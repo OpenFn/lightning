@@ -13,6 +13,7 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, test, vi } from "vitest";
+import { HotkeysProvider } from "react-hotkeys-hook";
 
 import { ManualRunPanel } from "../../../js/collaborative-editor/components/ManualRunPanel";
 import * as dataclipApi from "../../../js/collaborative-editor/api/dataclips";
@@ -79,6 +80,17 @@ const mockDataclip: dataclipApi.Dataclip = {
   wiped_at: null,
 };
 
+// Helper function to render ManualRunPanel with HotkeysProvider
+function renderManualRunPanel(
+  props: React.ComponentProps<typeof ManualRunPanel>
+) {
+  return render(
+    <HotkeysProvider>
+      <ManualRunPanel {...props} />
+    </HotkeysProvider>
+  );
+}
+
 describe("ManualRunPanel", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -92,15 +104,13 @@ describe("ManualRunPanel", () => {
   });
 
   test("renders with correct title when opened from job", async () => {
-    render(
-      <ManualRunPanel
-        workflow={mockWorkflow}
-        projectId="project-1"
-        workflowId="workflow-1"
-        jobId="job-1"
-        onClose={() => {}}
-      />
-    );
+    renderManualRunPanel({
+      workflow: mockWorkflow,
+      projectId: "project-1",
+      workflowId: "workflow-1",
+      jobId: "job-1",
+      onClose: () => {},
+    });
 
     await waitFor(() => {
       expect(screen.getByText("Run from Test Job")).toBeInTheDocument();
@@ -108,15 +118,13 @@ describe("ManualRunPanel", () => {
   });
 
   test("renders with correct title when opened from trigger", async () => {
-    render(
-      <ManualRunPanel
-        workflow={mockWorkflow}
-        projectId="project-1"
-        workflowId="workflow-1"
-        triggerId="trigger-1"
-        onClose={() => {}}
-      />
-    );
+    renderManualRunPanel({
+      workflow: mockWorkflow,
+      projectId: "project-1",
+      workflowId: "workflow-1",
+      triggerId: "trigger-1",
+      onClose: () => {},
+    });
 
     await waitFor(() => {
       expect(
@@ -125,51 +133,49 @@ describe("ManualRunPanel", () => {
     });
   });
 
-  test("shows three tabs with correct labels", () => {
-    render(
-      <ManualRunPanel
-        workflow={mockWorkflow}
-        projectId="project-1"
-        workflowId="workflow-1"
-        jobId="job-1"
-        onClose={() => {}}
-      />
-    );
+  test("shows three tabs with correct labels", async () => {
+    renderManualRunPanel({
+      workflow: mockWorkflow,
+      projectId: "project-1",
+      workflowId: "workflow-1",
+      jobId: "job-1",
+      onClose: () => {},
+    });
 
-    expect(screen.getByText("Empty")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText("Empty")).toBeInTheDocument();
+    });
     expect(screen.getByText("Custom")).toBeInTheDocument();
     expect(screen.getByText("Existing")).toBeInTheDocument();
   });
 
-  test("starts with Empty tab selected", () => {
-    render(
-      <ManualRunPanel
-        workflow={mockWorkflow}
-        projectId="project-1"
-        workflowId="workflow-1"
-        jobId="job-1"
-        onClose={() => {}}
-      />
-    );
+  test("starts with Empty tab selected", async () => {
+    renderManualRunPanel({
+      workflow: mockWorkflow,
+      projectId: "project-1",
+      workflowId: "workflow-1",
+      jobId: "job-1",
+      onClose: () => {},
+    });
 
     // Empty view should be visible
-    expect(
-      screen.getByText(/empty JSON object will be used/i)
-    ).toBeInTheDocument();
+    await waitFor(() => {
+      expect(
+        screen.getByText(/empty JSON object will be used/i)
+      ).toBeInTheDocument();
+    });
   });
 
   test("switches to Custom tab when clicked", async () => {
     const user = userEvent.setup();
 
-    render(
-      <ManualRunPanel
-        workflow={mockWorkflow}
-        projectId="project-1"
-        workflowId="workflow-1"
-        jobId="job-1"
-        onClose={() => {}}
-      />
-    );
+    renderManualRunPanel({
+      workflow: mockWorkflow,
+      projectId: "project-1",
+      workflowId: "workflow-1",
+      jobId: "job-1",
+      onClose: () => {},
+    });
 
     // Click Custom tab
     await user.click(screen.getByText("Custom"));
@@ -183,15 +189,13 @@ describe("ManualRunPanel", () => {
   test("switches to Existing tab when clicked", async () => {
     const user = userEvent.setup();
 
-    render(
-      <ManualRunPanel
-        workflow={mockWorkflow}
-        projectId="project-1"
-        workflowId="workflow-1"
-        jobId="job-1"
-        onClose={() => {}}
-      />
-    );
+    renderManualRunPanel({
+      workflow: mockWorkflow,
+      projectId: "project-1",
+      workflowId: "workflow-1",
+      jobId: "job-1",
+      onClose: () => {},
+    });
 
     // Click Existing tab
     await user.click(screen.getByText("Existing"));
@@ -204,51 +208,54 @@ describe("ManualRunPanel", () => {
     });
   });
 
-  test("calls onClose when Cancel button is clicked", async () => {
+  test("calls onClose when close button is clicked", async () => {
     const user = userEvent.setup();
     const onClose = vi.fn();
 
-    render(
-      <ManualRunPanel
-        workflow={mockWorkflow}
-        projectId="project-1"
-        workflowId="workflow-1"
-        jobId="job-1"
-        onClose={onClose}
-      />
-    );
+    renderManualRunPanel({
+      workflow: mockWorkflow,
+      projectId: "project-1",
+      workflowId: "workflow-1",
+      jobId: "job-1",
+      onClose: onClose,
+    });
 
-    // Click Cancel button
-    await user.click(screen.getByText("Cancel"));
+    // Wait for component to finish initial render and async operations
+    await waitFor(() => {
+      expect(
+        screen.getByRole("button", { name: /close panel/i })
+      ).toBeInTheDocument();
+    });
+
+    // Click close button
+    await user.click(screen.getByRole("button", { name: /close panel/i }));
 
     expect(onClose).toHaveBeenCalledOnce();
   });
 
-  test("Run button is enabled when Empty tab is selected", () => {
-    render(
-      <ManualRunPanel
-        workflow={mockWorkflow}
-        projectId="project-1"
-        workflowId="workflow-1"
-        jobId="job-1"
-        onClose={() => {}}
-      />
-    );
+  test("Run button is enabled when Empty tab is selected", async () => {
+    renderManualRunPanel({
+      workflow: mockWorkflow,
+      projectId: "project-1",
+      workflowId: "workflow-1",
+      jobId: "job-1",
+      onClose: () => {},
+    });
 
-    const runButton = screen.getByText("Run Workflow Now");
-    expect(runButton).not.toBeDisabled();
+    await waitFor(() => {
+      const runButton = screen.getByText("Run Workflow Now");
+      expect(runButton).not.toBeDisabled();
+    });
   });
 
   test("fetches dataclips on mount with job context", async () => {
-    render(
-      <ManualRunPanel
-        workflow={mockWorkflow}
-        projectId="project-1"
-        workflowId="workflow-1"
-        jobId="job-1"
-        onClose={() => {}}
-      />
-    );
+    renderManualRunPanel({
+      workflow: mockWorkflow,
+      projectId: "project-1",
+      workflowId: "workflow-1",
+      jobId: "job-1",
+      onClose: () => {},
+    });
 
     await waitFor(() => {
       expect(dataclipApi.searchDataclips).toHaveBeenCalledWith(
@@ -261,15 +268,13 @@ describe("ManualRunPanel", () => {
   });
 
   test("fetches dataclips on mount with trigger context", async () => {
-    render(
-      <ManualRunPanel
-        workflow={mockWorkflow}
-        projectId="project-1"
-        workflowId="workflow-1"
-        triggerId="trigger-1"
-        onClose={() => {}}
-      />
-    );
+    renderManualRunPanel({
+      workflow: mockWorkflow,
+      projectId: "project-1",
+      workflowId: "workflow-1",
+      triggerId: "trigger-1",
+      onClose: () => {},
+    });
 
     await waitFor(() => {
       expect(dataclipApi.searchDataclips).toHaveBeenCalledWith(
@@ -290,15 +295,13 @@ describe("ManualRunPanel", () => {
       can_edit_dataclip: true,
     });
 
-    render(
-      <ManualRunPanel
-        workflow={mockWorkflow}
-        projectId="project-1"
-        workflowId="workflow-1"
-        jobId="job-1"
-        onClose={() => {}}
-      />
-    );
+    renderManualRunPanel({
+      workflow: mockWorkflow,
+      projectId: "project-1",
+      workflowId: "workflow-1",
+      jobId: "job-1",
+      onClose: () => {},
+    });
 
     // Switch to Existing tab
     await user.click(screen.getByText("Existing"));
@@ -316,15 +319,13 @@ describe("ManualRunPanel", () => {
       can_edit_dataclip: true,
     });
 
-    render(
-      <ManualRunPanel
-        workflow={mockWorkflow}
-        projectId="project-1"
-        workflowId="workflow-1"
-        jobId="job-1"
-        onClose={() => {}}
-      />
-    );
+    renderManualRunPanel({
+      workflow: mockWorkflow,
+      projectId: "project-1",
+      workflowId: "workflow-1",
+      jobId: "job-1",
+      onClose: () => {},
+    });
 
     // Should auto-switch to Existing tab and show selected dataclip
     await waitFor(() => {
@@ -336,15 +337,13 @@ describe("ManualRunPanel", () => {
   test("disables Run button when Custom tab has invalid JSON", async () => {
     const user = userEvent.setup();
 
-    render(
-      <ManualRunPanel
-        workflow={mockWorkflow}
-        projectId="project-1"
-        workflowId="workflow-1"
-        jobId="job-1"
-        onClose={() => {}}
-      />
-    );
+    renderManualRunPanel({
+      workflow: mockWorkflow,
+      projectId: "project-1",
+      workflowId: "workflow-1",
+      jobId: "job-1",
+      onClose: () => {},
+    });
 
     // Switch to Custom tab
     await user.click(screen.getByText("Custom"));
@@ -368,15 +367,13 @@ describe("ManualRunPanel", () => {
       can_edit_dataclip: true,
     });
 
-    render(
-      <ManualRunPanel
-        workflow={mockWorkflow}
-        projectId="project-1"
-        workflowId="workflow-1"
-        jobId="job-1"
-        onClose={() => {}}
-      />
-    );
+    renderManualRunPanel({
+      workflow: mockWorkflow,
+      projectId: "project-1",
+      workflowId: "workflow-1",
+      jobId: "job-1",
+      onClose: () => {},
+    });
 
     // Switch to Existing tab
     await user.click(screen.getByText("Existing"));
@@ -395,7 +392,7 @@ describe("ManualRunPanel", () => {
     });
   });
 
-  test("handles empty workflow (no triggers)", () => {
+  test("handles empty workflow (no triggers)", async () => {
     const emptyWorkflow: Workflow = {
       id: "workflow-2",
       name: "Empty Workflow",
@@ -404,16 +401,16 @@ describe("ManualRunPanel", () => {
       edges: [],
     };
 
-    render(
-      <ManualRunPanel
-        workflow={emptyWorkflow}
-        projectId="project-1"
-        workflowId="workflow-2"
-        onClose={() => {}}
-      />
-    );
+    renderManualRunPanel({
+      workflow: emptyWorkflow,
+      projectId: "project-1",
+      workflowId: "workflow-2",
+      onClose: () => {},
+    });
 
     // Should render with generic title
-    expect(screen.getByText("Run Workflow")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText("Run Workflow")).toBeInTheDocument();
+    });
   });
 });

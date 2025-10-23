@@ -9,6 +9,7 @@ import {
 import type { Workflow } from "../types/workflow";
 
 import { Button } from "./Button";
+import { InspectorFooter } from "./inspector/InspectorFooter";
 import { InspectorLayout } from "./inspector/InspectorLayout";
 import { Tabs } from "./Tabs";
 import EmptyView from "../../manual-run-panel/views/EmptyView";
@@ -270,19 +271,20 @@ export function ManualRunPanel({
     (selectedTab === "existing" && selectedDataclip) ||
     selectedTab === "custom";
 
-  // Use HotkeysContext to enable runPanel scope
+  // Use HotkeysContext to manage runPanel scope
   const { enableScope, disableScope } = useHotkeysContext();
 
-  // Enable "runPanel" scope when this component mounts
-  // The parent (InnerEditor) handles disabling "panel" scope
+  // Enable runPanel scope when this component mounts
+  // Parent (WorkflowEditor) manages the "panel" scope to prevent conflicts
   useEffect(() => {
     enableScope("runPanel");
+
     return () => {
       disableScope("runPanel");
     };
   }, [enableScope, disableScope]);
 
-  // Handle Escape key to close only the run panel
+  // Handle Escape key to close the run panel
   useHotkeys(
     "escape",
     () => {
@@ -302,18 +304,17 @@ export function ManualRunPanel({
       nodeType={runContext.type === "job" ? "job" : "trigger"}
       onClose={onClose}
       footer={
-        <div className="flex gap-2">
-          <Button variant="secondary" onClick={onClose} disabled={isSubmitting}>
-            Cancel
-          </Button>
-          <Button
-            variant="primary"
-            onClick={handleRun}
-            disabled={!canRun || isSubmitting}
-          >
-            {isSubmitting ? "Running..." : "Run Workflow Now"}
-          </Button>
-        </div>
+        <InspectorFooter
+          leftButtons={
+            <Button
+              variant="primary"
+              onClick={handleRun}
+              disabled={!canRun || isSubmitting}
+            >
+              {isSubmitting ? "Running..." : "Run Workflow Now"}
+            </Button>
+          }
+        />
       }
     >
       {selectedDataclip ? (
