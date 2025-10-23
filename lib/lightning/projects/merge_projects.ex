@@ -6,7 +6,6 @@ defmodule Lightning.Projects.MergeProjects do
   import Lightning.Utils.Maps, only: [stringify_keys: 1]
   import Ecto.Query
 
-  # alias Lightning.AdaptorRegistry
   alias Lightning.Projects.Project
   alias Lightning.Repo
   alias Lightning.Workflows.Workflow
@@ -767,19 +766,15 @@ defmodule Lightning.Projects.MergeProjects do
     source_project = Repo.preload(source_project, :workflows)
     target_project = Repo.preload(target_project, :workflows)
 
-    # Get workflow version hashes indexed by workflow name
     sandbox_workflow_versions =
       get_workflow_version_hashes_by_name(source_project.workflows)
 
     target_workflow_versions =
       get_workflow_version_hashes_by_name(target_project.workflows)
 
-    # Check if any matching workflow in target has a different version hash
     Enum.any?(target_workflow_versions, fn {workflow_name, target_hash} ->
       case Map.get(sandbox_workflow_versions, workflow_name) do
-        # No matching workflow in sandbox, not a divergence
         nil -> false
-        # Compare version hashes - divergence if they differ
         sandbox_hash -> target_hash != sandbox_hash
       end
     end)

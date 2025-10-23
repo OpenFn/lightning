@@ -189,7 +189,6 @@ defmodule LightningWeb.SandboxLive.Index do
               target_id: default_target && default_target.value
             })
 
-          # Check for divergence with the selected target
           has_diverged =
             if default_target do
               target_project =
@@ -236,7 +235,6 @@ defmodule LightningWeb.SandboxLive.Index do
       ) do
     merge_changeset = merge_changeset(%{target_id: target_id})
 
-    # Check for divergence with the newly selected target
     has_diverged =
       if target_id do
         source = socket.assigns.merge_source_sandbox

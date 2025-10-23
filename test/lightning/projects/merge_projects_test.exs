@@ -1709,8 +1709,6 @@ defmodule Lightning.Projects.MergeProjectsTest do
     end
 
     test "handles source workflow with trigger that has no match in target" do
-      # Source has cron trigger, target has only webhook trigger
-      # This tests the else branch in map_triggers where matched_target is nil
       source_workflow =
         build(:workflow,
           triggers: [
@@ -1731,14 +1729,11 @@ defmodule Lightning.Projects.MergeProjectsTest do
 
       result = MergeProjects.merge_workflow(source_workflow, target_workflow)
 
-      # Source cron trigger should be present (with generated ID)
-      # This trigger had no match in target (else branch in map_triggers)
       cron_trigger =
         Enum.find(result["triggers"], fn t -> t["type"] == :cron end)
 
       assert cron_trigger
       assert cron_trigger["id"]
-      # Should not be deleted
       refute Map.get(cron_trigger, "delete")
     end
   end
@@ -2353,20 +2348,17 @@ defmodule Lightning.Projects.MergeProjectsTest do
       target_workflow =
         insert(:workflow, project: target_project, name: "Workflow 1")
 
-      # Create initial version for target workflow
       insert(:workflow_version,
         workflow: target_workflow,
         hash: "abc123",
         source: "app"
       )
 
-      # Create sandbox
       source_project = insert(:project, parent_id: target_project.id)
-      # Sandbox workflow has same name as target (as it's a copy)
+
       source_workflow =
         insert(:workflow, project: source_project, name: "Workflow 1")
 
-      # Sandbox gets same version hash (as it was copied at creation)
       insert(:workflow_version,
         workflow: source_workflow,
         hash: "abc123",
@@ -2382,27 +2374,23 @@ defmodule Lightning.Projects.MergeProjectsTest do
       target_workflow =
         insert(:workflow, project: target_project, name: "Workflow 1")
 
-      # Create initial version for target workflow
       insert(:workflow_version,
         workflow: target_workflow,
         hash: "abc123",
         source: "app"
       )
 
-      # Create sandbox
       source_project = insert(:project, parent_id: target_project.id)
-      # Sandbox workflow has same name (it's a copy)
+
       source_workflow =
         insert(:workflow, project: source_project, name: "Workflow 1")
 
-      # Sandbox has old version hash
       insert(:workflow_version,
         workflow: source_workflow,
         hash: "abc123",
         source: "app"
       )
 
-      # Target workflow is updated with new version after sandbox creation
       insert(:workflow_version,
         workflow: target_workflow,
         hash: "def456",
@@ -2436,7 +2424,6 @@ defmodule Lightning.Projects.MergeProjectsTest do
       target_workflow_2 =
         insert(:workflow, project: target_project, name: "Workflow 2")
 
-      # Both target workflows have initial versions
       insert(:workflow_version,
         workflow: target_workflow_1,
         hash: "abc123",
@@ -2449,7 +2436,6 @@ defmodule Lightning.Projects.MergeProjectsTest do
         source: "app"
       )
 
-      # Create sandbox with matching workflow names (copies of target workflows)
       source_project = insert(:project, parent_id: target_project.id)
 
       source_workflow_1 =
@@ -2458,7 +2444,6 @@ defmodule Lightning.Projects.MergeProjectsTest do
       source_workflow_2 =
         insert(:workflow, project: source_project, name: "Workflow 2")
 
-      # Sandbox gets same versions
       insert(:workflow_version,
         workflow: source_workflow_1,
         hash: "abc123",
@@ -2471,14 +2456,12 @@ defmodule Lightning.Projects.MergeProjectsTest do
         source: "app"
       )
 
-      # Update only one target workflow with new version
       insert(:workflow_version,
         workflow: target_workflow_2,
         hash: "xyz789",
         source: "app"
       )
 
-      # Should detect divergence
       assert MergeProjects.has_diverged?(source_project, target_project)
     end
 
@@ -2488,7 +2471,6 @@ defmodule Lightning.Projects.MergeProjectsTest do
       target_workflow =
         insert(:workflow, project: target_project, name: "Workflow 1")
 
-      # Create multiple versions, most recent should be used
       insert(:workflow_version,
         workflow: target_workflow,
         hash: "old_version",
@@ -2503,20 +2485,17 @@ defmodule Lightning.Projects.MergeProjectsTest do
         inserted_at: DateTime.utc_now()
       )
 
-      # Create sandbox with matching workflow name
       source_project = insert(:project, parent_id: target_project.id)
 
       source_workflow =
         insert(:workflow, project: source_project, name: "Workflow 1")
 
-      # Sandbox has the latest version at creation time
       insert(:workflow_version,
         workflow: source_workflow,
         hash: "latest_version",
         source: "app"
       )
 
-      # No divergence since versions match
       refute MergeProjects.has_diverged?(source_project, target_project)
     end
 
@@ -2532,11 +2511,8 @@ defmodule Lightning.Projects.MergeProjectsTest do
         source: "app"
       )
 
-      # Create sandbox WITHOUT this workflow
       source_project = insert(:project, parent_id: target_project.id)
 
-      # No matching workflow in sandbox, so nil case is triggered
-      # This should return false (not a divergence)
       refute MergeProjects.has_diverged?(source_project, target_project)
     end
 
@@ -2544,7 +2520,6 @@ defmodule Lightning.Projects.MergeProjectsTest do
       target_project = insert(:project)
       source_project = insert(:project, parent_id: target_project.id)
 
-      # Both projects have no workflows
       refute MergeProjects.has_diverged?(source_project, target_project)
     end
 
@@ -2552,20 +2527,15 @@ defmodule Lightning.Projects.MergeProjectsTest do
       target_project = insert(:project)
       source_project = insert(:project, parent_id: target_project.id)
 
-      # Create workflows without any workflow versions
       insert(:workflow, project: target_project, name: "Workflow 1")
       insert(:workflow, project: source_project, name: "Workflow 1")
 
-      # No versions exist, so no divergence can be detected
       refute MergeProjects.has_diverged?(source_project, target_project)
     end
   end
 
   describe "merge_workflow/2 - edge case with multiple candidates and body matching" do
     test "uses body matching when multiple structural candidates exist" do
-      # Create a scenario where multiple target jobs could match structurally
-      # but only one matches by body content
-
       source_trigger = build(:trigger, type: :webhook)
 
       source_job_a =
@@ -2584,7 +2554,7 @@ defmodule Lightning.Projects.MergeProjectsTest do
         |> insert()
 
       target_trigger = build(:trigger, type: :webhook)
-      # Both target jobs have same parent, creating ambiguity
+
       target_job_x =
         build(:job, name: "job_x", body: "console.log('other code');")
 
@@ -2602,22 +2572,16 @@ defmodule Lightning.Projects.MergeProjectsTest do
 
       result = MergeProjects.merge_workflow(source, target)
 
-      # job_a should map to job_y because of body match
       result_job_a = Enum.find(result["jobs"], &(&1["name"] == "job_a"))
       assert result_job_a["id"] == target_job_y.id
 
-      # job_b should map to job_x (the remaining one)
       result_job_b = Enum.find(result["jobs"], &(&1["name"] == "job_b"))
       assert result_job_b["id"] == target_job_x.id
     end
 
     test "handles max iterations guard in structural matching" do
-      # Test that iterative matching eventually converges or hits the max iteration limit
-      # This creates a complex structure with many jobs to test the iteration logic
-
       source_trigger = build(:trigger, type: :webhook)
 
-      # Create 10 jobs with same body to force multiple iterations of matching
       source_jobs =
         for i <- 1..10 do
           build(:job, name: "job_#{i}", body: "fn(state => state)")
@@ -2675,9 +2639,6 @@ defmodule Lightning.Projects.MergeProjectsTest do
     end
 
     test "handles source trigger with no matching target trigger type" do
-      # Test when source has a trigger type that doesn't exist in target
-      # This covers line 117 (else branch when matched_target is nil)
-
       source_trigger_webhook = build(:trigger, type: :webhook)
 
       source_trigger_cron =
@@ -2693,7 +2654,6 @@ defmodule Lightning.Projects.MergeProjectsTest do
         |> with_edge({source_trigger_webhook, source_job})
         |> insert()
 
-      # Target only has webhook trigger, no cron
       target_trigger = build(:trigger, type: :webhook)
       target_job = build(:job, name: "job_x")
 
@@ -2720,12 +2680,7 @@ defmodule Lightning.Projects.MergeProjectsTest do
     end
 
     test "handles multiple candidates with identical bodies in non-final iteration" do
-      # Test case where multiple target jobs match structurally AND have same body
-      # This covers line 279 (_other -> acc) when there are multiple body matches
-      # but we're not in the last iteration
-
       source_trigger = build(:trigger, type: :webhook)
-      # Three source jobs with same body
       source_job_a = build(:job, name: "job_a", body: "fn(state => state)")
       source_job_b = build(:job, name: "job_b", body: "fn(state => state)")
       source_job_c = build(:job, name: "job_c", body: "fn(state => state)")
@@ -2767,12 +2722,8 @@ defmodule Lightning.Projects.MergeProjectsTest do
     end
 
     test "exercises iteration boundary conditions" do
-      # Create a chain of jobs where each iteration can only map one job
-      # This helps exercise the iteration logic including boundary cases
-
       source_trigger = build(:trigger, type: :webhook)
 
-      # Create a linear chain: trigger -> a -> b -> c
       source_job_a = build(:job, name: "a", body: "code_a")
       source_job_b = build(:job, name: "b", body: "code_b")
       source_job_c = build(:job, name: "c", body: "code_c")
@@ -2790,7 +2741,6 @@ defmodule Lightning.Projects.MergeProjectsTest do
 
       target_trigger = build(:trigger, type: :webhook)
 
-      # Same structure but different names
       target_job_x = build(:job, name: "x", body: "other_code")
       target_job_y = build(:job, name: "y", body: "other_code")
       target_job_z = build(:job, name: "z", body: "other_code")
