@@ -1218,6 +1218,99 @@ defmodule Lightning.Projects.ProvisionerTest do
       [job_edge] = edges -- [trigger_edge]
       refute job_edge.enabled
     end
+
+    test "importing merged workflow with lock_version after parent was modified",
+         %{
+           user: user
+         } do
+      # Simulates the scenario where:
+      # 1. Sandbox is created from parent
+      # 2. Parent gets a new node added (incrementing lock_version)
+      # 3. Sandbox is merged back to parent
+      # The merge should succeed and delete the parent's new edges
+
+      # Create parent project with initial workflow
+      project = insert(:project)
+      workflow = insert(:workflow, project: project, lock_version: 5)
+      job1 = insert(:job, workflow: workflow, name: "job1")
+      trigger = insert(:trigger, workflow: workflow, type: :webhook)
+
+      trigger_edge =
+        insert(:edge,
+          workflow: workflow,
+          source_trigger: trigger,
+          target_job: job1
+        )
+
+      # Simulate parent modification after sandbox was created:
+      # add a new job and edge (this would increment lock_version to 6)
+      job2 = insert(:job, workflow: workflow, name: "job2")
+
+      new_edge =
+        insert(:edge, workflow: workflow, source_job: job1, target_job: job2)
+
+      # Manually increment lock_version to simulate the modification
+      workflow = Repo.update!(Ecto.Changeset.change(workflow, lock_version: 6))
+
+      assert workflow.lock_version == 6
+
+      # Now simulate a merge from sandbox that doesn't have job2
+      # This merged document will try to delete the new edge
+      merged_document = %{
+        "id" => project.id,
+        "name" => project.name,
+        "workflows" => [
+          %{
+            "id" => workflow.id,
+            "name" => workflow.name,
+            "lock_version" => workflow.lock_version,
+            "jobs" => [
+              %{
+                "id" => job1.id,
+                "name" => "job1",
+                "adaptor" => "@openfn/language-common@latest",
+                "body" => "console.log('from sandbox');"
+              }
+            ],
+            "triggers" => [
+              %{
+                "id" => trigger.id,
+                "type" => "webhook"
+              }
+            ],
+            "edges" => [
+              %{
+                "id" => trigger_edge.id,
+                "source_trigger_id" => trigger.id,
+                "target_job_id" => job1.id,
+                "condition_type" => "always"
+              },
+              # Mark job2's edge for deletion (not present in sandbox)
+              %{
+                "id" => new_edge.id,
+                "delete" => true
+              }
+            ]
+          }
+        ]
+      }
+
+      # This should succeed with allow_stale: true
+      assert {:ok, updated_project} =
+               Provisioner.import_document(project, user, merged_document)
+
+      # Verify the new edge was deleted
+      updated_workflow =
+        Repo.preload(updated_project, workflows: [:edges, :jobs]).workflows
+        |> hd()
+
+      assert length(updated_workflow.edges) == 1
+      refute Enum.any?(updated_workflow.edges, fn e -> e.id == new_edge.id end)
+
+      # Verify job2 was also deleted (merge replaces all jobs)
+      assert length(updated_workflow.jobs) == 1
+      assert hd(updated_workflow.jobs).id == job1.id
+    end
   end
 
   defp valid_document(project_id \\ nil, number_of_workflows \\ 1) do

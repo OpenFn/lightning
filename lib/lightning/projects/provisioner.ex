@@ -56,7 +56,7 @@ defmodule Lightning.Projects.Provisioner do
            project_changeset <-
              build_import_changeset(project, user_or_repo_connection, data),
            {:ok, %{workflows: workflows} = project} <-
-             Repo.insert_or_update(project_changeset),
+             Repo.insert_or_update(project_changeset, allow_stale: true),
            :ok <- handle_collection_deletion(project_changeset),
            updated_project <- preload_dependencies(project),
            {:ok, _changes} <-
