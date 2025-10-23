@@ -1297,7 +1297,9 @@ defmodule Lightning.Projects.ProvisionerTest do
 
       # This should succeed with allow_stale: true
       assert {:ok, updated_project} =
-               Provisioner.import_document(project, user, merged_document)
+               Provisioner.import_document(project, user, merged_document,
+                 allow_stale: true
+               )
 
       # Verify the new edge was deleted
       updated_workflow =
