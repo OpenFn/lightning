@@ -33,6 +33,7 @@ import type React from "react";
 import { useCallback, useContext, useMemo, useSyncExternalStore } from "react";
 
 import { useURLState } from "#/react/lib/use-url-state";
+import _logger from "#/utils/logger";
 
 import { StoreContext } from "../contexts/StoreProvider";
 import { notifications } from "../lib/notifications";
@@ -44,6 +45,8 @@ import {
   useLatestSnapshotLockVersion,
   usePermissions,
 } from "./useSessionContext";
+
+const logger = _logger.ns("useWorkflow").seal();
 
 /**
  * Hook to access the WorkflowStore context.
@@ -493,7 +496,7 @@ export const useCanSave = (): { canSave: boolean; tooltipMessage: string } => {
     latestSnapshotLockVersion !== null &&
     workflow.lock_version !== latestSnapshotLockVersion;
 
-  console.log({ workflow, hasPermission });
+  logger.debug({ workflow, hasPermission });
 
   // Determine tooltip message (check in priority order)
   let tooltipMessage = "Save workflow";
