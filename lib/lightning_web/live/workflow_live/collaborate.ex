@@ -49,6 +49,7 @@ defmodule LightningWeb.WorkflowLive.Collaborate do
       data-root-project-name={
         if @project.parent, do: Lightning.Projects.root_of(@project).name, else: nil
       }
+      data-project-env={@project.env}
     />
     """
   end

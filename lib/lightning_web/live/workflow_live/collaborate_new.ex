@@ -65,6 +65,7 @@ defmodule LightningWeb.WorkflowLive.CollaborateNew do
       data-root-project-name={
         if @project.parent, do: Lightning.Projects.root_of(@project).name, else: nil
       }
+      data-project-env={@project.env}
       data-is-new-workflow="true"
     />
     """

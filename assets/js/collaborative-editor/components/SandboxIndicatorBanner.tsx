@@ -32,7 +32,6 @@ export function SandboxIndicatorBanner({
   variant = "full",
 }: SandboxIndicatorBannerProps) {
   const isSandbox = !!parentProjectId;
-  const rootProjectName = parentProjectName || "root project";
   const sandboxName = projectName || "sandbox";
 
   if (!isSandbox) {
@@ -41,25 +40,22 @@ export function SandboxIndicatorBanner({
 
   const positionClasses = position === "absolute" ? "absolute z-5" : "relative";
 
-  const switchUrl = `/projects/${parentProjectId}/w`;
-
   return (
     <div
       id="sandbox-mode-alert"
-      className={`alert-warning w-full flex items-center gap-x-6 px-6 py-2.5 sm:px-3.5 sm:before:flex-1 ${positionClasses}`}
+      className={`bg-primary-100 text-primary-800 w-full flex items-center gap-x-6 px-6 py-2.5 sm:px-3.5 sm:before:flex-1 ${positionClasses}`}
       data-testid="sandbox-indicator-banner"
     >
       <p className="text-sm leading-6">
-        <span className="hero-exclamation-triangle h-5 w-5 inline-block align-middle mr-2" />{" "}
+        <span className="hero-beaker h-5 w-5 inline-block align-middle mr-2" />{" "}
         {variant === "compact" ? (
-          `sandbox: ${sandboxName}`
+          <>
+            sandbox: <span className="font-bold">{sandboxName}</span>
+          </>
         ) : (
           <>
-            You are currently working in the sandbox {sandboxName}.{" "}
-            <a href={switchUrl} className="whitespace-nowrap font-semibold">
-              Switch to {rootProjectName}
-              <span aria-hidden="true"> &rarr;</span>
-            </a>
+            You are currently working in the sandbox{" "}
+            <span className="font-bold">{sandboxName}</span>.
           </>
         )}
       </p>

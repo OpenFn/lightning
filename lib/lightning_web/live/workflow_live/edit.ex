@@ -107,6 +107,22 @@ defmodule LightningWeb.WorkflowLive.Edit do
                       "You are viewing a snapshot of this workflow that was taken on #{Lightning.Helpers.format_date(@snapshot.inserted_at, "%F at %T")}"
                 }
               />
+              <%= if @project.env do %>
+                <div
+                  id="canvas-project-env-container"
+                  class="flex items-middle text-sm font-normal"
+                >
+                  <span
+                    id="canvas-project-env"
+                    phx-hook="Tooltip"
+                    data-placement="bottom"
+                    aria-label={"Project environment is #{@project.env}"}
+                    class="inline-flex items-center rounded-md px-1.5 py-0.5 text-xs font-medium bg-primary-100 text-primary-800"
+                  >
+                    {@project.env}
+                  </span>
+                </div>
+              <% end %>
               
     <!-- Add collaborative editor toggle (beaker icon only) -->
               <.link
@@ -479,21 +495,6 @@ defmodule LightningWeb.WorkflowLive.Edit do
             return_to={
               Helpers.build_url(assigns, [Helpers.param("s", @selected_job.id)])
             }
-          />
-          <Common.banner
-            :if={@project.parent}
-            type="warning"
-            id="sandbox-mode-alert"
-            message={"You are currently working in the sandbox #{@project.name}."}
-            action={
-              %{
-                text: "Switch to #{Lightning.Projects.root_of(@project).name}",
-                target: "/projects/#{Lightning.Projects.root_of(@project).id}/w"
-              }
-            }
-            class="absolute"
-            icon
-            centered
           />
           <Common.banner
             :if={@display_banner}

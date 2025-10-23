@@ -110,6 +110,22 @@ defmodule LightningWeb.WorkflowLive.JobView do
                     "You are viewing a snapshot of this workflow that was taken on #{Lightning.Helpers.format_date(@snapshot.inserted_at, "%F at %T")}"
               }
             />
+            <%= if @project.env do %>
+              <div
+                id="inspector-project-env-container"
+                class="flex items-middle text-sm font-normal"
+              >
+                <span
+                  id="inspector-project-env"
+                  phx-hook="Tooltip"
+                  data-placement="bottom"
+                  aria-label={"Project environment is #{@project.env}"}
+                  class="inline-flex items-center rounded-md px-1.5 py-0.5 text-xs font-medium bg-primary-100 text-primary-800"
+                >
+                  {@project.env}
+                </span>
+              </div>
+            <% end %>
             <LightningWeb.WorkflowLive.Components.online_users
               id="inspector-online-users"
               presences={@presences}
@@ -138,18 +154,14 @@ defmodule LightningWeb.WorkflowLive.JobView do
         </div>
         <Common.banner
           :if={@project.parent}
-          type="warning"
+          type="info"
           id="sandbox-mode-alert"
-          message={"You are currently working in the sandbox #{@project.name}."}
-          action={
-            %{
-              text: "Switch to #{Lightning.Projects.root_of(@project).name}",
-              target: "/projects/#{Lightning.Projects.root_of(@project).id}/w"
-            }
-          }
+          icon_name="hero-beaker"
           icon
           centered
-        />
+        >
+          You are currently working in the sandbox <span class="font-bold">{@project.name}</span>.
+        </Common.banner>
       </:top>
       <%= for slot <- @collapsible_panel do %>
         <.collapsible_panel

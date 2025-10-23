@@ -6,7 +6,7 @@ import { useState } from "react";
 
 import { useURLState } from "../../react/lib/use-url-state";
 import type { WorkflowState as YAMLWorkflowState } from "../../yaml/types";
-import { useIsNewWorkflow, useProject } from "../hooks/useSessionContext";
+import { useIsNewWorkflow } from "../hooks/useSessionContext";
 import {
   useNodeSelection,
   useWorkflowActions,
@@ -18,7 +18,6 @@ import { CollaborativeWorkflowDiagram } from "./diagram/CollaborativeWorkflowDia
 import { FullScreenIDE } from "./ide/FullScreenIDE";
 import { Inspector } from "./inspector";
 import { LeftPanel } from "./left-panel";
-import { SandboxIndicatorBanner } from "./SandboxIndicatorBanner";
 
 interface WorkflowEditorProps {
   parentProjectId?: string | null;
@@ -34,7 +33,6 @@ export function WorkflowEditor({
   const workflowStore = useWorkflowStoreContext();
   const isNewWorkflow = useIsNewWorkflow();
   const { saveWorkflow } = useWorkflowActions();
-  const project = useProject();
 
   const [showLeftPanel, setShowLeftPanel] = useState(isNewWorkflow);
 
@@ -115,11 +113,6 @@ export function WorkflowEditor({
               showLeftPanel ? "ml-[33.333333%]" : "ml-0"
             }`}
           >
-            <SandboxIndicatorBanner
-              parentProjectId={parentProjectId}
-              parentProjectName={parentProjectName}
-              projectName={project?.name}
-            />
             <CollaborativeWorkflowDiagram inspectorId="inspector" />
 
             {/* Inspector slides in from the right and appears on top
