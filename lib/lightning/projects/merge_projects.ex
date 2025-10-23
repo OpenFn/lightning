@@ -475,7 +475,6 @@ defmodule Lightning.Projects.MergeProjects do
   end
 
   defp build_merged_jobs(source_jobs, target_jobs, job_mappings) do
-    # Create a lookup map for target jobs by ID
     target_jobs_by_id = Map.new(target_jobs, &{&1.id, &1})
 
     # Process source jobs (matched and new)
@@ -487,7 +486,6 @@ defmodule Lightning.Projects.MergeProjects do
           mapped_id =
             Map.get(job_mappings, source_job.id) || Ecto.UUID.generate()
 
-          # Check if this source job is mapped to an existing target job
           target_job = Map.get(target_jobs_by_id, mapped_id)
 
           merged_job =
@@ -500,7 +498,6 @@ defmodule Lightning.Projects.MergeProjects do
               :keychain_credential_id
             ])
             |> then(fn job_attrs ->
-              # If matched to target, preserve target's credential IDs
               if target_job do
                 job_attrs
                 |> Map.put(

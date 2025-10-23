@@ -2139,7 +2139,6 @@ defmodule Lightning.Projects.MergeProjectsTest do
     end
 
     test "preserves credentials when merging workflows with project_credential_id" do
-      # Create parent project with a credential
       parent_project = insert(:project, name: "Parent Project")
       parent_credential = insert(:credential, name: "Salesforce API Key")
 
@@ -2149,7 +2148,6 @@ defmodule Lightning.Projects.MergeProjectsTest do
           credential: parent_credential
         )
 
-      # Create parent workflow with a job using the credential
       {parent_workflow,
        %{:webhook => _parent_trigger, "process_data" => _parent_job}} =
         generate_workflow(
@@ -2165,7 +2163,6 @@ defmodule Lightning.Projects.MergeProjectsTest do
           }
         )
 
-      # Update parent job to have the credential
       [parent_job] = parent_workflow.jobs
 
       {:ok, _} =
@@ -2176,17 +2173,14 @@ defmodule Lightning.Projects.MergeProjectsTest do
       parent_workflow =
         Repo.preload(parent_workflow, [:jobs, :triggers, :edges], force: true)
 
-      # Create a sandbox project
       sandbox_project = insert(:project, name: "Sandbox Project")
 
-      # Clone the credential to the sandbox (simulating what happens during sandbox creation)
       sandbox_project_credential =
         insert(:project_credential,
           project: sandbox_project,
           credential: parent_credential
         )
 
-      # Create sandbox workflow with same structure but using sandbox credential ID
       {sandbox_workflow,
        %{:webhook => _sandbox_trigger, "process_data" => _sandbox_job}} =
         generate_workflow(
@@ -2202,7 +2196,6 @@ defmodule Lightning.Projects.MergeProjectsTest do
           }
         )
 
-      # Update sandbox job to have the sandbox credential
       [sandbox_job] = sandbox_workflow.jobs
 
       {:ok, _} =
@@ -2213,7 +2206,6 @@ defmodule Lightning.Projects.MergeProjectsTest do
       sandbox_workflow =
         Repo.preload(sandbox_workflow, [:jobs, :triggers, :edges], force: true)
 
-      # Verify parent workflow has job with credential
       parent_workflow_reloaded = Repo.preload(parent_workflow, [:jobs])
       parent_job_with_cred = hd(parent_workflow_reloaded.jobs)
 
@@ -2221,13 +2213,10 @@ defmodule Lightning.Projects.MergeProjectsTest do
                parent_project_credential.id,
              "Parent job in DB should have credential #{parent_project_credential.id}, got #{parent_job_with_cred.project_credential_id}"
 
-      # Merge sandbox workflow back to parent
       result = MergeProjects.merge_workflow(sandbox_workflow, parent_workflow)
 
-      # Find the merged job
       result_job = hd(result["jobs"])
 
-      # The job should preserve the parent's credential ID, not the sandbox's
       assert result_job["project_credential_id"] == parent_project_credential.id,
              "Expected credential ID to be parent's #{parent_project_credential.id}, got #{result_job["project_credential_id"]}"
 
@@ -2237,7 +2226,6 @@ defmodule Lightning.Projects.MergeProjectsTest do
     end
 
     test "preserves credentials when merging workflows with keychain_credential_id" do
-      # Create parent project with a keychain credential
       parent_project = insert(:project, name: "Parent Project")
       parent_user = insert(:user)
 
@@ -2249,7 +2237,6 @@ defmodule Lightning.Projects.MergeProjectsTest do
           created_by: parent_user
         )
 
-      # Create parent workflow with a job using the keychain credential
       {parent_workflow,
        %{:webhook => _parent_trigger, "process_data" => _parent_job}} =
         generate_workflow(
@@ -2265,7 +2252,6 @@ defmodule Lightning.Projects.MergeProjectsTest do
           }
         )
 
-      # Update parent job to have the keychain credential
       [parent_job] = parent_workflow.jobs
 
       {:ok, _} =
@@ -2276,10 +2262,8 @@ defmodule Lightning.Projects.MergeProjectsTest do
       parent_workflow =
         Repo.preload(parent_workflow, [:jobs, :triggers, :edges], force: true)
 
-      # Create a sandbox project
       sandbox_project = insert(:project, name: "Sandbox Project")
 
-      # Clone the keychain credential to the sandbox
       sandbox_keychain_credential =
         insert(:keychain_credential,
           name: "API Key",
@@ -2288,7 +2272,6 @@ defmodule Lightning.Projects.MergeProjectsTest do
           created_by: parent_user
         )
 
-      # Create sandbox workflow with same structure but using sandbox keychain credential ID
       {sandbox_workflow,
        %{:webhook => _sandbox_trigger, "process_data" => _sandbox_job}} =
         generate_workflow(
@@ -2304,7 +2287,6 @@ defmodule Lightning.Projects.MergeProjectsTest do
           }
         )
 
-      # Update sandbox job to have the sandbox keychain credential
       [sandbox_job] = sandbox_workflow.jobs
 
       {:ok, _} =
@@ -2315,13 +2297,10 @@ defmodule Lightning.Projects.MergeProjectsTest do
       sandbox_workflow =
         Repo.preload(sandbox_workflow, [:jobs, :triggers, :edges], force: true)
 
-      # Merge sandbox workflow back to parent
       result = MergeProjects.merge_workflow(sandbox_workflow, parent_workflow)
 
-      # Find the merged job
       result_job = hd(result["jobs"])
 
-      # The job should preserve the parent's keychain credential ID
       assert result_job["keychain_credential_id"] ==
                parent_keychain_credential.id,
              "Expected keychain credential ID to be parent's #{parent_keychain_credential.id}, got #{result_job["keychain_credential_id"]}"
@@ -2332,9 +2311,6 @@ defmodule Lightning.Projects.MergeProjectsTest do
     end
 
     test "preserves credentials when adding new jobs from sandbox with project_credential_id" do
-      # Test the else branch: new jobs from sandbox should keep their credentials
-
-      # Create parent project with credential
       parent_project = insert(:project, name: "Parent Project")
       parent_credential = insert(:credential, name: "Salesforce API Key")
 
@@ -2344,7 +2320,6 @@ defmodule Lightning.Projects.MergeProjectsTest do
           credential: parent_credential
         )
 
-      # Create parent workflow with one job
       {parent_workflow, %{:webhook => _parent_trigger, "job_one" => _job_one}} =
         generate_workflow(
           [
@@ -2359,7 +2334,6 @@ defmodule Lightning.Projects.MergeProjectsTest do
           }
         )
 
-      # Create sandbox with additional new job that has a credential
       sandbox_project = insert(:project, name: "Sandbox Project")
 
       sandbox_project_credential =
@@ -2368,7 +2342,6 @@ defmodule Lightning.Projects.MergeProjectsTest do
           credential: parent_credential
         )
 
-      # Sandbox has the original job plus a NEW job with credential
       {sandbox_workflow,
        %{
          :webhook => _sandbox_trigger,
@@ -2393,7 +2366,6 @@ defmodule Lightning.Projects.MergeProjectsTest do
           }
         )
 
-      # Update the NEW job in sandbox to have the sandbox credential
       new_job = Enum.find(sandbox_workflow.jobs, &(&1.name == "new_job"))
 
       {:ok, _} =
@@ -2404,18 +2376,14 @@ defmodule Lightning.Projects.MergeProjectsTest do
       sandbox_workflow =
         Repo.preload(sandbox_workflow, [:jobs, :triggers, :edges], force: true)
 
-      # Merge sandbox back to parent
       result = MergeProjects.merge_workflow(sandbox_workflow, parent_workflow)
 
-      # Find the new job in the result
       result_new_job = Enum.find(result["jobs"], &(&1["name"] == "new_job"))
 
-      # The new job should KEEP the sandbox's credential ID (not matched to parent job)
       assert result_new_job["project_credential_id"] ==
                sandbox_project_credential.id,
              "New job should keep sandbox credential #{sandbox_project_credential.id}, got #{result_new_job["project_credential_id"]}"
 
-      # It should NOT have the parent's credential (since it's a new job)
       refute result_new_job["project_credential_id"] ==
                parent_project_credential.id,
              "New job should not have parent's credential ID"
