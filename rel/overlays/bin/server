@@ -1,3 +1,10 @@
 #!/bin/sh
 cd -P -- "$(dirname -- "$0")"
+
+if [ "$AWS_EXECUTION_ENV" = "AWS_ECS_EC2" ]; then
+  # ECS_EC2 service discovery works similarly to K8S service
+  IP=`echo $HOSTNAME | awk -F '.' '{print $1}' | sed s/ip-// | tr '-' '.'`
+  export RELEASE_NODE="lightning@${IP}"
+fi
+
 PHX_SERVER=true exec ./lightning start
