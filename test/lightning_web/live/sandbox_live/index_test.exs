@@ -1676,5 +1676,134 @@ defmodule LightningWeb.SandboxLive.IndexTest do
 
       assert html =~ "Invalid merge request"
     end
+
+    test "merges sandbox successfully when parent workflow was modified with new nodes/edges",
+         %{
+           conn: conn,
+           owner_user: owner_user,
+           parent: parent
+         } do
+      # This test simulates Joe's scenario:
+      # 1. Create a sandbox from parent
+      # 2. Add a new node/edge to parent (after sandbox creation)
+      # 3. Merge sandbox back to parent
+      # Expected: Merge succeeds and parent's new edges are deleted (overwrite behavior)
+
+      # Create initial parent workflow with job1
+      parent_workflow =
+        insert(:workflow, project: parent, name: "Main Workflow")
+
+      job1 =
+        insert(:job,
+          workflow: parent_workflow,
+          name: "Initial Job",
+          body: "job1()"
+        )
+
+      trigger = insert(:trigger, workflow: parent_workflow, type: :webhook)
+
+      insert(:edge,
+        workflow: parent_workflow,
+        source_trigger: trigger,
+        target_job: job1
+      )
+
+      # Create sandbox from parent (at this point, parent only has job1)
+      sandbox = insert(:project, name: "Sandbox", parent: parent)
+
+      sandbox_workflow =
+        insert(:workflow,
+          project: sandbox,
+          name: "Main Workflow",
+          lock_version: parent_workflow.lock_version
+        )
+
+      sandbox_job1 =
+        insert(:job,
+          workflow: sandbox_workflow,
+          name: "Initial Job",
+          body: "job1_modified()"
+        )
+
+      sandbox_trigger =
+        insert(:trigger, workflow: sandbox_workflow, type: :webhook)
+
+      insert(:edge,
+        workflow: sandbox_workflow,
+        source_trigger: sandbox_trigger,
+        target_job: sandbox_job1
+      )
+
+      # NOW: Parent gets modified with a new job2 and edge (simulating concurrent work)
+      job2 =
+        insert(:job,
+          workflow: parent_workflow,
+          name: "New Job Added After Sandbox",
+          body: "job2()"
+        )
+
+      new_edge =
+        insert(:edge,
+          workflow: parent_workflow,
+          source_job: job1,
+          target_job: job2
+        )
+
+      # Update parent workflow to increment lock_version (simulating the modification)
+      parent_workflow =
+        parent_workflow
+        |> Ecto.Changeset.change()
+        |> Ecto.Changeset.optimistic_lock(:lock_version)
+        |> Repo.update!()
+
+      initial_parent_lock_version = parent_workflow.lock_version
+
+      # Now perform the merge from sandbox to parent
+      conn = log_in_user(conn, owner_user)
+      {:ok, view, _html} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
+
+      # Open the merge modal
+      view
+      |> element("#branch-rewire-sandbox-#{sandbox.id} button")
+      |> render_click()
+
+      # Submit the merge
+      view
+      |> form("#merge-sandbox-modal form", %{
+        "merge" => %{"target_id" => parent.id}
+      })
+      |> render_submit()
+
+      # Verify redirect to parent project
+      assert_redirect(view, ~p"/projects/#{parent.id}/w")
+
+      # Verify the merge succeeded with allow_stale
+      updated_parent_workflow =
+        Repo.reload(parent_workflow) |> Repo.preload([:edges, :jobs])
+
+      # The workflow lock_version should have incremented (merge was applied)
+      assert updated_parent_workflow.lock_version > initial_parent_lock_version
+
+      # The new edge added to parent should be DELETED (overwrite behavior)
+      edge_ids = Enum.map(updated_parent_workflow.edges, & &1.id)
+
+      refute new_edge.id in edge_ids,
+             "Parent's new edge should be deleted during merge"
+
+      # Only the trigger->job1 edge should remain
+      assert length(updated_parent_workflow.edges) == 1
+
+      # job2 should also be deleted (not in sandbox)
+      job_ids = Enum.map(updated_parent_workflow.jobs, & &1.id)
+
+      refute job2.id in job_ids,
+             "Parent's new job should be deleted during merge"
+
+      # job1 should have the sandbox's modified body
+      remaining_job =
+        Enum.find(updated_parent_workflow.jobs, &(&1.name == "Initial Job"))
+
+      assert remaining_job.body == "job1_modified()"
+    end
   end
 end
