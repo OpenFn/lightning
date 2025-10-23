@@ -85,6 +85,9 @@ export function useServerValidation<TFormData>(
       // Check if this field exists in the form
       if (fieldName in form.state.values) {
         // Take the first error message from the array (if it exists)
+        // Note: Backend returns arrays to match Ecto changeset format, which can
+        // have multiple errors per field. We currently only display the first one
+        // in the UI, but preserve the array structure for future enhancement.
         const errorMessage =
           Array.isArray(errorMessages) && errorMessages.length > 0
             ? errorMessages[0]

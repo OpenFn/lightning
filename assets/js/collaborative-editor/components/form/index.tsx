@@ -31,13 +31,16 @@ const { useAppForm: useBaseAppForm } = createFormHook({
  * validation errors from the WorkflowStore's errors map into form fields.
  *
  * Server validation uses a nested structure:
- * - Workflow fields: { name: "error message" }
- * - Nested entities: { jobs: { "job-id": { name: "error" } } }
+ * - Workflow fields: { name: ["error message"] }
+ * - Nested entities: { jobs: { "job-id": { name: ["error"] } } }
  *
  * @param formOptions - Standard TanStack Form options
  * @param errorPath - Optional dot-separated path to filter errors for nested entities.
- *                    Will be converted to a JSONPath expression.
- *                    (e.g., "jobs.abc-123" becomes "$.jobs['abc-123']")
+ *                    Converted to JSONPath internally for querying nested error structures.
+ *                    Examples:
+ *                      - "jobs.abc-123" → "$.jobs['abc-123']" → filters to that job's errors
+ *                      - "triggers.xyz-789" → "$.triggers['xyz-789']" → filters to that trigger's errors
+ *                      - "edges.edge-456" → "$.edges['edge-456']" → filters to that edge's errors
  * @returns TanStack Form instance with automatic server validation
  *
  * @example
@@ -47,6 +50,10 @@ const { useAppForm: useBaseAppForm } = createFormHook({
  * @example
  * // Job-specific form (with path)
  * const form = useAppForm({ defaultValues: { name: "" } }, `jobs.${jobId}`);
+ *
+ * @example
+ * // Edge-specific form (with path)
+ * const form = useAppForm({ defaultValues: { condition_expression: "" } }, `edges.${edgeId}`);
  */
 export function useAppForm<TFormData>(
   formOptions: FormOptions<TFormData>,

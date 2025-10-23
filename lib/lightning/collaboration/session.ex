@@ -561,11 +561,20 @@ defmodule Lightning.Collaboration.Session do
 
   # Format changeset errors into nested structure for Y.Doc
   #
-  # Examples:
-  #   %{name: ["can't be blank"]} -> %{"name" => ["can't be blank"]}
-  #   %{jobs: [%{name: ["too long"]}]} -> %{"jobs" => %{"job-id" => %{"name" => ["too long"]}}}
+  # Transforms Ecto changeset errors into a nested map structure that mirrors
+  # the workflow entity hierarchy. This enables the frontend to:
+  # 1. Display workflow-level errors directly (e.g., {name: ["can't be blank"]})
+  # 2. Route nested entity errors to specific forms using JSONPath
+  #    (e.g., {jobs: {"job-uuid" => {name: ["too long"]}}})
   #
-  # Note: Preserves error messages as lists for consistency with Ecto changeset format
+  # Error messages are preserved as lists to match Ecto's changeset format,
+  # allowing multiple errors per field (though the UI currently displays only the first).
+  #
+  # Examples:
+  #   Workflow error: %{name: ["can't be blank"]}
+  #   Job error: %{jobs: %{"job-uuid" => %{name: ["too long"]}}}
+  #   Edge error: %{edges: %{"edge-uuid" => %{condition_expression: ["is invalid"]}}}
+  #
   # Inspired by traverse_provision_errors in provisioning_json.ex
   defp format_changeset_errors_for_ydoc(changeset) do
     changeset

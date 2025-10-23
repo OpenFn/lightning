@@ -332,7 +332,10 @@ export const createWorkflowStore = () => {
       }, "positions/observerUpdate");
     };
 
-    // NEW: Errors observer
+    // NEW: Errors observer with deep observation
+    // Deep observer is necessary because errors have nested structure:
+    // { jobs: { "job-id": { name: ["error"] } } }
+    // Without deep observation, changes to nested job errors wouldn't trigger updates
     const errorsObserver = () => {
       const errorsJSON = errorsMap.toJSON() as Record<string, string[]>;
       updateState(draft => {
