@@ -5,7 +5,6 @@ import {
 } from "@heroicons/react/24/outline";
 import { useCallback, useEffect, useState } from "react";
 import { useHotkeys, useHotkeysContext } from "react-hotkeys-hook";
-import _logger from "#/utils/logger";
 import { FilterTypes } from "../../manual-run-panel/types";
 import CustomView from "../../manual-run-panel/views/CustomView";
 import EmptyView from "../../manual-run-panel/views/EmptyView";
@@ -19,7 +18,8 @@ import { InspectorLayout } from "./inspector/InspectorLayout";
 import { SelectedDataclipView } from "./manual-run/SelectedDataclipView";
 import { Tabs } from "./Tabs";
 
-const logger = _logger.ns("ManualRunPanel").seal();
+// import _logger from "#/utils/logger";
+// const logger = _logger.ns("ManualRunPanel").seal();
 
 interface ManualRunPanelProps {
   workflow: Workflow;
@@ -273,9 +273,7 @@ export function ManualRunPanel({
     selectedTab === "custom";
 
   // Use HotkeysContext to manage runPanel scope
-  const { enableScope, disableScope, activeScopes } = useHotkeysContext();
-
-  logger.debug("Active hotkey scopes:", activeScopes);
+  const { enableScope, disableScope } = useHotkeysContext();
 
   // Enable runPanel scope when this component mounts
   // Parent (WorkflowEditor) manages the "panel" scope to prevent conflicts

@@ -1,6 +1,10 @@
-import { useEffect } from "react";
 import type { ReactNode } from "react";
+import { useEffect } from "react";
 import { useHotkeys, useHotkeysContext } from "react-hotkeys-hook";
+
+// import _logger from "#/utils/logger";
+
+// const logger = _logger.ns("InspectorLayout").seal();
 
 interface InspectorLayoutProps {
   title: string;

@@ -12,11 +12,10 @@
 
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { beforeEach, describe, expect, test, vi } from "vitest";
 import { HotkeysProvider } from "react-hotkeys-hook";
-
-import { ManualRunPanel } from "../../../js/collaborative-editor/components/ManualRunPanel";
+import { beforeEach, describe, expect, test, vi } from "vitest";
 import * as dataclipApi from "../../../js/collaborative-editor/api/dataclips";
+import { ManualRunPanel } from "../../../js/collaborative-editor/components/ManualRunPanel";
 import type { Workflow } from "../../../js/collaborative-editor/types/workflow";
 
 // Mock the API module
