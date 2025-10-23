@@ -68,7 +68,7 @@ function BreadcrumbContent({
   const projectId = projectFromStore?.id ?? projectIdFallback;
   const projectName = projectFromStore?.name ?? projectNameFallback;
   const currentWorkflowName = workflowFromStore?.name ?? workflowName;
-  // Root project info only comes from props, not from store
+
   const rootProjectId = rootProjectIdFallback;
   const rootProjectName = rootProjectNameFallback;
 
@@ -84,7 +84,6 @@ function BreadcrumbContent({
       </BreadcrumbLink>,
     ];
 
-    // If this is a sandbox, show root project first
     if (isSandbox && rootProjectId && rootProjectName) {
       elements.push(
         <BreadcrumbLink href={`/projects/${rootProjectId}/w`} key="root">
@@ -93,7 +92,6 @@ function BreadcrumbContent({
       );
     }
 
-    // Show current project (or sandbox)
     elements.push(
       <BreadcrumbLink href={`/projects/${projectId}/w`} key="project">
         {isSandbox && (

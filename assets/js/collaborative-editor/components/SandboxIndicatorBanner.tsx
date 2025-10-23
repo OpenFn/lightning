@@ -31,19 +31,16 @@ export function SandboxIndicatorBanner({
   position = "absolute",
   variant = "full",
 }: SandboxIndicatorBannerProps) {
-  // Determine if we're in a sandbox using props
   const isSandbox = !!parentProjectId;
   const rootProjectName = parentProjectName || "root project";
   const sandboxName = projectName || "sandbox";
 
-  // Don't show banner if not in a sandbox
   if (!isSandbox) {
     return null;
   }
 
   const positionClasses = position === "absolute" ? "absolute z-5" : "relative";
 
-  // Switch to workflows list (/w) of root project
   const switchUrl = `/projects/${parentProjectId}/w`;
 
   return (
