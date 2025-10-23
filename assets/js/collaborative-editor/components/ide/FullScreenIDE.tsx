@@ -72,7 +72,7 @@ export function FullScreenIDE({ onClose }: FullScreenIDEProps) {
 
       if (isMonacoFocused) {
         // First Escape: blur Monaco editor to remove focus
-        (activeElement as HTMLElement)?.blur();
+        (activeElement as HTMLElement).blur();
         event.preventDefault();
       } else {
         // Second Escape: close IDE

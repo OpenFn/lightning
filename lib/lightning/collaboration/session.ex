@@ -18,6 +18,8 @@ defmodule Lightning.Collaboration.Session do
   """
   use GenServer, restart: :temporary
 
+  import LightningWeb.CoreComponents, only: [translate_error: 1]
+
   alias Lightning.Accounts.User
   alias Lightning.Collaboration.Registry
   alias Lightning.Collaboration.WorkflowSerializer
@@ -340,6 +342,9 @@ defmodule Lightning.Collaboration.Session do
           "Failed to save workflow #{state.workflow.id}: #{inspect(changeset.errors)}"
         )
 
+        # Write validation errors to Y.Doc
+        write_validation_errors_to_ydoc(state, changeset)
+
         {:reply, {:error, changeset}, state}
     end
   end
@@ -458,9 +463,14 @@ defmodule Lightning.Collaboration.Session do
       # Update the workflow map with the saved workflow data
       # This ensures the lock_version and other fields are synced to Y.Doc
       workflow_map = Yex.Doc.get_map(doc, "workflow")
+      errors_map = Yex.Doc.get_map(doc, "errors")
 
       Yex.Doc.transaction(doc, "merge_saved_workflow", fn ->
+        # Update lock version
         Yex.Map.set(workflow_map, "lock_version", workflow.lock_version)
+
+        # Clear all errors after successful save
+        clear_map(errors_map)
       end)
     end)
   end
@@ -475,12 +485,16 @@ defmodule Lightning.Collaboration.Session do
       jobs_array = Yex.Doc.get_array(doc, "jobs")
       edges_array = Yex.Doc.get_array(doc, "edges")
       triggers_array = Yex.Doc.get_array(doc, "triggers")
+      positions_map = Yex.Doc.get_map(doc, "positions")
+      errors_map = Yex.Doc.get_map(doc, "errors")
 
-      # Transaction 1: Clear all arrays
+      # Transaction 1: Clear all arrays and errors
       Yex.Doc.transaction(doc, "clear_workflow", fn ->
         clear_array(jobs_array)
         clear_array(edges_array)
         clear_array(triggers_array)
+        clear_map(positions_map)
+        clear_map(errors_map)
       end)
 
       # Transaction 2: Re-serialize workflow (WorkflowSerializer does its own
@@ -502,4 +516,158 @@ defmodule Lightning.Collaboration.Session do
       Yex.Array.delete_range(array, 0, length)
     end
   end
+
+  defp clear_map(map) do
+    map
+    |> Yex.Map.to_map()
+    |> Enum.each(fn {key, _val} -> Yex.Map.delete(map, key) end)
+  end
+
+  # Write validation errors to Y.Doc errors map
+  # This makes errors visible to all connected users
+  defp write_validation_errors_to_ydoc(%{shared_doc_pid: nil}, _changeset) do
+    Logger.warning("Cannot write errors: no shared doc")
+    :ok
+  end
+
+  defp write_validation_errors_to_ydoc(
+         %{shared_doc_pid: shared_doc_pid},
+         changeset
+       ) do
+    formatted_errors = format_changeset_errors_for_ydoc(changeset)
+
+    SharedDoc.update_doc(shared_doc_pid, fn doc ->
+      # Get errors map BEFORE transaction (avoid VM deadlock)
+      errors_map = Yex.Doc.get_map(doc, "errors")
+
+      Yex.Doc.transaction(doc, "write_validation_errors", fn ->
+        # Clear existing errors first
+        clear_map(errors_map)
+
+        # Set new errors (already converted to Y.js compatible types)
+        Enum.each(formatted_errors, fn {field, value} ->
+          Yex.Map.set(errors_map, to_string(field), value)
+        end)
+      end)
+    end)
+
+    :ok
+  rescue
+    error ->
+      Logger.error("Error writing validation errors to Y.Doc: #{inspect(error)}")
+
+      :ok
+  end
+
+  # Format changeset errors into nested structure for Y.Doc
+  #
+  # Transforms Ecto changeset errors into a nested map structure that mirrors
+  # the workflow entity hierarchy. This enables the frontend to:
+  # 1. Display workflow-level errors directly (e.g., {name: ["can't be blank"]})
+  # 2. Route nested entity errors to specific forms using JSONPath
+  #    (e.g., {jobs: {"job-uuid" => {name: ["too long"]}}})
+  #
+  # Error messages are preserved as lists to match Ecto's changeset format,
+  # allowing multiple errors per field (though the UI currently displays only the first).
+  #
+  # Examples:
+  #   Workflow error: %{name: ["can't be blank"]}
+  #   Job error: %{jobs: %{"job-uuid" => %{name: ["too long"]}}}
+  #   Edge error: %{edges: %{"edge-uuid" => %{condition_expression: ["is invalid"]}}}
+  #
+  # Inspired by traverse_provision_errors in provisioning_json.ex
+  defp format_changeset_errors_for_ydoc(changeset) do
+    changeset
+    |> extract_changeset_errors()
+    |> Map.new(fn {key, value} ->
+      {key, convert_to_yjs_value(value)}
+    end)
+  end
+
+  defp extract_changeset_errors(changeset) do
+    changeset.errors
+    |> Enum.reverse()
+    |> merge_keyword_keys()
+    |> merge_related_keys(changeset)
+  end
+
+  defp merge_keyword_keys(keyword_list) do
+    Enum.reduce(keyword_list, %{}, fn {key, val}, acc ->
+      val = translate_error(val)
+      Map.update(acc, key, [val], &[val | &1])
+    end)
+  end
+
+  defp merge_related_keys(map, %Ecto.Changeset{
+         changes: changes,
+         data: %schema_module{}
+       }) do
+    fields =
+      schema_module.__schema__(:associations) ++
+        schema_module.__schema__(:embeds)
+
+    Enum.reduce(fields, map, fn
+      field, acc when field in [:jobs, :triggers, :edges] ->
+        traverse_field_errors(acc, changes, field, fn
+          field_changeset ->
+            Ecto.Changeset.get_field(field_changeset, :id)
+        end)
+
+      field, acc ->
+        traverse_field_errors(acc, changes, field, fn _ -> field end)
+    end)
+  end
+
+  defp traverse_field_errors(acc, changes, field, child_name_func)
+       when is_function(child_name_func, 1) do
+    changesets =
+      case Map.get(changes, field) do
+        %{} = change ->
+          [change]
+
+        changes ->
+          changes
+      end
+
+    if changesets do
+      child = traverse_nested_changesets(changesets, child_name_func)
+
+      if child == %{} do
+        acc
+      else
+        Map.put(acc, field, child)
+      end
+    else
+      acc
+    end
+  end
+
+  defp traverse_nested_changesets(changesets, child_name_func) do
+    Enum.reduce(changesets, %{}, fn changeset, acc ->
+      child = extract_changeset_errors(changeset)
+
+      if child == %{} do
+        acc
+      else
+        child_name = changeset |> child_name_func.() |> to_string()
+        Map.put(acc, child_name, child)
+      end
+    end)
+  end
+
+  # Recursively convert nested maps to Y.js compatible MapPrelim
+  defp convert_to_yjs_value(value) when is_map(value) do
+    Yex.MapPrelim.from(
+      Map.new(value, fn {key, val} ->
+        {to_string(key), convert_to_yjs_value(val)}
+      end)
+    )
+  end
+
+  # Convert lists to Y.js compatible ArrayPrelim
+  defp convert_to_yjs_value(value) when is_list(value) do
+    Yex.ArrayPrelim.from(Enum.map(value, &convert_to_yjs_value/1))
+  end
+
+  defp convert_to_yjs_value(value), do: value
 end

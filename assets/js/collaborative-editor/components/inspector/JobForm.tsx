@@ -171,19 +171,22 @@ export function JobForm({ job }: JobFormProps) {
     [job, initialAdaptor, initialAdaptorPackage, initialCredentialId]
   );
 
-  const form = useAppForm({
-    defaultValues,
-    listeners: {
-      onChange: ({ formApi }) => {
-        if (job.id) {
-          updateJob(job.id, formApi.state.values);
-        }
+  const form = useAppForm(
+    {
+      defaultValues,
+      listeners: {
+        onChange: ({ formApi }) => {
+          if (job.id) {
+            updateJob(job.id, formApi.state.values);
+          }
+        },
+      },
+      validators: {
+        onChange: createZodValidator(JobSchema),
       },
     },
-    validators: {
-      onChange: createZodValidator(JobSchema),
-    },
-  });
+    `jobs.${job.id}` // Server validation automatically filtered to this job
+  );
 
   // Y.Doc sync
   useWatchFields(

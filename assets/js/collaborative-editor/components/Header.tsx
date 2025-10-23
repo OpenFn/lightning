@@ -111,7 +111,7 @@ export function Header({
   // Global save shortcut: Ctrl/Cmd+S
   useHotkeys(
     "ctrl+s,meta+s", // Windows/Linux: Ctrl+S, Mac: Cmd+S
-    (event) => {
+    event => {
       event.preventDefault(); // Always prevent browser's "Save Page" dialog
       if (canSave) {
         saveWorkflow(); // Only save when allowed

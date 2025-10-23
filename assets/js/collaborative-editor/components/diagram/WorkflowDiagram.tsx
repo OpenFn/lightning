@@ -18,6 +18,7 @@ import {
   usePositions,
   useWorkflowStoreContext,
 } from "#/collaborative-editor/hooks/useWorkflow";
+import { extractNodeErrors } from "#/collaborative-editor/utils/extractNodeErrors";
 import _logger from "#/utils/logger";
 import MiniMapNode from "#/workflow-diagram/components/MiniMapNode";
 import { FIT_DURATION, FIT_PADDING } from "#/workflow-diagram/constants";
@@ -111,24 +112,45 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
   const undo = useCallback(() => {}, []);
   const redo = useCallback(() => {}, []);
 
-  const { jobs, triggers, edges } = useWorkflowState(state => ({
+  const { jobs, triggers, edges, errors } = useWorkflowState(state => ({
     jobs: state.jobs,
     triggers: state.triggers,
     edges: state.edges,
+    errors: state.errors,
   }));
 
   // TODO: implement disabled state - not currently available in WorkflowState
   const disabled = false;
 
-  const workflow = React.useMemo(
-    () => ({
-      jobs,
-      triggers,
-      edges,
+  const workflow = React.useMemo(() => {
+    // Extract nested entity errors from state
+    const nodeErrors = extractNodeErrors(errors);
+
+    // Attach errors to jobs
+    const jobsWithErrors = jobs.map(job => ({
+      ...job,
+      errors: nodeErrors.jobs[job.id] || {},
+    }));
+
+    // Attach errors to triggers
+    const triggersWithErrors = triggers.map(trigger => ({
+      ...trigger,
+      errors: nodeErrors.triggers[trigger.id] || {},
+    }));
+
+    // Attach errors to edges
+    const edgesWithErrors = edges.map(edge => ({
+      ...edge,
+      errors: nodeErrors.edges[edge.id] || {},
+    }));
+
+    return {
+      jobs: jobsWithErrors,
+      triggers: triggersWithErrors,
+      edges: edgesWithErrors,
       disabled,
-    }),
-    [jobs, triggers, edges, disabled]
-  );
+    };
+  }, [jobs, triggers, edges, errors, disabled]);
 
   const isManualLayout = Object.keys(workflowPositions).length > 0;
 
