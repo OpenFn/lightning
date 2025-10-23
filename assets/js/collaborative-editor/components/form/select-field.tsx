@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 
-import { ErrorMessage } from "./error-message";
+import { FormField } from "./form-field";
 
 import { useFieldContext } from ".";
 
@@ -35,13 +35,7 @@ export function SelectField({
   const field = useFieldContext<string>();
 
   return (
-    <div className="mb-4">
-      <label
-        htmlFor={field.name}
-        className="text-sm/6 font-medium text-slate-800 mb-2"
-      >
-        {label}
-      </label>
+    <FormField name={field.name} label={label} meta={field.state.meta}>
       <select
         id={field.name}
         disabled={disabled}
@@ -68,7 +62,6 @@ export function SelectField({
           )
         )}
       </select>
-      <ErrorMessage meta={field.state.meta} />
-    </div>
+    </FormField>
   );
 }

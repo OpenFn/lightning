@@ -4,6 +4,8 @@ import {
   DialogPanel,
   DialogTitle,
 } from "@headlessui/react";
+import { useEffect } from "react";
+import { useHotkeysContext } from "react-hotkeys-hook";
 
 interface AlertDialogProps {
   isOpen: boolean;
@@ -47,6 +49,29 @@ export function AlertDialog({
     variant === "danger"
       ? "bg-red-600 hover:bg-red-500 focus-visible:outline-red-600"
       : "bg-primary-600 hover:bg-primary-500 focus-visible:outline-primary-600";
+
+  // Use HotkeysContext to control keyboard scope precedence
+  const { enableScope, disableScope } = useHotkeysContext();
+
+  // When modal opens, take control by disabling panel scope
+  // When modal closes, give control back by re-enabling panel scope
+  // This prevents Inspector's Escape handler from conflicting with
+  // HeadlessUI's native Escape handling without Inspector needing
+  // to know about modals.
+  useEffect(() => {
+    if (isOpen) {
+      enableScope("modal");
+      disableScope("panel");
+    } else {
+      disableScope("modal");
+      enableScope("panel");
+    }
+
+    // Cleanup: ensure modal scope is disabled when unmounted
+    return () => {
+      disableScope("modal");
+    };
+  }, [isOpen, enableScope, disableScope]);
 
   return (
     <Dialog open={isOpen} onClose={onClose} className="relative z-50">

@@ -276,3 +276,63 @@ describe("WorkflowStore - Save Workflow", () => {
     unsubscribe();
   });
 });
+
+describe("WorkflowStore - addJob", () => {
+  let store: WorkflowStoreInstance;
+  let ydoc: Session.WorkflowDoc;
+  let mockProvider: PhoenixChannelProvider & { channel: Channel };
+
+  beforeEach(() => {
+    // Create fresh store and Y.Doc instances
+    store = createWorkflowStore();
+    ydoc = new Y.Doc() as Session.WorkflowDoc;
+
+    // Initialize Y.Doc structure
+    ydoc.getArray("jobs");
+    ydoc.getMap("workflow");
+    ydoc.getArray("triggers");
+    ydoc.getArray("edges");
+    ydoc.getMap("positions");
+
+    // Create mock channel (minimal implementation)
+    const mockChannel = {
+      push: createMockChannelPushOk({}),
+    } as unknown as Channel;
+
+    // Create mock provider with channel
+    mockProvider = {
+      channel: mockChannel,
+      synced: true,
+      awareness: null,
+      doc: ydoc,
+    } as unknown as PhoenixChannelProvider & { channel: Channel };
+
+    // Connect store to Y.Doc and provider
+    store.connect(ydoc, mockProvider);
+  });
+
+  test("initializes credential fields to null when adding new job", () => {
+    // Add job without specifying credentials
+    store.addJob({
+      id: "new-job-1",
+      name: "New Job",
+      body: "fn(state => state)",
+    });
+
+    // Verify credentials are explicitly set to null in Y.Doc
+    const jobsArray = ydoc.getArray("jobs");
+    const job = jobsArray.get(0) as Y.Map<unknown>;
+
+    expect(job.get("project_credential_id")).toBe(null);
+    expect(job.get("keychain_credential_id")).toBe(null);
+
+    // Verify toJSON() includes null fields
+    const jobJSON = job.toJSON();
+    expect(jobJSON).toMatchObject({
+      id: "new-job-1",
+      name: "New Job",
+      project_credential_id: null,
+      keychain_credential_id: null,
+    });
+  });
+});

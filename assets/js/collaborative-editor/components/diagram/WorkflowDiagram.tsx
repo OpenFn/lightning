@@ -27,6 +27,7 @@ import nodeTypes from "#/workflow-diagram/nodes";
 import type { Flow, Positions } from "#/workflow-diagram/types";
 import useConnect from "#/workflow-diagram/useConnect";
 import usePlaceholders from "#/workflow-diagram/usePlaceholders";
+import { ensureNodePosition } from "#/workflow-diagram/util/ensure-node-position";
 import fromWorkflow from "#/workflow-diagram/util/from-workflow";
 import shouldLayout from "#/workflow-diagram/util/should-layout";
 import throttle from "#/workflow-diagram/util/throttle";
@@ -298,6 +299,10 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
         chartCache.current.lastLayout
       );
 
+      // If defaulting positions for multiple nodes,
+      // try to offset them a bit
+      const positionOffsetMap: Record<string, number> = {};
+
       if (layoutId) {
         chartCache.current.lastLayout = layoutId;
         const viewBounds = {
@@ -310,12 +315,20 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
             // during manualLayout. a placeholder wouldn't have position in positions in store
             // hence use the position on the placeholder node
             const isPlaceholder = node.type === "placeholder";
-            return {
+
+            const newNode = {
               ...node,
               position: isPlaceholder
                 ? node.position
-                : workflowPositions[node.id] || { x: 0, y: 0 },
+                : workflowPositions[node.id],
             };
+            ensureNodePosition(
+              newModel,
+              { ...positions, ...workflowPositions },
+              newNode,
+              positionOffsetMap
+            );
+            return newNode;
           });
           setModel({ ...newModel, nodes: nodesWPos });
           chartCache.current.positions = workflowPositions;
@@ -333,8 +346,14 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
         // if isManualLayout, then we use values from store instead
         newModel.nodes.forEach(n => {
           if (isManualLayout && n.type !== "placeholder") {
-            n.position = workflowPositions[n.id] || { x: 0, y: 0 };
+            n.position = workflowPositions[n.id];
           }
+          ensureNodePosition(
+            newModel,
+            { ...positions, ...workflowPositions },
+            n,
+            positionOffsetMap
+          );
         });
         setModel(newModel);
       }

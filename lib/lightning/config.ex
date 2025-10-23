@@ -263,6 +263,11 @@ defmodule Lightning.Config do
       promex_config() |> Keyword.get(:metrics_endpoint_token)
     end
 
+    @impl true
+    def promex_expensive_metrics_enabled? do
+      promex_config() |> Keyword.get(:expensive_metrics_enabled)
+    end
+
     defp promex_config do
       Application.get_env(:lightning, Lightning.PromEx, [])
     end
@@ -435,6 +440,7 @@ defmodule Lightning.Config do
   @callback promex_metrics_endpoint_authorization_required?() :: boolean()
   @callback promex_metrics_endpoint_scheme() :: String.t()
   @callback promex_metrics_endpoint_token() :: String.t()
+  @callback promex_expensive_metrics_enabled?() :: boolean()
   @callback purge_deleted_after_days() :: integer()
   @callback activity_cleanup_chunk_size() :: integer()
   @callback default_ecto_database_timeout() :: integer()
@@ -653,6 +659,10 @@ defmodule Lightning.Config do
 
   def promex_metrics_endpoint_token do
     impl().promex_metrics_endpoint_token()
+  end
+
+  def promex_expensive_metrics_enabled? do
+    impl().promex_expensive_metrics_enabled?()
   end
 
   def ui_metrics_tracking_enabled? do

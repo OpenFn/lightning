@@ -656,11 +656,13 @@ defmodule Lightning.WorkOrders do
   @doc """
   Get a Work Order by id.
 
-  Optionally preload associations by passing a list of atoms to `:include`.
+  Optionally preload associations by passing a list to `:include`.
+  Supports nested preloads.
 
       Lightning.WorkOrders.get(id, include: [:runs])
+      Lightning.WorkOrders.get(id, include: [workflow: :project, runs: []])
   """
-  @spec get(Ecto.UUID.t(), [{:include, [atom()]}]) :: WorkOrder.t() | nil
+  @spec get(Ecto.UUID.t(), [{:include, list()}]) :: WorkOrder.t() | nil
   def get(id, opts \\ []) do
     preloads = opts |> Keyword.get(:include, [])
 
@@ -669,6 +671,15 @@ defmodule Lightning.WorkOrders do
       preload: ^preloads
     )
     |> Repo.one()
+  end
+
+  @doc """
+  Returns a query for work orders belonging to a specific project
+  """
+  @spec work_orders_for_project_query(Lightning.Projects.Project.t()) ::
+          Ecto.Queryable.t()
+  def work_orders_for_project_query(%Lightning.Projects.Project{} = project) do
+    Lightning.Invocation.Query.work_orders_for(project)
   end
 
   defp new_retry_run(

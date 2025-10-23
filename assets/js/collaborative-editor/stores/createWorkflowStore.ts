@@ -438,6 +438,42 @@ export const createWorkflowStore = () => {
     updateJob(id, { body });
   };
 
+  /**
+   * Update workflow properties
+   *
+   * @param updates - Partial workflow properties to update
+   *
+   * Pattern 1: Y.Doc → Observer → Immer → Notify
+   * - Updates workflowMap in Y.Doc
+   * - Observer automatically syncs to Immer state
+   */
+  const updateWorkflow = (
+    updates: Partial<
+      Omit<Session.Workflow, "id" | "lock_version" | "deleted_at">
+    >
+  ) => {
+    if (!ydoc) {
+      throw new Error("Y.Doc not connected");
+    }
+
+    const workflowMap = ydoc.getMap("workflow");
+
+    ydoc.transact(() => {
+      (
+        Object.entries(updates) as [
+          keyof typeof updates,
+          (typeof updates)[keyof typeof updates],
+        ][]
+      ).forEach(([key, value]) => {
+        if (value !== undefined) {
+          workflowMap.set(key, value);
+        }
+      });
+    });
+
+    // Observer handles the rest: Y.Doc → immer → notify
+  };
+
   const addJob = (job: Partial<Session.Job>) => {
     if (!ydoc) {
       throw new Error("Y.Doc not connected");
@@ -453,6 +489,10 @@ export const createWorkflowStore = () => {
       if (job.body) {
         jobMap.set("body", new Y.Text(job.body));
       }
+      // Initialize credential fields to null
+      jobMap.set("project_credential_id", job.project_credential_id || null);
+      jobMap.set("keychain_credential_id", job.keychain_credential_id || null);
+
       jobsArray.push([jobMap]);
     });
   };
@@ -830,6 +870,7 @@ export const createWorkflowStore = () => {
     updateJob,
     updateJobName,
     updateJobBody,
+    updateWorkflow,
     addJob,
     removeJob,
     addEdge,

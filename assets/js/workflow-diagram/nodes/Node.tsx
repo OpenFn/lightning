@@ -49,7 +49,7 @@ const Label: React.FC<LabelProps> = ({ children, hasErrors = false }) => {
   if (children && (children as any).length) {
     return (
       <p
-        className={`line-clamp-2 align-left text-m max-w-[120px] text-ellipsis overflow-hidden ${textColorClass}`}
+        className={`line-clamp-2 align-left text-m max-w-[220px] text-ellipsis overflow-hidden ${textColorClass}`}
       >
         {children}
       </p>
@@ -94,7 +94,6 @@ const Node = ({
   const startInfo = data?.startInfo as
     | { started_at: string; startBy: string }
     | undefined;
-  const isErrorRun = runData?.exit_reason !== 'success';
   // TODO: remember triggers
   const didRun = data.isRun
     ? !!runData || (!!data?.startInfo && isTriggerNode)
@@ -113,6 +112,7 @@ const Node = ({
       className={`group ${didRun ? 'opacity-100' : 'opacity-30'}`}
       data-a-node
       data-id={id}
+      data-testid={type === 'trigger' ? `trigger-node-${id}` : `job-node-${id}`}
       data-valid-drop-target={
         data.isValidDropTarget !== undefined
           ? String(data.isValidDropTarget)
@@ -311,7 +311,7 @@ const Node = ({
             }}
           />
         )}
-        <div className="flex flex-col mt-8 ml-2 absolute left-[116px] top-0 pointer-events-none min-w-[275px]">
+        <div className="flex flex-col mt-8 absolute left-[116px] top-0 pointer-events-none min-w-[275px]">
           <Label hasErrors={hasErrors(errors)}>{label}</Label>
           <SubLabel>{sublabel}</SubLabel>
           {data.isActiveDropTarget &&

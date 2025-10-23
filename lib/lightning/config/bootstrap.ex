@@ -577,6 +577,8 @@ defmodule Lightning.Config.Bootstrap do
       disabled: not env!("PROMEX_ENABLED", &Utils.ensure_boolean/1, false),
       manual_metrics_start_delay: :no_delay,
       drop_metrics_groups: [],
+      expensive_metrics_enabled:
+        env!("PROMEX_EXPENSIVE_METRICS_ENABLED", &Utils.ensure_boolean/1, false),
       grafana: [
         host: env!("PROMEX_GRAFANA_HOST", :string, ""),
         username: env!("PROMEX_GRAFANA_USER", :string, ""),
@@ -612,7 +614,7 @@ defmodule Lightning.Config.Bootstrap do
       run_queue_metrics_period_seconds:
         env!("METRICS_RUN_QUEUE_METRICS_PERIOD_SECONDS", :integer, 5),
       unclaimed_run_threshold_seconds:
-        env!("METRICS_UNCLAIMED_RUN_THRESHOLD_SECONDS", :integer, 300)
+        env!("METRICS_UNCLAIMED_RUN_THRESHOLD_SECONDS", :integer, 10)
 
     config :lightning,
            :per_workflow_claim_limit,

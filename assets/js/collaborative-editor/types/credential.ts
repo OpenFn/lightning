@@ -8,7 +8,6 @@ export const CredentialSchema = z.object({
   project_credential_id: uuidSchema,
   name: z.string(),
   external_id: z.string(),
-  production: z.boolean(),
   schema: z.string(),
   inserted_at: isoDateTimeSchema,
   updated_at: isoDateTimeSchema,

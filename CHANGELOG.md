@@ -19,20 +19,65 @@ and this project adheres to
 
 - Ability to delay webhook trigger replies until a workflow finishes
   [#PR3785](https://github.com/OpenFn/lightning/pull/3785)
+- REST API for runs, work_orders, and log_lines to refresh GovStack compliance
+  [#1656](https://github.com/OpenFn/lightning/issues/1656) &
+  [PR#3786](https://github.com/OpenFn/lightning/pull/3786)
+- Added full-screen IDE for job editing
+  [#3708](https://github.com/OpenFn/lightning/issues/3708)
+- Show collaborative editor toggle (beaker icon) when creating new workflows
+  [#3797](https://github.com/OpenFn/lightning/pull/3797)
+- Auto-format code on commit with git hooks
+  [#3806](https://github.com/OpenFn/lightning/pull/3806)
+- Escape key support for closing inspector panels in collaborative workflow
+  editor, using react-hotkeys-hook for scoped keyboard shortcuts with modal
+  priority [#3768](https://github.com/OpenFn/lightning/issues/3768)
+
+### Changed
+
+- Removed Cancel button from inspector panel footers (redundant with X button
+  and Escape key) [#3768](https://github.com/OpenFn/lightning/issues/3768)
+- Refactored inspector component architecture to use composition pattern with
+  reusable layout shell and pure form components
+  [#3768](https://github.com/OpenFn/lightning/issues/3768)
+
+### Fixed
+
+## [2.14.12] - 2025-10-21
+
+## [2.14.12-pre1] - 2025-10-21
+
+### Fixed
+
+- Ensure default positions when using the Workflow Assistant with manual
+  positioning enabled [#3795](https://github.com/OpenFn/lightning/issues/3795)
+
+## [2.14.12-pre] - 2025-10-21
+
+### Added
+
 - Editable EdgeInspector form in collaborative workflow editor with TanStack
   Form, enabling users to configure edge properties (label, condition type, JS
   expressions, enabled state) with auto-save and real-time collaborative editing
   [#3701](https://github.com/OpenFn/lightning/issues/3701)
 - Delete nodes from Job panel in Collaborative Editor
   [#3702](https://github.com/OpenFn/lightning/issues/3702)
+- Reintroduce the impeded project with hopefully better performance
+  characteristics [#3542](https://github.com/OpenFn/lightning/issues/3542)
 
 ### Changed
 
+- Tweaked the Sandbox color palette
 - Detect and clean stale CMake caches in bootstrap script
   [PR#3762](https://github.com/OpenFn/lightning/pull/3762)
+- Implement workflow settings form using tanstack form
+  [#3643](https://github.com/OpenFn/lightning/issues/3643)
+- [#3774](https://github.com/OpenFn/lightning/pull/3774)Adjusted padding of
+  labels in the Workflow Diagram.
 
 ### Fixed
 
+- Jobs in collaborative editor can now be saved without selecting a credential
+  [#3760](https://github.com/OpenFn/lightning/issues/3760)
 - Runtime permission checks in WorkflowChannel save/reset operations to prevent
   unauthorized edits when user roles change during active collaboration sessions
   [#3749](https://github.com/OpenFn/lightning/issues/3749)
