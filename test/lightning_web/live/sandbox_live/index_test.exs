@@ -1092,10 +1092,11 @@ defmodule LightningWeb.SandboxLive.IndexTest do
       Mimic.expect(
         Lightning.Projects.Provisioner,
         :import_document,
-        fn target, actor, yaml ->
+        fn target, actor, yaml, opts ->
           assert target.id == root.id
           assert actor.id == user.id
           assert yaml == "merged_yaml"
+          assert opts[:allow_stale] == true
           {:ok, target}
         end
       )
@@ -1139,7 +1140,7 @@ defmodule LightningWeb.SandboxLive.IndexTest do
       Mimic.expect(
         Lightning.Projects.Provisioner,
         :import_document,
-        fn _target, _actor, _yaml ->
+        fn _target, _actor, _yaml, _opts ->
           {:error, :import_failed}
         end
       )
@@ -1320,7 +1321,8 @@ defmodule LightningWeb.SandboxLive.IndexTest do
 
       Mimic.expect(Lightning.Projects.Provisioner, :import_document, fn _target,
                                                                         _actor,
-                                                                        _yaml ->
+                                                                        _yaml,
+                                                                        _opts ->
         {:ok, root}
       end)
 
@@ -1366,7 +1368,8 @@ defmodule LightningWeb.SandboxLive.IndexTest do
 
       Mimic.expect(Lightning.Projects.Provisioner, :import_document, fn _target,
                                                                         _actor,
-                                                                        _yaml ->
+                                                                        _yaml,
+                                                                        _opts ->
         {:error, changeset}
       end)
 
@@ -1400,7 +1403,8 @@ defmodule LightningWeb.SandboxLive.IndexTest do
 
       Mimic.expect(Lightning.Projects.Provisioner, :import_document, fn _target,
                                                                         _actor,
-                                                                        _yaml ->
+                                                                        _yaml,
+                                                                        _opts ->
         {:error, %{text: "Custom import error message"}}
       end)
 
@@ -1434,7 +1438,8 @@ defmodule LightningWeb.SandboxLive.IndexTest do
 
       Mimic.expect(Lightning.Projects.Provisioner, :import_document, fn _target,
                                                                         _actor,
-                                                                        _yaml ->
+                                                                        _yaml,
+                                                                        _opts ->
         {:error, {:unexpected, "something went wrong"}}
       end)
 
@@ -1631,7 +1636,7 @@ defmodule LightningWeb.SandboxLive.IndexTest do
       Mimic.expect(
         Lightning.Projects.Provisioner,
         :import_document,
-        fn _target, _actor, _yaml -> {:ok, parent} end
+        fn _target, _actor, _yaml, _opts -> {:ok, parent} end
       )
 
       Mimic.expect(
