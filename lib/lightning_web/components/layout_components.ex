@@ -134,7 +134,6 @@ defmodule LightningWeb.LayoutComponents do
                   <:label>Projects</:label>
                 </.breadcrumb>
 
-                <%!-- If this is a sandbox (has parent_id), show parent first --%>
                 <%= if @project.parent_id do %>
                   <%= if Ecto.assoc_loaded?(@project.parent) do %>
                     <.breadcrumb path={"/projects/#{@project.parent.id}/w"}>
@@ -145,7 +144,6 @@ defmodule LightningWeb.LayoutComponents do
                     <:label>{@project.name}</:label>
                   </.breadcrumb>
                 <% else %>
-                  <%!-- Regular project (not a sandbox) --%>
                   <.breadcrumb path={"/projects/#{@project.id}/w"}>
                     <:label>{@project.name}</:label>
                   </.breadcrumb>
