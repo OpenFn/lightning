@@ -42,6 +42,9 @@ and this project adheres to
 
 ### Fixed
 
+- Backfilled `env` field for existing root projects to ensure environment chips
+  display correctly in workflow editor and inspector
+
 ## [2.14.12] - 2025-10-21
 
 ## [2.14.12-pre1] - 2025-10-21
