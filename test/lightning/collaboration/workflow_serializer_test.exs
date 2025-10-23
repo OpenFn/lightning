@@ -566,6 +566,46 @@ defmodule Lightning.Collaboration.WorkflowSerializerTest do
       assert Map.has_key?(extracted, "concurrency")
       assert extracted["concurrency"] == 5
     end
+
+    test "handles concurrency field with integer value directly" do
+      workflow =
+        insert(:workflow, name: "Test Workflow", concurrency: 10)
+        |> preload_workflow_associations()
+
+      doc = Yex.Doc.new()
+
+      # Serialize
+      WorkflowSerializer.serialize_to_ydoc(doc, workflow)
+
+      # Manually set it as an integer (edge case)
+      workflow_map = Yex.Doc.get_map(doc, "workflow")
+      Yex.Map.set(workflow_map, "concurrency", 15)
+
+      # Deserialize - should handle integer directly
+      extracted = WorkflowSerializer.deserialize_from_ydoc(doc, workflow.id)
+
+      assert extracted["concurrency"] == 15
+      assert is_integer(extracted["concurrency"])
+    end
+
+    test "handles missing concurrency field with nil default" do
+      workflow =
+        insert(:workflow, name: "Test Workflow")
+        |> preload_workflow_associations()
+
+      doc = Yex.Doc.new()
+
+      WorkflowSerializer.serialize_to_ydoc(doc, workflow)
+
+      # Remove the field to simulate legacy Y.Doc without concurrency
+      workflow_map = Yex.Doc.get_map(doc, "workflow")
+      Yex.Map.delete(workflow_map, "concurrency")
+
+      extracted = WorkflowSerializer.deserialize_from_ydoc(doc, workflow.id)
+
+      # Should return nil when field is missing
+      assert is_nil(extracted["concurrency"])
+    end
   end
 
   describe "enable_job_logs field" do
