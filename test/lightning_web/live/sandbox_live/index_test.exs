@@ -1671,5 +1671,145 @@ defmodule LightningWeb.SandboxLive.IndexTest do
 
       assert html =~ "Invalid merge request"
     end
+
+    test "checks for divergence when opening merge modal with default target", %{
+      conn: conn,
+      parent: parent,
+      sandbox: sandbox
+    } do
+      # Create a workflow in parent with a version
+      parent_workflow = insert(:workflow, project: parent, name: "Test Workflow")
+
+      insert(:workflow_version,
+        workflow: parent_workflow,
+        hash: "parent_hash",
+        source: "app"
+      )
+
+      # Create matching workflow in sandbox with different version
+      sandbox_workflow =
+        insert(:workflow, project: sandbox, name: "Test Workflow")
+
+      insert(:workflow_version,
+        workflow: sandbox_workflow,
+        hash: "sandbox_hash",
+        source: "app"
+      )
+
+      {:ok, view, _} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
+
+      # Open merge modal - this should trigger divergence check
+      view
+      |> element("#branch-rewire-sandbox-#{sandbox.id} button")
+      |> render_click()
+
+      # Should show divergence warning
+      assert view
+             |> element("#merge-divergence-alert")
+             |> has_element?()
+    end
+  end
+
+  describe "Edge cases for divergence and nil handling" do
+    test "handles nil target_id in select-merge-target", %{conn: conn} do
+      owner = insert(:user)
+
+      root =
+        insert(:project, project_users: [%{user: owner, role: :owner}])
+
+      child1 =
+        insert(:project,
+          parent: root,
+          project_users: [%{user: owner, role: :owner}]
+        )
+
+      conn = log_in_user(conn, owner)
+
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{root.id}/sandboxes")
+
+      # Open merge modal
+      view
+      |> element("#branch-rewire-sandbox-#{child1.id} button")
+      |> render_click()
+
+      # Select empty/nil target (covers line 253 else branch)
+      render_click(view, "select-merge-target", %{
+        "merge" => %{"target_id" => ""}
+      })
+
+      # Should not crash - the has_diverged will be false for nil target
+      assigns = :sys.get_state(view.pid).socket.assigns
+      refute assigns.merge_has_diverged
+    end
+
+    test "displays MAIN when selected target not found in options", %{conn: conn} do
+      # This tests the nil -> "MAIN" fallback in get_selected_target_label
+      # which covers line 675 in components.ex
+      owner = insert(:user)
+
+      root =
+        insert(:project, project_users: [%{user: owner, role: :owner}])
+
+      child1 =
+        insert(:project,
+          parent: root,
+          project_users: [%{user: owner, role: :owner}]
+        )
+
+      _child2 =
+        insert(:project,
+          parent: root,
+          project_users: [%{user: owner, role: :owner}]
+        )
+
+      conn = log_in_user(conn, owner)
+
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{root.id}/sandboxes")
+
+      # Open merge modal for child1
+      view
+      |> element("#branch-rewire-sandbox-#{child1.id} button")
+      |> render_click()
+
+      # Select an invalid target ID that doesn't match any option
+      # This will trigger the nil case in get_selected_target_label (line 675)
+      invalid_id = Ecto.UUID.generate()
+
+      render_click(view, "select-merge-target", %{
+        "merge" => %{"target_id" => invalid_id}
+      })
+
+      # The modal should still render without crashing
+      # and the label should fall back to "MAIN"
+      html = render(view)
+      assert html =~ "MAIN"
+    end
+
+    test "has_environment? handles project without env field", %{conn: conn} do
+      # This tests line 671 in components.ex (the catch-all clause)
+      # By passing a map that doesn't have an env field at all
+      owner = insert(:user)
+
+      # Create a project with env explicitly set to an integer
+      # or use a map without env field
+      root =
+        insert(:project,
+          project_users: [%{user: owner, role: :owner}],
+          env: ""
+        )
+
+      conn = log_in_user(conn, owner)
+
+      {:ok, view, html} =
+        live(conn, ~p"/projects/#{root.id}/sandboxes")
+
+      # With empty string env, it should show "main" badge
+      assert html =~ "main"
+
+      # The root project card should render successfully
+      assert has_element?(view, "#env-badge-#{root.id}")
+    end
   end
 end

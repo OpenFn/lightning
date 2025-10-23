@@ -1707,6 +1707,40 @@ defmodule Lightning.Projects.MergeProjectsTest do
       assert find_edge_by_names(result, "webhook", "y")["id"] ==
                find_edge_by_names(target, "webhook", "b")["id"]
     end
+
+    test "handles source workflow with trigger that has no match in target" do
+      # Source has cron trigger, target has only webhook trigger
+      # This tests the else branch in map_triggers where matched_target is nil
+      source_workflow =
+        build(:workflow,
+          triggers: [
+            build(:trigger, type: :cron, cron_expression: "0 0 * * *")
+          ],
+          jobs: [],
+          edges: []
+        )
+
+      target_workflow =
+        build(:workflow,
+          triggers: [
+            build(:trigger, type: :webhook)
+          ],
+          jobs: [],
+          edges: []
+        )
+
+      result = MergeProjects.merge_workflow(source_workflow, target_workflow)
+
+      # Source cron trigger should be present (with generated ID)
+      # This trigger had no match in target (else branch in map_triggers)
+      cron_trigger =
+        Enum.find(result["triggers"], fn t -> t["type"] == :cron end)
+
+      assert cron_trigger
+      assert cron_trigger["id"]
+      # Should not be deleted
+      refute Map.get(cron_trigger, "delete")
+    end
   end
 
   describe "merge_workflow/2 - merge attributes" do
@@ -2484,6 +2518,303 @@ defmodule Lightning.Projects.MergeProjectsTest do
 
       # No divergence since versions match
       refute MergeProjects.has_diverged?(source_project, target_project)
+    end
+
+    test "returns false when target has a workflow not in sandbox" do
+      target_project = insert(:project)
+
+      target_workflow =
+        insert(:workflow, project: target_project, name: "Workflow 1")
+
+      insert(:workflow_version,
+        workflow: target_workflow,
+        hash: "abc123",
+        source: "app"
+      )
+
+      # Create sandbox WITHOUT this workflow
+      source_project = insert(:project, parent_id: target_project.id)
+
+      # No matching workflow in sandbox, so nil case is triggered
+      # This should return false (not a divergence)
+      refute MergeProjects.has_diverged?(source_project, target_project)
+    end
+
+    test "returns false when sandbox has empty workflows list" do
+      target_project = insert(:project)
+      source_project = insert(:project, parent_id: target_project.id)
+
+      # Both projects have no workflows
+      refute MergeProjects.has_diverged?(source_project, target_project)
+    end
+
+    test "returns false when workflows have no versions" do
+      target_project = insert(:project)
+      source_project = insert(:project, parent_id: target_project.id)
+
+      # Create workflows without any workflow versions
+      insert(:workflow, project: target_project, name: "Workflow 1")
+      insert(:workflow, project: source_project, name: "Workflow 1")
+
+      # No versions exist, so no divergence can be detected
+      refute MergeProjects.has_diverged?(source_project, target_project)
+    end
+  end
+
+  describe "merge_workflow/2 - edge case with multiple candidates and body matching" do
+    test "uses body matching when multiple structural candidates exist" do
+      # Create a scenario where multiple target jobs could match structurally
+      # but only one matches by body content
+
+      source_trigger = build(:trigger, type: :webhook)
+
+      source_job_a =
+        build(:job, name: "job_a", body: "console.log('specific code');")
+
+      source_job_b =
+        build(:job, name: "job_b", body: "console.log('different code');")
+
+      source =
+        build(:workflow)
+        |> with_trigger(source_trigger)
+        |> with_job(source_job_a)
+        |> with_job(source_job_b)
+        |> with_edge({source_trigger, source_job_a})
+        |> with_edge({source_trigger, source_job_b})
+        |> insert()
+
+      target_trigger = build(:trigger, type: :webhook)
+      # Both target jobs have same parent, creating ambiguity
+      target_job_x =
+        build(:job, name: "job_x", body: "console.log('other code');")
+
+      target_job_y =
+        build(:job, name: "job_y", body: "console.log('specific code');")
+
+      target =
+        build(:workflow)
+        |> with_trigger(target_trigger)
+        |> with_job(target_job_x)
+        |> with_job(target_job_y)
+        |> with_edge({target_trigger, target_job_x})
+        |> with_edge({target_trigger, target_job_y})
+        |> insert()
+
+      result = MergeProjects.merge_workflow(source, target)
+
+      # job_a should map to job_y because of body match
+      result_job_a = Enum.find(result["jobs"], &(&1["name"] == "job_a"))
+      assert result_job_a["id"] == target_job_y.id
+
+      # job_b should map to job_x (the remaining one)
+      result_job_b = Enum.find(result["jobs"], &(&1["name"] == "job_b"))
+      assert result_job_b["id"] == target_job_x.id
+    end
+
+    test "handles max iterations guard in structural matching" do
+      # Test that iterative matching eventually converges or hits the max iteration limit
+      # This creates a complex structure with many jobs to test the iteration logic
+
+      source_trigger = build(:trigger, type: :webhook)
+
+      # Create 10 jobs with same body to force multiple iterations of matching
+      source_jobs =
+        for i <- 1..10 do
+          build(:job, name: "job_#{i}", body: "fn(state => state)")
+        end
+
+      source_workflow_builder =
+        Enum.reduce(
+          source_jobs,
+          build(:workflow) |> with_trigger(source_trigger),
+          fn job, workflow ->
+            with_job(workflow, job)
+          end
+        )
+
+      source_workflow_builder =
+        with_edge(source_workflow_builder, {source_trigger, hd(source_jobs)})
+
+      source =
+        source_workflow_builder
+        |> insert()
+
+      target_trigger = build(:trigger, type: :webhook)
+
+      target_jobs =
+        for i <- 1..10 do
+          build(:job, name: "target_job_#{i}", body: "fn(state => state)")
+        end
+
+      target_workflow_builder =
+        Enum.reduce(
+          target_jobs,
+          build(:workflow) |> with_trigger(target_trigger),
+          fn job, workflow ->
+            with_job(workflow, job)
+          end
+        )
+
+      target_workflow_builder =
+        with_edge(target_workflow_builder, {target_trigger, hd(target_jobs)})
+
+      target =
+        target_workflow_builder
+        |> insert()
+
+      result = MergeProjects.merge_workflow(source, target)
+
+      # Should complete without errors, even with many jobs
+      # Result includes both mapped source jobs and deleted target jobs (10 + 10 - 1)
+      # since only the first job from each gets matched by the trigger edge
+      assert length(result["jobs"]) == 19
+      # One target job gets mapped, the rest (9) get marked for deletion
+      # Plus 10 source jobs (with new IDs for 9 of them, 1 mapped)
+      deleted_jobs = Enum.filter(result["jobs"], & &1["delete"])
+      assert length(deleted_jobs) == 9
+    end
+
+    test "handles source trigger with no matching target trigger type" do
+      # Test when source has a trigger type that doesn't exist in target
+      # This covers line 117 (else branch when matched_target is nil)
+
+      source_trigger_webhook = build(:trigger, type: :webhook)
+
+      source_trigger_cron =
+        build(:trigger, type: :cron, cron_expression: "0 * * * *")
+
+      source_job = build(:job, name: "job_a")
+
+      source =
+        build(:workflow)
+        |> with_trigger(source_trigger_webhook)
+        |> with_trigger(source_trigger_cron)
+        |> with_job(source_job)
+        |> with_edge({source_trigger_webhook, source_job})
+        |> insert()
+
+      # Target only has webhook trigger, no cron
+      target_trigger = build(:trigger, type: :webhook)
+      target_job = build(:job, name: "job_x")
+
+      target =
+        build(:workflow)
+        |> with_trigger(target_trigger)
+        |> with_job(target_job)
+        |> with_edge({target_trigger, target_job})
+        |> insert()
+
+      result = MergeProjects.merge_workflow(source, target)
+
+      # Should have 2 triggers (webhook maps to target, cron gets new ID)
+      assert length(result["triggers"]) == 2
+
+      # Webhook trigger should map to target
+      webhook_trigger = Enum.find(result["triggers"], &(&1["type"] == :webhook))
+      assert webhook_trigger["id"] == target_trigger.id
+
+      # Cron trigger should get a new ID (not mapped)
+      cron_trigger = Enum.find(result["triggers"], &(&1["type"] == :cron))
+      assert cron_trigger["id"] != source_trigger_cron.id
+      refute cron_trigger["delete"]
+    end
+
+    test "handles multiple candidates with identical bodies in non-final iteration" do
+      # Test case where multiple target jobs match structurally AND have same body
+      # This covers line 279 (_other -> acc) when there are multiple body matches
+      # but we're not in the last iteration
+
+      source_trigger = build(:trigger, type: :webhook)
+      # Three source jobs with same body
+      source_job_a = build(:job, name: "job_a", body: "fn(state => state)")
+      source_job_b = build(:job, name: "job_b", body: "fn(state => state)")
+      source_job_c = build(:job, name: "job_c", body: "fn(state => state)")
+
+      source =
+        build(:workflow)
+        |> with_trigger(source_trigger)
+        |> with_job(source_job_a)
+        |> with_job(source_job_b)
+        |> with_job(source_job_c)
+        |> with_edge({source_trigger, source_job_a})
+        |> with_edge({source_trigger, source_job_b})
+        |> with_edge({source_trigger, source_job_c})
+        |> insert()
+
+      target_trigger = build(:trigger, type: :webhook)
+      # Three target jobs with same body (creates ambiguity)
+      target_job_x = build(:job, name: "job_x", body: "fn(state => state)")
+      target_job_y = build(:job, name: "job_y", body: "fn(state => state)")
+      target_job_z = build(:job, name: "job_z", body: "fn(state => state)")
+
+      target =
+        build(:workflow)
+        |> with_trigger(target_trigger)
+        |> with_job(target_job_x)
+        |> with_job(target_job_y)
+        |> with_job(target_job_z)
+        |> with_edge({target_trigger, target_job_x})
+        |> with_edge({target_trigger, target_job_y})
+        |> with_edge({target_trigger, target_job_z})
+        |> insert()
+
+      result = MergeProjects.merge_workflow(source, target)
+
+      # All jobs should be mapped (even with ambiguity)
+      # Algorithm will eventually map them all in final iteration
+      source_jobs = Enum.filter(result["jobs"], &(!&1["delete"]))
+      assert length(source_jobs) == 3
+    end
+
+    test "exercises iteration boundary conditions" do
+      # Create a chain of jobs where each iteration can only map one job
+      # This helps exercise the iteration logic including boundary cases
+
+      source_trigger = build(:trigger, type: :webhook)
+
+      # Create a linear chain: trigger -> a -> b -> c
+      source_job_a = build(:job, name: "a", body: "code_a")
+      source_job_b = build(:job, name: "b", body: "code_b")
+      source_job_c = build(:job, name: "c", body: "code_c")
+
+      source =
+        build(:workflow)
+        |> with_trigger(source_trigger)
+        |> with_job(source_job_a)
+        |> with_job(source_job_b)
+        |> with_job(source_job_c)
+        |> with_edge({source_trigger, source_job_a})
+        |> with_edge({source_job_a, source_job_b})
+        |> with_edge({source_job_b, source_job_c})
+        |> insert()
+
+      target_trigger = build(:trigger, type: :webhook)
+
+      # Same structure but different names
+      target_job_x = build(:job, name: "x", body: "other_code")
+      target_job_y = build(:job, name: "y", body: "other_code")
+      target_job_z = build(:job, name: "z", body: "other_code")
+
+      target =
+        build(:workflow)
+        |> with_trigger(target_trigger)
+        |> with_job(target_job_x)
+        |> with_job(target_job_y)
+        |> with_job(target_job_z)
+        |> with_edge({target_trigger, target_job_x})
+        |> with_edge({target_job_x, target_job_y})
+        |> with_edge({target_job_y, target_job_z})
+        |> insert()
+
+      result = MergeProjects.merge_workflow(source, target)
+
+      # Jobs should map based on structure (positions in chain)
+      result_jobs = Enum.reject(result["jobs"], & &1["delete"])
+      assert length(result_jobs) == 3
+
+      # First job in chain should map (has trigger as parent)
+      result_a = Enum.find(result_jobs, &(&1["name"] == "a"))
+      assert result_a["id"] == target_job_x.id
     end
   end
 end
