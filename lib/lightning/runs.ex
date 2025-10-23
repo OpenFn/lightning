@@ -351,6 +351,24 @@ defmodule Lightning.Runs do
 
   defdelegate subscribe(run), to: Events
 
+  @doc """
+  Returns a query for runs belonging to a specific project
+  """
+  @spec runs_for_project_query(Lightning.Projects.Project.t()) ::
+          Ecto.Queryable.t()
+  def runs_for_project_query(%Lightning.Projects.Project{} = project) do
+    Lightning.Invocation.Query.runs_for(project)
+  end
+
+  @doc """
+  Returns a query for runs accessible to a user
+  """
+  @spec runs_for_user_query(Lightning.Accounts.User.t()) ::
+          Ecto.Queryable.t()
+  def runs_for_user_query(%Lightning.Accounts.User{} = user) do
+    Lightning.Invocation.Query.runs_for(user)
+  end
+
   @spec get_project_id_for_run(Run.t()) :: Ecto.UUID.t() | nil
   def get_project_id_for_run(run) do
     Ecto.assoc(run, [:work_order, :workflow, :project])

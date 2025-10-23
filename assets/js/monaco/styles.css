@@ -14,19 +14,10 @@
   src: url(codicon.ttf) format('truetype');
 }
 
-/* Fixes for curved borders (what a pain!)*/
+/* Background fix for transparent editor */
 .monaco-editor,
 .monaco-editor .overflow-guard {
   background-color: transparent !important;
-  @apply rounded-md;
-}
-.monaco-editor .margin {
-  @apply rounded-l-md;
-}
-.monaco-editor .monaco-scrollable-element {
-  @apply rounded-r-md;
-  border-top-right-radius: 0.375rem;
-  border-bottom-right-radius: 0.375rem;
 }
 
 /* Fix ugly right border */

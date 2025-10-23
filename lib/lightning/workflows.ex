@@ -417,6 +417,15 @@ defmodule Lightning.Workflows do
     from w in query, order_by: [asc: w.name]
   end
 
+  @doc """
+  Returns a query for workflows accessible to a user
+  """
+  @spec workflows_for_user_query(Lightning.Accounts.User.t()) ::
+          Ecto.Queryable.t()
+  def workflows_for_user_query(%Lightning.Accounts.User{} = user) do
+    Query.workflows_for(user)
+  end
+
   @spec to_project_space([Workflow.t()]) :: %{}
   def to_project_space(workflows) when is_list(workflows) do
     %{

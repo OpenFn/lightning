@@ -1,7 +1,8 @@
 import { useMemo } from "react";
 
-import { useFieldContext } from ".";
 import { FormField } from "./form-field";
+
+import { useFieldContext } from ".";
 
 interface SelectOption {
   value: string;

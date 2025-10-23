@@ -1,11 +1,9 @@
-defmodule LightningWeb.API.RunJSON do
+defmodule LightningWeb.API.LogLinesJSON do
   @moduledoc false
 
   import LightningWeb.API.Helpers
 
-  alias LightningWeb.Router.Helpers, as: Routes
-
-  @fields ~w(state started_at finished_at priority error_type)a
+  @fields ~w(source level message timestamp step_id run_id)a
 
   def render("index.json", %{page: page, conn: conn}) do
     %{
@@ -25,23 +23,11 @@ defmodule LightningWeb.API.RunJSON do
     }
   end
 
-  def render("show.json", %{run: run, conn: conn}) do
+  defp resource(_conn, log_line) do
     %{
-      data: resource(conn, run),
-      included: [],
-      links: %{
-        self: url_for(conn)
-      }
-    }
-  end
-
-  defp resource(conn, run) do
-    %{
-      type: "runs",
-      relationships: %{},
-      links: %{self: Routes.api_run_url(conn, :show, run)},
-      id: run.id,
-      attributes: Map.take(run, @fields)
+      type: "log_lines",
+      id: log_line.id,
+      attributes: Map.take(log_line, @fields)
     }
   end
 end

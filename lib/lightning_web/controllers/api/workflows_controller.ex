@@ -34,6 +34,15 @@ defmodule LightningWeb.API.WorkflowsController do
     |> then(&maybe_handle_error(conn, &1))
   end
 
+  def index(conn, _params) do
+    list =
+      Workflows.workflows_for_user_query(conn.assigns.current_resource)
+      |> Repo.all()
+      |> Repo.preload([:edges, :jobs, :triggers])
+
+    json(conn, %{workflows: list, errors: %{}})
+  end
+
   def create(conn, %{"project_id" => project_id} = params) do
     with :ok <- validate_project_id(conn.body_params, project_id),
          :ok <- authorize_write(conn, project_id),
@@ -53,6 +62,21 @@ defmodule LightningWeb.API.WorkflowsController do
       json(conn, %{workflow: workflow, errors: %{}})
     end
     |> then(&maybe_handle_error(conn, &1))
+  end
+
+  def show(conn, %{"id" => workflow_id}) do
+    with :ok <- validate_uuid(workflow_id),
+         workflow when not is_nil(workflow) <-
+           Workflows.get_workflow(workflow_id,
+             include: [:edges, :jobs, :triggers]
+           ),
+         :ok <- authorize_read_workflow(conn, workflow) do
+      json(conn, %{workflow: workflow, errors: %{}})
+    else
+      nil -> {:error, :not_found}
+      error -> error
+    end
+    |> then(&maybe_handle_error(conn, &1, workflow_id))
   end
 
   def update(conn, %{"project_id" => project_id, "id" => workflow_id} = params) do
@@ -287,6 +311,10 @@ defmodule LightningWeb.API.WorkflowsController do
 
   defp authorize_read(conn, project_id) do
     authorize_for_project(conn, project_id, :access_read)
+  end
+
+  defp authorize_read_workflow(conn, %Workflow{project_id: project_id}) do
+    authorize_read(conn, project_id)
   end
 
   defp authorize_for_project(conn, project_id, access) do

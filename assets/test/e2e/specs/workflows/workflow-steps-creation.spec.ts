@@ -133,9 +133,7 @@ test.describe("US-022: Workflow Steps - Add and Configure", () => {
     );
   });
 
-  test("Save job without credential in LiveView editor", async ({
-    page,
-  }) => {
+  test("Save job without credential in LiveView editor", async ({ page }) => {
     const workflowsPage = new WorkflowsPage(page);
     const workflowEdit = new WorkflowEditPage(page);
 
@@ -152,7 +150,9 @@ test.describe("US-022: Workflow Steps - Add and Configure", () => {
 
     await expect(workflowEdit.jobForm(0).workflowForm).toBeAttached();
 
-    await workflowEdit.jobForm(0).adaptorSelect.selectOption("@openfn/language-http");
+    await workflowEdit
+      .jobForm(0)
+      .adaptorSelect.selectOption("@openfn/language-http");
     await workflowEdit.jobForm(0).nameInput.fill("HTTP Request No Cred");
 
     // Verify credential dropdown is empty
@@ -167,9 +167,7 @@ test.describe("US-022: Workflow Steps - Add and Configure", () => {
     await workflowEdit.expectFlashMessage("Workflow saved successfully.");
   });
 
-  test("Save job with credential in LiveView editor", async ({
-    page,
-  }) => {
+  test("Save job with credential in LiveView editor", async ({ page }) => {
     const workflowsPage = new WorkflowsPage(page);
     const workflowEdit = new WorkflowEditPage(page);
 
@@ -183,7 +181,9 @@ test.describe("US-022: Workflow Steps - Add and Configure", () => {
     await workflowEdit.diagram.nodes.clickJobByIndex(0);
     await expect(workflowEdit.jobForm(0).workflowForm).toBeAttached();
 
-    await workflowEdit.jobForm(0).adaptorSelect.selectOption("@openfn/language-http");
+    await workflowEdit
+      .jobForm(0)
+      .adaptorSelect.selectOption("@openfn/language-http");
     await workflowEdit.jobForm(0).nameInput.fill("HTTP Request With Cred");
 
     // Select first available credential
