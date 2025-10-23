@@ -296,9 +296,7 @@ defmodule LightningWeb.SandboxLive.FormComponent do
     name = Changeset.get_field(changeset, :name)
     id = Changeset.get_field(changeset, :id)
 
-    # Only validate for sandboxes (projects with parent_id)
     if parent_id && name do
-      # Check if another sandbox with the same name exists for this parent
       if Projects.sandbox_name_exists?(parent_id, name, id) do
         Changeset.add_error(
           changeset,

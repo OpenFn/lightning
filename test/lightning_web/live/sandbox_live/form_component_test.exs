@@ -84,7 +84,6 @@ defmodule LightningWeb.SandboxLive.FormComponentTest do
       parent: parent,
       user: user
     } do
-      # Create an existing sandbox with the name "test-sandbox"
       insert(:sandbox,
         parent: parent,
         name: "test-sandbox",
@@ -271,7 +270,6 @@ defmodule LightningWeb.SandboxLive.FormComponentTest do
       sb: sb,
       user: user
     } do
-      # Create another sandbox that will conflict
       insert(:sandbox,
         parent: parent,
         name: "existing-name",
