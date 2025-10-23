@@ -571,7 +571,7 @@
                           data-placement="top"
                           aria-label={search_field.label}
                         >
-                          <div class={"#{if(index == 0, do: "rounded-l-md", else: "-ml-px")} #{if(index == 2, do: "rounded-r-md")}
+                          <div class={"#{if(index == 0, do: "rounded-l-md", else: "-ml-px")} #{if(index == Enum.count(@search_fields) - 1, do: "rounded-r-md")}
                            ring-1 ring-inset ring-gray-300 px-3 py-2 text-sm
                            font-semibold text-gray-500 hover:bg-gray-100 focus:z-10
                            #{if(checked?(@filters_changeset, search_field.id), do: "bg-gray-200", else: "bg-white")}
