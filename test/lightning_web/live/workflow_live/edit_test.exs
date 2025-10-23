@@ -5064,6 +5064,57 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       refute html =~ "You are currently working in the sandbox"
       refute html =~ "Switch to"
     end
+
+    test "shows env chip on canvas when project has env", %{conn: conn} do
+      user = insert(:user)
+
+      project =
+        insert(:project,
+          name: "Production Project",
+          env: "production",
+          project_users: [%{user_id: user.id, role: :owner}]
+        )
+
+      workflow = workflow_fixture(project_id: project.id)
+
+      conn = log_in_user(conn, user)
+
+      {:ok, _view, html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/w/#{workflow.id}?v=#{workflow.lock_version}"
+        )
+
+      assert html =~ "canvas-project-env"
+      assert html =~ "production"
+      assert html =~ "Project environment is production"
+    end
+
+    test "shows env chip in inspector when project has env", %{conn: conn} do
+      user = insert(:user)
+
+      project =
+        insert(:project,
+          name: "Production Project",
+          env: "staging",
+          project_users: [%{user_id: user.id, role: :owner}]
+        )
+
+      workflow = workflow_fixture(project_id: project.id)
+      job = insert(:job, workflow: workflow, name: "test-job")
+
+      conn = log_in_user(conn, user)
+
+      {:ok, _view, html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/w/#{workflow.id}?s=#{job.id}&m=expand&v=#{workflow.lock_version}"
+        )
+
+      assert html =~ "inspector-project-env"
+      assert html =~ "staging"
+      assert html =~ "Project environment is staging"
+    end
   end
 
   defp stub_apollo_unavailable(_context) do
