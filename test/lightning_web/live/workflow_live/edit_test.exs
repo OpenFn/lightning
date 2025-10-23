@@ -4932,19 +4932,21 @@ defmodule LightningWeb.WorkflowLive.EditTest do
         )
 
       workflow = workflow_fixture(project_id: sandbox.id)
+      job = insert(:job, workflow: workflow, name: "test-job")
 
       conn = log_in_user(conn, user)
 
       {:ok, _view, html} =
         live(
           conn,
-          ~p"/projects/#{sandbox.id}/w/#{workflow.id}?v=#{workflow.lock_version}"
+          ~p"/projects/#{sandbox.id}/w/#{workflow.id}?s=#{job.id}&m=expand&v=#{workflow.lock_version}"
         )
 
+      # Banner only shows in inspector, not on canvas
       assert html =~ "You are currently working in the sandbox"
       assert html =~ sandbox.name
-      assert html =~ "Switch to #{parent_project.name}"
-      assert html =~ "/projects/#{parent_project.id}/w"
+      # No "Switch to" link per Joe's feedback
+      refute html =~ "Switch to"
     end
 
     test "does not show banner when viewing workflow in root project", %{
@@ -4991,19 +4993,21 @@ defmodule LightningWeb.WorkflowLive.EditTest do
         )
 
       workflow = workflow_fixture(project_id: sandbox_b.id)
+      job = insert(:job, workflow: workflow, name: "test-job")
 
       conn = log_in_user(conn, user)
 
       {:ok, _view, html} =
         live(
           conn,
-          ~p"/projects/#{sandbox_b.id}/w/#{workflow.id}?v=#{workflow.lock_version}"
+          ~p"/projects/#{sandbox_b.id}/w/#{workflow.id}?s=#{job.id}&m=expand&v=#{workflow.lock_version}"
         )
 
+      # Banner shows in inspector with current sandbox name
       assert html =~ "You are currently working in the sandbox"
-      assert html =~ "Switch to #{root_project.name}"
-      assert html =~ "/projects/#{root_project.id}/w"
-      refute html =~ sandbox_a.name
+      assert html =~ sandbox_b.name
+      # No "Switch to" link per Joe's feedback
+      refute html =~ "Switch to"
     end
 
     test "shows banner in job inspector when editing job in sandbox", %{
@@ -5032,8 +5036,8 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       assert html =~ "You are currently working in the sandbox"
       assert html =~ sandbox.name
-      assert html =~ "Switch to #{parent_project.name}"
-      assert html =~ "/projects/#{parent_project.id}/w"
+      # No "Switch to" link per Joe's feedback
+      refute html =~ "Switch to"
     end
 
     test "does not show banner in job inspector when editing job in root project",
