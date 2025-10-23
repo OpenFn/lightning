@@ -1313,6 +1313,84 @@ defmodule Lightning.Projects.ProvisionerTest do
       assert length(updated_workflow.jobs) == 1
       assert hd(updated_workflow.jobs).id == job1.id
     end
+
+    test "importing merged workflow without allow_stale raises StaleEntryError",
+         %{
+           user: user
+         } do
+      # Same setup as above, but WITHOUT allow_stale: true
+      # This verifies that stale errors are properly raised by default
+
+      project = insert(:project)
+      workflow = insert(:workflow, project: project, lock_version: 5)
+      job1 = insert(:job, workflow: workflow, name: "job1")
+      trigger = insert(:trigger, workflow: workflow, type: :webhook)
+
+      trigger_edge =
+        insert(:edge,
+          workflow: workflow,
+          source_trigger: trigger,
+          target_job: job1
+        )
+
+      # Add new edge to parent
+      job2 = insert(:job, workflow: workflow, name: "job2")
+
+      new_edge =
+        insert(:edge, workflow: workflow, source_job: job1, target_job: job2)
+
+      # Increment lock_version
+      workflow = Repo.update!(Ecto.Changeset.change(workflow, lock_version: 6))
+
+      # Create merged document that tries to delete the new edge
+      merged_document = %{
+        "id" => project.id,
+        "name" => project.name,
+        "workflows" => [
+          %{
+            "id" => workflow.id,
+            "name" => workflow.name,
+            "lock_version" => workflow.lock_version,
+            "jobs" => [
+              %{
+                "id" => job1.id,
+                "name" => "job1",
+                "adaptor" => "@openfn/language-common@latest",
+                "body" => "console.log('from sandbox');"
+              }
+            ],
+            "triggers" => [
+              %{
+                "id" => trigger.id,
+                "type" => "webhook"
+              }
+            ],
+            "edges" => [
+              %{
+                "id" => trigger_edge.id,
+                "source_trigger_id" => trigger.id,
+                "target_job_id" => job1.id,
+                "condition_type" => "always"
+              },
+              %{
+                "id" => new_edge.id,
+                "delete" => true
+              }
+            ]
+          }
+        ]
+      }
+
+      # Without allow_stale, this should raise StaleEntryError
+      assert_raise Ecto.StaleEntryError, fn ->
+        Provisioner.import_document(project, user, merged_document)
+      end
+
+      # Verify nothing was changed (transaction rolled back)
+      reloaded_workflow = Repo.reload(workflow) |> Repo.preload([:edges, :jobs])
+      assert length(reloaded_workflow.edges) == 2
+      assert length(reloaded_workflow.jobs) == 2
+    end
   end
 
   defp valid_document(project_id \\ nil, number_of_workflows \\ 1) do
