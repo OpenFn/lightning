@@ -210,6 +210,28 @@ defmodule Lightning.Projects.ProvisionerTest do
              end)
     end
 
+    test "importing with nil project delegates to empty Project struct" do
+      Mox.verify_on_exit!()
+
+      user = insert(:user)
+
+      %{body: body} = valid_document()
+
+      Mox.stub(
+        Lightning.Extensions.MockUsageLimiter,
+        :limit_action,
+        fn _action, _context -> :ok end
+      )
+
+      # Call with nil instead of %Project{}
+      {:ok, project} = Provisioner.import_document(nil, user, body)
+
+      # Should create a new project with the provided ID
+      assert project.id == body["id"]
+      assert project.name == body["name"]
+      assert length(project.workflows) == 1
+    end
+
     test "audit the creation of a snapshot" do
       Mox.verify_on_exit!()
       %{id: user_id} = user = insert(:user)
