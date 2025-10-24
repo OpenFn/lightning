@@ -45,6 +45,9 @@ import {
   usePermissions,
 } from "./useSessionContext";
 
+// import _logger from "#/utils/logger";
+// const logger = _logger.ns("useWorkflow").seal();
+
 /**
  * Hook to access the WorkflowStore context.
  *
@@ -492,8 +495,6 @@ export const useCanSave = (): { canSave: boolean; tooltipMessage: string } => {
     workflow !== null &&
     latestSnapshotLockVersion !== null &&
     workflow.lock_version !== latestSnapshotLockVersion;
-
-  console.log({ workflow, hasPermission });
 
   // Determine tooltip message (check in priority order)
   let tooltipMessage = "Save workflow";

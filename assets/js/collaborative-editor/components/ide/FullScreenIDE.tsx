@@ -8,6 +8,7 @@ import {
 } from "react-resizable-panels";
 
 import { useURLState } from "../../../react/lib/use-url-state";
+import _logger from "#/utils/logger";
 import { useSession } from "../../hooks/useSession";
 import {
   useCanSave,
@@ -17,6 +18,8 @@ import {
 import { CollaborativeMonaco } from "../CollaborativeMonaco";
 
 import { IDEHeader } from "./IDEHeader";
+
+const logger = _logger.ns("FullScreenIDE").seal();
 
 interface FullScreenIDEProps {
   jobId?: string;
@@ -95,7 +98,7 @@ export function FullScreenIDE({ onClose }: FullScreenIDEProps) {
   }, [jobIdFromURL, selectJob]);
 
   // Debug: Log what we have
-  console.log("[FullScreenIDE] Debug:", {
+  logger.debug({
     jobIdFromURL,
     hasCurrentJob: !!currentJob,
     hasYText: !!currentJobYText,
@@ -164,7 +167,7 @@ export function FullScreenIDE({ onClose }: FullScreenIDEProps) {
 
   // Placeholder handler for disabled Run button
   const handleRun = () => {
-    console.log("Run clicked (not yet implemented)");
+    logger.warn("Run clicked (not yet implemented)");
   };
 
   return (

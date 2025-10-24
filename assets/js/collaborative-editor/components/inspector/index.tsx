@@ -3,9 +3,9 @@
  * Shows details for jobs, triggers, and edges when selected
  */
 
+import { useHotkeys } from "react-hotkeys-hook";
 import { useURLState } from "../../../react/lib/use-url-state";
 import type { Workflow } from "../../types/workflow";
-
 import { EdgeInspector } from "./EdgeInspector";
 import { InspectorLayout } from "./InspectorLayout";
 import { JobInspector } from "./JobInspector";
@@ -13,6 +13,9 @@ import { TriggerInspector } from "./TriggerInspector";
 import { WorkflowSettings } from "./WorkflowSettings";
 
 export { InspectorLayout } from "./InspectorLayout";
+
+// import _logger from "#/utils/logger";
+// const logger = _logger.ns("Inspector").seal();
 
 interface InspectorProps {
   workflow: Workflow;
@@ -22,9 +25,17 @@ interface InspectorProps {
     id: string | null;
   };
   onClose: () => void;
+  onOpenRunPanel: (context: { jobId?: string; triggerId?: string }) => void;
+  respondToHotKey: boolean;
 }
 
-export function Inspector({ workflow, currentNode, onClose }: InspectorProps) {
+export function Inspector({
+  workflow,
+  currentNode,
+  onClose,
+  onOpenRunPanel,
+  respondToHotKey,
+}: InspectorProps) {
   const { hash, updateHash } = useURLState();
 
   const hasSelectedNode = currentNode.node && currentNode.type;
@@ -40,6 +51,19 @@ export function Inspector({ workflow, currentNode, onClose }: InspectorProps) {
       onClose(); // Clears node selection
     }
   };
+
+  useHotkeys(
+    "escape",
+    () => {
+      handleClose();
+    },
+    {
+      enabled: respondToHotKey,
+      scopes: ["panel"],
+      enableOnFormTags: true, // Allow Escape even in form fields
+    },
+    [handleClose]
+  );
 
   // Don't render if no mode selected
   if (!mode) return null;
@@ -60,6 +84,7 @@ export function Inspector({ workflow, currentNode, onClose }: InspectorProps) {
         key={`job-${currentNode.id}`}
         job={currentNode.node as Workflow.Job}
         onClose={handleClose}
+        onOpenRunPanel={onOpenRunPanel}
       />
     );
   }
@@ -70,6 +95,7 @@ export function Inspector({ workflow, currentNode, onClose }: InspectorProps) {
         key={`trigger-${currentNode.id}`}
         trigger={currentNode.node as Workflow.Trigger}
         onClose={handleClose}
+        onOpenRunPanel={onOpenRunPanel}
       />
     );
   }
@@ -89,7 +115,6 @@ export function Inspector({ workflow, currentNode, onClose }: InspectorProps) {
 
 // Helper function to open workflow settings from external components
 export const openWorkflowSettings = () => {
-  const newURL =
-    window.location.pathname + window.location.search + "#settings";
+  const newURL = `${window.location.pathname}${window.location.search}#settings`;
   history.pushState({}, "", newURL);
 };

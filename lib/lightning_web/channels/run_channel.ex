@@ -76,9 +76,15 @@ defmodule LightningWeb.RunChannel do
       {:ok, run} ->
         # TODO: Turn FailureAlerter into an Oban worker and process async
         # instead of blocking the channel.
-        run
-        |> Repo.preload([:log_lines, work_order: [:workflow]])
+        run_with_preloads =
+          run
+          |> Repo.preload([:log_lines, work_order: [:workflow, :trigger]])
+
+        run_with_preloads
         |> Lightning.FailureAlerter.alert_on_failure()
+
+        # Broadcast webhook response if after_completion is enabled
+        maybe_broadcast_webhook_response(run_with_preloads, payload)
 
         socket |> assign(run: run) |> reply_with({:ok, nil})
 
@@ -180,6 +186,53 @@ defmodule LightningWeb.RunChannel do
 
       {:ok, log_line} ->
         reply_with(socket, {:ok, %{log_line_id: log_line.id}})
+    end
+  end
+
+  defp maybe_broadcast_webhook_response(run, payload) do
+    work_order = run.work_order
+    trigger = work_order.trigger
+
+    if trigger && trigger.type == :webhook &&
+         trigger.webhook_reply == :after_completion do
+      topic = "work_order:#{work_order.id}:webhook_response"
+
+      # TODO - Later allow workflow authors to customize the status code
+      # and body of the reply.
+      status_code = determine_status_code(run.state)
+
+      body = %{
+        data: payload["final_state"],
+        meta: %{
+          work_order_id: work_order.id,
+          run_id: run.id,
+          state: run.state,
+          error_type: run.error_type,
+          inserted_at: run.inserted_at,
+          started_at: run.started_at,
+          claimed_at: run.claimed_at,
+          finished_at: run.finished_at
+        }
+      }
+
+      Phoenix.PubSub.broadcast(
+        Lightning.PubSub,
+        topic,
+        {:webhook_response, status_code, body}
+      )
+    end
+  end
+
+  # TODO - decide how we should respond... do we use HTTP codes for run states?
+  defp determine_status_code(state) do
+    case state do
+      :success -> 201
+      :failed -> 201
+      :crashed -> 201
+      :exception -> 201
+      :killed -> 201
+      :cancelled -> 201
+      _other -> 201
     end
   end
 

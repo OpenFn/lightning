@@ -24,6 +24,7 @@ defmodule Lightning.Workflows.Trigger do
   @type trigger_type :: :webhook | :cron
 
   @trigger_types [:webhook, :cron, :kafka]
+  @webhook_reply_types [:before_start, :after_completion, :custom]
 
   @derive {Jason.Encoder,
            only: [
@@ -32,13 +33,18 @@ defmodule Lightning.Workflows.Trigger do
              :custom_path,
              :cron_expression,
              :type,
-             :enabled
+             :enabled,
+             :webhook_reply
            ]}
   schema "triggers" do
     field :comment, :string
     field :custom_path, :string
     field :cron_expression, :string
     field :enabled, :boolean, default: false
+
+    field :webhook_reply, Ecto.Enum,
+      values: @webhook_reply_types,
+      default: :before_start
 
     belongs_to :workflow, Workflow
 
@@ -84,7 +90,8 @@ defmodule Lightning.Workflows.Trigger do
       :type,
       :workflow_id,
       :cron_expression,
-      :has_auth_method
+      :has_auth_method,
+      :webhook_reply
     ])
   end
 

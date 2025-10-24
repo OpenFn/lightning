@@ -48,6 +48,7 @@ import {
   createSessionContextStore,
   type SessionContextStoreInstance,
 } from "../stores/createSessionContextStore";
+import { createUIStore, type UIStoreInstance } from "../stores/createUIStore";
 import {
   createWorkflowStore,
   type WorkflowStoreInstance,
@@ -61,6 +62,7 @@ export interface StoreContextValue {
   awarenessStore: AwarenessStoreInstance;
   workflowStore: WorkflowStoreInstance;
   sessionContextStore: SessionContextStoreInstance;
+  uiStore: UIStoreInstance;
 }
 
 export const StoreContext = createContext<StoreContextValue | null>(null);
@@ -85,6 +87,7 @@ export const StoreProvider = ({ children }: StoreProviderProps) => {
     awarenessStore: createAwarenessStore(),
     workflowStore: createWorkflowStore(),
     sessionContextStore: createSessionContextStore(isNewWorkflow),
+    uiStore: createUIStore(),
   }));
 
   // Subscribe to sessionContextStore user changes

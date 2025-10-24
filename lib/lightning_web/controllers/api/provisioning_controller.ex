@@ -1,4 +1,16 @@
 defmodule LightningWeb.API.ProvisioningController do
+  @moduledoc """
+  API controller for project provisioning and deployment.
+
+  Handles creation, updates, and retrieval of project state for idempotent
+  deployments via the CLI. Supports both JSON and YAML formats.
+
+  ## Endpoints
+
+  - `POST /api/provision` - Create or update a project
+  - `GET /api/provision/:id` - Get project state as JSON
+  - `GET /api/provision/:id.yaml` - Get project state as YAML
+  """
   use LightningWeb, :controller
 
   alias Lightning.Policies.Permissions
@@ -10,9 +22,41 @@ defmodule LightningWeb.API.ProvisioningController do
   action_fallback(LightningWeb.FallbackController)
 
   @doc """
-  Creates or updates a project based on a JSON payload that may or may not
-  contain UUIDs for existing resources.
+  Creates or updates a project based on a JSON payload.
+
+  Performs idempotent project provisioning by accepting UUIDs for existing
+  resources. If a project ID is provided and exists, the project will be
+  updated; otherwise, a new project is created.
+
+  ## Parameters
+
+  - `conn` - The Plug connection struct with the current resource assigned
+  - `params` - Map containing project configuration (workflows, jobs, triggers, etc.)
+
+  ## Returns
+
+  - `201 Created` with project JSON on success
+  - `422 Unprocessable Entity` with changeset errors on validation failure
+  - `403 Forbidden` if user lacks provisioning permissions
+
+  ## Examples
+
+      # Create new project
+      POST /api/provision
+      {
+        "name": "My Project",
+        "workflows": [...]
+      }
+
+      # Update existing project
+      POST /api/provision
+      {
+        "id": "a1b2c3d4-...",
+        "name": "Updated Project",
+        "workflows": [...]
+      }
   """
+  @spec create(Plug.Conn.t(), map()) :: Plug.Conn.t()
   def create(conn, params) do
     with project <- get_or_build_project(params),
          :ok <-
@@ -54,9 +98,34 @@ defmodule LightningWeb.API.ProvisioningController do
   end
 
   @doc """
-  Returns a project "state.json", complete with UUIDs to enable idempotent
-  project deployments and updates to existing projects via the CLI.
+  Returns a project state as JSON with UUIDs for idempotent deployments.
+
+  Retrieves the complete project configuration including workflows, jobs,
+  triggers, edges, and credentials. UUIDs are included to enable updates
+  to existing projects via the CLI.
+
+  ## Parameters
+
+  - `conn` - The Plug connection struct with the current resource assigned
+  - `params` - Map containing:
+    - `id` - Project UUID (required)
+    - `snapshots` - Whether to include workflow snapshots (optional)
+
+  ## Returns
+
+  - `200 OK` with project JSON on success
+  - `404 Not Found` if project doesn't exist
+  - `403 Forbidden` if user lacks describe permissions
+
+  ## Examples
+
+      # Get project state
+      GET /api/provision/a1b2c3d4-5e6f-7a8b-9c0d-1e2f3a4b5c6d
+
+      # Get project state with snapshots
+      GET /api/provision/a1b2c3d4-5e6f-7a8b-9c0d-1e2f3a4b5c6d?snapshots=true
   """
+  @spec show(Plug.Conn.t(), map()) :: Plug.Conn.t()
   def show(conn, params) do
     with project = %Project{} <-
            Projects.get_project(params["id"]) || {:error, :not_found},
@@ -76,9 +145,34 @@ defmodule LightningWeb.API.ProvisioningController do
   end
 
   @doc """
-  Returns a description of the project as yaml. Same as the export project to
-  yaml button (see Downloads Controller) but made for the API.
+  Returns a project state as YAML for CLI deployments.
+
+  Exports the complete project configuration in YAML format, equivalent to
+  the "Export to YAML" feature in the UI. Useful for version control and
+  CLI-based workflows.
+
+  ## Parameters
+
+  - `conn` - The Plug connection struct with the current resource assigned
+  - `params` - Map containing:
+    - `id` - Project UUID (required)
+    - `snapshots` - Whether to include workflow snapshots (optional)
+
+  ## Returns
+
+  - `200 OK` with YAML content on success
+  - `404 Not Found` if project doesn't exist
+  - `403 Forbidden` if user lacks describe permissions
+
+  ## Examples
+
+      # Get project state as YAML
+      GET /api/provision/a1b2c3d4-5e6f-7a8b-9c0d-1e2f3a4b5c6d.yaml
+
+      # Get project state as YAML with snapshots
+      GET /api/provision/a1b2c3d4-5e6f-7a8b-9c0d-1e2f3a4b5c6d.yaml?snapshots=true
   """
+  @spec show_yaml(Plug.Conn.t(), map()) :: Plug.Conn.t()
   def show_yaml(conn, %{"id" => id} = params) do
     with %Projects.Project{} = project <-
            Projects.get_project(id) || {:error, :not_found},

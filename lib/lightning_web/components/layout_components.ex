@@ -133,6 +133,13 @@ defmodule LightningWeb.LayoutComponents do
                 <.breadcrumb path="/projects">
                   <:label>Projects</:label>
                 </.breadcrumb>
+
+                <%= if @project.parent_id && Ecto.assoc_loaded?(@project.parent) do %>
+                  <.breadcrumb path={"/projects/#{@project.parent.id}/w"}>
+                    <:label>{@project.parent.name}</:label>
+                  </.breadcrumb>
+                <% end %>
+
                 <.breadcrumb path={"/projects/#{@project.id}/w"}>
                   <:label>{@project.name}</:label>
                 </.breadcrumb>
