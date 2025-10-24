@@ -21,6 +21,13 @@ and this project adheres to
 
 ### Fixed
 
+## [2.14.13-pre1] 2025-10-24
+
+### Added
+
+- Ability to run a workflow from the new react canvas
+  [#3634](https://github.com/OpenFn/lightning/issues/3634)
+
 ## [2.14.13-pre] 2025-10-24
 
 ### Added
