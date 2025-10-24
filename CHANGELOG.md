@@ -44,6 +44,8 @@ and this project adheres to
 
 ### Fixed
 
+- Fixed AI chat session persistence when switching between jobs in workflow
+  editor [#3745](https://github.com/OpenFn/lightning/issues/3745)
 - Backfilled `env` field for existing root projects to ensure environment chips
   display correctly in workflow editor and inspector
   [#3839](https://github.com/OpenFn/lightning/issues/3839)

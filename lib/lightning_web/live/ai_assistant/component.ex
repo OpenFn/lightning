@@ -388,20 +388,31 @@ defmodule LightningWeb.AiAssistant.Component do
 
     case action do
       :new ->
-        socket
-        |> delegate_to_handler(:on_session_close)
-        |> assign_async([:all_sessions, :pagination_meta], fn ->
-          case handler.list_sessions(assigns, sort_direction,
-                 limit: @default_page_size
-               ) do
-            %{sessions: sessions, pagination: pagination} ->
-              {:ok, %{all_sessions: sessions, pagination_meta: pagination}}
-          end
-        end)
+        load_and_show_session_list(socket, handler, assigns, sort_direction)
 
       :show ->
-        session = handler.get_session!(assigns)
+        load_and_show_session(socket, handler, assigns)
+    end
+  end
 
+  defp load_and_show_session_list(socket, handler, assigns, sort_direction) do
+    socket
+    |> delegate_to_handler(:on_session_close)
+    |> assign(:action, :new)
+    |> assign(:session, nil)
+    |> assign_async([:all_sessions, :pagination_meta], fn ->
+      case handler.list_sessions(assigns, sort_direction,
+             limit: @default_page_size
+           ) do
+        %{sessions: sessions, pagination: pagination} ->
+          {:ok, %{all_sessions: sessions, pagination_meta: pagination}}
+      end
+    end)
+  end
+
+  defp load_and_show_session(socket, handler, assigns) do
+    case fetch_session(handler, assigns) do
+      {:ok, session} ->
         message_loading =
           Enum.any?(session.messages, fn msg ->
             msg.role == :user && msg.status in [:pending, :processing]
@@ -409,6 +420,7 @@ defmodule LightningWeb.AiAssistant.Component do
 
         socket
         |> assign(:session, session)
+        |> assign(:action, :show)
         |> assign(
           :pending_message,
           if message_loading do
@@ -418,7 +430,19 @@ defmodule LightningWeb.AiAssistant.Component do
           end
         )
         |> delegate_to_handler(:on_session_open, [session])
+
+      :error ->
+        socket
+        |> apply_action(:new)
+        |> assign(:action, :new)
+        |> assign(:session, nil)
     end
+  end
+
+  defp fetch_session(handler, assigns) do
+    {:ok, handler.get_session!(assigns)}
+  rescue
+    Ecto.NoResultsError -> :error
   end
 
   defp save_message(socket, action, content) do
