@@ -49,8 +49,10 @@ const CHIP_STYLES: Record<string, string> = {
   lost: "bg-gray-800 text-white",
 };
 
-const displayTextFromState = (state: string): string =>
-  `${state[0].toUpperCase()}${state.substring(1)}`;
+const displayTextFromState = (state: string): string => {
+  if (state.length === 0) return "";
+  return `${state[0].toUpperCase()}${state.substring(1)}`;
+};
 
 const StatePill: React.FC<{ state: string; mini?: boolean }> = ({
   state,
@@ -119,7 +121,7 @@ export default function MiniHistory({
     nextUrl.search = `?filters[workflow_id]=${
       workflowPaths[workflowPaths.length - 1]
     }`;
-    window.location.href = nextUrl.toString();
+    window.location.assign(nextUrl.toString());
   };
 
   const navigateToWorkorderHistory = (
@@ -137,7 +139,7 @@ export default function MiniHistory({
     if (projectId) {
       nextUrl.pathname = `/projects/${projectId}/history`;
       nextUrl.search = `?filters[workorder_id]=${workorderId}`;
-      window.location.href = nextUrl.toString();
+      window.location.assign(nextUrl.toString());
     }
   };
 
@@ -152,7 +154,7 @@ export default function MiniHistory({
 
     if (projectId) {
       nextUrl.pathname = `/projects/${projectId}/runs/${runId}`;
-      window.location.href = nextUrl.toString();
+      window.location.assign(nextUrl.toString());
     }
   };
 
@@ -162,10 +164,16 @@ export default function MiniHistory({
         border-gray-200 rounded-lg shadow-sm overflow-hidden z-40
         transition-all duration-300 ease-in-out`}
     >
+      {/*
+        Mouse-only clickable area for header - keyboard users can use the
+        "view full history" button or chevron icon for navigation.
+      */}
+      {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions */}
       <div
         className={`flex items-center cursor-pointer justify-between
           px-3 py-2 border-gray-200 bg-gray-50 hover:bg-gray-100
-          transition-colors ${isCollapsed ? "border-b-0" : "border-b"}`}
+          transition-colors w-full text-left
+          ${isCollapsed ? "border-b-0" : "border-b"}`}
         onClick={() => historyToggle()}
       >
         <div className="flex items-center gap-2">
@@ -231,9 +239,15 @@ export default function MiniHistory({
                   className={`px-3 py-2 hover:bg-gray-50
                   transition-colors`}
                 >
+                  {/*
+                    Mouse-only clickable area for convenience - keyboard users
+                    can use the chevron button and UUID link below for full accessibility.
+                    This matches the LiveView implementation's keyboard navigation pattern.
+                  */}
+                  {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions */}
                   <div
                     className="flex items-center justify-between
-                      cursor-pointer"
+                      cursor-pointer w-full text-left"
                     onClick={() => expandWorkorderHandler(workorder)}
                   >
                     <div
@@ -241,6 +255,7 @@ export default function MiniHistory({
                       flex-1 mr-2"
                     >
                       <button
+                        type="button"
                         onClick={e => {
                           e.preventDefault();
                           e.stopPropagation();
@@ -250,6 +265,7 @@ export default function MiniHistory({
                         }}
                         className="flex items-center text-gray-400
                           hover:text-gray-600 transition-colors"
+                        aria-label={`${expandedWorder === workorder.id ? "Collapse" : "Expand"} work order details`}
                       >
                         {workorder.selected ? (
                           <span
@@ -269,11 +285,13 @@ export default function MiniHistory({
                         )}
                       </button>
                       <button
+                        type="button"
                         onClick={e =>
                           navigateToWorkorderHistory(e, workorder.id)
                         }
                         className="link-uuid"
                         title={workorder.id}
+                        aria-label={`View full details for work order ${truncateUid(workorder.id)}`}
                       >
                         {truncateUid(workorder.id)}
                       </button>
@@ -296,11 +314,17 @@ export default function MiniHistory({
 
                 {(expandedWorder === workorder.id || workorder.selected) &&
                   workorder.runs.map(run => (
+                    /*
+                      Mouse-only clickable area - keyboard users can navigate to
+                      the run detail page using the UUID link button below.
+                    */
+                    // eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions
                     <div
                       key={run.id}
                       className={[
                         "px-3 py-1.5 text-xs hover:bg-gray-50 " +
-                          "transition-colors cursor-pointer border-l-2",
+                          "transition-colors cursor-pointer border-l-2 " +
+                          "w-full text-left",
                         run.selected
                           ? "bg-indigo-50 border-l-indigo-500"
                           : " border-l-transparent",
@@ -325,9 +349,11 @@ export default function MiniHistory({
                             }`}
                           ></span>
                           <button
+                            type="button"
                             onClick={e => navigateToRunView(e, run.id)}
                             className="link-uuid"
                             title={run.id}
+                            aria-label={`View full details for run ${truncateUid(run.id)}`}
                           >
                             {truncateUid(run.id)}
                           </button>
@@ -337,7 +363,9 @@ export default function MiniHistory({
                                 &bull;
                               </span>
                               {formatRelative(
-                                new Date(run.started_at || run.finished_at!),
+                                new Date(
+                                  (run.started_at || run.finished_at) as string
+                                ),
                                 now,
                                 {
                                   locale: relativeLocale,
