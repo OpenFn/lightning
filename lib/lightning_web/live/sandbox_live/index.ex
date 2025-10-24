@@ -569,7 +569,11 @@ defmodule LightningWeb.SandboxLive.Index do
   defp perform_merge(source, target, actor) do
     source
     |> MergeProjects.merge_project(target)
-    |> then(&Lightning.Projects.Provisioner.import_document(target, actor, &1))
+    |> then(
+      &Lightning.Projects.Provisioner.import_document(target, actor, &1,
+        allow_stale: true
+      )
+    )
   end
 
   defp handle_merge_result(

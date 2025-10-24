@@ -30,6 +30,10 @@ and this project adheres to
 
 ### Fixed
 
+- Fixed sandbox merge failing with StaleEntryError when parent workflow was
+  modified after sandbox creation
+  [#3765](https://github.com/OpenFn/lightning/issues/3765)
+
 ## [2.14.13-pre1] 2025-10-24
 
 ### Added
