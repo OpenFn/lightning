@@ -141,6 +141,10 @@ defmodule LightningWeb.WebhooksController do
         |> json(%{error: error})
     after
       Lightning.Config.webhook_response_timeout_ms() ->
+        Logger.warning(
+          "Webhook response timeout for work_order: #{inspect(work_order.id)}"
+        )
+
         conn
         |> put_status(:gateway_timeout)
         |> json(%{
