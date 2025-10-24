@@ -12,7 +12,7 @@
 
     <link rel="stylesheet" href="dist/html-elixir-RLZO5U2C.css" />
 
-    <script defer src="dist/sidebar_items-A0378AE8.js"></script>
+    <script defer src="dist/sidebar_items-A8C61237.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-Y223O6DN.js"></script>
 
@@ -115,7 +115,7 @@ ahead of time in the case of new records.</p>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#import_document/3" data-no-tooltip="" translate="no">import_document(project, user, data)</a>
+        <a href="#import_document/4" data-no-tooltip="" translate="no">import_document(project, user_or_repo_connection, data, opts \\ [])</a>
 
       </div>
 
@@ -165,17 +165,19 @@ ahead of time in the case of new records.</p>
     </h1>
 
     <div class="functions-list">
-<section class="detail" id="import_document/3">
+<section class="detail" id="import_document/4">
+
+    <span id="import_document/3"></span>
 
   <div class="detail-header">
-    <a href="#import_document/3" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+    <a href="#import_document/4" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
     </a>
     <div class="heading-with-actions">
-      <h1 class="signature" translate="no">import_document(project, user, data)</h1>
+      <h1 class="signature" translate="no">import_document(project, user_or_repo_connection, data, opts \\ [])</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/provisioner.ex#L49" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/provisioner.ex#L54" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -190,7 +192,8 @@ ahead of time in the case of new records.</p>
   <a href="Lightning.Projects.Project.html#t:t/0">Lightning.Projects.Project.t</a>() | nil,
   <a href="Lightning.Accounts.User.html#t:t/0">Lightning.Accounts.User.t</a>()
   | <a href="Lightning.VersionControl.ProjectRepoConnection.html#t:t/0">Lightning.VersionControl.ProjectRepoConnection.t</a>(),
-  <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>()
+  <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>(),
+  <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">keyword</a>()
 ) ::
   {:error,
    <a href="https://hexdocs.pm/ecto/3.13.2/Ecto.Changeset.html#t:t/1">Ecto.Changeset.t</a>(<a href="Lightning.Projects.Project.html#t:t/0">Lightning.Projects.Project.t</a>())
@@ -199,7 +202,8 @@ ahead of time in the case of new records.</p>
 
       </div>
 
-<p>Import a project.</p>
+<p>Import a project.</p><h2 id="import_document/4-options" class="section-heading"><a href="#import_document/4-options" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Options</span></h2><ul><li><code class="inline">:allow_stale</code> - If true, allows stale operations during import (useful for
+merge operations where concurrent modifications are expected). Defaults to false.</li></ul>
   </section>
 </section>
 <section class="detail" id="parse_document/2">
@@ -212,7 +216,7 @@ ahead of time in the case of new records.</p>
       <h1 class="signature" translate="no">parse_document(project, data)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/provisioner.ex#L186" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/provisioner.ex#L195" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -243,7 +247,7 @@ ahead of time in the case of new records.</p>
       <h1 class="signature" translate="no">preload_dependencies(project, snapshots \\ nil)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/provisioner.ex#L285" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/provisioner.ex#L294" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -272,7 +276,7 @@ ahead of time in the case of new records.</p>
       <h1 class="signature" translate="no">validate_extraneous_params(changeset)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/provisioner.ex#L461" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/provisioner.ex#L470" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
