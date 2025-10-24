@@ -17,6 +17,15 @@ and this project adheres to
 
 ### Added
 
+- Show validation error message when creating sandbox with duplicate name
+  [#3776](https://github.com/OpenFn/lightning/issues/3776)
+- Divergence warning when merging sandboxes - displays alert if target branch
+  was modified after sandbox creation to prevent data loss
+  [#3747](https://github.com/OpenFn/lightning/issues/3747)
+- Sandbox indicator banners in workflow editor (inspector) to help indicate when
+  working in a sandbox environment
+  [#3413](https://github.com/OpenFn/lightning/issues/3413)
+
 ### Changed
 
 ### Fixed

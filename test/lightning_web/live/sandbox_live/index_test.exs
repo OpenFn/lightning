@@ -1804,6 +1804,128 @@ defmodule LightningWeb.SandboxLive.IndexTest do
         Enum.find(updated_parent_workflow.jobs, &(&1.name == "Initial Job"))
 
       assert remaining_job.body == "job1_modified()"
+
+      test "checks for divergence when opening merge modal with default target",
+           %{
+             conn: conn,
+             parent: parent,
+             sandbox: sandbox
+           } do
+        parent_workflow =
+          insert(:workflow, project: parent, name: "Test Workflow")
+
+        insert(:workflow_version,
+          workflow: parent_workflow,
+          hash: "parent_hash",
+          source: "app"
+        )
+
+        sandbox_workflow =
+          insert(:workflow, project: sandbox, name: "Test Workflow")
+
+        insert(:workflow_version,
+          workflow: sandbox_workflow,
+          hash: "sandbox_hash",
+          source: "app"
+        )
+
+        {:ok, view, _} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
+
+        assert view
+               |> element("#merge-divergence-alert")
+               |> has_element?()
+      end
+    end
+  end
+
+  describe "Edge cases for divergence and nil handling" do
+    test "handles nil target_id in select-merge-target", %{conn: conn} do
+      owner = insert(:user)
+
+      root =
+        insert(:project, project_users: [%{user: owner, role: :owner}])
+
+      child1 =
+        insert(:project,
+          parent: root,
+          project_users: [%{user: owner, role: :owner}]
+        )
+
+      conn = log_in_user(conn, owner)
+
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{root.id}/sandboxes")
+
+      view
+      |> element("#branch-rewire-sandbox-#{child1.id} button")
+      |> render_click()
+
+      render_click(view, "select-merge-target", %{
+        "merge" => %{"target_id" => ""}
+      })
+
+      # Should not crash - the has_diverged will be false for nil target
+      assigns = :sys.get_state(view.pid).socket.assigns
+      refute assigns.merge_has_diverged
+    end
+
+    test "displays MAIN when selected target not found in options", %{conn: conn} do
+      owner = insert(:user)
+
+      root =
+        insert(:project, project_users: [%{user: owner, role: :owner}])
+
+      child1 =
+        insert(:project,
+          parent: root,
+          project_users: [%{user: owner, role: :owner}]
+        )
+
+      _child2 =
+        insert(:project,
+          parent: root,
+          project_users: [%{user: owner, role: :owner}]
+        )
+
+      conn = log_in_user(conn, owner)
+
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{root.id}/sandboxes")
+
+      view
+      |> element("#branch-rewire-sandbox-#{child1.id} button")
+      |> render_click()
+
+      invalid_id = Ecto.UUID.generate()
+
+      render_click(view, "select-merge-target", %{
+        "merge" => %{"target_id" => invalid_id}
+      })
+
+      # The modal should still render without crashing
+      # and the label should fall back to "MAIN"
+      html = render(view)
+      assert html =~ "MAIN"
+    end
+
+    test "has_environment? handles project without env field", %{conn: conn} do
+      owner = insert(:user)
+
+      root =
+        insert(:project,
+          project_users: [%{user: owner, role: :owner}],
+          env: ""
+        )
+
+      conn = log_in_user(conn, owner)
+
+      {:ok, view, html} =
+        live(conn, ~p"/projects/#{root.id}/sandboxes")
+
+      # With empty string env, it should show "main" badge
+      assert html =~ "main"
+
+      assert has_element?(view, "#env-badge-#{root.id}")
     end
   end
 end
