@@ -220,4 +220,270 @@ defmodule LightningWeb.DataclipControllerTest do
       assert conn.status == 403
     end
   end
+
+  describe "GET /projects/:project_id/jobs/:job_id/dataclips" do
+    setup do
+      user = insert(:user)
+      project = insert(:project, project_users: [%{user: user}])
+      workflow = insert(:workflow, project: project)
+      job = insert(:job, workflow: workflow)
+      dataclip = insert(:dataclip, project: project, type: :http_request)
+
+      %{
+        user: user,
+        project: project,
+        job: job,
+        dataclip: dataclip,
+        conn: build_conn() |> log_in_user(user)
+      }
+    end
+
+    test "returns dataclips for job with default filters", %{
+      conn: conn,
+      project: project,
+      job: job
+    } do
+      conn = get(conn, ~p"/projects/#{project}/jobs/#{job}/dataclips")
+
+      assert %{
+               "data" => dataclips,
+               "next_cron_run_dataclip_id" => _,
+               "can_edit_dataclip" => can_edit
+             } = json_response(conn, 200)
+
+      assert is_list(dataclips)
+      assert is_boolean(can_edit)
+    end
+
+    test "returns dataclips with query parameter", %{
+      conn: conn,
+      project: project,
+      job: job
+    } do
+      conn =
+        get(conn, ~p"/projects/#{project}/jobs/#{job}/dataclips?query=test")
+
+      assert %{"data" => _dataclips} = json_response(conn, 200)
+    end
+
+    test "returns dataclips with type filter", %{
+      conn: conn,
+      project: project,
+      job: job
+    } do
+      conn =
+        get(
+          conn,
+          ~p"/projects/#{project}/jobs/#{job}/dataclips?type=http_request"
+        )
+
+      assert %{"data" => _dataclips} = json_response(conn, 200)
+    end
+
+    test "requires authentication", %{project: project, job: job} do
+      conn = build_conn()
+      conn = get(conn, ~p"/projects/#{project}/jobs/#{job}/dataclips")
+
+      assert redirected_to(conn) == ~p"/users/log_in"
+    end
+
+    test "requires project access", %{conn: conn, job: job} do
+      other_user = insert(:user)
+      other_project = insert(:project, project_users: [%{user: other_user}])
+
+      conn = get(conn, ~p"/projects/#{other_project}/jobs/#{job}/dataclips")
+
+      # Returns 401 because Projects.get_project! raises for unauthorized access
+      assert html_response(conn, 401) =~ "Authorization Error"
+    end
+  end
+
+  describe "GET /projects/:project_id/runs/:run_id/dataclip" do
+    setup do
+      user = insert(:user)
+      project = insert(:project, project_users: [%{user: user}])
+      workflow = insert(:workflow, project: project)
+      job = insert(:job, workflow: workflow)
+      trigger = insert(:trigger, workflow: workflow)
+      dataclip = insert(:dataclip, project: project)
+
+      work_order =
+        insert(:workorder,
+          workflow: workflow,
+          trigger: trigger,
+          dataclip: dataclip
+        )
+
+      run =
+        insert(:run,
+          work_order: work_order,
+          dataclip: dataclip,
+          starting_trigger: trigger
+        )
+
+      step = insert(:step, job: job, input_dataclip: dataclip)
+      insert(:run_step, run: run, step: step)
+
+      %{
+        user: user,
+        project: project,
+        run: run,
+        job: job,
+        dataclip: dataclip,
+        conn: build_conn() |> log_in_user(user)
+      }
+    end
+
+    test "returns dataclip for run and job", %{
+      conn: conn,
+      project: project,
+      run: run,
+      job: job
+    } do
+      conn =
+        get(
+          conn,
+          ~p"/projects/#{project}/runs/#{run}/dataclip?job_id=#{job.id}"
+        )
+
+      assert %{
+               "dataclip" => _dataclip,
+               "run_step" => _run_step
+             } = json_response(conn, 200)
+    end
+
+    test "requires authentication", %{project: project, run: run, job: job} do
+      conn = build_conn()
+
+      conn =
+        get(
+          conn,
+          ~p"/projects/#{project}/runs/#{run}/dataclip?job_id=#{job.id}"
+        )
+
+      assert redirected_to(conn) == ~p"/users/log_in"
+    end
+
+    test "requires project access", %{
+      conn: conn,
+      run: run,
+      job: job
+    } do
+      other_user = insert(:user)
+      other_project = insert(:project, project_users: [%{user: other_user}])
+
+      conn =
+        get(
+          conn,
+          ~p"/projects/#{other_project}/runs/#{run}/dataclip?job_id=#{job.id}"
+        )
+
+      # Returns 401 because Projects.get_project! raises for unauthorized access
+      assert html_response(conn, 401) =~ "Authorization Error"
+    end
+  end
+
+  describe "PATCH /projects/:project_id/dataclips/:dataclip_id" do
+    setup do
+      user = insert(:user)
+      project = insert(:project, project_users: [%{user: user}])
+      dataclip = insert(:dataclip, project: project)
+
+      %{
+        user: user,
+        project: project,
+        dataclip: dataclip,
+        conn: build_conn() |> log_in_user(user)
+      }
+    end
+
+    test "updates dataclip name", %{
+      conn: conn,
+      project: project,
+      dataclip: dataclip
+    } do
+      conn =
+        patch(conn, ~p"/projects/#{project}/dataclips/#{dataclip}", %{
+          name: "My Custom Input"
+        })
+
+      assert %{"data" => updated} = json_response(conn, 200)
+      assert updated["name"] == "My Custom Input"
+    end
+
+    test "allows removing name by setting to null", %{
+      conn: conn,
+      project: project
+    } do
+      dataclip = insert(:dataclip, project: project, name: "Named Dataclip")
+
+      conn =
+        patch(conn, ~p"/projects/#{project}/dataclips/#{dataclip}", %{
+          name: nil
+        })
+
+      assert %{"data" => updated} = json_response(conn, 200)
+      assert is_nil(updated["name"])
+    end
+
+    test "requires authentication", %{project: project, dataclip: dataclip} do
+      conn = build_conn()
+
+      conn =
+        patch(conn, ~p"/projects/#{project}/dataclips/#{dataclip}", %{
+          name: "New Name"
+        })
+
+      assert redirected_to(conn) == ~p"/users/log_in"
+    end
+
+    test "requires edit_workflow permission", %{
+      conn: _conn
+    } do
+      # Create a project where user is a viewer (no edit permission)
+      viewer_user = insert(:user)
+      other_project = insert(:project)
+
+      insert(:project_user,
+        project: other_project,
+        user: viewer_user,
+        role: :viewer
+      )
+
+      other_dataclip = insert(:dataclip, project: other_project)
+
+      conn =
+        build_conn()
+        |> log_in_user(viewer_user)
+        |> patch(
+          ~p"/projects/#{other_project}/dataclips/#{other_dataclip}",
+          %{
+            name: "New Name"
+          }
+        )
+
+      # Returns 401 because viewer role doesn't have edit_workflow permission
+      assert html_response(conn, 401) =~ "Authorization Error"
+    end
+
+    test "requires access to dataclip's project", %{
+      conn: conn
+    } do
+      other_user = insert(:user)
+      other_project = insert(:project, project_users: [%{user: other_user}])
+      other_dataclip = insert(:dataclip, project: other_project)
+
+      conn =
+        patch(
+          conn,
+          ~p"/projects/#{other_project}/dataclips/#{other_dataclip}",
+          %{
+            name: "New Name"
+          }
+        )
+
+      # Returns 401 because Projects.get_project! raises for unauthorized access
+      assert html_response(conn, 401) =~ "Authorization Error"
+    end
+  end
 end
