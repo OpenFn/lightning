@@ -98,10 +98,25 @@ export default function MiniHistory({
     }
   }, [selectedItem]);
 
+  // Clear expanded work order when panel collapses
+  React.useEffect(() => {
+    if (isCollapsed) {
+      setExpandedWorder("");
+    }
+  }, [isCollapsed]);
+
   const expandWorkorderHandler = (workorder: WorkflowRunHistory) => {
-    if (workorder.runs.length === 1 && workorder.runs[0]) {
+    const isCurrentlyExpanded = expandedWorder === workorder.id;
+
+    // Only auto-select if expanding (not collapsing) and there's exactly 1 run
+    if (
+      !isCurrentlyExpanded &&
+      workorder.runs.length === 1 &&
+      workorder.runs[0]
+    ) {
       selectRunHandler(workorder.runs[0]);
     }
+
     setExpandedWorder(prev => (prev === workorder.id ? "" : workorder.id));
   };
 
@@ -259,9 +274,7 @@ export default function MiniHistory({
                         onClick={e => {
                           e.preventDefault();
                           e.stopPropagation();
-                          setExpandedWorder(prev =>
-                            prev === workorder.id ? "" : workorder.id
-                          );
+                          expandWorkorderHandler(workorder);
                         }}
                         className="flex items-center text-gray-400
                           hover:text-gray-600 transition-colors"
@@ -343,11 +356,23 @@ export default function MiniHistory({
                           className="flex items-center gap-2 min-w-0
                           flex-1"
                         >
-                          <span
-                            className={`hero-x-mark w-4 h-4 text-gray-400 ${
-                              run.selected ? "visible" : "invisible"
-                            }`}
-                          ></span>
+                          {run.selected && (
+                            <button
+                              type="button"
+                              onClick={e => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                onCollapseHistory();
+                              }}
+                              className="flex items-center text-gray-400 hover:text-gray-600 transition-colors"
+                              aria-label="Deselect run and collapse history"
+                            >
+                              <span className="hero-x-mark w-4 h-4"></span>
+                            </button>
+                          )}
+                          {!run.selected && (
+                            <span className="w-4 h-4 invisible"></span>
+                          )}
                           <button
                             type="button"
                             onClick={e => navigateToRunView(e, run.id)}

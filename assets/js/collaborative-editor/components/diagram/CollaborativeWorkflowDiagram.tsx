@@ -4,7 +4,7 @@
  */
 
 import { ReactFlowProvider } from "@xyflow/react";
-import { useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 
 import { useIsNewWorkflow } from "../../hooks/useSessionContext";
 import { useNodeSelection, useWorkflowState } from "../../hooks/useWorkflow";
@@ -204,6 +204,24 @@ export function CollaborativeWorkflowDiagram({
   // Local state for history panel collapse/expand
   const [historyCollapsed, setHistoryCollapsed] = useState(true);
 
+  // Track selected run for visual feedback (Phase 1 - local state only)
+  // Phase 2 will integrate with diagram state
+  const [selectedRunId, setSelectedRunId] = useState<string | null>(null);
+
+  // Transform history to mark selected run
+  const historyWithSelection = useMemo(() => {
+    if (!selectedRunId) return SAMPLE_HISTORY;
+
+    return SAMPLE_HISTORY.map(workorder => ({
+      ...workorder,
+      runs: workorder.runs.map(run => ({
+        ...run,
+        selected: run.id === selectedRunId,
+      })),
+      selected: workorder.runs.some(run => run.id === selectedRunId),
+    }));
+  }, [selectedRunId]);
+
   // Create container ref for event delegation
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -234,11 +252,18 @@ export function CollaborativeWorkflowDiagram({
         {!isNewWorkflow && (
           <MiniHistory
             collapsed={historyCollapsed}
-            history={SAMPLE_HISTORY}
-            onCollapseHistory={() => setHistoryCollapsed(!historyCollapsed)}
+            history={historyWithSelection}
+            onCollapseHistory={() => {
+              // Clear selection first (clicking selected run should deselect)
+              setSelectedRunId(null);
+              // Then toggle collapse state
+              setHistoryCollapsed(!historyCollapsed);
+            }}
             selectRunHandler={run => {
-              // Phase 2: implement run selection/navigation
-              console.log("Run selected (not yet implemented):", run.id);
+              // Phase 1: Local visual selection only
+              // Phase 2: Will integrate with diagram to show run state
+              setSelectedRunId(run.id);
+              console.log("Run selected:", run.id);
             }}
           />
         )}
