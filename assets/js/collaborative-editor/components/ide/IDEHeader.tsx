@@ -6,6 +6,8 @@ interface IDEHeaderProps {
   onClose: () => void;
   onSave: () => void;
   onRun: () => void;
+  canRun: boolean;
+  isRunning: boolean;
   canSave: boolean;
   saveTooltip: string;
 }
@@ -14,7 +16,7 @@ interface IDEHeaderProps {
  * IDE Header component with job name and action buttons
  *
  * Displays job name on left, Run/Save/Close buttons on right.
- * Run is disabled placeholder for future features.
+ * Run triggers workflow execution from ManualRunPanel.
  * Save is wired to workflow save functionality.
  */
 export function IDEHeader({
@@ -22,6 +24,8 @@ export function IDEHeader({
   onClose,
   onSave,
   onRun,
+  canRun,
+  isRunning,
   canSave,
   saveTooltip,
 }: IDEHeaderProps) {
@@ -36,17 +40,12 @@ export function IDEHeader({
 
         {/* Right: Action buttons */}
         <div className="flex items-center gap-3">
-          <Button
-            variant="secondary"
-            onClick={onRun}
-            disabled
-            className="opacity-50"
-          >
+          <Button variant="secondary" onClick={onRun} disabled={!canRun}>
             <span
               className="hero-play size-4 inline-block mr-1"
               aria-hidden="true"
             />
-            Run
+            {isRunning ? "Running..." : "Run"}
           </Button>
 
           <Tooltip content={saveTooltip} side="bottom">

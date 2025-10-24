@@ -1,8 +1,8 @@
 import { useState, useCallback } from "react";
-import MonacoEditor from "@monaco-editor/react";
 import { XMarkIcon, PencilIcon, CheckIcon } from "@heroicons/react/24/outline";
 import type { Dataclip } from "../../api/dataclips";
 import { Button } from "../Button";
+import { MonacoEditor } from "../../../monaco";
 
 interface SelectedDataclipViewProps {
   dataclip: Dataclip;

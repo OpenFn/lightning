@@ -28,6 +28,12 @@ interface ManualRunPanelProps {
   jobId?: string | null;
   triggerId?: string | null;
   onClose: () => void;
+  renderMode?: "standalone" | "embedded";
+  onRunStateChange?: (
+    canRun: boolean,
+    isSubmitting: boolean,
+    handleRun: () => void
+  ) => void;
 }
 
 type TabValue = "empty" | "custom" | "existing";
@@ -39,6 +45,8 @@ export function ManualRunPanel({
   jobId,
   triggerId,
   onClose,
+  renderMode = "standalone",
+  onRunStateChange,
 }: ManualRunPanelProps) {
   const [selectedTab, setSelectedTab] = useState<TabValue>("empty");
   const [selectedDataclip, setSelectedDataclip] = useState<Dataclip | null>(
@@ -269,8 +277,15 @@ export function ManualRunPanel({
 
   const canRun =
     selectedTab === "empty" ||
-    (selectedTab === "existing" && selectedDataclip) ||
+    (selectedTab === "existing" && !!selectedDataclip) ||
     selectedTab === "custom";
+
+  // Notify parent of run state changes (for embedded mode)
+  useEffect(() => {
+    if (onRunStateChange) {
+      onRunStateChange(canRun, isSubmitting, handleRun);
+    }
+  }, [canRun, isSubmitting, handleRun, onRunStateChange]);
 
   // Handle Escape key to close the run panel
   useHotkeys(
@@ -282,6 +297,74 @@ export function ManualRunPanel({
     [onClose]
   );
 
+  // Extract content for reuse
+  const content = selectedDataclip ? (
+    <SelectedDataclipView
+      dataclip={selectedDataclip}
+      onUnselect={handleUnselectDataclip}
+      onNameChange={handleDataclipNameChange}
+      canEdit={canEditDataclip}
+      isNextCronRun={nextCronRunDataclipId === selectedDataclip.id}
+    />
+  ) : (
+    <div className="flex flex-col h-full overflow-hidden">
+      <Tabs
+        value={selectedTab}
+        onChange={value => setSelectedTab(value as TabValue)}
+        options={[
+          { value: "empty", label: "Empty", icon: DocumentIcon },
+          {
+            value: "custom",
+            label: "Custom",
+            icon: PencilSquareIcon,
+          },
+          {
+            value: "existing",
+            label: "Existing",
+            icon: QueueListIcon,
+          },
+        ]}
+      />
+
+      {selectedTab === "empty" && <EmptyView />}
+      {selectedTab === "custom" && (
+        <CustomView
+          pushEvent={(_event, data) => {
+            if (data?.manual?.body !== undefined) {
+              handleCustomBodyChange(data.manual.body);
+            }
+          }}
+        />
+      )}
+      {selectedTab === "existing" && (
+        <ExistingView
+          dataclips={dataclips}
+          query={searchQuery}
+          setQuery={setSearchQuery}
+          setSelected={handleSelectDataclip}
+          filters={getActiveFilters()}
+          selectedClipType={selectedClipType}
+          setSelectedClipType={setSelectedClipType}
+          clearFilter={clearFilter}
+          selectedDates={selectedDates}
+          setSelectedDates={setSelectedDates}
+          namedOnly={namedOnly}
+          setNamedOnly={setNamedOnly}
+          onSubmit={handleSearch}
+          fixedHeight={true}
+          currentRunDataclip={currentRunDataclip}
+          nextCronRunDataclipId={nextCronRunDataclipId}
+        />
+      )}
+    </div>
+  );
+
+  // Embedded mode: return content without wrapper
+  if (renderMode === "embedded") {
+    return content;
+  }
+
+  // Standalone mode: wrap in InspectorLayout
   return (
     <InspectorLayout
       title={panelTitle}
@@ -301,66 +384,7 @@ export function ManualRunPanel({
         />
       }
     >
-      {selectedDataclip ? (
-        <SelectedDataclipView
-          dataclip={selectedDataclip}
-          onUnselect={handleUnselectDataclip}
-          onNameChange={handleDataclipNameChange}
-          canEdit={canEditDataclip}
-          isNextCronRun={nextCronRunDataclipId === selectedDataclip.id}
-        />
-      ) : (
-        <div className="flex flex-col h-full overflow-hidden">
-          <Tabs
-            value={selectedTab}
-            onChange={value => setSelectedTab(value as TabValue)}
-            options={[
-              { value: "empty", label: "Empty", icon: DocumentIcon },
-              {
-                value: "custom",
-                label: "Custom",
-                icon: PencilSquareIcon,
-              },
-              {
-                value: "existing",
-                label: "Existing",
-                icon: QueueListIcon,
-              },
-            ]}
-          />
-
-          {selectedTab === "empty" && <EmptyView />}
-          {selectedTab === "custom" && (
-            <CustomView
-              pushEvent={(_event, data) => {
-                if (data?.manual?.body !== undefined) {
-                  handleCustomBodyChange(data.manual.body);
-                }
-              }}
-            />
-          )}
-          {selectedTab === "existing" && (
-            <ExistingView
-              dataclips={dataclips}
-              query={searchQuery}
-              setQuery={setSearchQuery}
-              setSelected={handleSelectDataclip}
-              filters={getActiveFilters()}
-              selectedClipType={selectedClipType}
-              setSelectedClipType={setSelectedClipType}
-              clearFilter={clearFilter}
-              selectedDates={selectedDates}
-              setSelectedDates={setSelectedDates}
-              namedOnly={namedOnly}
-              setNamedOnly={setNamedOnly}
-              onSubmit={handleSearch}
-              fixedHeight={true}
-              currentRunDataclip={currentRunDataclip}
-              nextCronRunDataclipId={nextCronRunDataclipId}
-            />
-          )}
-        </div>
-      )}
+      {content}
     </InspectorLayout>
   );
 }

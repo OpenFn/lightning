@@ -15,9 +15,11 @@ import {
   useCanSave,
   useCurrentJob,
   useWorkflowActions,
+  useWorkflowState,
 } from "../../hooks/useWorkflow";
 import { CollaborativeMonaco } from "../CollaborativeMonaco";
 import { SandboxIndicatorBanner } from "../SandboxIndicatorBanner";
+import { ManualRunPanel } from "../ManualRunPanel";
 
 import { IDEHeader } from "./IDEHeader";
 
@@ -55,13 +57,36 @@ export function FullScreenIDE({
   const { canSave, tooltipMessage } = useCanSave();
   const project = useProject();
 
+  // Construct workflow object from store state for ManualRunPanel
+  const workflow = useWorkflowState(state =>
+    state.workflow
+      ? {
+          name: state.workflow.name,
+          jobs: state.jobs,
+          triggers: state.triggers,
+          edges: state.edges,
+          positions: state.positions,
+        }
+      : null
+  );
+
+  // Get project ID and workflow ID for ManualRunPanel
+  const project = useProject();
+  const projectId = project?.id;
+  const workflowId = useWorkflowState(state => state.workflow?.id);
+
   const leftPanelRef = useRef<ImperativePanelHandle>(null);
   const centerPanelRef = useRef<ImperativePanelHandle>(null);
   const rightPanelRef = useRef<ImperativePanelHandle>(null);
 
-  const [isLeftCollapsed, setIsLeftCollapsed] = useState(true);
+  const [isLeftCollapsed, setIsLeftCollapsed] = useState(false);
   const [isCenterCollapsed, setIsCenterCollapsed] = useState(false);
   const [isRightCollapsed, setIsRightCollapsed] = useState(true);
+
+  // Run state from ManualRunPanel
+  const [canRunWorkflow, setCanRunWorkflow] = useState(false);
+  const [isRunning, setIsRunning] = useState(false);
+  const [runHandler, setRunHandler] = useState<(() => void) | null>(null);
 
   const { enableScope, disableScope } = useHotkeysContext();
 
@@ -174,9 +199,27 @@ export function FullScreenIDE({
     void saveWorkflow();
   };
 
-  // Placeholder handler for disabled Run button
-  const handleRun = () => {
-    logger.warn("Run clicked (not yet implemented)");
+  // Handler for collapsing left panel (no close button in IDE context)
+  const handleCollapseLeftPanel = () => {
+    leftPanelRef.current?.collapse();
+  };
+
+  // Callback from ManualRunPanel with run state
+  const handleRunStateChange = (
+    canRun: boolean,
+    isSubmitting: boolean,
+    handler: () => void
+  ) => {
+    setCanRunWorkflow(canRun);
+    setIsRunning(isSubmitting);
+    setRunHandler(() => handler);
+  };
+
+  // Handler for Run button in header
+  const handleRunClick = () => {
+    if (runHandler) {
+      runHandler();
+    }
   };
 
   return (
@@ -186,7 +229,9 @@ export function FullScreenIDE({
         jobName={currentJob.name}
         onClose={onClose}
         onSave={handleSave}
-        onRun={handleRun}
+        onRun={handleRunClick}
+        canRun={canRunWorkflow && !isRunning}
+        isRunning={isRunning}
         canSave={canSave}
         saveTooltip={tooltipMessage}
       />
@@ -204,10 +249,10 @@ export function FullScreenIDE({
           autoSaveId="lightning.ide-layout"
           className="h-full"
         >
-          {/* Left Panel - Placeholder for Input Picker / AI Assistant */}
+          {/* Left Panel - ManualRunPanel */}
           <Panel
             ref={leftPanelRef}
-            defaultSize={1}
+            defaultSize={25}
             minSize={5}
             collapsible
             collapsedSize={1}
@@ -250,17 +295,18 @@ export function FullScreenIDE({
               </div>
 
               {/* Panel content */}
-              {!isLeftCollapsed && (
-                <div
-                  className="flex-1 p-4 flex items-center
-                  justify-center"
-                >
-                  <div className="text-center text-gray-500">
-                    <p className="text-sm font-medium">
-                      Input Picker / AI Assistant
-                    </p>
-                    <p className="text-xs mt-1">Coming Soon</p>
-                  </div>
+              {!isLeftCollapsed && workflow && projectId && workflowId && (
+                <div className="flex-1 overflow-hidden">
+                  <ManualRunPanel
+                    workflow={workflow}
+                    projectId={projectId}
+                    workflowId={workflowId}
+                    jobId={jobIdFromURL ?? null}
+                    triggerId={null}
+                    onClose={handleCollapseLeftPanel}
+                    renderMode="embedded"
+                    onRunStateChange={handleRunStateChange}
+                  />
                 </div>
               )}
             </div>
