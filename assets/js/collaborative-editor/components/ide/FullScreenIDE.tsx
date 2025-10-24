@@ -124,22 +124,33 @@ export function FullScreenIDE({
     [onClose]
   );
 
+  // Handle Cmd/Ctrl+Enter to trigger workflow run
+  // No scope restriction to ensure it works even when Monaco has focus
+  useHotkeys(
+    "mod+enter",
+    event => {
+      event.preventDefault();
+      event.stopPropagation();
+
+      if (runHandler && canRunWorkflow && !isRunning) {
+        runHandler();
+      }
+    },
+    {
+      enabled: true,
+      enableOnFormTags: true, // Allow in Monaco editor
+      preventDefault: true, // Prevent Monaco's default behavior
+      enableOnContentEditable: true, // Work in Monaco's contentEditable
+    },
+    [runHandler, canRunWorkflow, isRunning]
+  );
+
   // Sync URL job ID to workflow store selection
   useEffect(() => {
     if (jobIdFromURL) {
       selectJob(jobIdFromURL);
     }
   }, [jobIdFromURL, selectJob]);
-
-  // Debug: Log what we have
-  logger.debug({
-    jobIdFromURL,
-    hasCurrentJob: !!currentJob,
-    hasYText: !!currentJobYText,
-    hasAwareness: !!awareness,
-    currentJob,
-    awareness,
-  });
 
   // Loading state: Wait for Y.Text and awareness to be ready
   if (!currentJob || !currentJobYText || !awareness) {
@@ -253,7 +264,7 @@ export function FullScreenIDE({
           <Panel
             ref={leftPanelRef}
             defaultSize={25}
-            minSize={5}
+            minSize={15}
             collapsible
             collapsedSize={1}
             onCollapse={() => setIsLeftCollapsed(true)}
@@ -394,7 +405,7 @@ export function FullScreenIDE({
           <Panel
             ref={rightPanelRef}
             defaultSize={1}
-            minSize={5}
+            minSize={15}
             collapsible
             collapsedSize={1}
             onCollapse={() => setIsRightCollapsed(true)}

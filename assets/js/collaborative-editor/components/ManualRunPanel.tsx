@@ -200,11 +200,16 @@ export function ManualRunPanel({
     }
   }, [projectId, runContext.id, searchQuery, buildFilters]);
 
-  // Auto-search when filters change
+  // Auto-search when filters change (debounced)
   useEffect(() => {
-    if (selectedTab === "existing") {
+    if (selectedTab !== "existing") return;
+
+    // Debounce: wait 300ms after last filter change before searching
+    const timeoutId = setTimeout(() => {
       void handleSearch();
-    }
+    }, 300);
+
+    return () => clearTimeout(timeoutId);
   }, [
     selectedClipType,
     selectedDates.before,

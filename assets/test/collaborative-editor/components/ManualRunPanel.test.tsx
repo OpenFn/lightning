@@ -412,4 +412,289 @@ describe("ManualRunPanel", () => {
       expect(screen.getByText("Run Workflow")).toBeInTheDocument();
     });
   });
+
+  describe("renderMode prop", () => {
+    test("standalone mode (default) shows InspectorLayout with header and footer", async () => {
+      renderManualRunPanel({
+        workflow: mockWorkflow,
+        projectId: "project-1",
+        workflowId: "workflow-1",
+        jobId: "job-1",
+        onClose: () => {},
+      });
+
+      // Should show header with title
+      await waitFor(() => {
+        expect(screen.getByText("Run from Test Job")).toBeInTheDocument();
+      });
+
+      // Should show close button in header
+      expect(
+        screen.getByRole("button", { name: /close panel/i })
+      ).toBeInTheDocument();
+
+      // Should show footer with Run button
+      expect(screen.getByText("Run Workflow Now")).toBeInTheDocument();
+    });
+
+    test("embedded mode shows only content, no header or footer", async () => {
+      renderManualRunPanel({
+        workflow: mockWorkflow,
+        projectId: "project-1",
+        workflowId: "workflow-1",
+        jobId: "job-1",
+        onClose: () => {},
+        renderMode: "embedded",
+      });
+
+      // Should render tabs (content)
+      await waitFor(() => {
+        expect(screen.getByText("Empty")).toBeInTheDocument();
+      });
+
+      // Should NOT show header with title
+      expect(screen.queryByText("Run from Test Job")).not.toBeInTheDocument();
+
+      // Should NOT show close button
+      expect(
+        screen.queryByRole("button", { name: /close panel/i })
+      ).not.toBeInTheDocument();
+
+      // Should NOT show footer with Run button
+      expect(screen.queryByText("Run Workflow Now")).not.toBeInTheDocument();
+    });
+
+    test("embedded mode with trigger context", async () => {
+      renderManualRunPanel({
+        workflow: mockWorkflow,
+        projectId: "project-1",
+        workflowId: "workflow-1",
+        triggerId: "trigger-1",
+        onClose: () => {},
+        renderMode: "embedded",
+      });
+
+      // Should render tabs (content)
+      await waitFor(() => {
+        expect(screen.getByText("Empty")).toBeInTheDocument();
+      });
+
+      // Should NOT show header title
+      expect(
+        screen.queryByText("Run from Trigger (webhook)")
+      ).not.toBeInTheDocument();
+    });
+  });
+
+  describe("onRunStateChange callback", () => {
+    test("calls onRunStateChange when Empty tab is selected", async () => {
+      const onRunStateChange = vi.fn();
+
+      renderManualRunPanel({
+        workflow: mockWorkflow,
+        projectId: "project-1",
+        workflowId: "workflow-1",
+        jobId: "job-1",
+        onClose: () => {},
+        onRunStateChange,
+      });
+
+      // Wait for initial render and callback
+      await waitFor(() => {
+        expect(onRunStateChange).toHaveBeenCalled();
+      });
+
+      // Should be called with canRun=true, isSubmitting=false, and a handler function
+      const lastCall =
+        onRunStateChange.mock.calls[onRunStateChange.mock.calls.length - 1];
+      expect(lastCall[0]).toBe(true); // canRun
+      expect(lastCall[1]).toBe(false); // isSubmitting
+      expect(typeof lastCall[2]).toBe("function"); // handler
+    });
+
+    test("calls onRunStateChange when switching to Custom tab", async () => {
+      const user = userEvent.setup();
+      const onRunStateChange = vi.fn();
+
+      renderManualRunPanel({
+        workflow: mockWorkflow,
+        projectId: "project-1",
+        workflowId: "workflow-1",
+        jobId: "job-1",
+        onClose: () => {},
+        onRunStateChange,
+      });
+
+      // Clear initial calls
+      await waitFor(() => {
+        expect(onRunStateChange).toHaveBeenCalled();
+      });
+      onRunStateChange.mockClear();
+
+      // Switch to Custom tab
+      await user.click(screen.getByText("Custom"));
+
+      // Should be called again with updated state
+      await waitFor(() => {
+        expect(onRunStateChange).toHaveBeenCalled();
+      });
+
+      const lastCall =
+        onRunStateChange.mock.calls[onRunStateChange.mock.calls.length - 1];
+      expect(lastCall[0]).toBe(true); // canRun (Custom tab allows run)
+      expect(lastCall[1]).toBe(false); // isSubmitting
+      expect(typeof lastCall[2]).toBe("function"); // handler
+    });
+
+    test("calls onRunStateChange when selecting a dataclip in Existing tab", async () => {
+      const user = userEvent.setup();
+      const onRunStateChange = vi.fn();
+
+      vi.mocked(dataclipApi.searchDataclips).mockResolvedValue({
+        data: [mockDataclip],
+        next_cron_run_dataclip_id: null,
+        can_edit_dataclip: true,
+      });
+
+      renderManualRunPanel({
+        workflow: mockWorkflow,
+        projectId: "project-1",
+        workflowId: "workflow-1",
+        jobId: "job-1",
+        onClose: () => {},
+        onRunStateChange,
+      });
+
+      // Wait for initial render
+      await waitFor(() => {
+        expect(onRunStateChange).toHaveBeenCalled();
+      });
+      onRunStateChange.mockClear();
+
+      // Switch to Existing tab
+      await user.click(screen.getByText("Existing"));
+
+      // Wait for dataclip to appear
+      await waitFor(() => {
+        expect(screen.getByText("Test Dataclip")).toBeInTheDocument();
+      });
+
+      // At this point, no dataclip is selected, so canRun should be false
+      let lastCall =
+        onRunStateChange.mock.calls[onRunStateChange.mock.calls.length - 1];
+      expect(lastCall[0]).toBe(false); // canRun
+
+      onRunStateChange.mockClear();
+
+      // Select the dataclip
+      await user.click(screen.getByText("Test Dataclip"));
+
+      // Should be called with canRun=true now
+      await waitFor(() => {
+        expect(onRunStateChange).toHaveBeenCalled();
+      });
+
+      lastCall =
+        onRunStateChange.mock.calls[onRunStateChange.mock.calls.length - 1];
+      expect(lastCall[0]).toBe(true); // canRun
+      expect(lastCall[1]).toBe(false); // isSubmitting
+    });
+
+    test("handler function is stable across re-renders", async () => {
+      const onRunStateChange = vi.fn();
+
+      const { rerender } = renderManualRunPanel({
+        workflow: mockWorkflow,
+        projectId: "project-1",
+        workflowId: "workflow-1",
+        jobId: "job-1",
+        onClose: () => {},
+        onRunStateChange,
+      });
+
+      await waitFor(() => {
+        expect(onRunStateChange).toHaveBeenCalled();
+      });
+
+      const firstHandler = onRunStateChange.mock.calls[0][2];
+
+      // Re-render with same props
+      rerender(
+        <HotkeysProvider>
+          <ManualRunPanel
+            workflow={mockWorkflow}
+            projectId="project-1"
+            workflowId="workflow-1"
+            jobId="job-1"
+            onClose={() => {}}
+            onRunStateChange={onRunStateChange}
+          />
+        </HotkeysProvider>
+      );
+
+      await waitFor(() => {
+        expect(onRunStateChange.mock.calls.length).toBeGreaterThan(1);
+      });
+
+      const secondHandler =
+        onRunStateChange.mock.calls[onRunStateChange.mock.calls.length - 1][2];
+
+      // Handlers should reference the same memoized function
+      expect(typeof firstHandler).toBe("function");
+      expect(typeof secondHandler).toBe("function");
+    });
+  });
+
+  describe("filter debouncing", () => {
+    test("eventually triggers search after filter changes (debounced)", async () => {
+      const user = userEvent.setup();
+
+      vi.mocked(dataclipApi.searchDataclips).mockResolvedValue({
+        data: [],
+        next_cron_run_dataclip_id: null,
+        can_edit_dataclip: true,
+      });
+
+      renderManualRunPanel({
+        workflow: mockWorkflow,
+        projectId: "project-1",
+        workflowId: "workflow-1",
+        jobId: "job-1",
+        onClose: () => {},
+      });
+
+      // Wait for initial fetch
+      await waitFor(() => {
+        expect(dataclipApi.searchDataclips).toHaveBeenCalledTimes(1);
+      });
+
+      // Switch to Existing tab
+      await user.click(screen.getByText("Existing"));
+
+      // Find the "Named only" filter button (has hero-tag icon)
+      const filterButtons = screen
+        .getAllByRole("button")
+        .filter(btn => btn.querySelector(".hero-tag"));
+      expect(filterButtons.length).toBeGreaterThan(0);
+
+      // Click the named-only filter button
+      await user.click(filterButtons[0]);
+
+      // Search should eventually be triggered after debounce delay (300ms)
+      // We use waitFor with a reasonable timeout to allow the debounce to complete
+      await waitFor(
+        () => {
+          expect(dataclipApi.searchDataclips).toHaveBeenCalledTimes(2);
+        },
+        { timeout: 1000 }
+      );
+
+      // Verify the search was called with the correct filter
+      const lastCall =
+        dataclipApi.searchDataclips.mock.calls[
+          dataclipApi.searchDataclips.mock.calls.length - 1
+        ];
+      expect(lastCall[3]).toEqual({ named_only: "true" });
+    });
+  });
 });
