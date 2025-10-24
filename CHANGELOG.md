@@ -44,6 +44,9 @@ and this project adheres to
 
 ### Fixed
 
+- Fixed credential preservation during sandbox workflow merge - credentials are
+  now correctly maintained when merging sandboxes back to parent projects
+  [#3782](https://github.com/OpenFn/lightning/issues/3782)
 - Backfilled `env` field for existing root projects to ensure environment chips
   display correctly in workflow editor and inspector
   [#3839](https://github.com/OpenFn/lightning/issues/3839)
