@@ -47,6 +47,9 @@ and this project adheres to
 - Escape key support for closing inspector panels in collaborative workflow
   editor, using react-hotkeys-hook for scoped keyboard shortcuts with modal
   priority [#3768](https://github.com/OpenFn/lightning/issues/3768)
+- Divergence warning when merging sandboxes - displays alert if target branch
+  was modified after sandbox creation to prevent data loss
+  [#3747](https://github.com/OpenFn/lightning/issues/3747)
 
 ### Changed
 

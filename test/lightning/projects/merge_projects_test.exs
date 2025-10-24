@@ -1707,6 +1707,35 @@ defmodule Lightning.Projects.MergeProjectsTest do
       assert find_edge_by_names(result, "webhook", "y")["id"] ==
                find_edge_by_names(target, "webhook", "b")["id"]
     end
+
+    test "handles source workflow with trigger that has no match in target" do
+      source_workflow =
+        build(:workflow,
+          triggers: [
+            build(:trigger, type: :cron, cron_expression: "0 0 * * *")
+          ],
+          jobs: [],
+          edges: []
+        )
+
+      target_workflow =
+        build(:workflow,
+          triggers: [
+            build(:trigger, type: :webhook)
+          ],
+          jobs: [],
+          edges: []
+        )
+
+      result = MergeProjects.merge_workflow(source_workflow, target_workflow)
+
+      cron_trigger =
+        Enum.find(result["triggers"], fn t -> t["type"] == :cron end)
+
+      assert cron_trigger
+      assert cron_trigger["id"]
+      refute Map.get(cron_trigger, "delete")
+    end
   end
 
   describe "merge_workflow/2 - merge attributes" do
@@ -2561,5 +2590,432 @@ defmodule Lightning.Projects.MergeProjectsTest do
         edge_opts = Map.get(opts, {source_job_name, target_job_name}, %{})
         with_edge(wf, {source_job, target_job}, edge_opts)
     end)
+  end
+
+  describe "has_diverged?/2" do
+    test "returns false when target workflow versions match sandbox versions" do
+      target_project = insert(:project)
+
+      target_workflow =
+        insert(:workflow, project: target_project, name: "Workflow 1")
+
+      insert(:workflow_version,
+        workflow: target_workflow,
+        hash: "abc123",
+        source: "app"
+      )
+
+      source_project = insert(:project, parent_id: target_project.id)
+
+      source_workflow =
+        insert(:workflow, project: source_project, name: "Workflow 1")
+
+      insert(:workflow_version,
+        workflow: source_workflow,
+        hash: "abc123",
+        source: "app"
+      )
+
+      refute MergeProjects.has_diverged?(source_project, target_project)
+    end
+
+    test "returns true when target workflow version differs from sandbox version" do
+      target_project = insert(:project)
+
+      target_workflow =
+        insert(:workflow, project: target_project, name: "Workflow 1")
+
+      insert(:workflow_version,
+        workflow: target_workflow,
+        hash: "abc123",
+        source: "app"
+      )
+
+      source_project = insert(:project, parent_id: target_project.id)
+
+      source_workflow =
+        insert(:workflow, project: source_project, name: "Workflow 1")
+
+      insert(:workflow_version,
+        workflow: source_workflow,
+        hash: "abc123",
+        source: "app"
+      )
+
+      insert(:workflow_version,
+        workflow: target_workflow,
+        hash: "def456",
+        source: "app"
+      )
+
+      assert MergeProjects.has_diverged?(source_project, target_project)
+    end
+
+    test "returns false when target has no workflows" do
+      target_project = insert(:project)
+
+      source_project = insert(:project, parent_id: target_project.id)
+      source_workflow = insert(:workflow, project: source_project)
+
+      insert(:workflow_version,
+        workflow: source_workflow,
+        hash: "abc123",
+        source: "app"
+      )
+
+      refute MergeProjects.has_diverged?(source_project, target_project)
+    end
+
+    test "returns true when any workflow in target has different version" do
+      target_project = insert(:project)
+
+      target_workflow_1 =
+        insert(:workflow, project: target_project, name: "Workflow 1")
+
+      target_workflow_2 =
+        insert(:workflow, project: target_project, name: "Workflow 2")
+
+      insert(:workflow_version,
+        workflow: target_workflow_1,
+        hash: "abc123",
+        source: "app"
+      )
+
+      insert(:workflow_version,
+        workflow: target_workflow_2,
+        hash: "def456",
+        source: "app"
+      )
+
+      source_project = insert(:project, parent_id: target_project.id)
+
+      source_workflow_1 =
+        insert(:workflow, project: source_project, name: "Workflow 1")
+
+      source_workflow_2 =
+        insert(:workflow, project: source_project, name: "Workflow 2")
+
+      insert(:workflow_version,
+        workflow: source_workflow_1,
+        hash: "abc123",
+        source: "app"
+      )
+
+      insert(:workflow_version,
+        workflow: source_workflow_2,
+        hash: "def456",
+        source: "app"
+      )
+
+      insert(:workflow_version,
+        workflow: target_workflow_2,
+        hash: "xyz789",
+        source: "app"
+      )
+
+      assert MergeProjects.has_diverged?(source_project, target_project)
+    end
+
+    test "uses most recent version hash when multiple versions exist" do
+      target_project = insert(:project)
+
+      target_workflow =
+        insert(:workflow, project: target_project, name: "Workflow 1")
+
+      insert(:workflow_version,
+        workflow: target_workflow,
+        hash: "old_version",
+        source: "app",
+        inserted_at: DateTime.add(DateTime.utc_now(), -2, :hour)
+      )
+
+      insert(:workflow_version,
+        workflow: target_workflow,
+        hash: "latest_version",
+        source: "app",
+        inserted_at: DateTime.utc_now()
+      )
+
+      source_project = insert(:project, parent_id: target_project.id)
+
+      source_workflow =
+        insert(:workflow, project: source_project, name: "Workflow 1")
+
+      insert(:workflow_version,
+        workflow: source_workflow,
+        hash: "latest_version",
+        source: "app"
+      )
+
+      refute MergeProjects.has_diverged?(source_project, target_project)
+    end
+
+    test "returns false when target has a workflow not in sandbox" do
+      target_project = insert(:project)
+
+      target_workflow =
+        insert(:workflow, project: target_project, name: "Workflow 1")
+
+      insert(:workflow_version,
+        workflow: target_workflow,
+        hash: "abc123",
+        source: "app"
+      )
+
+      source_project = insert(:project, parent_id: target_project.id)
+
+      refute MergeProjects.has_diverged?(source_project, target_project)
+    end
+
+    test "returns false when sandbox has empty workflows list" do
+      target_project = insert(:project)
+      source_project = insert(:project, parent_id: target_project.id)
+
+      refute MergeProjects.has_diverged?(source_project, target_project)
+    end
+
+    test "returns false when workflows have no versions" do
+      target_project = insert(:project)
+      source_project = insert(:project, parent_id: target_project.id)
+
+      insert(:workflow, project: target_project, name: "Workflow 1")
+      insert(:workflow, project: source_project, name: "Workflow 1")
+
+      refute MergeProjects.has_diverged?(source_project, target_project)
+    end
+  end
+
+  describe "merge_workflow/2 - edge case with multiple candidates and body matching" do
+    test "uses body matching when multiple structural candidates exist" do
+      source_trigger = build(:trigger, type: :webhook)
+
+      source_job_a =
+        build(:job, name: "job_a", body: "console.log('specific code');")
+
+      source_job_b =
+        build(:job, name: "job_b", body: "console.log('different code');")
+
+      source =
+        build(:workflow)
+        |> with_trigger(source_trigger)
+        |> with_job(source_job_a)
+        |> with_job(source_job_b)
+        |> with_edge({source_trigger, source_job_a})
+        |> with_edge({source_trigger, source_job_b})
+        |> insert()
+
+      target_trigger = build(:trigger, type: :webhook)
+
+      target_job_x =
+        build(:job, name: "job_x", body: "console.log('other code');")
+
+      target_job_y =
+        build(:job, name: "job_y", body: "console.log('specific code');")
+
+      target =
+        build(:workflow)
+        |> with_trigger(target_trigger)
+        |> with_job(target_job_x)
+        |> with_job(target_job_y)
+        |> with_edge({target_trigger, target_job_x})
+        |> with_edge({target_trigger, target_job_y})
+        |> insert()
+
+      result = MergeProjects.merge_workflow(source, target)
+
+      result_job_a = Enum.find(result["jobs"], &(&1["name"] == "job_a"))
+      assert result_job_a["id"] == target_job_y.id
+
+      result_job_b = Enum.find(result["jobs"], &(&1["name"] == "job_b"))
+      assert result_job_b["id"] == target_job_x.id
+    end
+
+    test "handles max iterations guard in structural matching" do
+      source_trigger = build(:trigger, type: :webhook)
+
+      source_jobs =
+        for i <- 1..10 do
+          build(:job, name: "job_#{i}", body: "fn(state => state)")
+        end
+
+      source_workflow_builder =
+        Enum.reduce(
+          source_jobs,
+          build(:workflow) |> with_trigger(source_trigger),
+          fn job, workflow ->
+            with_job(workflow, job)
+          end
+        )
+
+      source_workflow_builder =
+        with_edge(source_workflow_builder, {source_trigger, hd(source_jobs)})
+
+      source =
+        source_workflow_builder
+        |> insert()
+
+      target_trigger = build(:trigger, type: :webhook)
+
+      target_jobs =
+        for i <- 1..10 do
+          build(:job, name: "target_job_#{i}", body: "fn(state => state)")
+        end
+
+      target_workflow_builder =
+        Enum.reduce(
+          target_jobs,
+          build(:workflow) |> with_trigger(target_trigger),
+          fn job, workflow ->
+            with_job(workflow, job)
+          end
+        )
+
+      target_workflow_builder =
+        with_edge(target_workflow_builder, {target_trigger, hd(target_jobs)})
+
+      target =
+        target_workflow_builder
+        |> insert()
+
+      result = MergeProjects.merge_workflow(source, target)
+
+      # Should complete without errors, even with many jobs
+      # Result includes both mapped source jobs and deleted target jobs (10 + 10 - 1)
+      # since only the first job from each gets matched by the trigger edge
+      assert length(result["jobs"]) == 19
+      # One target job gets mapped, the rest (9) get marked for deletion
+      # Plus 10 source jobs (with new IDs for 9 of them, 1 mapped)
+      deleted_jobs = Enum.filter(result["jobs"], & &1["delete"])
+      assert length(deleted_jobs) == 9
+    end
+
+    test "handles source trigger with no matching target trigger type" do
+      source_trigger_webhook = build(:trigger, type: :webhook)
+
+      source_trigger_cron =
+        build(:trigger, type: :cron, cron_expression: "0 * * * *")
+
+      source_job = build(:job, name: "job_a")
+
+      source =
+        build(:workflow)
+        |> with_trigger(source_trigger_webhook)
+        |> with_trigger(source_trigger_cron)
+        |> with_job(source_job)
+        |> with_edge({source_trigger_webhook, source_job})
+        |> insert()
+
+      target_trigger = build(:trigger, type: :webhook)
+      target_job = build(:job, name: "job_x")
+
+      target =
+        build(:workflow)
+        |> with_trigger(target_trigger)
+        |> with_job(target_job)
+        |> with_edge({target_trigger, target_job})
+        |> insert()
+
+      result = MergeProjects.merge_workflow(source, target)
+
+      # Should have 2 triggers (webhook maps to target, cron gets new ID)
+      assert length(result["triggers"]) == 2
+
+      # Webhook trigger should map to target
+      webhook_trigger = Enum.find(result["triggers"], &(&1["type"] == :webhook))
+      assert webhook_trigger["id"] == target_trigger.id
+
+      # Cron trigger should get a new ID (not mapped)
+      cron_trigger = Enum.find(result["triggers"], &(&1["type"] == :cron))
+      assert cron_trigger["id"] != source_trigger_cron.id
+      refute cron_trigger["delete"]
+    end
+
+    test "handles multiple candidates with identical bodies in non-final iteration" do
+      source_trigger = build(:trigger, type: :webhook)
+      source_job_a = build(:job, name: "job_a", body: "fn(state => state)")
+      source_job_b = build(:job, name: "job_b", body: "fn(state => state)")
+      source_job_c = build(:job, name: "job_c", body: "fn(state => state)")
+
+      source =
+        build(:workflow)
+        |> with_trigger(source_trigger)
+        |> with_job(source_job_a)
+        |> with_job(source_job_b)
+        |> with_job(source_job_c)
+        |> with_edge({source_trigger, source_job_a})
+        |> with_edge({source_trigger, source_job_b})
+        |> with_edge({source_trigger, source_job_c})
+        |> insert()
+
+      target_trigger = build(:trigger, type: :webhook)
+      # Three target jobs with same body (creates ambiguity)
+      target_job_x = build(:job, name: "job_x", body: "fn(state => state)")
+      target_job_y = build(:job, name: "job_y", body: "fn(state => state)")
+      target_job_z = build(:job, name: "job_z", body: "fn(state => state)")
+
+      target =
+        build(:workflow)
+        |> with_trigger(target_trigger)
+        |> with_job(target_job_x)
+        |> with_job(target_job_y)
+        |> with_job(target_job_z)
+        |> with_edge({target_trigger, target_job_x})
+        |> with_edge({target_trigger, target_job_y})
+        |> with_edge({target_trigger, target_job_z})
+        |> insert()
+
+      result = MergeProjects.merge_workflow(source, target)
+
+      # All jobs should be mapped (even with ambiguity)
+      # Algorithm will eventually map them all in final iteration
+      source_jobs = Enum.filter(result["jobs"], &(!&1["delete"]))
+      assert length(source_jobs) == 3
+    end
+
+    test "exercises iteration boundary conditions" do
+      source_trigger = build(:trigger, type: :webhook)
+
+      source_job_a = build(:job, name: "a", body: "code_a")
+      source_job_b = build(:job, name: "b", body: "code_b")
+      source_job_c = build(:job, name: "c", body: "code_c")
+
+      source =
+        build(:workflow)
+        |> with_trigger(source_trigger)
+        |> with_job(source_job_a)
+        |> with_job(source_job_b)
+        |> with_job(source_job_c)
+        |> with_edge({source_trigger, source_job_a})
+        |> with_edge({source_job_a, source_job_b})
+        |> with_edge({source_job_b, source_job_c})
+        |> insert()
+
+      target_trigger = build(:trigger, type: :webhook)
+
+      target_job_x = build(:job, name: "x", body: "other_code")
+      target_job_y = build(:job, name: "y", body: "other_code")
+      target_job_z = build(:job, name: "z", body: "other_code")
+
+      target =
+        build(:workflow)
+        |> with_trigger(target_trigger)
+        |> with_job(target_job_x)
+        |> with_job(target_job_y)
+        |> with_job(target_job_z)
+        |> with_edge({target_trigger, target_job_x})
+        |> with_edge({target_job_x, target_job_y})
+        |> with_edge({target_job_y, target_job_z})
+        |> insert()
+
+      result = MergeProjects.merge_workflow(source, target)
+
+      # Jobs should map based on structure (positions in chain)
+      result_jobs = Enum.reject(result["jobs"], & &1["delete"])
+      assert length(result_jobs) == 3
+
+      # First job in chain should map (has trigger as parent)
+      result_a = Enum.find(result_jobs, &(&1["name"] == "a"))
+      assert result_a["id"] == target_job_x.id
+    end
   end
 end
