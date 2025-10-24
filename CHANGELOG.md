@@ -17,6 +17,8 @@ and this project adheres to
 
 ### Added
 
+- Ability to delay webhook trigger replies until a workflow finishes
+  [#PR3785](https://github.com/OpenFn/lightning/pull/3785)
 - REST API for runs, work_orders, and log_lines to refresh GovStack compliance
   [#1656](https://github.com/OpenFn/lightning/issues/1656) &
   [PR#3786](https://github.com/OpenFn/lightning/pull/3786)
@@ -44,6 +46,9 @@ and this project adheres to
 
 - Fixed AI chat session persistence when switching between jobs in workflow
   editor [#3745](https://github.com/OpenFn/lightning/issues/3745)
+- Backfilled `env` field for existing root projects to ensure environment chips
+  display correctly in workflow editor and inspector
+  [#3839](https://github.com/OpenFn/lightning/issues/3839)
 
 ## [2.14.12] - 2025-10-21
 
