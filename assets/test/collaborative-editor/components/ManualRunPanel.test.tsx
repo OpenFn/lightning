@@ -8,15 +8,29 @@
  * - Dataclip fetching and selection
  * - Run button enable/disable logic
  * - Close handler
+ * - Permission checks for running workflows
  */
 
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { HotkeysProvider } from "react-hotkeys-hook";
+import type React from "react";
+import { act } from "react";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import * as dataclipApi from "../../../js/collaborative-editor/api/dataclips";
 import { ManualRunPanel } from "../../../js/collaborative-editor/components/ManualRunPanel";
+import { StoreContext } from "../../../js/collaborative-editor/contexts/StoreProvider";
+import type { StoreContextValue } from "../../../js/collaborative-editor/contexts/StoreProvider";
+import { createAdaptorStore } from "../../../js/collaborative-editor/stores/createAdaptorStore";
+import { createAwarenessStore } from "../../../js/collaborative-editor/stores/createAwarenessStore";
+import { createCredentialStore } from "../../../js/collaborative-editor/stores/createCredentialStore";
+import { createSessionContextStore } from "../../../js/collaborative-editor/stores/createSessionContextStore";
+import { createWorkflowStore } from "../../../js/collaborative-editor/stores/createWorkflowStore";
 import type { Workflow } from "../../../js/collaborative-editor/types/workflow";
+import {
+  createMockPhoenixChannel,
+  createMockPhoenixChannelProvider,
+} from "../__helpers__";
 
 // Mock the API module
 vi.mock("../../../js/collaborative-editor/api/dataclips");
@@ -79,20 +93,51 @@ const mockDataclip: dataclipApi.Dataclip = {
   wiped_at: null,
 };
 
-// Helper function to render ManualRunPanel with HotkeysProvider
+// Create stores for tests
+let stores: StoreContextValue;
+let mockChannel: any;
+
+// Helper function to render ManualRunPanel with all providers
 function renderManualRunPanel(
   props: React.ComponentProps<typeof ManualRunPanel>
 ) {
   return render(
-    <HotkeysProvider>
-      <ManualRunPanel {...props} />
-    </HotkeysProvider>
+    <StoreContext.Provider value={stores}>
+      <HotkeysProvider>
+        <ManualRunPanel {...props} />
+      </HotkeysProvider>
+    </StoreContext.Provider>
   );
 }
 
 describe("ManualRunPanel", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+
+    // Create fresh store instances
+    stores = {
+      workflowStore: createWorkflowStore(),
+      credentialStore: createCredentialStore(),
+      sessionContextStore: createSessionContextStore(),
+      adaptorStore: createAdaptorStore(),
+      awarenessStore: createAwarenessStore(),
+    };
+
+    // Create mock channel and connect session context store
+    mockChannel = createMockPhoenixChannel();
+    const mockProvider = createMockPhoenixChannelProvider(mockChannel);
+    stores.sessionContextStore._connectChannel(mockProvider as any);
+
+    // Set permissions with can_edit_workflow: true by default
+    act(() => {
+      (mockChannel as any)._test.emit("session_context", {
+        user: null,
+        project: null,
+        config: { require_email_verification: false },
+        permissions: { can_edit_workflow: true },
+        latest_snapshot_lock_version: 1,
+      });
+    });
 
     // Default mock for searchDataclips - returns empty list
     vi.mocked(dataclipApi.searchDataclips).mockResolvedValue({
@@ -618,18 +663,20 @@ describe("ManualRunPanel", () => {
 
       const firstHandler = onRunStateChange.mock.calls[0][2];
 
-      // Re-render with same props
+      // Re-render with same props (wrapped with providers)
       rerender(
-        <HotkeysProvider>
-          <ManualRunPanel
-            workflow={mockWorkflow}
-            projectId="project-1"
-            workflowId="workflow-1"
-            jobId="job-1"
-            onClose={() => {}}
-            onRunStateChange={onRunStateChange}
-          />
-        </HotkeysProvider>
+        <StoreContext.Provider value={stores}>
+          <HotkeysProvider>
+            <ManualRunPanel
+              workflow={mockWorkflow}
+              projectId="project-1"
+              workflowId="workflow-1"
+              jobId="job-1"
+              onClose={() => {}}
+              onRunStateChange={onRunStateChange}
+            />
+          </HotkeysProvider>
+        </StoreContext.Provider>
       );
 
       await waitFor(() => {
@@ -689,6 +736,131 @@ describe("ManualRunPanel", () => {
         },
         { timeout: 1000 }
       );
+    });
+  });
+
+  describe("permission checks", () => {
+    test("Run button is disabled when user lacks can_edit_workflow permission", async () => {
+      // Override permissions to deny workflow editing
+      act(() => {
+        (mockChannel as any)._test.emit("session_context", {
+          user: null,
+          project: null,
+          config: { require_email_verification: false },
+          permissions: { can_edit_workflow: false },
+          latest_snapshot_lock_version: 1,
+        });
+      });
+
+      renderManualRunPanel({
+        workflow: mockWorkflow,
+        projectId: "project-1",
+        workflowId: "workflow-1",
+        jobId: "job-1",
+        onClose: () => {},
+      });
+
+      await waitFor(() => {
+        const runButton = screen.getByText("Run Workflow Now");
+        expect(runButton).toBeDisabled();
+      });
+    });
+
+    test("Run button is enabled when user has can_edit_workflow permission", async () => {
+      // Permissions already set to can_edit_workflow: true in beforeEach
+      renderManualRunPanel({
+        workflow: mockWorkflow,
+        projectId: "project-1",
+        workflowId: "workflow-1",
+        jobId: "job-1",
+        onClose: () => {},
+      });
+
+      await waitFor(() => {
+        const runButton = screen.getByText("Run Workflow Now");
+        expect(runButton).not.toBeDisabled();
+      });
+    });
+
+    test("onRunStateChange reports canRun=false when permission is denied", async () => {
+      const onRunStateChange = vi.fn();
+
+      // Override permissions to deny workflow editing
+      act(() => {
+        (mockChannel as any)._test.emit("session_context", {
+          user: null,
+          project: null,
+          config: { require_email_verification: false },
+          permissions: { can_edit_workflow: false },
+          latest_snapshot_lock_version: 1,
+        });
+      });
+
+      renderManualRunPanel({
+        workflow: mockWorkflow,
+        projectId: "project-1",
+        workflowId: "workflow-1",
+        jobId: "job-1",
+        onClose: () => {},
+        onRunStateChange,
+      });
+
+      // Wait for initial render and callback
+      await waitFor(() => {
+        expect(onRunStateChange).toHaveBeenCalled();
+      });
+
+      // Should be called with canRun=false due to lack of permission
+      const lastCall =
+        onRunStateChange.mock.calls[onRunStateChange.mock.calls.length - 1];
+      expect(lastCall[0]).toBe(false); // canRun
+      expect(lastCall[1]).toBe(false); // isSubmitting
+      expect(typeof lastCall[2]).toBe("function"); // handler
+    });
+
+    test("Run button remains disabled in Existing tab without permission, even with selected dataclip", async () => {
+      const user = userEvent.setup();
+
+      // Override permissions to deny workflow editing
+      act(() => {
+        (mockChannel as any)._test.emit("session_context", {
+          user: null,
+          project: null,
+          config: { require_email_verification: false },
+          permissions: { can_edit_workflow: false },
+          latest_snapshot_lock_version: 1,
+        });
+      });
+
+      vi.mocked(dataclipApi.searchDataclips).mockResolvedValue({
+        data: [mockDataclip],
+        next_cron_run_dataclip_id: null,
+        can_edit_dataclip: false,
+      });
+
+      renderManualRunPanel({
+        workflow: mockWorkflow,
+        projectId: "project-1",
+        workflowId: "workflow-1",
+        jobId: "job-1",
+        onClose: () => {},
+      });
+
+      // Switch to Existing tab
+      await user.click(screen.getByText("Existing"));
+
+      // Wait for dataclip to appear and click it
+      await waitFor(() => {
+        expect(screen.getByText("Test Dataclip")).toBeInTheDocument();
+      });
+
+      await user.click(screen.getByText("Test Dataclip"));
+
+      // Run button should still be disabled due to lack of permission
+      await waitFor(() => {
+        const runButton = screen.getByText("Run Workflow Now");
+        expect(runButton).toBeDisabled();
+      });
     });
   });
 });

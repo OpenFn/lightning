@@ -4,22 +4,20 @@ import {
   QueueListIcon,
 } from "@heroicons/react/24/outline";
 import { useCallback, useEffect, useState } from "react";
-import { useHotkeys, useHotkeysContext } from "react-hotkeys-hook";
+import { useHotkeys } from "react-hotkeys-hook";
 import { FilterTypes } from "../../manual-run-panel/types";
 import CustomView from "../../manual-run-panel/views/CustomView";
 import EmptyView from "../../manual-run-panel/views/EmptyView";
 import ExistingView from "../../manual-run-panel/views/ExistingView";
 import type { Dataclip } from "../api/dataclips";
 import * as dataclipApi from "../api/dataclips";
+import { usePermissions } from "../hooks/useSessionContext";
 import type { Workflow } from "../types/workflow";
 import { Button } from "./Button";
 import { InspectorFooter } from "./inspector/InspectorFooter";
 import { InspectorLayout } from "./inspector/InspectorLayout";
 import { SelectedDataclipView } from "./manual-run/SelectedDataclipView";
 import { Tabs } from "./Tabs";
-
-import _logger from "#/utils/logger";
-const logger = _logger.ns("ManualRunPanel").seal();
 
 interface ManualRunPanelProps {
   workflow: Workflow;
@@ -69,6 +67,9 @@ export function ManualRunPanel({
     after: "",
   });
   const [namedOnly, setNamedOnly] = useState(false);
+
+  // Get user permissions
+  const permissions = usePermissions();
 
   // Determine run context
   const runContext = jobId
@@ -295,9 +296,10 @@ export function ManualRunPanel({
   ]);
 
   const canRun =
-    selectedTab === "empty" ||
-    (selectedTab === "existing" && !!selectedDataclip) ||
-    selectedTab === "custom";
+    !!permissions?.can_edit_workflow &&
+    (selectedTab === "empty" ||
+      (selectedTab === "existing" && !!selectedDataclip) ||
+      selectedTab === "custom");
 
   // Notify parent of run state changes (for embedded mode)
   useEffect(() => {
