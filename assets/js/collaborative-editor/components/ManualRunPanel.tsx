@@ -18,8 +18,8 @@ import { InspectorLayout } from "./inspector/InspectorLayout";
 import { SelectedDataclipView } from "./manual-run/SelectedDataclipView";
 import { Tabs } from "./Tabs";
 
-// import _logger from "#/utils/logger";
-// const logger = _logger.ns("ManualRunPanel").seal();
+import _logger from "#/utils/logger";
+const logger = _logger.ns("ManualRunPanel").seal();
 
 interface ManualRunPanelProps {
   workflow: Workflow;
@@ -273,7 +273,9 @@ export function ManualRunPanel({
     selectedTab === "custom";
 
   // Use HotkeysContext to manage runPanel scope
-  const { enableScope, disableScope } = useHotkeysContext();
+  const { enableScope, disableScope, activeScopes } = useHotkeysContext();
+
+  logger.debug({ activeScopes });
 
   // Enable runPanel scope when this component mounts
   // Parent (WorkflowEditor) manages the "panel" scope to prevent conflicts
@@ -289,6 +291,7 @@ export function ManualRunPanel({
   useHotkeys(
     "escape",
     () => {
+      logger.debug("Triggered Esc");
       onClose();
     },
     {

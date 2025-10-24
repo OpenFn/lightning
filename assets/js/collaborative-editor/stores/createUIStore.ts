@@ -77,7 +77,7 @@ export const createUIStore = (): UIStore => {
   // Single Immer-managed state object (referentially stable)
   let state: UIState = produce(
     {
-      activePanel: null,
+      runPanelOpen: false,
       runPanelContext: null,
     } as UIState,
     // No initial transformations needed
@@ -121,8 +121,8 @@ export const createUIStore = (): UIStore => {
   const openRunPanel = (context: { jobId?: string; triggerId?: string }) => {
     logger.debug("Opening run panel", { context });
     state = produce(state, draft => {
-      draft.activePanel = "run";
       draft.runPanelContext = context;
+      draft.runPanelOpen = true;
     });
     notify("openRunPanel");
   };
@@ -130,32 +130,11 @@ export const createUIStore = (): UIStore => {
   const closeRunPanel = () => {
     logger.debug("Closing run panel");
     state = produce(state, draft => {
-      draft.activePanel = null;
       draft.runPanelContext = null;
+      draft.runPanelOpen = false;
     });
     notify("closeRunPanel");
   };
-
-  const setActivePanel = (panel: UIState["activePanel"]) => {
-    logger.debug("Setting active panel", { panel });
-    state = produce(state, draft => {
-      draft.activePanel = panel;
-      // Clear run panel context if switching away from run panel
-      if (panel !== "run") {
-        draft.runPanelContext = null;
-      }
-    });
-    notify("setActivePanel");
-  };
-
-  // ===========================================================================
-  // QUERIES (CQS pattern - State reads)
-  // ===========================================================================
-
-  const getActivePanel = (): UIState["activePanel"] => state.activePanel;
-
-  const getRunPanelContext = (): UIState["runPanelContext"] =>
-    state.runPanelContext;
 
   devtools.connect();
 
@@ -172,11 +151,6 @@ export const createUIStore = (): UIStore => {
     // Commands
     openRunPanel,
     closeRunPanel,
-    setActivePanel,
-
-    // Queries
-    getActivePanel,
-    getRunPanelContext,
   };
 };
 

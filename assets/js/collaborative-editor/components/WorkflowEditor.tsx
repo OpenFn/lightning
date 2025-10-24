@@ -43,13 +43,35 @@ export function WorkflowEditor() {
   // When run panel closes, re-enable "panel" scope so Inspector Escape works
   const { enableScope, disableScope } = useHotkeysContext();
 
-  useEffect(() => {
-    if (isRunPanelOpen) {
-      disableScope("panel");
-    } else {
-      enableScope("panel");
-    }
-  }, [isRunPanelOpen, enableScope, disableScope]);
+  // useEffect(() => {
+  //   if (isRunPanelOpen) {
+  //     disableScope("panel");
+  //   } else {
+  //     enableScope("panel");
+  //   }
+  // }, [isRunPanelOpen, enableScope, disableScope]);
+
+  // // Update run panel context when selected node changes (if panel is open)
+  // useEffect(() => {
+  //   if (isRunPanelOpen && runPanelContext) {
+  //     // Panel is open, update context based on selected node
+  //     if (currentNode.type === "job" && currentNode.node) {
+  //       openRunPanel({ jobId: currentNode.node.id });
+  //     } else if (currentNode.type === "trigger" && currentNode.node) {
+  //       openRunPanel({ triggerId: currentNode.node.id });
+  //     } else if (currentNode.type === "edge" || !currentNode.node) {
+  //       // Close panel if edge selected or nothing selected (clicked canvas)
+  //       closeRunPanel();
+  //     }
+  //   }
+  // }, [
+  //   currentNode.type,
+  //   currentNode.node,
+  //   isRunPanelOpen,
+  //   runPanelContext,
+  //   openRunPanel,
+  //   closeRunPanel,
+  // ]);
 
   // Get projectId from session context store
   const project = useProject();

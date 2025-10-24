@@ -60,7 +60,6 @@ export const useUICommands = () => {
   return {
     openRunPanel: uiStore.openRunPanel,
     closeRunPanel: uiStore.closeRunPanel,
-    setActivePanel: uiStore.setActivePanel,
   };
 };
 
@@ -71,9 +70,7 @@ export const useUICommands = () => {
 export const useIsRunPanelOpen = (): boolean => {
   const uiStore = useUIStore();
 
-  const selectIsOpen = uiStore.withSelector(
-    state => state.activePanel === "run"
-  );
+  const selectIsOpen = uiStore.withSelector(state => state.runPanelOpen);
 
   return useSyncExternalStore(uiStore.subscribe, selectIsOpen);
 };

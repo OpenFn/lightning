@@ -13,8 +13,7 @@
  * UI store state for transient UI concerns like panel visibility
  */
 export interface UIState {
-  /** Currently active panel (null = no panel open) */
-  activePanel: "inspector" | "run" | "ide" | null;
+  runPanelOpen: boolean;
 
   /** Context for run panel (which job/trigger to run from) */
   runPanelContext: {
@@ -32,9 +31,6 @@ export interface UICommands {
 
   /** Close run panel */
   closeRunPanel: () => void;
-
-  /** Set active panel (generic) */
-  setActivePanel: (panel: UIState["activePanel"]) => void;
 }
 
 /**
@@ -49,12 +45,6 @@ export interface UIQueries {
 
   /** Create memoized selector for referential stability */
   withSelector: <T>(selector: (state: UIState) => T) => () => T;
-
-  /** Get currently active panel */
-  getActivePanel: () => UIState["activePanel"];
-
-  /** Get run panel context */
-  getRunPanelContext: () => UIState["runPanelContext"];
 }
 
 /**
