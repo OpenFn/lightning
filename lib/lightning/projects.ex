@@ -1314,6 +1314,30 @@ defmodule Lightning.Projects do
   end
 
   @doc """
+  Checks if a sandbox with the given name exists under the parent project.
+
+  Returns `true` if a sandbox exists, `false` otherwise.
+  Optionally excludes a specific sandbox by ID (useful for edit operations).
+  """
+  def sandbox_name_exists?(parent_id, name, excluding_id \\ nil)
+      when is_binary(parent_id) and is_binary(name) do
+    query =
+      from(p in Project,
+        where: p.parent_id == ^parent_id and p.name == ^name,
+        select: p.id
+      )
+
+    query =
+      if excluding_id do
+        from(p in query, where: p.id != ^excluding_id)
+      else
+        query
+      end
+
+    Repo.exists?(query)
+  end
+
+  @doc """
   Creates a sandbox under the given `parent` by delegating to `create_project/2`.
 
   This is a convenience wrapper that sets `:parent_id` and preserves the

@@ -3018,4 +3018,271 @@ defmodule Lightning.Projects.MergeProjectsTest do
       assert result_a["id"] == target_job_x.id
     end
   end
+
+  describe "edge cases" do
+    test "deep sandbox hierarchy - merging child when parent and grandparent both changed" do
+      # Test scenario:
+      # Root → Sandbox1 → Sandbox2
+      # Root adds job_root_new, Sandbox1 adds job_s1_new, Sandbox2 modifies original job
+      # Merge Sandbox2 → Sandbox1 → Root
+      # This tests that allow_stale works across hierarchy levels
+
+      # Create Root with initial workflow
+      root_project = insert(:project, name: "Root")
+
+      root_workflow =
+        insert(:workflow, project: root_project, name: "Main", lock_version: 0)
+
+      job_original =
+        insert(:job, workflow: root_workflow, name: "original", body: "v1()")
+
+      trigger = insert(:trigger, workflow: root_workflow, type: :webhook)
+
+      insert(:edge,
+        workflow: root_workflow,
+        source_trigger: trigger,
+        target_job: job_original
+      )
+
+      # Create Sandbox1 (child of Root)
+      sandbox1 = insert(:project, name: "Sandbox1", parent: root_project)
+
+      s1_workflow =
+        insert(:workflow,
+          project: sandbox1,
+          name: "Main",
+          lock_version: root_workflow.lock_version
+        )
+
+      s1_job_original =
+        insert(:job, workflow: s1_workflow, name: "original", body: "v1()")
+
+      s1_trigger = insert(:trigger, workflow: s1_workflow, type: :webhook)
+
+      insert(:edge,
+        workflow: s1_workflow,
+        source_trigger: s1_trigger,
+        target_job: s1_job_original
+      )
+
+      # Create Sandbox2 (child of Sandbox1)
+      sandbox2 = insert(:project, name: "Sandbox2", parent: sandbox1)
+
+      s2_workflow =
+        insert(:workflow,
+          project: sandbox2,
+          name: "Main",
+          lock_version: s1_workflow.lock_version
+        )
+
+      s2_job_original =
+        insert(:job,
+          workflow: s2_workflow,
+          name: "original",
+          body: "v2_modified()"
+        )
+
+      s2_trigger = insert(:trigger, workflow: s2_workflow, type: :webhook)
+
+      insert(:edge,
+        workflow: s2_workflow,
+        source_trigger: s2_trigger,
+        target_job: s2_job_original
+      )
+
+      # NOW: Root adds new job (simulating concurrent work at root level)
+      job_root_new =
+        insert(:job,
+          workflow: root_workflow,
+          name: "root_addition",
+          body: "root()"
+        )
+
+      insert(:edge,
+        workflow: root_workflow,
+        source_job: job_original,
+        target_job: job_root_new
+      )
+
+      # Root workflow lock_version increments
+      _root_workflow =
+        root_workflow
+        |> Ecto.Changeset.change()
+        |> Ecto.Changeset.optimistic_lock(:lock_version)
+        |> Repo.update!()
+
+      # Sandbox1 also adds new job
+      job_s1_new =
+        insert(:job, workflow: s1_workflow, name: "s1_addition", body: "s1()")
+
+      insert(:edge,
+        workflow: s1_workflow,
+        source_job: s1_job_original,
+        target_job: job_s1_new
+      )
+
+      _s1_workflow =
+        s1_workflow
+        |> Ecto.Changeset.change()
+        |> Ecto.Changeset.optimistic_lock(:lock_version)
+        |> Repo.update!()
+
+      user = insert(:user)
+
+      # Step 1: Merge Sandbox2 → Sandbox1 (with allow_stale)
+      s2_to_s1_merge =
+        Lightning.Projects.MergeProjects.merge_project(sandbox2, sandbox1)
+
+      assert {:ok, updated_s1} =
+               Lightning.Projects.Provisioner.import_document(
+                 sandbox1,
+                 user,
+                 s2_to_s1_merge,
+                 allow_stale: true
+               )
+
+      # Verify Sandbox1 now has Sandbox2's changes
+      s1_workflow_updated =
+        Repo.preload(updated_s1, workflows: :jobs).workflows |> hd()
+
+      s1_jobs = s1_workflow_updated.jobs
+
+      # Should have original job with v2 body, and s1_addition should be deleted
+      assert length(s1_jobs) == 1
+      updated_original = Enum.find(s1_jobs, &(&1.name == "original"))
+      assert updated_original.body == "v2_modified()"
+
+      # Step 2: Merge updated Sandbox1 → Root (with allow_stale)
+      s1_to_root_merge =
+        Lightning.Projects.MergeProjects.merge_project(
+          Repo.reload(sandbox1)
+          |> Repo.preload(workflows: [:jobs, :triggers, :edges]),
+          root_project
+        )
+
+      assert {:ok, updated_root} =
+               Lightning.Projects.Provisioner.import_document(
+                 root_project,
+                 user,
+                 s1_to_root_merge,
+                 allow_stale: true
+               )
+
+      # Verify Root now has the changes from Sandbox2 (via Sandbox1)
+      root_workflow_updated =
+        Repo.preload(updated_root, workflows: :jobs).workflows |> hd()
+
+      root_jobs = root_workflow_updated.jobs
+
+      # Should have original job with v2 body, root_addition should be deleted
+      assert length(root_jobs) == 1
+      final_original = Enum.find(root_jobs, &(&1.name == "original"))
+      assert final_original.body == "v2_modified()"
+    end
+
+    test "workflow name conflicts - parent adds workflow with same name as sandbox" do
+      # Test scenario:
+      # Root has workflow "Main"
+      # Sandbox created with workflow "Main"
+      # Parent adds NEW workflow also called "Main" (different UUID)
+      # Merge should map by name and overwrite
+
+      root_project = insert(:project, name: "Root")
+
+      # Original workflow in root
+      original_workflow =
+        insert(:workflow, project: root_project, name: "Main", lock_version: 0)
+
+      job1 =
+        insert(:job,
+          workflow: original_workflow,
+          name: "job1",
+          body: "original()"
+        )
+
+      trigger1 = insert(:trigger, workflow: original_workflow, type: :webhook)
+
+      insert(:edge,
+        workflow: original_workflow,
+        source_trigger: trigger1,
+        target_job: job1
+      )
+
+      # Create sandbox
+      sandbox = insert(:project, name: "Sandbox", parent: root_project)
+
+      sandbox_workflow =
+        insert(:workflow,
+          project: sandbox,
+          name: "Main",
+          lock_version: original_workflow.lock_version
+        )
+
+      s_job1 =
+        insert(:job,
+          workflow: sandbox_workflow,
+          name: "job1",
+          body: "modified()"
+        )
+
+      s_trigger1 = insert(:trigger, workflow: sandbox_workflow, type: :webhook)
+
+      insert(:edge,
+        workflow: sandbox_workflow,
+        source_trigger: s_trigger1,
+        target_job: s_job1
+      )
+
+      # Parent deletes original workflow and adds a NEW workflow with the same name
+      Repo.delete!(original_workflow)
+
+      new_main_workflow =
+        insert(:workflow, project: root_project, name: "Main", lock_version: 0)
+
+      job_new =
+        insert(:job,
+          workflow: new_main_workflow,
+          name: "different_job",
+          body: "new()"
+        )
+
+      trigger_new = insert(:trigger, workflow: new_main_workflow, type: :webhook)
+
+      insert(:edge,
+        workflow: new_main_workflow,
+        source_trigger: trigger_new,
+        target_job: job_new
+      )
+
+      user = insert(:user)
+
+      # Merge sandbox back to parent
+      merge_doc =
+        Lightning.Projects.MergeProjects.merge_project(sandbox, root_project)
+
+      assert {:ok, updated_root} =
+               Lightning.Projects.Provisioner.import_document(
+                 root_project,
+                 user,
+                 merge_doc,
+                 allow_stale: true
+               )
+
+      # The NEW workflow should be overwritten by sandbox changes
+      # Since merge maps by NAME, sandbox's "Main" should replace parent's new "Main"
+      updated_root = Repo.preload(updated_root, workflows: :jobs)
+      assert length(updated_root.workflows) == 1
+
+      result_workflow = hd(updated_root.workflows)
+      assert result_workflow.name == "Main"
+      # Should use the NEW workflow's UUID (target UUID)
+      assert result_workflow.id == new_main_workflow.id
+
+      # Should have sandbox's job content
+      assert length(result_workflow.jobs) == 1
+      result_job = hd(result_workflow.jobs)
+      assert result_job.name == "job1"
+      assert result_job.body == "modified()"
+    end
+  end
 end

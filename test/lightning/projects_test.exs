@@ -2390,6 +2390,46 @@ defmodule Lightning.ProjectsTest do
         Projects.list_workspace_projects(fake_id)
       end
     end
+
+    test "sandbox_name_exists?/3 returns true when sandbox with name exists" do
+      parent = insert(:project, name: "parent")
+      _existing = insert(:sandbox, parent: parent, name: "test-sandbox")
+
+      assert Projects.sandbox_name_exists?(parent.id, "test-sandbox") == true
+    end
+
+    test "sandbox_name_exists?/3 returns false when no sandbox with name exists" do
+      parent = insert(:project, name: "parent")
+      _existing = insert(:sandbox, parent: parent, name: "test-sandbox")
+
+      assert Projects.sandbox_name_exists?(parent.id, "other-name") == false
+    end
+
+    test "sandbox_name_exists?/3 excludes specific sandbox ID when provided" do
+      parent = insert(:project, name: "parent")
+      existing = insert(:sandbox, parent: parent, name: "test-sandbox")
+
+      # Should return false when checking if the same sandbox's name exists
+      # (useful for edit operations where we want to allow keeping the same name)
+      assert Projects.sandbox_name_exists?(
+               parent.id,
+               "test-sandbox",
+               existing.id
+             ) == false
+    end
+
+    test "sandbox_name_exists?/3 returns true when different sandbox has same name (edit case)" do
+      parent = insert(:project, name: "parent")
+      existing1 = insert(:sandbox, parent: parent, name: "test-sandbox")
+      _existing2 = insert(:sandbox, parent: parent, name: "other-sandbox")
+
+      # Should return true when trying to rename existing1 to "other-sandbox"
+      assert Projects.sandbox_name_exists?(
+               parent.id,
+               "other-sandbox",
+               existing1.id
+             ) == true
+    end
   end
 
   describe "project head hash + version history helpers" do

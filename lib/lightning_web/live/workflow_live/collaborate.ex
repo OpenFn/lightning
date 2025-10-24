@@ -11,6 +11,7 @@ defmodule LightningWeb.WorkflowLive.Collaborate do
   @impl true
   def mount(%{"id" => workflow_id}, _session, socket) do
     workflow = Workflows.get_workflow!(workflow_id)
+    project = socket.assigns.project
 
     {:ok,
      socket
@@ -18,7 +19,8 @@ defmodule LightningWeb.WorkflowLive.Collaborate do
        active_menu_item: :overview,
        page_title: "Collaborate on #{workflow.name}",
        workflow: workflow,
-       workflow_id: workflow_id
+       workflow_id: workflow_id,
+       project: project
      )}
   end
 
@@ -39,6 +41,15 @@ defmodule LightningWeb.WorkflowLive.Collaborate do
       data-workflow-id={@workflow_id}
       data-workflow-name={@workflow.name}
       data-project-id={@workflow.project_id}
+      data-project-name={@project.name}
+      data-project-color={@project.color}
+      data-root-project-id={
+        if @project.parent, do: Lightning.Projects.root_of(@project).id, else: nil
+      }
+      data-root-project-name={
+        if @project.parent, do: Lightning.Projects.root_of(@project).name, else: nil
+      }
+      data-project-env={@project.env}
     />
     """
   end

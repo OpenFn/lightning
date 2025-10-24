@@ -10,12 +10,14 @@ import {
 import { useURLState } from "../../../react/lib/use-url-state";
 import _logger from "#/utils/logger";
 import { useSession } from "../../hooks/useSession";
+import { useProject } from "../../hooks/useSessionContext";
 import {
   useCanSave,
   useCurrentJob,
   useWorkflowActions,
 } from "../../hooks/useWorkflow";
 import { CollaborativeMonaco } from "../CollaborativeMonaco";
+import { SandboxIndicatorBanner } from "../SandboxIndicatorBanner";
 
 import { IDEHeader } from "./IDEHeader";
 
@@ -24,6 +26,8 @@ const logger = _logger.ns("FullScreenIDE").seal();
 interface FullScreenIDEProps {
   jobId?: string;
   onClose: () => void;
+  parentProjectId?: string | null | undefined;
+  parentProjectName?: string | null | undefined;
 }
 
 /**
@@ -38,13 +42,18 @@ interface FullScreenIDEProps {
  *
  * Panel layout persists to localStorage automatically.
  */
-export function FullScreenIDE({ onClose }: FullScreenIDEProps) {
+export function FullScreenIDE({
+  onClose,
+  parentProjectId,
+  parentProjectName,
+}: FullScreenIDEProps) {
   const { searchParams } = useURLState();
   const jobIdFromURL = searchParams.get("job");
   const { selectJob, saveWorkflow } = useWorkflowActions();
   const { job: currentJob, ytext: currentJobYText } = useCurrentJob();
   const { awareness } = useSession();
   const { canSave, tooltipMessage } = useCanSave();
+  const project = useProject();
 
   const leftPanelRef = useRef<ImperativePanelHandle>(null);
   const centerPanelRef = useRef<ImperativePanelHandle>(null);
@@ -75,7 +84,7 @@ export function FullScreenIDE({ onClose }: FullScreenIDEProps) {
 
       if (isMonacoFocused) {
         // First Escape: blur Monaco editor to remove focus
-        (activeElement as HTMLElement)?.blur();
+        (activeElement as HTMLElement).blur();
         event.preventDefault();
       } else {
         // Second Escape: close IDE
@@ -180,6 +189,12 @@ export function FullScreenIDE({ onClose }: FullScreenIDEProps) {
         onRun={handleRun}
         canSave={canSave}
         saveTooltip={tooltipMessage}
+      />
+      <SandboxIndicatorBanner
+        parentProjectId={parentProjectId}
+        parentProjectName={parentProjectName}
+        projectName={project?.name}
+        position="relative"
       />
 
       {/* 3-panel layout */}

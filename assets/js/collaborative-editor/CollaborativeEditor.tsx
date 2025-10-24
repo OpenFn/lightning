@@ -19,6 +19,10 @@ export interface CollaborativeEditorDataProps {
   "data-workflow-name": string;
   "data-project-id": string;
   "data-project-name"?: string;
+  "data-project-color"?: string;
+  "data-project-env"?: string;
+  "data-root-project-id"?: string;
+  "data-root-project-name"?: string;
   "data-is-new-workflow"?: string;
 }
 
@@ -39,6 +43,9 @@ interface BreadcrumbContentProps {
   workflowName: string;
   projectIdFallback?: string;
   projectNameFallback?: string;
+  projectEnvFallback?: string;
+  rootProjectIdFallback?: string | null | undefined;
+  rootProjectNameFallback?: string | null | undefined;
 }
 
 function BreadcrumbContent({
@@ -46,6 +53,9 @@ function BreadcrumbContent({
   workflowName,
   projectIdFallback,
   projectNameFallback,
+  projectEnvFallback,
+  rootProjectIdFallback,
+  rootProjectNameFallback,
 }: BreadcrumbContentProps) {
   // Get project from store (may be null if not yet loaded)
   const projectFromStore = useProject();
@@ -60,7 +70,13 @@ function BreadcrumbContent({
   // 3. Full collaborative mode (uses store)
   const projectId = projectFromStore?.id ?? projectIdFallback;
   const projectName = projectFromStore?.name ?? projectNameFallback;
+  const projectEnv = projectFromStore?.env ?? projectEnvFallback;
   const currentWorkflowName = workflowFromStore?.name ?? workflowName;
+
+  const rootProjectId = rootProjectIdFallback;
+  const rootProjectName = rootProjectNameFallback;
+
+  const isSandbox = !!rootProjectId;
 
   const breadcrumbElements = useMemo(() => {
     return [
@@ -78,21 +94,37 @@ function BreadcrumbContent({
       </BreadcrumbLink>,
       <div key="workflow" className="flex items-center gap-2">
         <BreadcrumbText>{currentWorkflowName}</BreadcrumbText>
-        <div
-          id="canvas-workflow-version-container"
-          className="flex items-middle text-sm font-normal"
-        >
-          <span
-            id="canvas-workflow-version"
-            className="inline-flex items-center rounded-md px-1.5 py-0.5 text-xs font-medium bg-blue-100 text-blue-800"
-            title="This is the latest version of this workflow"
+        <div className="flex items-center gap-1.5">
+          <div
+            id="canvas-workflow-version-container"
+            className="flex items-middle text-sm font-normal"
           >
-            latest
-          </span>
+            <span
+              id="canvas-workflow-version"
+              className="inline-flex items-center rounded-md px-1.5 py-0.5 text-xs font-medium bg-primary-100 text-primary-800"
+              title="This is the latest version of this workflow"
+            >
+              latest
+            </span>
+          </div>
+          {projectEnv && (
+            <div
+              id="canvas-project-env-container"
+              className="flex items-middle text-sm font-normal"
+            >
+              <span
+                id="canvas-project-env"
+                className="inline-flex items-center rounded-md px-1.5 py-0.5 text-xs font-medium bg-primary-100 text-primary-800"
+                title={`Project environment is ${projectEnv}`}
+              >
+                {projectEnv}
+              </span>
+            </div>
+          )}
         </div>
       </div>,
     ];
-  }, [projectId, projectName, currentWorkflowName]);
+  }, [projectId, projectName, projectEnv, currentWorkflowName]);
 
   return (
     <Header
@@ -113,6 +145,9 @@ export const CollaborativeEditor: WithActionProps<
   // Migration: Props are now fallbacks, sessionContextStore is primary source
   const projectId = props["data-project-id"];
   const projectName = props["data-project-name"];
+  const projectEnv = props["data-project-env"];
+  const rootProjectId = props["data-root-project-id"] ?? null;
+  const rootProjectName = props["data-root-project-name"] ?? null;
   const isNewWorkflow = props["data-is-new-workflow"] === "true";
 
   return (
@@ -138,9 +173,25 @@ export const CollaborativeEditor: WithActionProps<
                 {...(projectName !== undefined && {
                   projectNameFallback: projectName,
                 })}
+                {...(projectEnv !== undefined && {
+                  projectEnvFallback: projectEnv,
+                })}
+                {...(rootProjectId !== null && {
+                  rootProjectIdFallback: rootProjectId,
+                })}
+                {...(rootProjectName !== null && {
+                  rootProjectNameFallback: rootProjectName,
+                })}
               />
               <div className="flex-1 min-h-0 overflow-hidden">
-                <WorkflowEditor />
+                <WorkflowEditor
+                  {...(rootProjectId !== null && {
+                    parentProjectId: rootProjectId,
+                  })}
+                  {...(rootProjectName !== null && {
+                    parentProjectName: rootProjectName,
+                  })}
+                />
                 <CollaborationWidget />
               </div>
             </StoreProvider>

@@ -36,27 +36,36 @@ defmodule Lightning.Projects.Provisioner do
 
   @doc """
   Import a project.
+
+  ## Options
+    * `:allow_stale` - If true, allows stale operations during import (useful for
+      merge operations where concurrent modifications are expected). Defaults to false.
   """
   @spec import_document(
           Project.t() | nil,
           User.t() | ProjectRepoConnection.t(),
-          map()
+          map(),
+          keyword()
         ) ::
           {:error,
            Ecto.Changeset.t(Project.t())
            | Lightning.Extensions.UsageLimiting.message()}
           | {:ok, Project.t()}
-  def import_document(nil, %User{} = user, data) do
-    import_document(%Project{}, user, data)
+  def import_document(project, user_or_repo_connection, data, opts \\ [])
+
+  def import_document(nil, %User{} = user, data, opts) do
+    import_document(%Project{}, user, data, opts)
   end
 
-  def import_document(project, user_or_repo_connection, data) do
+  def import_document(project, user_or_repo_connection, data, opts) do
+    allow_stale = Keyword.get(opts, :allow_stale, false)
+
     Repo.transact(fn ->
       with :ok <- VersionControlUsageLimiter.limit_github_sync(project.id),
            project_changeset <-
              build_import_changeset(project, user_or_repo_connection, data),
            {:ok, %{workflows: workflows} = project} <-
-             Repo.insert_or_update(project_changeset),
+             Repo.insert_or_update(project_changeset, allow_stale: allow_stale),
            :ok <- handle_collection_deletion(project_changeset),
            updated_project <- preload_dependencies(project),
            {:ok, _changes} <-
