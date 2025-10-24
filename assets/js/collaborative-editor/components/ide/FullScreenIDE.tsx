@@ -55,7 +55,6 @@ export function FullScreenIDE({
   const { job: currentJob, ytext: currentJobYText } = useCurrentJob();
   const { awareness } = useSession();
   const { canSave, tooltipMessage } = useCanSave();
-  const project = useProject();
 
   // Construct workflow object from store state for ManualRunPanel
   const workflow = useWorkflowState(state =>
