@@ -22,6 +22,9 @@ and this project adheres to
 - Divergence warning when merging sandboxes - displays alert if target branch
   was modified after sandbox creation to prevent data loss
   [#3747](https://github.com/OpenFn/lightning/issues/3747)
+- Sandbox indicator banners in workflow editor (inspector) to help indicate when
+  working in a sandbox environment
+  [#3413](https://github.com/OpenFn/lightning/issues/3413)
 
 ### Changed
 
@@ -53,9 +56,6 @@ and this project adheres to
 - Escape key support for closing inspector panels in collaborative workflow
   editor, using react-hotkeys-hook for scoped keyboard shortcuts with modal
   priority [#3768](https://github.com/OpenFn/lightning/issues/3768)
-- Sandbox indicator warning banners in workflow editor (canvas and inspector)
-  with links to root project, clearly indicating when working in a sandbox
-  environment [#3413](https://github.com/OpenFn/lightning/issues/3413)
 
 ### Changed
 
