@@ -388,49 +388,10 @@ defmodule LightningWeb.AiAssistant.Component do
 
     case action do
       :new ->
-        socket
-        |> delegate_to_handler(:on_session_close)
-        |> assign(:action, :new)
-        |> assign(:session, nil)
-        |> assign_async([:all_sessions, :pagination_meta], fn ->
-          case handler.list_sessions(assigns, sort_direction,
-                 limit: @default_page_size
-               ) do
-            %{sessions: sessions, pagination: pagination} ->
-              {:ok, %{all_sessions: sessions, pagination_meta: pagination}}
-          end
-        end)
+        load_and_show_session_list(socket, handler, assigns, sort_direction)
 
       :show ->
-        try do
-          session = handler.get_session!(assigns)
-
-          message_loading =
-            Enum.any?(session.messages, fn msg ->
-              msg.role == :user && msg.status in [:pending, :processing]
-            end)
-
-          socket
-          |> assign(:session, session)
-          |> assign(:action, :show)
-          |> assign(
-            :pending_message,
-            if message_loading do
-              AsyncResult.loading()
-            else
-              AsyncResult.ok(nil)
-            end
-          )
-          |> delegate_to_handler(:on_session_open, [session])
-        rescue
-          Ecto.NoResultsError ->
-            # Session doesn't exist or doesn't belong to this job
-            # Fall back to showing the session list
-            socket
-            |> apply_action(:new)
-            |> assign(:action, :new)
-            |> assign(:session, nil)
-        end
+        load_and_show_session(socket, handler, assigns)
     end
   end
 
@@ -450,32 +411,40 @@ defmodule LightningWeb.AiAssistant.Component do
   end
 
   defp load_and_show_session(socket, handler, assigns) do
-    session = handler.get_session!(assigns)
+    case fetch_session(handler, assigns) do
+      {:ok, session} ->
+        message_loading =
+          Enum.any?(session.messages, fn msg ->
+            msg.role == :user && msg.status in [:pending, :processing]
+          end)
 
-    message_loading =
-      Enum.any?(session.messages, fn msg ->
-        msg.role == :user && msg.status in [:pending, :processing]
-      end)
+        socket
+        |> assign(:session, session)
+        |> assign(:action, :show)
+        |> assign(
+          :pending_message,
+          if message_loading do
+            AsyncResult.loading()
+          else
+            AsyncResult.ok(nil)
+          end
+        )
+        |> delegate_to_handler(:on_session_open, [session])
 
-    socket
-    |> assign(:session, session)
-    |> assign(:action, :show)
-    |> assign(
-      :pending_message,
-      if message_loading do
-        AsyncResult.loading()
-      else
-        AsyncResult.ok(nil)
-      end
-    )
-    |> delegate_to_handler(:on_session_open, [session])
-  rescue
-    Ecto.NoResultsError ->
-      socket
-      |> apply_action(:new)
-      |> assign(:action, :new)
-      |> assign(:session, nil)
+      :error ->
+        socket
+        |> apply_action(:new)
+        |> assign(:action, :new)
+        |> assign(:session, nil)
+    end
   end
+
+  defp fetch_session(handler, assigns) do
+    {:ok, handler.get_session!(assigns)}
+  rescue
+    Ecto.NoResultsError -> :error
+  end
+
   defp save_message(socket, action, content) do
     result =
       case action do
