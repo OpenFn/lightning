@@ -200,6 +200,20 @@ export function ManualRunPanel({
     }
   }, [projectId, runContext.id, searchQuery, buildFilters]);
 
+  // Auto-search when filters change
+  useEffect(() => {
+    if (selectedTab === "existing") {
+      void handleSearch();
+    }
+  }, [
+    selectedClipType,
+    selectedDates.before,
+    selectedDates.after,
+    namedOnly,
+    selectedTab,
+    handleSearch,
+  ]);
+
   const handleCustomBodyChange = useCallback((value: string) => {
     setCustomBody(value);
   }, []);
