@@ -160,7 +160,8 @@ defmodule LightningWeb.WorkflowLive.JobView do
           icon
           centered
         >
-          You are currently working in the sandbox <span class="font-bold">{@project.name}</span>.
+          You are currently working in the sandbox
+          <span class="font-bold">{@project.name}</span>
         </Common.banner>
       </:top>
       <%= for slot <- @collapsible_panel do %>

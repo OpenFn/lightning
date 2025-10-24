@@ -55,7 +55,7 @@ export function SandboxIndicatorBanner({
         ) : (
           <>
             You are currently working in the sandbox{" "}
-            <span className="font-bold">{sandboxName}</span>.
+            <span className="font-bold">{sandboxName}</span>
           </>
         )}
       </p>
