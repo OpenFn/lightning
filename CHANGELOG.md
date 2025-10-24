@@ -21,6 +21,10 @@ and this project adheres to
 
 ### Fixed
 
+- Fixed sandbox merge failing with StaleEntryError when parent workflow was
+  modified after sandbox creation
+  [#3765](https://github.com/OpenFn/lightning/issues/3765)
+
 ## [2.14.13-pre1] 2025-10-24
 
 ### Added
@@ -60,9 +64,6 @@ and this project adheres to
 
 ### Fixed
 
-- Fixed sandbox merge failing with StaleEntryError when parent workflow was
-  modified after sandbox creation
-  [#3765](https://github.com/OpenFn/lightning/issues/3765)
 - Fixed credential preservation during sandbox workflow merge - credentials are
   now correctly maintained when merging sandboxes back to parent projects
   [#3782](https://github.com/OpenFn/lightning/issues/3782)
