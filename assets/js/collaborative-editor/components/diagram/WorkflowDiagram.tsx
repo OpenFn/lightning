@@ -275,7 +275,7 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
   // This usually means the workflow has changed or its the first load, so we don't want to animate
   // Later, if responding to changes from other users live, we may want to animate
   useEffect(() => {
-    const { positions, lastSelection } = chartCache.current;
+    const { positions } = chartCache.current;
     // create model from workflow and also apply selection styling to the model.
     logger.log("calling fromWorkflow");
 
@@ -285,11 +285,11 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
         positions,
         placeholders,
         { steps: [] },
-        // Re-render the model based on whatever was last selected
-        // This handles first load and new node safely
-        lastSelection
+        // Use current selection prop, not cached lastSelection
+        // This ensures URL changes (from Header Run button) highlight nodes
+        selection
       ),
-      lastSelection
+      selection
     );
     if (flow && newModel.nodes.length) {
       const layoutId = shouldLayout(
@@ -360,7 +360,15 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
     } else {
       chartCache.current.positions = {};
     }
-  }, [workflow, flow, placeholders, el, isManualLayout, workflowPositions]);
+  }, [
+    workflow,
+    flow,
+    placeholders,
+    el,
+    isManualLayout,
+    workflowPositions,
+    selection,
+  ]);
 
   // This effect only runs when AI assistant visibility changes, not on every selection change
   useEffect(() => {

@@ -42,6 +42,12 @@ defmodule LightningWeb.FallbackController do
     |> render("error.json", changeset: changeset)
   end
 
+  def call(conn, {:error, error}) when is_binary(error) do
+    conn
+    |> put_status(:bad_request)
+    |> json(%{error: error})
+  end
+
   def call(conn, {:error, error}) when is_map(error) do
     conn
     |> put_status(:unauthorized)
