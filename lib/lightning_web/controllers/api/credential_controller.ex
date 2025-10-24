@@ -1,4 +1,24 @@
 defmodule LightningWeb.API.CredentialController do
+  @moduledoc """
+  API controller for credential management.
+
+  Handles creation, retrieval, and deletion of credentials. Credentials are
+  used to authenticate with external services and can be associated with
+  multiple projects.
+
+  ## Security
+
+  - Credential bodies are excluded from responses for security
+  - Users can only delete credentials they own
+  - Project access is required to view project credentials
+
+  ## Examples
+
+      GET /api/credentials
+      GET /api/credentials?project_id=a1b2c3d4-...
+      POST /api/credentials
+      DELETE /api/credentials/a1b2c3d4-...
+  """
   use LightningWeb, :controller
 
   alias Lightning.Credentials
@@ -9,16 +29,35 @@ defmodule LightningWeb.API.CredentialController do
   action_fallback LightningWeb.FallbackController
 
   @doc """
-  Lists credentials based on the parameters:
+  Lists credentials with optional project filtering.
 
-  - With project_id: Lists all credentials for that specific project.
-    The user must have access to the project. Includes all credentials
-    (regardless of owner) that have access to the project.
+  This function has two variants:
+  - With `project_id`: Returns all credentials for a specific project (regardless of owner)
+  - Without `project_id`: Returns only credentials owned by the authenticated user
 
-  - Without project_id: Lists all credentials owned by the authenticated user.
+  Credential bodies are excluded from responses for security.
 
-  In both cases, the response excludes the credential body for security reasons.
+  ## Parameters
+
+  - `conn` - The Plug connection struct with the current resource assigned
+  - `params` - Map containing:
+    - `project_id` - Project UUID (optional, filters to specific project)
+
+  ## Returns
+
+  - `200 OK` with list of credentials (bodies excluded)
+  - `404 Not Found` if project doesn't exist (when project_id provided)
+  - `403 Forbidden` if user lacks project access (when project_id provided)
+
+  ## Examples
+
+      # User's own credentials
+      GET /api/credentials
+
+      # All credentials for a project
+      GET /api/credentials?project_id=a1b2c3d4-5e6f-7a8b-9c0d-1e2f3a4b5c6d
   """
+  @spec index(Plug.Conn.t(), map()) :: Plug.Conn.t()
   def index(conn, %{"project_id" => project_id}) do
     current_user = conn.assigns.current_resource
 
@@ -49,12 +88,46 @@ defmodule LightningWeb.API.CredentialController do
   end
 
   @doc """
-  Creates a new credential and optionally grants it access to specified projects.
+  Creates a new credential and optionally grants it access to projects.
 
-  The authenticated user must have access to any projects specified in the
-  project_credentials list. The created credential will be owned by the
-  authenticated user.
+  Creates a credential owned by the authenticated user. If project_credentials
+  are specified, the user must have access to all listed projects. The credential
+  body is included in the response only upon creation.
+
+  ## Parameters
+
+  - `conn` - The Plug connection struct with the current resource assigned
+  - `params` - Map containing:
+    - `name` - Credential name (required)
+    - `body` - Credential JSON body with authentication details (required)
+    - `project_credentials` - List of project associations (optional)
+
+  ## Returns
+
+  - `201 Created` with credential JSON including body
+  - `422 Unprocessable Entity` on validation errors
+  - `403 Forbidden` if user lacks access to specified projects
+
+  ## Examples
+
+      # Create credential without project association
+      POST /api/credentials
+      {
+        "name": "My API Key",
+        "body": {"apiKey": "secret123"}
+      }
+
+      # Create credential with project associations
+      POST /api/credentials
+      {
+        "name": "Shared Credential",
+        "body": {"token": "abc123"},
+        "project_credentials": [
+          {"project_id": "a1b2c3d4-..."}
+        ]
+      }
   """
+  @spec create(Plug.Conn.t(), map()) :: Plug.Conn.t()
   def create(conn, params) do
     current_user = conn.assigns.current_resource
 
@@ -70,8 +143,26 @@ defmodule LightningWeb.API.CredentialController do
   @doc """
   Deletes a credential owned by the authenticated user.
 
-  Only the owner of the credential can delete it.
+  Permanently removes a credential. Only the credential owner can delete it.
+  Credentials in use by workflows cannot be deleted and will return an error.
+
+  ## Parameters
+
+  - `conn` - The Plug connection struct with the current resource assigned
+  - `params` - Map containing:
+    - `id` - Credential UUID (required)
+
+  ## Returns
+
+  - `204 No Content` on successful deletion
+  - `404 Not Found` if credential doesn't exist or invalid UUID
+  - `403 Forbidden` if user is not the credential owner
+
+  ## Examples
+
+      DELETE /api/credentials/a1b2c3d4-5e6f-7a8b-9c0d-1e2f3a4b5c6d
   """
+  @spec delete(Plug.Conn.t(), map()) :: Plug.Conn.t()
   def delete(conn, %{"id" => id}) do
     current_user = conn.assigns.current_resource
 

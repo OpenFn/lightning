@@ -2,22 +2,30 @@
  * WorkflowEditor - Main workflow editing component
  */
 
-import { useState } from "react";
-
+import { useEffect, useState } from "react";
+import { useHotkeysContext } from "react-hotkeys-hook";
+import _logger from "#/utils/logger";
 import { useURLState } from "../../react/lib/use-url-state";
 import type { WorkflowState as YAMLWorkflowState } from "../../yaml/types";
-import { useIsNewWorkflow } from "../hooks/useSessionContext";
+import { useIsNewWorkflow, useProject } from "../hooks/useSessionContext";
+import {
+  useIsRunPanelOpen,
+  useRunPanelContext,
+  useUICommands,
+} from "../hooks/useUI";
 import {
   useNodeSelection,
   useWorkflowActions,
   useWorkflowState,
   useWorkflowStoreContext,
 } from "../hooks/useWorkflow";
-
 import { CollaborativeWorkflowDiagram } from "./diagram/CollaborativeWorkflowDiagram";
 import { FullScreenIDE } from "./ide/FullScreenIDE";
 import { Inspector } from "./inspector";
 import { LeftPanel } from "./left-panel";
+import { ManualRunPanel } from "./ManualRunPanel";
+
+const logger = _logger.ns("WorkflowEditor").seal();
 
 interface WorkflowEditorProps {
   parentProjectId?: string | null;
@@ -33,6 +41,49 @@ export function WorkflowEditor({
   const workflowStore = useWorkflowStoreContext();
   const isNewWorkflow = useIsNewWorkflow();
   const { saveWorkflow } = useWorkflowActions();
+
+  // UI state from store
+  const isRunPanelOpen = useIsRunPanelOpen();
+  const runPanelContext = useRunPanelContext();
+  const { closeRunPanel, openRunPanel } = useUICommands();
+
+  // Manage "panel" scope based on whether run panel is open
+  // When run panel opens, disable "panel" scope so Inspector Escape doesn't fire
+  // When run panel closes, re-enable "panel" scope so Inspector Escape works
+  const { activeScopes } = useHotkeysContext();
+
+  useEffect(() => {
+    logger.debug({ activeScopes });
+  }, [activeScopes]);
+
+  // Update run panel context when selected node changes (if panel is open)
+  useEffect(() => {
+    if (isRunPanelOpen) {
+      // Panel is open, update context based on selected node
+      if (currentNode.type === "job" && currentNode.node) {
+        openRunPanel({ jobId: currentNode.node.id });
+      } else if (currentNode.type === "trigger" && currentNode.node) {
+        openRunPanel({ triggerId: currentNode.node.id });
+      } else if (currentNode.type === "edge" || !currentNode.node) {
+        // Close panel if edge selected or nothing selected (clicked canvas)
+        closeRunPanel();
+      }
+    }
+  }, [
+    currentNode.type,
+    currentNode.node,
+    isRunPanelOpen,
+    openRunPanel,
+    closeRunPanel,
+  ]);
+
+  // Get projectId from session context store
+  const project = useProject();
+  const projectId = project?.id;
+
+  // WorkflowId comes from workflow state
+  const workflowState = useWorkflowState(state => state.workflow);
+  const workflowId = workflowState?.id;
 
   const [showLeftPanel, setShowLeftPanel] = useState(isNewWorkflow);
 
@@ -68,7 +119,7 @@ export function WorkflowEditor({
   };
 
   // Show inspector panel if settings is open OR a node is selected
-  const showInspector = hash === "settings" || currentNode.node;
+  const showInspector = hash === "settings" || Boolean(currentNode.node);
 
   const handleMethodChange = (method: "template" | "import" | "ai" | null) => {
     updateSearchParams({ method });
@@ -131,9 +182,29 @@ export function WorkflowEditor({
                   workflow={workflow}
                   currentNode={currentNode}
                   onClose={handleCloseInspector}
+                  onOpenRunPanel={openRunPanel}
+                  respondToHotKey={!isRunPanelOpen}
                 />
               </div>
             )}
+
+            {/* Run panel overlays inspector when open */}
+            {workflow &&
+              isRunPanelOpen &&
+              runPanelContext &&
+              projectId &&
+              workflowId && (
+                <div className="absolute inset-y-0 right-0 flex pointer-events-none z-20">
+                  <ManualRunPanel
+                    workflow={workflow}
+                    projectId={projectId}
+                    workflowId={workflowId}
+                    jobId={runPanelContext.jobId ?? undefined}
+                    triggerId={runPanelContext.triggerId ?? undefined}
+                    onClose={closeRunPanel}
+                  />
+                </div>
+              )}
           </div>
 
           {/* Left Panel - Workflow creation methods (absolute positioned, slides over) */}
