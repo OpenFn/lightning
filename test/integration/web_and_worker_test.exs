@@ -463,8 +463,8 @@ defmodule Lightning.WebAndWorkerTest do
       # Wait for the workflow to complete (up to 115 seconds)
       response = Task.await(task, 115_000)
 
-      # Should return 200 with the final state
-      assert response.status == 200
+      # Should return 201 with the final state
+      assert response.status == 201
 
       # The response body should be the final state from the job inside a "data"
       # key and the metadata inside a "meta" key.
@@ -550,8 +550,8 @@ defmodule Lightning.WebAndWorkerTest do
         )
         |> Tesla.post!("/i/#{trigger.id}", webhook_body)
 
-      # Should return 422 for failed workflow
-      assert response.status == 422
+      # Should return 201 for failed workflow
+      assert response.status == 201
 
       # Response should include the final state
       assert is_map(response.body)

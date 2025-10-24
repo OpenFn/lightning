@@ -223,15 +223,16 @@ defmodule LightningWeb.RunChannel do
     end
   end
 
+  # TODO - decide how we should respond... do we use HTTP codes for run states?
   defp determine_status_code(state) do
     case state do
-      :success -> 200
-      :failed -> 422
-      :crashed -> 500
-      :exception -> 500
-      :killed -> 410
-      :cancelled -> 499
-      _other -> 500
+      :success -> 201
+      :failed -> 201
+      :crashed -> 201
+      :exception -> 201
+      :killed -> 201
+      :cancelled -> 201
+      _other -> 201
     end
   end
 
