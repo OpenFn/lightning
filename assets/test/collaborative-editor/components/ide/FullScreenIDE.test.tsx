@@ -48,6 +48,7 @@ vi.mock(
     ManualRunPanel: ({
       renderMode,
       onRunStateChange,
+      saveWorkflow,
     }: {
       renderMode?: string;
       onRunStateChange?: (
@@ -55,6 +56,7 @@ vi.mock(
         isSubmitting: boolean,
         handler: () => void
       ) => void;
+      saveWorkflow?: () => Promise<void>;
     }) => {
       // Simulate ManualRunPanel calling onRunStateChange after mount
       if (onRunStateChange) {

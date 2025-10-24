@@ -259,10 +259,11 @@ export function WorkflowEditor({
                     workflow={workflow}
                     projectId={projectId}
                     workflowId={workflowId}
-                    jobId={runPanelContext.jobId ?? undefined}
-                    triggerId={runPanelContext.triggerId ?? undefined}
+                    jobId={runPanelContext.jobId ?? null}
+                    triggerId={runPanelContext.triggerId ?? null}
                     onClose={closeRunPanel}
                     onRunStateChange={handleRunStateChange}
+                    saveWorkflow={saveWorkflow}
                   />
                 </div>
               )}

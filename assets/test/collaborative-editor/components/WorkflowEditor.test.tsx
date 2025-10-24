@@ -71,6 +71,7 @@ vi.mock("../../../js/collaborative-editor/components/ManualRunPanel", () => ({
     jobId,
     triggerId,
     onRunStateChange,
+    saveWorkflow,
   }: {
     jobId?: string;
     triggerId?: string;
@@ -79,6 +80,7 @@ vi.mock("../../../js/collaborative-editor/components/ManualRunPanel", () => ({
       isSubmitting: boolean,
       handler: () => void
     ) => void;
+    saveWorkflow?: () => Promise<void>;
   }) => {
     // Store callback for later use
     mockOnRunStateChange = onRunStateChange || null;

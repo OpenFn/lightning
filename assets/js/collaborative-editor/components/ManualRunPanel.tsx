@@ -32,6 +32,10 @@ interface ManualRunPanelProps {
     isSubmitting: boolean,
     handleRun: () => void
   ) => void;
+  saveWorkflow: () => Promise<{
+    saved_at?: string;
+    lock_version?: number;
+  } | null>;
 }
 
 type TabValue = "empty" | "custom" | "existing";
@@ -45,6 +49,7 @@ export function ManualRunPanel({
   onClose,
   renderMode = "standalone",
   onRunStateChange,
+  saveWorkflow,
 }: ManualRunPanelProps) {
   const [selectedTab, setSelectedTab] = useState<TabValue>("empty");
   const [selectedDataclip, setSelectedDataclip] = useState<Dataclip | null>(
@@ -257,6 +262,9 @@ export function ManualRunPanel({
 
     setIsSubmitting(true);
     try {
+      // Save workflow first
+      await saveWorkflow();
+
       let params: dataclipApi.ManualRunParams = {
         workflowId,
         projectId,
@@ -293,6 +301,7 @@ export function ManualRunPanel({
     selectedTab,
     selectedDataclip,
     customBody,
+    saveWorkflow,
   ]);
 
   const canRun =

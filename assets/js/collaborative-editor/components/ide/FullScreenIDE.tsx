@@ -317,6 +317,7 @@ export function FullScreenIDE({
                     onClose={handleCollapseLeftPanel}
                     renderMode="embedded"
                     onRunStateChange={handleRunStateChange}
+                    saveWorkflow={saveWorkflow}
                   />
                 </div>
               )}

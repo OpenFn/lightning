@@ -99,12 +99,19 @@ let mockChannel: any;
 
 // Helper function to render ManualRunPanel with all providers
 function renderManualRunPanel(
-  props: React.ComponentProps<typeof ManualRunPanel>
+  props: Omit<React.ComponentProps<typeof ManualRunPanel>, "saveWorkflow"> & {
+    saveWorkflow?: () => Promise<void>;
+  }
 ) {
   return render(
     <StoreContext.Provider value={stores}>
       <HotkeysProvider>
-        <ManualRunPanel {...props} />
+        <ManualRunPanel
+          {...props}
+          saveWorkflow={
+            props.saveWorkflow || vi.fn().mockResolvedValue(undefined)
+          }
+        />
       </HotkeysProvider>
     </StoreContext.Provider>
   );
@@ -674,6 +681,7 @@ describe("ManualRunPanel", () => {
               jobId="job-1"
               onClose={() => {}}
               onRunStateChange={onRunStateChange}
+              saveWorkflow={vi.fn().mockResolvedValue(undefined)}
             />
           </HotkeysProvider>
         </StoreContext.Provider>
@@ -861,6 +869,214 @@ describe("ManualRunPanel", () => {
         const runButton = screen.getByText("Run Workflow Now");
         expect(runButton).toBeDisabled();
       });
+    });
+  });
+
+  describe("Save & Run behavior", () => {
+    test("saves workflow before submitting run", async () => {
+      const user = userEvent.setup();
+      const saveWorkflow = vi.fn().mockResolvedValue({
+        saved_at: "2025-01-01T00:00:00Z",
+        lock_version: 2,
+      });
+
+      // Track the order of calls
+      const callOrder: string[] = [];
+
+      saveWorkflow.mockImplementation(async () => {
+        callOrder.push("save");
+        return { saved_at: "2025-01-01T00:00:00Z", lock_version: 2 };
+      });
+
+      vi.mocked(dataclipApi.submitManualRun).mockImplementation(async () => {
+        callOrder.push("run");
+        return { data: { run_id: "run-1", workorder_id: "wo-1" } };
+      });
+
+      renderManualRunPanel({
+        workflow: mockWorkflow,
+        projectId: "project-1",
+        workflowId: "workflow-1",
+        jobId: "job-1",
+        onClose: () => {},
+        saveWorkflow,
+      });
+
+      // Wait for initial render
+      await waitFor(() => {
+        expect(screen.getByText("Run Workflow Now")).toBeInTheDocument();
+      });
+
+      // Click Run button
+      await user.click(screen.getByText("Run Workflow Now"));
+
+      // Verify save was called first, then run
+      await waitFor(() => {
+        expect(callOrder).toEqual(["save", "run"]);
+        expect(saveWorkflow).toHaveBeenCalledOnce();
+        expect(dataclipApi.submitManualRun).toHaveBeenCalledOnce();
+      });
+    });
+
+    test("does not run if save fails", async () => {
+      const user = userEvent.setup();
+      const saveWorkflow = vi.fn().mockRejectedValue(new Error("Save failed"));
+
+      // Mock window.alert to prevent actual alerts during test
+      const alertMock = vi.spyOn(window, "alert").mockImplementation(() => {});
+
+      renderManualRunPanel({
+        workflow: mockWorkflow,
+        projectId: "project-1",
+        workflowId: "workflow-1",
+        jobId: "job-1",
+        onClose: () => {},
+        saveWorkflow,
+      });
+
+      await waitFor(() => {
+        expect(screen.getByText("Run Workflow Now")).toBeInTheDocument();
+      });
+
+      await user.click(screen.getByText("Run Workflow Now"));
+
+      // Save should be called
+      await waitFor(() => {
+        expect(saveWorkflow).toHaveBeenCalledOnce();
+      });
+
+      // Run should NOT be called because save failed
+      expect(dataclipApi.submitManualRun).not.toHaveBeenCalled();
+
+      // Error should be shown to user
+      expect(alertMock).toHaveBeenCalledWith(
+        expect.stringContaining("Save failed")
+      );
+
+      alertMock.mockRestore();
+    });
+
+    test("does not run if save fails with generic error", async () => {
+      const user = userEvent.setup();
+      const saveWorkflow = vi.fn().mockRejectedValue("Network error"); // Non-Error type
+
+      // Mock window.alert to prevent actual alerts during test
+      const alertMock = vi.spyOn(window, "alert").mockImplementation(() => {});
+
+      renderManualRunPanel({
+        workflow: mockWorkflow,
+        projectId: "project-1",
+        workflowId: "workflow-1",
+        jobId: "job-1",
+        onClose: () => {},
+        saveWorkflow,
+      });
+
+      await waitFor(() => {
+        expect(screen.getByText("Run Workflow Now")).toBeInTheDocument();
+      });
+
+      await user.click(screen.getByText("Run Workflow Now"));
+
+      // Save should be called
+      await waitFor(() => {
+        expect(saveWorkflow).toHaveBeenCalledOnce();
+      });
+
+      // Run should NOT be called because save failed
+      expect(dataclipApi.submitManualRun).not.toHaveBeenCalled();
+
+      // Generic error message should be shown to user
+      expect(alertMock).toHaveBeenCalledWith("Failed to submit run");
+
+      alertMock.mockRestore();
+    });
+
+    test("calls saveWorkflow with correct signature", async () => {
+      const user = userEvent.setup();
+      const saveWorkflow = vi.fn().mockResolvedValue({
+        saved_at: "2025-01-01T00:00:00Z",
+        lock_version: 2,
+      });
+
+      vi.mocked(dataclipApi.submitManualRun).mockResolvedValue({
+        data: { run_id: "run-1", workorder_id: "wo-1" },
+      });
+
+      renderManualRunPanel({
+        workflow: mockWorkflow,
+        projectId: "project-1",
+        workflowId: "workflow-1",
+        jobId: "job-1",
+        onClose: () => {},
+        saveWorkflow,
+      });
+
+      // Wait for initial render
+      await waitFor(() => {
+        expect(screen.getByText("Run Workflow Now")).toBeInTheDocument();
+      });
+
+      // Click Run button
+      await user.click(screen.getByText("Run Workflow Now"));
+
+      // Verify saveWorkflow was called with no arguments
+      await waitFor(() => {
+        expect(saveWorkflow).toHaveBeenCalledWith();
+        expect(saveWorkflow).toHaveBeenCalledOnce();
+      });
+    });
+
+    test("submitting state prevents multiple simultaneous runs", async () => {
+      const user = userEvent.setup();
+      let saveResolve: () => void;
+      const savePromise = new Promise<{
+        saved_at: string;
+        lock_version: number;
+      }>(resolve => {
+        saveResolve = () =>
+          resolve({ saved_at: "2025-01-01T00:00:00Z", lock_version: 2 });
+      });
+      const saveWorkflow = vi.fn().mockReturnValue(savePromise);
+
+      vi.mocked(dataclipApi.submitManualRun).mockResolvedValue({
+        data: { run_id: "run-1", workorder_id: "wo-1" },
+      });
+
+      renderManualRunPanel({
+        workflow: mockWorkflow,
+        projectId: "project-1",
+        workflowId: "workflow-1",
+        jobId: "job-1",
+        onClose: () => {},
+        saveWorkflow,
+      });
+
+      // Wait for initial render
+      await waitFor(() => {
+        expect(screen.getByText("Run Workflow Now")).toBeInTheDocument();
+      });
+
+      // Click Run button - this will start the save
+      await user.click(screen.getByText("Run Workflow Now"));
+
+      // Button should show "Running..." while submitting
+      await waitFor(() => {
+        expect(screen.getByText("Running...")).toBeInTheDocument();
+      });
+
+      // Button should be disabled
+      const runButton = screen.getByText("Running...");
+      expect(runButton).toBeDisabled();
+
+      // Try to click again - should not trigger another save
+      await user.click(runButton);
+
+      // Should still only have one call to saveWorkflow
+      expect(saveWorkflow).toHaveBeenCalledOnce();
+
+      // Resolve the save to complete the test
+      saveResolve!();
     });
   });
 });
