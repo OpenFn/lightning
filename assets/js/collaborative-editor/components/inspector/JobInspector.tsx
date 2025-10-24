@@ -1,11 +1,11 @@
 import { useCallback, useState } from "react";
 
+import { useURLState } from "#/react/lib/use-url-state";
 import { useJobDeleteValidation } from "../../hooks/useJobDeleteValidation";
 import { usePermissions } from "../../hooks/useSessionContext";
 import { useWorkflowActions } from "../../hooks/useWorkflow";
 import { notifications } from "../../lib/notifications";
 import type { Workflow } from "../../types/workflow";
-import { useURLState } from "#/react/lib/use-url-state";
 import { AlertDialog } from "../AlertDialog";
 import { Button } from "../Button";
 import { Tooltip } from "../Tooltip";
@@ -17,6 +17,7 @@ import { JobForm } from "./JobForm";
 interface JobInspectorProps {
   job: Workflow.Job;
   onClose: () => void;
+  onOpenRunPanel: (context: { jobId?: string; triggerId?: string }) => void;
 }
 
 /**
@@ -26,7 +27,11 @@ interface JobInspectorProps {
  * - Handle delete validation and modal
  * - Manage delete permissions
  */
-export function JobInspector({ job, onClose }: JobInspectorProps) {
+export function JobInspector({
+  job,
+  onClose,
+  onOpenRunPanel,
+}: JobInspectorProps) {
   const { removeJobAndClearSelection } = useWorkflowActions();
   const permissions = usePermissions();
   const validation = useJobDeleteValidation(job.id);
@@ -57,30 +62,55 @@ export function JobInspector({ job, onClose }: JobInspectorProps) {
     }
   }, [job.id, removeJobAndClearSelection]);
 
-  // Build footer with delete and edit buttons (only if user has permission)
+  // Permission checks for Run button
+  // Note: can_run_workflow doesn't exist yet in permissions type
+  // For Phase 2, we'll just use can_edit_workflow as a placeholder
+  const canRun = permissions?.can_edit_workflow;
+
+  // Build footer with run, edit, and delete buttons (only if permission)
   const footer = permissions?.can_edit_workflow ? (
     <InspectorFooter
       leftButtons={
-        <Tooltip
-          content={
-            isIDEOpen ? "IDE is already open" : "Open full-screen code editor"
-          }
-          side="top"
-        >
-          <span className="inline-block">
-            <Button
-              variant="primary"
-              onClick={() => updateSearchParams({ editor: "open" })}
-              disabled={isIDEOpen}
-            >
-              <span
-                className="hero-code-bracket size-4 inline-block mr-1"
-                aria-hidden="true"
-              />
-              Edit
-            </Button>
-          </span>
-        </Tooltip>
+        <>
+          <Tooltip
+            content={
+              !canRun
+                ? "You do not have permission to run workflows"
+                : "Run from this job"
+            }
+            side="top"
+          >
+            <span className="inline-block">
+              <Button
+                variant="secondary"
+                onClick={() => onOpenRunPanel({ jobId: job.id })}
+                disabled={!canRun}
+              >
+                Run
+              </Button>
+            </span>
+          </Tooltip>
+          <Tooltip
+            content={
+              isIDEOpen ? "IDE is already open" : "Open full-screen code editor"
+            }
+            side="top"
+          >
+            <span className="inline-block">
+              <Button
+                variant="primary"
+                onClick={() => updateSearchParams({ editor: "open" })}
+                disabled={isIDEOpen}
+              >
+                <span
+                  className="hero-code-bracket size-4 inline-block mr-1"
+                  aria-hidden="true"
+                />
+                Edit
+              </Button>
+            </span>
+          </Tooltip>
+        </>
       }
       rightButtons={
         <Tooltip content={validation.disableReason || "Delete this job"}>

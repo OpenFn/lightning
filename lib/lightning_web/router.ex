@@ -135,6 +135,24 @@ defmodule LightningWeb.Router do
     get "/download/yaml", DownloadsController, :download_project_yaml
     get "/dataclip/body/:id", DataclipController, :show
 
+    # Dataclip operations for manual run panel
+    get "/projects/:project_id/jobs/:job_id/dataclips",
+        DataclipController,
+        :search
+
+    get "/projects/:project_id/runs/:run_id/dataclip",
+        DataclipController,
+        :show_for_run
+
+    patch "/projects/:project_id/dataclips/:dataclip_id",
+          DataclipController,
+          :update_name
+
+    # Manual workflow runs
+    post "/projects/:project_id/workflows/:workflow_id/runs",
+         WorkflowController,
+         :create_run
+
     get "/project_files/:id/download", ProjectFileController, :download
 
     get "/profile/confirm_email/:token",
