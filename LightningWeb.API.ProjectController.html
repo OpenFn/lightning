@@ -12,7 +12,7 @@
 
     <link rel="stylesheet" href="dist/html-elixir-RLZO5U2C.css" />
 
-    <script defer src="dist/sidebar_items-C8AC07DC.js"></script>
+    <script defer src="dist/sidebar_items-F044AFF5.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-Y223O6DN.js"></script>
 
@@ -92,6 +92,12 @@ Lightning
   </div>
 
 
+    <section id="moduledoc">
+<p>API controller for project management.</p><p>Provides read access to projects for authenticated users and API tokens.
+Users can list projects they have access to and retrieve individual project details.</p><h2 id="module-query-parameters-index" class="section-heading"><a href="#module-query-parameters-index" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Query Parameters (index)</span></h2><ul><li><code class="inline">page</code> - Page number (default: 1)</li><li><code class="inline">page_size</code> - Number of items per page (default: 10)</li></ul><h2 id="module-examples" class="section-heading"><a href="#module-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="nc">GET</span><span class="w"> </span><span class="o">/</span><span class="n">api</span><span class="o">/</span><span class="n">projects?</span><span class="n">page</span><span class="o">=</span><span class="mi">1</span><span class="o">&amp;</span><span class="n">page_size</span><span class="o">=</span><span class="mi">20</span><span class="w">
+</span><span class="nc">GET</span><span class="w"> </span><span class="o">/</span><span class="n">api</span><span class="o">/</span><span class="n">projects</span><span class="o">/</span><span class="n">a1b2c3d4</span><span class="o">-</span><span class="mi">5</span><span class="n">e6f</span><span class="o">-</span><span class="mi">7</span><span class="n">a8b</span><span class="o">-</span><span class="mi">9</span><span class="n">c0d</span><span class="o">-</span><span class="mi">1</span><span class="n">e2f3a4b5c6d</span></code></pre>
+    </section>
+
 </div>
 
   <section id="summary" class="details-list">
@@ -112,6 +118,8 @@ Lightning
 
       </div>
 
+        <div class="summary-synopsis"><p>Lists all projects accessible to the authenticated user.</p></div>
+
     </div>
 
     <div class="summary-row">
@@ -119,6 +127,8 @@ Lightning
         <a href="#show/2" data-no-tooltip="" translate="no">show(conn, map)</a>
 
       </div>
+
+        <div class="summary-synopsis"><p>Retrieves a specific project by ID.</p></div>
 
     </div>
 
@@ -146,7 +156,7 @@ Lightning
       <h1 class="signature" translate="no">index(conn, params)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/api/project_controller.ex#L10" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/api/project_controller.ex#L47" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -155,7 +165,15 @@ Lightning
 
   <section class="docstring">
 
+      <div class="specs">
 
+          <pre translate="no"><span class="attribute">@spec</span> index(<a href="https://hexdocs.pm/plug/1.18.1/Plug.Conn.html#t:t/0">Plug.Conn.t</a>(), <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>()) :: <a href="https://hexdocs.pm/plug/1.18.1/Plug.Conn.html#t:t/0">Plug.Conn.t</a>()</pre>
+
+      </div>
+
+<p>Lists all projects accessible to the authenticated user.</p><p>Returns a paginated list of projects that the current user or API token
+has access to.</p><h2 id="index/2-parameters" class="section-heading"><a href="#index/2-parameters" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Parameters</span></h2><ul><li><code class="inline">conn</code> - The Plug connection struct with the current resource assigned</li><li><code class="inline">params</code> - Map of query parameters for pagination</li></ul><h2 id="index/2-returns" class="section-heading"><a href="#index/2-returns" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Returns</span></h2><ul><li>Renders JSON with paginated list of projects</li></ul><h2 id="index/2-examples" class="section-heading"><a href="#index/2-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="nc">GET</span><span class="w"> </span><span class="o">/</span><span class="n">api</span><span class="o">/</span><span class="n">projects</span><span class="w">
+</span><span class="nc">GET</span><span class="w"> </span><span class="o">/</span><span class="n">api</span><span class="o">/</span><span class="n">projects?</span><span class="n">page</span><span class="o">=</span><span class="mi">2</span><span class="o">&amp;</span><span class="n">page_size</span><span class="o">=</span><span class="mi">50</span></code></pre>
   </section>
 </section>
 <section class="detail" id="show/2">
@@ -168,7 +186,7 @@ Lightning
       <h1 class="signature" translate="no">show(conn, map)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/api/project_controller.ex#L20" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/api/project_controller.ex#L80" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -177,7 +195,14 @@ Lightning
 
   <section class="docstring">
 
+      <div class="specs">
 
+          <pre translate="no"><span class="attribute">@spec</span> show(<a href="https://hexdocs.pm/plug/1.18.1/Plug.Conn.html#t:t/0">Plug.Conn.t</a>(), <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>()) :: <a href="https://hexdocs.pm/plug/1.18.1/Plug.Conn.html#t:t/0">Plug.Conn.t</a>()</pre>
+
+      </div>
+
+<p>Retrieves a specific project by ID.</p><p>Returns detailed information about a single project if the authenticated
+user has access to it.</p><h2 id="show/2-parameters" class="section-heading"><a href="#show/2-parameters" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Parameters</span></h2><ul><li><code class="inline">conn</code> - The Plug connection struct with the current resource assigned</li><li><code class="inline">params</code> - Map containing:<ul><li><code class="inline">id</code> - Project UUID (required)</li></ul></li></ul><h2 id="show/2-returns" class="section-heading"><a href="#show/2-returns" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Returns</span></h2><ul><li><code class="inline">200 OK</code> with project JSON on success</li><li><code class="inline">404 Not Found</code> if project doesn't exist</li><li><code class="inline">403 Forbidden</code> if user lacks access to the project</li></ul><h2 id="show/2-examples" class="section-heading"><a href="#show/2-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="nc">GET</span><span class="w"> </span><span class="o">/</span><span class="n">api</span><span class="o">/</span><span class="n">projects</span><span class="o">/</span><span class="n">a1b2c3d4</span><span class="o">-</span><span class="mi">5</span><span class="n">e6f</span><span class="o">-</span><span class="mi">7</span><span class="n">a8b</span><span class="o">-</span><span class="mi">9</span><span class="n">c0d</span><span class="o">-</span><span class="mi">1</span><span class="n">e2f3a4b5c6d</span></code></pre>
   </section>
 </section>
 

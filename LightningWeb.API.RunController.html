@@ -12,7 +12,7 @@
 
     <link rel="stylesheet" href="dist/html-elixir-RLZO5U2C.css" />
 
-    <script defer src="dist/sidebar_items-C8AC07DC.js"></script>
+    <script defer src="dist/sidebar_items-F044AFF5.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-Y223O6DN.js"></script>
 
@@ -119,6 +119,8 @@ Lightning
 
       </div>
 
+        <div class="summary-synopsis"><p>Lists runs with optional project filtering.</p></div>
+
     </div>
 
     <div class="summary-row">
@@ -126,6 +128,8 @@ Lightning
         <a href="#show/2" data-no-tooltip="" translate="no">show(conn, map)</a>
 
       </div>
+
+        <div class="summary-synopsis"><p>Retrieves a specific run by ID.</p></div>
 
     </div>
 
@@ -153,7 +157,7 @@ Lightning
       <h1 class="signature" translate="no">index(conn, params)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/api/run_controller.ex#L31" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/api/run_controller.ex#L72" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -162,7 +166,21 @@ Lightning
 
   <section class="docstring">
 
+      <div class="specs">
 
+          <pre translate="no"><span class="attribute">@spec</span> index(<a href="https://hexdocs.pm/plug/1.18.1/Plug.Conn.html#t:t/0">Plug.Conn.t</a>(), <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>()) :: <a href="https://hexdocs.pm/plug/1.18.1/Plug.Conn.html#t:t/0">Plug.Conn.t</a>()</pre>
+
+      </div>
+
+<p>Lists runs with optional project filtering.</p><p>This function has two variants:</p><ul><li>With <code class="inline">project_id</code>: Returns runs for a specific project</li><li>Without <code class="inline">project_id</code>: Returns runs across all accessible projects</li></ul><p>Returns a paginated list of runs with optional datetime filtering.</p><h2 id="index/2-parameters" class="section-heading"><a href="#index/2-parameters" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Parameters</span></h2><ul><li><code class="inline">conn</code> - The Plug connection struct with the current resource assigned</li><li><code class="inline">params</code> - Map containing:<ul><li><code class="inline">project_id</code> - Project UUID (optional, filters to specific project)</li><li><code class="inline">page</code> - Page number (optional, default: 1)</li><li><code class="inline">page_size</code> - Items per page (optional, default: 10)</li><li><code class="inline">inserted_after</code> - Filter runs created after ISO8601 datetime (optional)</li><li><code class="inline">inserted_before</code> - Filter runs created before ISO8601 datetime (optional)</li><li><code class="inline">updated_after</code> - Filter runs updated after ISO8601 datetime (optional)</li><li><code class="inline">updated_before</code> - Filter runs updated before ISO8601 datetime (optional)</li></ul></li></ul><h2 id="index/2-returns" class="section-heading"><a href="#index/2-returns" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Returns</span></h2><ul><li>Renders JSON with paginated list of runs</li><li><code class="inline">404 Not Found</code> if project doesn't exist (when project_id provided)</li><li><code class="inline">403 Forbidden</code> if user lacks project access (when project_id provided)</li><li><code class="inline">422 Unprocessable Entity</code> if datetime parameters are invalid</li></ul><h2 id="index/2-examples" class="section-heading"><a href="#index/2-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="c1"># All runs accessible to user</span><span class="w">
+</span><span class="nc">GET</span><span class="w"> </span><span class="o">/</span><span class="n">api</span><span class="o">/</span><span class="n">runs</span><span class="w">
+</span><span class="nc">GET</span><span class="w"> </span><span class="o">/</span><span class="n">api</span><span class="o">/</span><span class="n">runs?</span><span class="n">page</span><span class="o">=</span><span class="mi">2</span><span class="o">&amp;</span><span class="n">page_size</span><span class="o">=</span><span class="mi">50</span><span class="w">
+</span><span class="nc">GET</span><span class="w"> </span><span class="o">/</span><span class="n">api</span><span class="o">/</span><span class="n">runs?</span><span class="n">inserted_after</span><span class="o">=</span><span class="mi">2024</span><span class="o">-</span><span class="mi">01</span><span class="o">-</span><span class="mi">01</span><span class="nc">T00</span><span class="p">:</span><span class="mi">00</span><span class="p">:</span><span class="mi">00</span><span class="nc">Z</span><span class="w">
+
+</span><span class="c1"># Runs for specific project</span><span class="w">
+</span><span class="nc">GET</span><span class="w"> </span><span class="o">/</span><span class="n">api</span><span class="o">/</span><span class="n">projects</span><span class="o">/</span><span class="n">a1b2c3d4</span><span class="o">-</span><span class="mi">5</span><span class="n">e6f</span><span class="o">-</span><span class="mi">7</span><span class="n">a8b</span><span class="o">-</span><span class="mi">9</span><span class="n">c0d</span><span class="o">-</span><span class="mi">1</span><span class="n">e2f3a4b5c6d</span><span class="o">/</span><span class="n">runs</span><span class="w">
+</span><span class="nc">GET</span><span class="w"> </span><span class="o">/</span><span class="n">api</span><span class="o">/</span><span class="n">projects</span><span class="o">/</span><span class="n">a1b2c3d4</span><span class="o">-</span><span class="mi">5</span><span class="n">e6f</span><span class="o">-</span><span class="mi">7</span><span class="n">a8b</span><span class="o">-</span><span class="mi">9</span><span class="n">c0d</span><span class="o">-</span><span class="mi">1</span><span class="n">e2f3a4b5c6d</span><span class="o">/</span><span class="n">runs?</span><span class="n">page</span><span class="o">=</span><span class="mi">2</span><span class="w">
+</span><span class="nc">GET</span><span class="w"> </span><span class="o">/</span><span class="n">api</span><span class="o">/</span><span class="n">projects</span><span class="o">/</span><span class="n">a1b2c3d4</span><span class="o">-</span><span class="mi">5</span><span class="n">e6f</span><span class="o">-</span><span class="mi">7</span><span class="n">a8b</span><span class="o">-</span><span class="mi">9</span><span class="n">c0d</span><span class="o">-</span><span class="mi">1</span><span class="n">e2f3a4b5c6d</span><span class="o">/</span><span class="n">runs?</span><span class="n">inserted_after</span><span class="o">=</span><span class="mi">2024</span><span class="o">-</span><span class="mi">01</span><span class="o">-</span><span class="mi">01</span><span class="nc">T00</span><span class="p">:</span><span class="mi">00</span><span class="p">:</span><span class="mi">00</span><span class="nc">Z</span></code></pre>
   </section>
 </section>
 <section class="detail" id="show/2">
@@ -175,7 +193,7 @@ Lightning
       <h1 class="signature" translate="no">show(conn, map)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/api/run_controller.ex#L77" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/api/run_controller.ex#L142" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -184,7 +202,15 @@ Lightning
 
   <section class="docstring">
 
+      <div class="specs">
 
+          <pre translate="no"><span class="attribute">@spec</span> show(<a href="https://hexdocs.pm/plug/1.18.1/Plug.Conn.html#t:t/0">Plug.Conn.t</a>(), <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>()) :: <a href="https://hexdocs.pm/plug/1.18.1/Plug.Conn.html#t:t/0">Plug.Conn.t</a>()</pre>
+
+      </div>
+
+<p>Retrieves a specific run by ID.</p><p>Returns detailed information about a single run including its associated
+work order and workflow. Access is granted if the user has access to the
+run's parent project.</p><h2 id="show/2-parameters" class="section-heading"><a href="#show/2-parameters" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Parameters</span></h2><ul><li><code class="inline">conn</code> - The Plug connection struct with the current resource assigned</li><li><code class="inline">params</code> - Map containing:<ul><li><code class="inline">id</code> - Run UUID (required)</li></ul></li></ul><h2 id="show/2-returns" class="section-heading"><a href="#show/2-returns" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Returns</span></h2><ul><li><code class="inline">200 OK</code> with run JSON including work order and workflow</li><li><code class="inline">404 Not Found</code> if run doesn't exist</li><li><code class="inline">403 Forbidden</code> if user lacks project access</li></ul><h2 id="show/2-examples" class="section-heading"><a href="#show/2-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="nc">GET</span><span class="w"> </span><span class="o">/</span><span class="n">api</span><span class="o">/</span><span class="n">runs</span><span class="o">/</span><span class="n">a1b2c3d4</span><span class="o">-</span><span class="mi">5</span><span class="n">e6f</span><span class="o">-</span><span class="mi">7</span><span class="n">a8b</span><span class="o">-</span><span class="mi">9</span><span class="n">c0d</span><span class="o">-</span><span class="mi">1</span><span class="n">e2f3a4b5c6d</span></code></pre>
   </section>
 </section>
 
