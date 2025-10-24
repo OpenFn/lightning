@@ -12,7 +12,7 @@
 
     <link rel="stylesheet" href="dist/html-elixir-RLZO5U2C.css" />
 
-    <script defer src="dist/sidebar_items-BCDD0401.js"></script>
+    <script defer src="dist/sidebar_items-CE00643B.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-Y223O6DN.js"></script>
 
@@ -113,6 +113,16 @@ sandbox workflows back onto their parent workflows.</p>
 
     <div class="summary-row">
       <div class="summary-signature">
+        <a href="#has_diverged?/2" data-no-tooltip="" translate="no">has_diverged?(source_project, target_project)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Checks if the target project has diverged from the source sandbox.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
         <a href="#merge_project/2" data-no-tooltip="" translate="no">merge_project(source_project, target_project)</a>
 
       </div>
@@ -145,6 +155,38 @@ sandbox workflows back onto their parent workflows.</p>
     </h1>
 
     <div class="functions-list">
+<section class="detail" id="has_diverged?/2">
+
+  <div class="detail-header">
+    <a href="#has_diverged?/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">has_diverged?(source_project, target_project)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/merge_projects.ex#L784" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> has_diverged?(<a href="Lightning.Projects.Project.html#t:t/0">Lightning.Projects.Project.t</a>(), <a href="Lightning.Projects.Project.html#t:t/0">Lightning.Projects.Project.t</a>()) ::
+  <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">boolean</a>()</pre>
+
+      </div>
+
+<p>Checks if the target project has diverged from the source sandbox.</p><p>Divergence occurs when any workflow in the target project has a different
+version hash compared to when the source sandbox was created. This indicates
+that changes have been made to the target that the sandbox doesn't know about,
+which could lead to data loss during merge.</p><h2 id="has_diverged?/2-parameters" class="section-heading"><a href="#has_diverged?/2-parameters" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Parameters</span></h2><ul><li><code class="inline">source_project</code> - The sandbox project with workflows</li><li><code class="inline">target_project</code> - The target project to check with workflows</li></ul><h2 id="has_diverged?/2-returns" class="section-heading"><a href="#has_diverged?/2-returns" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Returns</span></h2><ul><li><code class="inline">true</code> if the target has diverged (workflow versions differ)</li><li><code class="inline">false</code> if no divergence detected</li></ul>
+  </section>
+</section>
 <section class="detail" id="merge_project/2">
 
   <div class="detail-header">
@@ -155,7 +197,7 @@ sandbox workflows back onto their parent workflows.</p>
       <h1 class="signature" translate="no">merge_project(source_project, target_project)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/merge_projects.ex#L29" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/merge_projects.ex#L30" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -187,7 +229,7 @@ Workflows that don't match are marked for deletion (target) or creation (source)
       <h1 class="signature" translate="no">merge_workflow(source_workflow, target_workflow)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/merge_projects.ex#L78" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/merge_projects.ex#L79" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
