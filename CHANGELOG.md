@@ -17,6 +17,8 @@ and this project adheres to
 
 ### Added
 
+- Ability to delay webhook trigger replies until a workflow finishes
+  [#PR3785](https://github.com/OpenFn/lightning/pull/3785)
 - REST API for runs, work_orders, and log_lines to refresh GovStack compliance
   [#1656](https://github.com/OpenFn/lightning/issues/1656) &
   [PR#3786](https://github.com/OpenFn/lightning/pull/3786)
