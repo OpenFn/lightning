@@ -219,6 +219,9 @@ defmodule Lightning.MixProject do
       source_url: "https://github.com/OpenFn/lightning",
       homepage_url: "https://openfn.github.io/lightning",
       groups_for_modules: [
+        API: [
+          ~r/LightningWeb.API/
+        ],
         Accounts: [
           ~r/Lightning.Accounts/
         ],
