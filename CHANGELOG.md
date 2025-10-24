@@ -17,18 +17,39 @@ and this project adheres to
 
 ### Added
 
+- Ability to delay webhook trigger replies until a workflow finishes
+  [#PR3785](https://github.com/OpenFn/lightning/pull/3785)
+- REST API for runs, work_orders, and log_lines to refresh GovStack compliance
+  [#1656](https://github.com/OpenFn/lightning/issues/1656) &
+  [PR#3786](https://github.com/OpenFn/lightning/pull/3786)
+- Added full-screen IDE for job editing
+  [#3708](https://github.com/OpenFn/lightning/issues/3708)
 - Show collaborative editor toggle (beaker icon) when creating new workflows
   [#3797](https://github.com/OpenFn/lightning/pull/3797)
 - Auto-format code on commit with git hooks
   [#3806](https://github.com/OpenFn/lightning/pull/3806)
+- Escape key support for closing inspector panels in collaborative workflow
+  editor, using react-hotkeys-hook for scoped keyboard shortcuts with modal
+  priority [#3768](https://github.com/OpenFn/lightning/issues/3768)
 
 ### Changed
+
+- Removed Cancel button from inspector panel footers (redundant with X button
+  and Escape key) [#3768](https://github.com/OpenFn/lightning/issues/3768)
+- Refactored inspector component architecture to use composition pattern with
+  reusable layout shell and pure form components
+  [#3768](https://github.com/OpenFn/lightning/issues/3768)
+- Updated breadcrumb navigation to display parent project name before sandbox
+  name [#3474](https://github.com/OpenFn/lightning/issues/3474)
 
 ### Fixed
 
 - Fixed credential preservation during sandbox workflow merge - credentials are
   now correctly maintained when merging sandboxes back to parent projects
   [#3782](https://github.com/OpenFn/lightning/issues/3782)
+- Backfilled `env` field for existing root projects to ensure environment chips
+  display correctly in workflow editor and inspector
+  [#3839](https://github.com/OpenFn/lightning/issues/3839)
 
 ## [2.14.12] - 2025-10-21
 

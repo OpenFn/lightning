@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { HotkeysProvider } from "react-hotkeys-hook";
 
 import { SocketProvider } from "../react/contexts/SocketProvider";
 import type { WithActionProps } from "../react/lib/with-props";
@@ -115,33 +116,37 @@ export const CollaborativeEditor: WithActionProps<
   const isNewWorkflow = props["data-is-new-workflow"] === "true";
 
   return (
-    <div
-      className="collaborative-editor h-full flex flex-col"
-      data-testid="collaborative-editor"
-    >
-      <SocketProvider>
-        <SessionProvider
-          workflowId={workflowId}
-          projectId={projectId}
-          isNewWorkflow={isNewWorkflow}
-        >
-          <StoreProvider>
-            <Toaster />
-            <BreadcrumbContent
-              workflowId={workflowId}
-              workflowName={workflowName}
-              {...(projectId !== undefined && { projectIdFallback: projectId })}
-              {...(projectName !== undefined && {
-                projectNameFallback: projectName,
-              })}
-            />
-            <div className="flex-1 min-h-0 overflow-hidden">
-              <WorkflowEditor />
-              <CollaborationWidget />
-            </div>
-          </StoreProvider>
-        </SessionProvider>
-      </SocketProvider>
-    </div>
+    <HotkeysProvider initiallyActiveScopes={["global"]}>
+      <div
+        className="collaborative-editor h-full flex flex-col"
+        data-testid="collaborative-editor"
+      >
+        <SocketProvider>
+          <SessionProvider
+            workflowId={workflowId}
+            projectId={projectId}
+            isNewWorkflow={isNewWorkflow}
+          >
+            <StoreProvider>
+              <Toaster />
+              <BreadcrumbContent
+                workflowId={workflowId}
+                workflowName={workflowName}
+                {...(projectId !== undefined && {
+                  projectIdFallback: projectId,
+                })}
+                {...(projectName !== undefined && {
+                  projectNameFallback: projectName,
+                })}
+              />
+              <div className="flex-1 min-h-0 overflow-hidden">
+                <WorkflowEditor />
+                <CollaborationWidget />
+              </div>
+            </StoreProvider>
+          </SessionProvider>
+        </SocketProvider>
+      </div>
+    </HotkeysProvider>
   );
 };

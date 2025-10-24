@@ -278,7 +278,7 @@ defmodule LightningWeb.SandboxLive.Index do
     ~H"""
     <LayoutComponents.page_content>
       <:header>
-        <LayoutComponents.header current_user={@current_user}>
+        <LayoutComponents.header current_user={@current_user} project={@project}>
           <:title>Sandboxes</:title>
         </LayoutComponents.header>
       </:header>

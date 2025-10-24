@@ -1,4 +1,33 @@
 defmodule LightningWeb.API.WorkflowsController do
+  @moduledoc """
+  API controller for workflow management.
+
+  Handles CRUD operations for workflows, including their jobs, triggers, and edges.
+  Workflows are directed acyclic graphs (DAGs) that define data processing pipelines.
+
+  ## Workflow Structure
+
+  A workflow consists of:
+  - Jobs: JavaScript execution units with adaptors
+  - Triggers: Initiation methods (Webhook, Cron, Kafka)
+  - Edges: Connections between triggers/jobs with conditions
+
+  ## Validation Rules
+
+  - Workflows must be valid DAGs (no cycles)
+  - Only one trigger can be enabled at a time
+  - All jobs and triggers must have valid UUIDs
+  - Edges must reference existing jobs/triggers
+  - Cannot modify workflows with active presence (being edited in UI)
+
+  ## Examples
+
+      GET /api/workflows
+      GET /api/workflows?project_id=a1b2c3d4-...
+      GET /api/workflows/a1b2c3d4-...
+      POST /api/workflows
+      PATCH /api/workflows/a1b2c3d4-...
+  """
   use LightningWeb, :controller
 
   import Lightning.Workflows.WorkflowUsageLimiter,
@@ -21,6 +50,36 @@ defmodule LightningWeb.API.WorkflowsController do
 
   require Logger
 
+  @doc """
+  Lists workflows with optional project filtering.
+
+  This function has two variants:
+  - With `project_id`: Returns workflows for a specific project
+  - Without `project_id`: Returns workflows across all accessible projects
+
+  Returns all workflows including their jobs, triggers, and edges.
+
+  ## Parameters
+
+  - `conn` - The Plug connection struct with the current resource assigned
+  - `params` - Map containing:
+    - `project_id` - Project UUID (optional, filters to specific project)
+
+  ## Returns
+
+  - `200 OK` with workflows list and empty errors map
+  - `404 Not Found` if project doesn't exist (when project_id provided)
+  - `403 Forbidden` if user lacks project access (when project_id provided)
+
+  ## Examples
+
+      # All workflows accessible to user
+      GET /api/workflows
+
+      # Workflows for specific project
+      GET /api/workflows?project_id=a1b2c3d4-5e6f-7a8b-9c0d-1e2f3a4b5c6d
+  """
+  @spec index(Plug.Conn.t(), map()) :: Plug.Conn.t()
   def index(conn, %{"project_id" => project_id}) do
     with :ok <- validate_project_id(%{"project_id" => project_id}, project_id),
          :ok <- authorize_read(conn, project_id) do
@@ -34,6 +93,67 @@ defmodule LightningWeb.API.WorkflowsController do
     |> then(&maybe_handle_error(conn, &1))
   end
 
+  def index(conn, _params) do
+    list =
+      Workflows.workflows_for_user_query(conn.assigns.current_resource)
+      |> Repo.all()
+      |> Repo.preload([:edges, :jobs, :triggers])
+
+    json(conn, %{workflows: list, errors: %{}})
+  end
+
+  @doc """
+  Creates a new workflow in a project.
+
+  Creates a workflow with jobs, triggers, and edges. Validates the workflow
+  structure and ensures it forms a valid DAG with no cycles.
+
+  ## Parameters
+
+  - `conn` - The Plug connection struct with the current resource assigned
+  - `params` - Map containing:
+    - `project_id` - Project UUID (required)
+    - `name` - Workflow name (required)
+    - `jobs` - List of job definitions with UUIDs (required)
+    - `triggers` - List of trigger definitions with UUIDs (required)
+    - `edges` - List of edge definitions connecting jobs/triggers (required)
+
+  ## Returns
+
+  - `201 Created` with workflow JSON on success
+  - `422 Unprocessable Entity` with validation errors
+  - `403 Forbidden` if user lacks write access
+
+  ## Examples
+
+      POST /api/workflows
+      {
+        "project_id": "a1b2c3d4-...",
+        "name": "Data Processing Pipeline",
+        "jobs": [
+          {
+            "id": "job-uuid-1",
+            "name": "Extract Data",
+            "body": "fn(state => state)"
+          }
+        ],
+        "triggers": [
+          {
+            "id": "trigger-uuid-1",
+            "type": "webhook",
+            "enabled": true
+          }
+        ],
+        "edges": [
+          {
+            "source_trigger_id": "trigger-uuid-1",
+            "target_job_id": "job-uuid-1",
+            "condition": "always"
+          }
+        ]
+      }
+  """
+  @spec create(Plug.Conn.t(), map()) :: Plug.Conn.t()
   def create(conn, %{"project_id" => project_id} = params) do
     with :ok <- validate_project_id(conn.body_params, project_id),
          :ok <- authorize_write(conn, project_id),
@@ -45,6 +165,38 @@ defmodule LightningWeb.API.WorkflowsController do
     |> then(&maybe_handle_error(conn, &1))
   end
 
+  @doc """
+  Retrieves a workflow by ID.
+
+  This function has two variants:
+  - With `project_id`: Validates workflow belongs to specified project
+  - Without `project_id`: Determines project access from workflow association
+
+  Returns a workflow with all its jobs, triggers, and edges.
+
+  ## Parameters
+
+  - `conn` - The Plug connection struct with the current resource assigned
+  - `params` - Map containing:
+    - `id` - Workflow UUID (required)
+    - `project_id` - Project UUID (optional, for validation)
+
+  ## Returns
+
+  - `200 OK` with workflow JSON on success
+  - `404 Not Found` if workflow doesn't exist
+  - `400 Bad Request` if workflow exists but project_id mismatch
+  - `403 Forbidden` if user lacks project access
+
+  ## Examples
+
+      # Get workflow by ID only
+      GET /api/workflows/a1b2c3d4-5e6f-7a8b-9c0d-1e2f3a4b5c6d
+
+      # Get workflow with project validation
+      GET /api/workflows/workflow-uuid-1?project_id=a1b2c3d4-...
+  """
+  @spec show(Plug.Conn.t(), map()) :: Plug.Conn.t()
   def show(conn, %{"project_id" => project_id, "id" => workflow_id}) do
     with :ok <- validate_uuid(project_id),
          :ok <- validate_uuid(workflow_id),
@@ -55,6 +207,56 @@ defmodule LightningWeb.API.WorkflowsController do
     |> then(&maybe_handle_error(conn, &1))
   end
 
+  def show(conn, %{"id" => workflow_id}) do
+    with :ok <- validate_uuid(workflow_id),
+         workflow when not is_nil(workflow) <-
+           Workflows.get_workflow(workflow_id,
+             include: [:edges, :jobs, :triggers]
+           ),
+         :ok <- authorize_read_workflow(conn, workflow) do
+      json(conn, %{workflow: workflow, errors: %{}})
+    else
+      nil -> {:error, :not_found}
+      error -> error
+    end
+    |> then(&maybe_handle_error(conn, &1, workflow_id))
+  end
+
+  @doc """
+  Updates an existing workflow.
+
+  Modifies a workflow's structure, including its jobs, triggers, and edges.
+  Validates the updated workflow forms a valid DAG. Prevents updates while
+  workflow is being edited in the UI (active presence).
+
+  ## Parameters
+
+  - `conn` - The Plug connection struct with the current resource assigned
+  - `params` - Map containing:
+    - `project_id` - Project UUID (required, must match workflow's project)
+    - `id` - Workflow UUID (required)
+    - `name` - Updated workflow name (optional)
+    - `jobs` - Updated jobs list (optional)
+    - `triggers` - Updated triggers list (optional, cannot replace existing)
+    - `edges` - Updated edges list (optional)
+
+  ## Returns
+
+  - `200 OK` with updated workflow JSON on success
+  - `422 Unprocessable Entity` with validation errors
+  - `409 Conflict` if workflow has active presence
+  - `403 Forbidden` if user lacks write access
+  - `404 Not Found` if workflow doesn't exist
+
+  ## Examples
+
+      PATCH /api/workflows/workflow-uuid-1?project_id=a1b2c3d4-...
+      {
+        "name": "Updated Pipeline Name",
+        "jobs": [...]
+      }
+  """
+  @spec update(Plug.Conn.t(), map()) :: Plug.Conn.t()
   def update(conn, %{"project_id" => project_id, "id" => workflow_id} = params) do
     with :ok <- validate_project_id(conn.body_params, project_id),
          :ok <- validate_workflow_id(conn.body_params, workflow_id),
@@ -287,6 +489,10 @@ defmodule LightningWeb.API.WorkflowsController do
 
   defp authorize_read(conn, project_id) do
     authorize_for_project(conn, project_id, :access_read)
+  end
+
+  defp authorize_read_workflow(conn, %Workflow{project_id: project_id}) do
+    authorize_read(conn, project_id)
   end
 
   defp authorize_for_project(conn, project_id, access) do

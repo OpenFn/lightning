@@ -114,10 +114,7 @@ describe("JobInspector - Credential Selection", () => {
           {
             name: "@openfn/language-common",
             latest: "2.0.0",
-            versions: [
-              { version: "2.0.0" },
-              { version: "1.0.0" },
-            ],
+            versions: [{ version: "2.0.0" }, { version: "1.0.0" }],
           },
         ],
       });
@@ -177,7 +174,13 @@ describe("JobInspector - Credential Selection", () => {
     const job = workflowStore.getSnapshot().jobs[0];
 
     render(<JobInspector job={job} />, {
-      wrapper: createWrapper(workflowStore, credentialStore, sessionContextStore, adaptorStore, awarenessStore),
+      wrapper: createWrapper(
+        workflowStore,
+        credentialStore,
+        sessionContextStore,
+        adaptorStore,
+        awarenessStore
+      ),
     });
 
     // Credential field should render
@@ -197,7 +200,13 @@ describe("JobInspector - Credential Selection", () => {
     const job = workflowStore.getSnapshot().jobs[0];
 
     render(<JobInspector job={job} />, {
-      wrapper: createWrapper(workflowStore, credentialStore, sessionContextStore, adaptorStore, awarenessStore),
+      wrapper: createWrapper(
+        workflowStore,
+        credentialStore,
+        sessionContextStore,
+        adaptorStore,
+        awarenessStore
+      ),
     });
 
     // Change job name to trigger form update
@@ -231,7 +240,13 @@ describe("JobInspector - Credential Selection", () => {
     const job = workflowStore.getSnapshot().jobs[0];
 
     render(<JobInspector job={job} />, {
-      wrapper: createWrapper(workflowStore, credentialStore, sessionContextStore, adaptorStore, awarenessStore),
+      wrapper: createWrapper(
+        workflowStore,
+        credentialStore,
+        sessionContextStore,
+        adaptorStore,
+        awarenessStore
+      ),
     });
 
     // Update the job name
@@ -301,7 +316,13 @@ describe("JobInspector - Credential Selection", () => {
     const job = workflowStore.getSnapshot().jobs[0];
 
     render(<JobInspector job={job} />, {
-      wrapper: createWrapper(workflowStore, credentialStore, sessionContextStore, adaptorStore, awarenessStore),
+      wrapper: createWrapper(
+        workflowStore,
+        credentialStore,
+        sessionContextStore,
+        adaptorStore,
+        awarenessStore
+      ),
     });
 
     const credentialSelect = screen.getByLabelText("Credential");
