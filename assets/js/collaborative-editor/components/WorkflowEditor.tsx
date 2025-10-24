@@ -27,7 +27,15 @@ import { ManualRunPanel } from "./ManualRunPanel";
 
 const logger = _logger.ns("WorkflowEditor").seal();
 
-export function WorkflowEditor() {
+interface WorkflowEditorProps {
+  parentProjectId?: string | null;
+  parentProjectName?: string | null;
+}
+
+export function WorkflowEditor({
+  parentProjectId,
+  parentProjectName,
+}: WorkflowEditorProps = {}) {
   const { hash, searchParams, updateSearchParams } = useURLState();
   const { currentNode, selectNode } = useNodeSelection();
   const workflowStore = useWorkflowStoreContext();
@@ -164,7 +172,7 @@ export function WorkflowEditor() {
             {workflow && (
               <div
                 id="inspector"
-                className={`absolute top-0 right-0 h-full transition-transform duration-300 ease-in-out ${
+                className={`absolute top-0 right-0 h-full transition-transform duration-300 ease-in-out z-10 ${
                   showInspector
                     ? "translate-x-0"
                     : "translate-x-full pointer-events-none"
@@ -212,7 +220,12 @@ export function WorkflowEditor() {
 
       {/* Full-Screen IDE - replaces canvas when open */}
       {isIDEOpen && selectedJobId && (
-        <FullScreenIDE jobId={selectedJobId} onClose={handleCloseIDE} />
+        <FullScreenIDE
+          jobId={selectedJobId}
+          onClose={handleCloseIDE}
+          parentProjectId={parentProjectId}
+          parentProjectName={parentProjectName}
+        />
       )}
     </div>
   );

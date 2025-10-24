@@ -22,6 +22,9 @@ and this project adheres to
 - Divergence warning when merging sandboxes - displays alert if target branch
   was modified after sandbox creation to prevent data loss
   [#3747](https://github.com/OpenFn/lightning/issues/3747)
+- Sandbox indicator banners in workflow editor (inspector) to help indicate when
+  working in a sandbox environment
+  [#3413](https://github.com/OpenFn/lightning/issues/3413)
 
 ### Changed
 
