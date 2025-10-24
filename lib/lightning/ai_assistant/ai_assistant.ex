@@ -274,6 +274,24 @@ defmodule Lightning.AiAssistant do
     end
   end
 
+  @doc """
+  Gets a session scoped to a specific job.
+
+  Returns the session only if it belongs to the given job.
+  Raises `Ecto.NoResultsError` if the session doesn't exist or doesn't belong to the job.
+
+  ## Examples
+
+      iex> get_session!(session_id, job)
+      %ChatSession{}
+  """
+  def get_session!(session_id, %Job{id: job_id}) do
+    ChatSession
+    |> where([s], s.id == ^session_id and s.job_id == ^job_id)
+    |> Repo.one!()
+    |> Repo.preload([:user, messages: {session_messages_query(), :user}])
+  end
+
   def get_session(id) do
     case Repo.get(ChatSession, id) do
       nil ->
