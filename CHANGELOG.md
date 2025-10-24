@@ -27,6 +27,9 @@ and this project adheres to
 
 ### Fixed
 
+- Fixed missing cron icon in trigger on new canvas
+  [#3849](https://github.com/OpenFn/lightning/issues/3849)
+
 ## [2.14.13-pre1] 2025-10-24
 
 ### Added
