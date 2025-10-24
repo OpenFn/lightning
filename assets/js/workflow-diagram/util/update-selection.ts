@@ -16,20 +16,20 @@ import type { Flow } from '../types';
  * TODO: as an optimisation, consider exiting early once we've updated both selected items
  */
 export default (model: Flow.Model, newSelection: string | null) => {
-  let neighbours = {};
+  // let neighbours = {};
 
-  if (newSelection) {
-    const selectedNode = model.nodes.find(n => n.id === newSelection);
-    if (selectedNode) {
-      neighbours = getConnectedEdges([selectedNode], model.edges).reduce(
-        (obj, next) => {
-          obj[next.id] = true;
-          return obj;
-        },
-        {} as Record<string, true>
-      );
-    }
-  }
+  // if (newSelection) {
+  //   const selectedNode = model.nodes.find(n => n.id === newSelection);
+  //   if (selectedNode) {
+  //     neighbours = getConnectedEdges([selectedNode], model.edges).reduce(
+  //       (obj, next) => {
+  //         obj[next.id] = true;
+  //         return obj;
+  //       },
+  //       {} as Record<string, true>
+  //     );
+  //   }
+  // }
 
   const updatedModel = {
     nodes: model.nodes.map(updateItem) as Flow.Node[],
@@ -42,7 +42,8 @@ export default (model: Flow.Model, newSelection: string | null) => {
   function updateItem(item: Flow.Edge | Flow.Node) {
     return styleItem({
       ...item,
-      data: { ...item.data, neighbour: item.id in neighbours },
+      // data: { ...item.data, neighbour: item.id in neighbours },
+      data: { ...item.data },
       selected: item.id === newSelection,
     });
   }

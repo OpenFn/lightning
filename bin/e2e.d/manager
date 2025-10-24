@@ -1,0 +1,520 @@
+#! /usr/bin/env bash
+set -e
+
+# Configuration (overridable via environment variables)
+export MIX_ENV=${MIX_ENV:-dev}
+export PORT=${PORT:-4003}
+export LOG_LEVEL=${LOG_LEVEL:-info}
+export RTM=${RTM:-false}
+export DATABASE_URL=${DATABASE_URL:-postgres://postgres:postgres@localhost/lightning_test_e2e}
+export LIVE_DEBUGGER=${LIVE_DEBUGGER:-false}
+export USAGE_TRACKING_ENABLED=false
+SNAPSHOT_FILE="${SNAPSHOT_FILE:-/tmp/demo_data_snapshot.sql}"
+
+# Helper functions
+run_in_project_root() {
+  local command="$1"
+  if [[ -n "${PROJECT_ROOT}" && -d "${PROJECT_ROOT}" ]]; then
+    bash -c "cd '${PROJECT_ROOT}' && exec ${command}"
+  else
+    bash -c "exec ${command}"
+  fi
+}
+
+show_help() {
+  local script_name="bin/e2e"
+  cat <<EOF
+Usage: $script_name [COMMAND] [OPTIONS]
+
+E2E test environment management for Lightning
+
+Commands:
+  start           Start e2e environment with full setup (migrations, snapshot, server)
+  start --force   Stop any running server and start fresh
+  server          Start the e2e test server only (with warnings for missing setup)
+  stop            Stop the running e2e server
+  reset           Fast reset using snapshot (truncate + restore)
+  reset --full    Full database reset with confirmation
+  reset --quiet   Fast reset with minimal output
+  setup           Initialize or refresh database and create snapshot
+  describe        Output current database state as JSON
+  enable-experimental-features  Enable experimental features for a user (default: editor@openfn.org)
+  help            Show this help message (default)
+
+Getting Started:
+  For first-time setup or when you want everything ready, run 'start'. This will:
+  - Run any pending migrations
+  - Create demo data and snapshot if missing
+  - Start the server on port 4003
+
+  For quick server startup (assuming setup is done), use 'server'. This will:
+  - Check compilation and warn about issues
+  - Start the server with warnings for missing snapshots/migrations
+
+  During development, use 'reset' between test runs for instant database restore.
+  This is perfect for iterative testing where you need consistent starting data.
+
+  When you need to pick up schema changes or fresh migrations, use 'reset --full'
+  to rebuild everything from scratch. This is slower but ensures you have the
+  latest database structure.
+
+CI Environments:
+
+  When using 'reset --full', to override the confirmation prompt, prepend
+  'yes |' to your command.
+
+Environment Variables:
+  All settings can be overridden via environment variables:
+  DATABASE_URL, PORT, LOG_LEVEL, MIX_ENV, SNAPSHOT_FILE
+EOF
+}
+
+confirm_destructive_operation() {
+  local operation="$1"
+  echo "WARNING: This will perform a destructive operation: $operation"
+  echo "This will drop and recreate the entire database."
+  echo "Database URL: $DATABASE_URL"
+  echo ""
+  read -p "Are you sure you want to continue? (y/N) " -n 1 -r
+  echo
+  if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+    echo "Operation cancelled."
+    exit 1
+  fi
+}
+
+db_exists() {
+  local db_name="lightning_test_e2e"
+  psql -h localhost -U postgres -lqt | cut -d \| -f 1 | grep -qw "$db_name"
+}
+
+seed_demo_data() {
+  echo "Seeding demo data..."
+  run_in_project_root 'mix run --no-start -e "
+Lightning.Setup.ensure_minimum_setup()
+Ecto.Migrator.with_repo(Lightning.Repo, fn _repo ->
+  Lightning.SetupUtils.setup_demo(create_super: true)
+end)
+"'
+}
+
+create_snapshot() {
+  source "$(dirname "$0")/create_snapshot.sh"
+  create_snapshot "${DATABASE_URL}"
+  echo "Use '$0 reset' for fast restore."
+}
+
+truncate_data() {
+  echo "Truncating all database data..."
+  psql "${DATABASE_URL}" -f "$(dirname "$0")/truncate_all_data.sql"
+}
+
+restore_snapshot() {
+  if [ -f "$SNAPSHOT_FILE" ]; then
+    echo "Restoring from snapshot: $SNAPSHOT_FILE"
+    psql "${DATABASE_URL}" -f "$SNAPSHOT_FILE"
+    echo "Snapshot restore complete!"
+  else
+    echo "Error: Snapshot file not found: $SNAPSHOT_FILE"
+    echo "Run 'setup' first to create a snapshot"
+    exit 1
+  fi
+}
+
+warm_npm_cache() {
+  local server_node="lightning_e2e@127.0.0.1"
+  local client_node="client_$$@127.0.0.1"
+  echo "Warming up npm cache by connecting to server node..."
+
+  # Initial wait before first attempt
+  sleep 1
+
+  local max_attempts=10
+  local attempt=1
+
+  while [[ $attempt -le $max_attempts ]]; do
+    echo "Attempting to connect to server (attempt $attempt/$max_attempts)..."
+
+    if run_in_project_root "elixir --name $client_node --rpc-eval $server_node '
+try do
+  adaptors = Lightning.AdaptorRegistry.all()
+  IO.puts(\"✅ NPM cache warmed successfully - loaded #{length(adaptors)} adaptors\")
+rescue
+  error ->
+    IO.puts(\"⚠️  Warning: Failed to warm NPM cache: #{inspect(error)}\")
+    exit(1)
+end
+'" 2>/dev/null; then
+      # Success - cache warmed
+      return 0
+    else
+      # Failed - server not ready yet
+      if [[ $attempt -eq $max_attempts ]]; then
+        echo "⚠️  Failed to connect to server after $max_attempts attempts"
+        echo "NPM cache warming skipped - adaptors may load slower on first use"
+        return 1
+      fi
+
+      # Wait before next attempt (1s, 2s, 3s, etc.)
+      echo "Server not ready, waiting ${attempt}s before retry..."
+      sleep $attempt
+      ((attempt++))
+    fi
+  done
+}
+
+# Check if Elixir application is compiled
+check_compilation() {
+  echo "Checking if Elixir application is compiled..."
+
+  # Change to project root for compilation check
+  if [[ -n "${PROJECT_ROOT}" && -d "${PROJECT_ROOT}" ]]; then
+    cd "${PROJECT_ROOT}"
+  fi
+
+  # Check if _build directory exists and has compiled beam files
+  if [[ ! -d "_build/${MIX_ENV}/lib/lightning/ebin" ]]; then
+    echo "❌ Application not compiled. Please run 'mix compile' first."
+    echo "Run from project root: mix compile"
+    exit 1
+  fi
+
+  # Check if beam files exist
+  local beam_count=$(find "_build/${MIX_ENV}/lib/lightning/ebin" -name "*.beam" | wc -l)
+  if [[ $beam_count -eq 0 ]]; then
+    echo "❌ No compiled beam files found. Please run 'mix compile' first."
+    echo "Run from project root: mix compile"
+    exit 1
+  fi
+
+  # Quick compilation check - this will be fast if already compiled
+  echo "Verifying compilation status..."
+  if ! run_in_project_root "mix compile --warnings-as-errors" >/dev/null 2>&1; then
+    echo "❌ Compilation failed or has warnings. Please fix compilation errors first."
+    echo "Run from project root: mix compile"
+    exit 1
+  fi
+}
+
+# Check for pending migrations
+check_pending_migrations() {
+  local migrations_output
+  migrations_output=$(run_in_project_root "mix ecto.migrations" 2>/dev/null)
+
+  if echo "$migrations_output" | grep -q "^  down"; then
+    echo "⚠️  WARNING: Pending migrations detected!"
+    echo "The following migrations are not applied:"
+    echo "$migrations_output" | grep "^  down"
+    echo "Run 'mix ecto.migrate' to apply them."
+    return 1
+  fi
+
+  return 0
+}
+
+# Check if snapshot exists and warn if missing
+check_snapshot() {
+  if [ ! -f "$SNAPSHOT_FILE" ]; then
+    echo "⚠️  WARNING: No snapshot file found at: $SNAPSHOT_FILE"
+    echo "Without a snapshot, database resets will be slow."
+    echo "Run 'bin/e2e setup' to create a snapshot for faster resets."
+    return 1
+  fi
+  return 0
+}
+
+cmd_stop() {
+  local pid_file="/tmp/lightning_e2e_server"
+
+  if [[ ! -f "$pid_file" ]]; then
+    echo "No PID file found - server may not be running"
+    return 0
+  fi
+
+  local existing_pid=$(cat "$pid_file" 2>/dev/null)
+  if [[ -z "$existing_pid" ]]; then
+    echo "Empty PID file - cleaning up"
+    rm -f "$pid_file"
+    return 0
+  fi
+
+  if kill -0 "$existing_pid" 2>/dev/null; then
+    echo "Stopping E2E server (PID: $existing_pid)..."
+    kill -SIGQUIT "$existing_pid"
+
+    # Wait up to 10 seconds for graceful shutdown
+    local count=0
+    while kill -0 "$existing_pid" 2>/dev/null && [[ $count -lt 10 ]]; do
+      sleep 1
+      ((count++))
+    done
+
+    if kill -0 "$existing_pid" 2>/dev/null; then
+      echo "Server didn't stop gracefully, force killing..."
+      kill -9 "$existing_pid" 2>/dev/null || true
+    fi
+
+    echo "✅ E2E server stopped"
+  else
+    echo "Server not running (stale PID file)"
+  fi
+
+  rm -f "$pid_file"
+}
+
+# Command functions
+cmd_start() {
+  local pid_file="/tmp/lightning_e2e_server"
+  local force_restart=false
+
+  # Parse flags
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+    --force)
+      force_restart=true
+      shift
+      ;;
+    *)
+      echo "Unknown flag: $1"
+      echo "Use 'help' for usage information"
+      exit 1
+      ;;
+    esac
+  done
+
+  # Check if server is already running first
+  if [[ -f "$pid_file" ]]; then
+    local existing_pid=$(cat "$pid_file" 2>/dev/null)
+    if [[ -n "$existing_pid" ]] && kill -0 "$existing_pid" 2>/dev/null; then
+      if [[ "$force_restart" == "true" ]]; then
+        echo "🔄 Force restart requested - stopping existing server..."
+        cmd_stop
+      else
+        echo "🔄 E2E server already running (PID: $existing_pid) on port $PORT"
+        echo "✅ Reusing existing server for tests"
+        echo "Use 'start --force' to restart the server"
+        return 0
+      fi
+    else
+      echo "🧹 Cleaning up stale PID file..."
+      rm -f "$pid_file"
+    fi
+  fi
+
+  echo "🚀 Starting E2E environment with full setup..."
+
+  # Check compilation first
+  check_compilation
+
+  # Run migrations to ensure database is up to date
+  echo "Running database migrations..."
+  if ! run_in_project_root "mix ecto.migrate" >/dev/null 2>&1; then
+    echo "❌ Database migration failed. Please check database connection and migration files."
+    echo "Run from project root: mix ecto.migrate"
+    exit 1
+  fi
+  echo "✅ Database migrations completed"
+
+  # Check if snapshot exists, create if missing
+  if [ ! -f "$SNAPSHOT_FILE" ]; then
+    echo "📸 No snapshot found, creating demo data and snapshot..."
+
+    # Truncate existing data
+    echo "Truncating existing data..."
+    truncate_data >/dev/null 2>&1
+
+    # Seed demo data
+    echo "Seeding demo data..."
+    seed_demo_data >/dev/null 2>&1
+
+    # Create snapshot
+    echo "Creating snapshot for fast resets..."
+    create_snapshot >/dev/null 2>&1
+
+    echo "✅ Snapshot created successfully"
+  else
+    echo "✅ Snapshot found at: $SNAPSHOT_FILE"
+  fi
+
+  # Now start the server
+  echo "🔥 Starting E2E server..."
+  cmd_server
+}
+
+cmd_server() {
+  local pid_file="/tmp/lightning_e2e_server"
+
+  # Check if server is already running
+  if [[ -f "$pid_file" ]]; then
+    local existing_pid=$(cat "$pid_file" 2>/dev/null)
+    if [[ -n "$existing_pid" ]] && kill -0 "$existing_pid" 2>/dev/null; then
+      echo "E2E server is already running (PID: $existing_pid) on port $PORT"
+      echo "Use 'kill $existing_pid' to stop it, or check http://localhost:$PORT"
+      exit 0
+    else
+      echo "Cleaning up stale PID file..."
+      rm -f "$pid_file"
+    fi
+  fi
+
+  # Check compilation before starting server
+  check_compilation
+
+  # Check for pending migrations and warn
+  check_pending_migrations
+
+  # Check for snapshot and warn if missing
+  check_snapshot
+
+  # Set up PID file cleanup on exit
+  cleanup_pid_file() {
+    echo "Shutting down server..."
+    rm -f "$pid_file"
+  }
+  trap cleanup_pid_file SIGINT SIGTERM EXIT
+
+  echo "Starting Phoenix server on port $PORT..."
+
+  # Change to project root if needed and start server
+  if [[ -n "${PROJECT_ROOT}" && -d "${PROJECT_ROOT}" ]]; then
+    cd "${PROJECT_ROOT}"
+  fi
+
+  # Start server with named node and write PID after it starts
+  elixir --name lightning_e2e@127.0.0.1 -S mix phx.server &
+  local server_pid=$!
+
+  # Write PID to file
+  echo "$server_pid" > "$pid_file"
+  echo "Server PID $server_pid written to $pid_file"
+
+  # Warm NPM cache in background with retry logic
+  warm_npm_cache 
+
+  # Wait for the server process
+  wait $server_pid
+}
+
+cmd_reset() {
+  local full_reset=false
+  local quiet=false
+
+  # Parse flags
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+    --full)
+      full_reset=true
+      shift
+      ;;
+    --quiet)
+      quiet=true
+      shift
+      ;;
+    *)
+      echo "Unknown flag: $1"
+      echo "Use 'help' for usage information"
+      exit 1
+      ;;
+    esac
+  done
+
+  if [ "$full_reset" = true ]; then
+    # Check if running in non-interactive mode (e.g., with yes |)
+    if [ -t 0 ]; then
+      confirm_destructive_operation "full database reset (drop/create/migrate)"
+    fi
+
+    if [ "$quiet" = true ]; then
+      echo "Performing full database reset..." >&2
+      run_in_project_root "mix ecto.reset" >/dev/null 2>&1
+      seed_demo_data >/dev/null 2>&1
+      create_snapshot >/dev/null 2>&1
+    else
+      echo "Performing full database reset (drop/create/migrate)..."
+      run_in_project_root "mix ecto.reset"
+      seed_demo_data
+      create_snapshot
+    fi
+  else
+    # Fast reset using snapshot - check snapshot exists first
+    if [ ! -f "$SNAPSHOT_FILE" ]; then
+      echo "Error: Snapshot file not found at: $SNAPSHOT_FILE"
+      echo "Cannot perform fast reset without a snapshot."
+      echo "Run 'bin/e2e setup' to create the snapshot, or use 'reset --full' for a complete rebuild."
+      exit 1
+    fi
+
+    if [ "$quiet" = true ]; then
+      truncate_data >/dev/null 2>&1
+      restore_snapshot >/dev/null 2>&1
+    else
+      echo "Truncating data and restoring from snapshot..."
+      truncate_data
+      restore_snapshot
+    fi
+  fi
+}
+
+cmd_setup() {
+  echo "Setting up e2e database..."
+
+  if db_exists; then
+    echo "Database exists, truncating data..."
+    truncate_data
+  else
+    echo "Database doesn't exist, creating and migrating..."
+    run_in_project_root "mix ecto.create"
+    run_in_project_root "mix ecto.migrate"
+  fi
+
+  seed_demo_data
+  create_snapshot
+  echo "Setup complete!"
+}
+
+cmd_describe() {
+  source "$(dirname "$0")/describe_data.sh"
+  describe_test_data "${DATABASE_URL}"
+}
+
+cmd_enable_experimental_features() {
+  local user_email="${1:-editor@openfn.org}"
+  source "$(dirname "$0")/enable_experimental_features.sh"
+  enable_experimental_features "${DATABASE_URL}" "$user_email"
+}
+
+# Parse command
+COMMAND="${1:-help}"
+shift || true
+
+case "$COMMAND" in
+start)
+  cmd_start "$@"
+  ;;
+server)
+  cmd_server "$@"
+  ;;
+stop)
+  cmd_stop "$@"
+  ;;
+reset)
+  cmd_reset "$@"
+  ;;
+setup)
+  cmd_setup "$@"
+  ;;
+describe)
+  cmd_describe "$@"
+  ;;
+enable-experimental-features)
+  cmd_enable_experimental_features "$@"
+  ;;
+help | --help | -h)
+  show_help
+  ;;
+*)
+  echo "Unknown command: $COMMAND"
+  echo "Use 'help' for usage information"
+  exit 1
+  ;;
+esac

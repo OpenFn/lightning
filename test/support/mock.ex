@@ -15,6 +15,9 @@ defmodule Lightning.Stub do
   def subscribe(topic), do: Lightning.API.subscribe(topic)
 
   @impl true
+  def unsubscribe(topic), do: Lightning.API.unsubscribe(topic)
+
+  @impl true
   def release(), do: Lightning.API.release()
 
   @doc """

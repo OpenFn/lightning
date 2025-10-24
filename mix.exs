@@ -4,8 +4,8 @@ defmodule Lightning.MixProject do
   def project do
     [
       app: :lightning,
-      version: "2.13.6",
-      elixir: "~> 1.17",
+      version: "2.14.12",
+      elixir: "~> 1.18",
       elixirc_paths: elixirc_paths(Mix.env()),
       elixirc_options: [
         warnings_as_errors: true
@@ -89,7 +89,8 @@ defmodule Lightning.MixProject do
       {:ex_machina, "~> 2.8.0", only: :test},
       {:excoveralls, "~> 0.18.5", only: [:test, :dev]},
       {:floki, ">= 0.30.0", only: :test},
-      {:gettext, "~> 0.18"},
+      {:gettext, "~> 0.26"},
+      {:git_hooks, "~> 0.8.0", only: [:dev], runtime: false},
       {:google_api_storage, "~> 0.46.0"},
       {:hackney, "~> 1.18"},
       {:heroicons, "~> 0.5.3"},
@@ -99,7 +100,9 @@ defmodule Lightning.MixProject do
       {:jsonpatch, "~> 2.2"},
       {:junit_formatter, "~> 3.0", only: [:test]},
       {:libcluster, "~> 3.3"},
-      {:mimic, "~> 1.7.2", only: :test},
+      {:libcluster_postgres, "~> 0.2.0"},
+      {:live_debugger, "~> 0.3.0", only: :dev},
+      {:mimic, "~> 1.12.0", only: :test},
       {:mix_test_watch, "~> 1.2.0", only: [:test, :dev], runtime: false},
       {:mock, "~> 0.3.8", only: :test},
       {:mox, "~> 1.2.0", only: :test},
@@ -112,7 +115,7 @@ defmodule Lightning.MixProject do
       {:phoenix_html_helpers, "~> 1.0"},
       {:phoenix_live_dashboard, "~> 0.8"},
       {:phoenix_live_reload, "~> 1.5", only: :dev},
-      {:phoenix_live_view, "~> 1.0"},
+      {:phoenix_live_view, "~> 1.0.17"},
       {:phoenix_storybook, "~> 0.6.4", only: :dev},
       {:cors_plug, "~> 3.0"},
       {:plug_cowboy, "~> 2.5"},
@@ -129,7 +132,8 @@ defmodule Lightning.MixProject do
       {:tailwind, "~> 0.3", runtime: Mix.env() == :dev},
       {:telemetry_metrics, "~> 1.0"},
       {:telemetry_poller, "~> 1.0"},
-      {:tesla, "~> 1.13"},
+      {:tesla, "~> 1.13.0"},
+      {:tidewave, "~> 0.5.0", only: :dev},
       {:timex, "~> 3.7"},
       {:replug, "~> 0.1.0"},
       {:phoenix_swoosh, "~> 1.2.1"},
@@ -147,7 +151,9 @@ defmodule Lightning.MixProject do
       {:earmark, "~> 1.4"},
       {:eventually, "~> 1.1", only: [:test]},
       {:benchee, "~> 1.4.0", only: :dev},
-      {:statistics, "~> 0.6", only: :dev}
+      {:statistics, "~> 0.6", only: :dev},
+      {:y_ex, "~> 0.8.0"},
+      {:chameleon, "~> 2.5"}
     ]
   end
 
@@ -213,6 +219,9 @@ defmodule Lightning.MixProject do
       source_url: "https://github.com/OpenFn/lightning",
       homepage_url: "https://openfn.github.io/lightning",
       groups_for_modules: [
+        API: [
+          ~r/LightningWeb.API/
+        ],
         Accounts: [
           ~r/Lightning.Accounts/
         ],

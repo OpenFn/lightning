@@ -60,7 +60,7 @@ defmodule Lightning.ProjectsTest do
       assert Projects.get_project(Ecto.UUID.generate()) == nil
 
       project = project_fixture() |> unload_relation(:project_users)
-      assert Projects.get_project(project.id) == project
+      assert Projects.get_project(project.id) == Repo.preload(project, :parent)
     end
 
     test "get_project_with_users!/1 returns the project with given id" do
@@ -459,7 +459,7 @@ defmodule Lightning.ProjectsTest do
       actual_deletion_date =
         Lightning.Config.purge_deleted_after_days()
         |> Lightning.Helpers.actual_deletion_date()
-        |> Lightning.Helpers.format_date()
+        |> Lightning.Helpers.format_date("%F at %T")
 
       for user <- [user_1, user_2] do
         email = %Email{
@@ -1066,6 +1066,13 @@ defmodule Lightning.ProjectsTest do
           inserted_at: Timex.shift(now, days: -8)
         )
 
+      orphan_pre_retention_dataclip_having_name =
+        insert(:dataclip,
+          name: "some-name",
+          project: project,
+          inserted_at: Timex.shift(now, days: -8)
+        )
+
       orphan_post_retention_dataclip =
         insert(:dataclip,
           project: project,
@@ -1169,6 +1176,8 @@ defmodule Lightning.ProjectsTest do
       assert Repo.get(Dataclip, post_retention_dataclip_4.id)
 
       # Test 5: Orphaned dataclip cleanup
+      # orphan_pre_retention_dataclip_having_name SHOULD NOT be deleted (despite being old it has a name)
+      assert Repo.get(Dataclip, orphan_pre_retention_dataclip_having_name.id)
       # orphan_pre_retention_dataclip SHOULD be deleted (old and not referenced)
       refute Repo.get(Dataclip, orphan_pre_retention_dataclip.id)
       # orphan_post_retention_dataclip should NOT be deleted (recent timestamp)
@@ -1248,6 +1257,32 @@ defmodule Lightning.ProjectsTest do
       refute dataclip.request
       refute dataclip.body
       refute is_nil(dataclip.wiped_at)
+    end
+
+    test "does not wipe dataclips having names" do
+      project =
+        insert(:project,
+          history_retention_period: 14,
+          dataclip_retention_period: 10
+        )
+
+      dataclip =
+        insert(:dataclip,
+          name: "some-name",
+          project: project,
+          request: %{star: "sadio mane"},
+          type: :step_result,
+          body: %{team: "senegal"},
+          inserted_at: Timex.now() |> Timex.shift(days: -11)
+        )
+
+      :ok = Projects.perform(%Oban.Job{args: %{"type" => "data_retention"}})
+
+      dataclip = dataclip_with_body_and_request(dataclip)
+
+      assert dataclip.request === %{"star" => "sadio mane"}
+      assert dataclip.body === %{"team" => "senegal"}
+      assert dataclip.wiped_at == nil
     end
 
     test "does not wipe dataclips without a set retention period" do
@@ -1785,7 +1820,7 @@ defmodule Lightning.ProjectsTest do
       assert {:error, %Ecto.Changeset{}} =
                Projects.update_project(project, @invalid_attrs)
 
-      assert project == Projects.get_project!(project.id)
+      assert Repo.preload(project, :parent) == Projects.get_project!(project.id)
     end
 
     test "update_project/2 calls the validate_changeset hook" do
@@ -2039,6 +2074,730 @@ defmodule Lightning.ProjectsTest do
 
       assert deleted_project_user.id == project_user.id
       refute Repo.get(Lightning.Projects.ProjectUser, project_user.id)
+    end
+  end
+
+  describe "sandboxes (list/create/workspace)" do
+    test "list_sandboxes/1 returns only direct children ordered by name" do
+      parent = insert(:project, name: "parent")
+
+      _other_parent = insert(:project, name: "another-root")
+
+      # children (unordered names to prove sorting)
+      _c2 = insert(:project, name: "B-child", parent: parent)
+      _c1 = insert(:project, name: "A-child", parent: parent)
+      _c3 = insert(:project, name: "Z-child", parent: parent)
+
+      got = Projects.list_sandboxes(parent.id)
+      assert Enum.map(got, & &1.name) == ["A-child", "B-child", "Z-child"]
+      assert Enum.uniq(Enum.map(got, & &1.parent_id)) == [parent.id]
+    end
+
+    test "create_sandbox/3 sets parent and creates a normal project (emails off by default)" do
+      owner = insert(:user)
+
+      parent =
+        insert(:project, project_users: [%{user_id: owner.id, role: :owner}])
+
+      attrs = %{
+        name: "sandbox-1",
+        project_users: [%{user_id: owner.id, role: :owner}]
+      }
+
+      assert {:ok, sandbox} = Projects.create_sandbox(parent, attrs)
+      assert sandbox.parent_id == parent.id
+      assert sandbox.name == "sandbox-1"
+    end
+
+    test "list_workspace_project/1 returns parent + its direct sandboxes (unique set)" do
+      parent = insert(:project, name: "root")
+      c1 = insert(:project, name: "s-a", parent: parent)
+      c2 = insert(:project, name: "s-b", parent: parent)
+      _unrelated = insert(:project, name: "someone-else")
+
+      %{root: root_project, descendants: sandboxes} =
+        Projects.list_workspace_projects(parent)
+
+      # Ensure it contains exactly parent + children (order is not guaranteed)
+      expected_sandboxes_ids = MapSet.new([c1.id, c2.id])
+      assert MapSet.new(Enum.map(sandboxes, & &1.id)) == expected_sandboxes_ids
+      assert root_project.id == parent.id
+    end
+
+    test "returns root and all descendants sorted by name ascending by default" do
+      root = insert(:project, name: "root")
+
+      # Level 1 children (unordered names to test sorting)
+      c2 = insert(:project, name: "Z-child", parent: root)
+      c1 = insert(:project, name: "A-child", parent: root)
+      c3 = insert(:project, name: "M-child", parent: root)
+
+      # Level 2 children (grandchildren)
+      gc1 = insert(:project, name: "B-grandchild", parent: c1)
+      gc2 = insert(:project, name: "Y-grandchild", parent: c2)
+
+      # Unrelated project in different workspace
+      _other_root = insert(:project, name: "other-root")
+
+      %{root: returned_root, descendants: descendants} =
+        Projects.list_workspace_projects(root.id)
+
+      # Check root is correct
+      assert returned_root.id == root.id
+
+      # Check all descendants are included and sorted alphabetically
+      expected_names = [
+        "A-child",
+        "B-grandchild",
+        "M-child",
+        "Y-grandchild",
+        "Z-child"
+      ]
+
+      assert Enum.map(descendants, & &1.name) == expected_names
+
+      # Verify correct IDs are returned
+      expected_ids = [c1.id, gc1.id, c3.id, gc2.id, c2.id]
+      assert Enum.map(descendants, & &1.id) == expected_ids
+    end
+
+    test "accepts Project struct and delegates to binary version" do
+      root = insert(:project, name: "root")
+      _c1 = insert(:project, name: "child-A", parent: root)
+
+      # Call with struct
+      %{root: returned_root, descendants: descendants} =
+        Projects.list_workspace_projects(root)
+
+      assert returned_root.id == root.id
+      assert Enum.map(descendants, & &1.name) == ["child-A"]
+    end
+
+    test "works when called with child project - finds correct root" do
+      root = insert(:project, name: "root")
+      child = insert(:project, name: "child", parent: root)
+      grandchild = insert(:project, name: "grandchild", parent: child)
+
+      # Call with grandchild - should find root and return entire workspace
+      %{root: returned_root, descendants: descendants} =
+        Projects.list_workspace_projects(grandchild.id)
+
+      assert returned_root.id == root.id
+      assert Enum.map(descendants, & &1.name) == ["child", "grandchild"]
+    end
+
+    test "returns empty descendants list when root has no children" do
+      root = insert(:project, name: "lonely-root")
+
+      %{root: returned_root, descendants: descendants} =
+        Projects.list_workspace_projects(root.id)
+
+      assert returned_root.id == root.id
+      assert descendants == []
+    end
+
+    test "sort_by: :name, sort_order: :desc sorts names descending" do
+      root = insert(:project, name: "root")
+      insert(:project, name: "Alpha", parent: root)
+      insert(:project, name: "Zeta", parent: root)
+      insert(:project, name: "Beta", parent: root)
+
+      %{descendants: descendants} =
+        Projects.list_workspace_projects(root.id,
+          sort_by: :name,
+          sort_order: :desc
+        )
+
+      assert Enum.map(descendants, & &1.name) == ["Zeta", "Beta", "Alpha"]
+    end
+
+    test "sort_by: :inserted_at sorts by creation time" do
+      root = insert(:project, name: "root")
+
+      # Insert with specific timestamps to control order
+      _old_child =
+        insert(:project,
+          name: "old",
+          parent: root,
+          inserted_at: ~N[2023-01-01 10:00:00]
+        )
+
+      _new_child =
+        insert(:project,
+          name: "new",
+          parent: root,
+          inserted_at: ~N[2023-01-01 12:00:00]
+        )
+
+      _mid_child =
+        insert(:project,
+          name: "mid",
+          parent: root,
+          inserted_at: ~N[2023-01-01 11:00:00]
+        )
+
+      # Sort by inserted_at ascending
+      %{descendants: descendants} =
+        Projects.list_workspace_projects(root.id,
+          sort_by: :inserted_at,
+          sort_order: :asc
+        )
+
+      assert Enum.map(descendants, & &1.name) == ["old", "mid", "new"]
+
+      # Sort by inserted_at descending
+      %{descendants: descendants} =
+        Projects.list_workspace_projects(root.id,
+          sort_by: :inserted_at,
+          sort_order: :desc
+        )
+
+      assert Enum.map(descendants, & &1.name) == ["new", "mid", "old"]
+    end
+
+    test "sort_by: :updated_at sorts by update time" do
+      root = insert(:project, name: "root")
+
+      old_time = ~N[2023-01-01 10:00:00]
+      new_time = ~N[2023-01-01 11:00:00]
+
+      _child1 =
+        insert(:project,
+          name: "child1-updated",
+          parent: root,
+          updated_at: old_time
+        )
+
+      _child2 =
+        insert(:project,
+          name: "child2-updated",
+          parent: root,
+          updated_at: new_time
+        )
+
+      %{descendants: descendants} =
+        Projects.list_workspace_projects(root.id,
+          sort_by: :updated_at,
+          sort_order: :desc
+        )
+
+      assert Enum.map(descendants, & &1.name) == [
+               "child2-updated",
+               "child1-updated"
+             ]
+    end
+
+    test "raises ArgumentError for invalid sort_by option" do
+      root = insert(:project, name: "root")
+
+      assert_raise ArgumentError,
+                   ~r/Invalid sort_by option: invalid_field/,
+                   fn ->
+                     Projects.list_workspace_projects(root.id,
+                       sort_by: :invalid_field
+                     )
+                   end
+    end
+
+    test "raises ArgumentError for invalid sort_order option" do
+      root = insert(:project, name: "root")
+
+      assert_raise ArgumentError,
+                   ~r/Invalid sort_order option: invalid_order/,
+                   fn ->
+                     Projects.list_workspace_projects(root.id,
+                       sort_order: :invalid_order
+                     )
+                   end
+    end
+
+    test "excludes projects from other workspaces" do
+      # Workspace 1
+      root1 = insert(:project, name: "root1")
+      _child1 = insert(:project, name: "workspace1-child", parent: root1)
+
+      # Workspace 2
+      root2 = insert(:project, name: "root2")
+      child2 = insert(:project, name: "workspace2-child", parent: root2)
+
+      # Get workspace 1 projects
+      %{root: returned_root, descendants: descendants} =
+        Projects.list_workspace_projects(root1.id)
+
+      assert returned_root.id == root1.id
+      assert Enum.map(descendants, & &1.name) == ["workspace1-child"]
+
+      # Ensure workspace 2 projects are not included
+      descendant_ids = Enum.map(descendants, & &1.id)
+      refute child2.id in descendant_ids
+      refute root2.id in descendant_ids
+    end
+
+    test "handles deep nesting correctly" do
+      root = insert(:project, name: "root")
+      l1 = insert(:project, name: "level1", parent: root)
+      l2 = insert(:project, name: "level2", parent: l1)
+      l3 = insert(:project, name: "level3", parent: l2)
+      _l4 = insert(:project, name: "level4", parent: l3)
+
+      %{root: returned_root, descendants: descendants} =
+        Projects.list_workspace_projects(root.id)
+
+      assert returned_root.id == root.id
+
+      assert Enum.map(descendants, & &1.name) == [
+               "level1",
+               "level2",
+               "level3",
+               "level4"
+             ]
+    end
+
+    test "preloads parent associations" do
+      root = insert(:project, name: "root")
+      child = insert(:project, name: "child", parent: root)
+      grandchild = insert(:project, name: "grandchild", parent: child)
+
+      %{descendants: descendants} =
+        Projects.list_workspace_projects(root.id)
+
+      # Find the grandchild in results
+      grandchild_result = Enum.find(descendants, &(&1.id == grandchild.id))
+
+      # Parent should be preloaded
+      assert grandchild_result.parent.id == child.id
+      assert grandchild_result.parent.name == "child"
+    end
+
+    test "same names at different levels sort correctly" do
+      root = insert(:project, name: "root")
+      _child1 = insert(:project, name: "duplicate", parent: root)
+      child2 = insert(:project, name: "other", parent: root)
+      _grandchild = insert(:project, name: "duplicate", parent: child2)
+
+      %{descendants: descendants} =
+        Projects.list_workspace_projects(root.id)
+
+      # Should get both "duplicate" projects in alphabetical order
+      names = Enum.map(descendants, & &1.name)
+      assert names == ["duplicate", "duplicate", "other"]
+    end
+
+    test "raises when project doesn't exist" do
+      fake_id = Ecto.UUID.generate()
+
+      assert_raise Ecto.NoResultsError, fn ->
+        Projects.list_workspace_projects(fake_id)
+      end
+    end
+  end
+
+  describe "project head hash + version history helpers" do
+    test "compute_project_head_hash/1 uses latest per workflow and is deterministic" do
+      project = insert(:project)
+
+      # Two workflows in this project
+      w1 = insert(:simple_workflow, project: project)
+      w2 = insert(:simple_workflow, project: project)
+
+      # Insert workflow_versions with controlled inserted_at so ordering is deterministic
+      now = DateTime.utc_now(:microsecond)
+      later = DateTime.add(now, 1, :microsecond)
+      latest = DateTime.add(now, 2, :microsecond)
+
+      rows = [
+        %{
+          id: Ecto.UUID.generate(),
+          workflow_id: w1.id,
+          hash: "aaaaaaaaaaaa",
+          source: "app",
+          inserted_at: now
+        },
+        %{
+          id: Ecto.UUID.generate(),
+          workflow_id: w1.id,
+          hash: "bbbbbbbbbbbb",
+          source: "cli",
+          inserted_at: later
+        },
+        %{
+          id: Ecto.UUID.generate(),
+          workflow_id: w2.id,
+          hash: "cccccccccccc",
+          source: "app",
+          inserted_at: latest
+        }
+      ]
+
+      Repo.insert_all(Lightning.Workflows.WorkflowVersion, rows)
+
+      # Build expected digest the same way as the implementation
+      pairs =
+        [
+          {w1.id, "bbbbbbbbbbbb"},
+          {w2.id, "cccccccccccc"}
+        ]
+        |> Enum.sort_by(fn {wid, _} -> to_string(wid) end)
+        |> Enum.map(fn {wid, h} -> [to_string(wid), h] end)
+
+      expected =
+        pairs
+        |> Jason.encode!()
+        |> then(fn data -> :crypto.hash(:sha256, data) end)
+        |> Base.encode16(case: :lower)
+        |> binary_part(0, 12)
+
+      assert Projects.compute_project_head_hash(project.id) == expected
+    end
+
+    test "append_project_head/2 appends once and validates format" do
+      project = insert(:project, version_history: [])
+
+      # Valid 12-hex hash
+      h1 = "deadbeefcafe"
+      assert {:ok, p1} = Projects.append_project_head(project, h1)
+      assert p1.version_history == [h1]
+
+      # Appending the same hash again is a no-op
+      assert {:ok, p2} = Projects.append_project_head(p1, h1)
+      assert p2.version_history == [h1]
+
+      # Invalid hash returns {:error, :bad_hash}
+      assert {:error, :bad_hash} = Projects.append_project_head(p2, "not-hex")
+    end
+
+    test "append_project_head!/2 raises on bad hash and returns updated project on success" do
+      project = insert(:project, version_history: [])
+
+      good = "0123456789ab"
+      bad = "oops"
+
+      # Success path
+      updated = Projects.append_project_head!(project, good)
+      assert updated.version_history == [good]
+
+      # Error path
+      assert_raise ArgumentError,
+                   "head_hash must be 12 lowercase hex chars",
+                   fn ->
+                     Projects.append_project_head!(updated, bad)
+                   end
+    end
+
+    test "rejects uppercase even if otherwise valid" do
+      p = insert(:project)
+
+      assert {:error, :bad_hash} =
+               Projects.append_project_head(p, "ABCDEF123456")
+    end
+
+    test "concurrent appends of the same hash result in a single entry" do
+      p = insert(:project)
+
+      fun = fn -> Projects.append_project_head!(p, "abcdef123456") end
+      tasks = for _ <- 1..10, do: Task.async(fun)
+      _ = Enum.map(tasks, &Task.await/1)
+
+      p = Repo.get!(Lightning.Projects.Project, p.id)
+      assert p.version_history == ["abcdef123456"]
+    end
+
+    test "concurrent appends of different hashes keep both (order unspecified)" do
+      p = insert(:project)
+
+      t1 = Task.async(fn -> Projects.append_project_head!(p, "aaaaaaaaaaaa") end)
+      t2 = Task.async(fn -> Projects.append_project_head!(p, "bbbbbbbbbbbb") end)
+      _ = Task.await(t1)
+      _ = Task.await(t2)
+
+      p = Repo.get!(Lightning.Projects.Project, p.id)
+
+      assert Enum.sort(p.version_history) ==
+               Enum.sort(["aaaaaaaaaaaa", "bbbbbbbbbbbb"])
+    end
+
+    test "version_history attrs are ignored by changeset (append-only via context)" do
+      {:ok, p} =
+        %Project{}
+        |> Project.changeset(%{name: "p", version_history: ["abcdef123456"]})
+        |> Repo.insert()
+
+      assert p.version_history == []
+
+      {:ok, p2} =
+        p
+        |> Project.changeset(%{version_history: ["bbbbbbbbbbbb"]})
+        |> Repo.update()
+
+      assert p2.version_history == []
+    end
+
+    test "compute_project_head_hash/1 returns stable digest for projects with no workflow versions" do
+      p = insert(:project)
+
+      expected =
+        []
+        |> Jason.encode!()
+        |> then(&:crypto.hash(:sha256, &1))
+        |> Base.encode16(case: :lower)
+        |> binary_part(0, 12)
+
+      assert Projects.compute_project_head_hash(p.id) == expected
+    end
+  end
+
+  describe "sandbox facade delegates" do
+    test "provision_sandbox/3 creates a child project and sets parent_id" do
+      owner = insert(:user)
+
+      parent =
+        insert(:project, project_users: [%{user_id: owner.id, role: :owner}])
+
+      {:ok, sandbox} =
+        Projects.provision_sandbox(parent, owner, %{name: "sb-1"})
+
+      assert sandbox.parent_id == parent.id
+      assert sandbox.name == "sb-1"
+      assert is_list(sandbox.version_history)
+    end
+
+    test "update_sandbox/3 updates basic fields on the sandbox" do
+      owner = insert(:user)
+
+      parent =
+        insert(:project, project_users: [%{user_id: owner.id, role: :owner}])
+
+      {:ok, sandbox} = Projects.provision_sandbox(parent, owner, %{name: "old"})
+
+      {:ok, updated} =
+        Projects.update_sandbox(sandbox, owner, %{name: "new"})
+
+      assert updated.name == "new"
+    end
+
+    test "delete_sandbox/2 removes the child project" do
+      owner = insert(:user)
+
+      parent =
+        insert(:project, project_users: [%{user_id: owner.id, role: :owner}])
+
+      {:ok, sandbox} =
+        Projects.provision_sandbox(parent, owner, %{name: "to-delete"})
+
+      assert {:ok, %Lightning.Projects.Project{}} =
+               Projects.delete_sandbox(sandbox, owner)
+
+      refute Repo.get(Lightning.Projects.Project, sandbox.id)
+    end
+  end
+
+  describe "descendant_of?/3" do
+    test "returns true when child is direct descendant of parent" do
+      parent = insert(:project, name: "parent")
+      child = insert(:project, name: "child", parent: parent)
+
+      # Preload the parent association for the child
+      child_with_parent = Repo.preload(child, :parent)
+
+      assert Projects.descendant_of?(child_with_parent, parent)
+    end
+
+    test "returns false when projects are siblings (same parent)" do
+      parent = insert(:project, name: "parent")
+      sibling1 = insert(:project, name: "sibling1", parent: parent)
+      sibling2 = insert(:project, name: "sibling2", parent: parent)
+
+      # Preload parent associations
+      sibling1_with_parent = Repo.preload(sibling1, :parent)
+      sibling2_with_parent = Repo.preload(sibling2, :parent)
+
+      refute Projects.descendant_of?(sibling1_with_parent, sibling2_with_parent)
+      refute Projects.descendant_of?(sibling2_with_parent, sibling1_with_parent)
+    end
+
+    test "returns true for multi-level descendants (grandchild, great-grandchild, etc.)" do
+      root = insert(:project, name: "root")
+      child = insert(:project, name: "child", parent: root)
+      grandchild = insert(:project, name: "grandchild", parent: child)
+
+      great_grandchild =
+        insert(:project, name: "great_grandchild", parent: grandchild)
+
+      # Build the chain with preloaded parents
+      great_grandchild = Repo.preload(great_grandchild, :parent)
+      grandchild = Repo.preload(grandchild, :parent)
+      child = Repo.preload(child, :parent)
+
+      # Update the preloaded associations to form the complete chain
+      great_grandchild = %{great_grandchild | parent: grandchild}
+      grandchild = %{grandchild | parent: child}
+      child = %{child | parent: root}
+
+      great_grandchild = %{
+        great_grandchild
+        | parent: %{grandchild | parent: child}
+      }
+
+      assert Projects.descendant_of?(great_grandchild, root)
+      assert Projects.descendant_of?(great_grandchild, child)
+      assert Projects.descendant_of?(great_grandchild, grandchild)
+      assert Projects.descendant_of?(grandchild, root)
+      assert Projects.descendant_of?(grandchild, child)
+      assert Projects.descendant_of?(child, root)
+    end
+
+    test "returns false when child is the root (no parent)" do
+      root = insert(:project, name: "root")
+      other_root = insert(:project, name: "other_root")
+
+      # Preload to ensure parent is nil
+      root_with_parent = Repo.preload(root, :parent)
+      other_root_with_parent = Repo.preload(other_root, :parent)
+
+      refute Projects.descendant_of?(root_with_parent, other_root_with_parent)
+      refute Projects.descendant_of?(other_root_with_parent, root_with_parent)
+    end
+
+    test "returns false when child has reached the root in the recursive walk" do
+      root = insert(:project, name: "root")
+      other_root = insert(:project, name: "other_root")
+
+      child_of_other =
+        insert(:project, name: "child_of_other", parent: other_root)
+
+      # Preload associations properly
+      child_with_parent = Repo.preload(child_of_other, :parent)
+
+      refute Projects.descendant_of?(child_with_parent, root)
+    end
+
+    test "returns false when child's parent_id equals root_project.id (stops recursion)" do
+      root = insert(:project, name: "root")
+      direct_child = insert(:project, name: "direct_child", parent: root)
+      other_project = insert(:project, name: "other_project")
+
+      # Preload the parent association
+      child_with_parent = Repo.preload(direct_child, :parent)
+
+      # When the child's parent is the root, it should not be considered a descendant of other_project
+      refute Projects.descendant_of?(child_with_parent, other_project, root)
+    end
+
+    test "handles nil parent_id correctly (stops recursion)" do
+      # This has nil parent_id
+      root = insert(:project, name: "root")
+      other_project = insert(:project, name: "other_project")
+
+      # Preload to ensure parent is nil
+      root_with_parent = Repo.preload(root, :parent)
+
+      refute Projects.descendant_of?(root_with_parent, other_project)
+    end
+
+    test "uses provided root_project parameter correctly" do
+      workspace_root = insert(:project, name: "workspace_root")
+      child = insert(:project, name: "child", parent: workspace_root)
+      grandchild = insert(:project, name: "grandchild", parent: child)
+
+      # Different workspace
+      other_root = insert(:project, name: "other_root")
+
+      # Build proper parent chain
+      grandchild = Repo.preload(grandchild, :parent)
+      child = Repo.preload(child, :parent)
+      grandchild = %{grandchild | parent: %{child | parent: workspace_root}}
+
+      # When root_project is provided, recursion should stop at that root
+      assert Projects.descendant_of?(grandchild, child, workspace_root)
+
+      # Should return false when checking against different root
+      refute Projects.descendant_of?(grandchild, other_root, workspace_root)
+    end
+
+    test "auto-discovers root when root_project parameter is nil" do
+      root = insert(:project, name: "auto_discovered_root")
+      child = insert(:project, name: "child", parent: root)
+      grandchild = insert(:project, name: "grandchild", parent: child)
+
+      # Build parent chain
+      grandchild = Repo.preload(grandchild, :parent)
+      child = Repo.preload(child, :parent)
+      grandchild = %{grandchild | parent: %{child | parent: root}}
+
+      # Should auto-discover root and work correctly
+      assert Projects.descendant_of?(grandchild, child, nil)
+      assert Projects.descendant_of?(grandchild, root, nil)
+    end
+
+    test "complex hierarchy with multiple branches" do
+      # Create a complex tree structure
+      root = insert(:project, name: "root")
+
+      # Branch 1
+      branch1 = insert(:project, name: "branch1", parent: root)
+      branch1_child = insert(:project, name: "branch1_child", parent: branch1)
+
+      # Branch 2
+      branch2 = insert(:project, name: "branch2", parent: root)
+      branch2_child = insert(:project, name: "branch2_child", parent: branch2)
+
+      # Build proper parent chains
+      branch1_child = Repo.preload(branch1_child, :parent)
+      branch1 = Repo.preload(branch1, :parent)
+      branch1_child = %{branch1_child | parent: %{branch1 | parent: root}}
+
+      branch2_child = Repo.preload(branch2_child, :parent)
+      branch2 = Repo.preload(branch2, :parent)
+      branch2_child = %{branch2_child | parent: %{branch2 | parent: root}}
+
+      # Test relationships within branches
+      assert Projects.descendant_of?(branch1_child, branch1)
+      assert Projects.descendant_of?(branch1_child, root)
+      assert Projects.descendant_of?(branch2_child, branch2)
+      assert Projects.descendant_of?(branch2_child, root)
+
+      # Test cross-branch relationships (should be false)
+      refute Projects.descendant_of?(branch1_child, branch2)
+      refute Projects.descendant_of?(branch2_child, branch1)
+      refute Projects.descendant_of?(branch1_child, branch2_child)
+    end
+
+    test "edge case: project compared to itself" do
+      project = insert(:project, name: "self")
+      project_with_parent = Repo.preload(project, :parent)
+
+      # A project is not considered a descendant of itself
+      refute Projects.descendant_of?(project_with_parent, project_with_parent)
+    end
+
+    test "edge case: deeply nested hierarchy performance" do
+      # Test with a very deep hierarchy to ensure it doesn't hit stack overflow
+      root = insert(:project, name: "deep_root")
+
+      # Create a chain of 10 levels deep
+      deepest =
+        Enum.reduce(1..10, root, fn level, parent ->
+          insert(:project, name: "level_#{level}", parent: parent)
+        end)
+
+      # Build the complete parent chain by preloading recursively
+      current = Repo.preload(deepest, :parent)
+
+      # Walk up the chain to build proper associations
+      current = build_parent_chain(current)
+
+      assert Projects.descendant_of?(current, root)
+    end
+  end
+
+  defp build_parent_chain(project) do
+    case project.parent do
+      nil ->
+        project
+
+      parent ->
+        parent_with_chain = build_parent_chain(Repo.preload(parent, :parent))
+        %{project | parent: parent_with_chain}
     end
   end
 

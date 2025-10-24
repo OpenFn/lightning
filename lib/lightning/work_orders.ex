@@ -57,9 +57,14 @@ defmodule Lightning.WorkOrders do
   alias Lightning.WorkOrders.Query
   alias Lightning.WorkOrders.RetryManyWorkOrdersJob
 
+  @type dataclip_input ::
+          Dataclip.t()
+          | Ecto.Changeset.t(Dataclip.t())
+          | map()
+
   @type work_order_option ::
           {:workflow, Workflow.t()}
-          | {:dataclip, Dataclip.t()}
+          | {:dataclip, dataclip_input()}
           | {:created_by, User.t()}
           | {:project_id, Ecto.UUID.t()}
           | {:without_run, boolean()}
@@ -484,6 +489,55 @@ defmodule Lightning.WorkOrders do
     {:ok, 0, 0}
   end
 
+  def get_workorders_with_runs(workflow_id, run_id) do
+    # First, get workorder IDs we want
+    workorder_ids =
+      if is_nil(run_id) do
+        # Just get top 20 workorders by last_activity
+        from(wo in WorkOrder,
+          join: r in assoc(wo, :runs),
+          where: wo.workflow_id == ^workflow_id,
+          group_by: wo.id,
+          order_by: [desc: wo.last_activity],
+          limit: 20,
+          select: wo.id
+        )
+        |> Repo.all()
+      else
+        # Get the specific workorder for the run
+        specific_wo_id =
+          from(r in Run,
+            where: r.id == ^run_id,
+            select: r.work_order_id
+          )
+          |> Repo.one()
+
+        # Get top 20 workorders
+        other_wo_ids =
+          from(wo in WorkOrder,
+            join: r in assoc(wo, :runs),
+            where: wo.workflow_id == ^workflow_id and wo.id != ^specific_wo_id,
+            group_by: wo.id,
+            order_by: [desc: wo.last_activity],
+            # 19 because we're adding the specific one
+            limit: 19,
+            select: wo.id
+          )
+          |> Repo.all()
+
+        # Combine them
+        [specific_wo_id | other_wo_ids] |> Enum.uniq()
+      end
+
+    # Now fetch the full workorders with preloads
+    from(wo in WorkOrder,
+      where: wo.id in ^workorder_ids,
+      order_by: [desc: wo.last_activity],
+      preload: [:snapshot, :runs]
+    )
+    |> Repo.all()
+  end
+
   def get_last_runs_steps_with_dataclips(workorders, jobs) do
     job_ids = Enum.map(jobs, & &1.id)
 
@@ -602,11 +656,13 @@ defmodule Lightning.WorkOrders do
   @doc """
   Get a Work Order by id.
 
-  Optionally preload associations by passing a list of atoms to `:include`.
+  Optionally preload associations by passing a list to `:include`.
+  Supports nested preloads.
 
       Lightning.WorkOrders.get(id, include: [:runs])
+      Lightning.WorkOrders.get(id, include: [workflow: :project, runs: []])
   """
-  @spec get(Ecto.UUID.t(), [{:include, [atom()]}]) :: WorkOrder.t() | nil
+  @spec get(Ecto.UUID.t(), [{:include, list()}]) :: WorkOrder.t() | nil
   def get(id, opts \\ []) do
     preloads = opts |> Keyword.get(:include, [])
 
@@ -615,6 +671,15 @@ defmodule Lightning.WorkOrders do
       preload: ^preloads
     )
     |> Repo.one()
+  end
+
+  @doc """
+  Returns a query for work orders belonging to a specific project
+  """
+  @spec work_orders_for_project_query(Lightning.Projects.Project.t()) ::
+          Ecto.Queryable.t()
+  def work_orders_for_project_query(%Lightning.Projects.Project{} = project) do
+    Lightning.Invocation.Query.work_orders_for(project)
   end
 
   defp new_retry_run(

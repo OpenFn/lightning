@@ -23,15 +23,18 @@ defmodule Lightning.Projects do
   alias Lightning.Projects.Project
   alias Lightning.Projects.ProjectCredential
   alias Lightning.Projects.ProjectUser
+  alias Lightning.Projects.Sandboxes
   alias Lightning.Repo
   alias Lightning.Run
   alias Lightning.RunStep
   alias Lightning.Services.AccountHook
   alias Lightning.Services.ProjectHook
+  alias Lightning.Validators.Hex
   alias Lightning.Workflows.Job
   alias Lightning.Workflows.Snapshot
   alias Lightning.Workflows.Trigger
   alias Lightning.Workflows.Workflow
+  alias Lightning.Workflows.WorkflowVersion
   alias Lightning.WorkOrder
 
   require Logger
@@ -59,7 +62,8 @@ defmodule Lightning.Projects do
       from(p in Project,
         left_join: w in assoc(p, :workflows),
         left_join: pu_all in assoc(p, :project_users),
-        where: p.allow_support_access and is_nil(w.deleted_at),
+        where:
+          p.allow_support_access and is_nil(w.deleted_at) and is_nil(p.parent_id),
         group_by: [p.id],
         select: %ProjectOverviewRow{
           id: p.id,
@@ -99,7 +103,8 @@ defmodule Lightning.Projects do
       left_join: w in assoc(p, :workflows),
       inner_join: pu in assoc(p, :project_users),
       left_join: pu_all in assoc(p, :project_users),
-      where: pu.user_id == ^user_id and is_nil(w.deleted_at),
+      where:
+        pu.user_id == ^user_id and is_nil(w.deleted_at) and is_nil(p.parent_id),
       group_by: [p.id, pu.role],
       select: %ProjectOverviewRow{
         id: p.id,
@@ -197,22 +202,93 @@ defmodule Lightning.Projects do
   end
 
   @doc """
-  Gets a single project.
+  Fetches a project by id (root **or** sandbox) and preloads its direct `:parent`.
 
-  Raises `Ecto.NoResultsError` if the Project does not exist.
+  Raises `Ecto.NoResultsError` if no project with the given id exists.
+  """
+  @spec get_project!(Ecto.UUID.t()) :: Project.t()
+  def get_project!(id), do: Repo.get!(Project, id) |> Repo.preload(:parent)
+
+  @doc """
+  Fetches a project by id (root **or** sandbox) and preloads its direct `:parent`.
+
+  Returns `nil` if no project with the given id exists.
+  """
+  @spec get_project(Ecto.UUID.t()) :: Project.t() | nil
+  def get_project(id) do
+    case Repo.get(Project, id) do
+      nil -> nil
+      p -> Repo.preload(p, :parent)
+    end
+  end
+
+  @doc """
+  Gets the project associated with a run.
+  Traverses Run → WorkOrder → Workflow → Project.
+
+  Returns nil if the run is not associated with a project.
 
   ## Examples
 
-      iex> get_project!(123)
-      %Project{}
+      iex> get_project_for_run(run)
+      %Project{id: "...", env: "production", ...}
 
-      iex> get_project!(456)
-      ** (Ecto.NoResultsError)
-
+      iex> get_project_for_run(orphaned_run)
+      nil
   """
-  def get_project!(id), do: Repo.get!(Project, id)
+  @spec get_project_for_run(Run.t()) :: Project.t() | nil
+  def get_project_for_run(%Run{} = run) do
+    from(p in Ecto.assoc(run, [:work_order, :workflow, :project]))
+    |> Repo.one()
+  end
 
-  def get_project(id), do: Repo.get(Project, id)
+  @doc """
+  Returns the **root ancestor** of a project by walking up `parent_id` links.
+
+  Supports arbitrarily deep nesting. (Assumes the parent chain is well-formed.)
+  """
+  @spec root_of(Project.t()) :: Project.t()
+  def root_of(%Project{} = p) do
+    case p.parent_id do
+      nil -> p
+      pid -> root_of(Repo.get!(Project, pid))
+    end
+  end
+
+  @doc """
+  Returns true if `child_project` is a descendant of `parent_project`.
+
+  Walks up the parent chain using preloaded `:parent` associations to determine
+  if `child_project` has `parent_project` anywhere in its ancestry.
+
+  ## Parameters
+  - `child_project`: The project to check (must have `:parent` preloaded)
+  - `parent_project`: The potential parent/ancestor project
+  - `root_project`: Optional root project to use as stopping condition
+
+  ## Examples
+      iex> Projects.descendant_of?(sandbox, parent_project)
+      true
+
+      iex> Projects.descendant_of?(sibling, parent_project)
+      false
+  """
+  @spec descendant_of?(Project.t(), Project.t(), Project.t() | nil) ::
+          boolean()
+  def descendant_of?(child_project, parent_project, root_project \\ nil) do
+    root = root_project || root_of(child_project)
+
+    cond do
+      child_project.parent_id == parent_project.id ->
+        true
+
+      child_project.parent_id == root.id or is_nil(child_project.parent_id) ->
+        false
+
+      true ->
+        descendant_of?(child_project.parent, parent_project, root)
+    end
+  end
 
   @doc """
   Should input or output dataclips be saved for runs in this project?
@@ -246,8 +322,11 @@ defmodule Lightning.Projects do
   """
   def get_project_user!(id), do: Repo.get!(ProjectUser, id)
 
-  def get_project_user(id), do: Repo.get(ProjectUser, id)
+  @spec get_project_user(Ecto.UUID.t()) :: ProjectUser.t() | nil
+  def get_project_user(id) when is_binary(id), do: Repo.get(ProjectUser, id)
 
+  @spec get_project_user(project :: Project.t(), user :: User.t()) ::
+          ProjectUser.t() | nil
   def get_project_user(%Project{id: project_id}, %User{id: user_id}) do
     from(pu in ProjectUser,
       join: p in assoc(pu, :project),
@@ -257,6 +336,12 @@ defmodule Lightning.Projects do
       preload: [:user, :project]
     )
     |> Repo.one()
+  end
+
+  @spec get_project_user(project_id :: binary(), user :: User.t()) ::
+          ProjectUser.t() | nil
+  def get_project_user(project_id, %User{} = user) when is_binary(project_id) do
+    get_project_user(%Project{id: project_id}, user)
   end
 
   @doc """
@@ -648,12 +733,15 @@ defmodule Lightning.Projects do
   ## Returns
     - An Ecto queryable struct to fetch projects.
   """
-  @spec projects_for_user_query(user :: User.t()) ::
-          Ecto.Queryable.t()
+  @spec projects_for_user_query(user :: User.t()) :: Ecto.Queryable.t()
   def projects_for_user_query(%User{id: user_id}) do
     from(p in Project,
       join: pu in assoc(p, :project_users),
-      where: pu.user_id == ^user_id and is_nil(p.scheduled_deletion)
+      where:
+        pu.user_id == ^user_id and
+          is_nil(p.scheduled_deletion) and
+          is_nil(p.parent_id),
+      order_by: p.name
     )
   end
 
@@ -670,7 +758,10 @@ defmodule Lightning.Projects do
   @spec get_projects_for_user(user :: User.t()) :: [Project.t()]
   def get_projects_for_user(%User{support_user: true} = user) do
     from(p in Project,
-      where: p.allow_support_access and is_nil(p.scheduled_deletion)
+      where:
+        p.allow_support_access and
+          is_nil(p.scheduled_deletion) and
+          is_nil(p.parent_id)
     )
     |> union(^projects_for_user_query(user))
     |> Repo.all()
@@ -683,9 +774,7 @@ defmodule Lightning.Projects do
     |> Repo.all()
   end
 
-  @spec project_user_role_query(user :: User.t(), project :: Project.t()) ::
-          Ecto.Queryable.t()
-  def project_user_role_query(%User{id: user_id}, %Project{id: project_id}) do
+  defp project_user_role_query(%User{id: user_id}, %Project{id: project_id}) do
     from(p in Project,
       join: pu in assoc(p, :project_users),
       where: p.id == ^project_id and pu.user_id == ^user_id,
@@ -712,6 +801,8 @@ defmodule Lightning.Projects do
       :owner
 
   """
+  @spec get_project_user_role(user :: User.t(), project :: Project.t()) ::
+          atom() | nil
   def get_project_user_role(user, project) do
     project_user_role_query(user, project)
     |> Repo.one()
@@ -930,7 +1021,8 @@ defmodule Lightning.Projects do
         on: d.id == r.dataclip_id,
         left_join: s in Step,
         on: d.id == s.input_dataclip_id or d.id == s.output_dataclip_id,
-        where: is_nil(wo.id) and is_nil(r.id) and is_nil(s.id),
+        where:
+          is_nil(d.name) and is_nil(wo.id) and is_nil(r.id) and is_nil(s.id),
         select: d.id
 
     delete_dataclips(
@@ -1204,4 +1296,301 @@ defmodule Lightning.Projects do
 
     query |> Repo.all()
   end
+
+  @doc """
+  Returns the *direct* sandboxes (children) of a parent project, ordered by `name` (ASC).
+
+  This is a flat view: only rows where `parent.id == child.parent_id` are returned.
+  If we later support arbitrarily deep nesting, switch this to a recursive CTE.
+  """
+  @spec list_sandboxes(Ecto.UUID.t()) :: [Project.t()]
+  def list_sandboxes(parent_id) when is_binary(parent_id) do
+    from(p in Project,
+      where: p.parent_id == ^parent_id,
+      order_by: p.name,
+      preload: :parent
+    )
+    |> Repo.all()
+  end
+
+  @doc """
+  Creates a sandbox under the given `parent` by delegating to `create_project/2`.
+
+  This is a convenience wrapper that sets `:parent_id` and preserves the
+  existing behavior around collaborator emails (off by default unless `schedule_email?` is `true`).
+
+  ## Notes
+
+  * Child names are scoped-unique by `(parent_id, name)`. Root names may repeat,
+    but two siblings cannot share a name (enforced by the `projects_unique_child_name` index).
+  * This function does **not** clone workflows, credentials, or dataclips. It only creates
+    a new project row with `parent_id` set. See sandbox provisioning flow for full cloning.
+
+  ## Returns
+
+  * `{:ok, %Project{}}` on success
+  * `{:error, %Ecto.Changeset{}}` on validation/unique errors
+  """
+  @spec create_sandbox(Project.t(), map(), boolean()) ::
+          {:ok, Project.t()} | {:error, Ecto.Changeset.t()}
+  def create_sandbox(%Project{id: parent_id}, attrs, schedule_email? \\ false) do
+    attrs |> Map.put(:parent_id, parent_id) |> create_project(schedule_email?)
+  end
+
+  @doc """
+  Returns all projects in a workspace hierarchy.
+
+  Returns a map with the root project and all its descendant sandboxes at any depth level.
+  Uses a recursive CTE to traverse the entire project tree from root to leaves.
+  Descendants are sorted as a flat list according to the specified options.
+
+  ## Options
+  - `sort_by`: Field to sort by (`:name`, `:inserted_at`, `:updated_at`). Defaults to `:name`.
+  - `sort_order`: Sort direction (`:asc` or `:desc`). Defaults to `:asc`.
+
+  ## Examples
+      # Default sorting (name ascending)
+      Projects.list_workspace_projects(project_id)
+
+      # Sort by name descending
+      Projects.list_workspace_projects(project_id, sort_by: :name, sort_order: :desc)
+
+      # Sort by creation date
+      Projects.list_workspace_projects(project_id, sort_by: :inserted_at, sort_order: :desc)
+  """
+  def list_workspace_projects(project_id_or_struct, opts \\ [])
+
+  @spec list_workspace_projects(Ecto.UUID.t(), keyword()) :: %{
+          root: Project.t(),
+          descendants: [Project.t()]
+        }
+  def list_workspace_projects(project_id, opts) when is_binary(project_id) do
+    project = get_project!(project_id)
+    root = root_of(project)
+
+    sort_by = Keyword.get(opts, :sort_by, :name)
+    sort_order = Keyword.get(opts, :sort_order, :asc)
+
+    valid_sort_fields = [:name, :inserted_at, :updated_at]
+    valid_sort_orders = [:asc, :desc]
+
+    unless sort_by in valid_sort_fields do
+      raise ArgumentError,
+            "Invalid sort_by option: #{sort_by}. Valid options are: #{inspect(valid_sort_fields)}"
+    end
+
+    unless sort_order in valid_sort_orders do
+      raise ArgumentError,
+            "Invalid sort_order option: #{sort_order}. Valid options are: #{inspect(valid_sort_orders)}"
+    end
+
+    descendants_query =
+      from(p in Project,
+        where: p.parent_id == ^root.id,
+        select: %{id: p.id, parent_id: p.parent_id, level: 1}
+      )
+
+    recursive_query =
+      from(p in Project,
+        join: d in "descendants",
+        on: p.parent_id == d.id,
+        select: %{id: p.id, parent_id: p.parent_id, level: d.level + 1}
+      )
+
+    order_by_clause =
+      case {sort_order, sort_by} do
+        {:asc, field} -> [asc: dynamic([p], field(p, ^field))]
+        {:desc, field} -> [desc: dynamic([p], field(p, ^field))]
+      end
+
+    {[root | _rest], descendants} =
+      Project
+      |> with_cte("descendants", as: ^descendants_query)
+      |> recursive_ctes(true)
+      |> with_cte("descendants",
+        as: ^union_all(descendants_query, ^recursive_query)
+      )
+      |> join(:left, [p], d in "descendants", on: p.id == d.id)
+      |> where([p, d], p.id == ^root.id or not is_nil(d.id))
+      |> order_by(^order_by_clause)
+      |> preload([:parent, :project_users])
+      |> Repo.all()
+      |> Enum.split_with(&(&1.id == root.id))
+
+    %{root: root, descendants: descendants}
+  end
+
+  @spec list_workspace_projects(Project.t(), keyword()) :: %{
+          root: Project.t(),
+          descendants: [Project.t()]
+        }
+  def list_workspace_projects(%Project{id: project_id}, opts) do
+    list_workspace_projects(project_id, opts)
+  end
+
+  @doc """
+  Computes a deterministic 12-hex “project head” hash from the *latest* version
+  hash per workflow.
+
+  The algorithm:
+  1. For each workflow in the project, select the most recent row in `workflow_versions`
+     by `(inserted_at DESC, id DESC)`.
+  2. Build pairs `[[workflow_id_as_string, hash], ...]`.
+  3. JSON-encode the pairs and take `sha256` of the bytes.
+  4. Return the first 12 lowercase hex chars.
+
+  ## Guarantees
+
+  * **Deterministic** for a given set of latest heads.
+  * If a project has no workflow versions, returns the digest of `[]`, i.e. a stable
+    12-hex string representing “empty”.
+
+  ## Use cases
+
+  * Change detection across environments.
+  * Cache keys and optimistic comparisons (e.g. “is this workspace up-to-date?”).
+  """
+  def compute_project_head_hash(project_id) do
+    pairs =
+      from(v in WorkflowVersion,
+        join: w in assoc(v, :workflow),
+        where: w.project_id == ^project_id,
+        distinct: [v.workflow_id],
+        order_by: [asc: v.workflow_id, desc: v.inserted_at, desc: v.id],
+        select: {v.workflow_id, v.hash}
+      )
+      |> Repo.all()
+      |> Enum.map(fn {wid, h} -> [to_string(wid), h] end)
+
+    data = Jason.encode!(pairs)
+
+    :crypto.hash(:sha256, data)
+    |> Base.encode16(case: :lower)
+    |> binary_part(0, 12)
+  end
+
+  @doc """
+  Appends a new 12-hex head hash to `project.version_history` (append-only).
+
+  This is a lenient wrapper that validates using
+  `Lightning.Validators.Hex.valid?(hash)` and returns tagged tuples.
+  For atomic locking and errors by exception, use `append_project_head!/2`.
+
+  ## Validation
+
+  * `hash` must be **12 lowercase hex characters** (`0-9`, `a-f`).
+  * No duplicates: if the hash already exists in the array, this is a no-op.
+
+  ## Concurrency
+
+  The underlying `!/2` variant locks the row (`FOR UPDATE`) to avoid lost updates.
+  """
+  @spec append_project_head(Project.t(), String.t()) ::
+          {:ok, Project.t()} | {:error, :bad_hash}
+  def append_project_head(%Project{} = project, hash) when is_binary(hash) do
+    if Hex.valid?(hash) do
+      {:ok, append_project_head!(project, hash)}
+    else
+      {:error, :bad_hash}
+    end
+  end
+
+  @doc """
+  Like `append_project_head/2`, but raises on invalid input and performs the
+  append within a transaction that locks the project row.
+
+  ## Behavior
+
+  * Raises `ArgumentError` if `hash` is not **12 lowercase hex**.
+  * Uses `SELECT … FOR UPDATE` to read the current array, appends if missing,
+    and writes back in the same transaction.
+  * Idempotent: if the hash is already present, returns the unchanged project.
+  """
+  @spec append_project_head!(Project.t(), String.t()) :: Project.t()
+  def append_project_head!(%Project{id: id}, hash) when is_binary(hash) do
+    unless Hex.valid?(hash),
+      do: raise(ArgumentError, "head_hash must be 12 lowercase hex chars")
+
+    {:ok, proj} =
+      Repo.transaction(fn ->
+        proj =
+          from(p in Project, where: p.id == ^id, lock: "FOR UPDATE")
+          |> Repo.one!()
+
+        new_hist = append_if_missing(proj.version_history || [], hash)
+
+        if new_hist == (proj.version_history || []) do
+          proj
+        else
+          proj
+          |> Ecto.Changeset.change(version_history: new_hist)
+          |> Repo.update!()
+        end
+      end)
+
+    proj
+  end
+
+  defp append_if_missing(list, h),
+    do: if(Enum.member?(list, h), do: list, else: list ++ [h])
+
+  @doc """
+  Creates a new sandbox project by cloning from a parent project.
+
+  ## Parameters
+  * `parent` - Project to clone from
+  * `actor` - User creating the sandbox (needs `:owner` or `:admin` role on parent)
+  * `attrs` - Creation attributes (name, color, env, collaborators, dataclip_ids)
+
+  ## Returns
+  * `{:ok, sandbox_project}` - Successfully created sandbox
+  * `{:error, :unauthorized}` - Actor lacks permission on parent
+  * `{:error, changeset}` - Validation or database error
+
+  See `Lightning.Projects.Sandboxes.provision/3` for detailed behavior.
+  """
+  @spec provision_sandbox(Project.t(), User.t(), Sandboxes.provision_attrs()) ::
+          {:ok, Project.t()} | {:error, term()}
+  defdelegate provision_sandbox(parent, actor, attrs),
+    to: Sandboxes,
+    as: :provision
+
+  @doc """
+  Updates a sandbox project's basic attributes (name, color, env).
+
+  ## Parameters
+  * `sandbox` - Sandbox to update (project struct or ID string)
+  * `actor` - User performing update (needs `:owner` or `:admin` role on sandbox)
+  * `attrs` - Map with name, color, and/or env keys
+
+  ## Returns
+  * `{:ok, updated_sandbox}` - Successfully updated
+  * `{:error, :unauthorized}` - Actor lacks permission
+  * `{:error, :not_found}` - Sandbox not found
+  * `{:error, changeset}` - Validation error
+  """
+  @spec update_sandbox(Project.t() | Ecto.UUID.t(), User.t(), map()) ::
+          {:ok, Project.t()}
+          | {:error, :unauthorized | :not_found | Ecto.Changeset.t()}
+  defdelegate update_sandbox(sandbox, actor, attrs),
+    to: Sandboxes,
+    as: :update_sandbox
+
+  @doc """
+  Deletes a sandbox and all its descendant projects.
+
+  **Warning**: Permanently removes the sandbox and any nested sandboxes.
+
+  ## Parameters
+  * `sandbox` - Sandbox to delete (project struct or ID string)
+  * `actor` - User performing deletion (needs `:owner` or `:admin` role on sandbox)
+
+  ## Returns
+  * `{:ok, deleted_sandbox}` - Successfully deleted
+  * `{:error, :unauthorized}` - Actor lacks permission
+  * `{:error, :not_found}` - Sandbox not found
+  """
+  @spec delete_sandbox(Project.t() | Ecto.UUID.t(), User.t()) ::
+          {:ok, Project.t()} | {:error, :unauthorized | :not_found | term()}
+  defdelegate delete_sandbox(sandbox, actor), to: Sandboxes, as: :delete_sandbox
 end

@@ -236,7 +236,6 @@ defmodule LightningWeb.UserAuth do
 
           _ ->
             conn
-            # |> put_flash(:error, "You must log in to access this page.")
             |> maybe_store_return_to()
             |> redirect(to: Routes.user_session_path(conn, :new))
             |> halt()
@@ -249,7 +248,10 @@ defmodule LightningWeb.UserAuth do
         |> halt()
 
       true ->
+        # Assign the user socket token, so we can pick it up in our templates
+        # allowing users to connect to the user socket.
         conn
+        |> put_user_token()
     end
   end
 
@@ -264,6 +266,15 @@ defmodule LightningWeb.UserAuth do
       |> put_view(LightningWeb.ErrorView)
       |> render(:"401")
       |> halt()
+    else
+      conn
+    end
+  end
+
+  defp put_user_token(conn, _ \\ nil) do
+    if current_user = conn.assigns[:current_user] do
+      token = Phoenix.Token.sign(conn, "user socket", current_user.id)
+      assign(conn, :user_token, token)
     else
       conn
     end

@@ -118,6 +118,8 @@ defmodule LightningWeb.Components.NewInputs do
   slot :inner_block, required: true
 
   def button(%{theme: theme} = assigns) when is_binary(theme) do
+    disabled = assigns[:rest][:disabled] || false
+
     assigns
     |> assign(:class, [
       # Base classes
@@ -126,7 +128,7 @@ defmodule LightningWeb.Components.NewInputs do
       # size variants
       button_size_classes(assigns.size),
       # theme variants
-      button_theme_classes(theme),
+      button_theme_classes(theme, disabled),
       # other classes to override
       assigns.class
     ])
@@ -156,6 +158,10 @@ defmodule LightningWeb.Components.NewInputs do
   attr :theme, :string, values: @button_themes, required: true
   attr :size, :string, default: "md", values: @button_sizes
 
+  attr :disabled, :boolean,
+    default: false,
+    doc: "If true, renders a disabled button that cannot be clicked"
+
   attr :rest, :global,
     include:
       ~w(id href patch navigate replace method csrf_token download hreflang referrerpolicy rel target type)
@@ -164,28 +170,51 @@ defmodule LightningWeb.Components.NewInputs do
 
   def button_link(assigns) do
     ~H"""
-    <.link
-      class={
-        [
-          # Base classes
-          button_base_classes(),
-          # TODO: consider another approach:
-          # https://github.com/OpenFn/lightning/issues/3269
-          # We want a way to style these links as buttons without interfering
-          # with JS.show()—using `inline-block` leads to a Tailwind gotcha.
-          "inline-block",
-          # size variants
-          button_size_classes(@size),
-          # theme variants
-          button_theme_classes(@theme),
-          # other classes to override
-          @class
-        ]
-      }
-      {@rest}
-    >
-      {render_slot(@inner_block)}
-    </.link>
+    <%= if @disabled do %>
+      <span
+        class={
+          [
+            # Base classes
+            button_base_classes(),
+            "inline-block",
+            # size variants
+            button_size_classes(@size),
+            # theme variants
+            button_theme_classes(@theme, true),
+            # disabled state
+            "pointer-events-none cursor-not-allowed",
+            # other classes to override
+            @class
+          ]
+        }
+        aria-disabled="true"
+      >
+        {render_slot(@inner_block)}
+      </span>
+    <% else %>
+      <.link
+        class={
+          [
+            # Base classes
+            button_base_classes(),
+            # TODO: consider another approach:
+            # https://github.com/OpenFn/lightning/issues/3269
+            # We want a way to style these links as buttons without interfering
+            # with JS.show()—using `inline-block` leads to a Tailwind gotcha.
+            "inline-block",
+            # size variants
+            button_size_classes(@size),
+            # theme variants
+            button_theme_classes(@theme, false),
+            # other classes to override
+            @class
+          ]
+        }
+        {@rest}
+      >
+        {render_slot(@inner_block)}
+      </.link>
+    <% end %>
     """
   end
 
@@ -193,31 +222,46 @@ defmodule LightningWeb.Components.NewInputs do
     "rounded-md text-sm font-semibold shadow-xs phx-submit-loading:opacity-75"
   end
 
-  defp button_theme_classes(theme) do
-    case theme do
-      "primary" ->
-        "bg-primary-600 hover:bg-primary-500 text-white disabled:bg-primary-300 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600"
-
-      "secondary" ->
-        "bg-white hover:bg-gray-50 text-gray-900 disabled:bg-gray-50 ring-1 ring-gray-300 ring-inset"
-
-      "danger" ->
-        "bg-red-600 hover:bg-red-500 text-white disabled:bg-red-300 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-600"
-
-      "success" ->
-        "bg-green-600 hover:bg-green-500 text-white disabled:bg-green-300 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-green-600"
-
-      "warning" ->
-        "bg-yellow-600 hover:bg-yellow-500 text-white disabled:bg-yellow-300 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-yellow-600"
-
-      "custom" ->
-        ""
-    end
-  end
-
   defp button_size_classes("sm"), do: "px-2.5 py-1.5"
   defp button_size_classes("md"), do: "px-3 py-2"
   defp button_size_classes("lg"), do: "px-3.5 py-2.5"
+
+  defp button_theme_classes(theme, disabled) do
+    button_themes = %{
+      "primary" => %{
+        disabled: "bg-primary-300 text-white",
+        enabled:
+          "bg-primary-600 hover:bg-primary-500 text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600"
+      },
+      "secondary" => %{
+        disabled: "bg-gray-50 text-gray-400 ring-1 ring-gray-200 ring-inset",
+        enabled:
+          "bg-white hover:bg-gray-50 text-gray-900 ring-1 ring-gray-300 ring-inset"
+      },
+      "danger" => %{
+        disabled: "bg-red-300 text-white",
+        enabled:
+          "bg-red-600 hover:bg-red-500 text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-600"
+      },
+      "success" => %{
+        disabled: "bg-green-300 text-white",
+        enabled:
+          "bg-green-600 hover:bg-green-500 text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-green-600"
+      },
+      "warning" => %{
+        disabled: "bg-yellow-300 text-white",
+        enabled:
+          "bg-yellow-600 hover:bg-yellow-500 text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-yellow-600"
+      },
+      "custom" => %{
+        disabled: "",
+        enabled: ""
+      }
+    }
+
+    state = if disabled, do: :disabled, else: :enabled
+    get_in(button_themes, [theme, state]) || ""
+  end
 
   attr :tooltip, :any, default: nil
   attr :rest, :global, include: ~w(id disabled form name value class type)
@@ -270,7 +314,7 @@ defmodule LightningWeb.Components.NewInputs do
   attr :icon_class, :string, default: "w-4 h-4 text-primary-600 opacity-50"
 
   defp tooltip_for_label(assigns) do
-    classes = ~w"relative cursor-pointer"
+    classes = ~w"relative cursor-pointer inline-block align-super"
 
     assigns = assign(assigns, class: classes ++ List.wrap(assigns.class))
 
@@ -424,7 +468,7 @@ defmodule LightningWeb.Components.NewInputs do
             class={[
               "block w-full rounded-lg border border-secondary-300 bg-white",
               "sm:text-sm shadow-xs",
-              "focus:border-primary-300 focus:ring focus:ring-primary-200 focus:ring-primary-200/50",
+              "focus:border-primary-300 focus:ring focus:ring-primary-200/50",
               "disabled:cursor-not-allowed",
               @button_placement == "right" && "rounded-r-none",
               @button_placement == "left" && "rounded-l-none",
@@ -437,7 +481,7 @@ defmodule LightningWeb.Components.NewInputs do
             {Phoenix.HTML.Form.options_for_select(@options, @value)}
           </select>
         </div>
-        <div class="relative ronded-l-none">
+        <div class="relative rounded-l-none">
           {render_slot(@inner_block)}
         </div>
       </div>
@@ -483,7 +527,7 @@ defmodule LightningWeb.Components.NewInputs do
             class={[
               "grid grid-cols-1 w-full rounded-lg bg-white border border-secondary-300",
               "sm:text-sm",
-              "focus:border-primary-300 focus:ring focus:ring-primary-200 focus:ring-primary-200/50",
+              "focus:border-primary-300 focus:ring focus:ring-primary-200/50",
               "py-2 pr-2 pl-3 text-left",
               "disabled:cursor-not-allowed",
               @button_placement == "right" && "rounded-r-none",
@@ -505,14 +549,14 @@ defmodule LightningWeb.Components.NewInputs do
           </button>
           <ul
             id={@id}
-            class="absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded-md bg-white py-1 text-base shadow-lg ring-1 ring-black/5 focus:outline-hidden sm:text-sm hidden"
+            class="absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded-md bg-white py-1 text-base shadow-lg ring-1 ring-black/5 focus:outline-none sm:text-sm hidden"
             tabindex="-1"
             role="listbox"
             phx-click-away={JS.hide()}
           >
             <li
               :for={option <- @options}
-              class="relative cursor-default py-2 pr-4 pl-8 text-gray-900 select-none group hover:bg-indigo-600 hover:text-white hover:outline-hidden"
+              class="relative cursor-default py-2 pr-4 pl-8 text-gray-900 select-none group hover:bg-primary-600 hover:text-white hover:outline-hidden"
               role="option"
               phx-click={
                 JS.set_attribute(
@@ -541,7 +585,7 @@ defmodule LightningWeb.Components.NewInputs do
 
               <span
                 :if={option == @selected_option}
-                class="absolute inset-y-0 left-0 flex items-center pl-1.5 text-indigo-600 group-hover:text-white"
+                class="absolute inset-y-0 left-0 flex items-center pl-1.5 text-primary-600 group-hover:text-white"
               >
                 <.icon name="hero-check" class="size-5" />
               </span>
@@ -590,6 +634,7 @@ defmodule LightningWeb.Components.NewInputs do
         class={["rounded-md w-full font-mono bg-slate-800 text-slate-100", @class]}
         value={@value}
         placeholder={@placeholder}
+        errors={@errors}
         {@rest}
       />
       <.error :for={msg <- @errors} :if={@display_errors}>{msg}</.error>
@@ -618,12 +663,13 @@ defmodule LightningWeb.Components.NewInputs do
           data-reveal-id={@reveal_id}
           value={Form.normalize_value(@type, @value)}
           lv-keep-type
+          placeholder={@placeholder}
           class={[
             "focus:outline focus:outline-2 focus:outline-offset-1 block w-full rounded-lg text-slate-900 focus:ring-0 sm:text-sm sm:leading-6",
             "phx-no-feedback:border-slate-300 phx-no-feedback:focus:border-slate-400 disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-500",
             @class,
             @errors == [] &&
-              "border-slate-300 focus:border-slate-400 focus:outline-indigo-600",
+              "border-slate-300 focus:border-slate-400 focus:outline-primary-600",
             @errors != [] && @field && @field.field == @name && @field.errors != [] &&
               "border-danger-400 focus:border-danger-400 focus:outline-danger-400"
           ]}
@@ -659,7 +705,7 @@ defmodule LightningWeb.Components.NewInputs do
       checked={@checked}
       value={@value}
       class={[
-        "h-4 w-4 border-gray-300 text-indigo-600 focus:ring-indigo-600",
+        "h-4 w-4 border-gray-300 text-primary-600 focus:ring-primary-600",
         @class
       ]}
       {@rest}
@@ -716,7 +762,7 @@ defmodule LightningWeb.Components.NewInputs do
             "focus:outline focus:outline-2 focus:outline-offset-1 block w-full rounded-lg text-slate-900 focus:ring-0 sm:text-sm sm:leading-6",
             "phx-no-feedback:border-slate-300 phx-no-feedback:focus:border-slate-400 disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-500",
             @errors == [] &&
-              "border-slate-300 focus:border-slate-400 focus:outline-indigo-600",
+              "border-slate-300 focus:border-slate-400 focus:outline-primary-600",
             @errors != [] &&
               "border-danger-400 focus:border-danger-400 focus:outline-danger-400",
             @class
@@ -778,9 +824,9 @@ defmodule LightningWeb.Components.NewInputs do
         "relative inline-flex h-6 w-11 shrink-0",
         "cursor-pointer rounded-full border-2 border-transparent",
         "transition-colors duration-200 ease-in-out",
-        "focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:ring-offset-2",
+        "focus:outline-none focus:ring-2 focus:ring-primary-600 focus:ring-offset-2",
         "disabled:cursor-not-allowed",
-        "bg-gray-200 aria-checked:bg-indigo-600 group"
+        "bg-gray-200 aria-checked:bg-primary-600 group"
       ]}
       role="switch"
       aria-checked={"#{@value == "1" || false}"}
@@ -853,8 +899,8 @@ defmodule LightningWeb.Components.NewInputs do
             aria-checked={@checked}
             class={[
               "relative inline-flex w-11 h-6 rounded-full transition-colors duration-200 ease-in-out border-2 border-transparent",
-              "focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500",
-              @checked && "bg-indigo-600",
+              "focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500",
+              @checked && "bg-primary-600",
               !@checked && "bg-gray-200",
               if(@rest[:disabled],
                 do: "opacity-50 cursor-not-allowed",
@@ -885,7 +931,7 @@ defmodule LightningWeb.Components.NewInputs do
                 ]}
                 aria-hidden="true"
               >
-                <.icon name="hero-check-micro" class="h-4 w-4 text-indigo-600" />
+                <.icon name="hero-check-micro" class="h-4 w-4 text-primary-600" />
               </span>
             </span>
           </div>
@@ -917,13 +963,13 @@ defmodule LightningWeb.Components.NewInputs do
     """
   end
 
-  # All other inputs text, datetime-local, url etc. are handled here...
   def input(assigns) do
     ~H"""
     <div phx-feedback-for={@name}>
       <.label :if={@label} for={@id} class="mb-2">
         {@label}
         <span :if={Map.get(@rest, :required, false)} class="text-red-500"> *</span>
+        <.tooltip_for_label :if={@tooltip} id={"#{@id}-tooltip"} tooltip={@tooltip} />
       </.label>
       <small :if={@sublabel} class="mb-2 block text-xs text-gray-600">
         {@sublabel}
@@ -938,6 +984,7 @@ defmodule LightningWeb.Components.NewInputs do
           id={@id}
           class={@class}
           value={Form.normalize_value(@type, @value)}
+          placeholder={@placeholder}
           {@rest}
         />
       </div>
@@ -987,7 +1034,7 @@ defmodule LightningWeb.Components.NewInputs do
         "focus:outline focus:outline-2 focus:outline-offset-1 block w-full rounded-lg text-slate-900 focus:ring-0 sm:text-sm sm:leading-6",
         "phx-no-feedback:border-slate-300 phx-no-feedback:focus:border-slate-400 disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-500",
         @errors == [] &&
-          "border-slate-300 focus:border-slate-400 focus:outline-indigo-600",
+          "border-slate-300 focus:border-slate-400 focus:outline-primary-600",
         @errors != [] &&
           "border-danger-400 focus:border-danger-400 focus:outline-danger-400",
         @class
@@ -1028,7 +1075,7 @@ defmodule LightningWeb.Components.NewInputs do
         "sm:text-sm sm:leading-6",
         "phx-no-feedback:border-slate-300 phx-no-feedback:focus:border-slate-400 overflow-y-auto",
         @errors == [] &&
-          "border-slate-300 focus:border-slate-400 focus:outline-indigo-600",
+          "border-slate-300 focus:border-slate-400 focus:outline-primary-600",
         @errors != [] &&
           "border-danger-400 focus:border-danger-400 focus:outline-danger-400",
         @class
@@ -1077,9 +1124,9 @@ defmodule LightningWeb.Components.NewInputs do
       name={@name}
       value={to_string(@checked_value)}
       checked={@checked}
-      class={["rounded border-gray-300 text-indigo-600 focus:ring-indigo-600
-        checked:disabled:bg-indigo-300 checked:disabled:border-indigo-300
-        checked:bg-indigo-600 checked:border-indigo-600 focus:outline-none
+      class={["rounded border-gray-300 text-primary-600 focus:ring-primary-600
+        checked:disabled:bg-primary-300 checked:disabled:border-primary-300
+        checked:bg-primary-600 checked:border-primary-600 focus:outline-none
         transition duration-200 cursor-pointer", @class]}
       {@rest}
     />

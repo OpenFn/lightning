@@ -126,6 +126,29 @@ defmodule Lightning.WorkflowsTest do
              } = Repo.one(Audit)
     end
 
+    test "save_workflow/1 records a version" do
+      user = insert(:user)
+      project = insert(:project)
+
+      # Create a new workflow
+      valid_attrs = %{name: "versioned-workflow", project_id: project.id}
+      {:ok, workflow} = Workflows.save_workflow(valid_attrs, user)
+
+      # Reload to get updated version_history
+      workflow = Repo.reload!(workflow)
+
+      # Check that a version was recorded
+      assert length(workflow.version_history) == 1
+
+      # Verify the version exists in the database
+      version =
+        Lightning.Workflows.WorkflowVersion
+        |> Repo.get_by!(workflow_id: workflow.id)
+
+      assert "#{version.source}:#{version.hash}" == hd(workflow.version_history)
+      assert version.source == "app"
+    end
+
     test "save_workflow/1 audits when a trigger is enabled" do
       %{id: user_id} = user = insert(:user)
       workflow = create_workflow()
@@ -487,6 +510,24 @@ defmodule Lightning.WorkflowsTest do
       assert Workflows.get_webhook_trigger("foo").id == trigger.id
     end
 
+    test "get_webhook_trigger/1 does not return a trigger when type is cron" do
+      %{triggers: [trigger]} =
+        insert(:simple_workflow) |> Repo.preload(:triggers)
+
+      # Change the trigger type to cron
+      Ecto.Changeset.change(trigger, type: :cron)
+      |> Lightning.Repo.update!()
+
+      # Should not return the trigger even though the ID matches
+      assert Workflows.get_webhook_trigger(trigger.id) == nil
+
+      # Set a custom path and verify it still doesn't return
+      Ecto.Changeset.change(trigger, custom_path: "cron_path")
+      |> Lightning.Repo.update!()
+
+      assert Workflows.get_webhook_trigger("cron_path") == nil
+    end
+
     test "get_jobs_for_cron_execution/0 returns jobs to run for a given time" do
       t1 = insert(:trigger, %{type: :cron, cron_expression: "5 0 * 8 *"})
       job_0 = insert(:job, %{workflow: t1.workflow})
@@ -517,24 +558,24 @@ defmodule Lightning.WorkflowsTest do
     end
   end
 
-  describe "get_trigger_by_webhook/1" do
+  describe "get_webhook_trigger/1" do
     test "returns a trigger when a matching custom_path is provided" do
       trigger = insert(:trigger, custom_path: "some_path")
 
       assert trigger |> unload_relation(:workflow) ==
-               Workflows.get_trigger_by_webhook("some_path")
+               Workflows.get_webhook_trigger("some_path")
     end
 
     test "returns a trigger when a matching id is provided" do
       trigger = insert(:trigger)
 
       assert trigger |> unload_relation(:workflow) ==
-               Workflows.get_trigger_by_webhook(trigger.id)
+               Workflows.get_webhook_trigger(trigger.id)
     end
 
     test "returns nil when no matching trigger is found" do
       insert(:trigger, custom_path: "some_path")
-      assert Workflows.get_trigger_by_webhook("non_existent_path") == nil
+      assert Workflows.get_webhook_trigger("non_existent_path") == nil
     end
   end
 

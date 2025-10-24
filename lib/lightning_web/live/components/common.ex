@@ -288,9 +288,108 @@ defmodule LightningWeb.Components.Common do
       phx-hook="Tooltip"
       aria-label={@tooltip}
       data-allow-html="true"
+      data-hide-on-click="false"
     >
       {render_slot(@inner_block)}
     </span>
+    """
+  end
+
+  attr :datetime, :map, required: true
+  attr :id, :string, default: nil
+  attr :class, :string, default: ""
+  attr :show_tooltip, :boolean, default: true
+
+  attr :format, :atom,
+    default: :relative,
+    values: [:relative, :relative_detailed, :detailed, :time_only]
+
+  @doc """
+  Renders a datetime with click-to-copy functionality and optional hover tooltip.
+
+  ## Format Options
+
+  - `:relative` - Shows relative time like "2 hours ago"
+  - `:detailed` - Shows absolute time like "2024-01-15 14:30:00" in user's timezone
+
+  ## Examples
+
+      <Common.datetime datetime={@user.inserted_at} />
+      <Common.datetime datetime={@run.finished_at} format={:detailed} />
+      <Common.datetime datetime={@event.created_at} class="text-gray-500" show_tooltip={false} />
+  """
+  def datetime(assigns) do
+    clean_timestamp =
+      assigns.datetime &&
+        case assigns.datetime do
+          %DateTime{microsecond: {microseconds, _precision}}
+          when microseconds > 0 ->
+            Calendar.strftime(assigns.datetime, "%Y-%m-%d %H:%M:%S.%f UTC")
+            |> String.replace(~r/\.(\d{3})\d+/, ".\\1")
+
+          _ ->
+            Calendar.strftime(assigns.datetime, "%Y-%m-%d %H:%M:%S UTC")
+        end
+
+    assigns =
+      assigns
+      |> assign(
+        id: "datetime-" <> Base.encode16(:crypto.strong_rand_bytes(4)),
+        iso_timestamp: clean_timestamp,
+        copy_value: clean_timestamp
+      )
+
+    ~H"""
+    <%= if is_nil(@datetime) do %>
+      <span class={["text-gray-400", @class]}>--</span>
+    <% else %>
+      <%= if @show_tooltip do %>
+        <Common.wrapper_tooltip
+          id={@id}
+          tooltip={"#{@iso_timestamp}<br/><span class=\"text-xs text-gray-500\">Click to copy timestamp</span>"}
+        >
+          <span
+            id={"#{@id}-outer"}
+            phx-hook="LocalTimeConverter"
+            data-format={@format}
+            data-iso-timestamp={@iso_timestamp}
+          >
+            <span
+              id={"#{@id}-inner"}
+              class={[
+                "relative inline-flex items-center cursor-pointer select-none group",
+                "rounded transition-colors",
+                @class
+              ]}
+              phx-hook="Copy"
+              data-content={@copy_value}
+            >
+              <span class="datetime-text">{@datetime}</span>
+            </span>
+          </span>
+        </Common.wrapper_tooltip>
+      <% else %>
+        <span
+          id={"#{@id}-outer"}
+          phx-hook="LocalTimeConverter"
+          data-format={@format}
+          data-iso-timestamp={@iso_timestamp}
+        >
+          <span
+            id={@id}
+            class={[
+              "relative inline-flex items-center cursor-pointer select-none group",
+              "rounded transition-colors",
+              @class
+            ]}
+            phx-hook="Copy"
+            data-content={@copy_value}
+          >
+            <span class="datetime-text">{@datetime}</span>
+          </span>
+        </span>
+      <% end %>
+    <% end %>
     """
   end
 
@@ -309,6 +408,7 @@ defmodule LightningWeb.Components.Common do
 
   attr :kind, :atom, required: true, values: [:error, :info]
   attr :flash, :map, required: true
+  attr :rest, :global
 
   def flash(%{kind: :error} = assigns) do
     assigns =
@@ -329,6 +429,7 @@ defmodule LightningWeb.Components.Common do
         |> hide(@id)
       }
       phx-hook="Flash"
+      {@rest}
     >
       <div class="flex justify-between items-center space-x-3 text-red-900">
         <.icon name="hero-exclamation-circle-solid" class="w-5 h-5" />
@@ -373,6 +474,7 @@ defmodule LightningWeb.Components.Common do
       }
       phx-value-key="info"
       phx-hook="Flash"
+      {@rest}
     >
       <div class="flex justify-between items-center space-x-3 text-blue-900">
         <.icon name="hero-check-circle-solid" class="w-5 h-5" />
@@ -443,7 +545,7 @@ defmodule LightningWeb.Components.Common do
         type="text"
         spellcheck="false"
         placeholder={@placeholder || "Search..."}
-        value={@selected_item && @selected_item.name}
+        value={root_name(@selected_item)}
         class="w-full rounded-md border-0 py-1.5 pl-3 pr-12 shadow-xs ring-1 ring-inset focus:ring-2 sm:text-sm sm:leading-6"
         role="combobox"
         aria-controls="options"
@@ -565,4 +667,11 @@ defmodule LightningWeb.Components.Common do
     </div>
     """
   end
+
+  defp root_name(nil), do: ""
+
+  defp root_name(%Lightning.Projects.Project{} = selected_item),
+    do: Lightning.Projects.root_of(selected_item).name
+
+  defp root_name(%{name: name}), do: name
 end

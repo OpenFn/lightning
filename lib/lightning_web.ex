@@ -17,9 +17,9 @@ defmodule LightningWeb do
   and import those modules here.
   """
   def static_paths,
-    do:
-      ~w(assets fonts images favicon.ico apple-touch-icon.png favicon-32x32.png
-      favicon-16x16.png safari-pinned-tab.svg robots.txt manifest.json workflow-api.yaml)
+    do: ~w(assets fonts images favicon.ico apple-touch-icon.png favicon-32x32.png
+      android-chrome-192x192.png android-chrome-512x512.png favicon-16x16.png
+      safari-pinned-tab.svg robots.txt manifest.json workflow-api.yaml)
 
   def router do
     quote do
@@ -37,8 +37,9 @@ defmodule LightningWeb do
         formats: [:html, :json],
         layouts: [html: LightningWeb.Layouts]
 
+      use Gettext, backend: LightningWeb.Gettext
+
       import Plug.Conn
-      import LightningWeb.Gettext
       import LightningWeb.UserAuth, only: [fetch_current_user: 2]
       import LightningWeb.Components.NewInputs
       import LightningWeb.Components.Table
@@ -73,6 +74,7 @@ defmodule LightningWeb do
       use Phoenix.LiveView, @opts
       import LightningWeb.Components.NewInputs
       import LightningWeb.Components.Table
+      import LightningWeb.Utils, only: [ok: 1, noreply: 1, reply: 1]
 
       unquote(html_helpers())
       on_mount Sentry.LiveViewHook
@@ -84,6 +86,7 @@ defmodule LightningWeb do
       use Phoenix.LiveComponent
       import LightningWeb.Components.NewInputs
       import LightningWeb.Components.Table
+      import LightningWeb.Utils, only: [ok: 1, noreply: 1, reply: 1]
 
       unquote(html_helpers())
     end
@@ -102,12 +105,14 @@ defmodule LightningWeb do
   def channel do
     quote do
       use Phoenix.Channel
-      import LightningWeb.Gettext
+      use Gettext, backend: LightningWeb.Gettext
     end
   end
 
   defp html_helpers do
     quote do
+      use Gettext, backend: LightningWeb.Gettext
+
       # Use all HTML functionality (forms, tags, etc)
       import Phoenix.HTML
 
@@ -122,7 +127,6 @@ defmodule LightningWeb do
       import Phoenix.View
 
       import LightningWeb.FormHelpers
-      import LightningWeb.Gettext
 
       import PetalComponents.Avatar
       import PetalComponents.Card
@@ -136,6 +140,7 @@ defmodule LightningWeb do
       alias LightningWeb.Components.Menu
       alias LightningWeb.DynamicComponent
       alias LightningWeb.Router.Helpers, as: Routes
+      alias Phoenix.LiveView.JS
 
       import LightningWeb.Components.Pills
       import LightningWeb.Components.Loaders

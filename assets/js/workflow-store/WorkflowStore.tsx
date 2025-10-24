@@ -3,9 +3,11 @@ import React from 'react';
 import {
   useWorkflowStore,
   type ChangeArgs,
+  type RunInfo,
   type PendingAction,
   type ReplayAction,
   type WorkflowProps,
+  type WorkflowRunHistory,
 } from './store';
 import { randomUUID } from '../common';
 import { DEFAULT_TEXT } from '../editor/Editor';
@@ -48,7 +50,8 @@ export const WorkflowStore: WithActionProps = props => {
     subscribe,
     setDisabled,
     setForceFit,
-    reset
+    reset,
+    updateRuns
   } = useWorkflowStore();
 
   const pushPendingChange = React.useCallback(
@@ -59,7 +62,11 @@ export const WorkflowStore: WithActionProps = props => {
         props.pushEventTo('push-change', pendingChange, response => {
           console.debug('push-change response', response);
           // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
-          if (response && response.patches) applyPatches({ patches: response.patches || [], inverse: response.inverse || [] });
+          if (response && response.patches)
+            applyPatches({
+              patches: response.patches || [],
+              inverse: response.inverse || [],
+            });
           resolve(true);
         });
       });
@@ -83,19 +90,33 @@ export const WorkflowStore: WithActionProps = props => {
   }, [processPendingChanges, subscribe]);
 
   React.useEffect(() => {
-    return props.handleEvent('patches-applied', (response: Partial<ReplayAction>) => {
-      console.debug('patches-applied', response);
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unnecessary-condition
-      if (response && response.patches && response.patches.length) applyPatches({ patches: response.patches || [], inverse: response.inverse || [] });
-    });
+    return props.handleEvent(
+      'patches-applied',
+      (response: Partial<ReplayAction>) => {
+        console.debug('patches-applied', response);
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unnecessary-condition
+        if (response && response.patches && response.patches.length)
+          applyPatches({
+            patches: response.patches || [],
+            inverse: response.inverse || [],
+          });
+      }
+    );
   }, [applyPatches, props]);
 
   React.useEffect(() => {
-    return props.handleEvent('state-applied', (response: { state: WorkflowProps }) => {
-      console.log('state-applied', response.state);
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unnecessary-condition
-      if (response.state) setState({ ...response.state, positions: response.state.positions ?? null });
-    });
+    return props.handleEvent(
+      'state-applied',
+      (response: { state: WorkflowProps }) => {
+        console.log('state-applied', response.state);
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unnecessary-condition
+        if (response.state)
+          setState({
+            ...response.state,
+            positions: response.state.positions ?? null,
+          });
+      }
+    );
   }, [setState, props]);
 
   React.useEffect(() => {
@@ -110,10 +131,16 @@ export const WorkflowStore: WithActionProps = props => {
       setForceFit(true);
     });
     return () => {
-      navigateCleanup()
-      forcefitCleanup()
-    }
+      navigateCleanup();
+      forcefitCleanup();
+    };
   }, [add, props.handleEvent, setSelection, setForceFit]);
+
+  React.useEffect(() => {
+    return props.handleEvent('patch-runs', (response: { run_id: string, run_steps: RunInfo }) => {
+      updateRuns(response.run_steps, response.run_id);
+    })
+  }, [props.handleEvent, updateRuns])
 
   // Fetch initial state once on mount
   React.useEffect(() => {
@@ -128,13 +155,11 @@ export const WorkflowStore: WithActionProps = props => {
     props.pushEventTo(
       'get-current-state',
       {},
-      (response: { workflow_params: WorkflowProps }) => {
-        const { workflow_params } = response;
+      (response: { workflow_params: WorkflowProps, run_steps: RunInfo, run_id: string | null, history: WorkflowRunHistory }) => {
+        const { workflow_params, run_steps, run_id, history } = response;
+        // workflow_params can contain an empty array of nodes and edges (empty workflow)
         setState(workflow_params);
-        if (!workflow_params.triggers.length && !workflow_params.jobs.length) {
-          const diff = createNewWorkflow();
-          add(diff);
-        }
+        updateRuns(run_steps, run_id, history);
 
         const end = new Date();
         console.debug('current-worflow-params processed', end.toISOString());
@@ -151,20 +176,23 @@ export const WorkflowStore: WithActionProps = props => {
         });
       }
     );
-  }, [props.pushEventTo, setState, add]);
+  }, [props.pushEventTo, setState, add, updateRuns]);
 
   React.useEffect(() => {
-    return props.handleEvent('set-disabled', (response: { disabled: boolean }) => {
-      setDisabled(response.disabled);
-    });
-  }, [props, setDisabled]);
+    return props.handleEvent(
+      'set-disabled',
+      (response: { disabled: boolean }) => {
+        setDisabled(response.disabled);
+      }
+    );
+  }, [props.handleEvent, setDisabled]);
 
   // clear store when store-component unmounted
   React.useEffect(() => {
     return () => {
       reset();
-    }
-  }, [reset])
+    };
+  }, [reset]);
 
   return <>{props.children}</>;
 };

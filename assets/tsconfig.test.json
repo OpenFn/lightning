@@ -1,18 +1,31 @@
 {
-  "extends": "@tsconfig/node-lts/tsconfig.json",
-  "ts-node": {
-    "transpileOnly": true,
-    "files": true,
-    "esm": true
-  },
+  "extends": [
+    "@tsconfig/node-lts/tsconfig.json",
+    "./tsconfig.base.json"
+  ],
   "compilerOptions": {
     "composite": true,
+    "target": "es2020",
     "module": "esnext",
     "moduleResolution": "bundler",
-    "types": ["node"],
+    "lib": [
+      "es2020",
+      "dom"
+    ],
+    "types": [
+      "node",
+      "vitest/globals"
+    ],
     "jsx": "react-jsx"
   },
-  "files": [],
-  "include": ["*.d.ts", "test/**/*"],
-  "exclude": ["node_modules/**"]
+  "include": [
+    "*.d.ts",
+    "test/**/*",
+    "js/**/*",
+    "vitest.config.ts",
+    "playwright.config.ts"
+  ],
+  "exclude": [
+    "node_modules/**"
+  ]
 }

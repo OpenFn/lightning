@@ -80,6 +80,22 @@ defmodule Lightning.Application do
         Application.get_env(:libcluster, :topologies)
       end
 
+    distributed_erlang_config =
+      Application.get_env(:lightning, :distributed_erlang)
+
+    topologies =
+      topologies
+      |> add_additional_libcluster_topology(
+        Keyword.fetch!(
+          distributed_erlang_config,
+          :node_discovery_via_postgres_enabled
+        ),
+        Keyword.fetch!(
+          distributed_erlang_config,
+          :node_discovery_via_postgres_channel_name
+        )
+      )
+
     goth =
       Application.get_env(:lightning, Lightning.Google, [])
       |> then(fn config ->
@@ -114,9 +130,11 @@ defmodule Lightning.Application do
         {Phoenix.PubSub, name: Lightning.PubSub},
         {Finch, name: Lightning.Finch},
         auth_providers_cache_childspec,
+        {Lightning.Collaboration.Supervisor, []},
         # Start the Endpoint (http/https)
         LightningWeb.Endpoint,
         Lightning.Workflows.Presence,
+        LightningWeb.WorkerPresence,
         adaptor_registry_childspec,
         adaptor_service_childspec,
         {Lightning.TaskWorker, name: :cli_task_worker},
@@ -189,10 +207,12 @@ defmodule Lightning.Application do
   defp put_usage_tracking_cron_opts(cron_opts) do
     usage_tracking_opts = Lightning.Config.usage_tracking()
 
-    if usage_tracking_opts[:enabled] do
-      print_tracking_thanks_message()
-    else
-      print_tracking_opt_out_message()
+    if Lightning.Config.env() !== :test do
+      if usage_tracking_opts[:enabled] do
+        print_tracking_thanks_message()
+      else
+        print_tracking_opt_out_message()
+      end
     end
 
     Keyword.merge(
@@ -237,5 +257,30 @@ defmodule Lightning.Application do
 
     You can do so by setting your `USAGE_TRACKING_ENABLED` environment variable to `true` at any time.
     """)
+  end
+
+  def add_additional_libcluster_topology(
+        topologies,
+        false = _postgres_discovery_enabled,
+        _channel_name
+      ) do
+    topologies
+  end
+
+  def add_additional_libcluster_topology(
+        topologies,
+        true = _postgres_discovery_enabled,
+        channel_name
+      ) do
+    Keyword.merge(
+      topologies,
+      postgres: [
+        strategy: LibclusterPostgres.Strategy,
+        config:
+          Keyword.merge(Lightning.Repo.config(),
+            channel_name: channel_name
+          )
+      ]
+    )
   end
 end

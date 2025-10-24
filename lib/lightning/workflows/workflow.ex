@@ -15,6 +15,7 @@ defmodule Lightning.Workflows.Workflow do
   alias Lightning.Workflows.Snapshot
   alias Lightning.Workflows.Trigger
   alias Lightning.Workflows.Workflow
+  alias Lightning.Workflows.WorkflowVersion
 
   @type t :: %__MODULE__{
           __meta__: Ecto.Schema.Metadata.t(),
@@ -39,11 +40,12 @@ defmodule Lightning.Workflows.Workflow do
     field :concurrency, :integer, default: nil
     field :enable_job_logs, :boolean, default: true
     field :positions, :map
+    field :version_history, {:array, :string}, default: []
 
     has_many :edges, Edge, on_replace: :delete_if_exists
-
     has_many :jobs, Job, on_replace: :delete
-    has_many :triggers, Trigger
+    has_many :triggers, Trigger, on_replace: :delete_if_exists
+    has_many :versions, WorkflowVersion, foreign_key: :workflow_id
 
     has_many :work_orders, Lightning.WorkOrder
     has_many :runs, through: [:work_orders, :runs]

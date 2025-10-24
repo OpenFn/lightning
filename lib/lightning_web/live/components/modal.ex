@@ -75,17 +75,12 @@ defmodule LightningWeb.Components.Modal do
               ]}
             >
               <header :if={@title != []} class="pl-[24px] pr-[24px]">
-                <h1
-                  id={"#{@id}-title"}
-                  class="text-lg font-semibold leading-5 text-zinc-800"
-                >
+                <.modal_title id={"#{@id}-title"}>
                   {render_slot(@title)}
-                </h1>
-                <%= for subtitle <- @subtitle do %>
-                  <p class="mt-2 text-sm leading-4.5 text-zinc-600">
-                    {render_slot(subtitle)}
-                  </p>
-                <% end %>
+                  <:subtitle>
+                    {render_slot(@subtitle)}
+                  </:subtitle>
+                </.modal_title>
               </header>
               <div :if={@title != []} class="flex-grow bg-gray-100 h-0.5 my-[16px]">
               </div>
@@ -102,6 +97,23 @@ defmodule LightningWeb.Components.Modal do
         </div>
       </div>
     </div>
+    """
+  end
+
+  attr :rest, :global
+  slot :subtitle
+  slot :inner_block, required: true
+
+  def modal_title(assigns) do
+    ~H"""
+    <h1 class="text-lg font-semibold leading-5 text-zinc-800" {@rest}>
+      {render_slot(@inner_block)}
+    </h1>
+    <%= for subtitle <- @subtitle do %>
+      <p class="mt-2 text-sm leading-4.5 text-zinc-600">
+        {render_slot(subtitle)}
+      </p>
+    <% end %>
     """
   end
 
@@ -137,7 +149,7 @@ defmodule LightningWeb.Components.Modal do
   end
 
   def hide_modal(js \\ %JS{}, id) when is_binary(id) do
-    js
+    %JS{}
     |> JS.hide(
       to: "##{id}-bg",
       transition:
@@ -146,13 +158,14 @@ defmodule LightningWeb.Components.Modal do
     )
     |> JS.hide(
       to: "##{id}-container",
-      time: 200,
+      time: 50,
       transition:
         {"transition-all transform ease-in duration-200",
          "opacity-100 translate-y-0 sm:scale-100",
          "opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"}
     )
     |> JS.hide(to: "##{id}", transition: {"block", "block", "hidden"})
+    |> JS.concat(js)
     |> JS.pop_focus()
   end
 end

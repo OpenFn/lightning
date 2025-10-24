@@ -2,6 +2,7 @@ defmodule Lightning.KafkaTriggers.MessageHandlingTest do
   use LightningWeb.ConnCase, async: true
 
   import Lightning.Factories
+  import Lightning.Utils.Maps, only: [stringify_keys: 1]
 
   require Lightning.Run
 
@@ -73,8 +74,9 @@ defmodule Lightning.KafkaTriggers.MessageHandlingTest do
       assert created_workorder.state == :pending
 
       %{dataclip: dataclip} = created_workorder
-      assert dataclip.body["data"] == %{"interesting" => "stuff"}
-      assert dataclip.body["request"] == message.metadata |> persisted_metadata()
+      parsed_body = Jason.decode!(dataclip.body)
+      assert parsed_body["data"] == %{"interesting" => "stuff"}
+      assert parsed_body["request"] == message.metadata |> persisted_metadata()
       assert dataclip.type == :kafka
       assert dataclip.project_id == workflow.project_id
     end
@@ -101,8 +103,9 @@ defmodule Lightning.KafkaTriggers.MessageHandlingTest do
       assert created_workorder.state == :pending
 
       %{dataclip: dataclip} = created_workorder
-      assert dataclip.body["data"] == %{"interesting" => "stuff"}
-      assert dataclip.body["request"] == message.metadata |> persisted_metadata()
+      parsed_body = Jason.decode!(dataclip.body)
+      assert parsed_body["data"] == %{"interesting" => "stuff"}
+      assert parsed_body["request"] == message.metadata |> persisted_metadata()
       assert dataclip.type == :kafka
       assert dataclip.project_id == workflow.project_id
     end
@@ -161,8 +164,9 @@ defmodule Lightning.KafkaTriggers.MessageHandlingTest do
       assert created_workorder.state == :rejected
 
       %{dataclip: dataclip} = created_workorder
-      assert dataclip.body["data"] == %{"interesting" => "stuff"}
-      assert dataclip.body["request"] == message.metadata |> stringify_keys()
+      parsed_body = Jason.decode!(dataclip.body)
+      assert parsed_body["data"] == %{"interesting" => "stuff"}
+      assert parsed_body["request"] == message.metadata |> stringify_keys()
       assert dataclip.type == :kafka
       assert dataclip.project_id == workflow.project_id
     end
@@ -365,24 +369,5 @@ defmodule Lightning.KafkaTriggers.MessageHandlingTest do
 
       assert returned_metadata == metadata
     end
-  end
-
-  # Put this in a helper
-  defp stringify_keys(map) do
-    map
-    |> Map.keys()
-    |> Enum.reduce(%{}, fn key, acc ->
-      acc |> stringify_key(key, map[key])
-    end)
-  end
-
-  defp stringify_key(acc, key, val) when is_map(val) and not is_struct(val) do
-    acc
-    |> Map.merge(%{to_string(key) => stringify_keys(val)})
-  end
-
-  defp stringify_key(acc, key, val) do
-    acc
-    |> Map.merge(%{to_string(key) => val})
   end
 end

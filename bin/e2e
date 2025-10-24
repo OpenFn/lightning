@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+# E2E test environment manager wrapper
+
+# Set up environment variables for proper project root detection
+SCRIPT_DIR="$(dirname "$0")"
+PROJECT_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+export PROJECT_ROOT
+
+exec "${SCRIPT_DIR}/e2e.d/manager" "$@"

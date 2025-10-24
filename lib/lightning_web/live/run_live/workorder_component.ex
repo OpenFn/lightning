@@ -5,6 +5,7 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
   use LightningWeb, :live_component
 
   import LightningWeb.RunLive.Components
+  alias Phoenix.LiveView.JS
 
   @impl true
   def update(
@@ -32,8 +33,7 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
   end
 
   defp set_details(socket, work_order) do
-    last_step = get_last_step(work_order)
-    last_step_finished_at = format_finished_at(last_step)
+    last_run = get_last_run(work_order)
 
     work_order_inserted_at =
       Lightning.Helpers.format_date(work_order.inserted_at)
@@ -54,30 +54,15 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
     |> assign(
       work_order: work_order,
       runs: work_order.runs,
-      last_step: last_step,
-      last_step_finished_at: last_step_finished_at,
+      last_run: last_run,
       work_order_inserted_at: work_order_inserted_at,
       workflow_name: workflow_name
     )
   end
 
-  defp get_last_step(work_order) do
+  defp get_last_run(work_order) do
     work_order.runs
     |> List.first()
-    |> case do
-      nil -> nil
-      run -> List.last(run.steps)
-    end
-  end
-
-  defp format_finished_at(last_step) do
-    case last_step do
-      %{finished_at: %_{} = finished_at} ->
-        Lightning.Helpers.format_date(finished_at)
-
-      _ ->
-        nil
-    end
   end
 
   @impl true
@@ -106,223 +91,299 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
   @impl true
   def render(assigns) do
     ~H"""
-    <div
-      id={"workorder-#{@work_order.id}"}
-      data-entity="work_order"
-      role="rowgroup"
-      class={if @entry_selected, do: "bg-gray-50", else: "bg-white"}
-    >
-      <div role="row" class="grid grid-cols-6 items-center">
-        <div
-          role="cell"
-          class="col-span-3 py-1 px-4 text-sm font-normal text-left rtl:text-right text-gray-500"
-        >
-          <div class="flex gap-4 items-center">
-            <%= if wo_dataclip_available?(@work_order) do %>
-              <form
-                phx-change="toggle_selection"
-                id={"selection-form-#{@work_order.id}"}
+    <tbody id={"workorder-#{@work_order.id}"}>
+      <.tr
+        class={
+          cond do
+            @entry_selected -> "bg-gray-50"
+            true -> "bg-white"
+          end
+        }
+        id={"toggle_details_for_#{@work_order.id}"}
+        onclick={
+          if @work_order.runs !== [] do
+            JS.push("toggle_details", target: @myself)
+          end
+        }
+      >
+        <.td>
+          <%= if wo_dataclip_available?(@work_order) do %>
+            <form
+              phx-change="toggle_selection"
+              phx-click={JS.exec("event.stopPropagation()")}
+              id={"selection-form-#{@work_order.id}"}
+            >
+              <input
+                type="hidden"
+                id={"id_#{@work_order.id}"}
+                name="workorder_id"
+                value={@work_order.id}
+              />
+              <input
+                type="hidden"
+                id={"unselect_#{@work_order.id}"}
+                name="selected"
+                value="false"
+              />
+              <input
+                type="checkbox"
+                id={"select_#{@work_order.id}"}
+                name="selected"
+                class="left-4 top-1/2 h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-600"
+                value="true"
+                phx-click={JS.exec("event.stopPropagation()")}
+                {if @entry_selected, do: [checked: "checked"], else: []}
+              />
+            </form>
+          <% else %>
+            <form
+              phx-click={JS.exec("event.stopPropagation()")}
+              id={"selection-form-#{@work_order.id}"}
+            >
+              <span
+                id={"select_#{@work_order.id}_tooltip"}
+                class="cursor-pointer"
+                phx-hook="Tooltip"
+                data-placement="top"
+                data-allow-html="true"
+                data-interactive={@can_edit_data_retention && "true"}
+                aria-label={
+                  rerun_zero_persistence_tooltip_message(
+                    @project.id,
+                    @can_edit_data_retention
+                  )
+                }
               >
-                <input
-                  type="hidden"
-                  id={"id_#{@work_order.id}"}
-                  name="workorder_id"
-                  value={@work_order.id}
-                />
-
-                <input
-                  type="hidden"
-                  id={"unselect_#{@work_order.id}"}
-                  name="selected"
-                  value="false"
-                />
-
                 <input
                   type="checkbox"
                   id={"select_#{@work_order.id}"}
                   name="selected"
-                  class="left-4 top-1/2 h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-600"
-                  value="true"
-                  {if @entry_selected, do: [checked: "checked"], else: []}
+                  class="left-4 top-1/2 h-4 w-4 rounded border-gray-300 bg-gray-100 text-indigo-600 focus:ring-indigo-600"
+                  disabled
                 />
-              </form>
-            <% else %>
-              <form id={"selection-form-#{@work_order.id}"}>
+              </span>
+            </form>
+          <% end %>
+        </.td>
+        <.td>
+          <span class="mt-2 text-gray-700">
+            <.link navigate={
+              ~p"/projects/#{@work_order.workflow.project_id}/history?filters[workorder_id]=#{@work_order.id}"
+            }>
+              <span class="link-uuid" title={@work_order.id}>
+                {display_short_uuid(@work_order.id)}
+              </span>
+            </.link>
+          </span>
+        </.td>
+        <.td>
+          <%= if @last_run do %>
+            <.link
+              navigate={
+                ~p"/projects/#{@project}/w/#{@work_order.workflow.id}?a=#{@last_run.id}&v=#{@work_order.snapshot.lock_version}"
+              }
+              class="inline-block"
+            >
+              <Common.wrapper_tooltip
+                id={"workflow-name-#{@work_order.id}"}
+                tooltip={"#{@workflow_name}<br/><span class=\"text-xs text-gray-500\">Click to view</span>"}
+              >
                 <span
-                  id={"select_#{@work_order.id}_tooltip"}
-                  class="cursor-pointer"
-                  phx-hook="Tooltip"
-                  data-placement="top"
-                  data-allow-html="true"
-                  aria-label={
-                    rerun_zero_persistence_tooltip_message(
-                      @project.id,
-                      @can_edit_data_retention
+                  class="truncate text-gray-900 workflow-name hover:text-primary-600 cursor-pointer"
+                  style="max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block;"
+                >
+                  {@workflow_name}
+                </span>
+              </Common.wrapper_tooltip>
+            </.link>
+          <% else %>
+            <Common.wrapper_tooltip
+              id={"workflow-name-#{@work_order.id}"}
+              tooltip={@workflow_name}
+            >
+              <span
+                class="truncate text-gray-900 workflow-name"
+                style="max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block;"
+              >
+                {@workflow_name}
+              </span>
+            </Common.wrapper_tooltip>
+          <% end %>
+        </.td>
+        <.td>
+          <.workorder_dataclip_link
+            work_order={@work_order}
+            project={@project}
+            can_edit_data_retention={@can_edit_data_retention}
+          />
+        </.td>
+        <.td>
+          <Common.datetime datetime={@work_order.inserted_at} />
+        </.td>
+        <.td>
+          <Common.datetime datetime={@work_order.last_activity} />
+        </.td>
+        <.td class="text-right">
+          <LightningWeb.RunLive.Components.elapsed_indicator
+            :if={@last_run}
+            item={@last_run}
+            context="table"
+          />
+          <span :if={is_nil(@last_run)}>Not started</span>
+        </.td>
+        <.td class="text-right">
+          <div class="flex items-center justify-end gap-2">
+            <.state_pill state={@work_order.state} />
+          </div>
+        </.td>
+        <.td class="text-right">
+          <%= if @work_order.runs !== [] do %>
+            <div class="flex items-center justify-end gap-2 pr-2 -mr-3">
+              <%= if wo_dataclip_available?(@work_order) and @can_run_workflow do %>
+                <button
+                  type="button"
+                  id={"retry-workorder-#{@work_order.id}"}
+                  phx-click={
+                    JS.push("bulk-rerun",
+                      value: %{type: "single", workorder_id: @work_order.id}
                     )
+                    |> JS.push("toggle_details", target: @myself)
+                    |> JS.exec("event.stopPropagation()")
+                  }
+                  class="inline-flex items-center p-1 text-xs font-medium text-gray-600 hover:text-primary-400 cursor-pointer rounded"
+                  phx-hook="Tooltip"
+                  aria-label="Retry (run from the start)"
+                >
+                  <.icon name="hero-arrow-path-mini" class="h-4 w-4" />
+                </button>
+              <% else %>
+                <span
+                  id={"retry-disabled-#{@work_order.id}"}
+                  class="inline-flex items-center p-1 text-xs font-medium text-gray-400 cursor-not-allowed rounded"
+                  phx-hook="Tooltip"
+                  data-allow-html="true"
+                  data-placement="top"
+                  data-interactive={@can_edit_data_retention && "true"}
+                  aria-label={
+                    cond do
+                      not @can_run_workflow ->
+                        "You are not authorized to start runs for this project."
+
+                      not wo_dataclip_available?(@work_order) ->
+                        rerun_zero_persistence_tooltip_message(
+                          @project.id,
+                          @can_edit_data_retention
+                        )
+                    end
                   }
                 >
-                  <input
-                    type="checkbox"
-                    id={"select_#{@work_order.id}"}
-                    name="selected"
-                    class="left-4 top-1/2 h-4 w-4 rounded border-gray-300 bg-gray-100 text-indigo-600 focus:ring-indigo-600"
-                    disabled
-                  />
+                  <.icon name="hero-arrow-path-mini" class="h-4 w-4" />
                 </span>
-              </form>
-            <% end %>
-            <%= if @work_order.runs !== [] do %>
-              <button
-                id={"toggle_details_for_#{@work_order.id}"}
-                class="w-10 rounded-full p-3 hover:bg-gray-100"
-                phx-click="toggle_details"
-                phx-target={@myself}
-              >
-                <%= if @show_details do %>
-                  <Heroicons.chevron_up outline class="h-4 w-4 rounded-lg" />
-                <% else %>
-                  <Heroicons.chevron_down outline class="h-4 w-4 rounded-lg" />
-                <% end %>
-              </button>
-            <% else %>
-              <span class="w-auto p-3">
-                <Heroicons.minus outline class="h-4 w-4 rounded-lg" />
+              <% end %>
+              <%!-- <%= if Enum.count(@work_order.runs) > 1 do %> --%>
+              <span class="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600">
+                {Enum.count(@work_order.runs)}
               </span>
-            <% end %>
-
-            <div class="ml-3 py-2">
-              <h1 class={"text-sm mb-1 #{unless @show_details, do: "truncate"}"}>
-                {@workflow_name}
-              </h1>
-              <span class="mt-2 text-gray-700">
-                <.link navigate={
-                  ~p"/projects/#{@work_order.workflow.project_id}/history?filters[workorder_id]=#{@work_order.id}"
-                }>
-                  <span class="link-uuid" title={@work_order.id}>
-                    {display_short_uuid(@work_order.id)}
-                  </span>
-                </.link>
-                &bull;
-                <.workorder_dataclip_link
-                  work_order={@work_order}
-                  project={@project}
-                  can_edit_data_retention={@can_edit_data_retention}
-                />
-              </span>
-            </div>
-          </div>
-        </div>
-        <div
-          class="py-1 px-4 text-sm font-normal text-left rtl:text-right text-gray-500"
-          role="cell"
-        >
-          <.timestamp
-            tooltip_prefix="Work order received at"
-            timestamp={@work_order.inserted_at}
-            style={:wrapped}
-          />
-        </div>
-        <div
-          class="py-1 px-4 text-sm font-normal text-left rtl:text-right text-gray-500"
-          role="cell"
-        >
-          <.timestamp
-            tooltip_prefix="Last activity for this work order at"
-            timestamp={@work_order.last_activity}
-            style={:wrapped}
-          />
-        </div>
-        <div
-          class="py-1 px-4 text-sm font-normal text-left rtl:text-right text-gray-500"
-          role="cell"
-        >
-          <.state_pill state={@work_order.state} />
-        </div>
-      </div>
-      <%= if @show_details do %>
-        <div class="flex flex-col bg-gray-100 gap-3 p-3">
-          <%= for {run, index} <- @runs |> Enum.reverse() |> Enum.with_index(1) |> Enum.reverse() do %>
-            <div
-              id={"run_#{run.id}"}
-              class={
-                if index != Enum.count(@runs) and !@show_prev_runs,
-                  do: "hidden",
-                  else: "outline outline-2 outline-gray-300 rounded"
-              }
-            >
-              <div
-                class="flex bg-gray-200 text-xs py-2 grid grid-cols-6"
-                role="rowgroup"
-              >
-                <div role="columnheader" class="col-span-3 pl-4">
-                  Run
-                  <.link navigate={~p"/projects/#{@project.id}/runs/#{run.id}"}>
-                    <span title={run.id} class="link font-mono">
-                      {display_short_uuid(run.id)}
-                    </span>
-                  </.link>
-                  <%= if Enum.count(@runs) > 1 do %>
-                    ({index}/{Enum.count(@runs)}{if index !=
-                                                      Enum.count(@runs),
-                                                    do: ")"}
-                    <%= if index == Enum.count(@runs) do %>
-                      <span>
-                        &bull; <a
-                          id={"toggle_runs_for_#{@work_order.id}"}
-                          href="#"
-                          class="link"
-                          phx-click="toggle_runs"
-                          phx-target={@myself}
-                        >
-                        <%= if @show_prev_runs, do: "hide", else: "show" %> previous</a>)
-                      </span>
-                    <% end %>
-                  <% end %>
-                </div>
-                <div role="columnheader" class="col-span-2 px-4">
-                  <%= case run.state do %>
-                    <% :available -> %>
-                      enqueued @
-                      <.timestamp
-                        tooltip_prefix="Run created at"
-                        timestamp={run.inserted_at}
-                      />
-                    <% :claimed -> %>
-                      claimed @
-                      <.timestamp
-                        tooltip_prefix="Run claimed by worker at"
-                        timestamp={run.claimed_at}
-                      />
-                    <% :started -> %>
-                      started @
-                      <.timestamp
-                        tooltip_prefix="Run started at"
-                        timestamp={run.started_at}
-                      />
-                    <% _state -> %>
-                      finished @
-                      <.timestamp
-                        tooltip_prefix="Run finished at"
-                        timestamp={run.finished_at}
-                      />
-                  <% end %>
-                </div>
-                <div role="columnheader" class="ml-3 col-span-1 px-4">
-                  {run.state}
-                </div>
-              </div>
-              <.run_item
-                can_edit_data_retention={@can_edit_data_retention}
-                can_run_workflow={@can_run_workflow}
-                run={run}
-                workflow_version={@work_order.workflow.lock_version}
-                project={@project}
+              <%!-- <% end %> --%>
+              <.icon
+                name={
+                  if @show_details, do: "hero-chevron-up", else: "hero-chevron-down"
+                }
+                class="size-4 text-gray-400"
               />
             </div>
           <% end %>
-        </div>
+        </.td>
+      </.tr>
+      <%= if @show_details do %>
+        <.tr>
+          <.td colspan={9} class="!p-0">
+            <div class="bg-gray-100 p-3 flex flex-col gap-3">
+              <%= for {run, index} <- @runs |> Enum.reverse() |> Enum.with_index(1) |> Enum.reverse() do %>
+                <%= if index == Enum.count(@runs) or @show_prev_runs do %>
+                  <div
+                    id={"run_#{run.id}"}
+                    class="w-full bg-white border border-gray-300 rounded-lg overflow-hidden"
+                  >
+                    <div class="bg-gray-200 text-xs flex items-center w-full">
+                      <div class="flex-1 py-2 text-left">
+                        <div class="pl-4">
+                          Run
+                          <.link navigate={
+                            ~p"/projects/#{@project.id}/runs/#{run.id}"
+                          }>
+                            <span title={run.id} class="link font-mono">
+                              {display_short_uuid(run.id)}
+                            </span>
+                          </.link>
+                          <%= if Enum.count(@runs) > 1 do %>
+                            ({index}/{Enum.count(@runs)}{if index !=
+                                                              Enum.count(@runs),
+                                                            do: ")"}
+                            <%= if index == Enum.count(@runs) do %>
+                              <span>
+                                &bull; <a
+                                  id={"toggle_runs_for_#{@work_order.id}"}
+                                  href="#"
+                                  class="link"
+                                  phx-click="toggle_runs"
+                                  phx-target={@myself}
+                                >
+                            <%= if @show_prev_runs, do: "hide", else: "show" %> previous</a>)
+                              </span>
+                            <% end %>
+                          <% end %>
+                          &bull;
+                          <%= case run.state do %>
+                            <% :available -> %>
+                              enqueued
+                              <Common.datetime
+                                datetime={run.inserted_at}
+                                format={:relative_detailed}
+                              />
+                            <% :claimed -> %>
+                              claimed
+                              <Common.datetime
+                                datetime={run.claimed_at}
+                                format={:relative_detailed}
+                              />
+                            <% :started -> %>
+                              started
+                              <Common.datetime
+                                datetime={run.started_at}
+                                format={:relative_detailed}
+                              />
+                            <% _state -> %>
+                              finished
+                              <Common.datetime
+                                datetime={run.finished_at}
+                                format={:relative_detailed}
+                              />
+                          <% end %>
+                        </div>
+                      </div>
+                      <div class="flex-shrink-0 py-2 px-4 text-right">
+                        <div class="flex items-center justify-end gap-4">
+                          <.elapsed_indicator item={run} context="details" />
+                          <span class="font-mono">{run.state}</span>
+                        </div>
+                      </div>
+                    </div>
+                    <.run_item
+                      can_edit_data_retention={@can_edit_data_retention}
+                      can_run_workflow={@can_run_workflow}
+                      run={run}
+                      workflow_version={@work_order.workflow.lock_version}
+                      project={@project}
+                    />
+                  </div>
+                <% end %>
+              <% end %>
+            </div>
+          </.td>
+        </.tr>
       <% end %>
-    </div>
+    </tbody>
     """
   end
 
@@ -344,9 +405,10 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
       <span
         id={"view-dataclip-#{@work_order.dataclip_id}-for-#{@work_order.id}"}
         title={@work_order.dataclip_id}
-        class="link-uuid"
+        class="link-uuid cursor-not-allowed"
         phx-hook="Tooltip"
         data-placement="right"
+        data-interactive="true"
         data-allow-html="true"
         aria-label={
           wiped_dataclip_tooltip_message(@project.id, @can_edit_data_retention)

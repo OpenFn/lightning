@@ -12,14 +12,15 @@ defmodule LightningWeb.Components.MenuTest do
 
       assigns = %{
         active_menu_item: :settings,
-        project: %{id: project_id, name: "project-1"},
-        projects: []
+        project: %Lightning.Projects.Project{id: project_id, name: "project-1"},
+        projects: [],
+        current_user: %Lightning.Accounts.User{}
       }
 
       element =
         (&LayoutComponents.menu_items/1)
         |> render_component(assigns)
-        |> Floki.find("a[href='/projects/#{project_id}/w']")
+        |> find_by_href("/projects/#{project_id}/w")
 
       assert Floki.text(element) == "Workflows"
 
@@ -37,26 +38,31 @@ defmodule LightningWeb.Components.MenuTest do
           &LayoutComponents.menu_items/1,
           %{
             active_menu_item: :settings,
-            project: %{id: project_id, name: "project-1"},
-            projects: []
+            project: %Lightning.Projects.Project{
+              id: project_id,
+              name: "project-1"
+            },
+            projects: [],
+            current_sandbox: nil,
+            current_user: %Lightning.Accounts.User{}
           }
         )
 
-      element = Floki.find(menu, "a[href='/projects/#{project_id}/w']")
+      element = find_by_href(menu, "/projects/#{project_id}/w")
 
       assert Floki.text(element) == "Workflows"
 
       assert element |> Floki.attribute("class") |> hd =~
                "menu-item-inactive"
 
-      element = Floki.find(menu, "a[href='/projects/#{project_id}/history']")
+      element = find_by_href(menu, "/projects/#{project_id}/history")
 
       assert Floki.text(element) == "History"
 
       assert element |> Floki.attribute("class") |> hd =~
                "menu-item-inactive"
 
-      element = Floki.find(menu, "a[href='/projects/#{project_id}/settings']")
+      element = find_by_href(menu, "/projects/#{project_id}/settings")
 
       assert Floki.text(element) == "Settings"
 
@@ -75,14 +81,14 @@ defmodule LightningWeb.Components.MenuTest do
           }
         )
 
-      element = Floki.find(menu, "a[href='/profile']")
+      element = find_by_href(menu, "/profile")
 
       assert Floki.text(element) =~ "User Profile"
 
       assert element |> Floki.attribute("class") |> hd =~
                "menu-item-inactive"
 
-      element = Floki.find(menu, "a[href='/credentials']")
+      element = find_by_href(menu, "/credentials")
 
       assert Floki.text(element) =~ "Credentials"
 
@@ -90,12 +96,18 @@ defmodule LightningWeb.Components.MenuTest do
                "menu-item-active"
 
       element =
-        Floki.find(menu, "a[href='/profile/tokens']")
+        find_by_href(menu, "/profile/tokens")
 
       assert Floki.text(element) =~ "API Tokens"
 
       assert element |> Floki.attribute("class") |> hd =~
                "menu-item-inactive"
     end
+  end
+
+  defp find_by_href(html, href) do
+    html
+    |> Floki.parse_fragment!()
+    |> Floki.find("a[href='#{href}']")
   end
 end

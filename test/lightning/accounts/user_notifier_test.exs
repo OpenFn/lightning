@@ -25,7 +25,7 @@ defmodule Lightning.Accounts.UserNotifierTest do
       actual_deletion_date =
         Lightning.Config.purge_deleted_after_days()
         |> Lightning.Helpers.actual_deletion_date()
-        |> Lightning.Helpers.format_date()
+        |> Lightning.Helpers.format_date("%F at %T")
 
       UserNotifier.notify_project_deletion(user, project)
 
@@ -254,22 +254,22 @@ defmodule Lightning.Accounts.UserNotifierTest do
         Here's your daily project digest for "Real Project", covering activity from #{start_date |> Lightning.Helpers.format_date_long()} to #{end_date |> Lightning.Helpers.format_date_long()}.
 
         Workflow A:
-        - 12 workorders correctly processed today
-        - 3 work orders that failed, crashed or timed out
-        Click the link below to view this in the history page:
-        #{UserNotifier.build_digest_url(workflow_a, start_date, end_date)}
+        • 12 workorders were successful today
+        • 3 workorders were not (failed, crashed, cancelled, killed, exception, lost, etc.)
+
+        Click this link to review: #{UserNotifier.build_digest_url(workflow_a, start_date, end_date)}
 
         Workflow B:
-        - 10 workorders correctly processed today
-        - 0 work orders that failed, crashed or timed out
-        Click the link below to view this in the history page:
-        #{UserNotifier.build_digest_url(workflow_b, start_date, end_date)}
+        • 10 workorders were successful today
+        • 0 workorders were not (failed, crashed, cancelled, killed, exception, lost, etc.)
+
+        Click this link to review: #{UserNotifier.build_digest_url(workflow_b, start_date, end_date)}
 
         Workflow C:
-        - 3 workorders correctly processed today
-        - 7 work orders that failed, crashed or timed out
-        Click the link below to view this in the history page:
-        #{UserNotifier.build_digest_url(workflow_c, start_date, end_date)}
+        • 3 workorders were successful today
+        • 7 workorders were not (failed, crashed, cancelled, killed, exception, lost, etc.)
+
+        Click this link to review: #{UserNotifier.build_digest_url(workflow_c, start_date, end_date)}
 
         OpenFn
         """
@@ -330,22 +330,22 @@ defmodule Lightning.Accounts.UserNotifierTest do
         Here's your weekly project digest for "Real Project", covering activity from #{start_date |> Lightning.Helpers.format_date_long()} to #{end_date |> Lightning.Helpers.format_date_long()}.
 
         Workflow A:
-        - 12 workorders correctly processed this week
-        - 3 work orders that failed, crashed or timed out
-        Click the link below to view this in the history page:
-        #{UserNotifier.build_digest_url(workflow_a, start_date, end_date)}
+        • 12 workorders were successful this week
+        • 3 workorders were not (failed, crashed, cancelled, killed, exception, lost, etc.)
+
+        Click this link to review: #{UserNotifier.build_digest_url(workflow_a, start_date, end_date)}
 
         Workflow B:
-        - 10 workorders correctly processed this week
-        - 0 work orders that failed, crashed or timed out
-        Click the link below to view this in the history page:
-        #{UserNotifier.build_digest_url(workflow_b, start_date, end_date)}
+        • 10 workorders were successful this week
+        • 0 workorders were not (failed, crashed, cancelled, killed, exception, lost, etc.)
+
+        Click this link to review: #{UserNotifier.build_digest_url(workflow_b, start_date, end_date)}
 
         Workflow C:
-        - 3 workorders correctly processed this week
-        - 7 work orders that failed, crashed or timed out
-        Click the link below to view this in the history page:
-        #{UserNotifier.build_digest_url(workflow_c, start_date, end_date)}
+        • 3 workorders were successful this week
+        • 7 workorders were not (failed, crashed, cancelled, killed, exception, lost, etc.)
+
+        Click this link to review: #{UserNotifier.build_digest_url(workflow_c, start_date, end_date)}
 
         OpenFn
         """
@@ -408,22 +408,22 @@ defmodule Lightning.Accounts.UserNotifierTest do
         Here's your monthly project digest for "Real Project", covering activity from #{start_date |> Lightning.Helpers.format_date_long()} to #{end_date |> Lightning.Helpers.format_date_long()}.
 
         Workflow A:
-        - 12 workorders correctly processed this month
-        - 3 work orders that failed, crashed or timed out
-        Click the link below to view this in the history page:
-        #{UserNotifier.build_digest_url(workflow_a, start_date, end_date)}
+        • 12 workorders were successful this month
+        • 3 workorders were not (failed, crashed, cancelled, killed, exception, lost, etc.)
+
+        Click this link to review: #{UserNotifier.build_digest_url(workflow_a, start_date, end_date)}
 
         Workflow B:
-        - 10 workorders correctly processed this month
-        - 0 work orders that failed, crashed or timed out
-        Click the link below to view this in the history page:
-        #{UserNotifier.build_digest_url(workflow_b, start_date, end_date)}
+        • 10 workorders were successful this month
+        • 0 workorders were not (failed, crashed, cancelled, killed, exception, lost, etc.)
+
+        Click this link to review: #{UserNotifier.build_digest_url(workflow_b, start_date, end_date)}
 
         Workflow C:
-        - 3 workorders correctly processed this month
-        - 7 work orders that failed, crashed or timed out
-        Click the link below to view this in the history page:
-        #{UserNotifier.build_digest_url(workflow_c, start_date, end_date)}
+        • 3 workorders were successful this month
+        • 7 workorders were not (failed, crashed, cancelled, killed, exception, lost, etc.)
+
+        Click this link to review: #{UserNotifier.build_digest_url(workflow_c, start_date, end_date)}
 
         OpenFn
         """
@@ -473,10 +473,10 @@ defmodule Lightning.Accounts.UserNotifierTest do
           Here's your #{digest_type} project digest for "Real Project", covering activity from #{start_date |> Lightning.Helpers.format_date_long()} to #{end_date |> Lightning.Helpers.format_date_long()}.
 
           Workflow A:
-          - 0 workorders correctly processed #{period}
-          - 0 work orders that failed, crashed or timed out
-          Click the link below to view this in the history page:
-          #{UserNotifier.build_digest_url(workflow, start_date, end_date)}
+          • 0 workorders were successful #{period}
+          • 0 workorders were not (failed, crashed, cancelled, killed, exception, lost, etc.)
+
+          Click this link to review: #{UserNotifier.build_digest_url(workflow, start_date, end_date)}
 
           OpenFn
           """

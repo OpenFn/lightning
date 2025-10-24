@@ -2,57 +2,94 @@ defmodule LightningWeb.CredentialLive.CredentialIndexComponent do
   @moduledoc false
   use LightningWeb, :live_component
 
-  import LightningWeb.CredentialLive.Helpers, only: [can_edit?: 2]
-
   alias Lightning.Credentials
+  alias Lightning.Credentials.KeychainCredential
   alias Lightning.OauthClients
+  alias Lightning.Policies
 
   @impl true
   def mount(socket) do
     {:ok,
      assign(socket,
        active_modal: nil,
+       can_create_keychain_credential: false,
+       can_create_project_credential: false,
        credential: nil,
-       oauth_client: nil,
-       current_user: nil,
-       project: nil,
        credentials: [],
+       current_user: nil,
+       keychain_credentials: nil,
+       oauth_client: nil,
        oauth_clients: [],
+       project: nil,
+       project_user: nil,
        projects: [],
-       can_create_project_credential: nil,
        show_owner_in_tables: false
      )}
   end
 
   @impl true
-  def update(
-        %{
-          current_user: _,
-          projects: _,
-          can_create_project_credential: _,
-          return_to: _
-        } =
-          assigns,
-        socket
-      ) do
-    # project is only available in the project settings page
-    project_or_user = assigns[:project] || assigns.current_user
+  def update(%{current_user: current_user, project: project} = assigns, socket) do
+    project_user =
+      Lightning.Projects.get_project_user(project, current_user)
 
+    # TODO: reject with permission error if project_user is nil, and add a test for this
     {:ok,
      socket
      |> assign(assigns)
-     |> assign(:credentials, list_credentials(project_or_user))
-     |> assign(:oauth_clients, list_clients(project_or_user))}
+     |> assign(%{
+       project_user: project_user,
+       can_create_keychain_credential:
+         Policies.Permissions.can?(
+           :credentials,
+           :create_keychain_credential,
+           current_user,
+           %{project: project, project_user: project_user}
+         )
+     })
+     |> load_credentials()}
+  end
+
+  @impl true
+  def update(
+        %{current_user: _, projects: _, return_to: _} = assigns,
+        socket
+      ) do
+    {:ok, socket |> assign(assigns) |> load_credentials()}
+  end
+
+  defp load_credentials(socket) do
+    %{current_user: current_user, project: project} = socket.assigns
+
+    socket
+    |> assign(%{
+      credentials: list_credentials(project || current_user),
+      oauth_clients: list_clients(project || current_user)
+    })
+    |> then(fn socket ->
+      if socket.assigns.project do
+        socket
+        |> assign(
+          :keychain_credentials,
+          Lightning.Credentials.list_keychain_credentials_for_project(
+            socket.assigns.project
+          )
+        )
+      else
+        socket
+      end
+    end)
   end
 
   @impl true
   def handle_event("close_active_modal", _params, socket) do
     {:noreply,
-     assign(socket, active_modal: nil, credential: nil, oauth_client: nil)}
+     socket
+     |> assign(active_modal: nil, credential: nil, oauth_client: nil)
+     |> load_credentials()}
   end
 
-  def handle_event("new_credential", _params, socket) do
-    with :ok <- can_create_project_credential(socket) do
+  def handle_event("show_modal", %{"target" => "new_credential"}, socket) do
+    if socket.assigns.can_create_project_credential do
       project_credentials =
         if socket.assigns.project do
           [
@@ -73,11 +110,34 @@ defmodule LightningWeb.CredentialLive.CredentialIndexComponent do
          },
          oauth_client: nil
        )}
+    else
+      not_authorized(socket)
     end
   end
 
-  def handle_event("new_oauth_client", _params, socket) do
-    with :ok <- can_create_project_credential(socket) do
+  def handle_event(
+        "show_modal",
+        %{"target" => "new_keychain_credential"},
+        socket
+      ) do
+    # TODO: check if user can create keychain credential
+    if socket.assigns.can_create_keychain_credential do
+      {:noreply,
+       assign(socket,
+         active_modal: :new_keychain_credential,
+         credential: %KeychainCredential{
+           created_by_id: socket.assigns.current_user.id,
+           project_id: socket.assigns.project && socket.assigns.project.id
+         },
+         oauth_client: nil
+       )}
+    else
+      not_authorized(socket)
+    end
+  end
+
+  def handle_event("show_modal", %{"target" => "new_oauth_client"}, socket) do
+    if socket.assigns.can_create_project_credential do
       project_oauth_clients =
         if socket.assigns.project do
           [
@@ -98,6 +158,8 @@ defmodule LightningWeb.CredentialLive.CredentialIndexComponent do
            project_oauth_clients: project_oauth_clients
          }
        )}
+    else
+      not_authorized(socket)
     end
   end
 
@@ -105,13 +167,15 @@ defmodule LightningWeb.CredentialLive.CredentialIndexComponent do
     %{oauth_clients: oauth_clients} = socket.assigns
     client = Enum.find(oauth_clients, fn client -> client.id == client_id end)
 
-    with :ok <- can_edit_credential(socket, client) do
+    if can_edit_credential(socket.assigns.current_user, client) do
       {:noreply,
        assign(socket,
          active_modal: :edit_oauth_client,
          credential: nil,
          oauth_client: client
        )}
+    else
+      not_authorized(socket)
     end
   end
 
@@ -119,13 +183,15 @@ defmodule LightningWeb.CredentialLive.CredentialIndexComponent do
     %{oauth_clients: oauth_clients} = socket.assigns
     client = Enum.find(oauth_clients, fn client -> client.id == client_id end)
 
-    with :ok <- can_edit_credential(socket, client) do
+    if can_edit_credential(socket.assigns.current_user, client) do
       {:noreply,
        assign(socket,
          active_modal: :delete_oauth_client,
          credential: nil,
          oauth_client: client
        )}
+    else
+      not_authorized(socket)
     end
   end
 
@@ -136,13 +202,16 @@ defmodule LightningWeb.CredentialLive.CredentialIndexComponent do
       ) do
     client = OauthClients.get_client!(oauth_client_id)
 
-    with :ok <- can_edit_credential(socket, client) do
+    if can_edit_credential(socket.assigns.current_user, client) do
+      # TODO: refetch oauth clients
       OauthClients.delete_client(client)
 
       {:noreply,
        socket
        |> put_flash(:info, "Oauth client deleted")
        |> push_patch(to: socket.assigns.return_to)}
+    else
+      not_authorized(socket)
     end
   end
 
@@ -150,14 +219,15 @@ defmodule LightningWeb.CredentialLive.CredentialIndexComponent do
     %{credentials: credentials} = socket.assigns
     credential = Enum.find(credentials, fn cred -> cred.id == credential_id end)
 
-    with :ok <- can_edit_credential(socket, credential) do
+    if can_edit_credential(socket.assigns.current_user, credential) do
       {:noreply,
        assign(socket,
          active_modal: :edit_credential,
          credential: credential,
-         oauth_client:
-           credential.oauth_token && credential.oauth_token.oauth_client
+         oauth_client: credential.oauth_client
        )}
+    else
+      not_authorized(socket)
     end
   end
 
@@ -166,12 +236,14 @@ defmodule LightningWeb.CredentialLive.CredentialIndexComponent do
         %{"id" => credential_id},
         socket
       ) do
-    %{credentials: credentials} = socket.assigns
-    credential = Enum.find(credentials, fn cred -> cred.id == credential_id end)
+    %{current_user: current_user, credentials: credentials} = socket.assigns
+    credential = Enum.find(credentials, &(&1.id == credential_id))
 
-    with :ok <- can_delete_credential(socket, credential) do
+    if credential && can_delete_credential(current_user, credential) do
       {:noreply,
        assign(socket, active_modal: :delete_credential, credential: credential)}
+    else
+      not_authorized(socket)
     end
   end
 
@@ -180,13 +252,95 @@ defmodule LightningWeb.CredentialLive.CredentialIndexComponent do
         %{"id" => credential_id},
         socket
       ) do
-    %{credentials: credentials} = socket.assigns
+    %{current_user: current_user, credentials: credentials} = socket.assigns
+    credential = Enum.find(credentials, &(&1.id == credential_id))
 
-    credential = Enum.find(credentials, fn cred -> cred.id == credential_id end)
-
-    with :ok <- can_edit_credential(socket, credential) do
+    if credential && can_edit_credential(current_user, credential) do
       {:noreply,
        assign(socket, active_modal: :transfer_credential, credential: credential)}
+    else
+      not_authorized(socket)
+    end
+  end
+
+  def handle_event(
+        "edit_keychain_credential",
+        %{"id" => keychain_credential_id},
+        socket
+      ) do
+    %{current_user: current_user, keychain_credentials: keychain_credentials} =
+      socket.assigns
+
+    credential =
+      Enum.find(keychain_credentials, &(&1.id == keychain_credential_id))
+
+    if credential && can_edit_credential(current_user, credential) do
+      {:noreply,
+       assign(socket,
+         active_modal: :edit_credential,
+         credential: credential,
+         oauth_client: nil
+       )}
+    else
+      not_authorized(socket)
+    end
+  end
+
+  def handle_event(
+        "request_keychain_credential_deletion",
+        %{"id" => keychain_credential_id},
+        socket
+      ) do
+    %{keychain_credentials: keychain_credentials} = socket.assigns
+
+    credential =
+      Enum.find(keychain_credentials, &(&1.id == keychain_credential_id))
+
+    if credential &&
+         can_delete_credential(socket.assigns.current_user, credential) do
+      {:noreply,
+       assign(socket,
+         active_modal: :delete_keychain_credential,
+         credential: credential
+       )}
+    else
+      not_authorized(socket)
+    end
+  end
+
+  # Deletion happens on this component, and the edit and create happen in
+  # the form component.
+  def handle_event(
+        "delete_keychain_credential",
+        %{"keychain_credential_id" => keychain_credential_id},
+        socket
+      ) do
+    %{current_user: current_user} = socket.assigns
+    modal_id = "delete-keychain-credential-#{keychain_credential_id}-modal"
+
+    credential =
+      Lightning.Credentials.get_keychain_credential(keychain_credential_id)
+
+    if credential && can_delete_credential(current_user, credential) do
+      Lightning.Credentials.delete_keychain_credential(credential)
+      |> case do
+        {:ok, %{id: id}} ->
+          {:noreply,
+           socket
+           |> update(:keychain_credentials, fn credentials ->
+             credentials |> Enum.reject(&(&1.id == id))
+           end)
+           |> push_event("close_modal", %{id: modal_id})
+           |> put_flash(:info, "Keychain credential deleted")}
+
+        {:error, _} ->
+          {:noreply,
+           socket
+           |> push_event("close_modal", %{id: modal_id})
+           |> put_flash(:error, "Failed to delete keychain credential")}
+      end
+    else
+      not_authorized(socket)
     end
   end
 
@@ -203,39 +357,46 @@ defmodule LightningWeb.CredentialLive.CredentialIndexComponent do
      |> push_navigate(to: socket.assigns.return_to)}
   end
 
-  defp can_delete_credential(socket, credential) do
-    can_delete_credential =
-      Lightning.Policies.Permissions.can?(
-        Lightning.Policies.Users,
-        :delete_credential,
-        socket.assigns.current_user,
-        credential
-      )
-
-    if can_delete_credential do
-      :ok
-    else
-      noreply_error(socket)
-    end
+  defp can_delete_credential(
+         current_user,
+         %KeychainCredential{} = keychain_credential
+       ) do
+    Policies.Permissions.can?(
+      :credentials,
+      :delete_keychain_credential,
+      current_user,
+      keychain_credential
+    )
   end
 
-  defp can_edit_credential(socket, credential) do
-    if can_edit?(credential, socket.assigns.current_user) do
-      :ok
-    else
-      noreply_error(socket)
-    end
+  defp can_delete_credential(current_user, credential) do
+    Policies.Permissions.can?(
+      :users,
+      :delete_credential,
+      current_user,
+      credential
+    )
   end
 
-  defp can_create_project_credential(socket) do
-    if socket.assigns.can_create_project_credential do
-      :ok
-    else
-      noreply_error(socket)
-    end
+  defp can_edit_credential(current_user, %KeychainCredential{} = credential) do
+    Policies.Permissions.can?(
+      :credentials,
+      :edit_keychain_credential,
+      current_user,
+      credential
+    )
   end
 
-  defp noreply_error(socket) do
+  defp can_edit_credential(current_user, credential) do
+    Policies.Permissions.can?(
+      :users,
+      :edit_credential,
+      current_user,
+      credential
+    )
+  end
+
+  defp not_authorized(socket) do
     {:noreply,
      socket
      |> put_flash(:error, "You are not authorized to perform this action")
@@ -245,12 +406,18 @@ defmodule LightningWeb.CredentialLive.CredentialIndexComponent do
   defp list_credentials(user_or_project) do
     user_or_project
     |> Credentials.list_credentials()
-    |> Enum.map(fn c ->
+    |> Enum.map(fn credential ->
       project_names =
-        Map.get(c, :projects, [])
-        |> Enum.map(fn p -> p.name end)
+        Map.get(credential, :projects, []) |> Enum.map(fn p -> p.name end)
 
-      Map.put(c, :project_names, project_names)
+      environment_names =
+        credential
+        |> Map.get(:credential_bodies, [])
+        |> Enum.map(& &1.name)
+
+      credential
+      |> Map.put(:project_names, project_names)
+      |> Map.put(:environment_names, environment_names)
     end)
   end
 
@@ -323,6 +490,36 @@ defmodule LightningWeb.CredentialLive.CredentialIndexComponent do
           phx-disable-with="Deleting..."
           phx-target={@target}
           theme="danger"
+        >
+          Delete
+        </.button>
+        <Components.Credentials.cancel_button modal_id={@id} />
+      </.modal_footer>
+    </Components.Credentials.credential_modal>
+    """
+  end
+
+  defp delete_keychain_credential_modal(assigns) do
+    ~H"""
+    <Components.Credentials.credential_modal id={@id}>
+      <:title>
+        Delete Keychain Credential
+      </:title>
+      <div>
+        <p class="text-sm text-gray-500">
+          You are about the delete the keychain credential "{@keychain_credential.name}" which may be used in jobs. All jobs using this keychain credential will fail.
+          <br /><br />Do you want to proceed with this action?
+        </p>
+      </div>
+      <.modal_footer>
+        <.button
+          id={"#{@id}_confirm_button"}
+          type="button"
+          phx-value-keychain_credential_id={@keychain_credential.id}
+          phx-click="delete_keychain_credential"
+          phx-disable-with="Deleting..."
+          theme="danger"
+          {assigns |> Map.take([:"phx-target"])}
         >
           Delete
         </.button>

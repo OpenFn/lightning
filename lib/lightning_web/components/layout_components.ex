@@ -30,6 +30,7 @@ defmodule LightningWeb.LayoutComponents do
       <%= if assigns[:project] do %>
         <Menu.project_items
           project_id={@project.id}
+          current_user={@current_user}
           active_menu_item={@active_menu_item}
         />
       <% else %>
@@ -99,7 +100,10 @@ defmodule LightningWeb.LayoutComponents do
         }
       }
     />
-    <div class="flex-none bg-white shadow-xs border-b border-gray-200">
+    <div
+      class="flex-none bg-white shadow-xs border-b border-gray-200"
+      data-testid="top-bar"
+    >
       <div class={[@title_class, @title_height]}>
         <%= if @current_user do %>
           <nav class="flex" aria-label="Breadcrumb">
@@ -129,6 +133,13 @@ defmodule LightningWeb.LayoutComponents do
                 <.breadcrumb path="/projects">
                   <:label>Projects</:label>
                 </.breadcrumb>
+
+                <%= if @project.parent_id && Ecto.assoc_loaded?(@project.parent) do %>
+                  <.breadcrumb path={"/projects/#{@project.parent.id}/w"}>
+                    <:label>{@project.parent.name}</:label>
+                  </.breadcrumb>
+                <% end %>
+
                 <.breadcrumb path={"/projects/#{@project.id}/w"}>
                   <:label>{@project.name}</:label>
                 </.breadcrumb>

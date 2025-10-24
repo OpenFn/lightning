@@ -130,6 +130,11 @@ defmodule Lightning.Config do
     end
 
     @impl true
+    def env do
+      Application.get_env(:lightning, :env)
+    end
+
+    @impl true
     def email_sender_name do
       Application.get_env(:lightning, :emails, [])
       |> Keyword.get(:sender_name)
@@ -258,6 +263,11 @@ defmodule Lightning.Config do
       promex_config() |> Keyword.get(:metrics_endpoint_token)
     end
 
+    @impl true
+    def promex_expensive_metrics_enabled? do
+      promex_config() |> Keyword.get(:expensive_metrics_enabled)
+    end
+
     defp promex_config do
       Application.get_env(:lightning, Lightning.PromEx, [])
     end
@@ -325,6 +335,11 @@ defmodule Lightning.Config do
     end
 
     @impl true
+    def broadcast_work_available? do
+      Application.get_env(:lightning, :broadcast_work_available)
+    end
+
+    @impl true
     def metrics_run_performance_age_seconds do
       metrics_config() |> Keyword.get(:run_performance_age_seconds)
     end
@@ -345,6 +360,58 @@ defmodule Lightning.Config do
     end
 
     defp metrics_config, do: Application.get_env(:lightning, :metrics)
+
+    @impl true
+    def sentry do
+      Application.get_env(:lightning, :sentry, Sentry)
+    end
+
+    @impl true
+    def webhook_retry do
+      default_webhook_retry()
+      |> Keyword.merge(Application.get_env(:lightning, :webhook_retry, []))
+      |> normalize_retry()
+    end
+
+    @impl true
+    def webhook_retry(key) when is_atom(key) do
+      webhook_retry() |> Keyword.fetch!(key)
+    end
+
+    @impl true
+    def webhook_response_timeout_ms do
+      Application.get_env(:lightning, :webhook_response_timeout_ms)
+    end
+
+    defp default_webhook_retry do
+      [
+        max_attempts: 5,
+        initial_delay_ms: 100,
+        max_delay_ms: 10_000,
+        backoff_factor: 2.0,
+        timeout_ms: 60_000,
+        jitter: true
+      ]
+    end
+
+    defp normalize_retry(opts) do
+      max_attempts = max(1, Keyword.get(opts, :max_attempts, 5))
+      initial_ms = max(0, Keyword.get(opts, :initial_delay_ms, 100))
+      max_delay_ms = max(initial_ms, Keyword.get(opts, :max_delay_ms, 10_000))
+      timeout_ms = max(0, Keyword.get(opts, :timeout_ms, 60_000))
+      backoff_factor = max(1.0, 1.0 * Keyword.get(opts, :backoff_factor, 2.0))
+
+      jitter = !!Keyword.get(opts, :jitter, true)
+
+      [
+        max_attempts: max_attempts,
+        initial_delay_ms: initial_ms,
+        max_delay_ms: max_delay_ms,
+        timeout_ms: timeout_ms,
+        backoff_factor: backoff_factor,
+        jitter: jitter
+      ]
+    end
   end
 
   @callback apollo(key :: atom() | nil) :: map()
@@ -352,6 +419,7 @@ defmodule Lightning.Config do
   @callback cors_origin() :: list()
   @callback default_max_run_duration() :: integer()
   @callback email_sender_name() :: String.t()
+  @callback env() :: :dev | :test | :prod
   @callback get_extension_mod(key :: atom()) :: any()
   @callback google(key :: atom()) :: any()
   @callback grace_period() :: integer()
@@ -372,6 +440,7 @@ defmodule Lightning.Config do
   @callback promex_metrics_endpoint_authorization_required?() :: boolean()
   @callback promex_metrics_endpoint_scheme() :: String.t()
   @callback promex_metrics_endpoint_token() :: String.t()
+  @callback promex_expensive_metrics_enabled?() :: boolean()
   @callback purge_deleted_after_days() :: integer()
   @callback activity_cleanup_chunk_size() :: integer()
   @callback default_ecto_database_timeout() :: integer()
@@ -400,6 +469,11 @@ defmodule Lightning.Config do
   @callback external_metrics_module() :: module() | nil
   @callback ai_assistant_modes() :: %{atom() => module()}
   @callback per_workflow_claim_limit() :: pos_integer()
+  @callback broadcast_work_available?() :: boolean()
+  @callback sentry() :: module()
+  @callback webhook_retry() :: Keyword.t()
+  @callback webhook_retry(key :: atom()) :: any()
+  @callback webhook_response_timeout_ms() :: integer()
 
   @doc """
   Returns the configuration for the `Lightning.AdaptorRegistry` service
@@ -413,6 +487,15 @@ defmodule Lightning.Config do
   """
   def apollo(key \\ nil) do
     impl().apollo(key)
+  end
+
+  @doc """
+  Returns the environment.
+
+  Either :dev, :test, or :prod.
+  """
+  def env do
+    impl().env()
   end
 
   @doc """
@@ -578,6 +661,10 @@ defmodule Lightning.Config do
     impl().promex_metrics_endpoint_token()
   end
 
+  def promex_expensive_metrics_enabled? do
+    impl().promex_expensive_metrics_enabled?()
+  end
+
   def ui_metrics_tracking_enabled? do
     impl().ui_metrics_tracking_enabled?()
   end
@@ -632,6 +719,26 @@ defmodule Lightning.Config do
 
   def per_workflow_claim_limit do
     impl().per_workflow_claim_limit()
+  end
+
+  def broadcast_work_available? do
+    impl().broadcast_work_available?()
+  end
+
+  def sentry do
+    impl().sentry()
+  end
+
+  def webhook_retry do
+    impl().webhook_retry()
+  end
+
+  def webhook_retry(key) when is_atom(key) do
+    impl().webhook_retry(key)
+  end
+
+  def webhook_response_timeout_ms do
+    impl().webhook_response_timeout_ms()
   end
 
   defp impl do

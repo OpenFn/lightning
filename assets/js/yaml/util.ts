@@ -2,6 +2,16 @@ import Ajv, { type ErrorObject } from 'ajv';
 import YAML from 'yaml';
 import { randomUUID } from '../common';
 import workflowV1Schema from './schema/workflow-spec.json';
+import {
+  WorkflowError,
+  YamlSyntaxError,
+  JobNotFoundError,
+  TriggerNotFoundError,
+  DuplicateJobNameError,
+  SchemaValidationError,
+  createWorkflowError
+} from './workflow-errors';
+
 import type {
   Position,
   SpecEdge,
@@ -26,57 +36,66 @@ const roundPosition = (pos: Position): Position => {
 };
 
 export const convertWorkflowStateToSpec = (
-  workflowState: WorkflowState
+  workflowState: WorkflowState,
+  includeIds: boolean = true
 ): WorkflowSpec => {
   const jobs: { [key: string]: SpecJob } = {};
   workflowState.jobs.forEach(job => {
-    const jobDetails: SpecJob = {} as SpecJob;
-    jobDetails.name = job.name;
-    jobDetails.adaptor = job.adaptor;
-    jobDetails.body = job.body;
-
-    const jobPos = workflowState.positions?.[job.id];
-    if (jobPos) {
-      jobDetails.pos = roundPosition(jobPos);
-    }
+    const pos = workflowState.positions?.[job.id]
+    const jobDetails: SpecJob = {
+      ...(includeIds && { id: job.id }),
+      name: job.name,
+      adaptor: job.adaptor,
+      body: job.body,
+      pos: pos ? roundPosition(pos): undefined
+    };
     jobs[hyphenate(job.name)] = jobDetails;
   });
 
   const triggers: { [key: string]: SpecTrigger } = {};
   workflowState.triggers.forEach(trigger => {
-    const triggerDetails: SpecTrigger = { type: trigger.type } as SpecTrigger;
-    if (trigger.cron_expression) {
-      triggerDetails.cron_expression = trigger.cron_expression;
-    }
-    triggerDetails.enabled = trigger.enabled;
+    const pos = workflowState.positions?.[trigger.id];
+    const triggerDetails: SpecTrigger = {
+      ...(includeIds && { id: trigger.id }),
+      type: trigger.type,
+      enabled: trigger.enabled,
+      pos: trigger.type !== 'kafka' && pos ? roundPosition(pos) : undefined,
+      cron_expression: trigger.type === 'cron' && 'cron_expression' in trigger ? trigger.cron_expression : undefined
+    } as SpecTrigger;
 
-    const triggerPos = workflowState.positions?.[trigger.id];
-    if (triggerDetails.type !== 'kafka' && triggerPos) {
-      triggerDetails.pos = roundPosition(triggerPos);
-    }
     // TODO: handle kafka config
     triggers[trigger.type] = triggerDetails;
   });
 
   const edges: { [key: string]: SpecEdge } = {};
   workflowState.edges.forEach(edge => {
-    const edgeDetails: SpecEdge = {} as SpecEdge;
+    const edgeDetails: SpecEdge = {
+      ...(includeIds && { id: edge.id }),
+      condition_type: edge.condition_type,
+      enabled: edge.enabled,
+      target_job: ''
+    };
 
     if (edge.source_trigger_id) {
       const trigger = workflowState.triggers.find(
         trigger => trigger.id === edge.source_trigger_id
       );
-      edgeDetails.source_trigger = trigger.type;
+      if (trigger) {
+        edgeDetails.source_trigger = trigger.type;
+      }
     }
     if (edge.source_job_id) {
       const job = workflowState.jobs.find(job => job.id === edge.source_job_id);
-      edgeDetails.source_job = hyphenate(job.name);
+      if (job) {
+        edgeDetails.source_job = hyphenate(job.name);
+      }
     }
     const targetJob = workflowState.jobs.find(
       job => job.id === edge.target_job_id
     );
-    edgeDetails.target_job = hyphenate(targetJob.name);
-    edgeDetails.condition_type = edge.condition_type;
+    if (targetJob) {
+      edgeDetails.target_job = hyphenate(targetJob.name);
+    }
 
     if (edge.condition_label) {
       edgeDetails.condition_label = edge.condition_label;
@@ -85,19 +104,19 @@ export const convertWorkflowStateToSpec = (
       edgeDetails.condition_expression = edge.condition_expression;
     }
 
-    edgeDetails.enabled = edge.enabled;
-
     const source_name = edgeDetails.source_trigger || edgeDetails.source_job;
     const target_name = edgeDetails.target_job;
 
     edges[`${source_name}->${target_name}`] = edgeDetails;
   });
 
-  const workflowSpec: WorkflowSpec = {} as WorkflowSpec;
-  workflowSpec.name = workflowState.name;
-  workflowSpec.jobs = jobs;
-  workflowSpec.triggers = triggers;
-  workflowSpec.edges = edges;
+  const workflowSpec: WorkflowSpec = {
+    ...(includeIds && { id: workflowState.id }),
+    name: workflowState.name,
+    jobs: jobs,
+    triggers: triggers,
+    edges: edges
+  };
 
   return workflowSpec;
 };
@@ -108,7 +127,7 @@ export const convertWorkflowSpecToState = (
   const positions: Record<string, Position> = {};
   const stateJobs: Record<string, StateJob> = {};
   Object.entries(workflowSpec.jobs).forEach(([key, specJob]) => {
-    const uId = randomUUID();
+    const uId = specJob.id || randomUUID();
     stateJobs[key] = {
       id: uId,
       name: specJob.name,
@@ -120,11 +139,11 @@ export const convertWorkflowSpecToState = (
 
   const stateTriggers: Record<string, StateTrigger> = {};
   Object.entries(workflowSpec.triggers).forEach(([key, specTrigger]) => {
-    const uId = randomUUID();
+    const uId = specTrigger.id || randomUUID();
     const trigger = {
       id: uId,
       type: specTrigger.type,
-      enabled: true,
+      enabled: specTrigger.enabled !== undefined ? specTrigger.enabled : true,
     };
 
     if (specTrigger.type !== 'kafka' && specTrigger.pos) {
@@ -137,7 +156,6 @@ export const convertWorkflowSpecToState = (
       }
 
     // TODO: handle kafka config
-
     stateTriggers[key] = trigger;
   });
 
@@ -145,13 +163,11 @@ export const convertWorkflowSpecToState = (
   Object.entries(workflowSpec.edges).forEach(([key, specEdge]) => {
     const targetJob = stateJobs[specEdge.target_job];
     if (!targetJob) {
-      throw new Error(
-        `TargetJob: '${specEdge.target_job}' specified by edge '${key}' not found in spec`
-      );
+      throw new JobNotFoundError(specEdge.target_job, key, false);
     }
 
     const edge: StateEdge = {
-      id: randomUUID(),
+      id: specEdge.id || randomUUID(),
       condition_type: specEdge.condition_type,
       enabled: specEdge.enabled,
       target_job_id: targetJob.id,
@@ -160,9 +176,7 @@ export const convertWorkflowSpecToState = (
     if (specEdge.source_trigger) {
       const trigger = stateTriggers[specEdge.source_trigger];
       if (!trigger) {
-        throw new Error(
-          `SourceTrigger: '${specEdge.source_trigger}' specified by edge '${key}' not found in spec`
-        );
+        throw new TriggerNotFoundError(specEdge.source_trigger, key);
       }
       edge.source_trigger_id = trigger.id;
     }
@@ -170,9 +184,7 @@ export const convertWorkflowSpecToState = (
     if (specEdge.source_job) {
       const job = stateJobs[specEdge.source_job];
       if (!job) {
-        throw new Error(
-          `SourceJob: '${specEdge.source_job}' specified by edge '${key}' not found in spec`
-        );
+        throw new JobNotFoundError(specEdge.source_job, key, true);
       }
       edge.source_job_id = job.id;
     }
@@ -189,7 +201,7 @@ export const convertWorkflowSpecToState = (
   });
 
   const workflowState: WorkflowState = {
-    id: randomUUID(),
+    id: workflowSpec.id || randomUUID(),
     name: workflowSpec.name,
     jobs: Object.values(stateJobs),
     edges: Object.values(stateEdges),
@@ -201,41 +213,58 @@ export const convertWorkflowSpecToState = (
 };
 
 export const parseWorkflowYAML = (yamlString: string): WorkflowSpec => {
-  const ajv = new Ajv({ allErrors: true });
-  const validate = ajv.compile(workflowV1Schema);
+  try {
+    const parsedYAML = YAML.parse(yamlString);
+    
+    const ajv = new Ajv({ allErrors: true });
+    const validate = ajv.compile(workflowV1Schema);
+    const isSchemaValid = validate(parsedYAML);
 
-  // throw error one at a time
-  const parsedYAML = YAML.parse(yamlString);
-
-  const isSchemaValid = validate(parsedYAML);
-
-  if (!isSchemaValid) {
-    const error = findActionableAjvError(validate.errors);
-
-    throw new Error(humanizeAjvError(error));
-  }
-
-  // Validate job names
-  Object.entries(parsedYAML['jobs']).reduce(
-    (acc, [key, specJob]: [string, object]) => {
-      if (acc[specJob.name]) {
-        throw new Error(
-          `Duplicate job name '${specJob.name}' found at 'jobs/${key}'`
-        );
+    if (!isSchemaValid && validate.errors) {
+      const error = findActionableAjvError(validate.errors);
+      if (error) {
+        throw new SchemaValidationError(error);
       }
-      acc[specJob.name] = true;
-      return acc;
-    },
-    {}
-  );
+    }
 
-  return parsedYAML as WorkflowSpec;
+    // Validate job names
+    const seenNames: Record<string, boolean> = {};
+    Object.entries(parsedYAML['jobs']).forEach(
+      ([key, specJob]: [string, any]) => {
+        if (seenNames[specJob.name]) {
+          throw new DuplicateJobNameError(specJob.name, key);
+        }
+        seenNames[specJob.name] = true;
+      }
+    );
+
+    return parsedYAML as WorkflowSpec;
+  } catch (error) {
+    // If it's already one of our errors, re-throw it
+    if (error instanceof WorkflowError) {
+      throw error;
+    }
+    
+    // If it's a YAML parsing error
+    if (error instanceof Error && error.name === 'YAMLParseError') {
+      throw new YamlSyntaxError(error.message, error);
+    }
+    
+    // For any other error, create a workflow error
+    throw createWorkflowError(error);
+  }
 };
 
 export const parseWorkflowTemplate = (code: string): WorkflowSpec => {
-  const parsedYAML = YAML.parse(code);
-
-  return parsedYAML as WorkflowSpec;
+  try {
+    const parsedYAML = YAML.parse(code);
+    return parsedYAML as WorkflowSpec;
+  } catch (error) {
+    if (error instanceof Error && error.name === 'YAMLParseError') {
+      throw new YamlSyntaxError(error.message, error);
+    }
+    throw createWorkflowError(error);
+  }
 };
 
 const humanizeAjvError = (error: ErrorObject): string => {

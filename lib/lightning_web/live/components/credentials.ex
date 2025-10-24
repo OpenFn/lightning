@@ -12,9 +12,15 @@ defmodule LightningWeb.Components.Credentials do
                         target: "##{@credentials_index_live_component}"
                       )
 
-  def credentials_index_live_component(assigns) do
-    assigns = assign(assigns, :id, @credentials_index_live_component)
+  attr :id, :string, default: @credentials_index_live_component
+  attr :current_user, :any, required: true
+  attr :project, :any
+  attr :projects, :list, required: true
+  attr :can_create_project_credential, :any, required: true
+  attr :show_owner_in_tables, :boolean, default: false
+  attr :return_to, :string, required: true
 
+  def credentials_index_live_component(assigns) do
     ~H"""
     <.live_component
       id={@id}
@@ -77,11 +83,12 @@ defmodule LightningWeb.Components.Credentials do
   attr :id, :string, required: false
   attr :type, :string, required: true
   attr :form, :map, required: true
+  attr :current_body, :map, default: %{}
   slot :inner_block
 
   def form_component(%{type: "raw"} = assigns) do
     ~H"""
-    <RawBodyComponent.fieldset :let={l} form={@form}>
+    <RawBodyComponent.fieldset :let={l} form={@form} current_body={@current_body}>
       {render_slot(@inner_block, l)}
     </RawBodyComponent.fieldset>
     """
@@ -89,7 +96,11 @@ defmodule LightningWeb.Components.Credentials do
 
   def form_component(%{type: _schema} = assigns) do
     ~H"""
-    <JsonSchemaBodyComponent.fieldset :let={l} form={@form}>
+    <JsonSchemaBodyComponent.fieldset
+      :let={l}
+      form={@form}
+      current_body={@current_body}
+    >
       {render_slot(@inner_block, l)}
     </JsonSchemaBodyComponent.fieldset>
     """
@@ -100,6 +111,7 @@ defmodule LightningWeb.Components.Credentials do
   attr :available_projects, :list, required: true
   attr :projects, :list, required: true
   attr :selected_projects, :list, required: true
+  attr :workflows_using_credentials, :map, default: %{}
   attr :selected, :string, required: true
   attr :phx_target, :any, default: nil
 
@@ -126,12 +138,12 @@ defmodule LightningWeb.Components.Credentials do
     ~H"""
     <div class="col-span-3">
       <div>
-        <label
+        <%!-- <label
           for={@select_id}
           class={["block text-sm font-semibold leading-6 text-slate-800"]}
         >
           Project
-        </label>
+        </label> --%>
         <div class="mt-1 pb-3">
           <select
             id={@select_id}
@@ -139,7 +151,7 @@ defmodule LightningWeb.Components.Credentials do
             class={[
               "block w-full rounded-lg border border-secondary-300 bg-white",
               "sm:text-sm shadow-xs",
-              "focus:border-primary-300 focus:ring focus:ring-primary-200 focus:ring-primary-200/50",
+              "focus:border-primary-300 focus:ring focus:ring-primary-200/50",
               "disabled:cursor-not-allowed "
             ]}
             phx-change="add_selected_project"
@@ -166,6 +178,7 @@ defmodule LightningWeb.Components.Credentials do
               phx-click="remove_selected_project"
               type="button"
               class="group relative -mr-1 h-3.5 w-3.5 rounded-sm hover:bg-gray-500/20"
+              {if(@workflows_using_credentials[project.id], do: %{"data-confirm": "Warning: This credential is in use by the following workflows: #{Enum.join(@workflows_using_credentials[project.id], ", ")}. If you revoke access to the \"#{project.name}\" project, runs for those workflows will probably fail until you provide a new credential. Are you sure you want to revoke access?"}, else: %{})}
             >
               <span class="sr-only">Remove</span>
               <Heroicons.x_mark solid class="w-4 h-4" />
@@ -210,47 +223,67 @@ defmodule LightningWeb.Components.Credentials do
   attr :disabled, :boolean, default: false
   attr :phx_target, :any, default: "##{@credentials_index_live_component}"
 
-  def new_credential_menu_button(assigns) do
-    assigns =
-      assign_new(assigns, :options, fn ->
-        [
-          %{
-            name: "Credential",
-            id: "new-credential-option-menu-item",
-            target: "new_credential"
-          },
-          %{
-            name: "OAuth client",
-            id: "new-oauth-client-option-menu-item",
-            target: "new_oauth_client",
-            badge: "Advanced"
-          }
-        ]
-      end)
+  slot :option, required: true do
+    attr :id, :string, required: true
+    attr :target, :string, required: true
+    attr :badge, :string, required: false
+    attr :disabled, :boolean, required: false
+  end
 
+  def new_credential_menu_button(assigns) do
     ~H"""
     <Common.simple_dropdown id={@id}>
       <:button>
         Add new
       </:button>
       <:options>
-        <a
-          :for={%{name: name, id: id, target: target} = option <- @options}
-          href="#"
-          role="menuitem"
-          tabindex="-1"
-          id={id}
-          phx-click={target}
+        <.menu_button_option
+          :for={option <- @option}
+          id={option.id}
+          target={option.target}
+          badge={option[:badge]}
+          disabled={Map.get(option, :disabled, false)}
           phx-target={@phx_target}
-          disabled={@disabled}
         >
-          {name}<span
-            :if={Map.get(option, :badge)}
-            class="ml-2 inline-flex items-center rounded-md bg-gray-50 px-1.5 py-0.5 text-xs font-medium text-gray-600 ring-1 ring-inset ring-gray-500/10"
-          ><%= Map.get(option, :badge) %></span>
-        </a>
+          {render_slot(option)}
+        </.menu_button_option>
       </:options>
     </Common.simple_dropdown>
+    """
+  end
+
+  attr :id, :string, required: true
+  attr :target, :string, required: true
+  attr :badge, :string, default: nil
+  attr :disabled, :boolean, required: false
+  attr :rest, :global
+  slot :inner_block, required: true
+
+  defp menu_button_option(assigns) do
+    ~H"""
+    <span
+      role="menuitem"
+      tabindex="-1"
+      phx-click={!@disabled && "show_modal"}
+      phx-value-target={!@disabled && @target}
+      id={@id}
+      class={
+        if @disabled, do: "text-gray-400 cursor-not-allowed", else: "cursor-pointer"
+      }
+      {@rest}
+    >
+      {render_slot(@inner_block)}
+      <span
+        :if={@badge}
+        class={[
+          "ml-2 inline-flex items-center rounded-md bg-gray-50",
+          "px-1.5 py-0.5 text-xs font-medium text-gray-600 ring-1",
+          "ring-inset ring-gray-500/10"
+        ]}
+      >
+        {@badge}
+      </span>
+    </span>
     """
   end
 end

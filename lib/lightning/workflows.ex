@@ -19,6 +19,7 @@ defmodule Lightning.Workflows do
   alias Lightning.Workflows.Trigger
   alias Lightning.Workflows.Triggers
   alias Lightning.Workflows.Workflow
+  alias Lightning.WorkflowVersions
 
   defdelegate subscribe(project_id), to: Events
 
@@ -55,6 +56,29 @@ defmodule Lightning.Workflows do
       order_by: :name
     )
     |> Repo.all()
+  end
+
+  @spec project_workflows_using_credentials([
+          project_credential :: Ecto.UUID.t(),
+          ...
+        ]) ::
+          %{
+            optional(project :: Ecto.UUID.t()) => [
+              workflow_name :: binary(),
+              ...
+            ]
+          }
+  def project_workflows_using_credentials(project_credential_ids) do
+    query =
+      from w in Workflow,
+        join: j in assoc(w, :jobs),
+        where: j.project_credential_id in ^project_credential_ids,
+        select: %{name: w.name, project_id: w.project_id},
+        distinct: true
+
+    query
+    |> Repo.all()
+    |> Enum.group_by(& &1.project_id, & &1.name)
   end
 
   @doc """
@@ -105,11 +129,23 @@ defmodule Lightning.Workflows do
     |> preload(^include)
   end
 
-  @spec save_workflow(Ecto.Changeset.t(Workflow.t()) | map(), struct()) ::
+  @spec save_workflow(
+          Ecto.Changeset.t(Workflow.t()) | map(),
+          struct(),
+          keyword()
+        ) ::
           {:ok, Workflow.t()}
           | {:error, Ecto.Changeset.t(Workflow.t())}
           | {:error, :workflow_deleted}
-  def save_workflow(%Ecto.Changeset{data: %Workflow{}} = changeset, actor) do
+  def save_workflow(changeset_or_attrs, actor, opts \\ [])
+
+  def save_workflow(
+        %Ecto.Changeset{data: %Workflow{}} = changeset,
+        actor,
+        opts
+      ) do
+    skip_reconcile = Keyword.get(opts, :skip_reconcile, false)
+
     Multi.new()
     |> Multi.put(:actor, actor)
     |> Multi.run(:validate, fn _repo, _changes ->
@@ -128,12 +164,26 @@ defmodule Lightning.Workflows do
       end
     end)
     |> maybe_audit_workflow_state_changes(changeset)
+    |> Multi.run(:workflow_version, fn _repo, %{workflow: workflow} ->
+      hash = WorkflowVersions.generate_hash(workflow)
+      WorkflowVersions.record_version(workflow, hash)
+    end)
     |> Repo.transaction()
     |> case do
       {:ok, %{workflow: workflow}} ->
         publish_kafka_trigger_events(changeset)
 
         Events.workflow_updated(workflow)
+
+        # Reconcile changes with active collaborative editing sessions
+        # Skip reconciliation when changes originate from collaborative session
+        # to prevent circular updates (Session → DB → Session)
+        unless skip_reconcile do
+          Lightning.Collaboration.WorkflowReconciler.reconcile_workflow_changes(
+            changeset,
+            workflow
+          )
+        end
 
         {:ok, workflow}
 
@@ -155,9 +205,9 @@ defmodule Lightning.Workflows do
     end
   end
 
-  def save_workflow(%{} = attrs, actor) do
+  def save_workflow(%{} = attrs, actor, opts) do
     Workflow.changeset(%Workflow{}, attrs)
-    |> save_workflow(actor)
+    |> save_workflow(actor, opts)
   end
 
   @spec publish_kafka_trigger_events(Ecto.Changeset.t(Workflow.t())) :: :ok
@@ -367,6 +417,15 @@ defmodule Lightning.Workflows do
     from w in query, order_by: [asc: w.name]
   end
 
+  @doc """
+  Returns a query for workflows accessible to a user
+  """
+  @spec workflows_for_user_query(Lightning.Accounts.User.t()) ::
+          Ecto.Queryable.t()
+  def workflows_for_user_query(%Lightning.Accounts.User{} = user) do
+    Query.workflows_for(user)
+  end
+
   @spec to_project_space([Workflow.t()]) :: %{}
   def to_project_space(workflows) when is_list(workflows) do
     %{
@@ -452,7 +511,7 @@ defmodule Lightning.Workflows do
   end
 
   @doc """
-  Gets a Single Edge by it's webhook trigger.
+  Gets a single Webhook Trigger by its `custom_path` or `id`.
   """
   def get_webhook_trigger(path, opts \\ []) when is_binary(path) do
     preloads = opts |> Keyword.get(:include, [])
@@ -463,36 +522,8 @@ defmodule Lightning.Workflows do
           "coalesce(?, ?)",
           t.custom_path,
           type(t.id, :string)
-        ) == ^path,
+        ) == ^path and t.type == :webhook,
       preload: ^preloads
-    )
-    |> Repo.one()
-  end
-
-  @doc """
-  Gets a single `Trigger` by its `custom_path` or `id`.
-
-  ## Parameters
-  - `path`: A binary string representing the `custom_path` or `id` of the trigger.
-
-  ## Returns
-  - Returns a `Trigger` struct if a trigger is found.
-  - Returns `nil` if no trigger is found for the given `path`.
-
-  ## Examples
-
-  ```
-  Lightning.Workflows.get_trigger_by_webhook("some_path_or_id")
-  # => %Trigger{id: 1, custom_path: "some_path_or_id", ...}
-
-  Lightning.Workflows.get_trigger_by_webhook("non_existent_path_or_id")
-  # => nil
-  ```
-  """
-  def get_trigger_by_webhook(path) when is_binary(path) do
-    from(t in Trigger,
-      where:
-        fragment("coalesce(?, ?)", t.custom_path, type(t.id, :string)) == ^path
     )
     |> Repo.one()
   end

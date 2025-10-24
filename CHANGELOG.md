@@ -17,9 +17,481 @@ and this project adheres to
 
 ### Added
 
+- Ability to delay webhook trigger replies until a workflow finishes
+  [#PR3785](https://github.com/OpenFn/lightning/pull/3785)
+- REST API for runs, work_orders, and log_lines to refresh GovStack compliance
+  [#1656](https://github.com/OpenFn/lightning/issues/1656) &
+  [PR#3786](https://github.com/OpenFn/lightning/pull/3786)
+- Added full-screen IDE for job editing
+  [#3708](https://github.com/OpenFn/lightning/issues/3708)
+- Show collaborative editor toggle (beaker icon) when creating new workflows
+  [#3797](https://github.com/OpenFn/lightning/pull/3797)
+- Auto-format code on commit with git hooks
+  [#3806](https://github.com/OpenFn/lightning/pull/3806)
+- Escape key support for closing inspector panels in collaborative workflow
+  editor, using react-hotkeys-hook for scoped keyboard shortcuts with modal
+  priority [#3768](https://github.com/OpenFn/lightning/issues/3768)
+
 ### Changed
 
+- Removed Cancel button from inspector panel footers (redundant with X button
+  and Escape key) [#3768](https://github.com/OpenFn/lightning/issues/3768)
+- Refactored inspector component architecture to use composition pattern with
+  reusable layout shell and pure form components
+  [#3768](https://github.com/OpenFn/lightning/issues/3768)
+- Updated breadcrumb navigation to display parent project name before sandbox
+  name [#3474](https://github.com/OpenFn/lightning/issues/3474)
+
 ### Fixed
+
+- Backfilled `env` field for existing root projects to ensure environment chips
+  display correctly in workflow editor and inspector
+  [#3839](https://github.com/OpenFn/lightning/issues/3839)
+
+## [2.14.12] - 2025-10-21
+
+## [2.14.12-pre1] - 2025-10-21
+
+### Fixed
+
+- Ensure default positions when using the Workflow Assistant with manual
+  positioning enabled [#3795](https://github.com/OpenFn/lightning/issues/3795)
+
+## [2.14.12-pre] - 2025-10-21
+
+### Added
+
+- Editable EdgeInspector form in collaborative workflow editor with TanStack
+  Form, enabling users to configure edge properties (label, condition type, JS
+  expressions, enabled state) with auto-save and real-time collaborative editing
+  [#3701](https://github.com/OpenFn/lightning/issues/3701)
+- Delete nodes from Job panel in Collaborative Editor
+  [#3702](https://github.com/OpenFn/lightning/issues/3702)
+- Reintroduce the impeded project with hopefully better performance
+  characteristics [#3542](https://github.com/OpenFn/lightning/issues/3542)
+
+### Changed
+
+- Tweaked the Sandbox color palette
+- Detect and clean stale CMake caches in bootstrap script
+  [PR#3762](https://github.com/OpenFn/lightning/pull/3762)
+- Implement workflow settings form using tanstack form
+  [#3643](https://github.com/OpenFn/lightning/issues/3643)
+- [#3774](https://github.com/OpenFn/lightning/pull/3774)Adjusted padding of
+  labels in the Workflow Diagram.
+
+### Fixed
+
+- Jobs in collaborative editor can now be saved without selecting a credential
+  [#3760](https://github.com/OpenFn/lightning/issues/3760)
+- Runtime permission checks in WorkflowChannel save/reset operations to prevent
+  unauthorized edits when user roles change during active collaboration sessions
+  [#3749](https://github.com/OpenFn/lightning/issues/3749)
+
+## [2.14.11] - 2025-10-15
+
+## [2.14.11-pre1] - 2025-10-15
+
+### Added
+
+- Create new workflow via YAML in the collaborative editor
+  [#3700](https://github.com/OpenFn/lightning/issues/3700)
+- E2E tests for edge validation in collaborative editor
+  [#3724](https://github.com/OpenFn/lightning/issues/3724)
+- Ensure that TOTP codes cannot be reused.
+  [#3758](https://github.com/OpenFn/lightning/issues/3758)
+
+### Changed
+
+- Detect and clean stale CMake caches in bootstrap script
+  [PR#3762](https://github.com/OpenFn/lightning/pull/3762)
+
+### Fixed
+
+- Credentials added to parent projects now automatically propagate to all
+  descendant sandbox projects, ensuring sandboxes have access to parent
+  credentials. Includes migration to backfill existing missing associations.
+  [#3756](https://github.com/OpenFn/lightning/issues/3756)
+
+## [2.14.11-pre] - 2025-10-14
+
+### Added
+
+- User interface for merging sandboxes
+  [#3436](https://github.com/OpenFn/lightning/issues/3436)
+- Credential environments user interface and runtime
+  [#3598](https://github.com/OpenFn/lightning/issues/3598)
+- Save button with validation and permissions in collaborative workflow editor
+  [#3635](https://github.com/OpenFn/lightning/issues/3635)
+- Workflow reset functionality in collaborative editor
+  [#3635](https://github.com/OpenFn/lightning/issues/3635)
+- Toast notifications and Redux DevTools integration for collaborative editor
+  [#3635](https://github.com/OpenFn/lightning/issues/3635)
+- E2E test infrastructure with Page Object Models for workflow testing
+- E2E testing guidelines for Playwright
+- Add project merging functionality
+  [#3432](https://github.com/OpenFn/lightning/issues/3432)
+- SessionContextStore for collaborative workflow editor to provide user,
+  project, and config data to React components via Phoenix Channel
+- E2E test infrastructure with Page Object Models for workflow editor testing
+- E2E test for workflow step creation and configuration
+- Force restart and AdaptorRegistry warming on E2E manager script
+
+### Changed
+
+- Delete oauth_tokens tables
+  [#3608](https://github.com/OpenFn/lightning/issues/3608)
+- Improved state management and store architecture in collaborative editor
+  [#3635](https://github.com/OpenFn/lightning/issues/3635)
+- Upgraded Tailwind CSS from 4.0.13 to 4.1.14
+
+### Fixed
+
+- Project merge now correctly preserves target project identity (name,
+  description, env, color) instead of overwriting with source metadata
+  [#3742](https://github.com/OpenFn/lightning/issues/3742)
+- New workflows created in sandboxes now properly retain all jobs, triggers, and
+  edges when merged into target projects (previously only workflow metadata was
+  copied, resulting in empty workflows)
+  [#3744](https://github.com/OpenFn/lightning/issues/3744)
+
+### Released
+
+## [2.14.10] - 2025-10-07
+
+## [2.14.10-pre] - 2025-10-07
+
+### Added
+
+- Worker "presence" module to track connected workers (and their capacity)
+  across the app. [#3725](https://github.com/OpenFn/lightning/pull/3725)
+- SessionContextStore for collaborative workflow editor to provide user,
+  project, and config data to React components via Phoenix Channel
+  [#3624](https://github.com/OpenFn/lightning/issues/3624)
+
+### Changed
+
+- Limit sandbox creation
+  [PR#3655](https://github.com/OpenFn/lightning/pull/3655)
+
+## [v2.14.9] - 2025-10-03
+
+## [v2.14.9-pre] - 2025-10-02
+
+### Added
+
+### Changed
+
+- Removed unused functions for getting dataclip bodies from postgres as
+  JSON/maps [#3653](https://github.com/OpenFn/lightning/issues/3653)
+- Limit sandbox creation
+  [PR#3655](https://github.com/OpenFn/lightning/pull/3655)
+
+### Fixed
+
+- Prevent the janitor trying to mark runs as lost that aren't actually lost
+  [PR#3672](https://github.com/OpenFn/lightning/pull/3672)
+- Fix canvas "lockup" after AI chat errors, prevent sending empty message to AI
+  [3605](https://github.com/OpenFn/lightning/issues/3605)
+
+## [v2.14.8] - 2025-10-01
+
+## [v2.14.8-pre1] - 2025-10-01
+
+### Fixed
+
+- Send back `null` if a requested dataclip has been wiped
+  [PR#3652](https://github.com/OpenFn/lightning/pull/3652)
+
+## [v2.14.8-pre] - 2025-10-01
+
+### Fixed
+
+- Reduced
+  [high server memory usage on dataclip body retrieval](https://github.com/OpenFn/lightning/issues/3641)
+  by 97% [PR#3651](https://github.com/OpenFn/lightning/pull/3651)
+
+## [v2.14.7] - 2025-09-30
+
+### Changed
+
+- Optimized map and join with `Enum.map_join/3`
+  [`c112f3d`](https://github.com/OpenFn/lightning/commit/c112f3df29f8ab83b187f3695fdaf32c0837a016)
+
+### Fixed
+
+- Fixed tests for dataclip live viewer
+  [#3648](https://github.com/OpenFn/lightning/issues/3648)
+
+## [v2.14.7-pre] - 2025-09-30
+
+### Added
+
+- Add database changes for credentials environments support
+  [#3597](https://github.com/OpenFn/lightning/issues/3597)
+- REST API for Credential creation, deletion, list
+  [#3583](https://github.com/OpenFn/lightning/issues/3583)
+
+### Changed
+
+- Bumped devDeps `ws-worker` version to `1.15.0` to better handle job
+  compilation memory issues
+  [#3613](https://github.com/OpenFn/lightning/pull/3613)
+
+### Fixed
+
+- Fix memory bloat on dataclip viewer in dataclip detail page
+  [#3641](https://github.com/OpenFn/lightning/issues/3641)
+- Ameliorate memory usage when scrubbing dataclips for security
+  [#3641](https://github.com/OpenFn/lightning/issues/3641)
+- Fixed bootstrap script compatibility for Intel Macs and older Bash versions
+  (3.1+) [#3623](https://github.com/OpenFn/lightning/pull/3623)
+- Fixed GDPR Compliance component
+  [#3611](https://github.com/OpenFn/lightning/issues/3611)
+- Fixed vertical alignment in breadcrumbs
+  [#3612](https://github.com/OpenFn/lightning/issues/3612)
+- Updated Project Digest to include count of work orders in an unsuccessful
+  state [#3616](https://github.com/OpenFn/lightning/issues/3616)
+
+## [v2.14.6] - 2025-09-30
+
+## [v2.14.6-pre1] - 2025-09-26
+
+### Changed
+
+- Modify `Common.root_name` to display any map with a `:name` key
+
+## [v2.14.6-pre] - 2025-09-25
+
+### Added
+
+- Sandbox Basic CRUD UI [#3412](https://github.com/OpenFn/lightning/issues/3412)
+  [#3431](https://github.com/OpenFn/lightning/issues/3431)
+- Generate workflow version on save
+  [#3452](https://github.com/OpenFn/lightning/issues/3452)
+- Add `bin/update-images` script for automated Dockerfile version management
+
+### Changed
+
+- Optimized queue query planner stability to prevent 60s+ spikes
+  [#3564](https://github.com/OpenFn/lightning/issues/3564)
+- Fix aarch64 (Apple Silicon) Dockerfile-dev build
+  [PR#3589](https://github.com/OpenFn/lightning/pull/3589)
+
+### Fixed
+
+- Fix project deletion for projects with webhook auth methods
+  [#3619](https://github.com/OpenFn/lightning/issues/3619),
+  [#3523](https://github.com/OpenFn/lightning/issues/3523)
+- Fix pagination bar rounding to match table corners
+  [#3595](https://github.com/OpenFn/lightning/issues/3595)
+- Restore export history button
+  [#3594](https://github.com/OpenFn/lightning/issues/3594)
+- Wrong timestamp information in mini-history for in-progress runs
+  [#3579](https://github.com/OpenFn/lightning/pull/3579)
+
+## [v2.14.5] - 2025-09-24
+
+## [v2.14.5-pre1] - 2025-09-11
+
+### Added
+
+- Hide sandboxes from project lists and project picker
+  [#3573](https://github.com/OpenFn/lightning/issues/3573)
+
+### Changed
+
+- Update deps
+
+## [v2.14.5-pre] - 2025-09-11
+
+### Added
+
+- Experimental feature - Collaborative Editing
+  [#3509](https://github.com/OpenFn/lightning/issues/3509)
+- API for provisioning Sandboxes
+  [#3430](https://github.com/OpenFn/lightning/issues/3430)
+- Added DB support for sandboxes and workflow version provenance.
+  [#3422](https://github.com/OpenFn/lightning/issues/3422)
+- Retry webhook events on transient database connection errors
+  [#3097](https://github.com/OpenFn/lightning/issues/3097)
+- Allow users to retry followed runs from the job panel
+  [#3502](https://github.com/OpenFn/lightning/issues/3502)
+
+### Changed
+
+- Make `:work_available` broadcast opt-out-able via ENV.
+  [#3574](https://github.com/OpenFn/lightning/pull/3574)
+- Enable X-Content-Type-Options header for static pages.
+  [#3534](https://github.com/OpenFn/lightning/issues/3534)
+- Refactor webhook auth methods modals
+  [#1588](https://github.com/OpenFn/lightning/issues/1588)
+
+### Fixed
+
+- Tooltip gets stuck when switching pages
+  [#3559](https://github.com/OpenFn/lightning/pull/3559)
+- Current run dataclip stuck when switching nodes
+  [#3560](https://github.com/OpenFn/lightning/pull/3560)
+
+## [v2.14.4] - 2025-09-09
+
+### Fixed
+
+- Fix Workflow AI Assistant apearing above inspector panel
+  [#3567](https://github.com/OpenFn/lightning/issues/3567)
+
+## [v2.14.3] - 2025-08-29
+
+## [v2.14.3-pre1] - 2025-08-22
+
+### Fixed
+
+- Clean UI for errors with recovery from the errors
+  [#3239](https://github.com/OpenFn/lightning/issues/3239)
+
+## [v2.14.3-pre] - 2025-08-21
+
+### Added
+
+- Visualizing runs on the workflow editor canvas
+  [#3387](https://github.com/OpenFn/lightning/issues/3387)
+- Add test gauge metric that can be used to set arbitrary values for the
+  purposes of triggering behaviour in metric consumers.
+  [3510](https://github.com/OpenFn/lightning/issues/3510)
+- Add test gauge metric that can be used to set arbitrary values for the
+  purposes of triggering behaviour in metric consumers.
+  [#3510](https://github.com/OpenFn/lightning/issues/3510)
+- Possibly temporary plumbing to allow the use of libcluster_postgres as an
+  additional mechanism for discovering Erlang nodes.
+  [#3482](https://github.com/OpenFn/lightning/issues/3482)
+- Remove redundant 'preconnect' link
+  [#3532](https://github.com/OpenFn/lightning/issues/3532)
+
+### Fixed
+
+- Fix cannot read properties of undefined (reading 'x') error on canvas
+  [#3530](https://github.com/OpenFn/lightning/issues/3530)
+- Hide Mini-History on new template page
+  [#3531](https://github.com/OpenFn/lightning/pull/3531)
+
+## [v2.14.2] - 2025-08-15
+
+## [v2.14.2-pre] - 2025-08-15
+
+### Fixed
+
+- Fixed issue where adaptors icons didn't change on the canvas when in
+  auto-layout mode [#3526](https://github.com/OpenFn/lightning/issues/3526)
+
+## [v2.14.1] - 2025-08-14
+
+### Changed
+
+- Removed impeded project metric until performance improvements can be made.
+  [#3519](https://github.com/OpenFn/lightning/issues/3519)
+
+## [v2.14.1-pre2] - 2025-08-12
+
+### Fixed
+
+- Fix workflow diagram collapsing in on itself to become a neutron star
+  [#3506](https://github.com/OpenFn/lightning/issues/3506)
+- Fix Oban crash when Apollo times out
+  [#3497](https://github.com/OpenFn/lightning/issues/3497)
+- Fix PostgreSQL UTF-8 error when inserting log lines with null bytes
+  [#3090](https://github.com/OpenFn/lightning/issues/3090)
+
+## [v2.14.1-pre1] - 2025-08-07
+
+### Fixed
+
+- Restored historical migration (⚠️ if you ran migrations on `v2.14.1-pre` by
+  editing your DB directly or dropping your DB first, you must undo those
+  changes by hand before running this migration) and added a migration to change
+  `:workflow_code` to `:code` on the AI Chat Messages table
+  [3495](https://github.com/OpenFn/lightning/issues/3495)
+
+## [v2.14.1-pre] - 2025-08-06
+
+### Added
+
+- Extended the AI Assistant to support editing existing workflows
+  [#3247](https://github.com/OpenFn/lightning/issues/3247)
+- Alert that workflows may break before letting users revoke access to a project
+  for their credential [#537](https://github.com/OpenFn/lightning/issues/537)
+
+### Changed
+
+- Upgraded Elixir from 1.17 to 1.18
+  [d35a6d1](https://github.com/OpenFn/lightning/commit/d35a6d1)
+
+### Fixed
+
+- Fix CTRL+S saving previously selected template when creating a workflow
+  [#3442](https://github.com/OpenFn/lightning/issues/3442)
+
+## [v2.14.0] - 2025-08-05
+
+### Fixed
+
+- Added "interactive" to checkbox disabled tooltip to allow user to click link,
+  ensure permissions line up with admin or above.
+  [PR-3473](https://github.com/OpenFn/lightning/pull/3473)
+- Fixed table action menus
+  [#3476](https://github.com/OpenFn/lightning/issues/3476)
+- Fixed "⚠️ Production" icon size in credentials table
+  [#3483](https://github.com/OpenFn/lightning/issues/3483)
+- Fixed test on history page
+  [3475](https://github.com/OpenFn/lightning/issues/3475)
+
+## [v2.14.0-pre1] - 2025-08-04
+
+### Added
+
+- Added a retry button to the work order row itself
+  [PR-3472](https://github.com/OpenFn/lightning/pull/3472)
+
+### Fixed
+
+- Fixed small table UI regression for history
+  [PR-3472](https://github.com/OpenFn/lightning/pull/3472)
+
+## [v2.14.0-pre] - 2025-08-01
+
+### Added
+
+- Allow users to name and preserve existing dataclips
+  [#311](https://github.com/OpenFn/lightning/issues/311)
+
+### Changed
+
+- Click to copy all timestamps in UTC across the application
+  [#1419](https://github.com/OpenFn/lightning/issues/1419)
+- Display relative times and respect browser timezones
+  [#1255](https://github.com/OpenFn/lightning/issues/1255)
+- Sortable history table
+  [PR-3356](https://github.com/OpenFn/lightning/pull/3356)
+- Visible run durations on the history table
+  [PR-3356](https://github.com/OpenFn/lightning/pull/3356)
+- Easier expansion of work orders in the history table
+  [PR-3356](https://github.com/OpenFn/lightning/pull/3356)
+
+## [v2.13.7-pre1] 2025-08-01
+
+### Added
+
+- Keychain credentials allow variable authentication/secret selection based on a
+  run's input dataclip [#3359](https://github.com/OpenFn/lightning/issues/3359)
+
+## [v2.13.7-pre] 2025-07-31
+
+### Fixed
+
+- Prevent requests to webhook URLs from matching non-webhook triggers
+  [#3453](https://github.com/OpenFn/lightning/issues/3453)
+- Authorized users unable to change the workflow concurrency setting
+  [#3459](https://github.com/OpenFn/lightning/issues/3459)
 
 ## [v2.13.6] - 2025-07-24
 
@@ -458,8 +930,9 @@ This bug was introduced in version `v2.12.3-pre` on May 29th. If you're tracking
 - Refactor OAuth credentials to reuse existing refresh tokens for same scopes
   [#2908](https://github.com/OpenFn/lightning/issues/2908) \
   ⚠️️ Please note that you will need to migrate your existing OAuth credentials.
-  To do that run the following command: `mix run priv/repo/migrate_oauth_credentials.exs`
-  for local setup or `docker exec -it <lightning_container_name> /app/bin/lightning eval "Lightning.Credentials.OauthMigration.run()"`
+  To do that run the following command:
+  `mix run priv/repo/migrate_oauth_credentials.exs` for local setup or
+  `docker exec -it <lightning_container_name> /app/bin/lightning eval "Lightning.Credentials.OauthMigration.run()"`
   for production environments.
 
 ### Changed

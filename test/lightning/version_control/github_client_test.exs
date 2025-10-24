@@ -40,7 +40,8 @@ defmodule Lightning.VersionControl.GithubClientTest do
                 message: "GitHub Certificate is misconfigured"
               }} = result
 
-      assert log =~ "Unexpected GitHub Response: #{inspect(resp_body)}"
+      assert log =~
+               "[invalid_certificate] GitHub Certificate is misconfigured (#{inspect(resp_body)})"
     end
 
     test "error is logged when 404 status code is received" do
@@ -71,7 +72,8 @@ defmodule Lightning.VersionControl.GithubClientTest do
                 message: "GitHub Installation APP ID is misconfigured"
               }} = result
 
-      assert log =~ "Unexpected GitHub Response: #{inspect(resp_body)}"
+      assert log =~
+               "[installation_not_found] GitHub Installation APP ID is misconfigured (#{inspect(resp_body)})"
     end
   end
 

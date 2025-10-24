@@ -176,32 +176,8 @@ defmodule Lightning.Factories do
     }
   end
 
-  def oauth_token_factory(attrs \\ %{}) do
-    scopes = Map.get(attrs, :scope, ["read", "write"])
-    unique_id = System.unique_integer([:positive])
-
-    default_token_body = %{
-      "access_token" => "access_token_#{unique_id}",
-      "refresh_token" => "refresh_token_#{unique_id}",
-      "token_type" => "bearer",
-      "expires_in" => 3600
-    }
-
-    %Lightning.Credentials.OauthToken{
-      body:
-        attrs
-        |> Map.get(:body, default_token_body)
-        |> Lightning.Helpers.normalize_keys(),
-      user: Map.get(attrs, :user, build(:user)),
-      oauth_client: Map.get(attrs, :oauth_client),
-      scopes: Enum.sort(scopes),
-      updated_at: DateTime.utc_now()
-    }
-  end
-
   def credential_factory(attrs \\ %{}) do
     %Lightning.Credentials.Credential{
-      body: %{},
       schema: "raw",
       name: sequence(:credential_name, &"credential#{&1}")
     }
@@ -212,6 +188,58 @@ defmodule Lightning.Factories do
     %Lightning.Projects.ProjectCredential{
       project: build(:project),
       credential: build(:credential)
+    }
+  end
+
+  def keychain_credential_factory do
+    %Lightning.Credentials.KeychainCredential{
+      name: sequence(:credential_name, &"keychain-credential-#{&1}"),
+      path: "$.user_id",
+      created_by: build(:user),
+      project: build(:project),
+      default_credential: nil
+    }
+  end
+
+  def credential_body_factory do
+    %Lightning.Credentials.CredentialBody{
+      name: "main",
+      body: %{"api_key" => "secret_value"},
+      credential: build(:credential)
+    }
+  end
+
+  def credential_body_with_environment_factory do
+    %Lightning.Credentials.CredentialBody{
+      name: sequence(:environment_name, ["main", "staging", "prod"]),
+      body: %{"api_key" => "secret_value"},
+      credential: build(:credential)
+    }
+  end
+
+  @doc """
+  Associates credential bodies with a credential.
+
+  ## Example
+
+      credential =
+        insert(:credential)
+        |> with_body(%{name: "main", body: %{"key" => "value"}})
+        |> with_body(%{name: "staging", body: %{"key" => "staging_value"}})
+  """
+  def with_body(credential, body_attrs \\ %{}) do
+    if credential.__meta__.state == :built do
+      raise "Cannot associate a body with a credential that has not been inserted"
+    end
+
+    body =
+      build(:credential_body, body_attrs)
+      |> merge_attributes(%{credential: credential})
+      |> insert()
+
+    %{
+      credential
+      | credential_bodies: merge_assoc(credential.credential_bodies, body)
     }
   end
 
@@ -269,6 +297,18 @@ defmodule Lightning.Factories do
     }
   end
 
+  def with_personal_access_token(user_token) do
+    %{
+      user_token
+      | token:
+          Lightning.Tokens.PersonalAccessToken.generate_and_sign!(
+            %{"sub" => "user:#{user_token.user.id}"},
+            Lightning.Config.token_signer()
+          ),
+        context: "api"
+    }
+  end
+
   def backup_code_factory do
     %Lightning.Accounts.UserBackupCode{
       code: Lightning.Accounts.UserBackupCode.generate_backup_code()
@@ -314,7 +354,6 @@ defmodule Lightning.Factories do
     %Lightning.AiAssistant.ChatSession{
       id: fn -> Ecto.UUID.generate() end,
       title: sequence(:session_title, &"Chat Session #{&1}"),
-      # Explicit default
       session_type: "job_code",
       expression: "fn(state => state)",
       adaptor: "@openfn/language-common@latest",
@@ -336,18 +375,14 @@ defmodule Lightning.Factories do
     build(:chat_session, %{
       session_type: "workflow_template",
       project: build(:project),
-      # Workflow sessions don't have jobs
       job: nil,
-      # Workflow sessions don't have expressions
       expression: nil,
-      # Workflow sessions don't have adaptors
       adaptor: nil,
       title:
         sequence(:workflow_session_title, &"Workflow Template Session #{&1}")
     })
   end
 
-  # Enhanced chat_message_factory with better defaults
   def chat_message_factory do
     %Lightning.AiAssistant.ChatMessage{
       content: sequence(:message_content, &"Message content #{&1}"),
@@ -355,7 +390,7 @@ defmodule Lightning.Factories do
       status: :success,
       is_deleted: false,
       is_public: false,
-      workflow_code: nil,
+      code: nil,
       user: build(:user),
       chat_session: build(:chat_session)
     }
@@ -382,7 +417,7 @@ defmodule Lightning.Factories do
   def workflow_assistant_message_factory do
     build(:assistant_chat_message, %{
       content: "Here's your generated workflow:",
-      workflow_code: """
+      code: """
       name: Generated Workflow
       jobs:
         process_data:
@@ -557,7 +592,7 @@ defmodule Lightning.Factories do
     |> with_edge({trigger, job})
   ```
   """
-  def with_job(workflow, job) do
+  def with_job(workflow, job \\ %{}) do
     %{
       workflow
       | jobs: merge_assoc(workflow.jobs, merge_attributes(job, %{workflow: nil}))
@@ -748,5 +783,64 @@ defmodule Lightning.Factories do
 
   def with_snapshot(workflow) do
     workflow |> tap(&Lightning.Workflows.Snapshot.create/1)
+  end
+
+  defp hex12(n) do
+    n
+    |> Integer.to_string(16)
+    |> String.downcase()
+    |> String.pad_leading(12, "0")
+  end
+
+  def workflow_version_factory do
+    %Lightning.Workflows.WorkflowVersion{
+      workflow: build(:workflow),
+      hash: sequence(:wv_hash, &hex12(&1)),
+      source: "app"
+    }
+  end
+
+  def with_version(%Lightning.Workflows.Workflow{} = workflow, attrs \\ %{}) do
+    unless workflow.__meta__.state == :loaded do
+      raise "with_version/2 expects an INSERTED workflow"
+    end
+
+    defaults = %{
+      workflow: workflow,
+      hash: sequence(:wv_hash, &hex12(&1)),
+      source: "app"
+    }
+
+    insert(:workflow_version, Map.merge(defaults, attrs))
+    workflow
+  end
+
+  def with_versions(
+        %Lightning.Workflows.Workflow{} = workflow,
+        n,
+        source \\ "app"
+      ) do
+    Enum.each(1..n, fn _ ->
+      insert(:workflow_version,
+        workflow: workflow,
+        hash: sequence(:wv_hash, &hex12(&1)),
+        source: source
+      )
+    end)
+
+    workflow
+  end
+
+  def sandbox_factory do
+    parent = build(:project)
+
+    %Lightning.Projects.Project{
+      name: sequence(:project_name, &"project-#{&1}"),
+      parent: parent
+    }
+  end
+
+  def sandbox_for(parent, attrs \\ %{}) do
+    build(:project, Map.merge(%{parent: parent}, attrs))
   end
 end

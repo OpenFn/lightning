@@ -33,7 +33,47 @@ export type WorkflowProps = {
   disabled: boolean;
   selection: string | null;
   positions: Positions | null;
+  runSteps: RunInfo;
+  history: WorkflowRunHistory;
 };
+
+export type RunStep = {
+  id: string;
+  job_id: Lightning.Job['id'];
+  error_type: string;
+  exit_reason: 'fail' | 'success' | 'crash' | null;
+  started_at: string;
+  finished_at: string;
+  input_dataclip_id: string;
+  // below don't come from backend
+  startNode?: boolean;
+  startBy: string;
+};
+
+export type RunInfo = {
+  start_from: string | null;
+  inserted_at: string;
+  isTrigger: boolean;
+  steps: RunStep[];
+  run_by: string | null;
+};
+
+export type WorkOrderStates = 'failed' | 'success' | 'crashed';
+export type WorkflowRunHistory = Array<{
+  id: string;
+  state: WorkOrderStates;
+  last_activity: string;
+  version: number;
+  runs: Array<{
+    id: string;
+    state: string;
+    error_type: string;
+    started_at: string;
+    finished_at: string;
+    selected?: boolean;
+  }>;
+  selected?: boolean;
+}>;
 
 export interface WorkflowState extends WorkflowProps {
   forceFit: boolean;
@@ -65,6 +105,11 @@ export interface WorkflowState extends WorkflowProps {
   applyPatches: (patches: Partial<ReplayAction>) => void;
   setDisabled: (value: boolean) => void;
   setSelection: (value: string) => void;
+  updateRuns: (
+    runs: RunInfo,
+    run_id: string | null,
+    history?: WorkflowRunHistory
+  ) => void;
 }
 
 // Immer's Patch type has an array of strings for the path, but RFC 6902
@@ -100,8 +145,16 @@ export type ReplayAction = {
   inverse: ImmerPatch[];
 };
 
-const undos: ReplayAction[] = [];
+let undos: ReplayAction[] = [];
 let redos: ReplayAction[] = [];
+
+export const RUNS_TMP: RunInfo = {
+  steps: [],
+  isTrigger: false,
+  start_from: null,
+  inserted_at: '',
+  run_by: null,
+};
 
 // simple squash function
 // I think after squashing. we can actually ignore in-between states.
@@ -141,7 +194,7 @@ function proposeChanges(
       fn(draft);
     },
     (p: ImmerPatch[], _inverse: ImmerPatch[]) => {
-      if (!skipUndoStack) {
+      if (!skipUndoStack && !state.disabled) {
         pushUndo({ patches: p, inverse: _inverse });
       }
       patches = p.map(toRFC6902Patch);
@@ -162,6 +215,8 @@ const DEFAULT_PROPS: WorkflowProps = {
   disabled: false,
   selection: null,
   positions: null,
+  runSteps: RUNS_TMP,
+  history: [],
 };
 
 export type WorkflowStore = StoreApi<WorkflowState>;
@@ -388,7 +443,7 @@ export const store: WorkflowStore = createStore<WorkflowState>()(
       }));
 
       // if there's an inverse, add this to undo stack
-      if (patches.inverse && patches.inverse.length) {
+      if (patches.inverse && patches.inverse.length && !get().disabled) {
         // don't forget to prep inverse patches path.
         const inverseImmerPatches: ImmerPatch[] = patches.inverse.map(
           patch => ({
@@ -410,12 +465,37 @@ export const store: WorkflowStore = createStore<WorkflowState>()(
         disabled: value,
       }));
     },
-    setState: set.bind(this),
+    setState(value) {
+      undos = [];
+      redos = [];
+      get().updateRuns(RUNS_TMP, null);
+      set(value);
+    },
     setSelection(value) {
       set(state => ({
         ...state,
         selection: value,
       }));
+    },
+    updateRuns(runs, run_id, history) {
+      set(state => {
+        const _history = (history || state.history).map(wo => {
+          let wselected = false;
+          return {
+            ...wo,
+            runs: wo.runs.map(run => {
+              const rselected = run.id === run_id;
+              if (rselected) wselected = true;
+              return { ...run, selected: rselected };
+            }),
+            selected: wselected,
+          };
+        });
+        return {
+          runSteps: runs,
+          history: _history,
+        };
+      });
     },
   })
 );

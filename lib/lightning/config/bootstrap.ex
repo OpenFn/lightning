@@ -50,6 +50,15 @@ defmodule Lightning.Config.Bootstrap do
       """
     end
 
+    if config_env() == :dev do
+      enabled = env!("LIVE_DEBUGGER", &Utils.ensure_boolean/1, true)
+      config :live_debugger, :disabled?, not enabled
+    end
+
+    # Load storage and webhook retry config early so endpoint can respect it.
+    setup_storage()
+    setup_webhook_retry()
+
     # Merge the configuration from the existing application environment into
     # this processes config dictionary.
     # Without this, values set in the application environment previously
@@ -256,7 +265,8 @@ defmodule Lightning.Config.Bootstrap do
         scheduler: 1,
         workflow_failures: 1,
         background: 1,
-        history_exports: 1
+        history_exports: 1,
+        ai_assistant: 10
       ]
 
     # https://plausible.io/ is an open-source, privacy-friendly alternative to
@@ -292,6 +302,10 @@ defmodule Lightning.Config.Bootstrap do
     config :lightning,
            :require_email_verification,
            env!("REQUIRE_EMAIL_VERIFICATION", &Utils.ensure_boolean/1, false)
+
+    config :lightning,
+           :webhook_response_timeout_ms,
+           env!("WEBHOOK_RESPONSE_TIMEOUT_MS", :integer, 30_000)
 
     # To actually send emails you need to configure the mailer to use a real
     # adapter. You may configure the swoosh api client of your choice.
@@ -414,8 +428,19 @@ defmodule Lightning.Config.Bootstrap do
       queue_interval: env!("DATABASE_QUEUE_INTERVAL", :integer, 1000)
 
     host = env!("URL_HOST", :string, "example.com")
-    port = env!("PORT", :integer, 4000)
+
+    port =
+      env!(
+        "PORT",
+        :integer,
+        Utils.get_env([:lightning, LightningWeb.Endpoint, :http, :port])
+      )
+
     url_port = env!("URL_PORT", :integer, 443)
+
+    config :lightning, LightningWeb.Endpoint,
+      url: [port: port],
+      http: [port: port]
 
     config :lightning,
       cors_origin:
@@ -486,16 +511,20 @@ defmodule Lightning.Config.Bootstrap do
 
       url_scheme = env!("URL_SCHEME", :string, "https")
 
+      retry_timeout_ms = Lightning.Config.webhook_retry(:timeout_ms)
+
+      idle_default_ms = max(60_000, retry_timeout_ms + 15_000)
+
       idle_timeout =
         env!(
           "IDLE_TIMEOUT",
           fn str ->
             case Integer.parse(str) do
-              :error -> 60_000
               {val, _} -> val * 1_000
+              :error -> idle_default_ms
             end
           end,
-          60_000
+          idle_default_ms
         )
 
       config :lightning, LightningWeb.Endpoint,
@@ -515,8 +544,7 @@ defmodule Lightning.Config.Bootstrap do
                 :lightning,
                 :max_dataclip_size_bytes,
                 10_000_000
-              ) *
-                10,
+              ) * 10,
             idle_timeout: idle_timeout
           ]
         ],
@@ -532,7 +560,8 @@ defmodule Lightning.Config.Bootstrap do
         pool_size: Enum.max([schedulers + 8, schedulers * 2])
 
       config :ex_unit,
-        assert_receive_timeout: env!("ASSERT_RECEIVE_TIMEOUT", :integer, 1000)
+        assert_receive_timeout: env!("ASSERT_RECEIVE_TIMEOUT", :integer, 1000),
+        timeout: env!("EX_UNIT_TIMEOUT", :integer, 60_000)
     end
 
     config :sentry,
@@ -548,6 +577,8 @@ defmodule Lightning.Config.Bootstrap do
       disabled: not env!("PROMEX_ENABLED", &Utils.ensure_boolean/1, false),
       manual_metrics_start_delay: :no_delay,
       drop_metrics_groups: [],
+      expensive_metrics_enabled:
+        env!("PROMEX_EXPENSIVE_METRICS_ENABLED", &Utils.ensure_boolean/1, false),
       grafana: [
         host: env!("PROMEX_GRAFANA_HOST", :string, ""),
         username: env!("PROMEX_GRAFANA_USER", :string, ""),
@@ -583,7 +614,7 @@ defmodule Lightning.Config.Bootstrap do
       run_queue_metrics_period_seconds:
         env!("METRICS_RUN_QUEUE_METRICS_PERIOD_SECONDS", :integer, 5),
       unclaimed_run_threshold_seconds:
-        env!("METRICS_UNCLAIMED_RUN_THRESHOLD_SECONDS", :integer, 300)
+        env!("METRICS_UNCLAIMED_RUN_THRESHOLD_SECONDS", :integer, 10)
 
     config :lightning,
            :per_workflow_claim_limit,
@@ -654,14 +685,34 @@ defmodule Lightning.Config.Bootstrap do
     config :lightning, :ui_metrics_tracking,
       enabled: env!("UI_METRICS_ENABLED", &Utils.ensure_boolean/1, false)
 
+    config :lightning,
+           :broadcast_work_available,
+           env!("BROADCAST_WORK_AVAILABLE", &Utils.ensure_boolean/1, true)
+
     config :lightning, :book_demo_banner,
       enabled: false,
       calendly_url: nil,
       openfn_workflow_url: nil
 
-    # # ==============================================================================
+    config :lightning, :distributed_erlang,
+      node_discovery_via_postgres_enabled:
+        env!(
+          "ERLANG_NODE_DISCOVERY_VIA_POSTGRES_ENABLED",
+          &Utils.ensure_boolean/1,
+          false
+        ),
+      node_discovery_via_postgres_channel_name:
+        env!(
+          "ERLANG_NODE_DISCOVERY_VIA_POSTGRES_CHANNEL_NAME",
+          :string,
+          "lightning-cluster"
+        )
+
+    # ==============================================================================
 
     setup_storage()
+
+    config :lightning, :env, config_env()
 
     # Commenting this out because the React modules aren't being used in prod
     # Utils.get_env([:esbuild, :default, :args]) returns nil in prod
@@ -795,6 +846,23 @@ defmodule Lightning.Config.Bootstrap do
       client_id: github_app_client_id,
       client_secret: github_app_client_secret
     ]
+  end
+
+  defp setup_webhook_retry do
+    webhook_retry_config =
+      [
+        max_attempts: env!("WEBHOOK_RETRY_MAX_ATTEMPTS", :integer, nil),
+        initial_delay_ms: env!("WEBHOOK_RETRY_INITIAL_DELAY_MS", :integer, nil),
+        max_delay_ms: env!("WEBHOOK_RETRY_MAX_DELAY_MS", :integer, nil),
+        backoff_factor: env!("WEBHOOK_RETRY_BACKOFF_FACTOR", :float, nil),
+        timeout_ms: env!("WEBHOOK_RETRY_TIMEOUT_MS", :integer, nil),
+        jitter: env!("WEBHOOK_RETRY_JITTER", &Utils.ensure_boolean/1, nil)
+      ]
+      |> Enum.reject(fn {_, value} -> is_nil(value) end)
+
+    if webhook_retry_config != [] do
+      config :lightning, :webhook_retry, webhook_retry_config
+    end
   end
 
   defp release_info do

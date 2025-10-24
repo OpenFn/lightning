@@ -40,7 +40,8 @@ defmodule LightningWeb.Components.DataTables do
               <.th>
                 Projects with access
               </.th>
-              <.th>Production</.th>
+              <.th>External ID</.th>
+              <.th>Environments</.th>
               <.th>
                 <span class="sr-only">Actions</span>
               </.th>
@@ -80,19 +81,108 @@ defmodule LightningWeb.Components.DataTables do
                     </span>
                   <% end %>
                 </.td>
-                <.td class="wrap-break-word max-w-[5rem]">
-                  <%= if credential.production do %>
-                    <div class="flex">
-                      <.icon
-                        name="hero-exclamation-triangle"
-                        class="w-5 h-5 text-secondary-500"
-                      /> &nbsp;Production
-                    </div>
+                <.td class="wrap-break-word max-w-[12rem]">
+                  <%= if credential.external_id do %>
+                    <code
+                      class="text-xs bg-gray-100 px-1 py-0.5 rounded truncate inline-block max-w-full"
+                      title={credential.external_id}
+                    >
+                      {credential.external_id}
+                    </code>
+                  <% else %>
+                    <span class="text-gray-400 text-sm">-</span>
                   <% end %>
+                </.td>
+                <.td class="text-left">
+                  <span
+                    id={"#{credential.id}-environments-tooltip"}
+                    class="text-base cursor-default text-gray-700"
+                    phx-hook="Tooltip"
+                    aria-label={
+                      Enum.join(credential.environment_names || ["main"], ", ")
+                    }
+                  >
+                    {length(credential.environment_names || [1])}
+                  </span>
                 </.td>
                 <.td>
                   <div class="flex justify-end items-center">
                     {render_slot(@actions, credential)}
+                  </div>
+                </.td>
+              </.tr>
+            <% end %>
+          </:body>
+        </.table>
+      <% end %>
+    </div>
+    """
+  end
+
+  attr :id, :string, required: true
+  attr :keychain_credentials, :list, required: true
+  attr :title, :string, required: true
+  attr :display_table_title, :boolean, default: true
+  attr :show_owner, :boolean, default: false
+
+  slot :actions,
+    doc: "the slot for showing user actions in the last table column"
+
+  slot :empty_state,
+    doc: "the slot for showing an empty state"
+
+  def keychain_credentials_table(assigns) do
+    ~H"""
+    <div id={"#{@id}-table-container"}>
+      <div :if={@display_table_title} class="pb-1 leading-loose">
+        <h6 class="font-normal text-black">{@title}</h6>
+      </div>
+      <%= if Enum.empty?(@keychain_credentials) do %>
+        {render_slot(@empty_state)}
+      <% else %>
+        <.table id={"#{@id}-table"}>
+          <:header>
+            <.tr>
+              <.th>Name</.th>
+              <.th>Path</.th>
+              <.th>Default Credential</.th>
+              <.th :if={@show_owner}>
+                Owner
+              </.th>
+              <.th>
+                <span class="sr-only">Actions</span>
+              </.th>
+            </.tr>
+          </:header>
+          <:body>
+            <%= for keychain_credential <- @keychain_credentials do %>
+              <.tr id={"#{@id}-#{keychain_credential.id}"}>
+                <.td class="max-w-[15rem]">
+                  {keychain_credential.name}
+                </.td>
+                <.td class="wrap-break-word max-w-[25rem]">
+                  <code
+                    class="text-xs bg-gray-100 px-1 py-0.5 rounded truncate inline-block max-w-full"
+                    title={keychain_credential.path}
+                  >
+                    {keychain_credential.path}
+                  </code>
+                </.td>
+                <.td class="wrap-break-word max-w-[15rem]">
+                  <%= if keychain_credential.default_credential do %>
+                    {keychain_credential.default_credential.name}
+                  <% else %>
+                    <span class="text-gray-400 text-sm">None</span>
+                  <% end %>
+                </.td>
+                <.td :if={@show_owner} class="wrap-break-word max-w-[15rem]">
+                  <div class="flex-auto items-center">
+                    {keychain_credential.created_by.email}
+                  </div>
+                </.td>
+                <.td>
+                  <div class="flex justify-end items-center">
+                    {render_slot(@actions, keychain_credential)}
                   </div>
                 </.td>
               </.tr>
@@ -173,10 +263,9 @@ defmodule LightningWeb.Components.DataTables do
     """
   end
 
-  defp credential_type(%Credential{schema: "oauth", oauth_token: token})
-       when not is_nil(token) do
-    if token.oauth_client_id && token.oauth_client do
-      String.downcase(token.oauth_client.name)
+  defp credential_type(%Credential{schema: "oauth", oauth_client: client}) do
+    if client do
+      String.downcase(client.name)
     else
       "oauth"
     end
@@ -187,9 +276,7 @@ defmodule LightningWeb.Components.DataTables do
   end
 
   defp missing_oauth_client?(credential) do
-    credential.schema == "oauth" &&
-      (credential.oauth_token == nil ||
-         credential.oauth_token.oauth_client_id == nil)
+    credential.schema == "oauth" && credential.oauth_client_id == nil
   end
 
   attr :id, :string, required: true
@@ -219,7 +306,7 @@ defmodule LightningWeb.Components.DataTables do
           <:body>
             <%= for file <- @project_files do %>
               <.tr>
-                <.td>{file.inserted_at |> Lightning.Helpers.format_date()}</.td>
+                <.td><Common.datetime datetime={file.inserted_at} /></.td>
                 <.td>
                   <%= if file.path do %>
                     {Path.basename(file.path)}

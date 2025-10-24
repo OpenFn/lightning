@@ -10,6 +10,7 @@ defmodule Lightning.Workflows.Snapshot do
 
   alias Ecto.Multi
 
+  alias Lightning.Credentials.KeychainCredential
   alias Lightning.Projects.ProjectCredential
   alias Lightning.Repo
   alias Lightning.Workflows.WebhookAuthMethod
@@ -22,13 +23,15 @@ defmodule Lightning.Workflows.Snapshot do
           workflow: nil | Workflow.t() | Ecto.Association.NotLoaded.t(),
           jobs: [%Lightning.Workflows.Snapshot.Job{}],
           triggers: [%Lightning.Workflows.Snapshot.Trigger{}],
-          edges: [%Lightning.Workflows.Snapshot.Edge{}]
+          edges: [%Lightning.Workflows.Snapshot.Edge{}],
+          positions: map() | nil
         }
 
   schema "workflow_snapshots" do
     belongs_to :workflow, Workflow
     field :name, :string
     field :lock_version, :integer
+    field :positions, :map, default: nil
 
     embeds_many :jobs, Job, primary_key: false do
       field :id, :binary_id, primary_key: true
@@ -38,6 +41,9 @@ defmodule Lightning.Workflows.Snapshot do
       belongs_to :project_credential, ProjectCredential, define_field: false
       field :project_credential_id, :binary_id
       has_one :credential, through: [:project_credential, :credential]
+
+      belongs_to :keychain_credential, KeychainCredential, define_field: false
+      field :keychain_credential_id, :binary_id
 
       field :inserted_at, :utc_datetime_usec
       field :updated_at, :utc_datetime_usec
@@ -52,6 +58,10 @@ defmodule Lightning.Workflows.Snapshot do
       field :kafka_configuration, :map
       field :type, Ecto.Enum, values: [:webhook, :cron, :kafka]
       field :has_auth_method, :boolean, virtual: true
+
+      field :webhook_reply, Ecto.Enum,
+        values: [:before_start, :after_completion, :custom],
+        default: :before_start
 
       many_to_many :webhook_auth_methods, WebhookAuthMethod,
         join_through: "trigger_webhook_auth_methods",
@@ -82,7 +92,12 @@ defmodule Lightning.Workflows.Snapshot do
   end
 
   def new(workflow) do
-    cast(%__MODULE__{}, workflow, [:name, :lock_version, :workflow_id])
+    cast(%__MODULE__{}, workflow, [
+      :name,
+      :lock_version,
+      :workflow_id,
+      :positions
+    ])
     |> validate_required([:name, :lock_version, :workflow_id])
     |> unique_constraint([:workflow_id, :lock_version],
       error_key: :lock_version,
@@ -128,7 +143,7 @@ defmodule Lightning.Workflows.Snapshot do
         field when field in @associations_to_include ->
           {field, Enum.map(value, &Map.from_struct/1)}
 
-        field when field in [:name, :lock_version] ->
+        field when field in [:name, :lock_version, :positions] ->
           {field, value}
 
         :id ->

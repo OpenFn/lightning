@@ -32,10 +32,20 @@ defmodule Lightning.Projects.Project do
     field :history_retention_period, :integer
     field :dataclip_retention_period, :integer
 
+    field :color, :string
+    field :env, :string
+
+    # Intentionally not included in cast/3.
+    # Mutated only via Projects.append_project_head!/2 to keep append-only semantics.
+    field :version_history, {:array, :string}, default: []
+
+    belongs_to :parent, __MODULE__, type: :binary_id
+
     has_many :project_users, ProjectUser
     has_many :users, through: [:project_users, :user]
     has_many :project_oauth_clients, ProjectOauthClient
     has_many :oauth_clients, through: [:project_oauth_clients, :oauth_client]
+    has_many :sandboxes, __MODULE__, foreign_key: :parent_id
 
     has_many :workflows, Workflow, where: [deleted_at: nil]
     has_many :jobs, through: [:workflows, :jobs]
@@ -67,9 +77,24 @@ defmodule Lightning.Projects.Project do
       :retention_policy,
       :history_retention_period,
       :dataclip_retention_period,
-      :allow_support_access
+      :allow_support_access,
+      :parent_id,
+      :color,
+      :env
     ])
+    |> set_default_env_for_root_projects()
     |> validate()
+  end
+
+  defp set_default_env_for_root_projects(changeset) do
+    parent_id = get_field(changeset, :parent_id)
+    env = get_field(changeset, :env)
+
+    if is_nil(parent_id) && is_nil(env) do
+      put_change(changeset, :env, "main")
+    else
+      changeset
+    end
   end
 
   def validate(changeset) do
@@ -80,7 +105,35 @@ defmodule Lightning.Projects.Project do
     |> validate_dataclip_retention_period()
     |> validate_inclusion(:history_retention_period, data_retention_options())
     |> validate_inclusion(:dataclip_retention_period, data_retention_options())
+    |> validate_format(
+      :color,
+      ~r/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3}|[A-Fa-f0-9]{8})$/,
+      message: "must be hex",
+      allow_nil: true
+    )
+    |> validate_format(:env, ~r/^[a-z0-9][a-z0-9_-]{0,31}$/,
+      message: "must be a short slug",
+      allow_nil: true
+    )
+    |> unique_constraint(:name, name: "projects_unique_child_name")
+    |> disallow_self_parent()
   end
+
+  defp disallow_self_parent(%{data: %{id: nil}} = changeset), do: changeset
+
+  defp disallow_self_parent(changeset) do
+    if get_field(changeset, :parent_id) == changeset.data.id,
+      do: add_error(changeset, :parent_id, "cannot be self"),
+      else: changeset
+  end
+
+  @doc """
+  Returns `true` if the project is a sandbox (i.e. `parent_id` is a UUID),
+  `false` otherwise.
+  """
+  @spec sandbox?(t()) :: boolean()
+  def sandbox?(%__MODULE__{parent_id: pid}) when is_binary(pid), do: true
+  def sandbox?(_), do: false
 
   defp validate_dataclip_retention_period(changeset) do
     history_retention_period = get_field(changeset, :history_retention_period)
@@ -126,11 +179,16 @@ defmodule Lightning.Projects.Project do
 
   def project_with_users_changeset(project, attrs) do
     project
-    |> cast(attrs, [:id, :name, :description, :concurrency])
-    |> cast_assoc(:project_users,
-      required: true,
-      sort_param: :users_sort
-    )
+    |> cast(attrs, [
+      :id,
+      :name,
+      :description,
+      :concurrency,
+      :parent_id,
+      :color,
+      :env
+    ])
+    |> cast_assoc(:project_users, required: true, sort_param: :users_sort)
     |> validate()
     |> validate_project_owner()
   end

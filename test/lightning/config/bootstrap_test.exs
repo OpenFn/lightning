@@ -3,6 +3,9 @@ defmodule Lightning.Config.BootstrapTest do
 
   alias Lightning.Config.Bootstrap
 
+  import Mox
+  setup :verify_on_exit!
+
   @opts_key {Config, :opts}
   @config_key {Config, :config}
   @imports_key {Config, :imports}
@@ -30,7 +33,16 @@ defmodule Lightning.Config.BootstrapTest do
 
   describe "prod" do
     setup do
-      Process.put(@opts_key, {:prod, ""})
+      Process.put({Config, :opts}, {:prod, ""})
+      Process.put({Config, :config}, [])
+      Process.put({Config, :imports}, [])
+
+      Process.delete(:dotenvy_vars)
+
+      stub(Lightning.MockConfig, :webhook_retry, fn
+        :timeout_ms -> 0
+        _ -> nil
+      end)
 
       :ok
     end
@@ -72,52 +84,47 @@ defmodule Lightning.Config.BootstrapTest do
     end
 
     test "LightningWeb.Endpoint idle_timeout" do
-      # Defaults to 60 seconds if idle_timeout is not set
-      Dotenvy.source([
-        %{"SECRET_KEY_BASE" => "Foo"},
-        %{"DATABASE_URL" => "ecto://USER:PASS@HOST/DATABASE"}
-      ])
+      # 1) default (no IDLE_TIMEOUT provided) -> 60_000
+      reconfigure(%{
+        "SECRET_KEY_BASE" => "Foo",
+        "DATABASE_URL" => "ecto://USER:PASS@HOST/DATABASE"
+      })
 
-      Bootstrap.configure()
+      assert endpoint_idle_timeout() == 60_000
 
-      idle_timeout =
-        :lightning
-        |> get_env(LightningWeb.Endpoint)
-        |> get_in([:http, :protocol_options, :idle_timeout])
+      # 2) invalid IDLE_TIMEOUT -> falls back to 60_000
+      reconfigure(%{
+        "IDLE_TIMEOUT" => "",
+        "SECRET_KEY_BASE" => "Foo",
+        "DATABASE_URL" => "ecto://USER:PASS@HOST/DATABASE"
+      })
 
-      assert idle_timeout == 60_000
+      assert endpoint_idle_timeout() == 60_000
 
-      # Default to 60 seconds if idle timeout is not an integer
-      Dotenvy.source([
-        %{"IDLE_TIMEOUT" => ""},
-        %{"SECRET_KEY_BASE" => "Foo"},
-        %{"DATABASE_URL" => "ecto://USER:PASS@HOST/DATABASE"}
-      ])
+      # 3) valid IDLE_TIMEOUT (seconds) -> converted to ms
+      reconfigure(%{
+        "IDLE_TIMEOUT" => "240",
+        "SECRET_KEY_BASE" => "Foo",
+        "DATABASE_URL" => "ecto://USER:PASS@HOST/DATABASE"
+      })
 
-      Bootstrap.configure()
+      assert endpoint_idle_timeout() == 240_000
+    end
 
-      idle_timeout =
-        :lightning
-        |> get_env(LightningWeb.Endpoint)
-        |> get_in([:http, :protocol_options, :idle_timeout])
+    test "idle_timeout honors retry timeout" do
+      # override the default stub for this test
+      stub(Lightning.MockConfig, :webhook_retry, fn
+        :timeout_ms -> 60_000
+        _ -> nil
+      end)
 
-      assert idle_timeout == 60_000
+      reconfigure(%{
+        "SECRET_KEY_BASE" => "Foo",
+        "DATABASE_URL" => "ecto://USER:PASS@HOST/DATABASE"
+      })
 
-      # Converts provided value to milliseconds
-      Dotenvy.source([
-        %{"IDLE_TIMEOUT" => "240"},
-        %{"SECRET_KEY_BASE" => "Foo"},
-        %{"DATABASE_URL" => "ecto://USER:PASS@HOST/DATABASE"}
-      ])
-
-      Bootstrap.configure()
-
-      idle_timeout =
-        :lightning
-        |> get_env(LightningWeb.Endpoint)
-        |> get_in([:http, :protocol_options, :idle_timeout])
-
-      assert idle_timeout == 240_000
+      # idle_timeout = max(60_000, 60_000 + 15_000) = 75_000
+      assert endpoint_idle_timeout() == 75_000
     end
   end
 
@@ -456,8 +463,110 @@ defmodule Lightning.Config.BootstrapTest do
     end
   end
 
-  # A helper function to get a value from the process dictionary
-  # that is stored by the Config module.
+  describe "webhook retry (dev)" do
+    test "does not set :webhook_retry when no WEBHOOK_RETRY_* envs are provided" do
+      Dotenvy.source([%{}])
+      Bootstrap.configure()
+      assert get_env(:lightning, :webhook_retry) == nil
+    end
+
+    test "sets only provided keys with correct types" do
+      Dotenvy.source([
+        %{
+          "WEBHOOK_RETRY_MAX_ATTEMPTS" => "7",
+          "WEBHOOK_RETRY_INITIAL_DELAY_MS" => "250",
+          "WEBHOOK_RETRY_MAX_DELAY_MS" => "5000",
+          "WEBHOOK_RETRY_BACKOFF_FACTOR" => "1.5",
+          "WEBHOOK_RETRY_TIMEOUT_MS" => "42000",
+          "WEBHOOK_RETRY_JITTER" => "false"
+        }
+      ])
+
+      Bootstrap.configure()
+
+      actual = get_env(:lightning, :webhook_retry) |> Enum.sort()
+
+      expected =
+        [
+          max_attempts: 7,
+          initial_delay_ms: 250,
+          max_delay_ms: 5000,
+          backoff_factor: 1.5,
+          timeout_ms: 42_000,
+          jitter: false
+        ]
+        |> Enum.sort()
+
+      assert actual == expected
+    end
+
+    test "accepts a partial set of variables and stores only those" do
+      Dotenvy.source([
+        %{"WEBHOOK_RETRY_MAX_ATTEMPTS" => "9"}
+      ])
+
+      Bootstrap.configure()
+      assert get_env(:lightning, :webhook_retry) == [max_attempts: 9]
+    end
+
+    test "parses jitter boolean values using Utils.ensure_boolean/1" do
+      Dotenvy.source([%{"WEBHOOK_RETRY_JITTER" => "true"}])
+      Bootstrap.configure()
+      assert get_env(:lightning, :webhook_retry) == [jitter: true]
+    end
+  end
+
+  describe "promex metrics configuration" do
+    @tag env: %{}
+    test "`expensive_metrics_enabled` is false if env variable is not set", %{
+      env: env
+    } do
+      Dotenvy.source([env])
+
+      Bootstrap.configure()
+
+      enable =
+        :lightning
+        |> get_env(Lightning.PromEx)
+        |> Keyword.get(:expensive_metrics_enabled)
+
+      assert enable == false
+    end
+
+    @tag env: %{"PROMEX_EXPENSIVE_METRICS_ENABLED" => "yes"}
+    test "`expensive_metrics_enabled` is true if env variable is truthy", %{
+      env: env
+    } do
+      Dotenvy.source([env])
+
+      Bootstrap.configure()
+
+      enable =
+        :lightning
+        |> get_env(Lightning.PromEx)
+        |> Keyword.get(:expensive_metrics_enabled)
+
+      assert enable == true
+    end
+
+    @tag env: %{"PROMEX_EXPENSIVE_METRICS_ENABLED" => "no"}
+    test "`expensive_metrics_enabled` is false if env variable is falsey", %{
+      env: env
+    } do
+      Dotenvy.source([env])
+
+      Bootstrap.configure()
+
+      enable =
+        :lightning
+        |> get_env(Lightning.PromEx)
+        |> Keyword.get(:expensive_metrics_enabled)
+
+      assert enable == false
+    end
+  end
+
+  # Helpers to read the in-process config that Config writes
   defp get_env(app) do
     Process.get(@config_key)
     |> Keyword.get(app)
@@ -470,5 +579,19 @@ defmodule Lightning.Config.BootstrapTest do
       {_, value} -> value
       nil -> nil
     end
+  end
+
+  defp reconfigure(envs) do
+    Process.put({Config, :config}, [])
+    Process.put({Config, :imports}, [])
+    Process.delete(:dotenvy_vars)
+    Dotenvy.source([envs])
+    Lightning.Config.Bootstrap.configure()
+  end
+
+  defp endpoint_idle_timeout do
+    :lightning
+    |> get_env(LightningWeb.Endpoint)
+    |> get_in([:http, :protocol_options, :idle_timeout])
   end
 end

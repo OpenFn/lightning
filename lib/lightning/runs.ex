@@ -304,19 +304,37 @@ defmodule Lightning.Runs do
         _other -> "UnknownReason"
       end
 
-    PromExPlugin.fire_lost_run_event()
+    result =
+      Repo.transaction(fn ->
+        case complete_run(run, %{state: "lost", error_type: error_type}) do
+          {:ok, updated_run} ->
+            Ecto.assoc(run, :steps)
+            |> where([r], is_nil(r.exit_reason))
+            |> mark_steps_lost()
 
-    Logger.warning(fn ->
-      "Detected lost run with reason #{error_type}: #{inspect(run)}"
-    end)
+            {:ok, updated_run}
 
-    Repo.transaction(fn ->
-      {:ok, _run} = complete_run(run, %{state: "lost", error_type: error_type})
+          {:error, changeset} ->
+            Repo.rollback({:error, :already_completed, changeset})
+        end
+      end)
 
-      Ecto.assoc(run, :steps)
-      |> where([r], is_nil(r.exit_reason))
-      |> mark_steps_lost()
-    end)
+    case result do
+      {:ok, {:ok, updated_run}} ->
+        PromExPlugin.fire_lost_run_event()
+
+        Logger.warning(fn ->
+          "Detected lost run with reason #{error_type}: #{inspect(run)}"
+        end)
+
+        {:ok, updated_run}
+
+      {:error, {:error, :already_completed, _changeset}} ->
+        {:error, :already_completed}
+
+      error ->
+        error
+    end
   end
 
   @spec mark_steps_lost(Ecto.Queryable.t()) :: {:ok, non_neg_integer()}
@@ -332,6 +350,24 @@ defmodule Lightning.Runs do
   end
 
   defdelegate subscribe(run), to: Events
+
+  @doc """
+  Returns a query for runs belonging to a specific project
+  """
+  @spec runs_for_project_query(Lightning.Projects.Project.t()) ::
+          Ecto.Queryable.t()
+  def runs_for_project_query(%Lightning.Projects.Project{} = project) do
+    Lightning.Invocation.Query.runs_for(project)
+  end
+
+  @doc """
+  Returns a query for runs accessible to a user
+  """
+  @spec runs_for_user_query(Lightning.Accounts.User.t()) ::
+          Ecto.Queryable.t()
+  def runs_for_user_query(%Lightning.Accounts.User{} = user) do
+    Lightning.Invocation.Query.runs_for(user)
+  end
 
   @spec get_project_id_for_run(Run.t()) :: Ecto.UUID.t() | nil
   def get_project_id_for_run(run) do

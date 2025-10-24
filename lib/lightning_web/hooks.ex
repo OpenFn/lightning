@@ -14,6 +14,7 @@ defmodule LightningWeb.Hooks do
   alias Lightning.Projects.ProjectLimiter
   alias Lightning.Services.UsageLimiter
   alias Lightning.VersionControl.VersionControlUsageLimiter
+  alias LightningWeb.Live.Helpers.ProjectTheme
 
   @doc """
   Finds and assigns a project to the socket, if a user doesn't have access
@@ -34,11 +35,13 @@ defmodule LightningWeb.Hooks do
     {:halt, redirect(socket, to: ~p"/users/log_in")}
   end
 
-  def on_mount(:project_scope, %{"project_id" => project_id}, _session, socket) do
-    %{current_user: current_user} = socket.assigns
-
+  def on_mount(
+        :project_scope,
+        %{"project_id" => project_id},
+        _session,
+        %{assigns: %{current_user: current_user}} = socket
+      ) do
     project = Lightning.Projects.get_project(project_id)
-
     projects = Lightning.Projects.get_projects_for_user(current_user)
 
     project_user =
@@ -52,9 +55,17 @@ defmodule LightningWeb.Hooks do
         {:halt, redirect(socket, to: ~p"/mfa_required")}
 
       can_access_project ->
+        scale = ProjectTheme.inline_primary_scale(project)
+
+        theme_style =
+          [scale, ProjectTheme.inline_sidebar_vars()]
+          |> Enum.reject(&is_nil/1)
+          |> Enum.join(" ")
+
         {:cont,
          socket
          |> assign(:side_menu_theme, "primary-theme")
+         |> assign(:theme_style, theme_style)
          |> assign_new(:project_user, fn -> project_user end)
          |> assign_new(:project, fn -> project end)
          |> assign_new(:projects, fn -> projects end)}
@@ -65,7 +76,7 @@ defmodule LightningWeb.Hooks do
   end
 
   def on_mount(:project_scope, _, _session, socket) do
-    {:cont, socket}
+    {:cont, assign_new(socket, :theme_style, fn -> nil end)}
   end
 
   def on_mount(:assign_projects, _, _session, socket) do

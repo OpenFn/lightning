@@ -82,7 +82,7 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
 
     assert {"type", "application/json"} in actual_attrs
     assert {"id", "JobEditor-1"} in actual_attrs
-    assert {"phx-hook", "ReactComponent"} in actual_attrs
+    assert {"phx-hook", "HeexReactComponent"} in actual_attrs
     assert {"data-react-name", "JobEditor"} in actual_attrs
 
     assert inner_json["adaptor"] == "@openfn/language-common@1.6.2"
@@ -492,50 +492,50 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
         insert(:project, project_users: [%{user_id: user.id, role: :admin}])
 
       workflow_name = "mytest workflow"
-      job_name = "my job"
 
       {:ok, view, _html} =
-        live(
-          conn,
-          ~p"/projects/#{project}/w/new",
-          on_error: :raise
+        live(conn, ~p"/projects/#{project}/w/new", on_error: :raise)
+
+      {view, parsed_workflow} = select_template(view, "base-webhook-template")
+
+      view |> render_click("save")
+
+      workflow =
+        Lightning.Repo.get_by(Lightning.Workflows.Workflow,
+          project_id: project.id
         )
 
-      select_template(view, "base-webhook-template")
-
-      # click continue
-      view |> element("button#create_workflow_btn") |> render_click()
+      expected_workflow_name = parsed_workflow["name"] || "Event-based Workflow"
+      assert workflow.name == expected_workflow_name
+      initial_workflow_id = workflow.id
 
       view
       |> form("#workflow-form")
       |> render_change(workflow: %{name: workflow_name})
 
-      # add a job to the workflow
-      %{"value" => %{"id" => job_id}} = job_patch = add_job_patch(job_name)
+      job_data = List.first(parsed_workflow["jobs"])
+      job_id = job_data["id"]
+      original_job_name = job_data["name"]
 
-      view |> push_patches_to_view([job_patch])
-
-      # select job node
       view |> select_node(%{id: job_id})
 
-      # open the editor modal
       view |> click_edit(%{id: job_id})
 
-      view |> change_editor_text("some body")
+      new_job_body = "#{job_data["body"] || "default body"}"
+      view |> change_editor_text(new_job_body)
 
-      # no workflow exists
-      refute Lightning.Repo.get_by(Lightning.Workflows.Workflow,
-               project_id: project.id
-             )
+      workflow =
+        Lightning.Repo.get(Lightning.Workflows.Workflow, initial_workflow_id)
+        |> Lightning.Repo.preload(:work_orders)
 
-      # submit the manual run form
+      assert length(workflow.work_orders) == 0
+
       Mox.expect(
         Lightning.Extensions.MockUsageLimiter,
         :limit_action,
         fn %{type: :new_run}, _context -> :ok end
       )
 
-      # subscribe to workflow events
       Lightning.Workflows.subscribe(project.id)
 
       render_submit(view, "manual_run_submit", %{
@@ -543,32 +543,23 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       })
 
       assert_patch(view)
-      # render_async(view)
 
-      # Wait out all the async renders on RunViewerLive, avoiding Postgrex client
-      # disconnection warnings.
       live_children(view) |> Enum.each(&render_async/1)
 
-      # workflow has been created
-      assert workflow =
-               Lightning.Repo.get_by(Lightning.Workflows.Workflow,
-                 project_id: project.id
-               )
-               |> Lightning.Repo.preload([:jobs, :work_orders])
+      workflow =
+        Lightning.Repo.get(Lightning.Workflows.Workflow, initial_workflow_id)
+        |> Lightning.Repo.preload([:jobs, :work_orders])
 
       assert workflow.name == workflow_name
 
-      assert Enum.any?(workflow.jobs, fn job ->
-               job.id == job_id and job.name == job_name
-             end)
+      assert job = Enum.find(workflow.jobs, &(&1.id == job_id))
+      assert job.name == original_job_name
+      assert job.body == new_job_body
 
       assert length(workflow.work_orders) == 1
 
-      # workflow updated event is emitted
-      workflow_id = workflow.id
-
       assert_received %Lightning.Workflows.Events.WorkflowUpdated{
-        workflow: %{id: ^workflow_id}
+        workflow: %{id: ^initial_workflow_id}
       }
     end
 
@@ -1713,18 +1704,21 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
 
       FakeRambo.Helpers.stub_run({:ok, %{status: 0, out: cli_stdout, err: ""}})
 
+      credential =
+        insert(:credential, schema: "http")
+        |> with_body(%{
+          name: "main",
+          body: %{
+            "baseUrl" => "http://localhost:4002",
+            "username" => "test",
+            "password" => "test"
+          }
+        })
+
       project_credential =
         insert(:project_credential,
           project: project,
-          credential:
-            build(:credential,
-              schema: "http",
-              body: %{
-                baseUrl: "http://localhost:4002",
-                username: "test",
-                password: "test"
-              }
-            )
+          credential: credential
         )
 
       job = workflow.jobs |> hd()

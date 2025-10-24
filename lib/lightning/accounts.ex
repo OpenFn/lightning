@@ -243,6 +243,7 @@ defmodule Lightning.Accounts do
     Multi.new()
     |> Multi.update(:user, fn _changes ->
       totp = Repo.preload(totp, [:user])
+
       Ecto.Changeset.change(totp.user, %{mfa_enabled: false})
     end)
     |> Multi.delete(:totp, totp)
@@ -258,9 +259,9 @@ defmodule Lightning.Accounts do
   """
   @spec valid_user_totp?(User.t(), String.t()) :: true | false
   def valid_user_totp?(user, code) do
-    totp = Repo.get_by(UserTOTP, user_id: user.id)
+    totp = Repo.get_by(UserTOTP, user_id: user.id) |> Repo.preload(:user)
 
-    UserTOTP.valid_totp?(totp, code)
+    UserTOTP.validate_totp(totp, code)
   end
 
   @doc """
@@ -421,6 +422,8 @@ defmodule Lightning.Accounts do
   @spec update_user_preferences(User.t(), map()) ::
           {:ok, User.t()} | {:error, Ecto.Changeset.t()}
   def update_user_preferences(%User{} = user, preferences) do
+    preferences = preferences |> Lightning.Utils.Maps.stringify_keys()
+
     user
     |> User.preferences_changeset(preferences)
     |> Repo.update()
@@ -1088,5 +1091,29 @@ defmodule Lightning.Accounts do
     user
     |> User.preferences_changeset(updated_preferences)
     |> Repo.update()
+  end
+
+  @doc """
+  Checks if experimental features are enabled for a user.
+
+  Returns true if the user has experimental features enabled in their preferences,
+  false otherwise. Safely handles nil preferences map and defaults to false when
+  the "experimental_features" key is not set.
+
+  ## Examples
+
+      iex> experimental_features_enabled?(%User{preferences: %{"experimental_features" => true}})
+      true
+
+      iex> experimental_features_enabled?(%User{preferences: %{}})
+      false
+
+      iex> experimental_features_enabled?(%User{preferences: nil})
+      false
+
+  """
+  @spec experimental_features_enabled?(User.t()) :: boolean()
+  def experimental_features_enabled?(%User{preferences: preferences}) do
+    Map.get(preferences || %{}, "experimental_features", false)
   end
 end

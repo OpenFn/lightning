@@ -1,6 +1,7 @@
-import Dagre from '../../vendor/dagre.cjs';
+import type { ReactFlowInstance } from '@xyflow/react';
 import { timer } from 'd3-timer';
-import { getNodesBounds, type ReactFlowInstance } from '@xyflow/react';
+
+import Dagre from '../../vendor/dagre.cjs';
 
 import { FIT_PADDING, NODE_HEIGHT, NODE_WIDTH } from './constants';
 import type { Flow, Positions } from './types';
@@ -81,7 +82,7 @@ const calculateLayout = async (
       for (const id in finalPositions) {
         // Check the node's old position to see if it was visible before the layout
         // if it's a new node, take the new position
-        const pos = oldPositions[id] || finalPositions;
+        const pos = oldPositions[id] || finalPositions[id];
         const isInside = isPointInRect(pos, rect);
         const node = newModel.nodes.find(n => n.id === id)!;
 
@@ -111,7 +112,7 @@ const calculateLayout = async (
       const rect = getVisibleRect(flow.getViewport(), viewBounds, 1.1);
       for (const id in finalPositions) {
         // again, use the OLD position to work out visibility
-        const pos = oldPositions[id] || finalPositions;
+        const pos = oldPositions[id] || finalPositions[id];
         const isInside = isPointInRect(pos, rect);
         if (isInside) {
           const node = newModel.nodes.find(n => n.id === id)!;
@@ -170,7 +171,7 @@ export const animate = (
       }
       return {
         id: node.id,
-        from: animateFrom!.position || { x: 0, y: 0 },
+        from: (animateFrom && animateFrom.position) ? animateFrom.position : { x: 0, y: 0 },
         to: node.position,
         node,
       };
@@ -198,7 +199,7 @@ export const animate = (
         if (typeof autofit !== 'boolean') {
           fitTarget = autofit;
         }
-        const bounds = getNodesBounds(fitTarget);
+        const bounds = flowInstance.getNodesBounds(fitTarget);
         if (autofit) {
           flowInstance.fitBounds(bounds, {
             duration: typeof duration === 'number' ? duration : 0,

@@ -94,11 +94,15 @@ defmodule LightningWeb.Pagination do
   attr :url, :any, required: true
   attr :help_text, :string, default: nil
 
+  attr :rounded, :string,
+    default: "lg",
+    doc: "Border radius size (sm, md, lg, xl, 2xl, etc.)"
+
   slot :action, required: false
 
   def pagination_bar(assigns) do
     ~H"""
-    <div class="bg-white px-4 py-3 flex items-center justify-between border-t border-secondary-200 sm:px-6">
+    <div class={"bg-white px-4 py-3 flex items-center justify-between sm:px-6 rounded-b-#{@rounded}"}>
       <div class="flex items-center space-x-4">
         <div>
           <%= if @async_page == Phoenix.LiveView.AsyncResult.loading() do %>
@@ -107,7 +111,11 @@ defmodule LightningWeb.Pagination do
             <%= if @page.total_entries == 0 do %>
               <p class="text-sm text-secondary-700">
                 No results found
-                <Common.tooltip id="no-results-tooltip" title={@help_text} />
+                <Common.tooltip
+                  :if={@help_text}
+                  id="no-results-tooltip"
+                  title={@help_text}
+                />
               </p>
             <% else %>
               <p class="text-sm text-secondary-700">

@@ -14,7 +14,7 @@ defmodule LightningWeb.ProfileLive.Components do
       </p>
       <div class="border-b border-gray-900/10 mt-6 mb-6" />
       <p class="mt-1 text-sm leading-6 text-gray-600">
-        Created: {@current_user.inserted_at |> Lightning.Helpers.format_date()}
+        Created: <Common.datetime datetime={@current_user.inserted_at} />
       </p>
       <p class="mt-1 text-sm leading-6 text-gray-600">
         Email: {@current_user.email}
@@ -54,13 +54,6 @@ defmodule LightningWeb.ProfileLive.Components do
         user={@current_user}
         return_to={~p"/profile"}
       />
-      <%= if assigns[:gdpr_preferences] do %>
-        <.live_component
-          module={@gdpr_preferences.component}
-          id={@gdpr_preferences.id}
-          current_user={@current_user}
-        />
-      <% end %>
       <.live_component
         module={LightningWeb.ProfileLive.MfaComponent}
         id={"#{@current_user.id}_mfa_section"}
@@ -71,6 +64,18 @@ defmodule LightningWeb.ProfileLive.Components do
         id={"#{@current_user.id}_github_section"}
         user={@current_user}
       />
+      <.live_component
+        module={LightningWeb.ProfileLive.ExperimentalFeaturesComponent}
+        id="experimental-features"
+        user={@current_user}
+      />
+      <%= if assigns[:gdpr_preferences] do %>
+        <.live_component
+          module={@gdpr_preferences.component}
+          id={@gdpr_preferences.id}
+          current_user={@current_user}
+        />
+      <% end %>
       <.delete_user_card url={@delete_user_url} />
     </div>
     """

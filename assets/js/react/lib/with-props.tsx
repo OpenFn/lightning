@@ -1,13 +1,13 @@
 import type { View } from 'phoenix_live_view';
-
 import { useSyncExternalStore } from 'react';
+
+import type { Portals } from '#/react/types';
 
 import { getComponentName } from './get-component-name';
 import { mergeChildren } from './merge-children';
 import { renderPortals } from './render-portals';
 import { renderSlots } from './render-slots';
 
-import type { Portals } from '#/react/types';
 
 interface ActionProps {
   pushEvent: (name: string, payload: Record<string, unknown>) => void,

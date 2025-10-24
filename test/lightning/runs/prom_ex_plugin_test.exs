@@ -108,6 +108,14 @@ defmodule Lightning.Runs.PromExPluginTest do
   end
 
   describe "polling_metrics" do
+    setup do
+      Mox.stub(Lightning.MockConfig, :promex_expensive_metrics_enabled?, fn ->
+        false
+      end)
+
+      :ok
+    end
+
     test "returns a polling instance for stalled runs" do
       expected_mfa =
         {
@@ -226,7 +234,11 @@ defmodule Lightning.Runs.PromExPluginTest do
       )
     end
 
-    test "returns a polling group to count impeded projects" do
+    test "returns polling group to count impeded projects" do
+      Mox.stub(Lightning.MockConfig, :promex_expensive_metrics_enabled?, fn ->
+        true
+      end)
+
       expected_mfa =
         {
           Lightning.Runs.PromExPlugin,
@@ -250,6 +262,17 @@ defmodule Lightning.Runs.PromExPluginTest do
                description:
                  "The count of projects impeded due to lack of worker capacity"
              } = metric
+    end
+
+    test "doesn't include impeded prohect group if expensive metrics disabled" do
+      Mox.stub(Lightning.MockConfig, :promex_expensive_metrics_enabled?, fn ->
+        false
+      end)
+
+      project_polling_group =
+        plugin_config() |> find_metric_group(:lightning_run_project_metrics)
+
+      assert project_polling_group == nil
     end
 
     defp find_metric_group(plugin_config, group_name) do

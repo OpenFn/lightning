@@ -124,7 +124,13 @@
       hover:underline hover:underline-offset-2
       whitespace-nowrap
       inline-block
-      text-indigo-400 hover:text-indigo-500;
+      text-primary-400 hover:text-primary-500
+      /* disabled state */
+      disabled:cursor-not-allowed
+      disabled:text-gray-400
+      disabled:hover:text-gray-400
+      disabled:hover:no-underline
+      disabled:opacity-60;
 }
 
 @utility link-uuid {
@@ -329,13 +335,13 @@
   }
 
   .phx-click-loading {
-    &:not([phx-hook='ReactComponent'][data-react-name='WorkflowEditor']) {
+    &:not([phx-hook='HeexReactComponent'][data-react-name='WorkflowEditor']) {
       opacity: 0.5;
       transition: opacity 1s ease-out;
     }
   }
 
-  [phx-hook='ReactComponent'][data-react-name='WorkflowEditor'].phx-click-loading
+  [phx-hook='HeexReactComponent'][data-react-name='WorkflowEditor'].phx-click-loading
     ~ form#workflow-form {
     opacity: 0.5;
     transition: opacity 1s ease-out;
@@ -407,7 +413,7 @@
 
   .icon-button {
     @apply cursor-pointer
-  hover:text-indigo-500
+  hover:text-primary-500
   font-bold
   text-secondary-600
   transition

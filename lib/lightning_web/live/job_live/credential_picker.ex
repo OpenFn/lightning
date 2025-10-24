@@ -6,11 +6,10 @@ defmodule LightningWeb.JobLive.CredentialPicker do
 
   use LightningWeb, :live_component
 
-  alias LightningWeb.Components.Form
-
   attr :form, :map, required: true
   attr :disabled, :boolean, default: false
   attr :credentials, :list, required: true
+  attr :keychain_credentials, :list, default: []
   attr :on_change, :any, default: nil
 
   @impl true
@@ -19,31 +18,58 @@ defmodule LightningWeb.JobLive.CredentialPicker do
       assigns
       |> assign(
         credential_options:
-          assigns.credentials |> Enum.map(&{&1.credential.name, &1.id})
+          assigns.credentials |> Enum.map(&{&1.credential.name, &1.id}),
+        keychain_options:
+          assigns.keychain_credentials |> Enum.map(&{&1.name, &1.id}),
+        all_options:
+          build_credential_options(
+            assigns.credentials,
+            assigns.keychain_credentials
+          )
       )
 
     ~H"""
-    <div>
-      <Form.label_field
-        form={@form}
-        field={:project_credential_id}
-        title="Credential"
-        tooltip="If the system you're working with requires authentication, choose a credential with login details (secrets) that will allow this job to connect. If you're not connecting to an external system you don't need a credential."
-      />
+    <div
+      phx-hook="CredentialSelector"
+      data-project-field={@form[:project_credential_id].name}
+      data-keychain-field={@form[:keychain_credential_id].name}
+      id={"credential-picker-#{@form[:id].value}"}
+    >
       <.old_error field={@form[:project_credential_id]} />
-      <Form.select_field
-        form={@form}
-        name={:project_credential_id}
+      <.old_error field={@form[:keychain_credential_id]} />
+
+      <.input
+        type="select"
+        name="credential_selector"
+        id="credential_selector"
+        value={
+          @form[:project_credential_id].value || @form[:keychain_credential_id].value
+        }
+        label="Credential"
+        tooltip="If the system you're working with requires authentication, choose a credential with login details (secrets) that will allow this job to connect. If you're not connecting to an external system you don't need a credential."
+        options={@all_options}
         prompt=""
-        values={@credential_options}
         disabled={@disabled}
       />
+      
+    <!-- Hidden fields that get populated by JS -->
+      <input
+        type="hidden"
+        name={@form[:project_credential_id].name}
+        value={@form[:project_credential_id].value}
+      />
+      <input
+        type="hidden"
+        name={@form[:keychain_credential_id].name}
+        value={@form[:keychain_credential_id].value}
+      />
 
-      <div :if={!@disabled} class="text-right">
+      <div class="text-right">
         <button
           id="new-credential-button"
           type="button"
           class="link text-xs"
+          disabled={@disabled}
           phx-click="toggle_job_credential_modal"
         >
           New credential
@@ -59,7 +85,9 @@ defmodule LightningWeb.JobLive.CredentialPicker do
      socket
      |> assign(
        credentials: [],
-       selected_project_credential_id: nil
+       keychain_credentials: [],
+       selected_project_credential_id: nil,
+       selected_keychain_credential_id: nil
      )}
   end
 
@@ -71,27 +99,52 @@ defmodule LightningWeb.JobLive.CredentialPicker do
       |> update(:selected_project_credential_id, fn _, %{form: form} ->
         form.source |> Ecto.Changeset.get_field(:project_credential_id)
       end)
+      |> update(:selected_keychain_credential_id, fn _, %{form: form} ->
+        form.source |> Ecto.Changeset.get_field(:keychain_credential_id)
+      end)
       |> then(fn socket ->
         %{
           credentials: credentials,
-          selected_project_credential_id: selected_project_credential_id
+          keychain_credentials: keychain_credentials,
+          selected_project_credential_id: selected_project_credential_id,
+          selected_keychain_credential_id: selected_keychain_credential_id
         } = socket.assigns
 
-        selected_in_list? =
+        project_selected_in_list? =
           credentials
           |> Enum.any?(&match?(%{id: ^selected_project_credential_id}, &1))
 
-        if selected_in_list? &&
-             !changed?(socket, :selected_project_credential_id) do
+        keychain_selected_in_list? =
+          keychain_credentials
+          |> Enum.any?(&match?(%{id: ^selected_keychain_credential_id}, &1))
+
+        if project_selected_in_list? && keychain_selected_in_list? &&
+             !changed?(socket, :selected_project_credential_id) &&
+             !changed?(socket, :selected_keychain_credential_id) do
           socket
         else
           socket
           |> assign(
-            credentials: Lightning.Projects.list_project_credentials(project)
+            credentials: Lightning.Projects.list_project_credentials(project),
+            keychain_credentials:
+              Lightning.Credentials.list_keychain_credentials_for_project(
+                project
+              )
           )
         end
       end)
 
     {:ok, socket}
+  end
+
+  defp build_credential_options(credentials, keychain_credentials) do
+    project_options = credentials |> Enum.map(&{&1.credential.name, &1.id})
+
+    if keychain_credentials == [] do
+      project_options
+    else
+      keychain_options = keychain_credentials |> Enum.map(&{&1.name, &1.id})
+      project_options ++ [{"Keychain Credentials", keychain_options}]
+    end
   end
 end

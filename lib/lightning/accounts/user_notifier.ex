@@ -273,7 +273,7 @@ defmodule Lightning.Accounts.UserNotifier do
     deliver(user, "Your OpenFn History Export Is Complete", """
     Hello #{user.first_name},
 
-    You history export started requested on #{Helpers.format_date(project_file.inserted_at)} is completed. Please visit this URL to download the file:acceptor
+    You history export requested on #{Helpers.format_date(project_file.inserted_at, "%F at %T")} is completed. Please visit this URL to download the file:
 
     #{url(~p"/project_files/#{project_file.id}/download")}
 
@@ -306,10 +306,10 @@ defmodule Lightning.Accounts.UserNotifier do
 
     """
     #{workflow.name}:
-    - #{successful_workorders} workorders correctly processed #{digest_lookup[digest]}
-    - #{failed_workorders} work orders that failed, crashed or timed out
-    Click the link below to view this in the history page:
-    #{build_digest_url(workflow, start_date, end_date)}
+    • #{successful_workorders} workorders were successful #{digest_lookup[digest]}
+    • #{failed_workorders} workorders were not (failed, crashed, cancelled, killed, exception, lost, etc.)
+
+    Click this link to review: #{build_digest_url(workflow, start_date, end_date)}
 
     """
   end
@@ -362,7 +362,7 @@ defmodule Lightning.Accounts.UserNotifier do
     actual_deletion_date =
       Lightning.Config.purge_deleted_after_days()
       |> Lightning.Helpers.actual_deletion_date()
-      |> Lightning.Helpers.format_date()
+      |> Lightning.Helpers.format_date("%F at %T")
 
     deliver(user, "Project scheduled for deletion", """
     Hi #{user.first_name},

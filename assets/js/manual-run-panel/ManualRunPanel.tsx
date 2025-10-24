@@ -8,6 +8,7 @@ import React from 'react';
 import constructQuery from '../utils/constructQuery';
 import { Tabs } from '../components/Tabs';
 import { type Dataclip, FilterTypes, SeletableOptions } from './types';
+import type { RunStep } from '../workflow-store/store';
 import CustomView from './views/CustomView';
 import EmptyView from './views/EmptyView';
 import ExistingView from './views/ExistingView';
@@ -18,6 +19,8 @@ import useQuery from '../hooks/useQuery';
 interface ManualRunPanelProps {
   job_id: string;
   fixedHeight: boolean;
+  onRunStepChange?: (runStep: RunStep | null) => void;
+  onDataclipChange?: (dataclip: Dataclip | null) => void;
 }
 
 export const ManualRunPanel: WithActionProps<ManualRunPanelProps> = props => {
@@ -28,13 +31,24 @@ export const ManualRunPanel: WithActionProps<ManualRunPanelProps> = props => {
     after,
     query: urlQuery,
     a: runId,
-  } = useQuery(['active_panel', 'type', 'before', 'after', 'query', 'a']);
+    named_only,
+  } = useQuery([
+    'active_panel',
+    'type',
+    'before',
+    'after',
+    'query',
+    'named_only',
+    'a',
+  ]);
   const {
     pushEvent,
     pushEventTo,
     job_id,
     navigate,
     fixedHeight = false,
+    onRunStepChange,
+    onDataclipChange,
   } = props;
 
   const [selectedOption, setSelectedOption] = React.useState<SeletableOptions>(
@@ -48,6 +62,7 @@ export const ManualRunPanel: WithActionProps<ManualRunPanelProps> = props => {
   const [nextCronRunDataclipId, setNextCronRunDataclipId] = React.useState<
     string | null
   >(null);
+  const [canEditDatclip, setCanEditDatclip] = React.useState<boolean>(false);
   const [query, setQuery] = React.useState(urlQuery ? urlQuery : '');
   const [selectedDataclip, setSelectedDataclip] =
     React.useState<Dataclip | null>();
@@ -58,6 +73,10 @@ export const ManualRunPanel: WithActionProps<ManualRunPanelProps> = props => {
     before: before ? before : '',
     after: after ? after : '',
   });
+  const [namedOnly, setNamedOnly] = React.useState<boolean>(
+    named_only === 'true'
+  );
+  const [nameError, setNameError] = React.useState<string>('');
   const formRef = React.useRef<HTMLFormElement>(null);
 
   const pushManualChange = React.useCallback(
@@ -95,9 +114,17 @@ export const ManualRunPanel: WithActionProps<ManualRunPanelProps> = props => {
         setSelectedOption(SeletableOptions.EXISTING);
         pushManualChange(SeletableOptions.EXISTING);
       }
+      onDataclipChange?.(dataclip);
       setSelectedDataclip(dataclip);
+      setNameError(''); // Clear any existing error when switching dataclips
     },
-    [pushEvent, setSelectedOption, pushManualChange, setSelectedDataclip]
+    [
+      pushEvent,
+      setSelectedOption,
+      pushManualChange,
+      setSelectedDataclip,
+      onDataclipChange,
+    ]
   );
 
   React.useEffect(() => {
@@ -132,6 +159,7 @@ export const ManualRunPanel: WithActionProps<ManualRunPanelProps> = props => {
       type: selectedClipType || undefined,
       before: selectedDates.before || undefined,
       after: selectedDates.after || undefined,
+      named_only: namedOnly || undefined,
     };
 
     const cleanFilters = Object.fromEntries(
@@ -139,7 +167,13 @@ export const ManualRunPanel: WithActionProps<ManualRunPanelProps> = props => {
     ) as Record<string, string>;
 
     return { query, filters: cleanFilters };
-  }, [query, selectedClipType, selectedDates.before, selectedDates.after]);
+  }, [
+    query,
+    selectedClipType,
+    selectedDates.before,
+    selectedDates.after,
+    namedOnly,
+  ]);
 
   const clearFilter = React.useCallback((type: FilterTypes) => {
     switch (type) {
@@ -152,6 +186,9 @@ export const ManualRunPanel: WithActionProps<ManualRunPanelProps> = props => {
       case FilterTypes.AFTER_DATE:
         setSelectedDates(p => ({ before: p.before, after: '' }));
         break;
+      case FilterTypes.NAMED_ONLY:
+        setNamedOnly(false);
+        break;
     }
   }, []);
 
@@ -159,21 +196,29 @@ export const ManualRunPanel: WithActionProps<ManualRunPanelProps> = props => {
   React.useEffect(() => {
     if (runId && job_id) {
       pushEventTo(
-        'get-run-input-dataclip',
+        'get-run-step-and-input-dataclip',
         { run_id: runId, job_id: job_id },
         (response: unknown) => {
-          const typedResponse = response as { dataclip: Dataclip | null };
+          const typedResponse = response as {
+            dataclip: Dataclip | null;
+            run_step: RunStep | null;
+          };
           if (typedResponse.dataclip) {
             setCurrentRunDataclip(typedResponse.dataclip);
             // Auto-select the current run's dataclip when viewing a specific run
             selectDataclipForManualRun(typedResponse.dataclip);
+          } else {
+            setCurrentRunDataclip(null);
+            selectDataclipForManualRun(null);
           }
+          onRunStepChange?.(typedResponse.run_step);
         }
       );
     } else {
       setCurrentRunDataclip(null);
+      onRunStepChange?.(null);
     }
-  }, [runId, job_id, pushEventTo, selectDataclipForManualRun]);
+  }, [runId, job_id, pushEventTo, selectDataclipForManualRun, onRunStepChange]);
 
   React.useEffect(() => {
     pushEventTo(
@@ -183,9 +228,11 @@ export const ManualRunPanel: WithActionProps<ManualRunPanelProps> = props => {
         const typedResponse = response as {
           dataclips: Dataclip[];
           next_cron_run_dataclip_id: string | null;
+          can_edit_dataclip: boolean;
         };
         setRecentClips(typedResponse.dataclips);
         setNextCronRunDataclipId(typedResponse.next_cron_run_dataclip_id);
+        setCanEditDatclip(typedResponse.can_edit_dataclip);
 
         // Auto-select the next cron run dataclip if it exists (for cron jobs)
         if (typedResponse.next_cron_run_dataclip_id && !runId) {
@@ -218,15 +265,71 @@ export const ManualRunPanel: WithActionProps<ManualRunPanelProps> = props => {
         const typedResponse = response as {
           dataclips: Dataclip[];
           next_cron_run_dataclip_id: string | null;
+          can_edit_dataclip: boolean;
         };
         setRecentClips(typedResponse.dataclips);
         setNextCronRunDataclipId(typedResponse.next_cron_run_dataclip_id);
+        setCanEditDatclip(typedResponse.can_edit_dataclip);
 
         // Note: Auto-selection of next cron run is handled in the initial useEffect only
         // We don't auto-select here to avoid re-selecting when filters are cleared
       }
     );
   }, [job_id, parsedQuery, pushEvent, navigate, selectedOption]);
+
+  const handleDataclipNameChange = React.useCallback(
+    (dataclipId: string, name: string, onSuccess?: () => void) => {
+      pushEventTo(
+        'update-dataclip-name',
+        {
+          dataclip_id: dataclipId,
+          name: name,
+        },
+        (response: unknown) => {
+          const typedResponse = response as {
+            dataclip?: Dataclip;
+            error?: string;
+          };
+          if (typedResponse.dataclip) {
+            const updatedDataclip = typedResponse.dataclip;
+
+            // Clear any existing error
+            setNameError('');
+
+            // Update selected dataclip
+            setSelectedDataclip(updatedDataclip);
+
+            // Update dataclip in recentclips list
+            setRecentClips(clips =>
+              clips.map(clip =>
+                clip.id === updatedDataclip.id ? updatedDataclip : clip
+              )
+            );
+
+            // Update current run dataclip if it's the same
+            if (currentRunDataclip?.id === updatedDataclip.id) {
+              setCurrentRunDataclip(updatedDataclip);
+            }
+
+            // Call success callback if provided
+            if (onSuccess) {
+              onSuccess();
+            }
+          } else if (typedResponse.error) {
+            // Set error message
+            setNameError(typedResponse.error);
+          }
+        }
+      );
+    },
+    [
+      pushEventTo,
+      setSelectedDataclip,
+      setRecentClips,
+      currentRunDataclip,
+      setCurrentRunDataclip,
+    ]
+  );
 
   React.useEffect(() => {
     if (!query.trim()) handleSearchSumbit();
@@ -292,6 +395,8 @@ export const ManualRunPanel: WithActionProps<ManualRunPanelProps> = props => {
             clearFilter={clearFilter}
             selectedDates={selectedDates}
             setSelectedDates={setSelectedDates}
+            namedOnly={namedOnly}
+            setNamedOnly={setNamedOnly}
             fixedHeight={fixedHeight}
             currentRunDataclip={currentRunDataclip}
             nextCronRunDataclipId={nextCronRunDataclipId}
@@ -311,9 +416,11 @@ export const ManualRunPanel: WithActionProps<ManualRunPanelProps> = props => {
     parsedQuery.filters,
     selectedClipType,
     selectedDates,
+    namedOnly,
     selectDataclipForManualRun,
     setSelectedDates,
     setSelectedClipType,
+    setNamedOnly,
     clearFilter,
     pushEvent,
     handleSearchSumbit,
@@ -333,6 +440,9 @@ export const ManualRunPanel: WithActionProps<ManualRunPanelProps> = props => {
               selectDataclipForManualRun(null);
             }}
             isNextCronRun={nextCronRunDataclipId === selectedDataclip.id}
+            onNameChange={handleDataclipNameChange}
+            canEditDataclip={canEditDatclip}
+            nameError={nameError}
           />
         </div>
       ) : (

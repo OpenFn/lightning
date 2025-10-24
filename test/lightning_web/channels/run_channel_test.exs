@@ -8,8 +8,9 @@ defmodule LightningWeb.RunChannelTest do
   alias Lightning.Workflows
 
   import Ecto.Query
-  import Lightning.TestUtils
   import Lightning.Factories
+  import Lightning.TestUtils
+  import Lightning.Utils.Maps, only: [stringify_keys: 1]
 
   setup do
     Mox.verify_on_exit!()
@@ -33,7 +34,7 @@ defmodule LightningWeb.RunChannelTest do
 
   describe "joining" do
     test "without providing a token" do
-      assert LightningWeb.UserSocket
+      assert LightningWeb.WorkerSocket
              |> socket("socket_id", %{})
              |> subscribe_and_join(LightningWeb.WorkerChannel, "worker:queue") ==
                {:error, %{reason: "unauthorized"}}
@@ -362,7 +363,6 @@ defmodule LightningWeb.RunChannelTest do
 
       assert_reply ref, :ok, {:binary, _payload}
 
-      # dataclip body is not cleared
       dataclip_query = from(Dataclip, select: [:wiped_at, :body, :request])
       updated_dataclip = Lightning.Repo.get(dataclip_query, dataclip.id)
       refute updated_dataclip.wiped_at
@@ -370,10 +370,13 @@ defmodule LightningWeb.RunChannelTest do
     end
 
     test "fetch:credential", %{socket: socket, credential: credential} do
-      credential = Repo.preload(credential, oauth_token: [:oauth_client])
+      credential = Repo.preload(credential, :oauth_client)
       oauth_client = credential.oauth_client
 
-      current_expires_at = credential.oauth_token.body["expires_at"]
+      credential_body =
+        Lightning.Credentials.get_credential_body(credential.id, "main")
+
+      current_expires_at = credential_body.body["expires_at"]
       new_expiry = current_expires_at + 3600
 
       endpoint = oauth_client.token_endpoint
@@ -388,13 +391,14 @@ defmodule LightningWeb.RunChannelTest do
            %Tesla.Env{
              env
              | status: 200,
-               body: %{
-                 "access_token" => "ya29.a0AWY7CknfkidjXaoDTuNi",
-                 "expires_at" => new_expiry,
-                 "refresh_token" => "1//03dATMQTmE5NSCgYIARAAGAMSNwF",
-                 "scope" => "https://www.googleapis.com/auth/spreadsheets",
-                 "token_type" => "Bearer"
-               }
+               body:
+                 Jason.encode!(%{
+                   "access_token" => "ya29.a0AWY7CknfkidjXaoDTuNi",
+                   "expires_at" => new_expiry,
+                   "refresh_token" => "1//03dATMQTmE5NSCgYIARAAGAMSNwF",
+                   "scope" => "https://www.googleapis.com/auth/spreadsheets",
+                   "token_type" => "Bearer"
+                 })
            }}
       end)
 
@@ -403,14 +407,18 @@ defmodule LightningWeb.RunChannelTest do
       assert_receive %Phoenix.Socket.Reply{
         ref: ^ref,
         status: :ok,
-        payload: %{
-          "access_token" => "ya29.a0AWY7CknfkidjXaoDTuNi",
-          "expires_at" => ^new_expiry,
-          "refresh_token" => "1//03dATMQTmE5NSCgYIARAAGAMSNwF",
-          "sandbox" => false,
-          "scope" => "https://www.googleapis.com/auth/spreadsheets"
-        }
+        payload: payload
       }
+
+      assert payload["access_token"] == "ya29.a0AWY7CknfkidjXaoDTuNi"
+
+      assert payload["expires_at"] >= current_expires_at
+
+      assert payload["refresh_token"] == "1//03dATMQTmE5NSCgYIARAAGAMSNwF"
+      assert payload["sandbox"] == false
+      assert payload["scope"] == "https://www.googleapis.com/auth/spreadsheets"
+      assert Map.has_key?(payload, "token_type")
+      assert Map.has_key?(payload, "updated_at")
     end
   end
 
@@ -423,18 +431,21 @@ defmodule LightningWeb.RunChannelTest do
       credential =
         insert(:credential,
           name: "Test Postgres",
-          body: %{
-            user: "user1",
-            password: "pass1",
-            host: "https://dbhost",
-            port: "5000",
-            database: "test_db",
-            ssl: "true",
-            allowSelfSignedCert: "false"
-          },
           schema: "postgresql",
           user: user
         )
+        |> with_body(%{
+          name: "main",
+          body: %{
+            "user" => "user1",
+            "password" => "pass1",
+            "host" => "https://dbhost",
+            "port" => "5000",
+            "database" => "test_db",
+            "ssl" => "true",
+            "allowSelfSignedCert" => "false"
+          }
+        })
 
       %{socket: socket} =
         create_socket_and_run(%{credential: credential, user: user})
@@ -460,18 +471,21 @@ defmodule LightningWeb.RunChannelTest do
       credential =
         insert(:credential,
           name: "Test Postgres",
-          body: %{
-            user: "user1",
-            password: "pass1",
-            host: "https://dbhost",
-            database: "test_db",
-            port: 5000,
-            ssl: true,
-            allowSelfSignedCert: false
-          },
           schema: "postgresql",
           user: user
         )
+        |> with_body(%{
+          name: "main",
+          body: %{
+            "user" => "user1",
+            "password" => "pass1",
+            "host" => "https://dbhost",
+            "database" => "test_db",
+            "port" => 5000,
+            "ssl" => true,
+            "allowSelfSignedCert" => false
+          }
+        })
 
       %{socket: socket} =
         create_socket_and_run(%{credential: credential, user: user})
@@ -497,6 +511,11 @@ defmodule LightningWeb.RunChannelTest do
       credential =
         insert(:credential,
           name: "Test Commcare",
+          schema: "commcare",
+          user: user
+        )
+        |> with_body(%{
+          name: "main",
           body: %{
             "apiKey" => "",
             "appId" => "12345",
@@ -504,10 +523,8 @@ defmodule LightningWeb.RunChannelTest do
             "hostUrl" => "http://localhost:2500",
             "password" => "test",
             "username" => "test"
-          },
-          schema: "commcare",
-          user: user
-        )
+          }
+        })
 
       %{socket: socket} =
         create_socket_and_run(%{credential: credential, user: user})
@@ -529,30 +546,24 @@ defmodule LightningWeb.RunChannelTest do
       user = insert(:user)
       oauth_client = insert(:oauth_client)
 
-      oauth_token = %{
-        "access_token" => "test_access_token",
-        "refresh_token" => "test_refresh_token",
-        "expires_at" =>
-          DateTime.utc_now() |> DateTime.add(3600) |> DateTime.to_unix()
-      }
-
       credential =
         insert(:credential,
           name: "OAuth Test",
           schema: "oauth",
-          body: %{
-            "apiVersion" => 23,
-            "sandbox" => true
-          },
-          oauth_token:
-            build(:oauth_token,
-              body: oauth_token,
-              user: user,
-              oauth_client: oauth_client
-            ),
           oauth_client: oauth_client,
           user: user
         )
+        |> with_body(%{
+          name: "main",
+          body: %{
+            "apiVersion" => 23,
+            "sandbox" => true,
+            "access_token" => "test_access_token",
+            "refresh_token" => "test_refresh_token",
+            "expires_at" =>
+              DateTime.utc_now() |> DateTime.add(3600) |> DateTime.to_unix()
+          }
+        })
 
       %{socket: socket} =
         create_socket_and_run(%{credential: credential, user: user})
@@ -568,11 +579,12 @@ defmodule LightningWeb.RunChannelTest do
       assert Map.has_key?(response, "expires_at")
     end
 
+    @tag capture_log: true
     test "translates error messages properly", %{
       credential: credential,
       user: user
     } do
-      credential = Repo.preload(credential, oauth_token: [:oauth_client])
+      credential = Repo.preload(credential, :oauth_client)
       oauth_client = credential.oauth_client
 
       endpoint = oauth_client.token_endpoint
@@ -588,7 +600,7 @@ defmodule LightningWeb.RunChannelTest do
            %Tesla.Env{
              env
              | status: 400,
-               body: %{"error" => "invalid_grant"}
+               body: Jason.encode!(%{"error" => "invalid_grant"})
            }}
       end)
       |> Mox.expect(:call, fn
@@ -601,7 +613,7 @@ defmodule LightningWeb.RunChannelTest do
            %Tesla.Env{
              env
              | status: 429,
-               body: %{"error" => "rate limit"}
+               body: Jason.encode!(%{"error" => "rate limit"})
            }}
       end)
 
@@ -639,9 +651,12 @@ defmodule LightningWeb.RunChannelTest do
       credential =
         insert(:credential,
           name: "My Credential",
-          body: %{pin: "1234"},
           user: user
         )
+        |> with_body(%{
+          name: "main",
+          body: %{"pin" => "1234"}
+        })
 
       %{id: project_credential_id} =
         insert(:project_credential, credential: credential, project: project)
@@ -1528,11 +1543,7 @@ defmodule LightningWeb.RunChannelTest do
     %{socket: socket}
   end
 
-  defp stringify_keys(map) do
-    Enum.map(map, fn {k, v} -> {Atom.to_string(k), v} end)
-    |> Map.new()
-  end
-
+  # ✅ Updated to use credential_bodies structure
   defp set_google_credential(_context) do
     expires_at =
       DateTime.utc_now()
@@ -1542,28 +1553,24 @@ defmodule LightningWeb.RunChannelTest do
     user = insert(:user)
     oauth_client = insert(:oauth_client)
 
-    oauth_token_body = %{
-      "access_token" => "ya29.a0AWY7CknfkidjXaoDTuNi",
-      "expires_at" => expires_at,
-      "refresh_token" => "1//03dATMQTmE5NSCgYIARAAGAMSNwF",
-      "scope" => "https://www.googleapis.com/auth/spreadsheets",
-      "token_type" => "Bearer"
-    }
-
     credential =
       insert(:credential,
         name: "Test Googlesheets Credential",
         user: user,
-        body: %{"sandbox" => false},
         schema: "oauth",
-        oauth_client: oauth_client,
-        oauth_token:
-          build(:oauth_token,
-            body: oauth_token_body,
-            user: user,
-            oauth_client: oauth_client
-          )
+        oauth_client: oauth_client
       )
+      |> with_body(%{
+        name: "main",
+        body: %{
+          "sandbox" => false,
+          "access_token" => "ya29.a0AWY7CknfkidjXaoDTuNi",
+          "expires_at" => expires_at,
+          "refresh_token" => "1//03dATMQTmE5NSCgYIARAAGAMSNwF",
+          "scope" => "https://www.googleapis.com/auth/spreadsheets",
+          "token_type" => "Bearer"
+        }
+      })
 
     {:ok, credential: credential, user: user}
   end

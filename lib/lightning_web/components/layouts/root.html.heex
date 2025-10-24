@@ -5,7 +5,6 @@
     <meta charset="utf-8" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <link rel="preconnect" href="//" />
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
     <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
@@ -17,6 +16,9 @@
     <.live_title suffix=" · OpenFn Lightning">
       {assigns[:page_title] || "Lightning"}
     </.live_title>
+    <script>
+      window.userToken = "<%= assigns[:user_token] %>";
+    </script>
     <link
       phx-track-static
       rel="stylesheet"
@@ -39,6 +41,7 @@
       src={Routes.static_path(@conn, "/assets/js/app.js")}
     >
     </script>
+    {Application.get_env(:live_debugger, :live_debugger_tags)}
     {render_slot(@header_tags)}
   </head>
   <body class="h-full">

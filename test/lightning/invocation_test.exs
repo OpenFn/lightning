@@ -153,6 +153,69 @@ defmodule Lightning.InvocationTest do
       dataclip = insert(:dataclip)
       assert %Ecto.Changeset{} = Invocation.change_dataclip(dataclip)
     end
+
+    test "get_dataclip_with_body!/1 returns dataclip with body as JSON text" do
+      project = insert(:project)
+
+      # Test with http_request type - should wrap body in {"data": ..., "request": ...}
+      http_dataclip =
+        insert(:dataclip,
+          body: %{"foo" => "bar"},
+          request: %{"headers" => "list"},
+          type: :http_request,
+          project: project
+        )
+
+      result = Invocation.get_dataclip_with_body!(http_dataclip.id)
+
+      assert result.id == http_dataclip.id
+      assert result.type == :http_request
+      assert result.updated_at == http_dataclip.updated_at
+      # Body should be JSON text string, not Elixir map
+      assert is_binary(result.body_json)
+      # Should be wrapped structure for http_request
+      parsed = Jason.decode!(result.body_json)
+      assert parsed["data"] == %{"foo" => "bar"}
+      assert parsed["request"] == %{"headers" => "list"}
+
+      # Test with step_result type - should NOT wrap body
+      step_dataclip =
+        insert(:dataclip,
+          body: %{"baz" => "qux"},
+          type: :step_result,
+          project: project
+        )
+
+      result = Invocation.get_dataclip_with_body!(step_dataclip.id)
+
+      assert result.id == step_dataclip.id
+      assert result.type == :step_result
+      assert is_binary(result.body_json)
+      parsed = Jason.decode!(result.body_json)
+      assert parsed == %{"baz" => "qux"}
+
+      # Test with kafka type - should wrap body in {"data": ..., "request": ...}
+      kafka_dataclip =
+        insert(:dataclip,
+          body: %{"kafka" => "data"},
+          request: %{"topic" => "test"},
+          type: :kafka,
+          project: project
+        )
+
+      result = Invocation.get_dataclip_with_body!(kafka_dataclip.id)
+
+      assert result.type == :kafka
+      assert is_binary(result.body_json)
+      parsed = Jason.decode!(result.body_json)
+      assert parsed["data"] == %{"kafka" => "data"}
+      assert parsed["request"] == %{"topic" => "test"}
+
+      # Test that it raises when dataclip doesn't exist
+      assert_raise Ecto.NoResultsError, fn ->
+        Invocation.get_dataclip_with_body!(Ecto.UUID.generate())
+      end
+    end
   end
 
   describe "list_dataclips_for_job/2" do
@@ -445,6 +508,140 @@ defmodule Lightning.InvocationTest do
           limit: 5
         )
       )
+    end
+
+    test "filters dataclips by name prefix case-insensitively" do
+      project = insert(:project)
+      %{jobs: [job1 | _rest]} = insert(:complex_workflow, project: project)
+
+      # Create dataclips with different names
+      named_dataclip =
+        insert(:dataclip,
+          name: "My Test Dataclip",
+          body: %{"foo" => "bar"},
+          type: :http_request,
+          project: project
+        )
+
+      other_named_dataclip =
+        insert(:dataclip,
+          name: "Another Dataclip",
+          body: %{"baz" => "qux"},
+          type: :http_request,
+          project: project
+        )
+
+      # Create dataclip without name
+      insert(:dataclip,
+        name: nil,
+        body: %{"without" => "name"},
+        type: :http_request
+      )
+      |> tap(&insert(:step, input_dataclip: &1, job: job1))
+
+      # Associate named dataclips with job
+      insert(:step, input_dataclip: named_dataclip, job: job1)
+      insert(:step, input_dataclip: other_named_dataclip, job: job1)
+
+      # Test case-insensitive search for "my"
+      assert_dataclips_list(
+        [named_dataclip],
+        Invocation.list_dataclips_for_job(
+          job1,
+          %{name_part: "my"},
+          limit: 10
+        )
+      )
+
+      # Test case-insensitive search for "MY"
+      assert_dataclips_list(
+        [named_dataclip],
+        Invocation.list_dataclips_for_job(
+          job1,
+          %{name_part: "MY"},
+          limit: 10
+        )
+      )
+
+      # Test partial match "anoth"
+      assert_dataclips_list(
+        [other_named_dataclip],
+        Invocation.list_dataclips_for_job(
+          job1,
+          %{name_part: "anoth"},
+          limit: 10
+        )
+      )
+
+      # Test no matches
+      assert [] =
+               Invocation.list_dataclips_for_job(
+                 job1,
+                 %{name_part: "nonexistent"},
+                 limit: 10
+               )
+    end
+
+    test "filters dataclips to only named ones" do
+      project = insert(:project)
+      %{jobs: [job1 | _rest]} = insert(:complex_workflow, project: project)
+
+      # Create named dataclips
+      named_dataclip1 =
+        insert(:dataclip,
+          name: "First Named",
+          body: %{"foo" => "bar"},
+          type: :http_request,
+          project: project
+        )
+
+      named_dataclip2 =
+        insert(:dataclip,
+          name: "Second Named",
+          body: %{"baz" => "qux"},
+          type: :http_request,
+          project: project
+        )
+
+      # Create dataclips without names
+      insert(:dataclip,
+        name: nil,
+        body: %{"without" => "name1"},
+        type: :http_request
+      )
+      |> tap(&insert(:step, input_dataclip: &1, job: job1))
+
+      insert(:dataclip,
+        name: nil,
+        body: %{"without" => "name2"},
+        type: :http_request
+      )
+      |> tap(&insert(:step, input_dataclip: &1, job: job1))
+
+      # Associate named dataclips with job
+      insert(:step, input_dataclip: named_dataclip1, job: job1)
+      insert(:step, input_dataclip: named_dataclip2, job: job1)
+
+      # Test named_only filter
+      results =
+        Invocation.list_dataclips_for_job(
+          job1,
+          %{named_only: true},
+          limit: 10
+        )
+
+      assert length(results) == 2
+      assert_dataclips_list([named_dataclip2, named_dataclip1], results)
+
+      # Test without named_only filter - should return all dataclips
+      all_results =
+        Invocation.list_dataclips_for_job(
+          job1,
+          %{},
+          limit: 10
+        )
+
+      assert length(all_results) == 4
     end
   end
 
