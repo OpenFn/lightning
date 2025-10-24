@@ -24,18 +24,6 @@ const useUIStore = (): UIStoreInstance => {
 };
 
 /**
- * Hook to get currently active panel
- * Returns null when no panel is open
- */
-export const useActivePanel = (): UIState["activePanel"] => {
-  const uiStore = useUIStore();
-
-  const selectActivePanel = uiStore.withSelector(state => state.activePanel);
-
-  return useSyncExternalStore(uiStore.subscribe, selectActivePanel);
-};
-
-/**
  * Hook to get run panel context
  * Returns null when run panel is not open
  */

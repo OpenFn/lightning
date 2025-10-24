@@ -1,10 +1,8 @@
 import type { ReactNode } from "react";
-import { useEffect } from "react";
-import { useHotkeys, useHotkeysContext } from "react-hotkeys-hook";
 
-import _logger from "#/utils/logger";
+// import _logger from "#/utils/logger";
 
-const logger = _logger.ns("InspectorLayout").seal();
+// const logger = _logger.ns("InspectorLayout").seal();
 
 interface InspectorLayoutProps {
   title: string;
@@ -28,32 +26,6 @@ export function InspectorLayout({
   children,
   "data-testid": dataTestId,
 }: InspectorLayoutProps) {
-  // const { enableScope, disableScope } = useHotkeysContext();
-
-  // Enable/disable panel scope based on whether panel is open
-  // Modal components can disable this scope to take precedence
-  // useEffect(() => {
-  //   enableScope("panel");
-  //   return () => {
-  //     disableScope("panel");
-  //   };
-  // }, [enableScope, disableScope]);
-
-  // Handle Escape key to close the panel
-  // useHotkeys(
-  //   "escape",
-  //   () => {
-  //     logger.debug("Escape triggered");
-  //     onClose();
-  //   },
-  //   {
-  //     enabled: true,
-  //     scopes: ["panel"],
-  //     enableOnFormTags: true, // Allow Escape even in form fields
-  //   },
-  //   [onClose]
-  // );
-
   return (
     <div
       className="pointer-events-auto w-screen max-w-md h-full"

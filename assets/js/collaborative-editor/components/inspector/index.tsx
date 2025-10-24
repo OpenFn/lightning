@@ -4,7 +4,6 @@
  */
 
 import { useHotkeys } from "react-hotkeys-hook";
-import _logger from "#/utils/logger";
 import { useURLState } from "../../../react/lib/use-url-state";
 import type { Workflow } from "../../types/workflow";
 import { EdgeInspector } from "./EdgeInspector";
@@ -15,7 +14,8 @@ import { WorkflowSettings } from "./WorkflowSettings";
 
 export { InspectorLayout } from "./InspectorLayout";
 
-const logger = _logger.ns("Inspector").seal();
+// import _logger from "#/utils/logger";
+// const logger = _logger.ns("Inspector").seal();
 
 interface InspectorProps {
   workflow: Workflow;
@@ -26,6 +26,7 @@ interface InspectorProps {
   };
   onClose: () => void;
   onOpenRunPanel: (context: { jobId?: string; triggerId?: string }) => void;
+  respondToHotKey: boolean;
 }
 
 export function Inspector({
@@ -33,6 +34,7 @@ export function Inspector({
   currentNode,
   onClose,
   onOpenRunPanel,
+  respondToHotKey,
 }: InspectorProps) {
   const { hash, updateHash } = useURLState();
 
@@ -53,15 +55,14 @@ export function Inspector({
   useHotkeys(
     "escape",
     () => {
-      logger.debug("Escape triggered");
-      onClose();
+      handleClose();
     },
     {
-      enabled: true,
+      enabled: respondToHotKey,
       scopes: ["panel"],
       enableOnFormTags: true, // Allow Escape even in form fields
     },
-    [onClose]
+    [handleClose]
   );
 
   // Don't render if no mode selected
@@ -114,7 +115,6 @@ export function Inspector({
 
 // Helper function to open workflow settings from external components
 export const openWorkflowSettings = () => {
-  const newURL =
-    window.location.pathname + window.location.search + "#settings";
+  const newURL = `${window.location.pathname}${window.location.search}#settings`;
   history.pushState({}, "", newURL);
 };

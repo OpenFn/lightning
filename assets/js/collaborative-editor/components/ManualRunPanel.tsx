@@ -272,33 +272,13 @@ export function ManualRunPanel({
     (selectedTab === "existing" && selectedDataclip) ||
     selectedTab === "custom";
 
-  // Use HotkeysContext to manage runPanel scope
-  const { enableScope, disableScope, activeScopes } = useHotkeysContext();
-
-  logger.debug({ activeScopes });
-
-  // Enable runPanel scope when this component mounts
-  // Parent (WorkflowEditor) manages the "panel" scope to prevent conflicts
-  useEffect(() => {
-    enableScope("runPanel");
-
-    return () => {
-      disableScope("runPanel");
-    };
-  }, [enableScope, disableScope]);
-
   // Handle Escape key to close the run panel
   useHotkeys(
     "escape",
     () => {
-      logger.debug("Triggered Esc");
       onClose();
     },
-    {
-      enabled: true,
-      scopes: ["runPanel"],
-      enableOnFormTags: true,
-    },
+    { enabled: true, enableOnFormTags: true },
     [onClose]
   );
 
