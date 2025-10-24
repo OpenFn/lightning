@@ -12,7 +12,7 @@
 
     <link rel="stylesheet" href="dist/html-elixir-RLZO5U2C.css" />
 
-    <script defer src="dist/sidebar_items-95EB1CFF.js"></script>
+    <script defer src="dist/sidebar_items-D1FC9583.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-Y223O6DN.js"></script>
 
@@ -108,9 +108,39 @@ Lightning
 
     <div class="summary-row">
       <div class="summary-signature">
+        <a href="#search/2" data-no-tooltip="" translate="no">search(conn, params)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Search dataclips for a specific job with filters.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
         <a href="#show/2" data-no-tooltip="" translate="no">show(conn, map)</a>
 
       </div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#show_for_run/2" data-no-tooltip="" translate="no">show_for_run(conn, map)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Get dataclip for a specific run and job.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#update_name/2" data-no-tooltip="" translate="no">update_name(conn, map)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Update dataclip name.</p></div>
 
     </div>
 
@@ -128,6 +158,28 @@ Lightning
     </h1>
 
     <div class="functions-list">
+<section class="detail" id="search/2">
+
+  <div class="detail-header">
+    <a href="#search/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">search(conn, params)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/dataclip_controller.ex#L108" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>Search dataclips for a specific job with filters.</p><p>Query params:</p><ul><li>query: Search text (optional)</li><li>type: Dataclip type filter (optional)</li><li>before: Before date filter (optional)</li><li>after: After date filter (optional)</li><li>named_only: Show only named dataclips (optional)</li><li>limit: Max results (default: 10)</li></ul>
+  </section>
+</section>
 <section class="detail" id="show/2">
 
   <div class="detail-header">
@@ -138,7 +190,7 @@ Lightning
       <h1 class="signature" translate="no">show(conn, map)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/dataclip_controller.ex#L11" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/dataclip_controller.ex#L15" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -148,6 +200,50 @@ Lightning
   <section class="docstring">
 
 
+  </section>
+</section>
+<section class="detail" id="show_for_run/2">
+
+  <div class="detail-header">
+    <a href="#show_for_run/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">show_for_run(conn, map)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/dataclip_controller.ex#L171" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>Get dataclip for a specific run and job.</p><p>Query params:</p><ul><li>job_id: Job ID to get dataclip for</li></ul>
+  </section>
+</section>
+<section class="detail" id="update_name/2">
+
+  <div class="detail-header">
+    <a href="#update_name/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">update_name(conn, map)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/dataclip_controller.ex#L200" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>Update dataclip name.</p><p>Body:</p><ul><li>name: New name for dataclip (or null to remove name)</li></ul>
   </section>
 </section>
 
