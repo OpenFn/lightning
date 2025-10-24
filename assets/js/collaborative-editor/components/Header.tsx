@@ -22,6 +22,7 @@ import { Breadcrumbs } from "./Breadcrumbs";
 import { Button } from "./Button";
 import { EmailVerificationBanner } from "./EmailVerificationBanner";
 import { Switch } from "./inputs/Switch";
+import { ReadOnlyWarning } from "./ReadOnlyWarning";
 import { Tooltip } from "./Tooltip";
 
 const userNavigation = [
@@ -143,10 +144,11 @@ export function Header({
   return (
     <>
       <EmailVerificationBanner />
+
       <div className="flex-none bg-white shadow-xs border-b border-gray-200">
         <div className="mx-auto sm:px-6 lg:px-8 py-6 flex items-center h-20 text-sm">
           <Breadcrumbs>{children}</Breadcrumbs>
-
+          <ReadOnlyWarning className="ml-3" />
           {projectId && workflowId && (
             <a
               href={

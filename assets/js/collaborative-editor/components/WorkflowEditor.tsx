@@ -18,6 +18,7 @@ import {
   useWorkflowActions,
   useWorkflowState,
   useWorkflowStoreContext,
+  useWorkflowReadOnly,
 } from "../hooks/useWorkflow";
 import { CollaborativeWorkflowDiagram } from "./diagram/CollaborativeWorkflowDiagram";
 import { FullScreenIDE } from "./ide/FullScreenIDE";
@@ -41,6 +42,7 @@ export function WorkflowEditor({
   const workflowStore = useWorkflowStoreContext();
   const isNewWorkflow = useIsNewWorkflow();
   const { saveWorkflow } = useWorkflowActions();
+  const { isReadOnly } = useWorkflowReadOnly();
 
   // UI state from store
   const isRunPanelOpen = useIsRunPanelOpen();
