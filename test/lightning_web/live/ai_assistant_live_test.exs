@@ -3450,4 +3450,284 @@ defmodule LightningWeb.AiAssistantLiveTest do
     project = insert(:project, project_users: [%{user: user, role: :owner}])
     %{project: project}
   end
+
+  defp create_workflow_with_jobs(%{project: project}) do
+    trigger = build(:trigger, type: :webhook)
+
+    job_a =
+      build(:job,
+        body: ~s[fn(state => state)],
+        name: "Job A"
+      )
+
+    job_b =
+      build(:job,
+        body: ~s[fn(state => state)],
+        name: "Job B"
+      )
+
+    workflow =
+      build(:workflow, project: project)
+      |> with_job(job_a)
+      |> with_job(job_b)
+      |> with_trigger(trigger)
+      |> with_edge({trigger, job_a}, %{condition_type: :always})
+      |> with_edge({job_a, job_b}, %{condition_type: :on_job_success})
+      |> insert()
+
+    {:ok, _snapshot} = Lightning.Workflows.Snapshot.create(workflow)
+
+    workflow = Lightning.Repo.reload!(workflow) |> Lightning.Repo.preload(:jobs)
+    [job_a, job_b] = workflow.jobs
+
+    %{workflow: workflow, job_a: job_a, job_b: job_b}
+  end
+
+  describe "AI Assistant - Job Scoping: URL parameter clearing" do
+    setup [:create_workflow_with_jobs]
+
+    test "clears j-chat parameter when switching from job A to job B", %{
+      conn: conn,
+      project: project,
+      user: user,
+      workflow: workflow,
+      job_a: job_a,
+      job_b: job_b
+    } do
+      skip_disclaimer(user)
+
+      session_a =
+        insert(:chat_session,
+          job: job_a,
+          user: user,
+          title: "Help with Job A",
+          session_type: "job_code"
+        )
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version, s: job_a.id, "j-chat": session_a.id]}"
+        )
+
+      assert has_element?(view, "#job-pane-#{job_a.id}")
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version, s: job_b.id]}"
+        )
+
+      assert has_element?(view, "#job-pane-#{job_b.id}")
+    end
+
+    test "preserves j-chat parameter when staying on same job", %{
+      conn: conn,
+      project: project,
+      user: user,
+      workflow: workflow,
+      job_a: job_a
+    } do
+      skip_disclaimer(user)
+
+      session_a =
+        insert(:chat_session,
+          job: job_a,
+          user: user,
+          title: "Help with Job A",
+          session_type: "job_code"
+        )
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version, s: job_a.id, "j-chat": session_a.id]}"
+        )
+
+      assert has_element?(view, "#job-pane-#{job_a.id}")
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version, s: job_a.id, "j-chat": session_a.id]}"
+        )
+
+      assert has_element?(view, "#job-pane-#{job_a.id}")
+    end
+
+    test "clears j-chat even when switching back to job with original session",
+         %{
+           conn: conn,
+           project: project,
+           user: user,
+           workflow: workflow,
+           job_a: job_a,
+           job_b: job_b
+         } do
+      skip_disclaimer(user)
+
+      session_a =
+        insert(:chat_session,
+          job: job_a,
+          user: user,
+          title: "Help with Job A",
+          session_type: "job_code"
+        )
+
+      _session_b =
+        insert(:chat_session,
+          job: job_b,
+          user: user,
+          title: "Help with Job B",
+          session_type: "job_code"
+        )
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version, s: job_a.id, "j-chat": session_a.id]}"
+        )
+
+      assert has_element?(view, "#job-pane-#{job_a.id}")
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version, s: job_b.id]}"
+        )
+
+      assert has_element?(view, "#job-pane-#{job_b.id}")
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version, s: job_a.id]}"
+        )
+
+      assert has_element?(view, "#job-pane-#{job_a.id}")
+    end
+
+    test "handles nil selected_job gracefully", %{
+      conn: conn,
+      project: project,
+      user: user,
+      workflow: workflow,
+      job_a: job_a
+    } do
+      skip_disclaimer(user)
+
+      session_a =
+        insert(:chat_session,
+          job: job_a,
+          user: user,
+          title: "Help with Job A",
+          session_type: "job_code"
+        )
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version, "j-chat": session_a.id]}"
+        )
+
+      assert render(view) =~ "workflow"
+    end
+  end
+
+  describe "AI Assistant - Job Scoping: Session validation and error handling" do
+    setup [:create_workflow_with_jobs]
+
+    test "attempting to access wrong job's session via URL falls back gracefully",
+         %{
+           conn: conn,
+           project: project,
+           user: user,
+           workflow: workflow,
+           job_a: job_a,
+           job_b: job_b
+         } do
+      skip_disclaimer(user)
+
+      session_a =
+        insert(:chat_session,
+          job: job_a,
+          user: user,
+          title: "Help with Job A",
+          session_type: "job_code"
+        )
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version, s: job_b.id, m: "expand", "j-chat": session_a.id]}"
+        )
+
+      assert has_element?(view, "#job-#{job_b.id}-ai-assistant")
+    end
+
+    test "nonexistent session ID doesn't crash the page", %{
+      conn: conn,
+      project: project,
+      user: user,
+      workflow: workflow,
+      job_a: job_a
+    } do
+      skip_disclaimer(user)
+
+      fake_session_id = Ecto.UUID.generate()
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version, s: job_a.id, m: "expand", "j-chat": fake_session_id]}"
+        )
+
+      assert has_element?(view, "#job-#{job_a.id}-ai-assistant")
+    end
+  end
+
+  describe "AI Assistant - Job Scoping: Session list filtering" do
+    setup [:create_workflow_with_jobs]
+
+    test "job A's AI assistant only shows job A sessions", %{
+      conn: conn,
+      project: project,
+      user: user,
+      workflow: workflow,
+      job_a: job_a,
+      job_b: job_b
+    } do
+      skip_disclaimer(user)
+
+      session_a =
+        insert(:chat_session,
+          job: job_a,
+          user: user,
+          title: "Help with Job A",
+          session_type: "job_code"
+        )
+
+      _session_b =
+        insert(:chat_session,
+          job: job_b,
+          user: user,
+          title: "Help with Job B",
+          session_type: "job_code"
+        )
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version, s: job_a.id, m: "expand"]}"
+        )
+
+      assert has_element?(view, "#job-#{job_a.id}-ai-assistant")
+
+      result = Lightning.AiAssistant.list_sessions(job_a, :desc)
+      session_ids = Enum.map(result.sessions, & &1.id)
+
+      assert session_a.id in session_ids
+      assert length(result.sessions) == 1
+    end
+  end
 end

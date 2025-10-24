@@ -100,7 +100,16 @@ defmodule LightningWeb.Live.AiAssistant.Modes.JobCode do
   @impl true
   @spec get_session!(assigns()) :: session()
   def get_session!(%{chat_session_id: session_id, selected_job: job} = assigns) do
-    AiAssistant.get_session!(session_id)
+    session = AiAssistant.get_session!(session_id)
+
+    # Validate that the session belongs to the selected job
+    if session.job_id != job.id do
+      raise Ecto.NoResultsError,
+        queryable: Lightning.AiAssistant.ChatSession,
+        message: "Chat session #{session_id} does not belong to job #{job.id}"
+    end
+
+    session
     |> AiAssistant.put_expression_and_adaptor(job.body, job.adaptor)
     |> maybe_add_run_logs(job, assigns[:follow_run])
   end
