@@ -287,6 +287,13 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
     }
 
     const { positions } = chartCache.current;
+
+    // Fix: If positions are empty but lastLayout is set, clear lastLayout to force layout
+    // This can happen when cache gets out of sync (e.g., after page refresh in auto-layout mode)
+    if (Object.keys(positions).length === 0 && chartCache.current.lastLayout) {
+      chartCache.current.lastLayout = undefined;
+    }
+
     // create model from workflow and also apply selection styling to the model.
     logger.log("calling fromWorkflow");
 
@@ -358,6 +365,9 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
         newModel.nodes.forEach(n => {
           if (isManualLayout && n.type !== "placeholder") {
             n.position = workflowPositions[n.id];
+          } else if (!isManualLayout && positions[n.id]) {
+            // In auto-layout mode, preserve cached positions from previous layout
+            n.position = positions[n.id];
           }
           ensureNodePosition(
             newModel,
