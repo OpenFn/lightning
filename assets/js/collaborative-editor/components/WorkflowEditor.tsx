@@ -84,8 +84,9 @@ export function WorkflowEditor({
   const projectId = project?.id;
 
   // WorkflowId comes from workflow state
-  const workflowState = useWorkflowState(state => state.workflow);
-  const workflowId = workflowState?.id;
+  // LoadingBoundary guarantees workflow is non-null here
+  const workflowState = useWorkflowState(state => state.workflow!);
+  const workflowId = workflowState.id;
 
   const [showLeftPanel, setShowLeftPanel] = useState(isNewWorkflow);
 
@@ -95,17 +96,14 @@ export function WorkflowEditor({
   const [runHandler, setRunHandler] = useState<(() => void) | null>(null);
 
   // Construct full workflow object from state
-  const workflow = useWorkflowState(state =>
-    state.workflow
-      ? {
-          name: state.workflow.name,
-          jobs: state.jobs,
-          triggers: state.triggers,
-          edges: state.edges,
-          positions: state.positions,
-        }
-      : null
-  );
+  // LoadingBoundary guarantees workflow is non-null here
+  const workflow = useWorkflowState(state => ({
+    name: state.workflow!.name,
+    jobs: state.jobs,
+    triggers: state.triggers,
+    edges: state.edges,
+    positions: state.positions,
+  }));
 
   // Get current creation method from URL
   const currentMethod = searchParams.get("method") as
@@ -229,44 +227,37 @@ export function WorkflowEditor({
             {/* Inspector slides in from the right and appears on top
                 This div is also the wrapper which is used to calculate the overlap
                 between the inspector and the diagram.  */}
-            {workflow && (
-              <div
-                id="inspector"
-                className={`absolute top-0 right-0 h-full transition-transform duration-300 ease-in-out z-10 ${
-                  showInspector
-                    ? "translate-x-0"
-                    : "translate-x-full pointer-events-none"
-                }`}
-              >
-                <Inspector
+            <div
+              id="inspector"
+              className={`absolute top-0 right-0 h-full transition-transform duration-300 ease-in-out z-10 ${
+                showInspector
+                  ? "translate-x-0"
+                  : "translate-x-full pointer-events-none"
+              }`}
+            >
+              <Inspector
+                currentNode={currentNode}
+                onClose={handleCloseInspector}
+                onOpenRunPanel={openRunPanel}
+                respondToHotKey={!isRunPanelOpen}
+              />
+            </div>
+
+            {/* Run panel overlays inspector when open */}
+            {isRunPanelOpen && runPanelContext && projectId && workflowId && (
+              <div className="absolute inset-y-0 right-0 flex pointer-events-none z-20">
+                <ManualRunPanel
                   workflow={workflow}
-                  currentNode={currentNode}
-                  onClose={handleCloseInspector}
-                  onOpenRunPanel={openRunPanel}
-                  respondToHotKey={!isRunPanelOpen}
+                  projectId={projectId}
+                  workflowId={workflowId}
+                  jobId={runPanelContext.jobId ?? null}
+                  triggerId={runPanelContext.triggerId ?? null}
+                  onClose={closeRunPanel}
+                  onRunStateChange={handleRunStateChange}
+                  saveWorkflow={saveWorkflow}
                 />
               </div>
             )}
-
-            {/* Run panel overlays inspector when open */}
-            {workflow &&
-              isRunPanelOpen &&
-              runPanelContext &&
-              projectId &&
-              workflowId && (
-                <div className="absolute inset-y-0 right-0 flex pointer-events-none z-20">
-                  <ManualRunPanel
-                    workflow={workflow}
-                    projectId={projectId}
-                    workflowId={workflowId}
-                    jobId={runPanelContext.jobId ?? null}
-                    triggerId={runPanelContext.triggerId ?? null}
-                    onClose={closeRunPanel}
-                    onRunStateChange={handleRunStateChange}
-                    saveWorkflow={saveWorkflow}
-                  />
-                </div>
-              )}
           </div>
 
           {/* Left Panel - Workflow creation methods (absolute positioned, slides over) */}

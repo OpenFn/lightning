@@ -277,7 +277,7 @@ export function FullScreenIDE({
                   isLeftCollapsed ? "rotate-90" : ""
                 }`}
               >
-                <div className="flex items-center justify-between px-3 py-2">
+                <div className="flex items-center justify-between px-3 py-1">
                   <button
                     onClick={toggleLeftPanel}
                     className="text-xs font-medium text-gray-400
@@ -347,7 +347,7 @@ export function FullScreenIDE({
                   isCenterCollapsed ? "rotate-90" : ""
                 }`}
               >
-                <div className="flex items-center justify-between px-3 py-2">
+                <div className="flex items-center justify-between px-3 py-1">
                   <button
                     onClick={toggleCenterPanel}
                     className="text-xs font-medium text-gray-400
@@ -419,7 +419,7 @@ export function FullScreenIDE({
                   isRightCollapsed ? "rotate-90" : ""
                 }`}
               >
-                <div className="flex items-center justify-between px-3 py-2">
+                <div className="flex items-center justify-between px-3 py-1">
                   <button
                     onClick={toggleRightPanel}
                     className="text-xs font-medium text-gray-400
