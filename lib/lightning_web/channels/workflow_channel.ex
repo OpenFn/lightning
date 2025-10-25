@@ -509,7 +509,12 @@ defmodule LightningWeb.WorkflowChannel do
 
   # Load workflow for "edit" action - fetch from database
   defp load_workflow("edit", workflow_id, project, user) do
-    case Lightning.Workflows.get_workflow(workflow_id) do
+    # IMPORTANT: Preload associations needed for Y.Doc initialization
+    # When no persisted Y.Doc state exists, the workflow is serialized to Y.Doc
+    # and needs jobs, edges, and triggers loaded to avoid empty workflow state
+    case Lightning.Workflows.get_workflow(workflow_id,
+           include: [:jobs, :edges, :triggers]
+         ) do
       nil ->
         {:error, "workflow not found"}
 
