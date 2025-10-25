@@ -1804,37 +1804,41 @@ defmodule LightningWeb.SandboxLive.IndexTest do
         Enum.find(updated_parent_workflow.jobs, &(&1.name == "Initial Job"))
 
       assert remaining_job.body == "job1_modified()"
+    end
 
-      test "checks for divergence when opening merge modal with default target",
-           %{
-             conn: conn,
-             parent: parent,
-             sandbox: sandbox
-           } do
-        parent_workflow =
-          insert(:workflow, project: parent, name: "Test Workflow")
+    test "checks for divergence when opening merge modal with default target",
+         %{
+           conn: conn,
+           parent: parent,
+           sandbox: sandbox
+         } do
+      parent_workflow =
+        insert(:workflow, project: parent, name: "Test Workflow")
 
-        insert(:workflow_version,
-          workflow: parent_workflow,
-          hash: "parent_hash",
-          source: "app"
-        )
+      insert(:workflow_version,
+        workflow: parent_workflow,
+        hash: "parent_hash",
+        source: "app"
+      )
 
-        sandbox_workflow =
-          insert(:workflow, project: sandbox, name: "Test Workflow")
+      sandbox_workflow =
+        insert(:workflow, project: sandbox, name: "Test Workflow")
 
-        insert(:workflow_version,
-          workflow: sandbox_workflow,
-          hash: "sandbox_hash",
-          source: "app"
-        )
+      insert(:workflow_version,
+        workflow: sandbox_workflow,
+        hash: "sandbox_hash",
+        source: "app"
+      )
 
-        {:ok, view, _} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
+      {:ok, view, _} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
 
-        assert view
-               |> element("#merge-divergence-alert")
-               |> has_element?()
-      end
+      # Open the merge modal
+      view
+      |> render_click("open-merge-modal", %{"id" => sandbox.id})
+
+      assert view
+             |> element("#merge-divergence-alert")
+             |> has_element?()
     end
   end
 
