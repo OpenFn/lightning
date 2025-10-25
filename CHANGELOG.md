@@ -17,6 +17,8 @@ and this project adheres to
 
 ### Added
 
+- Add a mix task to merge projects
+  [#3615](https://github.com/OpenFn/lightning/issues/3615)
 - Show validation error message when creating sandbox with duplicate name
   [#3776](https://github.com/OpenFn/lightning/issues/3776)
 - Divergence warning when merging sandboxes - displays alert if target branch
