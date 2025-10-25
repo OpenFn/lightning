@@ -275,6 +275,17 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
   // This usually means the workflow has changed or its the first load, so we don't want to animate
   // Later, if responding to changes from other users live, we may want to animate
   useEffect(() => {
+    // Clear cache if positions were cleared (e.g., after reset workflow)
+    // This prevents stale cached positions from being used when Y.Doc positions are empty
+    // Also clear lastLayout so shouldLayout() will trigger a new layout
+    if (
+      Object.keys(workflowPositions).length === 0 &&
+      Object.keys(chartCache.current.positions).length > 0
+    ) {
+      chartCache.current.positions = {};
+      chartCache.current.lastLayout = undefined;
+    }
+
     const { positions } = chartCache.current;
     // create model from workflow and also apply selection styling to the model.
     logger.log("calling fromWorkflow");
