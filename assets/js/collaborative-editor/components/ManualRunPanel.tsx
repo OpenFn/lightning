@@ -4,22 +4,20 @@ import {
   QueueListIcon,
 } from "@heroicons/react/24/outline";
 import { useCallback, useEffect, useState } from "react";
-import { useHotkeys, useHotkeysContext } from "react-hotkeys-hook";
+import { useHotkeys } from "react-hotkeys-hook";
 import { FilterTypes } from "../../manual-run-panel/types";
 import CustomView from "../../manual-run-panel/views/CustomView";
 import EmptyView from "../../manual-run-panel/views/EmptyView";
 import ExistingView from "../../manual-run-panel/views/ExistingView";
 import type { Dataclip } from "../api/dataclips";
 import * as dataclipApi from "../api/dataclips";
+import { usePermissions } from "../hooks/useSessionContext";
 import type { Workflow } from "../types/workflow";
 import { Button } from "./Button";
 import { InspectorFooter } from "./inspector/InspectorFooter";
 import { InspectorLayout } from "./inspector/InspectorLayout";
 import { SelectedDataclipView } from "./manual-run/SelectedDataclipView";
 import { Tabs } from "./Tabs";
-
-import _logger from "#/utils/logger";
-const logger = _logger.ns("ManualRunPanel").seal();
 
 interface ManualRunPanelProps {
   workflow: Workflow;
@@ -28,6 +26,16 @@ interface ManualRunPanelProps {
   jobId?: string | null;
   triggerId?: string | null;
   onClose: () => void;
+  renderMode?: "standalone" | "embedded";
+  onRunStateChange?: (
+    canRun: boolean,
+    isSubmitting: boolean,
+    handleRun: () => void
+  ) => void;
+  saveWorkflow: () => Promise<{
+    saved_at?: string;
+    lock_version?: number;
+  } | null>;
 }
 
 type TabValue = "empty" | "custom" | "existing";
@@ -39,6 +47,9 @@ export function ManualRunPanel({
   jobId,
   triggerId,
   onClose,
+  renderMode = "standalone",
+  onRunStateChange,
+  saveWorkflow,
 }: ManualRunPanelProps) {
   const [selectedTab, setSelectedTab] = useState<TabValue>("empty");
   const [selectedDataclip, setSelectedDataclip] = useState<Dataclip | null>(
@@ -61,6 +72,9 @@ export function ManualRunPanel({
     after: "",
   });
   const [namedOnly, setNamedOnly] = useState(false);
+
+  // Get user permissions
+  const permissions = usePermissions();
 
   // Determine run context
   const runContext = jobId
@@ -192,6 +206,25 @@ export function ManualRunPanel({
     }
   }, [projectId, runContext.id, searchQuery, buildFilters]);
 
+  // Auto-search when filters change (debounced)
+  useEffect(() => {
+    if (selectedTab !== "existing") return;
+
+    // Debounce: wait 300ms after last filter change before searching
+    const timeoutId = setTimeout(() => {
+      void handleSearch();
+    }, 300);
+
+    return () => clearTimeout(timeoutId);
+  }, [
+    selectedClipType,
+    selectedDates.before,
+    selectedDates.after,
+    namedOnly,
+    selectedTab,
+    handleSearch,
+  ]);
+
   const handleCustomBodyChange = useCallback((value: string) => {
     setCustomBody(value);
   }, []);
@@ -229,6 +262,9 @@ export function ManualRunPanel({
 
     setIsSubmitting(true);
     try {
+      // Save workflow first
+      await saveWorkflow();
+
       let params: dataclipApi.ManualRunParams = {
         workflowId,
         projectId,
@@ -265,12 +301,21 @@ export function ManualRunPanel({
     selectedTab,
     selectedDataclip,
     customBody,
+    saveWorkflow,
   ]);
 
   const canRun =
-    selectedTab === "empty" ||
-    (selectedTab === "existing" && selectedDataclip) ||
-    selectedTab === "custom";
+    !!permissions?.can_edit_workflow &&
+    (selectedTab === "empty" ||
+      (selectedTab === "existing" && !!selectedDataclip) ||
+      selectedTab === "custom");
+
+  // Notify parent of run state changes (for embedded mode)
+  useEffect(() => {
+    if (onRunStateChange) {
+      onRunStateChange(canRun, isSubmitting, handleRun);
+    }
+  }, [canRun, isSubmitting, handleRun, onRunStateChange]);
 
   // Handle Escape key to close the run panel
   useHotkeys(
@@ -282,6 +327,74 @@ export function ManualRunPanel({
     [onClose]
   );
 
+  // Extract content for reuse
+  const content = selectedDataclip ? (
+    <SelectedDataclipView
+      dataclip={selectedDataclip}
+      onUnselect={handleUnselectDataclip}
+      onNameChange={handleDataclipNameChange}
+      canEdit={canEditDataclip}
+      isNextCronRun={nextCronRunDataclipId === selectedDataclip.id}
+    />
+  ) : (
+    <div className="flex flex-col h-full overflow-hidden">
+      <Tabs
+        value={selectedTab}
+        onChange={value => setSelectedTab(value as TabValue)}
+        options={[
+          { value: "empty", label: "Empty", icon: DocumentIcon },
+          {
+            value: "custom",
+            label: "Custom",
+            icon: PencilSquareIcon,
+          },
+          {
+            value: "existing",
+            label: "Existing",
+            icon: QueueListIcon,
+          },
+        ]}
+      />
+
+      {selectedTab === "empty" && <EmptyView />}
+      {selectedTab === "custom" && (
+        <CustomView
+          pushEvent={(_event, data) => {
+            if (data?.manual?.body !== undefined) {
+              handleCustomBodyChange(data.manual.body);
+            }
+          }}
+        />
+      )}
+      {selectedTab === "existing" && (
+        <ExistingView
+          dataclips={dataclips}
+          query={searchQuery}
+          setQuery={setSearchQuery}
+          setSelected={handleSelectDataclip}
+          filters={getActiveFilters()}
+          selectedClipType={selectedClipType}
+          setSelectedClipType={setSelectedClipType}
+          clearFilter={clearFilter}
+          selectedDates={selectedDates}
+          setSelectedDates={setSelectedDates}
+          namedOnly={namedOnly}
+          setNamedOnly={setNamedOnly}
+          onSubmit={handleSearch}
+          fixedHeight={true}
+          currentRunDataclip={currentRunDataclip}
+          nextCronRunDataclipId={nextCronRunDataclipId}
+        />
+      )}
+    </div>
+  );
+
+  // Embedded mode: return content without wrapper
+  if (renderMode === "embedded") {
+    return content;
+  }
+
+  // Standalone mode: wrap in InspectorLayout
   return (
     <InspectorLayout
       title={panelTitle}
@@ -301,66 +414,7 @@ export function ManualRunPanel({
         />
       }
     >
-      {selectedDataclip ? (
-        <SelectedDataclipView
-          dataclip={selectedDataclip}
-          onUnselect={handleUnselectDataclip}
-          onNameChange={handleDataclipNameChange}
-          canEdit={canEditDataclip}
-          isNextCronRun={nextCronRunDataclipId === selectedDataclip.id}
-        />
-      ) : (
-        <div className="flex flex-col h-full overflow-hidden">
-          <Tabs
-            value={selectedTab}
-            onChange={value => setSelectedTab(value as TabValue)}
-            options={[
-              { value: "empty", label: "Empty", icon: DocumentIcon },
-              {
-                value: "custom",
-                label: "Custom",
-                icon: PencilSquareIcon,
-              },
-              {
-                value: "existing",
-                label: "Existing",
-                icon: QueueListIcon,
-              },
-            ]}
-          />
-
-          {selectedTab === "empty" && <EmptyView />}
-          {selectedTab === "custom" && (
-            <CustomView
-              pushEvent={(_event, data) => {
-                if (data?.manual?.body !== undefined) {
-                  handleCustomBodyChange(data.manual.body);
-                }
-              }}
-            />
-          )}
-          {selectedTab === "existing" && (
-            <ExistingView
-              dataclips={dataclips}
-              query={searchQuery}
-              setQuery={setSearchQuery}
-              setSelected={handleSelectDataclip}
-              filters={getActiveFilters()}
-              selectedClipType={selectedClipType}
-              setSelectedClipType={setSelectedClipType}
-              clearFilter={clearFilter}
-              selectedDates={selectedDates}
-              setSelectedDates={setSelectedDates}
-              namedOnly={namedOnly}
-              setNamedOnly={setNamedOnly}
-              onSubmit={handleSearch}
-              fixedHeight={true}
-              currentRunDataclip={currentRunDataclip}
-              nextCronRunDataclipId={nextCronRunDataclipId}
-            />
-          )}
-        </div>
-      )}
+      {content}
     </InspectorLayout>
   );
 }

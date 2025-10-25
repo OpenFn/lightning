@@ -188,7 +188,7 @@ describe("useSession", () => {
     test("handles rapid state updates", async () => {
       const { wrapper, store } = createWrapper();
 
-      const { result } = renderHook(() => useSession(state => state.settled), {
+      const { result } = renderHook(() => useSession(state => state.isSynced), {
         wrapper,
       });
 
