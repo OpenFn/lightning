@@ -11,6 +11,7 @@
  */
 
 import { useSession } from "../hooks/useSession";
+import { useSessionContextLoading } from "../hooks/useSessionContext";
 import { useWorkflowState } from "../hooks/useWorkflow";
 
 interface LoadingBoundaryProps {
@@ -20,11 +21,14 @@ interface LoadingBoundaryProps {
 export function LoadingBoundary({ children }: LoadingBoundaryProps) {
   const session = useSession();
   const workflow = useWorkflowState(state => state.workflow);
+  const sessionContextLoading = useSessionContextLoading();
 
   // Wait for ALL sync conditions before rendering
   // - session.isSynced: Y.Doc has received and applied all initial data
   // - workflow !== null: WorkflowStore observers have populated state
-  const isReady = session.isSynced && workflow !== null;
+  // - !sessionContextLoading: SessionContext (including latestSnapshotLockVersion) is loaded
+  const isReady =
+    session.isSynced && workflow !== null && !sessionContextLoading;
 
   if (!isReady) {
     return (

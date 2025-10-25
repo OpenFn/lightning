@@ -9,6 +9,7 @@ import { CollaborationWidget } from "./components/CollaborationWidget";
 import { Header } from "./components/Header";
 import { LoadingBoundary } from "./components/LoadingBoundary";
 import { Toaster } from "./components/ui/Toaster";
+import { VersionDebugOverlay } from "./components/VersionDebugOverlay";
 import { WorkflowEditor } from "./components/WorkflowEditor";
 import { SessionProvider } from "./contexts/SessionProvider";
 import { StoreProvider } from "./contexts/StoreProvider";
@@ -164,6 +165,7 @@ export const CollaborativeEditor: WithActionProps<
             isNewWorkflow={isNewWorkflow}
           >
             <StoreProvider>
+              <VersionDebugOverlay />
               <Toaster />
               <BreadcrumbContent
                 workflowId={workflowId}
