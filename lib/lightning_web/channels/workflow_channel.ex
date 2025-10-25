@@ -165,6 +165,12 @@ defmodule LightningWeb.WorkflowChannel do
 
     with :ok <- authorize_edit_workflow(socket),
          {:ok, workflow} <- Session.save_workflow(session_pid, user) do
+      # Broadcast the new lock_version to all users in the channel
+      # so they can update their latestSnapshotLockVersion in SessionContextStore
+      broadcast_from!(socket, "workflow_saved", %{
+        latest_snapshot_lock_version: workflow.lock_version
+      })
+
       {:reply,
        {:ok,
         %{
@@ -503,7 +509,12 @@ defmodule LightningWeb.WorkflowChannel do
 
   # Load workflow for "edit" action - fetch from database
   defp load_workflow("edit", workflow_id, project, user) do
-    case Lightning.Workflows.get_workflow(workflow_id) do
+    # IMPORTANT: Preload associations needed for Y.Doc initialization
+    # When no persisted Y.Doc state exists, the workflow is serialized to Y.Doc
+    # and needs jobs, edges, and triggers loaded to avoid empty workflow state
+    case Lightning.Workflows.get_workflow(workflow_id,
+           include: [:jobs, :edges, :triggers]
+         ) do
       nil ->
         {:error, "workflow not found"}
 
