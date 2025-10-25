@@ -159,9 +159,14 @@ export const StoreProvider = ({ children }: StoreProviderProps) => {
   }, [session.provider, session.isConnected, stores]);
 
   // Connect/disconnect workflowStore Y.Doc when session changes
+  // IMPORTANT: Wait for isSynced, not just isConnected
+  // isConnected = Phoenix channel is open
+  // isSynced = Y.Doc has received and applied all initial sync data
+  // We must wait for sync to complete before attaching observers,
+  // otherwise observers will read empty/partial Y.Doc state (race condition)
   useEffect(() => {
-    if (session.ydoc && session.provider && session.isConnected) {
-      logger.debug("Connecting workflowStore");
+    if (session.ydoc && session.provider && session.isSynced) {
+      logger.debug("Connecting workflowStore (Y.Doc synced)");
       stores.workflowStore.connect(
         session.ydoc as Session.WorkflowDoc,
         session.provider
@@ -174,12 +179,7 @@ export const StoreProvider = ({ children }: StoreProviderProps) => {
     } else {
       return undefined;
     }
-  }, [
-    session.ydoc,
-    session.provider,
-    stores.workflowStore,
-    session.isConnected,
-  ]);
+  }, [session.ydoc, session.provider, stores.workflowStore, session.isSynced]);
 
   useEffect(() => {
     return () => {
