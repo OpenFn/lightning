@@ -385,7 +385,7 @@ describe("StoreProvider", () => {
         createMockSessionState({
           ydoc: mockYDoc,
           provider: mockProvider,
-          isConnected: true,
+          isSynced: true,
         })
       );
 
