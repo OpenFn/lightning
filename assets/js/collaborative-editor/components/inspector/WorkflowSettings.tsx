@@ -3,18 +3,18 @@ import { useEffect, useMemo, useState } from "react";
 import { useAppForm } from "#/collaborative-editor/components/form";
 import { createZodValidator } from "#/collaborative-editor/components/form/createZodValidator";
 import { usePermissions } from "#/collaborative-editor/hooks/useSessionContext";
-import { useWorkflowActions } from "#/collaborative-editor/hooks/useWorkflow";
+import {
+  useWorkflowActions,
+  useWorkflowState,
+} from "#/collaborative-editor/hooks/useWorkflow";
 import { useWatchFields } from "#/collaborative-editor/stores/common";
-import type { Workflow } from "#/collaborative-editor/types/workflow";
 import { WorkflowSchema } from "#/collaborative-editor/types/workflow";
 
 import { AlertDialog } from "../AlertDialog";
 
-interface WorkflowSettingsProps {
-  workflow: Workflow;
-}
-
-export function WorkflowSettings({ workflow }: WorkflowSettingsProps) {
+export function WorkflowSettings() {
+  // Get workflow from store - LoadingBoundary guarantees it's non-null
+  const workflow = useWorkflowState(state => state.workflow!);
   const [isResetDialogOpen, setIsResetDialogOpen] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
 

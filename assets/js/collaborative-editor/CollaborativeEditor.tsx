@@ -7,6 +7,7 @@ import type { WithActionProps } from "../react/lib/with-props";
 import { BreadcrumbLink, BreadcrumbText } from "./components/Breadcrumbs";
 import { CollaborationWidget } from "./components/CollaborationWidget";
 import { Header } from "./components/Header";
+import { LoadingBoundary } from "./components/LoadingBoundary";
 import { Toaster } from "./components/ui/Toaster";
 import { WorkflowEditor } from "./components/WorkflowEditor";
 import { SessionProvider } from "./contexts/SessionProvider";
@@ -183,17 +184,19 @@ export const CollaborativeEditor: WithActionProps<
                   rootProjectNameFallback: rootProjectName,
                 })}
               />
-              <div className="flex-1 min-h-0 overflow-hidden">
-                <WorkflowEditor
-                  {...(rootProjectId !== null && {
-                    parentProjectId: rootProjectId,
-                  })}
-                  {...(rootProjectName !== null && {
-                    parentProjectName: rootProjectName,
-                  })}
-                />
-                <CollaborationWidget />
-              </div>
+              <LoadingBoundary>
+                <div className="flex-1 min-h-0 overflow-hidden">
+                  <WorkflowEditor
+                    {...(rootProjectId !== null && {
+                      parentProjectId: rootProjectId,
+                    })}
+                    {...(rootProjectName !== null && {
+                      parentProjectName: rootProjectName,
+                    })}
+                  />
+                  <CollaborationWidget />
+                </div>
+              </LoadingBoundary>
             </StoreProvider>
           </SessionProvider>
         </SocketProvider>

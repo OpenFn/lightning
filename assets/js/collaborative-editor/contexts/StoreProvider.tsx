@@ -19,6 +19,15 @@
  *   ↓ useStores
  * Components (consume stores)
  * ```
+ *
+ * ## Initialization Sequence:
+ *
+ * SessionProvider          →  Creates Y.Doc, connects Phoenix Channel
+ * SessionStore             →  Tracks isConnected, isSynced
+ * StoreProvider (this)     →  Waits for isSynced before connecting WorkflowStore
+ * WorkflowStore observers  →  Populate Immer state from Y.Doc
+ * LoadingBoundary          →  Waits for workflow !== null before rendering
+ * Components               →  Can safely assume workflow exists
  */
 
 import type React from "react";

@@ -18,7 +18,6 @@ export { InspectorLayout } from "./InspectorLayout";
 // const logger = _logger.ns("Inspector").seal();
 
 interface InspectorProps {
-  workflow: Workflow;
   currentNode: {
     node: Workflow.Node | null;
     type: Workflow.NodeType | null;
@@ -30,7 +29,6 @@ interface InspectorProps {
 }
 
 export function Inspector({
-  workflow,
   currentNode,
   onClose,
   onOpenRunPanel,
@@ -72,7 +70,7 @@ export function Inspector({
   if (mode === "settings") {
     return (
       <InspectorLayout title="Workflow settings" onClose={handleClose}>
-        <WorkflowSettings workflow={workflow} />
+        <WorkflowSettings />
       </InspectorLayout>
     );
   }
