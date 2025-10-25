@@ -413,7 +413,12 @@ defmodule Lightning.WebAndWorkerTest do
           body: """
           fn(state => {
             console.log("Processing data...");
-            return { result: "success", data: { value: state.data.x * 2 } };
+            // Add a delay to ensure the webhook request is still waiting
+            return new Promise(resolve => {
+              setTimeout(() => {
+                resolve({ result: "success", data: { value: state.data.x * 2 } });
+              }, 1000);
+            });
           });
           """,
           name: "process-job"
