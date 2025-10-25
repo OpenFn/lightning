@@ -460,8 +460,8 @@ defmodule Lightning.WebAndWorkerTest do
       refute Task.yield(task, 50),
              "Expected webhook request to still be waiting"
 
-      # Wait for the workflow to complete (up to 115 seconds)
-      response = Task.await(task, 115_000)
+      # Wait for the workflow to complete (up to 10 seconds)
+      response = Task.await(task, 10_000)
 
       # Should return 201 with the final state
       assert response.status == 201
