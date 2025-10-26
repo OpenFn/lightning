@@ -886,5 +886,107 @@ defmodule Lightning.SessionTest do
 
       Session.stop(session2)
     end
+
+    test "preserves user edits when reconnecting after server restart", %{
+      user: user
+    } do
+      workflow = insert(:simple_workflow)
+
+      # Start initial session
+      {:ok, _doc_supervisor} =
+        Lightning.Collaborate.start_document(
+          workflow,
+          "workflow:#{workflow.id}"
+        )
+
+      {:ok, session1} =
+        Session.start_link(
+          user: user,
+          workflow: workflow,
+          parent_pid: self()
+        )
+
+      # Simulate user making changes (add a job)
+      shared_doc = Session.get_doc(session1)
+      jobs_array = Yex.Doc.get_array(shared_doc, "jobs")
+      initial_job_count = Yex.Array.length(jobs_array)
+
+      # User adds a job while online
+      new_job_id = Ecto.UUID.generate()
+
+      Yex.Doc.transaction(shared_doc, "add_job", fn ->
+        Yex.Array.push(jobs_array, %{
+          "id" => new_job_id,
+          "name" => "User's New Job",
+          "body" => "console.log('offline work');",
+          "adaptor" => "@openfn/language-common@latest",
+          "enabled" => true,
+          "project_credential_id" => nil,
+          "keychain_credential_id" => nil
+        })
+      end)
+
+      # Verify job was added
+      assert Yex.Array.length(jobs_array) == initial_job_count + 1
+
+      # Meanwhile, workflow lock_version changes in database (another user saves)
+      {:ok, updated_workflow} =
+        Lightning.Workflows.save_workflow(
+          Lightning.Workflows.change_workflow(workflow, %{
+            name: "Changed by another user"
+          }),
+          user
+        )
+
+      new_lock_version = updated_workflow.lock_version
+
+      # Simulate server restart by stopping and restarting SharedDoc
+      Session.stop(session1)
+      ensure_doc_supervisor_stopped(workflow.id)
+
+      # Start new session - this loads persisted Y.Doc + reconciles metadata
+      {:ok, _doc_supervisor2} =
+        Lightning.Collaborate.start_document(
+          updated_workflow,
+          "workflow:#{workflow.id}"
+        )
+
+      {:ok, session2} =
+        Session.start_link(
+          user: user,
+          workflow: updated_workflow,
+          parent_pid: self()
+        )
+
+      # Check that user's job is still there
+      shared_doc2 = Session.get_doc(session2)
+      jobs_array2 = Yex.Doc.get_array(shared_doc2, "jobs")
+
+      # Should have all original jobs + the one added by user
+      assert Yex.Array.length(jobs_array2) == initial_job_count + 1
+
+      # Verify the user's job is present
+      user_job =
+        jobs_array2
+        |> Enum.find(fn job ->
+          job_map = if is_struct(job), do: Yex.Map.to_map(job), else: job
+          job_map["name"] == "User's New Job"
+        end)
+
+      assert user_job != nil, "User's job should be preserved after restart"
+
+      # Verify lock_version was reconciled to latest
+      workflow_map2 = Yex.Doc.get_map(shared_doc2, "workflow")
+      reconciled_lock_version = Yex.Map.fetch!(workflow_map2, "lock_version")
+
+      assert reconciled_lock_version == new_lock_version,
+             "Lock version should be reconciled to database value"
+
+      # Verify workflow name was reconciled
+      reconciled_name = Yex.Map.fetch!(workflow_map2, "name")
+      assert reconciled_name == "Changed by another user"
+
+      Session.stop(session2)
+    end
   end
 end
