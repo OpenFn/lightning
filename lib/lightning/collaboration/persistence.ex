@@ -42,10 +42,41 @@ defmodule Lightning.Collaboration.Persistence do
 
         Logger.debug("Loaded #{length(updates)} updates. document=#{doc_name}")
 
-        # Reconcile workflow metadata with current database state
-        # This ensures lock_version and other workflow fields are current
-        # even if the persisted Y.Doc state is stale
-        reconcile_workflow_metadata(doc, workflow)
+        # Check if persisted Y.Doc is stale by comparing lock_version
+        workflow_map = Yex.Doc.get_map(doc, "workflow")
+
+        persisted_lock_version =
+          case Yex.Map.fetch(workflow_map, "lock_version") do
+            {:ok, version} when is_float(version) -> trunc(version)
+            {:ok, version} when is_integer(version) -> version
+            :error -> nil
+          end
+
+        current_lock_version = workflow.lock_version
+
+        cond do
+          # Persisted Y.Doc is stale (DB has newer version)
+          # This means the workflow was saved elsewhere and persisted Y.Doc is outdated
+          # Discard persisted state and reload from DB
+          persisted_lock_version != current_lock_version and
+              not is_nil(persisted_lock_version) ->
+            Logger.warning("""
+            Persisted Y.Doc is stale (persisted: #{inspect(persisted_lock_version)}, current: #{current_lock_version})
+            Discarding persisted state and reloading from database.
+            document=#{doc_name}
+            """)
+
+            # Clear and reset: same pattern as Session.clear_and_reset_doc
+            clear_and_reset_workflow(doc, workflow)
+
+          # Persisted Y.Doc is current, just update metadata in case name/deleted_at changed
+          true ->
+            Logger.debug(
+              "Persisted Y.Doc is current (lock_version: #{current_lock_version}). document=#{doc_name}"
+            )
+
+            reconcile_workflow_metadata(doc, workflow)
+        end
 
       {:error, :not_found} ->
         Logger.info(
@@ -129,6 +160,34 @@ defmodule Lightning.Collaboration.Persistence do
       {:ok, checkpoint, updates}
     else
       {:error, :not_found}
+    end
+  end
+
+  defp clear_and_reset_workflow(doc, workflow) do
+    # Same pattern as Session.clear_and_reset_doc
+    # Get all Yex collections BEFORE transaction to avoid VM deadlock
+    jobs_array = Yex.Doc.get_array(doc, "jobs")
+    edges_array = Yex.Doc.get_array(doc, "edges")
+    triggers_array = Yex.Doc.get_array(doc, "triggers")
+
+    # Transaction 1: Clear all arrays
+    Yex.Doc.transaction(doc, "clear_stale_workflow", fn ->
+      clear_array(jobs_array)
+      clear_array(edges_array)
+      clear_array(triggers_array)
+    end)
+
+    # Transaction 2: Re-serialize workflow from database
+    Session.initialize_workflow_document(doc, workflow)
+
+    :ok
+  end
+
+  defp clear_array(array) do
+    length = Yex.Array.length(array)
+
+    if length > 0 do
+      Yex.Array.delete_range(array, 0, length)
     end
   end
 

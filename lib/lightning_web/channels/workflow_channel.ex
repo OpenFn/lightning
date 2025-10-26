@@ -34,62 +34,45 @@ defmodule LightningWeb.WorkflowChannel do
         [wf_id] -> {wf_id, nil}
       end
 
-    # Check if user is authenticated
-    case socket.assigns[:current_user] do
-      nil ->
-        {:error, %{reason: "unauthorized"}}
+    version = version_from_room || Map.get(params, "version")
 
-      user ->
-        # Fetch project first
-        case Lightning.Projects.get_project(project_id) do
-          nil ->
-            {:error, %{reason: "project not found"}}
+    with {:user, user} when not is_nil(user) <-
+           {:user, socket.assigns[:current_user]},
+         {:project, %_{} = project} <-
+           {:project, Lightning.Projects.get_project(project_id)},
+         {:workflow, {:ok, workflow}} <-
+           {:workflow,
+            load_workflow(action, workflow_id, project, user, version)} do
+      Logger.info("""
+      Joining workflow collaboration:
+        workflow_id: #{workflow_id}
+        version: #{inspect(version)}
+        room: #{topic}
+        is_latest: #{is_nil(version)}
+      """)
 
-          project ->
-            # Get version from room name or join params
-            # Room name takes precedence (version_from_room is from :vN in topic)
-            # Fall back to "version" param for backwards compatibility
-            version = version_from_room || Map.get(params, "version")
+      {:ok, session_pid} =
+        Collaborate.start(
+          user: user,
+          workflow: workflow,
+          room_topic: topic
+        )
 
-            Logger.info("""
-            Joining workflow collaboration:
-              workflow_id: #{workflow_id}
-              version: #{inspect(version)}
-              room: #{topic}
-              is_latest: #{is_nil(version)}
-            """)
+      project_user = Lightning.Projects.get_project_user(project, user)
 
-            # Load or build workflow based on action and version
-            case load_workflow(action, workflow_id, project, user, version) do
-              {:ok, workflow} ->
-                # Start collaboration with workflow struct
-                {:ok, session_pid} =
-                  Collaborate.start(
-                    user: user,
-                    workflow: workflow,
-                    room_topic: topic
-                  )
-
-                project_user =
-                  Lightning.Projects.get_project_user(
-                    project,
-                    user
-                  )
-
-                {:ok,
-                 assign(socket,
-                   workflow_id: workflow_id,
-                   collaboration_topic: topic,
-                   workflow: workflow,
-                   project: project,
-                   session_pid: session_pid,
-                   project_user: project_user
-                 )}
-
-              {:error, reason} ->
-                {:error, %{reason: reason}}
-            end
-        end
+      {:ok,
+       assign(socket,
+         workflow_id: workflow_id,
+         collaboration_topic: topic,
+         workflow: workflow,
+         project: project,
+         session_pid: session_pid,
+         project_user: project_user
+       )}
+    else
+      {:user, nil} -> {:error, %{reason: "unauthorized"}}
+      {:project, nil} -> {:error, %{reason: "project not found"}}
+      {:workflow, {:error, reason}} -> {:error, %{reason: reason}}
     end
   end
 
