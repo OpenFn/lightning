@@ -35,6 +35,25 @@ import {
 // Mock the API module
 vi.mock("../../../js/collaborative-editor/api/dataclips");
 
+// Create a configurable mock for useCanRun
+let mockCanRunValue = { canRun: true, tooltipMessage: "Run workflow" };
+
+// Mock the useCanRun hook from useWorkflow
+vi.mock("../../../js/collaborative-editor/hooks/useWorkflow", async () => {
+  const actual = await vi.importActual(
+    "../../../js/collaborative-editor/hooks/useWorkflow"
+  );
+  return {
+    ...actual,
+    useCanRun: () => mockCanRunValue,
+  };
+});
+
+// Helper function to override canRun mock
+function setMockCanRun(canRun: boolean, tooltipMessage: string) {
+  mockCanRunValue = { canRun, tooltipMessage };
+}
+
 // Mock MonacoEditor to avoid loading issues in tests
 vi.mock("@monaco-editor/react", () => ({
   default: ({ value }: { value: string }) => (
@@ -120,6 +139,9 @@ function renderManualRunPanel(
 describe("ManualRunPanel", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+
+    // Reset mock to default state
+    setMockCanRun(true, "Run workflow");
 
     // Create fresh store instances
     stores = {
@@ -749,6 +771,9 @@ describe("ManualRunPanel", () => {
 
   describe("permission checks", () => {
     test("Run button is disabled when user lacks can_edit_workflow permission", async () => {
+      // Mock useCanRun to return false (simulating lack of permission)
+      setMockCanRun(false, "You do not have permission to run workflows");
+
       // Override permissions to deny workflow editing
       act(() => {
         (mockChannel as any)._test.emit("session_context", {
@@ -793,6 +818,9 @@ describe("ManualRunPanel", () => {
     test("onRunStateChange reports canRun=false when permission is denied", async () => {
       const onRunStateChange = vi.fn();
 
+      // Mock useCanRun to return false (simulating lack of permission)
+      setMockCanRun(false, "You do not have permission to run workflows");
+
       // Override permissions to deny workflow editing
       act(() => {
         (mockChannel as any)._test.emit("session_context", {
@@ -828,6 +856,9 @@ describe("ManualRunPanel", () => {
 
     test("Run button remains disabled in Existing tab without permission, even with selected dataclip", async () => {
       const user = userEvent.setup();
+
+      // Mock useCanRun to return false (simulating lack of permission)
+      setMockCanRun(false, "You do not have permission to run workflows");
 
       // Override permissions to deny workflow editing
       act(() => {

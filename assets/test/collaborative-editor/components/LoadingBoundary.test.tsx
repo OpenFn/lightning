@@ -138,6 +138,7 @@ describe("LoadingBoundary", () => {
         createMockSessionState({
           isConnected: true,
           isSynced: true,
+          settled: true,
         })
       );
 
@@ -163,6 +164,7 @@ describe("LoadingBoundary", () => {
         createMockSessionState({
           isConnected: true,
           isSynced: true,
+          settled: true,
         })
       );
 
@@ -242,6 +244,7 @@ describe("LoadingBoundary", () => {
         createMockSessionState({
           isConnected: true,
           isSynced: true,
+          settled: true,
         })
       );
 
@@ -260,6 +263,7 @@ describe("LoadingBoundary", () => {
         createMockSessionState({
           isConnected: false,
           isSynced: true, // Unusual state
+          settled: true,
         })
       );
 
@@ -271,7 +275,7 @@ describe("LoadingBoundary", () => {
         </LoadingBoundary>
       );
 
-      // Should render children since isSynced is true
+      // Should render children since settled is true
       expect(screen.getByTestId("child-content")).toBeInTheDocument();
     });
 
@@ -280,6 +284,7 @@ describe("LoadingBoundary", () => {
         createMockSessionState({
           isConnected: true,
           isSynced: true,
+          settled: true,
         })
       );
 
@@ -353,6 +358,7 @@ describe("LoadingBoundary", () => {
       mockUseSession.mockReturnValue(
         createMockSessionState({
           isSynced: false,
+          settled: false,
         })
       );
       mockUseWorkflowState.mockReturnValue(null);
@@ -369,6 +375,7 @@ describe("LoadingBoundary", () => {
       mockUseSession.mockReturnValue(
         createMockSessionState({
           isSynced: true,
+          settled: true,
         })
       );
       mockUseWorkflowState.mockReturnValue(null);
@@ -385,6 +392,7 @@ describe("LoadingBoundary", () => {
       mockUseSession.mockReturnValue(
         createMockSessionState({
           isSynced: true,
+          settled: true,
         })
       );
       mockUseWorkflowState.mockReturnValue(createMockWorkflow());
@@ -405,6 +413,7 @@ describe("LoadingBoundary", () => {
       mockUseSession.mockReturnValue(
         createMockSessionState({
           isSynced: true,
+          settled: true,
         })
       );
       mockUseWorkflowState.mockReturnValue(createMockWorkflow());
@@ -422,6 +431,7 @@ describe("LoadingBoundary", () => {
       mockUseSession.mockReturnValue(
         createMockSessionState({
           isSynced: true,
+          settled: true,
         })
       );
       mockUseWorkflowState.mockReturnValue(createMockWorkflow());

@@ -11,7 +11,8 @@ import EmptyView from "../../manual-run-panel/views/EmptyView";
 import ExistingView from "../../manual-run-panel/views/ExistingView";
 import type { Dataclip } from "../api/dataclips";
 import * as dataclipApi from "../api/dataclips";
-import { usePermissions } from "../hooks/useSessionContext";
+import { useCanRun } from "../hooks/useWorkflow";
+import { notifications } from "../lib/notifications";
 import type { Workflow } from "../types/workflow";
 import { Button } from "./Button";
 import { InspectorFooter } from "./inspector/InspectorFooter";
@@ -73,8 +74,9 @@ export function ManualRunPanel({
   });
   const [namedOnly, setNamedOnly] = useState(false);
 
-  // Get user permissions
-  const permissions = usePermissions();
+  // Use centralized canRun hook for workflow-level permissions
+  const { canRun: canRunWorkflow, tooltipMessage: workflowRunTooltipMessage } =
+    useCanRun();
 
   // Determine run context
   const runContext = jobId
@@ -260,6 +262,15 @@ export function ManualRunPanel({
       return;
     }
 
+    // Check workflow-level permissions before running
+    if (!canRunWorkflow) {
+      notifications.alert({
+        title: "Cannot run workflow",
+        description: workflowRunTooltipMessage,
+      });
+      return;
+    }
+
     setIsSubmitting(true);
     try {
       // Save workflow first
@@ -302,13 +313,18 @@ export function ManualRunPanel({
     selectedDataclip,
     customBody,
     saveWorkflow,
+    canRunWorkflow,
+    workflowRunTooltipMessage,
   ]);
 
-  const canRun =
-    !!permissions?.can_edit_workflow &&
-    (selectedTab === "empty" ||
-      (selectedTab === "existing" && !!selectedDataclip) ||
-      selectedTab === "custom");
+  // Combine workflow-level permissions with local validation
+  // Local validation: user must have selected valid input (empty, custom, or existing dataclip)
+  const hasValidInput =
+    selectedTab === "empty" ||
+    (selectedTab === "existing" && !!selectedDataclip) ||
+    selectedTab === "custom";
+
+  const canRun = canRunWorkflow && hasValidInput;
 
   // Notify parent of run state changes (for embedded mode)
   useEffect(() => {
