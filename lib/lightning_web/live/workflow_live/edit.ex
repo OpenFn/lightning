@@ -136,15 +136,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
                   if @live_action == :new do
                     ~p"/projects/#{@project.id}/w/new/collaborate"
                   else
-                    # Build URL with optional version parameter
-                    base_path =
-                      ~p"/projects/#{@project.id}/w/#{@workflow.id}/collaborate"
-
-                    if @snapshot_version_tag != "latest" do
-                      "#{base_path}?v=#{@snapshot_version_tag}"
-                    else
-                      base_path
-                    end
+                    ~p"/projects/#{@project.id}/w/#{@workflow.id}/collaborate"
                   end
                 }
                 class="inline-flex items-center justify-center p-1 text-primary-600 hover:text-primary-700 hover:bg-primary-50 rounded transition-colors"
