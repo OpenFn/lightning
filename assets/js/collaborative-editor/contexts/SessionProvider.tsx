@@ -9,6 +9,7 @@ import { createContext, useEffect, useMemo, useState } from "react";
 import _logger from "#/utils/logger";
 
 import { useSocket } from "../../react/contexts/SocketProvider";
+import { useURLState } from "../../react/lib/use-url-state";
 import {
   createSessionStore,
   type SessionStoreInstance,
@@ -38,29 +39,55 @@ export const SessionProvider = ({
 }: SessionProviderProps) => {
   const { socket, isConnected } = useSocket();
 
+  // Get version from URL reactively
+  const { searchParams } = useURLState();
+  const version = searchParams.get("v");
+
   // Create store instance once - stable reference
   const [sessionStore] = useState(() => createSessionStore());
 
   useEffect(() => {
     if (!isConnected || !socket) return;
 
-    logger.log("Initializing Session with PhoenixChannelProvider");
+    logger.log("Initializing Session with PhoenixChannelProvider", { version });
 
     // Create the Yjs channel provider
-    const roomname = `workflow:collaborate:${workflowId}`;
+    // IMPORTANT: Room naming strategy for snapshots vs collaborative editing:
+    // - NO version param (?v not in URL) → `workflow:collaborate:${workflowId}`
+    //   This is the "latest" room where all users collaborate in real-time
+    //   Everyone in this room sees the same state and moves forward together
+    // - WITH version param (?v=22) → `workflow:collaborate:${workflowId}:v22`
+    //   This is a separate, isolated room for viewing that specific snapshot
+    //   Users viewing old versions don't interfere with users on latest
+    const roomname = version
+      ? `workflow:collaborate:${workflowId}:v${version}`
+      : `workflow:collaborate:${workflowId}`;
+
     logger.log("Creating PhoenixChannelProvider with:", {
       roomname,
       socketConnected: socket.isConnected(),
+      version,
+      isLatestRoom: !version,
     });
 
     // Initialize session - createSessionStore handles everything
     // Pass null for userData - StoreProvider will initialize it from SessionContextStore
+    const joinParams: {
+      project_id: string;
+      action: string;
+      version?: string;
+    } = {
+      project_id: projectId,
+      action: isNewWorkflow ? "new" : "edit",
+    };
+
+    if (version) {
+      joinParams.version = version;
+    }
+
     sessionStore.initializeSession(socket, roomname, null, {
       connect: true,
-      joinParams: {
-        project_id: projectId,
-        action: isNewWorkflow ? "new" : "edit",
-      },
+      joinParams,
     });
 
     // Testing helper to simulate a reconnect
@@ -80,10 +107,18 @@ export const SessionProvider = ({
 
     // Cleanup function
     return () => {
-      logger.debug("PhoenixChannelProvider: cleaning up");
+      logger.debug("PhoenixChannelProvider: cleaning up", { version });
       sessionStore.destroy();
     };
-  }, [isConnected, socket, workflowId, projectId, isNewWorkflow, sessionStore]);
+  }, [
+    isConnected,
+    socket,
+    workflowId,
+    projectId,
+    isNewWorkflow,
+    sessionStore,
+    version,
+  ]);
 
   // Memoize context value to prevent unnecessary re-renders
   // isNewWorkflow can change from true to false after user saves

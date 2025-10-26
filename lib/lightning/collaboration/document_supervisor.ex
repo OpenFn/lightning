@@ -30,7 +30,9 @@ defmodule Lightning.Collaboration.DocumentSupervisor do
   @impl true
   def init(opts) do
     workflow = Keyword.fetch!(opts, :workflow)
-    document_name = "workflow:#{workflow.id}"
+
+    # Accept document_name from opts, fallback to old behavior for backwards compatibility
+    document_name = Keyword.get(opts, :document_name, "workflow:#{workflow.id}")
 
     {:ok, persistence_writer_pid} =
       PersistenceWriter.start_link(
@@ -56,7 +58,8 @@ defmodule Lightning.Collaboration.DocumentSupervisor do
         name: via({:shared_doc, document_name})
       )
 
-    :ok = register_shared_doc_with_pg(workflow.id, shared_doc_pid)
+    # Register with :pg using document_name so versioned rooms are isolated
+    :ok = register_shared_doc_with_pg(document_name, shared_doc_pid)
 
     shared_doc_ref = Process.monitor(shared_doc_pid)
 
@@ -138,7 +141,7 @@ defmodule Lightning.Collaboration.DocumentSupervisor do
   end
 
   # Supervisor.start_link(children, strategy: :one_for_all)
-  defp register_shared_doc_with_pg(workflow_id, shared_doc_pid) do
-    :pg.join(@pg_scope, workflow_id, shared_doc_pid)
+  defp register_shared_doc_with_pg(document_name, shared_doc_pid) do
+    :pg.join(@pg_scope, document_name, shared_doc_pid)
   end
 end

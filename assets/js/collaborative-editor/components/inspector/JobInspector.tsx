@@ -4,7 +4,7 @@ import { useURLState } from "#/react/lib/use-url-state";
 
 import { useJobDeleteValidation } from "../../hooks/useJobDeleteValidation";
 import { usePermissions } from "../../hooks/useSessionContext";
-import { useWorkflowActions } from "../../hooks/useWorkflow";
+import { useWorkflowActions, useCanRun } from "../../hooks/useWorkflow";
 import { notifications } from "../../lib/notifications";
 import type { Workflow } from "../../types/workflow";
 import { AlertDialog } from "../AlertDialog";
@@ -63,24 +63,14 @@ export function JobInspector({
     }
   }, [job.id, removeJobAndClearSelection]);
 
-  // Permission checks for Run button
-  // Note: can_run_workflow doesn't exist yet in permissions type
-  // For Phase 2, we'll just use can_edit_workflow as a placeholder
-  const canRun = permissions?.can_edit_workflow;
+  const { canRun, tooltipMessage: runTooltipMessage } = useCanRun();
 
   // Build footer with run, edit, and delete buttons (only if permission)
   const footer = permissions?.can_edit_workflow ? (
     <InspectorFooter
       leftButtons={
         <>
-          <Tooltip
-            content={
-              !canRun
-                ? "You do not have permission to run workflows"
-                : "Run from this job"
-            }
-            side="top"
-          >
+          <Tooltip content={runTooltipMessage} side="top">
             <span className="inline-block">
               <Button
                 variant="secondary"

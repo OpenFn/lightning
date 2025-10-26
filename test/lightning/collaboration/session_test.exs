@@ -46,7 +46,10 @@ defmodule Lightning.SessionTest do
       user2 = insert(:user)
       workflow = insert(:simple_workflow)
 
-      Lightning.Collaborate.start_document(workflow)
+      Lightning.Collaborate.start_document(
+        workflow,
+        "workflow:#{workflow.id}"
+      )
 
       [parent1, parent2] = build_parents(2)
 
@@ -98,9 +101,11 @@ defmodule Lightning.SessionTest do
       assert MapSet.size(shared_doc_pids) == 1,
              "Expected exactly one shared doc pid, got #{inspect(shared_doc_pids)}"
 
-      # Check there is only one SharedDoc process for this workflow
+      # Check there is only one SharedDoc process for this workflow (now keyed by document_name)
+      document_name = "workflow:#{workflow.id}"
+
       assert_eventually(
-        length(:pg.get_members(:workflow_collaboration, workflow.id)) == 1
+        length(:pg.get_members(:workflow_collaboration, document_name)) == 1
       )
 
       Process.exit(parent2, :normal)

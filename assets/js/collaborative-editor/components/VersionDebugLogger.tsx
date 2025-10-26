@@ -1,17 +1,15 @@
 /**
- * Version Debug Overlay
+ * Version Debug Logger
  *
- * Debug component that displays version information in development mode
+ * Debug component that logs version information to console
  * to help diagnose sync issues between Y.Doc and database.
  *
- * Shows:
+ * Logs:
  * - Y.Doc workflow lock_version (from WorkflowStore)
  * - Database latest lock_version (from SessionContextStore)
  * - Sync status (isSynced, isConnected)
  * - Job/Trigger/Edge counts to verify data completeness
  * - Color coding: green if versions match, red if mismatch
- *
- * Only renders in development mode (NODE_ENV !== "production")
  */
 
 import { useSession } from "../hooks/useSession";
@@ -124,7 +122,7 @@ export function logVersionDebug(debugInfo: {
   console.log("%c━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n", grayStyle);
 }
 
-export function VersionDebugOverlay() {
+export function VersionDebugLogger() {
   const session = useSession();
   const workflow = useWorkflowState(state => state.workflow);
   const jobs = useWorkflowState(state => state.jobs);

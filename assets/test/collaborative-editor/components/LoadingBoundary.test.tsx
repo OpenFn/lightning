@@ -16,12 +16,17 @@ import { render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import { LoadingBoundary } from "../../../js/collaborative-editor/components/LoadingBoundary";
 import * as useSessionModule from "../../../js/collaborative-editor/hooks/useSession";
+import * as useSessionContextModule from "../../../js/collaborative-editor/hooks/useSessionContext";
 import * as useWorkflowModule from "../../../js/collaborative-editor/hooks/useWorkflow";
 import type { SessionState } from "../../../js/collaborative-editor/stores/createSessionStore";
 import type { Workflow } from "../../../js/collaborative-editor/types/workflow";
 
 // Mock hooks
 const mockUseSession = vi.spyOn(useSessionModule, "useSession");
+const mockUseSessionContextLoading = vi.spyOn(
+  useSessionContextModule,
+  "useSessionContextLoading"
+);
 const mockUseWorkflowState = vi.spyOn(useWorkflowModule, "useWorkflowState");
 
 // Mock session state factory
@@ -52,6 +57,8 @@ const createMockWorkflow = (overrides?: Partial<Workflow>): Workflow => ({
 describe("LoadingBoundary", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // By default, mock session context as loaded (not loading)
+    mockUseSessionContextLoading.mockReturnValue(false);
   });
 
   describe("loading states", () => {
@@ -75,11 +82,7 @@ describe("LoadingBoundary", () => {
 
       // Should show loading screen
       expect(screen.queryByTestId("child-content")).not.toBeInTheDocument();
-      expect(screen.getByText("Syncing workflow...")).toBeInTheDocument();
-
-      // Should show spinner (check for the spinner div with animation classes)
-      const spinner = screen.getByText("Syncing workflow...").previousSibling;
-      expect(spinner).toHaveClass("animate-spin");
+      expect(screen.getByText("Loading workflow")).toBeInTheDocument();
     });
 
     test("renders loading screen when workflow is null", () => {
@@ -102,7 +105,7 @@ describe("LoadingBoundary", () => {
 
       // Should show loading screen
       expect(screen.queryByTestId("child-content")).not.toBeInTheDocument();
-      expect(screen.getByText("Syncing workflow...")).toBeInTheDocument();
+      expect(screen.getByText("Loading workflow")).toBeInTheDocument();
     });
 
     test("renders loading screen when both conditions are false", () => {
@@ -124,7 +127,7 @@ describe("LoadingBoundary", () => {
 
       // Should show loading screen
       expect(screen.queryByTestId("child-content")).not.toBeInTheDocument();
-      expect(screen.getByText("Syncing workflow...")).toBeInTheDocument();
+      expect(screen.getByText("Loading workflow")).toBeInTheDocument();
     });
   });
 
@@ -152,7 +155,7 @@ describe("LoadingBoundary", () => {
       expect(screen.getByText("Child Content")).toBeInTheDocument();
 
       // Should NOT show loading screen
-      expect(screen.queryByText("Syncing workflow...")).not.toBeInTheDocument();
+      expect(screen.queryByText("Loading workflow")).not.toBeInTheDocument();
     });
 
     test("renders multiple children when ready", () => {
@@ -196,7 +199,7 @@ describe("LoadingBoundary", () => {
         </LoadingBoundary>
       );
 
-      expect(screen.getByText("Syncing workflow...")).toBeInTheDocument();
+      expect(screen.getByText("Loading workflow")).toBeInTheDocument();
     });
 
     test("loading screen has proper structure", () => {
@@ -220,23 +223,16 @@ describe("LoadingBoundary", () => {
       );
       expect(flexContainer).toBeInTheDocument();
 
-      // Check for text-center wrapper
-      const textCenter = container.querySelector(".text-center");
-      expect(textCenter).toBeInTheDocument();
-
-      // Check for spinner
-      const spinner = container.querySelector(".animate-spin");
-      expect(spinner).toBeInTheDocument();
-      expect(spinner).toHaveClass("rounded-full");
-      expect(spinner).toHaveClass("h-12");
-      expect(spinner).toHaveClass("w-12");
-      expect(spinner).toHaveClass("border-b-2");
-      expect(spinner).toHaveClass("border-primary-600");
-
       // Check for loading text
       const loadingText = container.querySelector(".text-gray-600");
       expect(loadingText).toBeInTheDocument();
-      expect(loadingText).toHaveTextContent("Syncing workflow...");
+      expect(loadingText).toHaveTextContent("Loading workflow");
+
+      // Check for animated ping spinner
+      const pingSpin = container.querySelector(".animate-ping");
+      expect(pingSpin).toBeInTheDocument();
+      expect(pingSpin).toHaveClass("rounded-full");
+      expect(pingSpin).toHaveClass("bg-primary-400");
     });
   });
 
@@ -255,7 +251,7 @@ describe("LoadingBoundary", () => {
 
       // Should render without errors
       expect(container).toBeInTheDocument();
-      expect(screen.queryByText("Syncing workflow...")).not.toBeInTheDocument();
+      expect(screen.queryByText("Loading workflow")).not.toBeInTheDocument();
     });
 
     test("handles isConnected false but isSynced true (edge case)", () => {
@@ -327,7 +323,7 @@ describe("LoadingBoundary", () => {
 
       // Should NOT render diagram until synced
       expect(screen.queryByTestId("workflow-diagram")).not.toBeInTheDocument();
-      expect(screen.getByText("Syncing workflow...")).toBeInTheDocument();
+      expect(screen.getByText("Loading workflow")).toBeInTheDocument();
     });
 
     test("prevents rendering before workflow loaded (Bug 2: old version errors)", () => {
@@ -349,7 +345,7 @@ describe("LoadingBoundary", () => {
 
       // Should NOT render editor until workflow available
       expect(screen.queryByTestId("workflow-editor")).not.toBeInTheDocument();
-      expect(screen.getByText("Syncing workflow...")).toBeInTheDocument();
+      expect(screen.getByText("Loading workflow")).toBeInTheDocument();
     });
 
     test("allows rendering only when both conditions met", () => {

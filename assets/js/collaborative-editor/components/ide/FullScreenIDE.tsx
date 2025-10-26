@@ -10,13 +10,18 @@ import {
 import { useURLState } from "../../../react/lib/use-url-state";
 import _logger from "#/utils/logger";
 import { useSession } from "../../hooks/useSession";
-import { useProject } from "../../hooks/useSessionContext";
 import {
+  useLatestSnapshotLockVersion,
+  useProject,
+} from "../../hooks/useSessionContext";
+import {
+  useCanRun,
   useCanSave,
   useCurrentJob,
   useWorkflowActions,
   useWorkflowState,
 } from "../../hooks/useWorkflow";
+import { notifications } from "../../lib/notifications";
 import { CollaborativeMonaco } from "../CollaborativeMonaco";
 import { SandboxIndicatorBanner } from "../SandboxIndicatorBanner";
 import { ManualRunPanel } from "../ManualRunPanel";
@@ -55,6 +60,14 @@ export function FullScreenIDE({
   const { job: currentJob, ytext: currentJobYText } = useCurrentJob();
   const { awareness } = useSession();
   const { canSave, tooltipMessage } = useCanSave();
+  const { canRun: canRunSnapshot, tooltipMessage: runTooltipMessage } =
+    useCanRun();
+
+  // Get version information for header
+  const snapshotVersion = useWorkflowState(
+    state => state.workflow?.lock_version
+  );
+  const latestSnapshotLockVersion = useLatestSnapshotLockVersion();
 
   // Construct workflow object from store state for ManualRunPanel
   const workflow = useWorkflowState(state =>
@@ -97,6 +110,64 @@ export function FullScreenIDE({
     };
   }, [enableScope, disableScope]);
 
+  // Sync URL job ID to workflow store selection
+  useEffect(() => {
+    if (jobIdFromURL) {
+      selectJob(jobIdFromURL);
+    }
+  }, [jobIdFromURL, selectJob]);
+
+  // Handler for Save button
+  const handleSave = () => {
+    // Centralized validation - both button and keyboard shortcut use this
+    if (!canSave) {
+      // Show toast with the reason why save is disabled
+      notifications.alert({
+        title: "Cannot save",
+        description: tooltipMessage,
+      });
+      return;
+    }
+    void saveWorkflow();
+  };
+
+  // Handler for collapsing left panel (no close button in IDE context)
+  const handleCollapseLeftPanel = () => {
+    leftPanelRef.current?.collapse();
+  };
+
+  // Callback from ManualRunPanel with run state
+  const handleRunStateChange = (
+    canRun: boolean,
+    isSubmitting: boolean,
+    handler: () => void
+  ) => {
+    setCanRunWorkflow(canRun);
+    setIsRunning(isSubmitting);
+    setRunHandler(() => handler);
+  };
+
+  // Handler for Run button in header
+  const handleRunClick = () => {
+    // Centralized validation - both button and keyboard shortcut use this
+
+    // Check snapshot/permission restrictions first (these have clear messages)
+    if (!canRunSnapshot) {
+      notifications.alert({
+        title: "Cannot run",
+        description: runTooltipMessage,
+      });
+      return;
+    }
+
+    // Check runtime conditions (no toast needed - these are transient states)
+    if (!canRunWorkflow || isRunning || !runHandler) {
+      return;
+    }
+
+    runHandler();
+  };
+
   // Handle Escape key to close the IDE
   // Two-step behavior: first Escape removes focus from Monaco, second closes IDE
   useHotkeys(
@@ -131,9 +202,8 @@ export function FullScreenIDE({
       event.preventDefault();
       event.stopPropagation();
 
-      if (runHandler && canRunWorkflow && !isRunning) {
-        runHandler();
-      }
+      // Use centralized handler with validation
+      handleRunClick();
     },
     {
       enabled: true,
@@ -141,15 +211,8 @@ export function FullScreenIDE({
       preventDefault: true, // Prevent Monaco's default behavior
       enableOnContentEditable: true, // Work in Monaco's contentEditable
     },
-    [runHandler, canRunWorkflow, isRunning]
+    [handleRunClick]
   );
-
-  // Sync URL job ID to workflow store selection
-  useEffect(() => {
-    if (jobIdFromURL) {
-      selectJob(jobIdFromURL);
-    }
-  }, [jobIdFromURL, selectJob]);
 
   // Loading state: Wait for Y.Text and awareness to be ready
   if (!currentJob || !currentJobYText || !awareness) {
@@ -204,46 +267,23 @@ export function FullScreenIDE({
     }
   };
 
-  // Handler for Save button
-  const handleSave = () => {
-    void saveWorkflow();
-  };
-
-  // Handler for collapsing left panel (no close button in IDE context)
-  const handleCollapseLeftPanel = () => {
-    leftPanelRef.current?.collapse();
-  };
-
-  // Callback from ManualRunPanel with run state
-  const handleRunStateChange = (
-    canRun: boolean,
-    isSubmitting: boolean,
-    handler: () => void
-  ) => {
-    setCanRunWorkflow(canRun);
-    setIsRunning(isSubmitting);
-    setRunHandler(() => handler);
-  };
-
-  // Handler for Run button in header
-  const handleRunClick = () => {
-    if (runHandler) {
-      runHandler();
-    }
-  };
-
   return (
     <div className="fixed inset-0 z-50 bg-white flex flex-col">
       {/* Header with Run, Save, Close buttons */}
       <IDEHeader
         jobName={currentJob.name}
+        snapshotVersion={snapshotVersion}
+        latestSnapshotVersion={latestSnapshotLockVersion}
+        workflowId={workflowId}
+        projectId={projectId}
         onClose={onClose}
         onSave={handleSave}
         onRun={handleRunClick}
-        canRun={canRunWorkflow && !isRunning}
+        canRun={canRunSnapshot && canRunWorkflow && !isRunning}
         isRunning={isRunning}
         canSave={canSave}
         saveTooltip={tooltipMessage}
+        runTooltip={runTooltipMessage}
       />
       <SandboxIndicatorBanner
         parentProjectId={parentProjectId}
@@ -381,7 +421,7 @@ export function FullScreenIDE({
                     ytext={currentJobYText}
                     awareness={awareness}
                     adaptor={currentJob.adaptor || "common"}
-                    disabled={false}
+                    disabled={!canSave}
                     className="h-full w-full"
                     options={{
                       automaticLayout: true,

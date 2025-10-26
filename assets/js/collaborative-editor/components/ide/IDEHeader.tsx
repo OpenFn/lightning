@@ -1,8 +1,14 @@
+import { useURLState } from "../../../react/lib/use-url-state";
 import { Button } from "../Button";
 import { Tooltip } from "../Tooltip";
+import { VersionDropdown } from "../VersionDropdown";
 
 interface IDEHeaderProps {
   jobName: string;
+  snapshotVersion: number | null | undefined;
+  latestSnapshotVersion: number | null | undefined;
+  workflowId: string | undefined;
+  projectId: string | undefined;
   onClose: () => void;
   onSave: () => void;
   onRun: () => void;
@@ -10,6 +16,7 @@ interface IDEHeaderProps {
   isRunning: boolean;
   canSave: boolean;
   saveTooltip: string;
+  runTooltip?: string;
 }
 
 /**
@@ -21,6 +28,10 @@ interface IDEHeaderProps {
  */
 export function IDEHeader({
   jobName,
+  snapshotVersion,
+  latestSnapshotVersion,
+  workflowId,
+  projectId,
   onClose,
   onSave,
   onRun,
@@ -28,25 +39,48 @@ export function IDEHeader({
   isRunning,
   canSave,
   saveTooltip,
+  runTooltip,
 }: IDEHeaderProps) {
+  const { updateSearchParams } = useURLState();
+
+  // Handler for version selection (update URL param without navigation)
+  const handleVersionSelect = (version: number | "latest") => {
+    if (version === "latest") {
+      updateSearchParams({ v: null }); // Remove version param
+    } else {
+      updateSearchParams({ v: String(version) }); // Set version param
+    }
+  };
   return (
-    <div className="shrink-0 border-b border-gray-200 bg-white px-6 py-3">
+    <div className="shrink-0 border-b border-gray-200 bg-white px-6 py-2">
       <div className="flex items-center justify-between">
-        {/* Left: Job name */}
-        <div>
+        {/* Left: Job name with version chip */}
+        <div className="flex items-center gap-2">
           <h2 className="text-base font-semibold text-gray-900">{jobName}</h2>
-          <p className="text-xs text-gray-500 mt-0.5">Full-screen editor</p>
+          {workflowId && projectId && (
+            <VersionDropdown
+              currentVersion={snapshotVersion ?? null}
+              latestVersion={latestSnapshotVersion ?? null}
+              workflowId={workflowId}
+              projectId={projectId}
+              onVersionSelect={handleVersionSelect}
+            />
+          )}
         </div>
 
         {/* Right: Action buttons */}
         <div className="flex items-center gap-3">
-          <Button variant="secondary" onClick={onRun} disabled={!canRun}>
-            <span
-              className="hero-play size-4 inline-block mr-1"
-              aria-hidden="true"
-            />
-            {isRunning ? "Running..." : "Run"}
-          </Button>
+          <Tooltip content={runTooltip || "Run workflow"} side="bottom">
+            <span className="inline-block">
+              <Button variant="secondary" onClick={onRun} disabled={!canRun}>
+                <span
+                  className="hero-play size-4 inline-block mr-1"
+                  aria-hidden="true"
+                />
+                {isRunning ? "Running..." : "Run"}
+              </Button>
+            </span>
+          </Tooltip>
 
           <Tooltip content={saveTooltip} side="bottom">
             <span className="inline-block">
