@@ -78,12 +78,6 @@ export function logVersionDebug(debugInfo: {
     versionStyle
   );
 
-  if (isStale) {
-    console.log("%c⚠️  STALE DATA - Y.Doc is behind database!", redStyle);
-  } else if (versionsMatch) {
-    console.log("%c✓ Versions Match", greenStyle);
-  }
-
   console.log("%c━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━", grayStyle);
 
   // Sync Status
