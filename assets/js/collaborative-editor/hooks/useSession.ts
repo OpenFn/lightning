@@ -10,7 +10,7 @@
  * ```typescript
  * const sessionStore = useSession();
  * // Access properties directly (convenience getters)
- * const { ydoc, provider, awareness, isConnected, isSynced } = sessionStore;
+ * const { ydoc, provider, awareness, isConnected, isSynced, settled } = sessionStore;
  *
  * // Or use optimized selectors
  * const ydoc = sessionStore.withSelector(state => state.ydoc);

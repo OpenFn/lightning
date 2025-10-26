@@ -1,4 +1,4 @@
-import { useURLState } from "../../../react/lib/use-url-state";
+import { useVersionSelect } from "../../hooks/useVersionSelect";
 import { Button } from "../Button";
 import { Tooltip } from "../Tooltip";
 import { VersionDropdown } from "../VersionDropdown";
@@ -41,16 +41,8 @@ export function IDEHeader({
   saveTooltip,
   runTooltip,
 }: IDEHeaderProps) {
-  const { updateSearchParams } = useURLState();
-
-  // Handler for version selection (update URL param without navigation)
-  const handleVersionSelect = (version: number | "latest") => {
-    if (version === "latest") {
-      updateSearchParams({ v: null }); // Remove version param
-    } else {
-      updateSearchParams({ v: String(version) }); // Set version param
-    }
-  };
+  // Use shared version selection handler (destroys Y.Doc before switching)
+  const handleVersionSelect = useVersionSelect();
   return (
     <div className="shrink-0 border-b border-gray-200 bg-white px-6 py-2">
       <div className="flex items-center justify-between">

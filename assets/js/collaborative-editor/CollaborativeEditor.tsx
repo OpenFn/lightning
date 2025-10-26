@@ -2,7 +2,6 @@ import { useMemo } from "react";
 import { HotkeysProvider } from "react-hotkeys-hook";
 
 import { SocketProvider } from "../react/contexts/SocketProvider";
-import { useURLState } from "../react/lib/use-url-state";
 import type { WithActionProps } from "../react/lib/with-props";
 
 import { BreadcrumbLink, BreadcrumbText } from "./components/Breadcrumbs";
@@ -19,6 +18,7 @@ import {
   useLatestSnapshotLockVersion,
   useProject,
 } from "./hooks/useSessionContext";
+import { useVersionSelect } from "./hooks/useVersionSelect";
 import { useWorkflowState } from "./hooks/useWorkflow";
 
 export interface CollaborativeEditorDataProps {
@@ -81,16 +81,8 @@ function BreadcrumbContent({
   const projectEnv = projectFromStore?.env ?? projectEnvFallback;
   const currentWorkflowName = workflowFromStore?.name ?? workflowName;
 
-  const { updateSearchParams } = useURLState();
-
-  // Handler for version selection (update URL param without navigation)
-  const handleVersionSelect = (version: number | "latest") => {
-    if (version === "latest") {
-      updateSearchParams({ v: null }); // Remove version param
-    } else {
-      updateSearchParams({ v: String(version) }); // Set version param
-    }
-  };
+  // Use shared version selection handler (destroys Y.Doc before switching)
+  const handleVersionSelect = useVersionSelect();
 
   const breadcrumbElements = useMemo(() => {
     return [
@@ -141,7 +133,7 @@ function BreadcrumbContent({
     workflowId,
     workflowFromStore?.lock_version,
     latestSnapshotLockVersion,
-    updateSearchParams,
+    handleVersionSelect,
   ]);
 
   return (

@@ -7,21 +7,6 @@
  */
 
 /**
- * ## Session State Machine
- *
- * 1. Initial (ydoc: null, provider: null, isConnected: false, isSynced: false)
- *    ↓ initializeSession()
- * 2. Connecting (ydoc: YDoc, provider: Provider, isConnected: false, isSynced: false)
- *    ↓ Phoenix channel connects
- * 3. Connected (ydoc: YDoc, provider: Provider, isConnected: true, isSynced: false)
- *    ↓ Y.Doc receives initial sync
- * 4. Synced (ydoc: YDoc, provider: Provider, isConnected: true, isSynced: true)
- *    ↓ Ready for WorkflowStore connection
- *
- * On disconnect: Returns to step 2, then re-syncs to step 4
- */
-
-/**
  * ## Redux DevTools Integration
  *
  * This store integrates with Redux DevTools for debugging in
@@ -67,6 +52,7 @@ export interface SessionState {
   userData: LocalUserData | null;
   isConnected: boolean;
   isSynced: boolean;
+  settled: boolean;
   lastStatus: string | null;
 }
 
@@ -92,8 +78,10 @@ export interface SessionStore {
   getYDoc: () => YDoc | null;
   getConnectionState: () => boolean;
   getSyncState: () => boolean;
+  getSettled: () => boolean;
   get isConnected(): boolean;
   get isSynced(): boolean;
+  get settled(): boolean;
   get provider(): PhoenixChannelProvider | null;
   get ydoc(): YDoc | null;
   get awareness(): awarenessProtocol.Awareness | null;
@@ -110,6 +98,7 @@ export const createSessionStore = (): SessionStore => {
       userData: null,
       isConnected: false,
       isSynced: false,
+      settled: false,
       lastStatus: null,
     } as SessionState,
     draft => draft
@@ -117,6 +106,7 @@ export const createSessionStore = (): SessionStore => {
 
   const listeners = new Set<() => void>();
   let cleanupProviderHandlers: (() => void) | null = null;
+  let settlingSubscriptionCleanup: (() => void) | null = null;
 
   // Redux DevTools integration
   const devtools = wrapStoreWithDevTools({
@@ -228,6 +218,14 @@ export const createSessionStore = (): SessionStore => {
     cleanupProviderHandlers?.(); // Clean up any existing handlers
     cleanupProviderHandlers = attachProvider(provider, updateState);
 
+    // Step 6: Initialize settling subscription if not already active
+    settlingSubscriptionCleanup?.();
+    settlingSubscriptionCleanup = createSettlingSubscription(
+      subscribe,
+      getSnapshot,
+      updateState
+    );
+
     devtools.connect();
 
     return { ydoc, provider, awareness: awarenessToUse };
@@ -235,6 +233,7 @@ export const createSessionStore = (): SessionStore => {
 
   /**
    * destroy
+   * - Calls settlingController.abort() which rejects the hanging promises
    * - Calls provider.destroy() which cleans up the PhoenixChannelProvider
    * - Calls ydoc.destroy() which cleans up the YDoc
    * - Resets all state to null
@@ -244,6 +243,10 @@ export const createSessionStore = (): SessionStore => {
     // Clean up all event handlers first
     cleanupProviderHandlers?.();
     cleanupProviderHandlers = null;
+
+    // Clean up settling subscription
+    settlingSubscriptionCleanup?.();
+    settlingSubscriptionCleanup = null;
 
     state.provider?.destroy();
     state.awareness?.destroy();
@@ -259,6 +262,7 @@ export const createSessionStore = (): SessionStore => {
       draft.userData = null;
       draft.isConnected = false;
       draft.isSynced = false;
+      draft.settled = false;
       draft.lastStatus = null;
     }, "destroy");
   };
@@ -269,6 +273,7 @@ export const createSessionStore = (): SessionStore => {
   const getYDoc = (): YDoc | null => state.ydoc;
   const getConnectionState = (): boolean => state.isConnected;
   const getSyncState = (): boolean => state.isSynced;
+  const getSettled = (): boolean => state.settled;
 
   return {
     // Core store interface
@@ -288,6 +293,7 @@ export const createSessionStore = (): SessionStore => {
     getYDoc,
     getConnectionState,
     getSyncState,
+    getSettled,
 
     // Raw state accessors for convenience
     get isConnected() {
@@ -295,6 +301,9 @@ export const createSessionStore = (): SessionStore => {
     },
     get isSynced() {
       return state.isSynced;
+    },
+    get settled() {
+      return state.settled;
     },
     get provider() {
       return state.provider;
@@ -340,4 +349,151 @@ function attachProvider(
     provider.off("status", statusHandler);
     provider.off("sync", syncHandler);
   };
+}
+
+function createSettlingSubscription(
+  subscribe: SessionStore["subscribe"],
+  getSnapshot: SessionStore["getSnapshot"],
+  updateState: UpdateFn<SessionState>
+) {
+  const state = getSnapshot();
+  if (!state.provider || !state.ydoc) {
+    throw new Error(
+      "Provider and YDoc must be initialized before creating settling subscription"
+    );
+  }
+
+  let currentController: AbortController | null = null;
+  let currentlyConnected = state.isConnected;
+
+  // Type-cast state since we've already verified provider and ydoc exist
+  const stateWithProviderAndYdoc = state as SessionState & {
+    provider: NonNullable<SessionState["provider"]>;
+    ydoc: NonNullable<SessionState["ydoc"]>;
+  };
+
+  const startSettling = () => {
+    // Abort any previous settling operation
+    currentController?.abort();
+    currentController = new AbortController();
+
+    // Reset settled state
+    updateState(draft => {
+      draft.settled = false;
+    }, "settlingStarted");
+
+    // Start waiting for settled state
+    Promise.all([
+      waitForChannelSynced(currentController, stateWithProviderAndYdoc),
+      waitForFirstUpdate(currentController, stateWithProviderAndYdoc),
+    ])
+      .then(() => {
+        if (!currentController?.signal.aborted) {
+          updateState(draft => {
+            logger.debug("Settled");
+            draft.settled = true;
+          }, "settledStatusChange");
+        }
+        return undefined;
+      })
+      .catch(_e => {
+        // Silently handle aborted/error cases
+        // Settled state remains false
+        return undefined;
+      });
+  };
+
+  const onStateChange = () => {
+    const newState = getSnapshot();
+
+    // Detect transition from disconnected to connected
+    if (newState.isConnected && !currentlyConnected) {
+      currentlyConnected = true;
+      // Restart settling process on reconnection
+      startSettling();
+    } else if (!newState.isConnected && currentlyConnected) {
+      // Handle disconnection
+      currentlyConnected = false;
+      currentController?.abort();
+      updateState(draft => {
+        draft.settled = false;
+      }, "disconnected");
+    }
+  };
+
+  const unsubscribe = subscribe(onStateChange);
+
+  // Start initial settling if already connected, otherwise wait for connection
+  if (currentlyConnected) {
+    startSettling();
+  }
+
+  // Return cleanup function
+  return () => {
+    unsubscribe();
+    currentController?.abort();
+  };
+}
+
+function waitForChannelSynced(
+  controller: AbortController,
+  state: SessionState & {
+    provider: NonNullable<SessionState["provider"]>;
+  }
+) {
+  const { provider } = state;
+  return new Promise<void>(resolve => {
+    // if (provider.synced) {
+    //   resolve();
+    //   return;
+    // }
+
+    const cleanup = () => {
+      provider.off("sync", handler);
+    };
+
+    const handler = (synced: boolean) => {
+      if (synced) {
+        cleanup();
+        resolve();
+      }
+    };
+
+    provider.on("sync", handler);
+
+    controller.signal.addEventListener("abort", () => {
+      cleanup();
+      resolve();
+    });
+  });
+}
+
+function waitForFirstUpdate(
+  controller: AbortController,
+  state: SessionState & {
+    ydoc: NonNullable<SessionState["ydoc"]>;
+    provider: NonNullable<SessionState["provider"]>;
+  }
+) {
+  const { ydoc, provider } = state;
+
+  return new Promise<void>(resolve => {
+    const cleanup = () => {
+      ydoc.off("update", handler);
+    };
+
+    const handler = (_update: Uint8Array, origin: unknown) => {
+      if (origin === provider) {
+        cleanup();
+        resolve();
+      }
+    };
+
+    controller.signal.addEventListener("abort", () => {
+      cleanup();
+      resolve();
+    });
+
+    ydoc.on("update", handler);
+  });
 }

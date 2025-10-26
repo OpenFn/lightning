@@ -24,12 +24,12 @@ export function LoadingBoundary({ children }: LoadingBoundaryProps) {
   const sessionContextLoading = useSessionContextLoading();
 
   // Wait for ALL sync conditions before rendering
-  // - session.isSynced: Y.Doc has received and applied all initial data
+  // - session.settled: Y.Doc has synced AND received first update from provider
   // - workflow !== null: WorkflowStore observers have populated state
   // - !sessionContextLoading: SessionContext (including latestSnapshotLockVersion) is loaded
 
   const isReady =
-    session.isSynced && workflow !== null && !sessionContextLoading;
+    session.settled && workflow !== null && !sessionContextLoading;
 
   if (!isReady) {
     return (
