@@ -103,6 +103,7 @@ vi.mock("../../../../js/collaborative-editor/hooks/useSessionContext", () => ({
     id: "project-1",
     name: "Test Project",
   }),
+  useLatestSnapshotLockVersion: () => 1,
 }));
 
 // Mock workflow hooks
@@ -138,6 +139,10 @@ vi.mock("../../../../js/collaborative-editor/hooks/useWorkflow", () => ({
     canSave: true,
     tooltipMessage: "Save workflow",
   }),
+  useCanRun: () => ({
+    canRun: true,
+    tooltipMessage: "Run workflow",
+  }),
   useCurrentJob: () => ({
     job: {
       id: "job-1",
@@ -165,7 +170,7 @@ vi.mock("../../../../js/collaborative-editor/hooks/useWorkflow", () => ({
 
 // Mock react-resizable-panels
 vi.mock("react-resizable-panels", () => ({
-  Panel: ({ children, onCollapse, onExpand, ref }: any) => {
+  Panel: ({ children }: any) => {
     return <div data-testid="panel">{children}</div>;
   },
   PanelGroup: ({ children }: any) => (
@@ -380,7 +385,6 @@ describe("FullScreenIDE", () => {
 
   describe("panel collapse/expand", () => {
     test("left panel can be collapsed via collapse button", async () => {
-      const user = userEvent.setup();
       const onClose = vi.fn();
 
       renderFullScreenIDE({
