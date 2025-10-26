@@ -51,7 +51,16 @@ defmodule Lightning.Collaboration.WorkflowReconciler do
   end
 
   defp generate_ydoc_operations(%Ecto.Changeset{} = changeset, workflow, doc) do
-    [:jobs, :edges, :triggers, :positions, :name, :concurrency, :enable_job_logs]
+    [
+      :jobs,
+      :edges,
+      :triggers,
+      :positions,
+      :name,
+      :concurrency,
+      :enable_job_logs,
+      :lock_version
+    ]
     |> Enum.flat_map(fn assoc ->
       case Ecto.Changeset.get_change(changeset, assoc) do
         nil ->
