@@ -42,6 +42,11 @@ defmodule Lightning.Collaboration.Persistence do
 
         Logger.debug("Loaded #{length(updates)} updates. document=#{doc_name}")
 
+        # Reconcile workflow metadata with current database state
+        # This ensures lock_version and other workflow fields are current
+        # even if the persisted Y.Doc state is stale
+        reconcile_workflow_metadata(doc, workflow)
+
       {:error, :not_found} ->
         Logger.info(
           "No persisted state found, starting fresh. document=#{doc_name}"
@@ -125,5 +130,30 @@ defmodule Lightning.Collaboration.Persistence do
     else
       {:error, :not_found}
     end
+  end
+
+  defp reconcile_workflow_metadata(doc, workflow) do
+    # Update workflow metadata fields to match current database state
+    # This is critical when loading persisted Y.Doc state that may be stale
+    workflow_map = Yex.Doc.get_map(doc, "workflow")
+
+    Yex.Doc.transaction(doc, "reconcile_metadata", fn ->
+      # Update lock_version to current database value
+      Yex.Map.set(workflow_map, "lock_version", workflow.lock_version)
+
+      # Update name in case it changed
+      Yex.Map.set(workflow_map, "name", workflow.name)
+
+      # Update deleted_at if present
+      if Map.has_key?(workflow, :deleted_at) do
+        Yex.Map.set(workflow_map, "deleted_at", workflow.deleted_at)
+      end
+    end)
+
+    Logger.debug(
+      "Reconciled workflow metadata: lock_version=#{workflow.lock_version}, name=#{workflow.name}"
+    )
+
+    :ok
   end
 end

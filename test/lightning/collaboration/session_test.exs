@@ -9,6 +9,7 @@ defmodule Lightning.SessionTest do
 
   import Eventually
   import Lightning.Factories
+  import Lightning.CollaborationHelpers
 
   alias Lightning.Collaboration.DocumentState
   alias Lightning.Collaboration.DocumentSupervisor
@@ -808,6 +809,82 @@ defmodule Lightning.SessionTest do
         {:ok, _} -> assert true
         {:error, _} -> assert true
       end
+    end
+  end
+
+  describe "persistence reconciliation" do
+    test "reconciles lock_version when loading persisted Y.Doc state", %{
+      user: user
+    } do
+      workflow = insert(:simple_workflow)
+
+      # Start initial session and make some changes
+      {:ok, _doc_supervisor} =
+        Lightning.Collaborate.start_document(
+          workflow,
+          "workflow:#{workflow.id}"
+        )
+
+      {:ok, session1} =
+        Session.start_link(
+          user: user,
+          workflow: workflow,
+          parent_pid: self()
+        )
+
+      # Get the SharedDoc and verify initial lock_version
+      shared_doc = Session.get_doc(session1)
+      workflow_map = Yex.Doc.get_map(shared_doc, "workflow")
+      initial_lock_version = Yex.Map.fetch!(workflow_map, "lock_version")
+
+      # Simulate workflow changes in database (e.g., from another save)
+      # This increments lock_version in the database
+      new_lock_version = initial_lock_version + 1
+
+      {:ok, updated_workflow} =
+        Lightning.Workflows.save_workflow(
+          Lightning.Workflows.change_workflow(workflow, %{
+            name: "Updated Name"
+          }),
+          user
+        )
+
+      # Verify database has new lock_version
+      assert updated_workflow.lock_version == new_lock_version
+
+      # Stop the session and document supervisor to simulate server restart
+      Session.stop(session1)
+      ensure_doc_supervisor_stopped(workflow.id)
+
+      # Start a new session - this will load persisted Y.Doc state
+      # The persisted state has old lock_version, but fresh workflow has new one
+      {:ok, _doc_supervisor2} =
+        Lightning.Collaborate.start_document(
+          updated_workflow,
+          "workflow:#{workflow.id}"
+        )
+
+      {:ok, session2} =
+        Session.start_link(
+          user: user,
+          workflow: updated_workflow,
+          parent_pid: self()
+        )
+
+      # Get the SharedDoc and check lock_version was reconciled
+      shared_doc2 = Session.get_doc(session2)
+      workflow_map2 = Yex.Doc.get_map(shared_doc2, "workflow")
+      reconciled_lock_version = Yex.Map.fetch!(workflow_map2, "lock_version")
+
+      # The lock_version should match the database, not the stale persisted state
+      assert reconciled_lock_version == new_lock_version,
+             "Expected lock_version #{new_lock_version} but got #{reconciled_lock_version}"
+
+      # Verify name was also reconciled
+      reconciled_name = Yex.Map.fetch!(workflow_map2, "name")
+      assert reconciled_name == "Updated Name"
+
+      Session.stop(session2)
     end
   end
 end
