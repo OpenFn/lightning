@@ -29,54 +29,8 @@ defmodule Lightning.Collaboration.Persistence do
 
     case load_document_records(doc_name) do
       {:ok, checkpoint, updates} ->
-        # Apply checkpoint first if exists
-        if checkpoint do
-          Logger.info("Applying checkpoint to document. document=#{doc_name}")
-          Yex.apply_update(doc, checkpoint.state_data)
-        end
-
-        # Then apply updates in chronological order
-        Enum.each(updates, fn update ->
-          Yex.apply_update(doc, update.state_data)
-        end)
-
-        Logger.debug("Loaded #{length(updates)} updates. document=#{doc_name}")
-
-        # Check if persisted Y.Doc is stale by comparing lock_version
-        workflow_map = Yex.Doc.get_map(doc, "workflow")
-
-        persisted_lock_version =
-          case Yex.Map.fetch(workflow_map, "lock_version") do
-            {:ok, version} when is_float(version) -> trunc(version)
-            {:ok, version} when is_integer(version) -> version
-            :error -> nil
-          end
-
-        current_lock_version = workflow.lock_version
-
-        cond do
-          # Persisted Y.Doc is stale (DB has newer version)
-          # This means the workflow was saved elsewhere and persisted Y.Doc is outdated
-          # Discard persisted state and reload from DB
-          persisted_lock_version != current_lock_version and
-              not is_nil(persisted_lock_version) ->
-            Logger.warning("""
-            Persisted Y.Doc is stale (persisted: #{inspect(persisted_lock_version)}, current: #{current_lock_version})
-            Discarding persisted state and reloading from database.
-            document=#{doc_name}
-            """)
-
-            # Clear and reset: same pattern as Session.clear_and_reset_doc
-            clear_and_reset_workflow(doc, workflow)
-
-          # Persisted Y.Doc is current, just update metadata in case name/deleted_at changed
-          true ->
-            Logger.debug(
-              "Persisted Y.Doc is current (lock_version: #{current_lock_version}). document=#{doc_name}"
-            )
-
-            reconcile_workflow_metadata(doc, workflow)
-        end
+        apply_persisted_state(doc, doc_name, checkpoint, updates)
+        reconcile_or_reset(doc, doc_name, workflow)
 
       {:error, :not_found} ->
         Logger.info(
@@ -84,8 +38,6 @@ defmodule Lightning.Collaboration.Persistence do
         )
 
         Session.initialize_workflow_document(doc, workflow)
-
-        :ok
     end
 
     # Return state for tracking
@@ -161,6 +113,77 @@ defmodule Lightning.Collaboration.Persistence do
     else
       {:error, :not_found}
     end
+  end
+
+  defp apply_persisted_state(doc, doc_name, checkpoint, updates) do
+    # Apply checkpoint first if exists
+    if checkpoint do
+      Logger.info("Applying checkpoint to document. document=#{doc_name}")
+      Yex.apply_update(doc, checkpoint.state_data)
+    end
+
+    # Then apply updates in chronological order
+    Enum.each(updates, fn update ->
+      Yex.apply_update(doc, update.state_data)
+    end)
+
+    Logger.debug("Loaded #{length(updates)} updates. document=#{doc_name}")
+  end
+
+  defp reconcile_or_reset(doc, doc_name, workflow) do
+    workflow_map = Yex.Doc.get_map(doc, "workflow")
+    persisted_lock_version = extract_lock_version(workflow_map)
+    current_lock_version = workflow.lock_version
+
+    if stale?(persisted_lock_version, current_lock_version) do
+      handle_stale_document(
+        doc,
+        doc_name,
+        workflow,
+        persisted_lock_version,
+        current_lock_version
+      )
+    else
+      handle_current_document(doc, doc_name, workflow, current_lock_version)
+    end
+  end
+
+  defp extract_lock_version(workflow_map) do
+    case Yex.Map.fetch(workflow_map, "lock_version") do
+      {:ok, version} when is_float(version) -> trunc(version)
+      {:ok, version} when is_integer(version) -> version
+      :error -> nil
+    end
+  end
+
+  defp stale?(persisted_version, current_version) do
+    persisted_version != current_version and not is_nil(persisted_version)
+  end
+
+  defp handle_stale_document(
+         doc,
+         doc_name,
+         workflow,
+         persisted_version,
+         current_version
+       ) do
+    Logger.warning("""
+    Persisted Y.Doc is stale (persisted: #{inspect(persisted_version)}, \
+    current: #{current_version})
+    Discarding persisted state and reloading from database.
+    document=#{doc_name}
+    """)
+
+    clear_and_reset_workflow(doc, workflow)
+  end
+
+  defp handle_current_document(doc, doc_name, workflow, current_version) do
+    Logger.debug(
+      "Persisted Y.Doc is current (lock_version: #{current_version}). \
+      document=#{doc_name}"
+    )
+
+    reconcile_workflow_metadata(doc, workflow)
   end
 
   defp clear_and_reset_workflow(doc, workflow) do
