@@ -40,7 +40,7 @@ export function SelectedDataclipView({
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b">
+      <div className="flex items-center justify-between pb-4">
         <div className="flex-1">
           {isEditingName ? (
             <div className="flex gap-2">
