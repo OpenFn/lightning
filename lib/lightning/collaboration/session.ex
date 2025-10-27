@@ -26,7 +26,14 @@ defmodule Lightning.Collaboration.Session do
 
   require Logger
 
-  defstruct [:parent_pid, :parent_ref, :shared_doc_pid, :user, :workflow]
+  defstruct [
+    :parent_pid,
+    :parent_ref,
+    :shared_doc_pid,
+    :user,
+    :workflow,
+    :document_name
+  ]
 
   @pg_scope :workflow_collaboration
 
@@ -86,8 +93,9 @@ defmodule Lightning.Collaboration.Session do
     workflow = Keyword.fetch!(opts, :workflow)
     user = Keyword.fetch!(opts, :user)
     parent_pid = Keyword.fetch!(opts, :parent_pid)
+    document_name = Keyword.fetch!(opts, :document_name)
 
-    Logger.info("Starting session for workflow #{workflow.id}")
+    Logger.info("Starting session for document #{document_name}")
 
     parent_ref = Process.monitor(parent_pid)
 
@@ -97,20 +105,23 @@ defmodule Lightning.Collaboration.Session do
       parent_ref: parent_ref,
       shared_doc_pid: nil,
       user: user,
-      workflow: workflow
+      workflow: workflow,
+      document_name: document_name
     }
 
-    Registry.whereis({:shared_doc, "workflow:#{workflow.id}"})
+    Registry.whereis({:shared_doc, document_name})
     |> case do
       nil ->
         {:stop, {:error, :shared_doc_not_found}}
 
       shared_doc_pid ->
         SharedDoc.observe(shared_doc_pid)
-        Logger.info("Joined SharedDoc for workflow #{workflow.id}")
+        Logger.info("Joined SharedDoc for #{document_name}")
 
         # We track the user presence here so the the original WorkflowLive.Edit
         # can be stopped from editing the workflow when someone else is editing it.
+        # Note: Presence tracking uses workflow.id, not document_name, because
+        # presence is about showing who is editing the workflow, not which version
         Presence.track_user_presence(
           user,
           workflow.id,
@@ -142,8 +153,8 @@ defmodule Lightning.Collaboration.Session do
 
   # ----------------------------------------------------------------------------
 
-  def lookup_shared_doc(workflow_id) do
-    case :pg.get_members(@pg_scope, workflow_id) do
+  def lookup_shared_doc(document_name) do
+    case :pg.get_members(@pg_scope, document_name) do
       [] -> nil
       [shared_doc_pid | _] -> shared_doc_pid
     end

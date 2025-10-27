@@ -4,8 +4,10 @@
  */
 
 import { useHotkeys } from "react-hotkeys-hook";
+
 import { useURLState } from "../../../react/lib/use-url-state";
 import type { Workflow } from "../../types/workflow";
+
 import { EdgeInspector } from "./EdgeInspector";
 import { InspectorLayout } from "./InspectorLayout";
 import { JobInspector } from "./JobInspector";
@@ -18,7 +20,6 @@ export { InspectorLayout } from "./InspectorLayout";
 // const logger = _logger.ns("Inspector").seal();
 
 interface InspectorProps {
-  workflow: Workflow;
   currentNode: {
     node: Workflow.Node | null;
     type: Workflow.NodeType | null;
@@ -30,7 +31,6 @@ interface InspectorProps {
 }
 
 export function Inspector({
-  workflow,
   currentNode,
   onClose,
   onOpenRunPanel,
@@ -72,7 +72,7 @@ export function Inspector({
   if (mode === "settings") {
     return (
       <InspectorLayout title="Workflow settings" onClose={handleClose}>
-        <WorkflowSettings workflow={workflow} />
+        <WorkflowSettings />
       </InspectorLayout>
     );
   }

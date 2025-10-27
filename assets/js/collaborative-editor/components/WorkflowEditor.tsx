@@ -3,8 +3,10 @@
  */
 
 import { useEffect, useState } from "react";
-import { useHotkeysContext } from "react-hotkeys-hook";
+import { useHotkeys, useHotkeysContext } from "react-hotkeys-hook";
+
 import _logger from "#/utils/logger";
+
 import { useURLState } from "../../react/lib/use-url-state";
 import type { WorkflowState as YAMLWorkflowState } from "../../yaml/types";
 import { useIsNewWorkflow, useProject } from "../hooks/useSessionContext";
@@ -19,6 +21,7 @@ import {
   useWorkflowState,
   useWorkflowStoreContext,
 } from "../hooks/useWorkflow";
+
 import { CollaborativeWorkflowDiagram } from "./diagram/CollaborativeWorkflowDiagram";
 import { FullScreenIDE } from "./ide/FullScreenIDE";
 import { Inspector } from "./inspector";
@@ -58,17 +61,19 @@ export function WorkflowEditor({
 
   // Update run panel context when selected node changes (if panel is open)
   useEffect(() => {
-    if (isRunPanelOpen) {
-      // Panel is open, update context based on selected node
-      if (currentNode.type === "job" && currentNode.node) {
+    if (isRunPanelOpen && currentNode.node) {
+      // Panel is open and a node is selected - update context
+      if (currentNode.type === "job") {
         openRunPanel({ jobId: currentNode.node.id });
-      } else if (currentNode.type === "trigger" && currentNode.node) {
+      } else if (currentNode.type === "trigger") {
         openRunPanel({ triggerId: currentNode.node.id });
-      } else if (currentNode.type === "edge" || !currentNode.node) {
-        // Close panel if edge selected or nothing selected (clicked canvas)
+      } else if (currentNode.type === "edge") {
+        // Close panel if edge selected
         closeRunPanel();
       }
     }
+    // Don't close when currentNode.node is null - panel can stay open
+    // with its initial context
   }, [
     currentNode.type,
     currentNode.node,
@@ -82,23 +87,26 @@ export function WorkflowEditor({
   const projectId = project?.id;
 
   // WorkflowId comes from workflow state
-  const workflowState = useWorkflowState(state => state.workflow);
-  const workflowId = workflowState?.id;
+  // LoadingBoundary guarantees workflow is non-null here
+  const workflowState = useWorkflowState(state => state.workflow!);
+  const workflowId = workflowState.id;
 
   const [showLeftPanel, setShowLeftPanel] = useState(isNewWorkflow);
 
+  // Run state from ManualRunPanel
+  const [canRunWorkflow, setCanRunWorkflow] = useState(false);
+  const [isRunning, setIsRunning] = useState(false);
+  const [runHandler, setRunHandler] = useState<(() => void) | null>(null);
+
   // Construct full workflow object from state
-  const workflow = useWorkflowState(state =>
-    state.workflow
-      ? {
-          name: state.workflow.name,
-          jobs: state.jobs,
-          triggers: state.triggers,
-          edges: state.edges,
-          positions: state.positions,
-        }
-      : null
-  );
+  // LoadingBoundary guarantees workflow is non-null here
+  const workflow = useWorkflowState(state => ({
+    name: state.workflow!.name,
+    jobs: state.jobs,
+    triggers: state.triggers,
+    edges: state.edges,
+    positions: state.positions,
+  }));
 
   // Get current creation method from URL
   const currentMethod = searchParams.get("method") as
@@ -153,6 +161,59 @@ export function WorkflowEditor({
     updateSearchParams({ editor: null });
   };
 
+  // Callback from ManualRunPanel with run state
+  const handleRunStateChange = (
+    canRun: boolean,
+    isSubmitting: boolean,
+    handler: () => void
+  ) => {
+    setCanRunWorkflow(canRun);
+    setIsRunning(isSubmitting);
+    setRunHandler(() => handler);
+  };
+
+  // Handle Cmd/Ctrl+Enter to open run panel or trigger run
+  useHotkeys(
+    "mod+enter",
+    event => {
+      event.preventDefault();
+
+      if (isRunPanelOpen) {
+        // Panel is open - trigger run
+        if (runHandler && canRunWorkflow && !isRunning) {
+          runHandler();
+        }
+      } else {
+        // Panel is closed - open it
+        if (currentNode.type === "job" && currentNode.node) {
+          openRunPanel({ jobId: currentNode.node.id });
+        } else if (currentNode.type === "trigger" && currentNode.node) {
+          openRunPanel({ triggerId: currentNode.node.id });
+        } else {
+          // Nothing selected - open with first trigger (like clicking Run)
+          const firstTrigger = workflow.triggers[0];
+          if (firstTrigger) {
+            openRunPanel({ triggerId: firstTrigger.id });
+          }
+        }
+      }
+    },
+    {
+      enabled: !isIDEOpen, // Disable in canvas when IDE is open
+      enableOnFormTags: true,
+    },
+    [
+      isRunPanelOpen,
+      runHandler,
+      canRunWorkflow,
+      isRunning,
+      currentNode,
+      openRunPanel,
+      isIDEOpen,
+      workflow,
+    ]
+  );
+
   return (
     <div className="relative flex h-full w-full">
       {/* Canvas and Inspector - hidden when IDE open */}
@@ -169,42 +230,37 @@ export function WorkflowEditor({
             {/* Inspector slides in from the right and appears on top
                 This div is also the wrapper which is used to calculate the overlap
                 between the inspector and the diagram.  */}
-            {workflow && (
-              <div
-                id="inspector"
-                className={`absolute top-0 right-0 h-full transition-transform duration-300 ease-in-out z-10 ${
-                  showInspector
-                    ? "translate-x-0"
-                    : "translate-x-full pointer-events-none"
-                }`}
-              >
-                <Inspector
+            <div
+              id="inspector"
+              className={`absolute top-0 right-0 h-full transition-transform duration-300 ease-in-out z-10 ${
+                showInspector
+                  ? "translate-x-0"
+                  : "translate-x-full pointer-events-none"
+              }`}
+            >
+              <Inspector
+                currentNode={currentNode}
+                onClose={handleCloseInspector}
+                onOpenRunPanel={openRunPanel}
+                respondToHotKey={!isRunPanelOpen}
+              />
+            </div>
+
+            {/* Run panel overlays inspector when open */}
+            {isRunPanelOpen && runPanelContext && projectId && workflowId && (
+              <div className="absolute inset-y-0 right-0 flex pointer-events-none z-20">
+                <ManualRunPanel
                   workflow={workflow}
-                  currentNode={currentNode}
-                  onClose={handleCloseInspector}
-                  onOpenRunPanel={openRunPanel}
-                  respondToHotKey={!isRunPanelOpen}
+                  projectId={projectId}
+                  workflowId={workflowId}
+                  jobId={runPanelContext.jobId ?? null}
+                  triggerId={runPanelContext.triggerId ?? null}
+                  onClose={closeRunPanel}
+                  onRunStateChange={handleRunStateChange}
+                  saveWorkflow={saveWorkflow}
                 />
               </div>
             )}
-
-            {/* Run panel overlays inspector when open */}
-            {workflow &&
-              isRunPanelOpen &&
-              runPanelContext &&
-              projectId &&
-              workflowId && (
-                <div className="absolute inset-y-0 right-0 flex pointer-events-none z-20">
-                  <ManualRunPanel
-                    workflow={workflow}
-                    projectId={projectId}
-                    workflowId={workflowId}
-                    jobId={runPanelContext.jobId ?? undefined}
-                    triggerId={runPanelContext.triggerId ?? undefined}
-                    onClose={closeRunPanel}
-                  />
-                </div>
-              )}
           </div>
 
           {/* Left Panel - Workflow creation methods (absolute positioned, slides over) */}

@@ -22,7 +22,7 @@ export function Tabs<T extends string>({
 }: TabsProps<T>) {
   return (
     <div className="border-b border-gray-200">
-      <nav className="-mb-px flex space-x-8" aria-label="Tabs">
+      <nav className="-mb-px flex w-full" aria-label="Tabs">
         {options.map(option => {
           const isSelected = value === option.value;
           const Icon = option.icon;
@@ -32,7 +32,8 @@ export function Tabs<T extends string>({
               key={option.value}
               onClick={() => onChange(option.value)}
               className={`
-                group inline-flex items-center border-b-2 px-1 py-4
+                group inline-flex items-center justify-center
+                border-b-2 px-1 py-4 flex-1
                 text-sm font-medium transition-colors
                 ${
                   isSelected

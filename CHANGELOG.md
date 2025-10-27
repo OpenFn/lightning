@@ -25,6 +25,11 @@ and this project adheres to
 - Sandbox indicator banners in workflow editor (inspector) to help indicate when
   working in a sandbox environment
   [#3413](https://github.com/OpenFn/lightning/issues/3413)
+- Manual runs from the canvas and the IDE
+  [#3827](https://github.com/openfn/lightning/issues/3827) and
+  [$3634](https://github.com/openfn/lightning/issues/3634)
+- View and switch versions
+  [#3819](https://github.com/openfn/lightning/issues/3819)
 
 ### Changed
 
@@ -33,6 +38,10 @@ and this project adheres to
 - Fixed sandbox merge failing with StaleEntryError when parent workflow was
   modified after sandbox creation
   [#3765](https://github.com/OpenFn/lightning/issues/3765)
+- Workflow is either decapitated or uneditable
+  [#3842](https://github.com/openfn/lightning/issues/3842)
+- User can navigate to React canvas from LiveView version
+  [#3847](https://github.com/openfn/lightning/issues/3847)
 
 ## [2.14.13-pre1] 2025-10-24
 

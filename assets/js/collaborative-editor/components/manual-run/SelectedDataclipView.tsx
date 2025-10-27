@@ -1,6 +1,7 @@
-import { useState, useCallback } from "react";
-import MonacoEditor from "@monaco-editor/react";
-import { XMarkIcon, PencilIcon, CheckIcon } from "@heroicons/react/24/outline";
+import { CheckIcon, PencilIcon, XMarkIcon } from "@heroicons/react/24/outline";
+import { useCallback, useState } from "react";
+
+import { MonacoEditor } from "../../../monaco";
 import type { Dataclip } from "../../api/dataclips";
 import { Button } from "../Button";
 
@@ -40,7 +41,7 @@ export function SelectedDataclipView({
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b">
+      <div className="flex items-center justify-between pb-4">
         <div className="flex-1">
           {isEditingName ? (
             <div className="flex gap-2">

@@ -7,11 +7,18 @@ import type { WithActionProps } from "../react/lib/with-props";
 import { BreadcrumbLink, BreadcrumbText } from "./components/Breadcrumbs";
 import { CollaborationWidget } from "./components/CollaborationWidget";
 import { Header } from "./components/Header";
+import { LoadingBoundary } from "./components/LoadingBoundary";
 import { Toaster } from "./components/ui/Toaster";
+import { VersionDebugLogger } from "./components/VersionDebugLogger";
+import { VersionDropdown } from "./components/VersionDropdown";
 import { WorkflowEditor } from "./components/WorkflowEditor";
 import { SessionProvider } from "./contexts/SessionProvider";
 import { StoreProvider } from "./contexts/StoreProvider";
-import { useProject } from "./hooks/useSessionContext";
+import {
+  useLatestSnapshotLockVersion,
+  useProject,
+} from "./hooks/useSessionContext";
+import { useVersionSelect } from "./hooks/useVersionSelect";
 import { useWorkflowState } from "./hooks/useWorkflow";
 
 export interface CollaborativeEditorDataProps {
@@ -62,6 +69,7 @@ function BreadcrumbContent({
 
   // Get workflow from store to read the current name
   const workflowFromStore = useWorkflowState(state => state.workflow);
+  const latestSnapshotLockVersion = useLatestSnapshotLockVersion();
 
   // Store-first with props-fallback pattern
   // This ensures breadcrumbs work during:
@@ -73,10 +81,8 @@ function BreadcrumbContent({
   const projectEnv = projectFromStore?.env ?? projectEnvFallback;
   const currentWorkflowName = workflowFromStore?.name ?? workflowName;
 
-  const rootProjectId = rootProjectIdFallback;
-  const rootProjectName = rootProjectNameFallback;
-
-  const isSandbox = !!rootProjectId;
+  // Use shared version selection handler (destroys Y.Doc before switching)
+  const handleVersionSelect = useVersionSelect();
 
   const breadcrumbElements = useMemo(() => {
     return [
@@ -95,18 +101,11 @@ function BreadcrumbContent({
       <div key="workflow" className="flex items-center gap-2">
         <BreadcrumbText>{currentWorkflowName}</BreadcrumbText>
         <div className="flex items-center gap-1.5">
-          <div
-            id="canvas-workflow-version-container"
-            className="flex items-middle text-sm font-normal"
-          >
-            <span
-              id="canvas-workflow-version"
-              className="inline-flex items-center rounded-md px-1.5 py-0.5 text-xs font-medium bg-primary-100 text-primary-800"
-              title="This is the latest version of this workflow"
-            >
-              latest
-            </span>
-          </div>
+          <VersionDropdown
+            currentVersion={workflowFromStore?.lock_version ?? null}
+            latestVersion={latestSnapshotLockVersion}
+            onVersionSelect={handleVersionSelect}
+          />
           {projectEnv && (
             <div
               id="canvas-project-env-container"
@@ -124,7 +123,16 @@ function BreadcrumbContent({
         </div>
       </div>,
     ];
-  }, [projectId, projectName, projectEnv, currentWorkflowName]);
+  }, [
+    projectId,
+    projectName,
+    projectEnv,
+    currentWorkflowName,
+    workflowId,
+    workflowFromStore?.lock_version,
+    latestSnapshotLockVersion,
+    handleVersionSelect,
+  ]);
 
   return (
     <Header
@@ -163,6 +171,7 @@ export const CollaborativeEditor: WithActionProps<
             isNewWorkflow={isNewWorkflow}
           >
             <StoreProvider>
+              <VersionDebugLogger />
               <Toaster />
               <BreadcrumbContent
                 workflowId={workflowId}
@@ -183,17 +192,19 @@ export const CollaborativeEditor: WithActionProps<
                   rootProjectNameFallback: rootProjectName,
                 })}
               />
-              <div className="flex-1 min-h-0 overflow-hidden">
-                <WorkflowEditor
-                  {...(rootProjectId !== null && {
-                    parentProjectId: rootProjectId,
-                  })}
-                  {...(rootProjectName !== null && {
-                    parentProjectName: rootProjectName,
-                  })}
-                />
-                <CollaborationWidget />
-              </div>
+              <LoadingBoundary>
+                <div className="flex-1 min-h-0 overflow-hidden">
+                  <WorkflowEditor
+                    {...(rootProjectId !== null && {
+                      parentProjectId: rootProjectId,
+                    })}
+                    {...(rootProjectName !== null && {
+                      parentProjectName: rootProjectName,
+                    })}
+                  />
+                  <CollaborationWidget />
+                </div>
+              </LoadingBoundary>
             </StoreProvider>
           </SessionProvider>
         </SocketProvider>

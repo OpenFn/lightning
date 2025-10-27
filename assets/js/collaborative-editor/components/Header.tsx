@@ -5,11 +5,12 @@ import { useHotkeys } from "react-hotkeys-hook";
 import { useURLState } from "../../react/lib/use-url-state";
 import {
   useIsNewWorkflow,
-  usePermissions,
+  useLatestSnapshotLockVersion,
   useUser,
 } from "../hooks/useSessionContext";
 import { useUICommands } from "../hooks/useUI";
 import {
+  useCanRun,
   useCanSave,
   useNodeSelection,
   useWorkflowActions,
@@ -98,14 +99,20 @@ export function Header({
   const triggers = useWorkflowState(state => state.triggers);
   const firstTriggerId = triggers[0]?.id;
 
-  // Permission checks for Run button
-  // Note: can_run_workflow doesn't exist yet in permissions type
-  // For Phase 2, we'll just use can_edit_workflow as a placeholder
-  const permissions = usePermissions();
-  const canRun = permissions?.can_edit_workflow && firstTriggerId;
+  // Get run button state from hook
+  const { canRun, tooltipMessage: runTooltipMessage } = useCanRun();
 
   // Get UI commands from store
   const { openRunPanel } = useUICommands();
+
+  // Detect if viewing old snapshot
+  const workflow = useWorkflowState(state => state.workflow);
+  const latestSnapshotLockVersion = useLatestSnapshotLockVersion();
+
+  const isOldSnapshot =
+    workflow !== null &&
+    latestSnapshotLockVersion !== null &&
+    workflow.lock_version !== latestSnapshotLockVersion;
 
   const handleRunClick = useCallback(() => {
     if (firstTriggerId) {
@@ -171,7 +178,9 @@ export function Header({
 
           <div className="flex flex-row gap-2">
             <div className="flex flex-row m-auto gap-2">
-              <Switch checked={enabled ?? false} onChange={setEnabled} />
+              {!isOldSnapshot && (
+                <Switch checked={enabled ?? false} onChange={setEnabled} />
+              )}
 
               <div>
                 <button
@@ -183,24 +192,17 @@ export function Header({
                   <span className="hero-adjustments-vertical"></span>
                 </button>
               </div>
-            </div>
-            <div
-              className="hidden"
-              phx-disconnected='[["show",{"transition":[["fade-in"],[],[]]}]]'
-              phx-connected='[["hide",{"transition":[["fade-out"],[],[]]}]]'
-            >
-              <span className="hero-signal-slash w-6 h-6 mr-2 text-red-500"></span>
+              <div
+                className="hidden"
+                phx-disconnected='[["show",{"transition":[["fade-in"],[],[]]}]]'
+                phx-connected='[["hide",{"transition":[["fade-out"],[],[]]}]]'
+              >
+                <span className="hero-signal-slash w-6 h-6 place-self-center mr-2 text-red-500"></span>
+              </div>
             </div>
             <div className="relative flex gap-2">
               {projectId && workflowId && firstTriggerId && (
-                <Tooltip
-                  content={
-                    !canRun
-                      ? "You do not have permission to run workflows"
-                      : "Run workflow"
-                  }
-                  side="bottom"
-                >
+                <Tooltip content={runTooltipMessage} side="bottom">
                   <span className="inline-block">
                     <Button
                       variant="secondary"

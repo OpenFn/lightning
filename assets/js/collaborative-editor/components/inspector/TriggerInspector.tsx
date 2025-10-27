@@ -1,4 +1,5 @@
 import { usePermissions } from "../../hooks/useSessionContext";
+import { useCanRun } from "../../hooks/useWorkflow";
 import type { Workflow } from "../../types/workflow";
 import { Button } from "../Button";
 import { Tooltip } from "../Tooltip";
@@ -24,23 +25,14 @@ export function TriggerInspector({
 }: TriggerInspectorProps) {
   const permissions = usePermissions();
 
-  // Permission checks for Run button
-  // Note: can_run_workflow doesn't exist yet in permissions type
-  // For Phase 2, we'll just use can_edit_workflow as a placeholder
-  const canRun = permissions?.can_edit_workflow;
+  // Use centralized canRun hook for all run permission/state checks
+  const { canRun, tooltipMessage: runTooltipMessage } = useCanRun();
 
   // Build footer with run button (only if user has permission)
   const footer = permissions?.can_edit_workflow ? (
     <InspectorFooter
       leftButtons={
-        <Tooltip
-          content={
-            !canRun
-              ? "You do not have permission to run workflows"
-              : "Run from this trigger"
-          }
-          side="top"
-        >
+        <Tooltip content={runTooltipMessage} side="top">
           <span className="inline-block">
             <Button
               variant="secondary"
