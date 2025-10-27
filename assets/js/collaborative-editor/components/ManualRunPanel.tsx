@@ -3,7 +3,7 @@ import {
   PencilSquareIcon,
   QueueListIcon,
 } from "@heroicons/react/24/outline";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
 
 import { FilterTypes } from "../../manual-run-panel/types";
@@ -107,6 +107,22 @@ export function ManualRunPanel({
       ? `Run from Trigger (${contextTrigger.type})`
       : "Run Workflow";
 
+  // For triggers, we need to find the first connected job for dataclip fetching
+  // since dataclips are associated with jobs, not triggers
+  // This mirrors the backend logic in WorkflowController.get_selected_job
+  const dataclipJobId = useMemo(() => {
+    if (runContext.type === "job") {
+      return runContext.id;
+    }
+
+    // Find the first edge from this trigger to a job
+    const triggerEdge = workflow.edges.find(
+      edge => edge.source_trigger_id === runContext.id
+    );
+
+    return triggerEdge?.target_job_id || workflow.jobs[0]?.id;
+  }, [runContext, workflow.edges, workflow.jobs]);
+
   // Watch for jobId/triggerId changes and update panel
   useEffect(() => {
     // Reset state when context changes
@@ -119,14 +135,13 @@ export function ManualRunPanel({
 
   // Fetch initial dataclips
   useEffect(() => {
-    const contextId = runContext.id;
-    if (!contextId) return;
+    if (!dataclipJobId) return;
 
     const fetchDataclips = async () => {
       try {
         const response = await dataclipApi.searchDataclips(
           projectId,
-          contextId,
+          dataclipJobId,
           "",
           {}
         );
@@ -150,7 +165,7 @@ export function ManualRunPanel({
     };
 
     fetchDataclips();
-  }, [projectId, runContext.id]);
+  }, [projectId, dataclipJobId, jobId, triggerId]);
 
   // Build filters object for API
   const buildFilters = useCallback(() => {
@@ -194,13 +209,12 @@ export function ManualRunPanel({
 
   // Search handler
   const handleSearch = useCallback(async () => {
-    const contextId = runContext.id;
-    if (!contextId) return;
+    if (!dataclipJobId) return;
 
     try {
       const response = await dataclipApi.searchDataclips(
         projectId,
-        contextId,
+        dataclipJobId,
         searchQuery,
         buildFilters()
       );
@@ -208,7 +222,7 @@ export function ManualRunPanel({
     } catch (error) {
       console.error("Failed to search dataclips:", error);
     }
-  }, [projectId, runContext.id, searchQuery, buildFilters]);
+  }, [projectId, dataclipJobId, searchQuery, buildFilters]);
 
   // Auto-search when filters change (debounced)
   useEffect(() => {
@@ -416,7 +430,6 @@ export function ManualRunPanel({
   return (
     <InspectorLayout
       title={panelTitle}
-      nodeType={runContext.type === "job" ? "job" : "trigger"}
       onClose={onClose}
       footer={
         <InspectorFooter

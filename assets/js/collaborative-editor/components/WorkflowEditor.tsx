@@ -16,6 +16,7 @@ import {
   useUICommands,
 } from "../hooks/useUI";
 import {
+  useCanRun,
   useNodeSelection,
   useWorkflowActions,
   useWorkflowState,
@@ -92,6 +93,9 @@ export function WorkflowEditor({
   const workflowId = workflowState.id;
 
   const [showLeftPanel, setShowLeftPanel] = useState(isNewWorkflow);
+
+  // Check if user can run workflows (handles permissions, snapshots, locks, etc.)
+  const { canRun: canOpenRunPanel } = useCanRun();
 
   // Run state from ManualRunPanel
   const [canRunWorkflow, setCanRunWorkflow] = useState(false);
@@ -178,6 +182,11 @@ export function WorkflowEditor({
     event => {
       event.preventDefault();
 
+      // Don't do anything if user can't run (snapshots, permissions, locks, etc.)
+      if (!canOpenRunPanel) {
+        return;
+      }
+
       if (isRunPanelOpen) {
         // Panel is open - trigger run
         if (runHandler && canRunWorkflow && !isRunning) {
@@ -203,6 +212,7 @@ export function WorkflowEditor({
       enableOnFormTags: true,
     },
     [
+      canOpenRunPanel,
       isRunPanelOpen,
       runHandler,
       canRunWorkflow,

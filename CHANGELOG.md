@@ -45,6 +45,10 @@ and this project adheres to
 
 ### Fixed
 
+- Prevent manual run panel from opening via keystroke if running isn't possible
+  (permissions or snapshot)
+- Default Next Input for Cron-Triggered Workflows
+  [#3856](https://github.com/OpenFn/lightning/issues/3856)
 - Canvas goes blank when adding nodes in collaborative workflow editor
   [#3848](https://github.com/OpenFn/lightning/issues/3848)
 - Crash when switching from old to collaborative editor
