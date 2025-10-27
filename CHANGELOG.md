@@ -25,6 +25,10 @@ and this project adheres to
 - Sandbox indicator banners in workflow editor (inspector) to help indicate when
   working in a sandbox environment
   [#3413](https://github.com/OpenFn/lightning/issues/3413)
+- Manual runs from the canvas and the IDE
+  [#3827](https://github.com/openfn/lightning/issues/3827)
+- View and switch versions
+  [#3819](https://github.com/openfn/lightning/issues/3819)
 
 ### Changed
 
