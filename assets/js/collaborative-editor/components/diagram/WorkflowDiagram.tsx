@@ -185,21 +185,7 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
       const placeholderNode = placeholders.nodes[0];
       const placeholderEdge = placeholders.edges[0];
 
-      if (!placeholderNode) {
-        // Add defensive logging in dev mode
-        if (process.env["NODE_ENV"] !== "production") {
-          console.warn(
-            "[WorkflowDiagram] handleCommit: placeholder node not found",
-            {
-              eventId: id,
-              eventName: name,
-              placeholdersState: placeholders,
-              workflowJobs: workflow.jobs.length,
-            }
-          );
-        }
-        return;
-      }
+      if (!placeholderNode) return;
 
       // Cast data to access placeholder-specific properties
       const nodeData = placeholderNode.data as any;
@@ -272,7 +258,6 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
     updateSelection,
     jobs,
     cancelPlaceholder,
-    workflow.jobs.length,
   ]);
 
   // Track positions and selection on a ref, as a passive cache, to prevent re-renders
