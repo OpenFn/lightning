@@ -4,8 +4,10 @@
  */
 
 import { useHotkeys } from "react-hotkeys-hook";
+
 import { useURLState } from "../../../react/lib/use-url-state";
 import type { Workflow } from "../../types/workflow";
+
 import { EdgeInspector } from "./EdgeInspector";
 import { InspectorLayout } from "./InspectorLayout";
 import { JobInspector } from "./JobInspector";

@@ -5,6 +5,7 @@ import {
 } from "@heroicons/react/24/outline";
 import { useCallback, useEffect, useState } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
+
 import { FilterTypes } from "../../manual-run-panel/types";
 import CustomView from "../../manual-run-panel/views/CustomView";
 import EmptyView from "../../manual-run-panel/views/EmptyView";
@@ -14,6 +15,7 @@ import * as dataclipApi from "../api/dataclips";
 import { useCanRun } from "../hooks/useWorkflow";
 import { notifications } from "../lib/notifications";
 import type { Workflow } from "../types/workflow";
+
 import { Button } from "./Button";
 import { InspectorFooter } from "./inspector/InspectorFooter";
 import { InspectorLayout } from "./inspector/InspectorLayout";
@@ -276,7 +278,7 @@ export function ManualRunPanel({
       // Save workflow first
       await saveWorkflow();
 
-      let params: dataclipApi.ManualRunParams = {
+      const params: dataclipApi.ManualRunParams = {
         workflowId,
         projectId,
       };
@@ -356,7 +358,7 @@ export function ManualRunPanel({
     <div className="flex flex-col h-full overflow-hidden">
       <Tabs
         value={selectedTab}
-        onChange={value => setSelectedTab(value as TabValue)}
+        onChange={value => setSelectedTab(value)}
         options={[
           { value: "empty", label: "Empty", icon: DocumentIcon },
           {

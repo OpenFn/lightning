@@ -96,7 +96,7 @@ export function VersionDropdown({
           .then(response => {
             console.log("Received versions response:", response);
             console.log("Versions array:", response.versions);
-            console.log("Versions length:", response.versions?.length);
+            console.log("Versions length:", response.versions.length);
             setVersions(response.versions || []);
             setIsLoading(false);
           })

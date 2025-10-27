@@ -12,13 +12,14 @@
  * - Color coding: green if versions match, red if mismatch
  */
 
+import { useEffect } from "react";
+
 import { useSession } from "../hooks/useSession";
 import {
   useSessionContextLoading,
   useLatestSnapshotLockVersion,
 } from "../hooks/useSessionContext";
 import { useWorkflowState } from "../hooks/useWorkflow";
-import { useEffect } from "react";
 
 /**
  * Logs version debug information to console with beautiful formatting

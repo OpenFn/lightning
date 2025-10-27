@@ -4,7 +4,9 @@
 
 import { useEffect, useState } from "react";
 import { useHotkeys, useHotkeysContext } from "react-hotkeys-hook";
+
 import _logger from "#/utils/logger";
+
 import { useURLState } from "../../react/lib/use-url-state";
 import type { WorkflowState as YAMLWorkflowState } from "../../yaml/types";
 import { useIsNewWorkflow, useProject } from "../hooks/useSessionContext";
@@ -19,6 +21,7 @@ import {
   useWorkflowState,
   useWorkflowStoreContext,
 } from "../hooks/useWorkflow";
+
 import { CollaborativeWorkflowDiagram } from "./diagram/CollaborativeWorkflowDiagram";
 import { FullScreenIDE } from "./ide/FullScreenIDE";
 import { Inspector } from "./inspector";
@@ -188,7 +191,7 @@ export function WorkflowEditor({
           openRunPanel({ triggerId: currentNode.node.id });
         } else {
           // Nothing selected - open with first trigger (like clicking Run)
-          const firstTrigger = workflow?.triggers?.[0];
+          const firstTrigger = workflow.triggers[0];
           if (firstTrigger) {
             openRunPanel({ triggerId: firstTrigger.id });
           }

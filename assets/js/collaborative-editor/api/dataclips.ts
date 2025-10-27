@@ -1,5 +1,5 @@
-import { getCsrfToken } from "../lib/csrf";
 import type { Dataclip } from "../../manual-run-panel/types";
+import { getCsrfToken } from "../lib/csrf";
 
 export type { Dataclip };
 

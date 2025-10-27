@@ -1,14 +1,15 @@
 import { useEffect, useRef, useState } from "react";
 import { useHotkeys, useHotkeysContext } from "react-hotkeys-hook";
 import {
+  type ImperativePanelHandle,
   Panel,
   PanelGroup,
   PanelResizeHandle,
-  type ImperativePanelHandle,
 } from "react-resizable-panels";
 
-import { useURLState } from "../../../react/lib/use-url-state";
 import _logger from "#/utils/logger";
+
+import { useURLState } from "../../../react/lib/use-url-state";
 import { useSession } from "../../hooks/useSession";
 import {
   useLatestSnapshotLockVersion,
@@ -23,8 +24,8 @@ import {
 } from "../../hooks/useWorkflow";
 import { notifications } from "../../lib/notifications";
 import { CollaborativeMonaco } from "../CollaborativeMonaco";
-import { SandboxIndicatorBanner } from "../SandboxIndicatorBanner";
 import { ManualRunPanel } from "../ManualRunPanel";
+import { SandboxIndicatorBanner } from "../SandboxIndicatorBanner";
 
 import { IDEHeader } from "./IDEHeader";
 
