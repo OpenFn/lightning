@@ -349,10 +349,12 @@ describe("ManualRunPanel", () => {
       onClose: () => {},
     });
 
+    // When triggerId is provided, the component finds the target job from the trigger's edge
+    // and uses that job to fetch dataclips (since dataclips are associated with jobs, not triggers)
     await waitFor(() => {
       expect(dataclipApi.searchDataclips).toHaveBeenCalledWith(
         "project-1",
-        "trigger-1",
+        "job-1", // Resolved from trigger-1's edge
         "",
         {}
       );
@@ -400,10 +402,64 @@ describe("ManualRunPanel", () => {
       onClose: () => {},
     });
 
-    // Should auto-switch to Existing tab and show selected dataclip
+    // Should auto-switch to Existing tab and show selected dataclip with warning banner
     await waitFor(() => {
       expect(screen.getByText("Test Dataclip")).toBeInTheDocument();
-      expect(screen.getByText("Next Cron Run")).toBeInTheDocument();
+      expect(
+        screen.getByText("Default Next Input for Cron")
+      ).toBeInTheDocument();
+    });
+  });
+
+  test("shows next cron run warning banner when dataclip is next cron run", async () => {
+    vi.mocked(dataclipApi.searchDataclips).mockResolvedValue({
+      data: [mockDataclip],
+      next_cron_run_dataclip_id: "dataclip-1",
+      can_edit_dataclip: true,
+    });
+
+    renderManualRunPanel({
+      workflow: mockWorkflow,
+      projectId: "project-1",
+      workflowId: "workflow-1",
+      jobId: "job-1",
+      onClose: () => {},
+    });
+
+    // Should show the next cron run warning banner
+    await waitFor(() => {
+      expect(
+        screen.getByText("Default Next Input for Cron")
+      ).toBeInTheDocument();
+      expect(
+        screen.getByText(/This workflow has a "cron" trigger/)
+      ).toBeInTheDocument();
+    });
+  });
+
+  test("shows next cron run warning banner when opened from trigger", async () => {
+    vi.mocked(dataclipApi.searchDataclips).mockResolvedValue({
+      data: [mockDataclip],
+      next_cron_run_dataclip_id: "dataclip-1",
+      can_edit_dataclip: true,
+    });
+
+    renderManualRunPanel({
+      workflow: mockWorkflow,
+      projectId: "project-1",
+      workflowId: "workflow-1",
+      triggerId: "trigger-1",
+      onClose: () => {},
+    });
+
+    // Should show the next cron run warning banner
+    await waitFor(() => {
+      expect(
+        screen.getByText("Default Next Input for Cron")
+      ).toBeInTheDocument();
+      expect(
+        screen.getByText(/This workflow has a "cron" trigger/)
+      ).toBeInTheDocument();
     });
   });
 
