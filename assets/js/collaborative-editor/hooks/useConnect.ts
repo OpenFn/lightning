@@ -146,7 +146,7 @@ export default (
             setDragActive(false);
             return;
           } else {
-            // dropped connect line on empty space -> create placeholder
+            // dropped connect line on empty space -> show adaptor modal
             // & deactivate drag.
             addPlaceholder(node, position);
             setDragActive(false);

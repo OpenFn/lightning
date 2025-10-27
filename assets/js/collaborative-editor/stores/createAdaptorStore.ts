@@ -103,6 +103,7 @@ export const createAdaptorStore = (): AdaptorStore => {
   let state: AdaptorState = produce(
     {
       adaptors: [],
+      projectAdaptors: [],
       isLoading: false,
       error: null,
       lastUpdated: null,
@@ -254,6 +255,7 @@ export const createAdaptorStore = (): AdaptorStore => {
     devtools.connect();
 
     void requestAdaptors();
+    void requestProjectAdaptors();
 
     return () => {
       devtools.disconnect();
@@ -296,6 +298,56 @@ export const createAdaptorStore = (): AdaptorStore => {
     }
   };
 
+  /**
+   * Request project adaptors from server via channel
+   */
+  const requestProjectAdaptors = async (): Promise<void> => {
+    if (!channelProvider?.channel) {
+      logger.warn("Cannot request project adaptors - no channel connected");
+      setError("No connection available");
+      return;
+    }
+
+    setLoading(true);
+    clearError();
+
+    try {
+      logger.debug("Requesting project adaptors");
+      const response = await channelRequest(
+        channelProvider.channel,
+        "request_project_adaptors",
+        {}
+      );
+
+      if (response && typeof response === "object") {
+        const { project_adaptors, all_adaptors } = response as {
+          project_adaptors: unknown;
+          all_adaptors: unknown;
+        };
+
+        const projectResult = AdaptorsListSchema.safeParse(project_adaptors);
+        const allResult = AdaptorsListSchema.safeParse(all_adaptors);
+
+        if (projectResult.success && allResult.success) {
+          state = produce(state, draft => {
+            draft.projectAdaptors = projectResult.data;
+            draft.adaptors = allResult.data;
+            draft.isLoading = false;
+            draft.error = null;
+          });
+          notify("requestProjectAdaptors");
+        } else {
+          const errorMessage = "Invalid project adaptors data";
+          logger.error(errorMessage, { projectResult, allResult });
+          setError(errorMessage);
+        }
+      }
+    } catch (error) {
+      logger.error("Project adaptors request failed", error);
+      setError("Failed to request project adaptors");
+    }
+  };
+
   // =============================================================================
   // QUERY HELPERS
   // =============================================================================
@@ -326,6 +378,7 @@ export const createAdaptorStore = (): AdaptorStore => {
 
     // Commands (CQS pattern)
     requestAdaptors,
+    requestProjectAdaptors,
     setAdaptors,
     setLoading,
     setError,
