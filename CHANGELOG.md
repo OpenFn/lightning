@@ -17,6 +17,9 @@ and this project adheres to
 
 ### Added
 
+- Drag-to-connect nodes on workflow canvas - users can now drag from the plus
+  button on a node and drop it onto another node to create connections
+  [#3825](https://github.com/OpenFn/lightning/issues/3825)
 - Show validation error message when creating sandbox with duplicate name
   [#3776](https://github.com/OpenFn/lightning/issues/3776)
 - Divergence warning when merging sandboxes - displays alert if target branch
