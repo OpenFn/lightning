@@ -35,6 +35,14 @@ and this project adheres to
 
 ### Fixed
 
+- Canvas goes blank when adding nodes in collaborative workflow editor
+  [#3848](https://github.com/OpenFn/lightning/issues/3848)
+- Crash when switching from old to collaborative editor
+  [#3865](https://github.com/OpenFn/lightning/issues/3865)
+- Position errors when rendering nodes
+  [#3866](https://github.com/OpenFn/lightning/issues/3866)
+- Layout animation crashes when adding nodes
+  [#3867](https://github.com/OpenFn/lightning/issues/3867)
 - Fixed sandbox merge failing with StaleEntryError when parent workflow was
   modified after sandbox creation
   [#3765](https://github.com/OpenFn/lightning/issues/3765)
