@@ -1,11 +1,11 @@
-import type { ReactFlowInstance } from '@xyflow/react';
-import { timer } from 'd3-timer';
+import type { ReactFlowInstance } from "@xyflow/react";
+import { timer } from "d3-timer";
 
-import Dagre from '../../vendor/dagre.cjs';
+import Dagre from "../../vendor/dagre.cjs";
 
-import { FIT_PADDING, NODE_HEIGHT, NODE_WIDTH } from './constants';
-import type { Flow, Positions } from './types';
-import { getVisibleRect, isPointInRect } from './util/viewport';
+import { FIT_PADDING, NODE_HEIGHT, NODE_WIDTH } from "./constants";
+import type { Flow, Positions } from "./types";
+import { getVisibleRect, isPointInRect } from "./util/viewport";
 
 export type LayoutOpts = {
   duration?: number | false;
@@ -18,7 +18,7 @@ const calculateLayout = async (
   update: (newModel: Flow.Model) => any,
   flow: ReactFlowInstance,
   viewBounds: { width: number; height: number },
-  options: Omit<LayoutOpts, 'autofit'> = {}
+  options: Omit<LayoutOpts, "autofit"> = {}
 ): Promise<Positions> => {
   const { nodes, edges } = model;
   const { duration } = options;
@@ -29,7 +29,7 @@ const calculateLayout = async (
 
   const g = new Dagre.graphlib.Graph().setDefaultEdgeLabel(() => ({}));
   g.setGraph({
-    rankdir: 'TB',
+    rankdir: "TB",
     nodesep: 250,
     edgesep: 200,
     ranksep: 150,
@@ -61,7 +61,7 @@ const calculateLayout = async (
 
   const hasOldPositions = nodes.find(n => n.position);
 
-  let autofit: LayoutOpts['autofit'] = false;
+  let autofit: LayoutOpts["autofit"] = false;
   let doFit: boolean = false;
   const fitTargets: Flow.Node[] = [];
 
@@ -93,7 +93,7 @@ const calculateLayout = async (
           if (!doFit && !isPointInRect(finalPositions[id], rect)) {
             doFit = true;
           }
-        } else if (node?.type === 'placeholder') {
+        } else if (node?.type === "placeholder") {
           // If the placeholder is NOT visible within the bounds,
           // include it in the set of visible nodes and force a fit
           doFit = true;
@@ -140,7 +140,7 @@ const calculateLayout = async (
     if (options.forceFit) {
       setTimeout(() => {
         flow.fitView({
-          duration: typeof duration === 'number' ? duration : 500,
+          duration: typeof duration === "number" ? duration : 500,
           padding: FIT_PADDING,
         });
       }, 20);
@@ -167,11 +167,18 @@ export const animate = (
       if (!animateFrom || !animateFrom.position) {
         // But if this a new node, animate from its parent (source)
         const edge = from.edges.find(({ target }) => target === node.id);
-        animateFrom = from.nodes.find(({ id }) => id === edge!.source);
+        if (edge) {
+          animateFrom = from.nodes.find(({ id }) => id === edge.source);
+        }
       }
+
+      // If we still don't have a valid position to animate from,
+      // use the node's current position (instant placement, no animation)
+      const fromPosition = animateFrom?.position ?? node.position;
+
       return {
         id: node.id,
-        from: (animateFrom && animateFrom.position) ? animateFrom.position : { x: 0, y: 0 },
+        from: fromPosition,
         to: node.position,
         node,
       };
@@ -196,13 +203,13 @@ export const animate = (
       if (isFirst) {
         // Synchronise a fit to the final position with the same duration
         let fitTarget = to.nodes;
-        if (typeof autofit !== 'boolean') {
+        if (typeof autofit !== "boolean") {
           fitTarget = autofit;
         }
         const bounds = flowInstance.getNodesBounds(fitTarget);
         if (autofit) {
           flowInstance.fitBounds(bounds, {
-            duration: typeof duration === 'number' ? duration : 0,
+            duration: typeof duration === "number" ? duration : 0,
             padding: FIT_PADDING,
           });
         }
