@@ -13,12 +13,15 @@ import {
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import tippy from "tippy.js";
 
+import { randomUUID } from "#/common";
 import useConnect from "#/collaborative-editor/hooks/useConnect";
 import {
   useWorkflowState,
   usePositions,
   useWorkflowStoreContext,
 } from "#/collaborative-editor/hooks/useWorkflow";
+import { useProjectAdaptors } from "#/collaborative-editor/hooks/useAdaptors";
+import { AdaptorSelectionModal } from "../AdaptorSelectionModal";
 import _logger from "#/utils/logger";
 import MiniMapNode from "#/workflow-diagram/components/MiniMapNode";
 import { FIT_DURATION, FIT_PADDING } from "#/workflow-diagram/constants";
@@ -136,6 +139,15 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
   const [drawerWidth, setDrawerWidth] = useState(0);
   const workflowDiagramRef = useRef<HTMLDivElement>(null);
 
+  // Modal state for adaptor selection
+  const [pendingPlaceholder, setPendingPlaceholder] = useState<{
+    sourceNode: Flow.Node;
+    position: { x: number; y: number };
+  } | null>(null);
+
+  // Fetch project adaptors for modal
+  const { projectAdaptors } = useProjectAdaptors();
+
   // Use custom hook for inspector overlap calculation
   const miniMapRightOffset = useInspectorOverlap(
     inspectorId,
@@ -164,7 +176,7 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
 
   const {
     placeholders,
-    add: addPlaceholder,
+    add: _addPlaceholder,
     cancel: cancelPlaceholder,
     updatePlaceholderPosition,
   } = usePlaceholders(el, isManualLayout, updateSelection);
@@ -544,24 +556,6 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
     [updatePosition, updatePlaceholderPosition]
   );
 
-  const handleNodeClick = useCallback(
-    (event: React.MouseEvent, node: Flow.Node) => {
-      // Don't intercept clicks on the + button handle
-      // Let ReactFlow's connection system handle all + button interactions
-      const target = event.target as HTMLElement;
-      const handleId = target.getAttribute("data-handleid");
-
-      if (handleId === "node-connector") {
-        // Do nothing - ReactFlow will handle drag or connection end
-        return;
-      }
-
-      if (node.type !== "placeholder") cancelPlaceholder();
-      updateSelection(node.id);
-    },
-    [updateSelection, cancelPlaceholder]
-  );
-
   const handleEdgeClick = useCallback(
     (_event: React.MouseEvent, edge: Flow.Edge) => {
       cancelPlaceholder();
@@ -642,10 +636,115 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
     });
   }, [model, flow]);
 
+  // Modal handlers for adaptor selection
+  const showAdaptorModal = useCallback(
+    (sourceNode: Flow.Node, position: { x: number; y: number }) => {
+      setPendingPlaceholder({
+        sourceNode,
+        position,
+      });
+    },
+    []
+  );
+
+  const handleAdaptorSelect = useCallback(
+    (adaptorName: string, adaptorVersion?: string) => {
+      if (!pendingPlaceholder) return;
+
+      const { sourceNode, position } = pendingPlaceholder;
+
+      // Extract adaptor display name (e.g., "salesforce" from "@openfn/language-salesforce")
+      const adaptorDisplayName =
+        adaptorName.match(/language-(.+?)(@|$)/)?.[1] || adaptorName;
+
+      // Generate job ID
+      const jobId = randomUUID();
+
+      // Use provided version or default to "latest"
+      const version = adaptorVersion || "latest";
+      const fullAdaptor = `${adaptorName}@${version}`;
+
+      // Create job directly in Y.Doc (this will trigger animation)
+      const newJob = {
+        id: jobId,
+        name: adaptorDisplayName,
+        body: "",
+        adaptor: fullAdaptor,
+      };
+
+      workflowStore.addJob(newJob);
+
+      if (isManualLayout) {
+        workflowStore.updatePosition(jobId, position);
+      }
+
+      // Create edge connecting source to new job
+      const sourceIsJob = jobs.some(j => j.id === sourceNode.id);
+      const newEdge: Record<string, any> = {
+        id: randomUUID(),
+        target_job_id: jobId,
+        condition_type: "on_job_success",
+        enabled: true,
+      };
+
+      if (sourceIsJob) {
+        newEdge["source_job_id"] = sourceNode.id;
+        newEdge["source_trigger_id"] = null;
+      } else {
+        newEdge["source_job_id"] = null;
+        newEdge["source_trigger_id"] = sourceNode.id;
+      }
+
+      workflowStore.addEdge(newEdge);
+
+      // Clear pending state
+      setPendingPlaceholder(null);
+
+      // Select the new job to open inspector
+      updateSelection(jobId);
+    },
+    [pendingPlaceholder, workflowStore, isManualLayout, jobs, updateSelection]
+  );
+
+  const handleAdaptorModalClose = useCallback(() => {
+    setPendingPlaceholder(null);
+  }, []);
+
+  // Show modal immediately without creating placeholder yet
+  const showModalThenAnimate = useCallback(
+    (sourceNode: Flow.Node, position?: { x: number; y: number }) => {
+      const defaultPosition = position || {
+        x: sourceNode.position.x,
+        y: sourceNode.position.y + 120,
+      };
+
+      showAdaptorModal(sourceNode, defaultPosition);
+    },
+    [showAdaptorModal]
+  );
+
+  const handleNodeClick = useCallback(
+    (event: React.MouseEvent, node: Flow.Node) => {
+      const target = event.target as HTMLElement;
+      const handleId = target.getAttribute("data-handleid");
+
+      if (handleId === "node-connector") {
+        // Clicking the + button shows modal immediately
+        // Node will animate in after adaptor is selected
+        showModalThenAnimate(node);
+        return;
+      }
+
+      if (node.type !== "placeholder") cancelPlaceholder();
+      updateSelection(node.id);
+    },
+    [updateSelection, cancelPlaceholder, showModalThenAnimate]
+  );
+
   const connectHandlers = useConnect(
     model,
     setModel,
-    addPlaceholder,
+    showModalThenAnimate,
     () => {
       cancelPlaceholder();
       updateSelection(null);
@@ -680,79 +779,88 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
   }, [redo, undo]);
 
   return (
-    <ReactFlowProvider>
-      <ReactFlow
-        ref={workflowDiagramRef}
-        maxZoom={1}
-        proOptions={{ account: "paid-pro", hideAttribution: true }}
-        nodes={model.nodes}
-        edges={model.edges}
-        onNodesChange={onNodesChange}
-        onNodeDragStop={onNodeDragStop}
-        nodesDraggable={isManualLayout}
-        nodeTypes={nodeTypes}
-        edgeTypes={edgeTypes}
-        onNodeClick={handleNodeClick}
-        onEdgeClick={handleEdgeClick}
-        onInit={setFlow}
-        deleteKeyCode={null}
-        fitView
-        fitViewOptions={{ padding: FIT_PADDING }}
-        minZoom={0.2}
-        {...connectHandlers}
-      >
-        <Controls
-          position="bottom-left"
-          showInteractive={false}
-          showFitView={false}
-          style={{
-            transform: `translateX(${drawerWidth.toString()}px)`,
-            transition: "transform 500ms ease-in-out",
-          }}
+    <>
+      <ReactFlowProvider>
+        <ReactFlow
+          ref={workflowDiagramRef}
+          maxZoom={1}
+          proOptions={{ account: "paid-pro", hideAttribution: true }}
+          nodes={model.nodes}
+          edges={model.edges}
+          onNodesChange={onNodesChange}
+          onNodeDragStop={onNodeDragStop}
+          nodesDraggable={isManualLayout}
+          nodeTypes={nodeTypes}
+          edgeTypes={edgeTypes}
+          onNodeClick={handleNodeClick}
+          onEdgeClick={handleEdgeClick}
+          onInit={setFlow}
+          deleteKeyCode={null}
+          fitView
+          fitViewOptions={{ padding: FIT_PADDING }}
+          minZoom={0.2}
+          {...connectHandlers}
         >
-          <ControlButton onClick={handleFitView} data-tooltip="Fit view">
-            <span className="text-black hero-viewfinder-circle w-4 h-4" />
-          </ControlButton>
+          <Controls
+            position="bottom-left"
+            showInteractive={false}
+            showFitView={false}
+            style={{
+              transform: `translateX(${drawerWidth.toString()}px)`,
+              transition: "transform 500ms ease-in-out",
+            }}
+          >
+            <ControlButton onClick={handleFitView} data-tooltip="Fit view">
+              <span className="text-black hero-viewfinder-circle w-4 h-4" />
+            </ControlButton>
 
-          <ControlButton
-            onClick={() => switchLayout()}
-            data-tooltip={
-              isManualLayout
-                ? "Switch to auto layout mode"
-                : "Switch to manual layout mode"
-            }
-          >
-            {isManualLayout ? (
-              <span className="text-black hero-cursor-arrow-rays w-4 h-4" />
-            ) : (
-              <span className="text-black hero-cursor-arrow-ripple w-4 h-4" />
-            )}
-          </ControlButton>
-          <ControlButton
-            onClick={() => void forceLayout()}
-            data-tooltip="Run auto layout (override manual positions)"
-          >
-            <span className="text-black hero-squares-2x2 w-4 h-4" />
-          </ControlButton>
-          <ControlButton onClick={() => undo()} data-tooltip="Undo">
-            <span className="text-black hero-arrow-uturn-left w-4 h-4" />
-          </ControlButton>
-          <ControlButton onClick={() => redo()} data-tooltip="Redo">
-            <span className="text-black hero-arrow-uturn-right w-4 h-4" />
-          </ControlButton>
-        </Controls>
-        <Background />
-        <MiniMap
-          zoomable
-          pannable
-          className="border-2 border-gray-200"
-          nodeComponent={MiniMapNode}
-          style={{
-            transform: `translateX(-${miniMapRightOffset.toString()}px)`,
-            transition: "transform duration-300 ease-in-out",
-          }}
-        />
-      </ReactFlow>
-    </ReactFlowProvider>
+            <ControlButton
+              onClick={() => switchLayout()}
+              data-tooltip={
+                isManualLayout
+                  ? "Switch to auto layout mode"
+                  : "Switch to manual layout mode"
+              }
+            >
+              {isManualLayout ? (
+                <span className="text-black hero-cursor-arrow-rays w-4 h-4" />
+              ) : (
+                <span className="text-black hero-cursor-arrow-ripple w-4 h-4" />
+              )}
+            </ControlButton>
+            <ControlButton
+              onClick={() => void forceLayout()}
+              data-tooltip="Run auto layout (override manual positions)"
+            >
+              <span className="text-black hero-squares-2x2 w-4 h-4" />
+            </ControlButton>
+            <ControlButton onClick={() => undo()} data-tooltip="Undo">
+              <span className="text-black hero-arrow-uturn-left w-4 h-4" />
+            </ControlButton>
+            <ControlButton onClick={() => redo()} data-tooltip="Redo">
+              <span className="text-black hero-arrow-uturn-right w-4 h-4" />
+            </ControlButton>
+          </Controls>
+          <Background />
+          <MiniMap
+            zoomable
+            pannable
+            className="border-2 border-gray-200"
+            nodeComponent={MiniMapNode}
+            style={{
+              transform: `translateX(-${miniMapRightOffset.toString()}px)`,
+              transition: "transform duration-300 ease-in-out",
+            }}
+          />
+        </ReactFlow>
+      </ReactFlowProvider>
+
+      <AdaptorSelectionModal
+        isOpen={pendingPlaceholder !== null}
+        onClose={handleAdaptorModalClose}
+        onSelect={handleAdaptorSelect}
+        projectAdaptors={projectAdaptors}
+      />
+    </>
   );
 }
