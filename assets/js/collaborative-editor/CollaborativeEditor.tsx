@@ -104,8 +104,6 @@ function BreadcrumbContent({
           <VersionDropdown
             currentVersion={workflowFromStore?.lock_version ?? null}
             latestVersion={latestSnapshotLockVersion}
-            workflowId={workflowId}
-            projectId={projectId ?? ""}
             onVersionSelect={handleVersionSelect}
           />
           {projectEnv && (

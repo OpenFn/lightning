@@ -8,7 +8,6 @@ interface IDEHeaderProps {
   snapshotVersion: number | null | undefined;
   latestSnapshotVersion: number | null | undefined;
   workflowId: string | undefined;
-  projectId: string | undefined;
   onClose: () => void;
   onSave: () => void;
   onRun: () => void;
@@ -31,7 +30,6 @@ export function IDEHeader({
   snapshotVersion,
   latestSnapshotVersion,
   workflowId,
-  projectId,
   onClose,
   onSave,
   onRun,
@@ -49,12 +47,10 @@ export function IDEHeader({
         {/* Left: Job name with version chip */}
         <div className="flex items-center gap-2">
           <h2 className="text-base font-semibold text-gray-900">{jobName}</h2>
-          {workflowId && projectId && (
+          {workflowId && (
             <VersionDropdown
               currentVersion={snapshotVersion ?? null}
               latestVersion={latestSnapshotVersion ?? null}
-              workflowId={workflowId}
-              projectId={projectId}
               onVersionSelect={handleVersionSelect}
             />
           )}

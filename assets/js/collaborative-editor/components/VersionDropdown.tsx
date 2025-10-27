@@ -12,16 +12,12 @@ interface Version {
 interface VersionDropdownProps {
   currentVersion: number | null;
   latestVersion: number | null;
-  workflowId: string;
-  projectId: string;
   onVersionSelect: (version: number | "latest") => void;
 }
 
 export function VersionDropdown({
   currentVersion,
   latestVersion,
-  workflowId,
-  projectId,
   onVersionSelect,
 }: VersionDropdownProps) {
   const [isOpen, setIsOpen] = useState(false);
