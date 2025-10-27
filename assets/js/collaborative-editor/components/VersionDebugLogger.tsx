@@ -16,8 +16,8 @@ import { useEffect } from "react";
 
 import { useSession } from "../hooks/useSession";
 import {
-  useSessionContextLoading,
   useLatestSnapshotLockVersion,
+  useSessionContextLoading,
 } from "../hooks/useSessionContext";
 import { useWorkflowState } from "../hooks/useWorkflow";
 
