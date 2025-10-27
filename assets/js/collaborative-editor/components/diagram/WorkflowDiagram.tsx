@@ -13,6 +13,7 @@ import {
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import tippy from "tippy.js";
 
+import useConnect from "#/collaborative-editor/hooks/useConnect";
 import {
   useWorkflowState,
   usePositions,
@@ -25,7 +26,6 @@ import edgeTypes from "#/workflow-diagram/edges";
 import layout from "#/workflow-diagram/layout";
 import nodeTypes from "#/workflow-diagram/nodes";
 import type { Flow, Positions } from "#/workflow-diagram/types";
-import useConnect from "#/workflow-diagram/useConnect";
 import usePlaceholders from "#/workflow-diagram/usePlaceholders";
 import { ensureNodePosition } from "#/workflow-diagram/util/ensure-node-position";
 import fromWorkflow from "#/workflow-diagram/util/from-workflow";
@@ -546,17 +546,20 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
 
   const handleNodeClick = useCallback(
     (event: React.MouseEvent, node: Flow.Node) => {
-      if (
-        (event.target as HTMLElement).getAttribute("data-handleid") ===
-        "node-connector"
-      ) {
-        addPlaceholder(node);
+      // Don't intercept clicks on the + button handle
+      // Let ReactFlow's connection system handle all + button interactions
+      const target = event.target as HTMLElement;
+      const handleId = target.getAttribute("data-handleid");
+
+      if (handleId === "node-connector") {
+        // Do nothing - ReactFlow will handle drag or connection end
         return;
       }
+
       if (node.type !== "placeholder") cancelPlaceholder();
       updateSelection(node.id);
     },
-    [updateSelection, cancelPlaceholder, addPlaceholder]
+    [updateSelection, cancelPlaceholder]
   );
 
   const handleEdgeClick = useCallback(
@@ -647,7 +650,8 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
       cancelPlaceholder();
       updateSelection(null);
     },
-    flowInstance
+    flowInstance,
+    workflowStore
   );
   // Set up tooltips for control buttons
   useTippyForControls(isManualLayout);
