@@ -136,15 +136,20 @@ defmodule Lightning.Collaboration.Persistence do
     current_lock_version = workflow.lock_version
 
     if stale?(persisted_lock_version, current_lock_version) do
-      handle_stale_document(
-        doc,
-        doc_name,
-        workflow,
-        persisted_lock_version,
-        current_lock_version
-      )
+      Logger.warning("""
+      Persisted Y.Doc is stale (persisted: #{inspect(persisted_lock_version)}, \
+      current: #{current_lock_version})
+      Discarding persisted state and reloading from database.
+      document=#{doc_name}
+      """)
+
+      clear_and_reset_workflow(doc, workflow)
     else
-      handle_current_document(doc, doc_name, workflow, current_lock_version)
+      Logger.debug(
+        "Persisted Y.Doc is current (lock_version: #{current_lock_version}). document=#{doc_name}"
+      )
+
+      reconcile_workflow_metadata(doc, workflow)
     end
   end
 
@@ -158,32 +163,6 @@ defmodule Lightning.Collaboration.Persistence do
 
   defp stale?(persisted_version, current_version) do
     persisted_version != current_version and not is_nil(persisted_version)
-  end
-
-  defp handle_stale_document(
-         doc,
-         doc_name,
-         workflow,
-         persisted_version,
-         current_version
-       ) do
-    Logger.warning("""
-    Persisted Y.Doc is stale (persisted: #{inspect(persisted_version)}, \
-    current: #{current_version})
-    Discarding persisted state and reloading from database.
-    document=#{doc_name}
-    """)
-
-    clear_and_reset_workflow(doc, workflow)
-  end
-
-  defp handle_current_document(doc, doc_name, workflow, current_version) do
-    Logger.debug(
-      "Persisted Y.Doc is current (lock_version: #{current_version}). \
-      document=#{doc_name}"
-    )
-
-    reconcile_workflow_metadata(doc, workflow)
   end
 
   defp clear_and_reset_workflow(doc, workflow) do
@@ -227,9 +206,7 @@ defmodule Lightning.Collaboration.Persistence do
       Yex.Map.set(workflow_map, "name", workflow.name)
 
       # Update deleted_at if present
-      if Map.has_key?(workflow, :deleted_at) do
-        Yex.Map.set(workflow_map, "deleted_at", workflow.deleted_at)
-      end
+      Yex.Map.set(workflow_map, "deleted_at", workflow.deleted_at)
     end)
 
     Logger.debug(
