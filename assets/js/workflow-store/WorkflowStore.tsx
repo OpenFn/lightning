@@ -51,7 +51,7 @@ export const WorkflowStore: WithActionProps = props => {
     setDisabled,
     setForceFit,
     reset,
-    updateRuns
+    updateRuns,
   } = useWorkflowStore();
 
   const pushPendingChange = React.useCallback(
@@ -137,10 +137,13 @@ export const WorkflowStore: WithActionProps = props => {
   }, [add, props.handleEvent, setSelection, setForceFit]);
 
   React.useEffect(() => {
-    return props.handleEvent('patch-runs', (response: { run_id: string, run_steps: RunInfo }) => {
-      updateRuns(response.run_steps, response.run_id);
-    })
-  }, [props.handleEvent, updateRuns])
+    return props.handleEvent(
+      'patch-runs',
+      (response: { run_id: string; run_steps: RunInfo }) => {
+        updateRuns(response.run_steps, response.run_id);
+      }
+    );
+  }, [props.handleEvent, updateRuns]);
 
   // Fetch initial state once on mount
   React.useEffect(() => {
@@ -155,7 +158,12 @@ export const WorkflowStore: WithActionProps = props => {
     props.pushEventTo(
       'get-current-state',
       {},
-      (response: { workflow_params: WorkflowProps, run_steps: RunInfo, run_id: string | null, history: WorkflowRunHistory }) => {
+      (response: {
+        workflow_params: WorkflowProps;
+        run_steps: RunInfo;
+        run_id: string | null;
+        history: WorkflowRunHistory;
+      }) => {
         const { workflow_params, run_steps, run_id, history } = response;
         // workflow_params can contain an empty array of nodes and edges (empty workflow)
         setState(workflow_params);

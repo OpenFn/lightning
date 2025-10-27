@@ -50,12 +50,7 @@ const MinimapNode = ({
           stroke="#ccc"
           strokeWidth={8}
         />
-        <foreignObject
-          x={x + 30}
-          y={y + 30}
-          width={60}
-          height={60}
-        >
+        <foreignObject x={x + 30} y={y + 30} width={60} height={60}>
           {icon}
         </foreignObject>
       </g>

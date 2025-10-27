@@ -1,5 +1,5 @@
-import { expect } from "@playwright/test";
-import type { Page, Locator } from "@playwright/test";
+import { expect } from '@playwright/test';
+import type { Page, Locator } from '@playwright/test';
 
 /**
  * Base class for Phoenix LiveView pages
@@ -7,7 +7,7 @@ import type { Page, Locator } from "@playwright/test";
  */
 export abstract class LiveViewPage {
   protected baseSelectors = {
-    phoenixMain: "div[data-phx-main]",
+    phoenixMain: 'div[data-phx-main]',
     flashMessage: '[id^="flash-"][phx-hook="Flash"]',
   };
 
@@ -15,8 +15,8 @@ export abstract class LiveViewPage {
 
   async clickMenuItem(itemText: string): Promise<void> {
     await this.page
-      .locator("#side-menu")
-      .getByRole("link", { name: itemText })
+      .locator('#side-menu')
+      .getByRole('link', { name: itemText })
       .click();
   }
 
@@ -31,7 +31,7 @@ export abstract class LiveViewPage {
   async waitForConnected(): Promise<void> {
     const locator = this.page.locator(this.baseSelectors.phoenixMain);
     await expect(locator).toBeVisible();
-    await expect(locator).toContainClass("phx-connected");
+    await expect(locator).toContainClass('phx-connected');
   }
 
   /**
@@ -73,23 +73,23 @@ export abstract class LiveViewPage {
    */
   async waitForEventAttached(
     locator: Locator,
-    eventType: string = "click",
+    eventType: string = 'click',
     timeout: number = 5000
   ): Promise<void> {
     // First get the element selector to use in waitForFunction
     const elementHandle = await locator.elementHandle();
     if (!elementHandle) {
-      throw new Error("Element not found for event attachment check");
+      throw new Error('Element not found for event attachment check');
     }
 
     await this.page.waitForFunction(
       ({ elementHandle, eventType }) => {
         // Check for Phoenix LiveView click handler
-        if (eventType === "click" && elementHandle.hasAttribute("phx-click")) {
+        if (eventType === 'click' && elementHandle.hasAttribute('phx-click')) {
           // For Phoenix LiveView, check if the main container is connected
           const isPhxConnected = document
-            .querySelector("[data-phx-main]")
-            ?.classList.contains("phx-connected");
+            .querySelector('[data-phx-main]')
+            ?.classList.contains('phx-connected');
           return isPhxConnected;
         }
 

@@ -5,8 +5,8 @@
  * across different stores in the collaborative editor.
  */
 
-import { produce } from "immer";
-import { useRef, useEffect } from "react";
+import { produce } from 'immer';
+import { useRef, useEffect } from 'react';
 
 /**
  * Creates a withSelector function for a given store's getSnapshot function.

@@ -1,7 +1,7 @@
-import path from "path";
-import react from "@vitejs/plugin-react";
-import tsconfigPaths from "vite-tsconfig-paths";
-import { defineConfig } from "vitest/config";
+import path from 'path';
+import react from '@vitejs/plugin-react';
+import tsconfigPaths from 'vite-tsconfig-paths';
+import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
   plugins: [react(), tsconfigPaths()],
@@ -12,13 +12,13 @@ export default defineConfig({
   },
   test: {
     globals: true,
-    environment: "jsdom",
-    setupFiles: ["./test/_setup.ts"],
-    include: ["test/**/*.test.ts", "test/**/*.test.tsx"],
-    exclude: ["node_modules/**/*"],
-    reporters: ["verbose", "junit"],
+    environment: 'jsdom',
+    setupFiles: ['./test/_setup.ts'],
+    include: ['test/**/*.test.ts', 'test/**/*.test.tsx'],
+    exclude: ['node_modules/**/*'],
+    reporters: ['verbose', 'junit'],
     outputFile: {
-      junit: "../test/reports/vitest.xml",
+      junit: '../test/reports/vitest.xml',
     },
     // Suppress debug logs during tests (matches current setup)
     silent: false,
@@ -27,7 +27,7 @@ export default defineConfig({
   resolve: {
     alias: {
       // Ensure path aliases are resolved correctly
-      "#": path.resolve(__dirname, "./js"),
+      '#': path.resolve(__dirname, './js'),
     },
   },
 });

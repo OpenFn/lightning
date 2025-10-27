@@ -1,9 +1,9 @@
-import { CheckIcon, PencilIcon, XMarkIcon } from "@heroicons/react/24/outline";
-import { useCallback, useState } from "react";
+import { CheckIcon, PencilIcon, XMarkIcon } from '@heroicons/react/24/outline';
+import { useCallback, useState } from 'react';
 
-import { MonacoEditor } from "../../../monaco";
-import type { Dataclip } from "../../api/dataclips";
-import { Button } from "../Button";
+import { MonacoEditor } from '../../../monaco';
+import type { Dataclip } from '../../api/dataclips';
+import { Button } from '../Button';
 
 interface SelectedDataclipViewProps {
   dataclip: Dataclip;
@@ -21,7 +21,7 @@ export function SelectedDataclipView({
   isNextCronRun,
 }: SelectedDataclipViewProps) {
   const [isEditingName, setIsEditingName] = useState(false);
-  const [editedName, setEditedName] = useState(dataclip.name || "");
+  const [editedName, setEditedName] = useState(dataclip.name || '');
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -32,7 +32,7 @@ export function SelectedDataclipView({
       await onNameChange(dataclip.id, editedName || null);
       setIsEditingName(false);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to save name");
+      setError(err instanceof Error ? err.message : 'Failed to save name');
     } finally {
       setIsSaving(false);
     }
@@ -67,7 +67,7 @@ export function SelectedDataclipView({
                 variant="secondary"
                 onClick={() => {
                   setIsEditingName(false);
-                  setEditedName(dataclip.name || "");
+                  setEditedName(dataclip.name || '');
                   setError(null);
                 }}
                 disabled={isSaving}
@@ -80,7 +80,7 @@ export function SelectedDataclipView({
             <>
               <div className="flex items-center gap-2">
                 <h3 className="font-medium text-gray-900">
-                  {dataclip.name || "Unnamed"}
+                  {dataclip.name || 'Unnamed'}
                 </h3>
                 {canEdit && (
                   <button
@@ -96,7 +96,7 @@ export function SelectedDataclipView({
                   text-gray-500 mt-1"
               >
                 <span className="capitalize">
-                  {dataclip.type.replace("_", " ")}
+                  {dataclip.type.replace('_', ' ')}
                 </span>
                 <span>•</span>
                 <span>
@@ -132,7 +132,7 @@ export function SelectedDataclipView({
           options={{
             readOnly: true,
             minimap: { enabled: false },
-            lineNumbers: "on",
+            lineNumbers: 'on',
             fontSize: 14,
             scrollBeyondLastLine: false,
           }}

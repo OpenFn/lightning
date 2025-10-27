@@ -8,17 +8,24 @@ import { mergeChildren } from './merge-children';
 import { renderPortals } from './render-portals';
 import { renderSlots } from './render-slots';
 
-
 interface ActionProps {
-  pushEvent: (name: string, payload: Record<string, unknown>) => void,
-  pushEventTo: (name: string, payload: Record<string, unknown>, callback?: (response: unknown) => void) => void,
-  handleEvent: (name: string, callback: (payload: unknown) => void) => () => void,
-  el: HTMLElement,
-  containerEl: HTMLElement,
-  navigate: (path: string) => void,
+  pushEvent: (name: string, payload: Record<string, unknown>) => void;
+  pushEventTo: (
+    name: string,
+    payload: Record<string, unknown>,
+    callback?: (response: unknown) => void
+  ) => void;
+  handleEvent: (
+    name: string,
+    callback: (payload: unknown) => void
+  ) => () => void;
+  el: HTMLElement;
+  containerEl: HTMLElement;
+  navigate: (path: string) => void;
 }
 
-export type WithActionProps<T = Record<string, unknown>> = React.FunctionComponent<React.PropsWithChildren<ActionProps & T>>;
+export type WithActionProps<T = Record<string, unknown>> =
+  React.FunctionComponent<React.PropsWithChildren<ActionProps & T>>;
 
 /**
  * Use [`useSyncExternalStore`](https://react.dev/reference/react/useSyncExternalStore)
@@ -45,13 +52,15 @@ export const withProps = <const Props = object,>(
 
     const portals = useSyncExternalStore(subscribe, getPortals);
     return (
-      <Component {...(props as React.JSX.IntrinsicAttributes & Props)}
+      <Component
+        {...(props as React.JSX.IntrinsicAttributes & Props)}
         pushEvent={actions.pushEvent}
         pushEventTo={actions.pushEventTo}
         handleEvent={actions.handleEvent}
         navigate={actions.navigate}
         el={actions.el}
-        containerEl={actions.containerEl}>
+        containerEl={actions.containerEl}
+      >
         {mergeChildren(
           (typeof props === 'object' &&
             props !== null &&

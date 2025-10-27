@@ -13,18 +13,18 @@
  *   triggerProviderSync(store, true);
  */
 
-import { Doc as YDoc, applyUpdate, encodeStateAsUpdate } from "yjs";
-import type { PhoenixChannelProvider } from "y-phoenix-channel";
-import { expect } from "vitest";
+import { Doc as YDoc, applyUpdate, encodeStateAsUpdate } from 'yjs';
+import type { PhoenixChannelProvider } from 'y-phoenix-channel';
+import { expect } from 'vitest';
 
-import type { SessionStore } from "../../../js/collaborative-editor/stores/createSessionStore";
-import type { SessionState } from "../../../js/collaborative-editor/stores/createSessionStore";
+import type { SessionStore } from '../../../js/collaborative-editor/stores/createSessionStore';
+import type { SessionState } from '../../../js/collaborative-editor/stores/createSessionStore';
 
-import { createMockSocket as baseCreateMockSocket } from "../mocks/phoenixSocket";
+import { createMockSocket as baseCreateMockSocket } from '../mocks/phoenixSocket';
 import {
   createMockPhoenixChannel as baseCreateMockPhoenixChannel,
   waitForAsync,
-} from "../mocks/phoenixChannel";
+} from '../mocks/phoenixChannel';
 
 // Re-export commonly used utilities
 export { waitForAsync };
@@ -51,7 +51,7 @@ export function createMockSocket() {
  * @example
  * const channel = createMockPhoenixChannel("workflow:123");
  */
-export function createMockPhoenixChannel(topic: string = "test:channel") {
+export function createMockPhoenixChannel(topic: string = 'test:channel') {
   return baseCreateMockPhoenixChannel(topic);
 }
 
@@ -73,9 +73,9 @@ export function triggerProviderSync(
   synced: boolean
 ): void {
   if (!store.provider) {
-    throw new Error("Cannot trigger sync: provider not initialized");
+    throw new Error('Cannot trigger sync: provider not initialized');
   }
-  store.provider.emit("sync", [synced]);
+  store.provider.emit('sync', [synced]);
 }
 
 /**
@@ -92,12 +92,12 @@ export function triggerProviderSync(
  */
 export function triggerProviderStatus(
   store: SessionStore,
-  status: "connected" | "disconnected" | "connecting"
+  status: 'connected' | 'disconnected' | 'connecting'
 ): void {
   if (!store.provider) {
-    throw new Error("Cannot trigger status: provider not initialized");
+    throw new Error('Cannot trigger status: provider not initialized');
   }
-  store.provider.emit("status", [{ status }]);
+  store.provider.emit('status', [{ status }]);
 }
 
 /**
@@ -120,7 +120,7 @@ export function applyProviderUpdate(
 ): void {
   // Create a temporary document with some test data
   const doc2 = new YDoc();
-  doc2.getArray("test").insert(0, ["hello"]);
+  doc2.getArray('test').insert(0, ['hello']);
 
   // Encode and apply the update
   const update = encodeStateAsUpdate(doc2);
@@ -231,7 +231,7 @@ export function createTestYDoc(data?: Record<string, any>): YDoc {
   const ydoc = new YDoc();
 
   if (data) {
-    const map = ydoc.getMap("test");
+    const map = ydoc.getMap('test');
     Object.entries(data).forEach(([key, value]) => {
       map.set(key, value);
     });
@@ -255,7 +255,7 @@ export function createTestYDoc(data?: Record<string, any>): YDoc {
  */
 export function extractYDocData(
   ydoc: YDoc,
-  mapName: string = "test"
+  mapName: string = 'test'
 ): Record<string, any> {
   const map = ydoc.getMap(mapName);
   const result: Record<string, any> = {};
@@ -290,10 +290,10 @@ export function simulateRemoteUserJoin(
 ): void {
   const awareness = store.getAwareness();
   if (!awareness) {
-    throw new Error("Cannot simulate remote user: awareness not initialized");
+    throw new Error('Cannot simulate remote user: awareness not initialized');
   }
 
-  awareness.setLocalStateField("user", userData);
+  awareness.setLocalStateField('user', userData);
 }
 
 /**
@@ -313,16 +313,16 @@ export function simulateRemoteUserLeave(
 ): void {
   const awareness = store.getAwareness();
   if (!awareness) {
-    throw new Error("Cannot simulate remote leave: awareness not initialized");
+    throw new Error('Cannot simulate remote leave: awareness not initialized');
   }
 
   // In real Yjs, this would be handled by the awareness protocol
   // For testing, we can manipulate the states map directly
   awareness.meta.delete(clientId);
   awareness.states.delete(clientId);
-  awareness.emit("change", [
+  awareness.emit('change', [
     { added: [], updated: [], removed: [clientId] },
-    "local",
+    'local',
   ]);
 }
 

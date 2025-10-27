@@ -1,7 +1,7 @@
-import * as path from "path";
-import { execSync } from "child_process";
-import { existsSync, readFileSync, unlinkSync } from "fs";
-import { fileURLToPath } from "url";
+import * as path from 'path';
+import { execSync } from 'child_process';
+import { existsSync, readFileSync, unlinkSync } from 'fs';
+import { fileURLToPath } from 'url';
 
 // ES module equivalent of __dirname
 const __filename = fileURLToPath(import.meta.url);
@@ -17,7 +17,7 @@ interface ExecuteOptions {
   cwd?: string;
 }
 
-export const binPath = path.resolve(__dirname, "../../..", "bin/e2e");
+export const binPath = path.resolve(__dirname, '../../..', 'bin/e2e');
 
 /**
  * Execute a bin/e2e command with proper error handling
@@ -25,7 +25,7 @@ export const binPath = path.resolve(__dirname, "../../..", "bin/e2e");
 function executeCommand(command: string, options: ExecuteOptions = {}): string {
   try {
     const output = execSync(`${binPath} ${command}`, {
-      encoding: "utf-8",
+      encoding: 'utf-8',
       timeout: options.timeout || 30000, // 30 second default timeout
       ...options,
     });
@@ -34,14 +34,14 @@ function executeCommand(command: string, options: ExecuteOptions = {}): string {
   } catch (error) {
     // Enhanced error messages for common scenarios
     if (error instanceof Error) {
-      if (error.message.includes("ENOENT")) {
+      if (error.message.includes('ENOENT')) {
         throw new Error(
           `E2E script not found at ${binPath}. ` +
             `Make sure you're running from the correct directory and the script exists.`
         );
       }
 
-      if (error.message.includes("timeout")) {
+      if (error.message.includes('timeout')) {
         throw new Error(
           `E2E command '${command}' timed out after ${options.timeout || 30000}ms. ` +
             `The database setup or command may be taking longer than expected.`
@@ -49,8 +49,8 @@ function executeCommand(command: string, options: ExecuteOptions = {}): string {
       }
 
       if (
-        error.message.includes("Connection refused") ||
-        error.message.includes("could not connect")
+        error.message.includes('Connection refused') ||
+        error.message.includes('could not connect')
       ) {
         throw new Error(
           `Database connection failed during '${command}'. ` +
@@ -69,14 +69,14 @@ function executeCommand(command: string, options: ExecuteOptions = {}): string {
 export async function describe(): Promise<string> {
   return new Promise((resolve, reject) => {
     try {
-      const output = executeCommand("describe");
+      const output = executeCommand('describe');
 
       // Check for null/empty output
-      if (!output || output === "null") {
+      if (!output || output === 'null') {
         reject(
           new Error(
-            "E2E describe command returned null or empty response. " +
-              "This usually means the e2e database is not set up. " +
+            'E2E describe command returned null or empty response. ' +
+              'This usually means the e2e database is not set up. ' +
               'Run "bin/e2e setup" to initialize the database with demo data.'
           )
         );
@@ -107,7 +107,7 @@ export async function describe(): Promise<string> {
 export async function reset(options: { quiet?: boolean } = {}): Promise<void> {
   return new Promise((resolve, reject) => {
     try {
-      const command = options.quiet ? "reset --quiet" : "reset";
+      const command = options.quiet ? 'reset --quiet' : 'reset';
       executeCommand(command, { timeout: 60000 }); // 1 minute timeout for reset
       resolve();
     } catch (error) {
@@ -137,13 +137,13 @@ export async function reset(options: { quiet?: boolean } = {}): Promise<void> {
  * ```
  */
 export async function enableExperimentalFeatures(
-  userEmail: string = "editor@openfn.org"
+  userEmail: string = 'editor@openfn.org'
 ): Promise<void> {
   return new Promise((resolve, reject) => {
     try {
       const command =
-        userEmail === "editor@openfn.org"
-          ? "enable-experimental-features"
+        userEmail === 'editor@openfn.org'
+          ? 'enable-experimental-features'
           : `enable-experimental-features ${userEmail}`;
 
       executeCommand(command);
@@ -165,7 +165,7 @@ export async function enableExperimentalFeatures(
 export async function startServer(): Promise<void> {
   return new Promise((resolve, reject) => {
     try {
-      executeCommand("server"); // No timeout - server runs indefinitely
+      executeCommand('server'); // No timeout - server runs indefinitely
       resolve();
     } catch (error) {
       reject(new Error(`Failed to start e2e server: ${error}`));
@@ -178,7 +178,7 @@ export async function startServer(): Promise<void> {
  */
 export async function isAvailable(): Promise<boolean> {
   try {
-    executeCommand("help", { timeout: 5000 });
+    executeCommand('help', { timeout: 5000 });
     return true;
   } catch {
     return false;
@@ -189,7 +189,7 @@ export async function isAvailable(): Promise<boolean> {
  * Check if e2e server is already running by checking PID file
  */
 export function isServerRunning(): boolean {
-  const pidFile = "/tmp/lightning_e2e_server";
+  const pidFile = '/tmp/lightning_e2e_server';
 
   try {
     // Check if PID file exists
@@ -198,7 +198,7 @@ export function isServerRunning(): boolean {
     }
 
     // Read PID from file
-    const pidContent = readFileSync(pidFile, "utf-8").trim();
+    const pidContent = readFileSync(pidFile, 'utf-8').trim();
     const pid = parseInt(pidContent, 10);
 
     if (isNaN(pid) || pid <= 0) {
@@ -227,14 +227,14 @@ export function isServerRunning(): boolean {
  * Check if e2e server is already running (safe version with proper imports)
  */
 export function checkServerRunning(): boolean {
-  const pidFile = "/tmp/lightning_e2e_server";
+  const pidFile = '/tmp/lightning_e2e_server';
 
   try {
     if (!existsSync(pidFile)) {
       return false;
     }
 
-    const pidContent = readFileSync(pidFile, "utf-8").trim();
+    const pidContent = readFileSync(pidFile, 'utf-8').trim();
     const pid = parseInt(pidContent, 10);
 
     if (isNaN(pid) || pid <= 0) {

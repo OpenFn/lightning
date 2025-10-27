@@ -1,14 +1,14 @@
-import { test, expect } from "@playwright/test";
-import { getTestData } from "../../test-data";
-import { enableExperimentalFeatures } from "../../e2e-helper";
+import { test, expect } from '@playwright/test';
+import { getTestData } from '../../test-data';
+import { enableExperimentalFeatures } from '../../e2e-helper';
 import {
   LoginPage,
   ProjectsPage,
   WorkflowsPage,
   WorkflowEditPage,
   WorkflowCollaborativePage,
-} from "../../pages";
-import { WorkflowDiagramPage } from "../../pages/components/workflow-diagram.page";
+} from '../../pages';
+import { WorkflowDiagramPage } from '../../pages/components/workflow-diagram.page';
 
 /**
  * Edge Validation in Collaborative Editor
@@ -23,7 +23,7 @@ import { WorkflowDiagramPage } from "../../pages/components/workflow-diagram.pag
  * during drag operations.
  */
 
-test.describe("Edge Validation in Collaborative Editor @collaborative", () => {
+test.describe('Edge Validation in Collaborative Editor @collaborative', () => {
   let testData: Awaited<ReturnType<typeof getTestData>>;
 
   test.beforeAll(async () => {
@@ -35,7 +35,7 @@ test.describe("Edge Validation in Collaborative Editor @collaborative", () => {
     await enableExperimentalFeatures(testData.users.editor.email);
 
     // Login
-    await page.goto("/");
+    await page.goto('/');
     const loginPage = new LoginPage(page);
     await loginPage.loginIfNeeded(
       testData.users.editor.email,
@@ -65,7 +65,7 @@ test.describe("Edge Validation in Collaborative Editor @collaborative", () => {
     await diagram.verifyReactFlowPresent();
   });
 
-  test.skip("should create valid edge between jobs", async ({ page }) => {
+  test.skip('should create valid edge between jobs', async ({ page }) => {
     // SKIP REASON: ReactFlow's onConnect event doesn't fire reliably in Playwright
     // due to d3-drag's precise event timing requirements. See research:
     // .context/stuart/notes/2025-10-14-3724-playwright-reactflow-final-investigation.md
@@ -87,15 +87,15 @@ test.describe("Edge Validation in Collaborative Editor @collaborative", () => {
 
     let initialEdgeCount: number;
 
-    await test.step("Verify initial workflow state", async () => {
+    await test.step('Verify initial workflow state', async () => {
       // Workflow has 4 jobs and 1 trigger
-      await diagram.nodes.verifyExists("Transform data to FHIR standard");
-      await diagram.nodes.verifyExists("Send to OpenHIM to route to SHR");
-      await diagram.nodes.verifyExists("Notify CHW upload successful");
-      await diagram.nodes.verifyExists("Notify CHW upload failed");
+      await diagram.nodes.verifyExists('Transform data to FHIR standard');
+      await diagram.nodes.verifyExists('Send to OpenHIM to route to SHR');
+      await diagram.nodes.verifyExists('Notify CHW upload successful');
+      await diagram.nodes.verifyExists('Notify CHW upload failed');
     });
 
-    await test.step("Record initial edge count", async () => {
+    await test.step('Record initial edge count', async () => {
       initialEdgeCount = await diagram.edges.getCount();
       expect(initialEdgeCount).toBe(4); // Known workflow has 4 edges
     });
@@ -103,8 +103,8 @@ test.describe("Edge Validation in Collaborative Editor @collaborative", () => {
     await test.step("Create edge from 'Notify CHW upload successful' to 'Notify CHW upload failed'", async () => {
       // Create a new edge between two jobs that aren't already connected
       await diagram.edges.dragFromTo(
-        "Notify CHW upload successful",
-        "Notify CHW upload failed"
+        'Notify CHW upload successful',
+        'Notify CHW upload failed'
       );
 
       // Wait for Y.js sync
@@ -114,12 +114,12 @@ test.describe("Edge Validation in Collaborative Editor @collaborative", () => {
       await page.waitForTimeout(500);
     });
 
-    await test.step("Verify edge was created", async () => {
+    await test.step('Verify edge was created', async () => {
       const newEdgeCount = await diagram.edges.getCount();
       expect(newEdgeCount).toBe(initialEdgeCount + 1);
     });
 
-    await test.step("Verify edge persists after reload", async () => {
+    await test.step('Verify edge persists after reload', async () => {
       await page.reload();
 
       const collabEditor = new WorkflowCollaborativePage(page);
@@ -134,17 +134,17 @@ test.describe("Edge Validation in Collaborative Editor @collaborative", () => {
     });
   });
 
-  test("should prevent self-connection", async ({ page }) => {
+  test('should prevent self-connection', async ({ page }) => {
     const diagram = new WorkflowDiagramPage(page);
 
-    await test.step("Attempt to connect job to itself", async () => {
+    await test.step('Attempt to connect job to itself', async () => {
       const initialEdgeCount = await diagram.edges.getCount();
 
       // Start dragging from a job
-      await diagram.edges.startDraggingFrom("Transform data to FHIR standard");
+      await diagram.edges.startDraggingFrom('Transform data to FHIR standard');
 
       // Try to drop on the same job
-      const node = diagram.nodes.getByName("Transform data to FHIR standard");
+      const node = diagram.nodes.getByName('Transform data to FHIR standard');
       await node.click();
 
       // Release drag
@@ -155,7 +155,7 @@ test.describe("Edge Validation in Collaborative Editor @collaborative", () => {
       expect(finalEdgeCount).toBe(initialEdgeCount);
     });
 
-    await test.step("Verify final edge count unchanged", async () => {
+    await test.step('Verify final edge count unchanged', async () => {
       // Self-connection should not have been created
       // Edge count should be same as initial (4 edges)
       const finalEdgeCount = await diagram.edges.getCount();
@@ -163,31 +163,31 @@ test.describe("Edge Validation in Collaborative Editor @collaborative", () => {
     });
   });
 
-  test("should prevent connection to trigger", async ({ page }) => {
+  test('should prevent connection to trigger', async ({ page }) => {
     const diagram = new WorkflowDiagramPage(page);
 
     let initialEdgeCount: number;
 
-    await test.step("Record initial state", async () => {
+    await test.step('Record initial state', async () => {
       // Get initial edge count before any operations
       initialEdgeCount = await diagram.edges.getCount();
       expect(initialEdgeCount).toBe(4);
 
       // Verify trigger node exists
       const triggerNode = diagram.page
-        .locator(".react-flow__node-trigger")
+        .locator('.react-flow__node-trigger')
         .first();
       await expect(triggerNode).toBeVisible();
     });
 
-    await test.step("Start dragging from job", async () => {
-      await diagram.edges.startDraggingFrom("Transform data to FHIR standard");
+    await test.step('Start dragging from job', async () => {
+      await diagram.edges.startDraggingFrom('Transform data to FHIR standard');
     });
 
-    await test.step("Attempt to connect to trigger", async () => {
+    await test.step('Attempt to connect to trigger', async () => {
       // Find the trigger node
       const triggerNode = diagram.page
-        .locator(".react-flow__node-trigger")
+        .locator('.react-flow__node-trigger')
         .first();
 
       // Try to connect to it
@@ -198,7 +198,7 @@ test.describe("Edge Validation in Collaborative Editor @collaborative", () => {
       await page.waitForTimeout(200);
     });
 
-    await test.step("Verify no edge was created", async () => {
+    await test.step('Verify no edge was created', async () => {
       // Ensure React Flow is still rendered
       await diagram.verifyReactFlowPresent();
 
@@ -209,12 +209,12 @@ test.describe("Edge Validation in Collaborative Editor @collaborative", () => {
     });
   });
 
-  test("should prevent two-node circular workflow", async ({ page }) => {
+  test('should prevent two-node circular workflow', async ({ page }) => {
     const diagram = new WorkflowDiagramPage(page);
 
     let initialEdgeCount: number;
 
-    await test.step("Record initial state", async () => {
+    await test.step('Record initial state', async () => {
       // The openhie workflow has these edges already:
       // Trigger -> "Transform data to FHIR standard"
       // "Transform data to FHIR standard" -> "Send to OpenHIM to route to SHR"
@@ -225,12 +225,12 @@ test.describe("Edge Validation in Collaborative Editor @collaborative", () => {
     });
 
     await test.step("Start dragging from 'Send to OpenHIM to route to SHR'", async () => {
-      await diagram.edges.startDraggingFrom("Send to OpenHIM to route to SHR");
+      await diagram.edges.startDraggingFrom('Send to OpenHIM to route to SHR');
     });
 
     await test.step("Attempt to connect back to 'Transform data to FHIR standard'", async () => {
       // This would create a 2-node cycle
-      const node = diagram.nodes.getByName("Transform data to FHIR standard");
+      const node = diagram.nodes.getByName('Transform data to FHIR standard');
       await node.click();
 
       // Small delay to let React Flow process
@@ -240,19 +240,19 @@ test.describe("Edge Validation in Collaborative Editor @collaborative", () => {
       await diagram.edges.releaseDrag();
     });
 
-    await test.step("Verify no circular edge was created", async () => {
+    await test.step('Verify no circular edge was created', async () => {
       // Verify edge count unchanged - circular edge was prevented
       const finalEdgeCount = await diagram.edges.getCount();
       expect(finalEdgeCount).toBe(initialEdgeCount);
     });
   });
 
-  test("should prevent three-node circular workflow", async ({ page }) => {
+  test('should prevent three-node circular workflow', async ({ page }) => {
     const diagram = new WorkflowDiagramPage(page);
 
     let initialEdgeCount: number;
 
-    await test.step("Record initial state", async () => {
+    await test.step('Record initial state', async () => {
       // The workflow already has this chain:
       // Trigger -> Transform -> Send to OpenHIM -> Notify successful
       initialEdgeCount = await diagram.edges.getCount();
@@ -260,13 +260,13 @@ test.describe("Edge Validation in Collaborative Editor @collaborative", () => {
     });
 
     await test.step("Start dragging from 'Notify CHW upload successful'", async () => {
-      await diagram.edges.startDraggingFrom("Notify CHW upload successful");
+      await diagram.edges.startDraggingFrom('Notify CHW upload successful');
     });
 
     await test.step("Attempt to connect back to 'Transform data to FHIR standard'", async () => {
       // This would create a 3-node cycle:
       // Transform -> Send to OpenHIM -> Notify -> Transform
-      const node = diagram.nodes.getByName("Transform data to FHIR standard");
+      const node = diagram.nodes.getByName('Transform data to FHIR standard');
       await node.click();
 
       // Small delay to let React Flow process
@@ -276,14 +276,14 @@ test.describe("Edge Validation in Collaborative Editor @collaborative", () => {
       await diagram.edges.releaseDrag();
     });
 
-    await test.step("Verify no circular edge was created", async () => {
+    await test.step('Verify no circular edge was created', async () => {
       // Verify edge count unchanged - circular edge was prevented
       const finalEdgeCount = await diagram.edges.getCount();
       expect(finalEdgeCount).toBe(initialEdgeCount);
     });
   });
 
-  test.skip("should allow diamond pattern (not a cycle)", async ({ page }) => {
+  test.skip('should allow diamond pattern (not a cycle)', async ({ page }) => {
     // SKIP REASON: Same as "should create valid edge between jobs"
     // ReactFlow's onConnect doesn't fire reliably in Playwright automation.
     // MANUAL VERIFICATION: Drag from Transform → Notify failed to create diamond pattern
@@ -292,7 +292,7 @@ test.describe("Edge Validation in Collaborative Editor @collaborative", () => {
 
     let initialEdgeCount: number;
 
-    await test.step("Record initial state", async () => {
+    await test.step('Record initial state', async () => {
       // The workflow already has a diamond-like pattern:
       // Send to OpenHIM -> Notify successful
       // Send to OpenHIM -> Notify failed
@@ -300,34 +300,34 @@ test.describe("Edge Validation in Collaborative Editor @collaborative", () => {
       expect(initialEdgeCount).toBe(4);
     });
 
-    await test.step("Create new edge completing a valid diamond", async () => {
+    await test.step('Create new edge completing a valid diamond', async () => {
       // Connect Transform -> Notify failed
       // This creates another path without forming a cycle
       // Existing path: Transform -> Send to OpenHIM -> Notify failed
       // New path: Transform -> Notify failed (direct)
       // This is a valid DAG (diamond pattern, not a cycle)
       await diagram.edges.dragFromTo(
-        "Transform data to FHIR standard",
-        "Notify CHW upload failed"
+        'Transform data to FHIR standard',
+        'Notify CHW upload failed'
       );
 
       await collabEditor.waitForSynced();
       await page.waitForTimeout(300);
     });
 
-    await test.step("Verify diamond pattern is valid (no cycle)", async () => {
+    await test.step('Verify diamond pattern is valid (no cycle)', async () => {
       // Edge should have been created successfully
       const finalEdgeCount = await diagram.edges.getCount();
       expect(finalEdgeCount).toBe(initialEdgeCount + 1);
     });
   });
 
-  test("should prevent duplicate edge", async ({ page }) => {
+  test('should prevent duplicate edge', async ({ page }) => {
     const diagram = new WorkflowDiagramPage(page);
 
     let initialEdgeCount: number;
 
-    await test.step("Record initial state", async () => {
+    await test.step('Record initial state', async () => {
       // The workflow has an existing edge:
       // "Transform data to FHIR standard" -> "Send to OpenHIM to route to SHR"
       initialEdgeCount = await diagram.edges.getCount();
@@ -335,12 +335,12 @@ test.describe("Edge Validation in Collaborative Editor @collaborative", () => {
     });
 
     await test.step("Start dragging from 'Transform data to FHIR standard'", async () => {
-      await diagram.edges.startDraggingFrom("Transform data to FHIR standard");
+      await diagram.edges.startDraggingFrom('Transform data to FHIR standard');
     });
 
     await test.step("Attempt to create duplicate edge to 'Send to OpenHIM to route to SHR'", async () => {
       // This edge already exists, should be prevented
-      const node = diagram.nodes.getByName("Send to OpenHIM to route to SHR");
+      const node = diagram.nodes.getByName('Send to OpenHIM to route to SHR');
       await node.click();
 
       // Small delay to let React Flow process
@@ -350,14 +350,14 @@ test.describe("Edge Validation in Collaborative Editor @collaborative", () => {
       await diagram.edges.releaseDrag();
     });
 
-    await test.step("Verify no duplicate edge was created", async () => {
+    await test.step('Verify no duplicate edge was created', async () => {
       // Edge count should remain unchanged - duplicate was prevented
       const finalEdgeCount = await diagram.edges.getCount();
       expect(finalEdgeCount).toBe(initialEdgeCount);
     });
   });
 
-  test.skip("should allow edge from different source to same target", async ({
+  test.skip('should allow edge from different source to same target', async ({
     page,
   }) => {
     // SKIP REASON: Same as "should create valid edge between jobs"
@@ -368,27 +368,27 @@ test.describe("Edge Validation in Collaborative Editor @collaborative", () => {
 
     let initialEdgeCount: number;
 
-    await test.step("Record initial state", async () => {
+    await test.step('Record initial state', async () => {
       // "Send to OpenHIM" already has edge to "Notify CHW upload successful"
       initialEdgeCount = await diagram.edges.getCount();
       expect(initialEdgeCount).toBe(4);
     });
 
-    await test.step("Create edge from different source to same target", async () => {
+    await test.step('Create edge from different source to same target', async () => {
       // Connect Transform -> Notify successful
       // Existing edge: Send to OpenHIM -> Notify successful
       // New edge: Transform -> Notify successful
       // This should be allowed since different source
       await diagram.edges.dragFromTo(
-        "Transform data to FHIR standard",
-        "Notify CHW upload successful"
+        'Transform data to FHIR standard',
+        'Notify CHW upload successful'
       );
 
       await collabEditor.waitForSynced();
       await page.waitForTimeout(300);
     });
 
-    await test.step("Verify both edges to same target exist", async () => {
+    await test.step('Verify both edges to same target exist', async () => {
       // Edge should have been created - different source is allowed
       const finalEdgeCount = await diagram.edges.getCount();
       expect(finalEdgeCount).toBe(initialEdgeCount + 1);
@@ -397,7 +397,7 @@ test.describe("Edge Validation in Collaborative Editor @collaborative", () => {
 
   // ==================== Visual Feedback Tests ====================
 
-  test.skip("should show visual feedback during edge drag", async ({
+  test.skip('should show visual feedback during edge drag', async ({
     page,
   }) => {
     // SKIP REASON: ReactFlow's onConnectStart doesn't fire reliably in Playwright
@@ -419,22 +419,22 @@ test.describe("Edge Validation in Collaborative Editor @collaborative", () => {
 
     await test.step("Begin edge drag from 'Transform data to FHIR standard'", async () => {
       // Use beginDrag() which triggers onConnectStart and visual feedback
-      await diagram.edges.beginDrag("Transform data to FHIR standard");
+      await diagram.edges.beginDrag('Transform data to FHIR standard');
       // Small delay to let visual feedback system update
       await page.waitForTimeout(200);
     });
 
-    await test.step("Debug: Check what attributes are set", async () => {
+    await test.step('Debug: Check what attributes are set', async () => {
       // Debug logging to see what's actually set
-      const nodes = await page.locator(".react-flow__node").all();
+      const nodes = await page.locator('.react-flow__node').all();
       console.log(`Found ${nodes.length} nodes`);
 
       let countWithValidAttr = 0;
       for (const node of nodes) {
-        const validAttr = await node.getAttribute("data-valid-drop-target");
-        const activeAttr = await node.getAttribute("data-active-drop-target");
-        const errorAttr = await node.getAttribute("data-drop-target-error");
-        const id = await node.getAttribute("data-id");
+        const validAttr = await node.getAttribute('data-valid-drop-target');
+        const activeAttr = await node.getAttribute('data-active-drop-target');
+        const errorAttr = await node.getAttribute('data-drop-target-error');
+        const id = await node.getAttribute('data-id');
         const text = await node.textContent();
         console.log(
           `Node ${id} (${text?.substring(0, 30)}...): valid=${validAttr}, active=${activeAttr}, error=${errorAttr}`
@@ -448,35 +448,35 @@ test.describe("Edge Validation in Collaborative Editor @collaborative", () => {
 
       // Also check if there's a connection line being drawn
       const connectionLine = await page
-        .locator(".react-flow__connection")
+        .locator('.react-flow__connection')
         .count();
       console.log(`Connection line visible: ${connectionLine > 0}`);
     });
 
-    await test.step("Verify valid targets show success state", async () => {
+    await test.step('Verify valid targets show success state', async () => {
       // Verify "Notify CHW upload successful" shows valid drop state
       // (it's not connected to Transform, so should be valid)
       await diagram.nodes.verifyHasValidDropState(
-        "Notify CHW upload successful"
+        'Notify CHW upload successful'
       );
 
       // Verify "Notify CHW upload failed" shows valid drop state
-      await diagram.nodes.verifyHasValidDropState("Notify CHW upload failed");
+      await diagram.nodes.verifyHasValidDropState('Notify CHW upload failed');
     });
 
-    await test.step("Verify invalid targets show error state", async () => {
+    await test.step('Verify invalid targets show error state', async () => {
       // Transform itself (self-connection) should be invalid
       await diagram.nodes.verifyHasInvalidDropState(
-        "Transform data to FHIR standard"
+        'Transform data to FHIR standard'
       );
 
       // Trigger should be invalid
       const triggerNode = diagram.page
-        .locator(".react-flow__node-trigger")
+        .locator('.react-flow__node-trigger')
         .first();
       const hasInvalidState = await triggerNode.evaluate(el => {
         return (
-          el.getAttribute("data-valid-drop-target") === "false" ||
+          el.getAttribute('data-valid-drop-target') === 'false' ||
           el.querySelector('[data-valid-drop-target="false"]') !== null
         );
       });
@@ -484,7 +484,7 @@ test.describe("Edge Validation in Collaborative Editor @collaborative", () => {
     });
 
     await test.step("Hover over 'Notify CHW upload successful' and verify active state", async () => {
-      const node = diagram.nodes.getByName("Notify CHW upload successful");
+      const node = diagram.nodes.getByName('Notify CHW upload successful');
       await node.hover();
 
       // Small delay for active state to update
@@ -493,8 +493,8 @@ test.describe("Edge Validation in Collaborative Editor @collaborative", () => {
       // Check for active hover state
       const hasActiveState = await node.evaluate(el => {
         return (
-          el.getAttribute("data-active-drop-target") === "true" ||
-          el.classList.contains("active-drop-target")
+          el.getAttribute('data-active-drop-target') === 'true' ||
+          el.classList.contains('active-drop-target')
         );
       });
 
@@ -503,9 +503,9 @@ test.describe("Edge Validation in Collaborative Editor @collaborative", () => {
 
     await test.step("Move to 'Notify CHW upload failed' and verify state clears on first node", async () => {
       const nodeSuccess = diagram.nodes.getByName(
-        "Notify CHW upload successful"
+        'Notify CHW upload successful'
       );
-      const nodeFailed = diagram.nodes.getByName("Notify CHW upload failed");
+      const nodeFailed = diagram.nodes.getByName('Notify CHW upload failed');
 
       await nodeFailed.hover();
       await page.waitForTimeout(100);
@@ -513,8 +513,8 @@ test.describe("Edge Validation in Collaborative Editor @collaborative", () => {
       // Verify 'Notify CHW upload successful' no longer has active state
       const hasActiveState = await nodeSuccess.evaluate(el => {
         return (
-          el.getAttribute("data-active-drop-target") === "true" ||
-          el.classList.contains("active-drop-target")
+          el.getAttribute('data-active-drop-target') === 'true' ||
+          el.classList.contains('active-drop-target')
         );
       });
 
@@ -523,15 +523,15 @@ test.describe("Edge Validation in Collaborative Editor @collaborative", () => {
       // Verify 'Notify CHW upload failed' now has active state
       const nodeFailedActive = await nodeFailed.evaluate(el => {
         return (
-          el.getAttribute("data-active-drop-target") === "true" ||
-          el.classList.contains("active-drop-target")
+          el.getAttribute('data-active-drop-target') === 'true' ||
+          el.classList.contains('active-drop-target')
         );
       });
 
       expect(nodeFailedActive).toBe(true);
     });
 
-    await test.step("Release drag and verify all visual states clear", async () => {
+    await test.step('Release drag and verify all visual states clear', async () => {
       await diagram.edges.releaseDrag();
 
       // Wait for state to clear
@@ -541,7 +541,7 @@ test.describe("Edge Validation in Collaborative Editor @collaborative", () => {
       const allNodes = await diagram.nodes.all.all();
       for (const node of allNodes) {
         const hasDropTargetState = await node.evaluate(el => {
-          return el.getAttribute("data-valid-drop-target") !== null;
+          return el.getAttribute('data-valid-drop-target') !== null;
         });
 
         // Drop target states should be cleared (undefined)
@@ -551,7 +551,7 @@ test.describe("Edge Validation in Collaborative Editor @collaborative", () => {
       // Check that active drop target states are cleared
       for (const node of allNodes) {
         const hasActiveState = await node.evaluate(el => {
-          return el.getAttribute("data-active-drop-target") === "true";
+          return el.getAttribute('data-active-drop-target') === 'true';
         });
 
         expect(hasActiveState).toBe(false);
@@ -559,27 +559,27 @@ test.describe("Edge Validation in Collaborative Editor @collaborative", () => {
     });
   });
 
-  test.skip("should display error messages during drag", async ({ page }) => {
+  test.skip('should display error messages during drag', async ({ page }) => {
     // SKIP REASON: Same as "should show visual feedback during edge drag"
     // ReactFlow's onConnectStart doesn't fire reliably in Playwright.
     // MANUAL VERIFICATION: During drag, hover over invalid targets to see error messages
     const diagram = new WorkflowDiagramPage(page);
 
     await test.step("Begin edge drag from 'Transform data to FHIR standard'", async () => {
-      await diagram.edges.beginDrag("Transform data to FHIR standard");
+      await diagram.edges.beginDrag('Transform data to FHIR standard');
       await page.waitForTimeout(200);
     });
 
     await test.step("Verify duplicate edge error on 'Send to OpenHIM to route to SHR'", async () => {
       // Hover over the node to activate it and show the error
-      const node = diagram.nodes.getByName("Send to OpenHIM to route to SHR");
+      const node = diagram.nodes.getByName('Send to OpenHIM to route to SHR');
       await node.hover();
       await page.waitForTimeout(100);
 
       // Verify the error message is displayed
       await diagram.nodes.verifyShowsError(
-        "Send to OpenHIM to route to SHR",
-        "Already connected to this step"
+        'Send to OpenHIM to route to SHR',
+        'Already connected to this step'
       );
     });
 
@@ -587,20 +587,20 @@ test.describe("Edge Validation in Collaborative Editor @collaborative", () => {
       await diagram.edges.releaseDrag();
       await page.waitForTimeout(300);
 
-      await diagram.edges.beginDrag("Send to OpenHIM to route to SHR");
+      await diagram.edges.beginDrag('Send to OpenHIM to route to SHR');
       await page.waitForTimeout(200);
     });
 
     await test.step("Verify circular workflow error on 'Transform data to FHIR standard'", async () => {
       // Hover over the node to activate it
-      const node = diagram.nodes.getByName("Transform data to FHIR standard");
+      const node = diagram.nodes.getByName('Transform data to FHIR standard');
       await node.hover();
       await page.waitForTimeout(100);
 
       // Verify the circular workflow error message
       await diagram.nodes.verifyShowsError(
-        "Transform data to FHIR standard",
-        "Cannot create circular workflow"
+        'Transform data to FHIR standard',
+        'Cannot create circular workflow'
       );
     });
 
@@ -608,14 +608,14 @@ test.describe("Edge Validation in Collaborative Editor @collaborative", () => {
       await diagram.edges.releaseDrag();
       await page.waitForTimeout(300);
 
-      await diagram.edges.beginDrag("Notify CHW upload successful");
+      await diagram.edges.beginDrag('Notify CHW upload successful');
       await page.waitForTimeout(200);
     });
 
-    await test.step("Verify trigger error message", async () => {
+    await test.step('Verify trigger error message', async () => {
       // Find the trigger node
       const triggerNode = diagram.page
-        .locator(".react-flow__node-trigger")
+        .locator('.react-flow__node-trigger')
         .first();
 
       // Hover over trigger to activate it
@@ -629,8 +629,8 @@ test.describe("Edge Validation in Collaborative Editor @collaborative", () => {
         // Check if error message exists in the node or its siblings
         const parent = el.parentElement;
         if (parent) {
-          const text = parent.textContent || "";
-          return text.includes("Cannot connect to a trigger");
+          const text = parent.textContent || '';
+          return text.includes('Cannot connect to a trigger');
         }
         return false;
       });
@@ -638,7 +638,7 @@ test.describe("Edge Validation in Collaborative Editor @collaborative", () => {
       expect(errorVisible).toBe(true);
     });
 
-    await test.step("Release drag to clean up", async () => {
+    await test.step('Release drag to clean up', async () => {
       await diagram.edges.releaseDrag();
       await page.waitForTimeout(200);
     });

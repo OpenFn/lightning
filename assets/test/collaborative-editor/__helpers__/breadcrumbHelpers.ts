@@ -12,13 +12,13 @@
  *   const breadcrumbs = generateBreadcrumbStructure(projectId, projectName, workflowName);
  */
 
-import type { ProjectContext } from "../../../js/collaborative-editor/types/sessionContext";
+import type { ProjectContext } from '../../../js/collaborative-editor/types/sessionContext';
 
 /**
  * Breadcrumb item type definition
  */
 export interface BreadcrumbItem {
-  type: "link" | "text";
+  type: 'link' | 'text';
   href?: string;
   text: string;
   icon?: string;
@@ -40,8 +40,8 @@ export function createMockProject(
   overrides: Partial<ProjectContext> = {}
 ): ProjectContext {
   return {
-    id: "project-123",
-    name: "Test Project",
+    id: 'project-123',
+    name: 'Test Project',
     ...overrides,
   };
 }
@@ -127,28 +127,28 @@ export function generateBreadcrumbStructure(
 ): BreadcrumbItem[] {
   return [
     {
-      type: "link",
-      href: "/",
-      text: "Home",
-      icon: "hero-home-mini",
+      type: 'link',
+      href: '/',
+      text: 'Home',
+      icon: 'hero-home-mini',
     },
     {
-      type: "link",
-      href: "/projects",
-      text: "Projects",
+      type: 'link',
+      href: '/projects',
+      text: 'Projects',
     },
     {
-      type: "link",
+      type: 'link',
       href: `/projects/${projectId}/w`,
-      text: projectName ?? "",
+      text: projectName ?? '',
     },
     {
-      type: "link",
+      type: 'link',
       href: `/projects/${projectId}/w`,
-      text: "Workflows",
+      text: 'Workflows',
     },
     {
-      type: "text",
+      type: 'text',
       text: workflowName,
     },
   ];
@@ -276,29 +276,29 @@ export function verifyCompleteBreadcrumbStructure(
 
   // Home
   verifyBreadcrumbItem(breadcrumbs[0], {
-    type: "link",
-    href: "/",
-    text: "Home",
-    icon: "hero-home-mini",
+    type: 'link',
+    href: '/',
+    text: 'Home',
+    icon: 'hero-home-mini',
   });
 
   // Projects
   verifyBreadcrumbItem(breadcrumbs[1], {
-    type: "link",
-    href: "/projects",
-    text: "Projects",
+    type: 'link',
+    href: '/projects',
+    text: 'Projects',
   });
 
   // Project (should be a link)
-  expect(breadcrumbs[2].type).toBe("link");
-  expect(breadcrumbs[2].href).toContain("/projects/");
+  expect(breadcrumbs[2].type).toBe('link');
+  expect(breadcrumbs[2].href).toContain('/projects/');
 
   // Workflows
-  expect(breadcrumbs[3].type).toBe("link");
-  expect(breadcrumbs[3].text).toBe("Workflows");
+  expect(breadcrumbs[3].type).toBe('link');
+  expect(breadcrumbs[3].text).toBe('Workflows');
 
   // Workflow (should be text, not link)
-  expect(breadcrumbs[4].type).toBe("text");
+  expect(breadcrumbs[4].type).toBe('text');
   expect(breadcrumbs[4].href).toBeUndefined();
 }
 
@@ -325,11 +325,11 @@ export function verifyCompleteBreadcrumbStructure(
  */
 export function createBreadcrumbScenario(
   scenario:
-    | "initial-load"
-    | "store-hydrated"
-    | "collaborative-update"
-    | "migration-phase"
-    | "ssr",
+    | 'initial-load'
+    | 'store-hydrated'
+    | 'collaborative-update'
+    | 'migration-phase'
+    | 'ssr',
   customData?: {
     projectFromStore?: ProjectContext;
     projectIdFallback?: string;
@@ -343,74 +343,74 @@ export function createBreadcrumbScenario(
   workflowName: string;
   description: string;
 } {
-  const defaultWorkflowName = "Test Workflow";
+  const defaultWorkflowName = 'Test Workflow';
 
   switch (scenario) {
-    case "initial-load":
+    case 'initial-load':
       // Simulates initial render where store hasn't loaded yet
       return {
         projectFromStore: null,
-        projectIdFallback: customData?.projectIdFallback ?? "prop-project-123",
+        projectIdFallback: customData?.projectIdFallback ?? 'prop-project-123',
         projectNameFallback:
-          customData?.projectNameFallback ?? "Props Project Name",
+          customData?.projectNameFallback ?? 'Props Project Name',
         workflowName: customData?.workflowName ?? defaultWorkflowName,
-        description: "Initial page load with props only (store not hydrated)",
+        description: 'Initial page load with props only (store not hydrated)',
       };
 
-    case "store-hydrated":
+    case 'store-hydrated':
       // Simulates after store has loaded data from server
       return {
         projectFromStore:
           customData?.projectFromStore ??
           createMockProject({
-            id: "store-project-789",
-            name: "Store Hydrated Name",
+            id: 'store-project-789',
+            name: 'Store Hydrated Name',
           }),
-        projectIdFallback: customData?.projectIdFallback ?? "prop-project-123",
+        projectIdFallback: customData?.projectIdFallback ?? 'prop-project-123',
         projectNameFallback:
-          customData?.projectNameFallback ?? "Props Project Name",
+          customData?.projectNameFallback ?? 'Props Project Name',
         workflowName: customData?.workflowName ?? defaultWorkflowName,
-        description: "After store hydration (store data available)",
+        description: 'After store hydration (store data available)',
       };
 
-    case "collaborative-update":
+    case 'collaborative-update':
       // Simulates a collaborative session where project name updates
       return {
         projectFromStore:
           customData?.projectFromStore ??
           createMockProject({
-            id: "collab-project-123",
-            name: "Initial Project Name",
+            id: 'collab-project-123',
+            name: 'Initial Project Name',
           }),
-        projectIdFallback: customData?.projectIdFallback ?? "fallback",
-        projectNameFallback: customData?.projectNameFallback ?? "Fallback",
-        workflowName: customData?.workflowName ?? "Collaborative Workflow",
-        description: "Collaborative session with live updates",
+        projectIdFallback: customData?.projectIdFallback ?? 'fallback',
+        projectNameFallback: customData?.projectNameFallback ?? 'Fallback',
+        workflowName: customData?.workflowName ?? 'Collaborative Workflow',
+        description: 'Collaborative session with live updates',
       };
 
-    case "migration-phase":
+    case 'migration-phase':
       // During migration, both props and store may be available
       return {
         projectFromStore:
           customData?.projectFromStore ??
           createMockProject({
-            id: "new-store-id",
-            name: "New Store Name",
+            id: 'new-store-id',
+            name: 'New Store Name',
           }),
-        projectIdFallback: customData?.projectIdFallback ?? "old-prop-id",
-        projectNameFallback: customData?.projectNameFallback ?? "Old Prop Name",
+        projectIdFallback: customData?.projectIdFallback ?? 'old-prop-id',
+        projectNameFallback: customData?.projectNameFallback ?? 'Old Prop Name',
         workflowName: customData?.workflowName ?? defaultWorkflowName,
-        description: "Migration phase with both props and store",
+        description: 'Migration phase with both props and store',
       };
 
-    case "ssr":
+    case 'ssr':
       // SSR scenario where store doesn't exist yet
       return {
         projectFromStore: null,
-        projectIdFallback: customData?.projectIdFallback ?? "ssr-project-123",
-        projectNameFallback: customData?.projectNameFallback ?? "SSR Project",
+        projectIdFallback: customData?.projectIdFallback ?? 'ssr-project-123',
+        projectNameFallback: customData?.projectNameFallback ?? 'SSR Project',
         workflowName: customData?.workflowName ?? defaultWorkflowName,
-        description: "Server-side render simulation (no store, props only)",
+        description: 'Server-side render simulation (no store, props only)',
       };
 
     default:
@@ -436,11 +436,11 @@ export function createBreadcrumbScenario(
  */
 export function createEdgeCaseTestData(
   testCase:
-    | "empty-string"
-    | "special-characters"
-    | "very-long-name"
-    | "null-values"
-    | "numeric-id"
+    | 'empty-string'
+    | 'special-characters'
+    | 'very-long-name'
+    | 'null-values'
+    | 'numeric-id'
 ): {
   projectFromStore: ProjectContext | null;
   fallbackId: string;
@@ -448,58 +448,58 @@ export function createEdgeCaseTestData(
   expectedBehavior: string;
 } {
   switch (testCase) {
-    case "empty-string":
+    case 'empty-string':
       return {
         projectFromStore: createMockProject({
-          id: "project-123",
-          name: "",
+          id: 'project-123',
+          name: '',
         }),
-        fallbackId: "fallback-id",
-        fallbackName: "Fallback Name",
+        fallbackId: 'fallback-id',
+        fallbackName: 'Fallback Name',
         expectedBehavior:
-          "Empty string from store should be used (not fallback)",
+          'Empty string from store should be used (not fallback)',
       };
 
-    case "special-characters":
+    case 'special-characters':
       return {
         projectFromStore: createMockProject({
-          id: "project-123",
-          name: "Project <>&\"' Name",
+          id: 'project-123',
+          name: 'Project <>&"\' Name',
         }),
-        fallbackId: "fallback-id",
-        fallbackName: "Fallback",
-        expectedBehavior: "Should preserve special characters",
+        fallbackId: 'fallback-id',
+        fallbackName: 'Fallback',
+        expectedBehavior: 'Should preserve special characters',
       };
 
-    case "very-long-name":
+    case 'very-long-name':
       return {
         projectFromStore: createMockProject({
-          id: "project-123",
-          name: "A".repeat(500),
+          id: 'project-123',
+          name: 'A'.repeat(500),
         }),
-        fallbackId: "fallback-id",
-        fallbackName: "Fallback",
+        fallbackId: 'fallback-id',
+        fallbackName: 'Fallback',
         expectedBehavior:
-          "Should handle long names without truncation at this level",
+          'Should handle long names without truncation at this level',
       };
 
-    case "null-values":
+    case 'null-values':
       return {
         projectFromStore: { id: null as any, name: null as any },
-        fallbackId: "fallback-id",
-        fallbackName: "Fallback Name",
-        expectedBehavior: "Null should fallback to props (nullish coalescing)",
+        fallbackId: 'fallback-id',
+        fallbackName: 'Fallback Name',
+        expectedBehavior: 'Null should fallback to props (nullish coalescing)',
       };
 
-    case "numeric-id":
+    case 'numeric-id':
       return {
         projectFromStore: createMockProject({
-          id: "12345",
-          name: "Numeric ID Project",
+          id: '12345',
+          name: 'Numeric ID Project',
         }),
-        fallbackId: "fallback-id",
-        fallbackName: "Fallback",
-        expectedBehavior: "Should handle numeric string IDs",
+        fallbackId: 'fallback-id',
+        fallbackName: 'Fallback',
+        expectedBehavior: 'Should handle numeric string IDs',
       };
 
     default:

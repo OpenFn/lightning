@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import type { ReactNode } from 'react';
 
 // import _logger from "#/utils/logger";
 
@@ -6,11 +6,11 @@ import type { ReactNode } from "react";
 
 interface InspectorLayoutProps {
   title: string;
-  nodeType?: "job" | "trigger" | "edge";
+  nodeType?: 'job' | 'trigger' | 'edge';
   onClose: () => void;
   footer?: ReactNode;
   children: ReactNode;
-  "data-testid"?: string;
+  'data-testid'?: string;
 }
 
 /**
@@ -24,7 +24,7 @@ export function InspectorLayout({
   onClose,
   footer,
   children,
-  "data-testid": dataTestId,
+  'data-testid': dataTestId,
 }: InspectorLayoutProps) {
   return (
     <div

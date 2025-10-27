@@ -3,9 +3,9 @@ import {
   DialogBackdrop,
   DialogPanel,
   DialogTitle,
-} from "@headlessui/react";
-import { useEffect } from "react";
-import { useHotkeysContext } from "react-hotkeys-hook";
+} from '@headlessui/react';
+import { useEffect } from 'react';
+import { useHotkeysContext } from 'react-hotkeys-hook';
 
 interface AlertDialogProps {
   isOpen: boolean;
@@ -15,7 +15,7 @@ interface AlertDialogProps {
   description: string;
   confirmLabel?: string;
   cancelLabel?: string;
-  variant?: "danger" | "primary";
+  variant?: 'danger' | 'primary';
 }
 
 /**
@@ -41,14 +41,14 @@ export function AlertDialog({
   onConfirm,
   title,
   description,
-  confirmLabel = "Confirm",
-  cancelLabel = "Cancel",
-  variant = "primary",
+  confirmLabel = 'Confirm',
+  cancelLabel = 'Cancel',
+  variant = 'primary',
 }: AlertDialogProps) {
   const confirmButtonClass =
-    variant === "danger"
-      ? "bg-red-600 hover:bg-red-500 focus-visible:outline-red-600"
-      : "bg-primary-600 hover:bg-primary-500 focus-visible:outline-primary-600";
+    variant === 'danger'
+      ? 'bg-red-600 hover:bg-red-500 focus-visible:outline-red-600'
+      : 'bg-primary-600 hover:bg-primary-500 focus-visible:outline-primary-600';
 
   // Use HotkeysContext to control keyboard scope precedence
   const { enableScope, disableScope } = useHotkeysContext();
@@ -60,16 +60,16 @@ export function AlertDialog({
   // to know about modals.
   useEffect(() => {
     if (isOpen) {
-      enableScope("modal");
-      disableScope("panel");
+      enableScope('modal');
+      disableScope('panel');
     } else {
-      disableScope("modal");
-      enableScope("panel");
+      disableScope('modal');
+      enableScope('panel');
     }
 
     // Cleanup: ensure modal scope is disabled when unmounted
     return () => {
-      disableScope("modal");
+      disableScope('modal');
     };
   }, [isOpen, enableScope, disableScope]);
 

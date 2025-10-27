@@ -1,4 +1,4 @@
-import type { Flow, Positions } from "./types";
+import type { Flow, Positions } from './types';
 
 export const ensureNodePosition = (
   model: Flow.Model,
@@ -40,7 +40,7 @@ export const ensureNodePosition = (
       };
       return true;
     } else {
-      console.warn("WARNING: could not auto-calculate position for ", node.id);
+      console.warn('WARNING: could not auto-calculate position for ', node.id);
       node.position = { x: 0, y: 0 };
     }
   }

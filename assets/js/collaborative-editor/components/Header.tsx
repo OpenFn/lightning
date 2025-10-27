@@ -1,14 +1,14 @@
-import { Menu, MenuButton, MenuItem, MenuItems } from "@headlessui/react";
-import { useCallback } from "react";
-import { useHotkeys } from "react-hotkeys-hook";
+import { Menu, MenuButton, MenuItem, MenuItems } from '@headlessui/react';
+import { useCallback } from 'react';
+import { useHotkeys } from 'react-hotkeys-hook';
 
-import { useURLState } from "../../react/lib/use-url-state";
+import { useURLState } from '../../react/lib/use-url-state';
 import {
   useIsNewWorkflow,
   useLatestSnapshotLockVersion,
   useUser,
-} from "../hooks/useSessionContext";
-import { useUICommands } from "../hooks/useUI";
+} from '../hooks/useSessionContext';
+import { useUICommands } from '../hooks/useUI';
 import {
   useCanRun,
   useCanSave,
@@ -16,23 +16,23 @@ import {
   useWorkflowActions,
   useWorkflowEnabled,
   useWorkflowState,
-} from "../hooks/useWorkflow";
-import { getAvatarInitials } from "../utils/avatar";
+} from '../hooks/useWorkflow';
+import { getAvatarInitials } from '../utils/avatar';
 
-import { Breadcrumbs } from "./Breadcrumbs";
-import { Button } from "./Button";
-import { EmailVerificationBanner } from "./EmailVerificationBanner";
-import { Switch } from "./inputs/Switch";
-import { Tooltip } from "./Tooltip";
+import { Breadcrumbs } from './Breadcrumbs';
+import { Button } from './Button';
+import { EmailVerificationBanner } from './EmailVerificationBanner';
+import { Switch } from './inputs/Switch';
+import { Tooltip } from './Tooltip';
 
 const userNavigation = [
-  { label: "User Profile", url: "/profile", icon: "hero-user-circle" },
-  { label: "Credentials", url: "/credentials", icon: "hero-key" },
-  { label: "API Tokens", url: "/profile/tokens", icon: "hero-key" },
+  { label: 'User Profile', url: '/profile', icon: 'hero-user-circle' },
+  { label: 'Credentials', url: '/credentials', icon: 'hero-key' },
+  { label: 'API Tokens', url: '/profile/tokens', icon: 'hero-key' },
   {
-    label: "Log out",
-    url: "/users/log_out",
-    icon: "hero-arrow-right-on-rectangle",
+    label: 'Log out',
+    url: '/users/log_out',
+    icon: 'hero-arrow-right-on-rectangle',
   },
 ];
 
@@ -71,7 +71,7 @@ function SaveButton({
     </div>
   );
 }
-SaveButton.displayName = "SaveButton";
+SaveButton.displayName = 'SaveButton';
 
 export function Header({
   children,
@@ -125,7 +125,7 @@ export function Header({
 
   // Global save shortcut: Ctrl/Cmd+S
   useHotkeys(
-    "ctrl+s,meta+s", // Windows/Linux: Ctrl+S, Mac: Cmd+S
+    'ctrl+s,meta+s', // Windows/Linux: Ctrl+S, Mac: Cmd+S
     event => {
       event.preventDefault(); // Always prevent browser's "Save Page" dialog
       if (canSave) {
@@ -134,7 +134,7 @@ export function Header({
     },
     {
       enabled: true, // Always listen to prevent browser save
-      scopes: ["global"], // Active everywhere in collaborative editor
+      scopes: ['global'], // Active everywhere in collaborative editor
       enableOnFormTags: true, // Allow in Monaco editor, input fields, textareas
     },
     [saveWorkflow, canSave] // Re-register when dependencies change
@@ -185,7 +185,7 @@ export function Header({
               <div>
                 <button
                   type="button"
-                  onClick={() => updateHash("settings")}
+                  onClick={() => updateHash('settings')}
                   className="w-5 h-5 place-self-center cursor-pointer
                   text-slate-500 hover:text-slate-400"
                 >

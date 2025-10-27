@@ -2,33 +2,33 @@
  * WorkflowEditor - Main workflow editing component
  */
 
-import { useEffect, useState } from "react";
-import { useHotkeys, useHotkeysContext } from "react-hotkeys-hook";
+import { useEffect, useState } from 'react';
+import { useHotkeys, useHotkeysContext } from 'react-hotkeys-hook';
 
-import _logger from "#/utils/logger";
+import _logger from '#/utils/logger';
 
-import { useURLState } from "../../react/lib/use-url-state";
-import type { WorkflowState as YAMLWorkflowState } from "../../yaml/types";
-import { useIsNewWorkflow, useProject } from "../hooks/useSessionContext";
+import { useURLState } from '../../react/lib/use-url-state';
+import type { WorkflowState as YAMLWorkflowState } from '../../yaml/types';
+import { useIsNewWorkflow, useProject } from '../hooks/useSessionContext';
 import {
   useIsRunPanelOpen,
   useRunPanelContext,
   useUICommands,
-} from "../hooks/useUI";
+} from '../hooks/useUI';
 import {
   useNodeSelection,
   useWorkflowActions,
   useWorkflowState,
   useWorkflowStoreContext,
-} from "../hooks/useWorkflow";
+} from '../hooks/useWorkflow';
 
-import { CollaborativeWorkflowDiagram } from "./diagram/CollaborativeWorkflowDiagram";
-import { FullScreenIDE } from "./ide/FullScreenIDE";
-import { Inspector } from "./inspector";
-import { LeftPanel } from "./left-panel";
-import { ManualRunPanel } from "./ManualRunPanel";
+import { CollaborativeWorkflowDiagram } from './diagram/CollaborativeWorkflowDiagram';
+import { FullScreenIDE } from './ide/FullScreenIDE';
+import { Inspector } from './inspector';
+import { LeftPanel } from './left-panel';
+import { ManualRunPanel } from './ManualRunPanel';
 
-const logger = _logger.ns("WorkflowEditor").seal();
+const logger = _logger.ns('WorkflowEditor').seal();
 
 interface WorkflowEditorProps {
   parentProjectId?: string | null;
@@ -63,11 +63,11 @@ export function WorkflowEditor({
   useEffect(() => {
     if (isRunPanelOpen && currentNode.node) {
       // Panel is open and a node is selected - update context
-      if (currentNode.type === "job") {
+      if (currentNode.type === 'job') {
         openRunPanel({ jobId: currentNode.node.id });
-      } else if (currentNode.type === "trigger") {
+      } else if (currentNode.type === 'trigger') {
         openRunPanel({ triggerId: currentNode.node.id });
-      } else if (currentNode.type === "edge") {
+      } else if (currentNode.type === 'edge') {
         // Close panel if edge selected
         closeRunPanel();
       }
@@ -109,27 +109,27 @@ export function WorkflowEditor({
   }));
 
   // Get current creation method from URL
-  const currentMethod = searchParams.get("method") as
-    | "template"
-    | "import"
-    | "ai"
+  const currentMethod = searchParams.get('method') as
+    | 'template'
+    | 'import'
+    | 'ai'
     | null;
 
   // Default to template method if no method specified and panel is open
-  const leftPanelMethod = showLeftPanel ? currentMethod || "template" : null;
+  const leftPanelMethod = showLeftPanel ? currentMethod || 'template' : null;
 
   // Check if IDE should be open
-  const isIDEOpen = searchParams.get("editor") === "open";
-  const selectedJobId = searchParams.get("job");
+  const isIDEOpen = searchParams.get('editor') === 'open';
+  const selectedJobId = searchParams.get('job');
 
   const handleCloseInspector = () => {
     selectNode(null);
   };
 
   // Show inspector panel if settings is open OR a node is selected
-  const showInspector = hash === "settings" || Boolean(currentNode.node);
+  const showInspector = hash === 'settings' || Boolean(currentNode.node);
 
-  const handleMethodChange = (method: "template" | "import" | "ai" | null) => {
+  const handleMethodChange = (method: 'template' | 'import' | 'ai' | null) => {
     updateSearchParams({ method });
   };
 
@@ -141,7 +141,7 @@ export function WorkflowEditor({
 
       workflowStore.importWorkflow(validatedState);
     } catch (error) {
-      console.error("Failed to validate workflow name:", error);
+      console.error('Failed to validate workflow name:', error);
       // Fall back to original state if validation fails
       workflowStore.importWorkflow(workflowState);
     }
@@ -174,7 +174,7 @@ export function WorkflowEditor({
 
   // Handle Cmd/Ctrl+Enter to open run panel or trigger run
   useHotkeys(
-    "mod+enter",
+    'mod+enter',
     event => {
       event.preventDefault();
 
@@ -185,9 +185,9 @@ export function WorkflowEditor({
         }
       } else {
         // Panel is closed - open it
-        if (currentNode.type === "job" && currentNode.node) {
+        if (currentNode.type === 'job' && currentNode.node) {
           openRunPanel({ jobId: currentNode.node.id });
-        } else if (currentNode.type === "trigger" && currentNode.node) {
+        } else if (currentNode.type === 'trigger' && currentNode.node) {
           openRunPanel({ triggerId: currentNode.node.id });
         } else {
           // Nothing selected - open with first trigger (like clicking Run)
@@ -222,7 +222,7 @@ export function WorkflowEditor({
           {/* Main content area - flex grows to fill remaining space */}
           <div
             className={`flex-1 relative transition-all duration-300 ease-in-out ${
-              showLeftPanel ? "ml-[33.333333%]" : "ml-0"
+              showLeftPanel ? 'ml-[33.333333%]' : 'ml-0'
             }`}
           >
             <CollaborativeWorkflowDiagram inspectorId="inspector" />
@@ -234,8 +234,8 @@ export function WorkflowEditor({
               id="inspector"
               className={`absolute top-0 right-0 h-full transition-transform duration-300 ease-in-out z-10 ${
                 showInspector
-                  ? "translate-x-0"
-                  : "translate-x-full pointer-events-none"
+                  ? 'translate-x-0'
+                  : 'translate-x-full pointer-events-none'
               }`}
             >
               <Inspector

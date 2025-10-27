@@ -3,7 +3,7 @@ import DocsPanel from './components/DocsPanel';
 
 type DocsProps = {
   adaptor: string; // name of the adaptor to load. aka specfier.
-}
+};
 
 export default ({ adaptor }: DocsProps) => {
   const handleInsert = useCallback((text: string) => {
@@ -13,4 +13,4 @@ export default ({ adaptor }: DocsProps) => {
     document.dispatchEvent(e);
   }, []);
   return <DocsPanel specifier={adaptor} onInsert={handleInsert} />;
-}
+};

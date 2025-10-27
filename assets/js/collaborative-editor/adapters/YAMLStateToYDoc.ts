@@ -1,12 +1,12 @@
-import * as Y from "yjs";
+import * as Y from 'yjs';
 
 import type {
   WorkflowState as YAMLWorkflowState,
   StateJob as YAMLStateJob,
   StateTrigger as YAMLStateTrigger,
   StateEdge as YAMLStateEdge,
-} from "../../yaml/types";
-import type { Session } from "../types/session";
+} from '../../yaml/types';
+import type { Session } from '../types/session';
 
 /**
  * YAMLStateToYDoc
@@ -28,16 +28,16 @@ export class YAMLStateToYDoc {
   static transformJob(job: YAMLStateJob): Y.Map<unknown> {
     const jobMap = new Y.Map();
 
-    jobMap.set("id", job.id);
-    jobMap.set("name", job.name);
-    jobMap.set("adaptor", job.adaptor);
+    jobMap.set('id', job.id);
+    jobMap.set('name', job.name);
+    jobMap.set('adaptor', job.adaptor);
 
     // Transform string body to Y.Text
     const bodyText = new Y.Text(job.body);
-    jobMap.set("body", bodyText);
+    jobMap.set('body', bodyText);
 
     // Add default enabled field (required by Session.Job but not in YAML)
-    jobMap.set("enabled", true);
+    jobMap.set('enabled', true);
 
     return jobMap;
   }
@@ -52,15 +52,15 @@ export class YAMLStateToYDoc {
   static transformTrigger(trigger: YAMLStateTrigger): Y.Map<unknown> {
     const triggerMap = new Y.Map();
 
-    triggerMap.set("id", trigger.id);
-    triggerMap.set("type", trigger.type); // Required for diagram icon rendering
-    triggerMap.set("enabled", trigger.enabled);
+    triggerMap.set('id', trigger.id);
+    triggerMap.set('type', trigger.type); // Required for diagram icon rendering
+    triggerMap.set('enabled', trigger.enabled);
 
     // Session.Trigger always requires cron_expression
     // Default to null for non-cron triggers
     const cronExpression =
-      trigger.type === "cron" ? trigger.cron_expression : null;
-    triggerMap.set("cron_expression", cronExpression);
+      trigger.type === 'cron' ? trigger.cron_expression : null;
+    triggerMap.set('cron_expression', cronExpression);
 
     return triggerMap;
   }
@@ -73,15 +73,15 @@ export class YAMLStateToYDoc {
   static transformEdge(edge: YAMLStateEdge): Y.Map<unknown> {
     const edgeMap = new Y.Map();
 
-    edgeMap.set("id", edge.id);
+    edgeMap.set('id', edge.id);
 
-    edgeMap.set("source_job_id", edge.source_job_id || null);
-    edgeMap.set("source_trigger_id", edge.source_trigger_id || null);
-    edgeMap.set("target_job_id", edge.target_job_id);
-    edgeMap.set("condition_type", edge.condition_type);
-    edgeMap.set("condition_label", edge.condition_label || null);
-    edgeMap.set("condition_expression", edge.condition_expression || null);
-    edgeMap.set("enabled", edge.enabled);
+    edgeMap.set('source_job_id', edge.source_job_id || null);
+    edgeMap.set('source_trigger_id', edge.source_trigger_id || null);
+    edgeMap.set('target_job_id', edge.target_job_id);
+    edgeMap.set('condition_type', edge.condition_type);
+    edgeMap.set('condition_label', edge.condition_label || null);
+    edgeMap.set('condition_expression', edge.condition_expression || null);
+    edgeMap.set('enabled', edge.enabled);
 
     return edgeMap;
   }
@@ -100,11 +100,11 @@ export class YAMLStateToYDoc {
   ): void {
     ydoc.transact(() => {
       // 1. Set workflow metadata (separate Map)
-      const workflowMap = ydoc.getMap("workflow");
-      workflowMap.set("name", workflowState.name);
+      const workflowMap = ydoc.getMap('workflow');
+      workflowMap.set('name', workflowState.name);
 
       // 2. Clear and populate jobs array
-      const jobsArray = ydoc.getArray("jobs");
+      const jobsArray = ydoc.getArray('jobs');
       jobsArray.delete(0, jobsArray.length);
       const transformedJobs = workflowState.jobs.map(job =>
         this.transformJob(job)
@@ -112,7 +112,7 @@ export class YAMLStateToYDoc {
       jobsArray.push(transformedJobs);
 
       // 3. Clear and populate triggers array
-      const triggersArray = ydoc.getArray("triggers");
+      const triggersArray = ydoc.getArray('triggers');
       triggersArray.delete(0, triggersArray.length);
       const transformedTriggers = workflowState.triggers.map(trigger =>
         this.transformTrigger(trigger)
@@ -120,7 +120,7 @@ export class YAMLStateToYDoc {
       triggersArray.push(transformedTriggers);
 
       // 4. Clear and populate edges array
-      const edgesArray = ydoc.getArray("edges");
+      const edgesArray = ydoc.getArray('edges');
       edgesArray.delete(0, edgesArray.length);
       const transformedEdges = workflowState.edges.map(edge =>
         this.transformEdge(edge)
@@ -128,7 +128,7 @@ export class YAMLStateToYDoc {
       edgesArray.push(transformedEdges);
 
       // 5. Set positions (individual entries)
-      const positionsMap = ydoc.getMap("positions");
+      const positionsMap = ydoc.getMap('positions');
       positionsMap.clear();
       if (workflowState.positions) {
         Object.entries(workflowState.positions).forEach(([id, pos]) => {

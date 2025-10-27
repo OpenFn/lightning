@@ -1,12 +1,12 @@
-import { useCallback, useState } from "react";
+import { useCallback, useState } from 'react';
 
-import { useWorkflowActions } from "../../hooks/useWorkflow";
-import type { Workflow } from "../../types/workflow";
-import { Button } from "../Button";
+import { useWorkflowActions } from '../../hooks/useWorkflow';
+import type { Workflow } from '../../types/workflow';
+import { Button } from '../Button';
 
-import { EdgeForm } from "./EdgeForm";
-import { InspectorFooter } from "./InspectorFooter";
-import { InspectorLayout } from "./InspectorLayout";
+import { EdgeForm } from './EdgeForm';
+import { InspectorFooter } from './InspectorFooter';
+import { InspectorLayout } from './InspectorLayout';
 
 interface EdgeInspectorProps {
   edge: Workflow.Edge;
@@ -24,7 +24,7 @@ export function EdgeInspector({ edge, onClose }: EdgeInspectorProps) {
   const handleDelete = useCallback(async () => {
     if (
       window.confirm(
-        "Are you sure you want to delete this edge? This action cannot be undone."
+        'Are you sure you want to delete this edge? This action cannot be undone.'
       )
     ) {
       setIsDeleting(true);
@@ -32,7 +32,7 @@ export function EdgeInspector({ edge, onClose }: EdgeInspectorProps) {
         removeEdge(edge.id);
         clearSelection();
       } catch (error) {
-        console.error("Delete failed:", error);
+        console.error('Delete failed:', error);
       } finally {
         setIsDeleting(false);
       }
@@ -44,7 +44,7 @@ export function EdgeInspector({ edge, onClose }: EdgeInspectorProps) {
     <InspectorFooter
       rightButtons={
         <Button variant="danger" onClick={handleDelete} disabled={isDeleting}>
-          {isDeleting ? "Deleting..." : "Delete"}
+          {isDeleting ? 'Deleting...' : 'Delete'}
         </Button>
       }
     />

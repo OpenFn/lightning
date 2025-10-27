@@ -171,7 +171,10 @@ export const animate = (
       }
       return {
         id: node.id,
-        from: (animateFrom && animateFrom.position) ? animateFrom.position : { x: 0, y: 0 },
+        from:
+          animateFrom && animateFrom.position
+            ? animateFrom.position
+            : { x: 0, y: 0 },
         to: node.position,
         node,
       };

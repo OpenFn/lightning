@@ -122,8 +122,8 @@ export const styleEdge = (edge: Flow.Edge) => {
   const primaryColor = edge.selected
     ? EDGE_COLOR_SELECTED
     : edge.data?.neighbour
-    ? EDGE_COLOR_NEIGHBOUR
-    : EDGE_COLOR;
+      ? EDGE_COLOR_NEIGHBOUR
+      : EDGE_COLOR;
   const hasErrors =
     typeof edge.data?.errors === 'object' &&
     Object.values(edge.data.errors).some(errorArray => errorArray.length > 0);
@@ -188,8 +188,8 @@ export const nodeIconStyles = (
   const primaryColor = selected
     ? EDGE_COLOR_SELECTED
     : runReason
-    ? getNodeBorderColor(runReason)
-    : EDGE_COLOR;
+      ? getNodeBorderColor(runReason)
+      : EDGE_COLOR;
   return {
     width: size,
     height: size,
