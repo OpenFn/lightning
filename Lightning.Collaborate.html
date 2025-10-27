@@ -12,7 +12,7 @@
 
     <link rel="stylesheet" href="dist/html-elixir-RLZO5U2C.css" />
 
-    <script defer src="dist/sidebar_items-A8C61237.js"></script>
+    <script defer src="dist/sidebar_items-FC97210E.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-Y223O6DN.js"></script>
 
@@ -96,19 +96,19 @@ Lightning
 <p>Public API for starting collaborative workflow editing sessions.</p><p>This module serves as the main entry point for collaborative editing,
 coordinating the creation and management of document and session processes
 for workflow collaboration.</p><p>All collaborative sessions require a workflow struct.</p><h2 id="module-example" class="section-heading"><a href="#module-example" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Example</span></h2><pre><code class="makeup elixir" translate="no"><span class="c1"># Existing workflow</span><span class="w">
-</span><span class="n">workflow</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">Lightning.Workflows</span><span class="o">.</span><span class="n">get_workflow</span><span class="p" data-group-id="4001901010-1">(</span><span class="n">workflow_id</span><span class="p" data-group-id="4001901010-1">)</span><span class="w">
+</span><span class="n">workflow</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">Lightning.Workflows</span><span class="o">.</span><span class="n">get_workflow</span><span class="p" data-group-id="7180875221-1">(</span><span class="n">workflow_id</span><span class="p" data-group-id="7180875221-1">)</span><span class="w">
 
-</span><span class="nc">Collaborate</span><span class="o">.</span><span class="n">start</span><span class="p" data-group-id="4001901010-2">(</span><span class="ss">user</span><span class="p">:</span><span class="w"> </span><span class="n">user</span><span class="p">,</span><span class="w"> </span><span class="ss">workflow</span><span class="p">:</span><span class="w"> </span><span class="n">workflow</span><span class="p" data-group-id="4001901010-2">)</span><span class="w">
+</span><span class="nc">Collaborate</span><span class="o">.</span><span class="n">start</span><span class="p" data-group-id="7180875221-2">(</span><span class="ss">user</span><span class="p">:</span><span class="w"> </span><span class="n">user</span><span class="p">,</span><span class="w"> </span><span class="ss">workflow</span><span class="p">:</span><span class="w"> </span><span class="n">workflow</span><span class="p" data-group-id="7180875221-2">)</span><span class="w">
 
 </span><span class="c1"># New workflow</span><span class="w">
-</span><span class="n">workflow</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p" data-group-id="4001901010-3">%</span><span class="nc" data-group-id="4001901010-3">Lightning.Workflows.Workflow</span><span class="p" data-group-id="4001901010-3">{</span><span class="w">
+</span><span class="n">workflow</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p" data-group-id="7180875221-3">%</span><span class="nc" data-group-id="7180875221-3">Lightning.Workflows.Workflow</span><span class="p" data-group-id="7180875221-3">{</span><span class="w">
   </span><span class="ss">id</span><span class="p">:</span><span class="w"> </span><span class="n">workflow_id</span><span class="p">,</span><span class="w">
   </span><span class="ss">project_id</span><span class="p">:</span><span class="w"> </span><span class="n">project_id</span><span class="p">,</span><span class="w">
   </span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;&quot;</span><span class="p">,</span><span class="w">
-  </span><span class="ss">positions</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="4001901010-4">%{</span><span class="p" data-group-id="4001901010-4">}</span><span class="w">
-</span><span class="p" data-group-id="4001901010-3">}</span><span class="w">
+  </span><span class="ss">positions</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="7180875221-4">%{</span><span class="p" data-group-id="7180875221-4">}</span><span class="w">
+</span><span class="p" data-group-id="7180875221-3">}</span><span class="w">
 
-</span><span class="nc">Collaborate</span><span class="o">.</span><span class="n">start</span><span class="p" data-group-id="4001901010-5">(</span><span class="ss">user</span><span class="p">:</span><span class="w"> </span><span class="n">user</span><span class="p">,</span><span class="w"> </span><span class="ss">workflow</span><span class="p">:</span><span class="w"> </span><span class="n">workflow</span><span class="p" data-group-id="4001901010-5">)</span></code></pre>
+</span><span class="nc">Collaborate</span><span class="o">.</span><span class="n">start</span><span class="p" data-group-id="7180875221-5">(</span><span class="ss">user</span><span class="p">:</span><span class="w"> </span><span class="n">user</span><span class="p">,</span><span class="w"> </span><span class="ss">workflow</span><span class="p">:</span><span class="w"> </span><span class="n">workflow</span><span class="p" data-group-id="7180875221-5">)</span></code></pre>
     </section>
 
 </div>
@@ -145,7 +145,7 @@ for workflow collaboration.</p><p>All collaborative sessions require a workflow 
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#start_document/1" data-no-tooltip="" translate="no">start_document(workflow)</a>
+        <a href="#start_document/2" data-no-tooltip="" translate="no">start_document(workflow, document_name)</a>
 
       </div>
 
@@ -185,7 +185,7 @@ for workflow collaboration.</p><p>All collaborative sessions require a workflow 
       <h1 class="signature" translate="no">lookup(key)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/collaboration.ex#L84" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/collaboration.ex#L116" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -225,17 +225,17 @@ for workflow collaboration.</p><p>All collaborative sessions require a workflow 
 
   </section>
 </section>
-<section class="detail" id="start_document/1">
+<section class="detail" id="start_document/2">
 
   <div class="detail-header">
-    <a href="#start_document/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+    <a href="#start_document/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
     </a>
     <div class="heading-with-actions">
-      <h1 class="signature" translate="no">start_document(workflow)</h1>
+      <h1 class="signature" translate="no">start_document(workflow, document_name)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/collaboration.ex#L66" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/collaboration.ex#L77" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -257,7 +257,7 @@ for workflow collaboration.</p><p>All collaborative sessions require a workflow 
       <h1 class="signature" translate="no">whereis(key)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/collaboration.ex#L85" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/collaboration.ex#L117" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
