@@ -93,9 +93,7 @@ defmodule Lightning.Collaboration.Session do
     workflow = Keyword.fetch!(opts, :workflow)
     user = Keyword.fetch!(opts, :user)
     parent_pid = Keyword.fetch!(opts, :parent_pid)
-
-    # Accept document_name from opts, fallback to old behavior for backwards compatibility
-    document_name = Keyword.get(opts, :document_name, "workflow:#{workflow.id}")
+    document_name = Keyword.fetch!(opts, :document_name)
 
     Logger.info("Starting session for document #{document_name}")
 

@@ -40,7 +40,12 @@ defmodule Lightning.SessionTest do
       }
 
       assert {:error, {{:error, :shared_doc_not_found}, _}} =
-               start_supervised({Session, user: user, workflow: workflow})
+               start_supervised(
+                 {Session,
+                  user: user,
+                  workflow: workflow,
+                  document_name: "workflow:#{workflow.id}"}
+               )
     end
 
     test "start/1 can join an existing shared doc", %{user: user1} do
@@ -60,7 +65,8 @@ defmodule Lightning.SessionTest do
             Session.start_link(
               user: user,
               workflow: workflow,
-              parent_pid: parent
+              parent_pid: parent,
+              document_name: "workflow:#{workflow.id}"
             )
 
           client
@@ -134,11 +140,19 @@ defmodule Lightning.SessionTest do
         build(:complex_workflow, name: "Test Workflow")
         |> insert()
 
-      start_supervised!({DocumentSupervisor, workflow: workflow})
+      start_supervised!(
+        {DocumentSupervisor,
+         workflow: workflow, document_name: "workflow:#{workflow.id}"}
+      )
 
       # Start a session - this should initialize the SharedDoc with workflow data
       session_pid =
-        start_supervised!({Session, user: user, workflow: workflow})
+        start_supervised!(
+          {Session,
+           user: user,
+           workflow: workflow,
+           document_name: "workflow:#{workflow.id}"}
+        )
 
       # Send a message to allow :handle_continue to finish
       shared_doc = Session.get_doc(session_pid)
@@ -223,11 +237,19 @@ defmodule Lightning.SessionTest do
 
       insert(:job, workflow: workflow, name: "Original Job", body: "original")
 
-      start_supervised!({DocumentSupervisor, workflow: workflow})
+      start_supervised!(
+        {DocumentSupervisor,
+         workflow: workflow, document_name: "workflow:#{workflow.id}"}
+      )
 
       # Start first session
       session_1 =
-        start_supervised!({Session, workflow: workflow, user: user})
+        start_supervised!(
+          {Session,
+           workflow: workflow,
+           user: user,
+           document_name: "workflow:#{workflow.id}"}
+        )
 
       shared_doc_1 = Session.get_doc(session_1)
 
@@ -238,7 +260,12 @@ defmodule Lightning.SessionTest do
 
       # Start second session - should connect to existing SharedDoc
       session_2 =
-        start_supervised!({Session, workflow: workflow, user: user})
+        start_supervised!(
+          {Session,
+           workflow: workflow,
+           user: user,
+           document_name: "workflow:#{workflow.id}"}
+        )
 
       shared_doc_2 = Session.get_doc(session_2)
 
@@ -268,11 +295,19 @@ defmodule Lightning.SessionTest do
           body: "console.log('sync')"
         )
 
-      start_supervised!({DocumentSupervisor, workflow: workflow})
+      start_supervised!(
+        {DocumentSupervisor,
+         workflow: workflow, document_name: "workflow:#{workflow.id}"}
+      )
 
       # Start session to initialize SharedDoc
       session_pid =
-        start_supervised!({Session, user: user, workflow: workflow})
+        start_supervised!(
+          {Session,
+           user: user,
+           workflow: workflow,
+           document_name: "workflow:#{workflow.id}"}
+        )
 
       %Session{shared_doc_pid: shared_doc_pid} = :sys.get_state(session_pid)
 
@@ -314,10 +349,18 @@ defmodule Lightning.SessionTest do
       workflow = insert(:simple_workflow)
 
       _document_supervisor =
-        start_supervised!({DocumentSupervisor, workflow: workflow})
+        start_supervised!(
+          {DocumentSupervisor,
+           workflow: workflow, document_name: "workflow:#{workflow.id}"}
+        )
 
       session_pid =
-        start_supervised!({Session, user: user, workflow: workflow})
+        start_supervised!(
+          {Session,
+           user: user,
+           workflow: workflow,
+           document_name: "workflow:#{workflow.id}"}
+        )
 
       # This is an existing workflow, so when the session starts, it should
       # both initialize the workflow document and save the initial state
@@ -425,13 +468,21 @@ defmodule Lightning.SessionTest do
       workflow = insert(:simple_workflow)
 
       document_supervisor =
-        start_supervised!({DocumentSupervisor, workflow: workflow})
+        start_supervised!(
+          {DocumentSupervisor,
+           workflow: workflow, document_name: "workflow:#{workflow.id}"}
+        )
 
       %{shared_doc: shared_doc, persistence_writer: persistence_writer} =
         Registry.get_group("workflow:#{workflow.id}")
 
       session_pid =
-        start_supervised!({Session, user: user, workflow: workflow})
+        start_supervised!(
+          {Session,
+           user: user,
+           workflow: workflow,
+           document_name: "workflow:#{workflow.id}"}
+        )
 
       {:ok, client_pid} =
         GenServer.start(TestClient, shared_doc_pid: shared_doc)
@@ -470,11 +521,19 @@ defmodule Lightning.SessionTest do
       # Starting a new document supervisor, like when the frontend reconnects
       # At this point, client is still running, and the SharedDoc should
       # pick up the existing document from the database.
-      start_supervised!({DocumentSupervisor, workflow: workflow})
+      start_supervised!(
+        {DocumentSupervisor,
+         workflow: workflow, document_name: "workflow:#{workflow.id}"}
+      )
 
       # Starting a new session
       _session_pid =
-        start_supervised!({Session, user: user, workflow: workflow})
+        start_supervised!(
+          {Session,
+           user: user,
+           workflow: workflow,
+           document_name: "workflow:#{workflow.id}"}
+        )
 
       shared_doc_pid = Registry.get_group("workflow:#{workflow.id}").shared_doc
 
@@ -536,7 +595,10 @@ defmodule Lightning.SessionTest do
       user2 = insert(:user)
       user3 = insert(:user)
 
-      start_supervised!({DocumentSupervisor, workflow: workflow})
+      start_supervised!(
+        {DocumentSupervisor,
+         workflow: workflow, document_name: "workflow:#{workflow.id}"}
+      )
 
       [{client1, parent1}, {client2, parent2}, {client3, _parent3}] =
         Enum.map([user1, user2, user3], fn user ->
@@ -544,7 +606,11 @@ defmodule Lightning.SessionTest do
 
           client =
             start_supervised!(
-              {Session, user: user, workflow: workflow, parent_pid: parent}
+              {Session,
+               user: user,
+               workflow: workflow,
+               parent_pid: parent,
+               document_name: "workflow:#{workflow.id}"}
             )
 
           {client, parent}
@@ -667,10 +733,18 @@ defmodule Lightning.SessionTest do
       # Add a job so we have something to modify
       job = insert(:job, workflow: workflow, name: "Original Job")
 
-      start_supervised!({DocumentSupervisor, workflow: workflow})
+      start_supervised!(
+        {DocumentSupervisor,
+         workflow: workflow, document_name: "workflow:#{workflow.id}"}
+      )
 
       session_pid =
-        start_supervised!({Session, workflow: workflow, user: user})
+        start_supervised!(
+          {Session,
+           workflow: workflow,
+           user: user,
+           document_name: "workflow:#{workflow.id}"}
+        )
 
       %{
         session: session_pid,
@@ -829,7 +903,8 @@ defmodule Lightning.SessionTest do
         Session.start_link(
           user: user,
           workflow: workflow,
-          parent_pid: self()
+          parent_pid: self(),
+          document_name: "workflow:#{workflow.id}"
         )
 
       # Get the SharedDoc and verify initial lock_version
@@ -868,7 +943,8 @@ defmodule Lightning.SessionTest do
         Session.start_link(
           user: user,
           workflow: updated_workflow,
-          parent_pid: self()
+          parent_pid: self(),
+          document_name: "workflow:#{workflow.id}"
         )
 
       # Get the SharedDoc and check lock_version was reconciled
@@ -903,7 +979,8 @@ defmodule Lightning.SessionTest do
         Session.start_link(
           user: user,
           workflow: workflow,
-          parent_pid: self()
+          parent_pid: self(),
+          document_name: "workflow:#{workflow.id}"
         )
 
       # Get initial state
@@ -938,7 +1015,8 @@ defmodule Lightning.SessionTest do
         Session.start_link(
           user: user,
           workflow: updated_workflow,
-          parent_pid: self()
+          parent_pid: self(),
+          document_name: "workflow:#{workflow.id}"
         )
 
       # Verify Y.Doc was reloaded from database

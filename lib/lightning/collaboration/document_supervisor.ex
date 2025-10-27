@@ -30,9 +30,7 @@ defmodule Lightning.Collaboration.DocumentSupervisor do
   @impl true
   def init(opts) do
     workflow = Keyword.fetch!(opts, :workflow)
-
-    # Accept document_name from opts, fallback to old behavior for backwards compatibility
-    document_name = Keyword.get(opts, :document_name, "workflow:#{workflow.id}")
+    document_name = Keyword.fetch!(opts, :document_name)
 
     {:ok, persistence_writer_pid} =
       PersistenceWriter.start_link(
