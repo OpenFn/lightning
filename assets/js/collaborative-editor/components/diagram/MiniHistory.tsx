@@ -29,7 +29,14 @@ import React, { useState } from "react";
 import { relativeLocale } from "../../../hooks";
 import { duration } from "../../../utils/duration";
 import truncateUid from "../../../utils/truncateUID";
-import type { WorkflowRunHistory, Run } from "../../types/history";
+import type { Run, WorkOrder } from "../../types/history";
+
+// Extended types with selection state for UI
+type RunWithSelection = Run & { selected?: boolean };
+type WorkOrderWithSelection = Omit<WorkOrder, "runs"> & {
+  runs: RunWithSelection[];
+  selected?: boolean;
+};
 
 const CHIP_STYLES: Record<string, string> = {
   // only workorder states...
@@ -51,7 +58,7 @@ const CHIP_STYLES: Record<string, string> = {
 
 const displayTextFromState = (state: string): string => {
   if (state.length === 0) return "";
-  return `${state[0].toUpperCase()}${state.substring(1)}`;
+  return state.charAt(0).toUpperCase() + state.substring(1);
 };
 
 const StatePill: React.FC<{ state: string; mini?: boolean }> = ({
@@ -73,9 +80,13 @@ const StatePill: React.FC<{ state: string; mini?: boolean }> = ({
 
 interface MiniHistoryProps {
   collapsed: boolean;
-  history: WorkflowRunHistory[];
+  history: WorkOrderWithSelection[];
   onCollapseHistory: () => void;
   selectRunHandler: (run: Run) => void;
+  onDeselectRun?: () => void;
+  loading?: boolean;
+  error?: string | null;
+  onRetry?: () => void;
 }
 
 export default function MiniHistory({
@@ -83,29 +94,22 @@ export default function MiniHistory({
   selectRunHandler,
   collapsed = true,
   onCollapseHistory,
+  onDeselectRun,
+  loading = false,
+  error = null,
+  onRetry,
 }: MiniHistoryProps) {
   const [expandedWorder, setExpandedWorder] = useState("");
-  const [isCollapsed, setIsCollapsed] = useState(collapsed);
   const now = new Date();
-
-  // Ensure panel is not collapsed when there's a selected item in history
-  // at time this component will be rendered before data reaches store.
-  // that makes the panel collapse
-  const selectedItem = history.find(w => w.selected)?.id;
-  React.useEffect(() => {
-    if (selectedItem) {
-      setIsCollapsed(false);
-    }
-  }, [selectedItem]);
 
   // Clear expanded work order when panel collapses
   React.useEffect(() => {
-    if (isCollapsed) {
+    if (collapsed) {
       setExpandedWorder("");
     }
-  }, [isCollapsed]);
+  }, [collapsed]);
 
-  const expandWorkorderHandler = (workorder: WorkflowRunHistory) => {
+  const expandWorkorderHandler = (workorder: WorkOrderWithSelection) => {
     const isCurrentlyExpanded = expandedWorder === workorder.id;
 
     // Only auto-select if expanding (not collapsing) and there's exactly 1 run
@@ -121,7 +125,7 @@ export default function MiniHistory({
   };
 
   const historyToggle = () => {
-    setIsCollapsed(p => !p);
+    onCollapseHistory();
   };
 
   const gotoHistory = (e: React.MouseEvent | React.KeyboardEvent) => {
@@ -188,12 +192,12 @@ export default function MiniHistory({
         className={`flex items-center cursor-pointer justify-between
           px-3 py-2 border-gray-200 bg-gray-50 hover:bg-gray-100
           transition-colors w-full text-left
-          ${isCollapsed ? "border-b-0" : "border-b"}`}
+          ${collapsed ? "border-b-0" : "border-b"}`}
         onClick={() => historyToggle()}
       >
         <div className="flex items-center gap-2">
           <h3 className="text-sm font-medium text-gray-700">
-            {isCollapsed ? "View History" : "Recent History"}
+            {collapsed ? "View History" : "Recent History"}
           </h3>
           <button
             id="view-history"
@@ -218,7 +222,7 @@ export default function MiniHistory({
             cursor-pointer ml-3"
           title="Collapse panel"
         >
-          {isCollapsed ? (
+          {collapsed ? (
             <span className="hero-chevron-right w-4 h-4"></span>
           ) : (
             <span className="hero-chevron-left w-4 h-4"></span>
@@ -229,10 +233,45 @@ export default function MiniHistory({
       <div
         className={`overflow-y-auto no-scrollbar max-h-82
           transition-opacity duration-200 ${
-            isCollapsed ? "opacity-0 h-0 hidden" : "opacity-100"
+            collapsed ? "opacity-0 h-0 hidden" : "opacity-100"
           }`}
       >
-        {history.length === 0 ? (
+        {loading ? (
+          <div
+            className="flex flex-col items-center justify-center
+            p-8 text-gray-500"
+          >
+            <div
+              className="animate-spin rounded-full h-8 w-8
+              border-b-2 border-gray-900 mb-2"
+            ></div>
+            <p className="text-sm font-medium">Loading history...</p>
+          </div>
+        ) : error ? (
+          <div
+            className="flex flex-col items-center justify-center
+            p-8 text-gray-500"
+          >
+            <span
+              className="hero-exclamation-triangle w-8 h-8
+              mb-2 text-red-500"
+            ></span>
+            <p className="text-sm font-medium text-red-600">
+              Failed to load history
+            </p>
+            <p className="text-xs text-gray-400 mt-1">{error}</p>
+            {onRetry && (
+              <button
+                type="button"
+                onClick={onRetry}
+                className="mt-3 px-3 py-1 text-xs bg-blue-500
+                  text-white rounded hover:bg-blue-600"
+              >
+                Retry
+              </button>
+            )}
+          </div>
+        ) : history.length === 0 ? (
           <div
             className="flex flex-col items-center justify-center
             p-8 text-gray-500"
@@ -263,7 +302,10 @@ export default function MiniHistory({
                   <div
                     className="flex items-center justify-between
                       cursor-pointer w-full text-left"
-                    onClick={() => expandWorkorderHandler(workorder)}
+                    onClick={e => {
+                      e.stopPropagation();
+                      expandWorkorderHandler(workorder);
+                    }}
                   >
                     <div
                       className="flex items-center gap-2 min-w-0
@@ -342,11 +384,14 @@ export default function MiniHistory({
                           ? "bg-indigo-50 border-l-indigo-500"
                           : " border-l-transparent",
                       ].join(" ")}
-                      onClick={() =>
-                        run.selected
-                          ? onCollapseHistory()
-                          : selectRunHandler(run)
-                      }
+                      onClick={e => {
+                        e.stopPropagation();
+                        if (run.selected) {
+                          onDeselectRun?.();
+                        } else {
+                          selectRunHandler(run);
+                        }
+                      }}
                     >
                       <div
                         className="flex items-center justify-between
@@ -362,10 +407,10 @@ export default function MiniHistory({
                               onClick={e => {
                                 e.preventDefault();
                                 e.stopPropagation();
-                                onCollapseHistory();
+                                onDeselectRun?.();
                               }}
                               className="flex items-center text-gray-400 hover:text-gray-600 transition-colors"
-                              aria-label="Deselect run and collapse history"
+                              aria-label="Deselect run"
                             >
                               <span className="hero-x-mark w-4 h-4"></span>
                             </button>
