@@ -108,7 +108,9 @@ defmodule Lightning.Collaboration.PersistenceWriter do
 
   @impl true
   def handle_cast({:add_update, update}, state) do
-    Logger.debug("Adding update to batch for document: #{state.document_name}")
+    Logger.debug(
+      "Adding update to batch for document: document=#{state.document_name}"
+    )
 
     new_state = %{
       state
