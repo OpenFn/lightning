@@ -72,18 +72,10 @@ export const SessionProvider = ({
 
     // Initialize session - createSessionStore handles everything
     // Pass null for userData - StoreProvider will initialize it from SessionContextStore
-    const joinParams: {
-      project_id: string;
-      action: string;
-      version?: string;
-    } = {
+    const joinParams = {
       project_id: projectId,
       action: isNewWorkflow ? "new" : "edit",
     };
-
-    if (version) {
-      joinParams.version = version;
-    }
 
     sessionStore.initializeSession(socket, roomname, null, {
       connect: true,

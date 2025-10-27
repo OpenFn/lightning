@@ -21,20 +21,18 @@ defmodule LightningWeb.WorkflowChannel do
   @impl true
   def join(
         "workflow:collaborate:" <> rest = topic,
-        %{"project_id" => project_id, "action" => action} = params,
+        %{"project_id" => project_id, "action" => action},
         socket
       ) do
     # Parse room name to extract workflow_id and optional version
     # Room formats:
     # - "workflow_id" → latest (collaborative editing room)
     # - "workflow_id:vN" → specific version N (isolated snapshot viewing)
-    {workflow_id, version_from_room} =
+    {workflow_id, version} =
       case String.split(rest, ":v", parts: 2) do
         [wf_id, version] -> {wf_id, version}
         [wf_id] -> {wf_id, nil}
       end
-
-    version = version_from_room || Map.get(params, "version")
 
     with {:user, user} when not is_nil(user) <-
            {:user, socket.assigns[:current_user]},
