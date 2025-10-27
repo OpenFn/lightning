@@ -179,7 +179,22 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
       // Get placeholder data
       const placeholderNode = placeholders.nodes[0];
       const placeholderEdge = placeholders.edges[0];
-      if (!placeholderNode) return;
+
+      if (!placeholderNode) {
+        // Add defensive logging in dev mode
+        if (process.env["NODE_ENV"] !== "production") {
+          console.warn(
+            "[WorkflowDiagram] handleCommit: placeholder node not found",
+            {
+              eventId: id,
+              eventName: name,
+              placeholdersState: placeholders,
+              workflowJobs: workflow.jobs.length,
+            }
+          );
+        }
+        return;
+      }
 
       // Cast data to access placeholder-specific properties
       const nodeData = placeholderNode.data as any;
@@ -192,7 +207,7 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
         adaptor: nodeData.adaptor as string,
       };
 
-      // Add to Y.Doc store
+      // Add to Y.Doc store (synchronous transaction)
       workflowStore.addJob(newJob);
 
       // Handle position for manual layout mode
@@ -204,7 +219,7 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
       if (placeholderEdge) {
         const edgeData = placeholderEdge.data as any;
 
-        // Determine if source is a job or trigger by checking the workflow state
+        // Determine if source is a job or trigger by checking workflow state
         const sourceIsJob = jobs.some(j => j.id === placeholderEdge.source);
 
         const newEdge: Record<string, any> = {
@@ -226,6 +241,12 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
         workflowStore.addEdge(newEdge);
       }
 
+      // FIX: Clear placeholder AFTER Y.Doc updates
+      // Y.Doc transactions are synchronous, so the store state is already
+      // updated. Canvas will re-render with new job before placeholder is
+      // cleared, preventing blank canvas during race conditions.
+      cancelPlaceholder();
+
       // Select the new job
       updateSelection(id);
     };
@@ -236,7 +257,16 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
     return () => {
       el.removeEventListener("commit-placeholder" as any, handleCommit);
     };
-  }, [el, placeholders, isManualLayout, workflowStore, updateSelection, jobs]);
+  }, [
+    el,
+    placeholders,
+    isManualLayout,
+    workflowStore,
+    updateSelection,
+    jobs,
+    cancelPlaceholder,
+    workflow.jobs.length,
+  ]);
 
   // Track positions and selection on a ref, as a passive cache, to prevent re-renders
   const chartCache = useRef<ChartCache>({
@@ -309,64 +339,85 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
       ),
       selection
     );
-    if (flow && newModel.nodes.length) {
-      const layoutId = shouldLayout(
-        newModel.edges,
-        newModel.nodes,
-        isManualLayout,
-        chartCache.current.lastLayout
-      );
-
+    if (newModel.nodes.length > 0) {
       // If defaulting positions for multiple nodes,
       // try to offset them a bit
       const positionOffsetMap: Record<string, number> = {};
 
-      if (layoutId) {
-        chartCache.current.lastLayout = layoutId;
-        const viewBounds = {
-          width: workflowDiagramRef.current?.clientWidth ?? 0,
-          height: workflowDiagramRef.current?.clientHeight ?? 0,
-        };
-        if (isManualLayout) {
-          // give nodes positions
-          const nodesWPos = newModel.nodes.map(node => {
-            // during manualLayout. a placeholder wouldn't have position in positions in store
-            // hence use the position on the placeholder node
-            const isPlaceholder = node.type === "placeholder";
+      // We have nodes - process layout and render
+      if (flow) {
+        const layoutId = shouldLayout(
+          newModel.edges,
+          newModel.nodes,
+          isManualLayout,
+          chartCache.current.lastLayout
+        );
 
-            const newNode = {
-              ...node,
-              position: isPlaceholder
-                ? node.position
-                : workflowPositions[node.id],
-            };
+        if (layoutId) {
+          chartCache.current.lastLayout = layoutId;
+          const viewBounds = {
+            width: workflowDiagramRef.current?.clientWidth ?? 0,
+            height: workflowDiagramRef.current?.clientHeight ?? 0,
+          };
+          if (isManualLayout) {
+            // give nodes positions
+            const nodesWPos = newModel.nodes.map(node => {
+              // during manualLayout. a placeholder wouldn't have position in
+              // positions in store hence use the position on the placeholder
+              // node
+              const isPlaceholder = node.type === "placeholder";
+
+              const newNode = {
+                ...node,
+                position: isPlaceholder
+                  ? node.position
+                  : workflowPositions[node.id],
+              };
+              ensureNodePosition(
+                newModel,
+                { ...positions, ...workflowPositions },
+                newNode,
+                positionOffsetMap
+              );
+              return newNode;
+            });
+            setModel({ ...newModel, nodes: nodesWPos });
+            chartCache.current.positions = workflowPositions;
+          } else {
+            void layout(newModel, setModel, flow, viewBounds, {
+              duration: props.layoutDuration ?? LAYOUT_DURATION,
+              forceFit: props.forceFit ?? false,
+            }).then(positions => {
+              // Note we don't update positions until animation has finished
+              chartCache.current.positions = positions;
+              return positions;
+            });
+          }
+        } else {
+          // if isManualLayout, then we use values from store instead
+          newModel.nodes.forEach(n => {
+            if (isManualLayout && n.type !== "placeholder") {
+              n.position = workflowPositions[n.id];
+            } else if (!isManualLayout && positions[n.id]) {
+              // In auto-layout mode, preserve cached positions from previous
+              // layout
+              n.position = positions[n.id];
+            }
             ensureNodePosition(
               newModel,
               { ...positions, ...workflowPositions },
-              newNode,
+              n,
               positionOffsetMap
             );
-            return newNode;
           });
-          setModel({ ...newModel, nodes: nodesWPos });
-          chartCache.current.positions = workflowPositions;
-        } else {
-          void layout(newModel, setModel, flow, viewBounds, {
-            duration: props.layoutDuration ?? LAYOUT_DURATION,
-            forceFit: props.forceFit ?? false,
-          }).then(positions => {
-            // Note we don't update positions until the animation has finished
-            chartCache.current.positions = positions;
-            return positions;
-          });
+          setModel(newModel);
         }
       } else {
-        // if isManualLayout, then we use values from store instead
+        // Flow not initialized yet, but we have nodes - ensure positions first
         newModel.nodes.forEach(n => {
           if (isManualLayout && n.type !== "placeholder") {
             n.position = workflowPositions[n.id];
           } else if (!isManualLayout && positions[n.id]) {
-            // In auto-layout mode, preserve cached positions from previous layout
             n.position = positions[n.id];
           }
           ensureNodePosition(
@@ -378,9 +429,16 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
         });
         setModel(newModel);
       }
-    } else {
+    } else if (workflow.jobs.length === 0 && placeholders.nodes.length === 0) {
+      // DEFENSIVE: Explicitly empty workflow - show empty state
+      // Only clear canvas when BOTH workflow.jobs and placeholders are empty
+      // This prevents blank canvas during race conditions where placeholder
+      // is cleared before Y.Doc observer fires
+      setModel({ nodes: [], edges: [] });
       chartCache.current.positions = {};
     }
+    // DEFENSIVE: If newModel is empty but workflow has jobs, keep previous
+    // model. This prevents blank canvas during state transitions.
   }, [
     workflow,
     flow,
