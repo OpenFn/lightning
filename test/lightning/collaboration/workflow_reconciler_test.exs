@@ -466,7 +466,7 @@ defmodule Lightning.Collaboration.WorkflowReconcilerTest do
       assert Yex.Map.fetch!(workflow_map, "concurrency") == 5
     end
 
-    test "lock_version updates are applied to YDoc", %{
+    test "lock_version updates are applied to YDoc when adding a job", %{
       user: user,
       workflow: workflow
     } do
@@ -479,31 +479,72 @@ defmodule Lightning.Collaboration.WorkflowReconcilerTest do
       workflow_map = Yex.Doc.get_map(shared_doc, "workflow")
       initial_lock_version = Yex.Map.fetch!(workflow_map, "lock_version")
 
-      # Simulate a save operation that increments lock_version
-      new_lock_version = initial_lock_version + 1
-
-      # Create changeset with updated lock_version
-      # Note: lock_version is managed by optimistic_lock() so we manually
-      # add it to changes to simulate what happens after a real save
-      workflow_changeset =
-        workflow
-        |> Workflows.change_workflow(%{})
-        |> Ecto.Changeset.put_change(:lock_version, new_lock_version)
-        |> Map.put(:action, :update)
-
       Yex.Doc.monitor_update(shared_doc)
 
-      # Reconcile the changes
-      WorkflowReconciler.reconcile_workflow_changes(workflow_changeset, workflow)
+      # Add a job to the workflow, which will increment lock_version
+      # but won't have lock_version in changeset.changes
+      {:ok, updated_workflow} =
+        workflow
+        |> Workflows.change_workflow(%{
+          jobs: [
+            %{
+              name: "new job",
+              body: "fn(state => state)",
+              adaptor: "@openfn/language-common@latest"
+            }
+          ]
+        })
+        |> Workflows.save_workflow(user)
 
-      # Verify exactly one update was sent
-      assert_one_update(shared_doc)
+      # Should receive update for both the new job AND the lock_version
+      assert_receive {:update_v1, _, nil, ^shared_doc}, 1000
 
-      # Verify the lock_version was updated in the YDoc
+      # Verify the lock_version was incremented and updated in the YDoc
       updated_workflow_map = Yex.Doc.get_map(shared_doc, "workflow")
 
       assert Yex.Map.fetch!(updated_workflow_map, "lock_version") ==
-               new_lock_version
+               initial_lock_version + 1
+
+      assert Yex.Map.fetch!(updated_workflow_map, "lock_version") ==
+               updated_workflow.lock_version
+
+      Session.stop(session_pid)
+      ensure_doc_supervisor_stopped(workflow.id)
+    end
+
+    test "workflow name changes are synced to YDoc via save_workflow", %{
+      user: user,
+      workflow: workflow
+    } do
+      # Start a session to create the SharedDoc
+      {:ok, session_pid} =
+        Collaborate.start(workflow: workflow, user: user)
+
+      shared_doc = Session.get_doc(session_pid)
+      Yex.Doc.monitor_update(shared_doc)
+
+      # Update workflow name via save_workflow
+      # This also tests that lock_version is incremented automatically
+      new_name = "Renamed Workflow"
+
+      {:ok, updated_workflow} =
+        workflow
+        |> Workflows.change_workflow(%{name: new_name})
+        |> Workflows.save_workflow(user)
+
+      # Verify update was sent
+      assert_one_update(shared_doc)
+
+      # Verify both name and lock_version were updated in YDoc
+      workflow_map = Yex.Doc.get_map(shared_doc, "workflow")
+
+      assert Yex.Map.fetch!(workflow_map, "name") == new_name
+
+      assert Yex.Map.fetch!(workflow_map, "lock_version") ==
+               workflow.lock_version + 1
+
+      assert Yex.Map.fetch!(workflow_map, "lock_version") ==
+               updated_workflow.lock_version
 
       Session.stop(session_pid)
       ensure_doc_supervisor_stopped(workflow.id)

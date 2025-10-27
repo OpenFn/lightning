@@ -40,6 +40,11 @@ defmodule Lightning.Collaboration.WorkflowReconciler do
         SharedDoc.update_doc(shared_doc_pid, fn doc ->
           changeset
           |> generate_ydoc_operations(workflow, doc)
+          |> tap(fn ops ->
+            Logger.debug(
+              "Applying ydoc operations from workflow changes:\n#{ops |> inspect(pretty: true)}"
+            )
+          end)
           |> apply_operations(doc)
         end)
     end
@@ -51,37 +56,78 @@ defmodule Lightning.Collaboration.WorkflowReconciler do
   end
 
   defp generate_ydoc_operations(%Ecto.Changeset{} = changeset, workflow, doc) do
-    [
-      :jobs,
-      :edges,
-      :triggers,
-      :positions,
-      :name,
-      :concurrency,
-      :enable_job_logs,
-      :lock_version
-    ]
-    |> Enum.flat_map(fn assoc ->
-      case Ecto.Changeset.get_change(changeset, assoc) do
+    # First, handle associations (jobs, edges, triggers) from changeset
+    association_ops =
+      [:jobs, :edges, :triggers]
+      |> Enum.flat_map(fn assoc ->
+        case Ecto.Changeset.get_change(changeset, assoc) do
+          nil ->
+            []
+
+          changesets when is_list(changesets) ->
+            Enum.map(changesets, &to_operation(&1, doc, workflow))
+        end
+      end)
+
+    # Handle positions map from changeset
+    positions_ops =
+      case Ecto.Changeset.get_change(changeset, :positions) do
         nil ->
           []
 
-        # Handle has_many changes (e.g. jobs, edges, triggers)
-        changesets when is_list(changesets) ->
-          Enum.map(changesets, &to_operation(&1, doc, workflow))
-
-        # Handle jsonb/map changes (e.g. positions)
         changes when is_map(changes) ->
-          [{:update, Doc.get_map(doc, to_string(assoc)), changes}]
-
-        # Handle workflow field changes
-        change ->
-          [
-            {:update, Doc.get_map(doc, "workflow"),
-             %{to_string(assoc) => change}}
-          ]
+          [{:update, Doc.get_map(doc, "positions"), changes}]
       end
-    end)
+
+    # For workflow-level fields, we need to handle two cases:
+    # 1. Explicit changes in the changeset (from direct updates)
+    # 2. Changes detected by comparing original vs updated workflow
+    #    (e.g., lock_version incremented by optimistic_lock)
+    # Get the workflow_map reference BEFORE creating operations to avoid
+    # calling Doc.get_map inside a transaction
+    workflow_map = Doc.get_map(doc, "workflow")
+
+    workflow_field_ops =
+      detect_workflow_field_changes(changeset, workflow, workflow_map)
+
+    association_ops ++ positions_ops ++ workflow_field_ops
+  end
+
+  # Detect workflow field changes from two sources:
+  # 1. Explicit changes in changeset.changes (for direct reconciliation calls)
+  # 2. Differences between original and updated workflow structs
+  #    (for optimistic_lock and other automatic updates)
+  defp detect_workflow_field_changes(changeset, updated_workflow, workflow_map) do
+    fields = [:name, :concurrency, :enable_job_logs, :lock_version]
+
+    # Collect changes from both sources
+    changes =
+      fields
+      |> Enum.reduce(%{}, fn field, acc ->
+        # First check if there's an explicit change in the changeset
+        case Ecto.Changeset.get_change(changeset, field) do
+          nil ->
+            # No explicit change, compare original vs updated
+            original_value = Map.get(changeset.data, field)
+            updated_value = Map.get(updated_workflow, field)
+
+            if original_value != updated_value do
+              Map.put(acc, to_string(field), to_yjs_variant(updated_value))
+            else
+              acc
+            end
+
+          # Use the explicit change value
+          value ->
+            Map.put(acc, to_string(field), to_yjs_variant(value))
+        end
+      end)
+
+    if map_size(changes) > 0 do
+      [{:update, workflow_map, changes}]
+    else
+      []
+    end
   end
 
   # Job operations
