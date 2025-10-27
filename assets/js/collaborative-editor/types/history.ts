@@ -1,71 +1,110 @@
-/**
- * # Workflow Run History Types
- *
- * Type definitions for workflow execution history (work orders and runs).
- * These types match the actual API response structure from the backend.
- *
- * ## Usage Example:
- * ```typescript
- * const history: WorkflowRunHistory[] = [
- *   {
- *     id: "e2107d46-cf29-4930-b11b-cbcfcf83549d",
- *     version: 29,
- *     state: "success",
- *     runs: [...],
- *     last_activity: "2025-10-23T21:00:02.293382Z",
- *     selected: false,
- *   }
- * ];
- * ```
- */
+import type { PhoenixChannelProvider } from "y-phoenix-channel";
+import * as z from "zod";
+
+import { isoDateTimeSchema, uuidSchema } from "./common";
 
 /**
- * Represents a work order with its associated runs
+ * Zod schema for a single Run
+ * Matches the backend Run structure from WorkOrders
  */
-export interface WorkflowRunHistory {
-  /** Work order ID (UUID) */
-  id: string;
-  /** Workflow snapshot version this work order executed against */
-  version: number;
-  /** Overall work order state (highest priority state from runs) */
-  state: RunState;
-  /** Array of runs for this work order */
-  runs: Run[];
-  /** ISO timestamp of last activity (most recent run update) */
-  last_activity: string;
-  /** UI state for selection (not from backend) */
-  selected: boolean;
+export const RunSchema = z.object({
+  id: uuidSchema,
+  state: z.enum([
+    "available",
+    "claimed",
+    "started",
+    "success",
+    "failed",
+    "killed",
+    "exception",
+    "crashed",
+    "cancelled",
+    "lost",
+  ]),
+  error_type: z.string().nullable(),
+  started_at: isoDateTimeSchema.nullable(),
+  finished_at: isoDateTimeSchema.nullable(),
+});
+
+/**
+ * Zod schema for a single WorkOrder
+ * Matches the backend WorkOrder structure from WorkOrders
+ */
+export const WorkOrderSchema = z.object({
+  id: uuidSchema,
+  state: z.enum([
+    "pending",
+    "running",
+    "success",
+    "failed",
+    "rejected",
+    "killed",
+    "exception",
+    "crashed",
+    "cancelled",
+    "lost",
+  ]),
+  last_activity: isoDateTimeSchema,
+  version: z.number(),
+  runs: z.array(RunSchema),
+});
+
+/**
+ * Zod schema for the history list response from the server
+ */
+export const HistoryListSchema = z.array(WorkOrderSchema);
+
+/**
+ * TypeScript types inferred from Zod schemas
+ */
+export type Run = z.infer<typeof RunSchema>;
+export type WorkOrder = z.infer<typeof WorkOrderSchema>;
+export type WorkflowRunHistory = WorkOrder[];
+
+/**
+ * Store state interface
+ */
+export interface HistoryState {
+  history: WorkflowRunHistory;
+  isLoading: boolean;
+  error: string | null;
+  lastUpdated: number | null;
+  isChannelConnected: boolean;
 }
 
 /**
- * Represents an individual run within a work order
+ * Commands interface - Following CQS pattern
+ * Commands mutate state and return void
  */
-export interface Run {
-  /** Run ID (UUID) */
-  id: string;
-  /** Current state of the run */
-  state: RunState;
-  /** ISO timestamp when run started */
-  started_at: string;
-  /** ISO timestamp when run finished (null if still running) */
-  finished_at: string | null;
-  /** Error type if failed (null if successful) */
-  error_type: string | null;
-  /** UI state for selection (not from backend) */
-  selected: boolean;
+interface HistoryCommands {
+  requestHistory: (runId?: string) => Promise<void>;
+  setLoading: (loading: boolean) => void;
+  setError: (error: string | null) => void;
+  clearError: () => void;
 }
 
 /**
- * All possible states for runs and work orders
+ * Queries interface - Following CQS pattern
+ * Queries return data without side effects
  */
-export type RunState =
-  | "available"
-  | "claimed"
-  | "started"
-  | "success"
-  | "failed"
-  | "crashed"
-  | "cancelled"
-  | "killed"
-  | "exception"
-  | "lost";
+interface HistoryQueries {
+  getSnapshot: () => HistoryState;
+  subscribe: (listener: () => void) => () => void;
+  withSelector: <T>(selector: (state: HistoryState) => T) => () => T;
+}
+
+/**
+ * Internal methods interface
+ * Methods prefixed with _ are for internal use only
+ */
+interface HistoryStoreInternals {
+  _connectChannel: (provider: PhoenixChannelProvider) => () => void;
+}
+
+/**
+ * Full HistoryStore interface
+ * Combines queries, commands, and internals following CQS pattern
+ */
+export type HistoryStore = HistoryQueries &
+  HistoryCommands &
+  HistoryStoreInternals;

@@ -45,6 +45,10 @@ import {
   createCredentialStore,
 } from "../stores/createCredentialStore";
 import {
+  createHistoryStore,
+  type HistoryStoreInstance,
+} from "../stores/createHistoryStore";
+import {
   createSessionContextStore,
   type SessionContextStoreInstance,
 } from "../stores/createSessionContextStore";
@@ -61,6 +65,7 @@ export interface StoreContextValue {
   awarenessStore: AwarenessStoreInstance;
   workflowStore: WorkflowStoreInstance;
   sessionContextStore: SessionContextStoreInstance;
+  historyStore: HistoryStoreInstance;
 }
 
 export const StoreContext = createContext<StoreContextValue | null>(null);
@@ -85,6 +90,7 @@ export const StoreProvider = ({ children }: StoreProviderProps) => {
     awarenessStore: createAwarenessStore(),
     workflowStore: createWorkflowStore(),
     sessionContextStore: createSessionContextStore(isNewWorkflow),
+    historyStore: createHistoryStore(),
   }));
 
   // Subscribe to sessionContextStore user changes
@@ -144,12 +150,14 @@ export const StoreProvider = ({ children }: StoreProviderProps) => {
       const cleanup3 = stores.sessionContextStore._connectChannel(
         session.provider
       );
+      const cleanup4 = stores.historyStore._connectChannel(session.provider);
 
       return () => {
         logger.debug("Disconnecting stores from channel");
         cleanup1();
         cleanup2();
         cleanup3();
+        cleanup4();
       };
     }
     return undefined;
