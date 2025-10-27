@@ -174,7 +174,7 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
     if (!el) return;
 
     const handleCommit = (evt: CustomEvent) => {
-      // CRITICAL: Stop event propagation to prevent old workflow store handler
+      // Stop event propagation to prevent old workflow store handler
       // from firing. The old handler (from usePlaceholders.ts) tries to send
       // push-change to LiveView which doesn't exist in collaborative mode.
       evt.stopImmediatePropagation();
@@ -198,7 +198,7 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
         adaptor: nodeData.adaptor as string,
       };
 
-      // Add to Y.Doc store (synchronous transaction)
+      // Add to Y.Doc store
       workflowStore.addJob(newJob);
 
       // Handle position for manual layout mode
@@ -210,7 +210,7 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
       if (placeholderEdge) {
         const edgeData = placeholderEdge.data as any;
 
-        // Determine if source is a job or trigger by checking workflow state
+        // Determine if source is a job or trigger by checking the workflow state
         const sourceIsJob = jobs.some(j => j.id === placeholderEdge.source);
 
         const newEdge: Record<string, any> = {
@@ -232,7 +232,7 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
         workflowStore.addEdge(newEdge);
       }
 
-      // FIX: Clear placeholder AFTER Y.Doc updates
+      // Clear placeholder AFTER Y.Doc updates
       // Y.Doc transactions are synchronous, so the store state is already
       // updated. Canvas will re-render with new job before placeholder is
       // cleared, preventing blank canvas during race conditions.
@@ -422,14 +422,14 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
         setModel(newModel);
       }
     } else if (workflow.jobs.length === 0 && placeholders.nodes.length === 0) {
-      // DEFENSIVE: Explicitly empty workflow - show empty state
+      // Explicitly empty workflow - show empty state
       // Only clear canvas when BOTH workflow.jobs and placeholders are empty
       // This prevents blank canvas during race conditions where placeholder
       // is cleared before Y.Doc observer fires
       setModel({ nodes: [], edges: [] });
       chartCache.current.positions = {};
     }
-    // DEFENSIVE: If newModel is empty but workflow has jobs, keep previous
+    // If newModel is empty but workflow has jobs, keep previous
     // model. This prevents blank canvas during state transitions.
   }, [
     workflow,

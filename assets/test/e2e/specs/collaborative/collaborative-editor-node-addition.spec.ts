@@ -34,10 +34,10 @@ test.describe("Collaborative Editor - Node Addition", () => {
     await placeholderInput.fill("New Test Node");
     await placeholderInput.press("Enter");
 
-    // ✅ CRITICAL: Canvas should still be visible
+    // Canvas should still be visible
     await expect(canvas).toBeVisible();
 
-    // ✅ CRITICAL: New node should appear immediately (within 2 seconds)
+    // New node should appear immediately (within 2 seconds)
     const newNode = page
       .locator(".react-flow__node")
       .filter({ hasText: "New Test Node" });
@@ -80,7 +80,7 @@ test.describe("Collaborative Editor - Node Addition", () => {
     await input.fill("Sequential Node 2");
     await input.press("Enter");
 
-    // ✅ CRITICAL: Both nodes should be visible
+    // Both nodes should be visible
     await expect(
       page.locator(".react-flow__node").filter({ hasText: "Sequential Node 1" })
     ).toBeVisible();
@@ -116,7 +116,7 @@ test.describe("Collaborative Editor - Node Addition", () => {
     // Hard refresh
     await page.reload();
 
-    // ✅ CRITICAL: Node should still exist after refresh
+    // Node should still exist after refresh
     await expect(page.locator(".react-flow__renderer")).toBeVisible({
       timeout: 10000,
     });
@@ -153,7 +153,7 @@ test.describe("Collaborative Editor - Node Addition", () => {
       await input.fill(`Rapid Node ${i}`);
       await input.press("Enter");
 
-      // ✅ CRITICAL: Canvas should remain visible throughout
+      // Canvas should remain visible throughout
       await expect(canvas).toBeVisible();
 
       // Wait for node to appear before adding next
@@ -206,7 +206,7 @@ test.describe("Collaborative Editor - Node Addition", () => {
     await input.fill("Manual Layout Node");
     await input.press("Enter");
 
-    // ✅ CRITICAL: Node should appear in manual layout mode
+    // Node should appear in manual layout mode
     await expect(
       page
         .locator(".react-flow__node")
