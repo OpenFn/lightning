@@ -174,6 +174,11 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
     if (!el) return;
 
     const handleCommit = (evt: CustomEvent) => {
+      // CRITICAL: Stop event propagation to prevent old workflow store handler
+      // from firing. The old handler (from usePlaceholders.ts) tries to send
+      // push-change to LiveView which doesn't exist in collaborative mode.
+      evt.stopImmediatePropagation();
+
       const { id, name } = evt.detail;
 
       // Get placeholder data
@@ -251,11 +256,13 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
       updateSelection(id);
     };
 
-    // Attach our custom commit handler
-    el.addEventListener("commit-placeholder" as any, handleCommit);
+    // Attach our custom commit handler in capture phase
+    // This ensures it fires BEFORE the old handler from usePlaceholders.ts
+    // We call stopImmediatePropagation() to prevent the old handler from executing
+    el.addEventListener("commit-placeholder" as any, handleCommit, true);
 
     return () => {
-      el.removeEventListener("commit-placeholder" as any, handleCommit);
+      el.removeEventListener("commit-placeholder" as any, handleCommit, true);
     };
   }, [
     el,
