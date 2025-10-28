@@ -14,7 +14,7 @@ import {
   useHistoryChannelConnected,
 } from "../../hooks/useHistory";
 import { useIsNewWorkflow } from "../../hooks/useSessionContext";
-import { useNodeSelection, useWorkflowState } from "../../hooks/useWorkflow";
+import { useNodeSelection } from "../../hooks/useWorkflow";
 import type { Run } from "../../types/history";
 
 import MiniHistory from "./MiniHistory";
@@ -29,7 +29,6 @@ export function CollaborativeWorkflowDiagram({
   className = "h-full w-full",
   inspectorId,
 }: CollaborativeWorkflowDiagramProps) {
-  const workflow = useWorkflowState(state => state.workflow);
   const { currentNode, selectNode } = useNodeSelection();
   const isNewWorkflow = useIsNewWorkflow();
   const isHistoryChannelConnected = useHistoryChannelConnected();
@@ -129,17 +128,6 @@ export function CollaborativeWorkflowDiagram({
 
   // Create container ref for event delegation
   const containerRef = useRef<HTMLDivElement>(null);
-
-  // Don't render if no workflow data yet
-  if (!workflow) {
-    return (
-      <div className={`flex items-center justify-center ${className}`}>
-        <div className="text-center text-gray-500">
-          <p>Loading workflow diagram...</p>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div ref={containerRef} className={className}>

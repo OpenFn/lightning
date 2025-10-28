@@ -23,7 +23,7 @@ defmodule Lightning.Collaboration.DocumentSupervisorTest do
   defp setup_document_supervisor(context) do
     {:ok, doc_supervisor} =
       DocumentSupervisor.start_link(
-        [workflow: context.workflow],
+        [workflow: context.workflow, document_name: context.document_name],
         name: Registry.via({:doc_supervisor, context.document_name})
       )
 
@@ -50,6 +50,7 @@ defmodule Lightning.Collaboration.DocumentSupervisorTest do
     child_spec =
       DocumentSupervisor.child_spec(
         workflow: context.workflow,
+        document_name: context.document_name,
         name: Registry.via({:doc_supervisor, context.document_name})
       )
 
@@ -60,7 +61,7 @@ defmodule Lightning.Collaboration.DocumentSupervisorTest do
   end
 
   # Helper function to verify cleanup after process termination
-  defp verify_cleanup(document_name, workflow_id) do
+  defp verify_cleanup(document_name, _workflow_id) do
     # Verify Registry is cleaned up eventually
     refute_eventually(Registry.whereis({:doc_supervisor, document_name}))
     refute_eventually(Registry.whereis({:persistence_writer, document_name}))
@@ -68,7 +69,7 @@ defmodule Lightning.Collaboration.DocumentSupervisorTest do
 
     # Verify process group is cleaned up eventually
     refute_eventually(
-      :pg.get_members(:workflow_collaboration, workflow_id)
+      :pg.get_members(:workflow_collaboration, document_name)
       |> Enum.any?()
     )
   end
@@ -167,8 +168,8 @@ defmodule Lightning.Collaboration.DocumentSupervisorTest do
     registered_supervisor = Registry.whereis({:doc_supervisor, document_name})
     assert registered_supervisor == doc_supervisor
 
-    # Verify SharedDoc is in process group
-    members = :pg.get_members(:workflow_collaboration, workflow_id)
+    # Verify SharedDoc is in process group (now keyed by document_name, not workflow_id)
+    members = :pg.get_members(:workflow_collaboration, document_name)
     assert shared_doc in members
 
     # Verify both processes are monitored by checking state
@@ -358,9 +359,10 @@ defmodule Lightning.Collaboration.DocumentSupervisorTest do
   describe "4. Child Spec Configuration" do
     test "4.1 - Child Spec Generation", context do
       workflow = context.workflow
+      document_name = context.document_name
 
       # Test with various options
-      basic_opts = [workflow: workflow]
+      basic_opts = [workflow: workflow, document_name: document_name]
       spec1 = DocumentSupervisor.child_spec(basic_opts)
 
       assert %{
@@ -376,28 +378,49 @@ defmodule Lightning.Collaboration.DocumentSupervisorTest do
 
       # Test with provided id
       custom_id = "custom_supervisor_id"
-      opts_with_id = [workflow: workflow, id: custom_id]
+
+      opts_with_id = [
+        workflow: workflow,
+        document_name: document_name,
+        id: custom_id
+      ]
+
       spec2 = DocumentSupervisor.child_spec(opts_with_id)
 
       assert spec2.id == custom_id
 
       assert spec2.start ==
-               {DocumentSupervisor, :start_link, [[workflow: workflow], []]}
+               {DocumentSupervisor, :start_link,
+                [[workflow: workflow, document_name: document_name], []]}
 
       # Test with name option (should be separated into GenServer opts)
-      name_opts = [workflow: workflow, name: {:via, Registry, "test_name"}]
+      name_opts = [
+        workflow: workflow,
+        document_name: document_name,
+        name: {:via, Registry, "test_name"}
+      ]
+
       spec3 = DocumentSupervisor.child_spec(name_opts)
 
       assert spec3.start ==
                {DocumentSupervisor, :start_link,
                 [
-                  [workflow: workflow],
+                  [workflow: workflow, document_name: document_name],
                   [name: {:via, Registry, "test_name"}]
                 ]}
 
       # Test id generation - each call should produce unique id
-      spec4 = DocumentSupervisor.child_spec(workflow: workflow)
-      spec5 = DocumentSupervisor.child_spec(workflow: workflow)
+      spec4 =
+        DocumentSupervisor.child_spec(
+          workflow: workflow,
+          document_name: document_name
+        )
+
+      spec5 =
+        DocumentSupervisor.child_spec(
+          workflow: workflow,
+          document_name: document_name
+        )
 
       assert spec4.id != spec5.id
     end
@@ -511,10 +534,10 @@ defmodule Lightning.Collaboration.DocumentSupervisorTest do
     } do
       # Test SharedDoc is the only member in workflow_collaboration process group
       assert [^shared_doc] =
-               :pg.get_members(:workflow_collaboration, workflow_id)
+               :pg.get_members(:workflow_collaboration, document_name)
 
       assert [^shared_doc] =
-               :pg.get_local_members(:workflow_collaboration, workflow_id)
+               :pg.get_local_members(:workflow_collaboration, document_name)
 
       # Clean up and verify process group is cleaned up
       GenServer.stop(doc_supervisor, :normal)
@@ -674,7 +697,7 @@ defmodule Lightning.Collaboration.DocumentSupervisorTest do
 
       # Verify SharedDoc is in process group
       assert [^shared_doc] =
-               :pg.get_members(:workflow_collaboration, workflow_id)
+               :pg.get_members(:workflow_collaboration, document_name)
 
       # Clean up session which should clean up DocumentSupervisor
       # Capture potential race condition logs during process shutdown
@@ -687,13 +710,13 @@ defmodule Lightning.Collaboration.DocumentSupervisorTest do
     setup :setup_document_supervisor
 
     test "7.2 - With Session Processes", %{
-      workflow_id: workflow_id,
+      workflow_id: _workflow_id,
       document_name: document_name,
       shared_doc: shared_doc
     } do
       # Both discovery methods should find the same process
       found_via_registry = Registry.whereis({:shared_doc, document_name})
-      [found_via_pg] = :pg.get_members(:workflow_collaboration, workflow_id)
+      [found_via_pg] = :pg.get_members(:workflow_collaboration, document_name)
 
       assert found_via_registry == shared_doc
       assert found_via_pg == shared_doc
@@ -736,7 +759,7 @@ defmodule Lightning.Collaboration.DocumentSupervisorTest do
         # Start DocumentSupervisor
         {:ok, doc_supervisor} =
           DocumentSupervisor.start_link(
-            [workflow: workflow],
+            [workflow: workflow, document_name: document_name],
             name: Registry.via({:doc_supervisor, document_name})
           )
 
@@ -749,7 +772,7 @@ defmodule Lightning.Collaboration.DocumentSupervisorTest do
 
         # Verify process group membership
         assert [^shared_doc] =
-                 :pg.get_members(:workflow_collaboration, workflow_id)
+                 :pg.get_members(:workflow_collaboration, document_name)
 
         # Stop DocumentSupervisor normally
         GenServer.stop(doc_supervisor, :normal)
@@ -766,7 +789,7 @@ defmodule Lightning.Collaboration.DocumentSupervisorTest do
       # Start DocumentSupervisor
       {:ok, doc_supervisor} =
         DocumentSupervisor.start_link(
-          [workflow: workflow],
+          [workflow: workflow, document_name: document_name],
           name: Registry.via({:doc_supervisor, document_name})
         )
 

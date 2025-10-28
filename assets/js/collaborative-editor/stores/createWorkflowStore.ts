@@ -218,6 +218,26 @@ export const createWorkflowStore = () => {
     trace: false,
   });
 
+  /**
+   * Ensures Y.Doc and provider are connected before mutation operations.
+   *
+   * This guard centralizes error handling for operations that require
+   * a connected Y.Doc. All mutation methods should call this before
+   * accessing ydoc or provider.
+   *
+   * @throws {Error} If Y.Doc or provider is not connected
+   * @returns Object containing ydoc and provider instances
+   */
+  const ensureConnected = () => {
+    if (!ydoc || !provider) {
+      throw new Error(
+        "Cannot modify workflow: Y.Doc not connected. " +
+          "This is likely a bug - mutations should not be called before sync."
+      );
+    }
+    return { ydoc, provider };
+  };
+
   const notify = (actionName: string = "stateChange") => {
     logger.debug("notify", {
       action: actionName,
@@ -388,9 +408,7 @@ export const createWorkflowStore = () => {
   // These methods update Y.Doc, which triggers observers that update Immer state
 
   const updateJob = (id: string, updates: Partial<Session.Job>) => {
-    if (!ydoc) {
-      throw new Error("Y.Doc not connected");
-    }
+    const { ydoc } = ensureConnected();
 
     // TODO: parse through zod to throw out extra fields
     // if (!ydoc) {
@@ -452,9 +470,7 @@ export const createWorkflowStore = () => {
       Omit<Session.Workflow, "id" | "lock_version" | "deleted_at">
     >
   ) => {
-    if (!ydoc) {
-      throw new Error("Y.Doc not connected");
-    }
+    const { ydoc } = ensureConnected();
 
     const workflowMap = ydoc.getMap("workflow");
 
@@ -475,9 +491,7 @@ export const createWorkflowStore = () => {
   };
 
   const addJob = (job: Partial<Session.Job>) => {
-    if (!ydoc) {
-      throw new Error("Y.Doc not connected");
-    }
+    const { ydoc } = ensureConnected();
     if (!job.id || !job.name) return;
 
     const jobsArray = ydoc.getArray("jobs");
@@ -498,9 +512,7 @@ export const createWorkflowStore = () => {
   };
 
   const removeJob = (id: string) => {
-    if (!ydoc) {
-      throw new Error("Y.Doc not connected");
-    }
+    const { ydoc } = ensureConnected();
 
     const jobsArray = ydoc.getArray("jobs");
     const jobs = jobsArray.toArray() as Y.Map<unknown>[];
@@ -514,9 +526,7 @@ export const createWorkflowStore = () => {
   };
 
   const addEdge = (edge: Partial<Session.Edge>) => {
-    if (!ydoc) {
-      throw new Error("Y.Doc not connected");
-    }
+    const { ydoc } = ensureConnected();
     if (!edge.id || !edge.target_job_id) return;
 
     const edgesArray = ydoc.getArray("edges");
@@ -536,9 +546,7 @@ export const createWorkflowStore = () => {
   };
 
   const updateEdge = (id: string, updates: Partial<Session.Edge>) => {
-    if (!ydoc) {
-      throw new Error("Y.Doc not connected");
-    }
+    const { ydoc } = ensureConnected();
 
     const edgesArray = ydoc.getArray("edges");
     const edges = edgesArray.toArray() as Y.Map<unknown>[];
@@ -560,9 +568,7 @@ export const createWorkflowStore = () => {
   };
 
   const removeEdge = (id: string) => {
-    if (!ydoc) {
-      throw new Error("Y.Doc not connected");
-    }
+    const { ydoc } = ensureConnected();
 
     const edgesArray = ydoc.getArray("edges");
     const edges = edgesArray.toArray() as Y.Map<unknown>[];
@@ -577,9 +583,7 @@ export const createWorkflowStore = () => {
   };
 
   const updateTrigger = (id: string, updates: Partial<Session.Trigger>) => {
-    if (!ydoc) {
-      throw new Error("Y.Doc not connected");
-    }
+    const { ydoc } = ensureConnected();
 
     const triggersArray = ydoc.getArray("triggers");
     const triggers = triggersArray.toArray() as Y.Map<unknown>[];
@@ -598,9 +602,7 @@ export const createWorkflowStore = () => {
   };
 
   const setEnabled = (enabled: boolean) => {
-    if (!ydoc) {
-      throw new Error("Y.Doc not connected");
-    }
+    const { ydoc } = ensureConnected();
 
     const triggersArray = ydoc.getArray("triggers");
     const triggers = triggersArray.toArray() as Y.Map<unknown>[];
@@ -623,9 +625,7 @@ export const createWorkflowStore = () => {
   };
 
   const updatePositions = (positions: Workflow.Positions | null) => {
-    if (!ydoc) {
-      throw new Error("Y.Doc not connected");
-    }
+    const { ydoc } = ensureConnected();
 
     const positionsMap = ydoc.getMap("positions");
 
@@ -643,9 +643,7 @@ export const createWorkflowStore = () => {
   };
 
   const updatePosition = (id: string, position: { x: number; y: number }) => {
-    if (!ydoc) {
-      throw new Error("Y.Doc not connected");
-    }
+    const { ydoc } = ensureConnected();
 
     const positionsMap = ydoc.getMap("positions");
     ydoc.transact(() => {
@@ -694,10 +692,7 @@ export const createWorkflowStore = () => {
     saved_at?: string;
     lock_version?: number;
   } | null> => {
-    if (!ydoc || !provider) {
-      logger.warn("Cannot save - Y.Doc or provider not connected");
-      return null;
-    }
+    const { ydoc, provider } = ensureConnected();
 
     const workflow = ydoc.getMap("workflow").toJSON();
 
@@ -732,10 +727,7 @@ export const createWorkflowStore = () => {
   };
 
   const resetWorkflow = async (): Promise<void> => {
-    if (!ydoc || !provider) {
-      logger.warn("Cannot reset - Y.Doc or provider not connected");
-      throw new Error("Y.Doc or provider not connected");
-    }
+    const { provider } = ensureConnected();
 
     logger.debug("Resetting workflow");
 
@@ -805,10 +797,7 @@ export const createWorkflowStore = () => {
    * @param workflowState - Parsed YAML workflow state
    */
   const importWorkflow = (workflowState: YAMLWorkflowState) => {
-    if (!ydoc) {
-      logger.error("Cannot import workflow: Y.Doc not connected");
-      throw new Error("Y.Doc not connected");
-    }
+    const { ydoc } = ensureConnected();
 
     try {
       // Use adapter to apply transformations and update Y.Doc

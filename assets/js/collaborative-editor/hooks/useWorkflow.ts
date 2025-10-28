@@ -45,6 +45,9 @@ import {
   usePermissions,
 } from "./useSessionContext";
 
+// import _logger from "#/utils/logger";
+// const logger = _logger.ns("useWorkflow").seal();
+
 /**
  * Hook to access the WorkflowStore context.
  *
@@ -457,6 +460,43 @@ export const useWorkflowActions = () => {
 };
 
 /**
+ * Internal hook that computes workflow state conditions used by both
+ * useCanSave and useCanRun.
+ *
+ * Extracts common logic to avoid duplication following DRY principles.
+ * This hook computes four core conditions that determine whether
+ * workflow operations (save/run) are permitted:
+ *
+ * @returns Object with condition flags:
+ * - hasPermission: User has can_edit_workflow permission
+ * - isConnected: Session is synced with backend
+ * - isDeleted: Workflow has been deleted
+ * - isOldSnapshot: Viewing an old snapshot (not latest version)
+ *
+ * @internal This is shared logic between useCanSave and useCanRun
+ */
+const useWorkflowConditions = () => {
+  const { isSynced } = useSession();
+  const permissions = usePermissions();
+  const latestSnapshotLockVersion = useLatestSnapshotLockVersion();
+  const workflow = useWorkflowState(state => state.workflow);
+
+  const hasPermission = permissions?.can_edit_workflow ?? false;
+  const isConnected = isSynced;
+  const isDeleted = workflow !== null && workflow.deleted_at !== null;
+
+  // Only consider it an old snapshot if workflow is loaded, latest
+  // snapshot lock version is available AND different from workflow
+  // lock version
+  const isOldSnapshot =
+    workflow !== null &&
+    latestSnapshotLockVersion !== null &&
+    workflow.lock_version !== latestSnapshotLockVersion;
+
+  return { hasPermission, isConnected, isDeleted, isOldSnapshot };
+};
+
+/**
  * Hook to determine if workflow can be saved and provide tooltip message
  *
  * Returns object with:
@@ -470,30 +510,8 @@ export const useWorkflowActions = () => {
  * 4. Workflow deletion state (deleted_at)
  */
 export const useCanSave = (): { canSave: boolean; tooltipMessage: string } => {
-  // Get session state
-  const { isSynced } = useSession();
-
-  // Get permissions and lock version from session context
-  const permissions = usePermissions();
-  const latestSnapshotLockVersion = useLatestSnapshotLockVersion();
-
-  // Get workflow data
-  const workflow = useWorkflowState(state => state.workflow);
-
-  // Compute conditions
-  const hasPermission = permissions?.can_edit_workflow ?? false;
-  const isConnected = isSynced;
-  const isDeleted = workflow !== null && workflow.deleted_at !== null;
-
-  // Only consider it an old snapshot if workflow is loaded, latest
-  // snapshot lock version is available AND different from workflow
-  // lock version
-  const isOldSnapshot =
-    workflow !== null &&
-    latestSnapshotLockVersion !== null &&
-    workflow.lock_version !== latestSnapshotLockVersion;
-
-  console.log({ workflow, hasPermission });
+  const { hasPermission, isConnected, isDeleted, isOldSnapshot } =
+    useWorkflowConditions();
 
   // Determine tooltip message (check in priority order)
   let tooltipMessage = "Save workflow";
@@ -514,4 +532,42 @@ export const useCanSave = (): { canSave: boolean; tooltipMessage: string } => {
   }
 
   return { canSave, tooltipMessage };
+};
+
+/**
+ * Hook to determine if workflow can be run and provide tooltip message
+ *
+ * Returns object with:
+ * - canRun: boolean - whether run button should be enabled
+ * - tooltipMessage: string - message explaining button state
+ *
+ * Checks:
+ * 1. User permissions (can_edit_workflow)
+ * 2. Connection state (isSynced)
+ * 3. Lock version (viewing latest snapshot)
+ * 4. Workflow deletion state (deleted_at)
+ */
+export const useCanRun = (): { canRun: boolean; tooltipMessage: string } => {
+  const { hasPermission, isConnected, isDeleted, isOldSnapshot } =
+    useWorkflowConditions();
+
+  // Determine tooltip message (check in priority order)
+  let tooltipMessage = "Run workflow";
+  let canRun = true;
+
+  if (!isConnected) {
+    canRun = false;
+    tooltipMessage = "You are disconnected. Reconnecting...";
+  } else if (!hasPermission) {
+    canRun = false;
+    tooltipMessage = "You do not have permission to run workflows";
+  } else if (isDeleted) {
+    canRun = false;
+    tooltipMessage = "Workflow has been deleted";
+  } else if (isOldSnapshot) {
+    canRun = false;
+    tooltipMessage = "You cannot run an old snapshot of a workflow";
+  }
+
+  return { canRun, tooltipMessage };
 };

@@ -19,6 +19,15 @@
  *   ↓ useStores
  * Components (consume stores)
  * ```
+ *
+ * ## Initialization Sequence:
+ *
+ * SessionProvider          →  Creates Y.Doc, connects Phoenix Channel
+ * SessionStore             →  Tracks isConnected, isSynced
+ * StoreProvider (this)     →  Waits for isSynced before connecting WorkflowStore
+ * WorkflowStore observers  →  Populate Immer state from Y.Doc
+ * LoadingBoundary          →  Waits for workflow !== null before rendering
+ * Components               →  Can safely assume workflow exists
  */
 
 import type React from "react";
@@ -52,6 +61,7 @@ import {
   createSessionContextStore,
   type SessionContextStoreInstance,
 } from "../stores/createSessionContextStore";
+import { createUIStore, type UIStoreInstance } from "../stores/createUIStore";
 import {
   createWorkflowStore,
   type WorkflowStoreInstance,
@@ -66,6 +76,7 @@ export interface StoreContextValue {
   workflowStore: WorkflowStoreInstance;
   sessionContextStore: SessionContextStoreInstance;
   historyStore: HistoryStoreInstance;
+  uiStore: UIStoreInstance;
 }
 
 export const StoreContext = createContext<StoreContextValue | null>(null);
@@ -91,6 +102,7 @@ export const StoreProvider = ({ children }: StoreProviderProps) => {
     workflowStore: createWorkflowStore(),
     sessionContextStore: createSessionContextStore(isNewWorkflow),
     historyStore: createHistoryStore(),
+    uiStore: createUIStore(),
   }));
 
   // Subscribe to sessionContextStore user changes
@@ -164,9 +176,14 @@ export const StoreProvider = ({ children }: StoreProviderProps) => {
   }, [session.provider, session.isConnected, stores]);
 
   // Connect/disconnect workflowStore Y.Doc when session changes
+  // IMPORTANT: Wait for isSynced, not just isConnected
+  // isConnected = Phoenix channel is open
+  // isSynced = Y.Doc has received and applied all initial sync data
+  // We must wait for sync to complete before attaching observers,
+  // otherwise observers will read empty/partial Y.Doc state (race condition)
   useEffect(() => {
-    if (session.ydoc && session.provider && session.isConnected) {
-      logger.debug("Connecting workflowStore");
+    if (session.ydoc && session.provider && session.isSynced) {
+      logger.debug("Connecting workflowStore (Y.Doc synced)");
       stores.workflowStore.connect(
         session.ydoc as Session.WorkflowDoc,
         session.provider
@@ -179,12 +196,7 @@ export const StoreProvider = ({ children }: StoreProviderProps) => {
     } else {
       return undefined;
     }
-  }, [
-    session.ydoc,
-    session.provider,
-    stores.workflowStore,
-    session.isConnected,
-  ]);
+  }, [session.ydoc, session.provider, stores.workflowStore, session.isSynced]);
 
   useEffect(() => {
     return () => {
