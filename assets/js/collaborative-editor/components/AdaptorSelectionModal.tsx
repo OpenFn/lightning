@@ -64,10 +64,8 @@ export function AdaptorSelectionModal({
     const lowerQuery = searchQuery.toLowerCase();
     return adaptors.filter(adaptor => {
       const displayName = extractAdaptorName(adaptor.name) || "";
-      return (
-        displayName.toLowerCase().includes(lowerQuery) ||
-        adaptor.name.toLowerCase().includes(lowerQuery)
-      );
+      // Only match against the adaptor name, not the @openfn/ prefix
+      return displayName.toLowerCase().includes(lowerQuery);
     });
   };
 
