@@ -108,12 +108,12 @@ export function AdaptorSelectionModal({
             data-leave:ease-in sm:my-8 sm:w-full sm:max-w-2xl
             sm:p-6"
           >
-            <div className="relative pr-8">
+            <div className="relative pr-12">
               {/* Close button - aligned with search input */}
               <button
                 type="button"
                 onClick={onClose}
-                className="absolute right-0 top-0 text-gray-400
+                className="absolute right-2 top-0 text-gray-400
                 hover:text-gray-500 focus:outline-none z-10 h-10 w-10
                 flex items-center justify-center"
               >
