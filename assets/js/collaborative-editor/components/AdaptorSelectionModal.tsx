@@ -171,7 +171,7 @@ export function AdaptorSelectionModal({
                 type="button"
                 onClick={onClose}
                 className="text-gray-400 hover:text-gray-500
-                focus:outline-none mt-2"
+                focus:outline-none h-10 flex items-center justify-center"
               >
                 <span className="hero-x-mark h-6 w-6" aria-hidden="true" />
               </button>
