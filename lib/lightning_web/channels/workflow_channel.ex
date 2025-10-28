@@ -15,6 +15,7 @@ defmodule LightningWeb.WorkflowChannel do
   alias Lightning.Credentials.KeychainCredential
   alias Lightning.Policies.Permissions
   alias Lightning.Projects.ProjectCredential
+  alias Lightning.VersionControl
   alias Lightning.Workflows.Job
   alias Lightning.Workflows.Snapshot
   alias Lightning.Workflows.Workflow
@@ -166,12 +167,16 @@ defmodule LightningWeb.WorkflowChannel do
       # so the frontend knows the difference between viewing v22 vs latest
       fresh_workflow = Lightning.Workflows.get_workflow(workflow.id)
 
+      project_repo_connection =
+        VersionControl.get_repo_connection_for_project(project.id)
+
       %{
         user: render_user_context(user),
         project: render_project_context(project),
         config: render_config_context(),
         permissions: render_permissions(user, project_user),
-        latest_snapshot_lock_version: fresh_workflow.lock_version
+        latest_snapshot_lock_version: fresh_workflow.lock_version,
+        project_repo_connection: render_repo_connection(project_repo_connection)
       }
     end)
   end
@@ -234,6 +239,51 @@ defmodule LightningWeb.WorkflowChannel do
         }}, socket}
     else
       error -> workflow_error_reply(socket, error)
+    end
+  end
+
+  @impl true
+  def handle_in("save_and_sync", %{"commit_message" => commit_message}, socket) do
+    session_pid = socket.assigns.session_pid
+    user = socket.assigns.current_user
+    project = socket.assigns.project
+
+    with :ok <- authorize_edit_workflow(socket),
+         {:ok, workflow} <- Session.save_workflow(session_pid, user),
+         repo_connection when not is_nil(repo_connection) <-
+           VersionControl.get_repo_connection_for_project(project.id),
+         :ok <- VersionControl.initiate_sync(repo_connection, commit_message) do
+      # Broadcast the new lock_version to all users in the channel
+      broadcast_from!(socket, "workflow_saved", %{
+        latest_snapshot_lock_version: workflow.lock_version
+      })
+
+      {:reply,
+       {:ok,
+        %{
+          saved_at: workflow.updated_at,
+          lock_version: workflow.lock_version,
+          repo: repo_connection.repo
+        }}, socket}
+    else
+      nil ->
+        {:reply,
+         {:error,
+          %{
+            errors: %{base: ["No GitHub connection configured for this project"]},
+            type: "github_sync_error"
+          }}, socket}
+
+      {:error, reason} when is_binary(reason) ->
+        {:reply,
+         {:error,
+          %{
+            errors: %{base: [reason]},
+            type: "github_sync_error"
+          }}, socket}
+
+      error ->
+        workflow_error_reply(socket, error)
     end
   end
 
@@ -475,6 +525,17 @@ defmodule LightningWeb.WorkflowChannel do
 
     %{
       can_edit_workflow: can_edit
+    }
+  end
+
+  defp render_repo_connection(nil), do: nil
+
+  defp render_repo_connection(repo_connection) do
+    %{
+      id: repo_connection.id,
+      repo: repo_connection.repo,
+      branch: repo_connection.branch,
+      github_installation_id: repo_connection.github_installation_id
     }
   end
 

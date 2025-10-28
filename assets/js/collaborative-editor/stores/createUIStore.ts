@@ -79,6 +79,7 @@ export const createUIStore = (): UIStore => {
     {
       runPanelOpen: false,
       runPanelContext: null,
+      githubSyncModalOpen: false,
     } as UIState,
     // No initial transformations needed
     draft => draft
@@ -136,6 +137,22 @@ export const createUIStore = (): UIStore => {
     notify("closeRunPanel");
   };
 
+  const openGitHubSyncModal = () => {
+    logger.debug("Opening GitHub sync modal");
+    state = produce(state, draft => {
+      draft.githubSyncModalOpen = true;
+    });
+    notify("openGitHubSyncModal");
+  };
+
+  const closeGitHubSyncModal = () => {
+    logger.debug("Closing GitHub sync modal");
+    state = produce(state, draft => {
+      draft.githubSyncModalOpen = false;
+    });
+    notify("closeGitHubSyncModal");
+  };
+
   devtools.connect();
 
   // ===========================================================================
@@ -151,6 +168,8 @@ export const createUIStore = (): UIStore => {
     // Commands
     openRunPanel,
     closeRunPanel,
+    openGitHubSyncModal,
+    closeGitHubSyncModal,
   };
 };
 
