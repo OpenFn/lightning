@@ -94,7 +94,7 @@ Lightning
 
     <section id="moduledoc">
 <p>Serializes Lightning Workflow structs to/from Y.Doc CRDT documents.</p><p>This module handles bidirectional conversion:</p><ul><li><a href="#serialize_to_ydoc/2"><code class="inline">serialize_to_ydoc/2</code></a> - Write workflow data into a Y.Doc (workflow → Y.Doc)</li><li><a href="#deserialize_from_ydoc/2"><code class="inline">deserialize_from_ydoc/2</code></a> - Extract workflow data from a Y.Doc (Y.Doc → workflow)</li></ul><p>These functions maintain consistent field mappings between the two formats.</p><h2 id="module-y-doc-structure" class="section-heading"><a href="#module-y-doc-structure" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Y.Doc Structure</span></h2><p>The Y.Doc contains five top-level collections:</p><ul><li><code class="inline">workflow</code> (Map): Core workflow metadata (id, name, lock_version,
-deleted_at)</li><li><code class="inline">jobs</code> (Array): Array of job objects with Y.Text body field</li><li><code class="inline">edges</code> (Array): Array of edge objects connecting jobs/triggers</li><li><code class="inline">triggers</code> (Array): Array of trigger objects (webhook, cron, kafka)</li><li><code class="inline">positions</code> (Map): Canvas positions for visual editor (node_id → {x, y})</li></ul><h2 id="module-field-mappings" class="section-heading"><a href="#module-field-mappings" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Field Mappings</span></h2><h3 id="module-special-type-conversions" class="section-heading"><a href="#module-special-type-conversions" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Special Type Conversions</span></h3><ul><li>Job <code class="inline">body</code>: Stored as Y.Text (for collaborative editing)</li><li>Atoms (condition_type, trigger type): Converted to/from strings</li><li>Nil values: Coalesced to empty strings or defaults where appropriate</li></ul>
+deleted_at, concurrency, enable_job_logs)</li><li><code class="inline">jobs</code> (Array): Array of job objects with Y.Text body field</li><li><code class="inline">edges</code> (Array): Array of edge objects connecting jobs/triggers</li><li><code class="inline">triggers</code> (Array): Array of trigger objects (webhook, cron, kafka)</li><li><code class="inline">positions</code> (Map): Canvas positions for visual editor (node_id → {x, y})</li></ul><h2 id="module-field-mappings" class="section-heading"><a href="#module-field-mappings" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Field Mappings</span></h2><h3 id="module-special-type-conversions" class="section-heading"><a href="#module-special-type-conversions" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Special Type Conversions</span></h3><ul><li>Job <code class="inline">body</code>: Stored as Y.Text (for collaborative editing)</li><li>Atoms (condition_type, trigger type): Converted to/from strings</li><li>Nil values: Coalesced to empty strings or defaults where appropriate</li></ul>
     </section>
 
 </div>
@@ -155,7 +155,7 @@ deleted_at)</li><li><code class="inline">jobs</code> (Array): Array of job objec
       <h1 class="signature" translate="no">deserialize_from_ydoc(doc, workflow_id)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/collaboration/workflow_serializer.ex#L97" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/collaboration/workflow_serializer.ex#L101" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -184,7 +184,7 @@ passing to Lightning.Workflows.save_workflow/2.</p><h2 id="deserialize_from_ydoc
       <h1 class="signature" translate="no">serialize_to_ydoc(doc, workflow)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/collaboration/workflow_serializer.ex#L54" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/collaboration/workflow_serializer.ex#L55" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -199,7 +199,8 @@ passing to Lightning.Workflows.save_workflow/2.</p><h2 id="deserialize_from_ydoc
 
       </div>
 
-<p>Writes a workflow's data into a Y.Doc.</p><p>This initializes the Y.Doc structure with:</p><ul><li><code class="inline">workflow</code> map: Core workflow metadata (id, name, lock_version, deleted_at)</li><li><code class="inline">jobs</code> array: Array of job objects</li><li><code class="inline">edges</code> array: Array of edge objects</li><li><code class="inline">triggers</code> array: Array of trigger objects</li><li><code class="inline">positions</code> map: Canvas positions for visual editor</li></ul><p>This function is a refactored version of Session.initialize_workflow_data/2
+<p>Writes a workflow's data into a Y.Doc.</p><p>This initializes the Y.Doc structure with:</p><ul><li><code class="inline">workflow</code> map: Core workflow metadata (id, name, lock_version, deleted_at,
+concurrency, enable_job_logs)</li><li><code class="inline">jobs</code> array: Array of job objects</li><li><code class="inline">edges</code> array: Array of edge objects</li><li><code class="inline">triggers</code> array: Array of trigger objects</li><li><code class="inline">positions</code> map: Canvas positions for visual editor</li></ul><p>This function is a refactored version of Session.initialize_workflow_data/2
 with no behavioral changes.</p><h2 id="serialize_to_ydoc/2-parameters" class="section-heading"><a href="#serialize_to_ydoc/2-parameters" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Parameters</span></h2><ul><li><code class="inline">doc</code>: The Y.Doc to write into</li><li><code class="inline">workflow</code>: The workflow struct to serialize</li></ul><h2 id="serialize_to_ydoc/2-returns" class="section-heading"><a href="#serialize_to_ydoc/2-returns" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Returns</span></h2><ul><li>The doc (for chaining convenience)</li></ul>
   </section>
 </section>
