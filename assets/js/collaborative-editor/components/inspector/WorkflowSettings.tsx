@@ -3,18 +3,18 @@ import { useEffect, useMemo, useState } from "react";
 import { useAppForm } from "#/collaborative-editor/components/form";
 import { createZodValidator } from "#/collaborative-editor/components/form/createZodValidator";
 import { usePermissions } from "#/collaborative-editor/hooks/useSessionContext";
-import { useWorkflowActions } from "#/collaborative-editor/hooks/useWorkflow";
+import {
+  useWorkflowActions,
+  useWorkflowState,
+} from "#/collaborative-editor/hooks/useWorkflow";
 import { useWatchFields } from "#/collaborative-editor/stores/common";
-import type { Workflow } from "#/collaborative-editor/types/workflow";
 import { WorkflowSchema } from "#/collaborative-editor/types/workflow";
 
 import { AlertDialog } from "../AlertDialog";
 
-interface WorkflowSettingsProps {
-  workflow: Workflow;
-}
-
-export function WorkflowSettings({ workflow }: WorkflowSettingsProps) {
+export function WorkflowSettings() {
+  // Get workflow from store - LoadingBoundary guarantees it's non-null
+  const workflow = useWorkflowState(state => state.workflow!);
   const [isResetDialogOpen, setIsResetDialogOpen] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
 
@@ -27,9 +27,8 @@ export function WorkflowSettings({ workflow }: WorkflowSettingsProps) {
       name: workflow.name,
       lock_version: workflow.lock_version,
       deleted_at: workflow.deleted_at,
-      // Virtual fields for future use (not yet in Y.Doc)
-      concurrency: null as number | null,
-      enable_job_logs: true,
+      concurrency: workflow.concurrency,
+      enable_job_logs: workflow.enable_job_logs,
     }),
     [workflow]
   );
@@ -39,11 +38,11 @@ export function WorkflowSettings({ workflow }: WorkflowSettingsProps) {
     listeners: {
       onChange: ({ formApi }) => {
         // Form → Y.Doc: Update workflow immediately on change
-        const { name } = formApi.state.values;
+        const { name, concurrency, enable_job_logs } = formApi.state.values;
         updateWorkflow({
           name,
-          // Note: concurrency and enable_job_logs will be no-ops
-          // until Y.Doc type is updated
+          concurrency,
+          enable_job_logs,
         });
       },
     },
@@ -62,7 +61,7 @@ export function WorkflowSettings({ workflow }: WorkflowSettingsProps) {
         }
       });
     },
-    ["name"]
+    ["name", "concurrency", "enable_job_logs"]
   );
 
   // Reset form when workflow changes

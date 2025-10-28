@@ -13,54 +13,64 @@ defmodule LightningWeb.WorkflowChannel do
   alias Lightning.Credentials.KeychainCredential
   alias Lightning.Policies.Permissions
   alias Lightning.Projects.ProjectCredential
+  alias Lightning.Workflows.Snapshot
+  alias Lightning.Workflows.Workflow
 
   require Logger
 
   @impl true
   def join(
-        "workflow:collaborate:" <> workflow_id = topic,
+        "workflow:collaborate:" <> rest = topic,
         %{"project_id" => project_id, "action" => action},
         socket
       ) do
-    # Check if user is authenticated
-    case socket.assigns[:current_user] do
-      nil ->
-        {:error, %{reason: "unauthorized"}}
+    # Parse room name to extract workflow_id and optional version
+    # Room formats:
+    # - "workflow_id" → latest (collaborative editing room)
+    # - "workflow_id:vN" → specific version N (isolated snapshot viewing)
+    {workflow_id, version} =
+      case String.split(rest, ":v", parts: 2) do
+        [wf_id, version] -> {wf_id, version}
+        [wf_id] -> {wf_id, nil}
+      end
 
-      user ->
-        # Fetch project first
-        case Lightning.Projects.get_project(project_id) do
-          nil ->
-            {:error, %{reason: "project not found"}}
+    with {:user, user} when not is_nil(user) <-
+           {:user, socket.assigns[:current_user]},
+         {:project, %_{} = project} <-
+           {:project, Lightning.Projects.get_project(project_id)},
+         {:workflow, {:ok, workflow}} <-
+           {:workflow,
+            load_workflow(action, workflow_id, project, user, version)} do
+      Logger.info("""
+      Joining workflow collaboration:
+        workflow_id: #{workflow_id}
+        version: #{inspect(version)}
+        room: #{topic}
+        is_latest: #{is_nil(version)}
+      """)
 
-          project ->
-            # Load or build workflow based on action
-            case load_workflow(action, workflow_id, project, user) do
-              {:ok, workflow} ->
-                # Start collaboration with workflow struct
-                {:ok, session_pid} =
-                  Collaborate.start(user: user, workflow: workflow)
+      {:ok, session_pid} =
+        Collaborate.start(
+          user: user,
+          workflow: workflow,
+          room_topic: topic
+        )
 
-                project_user =
-                  Lightning.Projects.get_project_user(
-                    project,
-                    user
-                  )
+      project_user = Lightning.Projects.get_project_user(project, user)
 
-                {:ok,
-                 assign(socket,
-                   workflow_id: workflow_id,
-                   collaboration_topic: topic,
-                   workflow: workflow,
-                   project: project,
-                   session_pid: session_pid,
-                   project_user: project_user
-                 )}
-
-              {:error, reason} ->
-                {:error, %{reason: reason}}
-            end
-        end
+      {:ok,
+       assign(socket,
+         workflow_id: workflow_id,
+         collaboration_topic: topic,
+         workflow: workflow,
+         project: project,
+         session_pid: session_pid,
+         project_user: project_user
+       )}
+    else
+      {:user, nil} -> {:error, %{reason: "unauthorized"}}
+      {:project, nil} -> {:error, %{reason: "project not found"}}
+      {:workflow, {:error, reason}} -> {:error, %{reason: reason}}
     end
   end
 
@@ -111,12 +121,18 @@ defmodule LightningWeb.WorkflowChannel do
     project_user = socket.assigns.project_user
 
     async_task(socket, "get_context", fn ->
+      # CRITICAL: Always fetch the actual latest workflow from DB
+      # socket.assigns.workflow could be an old snapshot (e.g., v22)
+      # but we need to send the actual latest lock_version (e.g., v28)
+      # so the frontend knows the difference between viewing v22 vs latest
+      fresh_workflow = Lightning.Workflows.get_workflow(workflow.id)
+
       %{
         user: render_user_context(user),
         project: render_project_context(project),
         config: render_config_context(),
         permissions: render_permissions(user, project_user),
-        latest_snapshot_lock_version: workflow.lock_version
+        latest_snapshot_lock_version: fresh_workflow.lock_version
       }
     end)
   end
@@ -165,6 +181,12 @@ defmodule LightningWeb.WorkflowChannel do
 
     with :ok <- authorize_edit_workflow(socket),
          {:ok, workflow} <- Session.save_workflow(session_pid, user) do
+      # Broadcast the new lock_version to all users in the channel
+      # so they can update their latestSnapshotLockVersion in SessionContextStore
+      broadcast_from!(socket, "workflow_saved", %{
+        latest_snapshot_lock_version: workflow.lock_version
+      })
+
       {:reply,
        {:ok,
         %{
@@ -205,6 +227,46 @@ defmodule LightningWeb.WorkflowChannel do
   end
 
   @impl true
+  def handle_in("request_versions", _payload, socket) do
+    Logger.info("====== RECEIVED request_versions ======")
+    workflow = socket.assigns.workflow
+    Logger.info("Workflow ID: #{workflow.id}")
+
+    async_task(socket, "request_versions", fn ->
+      Logger.info("Inside async_task for request_versions")
+
+      # Get fresh workflow from database to get the actual latest lock_version
+      fresh_workflow = Lightning.Workflows.get_workflow(workflow.id)
+      latest_lock_version = fresh_workflow.lock_version
+
+      snapshots = Lightning.Workflows.Snapshot.get_all_for(workflow)
+
+      Logger.info("Fetching versions for workflow #{workflow.id}")
+      Logger.info("Found #{length(snapshots)} snapshots")
+      Logger.info("Socket workflow lock_version: #{workflow.lock_version}")
+      Logger.info("Fresh workflow lock_version: #{latest_lock_version}")
+
+      versions =
+        snapshots
+        |> Enum.map(fn snapshot ->
+          %{
+            lock_version: snapshot.lock_version,
+            inserted_at: snapshot.inserted_at,
+            is_latest: snapshot.lock_version == latest_lock_version
+          }
+        end)
+        # Sort with latest first, then by lock_version descending
+        |> Enum.sort_by(fn v ->
+          {if(v.is_latest, do: 0, else: 1), -v.lock_version}
+        end)
+
+      Logger.info("Mapped versions: #{inspect(versions)}")
+
+      %{versions: versions}
+    end)
+  end
+
+  @impl true
   def handle_info({:yjs, chunk}, socket) do
     push(socket, "yjs", {:binary, chunk})
     {:noreply, socket}
@@ -226,6 +288,10 @@ defmodule LightningWeb.WorkflowChannel do
         {:noreply, socket}
 
       "get_context" ->
+        reply(socket_ref, reply)
+        {:noreply, socket}
+
+      "request_versions" ->
         reply(socket_ref, reply)
         {:noreply, socket}
 
@@ -502,8 +568,60 @@ defmodule LightningWeb.WorkflowChannel do
   end
 
   # Load workflow for "edit" action - fetch from database
-  defp load_workflow("edit", workflow_id, project, user) do
-    case Lightning.Workflows.get_workflow(workflow_id) do
+  # Load workflow for "edit" action with optional version
+  defp load_workflow("edit", workflow_id, project, user, version)
+       when is_binary(version) do
+    Logger.info("Loading workflow snapshot version: #{version}")
+
+    # Parse version as integer
+    case Integer.parse(version) do
+      {lock_version, ""} ->
+        # Load snapshot by version
+        case Snapshot.get_by_version(workflow_id, lock_version) do
+          nil ->
+            {:error, "snapshot version #{version} not found"}
+
+          snapshot ->
+            # Convert snapshot to workflow struct format for Y.Doc initialization
+            workflow = %Workflow{
+              id: workflow_id,
+              project_id: project.id,
+              name: snapshot.name,
+              lock_version: snapshot.lock_version,
+              deleted_at: nil,
+              jobs: Enum.map(snapshot.jobs, &Map.from_struct/1),
+              edges: Enum.map(snapshot.edges, &Map.from_struct/1),
+              triggers: Enum.map(snapshot.triggers, &Map.from_struct/1)
+            }
+
+            # Verify permissions
+            case Permissions.can(
+                   :workflows,
+                   :access_read,
+                   user,
+                   project
+                 ) do
+              :ok ->
+                {:ok, workflow}
+
+              {:error, :unauthorized} ->
+                {:error, "unauthorized"}
+            end
+        end
+
+      _ ->
+        {:error, "invalid version format"}
+    end
+  end
+
+  # Load workflow for "edit" action without version (latest)
+  defp load_workflow("edit", workflow_id, project, user, _version) do
+    # IMPORTANT: Preload associations needed for Y.Doc initialization
+    # When no persisted Y.Doc state exists, the workflow is serialized to Y.Doc
+    # and needs jobs, edges, and triggers loaded to avoid empty workflow state
+    case Lightning.Workflows.get_workflow(workflow_id,
+           include: [:jobs, :edges, :triggers]
+         ) do
       nil ->
         {:error, "workflow not found"}
 
@@ -530,7 +648,7 @@ defmodule LightningWeb.WorkflowChannel do
   end
 
   # Load workflow for "new" action - build workflow struct
-  defp load_workflow("new", workflow_id, project, user) do
+  defp load_workflow("new", workflow_id, project, user, _version) do
     # Verify permissions on project
     case Permissions.can(
            :project_users,
@@ -557,7 +675,7 @@ defmodule LightningWeb.WorkflowChannel do
   end
 
   # Handle invalid action
-  defp load_workflow(action, _workflow_id, _project, _user) do
+  defp load_workflow(action, _workflow_id, _project, _user, _version) do
     {:error, "invalid action '#{action}', must be 'new' or 'edit'"}
   end
 end

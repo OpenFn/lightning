@@ -29,6 +29,24 @@ defmodule LightningWeb.API.LogLinesController do
 
   action_fallback LightningWeb.FallbackController
 
+  @doc """
+  Lists log lines with pagination and filtering.
+
+  Returns a paginated list of log lines filtered by the query parameters.
+  Validates datetime parameters before applying filters and enforces
+  authorization based on the current resource (user or API token).
+
+  ## Parameters
+
+  - `conn` - The Plug connection struct with the current resource assigned
+  - `params` - Map of query parameters for filtering and pagination
+
+  ## Returns
+
+  - Renders JSON with paginated log lines on success
+  - Returns error via fallback controller if datetime validation fails
+  """
+  @spec index(Plug.Conn.t(), map()) :: Plug.Conn.t()
   def index(conn, params) do
     with :ok <-
            Invocation.Query.validate_datetime_params(params, [

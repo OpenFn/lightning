@@ -194,6 +194,59 @@ defmodule LightningWeb.WorkflowChannelTest do
       assert %{permissions: permissions_data} = response
       assert permissions_data.can_edit_workflow == false
     end
+
+    test "returns actual latest lock_version when viewing old snapshot", %{
+      project: project,
+      workflow: workflow,
+      user: user
+    } do
+      # Create initial snapshot so v0 is available for viewing
+      {:ok, _snapshot_v0} = Lightning.Workflows.Snapshot.create(workflow)
+
+      # Update workflow to create v1
+      workflow_changeset =
+        workflow
+        |> Lightning.Repo.preload([:jobs, :edges, :triggers])
+        |> Lightning.Workflows.Workflow.changeset(%{name: "Version 1"})
+
+      {:ok, updated_workflow_v1} =
+        Lightning.Workflows.save_workflow(workflow_changeset, user)
+
+      # Update workflow again to create v2 (the latest)
+      v2_changeset =
+        updated_workflow_v1
+        |> Lightning.Repo.reload!()
+        |> Lightning.Repo.preload([:jobs, :edges, :triggers])
+        |> Lightning.Workflows.Workflow.changeset(%{name: "Version 2"})
+
+      {:ok, updated_workflow_v2} =
+        Lightning.Workflows.save_workflow(v2_changeset, user)
+
+      # Join viewing old snapshot (v0 - the original workflow)
+      topic_with_version = "workflow:collaborate:#{workflow.id}:v0"
+
+      {:ok, _, snapshot_socket} =
+        LightningWeb.UserSocket
+        |> socket("user_#{user.id}", %{current_user: user})
+        |> subscribe_and_join(
+          LightningWeb.WorkflowChannel,
+          topic_with_version,
+          %{project_id: project.id, action: "edit"}
+        )
+
+      ref = push(snapshot_socket, "get_context", %{})
+
+      assert_reply ref, :ok, response
+
+      # CRITICAL: Even though we're viewing v0 (lock_version: 0),
+      # latest_snapshot_lock_version should be 2 (the actual latest in DB)
+      assert %{latest_snapshot_lock_version: latest_lock_version} = response
+      assert latest_lock_version == updated_workflow_v2.lock_version
+      assert latest_lock_version == 2
+      # Verify socket is viewing old version
+      assert snapshot_socket.assigns.workflow.lock_version == 0
+      assert snapshot_socket.assigns.workflow.name == workflow.name
+    end
   end
 
   describe "save_workflow" do
