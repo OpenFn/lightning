@@ -1,16 +1,17 @@
-import React, { useEffect, useState } from "react";
 import {
   Dialog,
   DialogBackdrop,
   DialogPanel,
   DialogTitle,
 } from "@headlessui/react";
+import React, { useEffect, useState } from "react";
 import { useHotkeysContext } from "react-hotkeys-hook";
 
 import { useAdaptors } from "../hooks/useAdaptors";
-import { SearchableList, ListSection, ListRow } from "./SearchableList";
-import { AdaptorIcon } from "./AdaptorIcon";
 import type { Adaptor } from "../types/adaptor";
+
+import { AdaptorIcon } from "./AdaptorIcon";
+import { SearchableList, ListSection, ListRow } from "./SearchableList";
 
 interface AdaptorSelectionModalProps {
   isOpen: boolean;
