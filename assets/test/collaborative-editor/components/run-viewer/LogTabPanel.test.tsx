@@ -9,10 +9,12 @@
  * - Log viewer mounting and cleanup
  * - Step selection syncing to log store
  * - Channel log event handling
+ * - Log level filter integration
  * - Integration with existing log-viewer component
  */
 
 import { render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import { LogTabPanel } from "../../../../js/collaborative-editor/components/run-viewer/LogTabPanel";
 import * as useRunModule from "../../../../js/collaborative-editor/hooks/useRun";
@@ -24,6 +26,18 @@ const mockUnmount = vi.fn();
 const mockMount = vi.fn();
 const mockSetStepId = vi.fn();
 const mockAddLogLines = vi.fn();
+const mockSetDesiredLogLevel = vi.fn();
+
+// Create a mock store that maintains state
+let mockLogStoreState = {
+  desiredLogLevel: "info",
+  setStepId: mockSetStepId,
+  addLogLines: mockAddLogLines,
+  setDesiredLogLevel: (level: string) => {
+    mockSetDesiredLogLevel(level);
+    mockLogStoreState.desiredLogLevel = level;
+  },
+};
 
 vi.mock("../../../../js/log-viewer/component", () => ({
   mount: vi.fn(() => ({
@@ -33,10 +47,7 @@ vi.mock("../../../../js/log-viewer/component", () => ({
 
 vi.mock("../../../../js/log-viewer/store", () => ({
   createLogStore: vi.fn(() => ({
-    getState: vi.fn(() => ({
-      setStepId: mockSetStepId,
-      addLogLines: mockAddLogLines,
-    })),
+    getState: vi.fn(() => mockLogStoreState),
   })),
 }));
 
@@ -104,6 +115,10 @@ describe("LogTabPanel", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+
+    // Reset mock store state to defaults
+    mockLogStoreState.desiredLogLevel = "info";
+
     mockRunStore = createMockRunStore();
     mockChannel = createMockChannel();
 
@@ -279,6 +294,92 @@ describe("LogTabPanel", () => {
 
       // Should not throw
       expect(() => render(<LogTabPanel />)).not.toThrow();
+    });
+  });
+
+  describe("log level filter integration", () => {
+    test("renders log level filter", () => {
+      mockUseCurrentRun.mockReturnValue(createMockRun());
+
+      render(<LogTabPanel />);
+
+      // Check that filter button is present with the default log level
+      expect(screen.getByText("info")).toBeInTheDocument();
+    });
+
+    test("initializes with correct level from store", () => {
+      mockUseCurrentRun.mockReturnValue(createMockRun());
+
+      // Set the mock store to have a different default level
+      mockLogStoreState.desiredLogLevel = "debug";
+
+      render(<LogTabPanel />);
+
+      // The filter should show the level from the store
+      expect(screen.getByText("debug")).toBeInTheDocument();
+    });
+
+    test("changes log level when filter is used", async () => {
+      const user = userEvent.setup();
+
+      mockUseCurrentRun.mockReturnValue(createMockRun());
+      mockLogStoreState.desiredLogLevel = "info";
+
+      render(<LogTabPanel />);
+
+      // Open the filter dropdown
+      const filterButton = screen.getByRole("button", { name: /info/i });
+      await user.click(filterButton);
+
+      // Wait for dropdown to appear
+      await waitFor(() => {
+        expect(screen.getByRole("listbox")).toBeInTheDocument();
+      });
+
+      // Select "warn" level
+      const warnOption = screen.getAllByText("warn")[0];
+      await user.click(warnOption);
+
+      // Verify the store was updated
+      expect(mockSetDesiredLogLevel).toHaveBeenCalledWith("warn");
+    });
+
+    test("updates displayed level after selection", async () => {
+      const user = userEvent.setup();
+
+      mockUseCurrentRun.mockReturnValue(createMockRun());
+      mockLogStoreState.desiredLogLevel = "info";
+
+      render(<LogTabPanel />);
+
+      // Open the filter dropdown
+      const filterButton = screen.getByRole("button");
+      await user.click(filterButton);
+
+      // Select "error" level
+      const errorOption = screen.getAllByText("error")[0];
+      await user.click(errorOption);
+
+      // The filter should now display "error"
+      await waitFor(() => {
+        // After clicking, the button should show the new level
+        const buttons = screen.getAllByText("error");
+        expect(buttons.length).toBeGreaterThan(0);
+      });
+    });
+
+    test("log level filter is in the correct layout position", () => {
+      mockUseCurrentRun.mockReturnValue(createMockRun());
+
+      const { container } = render(<LogTabPanel />);
+
+      // Check that the filter is in the header section
+      const header = container.querySelector(".border-b.border-slate-500");
+      expect(header).toBeInTheDocument();
+
+      // The filter button should be within the header
+      const filterButton = screen.getByRole("button");
+      expect(header).toContainElement(filterButton);
     });
   });
 });
