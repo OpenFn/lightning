@@ -108,17 +108,17 @@ export function AdaptorSelectionModal({
             data-leave:ease-in sm:my-8 sm:w-full sm:max-w-2xl
             sm:p-6"
           >
-            {/* Close button */}
-            <button
-              type="button"
-              onClick={onClose}
-              className="absolute right-4 top-4 text-gray-400
-              hover:text-gray-500 focus:outline-none z-10"
-            >
-              <span className="hero-x-mark h-6 w-6" aria-hidden="true" />
-            </button>
-
-            <div className="pr-8">
+            <div className="relative pr-8">
+              {/* Close button - aligned with search input */}
+              <button
+                type="button"
+                onClick={onClose}
+                className="absolute right-0 top-0 text-gray-400
+                hover:text-gray-500 focus:outline-none z-10 h-10 w-10
+                flex items-center justify-center"
+              >
+                <span className="hero-x-mark h-6 w-6" aria-hidden="true" />
+              </button>
               <SearchableList
                 placeholder="Search for an adaptor to connect..."
                 onSearch={setSearchQuery}
