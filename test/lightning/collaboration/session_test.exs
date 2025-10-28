@@ -373,7 +373,9 @@ defmodule Lightning.SessionTest do
         "id" => workflow_id,
         "name" => workflow.name,
         "lock_version" => workflow.lock_version,
-        "deleted_at" => nil
+        "deleted_at" => nil,
+        "concurrency" => nil,
+        "enable_job_logs" => true
       }
 
       assert Session.get_doc(session_pid)
