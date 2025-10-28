@@ -10,6 +10,7 @@ import {
 import _logger from "#/utils/logger";
 
 import { useURLState } from "../../../react/lib/use-url-state";
+import { useRunStoreInstance } from "../../hooks/useRun";
 import { useSession } from "../../hooks/useSession";
 import {
   useLatestSnapshotLockVersion,
@@ -25,6 +26,8 @@ import {
 import { notifications } from "../../lib/notifications";
 import { CollaborativeMonaco } from "../CollaborativeMonaco";
 import { ManualRunPanel } from "../ManualRunPanel";
+import { RunViewerPanel } from "../run-viewer/RunViewerPanel";
+import { RunViewerErrorBoundary } from "../run-viewer/RunViewerErrorBoundary";
 import { SandboxIndicatorBanner } from "../SandboxIndicatorBanner";
 
 import { IDEHeader } from "./IDEHeader";
@@ -55,9 +58,12 @@ export function FullScreenIDE({
   parentProjectId,
   parentProjectName,
 }: FullScreenIDEProps) {
-  const { searchParams } = useURLState();
+  const { searchParams, updateSearchParams } = useURLState();
   const jobIdFromURL = searchParams.get("job");
+  const runIdFromURL = searchParams.get("run");
+  const stepIdFromURL = searchParams.get("step");
   const { selectJob, saveWorkflow } = useWorkflowActions();
+  const runStore = useRunStoreInstance();
   const { job: currentJob, ytext: currentJobYText } = useCurrentJob();
   const { awareness } = useSession();
   const { canSave, tooltipMessage } = useCanSave();
@@ -101,6 +107,9 @@ export function FullScreenIDE({
   const [isRunning, setIsRunning] = useState(false);
   const [runHandler, setRunHandler] = useState<(() => void) | null>(null);
 
+  // Follow run state for right panel
+  const [followRunId, setFollowRunId] = useState<string | null>(null);
+
   const { enableScope, disableScope } = useHotkeysContext();
 
   // Enable/disable ide scope based on whether IDE is open
@@ -117,6 +126,25 @@ export function FullScreenIDE({
       selectJob(jobIdFromURL);
     }
   }, [jobIdFromURL, selectJob]);
+
+  // Sync URL run_id to followRunId
+  useEffect(() => {
+    if (runIdFromURL && runIdFromURL !== followRunId) {
+      setFollowRunId(runIdFromURL);
+
+      // Auto-expand right panel for deep links
+      if (rightPanelRef.current?.isCollapsed()) {
+        rightPanelRef.current.expand();
+      }
+    }
+  }, [runIdFromURL, followRunId]);
+
+  // Sync stepIdFromURL to RunStore
+  useEffect(() => {
+    if (stepIdFromURL && runIdFromURL) {
+      runStore.selectStep(stepIdFromURL);
+    }
+  }, [stepIdFromURL, runIdFromURL, runStore]);
 
   // Handler for Save button
   const handleSave = () => {
@@ -135,6 +163,17 @@ export function FullScreenIDE({
   // Handler for collapsing left panel (no close button in IDE context)
   const handleCollapseLeftPanel = () => {
     leftPanelRef.current?.collapse();
+  };
+
+  // Handler for run submission - auto-expands right panel and updates URL
+  const handleRunSubmitted = (runId: string) => {
+    setFollowRunId(runId);
+    updateSearchParams({ run: runId });
+
+    // Auto-expand right panel if collapsed
+    if (rightPanelRef.current?.isCollapsed()) {
+      rightPanelRef.current.expand();
+    }
   };
 
   // Callback from ManualRunPanel with run state
@@ -357,6 +396,7 @@ export function FullScreenIDE({
                     renderMode="embedded"
                     onRunStateChange={handleRunStateChange}
                     saveWorkflow={saveWorkflow}
+                    onRunSubmitted={handleRunSubmitted}
                   />
                 </div>
               )}
@@ -488,14 +528,13 @@ export function FullScreenIDE({
 
               {/* Panel content */}
               {!isRightCollapsed && (
-                <div
-                  className="flex-1 p-4 flex items-center
-                  justify-center"
-                >
-                  <div className="text-center text-gray-500">
-                    <p className="text-sm font-medium">Run / Logs / Step I/O</p>
-                    <p className="text-xs mt-1">Coming Soon</p>
-                  </div>
+                <div className="flex-1 overflow-hidden">
+                  <RunViewerErrorBoundary>
+                    <RunViewerPanel
+                      followRunId={followRunId}
+                      onClearFollowRun={() => setFollowRunId(null)}
+                    />
+                  </RunViewerErrorBoundary>
                 </div>
               )}
             </div>
