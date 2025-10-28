@@ -32,7 +32,6 @@ export function AdaptorSelectionModal({
 }: AdaptorSelectionModalProps) {
   const allAdaptors = useAdaptors();
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedAdaptor, setSelectedAdaptor] = useState<string | null>(null);
 
   // Keyboard scope management
   const { enableScope, disableScope } = useHotkeysContext();
@@ -55,7 +54,6 @@ export function AdaptorSelectionModal({
   useEffect(() => {
     if (!isOpen) {
       setSearchQuery("");
-      setSelectedAdaptor(null);
     }
   }, [isOpen]);
 
@@ -76,23 +74,10 @@ export function AdaptorSelectionModal({
   const filteredProjectAdaptors = filterAdaptors(projectAdaptors);
   const filteredAllAdaptors = filterAdaptors(allAdaptors);
 
-  const handleConfirm = () => {
-    if (selectedAdaptor) {
-      onSelect(selectedAdaptor);
-      onClose();
-    }
-  };
-
   const handleRowClick = (adaptorName: string) => {
-    setSelectedAdaptor(adaptorName);
-  };
-
-  // Allow Enter key to confirm selection
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" && selectedAdaptor) {
-      e.preventDefault();
-      handleConfirm();
-    }
+    // Immediately select and close (Figma design - no Continue button)
+    onSelect(adaptorName);
+    onClose();
   };
 
   const hasResults =
@@ -115,7 +100,6 @@ export function AdaptorSelectionModal({
         >
           <DialogPanel
             transition
-            onKeyDown={handleKeyDown}
             className="relative transform overflow-hidden rounded-lg
             bg-white px-4 pb-4 pt-5 text-left shadow-xl
             transition-all data-closed:translate-y-4
@@ -124,16 +108,19 @@ export function AdaptorSelectionModal({
             data-leave:ease-in sm:my-8 sm:w-full sm:max-w-2xl
             sm:p-6"
           >
-            <div>
-              <DialogTitle
-                as="h3"
-                className="text-lg font-semibold text-gray-900 mb-4"
-              >
-                Select Adaptor
-              </DialogTitle>
+            {/* Close button */}
+            <button
+              type="button"
+              onClick={onClose}
+              className="absolute right-4 top-4 text-gray-400
+              hover:text-gray-500 focus:outline-none"
+            >
+              <span className="hero-x-mark h-6 w-6" aria-hidden="true" />
+            </button>
 
+            <div>
               <SearchableList
-                placeholder="Search adaptors..."
+                placeholder="Search for an adaptor to connect..."
                 onSearch={setSearchQuery}
               >
                 {!hasResults && (
@@ -149,14 +136,13 @@ export function AdaptorSelectionModal({
                 )}
 
                 {filteredProjectAdaptors.length > 0 && (
-                  <ListSection title="Project Adaptors">
+                  <ListSection title="Adaptors in this project">
                     {filteredProjectAdaptors.map(adaptor => (
                       <ListRow
                         key={adaptor.name}
                         title={extractAdaptorName(adaptor.name) || adaptor.name}
                         description={`Latest: ${adaptor.latest}`}
-                        icon={<AdaptorIcon name={adaptor.name} size="sm" />}
-                        selected={selectedAdaptor === adaptor.name}
+                        icon={<AdaptorIcon name={adaptor.name} size="md" />}
                         onClick={() => handleRowClick(adaptor.name)}
                       />
                     ))}
@@ -167,8 +153,8 @@ export function AdaptorSelectionModal({
                   <ListSection
                     title={
                       filteredProjectAdaptors.length > 0
-                        ? "All Adaptors"
-                        : "Available Adaptors"
+                        ? "All adaptors"
+                        : "Available adaptors"
                     }
                   >
                     {filteredAllAdaptors.map(adaptor => (
@@ -177,43 +163,12 @@ export function AdaptorSelectionModal({
                         title={extractAdaptorName(adaptor.name) || adaptor.name}
                         description={`Latest: ${adaptor.latest}`}
                         icon={<AdaptorIcon name={adaptor.name} size="sm" />}
-                        selected={selectedAdaptor === adaptor.name}
                         onClick={() => handleRowClick(adaptor.name)}
                       />
                     ))}
                   </ListSection>
                 )}
               </SearchableList>
-            </div>
-
-            <div
-              className="mt-5 sm:mt-6 sm:grid sm:grid-flow-row-dense
-              sm:grid-cols-2 sm:gap-3"
-            >
-              <button
-                type="button"
-                onClick={handleConfirm}
-                disabled={!selectedAdaptor}
-                className="inline-flex w-full justify-center
-                rounded-md px-3 py-2 text-sm font-semibold text-white
-                shadow-xs focus-visible:outline-2
-                focus-visible:outline-offset-2 sm:col-start-2
-                bg-primary-600 hover:bg-primary-500
-                focus-visible:outline-primary-600 disabled:opacity-50
-                disabled:cursor-not-allowed"
-              >
-                Continue
-              </button>
-              <button
-                type="button"
-                onClick={onClose}
-                className="mt-3 inline-flex w-full justify-center
-                rounded-md bg-white px-3 py-2 text-sm font-semibold
-                text-gray-900 shadow-xs inset-ring inset-ring-gray-300
-                hover:inset-ring-gray-400 sm:col-start-1 sm:mt-0"
-              >
-                Cancel
-              </button>
             </div>
           </DialogPanel>
         </div>
