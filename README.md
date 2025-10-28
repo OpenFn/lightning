@@ -371,6 +371,20 @@ See [Benchmarking](benchmarking/README.md) for more detailed information.
 
 ## Troubleshooting
 
+### Switching branches during development
+
+Branches can have different dependencies. Run the bootstrap script to sync
+everything:
+
+```sh
+./bin/bootstrap
+```
+
+This handles Elixir dependencies, npm packages, native libraries, and database
+migrations.
+
+If the server was running, restart it after bootstrap completes.
+
 ### Problems with environment variables
 
 For troubleshooting custom environment variable configuration it's important to
