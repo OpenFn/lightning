@@ -28,42 +28,44 @@ export function InspectorLayout({
 }: InspectorLayoutProps) {
   return (
     <div
-      className="pointer-events-auto w-screen max-w-md h-full"
+      className="pointer-events-auto w-screen max-w-md h-full flex items-start justify-end p-6"
       data-testid={dataTestId}
     >
-      <div className="relative flex h-full flex-col divide-y divide-gray-200 bg-white shadow-xl">
+      <div className="relative flex max-h-full flex-col bg-white shadow-sm rounded-lg w-full">
         {/* Header */}
-        <div className="flex min-h-0 flex-1 flex-col overflow-y-auto py-6">
-          <div className="px-4 sm:px-6">
-            <div className="flex items-start justify-between">
-              <h2 className="text-base font-semibold text-gray-900">{title}</h2>
-              <div className="ml-3 flex h-7 items-center">
-                <button
-                  type="button"
-                  onClick={onClose}
-                  className="relative rounded-md text-gray-400 hover:text-gray-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
-                >
-                  <span className="absolute -inset-2.5" />
-                  <span className="sr-only">Close panel</span>
-                  <div className="hero-x-mark size-6" />
-                </button>
-              </div>
+        <div className="px-6 py-6 border-b border-gray-200">
+          <div className="flex items-start justify-between">
+            <h2 className="text-base font-semibold text-gray-900">{title}</h2>
+            <div className="ml-3 flex h-7 items-center">
+              <button
+                type="button"
+                onClick={onClose}
+                className="relative rounded-md text-gray-400 hover:text-gray-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
+              >
+                <span className="absolute -inset-2.5" />
+                <span className="sr-only">Close panel</span>
+                <div className="hero-x-mark size-6" />
+              </button>
             </div>
-            {nodeType && (
-              <div className="mt-2">
-                <span className="text-xs bg-gray-100 px-2 py-1 rounded">
-                  {nodeType}
-                </span>
-              </div>
-            )}
           </div>
-
-          {/* Scrollable content */}
-          <div className="relative mt-6 flex-1 px-4 sm:px-6">{children}</div>
+          {nodeType && (
+            <div className="mt-2">
+              <span className="text-xs bg-gray-100 px-2 py-1 rounded">
+                {nodeType}
+              </span>
+            </div>
+          )}
         </div>
 
+        {/* Scrollable content */}
+        <div className="flex-1 overflow-y-auto px-6 py-6">{children}</div>
+
         {/* Footer - only render if provided */}
-        {footer && <div className="shrink-0 px-4 py-4">{footer}</div>}
+        {footer && (
+          <div className="shrink-0 px-6 py-6 border-t border-gray-200">
+            {footer}
+          </div>
+        )}
       </div>
     </div>
   );

@@ -122,8 +122,7 @@ export function JobInspector({
   return (
     <>
       <InspectorLayout
-        title="Inspector"
-        nodeType="job"
+        title={job.name}
         onClose={onClose}
         footer={footer}
         data-testid="job-inspector"
