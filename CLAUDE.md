@@ -87,7 +87,6 @@ iex -S mix phx.server
 ```
 
 **Available stores:**
-
 - WorkflowStore - Workflow data, jobs, triggers, edges
 - SessionContextStore - User, project, config, permissions
 - SessionStore - Connection and sync state
@@ -96,13 +95,11 @@ iex -S mix phx.server
 - CredentialStore - Project and keychain credentials
 
 **Features:**
-
 - View current state of any store
 - See action history with timestamps
 - Export/import state for bug reproduction
 
-**Note:** DevTools is disabled in production builds. For detailed store
-architecture and usage guidelines, see `.claude/guidelines/store-structure.md`.
+**Note:** DevTools is disabled in production builds. For detailed store architecture and usage guidelines, see `.claude/guidelines/store-structure.md`.
 
 ### Docker Development
 
@@ -202,14 +199,11 @@ components:
 - Key dependencies: @xyflow/react (workflow visualization), Yjs (collaborative
   editing), Monaco Editor (code editing)
 - React components integrated into Phoenix app via LiveView mounting
-- **Icons**: Use heroicons via Tailwind classes (e.g.,
-  `className="hero-check-micro h-4 w-4"`). Never create custom SVG icons.
+- **Icons**: Use heroicons via Tailwind classes (e.g., `className="hero-check-micro h-4 w-4"`). Never create custom SVG icons.
 
 #### Toast Notifications
 
-For toast notifications in the collaborative editor, see
-`.claude/guidelines/toast-notifications.md`:
-
+For toast notifications in the collaborative editor, see `.claude/guidelines/toast-notifications.md`:
 - Usage patterns for info, alert, success, and warning toasts
 - Integration with workflow operations
 - Styling conventions matching Lightning's design system
@@ -217,11 +211,8 @@ For toast notifications in the collaborative editor, see
 
 #### Collaborative Editor Store Architecture
 
-When working with the collaborative editor stores (creating, modifying, or
-debugging), see `.claude/guidelines/store-structure.md`:
-
-- Store hierarchy and responsibilities (SessionStore, WorkflowStore,
-  AwarenessStore, etc.)
+When working with the collaborative editor stores (creating, modifying, or debugging), see `.claude/guidelines/store-structure.md`:
+- Store hierarchy and responsibilities (SessionStore, WorkflowStore, AwarenessStore, etc.)
 - Decision tree for "where should this state go?"
 - Store update patterns (Y.Doc, Phoenix Channel, local state)
 - When to create new stores vs extending existing ones
@@ -384,11 +375,9 @@ Key supervised processes:
 - Follow "strong opinions, weakly held" principle
 - Ask for clarification when uncertain
 - When running npm or npx commands, always cd into the assets directory first
-- We don't need to use MIX_ENV=test for most test related commands, ecto.create
-  is the only one that explicitly needs the env set
+- We don't need to use MIX_ENV=test for most test related commands, ecto.create is the only one that explicitly needs the env set
 - You don't need to build using `npm run ...`, phoenix automatically builds as
   we go, if you want to check for build failures or warnings etc you can either
   use Tidewave MCP to check the logs, or run `mix esbuild default`
-- When checking for JS/TS issues, prefer mcp**ide**getDiagnostics over tsc
-- never commit the .context directory, this is a symlink to another folder
-  shared across branches and worktrees
+- When checking for JS/TS issues, prefer mcp__ide__getDiagnostics over tsc
+- never commit the .context directory, this is a symlink to another folder shared across branches and worktrees
