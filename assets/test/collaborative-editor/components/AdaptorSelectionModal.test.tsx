@@ -158,8 +158,8 @@ describe("AdaptorSelectionModal", () => {
 
       expect(screen.getByText("Adaptors in this project")).toBeInTheDocument();
       // Use getAllByText since adaptors appear in both sections
-      expect(screen.getAllByText("http").length).toBeGreaterThan(0);
-      expect(screen.getAllByText("salesforce").length).toBeGreaterThan(0);
+      expect(screen.getAllByText("Http").length).toBeGreaterThan(0);
+      expect(screen.getAllByText("Salesforce").length).toBeGreaterThan(0);
     });
 
     it("displays all adaptors section", () => {
@@ -173,8 +173,8 @@ describe("AdaptorSelectionModal", () => {
       );
 
       expect(screen.getByText("All adaptors")).toBeInTheDocument();
-      expect(screen.getByText("dhis2")).toBeInTheDocument();
-      expect(screen.getByText("common")).toBeInTheDocument();
+      expect(screen.getByText("Dhis2")).toBeInTheDocument();
+      expect(screen.getByText("Common")).toBeInTheDocument();
     });
 
     it("shows 'Available adaptors' when no project adaptors", () => {
@@ -226,10 +226,10 @@ describe("AdaptorSelectionModal", () => {
       fireEvent.change(searchInput, { target: { value: "dhis" } });
 
       await waitFor(() => {
-        expect(screen.getByText("dhis2")).toBeInTheDocument();
-        expect(screen.queryByText("http")).not.toBeInTheDocument();
-        expect(screen.queryByText("salesforce")).not.toBeInTheDocument();
-        expect(screen.queryByText("common")).not.toBeInTheDocument();
+        expect(screen.getByText("Dhis2")).toBeInTheDocument();
+        expect(screen.queryByText("Http")).not.toBeInTheDocument();
+        expect(screen.queryByText("Salesforce")).not.toBeInTheDocument();
+        expect(screen.queryByText("Common")).not.toBeInTheDocument();
       });
     });
 
@@ -249,7 +249,7 @@ describe("AdaptorSelectionModal", () => {
       fireEvent.change(searchInput, { target: { value: "DHIS" } });
 
       await waitFor(() => {
-        expect(screen.getByText("dhis2")).toBeInTheDocument();
+        expect(screen.getByText("Dhis2")).toBeInTheDocument();
       });
     });
 
@@ -269,9 +269,7 @@ describe("AdaptorSelectionModal", () => {
       fireEvent.change(searchInput, { target: { value: "nonexistent" } });
 
       await waitFor(() => {
-        expect(
-          screen.getByText("No adaptors match your search")
-        ).toBeInTheDocument();
+        expect(screen.getByText("No adaptor found")).toBeInTheDocument();
       });
     });
 
@@ -300,8 +298,8 @@ describe("AdaptorSelectionModal", () => {
       fireEvent.change(searchInput, { target: { value: "dhis" } });
 
       await waitFor(() => {
-        expect(screen.queryByText("http")).not.toBeInTheDocument();
-        expect(screen.getByText("dhis2")).toBeInTheDocument();
+        expect(screen.queryByText("Http")).not.toBeInTheDocument();
+        expect(screen.getByText("Dhis2")).toBeInTheDocument();
       });
 
       // Close modal
@@ -313,9 +311,9 @@ describe("AdaptorSelectionModal", () => {
       // Search should be cleared - all adaptors visible again
       await waitFor(() => {
         // Use getAllByText for duplicates
-        expect(screen.getAllByText("http").length).toBeGreaterThan(0);
-        expect(screen.getByText("dhis2")).toBeInTheDocument();
-        expect(screen.getByText("common")).toBeInTheDocument();
+        expect(screen.getAllByText("Http").length).toBeGreaterThan(0);
+        expect(screen.getByText("Dhis2")).toBeInTheDocument();
+        expect(screen.getByText("Common")).toBeInTheDocument();
       });
     });
   });
@@ -332,7 +330,7 @@ describe("AdaptorSelectionModal", () => {
       );
 
       // Use getAllByText and pick first occurrence
-      const httpRows = screen.getAllByText("http");
+      const httpRows = screen.getAllByText("Http");
       const httpRow = httpRows[0].closest("button");
       fireEvent.click(httpRow!);
 
@@ -352,7 +350,7 @@ describe("AdaptorSelectionModal", () => {
       );
 
       // Click salesforce adaptor
-      const salesforceRows = screen.getAllByText("salesforce");
+      const salesforceRows = screen.getAllByText("Salesforce");
       const salesforceRow = salesforceRows[0].closest("button");
       fireEvent.click(salesforceRow!);
 
