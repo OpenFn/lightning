@@ -14,7 +14,7 @@ import { ListRow } from "../../../js/collaborative-editor/components/SearchableL
 describe("SearchableList", () => {
   it("renders search input with placeholder", () => {
     render(
-      <SearchableList placeholder="Search items...">
+      <SearchableList placeholder="Search items..." onSearch={() => {}}>
         <div>Content</div>
       </SearchableList>
     );
@@ -24,22 +24,22 @@ describe("SearchableList", () => {
 
   it("auto-focuses search input on mount", () => {
     render(
-      <SearchableList>
+      <SearchableList onSearch={() => {}}>
         <div>Content</div>
       </SearchableList>
     );
 
-    expect(screen.getByRole("textbox")).toHaveFocus();
+    expect(screen.getByRole("combobox")).toHaveFocus();
   });
 
   it("does not auto-focus when autoFocus is false", () => {
     render(
-      <SearchableList autoFocus={false}>
+      <SearchableList autoFocus={false} onSearch={() => {}}>
         <div>Content</div>
       </SearchableList>
     );
 
-    expect(screen.getByRole("textbox")).not.toHaveFocus();
+    expect(screen.getByRole("combobox")).not.toHaveFocus();
   });
 
   it("calls onSearch callback when typing", () => {
@@ -50,7 +50,7 @@ describe("SearchableList", () => {
       </SearchableList>
     );
 
-    const input = screen.getByRole("textbox");
+    const input = screen.getByRole("combobox");
     fireEvent.change(input, { target: { value: "test" } });
 
     expect(onSearch).toHaveBeenCalledWith("test");
@@ -58,12 +58,12 @@ describe("SearchableList", () => {
 
   it("shows clear button when input has value", () => {
     render(
-      <SearchableList>
+      <SearchableList onSearch={() => {}}>
         <div>Content</div>
       </SearchableList>
     );
 
-    const input = screen.getByRole("textbox");
+    const input = screen.getByRole("combobox");
 
     // No clear button initially
     expect(screen.queryByRole("button")).not.toBeInTheDocument();
@@ -83,7 +83,7 @@ describe("SearchableList", () => {
       </SearchableList>
     );
 
-    const input = screen.getByRole("textbox") as HTMLInputElement;
+    const input = screen.getByRole("combobox") as HTMLInputElement;
 
     // Type something
     fireEvent.change(input, { target: { value: "test" } });
@@ -101,7 +101,7 @@ describe("SearchableList", () => {
 
   it("renders children content", () => {
     render(
-      <SearchableList>
+      <SearchableList onSearch={() => {}}>
         <div data-testid="child-content">Test Content</div>
       </SearchableList>
     );
@@ -190,7 +190,7 @@ describe("ListRow", () => {
     const onClick = vi.fn();
     render(<ListRow title="Item" onClick={onClick} />);
 
-    fireEvent.click(screen.getByRole("button"));
+    fireEvent.click(screen.getByRole("option"));
     expect(onClick).toHaveBeenCalledTimes(1);
   });
 
@@ -209,12 +209,13 @@ describe("ListRow", () => {
     expect(container.querySelector(".hero-check")).toBeInTheDocument();
   });
 
-  it("renders as a button with proper type", () => {
+  it("renders as a button with proper type and option role", () => {
     render(<ListRow title="Item" />);
 
-    const button = screen.getByRole("button");
+    const button = screen.getByRole("option");
     expect(button.tagName).toBe("BUTTON");
     expect(button).toHaveAttribute("type", "button");
+    expect(button).toHaveAttribute("role", "option");
   });
 
   it("combines icon, title, description, and checkmark correctly", () => {
