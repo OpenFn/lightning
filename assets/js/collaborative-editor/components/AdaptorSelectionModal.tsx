@@ -72,7 +72,12 @@ export function AdaptorSelectionModal({
   };
 
   const filteredProjectAdaptors = filterAdaptors(projectAdaptors);
-  let filteredAllAdaptors = filterAdaptors(allAdaptors);
+
+  // Filter out project adaptors from all adaptors to avoid duplicates
+  const projectAdaptorNames = new Set(filteredProjectAdaptors.map(a => a.name));
+  let filteredAllAdaptors = filterAdaptors(allAdaptors).filter(
+    adaptor => !projectAdaptorNames.has(adaptor.name)
+  );
 
   // Always ensure HTTP adaptor is available as fallback
   const hasResults =
