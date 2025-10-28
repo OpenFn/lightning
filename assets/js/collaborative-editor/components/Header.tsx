@@ -1,16 +1,26 @@
 import { Menu, MenuButton, MenuItem, MenuItems } from "@headlessui/react";
+import { useCallback } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
 
 import { useURLState } from "../../react/lib/use-url-state";
-import { useIsNewWorkflow, useUser } from "../hooks/useSessionContext";
 import {
+  useIsNewWorkflow,
+  useLatestSnapshotLockVersion,
+  useUser,
+} from "../hooks/useSessionContext";
+import { useUICommands } from "../hooks/useUI";
+import {
+  useCanRun,
   useCanSave,
+  useNodeSelection,
   useWorkflowActions,
   useWorkflowEnabled,
+  useWorkflowState,
 } from "../hooks/useWorkflow";
 import { getAvatarInitials } from "../utils/avatar";
 
 import { Breadcrumbs } from "./Breadcrumbs";
+import { Button } from "./Button";
 import { EmailVerificationBanner } from "./EmailVerificationBanner";
 import { Switch } from "./inputs/Switch";
 import { ReadOnlyWarning } from "./ReadOnlyWarning";
@@ -26,35 +36,6 @@ const userNavigation = [
     icon: "hero-arrow-right-on-rectangle",
   },
 ];
-
-/**
- * Run button component - visible in React DevTools
- * Uses Phoenix LiveView patch navigation
- */
-function RunButton({
-  projectId,
-  workflowId,
-}: {
-  projectId: string;
-  workflowId: string;
-}) {
-  return (
-    <a
-      href={`/projects/${projectId}/w/${workflowId}?m=workflow_input&s=cae544ab-03dc-4ccc-a09c-fb4edb255d7a`}
-      data-phx-link="patch"
-      data-phx-link-state="push"
-      type="button"
-      className="rounded-md text-sm font-semibold shadow-xs
-      phx-submit-loading:opacity-75 inline-block px-3 py-2
-      bg-primary-600 hover:bg-primary-500 text-white
-      focus-visible:outline-2 focus-visible:outline-offset-2
-      focus-visible:outline-primary-600"
-    >
-      Run
-    </a>
-  );
-}
-RunButton.displayName = "RunButton";
 
 /**
  * Save button component - visible in React DevTools
@@ -102,12 +83,46 @@ export function Header({
   projectId?: string;
   workflowId?: string;
 }) {
+  // URL state management (needed early for handleRunClick)
+  const { updateHash } = useURLState();
+
+  // Node selection
+  const { selectNode } = useNodeSelection();
+
   // Separate queries and commands for proper CQS
   const { enabled, setEnabled } = useWorkflowEnabled();
   const { saveWorkflow } = useWorkflowActions();
 
   // Get save button state
   const { canSave, tooltipMessage } = useCanSave();
+
+  // Get triggers to check if workflow has any
+  const triggers = useWorkflowState(state => state.triggers);
+  const firstTriggerId = triggers[0]?.id;
+
+  // Get run button state from hook
+  const { canRun, tooltipMessage: runTooltipMessage } = useCanRun();
+
+  // Get UI commands from store
+  const { openRunPanel } = useUICommands();
+
+  // Detect if viewing old snapshot
+  const workflow = useWorkflowState(state => state.workflow);
+  const latestSnapshotLockVersion = useLatestSnapshotLockVersion();
+
+  const isOldSnapshot =
+    workflow !== null &&
+    latestSnapshotLockVersion !== null &&
+    workflow.lock_version !== latestSnapshotLockVersion;
+
+  const handleRunClick = useCallback(() => {
+    if (firstTriggerId) {
+      // Select the trigger in the diagram
+      selectNode(firstTriggerId);
+      // Open the run panel via store
+      openRunPanel({ triggerId: firstTriggerId });
+    }
+  }, [firstTriggerId, openRunPanel, selectNode]);
 
   // Global save shortcut: Ctrl/Cmd+S
   useHotkeys(
@@ -129,9 +144,6 @@ export function Header({
   // Session context queries
   const user = useUser();
   const isNewWorkflow = useIsNewWorkflow();
-
-  // URL state management
-  const { updateHash } = useURLState();
 
   // Generate avatar initials from user data
   const avatarInitials = getAvatarInitials(user);
@@ -168,7 +180,9 @@ export function Header({
 
           <div className="flex flex-row gap-2">
             <div className="flex flex-row m-auto gap-2">
-              <Switch checked={enabled ?? false} onChange={setEnabled} />
+              {!isOldSnapshot && (
+                <Switch checked={enabled ?? false} onChange={setEnabled} />
+              )}
 
               <div>
                 <button
@@ -180,17 +194,27 @@ export function Header({
                   <span className="hero-adjustments-vertical"></span>
                 </button>
               </div>
-            </div>
-            <div
-              className="hidden"
-              phx-disconnected='[["show",{"transition":[["fade-in"],[],[]]}]]'
-              phx-connected='[["hide",{"transition":[["fade-out"],[],[]]}]]'
-            >
-              <span className="hero-signal-slash w-6 h-6 mr-2 text-red-500"></span>
+              <div
+                className="hidden"
+                phx-disconnected='[["show",{"transition":[["fade-in"],[],[]]}]]'
+                phx-connected='[["hide",{"transition":[["fade-out"],[],[]]}]]'
+              >
+                <span className="hero-signal-slash w-6 h-6 place-self-center mr-2 text-red-500"></span>
+              </div>
             </div>
             <div className="relative flex gap-2">
-              {projectId && workflowId && (
-                <RunButton projectId={projectId} workflowId={workflowId} />
+              {projectId && workflowId && firstTriggerId && (
+                <Tooltip content={runTooltipMessage} side="bottom">
+                  <span className="inline-block">
+                    <Button
+                      variant="secondary"
+                      onClick={handleRunClick}
+                      disabled={!canRun}
+                    >
+                      Run
+                    </Button>
+                  </span>
+                </Tooltip>
               )}
               <SaveButton
                 canSave={canSave}

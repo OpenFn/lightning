@@ -66,7 +66,7 @@ export interface SessionStore {
     socket: PhoenixSocket | null,
     roomname: string,
     userData: LocalUserData | null,
-    options?: { connect?: boolean }
+    options?: { connect?: boolean; joinParams?: Record<string, unknown> }
   ) => {
     ydoc: YDoc;
     provider: PhoenixChannelProvider;

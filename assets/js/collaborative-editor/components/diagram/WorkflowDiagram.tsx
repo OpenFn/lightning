@@ -275,7 +275,25 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
   // This usually means the workflow has changed or its the first load, so we don't want to animate
   // Later, if responding to changes from other users live, we may want to animate
   useEffect(() => {
-    const { positions, lastSelection } = chartCache.current;
+    // Clear cache if positions were cleared (e.g., after reset workflow)
+    // This prevents stale cached positions from being used when Y.Doc positions are empty
+    // Also clear lastLayout so shouldLayout() will trigger a new layout
+    if (
+      Object.keys(workflowPositions).length === 0 &&
+      Object.keys(chartCache.current.positions).length > 0
+    ) {
+      chartCache.current.positions = {};
+      chartCache.current.lastLayout = undefined;
+    }
+
+    const { positions } = chartCache.current;
+
+    // Fix: If positions are empty but lastLayout is set, clear lastLayout to force layout
+    // This can happen when cache gets out of sync (e.g., after page refresh in auto-layout mode)
+    if (Object.keys(positions).length === 0 && chartCache.current.lastLayout) {
+      chartCache.current.lastLayout = undefined;
+    }
+
     // create model from workflow and also apply selection styling to the model.
     logger.log("calling fromWorkflow");
 
@@ -285,11 +303,11 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
         positions,
         placeholders,
         { steps: [] },
-        // Re-render the model based on whatever was last selected
-        // This handles first load and new node safely
-        lastSelection
+        // Use current selection prop, not cached lastSelection
+        // This ensures URL changes (from Header Run button) highlight nodes
+        selection
       ),
-      lastSelection
+      selection
     );
     if (flow && newModel.nodes.length) {
       const layoutId = shouldLayout(
@@ -347,6 +365,9 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
         newModel.nodes.forEach(n => {
           if (isManualLayout && n.type !== "placeholder") {
             n.position = workflowPositions[n.id];
+          } else if (!isManualLayout && positions[n.id]) {
+            // In auto-layout mode, preserve cached positions from previous layout
+            n.position = positions[n.id];
           }
           ensureNodePosition(
             newModel,
@@ -360,7 +381,15 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
     } else {
       chartCache.current.positions = {};
     }
-  }, [workflow, flow, placeholders, el, isManualLayout, workflowPositions]);
+  }, [
+    workflow,
+    flow,
+    placeholders,
+    el,
+    isManualLayout,
+    workflowPositions,
+    selection,
+  ]);
 
   // This effect only runs when AI assistant visibility changes, not on every selection change
   useEffect(() => {
