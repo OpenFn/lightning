@@ -24,7 +24,7 @@ export function ListRow({
 
   // Scroll focused item into view
   useEffect(() => {
-    if (focused && buttonRef.current) {
+    if (focused && buttonRef.current && buttonRef.current.scrollIntoView) {
       buttonRef.current.scrollIntoView({
         block: "nearest",
         behavior: "smooth",
