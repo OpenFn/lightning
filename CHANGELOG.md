@@ -17,6 +17,8 @@ and this project adheres to
 
 ### Added
 
+- Read-only indicator in collaborative editor header
+  [#3627](https://github.com/OpenFn/lightning/issues/3627)
 - Sync workflow concurrency and enable_job_logs settings in collaborative
   editor - allows users to configure max concurrency and console.log() usage
   with real-time collaborative editing support
