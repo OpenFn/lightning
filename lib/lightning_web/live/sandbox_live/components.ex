@@ -200,6 +200,7 @@ defmodule LightningWeb.SandboxLive.Components do
   attr :target_options, :list, required: true
   attr :changeset, :any, required: true
   attr :descendants, :list, default: []
+  attr :has_diverged, :boolean, default: false
 
   def merge_modal(assigns) do
     assigns =
@@ -299,6 +300,21 @@ defmodule LightningWeb.SandboxLive.Components do
                 will also be closed. Consider merging it into
                 <strong>{@sandbox.name}</strong>
                 first to preserve its work.
+              </:message>
+            </Common.alert>
+          <% end %>
+
+          <%= if @has_diverged do %>
+            <Common.alert
+              id="merge-divergence-alert"
+              type="danger"
+              header="Target project has diverged"
+            >
+              <:message>
+                {get_selected_target_label(
+                  @target_options,
+                  @merge_form[:target_id].value
+                )} has been modified since this sandbox was created. Merging may result in lost changes. Are you sure you wish to proceed?
               </:message>
             </Common.alert>
           <% end %>

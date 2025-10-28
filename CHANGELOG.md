@@ -17,6 +17,56 @@ and this project adheres to
 
 ### Added
 
+- Read-only indicator in collaborative editor header
+  [#3627](https://github.com/OpenFn/lightning/issues/3627)
+- Sync workflow concurrency and enable_job_logs settings in collaborative
+  editor - allows users to configure max concurrency and console.log() usage
+  with real-time collaborative editing support
+  [#3798](https://github.com/OpenFn/lightning/issues/3798) and
+  [#3799](https://github.com/OpenFn/lightning/issues/3799)
+- Show validation error message when creating sandbox with duplicate name
+  [#3776](https://github.com/OpenFn/lightning/issues/3776)
+- Divergence warning when merging sandboxes - displays alert if target branch
+  was modified after sandbox creation to prevent data loss
+  [#3747](https://github.com/OpenFn/lightning/issues/3747)
+- Sandbox indicator banners in workflow editor (inspector) to help indicate when
+  working in a sandbox environment
+  [#3413](https://github.com/OpenFn/lightning/issues/3413)
+- Manual runs from the canvas and the IDE
+  [#3827](https://github.com/openfn/lightning/issues/3827) and
+  [$3634](https://github.com/openfn/lightning/issues/3634)
+- View and switch versions
+  [#3819](https://github.com/openfn/lightning/issues/3819)
+
+### Changed
+
+### Fixed
+
+- Fixed sandbox merge failing with StaleEntryError when parent workflow was
+  modified after sandbox creation
+  [#3765](https://github.com/OpenFn/lightning/issues/3765)
+- Workflow is either decapitated or uneditable
+  [#3842](https://github.com/openfn/lightning/issues/3842)
+- User can navigate to React canvas from LiveView version
+  [#3847](https://github.com/openfn/lightning/issues/3847)
+
+## [2.14.13-pre1] 2025-10-24
+
+### Added
+
+- Ability to run a workflow from the new react canvas
+  [#3634](https://github.com/OpenFn/lightning/issues/3634)
+
+## [2.14.13-pre] 2025-10-24
+
+### Added
+
+- Ability to delay webhook trigger replies until a workflow finishes; ⚠️ note
+  that this is an experimental feature (API subject to change, only enabled via
+  DB updates) [#PR3785](https://github.com/OpenFn/lightning/pull/3785)
+- REST API for runs, work_orders, and log_lines to refresh GovStack compliance
+  [#1656](https://github.com/OpenFn/lightning/issues/1656) &
+  [PR#3786](https://github.com/OpenFn/lightning/pull/3786)
 - Added full-screen IDE for job editing
   [#3708](https://github.com/OpenFn/lightning/issues/3708)
 - Show collaborative editor toggle (beaker icon) when creating new workflows
@@ -36,8 +86,17 @@ and this project adheres to
 - Refactored inspector component architecture to use composition pattern with
   reusable layout shell and pure form components
   [#3768](https://github.com/OpenFn/lightning/issues/3768)
+- Updated breadcrumb navigation to display parent project name before sandbox
+  name [#3474](https://github.com/OpenFn/lightning/issues/3474)
 
 ### Fixed
+
+- Fixed credential preservation during sandbox workflow merge - credentials are
+  now correctly maintained when merging sandboxes back to parent projects
+  [#3782](https://github.com/OpenFn/lightning/issues/3782)
+- Backfilled `env` field for existing root projects to ensure environment chips
+  display correctly in workflow editor and inspector
+  [#3839](https://github.com/OpenFn/lightning/issues/3839)
 
 ## [2.14.12] - 2025-10-21
 

@@ -105,8 +105,8 @@ describe("EmailVerificationBanner", () => {
       await waitFor(() => {
         const alert = screen.getByRole("alert");
         expect(alert).toBeInTheDocument();
-        expect(alert).toHaveTextContent(/You must verify your email/i);
-        expect(alert).toHaveTextContent(/or your account will be deleted/i);
+        expect(alert).toHaveTextContent(/Please confirm your account before/i);
+        expect(alert).toHaveTextContent(/to continue using OpenFn/i);
         expect(alert).toHaveTextContent(/Wednesday, 15 January @ 10:30 UTC/);
       });
     });

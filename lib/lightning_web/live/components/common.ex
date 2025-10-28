@@ -114,11 +114,14 @@ defmodule LightningWeb.Components.Common do
     values: ["info", "success", "warning", "danger"]
 
   attr :class, :string, default: ""
-  attr :message, :string, required: true
+  attr :message, :string, required: false, default: nil
   attr :centered, :boolean, default: false
   attr :icon, :boolean, default: false
+  attr :icon_name, :string, required: false, default: nil
   attr :action, :map, required: false, default: nil
   attr :dismissable, :boolean, default: false
+
+  slot :inner_block, required: false
 
   @doc """
   Banners can sometimes be dismissed, take the full width, and can optionally
@@ -128,7 +131,7 @@ defmodule LightningWeb.Components.Common do
     assigns =
       assign(assigns,
         class: ["alert-#{assigns.type}" | List.wrap(assigns.class)],
-        icon_name: select_icon(assigns.type)
+        icon_name: assigns[:icon_name] || select_icon(assigns.type)
       )
 
     ~H"""
@@ -142,9 +145,13 @@ defmodule LightningWeb.Components.Common do
     >
       <p class="text-sm leading-6">
         <%= if @icon == true do %>
-          <.icon name={@icon_name} class="h-5 w-5 align-top mr-1" />
+          <.icon name={@icon_name} class="h-5 w-5 inline-block align-middle mr-2" />
         <% end %>
-        {@message}
+        <%= if @message do %>
+          {@message}
+        <% else %>
+          {render_slot(@inner_block)}
+        <% end %>
         <%= if assigns[:action] do %>
           <a href={@action.target} class="whitespace-nowrap font-semibold">
             {@action.text}
@@ -166,7 +173,7 @@ defmodule LightningWeb.Components.Common do
   def snapshot_version_chip(assigns) do
     styles =
       if assigns.version == "latest",
-        do: "bg-blue-100 text-blue-800",
+        do: "bg-primary-100 text-primary-800",
         else: "bg-yellow-100 text-yellow-800"
 
     has_tooltip? = Map.has_key?(assigns, :tooltip)

@@ -1,26 +1,41 @@
 import { useEffect, useRef, useState } from "react";
 import { useHotkeys, useHotkeysContext } from "react-hotkeys-hook";
 import {
+  type ImperativePanelHandle,
   Panel,
   PanelGroup,
   PanelResizeHandle,
-  type ImperativePanelHandle,
 } from "react-resizable-panels";
+
+import _logger from "#/utils/logger";
 
 import { useURLState } from "../../../react/lib/use-url-state";
 import { useSession } from "../../hooks/useSession";
 import {
+  useLatestSnapshotLockVersion,
+  useProject,
+} from "../../hooks/useSessionContext";
+import {
+  useCanRun,
   useCanSave,
   useCurrentJob,
   useWorkflowActions,
+  useWorkflowState,
 } from "../../hooks/useWorkflow";
+import { notifications } from "../../lib/notifications";
 import { CollaborativeMonaco } from "../CollaborativeMonaco";
+import { ManualRunPanel } from "../ManualRunPanel";
+import { SandboxIndicatorBanner } from "../SandboxIndicatorBanner";
 
 import { IDEHeader } from "./IDEHeader";
+
+const logger = _logger.ns("FullScreenIDE").seal();
 
 interface FullScreenIDEProps {
   jobId?: string;
   onClose: () => void;
+  parentProjectId?: string | null | undefined;
+  parentProjectName?: string | null | undefined;
 }
 
 /**
@@ -35,21 +50,56 @@ interface FullScreenIDEProps {
  *
  * Panel layout persists to localStorage automatically.
  */
-export function FullScreenIDE({ onClose }: FullScreenIDEProps) {
+export function FullScreenIDE({
+  onClose,
+  parentProjectId,
+  parentProjectName,
+}: FullScreenIDEProps) {
   const { searchParams } = useURLState();
   const jobIdFromURL = searchParams.get("job");
   const { selectJob, saveWorkflow } = useWorkflowActions();
   const { job: currentJob, ytext: currentJobYText } = useCurrentJob();
   const { awareness } = useSession();
   const { canSave, tooltipMessage } = useCanSave();
+  const { canRun: canRunSnapshot, tooltipMessage: runTooltipMessage } =
+    useCanRun();
+
+  // Get version information for header
+  const snapshotVersion = useWorkflowState(
+    state => state.workflow?.lock_version
+  );
+  const latestSnapshotLockVersion = useLatestSnapshotLockVersion();
+
+  // Construct workflow object from store state for ManualRunPanel
+  const workflow = useWorkflowState(state =>
+    state.workflow
+      ? {
+          name: state.workflow.name,
+          jobs: state.jobs,
+          triggers: state.triggers,
+          edges: state.edges,
+          positions: state.positions,
+        }
+      : null
+  );
+
+  // Get project ID and workflow ID for ManualRunPanel
+  const project = useProject();
+  const projectId = project?.id;
+  const workflowId = useWorkflowState(state => state.workflow?.id);
 
   const leftPanelRef = useRef<ImperativePanelHandle>(null);
   const centerPanelRef = useRef<ImperativePanelHandle>(null);
   const rightPanelRef = useRef<ImperativePanelHandle>(null);
 
-  const [isLeftCollapsed, setIsLeftCollapsed] = useState(true);
+  const [isLeftCollapsed, setIsLeftCollapsed] = useState(false);
   const [isCenterCollapsed, setIsCenterCollapsed] = useState(false);
   const [isRightCollapsed, setIsRightCollapsed] = useState(true);
+
+  // Run state from ManualRunPanel
+  const [canRunWorkflow, setCanRunWorkflow] = useState(false);
+  const [isRunning, setIsRunning] = useState(false);
+  const [runHandler, setRunHandler] = useState<(() => void) | null>(null);
 
   const { enableScope, disableScope } = useHotkeysContext();
 
@@ -60,6 +110,64 @@ export function FullScreenIDE({ onClose }: FullScreenIDEProps) {
       disableScope("ide");
     };
   }, [enableScope, disableScope]);
+
+  // Sync URL job ID to workflow store selection
+  useEffect(() => {
+    if (jobIdFromURL) {
+      selectJob(jobIdFromURL);
+    }
+  }, [jobIdFromURL, selectJob]);
+
+  // Handler for Save button
+  const handleSave = () => {
+    // Centralized validation - both button and keyboard shortcut use this
+    if (!canSave) {
+      // Show toast with the reason why save is disabled
+      notifications.alert({
+        title: "Cannot save",
+        description: tooltipMessage,
+      });
+      return;
+    }
+    void saveWorkflow();
+  };
+
+  // Handler for collapsing left panel (no close button in IDE context)
+  const handleCollapseLeftPanel = () => {
+    leftPanelRef.current?.collapse();
+  };
+
+  // Callback from ManualRunPanel with run state
+  const handleRunStateChange = (
+    canRun: boolean,
+    isSubmitting: boolean,
+    handler: () => void
+  ) => {
+    setCanRunWorkflow(canRun);
+    setIsRunning(isSubmitting);
+    setRunHandler(() => handler);
+  };
+
+  // Handler for Run button in header
+  const handleRunClick = () => {
+    // Centralized validation - both button and keyboard shortcut use this
+
+    // Check snapshot/permission restrictions first (these have clear messages)
+    if (!canRunSnapshot) {
+      notifications.alert({
+        title: "Cannot run",
+        description: runTooltipMessage,
+      });
+      return;
+    }
+
+    // Check runtime conditions (no toast needed - these are transient states)
+    if (!canRunWorkflow || isRunning || !runHandler) {
+      return;
+    }
+
+    runHandler();
+  };
 
   // Handle Escape key to close the IDE
   // Two-step behavior: first Escape removes focus from Monaco, second closes IDE
@@ -87,22 +195,25 @@ export function FullScreenIDE({ onClose }: FullScreenIDEProps) {
     [onClose]
   );
 
-  // Sync URL job ID to workflow store selection
-  useEffect(() => {
-    if (jobIdFromURL) {
-      selectJob(jobIdFromURL);
-    }
-  }, [jobIdFromURL, selectJob]);
+  // Handle Cmd/Ctrl+Enter to trigger workflow run
+  // No scope restriction to ensure it works even when Monaco has focus
+  useHotkeys(
+    "mod+enter",
+    event => {
+      event.preventDefault();
+      event.stopPropagation();
 
-  // Debug: Log what we have
-  console.log("[FullScreenIDE] Debug:", {
-    jobIdFromURL,
-    hasCurrentJob: !!currentJob,
-    hasYText: !!currentJobYText,
-    hasAwareness: !!awareness,
-    currentJob,
-    awareness,
-  });
+      // Use centralized handler with validation
+      handleRunClick();
+    },
+    {
+      enabled: true,
+      enableOnFormTags: true, // Allow in Monaco editor
+      preventDefault: true, // Prevent Monaco's default behavior
+      enableOnContentEditable: true, // Work in Monaco's contentEditable
+    },
+    [handleRunClick]
+  );
 
   // Loading state: Wait for Y.Text and awareness to be ready
   if (!currentJob || !currentJobYText || !awareness) {
@@ -157,26 +268,28 @@ export function FullScreenIDE({ onClose }: FullScreenIDEProps) {
     }
   };
 
-  // Handler for Save button
-  const handleSave = () => {
-    void saveWorkflow();
-  };
-
-  // Placeholder handler for disabled Run button
-  const handleRun = () => {
-    console.log("Run clicked (not yet implemented)");
-  };
-
   return (
     <div className="fixed inset-0 z-50 bg-white flex flex-col">
       {/* Header with Run, Save, Close buttons */}
       <IDEHeader
         jobName={currentJob.name}
+        snapshotVersion={snapshotVersion}
+        latestSnapshotVersion={latestSnapshotLockVersion}
+        workflowId={workflowId}
         onClose={onClose}
         onSave={handleSave}
-        onRun={handleRun}
+        onRun={handleRunClick}
+        canRun={canRunSnapshot && canRunWorkflow && !isRunning}
+        isRunning={isRunning}
         canSave={canSave}
         saveTooltip={tooltipMessage}
+        runTooltip={runTooltipMessage}
+      />
+      <SandboxIndicatorBanner
+        parentProjectId={parentProjectId}
+        parentProjectName={parentProjectName}
+        projectName={project?.name}
+        position="relative"
       />
 
       {/* 3-panel layout */}
@@ -186,11 +299,11 @@ export function FullScreenIDE({ onClose }: FullScreenIDEProps) {
           autoSaveId="lightning.ide-layout"
           className="h-full"
         >
-          {/* Left Panel - Placeholder for Input Picker / AI Assistant */}
+          {/* Left Panel - ManualRunPanel */}
           <Panel
             ref={leftPanelRef}
-            defaultSize={1}
-            minSize={5}
+            defaultSize={25}
+            minSize={15}
             collapsible
             collapsedSize={1}
             onCollapse={() => setIsLeftCollapsed(true)}
@@ -204,7 +317,7 @@ export function FullScreenIDE({ onClose }: FullScreenIDEProps) {
                   isLeftCollapsed ? "rotate-90" : ""
                 }`}
               >
-                <div className="flex items-center justify-between px-3 py-2">
+                <div className="flex items-center justify-between px-3 py-1">
                   <button
                     onClick={toggleLeftPanel}
                     className="text-xs font-medium text-gray-400
@@ -232,17 +345,19 @@ export function FullScreenIDE({ onClose }: FullScreenIDEProps) {
               </div>
 
               {/* Panel content */}
-              {!isLeftCollapsed && (
-                <div
-                  className="flex-1 p-4 flex items-center
-                  justify-center"
-                >
-                  <div className="text-center text-gray-500">
-                    <p className="text-sm font-medium">
-                      Input Picker / AI Assistant
-                    </p>
-                    <p className="text-xs mt-1">Coming Soon</p>
-                  </div>
+              {!isLeftCollapsed && workflow && projectId && workflowId && (
+                <div className="flex-1 overflow-hidden">
+                  <ManualRunPanel
+                    workflow={workflow}
+                    projectId={projectId}
+                    workflowId={workflowId}
+                    jobId={jobIdFromURL ?? null}
+                    triggerId={null}
+                    onClose={handleCollapseLeftPanel}
+                    renderMode="embedded"
+                    onRunStateChange={handleRunStateChange}
+                    saveWorkflow={saveWorkflow}
+                  />
                 </div>
               )}
             </div>
@@ -272,7 +387,7 @@ export function FullScreenIDE({ onClose }: FullScreenIDEProps) {
                   isCenterCollapsed ? "rotate-90" : ""
                 }`}
               >
-                <div className="flex items-center justify-between px-3 py-2">
+                <div className="flex items-center justify-between px-3 py-1">
                   <button
                     onClick={toggleCenterPanel}
                     className="text-xs font-medium text-gray-400
@@ -306,7 +421,7 @@ export function FullScreenIDE({ onClose }: FullScreenIDEProps) {
                     ytext={currentJobYText}
                     awareness={awareness}
                     adaptor={currentJob.adaptor || "common"}
-                    disabled={false}
+                    disabled={!canSave}
                     className="h-full w-full"
                     options={{
                       automaticLayout: true,
@@ -330,7 +445,7 @@ export function FullScreenIDE({ onClose }: FullScreenIDEProps) {
           <Panel
             ref={rightPanelRef}
             defaultSize={1}
-            minSize={5}
+            minSize={15}
             collapsible
             collapsedSize={1}
             onCollapse={() => setIsRightCollapsed(true)}
@@ -344,7 +459,7 @@ export function FullScreenIDE({ onClose }: FullScreenIDEProps) {
                   isRightCollapsed ? "rotate-90" : ""
                 }`}
               >
-                <div className="flex items-center justify-between px-3 py-2">
+                <div className="flex items-center justify-between px-3 py-1">
                   <button
                     onClick={toggleRightPanel}
                     className="text-xs font-medium text-gray-400

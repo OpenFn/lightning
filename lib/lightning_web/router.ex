@@ -81,17 +81,22 @@ defmodule LightningWeb.Router do
     resources "/provision", API.ProvisioningController, only: [:create, :show]
 
     resources "/projects", API.ProjectController, only: [:index, :show] do
-      resources "/jobs", API.JobController, only: [:index, :show]
-      resources "/workflows", API.WorkflowsController, except: [:delete]
-      # resources "/runs", API.RunController, only: [:index, :show]
       resources "/credentials", API.CredentialController, only: [:index]
+      resources "/workflows", API.WorkflowsController, except: [:delete]
+      resources "/jobs", API.JobController, only: [:index, :show]
+      resources "/work_orders", API.WorkOrdersController, only: [:index, :show]
+      resources "/runs", API.RunController, only: [:index, :show]
+      # resources "/logs"...
     end
-
-    resources "/jobs", API.JobController, only: [:index, :show]
-    # resources "/runs", API.RunController, only: [:index, :show]
 
     resources "/credentials", API.CredentialController,
       only: [:index, :create, :delete]
+
+    resources "/workflows", API.WorkflowsController, only: [:index, :show]
+    resources "/jobs", API.JobController, only: [:index, :show]
+    resources "/work_orders", API.WorkOrdersController, only: [:index, :show]
+    resources "/runs", API.RunController, only: [:index, :show]
+    resources "/log_lines", API.LogLinesController, only: [:index]
   end
 
   ## Collections
@@ -129,6 +134,24 @@ defmodule LightningWeb.Router do
     get "/setup_vcs", VersionControlController, :index
     get "/download/yaml", DownloadsController, :download_project_yaml
     get "/dataclip/body/:id", DataclipController, :show
+
+    # Dataclip operations for manual run panel
+    get "/projects/:project_id/jobs/:job_id/dataclips",
+        DataclipController,
+        :search
+
+    get "/projects/:project_id/runs/:run_id/dataclip",
+        DataclipController,
+        :show_for_run
+
+    patch "/projects/:project_id/dataclips/:dataclip_id",
+          DataclipController,
+          :update_name
+
+    # Manual workflow runs
+    post "/projects/:project_id/workflows/:workflow_id/runs",
+         WorkflowController,
+         :create_run
 
     get "/project_files/:id/download", ProjectFileController, :download
 
