@@ -68,6 +68,10 @@ export default (
 
   const onConnect: F.OnConnect = useCallback(
     args => {
+      // TODO: This edge creation logic is duplicated in WorkflowDiagram.tsx
+      // (handleCommit function). Consider extracting to a shared helper like
+      // createEdgeForSource() to avoid inconsistencies.
+
       // Generate edge data
       const newEdge: Partial<Session.Edge> = {
         id: randomUUID(),

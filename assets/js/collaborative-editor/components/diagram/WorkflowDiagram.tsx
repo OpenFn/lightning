@@ -223,6 +223,9 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
 
       // Create edge if placeholder has one
       if (placeholderEdge) {
+        // TODO: This edge creation logic is duplicated in useConnect.ts
+        // (onConnect callback). Consider extracting to a shared helper like
+        // createEdgeForSource() to avoid inconsistencies.
         const edgeData = placeholderEdge.data as any;
 
         // Determine if source is a job or trigger by checking the workflow state
@@ -283,22 +286,21 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
     lastLayout: undefined,
   });
 
-  const forceLayout = useCallback(() => {
+  const forceLayout = useCallback(async () => {
     if (!flow) return Promise.resolve({});
 
     const viewBounds = {
       width: workflowDiagramRef.current?.clientWidth ?? 0,
       height: workflowDiagramRef.current?.clientHeight ?? 0,
     };
-    return layout(model, setModel, flow, viewBounds, {
+    const positions = await layout(model, setModel, flow, viewBounds, {
       duration: props.layoutDuration ?? LAYOUT_DURATION,
       forceFit: props.forceFit ?? false,
-    }).then(positions => {
-      // Note we don't update positions until the animation has finished
-      chartCache.current.positions = positions;
-      if (isManualLayout) updatePositions(positions);
-      return positions;
     });
+    // Note we don't update positions until the animation has finished
+    chartCache.current.positions = positions;
+    if (isManualLayout) updatePositions(positions);
+    return positions;
   }, [
     flow,
     model,
@@ -680,6 +682,9 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
       }
 
       // Create edge connecting source to new job
+      // TODO: This edge creation logic is duplicated in useConnect.ts
+      // (onConnect callback) and above in handleCommit. Consider extracting
+      // to a shared helper like createEdgeForSource() to avoid inconsistencies.
       const sourceIsJob = jobs.some(j => j.id === sourceNode.id);
       const newEdge: Workflow.Edge = {
         id: randomUUID(),
