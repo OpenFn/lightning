@@ -49,6 +49,7 @@ function setPermissions(channelMock: any, can_edit_workflow: boolean) {
       config: { require_email_verification: false },
       permissions: { ...mockPermissions, can_edit_workflow },
       latest_snapshot_lock_version: 1,
+      project_repo_connection: null,
     });
   });
 }

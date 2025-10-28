@@ -119,6 +119,7 @@ describe("useUser()", () => {
         config: createMockAppConfig(),
         permissions: mockPermissions,
         latest_snapshot_lock_version: 1,
+        project_repo_connection: null,
       });
     });
 
@@ -132,6 +133,7 @@ describe("useUser()", () => {
         config: createMockAppConfig(),
         permissions: mockPermissions,
         latest_snapshot_lock_version: 1,
+        project_repo_connection: null,
       });
     });
 
@@ -163,6 +165,7 @@ describe("useProject()", () => {
         config: createMockAppConfig(),
         permissions: mockPermissions,
         latest_snapshot_lock_version: 1,
+        project_repo_connection: null,
       });
     });
 
@@ -176,6 +179,7 @@ describe("useProject()", () => {
         config: createMockAppConfig(),
         permissions: mockPermissions,
         latest_snapshot_lock_version: 1,
+        project_repo_connection: null,
       });
     });
 
@@ -207,6 +211,7 @@ describe("useAppConfig()", () => {
         config: mockConfig,
         permissions: mockPermissions,
         latest_snapshot_lock_version: 1,
+        project_repo_connection: null,
       });
     });
 
@@ -220,6 +225,7 @@ describe("useAppConfig()", () => {
         config: updatedConfig,
         permissions: mockPermissions,
         latest_snapshot_lock_version: 1,
+        project_repo_connection: null,
       });
     });
 
@@ -303,6 +309,7 @@ describe("Hook Integration", () => {
         config: mockConfig,
         permissions: mockPermissions,
         latest_snapshot_lock_version: 1,
+        project_repo_connection: null,
       });
     });
 

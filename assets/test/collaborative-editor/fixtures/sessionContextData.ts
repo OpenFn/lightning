@@ -55,6 +55,7 @@ export const mockSessionContextResponse = {
   config: mockAppConfig,
   permissions: mockPermissions,
   latest_snapshot_lock_version: 1,
+  project_repo_connection: null,
 };
 
 /**
@@ -66,6 +67,7 @@ export const mockUnauthenticatedSessionContext = {
   config: mockAppConfig,
   permissions: mockPermissions,
   latest_snapshot_lock_version: 1,
+  project_repo_connection: null,
 };
 
 /**
@@ -97,6 +99,7 @@ export const mockUpdatedSessionContext = {
   config: { require_email_verification: true },
   permissions: mockPermissions,
   latest_snapshot_lock_version: 2,
+  project_repo_connection: null,
 };
 
 /**
@@ -109,6 +112,7 @@ export const invalidSessionContextData = {
     config: mockAppConfig,
     permissions: mockPermissions,
     latest_snapshot_lock_version: 1,
+    project_repo_connection: null,
   },
 
   invalidUserId: {
@@ -120,6 +124,7 @@ export const invalidSessionContextData = {
     config: mockAppConfig,
     permissions: mockPermissions,
     latest_snapshot_lock_version: 1,
+    project_repo_connection: null,
   },
 
   invalidUserEmail: {
@@ -131,6 +136,7 @@ export const invalidSessionContextData = {
     config: mockAppConfig,
     permissions: mockPermissions,
     latest_snapshot_lock_version: 1,
+    project_repo_connection: null,
   },
 
   missingConfig: {
@@ -139,6 +145,7 @@ export const invalidSessionContextData = {
     // config missing entirely
     permissions: mockPermissions,
     latest_snapshot_lock_version: 1,
+    project_repo_connection: null,
   },
 
   invalidConfigType: {
@@ -149,6 +156,7 @@ export const invalidSessionContextData = {
     },
     permissions: mockPermissions,
     latest_snapshot_lock_version: 1,
+    project_repo_connection: null,
   },
 
   invalidProjectId: {
@@ -160,6 +168,7 @@ export const invalidSessionContextData = {
     config: mockAppConfig,
     permissions: mockPermissions,
     latest_snapshot_lock_version: 1,
+    project_repo_connection: null,
   },
 
   missingProjectName: {
@@ -171,6 +180,7 @@ export const invalidSessionContextData = {
     config: mockAppConfig,
     permissions: mockPermissions,
     latest_snapshot_lock_version: 1,
+    project_repo_connection: null,
   },
 };
 
@@ -184,6 +194,7 @@ export function createMockSessionContext(
     config?: AppConfig;
     permissions?: Permissions;
     latest_snapshot_lock_version?: number;
+    project_repo_connection?: unknown;
   } = {}
 ) {
   return {
@@ -193,6 +204,7 @@ export function createMockSessionContext(
     config: overrides.config || mockAppConfig,
     permissions: overrides.permissions || mockPermissions,
     latest_snapshot_lock_version: overrides.latest_snapshot_lock_version ?? 1,
+    project_repo_connection: overrides.project_repo_connection ?? null,
   };
 }
 
