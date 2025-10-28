@@ -8,11 +8,12 @@
 
 import { act, render, screen, waitFor } from "@testing-library/react";
 import type React from "react";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test, vi } from "vitest";
 import * as Y from "yjs";
 
 import { Header } from "../../../js/collaborative-editor/components/Header";
 import { SessionContext } from "../../../js/collaborative-editor/contexts/SessionProvider";
+import { LiveViewActionsProvider } from "../../../js/collaborative-editor/contexts/LiveViewActionsContext";
 import type { StoreContextValue } from "../../../js/collaborative-editor/contexts/StoreProvider";
 import { StoreContext } from "../../../js/collaborative-editor/contexts/StoreProvider";
 import { createAdaptorStore } from "../../../js/collaborative-editor/stores/createAdaptorStore";
@@ -106,7 +107,10 @@ function createTestSetup(options: WrapperOptions = {}) {
         name: "Test Project",
       },
       config: { require_email_verification: false },
-      permissions,
+      permissions: {
+        can_edit_workflow: permissions.can_edit_workflow,
+        can_run_workflow: true,
+      },
       latest_snapshot_lock_version: latestSnapshotLockVersion,
     });
   };
@@ -120,10 +124,19 @@ function createTestSetup(options: WrapperOptions = {}) {
     uiStore,
   };
 
+  const mockLiveViewActions = {
+    pushEvent: vi.fn(),
+    pushEventTo: vi.fn(),
+    handleEvent: vi.fn(() => vi.fn()),
+    navigate: vi.fn(),
+  };
+
   const wrapper = ({ children }: { children: React.ReactNode }) => (
     <SessionContext.Provider value={{ sessionStore, isNewWorkflow }}>
       <StoreContext.Provider value={mockStoreValue}>
-        {children}
+        <LiveViewActionsProvider actions={mockLiveViewActions}>
+          {children}
+        </LiveViewActionsProvider>
       </StoreContext.Provider>
     </SessionContext.Provider>
   );

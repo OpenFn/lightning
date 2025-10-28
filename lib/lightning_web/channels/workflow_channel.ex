@@ -61,6 +61,12 @@ defmodule LightningWeb.WorkflowChannel do
 
       project_user = Lightning.Projects.get_project_user(project, user)
 
+      # Subscribe to PubSub for real-time credential updates
+      Phoenix.PubSub.subscribe(
+        Lightning.PubSub,
+        "workflow:collaborate:#{workflow_id}"
+      )
+
       {:ok,
        assign(socket,
          workflow_id: workflow_id,
@@ -350,6 +356,13 @@ defmodule LightningWeb.WorkflowChannel do
   end
 
   @impl true
+  def handle_info(%{event: "credentials_updated", payload: credentials}, socket) do
+    # Forward credential updates from PubSub to connected channel clients
+    push(socket, "credentials_updated", credentials)
+    {:noreply, socket}
+  end
+
+  @impl true
   def handle_info(
         {:DOWN, _ref, :process, _pid, _reason},
         socket
@@ -378,7 +391,6 @@ defmodule LightningWeb.WorkflowChannel do
             name: credential.name,
             external_id: credential.external_id,
             schema: credential.schema,
-            production_tag: credential.production_tag,
             owner: render_owner(credential.user),
             oauth_client_name: render_oauth_client_name(credential.oauth_client),
             inserted_at: credential.inserted_at,

@@ -3,7 +3,6 @@ import { describe, it, expect } from "vitest";
 import {
   extractPackageName,
   extractAdaptorName,
-  adaptorNameToDisplayName,
   extractAdaptorDisplayName,
 } from "#/collaborative-editor/utils/adaptorUtils";
 
@@ -69,24 +68,6 @@ describe("adaptorUtils", () => {
       expect(extractAdaptorName("invalid-package")).toBeNull();
       expect(extractAdaptorName("@openfn/something-else")).toBeNull();
       expect(extractAdaptorName("")).toBeNull();
-    });
-  });
-
-  describe("adaptorNameToDisplayName", () => {
-    it("converts adaptor name to title case", () => {
-      expect(adaptorNameToDisplayName("http")).toBe("Http");
-      expect(adaptorNameToDisplayName("salesforce")).toBe("Salesforce");
-      expect(adaptorNameToDisplayName("dhis-2")).toBe("Dhis 2");
-      expect(adaptorNameToDisplayName("common")).toBe("Common");
-    });
-
-    it("handles names with multiple words", () => {
-      expect(adaptorNameToDisplayName("google-sheets")).toBe("Google Sheets");
-      expect(adaptorNameToDisplayName("ms-teams")).toBe("Ms Teams");
-    });
-
-    it("handles names with underscores", () => {
-      expect(adaptorNameToDisplayName("some_adaptor")).toBe("Some Adaptor");
     });
   });
 

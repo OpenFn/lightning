@@ -3,6 +3,7 @@ import { act, renderHook } from "@testing-library/react";
 import type React from "react";
 
 import { useJobDeleteValidation } from "../../../js/collaborative-editor/hooks/useJobDeleteValidation";
+import { LiveViewActionsProvider } from "../../../js/collaborative-editor/contexts/LiveViewActionsContext";
 import { StoreContext } from "../../../js/collaborative-editor/contexts/StoreProvider";
 import type { StoreContextValue } from "../../../js/collaborative-editor/contexts/StoreProvider";
 import { createSessionContextStore } from "../../../js/collaborative-editor/stores/createSessionContextStore";
@@ -31,10 +32,19 @@ function createWrapper(
     awarenessStore: {} as any,
   };
 
+  const mockLiveViewActions = {
+    pushEvent: vi.fn(),
+    pushEventTo: vi.fn(),
+    handleEvent: vi.fn(() => vi.fn()),
+    navigate: vi.fn(),
+  };
+
   return ({ children }: { children: React.ReactNode }) => (
-    <StoreContext.Provider value={mockStoreValue}>
-      {children}
-    </StoreContext.Provider>
+    <LiveViewActionsProvider actions={mockLiveViewActions}>
+      <StoreContext.Provider value={mockStoreValue}>
+        {children}
+      </StoreContext.Provider>
+    </LiveViewActionsProvider>
   );
 }
 
@@ -164,7 +174,7 @@ describe("useJobDeleteValidation - First Job Detection", () => {
     expect(result.current.isFirstJob).toBe(true);
     expect(result.current.canDelete).toBe(false);
     expect(result.current.disableReason).toBe(
-      "Cannot delete: this is the first job in the workflow"
+      "You can't delete the first step in a workflow."
     );
   });
 
@@ -651,7 +661,7 @@ describe("useJobDeleteValidation - Edge Case Scenarios", () => {
     expect(result.current.isFirstJob).toBe(true);
     expect(result.current.canDelete).toBe(false);
     expect(result.current.disableReason).toBe(
-      "Cannot delete: this is the first job in the workflow"
+      "You can't delete the first step in a workflow."
     );
   });
 

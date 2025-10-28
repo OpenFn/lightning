@@ -19,6 +19,7 @@ import type * as Y from "yjs";
 import { JobForm } from "../../../../js/collaborative-editor/components/inspector/JobForm";
 import type { StoreContextValue } from "../../../../js/collaborative-editor/contexts/StoreProvider";
 import { StoreContext } from "../../../../js/collaborative-editor/contexts/StoreProvider";
+import { LiveViewActionsProvider } from "../../../../js/collaborative-editor/contexts/LiveViewActionsContext";
 import type { AdaptorStoreInstance } from "../../../../js/collaborative-editor/stores/createAdaptorStore";
 import { createAdaptorStore } from "../../../../js/collaborative-editor/stores/createAdaptorStore";
 import type { AwarenessStoreInstance } from "../../../../js/collaborative-editor/stores/createAwarenessStore";
@@ -71,12 +72,21 @@ function createWrapper(
     awarenessStore,
   };
 
+  const mockLiveViewActions = {
+    pushEvent: vi.fn(),
+    pushEventTo: vi.fn(),
+    handleEvent: vi.fn(() => vi.fn()),
+    navigate: vi.fn(),
+  };
+
   return ({ children }: { children: React.ReactNode }) => (
-    <HotkeysProvider>
-      <StoreContext.Provider value={mockStoreValue}>
-        {children}
-      </StoreContext.Provider>
-    </HotkeysProvider>
+    <LiveViewActionsProvider actions={mockLiveViewActions}>
+      <HotkeysProvider>
+        <StoreContext.Provider value={mockStoreValue}>
+          {children}
+        </StoreContext.Provider>
+      </HotkeysProvider>
+    </LiveViewActionsProvider>
   );
 }
 
@@ -212,7 +222,7 @@ describe("JobForm - Adaptor Display Section", () => {
     // Phase 3R: ConfigureAdaptorModal should open (not AdaptorSelectionModal)
     await waitFor(
       () => {
-        expect(screen.getByText("Configure Your Adaptor")).toBeInTheDocument();
+        expect(screen.getByText("Configure connection")).toBeInTheDocument();
       },
       { timeout: 3000 }
     );
@@ -242,7 +252,7 @@ describe("JobForm - Adaptor Display Section", () => {
     // ConfigureAdaptorModal should open
     await waitFor(
       () => {
-        expect(screen.getByText("Configure Your Adaptor")).toBeInTheDocument();
+        expect(screen.getByText("Configure connection")).toBeInTheDocument();
       },
       { timeout: 3000 }
     );
@@ -254,7 +264,7 @@ describe("JobForm - Adaptor Display Section", () => {
     await waitFor(
       () => {
         expect(
-          screen.queryByText("Configure Your Adaptor")
+          screen.queryByText("Configure connection")
         ).not.toBeInTheDocument();
       },
       { timeout: 3000 }
@@ -610,7 +620,7 @@ describe("JobForm - Complete Integration (Phase 2R: Simplified)", () => {
     // Wait for ConfigureAdaptorModal to open
     await waitFor(
       () => {
-        expect(screen.getByText("Configure Your Adaptor")).toBeInTheDocument();
+        expect(screen.getByText("Configure connection")).toBeInTheDocument();
       },
       { timeout: 3000 }
     );
@@ -622,7 +632,7 @@ describe("JobForm - Complete Integration (Phase 2R: Simplified)", () => {
     await waitFor(
       () => {
         expect(
-          screen.queryByText("Configure Your Adaptor")
+          screen.queryByText("Configure connection")
         ).not.toBeInTheDocument();
       },
       { timeout: 3000 }

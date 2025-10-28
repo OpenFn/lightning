@@ -15,7 +15,6 @@ export const CredentialSchema = z.object({
   name: z.string(),
   external_id: z.string(),
   schema: z.string(),
-  production_tag: z.string().nullable(),
   owner: CredentialOwnerSchema.nullable(),
   oauth_client_name: z.string().nullable(),
   inserted_at: isoDateTimeSchema,

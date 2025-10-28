@@ -95,7 +95,10 @@ function createWrapper(options: WrapperOptions = {}): [
         name: "Test Project",
       },
       config: { require_email_verification: false },
-      permissions,
+      permissions: {
+        can_edit_workflow: permissions.can_edit_workflow,
+        can_run_workflow: true,
+      },
       latest_snapshot_lock_version: latestSnapshotLockVersion,
     });
   };
@@ -106,6 +109,7 @@ function createWrapper(options: WrapperOptions = {}): [
     adaptorStore: {} as any,
     credentialStore: {} as any,
     awarenessStore: {} as any,
+    uiStore: {} as any,
   };
 
   const wrapper = ({ children }: { children: React.ReactNode }) => (
@@ -336,6 +340,7 @@ describe("useWorkflowReadOnly - Edge Cases", () => {
       adaptorStore: {} as any,
       credentialStore: {} as any,
       awarenessStore: {} as any,
+      uiStore: {} as any,
     };
 
     const wrapper = ({ children }: { children: React.ReactNode }) => (
@@ -390,6 +395,7 @@ describe("useWorkflowReadOnly - Edge Cases", () => {
       adaptorStore: {} as any,
       credentialStore: {} as any,
       awarenessStore: {} as any,
+      uiStore: {} as any,
     };
 
     const wrapper = ({ children }: { children: React.ReactNode }) => (

@@ -336,6 +336,7 @@ describe.concurrent("SessionContextResponseSchema", () => {
       },
       permissions: {
         can_edit_workflow: true,
+        can_run_workflow: true,
       },
       latest_snapshot_lock_version: 1,
     };
@@ -360,6 +361,7 @@ describe.concurrent("SessionContextResponseSchema", () => {
       },
       permissions: {
         can_edit_workflow: true,
+        can_run_workflow: true,
       },
       latest_snapshot_lock_version: 1,
     };
@@ -388,6 +390,7 @@ describe.concurrent("SessionContextResponseSchema", () => {
       },
       permissions: {
         can_edit_workflow: true,
+        can_run_workflow: true,
       },
       latest_snapshot_lock_version: 1,
     };
@@ -409,6 +412,7 @@ describe.concurrent("SessionContextResponseSchema", () => {
       },
       permissions: {
         can_edit_workflow: true,
+        can_run_workflow: true,
       },
       latest_snapshot_lock_version: 1,
     };
@@ -429,6 +433,7 @@ describe.concurrent("SessionContextResponseSchema", () => {
       project: null,
       permissions: {
         can_edit_workflow: true,
+        can_run_workflow: true,
       },
       latest_snapshot_lock_version: 1,
     };
@@ -457,6 +462,7 @@ describe.concurrent("SessionContextResponseSchema", () => {
       },
       permissions: {
         can_edit_workflow: true,
+        can_run_workflow: true,
       },
       latest_snapshot_lock_version: 1,
     };
@@ -481,6 +487,7 @@ describe.concurrent("SessionContextResponseSchema", () => {
       },
       permissions: {
         can_edit_workflow: true,
+        can_run_workflow: true,
       },
       latest_snapshot_lock_version: 1,
     };
@@ -502,6 +509,7 @@ describe.concurrent("SessionContextResponseSchema", () => {
       },
       permissions: {
         can_edit_workflow: true,
+        can_run_workflow: true,
       },
       latest_snapshot_lock_version: 1,
     };
@@ -518,6 +526,7 @@ describe.concurrent("SessionContextResponseSchema", () => {
       config: null,
       permissions: {
         can_edit_workflow: true,
+        can_run_workflow: true,
       },
       latest_snapshot_lock_version: 1,
     };
@@ -536,6 +545,7 @@ describe.concurrent("SessionContextResponseSchema", () => {
       },
       permissions: {
         can_edit_workflow: true,
+        can_run_workflow: true,
       },
       latest_snapshot_lock_version: 1,
     };

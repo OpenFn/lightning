@@ -22,7 +22,6 @@ defmodule Lightning.Credentials.Credential do
     field :schema, :string
     field :scheduled_deletion, :utc_datetime
     field :transfer_status, Ecto.Enum, values: [:pending, :completed]
-    field :production_tag, :string
 
     belongs_to :user, User
     belongs_to :oauth_client, OauthClient
@@ -44,8 +43,7 @@ defmodule Lightning.Credentials.Credential do
       :oauth_client_id,
       :schema,
       :scheduled_deletion,
-      :transfer_status,
-      :production_tag
+      :transfer_status
     ])
     |> cast_assoc(:project_credentials)
     |> validate_required([:name, :user_id])

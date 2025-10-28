@@ -1,12 +1,17 @@
 import { useStore } from "@tanstack/react-form";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useHotkeysContext } from "react-hotkeys-hook";
 
 import { useAppForm } from "#/collaborative-editor/components/form";
+import { useLiveViewActions } from "#/collaborative-editor/contexts/LiveViewActionsContext";
 import {
   useAdaptors,
   useProjectAdaptors,
 } from "#/collaborative-editor/hooks/useAdaptors";
-import { useCredentials } from "#/collaborative-editor/hooks/useCredentials";
+import {
+  useCredentials,
+  useCredentialsCommands,
+} from "#/collaborative-editor/hooks/useCredentials";
 import { useWorkflowActions } from "#/collaborative-editor/hooks/useWorkflow";
 import { useWatchFields } from "#/collaborative-editor/stores/common";
 import { JobSchema } from "#/collaborative-editor/types/job";
@@ -153,11 +158,24 @@ function useAdaptorVersionOptions(adaptorPackage: string | null) {
 export function JobForm({ job }: JobFormProps) {
   const { updateJob } = useWorkflowActions();
   const { projectCredentials, keychainCredentials } = useCredentials();
+  const { requestCredentials } = useCredentialsCommands();
   const { projectAdaptors, allAdaptors } = useProjectAdaptors();
+  const { pushEvent, handleEvent } = useLiveViewActions();
+  const { enableScope, disableScope } = useHotkeysContext();
 
   // Modal state for adaptor configuration
   const [isConfigureModalOpen, setIsConfigureModalOpen] = useState(false);
   const [isAdaptorPickerOpen, setIsAdaptorPickerOpen] = useState(false);
+  const [isCredentialModalOpen, setIsCredentialModalOpen] = useState(false);
+
+  // Disable panel hotkeys when credential modal is open
+  useEffect(() => {
+    if (isCredentialModalOpen) {
+      disableScope("panel");
+    } else {
+      enableScope("panel");
+    }
+  }, [isCredentialModalOpen, enableScope, disableScope]);
 
   // Parse initial adaptor value
   const initialAdaptor = job.adaptor || "@openfn/language-common@latest";
@@ -220,6 +238,68 @@ export function JobForm({ job }: JobFormProps) {
     form.reset();
   }, [job.id, form]);
 
+  // Listen for credential modal close event to reopen configure modal
+  useEffect(() => {
+    const handleModalClose = () => {
+      setIsCredentialModalOpen(false);
+      // Delay reopening configure modal to avoid flash during transition
+      setTimeout(() => {
+        setIsConfigureModalOpen(true);
+      }, 200); // Wait for credential modal close animation
+      // Notify server after modal is fully closed to reset state
+      // This allows reopening the modal on subsequent clicks
+      setTimeout(() => {
+        pushEvent("close_credential_modal_complete", {});
+      }, 500); // Wait for modal close animation to complete
+    };
+
+    const element = document.getElementById("collaborative-editor-react");
+    element?.addEventListener("close_credential_modal", handleModalClose);
+
+    return () => {
+      element?.removeEventListener("close_credential_modal", handleModalClose);
+    };
+  }, [pushEvent]);
+
+  // Listen for credential saved event from LiveView
+  useEffect(() => {
+    const cleanup = handleEvent("credential_saved", (payload: any) => {
+      setIsCredentialModalOpen(false);
+
+      const { credential, is_project_credential } = payload;
+      const credentialId = is_project_credential
+        ? credential.project_credential_id
+        : credential.id;
+
+      // Select the credential immediately - we have the data from the server
+      form.setFieldValue("credential_id", credentialId);
+
+      if (is_project_credential) {
+        form.setFieldValue("project_credential_id", credentialId);
+        form.setFieldValue("keychain_credential_id", null);
+      } else {
+        form.setFieldValue("keychain_credential_id", credentialId);
+        form.setFieldValue("project_credential_id", null);
+      }
+
+      // Persist to Y.Doc
+      updateJob(job.id, {
+        project_credential_id: is_project_credential ? credentialId : null,
+        keychain_credential_id: is_project_credential ? null : credentialId,
+      });
+
+      // Reload credentials in the background so the list is up to date
+      void requestCredentials();
+
+      // Reopen configure modal after a brief delay for the close animation
+      setTimeout(() => {
+        setIsConfigureModalOpen(true);
+      }, 200);
+    });
+
+    return cleanup;
+  }, [handleEvent, form, job.id, updateJob, requestCredentials]);
+
   // Adaptor package logic
   const adaptorPackage = useStore(
     form.store,
@@ -256,6 +336,16 @@ export function JobForm({ job }: JobFormProps) {
     setIsConfigureModalOpen(false);
     setIsAdaptorPickerOpen(true);
   }, []);
+
+  // Handle opening credential modal from ConfigureAdaptorModal
+  const handleOpenCredentialModal = useCallback(
+    (adaptorName: string) => {
+      setIsConfigureModalOpen(false);
+      setIsCredentialModalOpen(true);
+      pushEvent("open_credential_modal", { schema: adaptorName });
+    },
+    [pushEvent]
+  );
 
   // Handle adaptor selection from picker
   const handleAdaptorSelect = useCallback(
@@ -444,6 +534,7 @@ export function JobForm({ job }: JobFormProps) {
         onClose={() => setIsConfigureModalOpen(false)}
         onSave={handleConfigureSave}
         onOpenAdaptorPicker={handleOpenAdaptorPicker}
+        onOpenCredentialModal={handleOpenCredentialModal}
         currentAdaptor={adaptorPackage || "@openfn/language-common"}
         currentVersion={
           resolveAdaptor(form.state.values.adaptor).version || "latest"

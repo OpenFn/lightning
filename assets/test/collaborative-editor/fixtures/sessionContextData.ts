@@ -44,6 +44,7 @@ export const mockAppConfig: AppConfig = {
  */
 export const mockPermissions: Permissions = {
   can_edit_workflow: true,
+  can_run_workflow: true,
 };
 
 /**

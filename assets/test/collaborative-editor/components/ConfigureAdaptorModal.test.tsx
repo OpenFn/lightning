@@ -26,6 +26,7 @@ import userEvent from "@testing-library/user-event";
 import { HotkeysProvider } from "react-hotkeys-hook";
 
 import { ConfigureAdaptorModal } from "../../../js/collaborative-editor/components/ConfigureAdaptorModal";
+import { LiveViewActionsProvider } from "../../../js/collaborative-editor/contexts/LiveViewActionsContext";
 import { StoreContext } from "../../../js/collaborative-editor/contexts/StoreProvider";
 import type { Adaptor } from "../../../js/collaborative-editor/types/adaptor";
 import type {
@@ -75,7 +76,6 @@ const mockProjectCredentials: ProjectCredential[] = [
     external_id: "ext-1",
     inserted_at: "2024-01-01T00:00:00Z",
     updated_at: "2024-01-01T00:00:00Z",
-    production_tag: "production",
     owner: { id: "user-1", name: "John Doe", email: "john@example.com" },
     oauth_client_name: null,
   },
@@ -87,7 +87,6 @@ const mockProjectCredentials: ProjectCredential[] = [
     external_id: "ext-2",
     inserted_at: "2024-01-01T00:00:00Z",
     updated_at: "2024-01-01T00:00:00Z",
-    production_tag: "staging",
     owner: null,
     oauth_client_name: null,
   },
@@ -99,7 +98,6 @@ const mockProjectCredentials: ProjectCredential[] = [
     external_id: "ext-3",
     inserted_at: "2024-01-01T00:00:00Z",
     updated_at: "2024-01-01T00:00:00Z",
-    production_tag: null,
     owner: null,
     oauth_client_name: null,
   },
@@ -112,7 +110,6 @@ const mockProjectCredentials: ProjectCredential[] = [
     external_id: "ext-4",
     inserted_at: "2024-01-01T00:00:00Z",
     updated_at: "2024-01-01T00:00:00Z",
-    production_tag: null,
     owner: { id: "user-2", name: "Jane Smith", email: "jane@example.com" },
   },
 ];
@@ -122,6 +119,7 @@ const mockKeychainCredentials: KeychainCredential[] = [
     id: "keychain-1",
     name: "Keychain Salesforce",
     path: "salesforce/production",
+    default_credential_id: null,
     inserted_at: "2024-01-01T00:00:00Z",
     updated_at: "2024-01-01T00:00:00Z",
   },
@@ -192,14 +190,25 @@ function createMockStoreContext() {
   };
 }
 
+// Create mock LiveView actions
+const createMockLiveViewActions = () => ({
+  pushEvent: vi.fn(),
+  pushEventTo: vi.fn(),
+  handleEvent: vi.fn(),
+  navigate: vi.fn(),
+});
+
 function renderWithProviders(
   ui: React.ReactElement,
-  mockStoreContext = createMockStoreContext()
+  mockStoreContext = createMockStoreContext(),
+  mockLiveViewActions = createMockLiveViewActions()
 ) {
   return render(
     <HotkeysProvider>
       <StoreContext.Provider value={mockStoreContext as any}>
-        {ui}
+        <LiveViewActionsProvider actions={mockLiveViewActions}>
+          {ui}
+        </LiveViewActionsProvider>
       </StoreContext.Provider>
     </HotkeysProvider>
   );
@@ -209,12 +218,14 @@ describe("ConfigureAdaptorModal", () => {
   const mockOnClose = vi.fn();
   const mockOnSave = vi.fn();
   const mockOnOpenAdaptorPicker = vi.fn();
+  const mockOnOpenCredentialModal = vi.fn();
 
   const defaultProps = {
     isOpen: true,
     onClose: mockOnClose,
     onSave: mockOnSave,
     onOpenAdaptorPicker: mockOnOpenAdaptorPicker,
+    onOpenCredentialModal: mockOnOpenCredentialModal,
     currentAdaptor: "@openfn/language-salesforce",
     currentVersion: "2.1.0",
     currentCredentialId: null,
@@ -599,7 +610,7 @@ describe("ConfigureAdaptorModal", () => {
       expect(screen.getByText("My Google Sheets OAuth")).toBeInTheDocument();
     });
 
-    it("automatically shows other credentials when no schema matches", () => {
+    it("shows informative message for adaptors that don't need credentials", () => {
       renderWithProviders(
         <ConfigureAdaptorModal
           {...defaultProps}
@@ -607,18 +618,22 @@ describe("ConfigureAdaptorModal", () => {
         />
       );
 
-      // Should automatically show other credentials (HTTP and Keychain) when no schema matches
-      expect(screen.getByText("HTTP API Key")).toBeInTheDocument();
-      expect(screen.getByText("Keychain Salesforce")).toBeInTheDocument();
+      // Should show message that adaptor doesn't need credentials
+      expect(
+        screen.getByText("This adaptor does not require credentials.")
+      ).toBeInTheDocument();
 
-      // Should NOT show Salesforce credentials (no schema match)
+      // Should NOT show credential list or New Credential button
+      expect(screen.queryByText("HTTP API Key")).not.toBeInTheDocument();
+      expect(screen.queryByText("Keychain Salesforce")).not.toBeInTheDocument();
       expect(
         screen.queryByText("Salesforce Production")
       ).not.toBeInTheDocument();
 
-      // Should show section headers for other credentials
-      expect(screen.getByText(/Generic Credentials/i)).toBeInTheDocument();
-      expect(screen.getByText(/Keychain Credentials/i)).toBeInTheDocument();
+      // New Credential button should be hidden
+      expect(
+        screen.queryByRole("button", { name: /new credential/i })
+      ).not.toBeInTheDocument();
 
       // Should NOT show "Back to matching credentials" link (no matching credentials to go back to)
       expect(
@@ -747,13 +762,6 @@ describe("ConfigureAdaptorModal", () => {
       expect(radioButtons.length).toBe(3);
     });
 
-    it("displays credential metadata (last used)", () => {
-      renderWithProviders(<ConfigureAdaptorModal {...defaultProps} />);
-
-      // Should show relative time for last_used (multiple credentials have this)
-      expect(screen.getAllByText(/last used/).length).toBeGreaterThan(0);
-    });
-
     it("displays credential metadata (owner)", () => {
       renderWithProviders(<ConfigureAdaptorModal {...defaultProps} />);
 
@@ -821,13 +829,18 @@ describe("ConfigureAdaptorModal", () => {
 
   describe("Adaptor Change Flow", () => {
     it("updates internal state when reopened with new adaptor", () => {
+      const mockLiveViewActions = createMockLiveViewActions();
+      const mockStoreContext = createMockStoreContext();
+
       // Start with Salesforce
       const { rerender } = renderWithProviders(
         <ConfigureAdaptorModal
           {...defaultProps}
           currentAdaptor="@openfn/language-salesforce"
           currentCredentialId="proj-cred-1"
-        />
+        />,
+        mockStoreContext,
+        mockLiveViewActions
       );
 
       // Verify Salesforce is shown
@@ -836,12 +849,14 @@ describe("ConfigureAdaptorModal", () => {
       // Close modal (simulating user clicking Change button)
       rerender(
         <HotkeysProvider>
-          <StoreContext.Provider value={createMockStoreContext() as any}>
-            <ConfigureAdaptorModal
-              {...defaultProps}
-              isOpen={false} // Modal closed
-              currentAdaptor="@openfn/language-salesforce"
-            />
+          <StoreContext.Provider value={mockStoreContext as any}>
+            <LiveViewActionsProvider actions={mockLiveViewActions}>
+              <ConfigureAdaptorModal
+                {...defaultProps}
+                isOpen={false} // Modal closed
+                currentAdaptor="@openfn/language-salesforce"
+              />
+            </LiveViewActionsProvider>
           </StoreContext.Provider>
         </HotkeysProvider>
       );
@@ -849,14 +864,16 @@ describe("ConfigureAdaptorModal", () => {
       // Reopen with new adaptor (simulating selection from AdaptorSelectionModal)
       rerender(
         <HotkeysProvider>
-          <StoreContext.Provider value={createMockStoreContext() as any}>
-            <ConfigureAdaptorModal
-              {...defaultProps}
-              isOpen={true}
-              currentAdaptor="@openfn/language-http"
-              currentVersion="1.5.0" // Parent updates version for new adaptor
-              currentCredentialId={null} // Credential cleared
-            />
+          <StoreContext.Provider value={mockStoreContext as any}>
+            <LiveViewActionsProvider actions={mockLiveViewActions}>
+              <ConfigureAdaptorModal
+                {...defaultProps}
+                isOpen={true}
+                currentAdaptor="@openfn/language-http"
+                currentVersion="1.5.0" // Parent updates version for new adaptor
+                currentCredentialId={null} // Credential cleared
+              />
+            </LiveViewActionsProvider>
           </StoreContext.Provider>
         </HotkeysProvider>
       );
@@ -922,24 +939,30 @@ describe("ConfigureAdaptorModal", () => {
 
     it("saves with new adaptor after parent switches it", async () => {
       const user = userEvent.setup();
+      const mockLiveViewActions = createMockLiveViewActions();
+      const mockStoreContext = createMockStoreContext();
 
       // Render with Salesforce initially
       const { rerender } = renderWithProviders(
         <ConfigureAdaptorModal
           {...defaultProps}
           currentAdaptor="@openfn/language-salesforce"
-        />
+        />,
+        mockStoreContext,
+        mockLiveViewActions
       );
 
       // Close modal (simulating: Close → Adaptor Picker)
       rerender(
         <HotkeysProvider>
-          <StoreContext.Provider value={createMockStoreContext() as any}>
-            <ConfigureAdaptorModal
-              {...defaultProps}
-              isOpen={false}
-              currentAdaptor="@openfn/language-salesforce"
-            />
+          <StoreContext.Provider value={mockStoreContext as any}>
+            <LiveViewActionsProvider actions={mockLiveViewActions}>
+              <ConfigureAdaptorModal
+                {...defaultProps}
+                isOpen={false}
+                currentAdaptor="@openfn/language-salesforce"
+              />
+            </LiveViewActionsProvider>
           </StoreContext.Provider>
         </HotkeysProvider>
       );
@@ -947,13 +970,15 @@ describe("ConfigureAdaptorModal", () => {
       // Reopen with HTTP (simulating: Adaptor Picker → Reopen)
       rerender(
         <HotkeysProvider>
-          <StoreContext.Provider value={createMockStoreContext() as any}>
-            <ConfigureAdaptorModal
-              {...defaultProps}
-              isOpen={true}
-              currentAdaptor="@openfn/language-http"
-              currentVersion="1.5.0" // Parent updates version for new adaptor
-            />
+          <StoreContext.Provider value={mockStoreContext as any}>
+            <LiveViewActionsProvider actions={mockLiveViewActions}>
+              <ConfigureAdaptorModal
+                {...defaultProps}
+                isOpen={true}
+                currentAdaptor="@openfn/language-http"
+                currentVersion="1.5.0" // Parent updates version for new adaptor
+              />
+            </LiveViewActionsProvider>
           </StoreContext.Provider>
         </HotkeysProvider>
       );
@@ -1005,15 +1030,22 @@ describe("ConfigureAdaptorModal", () => {
 
   describe("Modal State Reset", () => {
     it("resets to current values when modal reopens", () => {
+      const mockLiveViewActions = createMockLiveViewActions();
+      const mockStoreContext = createMockStoreContext();
+
       const { rerender } = renderWithProviders(
-        <ConfigureAdaptorModal {...defaultProps} isOpen={true} />
+        <ConfigureAdaptorModal {...defaultProps} isOpen={true} />,
+        mockStoreContext,
+        mockLiveViewActions
       );
 
       // Close modal
       rerender(
         <HotkeysProvider>
-          <StoreContext.Provider value={createMockStoreContext() as any}>
-            <ConfigureAdaptorModal {...defaultProps} isOpen={false} />
+          <StoreContext.Provider value={mockStoreContext as any}>
+            <LiveViewActionsProvider actions={mockLiveViewActions}>
+              <ConfigureAdaptorModal {...defaultProps} isOpen={false} />
+            </LiveViewActionsProvider>
           </StoreContext.Provider>
         </HotkeysProvider>
       );
@@ -1021,8 +1053,10 @@ describe("ConfigureAdaptorModal", () => {
       // Reopen modal
       rerender(
         <HotkeysProvider>
-          <StoreContext.Provider value={createMockStoreContext() as any}>
-            <ConfigureAdaptorModal {...defaultProps} isOpen={true} />
+          <StoreContext.Provider value={mockStoreContext as any}>
+            <LiveViewActionsProvider actions={mockLiveViewActions}>
+              <ConfigureAdaptorModal {...defaultProps} isOpen={true} />
+            </LiveViewActionsProvider>
           </StoreContext.Provider>
         </HotkeysProvider>
       );
@@ -1068,10 +1102,7 @@ describe("ConfigureAdaptorModal", () => {
       expect(newCredLink).toBeInTheDocument();
     });
 
-    it("logs navigation intent when New Credential clicked", async () => {
-      const consoleLogSpy = vi
-        .spyOn(console, "log")
-        .mockImplementation(() => {});
+    it("calls onOpenCredentialModal when New Credential clicked", async () => {
       const user = userEvent.setup();
 
       renderWithProviders(<ConfigureAdaptorModal {...defaultProps} />);
@@ -1081,11 +1112,7 @@ describe("ConfigureAdaptorModal", () => {
       });
       await user.click(newCredLink);
 
-      expect(consoleLogSpy).toHaveBeenCalledWith(
-        "Navigate to credential creation"
-      );
-
-      consoleLogSpy.mockRestore();
+      expect(mockOnOpenCredentialModal).toHaveBeenCalledWith("salesforce");
     });
   });
 });

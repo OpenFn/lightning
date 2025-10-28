@@ -24,12 +24,9 @@ import { AdaptorIcon } from "./AdaptorIcon";
 import { VersionPicker } from "./VersionPicker";
 
 /**
- * Extended credential type with optional metadata fields
- * These fields may not exist in current backend but are
- * designed for in Phase 4R
+ * Extended credential type with metadata fields from the backend
  */
 type CredentialWithMetadata = (ProjectCredential | KeychainCredential) & {
-  production_tag?: string | null;
   owner?: { name: string } | null;
   type: "project" | "keychain";
 };
@@ -42,7 +39,8 @@ interface ConfigureAdaptorModalProps {
     adaptorVersion: string;
     credentialId: string | null;
   }) => void;
-  onOpenAdaptorPicker: () => void; // New: notify parent to manage modal switching
+  onOpenAdaptorPicker: () => void; // Notify parent to manage modal switching to adaptor picker
+  onOpenCredentialModal: (adaptorName: string) => void; // Notify parent to manage modal switching to credential modal
   currentAdaptor: string;
   currentVersion: string;
   currentCredentialId: string | null;
@@ -61,6 +59,7 @@ export function ConfigureAdaptorModal({
   onClose,
   onSave,
   onOpenAdaptorPicker,
+  onOpenCredentialModal,
   currentAdaptor,
   currentVersion,
   currentCredentialId,
@@ -157,6 +156,13 @@ export function ConfigureAdaptorModal({
     currentCredentialId,
     allAdaptors,
   ]);
+
+  // Check if the adaptor requires credentials
+  const adaptorNeedsCredentials = useMemo(() => {
+    const adaptorName = extractAdaptorName(selectedAdaptor);
+    // Common adaptor doesn't require credentials
+    return adaptorName !== "common";
+  }, [selectedAdaptor]);
 
   // Filter credentials into sections
   const credentialSections = useMemo(() => {
@@ -348,6 +354,14 @@ export function ConfigureAdaptorModal({
       : (cred as KeychainCredential).id;
   };
 
+  // Open LiveView credential modal with adaptor schema (notifies parent)
+  const handleCreateCredential = () => {
+    const adaptorName = extractAdaptorName(selectedAdaptor);
+    if (adaptorName) {
+      onOpenCredentialModal(adaptorName);
+    }
+  };
+
   return (
     <>
       <Dialog open={isOpen} onClose={onClose} className="relative z-50">
@@ -471,24 +485,33 @@ export function ConfigureAdaptorModal({
                         role="img"
                       />
                     </label>
-                    <button
-                      type="button"
-                      aria-label="Create new credential"
-                      className="text-primary-600 hover:text-primary-700
-                      text-sm font-medium underline focus:outline-none"
-                      onClick={() => {
-                        // TODO Phase 4R: Navigate to credential creation
-                        console.log("Navigate to credential creation");
-                      }}
-                    >
-                      New Credential
-                    </button>
+                    {adaptorNeedsCredentials && (
+                      <button
+                        type="button"
+                        aria-label="Create new credential"
+                        className="text-primary-600 hover:text-primary-700
+                        text-sm font-medium underline focus:outline-none"
+                        onClick={handleCreateCredential}
+                      >
+                        New Credential
+                      </button>
+                    )}
                   </div>
 
-                  {/* Check if we have any credentials at all */}
-                  {credentialSections.schemaMatched.length === 0 &&
-                  credentialSections.universal.length === 0 &&
-                  credentialSections.keychain.length === 0 ? (
+                  {/* Show message if adaptor doesn't need credentials */}
+                  {!adaptorNeedsCredentials ? (
+                    <div
+                      className="border border-gray-200 rounded-md p-6
+                      text-center bg-gray-50"
+                    >
+                      <p className="text-gray-600 text-sm">
+                        This adaptor does not require credentials.
+                      </p>
+                    </div>
+                  ) : /* Check if we have any credentials at all */
+                  credentialSections.schemaMatched.length === 0 &&
+                    credentialSections.universal.length === 0 &&
+                    credentialSections.keychain.length === 0 ? (
                     /* No credentials at all - show empty state */
                     <div className="border border-gray-200 rounded-md p-6 text-center">
                       <p className="text-gray-500 mb-3">
@@ -496,10 +519,7 @@ export function ConfigureAdaptorModal({
                       </p>
                       <button
                         type="button"
-                        onClick={() => {
-                          // TODO Phase 4R: Navigate to credential creation
-                          console.log("Navigate to credential creation");
-                        }}
+                        onClick={handleCreateCredential}
                         className="text-primary-600 hover:text-primary-700
                         text-sm font-medium underline focus:outline-none"
                       >
