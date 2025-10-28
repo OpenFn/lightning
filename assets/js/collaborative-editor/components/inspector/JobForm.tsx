@@ -380,7 +380,7 @@ export function JobForm({ job }: JobFormProps) {
   // }, [selectedCredentialId, projectCredentials, keychainCredentials]);
 
   return (
-    <div className="md:grid md:grid-cols-6 md:gap-4 @container">
+    <div className="px-6 py-6 md:grid md:grid-cols-6 md:gap-4 @container">
       {/* Job Name Field */}
       <div className="col-span-6">
         <form.AppField name="name">

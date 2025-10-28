@@ -11,6 +11,8 @@ interface InspectorLayoutProps {
   footer?: ReactNode;
   children: ReactNode;
   "data-testid"?: string;
+  fixedHeight?: boolean;
+  showBackButton?: boolean;
 }
 
 /**
@@ -25,17 +27,35 @@ export function InspectorLayout({
   footer,
   children,
   "data-testid": dataTestId,
+  fixedHeight = false,
+  showBackButton = false,
 }: InspectorLayoutProps) {
   return (
     <div
       className="pointer-events-auto w-screen max-w-md h-full flex items-start justify-end p-6"
       data-testid={dataTestId}
     >
-      <div className="relative flex max-h-full flex-col bg-white shadow-sm rounded-lg w-full">
+      <div
+        className={`relative flex flex-col bg-white shadow-sm rounded-lg w-full ${
+          fixedHeight ? "h-[600px]" : "max-h-full"
+        }`}
+      >
         {/* Header */}
-        <div className="px-6 py-6 border-b border-gray-200">
-          <div className="flex items-start justify-between">
-            <h2 className="text-base font-semibold text-gray-900">{title}</h2>
+        <div className="px-6 py-4 border-b border-gray-200">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              {showBackButton && (
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="flex items-center justify-center hover:text-gray-500 cursor-pointer text-gray-900"
+                >
+                  <span className="hero-arrow-left h-4 w-4 inline-block" />
+                  <span className="sr-only">Back</span>
+                </button>
+              )}
+              <h2 className="text-base font-semibold text-gray-900">{title}</h2>
+            </div>
             <div className="ml-3 flex h-7 items-center">
               <button
                 type="button"
@@ -58,11 +78,11 @@ export function InspectorLayout({
         </div>
 
         {/* Scrollable content */}
-        <div className="flex-1 overflow-y-auto px-6 py-6">{children}</div>
+        <div className="flex-1 overflow-y-auto">{children}</div>
 
         {/* Footer - only render if provided */}
         {footer && (
-          <div className="shrink-0 px-6 py-6 border-t border-gray-200">
+          <div className="shrink-0 px-6 py-4 border-t border-gray-200">
             {footer}
           </div>
         )}

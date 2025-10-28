@@ -24,6 +24,7 @@ export const AppConfigSchema = z.object({
 
 export const PermissionsSchema = z.object({
   can_edit_workflow: z.boolean(),
+  can_run_workflow: z.boolean(),
 });
 
 export type Permissions = z.infer<typeof PermissionsSchema>;

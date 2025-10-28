@@ -4,7 +4,7 @@ import { useURLState } from "#/react/lib/use-url-state";
 
 import { useJobDeleteValidation } from "../../hooks/useJobDeleteValidation";
 import { usePermissions } from "../../hooks/useSessionContext";
-import { useWorkflowActions, useCanRun } from "../../hooks/useWorkflow";
+import { useWorkflowActions, useCanSave } from "../../hooks/useWorkflow";
 import { notifications } from "../../lib/notifications";
 import type { Workflow } from "../../types/workflow";
 import { AlertDialog } from "../AlertDialog";
@@ -63,24 +63,19 @@ export function JobInspector({
     }
   }, [job.id, removeJobAndClearSelection]);
 
-  const { canRun, tooltipMessage: runTooltipMessage } = useCanRun();
+  const { canSave, tooltipMessage: saveTooltipMessage } = useCanSave();
 
-  // Build footer with run, edit, and delete buttons (only if permission)
+  // Determine delete button state
+  const canDelete = canSave && validation.canDelete && !isDeleting;
+  const deleteTooltipMessage = !canSave
+    ? saveTooltipMessage
+    : validation.disableReason || "Delete this job";
+
+  // Build footer with edit, run, and delete buttons (only if permission)
   const footer = permissions?.can_edit_workflow ? (
     <InspectorFooter
       leftButtons={
         <>
-          <Tooltip content={runTooltipMessage} side="top">
-            <span className="inline-block">
-              <Button
-                variant="secondary"
-                onClick={() => onOpenRunPanel({ jobId: job.id })}
-                disabled={!canRun}
-              >
-                Run
-              </Button>
-            </span>
-          </Tooltip>
           <Tooltip
             content={
               isIDEOpen ? "IDE is already open" : "Open full-screen code editor"
@@ -93,23 +88,25 @@ export function JobInspector({
                 onClick={() => updateSearchParams({ editor: "open" })}
                 disabled={isIDEOpen}
               >
-                <span
-                  className="hero-code-bracket size-4 inline-block mr-1"
-                  aria-hidden="true"
-                />
                 Edit
               </Button>
             </span>
           </Tooltip>
+          <Button
+            variant="primary"
+            onClick={() => onOpenRunPanel({ jobId: job.id })}
+          >
+            Run
+          </Button>
         </>
       }
       rightButtons={
-        <Tooltip content={validation.disableReason || "Delete this job"}>
+        <Tooltip content={deleteTooltipMessage}>
           <span className="inline-block">
             <Button
               variant="danger"
               onClick={() => setIsDeleteDialogOpen(true)}
-              disabled={!validation.canDelete || isDeleting}
+              disabled={!canDelete}
             >
               {isDeleting ? "Deleting..." : "Delete"}
             </Button>

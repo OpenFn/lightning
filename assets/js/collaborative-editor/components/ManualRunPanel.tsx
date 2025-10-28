@@ -464,9 +464,11 @@ export function ManualRunPanel({
     <InspectorLayout
       title={panelTitle}
       onClose={onClose}
+      fixedHeight={true}
+      showBackButton={true}
       footer={
         <InspectorFooter
-          leftButtons={
+          rightButtons={
             <Button
               variant="primary"
               onClick={handleRun}

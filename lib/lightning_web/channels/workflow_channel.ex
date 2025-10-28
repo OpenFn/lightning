@@ -489,8 +489,17 @@ defmodule LightningWeb.WorkflowChannel do
         project_user
       )
 
+    can_run =
+      Permissions.can?(
+        :project_users,
+        :run_workflow,
+        user,
+        project_user
+      )
+
     %{
-      can_edit_workflow: can_edit
+      can_edit_workflow: can_edit,
+      can_run_workflow: can_run
     }
   end
 
