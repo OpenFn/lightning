@@ -105,7 +105,7 @@ export function AdaptorSelectionModal({
             transition-all data-closed:translate-y-4
             data-closed:opacity-0 data-enter:duration-300
             data-enter:ease-out data-leave:duration-200
-            data-leave:ease-in sm:my-8 sm:w-full sm:max-w-2xl
+            data-leave:ease-in sm:my-8 sm:w-full sm:max-w-lg
             sm:p-6"
           >
             <div className="flex items-start gap-3">
