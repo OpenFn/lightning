@@ -21,7 +21,14 @@ interface AdaptorSelectionModalProps {
 
 function extractAdaptorName(str: string): string | null {
   const match = str.match(/language-(.+?)(@|$)/);
-  return match?.[1] ?? null;
+  const name = match?.[1] ?? null;
+  if (!name) return null;
+
+  // Convert to title case (capitalize first letter of each word)
+  return name
+    .split(/[-_]/)
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(" ");
 }
 
 export function AdaptorSelectionModal({
