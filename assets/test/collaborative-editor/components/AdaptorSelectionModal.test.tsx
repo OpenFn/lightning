@@ -125,9 +125,8 @@ describe("AdaptorSelectionModal", () => {
         />
       );
 
-      expect(screen.getByText("Select Adaptor")).toBeInTheDocument();
       expect(
-        screen.getByPlaceholderText("Search adaptors...")
+        screen.getByPlaceholderText("Search for an adaptor to connect...")
       ).toBeInTheDocument();
     });
 
@@ -140,7 +139,9 @@ describe("AdaptorSelectionModal", () => {
         />
       );
 
-      expect(screen.queryByText("Select Adaptor")).not.toBeInTheDocument();
+      expect(
+        screen.queryByPlaceholderText("Search for an adaptor to connect...")
+      ).not.toBeInTheDocument();
     });
   });
 
@@ -155,7 +156,7 @@ describe("AdaptorSelectionModal", () => {
         />
       );
 
-      expect(screen.getByText("Project Adaptors")).toBeInTheDocument();
+      expect(screen.getByText("Adaptors in this project")).toBeInTheDocument();
       // Use getAllByText since adaptors appear in both sections
       expect(screen.getAllByText("http").length).toBeGreaterThan(0);
       expect(screen.getAllByText("salesforce").length).toBeGreaterThan(0);
@@ -171,12 +172,12 @@ describe("AdaptorSelectionModal", () => {
         />
       );
 
-      expect(screen.getByText("All Adaptors")).toBeInTheDocument();
+      expect(screen.getByText("All adaptors")).toBeInTheDocument();
       expect(screen.getByText("dhis2")).toBeInTheDocument();
       expect(screen.getByText("common")).toBeInTheDocument();
     });
 
-    it("shows 'Available Adaptors' when no project adaptors", () => {
+    it("shows 'Available adaptors' when no project adaptors", () => {
       renderWithProviders(
         <AdaptorSelectionModal
           isOpen={true}
@@ -186,8 +187,10 @@ describe("AdaptorSelectionModal", () => {
         />
       );
 
-      expect(screen.queryByText("Project Adaptors")).not.toBeInTheDocument();
-      expect(screen.getByText("Available Adaptors")).toBeInTheDocument();
+      expect(
+        screen.queryByText("Adaptors in this project")
+      ).not.toBeInTheDocument();
+      expect(screen.getByText("Available adaptors")).toBeInTheDocument();
     });
 
     it("displays adaptor version in description", () => {
@@ -217,7 +220,9 @@ describe("AdaptorSelectionModal", () => {
         />
       );
 
-      const searchInput = screen.getByPlaceholderText("Search adaptors...");
+      const searchInput = screen.getByPlaceholderText(
+        "Search for an adaptor to connect..."
+      );
       fireEvent.change(searchInput, { target: { value: "dhis" } });
 
       await waitFor(() => {
@@ -238,7 +243,9 @@ describe("AdaptorSelectionModal", () => {
         />
       );
 
-      const searchInput = screen.getByPlaceholderText("Search adaptors...");
+      const searchInput = screen.getByPlaceholderText(
+        "Search for an adaptor to connect..."
+      );
       fireEvent.change(searchInput, { target: { value: "DHIS" } });
 
       await waitFor(() => {
@@ -256,7 +263,9 @@ describe("AdaptorSelectionModal", () => {
         />
       );
 
-      const searchInput = screen.getByPlaceholderText("Search adaptors...");
+      const searchInput = screen.getByPlaceholderText(
+        "Search for an adaptor to connect..."
+      );
       fireEvent.change(searchInput, { target: { value: "nonexistent" } });
 
       await waitFor(() => {
@@ -285,7 +294,9 @@ describe("AdaptorSelectionModal", () => {
       const { rerender } = render(<TestWrapper isOpen={true} />);
 
       // Search for something specific that filters out most adaptors
-      const searchInput = screen.getByPlaceholderText("Search adaptors...");
+      const searchInput = screen.getByPlaceholderText(
+        "Search for an adaptor to connect..."
+      );
       fireEvent.change(searchInput, { target: { value: "dhis" } });
 
       await waitFor(() => {
@@ -309,8 +320,8 @@ describe("AdaptorSelectionModal", () => {
     });
   });
 
-  describe("adaptor selection", () => {
-    it("selects adaptor when clicked", () => {
+  describe("immediate selection", () => {
+    it("calls onSelect and onClose when adaptor clicked", () => {
       renderWithProviders(
         <AdaptorSelectionModal
           isOpen={true}
@@ -325,12 +336,12 @@ describe("AdaptorSelectionModal", () => {
       const httpRow = httpRows[0].closest("button");
       fireEvent.click(httpRow!);
 
-      // Continue button should be enabled
-      const continueButton = screen.getByText("Continue");
-      expect(continueButton).not.toBeDisabled();
+      // Should immediately call onSelect and onClose
+      expect(onSelect).toHaveBeenCalledWith("@openfn/language-http");
+      expect(onClose).toHaveBeenCalled();
     });
 
-    it("changes selection when different adaptor clicked", () => {
+    it("calls onSelect with correct adaptor name for different adaptors", () => {
       renderWithProviders(
         <AdaptorSelectionModal
           isOpen={true}
@@ -340,181 +351,13 @@ describe("AdaptorSelectionModal", () => {
         />
       );
 
-      // Click first adaptor - use getAllByText for duplicates
-      const httpRows = screen.getAllByText("http");
-      const httpRow = httpRows[0].closest("button");
-      fireEvent.click(httpRow!);
-
-      // Click second adaptor
+      // Click salesforce adaptor
       const salesforceRows = screen.getAllByText("salesforce");
       const salesforceRow = salesforceRows[0].closest("button");
       fireEvent.click(salesforceRow!);
 
-      // Both clicks should work (selection state is internal)
-      const continueButton = screen.getByText("Continue");
-      expect(continueButton).not.toBeDisabled();
-    });
-
-    it("disables Continue button when no selection", () => {
-      renderWithProviders(
-        <AdaptorSelectionModal
-          isOpen={true}
-          onClose={onClose}
-          onSelect={onSelect}
-          projectAdaptors={mockProjectAdaptors}
-        />
-      );
-
-      const continueButton = screen.getByText("Continue");
-      expect(continueButton).toBeDisabled();
-    });
-  });
-
-  describe("modal actions", () => {
-    it("calls onSelect and onClose when Continue clicked with selection", () => {
-      renderWithProviders(
-        <AdaptorSelectionModal
-          isOpen={true}
-          onClose={onClose}
-          onSelect={onSelect}
-          projectAdaptors={mockProjectAdaptors}
-        />
-      );
-
-      // Select adaptor - use getAllByText for duplicates
-      const httpRows = screen.getAllByText("http");
-      const httpRow = httpRows[0].closest("button");
-      fireEvent.click(httpRow!);
-
-      // Click Continue
-      const continueButton = screen.getByText("Continue");
-      fireEvent.click(continueButton);
-
-      expect(onSelect).toHaveBeenCalledWith("@openfn/language-http");
+      expect(onSelect).toHaveBeenCalledWith("@openfn/language-salesforce");
       expect(onClose).toHaveBeenCalled();
-    });
-
-    it("calls onClose when Cancel clicked", () => {
-      renderWithProviders(
-        <AdaptorSelectionModal
-          isOpen={true}
-          onClose={onClose}
-          onSelect={onSelect}
-          projectAdaptors={mockProjectAdaptors}
-        />
-      );
-
-      const cancelButton = screen.getByText("Cancel");
-      fireEvent.click(cancelButton);
-
-      expect(onClose).toHaveBeenCalled();
-      expect(onSelect).not.toHaveBeenCalled();
-    });
-
-    it("does not call onSelect when Continue clicked without selection", () => {
-      renderWithProviders(
-        <AdaptorSelectionModal
-          isOpen={true}
-          onClose={onClose}
-          onSelect={onSelect}
-          projectAdaptors={mockProjectAdaptors}
-        />
-      );
-
-      // Try to click Continue without selecting (button is disabled)
-      const continueButton = screen.getByText("Continue");
-      fireEvent.click(continueButton);
-
-      // onSelect should not be called because button is disabled
-      expect(onSelect).not.toHaveBeenCalled();
-    });
-  });
-
-  describe("keyboard navigation", () => {
-    it("confirms selection with Enter key when adaptor selected", () => {
-      renderWithProviders(
-        <AdaptorSelectionModal
-          isOpen={true}
-          onClose={onClose}
-          onSelect={onSelect}
-          projectAdaptors={mockProjectAdaptors}
-        />
-      );
-
-      // Select adaptor - use getAllByText for duplicates
-      const httpRows = screen.getAllByText("http");
-      const httpRow = httpRows[0].closest("button");
-      fireEvent.click(httpRow!);
-
-      // Find the dialog panel by text content and fire keyDown on it
-      const dialogTitle = screen.getByText("Select Adaptor");
-      const dialogPanel = dialogTitle.closest("[data-headlessui-state]");
-
-      if (dialogPanel) {
-        fireEvent.keyDown(dialogPanel, { key: "Enter", code: "Enter" });
-      }
-
-      expect(onSelect).toHaveBeenCalledWith("@openfn/language-http");
-      expect(onClose).toHaveBeenCalled();
-    });
-
-    it("does not confirm with Enter when no selection", () => {
-      const { container } = renderWithProviders(
-        <AdaptorSelectionModal
-          isOpen={true}
-          onClose={onClose}
-          onSelect={onSelect}
-          projectAdaptors={mockProjectAdaptors}
-        />
-      );
-
-      // Press Enter without selecting
-      const dialogPanel = container.querySelector('[role="dialog"]');
-      if (dialogPanel) {
-        fireEvent.keyDown(dialogPanel, { key: "Enter" });
-      }
-
-      expect(onSelect).not.toHaveBeenCalled();
-    });
-  });
-
-  describe("state reset", () => {
-    it("resets selection when modal closes", async () => {
-      const mockContext = createMockStoreContext();
-
-      const TestWrapper = ({ isOpen }: { isOpen: boolean }) => (
-        <HotkeysProvider>
-          <StoreContext.Provider value={mockContext as any}>
-            <AdaptorSelectionModal
-              isOpen={isOpen}
-              onClose={onClose}
-              onSelect={onSelect}
-              projectAdaptors={mockProjectAdaptors}
-            />
-          </StoreContext.Provider>
-        </HotkeysProvider>
-      );
-
-      const { rerender } = render(<TestWrapper isOpen={true} />);
-
-      // Select adaptor - use getAllByText for duplicates
-      const httpRows = screen.getAllByText("http");
-      const httpRow = httpRows[0].closest("button");
-      fireEvent.click(httpRow!);
-
-      // Continue button enabled
-      expect(screen.getByText("Continue")).not.toBeDisabled();
-
-      // Close modal
-      rerender(<TestWrapper isOpen={false} />);
-
-      // Reopen modal
-      rerender(<TestWrapper isOpen={true} />);
-
-      // Continue button should be disabled (no selection)
-      await waitFor(() => {
-        expect(screen.getByText("Continue")).toBeDisabled();
-      });
     });
   });
 });
