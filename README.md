@@ -373,18 +373,17 @@ See [Benchmarking](benchmarking/README.md) for more detailed information.
 
 ### Switching branches during development
 
-When switching between branches, especially those with different frontend
-dependencies, you may need to reinstall npm packages:
+Branches can have different dependencies. Run the bootstrap script to sync
+everything:
 
 ```sh
-npm install --prefix ./assets
+./bin/bootstrap
 ```
 
-**Important:** Remove any files that appear as a consequence of running this
-command. Do not commit these generated files.
+This handles Elixir dependencies, npm packages, native libraries, and database
+migrations.
 
-After reinstalling dependencies, restart your development server to ensure
-changes take effect.
+If the server was running, restart it after bootstrap completes.
 
 ### Problems with environment variables
 
