@@ -39,6 +39,7 @@ interface ManualRunPanelProps {
     saved_at?: string;
     lock_version?: number;
   } | null>;
+  onRunSubmitted?: (runId: string) => void;
 }
 
 type TabValue = "empty" | "custom" | "existing";
@@ -53,6 +54,7 @@ export function ManualRunPanel({
   renderMode = "standalone",
   onRunStateChange,
   saveWorkflow,
+  onRunSubmitted,
 }: ManualRunPanelProps) {
   const [selectedTab, setSelectedTab] = useState<TabValue>("empty");
   const [selectedDataclip, setSelectedDataclip] = useState<Dataclip | null>(
@@ -314,8 +316,13 @@ export function ManualRunPanel({
 
       const response = await dataclipApi.submitManualRun(params);
 
-      // Navigate to run page
-      window.location.href = `/projects/${projectId}/runs/${response.data.run_id}`;
+      // Step 5: Invoke callback with run_id (stay in IDE, don't navigate)
+      if (onRunSubmitted) {
+        onRunSubmitted(response.data.run_id);
+      } else {
+        // Fallback: navigate away if no callback (for standalone mode)
+        window.location.href = `/projects/${projectId}/runs/${response.data.run_id}`;
+      }
     } catch (error) {
       console.error("Failed to submit run:", error);
       alert(error instanceof Error ? error.message : "Failed to submit run");

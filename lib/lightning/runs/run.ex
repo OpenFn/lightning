@@ -8,6 +8,24 @@ defmodule Lightning.Run do
 
   import Lightning.Validators
 
+  @derive {Jason.Encoder,
+           only: [
+             :id,
+             :work_order_id,
+             :starting_job_id,
+             :starting_trigger_id,
+             :created_by_id,
+             :state,
+             :started_at,
+             :finished_at,
+             :priority,
+             :error_type,
+             :created_by,
+             :starting_trigger,
+             :steps,
+             :work_order
+           ]}
+
   alias Lightning.Accounts.User
   alias Lightning.Invocation.LogLine
   alias Lightning.Invocation.Step
