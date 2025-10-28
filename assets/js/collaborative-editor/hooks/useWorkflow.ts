@@ -420,12 +420,6 @@ export const useWorkflowActions = () => {
                 error instanceof Error
                   ? error.message
                   : "Please fix the errors and try again",
-              action: {
-                label: "Retry",
-                onClick: () => {
-                  void retrySaveWorkflow();
-                },
-              },
             });
           } else {
             notifications.alert({
