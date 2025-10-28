@@ -57,8 +57,8 @@ export namespace Workflow {
 
   export interface Edge {
     id: string;
-    source_job_id?: string;
-    source_trigger_id?: string;
+    source_job_id?: string | null;
+    source_trigger_id?: string | null;
     target_job_id: string;
     condition?: string;
     condition_type?: string;

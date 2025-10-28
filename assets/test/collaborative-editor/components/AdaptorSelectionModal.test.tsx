@@ -5,11 +5,11 @@
  * when creating new job nodes in the workflow canvas.
  */
 
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { HotkeysProvider } from "react-hotkeys-hook";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { AdaptorSelectionModal } from "../../../js/collaborative-editor/components/AdaptorSelectionModal";
 import { StoreContext } from "../../../js/collaborative-editor/contexts/StoreProvider";
-import { HotkeysProvider } from "react-hotkeys-hook";
 import type { Adaptor } from "../../../js/collaborative-editor/types/adaptor";
 
 // Mock useAdaptorIcons to avoid fetching icon manifest
@@ -22,12 +22,14 @@ const mockProjectAdaptors: Adaptor[] = [
   {
     name: "@openfn/language-http",
     latest: "1.0.0",
-    versions: ["1.0.0", "0.9.0"],
+    versions: [{ version: "1.0.0" }, { version: "0.9.0" }],
+    repo: "git+https://github.com/openfn/adaptors.git",
   },
   {
     name: "@openfn/language-salesforce",
     latest: "2.1.0",
-    versions: ["2.1.0", "2.0.0"],
+    versions: [{ version: "2.1.0" }, { version: "2.0.0" }],
+    repo: "git+https://github.com/openfn/adaptors.git",
   },
 ];
 
@@ -36,12 +38,14 @@ const mockAllAdaptors: Adaptor[] = [
   {
     name: "@openfn/language-dhis2",
     latest: "3.2.1",
-    versions: ["3.2.1", "3.2.0"],
+    versions: [{ version: "3.2.1" }, { version: "3.2.0" }],
+    repo: "git+https://github.com/openfn/adaptors.git",
   },
   {
     name: "@openfn/language-common",
     latest: "2.0.0",
-    versions: ["2.0.0", "1.9.0"],
+    versions: [{ version: "2.0.0" }, { version: "1.9.0" }],
+    repo: "git+https://github.com/openfn/adaptors.git",
   },
 ];
 
@@ -334,8 +338,8 @@ describe("AdaptorSelectionModal", () => {
       const httpRow = httpRows[0].closest("button");
       fireEvent.click(httpRow!);
 
-      // Should immediately call onSelect and onClose
-      expect(onSelect).toHaveBeenCalledWith("@openfn/language-http");
+      // Should immediately call onSelect with full adaptor spec and onClose
+      expect(onSelect).toHaveBeenCalledWith("@openfn/language-http@1.0.0");
       expect(onClose).toHaveBeenCalled();
     });
 
@@ -354,7 +358,9 @@ describe("AdaptorSelectionModal", () => {
       const salesforceRow = salesforceRows[0].closest("button");
       fireEvent.click(salesforceRow!);
 
-      expect(onSelect).toHaveBeenCalledWith("@openfn/language-salesforce");
+      expect(onSelect).toHaveBeenCalledWith(
+        "@openfn/language-salesforce@2.1.0"
+      );
       expect(onClose).toHaveBeenCalled();
     });
   });

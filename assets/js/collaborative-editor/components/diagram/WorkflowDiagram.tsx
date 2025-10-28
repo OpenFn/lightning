@@ -42,6 +42,8 @@ import {
 import { AdaptorSelectionModal } from "../AdaptorSelectionModal";
 
 import { useInspectorOverlap } from "./useInspectorOverlap";
+import { getAdaptorDisplayName } from "#/collaborative-editor/utils/adaptorUtils";
+import type { Workflow } from "#/collaborative-editor/types/workflow";
 
 type WorkflowDiagramProps = {
   el?: HTMLElement | null;
@@ -649,28 +651,26 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
   );
 
   const handleAdaptorSelect = useCallback(
-    (adaptorName: string, adaptorVersion?: string) => {
+    (adaptorSpec: string) => {
       if (!pendingPlaceholder) return;
 
       const { sourceNode, position } = pendingPlaceholder;
 
-      // Extract adaptor display name (e.g., "salesforce" from "@openfn/language-salesforce")
-      const adaptorDisplayName =
-        adaptorName.match(/language-(.+?)(@|$)/)?.[1] || adaptorName;
+      // Extract adaptor display name (e.g., "salesforce" from "@openfn/language-salesforce@2.0.0")
+      const adaptorDisplayName = getAdaptorDisplayName(adaptorSpec, {
+        titleCase: true,
+        fallback: "Unknown",
+      });
 
       // Generate job ID
       const jobId = randomUUID();
-
-      // Use provided version or default to "latest"
-      const version = adaptorVersion || "latest";
-      const fullAdaptor = `${adaptorName}@${version}`;
 
       // Create job directly in Y.Doc (this will trigger animation)
       const newJob = {
         id: jobId,
         name: adaptorDisplayName,
         body: "",
-        adaptor: fullAdaptor,
+        adaptor: adaptorSpec,
       };
 
       workflowStore.addJob(newJob);
@@ -681,7 +681,7 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
 
       // Create edge connecting source to new job
       const sourceIsJob = jobs.some(j => j.id === sourceNode.id);
-      const newEdge: Record<string, any> = {
+      const newEdge: Workflow.Edge = {
         id: randomUUID(),
         target_job_id: jobId,
         condition_type: "on_job_success",
@@ -689,11 +689,11 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
       };
 
       if (sourceIsJob) {
-        newEdge["source_job_id"] = sourceNode.id;
-        newEdge["source_trigger_id"] = null;
+        newEdge.source_job_id = sourceNode.id;
+        newEdge.source_trigger_id = null;
       } else {
-        newEdge["source_job_id"] = null;
-        newEdge["source_trigger_id"] = sourceNode.id;
+        newEdge.source_job_id = null;
+        newEdge.source_trigger_id = sourceNode.id;
       }
 
       workflowStore.addEdge(newEdge);
