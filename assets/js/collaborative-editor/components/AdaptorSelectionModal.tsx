@@ -123,6 +123,19 @@ export function AdaptorSelectionModal({
                   placeholder="Search for an adaptor to connect..."
                   onSearch={setSearchQuery}
                 >
+                  {!hasResults && searchQuery && (
+                    <div className="mb-4 px-3 py-4 bg-blue-50 rounded-lg border border-blue-100">
+                      <p className="text-sm text-gray-700 mb-1">
+                        <span className="font-medium">No adaptor found</span>{" "}
+                        for "{searchQuery}"
+                      </p>
+                      <p className="text-sm text-gray-600">
+                        Try the HTTP adaptor below to connect to any system with
+                        a REST API.
+                      </p>
+                    </div>
+                  )}
+
                   {filteredProjectAdaptors.length > 0 && (
                     <ListSection title="Adaptors in this project">
                       {filteredProjectAdaptors.map(adaptor => (
