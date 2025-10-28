@@ -23,7 +23,6 @@ export function ListRow({
         w-full text-left px-3 py-2 rounded-md
         hover:bg-gray-100 focus:outline-none focus:bg-gray-100
         flex items-center gap-3 transition-colors
-        ${selected ? "bg-primary-50 ring-2 ring-primary-500" : ""}
       `}
     >
       {icon && <div className="shrink-0">{icon}</div>}
