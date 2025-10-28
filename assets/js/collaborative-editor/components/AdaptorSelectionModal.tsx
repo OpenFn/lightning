@@ -113,12 +113,12 @@ export function AdaptorSelectionModal({
               type="button"
               onClick={onClose}
               className="absolute right-4 top-4 text-gray-400
-              hover:text-gray-500 focus:outline-none"
+              hover:text-gray-500 focus:outline-none z-10"
             >
               <span className="hero-x-mark h-6 w-6" aria-hidden="true" />
             </button>
 
-            <div>
+            <div className="pr-8">
               <SearchableList
                 placeholder="Search for an adaptor to connect..."
                 onSearch={setSearchQuery}
