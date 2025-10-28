@@ -1,10 +1,14 @@
-import React, { useEffect, useRef, useState } from "react";
+import type React from "react";
+import { useEffect, useRef, useState } from "react";
 
 interface SearchableListProps {
   placeholder?: string;
   children: React.ReactNode;
-  onSearch?: (query: string) => void;
+  onSearch: (query: string) => void;
   autoFocus?: boolean;
+  onKeyDown?: (e: React.KeyboardEvent<HTMLInputElement>) => void;
+  listboxId?: string;
+  activeDescendantId?: string;
 }
 
 export function SearchableList({
@@ -12,6 +16,9 @@ export function SearchableList({
   children,
   onSearch,
   autoFocus = true,
+  onKeyDown,
+  listboxId = "searchable-listbox",
+  activeDescendantId,
 }: SearchableListProps) {
   const [query, setQuery] = useState("");
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -26,12 +33,12 @@ export function SearchableList({
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newQuery = e.target.value;
     setQuery(newQuery);
-    onSearch?.(newQuery);
+    onSearch(newQuery);
   };
 
   const handleClear = () => {
     setQuery("");
-    onSearch?.("");
+    onSearch("");
     searchInputRef.current?.focus();
   };
 
@@ -44,7 +51,13 @@ export function SearchableList({
           type="text"
           value={query}
           onChange={handleChange}
+          onKeyDown={onKeyDown}
           placeholder={placeholder}
+          role="combobox"
+          aria-expanded="true"
+          aria-controls={listboxId}
+          aria-activedescendant={activeDescendantId}
+          aria-autocomplete="list"
           className="block w-full rounded-md border-secondary-300
             pl-10 pr-10 shadow-xs sm:text-sm
             focus:border-primary-300 focus:ring
@@ -72,7 +85,14 @@ export function SearchableList({
       </div>
 
       {/* Results */}
-      <div className="max-h-96 overflow-y-auto">{children}</div>
+      <div
+        id={listboxId}
+        role="listbox"
+        aria-label="Adaptor options"
+        className="max-h-96 overflow-y-auto"
+      >
+        {children}
+      </div>
     </div>
   );
 }

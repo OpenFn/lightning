@@ -1,4 +1,5 @@
-import React from "react";
+import type React from "react";
+import { useEffect, useRef } from "react";
 
 interface ListRowProps {
   icon?: React.ReactNode;
@@ -6,6 +7,8 @@ interface ListRowProps {
   description?: string;
   onClick?: () => void;
   selected?: boolean;
+  focused?: boolean;
+  id?: string;
 }
 
 export function ListRow({
@@ -14,15 +17,35 @@ export function ListRow({
   description,
   onClick,
   selected = false,
+  focused = false,
+  id,
 }: ListRowProps) {
+  const buttonRef = useRef<HTMLButtonElement>(null);
+
+  // Scroll focused item into view
+  useEffect(() => {
+    if (focused && buttonRef.current) {
+      buttonRef.current.scrollIntoView({
+        block: "nearest",
+        behavior: "smooth",
+      });
+    }
+  }, [focused]);
+
   return (
     <button
+      ref={buttonRef}
       type="button"
       onClick={onClick}
+      id={id}
+      role="option"
+      aria-label={`Select ${title} adaptor`}
+      aria-selected={focused || selected}
       className={`
         w-full text-left px-3 py-2 rounded-md
-        hover:bg-gray-100 focus:outline-none focus:bg-gray-100
+        hover:bg-gray-100 focus:outline-none
         flex items-center gap-3 transition-colors
+        ${focused ? "bg-gray-100" : ""}
       `}
     >
       {icon && <div className="shrink-0">{icon}</div>}

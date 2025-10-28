@@ -1,35 +1,23 @@
-import {
-  Dialog,
-  DialogBackdrop,
-  DialogPanel,
-  DialogTitle,
-} from "@headlessui/react";
-import React, { useEffect, useState } from "react";
+import { Dialog, DialogBackdrop, DialogPanel } from "@headlessui/react";
+import { useEffect, useMemo, useState } from "react";
 import { useHotkeysContext } from "react-hotkeys-hook";
 
 import { useAdaptors } from "../hooks/useAdaptors";
 import type { Adaptor } from "../types/adaptor";
+import { getAdaptorDisplayName } from "../utils/adaptorUtils";
 
 import { AdaptorIcon } from "./AdaptorIcon";
-import { SearchableList, ListSection, ListRow } from "./SearchableList";
+import { ListRow, ListSection, SearchableList } from "./SearchableList";
 
 interface AdaptorSelectionModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSelect: (adaptorName: string) => void;
+  onSelect: (adaptorSpec: string) => void;
   projectAdaptors?: Adaptor[];
 }
 
-function extractAdaptorName(str: string): string | null {
-  const match = str.match(/language-(.+?)(@|$)/);
-  const name = match?.[1] ?? null;
-  if (!name) return null;
-
-  // Convert to title case (capitalize first letter of each word)
-  return name
-    .split(/[-_]/)
-    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-    .join(" ");
+interface AdaptorWithDisplayName extends Adaptor {
+  displayName: string;
 }
 
 export function AdaptorSelectionModal({
@@ -40,6 +28,7 @@ export function AdaptorSelectionModal({
 }: AdaptorSelectionModalProps) {
   const allAdaptors = useAdaptors();
   const [searchQuery, setSearchQuery] = useState("");
+  const [focusedIndex, setFocusedIndex] = useState<number>(0);
 
   // Keyboard scope management
   const { enableScope, disableScope } = useHotkeysContext();
@@ -62,45 +51,149 @@ export function AdaptorSelectionModal({
   useEffect(() => {
     if (!isOpen) {
       setSearchQuery("");
+      setFocusedIndex(0);
     }
   }, [isOpen]);
 
-  // Filter adaptors based on search query
-  const filterAdaptors = (adaptors: Adaptor[]) => {
-    if (!searchQuery) return adaptors;
+  // Reset focused index when search query changes
+  useEffect(() => {
+    setFocusedIndex(0);
+  }, [searchQuery]);
 
-    const lowerQuery = searchQuery.toLowerCase();
-    return adaptors.filter(adaptor => {
-      const displayName = extractAdaptorName(adaptor.name) || "";
-      // Only match against the adaptor name, not the @openfn/ prefix
-      return displayName.toLowerCase().includes(lowerQuery);
-    });
-  };
-
-  const filteredProjectAdaptors = filterAdaptors(projectAdaptors);
-
-  // Filter out project adaptors from all adaptors to avoid duplicates
-  const projectAdaptorNames = new Set(filteredProjectAdaptors.map(a => a.name));
-  let filteredAllAdaptors = filterAdaptors(allAdaptors).filter(
-    adaptor => !projectAdaptorNames.has(adaptor.name)
+  const httpAdaptor = useMemo(
+    () => allAdaptors.find(a => a.name.includes("language-http")),
+    [allAdaptors]
   );
 
-  // Always ensure HTTP adaptor is available as fallback
-  const hasResults =
-    filteredProjectAdaptors.length > 0 || filteredAllAdaptors.length > 0;
+  const projectAdaptorsWithDisplayNames = useMemo<
+    AdaptorWithDisplayName[]
+  >(() => {
+    return projectAdaptors.map(adaptor => ({
+      ...adaptor,
+      displayName: getAdaptorDisplayName(adaptor.name, {
+        titleCase: true,
+        fallback: adaptor.name,
+      }),
+    }));
+  }, [projectAdaptors]);
 
-  if (!hasResults && searchQuery) {
-    // Show HTTP adaptor as fallback when no results
-    const httpAdaptor = allAdaptors.find(a => a.name.includes("language-http"));
-    if (httpAdaptor) {
-      filteredAllAdaptors = [httpAdaptor];
-    }
-  }
+  const allAdaptorsWithDisplayNames = useMemo<AdaptorWithDisplayName[]>(() => {
+    return allAdaptors.map(adaptor => ({
+      ...adaptor,
+      displayName: getAdaptorDisplayName(adaptor.name, {
+        titleCase: true,
+        fallback: adaptor.name,
+      }),
+    }));
+  }, [allAdaptors]);
 
-  const handleRowClick = (adaptorName: string) => {
+  // Memoize filtered results based on search query
+  const { filteredProjectAdaptors, filteredAllAdaptors, showingHttpFallback } =
+    useMemo(() => {
+      const lowerQuery = searchQuery.toLowerCase();
+
+      // Filter project adaptors
+      const filteredProject = searchQuery
+        ? projectAdaptorsWithDisplayNames.filter(adaptor =>
+            adaptor.displayName.toLowerCase().includes(lowerQuery)
+          )
+        : projectAdaptorsWithDisplayNames;
+
+      // Filter all adaptors and exclude duplicates from project adaptors
+      const projectAdaptorNames = new Set(filteredProject.map(a => a.name));
+      let filteredAll = allAdaptorsWithDisplayNames.filter(
+        adaptor => !projectAdaptorNames.has(adaptor.name)
+      );
+
+      if (searchQuery) {
+        filteredAll = filteredAll.filter(adaptor =>
+          adaptor.displayName.toLowerCase().includes(lowerQuery)
+        );
+      }
+
+      const hasMatchingResults =
+        filteredProject.length > 0 || filteredAll.length > 0;
+
+      // Show HTTP adaptor as fallback when no results
+      const showingFallback =
+        !hasMatchingResults && !!searchQuery && !!httpAdaptor;
+      if (showingFallback) {
+        const httpWithDisplay: AdaptorWithDisplayName = {
+          ...httpAdaptor,
+          displayName: getAdaptorDisplayName(httpAdaptor.name, {
+            titleCase: true,
+            fallback: httpAdaptor.name,
+          }),
+        };
+        filteredAll = [httpWithDisplay];
+      }
+
+      return {
+        filteredProjectAdaptors: filteredProject,
+        filteredAllAdaptors: filteredAll,
+        showingHttpFallback: showingFallback,
+      };
+    }, [
+      searchQuery,
+      projectAdaptorsWithDisplayNames,
+      allAdaptorsWithDisplayNames,
+      httpAdaptor,
+    ]);
+
+  // Create flat list of all visible adaptors for keyboard navigation
+  const allVisibleAdaptors = useMemo<AdaptorWithDisplayName[]>(() => {
+    return [...filteredProjectAdaptors, ...filteredAllAdaptors];
+  }, [filteredProjectAdaptors, filteredAllAdaptors]);
+
+  const handleRowClick = (adaptor: AdaptorWithDisplayName) => {
+    // Construct full adaptor spec with semantic version
+    const adaptorSpec = `${adaptor.name}@${adaptor.latest}`;
+
     // Immediately select and close (Figma design - no Continue button)
-    onSelect(adaptorName);
+    onSelect(adaptorSpec);
     onClose();
+  };
+
+  // Keyboard navigation handlers
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    const totalItems = allVisibleAdaptors.length;
+    if (totalItems === 0) return;
+
+    switch (e.key) {
+      case "ArrowDown":
+        e.preventDefault();
+        setFocusedIndex(prev => (prev + 1) % totalItems);
+        break;
+      case "ArrowUp":
+        e.preventDefault();
+        setFocusedIndex(prev => (prev - 1 + totalItems) % totalItems);
+        break;
+      case "Enter": {
+        e.preventDefault();
+        const focusedAdaptor = allVisibleAdaptors[focusedIndex];
+        handleRowClick(focusedAdaptor);
+        break;
+      }
+    }
+  };
+
+  // Generate ID for focused item (for aria-activedescendant)
+  const activeDescendantId =
+    focusedIndex >= 0 && focusedIndex < allVisibleAdaptors.length
+      ? `adaptor-option-${allVisibleAdaptors[focusedIndex].name}`
+      : undefined;
+
+  // Helper to check if an adaptor is currently focused
+  const isAdaptorFocused = (
+    adaptor: AdaptorWithDisplayName,
+    sectionOffset: number
+  ) => {
+    const adaptorIndex =
+      sectionOffset +
+      (sectionOffset === 0
+        ? filteredProjectAdaptors.indexOf(adaptor)
+        : filteredAllAdaptors.indexOf(adaptor));
+    return adaptorIndex === focusedIndex;
   };
 
   return (
@@ -133,8 +226,11 @@ export function AdaptorSelectionModal({
                 <SearchableList
                   placeholder="Search for an adaptor to connect..."
                   onSearch={setSearchQuery}
+                  onKeyDown={handleKeyDown}
+                  listboxId="adaptor-listbox"
+                  {...(activeDescendantId && { activeDescendantId })}
                 >
-                  {!hasResults && searchQuery && (
+                  {showingHttpFallback && (
                     <div className="mb-4 px-3 py-4 bg-blue-50 rounded-lg border border-blue-100">
                       <p className="text-sm text-gray-700 mb-1">
                         <span className="font-medium">No adaptor found</span>{" "}
@@ -152,12 +248,12 @@ export function AdaptorSelectionModal({
                       {filteredProjectAdaptors.map(adaptor => (
                         <ListRow
                           key={adaptor.name}
-                          title={
-                            extractAdaptorName(adaptor.name) || adaptor.name
-                          }
+                          id={`adaptor-option-${adaptor.name}`}
+                          title={adaptor.displayName}
                           description={`Latest: ${adaptor.latest}`}
                           icon={<AdaptorIcon name={adaptor.name} size="md" />}
-                          onClick={() => handleRowClick(adaptor.name)}
+                          onClick={() => handleRowClick(adaptor)}
+                          focused={isAdaptorFocused(adaptor, 0)}
                         />
                       ))}
                     </ListSection>
@@ -174,12 +270,15 @@ export function AdaptorSelectionModal({
                       {filteredAllAdaptors.map(adaptor => (
                         <ListRow
                           key={adaptor.name}
-                          title={
-                            extractAdaptorName(adaptor.name) || adaptor.name
-                          }
+                          id={`adaptor-option-${adaptor.name}`}
+                          title={adaptor.displayName}
                           description={`Latest: ${adaptor.latest}`}
                           icon={<AdaptorIcon name={adaptor.name} size="sm" />}
-                          onClick={() => handleRowClick(adaptor.name)}
+                          onClick={() => handleRowClick(adaptor)}
+                          focused={isAdaptorFocused(
+                            adaptor,
+                            filteredProjectAdaptors.length
+                          )}
                         />
                       ))}
                     </ListSection>
