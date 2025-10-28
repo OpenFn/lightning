@@ -17,6 +17,11 @@ and this project adheres to
 
 ### Added
 
+- Sync workflow concurrency and enable_job_logs settings in collaborative
+  editor - allows users to configure max concurrency and console.log() usage
+  with real-time collaborative editing support
+  [#3798](https://github.com/OpenFn/lightning/issues/3798) and
+  [#3799](https://github.com/OpenFn/lightning/issues/3799)
 - Show validation error message when creating sandbox with duplicate name
   [#3776](https://github.com/OpenFn/lightning/issues/3776)
 - Divergence warning when merging sandboxes - displays alert if target branch
