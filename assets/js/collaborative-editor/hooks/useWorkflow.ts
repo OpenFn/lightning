@@ -413,6 +413,20 @@ export const useWorkflowActions = () => {
                   ? error.message
                   : "You no longer have permission to edit this workflow. Your role may have changed.",
             });
+          } else if (errorType === "validation_error") {
+            notifications.alert({
+              title: "Unable to save workflow",
+              description:
+                error instanceof Error
+                  ? error.message
+                  : "Please fix the errors and try again",
+              action: {
+                label: "Retry",
+                onClick: () => {
+                  void retrySaveWorkflow();
+                },
+              },
+            });
           } else {
             notifications.alert({
               title: "Failed to save workflow",
