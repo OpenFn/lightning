@@ -138,6 +138,10 @@ config :git_hooks,
     pre_commit: [
       tasks: [
         {:cmd,
+         "git diff --cached --name-only | grep -q '^\\.context' && " <>
+           "echo 'ERROR: Cannot commit .context directory (it is a symlink shared across branches)' && " <>
+           "exit 1 || exit 0"},
+        {:cmd,
          "FILES=$(git diff --cached --name-only --diff-filter=ACM | grep -E '\\.(ex|exs|heex)$' || true); " <>
            "if [ -n \"$FILES\" ]; then " <>
            "mix format $FILES && git add $FILES; " <>
