@@ -14,9 +14,9 @@ defmodule LightningWeb.WorkflowChannel do
   alias Lightning.Policies.Permissions
   alias Lightning.Projects.ProjectCredential
   alias Lightning.Repo
-  alias Lightning.WorkOrders
   alias Lightning.Workflows.Snapshot
   alias Lightning.Workflows.Workflow
+  alias Lightning.WorkOrders
 
   require Logger
 
