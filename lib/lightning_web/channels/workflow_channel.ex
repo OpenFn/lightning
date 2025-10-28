@@ -378,6 +378,9 @@ defmodule LightningWeb.WorkflowChannel do
             name: credential.name,
             external_id: credential.external_id,
             schema: credential.schema,
+            production_tag: credential.production_tag,
+            owner: render_owner(credential.user),
+            oauth_client_name: render_oauth_client_name(credential.oauth_client),
             inserted_at: credential.inserted_at,
             updated_at: credential.updated_at
           }
@@ -396,6 +399,19 @@ defmodule LightningWeb.WorkflowChannel do
         end)
     }
   end
+
+  defp render_owner(nil), do: nil
+
+  defp render_owner(user) do
+    %{
+      id: user.id,
+      name: "#{user.first_name} #{user.last_name}",
+      email: user.email
+    }
+  end
+
+  defp render_oauth_client_name(nil), do: nil
+  defp render_oauth_client_name(%{name: name}), do: name
 
   defp async_task(socket, event, task_fn) do
     channel_pid = self()

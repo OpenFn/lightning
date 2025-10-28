@@ -1,15 +1,24 @@
 import { useStore } from "@tanstack/react-form";
-import { useCallback, useEffect, useMemo } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { useAppForm } from "#/collaborative-editor/components/form";
-import { useAdaptors } from "#/collaborative-editor/hooks/useAdaptors";
+import {
+  useAdaptors,
+  useProjectAdaptors,
+} from "#/collaborative-editor/hooks/useAdaptors";
 import { useCredentials } from "#/collaborative-editor/hooks/useCredentials";
 import { useWorkflowActions } from "#/collaborative-editor/hooks/useWorkflow";
 import { useWatchFields } from "#/collaborative-editor/stores/common";
 import { JobSchema } from "#/collaborative-editor/types/job";
 import type { Workflow } from "#/collaborative-editor/types/workflow";
-import { extractAdaptorName } from "#/collaborative-editor/utils/adaptorUtils";
+import {
+  extractAdaptorDisplayName,
+  extractAdaptorName,
+} from "#/collaborative-editor/utils/adaptorUtils";
 
+import { ConfigureAdaptorModal } from "../ConfigureAdaptorModal";
+import { AdaptorSelectionModal } from "../AdaptorSelectionModal";
+import { AdaptorIcon } from "../AdaptorIcon";
 import { createZodValidator } from "../form/createZodValidator";
 
 interface JobFormProps {
@@ -85,7 +94,8 @@ function useAdaptorVersionOptions(adaptorPackage: string | null) {
   return { adaptorVersionOptions, adaptorPackageOptions, getLatestVersion };
 }
 
-const useCredentialOptions = () => {
+// COMMENTED OUT (Phase 2R): Moved to ConfigureAdaptorModal in Phase 3R
+/* const useCredentialOptions = () => {
   const { keychainCredentials, projectCredentials } = useCredentials();
 
   const credentialOptions = useMemo(() => {
@@ -133,7 +143,7 @@ const useCredentialOptions = () => {
     }),
     [credentialOptions, resolveCredentialId]
   );
-};
+}; */
 
 /**
  * Pure form component for job configuration.
@@ -142,7 +152,12 @@ const useCredentialOptions = () => {
  */
 export function JobForm({ job }: JobFormProps) {
   const { updateJob } = useWorkflowActions();
-  const { credentialOptions, resolveCredentialId } = useCredentialOptions();
+  const { projectCredentials, keychainCredentials } = useCredentials();
+  const { projectAdaptors, allAdaptors } = useProjectAdaptors();
+
+  // Modal state for adaptor configuration
+  const [isConfigureModalOpen, setIsConfigureModalOpen] = useState(false);
+  const [isAdaptorPickerOpen, setIsAdaptorPickerOpen] = useState(false);
 
   // Parse initial adaptor value
   const initialAdaptor = job.adaptor || "@openfn/language-common@latest";
@@ -211,7 +226,8 @@ export function JobForm({ job }: JobFormProps) {
     state => state.values.adaptor_package
   );
 
-  const { adaptorVersionOptions, adaptorPackageOptions, getLatestVersion } =
+  // COMMENTED OUT (Phase 2R): Version options moved to ConfigureAdaptorModal
+  const { /* adaptorVersionOptions, */ getLatestVersion } =
     useAdaptorVersionOptions(adaptorPackage);
 
   useEffect(() => {
@@ -223,65 +239,226 @@ export function JobForm({ job }: JobFormProps) {
     }
   }, [adaptorPackage, getLatestVersion, form, job.id, updateJob]);
 
+  // Get current adaptor display name
+  const adaptorDisplayName = useMemo(() => {
+    return extractAdaptorDisplayName(adaptorPackage || "");
+  }, [adaptorPackage]);
+
+  // Check if a credential is selected
+  const selectedCredentialId = useStore(
+    form.store,
+    state => state.values.credential_id
+  );
+  const hasCredential = !!selectedCredentialId;
+
+  // Handle opening adaptor picker from ConfigureAdaptorModal
+  const handleOpenAdaptorPicker = useCallback(() => {
+    setIsConfigureModalOpen(false);
+    setIsAdaptorPickerOpen(true);
+  }, []);
+
+  // Handle adaptor selection from picker
+  const handleAdaptorSelect = useCallback(
+    (adaptorName: string) => {
+      // Update the adaptor package in form
+      const packageMatch = adaptorName.match(/(.+?)(@|$)/);
+      const newPackage = packageMatch ? packageMatch[1] : adaptorName;
+      form.setFieldValue("adaptor_package", newPackage || null);
+
+      // Find the adaptor in allAdaptors to get its newest version
+      const adaptor = allAdaptors.find(a => a.name === newPackage);
+
+      // Get the newest version (first in the versions array after filtering "latest")
+      const newestVersion =
+        adaptor?.versions
+          .map(v => v.version)
+          .filter(v => v !== "latest")
+          .sort((a, b) => {
+            const aParts = a.split(".").map(Number);
+            const bParts = b.split(".").map(Number);
+            for (let i = 0; i < Math.max(aParts.length, bParts.length); i++) {
+              const aNum = aParts[i] || 0;
+              const bNum = bParts[i] || 0;
+              if (aNum !== bNum) {
+                return bNum - aNum;
+              }
+            }
+            return 0;
+          })[0] ||
+        adaptor?.latest ||
+        "latest";
+
+      // Update the full adaptor string with newest version
+      const fullAdaptor = `${newPackage}@${newestVersion}`;
+      form.setFieldValue("adaptor", fullAdaptor);
+
+      // Close adaptor picker and reopen configure modal
+      setIsAdaptorPickerOpen(false);
+      setIsConfigureModalOpen(true);
+    },
+    [form, allAdaptors]
+  );
+
+  // Handler for configure save from modal
+  const handleConfigureSave = useCallback(
+    (config: {
+      adaptorPackage: string;
+      adaptorVersion: string;
+      credentialId: string | null;
+    }) => {
+      // Build the Y.Doc updates (only Job schema fields)
+      const jobUpdates: {
+        adaptor: string;
+        project_credential_id: string | null;
+        keychain_credential_id: string | null;
+      } = {
+        adaptor: `${config.adaptorPackage}@${config.adaptorVersion}`,
+        project_credential_id: null,
+        keychain_credential_id: null,
+      };
+
+      // Update credential if selected
+      if (config.credentialId) {
+        // Determine if it's a project or keychain credential
+        // Check project credentials first
+        const isProjectCredential = projectCredentials.some(
+          c => c.project_credential_id === config.credentialId
+        );
+
+        if (isProjectCredential) {
+          jobUpdates.project_credential_id = config.credentialId;
+        } else {
+          // Must be a keychain credential
+          jobUpdates.keychain_credential_id = config.credentialId;
+        }
+      }
+
+      // Update form state (includes UI-only fields like adaptor_package and credential_id)
+      form.setFieldValue("adaptor_package", config.adaptorPackage);
+      form.setFieldValue("adaptor", jobUpdates.adaptor);
+      form.setFieldValue("credential_id", config.credentialId);
+      form.setFieldValue(
+        "project_credential_id",
+        jobUpdates.project_credential_id
+      );
+      form.setFieldValue(
+        "keychain_credential_id",
+        jobUpdates.keychain_credential_id
+      );
+
+      // Persist to Y.Doc (only Job schema fields)
+      updateJob(job.id, jobUpdates);
+    },
+    [form, job.id, projectCredentials, keychainCredentials, updateJob]
+  );
+
+  // COMMENTED OUT (Phase 2R): Credential display removed from inspector
+  // Phase 3R will move this to ConfigureAdaptorModal
+  // const selectedCredentialId = useStore(
+  //   form.store,
+  //   state => state.values.credential_id
+  // );
+
+  // const { projectCredentials, keychainCredentials } = useCredentials();
+
+  // const selectedCredential = useMemo(() => {
+  //   if (!selectedCredentialId) return null;
+
+  //   // Check project credentials
+  //   const projectCred = projectCredentials.find(
+  //     c => c.project_credential_id === selectedCredentialId
+  //   );
+  //   if (projectCred) return { ...projectCred, type: "project" as const };
+
+  //   // Check keychain credentials
+  //   const keychainCred = keychainCredentials.find(
+  //     c => c.id === selectedCredentialId
+  //   );
+  //   if (keychainCred) return { ...keychainCred, type: "keychain" as const };
+
+  //   return null;
+  // }, [selectedCredentialId, projectCredentials, keychainCredentials]);
+
   return (
     <div className="-mt-6 md:grid md:grid-cols-6 md:gap-4 p-2 @container">
+      {/* Job Name Field */}
       <div className="col-span-6">
         <form.AppField name="name">
-          {field => <field.TextField label="Name" />}
+          {field => <field.TextField label="Job Name" />}
         </form.AppField>
       </div>
 
-      {/* Adaptor Package Dropdown */}
+      {/* Adaptor Section - Simplified to match design */}
       <div className="col-span-6">
-        <form.AppField name="adaptor_package">
-          {field => (
-            <field.SelectField
-              label="Adaptor"
-              options={adaptorPackageOptions}
-            />
-          )}
-        </form.AppField>
-      </div>
-
-      {/* Adaptor Version Dropdown */}
-      <div className="col-span-6">
-        <form.AppField name="adaptor">
-          {field => (
-            <field.SelectField
-              label="Version"
-              options={adaptorVersionOptions}
-            />
-          )}
-        </form.AppField>
-      </div>
-
-      {/* Credential Dropdown */}
-      <div className="col-span-6">
-        <form.AppField
-          name="credential_id"
-          listeners={{
-            onChange: ({ value, fieldApi }) => {
-              const resolved = resolveCredentialId(value);
-              fieldApi.form.setFieldValue(
-                "project_credential_id",
-                resolved.project_credential_id
-              );
-              fieldApi.form.setFieldValue(
-                "keychain_credential_id",
-                resolved.keychain_credential_id
-              );
-            },
-          }}
+        <label
+          className="flex items-center gap-1 text-sm font-medium
+          text-gray-700 mb-2"
         >
-          {field => (
-            <field.SelectField
-              label="Credential"
-              placeholder=" "
-              options={credentialOptions}
-            />
-          )}
-        </form.AppField>
+          Adaptor
+          <span
+            className="hero-information-circle h-4 w-4 text-gray-400"
+            aria-label="Information"
+            role="img"
+          />
+        </label>
+        <div
+          className="flex items-center justify-between gap-3 p-3 border
+          border-gray-200 rounded-md bg-white"
+        >
+          <div className="flex items-center gap-2 min-w-0 flex-1">
+            <AdaptorIcon name={adaptorPackage || ""} size="md" />
+            <span className="font-medium text-gray-900 truncate">
+              {adaptorDisplayName}
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setIsConfigureModalOpen(true)}
+            className="px-3 py-1.5 border border-gray-300 bg-white rounded-md
+            text-sm font-medium text-gray-700 hover:bg-gray-50
+            focus:outline-none flex-shrink-0 flex items-center gap-2"
+            aria-label={
+              hasCredential ? "Credential connected" : "Configure adaptor"
+            }
+          >
+            {hasCredential && (
+              <span
+                className="w-2 h-2 bg-green-500 rounded-full flex-shrink-0"
+                aria-hidden="true"
+              />
+            )}
+            {hasCredential ? "Connected" : "Connect"}
+          </button>
+        </div>
       </div>
+
+      {/* REMOVED: Version dropdown (Phase 2R) */}
+      {/* Phase 3R will add ConfigureAdaptorModal with version selection */}
+
+      {/* REMOVED: Credential section (Phase 2R) */}
+      {/* Phase 3R will add credential selection to ConfigureAdaptorModal */}
+
+      {/* Configure Adaptor Modal */}
+      <ConfigureAdaptorModal
+        isOpen={isConfigureModalOpen}
+        onClose={() => setIsConfigureModalOpen(false)}
+        onSave={handleConfigureSave}
+        onOpenAdaptorPicker={handleOpenAdaptorPicker}
+        currentAdaptor={adaptorPackage || "@openfn/language-common"}
+        currentVersion={
+          resolveAdaptor(form.state.values.adaptor).version || "latest"
+        }
+        currentCredentialId={form.state.values.credential_id}
+        allAdaptors={allAdaptors}
+      />
+
+      {/* Adaptor Selection Modal (opened from ConfigureAdaptorModal) */}
+      <AdaptorSelectionModal
+        isOpen={isAdaptorPickerOpen}
+        onClose={() => setIsAdaptorPickerOpen(false)}
+        onSelect={handleAdaptorSelect}
+        projectAdaptors={projectAdaptors}
+      />
     </div>
   );
 }

@@ -3,12 +3,21 @@ import * as z from "zod";
 
 import { isoDateTimeSchema, uuidSchema } from "./common";
 
+export const CredentialOwnerSchema = z.object({
+  id: uuidSchema,
+  name: z.string(),
+  email: z.string(),
+});
+
 export const CredentialSchema = z.object({
   id: uuidSchema,
   project_credential_id: uuidSchema,
   name: z.string(),
   external_id: z.string(),
   schema: z.string(),
+  production_tag: z.string().nullable(),
+  owner: CredentialOwnerSchema.nullable(),
+  oauth_client_name: z.string().nullable(),
   inserted_at: isoDateTimeSchema,
   updated_at: isoDateTimeSchema,
 });
