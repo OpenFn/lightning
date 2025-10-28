@@ -59,7 +59,7 @@ function SaveButton({
 }) {
   const hasGitHubIntegration = repoConnection !== null;
 
-  if (hasGitHubIntegration) {
+  if (!hasGitHubIntegration) {
     // Simple save button when no GitHub integration
     return (
       <div className="inline-flex rounded-md shadow-xs z-5">
