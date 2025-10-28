@@ -72,16 +72,25 @@ export function AdaptorSelectionModal({
   };
 
   const filteredProjectAdaptors = filterAdaptors(projectAdaptors);
-  const filteredAllAdaptors = filterAdaptors(allAdaptors);
+  let filteredAllAdaptors = filterAdaptors(allAdaptors);
+
+  // Always ensure HTTP adaptor is available as fallback
+  const hasResults =
+    filteredProjectAdaptors.length > 0 || filteredAllAdaptors.length > 0;
+
+  if (!hasResults && searchQuery) {
+    // Show HTTP adaptor as fallback when no results
+    const httpAdaptor = allAdaptors.find(a => a.name.includes("language-http"));
+    if (httpAdaptor) {
+      filteredAllAdaptors = [httpAdaptor];
+    }
+  }
 
   const handleRowClick = (adaptorName: string) => {
     // Immediately select and close (Figma design - no Continue button)
     onSelect(adaptorName);
     onClose();
   };
-
-  const hasResults =
-    filteredProjectAdaptors.length > 0 || filteredAllAdaptors.length > 0;
 
   return (
     <Dialog open={isOpen} onClose={onClose} className="relative z-50">
@@ -114,18 +123,6 @@ export function AdaptorSelectionModal({
                   placeholder="Search for an adaptor to connect..."
                   onSearch={setSearchQuery}
                 >
-                  {!hasResults && (
-                    <div className="text-center py-8">
-                      <span
-                        className="hero-magnifying-glass h-12 w-12
-                      text-gray-300 mx-auto block mb-2"
-                      />
-                      <p className="text-sm text-gray-500">
-                        No adaptors match your search
-                      </p>
-                    </div>
-                  )}
-
                   {filteredProjectAdaptors.length > 0 && (
                     <ListSection title="Adaptors in this project">
                       {filteredProjectAdaptors.map(adaptor => (
@@ -165,16 +162,6 @@ export function AdaptorSelectionModal({
                   )}
                 </SearchableList>
               </div>
-
-              {/* Close button - outside the input */}
-              <button
-                type="button"
-                onClick={onClose}
-                className="text-gray-400 hover:text-gray-500
-                focus:outline-none h-10 flex items-center justify-center"
-              >
-                <span className="hero-x-mark h-6 w-6" aria-hidden="true" />
-              </button>
             </div>
           </DialogPanel>
         </div>
