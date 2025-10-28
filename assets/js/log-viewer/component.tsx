@@ -1,10 +1,10 @@
-import { useEffect, useRef, useState } from 'react';
-import { createRoot } from 'react-dom/client';
-import { useStore } from 'zustand';
-import { useShallow } from 'zustand/react/shallow';
-import { editor as e } from 'monaco-editor';
-import { type Monaco, MonacoEditor } from '../monaco';
-import { createLogStore } from './store';
+import { useEffect, useRef, useState } from "react";
+import { createRoot } from "react-dom/client";
+import { useStore } from "zustand";
+import { useShallow } from "zustand/react/shallow";
+import { editor as e } from "monaco-editor";
+import { type Monaco, MonacoEditor } from "../monaco";
+import { createLogStore } from "./store";
 
 export function mount(
   el: HTMLElement,
@@ -36,6 +36,13 @@ const LogViewer = ({
     useShallow(state => state.formattedLogLines)
   );
 
+  console.log("[LogViewer] Render:", {
+    stepId,
+    highlightedRangesCount: highlightedRanges.length,
+    formattedLogLinesLength: formattedLogLines.length,
+    formattedPreview: formattedLogLines.substring(0, 100),
+  });
+
   const [monaco, setMonaco] = useState<Monaco>();
   const [editor, setEditor] = useState<e.IStandaloneCodeEditor>();
 
@@ -56,7 +63,7 @@ const LogViewer = ({
           range: new monaco.Range(range.start, 1, range.end, 1),
           options: {
             isWholeLine: true,
-            linesDecorationsClassName: 'log-viewer-highlighted',
+            linesDecorationsClassName: "log-viewer-highlighted",
           },
         };
       });
@@ -73,12 +80,12 @@ const LogViewer = ({
   useEffect(() => {
     if (monaco) {
       // Define a language for our logs
-      monaco!.languages.register({ id: 'openFnLogs' });
+      monaco!.languages.register({ id: "openFnLogs" });
 
       // Define a simple tokenizer for the language
-      monaco!.languages.setMonarchTokensProvider('openFnLogs', {
+      monaco!.languages.setMonarchTokensProvider("openFnLogs", {
         tokenizer: {
-          root: [[/^([A-Z\/]{2,4})/, 'logSource']],
+          root: [[/^([A-Z\/]{2,4})/, "logSource"]],
         },
       });
     }
@@ -96,14 +103,14 @@ const LogViewer = ({
       options={{
         readOnly: true,
         scrollBeyondLastLine: false,
-        fontFamily: 'Fira Code VF',
+        fontFamily: "Fira Code VF",
         fontSize: 14,
         fontLigatures: true,
         folding: false,
         minimap: {
           enabled: false,
         },
-        wordWrap: 'on',
+        wordWrap: "on",
         lineNumbersMinChars: 3,
       }}
     />
