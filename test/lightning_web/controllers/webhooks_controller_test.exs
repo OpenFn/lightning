@@ -1,6 +1,7 @@
 defmodule LightningWeb.WebhooksControllerTest do
   use LightningWeb.ConnCase, async: false
 
+  import Ecto.Query
   import Lightning.Factories
   import Mox
 
@@ -395,6 +396,217 @@ defmodule LightningWeb.WebhooksControllerTest do
 
       assert conn.status == 404
       assert Jason.decode!(conn.resp_body) == %{"error" => "Webhook not found"}
+    end
+  end
+
+  describe "delayed webhook response (webhook_reply: :after_completion)" do
+    setup [:stub_rate_limiter_ok, :stub_usage_limiter_ok]
+
+    test "waits for and returns the final state on success", %{conn: conn} do
+      %{triggers: [trigger]} =
+        insert(:simple_workflow)
+        |> Lightning.Repo.preload(:triggers)
+        |> with_snapshot()
+
+      # Update trigger to use after_completion
+      trigger =
+        trigger
+        |> Ecto.Changeset.change(webhook_reply: :after_completion)
+        |> Repo.update!()
+
+      message = %{"foo" => "bar"}
+
+      # Spawn a task that will post to the webhook
+      # This task will be blocked waiting for the webhook response
+      test_pid = self()
+
+      task =
+        Task.async(fn ->
+          conn = post(conn, "/i/#{trigger.id}", message)
+          send(test_pid, {:response, conn})
+        end)
+
+      # Wait for the work order to be created
+      Process.sleep(100)
+
+      # Find the work order
+      work_order =
+        Lightning.Repo.one(
+          from wo in Lightning.WorkOrder,
+            where: wo.trigger_id == ^trigger.id,
+            order_by: [desc: wo.inserted_at],
+            limit: 1
+        )
+
+      assert work_order
+
+      # Get the run for metadata
+      run =
+        Lightning.Repo.one(
+          from r in Lightning.Run,
+            where: r.work_order_id == ^work_order.id,
+            limit: 1
+        )
+
+      # Simulate the worker completing the run with final state
+      final_state_data = %{"result" => "success", "data" => %{"x" => 42}}
+
+      response_body = %{
+        data: final_state_data,
+        meta: %{
+          work_order_id: work_order.id,
+          run_id: run.id,
+          state: :success,
+          error_type: nil,
+          inserted_at: run.inserted_at,
+          started_at: run.started_at,
+          claimed_at: run.claimed_at,
+          finished_at: run.finished_at
+        }
+      }
+
+      Phoenix.PubSub.broadcast(
+        Lightning.PubSub,
+        "work_order:#{work_order.id}:webhook_response",
+        {:webhook_response, 200, response_body}
+      )
+
+      # Now the task should complete with the response
+      assert_receive {:response, response_conn}, 5_000
+
+      response = json_response(response_conn, 200)
+      assert response["data"] == final_state_data
+      assert response["meta"]["work_order_id"] == work_order.id
+      assert response["meta"]["run_id"] == run.id
+      assert response["meta"]["state"] == "success"
+
+      Task.await(task)
+    end
+
+    test "waits for and returns error state on failure", %{conn: conn} do
+      %{triggers: [trigger]} =
+        insert(:simple_workflow)
+        |> Lightning.Repo.preload(:triggers)
+        |> with_snapshot()
+
+      trigger =
+        trigger
+        |> Ecto.Changeset.change(webhook_reply: :after_completion)
+        |> Repo.update!()
+
+      message = %{"foo" => "bar"}
+      test_pid = self()
+
+      task =
+        Task.async(fn ->
+          conn = post(conn, "/i/#{trigger.id}", message)
+          send(test_pid, {:response, conn})
+        end)
+
+      Process.sleep(100)
+
+      work_order =
+        Lightning.Repo.one(
+          from wo in Lightning.WorkOrder,
+            where: wo.trigger_id == ^trigger.id,
+            order_by: [desc: wo.inserted_at],
+            limit: 1
+        )
+
+      assert work_order
+
+      # Get the run for metadata
+      run =
+        Lightning.Repo.one(
+          from r in Lightning.Run,
+            where: r.work_order_id == ^work_order.id,
+            limit: 1
+        )
+
+      error_data = %{"error" => "Something went wrong"}
+
+      response_body = %{
+        data: error_data,
+        meta: %{
+          work_order_id: work_order.id,
+          run_id: run.id,
+          state: :failed,
+          error_type: "RuntimeError",
+          inserted_at: run.inserted_at,
+          started_at: run.started_at,
+          claimed_at: run.claimed_at,
+          finished_at: run.finished_at
+        }
+      }
+
+      Phoenix.PubSub.broadcast(
+        Lightning.PubSub,
+        "work_order:#{work_order.id}:webhook_response",
+        {:webhook_response, 422, response_body}
+      )
+
+      assert_receive {:response, response_conn}, 5_000
+
+      response = json_response(response_conn, 422)
+      assert response["data"] == error_data
+      assert response["meta"]["work_order_id"] == work_order.id
+      assert response["meta"]["run_id"] == run.id
+      assert response["meta"]["state"] == "failed"
+      assert response["meta"]["error_type"] == "RuntimeError"
+
+      Task.await(task)
+    end
+
+    test "returns timeout if workflow doesn't complete within timeout period", %{
+      conn: conn
+    } do
+      # Set a shorter timeout for this test (2 seconds instead of default)
+      expect(Lightning.MockConfig, :webhook_response_timeout_ms, fn -> 2_000 end)
+
+      %{triggers: [trigger]} =
+        insert(:simple_workflow)
+        |> Lightning.Repo.preload(:triggers)
+        |> with_snapshot()
+
+      trigger =
+        trigger
+        |> Ecto.Changeset.change(webhook_reply: :after_completion)
+        |> Repo.update!()
+
+      message = %{"foo" => "bar"}
+
+      # This will timeout since we never broadcast a response
+      conn = post(conn, "/i/#{trigger.id}", message)
+
+      assert json_response(conn, 504) == %{
+               "error" => "timeout",
+               "message" => "Workflow did not complete within timeout period",
+               "work_order_id" => json_response(conn, 504)["work_order_id"]
+             }
+
+      # Verify work order was still created
+      work_order_id = json_response(conn, 504)["work_order_id"]
+      assert WorkOrders.get(work_order_id)
+    end
+
+    test "returns immediately when webhook_reply is before_start (default)", %{
+      conn: conn
+    } do
+      %{triggers: [trigger]} =
+        insert(:simple_workflow)
+        |> Lightning.Repo.preload(:triggers)
+        |> with_snapshot()
+
+      # Ensure trigger is using default before_start
+      assert trigger.webhook_reply == :before_start
+
+      message = %{"foo" => "bar"}
+
+      # Should return immediately
+      conn = post(conn, "/i/#{trigger.id}", message)
+
+      assert %{"work_order_id" => work_order_id} = json_response(conn, 200)
+      assert WorkOrders.get(work_order_id)
     end
   end
 end
