@@ -101,7 +101,7 @@ export function WorkflowEditor({
   // Construct full workflow object from state
   // LoadingBoundary guarantees workflow is non-null here
   const workflow = useWorkflowState(state => ({
-    name: state.workflow!.name,
+    ...state.workflow!,
     jobs: state.jobs,
     triggers: state.triggers,
     edges: state.edges,

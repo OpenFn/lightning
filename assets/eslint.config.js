@@ -83,6 +83,9 @@ export default [
     },
   },
   {
+    plugins: {
+      "@typescript-eslint": tsPlugin.plugin,
+    },
     rules: {
       "@typescript-eslint/no-confusing-void-expression": "off",
       "@typescript-eslint/no-unused-vars": [
@@ -123,9 +126,7 @@ export default [
       "import/resolver": {
         typescript: {
           alwaysTryTypes: true, // always try to resolve types under `<root>@types` directory even it doesn't contain any source code, like `@types/unist`
-          project: [
-            "tsconfig.browser.json",
-          ],
+          project: ["tsconfig.browser.json"],
         },
       },
     },

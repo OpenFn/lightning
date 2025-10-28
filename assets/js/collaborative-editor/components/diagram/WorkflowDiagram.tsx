@@ -19,6 +19,7 @@ import {
   useWorkflowState,
   usePositions,
   useWorkflowStoreContext,
+  useWorkflowReadOnly,
 } from "#/collaborative-editor/hooks/useWorkflow";
 import { randomUUID } from "#/common";
 import _logger from "#/utils/logger";
@@ -123,17 +124,16 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
     edges: state.edges,
   }));
 
-  // TODO: implement disabled state - not currently available in WorkflowState
-  const disabled = false;
+  const { isReadOnly } = useWorkflowReadOnly();
 
   const workflow = React.useMemo(
     () => ({
       jobs,
       triggers,
       edges,
-      disabled,
+      disabled: isReadOnly,
     }),
-    [jobs, triggers, edges, disabled]
+    [jobs, triggers, edges, isReadOnly]
   );
 
   const isManualLayout = Object.keys(workflowPositions).length > 0;
