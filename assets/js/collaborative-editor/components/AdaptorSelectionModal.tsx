@@ -108,67 +108,73 @@ export function AdaptorSelectionModal({
             data-leave:ease-in sm:my-8 sm:w-full sm:max-w-2xl
             sm:p-6"
           >
-            <div className="relative pr-12">
-              {/* Close button - aligned with search input */}
+            <div className="flex items-start gap-3">
+              <div className="flex-1">
+                <SearchableList
+                  placeholder="Search for an adaptor to connect..."
+                  onSearch={setSearchQuery}
+                >
+                  {!hasResults && (
+                    <div className="text-center py-8">
+                      <span
+                        className="hero-magnifying-glass h-12 w-12
+                      text-gray-300 mx-auto block mb-2"
+                      />
+                      <p className="text-sm text-gray-500">
+                        No adaptors match your search
+                      </p>
+                    </div>
+                  )}
+
+                  {filteredProjectAdaptors.length > 0 && (
+                    <ListSection title="Adaptors in this project">
+                      {filteredProjectAdaptors.map(adaptor => (
+                        <ListRow
+                          key={adaptor.name}
+                          title={
+                            extractAdaptorName(adaptor.name) || adaptor.name
+                          }
+                          description={`Latest: ${adaptor.latest}`}
+                          icon={<AdaptorIcon name={adaptor.name} size="md" />}
+                          onClick={() => handleRowClick(adaptor.name)}
+                        />
+                      ))}
+                    </ListSection>
+                  )}
+
+                  {filteredAllAdaptors.length > 0 && (
+                    <ListSection
+                      title={
+                        filteredProjectAdaptors.length > 0
+                          ? "All adaptors"
+                          : "Available adaptors"
+                      }
+                    >
+                      {filteredAllAdaptors.map(adaptor => (
+                        <ListRow
+                          key={adaptor.name}
+                          title={
+                            extractAdaptorName(adaptor.name) || adaptor.name
+                          }
+                          description={`Latest: ${adaptor.latest}`}
+                          icon={<AdaptorIcon name={adaptor.name} size="sm" />}
+                          onClick={() => handleRowClick(adaptor.name)}
+                        />
+                      ))}
+                    </ListSection>
+                  )}
+                </SearchableList>
+              </div>
+
+              {/* Close button - outside the input */}
               <button
                 type="button"
                 onClick={onClose}
-                className="absolute right-2 top-0 text-gray-400
-                hover:text-gray-500 focus:outline-none z-10 h-10 w-10
-                flex items-center justify-center"
+                className="text-gray-400 hover:text-gray-500
+                focus:outline-none mt-2"
               >
                 <span className="hero-x-mark h-6 w-6" aria-hidden="true" />
               </button>
-              <SearchableList
-                placeholder="Search for an adaptor to connect..."
-                onSearch={setSearchQuery}
-              >
-                {!hasResults && (
-                  <div className="text-center py-8">
-                    <span
-                      className="hero-magnifying-glass h-12 w-12
-                      text-gray-300 mx-auto block mb-2"
-                    />
-                    <p className="text-sm text-gray-500">
-                      No adaptors match your search
-                    </p>
-                  </div>
-                )}
-
-                {filteredProjectAdaptors.length > 0 && (
-                  <ListSection title="Adaptors in this project">
-                    {filteredProjectAdaptors.map(adaptor => (
-                      <ListRow
-                        key={adaptor.name}
-                        title={extractAdaptorName(adaptor.name) || adaptor.name}
-                        description={`Latest: ${adaptor.latest}`}
-                        icon={<AdaptorIcon name={adaptor.name} size="md" />}
-                        onClick={() => handleRowClick(adaptor.name)}
-                      />
-                    ))}
-                  </ListSection>
-                )}
-
-                {filteredAllAdaptors.length > 0 && (
-                  <ListSection
-                    title={
-                      filteredProjectAdaptors.length > 0
-                        ? "All adaptors"
-                        : "Available adaptors"
-                    }
-                  >
-                    {filteredAllAdaptors.map(adaptor => (
-                      <ListRow
-                        key={adaptor.name}
-                        title={extractAdaptorName(adaptor.name) || adaptor.name}
-                        description={`Latest: ${adaptor.latest}`}
-                        icon={<AdaptorIcon name={adaptor.name} size="sm" />}
-                        onClick={() => handleRowClick(adaptor.name)}
-                      />
-                    ))}
-                  </ListSection>
-                )}
-              </SearchableList>
             </div>
           </DialogPanel>
         </div>
