@@ -17,6 +17,9 @@ and this project adheres to
 
 ### Added
 
+- Drag-to-connect nodes on workflow canvas - users can now drag from the plus
+  button on a node and drop it onto another node to create connections
+  [#3825](https://github.com/OpenFn/lightning/issues/3825)
 - Read-only indicator in collaborative editor header
   [#3627](https://github.com/OpenFn/lightning/issues/3627)
 - Sync workflow concurrency and enable_job_logs settings in collaborative
@@ -42,6 +45,14 @@ and this project adheres to
 
 ### Fixed
 
+- Canvas goes blank when adding nodes in collaborative workflow editor
+  [#3848](https://github.com/OpenFn/lightning/issues/3848)
+- Crash when switching from old to collaborative editor
+  [#3865](https://github.com/OpenFn/lightning/issues/3865)
+- Position errors when rendering nodes
+  [#3866](https://github.com/OpenFn/lightning/issues/3866)
+- Layout animation crashes when adding nodes
+  [#3867](https://github.com/OpenFn/lightning/issues/3867)
 - Fixed sandbox merge failing with StaleEntryError when parent workflow was
   modified after sandbox creation
   [#3765](https://github.com/OpenFn/lightning/issues/3765)

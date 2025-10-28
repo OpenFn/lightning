@@ -7,12 +7,15 @@ defmodule LightningWeb.WorkflowChannel do
   """
   use LightningWeb, :channel
 
+  import Ecto.Query, only: [from: 2]
+
   alias Lightning.Collaborate
   alias Lightning.Collaboration.Session
   alias Lightning.Collaboration.Utils
   alias Lightning.Credentials.KeychainCredential
   alias Lightning.Policies.Permissions
   alias Lightning.Projects.ProjectCredential
+  alias Lightning.Workflows.Job
   alias Lightning.Workflows.Snapshot
   alias Lightning.Workflows.Workflow
 
@@ -84,6 +87,42 @@ defmodule LightningWeb.WorkflowChannel do
     async_task(socket, "request_adaptors", fn ->
       adaptors = Lightning.AdaptorRegistry.all()
       %{adaptors: adaptors}
+    end)
+  end
+
+  @impl true
+  def handle_in("request_project_adaptors", _payload, socket) do
+    project = socket.assigns.project
+
+    async_task(socket, "request_project_adaptors", fn ->
+      # Query all jobs in this project's workflows to extract unique
+      # adaptors
+      project_adaptor_names =
+        from(j in Job,
+          join: w in assoc(j, :workflow),
+          where: w.project_id == ^project.id,
+          select: j.adaptor,
+          distinct: true
+        )
+        |> Lightning.Repo.all()
+        |> Enum.sort()
+
+      # Get complete adaptor registry with version info
+      all_adaptors = Lightning.AdaptorRegistry.all()
+
+      # Filter registry to get full details for project adaptors
+      project_adaptors =
+        all_adaptors
+        |> Enum.filter(fn adaptor ->
+          Enum.any?(project_adaptor_names, fn used_adaptor ->
+            String.starts_with?(used_adaptor, adaptor.name)
+          end)
+        end)
+
+      %{
+        project_adaptors: project_adaptors,
+        all_adaptors: all_adaptors
+      }
     end)
   end
 
@@ -276,6 +315,10 @@ defmodule LightningWeb.WorkflowChannel do
   def handle_info({:async_reply, socket_ref, event, reply}, socket) do
     case event do
       "request_adaptors" ->
+        reply(socket_ref, reply)
+        {:noreply, socket}
+
+      "request_project_adaptors" ->
         reply(socket_ref, reply)
         {:noreply, socket}
 

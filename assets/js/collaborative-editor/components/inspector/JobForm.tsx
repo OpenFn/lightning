@@ -8,6 +8,7 @@ import { useWorkflowActions } from "#/collaborative-editor/hooks/useWorkflow";
 import { useWatchFields } from "#/collaborative-editor/stores/common";
 import { JobSchema } from "#/collaborative-editor/types/job";
 import type { Workflow } from "#/collaborative-editor/types/workflow";
+import { extractAdaptorName } from "#/collaborative-editor/utils/adaptorUtils";
 
 import { createZodValidator } from "../form/createZodValidator";
 
@@ -34,11 +35,6 @@ function resolveAdaptor(adaptor: string): {
     package: packageName || null,
     version: version || null,
   };
-}
-
-function extractAdaptorName(str: string): string | null {
-  const match = str.match(/language-(.+)$/);
-  return match ? match[1] || null : null;
 }
 
 function useAdaptorVersionOptions(adaptorPackage: string | null) {
