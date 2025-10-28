@@ -504,7 +504,7 @@ export const createWorkflowStore = () => {
         jobMap.set("body", new Y.Text(job.body));
       }
       // Set adaptor field (defaults to common if not provided)
-      jobMap.set("adaptor", job.adaptor || "@openfn/language-common@latest");
+      jobMap.set("adaptor", job.adaptor);
       // Initialize credential fields to null
       jobMap.set("project_credential_id", job.project_credential_id || null);
       jobMap.set("keychain_credential_id", job.keychain_credential_id || null);
