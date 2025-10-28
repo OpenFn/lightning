@@ -123,9 +123,19 @@ const fromWorkflow = (
         }
 
         if (type === 'trigger') {
+          const triggerNode = node as Lightning.TriggerNode;
           model.data.trigger = {
-            type: (node as Lightning.TriggerNode).type,
-            enabled: (node as Lightning.TriggerNode).enabled,
+            type: triggerNode.type,
+            enabled: triggerNode.enabled,
+            ...(triggerNode.type === 'cron' && {
+              cron_expression: triggerNode.cron_expression,
+            }),
+            ...(triggerNode.type === 'webhook' && {
+              has_auth_method: triggerNode.has_auth_method,
+            }),
+            ...(triggerNode.type === 'kafka' && {
+              has_auth_method: triggerNode.has_auth_method,
+            }),
           };
         }
         styleNode(model);

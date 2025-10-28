@@ -46,10 +46,13 @@ and this project adheres to
   modified after sandbox creation
   [#3765](https://github.com/OpenFn/lightning/issues/3765)
 - Workflow is either decapitated or uneditable
-  [#3842](https://github.com/openfn/lightning/issues/3842)
+  [#3842](https://github.com/OpenFn/lightning/issues/3842)
 - User can navigate to React canvas from LiveView version
   [#3847](https://github.com/openfn/lightning/issues/3847)
+- Fixed missing cron icon in trigger on new canvas
+  [#3849](https://github.com/OpenFn/lightning/issues/3849)
 
+## [2.14.13-pre1] 2025-10-24
 ## [2.14.13-pre1] 2025-10-24
 
 ### Added
