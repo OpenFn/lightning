@@ -33,7 +33,7 @@ export function AdaptorIcon({ name, size = "md" }: AdaptorIconProps) {
     );
   }
 
-  const iconPath = adaptorIconsData[displayName].square;
+  const iconPath = adaptorIconsData[displayName]?.square;
 
   if (!iconPath) {
     return (
