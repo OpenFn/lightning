@@ -63,14 +63,20 @@ function getTriggerMeta(trigger: Lightning.TriggerNode): TriggerMeta {
         secondaryIcon: trigger.has_auth_method ? lockClosedIcon : null,
       };
     case 'cron':
+      let sublabel = 'Not configured';
       try {
-        return {
-          label: 'Cron trigger',
-          sublabel: cronstrue.toString(trigger.cron_expression),
-          primaryIcon: <ClockIcon />,
-          secondaryIcon: null,
-        };
-      } catch (_error) { }
+        if (trigger.cron_expression) {
+          sublabel = cronstrue.toString(trigger.cron_expression);
+        }
+      } catch (_error) {
+        sublabel = 'Invalid cron expression';
+      }
+      return {
+        label: 'Cron trigger',
+        sublabel,
+        primaryIcon: <ClockIcon />,
+        secondaryIcon: null,
+      };
   }
   return { label: '', sublabel: '' };
 }

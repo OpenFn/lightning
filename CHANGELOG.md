@@ -46,9 +46,11 @@ and this project adheres to
   modified after sandbox creation
   [#3765](https://github.com/OpenFn/lightning/issues/3765)
 - Workflow is either decapitated or uneditable
-  [#3842](https://github.com/openfn/lightning/issues/3842)
+  [#3842](https://github.com/OpenFn/lightning/issues/3842)
 - User can navigate to React canvas from LiveView version
   [#3847](https://github.com/openfn/lightning/issues/3847)
+- Fixed missing cron icon in trigger on new canvas
+  [#3849](https://github.com/OpenFn/lightning/issues/3849)
 
 ## [2.14.13-pre1] 2025-10-24
 
@@ -978,9 +980,8 @@ This bug was introduced in version `v2.12.3-pre` on May 29th. If you're tracking
 - Refactor OAuth credentials to reuse existing refresh tokens for same scopes
   [#2908](https://github.com/OpenFn/lightning/issues/2908) \
   ⚠️️ Please note that you will need to migrate your existing OAuth credentials.
-  To do that run the following command:
-  `mix run priv/repo/migrate_oauth_credentials.exs` for local setup or
-  `docker exec -it <lightning_container_name> /app/bin/lightning eval "Lightning.Credentials.OauthMigration.run()"`
+  To do that run the following command: `mix run priv/repo/migrate_oauth_credentials.exs`
+  for local setup or `docker exec -it <lightning_container_name> /app/bin/lightning eval "Lightning.Credentials.OauthMigration.run()"`
   for production environments.
 
 ### Changed
