@@ -33,7 +33,7 @@ export function AdaptorIcon({ name, size = "md" }: AdaptorIconProps) {
     );
   }
 
-  const iconPath = adaptorIconsData[displayName]?.square;
+  const iconPath = adaptorIconsData[displayName].square;
 
   if (!iconPath) {
     return (
@@ -42,7 +42,7 @@ export function AdaptorIcon({ name, size = "md" }: AdaptorIconProps) {
         flex items-center justify-center`}
       >
         <span className="text-xs font-semibold text-gray-500">
-          {displayName?.[0]?.toUpperCase() || "?"}
+          {displayName[0].toUpperCase() || "?"}
         </span>
       </div>
     );

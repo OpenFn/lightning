@@ -13,15 +13,14 @@ import {
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import tippy from "tippy.js";
 
-import { randomUUID } from "#/common";
+import { useProjectAdaptors } from "#/collaborative-editor/hooks/useAdaptors";
 import useConnect from "#/collaborative-editor/hooks/useConnect";
 import {
   useWorkflowState,
   usePositions,
   useWorkflowStoreContext,
 } from "#/collaborative-editor/hooks/useWorkflow";
-import { useProjectAdaptors } from "#/collaborative-editor/hooks/useAdaptors";
-import { AdaptorSelectionModal } from "../AdaptorSelectionModal";
+import { randomUUID } from "#/common";
 import _logger from "#/utils/logger";
 import MiniMapNode from "#/workflow-diagram/components/MiniMapNode";
 import { FIT_DURATION, FIT_PADDING } from "#/workflow-diagram/constants";
@@ -39,6 +38,8 @@ import {
   getVisibleRect,
   isPointInRect,
 } from "#/workflow-diagram/util/viewport";
+
+import { AdaptorSelectionModal } from "../AdaptorSelectionModal";
 
 import { useInspectorOverlap } from "./useInspectorOverlap";
 
