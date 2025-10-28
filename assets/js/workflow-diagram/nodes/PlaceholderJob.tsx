@@ -1,3 +1,4 @@
+import { extractAdaptorName } from "#/collaborative-editor/utils/adaptorUtils";
 import React, {
   type SyntheticEvent,
   memo,
@@ -37,12 +38,6 @@ const dispatch = (
   });
   el.dispatchEvent(e);
 };
-
-// Extract adaptor name from full adaptor string (e.g., "@openfn/language-salesforce@latest" -> "salesforce")
-function extractAdaptorName(str: string): string | null {
-  const match = str.match(/language-(.+?)(@|$)/);
-  return match?.[1] ?? null;
-}
 
 const PlaceholderJobNode = ({ id, data, selected }: NodeProps<NodeData>) => {
   const textRef = useRef<HTMLInputElement | null>(null);
