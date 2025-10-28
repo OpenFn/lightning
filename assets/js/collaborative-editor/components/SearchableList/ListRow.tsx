@@ -27,7 +27,7 @@ export function ListRow({
     >
       {icon && <div className="shrink-0">{icon}</div>}
       <div className="flex-1 min-w-0">
-        <div className="font-medium text-gray-900">{title}</div>
+        <div className="font-normal text-gray-900">{title}</div>
         {description && (
           <div className="text-sm text-gray-500 line-clamp-2">
             {description}
