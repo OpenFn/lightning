@@ -1,6 +1,6 @@
-import { FormField, INPUT_CLASSES } from "./form-field";
+import { FormField, INPUT_CLASSES } from './form-field';
 
-import { useFieldContext } from ".";
+import { useFieldContext } from '.';
 
 export function TextField({ label }: { label: string }) {
   const field = useFieldContext<string>();
@@ -9,7 +9,7 @@ export function TextField({ label }: { label: string }) {
       <input
         type="text"
         id={field.name}
-        value={field.state.value || ""}
+        value={field.state.value || ''}
         onChange={e => field.handleChange(e.target.value)}
         className={INPUT_CLASSES}
       />

@@ -11,16 +11,16 @@
  *   cleanup();
  */
 
-import { createAdaptorStore } from "../../../js/collaborative-editor/stores/createAdaptorStore";
-import { createSessionStore } from "../../../js/collaborative-editor/stores/createSessionStore";
-import { createSessionContextStore } from "../../../js/collaborative-editor/stores/createSessionContextStore";
+import { createAdaptorStore } from '../../../js/collaborative-editor/stores/createAdaptorStore';
+import { createSessionStore } from '../../../js/collaborative-editor/stores/createSessionStore';
+import { createSessionContextStore } from '../../../js/collaborative-editor/stores/createSessionContextStore';
 
 import {
   createMockPhoenixChannel,
   createMockPhoenixChannelProvider,
   type MockPhoenixChannel,
   type MockPhoenixChannelProvider,
-} from "./channelMocks";
+} from './channelMocks';
 
 /**
  * Result of setting up an adaptor store test
@@ -60,7 +60,7 @@ export interface AdaptorStoreTestSetup {
  * });
  */
 export function setupAdaptorStoreTest(
-  topic: string = "test:channel"
+  topic: string = 'test:channel'
 ): AdaptorStoreTestSetup {
   const store = createAdaptorStore();
   const mockChannel = createMockPhoenixChannel(topic);
@@ -116,7 +116,7 @@ export interface SessionContextStoreTestSetup {
  * });
  */
 export function setupSessionContextStoreTest(
-  topic: string = "test:channel"
+  topic: string = 'test:channel'
 ): SessionContextStoreTestSetup {
   const store = createSessionContextStore();
   const mockChannel = createMockPhoenixChannel(topic);
@@ -172,13 +172,13 @@ export interface SessionStoreTestSetup {
  * });
  */
 export function setupSessionStoreTest(
-  roomTopic: string = "test:room",
+  roomTopic: string = 'test:room',
   userData?: { id: string; name: string; color: string }
 ): SessionStoreTestSetup {
   const store = createSessionStore();
 
   // Import createMockSocket dynamically to avoid circular dependencies
-  const { createMockSocket } = require("../mocks/phoenixSocket");
+  const { createMockSocket } = require('../mocks/phoenixSocket');
   const mockSocket = createMockSocket();
 
   // Initialize session if userData provided
@@ -229,13 +229,13 @@ export function setupMultipleStores(connectToSession: boolean = false): {
   const cleanupFunctions: Array<() => void> = [];
 
   if (connectToSession) {
-    const { createMockSocket } = require("../mocks/phoenixSocket");
+    const { createMockSocket } = require('../mocks/phoenixSocket');
     const mockSocket = createMockSocket();
 
-    sessionStore.initializeSession(mockSocket, "test:room", {
-      id: "user-1",
-      name: "Test User",
-      color: "#ff0000",
+    sessionStore.initializeSession(mockSocket, 'test:room', {
+      id: 'user-1',
+      name: 'Test User',
+      color: '#ff0000',
     });
 
     const session = sessionStore.getSnapshot();

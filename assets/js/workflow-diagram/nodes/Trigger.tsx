@@ -70,7 +70,7 @@ function getTriggerMeta(trigger: Lightning.TriggerNode): TriggerMeta {
           primaryIcon: <ClockIcon />,
           secondaryIcon: null,
         };
-      } catch (_error) { }
+      } catch (_error) {}
   }
   return { label: '', sublabel: '' };
 }

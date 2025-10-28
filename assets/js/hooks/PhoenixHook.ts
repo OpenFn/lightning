@@ -3,7 +3,7 @@ export type CallbackRef = { event: string; callback: (payload: any) => any };
 
 interface PhoenixHookInternal<
   Dataset extends DOMStringMap = {},
-  El extends HTMLElement = HTMLElement
+  El extends HTMLElement = HTMLElement,
 > extends Omit<ViewHookInternal, 'el'> {
   el: El & {
     readonly dataset: Dataset;
@@ -41,20 +41,17 @@ type OmitPrivate<T extends object = {}> = {
 type PhoenixHookInternalThis<
   T extends object = {},
   Dataset extends DOMStringMap = {},
-  El extends HTMLElement = HTMLElement
+  El extends HTMLElement = HTMLElement,
 > = T & PhoenixHookInternal<Dataset, El>;
 
 export type PhoenixHook<
   T extends object = {},
   Dataset extends DOMStringMap = {},
-  El extends HTMLElement = HTMLElement
+  El extends HTMLElement = HTMLElement,
 > = OmitThisInMethods<OmitPrivate<T> & ViewHook<T>> &
   ThisType<PhoenixHookInternalThis<T, Dataset, El>>;
 
-export type GetPhoenixHookInternalThis<T> = T extends PhoenixHook<
-  infer S extends object,
-  infer Dataset,
-  infer El
->
-  ? PhoenixHookInternalThis<S, Dataset, El>
-  : never;
+export type GetPhoenixHookInternalThis<T> =
+  T extends PhoenixHook<infer S extends object, infer Dataset, infer El>
+    ? PhoenixHookInternalThis<S, Dataset, El>
+    : never;

@@ -10,19 +10,19 @@
  * - Inspector panel behavior
  */
 
-import { render, screen, waitFor } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
-import { HotkeysProvider } from "react-hotkeys-hook";
-import { beforeEach, describe, expect, test, vi } from "vitest";
-import { WorkflowEditor } from "../../../js/collaborative-editor/components/WorkflowEditor";
-import type { Workflow } from "../../../js/collaborative-editor/types/workflow";
-import * as dataclipApi from "../../../js/collaborative-editor/api/dataclips";
+import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { HotkeysProvider } from 'react-hotkeys-hook';
+import { beforeEach, describe, expect, test, vi } from 'vitest';
+import { WorkflowEditor } from '../../../js/collaborative-editor/components/WorkflowEditor';
+import type { Workflow } from '../../../js/collaborative-editor/types/workflow';
+import * as dataclipApi from '../../../js/collaborative-editor/api/dataclips';
 
 // Mock dependencies
-vi.mock("../../../js/collaborative-editor/api/dataclips");
+vi.mock('../../../js/collaborative-editor/api/dataclips');
 
 // Mock MonacoEditor
-vi.mock("@monaco-editor/react", () => ({
+vi.mock('@monaco-editor/react', () => ({
   default: ({ value }: { value: string }) => (
     <div data-testid="monaco-editor">{value}</div>
   ),
@@ -30,7 +30,7 @@ vi.mock("@monaco-editor/react", () => ({
 
 // Mock CollaborativeWorkflowDiagram
 vi.mock(
-  "../../../js/collaborative-editor/components/diagram/CollaborativeWorkflowDiagram",
+  '../../../js/collaborative-editor/components/diagram/CollaborativeWorkflowDiagram',
   () => ({
     CollaborativeWorkflowDiagram: () => (
       <div data-testid="workflow-diagram">Workflow Diagram</div>
@@ -39,20 +39,20 @@ vi.mock(
 );
 
 // Mock Inspector
-vi.mock("../../../js/collaborative-editor/components/inspector", () => ({
+vi.mock('../../../js/collaborative-editor/components/inspector', () => ({
   Inspector: ({ onOpenRunPanel }: { onOpenRunPanel: (ctx: any) => void }) => (
     <div data-testid="inspector">Inspector</div>
   ),
 }));
 
 // Mock LeftPanel
-vi.mock("../../../js/collaborative-editor/components/left-panel", () => ({
+vi.mock('../../../js/collaborative-editor/components/left-panel', () => ({
   LeftPanel: () => <div data-testid="left-panel">Left Panel</div>,
 }));
 
 // Mock FullScreenIDE
 vi.mock(
-  "../../../js/collaborative-editor/components/ide/FullScreenIDE",
+  '../../../js/collaborative-editor/components/ide/FullScreenIDE',
   () => ({
     FullScreenIDE: () => (
       <div data-testid="fullscreen-ide">Full Screen IDE</div>
@@ -66,7 +66,7 @@ let mockOnRunStateChange:
   | null = null;
 const mockRunHandler = vi.fn();
 
-vi.mock("../../../js/collaborative-editor/components/ManualRunPanel", () => ({
+vi.mock('../../../js/collaborative-editor/components/ManualRunPanel', () => ({
   ManualRunPanel: ({
     jobId,
     triggerId,
@@ -108,42 +108,42 @@ vi.mock("../../../js/collaborative-editor/components/ManualRunPanel", () => ({
 const mockUpdateSearchParams = vi.fn();
 const mockSearchParams = new URLSearchParams();
 
-vi.mock("../../../js/react/lib/use-url-state", () => ({
+vi.mock('../../../js/react/lib/use-url-state', () => ({
   useURLState: () => ({
     searchParams: mockSearchParams,
     updateSearchParams: mockUpdateSearchParams,
-    hash: "",
+    hash: '',
   }),
 }));
 
 // Mock session context hooks
-vi.mock("../../../js/collaborative-editor/hooks/useSessionContext", () => ({
+vi.mock('../../../js/collaborative-editor/hooks/useSessionContext', () => ({
   useIsNewWorkflow: () => false,
   useProject: () => ({
-    id: "project-1",
-    name: "Test Project",
+    id: 'project-1',
+    name: 'Test Project',
   }),
 }));
 
 // Create mock workflow
 const mockWorkflow: Workflow = {
-  id: "workflow-1",
-  name: "Test Workflow",
+  id: 'workflow-1',
+  name: 'Test Workflow',
   jobs: [
     {
-      id: "job-1",
-      name: "Job 1",
-      adaptor: "@openfn/language-http@latest",
-      body: "fn(state => state)",
+      id: 'job-1',
+      name: 'Job 1',
+      adaptor: '@openfn/language-http@latest',
+      body: 'fn(state => state)',
       enabled: true,
       project_credential_id: null,
       keychain_credential_id: null,
     },
     {
-      id: "job-2",
-      name: "Job 2",
-      adaptor: "@openfn/language-http@latest",
-      body: "fn(state => state)",
+      id: 'job-2',
+      name: 'Job 2',
+      adaptor: '@openfn/language-http@latest',
+      body: 'fn(state => state)',
       enabled: true,
       project_credential_id: null,
       keychain_credential_id: null,
@@ -151,13 +151,13 @@ const mockWorkflow: Workflow = {
   ],
   triggers: [
     {
-      id: "trigger-1",
-      type: "webhook",
+      id: 'trigger-1',
+      type: 'webhook',
       enabled: true,
     },
     {
-      id: "trigger-2",
-      type: "cron",
+      id: 'trigger-2',
+      type: 'cron',
       enabled: true,
     },
   ],
@@ -181,7 +181,7 @@ const mockCloseRunPanel = vi.fn(() => {
   runPanelContext = null;
 });
 
-vi.mock("../../../js/collaborative-editor/hooks/useUI", () => ({
+vi.mock('../../../js/collaborative-editor/hooks/useUI', () => ({
   useIsRunPanelOpen: () => isRunPanelOpen,
   useRunPanelContext: () => runPanelContext,
   useUICommands: () => ({
@@ -192,7 +192,7 @@ vi.mock("../../../js/collaborative-editor/hooks/useUI", () => ({
 
 // Mock workflow hooks with controllable node selection
 let currentNode: {
-  type: "job" | "trigger" | "edge" | null;
+  type: 'job' | 'trigger' | 'edge' | null;
   node: any;
 } = {
   type: null,
@@ -205,7 +205,7 @@ const mockSelectNode = vi.fn((node: any) => {
   }
 });
 
-vi.mock("../../../js/collaborative-editor/hooks/useWorkflow", () => ({
+vi.mock('../../../js/collaborative-editor/hooks/useWorkflow', () => ({
   useNodeSelection: () => ({
     currentNode,
     selectNode: mockSelectNode,
@@ -225,7 +225,7 @@ vi.mock("../../../js/collaborative-editor/hooks/useWorkflow", () => ({
       edges: mockWorkflow.edges,
       positions: {},
     };
-    return typeof selector === "function" ? selector(state) : state;
+    return typeof selector === 'function' ? selector(state) : state;
   },
 }));
 
@@ -238,7 +238,7 @@ function renderWorkflowEditor() {
   );
 }
 
-describe("WorkflowEditor", () => {
+describe('WorkflowEditor', () => {
   beforeEach(() => {
     vi.clearAllMocks();
 
@@ -256,132 +256,132 @@ describe("WorkflowEditor", () => {
     });
   });
 
-  describe("basic rendering", () => {
-    test("renders workflow diagram", async () => {
+  describe('basic rendering', () => {
+    test('renders workflow diagram', async () => {
       renderWorkflowEditor();
 
       await waitFor(() => {
-        expect(screen.getByTestId("workflow-diagram")).toBeInTheDocument();
+        expect(screen.getByTestId('workflow-diagram')).toBeInTheDocument();
       });
     });
 
-    test("renders inspector in DOM", async () => {
+    test('renders inspector in DOM', async () => {
       renderWorkflowEditor();
 
       await waitFor(() => {
-        expect(screen.getByTestId("workflow-diagram")).toBeInTheDocument();
+        expect(screen.getByTestId('workflow-diagram')).toBeInTheDocument();
       });
 
       // Inspector is always rendered (visibility controlled by CSS translate classes)
-      const inspector = screen.getByTestId("inspector");
+      const inspector = screen.getByTestId('inspector');
       expect(inspector).toBeInTheDocument();
     });
 
-    test("does not show run panel by default", async () => {
+    test('does not show run panel by default', async () => {
       renderWorkflowEditor();
 
       await waitFor(() => {
-        expect(screen.getByTestId("workflow-diagram")).toBeInTheDocument();
+        expect(screen.getByTestId('workflow-diagram')).toBeInTheDocument();
       });
 
       // Run panel should not be visible
-      const runPanel = screen.queryByTestId("manual-run-panel");
+      const runPanel = screen.queryByTestId('manual-run-panel');
       expect(runPanel).not.toBeInTheDocument();
     });
   });
 
-  describe("Cmd+Enter keyboard shortcut - behavior", () => {
-    test("Cmd+Enter keyboard shortcut is registered", async () => {
+  describe('Cmd+Enter keyboard shortcut - behavior', () => {
+    test('Cmd+Enter keyboard shortcut is registered', async () => {
       renderWorkflowEditor();
 
       await waitFor(() => {
-        expect(screen.getByTestId("workflow-diagram")).toBeInTheDocument();
+        expect(screen.getByTestId('workflow-diagram')).toBeInTheDocument();
       });
 
       // The component registers Cmd+Enter handler via useHotkeys
       // We can't easily test the actual keyboard behavior with mocked state
       // but we can verify the component renders successfully with the hotkey
-      expect(screen.getByTestId("workflow-diagram")).toBeInTheDocument();
+      expect(screen.getByTestId('workflow-diagram')).toBeInTheDocument();
     });
   });
 
-  describe("Cmd+Enter keyboard shortcut - triggering run", () => {
-    test("shows run panel when open", async () => {
+  describe('Cmd+Enter keyboard shortcut - triggering run', () => {
+    test('shows run panel when open', async () => {
       // Open run panel first
       isRunPanelOpen = true;
-      runPanelContext = { jobId: "job-1" };
+      runPanelContext = { jobId: 'job-1' };
 
       renderWorkflowEditor();
 
       // Wait for ManualRunPanel to mount
       await waitFor(() => {
-        expect(screen.getByTestId("manual-run-panel")).toBeInTheDocument();
+        expect(screen.getByTestId('manual-run-panel')).toBeInTheDocument();
       });
 
       // Verify panel is visible with correct context
-      const panel = screen.getByTestId("manual-run-panel");
-      expect(panel.getAttribute("data-job-id")).toBe("job-1");
+      const panel = screen.getByTestId('manual-run-panel');
+      expect(panel.getAttribute('data-job-id')).toBe('job-1');
     });
   });
 
-  describe("run panel rendering", () => {
-    test("shows ManualRunPanel with job context when open", async () => {
+  describe('run panel rendering', () => {
+    test('shows ManualRunPanel with job context when open', async () => {
       isRunPanelOpen = true;
-      runPanelContext = { jobId: "job-1" };
+      runPanelContext = { jobId: 'job-1' };
 
       renderWorkflowEditor();
 
       await waitFor(() => {
-        expect(screen.getByTestId("manual-run-panel")).toBeInTheDocument();
+        expect(screen.getByTestId('manual-run-panel')).toBeInTheDocument();
       });
 
-      const panel = screen.getByTestId("manual-run-panel");
-      expect(panel.getAttribute("data-job-id")).toBe("job-1");
+      const panel = screen.getByTestId('manual-run-panel');
+      expect(panel.getAttribute('data-job-id')).toBe('job-1');
     });
 
-    test("shows ManualRunPanel with trigger context when open", async () => {
+    test('shows ManualRunPanel with trigger context when open', async () => {
       isRunPanelOpen = true;
-      runPanelContext = { triggerId: "trigger-1" };
+      runPanelContext = { triggerId: 'trigger-1' };
 
       renderWorkflowEditor();
 
       await waitFor(() => {
-        expect(screen.getByTestId("manual-run-panel")).toBeInTheDocument();
+        expect(screen.getByTestId('manual-run-panel')).toBeInTheDocument();
       });
 
-      const panel = screen.getByTestId("manual-run-panel");
-      expect(panel.getAttribute("data-trigger-id")).toBe("trigger-1");
+      const panel = screen.getByTestId('manual-run-panel');
+      expect(panel.getAttribute('data-trigger-id')).toBe('trigger-1');
     });
   });
 
-  describe("inspector integration", () => {
-    test("shows inspector when node is selected", async () => {
+  describe('inspector integration', () => {
+    test('shows inspector when node is selected', async () => {
       // Select a job
       currentNode = {
-        type: "job",
+        type: 'job',
         node: mockWorkflow.jobs[0],
       };
 
       renderWorkflowEditor();
 
       await waitFor(() => {
-        expect(screen.getByTestId("inspector")).toBeInTheDocument();
+        expect(screen.getByTestId('inspector')).toBeInTheDocument();
       });
     });
 
-    test("inspector renders in the DOM regardless of selection (visibility controlled by CSS)", async () => {
+    test('inspector renders in the DOM regardless of selection (visibility controlled by CSS)', async () => {
       // No node selected
       currentNode = { type: null, node: null };
 
       renderWorkflowEditor();
 
       await waitFor(() => {
-        expect(screen.getByTestId("workflow-diagram")).toBeInTheDocument();
+        expect(screen.getByTestId('workflow-diagram')).toBeInTheDocument();
       });
 
       // Inspector is in DOM but has translate-x-full class (off-screen)
       // The component itself mounts regardless of selection
-      const inspector = screen.queryByTestId("inspector");
+      const inspector = screen.queryByTestId('inspector');
       // We can't easily test CSS classes with JSDOM, so we just verify the structure exists
       expect(inspector).toBeInTheDocument();
     });

@@ -10,7 +10,7 @@ cd "$PROJECT_ROOT/assets"
 
 npm run lint -- \
   --concurrency 4 \
-  --fix js/collaborative-editor \
+  --fix \
   --exit-on-fatal-error || {
   exit_code=$?
   if [ $exit_code -le 1 ]; then
@@ -26,7 +26,7 @@ npm exec prettier -- \
   --config "$PROJECT_ROOT/.prettierrc" \
   --ignore-path "$PROJECT_ROOT/.prettierignore" \
   --write \
-  js/collaborative-editor test | grep -v "unchanged" || {
+  "**/*.{js,jsx,ts,tsx}" | grep -v "unchanged" || {
   exit_code=$?
   if [ $exit_code -eq 1 ]; then
     echo "✓ No changes needed for Prettier"

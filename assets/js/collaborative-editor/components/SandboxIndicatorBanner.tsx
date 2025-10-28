@@ -20,25 +20,25 @@ interface SandboxIndicatorBannerProps {
   parentProjectId?: string | null | undefined;
   parentProjectName?: string | null | undefined;
   projectName?: string | null | undefined;
-  position?: "absolute" | "relative";
-  variant?: "full" | "compact";
+  position?: 'absolute' | 'relative';
+  variant?: 'full' | 'compact';
 }
 
 export function SandboxIndicatorBanner({
   parentProjectId,
   parentProjectName,
   projectName,
-  position = "absolute",
-  variant = "full",
+  position = 'absolute',
+  variant = 'full',
 }: SandboxIndicatorBannerProps) {
   const isSandbox = !!parentProjectId;
-  const sandboxName = projectName || "sandbox";
+  const sandboxName = projectName || 'sandbox';
 
   if (!isSandbox) {
     return null;
   }
 
-  const positionClasses = position === "absolute" ? "absolute z-5" : "relative";
+  const positionClasses = position === 'absolute' ? 'absolute z-5' : 'relative';
 
   return (
     <div
@@ -47,14 +47,14 @@ export function SandboxIndicatorBanner({
       data-testid="sandbox-indicator-banner"
     >
       <p className="text-sm leading-6">
-        <span className="hero-beaker h-5 w-5 inline-block align-middle mr-2" />{" "}
-        {variant === "compact" ? (
+        <span className="hero-beaker h-5 w-5 inline-block align-middle mr-2" />{' '}
+        {variant === 'compact' ? (
           <>
             sandbox: <span className="font-bold">{sandboxName}</span>
           </>
         ) : (
           <>
-            You are currently working in the sandbox{" "}
+            You are currently working in the sandbox{' '}
             <span className="font-bold">{sandboxName}</span>
           </>
         )}

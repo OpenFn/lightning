@@ -15,7 +15,7 @@ export function CronFieldBuilder({
   onChange,
   onBlur,
   disabled = false,
-  className = "",
+  className = '',
 }: CronFieldBuilderProps) {
   return (
     <div className={`space-y-2 ${className}`}>

@@ -1,5 +1,5 @@
-import { produce } from "immer";
-import { useSyncExternalStore } from "react";
+import { produce } from 'immer';
+import { useSyncExternalStore } from 'react';
 
 interface URLState {
   searchParams: URLSearchParams;
@@ -23,7 +23,7 @@ class URLStore {
       const newSearchParams = new URLSearchParams(window.location.search);
       const newHash = window.location.hash.slice(1);
 
-      const newState = produce(this.state, (draft) => {
+      const newState = produce(this.state, draft => {
         draft.searchParams = newSearchParams;
         draft.hash = newHash;
       });
@@ -48,12 +48,12 @@ class URLStore {
       updateParams();
     };
 
-    window.addEventListener("popstate", updateParams);
-    window.addEventListener("hashchange", updateParams);
+    window.addEventListener('popstate', updateParams);
+    window.addEventListener('hashchange', updateParams);
   }
 
   private notifyListeners() {
-    this.listeners.forEach((listener) => listener());
+    this.listeners.forEach(listener => listener());
   }
 
   subscribe = (listener: () => void) => {
@@ -77,15 +77,15 @@ class URLStore {
     const newURL = new URL(window.location.pathname, window.location.origin);
     newURL.search = newParams.toString();
     newURL.hash = window.location.hash;
-    history.pushState({}, "", newURL);
+    history.pushState({}, '', newURL);
   };
 
   updateHash = (hash: string | null) => {
     const newURL =
       window.location.pathname +
       window.location.search +
-      (hash ? `#${hash}` : "");
-    history.pushState({}, "", newURL);
+      (hash ? `#${hash}` : '');
+    history.pushState({}, '', newURL);
   };
 }
 
@@ -97,7 +97,7 @@ export function useURLState() {
   const snapshot = useSyncExternalStore(
     urlStore.subscribe,
     urlStore.getSnapshot,
-    urlStore.getSnapshot, // Server-side snapshot (same as client for this use case)
+    urlStore.getSnapshot // Server-side snapshot (same as client for this use case)
   );
 
   return {

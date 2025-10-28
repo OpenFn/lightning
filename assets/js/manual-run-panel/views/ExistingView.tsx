@@ -3,22 +3,22 @@ import {
   MagnifyingGlassIcon,
   RectangleGroupIcon,
   XMarkIcon,
-} from "@heroicons/react/24/outline";
-import React, { type KeyboardEvent } from "react";
+} from '@heroicons/react/24/outline';
+import React, { type KeyboardEvent } from 'react';
 
-import useOutsideClick from "#/hooks/useOutsideClick";
-import formatDate from "#/utils/formatDate";
-import truncateUid from "#/utils/truncateUID";
+import useOutsideClick from '#/hooks/useOutsideClick';
+import formatDate from '#/utils/formatDate';
+import truncateUid from '#/utils/truncateUID';
 
-import DataclipTypePill from "../DataclipTypePill";
-import Pill from "../Pill";
+import DataclipTypePill from '../DataclipTypePill';
+import Pill from '../Pill';
 import {
   DataclipTypeNames,
   DataclipTypes,
   FilterTypes,
   type Dataclip,
   type SetDates,
-} from "../types";
+} from '../types';
 
 interface ExistingViewProps {
   dataclips: Dataclip[];
@@ -81,12 +81,12 @@ const ExistingView: React.FC<ExistingViewProps> = ({
               (key as FilterTypes) === FilterTypes.DATACLIP_TYPE
                 ? DataclipTypeNames[value!]
                 : value
-            }`}{" "}
+            }`}{' '}
       </Pill>
     ));
 
   const keyDownHandler = (e: KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter") {
+    if (e.key === 'Enter') {
       e.stopPropagation();
       e.preventDefault();
       onSubmit();
@@ -116,7 +116,7 @@ const ExistingView: React.FC<ExistingViewProps> = ({
               {query.trim() ? (
                 <div
                   onClick={() => {
-                    setQuery("");
+                    setQuery('');
                   }}
                   className="absolute inset-y-0 right-0 flex items-center pr-3 cursor-pointer"
                 >
@@ -150,7 +150,7 @@ const ExistingView: React.FC<ExistingViewProps> = ({
               <div
                 ref={calendarRef}
                 className={`absolute right-0 ml-1.5 z-10 mt-2 origin-top-left rounded-md bg-white shadow-lg ring-1 ring-black/5 focus:outline-none min-w-[260px] ${
-                  dateOpen ? "" : "hidden"
+                  dateOpen ? '' : 'hidden'
                 } `}
               >
                 <div className="py-3" role="none">
@@ -203,7 +203,7 @@ const ExistingView: React.FC<ExistingViewProps> = ({
               <ul
                 ref={typesRef}
                 className={`absolute z-10 mt-2 bg-white ring-1 ring-black/5 focus:outline-none rounded-md shadow-lg right-0 w-auto overflow-hidden ${
-                  typesOpen ? "" : "hidden"
+                  typesOpen ? '' : 'hidden'
                 } `}
               >
                 {DataclipTypes.map(type => {
@@ -212,18 +212,18 @@ const ExistingView: React.FC<ExistingViewProps> = ({
                       key={type}
                       onClick={() => {
                         setSelectedClipType(
-                          type === selectedClipType ? "" : type
+                          type === selectedClipType ? '' : type
                         );
                       }}
                       className={`px-3 py-2 hover:bg-slate-100 cursor-pointer text-nowrap flex items-center gap-2 text-slate-700 ${
                         type === selectedClipType
-                          ? "bg-blue-200 text-blue-700"
-                          : ""
+                          ? 'bg-blue-200 text-blue-700'
+                          : ''
                       }`}
                     >
                       <span
                         className={`hero-check size-4 text-gray-400 ${
-                          type !== selectedClipType ? "invisible" : ""
+                          type !== selectedClipType ? 'invisible' : ''
                         }`}
                       />
                       <span className="text-sm">{DataclipTypeNames[type]}</span>
@@ -240,7 +240,7 @@ const ExistingView: React.FC<ExistingViewProps> = ({
                   onSubmit();
                 }}
                 className={`border rounded-md px-1 py-1 h-full flex justify-center items-center hover:bg-slate-100 hover:border-slate-300 ${
-                  namedOnly ? "bg-primary-100 border-primary-300" : ""
+                  namedOnly ? 'bg-primary-100 border-primary-300' : ''
                 }`}
               >
                 <span className="hero-tag h-5 w-5 text-slate-700" />
@@ -251,7 +251,7 @@ const ExistingView: React.FC<ExistingViewProps> = ({
         <div className="flex gap-1 mt-2">{pills}</div>
       </div>
       <div
-        className={`${fixedHeight ? "h-64" : ""} flex flex-col gap-3 overflow-auto`}
+        className={`${fixedHeight ? 'h-64' : ''} flex flex-col gap-3 overflow-auto`}
       >
         {dataclips.length ? (
           dataclips.map(clip => {

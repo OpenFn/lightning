@@ -51,7 +51,7 @@ export const ReactComponent = {
       this._errorMsg('Element is not valid for this hook!')
     );
 
-    // TODO: remove this, in this hook there is no difference between the 
+    // TODO: remove this, in this hook there is no difference between the
     // container and the element
     this._containerEl = this.el;
     this._Component = withProps(

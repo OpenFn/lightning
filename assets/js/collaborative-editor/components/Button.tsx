@@ -1,12 +1,12 @@
-import type { ReactNode } from "react";
+import type { ReactNode } from 'react';
 
 interface ButtonProps {
   children: ReactNode;
-  variant?: "primary" | "danger" | "secondary";
+  variant?: 'primary' | 'danger' | 'secondary';
   disabled?: boolean;
   loading?: boolean;
   onClick?: () => void;
-  type?: "button" | "submit";
+  type?: 'button' | 'submit';
   className?: string;
 }
 
@@ -21,12 +21,12 @@ interface ButtonProps {
  */
 export function Button({
   children,
-  variant = "primary",
+  variant = 'primary',
   disabled = false,
   loading = false,
   onClick,
-  type = "button",
-  className = "",
+  type = 'button',
+  className = '',
 }: ButtonProps) {
   const isDisabled = disabled || loading;
 
@@ -66,7 +66,7 @@ export function Button({
         ${variantClasses[variant]}
         ${className}
       `
-        .replace(/\s+/g, " ")
+        .replace(/\s+/g, ' ')
         .trim()}
     >
       {children}

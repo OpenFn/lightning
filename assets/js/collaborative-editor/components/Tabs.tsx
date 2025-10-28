@@ -1,4 +1,4 @@
-import type { FC, SVGProps } from "react";
+import type { FC, SVGProps } from 'react';
 
 interface TabOption<T extends string> {
   value: T;
@@ -37,11 +37,11 @@ export function Tabs<T extends string>({
                 text-sm font-medium transition-colors
                 ${
                   isSelected
-                    ? "border-primary-500 text-primary-600"
-                    : "border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700"
+                    ? 'border-primary-500 text-primary-600'
+                    : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
                 }
               `}
-              aria-current={isSelected ? "page" : undefined}
+              aria-current={isSelected ? 'page' : undefined}
             >
               {Icon && (
                 <Icon
@@ -49,8 +49,8 @@ export function Tabs<T extends string>({
                     -ml-0.5 mr-2 h-5 w-5
                     ${
                       isSelected
-                        ? "text-primary-500"
-                        : "text-gray-400 group-hover:text-gray-500"
+                        ? 'text-primary-500'
+                        : 'text-gray-400 group-hover:text-gray-500'
                     }
                   `}
                   aria-hidden="true"

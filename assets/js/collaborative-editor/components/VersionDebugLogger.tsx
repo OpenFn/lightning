@@ -12,14 +12,14 @@
  * - Color coding: green if versions match, red if mismatch
  */
 
-import { useEffect } from "react";
+import { useEffect } from 'react';
 
-import { useSession } from "../hooks/useSession";
+import { useSession } from '../hooks/useSession';
 import {
   useLatestSnapshotLockVersion,
   useSessionContextLoading,
-} from "../hooks/useSessionContext";
-import { useWorkflowState } from "../hooks/useWorkflow";
+} from '../hooks/useSessionContext';
+import { useWorkflowState } from '../hooks/useWorkflow';
 
 /**
  * Logs version debug information to console with beautiful formatting
@@ -52,15 +52,15 @@ export function logVersionDebug(debugInfo: {
     ydocVersion !== null && dbVersion !== null && ydocVersion === dbVersion;
 
   // Styles
-  const headerStyle = "color: #FFC107; font-weight: bold; font-size: 14px;";
-  const greenStyle = "color: #4CAF50; font-weight: bold;";
-  const redStyle = "color: #F44336; font-weight: bold;";
-  const yellowStyle = "color: #FFC107; font-weight: bold;";
-  const grayStyle = "color: #9E9E9E;";
-  const resetStyle = "";
+  const headerStyle = 'color: #FFC107; font-weight: bold; font-size: 14px;';
+  const greenStyle = 'color: #4CAF50; font-weight: bold;';
+  const redStyle = 'color: #F44336; font-weight: bold;';
+  const yellowStyle = 'color: #FFC107; font-weight: bold;';
+  const grayStyle = 'color: #9E9E9E;';
+  const resetStyle = '';
 
-  console.log("%c🔍 Version Debug", headerStyle);
-  console.log("%c━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━", grayStyle);
+  console.log('%c🔍 Version Debug', headerStyle);
+  console.log('%c━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━', grayStyle);
 
   // Lock Versions
   const versionStyle = versionsMatch
@@ -69,36 +69,36 @@ export function logVersionDebug(debugInfo: {
       ? redStyle
       : yellowStyle;
   console.log(
-    `%cY.Doc Lock Version: %c${ydocVersion ?? "null"}`,
+    `%cY.Doc Lock Version: %c${ydocVersion ?? 'null'}`,
     grayStyle,
     versionStyle
   );
   console.log(
-    `%cDB Lock Version:    %c${dbVersion ?? "null"}`,
+    `%cDB Lock Version:    %c${dbVersion ?? 'null'}`,
     grayStyle,
     versionStyle
   );
 
-  console.log("%c━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━", grayStyle);
+  console.log('%c━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━', grayStyle);
 
   // Sync Status
   console.log(
-    `%cConnected:  %c${isConnected ? "✓" : "✗"}`,
+    `%cConnected:  %c${isConnected ? '✓' : '✗'}`,
     grayStyle,
     isConnected ? greenStyle : redStyle
   );
   console.log(
-    `%cSynced:     %c${isSynced ? "✓" : "✗"}`,
+    `%cSynced:     %c${isSynced ? '✓' : '✗'}`,
     grayStyle,
     isSynced ? greenStyle : redStyle
   );
   console.log(
-    `%cContext:    %c${sessionContextLoading ? "loading..." : "loaded"}`,
+    `%cContext:    %c${sessionContextLoading ? 'loading...' : 'loaded'}`,
     grayStyle,
     sessionContextLoading ? yellowStyle : greenStyle
   );
 
-  console.log("%c━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━", grayStyle);
+  console.log('%c━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━', grayStyle);
 
   // Data Counts
   console.log(`%cJobs:       %c${jobsCount}`, grayStyle, resetStyle);
@@ -107,14 +107,14 @@ export function logVersionDebug(debugInfo: {
 
   // Auto-reset indicator
   if (isStale && isSynced) {
-    console.log("%c━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━", grayStyle);
+    console.log('%c━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━', grayStyle);
     console.log(
-      "%c⚡ Auto-reset will trigger",
-      "color: #FF9800; font-weight: bold;"
+      '%c⚡ Auto-reset will trigger',
+      'color: #FF9800; font-weight: bold;'
     );
   }
 
-  console.log("%c━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n", grayStyle);
+  console.log('%c━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n', grayStyle);
 }
 
 export function VersionDebugLogger() {

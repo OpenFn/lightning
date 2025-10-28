@@ -1,15 +1,15 @@
-import { useStore } from "@tanstack/react-form";
-import { useCallback, useEffect, useMemo } from "react";
+import { useStore } from '@tanstack/react-form';
+import { useCallback, useEffect, useMemo } from 'react';
 
-import { useAppForm } from "#/collaborative-editor/components/form";
-import { useAdaptors } from "#/collaborative-editor/hooks/useAdaptors";
-import { useCredentials } from "#/collaborative-editor/hooks/useCredentials";
-import { useWorkflowActions } from "#/collaborative-editor/hooks/useWorkflow";
-import { useWatchFields } from "#/collaborative-editor/stores/common";
-import { JobSchema } from "#/collaborative-editor/types/job";
-import type { Workflow } from "#/collaborative-editor/types/workflow";
+import { useAppForm } from '#/collaborative-editor/components/form';
+import { useAdaptors } from '#/collaborative-editor/hooks/useAdaptors';
+import { useCredentials } from '#/collaborative-editor/hooks/useCredentials';
+import { useWorkflowActions } from '#/collaborative-editor/hooks/useWorkflow';
+import { useWatchFields } from '#/collaborative-editor/stores/common';
+import { JobSchema } from '#/collaborative-editor/types/job';
+import type { Workflow } from '#/collaborative-editor/types/workflow';
 
-import { createZodValidator } from "../form/createZodValidator";
+import { createZodValidator } from '../form/createZodValidator';
 
 interface JobFormProps {
   job: Workflow.Job;
@@ -101,7 +101,7 @@ const useCredentialOptions = () => {
       ...keychainCredentials.map(credential => ({
         value: credential.id,
         label: credential.name,
-        group: "Keychain Credentials",
+        group: 'Keychain Credentials',
       })),
     ];
   }, [projectCredentials, keychainCredentials]);
@@ -149,7 +149,7 @@ export function JobForm({ job }: JobFormProps) {
   const { credentialOptions, resolveCredentialId } = useCredentialOptions();
 
   // Parse initial adaptor value
-  const initialAdaptor = job.adaptor || "@openfn/language-common@latest";
+  const initialAdaptor = job.adaptor || '@openfn/language-common@latest';
   const { package: initialAdaptorPackage } = resolveAdaptor(initialAdaptor);
 
   // Determine initial credential_id
@@ -191,17 +191,17 @@ export function JobForm({ job }: JobFormProps) {
     changedFields => {
       Object.entries(changedFields).forEach(([key, value]) => {
         if (key in form.state.values) {
-          if (key === "adaptor" && value) {
+          if (key === 'adaptor' && value) {
             const { package: adaptorPackage } = resolveAdaptor(value);
             if (adaptorPackage) {
-              form.setFieldValue("adaptor_package", adaptorPackage);
+              form.setFieldValue('adaptor_package', adaptorPackage);
             }
           }
           form.setFieldValue(key as keyof typeof form.state.values, value);
         }
       });
     },
-    ["name", "adaptor", "project_credential_id", "keychain_credential_id"]
+    ['name', 'adaptor', 'project_credential_id', 'keychain_credential_id']
   );
 
   // Reset form when job changes
@@ -222,7 +222,7 @@ export function JobForm({ job }: JobFormProps) {
     if (!adaptorPackage) return;
     const latestVersion = getLatestVersion(adaptorPackage);
     if (latestVersion) {
-      form.setFieldValue("adaptor", latestVersion);
+      form.setFieldValue('adaptor', latestVersion);
       updateJob(job.id, form.state.values);
     }
   }, [adaptorPackage, getLatestVersion, form, job.id, updateJob]);
@@ -267,11 +267,11 @@ export function JobForm({ job }: JobFormProps) {
             onChange: ({ value, fieldApi }) => {
               const resolved = resolveCredentialId(value);
               fieldApi.form.setFieldValue(
-                "project_credential_id",
+                'project_credential_id',
                 resolved.project_credential_id
               );
               fieldApi.form.setFieldValue(
-                "keychain_credential_id",
+                'keychain_credential_id',
                 resolved.keychain_credential_id
               );
             },

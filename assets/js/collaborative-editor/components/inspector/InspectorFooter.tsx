@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import type { ReactNode } from 'react';
 
 interface InspectorFooterProps {
   leftButtons?: ReactNode;
@@ -34,7 +34,7 @@ export function InspectorFooter({
   }
 
   return (
-    <div className={"flex justify-between items-center"}>
+    <div className={'flex justify-between items-center'}>
       {/* Left side: Edit, Run, etc. */}
       <div className="flex gap-2">{leftButtons}</div>
 

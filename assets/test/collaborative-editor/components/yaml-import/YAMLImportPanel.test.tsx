@@ -4,14 +4,14 @@
  * Tests state machine, debounced validation, and import flow
  */
 
-import { describe, expect, test, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
-import { YAMLImportPanel } from "../../../../js/collaborative-editor/components/left-panel/YAMLImportPanel";
-import { StoreContext } from "../../../../js/collaborative-editor/contexts/StoreProvider";
-import type { StoreContextValue } from "../../../../js/collaborative-editor/contexts/StoreProvider";
+import { describe, expect, test, vi, beforeEach } from 'vitest';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { YAMLImportPanel } from '../../../../js/collaborative-editor/components/left-panel/YAMLImportPanel';
+import { StoreContext } from '../../../../js/collaborative-editor/contexts/StoreProvider';
+import type { StoreContextValue } from '../../../../js/collaborative-editor/contexts/StoreProvider';
 
 // Mock the awareness hook
-vi.mock("../../../../js/collaborative-editor/hooks/useAwareness", () => ({
+vi.mock('../../../../js/collaborative-editor/hooks/useAwareness', () => ({
   useRemoteUsers: () => [],
 }));
 
@@ -49,7 +49,7 @@ function createMockStoreContext(): StoreContextValue {
   };
 }
 
-describe("YAMLImportPanel", () => {
+describe('YAMLImportPanel', () => {
   let mockOnBack: ReturnType<typeof vi.fn>;
   let mockOnImport: ReturnType<typeof vi.fn>;
   let mockOnSave: ReturnType<typeof vi.fn>;
@@ -61,8 +61,8 @@ describe("YAMLImportPanel", () => {
     vi.clearAllMocks();
   });
 
-  describe("Panel visibility", () => {
-    test("shows panel content", () => {
+  describe('Panel visibility', () => {
+    test('shows panel content', () => {
       const mockStore = createMockStoreContext();
       render(
         <StoreContext.Provider value={mockStore}>
@@ -78,8 +78,8 @@ describe("YAMLImportPanel", () => {
     });
   });
 
-  describe("State machine", () => {
-    test("starts in initial state with disabled button", () => {
+  describe('State machine', () => {
+    test('starts in initial state with disabled button', () => {
       const mockStore = createMockStoreContext();
       render(
         <StoreContext.Provider value={mockStore}>
@@ -91,11 +91,11 @@ describe("YAMLImportPanel", () => {
         </StoreContext.Provider>
       );
 
-      const createButton = screen.getByRole("button", { name: /Create/i });
+      const createButton = screen.getByRole('button', { name: /Create/i });
       expect(createButton).toBeDisabled();
     });
 
-    test("transitions to parsing state when YAML entered", async () => {
+    test('transitions to parsing state when YAML entered', async () => {
       const mockStore = createMockStoreContext();
       render(
         <StoreContext.Provider value={mockStore}>
@@ -113,13 +113,13 @@ describe("YAMLImportPanel", () => {
       fireEvent.change(textarea, { target: { value: validYAML } });
 
       // Button should be disabled during parsing
-      const createButton = screen.getByRole("button", {
+      const createButton = screen.getByRole('button', {
         name: /Create|Validating/i,
       });
       expect(createButton).toBeDisabled();
     });
 
-    test("transitions to valid state after successful validation", async () => {
+    test('transitions to valid state after successful validation', async () => {
       const mockStore = createMockStoreContext();
       render(
         <StoreContext.Provider value={mockStore}>
@@ -139,14 +139,14 @@ describe("YAMLImportPanel", () => {
       // Wait for debounce (300ms) + validation
       await waitFor(
         () => {
-          const createButton = screen.getByRole("button", { name: /Create/i });
+          const createButton = screen.getByRole('button', { name: /Create/i });
           expect(createButton).not.toBeDisabled();
         },
         { timeout: 500 }
       );
     });
 
-    test("transitions to invalid state with validation errors", async () => {
+    test('transitions to invalid state with validation errors', async () => {
       const mockStore = createMockStoreContext();
       render(
         <StoreContext.Provider value={mockStore}>
@@ -166,14 +166,14 @@ describe("YAMLImportPanel", () => {
       // Wait for validation to complete - button should remain disabled
       await waitFor(
         () => {
-          const createButton = screen.getByRole("button", { name: /Create/i });
+          const createButton = screen.getByRole('button', { name: /Create/i });
           expect(createButton).toBeDisabled();
         },
         { timeout: 600 }
       );
     });
 
-    test("transitions to importing state when Create clicked", async () => {
+    test('transitions to importing state when Create clicked', async () => {
       const mockStore = createMockStoreContext();
       render(
         <StoreContext.Provider value={mockStore}>
@@ -193,13 +193,13 @@ describe("YAMLImportPanel", () => {
       // Wait for valid state
       await waitFor(
         () => {
-          const createButton = screen.getByRole("button", { name: /Create/i });
+          const createButton = screen.getByRole('button', { name: /Create/i });
           expect(createButton).not.toBeDisabled();
         },
         { timeout: 500 }
       );
 
-      const createButton = screen.getByRole("button", { name: /Create/i });
+      const createButton = screen.getByRole('button', { name: /Create/i });
       fireEvent.click(createButton);
 
       // Wait for async save to complete
@@ -209,8 +209,8 @@ describe("YAMLImportPanel", () => {
     });
   });
 
-  describe("Debounced validation", () => {
-    test("does not validate immediately on input", async () => {
+  describe('Debounced validation', () => {
+    test('does not validate immediately on input', async () => {
       const mockStore = createMockStoreContext();
       render(
         <StoreContext.Provider value={mockStore}>
@@ -225,7 +225,7 @@ describe("YAMLImportPanel", () => {
       const textarea = screen.getByPlaceholderText(
         /Paste your YAML content here/i
       );
-      fireEvent.change(textarea, { target: { value: "name:" } });
+      fireEvent.change(textarea, { target: { value: 'name:' } });
 
       // Validation shouldn't complete yet
       await waitFor(
@@ -238,7 +238,7 @@ describe("YAMLImportPanel", () => {
       );
     });
 
-    test("validates after 300ms delay", async () => {
+    test('validates after 300ms delay', async () => {
       const mockStore = createMockStoreContext();
       render(
         <StoreContext.Provider value={mockStore}>
@@ -253,7 +253,7 @@ describe("YAMLImportPanel", () => {
       const textarea = screen.getByPlaceholderText(
         /Paste your YAML content here/i
       );
-      const createButton = screen.getByRole("button", { name: /Create/i });
+      const createButton = screen.getByRole('button', { name: /Create/i });
 
       // Initially disabled
       expect(createButton).toBeDisabled();
@@ -270,8 +270,8 @@ describe("YAMLImportPanel", () => {
     });
   });
 
-  describe("User actions", () => {
-    test("navigates back when Back button clicked", () => {
+  describe('User actions', () => {
+    test('navigates back when Back button clicked', () => {
       const mockStore = createMockStoreContext();
       render(
         <StoreContext.Provider value={mockStore}>
@@ -283,15 +283,15 @@ describe("YAMLImportPanel", () => {
         </StoreContext.Provider>
       );
 
-      const backButton = screen.getByRole("button", { name: /Back/i });
+      const backButton = screen.getByRole('button', { name: /Back/i });
       fireEvent.click(backButton);
 
       expect(mockOnBack).toHaveBeenCalled();
     });
   });
 
-  describe("UI elements", () => {
-    test("shows button states during validation", async () => {
+  describe('UI elements', () => {
+    test('shows button states during validation', async () => {
       const mockStore = createMockStoreContext();
       render(
         <StoreContext.Provider value={mockStore}>
@@ -308,7 +308,7 @@ describe("YAMLImportPanel", () => {
       );
 
       // Initially disabled
-      const createButton1 = screen.getByRole("button", { name: /Create/i });
+      const createButton1 = screen.getByRole('button', { name: /Create/i });
       expect(createButton1).toBeDisabled();
 
       // Enter valid YAML
@@ -317,7 +317,7 @@ describe("YAMLImportPanel", () => {
       // After validation completes, button should be enabled
       await waitFor(
         () => {
-          const createButton2 = screen.getByRole("button", { name: /Create/i });
+          const createButton2 = screen.getByRole('button', { name: /Create/i });
           expect(createButton2).not.toBeDisabled();
         },
         { timeout: 600 }

@@ -1,12 +1,12 @@
-import { usePermissions } from "../../hooks/useSessionContext";
-import { useCanRun } from "../../hooks/useWorkflow";
-import type { Workflow } from "../../types/workflow";
-import { Button } from "../Button";
-import { Tooltip } from "../Tooltip";
+import { usePermissions } from '../../hooks/useSessionContext';
+import { useCanRun } from '../../hooks/useWorkflow';
+import type { Workflow } from '../../types/workflow';
+import { Button } from '../Button';
+import { Tooltip } from '../Tooltip';
 
-import { InspectorFooter } from "./InspectorFooter";
-import { InspectorLayout } from "./InspectorLayout";
-import { TriggerForm } from "./TriggerForm";
+import { InspectorFooter } from './InspectorFooter';
+import { InspectorLayout } from './InspectorLayout';
+import { TriggerForm } from './TriggerForm';
 
 interface TriggerInspectorProps {
   trigger: Workflow.Trigger;

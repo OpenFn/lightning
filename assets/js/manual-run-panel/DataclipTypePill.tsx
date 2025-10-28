@@ -25,4 +25,4 @@ const DataclipTypePill: React.FC<DataclipTypePillProps> = ({
   return <div className={`${baseClasses} ${typeClasses}`}>{type}</div>;
 };
 
-export default DataclipTypePill
+export default DataclipTypePill;

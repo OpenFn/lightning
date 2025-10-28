@@ -11,17 +11,17 @@
  *   cleanup();
  */
 
-import type { StoreContextValue } from "../../../js/collaborative-editor/contexts/StoreProvider";
-import type { SessionStoreInstance } from "../../../js/collaborative-editor/stores/createSessionStore";
-import { createSessionStore } from "../../../js/collaborative-editor/stores/createSessionStore";
-import { createAdaptorStore } from "../../../js/collaborative-editor/stores/createAdaptorStore";
-import { createCredentialStore } from "../../../js/collaborative-editor/stores/createCredentialStore";
-import { createAwarenessStore } from "../../../js/collaborative-editor/stores/createAwarenessStore";
-import { createWorkflowStore } from "../../../js/collaborative-editor/stores/createWorkflowStore";
-import { createSessionContextStore } from "../../../js/collaborative-editor/stores/createSessionContextStore";
+import type { StoreContextValue } from '../../../js/collaborative-editor/contexts/StoreProvider';
+import type { SessionStoreInstance } from '../../../js/collaborative-editor/stores/createSessionStore';
+import { createSessionStore } from '../../../js/collaborative-editor/stores/createSessionStore';
+import { createAdaptorStore } from '../../../js/collaborative-editor/stores/createAdaptorStore';
+import { createCredentialStore } from '../../../js/collaborative-editor/stores/createCredentialStore';
+import { createAwarenessStore } from '../../../js/collaborative-editor/stores/createAwarenessStore';
+import { createWorkflowStore } from '../../../js/collaborative-editor/stores/createWorkflowStore';
+import { createSessionContextStore } from '../../../js/collaborative-editor/stores/createSessionContextStore';
 
-import { createMockSocket } from "../mocks/phoenixSocket";
-import { waitForAsync } from "../mocks/phoenixChannel";
+import { createMockSocket } from '../mocks/phoenixSocket';
+import { waitForAsync } from '../mocks/phoenixChannel';
 
 /**
  * Result of simulating StoreProvider setup
@@ -163,7 +163,7 @@ export function simulateStoreProvider(): StoreProviderSimulation {
  * });
  */
 export async function simulateStoreProviderWithConnection(
-  roomTopic: string = "test:workflow",
+  roomTopic: string = 'test:workflow',
   userData?: { id: string; name: string; color: string },
   options?: { connect?: boolean }
 ): Promise<ConnectedStoreProviderSimulation> {
@@ -172,9 +172,9 @@ export async function simulateStoreProviderWithConnection(
   const mockSocket = createMockSocket();
 
   const defaultUserData = userData || {
-    id: "user-1",
-    name: "Test User",
-    color: "#ff0000",
+    id: 'user-1',
+    name: 'Test User',
+    color: '#ff0000',
   };
 
   // Initialize session with connect: true by default
@@ -223,9 +223,9 @@ export function verifyAllStoresPresent(stores: StoreContextValue): void {
     stores.credentialStore,
     stores.sessionContextStore,
   ].forEach(store => {
-    expect(typeof store.subscribe).toBe("function");
-    expect(typeof store.getSnapshot).toBe("function");
-    expect(typeof store.withSelector).toBe("function");
+    expect(typeof store.subscribe).toBe('function');
+    expect(typeof store.getSnapshot).toBe('function');
+    expect(typeof store.withSelector).toBe('function');
   });
 }
 
@@ -359,7 +359,7 @@ export function simulateProviderLifecycle() {
      * Simulates mounting the StoreProvider
      */
     async mount(
-      roomTopic: string = "test:workflow",
+      roomTopic: string = 'test:workflow',
       userData?: { id: string; name: string; color: string }
     ): Promise<ConnectedStoreProviderSimulation> {
       const simulation = await simulateStoreProviderWithConnection(

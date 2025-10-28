@@ -1,35 +1,35 @@
-import { useEffect, useRef, useState } from "react";
-import { useHotkeys, useHotkeysContext } from "react-hotkeys-hook";
+import { useEffect, useRef, useState } from 'react';
+import { useHotkeys, useHotkeysContext } from 'react-hotkeys-hook';
 import {
   type ImperativePanelHandle,
   Panel,
   PanelGroup,
   PanelResizeHandle,
-} from "react-resizable-panels";
+} from 'react-resizable-panels';
 
-import _logger from "#/utils/logger";
+import _logger from '#/utils/logger';
 
-import { useURLState } from "../../../react/lib/use-url-state";
-import { useSession } from "../../hooks/useSession";
+import { useURLState } from '../../../react/lib/use-url-state';
+import { useSession } from '../../hooks/useSession';
 import {
   useLatestSnapshotLockVersion,
   useProject,
-} from "../../hooks/useSessionContext";
+} from '../../hooks/useSessionContext';
 import {
   useCanRun,
   useCanSave,
   useCurrentJob,
   useWorkflowActions,
   useWorkflowState,
-} from "../../hooks/useWorkflow";
-import { notifications } from "../../lib/notifications";
-import { CollaborativeMonaco } from "../CollaborativeMonaco";
-import { ManualRunPanel } from "../ManualRunPanel";
-import { SandboxIndicatorBanner } from "../SandboxIndicatorBanner";
+} from '../../hooks/useWorkflow';
+import { notifications } from '../../lib/notifications';
+import { CollaborativeMonaco } from '../CollaborativeMonaco';
+import { ManualRunPanel } from '../ManualRunPanel';
+import { SandboxIndicatorBanner } from '../SandboxIndicatorBanner';
 
-import { IDEHeader } from "./IDEHeader";
+import { IDEHeader } from './IDEHeader';
 
-const logger = _logger.ns("FullScreenIDE").seal();
+const logger = _logger.ns('FullScreenIDE').seal();
 
 interface FullScreenIDEProps {
   jobId?: string;
@@ -56,7 +56,7 @@ export function FullScreenIDE({
   parentProjectName,
 }: FullScreenIDEProps) {
   const { searchParams } = useURLState();
-  const jobIdFromURL = searchParams.get("job");
+  const jobIdFromURL = searchParams.get('job');
   const { selectJob, saveWorkflow } = useWorkflowActions();
   const { job: currentJob, ytext: currentJobYText } = useCurrentJob();
   const { awareness } = useSession();
@@ -105,9 +105,9 @@ export function FullScreenIDE({
 
   // Enable/disable ide scope based on whether IDE is open
   useEffect(() => {
-    enableScope("ide");
+    enableScope('ide');
     return () => {
-      disableScope("ide");
+      disableScope('ide');
     };
   }, [enableScope, disableScope]);
 
@@ -124,7 +124,7 @@ export function FullScreenIDE({
     if (!canSave) {
       // Show toast with the reason why save is disabled
       notifications.alert({
-        title: "Cannot save",
+        title: 'Cannot save',
         description: tooltipMessage,
       });
       return;
@@ -155,7 +155,7 @@ export function FullScreenIDE({
     // Check snapshot/permission restrictions first (these have clear messages)
     if (!canRunSnapshot) {
       notifications.alert({
-        title: "Cannot run",
+        title: 'Cannot run',
         description: runTooltipMessage,
       });
       return;
@@ -172,11 +172,11 @@ export function FullScreenIDE({
   // Handle Escape key to close the IDE
   // Two-step behavior: first Escape removes focus from Monaco, second closes IDE
   useHotkeys(
-    "escape",
+    'escape',
     event => {
       // Check if Monaco editor has focus
       const activeElement = document.activeElement;
-      const isMonacoFocused = activeElement?.closest(".monaco-editor");
+      const isMonacoFocused = activeElement?.closest('.monaco-editor');
 
       if (isMonacoFocused) {
         // First Escape: blur Monaco editor to remove focus
@@ -189,7 +189,7 @@ export function FullScreenIDE({
     },
     {
       enabled: true,
-      scopes: ["ide"],
+      scopes: ['ide'],
       enableOnFormTags: true, // Allow Escape even in Monaco editor
     },
     [onClose]
@@ -198,7 +198,7 @@ export function FullScreenIDE({
   // Handle Cmd/Ctrl+Enter to trigger workflow run
   // No scope restriction to ensure it works even when Monaco has focus
   useHotkeys(
-    "mod+enter",
+    'mod+enter',
     event => {
       event.preventDefault();
       event.stopPropagation();
@@ -314,7 +314,7 @@ export function FullScreenIDE({
               {/* Panel heading */}
               <div
                 className={`shrink-0 transition-transform ${
-                  isLeftCollapsed ? "rotate-90" : ""
+                  isLeftCollapsed ? 'rotate-90' : ''
                 }`}
               >
                 <div className="flex items-center justify-between px-3 py-1">
@@ -384,7 +384,7 @@ export function FullScreenIDE({
               {/* Panel heading */}
               <div
                 className={`shrink-0 border-b border-gray-100 transition-transform ${
-                  isCenterCollapsed ? "rotate-90" : ""
+                  isCenterCollapsed ? 'rotate-90' : ''
                 }`}
               >
                 <div className="flex items-center justify-between px-3 py-1">
@@ -420,14 +420,14 @@ export function FullScreenIDE({
                   <CollaborativeMonaco
                     ytext={currentJobYText}
                     awareness={awareness}
-                    adaptor={currentJob.adaptor || "common"}
+                    adaptor={currentJob.adaptor || 'common'}
                     disabled={!canSave}
                     className="h-full w-full"
                     options={{
                       automaticLayout: true,
                       minimap: { enabled: true },
-                      lineNumbers: "on",
-                      wordWrap: "on",
+                      lineNumbers: 'on',
+                      wordWrap: 'on',
                     }}
                   />
                 </div>
@@ -456,7 +456,7 @@ export function FullScreenIDE({
               {/* Panel heading */}
               <div
                 className={`shrink-0 transition-transform ${
-                  isRightCollapsed ? "rotate-90" : ""
+                  isRightCollapsed ? 'rotate-90' : ''
                 }`}
               >
                 <div className="flex items-center justify-between px-3 py-1">

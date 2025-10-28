@@ -3,9 +3,9 @@
  * Uses existing Lightning user token authentication
  */
 
-import { Socket as PhoenixSocket } from "phoenix";
-import { PHX_LV_DEBUG } from "phoenix_live_view/constants";
-import React, { createContext, useContext, useEffect, useState } from "react";
+import { Socket as PhoenixSocket } from 'phoenix';
+import { PHX_LV_DEBUG } from 'phoenix_live_view/constants';
+import React, { createContext, useContext, useEffect, useState } from 'react';
 
 interface SocketContextValue {
   socket: PhoenixSocket | null;
@@ -20,7 +20,7 @@ const SocketContext = createContext<SocketContextValue | null>(null);
 export const useSocket = () => {
   const context = useContext(SocketContext);
   if (!context) {
-    throw new Error("useSocket must be used within a SocketProvider");
+    throw new Error('useSocket must be used within a SocketProvider');
   }
   return context;
 };
@@ -43,16 +43,16 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({ children }) => {
     // Get user token from window (set by Lightning's root layout)
     const userToken = (window as any).userToken;
     if (!userToken) {
-      setConnectionError("No user token available");
+      setConnectionError('No user token available');
       return;
     }
 
     // Create new socket
-    const newSocket = new PhoenixSocket("/socket", {
+    const newSocket = new PhoenixSocket('/socket', {
       params: { token: userToken },
       logger: (kind: any, msg: any, data: any) => {
         // Follow the LiveView debug mode
-        if (sessionStorage.getItem(PHX_LV_DEBUG) === "true") {
+        if (sessionStorage.getItem(PHX_LV_DEBUG) === 'true') {
           console.log(`Phoenix Socket ${kind}:`, msg, data);
         }
       },
@@ -60,19 +60,19 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({ children }) => {
 
     // Set up event handlers
     newSocket.onOpen(() => {
-      console.log("✅ Socket connected");
+      console.log('✅ Socket connected');
       setIsConnected(true);
       setConnectionError(null);
     });
 
     newSocket.onError((error: any) => {
-      console.error("❌ Socket connection error:", error);
+      console.error('❌ Socket connection error:', error);
       setIsConnected(false);
-      setConnectionError(error?.toString() || "Connection error");
+      setConnectionError(error?.toString() || 'Connection error');
     });
 
     newSocket.onClose(() => {
-      console.log("🔌 Socket disconnected");
+      console.log('🔌 Socket disconnected');
       setIsConnected(false);
     });
 

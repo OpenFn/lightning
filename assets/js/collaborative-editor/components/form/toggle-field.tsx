@@ -1,6 +1,6 @@
-import { ErrorMessage } from "./error-message";
+import { ErrorMessage } from './error-message';
 
-import { useFieldContext } from ".";
+import { useFieldContext } from '.';
 
 interface ToggleFieldProps {
   label: string;
@@ -56,13 +56,13 @@ export function ToggleField({
             onClick={() => !disabled && field.handleChange(!isChecked)}
             className={`w-11 h-6 rounded-full relative
               transition-colors cursor-pointer ${
-                isChecked ? "bg-indigo-600" : "bg-gray-300"
-              } ${disabled ? "opacity-50 cursor-not-allowed" : ""}`}
+                isChecked ? 'bg-indigo-600' : 'bg-gray-300'
+              } ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
           >
             <div
               className={`absolute top-1 w-4 h-4 bg-white rounded-full
                 transition-all ${
-                  isChecked ? "right-1" : "left-1"
+                  isChecked ? 'right-1' : 'left-1'
                 } flex items-center justify-center`}
             >
               {isChecked && (

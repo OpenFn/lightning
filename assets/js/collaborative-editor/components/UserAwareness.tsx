@@ -1,4 +1,4 @@
-import { useSession } from "../hooks/useSession";
+import { useSession } from '../hooks/useSession';
 
 export function UserAwareness() {
   const { users, isConnected, isSynced } = useSession();
@@ -13,25 +13,25 @@ export function UserAwareness() {
         <div
           className={`w-2 h-2 rounded-full ${
             isConnected && isSynced
-              ? "bg-green-500"
+              ? 'bg-green-500'
               : isConnected
-                ? "bg-yellow-500"
-                : "bg-red-500"
+                ? 'bg-yellow-500'
+                : 'bg-red-500'
           }`}
         />
         <span className="text-gray-600">
           {isConnected && isSynced
-            ? "Connected & Synced"
+            ? 'Connected & Synced'
             : isConnected
-              ? "Connected (Syncing...)"
-              : "Disconnected"}
+              ? 'Connected (Syncing...)'
+              : 'Disconnected'}
         </span>
       </div>
 
       {/* Online users */}
       <div className="flex items-center gap-2">
         <span className="text-sm text-gray-600">
-          {users.length} user{users.length !== 1 ? "s" : ""} online:
+          {users.length} user{users.length !== 1 ? 's' : ''} online:
         </span>
         <div className="flex gap-1">
           {users.map(user => (

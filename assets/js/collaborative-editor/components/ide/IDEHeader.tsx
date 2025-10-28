@@ -1,7 +1,7 @@
-import { useVersionSelect } from "../../hooks/useVersionSelect";
-import { Button } from "../Button";
-import { Tooltip } from "../Tooltip";
-import { VersionDropdown } from "../VersionDropdown";
+import { useVersionSelect } from '../../hooks/useVersionSelect';
+import { Button } from '../Button';
+import { Tooltip } from '../Tooltip';
+import { VersionDropdown } from '../VersionDropdown';
 
 interface IDEHeaderProps {
   jobName: string;
@@ -58,14 +58,14 @@ export function IDEHeader({
 
         {/* Right: Action buttons */}
         <div className="flex items-center gap-3">
-          <Tooltip content={runTooltip || "Run workflow"} side="bottom">
+          <Tooltip content={runTooltip || 'Run workflow'} side="bottom">
             <span className="inline-block">
               <Button variant="secondary" onClick={onRun} disabled={!canRun}>
                 <span
                   className="hero-play size-4 inline-block mr-1"
                   aria-hidden="true"
                 />
-                {isRunning ? "Running..." : "Run"}
+                {isRunning ? 'Running...' : 'Run'}
               </Button>
             </span>
           </Tooltip>

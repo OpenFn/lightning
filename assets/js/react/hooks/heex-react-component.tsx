@@ -47,7 +47,6 @@ export const HeexReactComponent = {
     this._listeners = new Set();
     this._boundaryMounted = false;
 
-
     invariant(
       isReactHookedElement(this.el),
       this._errorMsg('Element is not valid for this hook!')
@@ -55,7 +54,7 @@ export const HeexReactComponent = {
 
     invariant(
       isReactContainerElement(this.el.nextElementSibling) &&
-      this.el.nextElementSibling.dataset.reactContainer === this.el.id,
+        this.el.nextElementSibling.dataset.reactContainer === this.el.id,
       this._errorMsg(`Missing valid React container element!`)
     );
 
@@ -73,13 +72,18 @@ export const HeexReactComponent = {
         pushEvent: this.pushEvent.bind(this),
         handleEvent: (name, callback) => {
           const ref = this.handleEvent(name, callback);
-          return () => { this.removeHandleEvent(ref); }
+          return () => {
+            this.removeHandleEvent(ref);
+          };
         },
         pushEventTo: this.pushEventTo.bind(this, this.el),
         el: this.el,
         containerEl: this._containerEl,
-        navigate: (path) => {
-          this.liveSocket.execJS(this.el, '[["patch",{"replace":false,"href":"' + path + '"}]]')
+        navigate: path => {
+          this.liveSocket.execJS(
+            this.el,
+            '[["patch",{"replace":false,"href":"' + path + '"}]]'
+          );
         },
       },
       /* eslint-enable */
@@ -364,8 +368,8 @@ export const HeexReactComponent = {
       [
         // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
         this._name != null &&
-        // prettier-ignore -- the above supression should not leak down
-        `name \`${this._name}\``,
+          // prettier-ignore -- the above supression should not leak down
+          `name \`${this._name}\``,
         `id \`${this.el.id}\``,
       ]
         .filter(Boolean)

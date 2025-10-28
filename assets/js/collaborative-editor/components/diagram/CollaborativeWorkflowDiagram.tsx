@@ -3,12 +3,12 @@
  * Phase 1: Basic rendering only - maps collaborative data to diagram format
  */
 
-import { ReactFlowProvider } from "@xyflow/react";
-import { useRef } from "react";
+import { ReactFlowProvider } from '@xyflow/react';
+import { useRef } from 'react';
 
-import { useNodeSelection } from "../../hooks/useWorkflow";
+import { useNodeSelection } from '../../hooks/useWorkflow';
 
-import CollaborativeWorkflowDiagramImpl from "./WorkflowDiagram";
+import CollaborativeWorkflowDiagramImpl from './WorkflowDiagram';
 
 interface CollaborativeWorkflowDiagramProps {
   className?: string;
@@ -16,7 +16,7 @@ interface CollaborativeWorkflowDiagramProps {
 }
 
 export function CollaborativeWorkflowDiagram({
-  className = "h-full w-full",
+  className = 'h-full w-full',
   inspectorId,
 }: CollaborativeWorkflowDiagramProps) {
   const { currentNode, selectNode } = useNodeSelection();

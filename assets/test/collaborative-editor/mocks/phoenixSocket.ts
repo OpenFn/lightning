@@ -1,4 +1,4 @@
-import { createMockPhoenixChannel } from "./phoenixChannel";
+import { createMockPhoenixChannel } from './phoenixChannel';
 
 // Mock Phoenix Socket - must match real Phoenix Socket interface
 export const createMockSocket = () => {
@@ -11,12 +11,12 @@ export const createMockSocket = () => {
       mockChannel.socket = socket;
       return mockChannel;
     },
-    endPointURL: () => "ws://localhost:4000/socket",
-    makeRef: () => "test-ref-123",
+    endPointURL: () => 'ws://localhost:4000/socket',
+    makeRef: () => 'test-ref-123',
     sendHeartbeat: () => {},
     connect: () => {},
     disconnect: () => {},
-    connectionState: () => "connected",
+    connectionState: () => 'connected',
     onOpen: () => 1,
     onError: () => 2,
     onClose: () => 3,
