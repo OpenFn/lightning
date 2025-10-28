@@ -5,24 +5,24 @@
  * should be editable based on deletion state, permissions, and snapshot version.
  */
 
-import { describe, expect, test, beforeEach } from "vitest";
 import { act, renderHook, waitFor } from "@testing-library/react";
 import type React from "react";
+import { describe, expect, test } from "vitest";
 import * as Y from "yjs";
 
-import { useWorkflowReadOnly } from "../../../js/collaborative-editor/hooks/useWorkflow";
-import { StoreContext } from "../../../js/collaborative-editor/contexts/StoreProvider";
 import type { StoreContextValue } from "../../../js/collaborative-editor/contexts/StoreProvider";
-import { createSessionContextStore } from "../../../js/collaborative-editor/stores/createSessionContextStore";
+import { StoreContext } from "../../../js/collaborative-editor/contexts/StoreProvider";
+import { useWorkflowReadOnly } from "../../../js/collaborative-editor/hooks/useWorkflow";
 import type { SessionContextStoreInstance } from "../../../js/collaborative-editor/stores/createSessionContextStore";
-import { createWorkflowStore } from "../../../js/collaborative-editor/stores/createWorkflowStore";
+import { createSessionContextStore } from "../../../js/collaborative-editor/stores/createSessionContextStore";
 import type { WorkflowStoreInstance } from "../../../js/collaborative-editor/stores/createWorkflowStore";
+import { createWorkflowStore } from "../../../js/collaborative-editor/stores/createWorkflowStore";
+import type { Session } from "../../../js/collaborative-editor/types/session";
+import { mockPermissions } from "../fixtures/sessionContextData";
 import {
   createMockPhoenixChannel,
   createMockPhoenixChannelProvider,
 } from "../mocks/phoenixChannel";
-import { mockPermissions } from "../fixtures/sessionContextData";
-import type { Session } from "../../../js/collaborative-editor/types/session";
 
 // =============================================================================
 // TEST HELPERS
@@ -35,9 +35,7 @@ interface WrapperOptions {
   workflowDeletedAt?: string | null;
 }
 
-function createWrapper(
-  options: WrapperOptions = {}
-): [
+function createWrapper(options: WrapperOptions = {}): [
   React.ComponentType<{ children: React.ReactNode }>,
   {
     sessionContextStore: SessionContextStoreInstance;
@@ -45,7 +43,7 @@ function createWrapper(
     ydoc: Session.WorkflowDoc;
     mockChannel: any;
     emitSessionContext: () => void;
-  }
+  },
 ] {
   const {
     permissions = { can_edit_workflow: true },
@@ -118,7 +116,13 @@ function createWrapper(
 
   return [
     wrapper,
-    { sessionContextStore, workflowStore, ydoc, mockChannel, emitSessionContext },
+    {
+      sessionContextStore,
+      workflowStore,
+      ydoc,
+      mockChannel,
+      emitSessionContext,
+    },
   ];
 }
 

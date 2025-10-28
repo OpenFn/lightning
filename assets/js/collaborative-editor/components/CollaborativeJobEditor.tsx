@@ -15,10 +15,7 @@ import Docs from "../../adaptor-docs/Docs";
 import { Tabs } from "../../components/Tabs";
 import Metadata from "../../metadata-explorer/Explorer";
 import { useAwarenessReady, useRawAwareness } from "../hooks/useAwareness";
-import {
-  useWorkflowSelector,
-  useWorkflowReadOnly,
-} from "../hooks/useWorkflow";
+import { useWorkflowSelector, useWorkflowReadOnly } from "../hooks/useWorkflow";
 
 import { CollaborativeMonaco } from "./CollaborativeMonaco";
 import { CollaborativeWorkflowDiagram } from "./diagram/CollaborativeWorkflowDiagram";

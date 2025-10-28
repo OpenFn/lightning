@@ -9,21 +9,21 @@
  * on component rendering and user-visible behavior.
  */
 
-import { describe, expect, test } from "vitest";
-import { render, screen, waitFor, act } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import type React from "react";
+import { describe, expect, test } from "vitest";
 import * as Y from "yjs";
 
 import { ReadOnlyWarning } from "../../../js/collaborative-editor/components/ReadOnlyWarning";
-import { StoreContext } from "../../../js/collaborative-editor/contexts/StoreProvider";
 import type { StoreContextValue } from "../../../js/collaborative-editor/contexts/StoreProvider";
+import { StoreContext } from "../../../js/collaborative-editor/contexts/StoreProvider";
 import { createSessionContextStore } from "../../../js/collaborative-editor/stores/createSessionContextStore";
 import { createWorkflowStore } from "../../../js/collaborative-editor/stores/createWorkflowStore";
+import type { Session } from "../../../js/collaborative-editor/types/session";
 import {
   createMockPhoenixChannel,
   createMockPhoenixChannelProvider,
 } from "../mocks/phoenixChannel";
-import type { Session } from "../../../js/collaborative-editor/types/session";
 
 // =============================================================================
 // TEST HELPERS

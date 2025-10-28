@@ -6,27 +6,28 @@
  * proper integration within the Header component.
  */
 
-import { describe, expect, test } from "vitest";
-import { render, screen, waitFor, act } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import type React from "react";
+import { describe, expect, test } from "vitest";
 import * as Y from "yjs";
 
 import { Header } from "../../../js/collaborative-editor/components/Header";
 import { SessionContext } from "../../../js/collaborative-editor/contexts/SessionProvider";
-import { StoreContext } from "../../../js/collaborative-editor/contexts/StoreProvider";
 import type { StoreContextValue } from "../../../js/collaborative-editor/contexts/StoreProvider";
-import { createSessionStore } from "../../../js/collaborative-editor/stores/createSessionStore";
+import { StoreContext } from "../../../js/collaborative-editor/contexts/StoreProvider";
 import { createAdaptorStore } from "../../../js/collaborative-editor/stores/createAdaptorStore";
 import { createAwarenessStore } from "../../../js/collaborative-editor/stores/createAwarenessStore";
 import { createCredentialStore } from "../../../js/collaborative-editor/stores/createCredentialStore";
+import { createUIStore } from "../../../js/collaborative-editor/stores/createUIStore";
 import { createSessionContextStore } from "../../../js/collaborative-editor/stores/createSessionContextStore";
+import { createSessionStore } from "../../../js/collaborative-editor/stores/createSessionStore";
 import { createWorkflowStore } from "../../../js/collaborative-editor/stores/createWorkflowStore";
+import type { Session } from "../../../js/collaborative-editor/types/session";
 import {
   createMockPhoenixChannel,
   createMockPhoenixChannelProvider,
 } from "../mocks/phoenixChannel";
 import { createMockSocket } from "../mocks/phoenixSocket";
-import type { Session } from "../../../js/collaborative-editor/types/session";
 
 // =============================================================================
 // TEST HELPERS
@@ -56,6 +57,7 @@ function createTestSetup(options: WrapperOptions = {}) {
   const adaptorStore = createAdaptorStore();
   const awarenessStore = createAwarenessStore();
   const credentialStore = createCredentialStore();
+  const uiStore = createUIStore();
 
   // Initialize session store
   const mockSocket = createMockSocket();
@@ -115,12 +117,11 @@ function createTestSetup(options: WrapperOptions = {}) {
     adaptorStore,
     credentialStore,
     awarenessStore,
+    uiStore,
   };
 
   const wrapper = ({ children }: { children: React.ReactNode }) => (
-    <SessionContext.Provider
-      value={{ sessionStore, isNewWorkflow }}
-    >
+    <SessionContext.Provider value={{ sessionStore, isNewWorkflow }}>
       <StoreContext.Provider value={mockStoreValue}>
         {children}
       </StoreContext.Provider>
@@ -276,8 +277,18 @@ describe("Header - Basic Rendering", () => {
     expect(screen.getByRole("button", { name: /save/i })).toBeInTheDocument();
   });
 
-  test("renders run button when projectId and workflowId provided", async () => {
-    const { wrapper, emitSessionContext } = createTestSetup();
+  test("renders run button when projectId and workflowId and triggers provided", async () => {
+    const { wrapper, emitSessionContext, ydoc } = createTestSetup();
+
+    // Add a trigger so the Run button appears (must be a Y.Map, not plain object)
+    const triggersArray = ydoc.getArray("triggers");
+    const triggerMap = new Y.Map();
+    triggerMap.set("id", "trigger-123");
+    triggerMap.set("type", "webhook");
+    triggerMap.set("enabled", true);
+    triggerMap.set("cron_expression", null);
+    triggerMap.set("kafka_configuration", null);
+    triggersArray.push([triggerMap]);
 
     render(
       <Header projectId="project-1" workflowId="workflow-1">
@@ -290,7 +301,9 @@ describe("Header - Basic Rendering", () => {
       emitSessionContext();
     });
 
-    expect(screen.getByRole("link", { name: /run/i })).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: /run/i })).toBeInTheDocument();
+    });
   });
 
   test("renders user menu button", async () => {
