@@ -20,9 +20,22 @@ export const StepSchema = z.object({
   inserted_at: z.string(),
 });
 
+export const WorkOrderSchema = z.object({
+  id: z.string().uuid(),
+  state: z.string(),
+  workflow_id: z.string().uuid(),
+  snapshot_id: z.string().uuid().nullable(),
+  trigger_id: z.string().uuid().nullable(),
+  dataclip_id: z.string().uuid().nullable(),
+  last_activity: z.string().datetime().nullable().optional(),
+  inserted_at: z.string().datetime().optional(),
+  updated_at: z.string().datetime().optional(),
+});
+
 export const RunSchema = z.object({
   id: z.string().uuid(),
   work_order_id: z.string().uuid(),
+  work_order: WorkOrderSchema.optional(),
   state: z.enum([
     "available",
     "claimed",
@@ -53,6 +66,7 @@ export const RunSchema = z.object({
 });
 
 export type Step = z.infer<typeof StepSchema>;
+export type WorkOrder = z.infer<typeof WorkOrderSchema>;
 export type Run = z.infer<typeof RunSchema>;
 
 // Final states for UI logic
