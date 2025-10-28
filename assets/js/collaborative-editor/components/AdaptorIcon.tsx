@@ -1,5 +1,7 @@
 import useAdaptorIcons from "#/workflow-diagram/useAdaptorIcons";
 
+import { extractAdaptorName } from "../utils/adaptorUtils";
+
 interface AdaptorIconProps {
   name: string;
   size?: "sm" | "md" | "lg";
@@ -10,11 +12,6 @@ const sizeClasses = {
   md: "h-8 w-8",
   lg: "h-12 w-12",
 };
-
-function extractAdaptorName(str: string): string | null {
-  const match = str.match(/language-(.+?)(@|$)/);
-  return match?.[1] ?? null;
-}
 
 export function AdaptorIcon({ name, size = "md" }: AdaptorIconProps) {
   const adaptorIconsData = useAdaptorIcons();
@@ -42,7 +39,7 @@ export function AdaptorIcon({ name, size = "md" }: AdaptorIconProps) {
         flex items-center justify-center`}
       >
         <span className="text-xs font-semibold text-gray-500">
-          {displayName[0].toUpperCase() || "?"}
+          {displayName?.[0]?.toUpperCase() || "?"}
         </span>
       </div>
     );
