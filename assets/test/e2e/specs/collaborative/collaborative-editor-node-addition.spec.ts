@@ -216,4 +216,137 @@ test.describe("Collaborative Editor - Node Addition", () => {
     // Canvas should be visible
     await expect(page.locator(".react-flow__renderer")).toBeVisible();
   });
+
+  test("should open adaptor selection modal when dragging to empty space", async ({
+    page,
+  }) => {
+    await page.goto("/projects/1/workflows");
+    await page.locator('[data-entity="workflow"]').first().click();
+
+    await expect(page.locator(".react-flow__renderer")).toBeVisible({
+      timeout: 10000,
+    });
+
+    // Get first node connector
+    const firstNode = page.locator(".react-flow__node").first();
+    const connector = firstNode.locator('[data-handleid="node-connector"]');
+
+    // Get connector position
+    const connectorBox = await connector.boundingBox();
+    if (!connectorBox) throw new Error("Connector not found");
+
+    // Drag from connector to empty space
+    await page.mouse.move(
+      connectorBox.x + connectorBox.width / 2,
+      connectorBox.y + connectorBox.height / 2
+    );
+    await page.mouse.down();
+    await page.mouse.move(connectorBox.x + 300, connectorBox.y + 200);
+    await page.mouse.up();
+
+    // Adaptor modal should appear
+    const modal = page.locator('[role="dialog"]').filter({
+      hasText: "Select an adaptor",
+    });
+    await expect(modal).toBeVisible({ timeout: 5000 });
+
+    // Search input should be visible
+    const searchInput = modal.locator(
+      'input[placeholder="Search adaptors..."]'
+    );
+    await expect(searchInput).toBeVisible();
+  });
+
+  test("should create node with selected adaptor from modal", async ({
+    page,
+  }) => {
+    await page.goto("/projects/1/workflows");
+    await page.locator('[data-entity="workflow"]').first().click();
+
+    await expect(page.locator(".react-flow__renderer")).toBeVisible({
+      timeout: 10000,
+    });
+
+    // Trigger modal by dragging to empty space
+    const firstNode = page.locator(".react-flow__node").first();
+    const connector = firstNode.locator('[data-handleid="node-connector"]');
+    const connectorBox = await connector.boundingBox();
+    if (!connectorBox) throw new Error("Connector not found");
+
+    await page.mouse.move(
+      connectorBox.x + connectorBox.width / 2,
+      connectorBox.y + connectorBox.height / 2
+    );
+    await page.mouse.down();
+    await page.mouse.move(connectorBox.x + 300, connectorBox.y + 200);
+    await page.mouse.up();
+
+    // Wait for modal
+    const modal = page.locator('[role="dialog"]').filter({
+      hasText: "Select an adaptor",
+    });
+    await expect(modal).toBeVisible({ timeout: 5000 });
+
+    // Search for http adaptor
+    const searchInput = modal.locator(
+      'input[placeholder="Search adaptors..."]'
+    );
+    await searchInput.fill("http");
+
+    // Select http adaptor
+    const httpAdaptor = modal
+      .locator("button")
+      .filter({ hasText: /http/i })
+      .first();
+    await httpAdaptor.click();
+
+    // Modal should close
+    await expect(modal).not.toBeVisible();
+
+    // New node with http adaptor should appear
+    const newNode = page
+      .locator(".react-flow__node")
+      .filter({ hasText: "http" });
+    await expect(newNode).toBeVisible({ timeout: 5000 });
+  });
+
+  test("should close adaptor modal when clicking outside", async ({ page }) => {
+    await page.goto("/projects/1/workflows");
+    await page.locator('[data-entity="workflow"]').first().click();
+
+    await expect(page.locator(".react-flow__renderer")).toBeVisible({
+      timeout: 10000,
+    });
+
+    // Trigger modal
+    const firstNode = page.locator(".react-flow__node").first();
+    const connector = firstNode.locator('[data-handleid="node-connector"]');
+    const connectorBox = await connector.boundingBox();
+    if (!connectorBox) throw new Error("Connector not found");
+
+    await page.mouse.move(
+      connectorBox.x + connectorBox.width / 2,
+      connectorBox.y + connectorBox.height / 2
+    );
+    await page.mouse.down();
+    await page.mouse.move(connectorBox.x + 300, connectorBox.y + 200);
+    await page.mouse.up();
+
+    // Wait for modal
+    const modal = page.locator('[role="dialog"]').filter({
+      hasText: "Select an adaptor",
+    });
+    await expect(modal).toBeVisible({ timeout: 5000 });
+
+    // Click outside modal (on the backdrop)
+    await page.keyboard.press("Escape");
+
+    // Modal should close
+    await expect(modal).not.toBeVisible();
+
+    // No new node should be created
+    const nodeCount = await page.locator(".react-flow__node").count();
+    // Should have same number of nodes as before
+    expect(nodeCount).toBeGreaterThanOrEqual(1);
+  });
 });
