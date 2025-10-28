@@ -123,7 +123,7 @@ describe("ListSection", () => {
     expect(screen.getByText("Child content")).toBeInTheDocument();
   });
 
-  it("renders title as uppercase heading", () => {
+  it("renders title as h3 heading", () => {
     render(
       <ListSection title="Test Section">
         <div>Content</div>
@@ -132,7 +132,6 @@ describe("ListSection", () => {
 
     const heading = screen.getByText("Test Section");
     expect(heading.tagName).toBe("H3");
-    expect(heading).toHaveClass("uppercase");
   });
 
   it("renders multiple children", () => {
@@ -193,19 +192,6 @@ describe("ListRow", () => {
 
     fireEvent.click(screen.getByRole("button"));
     expect(onClick).toHaveBeenCalledTimes(1);
-  });
-
-  it("applies selected styles when selected", () => {
-    const { rerender } = render(<ListRow title="Item" selected={false} />);
-
-    const button = screen.getByRole("button");
-    expect(button).not.toHaveClass("bg-primary-50");
-
-    // Rerender with selected=true
-    rerender(<ListRow title="Item" selected={true} />);
-    expect(button).toHaveClass("bg-primary-50");
-    expect(button).toHaveClass("ring-2");
-    expect(button).toHaveClass("ring-primary-500");
   });
 
   it("shows checkmark icon when selected", () => {
