@@ -43,8 +43,21 @@ and this project adheres to
 
 ### Changed
 
+- Error messages in collaborative editor now include field names for validation
+  errors (e.g., "Name: can't be blank")
+  [#3843](https://github.com/OpenFn/lightning/issues/3843)
+- Added error notifications when workflow reset fails in collaborative editor
+  [#3843](https://github.com/OpenFn/lightning/issues/3843)
+- Consolidated toast notification styling in collaborative editor for better
+  maintainability [#3843](https://github.com/OpenFn/lightning/issues/3843)
+
 ### Fixed
 
+- Error toasts not appearing when workflow save fails (validation errors,
+  permission denied, etc.) in collaborative editor
+  [#3843](https://github.com/OpenFn/lightning/issues/3843)
+- Toast notification colors not displaying correctly due to CSS specificity
+  issues [#3843](https://github.com/OpenFn/lightning/issues/3843)
 - Canvas goes blank when adding nodes in collaborative workflow editor
   [#3848](https://github.com/OpenFn/lightning/issues/3848)
 - Crash when switching from old to collaborative editor
@@ -991,8 +1004,9 @@ This bug was introduced in version `v2.12.3-pre` on May 29th. If you're tracking
 - Refactor OAuth credentials to reuse existing refresh tokens for same scopes
   [#2908](https://github.com/OpenFn/lightning/issues/2908) \
   ⚠️️ Please note that you will need to migrate your existing OAuth credentials.
-  To do that run the following command: `mix run priv/repo/migrate_oauth_credentials.exs`
-  for local setup or `docker exec -it <lightning_container_name> /app/bin/lightning eval "Lightning.Credentials.OauthMigration.run()"`
+  To do that run the following command:
+  `mix run priv/repo/migrate_oauth_credentials.exs` for local setup or
+  `docker exec -it <lightning_container_name> /app/bin/lightning eval "Lightning.Credentials.OauthMigration.run()"`
   for production environments.
 
 ### Changed
