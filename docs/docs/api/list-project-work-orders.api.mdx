@@ -1,0 +1,71 @@
+---
+id: list-project-work-orders
+title: "List work orders for a project"
+description: "Returns paginated work orders for a specific project."
+sidebar_label: "List work orders for a project"
+hide_title: true
+hide_table_of_contents: true
+api: eJydVm1v2zYQ/isH9ksLKLaz7ZO+eVtbeAsaI01QDLFh09JZYkORLF+cuIb++3CUZCu2l6bzF1Pk8Z7jvT475nnhWHrPvmj7ANc2R+vYPGE5uswK44VWLGU36INVDgwvhOIec3gkcR3FYa0tcHAGM7EWGRirv2LmByxh2qDlpGOSs5RJ4fy0OSS0FixhhlteoaeP9H7HFK+QpaxVsxA5S5ggKwz3JUuYxW9BWMxZ6m3AY1NbALi7m/zJEuayEivO0h3zW0NqnbdCFSxha20r7lnKQhA5q+vkgMwL7DC/BbRbdgLCCwQVqhXa+PrWL3R4BlIojwXaqGXNg/QsvUxYJZSoQsXSy2PshRPff2DApwZbr0F4rBwYjEbga+FHffyEVfypXY9GdT0nHzujlUNHen4ZjejvuQWfQ5ahc+sgoRNmCcu08qg8iXNjpMiiU4ZfHd3ZndqmVxQsygFLueJFg5hz35fi1nLyQXzrj2+L/BXxThil8Frqx8Ur5Z3nHs9JoiLX3TODKm92bFCqWbnGTaSPC4mUy5nlroyrByGbLXzKsHHsvKa4O7Qe8wX3LxqWc48XXlRI1gVDnz9zp06YF16S3L4c427MwSa7z6RRJxCT9Oyx157LBSpv24Aci5xDvhLO33SJVNMvYRX6UlPnKDBGmeo/ZUNuxLDtDm64O/SJekghXeiurzi0m66pBCtZykrvjUuHQ27MQBtUazXQtjgtb6vzkNEHNDoYVehBRTocSp1xWWrn099Go9GJhis6hhw3KLWpUPm9ojnZlQUr/DYa9jtyi3Yc6Gn38/7xZyqWxoF9ob07yZKu3ul7FYVY0i4+dCH/68vtiX3j6QR48CUq39YoBCdUAQ0SeP2Ayg3gIyrq4Ai82YK11RVsdbAQHNqZMlavhUQQCnyJcCWK0lPqQ6/8BzMVYy7UWkf729gfhMfTCUsYBasx73IwGpxx6l5eOOAKKILgdLAZQlfMYCT3lO2xLxd6g1aR/+lCDkqri2ixdzPlNVR6g1Ail76M5y7YDW6B2g+s0D8iAWwdtZ0B3JbCkaU04DYiR0eLwvKq4l5kM8VjpQOp5YoGRJejyd46l0BmMSevc+mSiFlpJby2hxfgE2aBnuwGMzVTb97A+FmkaHMsZTQFVW60oOe1U/FVUZ2oTIYcmziOpxPyBQW3DSLBaSu+NxpK5DnalFCXy+VMPTtNO9X/XN/dLMbTyeL2+u/3n1rRmSIbG1TIuIIVQtFmVH6USvDKTIoOuaGUvBKV8EIVHQ55AB1F2iK4EGcDRSPmr2yFB/BHidnDfma1z2tIDEnOVBQFSlYqoB7qdD/laYMaVs//Lhijre9RAXgUvoQlNctljPRy3zeXEMc6HJhPOlMXrWwKfXrxth3aKVy+28s0SlL4LxrQvzVKoOJPtBi9m6l2RvMsjomWdFwbVB/o6HmXfHx87HfJOmFSZEj9+XB1/HF6dfFrLNbTy4UKdHPYXnNDXhhJ0gNUg9JXshk32vmKq57S6NpThtnW03Ff2B1Yx/8mqm1L9fjkh0ZyoeJIpQft2rFzz7gRDdWIRc0Slj6jqP3ZM08YzQa6tdutuMM7K+uaths6R40/F46vaPynay7dMY/tP+pFtnnW8gfcHnjshstAInGIvR71BYr5A8yOvx6A5/RhBSH/5Nvf3rRs/x0cMfuzRnSEUW37+HvjDvGqiWg1tR8tagTGGfGw3tUTEktP2dOSj+9vWV3/CynDo+U=
+sidebar_class_name: "get api-method"
+info_path: docs/api/lightning-api
+custom_edit_url: null
+---
+
+import MethodEndpoint from "@theme/ApiExplorer/MethodEndpoint";
+import ParamsDetails from "@theme/ParamsDetails";
+import RequestSchema from "@theme/RequestSchema";
+import StatusCodes from "@theme/StatusCodes";
+import OperationTabs from "@theme/OperationTabs";
+import TabItem from "@theme/TabItem";
+import Heading from "@theme/Heading";
+
+<Heading
+  as={"h1"}
+  className={"openapi__heading"}
+  children={"List work orders for a project"}
+>
+</Heading>
+
+<MethodEndpoint
+  method={"get"}
+  path={"/api/projects/{project_id}/work_orders"}
+  context={"endpoint"}
+>
+  
+</MethodEndpoint>
+
+
+
+Returns paginated work orders for a specific project.
+
+<Heading
+  id={"request"}
+  as={"h2"}
+  className={"openapi-tabs__heading"}
+  children={"Request"}
+>
+</Heading>
+
+<ParamsDetails
+  parameters={[{"name":"project_id","in":"path","required":true,"description":"Project UUID","schema":{"type":"string","format":"uuid"}},{"name":"page","in":"query","description":"Page number for pagination","schema":{"type":"integer","default":1,"minimum":1}},{"name":"page_size","in":"query","description":"Number of items per page","schema":{"type":"integer","default":10,"minimum":1,"maximum":100}}]}
+>
+  
+</ParamsDetails>
+
+<RequestSchema
+  title={"Body"}
+  body={undefined}
+>
+  
+</RequestSchema>
+
+<StatusCodes
+  id={undefined}
+  label={undefined}
+  responses={{"200":{"description":"Successful response","content":{"application/json":{"schema":{"type":"object","properties":{"data":{"type":"array","items":{"type":"object","properties":{"id":{"type":"string","format":"uuid"},"workflow_id":{"type":"string","format":"uuid"},"state":{"type":"string","enum":["pending","running","success","failed","crashed","killed","exception"]},"inserted_at":{"type":"string","format":"date-time"},"updated_at":{"type":"string","format":"date-time"}},"title":"WorkOrder"}},"page_number":{"type":"integer"},"page_size":{"type":"integer"},"total_entries":{"type":"integer"}},"title":"WorkOrderListResponse"}}}}}}
+>
+  
+</StatusCodes>
+
+
+      

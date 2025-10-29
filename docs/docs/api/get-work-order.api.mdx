@@ -1,0 +1,71 @@
+---
+id: get-work-order
+title: "Get work order by ID"
+description: "Returns a specific work order with its details."
+sidebar_label: "Get work order by ID"
+hide_title: true
+hide_table_of_contents: true
+api: eJydVm1v2zYQ/isH9ksLKLa77ZO+eVsbeAsaI01QDHHg0NJZYkORLHm04xr678VR8ltcDNn8xRT53PvDO24FySqI/F58sf4Jrn2JPoiHTJQYCq8cKWtELm6QojcBJASHhVqqAtaMt4yHtaIaFAUokaTSYSAyYR16ydKTUuSiQmL9Sb3IhJNeNkhsKr/fCiMbFLlgjfOkca5KkQnFlp2kWmTC47eoPJYiJx/xpXsH3+HubvKnyEQoamykyLeCNo6VB/LKVCITS+sbSSIXMapStO0DKw/OmoCB8b+MRvx3auBzLAoMYRk17MAiE4U1hIYYLp3TqkgBD78Gltme+2AXX7Egjt9zekh1FlX5Cj+zlJ6ltuv5K/GBJOHPkGhiwxV3aMpux0djulXoAmV9UmnkMhRehjqtnpTutvC5wC41Dy3XKaAnLOeS/tWxUhJekGqQvYuOP/+LTJsJUqSxr3fHpZZ/mWiQatsTLfGLapGLoXRqeGBVGG5PKNZyvOhXOxpGr0UuaiIX8uFQOjewDs3SDKxnn04ZMfW2jAV/QKdDtNmxinw41LaQuraB8t9Go9GZhis+hhJXqK1r0NBe0QP7VUSvaJMc+x2lRz+OHNT9w/HxZ6ZYx6Jj0D6h7MnuNvD3IoFE1i8+7tL815fbM//G0wnISDUa6pkNMShTQWcJyD6hCQO4RMNXHUF2W7D0toGNjR5iQD8zztul0gjKANUIV6qqiekGR5dmMDOpwsosbfK/r/QBPJ5ORCa4WJ177wejwU+SuserANIAVxCCjb5A2F0gcFoSMwyW1kNlV+gN558FSjDWXCSPKcwMWWjsCqFGqalO5yH6FW6glCRhgbRGNrAJhE0YwG2tAnsKztuVKjHwovKyaSSpYmZkul3AaqWRFfIx94SQ7b0LGRQeS8661CFLNhtrFFl/iACfsYgcchjMzMy8eQPjk0rx5ljr5Aqa0lnF4fVN9FVVnZhCxxK7Oo6nE84FF7cvIpuzXn3vNNQoS/Q5W318fJyZk9N8p/qf67ub+Xg6md9e//3hUw+dGfaxswqFNLBAqHpGlS+oBK9kUkrIDVPySjWKlKl2djgDGLjSHiHE1I+5Gom/ugcP4I8ai6d9p+/DC4kujJyZBAUmK1+gI6tTWSmzL8GVCnSU/xCds57A7UHd6Hx0ssLHVOm0nAf1HR/hW0S/gcOszGfmosfmbAjBxGaBHt6WuJRRUw7v3+0xnZIcPnUYuwTFHAXHeWThI6lRBo185sXo3cz0k00WqTX3w/naofnIR6ddcr1eH3fJNhNaFcjj8SA6vpxeXfyaLuu5cGUiSw57sTCUldOMHqAZ1NTo1BacDdRIc6T0Eun4CbLYQJr7J91ge5jQ/+MF07dQwmcaOi2VSWOLA9j2A+ZeSKdEdvRw4cGZn75jHjLBM4DR2+1CBrzzum15O9WXO3omVtIrueCOd78VpQq8LkW+lDq8fOwcB/X2pn8WvYPzJ9BP/e83pdlwM5U68hePdtycvcBaHu4d95NfHWZc8Ow/kj57+vCA2g/kyw+3om1/ABOzpzw=
+sidebar_class_name: "get api-method"
+info_path: docs/api/lightning-api
+custom_edit_url: null
+---
+
+import MethodEndpoint from "@theme/ApiExplorer/MethodEndpoint";
+import ParamsDetails from "@theme/ParamsDetails";
+import RequestSchema from "@theme/RequestSchema";
+import StatusCodes from "@theme/StatusCodes";
+import OperationTabs from "@theme/OperationTabs";
+import TabItem from "@theme/TabItem";
+import Heading from "@theme/Heading";
+
+<Heading
+  as={"h1"}
+  className={"openapi__heading"}
+  children={"Get work order by ID"}
+>
+</Heading>
+
+<MethodEndpoint
+  method={"get"}
+  path={"/api/work_orders/{work_order_id}"}
+  context={"endpoint"}
+>
+  
+</MethodEndpoint>
+
+
+
+Returns a specific work order with its details.
+
+<Heading
+  id={"request"}
+  as={"h2"}
+  className={"openapi-tabs__heading"}
+  children={"Request"}
+>
+</Heading>
+
+<ParamsDetails
+  parameters={[{"name":"work_order_id","in":"path","required":true,"description":"Work Order UUID","schema":{"type":"string","format":"uuid"}}]}
+>
+  
+</ParamsDetails>
+
+<RequestSchema
+  title={"Body"}
+  body={undefined}
+>
+  
+</RequestSchema>
+
+<StatusCodes
+  id={undefined}
+  label={undefined}
+  responses={{"200":{"description":"Successful response","content":{"application/json":{"schema":{"type":"object","properties":{"id":{"type":"string","format":"uuid"},"workflow_id":{"type":"string","format":"uuid"},"state":{"type":"string","enum":["pending","running","success","failed","crashed","killed","exception"]},"inserted_at":{"type":"string","format":"date-time"},"updated_at":{"type":"string","format":"date-time"}},"title":"WorkOrder"}}}}}}
+>
+  
+</StatusCodes>
+
+
+      

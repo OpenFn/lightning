@@ -1,0 +1,71 @@
+---
+id: get-run
+title: "Get run by ID"
+description: "Returns a specific run with its execution details."
+sidebar_label: "Get run by ID"
+hide_title: true
+hide_table_of_contents: true
+api: eJylVt9vGzcM/lcI9aUFLra77enevK0NvAWtkSYYhjhw5Dvap0ZHqRLlxDXufy+ouzhOUwzZ5hfrpI8/RH4iuVesN1GVV+o8UVTXhaoxVsF4No5Uqc6RU6AIGqLHyqxNBSER3BluwHAEvMcqCRZqZG1sHKlCOY9By+asVqXaIJ8nUoXyOugWGYPY2yvSLapShURLU6tCGbHnNTeqUAG/JBOwViWHhM+cSgSXl7PfVaFi1WCrVblXvPOiLnIwtFGFWrvQalalSsnUquuuRWv0jiJGwf80mcjfU82fUlVhjOtk4QGsClU5YiQWuPbemipfbvw5isz+uQ9u9RkrlhsHCQWb3qKpX+Bnoe5cuF26UGNYvlDis1u9FBpZM/4IiZRaoYHeamP1ysq9I+vAKLmJfVxEozY2b1VBxyavbo3tt/C+wj6S191Beqn5Hz2rNeMJm1YMUrK97Zz2rlBrQ0as/C8lhiL+O0+6rlBsWHQI2VQnv0K1yI0bKJ35zI0q1Vh7Mw6J4njfc7mTgGHYPhA9BatK1TD7WI7H2vuR80hrGrkg9p8ycB5cnar8onodqiuOVZTjsXWVto2LXP4ymUyeaTiTY6hxi9b5FokPiq7FryoFw7vs2K+oA4ZpkmtcXR8ffxJK96w9Bh2CJ548vD75XmWQKobF+4eQ/vHXxTP/pvMZ6MQNEg8vCVI0tIHeErC7RYojOEWSMoKg+y1YB9fCzqUAKWJYkA9ubSyCIeAG4cxsGiZRdPRIRwvK2TS0dtn/IauP4Ol8pgolyerdezuajH4Q1APeRNAEkkGILoUKQR7s2ro78FazsAnWLsDGbTGQxF8EaiBHJ9ljjgtiB63bIjSoLTf5PKawxR3UmjWskO9QDOwiYxtHcNGYKJ6CD25raoyy2ATdtppNtSCdnyeIWk16g3IsNSgWB+9iAVXAWqKubSyyzdaRYRceb3Ao53G0oAW9egXTJ5mSzam12RWk2jsj1xuq9YuyOqPKphr7PE7nM4mFJHdIophzwXztNTSoawylWL25uVnQk9PyQfXfHy/Pl9P5bHnx8c93HwbogsTH3ipUmmCFsBkYVX9HJXghk3JAzoWSZ6Y1bGjzYEcigFEyHRBiyvVfspH5awfwCH5rsLo9dJbhejHTRZALylAQssoDOrI61xtDhxScmchH8Y/JexcY/AHUN+gbrzd4kzOdl8tovuINfEkYdvDYjcsFnQzYUgwhUGpXGOB1jWudLJfw9s0B0ysp4UOPcWswwlHwEkcRPpKaFNDqe1lM3ixo6KS6ymV4aP8fPdJ7OXpaJe/u7o6rZFcoayqUdvwoOj2dn538nB/rc+ENJZEcD2JxrDfeCnqENGq4tbkseBe51XSk9BQ5TzirHeQB40kZ2D+OAv9tMhrKJ+M9j73VhuRm2fn90E6ulPZGJiAZxwpVDuPRdaGk4sv5fr/SES+D7TrZztmU+l2orQ6m73xXe1WbKOtalWtt4/cz1PFNXp8P09YbOJqsfujqsKlpJzVT2yRfMgLg7nGU66T799zOnvSH00qGgyOxZ6OUNKBDiz19d6G67htbU7az
+sidebar_class_name: "get api-method"
+info_path: docs/api/lightning-api
+custom_edit_url: null
+---
+
+import MethodEndpoint from "@theme/ApiExplorer/MethodEndpoint";
+import ParamsDetails from "@theme/ParamsDetails";
+import RequestSchema from "@theme/RequestSchema";
+import StatusCodes from "@theme/StatusCodes";
+import OperationTabs from "@theme/OperationTabs";
+import TabItem from "@theme/TabItem";
+import Heading from "@theme/Heading";
+
+<Heading
+  as={"h1"}
+  className={"openapi__heading"}
+  children={"Get run by ID"}
+>
+</Heading>
+
+<MethodEndpoint
+  method={"get"}
+  path={"/api/runs/{run_id}"}
+  context={"endpoint"}
+>
+  
+</MethodEndpoint>
+
+
+
+Returns a specific run with its execution details.
+
+<Heading
+  id={"request"}
+  as={"h2"}
+  className={"openapi-tabs__heading"}
+  children={"Request"}
+>
+</Heading>
+
+<ParamsDetails
+  parameters={[{"name":"run_id","in":"path","required":true,"description":"Run UUID","schema":{"type":"string","format":"uuid"}}]}
+>
+  
+</ParamsDetails>
+
+<RequestSchema
+  title={"Body"}
+  body={undefined}
+>
+  
+</RequestSchema>
+
+<StatusCodes
+  id={undefined}
+  label={undefined}
+  responses={{"200":{"description":"Successful response","content":{"application/json":{"schema":{"type":"object","properties":{"id":{"type":"string","format":"uuid"},"work_order_id":{"type":"string","format":"uuid"},"job_id":{"type":"string","format":"uuid"},"state":{"type":"string","enum":["available","started","success","failed","crashed","killed","exception"]},"started_at":{"type":"string","format":"date-time","nullable":true},"finished_at":{"type":"string","format":"date-time","nullable":true},"inserted_at":{"type":"string","format":"date-time"}},"title":"Run"}}}}}}
+>
+  
+</StatusCodes>
+
+
+      

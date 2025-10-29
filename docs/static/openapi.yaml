@@ -1,0 +1,1169 @@
+openapi: 3.0.3
+info:
+  title: Lightning API
+  version: 1.0.0
+  description: |
+    Lightning is an open source workflow platform for governments and non-profits
+    to move health and survey data between systems. This API provides programmatic
+    access to manage projects, workflows, credentials, and monitor workflow executions.
+
+    ## Authentication
+
+    All API endpoints require authentication using Bearer tokens. Include your API
+    token in the Authorization header:
+
+    ```
+    Authorization: Bearer YOUR_API_TOKEN
+    ```
+
+    API tokens can be generated from your user profile in the Lightning application.
+
+    ## Rate Limiting
+
+    API requests are subject to rate limiting. Check response headers for rate
+    limit information.
+
+    ## Pagination
+
+    List endpoints support pagination with `page` and `page_size` query parameters:
+    - `page`: Page number (default: 1)
+    - `page_size`: Number of items per page (default: 10, max: 100)
+  contact:
+    name: OpenFn
+    url: https://www.openfn.org
+  license:
+    name: AGPL-3.0
+    url: https://www.gnu.org/licenses/agpl-3.0.en.html
+
+servers:
+  - url: https://app.openfn.org
+    description: Production server
+  - url: http://localhost:4000
+    description: Local development server
+
+security:
+  - BearerAuth: []
+
+tags:
+  - name: Projects
+    description: Project management operations
+  - name: Workflows
+    description: Workflow CRUD operations and DAG management
+  - name: Jobs
+    description: Job management within workflows
+  - name: Credentials
+    description: Credential management for external service authentication
+  - name: Work Orders
+    description: Work order tracking and management
+  - name: Runs
+    description: Workflow execution history and details
+  - name: Log Lines
+    description: Log retrieval for workflow runs
+  - name: Provisioning
+    description: Project provisioning operations
+  - name: Registration
+    description: User registration
+
+paths:
+  /api/projects:
+    get:
+      tags:
+        - Projects
+      summary: List all accessible projects
+      description: |
+        Returns a paginated list of projects that the current user or API token
+        has access to.
+      operationId: listProjects
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PageSizeParam'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectListResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '429':
+          $ref: '#/components/responses/RateLimitError'
+
+  /api/projects/{project_id}:
+    get:
+      tags:
+        - Projects
+      summary: Get project by ID
+      description: |
+        Returns detailed information about a single project if the authenticated
+        user has access to it.
+      operationId: getProject
+      parameters:
+        - $ref: '#/components/parameters/ProjectIdParam'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectResponse'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /api/projects/{project_id}/workflows:
+    get:
+      tags:
+        - Workflows
+      summary: List workflows for a project
+      description: |
+        Returns all workflows for a specific project including their jobs,
+        triggers, and edges.
+      operationId: listProjectWorkflows
+      parameters:
+        - $ref: '#/components/parameters/ProjectIdParam'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkflowListResponse'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /api/workflows:
+    get:
+      tags:
+        - Workflows
+      summary: List all accessible workflows
+      description: |
+        Returns workflows across all projects that the user has access to.
+        Optionally filter by project_id.
+      operationId: listWorkflows
+      parameters:
+        - name: project_id
+          in: query
+          description: Filter workflows by project ID
+          required: false
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkflowListResponse'
+
+    post:
+      tags:
+        - Workflows
+      summary: Create a new workflow
+      description: |
+        Creates a workflow with jobs, triggers, and edges. Validates the workflow
+        structure and ensures it forms a valid DAG with no cycles.
+      operationId: createWorkflow
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkflowCreate'
+      responses:
+        '201':
+          description: Workflow created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkflowResponse'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /api/workflows/{workflow_id}:
+    get:
+      tags:
+        - Workflows
+      summary: Get workflow by ID
+      description: |
+        Returns a workflow with all its jobs, triggers, and edges.
+      operationId: getWorkflow
+      parameters:
+        - $ref: '#/components/parameters/WorkflowIdParam'
+        - name: project_id
+          in: query
+          description: Optional project ID for validation
+          required: false
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkflowResponse'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+    patch:
+      tags:
+        - Workflows
+      summary: Update an existing workflow
+      description: |
+        Modifies a workflow's structure. Validates the updated workflow forms a
+        valid DAG. Prevents updates while workflow is being edited in the UI.
+      operationId: updateWorkflow
+      parameters:
+        - $ref: '#/components/parameters/WorkflowIdParam'
+        - name: project_id
+          in: query
+          description: Project ID (required, must match workflow's project)
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkflowUpdate'
+      responses:
+        '200':
+          description: Workflow updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkflowResponse'
+        '409':
+          $ref: '#/components/responses/ConflictError'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /api/credentials:
+    get:
+      tags:
+        - Credentials
+      summary: List credentials
+      description: |
+        Lists credentials with optional project filtering.
+        - With project_id: Returns all credentials for a specific project
+        - Without project_id: Returns only credentials owned by the authenticated user
+
+        Credential bodies are excluded from responses for security.
+      operationId: listCredentials
+      parameters:
+        - name: project_id
+          in: query
+          description: Filter credentials by project ID
+          required: false
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CredentialListResponse'
+
+    post:
+      tags:
+        - Credentials
+      summary: Create a new credential
+      description: |
+        Creates a credential owned by the authenticated user. If project_credentials
+        are specified, the user must have access to all listed projects. The credential
+        body is included in the response only upon creation.
+      operationId: createCredential
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CredentialCreate'
+      responses:
+        '201':
+          description: Credential created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CredentialCreateResponse'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /api/credentials/{credential_id}:
+    delete:
+      tags:
+        - Credentials
+      summary: Delete a credential
+      description: |
+        Permanently removes a credential. Only the credential owner can delete it.
+        Credentials in use by workflows cannot be deleted.
+      operationId: deleteCredential
+      parameters:
+        - name: credential_id
+          in: path
+          required: true
+          description: Credential UUID
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Credential deleted successfully
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /api/projects/{project_id}/jobs:
+    get:
+      tags:
+        - Jobs
+      summary: List jobs for a project
+      description: Returns all jobs within a specific project.
+      operationId: listProjectJobs
+      parameters:
+        - $ref: '#/components/parameters/ProjectIdParam'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  jobs:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Job'
+
+  /api/projects/{project_id}/work_orders:
+    get:
+      tags:
+        - Work Orders
+      summary: List work orders for a project
+      description: Returns paginated work orders for a specific project.
+      operationId: listProjectWorkOrders
+      parameters:
+        - $ref: '#/components/parameters/ProjectIdParam'
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PageSizeParam'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkOrderListResponse'
+
+  /api/work_orders/{work_order_id}:
+    get:
+      tags:
+        - Work Orders
+      summary: Get work order by ID
+      description: Returns a specific work order with its details.
+      operationId: getWorkOrder
+      parameters:
+        - name: work_order_id
+          in: path
+          required: true
+          description: Work Order UUID
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkOrder'
+
+  /api/projects/{project_id}/runs:
+    get:
+      tags:
+        - Runs
+      summary: List runs for a project
+      description: Returns paginated run history for a specific project.
+      operationId: listProjectRuns
+      parameters:
+        - $ref: '#/components/parameters/ProjectIdParam'
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PageSizeParam'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RunListResponse'
+
+  /api/runs/{run_id}:
+    get:
+      tags:
+        - Runs
+      summary: Get run by ID
+      description: Returns a specific run with its execution details.
+      operationId: getRun
+      parameters:
+        - name: run_id
+          in: path
+          required: true
+          description: Run UUID
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Run'
+
+  /api/log_lines:
+    get:
+      tags:
+        - Log Lines
+      summary: List log lines
+      description: Returns log lines for workflow runs with filtering options.
+      operationId: listLogLines
+      parameters:
+        - name: run_id
+          in: query
+          description: Filter logs by run ID
+          schema:
+            type: string
+            format: uuid
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PageSizeParam'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  log_lines:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/LogLine'
+
+  /api/provision:
+    post:
+      tags:
+        - Provisioning
+      summary: Create provisioned project
+      description: Creates a new project from a provisioning specification.
+      operationId: createProvision
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProvisioningSpec'
+      responses:
+        '201':
+          description: Project provisioned successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectResponse'
+
+  /api/users/register:
+    post:
+      tags:
+        - Registration
+      summary: Register a new user
+      description: |
+        Creates a new user account. Self-registration may be disabled on some
+        instances.
+      operationId: registerUser
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserRegistration'
+      responses:
+        '201':
+          description: User registered successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user:
+                    $ref: '#/components/schemas/User'
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: |
+        API authentication using Bearer tokens. Generate a token from your user
+        profile in the Lightning application.
+
+  parameters:
+    ProjectIdParam:
+      name: project_id
+      in: path
+      required: true
+      description: Project UUID
+      schema:
+        type: string
+        format: uuid
+
+    WorkflowIdParam:
+      name: workflow_id
+      in: path
+      required: true
+      description: Workflow UUID
+      schema:
+        type: string
+        format: uuid
+
+    PageParam:
+      name: page
+      in: query
+      description: Page number for pagination
+      schema:
+        type: integer
+        default: 1
+        minimum: 1
+
+    PageSizeParam:
+      name: page_size
+      in: query
+      description: Number of items per page
+      schema:
+        type: integer
+        default: 10
+        minimum: 1
+        maximum: 100
+
+  schemas:
+    Project:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique project identifier
+        name:
+          type: string
+          description: Project name
+        description:
+          type: string
+          nullable: true
+          description: Project description
+        inserted_at:
+          type: string
+          format: date-time
+          description: Project creation timestamp
+        updated_at:
+          type: string
+          format: date-time
+          description: Last update timestamp
+
+    ProjectListResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Project'
+        page_number:
+          type: integer
+        page_size:
+          type: integer
+        total_entries:
+          type: integer
+        total_pages:
+          type: integer
+
+    ProjectResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/Project'
+
+    Workflow:
+      type: object
+      required:
+        - id
+        - name
+        - project_id
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        project_id:
+          type: string
+          format: uuid
+        jobs:
+          type: array
+          items:
+            $ref: '#/components/schemas/Job'
+        triggers:
+          type: array
+          items:
+            $ref: '#/components/schemas/Trigger'
+        edges:
+          type: array
+          items:
+            $ref: '#/components/schemas/Edge'
+        inserted_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    WorkflowCreate:
+      type: object
+      required:
+        - project_id
+        - name
+        - jobs
+        - triggers
+        - edges
+      properties:
+        project_id:
+          type: string
+          format: uuid
+          description: Project ID where workflow will be created
+        name:
+          type: string
+          description: Workflow name
+        jobs:
+          type: array
+          items:
+            $ref: '#/components/schemas/JobCreate'
+        triggers:
+          type: array
+          items:
+            $ref: '#/components/schemas/TriggerCreate'
+        edges:
+          type: array
+          items:
+            $ref: '#/components/schemas/EdgeCreate'
+
+    WorkflowUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Updated workflow name
+        jobs:
+          type: array
+          items:
+            $ref: '#/components/schemas/JobCreate'
+        triggers:
+          type: array
+          items:
+            $ref: '#/components/schemas/TriggerCreate'
+        edges:
+          type: array
+          items:
+            $ref: '#/components/schemas/EdgeCreate'
+
+    WorkflowListResponse:
+      type: object
+      properties:
+        workflows:
+          type: array
+          items:
+            $ref: '#/components/schemas/Workflow'
+        errors:
+          type: object
+
+    WorkflowResponse:
+      type: object
+      properties:
+        workflow:
+          $ref: '#/components/schemas/Workflow'
+        errors:
+          type: object
+
+    Job:
+      type: object
+      required:
+        - id
+        - name
+        - body
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          description: Job name
+        body:
+          type: string
+          description: JavaScript code to execute
+        adaptor:
+          type: string
+          nullable: true
+          description: NPM adaptor package name (e.g., "@openfn/language-http@latest")
+        credential_id:
+          type: string
+          format: uuid
+          nullable: true
+          description: Associated credential ID
+        inserted_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    JobCreate:
+      type: object
+      required:
+        - id
+        - name
+        - body
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Client-generated UUID for the job
+        name:
+          type: string
+        body:
+          type: string
+          description: JavaScript code to execute
+        adaptor:
+          type: string
+          nullable: true
+        credential_id:
+          type: string
+          format: uuid
+          nullable: true
+
+    Trigger:
+      type: object
+      required:
+        - id
+        - type
+      properties:
+        id:
+          type: string
+          format: uuid
+        type:
+          type: string
+          enum: [webhook, cron, kafka]
+          description: Trigger type
+        enabled:
+          type: boolean
+          description: Whether trigger is active
+        cron_expression:
+          type: string
+          nullable: true
+          description: Cron expression for scheduled triggers
+        kafka_configuration:
+          type: object
+          nullable: true
+          description: Kafka configuration for event-driven triggers
+        inserted_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    TriggerCreate:
+      type: object
+      required:
+        - id
+        - type
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Client-generated UUID for the trigger
+        type:
+          type: string
+          enum: [webhook, cron, kafka]
+        enabled:
+          type: boolean
+          default: false
+        cron_expression:
+          type: string
+          nullable: true
+        kafka_configuration:
+          type: object
+          nullable: true
+
+    Edge:
+      type: object
+      required:
+        - target_job_id
+      properties:
+        id:
+          type: string
+          format: uuid
+        source_trigger_id:
+          type: string
+          format: uuid
+          nullable: true
+          description: Source trigger (mutually exclusive with source_job_id)
+        source_job_id:
+          type: string
+          format: uuid
+          nullable: true
+          description: Source job (mutually exclusive with source_trigger_id)
+        target_job_id:
+          type: string
+          format: uuid
+          description: Target job
+        condition:
+          type: string
+          enum: [always, on_job_success, on_job_failure, js_expression]
+          description: Edge execution condition
+        condition_expression:
+          type: string
+          nullable: true
+          description: JavaScript expression for conditional edges
+        enabled:
+          type: boolean
+          default: true
+
+    EdgeCreate:
+      type: object
+      required:
+        - target_job_id
+      properties:
+        source_trigger_id:
+          type: string
+          format: uuid
+          nullable: true
+        source_job_id:
+          type: string
+          format: uuid
+          nullable: true
+        target_job_id:
+          type: string
+          format: uuid
+        condition:
+          type: string
+          enum: [always, on_job_success, on_job_failure, js_expression]
+          default: always
+        condition_expression:
+          type: string
+          nullable: true
+        enabled:
+          type: boolean
+          default: true
+
+    Credential:
+      type: object
+      required:
+        - id
+        - name
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          description: Credential name
+        user_id:
+          type: string
+          format: uuid
+          description: Owner user ID
+        schema:
+          type: string
+          nullable: true
+          description: JSON schema for credential validation
+        inserted_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    CredentialCreate:
+      type: object
+      required:
+        - name
+        - body
+      properties:
+        name:
+          type: string
+          description: Credential name
+        body:
+          type: object
+          description: Credential authentication details (encrypted at rest)
+        schema:
+          type: string
+          nullable: true
+        project_credentials:
+          type: array
+          items:
+            type: object
+            required:
+              - project_id
+            properties:
+              project_id:
+                type: string
+                format: uuid
+
+    CredentialListResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Credential'
+
+    CredentialCreateResponse:
+      type: object
+      properties:
+        data:
+          allOf:
+            - $ref: '#/components/schemas/Credential'
+            - type: object
+              properties:
+                body:
+                  type: object
+                  description: Credential body (only included in create response)
+
+    WorkOrder:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        workflow_id:
+          type: string
+          format: uuid
+        state:
+          type: string
+          enum: [pending, running, success, failed, crashed, killed, exception]
+        inserted_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    WorkOrderListResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/WorkOrder'
+        page_number:
+          type: integer
+        page_size:
+          type: integer
+        total_entries:
+          type: integer
+
+    Run:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        work_order_id:
+          type: string
+          format: uuid
+        job_id:
+          type: string
+          format: uuid
+        state:
+          type: string
+          enum: [available, started, success, failed, crashed, killed, exception]
+        started_at:
+          type: string
+          format: date-time
+          nullable: true
+        finished_at:
+          type: string
+          format: date-time
+          nullable: true
+        inserted_at:
+          type: string
+          format: date-time
+
+    RunListResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Run'
+        page_number:
+          type: integer
+        page_size:
+          type: integer
+
+    LogLine:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        message:
+          type: string
+        level:
+          type: string
+          enum: [debug, info, warning, error]
+        timestamp:
+          type: string
+          format: date-time
+        run_id:
+          type: string
+          format: uuid
+
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        first_name:
+          type: string
+        last_name:
+          type: string
+        inserted_at:
+          type: string
+          format: date-time
+
+    UserRegistration:
+      type: object
+      required:
+        - email
+        - password
+        - first_name
+        - last_name
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          format: password
+          minLength: 8
+        first_name:
+          type: string
+        last_name:
+          type: string
+
+    ProvisioningSpec:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+          description: Project name
+        description:
+          type: string
+          nullable: true
+        workflows:
+          type: array
+          items:
+            $ref: '#/components/schemas/WorkflowCreate'
+
+    Error:
+      type: object
+      properties:
+        errors:
+          type: object
+          additionalProperties: true
+          description: Error details by field
+
+  responses:
+    UnauthorizedError:
+      description: Authentication required
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+                example: Unauthorized
+
+    ForbiddenError:
+      description: Insufficient permissions
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+                example: Forbidden
+
+    NotFoundError:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+                example: Not Found
+
+    ValidationError:
+      description: Validation error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    ConflictError:
+      description: Resource conflict
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              errors:
+                type: object
+                properties:
+                  workflow:
+                    type: array
+                    items:
+                      type: string
+                    example: ["Cannot save a workflow while it is being edited on the App UI"]
+
+    RateLimitError:
+      description: Rate limit exceeded
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+                example: Rate limit exceeded
