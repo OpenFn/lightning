@@ -1,6 +1,8 @@
 import { CheckIcon, PencilIcon, XMarkIcon } from "@heroicons/react/24/outline";
 import { useCallback, useState } from "react";
 
+import { cn } from "#/utils/cn";
+
 import { DataclipViewer } from "../../../react/components/DataclipViewer";
 import type { Dataclip } from "../../api/dataclips";
 import { Button } from "../Button";
@@ -11,6 +13,7 @@ interface SelectedDataclipViewProps {
   onNameChange: (dataclipId: string, name: string | null) => Promise<void>;
   canEdit: boolean;
   isNextCronRun: boolean;
+  renderMode?: "standalone" | "embedded";
 }
 
 export function SelectedDataclipView({
@@ -19,6 +22,7 @@ export function SelectedDataclipView({
   onNameChange,
   canEdit,
   isNextCronRun,
+  renderMode = "standalone",
 }: SelectedDataclipViewProps) {
   const [isEditingName, setIsEditingName] = useState(false);
   const [editedName, setEditedName] = useState(dataclip.name || "");
@@ -39,9 +43,14 @@ export function SelectedDataclipView({
   }, [dataclip.id, editedName, onNameChange]);
 
   return (
-    <div className="flex flex-col h-full px-6 pt-4 pb-6">
+    <div className="flex flex-col h-full">
       {/* Header */}
-      <div className="flex items-center justify-between pb-4">
+      <div
+        className={cn(
+          "flex items-center justify-between pb-4",
+          renderMode === "embedded" ? "px-3" : "px-6 pt-4"
+        )}
+      >
         <div className="flex-1">
           {isEditingName ? (
             <div className="flex gap-2">
@@ -117,7 +126,12 @@ export function SelectedDataclipView({
 
       {/* Next Cron Run Warning */}
       {isNextCronRun && (
-        <div className="alert-warning flex flex-col gap-1 px-3 py-2 rounded-md border mb-4">
+        <div
+          className={cn(
+            "alert-warning flex flex-col gap-1 px-3 py-2 rounded-md border mb-4",
+            renderMode === "embedded" ? "mx-3" : "mx-6"
+          )}
+        >
           <span className="text-sm font-medium">
             Default Next Input for Cron
           </span>

@@ -1,5 +1,8 @@
 import { InformationCircleIcon } from "@heroicons/react/24/outline";
 import React from "react";
+
+import { cn } from "#/utils/cn";
+
 import { MonacoEditor } from "../../monaco";
 import FileUploader from "../FileUploader";
 
@@ -7,7 +10,8 @@ const iconStyle = "h-4 w-4 text-grey-400";
 
 const CustomView: React.FC<{
   pushEvent: (event: string, data: any) => void;
-}> = ({ pushEvent }) => {
+  renderMode?: "standalone" | "embedded";
+}> = ({ pushEvent, renderMode = "standalone" }) => {
   const [editorValue, setEditorValue] = React.useState("");
 
   async function uploadFiles(f: File[]) {
@@ -50,7 +54,12 @@ const CustomView: React.FC<{
   );
 
   return (
-    <div className="px-6 pt-4 pb-6 h-full flex flex-col">
+    <div
+      className={cn(
+        "h-full flex flex-col pb-6",
+        renderMode === "embedded" ? "px-3 pt-2" : "px-6 pt-4 "
+      )}
+    >
       <FileUploader count={1} formats={["json"]} onUpload={uploadFiles} />
       <div className="relative">
         <div className="absolute inset-0 flex items-center" aria-hidden="true">

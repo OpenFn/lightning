@@ -403,6 +403,7 @@ export function ManualRunPanel({
       onNameChange={handleDataclipNameChange}
       canEdit={canEditDataclip}
       isNextCronRun={nextCronRunDataclipId === selectedDataclip.id}
+      renderMode={renderMode}
     />
   ) : (
     <div className="flex flex-col h-full overflow-hidden">
@@ -432,6 +433,7 @@ export function ManualRunPanel({
               handleCustomBodyChange(data.manual.body);
             }
           }}
+          renderMode={renderMode}
         />
       )}
       {selectedTab === "existing" && (
@@ -452,6 +454,7 @@ export function ManualRunPanel({
           fixedHeight={true}
           currentRunDataclip={currentRunDataclip}
           nextCronRunDataclipId={nextCronRunDataclipId}
+          renderMode={renderMode}
         />
       )}
     </div>
