@@ -500,9 +500,9 @@ export const createWorkflowStore = () => {
     ydoc.transact(() => {
       jobMap.set("id", job.id);
       jobMap.set("name", job.name);
-      if (job.body) {
-        jobMap.set("body", new Y.Text(job.body));
-      }
+      // Always initialize body as Y.Text with default if empty
+      // Default body is "fn(state => state)" to satisfy backend validation
+      jobMap.set("body", new Y.Text(job.body || "fn(state => state)"));
       // Set adaptor field (defaults to common if not provided)
       jobMap.set("adaptor", job.adaptor);
       // Initialize credential fields to null
