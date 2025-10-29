@@ -1,5 +1,32 @@
-import { z } from "zod";
 import type { PhoenixChannelProvider } from "y-phoenix-channel";
+import { z } from "zod";
+
+// Define run states as constants first (single source of truth)
+export const ALL_RUN_STATES = [
+  "available",
+  "claimed",
+  "started",
+  "success",
+  "failed",
+  "crashed",
+  "cancelled",
+  "killed",
+  "exception",
+  "lost",
+] as const;
+
+export const FINAL_STATES = [
+  "success",
+  "failed",
+  "crashed",
+  "cancelled",
+  "killed",
+  "exception",
+  "lost",
+] as const;
+
+export type RunStatus = (typeof ALL_RUN_STATES)[number];
+export type FinalState = (typeof FINAL_STATES)[number];
 
 // Zod schemas for runtime validation
 export const StepSchema = z.object({
@@ -36,18 +63,7 @@ export const RunSchema = z.object({
   id: z.string().uuid(),
   work_order_id: z.string().uuid(),
   work_order: WorkOrderSchema.optional(),
-  state: z.enum([
-    "available",
-    "claimed",
-    "started",
-    "success",
-    "failed",
-    "crashed",
-    "cancelled",
-    "killed",
-    "exception",
-    "lost",
-  ]),
+  state: z.enum(ALL_RUN_STATES),
   started_at: z.string().nullable(),
   finished_at: z.string().nullable(),
   created_by: z
@@ -69,17 +85,10 @@ export type Step = z.infer<typeof StepSchema>;
 export type WorkOrder = z.infer<typeof WorkOrderSchema>;
 export type Run = z.infer<typeof RunSchema>;
 
-// Final states for UI logic
-export const FINAL_STATES = [
-  "success",
-  "failed",
-  "crashed",
-  "cancelled",
-  "killed",
-  "exception",
-  "lost",
-] as const;
-export type FinalState = (typeof FINAL_STATES)[number];
+// Type guard function to check if a state is final
+export function isFinalState(state: Run["state"]): state is FinalState {
+  return FINAL_STATES.includes(state as FinalState);
+}
 
 // State interface
 export interface RunState {
