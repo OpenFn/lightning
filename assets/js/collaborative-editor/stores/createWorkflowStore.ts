@@ -497,12 +497,16 @@ export const createWorkflowStore = () => {
     const jobsArray = ydoc.getArray("jobs");
     const jobMap = new Y.Map();
 
+    // Default body text shown in the Monaco editor for new jobs
+    const defaultBody = `// Check out the Job Writing Guide for help getting started:
+// https://docs.openfn.org/documentation/jobs/job-writing-guide
+`;
+
     ydoc.transact(() => {
       jobMap.set("id", job.id);
       jobMap.set("name", job.name);
       // Always initialize body as Y.Text with default if empty
-      // Default body is "fn(state => state)" to satisfy backend validation
-      jobMap.set("body", new Y.Text(job.body || "fn(state => state)"));
+      jobMap.set("body", new Y.Text(job.body || defaultBody));
       // Set adaptor field (defaults to common if not provided)
       jobMap.set("adaptor", job.adaptor);
       // Initialize credential fields to null
