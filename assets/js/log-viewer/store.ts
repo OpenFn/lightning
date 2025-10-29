@@ -94,24 +94,12 @@ function findSelectedRanges(
 }
 
 function coerceLogs(logs: LogLine[]): LogLine[] {
-  console.log("[LogStore] Coercing logs:", logs.length, "logs");
-  const result = logs.map((log, index) => {
-    const timestamp = new Date(log.timestamp);
-    if (index === 0) {
-      console.log("[LogStore] First log coercion:", {
-        original: log.timestamp,
-        originalType: typeof log.timestamp,
-        converted: timestamp,
-        isValidDate: !isNaN(timestamp.getTime()),
-      });
-    }
+  return logs.map(log => {
     return {
       ...log,
-      timestamp,
+      timestamp: new Date(log.timestamp),
     };
   });
-  console.log("[LogStore] Coerced logs:", result.length, "logs");
-  return result;
 }
 
 function isProbablyJSON(str: string) {
@@ -167,20 +155,18 @@ export const createLogStore = () => {
       stepSetAt: undefined,
       formattedLogLines: "",
       addLogLines: newLogs => {
-        console.log("[LogStore] addLogLines called with:", newLogs);
         newLogs = coerceLogs(newLogs);
-        const logLines = get().logLines.concat(newLogs);
+
+        // Deduplicate logs by ID
+        const existingIds = new Set(get().logLines.map(log => log.id));
+        const uniqueNewLogs = newLogs.filter(log => !existingIds.has(log.id));
+
+        const logLines = get().logLines.concat(uniqueNewLogs);
 
         logLines.sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
 
         const desiredLogLevel = get().desiredLogLevel;
         const formatted = stringifyLogLines(logLines, desiredLogLevel);
-
-        console.log("[LogStore] Setting state:", {
-          logLinesCount: logLines.length,
-          formattedLength: formatted.length,
-          desiredLogLevel,
-        });
 
         set({
           formattedLogLines: formatted,
