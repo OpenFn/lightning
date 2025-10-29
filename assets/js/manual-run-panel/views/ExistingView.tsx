@@ -7,6 +7,7 @@ import {
 import React, { type KeyboardEvent } from "react";
 
 import useOutsideClick from "#/hooks/useOutsideClick";
+import { cn } from "#/utils/cn";
 import formatDate from "#/utils/formatDate";
 import truncateUid from "#/utils/truncateUID";
 
@@ -37,6 +38,7 @@ interface ExistingViewProps {
   fixedHeight: boolean;
   currentRunDataclip?: Dataclip | null;
   nextCronRunDataclipId?: string | null;
+  renderMode?: "standalone" | "embedded";
 }
 
 const ExistingView: React.FC<ExistingViewProps> = ({
@@ -56,6 +58,7 @@ const ExistingView: React.FC<ExistingViewProps> = ({
   fixedHeight,
   currentRunDataclip,
   nextCronRunDataclipId,
+  renderMode = "standalone",
 }) => {
   const [typesOpen, setTypesOpen] = React.useState(false);
   const [dateOpen, setDateOpen] = React.useState(false);
@@ -94,7 +97,12 @@ const ExistingView: React.FC<ExistingViewProps> = ({
   };
 
   return (
-    <div className="mt-2 flex flex-col gap-3">
+    <div
+      className={cn(
+        "mt-2 flex flex-col gap-3",
+        renderMode === "embedded" && "px-3"
+      )}
+    >
       <div>
         <div className="flex items-center gap-2">
           {/* Search input + button group */}
