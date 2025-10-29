@@ -1,0 +1,71 @@
+---
+id: list-log-lines
+title: "List log lines"
+description: "Returns log lines for workflow runs with filtering options."
+sidebar_label: "List log lines"
+hide_title: true
+hide_table_of_contents: true
+api: eJylVttu20YQ/ZXB5KUBaElu+8Q3tU0CtUIiJA6KwhKsFTkiN17ubvZiWRH078UsKYm2HMdo9SKSOzPn7Nx3GETlMb/GqalgKjV5XGRYki+ctEEajTl+pBCd9qBMBYpFYG0cbIy7XSuzARe1h40MNaylCuSkrsAkXT/ADI0lJ/htUmKOSvowNVWLlKEVTjQUyDGHHWrREOboor6RJWYoGf5rJLfFx6TeJizm5GG1ZRIw+QMz9EVNjcB8h2Fr2ZgPzAgzXBvXiIA5xihL3O+zI54VFT2PNhMVgY7Nily6vBWV1OlWT0FKHagil6ysRVQB88sMG6llExvMLx9j33j57QcE3rfYZg0yUOPBUiJBL4Uf9fEzbMR99zwa7feLDB15a7Qnz3Z+Ho347yGDT7EoyPt1VHAQxgwLowPpwOLCWiWL5JThF886u3NuZvWFisCRd5wYQbaIylQ3KbV6osI5wY5IF/6xCVm+IOgZNuQ9++1Mdp+hojtST1khzb66xpJWsUqBWhvMcCOc7gScMw4X+wyDbMgH0dhn2ZQi0AWLMmyX7i9JWQwyKBbpagj33Y8vFmrDJVZRco4INeY4FFYOT97N0JO7O5RbdApzrEOwPh8OhbUDY0mv9cC46rwEnCljwS/Q2kDO4pOJfDhUphCqNj7kv45GozMLUz6Gkp1sbEM6HA0tmFcRnQzbROw3Eo7cOPIVrhf940+cUG3A+0JH1zGTQ03w+yoJYdY9vD049M+/r874jWcTEDHUpEOXxxA9d7MWCYK5Je0H8I40tzQC0X6CtTMNbE10ED25ubbOrKUikBpCTTCVVR04UaBXIoO5TgFNqcT8D4E9Co9nE8yQg9XSuxyMBk849SgvPQgNHEHwJrqCTi3aKhE4l1LvqswdOc3+Z4UStNEXiXHwcx0MNOaOoCahQp3OfXR3tIVSBAErChtigK3nqhzAVS09MwXrzJ0syfND5UTTiCCLuRapaQCbFZqbqHWGy9dnR3Y+g8JRyV4XymcJszFahv6QoXsqYjtT5nquX72C8YNI8cexUokK6dIayddz9DVKRy+K6kQXKpbUxnE8m7AvOLhdEBnOOPmttVCTKMnljLpcLuf6wWl+MP3Ph88fb8azyc3Vh7/evO9E55o5tqhQCA0rgqrLqPJRKsELMyk55COn5FQ2MkhdHXDYA+Q50o7Ax9Q6ORopf1UnPIDfaypuj329u14751lyrpMocLJyAfVQZ8dJyB+m0oee/3201rjQG5ftorDk0bVMkV4eB+AS0uiD006Qz/VFJ5tDfwT/1A22HC5fH2VaIzl8b1T2tUYZNOKeH0av57qbY6JIc6wbzB8s6bd89LBLbjabfpfkqSEL4mF4Uh2/m00vfknFeq5c6ciaw07ND0VlFUsPSA/q0KjUFqzxoRG6ZzS59riCPe4Du9Mk/p/7WtdIA92HoVVCar5jusauGyrXKKzErDe0Fxly2+ej3W4lPH12ar/nz+02wz29lF6sFJWYr4Xy9Az/7612TzK7pW1/Y7wTKrJQGk4vh3x2v3sGt1vB/iPqM0vdDzAPG+MJeMEvTjJympkZtkWcfN8qjouCbOhpnW1sbOW4R7x7c4X7/b9A/TwV
+sidebar_class_name: "get api-method"
+info_path: docs/api/lightning-api
+custom_edit_url: null
+---
+
+import MethodEndpoint from "@theme/ApiExplorer/MethodEndpoint";
+import ParamsDetails from "@theme/ParamsDetails";
+import RequestSchema from "@theme/RequestSchema";
+import StatusCodes from "@theme/StatusCodes";
+import OperationTabs from "@theme/OperationTabs";
+import TabItem from "@theme/TabItem";
+import Heading from "@theme/Heading";
+
+<Heading
+  as={"h1"}
+  className={"openapi__heading"}
+  children={"List log lines"}
+>
+</Heading>
+
+<MethodEndpoint
+  method={"get"}
+  path={"/api/log_lines"}
+  context={"endpoint"}
+>
+  
+</MethodEndpoint>
+
+
+
+Returns log lines for workflow runs with filtering options.
+
+<Heading
+  id={"request"}
+  as={"h2"}
+  className={"openapi-tabs__heading"}
+  children={"Request"}
+>
+</Heading>
+
+<ParamsDetails
+  parameters={[{"name":"run_id","in":"query","description":"Filter logs by run ID","schema":{"type":"string","format":"uuid"}},{"name":"page","in":"query","description":"Page number for pagination","schema":{"type":"integer","default":1,"minimum":1}},{"name":"page_size","in":"query","description":"Number of items per page","schema":{"type":"integer","default":10,"minimum":1,"maximum":100}}]}
+>
+  
+</ParamsDetails>
+
+<RequestSchema
+  title={"Body"}
+  body={undefined}
+>
+  
+</RequestSchema>
+
+<StatusCodes
+  id={undefined}
+  label={undefined}
+  responses={{"200":{"description":"Successful response","content":{"application/json":{"schema":{"type":"object","properties":{"log_lines":{"type":"array","items":{"type":"object","properties":{"id":{"type":"string","format":"uuid"},"message":{"type":"string"},"level":{"type":"string","enum":["debug","info","warning","error"]},"timestamp":{"type":"string","format":"date-time"},"run_id":{"type":"string","format":"uuid"}},"title":"LogLine"}}}}}}}}}
+>
+  
+</StatusCodes>
+
+
+      

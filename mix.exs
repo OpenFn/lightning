@@ -153,7 +153,8 @@ defmodule Lightning.MixProject do
       {:benchee, "~> 1.5.0", only: :dev},
       {:statistics, "~> 0.6", only: :dev},
       {:y_ex, "~> 0.8.0"},
-      {:chameleon, "~> 2.5"}
+      {:chameleon, "~> 2.5"},
+      {:open_api_spex, "~> 3.22"}
     ]
   end
 
@@ -195,6 +196,10 @@ defmodule Lightning.MixProject do
       ],
       compile: [
         "compile --warnings-as-errors"
+      ],
+      "api.docs": [
+        "openapi.spec.yaml --spec LightningWeb.ApiSpec --output docs/static/openapi.yaml",
+        "cmd cd docs && npm run gen-api-docs"
       ]
     ]
   end

@@ -1,0 +1,73 @@
+---
+id: list-projects
+title: "List all accessible projects"
+description: "Returns a paginated list of projects that the current user or API token"
+sidebar_label: "List all accessible projects"
+hide_title: true
+hide_table_of_contents: true
+api: eJy9V21v2zYQ/isH9ssKKLbT9cv0zRvaIlvQGmmCYYiDhJbOEhuKZMljEtfQfx+Okm0ldtoAe/lkmbyXh3fH545rQbIKIr8UM2+/YEFBXGWixFB45UhZI3JxhhS9CSDByUoZSViCVoHALsH1WkC1JKAaoYjeoyGIAT1YD9PZCZC9RTM3tQwgiwJDALKjuRGZsA69ZD8npcgFW93iyISTXjZI6BngWhjZoMiFkxWKTCiG9jWiX4mngGeyQjCxWaCHpfUb2LyZiVDU2EiRrwWtHNtThrBCn6wsZdQk8uNMNMqoJjYiP27b7JHv66C+/QDAx863XYIibAI4TCDwpe4nQ/+ZaORD/z2ZtO1VJjwGZ03AwHbeTCb88xjB55jivIwaNsIiE4U1hIZYXDqnVZGCMv4SWGe9j80uOBWcCc+JItV5LCUNpaT3kmOQzvpjbVUOZAJ5ZSqRiaX1jSSRixhVuRfQC6O+RtxUG6gSDamlQi/arM/NvsknRdHrJun2ye6+solay4VGkZOP+Jyx4WrLJRHQE5bXkr57xlISHpFq8FmUhceUG2CpQLJxbD861vwH5k9lIOisDC23mSBFfNgNgLSWqr27RwcKdiOQrsPBbbIk9TUa8n3qnxNhOwcF9oGdqkBnm4puW5Z4OznevwDTSDUXSVfi4PFrVB7Lf+8SoPfWH0oDPsjGJcgXRkaqrVffsExYE9o3v+yjPeOEaNUoAnwoEMv/Gekh/+0GcYNUW6bnCpNxSbXIxVg6NXY7sg7o7zZMHb0WuaiJXMjHY+ncyDo0SzOy/uDFLGORstTZEEy4OxP5eKxtIXVtA+VvJ5PJflXzNpR4h9q6hpvPxtAV4yqiV7RKwH5F6dFzbYj88mq4/ZmD2cVrKLQNGiPZ0Df/XyQhkfUf7zd37/c/z/fwcQuUj+sxBmUq6Dx17TGM4AMa7oYIsluCpbcNrGz0qZvOjfN2qTSCMqnVnqqqJsOGBuXBfbVNXLS0CX9/f3bC09mJyAQnq4N3PJqMDgR1K68CSAOcQQg2+gLh3vrbpbb34LQkpp3UZit7h95w/FmhBGPNUUJMYW7IQmPvEGqUmuq0H6K/wxVwN4EF0j2yg1XgLjKC81qFNDs4b+9UiYE/Ki+bRpIq5mY7R0AjDff7TSlmW3QhYxpNrULqkCWfjTWKrN+dAB+wiHzkMJqbuXn1Ch4zBy9OtU5Q0JTOKj5eTycvyuqJKXQsscvjdHbCseDk9kmc9hTRWahRluhz9npzczM3j3bzjem/Pl2cXU9nJ9fnn/5497EXnZvtqBWgkAYWCFVfUeWTUoIXVlIKSCKHUyYHZaqNH44ABs60RwgxMQ9nw2+ZRJlqBL/VWNxuR5D+eCGVC0vOTUc6XKx8gQZeZ9uhjReY9gfxD9E562kw2cG9ohpuuJPcpEzfbJvTDaQpDXbjZD43R71sDsNp8ad+Bsvh+PVWpjOSw3NT3VBrkkEjH/hj8joNuMzhskgc3s+Qnxya97z1mCXv7++HLNlmQqsCucvtVKcfZqdHP6fLuq9cmcia414tjGXlNEuP0IxqanTX022gRpqB0RRaqXU/mquF3l2mp6yw3vWk//RZ0JMu4QONnZYqTVfpyOu+/1wK6VTX6rbPFu4QvLNeL2TAC6/blpe7GZ3pv1SBZ7pS5Eupw9Opbni47z4hDqK7xdXucXIndWSR1Mpe7vU774Yf+Nw8SnaOr/iPV90Me3nVZqK7fCkQneK0KNDRQGtvymAr2/b/4d25aNu/Adjo/kg=
+sidebar_class_name: "get api-method"
+info_path: docs/api/lightning-api
+custom_edit_url: null
+---
+
+import MethodEndpoint from "@theme/ApiExplorer/MethodEndpoint";
+import ParamsDetails from "@theme/ParamsDetails";
+import RequestSchema from "@theme/RequestSchema";
+import StatusCodes from "@theme/StatusCodes";
+import OperationTabs from "@theme/OperationTabs";
+import TabItem from "@theme/TabItem";
+import Heading from "@theme/Heading";
+
+<Heading
+  as={"h1"}
+  className={"openapi__heading"}
+  children={"List all accessible projects"}
+>
+</Heading>
+
+<MethodEndpoint
+  method={"get"}
+  path={"/api/projects"}
+  context={"endpoint"}
+>
+  
+</MethodEndpoint>
+
+
+
+Returns a paginated list of projects that the current user or API token
+has access to.
+
+
+<Heading
+  id={"request"}
+  as={"h2"}
+  className={"openapi-tabs__heading"}
+  children={"Request"}
+>
+</Heading>
+
+<ParamsDetails
+  parameters={[{"name":"page","in":"query","description":"Page number for pagination","schema":{"type":"integer","default":1,"minimum":1}},{"name":"page_size","in":"query","description":"Number of items per page","schema":{"type":"integer","default":10,"minimum":1,"maximum":100}}]}
+>
+  
+</ParamsDetails>
+
+<RequestSchema
+  title={"Body"}
+  body={undefined}
+>
+  
+</RequestSchema>
+
+<StatusCodes
+  id={undefined}
+  label={undefined}
+  responses={{"200":{"description":"Successful response","content":{"application/json":{"schema":{"type":"object","properties":{"data":{"type":"array","items":{"type":"object","properties":{"id":{"type":"string","format":"uuid","description":"Unique project identifier"},"name":{"type":"string","description":"Project name"},"description":{"type":"string","nullable":true,"description":"Project description"},"inserted_at":{"type":"string","format":"date-time","description":"Project creation timestamp"},"updated_at":{"type":"string","format":"date-time","description":"Last update timestamp"}},"title":"Project"}},"page_number":{"type":"integer"},"page_size":{"type":"integer"},"total_entries":{"type":"integer"},"total_pages":{"type":"integer"}},"title":"ProjectListResponse"}}}},"401":{"description":"Authentication required","content":{"application/json":{"schema":{"type":"object","properties":{"error":{"type":"string","example":"Unauthorized"}}}}}},"429":{"description":"Rate limit exceeded","content":{"application/json":{"schema":{"type":"object","properties":{"error":{"type":"string","example":"Rate limit exceeded"}}}}}}}}
+>
+  
+</StatusCodes>
+
+
+      
