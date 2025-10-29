@@ -9,6 +9,7 @@ import {
 } from "@heroicons/react/24/outline";
 import { useCallback, useMemo, useState } from "react";
 
+import { cn } from "#/utils/cn";
 import _logger from "#/utils/logger";
 
 import Docs from "../../adaptor-docs/Docs";
@@ -138,9 +139,11 @@ export function CollaborativeJobEditor({
             )}
           </div>
           <div
-            className={`${
-              showPanel ? "flex flex-col flex-1 z-10 overflow-hidden" : ""
-            } ${vertical ? "pt-2" : "pl-2"} bg-white`}
+            className={cn(
+              "bg-white",
+              showPanel ? "flex flex-col flex-1 z-10 overflow-hidden" : "",
+              vertical ? "pt-2" : "pl-2"
+            )}
           >
             <div className={`relative flex`}>
               <Tabs
@@ -156,7 +159,7 @@ export function CollaborativeJobEditor({
               {showPanel && (
                 <div className="bg-white rounded-lg p-1 flex space-x-1 z-20 items-center">
                   <ViewColumnsIcon
-                    className={`${iconStyle} ${!vertical ? "rotate-90" : ""}`}
+                    className={cn(iconStyle, !vertical && "rotate-90")}
                     onClick={toggleOrientiation}
                     title="Toggle panel orientation"
                   />
@@ -170,9 +173,10 @@ export function CollaborativeJobEditor({
             </div>
             {showPanel && (
               <div
-                className={`flex flex-1 mt-1 ${
+                className={cn(
+                  "flex flex-1 mt-1",
                   vertical ? "overflow-auto" : "overflow-hidden"
-                }`}
+                )}
               >
                 {selectedTab === "docs" && <Docs adaptor={adaptor} />}
                 {selectedTab === "metadata" && (

@@ -200,6 +200,41 @@ components:
   editing), Monaco Editor (code editing)
 - React components integrated into Phoenix app via LiveView mounting
 - **Icons**: Use heroicons via Tailwind classes (e.g., `className="hero-check-micro h-4 w-4"`). Never create custom SVG icons.
+- **Conditional CSS Classes**: Always use the `cn` utility (`assets/js/utils/cn.ts`) for merging Tailwind classes. It combines `clsx` for conditional logic with `tailwind-merge` for conflict resolution.
+
+#### Using the `cn` Utility
+
+The `cn` utility should be used whenever you need to conditionally apply CSS classes or merge className props:
+
+```typescript
+import { cn } from '#/utils/cn';
+
+// Basic conditional classes
+<div className={cn(
+  "base-class",
+  isActive && "active-class",
+  isDisabled && "opacity-50"
+)} />
+
+// Merging with className prop
+<button className={cn(
+  "px-4 py-2 rounded",
+  variant === 'primary' ? "bg-blue-600" : "bg-gray-200",
+  className
+)} />
+
+// Handles Tailwind conflicts automatically
+cn('p-4', 'p-2') // => "p-2" (last wins)
+```
+
+**Anti-pattern to avoid:**
+```typescript
+// ❌ Don't use template literals
+className={`base-class ${condition ? 'active' : ''} ${className}`}
+
+// ✅ Use cn instead
+className={cn("base-class", condition && "active", className)}
+```
 
 #### Toast Notifications
 
