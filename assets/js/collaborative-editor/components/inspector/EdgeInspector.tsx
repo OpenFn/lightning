@@ -67,12 +67,7 @@ export function EdgeInspector({ edge, onClose }: EdgeInspectorProps) {
   ) : undefined;
 
   return (
-    <InspectorLayout
-      title="Path"
-      nodeType="edge"
-      onClose={onClose}
-      footer={footer}
-    >
+    <InspectorLayout title="Path" onClose={onClose} footer={footer}>
       <EdgeForm edge={edge} />
     </InspectorLayout>
   );

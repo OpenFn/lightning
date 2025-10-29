@@ -73,7 +73,7 @@ export function TriggerForm({ trigger }: TriggerFormProps) {
           {/* Trigger Type Selection */}
           <form.Field name="type">
             {field => (
-              <div>
+              <div className="pb-6 border-b border-slate-200">
                 <label
                   htmlFor={field.name}
                   className="block text-sm font-medium text-slate-800 mb-1"
@@ -190,10 +190,12 @@ export function TriggerForm({ trigger }: TriggerFormProps) {
 
               if (currentType === "kafka") {
                 return (
-                  <div className="space-y-4">
-                    {/* <div className="border-t border-slate-200 pt-4"> */}
+                  <div className="space-y-6">
                     {/* Connection Settings */}
                     <div className="space-y-4">
+                      <h4 className="text-xs font-semibold text-slate-700 uppercase tracking-wide">
+                        Connection
+                      </h4>
                       {/* Hosts Field */}
                       <form.Field name="kafka_configuration.hosts">
                         {field => (
@@ -242,7 +244,7 @@ export function TriggerForm({ trigger }: TriggerFormProps) {
                           <div>
                             <label
                               htmlFor={field.name}
-                              className="block text-sm font-medium text-slate-500 mb-1"
+                              className="block text-sm font-medium text-slate-800 mb-1"
                             >
                               Topics
                             </label>
@@ -277,7 +279,13 @@ export function TriggerForm({ trigger }: TriggerFormProps) {
                           </div>
                         )}
                       </form.Field>
+                    </div>
 
+                    {/* Security Settings */}
+                    <div className="space-y-4 border-t border-slate-200 pt-6">
+                      <h4 className="text-xs font-semibold text-slate-700 uppercase tracking-wide">
+                        Security
+                      </h4>
                       {/* SSL Configuration */}
                       <form.Field name="kafka_configuration.ssl">
                         {field => (
@@ -294,7 +302,7 @@ export function TriggerForm({ trigger }: TriggerFormProps) {
                             />
                             <label
                               htmlFor={field.name}
-                              className="ml-2 text-xs font-medium text-slate-700"
+                              className="ml-2 text-sm font-medium text-slate-800"
                             >
                               Enable SSL/TLS encryption
                             </label>
@@ -308,7 +316,7 @@ export function TriggerForm({ trigger }: TriggerFormProps) {
                           <div>
                             <label
                               htmlFor={field.name}
-                              className="block text-sm font-medium text-slate-500 mb-1"
+                              className="block text-sm font-medium text-slate-800 mb-1"
                             >
                               SASL Authentication
                             </label>
@@ -364,14 +372,14 @@ export function TriggerForm({ trigger }: TriggerFormProps) {
                           if (!requiresAuth) return null;
 
                           return (
-                            <div className="space-y-4 pl-4 border-l-2 border-slate-200">
+                            <div className="space-y-4 animate-in fade-in slide-in-from-top-2 duration-200">
                               {/* Username Field */}
                               <form.Field name="kafka_configuration.username">
                                 {field => (
                                   <div>
                                     <label
                                       htmlFor={field.name}
-                                      className="block text-sm font-medium text-slate-500 mb-1"
+                                      className="block text-sm font-medium text-slate-800 mb-1"
                                     >
                                       Username
                                     </label>
@@ -411,7 +419,7 @@ export function TriggerForm({ trigger }: TriggerFormProps) {
                                   <div>
                                     <label
                                       htmlFor={field.name}
-                                      className="block text-sm font-medium text-slate-500 mb-1"
+                                      className="block text-sm font-medium text-slate-800 mb-1"
                                     >
                                       Password
                                     </label>
@@ -448,118 +456,121 @@ export function TriggerForm({ trigger }: TriggerFormProps) {
                           );
                         }}
                       </form.Field>
-
-                      {/* Advanced Settings - Collapsible */}
-                      <div className="border-t pt-4">
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setShowAdvancedSettings(!showAdvancedSettings)
-                          }
-                          className="text-xs text-slate-600 hover:text-slate-800 focus:outline-none"
-                        >
-                          {showAdvancedSettings ? "Hide" : "Show"} advanced
-                          settings
-                        </button>
-
-                        {showAdvancedSettings && (
-                          <div className="mt-3 space-y-4">
-                            {/* Initial Offset Reset Policy */}
-                            <form.Field name="kafka_configuration.initial_offset_reset_policy">
-                              {field => (
-                                <div>
-                                  <label
-                                    htmlFor={field.name}
-                                    className="block text-sm font-medium text-slate-500 mb-1"
-                                  >
-                                    Initial Offset Reset Policy
-                                  </label>
-                                  <select
-                                    id={field.name}
-                                    value={field.state.value || "latest"}
-                                    onChange={e =>
-                                      field.handleChange(
-                                        e.target.value as "earliest" | "latest"
-                                      )
-                                    }
-                                    onBlur={field.handleBlur}
-                                    className={`
-                                        block w-full px-3 py-2 border rounded-md text-sm
-                                        ${
-                                          field.state.meta.errors.length > 0
-                                            ? "border-red-300 text-red-900 focus:border-red-500 focus:ring-red-500"
-                                            : "border-slate-300 focus:border-indigo-500 focus:ring-indigo-500"
-                                        }
-                                        focus:outline-none focus:ring-1
-                                      `}
-                                  >
-                                    <option value="latest">Latest</option>
-                                    <option value="earliest">Earliest</option>
-                                  </select>
-                                  <p className="mt-1 text-xs text-slate-500">
-                                    What to do when there is no initial offset
-                                  </p>
-                                  {field.state.meta.errors.map(error => (
-                                    <p
-                                      key={error}
-                                      className="mt-1 text-xs text-red-600"
-                                    >
-                                      {error}
-                                    </p>
-                                  ))}
-                                </div>
-                              )}
-                            </form.Field>
-
-                            {/* Connect Timeout */}
-                            <form.Field name="kafka_configuration.connect_timeout">
-                              {field => (
-                                <div>
-                                  <label
-                                    htmlFor={field.name}
-                                    className="block text-sm font-medium text-slate-500 mb-1"
-                                  >
-                                    Connect Timeout (ms)
-                                  </label>
-                                  <input
-                                    id={field.name}
-                                    type="number"
-                                    min="1000"
-                                    value={field.state.value || 30000}
-                                    onChange={e =>
-                                      field.handleChange(Number(e.target.value))
-                                    }
-                                    onBlur={field.handleBlur}
-                                    className={`
-                                        block w-full px-3 py-2 border rounded-md text-sm
-                                        ${
-                                          field.state.meta.errors.length > 0
-                                            ? "border-red-300 text-red-900 focus:border-red-500 focus:ring-red-500"
-                                            : "border-slate-300 focus:border-indigo-500 focus:ring-indigo-500"
-                                        }
-                                        focus:outline-none focus:ring-1
-                                      `}
-                                  />
-                                  <p className="mt-1 text-xs text-slate-500">
-                                    Connection timeout in milliseconds (minimum
-                                    1000)
-                                  </p>
-                                  {field.state.meta.errors.map(error => (
-                                    <p
-                                      key={error}
-                                      className="mt-1 text-xs text-red-600"
-                                    >
-                                      {error}
-                                    </p>
-                                  ))}
-                                </div>
-                              )}
-                            </form.Field>
-                          </div>
-                        )}
-                      </div>
                     </div>
-                    {/* </div> */}
+
+                    {/* Advanced Settings - Collapsible */}
+                    <div className="space-y-4 border-t border-slate-200 pt-6">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setShowAdvancedSettings(!showAdvancedSettings)
+                        }
+                        className="text-xs font-semibold text-slate-700 uppercase tracking-wide hover:text-slate-900 focus:outline-none inline-flex items-center gap-1"
+                      >
+                        <span
+                          className={`hero-chevron-right h-3 w-3 transition-transform ${
+                            showAdvancedSettings ? "rotate-90" : ""
+                          }`}
+                        />
+                        Advanced
+                      </button>
+
+                      {showAdvancedSettings && (
+                        <div className="mt-3 space-y-4">
+                          {/* Initial Offset Reset Policy */}
+                          <form.Field name="kafka_configuration.initial_offset_reset_policy">
+                            {field => (
+                              <div>
+                                <label
+                                  htmlFor={field.name}
+                                  className="block text-sm font-medium text-slate-800 mb-1"
+                                >
+                                  Initial Offset Reset Policy
+                                </label>
+                                <select
+                                  id={field.name}
+                                  value={field.state.value || "latest"}
+                                  onChange={e =>
+                                    field.handleChange(
+                                      e.target.value as "earliest" | "latest"
+                                    )
+                                  }
+                                  onBlur={field.handleBlur}
+                                  className={`
+                                        block w-full px-3 py-2 border rounded-md text-sm
+                                        ${
+                                          field.state.meta.errors.length > 0
+                                            ? "border-red-300 text-red-900 focus:border-red-500 focus:ring-red-500"
+                                            : "border-slate-300 focus:border-indigo-500 focus:ring-indigo-500"
+                                        }
+                                        focus:outline-none focus:ring-1
+                                      `}
+                                >
+                                  <option value="latest">Latest</option>
+                                  <option value="earliest">Earliest</option>
+                                </select>
+                                <p className="mt-1 text-xs text-slate-500">
+                                  What to do when there is no initial offset
+                                </p>
+                                {field.state.meta.errors.map(error => (
+                                  <p
+                                    key={error}
+                                    className="mt-1 text-xs text-red-600"
+                                  >
+                                    {error}
+                                  </p>
+                                ))}
+                              </div>
+                            )}
+                          </form.Field>
+
+                          {/* Connect Timeout */}
+                          <form.Field name="kafka_configuration.connect_timeout">
+                            {field => (
+                              <div>
+                                <label
+                                  htmlFor={field.name}
+                                  className="block text-sm font-medium text-slate-800 mb-1"
+                                >
+                                  Connect Timeout (ms)
+                                </label>
+                                <input
+                                  id={field.name}
+                                  type="number"
+                                  min="1000"
+                                  value={field.state.value || 30000}
+                                  onChange={e =>
+                                    field.handleChange(Number(e.target.value))
+                                  }
+                                  onBlur={field.handleBlur}
+                                  className={`
+                                        block w-full px-3 py-2 border rounded-md text-sm
+                                        ${
+                                          field.state.meta.errors.length > 0
+                                            ? "border-red-300 text-red-900 focus:border-red-500 focus:ring-red-500"
+                                            : "border-slate-300 focus:border-indigo-500 focus:ring-indigo-500"
+                                        }
+                                        focus:outline-none focus:ring-1
+                                      `}
+                                />
+                                <p className="mt-1 text-xs text-slate-500">
+                                  Connection timeout in milliseconds (minimum
+                                  1000)
+                                </p>
+                                {field.state.meta.errors.map(error => (
+                                  <p
+                                    key={error}
+                                    className="mt-1 text-xs text-red-600"
+                                  >
+                                    {error}
+                                  </p>
+                                ))}
+                              </div>
+                            )}
+                          </form.Field>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 );
               }

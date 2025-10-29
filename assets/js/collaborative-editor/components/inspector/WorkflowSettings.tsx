@@ -102,13 +102,11 @@ export function WorkflowSettings() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="px-6 py-6 space-y-4">
       {/* Workflow Name Field */}
-      <div>
-        <form.AppField name="name">
-          {field => <field.TextField label="Workflow Name" />}
-        </form.AppField>
-      </div>
+      <form.AppField name="name">
+        {field => <field.TextField label="Workflow Name" />}
+      </form.AppField>
 
       {/* YAML View Section - Placeholder (NOT implementing) */}
       <div>
@@ -124,16 +122,14 @@ export function WorkflowSettings() {
       </div>
 
       {/* Log Output Toggle */}
-      <div>
-        <form.AppField name="enable_job_logs">
-          {field => (
-            <field.ToggleField
-              label="Allow console.log() usage"
-              description="Control what's printed in run logs"
-            />
-          )}
-        </form.AppField>
-      </div>
+      <form.AppField name="enable_job_logs">
+        {field => (
+          <field.ToggleField
+            label="Allow console.log() usage"
+            description="Control what's printed in run logs"
+          />
+        )}
+      </form.AppField>
 
       {/* Concurrency Section */}
       <div>

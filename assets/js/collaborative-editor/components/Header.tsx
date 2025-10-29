@@ -251,7 +251,7 @@ export function Header({
 
             <MenuItems
               transition
-              className="absolute right-0 z-10 mt-2 w-48
+              className="absolute right-0 z-50 mt-2 w-48
               origin-top-right rounded-md bg-white py-1 shadow-lg
               outline outline-black/5 transition data-closed:scale-95
               data-closed:transform data-closed:opacity-0
