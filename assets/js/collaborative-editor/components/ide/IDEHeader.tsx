@@ -55,13 +55,13 @@ export function IDEHeader({
       <div className="flex items-center justify-between gap-4">
         {/* Left: Job name with version chip and adaptor display */}
         <div className="flex items-center gap-4 flex-1 min-w-0">
-          <div className="flex-shrink-0">
+          <div className="flex-shrink-0 flex items-center">
             <h2 className="text-base font-semibold text-gray-900 whitespace-nowrap">
               {jobName}
             </h2>
           </div>
           {workflowId && (
-            <div className="flex-shrink-0">
+            <div className="flex-shrink-0 mb-0.5">
               <VersionDropdown
                 currentVersion={snapshotVersion ?? null}
                 latestVersion={latestSnapshotVersion ?? null}
