@@ -130,7 +130,7 @@ export function LogTabPanel() {
       </div>
 
       {/* Log viewer with filter */}
-      <div className="flex-1 flex flex-col rounded-md bg-slate-700 font-mono text-gray-200">
+      <div className="flex-1 flex flex-col bg-slate-700 font-mono text-gray-200">
         {/* Log level filter header */}
         <div className="border-b border-slate-500">
           <div className="mx-auto px-2">
