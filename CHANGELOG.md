@@ -45,12 +45,25 @@ and this project adheres to
 
 ### Changed
 
+- Error messages in collaborative editor now include field names for validation
+  errors (e.g., "Name: can't be blank")
+  [#3843](https://github.com/OpenFn/lightning/issues/3843)
+- Added error notifications when workflow reset fails in collaborative editor
+  [#3843](https://github.com/OpenFn/lightning/issues/3843)
+- Consolidated toast notification styling in collaborative editor for better
+  maintainability [#3843](https://github.com/OpenFn/lightning/issues/3843)
+
 ### Fixed
 
 - Prevent manual run panel from opening via keystroke if running isn't possible
   (permissions or snapshot)
 - Default Next Input for Cron-Triggered Workflows
   [#3856](https://github.com/OpenFn/lightning/issues/3856)
+- Error toasts not appearing when workflow save fails (validation errors,
+  permission denied, etc.) in collaborative editor
+  [#3843](https://github.com/OpenFn/lightning/issues/3843)
+- Toast notification colors not displaying correctly due to CSS specificity
+  issues [#3843](https://github.com/OpenFn/lightning/issues/3843)
 - Canvas goes blank when adding nodes in collaborative workflow editor
   [#3848](https://github.com/OpenFn/lightning/issues/3848)
 - Crash when switching from old to collaborative editor
