@@ -97,6 +97,7 @@ function createWrapper(options: WrapperOptions = {}): [
       config: { require_email_verification: false },
       permissions,
       latest_snapshot_lock_version: latestSnapshotLockVersion,
+      project_repo_connection: null,
     });
   };
 
