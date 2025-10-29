@@ -811,11 +811,11 @@ describe("ManualRunPanel", () => {
       expect(filterButtons.length).toBeGreaterThan(0);
 
       // Click the named-only filter button
-      // This button calls both setNamedOnly and onSubmit immediately
+      // This changes the namedOnly state, which triggers the debounced search
       await user.click(filterButtons[0]);
 
-      // The button's onClick triggers onSubmit immediately, so search should happen right away
-      // The debouncing is for filter changes from the filter dropdowns, not the named-only button
+      // Wait for the debounced search to complete (300ms debounce + execution time)
+      // The debounce timer from switching tabs is cancelled when the button is clicked
       await waitFor(
         () => {
           expect(dataclipApi.searchDataclips).toHaveBeenCalledTimes(2);

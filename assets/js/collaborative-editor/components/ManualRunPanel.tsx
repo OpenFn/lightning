@@ -166,8 +166,8 @@ export function ManualRunPanel({
       }
     };
 
-    fetchDataclips();
-  }, [projectId, dataclipJobId, jobId, triggerId]);
+    void fetchDataclips();
+  }, [projectId, dataclipJobId]);
 
   // Build filters object for API
   const buildFilters = useCallback(() => {
@@ -230,9 +230,26 @@ export function ManualRunPanel({
   useEffect(() => {
     if (selectedTab !== "existing") return;
 
+    const contextId = runContext.id;
+    if (!contextId) return;
+
     // Debounce: wait 300ms after last filter change before searching
     const timeoutId = setTimeout(() => {
-      void handleSearch();
+      const filters: Record<string, string> = {};
+      if (selectedClipType) filters["type"] = selectedClipType;
+      if (selectedDates.before) filters["before"] = selectedDates.before;
+      if (selectedDates.after) filters["after"] = selectedDates.after;
+      if (namedOnly) filters["named_only"] = "true";
+
+      void dataclipApi
+        .searchDataclips(projectId, contextId, searchQuery, filters)
+        .then(response => {
+          setDataclips(response.data);
+          return response;
+        })
+        .catch(error => {
+          console.error("Failed to search dataclips:", error);
+        });
     }, 300);
 
     return () => clearTimeout(timeoutId);
@@ -241,8 +258,10 @@ export function ManualRunPanel({
     selectedDates.before,
     selectedDates.after,
     namedOnly,
+    searchQuery,
     selectedTab,
-    handleSearch,
+    projectId,
+    runContext.id,
   ]);
 
   const handleCustomBodyChange = useCallback((value: string) => {
