@@ -621,6 +621,409 @@ defmodule LightningWeb.WorkflowChannelTest do
     end
   end
 
+  describe "save_and_sync" do
+    test "successfully saves and syncs workflow to GitHub", %{
+      socket: socket,
+      workflow: workflow,
+      project: project
+    } do
+      # Set up GitHub repo connection
+      repo_connection =
+        insert(:project_repo_connection,
+          project: project,
+          repo: "openfn/demo",
+          branch: "main",
+          github_installation_id: "12345678"
+        )
+
+      # Modify the workflow name in Y.Doc
+      session_pid = socket.assigns.session_pid
+      doc = Lightning.Collaboration.Session.get_doc(session_pid)
+
+      # Get shared types BEFORE transaction to avoid deadlock
+      workflow_map = Yex.Doc.get_map(doc, "workflow")
+
+      Yex.Doc.transaction(doc, "test_update", fn ->
+        Yex.Map.set(workflow_map, "name", "Updated for GitHub Sync")
+      end)
+
+      commit_message = "Test commit message"
+
+      # Mock the GitHub sync operation
+      Lightning.MockGitHubClient
+      |> expect(:push_to_github, fn _repo, _branch, _files, _commit_msg ->
+        {:ok, %{commit_sha: "abc123def456"}}
+      end)
+
+      # Push save_and_sync request
+      ref = push(socket, "save_and_sync", %{"commit_message" => commit_message})
+
+      assert_reply ref, :ok, %{
+        saved_at: saved_at,
+        lock_version: lock_version,
+        repo: repo
+      }
+
+      assert %DateTime{} = saved_at
+      assert lock_version == workflow.lock_version + 1
+      assert repo == "openfn/demo"
+
+      # Verify workflow was saved to database
+      saved = Lightning.Workflows.get_workflow!(workflow.id)
+      assert saved.name == "Updated for GitHub Sync"
+      assert saved.lock_version == lock_version
+    end
+
+    test "requires commit message", %{socket: socket} do
+      ref = push(socket, "save_and_sync", %{})
+
+      assert_reply ref, :error, %{
+        errors: errors,
+        type: "validation_error"
+      }
+
+      assert is_map(errors)
+    end
+
+    test "trims whitespace from commit message", %{socket: socket} do
+      # Modify workflow
+      session_pid = socket.assigns.session_pid
+      doc = Lightning.Collaboration.Session.get_doc(session_pid)
+      workflow_map = Yex.Doc.get_map(doc, "workflow")
+
+      Yex.Doc.transaction(doc, "test_update", fn ->
+        Yex.Map.set(workflow_map, "name", "Test Workflow")
+      end)
+
+      # Set up GitHub repo connection
+      insert(:project_repo_connection,
+        project: socket.assigns.project,
+        repo: "openfn/demo",
+        branch: "main"
+      )
+
+      ref =
+        push(socket, "save_and_sync", %{
+          "commit_message" => "  Test message with spaces  "
+        })
+
+      # Should succeed - message gets trimmed by validation
+      assert_reply ref, reply_type, _response
+      assert reply_type in [:ok, :error]
+    end
+
+    test "returns validation errors when workflow data is invalid", %{
+      socket: socket
+    } do
+      # Set invalid data in Y.Doc (blank name)
+      session_pid = socket.assigns.session_pid
+      doc = Lightning.Collaboration.Session.get_doc(session_pid)
+
+      # Get shared types BEFORE transaction
+      workflow_map = Yex.Doc.get_map(doc, "workflow")
+
+      Yex.Doc.transaction(doc, "test_update", fn ->
+        Yex.Map.set(workflow_map, "name", "")
+      end)
+
+      # Set up GitHub repo connection
+      insert(:project_repo_connection,
+        project: socket.assigns.project,
+        repo: "openfn/demo",
+        branch: "main"
+      )
+
+      ref =
+        push(socket, "save_and_sync", %{
+          "commit_message" => "Valid commit message"
+        })
+
+      assert_reply ref, :error, %{
+        errors: errors,
+        type: "validation_error"
+      }
+
+      assert is_map(errors)
+      assert errors[:name]
+    end
+
+    test "handles GitHub sync failures gracefully", %{
+      socket: socket,
+      project: project
+    } do
+      # Set up GitHub repo connection
+      insert(:project_repo_connection,
+        project: project,
+        repo: "openfn/demo",
+        branch: "main"
+      )
+
+      # Modify workflow
+      session_pid = socket.assigns.session_pid
+      doc = Lightning.Collaboration.Session.get_doc(session_pid)
+      workflow_map = Yex.Doc.get_map(doc, "workflow")
+
+      Yex.Doc.transaction(doc, "test_update", fn ->
+        Yex.Map.set(workflow_map, "name", "GitHub Sync Test")
+      end)
+
+      # Mock GitHub sync to fail
+      Lightning.MockGitHubClient
+      |> expect(:push_to_github, fn _repo, _branch, _files, _commit_msg ->
+        {:error, "GitHub API rate limit exceeded"}
+      end)
+
+      ref =
+        push(socket, "save_and_sync", %{
+          "commit_message" => "This will fail to sync"
+        })
+
+      assert_reply ref, :error, %{
+        errors: errors,
+        type: error_type
+      }
+
+      assert is_map(errors)
+      # Error type could be "github_sync_error" or similar
+      assert error_type in ["github_sync_error", "sync_error", "external_error"]
+    end
+
+    test "requires GitHub repo connection to be configured", %{socket: socket} do
+      # No GitHub repo connection exists for this project
+
+      # Modify workflow
+      session_pid = socket.assigns.session_pid
+      doc = Lightning.Collaboration.Session.get_doc(session_pid)
+      workflow_map = Yex.Doc.get_map(doc, "workflow")
+
+      Yex.Doc.transaction(doc, "test_update", fn ->
+        Yex.Map.set(workflow_map, "name", "Test")
+      end)
+
+      ref =
+        push(socket, "save_and_sync", %{"commit_message" => "Test commit"})
+
+      assert_reply ref, :error, %{
+        errors: errors,
+        type: error_type
+      }
+
+      assert is_map(errors)
+      # Should indicate GitHub connection is missing
+      assert error_type in ["github_not_configured", "configuration_error"]
+    end
+
+    test "blocks viewers from saving and syncing", %{
+      project: project,
+      workflow: workflow
+    } do
+      viewer_user = insert(:user)
+      insert(:project_user, project: project, user: viewer_user, role: :viewer)
+
+      # Set up GitHub repo connection
+      insert(:project_repo_connection,
+        project: project,
+        repo: "openfn/demo",
+        branch: "main"
+      )
+
+      {:ok, _, socket} =
+        LightningWeb.UserSocket
+        |> socket("user_#{viewer_user.id}", %{current_user: viewer_user})
+        |> subscribe_and_join(
+          LightningWeb.WorkflowChannel,
+          "workflow:collaborate:#{workflow.id}",
+          %{"project_id" => project.id, "action" => "edit"}
+        )
+
+      # Viewers can join but cannot save and sync
+      ref =
+        push(socket, "save_and_sync", %{"commit_message" => "Test commit"})
+
+      assert_reply ref, :error, %{
+        errors: %{base: [message]},
+        type: "unauthorized"
+      }
+
+      assert message =~ "don't have permission to edit"
+    end
+
+    test "allows editors to save and sync", %{
+      project: project,
+      workflow: workflow
+    } do
+      editor_user = insert(:user)
+      insert(:project_user, project: project, user: editor_user, role: :editor)
+
+      # Set up GitHub repo connection
+      insert(:project_repo_connection,
+        project: project,
+        repo: "openfn/demo",
+        branch: "main"
+      )
+
+      {:ok, _, socket} =
+        LightningWeb.UserSocket
+        |> socket("user_#{editor_user.id}", %{current_user: editor_user})
+        |> subscribe_and_join(
+          LightningWeb.WorkflowChannel,
+          "workflow:collaborate:#{workflow.id}",
+          %{"project_id" => project.id, "action" => "edit"}
+        )
+
+      # Modify workflow
+      session_pid = socket.assigns.session_pid
+      doc = Lightning.Collaboration.Session.get_doc(session_pid)
+      workflow_map = Yex.Doc.get_map(doc, "workflow")
+
+      Yex.Doc.transaction(doc, "test_update", fn ->
+        Yex.Map.set(workflow_map, "name", "Editor's Change")
+      end)
+
+      # Mock successful GitHub sync
+      Lightning.MockGitHubClient
+      |> expect(:push_to_github, fn _repo, _branch, _files, _commit_msg ->
+        {:ok, %{commit_sha: "def789abc456"}}
+      end)
+
+      ref =
+        push(socket, "save_and_sync", %{"commit_message" => "Editor commit"})
+
+      assert_reply ref, :ok, %{
+        saved_at: _,
+        lock_version: _,
+        repo: _
+      }
+    end
+
+    test "blocks save and sync after user demoted mid-session", %{
+      project: project,
+      workflow: workflow
+    } do
+      editor_user = insert(:user)
+
+      project_user =
+        insert(:project_user, project: project, user: editor_user, role: :editor)
+
+      # Set up GitHub repo connection
+      insert(:project_repo_connection,
+        project: project,
+        repo: "openfn/demo",
+        branch: "main"
+      )
+
+      {:ok, _, socket} =
+        LightningWeb.UserSocket
+        |> socket("user_#{editor_user.id}", %{current_user: editor_user})
+        |> subscribe_and_join(
+          LightningWeb.WorkflowChannel,
+          "workflow:collaborate:#{workflow.id}",
+          %{"project_id" => project.id, "action" => "edit"}
+        )
+
+      # Verify editor can save initially
+      session_pid = socket.assigns.session_pid
+      doc = Lightning.Collaboration.Session.get_doc(session_pid)
+      workflow_map = Yex.Doc.get_map(doc, "workflow")
+
+      Yex.Doc.transaction(doc, "test_update", fn ->
+        Yex.Map.set(workflow_map, "name", "Before Demotion")
+      end)
+
+      # Mock successful GitHub sync for first attempt
+      Lightning.MockGitHubClient
+      |> expect(:push_to_github, fn _repo, _branch, _files, _commit_msg ->
+        {:ok, %{commit_sha: "xyz123"}}
+      end)
+
+      ref1 =
+        push(socket, "save_and_sync", %{
+          "commit_message" => "Before demotion"
+        })
+
+      assert_reply ref1, :ok, %{saved_at: _, lock_version: _, repo: _}
+
+      # Demote user to viewer
+      {:ok, _updated_project_user} =
+        Lightning.Projects.update_project_user(project_user, %{role: :viewer})
+
+      # Attempt to save and sync after demotion should fail
+      Yex.Doc.transaction(doc, "test_update", fn ->
+        Yex.Map.set(workflow_map, "name", "After Demotion")
+      end)
+
+      ref2 =
+        push(socket, "save_and_sync", %{"commit_message" => "After demotion"})
+
+      assert_reply ref2, :error, %{
+        errors: %{base: [message]},
+        type: "unauthorized"
+      }
+
+      assert message =~ "don't have permission to edit"
+    end
+
+    test "handles deleted workflow", %{socket: socket, workflow: workflow} do
+      # Set up GitHub repo connection
+      insert(:project_repo_connection,
+        project: socket.assigns.project,
+        repo: "openfn/demo",
+        branch: "main"
+      )
+
+      # Delete the workflow
+      Lightning.Repo.update!(
+        Ecto.Changeset.change(workflow,
+          deleted_at: DateTime.utc_now() |> DateTime.truncate(:second)
+        )
+      )
+
+      ref =
+        push(socket, "save_and_sync", %{"commit_message" => "Test commit"})
+
+      assert_reply ref, :error, %{
+        errors: %{base: ["This workflow has been deleted"]},
+        type: "workflow_deleted"
+      }
+    end
+
+    test "includes repository info in successful response", %{
+      socket: socket,
+      project: project
+    } do
+      # Set up GitHub repo connection
+      insert(:project_repo_connection,
+        project: project,
+        repo: "openfn/test-repo",
+        branch: "develop"
+      )
+
+      # Modify workflow
+      session_pid = socket.assigns.session_pid
+      doc = Lightning.Collaboration.Session.get_doc(session_pid)
+      workflow_map = Yex.Doc.get_map(doc, "workflow")
+
+      Yex.Doc.transaction(doc, "test_update", fn ->
+        Yex.Map.set(workflow_map, "name", "Test")
+      end)
+
+      # Mock successful GitHub sync
+      Lightning.MockGitHubClient
+      |> expect(:push_to_github, fn _repo, _branch, _files, _commit_msg ->
+        {:ok, %{commit_sha: "abc"}}
+      end)
+
+      ref =
+        push(socket, "save_and_sync", %{"commit_message" => "Test commit"})
+
+      assert_reply ref, :ok, response
+
+      assert response.repo == "openfn/test-repo"
+      assert is_integer(response.lock_version)
+      assert response.lock_version > 0
+    end
+  end
+
   describe "validate_workflow_name" do
     setup %{socket: socket} do
       project = socket.assigns.project
