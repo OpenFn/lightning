@@ -40,6 +40,8 @@ and this project adheres to
   [$3634](https://github.com/openfn/lightning/issues/3634)
 - View and switch versions
   [#3819](https://github.com/openfn/lightning/issues/3819)
+- Run viewer panel in collaborative IDE with Run, Log, Input, and Output tabs
+  [#3844](https://github.com/OpenFn/lightning/issues/3844)
 
 ### Changed
 
@@ -995,8 +997,9 @@ This bug was introduced in version `v2.12.3-pre` on May 29th. If you're tracking
 - Refactor OAuth credentials to reuse existing refresh tokens for same scopes
   [#2908](https://github.com/OpenFn/lightning/issues/2908) \
   ⚠️️ Please note that you will need to migrate your existing OAuth credentials.
-  To do that run the following command: `mix run priv/repo/migrate_oauth_credentials.exs`
-  for local setup or `docker exec -it <lightning_container_name> /app/bin/lightning eval "Lightning.Credentials.OauthMigration.run()"`
+  To do that run the following command:
+  `mix run priv/repo/migrate_oauth_credentials.exs` for local setup or
+  `docker exec -it <lightning_container_name> /app/bin/lightning eval "Lightning.Credentials.OauthMigration.run()"`
   for production environments.
 
 ### Changed
