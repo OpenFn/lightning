@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 
 import {
   useCurrentRun,
@@ -7,22 +7,27 @@ import {
   useRunStoreInstance,
 } from "../../hooks/useRun";
 import { useSession } from "../../hooks/useSession";
-import { Tabs } from "../Tabs";
+
 import { InputTabPanel } from "./InputTabPanel";
 import { LogTabPanel } from "./LogTabPanel";
 import { OutputTabPanel } from "./OutputTabPanel";
-import { RunTabPanel } from "./RunTabPanel";
 import { RunSkeleton } from "./RunSkeleton";
+import { RunTabPanel } from "./RunTabPanel";
 
 type TabValue = "run" | "log" | "input" | "output";
 
 interface RunViewerPanelProps {
   followRunId: string | null;
   onClearFollowRun?: () => void;
+  activeTab: TabValue;
+  onTabChange: (tab: TabValue) => void;
 }
 
-export function RunViewerPanel({ followRunId }: RunViewerPanelProps) {
-  const [activeTab, setActiveTab] = useState<TabValue>("run");
+export function RunViewerPanel({
+  followRunId,
+  activeTab,
+  onTabChange: _onTabChange,
+}: RunViewerPanelProps) {
   const runStore = useRunStoreInstance();
   const run = useCurrentRun();
   const isLoading = useRunLoading();
@@ -39,21 +44,6 @@ export function RunViewerPanel({ followRunId }: RunViewerPanelProps) {
     const cleanup = runStore._connectToRun(provider, followRunId);
     return cleanup;
   }, [followRunId, provider, runStore]);
-
-  // Persist active tab to localStorage
-  useEffect(() => {
-    if (activeTab) {
-      localStorage.setItem("lightning.ide-run-viewer-tab", activeTab);
-    }
-  }, [activeTab]);
-
-  // Restore tab from localStorage on mount
-  useEffect(() => {
-    const savedTab = localStorage.getItem("lightning.ide-run-viewer-tab");
-    if (savedTab && ["run", "log", "input", "output"].includes(savedTab)) {
-      setActiveTab(savedTab as TabValue);
-    }
-  }, []);
 
   // Empty state - no run to display
   if (!followRunId) {
@@ -90,7 +80,7 @@ export function RunViewerPanel({ followRunId }: RunViewerPanelProps) {
     );
   }
 
-  // No run data yet (shouldn't happen but defensive)
+  // No run data yet
   if (!run) {
     return (
       <div className="flex items-center justify-center h-full">
@@ -99,25 +89,13 @@ export function RunViewerPanel({ followRunId }: RunViewerPanelProps) {
     );
   }
 
+  // Render tab content based on activeTab prop
   return (
     <div
       className="h-full flex flex-col"
       role="region"
       aria-label="Run output viewer"
     >
-      {/* Tab navigation */}
-      <Tabs
-        value={activeTab}
-        onChange={setActiveTab}
-        options={[
-          { value: "run", label: "Run" },
-          { value: "log", label: "Log" },
-          { value: "input", label: "Input" },
-          { value: "output", label: "Output" },
-        ]}
-      />
-
-      {/* Tab content */}
       <div className="flex-1 overflow-hidden">
         {activeTab === "run" && <RunTabPanel />}
         {activeTab === "log" && <LogTabPanel />}

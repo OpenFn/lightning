@@ -1,14 +1,16 @@
 /**
  * RunViewerPanel Component Tests
  *
- * Tests for RunViewerPanel component that displays run data with 4 tabs
- * (Run, Log, Input, Output) and manages channel connection lifecycle.
+ * Tests for RunViewerPanel component that displays run data.
+ * The component is a controlled component that accepts activeTab
+ * and onTabChange props from its parent. Tab rendering and
+ * persistence are managed by the parent (FullScreenIDE).
  *
  * Test Coverage:
  * - Empty state when no run is selected
  * - Loading state with skeleton
  * - Error state with dismiss button
- * - Tab switching and persistence
+ * - Tab content rendering based on activeTab prop
  * - Channel connection/disconnection lifecycle
  */
 
@@ -118,7 +120,13 @@ describe("RunViewerPanel", () => {
       mockUseRunLoading.mockReturnValue(false);
       mockUseRunError.mockReturnValue(null);
 
-      render(<RunViewerPanel followRunId={null} />);
+      render(
+        <RunViewerPanel
+          followRunId={null}
+          activeTab="run"
+          onTabChange={vi.fn()}
+        />
+      );
 
       expect(screen.getByText(/after you click run/i)).toBeInTheDocument();
     });
@@ -130,7 +138,13 @@ describe("RunViewerPanel", () => {
       mockUseRunLoading.mockReturnValue(true);
       mockUseRunError.mockReturnValue(null);
 
-      render(<RunViewerPanel followRunId="run-1" />);
+      render(
+        <RunViewerPanel
+          followRunId="run-1"
+          activeTab="run"
+          onTabChange={vi.fn()}
+        />
+      );
 
       // Check for skeleton (animated pulse)
       const skeleton = document.querySelector(".animate-pulse");
@@ -142,11 +156,16 @@ describe("RunViewerPanel", () => {
       mockUseRunLoading.mockReturnValue(true);
       mockUseRunError.mockReturnValue(null);
 
-      render(<RunViewerPanel followRunId="run-1" />);
+      render(
+        <RunViewerPanel
+          followRunId="run-1"
+          activeTab="run"
+          onTabChange={vi.fn()}
+        />
+      );
 
-      // Should show tabs, not skeleton
-      expect(screen.getByText("Run")).toBeInTheDocument();
-      expect(screen.getByText("Log")).toBeInTheDocument();
+      // Should show tab content (Run Tab Content), not skeleton
+      expect(screen.getByText("Run Tab Content")).toBeInTheDocument();
     });
   });
 
@@ -156,7 +175,13 @@ describe("RunViewerPanel", () => {
       mockUseRunLoading.mockReturnValue(false);
       mockUseRunError.mockReturnValue("Failed to load run");
 
-      render(<RunViewerPanel followRunId="run-1" />);
+      render(
+        <RunViewerPanel
+          followRunId="run-1"
+          activeTab="run"
+          onTabChange={vi.fn()}
+        />
+      );
 
       expect(screen.getByText("Error loading run")).toBeInTheDocument();
       expect(screen.getByText("Failed to load run")).toBeInTheDocument();
@@ -168,7 +193,13 @@ describe("RunViewerPanel", () => {
       mockUseRunLoading.mockReturnValue(false);
       mockUseRunError.mockReturnValue("Failed to load run");
 
-      render(<RunViewerPanel followRunId="run-1" />);
+      render(
+        <RunViewerPanel
+          followRunId="run-1"
+          activeTab="run"
+          onTabChange={vi.fn()}
+        />
+      );
 
       const dismissButton = screen.getByText("Dismiss");
       await user.click(dismissButton);
@@ -177,65 +208,69 @@ describe("RunViewerPanel", () => {
     });
   });
 
-  describe("tab switching", () => {
-    test("renders all 4 tabs when run is loaded", () => {
+  describe("tab content rendering", () => {
+    test("renders Run tab content when activeTab is 'run'", () => {
       mockUseCurrentRun.mockReturnValue(createMockRun());
       mockUseRunLoading.mockReturnValue(false);
       mockUseRunError.mockReturnValue(null);
 
-      render(<RunViewerPanel followRunId="run-1" />);
-
-      expect(screen.getByText("Run")).toBeInTheDocument();
-      expect(screen.getByText("Log")).toBeInTheDocument();
-      expect(screen.getByText("Input")).toBeInTheDocument();
-      expect(screen.getByText("Output")).toBeInTheDocument();
-    });
-
-    test("switches to Log tab when clicked", async () => {
-      const user = userEvent.setup();
-      mockUseCurrentRun.mockReturnValue(createMockRun());
-      mockUseRunLoading.mockReturnValue(false);
-      mockUseRunError.mockReturnValue(null);
-
-      render(<RunViewerPanel followRunId="run-1" />);
-
-      // Click Log tab
-      await user.click(screen.getByText("Log"));
-
-      // Verify localStorage was updated
-      expect(localStorage.getItem("lightning.ide-run-viewer-tab")).toBe("log");
-    });
-
-    test("switches to Input tab when clicked", async () => {
-      const user = userEvent.setup();
-      mockUseCurrentRun.mockReturnValue(createMockRun());
-      mockUseRunLoading.mockReturnValue(false);
-      mockUseRunError.mockReturnValue(null);
-
-      render(<RunViewerPanel followRunId="run-1" />);
-
-      await user.click(screen.getByText("Input"));
-
-      expect(localStorage.getItem("lightning.ide-run-viewer-tab")).toBe(
-        "input"
+      render(
+        <RunViewerPanel
+          followRunId="run-1"
+          activeTab="run"
+          onTabChange={vi.fn()}
+        />
       );
+
+      expect(screen.getByText("Run Tab Content")).toBeInTheDocument();
     });
 
-    test("respects localStorage on mount", () => {
-      // Set localStorage before component mounts
-      localStorage.setItem("lightning.ide-run-viewer-tab", "output");
-
+    test("renders Log tab content when activeTab is 'log'", () => {
       mockUseCurrentRun.mockReturnValue(createMockRun());
       mockUseRunLoading.mockReturnValue(false);
       mockUseRunError.mockReturnValue(null);
 
-      render(<RunViewerPanel followRunId="run-1" />);
+      render(
+        <RunViewerPanel
+          followRunId="run-1"
+          activeTab="log"
+          onTabChange={vi.fn()}
+        />
+      );
 
-      // localStorage value should be preserved (component reads it)
-      // We can't test the visual state easily, but the component
-      // will restore the tab internally
-      const storedValue = localStorage.getItem("lightning.ide-run-viewer-tab");
-      expect(["run", "log", "input", "output"]).toContain(storedValue);
+      expect(screen.getByText("Log Tab Content")).toBeInTheDocument();
+    });
+
+    test("renders Input tab content when activeTab is 'input'", () => {
+      mockUseCurrentRun.mockReturnValue(createMockRun());
+      mockUseRunLoading.mockReturnValue(false);
+      mockUseRunError.mockReturnValue(null);
+
+      render(
+        <RunViewerPanel
+          followRunId="run-1"
+          activeTab="input"
+          onTabChange={vi.fn()}
+        />
+      );
+
+      expect(screen.getByText("Input Tab Content")).toBeInTheDocument();
+    });
+
+    test("renders Output tab content when activeTab is 'output'", () => {
+      mockUseCurrentRun.mockReturnValue(createMockRun());
+      mockUseRunLoading.mockReturnValue(false);
+      mockUseRunError.mockReturnValue(null);
+
+      render(
+        <RunViewerPanel
+          followRunId="run-1"
+          activeTab="output"
+          onTabChange={vi.fn()}
+        />
+      );
+
+      expect(screen.getByText("Output Tab Content")).toBeInTheDocument();
     });
   });
 
@@ -245,7 +280,13 @@ describe("RunViewerPanel", () => {
       mockUseRunLoading.mockReturnValue(false);
       mockUseRunError.mockReturnValue(null);
 
-      render(<RunViewerPanel followRunId="run-1" />);
+      render(
+        <RunViewerPanel
+          followRunId="run-1"
+          activeTab="run"
+          onTabChange={vi.fn()}
+        />
+      );
 
       expect(mockStore._connectToRun).toHaveBeenCalledWith(
         expect.anything(),
@@ -258,12 +299,24 @@ describe("RunViewerPanel", () => {
       mockUseRunLoading.mockReturnValue(false);
       mockUseRunError.mockReturnValue(null);
 
-      const { rerender } = render(<RunViewerPanel followRunId="run-1" />);
+      const { rerender } = render(
+        <RunViewerPanel
+          followRunId="run-1"
+          activeTab="run"
+          onTabChange={vi.fn()}
+        />
+      );
 
       expect(mockStore._connectToRun).toHaveBeenCalled();
 
       // Change to null
-      rerender(<RunViewerPanel followRunId={null} />);
+      rerender(
+        <RunViewerPanel
+          followRunId={null}
+          activeTab="run"
+          onTabChange={vi.fn()}
+        />
+      );
 
       expect(mockStore._disconnectFromRun).toHaveBeenCalled();
     });
@@ -273,7 +326,13 @@ describe("RunViewerPanel", () => {
       mockUseRunLoading.mockReturnValue(false);
       mockUseRunError.mockReturnValue(null);
 
-      const { rerender } = render(<RunViewerPanel followRunId="run-1" />);
+      const { rerender } = render(
+        <RunViewerPanel
+          followRunId="run-1"
+          activeTab="run"
+          onTabChange={vi.fn()}
+        />
+      );
 
       expect(mockStore._connectToRun).toHaveBeenCalledWith(
         expect.anything(),
@@ -281,7 +340,13 @@ describe("RunViewerPanel", () => {
       );
 
       // Change to different run
-      rerender(<RunViewerPanel followRunId="run-2" />);
+      rerender(
+        <RunViewerPanel
+          followRunId="run-2"
+          activeTab="run"
+          onTabChange={vi.fn()}
+        />
+      );
 
       expect(mockStore._connectToRun).toHaveBeenCalledWith(
         expect.anything(),
@@ -305,7 +370,13 @@ describe("RunViewerPanel", () => {
       mockUseRunLoading.mockReturnValue(false);
       mockUseRunError.mockReturnValue(null);
 
-      render(<RunViewerPanel followRunId="run-1" />);
+      render(
+        <RunViewerPanel
+          followRunId="run-1"
+          activeTab="run"
+          onTabChange={vi.fn()}
+        />
+      );
 
       // Should not attempt connection without provider
       expect(mockStore._connectToRun).not.toHaveBeenCalled();
@@ -318,7 +389,13 @@ describe("RunViewerPanel", () => {
       mockUseRunLoading.mockReturnValue(false);
       mockUseRunError.mockReturnValue(null);
 
-      render(<RunViewerPanel followRunId="run-1" />);
+      render(
+        <RunViewerPanel
+          followRunId="run-1"
+          activeTab="run"
+          onTabChange={vi.fn()}
+        />
+      );
 
       const region = screen.getByRole("region", {
         name: /run output viewer/i,
