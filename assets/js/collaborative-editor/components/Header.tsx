@@ -3,6 +3,7 @@ import { useCallback } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
 
 import { useURLState } from "../../react/lib/use-url-state";
+import { cn } from "../../utils/cn";
 import {
   useIsNewWorkflow,
   useLatestSnapshotLockVersion,
@@ -362,8 +363,10 @@ export function Header({
                     data-focus:bg-gray-100 data-focus:outline-hidden"
                   >
                     <span
-                      className={`${item.icon} w-5 h-5 mr-2
-                      text-secondary-500`}
+                      className={cn(
+                        item.icon,
+                        "w-5 h-5 mr-2 text-secondary-500"
+                      )}
                     ></span>
                     {item.label}
                   </a>
