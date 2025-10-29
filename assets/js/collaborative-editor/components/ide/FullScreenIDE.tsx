@@ -12,11 +12,12 @@ import _logger from "#/utils/logger";
 import { useURLState } from "../../../react/lib/use-url-state";
 import { useRunStoreInstance } from "../../hooks/useRun";
 import { useLiveViewActions } from "../../contexts/LiveViewActionsContext";
+import { useProjectAdaptors } from "../../hooks/useAdaptors";
 import {
   useCredentials,
   useCredentialsCommands,
 } from "../../hooks/useCredentials";
-import { useProjectAdaptors } from "../../hooks/useAdaptors";
+import { useRunStoreInstance } from "../../hooks/useRun";
 import { useSession } from "../../hooks/useSession";
 import {
   useLatestSnapshotLockVersion,

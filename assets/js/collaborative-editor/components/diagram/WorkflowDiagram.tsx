@@ -21,6 +21,8 @@ import {
   useWorkflowStoreContext,
   useWorkflowReadOnly,
 } from "#/collaborative-editor/hooks/useWorkflow";
+import type { Workflow } from "#/collaborative-editor/types/workflow";
+import { getAdaptorDisplayName } from "#/collaborative-editor/utils/adaptorUtils";
 import { randomUUID } from "#/common";
 import _logger from "#/utils/logger";
 import MiniMapNode from "#/workflow-diagram/components/MiniMapNode";
@@ -41,9 +43,6 @@ import {
 } from "#/workflow-diagram/util/viewport";
 
 import { AdaptorSelectionModal } from "../AdaptorSelectionModal";
-
-import { getAdaptorDisplayName } from "#/collaborative-editor/utils/adaptorUtils";
-import type { Workflow } from "#/collaborative-editor/types/workflow";
 
 type WorkflowDiagramProps = {
   el?: HTMLElement | null;

@@ -29,8 +29,8 @@ export function WorkflowSettings() {
 
   const defaultValues = useMemo(() => {
     // Y.Doc types can be loosely typed, so we assert to expected types
-    const concurrency = (workflow.concurrency ?? null) as number | null;
-    const enableJobLogs = (workflow.enable_job_logs ?? false) as boolean;
+    const concurrency = workflow.concurrency ?? null;
+    const enableJobLogs = workflow.enable_job_logs ?? false;
 
     return {
       id: workflow.id,
@@ -66,10 +66,7 @@ export function WorkflowSettings() {
     changedFields => {
       Object.entries(changedFields).forEach(([key, value]) => {
         if (key in form.state.values) {
-          form.setFieldValue(
-            key as keyof typeof form.state.values,
-            value as (typeof form.state.values)[keyof typeof form.state.values]
-          );
+          form.setFieldValue(key as keyof typeof form.state.values, value);
         }
       });
     },

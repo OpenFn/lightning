@@ -65,7 +65,7 @@ export function TriggerInspector({
       leftButtons={
         <Toggle
           id={`trigger-enabled-${trigger.id}`}
-          checked={trigger.enabled !== false}
+          checked={trigger.enabled}
           onChange={handleEnabledChange}
           label="Enabled"
         />
