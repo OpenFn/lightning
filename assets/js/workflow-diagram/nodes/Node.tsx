@@ -1,6 +1,7 @@
 import { Handle, type NodeProps } from "@xyflow/react";
 import React, { memo } from "react";
 
+import { cn } from "../../utils/cn";
 import { duration } from "../../utils/duration";
 import type { RunStep } from "../../workflow-store/store";
 import formatDate from "../../utils/formatDate";
@@ -44,12 +45,13 @@ const hasErrors = (errors: ErrorObject | null | undefined): boolean => {
 };
 
 const Label: React.FC<LabelProps> = ({ children, hasErrors = false }) => {
-  const textColorClass = hasErrors ? "text-red-500" : "";
-
   if (children && (children as any).length) {
     return (
       <p
-        className={`line-clamp-2 align-left text-m max-w-[220px] text-ellipsis overflow-hidden ${textColorClass}`}
+        className={cn(
+          "line-clamp-2 align-left text-m max-w-[220px] text-ellipsis overflow-hidden",
+          hasErrors && "text-red-500"
+        )}
       >
         {children}
       </p>
@@ -109,7 +111,7 @@ const Node = ({
 
   return (
     <div
-      className={`group ${didRun ? "opacity-100" : "opacity-30"}`}
+      className={cn("group", didRun ? "opacity-100" : "opacity-30")}
       data-a-node
       data-id={id}
       data-testid={type === "trigger" ? `trigger-node-${id}` : `job-node-${id}`}
@@ -331,12 +333,10 @@ const Node = ({
             marginTop: "-18px",
             justifyContent: "center",
           }}
-          className={`flex flex-row items-center
-                    opacity-0  ${
-                      (!data.isActiveDropTarget && "group-hover:opacity-100") ??
-                      ""
-                    }
-                    transition duration-150 ease-in-out`}
+          className={cn(
+            "flex flex-row items-center opacity-0 transition duration-150 ease-in-out",
+            !data.isActiveDropTarget && "group-hover:opacity-100"
+          )}
         >
           {toolbar()}
         </div>

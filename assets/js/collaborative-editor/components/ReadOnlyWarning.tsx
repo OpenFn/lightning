@@ -1,3 +1,4 @@
+import { cn } from "../../utils/cn";
 import { useIsNewWorkflow } from "../hooks/useSessionContext";
 import { useWorkflowReadOnly } from "../hooks/useWorkflow";
 
@@ -32,7 +33,7 @@ export const ReadOnlyWarning: React.FC<ReadOnlyWarningProps> = ({
     <Tooltip content={tooltipMessage} side="bottom">
       <span
         id={id}
-        className={`cursor-pointer text-xs flex items-center ${className}`}
+        className={cn("cursor-pointer text-xs flex items-center", className)}
       >
         <span
           className="hero-information-circle-solid h-4 w-4

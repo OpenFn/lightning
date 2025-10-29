@@ -4,6 +4,7 @@
  */
 
 import { useSocket } from "../../react/contexts/SocketProvider";
+import { cn } from "../../utils/cn";
 import { useAwarenessUsers } from "../hooks/useAwareness";
 import { useSession } from "../hooks/useSession";
 
@@ -34,7 +35,7 @@ export function CollaborationWidget() {
       >
         {/* Connection status */}
         <div className="flex items-center gap-2">
-          <div className={`w-2 h-2 rounded-full ${getStatusColor()}`} />
+          <div className={cn("w-2 h-2 rounded-full", getStatusColor())} />
           <span className="text-gray-600 font-medium">{getStatusText()}</span>
         </div>
 
