@@ -86,11 +86,7 @@ export function IDEHeader({
         <div className="flex items-center gap-3">
           <Tooltip content={runTooltip || "Run workflow"} side="bottom">
             <span className="inline-block">
-              <Button variant="secondary" onClick={onRun} disabled={!canRun}>
-                <span
-                  className="hero-play size-4 inline-block mr-1"
-                  aria-hidden="true"
-                />
+              <Button variant="primary" onClick={onRun} disabled={!canRun}>
                 {isRunning ? "Running..." : "Run"}
               </Button>
             </span>
@@ -98,27 +94,17 @@ export function IDEHeader({
 
           <Tooltip content={saveTooltip} side="bottom">
             <span className="inline-block">
-              <Button variant="secondary" onClick={onSave} disabled={!canSave}>
-                <span
-                  className="hero-check size-4 inline-block mr-1"
-                  aria-hidden="true"
-                />
+              <Button variant="primary" onClick={onSave} disabled={!canSave}>
                 Save
               </Button>
             </span>
           </Tooltip>
 
           <Button
-            variant="secondary"
+            variant="nakedClose"
             onClick={onClose}
             aria-label="Close full-screen editor"
-          >
-            <span
-              className="hero-x-mark size-4 inline-block mr-1"
-              aria-hidden="true"
-            />
-            Close
-          </Button>
+          />
         </div>
       </div>
     </div>

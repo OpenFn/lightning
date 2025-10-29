@@ -1,5 +1,7 @@
 import type { ReactNode } from "react";
 
+import { Button } from "../Button";
+
 // import _logger from "#/utils/logger";
 
 // const logger = _logger.ns("InspectorLayout").seal();
@@ -57,15 +59,7 @@ export function InspectorLayout({
               <h2 className="text-base font-semibold text-gray-900">{title}</h2>
             </div>
             <div className="ml-3 flex h-7 items-center">
-              <button
-                type="button"
-                onClick={onClose}
-                className="relative rounded-md text-gray-400 hover:text-gray-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
-              >
-                <span className="absolute -inset-2.5" />
-                <span className="sr-only">Close panel</span>
-                <div className="hero-x-mark size-6" />
-              </button>
+              <Button variant="nakedClose" onClick={onClose} />
             </div>
           </div>
           {nodeType && (

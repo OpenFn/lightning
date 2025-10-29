@@ -207,7 +207,7 @@ export function Header({
                 <Tooltip content={runTooltipMessage} side="bottom">
                   <span className="inline-block">
                     <Button
-                      variant="secondary"
+                      variant="primary"
                       onClick={handleRunClick}
                       disabled={!canRun}
                     >
