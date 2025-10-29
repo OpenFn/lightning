@@ -345,6 +345,9 @@ export function ManualRunPanel({
         // Fallback: navigate away if no callback (for standalone mode)
         window.location.href = `/projects/${projectId}/runs/${response.data.run_id}`;
       }
+
+      // Reset submitting state after successful submission
+      setIsSubmitting(false);
     } catch (error) {
       logger.error("Failed to submit run:", error);
       notifications.alert({
@@ -474,7 +477,7 @@ export function ManualRunPanel({
               onClick={handleRun}
               disabled={!canRun || isSubmitting}
             >
-              {isSubmitting ? "Running..." : "Run Workflow Now"}
+              {isSubmitting ? "Pending..." : "Run (Create New Workorder)"}
             </Button>
           }
         />

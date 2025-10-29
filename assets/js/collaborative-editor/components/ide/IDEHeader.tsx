@@ -87,7 +87,7 @@ export function IDEHeader({
           <Tooltip content={runTooltip || "Run workflow"} side="bottom">
             <span className="inline-block">
               <Button variant="primary" onClick={onRun} disabled={!canRun}>
-                {isRunning ? "Running..." : "Run"}
+                {isRunning ? "Pending..." : "Run"}
               </Button>
             </span>
           </Tooltip>
