@@ -199,6 +199,50 @@ describe("LogTabPanel", () => {
         expect.any(Function)
       );
     });
+
+    test("adds logs when streaming event is received", async () => {
+      mockUseCurrentRun.mockReturnValue(createMockRun());
+
+      render(<LogTabPanel />);
+
+      // Get the log handler that was registered
+      const logHandler = mockChannel.on.mock.calls.find(
+        call => call[0] === "logs"
+      )?.[1];
+
+      expect(logHandler).toBeDefined();
+
+      // Simulate receiving streaming logs
+      const streamingLogs = [
+        { id: "log-2", message: "Streaming log 1" },
+        { id: "log-3", message: "Streaming log 2" },
+      ];
+
+      logHandler({ logs: streamingLogs });
+
+      // Verify logs were added to the store
+      await waitFor(() => {
+        expect(mockAddLogLines).toHaveBeenCalledWith(streamingLogs);
+      });
+    });
+
+    test("fetches initial logs on mount", async () => {
+      const { channelRequest } = await import(
+        "../../../../js/collaborative-editor/hooks/useChannel"
+      );
+
+      mockUseCurrentRun.mockReturnValue(createMockRun());
+
+      render(<LogTabPanel />);
+
+      await waitFor(() => {
+        expect(channelRequest).toHaveBeenCalledWith(
+          mockChannel,
+          "fetch:logs",
+          {}
+        );
+      });
+    });
   });
 
   describe("layout", () => {

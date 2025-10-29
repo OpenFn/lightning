@@ -36,13 +36,6 @@ const LogViewer = ({
     useShallow(state => state.formattedLogLines)
   );
 
-  console.log("[LogViewer] Render:", {
-    stepId,
-    highlightedRangesCount: highlightedRanges.length,
-    formattedLogLinesLength: formattedLogLines.length,
-    formattedPreview: formattedLogLines.substring(0, 100),
-  });
-
   const [monaco, setMonaco] = useState<Monaco>();
   const [editor, setEditor] = useState<e.IStandaloneCodeEditor>();
 

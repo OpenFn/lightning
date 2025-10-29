@@ -40,55 +40,27 @@ export function LogTabPanel() {
 
   // Mount log viewer on first render
   useEffect(() => {
-    console.log("[LogTabPanel] Mount effect running", {
-      hasContainer: !!containerRef.current,
-      alreadyMounted: mountedRef.current,
-      containerHeight: containerRef.current?.offsetHeight,
-      containerWidth: containerRef.current?.offsetWidth,
-    });
-
     if (!containerRef.current) {
-      console.warn("[LogTabPanel] No container ref!");
       return;
     }
 
     // Prevent double-mounting in React Strict Mode
     if (mountedRef.current) {
-      console.log("[LogTabPanel] Already mounted (strict mode), skipping");
       return;
     }
 
-    // Check if container has dimensions
-    const height = containerRef.current.offsetHeight;
-    const width = containerRef.current.offsetWidth;
-    console.log("[LogTabPanel] Container dimensions:", { height, width });
-
-    if (height === 0 || width === 0) {
-      console.error(
-        "[LogTabPanel] Container has no dimensions! Height:",
-        height,
-        "Width:",
-        width
-      );
-    }
-
-    console.log("[LogTabPanel] Mounting log viewer...");
     try {
       mountedRef.current = true;
       viewerInstanceRef.current = mountLogViewer(
         containerRef.current,
         storeRef.current
       );
-      console.log("[LogTabPanel] Log viewer mounted successfully!");
     } catch (error) {
       console.error("[LogTabPanel] Failed to mount log viewer:", error);
       mountedRef.current = false;
     }
 
     return () => {
-      console.log(
-        "[LogTabPanel] Cleanup - NOT unmounting (keeping mounted for strict mode)"
-      );
       // Don't actually unmount - let the component stay mounted
       // Only unmount when the component is truly destroyed
     };
@@ -101,67 +73,29 @@ export function LogTabPanel() {
 
   // Subscribe to log events via existing run channel
   useEffect(() => {
-    if (!run || !provider?.socket) return undefined;
+    if (!run || !provider?.socket) {
+      return undefined;
+    }
 
     const channels = (provider.socket as any).channels;
-    console.log("[LogTabPanel] Available channels:", channels);
     const channel = channels?.find((ch: any) => ch.topic === `run:${run.id}`);
 
     if (!channel) {
       console.warn("[LogTabPanel] Run channel not found for logs", {
         runId: run.id,
-        availableChannels: channels?.map((ch: any) => ch.topic),
       });
       return undefined;
     }
 
-    console.log("[LogTabPanel] Found channel for run:", run.id);
-
     // Fetch initial logs
     void channelRequest<{ logs: unknown }>(channel, "fetch:logs", {})
       .then(response => {
-        console.log("[LogTabPanel] Received logs from fetch:logs:", response);
-
-        if (!response.logs) {
-          console.warn("[LogTabPanel] No logs in response", response);
+        if (!response.logs || !Array.isArray(response.logs)) {
           return;
-        }
-
-        if (!Array.isArray(response.logs)) {
-          console.error(
-            "[LogTabPanel] Logs is not an array:",
-            typeof response.logs,
-            response.logs
-          );
-          return;
-        }
-
-        console.log("[LogTabPanel] Logs array length:", response.logs.length);
-        console.log("[LogTabPanel] First log (if any):", response.logs[0]);
-
-        if (response.logs.length > 0) {
-          console.log(
-            "[LogTabPanel] Timestamp type:",
-            typeof (response.logs[0] as any)?.timestamp
-          );
         }
 
         const logStore = storeRef.current.getState();
-        console.log(
-          "[LogTabPanel] Current log lines before add:",
-          logStore.logLines.length
-        );
-
         logStore.addLogLines(response.logs as any);
-
-        console.log(
-          "[LogTabPanel] Current log lines after add:",
-          storeRef.current.getState().logLines.length
-        );
-        console.log(
-          "[LogTabPanel] Formatted log lines:",
-          storeRef.current.getState().formattedLogLines
-        );
       })
       .catch(error => {
         console.error("[LogTabPanel] Failed to fetch logs", error);
@@ -169,7 +103,6 @@ export function LogTabPanel() {
 
     // Listen for new logs
     const logHandler = (payload: { logs: unknown[] }) => {
-      console.log("[LogTabPanel] Received logs from 'logs' event:", payload);
       const logStore = storeRef.current.getState();
       logStore.addLogLines(payload.logs as any);
     };
