@@ -1,20 +1,20 @@
-import { describe, expect, test, beforeEach } from "vitest";
 import { act, renderHook } from "@testing-library/react";
 import type React from "react";
+import { beforeEach, describe, expect, test } from "vitest";
 
-import { useJobDeleteValidation } from "../../../js/collaborative-editor/hooks/useJobDeleteValidation";
-import { StoreContext } from "../../../js/collaborative-editor/contexts/StoreProvider";
 import type { StoreContextValue } from "../../../js/collaborative-editor/contexts/StoreProvider";
+import { StoreContext } from "../../../js/collaborative-editor/contexts/StoreProvider";
+import { useJobDeleteValidation } from "../../../js/collaborative-editor/hooks/useJobDeleteValidation";
+import type { SessionContextStoreInstance } from "../../../js/collaborative-editor/stores/createSessionContextStore";
 import { createSessionContextStore } from "../../../js/collaborative-editor/stores/createSessionContextStore";
+import type { WorkflowStoreInstance } from "../../../js/collaborative-editor/stores/createWorkflowStore";
 import { createWorkflowStore } from "../../../js/collaborative-editor/stores/createWorkflowStore";
-import { mockPermissions } from "../fixtures/sessionContextData";
+import { mockPermissions } from "../__helpers__/sessionContextFactory";
 import { createWorkflowYDoc } from "../__helpers__/workflowFactory";
 import {
   createMockPhoenixChannel,
   createMockPhoenixChannelProvider,
 } from "../mocks/phoenixChannel";
-import type { WorkflowStoreInstance } from "../../../js/collaborative-editor/stores/createWorkflowStore";
-import type { SessionContextStoreInstance } from "../../../js/collaborative-editor/stores/createSessionContextStore";
 
 /**
  * Creates a React wrapper with store providers for hook testing

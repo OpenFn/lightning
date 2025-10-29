@@ -20,6 +20,7 @@ import { StoreContext } from "../../../js/collaborative-editor/contexts/StorePro
 import { createSessionContextStore } from "../../../js/collaborative-editor/stores/createSessionContextStore";
 import { createWorkflowStore } from "../../../js/collaborative-editor/stores/createWorkflowStore";
 import type { Session } from "../../../js/collaborative-editor/types/session";
+import { createSessionContext } from "../__helpers__/sessionContextFactory";
 import {
   createMockPhoenixChannel,
   createMockPhoenixChannelProvider,
@@ -73,24 +74,13 @@ function createTestSetup(options: WrapperOptions = {}) {
   sessionContextStore._connectChannel(mockProvider as any);
 
   const emitSessionContext = () => {
-    (mockChannel as any)._test.emit("session_context", {
-      user: {
-        id: "550e8400-e29b-41d4-a716-446655440000",
-        first_name: "Test",
-        last_name: "User",
-        email: "test@example.com",
-        email_confirmed: true,
-        inserted_at: new Date().toISOString(),
-      },
-      project: {
-        id: "660e8400-e29b-41d4-a716-446655440000",
-        name: "Test Project",
-      },
-      config: { require_email_verification: false },
-      permissions,
-      latest_snapshot_lock_version: latestSnapshotLockVersion,
-      project_repo_connection: null,
-    });
+    (mockChannel as any)._test.emit(
+      "session_context",
+      createSessionContext({
+        permissions,
+        latest_snapshot_lock_version: latestSnapshotLockVersion,
+      })
+    );
   };
 
   const mockStoreValue: StoreContextValue = {
@@ -99,6 +89,7 @@ function createTestSetup(options: WrapperOptions = {}) {
     adaptorStore: {} as any,
     credentialStore: {} as any,
     awarenessStore: {} as any,
+    uiStore: {} as any,
   };
 
   const wrapper = ({ children }: { children: React.ReactNode }) => (

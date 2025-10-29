@@ -8,8 +8,7 @@
 import { describe, expect, test } from "vitest";
 
 import { getAvatarInitials } from "../../../js/collaborative-editor/utils/avatar";
-import type { UserContext } from "../../../js/collaborative-editor/types/sessionContext";
-import { createMockUser } from "../fixtures/sessionContextData";
+import { createMockUser } from "../__helpers__/sessionContextFactory";
 
 // =============================================================================
 // NORMAL CASES
