@@ -28,6 +28,7 @@ defmodule LightningWeb.RunLive.Index do
     id: :boolean,
     body: :boolean,
     log: :boolean,
+    dataclip_name: :boolean,
     workflow_id: :string,
     workorder_id: :string,
     date_after: :utc_datetime,
@@ -106,6 +107,11 @@ defmodule LightningWeb.RunLive.Index do
     ]
 
     search_fields = [
+      %{
+        id: :dataclip_name,
+        icon: "hero-identification",
+        label: "Include dataclip names"
+      },
       %{id: :id, icon: "hero-finger-print-mini", label: "Include IDs"},
       %{
         id: :body,

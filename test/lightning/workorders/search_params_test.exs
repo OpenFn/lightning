@@ -57,7 +57,8 @@ defmodule Lightning.WorkOrders.SearchParamsTest do
                "wo_date_before" => nil,
                "date_after" => nil,
                "date_before" => nil,
-               "workflow_id" => "babd29f7-bf15-4a66-af21-51209217ebd4"
+               "workflow_id" => "babd29f7-bf15-4a66-af21-51209217ebd4",
+               "dataclip_name" => true
              }
     end
 
@@ -78,7 +79,8 @@ defmodule Lightning.WorkOrders.SearchParamsTest do
                "date_before" => nil,
                "workflow_id" => "babd29f7-bf15-4a66-af21-51209217ebd4",
                "sort_direction" => "desc",
-               "sort_by" => "inserted_at"
+               "sort_by" => "inserted_at",
+               "dataclip_name" => true
              }
     end
 
@@ -102,7 +104,8 @@ defmodule Lightning.WorkOrders.SearchParamsTest do
                "wo_date_before" => now |> DateTime.to_string(),
                "date_after" => now |> DateTime.to_string(),
                "date_before" => nil,
-               "workflow_id" => "babd29f7-bf15-4a66-af21-51209217ebd4"
+               "workflow_id" => "babd29f7-bf15-4a66-af21-51209217ebd4",
+               "dataclip_name" => true
              }
     end
   end
