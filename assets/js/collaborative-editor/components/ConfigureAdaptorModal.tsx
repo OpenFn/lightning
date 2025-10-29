@@ -107,7 +107,20 @@ export function ConfigureAdaptorModal({
     if (modalJustOpened) {
       setSelectedAdaptor(currentAdaptor);
       setSelectedVersion(currentVersion);
-      setSelectedCredentialId(currentCredentialId);
+
+      // Validate that currentCredentialId exists in available credentials
+      // This prevents using credentials that were deleted or don't belong to this project
+      if (currentCredentialId) {
+        const credentialExists =
+          projectCredentials.some(
+            c => c.project_credential_id === currentCredentialId
+          ) || keychainCredentials.some(c => c.id === currentCredentialId);
+
+        setSelectedCredentialId(credentialExists ? currentCredentialId : null);
+      } else {
+        setSelectedCredentialId(null);
+      }
+
       isOpenRef.current = isOpen;
       prevAdaptorRef.current = currentAdaptor;
     } else if (adaptorChanged) {
@@ -142,7 +155,18 @@ export function ConfigureAdaptorModal({
         setSelectedVersion(currentVersion);
       }
 
-      setSelectedCredentialId(currentCredentialId);
+      // Validate credential when adaptor changes
+      if (currentCredentialId) {
+        const credentialExists =
+          projectCredentials.some(
+            c => c.project_credential_id === currentCredentialId
+          ) || keychainCredentials.some(c => c.id === currentCredentialId);
+
+        setSelectedCredentialId(credentialExists ? currentCredentialId : null);
+      } else {
+        setSelectedCredentialId(null);
+      }
+
       prevAdaptorRef.current = currentAdaptor;
     } else {
       // Update refs even when no action is taken

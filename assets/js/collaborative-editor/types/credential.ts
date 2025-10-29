@@ -13,7 +13,7 @@ export const CredentialSchema = z.object({
   id: uuidSchema,
   project_credential_id: uuidSchema,
   name: z.string(),
-  external_id: z.string(),
+  external_id: z.string().nullable(),
   schema: z.string(),
   owner: CredentialOwnerSchema.nullable(),
   oauth_client_name: z.string().nullable(),

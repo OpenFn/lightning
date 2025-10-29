@@ -150,13 +150,6 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
   // Fetch project adaptors for modal
   const { projectAdaptors } = useProjectAdaptors();
 
-  // Inspector overlap calculation no longer needed - inspector is now a panel
-  // that doesn't overlap with the minimap at the bottom-right
-  // const miniMapRightOffset = useInspectorOverlap(
-  //   inspectorId,
-  //   workflowDiagramRef
-  // );
-
   const updateSelection = useCallback(
     (id?: string | null) => {
       id = id || null;

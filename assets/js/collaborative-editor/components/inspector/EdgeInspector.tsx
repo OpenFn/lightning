@@ -3,6 +3,7 @@ import { useCallback, useState } from "react";
 import { useWorkflowActions } from "../../hooks/useWorkflow";
 import type { Workflow } from "../../types/workflow";
 import { Button } from "../Button";
+import { Toggle } from "../Toggle";
 
 import { EdgeForm } from "./EdgeForm";
 import { InspectorFooter } from "./InspectorFooter";
@@ -18,7 +19,7 @@ interface EdgeInspectorProps {
  * Combines layout, form, and delete action.
  */
 export function EdgeInspector({ edge, onClose }: EdgeInspectorProps) {
-  const { removeEdge, clearSelection } = useWorkflowActions();
+  const { removeEdge, clearSelection, updateEdge } = useWorkflowActions();
   const [isDeleting, setIsDeleting] = useState(false);
 
   const handleDelete = useCallback(async () => {
@@ -39,9 +40,24 @@ export function EdgeInspector({ edge, onClose }: EdgeInspectorProps) {
     }
   }, [edge.id, removeEdge, clearSelection]);
 
-  // Only show delete button for job edges (not trigger edges)
+  const handleEnabledChange = useCallback(
+    (enabled: boolean) => {
+      updateEdge(edge.id, { enabled });
+    },
+    [edge.id, updateEdge]
+  );
+
+  // Only show footer for job edges (not trigger edges)
   const footer = !edge.source_trigger_id ? (
     <InspectorFooter
+      leftButtons={
+        <Toggle
+          id={`edge-enabled-${edge.id}`}
+          checked={edge.enabled ?? true}
+          onChange={handleEnabledChange}
+          label="Enabled"
+        />
+      }
       rightButtons={
         <Button variant="danger" onClick={handleDelete} disabled={isDeleting}>
           {isDeleting ? "Deleting..." : "Delete"}
@@ -52,7 +68,7 @@ export function EdgeInspector({ edge, onClose }: EdgeInspectorProps) {
 
   return (
     <InspectorLayout
-      title="Inspector"
+      title="Path"
       nodeType="edge"
       onClose={onClose}
       footer={footer}

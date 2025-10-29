@@ -99,57 +99,6 @@ function useAdaptorVersionOptions(adaptorPackage: string | null) {
   return { adaptorVersionOptions, adaptorPackageOptions, getLatestVersion };
 }
 
-// COMMENTED OUT (Phase 2R): Moved to ConfigureAdaptorModal in Phase 3R
-/* const useCredentialOptions = () => {
-  const { keychainCredentials, projectCredentials } = useCredentials();
-
-  const credentialOptions = useMemo(() => {
-    return [
-      ...projectCredentials.map(credential => ({
-        value: credential.project_credential_id,
-        label: credential.name,
-      })),
-      ...keychainCredentials.map(credential => ({
-        value: credential.id,
-        label: credential.name,
-        group: "Keychain Credentials",
-      })),
-    ];
-  }, [projectCredentials, keychainCredentials]);
-
-  const resolveCredentialId = useCallback(
-    (credentialId: string | null) => {
-      if (!credentialId) {
-        return {
-          project_credential_id: null,
-          keychain_credential_id: null,
-        };
-      }
-
-      const isProjectCredential = projectCredentials.some(
-        c => c.project_credential_id === credentialId
-      );
-      const isKeychainCredential = keychainCredentials.some(
-        c => c.id === credentialId
-      );
-
-      return {
-        project_credential_id: isProjectCredential ? credentialId : null,
-        keychain_credential_id: isKeychainCredential ? credentialId : null,
-      };
-    },
-    [projectCredentials, keychainCredentials]
-  );
-
-  return useMemo(
-    () => ({
-      credentialOptions,
-      resolveCredentialId,
-    }),
-    [credentialOptions, resolveCredentialId]
-  );
-}; */
-
 /**
  * Pure form component for job configuration.
  * Handles all form fields, adaptor selection, credential selection.
@@ -242,15 +191,17 @@ export function JobForm({ job }: JobFormProps) {
   useEffect(() => {
     const handleModalClose = () => {
       setIsCredentialModalOpen(false);
-      // Delay reopening configure modal to avoid flash during transition
+      // Reopen configure modal after a short delay to avoid flash during transition
+      // Phoenix.JS dispatches the close event at ~250ms, so 200ms feels instant
       setTimeout(() => {
         setIsConfigureModalOpen(true);
-      }, 200); // Wait for credential modal close animation
+      }, 200);
       // Notify server after modal is fully closed to reset state
-      // This allows reopening the modal on subsequent clicks
+      // 500ms accounts for: Phoenix.JS animation (250ms) + LiveView update time + buffer
+      // This prevents race conditions if user quickly reopens modal
       setTimeout(() => {
         pushEvent("close_credential_modal_complete", {});
-      }, 500); // Wait for modal close animation to complete
+      }, 500);
     };
 
     const element = document.getElementById("collaborative-editor-react");
@@ -415,12 +366,16 @@ export function JobForm({ job }: JobFormProps) {
           c => c.project_credential_id === config.credentialId
         );
 
+        const isKeychainCredential = keychainCredentials.some(
+          c => c.id === config.credentialId
+        );
+
         if (isProjectCredential) {
           jobUpdates.project_credential_id = config.credentialId;
-        } else {
-          // Must be a keychain credential
+        } else if (isKeychainCredential) {
           jobUpdates.keychain_credential_id = config.credentialId;
         }
+        // If neither match, leave both as null (credential might have been deleted)
       }
 
       // Update form state (includes UI-only fields like adaptor_package and credential_id)
