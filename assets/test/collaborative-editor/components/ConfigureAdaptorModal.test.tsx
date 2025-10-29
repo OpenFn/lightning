@@ -333,11 +333,12 @@ describe("ConfigureAdaptorModal", () => {
       // Wait for options to appear
       const options = await screen.findAllByRole("option");
 
-      // Should have 3 versions from mock data (no "latest")
-      expect(options.length).toBe(3);
-      expect(options[0]).toHaveTextContent("2.1.0");
-      expect(options[1]).toHaveTextContent("2.0.0");
-      expect(options[2]).toHaveTextContent("1.9.0");
+      // Should have 4 versions: "latest" + 3 versions from mock data
+      expect(options.length).toBe(4);
+      expect(options[0]).toHaveTextContent("latest");
+      expect(options[1]).toHaveTextContent("2.1.0");
+      expect(options[2]).toHaveTextContent("2.0.0");
+      expect(options[3]).toHaveTextContent("1.9.0");
     });
 
     it("updates version when dropdown selection changes", async () => {
@@ -396,12 +397,13 @@ describe("ConfigureAdaptorModal", () => {
       // Wait for options to appear
       const options = await screen.findAllByRole("option");
 
-      // Should be sorted: 10.0.0, 9.0.0, 2.0.0, 1.10.0, 1.9.0 (no "latest")
-      expect(options[0]).toHaveTextContent("10.0.0");
-      expect(options[1]).toHaveTextContent("9.0.0");
-      expect(options[2]).toHaveTextContent("2.0.0");
-      expect(options[3]).toHaveTextContent("1.10.0");
-      expect(options[4]).toHaveTextContent("1.9.0");
+      // Should be sorted: "latest" first, then 10.0.0, 9.0.0, 2.0.0, 1.10.0, 1.9.0
+      expect(options[0]).toHaveTextContent("latest");
+      expect(options[1]).toHaveTextContent("10.0.0");
+      expect(options[2]).toHaveTextContent("9.0.0");
+      expect(options[3]).toHaveTextContent("2.0.0");
+      expect(options[4]).toHaveTextContent("1.10.0");
+      expect(options[5]).toHaveTextContent("1.9.0");
     });
   });
 

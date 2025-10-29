@@ -1,10 +1,13 @@
 import { useVersionSelect } from "../../hooks/useVersionSelect";
+import { AdaptorDisplay } from "../AdaptorDisplay";
 import { Button } from "../Button";
 import { Tooltip } from "../Tooltip";
 import { VersionDropdown } from "../VersionDropdown";
 
 interface IDEHeaderProps {
   jobName: string;
+  jobAdaptor?: string | undefined;
+  jobCredentialId?: string | null | undefined;
   snapshotVersion: number | null | undefined;
   latestSnapshotVersion: number | null | undefined;
   workflowId: string | undefined;
@@ -15,7 +18,9 @@ interface IDEHeaderProps {
   isRunning: boolean;
   canSave: boolean;
   saveTooltip: string;
-  runTooltip?: string;
+  runTooltip?: string | undefined;
+  onEditAdaptor?: (() => void) | undefined;
+  onChangeAdaptor?: (() => void) | undefined;
 }
 
 /**
@@ -27,6 +32,8 @@ interface IDEHeaderProps {
  */
 export function IDEHeader({
   jobName,
+  jobAdaptor,
+  jobCredentialId,
   snapshotVersion,
   latestSnapshotVersion,
   workflowId,
@@ -38,15 +45,26 @@ export function IDEHeader({
   canSave,
   saveTooltip,
   runTooltip,
+  onEditAdaptor,
+  onChangeAdaptor,
 }: IDEHeaderProps) {
   // Use shared version selection handler (destroys Y.Doc before switching)
   const handleVersionSelect = useVersionSelect();
   return (
     <div className="shrink-0 border-b border-gray-200 bg-white px-6 py-2">
       <div className="flex items-center justify-between">
-        {/* Left: Job name with version chip */}
+        {/* Left: Job name with version chip and adaptor display */}
         <div className="flex items-center gap-2">
           <h2 className="text-base font-semibold text-gray-900">{jobName}</h2>
+          {jobAdaptor && (
+            <AdaptorDisplay
+              adaptor={jobAdaptor}
+              credentialId={jobCredentialId}
+              size="sm"
+              onEdit={onEditAdaptor}
+              onChangeAdaptor={onChangeAdaptor}
+            />
+          )}
           {workflowId && (
             <VersionDropdown
               currentVersion={snapshotVersion ?? null}

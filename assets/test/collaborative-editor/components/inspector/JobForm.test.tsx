@@ -194,14 +194,13 @@ describe("JobForm - Adaptor Display Section", () => {
     // Phase 2R: Version is NO LONGER displayed in inspector
     // Version selection moved to ConfigureAdaptorModal (Phase 3R)
 
-    // Check "Connect" button exists (changed from "Change" in Phase 2R)
-    // Note: aria-label is "Configure adaptor" but button text is "Connect"
-    const connectButton = screen.getByRole("button", { name: /configure/i });
-    expect(connectButton).toBeInTheDocument();
-    expect(connectButton).toHaveTextContent("Connect");
+    // Check "Edit" button exists (changed from "Connect")
+    const editButton = screen.getByRole("button", { name: /edit adaptor/i });
+    expect(editButton).toBeInTheDocument();
+    expect(editButton).toHaveTextContent("Edit");
   });
 
-  test("opens ConfigureAdaptorModal when 'Connect' clicked (Phase 3R)", async () => {
+  test("opens ConfigureAdaptorModal when 'Edit' clicked (Phase 3R)", async () => {
     const user = userEvent.setup();
     const job = workflowStore.getSnapshot().jobs[0];
 
@@ -215,9 +214,9 @@ describe("JobForm - Adaptor Display Section", () => {
       ),
     });
 
-    // Click "Connect" button (changed from "Change" in Phase 2R)
-    const connectButton = screen.getByRole("button", { name: /configure/i });
-    await user.click(connectButton);
+    // Click "Edit" button to open ConfigureAdaptorModal
+    const editButton = screen.getByRole("button", { name: /edit adaptor/i });
+    await user.click(editButton);
 
     // Phase 3R: ConfigureAdaptorModal should open (not AdaptorSelectionModal)
     await waitFor(
@@ -245,9 +244,9 @@ describe("JobForm - Adaptor Display Section", () => {
     // Verify initial adaptor
     expect(screen.getByText("Http")).toBeInTheDocument();
 
-    // Open modal with "Connect" button
-    const connectButton = screen.getByRole("button", { name: /configure/i });
-    await user.click(connectButton);
+    // Open modal with "Edit" button
+    const editButton = screen.getByRole("button", { name: /edit adaptor/i });
+    await user.click(editButton);
 
     // ConfigureAdaptorModal should open
     await waitFor(
@@ -613,9 +612,9 @@ describe("JobForm - Complete Integration (Phase 2R: Simplified)", () => {
       expect(updatedJob.name).toBe("Updated Name");
     });
 
-    // 3. Verify "Connect" button opens ConfigureAdaptorModal (Phase 3R)
-    const connectButton = screen.getByRole("button", { name: /configure/i });
-    await user.click(connectButton);
+    // 3. Verify "Edit" button opens ConfigureAdaptorModal (Phase 3R)
+    const editButton = screen.getByRole("button", { name: /edit adaptor/i });
+    await user.click(editButton);
 
     // Wait for ConfigureAdaptorModal to open
     await waitFor(

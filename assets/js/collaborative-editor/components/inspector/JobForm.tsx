@@ -4,10 +4,7 @@ import { useHotkeysContext } from "react-hotkeys-hook";
 
 import { useAppForm } from "#/collaborative-editor/components/form";
 import { useLiveViewActions } from "#/collaborative-editor/contexts/LiveViewActionsContext";
-import {
-  useAdaptors,
-  useProjectAdaptors,
-} from "#/collaborative-editor/hooks/useAdaptors";
+import { useProjectAdaptors } from "#/collaborative-editor/hooks/useAdaptors";
 import {
   useCredentials,
   useCredentialsCommands,
@@ -16,14 +13,10 @@ import { useWorkflowActions } from "#/collaborative-editor/hooks/useWorkflow";
 import { useWatchFields } from "#/collaborative-editor/stores/common";
 import { JobSchema } from "#/collaborative-editor/types/job";
 import type { Workflow } from "#/collaborative-editor/types/workflow";
-import {
-  extractAdaptorDisplayName,
-  extractAdaptorName,
-} from "#/collaborative-editor/utils/adaptorUtils";
 
-import { ConfigureAdaptorModal } from "../ConfigureAdaptorModal";
+import { AdaptorDisplay } from "../AdaptorDisplay";
 import { AdaptorSelectionModal } from "../AdaptorSelectionModal";
-import { AdaptorIcon } from "../AdaptorIcon";
+import { ConfigureAdaptorModal } from "../ConfigureAdaptorModal";
 import { createZodValidator } from "../form/createZodValidator";
 
 interface JobFormProps {
@@ -49,54 +42,6 @@ function resolveAdaptor(adaptor: string): {
     package: packageName || null,
     version: version || null,
   };
-}
-
-function useAdaptorVersionOptions(adaptorPackage: string | null) {
-  const adaptors = useAdaptors();
-
-  const adaptor = useMemo(() => {
-    if (!adaptorPackage) return null;
-    return adaptors.find(adaptor => adaptor.name === adaptorPackage) || null;
-  }, [adaptorPackage, adaptors]);
-
-  const adaptorVersionOptions = useMemo(() => {
-    if (!adaptorPackage || !adaptor) return [];
-
-    return [
-      {
-        value: `${adaptor.name}@latest`,
-        label: `latest (≥ ${adaptor.latest})`,
-      },
-      ...adaptor.versions.map(({ version }) => ({
-        value: `${adaptor.name}@${version}`,
-        label: version,
-      })),
-    ];
-  }, [adaptorPackage, adaptor]);
-
-  const getLatestVersion = useCallback(
-    (packageName: string) => {
-      const adaptor = adaptors.find(adaptor => adaptor.name === packageName);
-      if (!adaptor) return null;
-      return `${adaptor.name}@${adaptor.latest}`;
-    },
-    [adaptors]
-  );
-
-  const adaptorPackageOptions = useMemo(() => {
-    return adaptors
-      .map(adaptor => {
-        const label = extractAdaptorName(adaptor.name);
-        if (!label) return null;
-        return {
-          value: adaptor.name,
-          label,
-        };
-      })
-      .filter(option => option !== null);
-  }, [adaptors]);
-
-  return { adaptorVersionOptions, adaptorPackageOptions, getLatestVersion };
 }
 
 /**
@@ -251,36 +196,12 @@ export function JobForm({ job }: JobFormProps) {
     return cleanup;
   }, [handleEvent, form, job.id, updateJob, requestCredentials]);
 
-  // Adaptor package logic
-  const adaptorPackage = useStore(
-    form.store,
-    state => state.values.adaptor_package
-  );
-
-  // COMMENTED OUT (Phase 2R): Version options moved to ConfigureAdaptorModal
-  const { /* adaptorVersionOptions, */ getLatestVersion } =
-    useAdaptorVersionOptions(adaptorPackage);
-
-  useEffect(() => {
-    if (!adaptorPackage) return;
-    const latestVersion = getLatestVersion(adaptorPackage);
-    if (latestVersion) {
-      form.setFieldValue("adaptor", latestVersion);
-      updateJob(job.id, form.state.values);
-    }
-  }, [adaptorPackage, getLatestVersion, form, job.id, updateJob]);
-
-  // Get current adaptor display name
-  const adaptorDisplayName = useMemo(() => {
-    return extractAdaptorDisplayName(adaptorPackage || "");
-  }, [adaptorPackage]);
-
-  // Check if a credential is selected
-  const selectedCredentialId = useStore(
+  // Get current adaptor and credential for display
+  const currentAdaptor = useStore(form.store, state => state.values.adaptor);
+  const currentCredentialId = useStore(
     form.store,
     state => state.values.credential_id
   );
-  const hasCredential = !!selectedCredentialId;
 
   // Handle opening adaptor picker from ConfigureAdaptorModal
   const handleOpenAdaptorPicker = useCallback(() => {
@@ -306,38 +227,15 @@ export function JobForm({ job }: JobFormProps) {
       const newPackage = packageMatch ? packageMatch[1] : adaptorName;
       form.setFieldValue("adaptor_package", newPackage || null);
 
-      // Find the adaptor in allAdaptors to get its newest version
-      const adaptor = allAdaptors.find(a => a.name === newPackage);
-
-      // Get the newest version (first in the versions array after filtering "latest")
-      const newestVersion =
-        adaptor?.versions
-          .map(v => v.version)
-          .filter(v => v !== "latest")
-          .sort((a, b) => {
-            const aParts = a.split(".").map(Number);
-            const bParts = b.split(".").map(Number);
-            for (let i = 0; i < Math.max(aParts.length, bParts.length); i++) {
-              const aNum = aParts[i] || 0;
-              const bNum = bParts[i] || 0;
-              if (aNum !== bNum) {
-                return bNum - aNum;
-              }
-            }
-            return 0;
-          })[0] ||
-        adaptor?.latest ||
-        "latest";
-
-      // Update the full adaptor string with newest version
-      const fullAdaptor = `${newPackage}@${newestVersion}`;
+      // Set version to "latest" by default when picking an adaptor
+      const fullAdaptor = `${newPackage}@latest`;
       form.setFieldValue("adaptor", fullAdaptor);
 
       // Close adaptor picker and reopen configure modal
       setIsAdaptorPickerOpen(false);
       setIsConfigureModalOpen(true);
     },
-    [form, allAdaptors]
+    [form]
   );
 
   // Handler for configure save from modal
@@ -433,12 +331,9 @@ export function JobForm({ job }: JobFormProps) {
         </form.AppField>
       </div>
 
-      {/* Adaptor Section - Simplified to match design */}
+      {/* Adaptor Section */}
       <div className="col-span-6">
-        <label
-          className="flex items-center gap-1 text-sm font-medium
-          text-gray-700 mb-2"
-        >
+        <label className="flex items-center gap-1 text-sm font-medium text-gray-700 mb-2">
           Adaptor
           <span
             className="hero-information-circle h-4 w-4 text-gray-400"
@@ -446,35 +341,13 @@ export function JobForm({ job }: JobFormProps) {
             role="img"
           />
         </label>
-        <div
-          className="flex items-center justify-between gap-3 p-3 border
-          border-gray-200 rounded-md bg-white"
-        >
-          <div className="flex items-center gap-2 min-w-0 flex-1">
-            <AdaptorIcon name={adaptorPackage || ""} size="md" />
-            <span className="font-medium text-gray-900 truncate">
-              {adaptorDisplayName}
-            </span>
-          </div>
-          <button
-            type="button"
-            onClick={() => setIsConfigureModalOpen(true)}
-            className="px-3 py-1.5 border border-gray-300 bg-white rounded-md
-            text-sm font-medium text-gray-700 hover:bg-gray-50
-            focus:outline-none flex-shrink-0 flex items-center gap-2"
-            aria-label={
-              hasCredential ? "Credential connected" : "Configure adaptor"
-            }
-          >
-            {hasCredential && (
-              <span
-                className="w-2 h-2 bg-green-500 rounded-full flex-shrink-0"
-                aria-hidden="true"
-              />
-            )}
-            {hasCredential ? "Connected" : "Connect"}
-          </button>
-        </div>
+        <AdaptorDisplay
+          adaptor={currentAdaptor}
+          credentialId={currentCredentialId}
+          onEdit={() => setIsConfigureModalOpen(true)}
+          onChangeAdaptor={handleOpenAdaptorPicker}
+          size="sm"
+        />
       </div>
 
       {/* REMOVED: Version dropdown (Phase 2R) */}
@@ -490,11 +363,11 @@ export function JobForm({ job }: JobFormProps) {
         onSave={handleConfigureSave}
         onOpenAdaptorPicker={handleOpenAdaptorPicker}
         onOpenCredentialModal={handleOpenCredentialModal}
-        currentAdaptor={adaptorPackage || "@openfn/language-common"}
-        currentVersion={
-          resolveAdaptor(form.state.values.adaptor).version || "latest"
+        currentAdaptor={
+          resolveAdaptor(currentAdaptor).package || "@openfn/language-common"
         }
-        currentCredentialId={form.state.values.credential_id}
+        currentVersion={resolveAdaptor(currentAdaptor).version || "latest"}
+        currentCredentialId={currentCredentialId}
         allAdaptors={allAdaptors}
       />
 

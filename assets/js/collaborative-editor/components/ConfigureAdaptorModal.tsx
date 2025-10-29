@@ -332,7 +332,8 @@ export function ConfigureAdaptorModal({
         return 0;
       });
 
-    return sortedVersions;
+    // Add "latest" as the first option
+    return ["latest", ...sortedVersions];
   }, [selectedAdaptor, allAdaptors]);
 
   // Extract adaptor display name
