@@ -1579,4 +1579,322 @@ defmodule LightningWeb.RunChannelTest do
     from(d in Dataclip, select: %{d | body: d.body})
     |> Repo.get(dataclip_id)
   end
+
+  # Browser client tests
+  describe "joining the run:* channel as browser client" do
+    setup do
+      user = insert(:user)
+      project = insert(:project)
+      insert(:project_user, user: user, project: project)
+      workflow = insert(:workflow, project: project)
+      trigger = insert(:trigger, workflow: workflow, type: :webhook)
+      dataclip = insert(:dataclip, project: project)
+      snapshot = insert(:snapshot, workflow: workflow)
+
+      workorder =
+        insert(:workorder,
+          workflow: workflow,
+          trigger: trigger,
+          dataclip: dataclip,
+          snapshot: snapshot
+        )
+
+      run =
+        insert(:run,
+          work_order: workorder,
+          starting_trigger: trigger,
+          dataclip: dataclip,
+          snapshot: snapshot
+        )
+
+      token = Phoenix.Token.sign(@endpoint, "user socket", user.id)
+      {:ok, socket} = connect(LightningWeb.UserSocket, %{"token" => token})
+
+      %{
+        socket: socket,
+        run: run,
+        user: user,
+        project: project,
+        workflow: workflow
+      }
+    end
+
+    test "allows authorized user to join", %{socket: socket, run: run} do
+      assert {:ok, _reply, _socket} =
+               subscribe_and_join(socket, "run:#{run.id}", %{})
+    end
+
+    test "rejects unauthorized user", %{socket: socket} do
+      other_project = insert(:project)
+      other_workflow = insert(:workflow, project: other_project)
+      other_trigger = insert(:trigger, workflow: other_workflow, type: :webhook)
+      other_dataclip = insert(:dataclip, project: other_project)
+      other_snapshot = insert(:snapshot, workflow: other_workflow)
+
+      other_workorder =
+        insert(:workorder,
+          workflow: other_workflow,
+          trigger: other_trigger,
+          dataclip: other_dataclip,
+          snapshot: other_snapshot
+        )
+
+      other_run =
+        insert(:run,
+          work_order: other_workorder,
+          starting_trigger: other_trigger,
+          dataclip: other_dataclip,
+          snapshot: other_snapshot
+        )
+
+      assert {:error, %{reason: "unauthorized"}} =
+               subscribe_and_join(socket, "run:#{other_run.id}", %{})
+    end
+
+    test "rejects non-existent run", %{socket: socket} do
+      fake_id = Ecto.UUID.generate()
+
+      assert {:error, %{reason: "not_found"}} =
+               subscribe_and_join(socket, "run:#{fake_id}", %{})
+    end
+  end
+
+  describe "handle_in fetch:run for browser clients" do
+    setup do
+      user = insert(:user)
+      project = insert(:project)
+      insert(:project_user, user: user, project: project)
+      workflow = insert(:workflow, project: project)
+      job = insert(:job, workflow: workflow)
+      trigger = insert(:trigger, workflow: workflow, type: :webhook)
+      dataclip = insert(:dataclip, project: project)
+      snapshot = insert(:snapshot, workflow: workflow)
+
+      workorder =
+        insert(:workorder,
+          workflow: workflow,
+          trigger: trigger,
+          dataclip: dataclip,
+          snapshot: snapshot
+        )
+
+      run =
+        insert(:run,
+          work_order: workorder,
+          starting_job: job,
+          created_by: user,
+          dataclip: dataclip,
+          snapshot: snapshot
+        )
+
+      step = insert(:step, job: job, runs: [run])
+
+      token = Phoenix.Token.sign(@endpoint, "user socket", user.id)
+      {:ok, socket} = connect(LightningWeb.UserSocket, %{"token" => token})
+
+      {:ok, _reply, socket} =
+        subscribe_and_join(socket, "run:#{run.id}", %{})
+
+      %{socket: socket, run: run, step: step, job: job}
+    end
+
+    test "returns run with associations", %{
+      socket: socket,
+      run: run,
+      step: step
+    } do
+      ref = push(socket, "fetch:run", %{})
+
+      assert_reply ref, :ok, %{run: returned_run}
+
+      # In test environment, data is returned as structs not JSON
+      assert returned_run.id == run.id
+      assert is_list(returned_run.steps)
+      assert length(returned_run.steps) == 1
+      assert List.first(returned_run.steps).id == step.id
+      assert List.first(returned_run.steps).job.id == step.job_id
+    end
+  end
+
+  describe "handle_in fetch:logs for browser clients" do
+    setup do
+      user = insert(:user)
+      project = insert(:project)
+      insert(:project_user, user: user, project: project)
+      workflow = insert(:workflow, project: project)
+      trigger = insert(:trigger, workflow: workflow, type: :webhook)
+      dataclip = insert(:dataclip, project: project)
+      snapshot = insert(:snapshot, workflow: workflow)
+
+      workorder =
+        insert(:workorder,
+          workflow: workflow,
+          trigger: trigger,
+          dataclip: dataclip,
+          snapshot: snapshot
+        )
+
+      run =
+        insert(:run,
+          work_order: workorder,
+          starting_trigger: trigger,
+          dataclip: dataclip,
+          snapshot: snapshot
+        )
+
+      insert(:log_line,
+        run: run,
+        message: "Test log message 1",
+        timestamp: DateTime.utc_now()
+      )
+
+      insert(:log_line,
+        run: run,
+        message: "Test log message 2",
+        timestamp: DateTime.utc_now()
+      )
+
+      token = Phoenix.Token.sign(@endpoint, "user socket", user.id)
+      {:ok, socket} = connect(LightningWeb.UserSocket, %{"token" => token})
+
+      {:ok, _reply, socket} =
+        subscribe_and_join(socket, "run:#{run.id}", %{})
+
+      %{socket: socket, run: run}
+    end
+
+    test "returns log lines for run", %{socket: socket} do
+      ref = push(socket, "fetch:logs", %{})
+
+      assert_reply ref, :ok, %{logs: logs}
+
+      assert is_list(logs)
+      assert length(logs) == 2
+    end
+  end
+
+  describe "handle_info for browser client events" do
+    setup do
+      user = insert(:user)
+      project = insert(:project)
+      insert(:project_user, user: user, project: project)
+      workflow = insert(:workflow, project: project)
+      job = insert(:job, workflow: workflow)
+      trigger = insert(:trigger, workflow: workflow, type: :webhook)
+      dataclip = insert(:dataclip, project: project)
+
+      # Create snapshot with the job included
+      {:ok, snapshot} = Workflows.Snapshot.create(workflow)
+
+      workorder =
+        insert(:workorder,
+          workflow: workflow,
+          trigger: trigger,
+          dataclip: dataclip,
+          snapshot: snapshot
+        )
+
+      run =
+        insert(:run,
+          work_order: workorder,
+          starting_trigger: trigger,
+          dataclip: dataclip,
+          snapshot: snapshot,
+          state: :started
+        )
+
+      token = Phoenix.Token.sign(@endpoint, "user socket", user.id)
+      {:ok, socket} = connect(LightningWeb.UserSocket, %{"token" => token})
+
+      {:ok, _reply, socket} =
+        subscribe_and_join(socket, "run:#{run.id}", %{})
+
+      %{socket: socket, run: run, job: job, project: project, snapshot: snapshot}
+    end
+
+    test "forwards run updated event", %{socket: _socket, run: run} do
+      {:ok, updated_run} =
+        run
+        |> Lightning.Run.complete(%{
+          state: :success,
+          finished_at: DateTime.utc_now()
+        })
+        |> Lightning.Repo.update()
+
+      Lightning.Runs.Events.run_updated(updated_run)
+
+      assert_push "run:updated", %{run: pushed_run}
+      assert pushed_run.state == :success
+    end
+
+    test "forwards step started event", %{
+      socket: _socket,
+      run: run,
+      job: job,
+      project: project
+    } do
+      input_dataclip = insert(:dataclip, project: project)
+
+      {:ok, step} =
+        Lightning.Runs.start_step(run, %{
+          step_id: Ecto.UUID.generate(),
+          job_id: job.id,
+          input_dataclip_id: input_dataclip.id,
+          started_at: DateTime.utc_now()
+        })
+
+      assert_push "step:started", %{step: pushed_step}
+      assert pushed_step.id == step.id
+      assert pushed_step.job.id == job.id
+    end
+
+    test "forwards step completed event", %{
+      socket: _socket,
+      run: run,
+      job: job,
+      project: project
+    } do
+      input_dataclip = insert(:dataclip, project: project)
+
+      {:ok, step} =
+        Lightning.Runs.start_step(run, %{
+          step_id: Ecto.UUID.generate(),
+          job_id: job.id,
+          input_dataclip_id: input_dataclip.id,
+          started_at: DateTime.utc_now()
+        })
+
+      {:ok, completed_step} =
+        Lightning.Runs.complete_step(
+          %{
+            "step_id" => step.id,
+            "output_dataclip" => Jason.encode!(%{"foo" => "bar"}),
+            "output_dataclip_id" => Ecto.UUID.generate(),
+            "reason" => "success",
+            "finished_at" => DateTime.utc_now(),
+            "run_id" => run.id,
+            "project_id" => project.id
+          },
+          %Lightning.Runs.RunOptions{}
+        )
+
+      assert_push "step:completed", %{step: pushed_step}
+      assert pushed_step.id == completed_step.id
+      assert pushed_step.exit_reason == "success"
+    end
+
+    test "forwards log appended event", %{socket: _socket, run: run} do
+      {:ok, log_line} =
+        Lightning.Runs.append_run_log(run, %{
+          message: "test message",
+          level: :info,
+          source: "TEST",
+          timestamp: DateTime.utc_now()
+        })
+
+      assert_push "logs", %{logs: [pushed_log]}
+      assert pushed_log.id == log_line.id
+      assert pushed_log.message == "test message"
+    end
+  end
 end

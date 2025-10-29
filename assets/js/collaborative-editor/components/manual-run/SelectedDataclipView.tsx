@@ -1,7 +1,7 @@
 import { CheckIcon, PencilIcon, XMarkIcon } from "@heroicons/react/24/outline";
 import { useCallback, useState } from "react";
 
-import { MonacoEditor } from "../../../monaco";
+import { DataclipViewer } from "../../../react/components/DataclipViewer";
 import type { Dataclip } from "../../api/dataclips";
 import { Button } from "../Button";
 
@@ -102,14 +102,6 @@ export function SelectedDataclipView({
                 <span>
                   {new Date(dataclip.inserted_at).toLocaleDateString()}
                 </span>
-                {isNextCronRun && (
-                  <>
-                    <span>•</span>
-                    <span className="text-green-600 font-medium">
-                      Next Cron Run
-                    </span>
-                  </>
-                )}
               </div>
             </>
           )}
@@ -123,20 +115,23 @@ export function SelectedDataclipView({
         </button>
       </div>
 
+      {/* Next Cron Run Warning */}
+      {isNextCronRun && (
+        <div className="alert-warning flex flex-col gap-1 px-3 py-2 rounded-md border mb-4">
+          <span className="text-sm font-medium">
+            Default Next Input for Cron
+          </span>
+          <span className="text-xs">
+            This workflow has a "cron" trigger, and by default it will use the
+            input below for its next run. You can override that by starting a
+            manual run with an empty input or a custom input at any time.
+          </span>
+        </div>
+      )}
+
       {/* Body Preview */}
       <div className="flex-1 overflow-hidden">
-        <MonacoEditor
-          height="100%"
-          language="json"
-          value={JSON.stringify(dataclip.body, null, 2)}
-          options={{
-            readOnly: true,
-            minimap: { enabled: false },
-            lineNumbers: "on",
-            fontSize: 14,
-            scrollBeyondLastLine: false,
-          }}
-        />
+        <DataclipViewer dataclipId={dataclip.id} />
       </div>
     </div>
   );

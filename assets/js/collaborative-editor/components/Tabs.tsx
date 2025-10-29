@@ -33,7 +33,7 @@ export function Tabs<T extends string>({
               onClick={() => onChange(option.value)}
               className={`
                 group inline-flex items-center justify-center
-                border-b-2 px-1 py-4 flex-1
+                border-b-2 px-1 py-2 flex-1
                 text-sm font-medium transition-colors
                 ${
                   isSelected
