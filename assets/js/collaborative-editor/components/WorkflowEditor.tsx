@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { useHotkeys, useHotkeysContext } from "react-hotkeys-hook";
 
 import _logger from "#/utils/logger";
+import { notifications } from "../lib/notifications";
 
 import { useURLState } from "../../react/lib/use-url-state";
 import type { WorkflowState as YAMLWorkflowState } from "../../yaml/types";
@@ -95,7 +96,8 @@ export function WorkflowEditor({
   const [showLeftPanel, setShowLeftPanel] = useState(isNewWorkflow);
 
   // Check if user can run workflows (handles permissions, snapshots, locks, etc.)
-  const { canRun: canOpenRunPanel } = useCanRun();
+  const { canRun: canOpenRunPanel, tooltipMessage: runDisabledReason } =
+    useCanRun();
 
   // Run state from ManualRunPanel
   const [canRunWorkflow, setCanRunWorkflow] = useState(false);
@@ -184,6 +186,10 @@ export function WorkflowEditor({
 
       // Don't do anything if user can't run (snapshots, permissions, locks, etc.)
       if (!canOpenRunPanel) {
+        notifications.alert({
+          title: "Cannot run workflow",
+          description: runDisabledReason,
+        });
         return;
       }
 
@@ -213,6 +219,7 @@ export function WorkflowEditor({
     },
     [
       canOpenRunPanel,
+      runDisabledReason,
       isRunPanelOpen,
       runHandler,
       canRunWorkflow,
