@@ -6,6 +6,7 @@ import {
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
 
+import _logger from "#/utils/logger";
 import { FilterTypes } from "../../manual-run-panel/types";
 import CustomView from "../../manual-run-panel/views/CustomView";
 import EmptyView from "../../manual-run-panel/views/EmptyView";
@@ -21,6 +22,8 @@ import { InspectorFooter } from "./inspector/InspectorFooter";
 import { InspectorLayout } from "./inspector/InspectorLayout";
 import { SelectedDataclipView } from "./manual-run/SelectedDataclipView";
 import { Tabs } from "./Tabs";
+
+const logger = _logger.ns("ManualRunPanel").seal();
 
 interface ManualRunPanelProps {
   workflow: Workflow;
@@ -162,7 +165,7 @@ export function ManualRunPanel({
           }
         }
       } catch (error) {
-        console.error("Failed to fetch dataclips:", error);
+        logger.error("Failed to fetch dataclips:", error);
       }
     };
 
@@ -222,7 +225,7 @@ export function ManualRunPanel({
       );
       setDataclips(response.data);
     } catch (error) {
-      console.error("Failed to search dataclips:", error);
+      logger.error("Failed to search dataclips:", error);
     }
   }, [projectId, dataclipJobId, searchQuery, buildFilters]);
 
@@ -248,7 +251,7 @@ export function ManualRunPanel({
           return response;
         })
         .catch(error => {
-          console.error("Failed to search dataclips:", error);
+          logger.error("Failed to search dataclips:", error);
         });
     }, 300);
 
@@ -295,7 +298,7 @@ export function ManualRunPanel({
   const handleRun = useCallback(async () => {
     const contextId = runContext.id;
     if (!contextId) {
-      console.error("No context ID available");
+      logger.error("No context ID available");
       return;
     }
 
@@ -343,8 +346,12 @@ export function ManualRunPanel({
         window.location.href = `/projects/${projectId}/runs/${response.data.run_id}`;
       }
     } catch (error) {
-      console.error("Failed to submit run:", error);
-      alert(error instanceof Error ? error.message : "Failed to submit run");
+      logger.error("Failed to submit run:", error);
+      notifications.alert({
+        title: "Failed to submit run",
+        description:
+          error instanceof Error ? error.message : "An unknown error occurred",
+      });
       setIsSubmitting(false);
     }
   }, [
