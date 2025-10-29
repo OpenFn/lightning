@@ -88,6 +88,11 @@ export namespace Workflow {
     enabled: boolean | null; // Computed from triggers
     selectedNode: Workflow.Job | Workflow.Trigger | null;
     selectedEdge: Workflow.Edge | null;
+
+    validationErrors: {
+      name?: string[];
+      concurrency?: string[];
+    } | null;
   }
 
   export interface Actions {

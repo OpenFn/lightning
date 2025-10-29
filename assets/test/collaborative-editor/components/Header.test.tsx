@@ -324,6 +324,117 @@ describe("Header - Basic Rendering", () => {
       screen.getByRole("button", { name: /open user menu/i })
     ).toBeInTheDocument();
   });
+
+  test("settings button shows error styling when workflow has validation errors", async () => {
+    const { wrapper, emitSessionContext, ydoc } = createTestSetup();
+
+    const { container } = render(
+      <Header projectId="project-1" workflowId="workflow-1">
+        {[<span key="breadcrumb-1">Breadcrumb</span>]}
+      </Header>,
+      { wrapper }
+    );
+
+    act(() => {
+      emitSessionContext();
+    });
+
+    // Initially, settings button should have gray styling
+    const settingsButton = container.querySelector(
+      'button[type="button"] .hero-adjustments-vertical'
+    )?.parentElement;
+    expect(settingsButton).toHaveClass("text-slate-500");
+    expect(settingsButton).toHaveClass("hover:text-slate-400");
+
+    // Set workflow name to empty string (invalid)
+    act(() => {
+      const workflowMap = ydoc.getMap("workflow");
+      workflowMap.set("name", "");
+    });
+
+    await waitFor(() => {
+      // Settings button should now have red error styling
+      expect(settingsButton).toHaveClass("text-danger-500");
+      expect(settingsButton).toHaveClass("hover:text-danger-400");
+    });
+
+    // Fix the validation error
+    act(() => {
+      const workflowMap = ydoc.getMap("workflow");
+      workflowMap.set("name", "Valid Workflow Name");
+    });
+
+    await waitFor(() => {
+      // Settings button should return to gray styling
+      expect(settingsButton).toHaveClass("text-slate-500");
+      expect(settingsButton).toHaveClass("hover:text-slate-400");
+    });
+  });
+
+  test("settings button shows error styling when concurrency is invalid", async () => {
+    const { wrapper, emitSessionContext, ydoc } = createTestSetup();
+
+    const { container } = render(
+      <Header projectId="project-1" workflowId="workflow-1">
+        {[<span key="breadcrumb-1">Breadcrumb</span>]}
+      </Header>,
+      { wrapper }
+    );
+
+    act(() => {
+      emitSessionContext();
+    });
+
+    // Set concurrency to 0 (invalid)
+    act(() => {
+      const workflowMap = ydoc.getMap("workflow");
+      workflowMap.set("concurrency", 0);
+    });
+
+    await waitFor(() => {
+      const settingsButton = container.querySelector(
+        'button[type="button"] .hero-adjustments-vertical'
+      )?.parentElement;
+      // Settings button should have red error styling
+      expect(settingsButton).toHaveClass("text-danger-500");
+      expect(settingsButton).toHaveClass("hover:text-danger-400");
+    });
+  });
+
+  test("settings button remains clickable when validation errors exist", async () => {
+    const { wrapper, emitSessionContext, ydoc } = createTestSetup();
+
+    const { container } = render(
+      <Header projectId="project-1" workflowId="workflow-1">
+        {[<span key="breadcrumb-1">Breadcrumb</span>]}
+      </Header>,
+      { wrapper }
+    );
+
+    act(() => {
+      emitSessionContext();
+    });
+
+    // Set workflow name to empty string (invalid)
+    act(() => {
+      const workflowMap = ydoc.getMap("workflow");
+      workflowMap.set("name", "");
+    });
+
+    await waitFor(() => {
+      const settingsButton = container.querySelector(
+        'button[type="button"] .hero-adjustments-vertical'
+      )?.parentElement;
+      expect(settingsButton).toHaveClass("text-danger-500");
+    });
+
+    // Verify button is still clickable (not disabled)
+    const settingsButton = container.querySelector(
+      'button[type="button"] .hero-adjustments-vertical'
+    )?.parentElement as HTMLButtonElement;
+    expect(settingsButton).not.toBeDisabled();
+    expect(settingsButton).toHaveClass("cursor-pointer");
+  });
 });
 
 // =============================================================================
