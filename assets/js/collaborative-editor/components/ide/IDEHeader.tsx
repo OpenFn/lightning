@@ -51,26 +51,34 @@ export function IDEHeader({
   // Use shared version selection handler (destroys Y.Doc before switching)
   const handleVersionSelect = useVersionSelect();
   return (
-    <div className="shrink-0 border-b border-gray-200 bg-white px-6 py-2">
-      <div className="flex items-center justify-between">
+    <div className="shrink-0 border-b border-gray-200 bg-white px-4 py-2">
+      <div className="flex items-center justify-between gap-4">
         {/* Left: Job name with version chip and adaptor display */}
-        <div className="flex items-center gap-2">
-          <h2 className="text-base font-semibold text-gray-900">{jobName}</h2>
-          {jobAdaptor && (
-            <AdaptorDisplay
-              adaptor={jobAdaptor}
-              credentialId={jobCredentialId}
-              size="sm"
-              onEdit={onEditAdaptor}
-              onChangeAdaptor={onChangeAdaptor}
-            />
-          )}
+        <div className="flex items-center gap-4 flex-1 min-w-0">
+          <div className="flex-shrink-0">
+            <h2 className="text-base font-semibold text-gray-900 whitespace-nowrap">
+              {jobName}
+            </h2>
+          </div>
           {workflowId && (
-            <VersionDropdown
-              currentVersion={snapshotVersion ?? null}
-              latestVersion={latestSnapshotVersion ?? null}
-              onVersionSelect={handleVersionSelect}
-            />
+            <div className="flex-shrink-0">
+              <VersionDropdown
+                currentVersion={snapshotVersion ?? null}
+                latestVersion={latestSnapshotVersion ?? null}
+                onVersionSelect={handleVersionSelect}
+              />
+            </div>
+          )}
+          {jobAdaptor && (
+            <div className="flex-1 max-w-xs">
+              <AdaptorDisplay
+                adaptor={jobAdaptor}
+                credentialId={jobCredentialId}
+                size="sm"
+                onEdit={onEditAdaptor}
+                onChangeAdaptor={onChangeAdaptor}
+              />
+            </div>
           )}
         </div>
 
