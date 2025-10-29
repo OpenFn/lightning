@@ -8,6 +8,15 @@ defmodule Lightning.Run do
 
   import Lightning.Validators
 
+  alias Lightning.Accounts.User
+  alias Lightning.Invocation.LogLine
+  alias Lightning.Invocation.Step
+  alias Lightning.RunStep
+  alias Lightning.Workflows.Job
+  alias Lightning.Workflows.Snapshot
+  alias Lightning.Workflows.Trigger
+  alias Lightning.WorkOrder
+
   @derive {Jason.Encoder,
            only: [
              :id,
@@ -25,15 +34,6 @@ defmodule Lightning.Run do
              :steps,
              :work_order
            ]}
-
-  alias Lightning.Accounts.User
-  alias Lightning.Invocation.LogLine
-  alias Lightning.Invocation.Step
-  alias Lightning.RunStep
-  alias Lightning.Workflows.Job
-  alias Lightning.Workflows.Snapshot
-  alias Lightning.Workflows.Trigger
-  alias Lightning.WorkOrder
 
   @final_states [
     :success,
