@@ -89,7 +89,7 @@ export function AdaptorDisplay({
             </span>
           </button>
         ) : (
-          <div className={`flex items-center gap-2 ${buttonClasses}`}>
+          <div className="flex items-center gap-2">
             <AdaptorIcon name={adaptorPackage || ""} size={iconSize} />
             <span className={`font-medium text-gray-900 truncate ${textSize}`}>
               {adaptorDisplayName}
