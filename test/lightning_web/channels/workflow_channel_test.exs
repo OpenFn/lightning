@@ -746,4 +746,313 @@ defmodule LightningWeb.WorkflowChannelTest do
       assert validated["name"] == "Gap Test 2"
     end
   end
+
+  describe "request_history" do
+    test "returns work orders with runs for workflow", %{
+      socket: socket,
+      workflow: workflow,
+      project: project
+    } do
+      # Create snapshot for workflow (required for work orders)
+      workflow = with_snapshot(workflow)
+
+      # Create trigger and work orders using the proper create_for method
+      trigger = insert(:trigger, type: :webhook, workflow: workflow)
+      dataclip_1 = insert(:dataclip, project: project)
+
+      {:ok, _work_order_1} =
+        Lightning.WorkOrders.create_for(trigger,
+          dataclip: dataclip_1,
+          workflow: workflow
+        )
+
+      dataclip_2 = insert(:dataclip, project: project)
+
+      {:ok, _work_order_2} =
+        Lightning.WorkOrders.create_for(trigger,
+          dataclip: dataclip_2,
+          workflow: workflow
+        )
+
+      ref = push(socket, "request_history", %{})
+
+      assert_reply ref, :ok, %{history: history}
+      assert is_list(history)
+      assert length(history) == 2
+
+      # Verify structure matches expected JSON format
+      [first_wo | _] = history
+      assert Map.has_key?(first_wo, :id)
+      assert Map.has_key?(first_wo, :state)
+      assert Map.has_key?(first_wo, :last_activity)
+      assert Map.has_key?(first_wo, :version)
+      assert Map.has_key?(first_wo, :runs)
+      assert is_list(first_wo.runs)
+
+      # Verify run structure
+      [first_run | _] = first_wo.runs
+      assert Map.has_key?(first_run, :id)
+      assert Map.has_key?(first_run, :state)
+      assert Map.has_key?(first_run, :error_type)
+      assert Map.has_key?(first_run, :started_at)
+      assert Map.has_key?(first_run, :finished_at)
+    end
+
+    test "returns empty list when workflow has no work orders", %{socket: socket} do
+      ref = push(socket, "request_history", %{})
+
+      assert_reply ref, :ok, %{history: history}
+      assert history == []
+    end
+
+    test "includes specific run's work order when run_id provided", %{
+      socket: socket,
+      workflow: workflow,
+      project: project
+    } do
+      # Create snapshot for workflow (required for work orders)
+      workflow = with_snapshot(workflow)
+
+      # Create an old work order
+      trigger = insert(:trigger, type: :webhook, workflow: workflow)
+      dataclip = insert(:dataclip, project: project)
+
+      {:ok, old_work_order} =
+        Lightning.WorkOrders.create_for(trigger,
+          dataclip: dataclip,
+          workflow: workflow
+        )
+
+      old_run = hd(old_work_order.runs)
+
+      # Create multiple newer work orders
+      for _ <- 1..5 do
+        dataclip = insert(:dataclip, project: project)
+
+        Lightning.WorkOrders.create_for(trigger,
+          dataclip: dataclip,
+          workflow: workflow
+        )
+      end
+
+      ref = push(socket, "request_history", %{"run_id" => old_run.id})
+
+      assert_reply ref, :ok, %{history: history}
+      assert is_list(history)
+
+      # Verify the specific work order is included
+      work_order_ids = Enum.map(history, & &1.id)
+      assert old_work_order.id in work_order_ids
+    end
+  end
+
+  describe "real-time history updates" do
+    test "handles WorkOrderCreated event for current workflow", %{
+      socket: socket,
+      workflow: workflow,
+      project: project
+    } do
+      # Create snapshot and work order
+      workflow = with_snapshot(workflow)
+      trigger = insert(:trigger, type: :webhook, workflow: workflow)
+      dataclip = insert(:dataclip, project: project)
+
+      {:ok, work_order} =
+        Lightning.WorkOrders.create_for(trigger,
+          dataclip: dataclip,
+          workflow: workflow
+        )
+
+      # Send the event directly to handle_info
+      event = %Lightning.WorkOrders.Events.WorkOrderCreated{
+        work_order: work_order,
+        project_id: project.id
+      }
+
+      # Should not crash and should push a message
+      assert {:noreply, ^socket} =
+               LightningWeb.WorkflowChannel.handle_info(event, socket)
+
+      # Verify message was pushed (check mailbox)
+      assert_push "history_updated", %{action: "created", work_order: wo}
+      assert wo.id == work_order.id
+    end
+
+    test "ignores WorkOrderCreated event for different workflow", %{
+      socket: socket,
+      project: project
+    } do
+      # Create a different workflow
+      other_workflow = insert(:workflow, project: project)
+      other_workflow = with_snapshot(other_workflow)
+
+      trigger = insert(:trigger, type: :webhook, workflow: other_workflow)
+      dataclip = insert(:dataclip, project: project)
+
+      {:ok, work_order} =
+        Lightning.WorkOrders.create_for(trigger,
+          dataclip: dataclip,
+          workflow: other_workflow
+        )
+
+      event = %Lightning.WorkOrders.Events.WorkOrderCreated{
+        work_order: work_order,
+        project_id: project.id
+      }
+
+      # Should not crash
+      assert {:noreply, ^socket} =
+               LightningWeb.WorkflowChannel.handle_info(event, socket)
+
+      # Should not push any message
+      refute_push "history_updated", _payload
+    end
+
+    test "handles WorkOrderUpdated event for current workflow", %{
+      socket: socket,
+      workflow: workflow,
+      project: project
+    } do
+      # Create snapshot and work order
+      workflow = with_snapshot(workflow)
+      trigger = insert(:trigger, type: :webhook, workflow: workflow)
+      dataclip = insert(:dataclip, project: project)
+
+      {:ok, work_order} =
+        Lightning.WorkOrders.create_for(trigger,
+          dataclip: dataclip,
+          workflow: workflow
+        )
+
+      {:ok, updated_work_order} =
+        Lightning.Repo.update(Ecto.Changeset.change(work_order, state: :success))
+
+      event = %Lightning.WorkOrders.Events.WorkOrderUpdated{
+        work_order: updated_work_order
+      }
+
+      # Should not crash and should push a message
+      assert {:noreply, ^socket} =
+               LightningWeb.WorkflowChannel.handle_info(event, socket)
+
+      assert_push "history_updated", %{action: "updated", work_order: wo}
+      assert wo.id == updated_work_order.id
+    end
+
+    test "handles RunCreated event for current workflow", %{
+      socket: socket,
+      workflow: workflow,
+      project: project
+    } do
+      # Create a job for the workflow first
+      job = insert(:job, workflow: workflow)
+
+      # Create snapshot and work order
+      workflow = with_snapshot(workflow)
+      trigger = insert(:trigger, type: :webhook, workflow: workflow)
+      dataclip = insert(:dataclip, project: project)
+
+      {:ok, work_order} =
+        Lightning.WorkOrders.create_for(trigger,
+          dataclip: dataclip,
+          workflow: workflow
+        )
+
+      {:ok, run} =
+        Lightning.Repo.insert(%Lightning.Run{
+          work_order_id: work_order.id,
+          starting_trigger_id: trigger.id,
+          starting_job_id: job.id,
+          dataclip_id: dataclip.id,
+          state: :available
+        })
+
+      event = %Lightning.WorkOrders.Events.RunCreated{
+        run: run,
+        project_id: project.id
+      }
+
+      # Should not crash and should push a message
+      assert {:noreply, ^socket} =
+               LightningWeb.WorkflowChannel.handle_info(event, socket)
+
+      assert_push "history_updated", %{
+        action: "run_created",
+        run: pushed_run,
+        work_order_id: wo_id
+      }
+
+      assert pushed_run.id == run.id
+      assert wo_id == work_order.id
+    end
+
+    test "handles RunUpdated event for current workflow", %{
+      socket: socket,
+      workflow: workflow,
+      project: project
+    } do
+      # Create snapshot and work order
+      workflow = with_snapshot(workflow)
+      trigger = insert(:trigger, type: :webhook, workflow: workflow)
+      dataclip = insert(:dataclip, project: project)
+
+      {:ok, work_order} =
+        Lightning.WorkOrders.create_for(trigger,
+          dataclip: dataclip,
+          workflow: workflow
+        )
+
+      run = hd(work_order.runs)
+
+      {:ok, updated_run} =
+        Lightning.Repo.update(Ecto.Changeset.change(run, state: :success))
+
+      event = %Lightning.WorkOrders.Events.RunUpdated{run: updated_run}
+
+      # Should not crash and should push a message
+      assert {:noreply, ^socket} =
+               LightningWeb.WorkflowChannel.handle_info(event, socket)
+
+      assert_push "history_updated", %{
+        action: "run_updated",
+        run: pushed_run,
+        work_order_id: wo_id
+      }
+
+      assert pushed_run.id == updated_run.id
+      assert wo_id == work_order.id
+    end
+
+    test "ignores RunUpdated event for different workflow", %{
+      socket: socket,
+      project: project
+    } do
+      # Create a different workflow
+      other_workflow = insert(:workflow, project: project)
+      other_workflow = with_snapshot(other_workflow)
+
+      trigger = insert(:trigger, type: :webhook, workflow: other_workflow)
+      dataclip = insert(:dataclip, project: project)
+
+      {:ok, work_order} =
+        Lightning.WorkOrders.create_for(trigger,
+          dataclip: dataclip,
+          workflow: other_workflow
+        )
+
+      run = hd(work_order.runs)
+
+      {:ok, updated_run} =
+        Lightning.Repo.update(Ecto.Changeset.change(run, state: :success))
+
+      event = %Lightning.WorkOrders.Events.RunUpdated{run: updated_run}
+
+      # Should not crash
+      assert {:noreply, ^socket} =
+               LightningWeb.WorkflowChannel.handle_info(event, socket)
+
+      # Should not push any message
+      refute_push "history_updated", _payload
+    end
+  end
 end

@@ -15,5 +15,5 @@
     "../deps/phoenix_live_view/**/*",
     "../deps/phoenix/**/*"
   ],
-  "exclude": ["node_modules/**"]
+  "exclude": ["node_modules/**", "test/**/*"]
 }
