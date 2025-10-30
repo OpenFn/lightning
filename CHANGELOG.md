@@ -17,9 +17,14 @@ and this project adheres to
 
 ### Added
 
+<<<<<<< HEAD
+
 - Adaptor and credential configuration in canvas job inspector - users can now
   configure adaptor version and connect credentials directly from the canvas
-  [#3834](https://github.com/OpenFn/lightning/issues/3834)
+  [#3834](https://github.com/OpenFn/lightning/issues/3834) =======
+- Press `Control-E` (or `⌘+E`) to open the IDE when a job/step is selected
+  [#3890](https://github.com/OpenFn/lightning/issues/3890)
+  > > > > > > > origin/main
 - Drag-to-connect nodes on workflow canvas - users can now drag from the plus
   button on a node and drop it onto another node to create connections
   [#3825](https://github.com/OpenFn/lightning/issues/3825)

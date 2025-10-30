@@ -231,6 +231,27 @@ export function WorkflowEditor({
     ]
   );
 
+  // Handle Ctrl/Cmd+E to open IDE for selected job
+  useHotkeys(
+    "ctrl+e,meta+e",
+    event => {
+      event.preventDefault();
+
+      // Only work if a job is selected
+      if (currentNode.type !== "job" || !currentNode.node) {
+        return;
+      }
+
+      // Open IDE by setting editor=open in URL
+      updateSearchParams({ editor: "open" });
+    },
+    {
+      enabled: !isIDEOpen, // Disable when IDE is already open
+      enableOnFormTags: true, // Allow in form fields, like Cmd+Enter
+    },
+    [currentNode, isIDEOpen, updateSearchParams]
+  );
+
   return (
     <div className="relative flex h-full w-full">
       {/* Canvas and Inspector - hidden when IDE open */}
