@@ -427,7 +427,7 @@ defmodule LightningWeb.WorkflowChannelTest do
       # Try to join channel without authentication (no token)
       # This should fail at the socket connect level
       assert_raise FunctionClauseError, fn ->
-        connect(LightningWeb.UserSocket, %{}, %{})
+        connect(LightningWeb.UserSocket, %{})
       end
     end
 
