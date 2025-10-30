@@ -8,18 +8,18 @@
  * - Selector performance and referential stability
  */
 
-import { describe, test, expect } from "vitest";
+import { describe, expect, test } from "vitest";
 import { createSessionContextStore } from "../../../js/collaborative-editor/stores/createSessionContextStore";
 
 import {
-  mockSessionContextResponse,
-  mockUpdatedSessionContext,
-  mockUnauthenticatedSessionContext,
   createMockSessionContext,
-  mockUserContext,
-  mockProjectContext,
   mockAppConfig,
-} from "../fixtures/sessionContextData";
+  mockProjectContext,
+  mockSessionContextResponse,
+  mockUnauthenticatedSessionContext,
+  mockUpdatedSessionContext,
+  mockUserContext,
+} from "../__helpers__/sessionContextFactory";
 import {
   createMockPhoenixChannel,
   createMockPhoenixChannelProvider,

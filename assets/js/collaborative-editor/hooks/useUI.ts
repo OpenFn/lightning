@@ -48,6 +48,8 @@ export const useUICommands = () => {
   return {
     openRunPanel: uiStore.openRunPanel,
     closeRunPanel: uiStore.closeRunPanel,
+    openGitHubSyncModal: uiStore.openGitHubSyncModal,
+    closeGitHubSyncModal: uiStore.closeGitHubSyncModal,
   };
 };
 
@@ -59,6 +61,18 @@ export const useIsRunPanelOpen = (): boolean => {
   const uiStore = useUIStore();
 
   const selectIsOpen = uiStore.withSelector(state => state.runPanelOpen);
+
+  return useSyncExternalStore(uiStore.subscribe, selectIsOpen);
+};
+
+/**
+ * Hook to check if GitHub sync modal is open
+ * Convenience helper that returns boolean
+ */
+export const useIsGitHubSyncModalOpen = (): boolean => {
+  const uiStore = useUIStore();
+
+  const selectIsOpen = uiStore.withSelector(state => state.githubSyncModalOpen);
 
   return useSyncExternalStore(uiStore.subscribe, selectIsOpen);
 };

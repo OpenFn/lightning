@@ -20,6 +20,9 @@ export interface UIState {
     jobId?: string | null;
     triggerId?: string | null;
   } | null;
+
+  /** GitHub sync modal open state */
+  githubSyncModalOpen: boolean;
 }
 
 /**
@@ -31,6 +34,12 @@ export interface UICommands {
 
   /** Close run panel */
   closeRunPanel: () => void;
+
+  /** Open GitHub sync modal */
+  openGitHubSyncModal: () => void;
+
+  /** Close GitHub sync modal */
+  closeGitHubSyncModal: () => void;
 }
 
 /**
