@@ -15,6 +15,10 @@ import {
 } from "../../hooks/useHistory";
 import { useIsNewWorkflow } from "../../hooks/useSessionContext";
 import { useNodeSelection } from "../../hooks/useWorkflow";
+import {
+  useHistoryPanelCollapsed,
+  useEditorPreferencesCommands,
+} from "../../hooks/useEditorPreferences";
 import type { Run } from "../../types/history";
 
 import MiniHistory from "./MiniHistory";
@@ -39,29 +43,25 @@ export function CollaborativeWorkflowDiagram({
   const historyError = useHistoryError();
   const { requestHistory, clearError } = useHistoryCommands();
 
-  // Local state for history panel (persisted to localStorage)
+  // Use EditorPreferencesStore for history panel collapsed state
+  const historyCollapsed = useHistoryPanelCollapsed();
+  const { setHistoryPanelCollapsed } = useEditorPreferencesCommands();
+
   // Auto-expand if there's a run ID in the URL (like LiveView behavior)
-  const [historyCollapsed, setHistoryCollapsed] = useState(() => {
+  const runIdFromUrl = useMemo(() => {
     const params = new URLSearchParams(window.location.search);
-    const hasRunIdInUrl = params.has("m");
+    return params.get("m");
+  }, []);
 
-    if (hasRunIdInUrl) {
-      // If URL has a run ID, always expand the panel
-      return false;
+  useEffect(() => {
+    if (runIdFromUrl && historyCollapsed) {
+      setHistoryPanelCollapsed(false);
     }
-
-    // Otherwise use localStorage preference
-    const saved = localStorage.getItem("history-panel-collapsed");
-    return saved === null ? true : saved === "true";
-  });
+  }, [runIdFromUrl, historyCollapsed, setHistoryPanelCollapsed]);
 
   const handleToggleHistory = useCallback(() => {
-    setHistoryCollapsed(prev => {
-      const next = !prev;
-      localStorage.setItem("history-panel-collapsed", String(next));
-      return next;
-    });
-  }, []);
+    setHistoryPanelCollapsed(!historyCollapsed);
+  }, [historyCollapsed, setHistoryPanelCollapsed]);
 
   // Track selected run for visual feedback (stored in URL)
   const [selectedRunId, setSelectedRunId] = useState<string | null>(() => {
@@ -91,9 +91,6 @@ export function CollaborativeWorkflowDiagram({
   // Wait for channel to be connected before making request
   const hasRequestedHistory = useRef(false);
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const runIdFromUrl = params.get("m");
-
     // Request if: channel connected AND (panel expanded OR run ID in URL) AND not already requested AND not new workflow
     const shouldRequest =
       isHistoryChannelConnected &&
@@ -110,6 +107,7 @@ export function CollaborativeWorkflowDiagram({
     isNewWorkflow,
     isHistoryChannelConnected,
     requestHistory,
+    runIdFromUrl,
   ]);
 
   // Transform history to mark selected run

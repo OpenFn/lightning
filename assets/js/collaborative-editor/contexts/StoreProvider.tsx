@@ -66,6 +66,10 @@ import {
   createWorkflowStore,
   type WorkflowStoreInstance,
 } from "../stores/createWorkflowStore";
+import {
+  createEditorPreferencesStore,
+  type EditorPreferencesStore as EditorPreferencesStoreInstance,
+} from "../stores/createEditorPreferencesStore";
 import type { Session } from "../types/session";
 import { generateUserColor } from "../utils/userColor";
 
@@ -77,6 +81,7 @@ export interface StoreContextValue {
   sessionContextStore: SessionContextStoreInstance;
   historyStore: HistoryStoreInstance;
   uiStore: UIStoreInstance;
+  editorPreferencesStore: EditorPreferencesStoreInstance;
 }
 
 export const StoreContext = createContext<StoreContextValue | null>(null);
@@ -103,6 +108,7 @@ export const StoreProvider = ({ children }: StoreProviderProps) => {
     sessionContextStore: createSessionContextStore(isNewWorkflow),
     historyStore: createHistoryStore(),
     uiStore: createUIStore(),
+    editorPreferencesStore: createEditorPreferencesStore(),
   }));
 
   // Subscribe to sessionContextStore user changes
