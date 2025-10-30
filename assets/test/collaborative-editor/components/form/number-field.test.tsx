@@ -1,8 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi, beforeEach } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useAppForm } from "../../../../js/collaborative-editor/components/form";
-import { NumberField } from "../../../../js/collaborative-editor/components/form/number-field";
 import * as useWorkflowModule from "../../../../js/collaborative-editor/hooks/useWorkflow";
 
 // Mock useWorkflowState
@@ -13,9 +12,14 @@ vi.mock("../../../../js/collaborative-editor/hooks/useWorkflow", () => ({
 describe("NumberField", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    // Mock useWorkflowState to return empty errors
+    // Mock useWorkflowState to return workflow with empty errors
     const mockFn = vi.fn(selector => {
-      const state = { errors: {} };
+      const state = {
+        workflow: { id: "w-1", errors: {} },
+        jobs: [],
+        triggers: [],
+        edges: [],
+      };
       return selector ? selector(state) : state;
     });
     vi.mocked(useWorkflowModule.useWorkflowState).mockImplementation(

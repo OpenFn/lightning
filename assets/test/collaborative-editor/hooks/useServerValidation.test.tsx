@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
 import { renderHook, waitFor } from "@testing-library/react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useAppForm } from "#/collaborative-editor/components/form";
 import * as useWorkflowModule from "#/collaborative-editor/hooks/useWorkflow";
 
@@ -14,9 +14,15 @@ describe("useServerValidation", () => {
   });
 
   it("should inject server errors into form field meta", async () => {
-    // Mock server errors from Y.Doc (as arrays)
+    // Mock server errors from Y.Doc
     const mockFn = vi.fn(selector => {
-      const state = { errors: { name: ["Name is required"] } };
+      const state = {
+        workflow: {
+          id: "w-1",
+          name: "Workflow",
+          errors: { name: ["Name is required"] },
+        },
+      };
       return selector ? selector(state) : state;
     });
     vi.mocked(useWorkflowModule.useWorkflowState).mockImplementation(
@@ -38,10 +44,16 @@ describe("useServerValidation", () => {
   });
 
   it("should clear server errors when errors removed from Y.Doc", async () => {
-    // Start with errors (as arrays)
+    // Start with errors
     let mockErrors = { name: ["Name is required"] };
     const mockFn = vi.fn(selector => {
-      const state = { errors: mockErrors };
+      const state = {
+        workflow: {
+          id: "w-1",
+          name: "Workflow",
+          errors: mockErrors,
+        },
+      };
       return selector ? selector(state) : state;
     });
     vi.mocked(useWorkflowModule.useWorkflowState).mockImplementation(
@@ -75,20 +87,21 @@ describe("useServerValidation", () => {
     });
   });
 
-  it("should filter errors by JSONPath for nested entities", async () => {
-    // Mock errors for multiple jobs (nested structure with arrays)
+  it("should filter errors for specific entity using errorPath", async () => {
     const mockFn = vi.fn(selector => {
       const state = {
-        errors: {
-          jobs: {
-            "abc-123": {
-              name: ["Job name is required"],
-            },
-            "def-456": {
-              name: ["Other job name is required"],
-            },
+        jobs: [
+          {
+            id: "abc-123",
+            name: "Job 1",
+            errors: { name: ["Job name is required"] },
           },
-        },
+          {
+            id: "def-456",
+            name: "Job 2",
+            errors: { name: ["Other job name is required"] },
+          },
+        ],
       };
       return selector ? selector(state) : state;
     });
@@ -96,13 +109,13 @@ describe("useServerValidation", () => {
       mockFn as any
     );
 
-    // Use useAppForm with errorPath (which gets converted to JSONPath)
+    // Use useAppForm with errorPath to select specific job's errors
     const { result } = renderHook(() =>
       useAppForm(
         {
           defaultValues: { name: "", body: "" },
         },
-        "jobs.abc-123" // This gets converted to JSONPath internally
+        "jobs.abc-123" // Dot-separated path to entity
       )
     );
 
@@ -120,9 +133,13 @@ describe("useServerValidation", () => {
   it("should handle multiple fields with errors", async () => {
     const mockFn = vi.fn(selector => {
       const state = {
-        errors: {
-          name: ["Name is required"],
-          concurrency: ["Must be positive"],
+        workflow: {
+          id: "w-1",
+          name: "Workflow",
+          errors: {
+            name: ["Name is required"],
+            concurrency: ["Must be positive"],
+          },
         },
       };
       return selector ? selector(state) : state;
