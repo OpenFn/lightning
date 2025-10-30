@@ -44,7 +44,7 @@ import { HotkeysProvider } from "react-hotkeys-hook";
 // =============================================================================
 
 interface WrapperOptions {
-  permissions?: { can_edit_workflow: boolean };
+  permissions?: { can_edit_workflow: boolean; can_run_workflow: boolean };
   latestSnapshotLockVersion?: number;
   workflowLockVersion?: number | null;
   workflowDeletedAt?: string | null;
@@ -56,7 +56,7 @@ interface WrapperOptions {
 
 function createTestSetup(options: WrapperOptions = {}) {
   const {
-    permissions = { can_edit_workflow: true },
+    permissions = { can_edit_workflow: true, can_run_workflow: true },
     latestSnapshotLockVersion = 1,
     workflowLockVersion = 1,
     workflowDeletedAt = null,
@@ -222,7 +222,7 @@ describe("Header - ReadOnlyWarning Integration", () => {
 
   test("does not show ReadOnlyWarning when workflow is editable", async () => {
     const { wrapper, emitSessionContext } = createTestSetup({
-      permissions: { can_edit_workflow: true },
+      permissions: { can_edit_workflow: true, can_run_workflow: true },
     });
 
     render(
@@ -356,7 +356,7 @@ describe("Header - Basic Rendering", () => {
 describe("Header - Read-Only State Changes", () => {
   test("ReadOnlyWarning appears when workflow becomes read-only", async () => {
     const { wrapper, emitSessionContext, ydoc } = createTestSetup({
-      permissions: { can_edit_workflow: true },
+      permissions: { can_edit_workflow: true, can_run_workflow: true },
     });
 
     const { rerender } = render(
@@ -391,7 +391,7 @@ describe("Header - Read-Only State Changes", () => {
 
   test("ReadOnlyWarning disappears when workflow becomes editable", async () => {
     const { wrapper, emitSessionContext, ydoc } = createTestSetup({
-      permissions: { can_edit_workflow: true },
+      permissions: { can_edit_workflow: true, can_run_workflow: true },
       workflowDeletedAt: new Date().toISOString(),
     });
 

@@ -13,7 +13,6 @@ defmodule LightningWeb.WorkflowChannel do
   alias Lightning.Collaboration.Session
   alias Lightning.Collaboration.Utils
   alias Lightning.Policies.Permissions
-  alias Lightning.Projects.ProjectCredential
   alias Lightning.VersionControl
   alias Lightning.Workflows.Job
   alias Lightning.Workflows.Snapshot

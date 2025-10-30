@@ -164,7 +164,7 @@ describe("JobForm - Adaptor Display Section", () => {
         user: null,
         project: null,
         config: { require_email_verification: false },
-        permissions: { can_edit_workflow: true },
+        permissions: { can_edit_workflow: true, can_run_workflow: true },
         latest_snapshot_lock_version: 1,
       });
     });
@@ -368,7 +368,7 @@ describe("JobForm - Credential Display", () => {
         user: null,
         project: null,
         config: { require_email_verification: false },
-        permissions: { can_edit_workflow: true },
+        permissions: { can_edit_workflow: true, can_run_workflow: true },
         latest_snapshot_lock_version: 1,
       });
     });
@@ -567,7 +567,7 @@ describe("JobForm - Complete Integration (Phase 2R: Simplified)", () => {
         user: null,
         project: null,
         config: { require_email_verification: false },
-        permissions: { can_edit_workflow: true },
+        permissions: { can_edit_workflow: true, can_run_workflow: true },
         latest_snapshot_lock_version: 1,
       });
     });
