@@ -18,7 +18,10 @@ import { createSessionContextStore } from "../../../js/collaborative-editor/stor
 import type { WorkflowStoreInstance } from "../../../js/collaborative-editor/stores/createWorkflowStore";
 import { createWorkflowStore } from "../../../js/collaborative-editor/stores/createWorkflowStore";
 import type { Session } from "../../../js/collaborative-editor/types/session";
-import { mockPermissions } from "../fixtures/sessionContextData";
+import {
+  createSessionContext,
+  mockPermissions,
+} from "../__helpers__/sessionContextFactory";
 import {
   createMockPhoenixChannel,
   createMockPhoenixChannelProvider,
@@ -81,26 +84,13 @@ function createWrapper(options: WrapperOptions = {}): [
 
   // Helper function to emit session context
   const emitSessionContext = () => {
-    (mockChannel as any)._test.emit("session_context", {
-      user: {
-        id: "550e8400-e29b-41d4-a716-446655440000",
-        first_name: "Test",
-        last_name: "User",
-        email: "test@example.com",
-        email_confirmed: true,
-        inserted_at: new Date().toISOString(),
-      },
-      project: {
-        id: "660e8400-e29b-41d4-a716-446655440000",
-        name: "Test Project",
-      },
-      config: { require_email_verification: false },
-      permissions: {
-        can_edit_workflow: permissions.can_edit_workflow,
-        can_run_workflow: true,
-      },
-      latest_snapshot_lock_version: latestSnapshotLockVersion,
-    });
+    (mockChannel as any)._test.emit(
+      "session_context",
+      createSessionContext({
+        permissions,
+        latest_snapshot_lock_version: latestSnapshotLockVersion,
+      })
+    );
   };
 
   const mockStoreValue: StoreContextValue = {
@@ -352,13 +342,14 @@ describe("useWorkflowReadOnly - Edge Cases", () => {
     const { result } = renderHook(() => useWorkflowReadOnly(), { wrapper });
 
     act(() => {
-      (mockChannel as any)._test.emit("session_context", {
-        user: null,
-        project: null,
-        config: { require_email_verification: false },
-        permissions: mockPermissions,
-        latest_snapshot_lock_version: 1,
-      });
+      (mockChannel as any)._test.emit(
+        "session_context",
+        createSessionContext({
+          user: null,
+          project: null,
+          permissions: mockPermissions,
+        })
+      );
     });
 
     await waitFor(() => {
@@ -408,13 +399,14 @@ describe("useWorkflowReadOnly - Edge Cases", () => {
 
     // Emit session context with null permissions (loading state)
     act(() => {
-      (mockChannel as any)._test.emit("session_context", {
-        user: null,
-        project: null,
-        config: { require_email_verification: false },
-        permissions: null,
-        latest_snapshot_lock_version: 1,
-      });
+      (mockChannel as any)._test.emit(
+        "session_context",
+        createSessionContext({
+          user: null,
+          project: null,
+          permissions: null as any, // Testing loading state with null permissions
+        })
+      );
     });
 
     // During loading (null permissions), should not show as read-only

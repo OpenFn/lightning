@@ -460,6 +460,104 @@ export const useWorkflowActions = () => {
 
         return wrappedSaveWorkflow;
       })(),
+
+      // GitHub save and sync action - wrapped to handle lock version updates and errors
+      saveAndSyncWorkflow: (commitMessage: string) => {
+        // Helper: Handle successful save and sync operations
+        const handleSaveAndSyncSuccess = (
+          response: Awaited<ReturnType<typeof store.saveAndSyncWorkflow>>
+        ) => {
+          if (!response) return;
+
+          // Update session context with new lock version if present
+          if (response.lock_version !== undefined) {
+            sessionContextStore.setLatestSnapshotLockVersion(
+              response.lock_version
+            );
+          }
+
+          // Check if this is a new workflow and update URL
+          const currentState = sessionContextStore.getSnapshot();
+          if (currentState.isNewWorkflow) {
+            const workflowState = store.getSnapshot();
+            const workflowId = workflowState.workflow?.id;
+            const projectId = currentState.project?.id;
+
+            if (workflowId && projectId) {
+              // Update URL to include project_id
+              const newUrl = `/projects/${projectId}/w/${workflowId}/collaborate`;
+              window.history.pushState({}, "", newUrl);
+              // Mark workflow as no longer new after first save
+              sessionContextStore.clearIsNewWorkflow();
+            }
+          }
+
+          // Show success toast
+          const successOptions: { title: string; description?: string } = {
+            title: "Workflow saved and synced to GitHub",
+          };
+          if (response.repo) {
+            successOptions.description = `Changes pushed to ${response.repo}`;
+          }
+          notifications.success(successOptions);
+        };
+
+        // Helper: Handle save and sync errors
+        const handleSaveAndSyncError = (
+          error: unknown,
+          retrySaveAndSync: () => Promise<unknown>
+        ) => {
+          if (error && typeof error === "object" && "type" in error) {
+            const typedError = error as { type?: string; message?: string };
+            if (typedError.type === "unauthorized") {
+              notifications.alert({
+                title: "Permission denied",
+                description:
+                  typedError.message ||
+                  "You no longer have permission to edit this workflow. Your role may have changed.",
+              });
+              return;
+            }
+          }
+
+          notifications.alert({
+            title: "Failed to save and sync workflow",
+            description:
+              error instanceof Error
+                ? error.message
+                : "Please check your connection and try again",
+            action: {
+              label: "Retry",
+              onClick: () => {
+                void retrySaveAndSync();
+              },
+            },
+          });
+        };
+
+        // Main wrapped saveAndSyncWorkflow function
+        const wrappedSaveAndSyncWorkflow = async () => {
+          try {
+            const response = await store.saveAndSyncWorkflow(commitMessage);
+
+            if (!response) {
+              // saveAndSyncWorkflow returns null when not connected
+              // Connection status is already shown in UI, no toast needed
+              return null;
+            }
+
+            handleSaveAndSyncSuccess(response);
+            return response;
+          } catch (error) {
+            handleSaveAndSyncError(error, wrappedSaveAndSyncWorkflow);
+            // Re-throw error for any upstream error handling
+            throw error;
+          }
+        };
+
+        return wrappedSaveAndSyncWorkflow();
+      },
+
       resetWorkflow: store.resetWorkflow,
       importWorkflow: store.importWorkflow,
     }),

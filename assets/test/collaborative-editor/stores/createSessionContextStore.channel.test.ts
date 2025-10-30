@@ -8,17 +8,17 @@
  * - Error handling for channel operations
  */
 
-import { describe, test, expect } from "vitest";
+import { describe, expect, test } from "vitest";
 import { createSessionContextStore } from "../../../js/collaborative-editor/stores/createSessionContextStore";
 
 import {
+  invalidSessionContextData,
+  mockAppConfig,
+  mockProjectContext,
   mockSessionContextResponse,
   mockUnauthenticatedSessionContext,
-  invalidSessionContextData,
   mockUserContext,
-  mockProjectContext,
-  mockAppConfig,
-} from "../fixtures/sessionContextData";
+} from "../__helpers__/sessionContextFactory";
 import {
   createMockPhoenixChannel,
   createMockPhoenixChannelProvider,

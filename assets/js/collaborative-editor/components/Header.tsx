@@ -3,9 +3,11 @@ import { useCallback } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
 
 import { useURLState } from "../../react/lib/use-url-state";
+import { cn } from "../../utils/cn";
 import {
   useIsNewWorkflow,
   useLatestSnapshotLockVersion,
+  useProjectRepoConnection,
   useUser,
 } from "../hooks/useSessionContext";
 import { useUICommands } from "../hooks/useUI";
@@ -22,6 +24,7 @@ import { getAvatarInitials } from "../utils/avatar";
 import { Breadcrumbs } from "./Breadcrumbs";
 import { Button } from "./Button";
 import { EmailVerificationBanner } from "./EmailVerificationBanner";
+import { GitHubSyncModal } from "./GitHubSyncModal";
 import { Switch } from "./inputs/Switch";
 import { ReadOnlyWarning } from "./ReadOnlyWarning";
 import { Tooltip } from "./Tooltip";
@@ -39,24 +42,57 @@ const userNavigation = [
 
 /**
  * Save button component - visible in React DevTools
- * Includes Radix tooltip with save status messaging
+ * Includes tooltip with save status messaging
+ * Shows as split button with dropdown when GitHub integration is available
  */
 function SaveButton({
   canSave,
   tooltipMessage,
   onClick,
+  repoConnection,
+  onSyncClick,
 }: {
   canSave: boolean;
   tooltipMessage: string;
   onClick: () => void;
+  repoConnection: ReturnType<typeof useProjectRepoConnection>;
+  onSyncClick: () => void;
 }) {
+  const hasGitHubIntegration = repoConnection !== null;
+
+  if (!hasGitHubIntegration) {
+    // Simple save button when no GitHub integration
+    return (
+      <div className="inline-flex rounded-md shadow-xs z-5">
+        <Tooltip content={tooltipMessage} side="bottom">
+          <button
+            type="button"
+            data-testid="save-workflow-button"
+            className="rounded-md text-sm font-semibold shadow-xs
+            phx-submit-loading:opacity-75 cursor-pointer
+            disabled:cursor-not-allowed disabled:opacity-50 px-3 py-2
+            bg-primary-600 hover:bg-primary-500
+            disabled:hover:bg-primary-600 text-white
+            focus-visible:outline-2 focus-visible:outline-offset-2
+            focus-visible:outline-primary-600 focus:ring-transparent"
+            onClick={onClick}
+            disabled={!canSave}
+          >
+            Save
+          </button>
+        </Tooltip>
+      </div>
+    );
+  }
+
+  // Split button with dropdown when GitHub integration exists
   return (
     <div className="inline-flex rounded-md shadow-xs z-5">
       <Tooltip content={tooltipMessage} side="bottom">
         <button
           type="button"
           data-testid="save-workflow-button"
-          className="rounded-md text-sm font-semibold shadow-xs
+          className="rounded-l-md text-sm font-semibold shadow-xs
           phx-submit-loading:opacity-75 cursor-pointer
           disabled:cursor-not-allowed disabled:opacity-50 px-3 py-2
           bg-primary-600 hover:bg-primary-500
@@ -69,6 +105,43 @@ function SaveButton({
           Save
         </button>
       </Tooltip>
+      <Menu as="div" className="relative -ml-px block">
+        <Tooltip content={tooltipMessage} side="bottom">
+          <MenuButton
+            disabled={!canSave}
+            className="h-full rounded-r-md pr-2 pl-2 text-sm font-semibold
+            shadow-xs cursor-pointer disabled:cursor-not-allowed
+            disabled:opacity-50 bg-primary-600 hover:bg-primary-500
+            disabled:hover:bg-primary-600 text-white
+            focus-visible:outline-2 focus-visible:outline-offset-2
+            focus-visible:outline-primary-600 focus:ring-transparent"
+          >
+            <span className="sr-only">Open sync options</span>
+            <span className="hero-chevron-down w-4 h-4" />
+          </MenuButton>
+        </Tooltip>
+        <MenuItems
+          transition
+          className="absolute right-0 z-10 mt-2 w-max origin-top-right
+          rounded-md bg-white py-1 shadow-lg outline outline-black/5
+          transition data-closed:scale-95 data-closed:transform
+          data-closed:opacity-0 data-enter:duration-200 data-enter:ease-out
+          data-leave:duration-75 data-leave:ease-in"
+        >
+          <MenuItem>
+            <button
+              type="button"
+              onClick={onSyncClick}
+              disabled={!canSave}
+              className="block w-full text-left px-4 py-2 text-sm text-gray-700
+              data-focus:bg-gray-100 data-focus:outline-hidden
+              disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Save & Sync
+            </button>
+          </MenuItem>
+        </MenuItems>
+      </Menu>
     </div>
   );
 }
@@ -104,7 +177,10 @@ export function Header({
   const { canRun, tooltipMessage: runTooltipMessage } = useCanRun();
 
   // Get UI commands from store
-  const { openRunPanel } = useUICommands();
+  const { openRunPanel, openGitHubSyncModal } = useUICommands();
+
+  // Get GitHub repo connection for split button
+  const repoConnection = useProjectRepoConnection();
 
   // Detect if viewing old snapshot
   const workflow = useWorkflowState(state => state.workflow);
@@ -135,10 +211,24 @@ export function Header({
     },
     {
       enabled: true, // Always listen to prevent browser save
-      scopes: ["global"], // Active everywhere in collaborative editor
       enableOnFormTags: true, // Allow in Monaco editor, input fields, textareas
     },
     [saveWorkflow, canSave] // Re-register when dependencies change
+  );
+
+  // Global save and sync shortcut: Ctrl/Cmd+Shift+S (only when GitHub integration available)
+  useHotkeys(
+    "ctrl+shift+s,meta+shift+s", // Windows/Linux: Ctrl+Shift+S, Mac: Cmd+Shift+S
+    event => {
+      event.preventDefault(); // Prevent any browser shortcuts
+      if (canSave && repoConnection) {
+        openGitHubSyncModal(); // Open sync modal when allowed and GitHub connected
+      }
+    },
+    {
+      enableOnFormTags: true, // Allow in Monaco editor, input fields, textareas
+    },
+    [openGitHubSyncModal, canSave, repoConnection] // Re-register when dependencies change
   );
 
   // Session context queries
@@ -220,9 +310,13 @@ export function Header({
                 canSave={canSave}
                 tooltipMessage={tooltipMessage}
                 onClick={saveWorkflow}
+                repoConnection={repoConnection}
+                onSyncClick={openGitHubSyncModal}
               />
             </div>
           </div>
+
+          <GitHubSyncModal />
 
           <div className="w-5"></div>
           <Menu as="div" className="relative ml-3">
@@ -266,8 +360,10 @@ export function Header({
                     data-focus:bg-gray-100 data-focus:outline-hidden"
                   >
                     <span
-                      className={`${item.icon} w-5 h-5 mr-2
-                      text-secondary-500`}
+                      className={cn(
+                        item.icon,
+                        "w-5 h-5 mr-2 text-secondary-500"
+                      )}
                     ></span>
                     {item.label}
                   </a>

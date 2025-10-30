@@ -7,10 +7,10 @@
  * - Channel cleanup and error scenarios
  */
 
-import { describe, test, expect } from "vitest";
+import { describe, expect, test } from "vitest";
 import { createSessionContextStore } from "../../../js/collaborative-editor/stores/createSessionContextStore";
 
-import { invalidSessionContextData } from "../fixtures/sessionContextData";
+import { invalidSessionContextData } from "../__helpers__/sessionContextFactory";
 import {
   createMockPhoenixChannel,
   createMockPhoenixChannelProvider,

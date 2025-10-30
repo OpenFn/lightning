@@ -1,21 +1,20 @@
-import { describe, expect, test, beforeEach } from "vitest";
 import { act, renderHook } from "@testing-library/react";
 import type React from "react";
+import { beforeEach, describe, expect, test } from "vitest";
 
-import { useJobDeleteValidation } from "../../../js/collaborative-editor/hooks/useJobDeleteValidation";
-import { LiveViewActionsProvider } from "../../../js/collaborative-editor/contexts/LiveViewActionsContext";
-import { StoreContext } from "../../../js/collaborative-editor/contexts/StoreProvider";
 import type { StoreContextValue } from "../../../js/collaborative-editor/contexts/StoreProvider";
+import { StoreContext } from "../../../js/collaborative-editor/contexts/StoreProvider";
+import { useJobDeleteValidation } from "../../../js/collaborative-editor/hooks/useJobDeleteValidation";
+import type { SessionContextStoreInstance } from "../../../js/collaborative-editor/stores/createSessionContextStore";
 import { createSessionContextStore } from "../../../js/collaborative-editor/stores/createSessionContextStore";
+import type { WorkflowStoreInstance } from "../../../js/collaborative-editor/stores/createWorkflowStore";
 import { createWorkflowStore } from "../../../js/collaborative-editor/stores/createWorkflowStore";
-import { mockPermissions } from "../fixtures/sessionContextData";
+import { mockPermissions } from "../__helpers__/sessionContextFactory";
 import { createWorkflowYDoc } from "../__helpers__/workflowFactory";
 import {
   createMockPhoenixChannel,
   createMockPhoenixChannelProvider,
 } from "../mocks/phoenixChannel";
-import type { WorkflowStoreInstance } from "../../../js/collaborative-editor/stores/createWorkflowStore";
-import type { SessionContextStoreInstance } from "../../../js/collaborative-editor/stores/createSessionContextStore";
 
 /**
  * Creates a React wrapper with store providers for hook testing
@@ -30,21 +29,13 @@ function createWrapper(
     adaptorStore: {} as any,
     credentialStore: {} as any,
     awarenessStore: {} as any,
-  };
-
-  const mockLiveViewActions = {
-    pushEvent: vi.fn(),
-    pushEventTo: vi.fn(),
-    handleEvent: vi.fn(() => vi.fn()),
-    navigate: vi.fn(),
+    uiStore: {} as any,
   };
 
   return ({ children }: { children: React.ReactNode }) => (
-    <LiveViewActionsProvider actions={mockLiveViewActions}>
-      <StoreContext.Provider value={mockStoreValue}>
-        {children}
-      </StoreContext.Provider>
-    </LiveViewActionsProvider>
+    <StoreContext.Provider value={mockStoreValue}>
+      {children}
+    </StoreContext.Provider>
   );
 }
 
@@ -59,6 +50,7 @@ function setPermissions(channelMock: any, can_edit_workflow: boolean) {
       config: { require_email_verification: false },
       permissions: { ...mockPermissions, can_edit_workflow },
       latest_snapshot_lock_version: 1,
+      project_repo_connection: null,
     });
   });
 }

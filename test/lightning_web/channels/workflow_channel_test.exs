@@ -621,6 +621,138 @@ defmodule LightningWeb.WorkflowChannelTest do
     end
   end
 
+  describe "save_and_sync" do
+    test "requires commit message", %{socket: socket} do
+      ref = push(socket, "save_and_sync", %{})
+
+      assert_reply ref, :error, %{
+        errors: errors,
+        type: "validation_error"
+      }
+
+      assert is_map(errors)
+    end
+
+    test "returns validation errors when workflow data is invalid", %{
+      socket: socket
+    } do
+      # Set invalid data in Y.Doc (blank name)
+      session_pid = socket.assigns.session_pid
+      doc = Lightning.Collaboration.Session.get_doc(session_pid)
+
+      # Get shared types BEFORE transaction
+      workflow_map = Yex.Doc.get_map(doc, "workflow")
+
+      Yex.Doc.transaction(doc, "test_update", fn ->
+        Yex.Map.set(workflow_map, "name", "")
+      end)
+
+      # Set up GitHub repo connection
+      insert(:project_repo_connection,
+        project: socket.assigns.project,
+        repo: "openfn/demo",
+        branch: "main"
+      )
+
+      ref =
+        push(socket, "save_and_sync", %{
+          "commit_message" => "Valid commit message"
+        })
+
+      assert_reply ref, :error, %{
+        errors: errors,
+        type: "validation_error"
+      }
+
+      assert is_map(errors)
+      assert errors[:name]
+    end
+
+    test "requires GitHub repo connection to be configured", %{socket: socket} do
+      # No GitHub repo connection exists for this project
+
+      # Modify workflow
+      session_pid = socket.assigns.session_pid
+      doc = Lightning.Collaboration.Session.get_doc(session_pid)
+      workflow_map = Yex.Doc.get_map(doc, "workflow")
+
+      Yex.Doc.transaction(doc, "test_update", fn ->
+        Yex.Map.set(workflow_map, "name", "Test")
+      end)
+
+      ref =
+        push(socket, "save_and_sync", %{"commit_message" => "Test commit"})
+
+      assert_reply ref, :error, %{
+        errors: errors,
+        type: error_type
+      }
+
+      assert is_map(errors)
+      # Should indicate GitHub connection is missing
+      assert error_type == "github_sync_error"
+    end
+
+    test "blocks viewers from saving and syncing", %{
+      project: project,
+      workflow: workflow
+    } do
+      viewer_user = insert(:user)
+      insert(:project_user, project: project, user: viewer_user, role: :viewer)
+
+      # Set up GitHub repo connection
+      insert(:project_repo_connection,
+        project: project,
+        repo: "openfn/demo",
+        branch: "main"
+      )
+
+      {:ok, _, socket} =
+        LightningWeb.UserSocket
+        |> socket("user_#{viewer_user.id}", %{current_user: viewer_user})
+        |> subscribe_and_join(
+          LightningWeb.WorkflowChannel,
+          "workflow:collaborate:#{workflow.id}",
+          %{"project_id" => project.id, "action" => "edit"}
+        )
+
+      # Viewers can join but cannot save and sync
+      ref =
+        push(socket, "save_and_sync", %{"commit_message" => "Test commit"})
+
+      assert_reply ref, :error, %{
+        errors: %{base: [message]},
+        type: "unauthorized"
+      }
+
+      assert message =~ "don't have permission to edit"
+    end
+
+    test "handles deleted workflow", %{socket: socket, workflow: workflow} do
+      # Set up GitHub repo connection
+      insert(:project_repo_connection,
+        project: socket.assigns.project,
+        repo: "openfn/demo",
+        branch: "main"
+      )
+
+      # Delete the workflow
+      Lightning.Repo.update!(
+        Ecto.Changeset.change(workflow,
+          deleted_at: DateTime.utc_now() |> DateTime.truncate(:second)
+        )
+      )
+
+      ref =
+        push(socket, "save_and_sync", %{"commit_message" => "Test commit"})
+
+      assert_reply ref, :error, %{
+        errors: %{base: ["This workflow has been deleted"]},
+        type: "workflow_deleted"
+      }
+    end
+  end
+
   describe "validate_workflow_name" do
     setup %{socket: socket} do
       project = socket.assigns.project

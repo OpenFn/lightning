@@ -340,6 +340,7 @@ describe.concurrent("SessionContextResponseSchema", () => {
         can_run_workflow: true,
       },
       latest_snapshot_lock_version: 1,
+      project_repo_connection: null,
     };
 
     const result = SessionContextResponseSchema.safeParse(validResponse);
@@ -365,6 +366,7 @@ describe.concurrent("SessionContextResponseSchema", () => {
         can_run_workflow: true,
       },
       latest_snapshot_lock_version: 1,
+      project_repo_connection: null,
     };
 
     const result = SessionContextResponseSchema.safeParse(validResponse);
@@ -394,6 +396,7 @@ describe.concurrent("SessionContextResponseSchema", () => {
         can_run_workflow: true,
       },
       latest_snapshot_lock_version: 1,
+      project_repo_connection: null,
     };
 
     const result = SessionContextResponseSchema.safeParse(validResponse);
@@ -416,6 +419,7 @@ describe.concurrent("SessionContextResponseSchema", () => {
         can_run_workflow: true,
       },
       latest_snapshot_lock_version: 1,
+      project_repo_connection: null,
     };
 
     const result = SessionContextResponseSchema.safeParse(validResponse);
@@ -437,6 +441,7 @@ describe.concurrent("SessionContextResponseSchema", () => {
         can_run_workflow: true,
       },
       latest_snapshot_lock_version: 1,
+      project_repo_connection: null,
     };
 
     const result = SessionContextResponseSchema.safeParse(invalidResponse);
@@ -466,6 +471,7 @@ describe.concurrent("SessionContextResponseSchema", () => {
         can_run_workflow: true,
       },
       latest_snapshot_lock_version: 1,
+      project_repo_connection: null,
     };
 
     const result = SessionContextResponseSchema.safeParse(invalidResponse);
@@ -491,6 +497,7 @@ describe.concurrent("SessionContextResponseSchema", () => {
         can_run_workflow: true,
       },
       latest_snapshot_lock_version: 1,
+      project_repo_connection: null,
     };
 
     const result = SessionContextResponseSchema.safeParse(invalidResponse);
@@ -513,6 +520,7 @@ describe.concurrent("SessionContextResponseSchema", () => {
         can_run_workflow: true,
       },
       latest_snapshot_lock_version: 1,
+      project_repo_connection: null,
     };
 
     const result = SessionContextResponseSchema.safeParse(invalidResponse);
@@ -530,6 +538,7 @@ describe.concurrent("SessionContextResponseSchema", () => {
         can_run_workflow: true,
       },
       latest_snapshot_lock_version: 1,
+      project_repo_connection: null,
     };
 
     const result = SessionContextResponseSchema.safeParse(invalidResponse);
@@ -549,6 +558,7 @@ describe.concurrent("SessionContextResponseSchema", () => {
         can_run_workflow: true,
       },
       latest_snapshot_lock_version: 1,
+      project_repo_connection: null,
     };
 
     const result = SessionContextResponseSchema.safeParse(invalidResponse);

@@ -9,8 +9,8 @@
  */
 
 import { act, render, renderHook, waitFor } from "@testing-library/react";
+import { useContext } from "react";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
-import { useContext, type ReactNode } from "react";
 
 import {
   StoreContext,
@@ -19,14 +19,14 @@ import {
 import * as useSessionModule from "../../../js/collaborative-editor/hooks/useSession";
 import type { SessionState } from "../../../js/collaborative-editor/stores/createSessionStore";
 import {
+  createMockConfig,
+  createMockUser,
+  mockPermissions,
+} from "../__helpers__/sessionContextFactory";
+import {
   createMockPhoenixChannel,
   createMockPhoenixChannelProvider,
 } from "../mocks/phoenixChannel";
-import {
-  createMockUser,
-  mockPermissions,
-  createMockConfig,
-} from "../fixtures/sessionContextData";
 
 // =============================================================================
 // TEST SETUP & FIXTURES
@@ -245,6 +245,7 @@ describe("StoreProvider", () => {
           config: createMockConfig(),
           permissions: mockPermissions,
           latest_snapshot_lock_version: 1,
+          project_repo_connection: null,
         });
       });
 
