@@ -48,7 +48,7 @@ export function SelectedDataclipView({
       <div
         className={cn(
           "flex items-center justify-between pb-4",
-          renderMode === "embedded" ? "px-3" : "px-6 pt-4"
+          renderMode === "embedded" ? "px-3 pt-3" : "px-6 pt-4"
         )}
       >
         <div className="flex-1">
