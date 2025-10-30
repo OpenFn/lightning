@@ -68,7 +68,7 @@ import {
 } from "../stores/createWorkflowStore";
 import {
   createEditorPreferencesStore,
-  type EditorPreferencesStore as EditorPreferencesStoreInstance,
+  type EditorPreferencesStoreInstance,
 } from "../stores/createEditorPreferencesStore";
 import type { Session } from "../types/session";
 import { generateUserColor } from "../utils/userColor";

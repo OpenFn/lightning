@@ -7,13 +7,13 @@
  * Preferences are persisted to localStorage via lib0/storage.
  */
 
+import _logger from "#/utils/logger";
 import { produce } from "immer";
 import * as storage from "lib0/storage";
 import type {
   EditorPreferencesState,
   EditorPreferencesStore,
 } from "../types/editorPreferences";
-import _logger from "#/utils/logger";
 import { createWithSelector } from "./common";
 import { wrapStoreWithDevTools } from "./devtools";
 
@@ -149,3 +149,7 @@ export const createEditorPreferencesStore = (): EditorPreferencesStore => {
     resetToDefaults,
   };
 };
+
+export type EditorPreferencesStoreInstance = ReturnType<
+  typeof createEditorPreferencesStore
+>;
