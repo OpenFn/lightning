@@ -31,7 +31,7 @@ import {
 // =============================================================================
 
 interface WrapperOptions {
-  permissions?: { can_edit_workflow: boolean };
+  permissions?: { can_edit_workflow: boolean; can_run_workflow: boolean };
   latestSnapshotLockVersion?: number;
   workflowLockVersion?: number | null;
   workflowDeletedAt?: string | null;
@@ -40,7 +40,7 @@ interface WrapperOptions {
 
 function createTestSetup(options: WrapperOptions = {}) {
   const {
-    permissions = { can_edit_workflow: true },
+    permissions = { can_edit_workflow: true, can_run_workflow: true },
     latestSnapshotLockVersion = 1,
     workflowLockVersion = 1,
     workflowDeletedAt = null,
@@ -124,7 +124,7 @@ describe("ReadOnlyWarning - Core Rendering", () => {
 
   test("does not render when workflow is editable", async () => {
     const { wrapper, emitSessionContext } = createTestSetup({
-      permissions: { can_edit_workflow: true },
+      permissions: { can_edit_workflow: true, can_run_workflow: true },
     });
 
     render(<ReadOnlyWarning />, { wrapper });
@@ -336,7 +336,7 @@ describe("ReadOnlyWarning - Read-Only States", () => {
 describe("ReadOnlyWarning - Dynamic Changes", () => {
   test("appears when workflow becomes deleted", async () => {
     const { wrapper, emitSessionContext, ydoc } = createTestSetup({
-      permissions: { can_edit_workflow: true },
+      permissions: { can_edit_workflow: true, can_run_workflow: true },
     });
 
     const { rerender } = render(<ReadOnlyWarning />, { wrapper });
@@ -362,7 +362,7 @@ describe("ReadOnlyWarning - Dynamic Changes", () => {
 
   test("disappears when workflow is no longer deleted", async () => {
     const { wrapper, emitSessionContext, ydoc } = createTestSetup({
-      permissions: { can_edit_workflow: true },
+      permissions: { can_edit_workflow: true, can_run_workflow: true },
       workflowDeletedAt: new Date().toISOString(),
     });
 

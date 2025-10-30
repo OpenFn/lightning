@@ -182,16 +182,19 @@ vi.mock('../../../../js/collaborative-editor/hooks/useWorkflow', () => ({
   }),
   useCurrentJob: () => ({
     job: {
-      id: 'job-1',
-      name: 'Test Job',
-      adaptor: '@openfn/language-http@latest',
-      body: 'fn(state => state)',
+      id: "job-1",
+      name: "Test Job",
+      adaptor: "@openfn/language-http@latest",
+      body: "fn(state => state)",
+      project_credential_id: null,
+      keychain_credential_id: null,
     },
     ytext: mockYText,
   }),
   useWorkflowActions: () => ({
     selectJob: vi.fn(),
     saveWorkflow: vi.fn(),
+    updateJob: vi.fn(),
   }),
   useWorkflowState: (selector: any) => {
     const state = {
@@ -217,6 +220,51 @@ vi.mock('../../../../js/collaborative-editor/hooks/useRun', () => ({
     setState: vi.fn(),
   }),
 }));
+
+// Mock credential hooks
+vi.mock("../../../../js/collaborative-editor/hooks/useCredentials", () => ({
+  useCredentials: () => ({
+    projectCredentials: [],
+    keychainCredentials: [],
+  }),
+  useCredentialsCommands: () => ({
+    requestCredentials: vi.fn(),
+  }),
+}));
+
+// Mock adaptor hooks
+vi.mock("../../../../js/collaborative-editor/hooks/useAdaptors", () => ({
+  useProjectAdaptors: () => ({
+    projectAdaptors: [],
+    allAdaptors: [],
+  }),
+}));
+
+// Mock LiveView actions
+vi.mock(
+  "../../../../js/collaborative-editor/contexts/LiveViewActionsContext",
+  () => ({
+    useLiveViewActions: () => ({
+      pushEvent: vi.fn(),
+      handleEvent: vi.fn(() => () => {}),
+    }),
+  })
+);
+
+// Mock adaptor modals
+vi.mock(
+  "../../../../js/collaborative-editor/components/ConfigureAdaptorModal",
+  () => ({
+    ConfigureAdaptorModal: () => <div data-testid="configure-adaptor-modal" />,
+  })
+);
+
+vi.mock(
+  "../../../../js/collaborative-editor/components/AdaptorSelectionModal",
+  () => ({
+    AdaptorSelectionModal: () => <div data-testid="adaptor-selection-modal" />,
+  })
+);
 
 // Mock react-resizable-panels
 vi.mock('react-resizable-panels', () => ({

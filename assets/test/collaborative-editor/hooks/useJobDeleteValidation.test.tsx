@@ -29,6 +29,7 @@ function createWrapper(
     adaptorStore: {} as any,
     credentialStore: {} as any,
     awarenessStore: {} as any,
+    uiStore: {} as any,
   };
 
   return ({ children }: { children: React.ReactNode }) => (
@@ -165,7 +166,7 @@ describe("useJobDeleteValidation - First Job Detection", () => {
     expect(result.current.isFirstJob).toBe(true);
     expect(result.current.canDelete).toBe(false);
     expect(result.current.disableReason).toBe(
-      "Cannot delete: this is the first job in the workflow"
+      "You can't delete the first step in a workflow."
     );
   });
 
@@ -652,7 +653,7 @@ describe("useJobDeleteValidation - Edge Case Scenarios", () => {
     expect(result.current.isFirstJob).toBe(true);
     expect(result.current.canDelete).toBe(false);
     expect(result.current.disableReason).toBe(
-      "Cannot delete: this is the first job in the workflow"
+      "You can't delete the first step in a workflow."
     );
   });
 

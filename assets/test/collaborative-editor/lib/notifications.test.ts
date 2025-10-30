@@ -1,5 +1,6 @@
-import { describe, it, expect, beforeEach, vi } from "vitest";
 import { toast } from "sonner";
+import { describe, it, expect, beforeEach, vi } from "vitest";
+
 import { notifications } from "../../../js/collaborative-editor/lib/notifications";
 
 // Mock Sonner

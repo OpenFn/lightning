@@ -6,7 +6,9 @@ import {
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
 
+import { cn } from "#/utils/cn";
 import _logger from "#/utils/logger";
+
 import { FilterTypes } from "../../manual-run-panel/types";
 import CustomView from "../../manual-run-panel/views/CustomView";
 import EmptyView from "../../manual-run-panel/views/EmptyView";
@@ -345,6 +347,9 @@ export function ManualRunPanel({
         // Fallback: navigate away if no callback (for standalone mode)
         window.location.href = `/projects/${projectId}/runs/${response.data.run_id}`;
       }
+
+      // Reset submitting state after successful submission
+      setIsSubmitting(false);
     } catch (error) {
       logger.error("Failed to submit run:", error);
       notifications.alert({
@@ -400,10 +405,18 @@ export function ManualRunPanel({
       onNameChange={handleDataclipNameChange}
       canEdit={canEditDataclip}
       isNextCronRun={nextCronRunDataclipId === selectedDataclip.id}
+      renderMode={renderMode}
     />
   ) : (
-    <div className="flex flex-col h-full overflow-hidden">
+    <div
+      className={cn(
+        "flex flex-col h-full overflow-hidden",
+        renderMode === "embedded" ? "mt-2" : "mt-4"
+      )}
+    >
       <Tabs
+        className="mx-3"
+        variant="pills"
         value={selectedTab}
         onChange={value => setSelectedTab(value)}
         options={[
@@ -429,6 +442,7 @@ export function ManualRunPanel({
               handleCustomBodyChange(data.manual.body);
             }
           }}
+          renderMode={renderMode}
         />
       )}
       {selectedTab === "existing" && (
@@ -449,6 +463,7 @@ export function ManualRunPanel({
           fixedHeight={true}
           currentRunDataclip={currentRunDataclip}
           nextCronRunDataclipId={nextCronRunDataclipId}
+          renderMode={renderMode}
         />
       )}
     </div>
@@ -464,15 +479,17 @@ export function ManualRunPanel({
     <InspectorLayout
       title={panelTitle}
       onClose={onClose}
+      fixedHeight={true}
+      showBackButton={true}
       footer={
         <InspectorFooter
-          leftButtons={
+          rightButtons={
             <Button
               variant="primary"
               onClick={handleRun}
               disabled={!canRun || isSubmitting}
             >
-              {isSubmitting ? "Running..." : "Run Workflow Now"}
+              {isSubmitting ? "Pending..." : "Run (Create New Workorder)"}
             </Button>
           }
         />

@@ -29,8 +29,8 @@ export function WorkflowSettings() {
 
   const defaultValues = useMemo(() => {
     // Y.Doc types can be loosely typed, so we assert to expected types
-    const concurrency = (workflow.concurrency ?? null) as number | null;
-    const enableJobLogs = (workflow.enable_job_logs ?? false) as boolean;
+    const concurrency = workflow.concurrency ?? null;
+    const enableJobLogs = workflow.enable_job_logs ?? false;
 
     return {
       id: workflow.id,
@@ -66,10 +66,7 @@ export function WorkflowSettings() {
     changedFields => {
       Object.entries(changedFields).forEach(([key, value]) => {
         if (key in form.state.values) {
-          form.setFieldValue(
-            key as keyof typeof form.state.values,
-            value as (typeof form.state.values)[keyof typeof form.state.values]
-          );
+          form.setFieldValue(key as keyof typeof form.state.values, value);
         }
       });
     },
@@ -102,13 +99,11 @@ export function WorkflowSettings() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="px-6 py-6 space-y-4">
       {/* Workflow Name Field */}
-      <div>
-        <form.AppField name="name">
-          {field => <field.TextField label="Workflow Name" />}
-        </form.AppField>
-      </div>
+      <form.AppField name="name">
+        {field => <field.TextField label="Workflow Name" />}
+      </form.AppField>
 
       {/* YAML View Section - Placeholder (NOT implementing) */}
       <div>
@@ -124,16 +119,14 @@ export function WorkflowSettings() {
       </div>
 
       {/* Log Output Toggle */}
-      <div>
-        <form.AppField name="enable_job_logs">
-          {field => (
-            <field.ToggleField
-              label="Allow console.log() usage"
-              description="Control what's printed in run logs"
-            />
-          )}
-        </form.AppField>
-      </div>
+      <form.AppField name="enable_job_logs">
+        {field => (
+          <field.ToggleField
+            label="Allow console.log() usage"
+            description="Control what's printed in run logs"
+          />
+        )}
+      </form.AppField>
 
       {/* Concurrency Section */}
       <div>

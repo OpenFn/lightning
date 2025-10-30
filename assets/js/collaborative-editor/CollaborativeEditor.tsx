@@ -12,6 +12,7 @@ import { Toaster } from "./components/ui/Toaster";
 import { VersionDebugLogger } from "./components/VersionDebugLogger";
 import { VersionDropdown } from "./components/VersionDropdown";
 import { WorkflowEditor } from "./components/WorkflowEditor";
+import { LiveViewActionsProvider } from "./contexts/LiveViewActionsContext";
 import { SessionProvider } from "./contexts/SessionProvider";
 import { StoreProvider } from "./contexts/StoreProvider";
 import {
@@ -158,6 +159,14 @@ export const CollaborativeEditor: WithActionProps<
   const rootProjectName = props["data-root-project-name"] ?? null;
   const isNewWorkflow = props["data-is-new-workflow"] === "true";
 
+  // Extract LiveView actions from props
+  const liveViewActions = {
+    pushEvent: props.pushEvent,
+    pushEventTo: props.pushEventTo,
+    handleEvent: props.handleEvent,
+    navigate: props.navigate,
+  };
+
   return (
     <HotkeysProvider>
       <div
@@ -171,40 +180,42 @@ export const CollaborativeEditor: WithActionProps<
             isNewWorkflow={isNewWorkflow}
           >
             <StoreProvider>
-              <VersionDebugLogger />
-              <Toaster />
-              <BreadcrumbContent
-                workflowId={workflowId}
-                workflowName={workflowName}
-                {...(projectId !== undefined && {
-                  projectIdFallback: projectId,
-                })}
-                {...(projectName !== undefined && {
-                  projectNameFallback: projectName,
-                })}
-                {...(projectEnv !== undefined && {
-                  projectEnvFallback: projectEnv,
-                })}
-                {...(rootProjectId !== null && {
-                  rootProjectIdFallback: rootProjectId,
-                })}
-                {...(rootProjectName !== null && {
-                  rootProjectNameFallback: rootProjectName,
-                })}
-              />
-              <LoadingBoundary>
-                <div className="flex-1 min-h-0 overflow-hidden">
-                  <WorkflowEditor
-                    {...(rootProjectId !== null && {
-                      parentProjectId: rootProjectId,
-                    })}
-                    {...(rootProjectName !== null && {
-                      parentProjectName: rootProjectName,
-                    })}
-                  />
-                  <CollaborationWidget />
-                </div>
-              </LoadingBoundary>
+              <LiveViewActionsProvider actions={liveViewActions}>
+                <VersionDebugLogger />
+                <Toaster />
+                <BreadcrumbContent
+                  workflowId={workflowId}
+                  workflowName={workflowName}
+                  {...(projectId !== undefined && {
+                    projectIdFallback: projectId,
+                  })}
+                  {...(projectName !== undefined && {
+                    projectNameFallback: projectName,
+                  })}
+                  {...(projectEnv !== undefined && {
+                    projectEnvFallback: projectEnv,
+                  })}
+                  {...(rootProjectId !== null && {
+                    rootProjectIdFallback: rootProjectId,
+                  })}
+                  {...(rootProjectName !== null && {
+                    rootProjectNameFallback: rootProjectName,
+                  })}
+                />
+                <LoadingBoundary>
+                  <div className="flex-1 min-h-0 overflow-hidden">
+                    <WorkflowEditor
+                      {...(rootProjectId !== null && {
+                        parentProjectId: rootProjectId,
+                      })}
+                      {...(rootProjectName !== null && {
+                        parentProjectName: rootProjectName,
+                      })}
+                    />
+                    <CollaborationWidget />
+                  </div>
+                </LoadingBoundary>
+              </LiveViewActionsProvider>
             </StoreProvider>
           </SessionProvider>
         </SocketProvider>

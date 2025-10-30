@@ -14,11 +14,12 @@ import {
   fireEvent,
 } from "@testing-library/react";
 import type React from "react";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test, vi } from "vitest";
 import * as Y from "yjs";
 
 import { Header } from "../../../js/collaborative-editor/components/Header";
 import { SessionContext } from "../../../js/collaborative-editor/contexts/SessionProvider";
+import { LiveViewActionsProvider } from "../../../js/collaborative-editor/contexts/LiveViewActionsContext";
 import type { StoreContextValue } from "../../../js/collaborative-editor/contexts/StoreProvider";
 import { StoreContext } from "../../../js/collaborative-editor/contexts/StoreProvider";
 import { createAdaptorStore } from "../../../js/collaborative-editor/stores/createAdaptorStore";
@@ -43,7 +44,7 @@ import { HotkeysProvider } from "react-hotkeys-hook";
 // =============================================================================
 
 interface WrapperOptions {
-  permissions?: { can_edit_workflow: boolean };
+  permissions?: { can_edit_workflow: boolean; can_run_workflow: boolean };
   latestSnapshotLockVersion?: number;
   workflowLockVersion?: number | null;
   workflowDeletedAt?: string | null;
@@ -55,7 +56,7 @@ interface WrapperOptions {
 
 function createTestSetup(options: WrapperOptions = {}) {
   const {
-    permissions = { can_edit_workflow: true },
+    permissions = { can_edit_workflow: true, can_run_workflow: true },
     latestSnapshotLockVersion = 1,
     workflowLockVersion = 1,
     workflowDeletedAt = null,
@@ -131,6 +132,13 @@ function createTestSetup(options: WrapperOptions = {}) {
     credentialStore,
     awarenessStore,
     uiStore,
+  };
+
+  const mockLiveViewActions = {
+    pushEvent: vi.fn(),
+    pushEventTo: vi.fn(),
+    handleEvent: vi.fn(() => vi.fn()),
+    navigate: vi.fn(),
   };
 
   const wrapper = ({ children }: { children: React.ReactNode }) => (
@@ -214,7 +222,7 @@ describe("Header - ReadOnlyWarning Integration", () => {
 
   test("does not show ReadOnlyWarning when workflow is editable", async () => {
     const { wrapper, emitSessionContext } = createTestSetup({
-      permissions: { can_edit_workflow: true },
+      permissions: { can_edit_workflow: true, can_run_workflow: true },
     });
 
     render(
@@ -348,7 +356,7 @@ describe("Header - Basic Rendering", () => {
 describe("Header - Read-Only State Changes", () => {
   test("ReadOnlyWarning appears when workflow becomes read-only", async () => {
     const { wrapper, emitSessionContext, ydoc } = createTestSetup({
-      permissions: { can_edit_workflow: true },
+      permissions: { can_edit_workflow: true, can_run_workflow: true },
     });
 
     const { rerender } = render(
@@ -383,7 +391,7 @@ describe("Header - Read-Only State Changes", () => {
 
   test("ReadOnlyWarning disappears when workflow becomes editable", async () => {
     const { wrapper, emitSessionContext, ydoc } = createTestSetup({
-      permissions: { can_edit_workflow: true },
+      permissions: { can_edit_workflow: true, can_run_workflow: true },
       workflowDeletedAt: new Date().toISOString(),
     });
 
