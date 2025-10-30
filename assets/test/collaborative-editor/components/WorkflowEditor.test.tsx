@@ -205,6 +205,10 @@ const mockSelectNode = vi.fn((node: any) => {
   }
 });
 
+// Mock canRun state
+let mockCanRun = true;
+let mockTooltipMessage = "";
+
 vi.mock("../../../js/collaborative-editor/hooks/useWorkflow", () => ({
   useNodeSelection: () => ({
     currentNode,
@@ -227,6 +231,10 @@ vi.mock("../../../js/collaborative-editor/hooks/useWorkflow", () => ({
     };
     return typeof selector === "function" ? selector(state) : state;
   },
+  useCanRun: () => ({
+    canRun: mockCanRun,
+    tooltipMessage: mockTooltipMessage,
+  }),
 }));
 
 // Helper function to render WorkflowEditor with HotkeysProvider
@@ -247,6 +255,8 @@ describe("WorkflowEditor", () => {
     runPanelContext = null;
     currentNode = { type: null, node: null };
     mockRunHandler.mockClear();
+    mockCanRun = true;
+    mockTooltipMessage = "";
 
     // Default mock for searchDataclips
     vi.mocked(dataclipApi.searchDataclips).mockResolvedValue({
@@ -291,17 +301,181 @@ describe("WorkflowEditor", () => {
   });
 
   describe("Cmd+Enter keyboard shortcut - behavior", () => {
-    test("Cmd+Enter keyboard shortcut is registered", async () => {
-      renderWorkflowEditor();
+    test("opens run panel with selected job when Cmd+Enter pressed and canRun is true", async () => {
+      const user = userEvent.setup();
+
+      // Select a job
+      currentNode = {
+        type: "job",
+        node: mockWorkflow.jobs[0],
+      };
+
+      // User has permission to run
+      mockCanRun = true;
+
+      const { container } = renderWorkflowEditor();
 
       await waitFor(() => {
         expect(screen.getByTestId("workflow-diagram")).toBeInTheDocument();
       });
 
-      // The component registers Cmd+Enter handler via useHotkeys
-      // We can't easily test the actual keyboard behavior with mocked state
-      // but we can verify the component renders successfully with the hotkey
-      expect(screen.getByTestId("workflow-diagram")).toBeInTheDocument();
+      // Focus the container so hotkeys can fire
+      container.focus();
+
+      // Press Cmd+Enter (or Ctrl+Enter on non-Mac)
+      await user.keyboard("{Control>}{Enter}{/Control}");
+
+      // Should open run panel with job context
+      await waitFor(() => {
+        expect(mockOpenRunPanel).toHaveBeenCalledWith({ jobId: "job-1" });
+      });
+    });
+
+    test("opens run panel with selected trigger when Cmd+Enter pressed and canRun is true", async () => {
+      const user = userEvent.setup();
+
+      // Select a trigger
+      currentNode = {
+        type: "trigger",
+        node: mockWorkflow.triggers[0],
+      };
+
+      // User has permission to run
+      mockCanRun = true;
+
+      const { container } = renderWorkflowEditor();
+
+      await waitFor(() => {
+        expect(screen.getByTestId("workflow-diagram")).toBeInTheDocument();
+      });
+
+      container.focus();
+
+      // Press Ctrl+Enter (mod key)
+      await user.keyboard("{Control>}{Enter}{/Control}");
+
+      // Should open run panel with trigger context
+      await waitFor(() => {
+        expect(mockOpenRunPanel).toHaveBeenCalledWith({
+          triggerId: "trigger-1",
+        });
+      });
+    });
+
+    test("opens run panel with first trigger when nothing selected and Cmd+Enter pressed", async () => {
+      const user = userEvent.setup();
+
+      // Nothing selected
+      currentNode = { type: null, node: null };
+
+      // User has permission to run
+      mockCanRun = true;
+
+      const { container } = renderWorkflowEditor();
+
+      await waitFor(() => {
+        expect(screen.getByTestId("workflow-diagram")).toBeInTheDocument();
+      });
+
+      container.focus();
+
+      // Press Ctrl+Enter (mod key)
+      await user.keyboard("{Control>}{Enter}{/Control}");
+
+      // Should open run panel with first trigger
+      await waitFor(() => {
+        expect(mockOpenRunPanel).toHaveBeenCalledWith({
+          triggerId: "trigger-1",
+        });
+      });
+    });
+
+    test("does NOT open run panel when Cmd+Enter pressed and canRun is false", async () => {
+      const user = userEvent.setup();
+
+      // Select a job
+      currentNode = {
+        type: "job",
+        node: mockWorkflow.jobs[0],
+      };
+
+      // User CANNOT run (e.g., viewing snapshot, no permissions, locked)
+      mockCanRun = false;
+      mockTooltipMessage = "Cannot run workflow in snapshot view";
+
+      const { container } = renderWorkflowEditor();
+
+      await waitFor(() => {
+        expect(screen.getByTestId("workflow-diagram")).toBeInTheDocument();
+      });
+
+      container.focus();
+
+      // Press Ctrl+Enter (mod key)
+      await user.keyboard("{Control>}{Enter}{/Control}");
+
+      // Should NOT open run panel
+      await new Promise(resolve => setTimeout(resolve, 100));
+      expect(mockOpenRunPanel).not.toHaveBeenCalled();
+    });
+
+    test("triggers run handler when Cmd+Enter pressed and panel is already open", async () => {
+      const user = userEvent.setup();
+
+      // Panel is already open
+      isRunPanelOpen = true;
+      runPanelContext = { jobId: "job-1" };
+
+      // User has permission to run
+      mockCanRun = true;
+
+      const { container } = renderWorkflowEditor();
+
+      // Wait for panel to mount and set up run handler
+      await waitFor(() => {
+        expect(screen.getByTestId("manual-run-panel")).toBeInTheDocument();
+      });
+
+      // Wait for the run state callback to be called
+      await waitFor(() => {
+        expect(mockOnRunStateChange).toBeTruthy();
+      });
+
+      container.focus();
+
+      // Press Ctrl+Enter (mod key)
+      await user.keyboard("{Control>}{Enter}{/Control}");
+
+      // Should trigger the run handler
+      await waitFor(() => {
+        expect(mockRunHandler).toHaveBeenCalled();
+      });
+    });
+
+    test("does NOT trigger run when panel is open but canRun is false", async () => {
+      const user = userEvent.setup();
+
+      // Panel is already open
+      isRunPanelOpen = true;
+      runPanelContext = { jobId: "job-1" };
+
+      // User CANNOT run
+      mockCanRun = false;
+
+      const { container } = renderWorkflowEditor();
+
+      await waitFor(() => {
+        expect(screen.getByTestId("manual-run-panel")).toBeInTheDocument();
+      });
+
+      container.focus();
+
+      // Press Ctrl+Enter (mod key)
+      await user.keyboard("{Control>}{Enter}{/Control}");
+
+      // Should NOT trigger run
+      await new Promise(resolve => setTimeout(resolve, 100));
+      expect(mockRunHandler).not.toHaveBeenCalled();
     });
   });
 

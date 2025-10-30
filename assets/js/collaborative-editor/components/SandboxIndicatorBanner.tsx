@@ -16,6 +16,8 @@
  * - compact: Shows only "sandbox: name" (for inspector panel)
  */
 
+import { cn } from "../../utils/cn";
+
 interface SandboxIndicatorBannerProps {
   parentProjectId?: string | null | undefined;
   parentProjectName?: string | null | undefined;
@@ -38,12 +40,13 @@ export function SandboxIndicatorBanner({
     return null;
   }
 
-  const positionClasses = position === "absolute" ? "absolute z-5" : "relative";
-
   return (
     <div
       id="sandbox-mode-alert"
-      className={`bg-primary-100 text-primary-800 w-full flex items-center gap-x-6 px-6 py-2.5 sm:px-3.5 sm:before:flex-1 ${positionClasses}`}
+      className={cn(
+        "bg-primary-100 text-primary-800 w-full flex items-center gap-x-6 px-6 py-2.5 sm:px-3.5 sm:before:flex-1",
+        position === "absolute" ? "absolute z-5" : "relative"
+      )}
       data-testid="sandbox-indicator-banner"
     >
       <p className="text-sm leading-6">

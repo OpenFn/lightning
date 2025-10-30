@@ -167,11 +167,18 @@ export const animate = (
       if (!animateFrom || !animateFrom.position) {
         // But if this a new node, animate from its parent (source)
         const edge = from.edges.find(({ target }) => target === node.id);
-        animateFrom = from.nodes.find(({ id }) => id === edge!.source);
+        if (edge) {
+          animateFrom = from.nodes.find(({ id }) => id === edge.source);
+        }
       }
+
+      // If we still don't have a valid position to animate from,
+      // use the node's current position (instant placement, no animation)
+      const fromPosition = animateFrom?.position ?? node.position;
+
       return {
         id: node.id,
-        from: (animateFrom && animateFrom.position) ? animateFrom.position : { x: 0, y: 0 },
+        from: fromPosition,
         to: node.position,
         node,
       };

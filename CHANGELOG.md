@@ -17,6 +17,9 @@ and this project adheres to
 
 ### Added
 
+- Drag-to-connect nodes on workflow canvas - users can now drag from the plus
+  button on a node and drop it onto another node to create connections
+  [#3825](https://github.com/OpenFn/lightning/issues/3825)
 - Read-only indicator in collaborative editor header
   [#3627](https://github.com/OpenFn/lightning/issues/3627)
 - Sync workflow concurrency and enable_job_logs settings in collaborative
@@ -37,18 +40,47 @@ and this project adheres to
   [$3634](https://github.com/openfn/lightning/issues/3634)
 - View and switch versions
   [#3819](https://github.com/openfn/lightning/issues/3819)
+- Run viewer panel in collaborative IDE with Run, Log, Input, and Output tabs
+  [#3844](https://github.com/OpenFn/lightning/issues/3844)
 
 ### Changed
 
+- Error messages in collaborative editor now include field names for validation
+  errors (e.g., "Name: can't be blank")
+  [#3843](https://github.com/OpenFn/lightning/issues/3843)
+- Added error notifications when workflow reset fails in collaborative editor
+  [#3843](https://github.com/OpenFn/lightning/issues/3843)
+- Consolidated toast notification styling in collaborative editor for better
+  maintainability [#3843](https://github.com/OpenFn/lightning/issues/3843)
+
 ### Fixed
 
+- Prevent manual run panel from opening via keystroke if running isn't possible
+  (permissions or snapshot)
+- Default Next Input for Cron-Triggered Workflows
+  [#3856](https://github.com/OpenFn/lightning/issues/3856)
+- Error toasts not appearing when workflow save fails (validation errors,
+  permission denied, etc.) in collaborative editor
+  [#3843](https://github.com/OpenFn/lightning/issues/3843)
+- Toast notification colors not displaying correctly due to CSS specificity
+  issues [#3843](https://github.com/OpenFn/lightning/issues/3843)
+- Canvas goes blank when adding nodes in collaborative workflow editor
+  [#3848](https://github.com/OpenFn/lightning/issues/3848)
+- Crash when switching from old to collaborative editor
+  [#3865](https://github.com/OpenFn/lightning/issues/3865)
+- Position errors when rendering nodes
+  [#3866](https://github.com/OpenFn/lightning/issues/3866)
+- Layout animation crashes when adding nodes
+  [#3867](https://github.com/OpenFn/lightning/issues/3867)
 - Fixed sandbox merge failing with StaleEntryError when parent workflow was
   modified after sandbox creation
   [#3765](https://github.com/OpenFn/lightning/issues/3765)
 - Workflow is either decapitated or uneditable
-  [#3842](https://github.com/openfn/lightning/issues/3842)
+  [#3842](https://github.com/OpenFn/lightning/issues/3842)
 - User can navigate to React canvas from LiveView version
   [#3847](https://github.com/openfn/lightning/issues/3847)
+- Fixed missing cron icon in trigger on new canvas
+  [#3849](https://github.com/OpenFn/lightning/issues/3849)
 
 ## [2.14.13-pre1] 2025-10-24
 

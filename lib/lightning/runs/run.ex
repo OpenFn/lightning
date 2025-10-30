@@ -17,6 +17,24 @@ defmodule Lightning.Run do
   alias Lightning.Workflows.Trigger
   alias Lightning.WorkOrder
 
+  @derive {Jason.Encoder,
+           only: [
+             :id,
+             :work_order_id,
+             :starting_job_id,
+             :starting_trigger_id,
+             :created_by_id,
+             :state,
+             :started_at,
+             :finished_at,
+             :priority,
+             :error_type,
+             :created_by,
+             :starting_trigger,
+             :steps,
+             :work_order
+           ]}
+
   @final_states [
     :success,
     :failed,

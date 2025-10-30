@@ -26,6 +26,19 @@ defmodule Lightning.WorkOrder do
                   Run.final_states()
                 )
 
+  @derive {Jason.Encoder,
+           only: [
+             :id,
+             :state,
+             :workflow_id,
+             :snapshot_id,
+             :trigger_id,
+             :dataclip_id,
+             :last_activity,
+             :inserted_at,
+             :updated_at
+           ]}
+
   @primary_key {:id, :binary_id, autogenerate: true}
   @foreign_key_type :binary_id
   schema "work_orders" do
