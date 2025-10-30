@@ -180,6 +180,7 @@ describe("JobInspector - Credential Selection", () => {
         config: { require_email_verification: false },
         permissions: { can_edit_workflow: true },
         latest_snapshot_lock_version: 1,
+        project_repo_connection: null,
       });
     });
   });

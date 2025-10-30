@@ -48,7 +48,7 @@ import {
   mockUserContext,
   mockProjectContext,
   mockAppConfig,
-} from "./fixtures/sessionContextData";
+} from "./__helpers__/sessionContextFactory";
 
 describe("SessionContextStore", () => {
   test("handles context updates", async () => {
@@ -412,7 +412,7 @@ import {
   waitForAsync,
   emitSessionContextUpdatedEvent,
 } from "./__helpers__";
-import { mockUserContext } from "./fixtures/sessionContextData";
+import { mockUserContext } from "./__helpers__/sessionContextFactory";
 
 describe("Complex Integration", () => {
   test("session and context stores work together", async () => {
