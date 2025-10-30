@@ -16,12 +16,13 @@ import tippy from "tippy.js";
 import { useProjectAdaptors } from "#/collaborative-editor/hooks/useAdaptors";
 import useConnect from "#/collaborative-editor/hooks/useConnect";
 import {
-  useWorkflowState,
   usePositions,
-  useWorkflowStoreContext,
   useWorkflowReadOnly,
+  useWorkflowState,
+  useWorkflowStoreContext,
 } from "#/collaborative-editor/hooks/useWorkflow";
-import { extractNodeErrors } from "#/collaborative-editor/utils/extractNodeErrors";
+import type { Workflow } from "#/collaborative-editor/types/workflow";
+import { getAdaptorDisplayName } from "#/collaborative-editor/utils/adaptorUtils";
 import { randomUUID } from "#/common";
 import _logger from "#/utils/logger";
 import MiniMapNode from "#/workflow-diagram/components/MiniMapNode";
@@ -44,8 +45,6 @@ import {
 import { AdaptorSelectionModal } from "../AdaptorSelectionModal";
 
 import { useInspectorOverlap } from "./useInspectorOverlap";
-import { getAdaptorDisplayName } from "#/collaborative-editor/utils/adaptorUtils";
-import type { Workflow } from "#/collaborative-editor/types/workflow";
 
 type WorkflowDiagramProps = {
   el?: HTMLElement | null;
@@ -119,44 +118,23 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
   const undo = useCallback(() => {}, []);
   const redo = useCallback(() => {}, []);
 
-  const { jobs, triggers, edges, errors } = useWorkflowState(state => ({
+  const { jobs, triggers, edges } = useWorkflowState(state => ({
     jobs: state.jobs,
     triggers: state.triggers,
     edges: state.edges,
-    errors: state.errors,
   }));
 
   const { isReadOnly } = useWorkflowReadOnly();
 
   const workflow = React.useMemo(() => {
-    // Extract nested entity errors from state
-    const nodeErrors = extractNodeErrors(errors);
-
-    // Attach errors to jobs
-    const jobsWithErrors = jobs.map(job => ({
-      ...job,
-      errors: nodeErrors.jobs[job.id] || {},
-    }));
-
-    // Attach errors to triggers
-    const triggersWithErrors = triggers.map(trigger => ({
-      ...trigger,
-      errors: nodeErrors.triggers[trigger.id] || {},
-    }));
-
-    // Attach errors to edges
-    const edgesWithErrors = edges.map(edge => ({
-      ...edge,
-      errors: nodeErrors.edges[edge.id] || {},
-    }));
-
+    // Entities already have errors denormalized from store
     return {
-      jobs: jobsWithErrors,
-      triggers: triggersWithErrors,
-      edges: edgesWithErrors,
+      jobs,
+      triggers,
+      edges,
       disabled: isReadOnly,
     };
-  }, [jobs, triggers, edges, errors, isReadOnly]);
+  }, [jobs, triggers, edges, isReadOnly]);
 
   const isManualLayout = Object.keys(workflowPositions).length > 0;
 

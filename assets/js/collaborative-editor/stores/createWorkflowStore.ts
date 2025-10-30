@@ -182,7 +182,6 @@ function produceInitialState() {
       triggers: [],
       edges: [],
       positions: {},
-      errors: {}, // NEW: Initialize empty errors map
 
       // Initialize UI state
       selectedJobId: null,
@@ -352,14 +351,82 @@ export const createWorkflowStore = () => {
       }, "positions/observerUpdate");
     };
 
-    // NEW: Errors observer with deep observation
-    // Deep observer is necessary because errors have nested structure:
-    // { jobs: { "job-id": { name: ["error"] } } }
-    // Without deep observation, changes to nested job errors wouldn't trigger updates
+    /**
+     * Helper to check if errors actually changed (shallow comparison)
+     * This prevents unnecessary object updates in Immer when errors haven't
+     * changed, maintaining referential stability for React memoization.
+     */
+    function areErrorsEqual(
+      a: Record<string, string[]>,
+      b: Record<string, string[]>
+    ): boolean {
+      const keysA = Object.keys(a);
+      const keysB = Object.keys(b);
+
+      if (keysA.length !== keysB.length) return false;
+
+      return keysA.every(key => {
+        const valsA = a[key];
+        const valsB = b[key];
+        if (!valsB) return false;
+        if (valsA.length !== valsB.length) return false;
+        return valsA.every((val, i) => val === valsB[i]);
+      });
+    }
+
+    // Enhanced errors observer with denormalization
+    // This observer reads the nested error structure from Y.Doc and
+    // denormalizes errors directly onto the corresponding entities in
+    // the store.
+    // Using Immer's structural sharing, only entities with changed errors
+    // get new object references, minimizing React re-renders.
     const errorsObserver = () => {
-      const errorsJSON = errorsMap.toJSON() as Record<string, string[]>;
+      const errorsJSON = errorsMap.toJSON() as {
+        workflow?: Record<string, string[]>;
+        jobs?: Record<string, Record<string, string[]>>;
+        triggers?: Record<string, Record<string, string[]>>;
+        edges?: Record<string, Record<string, string[]>>;
+      };
+
       updateState(draft => {
-        draft.errors = errorsJSON;
+        // Extract nested error structures
+        const workflowErrors = errorsJSON.workflow || {};
+        const jobErrors = errorsJSON.jobs || {};
+        const triggerErrors = errorsJSON.triggers || {};
+        const edgeErrors = errorsJSON.edges || {};
+
+        // Denormalize workflow errors onto workflow object
+        if (draft.workflow) {
+          const newErrors = workflowErrors;
+          if (!areErrorsEqual(draft.workflow.errors || {}, newErrors)) {
+            draft.workflow.errors = newErrors;
+          }
+        }
+
+        // Efficiently update job errors using Immer
+        // Only touches jobs that have changes
+        draft.jobs.forEach(job => {
+          const newErrors = jobErrors[job.id] || {};
+          if (!areErrorsEqual(job.errors || {}, newErrors)) {
+            job.errors = newErrors;
+          }
+        });
+
+        // Same for triggers
+        draft.triggers.forEach(trigger => {
+          const newErrors = triggerErrors[trigger.id] || {};
+          if (!areErrorsEqual(trigger.errors || {}, newErrors)) {
+            trigger.errors = newErrors;
+          }
+        });
+
+        // Same for edges
+        draft.edges.forEach(edge => {
+          const newErrors = edgeErrors[edge.id] || {};
+          if (!areErrorsEqual(edge.errors || {}, newErrors)) {
+            edge.errors = newErrors;
+          }
+        });
       }, "errors/observerUpdate");
     };
 
@@ -976,11 +1043,6 @@ export const createWorkflowStore = () => {
     saveWorkflow,
     resetWorkflow,
     validateWorkflowName,
-
-    // Getters for state properties
-    get errors() {
-      return state.errors;
-    },
   };
 };
 
