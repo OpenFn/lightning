@@ -939,8 +939,11 @@ defmodule Lightning.SessionTest do
       errors_map = Yex.Doc.get_map(doc, "errors")
       errors = Yex.Map.to_json(errors_map)
 
-      assert is_list(errors["name"])
-      assert "This field can't be blank." in errors["name"]
+      # Workflow errors should be nested under 'workflow' key
+      assert Map.has_key?(errors, "workflow")
+      assert is_map(errors["workflow"])
+      assert is_list(errors["workflow"]["name"])
+      assert "This field can't be blank." in errors["workflow"]["name"]
     end
 
     test "clears errors from Y.Doc after successful save", %{
@@ -1017,6 +1020,70 @@ defmodule Lightning.SessionTest do
                errors["jobs"][job_id]["name"],
                &String.contains?(&1, "can't be blank")
              )
+    end
+
+    test "nests workflow-level and entity errors correctly in Y.Doc", %{
+      session: session,
+      user: user
+    } do
+      # Create validation errors at both workflow and job level
+      doc = Session.get_doc(session)
+      workflow_map = Yex.Doc.get_map(doc, "workflow")
+      jobs_array = Yex.Doc.get_array(doc, "jobs")
+
+      job_id = Ecto.UUID.generate()
+
+      Yex.Doc.transaction(doc, "test_mixed_errors", fn ->
+        # Set blank workflow name (workflow-level error)
+        Yex.Map.set(workflow_map, "name", "")
+
+        # Add job with blank name (entity-level error)
+        job_map =
+          Yex.MapPrelim.from(%{
+            "id" => job_id,
+            "name" => "",
+            "body" => Yex.TextPrelim.from("console.log('test');"),
+            "adaptor" => "@openfn/language-common@1.0.0",
+            "project_credential_id" => nil,
+            "keychain_credential_id" => nil
+          })
+
+        Yex.Array.push(jobs_array, job_map)
+      end)
+
+      # Attempt save (should fail validation at both levels)
+      assert {:error, %Ecto.Changeset{}} = Session.save_workflow(session, user)
+
+      # Check error structure in Y.Doc
+      errors_map = Yex.Doc.get_map(doc, "errors")
+      errors = Yex.Map.to_json(errors_map)
+
+      # Verify workflow errors are nested under 'workflow' key
+      assert Map.has_key?(errors, "workflow")
+      assert is_map(errors["workflow"])
+      assert is_list(errors["workflow"]["name"])
+
+      assert Enum.any?(
+               errors["workflow"]["name"],
+               &String.contains?(&1, "can't be blank")
+             )
+
+      # Verify entity errors still nested under entity type keys
+      assert Map.has_key?(errors, "jobs")
+      assert is_map(errors["jobs"])
+      assert Map.has_key?(errors["jobs"], job_id)
+      assert is_map(errors["jobs"][job_id])
+      assert is_list(errors["jobs"][job_id]["name"])
+
+      assert Enum.any?(
+               errors["jobs"][job_id]["name"],
+               &String.contains?(&1, "can't be blank")
+             )
+
+      # Verify structure matches Y.Doc top-level organization
+      # Y.Doc has: workflow (map), jobs (array), triggers (array), edges (array)
+      # Errors mirror this: workflow (map), jobs (map), triggers (map), edges (map)
+      assert Map.keys(errors) |> Enum.sort() == ["jobs", "workflow"]
     end
   end
 

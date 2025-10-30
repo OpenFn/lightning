@@ -588,9 +588,22 @@ defmodule Lightning.Collaboration.Session do
   #
   # Inspired by traverse_provision_errors in provisioning_json.ex
   defp format_changeset_errors_for_ydoc(changeset) do
-    changeset
-    |> extract_changeset_errors()
-    |> Map.new(fn {key, value} ->
+    errors = extract_changeset_errors(changeset)
+
+    # Separate workflow-level errors from entity errors
+    {entity_errors, workflow_level_errors} =
+      Map.split(errors, [:jobs, :triggers, :edges])
+
+    # Nest workflow errors under 'workflow' key to match Y.Doc structure
+    result =
+      if workflow_level_errors == %{} do
+        entity_errors
+      else
+        Map.put(entity_errors, :workflow, workflow_level_errors)
+      end
+
+    # Convert to Y.js compatible types
+    Map.new(result, fn {key, value} ->
       {key, convert_to_yjs_value(value)}
     end)
   end
