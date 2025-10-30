@@ -38,6 +38,19 @@ export const CredentialsListSchema = z.object({
 export type ProjectCredential = z.infer<typeof CredentialSchema>;
 export type KeychainCredential = z.infer<typeof KeychainCredentialSchema>;
 
+// Discriminated union types for credentials with type metadata
+export type ProjectCredentialWithType = ProjectCredential & {
+  type: "project";
+};
+
+export type KeychainCredentialWithType = KeychainCredential & {
+  type: "keychain";
+};
+
+export type CredentialWithType =
+  | ProjectCredentialWithType
+  | KeychainCredentialWithType;
+
 export interface CredentialState {
   projectCredentials: ProjectCredential[];
   keychainCredentials: KeychainCredential[];
@@ -58,6 +71,11 @@ interface CredentialQueries {
 
   subscribe: (listener: () => void) => () => void;
   withSelector: <T>(selector: (state: CredentialState) => T) => () => T;
+
+  // Credential lookup queries
+  findCredentialById: (searchId: string | null) => CredentialWithType | null;
+  credentialExists: (searchId: string | null) => boolean;
+  getCredentialId: (cred: ProjectCredential | KeychainCredential) => string;
 }
 
 interface CredentialStoreInternals {

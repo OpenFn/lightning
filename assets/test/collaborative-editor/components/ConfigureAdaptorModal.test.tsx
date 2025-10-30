@@ -125,6 +125,44 @@ const mockKeychainCredentials: KeychainCredential[] = [
   },
 ];
 
+// Helper to create credential query methods
+function createCredentialQueryMethods(credSnapshot: any) {
+  return {
+    findCredentialById: (searchId: string | null) => {
+      if (!searchId) return null;
+      // Check project credentials
+      const projectCred = credSnapshot.projectCredentials.find(
+        (c: any) => c.id === searchId || c.project_credential_id === searchId
+      );
+      if (projectCred) {
+        return { ...projectCred, type: "project" as const };
+      }
+      // Check keychain credentials
+      const keychainCred = credSnapshot.keychainCredentials.find(
+        (c: any) => c.id === searchId
+      );
+      if (keychainCred) {
+        return { ...keychainCred, type: "keychain" as const };
+      }
+      return null;
+    },
+    credentialExists: (searchId: string | null) => {
+      if (!searchId) return false;
+      return (
+        credSnapshot.projectCredentials.some(
+          (c: any) => c.id === searchId || c.project_credential_id === searchId
+        ) ||
+        credSnapshot.keychainCredentials.some((c: any) => c.id === searchId)
+      );
+    },
+    getCredentialId: (cred: any) => {
+      return "project_credential_id" in cred
+        ? cred.project_credential_id
+        : cred.id;
+    },
+  };
+}
+
 // Mock store context
 function createMockStoreContext() {
   const credentialSnapshot = {
@@ -154,6 +192,7 @@ function createMockStoreContext() {
         const result = selector(credentialSnapshot);
         return () => result;
       },
+      ...createCredentialQueryMethods(credentialSnapshot),
     },
     adaptorStore: {
       subscribe: vi.fn(() => vi.fn()),
@@ -501,6 +540,7 @@ describe("ConfigureAdaptorModal", () => {
             const result = selector(credSnapshot);
             return () => result;
           },
+          ...createCredentialQueryMethods(credSnapshot),
         },
         adaptorStore: {
           subscribe: vi.fn(() => vi.fn()),
@@ -574,6 +614,7 @@ describe("ConfigureAdaptorModal", () => {
             const result = selector(credSnapshot);
             return () => result;
           },
+          ...createCredentialQueryMethods(credSnapshot),
         },
         adaptorStore: {
           subscribe: vi.fn(() => vi.fn()),
@@ -697,6 +738,7 @@ describe("ConfigureAdaptorModal", () => {
             const result = selector(emptyCredentialSnapshot);
             return () => result;
           },
+          ...createCredentialQueryMethods(emptyCredentialSnapshot),
         },
         adaptorStore: {
           subscribe: vi.fn(() => vi.fn()),

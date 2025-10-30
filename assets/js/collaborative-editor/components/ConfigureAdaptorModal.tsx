@@ -7,29 +7,20 @@ import {
 import { useEffect, useMemo, useState, useRef } from "react";
 import { useHotkeysContext } from "react-hotkeys-hook";
 
-import { useCredentials } from "#/collaborative-editor/hooks/useCredentials";
+import {
+  useCredentials,
+  useCredentialQueries,
+} from "#/collaborative-editor/hooks/useCredentials";
 import type { Adaptor } from "#/collaborative-editor/types/adaptor";
-import type {
-  ProjectCredential,
-  KeychainCredential,
-} from "#/collaborative-editor/types/credential";
+import type { CredentialWithType } from "#/collaborative-editor/types/credential";
 import {
   extractAdaptorName,
   extractAdaptorDisplayName,
   extractPackageName,
 } from "#/collaborative-editor/utils/adaptorUtils";
-import { getEnvironmentBadgeColor } from "#/collaborative-editor/utils/credentialUtils";
 
 import { AdaptorIcon } from "./AdaptorIcon";
 import { VersionPicker } from "./VersionPicker";
-
-/**
- * Extended credential type with metadata fields from the backend
- */
-type CredentialWithMetadata = (ProjectCredential | KeychainCredential) & {
-  owner?: { name: string } | null;
-  type: "project" | "keychain";
-};
 
 interface ConfigureAdaptorModalProps {
   isOpen: boolean;
@@ -75,6 +66,7 @@ export function ConfigureAdaptorModal({
 
   // Get credentials from store
   const { projectCredentials, keychainCredentials } = useCredentials();
+  const { credentialExists, getCredentialId } = useCredentialQueries();
 
   // Keyboard scope management
   const { enableScope, disableScope } = useHotkeysContext();
@@ -110,16 +102,9 @@ export function ConfigureAdaptorModal({
 
       // Validate that currentCredentialId exists in available credentials
       // This prevents using credentials that were deleted or don't belong to this project
-      if (currentCredentialId) {
-        const credentialExists =
-          projectCredentials.some(
-            c => c.project_credential_id === currentCredentialId
-          ) || keychainCredentials.some(c => c.id === currentCredentialId);
-
-        setSelectedCredentialId(credentialExists ? currentCredentialId : null);
-      } else {
-        setSelectedCredentialId(null);
-      }
+      setSelectedCredentialId(
+        credentialExists(currentCredentialId) ? currentCredentialId : null
+      );
 
       isOpenRef.current = isOpen;
       prevAdaptorRef.current = currentAdaptor;
@@ -156,16 +141,9 @@ export function ConfigureAdaptorModal({
       }
 
       // Validate credential when adaptor changes
-      if (currentCredentialId) {
-        const credentialExists =
-          projectCredentials.some(
-            c => c.project_credential_id === currentCredentialId
-          ) || keychainCredentials.some(c => c.id === currentCredentialId);
-
-        setSelectedCredentialId(credentialExists ? currentCredentialId : null);
-      } else {
-        setSelectedCredentialId(null);
-      }
+      setSelectedCredentialId(
+        credentialExists(currentCredentialId) ? currentCredentialId : null
+      );
 
       prevAdaptorRef.current = currentAdaptor;
     } else {
@@ -200,7 +178,7 @@ export function ConfigureAdaptorModal({
     }
 
     // Schema-matched project credentials (exact match or OAuth smart matching)
-    const schemaMatched = projectCredentials
+    const schemaMatched: CredentialWithType[] = projectCredentials
       .filter(c => {
         // Exact schema match
         if (c.schema === adaptorName) return true;
@@ -224,38 +202,23 @@ export function ConfigureAdaptorModal({
 
         return false;
       })
-      .map(
-        c =>
-          ({
-            ...c,
-            type: "project" as const,
-          }) as CredentialWithMetadata
-      );
+      .map(c => ({ ...c, type: "project" as const }));
 
     // Universal project credentials (http and raw work with all adaptors)
     // Only show if not already in schemaMatched (avoid duplicates)
-    const universal = projectCredentials
+    const universal: CredentialWithType[] = projectCredentials
       .filter(c => {
         const isUniversal = c.schema === "http" || c.schema === "raw";
         const alreadyMatched = adaptorName === "http" || adaptorName === "raw";
         return isUniversal && !alreadyMatched;
       })
-      .map(
-        c =>
-          ({
-            ...c,
-            type: "project" as const,
-          }) as CredentialWithMetadata
-      );
+      .map(c => ({ ...c, type: "project" as const }));
 
     // All keychain credentials (can't reliably filter by schema)
-    const keychain = keychainCredentials.map(
-      c =>
-        ({
-          ...c,
-          type: "keychain" as const,
-        }) as CredentialWithMetadata
-    );
+    const keychain: CredentialWithType[] = keychainCredentials.map(c => ({
+      ...c,
+      type: "keychain" as const,
+    }));
 
     return { schemaMatched, universal, keychain };
   }, [selectedAdaptor, projectCredentials, keychainCredentials]);
@@ -370,13 +333,6 @@ export function ConfigureAdaptorModal({
       credentialId: selectedCredentialId,
     });
     onClose();
-  };
-
-  // Get credential ID for comparison (handle both project and keychain)
-  const getCredentialId = (cred: CredentialWithMetadata): string => {
-    return cred.type === "project"
-      ? (cred as ProjectCredential).project_credential_id
-      : (cred as KeychainCredential).id;
   };
 
   // Open LiveView credential modal with adaptor schema (notifies parent)
@@ -683,16 +639,17 @@ export function ConfigureAdaptorModal({
                                           {cred.name}
                                         </span>
                                       </div>
-                                      {cred.owner && (
-                                        <div className="flex items-center gap-1 text-sm text-gray-500">
-                                          <span
-                                            className="hero-user-solid h-4 w-4"
-                                            aria-hidden="true"
-                                            role="img"
-                                          />
-                                          {cred.owner.name}
-                                        </div>
-                                      )}
+                                      {cred.type === "project" &&
+                                        cred.owner && (
+                                          <div className="flex items-center gap-1 text-sm text-gray-500">
+                                            <span
+                                              className="hero-user-solid h-4 w-4"
+                                              aria-hidden="true"
+                                              role="img"
+                                            />
+                                            {cred.owner.name}
+                                          </div>
+                                        )}
                                     </div>
                                     {isSelected && (
                                       <button

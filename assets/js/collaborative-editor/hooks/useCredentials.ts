@@ -55,7 +55,7 @@ export const useCredentialsError = (): string | null => {
 };
 
 /**
- * Hook to get adaptor commands for triggering actions
+ * Hook to get credential commands for triggering actions
  */
 export const useCredentialsCommands = () => {
   const credentialStore = useCredentialStore();
@@ -64,5 +64,20 @@ export const useCredentialsCommands = () => {
   return {
     requestCredentials: credentialStore.requestCredentials,
     clearError: credentialStore.clearError,
+  };
+};
+
+/**
+ * Hook to get credential query utilities
+ * These are stable function references for looking up credentials
+ */
+export const useCredentialQueries = () => {
+  const credentialStore = useCredentialStore();
+
+  // These are already stable function references from the store
+  return {
+    findCredentialById: credentialStore.findCredentialById,
+    credentialExists: credentialStore.credentialExists,
+    getCredentialId: credentialStore.getCredentialId,
   };
 };
