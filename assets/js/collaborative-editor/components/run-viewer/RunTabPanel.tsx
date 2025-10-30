@@ -3,16 +3,26 @@ import {
   useRunActions,
   useSelectedStepId,
 } from "../../hooks/useRun";
+import { useProject } from "../../hooks/useSessionContext";
+
 import { ElapsedIndicator } from "./ElapsedIndicator";
 import { StatePill } from "./StatePill";
 import { StepList } from "./StepList";
+
+/**
+ * Displays a short version of a UUID (first 8 characters)
+ */
+function displayShortUuid(uuid: string): string {
+  return uuid.slice(0, 8);
+}
 
 export function RunTabPanel() {
   const run = useCurrentRun();
   const selectedStepId = useSelectedStepId();
   const { selectStep } = useRunActions();
+  const project = useProject();
 
-  if (!run) {
+  if (!run || !project) {
     return <div className="p-4 text-gray-500">No run data</div>;
   }
 
@@ -21,16 +31,30 @@ export function RunTabPanel() {
       {/* Run metadata */}
       <dl className="space-y-2 mb-4">
         <div className="flex justify-between text-sm">
-          <dt className="font-medium text-gray-700">Work Order</dt>
-          <dd className="text-gray-900 font-mono text-xs">
-            {run.work_order_id.slice(0, 8)}...
+          <dt className="font-medium text-gray-700 whitespace-nowrap">
+            Work Order
+          </dt>
+          <dd>
+            <a
+              href={`/projects/${project.id}/history?filters[workorder_id]=${run.work_order_id}`}
+              className="link-uuid"
+              title={`View work order ${run.work_order_id}`}
+            >
+              {displayShortUuid(run.work_order_id)}
+            </a>
           </dd>
         </div>
 
         <div className="flex justify-between text-sm">
           <dt className="font-medium text-gray-700">Run</dt>
-          <dd className="text-gray-900 font-mono text-xs">
-            {run.id.slice(0, 8)}...
+          <dd>
+            <a
+              href={`/projects/${project.id}/runs/${run.id}${selectedStepId ? `?step=${selectedStepId}` : ""}`}
+              className="link-uuid"
+              title={`View run ${run.id}`}
+            >
+              {displayShortUuid(run.id)}
+            </a>
           </dd>
         </div>
 

@@ -6,7 +6,9 @@ import {
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
 
+import { cn } from "#/utils/cn";
 import _logger from "#/utils/logger";
+
 import { FilterTypes } from "../../manual-run-panel/types";
 import CustomView from "../../manual-run-panel/views/CustomView";
 import EmptyView from "../../manual-run-panel/views/EmptyView";
@@ -403,10 +405,18 @@ export function ManualRunPanel({
       onNameChange={handleDataclipNameChange}
       canEdit={canEditDataclip}
       isNextCronRun={nextCronRunDataclipId === selectedDataclip.id}
+      renderMode={renderMode}
     />
   ) : (
-    <div className="flex flex-col h-full overflow-hidden">
+    <div
+      className={cn(
+        "flex flex-col h-full overflow-hidden",
+        renderMode === "embedded" ? "mt-2" : "mt-4"
+      )}
+    >
       <Tabs
+        className="mx-3"
+        variant="pills"
         value={selectedTab}
         onChange={value => setSelectedTab(value)}
         options={[
@@ -432,6 +442,7 @@ export function ManualRunPanel({
               handleCustomBodyChange(data.manual.body);
             }
           }}
+          renderMode={renderMode}
         />
       )}
       {selectedTab === "existing" && (
@@ -452,6 +463,7 @@ export function ManualRunPanel({
           fixedHeight={true}
           currentRunDataclip={currentRunDataclip}
           nextCronRunDataclipId={nextCronRunDataclipId}
+          renderMode={renderMode}
         />
       )}
     </div>
