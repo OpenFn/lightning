@@ -17,6 +17,8 @@ and this project adheres to
 
 ### Added
 
+- Press `Control-E` (or `⌘+E`) to open the IDE when a job/step is selected
+  [#3890](https://github.com/OpenFn/lightning/issues/3890)
 - Drag-to-connect nodes on workflow canvas - users can now drag from the plus
   button on a node and drop it onto another node to create connections
   [#3825](https://github.com/OpenFn/lightning/issues/3825)
