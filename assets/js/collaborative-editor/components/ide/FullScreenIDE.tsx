@@ -606,7 +606,7 @@ export function FullScreenIDE({
 
               {/* Panel content */}
               {!isLeftCollapsed && workflow && projectId && workflowId && (
-                <div className="flex-1 overflow-hidden">
+                <div className="flex-1 overflow-hidden bg-white">
                   <ManualRunPanel
                     workflow={workflow}
                     projectId={projectId}
@@ -752,6 +752,7 @@ export function FullScreenIDE({
                         <Tabs
                           value={activeRightTab}
                           onChange={setActiveRightTab}
+                          variant="underline"
                           options={[
                             { value: "run", label: "Run" },
                             { value: "log", label: "Log" },
@@ -807,7 +808,7 @@ export function FullScreenIDE({
 
               {/* Panel content */}
               {!isRightCollapsed && (
-                <div className="flex-1 overflow-hidden">
+                <div className="flex-1 overflow-hidden pt-2 bg-white">
                   <RunViewerErrorBoundary>
                     <RunViewerPanel
                       followRunId={followRunId}
