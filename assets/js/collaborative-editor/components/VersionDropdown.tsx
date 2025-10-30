@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 
+import { cn } from "../../utils/cn";
 import { channelRequest } from "../hooks/useChannel";
 import { useSession } from "../hooks/useSession";
 
@@ -144,13 +145,19 @@ export function VersionDropdown({
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className={`inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-xs font-medium transition-colors ${buttonStyles}`}
+        className={cn(
+          "inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-xs font-medium transition-colors",
+          buttonStyles
+        )}
         aria-expanded={isOpen}
         aria-haspopup="true"
       >
         <span>{currentVersionDisplay}</span>
         <span
-          className={`hero-chevron-down h-3 w-3 transition-transform ${isOpen ? "rotate-180" : ""}`}
+          className={cn(
+            "hero-chevron-down h-3 w-3 transition-transform",
+            isOpen && "rotate-180"
+          )}
         />
       </button>
 
@@ -191,11 +198,12 @@ export function VersionDropdown({
                     key={version.lock_version}
                     type="button"
                     onClick={() => handleVersionClick(version)}
-                    className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-100 flex items-center justify-between ${
+                    className={cn(
+                      "w-full text-left px-4 py-2 text-sm hover:bg-gray-100 flex items-center justify-between",
                       isSelected
                         ? "bg-primary-50 text-primary-900"
                         : "text-gray-700"
-                    }`}
+                    )}
                     role="menuitem"
                   >
                     <div className="flex flex-col">

@@ -1,18 +1,19 @@
-import { Handle, type NodeProps } from '@xyflow/react';
-import React, { memo } from 'react';
+import { Handle, type NodeProps } from "@xyflow/react";
+import React, { memo } from "react";
 
-import { duration } from '../../utils/duration';
-import type { RunStep } from '../../workflow-store/store';
-import formatDate from '../../utils/formatDate';
-import ErrorMessage from '../components/ErrorMessage';
-import Shape from '../components/Shape';
-import { renderIcon } from '../components/RunIcons';
-import { nodeIconStyles, nodeLabelStyles } from '../styles';
+import { cn } from "../../utils/cn";
+import { duration } from "../../utils/duration";
+import type { RunStep } from "../../workflow-store/store";
+import formatDate from "../../utils/formatDate";
+import ErrorMessage from "../components/ErrorMessage";
+import Shape from "../components/Shape";
+import { renderIcon } from "../components/RunIcons";
+import { nodeIconStyles, nodeLabelStyles } from "../styles";
 
 type NodeData = any;
 
 type BaseNodeProps = NodeProps<NodeData> & {
-  shape?: 'circle' | 'rect';
+  shape?: "circle" | "rect";
   primaryIcon?: any;
   secondaryIcon?: any;
   label?: string;
@@ -31,10 +32,10 @@ type LabelProps = React.PropsWithChildren<{
 
 function errorsMessage(errors: ErrorObject): string {
   const messages = Object.entries(errors).map(([key, errorArray]) => {
-    return `${errorArray.join(', ')}`;
+    return `${errorArray.join(", ")}`;
   });
 
-  return messages.join(', ');
+  return messages.join(", ");
 }
 
 const hasErrors = (errors: ErrorObject | null | undefined): boolean => {
@@ -44,12 +45,13 @@ const hasErrors = (errors: ErrorObject | null | undefined): boolean => {
 };
 
 const Label: React.FC<LabelProps> = ({ children, hasErrors = false }) => {
-  const textColorClass = hasErrors ? 'text-red-500' : '';
-
   if (children && (children as any).length) {
     return (
       <p
-        className={`line-clamp-2 align-left text-m max-w-[220px] text-ellipsis overflow-hidden ${textColorClass}`}
+        className={cn(
+          "line-clamp-2 align-left text-m max-w-[220px] text-ellipsis overflow-hidden",
+          hasErrors && "text-red-500"
+        )}
       >
         {children}
       </p>
@@ -89,7 +91,7 @@ const Node = ({
   errors,
   type,
 }: BaseNodeProps) => {
-  const isTriggerNode = type === 'trigger';
+  const isTriggerNode = type === "trigger";
   const runData = data?.runData as RunStep | undefined;
   const startInfo = data?.startInfo as
     | { started_at: string; startBy: string }
@@ -109,16 +111,16 @@ const Node = ({
 
   return (
     <div
-      className={`group ${didRun ? 'opacity-100' : 'opacity-30'}`}
+      className={cn("group", didRun ? "opacity-100" : "opacity-30")}
       data-a-node
       data-id={id}
-      data-testid={type === 'trigger' ? `trigger-node-${id}` : `job-node-${id}`}
+      data-testid={type === "trigger" ? `trigger-node-${id}` : `job-node-${id}`}
       data-valid-drop-target={
         data.isValidDropTarget !== undefined
           ? String(data.isValidDropTarget)
           : undefined
       }
-      data-active-drop-target={data.isActiveDropTarget ? 'true' : undefined}
+      data-active-drop-target={data.isActiveDropTarget ? "true" : undefined}
       data-drop-target-error={data.dropTargetError || undefined}
     >
       <div className="flex flex-row cursor-pointer">
@@ -135,7 +137,7 @@ const Node = ({
                 isConnectable={false}
                 position={targetPosition}
                 style={{
-                  visibility: 'hidden',
+                  visibility: "hidden",
                   height: 0,
                   top: 0,
                   left: strokeWidth + anchorx,
@@ -149,29 +151,29 @@ const Node = ({
                 // handles have a built-in way of updating styles when connecting - is this better?
                 // See https://reactflow.dev/examples/interaction/validation
                 style={{
-                  visibility: data.isValidDropTarget ? 'visible' : 'hidden',
+                  visibility: data.isValidDropTarget ? "visible" : "hidden",
 
                   // abuse the handle style to make the whole node the drop target
-                  left: '52px',
-                  top: '52px',
-                  width: '128px',
-                  height: '128px',
+                  left: "52px",
+                  top: "52px",
+                  width: "128px",
+                  height: "128px",
                   zIndex: 1000,
                   backgroundColor: data.isActiveDropTarget
-                    ? 'rgba(79, 70, 229, 0.2)'
-                    : 'transparent',
-                  borderColor: 'rgb(79, 70, 229)',
-                  borderWidth: '4px',
-                  borderStyle: data.isActiveDropTarget ? 'solid' : 'dashed',
-                  borderRadius: '20%',
+                    ? "rgba(79, 70, 229, 0.2)"
+                    : "transparent",
+                  borderColor: "rgb(79, 70, 229)",
+                  borderWidth: "4px",
+                  borderStyle: data.isActiveDropTarget ? "solid" : "dashed",
+                  borderRadius: "20%",
                 }}
               />
             </>
           )}
           {runData && !isTriggerNode ? (
             <div className="absolute -left-2 -top-2">
-              {renderIcon(runData.exit_reason ?? 'pending', {
-                tooltip: runData?.error_type ?? 'Step completed successfully',
+              {renderIcon(runData.exit_reason ?? "pending", {
+                tooltip: runData?.error_type ?? "Step completed successfully",
               })}
             </div>
           ) : null}
@@ -192,7 +194,7 @@ const Node = ({
             <div
               className={`absolute -top-2 flex gap-2 items-center`}
               style={{
-                left: 'calc(100% - 24px)',
+                left: "calc(100% - 24px)",
               }}
               data-tooltip={`Started by ${startInfo.startBy}`}
               data-tooltip-placement="top"
@@ -206,7 +208,7 @@ const Node = ({
             <div
               className={`absolute top-2 ml-2 flex gap-2 items-center text-nowrap font-mono`}
               style={{
-                left: 'calc(100% + 6px)',
+                left: "calc(100% + 6px)",
               }}
             >
               {isTriggerNode
@@ -218,7 +220,7 @@ const Node = ({
             <div
               className={`absolute top-2 ml-2 flex gap-2 items-center text-nowrap font-mono`}
               style={{
-                left: 'calc(100% + 6px)',
+                left: "calc(100% + 6px)",
               }}
             >
               {formatDate(new Date(startInfo.started_at))}
@@ -226,10 +228,10 @@ const Node = ({
           ) : null}
           <svg
             style={{
-              maxWidth: '110px',
-              maxHeight: '110px',
+              maxWidth: "110px",
+              maxHeight: "110px",
               opacity: nodeOpacity,
-              overflow: 'visible',
+              overflow: "visible",
             }}
           >
             <Shape
@@ -243,7 +245,7 @@ const Node = ({
           {primaryIcon && (
             <div
               style={{
-                position: 'absolute',
+                position: "absolute",
                 // Position is half of the difference of the actual width, offset for stroke
                 left: 0.175 * width + strokeWidth,
                 top: 0.175 * height + strokeWidth,
@@ -253,13 +255,13 @@ const Node = ({
                 opacity: nodeOpacity,
               }}
             >
-              {typeof primaryIcon === 'string' ? (
+              {typeof primaryIcon === "string" ? (
                 <div
                   className="font-bold"
                   style={{
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap',
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    whiteSpace: "nowrap",
                   }}
                 >
                   {primaryIcon}
@@ -272,21 +274,21 @@ const Node = ({
           {secondaryIcon && (
             <div
               style={{
-                position: 'absolute',
-                left: '2%', // You can adjust these values for precise positioning
-                top: '2%',
+                position: "absolute",
+                left: "2%", // You can adjust these values for precise positioning
+                top: "2%",
                 height: `${0.3 * height}px`, // Adjusting size for secondary icon
                 width: `${0.3 * width}px`,
                 ...nodeLabelStyles(selected),
               }}
             >
-              {typeof secondaryIcon === 'string' ? (
+              {typeof secondaryIcon === "string" ? (
                 <div
                   className="font-bold"
                   style={{
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap',
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    whiteSpace: "nowrap",
                   }}
                 >
                   {secondaryIcon}
@@ -304,7 +306,7 @@ const Node = ({
             isConnectable={isConnectable}
             position={sourcePosition}
             style={{
-              visibility: 'hidden',
+              visibility: "hidden",
               height: 0,
               top: height,
               left: strokeWidth + anchorx,
@@ -315,7 +317,7 @@ const Node = ({
           <Label hasErrors={hasErrors(errors)}>{label}</Label>
           <SubLabel>{sublabel}</SubLabel>
           {data.isActiveDropTarget &&
-            typeof data.dropTargetError === 'string' && (
+            typeof data.dropTargetError === "string" && (
               <ErrorMessage>{data.dropTargetError}</ErrorMessage>
             )}
           {hasErrors(errors) && (
@@ -327,16 +329,14 @@ const Node = ({
         <div
           style={{
             width: `${width}px`,
-            marginLeft: '2px',
-            marginTop: '-18px',
-            justifyContent: 'center',
+            marginLeft: "2px",
+            marginTop: "-18px",
+            justifyContent: "center",
           }}
-          className={`flex flex-row items-center
-                    opacity-0  ${
-                      (!data.isActiveDropTarget && 'group-hover:opacity-100') ??
-                      ''
-                    }
-                    transition duration-150 ease-in-out`}
+          className={cn(
+            "flex flex-row items-center opacity-0 transition duration-150 ease-in-out",
+            !data.isActiveDropTarget && "group-hover:opacity-100"
+          )}
         >
           {toolbar()}
         </div>
@@ -345,6 +345,6 @@ const Node = ({
   );
 };
 
-Node.displayName = 'Node';
+Node.displayName = "Node";
 
 export default memo(Node);

@@ -7,6 +7,7 @@ import {
   useWorkflowActions,
   useWorkflowState,
 } from "#/collaborative-editor/hooks/useWorkflow";
+import { notifications } from "#/collaborative-editor/lib/notifications";
 import { useWatchFields } from "#/collaborative-editor/stores/common";
 import { WorkflowSchema } from "#/collaborative-editor/types/workflow";
 
@@ -14,36 +15,43 @@ import { AlertDialog } from "../AlertDialog";
 
 export function WorkflowSettings() {
   // Get workflow from store - LoadingBoundary guarantees it's non-null
-  const workflow = useWorkflowState(state => state.workflow!);
+  const workflow = useWorkflowState(state => state.workflow);
   const [isResetDialogOpen, setIsResetDialogOpen] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
 
   const { updateWorkflow, resetWorkflow } = useWorkflowActions();
   const permissions = usePermissions();
 
-  const defaultValues = useMemo(
-    () => ({
+  // LoadingBoundary guarantees workflow is non-null at this point
+  if (!workflow) {
+    throw new Error("Workflow must be loaded");
+  }
+
+  const defaultValues = useMemo(() => {
+    // Y.Doc types can be loosely typed, so we assert to expected types
+    const concurrency = (workflow.concurrency ?? null) as number | null;
+    const enableJobLogs = (workflow.enable_job_logs ?? false) as boolean;
+
+    return {
       id: workflow.id,
       name: workflow.name,
       lock_version: workflow.lock_version,
       deleted_at: workflow.deleted_at,
-      // Virtual fields for future use (not yet in Y.Doc)
-      concurrency: null as number | null,
-      enable_job_logs: true,
-    }),
-    [workflow]
-  );
+      concurrency,
+      enable_job_logs: enableJobLogs,
+    };
+  }, [workflow]);
 
   const form = useAppForm({
     defaultValues,
     listeners: {
       onChange: ({ formApi }) => {
         // Form → Y.Doc: Update workflow immediately on change
-        const { name } = formApi.state.values;
+        const { name, concurrency, enable_job_logs } = formApi.state.values;
         updateWorkflow({
           name,
-          // Note: concurrency and enable_job_logs will be no-ops
-          // until Y.Doc type is updated
+          concurrency,
+          enable_job_logs,
         });
       },
     },
@@ -58,11 +66,14 @@ export function WorkflowSettings() {
     changedFields => {
       Object.entries(changedFields).forEach(([key, value]) => {
         if (key in form.state.values) {
-          form.setFieldValue(key as keyof typeof form.state.values, value);
+          form.setFieldValue(
+            key as keyof typeof form.state.values,
+            value as (typeof form.state.values)[keyof typeof form.state.values]
+          );
         }
       });
     },
-    ["name"]
+    ["name", "concurrency", "enable_job_logs"]
   );
 
   // Reset form when workflow changes
@@ -76,8 +87,14 @@ export function WorkflowSettings() {
       await resetWorkflow();
       // Success - dialog will close, user sees changes via Y.Doc sync
     } catch (error) {
-      // Error - just log for now (no notification system exists)
-      console.error("Reset failed:", error);
+      // Show error notification to user
+      notifications.alert({
+        title: "Failed to reset workflow",
+        description:
+          error instanceof Error
+            ? error.message
+            : "An unexpected error occurred. Please try again.",
+      });
     } finally {
       setIsResetting(false);
       setIsResetDialogOpen(false);
@@ -169,7 +186,9 @@ export function WorkflowSettings() {
       <AlertDialog
         isOpen={isResetDialogOpen}
         onClose={() => !isResetting && setIsResetDialogOpen(false)}
-        onConfirm={handleReset}
+        onConfirm={() => {
+          void handleReset();
+        }}
         title="Reset Workflow?"
         description="This will undo all uncommitted changes and restore
           the workflow to its latest snapshot. This action cannot

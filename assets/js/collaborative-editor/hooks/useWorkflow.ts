@@ -413,6 +413,14 @@ export const useWorkflowActions = () => {
                   ? error.message
                   : "You no longer have permission to edit this workflow. Your role may have changed.",
             });
+          } else if (errorType === "validation_error") {
+            notifications.alert({
+              title: "Unable to save workflow",
+              description:
+                error instanceof Error
+                  ? error.message
+                  : "Please fix the errors and try again",
+            });
           } else {
             notifications.alert({
               title: "Failed to save workflow",
@@ -570,4 +578,62 @@ export const useCanRun = (): { canRun: boolean; tooltipMessage: string } => {
   }
 
   return { canRun, tooltipMessage };
+};
+
+/**
+ * Hook to determine if workflow is read-only and provide tooltip message
+ *
+ * Returns object with:
+ * - isReadOnly: boolean - whether workflow should be read-only
+ * - tooltipMessage: string - message explaining read-only state
+ *
+ * Checks (in priority order):
+ * 1. Workflow deletion state (deleted_at)
+ * 2. User permissions (can_edit_workflow)
+ * 3. Snapshot version (viewing old snapshot)
+ */
+export const useWorkflowReadOnly = (): {
+  isReadOnly: boolean;
+  tooltipMessage: string;
+} => {
+  // Get session state and permissions (same pattern as useCanSave)
+  const permissions = usePermissions();
+  const latestSnapshotLockVersion = useLatestSnapshotLockVersion();
+  const workflow = useWorkflowState(state => state.workflow);
+
+  // Don't show read-only state until permissions are loaded
+  // This prevents flickering during initial load
+  if (permissions === null) {
+    return { isReadOnly: false, tooltipMessage: "" };
+  }
+
+  // Compute read-only conditions
+  const hasPermission = permissions.can_edit_workflow;
+  const isDeleted = workflow !== null && workflow.deleted_at !== null;
+  const isOldSnapshot =
+    workflow !== null &&
+    latestSnapshotLockVersion !== null &&
+    workflow.lock_version !== latestSnapshotLockVersion;
+
+  // Priority order: deleted > permissions > snapshot
+  if (isDeleted) {
+    return {
+      isReadOnly: true,
+      tooltipMessage: "This workflow has been deleted and cannot be edited",
+    };
+  }
+  if (!hasPermission) {
+    return {
+      isReadOnly: true,
+      tooltipMessage: "You do not have permission to edit this workflow",
+    };
+  }
+  if (isOldSnapshot) {
+    return {
+      isReadOnly: true,
+      tooltipMessage: "You cannot edit or run an old snapshot of a workflow",
+    };
+  }
+
+  return { isReadOnly: false, tooltipMessage: "" };
 };

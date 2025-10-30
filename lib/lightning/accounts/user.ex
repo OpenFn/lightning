@@ -18,6 +18,9 @@ defmodule Lightning.Accounts.User do
     :superuser
   ])
 
+  @derive {Jason.Encoder,
+           only: [:id, :first_name, :last_name, :email, :role, :disabled]}
+
   schema "users" do
     field :first_name, :string
     field :last_name, :string

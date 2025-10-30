@@ -58,6 +58,10 @@ import {
   type HistoryStoreInstance,
 } from "../stores/createHistoryStore";
 import {
+  createRunStore,
+  type RunStoreInstance,
+} from "../stores/createRunStore";
+import {
   createSessionContextStore,
   type SessionContextStoreInstance,
 } from "../stores/createSessionContextStore";
@@ -82,6 +86,7 @@ export interface StoreContextValue {
   historyStore: HistoryStoreInstance;
   uiStore: UIStoreInstance;
   editorPreferencesStore: EditorPreferencesStoreInstance;
+  runStore: RunStoreInstance;
 }
 
 export const StoreContext = createContext<StoreContextValue | null>(null);
@@ -109,6 +114,7 @@ export const StoreProvider = ({ children }: StoreProviderProps) => {
     historyStore: createHistoryStore(),
     uiStore: createUIStore(),
     editorPreferencesStore: createEditorPreferencesStore(),
+    runStore: createRunStore(),
   }));
 
   // Subscribe to sessionContextStore user changes

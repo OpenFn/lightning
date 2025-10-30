@@ -237,7 +237,6 @@ const ExistingView: React.FC<ExistingViewProps> = ({
                 type="button"
                 onClick={() => {
                   setNamedOnly(!namedOnly);
-                  onSubmit();
                 }}
                 className={`border rounded-md px-1 py-1 h-full flex justify-center items-center hover:bg-slate-100 hover:border-slate-300 ${
                   namedOnly ? "bg-primary-100 border-primary-300" : ""

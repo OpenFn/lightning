@@ -31,6 +31,43 @@ vi.mock("@monaco-editor/react", () => ({
   ),
 }));
 
+// Mock the monaco module to avoid monaco-editor package resolution issues
+vi.mock("../../../../js/monaco", () => ({
+  MonacoEditor: ({ value }: { value?: string }) => (
+    <div data-testid="monaco-editor">{value}</div>
+  ),
+  setTheme: vi.fn(),
+}));
+
+// Mock tab panel components to avoid monaco-editor dependency in log-viewer
+vi.mock(
+  "../../../../js/collaborative-editor/components/run-viewer/RunTabPanel",
+  () => ({
+    RunTabPanel: () => <div>Run Tab Content</div>,
+  })
+);
+
+vi.mock(
+  "../../../../js/collaborative-editor/components/run-viewer/LogTabPanel",
+  () => ({
+    LogTabPanel: () => <div>Log Tab Content</div>,
+  })
+);
+
+vi.mock(
+  "../../../../js/collaborative-editor/components/run-viewer/InputTabPanel",
+  () => ({
+    InputTabPanel: () => <div>Input Tab Content</div>,
+  })
+);
+
+vi.mock(
+  "../../../../js/collaborative-editor/components/run-viewer/OutputTabPanel",
+  () => ({
+    OutputTabPanel: () => <div>Output Tab Content</div>,
+  })
+);
+
 // Mock CollaborativeMonaco
 vi.mock(
   "../../../../js/collaborative-editor/components/CollaborativeMonaco",
@@ -166,6 +203,19 @@ vi.mock("../../../../js/collaborative-editor/hooks/useWorkflow", () => ({
     };
     return typeof selector === "function" ? selector(state) : state;
   },
+}));
+
+// Mock useRun hooks
+vi.mock("../../../../js/collaborative-editor/hooks/useRun", () => ({
+  useRunStoreInstance: () => ({
+    getState: vi.fn(() => ({
+      run: null,
+      loading: false,
+      error: null,
+    })),
+    subscribe: vi.fn(),
+    setState: vi.fn(),
+  }),
 }));
 
 // Mock react-resizable-panels

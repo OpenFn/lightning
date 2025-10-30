@@ -18,6 +18,7 @@ import type React from "react";
 import { act } from "react";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import * as dataclipApi from "../../../js/collaborative-editor/api/dataclips";
+import { notifications } from "../../../js/collaborative-editor/lib/notifications";
 import { ManualRunPanel } from "../../../js/collaborative-editor/components/ManualRunPanel";
 import { StoreContext } from "../../../js/collaborative-editor/contexts/StoreProvider";
 import type { StoreContextValue } from "../../../js/collaborative-editor/contexts/StoreProvider";
@@ -34,6 +35,17 @@ import {
 
 // Mock the API module
 vi.mock("../../../js/collaborative-editor/api/dataclips");
+
+// Mock the notifications module
+vi.mock("../../../js/collaborative-editor/lib/notifications", () => ({
+  notifications: {
+    alert: vi.fn(),
+    info: vi.fn(),
+    success: vi.fn(),
+    warning: vi.fn(),
+    dismiss: vi.fn(),
+  },
+}));
 
 // Create a configurable mock for useCanRun
 let mockCanRunValue = { canRun: true, tooltipMessage: "Run workflow" };
@@ -349,10 +361,12 @@ describe("ManualRunPanel", () => {
       onClose: () => {},
     });
 
+    // When triggerId is provided, the component finds the target job from the trigger's edge
+    // and uses that job to fetch dataclips (since dataclips are associated with jobs, not triggers)
     await waitFor(() => {
       expect(dataclipApi.searchDataclips).toHaveBeenCalledWith(
         "project-1",
-        "trigger-1",
+        "job-1", // Resolved from trigger-1's edge
         "",
         {}
       );
@@ -400,10 +414,64 @@ describe("ManualRunPanel", () => {
       onClose: () => {},
     });
 
-    // Should auto-switch to Existing tab and show selected dataclip
+    // Should auto-switch to Existing tab and show selected dataclip with warning banner
     await waitFor(() => {
       expect(screen.getByText("Test Dataclip")).toBeInTheDocument();
-      expect(screen.getByText("Next Cron Run")).toBeInTheDocument();
+      expect(
+        screen.getByText("Default Next Input for Cron")
+      ).toBeInTheDocument();
+    });
+  });
+
+  test("shows next cron run warning banner when dataclip is next cron run", async () => {
+    vi.mocked(dataclipApi.searchDataclips).mockResolvedValue({
+      data: [mockDataclip],
+      next_cron_run_dataclip_id: "dataclip-1",
+      can_edit_dataclip: true,
+    });
+
+    renderManualRunPanel({
+      workflow: mockWorkflow,
+      projectId: "project-1",
+      workflowId: "workflow-1",
+      jobId: "job-1",
+      onClose: () => {},
+    });
+
+    // Should show the next cron run warning banner
+    await waitFor(() => {
+      expect(
+        screen.getByText("Default Next Input for Cron")
+      ).toBeInTheDocument();
+      expect(
+        screen.getByText(/This workflow has a "cron" trigger/)
+      ).toBeInTheDocument();
+    });
+  });
+
+  test("shows next cron run warning banner when opened from trigger", async () => {
+    vi.mocked(dataclipApi.searchDataclips).mockResolvedValue({
+      data: [mockDataclip],
+      next_cron_run_dataclip_id: "dataclip-1",
+      can_edit_dataclip: true,
+    });
+
+    renderManualRunPanel({
+      workflow: mockWorkflow,
+      projectId: "project-1",
+      workflowId: "workflow-1",
+      triggerId: "trigger-1",
+      onClose: () => {},
+    });
+
+    // Should show the next cron run warning banner
+    await waitFor(() => {
+      expect(
+        screen.getByText("Default Next Input for Cron")
+      ).toBeInTheDocument();
+      expect(
+        screen.getByText(/This workflow has a "cron" trigger/)
+      ).toBeInTheDocument();
     });
   });
 
@@ -755,11 +823,11 @@ describe("ManualRunPanel", () => {
       expect(filterButtons.length).toBeGreaterThan(0);
 
       // Click the named-only filter button
-      // This button calls both setNamedOnly and onSubmit immediately
+      // This changes the namedOnly state, which triggers the debounced search
       await user.click(filterButtons[0]);
 
-      // The button's onClick triggers onSubmit immediately, so search should happen right away
-      // The debouncing is for filter changes from the filter dropdowns, not the named-only button
+      // Wait for the debounced search to complete (300ms debounce + execution time)
+      // The debounce timer from switching tabs is cancelled when the button is clicked
       await waitFor(
         () => {
           expect(dataclipApi.searchDataclips).toHaveBeenCalledTimes(2);
@@ -953,8 +1021,8 @@ describe("ManualRunPanel", () => {
       const user = userEvent.setup();
       const saveWorkflow = vi.fn().mockRejectedValue(new Error("Save failed"));
 
-      // Mock window.alert to prevent actual alerts during test
-      const alertMock = vi.spyOn(window, "alert").mockImplementation(() => {});
+      // Clear notifications mock before test
+      vi.mocked(notifications.alert).mockClear();
 
       renderManualRunPanel({
         workflow: mockWorkflow,
@@ -979,20 +1047,21 @@ describe("ManualRunPanel", () => {
       // Run should NOT be called because save failed
       expect(dataclipApi.submitManualRun).not.toHaveBeenCalled();
 
-      // Error should be shown to user
-      expect(alertMock).toHaveBeenCalledWith(
-        expect.stringContaining("Save failed")
-      );
-
-      alertMock.mockRestore();
+      // Error should be shown to user via notifications
+      await waitFor(() => {
+        expect(notifications.alert).toHaveBeenCalledWith({
+          title: "Failed to submit run",
+          description: "Save failed",
+        });
+      });
     });
 
     test("does not run if save fails with generic error", async () => {
       const user = userEvent.setup();
       const saveWorkflow = vi.fn().mockRejectedValue("Network error"); // Non-Error type
 
-      // Mock window.alert to prevent actual alerts during test
-      const alertMock = vi.spyOn(window, "alert").mockImplementation(() => {});
+      // Clear notifications mock before test
+      vi.mocked(notifications.alert).mockClear();
 
       renderManualRunPanel({
         workflow: mockWorkflow,
@@ -1017,10 +1086,13 @@ describe("ManualRunPanel", () => {
       // Run should NOT be called because save failed
       expect(dataclipApi.submitManualRun).not.toHaveBeenCalled();
 
-      // Generic error message should be shown to user
-      expect(alertMock).toHaveBeenCalledWith("Failed to submit run");
-
-      alertMock.mockRestore();
+      // Generic error message should be shown to user via notifications
+      await waitFor(() => {
+        expect(notifications.alert).toHaveBeenCalledWith({
+          title: "Failed to submit run",
+          description: "An unknown error occurred",
+        });
+      });
     });
 
     test("calls saveWorkflow with correct signature", async () => {

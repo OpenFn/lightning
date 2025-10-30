@@ -3,9 +3,10 @@ import {
   PencilSquareIcon,
   QueueListIcon,
 } from "@heroicons/react/24/outline";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
 
+import _logger from "#/utils/logger";
 import { FilterTypes } from "../../manual-run-panel/types";
 import CustomView from "../../manual-run-panel/views/CustomView";
 import EmptyView from "../../manual-run-panel/views/EmptyView";
@@ -21,6 +22,8 @@ import { InspectorFooter } from "./inspector/InspectorFooter";
 import { InspectorLayout } from "./inspector/InspectorLayout";
 import { SelectedDataclipView } from "./manual-run/SelectedDataclipView";
 import { Tabs } from "./Tabs";
+
+const logger = _logger.ns("ManualRunPanel").seal();
 
 interface ManualRunPanelProps {
   workflow: Workflow;
@@ -39,6 +42,7 @@ interface ManualRunPanelProps {
     saved_at?: string;
     lock_version?: number;
   } | null>;
+  onRunSubmitted?: (runId: string) => void;
 }
 
 type TabValue = "empty" | "custom" | "existing";
@@ -53,6 +57,7 @@ export function ManualRunPanel({
   renderMode = "standalone",
   onRunStateChange,
   saveWorkflow,
+  onRunSubmitted,
 }: ManualRunPanelProps) {
   const [selectedTab, setSelectedTab] = useState<TabValue>("empty");
   const [selectedDataclip, setSelectedDataclip] = useState<Dataclip | null>(
@@ -107,6 +112,22 @@ export function ManualRunPanel({
       ? `Run from Trigger (${contextTrigger.type})`
       : "Run Workflow";
 
+  // For triggers, we need to find the first connected job for dataclip fetching
+  // since dataclips are associated with jobs, not triggers
+  // This mirrors the backend logic in WorkflowController.get_selected_job
+  const dataclipJobId = useMemo(() => {
+    if (runContext.type === "job") {
+      return runContext.id;
+    }
+
+    // Find the first edge from this trigger to a job
+    const triggerEdge = workflow.edges.find(
+      edge => edge.source_trigger_id === runContext.id
+    );
+
+    return triggerEdge?.target_job_id || workflow.jobs[0]?.id;
+  }, [runContext, workflow.edges, workflow.jobs]);
+
   // Watch for jobId/triggerId changes and update panel
   useEffect(() => {
     // Reset state when context changes
@@ -119,14 +140,13 @@ export function ManualRunPanel({
 
   // Fetch initial dataclips
   useEffect(() => {
-    const contextId = runContext.id;
-    if (!contextId) return;
+    if (!dataclipJobId) return;
 
     const fetchDataclips = async () => {
       try {
         const response = await dataclipApi.searchDataclips(
           projectId,
-          contextId,
+          dataclipJobId,
           "",
           {}
         );
@@ -145,12 +165,12 @@ export function ManualRunPanel({
           }
         }
       } catch (error) {
-        console.error("Failed to fetch dataclips:", error);
+        logger.error("Failed to fetch dataclips:", error);
       }
     };
 
-    fetchDataclips();
-  }, [projectId, runContext.id]);
+    void fetchDataclips();
+  }, [projectId, dataclipJobId]);
 
   // Build filters object for API
   const buildFilters = useCallback(() => {
@@ -194,29 +214,45 @@ export function ManualRunPanel({
 
   // Search handler
   const handleSearch = useCallback(async () => {
-    const contextId = runContext.id;
-    if (!contextId) return;
+    if (!dataclipJobId) return;
 
     try {
       const response = await dataclipApi.searchDataclips(
         projectId,
-        contextId,
+        dataclipJobId,
         searchQuery,
         buildFilters()
       );
       setDataclips(response.data);
     } catch (error) {
-      console.error("Failed to search dataclips:", error);
+      logger.error("Failed to search dataclips:", error);
     }
-  }, [projectId, runContext.id, searchQuery, buildFilters]);
+  }, [projectId, dataclipJobId, searchQuery, buildFilters]);
 
   // Auto-search when filters change (debounced)
   useEffect(() => {
     if (selectedTab !== "existing") return;
 
+    const contextId = runContext.id;
+    if (!contextId) return;
+
     // Debounce: wait 300ms after last filter change before searching
     const timeoutId = setTimeout(() => {
-      void handleSearch();
+      const filters: Record<string, string> = {};
+      if (selectedClipType) filters["type"] = selectedClipType;
+      if (selectedDates.before) filters["before"] = selectedDates.before;
+      if (selectedDates.after) filters["after"] = selectedDates.after;
+      if (namedOnly) filters["named_only"] = "true";
+
+      void dataclipApi
+        .searchDataclips(projectId, contextId, searchQuery, filters)
+        .then(response => {
+          setDataclips(response.data);
+          return response;
+        })
+        .catch(error => {
+          logger.error("Failed to search dataclips:", error);
+        });
     }, 300);
 
     return () => clearTimeout(timeoutId);
@@ -225,8 +261,10 @@ export function ManualRunPanel({
     selectedDates.before,
     selectedDates.after,
     namedOnly,
+    searchQuery,
     selectedTab,
-    handleSearch,
+    projectId,
+    runContext.id,
   ]);
 
   const handleCustomBodyChange = useCallback((value: string) => {
@@ -260,7 +298,7 @@ export function ManualRunPanel({
   const handleRun = useCallback(async () => {
     const contextId = runContext.id;
     if (!contextId) {
-      console.error("No context ID available");
+      logger.error("No context ID available");
       return;
     }
 
@@ -300,11 +338,20 @@ export function ManualRunPanel({
 
       const response = await dataclipApi.submitManualRun(params);
 
-      // Navigate to run page
-      window.location.href = `/projects/${projectId}/runs/${response.data.run_id}`;
+      // Step 5: Invoke callback with run_id (stay in IDE, don't navigate)
+      if (onRunSubmitted) {
+        onRunSubmitted(response.data.run_id);
+      } else {
+        // Fallback: navigate away if no callback (for standalone mode)
+        window.location.href = `/projects/${projectId}/runs/${response.data.run_id}`;
+      }
     } catch (error) {
-      console.error("Failed to submit run:", error);
-      alert(error instanceof Error ? error.message : "Failed to submit run");
+      logger.error("Failed to submit run:", error);
+      notifications.alert({
+        title: "Failed to submit run",
+        description:
+          error instanceof Error ? error.message : "An unknown error occurred",
+      });
       setIsSubmitting(false);
     }
   }, [
@@ -416,7 +463,6 @@ export function ManualRunPanel({
   return (
     <InspectorLayout
       title={panelTitle}
-      nodeType={runContext.type === "job" ? "job" : "trigger"}
       onClose={onClose}
       footer={
         <InspectorFooter

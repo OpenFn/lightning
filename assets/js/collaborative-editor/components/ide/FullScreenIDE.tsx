@@ -10,6 +10,7 @@ import {
 import _logger from "#/utils/logger";
 
 import { useURLState } from "../../../react/lib/use-url-state";
+import { useRunStoreInstance } from "../../hooks/useRun";
 import { useSession } from "../../hooks/useSession";
 import {
   useLatestSnapshotLockVersion,
@@ -25,7 +26,10 @@ import {
 import { notifications } from "../../lib/notifications";
 import { CollaborativeMonaco } from "../CollaborativeMonaco";
 import { ManualRunPanel } from "../ManualRunPanel";
+import { RunViewerPanel } from "../run-viewer/RunViewerPanel";
+import { RunViewerErrorBoundary } from "../run-viewer/RunViewerErrorBoundary";
 import { SandboxIndicatorBanner } from "../SandboxIndicatorBanner";
+import { Tabs } from "../Tabs";
 
 import { IDEHeader } from "./IDEHeader";
 
@@ -55,9 +59,12 @@ export function FullScreenIDE({
   parentProjectId,
   parentProjectName,
 }: FullScreenIDEProps) {
-  const { searchParams } = useURLState();
+  const { searchParams, updateSearchParams } = useURLState();
   const jobIdFromURL = searchParams.get("job");
+  const runIdFromURL = searchParams.get("run");
+  const stepIdFromURL = searchParams.get("step");
   const { selectJob, saveWorkflow } = useWorkflowActions();
+  const runStore = useRunStoreInstance();
   const { job: currentJob, ytext: currentJobYText } = useCurrentJob();
   const { awareness } = useSession();
   const { canSave, tooltipMessage } = useCanSave();
@@ -101,6 +108,28 @@ export function FullScreenIDE({
   const [isRunning, setIsRunning] = useState(false);
   const [runHandler, setRunHandler] = useState<(() => void) | null>(null);
 
+  // Follow run state for right panel
+  const [followRunId, setFollowRunId] = useState<string | null>(null);
+
+  // Right panel tab state
+  type RightPanelTab = "run" | "log" | "input" | "output";
+  const [activeRightTab, setActiveRightTab] = useState<RightPanelTab>("run");
+
+  // Persist right panel tab to localStorage
+  useEffect(() => {
+    if (activeRightTab) {
+      localStorage.setItem("lightning.ide-run-viewer-tab", activeRightTab);
+    }
+  }, [activeRightTab]);
+
+  // Restore tab from localStorage on mount
+  useEffect(() => {
+    const savedTab = localStorage.getItem("lightning.ide-run-viewer-tab");
+    if (savedTab && ["run", "log", "input", "output"].includes(savedTab)) {
+      setActiveRightTab(savedTab as RightPanelTab);
+    }
+  }, []);
+
   const { enableScope, disableScope } = useHotkeysContext();
 
   // Enable/disable ide scope based on whether IDE is open
@@ -117,6 +146,25 @@ export function FullScreenIDE({
       selectJob(jobIdFromURL);
     }
   }, [jobIdFromURL, selectJob]);
+
+  // Sync URL run_id to followRunId
+  useEffect(() => {
+    if (runIdFromURL && runIdFromURL !== followRunId) {
+      setFollowRunId(runIdFromURL);
+
+      // Auto-expand right panel for deep links
+      if (rightPanelRef.current?.isCollapsed()) {
+        rightPanelRef.current.expand();
+      }
+    }
+  }, [runIdFromURL, followRunId]);
+
+  // Sync stepIdFromURL to RunStore
+  useEffect(() => {
+    if (stepIdFromURL && runIdFromURL) {
+      runStore.selectStep(stepIdFromURL);
+    }
+  }, [stepIdFromURL, runIdFromURL, runStore]);
 
   // Handler for Save button
   const handleSave = () => {
@@ -135,6 +183,17 @@ export function FullScreenIDE({
   // Handler for collapsing left panel (no close button in IDE context)
   const handleCollapseLeftPanel = () => {
     leftPanelRef.current?.collapse();
+  };
+
+  // Handler for run submission - auto-expands right panel and updates URL
+  const handleRunSubmitted = (runId: string) => {
+    setFollowRunId(runId);
+    updateSearchParams({ run: runId });
+
+    // Auto-expand right panel if collapsed
+    if (rightPanelRef.current?.isCollapsed()) {
+      rightPanelRef.current.expand();
+    }
   };
 
   // Callback from ManualRunPanel with run state
@@ -305,7 +364,7 @@ export function FullScreenIDE({
             defaultSize={25}
             minSize={15}
             collapsible
-            collapsedSize={1}
+            collapsedSize={2}
             onCollapse={() => setIsLeftCollapsed(true)}
             onExpand={() => setIsLeftCollapsed(false)}
             className="bg-gray-50 border-r border-gray-200"
@@ -318,28 +377,52 @@ export function FullScreenIDE({
                 }`}
               >
                 <div className="flex items-center justify-between px-3 py-1">
-                  <button
-                    onClick={toggleLeftPanel}
-                    className="text-xs font-medium text-gray-400
-                      uppercase tracking-wide hover:text-gray-600
-                      transition-colors cursor-pointer"
-                  >
-                    Input
-                  </button>
-                  {!isLeftCollapsed && (
-                    <button
-                      onClick={toggleLeftPanel}
-                      disabled={openPanelCount === 1}
-                      className="text-gray-400 hover:text-gray-600
-                        disabled:opacity-30 disabled:cursor-not-allowed
-                        transition-colors"
-                      aria-label="Collapse left panel"
-                    >
-                      <span
-                        className="hero-chevron-left size-3"
-                        aria-hidden="true"
-                      />
-                    </button>
+                  {!isLeftCollapsed ? (
+                    <>
+                      <div
+                        className="text-xs font-medium text-gray-400
+                        uppercase tracking-wide"
+                      >
+                        Input
+                      </div>
+                      <button
+                        onClick={toggleLeftPanel}
+                        disabled={openPanelCount === 1}
+                        className="text-slate-500 hover:text-slate-600
+                          hover:bg-slate-400 rounded-full p-1
+                          disabled:opacity-30 disabled:cursor-not-allowed
+                          transition-colors"
+                        aria-label="Collapse left panel"
+                      >
+                        <span
+                          className="hero-minus-circle w-5 h-5"
+                          aria-hidden="true"
+                        />
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <button
+                        onClick={toggleLeftPanel}
+                        className="text-xs font-medium text-gray-400
+                          uppercase tracking-wide hover:text-gray-600
+                          transition-colors cursor-pointer"
+                      >
+                        Input
+                      </button>
+                      <button
+                        onClick={toggleLeftPanel}
+                        className="text-slate-500 hover:text-slate-600
+                          hover:bg-slate-400 rounded-full p-1
+                          transition-colors"
+                        aria-label="Expand left panel"
+                      >
+                        <span
+                          className="hero-plus-circle w-5 h-5"
+                          aria-hidden="true"
+                        />
+                      </button>
+                    </>
                   )}
                 </div>
               </div>
@@ -357,6 +440,7 @@ export function FullScreenIDE({
                     renderMode="embedded"
                     onRunStateChange={handleRunStateChange}
                     saveWorkflow={saveWorkflow}
+                    onRunSubmitted={handleRunSubmitted}
                   />
                 </div>
               )}
@@ -375,7 +459,7 @@ export function FullScreenIDE({
             defaultSize={100}
             minSize={15}
             collapsible
-            collapsedSize={1}
+            collapsedSize={2}
             onCollapse={() => setIsCenterCollapsed(true)}
             onExpand={() => setIsCenterCollapsed(false)}
             className="bg-white"
@@ -388,28 +472,52 @@ export function FullScreenIDE({
                 }`}
               >
                 <div className="flex items-center justify-between px-3 py-1">
-                  <button
-                    onClick={toggleCenterPanel}
-                    className="text-xs font-medium text-gray-400
-                      uppercase tracking-wide hover:text-gray-600
-                      transition-colors cursor-pointer"
-                  >
-                    Code
-                  </button>
-                  {!isCenterCollapsed && (
-                    <button
-                      onClick={toggleCenterPanel}
-                      disabled={openPanelCount === 1}
-                      className="text-gray-400 hover:text-gray-600
-                        disabled:opacity-30 disabled:cursor-not-allowed
-                        transition-colors"
-                      aria-label="Collapse code panel"
-                    >
-                      <span
-                        className="hero-chevron-left size-3"
-                        aria-hidden="true"
-                      />
-                    </button>
+                  {!isCenterCollapsed ? (
+                    <>
+                      <div
+                        className="text-xs font-medium text-gray-400
+                        uppercase tracking-wide"
+                      >
+                        Code
+                      </div>
+                      <button
+                        onClick={toggleCenterPanel}
+                        disabled={openPanelCount === 1}
+                        className="text-slate-500 hover:text-slate-600
+                          hover:bg-slate-400 rounded-full p-1
+                          disabled:opacity-30 disabled:cursor-not-allowed
+                          transition-colors"
+                        aria-label="Collapse code panel"
+                      >
+                        <span
+                          className="hero-minus-circle w-5 h-5"
+                          aria-hidden="true"
+                        />
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <button
+                        onClick={toggleCenterPanel}
+                        className="text-xs font-medium text-gray-400
+                          uppercase tracking-wide hover:text-gray-600
+                          transition-colors cursor-pointer"
+                      >
+                        Code
+                      </button>
+                      <button
+                        onClick={toggleCenterPanel}
+                        className="text-slate-500 hover:text-slate-600
+                          hover:bg-slate-400 rounded-full p-1
+                          transition-colors"
+                        aria-label="Expand code panel"
+                      >
+                        <span
+                          className="hero-plus-circle w-5 h-5"
+                          aria-hidden="true"
+                        />
+                      </button>
+                    </>
                   )}
                 </div>
               </div>
@@ -447,55 +555,90 @@ export function FullScreenIDE({
             defaultSize={1}
             minSize={15}
             collapsible
-            collapsedSize={1}
+            collapsedSize={2}
             onCollapse={() => setIsRightCollapsed(true)}
             onExpand={() => setIsRightCollapsed(false)}
             className="bg-gray-50 border-l border-gray-200"
           >
             <div className="h-full flex flex-col">
-              {/* Panel heading */}
+              {/* Panel heading with tabs */}
               <div
-                className={`shrink-0 transition-transform ${
+                className={`shrink-0 bg-slate-50 transition-transform ${
                   isRightCollapsed ? "rotate-90" : ""
                 }`}
               >
-                <div className="flex items-center justify-between px-3 py-1">
-                  <button
-                    onClick={toggleRightPanel}
-                    className="text-xs font-medium text-gray-400
-                      uppercase tracking-wide hover:text-gray-600
-                      transition-colors cursor-pointer"
-                  >
-                    Output
-                  </button>
-                  {!isRightCollapsed && (
-                    <button
-                      onClick={toggleRightPanel}
-                      disabled={openPanelCount === 1}
-                      className="text-gray-400 hover:text-gray-600
-                        disabled:opacity-30 disabled:cursor-not-allowed
-                        transition-colors"
-                      aria-label="Collapse right panel"
-                    >
-                      <span
-                        className="hero-chevron-right size-3"
-                        aria-hidden="true"
-                      />
-                    </button>
+                <div className="flex items-center justify-between px-2">
+                  {!isRightCollapsed ? (
+                    <>
+                      {/* Tabs as header content */}
+                      <div className="flex-1">
+                        <Tabs
+                          value={activeRightTab}
+                          onChange={setActiveRightTab}
+                          options={[
+                            { value: "run", label: "Run" },
+                            { value: "log", label: "Log" },
+                            { value: "input", label: "Input" },
+                            { value: "output", label: "Output" },
+                          ]}
+                        />
+                      </div>
+                      {/* Collapse button */}
+                      <button
+                        onClick={toggleRightPanel}
+                        disabled={openPanelCount === 1}
+                        className="text-slate-500 hover:text-slate-600
+                          hover:bg-slate-400 rounded-full p-1
+                          disabled:opacity-30 disabled:cursor-not-allowed
+                          transition-colors ml-2"
+                        aria-label="Collapse right panel"
+                      >
+                        <span
+                          className="hero-minus-circle w-5 h-5"
+                          aria-hidden="true"
+                        />
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      {/* Collapsed state - clickable label */}
+                      <button
+                        onClick={toggleRightPanel}
+                        className="text-xs font-medium text-gray-400
+                          uppercase tracking-wide hover:text-gray-600
+                          transition-colors cursor-pointer"
+                      >
+                        Output
+                      </button>
+                      {/* Expand icon */}
+                      <button
+                        onClick={toggleRightPanel}
+                        className="text-slate-500 hover:text-slate-600
+                          hover:bg-slate-400 rounded-full p-1
+                          transition-colors"
+                        aria-label="Expand right panel"
+                      >
+                        <span
+                          className="hero-plus-circle w-5 h-5"
+                          aria-hidden="true"
+                        />
+                      </button>
+                    </>
                   )}
                 </div>
               </div>
 
               {/* Panel content */}
               {!isRightCollapsed && (
-                <div
-                  className="flex-1 p-4 flex items-center
-                  justify-center"
-                >
-                  <div className="text-center text-gray-500">
-                    <p className="text-sm font-medium">Run / Logs / Step I/O</p>
-                    <p className="text-xs mt-1">Coming Soon</p>
-                  </div>
+                <div className="flex-1 overflow-hidden">
+                  <RunViewerErrorBoundary>
+                    <RunViewerPanel
+                      followRunId={followRunId}
+                      onClearFollowRun={() => setFollowRunId(null)}
+                      activeTab={activeRightTab}
+                      onTabChange={setActiveRightTab}
+                    />
+                  </RunViewerErrorBoundary>
                 </div>
               )}
             </div>

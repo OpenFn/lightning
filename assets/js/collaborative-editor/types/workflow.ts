@@ -41,8 +41,7 @@ export const WorkflowSchema = z.object({
 
 export type WorkflowFormValues = z.infer<typeof WorkflowSchema>;
 
-export interface Workflow {
-  name: string;
+export interface Workflow extends Session.Workflow {
   jobs: Workflow.Job[];
   triggers: Workflow.Trigger[];
   edges: Workflow.Edge[];
@@ -57,8 +56,8 @@ export namespace Workflow {
 
   export interface Edge {
     id: string;
-    source_job_id?: string;
-    source_trigger_id?: string;
+    source_job_id?: string | null;
+    source_trigger_id?: string | null;
     target_job_id: string;
     condition?: string;
     condition_type?: string;

@@ -1,5 +1,5 @@
-import { createStore } from 'zustand/vanilla';
-import { subscribeWithSelector } from 'zustand/middleware';
+import { createStore } from "zustand/vanilla";
+import { subscribeWithSelector } from "zustand/middleware";
 
 export type LogLine = {
   id: string;
@@ -24,13 +24,13 @@ interface LogStore {
 // get score for log level
 function logLevelScore(level: string): number {
   switch (level) {
-    case 'debug':
+    case "debug":
       return 0;
-    case 'info':
+    case "info":
       return 1;
-    case 'warn':
+    case "warn":
       return 2;
-    case 'error':
+    case "error":
       return 3;
     default:
       return 4;
@@ -94,17 +94,19 @@ function findSelectedRanges(
 }
 
 function coerceLogs(logs: LogLine[]): LogLine[] {
-  return logs.map(log => ({
-    ...log,
-    timestamp: new Date(log.timestamp),
-  }));
+  return logs.map(log => {
+    return {
+      ...log,
+      timestamp: new Date(log.timestamp),
+    };
+  });
 }
 
 function isProbablyJSON(str: string) {
   // Check if the string starts with '{' or '[' and ends with '}' or ']'
   return (
-    (str.startsWith('{') && str.endsWith('}')) ||
-    (str.startsWith('[') && str.endsWith(']'))
+    (str.startsWith("{") && str.endsWith("}")) ||
+    (str.startsWith("[") && str.endsWith("]"))
   );
 }
 
@@ -132,10 +134,10 @@ function formatLogLine(log: LogLine) {
 function stringifyLogLines(logLines: LogLine[], desiredLogLevel: string) {
   const lines = logLines.reduce((formatted, log) => {
     if (matchesLogFilter(log, desiredLogLevel)) {
-      return formatted + (formatted !== '' ? '\n' : '') + formatLogLine(log);
+      return formatted + (formatted !== "" ? "\n" : "") + formatLogLine(log);
     }
     return formatted;
-  }, '');
+  }, "");
 
   return lines;
 }
@@ -145,23 +147,29 @@ export const createLogStore = () => {
     subscribeWithSelector((set, get) => ({
       stepId: undefined,
       setStepId: (stepId: string | undefined) => set({ stepId }),
-      desiredLogLevel: 'info',
+      desiredLogLevel: "info",
       setDesiredLogLevel: (desiredLogLevel: string | undefined) =>
-        set({ desiredLogLevel: desiredLogLevel || 'info' }),
+        set({ desiredLogLevel: desiredLogLevel || "info" }),
       highlightedRanges: [],
       logLines: [],
       stepSetAt: undefined,
-      formattedLogLines: '',
+      formattedLogLines: "",
       addLogLines: newLogs => {
         newLogs = coerceLogs(newLogs);
-        const logLines = get().logLines.concat(newLogs);
+
+        // Deduplicate logs by ID
+        const existingIds = new Set(get().logLines.map(log => log.id));
+        const uniqueNewLogs = newLogs.filter(log => !existingIds.has(log.id));
+
+        const logLines = get().logLines.concat(uniqueNewLogs);
 
         logLines.sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
 
         const desiredLogLevel = get().desiredLogLevel;
+        const formatted = stringifyLogLines(logLines, desiredLogLevel);
 
         set({
-          formattedLogLines: stringifyLogLines(logLines, desiredLogLevel),
+          formattedLogLines: formatted,
           logLines,
         });
       },
@@ -176,7 +184,7 @@ export const createLogStore = () => {
       [logLines, stepId, desiredLogLevel],
       [_prevLogLines, _prevStepId, prevLogLevel]
     ) => {
-      const state = {
+      const state: Partial<LogStore> = {
         highlightedRanges: findSelectedRanges(
           logLines,
           stepId,

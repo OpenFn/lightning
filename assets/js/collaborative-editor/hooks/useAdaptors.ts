@@ -83,3 +83,23 @@ export const useAdaptor = (name: string): Adaptor | null => {
 
   return useSyncExternalStore(adaptorStore.subscribe, selectAdaptor);
 };
+
+/**
+ * Hook to get project-specific adaptors and all adaptors
+ * Returns both project adaptors and all adaptors from backend endpoint
+ */
+export const useProjectAdaptors = (): {
+  projectAdaptors: Adaptor[];
+  allAdaptors: Adaptor[];
+  isLoading: boolean;
+} => {
+  const adaptorStore = useAdaptorStore();
+
+  const selectProjectData = adaptorStore.withSelector(state => ({
+    projectAdaptors: state.projectAdaptors || [],
+    allAdaptors: state.adaptors,
+    isLoading: state.isLoading,
+  }));
+
+  return useSyncExternalStore(adaptorStore.subscribe, selectProjectData);
+};

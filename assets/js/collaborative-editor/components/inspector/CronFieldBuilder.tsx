@@ -1,3 +1,5 @@
+import { cn } from "../../../utils/cn";
+
 interface CronFieldBuilderProps {
   value: string;
   onChange: (cronExpression: string) => void;
@@ -18,7 +20,7 @@ export function CronFieldBuilder({
   className = "",
 }: CronFieldBuilderProps) {
   return (
-    <div className={`space-y-2 ${className}`}>
+    <div className={cn("space-y-2", className)}>
       <div>
         <label
           htmlFor="cron-expression"

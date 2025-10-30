@@ -86,6 +86,76 @@ defmodule LightningWeb.WorkflowChannelTest do
       assert is_list(credentials.keychain_credentials)
     end
 
+    test "returns project-specific adaptors", %{socket: socket, project: project} do
+      # Create jobs with specific adaptors in this project
+      workflow = insert(:workflow, project: project)
+
+      insert(:job,
+        workflow: workflow,
+        adaptor: "@openfn/language-salesforce@latest"
+      )
+
+      insert(:job, workflow: workflow, adaptor: "@openfn/language-http@2.0.0")
+
+      ref = push(socket, "request_project_adaptors", %{})
+
+      assert_reply ref, :ok, %{
+        project_adaptors: project_adaptors,
+        all_adaptors: all_adaptors
+      }
+
+      assert is_list(project_adaptors)
+      assert is_list(all_adaptors)
+
+      # Verify project_adaptors contains only adaptors used in the project
+      project_adaptor_names = Enum.map(project_adaptors, & &1.name)
+      assert "@openfn/language-salesforce" in project_adaptor_names
+      assert "@openfn/language-http" in project_adaptor_names
+
+      # Verify all_adaptors contains the full registry
+      assert length(all_adaptors) > 0
+    end
+
+    test "returns empty project_adaptors for project with no jobs", %{
+      socket: socket
+    } do
+      ref = push(socket, "request_project_adaptors", %{})
+
+      assert_reply ref, :ok, %{
+        project_adaptors: project_adaptors,
+        all_adaptors: all_adaptors
+      }
+
+      assert project_adaptors == []
+      assert is_list(all_adaptors)
+      assert length(all_adaptors) > 0
+    end
+
+    test "handles duplicate adaptors in project", %{
+      socket: socket,
+      project: project
+    } do
+      workflow = insert(:workflow, project: project)
+
+      # Create multiple jobs with the same adaptor
+      insert(:job,
+        workflow: workflow,
+        adaptor: "@openfn/language-common@latest"
+      )
+
+      insert(:job, workflow: workflow, adaptor: "@openfn/language-common@1.0.0")
+
+      ref = push(socket, "request_project_adaptors", %{})
+
+      assert_reply ref, :ok, %{project_adaptors: project_adaptors}
+
+      # Should only appear once in project_adaptors
+      common_adaptors =
+        Enum.filter(project_adaptors, &(&1.name == "@openfn/language-common"))
+
+      assert length(common_adaptors) <= 1
+    end
+
     test "returns correctly structured project credentials", %{
       socket: socket,
       project: project
