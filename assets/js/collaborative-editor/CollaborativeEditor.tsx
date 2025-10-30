@@ -159,7 +159,7 @@ export const CollaborativeEditor: WithActionProps<
   const isNewWorkflow = props["data-is-new-workflow"] === "true";
 
   return (
-    <HotkeysProvider initiallyActiveScopes={["global"]}>
+    <HotkeysProvider>
       <div
         className="collaborative-editor h-full flex flex-col"
         data-testid="collaborative-editor"

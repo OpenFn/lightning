@@ -211,7 +211,6 @@ export function Header({
     },
     {
       enabled: true, // Always listen to prevent browser save
-      scopes: ["global"], // Active everywhere in collaborative editor
       enableOnFormTags: true, // Allow in Monaco editor, input fields, textareas
     },
     [saveWorkflow, canSave] // Re-register when dependencies change
@@ -227,8 +226,6 @@ export function Header({
       }
     },
     {
-      enabled: repoConnection !== null, // Only enable when GitHub integration exists
-      scopes: ["global"], // Active everywhere in collaborative editor
       enableOnFormTags: true, // Allow in Monaco editor, input fields, textareas
     },
     [openGitHubSyncModal, canSave, repoConnection] // Re-register when dependencies change
