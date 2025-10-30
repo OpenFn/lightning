@@ -7,6 +7,10 @@ import { ReactFlowProvider } from "@xyflow/react";
 import { useMemo, useRef, useState, useCallback, useEffect } from "react";
 
 import {
+  useHistoryPanelCollapsed,
+  useEditorPreferencesCommands,
+} from "../../hooks/useEditorPreferences";
+import {
   useHistory,
   useHistoryLoading,
   useHistoryError,
@@ -15,10 +19,6 @@ import {
 } from "../../hooks/useHistory";
 import { useIsNewWorkflow } from "../../hooks/useSessionContext";
 import { useNodeSelection } from "../../hooks/useWorkflow";
-import {
-  useHistoryPanelCollapsed,
-  useEditorPreferencesCommands,
-} from "../../hooks/useEditorPreferences";
 import type { Run } from "../../types/history";
 
 import MiniHistory from "./MiniHistory";
@@ -50,7 +50,7 @@ export function CollaborativeWorkflowDiagram({
   // Auto-expand if there's a run ID in the URL (like LiveView behavior)
   const runIdFromUrl = useMemo(() => {
     const params = new URLSearchParams(window.location.search);
-    return params.get("m");
+    return params.get("run");
   }, []);
 
   useEffect(() => {
@@ -66,7 +66,7 @@ export function CollaborativeWorkflowDiagram({
   // Track selected run for visual feedback (stored in URL)
   const [selectedRunId, setSelectedRunId] = useState<string | null>(() => {
     const params = new URLSearchParams(window.location.search);
-    return params.get("m");
+    return params.get("run");
   });
 
   // Update URL when run selection changes
@@ -74,7 +74,7 @@ export function CollaborativeWorkflowDiagram({
     setSelectedRunId(run.id);
 
     const url = new URL(window.location.href);
-    url.searchParams.set("m", run.id);
+    url.searchParams.set("run", run.id);
     window.history.pushState({}, "", url.toString());
   }, []);
 
@@ -83,7 +83,7 @@ export function CollaborativeWorkflowDiagram({
     setSelectedRunId(null);
 
     const url = new URL(window.location.href);
-    url.searchParams.delete("m");
+    url.searchParams.delete("run");
     window.history.pushState({}, "", url.toString());
   }, []);
 
