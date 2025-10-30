@@ -26,8 +26,8 @@ import {
 import { notifications } from "../../lib/notifications";
 import { CollaborativeMonaco } from "../CollaborativeMonaco";
 import { ManualRunPanel } from "../ManualRunPanel";
-import { RunViewerPanel } from "../run-viewer/RunViewerPanel";
 import { RunViewerErrorBoundary } from "../run-viewer/RunViewerErrorBoundary";
+import { RunViewerPanel } from "../run-viewer/RunViewerPanel";
 import { SandboxIndicatorBanner } from "../SandboxIndicatorBanner";
 import { Tabs } from "../Tabs";
 

@@ -7,13 +7,16 @@
  * Preferences are persisted to localStorage via lib0/storage.
  */
 
-import _logger from "#/utils/logger";
 import { produce } from "immer";
 import * as storage from "lib0/storage";
+
+import _logger from "#/utils/logger";
+
 import type {
   EditorPreferencesState,
   EditorPreferencesStore,
 } from "../types/editorPreferences";
+
 import { createWithSelector } from "./common";
 import { wrapStoreWithDevTools } from "./devtools";
 

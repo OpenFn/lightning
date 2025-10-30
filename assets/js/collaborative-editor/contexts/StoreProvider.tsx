@@ -50,9 +50,13 @@ import {
   createAwarenessStore,
 } from "../stores/createAwarenessStore";
 import {
-  type CredentialStoreInstance,
   createCredentialStore,
+  type CredentialStoreInstance,
 } from "../stores/createCredentialStore";
+import {
+  createEditorPreferencesStore,
+  type EditorPreferencesStoreInstance,
+} from "../stores/createEditorPreferencesStore";
 import {
   createHistoryStore,
   type HistoryStoreInstance,
@@ -70,10 +74,6 @@ import {
   createWorkflowStore,
   type WorkflowStoreInstance,
 } from "../stores/createWorkflowStore";
-import {
-  createEditorPreferencesStore,
-  type EditorPreferencesStoreInstance,
-} from "../stores/createEditorPreferencesStore";
 import type { Session } from "../types/session";
 import { generateUserColor } from "../utils/userColor";
 
