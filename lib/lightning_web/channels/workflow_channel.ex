@@ -243,6 +243,17 @@ defmodule LightningWeb.WorkflowChannel do
   end
 
   @impl true
+  def handle_in("save_and_sync", params, socket)
+      when not is_map_key(params, "commit_message") do
+    {:reply,
+     {:error,
+      %{
+        errors: %{commit_message: ["can't be blank"]},
+        type: "validation_error"
+      }}, socket}
+  end
+
+  @impl true
   def handle_in("save_and_sync", %{"commit_message" => commit_message}, socket) do
     session_pid = socket.assigns.session_pid
     user = socket.assigns.current_user
