@@ -592,28 +592,34 @@ export function ManualRunPanel({
     "mod+enter",
     e => {
       e.preventDefault();
-      logger.debug("Cmd+Enter pressed", {
-        canRun,
-        isSubmitting,
-        runIsProcessing,
-        isRetryable,
-        followedRunId,
-        followedRunStep: followedRunStep
-          ? {
-              id: followedRunStep.id,
-              input_dataclip_id: followedRunStep.input_dataclip_id,
-            }
-          : null,
-        selectedDataclip: selectedDataclip
-          ? { id: selectedDataclip.id, wiped_at: selectedDataclip.wiped_at }
-          : null,
-      });
+      logger.debug("=== Cmd+Enter pressed ===");
+      logger.debug("canRun:", canRun);
+      logger.debug("isSubmitting:", isSubmitting);
+      logger.debug("runIsProcessing:", runIsProcessing);
+      logger.debug("isRetryable:", isRetryable);
+      logger.debug("followedRunId:", followedRunId);
+      logger.debug(
+        "followedRunStep.id:",
+        followedRunStep ? followedRunStep.id : null
+      );
+      logger.debug(
+        "followedRunStep.input_dataclip_id:",
+        followedRunStep ? followedRunStep.input_dataclip_id : null
+      );
+      logger.debug(
+        "selectedDataclip.id:",
+        selectedDataclip ? selectedDataclip.id : null
+      );
+      logger.debug(
+        "selectedDataclip.wiped_at:",
+        selectedDataclip ? selectedDataclip.wiped_at : null
+      );
       if (canRun && !isSubmitting && !runIsProcessing) {
         if (isRetryable) {
-          logger.debug("Calling handleRetry()");
+          logger.debug(">>> Calling handleRetry() <<<");
           void handleRetry();
         } else {
-          logger.debug("Calling handleRun()");
+          logger.debug(">>> Calling handleRun() (NEW WORK ORDER) <<<");
           void handleRun();
         }
       }
@@ -766,21 +772,24 @@ export function ManualRunPanel({
                 void handleRun();
               }}
               onRetry={() => {
-                logger.debug("Button onRetry() called", {
-                  followedRunId,
-                  followedRunStep: followedRunStep
-                    ? {
-                        id: followedRunStep.id,
-                        input_dataclip_id: followedRunStep.input_dataclip_id,
-                      }
-                    : null,
-                  selectedDataclip: selectedDataclip
-                    ? {
-                        id: selectedDataclip.id,
-                        wiped_at: selectedDataclip.wiped_at,
-                      }
-                    : null,
-                });
+                logger.debug("=== Button onRetry() called ===");
+                logger.debug("followedRunId:", followedRunId);
+                logger.debug(
+                  "followedRunStep.id:",
+                  followedRunStep ? followedRunStep.id : null
+                );
+                logger.debug(
+                  "followedRunStep.input_dataclip_id:",
+                  followedRunStep ? followedRunStep.input_dataclip_id : null
+                );
+                logger.debug(
+                  "selectedDataclip.id:",
+                  selectedDataclip ? selectedDataclip.id : null
+                );
+                logger.debug(
+                  "selectedDataclip.wiped_at:",
+                  selectedDataclip ? selectedDataclip.wiped_at : null
+                );
                 void handleRetry();
               }}
               buttonText={{
