@@ -1,6 +1,8 @@
+import type { useProjectRepoConnection } from "#/collaborative-editor/hooks/useSessionContext";
 import { useVersionSelect } from "../../hooks/useVersionSelect";
 import { AdaptorDisplay } from "../AdaptorDisplay";
 import { Button } from "../Button";
+import { SaveButton } from "../Header";
 import { Tooltip } from "../Tooltip";
 import { VersionDropdown } from "../VersionDropdown";
 
@@ -21,6 +23,8 @@ interface IDEHeaderProps {
   runTooltip?: string | undefined;
   onEditAdaptor?: (() => void) | undefined;
   onChangeAdaptor?: (() => void) | undefined;
+  repoConnection: ReturnType<typeof useProjectRepoConnection>;
+  openGitHubSyncModal: () => void;
 }
 
 /**
@@ -47,6 +51,8 @@ export function IDEHeader({
   runTooltip,
   onEditAdaptor,
   onChangeAdaptor,
+  repoConnection,
+  openGitHubSyncModal,
 }: IDEHeaderProps) {
   // Use shared version selection handler (destroys Y.Doc before switching)
   const handleVersionSelect = useVersionSelect();
@@ -92,13 +98,13 @@ export function IDEHeader({
             </span>
           </Tooltip>
 
-          <Tooltip content={saveTooltip} side="bottom">
-            <span className="inline-block">
-              <Button variant="primary" onClick={onSave} disabled={!canSave}>
-                Save
-              </Button>
-            </span>
-          </Tooltip>
+          <SaveButton
+            canSave={canSave}
+            tooltipMessage={saveTooltip}
+            onClick={onSave}
+            repoConnection={repoConnection}
+            onSyncClick={openGitHubSyncModal}
+          />
 
           <Button
             variant="nakedClose"

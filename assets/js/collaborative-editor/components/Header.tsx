@@ -45,7 +45,7 @@ const userNavigation = [
  * Includes tooltip with save status messaging
  * Shows as split button with dropdown when GitHub integration is available
  */
-function SaveButton({
+export function SaveButton({
   canSave,
   tooltipMessage,
   onClick,

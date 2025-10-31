@@ -22,6 +22,7 @@ import { useSession } from "../../hooks/useSession";
 import {
   useLatestSnapshotLockVersion,
   useProject,
+  useProjectRepoConnection,
 } from "../../hooks/useSessionContext";
 import {
   useCanRun,
@@ -41,6 +42,7 @@ import { SandboxIndicatorBanner } from "../SandboxIndicatorBanner";
 import { Tabs } from "../Tabs";
 
 import { IDEHeader } from "./IDEHeader";
+import { useUICommands } from "#/collaborative-editor/hooks/useUI";
 
 const logger = _logger.ns("FullScreenIDE").seal();
 
@@ -97,6 +99,9 @@ export function FullScreenIDE({
   const { job: currentJob, ytext: currentJobYText } = useCurrentJob();
   const { awareness } = useSession();
   const { canSave, tooltipMessage } = useCanSave();
+  // Get UI commands from store
+  const repoConnection = useProjectRepoConnection();
+  const { openGitHubSyncModal } = useUICommands();
   const { canRun: canRunSnapshot, tooltipMessage: runTooltipMessage } =
     useCanRun();
 
@@ -520,6 +525,8 @@ export function FullScreenIDE({
         runTooltip={runTooltipMessage}
         onEditAdaptor={() => setIsConfigureModalOpen(true)}
         onChangeAdaptor={handleOpenAdaptorPicker}
+        repoConnection={repoConnection}
+        openGitHubSyncModal={openGitHubSyncModal}
       />
       <SandboxIndicatorBanner
         parentProjectId={parentProjectId}
