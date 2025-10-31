@@ -430,6 +430,12 @@ defmodule LightningWeb.WorkflowChannel do
     {:stop, {:error, "remote process crash"}, socket}
   end
 
+  @impl true
+  def handle_out("workflow_saved", payload, socket) do
+    push(socket, "workflow_saved", payload)
+    {:noreply, socket}
+  end
+
   defp async_task(socket, event, task_fn) do
     channel_pid = self()
     socket_ref = socket_ref(socket)
