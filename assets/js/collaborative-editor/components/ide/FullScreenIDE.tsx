@@ -500,6 +500,7 @@ export function FullScreenIDE({
     <div className="fixed inset-0 z-50 bg-white flex flex-col">
       {/* Header with Run, Save, Close buttons */}
       <IDEHeader
+        jobId={currentJob.id}
         jobName={currentJob.name}
         jobAdaptor={currentJob.adaptor || undefined}
         jobCredentialId={
