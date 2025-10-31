@@ -257,11 +257,8 @@ export function FullScreenIDE({
     setRunIsProcessing(processing ?? false);
   };
 
-  // Handler for Run button in header (new work order)
+  // Handler for Run button
   const handleRunClick = () => {
-    // Centralized validation - both button and keyboard shortcut use this
-
-    // Check snapshot/permission restrictions first (these have clear messages)
     if (!canRunSnapshot) {
       notifications.alert({
         title: "Cannot run",
@@ -270,7 +267,6 @@ export function FullScreenIDE({
       return;
     }
 
-    // Check runtime conditions (no toast needed - these are transient states)
     if (!canRunWorkflow || isRunning || runIsProcessing || !runHandler) {
       return;
     }
@@ -278,9 +274,8 @@ export function FullScreenIDE({
     runHandler();
   };
 
-  // Handler for Retry button in header
+  // Handler for Retry button
   const handleRetryClick = () => {
-    // Same validation as handleRunClick
     if (!canRunSnapshot) {
       notifications.alert({
         title: "Cannot run",
@@ -458,7 +453,6 @@ export function FullScreenIDE({
       event.preventDefault();
       event.stopPropagation();
 
-      // If retryable, use retry handler, otherwise use run handler
       if (isRetryable && retryHandler) {
         handleRetryClick();
       } else {
@@ -467,21 +461,20 @@ export function FullScreenIDE({
     },
     {
       enabled: true,
-      enableOnFormTags: true, // Allow in Monaco editor
-      preventDefault: true, // Prevent Monaco's default behavior
-      enableOnContentEditable: true, // Work in Monaco's contentEditable
+      enableOnFormTags: true,
+      preventDefault: true,
+      enableOnContentEditable: true,
     },
     [handleRunClick, handleRetryClick, isRetryable, retryHandler]
   );
 
-  // Handle Cmd/Ctrl+Shift+Enter to force new work order (even in retry mode)
+  // Handle Cmd/Ctrl+Shift+Enter to create new work order (even in retry mode)
   useHotkeys(
     "mod+shift+enter",
     event => {
       event.preventDefault();
       event.stopPropagation();
 
-      // Always use run handler to force new work order
       handleRunClick();
     },
     {
