@@ -57,16 +57,21 @@ const CustomView: React.FC<{
     <div
       className={cn(
         "h-full flex flex-col pb-6",
-        renderMode === "embedded" ? "px-3 pt-2" : "px-6 pt-4 "
+        renderMode === "embedded" ? "pt-2" : "px-3 pt-3"
       )}
     >
-      <FileUploader count={1} formats={["json"]} onUpload={uploadFiles} />
-      <div className="relative">
-        <div className="absolute inset-0 flex items-center" aria-hidden="true">
-          <div className="w-full border-t border-gray-300"></div>
-        </div>
-        <div className="relative flex justify-center">
-          <span className="bg-white px-2 text-sm text-gray-500">OR</span>
+      <div className={cn(renderMode === "embedded" && "px-3")}>
+        <FileUploader count={1} formats={["json"]} onUpload={uploadFiles} />
+        <div className="relative">
+          <div
+            className="absolute inset-0 flex items-center"
+            aria-hidden="true"
+          >
+            <div className="w-full border-t border-gray-300"></div>
+          </div>
+          <div className="relative flex justify-center">
+            <span className="bg-white px-2 text-sm text-gray-500">OR</span>
+          </div>
         </div>
       </div>
       <div className="relative h-full flex flex-col overflow-hidden">
