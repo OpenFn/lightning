@@ -133,10 +133,29 @@ defmodule LightningWeb.WorkflowLive.Edit do
                   )
                 }
                 navigate={
+                  # Convert classical editor params to collaborative editor params
+                  # a (followed run) -> run, s (step/job) -> job
+                  collaborative_params =
+                    @query_params
+                    |> Enum.reduce(%{}, fn {k, v}, acc ->
+                      cond do
+                        k == "a" and not is_nil(v) -> Map.put(acc, "run", v)
+                        k == "s" and not is_nil(v) -> Map.put(acc, "job", v)
+                        true -> acc
+                      end
+                    end)
+
+                  query_string =
+                    if map_size(collaborative_params) > 0 do
+                      "?" <> URI.encode_query(collaborative_params)
+                    else
+                      ""
+                    end
+
                   if @live_action == :new do
-                    ~p"/projects/#{@project.id}/w/new/collaborate"
+                    "/projects/#{@project.id}/w/new/collaborate#{query_string}"
                   else
-                    ~p"/projects/#{@project.id}/w/#{@workflow.id}/collaborate"
+                    "/projects/#{@project.id}/w/#{@workflow.id}/collaborate#{query_string}"
                   end
                 }
                 class="inline-flex items-center justify-center p-1 text-primary-600 hover:text-primary-700 hover:bg-primary-50 rounded transition-colors"

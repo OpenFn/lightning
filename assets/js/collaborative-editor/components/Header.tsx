@@ -248,11 +248,33 @@ export function Header({
           <ReadOnlyWarning className="ml-3" />
           {projectId && workflowId && (
             <a
-              href={
-                isNewWorkflow
-                  ? `/projects/${projectId}/w/new`
-                  : `/projects/${projectId}/w/${workflowId}`
-              }
+              href={(() => {
+                // Convert collaborative editor params to classical editor params
+                // run -> a (followed run), job -> s (step/job)
+                const searchParams = new URLSearchParams(
+                  window.location.search
+                );
+                const classicalParams = new URLSearchParams();
+
+                const runId = searchParams.get("run");
+                const jobId = searchParams.get("job");
+
+                if (runId) {
+                  classicalParams.set("a", runId);
+                }
+                if (jobId) {
+                  classicalParams.set("s", jobId);
+                }
+
+                const queryString =
+                  classicalParams.toString().length > 0
+                    ? `?${classicalParams.toString()}`
+                    : "";
+
+                return isNewWorkflow
+                  ? `/projects/${projectId}/w/new${queryString}`
+                  : `/projects/${projectId}/w/${workflowId}${queryString}`;
+              })()}
               className="inline-flex items-center justify-center
               w-6 h-6 text-primary-600 hover:text-primary-700
               hover:bg-primary-50 rounded transition-colors ml-4"
