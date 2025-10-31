@@ -132,32 +132,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
                     @snapshot_version_tag
                   )
                 }
-                navigate={
-                  # Convert classical editor params to collaborative editor params
-                  # a (followed run) -> run, s (step/job) -> job
-                  collaborative_params =
-                    @query_params
-                    |> Enum.reduce(%{}, fn {k, v}, acc ->
-                      cond do
-                        k == "a" and not is_nil(v) -> Map.put(acc, "run", v)
-                        k == "s" and not is_nil(v) -> Map.put(acc, "job", v)
-                        true -> acc
-                      end
-                    end)
-
-                  query_string =
-                    if map_size(collaborative_params) > 0 do
-                      "?" <> URI.encode_query(collaborative_params)
-                    else
-                      ""
-                    end
-
-                  if @live_action == :new do
-                    "/projects/#{@project.id}/w/new/collaborate#{query_string}"
-                  else
-                    "/projects/#{@project.id}/w/#{@workflow.id}/collaborate#{query_string}"
-                  end
-                }
+                navigate={collaborative_editor_url(assigns)}
                 class="inline-flex items-center justify-center p-1 text-primary-600 hover:text-primary-700 hover:bg-primary-50 rounded transition-colors"
                 phx-hook="Tooltip"
                 data-placement="bottom"
@@ -3896,6 +3871,33 @@ defmodule LightningWeb.WorkflowLive.Edit do
       [base_class, "rounded-r-none"]
     else
       [base_class]
+    end
+  end
+
+  defp collaborative_editor_url(assigns) do
+    # Convert classical editor params to collaborative editor params
+    # a (followed run) -> run, s (step/job) -> job
+    collaborative_params =
+      assigns.query_params
+      |> Enum.reduce(%{}, fn {k, v}, acc ->
+        cond do
+          k == "a" and not is_nil(v) -> Map.put(acc, "run", v)
+          k == "s" and not is_nil(v) -> Map.put(acc, "job", v)
+          true -> acc
+        end
+      end)
+
+    query_string =
+      if map_size(collaborative_params) > 0 do
+        "?" <> URI.encode_query(collaborative_params)
+      else
+        ""
+      end
+
+    if assigns.live_action == :new do
+      "/projects/#{assigns.project.id}/w/new/collaborate#{query_string}"
+    else
+      "/projects/#{assigns.project.id}/w/#{assigns.workflow.id}/collaborate#{query_string}"
     end
   end
 
