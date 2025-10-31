@@ -150,7 +150,6 @@ defmodule Lightning.Collaboration.WorkflowSerializerTest do
 
       # Should be converted to string
       assert edge["condition_type"] == "on_job_failure"
-      assert is_binary(edge["condition_type"])
     end
 
     test "writes triggers array to Y.Doc with webhook trigger" do
@@ -225,7 +224,6 @@ defmodule Lightning.Collaboration.WorkflowSerializerTest do
 
       # Should be converted to string
       assert trigger["type"] == "kafka"
-      assert is_binary(trigger["type"])
     end
 
     test "writes positions map to Y.Doc" do
@@ -563,8 +561,7 @@ defmodule Lightning.Collaboration.WorkflowSerializerTest do
       extracted = WorkflowSerializer.deserialize_from_ydoc(doc, workflow.id)
 
       # Concurrency should be in the deserialized data
-      assert Map.has_key?(extracted, "concurrency")
-      assert extracted["concurrency"] == 5
+      assert Map.fetch(extracted, "concurrency") == {:ok, 5}
     end
 
     test "handles missing concurrency field with nil default" do
@@ -582,8 +579,9 @@ defmodule Lightning.Collaboration.WorkflowSerializerTest do
 
       extracted = WorkflowSerializer.deserialize_from_ydoc(doc, workflow.id)
 
-      # Should return nil when field is missing
-      assert is_nil(extracted["concurrency"])
+      # Field should be completely omitted to allow schema defaults
+      refute Map.has_key?(extracted, "concurrency"),
+             "Missing fields should be omitted, not set to nil"
     end
   end
 
@@ -612,7 +610,6 @@ defmodule Lightning.Collaboration.WorkflowSerializerTest do
       extracted = WorkflowSerializer.deserialize_from_ydoc(doc, workflow.id)
 
       assert extracted["enable_job_logs"] == true
-      assert is_boolean(extracted["enable_job_logs"])
     end
 
     test "handles missing enable_job_logs field with nil default" do
@@ -630,8 +627,29 @@ defmodule Lightning.Collaboration.WorkflowSerializerTest do
 
       extracted = WorkflowSerializer.deserialize_from_ydoc(doc, workflow.id)
 
-      # Should return nil, letting database default handle it
-      assert is_nil(extracted["enable_job_logs"])
+      # Field should be completely omitted to allow schema defaults
+      refute Map.has_key?(extracted, "enable_job_logs"),
+             "Missing fields should be omitted, not set to nil"
+    end
+
+    test "handles explicit nil enable_job_logs value" do
+      workflow =
+        insert(:workflow, name: "Test Workflow")
+        |> preload_workflow_associations()
+
+      doc = Yex.Doc.new()
+
+      WorkflowSerializer.serialize_to_ydoc(doc, workflow)
+
+      # Explicitly set to nil (different from missing)
+      workflow_map = Yex.Doc.get_map(doc, "workflow")
+      Yex.Map.set(workflow_map, "enable_job_logs", nil)
+
+      extracted = WorkflowSerializer.deserialize_from_ydoc(doc, workflow.id)
+
+      # Explicit nil should be included in attrs (key exists with nil value)
+      assert Map.fetch(extracted, "enable_job_logs") == {:ok, nil},
+             "Explicit nil values should be preserved in attrs"
     end
 
     test "enable_job_logs is included in deserialized data" do
@@ -644,8 +662,7 @@ defmodule Lightning.Collaboration.WorkflowSerializerTest do
       WorkflowSerializer.serialize_to_ydoc(doc, workflow)
       extracted = WorkflowSerializer.deserialize_from_ydoc(doc, workflow.id)
 
-      assert Map.has_key?(extracted, "enable_job_logs")
-      assert extracted["enable_job_logs"] == false
+      assert Map.fetch(extracted, "enable_job_logs") == {:ok, false}
     end
   end
 
@@ -674,16 +691,14 @@ defmodule Lightning.Collaboration.WorkflowSerializerTest do
       # Now deserialize
       extracted = WorkflowSerializer.deserialize_from_ydoc(doc, workflow.id)
 
-      # Verify structure uses string keys
-      assert is_map(extracted)
-      assert Map.has_key?(extracted, "name")
-      assert Map.has_key?(extracted, "jobs")
-      assert Map.has_key?(extracted, "edges")
-      assert Map.has_key?(extracted, "triggers")
-      assert Map.has_key?(extracted, "positions")
-
-      # Verify workflow name
-      assert extracted["name"] == "Test Workflow"
+      # Verify structure uses string keys and workflow name
+      assert %{
+               "name" => "Test Workflow",
+               "jobs" => _,
+               "edges" => _,
+               "triggers" => _,
+               "positions" => _
+             } = extracted
 
       # Verify jobs
       assert length(extracted["jobs"]) == 2
@@ -770,10 +785,9 @@ defmodule Lightning.Collaboration.WorkflowSerializerTest do
 
       job = List.first(extracted["jobs"])
 
-      # Body should be converted from Y.Text to String
-      assert is_binary(job["body"])
-      refute is_struct(job["body"], Yex.Text)
+      # Body should be converted from Y.Text to String (not a struct)
       assert job["body"] == "fn(state => { return state; })"
+      refute is_struct(job["body"], Yex.Text)
     end
 
     test "preserves trigger type as strings" do
@@ -849,8 +863,11 @@ defmodule Lightning.Collaboration.WorkflowSerializerTest do
       extracted = WorkflowSerializer.deserialize_from_ydoc(doc, workflow.id)
 
       edge = List.first(extracted["edges"])
-      assert edge["condition_type"] == "js_expression"
-      assert edge["condition_expression"] == "state.data.success === true"
+
+      assert %{
+               "condition_type" => "js_expression",
+               "condition_expression" => "state.data.success === true"
+             } = edge
     end
 
     test "round-trip: serialize then deserialize produces equivalent data" do
@@ -1061,7 +1078,7 @@ defmodule Lightning.Collaboration.WorkflowSerializerTest do
       extracted = WorkflowSerializer.deserialize_from_ydoc(doc, workflow.id)
 
       trigger = List.first(extracted["triggers"])
-      assert is_nil(trigger["cron_expression"])
+      assert %{"cron_expression" => nil} = trigger
     end
 
     test "handles empty strings in job fields" do
@@ -1321,8 +1338,8 @@ defmodule Lightning.Collaboration.WorkflowSerializerTest do
       WorkflowSerializer.serialize_to_ydoc(doc, workflow)
       extracted = WorkflowSerializer.deserialize_from_ydoc(doc, workflow.id)
 
-      refute is_nil(extracted["positions"])
       assert extracted["positions"] == positions
+      refute is_nil(extracted["positions"])
     end
   end
 end
