@@ -561,6 +561,7 @@ export function FullScreenIDE({
         snapshotVersion={snapshotVersion}
         latestSnapshotVersion={latestSnapshotLockVersion}
         workflowId={workflowId}
+        projectId={projectId}
         onClose={onClose}
         onSave={handleSave}
         onRun={handleRunClick}

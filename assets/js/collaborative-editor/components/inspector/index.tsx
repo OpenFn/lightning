@@ -36,17 +36,21 @@ export function Inspector({
   onOpenRunPanel,
   respondToHotKey,
 }: InspectorProps) {
-  const { hash, updateHash } = useURLState();
+  const { searchParams, updateSearchParams } = useURLState();
 
   const hasSelectedNode = currentNode.node && currentNode.type;
 
-  // Settings hash takes precedence, then node inspector
+  // Settings panel takes precedence, then node inspector
   const mode =
-    hash === "settings" ? "settings" : hasSelectedNode ? "node" : null;
+    searchParams.get("panel") === "settings"
+      ? "settings"
+      : hasSelectedNode
+        ? "node"
+        : null;
 
   const handleClose = () => {
     if (mode === "settings") {
-      updateHash(null);
+      updateSearchParams({ panel: null });
     } else {
       onClose(); // Clears node selection
     }
@@ -115,6 +119,8 @@ export function Inspector({
 
 // Helper function to open workflow settings from external components
 export const openWorkflowSettings = () => {
-  const newURL = `${window.location.pathname}${window.location.search}#settings`;
+  const params = new URLSearchParams(window.location.search);
+  params.set("panel", "settings");
+  const newURL = `${window.location.pathname}?${params.toString()}`;
   history.pushState({}, "", newURL);
 };

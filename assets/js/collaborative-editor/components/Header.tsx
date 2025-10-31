@@ -4,6 +4,7 @@ import { useHotkeys } from "react-hotkeys-hook";
 
 import { useURLState } from "../../react/lib/use-url-state";
 import { cn } from "../../utils/cn";
+import { buildClassicalEditorUrl } from "../../utils/editorUrlConversion";
 import {
   useIsNewWorkflow,
   useLatestSnapshotLockVersion,
@@ -157,7 +158,7 @@ export function Header({
   workflowId?: string;
 }) {
   // URL state management (needed early for handleRunClick)
-  const { updateHash } = useURLState();
+  const { updateSearchParams } = useURLState();
 
   // Node selection
   const { selectNode } = useNodeSelection();
@@ -248,33 +249,12 @@ export function Header({
           <ReadOnlyWarning className="ml-3" />
           {projectId && workflowId && (
             <a
-              href={(() => {
-                // Convert collaborative editor params to classical editor params
-                // run -> a (followed run), job -> s (step/job)
-                const searchParams = new URLSearchParams(
-                  window.location.search
-                );
-                const classicalParams = new URLSearchParams();
-
-                const runId = searchParams.get("run");
-                const jobId = searchParams.get("job");
-
-                if (runId) {
-                  classicalParams.set("a", runId);
-                }
-                if (jobId) {
-                  classicalParams.set("s", jobId);
-                }
-
-                const queryString =
-                  classicalParams.toString().length > 0
-                    ? `?${classicalParams.toString()}`
-                    : "";
-
-                return isNewWorkflow
-                  ? `/projects/${projectId}/w/new${queryString}`
-                  : `/projects/${projectId}/w/${workflowId}${queryString}`;
-              })()}
+              href={buildClassicalEditorUrl({
+                projectId,
+                workflowId: workflowId ?? null,
+                searchParams: new URLSearchParams(window.location.search),
+                isNewWorkflow,
+              })}
               className="inline-flex items-center justify-center
               w-6 h-6 text-primary-600 hover:text-primary-700
               hover:bg-primary-50 rounded transition-colors ml-4"
@@ -299,7 +279,7 @@ export function Header({
               <div>
                 <button
                   type="button"
-                  onClick={() => updateHash("settings")}
+                  onClick={() => updateSearchParams({ panel: "settings" })}
                   className="w-5 h-5 place-self-center cursor-pointer
                   text-slate-500 hover:text-slate-400"
                 >

@@ -40,7 +40,7 @@ export function JobInspector({
 
   // URL state for Edit button
   const { searchParams, updateSearchParams } = useURLState();
-  const isIDEOpen = searchParams.get("editor") === "open";
+  const isIDEOpen = searchParams.get("panel") === "editor";
 
   const handleDelete = useCallback(async () => {
     setIsDeleting(true);
@@ -77,7 +77,7 @@ export function JobInspector({
             <span className="inline-block">
               <Button
                 variant="primary"
-                onClick={() => updateSearchParams({ editor: "open" })}
+                onClick={() => updateSearchParams({ panel: "editor" })}
                 disabled={isIDEOpen}
               >
                 Edit
