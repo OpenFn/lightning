@@ -77,7 +77,7 @@ export function IDEHeader({
     "mod+enter",
     e => {
       e.preventDefault();
-      if (canRun) {
+      if (canRun && !isRunning) {
         if (isRetryable) {
           onRetry();
         } else {
@@ -89,7 +89,7 @@ export function IDEHeader({
       enabled: true,
       scopes: ["ide"],
     },
-    [canRun, isRetryable, onRetry, onRun]
+    [canRun, isRunning, isRetryable, onRetry, onRun]
   );
 
   // Handle Cmd/Ctrl+Shift+Enter to force new work order
@@ -97,7 +97,7 @@ export function IDEHeader({
     "mod+shift+enter",
     e => {
       e.preventDefault();
-      if (canRun && isRetryable) {
+      if (canRun && !isRunning && isRetryable) {
         // Force new work order even in retry mode
         onRun();
       }
@@ -106,7 +106,7 @@ export function IDEHeader({
       enabled: true,
       scopes: ["ide"],
     },
-    [canRun, isRetryable, onRun]
+    [canRun, isRunning, isRetryable, onRun]
   );
 
   return (
