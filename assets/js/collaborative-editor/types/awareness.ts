@@ -24,6 +24,7 @@ export interface AwarenessUser {
     head: RelativePosition;
   };
   lastSeen?: number;
+  connectionCount?: number;
 }
 
 /**

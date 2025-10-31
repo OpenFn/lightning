@@ -31,14 +31,15 @@ export function ActiveCollaborators() {
 
         const initials = getAvatarInitials(userForInitials as any);
 
+        const tooltipContent =
+          user.connectionCount && user.connectionCount > 1
+            ? `${user.user.name} (${user.user.email}) - ${user.connectionCount} tabs`
+            : `${user.user.name} (${user.user.email})`;
+
         return (
-          <Tooltip
-            key={user.clientId}
-            content={`${user.user.name} (${user.user.email})`}
-            side="right"
-          >
+          <Tooltip key={user.clientId} content={tooltipContent} side="right">
             <div
-              className={`inline-flex items-center justify-center rounded-full border-2 ${user.lastSeen && lessthanmin(user.lastSeen, 2) ? "border-green-300" : "border-gray-300 "}`}
+              className={`relative inline-flex items-center justify-center rounded-full border-2 ${user.lastSeen && lessthanmin(user.lastSeen, 2) ? "border-green-300" : "border-gray-300 "}`}
             >
               <div
                 className="w-5 h-5 rounded-full flex items-center justify-center font-normal text-[9px] font-semibold text-white cursor-default"
