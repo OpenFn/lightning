@@ -17,6 +17,7 @@ import {
   useNodeSelection,
   useWorkflowActions,
   useWorkflowEnabled,
+  useWorkflowSettingsErrors,
   useWorkflowState,
 } from "../hooks/useWorkflow";
 import { getAvatarInitials } from "../utils/avatar";
@@ -176,6 +177,9 @@ export function Header({
   // Get run button state from hook
   const { canRun, tooltipMessage: runTooltipMessage } = useCanRun();
 
+  // Get validation state for settings button styling
+  const { hasErrors: hasSettingsErrors } = useWorkflowSettingsErrors();
+
   // Get UI commands from store
   const { openRunPanel, openGitHubSyncModal } = useUICommands();
 
@@ -278,8 +282,11 @@ export function Header({
                 <button
                   type="button"
                   onClick={() => updateHash("settings")}
-                  className="w-5 h-5 place-self-center cursor-pointer
-                  text-slate-500 hover:text-slate-400"
+                  className={`w-5 h-5 place-self-center cursor-pointer ${
+                    hasSettingsErrors
+                      ? "text-danger-500 hover:text-danger-400"
+                      : "text-slate-500 hover:text-slate-400"
+                  }`}
                 >
                   <span className="hero-adjustments-vertical"></span>
                 </button>
@@ -307,7 +314,7 @@ export function Header({
                 </Tooltip>
               )}
               <SaveButton
-                canSave={canSave}
+                canSave={canSave && !hasSettingsErrors}
                 tooltipMessage={tooltipMessage}
                 onClick={saveWorkflow}
                 repoConnection={repoConnection}
