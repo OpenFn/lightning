@@ -59,7 +59,8 @@ export function EdgeForm({ edge }: EdgeFormProps) {
   // Reset form when edge changes
   useEffect(() => {
     form.reset();
-  }, [edge.id, form.reset]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [edge.id]);
 
   // Condition options based on source
   const conditionOptions = useMemo(() => {

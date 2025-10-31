@@ -54,9 +54,7 @@ export async function channelRequest<T = unknown>(
         resolve(response);
       })
       .receive("error", (channelError: ChannelError) => {
-        reject(
-          new ChannelRequestError(channelError.type, channelError.errors)
-        );
+        reject(new ChannelRequestError(channelError.type, channelError.errors));
       })
       .receive("timeout", () => {
         reject(new Error("Request timed out"));

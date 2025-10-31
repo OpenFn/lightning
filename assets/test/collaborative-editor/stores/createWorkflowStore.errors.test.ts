@@ -275,44 +275,4 @@ describe("WorkflowStore - Errors Observer (Phase 3: Denormalized)", () => {
       });
     });
   });
-
-  describe("Legacy error commands (still work with new structure)", () => {
-    it("should support clearAllErrors command", () => {
-      const errorsMap = ydoc.getMap("errors");
-
-      // Add errors in nested structure
-      ydoc.transact(() => {
-        errorsMap.set("workflow", { name: ["Error 1"] });
-        errorsMap.set("jobs", { "job-1": { name: ["Error 2"] } });
-      });
-
-      // Verify errors exist
-      expect(store.getSnapshot().workflow?.errors).toEqual({
-        name: ["Error 1"],
-      });
-
-      // Clear all via command
-      store.clearAllErrors();
-
-      // All error maps should be cleared
-      expect(errorsMap.size).toBe(0);
-    });
-
-    it("should support clearError command for top-level keys", () => {
-      const errorsMap = ydoc.getMap("errors");
-
-      // Add errors
-      ydoc.transact(() => {
-        errorsMap.set("workflow", { name: ["Error 1"] });
-        errorsMap.set("jobs", { "job-1": { name: ["Error 2"] } });
-      });
-
-      // Clear workflow errors
-      store.clearError("workflow");
-
-      // Workflow errors should be gone, but job errors remain
-      expect(errorsMap.has("workflow")).toBe(false);
-      expect(errorsMap.has("jobs")).toBe(true);
-    });
-  });
 });

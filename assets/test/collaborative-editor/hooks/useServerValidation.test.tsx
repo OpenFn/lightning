@@ -3,18 +3,19 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useAppForm } from "#/collaborative-editor/components/form";
 import * as useWorkflowModule from "#/collaborative-editor/hooks/useWorkflow";
 
-// Mock useWorkflowState
+// Mock useWorkflowState and useWorkflowActions
 vi.mock("#/collaborative-editor/hooks/useWorkflow", () => ({
   useWorkflowState: vi.fn(),
+  useWorkflowActions: vi.fn(() => ({ setClientErrors: vi.fn() })),
 }));
 
-describe("useServerValidation", () => {
+describe("useValidation (via useAppForm)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it("should inject server errors into form field meta", async () => {
-    // Mock server errors from Y.Doc
+  it("should inject collaborative errors into form field meta", async () => {
+    // Mock collaborative errors from Y.Doc
     const mockFn = vi.fn(selector => {
       const state = {
         workflow: {
@@ -29,21 +30,21 @@ describe("useServerValidation", () => {
       mockFn as any
     );
 
-    // Create form using useAppForm (which includes useServerValidation)
+    // Create form using useAppForm (which includes useValidation)
     const { result } = renderHook(() =>
       useAppForm({
         defaultValues: { name: "", concurrency: null },
       })
     );
 
-    // Wait for server validation effect to run
+    // Wait for validation effect to run
     await waitFor(() => {
       const fieldMeta = result.current.getFieldMeta("name");
-      expect(fieldMeta?.errorMap?.onServer).toBe("Name is required");
+      expect(fieldMeta?.errorMap?.collaborative).toBe("Name is required");
     });
   });
 
-  it("should clear server errors when errors removed from Y.Doc", async () => {
+  it("should clear collaborative errors when errors removed from Y.Doc", async () => {
     // Start with errors
     let mockErrors = { name: ["Name is required"] };
     const mockFn = vi.fn(selector => {
@@ -68,7 +69,7 @@ describe("useServerValidation", () => {
 
     // Verify error is present
     await waitFor(() => {
-      expect(result.current.getFieldMeta("name")?.errorMap?.onServer).toBe(
+      expect(result.current.getFieldMeta("name")?.errorMap?.collaborative).toBe(
         "Name is required"
       );
     });
@@ -82,7 +83,7 @@ describe("useServerValidation", () => {
     // Verify error was cleared
     await waitFor(() => {
       expect(
-        result.current.getFieldMeta("name")?.errorMap?.onServer
+        result.current.getFieldMeta("name")?.errorMap?.collaborative
       ).toBeUndefined();
     });
   });
@@ -119,15 +120,15 @@ describe("useServerValidation", () => {
       )
     );
 
-    // Wait for server validation effect to run
+    // Wait for validation effect to run
     await waitFor(() => {
       const fieldMeta = result.current.getFieldMeta("name");
-      expect(fieldMeta?.errorMap?.onServer).toBe("Job name is required");
+      expect(fieldMeta?.errorMap?.collaborative).toBe("Job name is required");
     });
 
     // def-456 job error should NOT be injected
     const bodyMeta = result.current.getFieldMeta("body");
-    expect(bodyMeta?.errorMap?.onServer).toBeUndefined();
+    expect(bodyMeta?.errorMap?.collaborative).toBeUndefined();
   });
 
   it("should handle multiple fields with errors", async () => {
@@ -154,12 +155,12 @@ describe("useServerValidation", () => {
       })
     );
 
-    // Wait for server validation effect to run
+    // Wait for validation effect to run
     await waitFor(() => {
       const nameMeta = result.current.getFieldMeta("name");
       const concurrencyMeta = result.current.getFieldMeta("concurrency");
-      expect(nameMeta?.errorMap?.onServer).toBe("Name is required");
-      expect(concurrencyMeta?.errorMap?.onServer).toBe("Must be positive");
+      expect(nameMeta?.errorMap?.collaborative).toBe("Name is required");
+      expect(concurrencyMeta?.errorMap?.collaborative).toBe("Must be positive");
     });
   });
 });

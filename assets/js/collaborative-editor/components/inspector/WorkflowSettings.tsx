@@ -76,7 +76,8 @@ export function WorkflowSettings() {
   // Reset form when workflow changes
   useEffect(() => {
     form.reset();
-  }, [workflow.id, form]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [workflow.id]);
 
   const handleReset = async () => {
     setIsResetting(true);

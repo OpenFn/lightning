@@ -650,3 +650,329 @@ describe("JobForm - Complete Integration (Phase 2R: Simplified)", () => {
     expect(finalJob.adaptor).toContain("salesforce");
   });
 });
+
+describe("JobForm - Collaborative Validation (Phase 5)", () => {
+  let ydoc: Y.Doc;
+  let workflowStore: WorkflowStoreInstance;
+  let credentialStore: CredentialStoreInstance;
+  let sessionContextStore: SessionContextStoreInstance;
+  let adaptorStore: AdaptorStoreInstance;
+  let awarenessStore: AwarenessStoreInstance;
+  let mockChannel: any;
+
+  beforeEach(() => {
+    // Create Y.Doc with a job
+    ydoc = createWorkflowYDoc({
+      jobs: {
+        "job-1": {
+          id: "job-1",
+          name: "Test Job",
+          adaptor: "@openfn/language-http@1.0.0",
+          body: "fn(state => state)",
+          project_credential_id: null,
+          keychain_credential_id: null,
+        },
+      },
+    });
+
+    // Create connected stores
+    workflowStore = createConnectedWorkflowStore(ydoc);
+    credentialStore = createCredentialStore();
+    sessionContextStore = createSessionContextStore();
+    adaptorStore = createAdaptorStore();
+    awarenessStore = createAwarenessStore();
+
+    // Mock channels
+    mockChannel = createMockPhoenixChannel();
+    const mockProvider = createMockPhoenixChannelProvider(mockChannel);
+    credentialStore._connectChannel(mockProvider as any);
+    adaptorStore._connectChannel(mockProvider as any);
+
+    // Emit adaptors
+    act(() => {
+      (mockChannel as any)._test.emit("adaptors", {
+        adaptors: [
+          {
+            name: "@openfn/language-http",
+            latest: "1.0.0",
+            versions: [{ version: "1.0.0" }],
+          },
+        ],
+      });
+    });
+
+    // Emit credentials
+    act(() => {
+      (mockChannel as any)._test.emit("credentials_list", {
+        project_credentials: [],
+        keychain_credentials: [],
+      });
+    });
+
+    // Emit permissions
+    act(() => {
+      (mockChannel as any)._test.emit("session_context", {
+        user: null,
+        project: null,
+        config: { require_email_verification: false },
+        permissions: { can_edit_workflow: true, can_run_workflow: true },
+        latest_snapshot_lock_version: 1,
+      });
+    });
+  });
+
+  test("displays server validation errors from Y.Doc", async () => {
+    // Add server validation errors to Y.Doc
+    const errorsMap = ydoc.getMap("errors");
+    act(() => {
+      ydoc.transact(() => {
+        errorsMap.set("jobs", {
+          "job-1": {
+            name: ["Job name is too long (max 100 characters)"],
+          },
+        });
+      });
+    });
+
+    const job = workflowStore.getSnapshot().jobs[0];
+
+    render(<JobForm job={job} />, {
+      wrapper: createWrapper(
+        workflowStore,
+        credentialStore,
+        sessionContextStore,
+        adaptorStore,
+        awarenessStore
+      ),
+    });
+
+    // Verify error is displayed in form
+    await waitFor(() => {
+      expect(
+        screen.getByText(/Job name is too long/)
+      ).toBeInTheDocument();
+    });
+  });
+
+  test("displays multiple validation errors for different fields", async () => {
+    // Add multiple errors to Y.Doc
+    // Note: JobForm only renders the name field, not body
+    const errorsMap = ydoc.getMap("errors");
+    act(() => {
+      ydoc.transact(() => {
+        errorsMap.set("jobs", {
+          "job-1": {
+            name: ["Job name is required"],
+            adaptor: ["Adaptor is invalid"],
+          },
+        });
+      });
+    });
+
+    const job = workflowStore.getSnapshot().jobs[0];
+
+    render(<JobForm job={job} />, {
+      wrapper: createWrapper(
+        workflowStore,
+        credentialStore,
+        sessionContextStore,
+        adaptorStore,
+        awarenessStore
+      ),
+    });
+
+    // Both errors should be displayed (name visible, adaptor handled by form)
+    await waitFor(() => {
+      expect(screen.getByText(/Job name is required/)).toBeInTheDocument();
+    });
+    // Note: adaptor error won't be visible in current JobForm UI since
+    // adaptor is selected via modal, not a direct form field
+  });
+
+  test("preserves errors when reopening inspector", async () => {
+    // Add validation errors
+    const errorsMap = ydoc.getMap("errors");
+    act(() => {
+      ydoc.transact(() => {
+        errorsMap.set("jobs", {
+          "job-1": {
+            name: ["Invalid job name"],
+          },
+        });
+      });
+    });
+
+    const job = workflowStore.getSnapshot().jobs[0];
+
+    // Render, unmount, and re-render
+    const { unmount } = render(<JobForm job={job} />, {
+      wrapper: createWrapper(
+        workflowStore,
+        credentialStore,
+        sessionContextStore,
+        adaptorStore,
+        awarenessStore
+      ),
+    });
+
+    // Verify error is shown initially
+    await waitFor(() => {
+      expect(screen.getByText(/Invalid job name/)).toBeInTheDocument();
+    });
+
+    // Unmount (simulate closing inspector)
+    unmount();
+
+    // Re-render (simulate reopening inspector)
+    render(<JobForm job={job} />, {
+      wrapper: createWrapper(
+        workflowStore,
+        credentialStore,
+        sessionContextStore,
+        adaptorStore,
+        awarenessStore
+      ),
+    });
+
+    // Error should still be visible after remount
+    await waitFor(() => {
+      expect(screen.getByText(/Invalid job name/)).toBeInTheDocument();
+    });
+  });
+
+  test("clears errors when removed from Y.Doc", async () => {
+    // Start with errors
+    const errorsMap = ydoc.getMap("errors");
+    act(() => {
+      ydoc.transact(() => {
+        errorsMap.set("jobs", {
+          "job-1": {
+            name: ["Job name is invalid"],
+          },
+        });
+      });
+    });
+
+    const job = workflowStore.getSnapshot().jobs[0];
+
+    render(<JobForm job={job} />, {
+      wrapper: createWrapper(
+        workflowStore,
+        credentialStore,
+        sessionContextStore,
+        adaptorStore,
+        awarenessStore
+      ),
+    });
+
+    // Verify error is shown
+    await waitFor(() => {
+      expect(screen.getByText(/Job name is invalid/)).toBeInTheDocument();
+    });
+
+    // Clear errors from Y.Doc
+    act(() => {
+      ydoc.transact(() => {
+        errorsMap.set("jobs", {});
+      });
+    });
+
+    // Error should disappear
+    await waitFor(() => {
+      expect(screen.queryByText(/Job name is invalid/)).not.toBeInTheDocument();
+    });
+  });
+
+  test("handles errors for specific job only (not other jobs)", async () => {
+    // Create a second Y.Doc with two jobs to test isolation
+    const ydocWithTwoJobs = createWorkflowYDoc({
+      jobs: {
+        "job-1": {
+          id: "job-1",
+          name: "First Job",
+          adaptor: "@openfn/language-http@1.0.0",
+          body: "fn(state => state)",
+          project_credential_id: null,
+          keychain_credential_id: null,
+        },
+        "job-2": {
+          id: "job-2",
+          name: "Second Job",
+          adaptor: "@openfn/language-http@1.0.0",
+          body: "fn(state => state)",
+          project_credential_id: null,
+          keychain_credential_id: null,
+        },
+      },
+    });
+
+    const twoJobsStore = createConnectedWorkflowStore(ydocWithTwoJobs);
+
+    // Add errors only for job-2
+    const errorsMap = ydocWithTwoJobs.getMap("errors");
+    act(() => {
+      ydocWithTwoJobs.transact(() => {
+        errorsMap.set("jobs", {
+          "job-2": {
+            name: ["Error on job 2"],
+          },
+        });
+      });
+    });
+
+    // Render form for job-1
+    const job1 = twoJobsStore.getSnapshot().jobs.find(j => j.id === "job-1");
+
+    render(<JobForm job={job1!} />, {
+      wrapper: createWrapper(
+        twoJobsStore,
+        credentialStore,
+        sessionContextStore,
+        adaptorStore,
+        awarenessStore
+      ),
+    });
+
+    // job-1 form should NOT show job-2's error
+    await waitFor(() => {
+      expect(screen.queryByText(/Error on job 2/)).not.toBeInTheDocument();
+    });
+  });
+
+  test("displays first error when field has multiple errors", async () => {
+    // Add multiple errors for same field
+    const errorsMap = ydoc.getMap("errors");
+    act(() => {
+      ydoc.transact(() => {
+        errorsMap.set("jobs", {
+          "job-1": {
+            name: [
+              "First error message",
+              "Second error message",
+              "Third error message",
+            ],
+          },
+        });
+      });
+    });
+
+    const job = workflowStore.getSnapshot().jobs[0];
+
+    render(<JobForm job={job} />, {
+      wrapper: createWrapper(
+        workflowStore,
+        credentialStore,
+        sessionContextStore,
+        adaptorStore,
+        awarenessStore
+      ),
+    });
+
+    // Should display first error only
+    await waitFor(() => {
+      expect(screen.getByText(/First error message/)).toBeInTheDocument();
+      expect(screen.queryByText(/Second error message/)).not.toBeInTheDocument();
+      expect(screen.queryByText(/Third error message/)).not.toBeInTheDocument();
+    });
+  });
+});

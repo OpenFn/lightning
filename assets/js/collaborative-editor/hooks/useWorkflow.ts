@@ -361,6 +361,10 @@ export const useWorkflowActions = () => {
       clearSelection: store.clearSelection,
       removeJobAndClearSelection: store.removeJobAndClearSelection,
 
+      // Error management actions
+      setError: store.setError,
+      setClientErrors: store.setClientErrors,
+
       // Workflow actions - wrapped to handle lock version updates
       saveWorkflow: (() => {
         // Helper: Handle successful save operations

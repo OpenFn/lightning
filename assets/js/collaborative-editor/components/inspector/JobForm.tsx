@@ -133,7 +133,8 @@ export function JobForm({ job }: JobFormProps) {
   // Reset form when job changes
   useEffect(() => {
     form.reset();
-  }, [job.id, form]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [job.id]);
 
   // Listen for credential modal close event to reopen configure modal
   useEffect(() => {

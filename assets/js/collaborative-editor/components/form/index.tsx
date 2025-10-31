@@ -1,7 +1,7 @@
 import type { FormOptions } from "@tanstack/react-form";
 import { createFormHook, createFormHookContexts } from "@tanstack/react-form";
 
-import { useServerValidation } from "#/collaborative-editor/hooks/useServerValidation";
+import { useValidation } from "#/collaborative-editor/hooks/useValidation";
 
 import { NumberField } from "./number-field";
 import { SelectField } from "./select-field";
@@ -25,11 +25,12 @@ const { useAppForm: useBaseAppForm } = createFormHook({
 });
 
 /**
- * Enhanced useAppForm that automatically integrates server validation from
- * Y.Doc
+ * Enhanced useAppForm that automatically integrates collaborative
+ * validation from Y.Doc
  *
- * Errors are denormalized onto entities in the WorkflowStore, so this hook
- * passes the errorPath directly to useServerValidation for entity lookup.
+ * All validation errors (server-side Ecto validation AND client-side
+ * TanStack Form/Zod validation) flow through Y.Doc's errorsMap, making
+ * them visible to all connected users in real-time.
  *
  * @param formOptions - Standard TanStack Form options
  * @param errorPath - Optional dot-separated path to entity.
@@ -38,7 +39,7 @@ const { useAppForm: useBaseAppForm } = createFormHook({
  *                      - "jobs.abc-123" → filters to that job's errors
  *                      - "triggers.xyz-789" → filters to that trigger's errors
  *                      - "edges.edge-456" → filters to that edge's errors
- * @returns TanStack Form instance with automatic server validation
+ * @returns TanStack Form instance with automatic collaborative validation
  *
  * @example
  * // Workflow-level form (no path)
@@ -54,7 +55,7 @@ export function useAppForm<TFormData>(
 ) {
   const form = useBaseAppForm(formOptions);
 
-  useServerValidation(form, errorPath);
+  useValidation(form, errorPath);
 
   return form;
 }
