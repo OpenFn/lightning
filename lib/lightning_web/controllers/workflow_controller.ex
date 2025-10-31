@@ -5,8 +5,8 @@ defmodule LightningWeb.WorkflowController do
   alias Lightning.Policies.Permissions
   alias Lightning.Projects
   alias Lightning.Runs
-  alias Lightning.WorkOrders
   alias Lightning.Workflows
+  alias Lightning.WorkOrders
   alias LightningWeb.WorkflowLive.Helpers
 
   action_fallback LightningWeb.FallbackController
