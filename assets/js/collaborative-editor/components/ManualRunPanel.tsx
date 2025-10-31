@@ -3,7 +3,7 @@ import {
   PencilSquareIcon,
   QueueListIcon,
 } from "@heroicons/react/24/outline";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, useRef } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
 
 import { cn } from "#/utils/cn";
@@ -93,6 +93,7 @@ export function ManualRunPanel({
   const [selectedDataclip, setSelectedDataclip] = useState<Dataclip | null>(
     null
   );
+  const isRetryingRef = useRef(false);
   const [dataclips, setDataclips] = useState<Dataclip[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [customBody, setCustomBody] = useState("{}");
@@ -447,8 +448,19 @@ export function ManualRunPanel({
   ]);
 
   const handleRetry = useCallback(async () => {
+    logger.debug("=== handleRetry CALLED ===");
+
+    // Guard against double-calls (e.g., from rapid keyboard shortcuts)
+    if (isRetryingRef.current) {
+      logger.debug("handleRetry blocked: already retrying");
+      return;
+    }
+    isRetryingRef.current = true;
+    logger.debug("isRetryingRef set to true");
+
     if (!followedRunId || !followedRunStep) {
       logger.error("Cannot retry: missing run or step data");
+      isRetryingRef.current = false;
       return;
     }
 
@@ -457,28 +469,40 @@ export function ManualRunPanel({
         title: "Cannot run workflow",
         description: workflowRunTooltipMessage,
       });
+      isRetryingRef.current = false;
       return;
     }
 
+    logger.debug("Setting isSubmitting to true");
     setIsSubmitting(true);
     try {
       // Save workflow first
+      logger.debug("About to call saveWorkflow()");
       await saveWorkflow();
+      logger.debug("saveWorkflow() completed");
 
       // Call retry endpoint
+      const retryUrl = `/projects/${projectId}/runs/${followedRunId}/retry`;
+      const retryBody = { step_id: followedRunStep.id };
+      logger.debug("Calling retry endpoint:");
+      logger.debug("  URL:", retryUrl);
+      logger.debug("  Body:", JSON.stringify(retryBody));
+      logger.debug("  followedRunId:", followedRunId);
+      logger.debug("  followedRunStep.id:", followedRunStep.id);
+
       const csrfToken = getCsrfToken();
-      const response = await fetch(
-        `/projects/${projectId}/runs/${followedRunId}/retry`,
-        {
-          method: "POST",
-          credentials: "same-origin",
-          headers: {
-            "Content-Type": "application/json",
-            "X-CSRF-Token": csrfToken || "",
-          },
-          body: JSON.stringify({ step_id: followedRunStep.id }),
-        }
-      );
+      const response = await fetch(retryUrl, {
+        method: "POST",
+        credentials: "same-origin",
+        headers: {
+          "Content-Type": "application/json",
+          "X-CSRF-Token": csrfToken || "",
+        },
+        body: JSON.stringify(retryBody),
+      });
+
+      logger.debug("Retry response status:", response.status);
+      logger.debug("Retry response ok:", response.ok);
 
       if (!response.ok) {
         const error = (await response.json()) as { error?: string };
@@ -486,8 +510,16 @@ export function ManualRunPanel({
       }
 
       const result = (await response.json()) as {
-        data: { run_id: string };
+        data: { run_id: string; work_order_id?: string };
       };
+
+      logger.debug("=== Retry response ===");
+      logger.debug("  New run_id:", result.data.run_id);
+      logger.debug(
+        "  work_order_id:",
+        result.data.work_order_id || "not included in response"
+      );
+      logger.debug("  Full result:", result);
 
       notifications.success({
         title: "Retry started",
@@ -496,12 +528,16 @@ export function ManualRunPanel({
 
       // Invoke callback with new run_id
       if (onRunSubmitted) {
+        logger.debug("Calling onRunSubmitted with run_id:", result.data.run_id);
         onRunSubmitted(result.data.run_id);
         // Reset submitting state after callback (component stays mounted)
         setIsSubmitting(false);
+        isRetryingRef.current = false;
       } else {
+        logger.debug("Navigating to new run:", result.data.run_id);
         // Fallback: navigate to new run (component will unmount)
         window.location.href = `/projects/${projectId}/runs/${result.data.run_id}`;
+        // No need to reset ref as component will unmount
       }
     } catch (error) {
       logger.error("Failed to retry run:", error);
@@ -510,6 +546,7 @@ export function ManualRunPanel({
         description: error instanceof Error ? error.message : "Unknown error",
       });
       setIsSubmitting(false);
+      isRetryingRef.current = false;
     }
   }, [
     followedRunId,
@@ -614,14 +651,37 @@ export function ManualRunPanel({
         "selectedDataclip.wiped_at:",
         selectedDataclip ? selectedDataclip.wiped_at : null
       );
+
+      // WHY IS isRetryable FALSE?
+      logger.debug("=== Debugging isRetryable calculation ===");
+      logger.debug("Has followedRunId?", !!followedRunId);
+      logger.debug("Has followedRunStep?", !!followedRunStep);
+      logger.debug("Has selectedDataclip?", !!selectedDataclip);
+      if (followedRunStep && selectedDataclip) {
+        logger.debug(
+          "Dataclip IDs match?",
+          followedRunStep.input_dataclip_id === selectedDataclip.id
+        );
+        logger.debug("Dataclip not wiped?", selectedDataclip.wiped_at === null);
+      }
+
       if (canRun && !isSubmitting && !runIsProcessing) {
         if (isRetryable) {
           logger.debug(">>> Calling handleRetry() <<<");
+          // Prevent double-calls by checking isSubmitting again in the handler
           void handleRetry();
         } else {
-          logger.debug(">>> Calling handleRun() (NEW WORK ORDER) <<<");
+          logger.debug(
+            ">>> Calling handleRun() (NEW WORK ORDER) because isRetryable is FALSE <<<"
+          );
           void handleRun();
         }
+      } else {
+        logger.debug("Cmd+Enter blocked:", {
+          canRun,
+          isSubmitting,
+          runIsProcessing,
+        });
       }
     },
     {
