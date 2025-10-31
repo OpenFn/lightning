@@ -74,7 +74,8 @@ defmodule LightningWeb.WorkflowChannel do
          workflow: workflow,
          project: project,
          session_pid: session_pid,
-         project_user: project_user
+         project_user: project_user,
+         snapshot_version: version
        )}
     else
       {:user, nil} -> {:error, %{reason: "unauthorized"}}
