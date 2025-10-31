@@ -25,6 +25,7 @@ export interface AwarenessUser {
   };
   lastSeen?: number;
   connectionCount?: number;
+  currentJobId?: string | null;
 }
 
 /**
@@ -77,6 +78,7 @@ export interface AwarenessCommands {
   updateLocalCursor: (cursor: { x: number; y: number } | null) => void;
   updateLocalSelection: (selection: AwarenessUser["selection"] | null) => void;
   updateLastSeen: () => void;
+  setCurrentJob: (jobId: string | null) => void;
 
   // Connection state
   setConnected: (isConnected: boolean) => void;

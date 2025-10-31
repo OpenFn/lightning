@@ -181,6 +181,10 @@ export const createAwarenessStore = (): AwarenessStore => {
               "selection"
             ] as AwarenessUser["selection"],
             lastSeen: awarenessState["lastSeen"] as number | undefined,
+            currentJobId: awarenessState["currentJobId"] as
+              | string
+              | null
+              | undefined,
           };
           users.push(user);
         } catch (error) {
@@ -380,6 +384,32 @@ export const createAwarenessStore = (): AwarenessStore => {
   };
 
   /**
+   * Set the current job the user is viewing/editing
+   */
+  const setCurrentJob = (jobId: string | null) => {
+    if (!awarenessInstance) {
+      logger.warn("Cannot set current job - awareness not initialized");
+      return;
+    }
+
+    // Update awareness
+    awarenessInstance.setLocalStateField("currentJobId", jobId);
+
+    // Immediate local state update for responsiveness
+    state = produce(state, draft => {
+      if (draft.localUser) {
+        const localUserIndex = draft.users.findIndex(
+          u => u.user.id === draft.localUser?.id
+        );
+        if (localUserIndex !== -1 && draft.users[localUserIndex]) {
+          draft.users[localUserIndex].currentJobId = jobId;
+        }
+      }
+    });
+    notify("setCurrentJob");
+  };
+
+  /**
    * Set up automatic last seen updates
    */
   const setupLastSeenTimer = () => {
@@ -460,6 +490,7 @@ export const createAwarenessStore = (): AwarenessStore => {
     updateLocalCursor,
     updateLocalSelection,
     updateLastSeen,
+    setCurrentJob,
     setConnected,
 
     // Queries (CQS pattern)

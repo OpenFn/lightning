@@ -7,7 +7,7 @@ import {
   SparklesIcon,
   ViewColumnsIcon,
 } from "@heroicons/react/24/outline";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { cn } from "#/utils/cn";
 import _logger from "#/utils/logger";
@@ -15,7 +15,11 @@ import _logger from "#/utils/logger";
 import Docs from "../../adaptor-docs/Docs";
 import { Tabs } from "../../components/Tabs";
 import Metadata from "../../metadata-explorer/Explorer";
-import { useAwarenessReady, useRawAwareness } from "../hooks/useAwareness";
+import {
+  useAwarenessCommands,
+  useAwarenessReady,
+  useRawAwareness,
+} from "../hooks/useAwareness";
 import { useWorkflowSelector, useWorkflowReadOnly } from "../hooks/useWorkflow";
 
 import { CollaborativeMonaco } from "./CollaborativeMonaco";
@@ -66,6 +70,7 @@ export function CollaborativeJobEditor({
   const awarenessReady = useAwarenessReady();
   logger.log("awarenessReady", awarenessReady);
   const { isReadOnly } = useWorkflowReadOnly();
+  const { setCurrentJob } = useAwarenessCommands();
 
   const [vertical, setVertical] = useState(
     () => settings[SettingsKeys.ORIENTATION] === "v"
@@ -74,6 +79,21 @@ export function CollaborativeJobEditor({
     () => settings[SettingsKeys.SHOW_PANEL]
   );
   const [selectedTab, setSelectedTab] = useState("docs");
+
+  // track whether user is editing the job or not
+  useEffect(() => {
+    if (awarenessReady && jobId) {
+      logger.log("user currently editing in awareness", jobId);
+      setCurrentJob(jobId);
+    }
+
+    return () => {
+      if (awarenessReady) {
+        logger.log("user no more editing in awareness", jobId);
+        setCurrentJob(null);
+      }
+    };
+  }, [jobId, awarenessReady, setCurrentJob]);
 
   // Get Y.Text for this job using useWorkflowSelector for store method access
   const jobBodyYText = useWorkflowSelector(

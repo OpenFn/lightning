@@ -23,7 +23,9 @@ import type { UserContext } from "../types/sessionContext";
  * getAvatarInitials(null) // "??"
  * ```
  */
-export function getAvatarInitials(user: UserContext | null): string {
+export function getAvatarInitials(
+  user: Pick<UserContext, "first_name" | "last_name"> | null
+): string {
   // Handle null user
   if (!user) {
     return "??";
@@ -43,4 +45,15 @@ export function getAvatarInitials(user: UserContext | null): string {
   const lastInitial = lastName.charAt(0).toUpperCase();
 
   return `${firstInitial}${lastInitial}`;
+}
+
+export function splitName(name: string) {
+  const nameParts = name.split(/\s+/);
+  const firstName = nameParts[0] || "";
+  const lastName = nameParts.length > 1 ? nameParts[nameParts.length - 1] : "";
+
+  return {
+    first_name: firstName,
+    last_name: lastName,
+  };
 }

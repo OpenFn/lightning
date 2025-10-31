@@ -2,9 +2,11 @@ import { useVersionSelect } from "../../hooks/useVersionSelect";
 import { AdaptorDisplay } from "../AdaptorDisplay";
 import { Button } from "../Button";
 import { Tooltip } from "../Tooltip";
+import { UserAwareness } from "../UserAwareness";
 import { VersionDropdown } from "../VersionDropdown";
 
 interface IDEHeaderProps {
+  jobId: string;
   jobName: string;
   jobAdaptor?: string | undefined;
   jobCredentialId?: string | null | undefined;
@@ -31,6 +33,7 @@ interface IDEHeaderProps {
  * Save is wired to workflow save functionality.
  */
 export function IDEHeader({
+  jobId,
   jobName,
   jobAdaptor,
   jobCredentialId,
@@ -80,6 +83,7 @@ export function IDEHeader({
               />
             </div>
           )}
+          {jobId && <UserAwareness jobId={jobId} />}
         </div>
 
         {/* Right: Action buttons */}

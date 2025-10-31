@@ -68,17 +68,24 @@ export const useAwarenessUsers = (): AwarenessUser[] => {
  * Useful for cursor rendering where you don't want to show your own cursor
  * Deduplicates users by keeping the one with the latest lastSeen timestamp
  * and adds connectionCount to show how many connections they have
+ *
+ * @param jobId - Optional job ID to filter users by. Only returns users currently viewing/editing this job.
  */
-export const useRemoteUsers = (): AwarenessUser[] => {
+export const useRemoteUsers = (jobId?: string | null): AwarenessUser[] => {
   const awarenessStore = useAwarenessStore();
 
   const selectRemoteUsers = awarenessStore.withSelector(state => {
     if (!state.localUser) return state.users;
 
     // Filter out local user
-    const remoteUsers = state.users.filter(
+    let remoteUsers = state.users.filter(
       user => user.user.id !== state.localUser?.id
     );
+
+    // Filter by job ID if provided
+    if (jobId !== undefined && jobId !== null) {
+      remoteUsers = remoteUsers.filter(user => user.currentJobId === jobId);
+    }
 
     // Group users by user ID and deduplicate
     const userMap = new Map<string, AwarenessUser>();
@@ -219,6 +226,7 @@ export const useAwarenessCommands = () => {
     updateLocalCursor: awarenessStore.updateLocalCursor,
     updateLocalSelection: awarenessStore.updateLocalSelection,
     updateLastSeen: awarenessStore.updateLastSeen,
+    setCurrentJob: awarenessStore.setCurrentJob,
     setConnected: awarenessStore.setConnected,
   };
 };

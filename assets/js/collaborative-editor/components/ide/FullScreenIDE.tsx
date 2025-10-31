@@ -10,9 +10,12 @@ import {
 import _logger from "#/utils/logger";
 
 import { useURLState } from "../../../react/lib/use-url-state";
-import { useRunStoreInstance } from "../../hooks/useRun";
 import { useLiveViewActions } from "../../contexts/LiveViewActionsContext";
 import { useProjectAdaptors } from "../../hooks/useAdaptors";
+import {
+  useAwarenessCommands,
+  useAwarenessReady,
+} from "../../hooks/useAwareness";
 import {
   useCredentials,
   useCredentialsCommands,
@@ -99,6 +102,8 @@ export function FullScreenIDE({
   const { canSave, tooltipMessage } = useCanSave();
   const { canRun: canRunSnapshot, tooltipMessage: runTooltipMessage } =
     useCanRun();
+  const { setCurrentJob } = useAwarenessCommands();
+  const awarenessReady = useAwarenessReady();
 
   // Get version information for header
   const snapshotVersion = useWorkflowState(
@@ -187,6 +192,22 @@ export function FullScreenIDE({
       selectJob(jobIdFromURL);
     }
   }, [jobIdFromURL, selectJob]);
+
+  // Track current job in awareness
+  useEffect(() => {
+    if (awarenessReady && currentJob?.id) {
+      logger.log("Setting current job in awareness (IDE):", currentJob.id);
+      setCurrentJob(currentJob.id);
+    }
+
+    // Clear current job when component unmounts or job changes
+    return () => {
+      if (awarenessReady) {
+        logger.log("Clearing current job in awareness (IDE)");
+        setCurrentJob(null);
+      }
+    };
+  }, [currentJob?.id, awarenessReady, setCurrentJob]);
 
   // Sync URL run_id to followRunId
   useEffect(() => {
@@ -500,6 +521,7 @@ export function FullScreenIDE({
     <div className="fixed inset-0 z-50 bg-white flex flex-col">
       {/* Header with Run, Save, Close buttons */}
       <IDEHeader
+        jobId={currentJob.id}
         jobName={currentJob.name}
         jobAdaptor={currentJob.adaptor || undefined}
         jobCredentialId={
@@ -708,6 +730,7 @@ export function FullScreenIDE({
                     adaptor={currentJob.adaptor || "common"}
                     disabled={!canSave}
                     className="h-full w-full"
+                    jobId={currentJob.id}
                     options={{
                       automaticLayout: true,
                       minimap: { enabled: true },
