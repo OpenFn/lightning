@@ -558,19 +558,41 @@ defmodule Lightning.Collaboration.Session do
          %{shared_doc_pid: shared_doc_pid},
          changeset
        ) do
-    formatted_errors = format_changeset_errors_for_ydoc(changeset)
+    # Format as plain maps (without Yex conversion yet)
+    server_errors = format_changeset_errors_as_maps(changeset)
+
+    Logger.debug(
+      "write_validation_errors_to_ydoc: server_errors = #{inspect(server_errors)}"
+    )
 
     SharedDoc.update_doc(shared_doc_pid, fn doc ->
       # Get errors map BEFORE transaction (avoid VM deadlock)
       errors_map = Yex.Doc.get_map(doc, "errors")
 
+      # Read current errors to preserve client-side validation
+      # Use to_json to get plain Elixir maps (to_map can return Yex.Map structs)
+      current_errors = Yex.Map.to_json(errors_map)
+
+      Logger.debug(
+        "write_validation_errors_to_ydoc: current_errors = #{inspect(current_errors)}"
+      )
+
       Yex.Doc.transaction(doc, "write_validation_errors", fn ->
-        # Clear existing errors first
+        # Merge server errors with existing errors (both are plain maps)
+        # Server errors take precedence over client errors for the same paths
+        merged_errors = merge_server_errors(current_errors, server_errors)
+
+        Logger.debug(
+          "write_validation_errors_to_ydoc: merged_errors = #{inspect(merged_errors)}"
+        )
+
+        # Clear and rewrite with merged errors
         clear_map(errors_map)
 
-        # Set new errors (already converted to Y.js compatible types)
-        Enum.each(formatted_errors, fn {field, value} ->
-          Yex.Map.set(errors_map, to_string(field), value)
+        # Convert merged errors to Y.js compatible types before setting
+        Enum.each(merged_errors, fn {field, value} ->
+          yjs_value = convert_to_yjs_value(value)
+          Yex.Map.set(errors_map, to_string(field), yjs_value)
         end)
       end)
     end)
@@ -583,24 +605,43 @@ defmodule Lightning.Collaboration.Session do
       :ok
   end
 
-  # Format changeset errors into nested structure for Y.Doc
-  #
-  # Transforms Ecto changeset errors into a nested map structure that mirrors
-  # the workflow entity hierarchy. This enables the frontend to:
-  # 1. Display workflow-level errors directly (e.g., {name: ["can't be blank"]})
-  # 2. Route nested entity errors to specific forms using JSONPath
-  #    (e.g., {jobs: {"job-uuid" => {name: ["too long"]}}})
-  #
-  # Error messages are preserved as lists to match Ecto's changeset format,
-  # allowing multiple errors per field (though the UI currently displays only the first).
-  #
-  # Examples:
-  #   Workflow error: %{name: ["can't be blank"]}
-  #   Job error: %{jobs: %{"job-uuid" => %{name: ["too long"]}}}
-  #   Edge error: %{edges: %{"edge-uuid" => %{condition_expression: ["is invalid"]}}}
-  #
-  # Inspired by traverse_provision_errors in provisioning_json.ex
-  defp format_changeset_errors_for_ydoc(changeset) do
+  # Merge server validation errors with existing errors (client-side)
+  # Server errors take precedence for paths they validate
+  defp merge_server_errors(current_errors, server_errors) do
+    # Start with current errors (includes client errors)
+    Map.merge(current_errors, server_errors, fn
+      # For nested entity errors (jobs/triggers/edges), merge at entity and field level
+      key, current_nested, server_nested
+      when key in ["jobs", "triggers", "edges"] and is_map(current_nested) and
+             is_map(server_nested) ->
+        # Merge at entity ID level
+        Map.merge(current_nested, server_nested, fn
+          # For each entity ID, merge field errors
+          _entity_id, current_fields, server_fields
+          when is_map(current_fields) and is_map(server_fields) ->
+            # Merge field-level errors: server wins for same field, both preserved for different fields
+            Map.merge(current_fields, server_fields)
+
+          # Server wins if types don't match (shouldn't happen in practice)
+          _entity_id, _current_fields, server_fields ->
+            server_fields
+        end)
+
+      # For workflow-level errors, merge field errors
+      "workflow", current_workflow_errors, server_workflow_errors
+      when is_map(current_workflow_errors) and is_map(server_workflow_errors) ->
+        # Merge workflow field errors: server wins for same field
+        Map.merge(current_workflow_errors, server_workflow_errors)
+
+      # For simple values, server wins
+      _key, _current, server ->
+        server
+    end)
+  end
+
+  # Format changeset errors as plain Elixir maps (for merging with client errors)
+  # Does NOT convert to Yex types - that happens after merging
+  defp format_changeset_errors_as_maps(changeset) do
     errors = extract_changeset_errors(changeset)
 
     # Separate workflow-level errors from entity errors
@@ -608,6 +649,7 @@ defmodule Lightning.Collaboration.Session do
       Map.split(errors, [:jobs, :triggers, :edges])
 
     # Nest workflow errors under 'workflow' key to match Y.Doc structure
+    # Convert atom keys to strings for consistency with JSON representation
     result =
       if workflow_level_errors == %{} do
         entity_errors
@@ -615,11 +657,20 @@ defmodule Lightning.Collaboration.Session do
         Map.put(entity_errors, :workflow, workflow_level_errors)
       end
 
-    # Convert to Y.js compatible types
+    # Convert atom keys to strings to match Y.Doc structure
     Map.new(result, fn {key, value} ->
-      {key, convert_to_yjs_value(value)}
+      {to_string(key), atomize_map_keys_to_strings(value)}
     end)
   end
+
+  # Helper to convert nested atom keys to strings
+  defp atomize_map_keys_to_strings(value) when is_map(value) do
+    Map.new(value, fn {k, v} ->
+      {to_string(k), atomize_map_keys_to_strings(v)}
+    end)
+  end
+
+  defp atomize_map_keys_to_strings(value), do: value
 
   defp extract_changeset_errors(changeset) do
     changeset.errors

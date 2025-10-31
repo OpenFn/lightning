@@ -1085,6 +1085,192 @@ defmodule Lightning.SessionTest do
       # Errors mirror this: workflow (map), jobs (map), triggers (map), edges (map)
       assert Map.keys(errors) |> Enum.sort() == ["jobs", "workflow"]
     end
+
+    test "merges server errors with existing client errors", %{
+      session: session,
+      user: user
+    } do
+      # Simulate client-side validation errors already in Y.Doc
+      doc = Session.get_doc(session)
+      errors_map = Yex.Doc.get_map(doc, "errors")
+
+      job_id_1 = Ecto.UUID.generate()
+      job_id_2 = Ecto.UUID.generate()
+
+      # Add client errors for two jobs
+      Yex.Doc.transaction(doc, "test_add_client_errors", fn ->
+        jobs_errors =
+          Yex.MapPrelim.from(%{
+            job_id_1 => Yex.MapPrelim.from(%{"body" => ["client error"]}),
+            job_id_2 => Yex.MapPrelim.from(%{"adaptor" => ["invalid adaptor"]})
+          })
+
+        Yex.Map.set(errors_map, "jobs", jobs_errors)
+      end)
+
+      # Now create server validation error for job_id_1 (different field)
+      jobs_array = Yex.Doc.get_array(doc, "jobs")
+
+      job_map =
+        Yex.MapPrelim.from(%{
+          "id" => job_id_1,
+          "name" => "",
+          # Server will validate this
+          "body" => Yex.TextPrelim.from("console.log('test');"),
+          "adaptor" => "@openfn/language-common@1.0.0",
+          "project_credential_id" => nil,
+          "keychain_credential_id" => nil
+        })
+
+      Yex.Doc.transaction(doc, "test_add_invalid_job", fn ->
+        Yex.Array.push(jobs_array, job_map)
+      end)
+
+      # Attempt save (should fail validation on job_id_1 name)
+      assert {:error, %Ecto.Changeset{}} = Session.save_workflow(session, user)
+
+      # Check that BOTH client and server errors are present
+      errors = Yex.Map.to_json(errors_map)
+
+      # job_id_1 should have server error for 'name' AND client error for 'body'
+      assert Map.has_key?(errors, "jobs")
+      assert Map.has_key?(errors["jobs"], job_id_1)
+
+      # Server error should be present
+      assert is_list(errors["jobs"][job_id_1]["name"])
+
+      assert Enum.any?(
+               errors["jobs"][job_id_1]["name"],
+               &String.contains?(&1, "can't be blank")
+             )
+
+      # Client error should still be present
+      assert is_list(errors["jobs"][job_id_1]["body"])
+      assert "client error" in errors["jobs"][job_id_1]["body"]
+
+      # job_id_2 should still have its client error (untouched by server)
+      assert Map.has_key?(errors["jobs"], job_id_2)
+      assert is_list(errors["jobs"][job_id_2]["adaptor"])
+      assert "invalid adaptor" in errors["jobs"][job_id_2]["adaptor"]
+    end
+
+    test "server errors take precedence over client errors for same field", %{
+      session: session,
+      user: user
+    } do
+      # Add client error for workflow name
+      doc = Session.get_doc(session)
+      errors_map = Yex.Doc.get_map(doc, "errors")
+
+      Yex.Doc.transaction(doc, "test_add_client_error", fn ->
+        client_workflow_errors =
+          Yex.MapPrelim.from(%{"name" => ["client side validation error"]})
+
+        Yex.Map.set(errors_map, "workflow", client_workflow_errors)
+      end)
+
+      # Now cause server validation error on the same field
+      workflow_map = Yex.Doc.get_map(doc, "workflow")
+
+      Yex.Doc.transaction(doc, "test_blank_name", fn ->
+        Yex.Map.set(workflow_map, "name", "")
+      end)
+
+      # Attempt save (should fail validation)
+      assert {:error, %Ecto.Changeset{}} = Session.save_workflow(session, user)
+
+      # Check that server error replaced client error
+      errors = Yex.Map.to_json(errors_map)
+
+      assert Map.has_key?(errors, "workflow")
+      assert is_list(errors["workflow"]["name"])
+
+      # Should have server error, not client error
+      assert Enum.any?(
+               errors["workflow"]["name"],
+               &String.contains?(&1, "can't be blank")
+             )
+
+      refute "client side validation error" in errors["workflow"]["name"]
+    end
+
+    test "preserves client errors for entities not validated by server", %{
+      session: session,
+      user: user
+    } do
+      # Simulate multiple client errors across different entity types
+      doc = Session.get_doc(session)
+      errors_map = Yex.Doc.get_map(doc, "errors")
+
+      job_id = Ecto.UUID.generate()
+      edge_id = Ecto.UUID.generate()
+
+      Yex.Doc.transaction(doc, "test_add_multiple_client_errors", fn ->
+        # Client errors for job
+        Yex.Map.set(
+          errors_map,
+          "jobs",
+          Yex.MapPrelim.from(%{
+            job_id => Yex.MapPrelim.from(%{"body" => ["client job error"]})
+          })
+        )
+
+        # Client errors for edge
+        Yex.Map.set(
+          errors_map,
+          "edges",
+          Yex.MapPrelim.from(%{
+            edge_id =>
+              Yex.MapPrelim.from(%{
+                "condition_expression" => ["client edge error"]
+              })
+          })
+        )
+
+        # Client error for workflow
+        Yex.Map.set(
+          errors_map,
+          "workflow",
+          Yex.MapPrelim.from(%{"concurrency" => ["client workflow error"]})
+        )
+      end)
+
+      # Now cause server validation error on workflow name only
+      workflow_map = Yex.Doc.get_map(doc, "workflow")
+
+      Yex.Doc.transaction(doc, "test_blank_workflow_name", fn ->
+        Yex.Map.set(workflow_map, "name", "")
+      end)
+
+      # Attempt save (should fail validation on workflow name)
+      assert {:error, %Ecto.Changeset{}} = Session.save_workflow(session, user)
+
+      # Check that client errors for jobs and edges are preserved
+      errors = Yex.Map.to_json(errors_map)
+
+      # Workflow should have BOTH server error (name) and client error (concurrency)
+      assert Map.has_key?(errors, "workflow")
+
+      assert Enum.any?(
+               errors["workflow"]["name"],
+               &String.contains?(&1, "can't be blank")
+             )
+
+      assert "client workflow error" in errors["workflow"]["concurrency"]
+
+      # Job client error should be preserved
+      assert Map.has_key?(errors, "jobs")
+      assert Map.has_key?(errors["jobs"], job_id)
+      assert "client job error" in errors["jobs"][job_id]["body"]
+
+      # Edge client error should be preserved
+      assert Map.has_key?(errors, "edges")
+      assert Map.has_key?(errors["edges"], edge_id)
+
+      assert "client edge error" in errors["edges"][edge_id][
+               "condition_expression"
+             ]
+    end
   end
 
   describe "persistence reconciliation" do
