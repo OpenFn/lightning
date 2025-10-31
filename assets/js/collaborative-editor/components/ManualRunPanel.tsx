@@ -592,10 +592,18 @@ export function ManualRunPanel({
     "mod+enter",
     e => {
       e.preventDefault();
+      logger.debug("Cmd+Enter pressed", {
+        canRun,
+        isSubmitting,
+        runIsProcessing,
+        isRetryable,
+      });
       if (canRun && !isSubmitting && !runIsProcessing) {
         if (isRetryable) {
+          logger.debug("Calling handleRetry()");
           void handleRetry();
         } else {
+          logger.debug("Calling handleRun()");
           void handleRun();
         }
       }
