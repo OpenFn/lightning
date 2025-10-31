@@ -46,7 +46,7 @@ export function ActiveCollaborators() {
                 style={{
                   backgroundColor: user.user.color,
                   textShadow:
-                    "0 0 3px rgba(0, 0, 0, 0.9), 0 1px 2px rgba(0, 0, 0, 0.8)",
+                    "1px 0 0 rgba(0, 0, 0, 0.5), 0 -1px 0 rgba(0, 0, 0, 0.5), 0 1px 0 rgba(0, 0, 0, 0.5), -1px 0 0 rgba(0, 0, 0, 0.5)",
                 }}
               >
                 {initials}
