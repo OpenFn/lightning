@@ -1,5 +1,9 @@
 import { useHotkeys } from "react-hotkeys-hook";
 
+import { useURLState } from "#/react/lib/use-url-state";
+import { buildClassicalEditorUrl } from "#/utils/editorUrlConversion";
+
+import { useIsNewWorkflow } from "../../hooks/useSessionContext";
 import { useVersionSelect } from "../../hooks/useVersionSelect";
 import { AdaptorDisplay } from "../AdaptorDisplay";
 import { Button } from "../Button";
@@ -15,6 +19,7 @@ interface IDEHeaderProps {
   snapshotVersion: number | null | undefined;
   latestSnapshotVersion: number | null | undefined;
   workflowId: string | undefined;
+  projectId: string | undefined;
   onClose: () => void;
   onSave: () => void;
   onRun: () => void;
@@ -39,13 +44,14 @@ interface IDEHeaderProps {
  * Retry state is managed by ManualRunPanel and passed through FullScreenIDE.
  */
 export function IDEHeader({
-  jobId: _jobId,
+  jobId,
   jobName,
   jobAdaptor,
   jobCredentialId,
   snapshotVersion,
   latestSnapshotVersion,
   workflowId,
+  projectId,
   onClose,
   onSave,
   onRun,
@@ -61,6 +67,10 @@ export function IDEHeader({
 }: IDEHeaderProps) {
   // Use shared version selection handler (destroys Y.Doc before switching)
   const handleVersionSelect = useVersionSelect();
+
+  // Get URL state for building classical editor link
+  const { searchParams } = useURLState();
+  const isNewWorkflow = useIsNewWorkflow();
 
   // Handle Cmd/Ctrl+Enter for main action (Run or Retry based on state)
   useHotkeys(
@@ -122,18 +132,42 @@ export function IDEHeader({
             <div className="flex-1 max-w-xs">
               <AdaptorDisplay
                 adaptor={jobAdaptor}
-                credentialId={jobCredentialId}
+                credentialId={jobCredentialId ?? null}
                 size="sm"
                 onEdit={onEditAdaptor}
                 onChangeAdaptor={onChangeAdaptor}
               />
             </div>
           )}
+          {projectId && workflowId && (
+            <a
+              href={(() => {
+                // Build URL with current job selected and inspector open
+                const params = new URLSearchParams(searchParams);
+                params.set("job", jobId);
+                params.set("panel", "editor");
+
+                return buildClassicalEditorUrl({
+                  projectId,
+                  workflowId,
+                  searchParams: params,
+                  isNewWorkflow,
+                });
+              })()}
+              className="inline-flex items-center justify-center flex-shrink-0
+              w-6 h-6 text-primary-600 hover:text-primary-700
+              hover:bg-primary-50 rounded transition-colors"
+            >
+              <Tooltip content="Switch back to classical editor" side="bottom">
+                <span className="hero-beaker-solid h-4 w-4" />
+              </Tooltip>
+            </a>
+          )}
         </div>
 
         {/* Right: Action buttons */}
         <div className="flex items-center gap-3">
-          {runTooltip ? (
+          {!canRun && runTooltip ? (
             <Tooltip content={runTooltip} side="bottom">
               <span className="inline-block">
                 <RunRetryButton
