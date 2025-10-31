@@ -1,6 +1,6 @@
 import type { Channel } from "phoenix";
 
-import type { ChannelRequestError } from "../lib/errors";
+import { ChannelRequestError } from "../lib/errors";
 
 /**
  * Channel error response from backend
@@ -54,10 +54,9 @@ export async function channelRequest<T = unknown>(
         resolve(response);
       })
       .receive("error", (channelError: ChannelError) => {
-        const customError = new Error() as ChannelRequestError;
-        customError.type = channelError.type;
-        customError.errors = channelError.errors;
-        reject(customError);
+        reject(
+          new ChannelRequestError(channelError.type, channelError.errors)
+        );
       })
       .receive("timeout", () => {
         reject(new Error("Request timed out"));

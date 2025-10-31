@@ -4,8 +4,9 @@ import type { ChannelError } from "../hooks/useChannel";
 
 /**
  * Custom error thrown by channelRequest when backend returns an error.
+ * Does not include a formatted message - formatting happens at higher levels.
  */
-export interface ChannelRequestError extends Error {
+export class ChannelRequestError extends Error {
   type:
     | "unauthorized"
     | "validation_error"
@@ -14,6 +15,16 @@ export interface ChannelRequestError extends Error {
     | "internal_error"
     | "optimistic_lock_error";
   errors: Record<string, string[] | undefined>;
+
+  constructor(
+    type: ChannelRequestError["type"],
+    errors: Record<string, string[] | undefined>
+  ) {
+    super("Channel request failed");
+    this.name = "ChannelRequestError";
+    this.type = type;
+    this.errors = errors;
+  }
 }
 
 /**
@@ -22,7 +33,7 @@ export interface ChannelRequestError extends Error {
 export function isChannelRequestError(
   error: unknown
 ): error is ChannelRequestError {
-  return error instanceof Error && "type" in error && "errors" in error;
+  return error instanceof ChannelRequestError;
 }
 
 /**
