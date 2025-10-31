@@ -230,7 +230,8 @@ export function ManualRunPanel({
         setCanEditDataclip(response.can_edit_dataclip);
 
         // Auto-select next cron run dataclip if exists
-        if (response.next_cron_run_dataclip_id) {
+        // BUT: Skip this if following a run - the followedRunStep effect will handle selection
+        if (response.next_cron_run_dataclip_id && !followedRunId) {
           const nextCronDataclip = response.data.find(
             d => d.id === response.next_cron_run_dataclip_id
           );
@@ -245,7 +246,7 @@ export function ManualRunPanel({
     };
 
     void fetchDataclips();
-  }, [projectId, dataclipJobId]);
+  }, [projectId, dataclipJobId, followedRunId]);
 
   // Build filters object for API
   const buildFilters = useCallback(() => {
