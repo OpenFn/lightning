@@ -39,11 +39,15 @@ export function ActiveCollaborators() {
         return (
           <Tooltip key={user.clientId} content={tooltipContent} side="right">
             <div
-              className={`relative inline-flex items-center justify-center rounded-full border-2 ${user.lastSeen && lessthanmin(user.lastSeen, 2) ? "border-green-300" : "border-gray-300 "}`}
+              className={`relative inline-flex items-center justify-center rounded-full border-2 ${user.lastSeen && lessthanmin(user.lastSeen, 2) ? "border-green-500" : "border-gray-500 "}`}
             >
               <div
                 className="w-5 h-5 rounded-full flex items-center justify-center font-normal text-[9px] font-semibold text-white cursor-default"
-                style={{ backgroundColor: user.user.color }}
+                style={{
+                  backgroundColor: user.user.color,
+                  textShadow:
+                    "0 0 3px rgba(0, 0, 0, 0.9), 0 1px 2px rgba(0, 0, 0, 0.8)",
+                }}
               >
                 {initials}
               </div>
