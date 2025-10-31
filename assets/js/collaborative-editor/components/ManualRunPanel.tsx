@@ -592,7 +592,7 @@ export function ManualRunPanel({
     "mod+enter",
     e => {
       e.preventDefault();
-      if (canRun && !isSubmitting) {
+      if (canRun && !isSubmitting && !runIsProcessing) {
         if (isRetryable) {
           void handleRetry();
         } else {
@@ -604,7 +604,7 @@ export function ManualRunPanel({
       enabled: true,
       enableOnFormTags: true,
     },
-    [canRun, isSubmitting, isRetryable, handleRetry, handleRun]
+    [canRun, isSubmitting, runIsProcessing, isRetryable, handleRetry, handleRun]
   );
 
   // Handle ⌘+Shift+Enter for force new work order
@@ -612,7 +612,7 @@ export function ManualRunPanel({
     "mod+shift+enter",
     e => {
       e.preventDefault();
-      if (canRun && !isSubmitting && isRetryable) {
+      if (canRun && !isSubmitting && !runIsProcessing && isRetryable) {
         // Force new work order even in retry mode
         void handleRun();
       }
@@ -621,7 +621,7 @@ export function ManualRunPanel({
       enabled: true,
       enableOnFormTags: true,
     },
-    [canRun, isSubmitting, isRetryable, handleRun]
+    [canRun, isSubmitting, runIsProcessing, isRetryable, handleRun]
   );
 
   // Extract content for reuse
