@@ -153,6 +153,15 @@ defmodule LightningWeb.Router do
          WorkflowController,
          :create_run
 
+    # Run steps and retry
+    get "/projects/:project_id/runs/:run_id/steps",
+        WorkflowController,
+        :get_run_steps
+
+    post "/projects/:project_id/runs/:run_id/retry",
+         WorkflowController,
+         :retry_run
+
     get "/project_files/:id/download", ProjectFileController, :download
 
     get "/profile/confirm_email/:token",
