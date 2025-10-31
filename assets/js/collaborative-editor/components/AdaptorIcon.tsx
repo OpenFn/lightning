@@ -8,7 +8,7 @@ interface AdaptorIconProps {
 }
 
 const sizeClasses = {
-  sm: "h-6 w-6",
+  sm: "h-5 w-5",
   md: "h-8 w-8",
   lg: "h-12 w-12",
 };
@@ -49,7 +49,7 @@ export function AdaptorIcon({ name, size = "md" }: AdaptorIconProps) {
     <img
       src={iconData.square}
       alt={displayName}
-      className={`${sizeClasses[size]} rounded-md object-cover`}
+      className={`${sizeClasses[size]} object-cover`}
     />
   );
 }
