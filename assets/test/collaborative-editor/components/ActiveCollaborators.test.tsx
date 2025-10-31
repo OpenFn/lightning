@@ -178,7 +178,7 @@ describe("ActiveCollaborators - Activity Indicator", () => {
 
     const { container } = render(<ActiveCollaborators />);
 
-    const borderDiv = container.querySelector(".border-green-300");
+    const borderDiv = container.querySelector(".border-green-500");
     expect(borderDiv).toBeInTheDocument();
   });
 
@@ -200,7 +200,7 @@ describe("ActiveCollaborators - Activity Indicator", () => {
 
     const { container } = render(<ActiveCollaborators />);
 
-    const borderDiv = container.querySelector(".border-gray-300");
+    const borderDiv = container.querySelector(".border-gray-500");
     expect(borderDiv).toBeInTheDocument();
   });
 
@@ -219,7 +219,7 @@ describe("ActiveCollaborators - Activity Indicator", () => {
 
     const { container } = render(<ActiveCollaborators />);
 
-    const borderDiv = container.querySelector(".border-gray-300");
+    const borderDiv = container.querySelector(".border-gray-500");
     expect(borderDiv).toBeInTheDocument();
   });
 
@@ -254,8 +254,8 @@ describe("ActiveCollaborators - Activity Indicator", () => {
 
     const { container } = render(<ActiveCollaborators />);
 
-    const greenBorder = container.querySelector(".border-green-300");
-    const grayBorder = container.querySelector(".border-gray-300");
+    const greenBorder = container.querySelector(".border-green-500");
+    const grayBorder = container.querySelector(".border-gray-500");
 
     expect(greenBorder).toBeInTheDocument();
     expect(grayBorder).toBeInTheDocument();
@@ -280,7 +280,7 @@ describe("ActiveCollaborators - Activity Indicator", () => {
     const { container, rerender } = render(<ActiveCollaborators />);
 
     // Initially should have green border
-    expect(container.querySelector(".border-green-300")).toBeInTheDocument();
+    expect(container.querySelector(".border-green-500")).toBeInTheDocument();
 
     // Advance time by 3 minutes
     vi.advanceTimersByTime(3 * 60 * 1000);
@@ -289,7 +289,7 @@ describe("ActiveCollaborators - Activity Indicator", () => {
     rerender(<ActiveCollaborators />);
 
     // Now should have gray border
-    expect(container.querySelector(".border-gray-300")).toBeInTheDocument();
+    expect(container.querySelector(".border-gray-500")).toBeInTheDocument();
 
     vi.useRealTimers();
   });
@@ -474,7 +474,7 @@ describe("ActiveCollaborators - Edge Cases", () => {
     // Should render without crashing
     expect(screen.getByText("JD")).toBeInTheDocument();
     // Should have gray border (inactive)
-    expect(container.querySelector(".border-gray-300")).toBeInTheDocument();
+    expect(container.querySelector(".border-gray-500")).toBeInTheDocument();
   });
 
   test("handles rapidly changing awareness states", () => {
