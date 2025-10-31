@@ -13,16 +13,18 @@ import { FilterTypes } from "../../manual-run-panel/types";
 import CustomView from "../../manual-run-panel/views/CustomView";
 import EmptyView from "../../manual-run-panel/views/EmptyView";
 import ExistingView from "../../manual-run-panel/views/ExistingView";
+import { useURLState } from "../../react/lib/use-url-state";
 import type { Dataclip } from "../api/dataclips";
 import * as dataclipApi from "../api/dataclips";
 import { useCanRun } from "../hooks/useWorkflow";
+import { getCsrfToken } from "../lib/csrf";
 import { notifications } from "../lib/notifications";
 import type { Workflow } from "../types/workflow";
 
-import { Button } from "./Button";
 import { InspectorFooter } from "./inspector/InspectorFooter";
 import { InspectorLayout } from "./inspector/InspectorLayout";
 import { SelectedDataclipView } from "./manual-run/SelectedDataclipView";
+import { RunRetryButton } from "./RunRetryButton";
 import { Tabs } from "./Tabs";
 
 const logger = _logger.ns("ManualRunPanel").seal();
@@ -74,6 +76,14 @@ export function ManualRunPanel({
   >(null);
   const [canEditDataclip, setCanEditDataclip] = useState(false);
   const [currentRunDataclip] = useState<Dataclip | null>(null);
+
+  // Retry state tracking
+  const { searchParams } = useURLState();
+  const followedRunId = searchParams.get("run"); // 'run' param is run ID
+  const [followedRunStep, setFollowedRunStep] = useState<{
+    id: string;
+    input_dataclip_id: string | null;
+  } | null>(null);
 
   // Filter state for ExistingView
   const [selectedClipType, setSelectedClipType] = useState("");
@@ -140,6 +150,44 @@ export function ManualRunPanel({
     setNamedOnly(false);
   }, [jobId, triggerId]);
 
+  // Fetch step data for followed run to determine retry eligibility
+  useEffect(() => {
+    if (!followedRunId || !dataclipJobId) {
+      setFollowedRunStep(null);
+      return;
+    }
+
+    const fetchStepData = async () => {
+      try {
+        const response = await fetch(
+          `/projects/${projectId}/runs/${followedRunId}/steps?job_id=${dataclipJobId}`,
+          {
+            credentials: "same-origin",
+          }
+        );
+
+        if (!response.ok) {
+          if (response.status === 404) {
+            // No step found for this job - not retryable
+            setFollowedRunStep(null);
+            return;
+          }
+          throw new Error(`Failed to fetch step data: ${response.statusText}`);
+        }
+
+        const result = (await response.json()) as {
+          data: { id: string; input_dataclip_id: string | null };
+        };
+        setFollowedRunStep(result.data);
+      } catch (error) {
+        logger.error("Failed to fetch step data:", error);
+        setFollowedRunStep(null);
+      }
+    };
+
+    void fetchStepData();
+  }, [followedRunId, dataclipJobId, projectId]);
+
   // Fetch initial dataclips
   useEffect(() => {
     if (!dataclipJobId) return;
@@ -173,6 +221,23 @@ export function ManualRunPanel({
 
     void fetchDataclips();
   }, [projectId, dataclipJobId]);
+
+  // Auto-select step's input dataclip when following a run
+  useEffect(() => {
+    if (!followedRunStep?.input_dataclip_id || !dataclips.length) {
+      return;
+    }
+
+    // Find the step's input dataclip in the loaded dataclips
+    const stepDataclip = dataclips.find(
+      dc => dc.id === followedRunStep.input_dataclip_id
+    );
+
+    if (stepDataclip) {
+      setSelectedDataclip(stepDataclip);
+      setSelectedTab("existing");
+    }
+  }, [followedRunStep, dataclips]);
 
   // Build filters object for API
   const buildFilters = useCallback(() => {
@@ -369,7 +434,93 @@ export function ManualRunPanel({
     saveWorkflow,
     canRunWorkflow,
     workflowRunTooltipMessage,
+    onRunSubmitted,
   ]);
+
+  const handleRetry = useCallback(async () => {
+    if (!followedRunId || !followedRunStep) {
+      logger.error("Cannot retry: missing run or step data");
+      return;
+    }
+
+    if (!canRunWorkflow) {
+      notifications.alert({
+        title: "Cannot run workflow",
+        description: workflowRunTooltipMessage,
+      });
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      // Save workflow first
+      await saveWorkflow();
+
+      // Call retry endpoint
+      const csrfToken = getCsrfToken();
+      const response = await fetch(
+        `/projects/${projectId}/runs/${followedRunId}/retry`,
+        {
+          method: "POST",
+          credentials: "same-origin",
+          headers: {
+            "Content-Type": "application/json",
+            "X-CSRF-Token": csrfToken || "",
+          },
+          body: JSON.stringify({ step_id: followedRunStep.id }),
+        }
+      );
+
+      if (!response.ok) {
+        const error = (await response.json()) as { error?: string };
+        throw new Error(error.error || "Failed to retry run");
+      }
+
+      const result = (await response.json()) as {
+        data: { run_id: string };
+      };
+
+      notifications.success({
+        title: "Retry started",
+        description: "Your workflow retry is now running",
+      });
+
+      // Invoke callback with new run_id
+      if (onRunSubmitted) {
+        onRunSubmitted(result.data.run_id);
+      } else {
+        // Fallback: navigate to new run
+        window.location.href = `/projects/${projectId}/runs/${result.data.run_id}`;
+      }
+    } catch (error) {
+      logger.error("Failed to retry run:", error);
+      notifications.alert({
+        title: "Retry failed",
+        description: error instanceof Error ? error.message : "Unknown error",
+      });
+      setIsSubmitting(false);
+    }
+  }, [
+    followedRunId,
+    followedRunStep,
+    canRunWorkflow,
+    workflowRunTooltipMessage,
+    saveWorkflow,
+    projectId,
+    onRunSubmitted,
+  ]);
+
+  // Calculate retry eligibility
+  const isRetryable = useMemo(() => {
+    if (!followedRunId || !followedRunStep || !selectedDataclip) {
+      return false;
+    }
+
+    return (
+      selectedDataclip.wiped_at === null &&
+      followedRunStep.input_dataclip_id === selectedDataclip.id
+    );
+  }, [followedRunId, followedRunStep, selectedDataclip]);
 
   // Combine workflow-level permissions with local validation
   // Local validation: user must have selected valid input (empty, custom, or existing dataclip)
@@ -383,7 +534,11 @@ export function ManualRunPanel({
   // Notify parent of run state changes (for embedded mode)
   useEffect(() => {
     if (onRunStateChange) {
-      onRunStateChange(canRun, isSubmitting, handleRun);
+      // Wrap handleRun to avoid promise warnings in parent components
+      const wrappedHandleRun = () => {
+        void handleRun();
+      };
+      onRunStateChange(canRun, isSubmitting, wrappedHandleRun);
     }
   }, [canRun, isSubmitting, handleRun, onRunStateChange]);
 
@@ -395,6 +550,43 @@ export function ManualRunPanel({
     },
     { enabled: true, enableOnFormTags: true },
     [onClose]
+  );
+
+  // Handle ⌘+Enter for main action (Run or Retry based on state)
+  useHotkeys(
+    "mod+enter",
+    e => {
+      e.preventDefault();
+      if (canRun && !isSubmitting) {
+        if (isRetryable) {
+          void handleRetry();
+        } else {
+          void handleRun();
+        }
+      }
+    },
+    {
+      enabled: true,
+      enableOnFormTags: true,
+    },
+    [canRun, isSubmitting, isRetryable, handleRetry, handleRun]
+  );
+
+  // Handle ⌘+Shift+Enter for force new work order
+  useHotkeys(
+    "mod+shift+enter",
+    e => {
+      e.preventDefault();
+      if (canRun && !isSubmitting && isRetryable) {
+        // Force new work order even in retry mode
+        void handleRun();
+      }
+    },
+    {
+      enabled: true,
+      enableOnFormTags: true,
+    },
+    [canRun, isSubmitting, isRetryable, handleRun]
   );
 
   // Extract content for reuse
@@ -437,8 +629,17 @@ export function ManualRunPanel({
       {selectedTab === "empty" && <EmptyView />}
       {selectedTab === "custom" && (
         <CustomView
-          pushEvent={(_event, data) => {
-            if (data?.manual?.body !== undefined) {
+          pushEvent={(_event, data: unknown) => {
+            // Type guard for data shape
+            if (
+              data &&
+              typeof data === "object" &&
+              "manual" in data &&
+              data.manual &&
+              typeof data.manual === "object" &&
+              "body" in data.manual &&
+              typeof data.manual.body === "string"
+            ) {
               handleCustomBodyChange(data.manual.body);
             }
           }}
@@ -459,7 +660,9 @@ export function ManualRunPanel({
           setSelectedDates={setSelectedDates}
           namedOnly={namedOnly}
           setNamedOnly={setNamedOnly}
-          onSubmit={handleSearch}
+          onSubmit={() => {
+            void handleSearch();
+          }}
           fixedHeight={true}
           currentRunDataclip={currentRunDataclip}
           nextCronRunDataclipId={nextCronRunDataclipId}
@@ -484,13 +687,22 @@ export function ManualRunPanel({
       footer={
         <InspectorFooter
           rightButtons={
-            <Button
-              variant="primary"
-              onClick={handleRun}
-              disabled={!canRun || isSubmitting}
-            >
-              {isSubmitting ? "Pending..." : "Run (Create New Workorder)"}
-            </Button>
+            <RunRetryButton
+              isRetryable={isRetryable}
+              isDisabled={!canRun}
+              isSubmitting={isSubmitting}
+              onRun={() => {
+                void handleRun();
+              }}
+              onRetry={() => {
+                void handleRetry();
+              }}
+              buttonText={{
+                run: "Run Workflow Now",
+                retry: "Run (retry)",
+                processing: "Running...",
+              }}
+            />
           }
         />
       }
