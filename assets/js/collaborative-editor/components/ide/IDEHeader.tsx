@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useHotkeys } from "react-hotkeys-hook";
 
 import { useURLState } from "#/react/lib/use-url-state";
 
@@ -170,6 +171,43 @@ export function IDEHeader({
       followedRunId && followedRunStep && followedRunStep.input_dataclip_id
     );
   }, [followedRunId, followedRunStep]);
+
+  // Handle Cmd/Ctrl+Enter for main action (Run or Retry based on state)
+  useHotkeys(
+    "mod+enter",
+    e => {
+      e.preventDefault();
+      if (canRun && !isRetrying) {
+        if (isRetryable) {
+          void handleRetry();
+        } else {
+          onRun();
+        }
+      }
+    },
+    {
+      enabled: true,
+      scopes: ["ide"],
+    },
+    [canRun, isRetrying, isRetryable, handleRetry, onRun]
+  );
+
+  // Handle Cmd/Ctrl+Shift+Enter to force new work order
+  useHotkeys(
+    "mod+shift+enter",
+    e => {
+      e.preventDefault();
+      if (canRun && !isRetrying && isRetryable) {
+        // Force new work order even in retry mode
+        onRun();
+      }
+    },
+    {
+      enabled: true,
+      scopes: ["ide"],
+    },
+    [canRun, isRetrying, isRetryable, onRun]
+  );
 
   return (
     <div className="shrink-0 border-b border-gray-200 bg-white px-4 py-2">
