@@ -19,9 +19,10 @@ export function ActiveCollaborators() {
   return (
     <div className="flex items-center gap-1.5 ml-2">
       {remoteUsers.map(user => {
-        const nameParts = user.user.name.split(" ");
+        const nameParts = user.user.name.split(/\s+/);
         const firstName = nameParts[0] || "";
-        const lastName = nameParts[nameParts.length - 1] || "";
+        const lastName =
+          nameParts.length > 1 ? nameParts[nameParts.length - 1] : "";
 
         const userForInitials = {
           first_name: firstName,
