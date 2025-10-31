@@ -1,13 +1,14 @@
-import { memo } from 'react';
-import type { MiniMapNodeProps } from '@xyflow/react';
-import { useWorkflowStore } from '../../workflow-store/store';
-import useAdaptorIcons from '../useAdaptorIcons';
-import getAdaptorName from '../util/get-adaptor-name';
-import { ClockIcon, GlobeAltIcon } from '@heroicons/react/24/outline';
+import { ClockIcon, GlobeAltIcon } from "@heroicons/react/24/outline";
+import type { MiniMapNodeProps } from "@xyflow/react";
+import { memo } from "react";
+
+import { useWorkflowStore } from "../../workflow-store/store";
+import useAdaptorIcons from "../useAdaptorIcons";
+import getAdaptorName from "../util/get-adaptor-name";
 
 type Trigger = {
   id: string;
-  type: 'webhook' | 'cron';
+  type: "webhook" | "cron";
 };
 
 type Job = {
@@ -18,10 +19,10 @@ type Job = {
 const MinimapNode = ({
   x,
   y,
-  width,
-  height,
+  width: _width,
+  height: _height,
   id,
-  selected,
+  selected: _selected,
 }: MiniMapNodeProps) => {
   const { triggers, jobs } = useWorkflowStore();
   const adaptorIconsData = useAdaptorIcons();
@@ -34,7 +35,7 @@ const MinimapNode = ({
   if (isTrigger) {
     // Use the same icons as the main Trigger component
     const icon =
-      trigger.type === 'webhook' ? (
+      trigger.type === "webhook" ? (
         <GlobeAltIcon className="w-full h-full text-gray-500" />
       ) : (
         <ClockIcon className="w-full h-full text-gray-500" />
@@ -50,12 +51,7 @@ const MinimapNode = ({
           stroke="#ccc"
           strokeWidth={8}
         />
-        <foreignObject
-          x={x + 30}
-          y={y + 30}
-          width={60}
-          height={60}
-        >
+        <foreignObject x={x + 30} y={y + 30} width={60} height={60}>
           {icon}
         </foreignObject>
       </g>
@@ -66,7 +62,7 @@ const MinimapNode = ({
   const job = jobs.find((job: Job) => job.id === id);
   const adaptor = job?.adaptor ? getAdaptorName(job.adaptor) : null;
   const icon =
-    adaptor && adaptor in adaptorIconsData
+    adaptor && adaptorIconsData && adaptor in adaptorIconsData
       ? adaptorIconsData[adaptor]?.square
       : null;
 

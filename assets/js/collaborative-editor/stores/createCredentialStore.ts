@@ -86,6 +86,9 @@ import { channelRequest } from "../hooks/useChannel";
 import {
   type CredentialState,
   type CredentialStore,
+  type CredentialWithType,
+  type ProjectCredential,
+  type KeychainCredential,
   CredentialsListSchema,
 } from "../types/credential";
 
@@ -140,6 +143,57 @@ export const createCredentialStore = (): CredentialStore => {
 
   // withSelector utility - creates memoized selectors for referential stability
   const withSelector = createWithSelector(getSnapshot);
+
+  // =============================================================================
+  // QUERIES (CQS pattern - read-only operations)
+  // =============================================================================
+
+  /**
+   * Find a credential by ID
+   * For ProjectCredentials: checks both 'id' and 'project_credential_id'
+   * For KeychainCredentials: checks 'id'
+   * Returns credential with type discriminator
+   */
+  const findCredentialById = (
+    searchId: string | null
+  ): CredentialWithType | null => {
+    if (!searchId) return null;
+
+    // Check project credentials (match either id or project_credential_id)
+    const projectCred = state.projectCredentials.find(
+      c => c.id === searchId || c.project_credential_id === searchId
+    );
+    if (projectCred) {
+      return { ...projectCred, type: "project" };
+    }
+
+    // Check keychain credentials (match id)
+    const keychainCred = state.keychainCredentials.find(c => c.id === searchId);
+    if (keychainCred) {
+      return { ...keychainCred, type: "keychain" };
+    }
+
+    return null;
+  };
+
+  /**
+   * Check if a credential exists by ID
+   */
+  const credentialExists = (searchId: string | null): boolean => {
+    return findCredentialById(searchId) !== null;
+  };
+
+  /**
+   * Get the ID used for credential selection
+   * (project_credential_id for project creds, id for keychain)
+   */
+  const getCredentialId = (
+    cred: ProjectCredential | KeychainCredential
+  ): string => {
+    return "project_credential_id" in cred
+      ? cred.project_credential_id
+      : cred.id;
+  };
 
   // =============================================================================
   // PATTERN 1: Channel Message → Immer → Notify (Server Updates)
@@ -302,6 +356,11 @@ export const createCredentialStore = (): CredentialStore => {
     subscribe,
     getSnapshot,
     withSelector,
+
+    // Queries (CQS pattern)
+    findCredentialById,
+    credentialExists,
+    getCredentialId,
 
     // Commands (CQS pattern)
     requestCredentials,

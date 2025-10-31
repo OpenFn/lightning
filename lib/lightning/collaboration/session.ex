@@ -349,9 +349,22 @@ defmodule Lightning.Collaboration.Session do
         {:reply, {:error, :workflow_deleted}, state}
 
       {:error, %Ecto.Changeset{} = changeset} ->
-        Logger.warning(
-          "Failed to save workflow #{state.workflow.id}: #{inspect(changeset.errors)}"
-        )
+        all_errors =
+          Ecto.Changeset.traverse_errors(changeset, fn {msg, opts} ->
+            Regex.replace(~r"%{(\w+)}", msg, fn _, key ->
+              opts
+              |> Keyword.get(String.to_existing_atom(key), key)
+              |> to_string()
+            end)
+          end)
+
+        Logger.warning(fn ->
+          """
+          Failed to save workflow #{state.workflow.id}
+          Top-level errors: #{inspect(changeset.errors)}
+          All validation errors: #{inspect(all_errors)}
+          """
+        end)
 
         # Write validation errors to Y.Doc
         write_validation_errors_to_ydoc(state, changeset)

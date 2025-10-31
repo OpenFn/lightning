@@ -253,6 +253,17 @@ defmodule Lightning.Collaboration.WorkflowSerializer do
   defp extract_text_field(string) when is_binary(string), do: string
   defp extract_text_field(nil), do: ""
 
+  # Catch-all for unexpected types - log and return empty string
+  defp extract_text_field(value) do
+    require Logger
+
+    Logger.warning(
+      "extract_text_field received unexpected type: #{inspect(value)}"
+    )
+
+    ""
+  end
+
   # Convert DateTime to ISO8601 string for Y.Doc storage
   # Y.Doc can't store DateTime structs directly
   defp datetime_to_string(nil), do: nil

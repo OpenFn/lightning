@@ -58,6 +58,7 @@ export const mockAppConfig: AppConfig = {
  */
 export const mockPermissions: Permissions = {
   can_edit_workflow: true,
+  can_run_workflow: true,
 };
 
 /**
@@ -302,6 +303,7 @@ export function createSessionContext(
   // Handle permissions - always present, merge with defaults
   const permissions: Permissions = {
     can_edit_workflow: true,
+    can_run_workflow: true,
     ...options.permissions,
   };
 
@@ -376,7 +378,7 @@ export function createGithubConnectedContext(
  */
 export function createReadOnlyContext(): SessionContextResponse {
   return createSessionContext({
-    permissions: { can_edit_workflow: false },
+    permissions: { can_edit_workflow: false, can_run_workflow: false },
   });
 }
 

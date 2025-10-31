@@ -19,6 +19,18 @@ and this project adheres to
 
 - Show server validation errors in the collab editor forms
   [#3783](https://github.com/OpenFn/lightning/issues/3783)
+
+### Changed
+
+### Fixed
+
+## [2.14.14-pre1] - 2025-10-30
+
+### Added
+
+- Adaptor and credential configuration in canvas job inspector - users can now
+  configure adaptor version and connect credentials directly from the canvas
+  [#3834](https://github.com/OpenFn/lightning/issues/3834)
 - Press `Control-E` (or `⌘+E`) to open the IDE when a job/step is selected
   [#3890](https://github.com/OpenFn/lightning/issues/3890)
 - Drag-to-connect nodes on workflow canvas - users can now drag from the plus

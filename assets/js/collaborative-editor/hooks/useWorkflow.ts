@@ -587,7 +587,8 @@ const useWorkflowConditions = () => {
   const latestSnapshotLockVersion = useLatestSnapshotLockVersion();
   const workflow = useWorkflowState(state => state.workflow);
 
-  const hasPermission = permissions?.can_edit_workflow ?? false;
+  const hasEditPermission = permissions?.can_edit_workflow ?? false;
+  const hasRunPermission = permissions?.can_run_workflow ?? false;
   const isConnected = isSynced;
   const isDeleted = workflow !== null && workflow.deleted_at !== null;
 
@@ -599,7 +600,13 @@ const useWorkflowConditions = () => {
     latestSnapshotLockVersion !== null &&
     workflow.lock_version !== latestSnapshotLockVersion;
 
-  return { hasPermission, isConnected, isDeleted, isOldSnapshot };
+  return {
+    hasEditPermission,
+    hasRunPermission,
+    isConnected,
+    isDeleted,
+    isOldSnapshot,
+  };
 };
 
 /**
@@ -616,7 +623,7 @@ const useWorkflowConditions = () => {
  * 4. Workflow deletion state (deleted_at)
  */
 export const useCanSave = (): { canSave: boolean; tooltipMessage: string } => {
-  const { hasPermission, isConnected, isDeleted, isOldSnapshot } =
+  const { hasEditPermission, isConnected, isDeleted, isOldSnapshot } =
     useWorkflowConditions();
 
   // Determine tooltip message (check in priority order)
@@ -626,7 +633,7 @@ export const useCanSave = (): { canSave: boolean; tooltipMessage: string } => {
   if (!isConnected) {
     canSave = false;
     tooltipMessage = "You are disconnected. Reconnecting...";
-  } else if (!hasPermission) {
+  } else if (!hasEditPermission) {
     canSave = false;
     tooltipMessage = "You do not have permission to edit this workflow";
   } else if (isDeleted) {
@@ -654,8 +661,16 @@ export const useCanSave = (): { canSave: boolean; tooltipMessage: string } => {
  * 4. Workflow deletion state (deleted_at)
  */
 export const useCanRun = (): { canRun: boolean; tooltipMessage: string } => {
-  const { hasPermission, isConnected, isDeleted, isOldSnapshot } =
-    useWorkflowConditions();
+  const {
+    hasEditPermission,
+    hasRunPermission,
+    isConnected,
+    isDeleted,
+    isOldSnapshot,
+  } = useWorkflowConditions();
+
+  // User can run if they have EITHER edit OR run permission (matches WorkflowEdit)
+  const hasPermission = hasEditPermission || hasRunPermission;
 
   // Determine tooltip message (check in priority order)
   let tooltipMessage = "Run workflow";

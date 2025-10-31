@@ -98,7 +98,7 @@ export function EdgeForm({ edge }: EdgeFormProps) {
     );
 
   return (
-    <div>
+    <div className="px-6 py-6 space-y-4">
       {/* Label Field */}
       <form.AppField name="condition_label">
         {field => <field.TextField label="Label" />}
@@ -173,28 +173,6 @@ export function EdgeForm({ edge }: EdgeFormProps) {
               </p>
             </div>
           </details>
-        </div>
-      )}
-
-      {/* Enabled toggle (only for job edges) */}
-      {!edge.source_trigger_id && (
-        <div className="mt-4">
-          <form.Field name="enabled">
-            {field => (
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={field.state.value ?? true}
-                  onChange={e => field.handleChange(e.target.checked)}
-                  className="rounded border-slate-300 text-indigo-600
-                             focus:ring-indigo-500"
-                />
-                <span className="text-sm font-medium text-slate-800">
-                  Enabled
-                </span>
-              </label>
-            )}
-          </form.Field>
         </div>
       )}
 

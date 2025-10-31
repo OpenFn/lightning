@@ -32,7 +32,7 @@ import {
 // =============================================================================
 
 interface WrapperOptions {
-  permissions?: { can_edit_workflow: boolean };
+  permissions?: { can_edit_workflow: boolean; can_run_workflow: boolean };
   latestSnapshotLockVersion?: number;
   workflowLockVersion?: number | null;
   workflowDeletedAt?: string | null;
@@ -49,7 +49,7 @@ function createWrapper(options: WrapperOptions = {}): [
   },
 ] {
   const {
-    permissions = { can_edit_workflow: true },
+    permissions = { can_edit_workflow: true, can_run_workflow: true },
     latestSnapshotLockVersion = 1,
     workflowLockVersion = 1,
     workflowDeletedAt = null,
@@ -127,7 +127,7 @@ function createWrapper(options: WrapperOptions = {}): [
 describe("useWorkflowReadOnly - Deleted Workflow", () => {
   test("returns read-only true with deletion message for deleted workflow", async () => {
     const [wrapper, { emitSessionContext }] = createWrapper({
-      permissions: { can_edit_workflow: true },
+      permissions: { can_edit_workflow: true, can_run_workflow: true },
       workflowDeletedAt: new Date().toISOString(),
     });
 
@@ -147,7 +147,7 @@ describe("useWorkflowReadOnly - Deleted Workflow", () => {
 
   test("deleted state takes priority over permission restrictions", async () => {
     const [wrapper, { emitSessionContext }] = createWrapper({
-      permissions: { can_edit_workflow: false },
+      permissions: { can_edit_workflow: false, can_run_workflow: false },
       workflowDeletedAt: new Date().toISOString(),
     });
 
@@ -167,7 +167,7 @@ describe("useWorkflowReadOnly - Deleted Workflow", () => {
 
   test("deleted state takes priority over old snapshot", async () => {
     const [wrapper, { emitSessionContext }] = createWrapper({
-      permissions: { can_edit_workflow: true },
+      permissions: { can_edit_workflow: true, can_run_workflow: true },
       latestSnapshotLockVersion: 2,
       workflowLockVersion: 1,
       workflowDeletedAt: new Date().toISOString(),
@@ -195,7 +195,7 @@ describe("useWorkflowReadOnly - Deleted Workflow", () => {
 describe("useWorkflowReadOnly - Permissions", () => {
   test("returns read-only true with permission message when user lacks edit permission", async () => {
     const [wrapper, { emitSessionContext }] = createWrapper({
-      permissions: { can_edit_workflow: false },
+      permissions: { can_edit_workflow: false, can_run_workflow: false },
       workflowDeletedAt: null,
     });
 
@@ -215,7 +215,7 @@ describe("useWorkflowReadOnly - Permissions", () => {
 
   test("permission restriction takes priority over old snapshot", async () => {
     const [wrapper, { emitSessionContext }] = createWrapper({
-      permissions: { can_edit_workflow: false },
+      permissions: { can_edit_workflow: false, can_run_workflow: false },
       latestSnapshotLockVersion: 2,
       workflowLockVersion: 1,
       workflowDeletedAt: null,
@@ -243,7 +243,7 @@ describe("useWorkflowReadOnly - Permissions", () => {
 describe("useWorkflowReadOnly - Snapshot Version", () => {
   test("returns read-only true with snapshot message for old snapshot", async () => {
     const [wrapper, { emitSessionContext }] = createWrapper({
-      permissions: { can_edit_workflow: true },
+      permissions: { can_edit_workflow: true, can_run_workflow: true },
       latestSnapshotLockVersion: 2,
       workflowLockVersion: 1,
       workflowDeletedAt: null,
@@ -265,7 +265,7 @@ describe("useWorkflowReadOnly - Snapshot Version", () => {
 
   test("returns not read-only when viewing latest snapshot", async () => {
     const [wrapper, { emitSessionContext }] = createWrapper({
-      permissions: { can_edit_workflow: true },
+      permissions: { can_edit_workflow: true, can_run_workflow: true },
       latestSnapshotLockVersion: 1,
       workflowLockVersion: 1,
       workflowDeletedAt: null,
@@ -291,7 +291,7 @@ describe("useWorkflowReadOnly - Snapshot Version", () => {
 describe("useWorkflowReadOnly - Valid Editing", () => {
   test("returns not read-only for valid editing scenario", async () => {
     const [wrapper, { emitSessionContext }] = createWrapper({
-      permissions: { can_edit_workflow: true },
+      permissions: { can_edit_workflow: true, can_run_workflow: true },
       latestSnapshotLockVersion: 1,
       workflowLockVersion: 1,
       workflowDeletedAt: null,
@@ -426,7 +426,7 @@ describe("useWorkflowReadOnly - Priority Order", () => {
   test("verifies complete priority order: deleted > permissions > snapshot", async () => {
     // Test 1: All three conditions apply - deleted takes priority
     const [wrapper1, { emitSessionContext: emit1 }] = createWrapper({
-      permissions: { can_edit_workflow: false },
+      permissions: { can_edit_workflow: false, can_run_workflow: false },
       latestSnapshotLockVersion: 2,
       workflowLockVersion: 1,
       workflowDeletedAt: new Date().toISOString(),
@@ -448,7 +448,7 @@ describe("useWorkflowReadOnly - Priority Order", () => {
 
     // Test 2: Permission and snapshot conditions apply - permission takes priority
     const [wrapper2, { emitSessionContext: emit2 }] = createWrapper({
-      permissions: { can_edit_workflow: false },
+      permissions: { can_edit_workflow: false, can_run_workflow: false },
       latestSnapshotLockVersion: 2,
       workflowLockVersion: 1,
       workflowDeletedAt: null,
@@ -470,7 +470,7 @@ describe("useWorkflowReadOnly - Priority Order", () => {
 
     // Test 3: Only snapshot condition applies
     const [wrapper3, { emitSessionContext: emit3 }] = createWrapper({
-      permissions: { can_edit_workflow: true },
+      permissions: { can_edit_workflow: true, can_run_workflow: true },
       latestSnapshotLockVersion: 2,
       workflowLockVersion: 1,
       workflowDeletedAt: null,

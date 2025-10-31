@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useHotkeys, useHotkeysContext } from "react-hotkeys-hook";
 import {
   type ImperativePanelHandle,
@@ -10,6 +10,13 @@ import {
 import _logger from "#/utils/logger";
 
 import { useURLState } from "../../../react/lib/use-url-state";
+import { useRunStoreInstance } from "../../hooks/useRun";
+import { useLiveViewActions } from "../../contexts/LiveViewActionsContext";
+import { useProjectAdaptors } from "../../hooks/useAdaptors";
+import {
+  useCredentials,
+  useCredentialsCommands,
+} from "../../hooks/useCredentials";
 import { useRunStoreInstance } from "../../hooks/useRun";
 import { useSession } from "../../hooks/useSession";
 import {
@@ -24,7 +31,9 @@ import {
   useWorkflowState,
 } from "../../hooks/useWorkflow";
 import { notifications } from "../../lib/notifications";
+import { AdaptorSelectionModal } from "../AdaptorSelectionModal";
 import { CollaborativeMonaco } from "../CollaborativeMonaco";
+import { ConfigureAdaptorModal } from "../ConfigureAdaptorModal";
 import { ManualRunPanel } from "../ManualRunPanel";
 import { RunViewerPanel } from "../run-viewer/RunViewerPanel";
 import { RunViewerErrorBoundary } from "../run-viewer/RunViewerErrorBoundary";
@@ -34,6 +43,26 @@ import { Tabs } from "../Tabs";
 import { IDEHeader } from "./IDEHeader";
 
 const logger = _logger.ns("FullScreenIDE").seal();
+
+/**
+ * Resolves an adaptor specifier into its package name and version
+ * @param adaptor - Full NPM package string like "@openfn/language-common@1.4.3"
+ * @returns Tuple of package name and version, or null if parsing fails
+ */
+function resolveAdaptor(adaptor: string): {
+  package: string | null;
+  version: string | null;
+} {
+  const regex = /^(@[^@]+)@(.+)$/;
+  const match = adaptor.match(regex);
+  if (!match) return { package: null, version: null };
+  const [, packageName, version] = match;
+
+  return {
+    package: packageName || null,
+    version: version || null,
+  };
+}
 
 interface FullScreenIDEProps {
   jobId?: string;
@@ -129,6 +158,18 @@ export function FullScreenIDE({
       setActiveRightTab(savedTab as RightPanelTab);
     }
   }, []);
+
+  // Adaptor configuration modal state
+  const [isConfigureModalOpen, setIsConfigureModalOpen] = useState(false);
+  const [isAdaptorPickerOpen, setIsAdaptorPickerOpen] = useState(false);
+  const [isCredentialModalOpen, setIsCredentialModalOpen] = useState(false);
+
+  // Adaptor and credential data
+  const { projectCredentials, keychainCredentials } = useCredentials();
+  const { requestCredentials } = useCredentialsCommands();
+  const { projectAdaptors, allAdaptors } = useProjectAdaptors();
+  const { pushEvent, handleEvent } = useLiveViewActions();
+  const { updateJob } = useWorkflowActions();
 
   const { enableScope, disableScope } = useHotkeysContext();
 
@@ -227,6 +268,134 @@ export function FullScreenIDE({
 
     runHandler();
   };
+
+  // Adaptor modal handlers
+  const handleOpenAdaptorPicker = useCallback(() => {
+    setIsConfigureModalOpen(false);
+    setIsAdaptorPickerOpen(true);
+  }, []);
+
+  const handleOpenCredentialModal = useCallback(
+    (adaptorName: string) => {
+      setIsConfigureModalOpen(false);
+      setIsCredentialModalOpen(true);
+      pushEvent("open_credential_modal", { schema: adaptorName });
+    },
+    [pushEvent]
+  );
+
+  const handleAdaptorSelect = useCallback(
+    (adaptorName: string) => {
+      if (!currentJob) return;
+
+      // Extract package name and set version to "latest"
+      const packageMatch = adaptorName.match(/(.+?)(@|$)/);
+      const newPackage = packageMatch ? packageMatch[1] : adaptorName;
+      const fullAdaptor = `${newPackage}@latest`;
+
+      // Update job in Y.Doc
+      updateJob(currentJob.id, { adaptor: fullAdaptor });
+
+      // Close adaptor picker and reopen configure modal
+      setIsAdaptorPickerOpen(false);
+      setIsConfigureModalOpen(true);
+    },
+    [currentJob, updateJob]
+  );
+
+  const handleConfigureSave = useCallback(
+    (config: {
+      adaptorPackage: string;
+      adaptorVersion: string;
+      credentialId: string | null;
+    }) => {
+      if (!currentJob) return;
+
+      // Build the Y.Doc updates (only Job schema fields)
+      const jobUpdates: {
+        adaptor: string;
+        project_credential_id: string | null;
+        keychain_credential_id: string | null;
+      } = {
+        adaptor: `${config.adaptorPackage}@${config.adaptorVersion}`,
+        project_credential_id: null,
+        keychain_credential_id: null,
+      };
+
+      // Update credential if selected
+      if (config.credentialId) {
+        const isProjectCredential = projectCredentials.some(
+          c => c.project_credential_id === config.credentialId
+        );
+        const isKeychainCredential = keychainCredentials.some(
+          c => c.id === config.credentialId
+        );
+
+        if (isProjectCredential) {
+          jobUpdates.project_credential_id = config.credentialId;
+        } else if (isKeychainCredential) {
+          jobUpdates.keychain_credential_id = config.credentialId;
+        }
+      }
+
+      // Persist to Y.Doc
+      updateJob(currentJob.id, jobUpdates);
+
+      // Close modal
+      setIsConfigureModalOpen(false);
+    },
+    [currentJob, projectCredentials, keychainCredentials, updateJob]
+  );
+
+  // Listen for credential modal close event
+  useEffect(() => {
+    const handleModalClose = () => {
+      setIsCredentialModalOpen(false);
+      setTimeout(() => {
+        setIsConfigureModalOpen(true);
+      }, 200);
+      setTimeout(() => {
+        pushEvent("close_credential_modal_complete", {});
+      }, 500);
+    };
+
+    const element = document.getElementById("collaborative-editor-react");
+    element?.addEventListener("close_credential_modal", handleModalClose);
+
+    return () => {
+      element?.removeEventListener("close_credential_modal", handleModalClose);
+    };
+  }, [pushEvent]);
+
+  // Listen for credential saved event
+  useEffect(() => {
+    const cleanup = handleEvent("credential_saved", (payload: any) => {
+      if (!currentJob) return;
+
+      setIsCredentialModalOpen(false);
+
+      const { credential, is_project_credential } = payload;
+      const credentialId = is_project_credential
+        ? credential.project_credential_id
+        : credential.id;
+
+      // Update job with new credential
+      updateJob(currentJob.id, {
+        project_credential_id: is_project_credential ? credentialId : null,
+        keychain_credential_id: is_project_credential ? null : credentialId,
+      });
+
+      // Reload credentials
+      void requestCredentials();
+
+      // Reopen configure modal
+      setTimeout(() => {
+        setIsConfigureModalOpen(true);
+      }, 200);
+    });
+
+    return cleanup;
+  }, [handleEvent, currentJob, updateJob, requestCredentials]);
 
   // Handle Escape key to close the IDE
   // Two-step behavior: first Escape removes focus from Monaco, second closes IDE
@@ -332,6 +501,12 @@ export function FullScreenIDE({
       {/* Header with Run, Save, Close buttons */}
       <IDEHeader
         jobName={currentJob.name}
+        jobAdaptor={currentJob.adaptor || undefined}
+        jobCredentialId={
+          currentJob.project_credential_id ||
+          currentJob.keychain_credential_id ||
+          null
+        }
         snapshotVersion={snapshotVersion}
         latestSnapshotVersion={latestSnapshotLockVersion}
         workflowId={workflowId}
@@ -343,6 +518,8 @@ export function FullScreenIDE({
         canSave={canSave}
         saveTooltip={tooltipMessage}
         runTooltip={runTooltipMessage}
+        onEditAdaptor={() => setIsConfigureModalOpen(true)}
+        onChangeAdaptor={handleOpenAdaptorPicker}
       />
       <SandboxIndicatorBanner
         parentProjectId={parentProjectId}
@@ -429,7 +606,7 @@ export function FullScreenIDE({
 
               {/* Panel content */}
               {!isLeftCollapsed && workflow && projectId && workflowId && (
-                <div className="flex-1 overflow-hidden">
+                <div className="flex-1 overflow-hidden bg-white">
                   <ManualRunPanel
                     workflow={workflow}
                     projectId={projectId}
@@ -575,6 +752,7 @@ export function FullScreenIDE({
                         <Tabs
                           value={activeRightTab}
                           onChange={setActiveRightTab}
+                          variant="underline"
                           options={[
                             { value: "run", label: "Run" },
                             { value: "log", label: "Log" },
@@ -630,7 +808,7 @@ export function FullScreenIDE({
 
               {/* Panel content */}
               {!isRightCollapsed && (
-                <div className="flex-1 overflow-hidden">
+                <div className="flex-1 overflow-hidden pt-2 bg-white">
                   <RunViewerErrorBoundary>
                     <RunViewerPanel
                       followRunId={followRunId}
@@ -645,6 +823,42 @@ export function FullScreenIDE({
           </Panel>
         </PanelGroup>
       </div>
+
+      {/* Adaptor Configuration Modals */}
+      {currentJob && (
+        <>
+          <ConfigureAdaptorModal
+            isOpen={isConfigureModalOpen}
+            onClose={() => setIsConfigureModalOpen(false)}
+            onSave={handleConfigureSave}
+            onOpenAdaptorPicker={handleOpenAdaptorPicker}
+            onOpenCredentialModal={handleOpenCredentialModal}
+            currentAdaptor={
+              resolveAdaptor(
+                currentJob.adaptor || "@openfn/language-common@latest"
+              ).package || "@openfn/language-common"
+            }
+            currentVersion={
+              resolveAdaptor(
+                currentJob.adaptor || "@openfn/language-common@latest"
+              ).version || "latest"
+            }
+            currentCredentialId={
+              currentJob.project_credential_id ||
+              currentJob.keychain_credential_id ||
+              null
+            }
+            allAdaptors={allAdaptors}
+          />
+
+          <AdaptorSelectionModal
+            isOpen={isAdaptorPickerOpen}
+            onClose={() => setIsAdaptorPickerOpen(false)}
+            onSelect={handleAdaptorSelect}
+            projectAdaptors={projectAdaptors}
+          />
+        </>
+      )}
     </div>
   );
 }
