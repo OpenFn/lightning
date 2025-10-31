@@ -497,12 +497,16 @@ export const createWorkflowStore = () => {
     const jobsArray = ydoc.getArray("jobs");
     const jobMap = new Y.Map();
 
+    // Default body text shown in the Monaco editor for new jobs
+    const defaultBody = `// Check out the Job Writing Guide for help getting started:
+// https://docs.openfn.org/documentation/jobs/job-writing-guide
+`;
+
     ydoc.transact(() => {
       jobMap.set("id", job.id);
       jobMap.set("name", job.name);
-      if (job.body) {
-        jobMap.set("body", new Y.Text(job.body));
-      }
+      // Always initialize body as Y.Text with default if empty
+      jobMap.set("body", new Y.Text(job.body || defaultBody));
       // Set adaptor field (defaults to common if not provided)
       jobMap.set("adaptor", job.adaptor);
       // Initialize credential fields to null
@@ -728,6 +732,49 @@ export const createWorkflowStore = () => {
     }
   };
 
+  const saveAndSyncWorkflow = async (
+    commitMessage: string
+  ): Promise<{
+    saved_at?: string;
+    lock_version?: number;
+    repo?: string;
+  } | null> => {
+    const { ydoc, provider } = ensureConnected();
+
+    const workflow = ydoc.getMap("workflow").toJSON();
+
+    const jobs = ydoc.getArray("jobs").toJSON();
+    const triggers = ydoc.getArray("triggers").toJSON();
+    const edges = ydoc.getArray("edges").toJSON();
+    const positions = ydoc.getMap("positions").toJSON();
+
+    const payload = {
+      ...workflow,
+      jobs,
+      triggers,
+      edges,
+      positions,
+      commit_message: commitMessage,
+    };
+
+    logger.debug("Saving and syncing workflow to GitHub", payload);
+
+    try {
+      const response = await channelRequest<{
+        saved_at: string;
+        lock_version: number;
+        repo: string;
+      }>(provider.channel, "save_and_sync", payload);
+
+      logger.debug("Saved and synced workflow to GitHub", response);
+
+      return response;
+    } catch (error) {
+      logger.error("Failed to save and sync workflow", error);
+      throw error;
+    }
+  };
+
   const resetWorkflow = async (): Promise<void> => {
     const { provider } = ensureConnected();
 
@@ -887,6 +934,7 @@ export const createWorkflowStore = () => {
     selectEdge,
     clearSelection,
     saveWorkflow,
+    saveAndSyncWorkflow,
     resetWorkflow,
     validateWorkflowName,
   };

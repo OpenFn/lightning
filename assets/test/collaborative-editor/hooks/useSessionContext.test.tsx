@@ -5,31 +5,31 @@
  * data from the session context store.
  */
 
-import { describe, expect, test, beforeEach } from "vitest";
 import { act, renderHook, waitFor } from "@testing-library/react";
 import type React from "react";
+import { beforeEach, describe, expect, test } from "vitest";
 
-import {
-  useUser,
-  useProject,
-  useAppConfig,
-  useSessionContextLoading,
-  useSessionContextError,
-} from "../../../js/collaborative-editor/hooks/useSessionContext";
-import { StoreContext } from "../../../js/collaborative-editor/contexts/StoreProvider";
 import type { StoreContextValue } from "../../../js/collaborative-editor/contexts/StoreProvider";
-import { createSessionContextStore } from "../../../js/collaborative-editor/stores/createSessionContextStore";
+import { StoreContext } from "../../../js/collaborative-editor/contexts/StoreProvider";
+import {
+  useAppConfig,
+  useProject,
+  useSessionContextError,
+  useSessionContextLoading,
+  useUser,
+} from "../../../js/collaborative-editor/hooks/useSessionContext";
 import type { SessionContextStoreInstance } from "../../../js/collaborative-editor/stores/createSessionContextStore";
+import { createSessionContextStore } from "../../../js/collaborative-editor/stores/createSessionContextStore";
+import type {
+  AppConfig,
+  ProjectContext,
+  UserContext,
+} from "../../../js/collaborative-editor/types/sessionContext";
+import { mockPermissions } from "../__helpers__/sessionContextFactory";
 import {
   createMockPhoenixChannel,
   createMockPhoenixChannelProvider,
 } from "../mocks/phoenixChannel";
-import type {
-  UserContext,
-  ProjectContext,
-  AppConfig,
-} from "../../../js/collaborative-editor/types/sessionContext";
-import { mockPermissions } from "../fixtures/sessionContextData";
 
 function createWrapper(
   sessionContextStore: SessionContextStoreInstance
@@ -119,6 +119,7 @@ describe("useUser()", () => {
         config: createMockAppConfig(),
         permissions: mockPermissions,
         latest_snapshot_lock_version: 1,
+        project_repo_connection: null,
       });
     });
 
@@ -132,6 +133,7 @@ describe("useUser()", () => {
         config: createMockAppConfig(),
         permissions: mockPermissions,
         latest_snapshot_lock_version: 1,
+        project_repo_connection: null,
       });
     });
 
@@ -163,6 +165,7 @@ describe("useProject()", () => {
         config: createMockAppConfig(),
         permissions: mockPermissions,
         latest_snapshot_lock_version: 1,
+        project_repo_connection: null,
       });
     });
 
@@ -176,6 +179,7 @@ describe("useProject()", () => {
         config: createMockAppConfig(),
         permissions: mockPermissions,
         latest_snapshot_lock_version: 1,
+        project_repo_connection: null,
       });
     });
 
@@ -207,6 +211,7 @@ describe("useAppConfig()", () => {
         config: mockConfig,
         permissions: mockPermissions,
         latest_snapshot_lock_version: 1,
+        project_repo_connection: null,
       });
     });
 
@@ -220,6 +225,7 @@ describe("useAppConfig()", () => {
         config: updatedConfig,
         permissions: mockPermissions,
         latest_snapshot_lock_version: 1,
+        project_repo_connection: null,
       });
     });
 
@@ -303,6 +309,7 @@ describe("Hook Integration", () => {
         config: mockConfig,
         permissions: mockPermissions,
         latest_snapshot_lock_version: 1,
+        project_repo_connection: null,
       });
     });
 

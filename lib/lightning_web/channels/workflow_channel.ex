@@ -12,12 +12,12 @@ defmodule LightningWeb.WorkflowChannel do
   alias Lightning.Collaborate
   alias Lightning.Collaboration.Session
   alias Lightning.Collaboration.Utils
-  alias Lightning.Credentials.KeychainCredential
   alias Lightning.Policies.Permissions
-  alias Lightning.Projects.ProjectCredential
+  alias Lightning.VersionControl
   alias Lightning.Workflows.Job
   alias Lightning.Workflows.Snapshot
   alias Lightning.Workflows.Workflow
+  alias LightningWeb.Channels.WorkflowJSON
 
   require Logger
 
@@ -60,6 +60,12 @@ defmodule LightningWeb.WorkflowChannel do
         )
 
       project_user = Lightning.Projects.get_project_user(project, user)
+
+      # Subscribe to PubSub for real-time credential updates
+      Phoenix.PubSub.subscribe(
+        Lightning.PubSub,
+        "workflow:collaborate:#{workflow_id}"
+      )
 
       {:ok,
        assign(socket,
@@ -136,7 +142,7 @@ defmodule LightningWeb.WorkflowChannel do
         |> Enum.concat(
           Lightning.Credentials.list_keychain_credentials_for_project(project)
         )
-        |> render_credentials()
+        |> WorkflowJSON.render()
 
       %{credentials: credentials}
     end)
@@ -166,12 +172,16 @@ defmodule LightningWeb.WorkflowChannel do
       # so the frontend knows the difference between viewing v22 vs latest
       fresh_workflow = Lightning.Workflows.get_workflow(workflow.id)
 
+      project_repo_connection =
+        VersionControl.get_repo_connection_for_project(project.id)
+
       %{
         user: render_user_context(user),
         project: render_project_context(project),
         config: render_config_context(),
         permissions: render_permissions(user, project_user),
-        latest_snapshot_lock_version: fresh_workflow.lock_version
+        latest_snapshot_lock_version: fresh_workflow.lock_version,
+        project_repo_connection: render_repo_connection(project_repo_connection)
       }
     end)
   end
@@ -234,6 +244,62 @@ defmodule LightningWeb.WorkflowChannel do
         }}, socket}
     else
       error -> workflow_error_reply(socket, error)
+    end
+  end
+
+  @impl true
+  def handle_in("save_and_sync", params, socket)
+      when not is_map_key(params, "commit_message") do
+    {:reply,
+     {:error,
+      %{
+        errors: %{commit_message: ["can't be blank"]},
+        type: "validation_error"
+      }}, socket}
+  end
+
+  @impl true
+  def handle_in("save_and_sync", %{"commit_message" => commit_message}, socket) do
+    session_pid = socket.assigns.session_pid
+    user = socket.assigns.current_user
+    project = socket.assigns.project
+
+    with :ok <- authorize_edit_workflow(socket),
+         {:ok, workflow} <- Session.save_workflow(session_pid, user),
+         repo_connection when not is_nil(repo_connection) <-
+           VersionControl.get_repo_connection_for_project(project.id),
+         :ok <- VersionControl.initiate_sync(repo_connection, commit_message) do
+      # Broadcast the new lock_version to all users in the channel
+      broadcast_from!(socket, "workflow_saved", %{
+        latest_snapshot_lock_version: workflow.lock_version
+      })
+
+      {:reply,
+       {:ok,
+        %{
+          saved_at: workflow.updated_at,
+          lock_version: workflow.lock_version,
+          repo: repo_connection.repo
+        }}, socket}
+    else
+      nil ->
+        {:reply,
+         {:error,
+          %{
+            errors: %{base: ["No GitHub connection configured for this project"]},
+            type: "github_sync_error"
+          }}, socket}
+
+      {:error, reason} when is_binary(reason) ->
+        {:reply,
+         {:error,
+          %{
+            errors: %{base: [reason]},
+            type: "github_sync_error"
+          }}, socket}
+
+      error ->
+        workflow_error_reply(socket, error)
     end
   end
 
@@ -350,51 +416,18 @@ defmodule LightningWeb.WorkflowChannel do
   end
 
   @impl true
+  def handle_info(%{event: "credentials_updated", payload: credentials}, socket) do
+    # Forward credential updates from PubSub to connected channel clients
+    push(socket, "credentials_updated", credentials)
+    {:noreply, socket}
+  end
+
+  @impl true
   def handle_info(
         {:DOWN, _ref, :process, _pid, _reason},
         socket
       ) do
     {:stop, {:error, "remote process crash"}, socket}
-  end
-
-  defp render_credentials(credentials) do
-    {project_credentials, keychain_credentials} =
-      credentials
-      |> Enum.split_with(fn
-        %ProjectCredential{} -> true
-        %KeychainCredential{} -> false
-      end)
-
-    %{
-      project_credentials:
-        project_credentials
-        |> Enum.map(fn %ProjectCredential{
-                         credential: credential,
-                         id: project_credential_id
-                       } ->
-          %{
-            id: credential.id,
-            project_credential_id: project_credential_id,
-            name: credential.name,
-            external_id: credential.external_id,
-            schema: credential.schema,
-            inserted_at: credential.inserted_at,
-            updated_at: credential.updated_at
-          }
-        end),
-      keychain_credentials:
-        keychain_credentials
-        |> Enum.map(fn %KeychainCredential{} = keychain_credential ->
-          %{
-            id: keychain_credential.id,
-            name: keychain_credential.name,
-            path: keychain_credential.path,
-            default_credential_id: keychain_credential.default_credential_id,
-            inserted_at: keychain_credential.inserted_at,
-            updated_at: keychain_credential.updated_at
-          }
-        end)
-    }
   end
 
   defp async_task(socket, event, task_fn) do
@@ -473,8 +506,28 @@ defmodule LightningWeb.WorkflowChannel do
         project_user
       )
 
+    can_run =
+      Permissions.can?(
+        :project_users,
+        :run_workflow,
+        user,
+        project_user
+      )
+
     %{
-      can_edit_workflow: can_edit
+      can_edit_workflow: can_edit,
+      can_run_workflow: can_run
+    }
+  end
+
+  defp render_repo_connection(nil), do: nil
+
+  defp render_repo_connection(repo_connection) do
+    %{
+      id: repo_connection.id,
+      repo: repo_connection.repo,
+      branch: repo_connection.branch,
+      github_installation_id: repo_connection.github_installation_id
     }
   end
 

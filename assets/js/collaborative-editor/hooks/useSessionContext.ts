@@ -7,6 +7,7 @@
  * ## Core Hooks:
  * - `useUser()`: Current user data
  * - `useProject()`: Current project data
+ * - `useProjectRepoConnection()`: GitHub integration connection (null if not configured)
  * - `useAppConfig()`: Application configuration
  * - `useSessionContextLoading()`: Loading state
  * - `useSessionContextError()`: Error state
@@ -38,6 +39,7 @@ import type { SessionContextStoreInstance } from "../stores/createSessionContext
 import type {
   UserContext,
   ProjectContext,
+  ProjectRepoConnection,
   AppConfig,
   Permissions,
 } from "../types/sessionContext";
@@ -80,6 +82,23 @@ export const useProject = (): ProjectContext | null => {
   );
 
   return useSyncExternalStore(sessionContextStore.subscribe, selectProject);
+};
+
+/**
+ * Hook to get project repo connection (GitHub integration)
+ * Returns null if no GitHub connection is configured for the project
+ */
+export const useProjectRepoConnection = (): ProjectRepoConnection | null => {
+  const sessionContextStore = useSessionContextStore();
+
+  const selectRepoConnection = sessionContextStore.withSelector(
+    state => state.projectRepoConnection
+  );
+
+  return useSyncExternalStore(
+    sessionContextStore.subscribe,
+    selectRepoConnection
+  );
 };
 
 /**

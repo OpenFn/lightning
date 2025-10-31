@@ -231,6 +231,27 @@ export function WorkflowEditor({
     ]
   );
 
+  // Handle Ctrl/Cmd+E to open IDE for selected job
+  useHotkeys(
+    "ctrl+e,meta+e",
+    event => {
+      event.preventDefault();
+
+      // Only work if a job is selected
+      if (currentNode.type !== "job" || !currentNode.node) {
+        return;
+      }
+
+      // Open IDE by setting editor=open in URL
+      updateSearchParams({ editor: "open" });
+    },
+    {
+      enabled: !isIDEOpen, // Disable when IDE is already open
+      enableOnFormTags: true, // Allow in form fields, like Cmd+Enter
+    },
+    [currentNode, isIDEOpen, updateSearchParams]
+  );
+
   return (
     <div className="relative flex h-full w-full">
       {/* Canvas and Inspector - hidden when IDE open */}
@@ -247,23 +268,25 @@ export function WorkflowEditor({
             {/* Inspector slides in from the right and appears on top
                 This div is also the wrapper which is used to calculate the overlap
                 between the inspector and the diagram.  */}
-            <div
-              id="inspector"
-              className={`absolute top-0 right-0 h-full transition-transform duration-300 ease-in-out z-10 ${
-                showInspector
-                  ? "translate-x-0"
-                  : "translate-x-full pointer-events-none"
-              }`}
-            >
-              <Inspector
-                currentNode={currentNode}
-                onClose={handleCloseInspector}
-                onOpenRunPanel={openRunPanel}
-                respondToHotKey={!isRunPanelOpen}
-              />
-            </div>
+            {!isRunPanelOpen && (
+              <div
+                id="inspector"
+                className={`absolute top-0 right-0 transition-transform duration-300 ease-in-out z-10 ${
+                  showInspector
+                    ? "translate-x-0"
+                    : "translate-x-full pointer-events-none"
+                }`}
+              >
+                <Inspector
+                  currentNode={currentNode}
+                  onClose={handleCloseInspector}
+                  onOpenRunPanel={openRunPanel}
+                  respondToHotKey={!isRunPanelOpen}
+                />
+              </div>
+            )}
 
-            {/* Run panel overlays inspector when open */}
+            {/* Run panel replaces inspector when open */}
             {isRunPanelOpen && runPanelContext && projectId && workflowId && (
               <div className="absolute inset-y-0 right-0 flex pointer-events-none z-20">
                 <ManualRunPanel

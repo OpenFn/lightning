@@ -30,16 +30,16 @@ export function AdaptorIcon({ name, size = "md" }: AdaptorIconProps) {
     );
   }
 
-  const iconPath = adaptorIconsData[displayName]?.square;
+  const iconData = adaptorIconsData[displayName];
 
-  if (!iconPath) {
+  if (!iconData || !iconData.square) {
     return (
       <div
         className={`${sizeClasses[size]} rounded-md bg-gray-200
         flex items-center justify-center`}
       >
         <span className="text-xs font-semibold text-gray-500">
-          {displayName?.[0]?.toUpperCase() || "?"}
+          {displayName[0].toUpperCase() || "?"}
         </span>
       </div>
     );
@@ -47,7 +47,7 @@ export function AdaptorIcon({ name, size = "md" }: AdaptorIconProps) {
 
   return (
     <img
-      src={iconPath}
+      src={iconData.square}
       alt={displayName}
       className={`${sizeClasses[size]} rounded-md object-cover`}
     />

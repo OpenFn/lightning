@@ -18,7 +18,10 @@ import { createSessionContextStore } from "../../../js/collaborative-editor/stor
 import type { WorkflowStoreInstance } from "../../../js/collaborative-editor/stores/createWorkflowStore";
 import { createWorkflowStore } from "../../../js/collaborative-editor/stores/createWorkflowStore";
 import type { Session } from "../../../js/collaborative-editor/types/session";
-import { mockPermissions } from "../fixtures/sessionContextData";
+import {
+  createSessionContext,
+  mockPermissions,
+} from "../__helpers__/sessionContextFactory";
 import {
   createMockPhoenixChannel,
   createMockPhoenixChannelProvider,
@@ -29,7 +32,7 @@ import {
 // =============================================================================
 
 interface WrapperOptions {
-  permissions?: { can_edit_workflow: boolean };
+  permissions?: { can_edit_workflow: boolean; can_run_workflow: boolean };
   latestSnapshotLockVersion?: number;
   workflowLockVersion?: number | null;
   workflowDeletedAt?: string | null;
@@ -46,7 +49,7 @@ function createWrapper(options: WrapperOptions = {}): [
   },
 ] {
   const {
-    permissions = { can_edit_workflow: true },
+    permissions = { can_edit_workflow: true, can_run_workflow: true },
     latestSnapshotLockVersion = 1,
     workflowLockVersion = 1,
     workflowDeletedAt = null,
@@ -81,23 +84,13 @@ function createWrapper(options: WrapperOptions = {}): [
 
   // Helper function to emit session context
   const emitSessionContext = () => {
-    (mockChannel as any)._test.emit("session_context", {
-      user: {
-        id: "550e8400-e29b-41d4-a716-446655440000",
-        first_name: "Test",
-        last_name: "User",
-        email: "test@example.com",
-        email_confirmed: true,
-        inserted_at: new Date().toISOString(),
-      },
-      project: {
-        id: "660e8400-e29b-41d4-a716-446655440000",
-        name: "Test Project",
-      },
-      config: { require_email_verification: false },
-      permissions,
-      latest_snapshot_lock_version: latestSnapshotLockVersion,
-    });
+    (mockChannel as any)._test.emit(
+      "session_context",
+      createSessionContext({
+        permissions,
+        latest_snapshot_lock_version: latestSnapshotLockVersion,
+      })
+    );
   };
 
   const mockStoreValue: StoreContextValue = {
@@ -106,6 +99,7 @@ function createWrapper(options: WrapperOptions = {}): [
     adaptorStore: {} as any,
     credentialStore: {} as any,
     awarenessStore: {} as any,
+    uiStore: {} as any,
   };
 
   const wrapper = ({ children }: { children: React.ReactNode }) => (
@@ -133,7 +127,7 @@ function createWrapper(options: WrapperOptions = {}): [
 describe("useWorkflowReadOnly - Deleted Workflow", () => {
   test("returns read-only true with deletion message for deleted workflow", async () => {
     const [wrapper, { emitSessionContext }] = createWrapper({
-      permissions: { can_edit_workflow: true },
+      permissions: { can_edit_workflow: true, can_run_workflow: true },
       workflowDeletedAt: new Date().toISOString(),
     });
 
@@ -153,7 +147,7 @@ describe("useWorkflowReadOnly - Deleted Workflow", () => {
 
   test("deleted state takes priority over permission restrictions", async () => {
     const [wrapper, { emitSessionContext }] = createWrapper({
-      permissions: { can_edit_workflow: false },
+      permissions: { can_edit_workflow: false, can_run_workflow: false },
       workflowDeletedAt: new Date().toISOString(),
     });
 
@@ -173,7 +167,7 @@ describe("useWorkflowReadOnly - Deleted Workflow", () => {
 
   test("deleted state takes priority over old snapshot", async () => {
     const [wrapper, { emitSessionContext }] = createWrapper({
-      permissions: { can_edit_workflow: true },
+      permissions: { can_edit_workflow: true, can_run_workflow: true },
       latestSnapshotLockVersion: 2,
       workflowLockVersion: 1,
       workflowDeletedAt: new Date().toISOString(),
@@ -201,7 +195,7 @@ describe("useWorkflowReadOnly - Deleted Workflow", () => {
 describe("useWorkflowReadOnly - Permissions", () => {
   test("returns read-only true with permission message when user lacks edit permission", async () => {
     const [wrapper, { emitSessionContext }] = createWrapper({
-      permissions: { can_edit_workflow: false },
+      permissions: { can_edit_workflow: false, can_run_workflow: false },
       workflowDeletedAt: null,
     });
 
@@ -221,7 +215,7 @@ describe("useWorkflowReadOnly - Permissions", () => {
 
   test("permission restriction takes priority over old snapshot", async () => {
     const [wrapper, { emitSessionContext }] = createWrapper({
-      permissions: { can_edit_workflow: false },
+      permissions: { can_edit_workflow: false, can_run_workflow: false },
       latestSnapshotLockVersion: 2,
       workflowLockVersion: 1,
       workflowDeletedAt: null,
@@ -249,7 +243,7 @@ describe("useWorkflowReadOnly - Permissions", () => {
 describe("useWorkflowReadOnly - Snapshot Version", () => {
   test("returns read-only true with snapshot message for old snapshot", async () => {
     const [wrapper, { emitSessionContext }] = createWrapper({
-      permissions: { can_edit_workflow: true },
+      permissions: { can_edit_workflow: true, can_run_workflow: true },
       latestSnapshotLockVersion: 2,
       workflowLockVersion: 1,
       workflowDeletedAt: null,
@@ -271,7 +265,7 @@ describe("useWorkflowReadOnly - Snapshot Version", () => {
 
   test("returns not read-only when viewing latest snapshot", async () => {
     const [wrapper, { emitSessionContext }] = createWrapper({
-      permissions: { can_edit_workflow: true },
+      permissions: { can_edit_workflow: true, can_run_workflow: true },
       latestSnapshotLockVersion: 1,
       workflowLockVersion: 1,
       workflowDeletedAt: null,
@@ -297,7 +291,7 @@ describe("useWorkflowReadOnly - Snapshot Version", () => {
 describe("useWorkflowReadOnly - Valid Editing", () => {
   test("returns not read-only for valid editing scenario", async () => {
     const [wrapper, { emitSessionContext }] = createWrapper({
-      permissions: { can_edit_workflow: true },
+      permissions: { can_edit_workflow: true, can_run_workflow: true },
       latestSnapshotLockVersion: 1,
       workflowLockVersion: 1,
       workflowDeletedAt: null,
@@ -336,6 +330,7 @@ describe("useWorkflowReadOnly - Edge Cases", () => {
       adaptorStore: {} as any,
       credentialStore: {} as any,
       awarenessStore: {} as any,
+      uiStore: {} as any,
     };
 
     const wrapper = ({ children }: { children: React.ReactNode }) => (
@@ -347,13 +342,14 @@ describe("useWorkflowReadOnly - Edge Cases", () => {
     const { result } = renderHook(() => useWorkflowReadOnly(), { wrapper });
 
     act(() => {
-      (mockChannel as any)._test.emit("session_context", {
-        user: null,
-        project: null,
-        config: { require_email_verification: false },
-        permissions: mockPermissions,
-        latest_snapshot_lock_version: 1,
-      });
+      (mockChannel as any)._test.emit(
+        "session_context",
+        createSessionContext({
+          user: null,
+          project: null,
+          permissions: mockPermissions,
+        })
+      );
     });
 
     await waitFor(() => {
@@ -390,6 +386,7 @@ describe("useWorkflowReadOnly - Edge Cases", () => {
       adaptorStore: {} as any,
       credentialStore: {} as any,
       awarenessStore: {} as any,
+      uiStore: {} as any,
     };
 
     const wrapper = ({ children }: { children: React.ReactNode }) => (
@@ -402,13 +399,14 @@ describe("useWorkflowReadOnly - Edge Cases", () => {
 
     // Emit session context with null permissions (loading state)
     act(() => {
-      (mockChannel as any)._test.emit("session_context", {
-        user: null,
-        project: null,
-        config: { require_email_verification: false },
-        permissions: null,
-        latest_snapshot_lock_version: 1,
-      });
+      (mockChannel as any)._test.emit(
+        "session_context",
+        createSessionContext({
+          user: null,
+          project: null,
+          permissions: null as any, // Testing loading state with null permissions
+        })
+      );
     });
 
     // During loading (null permissions), should not show as read-only
@@ -428,7 +426,7 @@ describe("useWorkflowReadOnly - Priority Order", () => {
   test("verifies complete priority order: deleted > permissions > snapshot", async () => {
     // Test 1: All three conditions apply - deleted takes priority
     const [wrapper1, { emitSessionContext: emit1 }] = createWrapper({
-      permissions: { can_edit_workflow: false },
+      permissions: { can_edit_workflow: false, can_run_workflow: false },
       latestSnapshotLockVersion: 2,
       workflowLockVersion: 1,
       workflowDeletedAt: new Date().toISOString(),
@@ -450,7 +448,7 @@ describe("useWorkflowReadOnly - Priority Order", () => {
 
     // Test 2: Permission and snapshot conditions apply - permission takes priority
     const [wrapper2, { emitSessionContext: emit2 }] = createWrapper({
-      permissions: { can_edit_workflow: false },
+      permissions: { can_edit_workflow: false, can_run_workflow: false },
       latestSnapshotLockVersion: 2,
       workflowLockVersion: 1,
       workflowDeletedAt: null,
@@ -472,7 +470,7 @@ describe("useWorkflowReadOnly - Priority Order", () => {
 
     // Test 3: Only snapshot condition applies
     const [wrapper3, { emitSessionContext: emit3 }] = createWrapper({
-      permissions: { can_edit_workflow: true },
+      permissions: { can_edit_workflow: true, can_run_workflow: true },
       latestSnapshotLockVersion: 2,
       workflowLockVersion: 1,
       workflowDeletedAt: null,

@@ -1,9 +1,11 @@
-import { memo } from "react";
 import { Position, type NodeProps } from "@xyflow/react";
-import Node from "./Node";
+import { memo } from "react";
+
 import PathButton from "../components/PathButton";
-import getAdaptorName from "../util/get-adaptor-name";
 import useAdaptorIcons, { type AdaptorIconData } from "../useAdaptorIcons";
+import getAdaptorName from "../util/get-adaptor-name";
+
+import Node from "./Node";
 
 type NodeData = any;
 
@@ -45,20 +47,17 @@ JobNode.displayName = "JobNode";
 
 function getAdaptorIcon(
   adaptor: string,
-  adaptorIconsData: AdaptorIconData | null,
+  adaptorIconsData: AdaptorIconData | null
 ) {
   try {
-    if (
-      adaptorIconsData &&
-      adaptor in adaptorIconsData &&
-      adaptorIconsData[adaptor]?.square
-    ) {
-      const srcPath = adaptorIconsData[adaptor].square;
+    const iconData = adaptorIconsData?.[adaptor];
+    if (iconData?.square) {
+      const srcPath = iconData.square;
       return <img src={srcPath} alt={adaptor} />;
     } else {
       return adaptor;
     }
-  } catch (e) {
+  } catch {
     return adaptor;
   }
 }
