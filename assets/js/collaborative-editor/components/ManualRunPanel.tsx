@@ -56,6 +56,7 @@ interface ManualRunPanelProps {
   workflowId: string;
   jobId?: string | null;
   triggerId?: string | null;
+  edgeId?: string | null;
   onClose: () => void;
   renderMode?: "standalone" | "embedded";
   onRunStateChange?: (
@@ -81,6 +82,7 @@ export function ManualRunPanel({
   workflowId,
   jobId,
   triggerId,
+  edgeId,
   onClose,
   renderMode = "standalone",
   onRunStateChange,
@@ -182,13 +184,16 @@ export function ManualRunPanel({
 
   // Watch for jobId/triggerId changes and update panel
   useEffect(() => {
-    // Reset state when context changes
-    setSelectedDataclip(null);
-    setSearchQuery("");
-    setSelectedClipType("");
-    setSelectedDates({ before: "", after: "" });
-    setNamedOnly(false);
-  }, [jobId, triggerId]);
+    // Only reset state when context changes if there's NO followed run
+    // If following a run, preserve state to avoid flash when switching nodes
+    if (!followedRunId) {
+      setSelectedDataclip(null);
+      setSearchQuery("");
+      setSelectedClipType("");
+      setSelectedDates({ before: "", after: "" });
+      setNamedOnly(false);
+    }
+  }, [jobId, triggerId, followedRunId]);
 
   // Auto-select step's input dataclip when following a run
   // This effect runs when step data becomes available from RunStore
@@ -539,7 +544,8 @@ export function ManualRunPanel({
     (selectedTab === "existing" && !!selectedDataclip) ||
     selectedTab === "custom";
 
-  const canRun = canRunWorkflow && hasValidInput;
+  // Disable run when edge is selected (cannot run from an edge)
+  const canRun = !edgeId && canRunWorkflow && hasValidInput;
 
   // Notify parent of run state changes (for embedded mode)
   useEffect(() => {
@@ -618,7 +624,14 @@ export function ManualRunPanel({
   );
 
   // Extract content for reuse
-  const content = selectedDataclip ? (
+  // Show message when edge is selected (like classical editor)
+  const content = edgeId ? (
+    <div className="flex justify-center flex-col items-center self-center h-full">
+      <div className="text-gray-600">
+        Select a Step or Trigger to start a Run from
+      </div>
+    </div>
+  ) : selectedDataclip ? (
     <SelectedDataclipView
       dataclip={selectedDataclip}
       onUnselect={handleUnselectDataclip}
