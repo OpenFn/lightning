@@ -17,6 +17,8 @@ import { useURLState } from "../../react/lib/use-url-state";
 import type { Dataclip } from "../api/dataclips";
 import * as dataclipApi from "../api/dataclips";
 import { useCanRun } from "../hooks/useWorkflow";
+import { useCurrentRun, useRunStoreInstance } from "../hooks/useRun";
+import { useSession } from "../hooks/useSession";
 import { getCsrfToken } from "../lib/csrf";
 import { notifications } from "../lib/notifications";
 import type { Workflow } from "../types/workflow";
@@ -29,6 +31,25 @@ import { Tabs } from "./Tabs";
 
 const logger = _logger.ns("ManualRunPanel").seal();
 
+// Final states for a run (matches Lightning.Run.final_states/0)
+const FINAL_RUN_STATES = [
+  "success",
+  "failed",
+  "crashed",
+  "cancelled",
+  "killed",
+  "exception",
+  "lost",
+];
+
+function isFinalState(state: string): boolean {
+  return FINAL_RUN_STATES.includes(state);
+}
+
+function isProcessing(state: string | null): boolean {
+  return state !== null && !isFinalState(state);
+}
+
 interface ManualRunPanelProps {
   workflow: Workflow;
   projectId: string;
@@ -40,7 +61,10 @@ interface ManualRunPanelProps {
   onRunStateChange?: (
     canRun: boolean,
     isSubmitting: boolean,
-    handleRun: () => void
+    runHandler: () => void,
+    retryHandler?: () => void,
+    isRetryable?: boolean,
+    processing?: boolean
   ) => void;
   saveWorkflow: () => Promise<{
     saved_at?: string;
@@ -77,13 +101,23 @@ export function ManualRunPanel({
   const [canEditDataclip, setCanEditDataclip] = useState(false);
   const [currentRunDataclip] = useState<Dataclip | null>(null);
 
-  // Retry state tracking
+  // Retry state tracking via RunStore (WebSocket updates)
   const { searchParams } = useURLState();
   const followedRunId = searchParams.get("run"); // 'run' param is run ID
-  const [followedRunStep, setFollowedRunStep] = useState<{
-    id: string;
-    input_dataclip_id: string | null;
-  } | null>(null);
+  const currentRun = useCurrentRun(); // Real-time from WebSocket
+  const runStore = useRunStoreInstance();
+  const { provider } = useSession();
+
+  // Connect to run channel when followedRunId changes
+  useEffect(() => {
+    if (!followedRunId || !provider) {
+      runStore._disconnectFromRun();
+      return;
+    }
+
+    const cleanup = runStore._connectToRun(provider, followedRunId);
+    return cleanup;
+  }, [followedRunId, provider, runStore]);
 
   // Filter state for ExistingView
   const [selectedClipType, setSelectedClipType] = useState("");
@@ -140,6 +174,12 @@ export function ManualRunPanel({
     return triggerEdge?.target_job_id || workflow.jobs[0]?.id;
   }, [runContext, workflow.edges, workflow.jobs]);
 
+  // Get step for current job from followed run (from real-time RunStore)
+  const followedRunStep = useMemo(() => {
+    if (!currentRun || !dataclipJobId) return null;
+    return currentRun.steps.find(s => s.job_id === dataclipJobId) || null;
+  }, [currentRun, dataclipJobId]);
+
   // Watch for jobId/triggerId changes and update panel
   useEffect(() => {
     // Reset state when context changes
@@ -150,43 +190,23 @@ export function ManualRunPanel({
     setNamedOnly(false);
   }, [jobId, triggerId]);
 
-  // Fetch step data for followed run to determine retry eligibility
+  // Auto-select step's input dataclip when following a run
+  // This effect runs when step data becomes available from RunStore
   useEffect(() => {
-    if (!followedRunId || !dataclipJobId) {
-      setFollowedRunStep(null);
+    if (!followedRunStep?.input_dataclip_id || !dataclips.length) {
       return;
     }
 
-    const fetchStepData = async () => {
-      try {
-        const response = await fetch(
-          `/projects/${projectId}/runs/${followedRunId}/steps?job_id=${dataclipJobId}`,
-          {
-            credentials: "same-origin",
-          }
-        );
+    // Find the step's input dataclip in the loaded dataclips
+    const stepDataclip = dataclips.find(
+      dc => dc.id === followedRunStep.input_dataclip_id
+    );
 
-        if (!response.ok) {
-          if (response.status === 404) {
-            // No step found for this job - not retryable
-            setFollowedRunStep(null);
-            return;
-          }
-          throw new Error(`Failed to fetch step data: ${response.statusText}`);
-        }
-
-        const result = (await response.json()) as {
-          data: { id: string; input_dataclip_id: string | null };
-        };
-        setFollowedRunStep(result.data);
-      } catch (error) {
-        logger.error("Failed to fetch step data:", error);
-        setFollowedRunStep(null);
-      }
-    };
-
-    void fetchStepData();
-  }, [followedRunId, dataclipJobId, projectId]);
+    if (stepDataclip) {
+      setSelectedDataclip(stepDataclip);
+      setSelectedTab("existing");
+    }
+  }, [followedRunStep, dataclips]);
 
   // Fetch initial dataclips
   useEffect(() => {
@@ -221,23 +241,6 @@ export function ManualRunPanel({
 
     void fetchDataclips();
   }, [projectId, dataclipJobId]);
-
-  // Auto-select step's input dataclip when following a run
-  useEffect(() => {
-    if (!followedRunStep?.input_dataclip_id || !dataclips.length) {
-      return;
-    }
-
-    // Find the step's input dataclip in the loaded dataclips
-    const stepDataclip = dataclips.find(
-      dc => dc.id === followedRunStep.input_dataclip_id
-    );
-
-    if (stepDataclip) {
-      setSelectedDataclip(stepDataclip);
-      setSelectedTab("existing");
-    }
-  }, [followedRunStep, dataclips]);
 
   // Build filters object for API
   const buildFilters = useCallback(() => {
@@ -488,8 +491,10 @@ export function ManualRunPanel({
       // Invoke callback with new run_id
       if (onRunSubmitted) {
         onRunSubmitted(result.data.run_id);
+        // Reset submitting state after callback (component stays mounted)
+        setIsSubmitting(false);
       } else {
-        // Fallback: navigate to new run
+        // Fallback: navigate to new run (component will unmount)
         window.location.href = `/projects/${projectId}/runs/${result.data.run_id}`;
       }
     } catch (error) {
@@ -510,7 +515,12 @@ export function ManualRunPanel({
     onRunSubmitted,
   ]);
 
+  // Check if the followed run is currently processing (from real-time WebSocket)
+  const runIsProcessing = currentRun ? isProcessing(currentRun.state) : false;
+
   // Calculate retry eligibility
+  // Button shows retry when step exists and selected dataclip matches
+  // This persists even during processing and after retry
   const isRetryable = useMemo(() => {
     if (!followedRunId || !followedRunStep || !selectedDataclip) {
       return false;
@@ -534,13 +544,31 @@ export function ManualRunPanel({
   // Notify parent of run state changes (for embedded mode)
   useEffect(() => {
     if (onRunStateChange) {
-      // Wrap handleRun to avoid promise warnings in parent components
+      // Wrap handlers to avoid promise warnings in parent components
       const wrappedHandleRun = () => {
         void handleRun();
       };
-      onRunStateChange(canRun, isSubmitting, wrappedHandleRun);
+      const wrappedHandleRetry = () => {
+        void handleRetry();
+      };
+      onRunStateChange(
+        canRun,
+        isSubmitting,
+        wrappedHandleRun,
+        wrappedHandleRetry,
+        isRetryable,
+        runIsProcessing
+      );
     }
-  }, [canRun, isSubmitting, handleRun, onRunStateChange]);
+  }, [
+    canRun,
+    isSubmitting,
+    handleRun,
+    handleRetry,
+    isRetryable,
+    runIsProcessing,
+    onRunStateChange,
+  ]);
 
   // Handle Escape key to close the run panel
   useHotkeys(
@@ -690,7 +718,7 @@ export function ManualRunPanel({
             <RunRetryButton
               isRetryable={isRetryable}
               isDisabled={!canRun}
-              isSubmitting={isSubmitting}
+              isSubmitting={isSubmitting || runIsProcessing}
               onRun={() => {
                 void handleRun();
               }}
@@ -700,7 +728,7 @@ export function ManualRunPanel({
               buttonText={{
                 run: "Run Workflow Now",
                 retry: "Run (retry)",
-                processing: "Running...",
+                processing: "Processing",
               }}
             />
           }

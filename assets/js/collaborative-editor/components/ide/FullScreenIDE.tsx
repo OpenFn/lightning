@@ -136,6 +136,9 @@ export function FullScreenIDE({
   const [canRunWorkflow, setCanRunWorkflow] = useState(false);
   const [isRunning, setIsRunning] = useState(false);
   const [runHandler, setRunHandler] = useState<(() => void) | null>(null);
+  const [retryHandler, setRetryHandler] = useState<(() => void) | null>(null);
+  const [isRetryable, setIsRetryable] = useState(false);
+  const [runIsProcessing, setRunIsProcessing] = useState(false);
 
   // Follow run state for right panel
   const [followRunId, setFollowRunId] = useState<string | null>(null);
@@ -241,14 +244,20 @@ export function FullScreenIDE({
   const handleRunStateChange = (
     canRun: boolean,
     isSubmitting: boolean,
-    handler: () => void
+    runHandler: () => void,
+    retryHandler?: () => void,
+    isRetryable?: boolean,
+    processing?: boolean
   ) => {
     setCanRunWorkflow(canRun);
     setIsRunning(isSubmitting);
-    setRunHandler(() => handler);
+    setRunHandler(() => runHandler);
+    setRetryHandler(retryHandler ? () => retryHandler : null);
+    setIsRetryable(isRetryable ?? false);
+    setRunIsProcessing(processing ?? false);
   };
 
-  // Handler for Run button in header
+  // Handler for Run button in header (new work order)
   const handleRunClick = () => {
     // Centralized validation - both button and keyboard shortcut use this
 
@@ -267,6 +276,24 @@ export function FullScreenIDE({
     }
 
     runHandler();
+  };
+
+  // Handler for Retry button in header
+  const handleRetryClick = () => {
+    // Same validation as handleRunClick
+    if (!canRunSnapshot) {
+      notifications.alert({
+        title: "Cannot run",
+        description: runTooltipMessage,
+      });
+      return;
+    }
+
+    if (!canRunWorkflow || isRunning || !retryHandler) {
+      return;
+    }
+
+    retryHandler();
   };
 
   // Adaptor modal handlers
@@ -423,7 +450,7 @@ export function FullScreenIDE({
     [onClose]
   );
 
-  // Handle Cmd/Ctrl+Enter to trigger workflow run
+  // Handle Cmd/Ctrl+Enter to trigger workflow run or retry
   // No scope restriction to ensure it works even when Monaco has focus
   useHotkeys(
     "mod+enter",
@@ -431,14 +458,37 @@ export function FullScreenIDE({
       event.preventDefault();
       event.stopPropagation();
 
-      // Use centralized handler with validation
-      handleRunClick();
+      // If retryable, use retry handler, otherwise use run handler
+      if (isRetryable && retryHandler) {
+        handleRetryClick();
+      } else {
+        handleRunClick();
+      }
     },
     {
       enabled: true,
       enableOnFormTags: true, // Allow in Monaco editor
       preventDefault: true, // Prevent Monaco's default behavior
       enableOnContentEditable: true, // Work in Monaco's contentEditable
+    },
+    [handleRunClick, handleRetryClick, isRetryable, retryHandler]
+  );
+
+  // Handle Cmd/Ctrl+Shift+Enter to force new work order (even in retry mode)
+  useHotkeys(
+    "mod+shift+enter",
+    event => {
+      event.preventDefault();
+      event.stopPropagation();
+
+      // Always use run handler to force new work order
+      handleRunClick();
+    },
+    {
+      enabled: true,
+      enableOnFormTags: true,
+      preventDefault: true,
+      enableOnContentEditable: true,
     },
     [handleRunClick]
   );
@@ -514,8 +564,12 @@ export function FullScreenIDE({
         onClose={onClose}
         onSave={handleSave}
         onRun={handleRunClick}
-        canRun={canRunSnapshot && canRunWorkflow && !isRunning}
-        isRunning={isRunning}
+        onRetry={handleRetryClick}
+        isRetryable={isRetryable}
+        canRun={
+          canRunSnapshot && canRunWorkflow && !isRunning && !runIsProcessing
+        }
+        isRunning={isRunning || runIsProcessing}
         canSave={canSave}
         saveTooltip={tooltipMessage}
         runTooltip={runTooltipMessage}
