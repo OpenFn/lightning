@@ -35,6 +35,10 @@ import { useCallback, useContext, useMemo, useSyncExternalStore } from "react";
 import { useURLState } from "#/react/lib/use-url-state";
 
 import { StoreContext } from "../contexts/StoreProvider";
+import {
+  formatChannelErrorMessage,
+  isChannelRequestError,
+} from "../lib/errors";
 import { notifications } from "../lib/notifications";
 import type { WorkflowStoreInstance } from "../stores/createWorkflowStore";
 import type { Workflow } from "../types/workflow";
@@ -403,25 +407,37 @@ export const useWorkflowActions = () => {
           error: unknown,
           retrySaveWorkflow: () => Promise<unknown>
         ) => {
-          const errorType = (error as Error & { type?: string }).type;
+          // Format channel errors into user-friendly messages
+          if (isChannelRequestError(error)) {
+            error.message = formatChannelErrorMessage({
+              errors: error.errors,
+              type: error.type,
+            });
 
-          if (errorType === "unauthorized") {
-            notifications.alert({
-              title: "Permission Denied",
-              description:
-                error instanceof Error
-                  ? error.message
-                  : "You no longer have permission to edit this workflow. Your role may have changed.",
-            });
-          } else if (errorType === "validation_error") {
-            notifications.alert({
-              title: "Unable to save workflow",
-              description:
-                error instanceof Error
-                  ? error.message
-                  : "Please fix the errors and try again",
-            });
+            if (error.type === "unauthorized") {
+              notifications.alert({
+                title: "Permission Denied",
+                description: error.message,
+              });
+            } else if (error.type === "validation_error") {
+              notifications.alert({
+                title: "Unable to save workflow",
+                description: error.message,
+              });
+            } else {
+              notifications.alert({
+                title: "Failed to save workflow",
+                description: error.message,
+                action: {
+                  label: "Retry",
+                  onClick: () => {
+                    void retrySaveWorkflow();
+                  },
+                },
+              });
+            }
           } else {
+            // Handle non-channel errors
             notifications.alert({
               title: "Failed to save workflow",
               description:
@@ -507,14 +523,25 @@ export const useWorkflowActions = () => {
           error: unknown,
           retrySaveAndSync: () => Promise<unknown>
         ) => {
-          if (error && typeof error === "object" && "type" in error) {
-            const typedError = error as { type?: string; message?: string };
-            if (typedError.type === "unauthorized") {
+          // Format channel errors into user-friendly messages
+          if (isChannelRequestError(error)) {
+            error.message = formatChannelErrorMessage({
+              errors: error.errors,
+              type: error.type,
+            });
+
+            if (error.type === "unauthorized") {
               notifications.alert({
                 title: "Permission denied",
-                description:
-                  typedError.message ||
-                  "You no longer have permission to edit this workflow. Your role may have changed.",
+                description: error.message,
+              });
+              return;
+            }
+
+            if (error.type === "validation_error") {
+              notifications.alert({
+                title: "Unable to save and sync workflow",
+                description: error.message,
               });
               return;
             }
