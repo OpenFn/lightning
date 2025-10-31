@@ -299,11 +299,14 @@ export function WorkflowEditor({
   const handleRunStateChange = (
     canRun: boolean,
     isSubmitting: boolean,
-    handler: () => void
+    handler: () => void,
+    retryHandler?: () => void,
+    isRetryable?: boolean
   ) => {
     setCanRunWorkflow(canRun);
     setIsRunning(isSubmitting);
-    setRunHandler(() => handler);
+    // Use retry handler if available and retryable, otherwise use regular handler
+    setRunHandler(() => (isRetryable && retryHandler ? retryHandler : handler));
   };
 
   // Handle Cmd/Ctrl+Enter to open run panel or trigger run

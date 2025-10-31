@@ -629,6 +629,7 @@ export function ManualRunPanel({
     "mod+enter",
     e => {
       e.preventDefault();
+      e.stopPropagation(); // Prevent WorkflowEditor's handler from also firing
       logger.debug("=== Cmd+Enter pressed ===");
       logger.debug("canRun:", canRun);
       logger.debug("isSubmitting:", isSubmitting);
