@@ -271,7 +271,7 @@ export function FullScreenIDE({
     }
 
     // Check runtime conditions (no toast needed - these are transient states)
-    if (!canRunWorkflow || isRunning || !runHandler) {
+    if (!canRunWorkflow || isRunning || runIsProcessing || !runHandler) {
       return;
     }
 
@@ -289,7 +289,7 @@ export function FullScreenIDE({
       return;
     }
 
-    if (!canRunWorkflow || isRunning || !retryHandler) {
+    if (!canRunWorkflow || isRunning || runIsProcessing || !retryHandler) {
       return;
     }
 
