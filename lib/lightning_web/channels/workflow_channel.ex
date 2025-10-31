@@ -431,8 +431,8 @@ defmodule LightningWeb.WorkflowChannel do
   end
 
   @impl true
-  def handle_out("workflow_saved", payload, socket) do
-    push(socket, "workflow_saved", payload)
+  def handle_out(event, payload, socket) do
+    push(socket, event, payload)
     {:noreply, socket}
   end
 
