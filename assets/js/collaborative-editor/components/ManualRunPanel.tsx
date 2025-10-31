@@ -597,6 +597,16 @@ export function ManualRunPanel({
         isSubmitting,
         runIsProcessing,
         isRetryable,
+        followedRunId,
+        followedRunStep: followedRunStep
+          ? {
+              id: followedRunStep.id,
+              input_dataclip_id: followedRunStep.input_dataclip_id,
+            }
+          : null,
+        selectedDataclip: selectedDataclip
+          ? { id: selectedDataclip.id, wiped_at: selectedDataclip.wiped_at }
+          : null,
       });
       if (canRun && !isSubmitting && !runIsProcessing) {
         if (isRetryable) {
@@ -612,7 +622,17 @@ export function ManualRunPanel({
       enabled: true,
       enableOnFormTags: true,
     },
-    [canRun, isSubmitting, runIsProcessing, isRetryable, handleRetry, handleRun]
+    [
+      canRun,
+      isSubmitting,
+      runIsProcessing,
+      isRetryable,
+      handleRetry,
+      handleRun,
+      followedRunId,
+      followedRunStep,
+      selectedDataclip,
+    ]
   );
 
   // Handle ⌘+Shift+Enter for force new work order
@@ -742,9 +762,25 @@ export function ManualRunPanel({
               isDisabled={!canRun}
               isSubmitting={isSubmitting || runIsProcessing}
               onRun={() => {
+                logger.debug("Button onRun() called");
                 void handleRun();
               }}
               onRetry={() => {
+                logger.debug("Button onRetry() called", {
+                  followedRunId,
+                  followedRunStep: followedRunStep
+                    ? {
+                        id: followedRunStep.id,
+                        input_dataclip_id: followedRunStep.input_dataclip_id,
+                      }
+                    : null,
+                  selectedDataclip: selectedDataclip
+                    ? {
+                        id: selectedDataclip.id,
+                        wiped_at: selectedDataclip.wiped_at,
+                      }
+                    : null,
+                });
                 void handleRetry();
               }}
               buttonText={{
