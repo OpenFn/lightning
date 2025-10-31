@@ -457,5 +457,22 @@ defmodule LightningWeb.WorkflowControllerTest do
       response = json_response(conn, 422)
       assert response["error"] =~ "forbidden"
     end
+
+    test "returns 422 when run does not exist", %{
+      conn: conn,
+      project: project,
+      step: step
+    } do
+      fake_run_id = Ecto.UUID.generate()
+
+      conn =
+        post(conn, ~p"/projects/#{project}/runs/#{fake_run_id}/retry", %{
+          step_id: step.id
+        })
+
+      assert conn.status == 422
+      response = json_response(conn, 422)
+      assert response["error"] =~ "not_found"
+    end
   end
 end
