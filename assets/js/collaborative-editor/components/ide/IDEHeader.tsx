@@ -1,11 +1,11 @@
 import type { useProjectRepoConnection } from "#/collaborative-editor/hooks/useSessionContext";
+
 import { useVersionSelect } from "../../hooks/useVersionSelect";
 import { ActiveCollaborators } from "../ActiveCollaborators";
 import { AdaptorDisplay } from "../AdaptorDisplay";
 import { Button } from "../Button";
 import { SaveButton } from "../Header";
 import { Tooltip } from "../Tooltip";
-import { useVersionSelect } from "../../hooks/useVersionSelect";
 import { VersionDropdown } from "../VersionDropdown";
 
 interface IDEHeaderProps {
