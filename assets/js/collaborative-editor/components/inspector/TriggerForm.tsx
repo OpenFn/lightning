@@ -26,19 +26,22 @@ export function TriggerForm({ trigger }: TriggerFormProps) {
   const [copySuccess, setCopySuccess] = useState<string>("");
   const [showAdvancedSettings, setShowAdvancedSettings] = useState(false);
 
-  const form = useAppForm({
-    defaultValues: trigger,
-    listeners: {
-      onChange: ({ formApi }) => {
-        if (trigger.id) {
-          updateTrigger(trigger.id, formApi.state.values);
-        }
+  const form = useAppForm(
+    {
+      defaultValues: trigger,
+      listeners: {
+        onChange: ({ formApi }) => {
+          if (trigger.id) {
+            updateTrigger(trigger.id, formApi.state.values);
+          }
+        },
+      },
+      validators: {
+        onChange: createZodValidator(TriggerSchema),
       },
     },
-    validators: {
-      onChange: createZodValidator(TriggerSchema),
-    },
-  });
+    `triggers.${trigger.id}` // Server validation automatically filtered to this trigger
+  );
 
   // Generate webhook URL based on trigger ID
   const webhookUrl = new URL(

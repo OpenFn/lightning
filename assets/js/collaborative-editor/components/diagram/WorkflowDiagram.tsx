@@ -16,10 +16,10 @@ import tippy from "tippy.js";
 import { useProjectAdaptors } from "#/collaborative-editor/hooks/useAdaptors";
 import useConnect from "#/collaborative-editor/hooks/useConnect";
 import {
-  useWorkflowState,
   usePositions,
-  useWorkflowStoreContext,
   useWorkflowReadOnly,
+  useWorkflowState,
+  useWorkflowStoreContext,
 } from "#/collaborative-editor/hooks/useWorkflow";
 import type { Workflow } from "#/collaborative-editor/types/workflow";
 import { getAdaptorDisplayName } from "#/collaborative-editor/utils/adaptorUtils";
@@ -124,15 +124,15 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
 
   const { isReadOnly } = useWorkflowReadOnly();
 
-  const workflow = React.useMemo(
-    () => ({
+  const workflow = React.useMemo(() => {
+    // Entities already have errors denormalized from store
+    return {
       jobs,
       triggers,
       edges,
       disabled: isReadOnly,
-    }),
-    [jobs, triggers, edges, isReadOnly]
-  );
+    };
+  }, [jobs, triggers, edges, isReadOnly]);
 
   const isManualLayout = Object.keys(workflowPositions).length > 0;
 

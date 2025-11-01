@@ -94,19 +94,22 @@ export function JobForm({ job }: JobFormProps) {
     [job, initialAdaptor, initialAdaptorPackage, initialCredentialId]
   );
 
-  const form = useAppForm({
-    defaultValues,
-    listeners: {
-      onChange: ({ formApi }) => {
-        if (job.id) {
-          updateJob(job.id, formApi.state.values);
-        }
+  const form = useAppForm(
+    {
+      defaultValues,
+      listeners: {
+        onChange: ({ formApi }) => {
+          if (job.id) {
+            updateJob(job.id, formApi.state.values);
+          }
+        },
+      },
+      validators: {
+        onChange: createZodValidator(JobSchema),
       },
     },
-    validators: {
-      onChange: createZodValidator(JobSchema),
-    },
-  });
+    `jobs.${job.id}` // Server validation automatically filtered to this job
+  );
 
   // Y.Doc sync
   useWatchFields(
@@ -130,7 +133,8 @@ export function JobForm({ job }: JobFormProps) {
   // Reset form when job changes
   useEffect(() => {
     form.reset();
-  }, [job.id, form]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [job.id]);
 
   // Listen for credential modal close event to reopen configure modal
   useEffect(() => {

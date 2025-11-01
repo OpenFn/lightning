@@ -210,6 +210,9 @@ export const createWorkflowStore = () => {
 
   const listeners = new Set<() => void>();
 
+  // Debounce state for setClientErrors
+  let debounceTimeouts = new Map<string, NodeJS.Timeout>();
+
   // Redux DevTools integration (development/test only)
   const devtools = wrapStoreWithDevTools<Workflow.State>({
     name: "WorkflowStore",
@@ -284,6 +287,29 @@ export const createWorkflowStore = () => {
   // withSelector utility - creates memoized selectors for referential stability
   const withSelector = createWithSelector(getSnapshot);
 
+  /**
+   * Helper to check if errors actually changed (shallow comparison)
+   * This prevents unnecessary object updates in Immer when errors haven't
+   * changed, maintaining referential stability for React memoization.
+   */
+  function areErrorsEqual(
+    a: Record<string, string[]>,
+    b: Record<string, string[]>
+  ): boolean {
+    const keysA = Object.keys(a);
+    const keysB = Object.keys(b);
+
+    if (keysA.length !== keysB.length) return false;
+
+    return keysA.every(key => {
+      const valsA = a[key];
+      const valsB = b[key];
+      if (!valsA || !valsB) return false;
+      if (valsA.length !== valsB.length) return false;
+      return valsA.every((val, i) => val === valsB[i]);
+    });
+  }
+
   // Connect Y.Doc and set up observers
   const connect = (d: Session.WorkflowDoc, p: PhoenixChannelProvider) => {
     // Clean up previous connection
@@ -301,6 +327,7 @@ export const createWorkflowStore = () => {
     const triggersArray = ydoc.getArray("triggers");
     const edgesArray = ydoc.getArray("edges");
     const positionsMap = ydoc.getMap("positions");
+    const errorsMap = ydoc.getMap("errors"); // NEW: Get errors map
 
     // Set up observers
     const workflowObserver = () => {
@@ -350,12 +377,76 @@ export const createWorkflowStore = () => {
       }, "positions/observerUpdate");
     };
 
+    // Enhanced errors observer with denormalization
+    // This observer reads the nested error structure from Y.Doc and
+    // denormalizes errors directly onto the corresponding entities in
+    // the store.
+    // Using Immer's structural sharing, only entities with changed errors
+    // get new object references, minimizing React re-renders.
+    const errorsObserver = () => {
+      const errorsJSON = errorsMap.toJSON() as {
+        workflow?: Record<string, string[]>;
+        jobs?: Record<string, Record<string, string[]>>;
+        triggers?: Record<string, Record<string, string[]>>;
+        edges?: Record<string, Record<string, string[]>>;
+      };
+
+      logger.debug("errorsObserver fired", {
+        errorsJSON,
+        jobCount: Object.keys(errorsJSON.jobs || {}).length,
+        triggerCount: Object.keys(errorsJSON.triggers || {}).length,
+        edgeCount: Object.keys(errorsJSON.edges || {}).length,
+      });
+
+      updateState(draft => {
+        // Extract nested error structures
+        const workflowErrors = errorsJSON.workflow || {};
+        const jobErrors = errorsJSON.jobs || {};
+        const triggerErrors = errorsJSON.triggers || {};
+        const edgeErrors = errorsJSON.edges || {};
+
+        // Denormalize workflow errors onto workflow object
+        if (draft.workflow) {
+          const newErrors = workflowErrors;
+          if (!areErrorsEqual(draft.workflow.errors || {}, newErrors)) {
+            draft.workflow.errors = newErrors;
+          }
+        }
+
+        // Efficiently update job errors using Immer
+        // Only touches jobs that have changes
+        draft.jobs.forEach(job => {
+          const newErrors = jobErrors[job.id] || {};
+          if (!areErrorsEqual(job.errors || {}, newErrors)) {
+            job.errors = newErrors;
+          }
+        });
+
+        // Same for triggers
+        draft.triggers.forEach(trigger => {
+          const newErrors = triggerErrors[trigger.id] || {};
+          if (!areErrorsEqual(trigger.errors || {}, newErrors)) {
+            trigger.errors = newErrors;
+          }
+        });
+
+        // Same for edges
+        draft.edges.forEach(edge => {
+          const newErrors = edgeErrors[edge.id] || {};
+          if (!areErrorsEqual(edge.errors || {}, newErrors)) {
+            edge.errors = newErrors;
+          }
+        });
+      }, "errors/observerUpdate");
+    };
+
     // Attach observers with deep observation for nested changes
     workflowMap.observeDeep(workflowObserver);
     jobsArray.observeDeep(jobsObserver);
     triggersArray.observeDeep(triggersObserver);
     edgesArray.observeDeep(edgesObserver);
     positionsMap.observeDeep(positionsObserver);
+    errorsMap.observeDeep(errorsObserver); // NEW: Attach errors observer
 
     // Store cleanup functions
     logger.debug("Attaching observers");
@@ -365,6 +456,7 @@ export const createWorkflowStore = () => {
       () => triggersArray.unobserveDeep(triggersObserver),
       () => edgesArray.unobserveDeep(edgesObserver),
       () => positionsMap.unobserveDeep(positionsObserver),
+      () => errorsMap.unobserveDeep(errorsObserver), // NEW: Cleanup function
     ];
 
     state = produce(state, draft => {
@@ -377,6 +469,7 @@ export const createWorkflowStore = () => {
     triggersObserver();
     edgesObserver();
     positionsObserver();
+    errorsObserver(); // NEW: Initial sync
 
     // Initialize DevTools connection
     devtools.connect();
@@ -657,6 +750,252 @@ export const createWorkflowStore = () => {
     });
   };
 
+  /**
+   * Set validation errors for an entity or entity field
+   *
+   * Supports nested paths:
+   * - "workflow" → sets workflow-level errors
+   * - "jobs.abc-123" → sets all errors for job abc-123
+   * - "jobs.abc-123.name" → sets error for specific field
+   *   (NOT IMPLEMENTED YET)
+   *
+   * Pattern 1: Y.Doc → Observer → Immer → Notify
+   */
+  const setError = (path: string, errors: Record<string, string[]>) => {
+    if (!ydoc) throw new Error("Y.Doc not connected");
+
+    logger.debug("setError called", {
+      path,
+      errors,
+      errorCount: Object.keys(errors).length,
+      stack: new Error().stack?.split("\n").slice(2, 5).join("\n"),
+    });
+
+    const errorsMap = ydoc.getMap("errors");
+
+    // Parse path to determine error location
+    const parts = path.split(".");
+
+    // 1. Read current errors from Y.Doc (outside transaction)
+    const currentErrors = (() => {
+      if (parts.length === 1) {
+        // Top-level: "workflow" or entity collection
+        return (
+          (errorsMap.get(
+            path as "workflow" | "jobs" | "triggers" | "edges"
+          ) as Record<string, string[]>) || {}
+        );
+      } else if (parts.length === 2) {
+        // Entity-level: "jobs.abc-123"
+        const entityType = parts[0];
+        const entityId = parts[1];
+
+        if (!entityId) {
+          throw new Error(`Missing entity ID in path: ${path}`);
+        }
+
+        // Validate entity type (runtime check for path parsing)
+        if (
+          entityType !== "jobs" &&
+          entityType !== "triggers" &&
+          entityType !== "edges"
+        ) {
+          throw new Error(`Invalid entity type in path: ${entityType}`);
+        }
+
+        const entityErrors =
+          (errorsMap.get(entityType) as Record<
+            string,
+            Record<string, string[]>
+          >) || {};
+
+        return entityErrors[entityId] || {};
+      } else {
+        // Field-level not implemented yet - would need more complex structure
+        throw new Error(`Unsupported error path: ${path}`);
+      }
+    })();
+
+    // 2. Check if actually different (avoid unnecessary transactions)
+    if (areErrorsEqual(currentErrors, errors)) {
+      logger.debug("setError: no changes detected, skipping transaction", {
+        path,
+      });
+      return;
+    }
+
+    // 3. Apply changes in transaction
+    ydoc.transact(() => {
+      if (parts.length === 1) {
+        // Top-level: "workflow" or entity collection
+        errorsMap.set(
+          path as "workflow" | "jobs" | "triggers" | "edges",
+          errors
+        );
+      } else if (parts.length === 2) {
+        // Entity-level: "jobs.abc-123"
+        const entityType = parts[0];
+        const entityId = parts[1];
+
+        // These are already validated above in currentErrors extraction
+        if (!entityId || !entityType) return;
+
+        // Validate entity type (runtime check for path parsing)
+        if (
+          entityType !== "jobs" &&
+          entityType !== "triggers" &&
+          entityType !== "edges"
+        ) {
+          return;
+        }
+
+        const entityErrors = errorsMap.get(entityType);
+        // Type assertion needed because Y.Map.get returns unknown
+        // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
+        const typedEntityErrors = entityErrors as
+          | Record<string, Record<string, string[]>>
+          | undefined;
+
+        const updatedEntityErrors = {
+          ...(typedEntityErrors ?? {}),
+          [entityId]: errors,
+        };
+
+        errorsMap.set(entityType, updatedEntityErrors);
+      }
+    });
+
+    // Observer handles the rest: Y.Doc → immer → notify
+  };
+
+  /**
+   * Set client validation errors with debouncing and merge+dedupe logic
+   *
+   * This is the primary method for client-side validation errors (from TanStack Form).
+   * Server validation errors should use setError() directly.
+   *
+   * Features:
+   * - Debounced 500ms to avoid excessive Y.Doc updates
+   * - Merges with existing errors (server + other clients)
+   * - Deduplicates error messages per field using Immer
+   * - Empty array clears field errors
+   *
+   * Pattern 1: Y.Doc → Observer → Immer → Notify (after debounce)
+   *
+   * @param path - Dot-separated path (e.g., "workflow", "jobs.abc-123")
+   * @param errors - Field errors { fieldName: ["error1", "error2"] }
+   *                 Empty array [] clears that field
+   */
+  const setClientErrors = (path: string, errors: Record<string, string[]>) => {
+    logger.debug("setClientErrors called (before debounce)", {
+      path,
+      errors,
+      errorCount: Object.keys(errors).length,
+      stack: new Error(),
+    });
+
+    // Clear any existing timeout for this path
+    const existingTimeout = debounceTimeouts.get(path);
+    if (existingTimeout) {
+      clearTimeout(existingTimeout);
+      logger.debug("setClientErrors cleared existing timeout", { path });
+    }
+
+    // Set new debounced timeout
+    const timeoutId = setTimeout(() => {
+      logger.debug("setClientErrors executing (after debounce)", {
+        path,
+        errors,
+      });
+
+      if (!ydoc) {
+        logger.warn("Cannot set client errors: Y.Doc not connected");
+        return;
+      }
+
+      const errorsMap = ydoc.getMap("errors");
+      const parts = path.split(".");
+
+      // 1. Read current errors from Y.Doc (outside transaction)
+      const currentErrors = (() => {
+        if (parts.length === 1 || !path) {
+          // Top-level: "workflow"
+          const entityKey = path || "workflow";
+          const errors = errorsMap.get(
+            entityKey as "workflow" | "jobs" | "triggers" | "edges"
+          ) as Record<string, string[]> | undefined;
+          return errors ?? {};
+        } else if (parts.length === 2) {
+          // Entity-level: "jobs.abc-123"
+          const entityType = parts[0];
+          const entityId = parts[1];
+
+          if (!entityId || !entityType) return {};
+
+          // Validate entity type (runtime check for path parsing)
+          if (
+            entityType !== "jobs" &&
+            entityType !== "triggers" &&
+            entityType !== "edges"
+          ) {
+            return {};
+          }
+
+          const entityErrors = errorsMap.get(entityType);
+          // Type assertion needed because Y.Map.get returns unknown
+          // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
+          const typedEntityErrors = entityErrors as
+            | Record<string, Record<string, string[]>>
+            | undefined;
+
+          return typedEntityErrors?.[entityId] ?? {};
+        }
+        return {};
+      })();
+
+      logger.debug("setClientErrors before merge", {
+        path,
+        currentErrors,
+        incomingErrors: errors,
+      });
+
+      // 2. Use Immer to merge and deduplicate errors
+      const mergedErrors = produce(currentErrors, draft => {
+        Object.entries(errors).forEach(([fieldName, newMessages]) => {
+          if (newMessages.length === 0) {
+            // Empty array clears the field
+            // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
+            delete draft[fieldName];
+          } else {
+            // Merge and deduplicate using Set
+            const existing = draft[fieldName] ?? [];
+            draft[fieldName] = Array.from(
+              new Set([...existing, ...newMessages])
+            );
+          }
+        });
+      });
+
+      logger.debug("setClientErrors after merge", {
+        path,
+        mergedErrors,
+        mergedCount: Object.keys(mergedErrors).length,
+      });
+
+      // 3. Write to Y.Doc using setError (which checks if different before transacting)
+      try {
+        setError(path || "workflow", mergedErrors);
+      } catch (error) {
+        logger.error("Failed to set client errors", { path, error });
+      }
+
+      // Clean up timeout
+      debounceTimeouts.delete(path);
+    }, 500);
+
+    debounceTimeouts.set(path, timeoutId);
+  };
+
   // =============================================================================
   // PATTERN 3: Direct Immer → Notify (Local UI State)
   // =============================================================================
@@ -920,6 +1259,8 @@ export const createWorkflowStore = () => {
     updatePositions,
     updatePosition,
     importWorkflow,
+    setError,
+    setClientErrors,
 
     // =============================================================================
     // PATTERN 2: Y.Doc + Immediate Immer → Notify (Hybrid Operations - Use Sparingly)
