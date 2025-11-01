@@ -20,6 +20,7 @@ import { beforeEach, describe, expect, test, vi } from "vitest";
 import { FullScreenIDE } from "../../../../js/collaborative-editor/components/ide/FullScreenIDE";
 import * as dataclipApi from "../../../../js/collaborative-editor/api/dataclips";
 import type { Workflow } from "../../../../js/collaborative-editor/types/workflow";
+import { StoreProvider } from "#/collaborative-editor/contexts/StoreProvider";
 
 // Mock dependencies
 vi.mock("../../../../js/collaborative-editor/api/dataclips");
@@ -140,6 +141,7 @@ vi.mock("../../../../js/collaborative-editor/hooks/useSessionContext", () => ({
     id: "project-1",
     name: "Test Project",
   }),
+  useProjectRepoConnection: () => undefined,
   useLatestSnapshotLockVersion: () => 1,
 }));
 
@@ -291,7 +293,9 @@ function renderFullScreenIDE(
 ) {
   return render(
     <HotkeysProvider>
-      <FullScreenIDE {...props} />
+      <StoreProvider>
+        <FullScreenIDE {...props} />
+      </StoreProvider>
     </HotkeysProvider>
   );
 }

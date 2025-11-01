@@ -19,6 +19,8 @@ and this project adheres to
 
 ### Changed
 
+- Add save & sync split button to new canvas & IDE header
+  [#3908](https://github.com/OpenFn/lightning/issues/3908)
 - Show collaborators in the header of the new canvas & IDE
   [#3845](https://github.com/OpenFn/lightning/issues/3845)
 
