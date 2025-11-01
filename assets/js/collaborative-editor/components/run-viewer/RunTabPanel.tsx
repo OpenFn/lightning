@@ -27,79 +27,79 @@ export function RunTabPanel() {
   }
 
   return (
-    <div className="h-full flex flex-col overflow-auto p-4">
+    <div className="flex h-full flex-col overflow-auto">
       {/* Run metadata */}
-      <dl className="space-y-2 mb-4">
-        <div className="flex justify-between text-sm">
-          <dt className="font-medium text-gray-700 whitespace-nowrap">
-            Work Order
-          </dt>
-          <dd>
-            <a
-              href={`/projects/${project.id}/history?filters[workorder_id]=${run.work_order_id}`}
-              className="link-uuid"
-              title={`View work order ${run.work_order_id}`}
-            >
-              {displayShortUuid(run.work_order_id)}
-            </a>
-          </dd>
-        </div>
-
-        <div className="flex justify-between text-sm">
-          <dt className="font-medium text-gray-700">Run</dt>
-          <dd>
-            <a
-              href={`/projects/${project.id}/runs/${run.id}${selectedStepId ? `?step=${selectedStepId}` : ""}`}
-              className="link-uuid"
-              title={`View run ${run.id}`}
-            >
-              {displayShortUuid(run.id)}
-            </a>
-          </dd>
-        </div>
-
-        {(run.created_by || run.starting_trigger) && (
-          <div className="flex justify-between text-sm">
-            <dt className="font-medium text-gray-700">Started by</dt>
-            <dd className="text-gray-900">
-              {run.created_by?.email ||
-                (run.starting_trigger
-                  ? `${run.starting_trigger.type} trigger`
-                  : "Unknown")}
+      <div className="border-b border-gray-200 p-4">
+        <dl className="space-y-3">
+          <div className="flex items-center justify-between gap-4 text-sm">
+            <dt className="font-medium text-gray-600">Work Order</dt>
+            <dd>
+              <a
+                href={`/projects/${project.id}/history?filters[workorder_id]=${run.work_order_id}`}
+                className="link-uuid"
+                title={`View work order ${run.work_order_id}`}
+              >
+                {displayShortUuid(run.work_order_id)}
+              </a>
             </dd>
           </div>
-        )}
 
-        {run.started_at && (
-          <div className="flex justify-between text-sm">
-            <dt className="font-medium text-gray-700">Started</dt>
-            <dd className="text-gray-900">
-              {new Date(run.started_at).toLocaleString()}
+          <div className="flex items-center justify-between gap-4 text-sm">
+            <dt className="font-medium text-gray-600">Run</dt>
+            <dd>
+              <a
+                href={`/projects/${project.id}/runs/${run.id}${selectedStepId ? `?step=${selectedStepId}` : ""}`}
+                className="link-uuid"
+                title={`View run ${run.id}`}
+              >
+                {displayShortUuid(run.id)}
+              </a>
             </dd>
           </div>
-        )}
 
-        <div className="flex justify-between text-sm">
-          <dt className="font-medium text-gray-700">Duration</dt>
-          <dd className="text-gray-900">
-            <ElapsedIndicator
-              startedAt={run.started_at}
-              finishedAt={run.finished_at}
-            />
-          </dd>
-        </div>
+          {(run.created_by || run.starting_trigger) && (
+            <div className="flex items-center justify-between gap-4 text-sm">
+              <dt className="font-medium text-gray-600">Started by</dt>
+              <dd className="text-right text-gray-900">
+                {run.created_by?.email ||
+                  (run.starting_trigger
+                    ? `${run.starting_trigger.type} trigger`
+                    : "Unknown")}
+              </dd>
+            </div>
+          )}
 
-        <div className="flex justify-between text-sm items-center">
-          <dt className="font-medium text-gray-700">Status</dt>
-          <dd>
-            <StatePill state={run.state} />
-          </dd>
-        </div>
-      </dl>
+          {run.started_at && (
+            <div className="flex items-center justify-between gap-4 text-sm">
+              <dt className="font-medium text-gray-600">Started</dt>
+              <dd className="text-gray-900">
+                {new Date(run.started_at).toLocaleString()}
+              </dd>
+            </div>
+          )}
+
+          <div className="flex items-center justify-between gap-4 text-sm">
+            <dt className="font-medium text-gray-600">Duration</dt>
+            <dd className="text-gray-900">
+              <ElapsedIndicator
+                startedAt={run.started_at}
+                finishedAt={run.finished_at}
+              />
+            </dd>
+          </div>
+
+          <div className="flex items-center justify-between gap-4 text-sm">
+            <dt className="font-medium text-gray-600">Status</dt>
+            <dd>
+              <StatePill state={run.state} />
+            </dd>
+          </div>
+        </dl>
+      </div>
 
       {/* Steps list */}
-      <div className="flex-1 overflow-auto">
-        <h3 className="text-sm font-medium text-gray-700 mb-2">Steps:</h3>
+      <div className="flex-1 overflow-auto p-4">
+        <h3 className="mb-3 text-sm font-semibold text-gray-900">Steps</h3>
         <StepList
           steps={run.steps}
           selectedStepId={selectedStepId}
