@@ -119,9 +119,9 @@ export function LogTabPanel() {
   }
 
   return (
-    <div className="h-full flex">
+    <div className="flex h-full flex-col">
       {/* Step list for navigation */}
-      <div className="w-48 border-r overflow-auto p-2">
+      <div className="mb-1 min-h-0 max-h-[30%] flex-none overflow-auto border-b p-4">
         <StepList
           steps={run.steps}
           selectedStepId={selectedStepId}
@@ -130,7 +130,7 @@ export function LogTabPanel() {
       </div>
 
       {/* Log viewer with filter */}
-      <div className="flex-1 flex flex-col bg-slate-700 font-mono text-gray-200">
+      <div className="flex min-h-0 grow flex-col overflow-auto rounded-md bg-slate-700 font-mono text-gray-200">
         {/* Log level filter header */}
         <div className="border-b border-slate-500">
           <div className="mx-auto px-2">
