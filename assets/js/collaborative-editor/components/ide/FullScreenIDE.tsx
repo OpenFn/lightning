@@ -624,12 +624,12 @@ export function FullScreenIDE({
             collapsedSize={2}
             onCollapse={() => setIsCenterCollapsed(true)}
             onExpand={() => setIsCenterCollapsed(false)}
-            className="bg-white"
+            className="bg-slate-100"
           >
             <div className="h-full flex flex-col">
               {/* Panel heading */}
               <div
-                className={`shrink-0 bg-slate-100 border-b border-gray-100 transition-transform ${
+                className={`shrink-0 border-b border-gray-100 transition-transform ${
                   isCenterCollapsed ? "rotate-90" : ""
                 }`}
               >
@@ -697,12 +697,12 @@ export function FullScreenIDE({
             collapsedSize={2}
             onCollapse={() => setIsRightCollapsed(true)}
             onExpand={() => setIsRightCollapsed(false)}
-            className="bg-gray-50 border-l border-gray-200"
+            className="bg-slate-100 bg-gray-50 border-l border-gray-200"
           >
             <div className="h-full flex flex-col">
               {/* Panel heading with tabs */}
               <div
-                className={`shrink-0 bg-slate-100 transition-transform ${
+                className={`shrink-0 transition-transform ${
                   isRightCollapsed ? "rotate-90" : ""
                 }`}
               >
