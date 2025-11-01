@@ -1,3 +1,4 @@
+import { cn } from "../../utils/cn";
 import { useRemoteUsers } from "../hooks/useAwareness";
 import { getAvatarInitials } from "../utils/avatar";
 
@@ -9,7 +10,11 @@ function lessthanmin(val: number, mins: number) {
   return val > threshold;
 }
 
-export function ActiveCollaborators() {
+interface ActiveCollaboratorsProps {
+  className?: string;
+}
+
+export function ActiveCollaborators({ className }: ActiveCollaboratorsProps) {
   const remoteUsers = useRemoteUsers();
 
   if (remoteUsers.length === 0) {
@@ -17,7 +22,7 @@ export function ActiveCollaborators() {
   }
 
   return (
-    <div className="flex items-center gap-1.5 ml-2">
+    <div className={cn("flex items-center gap-1.5", className)}>
       {remoteUsers.map(user => {
         const nameParts = user.user.name.split(/\s+/);
         const firstName = nameParts[0] || "";

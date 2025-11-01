@@ -266,7 +266,7 @@ export function Header({
               </Tooltip>
             </a>
           )}
-          <ActiveCollaborators />
+          <ActiveCollaborators className="ml-2" />
           <div className="grow ml-2"></div>
 
           <div className="flex flex-row gap-2">
