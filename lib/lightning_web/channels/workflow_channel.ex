@@ -430,6 +430,15 @@ defmodule LightningWeb.WorkflowChannel do
     {:stop, {:error, "remote process crash"}, socket}
   end
 
+  # TODO why do we need to use handle_out on broadcast_from! events
+  # even tho we've not specified any interceptors?
+  # from docs. we don't need to. broadcast_from! automatically pushes unless we intercept the event
+  @impl true
+  def handle_out(event, payload, socket) do
+    push(socket, event, payload)
+    {:noreply, socket}
+  end
+
   defp async_task(socket, event, task_fn) do
     channel_pid = self()
     socket_ref = socket_ref(socket)
