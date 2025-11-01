@@ -95,15 +95,19 @@ function createTestSetup() {
 }
 
 const defaultProps = {
+  jobId: "job-123",
   jobName: "Test Job",
   jobAdaptor: "@openfn/language-common@1.0.0",
   jobCredentialId: "cred-123",
   snapshotVersion: 1,
   latestSnapshotVersion: 1,
   workflowId: "workflow-123",
+  projectId: "project-123",
   onClose: vi.fn(),
   onSave: vi.fn(),
   onRun: vi.fn(),
+  onRetry: vi.fn(),
+  isRetryable: false,
   canRun: true,
   isRunning: false,
   canSave: true,

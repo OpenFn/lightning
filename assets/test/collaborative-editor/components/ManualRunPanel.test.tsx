@@ -25,7 +25,9 @@ import type { StoreContextValue } from "../../../js/collaborative-editor/context
 import { createAdaptorStore } from "../../../js/collaborative-editor/stores/createAdaptorStore";
 import { createAwarenessStore } from "../../../js/collaborative-editor/stores/createAwarenessStore";
 import { createCredentialStore } from "../../../js/collaborative-editor/stores/createCredentialStore";
+import { createRunStore } from "../../../js/collaborative-editor/stores/createRunStore";
 import { createSessionContextStore } from "../../../js/collaborative-editor/stores/createSessionContextStore";
+import { createUIStore } from "../../../js/collaborative-editor/stores/createUIStore";
 import { createWorkflowStore } from "../../../js/collaborative-editor/stores/createWorkflowStore";
 import type { Workflow } from "../../../js/collaborative-editor/types/workflow";
 import {
@@ -78,6 +80,26 @@ vi.mock("../../../js/monaco", () => ({
   MonacoEditor: ({ value }: { value: string }) => (
     <div data-testid="monaco-editor">{value}</div>
   ),
+}));
+
+// Mock useSession hook
+vi.mock("../../../js/collaborative-editor/hooks/useSession", () => ({
+  useSession: () => ({
+    provider: null,
+    ydoc: null,
+    awareness: null,
+    isConnected: false,
+    isSynced: false,
+  }),
+}));
+
+// Mock useURLState hook
+vi.mock("../../../js/react/lib/use-url-state", () => ({
+  useURLState: () => ({
+    searchParams: new URLSearchParams(),
+    updateSearchParams: vi.fn(),
+    hash: "",
+  }),
 }));
 
 const mockWorkflow: Workflow = {
@@ -162,6 +184,8 @@ describe("ManualRunPanel", () => {
       sessionContextStore: createSessionContextStore(),
       adaptorStore: createAdaptorStore(),
       awarenessStore: createAwarenessStore(),
+      uiStore: createUIStore(),
+      runStore: createRunStore(),
     };
 
     // Create mock channel and connect session context store
@@ -329,7 +353,7 @@ describe("ManualRunPanel", () => {
     });
 
     await waitFor(() => {
-      const runButton = screen.getByText("Run (Create New Workorder)");
+      const runButton = screen.getByText("Run Workflow Now");
       expect(runButton).not.toBeDisabled();
     });
   });
@@ -529,7 +553,7 @@ describe("ManualRunPanel", () => {
 
     // Run button should be enabled
     await waitFor(() => {
-      const runButton = screen.getByText("Run (Create New Workorder)");
+      const runButton = screen.getByText("Run Workflow Now");
       expect(runButton).not.toBeDisabled();
     });
   });
@@ -577,9 +601,7 @@ describe("ManualRunPanel", () => {
       ).toBeInTheDocument();
 
       // Should show footer with Run button
-      expect(
-        screen.getByText("Run (Create New Workorder)")
-      ).toBeInTheDocument();
+      expect(screen.getByText("Run Workflow Now")).toBeInTheDocument();
     });
 
     test("embedded mode shows only content, no header or footer", async () => {
@@ -606,9 +628,7 @@ describe("ManualRunPanel", () => {
       ).not.toBeInTheDocument();
 
       // Should NOT show footer with Run button
-      expect(
-        screen.queryByText("Run (Create New Workorder)")
-      ).not.toBeInTheDocument();
+      expect(screen.queryByText("Run Workflow Now")).not.toBeInTheDocument();
     });
 
     test("embedded mode with trigger context", async () => {
@@ -868,7 +888,7 @@ describe("ManualRunPanel", () => {
       });
 
       await waitFor(() => {
-        const runButton = screen.getByText("Run (Create New Workorder)");
+        const runButton = screen.getByText("Run Workflow Now");
         expect(runButton).toBeDisabled();
       });
     });
@@ -884,7 +904,7 @@ describe("ManualRunPanel", () => {
       });
 
       await waitFor(() => {
-        const runButton = screen.getByText("Run (Create New Workorder)");
+        const runButton = screen.getByText("Run Workflow Now");
         expect(runButton).not.toBeDisabled();
       });
     });
@@ -973,7 +993,7 @@ describe("ManualRunPanel", () => {
 
       // Run button should still be disabled due to lack of permission
       await waitFor(() => {
-        const runButton = screen.getByText("Run (Create New Workorder)");
+        const runButton = screen.getByText("Run Workflow Now");
         expect(runButton).toBeDisabled();
       });
     });
@@ -1011,13 +1031,11 @@ describe("ManualRunPanel", () => {
 
       // Wait for initial render
       await waitFor(() => {
-        expect(
-          screen.getByText("Run (Create New Workorder)")
-        ).toBeInTheDocument();
+        expect(screen.getByText("Run Workflow Now")).toBeInTheDocument();
       });
 
       // Click Run button
-      await user.click(screen.getByText("Run (Create New Workorder)"));
+      await user.click(screen.getByText("Run Workflow Now"));
 
       // Verify save was called first, then run
       await waitFor(() => {
@@ -1044,12 +1062,10 @@ describe("ManualRunPanel", () => {
       });
 
       await waitFor(() => {
-        expect(
-          screen.getByText("Run (Create New Workorder)")
-        ).toBeInTheDocument();
+        expect(screen.getByText("Run Workflow Now")).toBeInTheDocument();
       });
 
-      await user.click(screen.getByText("Run (Create New Workorder)"));
+      await user.click(screen.getByText("Run Workflow Now"));
 
       // Save should be called
       await waitFor(() => {
@@ -1085,12 +1101,10 @@ describe("ManualRunPanel", () => {
       });
 
       await waitFor(() => {
-        expect(
-          screen.getByText("Run (Create New Workorder)")
-        ).toBeInTheDocument();
+        expect(screen.getByText("Run Workflow Now")).toBeInTheDocument();
       });
 
-      await user.click(screen.getByText("Run (Create New Workorder)"));
+      await user.click(screen.getByText("Run Workflow Now"));
 
       // Save should be called
       await waitFor(() => {
@@ -1131,13 +1145,11 @@ describe("ManualRunPanel", () => {
 
       // Wait for initial render
       await waitFor(() => {
-        expect(
-          screen.getByText("Run (Create New Workorder)")
-        ).toBeInTheDocument();
+        expect(screen.getByText("Run Workflow Now")).toBeInTheDocument();
       });
 
       // Click Run button
-      await user.click(screen.getByText("Run (Create New Workorder)"));
+      await user.click(screen.getByText("Run Workflow Now"));
 
       // Verify saveWorkflow was called with no arguments
       await waitFor(() => {
@@ -1173,21 +1185,19 @@ describe("ManualRunPanel", () => {
 
       // Wait for initial render
       await waitFor(() => {
-        expect(
-          screen.getByText("Run (Create New Workorder)")
-        ).toBeInTheDocument();
+        expect(screen.getByText("Run Workflow Now")).toBeInTheDocument();
       });
 
       // Click Run button - this will start the save
-      await user.click(screen.getByText("Run (Create New Workorder)"));
+      await user.click(screen.getByText("Run Workflow Now"));
 
-      // Button should show "Pending..." while submitting
+      // Button should show "Processing" while submitting
       await waitFor(() => {
-        expect(screen.getByText("Pending...")).toBeInTheDocument();
+        expect(screen.getByText("Processing")).toBeInTheDocument();
       });
 
       // Button should be disabled
-      const runButton = screen.getByText("Pending...");
+      const runButton = screen.getByText("Processing");
       expect(runButton).toBeDisabled();
 
       // Try to click again - should not trigger another save

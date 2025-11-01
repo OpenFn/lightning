@@ -15,10 +15,11 @@
 export interface UIState {
   runPanelOpen: boolean;
 
-  /** Context for run panel (which job/trigger to run from) */
+  /** Context for run panel (which job/trigger/edge is selected) */
   runPanelContext: {
     jobId?: string | null;
     triggerId?: string | null;
+    edgeId?: string | null;
   } | null;
 
   /** GitHub sync modal open state */
@@ -30,7 +31,11 @@ export interface UIState {
  */
 export interface UICommands {
   /** Open run panel with context */
-  openRunPanel: (context: { jobId?: string; triggerId?: string }) => void;
+  openRunPanel: (context: {
+    jobId?: string;
+    triggerId?: string;
+    edgeId?: string;
+  }) => void;
 
   /** Close run panel */
   closeRunPanel: () => void;

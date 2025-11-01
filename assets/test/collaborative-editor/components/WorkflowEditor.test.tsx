@@ -63,9 +63,16 @@ vi.mock(
 
 // Mock ManualRunPanel with run state callback
 let mockOnRunStateChange:
-  | ((canRun: boolean, isSubmitting: boolean, handler: () => void) => void)
+  | ((
+      canRun: boolean,
+      isSubmitting: boolean,
+      handler: () => void,
+      retryHandler?: () => void,
+      isRetryable?: boolean
+    ) => void)
   | null = null;
 const mockRunHandler = vi.fn();
+const mockRetryHandler = vi.fn();
 
 vi.mock("../../../js/collaborative-editor/components/ManualRunPanel", () => ({
   ManualRunPanel: ({
@@ -79,7 +86,9 @@ vi.mock("../../../js/collaborative-editor/components/ManualRunPanel", () => ({
     onRunStateChange?: (
       canRun: boolean,
       isSubmitting: boolean,
-      handler: () => void
+      handler: () => void,
+      retryHandler?: () => void,
+      isRetryable?: boolean
     ) => void;
     saveWorkflow?: () => Promise<void>;
   }) => {
@@ -89,7 +98,8 @@ vi.mock("../../../js/collaborative-editor/components/ManualRunPanel", () => ({
     // Call callback after mount to simulate ManualRunPanel behavior
     if (onRunStateChange) {
       setTimeout(() => {
-        onRunStateChange(true, false, mockRunHandler);
+        // Call with all 5 parameters (last 2 optional)
+        onRunStateChange(true, false, mockRunHandler, mockRetryHandler, false);
       }, 0);
     }
 
@@ -167,25 +177,15 @@ const mockWorkflow: Workflow = {
 };
 
 // Mock UI hooks with controllable state
-let isRunPanelOpen = false;
-let runPanelContext: {
-  jobId?: string | null;
-  triggerId?: string | null;
-} | null = null;
-
-const mockOpenRunPanel = vi.fn((ctx: any) => {
-  isRunPanelOpen = true;
-  runPanelContext = ctx;
-});
-
-const mockCloseRunPanel = vi.fn(() => {
-  isRunPanelOpen = false;
-  runPanelContext = null;
-});
+// Use vi.fn() so we can update return values in tests
+const mockIsRunPanelOpen = vi.fn(() => false);
+const mockRunPanelContext = vi.fn(() => null);
+const mockOpenRunPanel = vi.fn();
+const mockCloseRunPanel = vi.fn();
 
 vi.mock("../../../js/collaborative-editor/hooks/useUI", () => ({
-  useIsRunPanelOpen: () => isRunPanelOpen,
-  useRunPanelContext: () => runPanelContext,
+  useIsRunPanelOpen: () => mockIsRunPanelOpen(),
+  useRunPanelContext: () => mockRunPanelContext(),
   useUICommands: () => ({
     openRunPanel: mockOpenRunPanel,
     closeRunPanel: mockCloseRunPanel,
@@ -253,8 +253,8 @@ describe("WorkflowEditor", () => {
     vi.clearAllMocks();
 
     // Reset state
-    isRunPanelOpen = false;
-    runPanelContext = null;
+    mockIsRunPanelOpen.mockReturnValue(false);
+    mockRunPanelContext.mockReturnValue(null);
     currentNode = { type: null, node: null };
     mockRunHandler.mockClear();
     mockCanRun = true;
@@ -425,8 +425,8 @@ describe("WorkflowEditor", () => {
       const user = userEvent.setup();
 
       // Panel is already open
-      isRunPanelOpen = true;
-      runPanelContext = { jobId: "job-1" };
+      mockIsRunPanelOpen.mockReturnValue(true);
+      mockRunPanelContext.mockReturnValue({ jobId: "job-1" });
 
       // User has permission to run
       mockCanRun = true;
@@ -458,8 +458,8 @@ describe("WorkflowEditor", () => {
       const user = userEvent.setup();
 
       // Panel is already open
-      isRunPanelOpen = true;
-      runPanelContext = { jobId: "job-1" };
+      mockIsRunPanelOpen.mockReturnValue(true);
+      mockRunPanelContext.mockReturnValue({ jobId: "job-1" });
 
       // User CANNOT run
       mockCanRun = false;
@@ -484,8 +484,8 @@ describe("WorkflowEditor", () => {
   describe("Cmd+Enter keyboard shortcut - triggering run", () => {
     test("shows run panel when open", async () => {
       // Open run panel first
-      isRunPanelOpen = true;
-      runPanelContext = { jobId: "job-1" };
+      mockIsRunPanelOpen.mockReturnValue(true);
+      mockRunPanelContext.mockReturnValue({ jobId: "job-1" });
 
       renderWorkflowEditor();
 
@@ -502,8 +502,8 @@ describe("WorkflowEditor", () => {
 
   describe("run panel rendering", () => {
     test("shows ManualRunPanel with job context when open", async () => {
-      isRunPanelOpen = true;
-      runPanelContext = { jobId: "job-1" };
+      mockIsRunPanelOpen.mockReturnValue(true);
+      mockRunPanelContext.mockReturnValue({ jobId: "job-1" });
 
       renderWorkflowEditor();
 
@@ -516,8 +516,8 @@ describe("WorkflowEditor", () => {
     });
 
     test("shows ManualRunPanel with trigger context when open", async () => {
-      isRunPanelOpen = true;
-      runPanelContext = { triggerId: "trigger-1" };
+      mockIsRunPanelOpen.mockReturnValue(true);
+      mockRunPanelContext.mockReturnValue({ triggerId: "trigger-1" });
 
       renderWorkflowEditor();
 
@@ -586,7 +586,9 @@ describe("WorkflowEditor", () => {
 
       // Should open IDE by setting editor=open in URL
       await waitFor(() => {
-        expect(mockUpdateSearchParams).toHaveBeenCalledWith({ editor: "open" });
+        expect(mockUpdateSearchParams).toHaveBeenCalledWith({
+          panel: "editor",
+        });
       });
     });
 
@@ -651,7 +653,7 @@ describe("WorkflowEditor", () => {
       };
 
       // IDE is already open
-      mockSearchParams.set("editor", "open");
+      mockSearchParams.set("panel", "editor");
       mockSearchParams.set("job", "job-1");
 
       const { container } = renderWorkflowEditor();

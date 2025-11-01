@@ -4917,6 +4917,53 @@ defmodule LightningWeb.WorkflowLive.EditTest do
                "a[aria-label*='collaborative editor (experimental)']"
              )
     end
+
+    test "shows collaborative editor toggle in job inspector with experimental features",
+         %{
+           conn: conn,
+           project: project,
+           workflow: workflow,
+           user: user
+         } do
+      # Enable experimental features for user
+      user
+      |> Ecto.Changeset.change(%{
+        preferences: %{"experimental_features" => true}
+      })
+      |> Lightning.Repo.update!()
+
+      job = insert(:job, workflow: workflow, name: "test-job")
+
+      {:ok, _view, html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/w/#{workflow.id}?s=#{job.id}&m=expand&v=#{workflow.lock_version}"
+        )
+
+      # Should show beaker icon in job inspector
+      assert html =~ "inspector-collaborative-editor-toggle"
+      assert html =~ "hero-beaker"
+      assert html =~ "collaborative editor (experimental)"
+    end
+
+    test "hides collaborative editor toggle in job inspector without experimental features",
+         %{
+           conn: conn,
+           project: project,
+           workflow: workflow,
+           user: user
+         } do
+      job = insert(:job, workflow: workflow, name: "test-job")
+
+      {:ok, _view, html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/w/#{workflow.id}?s=#{job.id}&m=expand&v=#{workflow.lock_version}"
+        )
+
+      # Should not show beaker icon in job inspector
+      refute html =~ "inspector-collaborative-editor-toggle"
+    end
   end
 
   describe "sandbox indicator banner" do

@@ -143,6 +143,7 @@ vi.mock("../../../../js/collaborative-editor/hooks/useSessionContext", () => ({
   }),
   useProjectRepoConnection: () => undefined,
   useLatestSnapshotLockVersion: () => 1,
+  useIsNewWorkflow: () => false,
 }));
 
 // Mock workflow hooks

@@ -141,6 +141,9 @@ export function FullScreenIDE({
   const [canRunWorkflow, setCanRunWorkflow] = useState(false);
   const [isRunning, setIsRunning] = useState(false);
   const [runHandler, setRunHandler] = useState<(() => void) | null>(null);
+  const [retryHandler, setRetryHandler] = useState<(() => void) | null>(null);
+  const [isRetryable, setIsRetryable] = useState(false);
+  const [runIsProcessing, setRunIsProcessing] = useState(false);
 
   // Follow run state for right panel
   const [followRunId, setFollowRunId] = useState<string | null>(null);
@@ -246,18 +249,21 @@ export function FullScreenIDE({
   const handleRunStateChange = (
     canRun: boolean,
     isSubmitting: boolean,
-    handler: () => void
+    runHandler: () => void,
+    retryHandler?: () => void,
+    isRetryable?: boolean,
+    processing?: boolean
   ) => {
     setCanRunWorkflow(canRun);
     setIsRunning(isSubmitting);
-    setRunHandler(() => handler);
+    setRunHandler(() => runHandler);
+    setRetryHandler(retryHandler ? () => retryHandler : null);
+    setIsRetryable(isRetryable ?? false);
+    setRunIsProcessing(processing ?? false);
   };
 
-  // Handler for Run button in header
+  // Handler for Run button
   const handleRunClick = () => {
-    // Centralized validation - both button and keyboard shortcut use this
-
-    // Check snapshot/permission restrictions first (these have clear messages)
     if (!canRunSnapshot) {
       notifications.alert({
         title: "Cannot run",
@@ -266,12 +272,28 @@ export function FullScreenIDE({
       return;
     }
 
-    // Check runtime conditions (no toast needed - these are transient states)
-    if (!canRunWorkflow || isRunning || !runHandler) {
+    if (!canRunWorkflow || isRunning || runIsProcessing || !runHandler) {
       return;
     }
 
     runHandler();
+  };
+
+  // Handler for Retry button
+  const handleRetryClick = () => {
+    if (!canRunSnapshot) {
+      notifications.alert({
+        title: "Cannot run",
+        description: runTooltipMessage,
+      });
+      return;
+    }
+
+    if (!canRunWorkflow || isRunning || runIsProcessing || !retryHandler) {
+      return;
+    }
+
+    retryHandler();
   };
 
   // Adaptor modal handlers
@@ -428,7 +450,7 @@ export function FullScreenIDE({
     [onClose]
   );
 
-  // Handle Cmd/Ctrl+Enter to trigger workflow run
+  // Handle Cmd/Ctrl+Enter to trigger workflow run or retry
   // No scope restriction to ensure it works even when Monaco has focus
   useHotkeys(
     "mod+enter",
@@ -436,14 +458,35 @@ export function FullScreenIDE({
       event.preventDefault();
       event.stopPropagation();
 
-      // Use centralized handler with validation
+      if (isRetryable && retryHandler) {
+        handleRetryClick();
+      } else {
+        handleRunClick();
+      }
+    },
+    {
+      enabled: true,
+      enableOnFormTags: true,
+      preventDefault: true,
+      enableOnContentEditable: true,
+    },
+    [handleRunClick, handleRetryClick, isRetryable, retryHandler]
+  );
+
+  // Handle Cmd/Ctrl+Shift+Enter to create new work order (even in retry mode)
+  useHotkeys(
+    "mod+shift+enter",
+    event => {
+      event.preventDefault();
+      event.stopPropagation();
+
       handleRunClick();
     },
     {
       enabled: true,
-      enableOnFormTags: true, // Allow in Monaco editor
-      preventDefault: true, // Prevent Monaco's default behavior
-      enableOnContentEditable: true, // Work in Monaco's contentEditable
+      enableOnFormTags: true,
+      preventDefault: true,
+      enableOnContentEditable: true,
     },
     [handleRunClick]
   );
@@ -505,6 +548,7 @@ export function FullScreenIDE({
     <div className="fixed inset-0 z-50 bg-white flex flex-col">
       {/* Header with Run, Save, Close buttons */}
       <IDEHeader
+        jobId={currentJob.id}
         jobName={currentJob.name}
         jobAdaptor={currentJob.adaptor || undefined}
         jobCredentialId={
@@ -515,11 +559,16 @@ export function FullScreenIDE({
         snapshotVersion={snapshotVersion}
         latestSnapshotVersion={latestSnapshotLockVersion}
         workflowId={workflowId}
+        projectId={projectId}
         onClose={onClose}
         onSave={handleSave}
         onRun={handleRunClick}
-        canRun={canRunSnapshot && canRunWorkflow && !isRunning}
-        isRunning={isRunning}
+        onRetry={handleRetryClick}
+        isRetryable={isRetryable}
+        canRun={
+          canRunSnapshot && canRunWorkflow && !isRunning && !runIsProcessing
+        }
+        isRunning={isRunning || runIsProcessing}
         canSave={canSave}
         saveTooltip={tooltipMessage}
         runTooltip={runTooltipMessage}
