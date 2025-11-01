@@ -1,4 +1,3 @@
-
 import { useHotkeys } from "react-hotkeys-hook";
 import { useURLState } from "#/react/lib/use-url-state";
 import { buildClassicalEditorUrl } from "#/utils/editorUrlConversion";
@@ -186,7 +185,7 @@ export function IDEHeader({
                   buttonText={{
                     run: "Run",
                     retry: "Run (retry)",
-                    processing: "Processing",
+                    processing: "Pending...",
                   }}
                   variant="secondary"
                   dropdownPosition="down"
@@ -203,7 +202,7 @@ export function IDEHeader({
               buttonText={{
                 run: "Run",
                 retry: "Run (retry)",
-                processing: "Processing",
+                processing: "Pending...",
               }}
               variant="secondary"
               dropdownPosition="down"
