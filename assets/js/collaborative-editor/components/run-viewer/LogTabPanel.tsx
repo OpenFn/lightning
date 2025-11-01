@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
 
 import { mount as mountLogViewer } from "../../../log-viewer/component";
 import { createLogStore } from "../../../log-viewer/store";
@@ -66,6 +67,27 @@ export function LogTabPanel() {
     };
   }, []);
 
+  // Handle Monaco resize when panel is resized
+  useEffect(() => {
+    if (!containerRef.current || !viewerInstanceRef.current) {
+      return;
+    }
+
+    const resizeObserver = new ResizeObserver(() => {
+      // Monaco's layout method handles resize
+      const monaco = viewerInstanceRef.current?.monaco;
+      if (monaco) {
+        monaco.layout();
+      }
+    });
+
+    resizeObserver.observe(containerRef.current);
+
+    return () => {
+      resizeObserver.disconnect();
+    };
+  }, []);
+
   // Update selected step in log store
   useEffect(() => {
     storeRef.current.getState().setStepId(selectedStepId ?? undefined);
@@ -119,33 +141,40 @@ export function LogTabPanel() {
   }
 
   return (
-    <div className="flex h-full flex-col">
+    <PanelGroup direction="vertical" className="h-full">
       {/* Step list for navigation */}
-      <div className="mb-1 min-h-0 max-h-[30%] flex-none overflow-auto border-b p-4">
-        <StepList
-          steps={run.steps}
-          selectedStepId={selectedStepId}
-          onSelectStep={runStore.selectStep}
-        />
-      </div>
+      <Panel defaultSize={20} minSize={10} maxSize={40}>
+        <div className="h-full overflow-auto border-b p-4">
+          <StepList
+            steps={run.steps}
+            selectedStepId={selectedStepId}
+            onSelectStep={runStore.selectStep}
+          />
+        </div>
+      </Panel>
+
+      {/* Resize handle */}
+      <PanelResizeHandle className="h-1 bg-gray-200 hover:bg-blue-400 transition-colors cursor-row-resize" />
 
       {/* Log viewer with filter */}
-      <div className="flex min-h-0 grow flex-col overflow-auto rounded-md bg-slate-700 font-mono text-gray-200">
-        {/* Log level filter header */}
-        <div className="border-b border-slate-500">
-          <div className="mx-auto px-2">
-            <div className="flex h-6 flex-row-reverse items-center">
-              <LogLevelFilter
-                selectedLevel={logLevel}
-                onLevelChange={handleLogLevelChange}
-              />
+      <Panel minSize={30}>
+        <div className="flex h-full flex-col rounded-md bg-slate-700 font-mono text-gray-200">
+          {/* Log level filter header */}
+          <div className="flex-none border-b border-slate-500">
+            <div className="mx-auto px-2">
+              <div className="flex h-6 flex-row-reverse items-center">
+                <LogLevelFilter
+                  selectedLevel={logLevel}
+                  onLevelChange={handleLogLevelChange}
+                />
+              </div>
             </div>
           </div>
-        </div>
 
-        {/* Log viewer */}
-        <div ref={containerRef} className="flex-1" />
-      </div>
-    </div>
+          {/* Log viewer */}
+          <div ref={containerRef} className="flex-1 overflow-hidden" />
+        </div>
+      </Panel>
+    </PanelGroup>
   );
 }
