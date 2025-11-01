@@ -552,7 +552,7 @@ export function FullScreenIDE({
             collapsedSize={2}
             onCollapse={() => setIsLeftCollapsed(true)}
             onExpand={() => setIsLeftCollapsed(false)}
-            className="bg-gray-50 border-r border-gray-200"
+            className="bg-slate-100 border-r border-gray-200"
           >
             <div className="h-full flex flex-col">
               {/* Panel heading */}
@@ -629,7 +629,7 @@ export function FullScreenIDE({
             <div className="h-full flex flex-col">
               {/* Panel heading */}
               <div
-                className={`shrink-0 border-b border-gray-100 transition-transform ${
+                className={`shrink-0 bg-slate-100 border-b border-gray-100 transition-transform ${
                   isCenterCollapsed ? "rotate-90" : ""
                 }`}
               >
@@ -702,7 +702,7 @@ export function FullScreenIDE({
             <div className="h-full flex flex-col">
               {/* Panel heading with tabs */}
               <div
-                className={`shrink-0 bg-slate-50 transition-transform ${
+                className={`shrink-0 bg-slate-100 transition-transform ${
                   isRightCollapsed ? "rotate-90" : ""
                 }`}
               >
@@ -745,7 +745,7 @@ export function FullScreenIDE({
 
               {/* Panel content */}
               {!isRightCollapsed && (
-                <div className="flex-1 overflow-hidden pt-2 bg-white">
+                <div className="flex-1 overflow-hidden bg-white">
                   <RunViewerErrorBoundary>
                     <RunViewerPanel
                       followRunId={followRunId}
