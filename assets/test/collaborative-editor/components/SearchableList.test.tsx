@@ -109,6 +109,46 @@ describe("SearchableList", () => {
     expect(screen.getByTestId("child-content")).toBeInTheDocument();
     expect(screen.getByText("Test Content")).toBeInTheDocument();
   });
+
+  it("calls onKeyDown when arrow keys are pressed", () => {
+    const onKeyDown = vi.fn();
+    render(
+      <SearchableList onSearch={() => {}} onKeyDown={onKeyDown}>
+        <div>Content</div>
+      </SearchableList>
+    );
+
+    const input = screen.getByRole("combobox");
+
+    // Press ArrowDown
+    fireEvent.keyDown(input, { key: "ArrowDown", code: "ArrowDown" });
+    expect(onKeyDown).toHaveBeenCalledTimes(1);
+
+    // Press ArrowUp
+    fireEvent.keyDown(input, { key: "ArrowUp", code: "ArrowUp" });
+    expect(onKeyDown).toHaveBeenCalledTimes(2);
+  });
+
+  it("calls onKeyDown after typing in input", () => {
+    const onKeyDown = vi.fn();
+    render(
+      <SearchableList onSearch={() => {}} onKeyDown={onKeyDown}>
+        <div>Content</div>
+      </SearchableList>
+    );
+
+    const input = screen.getByRole("combobox");
+
+    // Type some text
+    fireEvent.change(input, { target: { value: "test" } });
+
+    // Arrow keys should still work after typing
+    fireEvent.keyDown(input, { key: "ArrowDown", code: "ArrowDown" });
+    expect(onKeyDown).toHaveBeenCalledTimes(1);
+
+    fireEvent.keyDown(input, { key: "ArrowUp", code: "ArrowUp" });
+    expect(onKeyDown).toHaveBeenCalledTimes(2);
+  });
 });
 
 describe("ListSection", () => {

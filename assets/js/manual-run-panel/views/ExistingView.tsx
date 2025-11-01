@@ -97,12 +97,7 @@ const ExistingView: React.FC<ExistingViewProps> = ({
   };
 
   return (
-    <div
-      className={cn(
-        "flex flex-col gap-3 pt-4 pb-6",
-        renderMode === "embedded" ? "px-3" : "px-6"
-      )}
-    >
+    <div className="flex flex-col gap-3 pt-4 pb-6 px-3">
       <div>
         <div className="flex items-center gap-2">
           {/* Search input + button group */}

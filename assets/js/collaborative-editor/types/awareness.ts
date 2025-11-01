@@ -12,6 +12,7 @@ export interface AwarenessUser {
   user: {
     id: string;
     name: string;
+    email: string;
     color: string;
   };
   cursor?: {
@@ -23,6 +24,7 @@ export interface AwarenessUser {
     head: RelativePosition;
   };
   lastSeen?: number;
+  connectionCount?: number;
 }
 
 /**
@@ -31,6 +33,7 @@ export interface AwarenessUser {
 export interface LocalUserData {
   id: string;
   name: string;
+  email: string;
   color: string;
 }
 
@@ -57,6 +60,7 @@ export interface AwarenessState {
 export const AwarenessUserDataSchema = z.object({
   id: z.string(),
   name: z.string(),
+  email: z.email(),
   color: z.string(),
 });
 

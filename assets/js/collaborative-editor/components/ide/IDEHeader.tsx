@@ -1,13 +1,15 @@
-import { useHotkeys } from "react-hotkeys-hook";
 
+import { useHotkeys } from "react-hotkeys-hook";
 import { useURLState } from "#/react/lib/use-url-state";
 import { buildClassicalEditorUrl } from "#/utils/editorUrlConversion";
-
 import { useIsNewWorkflow } from "../../hooks/useSessionContext";
+import type { useProjectRepoConnection } from "#/collaborative-editor/hooks/useSessionContext";
 import { useVersionSelect } from "../../hooks/useVersionSelect";
+import { ActiveCollaborators } from "../ActiveCollaborators";
 import { AdaptorDisplay } from "../AdaptorDisplay";
 import { Button } from "../Button";
 import { RunRetryButton } from "../RunRetryButton";
+import { SaveButton } from "../Header";
 import { Tooltip } from "../Tooltip";
 import { VersionDropdown } from "../VersionDropdown";
 
@@ -32,6 +34,8 @@ interface IDEHeaderProps {
   runTooltip?: string | undefined;
   onEditAdaptor?: (() => void) | undefined;
   onChangeAdaptor?: (() => void) | undefined;
+  repoConnection: ReturnType<typeof useProjectRepoConnection>;
+  openGitHubSyncModal: () => void;
 }
 
 /**
@@ -64,6 +68,8 @@ export function IDEHeader({
   runTooltip,
   onEditAdaptor,
   onChangeAdaptor,
+  repoConnection,
+  openGitHubSyncModal,
 }: IDEHeaderProps) {
   // Use shared version selection handler (destroys Y.Doc before switching)
   const handleVersionSelect = useVersionSelect();
@@ -111,7 +117,7 @@ export function IDEHeader({
 
   return (
     <div className="shrink-0 border-b border-gray-200 bg-white px-4 py-2">
-      <div className="flex items-center justify-between gap-4">
+      <div className="flex items-center justify-between gap-3">
         {/* Left: Job name with version chip and adaptor display */}
         <div className="flex items-center gap-4 flex-1 min-w-0">
           <div className="flex-shrink-0 flex items-center">
@@ -128,6 +134,7 @@ export function IDEHeader({
               />
             </div>
           )}
+          <ActiveCollaborators />
           {jobAdaptor && (
             <div className="flex-1 max-w-xs">
               <AdaptorDisplay
@@ -203,13 +210,13 @@ export function IDEHeader({
             />
           )}
 
-          <Tooltip content={saveTooltip} side="bottom">
-            <span className="inline-block">
-              <Button variant="primary" onClick={onSave} disabled={!canSave}>
-                Save
-              </Button>
-            </span>
-          </Tooltip>
+          <SaveButton
+            canSave={canSave}
+            tooltipMessage={saveTooltip}
+            onClick={onSave}
+            repoConnection={repoConnection}
+            onSyncClick={openGitHubSyncModal}
+          />
 
           <Button
             variant="nakedClose"

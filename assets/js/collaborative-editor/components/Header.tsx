@@ -22,6 +22,7 @@ import {
 } from "../hooks/useWorkflow";
 import { getAvatarInitials } from "../utils/avatar";
 
+import { ActiveCollaborators } from "./ActiveCollaborators";
 import { Breadcrumbs } from "./Breadcrumbs";
 import { Button } from "./Button";
 import { EmailVerificationBanner } from "./EmailVerificationBanner";
@@ -46,7 +47,7 @@ const userNavigation = [
  * Includes tooltip with save status messaging
  * Shows as split button with dropdown when GitHub integration is available
  */
-function SaveButton({
+export function SaveButton({
   canSave,
   tooltipMessage,
   onClick,
@@ -257,7 +258,7 @@ export function Header({
               })}
               className="inline-flex items-center justify-center
               w-6 h-6 text-primary-600 hover:text-primary-700
-              hover:bg-primary-50 rounded transition-colors ml-4"
+              hover:bg-primary-50 rounded transition-colors ml-2"
             >
               <Tooltip
                 content={"You're using the new editor — click to switch back."}
@@ -267,8 +268,8 @@ export function Header({
               </Tooltip>
             </a>
           )}
-
-          <div className="grow"></div>
+          <ActiveCollaborators className="ml-2" />
+          <div className="grow ml-2"></div>
 
           <div className="flex flex-row gap-2">
             <div className="flex flex-row m-auto gap-2">
