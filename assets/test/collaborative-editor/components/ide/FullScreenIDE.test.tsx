@@ -268,6 +268,14 @@ vi.mock(
   })
 );
 
+// Mock ActiveCollaborators
+vi.mock(
+  "../../../../js/collaborative-editor/components/ActiveCollaborators",
+  () => ({
+    ActiveCollaborators: () => <div data-testid="active-collaborators" />,
+  })
+);
+
 // Mock react-resizable-panels
 vi.mock("react-resizable-panels", () => ({
   Panel: ({ children }: any) => {

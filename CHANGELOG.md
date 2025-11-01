@@ -19,6 +19,9 @@ and this project adheres to
 
 ### Changed
 
+- Show collaborators in the header of the new canvas & IDE
+  [#3845](https://github.com/OpenFn/lightning/issues/3845)
+
 ### Fixed
 
 ## [2.14.14-pre1] - 2025-10-30

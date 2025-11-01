@@ -130,12 +130,14 @@ export const StoreProvider = ({ children }: StoreProviderProps) => {
       user.id &&
       user.first_name &&
       user.last_name &&
+      user.email &&
       !stores.awarenessStore.isAwarenessReady()
     ) {
       // Create LocalUserData from SessionContextStore user
       const userData = {
         id: user.id,
         name: `${user.first_name} ${user.last_name}`,
+        email: user.email,
         color: generateUserColor(user.id),
       };
 

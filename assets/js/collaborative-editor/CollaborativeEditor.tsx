@@ -5,7 +5,6 @@ import { SocketProvider } from "../react/contexts/SocketProvider";
 import type { WithActionProps } from "../react/lib/with-props";
 
 import { BreadcrumbLink, BreadcrumbText } from "./components/Breadcrumbs";
-import { CollaborationWidget } from "./components/CollaborationWidget";
 import { Header } from "./components/Header";
 import { LoadingBoundary } from "./components/LoadingBoundary";
 import { Toaster } from "./components/ui/Toaster";
@@ -212,7 +211,6 @@ export const CollaborativeEditor: WithActionProps<
                         parentProjectName: rootProjectName,
                       })}
                     />
-                    <CollaborationWidget />
                   </div>
                 </LoadingBoundary>
               </LiveViewActionsProvider>

@@ -643,7 +643,7 @@ describe("CollaborativeEditor - Referential Stability Concerns", () => {
 // =============================================================================
 
 describe("CollaborativeEditor - LoadingBoundary Integration", () => {
-  test("LoadingBoundary wraps WorkflowEditor and CollaborationWidget", () => {
+  test("LoadingBoundary wraps WorkflowEditor", () => {
     // This test documents that LoadingBoundary wraps the main editor content
     // but NOT the Header (BreadcrumbContent) or Toaster.
     //
@@ -658,24 +658,21 @@ describe("CollaborativeEditor - LoadingBoundary Integration", () => {
     //           - LoadingBoundary
     //             - div.flex-1
     //               - WorkflowEditor
-    //               - CollaborationWidget
 
     const structure = {
       toasterOutsideBoundary: true,
       breadcrumbContentOutsideBoundary: true,
       workflowEditorInsideBoundary: true,
-      collaborationWidgetInsideBoundary: true,
     };
 
     expect(structure.toasterOutsideBoundary).toBe(true);
     expect(structure.breadcrumbContentOutsideBoundary).toBe(true);
     expect(structure.workflowEditorInsideBoundary).toBe(true);
-    expect(structure.collaborationWidgetInsideBoundary).toBe(true);
   });
 
   test("LoadingBoundary prevents rendering before sync conditions", () => {
     // This test documents the critical behavior of LoadingBoundary:
-    // It prevents WorkflowEditor and CollaborationWidget from rendering
+    // It prevents WorkflowEditor from rendering
     // until BOTH conditions are met:
     // 1. session.isSynced === true
     // 2. workflow !== null
@@ -736,7 +733,7 @@ describe("CollaborativeEditor - LoadingBoundary Integration", () => {
     // 4. Y.Doc syncs with server (isSynced becomes true)
     // 5. WorkflowStore observers populate state (workflow becomes non-null)
     // 6. LoadingBoundary allows children to render
-    // 7. WorkflowEditor and CollaborationWidget mount
+    // 7. WorkflowEditor mounts
 
     const loadingSequence = [
       "CollaborativeEditor mounts",
@@ -745,13 +742,13 @@ describe("CollaborativeEditor - LoadingBoundary Integration", () => {
       "Y.Doc syncs with server (isSynced = true)",
       "WorkflowStore observers populate state (workflow !== null)",
       "LoadingBoundary renders children",
-      "WorkflowEditor and CollaborationWidget mount",
+      "WorkflowEditor mounts",
     ];
 
     expect(loadingSequence).toHaveLength(7);
     expect(loadingSequence[0]).toBe("CollaborativeEditor mounts");
     expect(loadingSequence[loadingSequence.length - 1]).toBe(
-      "WorkflowEditor and CollaborationWidget mount"
+      "WorkflowEditor mounts"
     );
   });
 
