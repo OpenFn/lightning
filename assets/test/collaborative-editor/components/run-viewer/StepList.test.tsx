@@ -26,6 +26,28 @@ vi.mock("../../../../js/react/lib/use-url-state", () => ({
   }),
 }));
 
+// Mock useWorkflowState hook
+vi.mock("../../../../js/collaborative-editor/hooks/useWorkflow", () => ({
+  useWorkflowState: (selector: any) => {
+    // Return job name from step.job if available, otherwise "Unknown Job"
+    const mockState = {
+      jobs: [
+        { id: "job-1", name: "Test Job" },
+        { id: "job-2", name: "Job 2" },
+        { id: "job-3", name: "Job 3" },
+        { id: "job-1", name: "My Job" },
+        { id: "job-1", name: "Data Fetch" },
+        { id: "job-1", name: "Success Job" },
+        { id: "job-2", name: "Failed Job" },
+        { id: "job-3", name: "Running Job" },
+        { id: "job-1", name: "Selected Job" },
+        { id: "job-1", name: "Job 1" },
+      ],
+    };
+    return selector(mockState);
+  },
+}));
+
 // Mock step factory
 const createMockStep = (overrides?: Partial<Step>): Step => ({
   id: `step-${Math.random()}`,
@@ -253,6 +275,7 @@ describe("StepList", () => {
   describe("edge cases", () => {
     test("handles step without job name", () => {
       const step = createMockStep({
+        job_id: "nonexistent-job-id",
         job: undefined,
       });
 
@@ -279,6 +302,22 @@ describe("StepList", () => {
     });
 
     test("handles many steps efficiently", () => {
+      // Mock needs to have all jobs available
+      const mockJobs = Array.from({ length: 50 }, (_, i) => ({
+        id: `job-${i}`,
+        name: `Job ${i}`,
+      }));
+
+      // Override the mock for this test
+      vi.doMock(
+        "../../../../js/collaborative-editor/hooks/useWorkflow",
+        () => ({
+          useWorkflowState: (selector: any) => {
+            return selector({ jobs: mockJobs });
+          },
+        })
+      );
+
       const steps = Array.from({ length: 50 }, (_, i) =>
         createMockStep({
           id: `step-${i}`,

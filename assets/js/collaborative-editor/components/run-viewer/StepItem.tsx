@@ -1,4 +1,5 @@
 import { useURLState } from "../../../react/lib/use-url-state";
+import { useWorkflowState } from "../../hooks/useWorkflow";
 import type { Step } from "../../types/run";
 import { ElapsedIndicator } from "./ElapsedIndicator";
 import { StepIcon } from "./StepIcon";
@@ -11,6 +12,18 @@ interface StepItemProps {
 
 export function StepItem({ step, selected, onSelect }: StepItemProps) {
   const { searchParams, updateSearchParams } = useURLState();
+
+  // Look up job name from workflow state if not included in step
+  const jobName = useWorkflowState(
+    state => {
+      if (step.job?.name) {
+        return step.job.name;
+      }
+      const job = state.jobs.find(j => j.id === step.job_id);
+      return job?.name || "Unknown Job";
+    },
+    [step.job_id, step.job?.name]
+  );
 
   const handleInspect = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -42,15 +55,13 @@ export function StepItem({ step, selected, onSelect }: StepItemProps) {
       <StepIcon exitReason={step.exit_reason} errorType={step.error_type} />
 
       <div className="flex-1 min-w-0 flex items-center space-x-2">
-        <span className="text-sm truncate">
-          {step.job?.name || "Unknown Job"}
-        </span>
+        <span className="text-sm truncate">{jobName}</span>
 
         <button
           onClick={handleInspect}
           className="flex-shrink-0 text-gray-400 hover:text-primary-600"
           title="Inspect Step"
-          aria-label={`Inspect step ${step.job?.name || "Unknown Job"}`}
+          aria-label={`Inspect step ${jobName}`}
         >
           <span
             className="hero-document-magnifying-glass-mini size-5"
