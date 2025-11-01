@@ -42,6 +42,7 @@ import { SandboxIndicatorBanner } from "../SandboxIndicatorBanner";
 import { Tabs } from "../Tabs";
 
 import { IDEHeader } from "./IDEHeader";
+import { PanelToggleButton } from "./PanelToggleButton";
 import { useUICommands } from "#/collaborative-editor/hooks/useUI";
 
 const logger = _logger.ns("FullScreenIDE").seal();
@@ -546,7 +547,7 @@ export function FullScreenIDE({
           <Panel
             ref={leftPanelRef}
             defaultSize={25}
-            minSize={15}
+            minSize={25}
             collapsible
             collapsedSize={2}
             onCollapse={() => setIsLeftCollapsed(true)}
@@ -569,44 +570,21 @@ export function FullScreenIDE({
                       >
                         Input
                       </div>
-                      <button
+                      <PanelToggleButton
                         onClick={toggleLeftPanel}
                         disabled={openPanelCount === 1}
-                        className="text-slate-500 hover:text-slate-600
-                          hover:bg-slate-400 rounded-full p-1
-                          disabled:opacity-30 disabled:cursor-not-allowed
-                          transition-colors"
-                        aria-label="Collapse left panel"
-                      >
-                        <span
-                          className="hero-minus-circle w-5 h-5"
-                          aria-hidden="true"
-                        />
-                      </button>
+                        ariaLabel="Collapse left panel"
+                      />
                     </>
                   ) : (
-                    <>
-                      <button
-                        onClick={toggleLeftPanel}
-                        className="text-xs font-medium text-gray-400
-                          uppercase tracking-wide hover:text-gray-600
-                          transition-colors cursor-pointer"
-                      >
-                        Input
-                      </button>
-                      <button
-                        onClick={toggleLeftPanel}
-                        className="text-slate-500 hover:text-slate-600
-                          hover:bg-slate-400 rounded-full p-1
-                          transition-colors"
-                        aria-label="Expand left panel"
-                      >
-                        <span
-                          className="hero-plus-circle w-5 h-5"
-                          aria-hidden="true"
-                        />
-                      </button>
-                    </>
+                    <button
+                      onClick={toggleLeftPanel}
+                      className="ml-2 text-xs font-medium text-gray-400
+                        uppercase tracking-wide hover:text-gray-600
+                        transition-colors cursor-pointer"
+                    >
+                      Input
+                    </button>
                   )}
                 </div>
               </div>
@@ -641,7 +619,7 @@ export function FullScreenIDE({
           <Panel
             ref={centerPanelRef}
             defaultSize={100}
-            minSize={15}
+            minSize={25}
             collapsible
             collapsedSize={2}
             onCollapse={() => setIsCenterCollapsed(true)}
@@ -664,44 +642,21 @@ export function FullScreenIDE({
                       >
                         Code
                       </div>
-                      <button
+                      <PanelToggleButton
                         onClick={toggleCenterPanel}
                         disabled={openPanelCount === 1}
-                        className="text-slate-500 hover:text-slate-600
-                          hover:bg-slate-400 rounded-full p-1
-                          disabled:opacity-30 disabled:cursor-not-allowed
-                          transition-colors"
-                        aria-label="Collapse code panel"
-                      >
-                        <span
-                          className="hero-minus-circle w-5 h-5"
-                          aria-hidden="true"
-                        />
-                      </button>
+                        ariaLabel="Collapse code panel"
+                      />
                     </>
                   ) : (
-                    <>
-                      <button
-                        onClick={toggleCenterPanel}
-                        className="text-xs font-medium text-gray-400
-                          uppercase tracking-wide hover:text-gray-600
-                          transition-colors cursor-pointer"
-                      >
-                        Code
-                      </button>
-                      <button
-                        onClick={toggleCenterPanel}
-                        className="text-slate-500 hover:text-slate-600
-                          hover:bg-slate-400 rounded-full p-1
-                          transition-colors"
-                        aria-label="Expand code panel"
-                      >
-                        <span
-                          className="hero-plus-circle w-5 h-5"
-                          aria-hidden="true"
-                        />
-                      </button>
-                    </>
+                    <button
+                      onClick={toggleCenterPanel}
+                      className="ml-2 text-xs font-medium text-gray-400
+                        uppercase tracking-wide hover:text-gray-600
+                        transition-colors cursor-pointer"
+                    >
+                      Code
+                    </button>
                   )}
                 </div>
               </div>
@@ -737,7 +692,7 @@ export function FullScreenIDE({
           <Panel
             ref={rightPanelRef}
             defaultSize={1}
-            minSize={15}
+            minSize={25}
             collapsible
             collapsedSize={2}
             onCollapse={() => setIsRightCollapsed(true)}
@@ -751,7 +706,7 @@ export function FullScreenIDE({
                   isRightCollapsed ? "rotate-90" : ""
                 }`}
               >
-                <div className="flex items-center justify-between px-2">
+                <div className="flex items-center justify-between px-3 py-1">
                   {!isRightCollapsed ? (
                     <>
                       {/* Tabs as header content */}
@@ -769,46 +724,21 @@ export function FullScreenIDE({
                         />
                       </div>
                       {/* Collapse button */}
-                      <button
+                      <PanelToggleButton
                         onClick={toggleRightPanel}
                         disabled={openPanelCount === 1}
-                        className="text-slate-500 hover:text-slate-600
-                          hover:bg-slate-400 rounded-full p-1
-                          disabled:opacity-30 disabled:cursor-not-allowed
-                          transition-colors ml-2"
-                        aria-label="Collapse right panel"
-                      >
-                        <span
-                          className="hero-minus-circle w-5 h-5"
-                          aria-hidden="true"
-                        />
-                      </button>
+                        ariaLabel="Collapse right panel"
+                      />
                     </>
                   ) : (
-                    <>
-                      {/* Collapsed state - clickable label */}
-                      <button
-                        onClick={toggleRightPanel}
-                        className="text-xs font-medium text-gray-400
-                          uppercase tracking-wide hover:text-gray-600
-                          transition-colors cursor-pointer"
-                      >
-                        Output
-                      </button>
-                      {/* Expand icon */}
-                      <button
-                        onClick={toggleRightPanel}
-                        className="text-slate-500 hover:text-slate-600
-                          hover:bg-slate-400 rounded-full p-1
-                          transition-colors"
-                        aria-label="Expand right panel"
-                      >
-                        <span
-                          className="hero-plus-circle w-5 h-5"
-                          aria-hidden="true"
-                        />
-                      </button>
-                    </>
+                    <button
+                      onClick={toggleRightPanel}
+                      className="ml-2 text-xs font-medium text-gray-400
+                        uppercase tracking-wide hover:text-gray-600
+                        transition-colors cursor-pointer"
+                    >
+                      Output
+                    </button>
                   )}
                 </div>
               </div>
