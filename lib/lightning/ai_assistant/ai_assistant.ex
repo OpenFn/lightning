@@ -569,12 +569,16 @@ defmodule Lightning.AiAssistant do
 
   ## Returns
 
-  List of `%ChatMessage{}` structs with `:role` of `:user` and `:status` of `:pending`.
+  List of `%ChatMessage{}` structs with `:role` of `:user` and `:status` of `:pending` or `:processing`.
   """
   @spec find_pending_user_messages(ChatSession.t()) :: [ChatMessage.t()]
   def find_pending_user_messages(session) do
     messages = session.messages || []
-    Enum.filter(messages, &(&1.role == :user && &1.status == :pending))
+
+    Enum.filter(
+      messages,
+      &(&1.role == :user && &1.status in [:pending, :processing])
+    )
   end
 
   @doc """

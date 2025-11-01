@@ -9,6 +9,7 @@ Mox.defmock(Lightning.Tesla.Mock, for: Tesla.Adapter)
 
 Mimic.copy(:hackney)
 Mimic.copy(File)
+Mimic.copy(Finch)
 Mimic.copy(IO)
 Mimic.copy(Lightning.FailureEmail)
 Mimic.copy(Mix.Tasks.Lightning.InstallSchemas)

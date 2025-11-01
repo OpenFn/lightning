@@ -1,11 +1,12 @@
 defmodule LightningWeb.WorkflowLive.WorkflowAiChatComponentTest do
-  use LightningWeb.ConnCase, async: true
+  use LightningWeb.ConnCase, async: false
 
   import Phoenix.LiveViewTest
   import Lightning.Factories
   import Mox
   import Ecto.Query
 
+  setup :set_mox_global
   setup :register_and_log_in_user
   setup :create_project_for_current_user
   setup :verify_on_exit!
@@ -74,28 +75,7 @@ defmodule LightningWeb.WorkflowLive.WorkflowAiChatComponentTest do
           condition_type: always
       """
 
-      Mox.stub(Lightning.Tesla.Mock, :call, fn
-        %{method: :get, url: "http://localhost:4001/"}, _opts ->
-          {:ok, %Tesla.Env{status: 200}}
-
-        %{method: :post}, _opts ->
-          {:ok,
-           %Tesla.Env{
-             status: 200,
-             body: %{
-               "response" => "I'll update your workflow",
-               "response_yaml" => valid_workflow_yaml,
-               "usage" => %{},
-               "history" => [
-                 %{"role" => "user", "content" => "Add a fetch data job"},
-                 %{
-                   "role" => "assistant",
-                   "content" => "I'll update your workflow"
-                 }
-               ]
-             }
-           }}
-      end)
+      Lightning.AiAssistantHelpers.stub_online()
 
       skip_disclaimer(user)
 
@@ -104,9 +84,17 @@ defmodule LightningWeb.WorkflowLive.WorkflowAiChatComponentTest do
 
       render_async(view)
 
+      # Submit the form - this will create a session, message and start Oban job
       view
       |> element("#ai-assistant-form-workflow-ai-chat-panel-assistant")
       |> render_submit(%{"assistant" => %{"content" => "Add a fetch data job"}})
+
+      # Wait and simulate streaming response
+      Lightning.AiAssistantHelpers.submit_and_simulate_stream(
+        workflow.id,
+        response: "I'll update your workflow",
+        code: valid_workflow_yaml
+      )
 
       assert_push_event(view, "template_selected", %{template: template})
       assert template =~ "name: Updated Workflow"
@@ -168,21 +156,7 @@ defmodule LightningWeb.WorkflowLive.WorkflowAiChatComponentTest do
           body: |
       """
 
-      Mox.stub(Lightning.Tesla.Mock, :call, fn
-        %{method: :get, url: "http://localhost:4001/"}, _opts ->
-          {:ok, %Tesla.Env{status: 200}}
-
-        %{method: :post}, _opts ->
-          {:ok,
-           %Tesla.Env{
-             status: 200,
-             body: %{
-               "response" => "Here's your workflow",
-               "response_yaml" => invalid_yaml,
-               "usage" => %{}
-             }
-           }}
-      end)
+      Lightning.AiAssistantHelpers.stub_online()
 
       skip_disclaimer(user)
 
@@ -194,6 +168,13 @@ defmodule LightningWeb.WorkflowLive.WorkflowAiChatComponentTest do
       view
       |> element("#ai-assistant-form-workflow-ai-chat-panel-assistant")
       |> render_submit(%{"assistant" => %{"content" => "Create a bad workflow"}})
+
+      # Wait and simulate streaming response
+      Lightning.AiAssistantHelpers.submit_and_simulate_stream(
+        workflow.id,
+        response: "Here's your workflow",
+        code: invalid_yaml
+      )
 
       assert_push_event(view, "template_selected", %{template: template})
       assert template =~ "Bad Workflow"
@@ -235,28 +216,16 @@ defmodule LightningWeb.WorkflowLive.WorkflowAiChatComponentTest do
       workflow: workflow,
       user: user
     } do
-      Mox.stub(Lightning.Tesla.Mock, :call, fn
-        %{method: :get, url: "http://localhost:4001/"}, _opts ->
-          {:ok, %Tesla.Env{status: 200}}
+      invalid_workflow_yaml = """
+      name: ""
+      jobs:
+        empty_job:
+          name: ""
+          adaptor: ""
+          body: ""
+      """
 
-        %{method: :post}, _opts ->
-          {:ok,
-           %Tesla.Env{
-             status: 200,
-             body: %{
-               "response" => "Here's a workflow with validation issues",
-               "response_yaml" => """
-               name: ""
-               jobs:
-                 empty_job:
-                   name: ""
-                   adaptor: ""
-                   body: ""
-               """,
-               "usage" => %{}
-             }
-           }}
-      end)
+      Lightning.AiAssistantHelpers.stub_online()
 
       skip_disclaimer(user)
 
@@ -270,6 +239,13 @@ defmodule LightningWeb.WorkflowLive.WorkflowAiChatComponentTest do
       |> render_submit(%{
         "assistant" => %{"content" => "Create invalid workflow"}
       })
+
+      # Wait and simulate streaming response
+      Lightning.AiAssistantHelpers.submit_and_simulate_stream(
+        workflow.id,
+        response: "Here's a workflow with validation issues",
+        code: invalid_workflow_yaml
+      )
 
       assert_push_event(view, "template_selected", %{template: _})
 
@@ -404,39 +380,7 @@ defmodule LightningWeb.WorkflowLive.WorkflowAiChatComponentTest do
             target_job: first_job
         """
 
-        Mox.stub(Lightning.MockConfig, :apollo, fn key ->
-          case key do
-            :endpoint -> "http://localhost:3000"
-            :ai_assistant_api_key -> "api_key"
-            :timeout -> 5_000
-          end
-        end)
-
-        Mox.stub(Lightning.Tesla.Mock, :call, fn
-          %{method: :get, url: "http://localhost:3000/"}, _opts ->
-            {:ok, %Tesla.Env{status: 200}}
-
-          %{method: :post}, _opts ->
-            {:ok,
-             %Tesla.Env{
-               status: 200,
-               body: %{
-                 "response" => "Here's a workflow with validation issues",
-                 "response_yaml" => workflow_yaml,
-                 "usage" => %{},
-                 "history" => [
-                   %{
-                     "role" => "user",
-                     "content" => "Create workflow with errors"
-                   },
-                   %{
-                     "role" => "assistant",
-                     "content" => "Here's a workflow with validation issues"
-                   }
-                 ]
-               }
-             }}
-        end)
+        Lightning.AiAssistantHelpers.stub_online()
 
         skip_disclaimer(user)
 
@@ -450,6 +394,13 @@ defmodule LightningWeb.WorkflowLive.WorkflowAiChatComponentTest do
         |> render_submit(%{
           assistant: %{content: "Create workflow with errors"}
         })
+
+        # Simulate streaming response (job runs inline in test mode)
+        Lightning.AiAssistantHelpers.submit_and_simulate_stream(
+          workflow.id,
+          response: "Here's a workflow with validation issues",
+          code: workflow_yaml
+        )
 
         render_async(view)
 
@@ -540,39 +491,7 @@ defmodule LightningWeb.WorkflowLive.WorkflowAiChatComponentTest do
       Oban.Testing.with_testing_mode(:manual, fn ->
         workflow_yaml = "unparseable workflow"
 
-        Mox.stub(Lightning.MockConfig, :apollo, fn key ->
-          case key do
-            :endpoint -> "http://localhost:3000"
-            :ai_assistant_api_key -> "api_key"
-            :timeout -> 5_000
-          end
-        end)
-
-        Mox.stub(Lightning.Tesla.Mock, :call, fn
-          %{method: :get, url: "http://localhost:3000/"}, _opts ->
-            {:ok, %Tesla.Env{status: 200}}
-
-          %{method: :post}, _opts ->
-            {:ok,
-             %Tesla.Env{
-               status: 200,
-               body: %{
-                 "response" => "Here's a workflow with validation issues",
-                 "response_yaml" => workflow_yaml,
-                 "usage" => %{},
-                 "history" => [
-                   %{
-                     "role" => "user",
-                     "content" => "Create workflow with errors"
-                   },
-                   %{
-                     "role" => "assistant",
-                     "content" => "Here's a workflow with validation issues"
-                   }
-                 ]
-               }
-             }}
-        end)
+        Lightning.AiAssistantHelpers.stub_online()
 
         skip_disclaimer(user)
 
@@ -586,6 +505,13 @@ defmodule LightningWeb.WorkflowLive.WorkflowAiChatComponentTest do
         |> render_submit(%{
           assistant: %{content: "Create workflow with errors"}
         })
+
+        # Simulate streaming response (job runs inline in test mode)
+        Lightning.AiAssistantHelpers.submit_and_simulate_stream(
+          workflow.id,
+          response: "Here's a workflow with validation issues",
+          code: workflow_yaml
+        )
 
         render_async(view)
 
