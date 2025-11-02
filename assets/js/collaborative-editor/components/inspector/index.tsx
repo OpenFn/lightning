@@ -3,18 +3,18 @@
  * Shows details for jobs, triggers, and edges when selected
  */
 
-import { useHotkeys } from "react-hotkeys-hook";
+import { useHotkeys } from 'react-hotkeys-hook';
 
-import { useURLState } from "../../../react/lib/use-url-state";
-import type { Workflow } from "../../types/workflow";
+import { useURLState } from '../../../react/lib/use-url-state';
+import type { Workflow } from '../../types/workflow';
 
-import { EdgeInspector } from "./EdgeInspector";
-import { InspectorLayout } from "./InspectorLayout";
-import { JobInspector } from "./JobInspector";
-import { TriggerInspector } from "./TriggerInspector";
-import { WorkflowSettings } from "./WorkflowSettings";
+import { EdgeInspector } from './EdgeInspector';
+import { InspectorLayout } from './InspectorLayout';
+import { JobInspector } from './JobInspector';
+import { TriggerInspector } from './TriggerInspector';
+import { WorkflowSettings } from './WorkflowSettings';
 
-export { InspectorLayout } from "./InspectorLayout";
+export { InspectorLayout } from './InspectorLayout';
 
 // import _logger from "#/utils/logger";
 // const logger = _logger.ns("Inspector").seal();
@@ -36,30 +36,34 @@ export function Inspector({
   onOpenRunPanel,
   respondToHotKey,
 }: InspectorProps) {
-  const { hash, updateHash } = useURLState();
+  const { searchParams, updateSearchParams } = useURLState();
 
   const hasSelectedNode = currentNode.node && currentNode.type;
 
-  // Settings hash takes precedence, then node inspector
+  // Settings panel takes precedence, then node inspector
   const mode =
-    hash === "settings" ? "settings" : hasSelectedNode ? "node" : null;
+    searchParams.get('panel') === 'settings'
+      ? 'settings'
+      : hasSelectedNode
+        ? 'node'
+        : null;
 
   const handleClose = () => {
-    if (mode === "settings") {
-      updateHash(null);
+    if (mode === 'settings') {
+      updateSearchParams({ panel: null });
     } else {
       onClose(); // Clears node selection
     }
   };
 
   useHotkeys(
-    "escape",
+    'escape',
     () => {
       handleClose();
     },
     {
       enabled: respondToHotKey,
-      scopes: ["panel"],
+      scopes: ['panel'],
       enableOnFormTags: true, // Allow Escape even in form fields
     },
     [handleClose]
@@ -69,7 +73,7 @@ export function Inspector({
   if (!mode) return null;
 
   // Settings mode
-  if (mode === "settings") {
+  if (mode === 'settings') {
     return (
       <InspectorLayout title="Workflow settings" onClose={handleClose}>
         <WorkflowSettings />
@@ -78,7 +82,7 @@ export function Inspector({
   }
 
   // Node inspector mode
-  if (currentNode.type === "job") {
+  if (currentNode.type === 'job') {
     return (
       <JobInspector
         key={`job-${currentNode.id}`}
@@ -89,7 +93,7 @@ export function Inspector({
     );
   }
 
-  if (currentNode.type === "trigger") {
+  if (currentNode.type === 'trigger') {
     return (
       <TriggerInspector
         key={`trigger-${currentNode.id}`}
@@ -100,7 +104,7 @@ export function Inspector({
     );
   }
 
-  if (currentNode.type === "edge") {
+  if (currentNode.type === 'edge') {
     return (
       <EdgeInspector
         key={`edge-${currentNode.id}`}
@@ -115,6 +119,8 @@ export function Inspector({
 
 // Helper function to open workflow settings from external components
 export const openWorkflowSettings = () => {
-  const newURL = `${window.location.pathname}${window.location.search}#settings`;
-  history.pushState({}, "", newURL);
+  const params = new URLSearchParams(window.location.search);
+  params.set('panel', 'settings');
+  const newURL = `${window.location.pathname}?${params.toString()}`;
+  history.pushState({}, '', newURL);
 };

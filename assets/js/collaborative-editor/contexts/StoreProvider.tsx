@@ -30,44 +30,44 @@
  * Components               →  Can safely assume workflow exists
  */
 
-import type React from "react";
+import type React from 'react';
 import {
   createContext,
   useContext,
   useEffect,
   useState,
   useSyncExternalStore,
-} from "react";
+} from 'react';
 
-import _logger from "#/utils/logger";
+import _logger from '#/utils/logger';
 
-import { SessionContext } from "../contexts/SessionProvider";
-import { useSession } from "../hooks/useSession";
-import type { AdaptorStoreInstance } from "../stores/createAdaptorStore";
-import { createAdaptorStore } from "../stores/createAdaptorStore";
+import { SessionContext } from '../contexts/SessionProvider';
+import { useSession } from '../hooks/useSession';
+import type { AdaptorStoreInstance } from '../stores/createAdaptorStore';
+import { createAdaptorStore } from '../stores/createAdaptorStore';
 import {
   type AwarenessStoreInstance,
   createAwarenessStore,
-} from "../stores/createAwarenessStore";
+} from '../stores/createAwarenessStore';
 import {
   type CredentialStoreInstance,
   createCredentialStore,
-} from "../stores/createCredentialStore";
+} from '../stores/createCredentialStore';
 import {
   createRunStore,
   type RunStoreInstance,
-} from "../stores/createRunStore";
+} from '../stores/createRunStore';
 import {
   createSessionContextStore,
   type SessionContextStoreInstance,
-} from "../stores/createSessionContextStore";
-import { createUIStore, type UIStoreInstance } from "../stores/createUIStore";
+} from '../stores/createSessionContextStore';
+import { createUIStore, type UIStoreInstance } from '../stores/createUIStore';
 import {
   createWorkflowStore,
   type WorkflowStoreInstance,
-} from "../stores/createWorkflowStore";
-import type { Session } from "../types/session";
-import { generateUserColor } from "../utils/userColor";
+} from '../stores/createWorkflowStore';
+import type { Session } from '../types/session';
+import { generateUserColor } from '../utils/userColor';
 
 export interface StoreContextValue {
   adaptorStore: AdaptorStoreInstance;
@@ -85,7 +85,7 @@ interface StoreProviderProps {
   children: React.ReactNode;
 }
 
-const logger = _logger.ns("StoreProvider").seal();
+const logger = _logger.ns('StoreProvider').seal();
 
 export const StoreProvider = ({ children }: StoreProviderProps) => {
   const session = useSession();
@@ -117,7 +117,7 @@ export const StoreProvider = ({ children }: StoreProviderProps) => {
   // Initialize awareness when both awareness instance and user data are available
   // User data comes from SessionContextStore, not from props
   useEffect(() => {
-    logger.debug("Awareness initialization check", {
+    logger.debug('Awareness initialization check', {
       hasAwareness: !!session.awareness,
       hasUser: !!user,
       user: user,
@@ -141,7 +141,7 @@ export const StoreProvider = ({ children }: StoreProviderProps) => {
         color: generateUserColor(user.id),
       };
 
-      logger.debug("Initializing awareness", { userData });
+      logger.debug('Initializing awareness', { userData });
 
       // AwarenessStore is the ONLY place that sets awareness local state
       stores.awarenessStore.initializeAwareness(session.awareness, userData);
@@ -157,7 +157,7 @@ export const StoreProvider = ({ children }: StoreProviderProps) => {
   // Connect stores when provider is ready
   useEffect(() => {
     if (session.provider && session.isConnected) {
-      logger.debug("Connecting stores to channel");
+      logger.debug('Connecting stores to channel');
 
       const cleanup1 = stores.adaptorStore._connectChannel(session.provider);
       const cleanup2 = stores.credentialStore._connectChannel(session.provider);
@@ -166,7 +166,7 @@ export const StoreProvider = ({ children }: StoreProviderProps) => {
       );
 
       return () => {
-        logger.debug("Disconnecting stores from channel");
+        logger.debug('Disconnecting stores from channel');
         cleanup1();
         cleanup2();
         cleanup3();
@@ -183,14 +183,14 @@ export const StoreProvider = ({ children }: StoreProviderProps) => {
   // otherwise observers will read empty/partial Y.Doc state (race condition)
   useEffect(() => {
     if (session.ydoc && session.provider && session.isSynced) {
-      logger.debug("Connecting workflowStore (Y.Doc synced)");
+      logger.debug('Connecting workflowStore (Y.Doc synced)');
       stores.workflowStore.connect(
         session.ydoc as Session.WorkflowDoc,
         session.provider
       );
 
       return () => {
-        logger.debug("Disconnecting workflowStore from Y.Doc");
+        logger.debug('Disconnecting workflowStore from Y.Doc');
         stores.workflowStore.disconnect();
       };
     } else {
@@ -200,7 +200,7 @@ export const StoreProvider = ({ children }: StoreProviderProps) => {
 
   useEffect(() => {
     return () => {
-      logger.debug("Cleaning up awareness on unmount");
+      logger.debug('Cleaning up awareness on unmount');
       stores.awarenessStore.destroyAwareness();
     };
   }, [stores.awarenessStore]);

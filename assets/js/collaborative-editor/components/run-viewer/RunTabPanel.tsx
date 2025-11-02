@@ -2,12 +2,12 @@ import {
   useCurrentRun,
   useRunActions,
   useSelectedStepId,
-} from "../../hooks/useRun";
-import { useProject } from "../../hooks/useSessionContext";
+} from '../../hooks/useRun';
+import { useProject } from '../../hooks/useSessionContext';
 
-import { ElapsedIndicator } from "./ElapsedIndicator";
-import { StatePill } from "./StatePill";
-import { StepList } from "./StepList";
+import { ElapsedIndicator } from './ElapsedIndicator';
+import { StatePill } from './StatePill';
+import { StepList } from './StepList';
 
 /**
  * Displays a short version of a UUID (first 8 characters)
@@ -48,7 +48,7 @@ export function RunTabPanel() {
             <dt className="font-medium text-gray-600">Run</dt>
             <dd>
               <a
-                href={`/projects/${project.id}/runs/${run.id}${selectedStepId ? `?step=${selectedStepId}` : ""}`}
+                href={`/projects/${project.id}/runs/${run.id}${selectedStepId ? `?step=${selectedStepId}` : ''}`}
                 className="link-uuid"
                 title={`View run ${run.id}`}
               >
@@ -64,7 +64,7 @@ export function RunTabPanel() {
                 {run.created_by?.email ||
                   (run.starting_trigger
                     ? `${run.starting_trigger.type} trigger`
-                    : "Unknown")}
+                    : 'Unknown')}
               </dd>
             </div>
           )}
