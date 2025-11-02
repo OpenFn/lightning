@@ -2,35 +2,35 @@
  * WorkflowEditor - Main workflow editing component
  */
 
-import { useEffect, useState } from "react";
-import { useHotkeys, useHotkeysContext } from "react-hotkeys-hook";
+import { useEffect, useRef, useState } from 'react';
+import { useHotkeys, useHotkeysContext } from 'react-hotkeys-hook';
 
-import _logger from "#/utils/logger";
-import { notifications } from "../lib/notifications";
+import _logger from '#/utils/logger';
 
-import { useURLState } from "../../react/lib/use-url-state";
-import type { WorkflowState as YAMLWorkflowState } from "../../yaml/types";
-import { useIsNewWorkflow, useProject } from "../hooks/useSessionContext";
+import { useURLState } from '../../react/lib/use-url-state';
+import type { WorkflowState as YAMLWorkflowState } from '../../yaml/types';
+import { useIsNewWorkflow, useProject } from '../hooks/useSessionContext';
 import {
   useIsRunPanelOpen,
   useRunPanelContext,
   useUICommands,
-} from "../hooks/useUI";
+} from '../hooks/useUI';
 import {
   useCanRun,
   useNodeSelection,
   useWorkflowActions,
   useWorkflowState,
   useWorkflowStoreContext,
-} from "../hooks/useWorkflow";
+} from '../hooks/useWorkflow';
+import { notifications } from '../lib/notifications';
 
-import { CollaborativeWorkflowDiagram } from "./diagram/CollaborativeWorkflowDiagram";
-import { FullScreenIDE } from "./ide/FullScreenIDE";
-import { Inspector } from "./inspector";
-import { LeftPanel } from "./left-panel";
-import { ManualRunPanel } from "./ManualRunPanel";
+import { CollaborativeWorkflowDiagram } from './diagram/CollaborativeWorkflowDiagram';
+import { FullScreenIDE } from './ide/FullScreenIDE';
+import { Inspector } from './inspector';
+import { LeftPanel } from './left-panel';
+import { ManualRunPanel } from './ManualRunPanel';
 
-const logger = _logger.ns("WorkflowEditor").seal();
+const logger = _logger.ns('WorkflowEditor').seal();
 
 interface WorkflowEditorProps {
   parentProjectId?: string | null;
@@ -41,7 +41,7 @@ export function WorkflowEditor({
   parentProjectId,
   parentProjectName,
 }: WorkflowEditorProps = {}) {
-  const { hash, searchParams, updateSearchParams } = useURLState();
+  const { searchParams, updateSearchParams } = useURLState();
   const { currentNode, selectNode } = useNodeSelection();
   const workflowStore = useWorkflowStoreContext();
   const isNewWorkflow = useIsNewWorkflow();
@@ -52,6 +52,11 @@ export function WorkflowEditor({
   const runPanelContext = useRunPanelContext();
   const { closeRunPanel, openRunPanel } = useUICommands();
 
+  // Track if we're programmatically updating to avoid loops
+  const isSyncingRef = useRef(false);
+  // Track if this is the initial mount to prevent URL stripping on page load
+  const isInitialMountRef = useRef(true);
+
   // Manage "panel" scope based on whether run panel is open
   // When run panel opens, disable "panel" scope so Inspector Escape doesn't fire
   // When run panel closes, re-enable "panel" scope so Inspector Escape works
@@ -61,17 +66,138 @@ export function WorkflowEditor({
     logger.debug({ activeScopes });
   }, [activeScopes]);
 
+  // Sync URL parameter when run panel opens/closes or context changes (write to URL)
+  useEffect(() => {
+    if (isSyncingRef.current) return; // Don't update URL if we're syncing from URL
+
+    const panelParam = searchParams.get('panel');
+    const jobParam = searchParams.get('job');
+    const triggerParam = searchParams.get('trigger');
+
+    if (isRunPanelOpen) {
+      // Panel is open - only update URL if panel param is missing
+      // Don't overwrite job/trigger params - let user selection changes persist
+      const contextJobId = runPanelContext?.jobId;
+      const contextTriggerId = runPanelContext?.triggerId;
+
+      // Only update if panel param is missing (panel just opened)
+      // Don't sync context changes back to URL - Effect 3 handles that
+      const needsUpdate = panelParam !== 'run';
+
+      if (needsUpdate) {
+        isSyncingRef.current = true;
+        if (contextJobId) {
+          updateSearchParams({
+            panel: 'run',
+            job: contextJobId,
+            trigger: null,
+          });
+        } else if (contextTriggerId) {
+          updateSearchParams({
+            panel: 'run',
+            trigger: contextTriggerId,
+            job: null,
+          });
+        } else {
+          updateSearchParams({ panel: 'run' });
+        }
+        setTimeout(() => {
+          isSyncingRef.current = false;
+        }, 0);
+      }
+    } else if (
+      !isRunPanelOpen &&
+      panelParam === 'run' &&
+      !isSyncingRef.current &&
+      !isInitialMountRef.current
+    ) {
+      // Panel closed - remove from URL (but keep job/trigger selection)
+      // Don't remove if we're currently syncing or on initial mount
+      isSyncingRef.current = true;
+      updateSearchParams({ panel: null });
+      setTimeout(() => {
+        isSyncingRef.current = false;
+      }, 0);
+    }
+  }, [isRunPanelOpen, runPanelContext, searchParams, updateSearchParams]);
+
+  // Sync run panel state from URL parameter (read from URL)
+  useEffect(() => {
+    const panelParam = searchParams.get('panel');
+
+    if (panelParam === 'run' && !isRunPanelOpen) {
+      // URL says panel should be open, but it's not - open it
+      isSyncingRef.current = true;
+
+      // Check URL params first (more reliable than currentNode on initial load)
+      const jobParam = searchParams.get('job');
+      const triggerParam = searchParams.get('trigger');
+
+      if (jobParam) {
+        openRunPanel({ jobId: jobParam });
+      } else if (triggerParam) {
+        openRunPanel({ triggerId: triggerParam });
+      } else if (currentNode.type === 'job' && currentNode.node) {
+        // Fallback to currentNode if no URL params
+        openRunPanel({ jobId: currentNode.node.id });
+      } else if (currentNode.type === 'trigger' && currentNode.node) {
+        openRunPanel({ triggerId: currentNode.node.id });
+      } else {
+        // Last resort: open with first trigger if available
+        const firstTrigger = workflow?.triggers?.[0];
+        if (firstTrigger?.id) {
+          openRunPanel({ triggerId: firstTrigger.id });
+        }
+      }
+
+      // Reset sync flag after a tick
+      setTimeout(() => {
+        isSyncingRef.current = false;
+        isInitialMountRef.current = false;
+      }, 0);
+    } else if (panelParam !== 'run' && isRunPanelOpen) {
+      // Panel is open but URL says it shouldn't be - close it
+      isSyncingRef.current = true;
+      closeRunPanel();
+
+      setTimeout(() => {
+        isSyncingRef.current = false;
+        isInitialMountRef.current = false;
+      }, 0);
+    } else {
+      // No sync needed - clear initial mount flag
+      setTimeout(() => {
+        isInitialMountRef.current = false;
+      }, 0);
+    }
+  }, [
+    searchParams,
+    isRunPanelOpen,
+    currentNode.type,
+    currentNode.node,
+    openRunPanel,
+    closeRunPanel,
+  ]);
+
   // Update run panel context when selected node changes (if panel is open)
   useEffect(() => {
     if (isRunPanelOpen && currentNode.node) {
-      // Panel is open and a node is selected - update context
-      if (currentNode.type === "job") {
-        openRunPanel({ jobId: currentNode.node.id });
-      } else if (currentNode.type === "trigger") {
-        openRunPanel({ triggerId: currentNode.node.id });
-      } else if (currentNode.type === "edge") {
-        // Close panel if edge selected
-        closeRunPanel();
+      // Panel is open and a node is selected - update context if different
+      if (currentNode.type === 'job') {
+        // Only update if context is different (prevents redundant updates after Effect 2)
+        if (runPanelContext?.jobId !== currentNode.node.id) {
+          openRunPanel({ jobId: currentNode.node.id });
+        }
+      } else if (currentNode.type === 'trigger') {
+        // Only update if context is different
+        if (runPanelContext?.triggerId !== currentNode.node.id) {
+          openRunPanel({ triggerId: currentNode.node.id });
+        }
+      } else if (currentNode.type === 'edge') {
+        // Keep panel open but show edge context (displays message to user)
+        if (runPanelContext?.edgeId !== currentNode.node.id) {
+          openRunPanel({ edgeId: currentNode.node.id });
+        }
       }
     }
     // Don't close when currentNode.node is null - panel can stay open
@@ -80,6 +206,7 @@ export function WorkflowEditor({
     currentNode.type,
     currentNode.node,
     isRunPanelOpen,
+    runPanelContext,
     openRunPanel,
     closeRunPanel,
   ]);
@@ -115,27 +242,28 @@ export function WorkflowEditor({
   }));
 
   // Get current creation method from URL
-  const currentMethod = searchParams.get("method") as
-    | "template"
-    | "import"
-    | "ai"
+  const currentMethod = searchParams.get('method') as
+    | 'template'
+    | 'import'
+    | 'ai'
     | null;
 
   // Default to template method if no method specified and panel is open
-  const leftPanelMethod = showLeftPanel ? currentMethod || "template" : null;
+  const leftPanelMethod = showLeftPanel ? currentMethod || 'template' : null;
 
-  // Check if IDE should be open
-  const isIDEOpen = searchParams.get("editor") === "open";
-  const selectedJobId = searchParams.get("job");
+  // Check if IDE should be open (panel=editor)
+  const isIDEOpen = searchParams.get('panel') === 'editor';
+  const selectedJobId = searchParams.get('job');
 
   const handleCloseInspector = () => {
     selectNode(null);
   };
 
   // Show inspector panel if settings is open OR a node is selected
-  const showInspector = hash === "settings" || Boolean(currentNode.node);
+  const showInspector =
+    searchParams.get('panel') === 'settings' || Boolean(currentNode.node);
 
-  const handleMethodChange = (method: "template" | "import" | "ai" | null) => {
+  const handleMethodChange = (method: 'template' | 'import' | 'ai' | null) => {
     updateSearchParams({ method });
   };
 
@@ -147,7 +275,7 @@ export function WorkflowEditor({
 
       workflowStore.importWorkflow(validatedState);
     } catch (error) {
-      console.error("Failed to validate workflow name:", error);
+      console.error('Failed to validate workflow name:', error);
       // Fall back to original state if validation fails
       workflowStore.importWorkflow(workflowState);
     }
@@ -164,30 +292,33 @@ export function WorkflowEditor({
   };
 
   const handleCloseIDE = () => {
-    updateSearchParams({ editor: null });
+    updateSearchParams({ panel: null });
   };
 
   // Callback from ManualRunPanel with run state
   const handleRunStateChange = (
     canRun: boolean,
     isSubmitting: boolean,
-    handler: () => void
+    handler: () => void,
+    retryHandler?: () => void,
+    isRetryable?: boolean
   ) => {
     setCanRunWorkflow(canRun);
     setIsRunning(isSubmitting);
-    setRunHandler(() => handler);
+    // Use retry handler if available and retryable, otherwise use regular handler
+    setRunHandler(() => (isRetryable && retryHandler ? retryHandler : handler));
   };
 
   // Handle Cmd/Ctrl+Enter to open run panel or trigger run
   useHotkeys(
-    "mod+enter",
+    'mod+enter',
     event => {
       event.preventDefault();
 
       // Don't do anything if user can't run (snapshots, permissions, locks, etc.)
       if (!canOpenRunPanel) {
         notifications.alert({
-          title: "Cannot run workflow",
+          title: 'Cannot run workflow',
           description: runDisabledReason,
         });
         return;
@@ -200,9 +331,9 @@ export function WorkflowEditor({
         }
       } else {
         // Panel is closed - open it
-        if (currentNode.type === "job" && currentNode.node) {
+        if (currentNode.type === 'job' && currentNode.node) {
           openRunPanel({ jobId: currentNode.node.id });
-        } else if (currentNode.type === "trigger" && currentNode.node) {
+        } else if (currentNode.type === 'trigger' && currentNode.node) {
           openRunPanel({ triggerId: currentNode.node.id });
         } else {
           // Nothing selected - open with first trigger (like clicking Run)
@@ -233,17 +364,17 @@ export function WorkflowEditor({
 
   // Handle Ctrl/Cmd+E to open IDE for selected job
   useHotkeys(
-    "ctrl+e,meta+e",
+    'ctrl+e,meta+e',
     event => {
       event.preventDefault();
 
       // Only work if a job is selected
-      if (currentNode.type !== "job" || !currentNode.node) {
+      if (currentNode.type !== 'job' || !currentNode.node) {
         return;
       }
 
-      // Open IDE by setting editor=open in URL
-      updateSearchParams({ editor: "open" });
+      // Open IDE by setting panel=editor in URL
+      updateSearchParams({ panel: 'editor' });
     },
     {
       enabled: !isIDEOpen, // Disable when IDE is already open
@@ -260,7 +391,7 @@ export function WorkflowEditor({
           {/* Main content area - flex grows to fill remaining space */}
           <div
             className={`flex-1 relative transition-all duration-300 ease-in-out ${
-              showLeftPanel ? "ml-[33.333333%]" : "ml-0"
+              showLeftPanel ? 'ml-[33.333333%]' : 'ml-0'
             }`}
           >
             <CollaborativeWorkflowDiagram inspectorId="inspector" />
@@ -273,8 +404,8 @@ export function WorkflowEditor({
                 id="inspector"
                 className={`absolute top-0 right-0 transition-transform duration-300 ease-in-out z-10 ${
                   showInspector
-                    ? "translate-x-0"
-                    : "translate-x-full pointer-events-none"
+                    ? 'translate-x-0'
+                    : 'translate-x-full pointer-events-none'
                 }`}
               >
                 <Inspector
@@ -295,6 +426,7 @@ export function WorkflowEditor({
                   workflowId={workflowId}
                   jobId={runPanelContext.jobId ?? null}
                   triggerId={runPanelContext.triggerId ?? null}
+                  edgeId={runPanelContext.edgeId ?? null}
                   onClose={closeRunPanel}
                   onRunStateChange={handleRunStateChange}
                   saveWorkflow={saveWorkflow}

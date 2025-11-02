@@ -17,6 +17,13 @@ and this project adheres to
 
 ### Added
 
+- Run/retry split button in collaborative editor allowing users to retry
+  existing runs or create new work orders from both the ManualRunPanel and
+  fullscreen IDE header [#3876](https://github.com/OpenFn/lightning/issues/3876)
+- Keyboard shortcuts for run/retry actions - `Cmd+Enter` (or `Ctrl+Enter`)
+  triggers run/retry, `Cmd+Shift+Enter` create new work order
+  [#3861](https://github.com/OpenFn/lightning/issues/3861)
+
 ### Changed
 
 - Updated styles on new IDE to match (nay, exceed!) those on the legacy IDE
@@ -30,6 +37,15 @@ and this project adheres to
 
 - Adaptor picker changes now sync immediately to Y.Doc instead of requiring
   manual save [#3904](https://github.com/OpenFn/lightning/issues/3904)
+- Fixed Cmd+Enter creating duplicate work orders in workflow editor - both
+  ManualRunPanel and WorkflowEditor keyboard handlers were firing simultaneously
+  [#3876](https://github.com/OpenFn/lightning/issues/3876)
+- Fixed GenServer crash when retrying from collaborative editor due to Y.Doc
+  workflow data structure issues
+  [#3876](https://github.com/OpenFn/lightning/issues/3876)
+- Fixed run panel blocking node selection and causing screen flashes when
+  switching between nodes
+  [#3876](https://github.com/OpenFn/lightning/issues/3876)
 
 ## [2.14.14-pre1] - 2025-10-30
 

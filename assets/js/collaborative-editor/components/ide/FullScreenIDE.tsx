@@ -7,6 +7,7 @@ import {
   PanelResizeHandle,
 } from 'react-resizable-panels';
 
+import { cn } from '#/utils/cn';
 import _logger from '#/utils/logger';
 
 import { useURLState } from '../../../react/lib/use-url-state';
@@ -142,6 +143,9 @@ export function FullScreenIDE({
   const [canRunWorkflow, setCanRunWorkflow] = useState(false);
   const [isRunning, setIsRunning] = useState(false);
   const [runHandler, setRunHandler] = useState<(() => void) | null>(null);
+  const [retryHandler, setRetryHandler] = useState<(() => void) | null>(null);
+  const [isRetryable, setIsRetryable] = useState(false);
+  const [runIsProcessing, setRunIsProcessing] = useState(false);
 
   // Follow run state for right panel
   const [followRunId, setFollowRunId] = useState<string | null>(null);
@@ -247,18 +251,21 @@ export function FullScreenIDE({
   const handleRunStateChange = (
     canRun: boolean,
     isSubmitting: boolean,
-    handler: () => void
+    runHandler: () => void,
+    retryHandler?: () => void,
+    isRetryable?: boolean,
+    processing?: boolean
   ) => {
     setCanRunWorkflow(canRun);
     setIsRunning(isSubmitting);
-    setRunHandler(() => handler);
+    setRunHandler(() => runHandler);
+    setRetryHandler(retryHandler ? () => retryHandler : null);
+    setIsRetryable(isRetryable ?? false);
+    setRunIsProcessing(processing ?? false);
   };
 
-  // Handler for Run button in header
+  // Handler for Run button
   const handleRunClick = () => {
-    // Centralized validation - both button and keyboard shortcut use this
-
-    // Check snapshot/permission restrictions first (these have clear messages)
     if (!canRunSnapshot) {
       notifications.alert({
         title: 'Cannot run',
@@ -267,12 +274,28 @@ export function FullScreenIDE({
       return;
     }
 
-    // Check runtime conditions (no toast needed - these are transient states)
-    if (!canRunWorkflow || isRunning || !runHandler) {
+    if (!canRunWorkflow || isRunning || runIsProcessing || !runHandler) {
       return;
     }
 
     runHandler();
+  };
+
+  // Handler for Retry button
+  const handleRetryClick = () => {
+    if (!canRunSnapshot) {
+      notifications.alert({
+        title: 'Cannot run',
+        description: runTooltipMessage,
+      });
+      return;
+    }
+
+    if (!canRunWorkflow || isRunning || runIsProcessing || !retryHandler) {
+      return;
+    }
+
+    retryHandler();
   };
 
   // Adaptor modal handlers
@@ -536,6 +559,7 @@ export function FullScreenIDE({
     <div className="fixed inset-0 z-50 bg-white flex flex-col">
       {/* Header with Run, Save, Close buttons */}
       <IDEHeader
+        jobId={currentJob.id}
         jobName={currentJob.name}
         jobAdaptor={currentJob.adaptor || undefined}
         jobCredentialId={
@@ -546,11 +570,16 @@ export function FullScreenIDE({
         snapshotVersion={snapshotVersion}
         latestSnapshotVersion={latestSnapshotLockVersion}
         workflowId={workflowId}
+        projectId={projectId}
         onClose={onClose}
         onSave={handleSave}
         onRun={handleRunClick}
-        canRun={canRunSnapshot && canRunWorkflow && !isRunning}
-        isRunning={isRunning}
+        onRetry={handleRetryClick}
+        isRetryable={isRetryable}
+        canRun={
+          canRunSnapshot && canRunWorkflow && !isRunning && !runIsProcessing
+        }
+        isRunning={isRunning || runIsProcessing}
         canSave={canSave}
         saveTooltip={tooltipMessage}
         runTooltip={runTooltipMessage}
@@ -620,8 +649,13 @@ export function FullScreenIDE({
               </div>
 
               {/* Panel content */}
-              {!isLeftCollapsed && workflow && projectId && workflowId && (
-                <div className="flex-1 overflow-hidden bg-white">
+              {workflow && projectId && workflowId && (
+                <div
+                  className={cn(
+                    'flex-1 overflow-hidden bg-white',
+                    isLeftCollapsed && 'hidden'
+                  )}
+                >
                   <ManualRunPanel
                     workflow={workflow}
                     projectId={projectId}
