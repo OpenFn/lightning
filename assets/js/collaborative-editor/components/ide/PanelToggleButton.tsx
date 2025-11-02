@@ -1,4 +1,4 @@
-import { cn } from "#/utils/cn";
+import { cn } from '#/utils/cn';
 
 interface PanelToggleButtonProps {
   isCollapsed: boolean;
@@ -24,15 +24,15 @@ export function PanelToggleButton({
       onClick={onClick}
       disabled={disabled}
       className={cn(
-        "disabled:opacity-30 disabled:cursor-not-allowed",
+        'disabled:opacity-30 disabled:cursor-not-allowed',
         className
       )}
       aria-label={ariaLabel}
     >
       <span
         className={cn(
-          "w-5 h-5 hover:bg-slate-400 text-slate-500",
-          isCollapsed ? "hero-plus-circle" : "hero-minus-circle"
+          'w-5 h-5 hover:bg-slate-400 text-slate-500',
+          isCollapsed ? 'hero-plus-circle' : 'hero-minus-circle'
         )}
         aria-hidden="true"
       />

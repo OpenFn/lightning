@@ -1,6 +1,6 @@
-import type { FC, SVGProps } from "react";
+import type { FC, SVGProps } from 'react';
 
-import { cn } from "#/utils/cn";
+import { cn } from '#/utils/cn';
 
 interface TabOption<T extends string> {
   value: T;
@@ -12,7 +12,7 @@ interface TabsProps<T extends string> {
   value: T;
   onChange: (value: T) => void;
   options: TabOption<T>[];
-  variant?: "pills" | "underline";
+  variant?: 'pills' | 'underline';
   className?: string;
 }
 
@@ -27,12 +27,12 @@ export function Tabs<T extends string>({
   value,
   onChange,
   options,
-  variant = "underline",
+  variant = 'underline',
   className,
 }: TabsProps<T>) {
-  if (variant === "pills") {
+  if (variant === 'pills') {
     return (
-      <div className={cn("bg-slate-100 p-1 rounded-lg", className)}>
+      <div className={cn('bg-slate-100 p-1 rounded-lg', className)}>
         <nav className="flex gap-1" aria-label="Tabs">
           {options.map(option => {
             const isSelected = value === option.value;
@@ -47,11 +47,11 @@ export function Tabs<T extends string>({
                   flex items-center justify-center transition-all duration-200
                   ${
                     isSelected
-                      ? "bg-white text-indigo-600"
-                      : "text-gray-500 hover:text-gray-700 hover:bg-slate-50"
+                      ? 'bg-white text-indigo-600'
+                      : 'text-gray-500 hover:text-gray-700 hover:bg-slate-50'
                   }
                 `}
-                aria-current={isSelected ? "page" : undefined}
+                aria-current={isSelected ? 'page' : undefined}
               >
                 {Icon && (
                   <Icon className="inline h-5 w-5 mr-2" aria-hidden="true" />
@@ -86,11 +86,11 @@ export function Tabs<T extends string>({
                 text-xs font-semibold leading-tight transition-colors
                 ${
                   isSelected
-                    ? "border-primary-500 text-primary-600"
-                    : "border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700"
+                    ? 'border-primary-500 text-primary-600'
+                    : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
                 }
               `}
-              aria-current={isSelected ? "page" : undefined}
+              aria-current={isSelected ? 'page' : undefined}
             >
               {Icon && (
                 <Icon
@@ -98,8 +98,8 @@ export function Tabs<T extends string>({
                     -ml-0.5 mr-2 h-5 w-5
                     ${
                       isSelected
-                        ? "text-primary-500"
-                        : "text-gray-400 group-hover:text-gray-500"
+                        ? 'text-primary-500'
+                        : 'text-gray-400 group-hover:text-gray-500'
                     }
                   `}
                   aria-hidden="true"

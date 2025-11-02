@@ -1,16 +1,17 @@
-import { Menu, MenuButton, MenuItem, MenuItems } from "@headlessui/react";
-import { useCallback } from "react";
-import { useHotkeys } from "react-hotkeys-hook";
+import { Menu, MenuButton, MenuItem, MenuItems } from '@headlessui/react';
+import { useCallback } from 'react';
+import { useHotkeys } from 'react-hotkeys-hook';
 
-import { useURLState } from "../../react/lib/use-url-state";
-import { cn } from "../../utils/cn";
+import { useURLState } from '../../react/lib/use-url-state';
+import { cn } from '../../utils/cn';
+import { buildClassicalEditorUrl } from '../../utils/editorUrlConversion';
 import {
   useIsNewWorkflow,
   useLatestSnapshotLockVersion,
   useProjectRepoConnection,
   useUser,
-} from "../hooks/useSessionContext";
-import { useUICommands } from "../hooks/useUI";
+} from '../hooks/useSessionContext';
+import { useUICommands } from '../hooks/useUI';
 import {
   useCanRun,
   useCanSave,
@@ -18,26 +19,26 @@ import {
   useWorkflowActions,
   useWorkflowEnabled,
   useWorkflowState,
-} from "../hooks/useWorkflow";
-import { getAvatarInitials } from "../utils/avatar";
+} from '../hooks/useWorkflow';
+import { getAvatarInitials } from '../utils/avatar';
 
-import { ActiveCollaborators } from "./ActiveCollaborators";
-import { Breadcrumbs } from "./Breadcrumbs";
-import { Button } from "./Button";
-import { EmailVerificationBanner } from "./EmailVerificationBanner";
-import { GitHubSyncModal } from "./GitHubSyncModal";
-import { Switch } from "./inputs/Switch";
-import { ReadOnlyWarning } from "./ReadOnlyWarning";
-import { Tooltip } from "./Tooltip";
+import { ActiveCollaborators } from './ActiveCollaborators';
+import { Breadcrumbs } from './Breadcrumbs';
+import { Button } from './Button';
+import { EmailVerificationBanner } from './EmailVerificationBanner';
+import { GitHubSyncModal } from './GitHubSyncModal';
+import { Switch } from './inputs/Switch';
+import { ReadOnlyWarning } from './ReadOnlyWarning';
+import { Tooltip } from './Tooltip';
 
 const userNavigation = [
-  { label: "User Profile", url: "/profile", icon: "hero-user-circle" },
-  { label: "Credentials", url: "/credentials", icon: "hero-key" },
-  { label: "API Tokens", url: "/profile/tokens", icon: "hero-key" },
+  { label: 'User Profile', url: '/profile', icon: 'hero-user-circle' },
+  { label: 'Credentials', url: '/credentials', icon: 'hero-key' },
+  { label: 'API Tokens', url: '/profile/tokens', icon: 'hero-key' },
   {
-    label: "Log out",
-    url: "/users/log_out",
-    icon: "hero-arrow-right-on-rectangle",
+    label: 'Log out',
+    url: '/users/log_out',
+    icon: 'hero-arrow-right-on-rectangle',
   },
 ];
 
@@ -146,7 +147,7 @@ export function SaveButton({
     </div>
   );
 }
-SaveButton.displayName = "SaveButton";
+SaveButton.displayName = 'SaveButton';
 
 export function Header({
   children,
@@ -158,7 +159,7 @@ export function Header({
   workflowId?: string;
 }) {
   // URL state management (needed early for handleRunClick)
-  const { updateHash } = useURLState();
+  const { updateSearchParams } = useURLState();
 
   // Node selection
   const { selectNode } = useNodeSelection();
@@ -203,7 +204,7 @@ export function Header({
 
   // Global save shortcut: Ctrl/Cmd+S
   useHotkeys(
-    "ctrl+s,meta+s", // Windows/Linux: Ctrl+S, Mac: Cmd+S
+    'ctrl+s,meta+s', // Windows/Linux: Ctrl+S, Mac: Cmd+S
     event => {
       event.preventDefault(); // Always prevent browser's "Save Page" dialog
       if (canSave) {
@@ -219,7 +220,7 @@ export function Header({
 
   // Global save and sync shortcut: Ctrl/Cmd+Shift+S (only when GitHub integration available)
   useHotkeys(
-    "ctrl+shift+s,meta+shift+s", // Windows/Linux: Ctrl+Shift+S, Mac: Cmd+Shift+S
+    'ctrl+shift+s,meta+shift+s', // Windows/Linux: Ctrl+Shift+S, Mac: Cmd+Shift+S
     event => {
       event.preventDefault(); // Prevent any browser shortcuts
       if (canSave && repoConnection) {
@@ -249,11 +250,12 @@ export function Header({
           <ReadOnlyWarning className="ml-3" />
           {projectId && workflowId && (
             <a
-              href={
-                isNewWorkflow
-                  ? `/projects/${projectId}/w/new`
-                  : `/projects/${projectId}/w/${workflowId}`
-              }
+              href={buildClassicalEditorUrl({
+                projectId,
+                workflowId: workflowId ?? null,
+                searchParams: new URLSearchParams(window.location.search),
+                isNewWorkflow,
+              })}
               className="inline-flex items-center justify-center
               w-6 h-6 text-primary-600 hover:text-primary-700
               hover:bg-primary-50 rounded transition-colors ml-2"
@@ -278,7 +280,7 @@ export function Header({
               <div>
                 <button
                   type="button"
-                  onClick={() => updateHash("settings")}
+                  onClick={() => updateSearchParams({ panel: 'settings' })}
                   className="w-5 h-5 place-self-center cursor-pointer
                   text-slate-500 hover:text-slate-400"
                 >
@@ -363,7 +365,7 @@ export function Header({
                     <span
                       className={cn(
                         item.icon,
-                        "w-5 h-5 mr-2 text-secondary-500"
+                        'w-5 h-5 mr-2 text-secondary-500'
                       )}
                     ></span>
                     {item.label}
