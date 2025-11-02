@@ -195,7 +195,6 @@ export function FullScreenIDE({
   useEffect(() => {
     const inputDataclipId = followedRunStep?.input_dataclip_id;
 
-    // Early returns: conditions where we shouldn't fetch
     if (!inputDataclipId || !jobIdFromURL || !projectId) {
       return;
     }
@@ -377,7 +376,6 @@ export function FullScreenIDE({
     (adaptorName: string) => {
       if (!currentJob) return;
 
-      // Extract package name and set version to "latest"
       const packageMatch = adaptorName.match(/(.+?)(@|$)/);
       const newPackage = packageMatch ? packageMatch[1] : adaptorName;
       const fullAdaptor = `${newPackage}@latest`;
