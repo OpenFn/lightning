@@ -16,9 +16,13 @@ import ExistingView from "../../manual-run-panel/views/ExistingView";
 import { useURLState } from "../../react/lib/use-url-state";
 import type { Dataclip } from "../api/dataclips";
 import * as dataclipApi from "../api/dataclips";
+import { RENDER_MODES, type RenderMode } from "../constants/panel";
+import { SHORTCUT_SCOPES } from "../constants/shortcuts";
 import { useCanRun } from "../hooks/useWorkflow";
-import { useCurrentRun } from "../hooks/useRun";
+import { useCurrentRun, useRunStoreInstance } from "../hooks/useRun";
 import { useRunRetry } from "../hooks/useRunRetry";
+import { useRunRetryShortcuts } from "../hooks/useRunRetryShortcuts";
+import { useSession } from "../hooks/useSession";
 import type { Workflow } from "../types/workflow";
 
 import { InspectorFooter } from "./inspector/InspectorFooter";
@@ -37,7 +41,7 @@ interface ManualRunPanelProps {
   triggerId?: string | null;
   edgeId?: string | null;
   onClose: () => void;
-  renderMode?: "standalone" | "embedded";
+  renderMode?: RenderMode;
   saveWorkflow: (options?: { silent?: boolean }) => Promise<{
     saved_at?: string;
     lock_version?: number;
@@ -55,7 +59,7 @@ export function ManualRunPanel({
   triggerId,
   edgeId,
   onClose,
-  renderMode = "standalone",
+  renderMode = RENDER_MODES.STANDALONE,
   saveWorkflow,
   onRunSubmitted,
 }: ManualRunPanelProps) {
@@ -88,6 +92,10 @@ export function ManualRunPanel({
   const { searchParams } = useURLState();
   const followedRunId = searchParams.get("run");
   const currentRun = useCurrentRun(); // Real-time from WebSocket
+
+  // Get provider for run connection (only needed in standalone mode)
+  const { provider } = useSession();
+  const runStore = useRunStoreInstance();
 
   // Determine run context
   const runContext = jobId
@@ -152,6 +160,7 @@ export function ManualRunPanel({
     saveWorkflow,
     onRunSubmitted: onRunSubmitted,
     edgeId: edgeId || null,
+    workflowEdges: workflow.edges,
   });
 
   // Get step for current job from followed run (needed for dataclip auto-selection)
@@ -159,6 +168,23 @@ export function ManualRunPanel({
     if (!currentRun || !dataclipJobId) return null;
     return currentRun.steps.find(s => s.job_id === dataclipJobId) || null;
   }, [currentRun, dataclipJobId]);
+
+  // Connect to run channel when following a run (only in standalone mode)
+  // In embedded mode (FullScreenIDE), the parent handles the connection
+  useEffect(() => {
+    // Only manage connection in standalone mode
+    if (renderMode !== RENDER_MODES.STANDALONE) {
+      return;
+    }
+
+    if (!followedRunId || !provider) {
+      runStore._disconnectFromRun();
+      return;
+    }
+
+    const cleanup = runStore._connectToRun(provider, followedRunId);
+    return cleanup;
+  }, [followedRunId, provider, runStore, renderMode]);
 
   // Watch for jobId/triggerId changes and update panel
   useEffect(() => {
@@ -359,58 +385,18 @@ export function ManualRunPanel({
     [onClose]
   );
 
-  // Handle ⌘+Enter for main action (Run or Retry based on state)
+  // Handle run/retry keyboard shortcuts
   // Only enabled in standalone mode - embedded mode uses IDEHeader handlers
-  useHotkeys(
-    "mod+enter",
-    e => {
-      e.preventDefault();
-      e.stopPropagation(); // Prevent WorkflowEditor's handler from also firing
-
-      if (canRun && !isSubmitting && !runIsProcessing) {
-        if (isRetryable) {
-          // Prevent double-calls by checking isSubmitting again in the handler
-          void handleRetry();
-        } else {
-          void handleRun();
-        }
-      }
-    },
-    {
-      enabled: renderMode === "standalone",
-      enableOnFormTags: true,
-    },
-    [
-      canRun,
-      isSubmitting,
-      runIsProcessing,
-      isRetryable,
-      handleRetry,
-      handleRun,
-      followedRunId,
-      followedRunStep,
-      selectedDataclip,
-      renderMode,
-    ]
-  );
-
-  // Handle ⌘+Shift+Enter for force new work order
-  // Only enabled in standalone mode - embedded mode uses IDEHeader handlers
-  useHotkeys(
-    "mod+shift+enter",
-    e => {
-      e.preventDefault();
-      if (canRun && !isSubmitting && !runIsProcessing && isRetryable) {
-        // Force new work order even in retry mode
-        void handleRun();
-      }
-    },
-    {
-      enabled: renderMode === "standalone",
-      enableOnFormTags: true,
-    },
-    [canRun, isSubmitting, runIsProcessing, isRetryable, handleRun, renderMode]
-  );
+  // Use "runpanel" scope to give these shortcuts priority over WorkflowEditor
+  useRunRetryShortcuts({
+    onRun: () => void handleRun(),
+    onRetry: () => void handleRetry(),
+    canRun,
+    isRunning: isSubmitting || runIsProcessing,
+    isRetryable,
+    enabled: renderMode === RENDER_MODES.STANDALONE,
+    scope: SHORTCUT_SCOPES.RUN_PANEL,
+  });
 
   // Extract content for reuse
   // Show message when edge is selected (like classical editor)
@@ -433,7 +419,7 @@ export function ManualRunPanel({
     <div
       className={cn(
         "flex flex-col h-full overflow-hidden",
-        renderMode === "embedded" ? "mt-2" : "mt-4"
+        renderMode === RENDER_MODES.EMBEDDED ? "mt-2" : "mt-4"
       )}
     >
       <Tabs
@@ -503,7 +489,7 @@ export function ManualRunPanel({
   );
 
   // Embedded mode: return content without wrapper
-  if (renderMode === "embedded") {
+  if (renderMode === RENDER_MODES.EMBEDDED) {
     return content;
   }
 
