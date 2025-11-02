@@ -139,6 +139,9 @@ export function FullScreenIDE({
   // Follow run state for right panel
   const [followRunId, setFollowRunId] = useState<string | null>(null);
 
+  // Track selected dataclip for retry functionality
+  const [selectedDataclip, setSelectedDataclip] = useState<any>(null);
+
   // Handler for run submission - auto-expands right panel and updates URL
   const handleRunSubmitted = useCallback(
     (runId: string) => {
@@ -161,6 +164,44 @@ export function FullScreenIDE({
         id: workflow?.triggers[0]?.id || "",
       };
 
+  // Get current run from RunStore for retry detection
+  const currentRun = useRunStoreInstance(state => state.currentRun);
+
+  // Get step for current job from followed run
+  const followedRunStep = useMemo(() => {
+    if (!currentRun || !jobIdFromURL) return null;
+    return currentRun.steps.find(s => s.job_id === jobIdFromURL) || null;
+  }, [currentRun, jobIdFromURL]);
+
+  // Auto-fetch and select dataclip when following a run
+  // This enables retry functionality in the IDE
+  useEffect(() => {
+    if (!followedRunStep?.input_dataclip_id) {
+      setSelectedDataclip(null);
+      return;
+    }
+
+    // Fetch the dataclip for retry
+    const fetchDataclip = async () => {
+      try {
+        const response = await fetch(
+          `/api/dataclips/${followedRunStep.input_dataclip_id}`,
+          {
+            credentials: "same-origin",
+          }
+        );
+        if (response.ok) {
+          const data = await response.json();
+          setSelectedDataclip(data.data);
+        }
+      } catch (error) {
+        console.error("Failed to fetch dataclip for retry:", error);
+      }
+    };
+
+    void fetchDataclip();
+  }, [followedRunStep]);
+
   // Use run/retry hook for all run logic
   const {
     handleRun,
@@ -173,8 +214,8 @@ export function FullScreenIDE({
     projectId: projectId || "",
     workflowId: workflowId || "",
     runContext,
-    selectedTab: "empty", // IDE doesn't have manual input selection
-    selectedDataclip: null,
+    selectedTab: selectedDataclip ? "existing" : "empty",
+    selectedDataclip,
     customBody: "{}",
     canRunWorkflow: canRunSnapshot,
     workflowRunTooltipMessage: runTooltipMessage,
