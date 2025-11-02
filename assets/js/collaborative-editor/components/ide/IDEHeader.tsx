@@ -1,11 +1,11 @@
-import { useHotkeys } from "react-hotkeys-hook";
-
 import type { useProjectRepoConnection } from "#/collaborative-editor/hooks/useSessionContext";
 import { useURLState } from "#/react/lib/use-url-state";
 import { buildClassicalEditorUrl } from "#/utils/editorUrlConversion";
 
+import { SHORTCUT_SCOPES } from "../../constants/shortcuts";
 import { useIsNewWorkflow } from "../../hooks/useSessionContext";
 import { useVersionSelect } from "../../hooks/useVersionSelect";
+import { useRunRetryShortcuts } from "../../hooks/useRunRetryShortcuts";
 import { ActiveCollaborators } from "../ActiveCollaborators";
 import { AdaptorDisplay } from "../AdaptorDisplay";
 import { Button } from "../Button";
@@ -79,48 +79,17 @@ export function IDEHeader({
   const { searchParams } = useURLState();
   const isNewWorkflow = useIsNewWorkflow();
 
-  // Handle Cmd/Ctrl+Enter for main action (Run or Retry based on state)
-  // enableOnFormTags and enableOnContentEditable ensure it works in Monaco editor
-  useHotkeys(
-    "mod+enter",
-    e => {
-      e.preventDefault();
-      if (canRun && !isRunning) {
-        if (isRetryable) {
-          onRetry();
-        } else {
-          onRun();
-        }
-      }
-    },
-    {
-      enabled: true,
-      scopes: ["ide"],
-      enableOnFormTags: true,
-      enableOnContentEditable: true,
-    },
-    [canRun, isRunning, isRetryable, onRetry, onRun]
-  );
-
-  // Handle Cmd/Ctrl+Shift+Enter to force new work order
-  // enableOnFormTags and enableOnContentEditable ensure it works in Monaco editor
-  useHotkeys(
-    "mod+shift+enter",
-    e => {
-      e.preventDefault();
-      if (canRun && !isRunning && isRetryable) {
-        // Force new work order even in retry mode
-        onRun();
-      }
-    },
-    {
-      enabled: true,
-      scopes: ["ide"],
-      enableOnFormTags: true,
-      enableOnContentEditable: true,
-    },
-    [canRun, isRunning, isRetryable, onRun]
-  );
+  // Handle run/retry keyboard shortcuts
+  // enableOnContentEditable ensures shortcuts work in Monaco editor
+  useRunRetryShortcuts({
+    onRun,
+    onRetry,
+    canRun,
+    isRunning,
+    isRetryable,
+    scope: SHORTCUT_SCOPES.IDE,
+    enableOnContentEditable: true,
+  });
 
   return (
     <div className="shrink-0 border-b border-gray-200 bg-white px-4 py-2">

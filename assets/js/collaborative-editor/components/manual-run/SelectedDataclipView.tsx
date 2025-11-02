@@ -5,6 +5,7 @@ import { cn } from "#/utils/cn";
 
 import { DataclipViewer } from "../../../react/components/DataclipViewer";
 import type { Dataclip } from "../../api/dataclips";
+import { RENDER_MODES, type RenderMode } from "../../constants/panel";
 import { Button } from "../Button";
 
 interface SelectedDataclipViewProps {
@@ -13,7 +14,7 @@ interface SelectedDataclipViewProps {
   onNameChange: (dataclipId: string, name: string | null) => Promise<void>;
   canEdit: boolean;
   isNextCronRun: boolean;
-  renderMode?: "standalone" | "embedded";
+  renderMode?: RenderMode;
 }
 
 export function SelectedDataclipView({
@@ -22,7 +23,7 @@ export function SelectedDataclipView({
   onNameChange,
   canEdit,
   isNextCronRun,
-  renderMode = "standalone",
+  renderMode = RENDER_MODES.STANDALONE,
 }: SelectedDataclipViewProps) {
   const [isEditingName, setIsEditingName] = useState(false);
   const [editedName, setEditedName] = useState(dataclip.name || "");
@@ -48,7 +49,7 @@ export function SelectedDataclipView({
       <div
         className={cn(
           "flex items-center justify-between pb-4",
-          renderMode === "embedded" ? "px-3 pt-3" : "px-6 pt-4"
+          renderMode === RENDER_MODES.EMBEDDED ? "px-3 pt-3" : "px-6 pt-4"
         )}
       >
         <div className="flex-1">
@@ -129,7 +130,7 @@ export function SelectedDataclipView({
         <div
           className={cn(
             "alert-warning flex flex-col gap-1 px-3 py-2 rounded-md border mb-4",
-            renderMode === "embedded" ? "mx-3" : "mx-6"
+            renderMode === RENDER_MODES.EMBEDDED ? "mx-3" : "mx-6"
           )}
         >
           <span className="text-sm font-medium">

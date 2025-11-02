@@ -3,10 +3,11 @@
  */
 
 import { useEffect, useRef, useState } from "react";
-import { useHotkeys } from "react-hotkeys-hook";
+import { useHotkeys, useHotkeysContext } from "react-hotkeys-hook";
 
 import { useURLState } from "../../react/lib/use-url-state";
 import type { WorkflowState as YAMLWorkflowState } from "../../yaml/types";
+import { SHORTCUT_SCOPES } from "../constants/shortcuts";
 import { useIsNewWorkflow, useProject } from "../hooks/useSessionContext";
 import {
   useIsRunPanelOpen,
@@ -27,6 +28,7 @@ import { FullScreenIDE } from "./ide/FullScreenIDE";
 import { Inspector } from "./inspector";
 import { LeftPanel } from "./left-panel";
 import { ManualRunPanel } from "./ManualRunPanel";
+import { ManualRunPanelErrorBoundary } from "./ManualRunPanelErrorBoundary";
 
 interface WorkflowEditorProps {
   parentProjectId?: string | null;
@@ -53,9 +55,17 @@ export function WorkflowEditor({
   // Track if this is the initial mount to prevent URL stripping on page load
   const isInitialMountRef = useRef(true);
 
-  // Manage "panel" scope based on whether run panel is open
-  // When run panel opens, disable "panel" scope so Inspector Escape doesn't fire
-  // When run panel closes, re-enable "panel" scope so Inspector Escape works
+  // Manage "runpanel" scope based on whether run panel is open
+  // This allows ManualRunPanel's shortcuts to take priority when panel is open
+  const { enableScope, disableScope } = useHotkeysContext();
+
+  useEffect(() => {
+    if (isRunPanelOpen) {
+      enableScope(SHORTCUT_SCOPES.RUN_PANEL);
+    } else {
+      disableScope(SHORTCUT_SCOPES.RUN_PANEL);
+    }
+  }, [isRunPanelOpen, enableScope, disableScope]);
 
   // Sync URL parameter when run panel opens/closes or context changes (write to URL)
   useEffect(() => {
@@ -215,11 +225,6 @@ export function WorkflowEditor({
   const { canRun: canOpenRunPanel, tooltipMessage: runDisabledReason } =
     useCanRun();
 
-  // Run state from ManualRunPanel
-  const [canRunWorkflow, setCanRunWorkflow] = useState(false);
-  const [isRunning, setIsRunning] = useState(false);
-  const [runHandler, setRunHandler] = useState<(() => void) | null>(null);
-
   // Construct full workflow object from state
   // LoadingBoundary guarantees workflow is non-null here
   const workflow = useWorkflowState(state => ({
@@ -284,73 +289,6 @@ export function WorkflowEditor({
     updateSearchParams({ panel: null });
   };
 
-  // Callback from ManualRunPanel with run state
-  const handleRunStateChange = (
-    canRun: boolean,
-    isSubmitting: boolean,
-    handler: () => void,
-    retryHandler?: () => void,
-    isRetryable?: boolean
-  ) => {
-    setCanRunWorkflow(canRun);
-    setIsRunning(isSubmitting);
-    // Use retry handler if available and retryable, otherwise use regular handler
-    setRunHandler(() => (isRetryable && retryHandler ? retryHandler : handler));
-  };
-
-  // Handle Cmd/Ctrl+Enter to open run panel or trigger run
-  useHotkeys(
-    "mod+enter",
-    event => {
-      event.preventDefault();
-
-      // Don't do anything if user can't run (snapshots, permissions, locks, etc.)
-      if (!canOpenRunPanel) {
-        notifications.alert({
-          title: "Cannot run workflow",
-          description: runDisabledReason,
-        });
-        return;
-      }
-
-      if (isRunPanelOpen) {
-        // Panel is open - trigger run
-        if (runHandler && canRunWorkflow && !isRunning) {
-          runHandler();
-        }
-      } else {
-        // Panel is closed - open it
-        if (currentNode.type === "job" && currentNode.node) {
-          openRunPanel({ jobId: currentNode.node.id });
-        } else if (currentNode.type === "trigger" && currentNode.node) {
-          openRunPanel({ triggerId: currentNode.node.id });
-        } else {
-          // Nothing selected - open with first trigger (like clicking Run)
-          const firstTrigger = workflow.triggers[0];
-          if (firstTrigger) {
-            openRunPanel({ triggerId: firstTrigger.id });
-          }
-        }
-      }
-    },
-    {
-      enabled: !isIDEOpen, // Disable in canvas when IDE is open
-      enableOnFormTags: true,
-    },
-    [
-      canOpenRunPanel,
-      runDisabledReason,
-      isRunPanelOpen,
-      runHandler,
-      canRunWorkflow,
-      isRunning,
-      currentNode,
-      openRunPanel,
-      isIDEOpen,
-      workflow,
-    ]
-  );
-
   // Handle Ctrl/Cmd+E to open IDE for selected job
   useHotkeys(
     "ctrl+e,meta+e",
@@ -409,17 +347,18 @@ export function WorkflowEditor({
             {/* Run panel replaces inspector when open */}
             {isRunPanelOpen && runPanelContext && projectId && workflowId && (
               <div className="absolute inset-y-0 right-0 flex pointer-events-none z-20">
-                <ManualRunPanel
-                  workflow={workflow}
-                  projectId={projectId}
-                  workflowId={workflowId}
-                  jobId={runPanelContext.jobId ?? null}
-                  triggerId={runPanelContext.triggerId ?? null}
-                  edgeId={runPanelContext.edgeId ?? null}
-                  onClose={closeRunPanel}
-                  onRunStateChange={handleRunStateChange}
-                  saveWorkflow={saveWorkflow}
-                />
+                <ManualRunPanelErrorBoundary onClose={closeRunPanel}>
+                  <ManualRunPanel
+                    workflow={workflow}
+                    projectId={projectId}
+                    workflowId={workflowId}
+                    jobId={runPanelContext.jobId ?? null}
+                    triggerId={runPanelContext.triggerId ?? null}
+                    edgeId={runPanelContext.edgeId ?? null}
+                    onClose={closeRunPanel}
+                    saveWorkflow={saveWorkflow}
+                  />
+                </ManualRunPanelErrorBoundary>
               </div>
             )}
           </div>
