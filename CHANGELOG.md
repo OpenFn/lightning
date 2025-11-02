@@ -35,16 +35,6 @@ and this project adheres to
 
 ### Fixed
 
-- Fixed Cmd+Enter creating duplicate work orders in workflow editor - both
-  ManualRunPanel and WorkflowEditor keyboard handlers were firing simultaneously
-  [#3876](https://github.com/OpenFn/lightning/issues/3876)
-- Fixed GenServer crash when retrying from collaborative editor due to Y.Doc
-  workflow data structure issues
-  [#3876](https://github.com/OpenFn/lightning/issues/3876)
-- Fixed run panel blocking node selection and causing screen flashes when
-  switching between nodes
-  [#3876](https://github.com/OpenFn/lightning/issues/3876)
-
 ## [2.14.14-pre1] - 2025-10-30
 
 ### Added
