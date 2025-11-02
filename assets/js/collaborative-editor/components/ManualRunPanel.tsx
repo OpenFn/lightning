@@ -454,15 +454,11 @@ export function ManualRunPanel({
   ]);
 
   const handleRetry = useCallback(async () => {
-    logger.debug('=== handleRetry CALLED ===');
-
     // Guard against double-calls (e.g., from rapid keyboard shortcuts)
     if (isRetryingRef.current) {
-      logger.debug('handleRetry blocked: already retrying');
       return;
     }
     isRetryingRef.current = true;
-    logger.debug('isRetryingRef set to true');
 
     if (!followedRunId || !followedRunStep) {
       logger.error('Cannot retry: missing run or step data');
@@ -479,22 +475,14 @@ export function ManualRunPanel({
       return;
     }
 
-    logger.debug('Setting isSubmitting to true');
     setIsSubmitting(true);
     try {
       // Save workflow first (silently to avoid double notifications)
-      logger.debug('About to call saveWorkflow()');
       await saveWorkflow({ silent: true });
-      logger.debug('saveWorkflow() completed');
 
       // Call retry endpoint
       const retryUrl = `/projects/${projectId}/runs/${followedRunId}/retry`;
       const retryBody = { step_id: followedRunStep.id };
-      logger.debug('Calling retry endpoint:');
-      logger.debug('  URL:', retryUrl);
-      logger.debug('  Body:', JSON.stringify(retryBody));
-      logger.debug('  followedRunId:', followedRunId);
-      logger.debug('  followedRunStep.id:', followedRunStep.id);
 
       const csrfToken = getCsrfToken();
       const response = await fetch(retryUrl, {
@@ -507,9 +495,6 @@ export function ManualRunPanel({
         body: JSON.stringify(retryBody),
       });
 
-      logger.debug('Retry response status:', response.status);
-      logger.debug('Retry response ok:', response.ok);
-
       if (!response.ok) {
         const error = (await response.json()) as { error?: string };
         throw new Error(error.error || 'Failed to retry run');
@@ -519,14 +504,6 @@ export function ManualRunPanel({
         data: { run_id: string; work_order_id?: string };
       };
 
-      logger.debug('=== Retry response ===');
-      logger.debug('  New run_id:', result.data.run_id);
-      logger.debug(
-        '  work_order_id:',
-        result.data.work_order_id || 'not included in response'
-      );
-      logger.debug('  Full result:', result);
-
       notifications.success({
         title: 'Retry started',
         description: 'Saved latest changes and re-running with previous input',
@@ -534,13 +511,11 @@ export function ManualRunPanel({
 
       // Invoke callback with new run_id
       if (onRunSubmitted) {
-        logger.debug('Calling onRunSubmitted with run_id:', result.data.run_id);
         onRunSubmitted(result.data.run_id);
         // Reset submitting state after callback (component stays mounted)
         setIsSubmitting(false);
         isRetryingRef.current = false;
       } else {
-        logger.debug('Navigating to new run:', result.data.run_id);
         // Fallback: navigate to new run (component will unmount)
         window.location.href = `/projects/${projectId}/runs/${result.data.run_id}`;
         // No need to reset ref as component will unmount
@@ -636,59 +611,14 @@ export function ManualRunPanel({
     e => {
       e.preventDefault();
       e.stopPropagation(); // Prevent WorkflowEditor's handler from also firing
-      logger.debug('=== Cmd+Enter pressed ===');
-      logger.debug('canRun:', canRun);
-      logger.debug('isSubmitting:', isSubmitting);
-      logger.debug('runIsProcessing:', runIsProcessing);
-      logger.debug('isRetryable:', isRetryable);
-      logger.debug('followedRunId:', followedRunId);
-      logger.debug(
-        'followedRunStep.id:',
-        followedRunStep ? followedRunStep.id : null
-      );
-      logger.debug(
-        'followedRunStep.input_dataclip_id:',
-        followedRunStep ? followedRunStep.input_dataclip_id : null
-      );
-      logger.debug(
-        'selectedDataclip.id:',
-        selectedDataclip ? selectedDataclip.id : null
-      );
-      logger.debug(
-        'selectedDataclip.wiped_at:',
-        selectedDataclip ? selectedDataclip.wiped_at : null
-      );
-
-      // WHY IS isRetryable FALSE?
-      logger.debug('=== Debugging isRetryable calculation ===');
-      logger.debug('Has followedRunId?', !!followedRunId);
-      logger.debug('Has followedRunStep?', !!followedRunStep);
-      logger.debug('Has selectedDataclip?', !!selectedDataclip);
-      if (followedRunStep && selectedDataclip) {
-        logger.debug(
-          'Dataclip IDs match?',
-          followedRunStep.input_dataclip_id === selectedDataclip.id
-        );
-        logger.debug('Dataclip not wiped?', selectedDataclip.wiped_at === null);
-      }
 
       if (canRun && !isSubmitting && !runIsProcessing) {
         if (isRetryable) {
-          logger.debug('>>> Calling handleRetry() <<<');
           // Prevent double-calls by checking isSubmitting again in the handler
           void handleRetry();
         } else {
-          logger.debug(
-            '>>> Calling handleRun() (NEW WORK ORDER) because isRetryable is FALSE <<<'
-          );
           void handleRun();
         }
-      } else {
-        logger.debug('Cmd+Enter blocked:', {
-          canRun,
-          isSubmitting,
-          runIsProcessing,
-        });
       }
     },
     {
@@ -835,28 +765,9 @@ export function ManualRunPanel({
               isDisabled={!canRun}
               isSubmitting={isSubmitting || runIsProcessing}
               onRun={() => {
-                logger.debug('Button onRun() called');
                 void handleRun();
               }}
               onRetry={() => {
-                logger.debug('=== Button onRetry() called ===');
-                logger.debug('followedRunId:', followedRunId);
-                logger.debug(
-                  'followedRunStep.id:',
-                  followedRunStep ? followedRunStep.id : null
-                );
-                logger.debug(
-                  'followedRunStep.input_dataclip_id:',
-                  followedRunStep ? followedRunStep.input_dataclip_id : null
-                );
-                logger.debug(
-                  'selectedDataclip.id:',
-                  selectedDataclip ? selectedDataclip.id : null
-                );
-                logger.debug(
-                  'selectedDataclip.wiped_at:',
-                  selectedDataclip ? selectedDataclip.wiped_at : null
-                );
                 void handleRetry();
               }}
               buttonText={{
