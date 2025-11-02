@@ -3,9 +3,7 @@
  */
 
 import { useEffect, useRef, useState } from 'react';
-import { useHotkeys, useHotkeysContext } from 'react-hotkeys-hook';
-
-import _logger from '#/utils/logger';
+import { useHotkeys } from 'react-hotkeys-hook';
 
 import { useURLState } from '../../react/lib/use-url-state';
 import type { WorkflowState as YAMLWorkflowState } from '../../yaml/types';
@@ -29,8 +27,6 @@ import { FullScreenIDE } from './ide/FullScreenIDE';
 import { Inspector } from './inspector';
 import { LeftPanel } from './left-panel';
 import { ManualRunPanel } from './ManualRunPanel';
-
-const logger = _logger.ns('WorkflowEditor').seal();
 
 interface WorkflowEditorProps {
   parentProjectId?: string | null;
@@ -60,19 +56,12 @@ export function WorkflowEditor({
   // Manage "panel" scope based on whether run panel is open
   // When run panel opens, disable "panel" scope so Inspector Escape doesn't fire
   // When run panel closes, re-enable "panel" scope so Inspector Escape works
-  const { activeScopes } = useHotkeysContext();
-
-  useEffect(() => {
-    logger.debug({ activeScopes });
-  }, [activeScopes]);
 
   // Sync URL parameter when run panel opens/closes or context changes (write to URL)
   useEffect(() => {
     if (isSyncingRef.current) return; // Don't update URL if we're syncing from URL
 
     const panelParam = searchParams.get('panel');
-    const jobParam = searchParams.get('job');
-    const triggerParam = searchParams.get('trigger');
 
     if (isRunPanelOpen) {
       // Panel is open - only update URL if panel param is missing
