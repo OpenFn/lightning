@@ -176,6 +176,13 @@ export function FullScreenIDE({
   // Auto-fetch and select dataclip when following a run
   // This enables retry functionality in the IDE
   useEffect(() => {
+    console.log("[FullScreenIDE] followedRunStep changed:", {
+      followedRunStep,
+      input_dataclip_id: followedRunStep?.input_dataclip_id,
+      currentRun,
+      jobIdFromURL,
+    });
+
     if (!followedRunStep?.input_dataclip_id) {
       setSelectedDataclip(null);
       return;
@@ -184,6 +191,10 @@ export function FullScreenIDE({
     // Fetch the dataclip for retry
     const fetchDataclip = async () => {
       try {
+        console.log(
+          "[FullScreenIDE] Fetching dataclip:",
+          followedRunStep.input_dataclip_id
+        );
         const response = await fetch(
           `/api/dataclips/${followedRunStep.input_dataclip_id}`,
           {
@@ -192,6 +203,7 @@ export function FullScreenIDE({
         );
         if (response.ok) {
           const data = await response.json();
+          console.log("[FullScreenIDE] Dataclip fetched:", data.data);
           setSelectedDataclip(data.data);
         }
       } catch (error) {
@@ -200,17 +212,10 @@ export function FullScreenIDE({
     };
 
     void fetchDataclip();
-  }, [followedRunStep]);
+  }, [followedRunStep, currentRun, jobIdFromURL]);
 
   // Use run/retry hook for all run logic
-  const {
-    handleRun,
-    handleRetry,
-    isSubmitting,
-    isRetryable,
-    runIsProcessing,
-    canRun: canRunFromHook,
-  } = useRunRetry({
+  const hookParams = {
     projectId: projectId || "",
     workflowId: workflowId || "",
     runContext,
@@ -222,6 +227,23 @@ export function FullScreenIDE({
     saveWorkflow,
     onRunSubmitted: handleRunSubmitted,
     edgeId: null,
+  };
+  console.log("[FullScreenIDE] useRunRetry params:", hookParams);
+
+  const {
+    handleRun,
+    handleRetry,
+    isSubmitting,
+    isRetryable,
+    runIsProcessing,
+    canRun: canRunFromHook,
+  } = useRunRetry(hookParams);
+
+  console.log("[FullScreenIDE] useRunRetry result:", {
+    isRetryable,
+    isSubmitting,
+    runIsProcessing,
+    canRun: canRunFromHook,
   });
 
   // Right panel tab state
