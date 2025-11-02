@@ -10,6 +10,7 @@ import {
 import { cn } from "#/utils/cn";
 
 import { useURLState } from "../../../react/lib/use-url-state";
+import * as dataclipApi from "../../api/dataclips";
 import { useCurrentRun, useRunActions } from "../../hooks/useRun";
 import { useLiveViewActions } from "../../contexts/LiveViewActionsContext";
 import { useProjectAdaptors } from "../../hooks/useAdaptors";
@@ -183,36 +184,45 @@ export function FullScreenIDE({
       jobIdFromURL,
     });
 
-    if (!followedRunStep?.input_dataclip_id) {
+    if (!followedRunStep?.input_dataclip_id || !jobIdFromURL || !projectId) {
       setSelectedDataclip(null);
       return;
     }
 
-    // Fetch the dataclip for retry
+    // Fetch dataclips for this job and find the one we need
     const fetchDataclip = async () => {
       try {
         console.log(
-          "[FullScreenIDE] Fetching dataclip:",
-          followedRunStep.input_dataclip_id
+          "[FullScreenIDE] Fetching dataclips for job:",
+          jobIdFromURL
         );
-        const response = await fetch(
-          `/api/dataclips/${followedRunStep.input_dataclip_id}`,
-          {
-            credentials: "same-origin",
-          }
+        const response = await dataclipApi.searchDataclips(
+          projectId,
+          jobIdFromURL,
+          "",
+          {}
         );
-        if (response.ok) {
-          const data = await response.json();
-          console.log("[FullScreenIDE] Dataclip fetched:", data.data);
-          setSelectedDataclip(data.data);
+
+        // Find the specific dataclip from the step
+        const stepDataclip = response.data.find(
+          dc => dc.id === followedRunStep.input_dataclip_id
+        );
+
+        if (stepDataclip) {
+          console.log("[FullScreenIDE] Dataclip found:", stepDataclip);
+          setSelectedDataclip(stepDataclip);
+        } else {
+          console.warn("[FullScreenIDE] Dataclip not found in search results");
+          setSelectedDataclip(null);
         }
       } catch (error) {
         console.error("Failed to fetch dataclip for retry:", error);
+        setSelectedDataclip(null);
       }
     };
 
     void fetchDataclip();
-  }, [followedRunStep, currentRun, jobIdFromURL]);
+  }, [followedRunStep, currentRun, jobIdFromURL, projectId]);
 
   // Use run/retry hook for all run logic
   const hookParams = {
