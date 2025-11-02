@@ -1,5 +1,5 @@
-import { useState, useRef, useEffect } from 'react';
-import { cn } from '#/utils/cn';
+import { useState, useRef, useEffect } from "react";
+import { cn } from "#/utils/cn";
 
 interface RunRetryButtonProps {
   isRetryable: boolean;
@@ -12,8 +12,8 @@ interface RunRetryButtonProps {
     retry?: string;
     processing?: string;
   };
-  variant?: 'primary' | 'secondary';
-  dropdownPosition?: 'up' | 'down';
+  variant?: "primary" | "secondary";
+  dropdownPosition?: "up" | "down";
   className?: string;
 }
 
@@ -40,14 +40,14 @@ export function RunRetryButton({
   onRun,
   onRetry,
   buttonText = {},
-  variant = 'primary',
-  dropdownPosition = 'up',
+  variant = "primary",
+  dropdownPosition = "up",
   className,
 }: RunRetryButtonProps) {
   const {
-    run = 'Run Workflow',
-    retry = 'Run (retry)',
-    processing = 'Processing',
+    run = "Run Workflow",
+    retry = "Run (retry)",
+    processing = "Processing",
   } = buttonText;
 
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
@@ -56,16 +56,16 @@ export function RunRetryButton({
   // Variant-specific styles
   const variantStyles = {
     primary: {
-      base: 'bg-primary-600 hover:bg-primary-500 text-white',
-      disabled: 'disabled:bg-primary-300',
-      submitting: 'bg-primary-300 text-white',
-      focus: 'focus-visible:outline-primary-600',
+      base: "bg-primary-600 hover:bg-primary-500 text-white",
+      disabled: "disabled:bg-primary-300",
+      submitting: "bg-primary-300 text-white",
+      focus: "focus-visible:outline-primary-600",
     },
     secondary: {
-      base: 'bg-white hover:bg-gray-50 text-gray-900 inset-ring inset-ring-gray-300 hover:inset-ring-gray-400',
-      disabled: 'disabled:bg-gray-50 disabled:text-gray-400',
-      submitting: 'bg-gray-50 text-gray-400 inset-ring inset-ring-gray-300',
-      focus: 'focus-visible:outline-gray-600',
+      base: "bg-white hover:bg-gray-50 text-gray-900 inset-ring inset-ring-gray-300 hover:inset-ring-gray-400",
+      disabled: "disabled:bg-gray-50 disabled:text-gray-400",
+      submitting: "bg-gray-50 text-gray-400 inset-ring inset-ring-gray-300",
+      focus: "focus-visible:outline-gray-600",
     },
   };
 
@@ -84,8 +84,8 @@ export function RunRetryButton({
       }
     };
 
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [isDropdownOpen]);
 
   const handleMainClick = () => {
@@ -107,10 +107,10 @@ export function RunRetryButton({
         type="button"
         disabled
         className={cn(
-          'rounded-md text-sm font-semibold shadow-xs px-3 py-2',
+          "rounded-md text-sm font-semibold shadow-xs px-3 py-2",
           styles.submitting,
-          'cursor-not-allowed',
-          'flex items-center gap-1',
+          "cursor-not-allowed",
+          "flex items-center gap-1",
           className
         )}
       >
@@ -128,13 +128,13 @@ export function RunRetryButton({
         onClick={handleMainClick}
         disabled={isDisabled}
         className={cn(
-          'rounded-md text-sm font-semibold shadow-xs px-3 py-2',
+          "rounded-md text-sm font-semibold shadow-xs px-3 py-2",
           styles.base,
           styles.disabled,
-          'disabled:cursor-not-allowed',
-          'focus-visible:outline-2 focus-visible:outline-offset-2',
+          "disabled:cursor-not-allowed",
+          "focus-visible:outline-2 focus-visible:outline-offset-2",
           styles.focus,
-          'flex items-center gap-1',
+          "flex items-center gap-1",
           className
         )}
       >
@@ -147,7 +147,7 @@ export function RunRetryButton({
   // Split button
   return (
     <div
-      className={cn('inline-flex rounded-md shadow-xs', className)}
+      className={cn("inline-flex rounded-md shadow-xs", className)}
       ref={dropdownRef}
     >
       {/* Main button */}
@@ -156,13 +156,13 @@ export function RunRetryButton({
         onClick={handleMainClick}
         disabled={isDisabled}
         className={cn(
-          'rounded-md text-sm font-semibold shadow-xs px-3 py-2',
+          "rounded-md text-sm font-semibold shadow-xs px-3 py-2",
           styles.base,
           styles.disabled,
-          'disabled:cursor-not-allowed',
-          'focus-visible:outline-2 focus-visible:outline-offset-2',
+          "disabled:cursor-not-allowed",
+          "focus-visible:outline-2 focus-visible:outline-offset-2",
           styles.focus,
-          'relative inline-flex items-center rounded-r-none'
+          "relative inline-flex items-center rounded-r-none"
         )}
       >
         <span className="hero-play-mini w-4 h-4 mr-1"></span>
@@ -176,13 +176,13 @@ export function RunRetryButton({
           onClick={() => setIsDropdownOpen(!isDropdownOpen)}
           disabled={isDisabled}
           className={cn(
-            'rounded-md text-sm font-semibold shadow-xs px-1 py-2',
+            "rounded-md text-sm font-semibold shadow-xs px-1 py-2",
             styles.base,
             styles.disabled,
-            'disabled:cursor-not-allowed',
-            'focus-visible:outline-2 focus-visible:outline-offset-2',
+            "disabled:cursor-not-allowed",
+            "focus-visible:outline-2 focus-visible:outline-offset-2",
             styles.focus,
-            'h-full rounded-l-none'
+            "h-full rounded-l-none"
           )}
           aria-expanded={isDropdownOpen}
           aria-haspopup="true"
@@ -197,8 +197,8 @@ export function RunRetryButton({
             role="menu"
             aria-orientation="vertical"
             className={cn(
-              'absolute right-0 z-10 w-max',
-              dropdownPosition === 'up' ? 'bottom-full mb-2' : 'top-full mt-2'
+              "absolute right-0 z-10 w-max",
+              dropdownPosition === "up" ? "bottom-full mb-2" : "top-full mt-2"
             )}
           >
             <button
@@ -206,11 +206,11 @@ export function RunRetryButton({
               onClick={handleDropdownClick}
               disabled={isDisabled}
               className={cn(
-                'rounded-md text-sm font-semibold shadow-lg px-3 py-2',
-                'bg-white hover:bg-gray-50 text-gray-900',
-                'ring-1 ring-gray-300 ring-inset',
-                'disabled:opacity-50 disabled:cursor-not-allowed',
-                'flex items-center gap-1 whitespace-nowrap'
+                "rounded-md text-sm font-semibold shadow-lg px-3 py-2",
+                "bg-white hover:bg-gray-50 text-gray-900",
+                "ring-1 ring-gray-300 ring-inset",
+                "disabled:opacity-50 disabled:cursor-not-allowed",
+                "flex items-center gap-1 whitespace-nowrap"
               )}
             >
               <span className="hero-play-solid w-4 h-4"></span>
