@@ -461,7 +461,43 @@ defmodule Lightning.Collaboration.Session do
       {:error, :deserialization_failed, Exception.message(e)}
   end
 
+  # For :built workflows (new workflows not yet saved to DB), we need to handle them carefully:
+  # - If lock_version > 0, the workflow was already saved - fetch from DB to get proper structs
+  # - If lock_version == 0, it's truly new - replace plain maps with NotLoaded associations
+  defp fetch_workflow(
+         %{__meta__: %{state: :built}, lock_version: lock_version} = workflow
+       )
+       when lock_version > 0 do
+    # Workflow was already saved, fetch from DB to get proper Ecto structs
+    case Lightning.Workflows.get_workflow(workflow.id,
+           include: [:jobs, :edges, :triggers]
+         ) do
+      nil -> {:error, :workflow_deleted}
+      workflow -> {:ok, workflow}
+    end
+  end
+
   defp fetch_workflow(%{__meta__: %{state: :built}} = workflow) do
+    # Truly new workflow (lock_version == 0), replace plain map associations with NotLoaded
+    # This tells Ecto to use data from attrs parameter instead
+    workflow =
+      workflow
+      |> Map.put(:edges, %Ecto.Association.NotLoaded{
+        __cardinality__: :many,
+        __field__: :edges,
+        __owner__: Lightning.Workflows.Workflow
+      })
+      |> Map.put(:jobs, %Ecto.Association.NotLoaded{
+        __cardinality__: :many,
+        __field__: :jobs,
+        __owner__: Lightning.Workflows.Workflow
+      })
+      |> Map.put(:triggers, %Ecto.Association.NotLoaded{
+        __cardinality__: :many,
+        __field__: :triggers,
+        __owner__: Lightning.Workflows.Workflow
+      })
+
     {:ok, workflow}
   end
 
