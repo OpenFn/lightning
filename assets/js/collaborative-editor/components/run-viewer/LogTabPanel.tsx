@@ -61,27 +61,6 @@ export function LogTabPanel() {
     };
   }, []);
 
-  // Handle Monaco resize when panel is resized
-  useEffect(() => {
-    if (!containerRef.current || !viewerInstanceRef.current) {
-      return;
-    }
-
-    const resizeObserver = new ResizeObserver(() => {
-      // Monaco's layout method handles resize
-      const monaco = viewerInstanceRef.current?.monaco;
-      if (monaco) {
-        monaco.layout();
-      }
-    });
-
-    resizeObserver.observe(containerRef.current);
-
-    return () => {
-      resizeObserver.disconnect();
-    };
-  }, []);
-
   // Update selected step in log store
   useEffect(() => {
     storeRef.current.getState().setStepId(selectedStepId ?? undefined);
