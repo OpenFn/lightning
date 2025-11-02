@@ -1,13 +1,13 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 
 import * as dataclipApi from "../api/dataclips";
 import type { Dataclip } from "../api/dataclips";
-import { useCurrentRun, useRunStoreInstance } from "./useRun";
-import { useSession } from "./useSession";
+import { useCurrentRun } from "./useRun";
 import { getCsrfToken } from "../lib/csrf";
 import { notifications } from "../lib/notifications";
 import _logger from "#/utils/logger";
 import { useURLState } from "../../react/lib/use-url-state";
+import type { Workflow } from "../types/workflow";
 
 const logger = _logger.ns("useRunRetry").seal();
 
@@ -42,12 +42,12 @@ export interface UseRunRetryOptions {
   customBody: string;
   canRunWorkflow: boolean;
   workflowRunTooltipMessage: string;
-  saveWorkflow: (options?: { silent?: boolean }) => Promise<{
-    saved_at?: string;
-    lock_version?: number;
-  } | null>;
+  saveWorkflow: (options?: {
+    silent?: boolean;
+  }) => Promise<{ saved_at?: string; lock_version?: number } | null>;
   onRunSubmitted: ((runId: string) => void) | undefined;
   edgeId: string | null;
+  workflowEdges?: Workflow.Edge[];
 }
 
 export interface UseRunRetryReturn {
@@ -91,31 +91,39 @@ export function useRunRetry({
   saveWorkflow,
   onRunSubmitted,
   edgeId,
+  workflowEdges = [],
 }: UseRunRetryOptions): UseRunRetryReturn {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const isRetryingRef = useRef(false);
 
   // Retry state tracking via RunStore (WebSocket updates)
+  // Note: Connection management is handled by the parent component (FullScreenIDE or ManualRunPanel)
+  // This hook only reads the current run state from RunStore
   const { searchParams } = useURLState();
   const followedRunId = searchParams.get("run"); // 'run' param is run ID
   const currentRun = useCurrentRun(); // Real-time from WebSocket
-  const runStore = useRunStoreInstance();
-  const { provider } = useSession();
 
-  // Connect to run channel when followedRunId changes
-  useEffect(() => {
-    if (!followedRunId || !provider) {
-      runStore._disconnectFromRun();
-      return;
+  // Get step for current context from followed run (from real-time RunStore)
+  // For jobs: use the job's step directly
+  // For triggers: find the first job connected to the trigger and use its step
+  // This matches classical editor behavior (WorkflowController.get_selected_job)
+  const dataclipJobId = useMemo(() => {
+    if (runContext.type === "job") {
+      return runContext.id;
     }
 
-    // Connect and return cleanup function to prevent race conditions
-    // Cleanup is guaranteed to run before next effect or on unmount
-    return runStore._connectToRun(provider, followedRunId);
-  }, [followedRunId, provider, runStore]);
+    // For triggers: find the connected job (matching classical editor behavior)
+    // This allows retry to work when a trigger is selected
+    if (runContext.type === "trigger") {
+      // Find the edge from this trigger to a job
+      const edge = workflowEdges.find(
+        e => e.source_trigger_id === runContext.id
+      );
+      return edge?.target_job_id || undefined;
+    }
 
-  // Get step for current job from followed run (from real-time RunStore)
-  const dataclipJobId = runContext.type === "job" ? runContext.id : undefined;
+    return undefined;
+  }, [runContext, workflowEdges]);
 
   const followedRunStep = useMemo(() => {
     if (!currentRun || !dataclipJobId) return null;
@@ -127,7 +135,8 @@ export function useRunRetry({
 
   // Calculate retry eligibility
   // Button shows retry when step exists and selected dataclip matches
-  // This persists even during processing and after retry
+  // For triggers: uses the step of the first connected job (via edges)
+  // This matches classical editor behavior (WorkflowController.get_selected_job)
   const isRetryable = useMemo(() => {
     if (!followedRunId || !followedRunStep || !selectedDataclip) {
       return false;

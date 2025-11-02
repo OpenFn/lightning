@@ -11,7 +11,12 @@ import { cn } from "#/utils/cn";
 
 import { useURLState } from "../../../react/lib/use-url-state";
 import * as dataclipApi from "../../api/dataclips";
-import { useCurrentRun, useRunActions } from "../../hooks/useRun";
+import { RENDER_MODES } from "../../constants/panel";
+import {
+  useCurrentRun,
+  useRunActions,
+  useRunStoreInstance,
+} from "../../hooks/useRun";
 import { useLiveViewActions } from "../../contexts/LiveViewActionsContext";
 import { useProjectAdaptors } from "../../hooks/useAdaptors";
 import {
@@ -37,6 +42,7 @@ import { AdaptorSelectionModal } from "../AdaptorSelectionModal";
 import { CollaborativeMonaco } from "../CollaborativeMonaco";
 import { ConfigureAdaptorModal } from "../ConfigureAdaptorModal";
 import { ManualRunPanel } from "../ManualRunPanel";
+import { ManualRunPanelErrorBoundary } from "../ManualRunPanelErrorBoundary";
 import { RunViewerPanel } from "../run-viewer/RunViewerPanel";
 import { RunViewerErrorBoundary } from "../run-viewer/RunViewerErrorBoundary";
 import { SandboxIndicatorBanner } from "../SandboxIndicatorBanner";
@@ -66,6 +72,10 @@ function resolveAdaptor(adaptor: string): {
   };
 }
 
+// Stable selector functions to prevent useEffect re-runs
+const selectProvider = (state: any) => state.provider;
+const selectAwareness = (state: any) => state.awareness;
+
 interface FullScreenIDEProps {
   jobId?: string;
   onClose: () => void;
@@ -92,13 +102,18 @@ export function FullScreenIDE({
 }: FullScreenIDEProps) {
   const { searchParams, updateSearchParams } = useURLState();
   const jobIdFromURL = searchParams.get("job");
-  const runIdFromURL = searchParams.get("run");
+  // Support both 'run' (collaborative) and 'a' (classical) parameter for run ID
+  const runIdFromURL = searchParams.get("run") || searchParams.get("a");
   const stepIdFromURL = searchParams.get("step");
   const { selectJob, saveWorkflow } = useWorkflowActions();
   const { selectStep } = useRunActions();
   const { job: currentJob, ytext: currentJobYText } = useCurrentJob();
-  const { awareness } = useSession();
+  // Get provider and awareness with stable selector functions
+  // Using stable functions defined outside component to prevent useEffect re-runs
+  const awareness = useSession(selectAwareness);
+  const provider = useSession(selectProvider);
   const { canSave, tooltipMessage } = useCanSave();
+  const runStore = useRunStoreInstance();
   // Get UI commands from store
   const repoConnection = useProjectRepoConnection();
   const { openGitHubSyncModal } = useUICommands();
@@ -176,20 +191,27 @@ export function FullScreenIDE({
 
   // Auto-fetch and select dataclip when following a run
   // This enables retry functionality in the IDE
+  // Fetch once when input_dataclip_id becomes available
   useEffect(() => {
-    if (!followedRunStep?.input_dataclip_id || !jobIdFromURL || !projectId) {
-      setSelectedDataclip(null);
+    const inputDataclipId = followedRunStep?.input_dataclip_id;
+
+    // Early returns: conditions where we shouldn't fetch
+    if (!inputDataclipId || !jobIdFromURL || !projectId) {
       return;
     }
 
-    // Get run ID from URL
-    const runId = searchParams.get("run");
+    // Skip if we already have the correct dataclip
+    if (selectedDataclip?.id === inputDataclipId) {
+      return;
+    }
+
+    // Get run ID from URL (support both 'run' and 'a' parameters)
+    const runId = searchParams.get("run") || searchParams.get("a");
     if (!runId) {
-      setSelectedDataclip(null);
       return;
     }
 
-    // Use getRunDataclip API which is designed for this exact use case
+    // Fetch the dataclip for this run
     const fetchDataclip = async () => {
       try {
         const response = await dataclipApi.getRunDataclip(
@@ -200,17 +222,20 @@ export function FullScreenIDE({
 
         if (response.dataclip) {
           setSelectedDataclip(response.dataclip);
-        } else {
-          setSelectedDataclip(null);
         }
       } catch (error) {
         console.error("Failed to fetch dataclip for retry:", error);
-        setSelectedDataclip(null);
       }
     };
 
     void fetchDataclip();
-  }, [followedRunStep, currentRun, jobIdFromURL, projectId, searchParams]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    followedRunStep?.input_dataclip_id,
+    jobIdFromURL,
+    projectId,
+    searchParams,
+  ]);
 
   // Use run/retry hook for all run logic
   const {
@@ -232,6 +257,7 @@ export function FullScreenIDE({
     saveWorkflow,
     onRunSubmitted: handleRunSubmitted,
     edgeId: null,
+    workflowEdges: workflow?.edges || [],
   });
 
   // Right panel tab state
@@ -281,6 +307,18 @@ export function FullScreenIDE({
       selectJob(jobIdFromURL);
     }
   }, [jobIdFromURL, selectJob]);
+
+  // Connect to run channel when URL has run parameter
+  // This keeps the connection alive independently of panel collapse state
+  useEffect(() => {
+    if (!runIdFromURL || !provider) {
+      runStore._disconnectFromRun();
+      return;
+    }
+
+    const cleanup = runStore._connectToRun(provider, runIdFromURL);
+    return cleanup;
+  }, [runIdFromURL, provider, runStore]);
 
   // Sync URL run_id to followRunId
   useEffect(() => {
@@ -678,17 +716,21 @@ export function FullScreenIDE({
                     isLeftCollapsed && "hidden"
                   )}
                 >
-                  <ManualRunPanel
-                    workflow={workflow}
-                    projectId={projectId}
-                    workflowId={workflowId}
-                    jobId={jobIdFromURL ?? null}
-                    triggerId={null}
+                  <ManualRunPanelErrorBoundary
                     onClose={handleCollapseLeftPanel}
-                    renderMode="embedded"
-                    saveWorkflow={saveWorkflow}
-                    onRunSubmitted={handleRunSubmitted}
-                  />
+                  >
+                    <ManualRunPanel
+                      workflow={workflow}
+                      projectId={projectId}
+                      workflowId={workflowId}
+                      jobId={jobIdFromURL ?? null}
+                      triggerId={null}
+                      onClose={handleCollapseLeftPanel}
+                      renderMode={RENDER_MODES.EMBEDDED}
+                      saveWorkflow={saveWorkflow}
+                      onRunSubmitted={handleRunSubmitted}
+                    />
+                  </ManualRunPanelErrorBoundary>
                 </div>
               )}
             </div>
