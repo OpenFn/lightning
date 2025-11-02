@@ -3,7 +3,7 @@ import {
   PencilSquareIcon,
   QueueListIcon,
 } from "@heroicons/react/24/outline";
-import { useCallback, useEffect, useMemo, useState, useRef } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
 
 import { cn } from "#/utils/cn";
@@ -17,10 +17,8 @@ import { useURLState } from "../../react/lib/use-url-state";
 import type { Dataclip } from "../api/dataclips";
 import * as dataclipApi from "../api/dataclips";
 import { useCanRun } from "../hooks/useWorkflow";
-import { useCurrentRun, useRunStoreInstance } from "../hooks/useRun";
-import { useSession } from "../hooks/useSession";
-import { getCsrfToken } from "../lib/csrf";
-import { notifications } from "../lib/notifications";
+import { useCurrentRun } from "../hooks/useRun";
+import { useRunRetry } from "../hooks/useRunRetry";
 import type { Workflow } from "../types/workflow";
 
 import { InspectorFooter } from "./inspector/InspectorFooter";
@@ -30,25 +28,6 @@ import { RunRetryButton } from "./RunRetryButton";
 import { Tabs } from "./Tabs";
 
 const logger = _logger.ns("ManualRunPanel").seal();
-
-// Final states for a run (matches Lightning.Run.final_states/0)
-const FINAL_RUN_STATES = [
-  "success",
-  "failed",
-  "crashed",
-  "cancelled",
-  "killed",
-  "exception",
-  "lost",
-];
-
-function isFinalState(state: string): boolean {
-  return FINAL_RUN_STATES.includes(state);
-}
-
-function isProcessing(state: string | null): boolean {
-  return state !== null && !isFinalState(state);
-}
 
 interface ManualRunPanelProps {
   workflow: Workflow;
@@ -93,35 +72,14 @@ export function ManualRunPanel({
   const [selectedDataclip, setSelectedDataclip] = useState<Dataclip | null>(
     null
   );
-  const isRetryingRef = useRef(false);
   const [dataclips, setDataclips] = useState<Dataclip[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [customBody, setCustomBody] = useState("{}");
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [nextCronRunDataclipId, setNextCronRunDataclipId] = useState<
     string | null
   >(null);
   const [canEditDataclip, setCanEditDataclip] = useState(false);
   const [currentRunDataclip] = useState<Dataclip | null>(null);
-
-  // Retry state tracking via RunStore (WebSocket updates)
-  const { searchParams } = useURLState();
-  const followedRunId = searchParams.get("run"); // 'run' param is run ID
-  const currentRun = useCurrentRun(); // Real-time from WebSocket
-  const runStore = useRunStoreInstance();
-  const { provider } = useSession();
-
-  // Connect to run channel when followedRunId changes
-  useEffect(() => {
-    if (!followedRunId || !provider) {
-      runStore._disconnectFromRun();
-      return;
-    }
-
-    // Connect and return cleanup function to prevent race conditions
-    // Cleanup is guaranteed to run before next effect or on unmount
-    return runStore._connectToRun(provider, followedRunId);
-  }, [followedRunId, provider, runStore]);
 
   // Filter state for ExistingView
   const [selectedClipType, setSelectedClipType] = useState("");
@@ -135,6 +93,11 @@ export function ManualRunPanel({
   const { canRun: canRunWorkflow, tooltipMessage: workflowRunTooltipMessage } =
     useCanRun();
 
+  // Get URL state for following runs
+  const { searchParams } = useURLState();
+  const followedRunId = searchParams.get("run");
+  const currentRun = useCurrentRun(); // Real-time from WebSocket
+
   // Determine run context
   const runContext = jobId
     ? { type: "job" as const, id: jobId }
@@ -142,7 +105,7 @@ export function ManualRunPanel({
       ? { type: "trigger" as const, id: triggerId }
       : {
           type: "trigger" as const,
-          id: workflow.triggers[0]?.id,
+          id: workflow.triggers[0]?.id || "",
         };
 
   // Get the node for panel title
@@ -178,7 +141,29 @@ export function ManualRunPanel({
     return triggerEdge?.target_job_id || workflow.jobs[0]?.id;
   }, [runContext, workflow.edges, workflow.jobs]);
 
-  // Get step for current job from followed run (from real-time RunStore)
+  // Use run/retry hook for all run logic
+  const {
+    handleRun,
+    handleRetry,
+    isSubmitting,
+    isRetryable,
+    runIsProcessing,
+    canRun,
+  } = useRunRetry({
+    projectId,
+    workflowId,
+    runContext,
+    selectedTab,
+    selectedDataclip,
+    customBody,
+    canRunWorkflow,
+    workflowRunTooltipMessage,
+    saveWorkflow,
+    onRunSubmitted: onRunSubmitted,
+    edgeId: edgeId || null,
+  });
+
+  // Get step for current job from followed run (needed for dataclip auto-selection)
   const followedRunStep = useMemo(() => {
     if (!currentRun || !dataclipJobId) return null;
     return currentRun.steps.find(s => s.job_id === dataclipJobId) || null;
@@ -372,200 +357,6 @@ export function ManualRunPanel({
     },
     [projectId]
   );
-
-  const handleRun = useCallback(async () => {
-    const contextId = runContext.id;
-    if (!contextId) {
-      logger.error("No context ID available");
-      return;
-    }
-
-    // Check workflow-level permissions before running
-    if (!canRunWorkflow) {
-      notifications.alert({
-        title: "Cannot run workflow",
-        description: workflowRunTooltipMessage,
-      });
-      return;
-    }
-
-    setIsSubmitting(true);
-    try {
-      // Save workflow first (silently - user action is "run", not "save")
-      await saveWorkflow({ silent: true });
-
-      const params: dataclipApi.ManualRunParams = {
-        workflowId,
-        projectId,
-      };
-
-      // Add job or trigger ID
-      if (runContext.type === "job") {
-        params.jobId = contextId;
-      } else {
-        params.triggerId = contextId;
-      }
-
-      // Add dataclip or custom body based on selected tab
-      if (selectedTab === "existing" && selectedDataclip) {
-        params.dataclipId = selectedDataclip.id;
-      } else if (selectedTab === "custom") {
-        params.customBody = customBody;
-      }
-      // For 'empty' tab, no dataclip or body needed
-
-      const response = await dataclipApi.submitManualRun(params);
-
-      // Show success notification
-      notifications.success({
-        title: "Run started",
-        description: "Saved latest changes and created new work order",
-      });
-
-      // Invoke callback with run_id (stay in IDE, don't navigate)
-      if (onRunSubmitted) {
-        onRunSubmitted(response.data.run_id);
-      } else {
-        // Fallback: navigate away if no callback (for standalone mode)
-        window.location.href = `/projects/${projectId}/runs/${response.data.run_id}`;
-      }
-
-      // Reset submitting state after successful submission
-      setIsSubmitting(false);
-    } catch (error) {
-      logger.error("Failed to submit run:", error);
-      notifications.alert({
-        title: "Failed to submit run",
-        description:
-          error instanceof Error ? error.message : "An unknown error occurred",
-      });
-      setIsSubmitting(false);
-    }
-  }, [
-    workflowId,
-    projectId,
-    runContext,
-    selectedTab,
-    selectedDataclip,
-    customBody,
-    saveWorkflow,
-    canRunWorkflow,
-    workflowRunTooltipMessage,
-    onRunSubmitted,
-  ]);
-
-  const handleRetry = useCallback(async () => {
-    // Guard against double-calls (e.g., from rapid keyboard shortcuts)
-    if (isRetryingRef.current) {
-      return;
-    }
-    isRetryingRef.current = true;
-
-    if (!followedRunId || !followedRunStep) {
-      logger.error("Cannot retry: missing run or step data");
-      isRetryingRef.current = false;
-      return;
-    }
-
-    if (!canRunWorkflow) {
-      notifications.alert({
-        title: "Cannot run workflow",
-        description: workflowRunTooltipMessage,
-      });
-      isRetryingRef.current = false;
-      return;
-    }
-
-    setIsSubmitting(true);
-    try {
-      // Save workflow first (silently to avoid double notifications)
-      await saveWorkflow({ silent: true });
-
-      // Call retry endpoint
-      const retryUrl = `/projects/${projectId}/runs/${followedRunId}/retry`;
-      const retryBody = { step_id: followedRunStep.id };
-
-      const csrfToken = getCsrfToken();
-      const response = await fetch(retryUrl, {
-        method: "POST",
-        credentials: "same-origin",
-        headers: {
-          "Content-Type": "application/json",
-          "X-CSRF-Token": csrfToken || "",
-        },
-        body: JSON.stringify(retryBody),
-      });
-
-      if (!response.ok) {
-        const error = (await response.json()) as { error?: string };
-        throw new Error(error.error || "Failed to retry run");
-      }
-
-      const result = (await response.json()) as {
-        data: { run_id: string; work_order_id?: string };
-      };
-
-      notifications.success({
-        title: "Retry started",
-        description: "Saved latest changes and re-running with previous input",
-      });
-
-      // Invoke callback with new run_id
-      if (onRunSubmitted) {
-        onRunSubmitted(result.data.run_id);
-        // Reset submitting state after callback (component stays mounted)
-        setIsSubmitting(false);
-        isRetryingRef.current = false;
-      } else {
-        // Fallback: navigate to new run (component will unmount)
-        window.location.href = `/projects/${projectId}/runs/${result.data.run_id}`;
-        // No need to reset ref as component will unmount
-      }
-    } catch (error) {
-      logger.error("Failed to retry run:", error);
-      notifications.alert({
-        title: "Retry failed",
-        description: error instanceof Error ? error.message : "Unknown error",
-      });
-      setIsSubmitting(false);
-      isRetryingRef.current = false;
-    }
-  }, [
-    followedRunId,
-    followedRunStep,
-    canRunWorkflow,
-    workflowRunTooltipMessage,
-    saveWorkflow,
-    projectId,
-    onRunSubmitted,
-  ]);
-
-  // Check if the followed run is currently processing (from real-time WebSocket)
-  const runIsProcessing = currentRun ? isProcessing(currentRun.state) : false;
-
-  // Calculate retry eligibility
-  // Button shows retry when step exists and selected dataclip matches
-  // This persists even during processing and after retry
-  const isRetryable = useMemo(() => {
-    if (!followedRunId || !followedRunStep || !selectedDataclip) {
-      return false;
-    }
-
-    return (
-      selectedDataclip.wiped_at === null &&
-      followedRunStep.input_dataclip_id === selectedDataclip.id
-    );
-  }, [followedRunId, followedRunStep, selectedDataclip]);
-
-  // Combine workflow-level permissions with local validation
-  // Local validation: user must have selected valid input (empty, custom, or existing dataclip)
-  const hasValidInput =
-    selectedTab === "empty" ||
-    (selectedTab === "existing" && !!selectedDataclip) ||
-    selectedTab === "custom";
-
-  // Disable run when edge is selected (cannot run from an edge)
-  const canRun = !edgeId && canRunWorkflow && hasValidInput;
 
   // Notify parent of run state changes (for embedded mode)
   useEffect(() => {
