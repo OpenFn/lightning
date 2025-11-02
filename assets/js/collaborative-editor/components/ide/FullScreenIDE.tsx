@@ -169,7 +169,7 @@ export function FullScreenIDE({
 
   // Get step for current job from followed run
   const followedRunStep = useMemo(() => {
-    if (!currentRun || !jobIdFromURL) return null;
+    if (!currentRun || !currentRun.steps || !jobIdFromURL) return null;
     return currentRun.steps.find(s => s.job_id === jobIdFromURL) || null;
   }, [currentRun, jobIdFromURL]);
 
