@@ -10,7 +10,7 @@ import {
 import { cn } from "#/utils/cn";
 
 import { useURLState } from "../../../react/lib/use-url-state";
-import { useRunStoreInstance } from "../../hooks/useRun";
+import { useCurrentRun } from "../../hooks/useRun";
 import { useLiveViewActions } from "../../contexts/LiveViewActionsContext";
 import { useProjectAdaptors } from "../../hooks/useAdaptors";
 import {
@@ -165,7 +165,7 @@ export function FullScreenIDE({
       };
 
   // Get current run from RunStore for retry detection
-  const currentRun = useRunStoreInstance(state => state.currentRun);
+  const currentRun = useCurrentRun();
 
   // Get step for current job from followed run
   const followedRunStep = useMemo(() => {
