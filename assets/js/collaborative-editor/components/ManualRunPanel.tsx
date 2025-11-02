@@ -120,8 +120,7 @@ export function ManualRunPanel({
 
     // Connect and return cleanup function to prevent race conditions
     // Cleanup is guaranteed to run before next effect or on unmount
-    const cleanup = runStore._connectToRun(provider, followedRunId);
-    return cleanup;
+    return runStore._connectToRun(provider, followedRunId);
   }, [followedRunId, provider, runStore]);
 
   // Filter state for ExistingView
