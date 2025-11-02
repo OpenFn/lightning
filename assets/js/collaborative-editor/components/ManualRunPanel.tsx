@@ -360,6 +360,7 @@ export function ManualRunPanel({
   );
 
   // Handle ⌘+Enter for main action (Run or Retry based on state)
+  // Only enabled in standalone mode - embedded mode uses IDEHeader handlers
   useHotkeys(
     "mod+enter",
     e => {
@@ -376,7 +377,7 @@ export function ManualRunPanel({
       }
     },
     {
-      enabled: true,
+      enabled: renderMode === "standalone",
       enableOnFormTags: true,
     },
     [
@@ -389,10 +390,12 @@ export function ManualRunPanel({
       followedRunId,
       followedRunStep,
       selectedDataclip,
+      renderMode,
     ]
   );
 
   // Handle ⌘+Shift+Enter for force new work order
+  // Only enabled in standalone mode - embedded mode uses IDEHeader handlers
   useHotkeys(
     "mod+shift+enter",
     e => {
@@ -403,10 +406,10 @@ export function ManualRunPanel({
       }
     },
     {
-      enabled: true,
+      enabled: renderMode === "standalone",
       enableOnFormTags: true,
     },
-    [canRun, isSubmitting, runIsProcessing, isRetryable, handleRun]
+    [canRun, isSubmitting, runIsProcessing, isRetryable, handleRun, renderMode]
   );
 
   // Extract content for reuse

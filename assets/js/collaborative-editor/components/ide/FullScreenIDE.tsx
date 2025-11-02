@@ -177,42 +177,30 @@ export function FullScreenIDE({
   // Auto-fetch and select dataclip when following a run
   // This enables retry functionality in the IDE
   useEffect(() => {
-    console.log("[FullScreenIDE] followedRunStep changed:", {
-      followedRunStep,
-      input_dataclip_id: followedRunStep?.input_dataclip_id,
-      currentRun,
-      jobIdFromURL,
-    });
-
     if (!followedRunStep?.input_dataclip_id || !jobIdFromURL || !projectId) {
       setSelectedDataclip(null);
       return;
     }
 
-    // Fetch dataclips for this job and find the one we need
+    // Get run ID from URL
+    const runId = searchParams.get("run");
+    if (!runId) {
+      setSelectedDataclip(null);
+      return;
+    }
+
+    // Use getRunDataclip API which is designed for this exact use case
     const fetchDataclip = async () => {
       try {
-        console.log(
-          "[FullScreenIDE] Fetching dataclips for job:",
+        const response = await dataclipApi.getRunDataclip(
+          projectId,
+          runId,
           jobIdFromURL
         );
-        const response = await dataclipApi.searchDataclips(
-          projectId,
-          jobIdFromURL,
-          "",
-          {}
-        );
 
-        // Find the specific dataclip from the step
-        const stepDataclip = response.data.find(
-          dc => dc.id === followedRunStep.input_dataclip_id
-        );
-
-        if (stepDataclip) {
-          console.log("[FullScreenIDE] Dataclip found:", stepDataclip);
-          setSelectedDataclip(stepDataclip);
+        if (response.dataclip) {
+          setSelectedDataclip(response.dataclip);
         } else {
-          console.warn("[FullScreenIDE] Dataclip not found in search results");
           setSelectedDataclip(null);
         }
       } catch (error) {
@@ -222,10 +210,17 @@ export function FullScreenIDE({
     };
 
     void fetchDataclip();
-  }, [followedRunStep, currentRun, jobIdFromURL, projectId]);
+  }, [followedRunStep, currentRun, jobIdFromURL, projectId, searchParams]);
 
   // Use run/retry hook for all run logic
-  const hookParams = {
+  const {
+    handleRun,
+    handleRetry,
+    isSubmitting,
+    isRetryable,
+    runIsProcessing,
+    canRun: canRunFromHook,
+  } = useRunRetry({
     projectId: projectId || "",
     workflowId: workflowId || "",
     runContext,
@@ -237,23 +232,6 @@ export function FullScreenIDE({
     saveWorkflow,
     onRunSubmitted: handleRunSubmitted,
     edgeId: null,
-  };
-  console.log("[FullScreenIDE] useRunRetry params:", hookParams);
-
-  const {
-    handleRun,
-    handleRetry,
-    isSubmitting,
-    isRetryable,
-    runIsProcessing,
-    canRun: canRunFromHook,
-  } = useRunRetry(hookParams);
-
-  console.log("[FullScreenIDE] useRunRetry result:", {
-    isRetryable,
-    isSubmitting,
-    runIsProcessing,
-    canRun: canRunFromHook,
   });
 
   // Right panel tab state
