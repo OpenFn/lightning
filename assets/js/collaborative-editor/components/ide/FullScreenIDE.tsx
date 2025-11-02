@@ -8,7 +8,6 @@ import {
 } from "react-resizable-panels";
 
 import { cn } from "#/utils/cn";
-import _logger from "#/utils/logger";
 
 import { useURLState } from "../../../react/lib/use-url-state";
 import { useRunStoreInstance } from "../../hooks/useRun";
@@ -18,8 +17,8 @@ import {
   useCredentials,
   useCredentialsCommands,
 } from "../../hooks/useCredentials";
-import { useRunStoreInstance } from "../../hooks/useRun";
 import { useSession } from "../../hooks/useSession";
+import { useRunRetry } from "../../hooks/useRunRetry";
 import {
   useLatestSnapshotLockVersion,
   useProject,
@@ -45,8 +44,6 @@ import { Tabs } from "../Tabs";
 import { IDEHeader } from "./IDEHeader";
 import { PanelToggleButton } from "./PanelToggleButton";
 import { useUICommands } from "#/collaborative-editor/hooks/useUI";
-
-const logger = _logger.ns("FullScreenIDE").seal();
 
 /**
  * Resolves an adaptor specifier into its package name and version
@@ -139,16 +136,52 @@ export function FullScreenIDE({
   const [isCenterCollapsed, setIsCenterCollapsed] = useState(false);
   const [isRightCollapsed, setIsRightCollapsed] = useState(true);
 
-  // Run state from ManualRunPanel
-  const [canRunWorkflow, setCanRunWorkflow] = useState(false);
-  const [isRunning, setIsRunning] = useState(false);
-  const [runHandler, setRunHandler] = useState<(() => void) | null>(null);
-  const [retryHandler, setRetryHandler] = useState<(() => void) | null>(null);
-  const [isRetryable, setIsRetryable] = useState(false);
-  const [runIsProcessing, setRunIsProcessing] = useState(false);
-
   // Follow run state for right panel
   const [followRunId, setFollowRunId] = useState<string | null>(null);
+
+  // Handler for run submission - auto-expands right panel and updates URL
+  const handleRunSubmitted = useCallback(
+    (runId: string) => {
+      setFollowRunId(runId);
+      updateSearchParams({ run: runId });
+
+      // Auto-expand right panel if collapsed
+      if (rightPanelRef.current?.isCollapsed()) {
+        rightPanelRef.current.expand();
+      }
+    },
+    [updateSearchParams]
+  );
+
+  // Determine run context (job from URL)
+  const runContext = jobIdFromURL
+    ? { type: "job" as const, id: jobIdFromURL }
+    : {
+        type: "trigger" as const,
+        id: workflow?.triggers[0]?.id || "",
+      };
+
+  // Use run/retry hook for all run logic
+  const {
+    handleRun,
+    handleRetry,
+    isSubmitting,
+    isRetryable,
+    runIsProcessing,
+    canRun: canRunFromHook,
+  } = useRunRetry({
+    projectId: projectId || "",
+    workflowId: workflowId || "",
+    runContext,
+    selectedTab: "empty", // IDE doesn't have manual input selection
+    selectedDataclip: null,
+    customBody: "{}",
+    canRunWorkflow: canRunSnapshot,
+    workflowRunTooltipMessage: runTooltipMessage,
+    saveWorkflow,
+    onRunSubmitted: handleRunSubmitted,
+    edgeId: null,
+  });
 
   // Right panel tab state
   type RightPanelTab = "run" | "log" | "input" | "output";
@@ -234,68 +267,6 @@ export function FullScreenIDE({
   // Handler for collapsing left panel (no close button in IDE context)
   const handleCollapseLeftPanel = () => {
     leftPanelRef.current?.collapse();
-  };
-
-  // Handler for run submission - auto-expands right panel and updates URL
-  const handleRunSubmitted = (runId: string) => {
-    setFollowRunId(runId);
-    updateSearchParams({ run: runId });
-
-    // Auto-expand right panel if collapsed
-    if (rightPanelRef.current?.isCollapsed()) {
-      rightPanelRef.current.expand();
-    }
-  };
-
-  // Callback from ManualRunPanel with run state
-  const handleRunStateChange = (
-    canRun: boolean,
-    isSubmitting: boolean,
-    runHandler: () => void,
-    retryHandler?: () => void,
-    isRetryable?: boolean,
-    processing?: boolean
-  ) => {
-    setCanRunWorkflow(canRun);
-    setIsRunning(isSubmitting);
-    setRunHandler(() => runHandler);
-    setRetryHandler(retryHandler ? () => retryHandler : null);
-    setIsRetryable(isRetryable ?? false);
-    setRunIsProcessing(processing ?? false);
-  };
-
-  // Handler for Run button
-  const handleRunClick = () => {
-    if (!canRunSnapshot) {
-      notifications.alert({
-        title: "Cannot run",
-        description: runTooltipMessage,
-      });
-      return;
-    }
-
-    if (!canRunWorkflow || isRunning || runIsProcessing || !runHandler) {
-      return;
-    }
-
-    runHandler();
-  };
-
-  // Handler for Retry button
-  const handleRetryClick = () => {
-    if (!canRunSnapshot) {
-      notifications.alert({
-        title: "Cannot run",
-        description: runTooltipMessage,
-      });
-      return;
-    }
-
-    if (!canRunWorkflow || isRunning || runIsProcessing || !retryHandler) {
-      return;
-    }
-
-    retryHandler();
   };
 
   // Adaptor modal handlers
@@ -527,13 +498,13 @@ export function FullScreenIDE({
         projectId={projectId}
         onClose={onClose}
         onSave={handleSave}
-        onRun={handleRunClick}
-        onRetry={handleRetryClick}
+        onRun={handleRun}
+        onRetry={handleRetry}
         isRetryable={isRetryable}
         canRun={
-          canRunSnapshot && canRunWorkflow && !isRunning && !runIsProcessing
+          canRunSnapshot && canRunFromHook && !isSubmitting && !runIsProcessing
         }
-        isRunning={isRunning || runIsProcessing}
+        isRunning={isSubmitting || runIsProcessing}
         canSave={canSave}
         saveTooltip={tooltipMessage}
         runTooltip={runTooltipMessage}
@@ -618,7 +589,6 @@ export function FullScreenIDE({
                     triggerId={null}
                     onClose={handleCollapseLeftPanel}
                     renderMode="embedded"
-                    onRunStateChange={handleRunStateChange}
                     saveWorkflow={saveWorkflow}
                     onRunSubmitted={handleRunSubmitted}
                   />
