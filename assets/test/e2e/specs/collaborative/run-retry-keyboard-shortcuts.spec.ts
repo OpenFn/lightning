@@ -61,7 +61,13 @@ test.describe("Run/Retry Keyboard Shortcuts @collaborative @critical", () => {
 
     const collabPage = new WorkflowCollaborativePage(page);
     await collabPage.waitForReactComponentLoaded();
-    await collabPage.waitForSynced();
+
+    // Wait for workflow canvas to be interactive (job nodes visible)
+    // We don't strictly need full "Synced" state for keyboard shortcut tests
+    await page
+      .locator('[data-testid="job-node"]')
+      .first()
+      .waitFor({ timeout: 30000 });
   });
 
   test("Cmd+Enter triggers run from Manual Run Panel", async ({
