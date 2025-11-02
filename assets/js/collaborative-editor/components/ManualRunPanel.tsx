@@ -38,14 +38,6 @@ interface ManualRunPanelProps {
   edgeId?: string | null;
   onClose: () => void;
   renderMode?: "standalone" | "embedded";
-  onRunStateChange?: (
-    canRun: boolean,
-    isSubmitting: boolean,
-    runHandler: () => void,
-    retryHandler?: () => void,
-    isRetryable?: boolean,
-    processing?: boolean
-  ) => void;
   saveWorkflow: (options?: { silent?: boolean }) => Promise<{
     saved_at?: string;
     lock_version?: number;
@@ -64,7 +56,6 @@ export function ManualRunPanel({
   edgeId,
   onClose,
   renderMode = "standalone",
-  onRunStateChange,
   saveWorkflow,
   onRunSubmitted,
 }: ManualRunPanelProps) {
@@ -357,35 +348,6 @@ export function ManualRunPanel({
     },
     [projectId]
   );
-
-  // Notify parent of run state changes (for embedded mode)
-  useEffect(() => {
-    if (onRunStateChange) {
-      // Wrap handlers to avoid promise warnings in parent components
-      const wrappedHandleRun = () => {
-        void handleRun();
-      };
-      const wrappedHandleRetry = () => {
-        void handleRetry();
-      };
-      onRunStateChange(
-        canRun,
-        isSubmitting,
-        wrappedHandleRun,
-        wrappedHandleRetry,
-        isRetryable,
-        runIsProcessing
-      );
-    }
-  }, [
-    canRun,
-    isSubmitting,
-    handleRun,
-    handleRetry,
-    isRetryable,
-    runIsProcessing,
-    onRunStateChange,
-  ]);
 
   // Handle Escape key to close the run panel
   useHotkeys(
