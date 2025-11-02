@@ -10,7 +10,7 @@ import {
 import { cn } from "#/utils/cn";
 
 import { useURLState } from "../../../react/lib/use-url-state";
-import { useCurrentRun } from "../../hooks/useRun";
+import { useCurrentRun, useRunActions } from "../../hooks/useRun";
 import { useLiveViewActions } from "../../contexts/LiveViewActionsContext";
 import { useProjectAdaptors } from "../../hooks/useAdaptors";
 import {
@@ -94,7 +94,7 @@ export function FullScreenIDE({
   const runIdFromURL = searchParams.get("run");
   const stepIdFromURL = searchParams.get("step");
   const { selectJob, saveWorkflow } = useWorkflowActions();
-  const runStore = useRunStoreInstance();
+  const { selectStep } = useRunActions();
   const { job: currentJob, ytext: currentJobYText } = useCurrentJob();
   const { awareness } = useSession();
   const { canSave, tooltipMessage } = useCanSave();
@@ -309,9 +309,9 @@ export function FullScreenIDE({
   // Sync stepIdFromURL to RunStore
   useEffect(() => {
     if (stepIdFromURL && runIdFromURL) {
-      runStore.selectStep(stepIdFromURL);
+      selectStep(stepIdFromURL);
     }
-  }, [stepIdFromURL, runIdFromURL, runStore]);
+  }, [stepIdFromURL, runIdFromURL, selectStep]);
 
   // Handler for Save button
   const handleSave = () => {
