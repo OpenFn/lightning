@@ -7,14 +7,10 @@
 import { useMemo } from "react";
 
 import { DataclipViewer } from "../../../react/components/DataclipViewer";
-import {
-  useCurrentRun,
-  useRunStoreInstance,
-  useSelectedStep,
-} from "../../hooks/useRun";
+import { useCurrentRun, useSelectedStep } from "../../hooks/useRun";
 import type { Step } from "../../types/run";
 import { isFinalState } from "../../types/run";
-import { StepList } from "./StepList";
+import { StepViewerLayout } from "./StepViewerLayout";
 
 interface InputContentProps {
   selectedStep: Step | null;
@@ -50,32 +46,17 @@ function InputContent({ selectedStep, runFinished }: InputContentProps) {
 export function InputTabPanel() {
   const run = useCurrentRun();
   const selectedStep = useSelectedStep();
-  const runStore = useRunStoreInstance();
 
   const runFinished = useMemo(
     () => !!(run?.state && isFinalState(run.state)),
     [run?.state]
   );
 
-  if (!run) {
-    return <div className="p-4 text-gray-500">No run selected</div>;
-  }
-
   return (
-    <div className="h-full flex">
-      {/* Step list */}
-      <div className="w-48 border-r overflow-auto p-2">
-        <StepList
-          steps={run.steps}
-          selectedStepId={selectedStep?.id || null}
-          onSelectStep={runStore.selectStep}
-        />
-      </div>
-
-      {/* Dataclip viewer */}
-      <div className="flex-1 overflow-auto">
+    <StepViewerLayout selectedStepId={selectedStep?.id || null}>
+      <div className="h-full overflow-auto">
         <InputContent selectedStep={selectedStep} runFinished={runFinished} />
       </div>
-    </div>
+    </StepViewerLayout>
   );
 }

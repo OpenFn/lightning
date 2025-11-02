@@ -1,22 +1,16 @@
 import { useEffect, useRef, useState } from "react";
-import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
 
 import { mount as mountLogViewer } from "../../../log-viewer/component";
 import { createLogStore } from "../../../log-viewer/store";
 import { channelRequest } from "../../hooks/useChannel";
-import {
-  useCurrentRun,
-  useRunStoreInstance,
-  useSelectedStepId,
-} from "../../hooks/useRun";
+import { useCurrentRun, useSelectedStepId } from "../../hooks/useRun";
 import { useSession } from "../../hooks/useSession";
 import { LogLevelFilter } from "./LogLevelFilter";
-import { StepList } from "./StepList";
+import { StepViewerLayout } from "./StepViewerLayout";
 
 export function LogTabPanel() {
   const run = useCurrentRun();
   const selectedStepId = useSelectedStepId();
-  const runStore = useRunStoreInstance();
   const { provider } = useSession();
 
   const containerRef = useRef<HTMLDivElement>(null);
@@ -136,45 +130,24 @@ export function LogTabPanel() {
     };
   }, [run, provider]);
 
-  if (!run) {
-    return <div className="p-4 text-gray-500">No run selected</div>;
-  }
-
   return (
-    <PanelGroup direction="vertical" className="h-full">
-      {/* Step list for navigation */}
-      <Panel defaultSize={20} minSize={10} maxSize={40}>
-        <div className="h-full overflow-auto border-b p-4">
-          <StepList
-            steps={run.steps}
-            selectedStepId={selectedStepId}
-            onSelectStep={runStore.selectStep}
-          />
-        </div>
-      </Panel>
-
-      {/* Resize handle */}
-      <PanelResizeHandle className="h-1 bg-gray-200 hover:bg-blue-400 transition-colors cursor-row-resize" />
-
-      {/* Log viewer with filter */}
-      <Panel minSize={30}>
-        <div className="flex h-full flex-col rounded-md bg-slate-700 font-mono text-gray-200">
-          {/* Log level filter header */}
-          <div className="flex-none border-b border-slate-500">
-            <div className="mx-auto px-2">
-              <div className="flex h-6 flex-row-reverse items-center">
-                <LogLevelFilter
-                  selectedLevel={logLevel}
-                  onLevelChange={handleLogLevelChange}
-                />
-              </div>
+    <StepViewerLayout selectedStepId={selectedStepId}>
+      <div className="flex h-full flex-col rounded-md bg-slate-700 font-mono text-gray-200">
+        {/* Log level filter header */}
+        <div className="flex-none border-b border-slate-500">
+          <div className="mx-auto px-2">
+            <div className="flex h-6 flex-row-reverse items-center">
+              <LogLevelFilter
+                selectedLevel={logLevel}
+                onLevelChange={handleLogLevelChange}
+              />
             </div>
           </div>
-
-          {/* Log viewer */}
-          <div ref={containerRef} className="flex-1 overflow-hidden" />
         </div>
-      </Panel>
-    </PanelGroup>
+
+        {/* Log viewer */}
+        <div ref={containerRef} className="flex-1 overflow-hidden" />
+      </div>
+    </StepViewerLayout>
   );
 }
