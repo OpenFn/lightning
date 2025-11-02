@@ -11,7 +11,16 @@ import type { Workflow } from "../types/workflow";
 
 const logger = _logger.ns("useRunRetry").seal();
 
-// Final states for a run (matches Lightning.Run.final_states/0)
+/**
+ * Final states for a run (matches Lightning.Run.final_states/0)
+ * - success: Run completed successfully
+ * - failed: Run failed but error was caught
+ * - crashed: Run crashed unexpectedly
+ * - cancelled: User cancelled the run
+ * - killed: Run was forcibly terminated
+ * - exception: Unhandled exception occurred
+ * - lost: Run state unknown/lost connection
+ */
 const FINAL_RUN_STATES = [
   "success",
   "failed",
@@ -114,15 +123,9 @@ export function useRunRetry({
 
     // For triggers: find the connected job (matching classical editor behavior)
     // This allows retry to work when a trigger is selected
-    if (runContext.type === "trigger") {
-      // Find the edge from this trigger to a job
-      const edge = workflowEdges.find(
-        e => e.source_trigger_id === runContext.id
-      );
-      return edge?.target_job_id || undefined;
-    }
-
-    return undefined;
+    // Find the edge from this trigger to a job
+    const edge = workflowEdges.find(e => e.source_trigger_id === runContext.id);
+    return edge?.target_job_id || undefined;
   }, [runContext, workflowEdges]);
 
   const followedRunStep = useMemo(() => {
@@ -204,7 +207,6 @@ export function useRunRetry({
 
       const response = await dataclipApi.submitManualRun(params);
 
-      // Show success notification
       notifications.success({
         title: "Run started",
         description: "Saved latest changes and created new work order",
@@ -218,7 +220,6 @@ export function useRunRetry({
         window.location.href = `/projects/${projectId}/runs/${response.data.run_id}`;
       }
 
-      // Reset submitting state after successful submission
       setIsSubmitting(false);
     } catch (error) {
       logger.error("Failed to submit run:", error);
