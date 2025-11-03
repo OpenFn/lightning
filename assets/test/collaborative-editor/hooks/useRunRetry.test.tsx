@@ -231,13 +231,100 @@ describe("useRunRetry - Basic Functionality", () => {
     expect(result.current.canRun).toBe(true);
   });
 
-  test("canRun is true for 'custom' tab", () => {
-    const options = createMockOptions({ selectedTab: "custom" });
+  test("canRun is true for 'custom' tab with valid JSON", () => {
+    const options = createMockOptions({
+      selectedTab: "custom",
+      customBody: '{"valid": "json"}',
+    });
     const { result } = renderHook(() => useRunRetry(options), {
       wrapper: createWrapper(runStore),
     });
 
     expect(result.current.canRun).toBe(true);
+  });
+
+  test("canRun is false for 'custom' tab with empty body", () => {
+    const options = createMockOptions({
+      selectedTab: "custom",
+      customBody: "",
+    });
+    const { result } = renderHook(() => useRunRetry(options), {
+      wrapper: createWrapper(runStore),
+    });
+
+    expect(result.current.canRun).toBe(false);
+  });
+
+  test("canRun is false for 'custom' tab with whitespace-only body", () => {
+    const options = createMockOptions({
+      selectedTab: "custom",
+      customBody: "   ",
+    });
+    const { result } = renderHook(() => useRunRetry(options), {
+      wrapper: createWrapper(runStore),
+    });
+
+    expect(result.current.canRun).toBe(false);
+  });
+
+  test("canRun is false for 'custom' tab with invalid JSON", () => {
+    const options = createMockOptions({
+      selectedTab: "custom",
+      customBody: "{ invalid json }",
+    });
+    const { result } = renderHook(() => useRunRetry(options), {
+      wrapper: createWrapper(runStore),
+    });
+
+    expect(result.current.canRun).toBe(false);
+  });
+
+  test("canRun is false for 'custom' tab with JSON array (must be object)", () => {
+    const options = createMockOptions({
+      selectedTab: "custom",
+      customBody: '["array", "not", "object"]',
+    });
+    const { result } = renderHook(() => useRunRetry(options), {
+      wrapper: createWrapper(runStore),
+    });
+
+    expect(result.current.canRun).toBe(false);
+  });
+
+  test("canRun is false for 'custom' tab with JSON null (must be object)", () => {
+    const options = createMockOptions({
+      selectedTab: "custom",
+      customBody: "null",
+    });
+    const { result } = renderHook(() => useRunRetry(options), {
+      wrapper: createWrapper(runStore),
+    });
+
+    expect(result.current.canRun).toBe(false);
+  });
+
+  test("canRun is false for 'custom' tab with JSON string (must be object)", () => {
+    const options = createMockOptions({
+      selectedTab: "custom",
+      customBody: '"string value"',
+    });
+    const { result } = renderHook(() => useRunRetry(options), {
+      wrapper: createWrapper(runStore),
+    });
+
+    expect(result.current.canRun).toBe(false);
+  });
+
+  test("canRun is false for 'custom' tab with JSON number (must be object)", () => {
+    const options = createMockOptions({
+      selectedTab: "custom",
+      customBody: "123",
+    });
+    const { result } = renderHook(() => useRunRetry(options), {
+      wrapper: createWrapper(runStore),
+    });
+
+    expect(result.current.canRun).toBe(false);
   });
 });
 
@@ -412,7 +499,7 @@ describe("useRunRetry - handleRun", () => {
       projectId: "project-123",
       jobId: "job-789",
     });
-    expect(onRunSubmitted).toHaveBeenCalledWith("run-456");
+    expect(onRunSubmitted).toHaveBeenCalledWith("run-456", undefined);
   });
 
   test("submits run with existing dataclip", async () => {
@@ -445,11 +532,18 @@ describe("useRunRetry - handleRun", () => {
       jobId: "job-789",
       dataclipId: "dataclip-123",
     });
-    expect(onRunSubmitted).toHaveBeenCalledWith("run-456");
+    expect(onRunSubmitted).toHaveBeenCalledWith("run-456", undefined);
   });
 
-  test("submits run with custom body", async () => {
-    const mockResponse = { data: { run_id: "run-456" } };
+  test("submits run with custom body and receives created dataclip", async () => {
+    const createdDataclip = createMockDataclip({
+      id: "dataclip-new",
+      name: null,
+      type: "saved_input",
+    });
+    const mockResponse = {
+      data: { run_id: "run-456", dataclip: createdDataclip },
+    };
     vi.mocked(dataclipApi.submitManualRun).mockResolvedValue(
       mockResponse as any
     );
@@ -477,7 +571,7 @@ describe("useRunRetry - handleRun", () => {
       jobId: "job-789",
       customBody: '{"custom": "data"}',
     });
-    expect(onRunSubmitted).toHaveBeenCalledWith("run-456");
+    expect(onRunSubmitted).toHaveBeenCalledWith("run-456", createdDataclip);
   });
 
   test("submits run from trigger context", async () => {
@@ -507,6 +601,7 @@ describe("useRunRetry - handleRun", () => {
       projectId: "project-123",
       triggerId: "trigger-123",
     });
+    expect(onRunSubmitted).toHaveBeenCalledWith("run-456", undefined);
   });
 });
 

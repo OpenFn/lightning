@@ -46,10 +46,13 @@ interface ManualRunPanelProps {
     saved_at?: string;
     lock_version?: number;
   } | null>;
-  onRunSubmitted?: (runId: string) => void;
+  onRunSubmitted?: (runId: string, dataclip?: Dataclip) => void;
   onTabChange?: (tab: TabValue) => void;
   onDataclipChange?: (dataclip: Dataclip | null) => void;
   onCustomBodyChange?: (body: string) => void;
+  selectedTab?: TabValue;
+  selectedDataclip?: Dataclip | null;
+  customBody?: string;
 }
 
 type TabValue = "empty" | "custom" | "existing";
@@ -68,11 +71,21 @@ export function ManualRunPanel({
   onTabChange,
   onDataclipChange,
   onCustomBodyChange,
+  selectedTab: selectedTabProp,
+  selectedDataclip: selectedDataclipProp,
+  customBody: customBodyProp,
 }: ManualRunPanelProps) {
-  const [selectedTab, setSelectedTabInternal] = useState<TabValue>("empty");
-  const [selectedDataclip, setSelectedDataclipInternal] = useState<
+  const [selectedTabInternal, setSelectedTabInternal] =
+    useState<TabValue>("empty");
+  const [selectedDataclipInternal, setSelectedDataclipInternal] = useState<
     Dataclip | null
   >(null);
+  const [customBodyInternal, setCustomBodyInternal] = useState("");
+
+  // Use prop if provided (controlled), otherwise use internal state (uncontrolled)
+  const selectedTab = selectedTabProp ?? selectedTabInternal;
+  const selectedDataclip = selectedDataclipProp ?? selectedDataclipInternal;
+  const customBody = customBodyProp ?? customBodyInternal;
   const [dataclips, setDataclips] = useState<Dataclip[]>([]);
   const [manuallyUnselected, setManuallyUnselected] = useState(false);
 
@@ -94,7 +107,6 @@ export function ManualRunPanel({
   );
 
   const [searchQuery, setSearchQuery] = useState("");
-  const [customBodyInternal, setCustomBodyInternal] = useState("");
 
   const setCustomBody = useCallback(
     (body: string) => {
@@ -178,7 +190,7 @@ export function ManualRunPanel({
     runContext,
     selectedTab,
     selectedDataclip,
-    customBody: customBodyInternal,
+    customBody,
     canRunWorkflow,
     workflowRunTooltipMessage,
     saveWorkflow,

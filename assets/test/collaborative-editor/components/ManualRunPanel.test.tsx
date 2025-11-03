@@ -1008,4 +1008,258 @@ describe("ManualRunPanel", () => {
       saveResolve!();
     });
   });
+
+  describe("Unselecting Dataclip Behavior", () => {
+    test("disables Run button when dataclip is unselected on Existing tab", async () => {
+      const user = userEvent.setup();
+
+      vi.mocked(dataclipApi.searchDataclips).mockResolvedValue({
+        data: [mockDataclip],
+        next_cron_run_dataclip_id: null,
+        can_edit_dataclip: true,
+      });
+
+      renderManualRunPanel({
+        workflow: mockWorkflow,
+        projectId: "project-1",
+        workflowId: "workflow-1",
+        jobId: "job-1",
+        onClose: () => {},
+      });
+
+      // Switch to Existing tab
+      await user.click(screen.getByText("Existing"));
+
+      // Select a dataclip
+      await waitFor(() => {
+        expect(screen.getByText("Test Dataclip")).toBeInTheDocument();
+      });
+      await user.click(screen.getByText("Test Dataclip"));
+
+      // Button should be enabled with selected dataclip
+      await waitFor(() => {
+        const runButton = screen.getByText("Run Workflow Now");
+        expect(runButton).not.toBeDisabled();
+      });
+
+      // Unselect the dataclip by clicking the X button (close button in SelectedDataclipView)
+      // After selecting dataclip, we have SelectedDataclipView with its own buttons
+      // Wait for the view to render
+      await waitFor(() => {
+        expect(screen.getByText("Test Dataclip")).toBeInTheDocument();
+      });
+
+      // Find the close button - it's the last button with an X icon in the header
+      const allButtons = screen.getAllByRole("button");
+      // The close button is in the SelectedDataclipView header with ml-4 class
+      const xButton = allButtons.find(btn =>
+        btn.className.includes("ml-4") && btn.className.includes("text-gray-400")
+      );
+      await user.click(xButton!);
+
+      // Button should now be disabled
+      await waitFor(() => {
+        const runButton = screen.getByText("Run Workflow Now");
+        expect(runButton).toBeDisabled();
+      });
+    });
+
+    test("does not auto-reselect dataclip after manual unselection when switching tabs", async () => {
+      const user = userEvent.setup();
+
+      vi.mocked(dataclipApi.searchDataclips).mockResolvedValue({
+        data: [mockDataclip],
+        next_cron_run_dataclip_id: null,
+        can_edit_dataclip: true,
+      });
+
+      renderManualRunPanel({
+        workflow: mockWorkflow,
+        projectId: "project-1",
+        workflowId: "workflow-1",
+        jobId: "job-1",
+        onClose: () => {},
+      });
+
+      // Switch to Existing tab
+      await user.click(screen.getByText("Existing"));
+
+      // Select a dataclip
+      await waitFor(() => {
+        expect(screen.getByText("Test Dataclip")).toBeInTheDocument();
+      });
+      await user.click(screen.getByText("Test Dataclip"));
+
+      // Unselect the dataclip - find close button in SelectedDataclipView
+      await waitFor(() => {
+        expect(screen.getByText("Test Dataclip")).toBeInTheDocument();
+      });
+      const allButtons = screen.getAllByRole("button");
+      const xButton = allButtons.find(btn =>
+        btn.className.includes("ml-4") && btn.className.includes("text-gray-400")
+      );
+      await user.click(xButton!);
+
+      // Switch to Custom tab
+      await user.click(screen.getByText("Custom"));
+
+      // Switch back to Existing tab
+      await user.click(screen.getByText("Existing"));
+
+      // Dataclip should NOT be auto-selected
+      await waitFor(() => {
+        expect(
+          screen.queryByText("Default Next Input for Cron")
+        ).not.toBeInTheDocument();
+      });
+
+      // The list should still show the dataclip as available
+      expect(screen.getByText("Test Dataclip")).toBeInTheDocument();
+
+      // Run button should still be disabled
+      const runButton = screen.getByText("Run Workflow Now");
+      expect(runButton).toBeDisabled();
+    });
+
+    test("re-enables Run button when switching to Empty tab after unselecting dataclip", async () => {
+      const user = userEvent.setup();
+
+      vi.mocked(dataclipApi.searchDataclips).mockResolvedValue({
+        data: [mockDataclip],
+        next_cron_run_dataclip_id: null,
+        can_edit_dataclip: true,
+      });
+
+      renderManualRunPanel({
+        workflow: mockWorkflow,
+        projectId: "project-1",
+        workflowId: "workflow-1",
+        jobId: "job-1",
+        onClose: () => {},
+      });
+
+      // Switch to Existing tab and select dataclip
+      await user.click(screen.getByText("Existing"));
+      await waitFor(() => {
+        expect(screen.getByText("Test Dataclip")).toBeInTheDocument();
+      });
+      await user.click(screen.getByText("Test Dataclip"));
+
+      // Unselect the dataclip - find close button in SelectedDataclipView
+      await waitFor(() => {
+        expect(screen.getByText("Test Dataclip")).toBeInTheDocument();
+      });
+      const allButtons = screen.getAllByRole("button");
+      const xButton = allButtons.find(btn =>
+        btn.className.includes("ml-4") && btn.className.includes("text-gray-400")
+      );
+      await user.click(xButton!);
+
+      // Switch to Empty tab
+      await user.click(screen.getByText("Empty"));
+
+      // Run button should be enabled on Empty tab
+      await waitFor(() => {
+        const runButton = screen.getByText("Run Workflow Now");
+        expect(runButton).not.toBeDisabled();
+      });
+    });
+
+    test("calls onDataclipChange callback when dataclip is unselected", async () => {
+      const user = userEvent.setup();
+      const onDataclipChange = vi.fn();
+
+      vi.mocked(dataclipApi.searchDataclips).mockResolvedValue({
+        data: [mockDataclip],
+        next_cron_run_dataclip_id: null,
+        can_edit_dataclip: true,
+      });
+
+      renderManualRunPanel({
+        workflow: mockWorkflow,
+        projectId: "project-1",
+        workflowId: "workflow-1",
+        jobId: "job-1",
+        onClose: () => {},
+        onDataclipChange,
+      });
+
+      // Switch to Existing tab and select dataclip
+      await user.click(screen.getByText("Existing"));
+      await waitFor(() => {
+        expect(screen.getByText("Test Dataclip")).toBeInTheDocument();
+      });
+      await user.click(screen.getByText("Test Dataclip"));
+
+      // Callback should be called with dataclip
+      await waitFor(() => {
+        expect(onDataclipChange).toHaveBeenCalledWith(
+          expect.objectContaining({ id: "dataclip-1" })
+        );
+      });
+
+      // Unselect the dataclip - find close button in SelectedDataclipView
+      await waitFor(() => {
+        expect(screen.getByText("Test Dataclip")).toBeInTheDocument();
+      });
+      const allButtons = screen.getAllByRole("button");
+      const xButton = allButtons.find(btn =>
+        btn.className.includes("ml-4") && btn.className.includes("text-gray-400")
+      );
+      await user.click(xButton!);
+
+      // Callback should be called with null
+      await waitFor(() => {
+        expect(onDataclipChange).toHaveBeenCalledWith(null);
+      });
+    });
+  });
+
+  describe("controlled component mode", () => {
+    test("Run button state reflects controlled customBody prop", async () => {
+      vi.mocked(dataclipApi.searchDataclips).mockResolvedValue({
+        data: [],
+        next_cron_run_dataclip_id: null,
+        can_edit_dataclip: true,
+      });
+
+      renderManualRunPanel({
+        workflow: mockWorkflow,
+        projectId: "project-1",
+        workflowId: "workflow-1",
+        jobId: "job-1",
+        onClose: () => {},
+        selectedTab: "custom",
+        customBody: '{"test": "data"}',
+      });
+
+      await waitFor(() => {
+        const runButton = screen.getByText("Run Workflow Now");
+        expect(runButton).not.toBeDisabled();
+      });
+    });
+
+    test("Run button disabled when controlled customBody is empty", async () => {
+      vi.mocked(dataclipApi.searchDataclips).mockResolvedValue({
+        data: [],
+        next_cron_run_dataclip_id: null,
+        can_edit_dataclip: true,
+      });
+
+      renderManualRunPanel({
+        workflow: mockWorkflow,
+        projectId: "project-1",
+        workflowId: "workflow-1",
+        jobId: "job-1",
+        onClose: () => {},
+        selectedTab: "custom",
+        customBody: "",
+      });
+
+      await waitFor(() => {
+        const runButton = screen.getByText("Run Workflow Now");
+        expect(runButton).toBeDisabled();
+      });
+    });
+  });
 });

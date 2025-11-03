@@ -54,7 +54,9 @@ export interface UseRunRetryOptions {
   saveWorkflow: (options?: {
     silent?: boolean;
   }) => Promise<{ saved_at?: string; lock_version?: number } | null>;
-  onRunSubmitted: ((runId: string) => void) | undefined;
+  onRunSubmitted:
+    | ((runId: string, dataclip?: Dataclip) => void)
+    | undefined;
   edgeId: string | null;
   workflowEdges?: Workflow.Edge[];
 }
@@ -219,9 +221,9 @@ export function useRunRetry({
         description: "Saved latest changes and created new work order",
       });
 
-      // Invoke callback with run_id (stay in IDE, don't navigate)
+      // Invoke callback with run_id and dataclip (if created from custom body)
       if (onRunSubmitted) {
-        onRunSubmitted(response.data.run_id);
+        onRunSubmitted(response.data.run_id, response.data.dataclip);
       } else {
         // Fallback: navigate away if no callback (for standalone mode)
         window.location.href = `/projects/${projectId}/runs/${response.data.run_id}`;

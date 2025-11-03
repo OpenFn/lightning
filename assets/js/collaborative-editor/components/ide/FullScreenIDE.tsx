@@ -11,6 +11,7 @@ import { cn } from "#/utils/cn";
 
 import { useURLState } from "../../../react/lib/use-url-state";
 import * as dataclipApi from "../../api/dataclips";
+import type { Dataclip } from "../../api/dataclips";
 import { RENDER_MODES } from "../../constants/panel";
 import {
   useCurrentRun,
@@ -161,10 +162,17 @@ export function FullScreenIDE({
   }, []);
 
   const handleRunSubmitted = useCallback(
-    (runId: string) => {
+    (runId: string, dataclip?: Dataclip) => {
       setFollowRunId(runId);
       updateSearchParams({ run: runId });
       setManuallyUnselectedDataclip(false);
+
+      // If a dataclip was created (from custom body), select it and switch to existing tab
+      if (dataclip) {
+        setSelectedDataclipState(dataclip);
+        setSelectedTab("existing");
+        setCustomBody("");
+      }
 
       if (rightPanelRef.current?.isCollapsed()) {
         rightPanelRef.current.expand();
@@ -680,6 +688,9 @@ export function FullScreenIDE({
                       onTabChange={setSelectedTab}
                       onDataclipChange={handleDataclipChange}
                       onCustomBodyChange={setCustomBody}
+                      selectedTab={selectedTab}
+                      selectedDataclip={selectedDataclipState}
+                      customBody={customBody}
                     />
                   </ManualRunPanelErrorBoundary>
                 </div>
