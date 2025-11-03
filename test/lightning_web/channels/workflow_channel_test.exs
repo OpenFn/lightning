@@ -1272,6 +1272,90 @@ defmodule LightningWeb.WorkflowChannelTest do
     end
   end
 
+  describe "request_run_steps" do
+    test "returns step data for valid run_id", %{
+      socket: socket,
+      workflow: workflow,
+      project: project
+    } do
+      # Create jobs and steps for the workflow
+      job1 = insert(:job, workflow: workflow)
+      job2 = insert(:job, workflow: workflow)
+      workflow = with_snapshot(workflow)
+
+      dataclip = insert(:dataclip, project: project)
+      work_order = insert(:workorder, workflow: workflow)
+
+      run =
+        insert(:run,
+          work_order: work_order,
+          starting_job: job1,
+          dataclip: dataclip
+        )
+
+      _step1 =
+        insert(:step,
+          runs: [run],
+          job: job1,
+          exit_reason: "success"
+        )
+
+      _step2 =
+        insert(:step,
+          runs: [run],
+          job: job2,
+          exit_reason: "fail",
+          error_type: "RuntimeError"
+        )
+
+      ref = push(socket, "request_run_steps", %{"run_id" => run.id})
+
+      assert_reply ref, :ok, response
+
+      assert %{run_id: run_id, steps: steps, metadata: metadata} = response
+      assert run_id == run.id
+      assert length(steps) == 2
+
+      assert Enum.any?(steps, fn s ->
+               s.job_id == job1.id && s.exit_reason == "success"
+             end)
+
+      assert Enum.any?(steps, fn s ->
+               s.job_id == job2.id && s.exit_reason == "fail" &&
+                 s.error_type == "RuntimeError"
+             end)
+
+      assert metadata.starting_job_id == job1.id
+    end
+
+    test "returns error for non-existent run", %{socket: socket} do
+      ref =
+        push(socket, "request_run_steps", %{"run_id" => Ecto.UUID.generate()})
+
+      assert_reply ref, :error, %{reason: "run_not_found"}
+    end
+
+    test "returns error for run from different project", %{socket: socket} do
+      other_project = insert(:project)
+      other_workflow = insert(:workflow, project: other_project)
+      job = insert(:job, workflow: other_workflow)
+      other_workflow = with_snapshot(other_workflow)
+
+      dataclip = insert(:dataclip, project: other_project)
+      work_order = insert(:workorder, workflow: other_workflow)
+
+      run =
+        insert(:run,
+          work_order: work_order,
+          starting_job: job,
+          dataclip: dataclip
+        )
+
+      ref = push(socket, "request_run_steps", %{"run_id" => run.id})
+      assert_reply ref, :error, %{reason: "unauthorized"}
+    end
+  end
+
   describe "real-time history updates" do
     test "handles WorkOrderCreated event for current workflow", %{
       socket: socket,

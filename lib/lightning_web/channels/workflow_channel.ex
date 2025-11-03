@@ -229,6 +229,27 @@ defmodule LightningWeb.WorkflowChannel do
     handle_in("request_history", %{"run_id" => nil}, socket)
   end
 
+  @impl true
+  def handle_in(
+        "request_run_steps",
+        %{"run_id" => run_id},
+        %{assigns: %{project: project}} = socket
+      ) do
+    case Lightning.Invocation.get_run_with_steps(run_id) do
+      nil ->
+        {:reply, {:error, %{reason: "run_not_found"}}, socket}
+
+      run ->
+        # Verify run belongs to this project's workflows
+        if run.work_order.workflow.project_id == project.id do
+          formatted_steps = format_run_steps_for_client(run)
+          {:reply, {:ok, formatted_steps}, socket}
+        else
+          {:reply, {:error, %{reason: "unauthorized"}}, socket}
+        end
+    end
+  end
+
   @doc """
   Handles explicit workflow save requests from the collaborative editor.
 
@@ -927,6 +948,34 @@ defmodule LightningWeb.WorkflowChannel do
       error_type: run.error_type,
       started_at: run.started_at,
       finished_at: run.finished_at
+    }
+  end
+
+  defp format_run_steps_for_client(run) do
+    steps =
+      run.steps
+      |> Enum.map(fn step ->
+        %{
+          id: step.id,
+          job_id: step.job_id,
+          exit_reason: step.exit_reason,
+          error_type: step.error_type,
+          started_at: step.started_at,
+          finished_at: step.finished_at,
+          input_dataclip_id: step.input_dataclip_id
+        }
+      end)
+
+    %{
+      run_id: run.id,
+      steps: steps,
+      metadata: %{
+        starting_job_id: run.starting_job_id,
+        starting_trigger_id: run.starting_trigger_id,
+        inserted_at: run.inserted_at,
+        created_by_id: run.created_by_id,
+        created_by_email: run.created_by && run.created_by.email
+      }
     }
   end
 end
