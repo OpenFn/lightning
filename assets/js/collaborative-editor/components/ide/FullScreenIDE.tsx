@@ -147,12 +147,24 @@ export function FullScreenIDE({
   const [isRightCollapsed, setIsRightCollapsed] = useState(true);
 
   const [followRunId, setFollowRunId] = useState<string | null>(null);
-  const [selectedDataclip, setSelectedDataclip] = useState<any>(null);
+  const [selectedDataclipState, setSelectedDataclipState] = useState<any>(null);
+  const [selectedTab, setSelectedTab] = useState<
+    "empty" | "custom" | "existing"
+  >("empty");
+  const [customBody, setCustomBody] = useState("");
+  const [manuallyUnselectedDataclip, setManuallyUnselectedDataclip] =
+    useState(false);
+
+  const handleDataclipChange = useCallback((dataclip: any) => {
+    setSelectedDataclipState(dataclip);
+    setManuallyUnselectedDataclip(dataclip === null);
+  }, []);
 
   const handleRunSubmitted = useCallback(
     (runId: string) => {
       setFollowRunId(runId);
       updateSearchParams({ run: runId });
+      setManuallyUnselectedDataclip(false);
 
       if (rightPanelRef.current?.isCollapsed()) {
         rightPanelRef.current.expand();
@@ -175,15 +187,23 @@ export function FullScreenIDE({
     return currentRun.steps.find(s => s.job_id === jobIdFromURL) || null;
   }, [currentRun, jobIdFromURL]);
 
-  // Auto-fetch and select dataclip when following a run (enables retry functionality)
+  useEffect(() => {
+    const runId = searchParams.get("run");
+    if (runId && runId !== followRunId) {
+      setManuallyUnselectedDataclip(false);
+    }
+  }, [searchParams, followRunId]);
+
   useEffect(() => {
     const inputDataclipId = followedRunStep?.input_dataclip_id;
 
-    if (!inputDataclipId || !jobIdFromURL || !projectId) {
-      return;
-    }
-
-    if (selectedDataclip?.id === inputDataclipId) {
+    if (
+      !inputDataclipId ||
+      !jobIdFromURL ||
+      !projectId ||
+      manuallyUnselectedDataclip ||
+      selectedDataclipState?.id === inputDataclipId
+    ) {
       return;
     }
 
@@ -201,7 +221,8 @@ export function FullScreenIDE({
         );
 
         if (response.dataclip) {
-          setSelectedDataclip(response.dataclip);
+          setSelectedDataclipState(response.dataclip);
+          setManuallyUnselectedDataclip(false);
         }
       } catch (error) {
         console.error("Failed to fetch dataclip for retry:", error);
@@ -214,7 +235,8 @@ export function FullScreenIDE({
     jobIdFromURL,
     projectId,
     searchParams,
-    selectedDataclip?.id,
+    selectedDataclipState?.id,
+    manuallyUnselectedDataclip,
   ]);
 
   const {
@@ -228,9 +250,9 @@ export function FullScreenIDE({
     projectId: projectId || "",
     workflowId: workflowId || "",
     runContext,
-    selectedTab: selectedDataclip ? "existing" : "empty",
-    selectedDataclip,
-    customBody: "{}",
+    selectedTab,
+    selectedDataclip: selectedDataclipState,
+    customBody,
     canRunWorkflow: canRunSnapshot,
     workflowRunTooltipMessage: runTooltipMessage,
     saveWorkflow,
@@ -492,26 +514,6 @@ export function FullScreenIDE({
     [onClose]
   );
 
-  // Handle Cmd/Ctrl+Enter to trigger workflow run
-  // No scope restriction to ensure it works even when Monaco has focus
-  useHotkeys(
-    'mod+enter',
-    event => {
-      event.preventDefault();
-      event.stopPropagation();
-
-      // Use centralized handler with validation
-      handleRunClick();
-    },
-    {
-      enabled: true,
-      enableOnFormTags: true, // Allow in Monaco editor
-      preventDefault: true, // Prevent Monaco's default behavior
-      enableOnContentEditable: true, // Work in Monaco's contentEditable
-    },
-    [handleRunClick]
-  );
-
   // Loading state: Wait for Y.Text and awareness to be ready
   if (!currentJob || !currentJobYText || !awareness) {
     return (
@@ -675,6 +677,9 @@ export function FullScreenIDE({
                       renderMode={RENDER_MODES.EMBEDDED}
                       saveWorkflow={saveWorkflow}
                       onRunSubmitted={handleRunSubmitted}
+                      onTabChange={setSelectedTab}
+                      onDataclipChange={handleDataclipChange}
+                      onCustomBodyChange={setCustomBody}
                     />
                   </ManualRunPanelErrorBoundary>
                 </div>

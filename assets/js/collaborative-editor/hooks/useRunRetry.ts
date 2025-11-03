@@ -136,10 +136,6 @@ export function useRunRetry({
   // Check if the followed run is currently processing (from real-time WebSocket)
   const runIsProcessing = currentRun ? isProcessing(currentRun.state) : false;
 
-  // Calculate retry eligibility
-  // Button shows retry when step exists and selected dataclip matches
-  // For triggers: uses the step of the first connected job (via edges)
-  // This matches classical editor behavior (WorkflowController.get_selected_job)
   const isRetryable = useMemo(() => {
     if (!followedRunId || !followedRunStep || !selectedDataclip) {
       return false;
@@ -151,14 +147,25 @@ export function useRunRetry({
     );
   }, [followedRunId, followedRunStep, selectedDataclip]);
 
-  // Combine workflow-level permissions with local validation
-  // Local validation: user must have selected valid input (empty, custom, or existing dataclip)
+  const isValidCustomBody = useMemo(() => {
+    if (!customBody || !customBody.trim()) {
+      return false;
+    }
+    try {
+      const parsed = JSON.parse(customBody);
+      return (
+        parsed !== null && typeof parsed === "object" && !Array.isArray(parsed)
+      );
+    } catch {
+      return false;
+    }
+  }, [customBody]);
+
   const hasValidInput =
     selectedTab === "empty" ||
     (selectedTab === "existing" && !!selectedDataclip) ||
-    selectedTab === "custom";
+    (selectedTab === "custom" && isValidCustomBody);
 
-  // Disable run when edge is selected (cannot run from an edge)
   const canRun = !edgeId && canRunWorkflow && hasValidInput;
 
   /**

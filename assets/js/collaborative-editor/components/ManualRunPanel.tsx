@@ -47,6 +47,9 @@ interface ManualRunPanelProps {
     lock_version?: number;
   } | null>;
   onRunSubmitted?: (runId: string) => void;
+  onTabChange?: (tab: TabValue) => void;
+  onDataclipChange?: (dataclip: Dataclip | null) => void;
+  onCustomBodyChange?: (body: string) => void;
 }
 
 type TabValue = "empty" | "custom" | "existing";
@@ -62,14 +65,45 @@ export function ManualRunPanel({
   renderMode = RENDER_MODES.STANDALONE,
   saveWorkflow,
   onRunSubmitted,
+  onTabChange,
+  onDataclipChange,
+  onCustomBodyChange,
 }: ManualRunPanelProps) {
-  const [selectedTab, setSelectedTab] = useState<TabValue>("empty");
-  const [selectedDataclip, setSelectedDataclip] = useState<Dataclip | null>(
-    null
-  );
+  const [selectedTab, setSelectedTabInternal] = useState<TabValue>("empty");
+  const [selectedDataclip, setSelectedDataclipInternal] = useState<
+    Dataclip | null
+  >(null);
   const [dataclips, setDataclips] = useState<Dataclip[]>([]);
+  const [manuallyUnselected, setManuallyUnselected] = useState(false);
+
+  const setSelectedTab = useCallback(
+    (tab: TabValue) => {
+      setSelectedTabInternal(tab);
+      onTabChange?.(tab);
+    },
+    [onTabChange]
+  );
+
+  const setSelectedDataclip = useCallback(
+    (dataclip: Dataclip | null) => {
+      setSelectedDataclipInternal(dataclip);
+      onDataclipChange?.(dataclip);
+      setManuallyUnselected(dataclip === null);
+    },
+    [onDataclipChange]
+  );
+
   const [searchQuery, setSearchQuery] = useState("");
-  const [customBody, setCustomBody] = useState("{}");
+  const [customBodyInternal, setCustomBodyInternal] = useState("");
+
+  const setCustomBody = useCallback(
+    (body: string) => {
+      setCustomBodyInternal(body);
+      onCustomBodyChange?.(body);
+    },
+    [onCustomBodyChange]
+  );
+
   const [nextCronRunDataclipId, setNextCronRunDataclipId] = useState<
     string | null
   >(null);
@@ -144,7 +178,7 @@ export function ManualRunPanel({
     runContext,
     selectedTab,
     selectedDataclip,
-    customBody,
+    customBody: customBodyInternal,
     canRunWorkflow,
     workflowRunTooltipMessage,
     saveWorkflow,
@@ -174,7 +208,6 @@ export function ManualRunPanel({
     return cleanup;
   }, [followedRunId, provider, runStore, renderMode]);
 
-  // Reset panel state when context changes (unless following a run)
   useEffect(() => {
     if (!followedRunId) {
       setSelectedDataclip(null);
@@ -183,11 +216,18 @@ export function ManualRunPanel({
       setSelectedDates({ before: "", after: "" });
       setNamedOnly(false);
     }
-  }, [jobId, triggerId, followedRunId]);
+  }, [jobId, triggerId, followedRunId, setSelectedDataclip]);
 
-  // Auto-select step's input dataclip when following a run
   useEffect(() => {
-    if (!followedRunStep?.input_dataclip_id || !dataclips.length) {
+    setManuallyUnselected(false);
+  }, [followedRunId]);
+
+  useEffect(() => {
+    if (
+      !followedRunStep?.input_dataclip_id ||
+      !dataclips.length ||
+      manuallyUnselected
+    ) {
       return;
     }
 
@@ -199,7 +239,13 @@ export function ManualRunPanel({
       setSelectedDataclip(stepDataclip);
       setSelectedTab("existing");
     }
-  }, [followedRunStep, dataclips]);
+  }, [
+    followedRunStep,
+    dataclips,
+    manuallyUnselected,
+    setSelectedDataclip,
+    setSelectedTab,
+  ]);
 
   useEffect(() => {
     if (!dataclipJobId) return;
