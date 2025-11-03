@@ -1,23 +1,23 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState } from 'react';
 
-import { MonacoEditor } from "#/monaco";
+import { MonacoEditor } from '#/monaco';
 
 async function fetchDataclipContent(dataclipId: string) {
   try {
     const response = await fetch(`/dataclip/body/${dataclipId}`);
     if (!response.ok && response.status !== 304) {
-      throw new Error("Network response was not ok");
+      throw new Error('Network response was not ok');
     }
 
     return await response.text();
   } catch (error) {
-    console.error("Error fetching content:", error);
-    return "Failed to load content";
+    console.error('Error fetching content:', error);
+    return 'Failed to load content';
   }
 }
 
 export const DataclipViewer = ({ dataclipId }: { dataclipId: string }) => {
-  const [content, setContent] = useState<string>("");
+  const [content, setContent] = useState<string>('');
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
@@ -53,19 +53,19 @@ export const DataclipViewer = ({ dataclipId }: { dataclipId: string }) => {
           return;
         })
         .catch((error: unknown) => {
-          console.error("Failed to copy:", error);
+          console.error('Failed to copy:', error);
         });
     }
   };
 
   return (
     <div className="h-full relative">
-      {content && content !== "Failed to load content" && (
+      {content && content !== 'Failed to load content' && (
         <button
           onClick={handleCopy}
           className="absolute top-3 right-3 z-10 p-1.5 rounded text-gray-400 hover:text-gray-600 hover:bg-gray-100/80 focus:outline-none transition-colors"
-          title={copied ? "Copied!" : "Copy to clipboard"}
-          aria-label={copied ? "Copied to clipboard" : "Copy to clipboard"}
+          title={copied ? 'Copied!' : 'Copy to clipboard'}
+          aria-label={copied ? 'Copied to clipboard' : 'Copy to clipboard'}
         >
           {copied ? (
             <svg
@@ -110,13 +110,13 @@ export const DataclipViewer = ({ dataclipId }: { dataclipId: string }) => {
           scrollBeyondLastLine: false,
           overviewRulerLanes: 0,
           overviewRulerBorder: false,
-          fontFamily: "Fira Code VF",
+          fontFamily: 'Fira Code VF',
           fontSize: 14,
           fontLigatures: true,
           minimap: {
             enabled: false,
           },
-          wordWrap: "on",
+          wordWrap: 'on',
         }}
       />
     </div>
