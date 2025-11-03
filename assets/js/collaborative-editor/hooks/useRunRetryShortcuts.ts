@@ -76,7 +76,7 @@ export interface UseRunRetryShortcutsOptions {
  *   canRun,
  *   isRunning: isSubmitting || runIsProcessing,
  *   isRetryable,
- *   enabled: renderMode === "standalone",
+ *   enabled: renderMode === RENDER_MODES.STANDALONE,
  * });
  *
  * // In IDEHeader (fullscreen IDE)

@@ -6,6 +6,7 @@
 import { useHotkeys } from "react-hotkeys-hook";
 
 import { useURLState } from "../../../react/lib/use-url-state";
+import { HOTKEY_SCOPES } from "../../constants/hotkeys";
 import type { Workflow } from "../../types/workflow";
 
 import { EdgeInspector } from "./EdgeInspector";
@@ -63,7 +64,7 @@ export function Inspector({
     },
     {
       enabled: respondToHotKey,
-      scopes: ["panel"],
+      scopes: [HOTKEY_SCOPES.PANEL],
       enableOnFormTags: true, // Allow Escape even in form fields
     },
     [handleClose]

@@ -2,7 +2,7 @@ import type { useProjectRepoConnection } from "#/collaborative-editor/hooks/useS
 import { useURLState } from "#/react/lib/use-url-state";
 import { buildClassicalEditorUrl } from "#/utils/editorUrlConversion";
 
-import { SHORTCUT_SCOPES } from "../../constants/shortcuts";
+import { HOTKEY_SCOPES } from "../../constants/hotkeys";
 import { useIsNewWorkflow } from "../../hooks/useSessionContext";
 import { useVersionSelect } from "../../hooks/useVersionSelect";
 import { useRunRetryShortcuts } from "../../hooks/useRunRetryShortcuts";
@@ -87,7 +87,7 @@ export function IDEHeader({
     canRun,
     isRunning,
     isRetryable,
-    scope: SHORTCUT_SCOPES.IDE,
+    scope: HOTKEY_SCOPES.IDE,
     enableOnContentEditable: true,
   });
 

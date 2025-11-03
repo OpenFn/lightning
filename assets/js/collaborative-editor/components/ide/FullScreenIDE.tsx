@@ -13,6 +13,7 @@ import { useURLState } from "../../../react/lib/use-url-state";
 import * as dataclipApi from "../../api/dataclips";
 import type { Dataclip } from "../../api/dataclips";
 import { RENDER_MODES } from "../../constants/panel";
+import { HOTKEY_SCOPES } from "../../constants/hotkeys";
 import {
   useCurrentRun,
   useRunActions,
@@ -298,9 +299,9 @@ export function FullScreenIDE({
   const { enableScope, disableScope } = useHotkeysContext();
 
   useEffect(() => {
-    enableScope("ide");
+    enableScope(HOTKEY_SCOPES.IDE);
     return () => {
-      disableScope("ide");
+      disableScope(HOTKEY_SCOPES.IDE);
     };
   }, [enableScope, disableScope]);
 
@@ -516,7 +517,7 @@ export function FullScreenIDE({
     },
     {
       enabled: true,
-      scopes: ["ide"],
+      scopes: [HOTKEY_SCOPES.IDE],
       enableOnFormTags: true,
     },
     [onClose]

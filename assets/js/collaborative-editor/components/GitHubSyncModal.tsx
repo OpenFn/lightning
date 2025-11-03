@@ -14,6 +14,7 @@ import {
 } from "../hooks/useSessionContext";
 import { useIsGitHubSyncModalOpen, useUICommands } from "../hooks/useUI";
 import { useWorkflowActions } from "../hooks/useWorkflow";
+import { HOTKEY_SCOPES } from "../constants/hotkeys";
 import { GITHUB_BASE_URL } from "../utils/constants";
 
 /**
@@ -55,16 +56,16 @@ export function GitHubSyncModal() {
   // When modal closes, give control back by re-enabling panel scope
   useEffect(() => {
     if (isOpen) {
-      enableScope("modal");
-      disableScope("panel");
+      enableScope(HOTKEY_SCOPES.MODAL);
+      disableScope(HOTKEY_SCOPES.PANEL);
     } else {
-      disableScope("modal");
-      enableScope("panel");
+      disableScope(HOTKEY_SCOPES.MODAL);
+      enableScope(HOTKEY_SCOPES.PANEL);
     }
 
     // Cleanup: ensure modal scope is disabled when unmounted
     return () => {
-      disableScope("modal");
+      disableScope(HOTKEY_SCOPES.MODAL);
     };
   }, [isOpen, enableScope, disableScope]);
 

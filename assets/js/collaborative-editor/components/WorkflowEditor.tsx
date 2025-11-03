@@ -7,7 +7,7 @@ import { useHotkeys, useHotkeysContext } from "react-hotkeys-hook";
 
 import { useURLState } from "../../react/lib/use-url-state";
 import type { WorkflowState as YAMLWorkflowState } from "../../yaml/types";
-import { SHORTCUT_SCOPES } from "../constants/shortcuts";
+import { HOTKEY_SCOPES } from "../constants/hotkeys";
 import { useIsNewWorkflow, useProject } from "../hooks/useSessionContext";
 import {
   useIsRunPanelOpen,
@@ -56,9 +56,9 @@ export function WorkflowEditor({
 
   useEffect(() => {
     if (isRunPanelOpen) {
-      enableScope(SHORTCUT_SCOPES.RUN_PANEL);
+      enableScope(HOTKEY_SCOPES.RUN_PANEL);
     } else {
-      disableScope(SHORTCUT_SCOPES.RUN_PANEL);
+      disableScope(HOTKEY_SCOPES.RUN_PANEL);
     }
   }, [isRunPanelOpen, enableScope, disableScope]);
 

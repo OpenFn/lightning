@@ -17,7 +17,7 @@ import { useURLState } from "../../react/lib/use-url-state";
 import type { Dataclip } from "../api/dataclips";
 import * as dataclipApi from "../api/dataclips";
 import { RENDER_MODES, type RenderMode } from "../constants/panel";
-import { SHORTCUT_SCOPES } from "../constants/shortcuts";
+import { HOTKEY_SCOPES } from "../constants/hotkeys";
 import { useCanRun } from "../hooks/useWorkflow";
 import { useCurrentRun, useRunStoreInstance } from "../hooks/useRun";
 import { useRunRetry } from "../hooks/useRunRetry";
@@ -426,7 +426,7 @@ export function ManualRunPanel({
     isRunning: isSubmitting || runIsProcessing,
     isRetryable,
     enabled: renderMode === RENDER_MODES.STANDALONE,
-    scope: SHORTCUT_SCOPES.RUN_PANEL,
+    scope: HOTKEY_SCOPES.RUN_PANEL,
   });
 
   const content = edgeId ? (

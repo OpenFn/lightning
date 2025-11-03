@@ -7,6 +7,7 @@ import {
 import { useEffect, useMemo, useState, useRef } from 'react';
 import { useHotkeysContext } from 'react-hotkeys-hook';
 
+import { HOTKEY_SCOPES } from "#/collaborative-editor/constants/hotkeys";
 import {
   useCredentials,
   useCredentialQueries,
@@ -68,15 +69,15 @@ export function ConfigureAdaptorModal({
 
   useEffect(() => {
     if (isOpen) {
-      enableScope('modal');
-      disableScope('panel');
+      enableScope(HOTKEY_SCOPES.MODAL);
+      disableScope(HOTKEY_SCOPES.PANEL);
     } else {
-      disableScope('modal');
-      enableScope('panel');
+      disableScope(HOTKEY_SCOPES.MODAL);
+      enableScope(HOTKEY_SCOPES.PANEL);
     }
 
     return () => {
-      disableScope('modal');
+      disableScope(HOTKEY_SCOPES.MODAL);
     };
   }, [isOpen, enableScope, disableScope]);
 

@@ -2,6 +2,7 @@ import { Dialog, DialogBackdrop, DialogPanel } from "@headlessui/react";
 import { useEffect, useMemo, useState } from "react";
 import { useHotkeysContext } from "react-hotkeys-hook";
 
+import { HOTKEY_SCOPES } from "../constants/hotkeys";
 import { useAdaptors } from "../hooks/useAdaptors";
 import type { Adaptor } from "../types/adaptor";
 import { getAdaptorDisplayName } from "../utils/adaptorUtils";
@@ -35,15 +36,15 @@ export function AdaptorSelectionModal({
 
   useEffect(() => {
     if (isOpen) {
-      enableScope("modal");
-      disableScope("panel");
+      enableScope(HOTKEY_SCOPES.MODAL);
+      disableScope(HOTKEY_SCOPES.PANEL);
     } else {
-      disableScope("modal");
-      enableScope("panel");
+      disableScope(HOTKEY_SCOPES.MODAL);
+      enableScope(HOTKEY_SCOPES.PANEL);
     }
 
     return () => {
-      disableScope("modal");
+      disableScope(HOTKEY_SCOPES.MODAL);
     };
   }, [isOpen, enableScope, disableScope]);
 
