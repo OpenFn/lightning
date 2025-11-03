@@ -1,10 +1,11 @@
 /**
  * CollaborativeWorkflowDiagram - Wrapper for WorkflowDiagram using Yjs data
- * Phase 1: Basic rendering only - maps collaborative data to diagram format
  */
 
 import { ReactFlowProvider } from "@xyflow/react";
 import { useMemo, useRef, useState, useCallback, useEffect } from "react";
+
+import type { RunInfo } from "#/workflow-store/store";
 
 import {
   useHistoryPanelCollapsed,
@@ -18,8 +19,9 @@ import {
   useHistoryChannelConnected,
 } from "../../hooks/useHistory";
 import { useIsNewWorkflow } from "../../hooks/useSessionContext";
-import { useNodeSelection } from "../../hooks/useWorkflow";
+import { useNodeSelection, useWorkflowState } from "../../hooks/useWorkflow";
 import type { Run } from "../../types/history";
+import { transformToRunInfo } from "../../utils/runStepsTransformer";
 
 import MiniHistory from "./MiniHistory";
 import CollaborativeWorkflowDiagramImpl from "./WorkflowDiagram";
@@ -37,11 +39,15 @@ export function CollaborativeWorkflowDiagram({
   const isNewWorkflow = useIsNewWorkflow();
   const isHistoryChannelConnected = useHistoryChannelConnected();
 
-  // Replace SAMPLE_HISTORY with HistoryStore data
+  // Get workflow ID for run steps transformation
+  const workflow = useWorkflowState(state => state.workflow);
+  const workflowId = workflow?.id || "";
+
+  // Get history data and commands
   const history = useHistory();
   const historyLoading = useHistoryLoading();
   const historyError = useHistoryError();
-  const { requestHistory, clearError } = useHistoryCommands();
+  const historyCommands = useHistoryCommands();
 
   // Use EditorPreferencesStore for history panel collapsed state
   const historyCollapsed = useHistoryPanelCollapsed();
@@ -68,6 +74,9 @@ export function CollaborativeWorkflowDiagram({
     const params = new URLSearchParams(window.location.search);
     return params.get("run");
   });
+
+  // Track current run steps for visualization
+  const [currentRunSteps, setCurrentRunSteps] = useState<RunInfo | null>(null);
 
   // Update URL when run selection changes
   const handleRunSelect = useCallback((run: Run) => {
@@ -99,16 +108,74 @@ export function CollaborativeWorkflowDiagram({
       (!historyCollapsed || runIdFromUrl);
 
     if (shouldRequest) {
-      void requestHistory(runIdFromUrl || undefined);
+      void historyCommands.requestHistory(runIdFromUrl || undefined);
       hasRequestedHistory.current = true;
     }
   }, [
     historyCollapsed,
     isNewWorkflow,
     isHistoryChannelConnected,
-    requestHistory,
+    historyCommands,
     runIdFromUrl,
   ]);
+
+  // Fetch run steps when run is selected
+  useEffect(() => {
+    const fetchRunSteps = async () => {
+      if (!selectedRunId) {
+        setCurrentRunSteps(null);
+        return;
+      }
+
+      // Check cache first
+      let stepsData = historyCommands.getRunSteps(selectedRunId);
+
+      if (!stepsData) {
+        // Fetch from backend
+        stepsData = await historyCommands.requestRunSteps(selectedRunId);
+      }
+
+      if (stepsData && workflowId) {
+        // Transform to RunInfo format
+        const runInfo = transformToRunInfo(stepsData, workflowId);
+        setCurrentRunSteps(runInfo);
+      } else {
+        setCurrentRunSteps(null);
+      }
+    };
+
+    void fetchRunSteps();
+  }, [selectedRunId, historyCommands, workflowId]);
+
+  // Re-fetch run steps when history updates for the selected run
+  // This ensures real-time updates as run progresses (e.g., steps
+  // complete, state changes)
+  const previousHistoryRef = useRef(history);
+  useEffect(() => {
+    // Skip if history hasn't actually changed (avoid duplicate fetch on
+    // initial mount)
+    if (previousHistoryRef.current === history) {
+      return;
+    }
+    previousHistoryRef.current = history;
+
+    const refetchRunSteps = async () => {
+      if (!selectedRunId || !workflowId) {
+        return;
+      }
+
+      // Force re-fetch from backend to get latest step data
+      const stepsData = await historyCommands.requestRunSteps(selectedRunId);
+
+      if (stepsData) {
+        // Transform to RunInfo format
+        const runInfo = transformToRunInfo(stepsData, workflowId);
+        setCurrentRunSteps(runInfo);
+      }
+    };
+
+    void refetchRunSteps();
+  }, [history, selectedRunId, workflowId, historyCommands]);
 
   // Transform history to mark selected run
   const historyWithSelection = useMemo(() => {
@@ -137,6 +204,7 @@ export function CollaborativeWorkflowDiagram({
           showAiAssistant={false}
           inspectorId={inspectorId}
           containerEl={containerRef.current}
+          runSteps={currentRunSteps}
         />
 
         {/* Only show history panel when NOT creating a new workflow */}
@@ -150,8 +218,8 @@ export function CollaborativeWorkflowDiagram({
             loading={historyLoading}
             error={historyError}
             onRetry={() => {
-              clearError();
-              void requestHistory();
+              historyCommands.clearError();
+              void historyCommands.requestHistory();
             }}
           />
         )}

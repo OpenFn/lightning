@@ -123,8 +123,11 @@ function createWrapper(
       withSelector: createWithSelectorMock(historyGetSnapshot),
       requestHistory: vi.fn(),
       clearError: vi.fn(),
+      getRunSteps: vi.fn(() => null),
+      requestRunSteps: vi.fn(() => Promise.resolve(null)),
     } as any,
     uiStore: {} as any,
+    runStore: {} as any,
   };
 
   return ({ children }: { children: React.ReactNode }) => (

@@ -62,6 +62,34 @@ export type WorkOrder = z.infer<typeof WorkOrderSchema>;
 export type WorkflowRunHistory = WorkOrder[];
 
 /**
+ * Step data from backend
+ */
+export interface Step {
+  id: string;
+  job_id: string;
+  exit_reason: string | null;
+  error_type: string | null;
+  started_at: string | null;
+  finished_at: string | null;
+  input_dataclip_id: string;
+}
+
+/**
+ * Run steps data response from backend
+ */
+export interface RunStepsData {
+  run_id: string;
+  steps: Step[];
+  metadata: {
+    starting_job_id: string | null;
+    starting_trigger_id: string | null;
+    inserted_at: string;
+    created_by_id: string | null;
+    created_by_email: string | null;
+  };
+}
+
+/**
  * Store state interface
  */
 export interface HistoryState {
@@ -70,6 +98,7 @@ export interface HistoryState {
   error: string | null;
   lastUpdated: number | null;
   isChannelConnected: boolean;
+  runStepsCache: Record<string, RunStepsData>;
 }
 
 /**
@@ -78,6 +107,7 @@ export interface HistoryState {
  */
 interface HistoryCommands {
   requestHistory: (runId?: string) => Promise<void>;
+  requestRunSteps: (runId: string) => Promise<RunStepsData | null>;
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
   clearError: () => void;
@@ -91,6 +121,7 @@ interface HistoryQueries {
   getSnapshot: () => HistoryState;
   subscribe: (listener: () => void) => () => void;
   withSelector: <T>(selector: (state: HistoryState) => T) => () => T;
+  getRunSteps: (runId: string) => RunStepsData | null;
 }
 
 /**

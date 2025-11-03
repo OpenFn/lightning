@@ -1,14 +1,14 @@
+import type { XYPosition } from '@xyflow/react';
 import type { Patch as ImmerPatch } from 'immer';
-
 import {
   applyPatches as immerApplyPatches,
   enablePatches,
   produce,
 } from 'immer';
 import { createStore, useStore, type StoreApi } from 'zustand';
-import type { Lightning, Positions } from '../workflow-diagram/types';
+
 import { randomUUID } from '../common';
-import type { XYPosition } from '@xyflow/react';
+import type { Lightning, Positions } from '../workflow-diagram/types';
 
 enablePatches();
 
@@ -40,7 +40,7 @@ export type WorkflowProps = {
 export type RunStep = {
   id: string;
   job_id: Lightning.Job['id'];
-  error_type: string;
+  error_type: string | null;
   exit_reason: 'fail' | 'success' | 'crash' | null;
   started_at: string;
   finished_at: string;

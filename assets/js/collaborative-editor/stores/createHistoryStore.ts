@@ -91,6 +91,7 @@ import {
   HistoryListSchema,
   type WorkOrder,
   type Run,
+  type RunStepsData,
 } from "../types/history";
 
 import { createWithSelector } from "./common";
@@ -111,6 +112,7 @@ export const createHistoryStore = (): HistoryStore => {
       error: null,
       lastUpdated: null,
       isChannelConnected: false,
+      runStepsCache: {},
     } as HistoryState,
     // No initial transformations needed
     draft => draft
@@ -274,37 +276,47 @@ export const createHistoryStore = (): HistoryStore => {
 
     // Listen for history-related channel messages
     const historyUpdatedHandler = (message: unknown) => {
-      logger.debug("Received history_updated message", message);
-      handleHistoryUpdated(
-        message as {
-          action: "created" | "updated" | "run_created" | "run_updated";
-          work_order?: WorkOrder;
-          run?: Run;
-          work_order_id?: string;
-        }
-      );
+      const payload = message as {
+        action: "created" | "updated" | "run_created" | "run_updated";
+        work_order?: WorkOrder;
+        run?: Run;
+        work_order_id?: string;
+      };
+      handleHistoryUpdated(payload);
     };
 
     // Set up channel listeners
     if (channel) {
       channel.on("history_updated", historyUpdatedHandler);
-    }
 
-    devtools.connect();
+      devtools.connect();
 
-    return () => {
-      devtools.disconnect();
-      if (channel) {
+      return () => {
+        devtools.disconnect();
         channel.off("history_updated", historyUpdatedHandler);
-      }
-      _channelProvider = null;
+        _channelProvider = null;
 
-      // Update connection state
-      state = produce(state, draft => {
-        draft.isChannelConnected = false;
-      });
-      notify("channelDisconnected");
-    };
+        // Update connection state
+        state = produce(state, draft => {
+          draft.isChannelConnected = false;
+        });
+        notify("channelDisconnected");
+      };
+    } else {
+      logger.warn("No channel available to set up listeners");
+      devtools.connect();
+
+      return () => {
+        devtools.disconnect();
+        _channelProvider = null;
+
+        // Update connection state
+        state = produce(state, draft => {
+          draft.isChannelConnected = false;
+        });
+        notify("channelDisconnected");
+      };
+    }
   };
 
   /**
@@ -342,6 +354,67 @@ export const createHistoryStore = (): HistoryStore => {
     }
   };
 
+  /**
+   * Request run steps from server via channel
+   * Returns step data for a specific run, or null if request fails
+   */
+  const requestRunSteps = async (
+    runId: string
+  ): Promise<RunStepsData | null> => {
+    if (!_channelProvider?.channel) {
+      logger.warn("Cannot request run steps - no channel connected");
+      return null;
+    }
+
+    state = produce(state, draft => {
+      draft.isLoading = true;
+      draft.error = null;
+    });
+    notify("requestRunSteps/start");
+
+    try {
+      const response = await channelRequest<RunStepsData>(
+        _channelProvider.channel,
+        "request_run_steps",
+        { run_id: runId }
+      );
+
+      state = produce(state, draft => {
+        draft.runStepsCache[runId] = response;
+        draft.isLoading = false;
+      });
+      notify("requestRunSteps/success");
+
+      return response;
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : "Failed to fetch run steps";
+
+      logger.error("Run steps request failed", { error, runId });
+
+      state = produce(state, draft => {
+        draft.error = errorMessage;
+        draft.isLoading = false;
+      });
+      notify("requestRunSteps/error");
+
+      return null;
+    }
+  };
+
+  // ===========================================================================
+  // QUERIES (CQS Pattern)
+  // ===========================================================================
+
+  /**
+   * Get cached run steps for a specific run
+   * Returns null if not in cache
+   */
+  const getRunSteps = (runId: string): RunStepsData | null => {
+    const currentState = getSnapshot();
+    return currentState.runStepsCache[runId] || null;
+  };
+
   // ===========================================================================
   // PUBLIC INTERFACE
   // ===========================================================================
@@ -352,8 +425,12 @@ export const createHistoryStore = (): HistoryStore => {
     getSnapshot,
     withSelector,
 
+    // Queries (CQS pattern)
+    getRunSteps,
+
     // Commands (CQS pattern)
     requestHistory,
+    requestRunSteps,
     setLoading,
     setError,
     clearError,
