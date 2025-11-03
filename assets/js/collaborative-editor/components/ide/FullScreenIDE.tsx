@@ -108,25 +108,20 @@ export function FullScreenIDE({
   const { selectJob, saveWorkflow } = useWorkflowActions();
   const { selectStep } = useRunActions();
   const { job: currentJob, ytext: currentJobYText } = useCurrentJob();
-  // Get provider and awareness with stable selector functions
-  // Using stable functions defined outside component to prevent useEffect re-runs
   const awareness = useSession(selectAwareness);
   const provider = useSession(selectProvider);
   const { canSave, tooltipMessage } = useCanSave();
   const runStore = useRunStoreInstance();
-  // Get UI commands from store
   const repoConnection = useProjectRepoConnection();
   const { openGitHubSyncModal } = useUICommands();
   const { canRun: canRunSnapshot, tooltipMessage: runTooltipMessage } =
     useCanRun();
 
-  // Get version information for header
   const snapshotVersion = useWorkflowState(
     state => state.workflow?.lock_version
   );
   const latestSnapshotLockVersion = useLatestSnapshotLockVersion();
 
-  // Construct workflow object from store state for ManualRunPanel
   const workflow = useWorkflowState(state =>
     state.workflow
       ? {
@@ -139,7 +134,6 @@ export function FullScreenIDE({
       : null
   );
 
-  // Get project ID and workflow ID for ManualRunPanel
   const project = useProject();
   const projectId = project?.id;
   const workflowId = useWorkflowState(state => state.workflow?.id);
@@ -152,19 +146,14 @@ export function FullScreenIDE({
   const [isCenterCollapsed, setIsCenterCollapsed] = useState(false);
   const [isRightCollapsed, setIsRightCollapsed] = useState(true);
 
-  // Follow run state for right panel
   const [followRunId, setFollowRunId] = useState<string | null>(null);
-
-  // Track selected dataclip for retry functionality
   const [selectedDataclip, setSelectedDataclip] = useState<any>(null);
 
-  // Handler for run submission - auto-expands right panel and updates URL
   const handleRunSubmitted = useCallback(
     (runId: string) => {
       setFollowRunId(runId);
       updateSearchParams({ run: runId });
 
-      // Auto-expand right panel if collapsed
       if (rightPanelRef.current?.isCollapsed()) {
         rightPanelRef.current.expand();
       }
@@ -172,7 +161,6 @@ export function FullScreenIDE({
     [updateSearchParams]
   );
 
-  // Determine run context (job from URL)
   const runContext = jobIdFromURL
     ? { type: "job" as const, id: jobIdFromURL }
     : {
@@ -180,18 +168,14 @@ export function FullScreenIDE({
         id: workflow?.triggers[0]?.id || "",
       };
 
-  // Get current run from RunStore for retry detection
   const currentRun = useCurrentRun();
 
-  // Get step for current job from followed run
   const followedRunStep = useMemo(() => {
     if (!currentRun || !currentRun.steps || !jobIdFromURL) return null;
     return currentRun.steps.find(s => s.job_id === jobIdFromURL) || null;
   }, [currentRun, jobIdFromURL]);
 
-  // Auto-fetch and select dataclip when following a run
-  // This enables retry functionality in the IDE
-  // Fetch once when input_dataclip_id becomes available
+  // Auto-fetch and select dataclip when following a run (enables retry functionality)
   useEffect(() => {
     const inputDataclipId = followedRunStep?.input_dataclip_id;
 
@@ -199,18 +183,15 @@ export function FullScreenIDE({
       return;
     }
 
-    // Skip if we already have the correct dataclip
     if (selectedDataclip?.id === inputDataclipId) {
       return;
     }
 
-    // Get run ID from URL (support both 'run' and 'a' parameters)
     const runId = searchParams.get("run") || searchParams.get("a");
     if (!runId) {
       return;
     }
 
-    // Fetch the dataclip for this run
     const fetchDataclip = async () => {
       try {
         const response = await dataclipApi.getRunDataclip(
@@ -228,15 +209,14 @@ export function FullScreenIDE({
     };
 
     void fetchDataclip();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     followedRunStep?.input_dataclip_id,
     jobIdFromURL,
     projectId,
     searchParams,
+    selectedDataclip?.id,
   ]);
 
-  // Use run/retry hook for all run logic
   const {
     handleRun,
     handleRetry,
@@ -259,18 +239,15 @@ export function FullScreenIDE({
     workflowEdges: workflow?.edges || [],
   });
 
-  // Right panel tab state
   type RightPanelTab = "run" | "log" | "input" | "output";
   const [activeRightTab, setActiveRightTab] = useState<RightPanelTab>("run");
 
-  // Persist right panel tab to localStorage
   useEffect(() => {
     if (activeRightTab) {
       localStorage.setItem("lightning.ide-run-viewer-tab", activeRightTab);
     }
   }, [activeRightTab]);
 
-  // Restore tab from localStorage on mount
   useEffect(() => {
     const savedTab = localStorage.getItem("lightning.ide-run-viewer-tab");
     if (savedTab && ["run", "log", "input", "output"].includes(savedTab)) {
@@ -278,12 +255,10 @@ export function FullScreenIDE({
     }
   }, []);
 
-  // Adaptor configuration modal state
   const [isConfigureModalOpen, setIsConfigureModalOpen] = useState(false);
   const [isAdaptorPickerOpen, setIsAdaptorPickerOpen] = useState(false);
   const [isCredentialModalOpen, setIsCredentialModalOpen] = useState(false);
 
-  // Adaptor and credential data
   const { projectCredentials, keychainCredentials } = useCredentials();
   const { requestCredentials } = useCredentialsCommands();
   const { projectAdaptors, allAdaptors } = useProjectAdaptors();
@@ -292,7 +267,6 @@ export function FullScreenIDE({
 
   const { enableScope, disableScope } = useHotkeysContext();
 
-  // Enable/disable ide scope based on whether IDE is open
   useEffect(() => {
     enableScope("ide");
     return () => {
@@ -300,15 +274,12 @@ export function FullScreenIDE({
     };
   }, [enableScope, disableScope]);
 
-  // Sync URL job ID to workflow store selection
   useEffect(() => {
     if (jobIdFromURL) {
       selectJob(jobIdFromURL);
     }
   }, [jobIdFromURL, selectJob]);
 
-  // Connect to run channel when URL has run parameter
-  // This keeps the connection alive independently of panel collapse state
   useEffect(() => {
     if (!runIdFromURL || !provider) {
       runStore._disconnectFromRun();
@@ -319,30 +290,24 @@ export function FullScreenIDE({
     return cleanup;
   }, [runIdFromURL, provider, runStore]);
 
-  // Sync URL run_id to followRunId
   useEffect(() => {
     if (runIdFromURL && runIdFromURL !== followRunId) {
       setFollowRunId(runIdFromURL);
 
-      // Auto-expand right panel for deep links
       if (rightPanelRef.current?.isCollapsed()) {
         rightPanelRef.current.expand();
       }
     }
   }, [runIdFromURL, followRunId]);
 
-  // Sync stepIdFromURL to RunStore
   useEffect(() => {
     if (stepIdFromURL && runIdFromURL) {
       selectStep(stepIdFromURL);
     }
   }, [stepIdFromURL, runIdFromURL, selectStep]);
 
-  // Handler for Save button
   const handleSave = () => {
-    // Centralized validation - both button and keyboard shortcut use this
     if (!canSave) {
-      // Show toast with the reason why save is disabled
       notifications.alert({
         title: "Cannot save",
         description: tooltipMessage,
@@ -352,12 +317,10 @@ export function FullScreenIDE({
     void saveWorkflow();
   };
 
-  // Handler for collapsing left panel (no close button in IDE context)
   const handleCollapseLeftPanel = () => {
     leftPanelRef.current?.collapse();
   };
 
-  // Adaptor modal handlers
   const handleOpenAdaptorPicker = useCallback(() => {
     setIsConfigureModalOpen(false);
     setIsAdaptorPickerOpen(true);
@@ -380,10 +343,8 @@ export function FullScreenIDE({
       const newPackage = packageMatch ? packageMatch[1] : adaptorName;
       const fullAdaptor = `${newPackage}@latest`;
 
-      // Update job in Y.Doc
       updateJob(currentJob.id, { adaptor: fullAdaptor });
 
-      // Close adaptor picker and reopen configure modal
       setIsAdaptorPickerOpen(false);
       setIsConfigureModalOpen(true);
     },
@@ -458,13 +419,13 @@ export function FullScreenIDE({
         }
       }
 
-      // Persist to Y.Doc
       updateJob(currentJob.id, jobUpdates);
+
+      // setIsConfigureModalOpen(false);
     },
     [currentJob, projectCredentials, keychainCredentials, updateJob]
   );
 
-  // Listen for credential modal close event
   useEffect(() => {
     const handleModalClose = () => {
       setIsCredentialModalOpen(false);
@@ -484,7 +445,6 @@ export function FullScreenIDE({
     };
   }, [pushEvent]);
 
-  // Listen for credential saved event
   useEffect(() => {
     const cleanup = handleEvent("credential_saved", (payload: any) => {
       if (!currentJob) return;
@@ -496,16 +456,13 @@ export function FullScreenIDE({
         ? credential.project_credential_id
         : credential.id;
 
-      // Update job with new credential
       updateJob(currentJob.id, {
         project_credential_id: is_project_credential ? credentialId : null,
         keychain_credential_id: is_project_credential ? null : credentialId,
       });
 
-      // Reload credentials
       void requestCredentials();
 
-      // Reopen configure modal
       setTimeout(() => {
         setIsConfigureModalOpen(true);
       }, 200);
@@ -514,28 +471,23 @@ export function FullScreenIDE({
     return cleanup;
   }, [handleEvent, currentJob, updateJob, requestCredentials]);
 
-  // Handle Escape key to close the IDE
-  // Two-step behavior: first Escape removes focus from Monaco, second closes IDE
   useHotkeys(
     "escape",
     event => {
-      // Check if Monaco editor has focus
       const activeElement = document.activeElement;
       const isMonacoFocused = activeElement?.closest(".monaco-editor");
 
       if (isMonacoFocused) {
-        // First Escape: blur Monaco editor to remove focus
         (activeElement as HTMLElement).blur();
         event.preventDefault();
       } else {
-        // Second Escape: close IDE
         onClose();
       }
     },
     {
       enabled: true,
       scopes: ["ide"],
-      enableOnFormTags: true, // Allow Escape even in Monaco editor
+      enableOnFormTags: true,
     },
     [onClose]
   );
@@ -579,13 +531,11 @@ export function FullScreenIDE({
     );
   }
 
-  // Check how many panels are open
   const openPanelCount =
     (!isLeftCollapsed ? 1 : 0) +
     (!isCenterCollapsed ? 1 : 0) +
     (!isRightCollapsed ? 1 : 0);
 
-  // Toggle handlers for panel collapse/expand
   const toggleLeftPanel = () => {
     if (!isLeftCollapsed && openPanelCount === 1) return;
     if (isLeftCollapsed) {
@@ -615,7 +565,6 @@ export function FullScreenIDE({
 
   return (
     <div className="fixed inset-0 z-50 bg-white flex flex-col">
-      {/* Header with Run, Save, Close buttons */}
       <IDEHeader
         jobId={currentJob.id}
         jobName={currentJob.name}
@@ -653,7 +602,6 @@ export function FullScreenIDE({
         position="relative"
       />
 
-      {/* 3-panel layout */}
       <div className="flex-1 overflow-hidden">
         <PanelGroup
           direction="horizontal"

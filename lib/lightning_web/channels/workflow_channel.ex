@@ -27,7 +27,6 @@ defmodule LightningWeb.WorkflowChannel do
         %{"project_id" => project_id, "action" => action},
         socket
       ) do
-    # Parse room name to extract workflow_id and optional version
     # Room formats:
     # - "workflow_id" → latest (collaborative editing room)
     # - "workflow_id:vN" → specific version N (isolated snapshot viewing)
@@ -61,7 +60,6 @@ defmodule LightningWeb.WorkflowChannel do
 
       project_user = Lightning.Projects.get_project_user(project, user)
 
-      # Subscribe to PubSub for real-time credential updates
       Phoenix.PubSub.subscribe(
         Lightning.PubSub,
         "workflow:collaborate:#{workflow_id}"
@@ -84,7 +82,6 @@ defmodule LightningWeb.WorkflowChannel do
     end
   end
 
-  # Handle missing params
   def join("workflow:collaborate:" <> _workflow_id, _params, _socket) do
     {:error, %{reason: "invalid parameters. project_id and action are required"}}
   end
@@ -102,8 +99,6 @@ defmodule LightningWeb.WorkflowChannel do
     project = socket.assigns.project
 
     async_task(socket, "request_project_adaptors", fn ->
-      # Query all jobs in this project's workflows to extract unique
-      # adaptors
       project_adaptor_names =
         from(j in Job,
           join: w in assoc(j, :workflow),
@@ -114,10 +109,8 @@ defmodule LightningWeb.WorkflowChannel do
         |> Lightning.Repo.all()
         |> Enum.sort()
 
-      # Get complete adaptor registry with version info
       all_adaptors = Lightning.AdaptorRegistry.all()
 
-      # Filter registry to get full details for project adaptors
       project_adaptors =
         all_adaptors
         |> Enum.filter(fn adaptor ->
@@ -270,7 +263,6 @@ defmodule LightningWeb.WorkflowChannel do
          repo_connection when not is_nil(repo_connection) <-
            VersionControl.get_repo_connection_for_project(project.id),
          :ok <- VersionControl.initiate_sync(repo_connection, commit_message) do
-      # Broadcast the new lock_version to all users in the channel
       broadcast_from!(socket, "workflow_saved", %{
         latest_snapshot_lock_version: workflow.lock_version
       })
@@ -326,7 +318,6 @@ defmodule LightningWeb.WorkflowChannel do
   def handle_in("validate_workflow_name", %{"workflow" => params}, socket) do
     project = socket.assigns.project
 
-    # Apply name uniqueness logic
     validated_params = ensure_unique_name(params, project)
 
     {:reply, {:ok, %{workflow: validated_params}}, socket}
@@ -341,7 +332,6 @@ defmodule LightningWeb.WorkflowChannel do
     async_task(socket, "request_versions", fn ->
       Logger.info("Inside async_task for request_versions")
 
-      # Get fresh workflow from database to get the actual latest lock_version
       fresh_workflow = Lightning.Workflows.get_workflow(workflow.id)
       latest_lock_version = fresh_workflow.lock_version
 
@@ -361,7 +351,6 @@ defmodule LightningWeb.WorkflowChannel do
             is_latest: snapshot.lock_version == latest_lock_version
           }
         end)
-        # Sort with latest first, then by lock_version descending
         |> Enum.sort_by(fn v ->
           {if(v.is_latest, do: 0, else: 1), -v.lock_version}
         end)
@@ -418,7 +407,6 @@ defmodule LightningWeb.WorkflowChannel do
 
   @impl true
   def handle_info(%{event: "credentials_updated", payload: credentials}, socket) do
-    # Forward credential updates from PubSub to connected channel clients
     push(socket, "credentials_updated", credentials)
     {:noreply, socket}
   end
@@ -431,9 +419,6 @@ defmodule LightningWeb.WorkflowChannel do
     {:stop, {:error, "remote process crash"}, socket}
   end
 
-  # TODO why do we need to use handle_out on broadcast_from! events
-  # even tho we've not specified any interceptors?
-  # from docs. we don't need to. broadcast_from! automatically pushes unless we intercept the event
   @impl true
   def handle_out(event, payload, socket) do
     push(socket, event, payload)
@@ -634,8 +619,6 @@ defmodule LightningWeb.WorkflowChannel do
     end
   end
 
-  # Private helper functions for validate_workflow_name
-
   defp ensure_unique_name(params, project) do
     workflow_name =
       params["name"]
@@ -673,22 +656,17 @@ defmodule LightningWeb.WorkflowChannel do
     not MapSet.member?(existing_names, name)
   end
 
-  # Load workflow for "edit" action - fetch from database
-  # Load workflow for "edit" action with optional version
   defp load_workflow("edit", workflow_id, project, user, version)
        when is_binary(version) do
     Logger.info("Loading workflow snapshot version: #{version}")
 
-    # Parse version as integer
     case Integer.parse(version) do
       {lock_version, ""} ->
-        # Load snapshot by version
         case Snapshot.get_by_version(workflow_id, lock_version) do
           nil ->
             {:error, "snapshot version #{version} not found"}
 
           snapshot ->
-            # Convert snapshot to workflow struct format for Y.Doc initialization
             workflow = %Workflow{
               id: workflow_id,
               project_id: project.id,
@@ -700,7 +678,6 @@ defmodule LightningWeb.WorkflowChannel do
               triggers: Enum.map(snapshot.triggers, &Map.from_struct/1)
             }
 
-            # Verify permissions
             case Permissions.can(
                    :workflows,
                    :access_read,
@@ -720,7 +697,6 @@ defmodule LightningWeb.WorkflowChannel do
     end
   end
 
-  # Load workflow for "edit" action without version (latest)
   defp load_workflow("edit", workflow_id, project, user, _version) do
     # IMPORTANT: Preload associations needed for Y.Doc initialization
     # When no persisted Y.Doc state exists, the workflow is serialized to Y.Doc
@@ -732,11 +708,9 @@ defmodule LightningWeb.WorkflowChannel do
         {:error, "workflow not found"}
 
       workflow ->
-        # Verify project matches
         if workflow.project_id != project.id do
           {:error, "workflow does not belong to specified project"}
         else
-          # Verify permissions
           case Permissions.can(
                  :workflows,
                  :access_read,
@@ -753,9 +727,7 @@ defmodule LightningWeb.WorkflowChannel do
     end
   end
 
-  # Load workflow for "new" action - build workflow struct
   defp load_workflow("new", workflow_id, project, user, _version) do
-    # Verify permissions on project
     case Permissions.can(
            :project_users,
            :create_workflow,
@@ -763,7 +735,6 @@ defmodule LightningWeb.WorkflowChannel do
            project
          ) do
       :ok ->
-        # Build minimal workflow struct for new workflow
         workflow = %Lightning.Workflows.Workflow{
           id: workflow_id,
           project_id: project.id,
@@ -780,7 +751,6 @@ defmodule LightningWeb.WorkflowChannel do
     end
   end
 
-  # Handle invalid action
   defp load_workflow(action, _workflow_id, _project, _user, _version) do
     {:error, "invalid action '#{action}', must be 'new' or 'edit'"}
   end

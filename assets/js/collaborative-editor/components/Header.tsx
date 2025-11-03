@@ -63,7 +63,6 @@ export function SaveButton({
   const hasGitHubIntegration = repoConnection !== null;
 
   if (!hasGitHubIntegration) {
-    // Simple save button when no GitHub integration
     return (
       <div className="inline-flex rounded-md shadow-xs z-5">
         <Tooltip content={tooltipMessage} side="bottom">
@@ -87,7 +86,6 @@ export function SaveButton({
     );
   }
 
-  // Split button with dropdown when GitHub integration exists
   return (
     <div className="inline-flex rounded-md shadow-xs z-5">
       <Tooltip content={tooltipMessage} side="bottom">
@@ -158,30 +156,15 @@ export function Header({
   projectId?: string;
   workflowId?: string;
 }) {
-  // URL state management (needed early for handleRunClick)
   const { updateSearchParams } = useURLState();
-
-  // Node selection
   const { selectNode } = useNodeSelection();
-
-  // Separate queries and commands for proper CQS
   const { enabled, setEnabled } = useWorkflowEnabled();
   const { saveWorkflow } = useWorkflowActions();
-
-  // Get save button state
   const { canSave, tooltipMessage } = useCanSave();
-
-  // Get triggers to check if workflow has any
   const triggers = useWorkflowState(state => state.triggers);
   const firstTriggerId = triggers[0]?.id;
-
-  // Get run button state from hook
   const { canRun, tooltipMessage: runTooltipMessage } = useCanRun();
-
-  // Get UI commands from store
   const { openRunPanel, openGitHubSyncModal } = useUICommands();
-
-  // Get GitHub repo connection for split button
   const repoConnection = useProjectRepoConnection();
 
   // Detect if viewing old snapshot
@@ -195,49 +178,42 @@ export function Header({
 
   const handleRunClick = useCallback(() => {
     if (firstTriggerId) {
-      // Select the trigger in the diagram
       selectNode(firstTriggerId);
-      // Open the run panel via store
       openRunPanel({ triggerId: firstTriggerId });
     }
   }, [firstTriggerId, openRunPanel, selectNode]);
 
-  // Global save shortcut: Ctrl/Cmd+S
   useHotkeys(
-    "ctrl+s,meta+s", // Windows/Linux: Ctrl+S, Mac: Cmd+S
+    "ctrl+s,meta+s",
     event => {
-      event.preventDefault(); // Always prevent browser's "Save Page" dialog
+      event.preventDefault();
       if (canSave) {
-        saveWorkflow(); // Only save when allowed
+        void saveWorkflow();
       }
     },
     {
-      enabled: true, // Always listen to prevent browser save
-      enableOnFormTags: true, // Allow in Monaco editor, input fields, textareas
+      enabled: true,
+      enableOnFormTags: true,
     },
-    [saveWorkflow, canSave] // Re-register when dependencies change
+    [saveWorkflow, canSave]
   );
 
-  // Global save and sync shortcut: Ctrl/Cmd+Shift+S (only when GitHub integration available)
   useHotkeys(
-    "ctrl+shift+s,meta+shift+s", // Windows/Linux: Ctrl+Shift+S, Mac: Cmd+Shift+S
+    "ctrl+shift+s,meta+shift+s",
     event => {
-      event.preventDefault(); // Prevent any browser shortcuts
+      event.preventDefault();
       if (canSave && repoConnection) {
-        openGitHubSyncModal(); // Open sync modal when allowed and GitHub connected
+        openGitHubSyncModal();
       }
     },
     {
-      enableOnFormTags: true, // Allow in Monaco editor, input fields, textareas
+      enableOnFormTags: true,
     },
-    [openGitHubSyncModal, canSave, repoConnection] // Re-register when dependencies change
+    [openGitHubSyncModal, canSave, repoConnection]
   );
 
-  // Session context queries
   const user = useUser();
   const isNewWorkflow = useIsNewWorkflow();
-
-  // Generate avatar initials from user data
   const avatarInitials = getAvatarInitials(user);
 
   return (
@@ -252,7 +228,7 @@ export function Header({
             <a
               href={buildClassicalEditorUrl({
                 projectId,
-                workflowId: workflowId ?? null,
+                workflowId,
                 searchParams: new URLSearchParams(window.location.search),
                 isNewWorkflow,
               })}
@@ -312,7 +288,7 @@ export function Header({
               <SaveButton
                 canSave={canSave}
                 tooltipMessage={tooltipMessage}
-                onClick={saveWorkflow}
+                onClick={() => void saveWorkflow()}
                 repoConnection={repoConnection}
                 onSyncClick={openGitHubSyncModal}
               />

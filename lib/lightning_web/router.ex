@@ -135,7 +135,6 @@ defmodule LightningWeb.Router do
     get "/download/yaml", DownloadsController, :download_project_yaml
     get "/dataclip/body/:id", DataclipController, :show
 
-    # Dataclip operations for manual run panel
     get "/projects/:project_id/jobs/:job_id/dataclips",
         DataclipController,
         :search
@@ -148,12 +147,10 @@ defmodule LightningWeb.Router do
           DataclipController,
           :update_name
 
-    # Manual workflow runs
     post "/projects/:project_id/workflows/:workflow_id/runs",
          WorkflowController,
          :create_run
 
-    # Run steps and retry
     get "/projects/:project_id/runs/:run_id/steps",
         WorkflowController,
         :get_run_steps

@@ -75,7 +75,6 @@ export function RunRetryButton({
 
   const styles = variantStyles[variant];
 
-  // Click-away handler
   useEffect(() => {
     if (!isDropdownOpen) return;
 
@@ -102,7 +101,7 @@ export function RunRetryButton({
 
   const handleDropdownClick = () => {
     setIsDropdownOpen(false);
-    onRun(); // Always run (force new work order)
+    onRun();
   };
 
   if (isSubmitting) {
@@ -125,7 +124,6 @@ export function RunRetryButton({
   }
 
   if (!isRetryable) {
-    // Single button
     return (
       <button
         type="button"
@@ -148,13 +146,11 @@ export function RunRetryButton({
     );
   }
 
-  // Split button
   return (
     <div
       className={cn("inline-flex rounded-md shadow-xs", className)}
       ref={dropdownRef}
     >
-      {/* Main button */}
       <button
         type="button"
         onClick={handleMainClick}
@@ -173,7 +169,6 @@ export function RunRetryButton({
         {retry}
       </button>
 
-      {/* Dropdown toggle */}
       <div className="relative -ml-px">
         <button
           type="button"
@@ -195,7 +190,6 @@ export function RunRetryButton({
           <span className="hero-chevron-down w-4 h-4"></span>
         </button>
 
-        {/* Dropdown menu */}
         {isDropdownOpen && (
           <div
             role="menu"

@@ -306,7 +306,6 @@ defmodule LightningWeb.WorkflowLive.Helpers do
 
       case value_or_opts do
         opts when is_list(opts) ->
-          # If it's already a param definition, use it
           if Keyword.has_key?(opts, :name) do
             opts
           else
@@ -331,22 +330,16 @@ defmodule LightningWeb.WorkflowLive.Helpers do
     end)
   end
 
-  # Query parameter mapping configuration
-  # This centralizes the conversion rules between classical and collaborative editors
   @param_mappings %{
-    # Direct parameter mappings: classical_key => collaborative_key
     direct: %{
       "a" => "run"
     },
-    # Mode to panel mappings
     mode_to_panel: %{
       "expand" => "editor",
       "workflow_input" => "run",
       "settings" => "settings"
     },
-    # Parameters that should be preserved as-is
     preserved: ["v", "method", "w-chat", "j-chat", "code"],
-    # Parameters that are collaborative-only and should be skipped
     collaborative_only: ["panel"]
   }
 
@@ -406,7 +399,6 @@ defmodule LightningWeb.WorkflowLive.Helpers do
     )
   end
 
-  # Convert a single parameter based on mapping rules
   defp convert_param(_key, nil, acc, _assigns), do: acc
 
   defp convert_param("a", value, acc, _assigns) do
@@ -433,24 +425,20 @@ defmodule LightningWeb.WorkflowLive.Helpers do
       key in @param_mappings.preserved ->
         Map.put(acc, key, value)
 
-      # Future-proof: preserve unknown parameters
       true ->
         Map.put(acc, key, value)
     end
   end
 
-  # Determine if 's' parameter refers to a job, trigger, or edge
   defp determine_selection_type(value, assigns) do
     cond do
       match?(%{selected_trigger: %{id: ^value}}, assigns) -> "trigger"
       match?(%{selected_job: %{id: ^value}}, assigns) -> "job"
       match?(%{selected_edge: %{id: ^value}}, assigns) -> "edge"
-      # Default to job for backwards compatibility
       true -> "job"
     end
   end
 
-  # Build the base URL for collaborative editor
   defp collaborative_base_url(%{live_action: :new, project: project}) do
     "/projects/#{project.id}/w/new/collaborate"
   end
@@ -459,7 +447,6 @@ defmodule LightningWeb.WorkflowLive.Helpers do
     "/projects/#{project.id}/w/#{workflow.id}/collaborate"
   end
 
-  # Build complete URL with query parameters
   defp build_url_with_params(base_url, params) when map_size(params) == 0 do
     base_url
   end

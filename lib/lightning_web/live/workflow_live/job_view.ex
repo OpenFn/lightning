@@ -7,15 +7,15 @@ defmodule LightningWeb.WorkflowLive.JobView do
   alias LightningWeb.Components.Tabbed
   alias LightningWeb.WorkflowLive.EditorPane
 
-  attr(:id, :string, required: true)
-  slot(:top)
+  attr :id, :string, required: true
+  slot :top
 
-  slot(:inner_block, required: false)
+  slot :inner_block, required: false
 
-  slot(:bottom)
+  slot :bottom
 
   slot :column do
-    attr(:class, :string, doc: "Extra CSS classes for the column")
+    attr :class, :string, doc: "Extra CSS classes for the column"
   end
 
   def container(assigns) do
@@ -41,9 +41,9 @@ defmodule LightningWeb.WorkflowLive.JobView do
     """
   end
 
-  slot(:inner_block, required: true)
-  attr(:class, :string, default: "")
-  attr(:id, :string, required: true)
+  slot :inner_block, required: true
+  attr :class, :string, default: ""
+  attr :id, :string, required: true
 
   defp column(assigns) do
     ~H"""
@@ -53,27 +53,27 @@ defmodule LightningWeb.WorkflowLive.JobView do
     """
   end
 
-  attr(:job, :map, required: true)
-  attr(:form, :map, required: true, doc: "A form built from a job")
-  attr(:current_user, :map, required: true)
-  attr(:project, :map, required: true)
-  attr(:close_url, :any, required: true)
-  attr(:socket, :any, required: true)
-  attr(:follow_run_id, :any, default: nil)
-  attr(:snapshot, :any, required: true)
-  attr(:snapshot_version, :any, required: true)
-  attr(:display_banner, :boolean, default: false)
-  attr(:banner_message, :string, default: "")
-  attr(:presences, :list, required: true)
-  attr(:prior_user_presence, :any, required: true)
-  attr(:query_params, :map, default: %{})
+  attr :job, :map, required: true
+  attr :form, :map, required: true, doc: "A form built from a job"
+  attr :current_user, :map, required: true
+  attr :project, :map, required: true
+  attr :close_url, :any, required: true
+  attr :socket, :any, required: true
+  attr :follow_run_id, :any, default: nil
+  attr :snapshot, :any, required: true
+  attr :snapshot_version, :any, required: true
+  attr :display_banner, :boolean, default: false
+  attr :banner_message, :string, default: ""
+  attr :presences, :list, required: true
+  attr :prior_user_presence, :any, required: true
+  attr :query_params, :map, default: %{}
 
-  slot(:footer)
+  slot :footer
 
   slot :collapsible_panel do
-    attr(:id, :string, required: true)
-    attr(:panel_title, :string, required: true)
-    attr(:class, :string, doc: "Extra CSS classes for the column")
+    attr :id, :string, required: true
+    attr :panel_title, :string, required: true
+    attr :class, :string, doc: "Extra CSS classes for the column"
   end
 
   def job_edit_view(assigns) do

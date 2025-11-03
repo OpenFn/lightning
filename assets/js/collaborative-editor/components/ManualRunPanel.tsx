@@ -75,8 +75,6 @@ export function ManualRunPanel({
   >(null);
   const [canEditDataclip, setCanEditDataclip] = useState(false);
   const [currentRunDataclip] = useState<Dataclip | null>(null);
-
-  // Filter state for ExistingView
   const [selectedClipType, setSelectedClipType] = useState("");
   const [selectedDates, setSelectedDates] = useState({
     before: "",
@@ -84,20 +82,16 @@ export function ManualRunPanel({
   });
   const [namedOnly, setNamedOnly] = useState(false);
 
-  // Use centralized canRun hook for workflow-level permissions
   const { canRun: canRunWorkflow, tooltipMessage: workflowRunTooltipMessage } =
     useCanRun();
 
-  // Get URL state for following runs
   const { searchParams } = useURLState();
   const followedRunId = searchParams.get("run");
-  const currentRun = useCurrentRun(); // Real-time from WebSocket
+  const currentRun = useCurrentRun();
 
-  // Get provider for run connection (only needed in standalone mode)
   const { provider } = useSession();
   const runStore = useRunStoreInstance();
 
-  // Determine run context
   const runContext = jobId
     ? { type: "job" as const, id: jobId }
     : triggerId
@@ -107,7 +101,6 @@ export function ManualRunPanel({
           id: workflow.triggers[0]?.id || "",
         };
 
-  // Get the node for panel title
   const contextJob =
     runContext.type === "job"
       ? workflow.jobs.find(j => j.id === runContext.id)
@@ -124,15 +117,13 @@ export function ManualRunPanel({
       ? `Run from Trigger (${contextTrigger.type})`
       : "Run Workflow";
 
-  // For triggers, we need to find the first connected job for dataclip fetching
-  // since dataclips are associated with jobs, not triggers
-  // This mirrors the backend logic in WorkflowController.get_selected_job
+  // For triggers: find first connected job for dataclip fetching
+  // (dataclips are associated with jobs, not triggers)
   const dataclipJobId = useMemo(() => {
     if (runContext.type === "job") {
       return runContext.id;
     }
 
-    // Find the first edge from this trigger to a job
     const triggerEdge = workflow.edges.find(
       edge => edge.source_trigger_id === runContext.id
     );
@@ -140,7 +131,6 @@ export function ManualRunPanel({
     return triggerEdge?.target_job_id || workflow.jobs[0]?.id;
   }, [runContext, workflow.edges, workflow.jobs]);
 
-  // Use run/retry hook for all run logic
   const {
     handleRun,
     handleRetry,
@@ -163,16 +153,14 @@ export function ManualRunPanel({
     workflowEdges: workflow.edges,
   });
 
-  // Get step for current job from followed run (needed for dataclip auto-selection)
   const followedRunStep = useMemo(() => {
     if (!currentRun || !dataclipJobId) return null;
     return currentRun.steps.find(s => s.job_id === dataclipJobId) || null;
   }, [currentRun, dataclipJobId]);
 
-  // Connect to run channel when following a run (only in standalone mode)
-  // In embedded mode (FullScreenIDE), the parent handles the connection
+  // Connect to run channel when following a run
+  // Note: In embedded mode (FullScreenIDE), parent handles the connection
   useEffect(() => {
-    // Only manage connection in standalone mode
     if (renderMode !== RENDER_MODES.STANDALONE) {
       return;
     }
@@ -186,10 +174,8 @@ export function ManualRunPanel({
     return cleanup;
   }, [followedRunId, provider, runStore, renderMode]);
 
-  // Watch for jobId/triggerId changes and update panel
+  // Reset panel state when context changes (unless following a run)
   useEffect(() => {
-    // Only reset state when context changes if there's NO followed run
-    // If following a run, preserve state to avoid flash when switching nodes
     if (!followedRunId) {
       setSelectedDataclip(null);
       setSearchQuery("");
@@ -200,13 +186,11 @@ export function ManualRunPanel({
   }, [jobId, triggerId, followedRunId]);
 
   // Auto-select step's input dataclip when following a run
-  // This effect runs when step data becomes available from RunStore
   useEffect(() => {
     if (!followedRunStep?.input_dataclip_id || !dataclips.length) {
       return;
     }
 
-    // Find the step's input dataclip in the loaded dataclips
     const stepDataclip = dataclips.find(
       dc => dc.id === followedRunStep.input_dataclip_id
     );
@@ -217,7 +201,6 @@ export function ManualRunPanel({
     }
   }, [followedRunStep, dataclips]);
 
-  // Fetch initial dataclips
   useEffect(() => {
     if (!dataclipJobId) return;
 
@@ -233,8 +216,7 @@ export function ManualRunPanel({
         setNextCronRunDataclipId(response.next_cron_run_dataclip_id);
         setCanEditDataclip(response.can_edit_dataclip);
 
-        // Auto-select next cron run dataclip if exists
-        // BUT: Skip this if following a run - the followedRunStep effect will handle selection
+        // Auto-select next cron run dataclip (unless following a run)
         if (response.next_cron_run_dataclip_id && !followedRunId) {
           const nextCronDataclip = response.data.find(
             d => d.id === response.next_cron_run_dataclip_id
@@ -252,7 +234,6 @@ export function ManualRunPanel({
     void fetchDataclips();
   }, [projectId, dataclipJobId, followedRunId]);
 
-  // Build filters object for API
   const buildFilters = useCallback(() => {
     const filters: Record<string, string> = {};
     if (selectedClipType) filters["type"] = selectedClipType;
@@ -262,7 +243,6 @@ export function ManualRunPanel({
     return filters;
   }, [selectedClipType, selectedDates.before, selectedDates.after, namedOnly]);
 
-  // Get active filters for display
   const getActiveFilters = useCallback(() => {
     const filters: Record<string, string | undefined> = {};
     if (selectedClipType) filters[FilterTypes.DATACLIP_TYPE] = selectedClipType;
@@ -274,7 +254,6 @@ export function ManualRunPanel({
     return filters;
   }, [selectedClipType, selectedDates.before, selectedDates.after, namedOnly]);
 
-  // Clear filter handler
   const clearFilter = useCallback((filterType: FilterTypes) => {
     switch (filterType) {
       case FilterTypes.DATACLIP_TYPE:
@@ -292,7 +271,6 @@ export function ManualRunPanel({
     }
   }, []);
 
-  // Search handler
   const handleSearch = useCallback(async () => {
     if (!dataclipJobId) return;
 
@@ -309,14 +287,12 @@ export function ManualRunPanel({
     }
   }, [projectId, dataclipJobId, searchQuery, buildFilters]);
 
-  // Auto-search when filters change (debounced)
   useEffect(() => {
     if (selectedTab !== "existing") return;
 
     const contextId = runContext.id;
     if (!contextId) return;
 
-    // Debounce: wait 300ms after last filter change before searching
     const timeoutId = setTimeout(() => {
       const filters: Record<string, string> = {};
       if (selectedClipType) filters["type"] = selectedClipType;
@@ -375,7 +351,6 @@ export function ManualRunPanel({
     [projectId]
   );
 
-  // Handle Escape key to close the run panel
   useHotkeys(
     "escape",
     () => {
@@ -385,9 +360,7 @@ export function ManualRunPanel({
     [onClose]
   );
 
-  // Handle run/retry keyboard shortcuts
-  // Only enabled in standalone mode - embedded mode uses IDEHeader handlers
-  // Use "runpanel" scope to give these shortcuts priority over WorkflowEditor
+  // Run/retry shortcuts (standalone mode only - embedded uses IDEHeader)
   useRunRetryShortcuts({
     onRun: () => void handleRun(),
     onRetry: () => void handleRetry(),
@@ -398,8 +371,6 @@ export function ManualRunPanel({
     scope: SHORTCUT_SCOPES.RUN_PANEL,
   });
 
-  // Extract content for reuse
-  // Show message when edge is selected (like classical editor)
   const content = edgeId ? (
     <div className="flex justify-center flex-col items-center self-center h-full">
       <div className="text-gray-600">
@@ -488,12 +459,10 @@ export function ManualRunPanel({
     </div>
   );
 
-  // Embedded mode: return content without wrapper
   if (renderMode === RENDER_MODES.EMBEDDED) {
     return content;
   }
 
-  // Standalone mode: wrap in InspectorLayout
   return (
     <InspectorLayout
       title={panelTitle}

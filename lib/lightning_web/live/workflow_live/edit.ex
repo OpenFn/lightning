@@ -42,29 +42,29 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
   on_mount({LightningWeb.Hooks, :project_scope})
 
-  attr(:selection, :string, required: false)
-  attr(:aiAssistantId, :string, required: false)
-  attr(:showAiAssistant, :boolean, required: false)
-  attr(:canEditWorkflow, :boolean, required: false)
-  attr(:snapshotVersionTag, :string, required: false)
-  attr(:aiAssistantEnabled, :boolean, required: false)
-  attr(:liveAction, :string, required: false)
+  attr :selection, :string, required: false
+  attr :aiAssistantId, :string, required: false
+  attr :showAiAssistant, :boolean, required: false
+  attr :canEditWorkflow, :boolean, required: false
+  attr :snapshotVersionTag, :string, required: false
+  attr :aiAssistantEnabled, :boolean, required: false
+  attr :liveAction, :string, required: false
 
   jsx("assets/js/workflow-editor/WorkflowEditor.tsx")
   jsx("assets/js/workflow-store/WorkflowStore.tsx")
 
-  attr(:job_id, :string)
+  attr :job_id, :string
   jsx("assets/js/manual-run-panel/ManualRunPanel.tsx")
 
-  attr(:job_id, :string)
-  attr(:job_title, :string)
-  attr(:cancel_url, :string)
-  attr(:back_url, :string)
-  attr(:is_edge, :boolean)
+  attr :job_id, :string
+  attr :job_title, :string
+  attr :cancel_url, :string
+  attr :back_url, :string
+  attr :is_edge, :boolean
   jsx("assets/js/panel/panels/WorkflowRunPanel.tsx")
 
-  attr(:changeset, :map, required: true)
-  attr(:project_user, :map, required: true)
+  attr :changeset, :map, required: true
+  attr :project_user, :map, required: true
 
   @impl true
   def render(assigns) do
@@ -1220,14 +1220,14 @@ defmodule LightningWeb.WorkflowLive.Edit do
     """
   end
 
-  attr(:id, :string, required: true)
-  attr(:can_edit_workflow, :boolean, required: true)
-  attr(:changeset, Ecto.Changeset, required: true)
-  attr(:snapshot_version_tag, :string, required: true)
-  attr(:has_presence_priority, :boolean, required: true)
-  attr(:sending_ai_message, :boolean, default: false)
-  attr(:project_repo_connection, :map, required: true)
-  attr(:dropdown_position, :atom, values: [:top, :bottom], required: true)
+  attr :id, :string, required: true
+  attr :can_edit_workflow, :boolean, required: true
+  attr :changeset, Ecto.Changeset, required: true
+  attr :snapshot_version_tag, :string, required: true
+  attr :has_presence_priority, :boolean, required: true
+  attr :sending_ai_message, :boolean, default: false
+  attr :project_repo_connection, :map, required: true
+  attr :dropdown_position, :atom, values: [:top, :bottom], required: true
 
   defp save_workflow_button(assigns) do
     {disabled, tooltip} =
