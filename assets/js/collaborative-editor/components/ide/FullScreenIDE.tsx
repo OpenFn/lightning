@@ -44,6 +44,14 @@ import { Tabs } from '../Tabs';
 import { IDEHeader } from './IDEHeader';
 import { PanelToggleButton } from './PanelToggleButton';
 import { useUICommands } from '#/collaborative-editor/hooks/useUI';
+import Docs from '../../../adaptor-docs/Docs';
+import Metadata from '../../../metadata-explorer/Explorer';
+import {
+  ViewColumnsIcon,
+  DocumentTextIcon,
+  SparklesIcon,
+} from '@heroicons/react/24/outline';
+import { cn } from '#/utils/cn';
 
 const logger = _logger.ns('FullScreenIDE').seal();
 
@@ -135,8 +143,19 @@ export function FullScreenIDE({
   const rightPanelRef = useRef<ImperativePanelHandle>(null);
 
   const [isLeftCollapsed, setIsLeftCollapsed] = useState(false);
-  const [isCenterCollapsed, setIsCenterCollapsed] = useState(false);
   const [isRightCollapsed, setIsRightCollapsed] = useState(true);
+
+  // NEW: Sub-panel state for Code/Docs nested layout
+  const docsSubPanelRef = useRef<ImperativePanelHandle>(null);
+  const [isDocsSubPanelCollapsed, setIsDocsSubPanelCollapsed] = useState(true); // Start collapsed
+
+  // NEW: Orientation state for Code/Docs layout
+  const [docsOrientation, setDocsOrientation] = useState<
+    'vertical' | 'horizontal'
+  >('vertical');
+
+  // NEW: Selected tab state for Docs/Metadata
+  const [selectedTab, setSelectedTab] = useState<'docs' | 'metadata'>('docs');
 
   // Run state from ManualRunPanel
   const [canRunWorkflow, setCanRunWorkflow] = useState(false);
@@ -164,6 +183,28 @@ export function FullScreenIDE({
       setActiveRightTab(savedTab as RightPanelTab);
     }
   }, []);
+
+  // Restore docs orientation from localStorage on mount
+  useEffect(() => {
+    const saved = localStorage.getItem('lightning.ide-docs-orientation');
+    if (saved === 'horizontal' || saved === 'vertical') {
+      setDocsOrientation(saved);
+    }
+  }, []);
+
+  // Persist docs orientation to localStorage on change
+  useEffect(() => {
+    if (docsOrientation) {
+      localStorage.setItem('lightning.ide-docs-orientation', docsOrientation);
+    }
+  }, [docsOrientation]);
+
+  // Toggle orientation between vertical and horizontal
+  const toggleDocsOrientation = useCallback(() => {
+    const newOrientation =
+      docsOrientation === 'vertical' ? 'horizontal' : 'vertical';
+    setDocsOrientation(newOrientation);
+  }, [docsOrientation]);
 
   // Adaptor configuration modal state
   const [isConfigureModalOpen, setIsConfigureModalOpen] = useState(false);
@@ -500,9 +541,7 @@ export function FullScreenIDE({
 
   // Check how many panels are open
   const openPanelCount =
-    (!isLeftCollapsed ? 1 : 0) +
-    (!isCenterCollapsed ? 1 : 0) +
-    (!isRightCollapsed ? 1 : 0);
+    (!isLeftCollapsed ? 1 : 0) + (!isRightCollapsed ? 1 : 0);
 
   // Toggle handlers for panel collapse/expand
   const toggleLeftPanel = () => {
@@ -514,21 +553,27 @@ export function FullScreenIDE({
     }
   };
 
-  const toggleCenterPanel = () => {
-    if (!isCenterCollapsed && openPanelCount === 1) return;
-    if (isCenterCollapsed) {
-      centerPanelRef.current?.expand();
-    } else {
-      centerPanelRef.current?.collapse();
-    }
-  };
-
   const toggleRightPanel = () => {
     if (!isRightCollapsed && openPanelCount === 1) return;
     if (isRightCollapsed) {
       rightPanelRef.current?.expand();
     } else {
       rightPanelRef.current?.collapse();
+    }
+  };
+
+  const toggleDocsSubPanel = () => {
+    if (isDocsSubPanelCollapsed) {
+      docsSubPanelRef.current?.expand();
+    } else {
+      docsSubPanelRef.current?.collapse();
+    }
+  };
+
+  const handleTabChange = (newTab: 'docs' | 'metadata') => {
+    setSelectedTab(newTab);
+    if (isDocsSubPanelCollapsed) {
+      docsSubPanelRef.current?.expand();
     }
   };
 
@@ -601,6 +646,7 @@ export function FullScreenIDE({
                         Input
                       </div>
                       <PanelToggleButton
+                        isCollapsed={isLeftCollapsed}
                         onClick={toggleLeftPanel}
                         disabled={openPanelCount === 1}
                         ariaLabel="Collapse left panel"
@@ -645,71 +691,137 @@ export function FullScreenIDE({
             transition-colors cursor-col-resize"
           />
 
-          {/* Center Panel - CollaborativeMonaco Editor */}
+          {/* Center Panel - Code + Docs with nested layout */}
           <Panel
             ref={centerPanelRef}
             defaultSize={100}
             minSize={25}
-            collapsible
-            collapsedSize={2}
-            onCollapse={() => setIsCenterCollapsed(true)}
-            onExpand={() => setIsCenterCollapsed(false)}
             className="bg-slate-100"
           >
-            <div className="h-full flex flex-col">
-              {/* Panel heading */}
-              <div
-                className={`shrink-0 border-b border-gray-100 transition-transform ${
-                  isCenterCollapsed ? 'rotate-90' : ''
-                }`}
-              >
-                <div className="flex items-center justify-between px-3 py-1">
-                  {!isCenterCollapsed ? (
-                    <>
-                      <div
-                        className="text-xs font-medium text-gray-400
-                        uppercase tracking-wide"
-                      >
-                        Code
-                      </div>
-                      <PanelToggleButton
-                        onClick={toggleCenterPanel}
-                        disabled={openPanelCount === 1}
-                        ariaLabel="Collapse code panel"
-                      />
-                    </>
-                  ) : (
-                    <button
-                      onClick={toggleCenterPanel}
-                      className="ml-2 text-xs font-medium text-gray-400
-                        uppercase tracking-wide hover:text-gray-600
-                        transition-colors cursor-pointer"
-                    >
+            <PanelGroup direction={docsOrientation} className="h-full">
+              {/* Code Editor Sub-panel */}
+              <Panel defaultSize={70} minSize={30}>
+                <div className="h-full flex flex-col">
+                  {/* Code sub-panel heading */}
+                  <div className="shrink-0 px-3 py-1 bg-slate-50 border-b border-gray-200">
+                    <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">
                       Code
-                    </button>
+                    </span>
+                  </div>
+
+                  {/* Monaco Editor - COPIED EXISTING CODE VERBATIM */}
+                  <div className="flex-1 overflow-hidden">
+                    <CollaborativeMonaco
+                      ytext={currentJobYText}
+                      awareness={awareness}
+                      adaptor={currentJob.adaptor || 'common'}
+                      disabled={!canSave}
+                      className="h-full w-full"
+                      options={{
+                        automaticLayout: true,
+                        minimap: { enabled: true },
+                        lineNumbers: 'on',
+                        wordWrap: 'on',
+                      }}
+                    />
+                  </div>
+                </div>
+              </Panel>
+
+              {/* Resize Handle - changes based on orientation */}
+              <PanelResizeHandle
+                className={
+                  docsOrientation === 'vertical'
+                    ? 'h-1 bg-gray-200 hover:bg-blue-400 transition-colors cursor-row-resize'
+                    : 'w-1 bg-gray-200 hover:bg-blue-400 transition-colors cursor-col-resize'
+                }
+              />
+
+              {/* Docs Sub-panel */}
+              <Panel
+                ref={docsSubPanelRef}
+                defaultSize={30}
+                minSize={20}
+                collapsible
+                collapsedSize={4}
+                onCollapse={() => setIsDocsSubPanelCollapsed(true)}
+                onExpand={() => setIsDocsSubPanelCollapsed(false)}
+              >
+                <div className="h-full flex flex-col">
+                  {/* Tabs and controls in same row */}
+                  <div
+                    className={cn(
+                      'shrink-0 px-3 py-1 flex justify-between items-center bg-slate-50',
+                      docsOrientation === 'vertical'
+                        ? 'border-t border-gray-200'
+                        : 'border-l border-gray-200'
+                    )}
+                  >
+                    <div
+                      className={cn(
+                        'transition-transform',
+                        isDocsSubPanelCollapsed &&
+                          docsOrientation === 'vertical' &&
+                          '-rotate-90 origin-left',
+                        isDocsSubPanelCollapsed &&
+                          docsOrientation === 'horizontal' &&
+                          'rotate-90 origin-top'
+                      )}
+                    >
+                      <Tabs
+                        options={[
+                          {
+                            label: 'Docs',
+                            value: 'docs',
+                            icon: DocumentTextIcon,
+                          },
+                          {
+                            label: 'Metadata',
+                            value: 'metadata',
+                            icon: SparklesIcon,
+                          },
+                        ]}
+                        value={selectedTab}
+                        onChange={handleTabChange}
+                        variant="pills"
+                      />
+                    </div>
+                    {!isDocsSubPanelCollapsed && (
+                      <div className="flex items-center gap-1">
+                        <ViewColumnsIcon
+                          className={cn(
+                            'inline cursor-pointer h-4 w-4 hover:text-primary-600 transition-colors',
+                            docsOrientation === 'horizontal' && 'rotate-90'
+                          )}
+                          onClick={toggleDocsOrientation}
+                          title="Toggle panel orientation"
+                        />
+                        <PanelToggleButton
+                          isCollapsed={isDocsSubPanelCollapsed}
+                          onClick={toggleDocsSubPanel}
+                          ariaLabel="Collapse docs panel"
+                        />
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Docs content */}
+                  {!isDocsSubPanelCollapsed && (
+                    <div className="flex-1 overflow-auto bg-white p-2">
+                      {selectedTab === 'docs' && (
+                        <Docs adaptor={currentJob.adaptor || ''} />
+                      )}
+                      {selectedTab === 'metadata' && (
+                        <Metadata
+                          adaptor={currentJob.adaptor || 'common'}
+                          metadata={true}
+                        />
+                      )}
+                    </div>
                   )}
                 </div>
-              </div>
-
-              {/* Editor */}
-              {!isCenterCollapsed && (
-                <div className="flex-1 overflow-hidden">
-                  <CollaborativeMonaco
-                    ytext={currentJobYText}
-                    awareness={awareness}
-                    adaptor={currentJob.adaptor || 'common'}
-                    disabled={!canSave}
-                    className="h-full w-full"
-                    options={{
-                      automaticLayout: true,
-                      minimap: { enabled: true },
-                      lineNumbers: 'on',
-                      wordWrap: 'on',
-                    }}
-                  />
-                </div>
-              )}
-            </div>
+              </Panel>
+            </PanelGroup>
           </Panel>
 
           {/* Resize Handle */}
@@ -755,6 +867,7 @@ export function FullScreenIDE({
                       </div>
                       {/* Collapse button */}
                       <PanelToggleButton
+                        isCollapsed={isRightCollapsed}
                         onClick={toggleRightPanel}
                         disabled={openPanelCount === 1}
                         ariaLabel="Collapse right panel"
