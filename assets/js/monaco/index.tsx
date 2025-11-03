@@ -83,6 +83,46 @@ export const MonacoEditor = ({
         ctxKey.reset();
       });
     }
+
+    // Cmd+Enter: Run or Retry
+    editor.addAction({
+      id: 'workflow-run-shortcut',
+      label: 'Run Workflow',
+      keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter],
+      run: () => {
+        const event = new KeyboardEvent('keydown', {
+          key: 'Enter',
+          code: 'Enter',
+          metaKey: true,
+          ctrlKey: true,
+          bubbles: true,
+          cancelable: true,
+        });
+        document.dispatchEvent(event);
+      },
+    });
+
+    // Cmd+Shift+Enter: Force new work order
+    editor.addAction({
+      id: 'workflow-force-run-shortcut',
+      label: 'Force New Workflow Run',
+      keybindings: [
+        monaco.KeyMod.CtrlCmd | monaco.KeyMod.Shift | monaco.KeyCode.Enter,
+      ],
+      run: () => {
+        const event = new KeyboardEvent('keydown', {
+          key: 'Enter',
+          code: 'Enter',
+          metaKey: true,
+          ctrlKey: true,
+          shiftKey: true,
+          bubbles: true,
+          cancelable: true,
+        });
+        document.dispatchEvent(event);
+      },
+    });
+
     setTheme(monaco);
     onMount(editor, monaco);
   }, []);

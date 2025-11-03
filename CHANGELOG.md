@@ -35,6 +35,9 @@ and this project adheres to
 
 ### Fixed
 
+- Cmd+Enter and Cmd+Shift+Enter keyboard shortcuts not working when typing in
+  Monaco code editors [#3903](https://github.com/OpenFn/lightning/issues/3903)
+
 ## [2.14.14-pre1] - 2025-10-30
 
 ### Added

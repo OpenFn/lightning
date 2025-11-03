@@ -51,6 +51,45 @@ export function CollaborativeMonaco({
       const language = getLanguageFromAdaptor(adaptor);
       monaco.editor.setModelLanguage(editor.getModel()!, language);
 
+      // Cmd+Enter: Run or Retry
+      editor.addAction({
+        id: 'workflow-run-shortcut',
+        label: 'Run Workflow',
+        keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter],
+        run: () => {
+          const event = new KeyboardEvent('keydown', {
+            key: 'Enter',
+            code: 'Enter',
+            metaKey: true,
+            ctrlKey: true,
+            bubbles: true,
+            cancelable: true,
+          });
+          document.dispatchEvent(event);
+        },
+      });
+
+      // Cmd+Shift+Enter: Force new work order
+      editor.addAction({
+        id: 'workflow-force-run-shortcut',
+        label: 'Force New Workflow Run',
+        keybindings: [
+          monaco.KeyMod.CtrlCmd | monaco.KeyMod.Shift | monaco.KeyCode.Enter,
+        ],
+        run: () => {
+          const event = new KeyboardEvent('keydown', {
+            key: 'Enter',
+            code: 'Enter',
+            metaKey: true,
+            ctrlKey: true,
+            shiftKey: true,
+            bubbles: true,
+            cancelable: true,
+          });
+          document.dispatchEvent(event);
+        },
+      });
+
       // Create initial binding if ytext and awareness are available
       if (ytext && awareness) {
         logger.log("🔄 Creating initial Monaco binding on mount");
