@@ -3,33 +3,31 @@ import {
   DialogBackdrop,
   DialogPanel,
   DialogTitle,
-} from "@headlessui/react";
-import { useEffect, useMemo, useState, useRef } from "react";
-import { useHotkeysContext } from "react-hotkeys-hook";
+} from '@headlessui/react';
+import { useEffect, useMemo, useState, useRef } from 'react';
+import { useHotkeysContext } from 'react-hotkeys-hook';
 
 import {
   useCredentials,
   useCredentialQueries,
-} from "#/collaborative-editor/hooks/useCredentials";
-import type { Adaptor } from "#/collaborative-editor/types/adaptor";
-import type { CredentialWithType } from "#/collaborative-editor/types/credential";
+} from '#/collaborative-editor/hooks/useCredentials';
+import type { Adaptor } from '#/collaborative-editor/types/adaptor';
+import type { CredentialWithType } from '#/collaborative-editor/types/credential';
 import {
   extractAdaptorName,
   extractAdaptorDisplayName,
   extractPackageName,
-} from "#/collaborative-editor/utils/adaptorUtils";
+} from '#/collaborative-editor/utils/adaptorUtils';
 
-import { AdaptorIcon } from "./AdaptorIcon";
-import { VersionPicker } from "./VersionPicker";
+import { AdaptorIcon } from './AdaptorIcon';
+import { VersionPicker } from './VersionPicker';
 
 interface ConfigureAdaptorModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (config: {
-    adaptorPackage: string;
-    adaptorVersion: string;
-    credentialId: string | null;
-  }) => void;
+  onAdaptorChange: (adaptorPackage: string) => void; // Immediately sync adaptor to Y.Doc
+  onVersionChange: (version: string) => void; // Immediately sync version to Y.Doc
+  onCredentialChange: (credentialId: string | null) => void; // Immediately sync credential to Y.Doc
   onOpenAdaptorPicker: () => void; // Notify parent to manage modal switching to adaptor picker
   onOpenCredentialModal: (adaptorName: string) => void; // Notify parent to manage modal switching to credential modal
   currentAdaptor: string;
@@ -48,7 +46,9 @@ interface ConfigureAdaptorModalProps {
 export function ConfigureAdaptorModal({
   isOpen,
   onClose,
-  onSave,
+  onAdaptorChange,
+  onVersionChange,
+  onCredentialChange,
   onOpenAdaptorPicker,
   onOpenCredentialModal,
   currentAdaptor,
@@ -56,12 +56,7 @@ export function ConfigureAdaptorModal({
   currentCredentialId,
   allAdaptors,
 }: ConfigureAdaptorModalProps) {
-  // Local state for modal form
-  const [selectedAdaptor, setSelectedAdaptor] = useState(currentAdaptor);
-  const [selectedVersion, setSelectedVersion] = useState(currentVersion);
-  const [selectedCredentialId, setSelectedCredentialId] = useState<
-    string | null
-  >(currentCredentialId);
+  // UI state (not synced to Y.Doc)
   const [showOtherCredentials, setShowOtherCredentials] = useState(false);
 
   // Get credentials from store
@@ -73,54 +68,39 @@ export function ConfigureAdaptorModal({
 
   useEffect(() => {
     if (isOpen) {
-      enableScope("modal");
-      disableScope("panel");
+      enableScope('modal');
+      disableScope('panel');
     } else {
-      disableScope("modal");
-      enableScope("panel");
+      disableScope('modal');
+      enableScope('panel');
     }
 
     return () => {
-      disableScope("modal");
+      disableScope('modal');
     };
   }, [isOpen, enableScope, disableScope]);
 
-  // Reset state when modal opens or adaptor changes
-  // We use refs to track previous values
-  const isOpenRef = useRef(isOpen);
+  // When adaptor changes externally (from Y.Doc or adaptor picker),
+  // automatically update to newest version and clear invalid credentials
   const prevAdaptorRef = useRef(currentAdaptor);
 
   useEffect(() => {
-    // Reset when modal transitions from closed to open
-    const modalJustOpened = isOpen && !isOpenRef.current;
-    // OR when adaptor changes while modal is open
-    const adaptorChanged = isOpen && currentAdaptor !== prevAdaptorRef.current;
+    if (!isOpen) return;
 
-    if (modalJustOpened) {
-      setSelectedAdaptor(currentAdaptor);
-      setSelectedVersion(currentVersion);
+    const adaptorChanged = currentAdaptor !== prevAdaptorRef.current;
 
-      // Validate that currentCredentialId exists in available credentials
-      // This prevents using credentials that were deleted or don't belong to this project
-      setSelectedCredentialId(
-        credentialExists(currentCredentialId) ? currentCredentialId : null
-      );
-
-      isOpenRef.current = isOpen;
-      prevAdaptorRef.current = currentAdaptor;
-    } else if (adaptorChanged) {
-      setSelectedAdaptor(currentAdaptor);
-      // When adaptor changes, compute newest version inline
+    if (adaptorChanged) {
+      // When adaptor changes, update to newest version automatically
       const packageName = extractPackageName(currentAdaptor);
       const adaptor = allAdaptors.find(a => a.name === packageName);
 
       if (adaptor) {
         const sortedVersions = adaptor.versions
           .map(v => v.version)
-          .filter(v => v !== "latest")
+          .filter(v => v !== 'latest')
           .sort((a, b) => {
-            const aParts = a.split(".").map(Number);
-            const bParts = b.split(".").map(Number);
+            const aParts = a.split('.').map(Number);
+            const bParts = b.split('.').map(Number);
             for (let i = 0; i < Math.max(aParts.length, bParts.length); i++) {
               const aNum = aParts[i] || 0;
               const bNum = bParts[i] || 0;
@@ -132,43 +112,37 @@ export function ConfigureAdaptorModal({
           });
 
         if (sortedVersions.length > 0 && sortedVersions[0]) {
-          setSelectedVersion(sortedVersions[0]);
-        } else {
-          setSelectedVersion(currentVersion);
+          onVersionChange(sortedVersions[0]);
         }
-      } else {
-        setSelectedVersion(currentVersion);
       }
 
-      // Validate credential when adaptor changes
-      setSelectedCredentialId(
-        credentialExists(currentCredentialId) ? currentCredentialId : null
-      );
+      // Clear credential if it no longer exists
+      if (currentCredentialId && !credentialExists(currentCredentialId)) {
+        onCredentialChange(null);
+      }
 
-      prevAdaptorRef.current = currentAdaptor;
-    } else {
-      // Update refs even when no action is taken
-      isOpenRef.current = isOpen;
       prevAdaptorRef.current = currentAdaptor;
     }
   }, [
     isOpen,
     currentAdaptor,
-    currentVersion,
     currentCredentialId,
     allAdaptors,
+    credentialExists,
+    onVersionChange,
+    onCredentialChange,
   ]);
 
   // Check if the adaptor requires credentials
   const adaptorNeedsCredentials = useMemo(() => {
-    const adaptorName = extractAdaptorName(selectedAdaptor);
+    const adaptorName = extractAdaptorName(currentAdaptor);
     // Common adaptor doesn't require credentials
-    return adaptorName !== "common";
-  }, [selectedAdaptor]);
+    return adaptorName !== 'common';
+  }, [currentAdaptor]);
 
   // Filter credentials into sections
   const credentialSections = useMemo(() => {
-    const adaptorName = extractAdaptorName(selectedAdaptor);
+    const adaptorName = extractAdaptorName(currentAdaptor);
     if (!adaptorName) {
       return {
         schemaMatched: [],
@@ -184,10 +158,10 @@ export function ConfigureAdaptorModal({
         if (c.schema === adaptorName) return true;
 
         // Smart OAuth matching: if credential is OAuth, check oauth_client_name
-        if (c.schema === "oauth" && c.oauth_client_name) {
+        if (c.schema === 'oauth' && c.oauth_client_name) {
           // Normalize both strings: lowercase, remove spaces/hyphens/underscores
           const normalizeString = (str: string) =>
-            str.toLowerCase().replace(/[\s\-_]/g, "");
+            str.toLowerCase().replace(/[\s\-_]/g, '');
 
           const normalizedClientName = normalizeString(c.oauth_client_name);
           const normalizedAdaptorName = normalizeString(adaptorName);
@@ -202,26 +176,26 @@ export function ConfigureAdaptorModal({
 
         return false;
       })
-      .map(c => ({ ...c, type: "project" as const }));
+      .map(c => ({ ...c, type: 'project' as const }));
 
     // Universal project credentials (http and raw work with all adaptors)
     // Only show if not already in schemaMatched (avoid duplicates)
     const universal: CredentialWithType[] = projectCredentials
       .filter(c => {
-        const isUniversal = c.schema === "http" || c.schema === "raw";
-        const alreadyMatched = adaptorName === "http" || adaptorName === "raw";
+        const isUniversal = c.schema === 'http' || c.schema === 'raw';
+        const alreadyMatched = adaptorName === 'http' || adaptorName === 'raw';
         return isUniversal && !alreadyMatched;
       })
-      .map(c => ({ ...c, type: "project" as const }));
+      .map(c => ({ ...c, type: 'project' as const }));
 
     // All keychain credentials (can't reliably filter by schema)
     const keychain: CredentialWithType[] = keychainCredentials.map(c => ({
       ...c,
-      type: "keychain" as const,
+      type: 'keychain' as const,
     }));
 
     return { schemaMatched, universal, keychain };
-  }, [selectedAdaptor, projectCredentials, keychainCredentials]);
+  }, [currentAdaptor, projectCredentials, keychainCredentials]);
 
   // Automatically show "other credentials" when:
   // 1. No schema matches found, OR
@@ -237,12 +211,12 @@ export function ConfigureAdaptorModal({
 
     // Check if currently selected credential is in "other credentials"
     const selectedCredentialInOther =
-      selectedCredentialId &&
+      currentCredentialId &&
       (credentialSections.universal.some(
-        c => getCredentialId(c) === selectedCredentialId
+        c => getCredentialId(c) === currentCredentialId
       ) ||
         credentialSections.keychain.some(
-          c => getCredentialId(c) === selectedCredentialId
+          c => getCredentialId(c) === currentCredentialId
         ));
 
     // Show "other credentials" if:
@@ -259,12 +233,12 @@ export function ConfigureAdaptorModal({
       setShowOtherCredentials(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOpen, selectedAdaptor, selectedCredentialId]);
+  }, [isOpen, currentAdaptor, currentCredentialId]);
 
-  // Get version options for selected adaptor
+  // Get version options for current adaptor
   const versionOptions = useMemo(() => {
     // Extract package name without version using utility function
-    const packageName = extractPackageName(selectedAdaptor);
+    const packageName = extractPackageName(currentAdaptor);
 
     // Use allAdaptors to get versions (not projectAdaptors)
     // This ensures we show all versions even for adaptors not yet used in the project
@@ -278,11 +252,11 @@ export function ConfigureAdaptorModal({
     // Sort versions using semantic versioning (newest first)
     const sortedVersions = adaptor.versions
       .map(v => v.version)
-      .filter(v => v !== "latest")
+      .filter(v => v !== 'latest')
       .sort((a, b) => {
         // Split version strings into parts [major, minor, patch]
-        const aParts = a.split(".").map(Number);
-        const bParts = b.split(".").map(Number);
+        const aParts = a.split('.').map(Number);
+        const bParts = b.split('.').map(Number);
 
         // Compare major, minor, patch in order
         for (let i = 0; i < Math.max(aParts.length, bParts.length); i++) {
@@ -296,13 +270,13 @@ export function ConfigureAdaptorModal({
       });
 
     // Add "latest" as the first option
-    return ["latest", ...sortedVersions];
-  }, [selectedAdaptor, allAdaptors]);
+    return ['latest', ...sortedVersions];
+  }, [currentAdaptor, allAdaptors]);
 
   // Extract adaptor display name
   const adaptorDisplayName = useMemo(() => {
-    return extractAdaptorDisplayName(selectedAdaptor);
-  }, [selectedAdaptor]);
+    return extractAdaptorDisplayName(currentAdaptor);
+  }, [currentAdaptor]);
 
   // Handle "Change" button click - notify parent to switch modals
   const handleChangeClick = () => {
@@ -310,34 +284,9 @@ export function ConfigureAdaptorModal({
     onOpenAdaptorPicker(); // Let parent open AdaptorSelectionModal
   };
 
-  // Update selected adaptor (called from parent after adaptor picker closes)
-  // This will be triggered when the modal reopens with a new currentAdaptor
-  // NOTE: This effect is redundant with the reset effect above (lines 107-158)
-  // and can cause issues. Commenting out for now.
-  // useEffect(() => {
-  //   if (isOpen && currentAdaptor !== selectedAdaptor) {
-  //     setSelectedAdaptor(currentAdaptor);
-  //     // Reset version to newest (first in sorted array)
-  //     if (versionOptions.length > 0) {
-  //       setSelectedVersion(versionOptions[0]);
-  //     }
-  //     setSelectedCredentialId(null); // Clear credential selection
-  //   }
-  // }, [isOpen, currentAdaptor, selectedAdaptor, versionOptions]);
-
-  // Handle save button click
-  const handleSave = () => {
-    onSave({
-      adaptorPackage: selectedAdaptor,
-      adaptorVersion: selectedVersion,
-      credentialId: selectedCredentialId,
-    });
-    onClose();
-  };
-
   // Open LiveView credential modal with adaptor schema (notifies parent)
   const handleCreateCredential = () => {
-    const adaptorName = extractAdaptorName(selectedAdaptor);
+    const adaptorName = extractAdaptorName(currentAdaptor);
     if (adaptorName) {
       onOpenCredentialModal(adaptorName);
     }
@@ -414,7 +363,7 @@ export function ConfigureAdaptorModal({
                       border border-gray-200 rounded-md bg-white"
                     >
                       <div className="flex items-center gap-2 min-w-0 flex-1">
-                        <AdaptorIcon name={selectedAdaptor} size="md" />
+                        <AdaptorIcon name={currentAdaptor} size="md" />
                         <span className="font-medium text-gray-900 truncate">
                           {adaptorDisplayName}
                         </span>
@@ -445,8 +394,8 @@ export function ConfigureAdaptorModal({
                     </label>
                     <VersionPicker
                       versions={versionOptions}
-                      selectedVersion={selectedVersion}
-                      onVersionChange={setSelectedVersion}
+                      selectedVersion={currentVersion}
+                      onVersionChange={onVersionChange}
                     />
                   </div>
                 </div>
@@ -514,7 +463,7 @@ export function ConfigureAdaptorModal({
                       <div className="border border-gray-200 rounded-md divide-y">
                         {credentialSections.schemaMatched.map(cred => {
                           const credId = getCredentialId(cred);
-                          const isSelected = selectedCredentialId === credId;
+                          const isSelected = currentCredentialId === credId;
                           return (
                             <label
                               key={credId}
@@ -528,7 +477,7 @@ export function ConfigureAdaptorModal({
                                 name="credential"
                                 value={credId}
                                 checked={isSelected}
-                                onChange={() => setSelectedCredentialId(credId)}
+                                onChange={() => onCredentialChange(credId)}
                                 aria-label={`Select ${cred.name} credential`}
                                 className="mt-1 h-4 w-4 text-primary-600
                                   focus:ring-primary-500 border-gray-300"
@@ -542,7 +491,7 @@ export function ConfigureAdaptorModal({
                                     {cred.name}
                                   </span>
                                 </div>
-                                {cred.owner && (
+                                {cred.type === 'project' && cred.owner && (
                                   <div className="flex items-center gap-1 text-sm text-gray-500">
                                     <span
                                       className="hero-user-solid h-4 w-4"
@@ -558,7 +507,7 @@ export function ConfigureAdaptorModal({
                                   type="button"
                                   onClick={e => {
                                     e.preventDefault();
-                                    setSelectedCredentialId(null);
+                                    onCredentialChange(null);
                                   }}
                                   className="text-gray-400 hover:text-gray-600
                                     focus:outline-none flex-shrink-0 ml-2"
@@ -609,7 +558,7 @@ export function ConfigureAdaptorModal({
                               {credentialSections.universal.map(cred => {
                                 const credId = getCredentialId(cred);
                                 const isSelected =
-                                  selectedCredentialId === credId;
+                                  currentCredentialId === credId;
                                 return (
                                   <label
                                     key={credId}
@@ -622,9 +571,9 @@ export function ConfigureAdaptorModal({
                                       type="radio"
                                       name="credential"
                                       value={credId}
-                                      checked={selectedCredentialId === credId}
+                                      checked={currentCredentialId === credId}
                                       onChange={() =>
-                                        setSelectedCredentialId(credId)
+                                        onCredentialChange(credId)
                                       }
                                       aria-label={`Select ${cred.name} credential`}
                                       className="mt-1 h-4 w-4 text-primary-600
@@ -639,7 +588,7 @@ export function ConfigureAdaptorModal({
                                           {cred.name}
                                         </span>
                                       </div>
-                                      {cred.type === "project" &&
+                                      {cred.type === 'project' &&
                                         cred.owner && (
                                           <div className="flex items-center gap-1 text-sm text-gray-500">
                                             <span
@@ -656,7 +605,7 @@ export function ConfigureAdaptorModal({
                                         type="button"
                                         onClick={e => {
                                           e.preventDefault();
-                                          setSelectedCredentialId(null);
+                                          onCredentialChange(null);
                                         }}
                                         className="text-gray-400 hover:text-gray-600
                                         focus:outline-none flex-shrink-0 ml-2"
@@ -690,7 +639,7 @@ export function ConfigureAdaptorModal({
                               {credentialSections.keychain.map(cred => {
                                 const credId = getCredentialId(cred);
                                 const isSelected =
-                                  selectedCredentialId === credId;
+                                  currentCredentialId === credId;
                                 return (
                                   <label
                                     key={credId}
@@ -705,7 +654,7 @@ export function ConfigureAdaptorModal({
                                       value={credId}
                                       checked={isSelected}
                                       onChange={() =>
-                                        setSelectedCredentialId(credId)
+                                        onCredentialChange(credId)
                                       }
                                       aria-label={`Select ${cred.name} credential`}
                                       className="mt-1 h-4 w-4 text-primary-600
@@ -726,7 +675,7 @@ export function ConfigureAdaptorModal({
                                         type="button"
                                         onClick={e => {
                                           e.preventDefault();
-                                          setSelectedCredentialId(null);
+                                          onCredentialChange(null);
                                         }}
                                         className="text-gray-400 hover:text-gray-600
                                         focus:outline-none flex-shrink-0 ml-2"
@@ -768,14 +717,14 @@ export function ConfigureAdaptorModal({
               <div className="flex justify-end px-6 py-4 border-t">
                 <button
                   type="button"
-                  onClick={handleSave}
-                  aria-label="Save adaptor configuration"
+                  onClick={onClose}
+                  aria-label="Close modal"
                   className="px-6 py-2.5 bg-primary-600 text-white
                   rounded-md font-medium hover:bg-primary-700
                   focus:outline-none focus:ring-2 focus:ring-offset-2
                   focus:ring-primary-500"
                 >
-                  Save
+                  Close
                 </button>
               </div>
             </DialogPanel>

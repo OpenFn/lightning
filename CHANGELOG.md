@@ -28,6 +28,9 @@ and this project adheres to
 
 ### Fixed
 
+- Adaptor picker changes now sync immediately to Y.Doc instead of requiring
+  manual save [#3904](https://github.com/OpenFn/lightning/issues/3904)
+
 ## [2.14.14-pre1] - 2025-10-30
 
 ### Added
