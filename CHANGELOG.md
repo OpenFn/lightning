@@ -24,6 +24,8 @@ and this project adheres to
 
 ### Fixed
 
+- Monaco tooltips get cut off
+  [#3900](https://github.com/OpenFn/lightning/issues/3900)
 - Shared doc lookup in clustered environments now works across nodes instead of
   only searching locally
   [#3910](https://github.com/OpenFn/lightning/issues/3910)
