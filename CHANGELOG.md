@@ -28,6 +28,9 @@ and this project adheres to
 
 ### Fixed
 
+- Dataclip body display timing out due to slow credentials query - optimised
+  query to leverage indexes better using a self-join
+  [#3924](https://github.com/OpenFn/lightning/issues/3924)
 - Adaptor picker changes now sync immediately to Y.Doc instead of requiring
   manual save [#3904](https://github.com/OpenFn/lightning/issues/3904)
 
