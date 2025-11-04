@@ -5,10 +5,10 @@
  * from the StoreProvider context using the useSyncExternalStore pattern.
  */
 
-import { useSyncExternalStore, useContext, useMemo } from "react";
+import { useSyncExternalStore, useContext, useMemo } from 'react';
 
-import { StoreContext } from "../contexts/StoreProvider";
-import type { HistoryStore, WorkflowRunHistory } from "../types/history";
+import { StoreContext } from '../contexts/StoreProvider';
+import type { HistoryStore, WorkflowRunHistory } from '../types/history';
 
 /**
  * Main hook for accessing the HistoryStore instance
@@ -22,10 +22,10 @@ import type { HistoryStore, WorkflowRunHistory } from "../types/history";
 const useHistoryStore = (): HistoryStore => {
   const context = useContext(StoreContext);
   if (!context) {
-    throw new Error("useHistoryStore must be used within a StoreProvider");
+    throw new Error('useHistoryStore must be used within a StoreProvider');
   }
-  // Type assertion to prevent error type propagation
-  return context.historyStore as HistoryStore;
+
+  return context.historyStore;
 };
 
 /**
