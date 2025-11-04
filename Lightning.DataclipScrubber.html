@@ -12,7 +12,7 @@
 
     <link rel="stylesheet" href="dist/html-elixir-RLZO5U2C.css" />
 
-    <script defer src="dist/sidebar_items-8C0FD76A.js"></script>
+    <script defer src="dist/sidebar_items-AE84EF47.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-Y223O6DN.js"></script>
 
@@ -112,6 +112,17 @@ Lightning
 
     <div class="summary-row">
       <div class="summary-signature">
+        <a href="#credentials_for_step/2" data-no-tooltip="" translate="no">credentials_for_step(step_id, started_at)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Returns an Ecto query for credentials (with project env) used in the same
+run or earlier steps.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
         <a href="#scrub_dataclip_body!/1" data-no-tooltip="" translate="no">scrub_dataclip_body!(dataclip)</a>
 
       </div>
@@ -132,6 +143,29 @@ Lightning
     </h1>
 
     <div class="functions-list">
+<section class="detail" id="credentials_for_step/2">
+
+  <div class="detail-header">
+    <a href="#credentials_for_step/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">credentials_for_step(step_id, started_at)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/dataclip_scrubber.ex#L70" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>Returns an Ecto query for credentials (with project env) used in the same
+run or earlier steps.</p><p>Uses a self-join on RunStep to leverage existing indexes.</p>
+  </section>
+</section>
 <section class="detail" id="scrub_dataclip_body!/1">
 
   <div class="detail-header">
