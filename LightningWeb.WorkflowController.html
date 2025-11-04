@@ -12,7 +12,7 @@
 
     <link rel="stylesheet" href="dist/html-elixir-RLZO5U2C.css" />
 
-    <script defer src="dist/sidebar_items-AE84EF47.js"></script>
+    <script defer src="dist/sidebar_items-B0FE11F0.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-Y223O6DN.js"></script>
 
@@ -116,6 +116,26 @@ Lightning
 
     </div>
 
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#get_run_steps/2" data-no-tooltip="" translate="no">get_run_steps(conn, arg2)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Get steps for a run filtered by job_id.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#retry_run/2" data-no-tooltip="" translate="no">retry_run(conn, arg2)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Retry an existing run from a specific step.</p></div>
+
+    </div>
+
 </div>
 
   </section>
@@ -140,7 +160,7 @@ Lightning
       <h1 class="signature" translate="no">create_run(conn, params)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/workflow_controller.ex#L24" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/workflow_controller.ex#L26" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -151,6 +171,51 @@ Lightning
 
 <p>Create a manual workflow run.</p><p>Body:</p><ul><li>job_id: Job to start from (required)</li><li>trigger_id: Trigger to start from (alternative to job_id)</li><li>dataclip_id: Existing dataclip ID (optional)</li><li>custom_body: Custom JSON input (optional)</li></ul><p>Note: Either job_id or trigger_id must be provided.
 Either dataclip_id or custom_body can be provided, but not both.</p>
+  </section>
+</section>
+<section class="detail" id="get_run_steps/2">
+
+  <div class="detail-header">
+    <a href="#get_run_steps/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">get_run_steps(conn, arg2)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/workflow_controller.ex#L152" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>Get steps for a run filtered by job_id.</p><p>Query params:</p><ul><li>job_id: Filter steps for a specific job (required)</li></ul><p>Returns the step data including id, input_dataclip_id, and job_id.
+Used by the frontend to determine if a retry is available.</p>
+  </section>
+</section>
+<section class="detail" id="retry_run/2">
+
+  <div class="detail-header">
+    <a href="#retry_run/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">retry_run(conn, arg2)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/workflow_controller.ex#L206" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>Retry an existing run from a specific step.</p><p>Body:</p><ul><li>step_id: The step ID to retry from (required)</li></ul><p>Creates a new run on the same work order, copying independent upstream steps.</p>
   </section>
 </section>
 
