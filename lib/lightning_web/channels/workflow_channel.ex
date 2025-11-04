@@ -235,19 +235,20 @@ defmodule LightningWeb.WorkflowChannel do
         %{"run_id" => run_id},
         %{assigns: %{project: project}} = socket
       ) do
-    case Lightning.Invocation.get_run_with_steps(run_id) do
-      nil ->
-        {:reply, {:error, %{reason: "run_not_found"}}, socket}
+    async_task(socket, "request_run_steps", fn ->
+      case Lightning.Invocation.get_run_with_steps(run_id) do
+        nil ->
+          {:error, %{reason: "run_not_found"}}
 
-      run ->
-        # Verify run belongs to this project's workflows
-        if run.work_order.workflow.project_id == project.id do
-          formatted_steps = format_run_steps_for_client(run)
-          {:reply, {:ok, formatted_steps}, socket}
-        else
-          {:reply, {:error, %{reason: "unauthorized"}}, socket}
-        end
-    end
+        run ->
+          # Verify run belongs to this project's workflows
+          if run.work_order.workflow.project_id == project.id do
+            {:ok, format_run_steps_for_client(run)}
+          else
+            {:error, %{reason: "unauthorized"}}
+          end
+      end
+    end)
   end
 
   @doc """
@@ -443,6 +444,17 @@ defmodule LightningWeb.WorkflowChannel do
 
       "request_history" ->
         reply(socket_ref, reply)
+        {:noreply, socket}
+
+      "request_run_steps" ->
+        # Unwrap the result from async_task - it wraps everything in {:ok, ...}
+        # but we may have {:error, ...} tuples from the handler logic
+        case reply do
+          {:ok, {:ok, data}} -> reply(socket_ref, {:ok, data})
+          {:ok, {:error, reason}} -> reply(socket_ref, {:error, reason})
+          error -> reply(socket_ref, error)
+        end
+
         {:noreply, socket}
 
       "request_versions" ->
