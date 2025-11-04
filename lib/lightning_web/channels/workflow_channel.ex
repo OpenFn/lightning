@@ -421,50 +421,8 @@ defmodule LightningWeb.WorkflowChannel do
 
   @impl true
   def handle_info({:async_reply, socket_ref, event, reply}, socket) do
-    case event do
-      "request_adaptors" ->
-        reply(socket_ref, reply)
-        {:noreply, socket}
-
-      "request_project_adaptors" ->
-        reply(socket_ref, reply)
-        {:noreply, socket}
-
-      "request_credentials" ->
-        reply(socket_ref, reply)
-        {:noreply, socket}
-
-      "request_current_user" ->
-        reply(socket_ref, reply)
-        {:noreply, socket}
-
-      "get_context" ->
-        reply(socket_ref, reply)
-        {:noreply, socket}
-
-      "request_history" ->
-        reply(socket_ref, reply)
-        {:noreply, socket}
-
-      "request_run_steps" ->
-        # Unwrap the result from async_task - it wraps everything in {:ok, ...}
-        # but we may have {:error, ...} tuples from the handler logic
-        case reply do
-          {:ok, {:ok, data}} -> reply(socket_ref, {:ok, data})
-          {:ok, {:error, reason}} -> reply(socket_ref, {:error, reason})
-          error -> reply(socket_ref, error)
-        end
-
-        {:noreply, socket}
-
-      "request_versions" ->
-        reply(socket_ref, reply)
-        {:noreply, socket}
-
-      _ ->
-        Logger.warning("Unhandled async reply for event: #{event}")
-        {:noreply, socket}
-    end
+    handle_async_event(event, socket_ref, reply)
+    {:noreply, socket}
   end
 
   @impl true
@@ -599,6 +557,36 @@ defmodule LightningWeb.WorkflowChannel do
 
     {:noreply, socket}
   end
+
+  # Handles async replies for different event types
+  # Extracts event handling logic to reduce cyclomatic complexity
+  defp handle_async_event("request_run_steps", socket_ref, reply) do
+    # Unwrap the result from async_task - it wraps everything in {:ok, ...}
+    # but we may have {:error, ...} tuples from the handler logic
+    unwrapped_reply = unwrap_run_steps_reply(reply)
+    reply(socket_ref, unwrapped_reply)
+  end
+
+  defp handle_async_event(event, socket_ref, reply)
+       when event in [
+              "request_adaptors",
+              "request_project_adaptors",
+              "request_credentials",
+              "request_current_user",
+              "get_context",
+              "request_history",
+              "request_versions"
+            ] do
+    reply(socket_ref, reply)
+  end
+
+  defp handle_async_event(event, _socket_ref, _reply) do
+    Logger.warning("Unhandled async reply for event: #{event}")
+  end
+
+  defp unwrap_run_steps_reply({:ok, {:ok, data}}), do: {:ok, data}
+  defp unwrap_run_steps_reply({:ok, {:error, reason}}), do: {:error, reason}
+  defp unwrap_run_steps_reply(error), do: error
 
   defp render_current_user(user) do
     %{
