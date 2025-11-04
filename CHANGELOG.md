@@ -28,6 +28,8 @@ and this project adheres to
 
 ### Fixed
 
+- Channel error handling crash when error responses don't include expected
+  structure [#3928](https://github.com/OpenFn/lightning/issues/3928)
 - Dataclip body display timing out due to slow credentials query - optimised
   query to leverage indexes better using a self-join
   [#3924](https://github.com/OpenFn/lightning/issues/3924)
