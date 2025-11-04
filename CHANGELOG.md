@@ -17,6 +17,14 @@ and this project adheres to
 
 ### Added
 
+### Changed
+
+### Fixed
+
+## [2.14.14-pre2] - 2025-11-04
+
+### Added
+
 - Run/retry split button in collaborative editor allowing users to retry
   existing runs or create new work orders from both the ManualRunPanel and
   fullscreen IDE header [#3876](https://github.com/OpenFn/lightning/issues/3876)
