@@ -18,8 +18,8 @@ defmodule LightningWeb.WorkflowChannel do
   alias Lightning.Workflows.Job
   alias Lightning.Workflows.Snapshot
   alias Lightning.Workflows.Workflow
-  alias LightningWeb.Channels.WorkflowJSON
   alias Lightning.WorkOrders
+  alias LightningWeb.Channels.WorkflowJSON
 
   require Logger
 
