@@ -120,7 +120,6 @@ export function ManualRunPanel({
     string | null
   >(null);
   const [canEditDataclip, setCanEditDataclip] = useState(false);
-  const [currentRunDataclip] = useState<Dataclip | null>(null);
   const [selectedClipType, setSelectedClipType] = useState("");
   const [selectedDates, setSelectedDates] = useState({
     before: "",
@@ -204,6 +203,16 @@ export function ManualRunPanel({
     return currentRun.steps.find(s => s.job_id === dataclipJobId) || null;
   }, [currentRun, dataclipJobId]);
 
+  // Find the current run's input dataclip from the dataclips list
+  const currentRunDataclip = useMemo(() => {
+    if (!followedRunStep?.input_dataclip_id || !dataclips.length) {
+      return null;
+    }
+    return (
+      dataclips.find(dc => dc.id === followedRunStep.input_dataclip_id) || null
+    );
+  }, [followedRunStep, dataclips]);
+
   // Connect to run channel when following a run
   // Note: In embedded mode (FullScreenIDE), parent handles the connection
   useEffect(() => {
@@ -240,6 +249,12 @@ export function ManualRunPanel({
       !dataclips.length ||
       manuallyUnselected
     ) {
+      return;
+    }
+
+    // Only auto-select if no dataclip is currently selected
+    // This allows users to manually select different dataclips
+    if (selectedDataclip !== null) {
       return;
     }
 
@@ -348,8 +363,7 @@ export function ManualRunPanel({
   useEffect(() => {
     if (selectedTab !== "existing") return;
 
-    const contextId = runContext.id;
-    if (!contextId) return;
+    if (!dataclipJobId) return;
 
     const timeoutId = setTimeout(() => {
       const filters: Record<string, string> = {};
@@ -359,7 +373,7 @@ export function ManualRunPanel({
       if (namedOnly) filters["named_only"] = "true";
 
       void dataclipApi
-        .searchDataclips(projectId, contextId, searchQuery, filters)
+        .searchDataclips(projectId, dataclipJobId, searchQuery, filters)
         .then(response => {
           setDataclips(response.data);
           return response;
@@ -378,7 +392,7 @@ export function ManualRunPanel({
     searchQuery,
     selectedTab,
     projectId,
-    runContext.id,
+    dataclipJobId,
   ]);
 
   const handleCustomBodyChange = useCallback((value: string) => {
@@ -447,8 +461,8 @@ export function ManualRunPanel({
   ) : (
     <div
       className={cn(
-        "flex flex-col h-full overflow-hidden",
-        renderMode === RENDER_MODES.EMBEDDED ? "mt-2" : "mt-4"
+        "flex flex-col overflow-hidden",
+        renderMode === RENDER_MODES.EMBEDDED ? "h-full mt-2" : "flex-1 mt-4"
       )}
     >
       <Tabs
@@ -508,7 +522,7 @@ export function ManualRunPanel({
           onSubmit={() => {
             void handleSearch();
           }}
-          fixedHeight={true}
+          fixedHeight={false}
           currentRunDataclip={currentRunDataclip}
           nextCronRunDataclipId={nextCronRunDataclipId}
           renderMode={renderMode}

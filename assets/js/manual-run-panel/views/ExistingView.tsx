@@ -253,7 +253,10 @@ const ExistingView: React.FC<ExistingViewProps> = ({
         <div className="flex gap-1 mt-2">{pills}</div>
       </div>
       <div
-        className={`${fixedHeight ? "h-64" : ""} flex flex-col gap-3 overflow-auto`}
+        className={cn(
+          "flex flex-col gap-3 overflow-auto",
+          fixedHeight ? "h-64" : "flex-1 min-h-0"
+        )}
       >
         {dataclips.length ? (
           dataclips.map(clip => {

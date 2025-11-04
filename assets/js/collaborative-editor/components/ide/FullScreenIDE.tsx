@@ -210,9 +210,14 @@ export function FullScreenIDE({
       !inputDataclipId ||
       !jobIdFromURL ||
       !projectId ||
-      manuallyUnselectedDataclip ||
-      selectedDataclipState?.id === inputDataclipId
+      manuallyUnselectedDataclip
     ) {
+      return;
+    }
+
+    // Only auto-select if no dataclip is currently selected
+    // This allows users to manually select different dataclips
+    if (selectedDataclipState !== null) {
       return;
     }
 
@@ -244,7 +249,6 @@ export function FullScreenIDE({
     jobIdFromURL,
     projectId,
     searchParams,
-    selectedDataclipState?.id,
     manuallyUnselectedDataclip,
   ]);
 
