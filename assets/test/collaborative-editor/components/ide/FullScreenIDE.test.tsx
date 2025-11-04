@@ -143,6 +143,7 @@ vi.mock("../../../../js/collaborative-editor/hooks/useSessionContext", () => ({
   }),
   useProjectRepoConnection: () => undefined,
   useLatestSnapshotLockVersion: () => 1,
+  useIsNewWorkflow: () => false,
 }));
 
 // Mock workflow hooks
@@ -220,7 +221,13 @@ vi.mock("../../../../js/collaborative-editor/hooks/useRun", () => ({
     })),
     subscribe: vi.fn(),
     setState: vi.fn(),
+    _connectToRun: vi.fn(() => vi.fn()),
+    _disconnectFromRun: vi.fn(),
   }),
+  useRunActions: () => ({
+    selectStep: vi.fn(),
+  }),
+  useCurrentRun: () => null,
 }));
 
 // Mock credential hooks

@@ -418,13 +418,13 @@ describe("IDEHeader - Other Elements", () => {
     expect(runButton).toBeDisabled();
   });
 
-  test("Run button shows 'Pending...' when isRunning is true", () => {
+  test("Run button shows 'Processing' when isRunning is true", () => {
     const { wrapper } = createTestSetup();
     render(<IDEHeader {...defaultProps} isRunning={true} />, { wrapper });
 
-    const runButton = screen.getByRole("button", { name: /pending/i });
+    const runButton = screen.getByRole("button", { name: /processing/i });
     expect(runButton).toBeInTheDocument();
-    expect(runButton).toHaveTextContent("Pending...");
+    expect(runButton).toHaveTextContent("Processing");
   });
 
   test("calls onClose when Close button is clicked", () => {

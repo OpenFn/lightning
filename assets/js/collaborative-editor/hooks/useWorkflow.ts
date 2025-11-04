@@ -361,7 +361,8 @@ export const useWorkflowActions = () => {
       saveWorkflow: (() => {
         // Helper: Handle successful save operations
         const handleSaveSuccess = (
-          response: Awaited<ReturnType<typeof store.saveWorkflow>>
+          response: Awaited<ReturnType<typeof store.saveWorkflow>>,
+          silent = false
         ) => {
           if (!response) return;
 
@@ -389,13 +390,15 @@ export const useWorkflowActions = () => {
             }
           }
 
-          // Show success notification
-          notifications.info({
-            title: "Workflow saved",
-            description: response.saved_at
-              ? `Last saved at ${new Date(response.saved_at).toLocaleTimeString()}`
-              : "All changes have been synced",
-          });
+          // Show success notification unless silent mode
+          if (!silent) {
+            notifications.info({
+              title: "Workflow saved",
+              description: response.saved_at
+                ? `Last saved at ${new Date(response.saved_at).toLocaleTimeString()}`
+                : "All changes have been synced",
+            });
+          }
         };
 
         // Helper: Handle save errors with appropriate notifications
@@ -439,7 +442,7 @@ export const useWorkflowActions = () => {
         };
 
         // Main wrapped saveWorkflow function
-        const wrappedSaveWorkflow = async () => {
+        const wrappedSaveWorkflow = async (options?: { silent?: boolean }) => {
           try {
             const response = await store.saveWorkflow();
 
@@ -449,7 +452,7 @@ export const useWorkflowActions = () => {
               return null;
             }
 
-            handleSaveSuccess(response);
+            handleSaveSuccess(response, options?.silent);
             return response;
           } catch (error) {
             handleSaveError(error, wrappedSaveWorkflow);

@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useHotkeysContext } from 'react-hotkeys-hook';
 
 import { useAppForm } from '#/collaborative-editor/components/form';
+import { HOTKEY_SCOPES } from '#/collaborative-editor/constants/hotkeys';
 import { useLiveViewActions } from '#/collaborative-editor/contexts/LiveViewActionsContext';
 import { useProjectAdaptors } from '#/collaborative-editor/hooks/useAdaptors';
 import {
@@ -65,9 +66,9 @@ export function JobForm({ job }: JobFormProps) {
   // Disable panel hotkeys when credential modal is open
   useEffect(() => {
     if (isCredentialModalOpen) {
-      disableScope('panel');
+      disableScope(HOTKEY_SCOPES.PANEL);
     } else {
-      enableScope('panel');
+      enableScope(HOTKEY_SCOPES.PANEL);
     }
   }, [isCredentialModalOpen, enableScope, disableScope]);
 

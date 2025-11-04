@@ -116,8 +116,14 @@ export async function updateDataclipName(
   );
 
   if (!response.ok) {
-    const error = (await response.json()) as { error?: string };
-    throw new Error(error.error || "Failed to update dataclip name");
+    let errorMessage = "Failed to update dataclip name";
+    try {
+      const error = (await response.json()) as { error?: string };
+      errorMessage = error.error || errorMessage;
+    } catch {
+      errorMessage = `${errorMessage} (${response.status})`;
+    }
+    throw new Error(errorMessage);
   }
 
   return response.json() as Promise<{ data: Dataclip }>;

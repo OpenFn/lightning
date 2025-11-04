@@ -6,6 +6,7 @@
 import { useHotkeys } from "react-hotkeys-hook";
 
 import { useURLState } from "../../../react/lib/use-url-state";
+import { HOTKEY_SCOPES } from "../../constants/hotkeys";
 import type { Workflow } from "../../types/workflow";
 
 import { EdgeInspector } from "./EdgeInspector";
@@ -36,17 +37,21 @@ export function Inspector({
   onOpenRunPanel,
   respondToHotKey,
 }: InspectorProps) {
-  const { hash, updateHash } = useURLState();
+  const { searchParams, updateSearchParams } = useURLState();
 
   const hasSelectedNode = currentNode.node && currentNode.type;
 
-  // Settings hash takes precedence, then node inspector
+  // Settings panel takes precedence, then node inspector
   const mode =
-    hash === "settings" ? "settings" : hasSelectedNode ? "node" : null;
+    searchParams.get("panel") === "settings"
+      ? "settings"
+      : hasSelectedNode
+        ? "node"
+        : null;
 
   const handleClose = () => {
     if (mode === "settings") {
-      updateHash(null);
+      updateSearchParams({ panel: null });
     } else {
       onClose(); // Clears node selection
     }
@@ -59,7 +64,7 @@ export function Inspector({
     },
     {
       enabled: respondToHotKey,
-      scopes: ["panel"],
+      scopes: [HOTKEY_SCOPES.PANEL],
       enableOnFormTags: true, // Allow Escape even in form fields
     },
     [handleClose]
@@ -115,6 +120,8 @@ export function Inspector({
 
 // Helper function to open workflow settings from external components
 export const openWorkflowSettings = () => {
-  const newURL = `${window.location.pathname}${window.location.search}#settings`;
+  const params = new URLSearchParams(window.location.search);
+  params.set("panel", "settings");
+  const newURL = `${window.location.pathname}?${params.toString()}`;
   history.pushState({}, "", newURL);
 };

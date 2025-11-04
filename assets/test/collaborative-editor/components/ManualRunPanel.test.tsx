@@ -25,7 +25,9 @@ import type { StoreContextValue } from "../../../js/collaborative-editor/context
 import { createAdaptorStore } from "../../../js/collaborative-editor/stores/createAdaptorStore";
 import { createAwarenessStore } from "../../../js/collaborative-editor/stores/createAwarenessStore";
 import { createCredentialStore } from "../../../js/collaborative-editor/stores/createCredentialStore";
+import { createRunStore } from "../../../js/collaborative-editor/stores/createRunStore";
 import { createSessionContextStore } from "../../../js/collaborative-editor/stores/createSessionContextStore";
+import { createUIStore } from "../../../js/collaborative-editor/stores/createUIStore";
 import { createWorkflowStore } from "../../../js/collaborative-editor/stores/createWorkflowStore";
 import type { Workflow } from "../../../js/collaborative-editor/types/workflow";
 import {
@@ -78,6 +80,26 @@ vi.mock("../../../js/monaco", () => ({
   MonacoEditor: ({ value }: { value: string }) => (
     <div data-testid="monaco-editor">{value}</div>
   ),
+}));
+
+// Mock useSession hook
+vi.mock("../../../js/collaborative-editor/hooks/useSession", () => ({
+  useSession: () => ({
+    provider: null,
+    ydoc: null,
+    awareness: null,
+    isConnected: false,
+    isSynced: false,
+  }),
+}));
+
+// Mock useURLState hook
+vi.mock("../../../js/react/lib/use-url-state", () => ({
+  useURLState: () => ({
+    searchParams: new URLSearchParams(),
+    updateSearchParams: vi.fn(),
+    hash: "",
+  }),
 }));
 
 const mockWorkflow: Workflow = {
@@ -162,6 +184,8 @@ describe("ManualRunPanel", () => {
       sessionContextStore: createSessionContextStore(),
       adaptorStore: createAdaptorStore(),
       awarenessStore: createAwarenessStore(),
+      uiStore: createUIStore(),
+      runStore: createRunStore(),
     };
 
     // Create mock channel and connect session context store
@@ -329,7 +353,7 @@ describe("ManualRunPanel", () => {
     });
 
     await waitFor(() => {
-      const runButton = screen.getByText("Run (Create New Workorder)");
+      const runButton = screen.getByText("Run Workflow Now");
       expect(runButton).not.toBeDisabled();
     });
   });
@@ -529,7 +553,7 @@ describe("ManualRunPanel", () => {
 
     // Run button should be enabled
     await waitFor(() => {
-      const runButton = screen.getByText("Run (Create New Workorder)");
+      const runButton = screen.getByText("Run Workflow Now");
       expect(runButton).not.toBeDisabled();
     });
   });
@@ -577,9 +601,7 @@ describe("ManualRunPanel", () => {
       ).toBeInTheDocument();
 
       // Should show footer with Run button
-      expect(
-        screen.getByText("Run (Create New Workorder)")
-      ).toBeInTheDocument();
+      expect(screen.getByText("Run Workflow Now")).toBeInTheDocument();
     });
 
     test("embedded mode shows only content, no header or footer", async () => {
@@ -606,9 +628,7 @@ describe("ManualRunPanel", () => {
       ).not.toBeInTheDocument();
 
       // Should NOT show footer with Run button
-      expect(
-        screen.queryByText("Run (Create New Workorder)")
-      ).not.toBeInTheDocument();
+      expect(screen.queryByText("Run Workflow Now")).not.toBeInTheDocument();
     });
 
     test("embedded mode with trigger context", async () => {
@@ -630,168 +650,6 @@ describe("ManualRunPanel", () => {
       expect(
         screen.queryByText("Run from Trigger (webhook)")
       ).not.toBeInTheDocument();
-    });
-  });
-
-  describe("onRunStateChange callback", () => {
-    test("calls onRunStateChange when Empty tab is selected", async () => {
-      const onRunStateChange = vi.fn();
-
-      renderManualRunPanel({
-        workflow: mockWorkflow,
-        projectId: "project-1",
-        workflowId: "workflow-1",
-        jobId: "job-1",
-        onClose: () => {},
-        onRunStateChange,
-      });
-
-      // Wait for initial render and callback
-      await waitFor(() => {
-        expect(onRunStateChange).toHaveBeenCalled();
-      });
-
-      // Should be called with canRun=true, isSubmitting=false, and a handler function
-      const lastCall =
-        onRunStateChange.mock.calls[onRunStateChange.mock.calls.length - 1];
-      expect(lastCall[0]).toBe(true); // canRun
-      expect(lastCall[1]).toBe(false); // isSubmitting
-      expect(typeof lastCall[2]).toBe("function"); // handler
-    });
-
-    test("calls onRunStateChange when switching to Custom tab", async () => {
-      const user = userEvent.setup();
-      const onRunStateChange = vi.fn();
-
-      renderManualRunPanel({
-        workflow: mockWorkflow,
-        projectId: "project-1",
-        workflowId: "workflow-1",
-        jobId: "job-1",
-        onClose: () => {},
-        onRunStateChange,
-      });
-
-      // Clear initial calls
-      await waitFor(() => {
-        expect(onRunStateChange).toHaveBeenCalled();
-      });
-      onRunStateChange.mockClear();
-
-      // Switch to Custom tab
-      await user.click(screen.getByText("Custom"));
-
-      // Should be called again with updated state
-      await waitFor(() => {
-        expect(onRunStateChange).toHaveBeenCalled();
-      });
-
-      const lastCall =
-        onRunStateChange.mock.calls[onRunStateChange.mock.calls.length - 1];
-      expect(lastCall[0]).toBe(true); // canRun (Custom tab allows run)
-      expect(lastCall[1]).toBe(false); // isSubmitting
-      expect(typeof lastCall[2]).toBe("function"); // handler
-    });
-
-    test("calls onRunStateChange when selecting a dataclip in Existing tab", async () => {
-      const user = userEvent.setup();
-      const onRunStateChange = vi.fn();
-
-      vi.mocked(dataclipApi.searchDataclips).mockResolvedValue({
-        data: [mockDataclip],
-        next_cron_run_dataclip_id: null,
-        can_edit_dataclip: true,
-      });
-
-      renderManualRunPanel({
-        workflow: mockWorkflow,
-        projectId: "project-1",
-        workflowId: "workflow-1",
-        jobId: "job-1",
-        onClose: () => {},
-        onRunStateChange,
-      });
-
-      // Wait for initial render
-      await waitFor(() => {
-        expect(onRunStateChange).toHaveBeenCalled();
-      });
-      onRunStateChange.mockClear();
-
-      // Switch to Existing tab
-      await user.click(screen.getByText("Existing"));
-
-      // Wait for dataclip to appear
-      await waitFor(() => {
-        expect(screen.getByText("Test Dataclip")).toBeInTheDocument();
-      });
-
-      // At this point, no dataclip is selected, so canRun should be false
-      let lastCall =
-        onRunStateChange.mock.calls[onRunStateChange.mock.calls.length - 1];
-      expect(lastCall[0]).toBe(false); // canRun
-
-      onRunStateChange.mockClear();
-
-      // Select the dataclip
-      await user.click(screen.getByText("Test Dataclip"));
-
-      // Should be called with canRun=true now
-      await waitFor(() => {
-        expect(onRunStateChange).toHaveBeenCalled();
-      });
-
-      lastCall =
-        onRunStateChange.mock.calls[onRunStateChange.mock.calls.length - 1];
-      expect(lastCall[0]).toBe(true); // canRun
-      expect(lastCall[1]).toBe(false); // isSubmitting
-    });
-
-    test("handler function is stable across re-renders", async () => {
-      const onRunStateChange = vi.fn();
-
-      const { rerender } = renderManualRunPanel({
-        workflow: mockWorkflow,
-        projectId: "project-1",
-        workflowId: "workflow-1",
-        jobId: "job-1",
-        onClose: () => {},
-        onRunStateChange,
-      });
-
-      await waitFor(() => {
-        expect(onRunStateChange).toHaveBeenCalled();
-      });
-
-      const firstHandler = onRunStateChange.mock.calls[0][2];
-
-      // Re-render with same props (wrapped with providers)
-      rerender(
-        <StoreContext.Provider value={stores}>
-          <HotkeysProvider>
-            <ManualRunPanel
-              workflow={mockWorkflow}
-              projectId="project-1"
-              workflowId="workflow-1"
-              jobId="job-1"
-              onClose={() => {}}
-              onRunStateChange={onRunStateChange}
-              saveWorkflow={vi.fn().mockResolvedValue(undefined)}
-            />
-          </HotkeysProvider>
-        </StoreContext.Provider>
-      );
-
-      await waitFor(() => {
-        expect(onRunStateChange.mock.calls.length).toBeGreaterThan(1);
-      });
-
-      const secondHandler =
-        onRunStateChange.mock.calls[onRunStateChange.mock.calls.length - 1][2];
-
-      // Handlers should reference the same memoized function
-      expect(typeof firstHandler).toBe("function");
-      expect(typeof secondHandler).toBe("function");
     });
   });
 
@@ -868,7 +726,7 @@ describe("ManualRunPanel", () => {
       });
 
       await waitFor(() => {
-        const runButton = screen.getByText("Run (Create New Workorder)");
+        const runButton = screen.getByText("Run Workflow Now");
         expect(runButton).toBeDisabled();
       });
     });
@@ -884,49 +742,9 @@ describe("ManualRunPanel", () => {
       });
 
       await waitFor(() => {
-        const runButton = screen.getByText("Run (Create New Workorder)");
+        const runButton = screen.getByText("Run Workflow Now");
         expect(runButton).not.toBeDisabled();
       });
-    });
-
-    test("onRunStateChange reports canRun=false when permission is denied", async () => {
-      const onRunStateChange = vi.fn();
-
-      // Mock useCanRun to return false (simulating lack of permission)
-      setMockCanRun(false, "You do not have permission to run workflows");
-
-      // Override permissions to deny workflow editing
-      act(() => {
-        (mockChannel as any)._test.emit("session_context", {
-          user: null,
-          project: null,
-          config: { require_email_verification: false },
-          permissions: { can_edit_workflow: false },
-          latest_snapshot_lock_version: 1,
-          project_repo_connection: null,
-        });
-      });
-
-      renderManualRunPanel({
-        workflow: mockWorkflow,
-        projectId: "project-1",
-        workflowId: "workflow-1",
-        jobId: "job-1",
-        onClose: () => {},
-        onRunStateChange,
-      });
-
-      // Wait for initial render and callback
-      await waitFor(() => {
-        expect(onRunStateChange).toHaveBeenCalled();
-      });
-
-      // Should be called with canRun=false due to lack of permission
-      const lastCall =
-        onRunStateChange.mock.calls[onRunStateChange.mock.calls.length - 1];
-      expect(lastCall[0]).toBe(false); // canRun
-      expect(lastCall[1]).toBe(false); // isSubmitting
-      expect(typeof lastCall[2]).toBe("function"); // handler
     });
 
     test("Run button remains disabled in Existing tab without permission, even with selected dataclip", async () => {
@@ -973,7 +791,7 @@ describe("ManualRunPanel", () => {
 
       // Run button should still be disabled due to lack of permission
       await waitFor(() => {
-        const runButton = screen.getByText("Run (Create New Workorder)");
+        const runButton = screen.getByText("Run Workflow Now");
         expect(runButton).toBeDisabled();
       });
     });
@@ -1011,13 +829,11 @@ describe("ManualRunPanel", () => {
 
       // Wait for initial render
       await waitFor(() => {
-        expect(
-          screen.getByText("Run (Create New Workorder)")
-        ).toBeInTheDocument();
+        expect(screen.getByText("Run Workflow Now")).toBeInTheDocument();
       });
 
       // Click Run button
-      await user.click(screen.getByText("Run (Create New Workorder)"));
+      await user.click(screen.getByText("Run Workflow Now"));
 
       // Verify save was called first, then run
       await waitFor(() => {
@@ -1044,12 +860,10 @@ describe("ManualRunPanel", () => {
       });
 
       await waitFor(() => {
-        expect(
-          screen.getByText("Run (Create New Workorder)")
-        ).toBeInTheDocument();
+        expect(screen.getByText("Run Workflow Now")).toBeInTheDocument();
       });
 
-      await user.click(screen.getByText("Run (Create New Workorder)"));
+      await user.click(screen.getByText("Run Workflow Now"));
 
       // Save should be called
       await waitFor(() => {
@@ -1085,12 +899,10 @@ describe("ManualRunPanel", () => {
       });
 
       await waitFor(() => {
-        expect(
-          screen.getByText("Run (Create New Workorder)")
-        ).toBeInTheDocument();
+        expect(screen.getByText("Run Workflow Now")).toBeInTheDocument();
       });
 
-      await user.click(screen.getByText("Run (Create New Workorder)"));
+      await user.click(screen.getByText("Run Workflow Now"));
 
       // Save should be called
       await waitFor(() => {
@@ -1131,17 +943,15 @@ describe("ManualRunPanel", () => {
 
       // Wait for initial render
       await waitFor(() => {
-        expect(
-          screen.getByText("Run (Create New Workorder)")
-        ).toBeInTheDocument();
+        expect(screen.getByText("Run Workflow Now")).toBeInTheDocument();
       });
 
       // Click Run button
-      await user.click(screen.getByText("Run (Create New Workorder)"));
+      await user.click(screen.getByText("Run Workflow Now"));
 
-      // Verify saveWorkflow was called with no arguments
+      // Verify saveWorkflow was called with { silent: true }
       await waitFor(() => {
-        expect(saveWorkflow).toHaveBeenCalledWith();
+        expect(saveWorkflow).toHaveBeenCalledWith({ silent: true });
         expect(saveWorkflow).toHaveBeenCalledOnce();
       });
     });
@@ -1173,21 +983,19 @@ describe("ManualRunPanel", () => {
 
       // Wait for initial render
       await waitFor(() => {
-        expect(
-          screen.getByText("Run (Create New Workorder)")
-        ).toBeInTheDocument();
+        expect(screen.getByText("Run Workflow Now")).toBeInTheDocument();
       });
 
       // Click Run button - this will start the save
-      await user.click(screen.getByText("Run (Create New Workorder)"));
+      await user.click(screen.getByText("Run Workflow Now"));
 
-      // Button should show "Pending..." while submitting
+      // Button should show "Processing" while submitting
       await waitFor(() => {
-        expect(screen.getByText("Pending...")).toBeInTheDocument();
+        expect(screen.getByText("Processing")).toBeInTheDocument();
       });
 
       // Button should be disabled
-      const runButton = screen.getByText("Pending...");
+      const runButton = screen.getByText("Processing");
       expect(runButton).toBeDisabled();
 
       // Try to click again - should not trigger another save
@@ -1198,6 +1006,260 @@ describe("ManualRunPanel", () => {
 
       // Resolve the save to complete the test
       saveResolve!();
+    });
+  });
+
+  describe("Unselecting Dataclip Behavior", () => {
+    test("disables Run button when dataclip is unselected on Existing tab", async () => {
+      const user = userEvent.setup();
+
+      vi.mocked(dataclipApi.searchDataclips).mockResolvedValue({
+        data: [mockDataclip],
+        next_cron_run_dataclip_id: null,
+        can_edit_dataclip: true,
+      });
+
+      renderManualRunPanel({
+        workflow: mockWorkflow,
+        projectId: "project-1",
+        workflowId: "workflow-1",
+        jobId: "job-1",
+        onClose: () => {},
+      });
+
+      // Switch to Existing tab
+      await user.click(screen.getByText("Existing"));
+
+      // Select a dataclip
+      await waitFor(() => {
+        expect(screen.getByText("Test Dataclip")).toBeInTheDocument();
+      });
+      await user.click(screen.getByText("Test Dataclip"));
+
+      // Button should be enabled with selected dataclip
+      await waitFor(() => {
+        const runButton = screen.getByText("Run Workflow Now");
+        expect(runButton).not.toBeDisabled();
+      });
+
+      // Unselect the dataclip by clicking the X button (close button in SelectedDataclipView)
+      // After selecting dataclip, we have SelectedDataclipView with its own buttons
+      // Wait for the view to render
+      await waitFor(() => {
+        expect(screen.getByText("Test Dataclip")).toBeInTheDocument();
+      });
+
+      // Find the close button - it's the last button with an X icon in the header
+      const allButtons = screen.getAllByRole("button");
+      // The close button is in the SelectedDataclipView header with ml-4 class
+      const xButton = allButtons.find(btn =>
+        btn.className.includes("ml-4") && btn.className.includes("text-gray-400")
+      );
+      await user.click(xButton!);
+
+      // Button should now be disabled
+      await waitFor(() => {
+        const runButton = screen.getByText("Run Workflow Now");
+        expect(runButton).toBeDisabled();
+      });
+    });
+
+    test("does not auto-reselect dataclip after manual unselection when switching tabs", async () => {
+      const user = userEvent.setup();
+
+      vi.mocked(dataclipApi.searchDataclips).mockResolvedValue({
+        data: [mockDataclip],
+        next_cron_run_dataclip_id: null,
+        can_edit_dataclip: true,
+      });
+
+      renderManualRunPanel({
+        workflow: mockWorkflow,
+        projectId: "project-1",
+        workflowId: "workflow-1",
+        jobId: "job-1",
+        onClose: () => {},
+      });
+
+      // Switch to Existing tab
+      await user.click(screen.getByText("Existing"));
+
+      // Select a dataclip
+      await waitFor(() => {
+        expect(screen.getByText("Test Dataclip")).toBeInTheDocument();
+      });
+      await user.click(screen.getByText("Test Dataclip"));
+
+      // Unselect the dataclip - find close button in SelectedDataclipView
+      await waitFor(() => {
+        expect(screen.getByText("Test Dataclip")).toBeInTheDocument();
+      });
+      const allButtons = screen.getAllByRole("button");
+      const xButton = allButtons.find(btn =>
+        btn.className.includes("ml-4") && btn.className.includes("text-gray-400")
+      );
+      await user.click(xButton!);
+
+      // Switch to Custom tab
+      await user.click(screen.getByText("Custom"));
+
+      // Switch back to Existing tab
+      await user.click(screen.getByText("Existing"));
+
+      // Dataclip should NOT be auto-selected
+      await waitFor(() => {
+        expect(
+          screen.queryByText("Default Next Input for Cron")
+        ).not.toBeInTheDocument();
+      });
+
+      // The list should still show the dataclip as available
+      expect(screen.getByText("Test Dataclip")).toBeInTheDocument();
+
+      // Run button should still be disabled
+      const runButton = screen.getByText("Run Workflow Now");
+      expect(runButton).toBeDisabled();
+    });
+
+    test("re-enables Run button when switching to Empty tab after unselecting dataclip", async () => {
+      const user = userEvent.setup();
+
+      vi.mocked(dataclipApi.searchDataclips).mockResolvedValue({
+        data: [mockDataclip],
+        next_cron_run_dataclip_id: null,
+        can_edit_dataclip: true,
+      });
+
+      renderManualRunPanel({
+        workflow: mockWorkflow,
+        projectId: "project-1",
+        workflowId: "workflow-1",
+        jobId: "job-1",
+        onClose: () => {},
+      });
+
+      // Switch to Existing tab and select dataclip
+      await user.click(screen.getByText("Existing"));
+      await waitFor(() => {
+        expect(screen.getByText("Test Dataclip")).toBeInTheDocument();
+      });
+      await user.click(screen.getByText("Test Dataclip"));
+
+      // Unselect the dataclip - find close button in SelectedDataclipView
+      await waitFor(() => {
+        expect(screen.getByText("Test Dataclip")).toBeInTheDocument();
+      });
+      const allButtons = screen.getAllByRole("button");
+      const xButton = allButtons.find(btn =>
+        btn.className.includes("ml-4") && btn.className.includes("text-gray-400")
+      );
+      await user.click(xButton!);
+
+      // Switch to Empty tab
+      await user.click(screen.getByText("Empty"));
+
+      // Run button should be enabled on Empty tab
+      await waitFor(() => {
+        const runButton = screen.getByText("Run Workflow Now");
+        expect(runButton).not.toBeDisabled();
+      });
+    });
+
+    test("calls onDataclipChange callback when dataclip is unselected", async () => {
+      const user = userEvent.setup();
+      const onDataclipChange = vi.fn();
+
+      vi.mocked(dataclipApi.searchDataclips).mockResolvedValue({
+        data: [mockDataclip],
+        next_cron_run_dataclip_id: null,
+        can_edit_dataclip: true,
+      });
+
+      renderManualRunPanel({
+        workflow: mockWorkflow,
+        projectId: "project-1",
+        workflowId: "workflow-1",
+        jobId: "job-1",
+        onClose: () => {},
+        onDataclipChange,
+      });
+
+      // Switch to Existing tab and select dataclip
+      await user.click(screen.getByText("Existing"));
+      await waitFor(() => {
+        expect(screen.getByText("Test Dataclip")).toBeInTheDocument();
+      });
+      await user.click(screen.getByText("Test Dataclip"));
+
+      // Callback should be called with dataclip
+      await waitFor(() => {
+        expect(onDataclipChange).toHaveBeenCalledWith(
+          expect.objectContaining({ id: "dataclip-1" })
+        );
+      });
+
+      // Unselect the dataclip - find close button in SelectedDataclipView
+      await waitFor(() => {
+        expect(screen.getByText("Test Dataclip")).toBeInTheDocument();
+      });
+      const allButtons = screen.getAllByRole("button");
+      const xButton = allButtons.find(btn =>
+        btn.className.includes("ml-4") && btn.className.includes("text-gray-400")
+      );
+      await user.click(xButton!);
+
+      // Callback should be called with null
+      await waitFor(() => {
+        expect(onDataclipChange).toHaveBeenCalledWith(null);
+      });
+    });
+  });
+
+  describe("controlled component mode", () => {
+    test("Run button state reflects controlled customBody prop", async () => {
+      vi.mocked(dataclipApi.searchDataclips).mockResolvedValue({
+        data: [],
+        next_cron_run_dataclip_id: null,
+        can_edit_dataclip: true,
+      });
+
+      renderManualRunPanel({
+        workflow: mockWorkflow,
+        projectId: "project-1",
+        workflowId: "workflow-1",
+        jobId: "job-1",
+        onClose: () => {},
+        selectedTab: "custom",
+        customBody: '{"test": "data"}',
+      });
+
+      await waitFor(() => {
+        const runButton = screen.getByText("Run Workflow Now");
+        expect(runButton).not.toBeDisabled();
+      });
+    });
+
+    test("Run button disabled when controlled customBody is empty", async () => {
+      vi.mocked(dataclipApi.searchDataclips).mockResolvedValue({
+        data: [],
+        next_cron_run_dataclip_id: null,
+        can_edit_dataclip: true,
+      });
+
+      renderManualRunPanel({
+        workflow: mockWorkflow,
+        projectId: "project-1",
+        workflowId: "workflow-1",
+        jobId: "job-1",
+        onClose: () => {},
+        selectedTab: "custom",
+        customBody: "",
+      });
+
+      await waitFor(() => {
+        const runButton = screen.getByText("Run Workflow Now");
+        expect(runButton).toBeDisabled();
+      });
     });
   });
 });
