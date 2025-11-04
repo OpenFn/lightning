@@ -7,18 +7,18 @@
  * - Channel cleanup and error scenarios
  */
 
-import { describe, test, expect } from "vitest";
-import { createSessionContextStore } from "../../../js/collaborative-editor/stores/createSessionContextStore";
+import { describe, expect, test } from 'vitest';
+import { createSessionContextStore } from '../../../js/collaborative-editor/stores/createSessionContextStore';
 
-import { invalidSessionContextData } from "../fixtures/sessionContextData";
+import { invalidSessionContextData } from '../__helpers__/sessionContextFactory';
 import {
   createMockPhoenixChannel,
   createMockPhoenixChannelProvider,
-} from "../mocks/phoenixChannel";
+} from '../mocks/phoenixChannel';
 
-describe("createSessionContextStore - Validation & Edge Cases", () => {
-  describe("validation", () => {
-    test("handles invalid user ID gracefully", async () => {
+describe('createSessionContextStore - Validation & Edge Cases', () => {
+  describe('validation', () => {
+    test('handles invalid user ID gracefully', async () => {
       const store = createSessionContextStore();
       const mockChannel = createMockPhoenixChannel();
       const mockProvider = createMockPhoenixChannelProvider(mockChannel);
@@ -26,7 +26,7 @@ describe("createSessionContextStore - Validation & Edge Cases", () => {
       mockChannel.push = (_event: string, _payload: unknown) => {
         return {
           receive: (status: string, callback: (response?: unknown) => void) => {
-            if (status === "ok") {
+            if (status === 'ok') {
               setTimeout(() => {
                 callback(invalidSessionContextData.invalidUserId);
               }, 0);
@@ -44,10 +44,10 @@ describe("createSessionContextStore - Validation & Edge Cases", () => {
       await store.requestSessionContext();
 
       const state = store.getSnapshot();
-      expect(state.error?.includes("Invalid session context data")).toBe(true);
+      expect(state.error?.includes('Invalid session context data')).toBe(true);
     });
 
-    test("handles invalid user email gracefully", async () => {
+    test('handles invalid user email gracefully', async () => {
       const store = createSessionContextStore();
       const mockChannel = createMockPhoenixChannel();
       const mockProvider = createMockPhoenixChannelProvider(mockChannel);
@@ -55,7 +55,7 @@ describe("createSessionContextStore - Validation & Edge Cases", () => {
       mockChannel.push = (_event: string, _payload: unknown) => {
         return {
           receive: (status: string, callback: (response?: unknown) => void) => {
-            if (status === "ok") {
+            if (status === 'ok') {
               setTimeout(() => {
                 callback(invalidSessionContextData.invalidUserEmail);
               }, 0);
@@ -73,10 +73,10 @@ describe("createSessionContextStore - Validation & Edge Cases", () => {
       await store.requestSessionContext();
 
       const state = store.getSnapshot();
-      expect(state.error?.includes("Invalid session context data")).toBe(true);
+      expect(state.error?.includes('Invalid session context data')).toBe(true);
     });
 
-    test("handles missing config gracefully", async () => {
+    test('handles missing config gracefully', async () => {
       const store = createSessionContextStore();
       const mockChannel = createMockPhoenixChannel();
       const mockProvider = createMockPhoenixChannelProvider(mockChannel);
@@ -84,7 +84,7 @@ describe("createSessionContextStore - Validation & Edge Cases", () => {
       mockChannel.push = (_event: string, _payload: unknown) => {
         return {
           receive: (status: string, callback: (response?: unknown) => void) => {
-            if (status === "ok") {
+            if (status === 'ok') {
               setTimeout(() => {
                 callback(invalidSessionContextData.missingConfig);
               }, 0);
@@ -102,10 +102,10 @@ describe("createSessionContextStore - Validation & Edge Cases", () => {
       await store.requestSessionContext();
 
       const state = store.getSnapshot();
-      expect(state.error?.includes("Invalid session context data")).toBe(true);
+      expect(state.error?.includes('Invalid session context data')).toBe(true);
     });
 
-    test("handles invalid config type gracefully", async () => {
+    test('handles invalid config type gracefully', async () => {
       const store = createSessionContextStore();
       const mockChannel = createMockPhoenixChannel();
       const mockProvider = createMockPhoenixChannelProvider(mockChannel);
@@ -113,7 +113,7 @@ describe("createSessionContextStore - Validation & Edge Cases", () => {
       mockChannel.push = (_event: string, _payload: unknown) => {
         return {
           receive: (status: string, callback: (response?: unknown) => void) => {
-            if (status === "ok") {
+            if (status === 'ok') {
               setTimeout(() => {
                 callback(invalidSessionContextData.invalidConfigType);
               }, 0);
@@ -131,12 +131,12 @@ describe("createSessionContextStore - Validation & Edge Cases", () => {
       await store.requestSessionContext();
 
       const state = store.getSnapshot();
-      expect(state.error?.includes("Invalid session context data")).toBe(true);
+      expect(state.error?.includes('Invalid session context data')).toBe(true);
     });
   });
 
-  describe("edge cases", () => {
-    test("handles multiple subscribers correctly", () => {
+  describe('edge cases', () => {
+    test('handles multiple subscribers correctly', () => {
       const store = createSessionContextStore();
 
       let listener1Count = 0;
@@ -164,7 +164,7 @@ describe("createSessionContextStore - Validation & Edge Cases", () => {
       unsubscribe2();
 
       // Trigger another change
-      store.setError("test");
+      store.setError('test');
 
       expect(listener1Count).toBe(2);
       expect(listener2Count).toBe(1); // Unsubscribed listener should not be called
@@ -175,7 +175,7 @@ describe("createSessionContextStore - Validation & Edge Cases", () => {
       unsubscribe3();
     });
 
-    test("maintains state consistency during rapid updates", () => {
+    test('maintains state consistency during rapid updates', () => {
       const store = createSessionContextStore();
       let notificationCount = 0;
 
@@ -185,10 +185,10 @@ describe("createSessionContextStore - Validation & Edge Cases", () => {
 
       // Perform rapid state updates
       store.setLoading(true);
-      store.setError("error 1");
+      store.setError('error 1');
       store.clearError();
       store.setLoading(false);
-      store.setError("error 2");
+      store.setError('error 2');
       store.clearError();
 
       // Each operation should trigger exactly one notification
@@ -200,13 +200,13 @@ describe("createSessionContextStore - Validation & Edge Cases", () => {
       expect(finalState.error).toBe(null);
     });
 
-    test("handles null and undefined channel provider gracefully", async () => {
+    test('handles null and undefined channel provider gracefully', async () => {
       const store = createSessionContextStore();
 
       // Test with null provider
       try {
         store._connectChannel(null as any);
-        throw new Error("Should have thrown error for null provider");
+        throw new Error('Should have thrown error for null provider');
       } catch (error) {
         expect(error instanceof TypeError).toBe(true);
       }
@@ -214,7 +214,7 @@ describe("createSessionContextStore - Validation & Edge Cases", () => {
       // Test with undefined provider
       try {
         store._connectChannel(undefined as any);
-        throw new Error("Should have thrown error for undefined provider");
+        throw new Error('Should have thrown error for undefined provider');
       } catch (error) {
         expect(error instanceof TypeError).toBe(true);
       }
@@ -223,7 +223,7 @@ describe("createSessionContextStore - Validation & Edge Cases", () => {
       await store.requestSessionContext();
 
       const state = store.getSnapshot();
-      expect(state.error?.includes("No connection available") ?? false).toBe(
+      expect(state.error?.includes('No connection available') ?? false).toBe(
         true
       );
     });

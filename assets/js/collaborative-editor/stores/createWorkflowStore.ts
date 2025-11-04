@@ -128,25 +128,25 @@
  * Y.Doc, Provider (too large/circular)
  */
 
-import { produce } from "immer";
-import type { Channel } from "phoenix";
-import type { PhoenixChannelProvider } from "y-phoenix-channel";
-import * as Y from "yjs";
+import { produce } from 'immer';
+import type { Channel } from 'phoenix';
+import type { PhoenixChannelProvider } from 'y-phoenix-channel';
+import * as Y from 'yjs';
 
-import _logger from "#/utils/logger";
+import _logger from '#/utils/logger';
 
-import type { WorkflowState as YAMLWorkflowState } from "../../yaml/types";
-import { YAMLStateToYDoc } from "../adapters/YAMLStateToYDoc";
-import { channelRequest } from "../hooks/useChannel";
-import { EdgeSchema } from "../types/edge";
-import { JobSchema } from "../types/job";
-import type { Session } from "../types/session";
-import type { Workflow } from "../types/workflow";
+import type { WorkflowState as YAMLWorkflowState } from '../../yaml/types';
+import { YAMLStateToYDoc } from '../adapters/YAMLStateToYDoc';
+import { channelRequest } from '../hooks/useChannel';
+import { EdgeSchema } from '../types/edge';
+import { JobSchema } from '../types/job';
+import type { Session } from '../types/session';
+import type { Workflow } from '../types/workflow';
 
-import { createWithSelector } from "./common";
-import { wrapStoreWithDevTools } from "./devtools";
+import { createWithSelector } from './common';
+import { wrapStoreWithDevTools } from './devtools';
 
-const logger = _logger.ns("WorkflowStore").seal();
+const logger = _logger.ns('WorkflowStore').seal();
 
 const JobShape = JobSchema.shape;
 const EdgeShape = EdgeSchema.shape;
@@ -212,8 +212,8 @@ export const createWorkflowStore = () => {
 
   // Redux DevTools integration (development/test only)
   const devtools = wrapStoreWithDevTools<Workflow.State>({
-    name: "WorkflowStore",
-    excludeKeys: ["ydoc", "provider"], // Exclude Y.Doc and provider (too large/circular)
+    name: 'WorkflowStore',
+    excludeKeys: ['ydoc', 'provider'], // Exclude Y.Doc and provider (too large/circular)
     maxAge: 200, // Higher limit to prevent history loss from frequent updates
     trace: false,
   });
@@ -231,15 +231,15 @@ export const createWorkflowStore = () => {
   const ensureConnected = () => {
     if (!ydoc || !provider) {
       throw new Error(
-        "Cannot modify workflow: Y.Doc not connected. " +
-          "This is likely a bug - mutations should not be called before sync."
+        'Cannot modify workflow: Y.Doc not connected. ' +
+          'This is likely a bug - mutations should not be called before sync.'
       );
     }
     return { ydoc, provider };
   };
 
-  const notify = (actionName: string = "stateChange") => {
-    logger.debug("notify", {
+  const notify = (actionName: string = 'stateChange') => {
+    logger.debug('notify', {
       action: actionName,
       workflow: state.workflow,
       jobs: state.jobs.length,
@@ -265,7 +265,7 @@ export const createWorkflowStore = () => {
   let lastState: Workflow.State = state;
   const updateState = (
     updater: (draft: Workflow.State) => void,
-    actionName: string = "updateState"
+    actionName: string = 'updateState'
   ) => {
     const nextState = produce(state, draft => {
       updater(draft);
@@ -289,24 +289,24 @@ export const createWorkflowStore = () => {
     // Clean up previous connection
     disconnect();
     if (p.channel === undefined) {
-      throw new Error("Provider must have a channel");
+      throw new Error('Provider must have a channel');
     }
 
     provider = p as PhoenixChannelProvider & { channel: Channel };
     ydoc = d;
 
     // Get Y.js maps and arrays
-    const workflowMap = ydoc.getMap("workflow");
-    const jobsArray = ydoc.getArray("jobs");
-    const triggersArray = ydoc.getArray("triggers");
-    const edgesArray = ydoc.getArray("edges");
-    const positionsMap = ydoc.getMap("positions");
+    const workflowMap = ydoc.getMap('workflow');
+    const jobsArray = ydoc.getArray('jobs');
+    const triggersArray = ydoc.getArray('triggers');
+    const edgesArray = ydoc.getArray('edges');
+    const positionsMap = ydoc.getMap('positions');
 
     // Set up observers
     const workflowObserver = () => {
       updateState(draft => {
         draft.workflow = workflowMap.toJSON() as Session.Workflow;
-      }, "workflow/observerUpdate");
+      }, 'workflow/observerUpdate');
     };
 
     const jobsObserver = (
@@ -314,7 +314,7 @@ export const createWorkflowStore = () => {
       transaction?: Y.Transaction
     ) => {
       if (jobs && transaction) {
-        logger.debug("jobsObserver", {
+        logger.debug('jobsObserver', {
           jobs,
           transaction,
           sameOrigin: transaction.origin === provider,
@@ -323,7 +323,7 @@ export const createWorkflowStore = () => {
       updateState(draft => {
         const yjsJobs = jobsArray.toArray() as Y.Map<unknown>[];
         draft.jobs = yjsJobs.map(yjsJob => yjsJob.toJSON() as Workflow.Job);
-      }, "jobs/observerUpdate");
+      }, 'jobs/observerUpdate');
     };
 
     const triggersObserver = () => {
@@ -332,7 +332,7 @@ export const createWorkflowStore = () => {
         draft.triggers = yjsTriggers.map(
           yjsTrigger => yjsTrigger.toJSON() as Workflow.Trigger
         );
-      }, "triggers/observerUpdate");
+      }, 'triggers/observerUpdate');
     };
 
     const edgesObserver = () => {
@@ -341,13 +341,13 @@ export const createWorkflowStore = () => {
         draft.edges = yjsEdges.map(
           yjsEdge => yjsEdge.toJSON() as Workflow.Edge
         );
-      }, "edges/observerUpdate");
+      }, 'edges/observerUpdate');
     };
 
     const positionsObserver = () => {
       updateState(draft => {
         draft.positions = positionsMap.toJSON() as Workflow.Positions;
-      }, "positions/observerUpdate");
+      }, 'positions/observerUpdate');
     };
 
     // Attach observers with deep observation for nested changes
@@ -358,7 +358,7 @@ export const createWorkflowStore = () => {
     positionsMap.observeDeep(positionsObserver);
 
     // Store cleanup functions
-    logger.debug("Attaching observers");
+    logger.debug('Attaching observers');
     observerCleanups = [
       () => workflowMap.unobserveDeep(workflowObserver),
       () => jobsArray.unobserveDeep(jobsObserver),
@@ -382,12 +382,12 @@ export const createWorkflowStore = () => {
     devtools.connect();
 
     // Send initial state
-    notify("connected");
+    notify('connected');
   };
 
   // Disconnect Y.Doc and clean up observers
   const disconnect = () => {
-    logger.debug("Cleaning up observers", observerCleanups.length);
+    logger.debug('Cleaning up observers', observerCleanups.length);
     observerCleanups.forEach(cleanup => {
       cleanup();
     });
@@ -399,7 +399,7 @@ export const createWorkflowStore = () => {
     devtools.disconnect();
 
     // Update collaboration status
-    updateState(_draft => {}, "disconnected");
+    updateState(_draft => {}, 'disconnected');
   };
 
   // =============================================================================
@@ -424,9 +424,9 @@ export const createWorkflowStore = () => {
     //   return;
     // }
 
-    const jobsArray = ydoc.getArray("jobs");
+    const jobsArray = ydoc.getArray('jobs');
     const jobs = jobsArray.toArray() as Y.Map<unknown>[];
-    const jobIndex = jobs.findIndex(job => job.get("id") === id);
+    const jobIndex = jobs.findIndex(job => job.get('id') === id);
 
     if (jobIndex >= 0) {
       const yjsJob = jobs[jobIndex];
@@ -434,8 +434,8 @@ export const createWorkflowStore = () => {
         Object.entries(updates)
           .filter(([key]) => key in JobShape)
           .forEach(([key, value]) => {
-            if (key === "body" && typeof value === "string") {
-              const ytext = yjsJob.get("body") as Y.Text;
+            if (key === 'body' && typeof value === 'string') {
+              const ytext = yjsJob.get('body') as Y.Text;
               ytext.delete(0, ytext.length);
               ytext.insert(0, value);
             } else {
@@ -467,12 +467,12 @@ export const createWorkflowStore = () => {
    */
   const updateWorkflow = (
     updates: Partial<
-      Omit<Session.Workflow, "id" | "lock_version" | "deleted_at">
+      Omit<Session.Workflow, 'id' | 'lock_version' | 'deleted_at'>
     >
   ) => {
     const { ydoc } = ensureConnected();
 
-    const workflowMap = ydoc.getMap("workflow");
+    const workflowMap = ydoc.getMap('workflow');
 
     ydoc.transact(() => {
       (
@@ -494,20 +494,24 @@ export const createWorkflowStore = () => {
     const { ydoc } = ensureConnected();
     if (!job.id || !job.name) return;
 
-    const jobsArray = ydoc.getArray("jobs");
+    const jobsArray = ydoc.getArray('jobs');
     const jobMap = new Y.Map();
 
+    // Default body text shown in the Monaco editor for new jobs
+    const defaultBody = `// Check out the Job Writing Guide for help getting started:
+// https://docs.openfn.org/documentation/jobs/job-writing-guide
+`;
+
     ydoc.transact(() => {
-      jobMap.set("id", job.id);
-      jobMap.set("name", job.name);
-      if (job.body) {
-        jobMap.set("body", new Y.Text(job.body));
-      }
+      jobMap.set('id', job.id);
+      jobMap.set('name', job.name);
+      // Always initialize body as Y.Text with default if empty
+      jobMap.set('body', new Y.Text(job.body || defaultBody));
       // Set adaptor field (defaults to common if not provided)
-      jobMap.set("adaptor", job.adaptor);
+      jobMap.set('adaptor', job.adaptor);
       // Initialize credential fields to null
-      jobMap.set("project_credential_id", job.project_credential_id || null);
-      jobMap.set("keychain_credential_id", job.keychain_credential_id || null);
+      jobMap.set('project_credential_id', job.project_credential_id || null);
+      jobMap.set('keychain_credential_id', job.keychain_credential_id || null);
 
       jobsArray.push([jobMap]);
     });
@@ -516,9 +520,9 @@ export const createWorkflowStore = () => {
   const removeJob = (id: string) => {
     const { ydoc } = ensureConnected();
 
-    const jobsArray = ydoc.getArray("jobs");
+    const jobsArray = ydoc.getArray('jobs');
     const jobs = jobsArray.toArray() as Y.Map<unknown>[];
-    const jobIndex = jobs.findIndex(job => job.get("id") === id);
+    const jobIndex = jobs.findIndex(job => job.get('id') === id);
 
     if (jobIndex >= 0) {
       ydoc.transact(() => {
@@ -531,18 +535,18 @@ export const createWorkflowStore = () => {
     const { ydoc } = ensureConnected();
     if (!edge.id || !edge.target_job_id) return;
 
-    const edgesArray = ydoc.getArray("edges");
+    const edgesArray = ydoc.getArray('edges');
     const edgeMap = new Y.Map();
 
     ydoc.transact(() => {
-      edgeMap.set("id", edge.id);
-      edgeMap.set("source_job_id", edge.source_job_id || null);
-      edgeMap.set("source_trigger_id", edge.source_trigger_id || null);
-      edgeMap.set("target_job_id", edge.target_job_id);
-      edgeMap.set("condition_type", edge.condition_type || "on_job_success");
-      edgeMap.set("condition_label", edge.condition_label || null);
-      edgeMap.set("condition_expression", edge.condition_expression || null);
-      edgeMap.set("enabled", edge.enabled !== undefined ? edge.enabled : true);
+      edgeMap.set('id', edge.id);
+      edgeMap.set('source_job_id', edge.source_job_id || null);
+      edgeMap.set('source_trigger_id', edge.source_trigger_id || null);
+      edgeMap.set('target_job_id', edge.target_job_id);
+      edgeMap.set('condition_type', edge.condition_type || 'on_job_success');
+      edgeMap.set('condition_label', edge.condition_label || null);
+      edgeMap.set('condition_expression', edge.condition_expression || null);
+      edgeMap.set('enabled', edge.enabled !== undefined ? edge.enabled : true);
       edgesArray.push([edgeMap]);
     });
   };
@@ -550,9 +554,9 @@ export const createWorkflowStore = () => {
   const updateEdge = (id: string, updates: Partial<Session.Edge>) => {
     const { ydoc } = ensureConnected();
 
-    const edgesArray = ydoc.getArray("edges");
+    const edgesArray = ydoc.getArray('edges');
     const edges = edgesArray.toArray() as Y.Map<unknown>[];
-    const edgeIndex = edges.findIndex(edge => edge.get("id") === id);
+    const edgeIndex = edges.findIndex(edge => edge.get('id') === id);
 
     if (edgeIndex >= 0) {
       const yjsEdge = edges[edgeIndex];
@@ -572,9 +576,9 @@ export const createWorkflowStore = () => {
   const removeEdge = (id: string) => {
     const { ydoc } = ensureConnected();
 
-    const edgesArray = ydoc.getArray("edges");
+    const edgesArray = ydoc.getArray('edges');
     const edges = edgesArray.toArray() as Y.Map<unknown>[];
-    const edgeIndex = edges.findIndex(edge => edge.get("id") === id);
+    const edgeIndex = edges.findIndex(edge => edge.get('id') === id);
 
     if (edgeIndex >= 0) {
       ydoc.transact(() => {
@@ -587,10 +591,10 @@ export const createWorkflowStore = () => {
   const updateTrigger = (id: string, updates: Partial<Session.Trigger>) => {
     const { ydoc } = ensureConnected();
 
-    const triggersArray = ydoc.getArray("triggers");
+    const triggersArray = ydoc.getArray('triggers');
     const triggers = triggersArray.toArray() as Y.Map<unknown>[];
     const triggerIndex = triggers.findIndex(
-      trigger => trigger.get("id") === id
+      trigger => trigger.get('id') === id
     );
 
     if (triggerIndex >= 0) {
@@ -606,12 +610,12 @@ export const createWorkflowStore = () => {
   const setEnabled = (enabled: boolean) => {
     const { ydoc } = ensureConnected();
 
-    const triggersArray = ydoc.getArray("triggers");
+    const triggersArray = ydoc.getArray('triggers');
     const triggers = triggersArray.toArray() as Y.Map<unknown>[];
 
     ydoc.transact(() => {
       triggers.forEach(trigger => {
-        trigger.set("enabled", enabled);
+        trigger.set('enabled', enabled);
       });
     });
   };
@@ -619,17 +623,17 @@ export const createWorkflowStore = () => {
   const getJobBodyYText = (id: string): Y.Text | null => {
     if (!ydoc) return null;
 
-    const jobsArray = ydoc.getArray("jobs");
+    const jobsArray = ydoc.getArray('jobs');
     const jobs = jobsArray.toArray() as Y.Map<unknown>[];
-    const yjsJob = jobs.find(job => job.get("id") === id);
+    const yjsJob = jobs.find(job => job.get('id') === id);
 
-    return yjsJob ? (yjsJob.get("body") as Y.Text) : null;
+    return yjsJob ? (yjsJob.get('body') as Y.Text) : null;
   };
 
   const updatePositions = (positions: Workflow.Positions | null) => {
     const { ydoc } = ensureConnected();
 
-    const positionsMap = ydoc.getMap("positions");
+    const positionsMap = ydoc.getMap('positions');
 
     ydoc.transact(() => {
       if (positions === null) {
@@ -647,7 +651,7 @@ export const createWorkflowStore = () => {
   const updatePosition = (id: string, position: { x: number; y: number }) => {
     const { ydoc } = ensureConnected();
 
-    const positionsMap = ydoc.getMap("positions");
+    const positionsMap = ydoc.getMap('positions');
     ydoc.transact(() => {
       positionsMap.set(id, position);
     });
@@ -663,7 +667,7 @@ export const createWorkflowStore = () => {
       draft.selectedJobId = id;
       draft.selectedTriggerId = null;
       draft.selectedEdgeId = null;
-    }, "selectJob");
+    }, 'selectJob');
   };
 
   const selectTrigger = (id: string | null) => {
@@ -671,7 +675,7 @@ export const createWorkflowStore = () => {
       draft.selectedTriggerId = id;
       draft.selectedJobId = null;
       draft.selectedEdgeId = null;
-    }, "selectTrigger");
+    }, 'selectTrigger');
   };
 
   const selectEdge = (id: string | null) => {
@@ -679,7 +683,7 @@ export const createWorkflowStore = () => {
       draft.selectedEdgeId = id;
       draft.selectedJobId = null;
       draft.selectedTriggerId = null;
-    }, "selectEdge");
+    }, 'selectEdge');
   };
 
   const clearSelection = () => {
@@ -687,7 +691,7 @@ export const createWorkflowStore = () => {
       draft.selectedJobId = null;
       draft.selectedTriggerId = null;
       draft.selectedEdgeId = null;
-    }, "clearSelection");
+    }, 'clearSelection');
   };
 
   const saveWorkflow = async (): Promise<{
@@ -696,12 +700,12 @@ export const createWorkflowStore = () => {
   } | null> => {
     const { ydoc, provider } = ensureConnected();
 
-    const workflow = ydoc.getMap("workflow").toJSON();
+    const workflow = ydoc.getMap('workflow').toJSON();
 
-    const jobs = ydoc.getArray("jobs").toJSON();
-    const triggers = ydoc.getArray("triggers").toJSON();
-    const edges = ydoc.getArray("edges").toJSON();
-    const positions = ydoc.getMap("positions").toJSON();
+    const jobs = ydoc.getArray('jobs').toJSON();
+    const triggers = ydoc.getArray('triggers').toJSON();
+    const edges = ydoc.getArray('edges').toJSON();
+    const positions = ydoc.getMap('positions').toJSON();
 
     const payload = {
       ...workflow,
@@ -711,19 +715,62 @@ export const createWorkflowStore = () => {
       positions,
     };
 
-    logger.debug("Saving workflow", payload);
+    logger.debug('Saving workflow', payload);
 
     try {
       const response = await channelRequest<{
         saved_at: string;
         lock_version: number;
-      }>(provider.channel, "save_workflow", payload);
+      }>(provider.channel, 'save_workflow', payload);
 
-      logger.debug("Saved workflow", response);
+      logger.debug('Saved workflow', response);
 
       return response;
     } catch (error) {
-      logger.error("Failed to save workflow", error);
+      logger.error('Failed to save workflow', error);
+      throw error;
+    }
+  };
+
+  const saveAndSyncWorkflow = async (
+    commitMessage: string
+  ): Promise<{
+    saved_at?: string;
+    lock_version?: number;
+    repo?: string;
+  } | null> => {
+    const { ydoc, provider } = ensureConnected();
+
+    const workflow = ydoc.getMap('workflow').toJSON();
+
+    const jobs = ydoc.getArray('jobs').toJSON();
+    const triggers = ydoc.getArray('triggers').toJSON();
+    const edges = ydoc.getArray('edges').toJSON();
+    const positions = ydoc.getMap('positions').toJSON();
+
+    const payload = {
+      ...workflow,
+      jobs,
+      triggers,
+      edges,
+      positions,
+      commit_message: commitMessage,
+    };
+
+    logger.debug('Saving and syncing workflow to GitHub', payload);
+
+    try {
+      const response = await channelRequest<{
+        saved_at: string;
+        lock_version: number;
+        repo: string;
+      }>(provider.channel, 'save_and_sync', payload);
+
+      logger.debug('Saved and synced workflow to GitHub', response);
+
+      return response;
+    } catch (error) {
+      logger.error('Failed to save and sync workflow', error);
       throw error;
     }
   };
@@ -731,18 +778,18 @@ export const createWorkflowStore = () => {
   const resetWorkflow = async (): Promise<void> => {
     const { provider } = ensureConnected();
 
-    logger.debug("Resetting workflow");
+    logger.debug('Resetting workflow');
 
     try {
       const response = await channelRequest<{
         lock_version: number;
         workflow_id: string;
-      }>(provider.channel, "reset_workflow", {});
+      }>(provider.channel, 'reset_workflow', {});
 
       // Y.Doc will automatically update from server broadcast
-      logger.debug("Reset workflow successfully", response);
+      logger.debug('Reset workflow successfully', response);
     } catch (error) {
-      logger.error("Failed to reset workflow", error);
+      logger.error('Failed to reset workflow', error);
       throw error;
     }
   };
@@ -761,18 +808,18 @@ export const createWorkflowStore = () => {
     workflowState: YAMLWorkflowState
   ): Promise<YAMLWorkflowState> => {
     if (!provider) {
-      logger.warn("No provider available for name validation");
+      logger.warn('No provider available for name validation');
       return workflowState;
     }
 
     try {
       const response = await channelRequest<{ workflow: { name: string } }>(
         provider.channel,
-        "validate_workflow_name",
+        'validate_workflow_name',
         { workflow: { name: workflowState.name } }
       );
 
-      logger.debug("Validated workflow name", {
+      logger.debug('Validated workflow name', {
         original: workflowState.name,
         validated: response.workflow.name,
       });
@@ -783,7 +830,7 @@ export const createWorkflowStore = () => {
         name: response.workflow.name,
       };
     } catch (error) {
-      logger.error("Failed to validate workflow name", error);
+      logger.error('Failed to validate workflow name', error);
       throw error;
     }
   };
@@ -805,7 +852,7 @@ export const createWorkflowStore = () => {
       // Use adapter to apply transformations and update Y.Doc
       YAMLStateToYDoc.applyToYDoc(ydoc, workflowState);
 
-      logger.info("Workflow imported successfully", {
+      logger.info('Workflow imported successfully', {
         workflowId: workflowState.id,
         jobs: workflowState.jobs.length,
         triggers: workflowState.triggers.length,
@@ -814,7 +861,7 @@ export const createWorkflowStore = () => {
 
       // Note: Observers will automatically trigger Immer updates and notify React
     } catch (error) {
-      logger.error("Failed to import workflow", error);
+      logger.error('Failed to import workflow', error);
       throw error;
     }
   };
@@ -834,7 +881,7 @@ export const createWorkflowStore = () => {
       if (draft.selectedJobId === id) {
         draft.selectedJobId = null;
       }
-    }, "removeJobAndClearSelection");
+    }, 'removeJobAndClearSelection');
 
     // Note: Y.Doc observer will also fire and update the jobs array
   };
@@ -887,6 +934,7 @@ export const createWorkflowStore = () => {
     selectEdge,
     clearSelection,
     saveWorkflow,
+    saveAndSyncWorkflow,
     resetWorkflow,
     validateWorkflowName,
   };

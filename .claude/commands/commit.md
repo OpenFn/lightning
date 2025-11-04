@@ -8,6 +8,8 @@ You are tasked with creating git commits for the changes made during this sessio
 
 ## Process:
 
+**Important:** Ensure all git commands are run from the repository root directory. Check your current working directory and navigate to the repo root if needed before proceeding.
+
 1. **Think about what changed:**
    - Review the conversation history and understand what was accomplished
    - Run `git status` to see current changes

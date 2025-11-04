@@ -1,36 +1,36 @@
-import { useMemo } from "react";
-import { HotkeysProvider } from "react-hotkeys-hook";
+import { useMemo } from 'react';
+import { HotkeysProvider } from 'react-hotkeys-hook';
 
-import { SocketProvider } from "../react/contexts/SocketProvider";
-import type { WithActionProps } from "../react/lib/with-props";
+import { SocketProvider } from '../react/contexts/SocketProvider';
+import type { WithActionProps } from '../react/lib/with-props';
 
-import { BreadcrumbLink, BreadcrumbText } from "./components/Breadcrumbs";
-import { CollaborationWidget } from "./components/CollaborationWidget";
-import { Header } from "./components/Header";
-import { LoadingBoundary } from "./components/LoadingBoundary";
-import { Toaster } from "./components/ui/Toaster";
-import { VersionDebugLogger } from "./components/VersionDebugLogger";
-import { VersionDropdown } from "./components/VersionDropdown";
-import { WorkflowEditor } from "./components/WorkflowEditor";
-import { SessionProvider } from "./contexts/SessionProvider";
-import { StoreProvider } from "./contexts/StoreProvider";
+import { BreadcrumbLink, BreadcrumbText } from './components/Breadcrumbs';
+import { Header } from './components/Header';
+import { LoadingBoundary } from './components/LoadingBoundary';
+import { Toaster } from './components/ui/Toaster';
+import { VersionDebugLogger } from './components/VersionDebugLogger';
+import { VersionDropdown } from './components/VersionDropdown';
+import { WorkflowEditor } from './components/WorkflowEditor';
+import { LiveViewActionsProvider } from './contexts/LiveViewActionsContext';
+import { SessionProvider } from './contexts/SessionProvider';
+import { StoreProvider } from './contexts/StoreProvider';
 import {
   useLatestSnapshotLockVersion,
   useProject,
-} from "./hooks/useSessionContext";
-import { useVersionSelect } from "./hooks/useVersionSelect";
-import { useWorkflowState } from "./hooks/useWorkflow";
+} from './hooks/useSessionContext';
+import { useVersionSelect } from './hooks/useVersionSelect';
+import { useWorkflowState } from './hooks/useWorkflow';
 
 export interface CollaborativeEditorDataProps {
-  "data-workflow-id": string;
-  "data-workflow-name": string;
-  "data-project-id": string;
-  "data-project-name"?: string;
-  "data-project-color"?: string;
-  "data-project-env"?: string;
-  "data-root-project-id"?: string;
-  "data-root-project-name"?: string;
-  "data-is-new-workflow"?: string;
+  'data-workflow-id': string;
+  'data-workflow-name': string;
+  'data-project-id': string;
+  'data-project-name'?: string;
+  'data-project-color'?: string;
+  'data-project-env'?: string;
+  'data-root-project-id'?: string;
+  'data-root-project-name'?: string;
+  'data-is-new-workflow'?: string;
 }
 
 /**
@@ -148,18 +148,26 @@ export const CollaborativeEditor: WithActionProps<
   CollaborativeEditorDataProps
 > = props => {
   // Extract data from props (ReactComponent hook passes data attributes as props)
-  const workflowId = props["data-workflow-id"];
-  const workflowName = props["data-workflow-name"];
+  const workflowId = props['data-workflow-id'];
+  const workflowName = props['data-workflow-name'];
   // Migration: Props are now fallbacks, sessionContextStore is primary source
-  const projectId = props["data-project-id"];
-  const projectName = props["data-project-name"];
-  const projectEnv = props["data-project-env"];
-  const rootProjectId = props["data-root-project-id"] ?? null;
-  const rootProjectName = props["data-root-project-name"] ?? null;
-  const isNewWorkflow = props["data-is-new-workflow"] === "true";
+  const projectId = props['data-project-id'];
+  const projectName = props['data-project-name'];
+  const projectEnv = props['data-project-env'];
+  const rootProjectId = props['data-root-project-id'] ?? null;
+  const rootProjectName = props['data-root-project-name'] ?? null;
+  const isNewWorkflow = props['data-is-new-workflow'] === 'true';
+
+  // Extract LiveView actions from props
+  const liveViewActions = {
+    pushEvent: props.pushEvent,
+    pushEventTo: props.pushEventTo,
+    handleEvent: props.handleEvent,
+    navigate: props.navigate,
+  };
 
   return (
-    <HotkeysProvider initiallyActiveScopes={["global"]}>
+    <HotkeysProvider>
       <div
         className="collaborative-editor h-full flex flex-col"
         data-testid="collaborative-editor"
@@ -171,40 +179,41 @@ export const CollaborativeEditor: WithActionProps<
             isNewWorkflow={isNewWorkflow}
           >
             <StoreProvider>
-              <VersionDebugLogger />
-              <Toaster />
-              <BreadcrumbContent
-                workflowId={workflowId}
-                workflowName={workflowName}
-                {...(projectId !== undefined && {
-                  projectIdFallback: projectId,
-                })}
-                {...(projectName !== undefined && {
-                  projectNameFallback: projectName,
-                })}
-                {...(projectEnv !== undefined && {
-                  projectEnvFallback: projectEnv,
-                })}
-                {...(rootProjectId !== null && {
-                  rootProjectIdFallback: rootProjectId,
-                })}
-                {...(rootProjectName !== null && {
-                  rootProjectNameFallback: rootProjectName,
-                })}
-              />
-              <LoadingBoundary>
-                <div className="flex-1 min-h-0 overflow-hidden">
-                  <WorkflowEditor
-                    {...(rootProjectId !== null && {
-                      parentProjectId: rootProjectId,
-                    })}
-                    {...(rootProjectName !== null && {
-                      parentProjectName: rootProjectName,
-                    })}
-                  />
-                  <CollaborationWidget />
-                </div>
-              </LoadingBoundary>
+              <LiveViewActionsProvider actions={liveViewActions}>
+                <VersionDebugLogger />
+                <Toaster />
+                <BreadcrumbContent
+                  workflowId={workflowId}
+                  workflowName={workflowName}
+                  {...(projectId !== undefined && {
+                    projectIdFallback: projectId,
+                  })}
+                  {...(projectName !== undefined && {
+                    projectNameFallback: projectName,
+                  })}
+                  {...(projectEnv !== undefined && {
+                    projectEnvFallback: projectEnv,
+                  })}
+                  {...(rootProjectId !== null && {
+                    rootProjectIdFallback: rootProjectId,
+                  })}
+                  {...(rootProjectName !== null && {
+                    rootProjectNameFallback: rootProjectName,
+                  })}
+                />
+                <LoadingBoundary>
+                  <div className="flex-1 min-h-0 overflow-hidden">
+                    <WorkflowEditor
+                      {...(rootProjectId !== null && {
+                        parentProjectId: rootProjectId,
+                      })}
+                      {...(rootProjectName !== null && {
+                        parentProjectName: rootProjectName,
+                      })}
+                    />
+                  </div>
+                </LoadingBoundary>
+              </LiveViewActionsProvider>
             </StoreProvider>
           </SessionProvider>
         </SocketProvider>

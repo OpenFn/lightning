@@ -13,13 +13,13 @@
  * - Integration with existing log-viewer component
  */
 
-import { render, screen, waitFor } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
-import { beforeEach, describe, expect, test, vi } from "vitest";
-import { LogTabPanel } from "../../../../js/collaborative-editor/components/run-viewer/LogTabPanel";
-import * as useRunModule from "../../../../js/collaborative-editor/hooks/useRun";
-import * as useSessionModule from "../../../../js/collaborative-editor/hooks/useSession";
-import type { Run } from "../../../../js/collaborative-editor/types/run";
+import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { beforeEach, describe, expect, test, vi } from 'vitest';
+import { LogTabPanel } from '../../../../js/collaborative-editor/components/run-viewer/LogTabPanel';
+import * as useRunModule from '../../../../js/collaborative-editor/hooks/useRun';
+import * as useSessionModule from '../../../../js/collaborative-editor/hooks/useSession';
+import type { Run } from '../../../../js/collaborative-editor/types/run';
 
 // Mock log viewer - Define mocks before vi.mock calls
 const mockUnmount = vi.fn();
@@ -30,7 +30,7 @@ const mockSetDesiredLogLevel = vi.fn();
 
 // Create a mock store that maintains state
 let mockLogStoreState = {
-  desiredLogLevel: "info",
+  desiredLogLevel: 'info',
   setStepId: mockSetStepId,
   addLogLines: mockAddLogLines,
   setDesiredLogLevel: (level: string) => {
@@ -39,44 +39,71 @@ let mockLogStoreState = {
   },
 };
 
-vi.mock("../../../../js/log-viewer/component", () => ({
+vi.mock('../../../../js/log-viewer/component', () => ({
   mount: vi.fn(() => ({
     unmount: mockUnmount,
   })),
 }));
 
-vi.mock("../../../../js/log-viewer/store", () => ({
+vi.mock('../../../../js/log-viewer/store', () => ({
   createLogStore: vi.fn(() => ({
     getState: vi.fn(() => mockLogStoreState),
   })),
 }));
 
 // Mock channel request
-vi.mock("../../../../js/collaborative-editor/hooks/useChannel", () => ({
+vi.mock('../../../../js/collaborative-editor/hooks/useChannel', () => ({
   channelRequest: vi.fn(() =>
-    Promise.resolve({ logs: [{ id: "log-1", message: "Test log" }] })
+    Promise.resolve({ logs: [{ id: 'log-1', message: 'Test log' }] })
   ),
 }));
 
 // Mock useURLState
-vi.mock("../../../../js/react/lib/use-url-state", () => ({
+vi.mock('../../../../js/react/lib/use-url-state', () => ({
   useURLState: () => ({
     searchParams: new URLSearchParams(),
     updateSearchParams: vi.fn(),
   }),
 }));
 
+// Mock useWorkflowState hook for StepItem
+vi.mock('../../../../js/collaborative-editor/hooks/useWorkflow', () => ({
+  useWorkflowState: (selector: any) => {
+    const mockState = {
+      jobs: [{ id: 'job-1', name: 'Test Job' }],
+    };
+    return selector(mockState);
+  },
+}));
+
+// Mock react-resizable-panels
+vi.mock('react-resizable-panels', () => ({
+  Panel: ({ children, className }: any) => (
+    <div className={className} data-testid="panel">
+      {children}
+    </div>
+  ),
+  PanelGroup: ({ children, className }: any) => (
+    <div className={className} data-testid="panel-group">
+      {children}
+    </div>
+  ),
+  PanelResizeHandle: ({ className }: any) => (
+    <div className={className} data-testid="panel-resize-handle" />
+  ),
+}));
+
 // Mock hooks
-const mockUseCurrentRun = vi.spyOn(useRunModule, "useCurrentRun");
-const mockUseSelectedStepId = vi.spyOn(useRunModule, "useSelectedStepId");
-const mockUseRunStoreInstance = vi.spyOn(useRunModule, "useRunStoreInstance");
-const mockUseSession = vi.spyOn(useSessionModule, "useSession");
+const mockUseCurrentRun = vi.spyOn(useRunModule, 'useCurrentRun');
+const mockUseSelectedStepId = vi.spyOn(useRunModule, 'useSelectedStepId');
+const mockUseRunStoreInstance = vi.spyOn(useRunModule, 'useRunStoreInstance');
+const mockUseSession = vi.spyOn(useSessionModule, 'useSession');
 
 // Mock run factory
 const createMockRun = (overrides?: Partial<Run>): Run => ({
-  id: "run-1",
-  work_order_id: "wo-1",
-  state: "started",
+  id: 'run-1',
+  work_order_id: 'wo-1',
+  state: 'started',
   started_at: new Date().toISOString(),
   finished_at: null,
   steps: [],
@@ -104,12 +131,12 @@ const createMockRunStore = () => ({
 
 // Mock channel
 const createMockChannel = () => ({
-  topic: "run:run-1",
+  topic: 'run:run-1',
   on: vi.fn(),
   off: vi.fn(),
 });
 
-describe("LogTabPanel", () => {
+describe('LogTabPanel', () => {
   let mockRunStore: ReturnType<typeof createMockRunStore>;
   let mockChannel: ReturnType<typeof createMockChannel>;
 
@@ -117,7 +144,7 @@ describe("LogTabPanel", () => {
     vi.clearAllMocks();
 
     // Reset mock store state to defaults
-    mockLogStoreState.desiredLogLevel = "info";
+    mockLogStoreState.desiredLogLevel = 'info';
 
     mockRunStore = createMockRunStore();
     mockChannel = createMockChannel();
@@ -142,52 +169,50 @@ describe("LogTabPanel", () => {
     });
   });
 
-  describe("empty state", () => {
-    test("shows empty message when no run", () => {
+  describe('empty state', () => {
+    test('shows empty message when no run', () => {
       mockUseCurrentRun.mockReturnValue(null);
 
       render(<LogTabPanel />);
 
-      expect(screen.getByText("No run selected")).toBeInTheDocument();
+      expect(screen.getByText('No run selected')).toBeInTheDocument();
     });
   });
 
-  describe("log viewer integration", () => {
-    test("renders log viewer container", () => {
+  describe('log viewer integration', () => {
+    test('renders log viewer container', () => {
       mockUseCurrentRun.mockReturnValue(createMockRun());
 
       const { container } = render(<LogTabPanel />);
 
-      // Check for log viewer container
-      const logViewerContainer = container.querySelector(
-        ".flex-1.bg-slate-700"
-      );
+      // Check for log viewer container with new structure
+      const logViewerContainer = container.querySelector('.bg-slate-700');
       expect(logViewerContainer).toBeInTheDocument();
     });
   });
 
-  describe("step selection", () => {
-    test("renders with selected step", () => {
+  describe('step selection', () => {
+    test('renders with selected step', () => {
       mockUseCurrentRun.mockReturnValue(createMockRun());
-      mockUseSelectedStepId.mockReturnValue("step-1");
+      mockUseSelectedStepId.mockReturnValue('step-1');
 
       render(<LogTabPanel />);
 
       // Component renders successfully with selected step
-      expect(screen.queryByText("No run selected")).not.toBeInTheDocument();
+      expect(screen.queryByText('No run selected')).not.toBeInTheDocument();
     });
   });
 
-  describe("channel log events", () => {
-    test("subscribes to log events from run channel", () => {
+  describe('channel log events', () => {
+    test('subscribes to log events from run channel', () => {
       mockUseCurrentRun.mockReturnValue(createMockRun());
 
       render(<LogTabPanel />);
 
-      expect(mockChannel.on).toHaveBeenCalledWith("logs", expect.any(Function));
+      expect(mockChannel.on).toHaveBeenCalledWith('logs', expect.any(Function));
     });
 
-    test("unsubscribes from log events on cleanup", () => {
+    test('unsubscribes from log events on cleanup', () => {
       mockUseCurrentRun.mockReturnValue(createMockRun());
 
       const { unmount } = render(<LogTabPanel />);
@@ -195,27 +220,27 @@ describe("LogTabPanel", () => {
       unmount();
 
       expect(mockChannel.off).toHaveBeenCalledWith(
-        "logs",
+        'logs',
         expect.any(Function)
       );
     });
 
-    test("adds logs when streaming event is received", async () => {
+    test('adds logs when streaming event is received', async () => {
       mockUseCurrentRun.mockReturnValue(createMockRun());
 
       render(<LogTabPanel />);
 
       // Get the log handler that was registered
       const logHandler = mockChannel.on.mock.calls.find(
-        call => call[0] === "logs"
+        call => call[0] === 'logs'
       )?.[1];
 
       expect(logHandler).toBeDefined();
 
       // Simulate receiving streaming logs
       const streamingLogs = [
-        { id: "log-2", message: "Streaming log 1" },
-        { id: "log-3", message: "Streaming log 2" },
+        { id: 'log-2', message: 'Streaming log 1' },
+        { id: 'log-3', message: 'Streaming log 2' },
       ];
 
       logHandler({ logs: streamingLogs });
@@ -226,9 +251,9 @@ describe("LogTabPanel", () => {
       });
     });
 
-    test("fetches initial logs on mount", async () => {
+    test('fetches initial logs on mount', async () => {
       const { channelRequest } = await import(
-        "../../../../js/collaborative-editor/hooks/useChannel"
+        '../../../../js/collaborative-editor/hooks/useChannel'
       );
 
       mockUseCurrentRun.mockReturnValue(createMockRun());
@@ -238,22 +263,22 @@ describe("LogTabPanel", () => {
       await waitFor(() => {
         expect(channelRequest).toHaveBeenCalledWith(
           mockChannel,
-          "fetch:logs",
+          'fetch:logs',
           {}
         );
       });
     });
   });
 
-  describe("layout", () => {
-    test("renders step list in sidebar", () => {
+  describe('layout', () => {
+    test('renders step list in sidebar', () => {
       mockUseCurrentRun.mockReturnValue(
         createMockRun({
           steps: [
             {
-              id: "step-1",
-              job_id: "job-1",
-              job: { id: "job-1", name: "Test Job" },
+              id: 'step-1',
+              job_id: 'job-1',
+              job: { id: 'job-1', name: 'Test Job' },
               exit_reason: null,
               error_type: null,
               started_at: new Date().toISOString(),
@@ -268,32 +293,36 @@ describe("LogTabPanel", () => {
 
       render(<LogTabPanel />);
 
-      expect(screen.getByText("Test Job")).toBeInTheDocument();
+      expect(screen.getByText('Test Job')).toBeInTheDocument();
     });
 
-    test("has proper layout structure", () => {
+    test('has proper layout structure with resizable panels', () => {
       mockUseCurrentRun.mockReturnValue(createMockRun());
 
-      const { container } = render(<LogTabPanel />);
+      const { container, getByTestId } = render(<LogTabPanel />);
 
-      // Check for flex container
-      const flexContainer = container.querySelector(".h-full.flex");
-      expect(flexContainer).toBeInTheDocument();
+      // Check for PanelGroup
+      const panelGroup = getByTestId('panel-group');
+      expect(panelGroup).toBeInTheDocument();
+      expect(panelGroup).toHaveClass('h-full');
 
-      // Check for sidebar
-      const sidebar = container.querySelector(".w-48.border-r");
-      expect(sidebar).toBeInTheDocument();
+      // Check for panels
+      const panels = container.querySelectorAll('[data-testid="panel"]');
+      expect(panels).toHaveLength(2); // Step list panel and log viewer panel
+
+      // Check for resize handle
+      const resizeHandle = getByTestId('panel-resize-handle');
+      expect(resizeHandle).toBeInTheDocument();
+      expect(resizeHandle).toHaveClass('cursor-row-resize');
 
       // Check for log viewer container
-      const logViewerContainer = container.querySelector(
-        ".flex-1.bg-slate-700"
-      );
+      const logViewerContainer = container.querySelector('.bg-slate-700');
       expect(logViewerContainer).toBeInTheDocument();
     });
   });
 
-  describe("error handling", () => {
-    test("handles missing run channel gracefully", () => {
+  describe('error handling', () => {
+    test('handles missing run channel gracefully', () => {
       mockUseCurrentRun.mockReturnValue(createMockRun());
 
       // Mock session with no matching channel
@@ -302,7 +331,7 @@ describe("LogTabPanel", () => {
           socket: {
             channels: [
               {
-                topic: "run:different-run",
+                topic: 'run:different-run',
                 on: vi.fn(),
                 off: vi.fn(),
               },
@@ -322,7 +351,7 @@ describe("LogTabPanel", () => {
       expect(() => render(<LogTabPanel />)).not.toThrow();
     });
 
-    test("handles null provider gracefully", () => {
+    test('handles null provider gracefully', () => {
       mockUseCurrentRun.mockReturnValue(createMockRun());
 
       mockUseSession.mockReturnValue({
@@ -341,88 +370,88 @@ describe("LogTabPanel", () => {
     });
   });
 
-  describe("log level filter integration", () => {
-    test("renders log level filter", () => {
+  describe('log level filter integration', () => {
+    test('renders log level filter', () => {
       mockUseCurrentRun.mockReturnValue(createMockRun());
 
       render(<LogTabPanel />);
 
       // Check that filter button is present with the default log level
-      expect(screen.getByText("info")).toBeInTheDocument();
+      expect(screen.getByText('info')).toBeInTheDocument();
     });
 
-    test("initializes with correct level from store", () => {
+    test('initializes with correct level from store', () => {
       mockUseCurrentRun.mockReturnValue(createMockRun());
 
       // Set the mock store to have a different default level
-      mockLogStoreState.desiredLogLevel = "debug";
+      mockLogStoreState.desiredLogLevel = 'debug';
 
       render(<LogTabPanel />);
 
       // The filter should show the level from the store
-      expect(screen.getByText("debug")).toBeInTheDocument();
+      expect(screen.getByText('debug')).toBeInTheDocument();
     });
 
-    test("changes log level when filter is used", async () => {
+    test('changes log level when filter is used', async () => {
       const user = userEvent.setup();
 
       mockUseCurrentRun.mockReturnValue(createMockRun());
-      mockLogStoreState.desiredLogLevel = "info";
+      mockLogStoreState.desiredLogLevel = 'info';
 
       render(<LogTabPanel />);
 
       // Open the filter dropdown
-      const filterButton = screen.getByRole("button", { name: /info/i });
+      const filterButton = screen.getByRole('button', { name: /info/i });
       await user.click(filterButton);
 
       // Wait for dropdown to appear
       await waitFor(() => {
-        expect(screen.getByRole("listbox")).toBeInTheDocument();
+        expect(screen.getByRole('listbox')).toBeInTheDocument();
       });
 
       // Select "warn" level
-      const warnOption = screen.getAllByText("warn")[0];
+      const warnOption = screen.getAllByText('warn')[0];
       await user.click(warnOption);
 
       // Verify the store was updated
-      expect(mockSetDesiredLogLevel).toHaveBeenCalledWith("warn");
+      expect(mockSetDesiredLogLevel).toHaveBeenCalledWith('warn');
     });
 
-    test("updates displayed level after selection", async () => {
+    test('updates displayed level after selection', async () => {
       const user = userEvent.setup();
 
       mockUseCurrentRun.mockReturnValue(createMockRun());
-      mockLogStoreState.desiredLogLevel = "info";
+      mockLogStoreState.desiredLogLevel = 'info';
 
       render(<LogTabPanel />);
 
       // Open the filter dropdown
-      const filterButton = screen.getByRole("button");
+      const filterButton = screen.getByRole('button');
       await user.click(filterButton);
 
       // Select "error" level
-      const errorOption = screen.getAllByText("error")[0];
+      const errorOption = screen.getAllByText('error')[0];
       await user.click(errorOption);
 
       // The filter should now display "error"
       await waitFor(() => {
         // After clicking, the button should show the new level
-        const buttons = screen.getAllByText("error");
+        const buttons = screen.getAllByText('error');
         expect(buttons.length).toBeGreaterThan(0);
       });
     });
 
-    test("log level filter is in the correct layout position", () => {
+    test('log level filter is in the correct layout position', () => {
       mockUseCurrentRun.mockReturnValue(createMockRun());
 
       const { container } = render(<LogTabPanel />);
 
       // Check that the filter is in the header section
-      const header = container.querySelector(".border-b.border-slate-500");
+      const header = container.querySelector('.border-b.border-slate-500');
       expect(header).toBeInTheDocument();
 
       // The filter button should be within the header
-      const filterButton = screen.getByRole("button");
+      const filterButton = screen.getByRole('button');
       expect(header).toContainElement(filterButton);
     });
   });

@@ -5,11 +5,11 @@
  * from the StoreProvider context using the useSyncExternalStore pattern.
  */
 
-import { useContext, useSyncExternalStore } from "react";
+import { useContext, useSyncExternalStore } from 'react';
 
-import { StoreContext } from "../contexts/StoreProvider";
-import type { UIStoreInstance } from "../stores/createUIStore";
-import type { UIState } from "../types/ui";
+import { StoreContext } from '../contexts/StoreProvider';
+import type { UIStoreInstance } from '../stores/createUIStore';
+import type { UIState } from '../types/ui';
 
 /**
  * Main hook for accessing the UIStore instance
@@ -18,7 +18,7 @@ import type { UIState } from "../types/ui";
 const useUIStore = (): UIStoreInstance => {
   const context = useContext(StoreContext);
   if (!context) {
-    throw new Error("useUIStore must be used within a StoreProvider");
+    throw new Error('useUIStore must be used within a StoreProvider');
   }
   return context.uiStore;
 };
@@ -27,7 +27,7 @@ const useUIStore = (): UIStoreInstance => {
  * Hook to get run panel context
  * Returns null when run panel is not open
  */
-export const useRunPanelContext = (): UIState["runPanelContext"] => {
+export const useRunPanelContext = (): UIState['runPanelContext'] => {
   const uiStore = useUIStore();
 
   const selectRunPanelContext = uiStore.withSelector(
@@ -48,6 +48,8 @@ export const useUICommands = () => {
   return {
     openRunPanel: uiStore.openRunPanel,
     closeRunPanel: uiStore.closeRunPanel,
+    openGitHubSyncModal: uiStore.openGitHubSyncModal,
+    closeGitHubSyncModal: uiStore.closeGitHubSyncModal,
   };
 };
 
@@ -59,6 +61,18 @@ export const useIsRunPanelOpen = (): boolean => {
   const uiStore = useUIStore();
 
   const selectIsOpen = uiStore.withSelector(state => state.runPanelOpen);
+
+  return useSyncExternalStore(uiStore.subscribe, selectIsOpen);
+};
+
+/**
+ * Hook to check if GitHub sync modal is open
+ * Convenience helper that returns boolean
+ */
+export const useIsGitHubSyncModalOpen = (): boolean => {
+  const uiStore = useUIStore();
+
+  const selectIsOpen = uiStore.withSelector(state => state.githubSyncModalOpen);
 
   return useSyncExternalStore(uiStore.subscribe, selectIsOpen);
 };

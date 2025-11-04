@@ -44,7 +44,8 @@ defmodule Lightning.ProjectsTest do
         )
 
       assert Projects.list_project_credentials(project) ==
-               credential.project_credentials |> Repo.preload(:credential)
+               credential.project_credentials
+               |> Repo.preload(credential: [:user, :oauth_client])
     end
 
     test "get_project!/1 returns the project with given id" do

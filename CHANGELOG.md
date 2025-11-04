@@ -17,6 +17,29 @@ and this project adheres to
 
 ### Added
 
+### Changed
+
+- Updated styles on new IDE to match (nay, exceed!) those on the legacy IDE
+  [#3894](https://github.com/OpenFn/lightning/issues/3894)
+- Add save & sync split button to new canvas & IDE header
+  [#3908](https://github.com/OpenFn/lightning/issues/3908)
+- Show collaborators in the header of the new canvas & IDE
+  [#3845](https://github.com/OpenFn/lightning/issues/3845)
+
+### Fixed
+
+- Adaptor picker changes now sync immediately to Y.Doc instead of requiring
+  manual save [#3904](https://github.com/OpenFn/lightning/issues/3904)
+
+## [2.14.14-pre1] - 2025-10-30
+
+### Added
+
+- Adaptor and credential configuration in canvas job inspector - users can now
+  configure adaptor version and connect credentials directly from the canvas
+  [#3834](https://github.com/OpenFn/lightning/issues/3834)
+- Press `Control-E` (or `⌘+E`) to open the IDE when a job/step is selected
+  [#3890](https://github.com/OpenFn/lightning/issues/3890)
 - Drag-to-connect nodes on workflow canvas - users can now drag from the plus
   button on a node and drop it onto another node to create connections
   [#3825](https://github.com/OpenFn/lightning/issues/3825)
@@ -82,14 +105,16 @@ and this project adheres to
 - Fixed missing cron icon in trigger on new canvas
   [#3849](https://github.com/OpenFn/lightning/issues/3849)
 
-## [2.14.13-pre1] 2025-10-24
+## [2.14.13] - 2025-10-24
+
+## [2.14.13-pre1] - 2025-10-24
 
 ### Added
 
 - Ability to run a workflow from the new react canvas
   [#3634](https://github.com/OpenFn/lightning/issues/3634)
 
-## [2.14.13-pre] 2025-10-24
+## [2.14.13-pre] - 2025-10-24
 
 ### Added
 

@@ -1,19 +1,19 @@
-import { useCallback, useState } from "react";
+import { useCallback, useState } from 'react';
 
-import { useURLState } from "#/react/lib/use-url-state";
+import { useURLState } from '#/react/lib/use-url-state';
 
-import { useJobDeleteValidation } from "../../hooks/useJobDeleteValidation";
-import { usePermissions } from "../../hooks/useSessionContext";
-import { useWorkflowActions, useCanRun } from "../../hooks/useWorkflow";
-import { notifications } from "../../lib/notifications";
-import type { Workflow } from "../../types/workflow";
-import { AlertDialog } from "../AlertDialog";
-import { Button } from "../Button";
-import { Tooltip } from "../Tooltip";
+import { useJobDeleteValidation } from '../../hooks/useJobDeleteValidation';
+import { usePermissions } from '../../hooks/useSessionContext';
+import { useWorkflowActions, useCanSave } from '../../hooks/useWorkflow';
+import { notifications } from '../../lib/notifications';
+import type { Workflow } from '../../types/workflow';
+import { AlertDialog } from '../AlertDialog';
+import { Button } from '../Button';
+import { Tooltip } from '../Tooltip';
 
-import { InspectorFooter } from "./InspectorFooter";
-import { InspectorLayout } from "./InspectorLayout";
-import { JobForm } from "./JobForm";
+import { InspectorFooter } from './InspectorFooter';
+import { InspectorLayout } from './InspectorLayout';
+import { JobForm } from './JobForm';
 
 interface JobInspectorProps {
   job: Workflow.Job;
@@ -41,7 +41,7 @@ export function JobInspector({
 
   // URL state for Edit button
   const { searchParams, updateSearchParams } = useURLState();
-  const isIDEOpen = searchParams.get("editor") === "open";
+  const isIDEOpen = searchParams.get('editor') === 'open';
 
   const handleDelete = useCallback(async () => {
     setIsDeleting(true);
@@ -50,68 +50,65 @@ export function JobInspector({
       setIsDeleteDialogOpen(false);
       // Y.Doc sync provides immediate visual feedback
     } catch (error) {
-      console.error("Delete failed:", error);
+      console.error('Delete failed:', error);
       notifications.alert({
-        title: "Failed to delete job",
+        title: 'Failed to delete job',
         description:
           error instanceof Error
             ? error.message
-            : "An unexpected error occurred. Please try again.",
+            : 'An unexpected error occurred. Please try again.',
       });
     } finally {
       setIsDeleting(false);
     }
   }, [job.id, removeJobAndClearSelection]);
 
-  const { canRun, tooltipMessage: runTooltipMessage } = useCanRun();
+  const { canSave, tooltipMessage: saveTooltipMessage } = useCanSave();
 
-  // Build footer with run, edit, and delete buttons (only if permission)
+  // Determine delete button state
+  const canDelete = canSave && validation.canDelete && !isDeleting;
+  const deleteTooltipMessage = !canSave
+    ? saveTooltipMessage
+    : validation.disableReason || 'Delete this job';
+
+  // Build footer with edit, run, and delete buttons (only if permission)
   const footer = permissions?.can_edit_workflow ? (
     <InspectorFooter
       leftButtons={
         <>
-          <Tooltip content={runTooltipMessage} side="top">
-            <span className="inline-block">
-              <Button
-                variant="secondary"
-                onClick={() => onOpenRunPanel({ jobId: job.id })}
-                disabled={!canRun}
-              >
-                Run
-              </Button>
-            </span>
-          </Tooltip>
           <Tooltip
             content={
-              isIDEOpen ? "IDE is already open" : "Open full-screen code editor"
+              isIDEOpen ? 'IDE is already open' : 'Open full-screen code editor'
             }
             side="top"
           >
             <span className="inline-block">
               <Button
                 variant="primary"
-                onClick={() => updateSearchParams({ editor: "open" })}
+                onClick={() => updateSearchParams({ editor: 'open' })}
                 disabled={isIDEOpen}
               >
-                <span
-                  className="hero-code-bracket size-4 inline-block mr-1"
-                  aria-hidden="true"
-                />
                 Edit
               </Button>
             </span>
           </Tooltip>
+          <Button
+            variant="primary"
+            onClick={() => onOpenRunPanel({ jobId: job.id })}
+          >
+            Run
+          </Button>
         </>
       }
       rightButtons={
-        <Tooltip content={validation.disableReason || "Delete this job"}>
+        <Tooltip content={deleteTooltipMessage}>
           <span className="inline-block">
             <Button
               variant="danger"
               onClick={() => setIsDeleteDialogOpen(true)}
-              disabled={!validation.canDelete || isDeleting}
+              disabled={!canDelete}
             >
-              {isDeleting ? "Deleting..." : "Delete"}
+              {isDeleting ? 'Deleting...' : 'Delete'}
             </Button>
           </span>
         </Tooltip>
@@ -122,8 +119,7 @@ export function JobInspector({
   return (
     <>
       <InspectorLayout
-        title="Inspector"
-        nodeType="job"
+        title={job.name}
         onClose={onClose}
         footer={footer}
         data-testid="job-inspector"
@@ -140,7 +136,7 @@ export function JobInspector({
           `This will permanently remove "${job.name}" from the ` +
           `workflow. This action cannot be undone.`
         }
-        confirmLabel={isDeleting ? "Deleting..." : "Delete Job"}
+        confirmLabel={isDeleting ? 'Deleting...' : 'Delete Job'}
         cancelLabel="Cancel"
         variant="danger"
       />

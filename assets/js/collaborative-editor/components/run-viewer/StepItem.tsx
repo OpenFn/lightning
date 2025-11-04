@@ -1,7 +1,8 @@
-import { useURLState } from "../../../react/lib/use-url-state";
-import type { Step } from "../../types/run";
-import { ElapsedIndicator } from "./ElapsedIndicator";
-import { StepIcon } from "./StepIcon";
+import { useURLState } from '../../../react/lib/use-url-state';
+import { useWorkflowState } from '../../hooks/useWorkflow';
+import type { Step } from '../../types/run';
+import { ElapsedIndicator } from './ElapsedIndicator';
+import { StepIcon } from './StepIcon';
 
 interface StepItemProps {
   step: Step;
@@ -12,11 +13,23 @@ interface StepItemProps {
 export function StepItem({ step, selected, onSelect }: StepItemProps) {
   const { searchParams, updateSearchParams } = useURLState();
 
+  // Look up job name from workflow state if not included in step
+  const jobName = useWorkflowState(
+    state => {
+      if (step.job?.name) {
+        return step.job.name;
+      }
+      const job = state.jobs.find(j => j.id === step.job_id);
+      return job?.name || 'Unknown Job';
+    },
+    [step.job_id, step.job?.name]
+  );
+
   const handleInspect = (e: React.MouseEvent) => {
     e.stopPropagation();
 
     // Get current run ID from URL to preserve context
-    const currentRunId = searchParams.get("run");
+    const currentRunId = searchParams.get('run');
 
     // Update URL to switch job but preserve run/step context
     updateSearchParams({
@@ -34,23 +47,21 @@ export function StepItem({ step, selected, onSelect }: StepItemProps) {
         cursor-pointer border-r-4 transition-colors
         ${
           selected
-            ? "border-primary-500 bg-primary-50 font-semibold"
-            : "border-transparent hover:border-gray-300 hover:bg-gray-50"
+            ? 'border-primary-500 bg-primary-50 font-semibold'
+            : 'border-transparent hover:border-gray-300 hover:bg-gray-50'
         }
       `}
     >
       <StepIcon exitReason={step.exit_reason} errorType={step.error_type} />
 
       <div className="flex-1 min-w-0 flex items-center space-x-2">
-        <span className="text-sm truncate">
-          {step.job?.name || "Unknown Job"}
-        </span>
+        <span className="text-sm truncate">{jobName}</span>
 
         <button
           onClick={handleInspect}
           className="flex-shrink-0 text-gray-400 hover:text-primary-600"
           title="Inspect Step"
-          aria-label={`Inspect step ${step.job?.name || "Unknown Job"}`}
+          aria-label={`Inspect step ${jobName}`}
         >
           <span
             className="hero-document-magnifying-glass-mini size-5"
