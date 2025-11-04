@@ -67,8 +67,11 @@ export function Tabs<T extends string>({
 
   // Underline variant
   return (
-    <div className={cn("border-b border-gray-200", className)}>
-      <nav className="-mb-px flex w-full" aria-label="Tabs">
+    <div className={className}>
+      <nav
+        className="flex flex-row space-x-6 job-viewer-tabs"
+        aria-label="Tabs"
+      >
         {options.map(option => {
           const isSelected = value === option.value;
           const Icon = option.icon;
@@ -78,9 +81,9 @@ export function Tabs<T extends string>({
               key={option.value}
               onClick={() => onChange(option.value)}
               className={`
-                group inline-flex items-center justify-center
-                border-b-2 px-1 py-2 flex-1
-                text-sm font-medium transition-colors
+                group inline-flex items-center
+                border-b-2 px-1 py-1
+                text-xs font-semibold leading-tight transition-colors
                 ${
                   isSelected
                     ? "border-primary-500 text-primary-600"

@@ -3,19 +3,14 @@ import { useEffect, useRef, useState } from "react";
 import { mount as mountLogViewer } from "../../../log-viewer/component";
 import { createLogStore } from "../../../log-viewer/store";
 import { channelRequest } from "../../hooks/useChannel";
-import {
-  useCurrentRun,
-  useRunStoreInstance,
-  useSelectedStepId,
-} from "../../hooks/useRun";
+import { useCurrentRun, useSelectedStepId } from "../../hooks/useRun";
 import { useSession } from "../../hooks/useSession";
 import { LogLevelFilter } from "./LogLevelFilter";
-import { StepList } from "./StepList";
+import { StepViewerLayout } from "./StepViewerLayout";
 
 export function LogTabPanel() {
   const run = useCurrentRun();
   const selectedStepId = useSelectedStepId();
-  const runStore = useRunStoreInstance();
   const { provider } = useSession();
 
   const containerRef = useRef<HTMLDivElement>(null);
@@ -114,25 +109,11 @@ export function LogTabPanel() {
     };
   }, [run, provider]);
 
-  if (!run) {
-    return <div className="p-4 text-gray-500">No run selected</div>;
-  }
-
   return (
-    <div className="h-full flex">
-      {/* Step list for navigation */}
-      <div className="w-48 border-r overflow-auto p-2">
-        <StepList
-          steps={run.steps}
-          selectedStepId={selectedStepId}
-          onSelectStep={runStore.selectStep}
-        />
-      </div>
-
-      {/* Log viewer with filter */}
-      <div className="flex-1 flex flex-col bg-slate-700 font-mono text-gray-200">
+    <StepViewerLayout selectedStepId={selectedStepId}>
+      <div className="flex h-full flex-col rounded-md bg-slate-700 font-mono text-gray-200">
         {/* Log level filter header */}
-        <div className="border-b border-slate-500">
+        <div className="flex-none border-b border-slate-500">
           <div className="mx-auto px-2">
             <div className="flex h-6 flex-row-reverse items-center">
               <LogLevelFilter
@@ -144,8 +125,8 @@ export function LogTabPanel() {
         </div>
 
         {/* Log viewer */}
-        <div ref={containerRef} className="flex-1" />
+        <div ref={containerRef} className="flex-1 overflow-hidden" />
       </div>
-    </div>
+    </StepViewerLayout>
   );
 }

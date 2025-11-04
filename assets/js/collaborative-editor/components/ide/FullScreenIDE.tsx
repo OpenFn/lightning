@@ -1,48 +1,51 @@
-import { useCallback, useEffect, useRef, useState } from "react";
-import { useHotkeys, useHotkeysContext } from "react-hotkeys-hook";
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { useHotkeys, useHotkeysContext } from 'react-hotkeys-hook';
 import {
   type ImperativePanelHandle,
   Panel,
   PanelGroup,
   PanelResizeHandle,
-} from "react-resizable-panels";
+} from 'react-resizable-panels';
 
-import _logger from "#/utils/logger";
+import _logger from '#/utils/logger';
 
-import { useURLState } from "../../../react/lib/use-url-state";
-import { useRunStoreInstance } from "../../hooks/useRun";
-import { useLiveViewActions } from "../../contexts/LiveViewActionsContext";
-import { useProjectAdaptors } from "../../hooks/useAdaptors";
+import { useURLState } from '../../../react/lib/use-url-state';
+import { useRunStoreInstance } from '../../hooks/useRun';
+import { useLiveViewActions } from '../../contexts/LiveViewActionsContext';
+import { useProjectAdaptors } from '../../hooks/useAdaptors';
 import {
   useCredentials,
   useCredentialsCommands,
-} from "../../hooks/useCredentials";
-import { useRunStoreInstance } from "../../hooks/useRun";
-import { useSession } from "../../hooks/useSession";
+} from '../../hooks/useCredentials';
+import { useRunStoreInstance } from '../../hooks/useRun';
+import { useSession } from '../../hooks/useSession';
 import {
   useLatestSnapshotLockVersion,
   useProject,
-} from "../../hooks/useSessionContext";
+  useProjectRepoConnection,
+} from '../../hooks/useSessionContext';
 import {
   useCanRun,
   useCanSave,
   useCurrentJob,
   useWorkflowActions,
   useWorkflowState,
-} from "../../hooks/useWorkflow";
-import { notifications } from "../../lib/notifications";
-import { AdaptorSelectionModal } from "../AdaptorSelectionModal";
-import { CollaborativeMonaco } from "../CollaborativeMonaco";
-import { ConfigureAdaptorModal } from "../ConfigureAdaptorModal";
-import { ManualRunPanel } from "../ManualRunPanel";
-import { RunViewerPanel } from "../run-viewer/RunViewerPanel";
-import { RunViewerErrorBoundary } from "../run-viewer/RunViewerErrorBoundary";
-import { SandboxIndicatorBanner } from "../SandboxIndicatorBanner";
-import { Tabs } from "../Tabs";
+} from '../../hooks/useWorkflow';
+import { notifications } from '../../lib/notifications';
+import { AdaptorSelectionModal } from '../AdaptorSelectionModal';
+import { CollaborativeMonaco } from '../CollaborativeMonaco';
+import { ConfigureAdaptorModal } from '../ConfigureAdaptorModal';
+import { ManualRunPanel } from '../ManualRunPanel';
+import { RunViewerPanel } from '../run-viewer/RunViewerPanel';
+import { RunViewerErrorBoundary } from '../run-viewer/RunViewerErrorBoundary';
+import { SandboxIndicatorBanner } from '../SandboxIndicatorBanner';
+import { Tabs } from '../Tabs';
 
-import { IDEHeader } from "./IDEHeader";
+import { IDEHeader } from './IDEHeader';
+import { PanelToggleButton } from './PanelToggleButton';
+import { useUICommands } from '#/collaborative-editor/hooks/useUI';
 
-const logger = _logger.ns("FullScreenIDE").seal();
+const logger = _logger.ns('FullScreenIDE').seal();
 
 /**
  * Resolves an adaptor specifier into its package name and version
@@ -89,14 +92,17 @@ export function FullScreenIDE({
   parentProjectName,
 }: FullScreenIDEProps) {
   const { searchParams, updateSearchParams } = useURLState();
-  const jobIdFromURL = searchParams.get("job");
-  const runIdFromURL = searchParams.get("run");
-  const stepIdFromURL = searchParams.get("step");
+  const jobIdFromURL = searchParams.get('job');
+  const runIdFromURL = searchParams.get('run');
+  const stepIdFromURL = searchParams.get('step');
   const { selectJob, saveWorkflow } = useWorkflowActions();
   const runStore = useRunStoreInstance();
   const { job: currentJob, ytext: currentJobYText } = useCurrentJob();
   const { awareness } = useSession();
   const { canSave, tooltipMessage } = useCanSave();
+  // Get UI commands from store
+  const repoConnection = useProjectRepoConnection();
+  const { openGitHubSyncModal } = useUICommands();
   const { canRun: canRunSnapshot, tooltipMessage: runTooltipMessage } =
     useCanRun();
 
@@ -141,20 +147,20 @@ export function FullScreenIDE({
   const [followRunId, setFollowRunId] = useState<string | null>(null);
 
   // Right panel tab state
-  type RightPanelTab = "run" | "log" | "input" | "output";
-  const [activeRightTab, setActiveRightTab] = useState<RightPanelTab>("run");
+  type RightPanelTab = 'run' | 'log' | 'input' | 'output';
+  const [activeRightTab, setActiveRightTab] = useState<RightPanelTab>('run');
 
   // Persist right panel tab to localStorage
   useEffect(() => {
     if (activeRightTab) {
-      localStorage.setItem("lightning.ide-run-viewer-tab", activeRightTab);
+      localStorage.setItem('lightning.ide-run-viewer-tab', activeRightTab);
     }
   }, [activeRightTab]);
 
   // Restore tab from localStorage on mount
   useEffect(() => {
-    const savedTab = localStorage.getItem("lightning.ide-run-viewer-tab");
-    if (savedTab && ["run", "log", "input", "output"].includes(savedTab)) {
+    const savedTab = localStorage.getItem('lightning.ide-run-viewer-tab');
+    if (savedTab && ['run', 'log', 'input', 'output'].includes(savedTab)) {
       setActiveRightTab(savedTab as RightPanelTab);
     }
   }, []);
@@ -175,9 +181,9 @@ export function FullScreenIDE({
 
   // Enable/disable ide scope based on whether IDE is open
   useEffect(() => {
-    enableScope("ide");
+    enableScope('ide');
     return () => {
-      disableScope("ide");
+      disableScope('ide');
     };
   }, [enableScope, disableScope]);
 
@@ -213,7 +219,7 @@ export function FullScreenIDE({
     if (!canSave) {
       // Show toast with the reason why save is disabled
       notifications.alert({
-        title: "Cannot save",
+        title: 'Cannot save',
         description: tooltipMessage,
       });
       return;
@@ -255,7 +261,7 @@ export function FullScreenIDE({
     // Check snapshot/permission restrictions first (these have clear messages)
     if (!canRunSnapshot) {
       notifications.alert({
-        title: "Cannot run",
+        title: 'Cannot run',
         description: runTooltipMessage,
       });
       return;
@@ -279,7 +285,7 @@ export function FullScreenIDE({
     (adaptorName: string) => {
       setIsConfigureModalOpen(false);
       setIsCredentialModalOpen(true);
-      pushEvent("open_credential_modal", { schema: adaptorName });
+      pushEvent('open_credential_modal', { schema: adaptorName });
     },
     [pushEvent]
   );
@@ -303,46 +309,76 @@ export function FullScreenIDE({
     [currentJob, updateJob]
   );
 
-  const handleConfigureSave = useCallback(
-    (config: {
-      adaptorPackage: string;
-      adaptorVersion: string;
-      credentialId: string | null;
-    }) => {
+  // Handler for adaptor changes - immediately syncs to Y.Doc
+  const handleAdaptorChange = useCallback(
+    (adaptorPackage: string) => {
       if (!currentJob) return;
 
-      // Build the Y.Doc updates (only Job schema fields)
+      // Get current version from job
+      const { version: currentVersion } = resolveAdaptor(
+        currentJob.adaptor || '@openfn/language-common@latest'
+      );
+
+      // Build new adaptor string with current version
+      const newAdaptor = `${adaptorPackage}@${currentVersion || 'latest'}`;
+
+      // Persist to Y.Doc
+      updateJob(currentJob.id, { adaptor: newAdaptor });
+    },
+    [currentJob, updateJob]
+  );
+
+  // Handler for version changes - immediately syncs to Y.Doc
+  const handleVersionChange = useCallback(
+    (version: string) => {
+      if (!currentJob) return;
+
+      // Get current adaptor package from job
+      const { package: adaptorPackage } = resolveAdaptor(
+        currentJob.adaptor || '@openfn/language-common@latest'
+      );
+
+      // Build new adaptor string with new version
+      const newAdaptor = `${adaptorPackage}@${version}`;
+
+      // Persist to Y.Doc
+      updateJob(currentJob.id, { adaptor: newAdaptor });
+    },
+    [currentJob, updateJob]
+  );
+
+  // Handler for credential changes - immediately syncs to Y.Doc
+  const handleCredentialChange = useCallback(
+    (credentialId: string | null) => {
+      if (!currentJob) return;
+
+      // Build the Y.Doc updates
       const jobUpdates: {
-        adaptor: string;
         project_credential_id: string | null;
         keychain_credential_id: string | null;
       } = {
-        adaptor: `${config.adaptorPackage}@${config.adaptorVersion}`,
         project_credential_id: null,
         keychain_credential_id: null,
       };
 
       // Update credential if selected
-      if (config.credentialId) {
+      if (credentialId) {
         const isProjectCredential = projectCredentials.some(
-          c => c.project_credential_id === config.credentialId
+          c => c.project_credential_id === credentialId
         );
         const isKeychainCredential = keychainCredentials.some(
-          c => c.id === config.credentialId
+          c => c.id === credentialId
         );
 
         if (isProjectCredential) {
-          jobUpdates.project_credential_id = config.credentialId;
+          jobUpdates.project_credential_id = credentialId;
         } else if (isKeychainCredential) {
-          jobUpdates.keychain_credential_id = config.credentialId;
+          jobUpdates.keychain_credential_id = credentialId;
         }
       }
 
       // Persist to Y.Doc
       updateJob(currentJob.id, jobUpdates);
-
-      // Close modal
-      setIsConfigureModalOpen(false);
     },
     [currentJob, projectCredentials, keychainCredentials, updateJob]
   );
@@ -355,21 +391,21 @@ export function FullScreenIDE({
         setIsConfigureModalOpen(true);
       }, 200);
       setTimeout(() => {
-        pushEvent("close_credential_modal_complete", {});
+        pushEvent('close_credential_modal_complete', {});
       }, 500);
     };
 
-    const element = document.getElementById("collaborative-editor-react");
-    element?.addEventListener("close_credential_modal", handleModalClose);
+    const element = document.getElementById('collaborative-editor-react');
+    element?.addEventListener('close_credential_modal', handleModalClose);
 
     return () => {
-      element?.removeEventListener("close_credential_modal", handleModalClose);
+      element?.removeEventListener('close_credential_modal', handleModalClose);
     };
   }, [pushEvent]);
 
   // Listen for credential saved event
   useEffect(() => {
-    const cleanup = handleEvent("credential_saved", (payload: any) => {
+    const cleanup = handleEvent('credential_saved', (payload: any) => {
       if (!currentJob) return;
 
       setIsCredentialModalOpen(false);
@@ -400,11 +436,11 @@ export function FullScreenIDE({
   // Handle Escape key to close the IDE
   // Two-step behavior: first Escape removes focus from Monaco, second closes IDE
   useHotkeys(
-    "escape",
+    'escape',
     event => {
       // Check if Monaco editor has focus
       const activeElement = document.activeElement;
-      const isMonacoFocused = activeElement?.closest(".monaco-editor");
+      const isMonacoFocused = activeElement?.closest('.monaco-editor');
 
       if (isMonacoFocused) {
         // First Escape: blur Monaco editor to remove focus
@@ -417,7 +453,7 @@ export function FullScreenIDE({
     },
     {
       enabled: true,
-      scopes: ["ide"],
+      scopes: ['ide'],
       enableOnFormTags: true, // Allow Escape even in Monaco editor
     },
     [onClose]
@@ -426,7 +462,7 @@ export function FullScreenIDE({
   // Handle Cmd/Ctrl+Enter to trigger workflow run
   // No scope restriction to ensure it works even when Monaco has focus
   useHotkeys(
-    "mod+enter",
+    'mod+enter',
     event => {
       event.preventDefault();
       event.stopPropagation();
@@ -520,6 +556,8 @@ export function FullScreenIDE({
         runTooltip={runTooltipMessage}
         onEditAdaptor={() => setIsConfigureModalOpen(true)}
         onChangeAdaptor={handleOpenAdaptorPicker}
+        repoConnection={repoConnection}
+        openGitHubSyncModal={openGitHubSyncModal}
       />
       <SandboxIndicatorBanner
         parentProjectId={parentProjectId}
@@ -539,18 +577,18 @@ export function FullScreenIDE({
           <Panel
             ref={leftPanelRef}
             defaultSize={25}
-            minSize={15}
+            minSize={25}
             collapsible
             collapsedSize={2}
             onCollapse={() => setIsLeftCollapsed(true)}
             onExpand={() => setIsLeftCollapsed(false)}
-            className="bg-gray-50 border-r border-gray-200"
+            className="bg-slate-100 border-r border-gray-200"
           >
             <div className="h-full flex flex-col">
               {/* Panel heading */}
               <div
                 className={`shrink-0 transition-transform ${
-                  isLeftCollapsed ? "rotate-90" : ""
+                  isLeftCollapsed ? 'rotate-90' : ''
                 }`}
               >
                 <div className="flex items-center justify-between px-3 py-1">
@@ -562,44 +600,21 @@ export function FullScreenIDE({
                       >
                         Input
                       </div>
-                      <button
+                      <PanelToggleButton
                         onClick={toggleLeftPanel}
                         disabled={openPanelCount === 1}
-                        className="text-slate-500 hover:text-slate-600
-                          hover:bg-slate-400 rounded-full p-1
-                          disabled:opacity-30 disabled:cursor-not-allowed
-                          transition-colors"
-                        aria-label="Collapse left panel"
-                      >
-                        <span
-                          className="hero-minus-circle w-5 h-5"
-                          aria-hidden="true"
-                        />
-                      </button>
+                        ariaLabel="Collapse left panel"
+                      />
                     </>
                   ) : (
-                    <>
-                      <button
-                        onClick={toggleLeftPanel}
-                        className="text-xs font-medium text-gray-400
-                          uppercase tracking-wide hover:text-gray-600
-                          transition-colors cursor-pointer"
-                      >
-                        Input
-                      </button>
-                      <button
-                        onClick={toggleLeftPanel}
-                        className="text-slate-500 hover:text-slate-600
-                          hover:bg-slate-400 rounded-full p-1
-                          transition-colors"
-                        aria-label="Expand left panel"
-                      >
-                        <span
-                          className="hero-plus-circle w-5 h-5"
-                          aria-hidden="true"
-                        />
-                      </button>
-                    </>
+                    <button
+                      onClick={toggleLeftPanel}
+                      className="ml-2 text-xs font-medium text-gray-400
+                        uppercase tracking-wide hover:text-gray-600
+                        transition-colors cursor-pointer"
+                    >
+                      Input
+                    </button>
                   )}
                 </div>
               </div>
@@ -634,18 +649,18 @@ export function FullScreenIDE({
           <Panel
             ref={centerPanelRef}
             defaultSize={100}
-            minSize={15}
+            minSize={25}
             collapsible
             collapsedSize={2}
             onCollapse={() => setIsCenterCollapsed(true)}
             onExpand={() => setIsCenterCollapsed(false)}
-            className="bg-white"
+            className="bg-slate-100"
           >
             <div className="h-full flex flex-col">
               {/* Panel heading */}
               <div
                 className={`shrink-0 border-b border-gray-100 transition-transform ${
-                  isCenterCollapsed ? "rotate-90" : ""
+                  isCenterCollapsed ? 'rotate-90' : ''
                 }`}
               >
                 <div className="flex items-center justify-between px-3 py-1">
@@ -657,44 +672,21 @@ export function FullScreenIDE({
                       >
                         Code
                       </div>
-                      <button
+                      <PanelToggleButton
                         onClick={toggleCenterPanel}
                         disabled={openPanelCount === 1}
-                        className="text-slate-500 hover:text-slate-600
-                          hover:bg-slate-400 rounded-full p-1
-                          disabled:opacity-30 disabled:cursor-not-allowed
-                          transition-colors"
-                        aria-label="Collapse code panel"
-                      >
-                        <span
-                          className="hero-minus-circle w-5 h-5"
-                          aria-hidden="true"
-                        />
-                      </button>
+                        ariaLabel="Collapse code panel"
+                      />
                     </>
                   ) : (
-                    <>
-                      <button
-                        onClick={toggleCenterPanel}
-                        className="text-xs font-medium text-gray-400
-                          uppercase tracking-wide hover:text-gray-600
-                          transition-colors cursor-pointer"
-                      >
-                        Code
-                      </button>
-                      <button
-                        onClick={toggleCenterPanel}
-                        className="text-slate-500 hover:text-slate-600
-                          hover:bg-slate-400 rounded-full p-1
-                          transition-colors"
-                        aria-label="Expand code panel"
-                      >
-                        <span
-                          className="hero-plus-circle w-5 h-5"
-                          aria-hidden="true"
-                        />
-                      </button>
-                    </>
+                    <button
+                      onClick={toggleCenterPanel}
+                      className="ml-2 text-xs font-medium text-gray-400
+                        uppercase tracking-wide hover:text-gray-600
+                        transition-colors cursor-pointer"
+                    >
+                      Code
+                    </button>
                   )}
                 </div>
               </div>
@@ -705,14 +697,14 @@ export function FullScreenIDE({
                   <CollaborativeMonaco
                     ytext={currentJobYText}
                     awareness={awareness}
-                    adaptor={currentJob.adaptor || "common"}
+                    adaptor={currentJob.adaptor || 'common'}
                     disabled={!canSave}
                     className="h-full w-full"
                     options={{
                       automaticLayout: true,
                       minimap: { enabled: true },
-                      lineNumbers: "on",
-                      wordWrap: "on",
+                      lineNumbers: 'on',
+                      wordWrap: 'on',
                     }}
                   />
                 </div>
@@ -730,21 +722,21 @@ export function FullScreenIDE({
           <Panel
             ref={rightPanelRef}
             defaultSize={1}
-            minSize={15}
+            minSize={25}
             collapsible
             collapsedSize={2}
             onCollapse={() => setIsRightCollapsed(true)}
             onExpand={() => setIsRightCollapsed(false)}
-            className="bg-gray-50 border-l border-gray-200"
+            className="bg-slate-100 bg-gray-50 border-l border-gray-200"
           >
             <div className="h-full flex flex-col">
               {/* Panel heading with tabs */}
               <div
-                className={`shrink-0 bg-slate-50 transition-transform ${
-                  isRightCollapsed ? "rotate-90" : ""
+                className={`shrink-0 transition-transform ${
+                  isRightCollapsed ? 'rotate-90' : ''
                 }`}
               >
-                <div className="flex items-center justify-between px-2">
+                <div className="flex items-center justify-between px-3 py-1">
                   {!isRightCollapsed ? (
                     <>
                       {/* Tabs as header content */}
@@ -754,61 +746,36 @@ export function FullScreenIDE({
                           onChange={setActiveRightTab}
                           variant="underline"
                           options={[
-                            { value: "run", label: "Run" },
-                            { value: "log", label: "Log" },
-                            { value: "input", label: "Input" },
-                            { value: "output", label: "Output" },
+                            { value: 'run', label: 'Run' },
+                            { value: 'log', label: 'Log' },
+                            { value: 'input', label: 'Input' },
+                            { value: 'output', label: 'Output' },
                           ]}
                         />
                       </div>
                       {/* Collapse button */}
-                      <button
+                      <PanelToggleButton
                         onClick={toggleRightPanel}
                         disabled={openPanelCount === 1}
-                        className="text-slate-500 hover:text-slate-600
-                          hover:bg-slate-400 rounded-full p-1
-                          disabled:opacity-30 disabled:cursor-not-allowed
-                          transition-colors ml-2"
-                        aria-label="Collapse right panel"
-                      >
-                        <span
-                          className="hero-minus-circle w-5 h-5"
-                          aria-hidden="true"
-                        />
-                      </button>
+                        ariaLabel="Collapse right panel"
+                      />
                     </>
                   ) : (
-                    <>
-                      {/* Collapsed state - clickable label */}
-                      <button
-                        onClick={toggleRightPanel}
-                        className="text-xs font-medium text-gray-400
-                          uppercase tracking-wide hover:text-gray-600
-                          transition-colors cursor-pointer"
-                      >
-                        Output
-                      </button>
-                      {/* Expand icon */}
-                      <button
-                        onClick={toggleRightPanel}
-                        className="text-slate-500 hover:text-slate-600
-                          hover:bg-slate-400 rounded-full p-1
-                          transition-colors"
-                        aria-label="Expand right panel"
-                      >
-                        <span
-                          className="hero-plus-circle w-5 h-5"
-                          aria-hidden="true"
-                        />
-                      </button>
-                    </>
+                    <button
+                      onClick={toggleRightPanel}
+                      className="ml-2 text-xs font-medium text-gray-400
+                        uppercase tracking-wide hover:text-gray-600
+                        transition-colors cursor-pointer"
+                    >
+                      Output
+                    </button>
                   )}
                 </div>
               </div>
 
               {/* Panel content */}
               {!isRightCollapsed && (
-                <div className="flex-1 overflow-hidden pt-2 bg-white">
+                <div className="flex-1 overflow-hidden bg-white">
                   <RunViewerErrorBoundary>
                     <RunViewerPanel
                       followRunId={followRunId}
@@ -830,18 +797,20 @@ export function FullScreenIDE({
           <ConfigureAdaptorModal
             isOpen={isConfigureModalOpen}
             onClose={() => setIsConfigureModalOpen(false)}
-            onSave={handleConfigureSave}
+            onAdaptorChange={handleAdaptorChange}
+            onVersionChange={handleVersionChange}
+            onCredentialChange={handleCredentialChange}
             onOpenAdaptorPicker={handleOpenAdaptorPicker}
             onOpenCredentialModal={handleOpenCredentialModal}
             currentAdaptor={
               resolveAdaptor(
-                currentJob.adaptor || "@openfn/language-common@latest"
-              ).package || "@openfn/language-common"
+                currentJob.adaptor || '@openfn/language-common@latest'
+              ).package || '@openfn/language-common'
             }
             currentVersion={
               resolveAdaptor(
-                currentJob.adaptor || "@openfn/language-common@latest"
-              ).version || "latest"
+                currentJob.adaptor || '@openfn/language-common@latest'
+              ).version || 'latest'
             }
             currentCredentialId={
               currentJob.project_credential_id ||

@@ -66,6 +66,33 @@ vi.mock("../../../../js/react/lib/use-url-state", () => ({
   }),
 }));
 
+// Mock useWorkflowState hook for StepItem
+vi.mock("../../../../js/collaborative-editor/hooks/useWorkflow", () => ({
+  useWorkflowState: (selector: any) => {
+    const mockState = {
+      jobs: [{ id: "job-1", name: "Test Job" }],
+    };
+    return selector(mockState);
+  },
+}));
+
+// Mock react-resizable-panels
+vi.mock("react-resizable-panels", () => ({
+  Panel: ({ children, className }: any) => (
+    <div className={className} data-testid="panel">
+      {children}
+    </div>
+  ),
+  PanelGroup: ({ children, className }: any) => (
+    <div className={className} data-testid="panel-group">
+      {children}
+    </div>
+  ),
+  PanelResizeHandle: ({ className }: any) => (
+    <div className={className} data-testid="panel-resize-handle" />
+  ),
+}));
+
 // Mock hooks
 const mockUseCurrentRun = vi.spyOn(useRunModule, "useCurrentRun");
 const mockUseSelectedStepId = vi.spyOn(useRunModule, "useSelectedStepId");
@@ -158,10 +185,8 @@ describe("LogTabPanel", () => {
 
       const { container } = render(<LogTabPanel />);
 
-      // Check for log viewer container
-      const logViewerContainer = container.querySelector(
-        ".flex-1.bg-slate-700"
-      );
+      // Check for log viewer container with new structure
+      const logViewerContainer = container.querySelector(".bg-slate-700");
       expect(logViewerContainer).toBeInTheDocument();
     });
   });
@@ -271,23 +296,27 @@ describe("LogTabPanel", () => {
       expect(screen.getByText("Test Job")).toBeInTheDocument();
     });
 
-    test("has proper layout structure", () => {
+    test("has proper layout structure with resizable panels", () => {
       mockUseCurrentRun.mockReturnValue(createMockRun());
 
-      const { container } = render(<LogTabPanel />);
+      const { container, getByTestId } = render(<LogTabPanel />);
 
-      // Check for flex container
-      const flexContainer = container.querySelector(".h-full.flex");
-      expect(flexContainer).toBeInTheDocument();
+      // Check for PanelGroup
+      const panelGroup = getByTestId("panel-group");
+      expect(panelGroup).toBeInTheDocument();
+      expect(panelGroup).toHaveClass("h-full");
 
-      // Check for sidebar
-      const sidebar = container.querySelector(".w-48.border-r");
-      expect(sidebar).toBeInTheDocument();
+      // Check for panels
+      const panels = container.querySelectorAll('[data-testid="panel"]');
+      expect(panels).toHaveLength(2); // Step list panel and log viewer panel
+
+      // Check for resize handle
+      const resizeHandle = getByTestId("panel-resize-handle");
+      expect(resizeHandle).toBeInTheDocument();
+      expect(resizeHandle).toHaveClass("cursor-row-resize");
 
       // Check for log viewer container
-      const logViewerContainer = container.querySelector(
-        ".flex-1.bg-slate-700"
-      );
+      const logViewerContainer = container.querySelector(".bg-slate-700");
       expect(logViewerContainer).toBeInTheDocument();
     });
   });
