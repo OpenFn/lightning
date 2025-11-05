@@ -2,29 +2,27 @@
  * CollaborativeWorkflowDiagram - Wrapper for WorkflowDiagram using Yjs data
  */
 
-import { ReactFlowProvider } from "@xyflow/react";
-import { useMemo, useRef, useState, useCallback, useEffect } from "react";
-
-import type { RunInfo } from "#/workflow-store/store";
+import { ReactFlowProvider } from '@xyflow/react';
+import { useMemo, useState, useCallback, useEffect, useRef } from 'react';
 
 import {
   useHistoryPanelCollapsed,
   useEditorPreferencesCommands,
-} from "../../hooks/useEditorPreferences";
+} from '../../hooks/useEditorPreferences';
 import {
   useHistory,
   useHistoryLoading,
   useHistoryError,
   useHistoryCommands,
   useHistoryChannelConnected,
-} from "../../hooks/useHistory";
-import { useIsNewWorkflow } from "../../hooks/useSessionContext";
-import { useNodeSelection, useWorkflowState } from "../../hooks/useWorkflow";
-import type { Run } from "../../types/history";
-import { transformToRunInfo } from "../../utils/runStepsTransformer";
+  useRunSteps,
+} from '../../hooks/useHistory';
+import { useIsNewWorkflow } from '../../hooks/useSessionContext';
+import { useNodeSelection } from '../../hooks/useWorkflow';
+import type { Run } from '../../types/history';
 
-import MiniHistory from "./MiniHistory";
-import CollaborativeWorkflowDiagramImpl from "./WorkflowDiagram";
+import MiniHistory from './MiniHistory';
+import CollaborativeWorkflowDiagramImpl from './WorkflowDiagram';
 
 interface CollaborativeWorkflowDiagramProps {
   className?: string;
@@ -32,16 +30,12 @@ interface CollaborativeWorkflowDiagramProps {
 }
 
 export function CollaborativeWorkflowDiagram({
-  className = "h-full w-full",
+  className = 'h-full w-full',
   inspectorId,
 }: CollaborativeWorkflowDiagramProps) {
   const { currentNode, selectNode } = useNodeSelection();
   const isNewWorkflow = useIsNewWorkflow();
   const isHistoryChannelConnected = useHistoryChannelConnected();
-
-  // Get workflow ID for run steps transformation
-  const workflow = useWorkflowState(state => state.workflow);
-  const workflowId = workflow?.id || "";
 
   // Get history data and commands
   const history = useHistory();
@@ -56,7 +50,7 @@ export function CollaborativeWorkflowDiagram({
   // Auto-expand if there's a run ID in the URL (like LiveView behavior)
   const runIdFromUrl = useMemo(() => {
     const params = new URLSearchParams(window.location.search);
-    return params.get("run");
+    return params.get('run');
   }, []);
 
   useEffect(() => {
@@ -72,19 +66,19 @@ export function CollaborativeWorkflowDiagram({
   // Track selected run for visual feedback (stored in URL)
   const [selectedRunId, setSelectedRunId] = useState<string | null>(() => {
     const params = new URLSearchParams(window.location.search);
-    return params.get("run");
+    return params.get('run');
   });
 
-  // Track current run steps for visualization
-  const [currentRunSteps, setCurrentRunSteps] = useState<RunInfo | null>(null);
+  // Use hook to get run steps with automatic subscription management
+  const currentRunSteps = useRunSteps(selectedRunId);
 
   // Update URL when run selection changes
   const handleRunSelect = useCallback((run: Run) => {
     setSelectedRunId(run.id);
 
     const url = new URL(window.location.href);
-    url.searchParams.set("run", run.id);
-    window.history.pushState({}, "", url.toString());
+    url.searchParams.set('run', run.id);
+    window.history.pushState({}, '', url.toString());
   }, []);
 
   // Clear URL parameter when deselecting run
@@ -92,8 +86,8 @@ export function CollaborativeWorkflowDiagram({
     setSelectedRunId(null);
 
     const url = new URL(window.location.href);
-    url.searchParams.delete("run");
-    window.history.pushState({}, "", url.toString());
+    url.searchParams.delete('run');
+    window.history.pushState({}, '', url.toString());
   }, []);
 
   // Request history when panel is first expanded OR when there's a run ID in URL
@@ -118,64 +112,6 @@ export function CollaborativeWorkflowDiagram({
     historyCommands,
     runIdFromUrl,
   ]);
-
-  // Fetch run steps when run is selected
-  useEffect(() => {
-    const fetchRunSteps = async () => {
-      if (!selectedRunId) {
-        setCurrentRunSteps(null);
-        return;
-      }
-
-      // Check cache first
-      let stepsData = historyCommands.getRunSteps(selectedRunId);
-
-      if (!stepsData) {
-        // Fetch from backend
-        stepsData = await historyCommands.requestRunSteps(selectedRunId);
-      }
-
-      if (stepsData && workflowId) {
-        // Transform to RunInfo format
-        const runInfo = transformToRunInfo(stepsData, workflowId);
-        setCurrentRunSteps(runInfo);
-      } else {
-        setCurrentRunSteps(null);
-      }
-    };
-
-    void fetchRunSteps();
-  }, [selectedRunId, historyCommands, workflowId]);
-
-  // Re-fetch run steps when history updates for the selected run
-  // This ensures real-time updates as run progresses (e.g., steps
-  // complete, state changes)
-  const previousHistoryRef = useRef(history);
-  useEffect(() => {
-    // Skip if history hasn't actually changed (avoid duplicate fetch on
-    // initial mount)
-    if (previousHistoryRef.current === history) {
-      return;
-    }
-    previousHistoryRef.current = history;
-
-    const refetchRunSteps = async () => {
-      if (!selectedRunId || !workflowId) {
-        return;
-      }
-
-      // Force re-fetch from backend to get latest step data
-      const stepsData = await historyCommands.requestRunSteps(selectedRunId);
-
-      if (stepsData) {
-        // Transform to RunInfo format
-        const runInfo = transformToRunInfo(stepsData, workflowId);
-        setCurrentRunSteps(runInfo);
-      }
-    };
-
-    void refetchRunSteps();
-  }, [history, selectedRunId, workflowId, historyCommands]);
 
   // Transform history to mark selected run
   const historyWithSelection = useMemo(() => {
