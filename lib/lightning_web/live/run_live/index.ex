@@ -107,12 +107,12 @@ defmodule LightningWeb.RunLive.Index do
     ]
 
     search_fields = [
+      %{id: :id, icon: "hero-finger-print-mini", label: "Include IDs"},
       %{
         id: :dataclip_name,
         icon: "hero-identification",
         label: "Include dataclip names"
       },
-      %{id: :id, icon: "hero-finger-print-mini", label: "Include IDs"},
       %{
         id: :body,
         icon: "hero-document-arrow-down",
