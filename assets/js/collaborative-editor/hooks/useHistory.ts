@@ -5,10 +5,28 @@
  * from the StoreProvider context using the useSyncExternalStore pattern.
  */
 
-import { useSyncExternalStore, useContext, useMemo } from 'react';
+import {
+  useSyncExternalStore,
+  useContext,
+  useMemo,
+  useEffect,
+  useId,
+} from 'react';
+
+import _logger from '#/utils/logger';
+import type { RunInfo } from '#/workflow-store/store';
 
 import { StoreContext } from '../contexts/StoreProvider';
-import type { HistoryStore, WorkflowRunHistory } from '../types/history';
+import type {
+  HistoryStore,
+  WorkflowRunHistory,
+  RunStepsData,
+} from '../types/history';
+import { transformToRunInfo } from '../utils/runStepsTransformer';
+
+import { useWorkflowState } from './useWorkflow';
+
+const logger = _logger.ns('useHistory').seal();
 
 /**
  * Main hook for accessing the HistoryStore instance
@@ -89,4 +107,72 @@ export const useHistoryCommands = () => {
     }),
     [historyStore]
   );
+};
+
+/**
+ * Hook to get run steps for a specific run with automatic subscription
+ * management
+ *
+ * This hook:
+ * - Subscribes to run steps on mount
+ * - Fetches run steps if not cached
+ * - Automatically refetches when run updates (via store invalidation)
+ * - Unsubscribes and cleans up on unmount
+ * - Transforms backend data to RunInfo format for visualization
+ *
+ * @param runId - The run ID to get steps for (or null for no selection)
+ * @returns RunInfo object for visualization, or null if no run selected or
+ * loading
+ *
+ * @example
+ * function MyComponent({ selectedRunId }) {
+ *   const runSteps = useRunSteps(selectedRunId);
+ *
+ *   if (!runSteps) return <Spinner />;
+ *
+ *   return <RunVisualization steps={runSteps} />;
+ * }
+ */
+export const useRunSteps = (runId: string | null): RunInfo | null => {
+  const historyStore = useHistoryStore();
+  const workflow = useWorkflowState(state => state.workflow);
+  const workflowId = workflow?.id || '';
+
+  // Generate stable component ID for subscription tracking
+  // React's useId provides a stable identifier per component instance
+  const componentId = useId();
+
+  // Subscribe to run steps with automatic cleanup
+  useEffect(() => {
+    if (!runId) return;
+
+    logger.debug('useRunSteps: Subscribing', { runId, componentId });
+    historyStore.subscribeToRunSteps(runId, componentId);
+
+    return () => {
+      logger.debug('useRunSteps: Unsubscribing', { runId, componentId });
+      historyStore.unsubscribeFromRunSteps(runId, componentId);
+    };
+  }, [runId, componentId, historyStore]);
+
+  // Get raw data from store with subscription
+  const selectRunSteps = useMemo(
+    () =>
+      historyStore.withSelector((state): RunStepsData | null => {
+        if (!runId) return null;
+        return state.runStepsCache[runId] || null;
+      }),
+    [historyStore, runId]
+  );
+
+  const rawRunSteps = useSyncExternalStore(
+    historyStore.subscribe,
+    selectRunSteps
+  );
+
+  // Transform to RunInfo format for visualization
+  return useMemo(() => {
+    if (!rawRunSteps || !workflowId) return null;
+    return transformToRunInfo(rawRunSteps, workflowId);
+  }, [rawRunSteps, workflowId]);
 };

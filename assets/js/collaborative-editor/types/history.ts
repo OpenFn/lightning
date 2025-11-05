@@ -1,7 +1,7 @@
-import type { PhoenixChannelProvider } from "y-phoenix-channel";
-import * as z from "zod";
+import type { PhoenixChannelProvider } from 'y-phoenix-channel';
+import * as z from 'zod';
 
-import { isoDateTimeSchema, uuidSchema } from "./common";
+import { isoDateTimeSchema, uuidSchema } from './common';
 
 /**
  * Zod schema for a single Run
@@ -10,16 +10,16 @@ import { isoDateTimeSchema, uuidSchema } from "./common";
 export const RunSchema = z.object({
   id: uuidSchema,
   state: z.enum([
-    "available",
-    "claimed",
-    "started",
-    "success",
-    "failed",
-    "killed",
-    "exception",
-    "crashed",
-    "cancelled",
-    "lost",
+    'available',
+    'claimed',
+    'started',
+    'success',
+    'failed',
+    'killed',
+    'exception',
+    'crashed',
+    'cancelled',
+    'lost',
   ]),
   error_type: z.string().nullable(),
   started_at: isoDateTimeSchema.nullable(),
@@ -33,16 +33,16 @@ export const RunSchema = z.object({
 export const WorkOrderSchema = z.object({
   id: uuidSchema,
   state: z.enum([
-    "pending",
-    "running",
-    "success",
-    "failed",
-    "rejected",
-    "killed",
-    "exception",
-    "crashed",
-    "cancelled",
-    "lost",
+    'pending',
+    'running',
+    'success',
+    'failed',
+    'rejected',
+    'killed',
+    'exception',
+    'crashed',
+    'cancelled',
+    'lost',
   ]),
   last_activity: isoDateTimeSchema,
   version: z.number(),
@@ -99,6 +99,8 @@ export interface HistoryState {
   lastUpdated: number | null;
   isChannelConnected: boolean;
   runStepsCache: Record<string, RunStepsData>;
+  runStepsSubscribers: Record<string, Set<string>>;
+  runStepsLoading: Set<string>;
 }
 
 /**
@@ -111,6 +113,8 @@ interface HistoryCommands {
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
   clearError: () => void;
+  subscribeToRunSteps: (runId: string, subscriberId: string) => void;
+  unsubscribeFromRunSteps: (runId: string, subscriberId: string) => void;
 }
 
 /**
