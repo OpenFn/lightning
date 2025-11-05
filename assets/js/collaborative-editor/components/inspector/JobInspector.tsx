@@ -5,7 +5,6 @@ import { useURLState } from "#/react/lib/use-url-state";
 import { useJobDeleteValidation } from "../../hooks/useJobDeleteValidation";
 import { usePermissions } from "../../hooks/useSessionContext";
 import { useWorkflowActions, useCanSave } from "../../hooks/useWorkflow";
-import { notifications } from "../../lib/notifications";
 import type { Workflow } from "../../types/workflow";
 import { AlertDialog } from "../AlertDialog";
 import { Button } from "../Button";
@@ -41,7 +40,7 @@ export function JobInspector({
 
   // URL state for Edit button
   const { searchParams, updateSearchParams } = useURLState();
-  const isIDEOpen = searchParams.get("editor") === "open";
+  const isIDEOpen = searchParams.get("panel") === "editor";
 
   const handleDelete = useCallback(async () => {
     setIsDeleting(true);
@@ -51,13 +50,6 @@ export function JobInspector({
       // Y.Doc sync provides immediate visual feedback
     } catch (error) {
       console.error("Delete failed:", error);
-      notifications.alert({
-        title: "Failed to delete job",
-        description:
-          error instanceof Error
-            ? error.message
-            : "An unexpected error occurred. Please try again.",
-      });
     } finally {
       setIsDeleting(false);
     }
@@ -85,7 +77,7 @@ export function JobInspector({
             <span className="inline-block">
               <Button
                 variant="primary"
-                onClick={() => updateSearchParams({ editor: "open" })}
+                onClick={() => updateSearchParams({ panel: "editor" })}
                 disabled={isIDEOpen}
               >
                 Edit

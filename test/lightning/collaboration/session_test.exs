@@ -886,6 +886,108 @@ defmodule Lightning.SessionTest do
         {:error, _} -> assert true
       end
     end
+
+    test "saves workflow with :built state and lock_version > 0", %{
+      user: user,
+      project: project
+    } do
+      # Create a new workflow struct (not yet saved)
+      workflow_id = Ecto.UUID.generate()
+
+      new_workflow = %Workflow{
+        id: workflow_id,
+        name: "New Workflow",
+        project_id: project.id,
+        lock_version: 0,
+        edges: [],
+        jobs: [],
+        triggers: []
+      }
+
+      # Start document and session with the new workflow
+      start_supervised!(
+        {DocumentSupervisor,
+         workflow: new_workflow, document_name: "workflow:#{workflow_id}"}
+      )
+
+      session_pid =
+        start_supervised!(
+          {Session,
+           workflow: new_workflow,
+           user: user,
+           document_name: "workflow:#{workflow_id}"}
+        )
+
+      # First save - this creates the workflow in DB (lock_version becomes 1)
+      assert {:ok, saved_workflow} = Session.save_workflow(session_pid, user)
+      assert saved_workflow.lock_version == 1
+
+      # Now we have a workflow with state: :built but lock_version > 0
+      # Modify it again via Y.Doc
+      doc = Session.get_doc(session_pid)
+      workflow_map = Yex.Doc.get_map(doc, "workflow")
+
+      Yex.Doc.transaction(doc, "second_update", fn ->
+        Yex.Map.set(workflow_map, "name", "Updated After First Save")
+      end)
+
+      # Second save - this should fetch the workflow from DB (covering line 472-476)
+      assert {:ok, saved_workflow2} = Session.save_workflow(session_pid, user)
+      assert saved_workflow2.name == "Updated After First Save"
+      assert saved_workflow2.lock_version == 2
+
+      # Verify in database
+      from_db = Lightning.Workflows.get_workflow!(workflow_id)
+      assert from_db.name == "Updated After First Save"
+      assert from_db.lock_version == 2
+    end
+
+    test "handles workflow deleted for :built workflow with lock_version > 0", %{
+      user: user,
+      project: project
+    } do
+      # Create a workflow and save it once to get lock_version > 0
+      workflow_id = Ecto.UUID.generate()
+
+      new_workflow = %Workflow{
+        id: workflow_id,
+        name: "To Be Deleted",
+        project_id: project.id,
+        lock_version: 0,
+        edges: [],
+        jobs: [],
+        triggers: []
+      }
+
+      start_supervised!(
+        {DocumentSupervisor,
+         workflow: new_workflow, document_name: "workflow:#{workflow_id}"}
+      )
+
+      session_pid =
+        start_supervised!(
+          {Session,
+           workflow: new_workflow,
+           user: user,
+           document_name: "workflow:#{workflow_id}"}
+        )
+
+      # First save to create in DB
+      assert {:ok, _saved_workflow} = Session.save_workflow(session_pid, user)
+
+      # Now delete the workflow from DB
+      from_db = Lightning.Workflows.get_workflow!(workflow_id)
+
+      Lightning.Repo.update!(
+        Ecto.Changeset.change(from_db,
+          deleted_at: DateTime.utc_now() |> DateTime.truncate(:second)
+        )
+      )
+
+      # Try to save again - should get workflow_deleted error (covering line 475)
+      assert {:error, :workflow_deleted} =
+               Session.save_workflow(session_pid, user)
+    end
   end
 
   describe "save_workflow/2 validation errors" do

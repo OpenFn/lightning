@@ -5,6 +5,7 @@ import { cn } from "#/utils/cn";
 
 import { DataclipViewer } from "../../../react/components/DataclipViewer";
 import type { Dataclip } from "../../api/dataclips";
+import { RENDER_MODES, type RenderMode } from "../../constants/panel";
 import { Button } from "../Button";
 
 interface SelectedDataclipViewProps {
@@ -13,7 +14,7 @@ interface SelectedDataclipViewProps {
   onNameChange: (dataclipId: string, name: string | null) => Promise<void>;
   canEdit: boolean;
   isNextCronRun: boolean;
-  renderMode?: "standalone" | "embedded";
+  renderMode?: RenderMode;
 }
 
 export function SelectedDataclipView({
@@ -22,25 +23,39 @@ export function SelectedDataclipView({
   onNameChange,
   canEdit,
   isNextCronRun,
-  renderMode = "standalone",
+  renderMode = RENDER_MODES.STANDALONE,
 }: SelectedDataclipViewProps) {
   const [isEditingName, setIsEditingName] = useState(false);
   const [editedName, setEditedName] = useState(dataclip.name || "");
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const handleCancelEdit = useCallback(() => {
+    setIsEditingName(false);
+    setEditedName(dataclip.name || "");
+    setError(null);
+  }, [dataclip.name]);
+
   const handleSaveName = useCallback(async () => {
+    const newName = editedName.trim() || null;
+    const currentName = dataclip.name || null;
+
+    if (newName === currentName) {
+      setIsEditingName(false);
+      return;
+    }
+
     setIsSaving(true);
     setError(null);
     try {
-      await onNameChange(dataclip.id, editedName || null);
+      await onNameChange(dataclip.id, newName);
       setIsEditingName(false);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to save name");
     } finally {
       setIsSaving(false);
     }
-  }, [dataclip.id, editedName, onNameChange]);
+  }, [dataclip.id, dataclip.name, editedName, onNameChange]);
 
   return (
     <div className="flex flex-col h-full">
@@ -48,7 +63,7 @@ export function SelectedDataclipView({
       <div
         className={cn(
           "flex items-center justify-between pb-4",
-          renderMode === "embedded" ? "px-3 pt-3" : "px-6 pt-4"
+          renderMode === RENDER_MODES.EMBEDDED ? "px-3 pt-3" : "px-6 pt-4"
         )}
       >
         <div className="flex-1">
@@ -58,6 +73,15 @@ export function SelectedDataclipView({
                 type="text"
                 value={editedName}
                 onChange={e => setEditedName(e.target.value)}
+                onKeyDown={e => {
+                  if (e.key === "Enter" && !isSaving) {
+                    e.preventDefault();
+                    void handleSaveName();
+                  } else if (e.key === "Escape") {
+                    e.preventDefault();
+                    handleCancelEdit();
+                  }
+                }}
                 className="flex-1 rounded-md border-gray-300
                   shadow-sm focus:border-indigo-500
                   focus:ring-indigo-500 sm:text-sm"
@@ -74,11 +98,7 @@ export function SelectedDataclipView({
               </Button>
               <Button
                 variant="secondary"
-                onClick={() => {
-                  setIsEditingName(false);
-                  setEditedName(dataclip.name || "");
-                  setError(null);
-                }}
+                onClick={handleCancelEdit}
                 disabled={isSaving}
                 className="!p-2"
               >
@@ -129,7 +149,7 @@ export function SelectedDataclipView({
         <div
           className={cn(
             "alert-warning flex flex-col gap-1 px-3 py-2 rounded-md border mb-4",
-            renderMode === "embedded" ? "mx-3" : "mx-6"
+            renderMode === RENDER_MODES.EMBEDDED ? "mx-3" : "mx-6"
           )}
         >
           <span className="text-sm font-medium">

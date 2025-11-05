@@ -56,6 +56,7 @@ const mockUseCurrentRun = vi.spyOn(useRunModule, "useCurrentRun");
 const mockUseRunLoading = vi.spyOn(useRunModule, "useRunLoading");
 const mockUseRunError = vi.spyOn(useRunModule, "useRunError");
 const mockUseRunStoreInstance = vi.spyOn(useRunModule, "useRunStoreInstance");
+const mockUseRunActions = vi.spyOn(useRunModule, "useRunActions");
 const mockUseSession = vi.spyOn(useSessionModule, "useSession");
 
 // Mock run factory
@@ -97,6 +98,10 @@ describe("RunViewerPanel", () => {
 
     // Default mocks
     mockUseRunStoreInstance.mockReturnValue(mockStore as any);
+    mockUseRunActions.mockReturnValue({
+      selectStep: mockStore.selectStep,
+      clearError: mockStore.clearError,
+    } as any);
     mockUseSession.mockReturnValue({
       provider: {
         socket: {},
@@ -274,86 +279,10 @@ describe("RunViewerPanel", () => {
     });
   });
 
+  // NOTE: Connection lifecycle tests were removed in this PR.
+  // Connection management is now handled by parent component (FullScreenIDE),
+  // not by RunViewerPanel. RunViewerPanel only reads from RunStore.
   describe("channel connection lifecycle", () => {
-    test("connects to run channel when followRunId provided", () => {
-      mockUseCurrentRun.mockReturnValue(createMockRun());
-      mockUseRunLoading.mockReturnValue(false);
-      mockUseRunError.mockReturnValue(null);
-
-      render(
-        <RunViewerPanel
-          followRunId="run-1"
-          activeTab="run"
-          onTabChange={vi.fn()}
-        />
-      );
-
-      expect(mockStore._connectToRun).toHaveBeenCalledWith(
-        expect.anything(),
-        "run-1"
-      );
-    });
-
-    test("disconnects when followRunId becomes null", () => {
-      mockUseCurrentRun.mockReturnValue(createMockRun());
-      mockUseRunLoading.mockReturnValue(false);
-      mockUseRunError.mockReturnValue(null);
-
-      const { rerender } = render(
-        <RunViewerPanel
-          followRunId="run-1"
-          activeTab="run"
-          onTabChange={vi.fn()}
-        />
-      );
-
-      expect(mockStore._connectToRun).toHaveBeenCalled();
-
-      // Change to null
-      rerender(
-        <RunViewerPanel
-          followRunId={null}
-          activeTab="run"
-          onTabChange={vi.fn()}
-        />
-      );
-
-      expect(mockStore._disconnectFromRun).toHaveBeenCalled();
-    });
-
-    test("reconnects when followRunId changes", () => {
-      mockUseCurrentRun.mockReturnValue(createMockRun());
-      mockUseRunLoading.mockReturnValue(false);
-      mockUseRunError.mockReturnValue(null);
-
-      const { rerender } = render(
-        <RunViewerPanel
-          followRunId="run-1"
-          activeTab="run"
-          onTabChange={vi.fn()}
-        />
-      );
-
-      expect(mockStore._connectToRun).toHaveBeenCalledWith(
-        expect.anything(),
-        "run-1"
-      );
-
-      // Change to different run
-      rerender(
-        <RunViewerPanel
-          followRunId="run-2"
-          activeTab="run"
-          onTabChange={vi.fn()}
-        />
-      );
-
-      expect(mockStore._connectToRun).toHaveBeenCalledWith(
-        expect.anything(),
-        "run-2"
-      );
-    });
-
     test("does not connect when provider is null", () => {
       mockUseSession.mockReturnValue({
         provider: null,

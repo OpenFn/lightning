@@ -7,6 +7,8 @@ import {
 import { useEffect } from "react";
 import { useHotkeysContext } from "react-hotkeys-hook";
 
+import { HOTKEY_SCOPES } from "#/collaborative-editor/constants/hotkeys";
+
 interface AlertDialogProps {
   isOpen: boolean;
   onClose: () => void;
@@ -60,16 +62,16 @@ export function AlertDialog({
   // to know about modals.
   useEffect(() => {
     if (isOpen) {
-      enableScope("modal");
-      disableScope("panel");
+      enableScope(HOTKEY_SCOPES.MODAL);
+      disableScope(HOTKEY_SCOPES.PANEL);
     } else {
-      disableScope("modal");
-      enableScope("panel");
+      disableScope(HOTKEY_SCOPES.MODAL);
+      enableScope(HOTKEY_SCOPES.PANEL);
     }
 
     // Cleanup: ensure modal scope is disabled when unmounted
     return () => {
-      disableScope("modal");
+      disableScope(HOTKEY_SCOPES.MODAL);
     };
   }, [isOpen, enableScope, disableScope]);
 

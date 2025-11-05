@@ -230,7 +230,7 @@ export const createRunStore = (): RunStore => {
     // Don't reconnect to same run
     if (currentRunId === runId && currentChannel) {
       logger.debug("Already connected to run", runId);
-      return () => {};
+      return () => {}; // Return no-op cleanup to prevent disconnect
     }
 
     currentRunId = runId;

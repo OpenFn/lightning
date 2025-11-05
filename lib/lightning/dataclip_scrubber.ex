@@ -31,25 +31,8 @@ defmodule Lightning.DataclipScrubber do
          id: step_id,
          started_at: started_at
        }) do
-    run_step =
-      from(as in RunStep,
-        where: as.step_id == ^step_id,
-        select: as.run_id
-      )
-
-    from(as in RunStep,
-      join: s in assoc(as, :step),
-      join: j in assoc(s, :job),
-      join: c in assoc(j, :credential),
-      join: r in assoc(as, :run),
-      join: wo in assoc(r, :work_order),
-      join: w in assoc(wo, :workflow),
-      join: p in assoc(w, :project),
-      where: as.run_id in subquery(run_step),
-      where: s.started_at <= ^started_at,
-      select: {c, p.env},
-      distinct: c.id
-    )
+    step_id
+    |> credentials_for_step(started_at)
     |> Repo.all()
     |> case do
       [] ->
@@ -77,4 +60,28 @@ defmodule Lightning.DataclipScrubber do
   end
 
   defp scrub_body(body_str, _step), do: body_str
+
+  @doc """
+  Returns an Ecto query for credentials (with project env) used in the same
+  run or earlier steps.
+
+  Uses a self-join on RunStep to leverage existing indexes.
+  """
+  def credentials_for_step(step_id, started_at) do
+    from(r0 in RunStep,
+      where: r0.step_id == ^step_id,
+      join: r1 in RunStep,
+      on: r1.run_id == r0.run_id,
+      join: s in assoc(r1, :step),
+      join: j in assoc(s, :job),
+      join: c in assoc(j, :credential),
+      join: r in assoc(r1, :run),
+      join: wo in assoc(r, :work_order),
+      join: w in assoc(wo, :workflow),
+      join: p in assoc(w, :project),
+      where: s.started_at <= ^started_at,
+      select: {c, p.env},
+      distinct: c.id
+    )
+  end
 end
