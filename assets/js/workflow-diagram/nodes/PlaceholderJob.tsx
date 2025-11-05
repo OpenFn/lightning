@@ -1,4 +1,3 @@
-import { extractAdaptorName } from "#/collaborative-editor/utils/adaptorUtils";
 import React, {
   type SyntheticEvent,
   memo,
@@ -42,15 +41,7 @@ const dispatch = (
 const PlaceholderJobNode = ({ id, data, selected }: NodeProps<NodeData>) => {
   const textRef = useRef<HTMLInputElement | null>(null);
 
-  // Extract adaptor display name for default
-  const adaptorDisplayName = React.useMemo(() => {
-    if (data?.adaptor) {
-      return extractAdaptorName(data.adaptor) || "New Job";
-    }
-    return "New Job";
-  }, [data?.adaptor]);
-
-  const [jobName, setJobName] = useState(adaptorDisplayName);
+  const [jobName, setJobName] = useState("");
 
   const [validationResult, setValidationResult] = useState<ValidationResult>({
     isValid: true,
@@ -192,7 +183,6 @@ const PlaceholderJobNode = ({ id, data, selected }: NodeProps<NodeData>) => {
               setJobName(e.target.value);
               handleChange(e);
             }}
-            placeholder={adaptorDisplayName}
             data-placeholder={id}
             className={[
               "line-clamp-2",
