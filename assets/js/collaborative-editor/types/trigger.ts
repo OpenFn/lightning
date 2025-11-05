@@ -4,6 +4,7 @@ import { z } from "zod";
 import _logger from "#/utils/logger";
 
 import { uuidSchema } from "./common";
+import { WebhookAuthMethodSchema } from "./sessionContext";
 
 const logger = _logger.ns("TriggerTypes").seal();
 
@@ -11,6 +12,11 @@ const logger = _logger.ns("TriggerTypes").seal();
 const baseTriggerSchema = z.object({
   id: uuidSchema,
   enabled: z.boolean().default(true),
+  webhook_auth_methods: z
+    .array(
+      WebhookAuthMethodSchema.pick({ id: true, name: true, auth_type: true })
+    )
+    .optional(),
 });
 
 // Webhook trigger schema

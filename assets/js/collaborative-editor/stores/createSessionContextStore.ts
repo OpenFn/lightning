@@ -111,6 +111,7 @@ export const createSessionContextStore = (
       permissions: null,
       latestSnapshotLockVersion: null,
       projectRepoConnection: null,
+      webhookAuthMethods: [],
       isNewWorkflow,
       isLoading: false,
       error: null,
@@ -172,6 +173,7 @@ export const createSessionContextStore = (
         draft.latestSnapshotLockVersion =
           sessionContext.latest_snapshot_lock_version;
         draft.projectRepoConnection = sessionContext.project_repo_connection;
+        draft.webhookAuthMethods = sessionContext.webhook_auth_methods;
         draft.isLoading = false;
         draft.error = null;
         draft.lastUpdated = Date.now();

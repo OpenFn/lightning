@@ -34,7 +34,8 @@ defmodule Lightning.Workflows.Trigger do
              :cron_expression,
              :type,
              :enabled,
-             :webhook_reply
+             :webhook_reply,
+             :webhook_auth_methods
            ]}
   schema "triggers" do
     field :comment, :string

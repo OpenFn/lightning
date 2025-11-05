@@ -1,14 +1,20 @@
 import { useCallback, useState } from "react";
 
 import { TriggerSchema } from "#/collaborative-editor/types/trigger";
+import { cn } from "#/utils/cn";
 import _logger from "#/utils/logger";
 
+import { channelRequest } from "../../hooks/useChannel";
+import { useSession } from "../../hooks/useSession";
+import { useSessionContext } from "../../hooks/useSessionContext";
 import { useWorkflowActions } from "../../hooks/useWorkflow";
+import { notifications } from "../../lib/notifications";
 import type { Workflow } from "../../types/workflow";
 import { useAppForm } from "../form";
 import { createZodValidator } from "../form/createZodValidator";
 
 import { CronFieldBuilder } from "./CronFieldBuilder";
+import { WebhookAuthMethodModal } from "./WebhookAuthMethodModal";
 
 interface TriggerFormProps {
   trigger: Workflow.Trigger;
@@ -25,6 +31,10 @@ export function TriggerForm({ trigger }: TriggerFormProps) {
   const { updateTrigger } = useWorkflowActions();
   const [copySuccess, setCopySuccess] = useState<string>("");
   const [showAdvancedSettings, setShowAdvancedSettings] = useState(false);
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const sessionContext = useSessionContext();
+  const { provider } = useSession();
+  const channel = provider?.channel;
 
   const form = useAppForm({
     defaultValues: trigger,
@@ -59,6 +69,40 @@ export function TriggerForm({ trigger }: TriggerFormProps) {
       }
     })();
   }, []);
+
+  // Handle saving webhook auth methods
+  const handleSaveAuthMethods = useCallback(
+    async (selectedMethodIds: string[]) => {
+      if (!channel || !trigger.id) {
+        throw new Error(
+          "Cannot save: channel not connected or trigger not saved"
+        );
+      }
+
+      try {
+        await channelRequest(channel, "update_trigger_auth_methods", {
+          trigger_id: trigger.id,
+          auth_method_ids: selectedMethodIds,
+        });
+
+        notifications.info({
+          title: "Authentication updated",
+          description: "Webhook authentication methods have been updated",
+        });
+      } catch (error) {
+        const errorMessage =
+          error instanceof Error ? error.message : "An error occurred";
+
+        notifications.alert({
+          title: "Failed to update",
+          description: errorMessage,
+        });
+
+        throw error;
+      }
+    },
+    [channel, trigger.id]
+  );
 
   return (
     <div className="px-6 py-6 space-y-4">
@@ -124,7 +168,8 @@ export function TriggerForm({ trigger }: TriggerFormProps) {
                     <div>
                       <label
                         htmlFor="webhook-url"
-                        className="block text-sm font-medium leading-6 text-slate-800"
+                        className="block text-sm font-medium leading-6
+                          text-slate-800"
                       >
                         Webhook URL
                       </label>
@@ -135,16 +180,117 @@ export function TriggerForm({ trigger }: TriggerFormProps) {
                           value={webhookUrl}
                           readOnly
                           disabled
-                          className="block w-full flex-1 rounded-l-lg text-slate-900 disabled:bg-gray-50 disabled:text-gray-500 border border-r-0 border-secondary-300 sm:text-sm sm:leading-6 font-mono"
+                          className="block w-full flex-1 rounded-l-lg
+                            text-slate-900 disabled:bg-gray-50
+                            disabled:text-gray-500 border border-r-0
+                            border-secondary-300 sm:text-sm sm:leading-6
+                            font-mono"
                         />
                         <button
                           type="button"
                           onClick={() => copyToClipboard(webhookUrl)}
-                          className="w-[100px] inline-block relative rounded-r-lg px-3 text-sm font-normal text-gray-900 border border-secondary-300 hover:bg-gray-50"
+                          className="w-[100px] inline-block relative
+                            rounded-r-lg px-3 text-sm font-normal
+                            text-gray-900 border border-secondary-300
+                            hover:bg-gray-50"
                         >
                           {copySuccess || "Copy URL"}
                         </button>
                       </div>
+                    </div>
+
+                    {/* Webhook Authentication Section */}
+                    <div
+                      className="space-y-2 pt-4 border-t
+                      border-slate-200"
+                    >
+                      <h4 className="text-sm font-medium text-slate-800">
+                        Webhook Authentication
+                      </h4>
+
+                      {!trigger.webhook_auth_methods ||
+                      trigger.webhook_auth_methods.length === 0 ? (
+                        <div className="text-xs text-slate-600 space-y-2">
+                          <p>
+                            Add an extra layer of security with Webhook
+                            authentication
+                          </p>
+                          <button
+                            type="button"
+                            onClick={() => setShowAuthModal(true)}
+                            disabled={
+                              !trigger.id ||
+                              !sessionContext.permissions
+                                ?.can_write_webhook_auth_method
+                            }
+                            className={cn(
+                              "link text-sm font-semibold inline-flex",
+                              "items-center gap-1",
+                              (!trigger.id ||
+                                !sessionContext.permissions
+                                  ?.can_write_webhook_auth_method) &&
+                                "text-gray-400 cursor-not-allowed",
+                              "no-underline"
+                            )}
+                          >
+                            <span className="hero-plus-micro h-4 w-4" />
+                            Add authentication
+                          </button>
+                          {!trigger.id && (
+                            <p className="text-xs text-amber-600 italic">
+                              Save the trigger first to add authentication
+                            </p>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="space-y-2">
+                          <div className="space-y-1">
+                            {trigger.webhook_auth_methods.map(method => (
+                              <div
+                                key={method.id}
+                                className="flex items-center gap-2 text-xs"
+                              >
+                                <span
+                                  className="hero-shield-check-micro h-4 w-4
+                                    text-green-600"
+                                />
+                                <span
+                                  className="font-medium
+                                  text-slate-700"
+                                >
+                                  {method.name}
+                                </span>
+                                <span className="text-slate-400">
+                                  (
+                                  {method.auth_type === "api"
+                                    ? "API Key"
+                                    : "Basic Auth"}
+                                  )
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => setShowAuthModal(true)}
+                            disabled={
+                              !trigger.id ||
+                              !sessionContext.permissions
+                                ?.can_write_webhook_auth_method
+                            }
+                            className={cn(
+                              "link text-sm font-semibold",
+                              (!trigger.id ||
+                                !sessionContext.permissions
+                                  ?.can_write_webhook_auth_method) &&
+                                "text-gray-400 cursor-not-allowed",
+                              "no-underline"
+                            )}
+                          >
+                            Manage authentication
+                          </button>
+                        </div>
+                      )}
                     </div>
                   </div>
                 );
@@ -580,6 +726,17 @@ export function TriggerForm({ trigger }: TriggerFormProps) {
           </form.Field>
         </form>
       </div>
+
+      {/* Webhook Auth Method Modal */}
+      {showAuthModal && (
+        <WebhookAuthMethodModal
+          trigger={trigger}
+          projectAuthMethods={sessionContext.webhookAuthMethods || []}
+          projectId={sessionContext.project?.id || ""}
+          onClose={() => setShowAuthModal(false)}
+          onSave={handleSaveAuthMethods}
+        />
+      )}
     </div>
   );
 }

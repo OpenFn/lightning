@@ -58,8 +58,15 @@ export namespace Session {
 
   export type Trigger = {
     id: string;
-    cron_expression: string;
+    type: string;
     enabled: boolean;
+    cron_expression: string | null;
+    has_auth_method: boolean;
+    webhook_auth_methods: Array<{
+      id: string;
+      name: string;
+      auth_type: string;
+    }> | null;
   };
 
   // This could be a common type if we take the inner type out of Y.Map

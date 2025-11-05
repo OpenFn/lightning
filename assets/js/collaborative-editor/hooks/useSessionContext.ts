@@ -183,3 +183,16 @@ export const useIsNewWorkflow = (): boolean => {
     selectIsNewWorkflow
   );
 };
+
+/**
+ * Hook to get the entire session context state
+ * Useful when you need multiple pieces of session context at once
+ * Returns the full session context state object
+ */
+export const useSessionContext = () => {
+  const sessionContextStore = useSessionContextStore();
+
+  const selectState = sessionContextStore.withSelector(state => state);
+
+  return useSyncExternalStore(sessionContextStore.subscribe, selectState);
+};

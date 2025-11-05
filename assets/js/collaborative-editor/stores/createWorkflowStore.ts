@@ -357,6 +357,38 @@ export const createWorkflowStore = () => {
     edgesArray.observeDeep(edgesObserver);
     positionsMap.observeDeep(positionsObserver);
 
+    // Set up channel listener for trigger auth methods updates
+    const triggerAuthMethodsHandler = (payload: unknown) => {
+      logger.debug("Received trigger_auth_methods_updated broadcast", payload);
+
+      // Type guard and validation
+      if (
+        typeof payload === "object" &&
+        payload !== null &&
+        "trigger_id" in payload &&
+        "webhook_auth_methods" in payload
+      ) {
+        const { trigger_id, webhook_auth_methods } = payload as {
+          trigger_id: string;
+          webhook_auth_methods: unknown;
+        };
+
+        // Update the trigger's webhook_auth_methods in local state
+        updateState(draft => {
+          const trigger = draft.triggers.find(t => t.id === trigger_id);
+          if (trigger && Array.isArray(webhook_auth_methods)) {
+            trigger.webhook_auth_methods =
+              webhook_auth_methods as Workflow.Trigger["webhook_auth_methods"];
+          }
+        }, "trigger_auth_methods_updated");
+      }
+    };
+
+    provider.channel.on(
+      "trigger_auth_methods_updated",
+      triggerAuthMethodsHandler
+    );
+
     // Store cleanup functions
     logger.debug("Attaching observers");
     observerCleanups = [
@@ -365,6 +397,11 @@ export const createWorkflowStore = () => {
       () => triggersArray.unobserveDeep(triggersObserver),
       () => edgesArray.unobserveDeep(edgesObserver),
       () => positionsMap.unobserveDeep(positionsObserver),
+      () =>
+        provider.channel.off(
+          "trigger_auth_methods_updated",
+          triggerAuthMethodsHandler
+        ),
     ];
 
     state = produce(state, draft => {
