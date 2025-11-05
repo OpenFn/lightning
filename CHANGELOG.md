@@ -14,10 +14,11 @@ and this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
-- Add the ability to search by dataclip name on the history page
-  [#3486] (https://github.com/OpenFn/lightning/issues/3486)
 
 ### Added
+
+- Add the ability to search by dataclip name on the history page
+  [#3486](https://github.com/OpenFn/lightning/issues/3486)
 
 ### Changed
 
