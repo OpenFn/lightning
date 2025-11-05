@@ -1,6 +1,6 @@
-import { useEffect } from "react";
+import { useEffect } from 'react';
 
-import { useWorkflowActions, useWorkflowState } from "./useWorkflow";
+import { useWorkflowActions, useWorkflowState } from './useWorkflow';
 
 /**
  * Simple type for TanStack Form instance
@@ -19,13 +19,10 @@ interface FormInstance {
     isTouched?: boolean;
     isDirty?: boolean;
   } | null;
-  setFieldMeta: (
-    fieldName: string,
-    updater: (old: unknown) => unknown
-  ) => void;
+  setFieldMeta: (fieldName: string, updater: (old: unknown) => unknown) => void;
 }
 
-const NO_ERRORS={}
+const NO_ERRORS = {};
 
 /**
  * Hook to integrate collaborative validation with TanStack Form
@@ -56,10 +53,8 @@ export function useValidation(form: FormInstance, errorPath?: string) {
       return state.workflow?.errors || {};
     }
 
-    const [entityType, entityId] = errorPath.split(".");
-    const entityCollection = state[
-      entityType as "jobs" | "triggers" | "edges"
-    ];
+    const [entityType, entityId] = errorPath.split('.');
+    const entityCollection = state[entityType as 'jobs' | 'triggers' | 'edges'];
 
     // Validate entity type at runtime - dynamic path parsing
     // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
@@ -87,20 +82,33 @@ export function useValidation(form: FormInstance, errorPath?: string) {
         // Only include fields that have been touched/interacted with
         // This preserves server errors for untouched fields
         if (fieldMeta?.isTouched || fieldMeta?.isDirty) {
-          if (fieldMeta?.errors && fieldMeta.errors.length > 0) {
-            // Field has validation errors
-            clientErrors[fieldName] = fieldMeta.errors.map((e: unknown) =>
-              typeof e === "string" ? e : String(e)
+          // Get client validation errors (exclude collaborative errors from errorMap)
+          const meta = fieldMeta as unknown as Record<string, unknown>;
+          const errorMap = (meta?.errorMap as Record<string, unknown>) || {};
+
+          // Filter out collaborative errors - only send client validation errors
+          const clientValidationErrors = (fieldMeta?.errors || []).filter(
+            (error: unknown) => {
+              // If this error matches the collaborative error, exclude it
+              const collaborativeError = errorMap.collaborative;
+              return error !== collaborativeError;
+            }
+          );
+
+          if (clientValidationErrors.length > 0) {
+            // Field has client validation errors
+            clientErrors[fieldName] = clientValidationErrors.map(
+              (e: unknown) => (typeof e === 'string' ? e : String(e))
             );
           } else {
-            // Field is valid - send empty array to clear
+            // Field is valid or only has collaborative errors - send empty array to clear
             clientErrors[fieldName] = [];
           }
         }
       });
 
       // Write to store (debounced, with merge+dedupe)
-      setClientErrors(errorPath || "workflow", clientErrors);
+      setClientErrors(errorPath || 'workflow', clientErrors);
     });
 
     return () => unsubscribe();
@@ -108,55 +116,65 @@ export function useValidation(form: FormInstance, errorPath?: string) {
 
   // Inject collaborative errors into TanStack Form
   useEffect(() => {
-    // Clear all previous collaborative errors first
+    // Track which fields currently have collaborative errors
+    const fieldsWithErrors = new Set(Object.keys(collaborativeErrors));
+
+    // Process all form fields
     Object.keys(form.state.values).forEach(fieldName => {
       const currentMeta = form.getFieldMeta(fieldName);
-      if (currentMeta) {
+      if (!currentMeta) return;
+
+      const hasCollaborativeError = fieldsWithErrors.has(fieldName);
+      const fieldMeta = currentMeta;
+
+      // Check if field has CLIENT validation errors (excluding collaborative)
+      const meta = fieldMeta as unknown as Record<string, unknown>;
+      const errorMap = (meta?.errorMap as Record<string, unknown>) || {};
+      const collaborativeError = errorMap.collaborative;
+
+      const hasClientValidationErrors = (fieldMeta?.errors || []).some(
+        (error: unknown) => error !== collaborativeError
+      );
+
+      // Skip if field has client validation errors (prevents duplicates)
+      // But don't skip if it only has collaborative errors - we might need to clear them
+      if (hasClientValidationErrors) {
+        return;
+      }
+
+      // Determine what the collaborative error should be
+      const errorMessage = hasCollaborativeError
+        ? Array.isArray(collaborativeErrors[fieldName]) &&
+          collaborativeErrors[fieldName].length > 0
+          ? collaborativeErrors[fieldName][0]
+          : undefined
+        : undefined;
+
+      // Only update if the collaborative error changed
+      const oldRecord = currentMeta as Record<string, unknown>;
+      const oldErrorMap =
+        (oldRecord['errorMap'] as Record<string, unknown> | undefined) ?? {};
+      const currentCollaborativeError = oldErrorMap.collaborative;
+
+      if (currentCollaborativeError !== errorMessage) {
         form.setFieldMeta(fieldName, (old: unknown) => {
-          const oldRecord = old as Record<string, unknown>;
+          const rec = old as Record<string, unknown>;
+          const errMap =
+            (rec['errorMap'] as Record<string, unknown> | undefined) ?? {};
+
           return {
-            ...oldRecord,
+            ...rec,
+            // CRITICAL: Explicitly preserve dirty/touched state
+            // Without this, form changes don't sync after server errors
+            isTouched: rec.isTouched,
+            isDirty: rec.isDirty,
             errorMap: {
-              ...(oldRecord["errorMap"] as Record<string, unknown>),
-              collaborative: undefined,
+              ...errMap,
+              collaborative: errorMessage,
             },
           };
         });
       }
     });
-
-    // Inject collaborative errors
-    Object.entries(collaborativeErrors).forEach(
-      ([fieldName, errorMessages]) => {
-        if (fieldName in form.state.values) {
-          const fieldMeta = form.getFieldMeta(fieldName);
-
-          // Skip injection if field already has validation errors from TanStack Form
-          // This prevents duplicates for the user who created the error
-          // Other users will still see the error since they don't have validation errors
-          if (fieldMeta?.errors && fieldMeta.errors.length > 0) {
-            return;
-          }
-
-          const errorMessage =
-            Array.isArray(errorMessages) && errorMessages.length > 0
-              ? errorMessages[0]
-              : undefined;
-
-          form.setFieldMeta(fieldName, (old: unknown) => {
-            const oldRecord = (old as Record<string, unknown> | undefined) ?? {};
-            const oldErrorMap =
-              (oldRecord.errorMap as Record<string, unknown> | undefined) ?? {};
-            return {
-              ...oldRecord,
-              errorMap: {
-                ...oldErrorMap,
-                collaborative: errorMessage,
-              },
-            };
-          });
-        }
-      }
-    );
   }, [collaborativeErrors, form]);
 }
