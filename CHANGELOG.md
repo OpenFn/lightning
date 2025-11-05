@@ -26,6 +26,8 @@ and this project adheres to
 
 - Exception when cleaning up old persisted documents
   [#3932](https://github.com/OpenFn/lightning/issues/3932)
+- Legacy canvas new job nodes no longer auto-populate with adaptor name
+  [#3920](https://github.com/OpenFn/lightning/issues/3920)
 
 ## [2.14.14-pre2] - 2025-11-04
 
