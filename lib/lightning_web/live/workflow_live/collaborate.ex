@@ -158,7 +158,7 @@ defmodule LightningWeb.WorkflowLive.Collaborate do
           JS.dispatch("close_webhook_auth_modal", to: "#collaborative-editor-react")
         }
         on_save={
-          fn _auth_method ->
+          fn _ ->
             send(self(), :webhook_auth_method_saved)
             :ok
           end
@@ -227,6 +227,8 @@ defmodule LightningWeb.WorkflowLive.Collaborate do
   def handle_info(:webhook_auth_method_saved, socket) do
     # Broadcast webhook auth methods update to all connected clients
     broadcast_webhook_auth_methods_update(socket)
+
+    socket = push_event(socket, "webhook_auth_method_saved", %{})
 
     # Update server state to close the modal
     send(self(), :close_webhook_auth_modal_after_save)

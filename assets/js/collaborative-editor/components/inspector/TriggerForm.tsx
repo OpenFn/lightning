@@ -30,7 +30,7 @@ const logger = _logger.ns("TriggerForm").seal();
  */
 export function TriggerForm({ trigger }: TriggerFormProps) {
   const { updateTrigger } = useWorkflowActions();
-  const { pushEvent } = useLiveViewActions();
+  const { pushEvent, handleEvent } = useLiveViewActions();
   const [copySuccess, setCopySuccess] = useState<string>("");
   const [showAdvancedSettings, setShowAdvancedSettings] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
@@ -57,6 +57,12 @@ export function TriggerForm({ trigger }: TriggerFormProps) {
     `/i/${trigger.id}`,
     window.location.origin
   ).toString();
+
+  useEffect(() => {
+    handleEvent("webhook_auth_method_saved", () => {
+      setShowAuthModal(true);
+    });
+  }, [handleEvent]);
 
   // Listen for webhook auth modal close event
   useEffect(() => {
