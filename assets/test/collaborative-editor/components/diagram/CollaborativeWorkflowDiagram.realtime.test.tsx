@@ -83,6 +83,7 @@ describe('CollaborativeWorkflowDiagram - Real-time Run Updates', () => {
     runStepsSubscribers: Record<string, Set<string>>;
     runStepsLoading: Set<string>;
   };
+  let previousHistoryState: typeof historyState;
   let historySubscribers: Set<() => void>;
   let requestRunStepsMock: ReturnType<typeof vi.fn>;
   let getRunStepsMock: ReturnType<typeof vi.fn>;
@@ -132,16 +133,88 @@ describe('CollaborativeWorkflowDiagram - Real-time Run Updates', () => {
       historyStore: {
         getSnapshot: historyGetSnapshot,
         subscribe: (callback: () => void) => {
-          historySubscribers.add(callback);
-          return () => historySubscribers.delete(callback);
+          const enhancedCallback = () => {
+            // Simulate cache invalidation on history update
+            // Detect which runs changed by comparing states
+            const currentState = historyGetSnapshot();
+            const changedRunIds = new Set<string>();
+
+            // Check which runs have changed state
+            currentState.history.forEach(wo => {
+              wo.runs.forEach(run => {
+                const prevWo = previousHistoryState?.history.find(
+                  w => w.id === wo.id
+                );
+                const prevRun = prevWo?.runs.find(r => r.id === run.id);
+
+                if (
+                  !prevRun ||
+                  prevRun.state !== run.state ||
+                  prevRun.finished_at !== run.finished_at ||
+                  prevRun.started_at !== run.started_at
+                ) {
+                  changedRunIds.add(run.id);
+                }
+              });
+            });
+
+            // For each changed run that has subscribers, invalidate cache and refetch
+            changedRunIds.forEach(runId => {
+              if (currentState.runStepsSubscribers[runId]?.size > 0) {
+                // Invalidate cache
+                delete currentState.runStepsCache[runId];
+                // Trigger refetch
+                void requestRunStepsMock(runId);
+              }
+            });
+
+            // Update previous state for next comparison (deep clone)
+            previousHistoryState = {
+              ...currentState,
+              history: currentState.history.map(wo => ({
+                ...wo,
+                runs: [...wo.runs],
+              })),
+              runStepsCache: { ...currentState.runStepsCache },
+              runStepsSubscribers: { ...currentState.runStepsSubscribers },
+              runStepsLoading: new Set(currentState.runStepsLoading),
+            };
+
+            // Call original callback
+            callback();
+          };
+          historySubscribers.add(enhancedCallback);
+          return () => historySubscribers.delete(enhancedCallback);
         },
         withSelector: createWithSelectorMock(historyGetSnapshot),
         requestHistory: vi.fn(),
         clearError: vi.fn(),
         getRunSteps: getRunStepsMock,
         requestRunSteps: requestRunStepsMock,
-        subscribeToRunSteps: vi.fn(),
-        unsubscribeFromRunSteps: vi.fn(),
+        subscribeToRunSteps: vi.fn((runId: string, subscriberId: string) => {
+          // Add to subscribers
+          const state = historyGetSnapshot();
+          if (!state.runStepsSubscribers[runId]) {
+            state.runStepsSubscribers[runId] = new Set();
+          }
+          state.runStepsSubscribers[runId].add(subscriberId);
+
+          // Fetch if not cached
+          if (
+            !state.runStepsCache[runId] &&
+            !state.runStepsLoading.has(runId)
+          ) {
+            void requestRunStepsMock(runId);
+          }
+        }),
+        unsubscribeFromRunSteps: vi.fn(
+          (runId: string, subscriberId: string) => {
+            const state = historyGetSnapshot();
+            if (state.runStepsSubscribers[runId]) {
+              state.runStepsSubscribers[runId].delete(subscriberId);
+            }
+          }
+        ),
       } as any,
       uiStore: {} as any,
       runStore: {} as any,
@@ -210,6 +283,15 @@ describe('CollaborativeWorkflowDiagram - Real-time Run Updates', () => {
       runStepsLoading: new Set(),
     };
 
+    // Initialize previous state for comparison (deep clone)
+    previousHistoryState = {
+      ...historyState,
+      history: historyState.history.map(wo => ({ ...wo, runs: [...wo.runs] })),
+      runStepsCache: { ...historyState.runStepsCache },
+      runStepsSubscribers: { ...historyState.runStepsSubscribers },
+      runStepsLoading: new Set(historyState.runStepsLoading),
+    };
+
     // Mock URL with run ID
     Object.defineProperty(window, 'location', {
       value: {
@@ -271,7 +353,8 @@ describe('CollaborativeWorkflowDiagram - Real-time Run Updates', () => {
       expect(requestRunStepsMock).toHaveBeenCalledTimes(1);
     });
 
-    // Simulate first update: "started" -> "running"
+    // Simulate first update: run still executing (started_at gets updated or steps change)
+    // We update the started_at timestamp to simulate progress
     historyState = {
       ...historyState,
       history: [
@@ -281,6 +364,7 @@ describe('CollaborativeWorkflowDiagram - Real-time Run Updates', () => {
             {
               ...historyState.history[0].runs[0],
               state: 'started',
+              started_at: '2024-01-01T10:00:30Z', // 30 seconds later
             } as Run,
           ],
         } as WorkOrder,
@@ -400,13 +484,11 @@ describe('CollaborativeWorkflowDiagram - Real-time Run Updates', () => {
     };
     historySubscribers.forEach(callback => callback());
 
-    // Should re-fetch for run-1 (selected) even though run-2 changed
-    // This is expected behavior - we re-fetch whenever history updates
-    // and a run is selected (could be optimized in future to only
-    // re-fetch if the selected run itself changed)
-    await waitFor(() => {
-      expect(requestRunStepsMock).toHaveBeenCalledTimes(2);
-      expect(requestRunStepsMock).toHaveBeenCalledWith('run-1');
-    });
+    // Should NOT re-fetch for run-1 since only run-2 changed
+    // The new implementation only refetches when the selected run itself changes
+    // This is more efficient than refetching on every history update
+    await new Promise(resolve => setTimeout(resolve, 100));
+    expect(requestRunStepsMock).toHaveBeenCalledTimes(1); // Still just the initial fetch
+    expect(requestRunStepsMock).toHaveBeenCalledWith('run-1');
   });
 });
