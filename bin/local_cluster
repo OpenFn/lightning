@@ -1,0 +1,250 @@
+#!/usr/bin/env bash
+
+# =============================================================================
+# Lightning Local Cluster Development Script
+# =============================================================================
+#
+# Start multiple Lightning nodes on a single machine to test and develop
+# distributed features like clustering, presence tracking, and PubSub.
+#
+# OVERVIEW
+# --------
+# This script launches 1-4 Lightning Phoenix nodes, each running as a named
+# Erlang node that can communicate via distributed Erlang. Each node gets:
+#   - Unique HTTP port (4000-4003 without --proxy, 4001-4004 with --proxy)
+#   - Unique RTM worker port (2222-2225)
+#   - Named Erlang node (node1@127.0.0.1 - node4@127.0.0.1)
+#   - Color-coded console output for easy log monitoring
+#
+# Without --proxy: Nodes run on ports 4000, 4001, 4002, 4003 (no load balancing)
+# With --proxy: Caddy load balancer on :4000 routes to nodes on 4001-4004
+#
+# USAGE
+# -----
+# Start a 2-node cluster (default):
+#   ./bin/local_cluster
+#
+# Start 4 nodes:
+#   ./bin/local_cluster --count 4
+#
+# Start with Caddy load balancer:
+#   ./bin/local_cluster --proxy --count 3
+#   # Caddy on :4000 routes to nodes on :4001-4003
+#
+# Connect to a running node's IEx shell:
+#   ./bin/local_cluster connect 1
+#   # Now you can run Erlang commands like: Node.list()
+#
+# REQUIREMENTS
+# ------------
+# - Elixir/Phoenix development environment
+# - Caddy (optional, only for --proxy mode)
+#   Mac: brew install caddy
+#   Linux: apt install caddy
+#
+# ENVIRONMENT VARIABLES
+# ---------------------
+# COOKIE            Erlang distribution cookie (default: "my-super-secret")
+# LIVE_DEBUGGER     Enable Phoenix LiveDashboard debugger (default: false)
+#                   NOTE: Disabled by default because LiveDebugger hasn't been
+#                   configured for unique ports per node and will conflict on
+#                   startup when running multiple nodes
+# LOG_LEVEL         Override default log level (debug, info, warn, error)
+#
+# HOW IT WORKS
+# ------------
+# Each node is started with environment variables that configure unique ports:
+#   - PORT: Phoenix HTTP endpoint (4000 + node_num - 1)
+#   - RTM_PORT: Runtime manager worker socket (2222 + node_num - 1)
+#
+# The nodes automatically discover each other via libcluster (configured in
+# config/config.exs) and form an Erlang cluster. This enables testing of:
+#   - Distributed PubSub message broadcasting
+#   - Presence tracking across nodes
+#   - Collaborative editing with multiple server instances
+#   - Load balancing and failover behavior
+#
+# OUTPUT
+# ------
+# Each node's output is prefixed with a colored label (node1, node2, etc.)
+# making it easy to distinguish which node is logging what.
+#
+# STOPPING
+# --------
+# Press Ctrl+C to stop all nodes. The script will clean up all child processes.
+#
+# =============================================================================
+
+COOKIE=${COOKIE:-"my-super-secret"}
+export LIVE_DEBUGGER=${LIVE_DEBUGGER:-false}
+
+# Function to show usage
+show_usage() {
+  echo "Usage:"
+  echo "  $0 [--proxy] --count <number>     Start local cluster (default: 2 instances)"
+  echo "  $0 connect <node_number>          Connect to a specific node (1-4)"
+  echo ""
+  echo "Options:"
+  echo "  --proxy         Start a Caddy reverse proxy on port 4000 (nodes will start from 4001)"
+  echo "  --count <num>   Number of nodes to start (1-4, default: 2)"
+  exit 1
+}
+
+
+# Handle connect subcommand
+if [ "$1" = "connect" ]; then
+  if [ -z "$2" ] || ! [[ "$2" =~ ^[1-4]$ ]]; then
+    echo "Error: Please specify a valid node number (1-4)"
+    show_usage
+  fi
+
+  NODE_NUM=$2
+  echo "Connecting to node${NODE_NUM}@127.0.0.1..."
+  exec iex --name "remote_shell${NODE_NUM}@127.0.0.1" --cookie "${COOKIE}" --remsh "node${NODE_NUM}@127.0.0.1"
+  # The exec command replaces the current process, so we don't need an explicit exit
+  # If we reach this point, it means the exec failed, so we'll exit with its status code
+  exit $?
+fi
+
+# Parse arguments
+USE_PROXY=false
+INSTANCES=2
+
+while [[ $# -gt 0 ]]; do
+  case $1 in
+  --proxy)
+    USE_PROXY=true
+    shift
+    ;;
+  --count)
+    if [ -z "$2" ] || ! [[ "$2" =~ ^[0-9]+$ ]]; then
+      echo "Error: --count requires a numeric argument"
+      show_usage
+    fi
+    INSTANCES=$2
+    shift 2
+    ;;
+  *)
+    echo "Unknown argument: $1"
+    show_usage
+    ;;
+  esac
+done
+
+# Validate number of instances
+if ! [[ "$INSTANCES" =~ ^[0-9]+$ ]]; then
+  echo "Error: Number of instances must be a positive integer"
+  show_usage
+fi
+
+if [ "$INSTANCES" -lt 1 ] || [ "$INSTANCES" -gt 4 ]; then
+  echo "Error: Number of instances must be between 1 and 4"
+  show_usage
+fi
+
+# Check for Caddy if proxy is requested
+if [ "$USE_PROXY" = true ]; then
+  if ! command -v caddy &>/dev/null; then
+    echo "Error: Caddy is required for proxy mode but it's not installed"
+    echo "Please install Caddy first:"
+    echo "  Mac: brew install caddy"
+    echo "  Linux: sudo apt install caddy"
+    echo "  Or visit: https://caddyserver.com/docs/install"
+    exit 1
+  fi
+fi
+
+# Array to store background PIDs
+declare -a PIDS
+
+# Colors for different processes
+declare -a COLORS=(
+  "\033[0;36m" # Cyan
+  "\033[0;32m" # Green
+  "\033[0;35m" # Purple
+  "\033[0;33m" # Yellow
+  "\033[0;37m" # Gray (for proxy)
+)
+RESET="\033[0m"
+
+# Cleanup function to kill all child processes
+cleanup() {
+  echo "Shutting down all processes..."
+  for pid in "${PIDS[@]}"; do
+    kill "$pid" 2>/dev/null
+  done
+  exit 0
+}
+
+# Set up trap for cleanup
+trap cleanup INT TERM
+
+# Function to run a command with colored output
+run_with_color() {
+  local color=$1
+  local prefix=$2
+  shift 2
+  # Run the command and color its output
+  "$@" 2>&1 | while read -r line; do
+    echo -e "${color}${prefix} | ${line}${RESET}"
+  done
+}
+
+# Create Caddy configuration if proxy is enabled
+if [ "$USE_PROXY" = true ]; then
+  BASE_PORT=4001
+  CADDY_CONFIG=$(mktemp)
+  echo "Creating Caddy configuration..."
+  cat >"$CADDY_CONFIG" <<EOF
+# Global options
+{
+    admin off
+    auto_https off
+    http_port 4000
+}
+
+# Reverse proxy configuration
+localhost:4000 {
+    reverse_proxy {
+        to $(for i in $(seq 1 "$INSTANCES"); do echo "localhost:$((BASE_PORT + i - 1))"; done | paste -sd " " -)
+        lb_policy round_robin
+    }
+}
+EOF
+
+  # Only log Caddy config if LOG_LEVEL is debug
+  if [ "${LOG_LEVEL:-}" = "debug" ]; then
+    echo "Caddy config:"
+    cat "$CADDY_CONFIG"
+  fi
+
+  # Start Caddy
+  run_with_color "${COLORS[4]}" "proxy" caddy run --adapter caddyfile --config "$CADDY_CONFIG" &
+  PIDS+=($!)
+
+  # Cleanup Caddy config on exit
+  trap 'rm -f "$CADDY_CONFIG"' EXIT
+
+  echo "Started reverse proxy on port 4000"
+else
+  BASE_PORT=4000
+fi
+
+# Start the requested number of instances
+for i in $(seq 1 "$INSTANCES"); do
+  export RTM_PORT=$((2222 + i - 1)) PORT=$((BASE_PORT + i - 1))
+  run_with_color "${COLORS[$i - 1]}" "node$i" elixir --cookie "${COOKIE}" --name "node$i@127.0.0.1" -S mix phx.server &
+  PIDS+=($!)
+done
+
+if [ "$USE_PROXY" = true ]; then
+  echo "Started $INSTANCES node(s) on ports $((BASE_PORT))-$((BASE_PORT + INSTANCES - 1)) with load balancer on port 4000"
+  echo "RTM ports: 2222-$((2222 + INSTANCES - 1))"
+else
+  echo "Started $INSTANCES node(s) on ports $((BASE_PORT))-$((BASE_PORT + INSTANCES - 1))"
+  echo "RTM ports: 2222-$((2222 + INSTANCES - 1))"
+fi
+echo "To connect to a specific node, use: $0 connect <node_number>"
+
+# Wait for all background processes
+wait

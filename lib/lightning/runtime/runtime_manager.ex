@@ -41,7 +41,7 @@ defmodule Lightning.Runtime.RuntimeManager do
               cd: Path.expand("../../../assets", __DIR__),
               cmd: ~w(node ./node_modules/.bin/worker),
               env: [],
-              port: 2222,
+              port: Lightning.Config.runtime_manager_port(),
               repo_dir: nil,
               worker_secret: nil,
               endpoint: nil,

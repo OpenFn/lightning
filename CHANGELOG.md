@@ -21,6 +21,10 @@ and this project adheres to
 
 ### Fixed
 
+- Shared doc lookup in clustered environments now works across nodes instead of
+  only searching locally
+  [#3910](https://github.com/OpenFn/lightning/issues/3910)
+
 ## [2.14.14] - 2025-11-05
 
 ### Added
