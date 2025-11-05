@@ -24,6 +24,9 @@ and this project adheres to
 
 ### Fixed
 
+- Exception when cleaning up old persisted documents
+  [#3932](https://github.com/OpenFn/lightning/issues/3932)
+
 ## [2.14.14-pre2] - 2025-11-04
 
 ### Added
