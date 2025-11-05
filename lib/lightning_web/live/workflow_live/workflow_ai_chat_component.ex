@@ -31,10 +31,16 @@ defmodule LightningWeb.WorkflowLive.WorkflowAiChatComponent do
         },
         socket
       ) do
-    {:ok,
-     socket
-     |> assign(session_or_message: session_or_message)
-     |> push_event("template_selected", %{template: code})}
+    socket = assign(socket, session_or_message: session_or_message)
+
+    socket =
+      if code != nil and code != "" do
+        push_event(socket, "template_selected", %{template: code})
+      else
+        socket
+      end
+
+    {:ok, socket}
   end
 
   def update(assigns, socket) do

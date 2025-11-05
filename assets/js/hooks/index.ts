@@ -4,6 +4,7 @@ import tippy, {
 } from 'tippy.js';
 import { format, formatRelative } from 'date-fns';
 import { enUS } from 'date-fns/locale';
+import { marked } from 'marked';
 import type { PhoenixHook } from './PhoenixHook';
 
 import LogLineHighlight from './LogLineHighlight';
@@ -684,7 +685,36 @@ export const BlurDataclipEditor = {
 
 export const ScrollToMessage = {
   mounted() {
+    this.shouldAutoScroll = true;
+
+    this.handleScrollThrottled = this.throttle(() => {
+      const isAtBottom = this.isAtBottom();
+      this.shouldAutoScroll = isAtBottom;
+    }, 100);
+
+    this.el.addEventListener('scroll', this.handleScrollThrottled);
     this.handleScroll();
+  },
+
+  destroyed() {
+    if (this.handleScrollThrottled) {
+      this.el.removeEventListener('scroll', this.handleScrollThrottled);
+    }
+    if (this.throttleTimeout !== undefined) {
+      clearTimeout(this.throttleTimeout);
+    }
+  },
+
+  throttle(func: () => void, wait: number): () => void {
+    return () => {
+      if (this.throttleTimeout !== undefined) {
+        clearTimeout(this.throttleTimeout);
+      }
+      this.throttleTimeout = setTimeout(() => {
+        func();
+        this.throttleTimeout = undefined;
+      }, wait) as unknown as number;
+    };
   },
 
   updated() {
@@ -696,7 +726,7 @@ export const ScrollToMessage = {
 
     if (targetMessageId) {
       this.scrollToSpecificMessage(targetMessageId);
-    } else {
+    } else if (this.shouldAutoScroll) {
       this.scrollToBottom();
     }
   },
@@ -717,18 +747,25 @@ export const ScrollToMessage = {
     }
   },
 
+  isAtBottom() {
+    const threshold = 50;
+    const position = this.el.scrollTop + this.el.clientHeight;
+    const height = this.el.scrollHeight;
+    return height - position <= threshold;
+  },
+
   scrollToBottom() {
-    setTimeout(() => {
-      this.el.scrollTo({
-        top: this.el.scrollHeight,
-        behavior: 'smooth',
-      });
-    }, 600);
+    this.el.scrollTop = this.el.scrollHeight;
   },
 } as PhoenixHook<{
+  shouldAutoScroll: boolean;
+  handleScrollThrottled?: () => void;
+  throttleTimeout?: number;
+  throttle: (func: () => void, wait: number) => () => void;
   handleScroll: () => void;
   scrollToSpecificMessage: (messageId: string) => void;
   scrollToBottom: () => void;
+  isAtBottom: () => boolean;
 }>;
 
 export const Copy = {
@@ -1019,4 +1056,96 @@ export const LocalTimeConverter = {
 } as PhoenixHook<{
   convertDateTime: () => void;
   convertToDisplayTime: (isoTimestamp: string, display: string) => void;
+}>;
+
+export const StreamingText = {
+  mounted() {
+    this.lastContent = '';
+    this.renderer = this.createCustomRenderer();
+    this.parseCount = 0;
+    this.pendingUpdate = undefined;
+    this.updateContent();
+  },
+
+  updated() {
+    // Debounce updates by 50ms to batch rapid chunk arrivals
+    if (this.pendingUpdate !== undefined) {
+      clearTimeout(this.pendingUpdate);
+    }
+
+    this.pendingUpdate = setTimeout(() => {
+      this.updateContent();
+      this.pendingUpdate = undefined;
+    }, 50) as unknown as number;
+  },
+
+  destroyed() {
+    if (this.pendingUpdate !== undefined) {
+      clearTimeout(this.pendingUpdate);
+    }
+  },
+
+  createCustomRenderer() {
+    const renderer = new marked.Renderer();
+
+    renderer.code = (code, language) => {
+      const lang = language ? ` class="${language}"` : '';
+      return `<pre class="rounded-md font-mono bg-slate-100 border-2 border-slate-200 text-slate-800 my-4 p-2 overflow-auto"><code${lang}>${code}</code></pre>`;
+    };
+
+    renderer.link = (href, title, text) => {
+      return `<a href="${href}" class="text-primary-400 hover:text-primary-600" target="_blank">${text}</a>`;
+    };
+
+    renderer.heading = (text, level) => {
+      const classes = level === 1 ? 'text-2xl font-bold mb-6' : 'text-xl font-semibold mb-4 mt-8';
+      return `<h${level} class="${classes}">${text}</h${level}>`;
+    };
+
+    renderer.list = (body, ordered) => {
+      const tag = ordered ? 'ol' : 'ul';
+      const classes = ordered ? 'list-decimal pl-8 space-y-1' : 'list-disc pl-8 space-y-1';
+      return `<${tag} class="${classes}">${body}</${tag}>`;
+    };
+
+    renderer.listitem = (text) => {
+      return `<li class="text-gray-800">${text}</li>`;
+    };
+
+    renderer.paragraph = (text) => {
+      return `<p class="mt-1 mb-2 text-gray-800">${text}</p>`;
+    };
+
+    return renderer;
+  },
+
+  updateContent() {
+    const start = performance.now();
+    const newContent = this.el.dataset.streamingContent || '';
+
+    if (newContent !== this.lastContent) {
+      this.parseCount++;
+
+      const htmlContent = marked.parse(newContent, {
+        renderer: this.renderer,
+        breaks: true,
+        gfm: true,
+      });
+
+      this.el.innerHTML = htmlContent;
+      this.lastContent = newContent;
+
+      const duration = performance.now() - start;
+      console.debug(
+        `[StreamingText] Parse #${this.parseCount}: ${duration.toFixed(2)}ms for ${newContent.length} chars`
+      );
+    }
+  },
+} as PhoenixHook<{
+  lastContent: string;
+  renderer: marked.Renderer;
+  parseCount: number;
+  pendingUpdate?: number;
+  createCustomRenderer: () => marked.Renderer;
+  updateContent: () => void;
 }>;
