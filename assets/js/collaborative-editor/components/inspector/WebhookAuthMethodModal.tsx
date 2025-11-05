@@ -10,6 +10,7 @@ import { useHotkeysContext } from "react-hotkeys-hook";
 import { cn } from "#/utils/cn";
 
 import { HOTKEY_SCOPES } from "../../constants/hotkeys";
+import { useLiveViewActions } from "../../contexts/LiveViewActionsContext";
 import type { WebhookAuthMethod } from "../../types/sessionContext";
 import type { Workflow } from "../../types/workflow";
 
@@ -43,6 +44,7 @@ export function WebhookAuthMethodModal({
 
   // Keyboard scope management
   const { enableScope, disableScope } = useHotkeysContext();
+  const { pushEvent } = useLiveViewActions();
 
   useEffect(() => {
     enableScope(HOTKEY_SCOPES.MODAL);
@@ -149,14 +151,16 @@ export function WebhookAuthMethodModal({
                   <p className="text-sm text-gray-600 mb-2">
                     No webhook authentication methods available.
                   </p>
-                  <a
-                    href={`/projects/${projectId}/settings#webhook_security`}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onClose();
+                      pushEvent("open_webhook_auth_modal", {});
+                    }}
                     className="link text-sm"
-                    target="_blank"
-                    rel="noopener noreferrer"
                   >
-                    Create one in project settings
-                  </a>
+                    Create a new authentication method
+                  </button>
                 </div>
               ) : (
                 <div className="space-y-2">
@@ -205,7 +209,17 @@ export function WebhookAuthMethodModal({
               {projectAuthMethods.length > 0 && (
                 <div className="mt-4 pt-4 border-t border-gray-200">
                   <p className="text-xs text-gray-500">
-                    Webhook authentication methods are managed in{" "}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onClose();
+                        pushEvent("open_webhook_auth_modal", {});
+                      }}
+                      className="link"
+                    >
+                      Create a new authentication method
+                    </button>
+                    {" or manage them in "}
                     <a
                       href={`/projects/${projectId}/settings#webhook_security`}
                       className="link"

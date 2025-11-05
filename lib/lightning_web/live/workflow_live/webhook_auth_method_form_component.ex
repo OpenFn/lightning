@@ -19,15 +19,21 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodFormComponent do
           assigns,
         socket
       ) do
+    show_existing = Map.get(assigns, :show_existing_credentials, true)
+
+    project_webhook_auth_methods =
+      if show_existing do
+        WebhookAuthMethods.list_for_project(%Project{
+          id: webhook_auth_method.project_id
+        })
+      else
+        []
+      end
+
     {:ok,
      socket
      |> assign(:changeset, WebhookAuthMethod.changeset(webhook_auth_method, %{}))
-     |> assign(
-       :project_webhook_auth_methods,
-       WebhookAuthMethods.list_for_project(%Project{
-         id: webhook_auth_method.project_id
-       })
-     )
+     |> assign(:project_webhook_auth_methods, project_webhook_auth_methods)
      |> assign(assigns)
      |> assign(sudo_mode?: false)
      |> assign(show_2fa_options: false)
@@ -133,10 +139,18 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodFormComponent do
           socket.assigns.on_save.(webhook_auth_method)
         end
 
-        {:noreply,
-         socket
-         |> put_flash(:info, "Webhook auth method updated successfully")
-         |> push_patch(to: socket.assigns.return_to)}
+        socket =
+          socket
+          |> put_flash(:info, "Webhook auth method updated successfully")
+
+        socket =
+          if socket.assigns.return_to do
+            push_patch(socket, to: socket.assigns.return_to)
+          else
+            socket
+          end
+
+        {:noreply, socket}
 
       {:error, %Ecto.Changeset{} = changeset} ->
         {:noreply, assign(socket, :changeset, changeset)}
@@ -158,10 +172,18 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodFormComponent do
           socket.assigns.on_save.(auth_method)
         end
 
-        {:noreply,
-         socket
-         |> put_flash(:info, "Webhook auth method created successfully")
-         |> push_patch(to: socket.assigns.return_to)}
+        socket =
+          socket
+          |> put_flash(:info, "Webhook auth method created successfully")
+
+        socket =
+          if socket.assigns.return_to do
+            push_patch(socket, to: socket.assigns.return_to)
+          else
+            socket
+          end
+
+        {:noreply, socket}
 
       {:error, %Ecto.Changeset{} = changeset} ->
         {:noreply, assign(socket, changeset: changeset)}
@@ -179,10 +201,18 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodFormComponent do
           socket.assigns.on_save.(webhook_auth_method)
         end
 
-        {:noreply,
-         socket
-         |> put_flash(:info, "Webhook auth method created successfully")
-         |> push_patch(to: socket.assigns.return_to)}
+        socket =
+          socket
+          |> put_flash(:info, "Webhook auth method created successfully")
+
+        socket =
+          if socket.assigns.return_to do
+            push_patch(socket, to: socket.assigns.return_to)
+          else
+            socket
+          end
+
+        {:noreply, socket}
 
       {:error, %Ecto.Changeset{} = changeset} ->
         {:noreply, assign(socket, :changeset, changeset)}

@@ -1,9 +1,10 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import { TriggerSchema } from "#/collaborative-editor/types/trigger";
 import { cn } from "#/utils/cn";
 import _logger from "#/utils/logger";
 
+import { useLiveViewActions } from "../../contexts/LiveViewActionsContext";
 import { channelRequest } from "../../hooks/useChannel";
 import { useSession } from "../../hooks/useSession";
 import { useSessionContext } from "../../hooks/useSessionContext";
@@ -29,6 +30,7 @@ const logger = _logger.ns("TriggerForm").seal();
  */
 export function TriggerForm({ trigger }: TriggerFormProps) {
   const { updateTrigger } = useWorkflowActions();
+  const { pushEvent } = useLiveViewActions();
   const [copySuccess, setCopySuccess] = useState<string>("");
   const [showAdvancedSettings, setShowAdvancedSettings] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
@@ -55,6 +57,23 @@ export function TriggerForm({ trigger }: TriggerFormProps) {
     `/i/${trigger.id}`,
     window.location.origin
   ).toString();
+
+  // Listen for webhook auth modal close event
+  useEffect(() => {
+    const handleModalClose = () => {
+      pushEvent("close_webhook_auth_modal_complete", {});
+    };
+
+    const element = document.getElementById("collaborative-editor-react");
+    element?.addEventListener("close_webhook_auth_modal", handleModalClose);
+
+    return () => {
+      element?.removeEventListener(
+        "close_webhook_auth_modal",
+        handleModalClose
+      );
+    };
+  }, [pushEvent]);
 
   // Copy to clipboard function
   const copyToClipboard = useCallback((text: string) => {
