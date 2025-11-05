@@ -381,7 +381,8 @@ defmodule Lightning.Collaboration.PersistenceWriter do
     latest_checkpoint =
       Repo.one(
         from d in DocumentState,
-          where: d.document_name == ^document_name and d.version == "checkpoint",
+          where:
+            d.document_name == ^document_name and d.version == ^"checkpoint",
           order_by: [desc: d.inserted_at],
           limit: 1
       )
@@ -396,7 +397,7 @@ defmodule Lightning.Collaboration.PersistenceWriter do
         from d in DocumentState,
           where:
             d.document_name == ^document_name and
-              d.version == "update" and
+              d.version == ^"update" and
               d.inserted_at > ^checkpoint_time,
           order_by: [asc: d.inserted_at]
       )
@@ -439,7 +440,8 @@ defmodule Lightning.Collaboration.PersistenceWriter do
     latest_checkpoint =
       Repo.one(
         from d in DocumentState,
-          where: d.document_name == ^document_name and d.version == "checkpoint",
+          where:
+            d.document_name == ^document_name and d.version == ^"checkpoint",
           order_by: [desc: d.inserted_at],
           limit: 1
       )
@@ -454,7 +456,7 @@ defmodule Lightning.Collaboration.PersistenceWriter do
           from d in DocumentState,
             where:
               d.document_name == ^document_name and
-                d.version == "update" and
+                d.version == ^"update" and
                 d.inserted_at < ^latest_checkpoint.inserted_at and
                 d.inserted_at < ^cutoff_time
         )

@@ -17,9 +17,6 @@ and this project adheres to
 
 ### Added
 
-- Add the ability to search by dataclip name on the history page
-  [#3486](https://github.com/OpenFn/lightning/issues/3486)
-
 ### Changed
 
 ### Fixed
@@ -27,6 +24,20 @@ and this project adheres to
 - Shared doc lookup in clustered environments now works across nodes instead of
   only searching locally
   [#3910](https://github.com/OpenFn/lightning/issues/3910)
+
+## [2.14.14] - 2025-11-05
+
+### Added
+
+- Add the ability to search by dataclip name on the history page
+  [#3486](https://github.com/OpenFn/lightning/issues/3486)
+
+### Fixed
+
+- Exception when cleaning up old persisted documents
+  [#3932](https://github.com/OpenFn/lightning/issues/3932)
+- Legacy canvas new job nodes no longer auto-populate with adaptor name
+  [#3920](https://github.com/OpenFn/lightning/issues/3920)
 
 ## [2.14.14-pre2] - 2025-11-04
 
