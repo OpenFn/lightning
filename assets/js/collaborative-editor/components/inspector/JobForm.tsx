@@ -130,12 +130,6 @@ export function JobForm({ job }: JobFormProps) {
     ['name', 'adaptor', 'project_credential_id', 'keychain_credential_id']
   );
 
-  // Reset form when job changes
-  useEffect(() => {
-    form.reset();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [job.id]);
-
   // Listen for credential modal close event to reopen configure modal
   useEffect(() => {
     const handleModalClose = () => {

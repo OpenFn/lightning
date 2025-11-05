@@ -1,14 +1,14 @@
-import { useStore } from "@tanstack/react-form";
-import { useEffect, useMemo } from "react";
+import { useStore } from '@tanstack/react-form';
+import { useEffect, useMemo } from 'react';
 
-import { useWorkflowActions } from "../../hooks/useWorkflow";
-import { useWatchFields } from "../../stores/common";
-import { EdgeSchema } from "../../types/edge";
-import type { Workflow } from "../../types/workflow";
-import { useAppForm } from "../form";
-import { createZodValidator } from "../form/createZodValidator";
-import { ErrorMessage } from "../form/error-message";
-import { Tooltip } from "../Tooltip";
+import { useWorkflowActions } from '../../hooks/useWorkflow';
+import { useWatchFields } from '../../stores/common';
+import { EdgeSchema } from '../../types/edge';
+import type { Workflow } from '../../types/workflow';
+import { useAppForm } from '../form';
+import { createZodValidator } from '../form/createZodValidator';
+import { ErrorMessage } from '../form/error-message';
+import { Tooltip } from '../Tooltip';
 
 interface EdgeFormProps {
   edge: Workflow.Edge;
@@ -53,14 +53,8 @@ export function EdgeForm({ edge }: EdgeFormProps) {
         }
       });
     },
-    ["condition_label", "condition_type", "condition_expression", "enabled"]
+    ['condition_label', 'condition_type', 'condition_expression', 'enabled']
   );
-
-  // Reset form when edge changes
-  useEffect(() => {
-    form.reset();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [edge.id]);
 
   // Condition options based on source
   const conditionOptions = useMemo(() => {
@@ -68,16 +62,16 @@ export function EdgeForm({ edge }: EdgeFormProps) {
 
     if (isSourceTrigger) {
       return [
-        { value: "always", label: "Always" },
-        { value: "js_expression", label: "Matches a Javascript Expression" },
+        { value: 'always', label: 'Always' },
+        { value: 'js_expression', label: 'Matches a Javascript Expression' },
       ];
     }
 
     return [
-      { value: "on_job_success", label: "On Success" },
-      { value: "on_job_failure", label: "On Failure" },
-      { value: "always", label: "Always" },
-      { value: "js_expression", label: "Matches a Javascript Expression" },
+      { value: 'on_job_success', label: 'On Success' },
+      { value: 'on_job_failure', label: 'On Failure' },
+      { value: 'always', label: 'Always' },
+      { value: 'js_expression', label: 'Matches a Javascript Expression' },
     ];
   }, [edge.source_trigger_id]);
 
@@ -86,12 +80,12 @@ export function EdgeForm({ edge }: EdgeFormProps) {
     form.store,
     state => state.values.condition_type
   );
-  const showExpressionEditor = conditionType === "js_expression";
+  const showExpressionEditor = conditionType === 'js_expression';
 
   // Unsafe keyword detection
   const conditionExpression = useStore(
     form.store,
-    state => state.values.condition_expression || ""
+    state => state.values.condition_expression || ''
   );
   const isExpressionUnsafe =
     /(\bimport\b|\brequire\b|\bprocess\b|\bawait\b|\beval\b)/.test(
@@ -136,7 +130,7 @@ export function EdgeForm({ edge }: EdgeFormProps) {
                 </div>
                 <textarea
                   id={field.name}
-                  value={field.state.value || ""}
+                  value={field.state.value || ''}
                   onChange={e => field.handleChange(e.target.value)}
                   placeholder="eg: !state.error"
                   className="block w-full h-24 px-3 py-2 rounded-md border-slate-300
@@ -161,7 +155,7 @@ export function EdgeForm({ edge }: EdgeFormProps) {
                 Must be a single JavaScript expression with `state` in scope.
               </p>
               <p>
-                Check{" "}
+                Check{' '}
                 <a
                   href="https://docs.openfn.org/documentation/build/paths#writing-javascript-expressions-for-custom-path-conditions"
                   target="_blank"
@@ -169,7 +163,7 @@ export function EdgeForm({ edge }: EdgeFormProps) {
                   className="text-indigo-600 hover:underline"
                 >
                   docs.openfn.org
-                </a>{" "}
+                </a>{' '}
                 for more details.
               </p>
             </div>
