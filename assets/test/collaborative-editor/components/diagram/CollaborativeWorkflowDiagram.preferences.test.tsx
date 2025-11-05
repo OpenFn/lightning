@@ -95,6 +95,9 @@ function createWrapper(
     loading: false,
     error: null,
     channelConnected: false,
+    runStepsCache: {},
+    runStepsSubscribers: {},
+    runStepsLoading: new Set(),
   };
 
   const workflowGetSnapshot = () => workflowState;
@@ -125,6 +128,8 @@ function createWrapper(
       clearError: vi.fn(),
       getRunSteps: vi.fn(() => null),
       requestRunSteps: vi.fn(() => Promise.resolve(null)),
+      subscribeToRunSteps: vi.fn(),
+      unsubscribeFromRunSteps: vi.fn(),
     } as any,
     uiStore: {} as any,
     runStore: {} as any,
