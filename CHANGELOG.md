@@ -17,10 +17,16 @@ and this project adheres to
 
 ### Added
 
+### Changed
+
+### Fixed
+
+## [2.14.14] - 2025-11-05
+
+### Added
+
 - Add the ability to search by dataclip name on the history page
   [#3486](https://github.com/OpenFn/lightning/issues/3486)
-
-### Changed
 
 ### Fixed
 
