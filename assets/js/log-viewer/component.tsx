@@ -105,6 +105,7 @@ const LogViewer = ({
         },
         wordWrap: 'on',
         lineNumbersMinChars: 3,
+        automaticLayout: true,
       }}
     />
   );

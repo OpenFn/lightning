@@ -2,72 +2,228 @@
  * WorkflowEditor - Main workflow editing component
  */
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useHotkeys, useHotkeysContext } from "react-hotkeys-hook";
 
 import { useURLState } from "../../react/lib/use-url-state";
 import type { WorkflowState as YAMLWorkflowState } from "../../yaml/types";
-import { useSession } from "../hooks/useSession";
-import { useIsNewWorkflow } from "../hooks/useSessionContext";
+import { HOTKEY_SCOPES } from "../constants/hotkeys";
+import { useIsNewWorkflow, useProject } from "../hooks/useSessionContext";
 import {
-  useCurrentJob,
+  useIsRunPanelOpen,
+  useRunPanelContext,
+  useUICommands,
+} from "../hooks/useUI";
+import {
+  useCanRun,
   useNodeSelection,
   useWorkflowActions,
   useWorkflowState,
   useWorkflowStoreContext,
 } from "../hooks/useWorkflow";
+import { notifications } from "../lib/notifications";
 
-import { CollaborativeMonaco } from "./CollaborativeMonaco";
 import { CollaborativeWorkflowDiagram } from "./diagram/CollaborativeWorkflowDiagram";
+import { FullScreenIDE } from "./ide/FullScreenIDE";
 import { Inspector } from "./inspector";
 import { LeftPanel } from "./left-panel";
+import { ManualRunPanel } from "./ManualRunPanel";
+import { ManualRunPanelErrorBoundary } from "./ManualRunPanelErrorBoundary";
 
-export function WorkflowEditor() {
-  const { hash, searchParams, updateSearchParams } = useURLState();
-  const { job: currentJob, ytext: currentJobYText } = useCurrentJob();
+interface WorkflowEditorProps {
+  parentProjectId?: string | null;
+  parentProjectName?: string | null;
+}
+
+export function WorkflowEditor({
+  parentProjectId,
+  parentProjectName,
+}: WorkflowEditorProps = {}) {
+  const { searchParams, updateSearchParams } = useURLState();
   const { currentNode, selectNode } = useNodeSelection();
-  const { awareness } = useSession();
   const workflowStore = useWorkflowStoreContext();
   const isNewWorkflow = useIsNewWorkflow();
   const { saveWorkflow } = useWorkflowActions();
 
+  const isRunPanelOpen = useIsRunPanelOpen();
+  const runPanelContext = useRunPanelContext();
+  const { closeRunPanel, openRunPanel } = useUICommands();
+
+  const isSyncingRef = useRef(false);
+  const isInitialMountRef = useRef(true);
+
+  const { enableScope, disableScope } = useHotkeysContext();
+
+  useEffect(() => {
+    if (isRunPanelOpen) {
+      enableScope(HOTKEY_SCOPES.RUN_PANEL);
+    } else {
+      disableScope(HOTKEY_SCOPES.RUN_PANEL);
+    }
+  }, [isRunPanelOpen, enableScope, disableScope]);
+
+  useEffect(() => {
+    if (isSyncingRef.current) return;
+
+    const panelParam = searchParams.get("panel");
+
+    if (isRunPanelOpen) {
+      const contextJobId = runPanelContext?.jobId;
+      const contextTriggerId = runPanelContext?.triggerId;
+      const needsUpdate = panelParam !== "run";
+
+      if (needsUpdate) {
+        isSyncingRef.current = true;
+        if (contextJobId) {
+          updateSearchParams({
+            panel: "run",
+            job: contextJobId,
+            trigger: null,
+          });
+        } else if (contextTriggerId) {
+          updateSearchParams({
+            panel: "run",
+            trigger: contextTriggerId,
+            job: null,
+          });
+        } else {
+          updateSearchParams({ panel: "run" });
+        }
+        setTimeout(() => {
+          isSyncingRef.current = false;
+        }, 0);
+      }
+    } else if (
+      !isRunPanelOpen &&
+      panelParam === "run" &&
+      !isSyncingRef.current &&
+      !isInitialMountRef.current
+    ) {
+      isSyncingRef.current = true;
+      updateSearchParams({ panel: null });
+      setTimeout(() => {
+        isSyncingRef.current = false;
+      }, 0);
+    }
+  }, [isRunPanelOpen, runPanelContext, searchParams, updateSearchParams]);
+
+  useEffect(() => {
+    const panelParam = searchParams.get("panel");
+
+    if (panelParam === "run" && !isRunPanelOpen) {
+      isSyncingRef.current = true;
+
+      const jobParam = searchParams.get("job");
+      const triggerParam = searchParams.get("trigger");
+
+      if (jobParam) {
+        openRunPanel({ jobId: jobParam });
+      } else if (triggerParam) {
+        openRunPanel({ triggerId: triggerParam });
+      } else if (currentNode.type === "job" && currentNode.node) {
+        openRunPanel({ jobId: currentNode.node.id });
+      } else if (currentNode.type === "trigger" && currentNode.node) {
+        openRunPanel({ triggerId: currentNode.node.id });
+      } else {
+        const firstTrigger = workflow?.triggers?.[0];
+        if (firstTrigger?.id) {
+          openRunPanel({ triggerId: firstTrigger.id });
+        }
+      }
+
+      setTimeout(() => {
+        isSyncingRef.current = false;
+        isInitialMountRef.current = false;
+      }, 0);
+    } else if (panelParam !== "run" && isRunPanelOpen) {
+      isSyncingRef.current = true;
+      closeRunPanel();
+
+      setTimeout(() => {
+        isSyncingRef.current = false;
+        isInitialMountRef.current = false;
+      }, 0);
+    } else {
+      setTimeout(() => {
+        isInitialMountRef.current = false;
+      }, 0);
+    }
+  }, [
+    searchParams,
+    isRunPanelOpen,
+    currentNode.type,
+    currentNode.node,
+    openRunPanel,
+    closeRunPanel,
+  ]);
+
+  useEffect(() => {
+    if (isRunPanelOpen && currentNode.node) {
+      if (currentNode.type === "job") {
+        if (runPanelContext?.jobId !== currentNode.node.id) {
+          openRunPanel({ jobId: currentNode.node.id });
+        }
+      } else if (currentNode.type === "trigger") {
+        if (runPanelContext?.triggerId !== currentNode.node.id) {
+          openRunPanel({ triggerId: currentNode.node.id });
+        }
+      } else if (currentNode.type === "edge") {
+        if (runPanelContext?.edgeId !== currentNode.node.id) {
+          openRunPanel({ edgeId: currentNode.node.id });
+        }
+      }
+    }
+  }, [
+    currentNode.type,
+    currentNode.node,
+    isRunPanelOpen,
+    runPanelContext,
+    openRunPanel,
+    closeRunPanel,
+  ]);
+
+  const project = useProject();
+  const projectId = project?.id;
+
+  const workflowState = useWorkflowState(state => state.workflow!);
+  const workflowId = workflowState.id;
+
   const [showLeftPanel, setShowLeftPanel] = useState(isNewWorkflow);
 
-  // Construct full workflow object from state
-  const workflow = useWorkflowState(state =>
-    state.workflow
-      ? {
-          name: state.workflow.name,
-          jobs: state.jobs,
-          triggers: state.triggers,
-          edges: state.edges,
-          positions: state.positions,
-        }
-      : null
-  );
+  const { canRun: canOpenRunPanel, tooltipMessage: runDisabledReason } =
+    useCanRun();
 
-  // Get current creation method from URL
+  const workflow = useWorkflowState(state => ({
+    ...state.workflow!,
+    jobs: state.jobs,
+    triggers: state.triggers,
+    edges: state.edges,
+    positions: state.positions,
+  }));
+
   const currentMethod = searchParams.get("method") as
     | "template"
     | "import"
     | "ai"
     | null;
 
-  // Default to template method if no method specified and panel is open
   const leftPanelMethod = showLeftPanel ? currentMethod || "template" : null;
+
+  const isIDEOpen = searchParams.get("panel") === "editor";
+  const selectedJobId = searchParams.get("job");
 
   const handleCloseInspector = () => {
     selectNode(null);
   };
 
-  // Show inspector panel if settings is open OR a node is selected
-  const showInspector = hash === "settings" || currentNode.node;
+  const showInspector =
+    searchParams.get("panel") === "settings" || Boolean(currentNode.node);
 
   const handleMethodChange = (method: "template" | "import" | "ai" | null) => {
     updateSearchParams({ method });
   };
 
   const handleImport = async (workflowState: YAMLWorkflowState) => {
-    // Validate workflow name with server before importing
     try {
       const validatedState =
         await workflowStore.validateWorkflowName(workflowState);
@@ -75,7 +231,6 @@ export function WorkflowEditor() {
       workflowStore.importWorkflow(validatedState);
     } catch (error) {
       console.error("Failed to validate workflow name:", error);
-      // Fall back to original state if validation fails
       workflowStore.importWorkflow(workflowState);
     }
   };
@@ -90,81 +245,92 @@ export function WorkflowEditor() {
     handleCloseLeftPanel();
   };
 
+  const handleCloseIDE = () => {
+    updateSearchParams({ panel: null });
+  };
+
+  useHotkeys(
+    "ctrl+e,meta+e",
+    event => {
+      event.preventDefault();
+
+      if (currentNode.type !== "job" || !currentNode.node) {
+        return;
+      }
+
+      updateSearchParams({ panel: "editor" });
+    },
+    {
+      enabled: !isIDEOpen,
+      enableOnFormTags: true,
+    },
+    [currentNode, isIDEOpen, updateSearchParams]
+  );
+
   return (
     <div className="relative flex h-full w-full">
-      {/* Main content area - flex grows to fill remaining space */}
-      <div
-        className={`flex-1 relative transition-all duration-300 ease-in-out ${
-          showLeftPanel ? "ml-[33.333333%]" : "ml-0"
-        }`}
-      >
-        <CollaborativeWorkflowDiagram inspectorId="inspector" />
-
-        {/* Inspector slides in from the right and appears on top
-            This div is also the wrapper which is used to calculate the overlap
-            between the inspector and the diagram.  */}
-        {workflow && (
+      {!isIDEOpen && (
+        <>
           <div
-            id="inspector"
-            className={`absolute top-0 right-0 h-full transition-transform duration-300 ease-in-out ${
-              showInspector
-                ? "translate-x-0"
-                : "translate-x-full pointer-events-none"
+            className={`flex-1 relative transition-all duration-300 ease-in-out ${
+              showLeftPanel ? "ml-[33.333333%]" : "ml-0"
             }`}
           >
-            <Inspector
-              workflow={workflow}
-              currentNode={currentNode}
-              onClose={handleCloseInspector}
-            />
-          </div>
-        )}
-      </div>
+            <CollaborativeWorkflowDiagram inspectorId="inspector" />
 
-      {/* Left Panel - Workflow creation methods (absolute positioned, slides over) */}
-      <LeftPanel
-        method={leftPanelMethod}
-        onMethodChange={handleMethodChange}
-        onImport={handleImport}
-        onClosePanel={handleCloseLeftPanel}
-        onSave={handleSaveAndClose}
-      />
-
-      {false && ( // Leaving this here for now, but we'll remove/replace it in the future
-        <div className="flex flex-col h-full">
-          {/* Main Content */}
-
-          {/* Right Panel - Split vertically */}
-          <div className="flex-1 min-w-0 flex flex-col overflow-y-auto">
-            {/* Workflow Diagram */}
-            <div className="flex-none h-1/3 border-b border-gray-200">
-              <CollaborativeWorkflowDiagram />
-            </div>
-
-            {/* Bottom Right - Monaco Editor */}
-            <div className="flex-1 min-h-0">
-              {currentJob && currentJobYText && awareness ? (
-                <CollaborativeMonaco
-                  ytext={currentJobYText}
-                  awareness={awareness}
-                  adaptor="common"
-                  disabled={false}
-                  className="h-full w-full"
+            {!isRunPanelOpen && (
+              <div
+                id="inspector"
+                className={`absolute top-0 right-0 transition-transform duration-300 ease-in-out z-10 ${
+                  showInspector
+                    ? "translate-x-0"
+                    : "translate-x-full pointer-events-none"
+                }`}
+              >
+                <Inspector
+                  currentNode={currentNode}
+                  onClose={handleCloseInspector}
+                  onOpenRunPanel={openRunPanel}
+                  respondToHotKey={!isRunPanelOpen}
                 />
-              ) : (
-                <div className="flex items-center justify-center h-full text-gray-500">
-                  <div className="text-center">
-                    <p className="text-lg">Select a job to edit</p>
-                    <p className="text-sm">
-                      Choose a job from the sidebar to start editing with the
-                      collaborative Monaco editor
-                    </p>
-                  </div>
-                </div>
-              )}
-            </div>
+              </div>
+            )}
+
+            {isRunPanelOpen && runPanelContext && projectId && workflowId && (
+              <div className="absolute inset-y-0 right-0 flex pointer-events-none z-20">
+                <ManualRunPanelErrorBoundary onClose={closeRunPanel}>
+                  <ManualRunPanel
+                    workflow={workflow}
+                    projectId={projectId}
+                    workflowId={workflowId}
+                    jobId={runPanelContext.jobId ?? null}
+                    triggerId={runPanelContext.triggerId ?? null}
+                    edgeId={runPanelContext.edgeId ?? null}
+                    onClose={closeRunPanel}
+                    saveWorkflow={saveWorkflow}
+                  />
+                </ManualRunPanelErrorBoundary>
+              </div>
+            )}
           </div>
-        </div>
+
+          <LeftPanel
+            method={leftPanelMethod}
+            onMethodChange={handleMethodChange}
+            onImport={handleImport}
+            onClosePanel={handleCloseLeftPanel}
+            onSave={handleSaveAndClose}
+          />
+        </>
+      )}
+
+      {isIDEOpen && selectedJobId && (
+        <FullScreenIDE
+          jobId={selectedJobId}
+          onClose={handleCloseIDE}
+          parentProjectId={parentProjectId}
+          parentProjectName={parentProjectName}
+        />
       )}
     </div>
   );

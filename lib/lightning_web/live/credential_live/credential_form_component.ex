@@ -278,10 +278,18 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
     if socket.assigns.can_create_project_credential do
       save_with_authorization(socket, credential_params)
     else
-      {:noreply,
-       socket
-       |> put_flash(:error, "You are not authorized to perform this action.")
-       |> push_navigate(to: socket.assigns.return_to)}
+      socket =
+        socket
+        |> put_flash(:error, "You are not authorized to perform this action.")
+
+      socket =
+        if socket.assigns.return_to do
+          push_navigate(socket, to: socket.assigns.return_to)
+        else
+          socket
+        end
+
+      {:noreply, socket}
     end
   end
 
@@ -757,19 +765,35 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
             socket.assigns.current_user.id == socket.assigns.credential.user_id},
          {:ok, _credential} <-
            Credentials.update_credential(form_credential, credential_params) do
-      {:noreply,
-       socket
-       |> put_flash(:info, "Credential updated successfully")
-       |> push_navigate(to: socket.assigns.return_to)}
+      socket =
+        socket
+        |> put_flash(:info, "Credential updated successfully")
+
+      socket =
+        if socket.assigns.return_to do
+          push_navigate(socket, to: socket.assigns.return_to)
+        else
+          socket
+        end
+
+      {:noreply, socket}
     else
       {:same_user, false} ->
-        {:noreply,
-         socket
-         |> put_flash(
-           :error,
-           "Invalid credentials. Please log in again."
-         )
-         |> push_navigate(to: socket.assigns.return_to)}
+        socket =
+          socket
+          |> put_flash(
+            :error,
+            "Invalid credentials. Please log in again."
+          )
+
+        socket =
+          if socket.assigns.return_to do
+            push_navigate(socket, to: socket.assigns.return_to)
+          else
+            socket
+          end
+
+        {:noreply, socket}
 
       {:error, %Ecto.Changeset{} = changeset} ->
         {:noreply, assign(socket, :changeset, changeset)}
@@ -798,7 +822,13 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
   end
 
   defp assigns_for_action(socket, opts \\ []) do
-    page = if socket.assigns.action == :new, do: :first, else: :second
+    # If action is :new but credential already has a schema, skip to :second page
+    # This happens when creating a credential from the collaborative editor with a pre-selected schema
+    page =
+      if socket.assigns.action == :new and
+           socket.assigns.credential.schema == nil,
+         do: :first,
+         else: :second
 
     is_reset? = Keyword.get(opts, :reset, false)
 

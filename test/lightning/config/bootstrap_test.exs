@@ -516,6 +516,56 @@ defmodule Lightning.Config.BootstrapTest do
     end
   end
 
+  describe "promex metrics configuration" do
+    @tag env: %{}
+    test "`expensive_metrics_enabled` is false if env variable is not set", %{
+      env: env
+    } do
+      Dotenvy.source([env])
+
+      Bootstrap.configure()
+
+      enable =
+        :lightning
+        |> get_env(Lightning.PromEx)
+        |> Keyword.get(:expensive_metrics_enabled)
+
+      assert enable == false
+    end
+
+    @tag env: %{"PROMEX_EXPENSIVE_METRICS_ENABLED" => "yes"}
+    test "`expensive_metrics_enabled` is true if env variable is truthy", %{
+      env: env
+    } do
+      Dotenvy.source([env])
+
+      Bootstrap.configure()
+
+      enable =
+        :lightning
+        |> get_env(Lightning.PromEx)
+        |> Keyword.get(:expensive_metrics_enabled)
+
+      assert enable == true
+    end
+
+    @tag env: %{"PROMEX_EXPENSIVE_METRICS_ENABLED" => "no"}
+    test "`expensive_metrics_enabled` is false if env variable is falsey", %{
+      env: env
+    } do
+      Dotenvy.source([env])
+
+      Bootstrap.configure()
+
+      enable =
+        :lightning
+        |> get_env(Lightning.PromEx)
+        |> Keyword.get(:expensive_metrics_enabled)
+
+      assert enable == false
+    end
+  end
+
   # Helpers to read the in-process config that Config writes
   defp get_env(app) do
     Process.get(@config_key)

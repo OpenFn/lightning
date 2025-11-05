@@ -7,7 +7,6 @@ defmodule LightningWeb.WorkflowLive.Edit do
   import LightningWeb.WorkflowLive.Components
   import React
 
-  alias Lightning.Accounts
   alias Lightning.AiAssistant
   alias Lightning.Extensions.UsageLimiting.Action
   alias Lightning.Extensions.UsageLimiting.Context
@@ -41,7 +40,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
   require Lightning.Run
   require Logger
 
-  on_mount {LightningWeb.Hooks, :project_scope}
+  on_mount({LightningWeb.Hooks, :project_scope})
 
   attr :selection, :string, required: false
   attr :aiAssistantId, :string, required: false
@@ -107,24 +106,39 @@ defmodule LightningWeb.WorkflowLive.Edit do
                       "You are viewing a snapshot of this workflow that was taken on #{Lightning.Helpers.format_date(@snapshot.inserted_at, "%F at %T")}"
                 }
               />
+              <%= if @project.env do %>
+                <div
+                  id="canvas-project-env-container"
+                  class="flex items-middle text-sm font-normal"
+                >
+                  <span
+                    id="canvas-project-env"
+                    phx-hook="Tooltip"
+                    data-placement="bottom"
+                    aria-label={"Project environment is #{@project.env}"}
+                    class="inline-flex items-center rounded-md px-1.5 py-0.5 text-xs font-medium bg-primary-100 text-primary-800"
+                  >
+                    {@project.env}
+                  </span>
+                </div>
+              <% end %>
               
     <!-- Add collaborative editor toggle (beaker icon only) -->
-              <.link
+              <a
                 :if={
-                  !@show_new_workflow_panel &&
-                    show_collaborative_editor_toggle?(
-                      @current_user,
-                      @snapshot_version_tag
-                    )
+                  Helpers.show_collaborative_editor_toggle?(
+                    @current_user,
+                    @snapshot_version_tag
+                  )
                 }
-                navigate={~p"/projects/#{@project.id}/w/#{@workflow.id}/collaborate"}
+                id="collaborative-editor-toggle"
+                href={Helpers.collaborative_editor_url(assigns)}
                 class="inline-flex items-center justify-center p-1 text-primary-600 hover:text-primary-700 hover:bg-primary-50 rounded transition-colors"
-                phx-hook="Tooltip"
                 data-placement="bottom"
                 aria-label="Switch to collaborative editor (experimental)"
               >
                 <.icon name="hero-beaker" class="h-4 w-4" />
-              </.link>
+              </a>
 
               <LightningWeb.WorkflowLive.Components.online_users
                 id="canvas-online-users"
@@ -296,6 +310,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
                 follow_run_id={@follow_run && @follow_run.id}
                 close_url={close_url(assigns, :selected_job, :select)}
                 form={single_inputs_for(@workflow_form, :jobs, @selected_job.id)}
+                query_params={@query_params}
               >
                 <.collapsible_panel
                   id={"manual-job-#{@selected_job.id}"}
@@ -3173,22 +3188,23 @@ defmodule LightningWeb.WorkflowLive.Edit do
   end
 
   defp apply_query_params(socket, params) do
+    taken =
+      Map.take(params, ["s", "m", "a", "v", "w-chat", "j-chat", "code", "method"])
+
+    query_params =
+      Enum.into(taken, %{
+        "s" => nil,
+        "m" => nil,
+        "a" => nil,
+        "v" => nil,
+        "w-chat" => nil,
+        "j-chat" => nil,
+        "code" => nil,
+        "method" => nil
+      })
+
     socket
-    |> assign(
-      query_params:
-        params
-        |> Map.take(["s", "m", "a", "v", "w-chat", "j-chat", "code", "method"])
-        |> Enum.into(%{
-          "s" => nil,
-          "m" => nil,
-          "a" => nil,
-          "v" => nil,
-          "w-chat" => nil,
-          "j-chat" => nil,
-          "code" => nil,
-          "method" => nil
-        })
-    )
+    |> assign(query_params: query_params)
     |> apply_query_params()
   end
 
@@ -3859,8 +3875,11 @@ defmodule LightningWeb.WorkflowLive.Edit do
     end
   end
 
-  defp show_collaborative_editor_toggle?(user, snapshot_version_tag) do
-    Accounts.experimental_features_enabled?(user) &&
-      snapshot_version_tag == "latest"
+  def collaborative_editor_base_url(assigns) do
+    if assigns.live_action == :new do
+      "/projects/#{assigns.project.id}/w/new/collaborate"
+    else
+      "/projects/#{assigns.project.id}/w/#{assigns.workflow.id}/collaborate"
+    end
   end
 end

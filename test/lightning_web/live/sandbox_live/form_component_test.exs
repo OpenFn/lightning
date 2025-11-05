@@ -79,6 +79,34 @@ defmodule LightningWeb.SandboxLive.FormComponentTest do
       assert flash["info"] == "Sandbox created"
     end
 
+    test "creating sandbox with duplicate name shows validation error", %{
+      conn: conn,
+      parent: parent,
+      user: user
+    } do
+      insert(:sandbox,
+        parent: parent,
+        name: "test-sandbox",
+        project_users: [%{user_id: user.id, role: :owner}]
+      )
+
+      {:ok, view, _} = live(conn, ~p"/projects/#{parent.id}/sandboxes/new")
+
+      Mimic.allow(Lightning.Projects, self(), view.pid)
+
+      # Try to create a new sandbox with a name that becomes "test-sandbox"
+      view
+      |> element("#sandbox-form-new")
+      |> render_change(%{
+        "project" => %{"raw_name" => "Test Sandbox", "color" => "#abcdef"}
+      })
+
+      html = render(view)
+
+      # Verify validation error appears
+      assert html =~ "Sandbox name already exists"
+    end
+
     test "creating sandbox with blank name disables submit and keeps placeholder",
          %{
            conn: conn,
@@ -235,6 +263,55 @@ defmodule LightningWeb.SandboxLive.FormComponentTest do
       assert html =~ "#ff0000"
       assert html =~ "rounded-md"
     end
+
+    test "editing sandbox with duplicate name shows validation error", %{
+      conn: conn,
+      parent: parent,
+      sb: sb,
+      user: user
+    } do
+      insert(:sandbox,
+        parent: parent,
+        name: "existing-name",
+        project_users: [%{user_id: user.id, role: :owner}]
+      )
+
+      {:ok, view, _} =
+        live(conn, ~p"/projects/#{parent.id}/sandboxes/#{sb.id}/edit")
+
+      Mimic.allow(Lightning.Projects, self(), view.pid)
+
+      # Try to rename to an existing sandbox name
+      view
+      |> element("#sandbox-form-#{sb.id}")
+      |> render_change(%{"project" => %{"raw_name" => "Existing Name"}})
+
+      html = render(view)
+
+      # Verify validation error appears
+      assert html =~ "Sandbox name already exists"
+    end
+
+    test "editing sandbox keeping same name does not show validation error", %{
+      conn: conn,
+      parent: parent,
+      sb: sb
+    } do
+      {:ok, view, _} =
+        live(conn, ~p"/projects/#{parent.id}/sandboxes/#{sb.id}/edit")
+
+      Mimic.allow(Lightning.Projects, self(), view.pid)
+
+      # Keep the same name
+      view
+      |> element("#sandbox-form-#{sb.id}")
+      |> render_change(%{"project" => %{"raw_name" => sb.name}})
+
+      html = render(view)
+
+      # Should NOT show validation error
+      refute html =~ "Sandbox name already exists"
+    end
   end
 
   describe "theme preview edge cases" do
@@ -273,7 +350,6 @@ defmodule LightningWeb.SandboxLive.FormComponentTest do
 
       assert html =~ "Create a new sandbox"
 
-      assert html =~ ~s(background-color: #ff0000)
       assert html =~ ~s(#ff0000)
 
       assert html =~ ~s(name="project[color]")
@@ -284,7 +360,7 @@ defmodule LightningWeb.SandboxLive.FormComponentTest do
       |> render_change(%{"project" => %{"color" => "#00ff00"}})
 
       updated_html = render(view)
-      assert updated_html =~ ~s(background-color: #00ff00)
+      assert updated_html =~ ~s(#00ff00)
     end
   end
 

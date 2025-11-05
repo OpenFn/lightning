@@ -1,5 +1,6 @@
-import { describe, it, expect, beforeEach, vi } from "vitest";
 import { toast } from "sonner";
+import { describe, it, expect, beforeEach, vi } from "vitest";
+
 import { notifications } from "../../../js/collaborative-editor/lib/notifications";
 
 // Mock Sonner
@@ -33,16 +34,18 @@ describe("notifications", () => {
       );
     });
 
-    it("applies blue color scheme styling", () => {
+    it("applies blue color scheme styling with !important", () => {
       notifications.info({ title: "Test" });
 
       expect(toast.info).toHaveBeenCalledWith(
         "Test",
         expect.objectContaining({
-          classNames: expect.objectContaining({
-            toast: expect.stringContaining("border-blue-500"),
-            title: expect.stringContaining("text-blue-900"),
-          }),
+          classNames: {
+            toast: "!bg-blue-50 !border-l-4 !border-l-blue-500",
+            title: "!text-blue-900 !font-semibold",
+            description: "!text-blue-700 !text-sm",
+            icon: "!text-blue-500",
+          },
         })
       );
     });
@@ -104,16 +107,18 @@ describe("notifications", () => {
       );
     });
 
-    it("applies red color scheme styling", () => {
+    it("applies red color scheme styling with !important", () => {
       notifications.alert({ title: "Error" });
 
       expect(toast.error).toHaveBeenCalledWith(
         "Error",
         expect.objectContaining({
-          classNames: expect.objectContaining({
-            toast: expect.stringContaining("border-red-500"),
-            title: expect.stringContaining("text-red-900"),
-          }),
+          classNames: {
+            toast: "!bg-red-50 !border-l-4 !border-l-red-500",
+            title: "!text-red-900 !font-semibold",
+            description: "!text-red-700 !text-sm",
+            icon: "!text-red-500",
+          },
         })
       );
     });
@@ -131,15 +136,18 @@ describe("notifications", () => {
   });
 
   describe("success", () => {
-    it("calls toast.success with green color scheme", () => {
+    it("calls toast.success with green color scheme and !important", () => {
       notifications.success({ title: "Success" });
 
       expect(toast.success).toHaveBeenCalledWith(
         "Success",
         expect.objectContaining({
-          classNames: expect.objectContaining({
-            toast: expect.stringContaining("border-green-500"),
-          }),
+          classNames: {
+            toast: "!bg-green-50 !border-l-4 !border-l-green-500",
+            title: "!text-green-900 !font-semibold",
+            description: "!text-green-700 !text-sm",
+            icon: "!text-green-500",
+          },
         })
       );
     });
@@ -157,15 +165,18 @@ describe("notifications", () => {
   });
 
   describe("warning", () => {
-    it("calls toast.warning with amber color scheme", () => {
+    it("calls toast.warning with amber color scheme and !important", () => {
       notifications.warning({ title: "Warning" });
 
       expect(toast.warning).toHaveBeenCalledWith(
         "Warning",
         expect.objectContaining({
-          classNames: expect.objectContaining({
-            toast: expect.stringContaining("border-amber-500"),
-          }),
+          classNames: {
+            toast: "!bg-amber-50 !border-l-4 !border-l-amber-500",
+            title: "!text-amber-900 !font-semibold",
+            description: "!text-amber-700 !text-sm",
+            icon: "!text-amber-500",
+          },
         })
       );
     });

@@ -13,11 +13,17 @@ import {
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import tippy from "tippy.js";
 
+import { useProjectAdaptors } from "#/collaborative-editor/hooks/useAdaptors";
+import useConnect from "#/collaborative-editor/hooks/useConnect";
 import {
   useWorkflowState,
   usePositions,
   useWorkflowStoreContext,
+  useWorkflowReadOnly,
 } from "#/collaborative-editor/hooks/useWorkflow";
+import type { Workflow } from "#/collaborative-editor/types/workflow";
+import { getAdaptorDisplayName } from "#/collaborative-editor/utils/adaptorUtils";
+import { randomUUID } from "#/common";
 import _logger from "#/utils/logger";
 import MiniMapNode from "#/workflow-diagram/components/MiniMapNode";
 import { FIT_DURATION, FIT_PADDING } from "#/workflow-diagram/constants";
@@ -25,8 +31,8 @@ import edgeTypes from "#/workflow-diagram/edges";
 import layout from "#/workflow-diagram/layout";
 import nodeTypes from "#/workflow-diagram/nodes";
 import type { Flow, Positions } from "#/workflow-diagram/types";
-import useConnect from "#/workflow-diagram/useConnect";
 import usePlaceholders from "#/workflow-diagram/usePlaceholders";
+import { ensureNodePosition } from "#/workflow-diagram/util/ensure-node-position";
 import fromWorkflow from "#/workflow-diagram/util/from-workflow";
 import shouldLayout from "#/workflow-diagram/util/should-layout";
 import throttle from "#/workflow-diagram/util/throttle";
@@ -36,7 +42,7 @@ import {
   isPointInRect,
 } from "#/workflow-diagram/util/viewport";
 
-import { useInspectorOverlap } from "./useInspectorOverlap";
+import { AdaptorSelectionModal } from "../AdaptorSelectionModal";
 
 type WorkflowDiagramProps = {
   el?: HTMLElement | null;
@@ -116,17 +122,16 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
     edges: state.edges,
   }));
 
-  // TODO: implement disabled state - not currently available in WorkflowState
-  const disabled = false;
+  const { isReadOnly } = useWorkflowReadOnly();
 
   const workflow = React.useMemo(
     () => ({
       jobs,
       triggers,
       edges,
-      disabled,
+      disabled: isReadOnly,
     }),
-    [jobs, triggers, edges, disabled]
+    [jobs, triggers, edges, isReadOnly]
   );
 
   const isManualLayout = Object.keys(workflowPositions).length > 0;
@@ -135,11 +140,14 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
   const [drawerWidth, setDrawerWidth] = useState(0);
   const workflowDiagramRef = useRef<HTMLDivElement>(null);
 
-  // Use custom hook for inspector overlap calculation
-  const miniMapRightOffset = useInspectorOverlap(
-    inspectorId,
-    workflowDiagramRef
-  );
+  // Modal state for adaptor selection
+  const [pendingPlaceholder, setPendingPlaceholder] = useState<{
+    sourceNode: Flow.Node;
+    position: { x: number; y: number };
+  } | null>(null);
+
+  // Fetch project adaptors for modal
+  const { projectAdaptors } = useProjectAdaptors();
 
   const updateSelection = useCallback(
     (id?: string | null) => {
@@ -163,7 +171,7 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
 
   const {
     placeholders,
-    add: addPlaceholder,
+    add: _addPlaceholder,
     cancel: cancelPlaceholder,
     updatePlaceholderPosition,
   } = usePlaceholders(el, isManualLayout, updateSelection);
@@ -173,11 +181,17 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
     if (!el) return;
 
     const handleCommit = (evt: CustomEvent) => {
+      // Stop event propagation to prevent old workflow store handler
+      // from firing. The old handler (from usePlaceholders.ts) tries to send
+      // push-change to LiveView which doesn't exist in collaborative mode.
+      evt.stopImmediatePropagation();
+
       const { id, name } = evt.detail;
 
       // Get placeholder data
       const placeholderNode = placeholders.nodes[0];
       const placeholderEdge = placeholders.edges[0];
+
       if (!placeholderNode) return;
 
       // Cast data to access placeholder-specific properties
@@ -201,6 +215,9 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
 
       // Create edge if placeholder has one
       if (placeholderEdge) {
+        // TODO: This edge creation logic is duplicated in useConnect.ts
+        // (onConnect callback). Consider extracting to a shared helper like
+        // createEdgeForSource() to avoid inconsistencies.
         const edgeData = placeholderEdge.data as any;
 
         // Determine if source is a job or trigger by checking the workflow state
@@ -225,17 +242,33 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
         workflowStore.addEdge(newEdge);
       }
 
+      // Clear placeholder AFTER Y.Doc updates
+      // Y.Doc transactions are synchronous, so the store state is already
+      // updated. Canvas will re-render with new job before placeholder is
+      // cleared, preventing blank canvas during race conditions.
+      cancelPlaceholder();
+
       // Select the new job
       updateSelection(id);
     };
 
-    // Attach our custom commit handler
-    el.addEventListener("commit-placeholder" as any, handleCommit);
+    // Attach our custom commit handler in capture phase
+    // This ensures it fires BEFORE the old handler from usePlaceholders.ts
+    // We call stopImmediatePropagation() to prevent the old handler from executing
+    el.addEventListener("commit-placeholder" as any, handleCommit, true);
 
     return () => {
-      el.removeEventListener("commit-placeholder" as any, handleCommit);
+      el.removeEventListener("commit-placeholder" as any, handleCommit, true);
     };
-  }, [el, placeholders, isManualLayout, workflowStore, updateSelection, jobs]);
+  }, [
+    el,
+    placeholders,
+    isManualLayout,
+    workflowStore,
+    updateSelection,
+    jobs,
+    cancelPlaceholder,
+  ]);
 
   // Track positions and selection on a ref, as a passive cache, to prevent re-renders
   const chartCache = useRef<ChartCache>({
@@ -245,22 +278,21 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
     lastLayout: undefined,
   });
 
-  const forceLayout = useCallback(() => {
+  const forceLayout = useCallback(async () => {
     if (!flow) return Promise.resolve({});
 
     const viewBounds = {
       width: workflowDiagramRef.current?.clientWidth ?? 0,
       height: workflowDiagramRef.current?.clientHeight ?? 0,
     };
-    return layout(model, setModel, flow, viewBounds, {
+    const positions = await layout(model, setModel, flow, viewBounds, {
       duration: props.layoutDuration ?? LAYOUT_DURATION,
       forceFit: props.forceFit ?? false,
-    }).then(positions => {
-      // Note we don't update positions until the animation has finished
-      chartCache.current.positions = positions;
-      if (isManualLayout) updatePositions(positions);
-      return positions;
     });
+    // Note we don't update positions until the animation has finished
+    chartCache.current.positions = positions;
+    if (isManualLayout) updatePositions(positions);
+    return positions;
   }, [
     flow,
     model,
@@ -274,7 +306,25 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
   // This usually means the workflow has changed or its the first load, so we don't want to animate
   // Later, if responding to changes from other users live, we may want to animate
   useEffect(() => {
-    const { positions, lastSelection } = chartCache.current;
+    // Clear cache if positions were cleared (e.g., after reset workflow)
+    // This prevents stale cached positions from being used when Y.Doc positions are empty
+    // Also clear lastLayout so shouldLayout() will trigger a new layout
+    if (
+      Object.keys(workflowPositions).length === 0 &&
+      Object.keys(chartCache.current.positions).length > 0
+    ) {
+      chartCache.current.positions = {};
+      chartCache.current.lastLayout = undefined;
+    }
+
+    const { positions } = chartCache.current;
+
+    // Fix: If positions are empty but lastLayout is set, clear lastLayout to force layout
+    // This can happen when cache gets out of sync (e.g., after page refresh in auto-layout mode)
+    if (Object.keys(positions).length === 0 && chartCache.current.lastLayout) {
+      chartCache.current.lastLayout = undefined;
+    }
+
     // create model from workflow and also apply selection styling to the model.
     logger.log("calling fromWorkflow");
 
@@ -284,64 +334,121 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
         positions,
         placeholders,
         { steps: [] },
-        // Re-render the model based on whatever was last selected
-        // This handles first load and new node safely
-        lastSelection
+        // Use current selection prop, not cached lastSelection
+        // This ensures URL changes (from Header Run button) highlight nodes
+        selection
       ),
-      lastSelection
+      selection
     );
-    if (flow && newModel.nodes.length) {
-      const layoutId = shouldLayout(
-        newModel.edges,
-        newModel.nodes,
-        isManualLayout,
-        chartCache.current.lastLayout
-      );
+    if (newModel.nodes.length > 0) {
+      // If defaulting positions for multiple nodes,
+      // try to offset them a bit
+      const positionOffsetMap: Record<string, number> = {};
 
-      if (layoutId) {
-        chartCache.current.lastLayout = layoutId;
-        const viewBounds = {
-          width: workflowDiagramRef.current?.clientWidth ?? 0,
-          height: workflowDiagramRef.current?.clientHeight ?? 0,
-        };
-        if (isManualLayout) {
-          // give nodes positions
-          const nodesWPos = newModel.nodes.map(node => {
-            // during manualLayout. a placeholder wouldn't have position in positions in store
-            // hence use the position on the placeholder node
-            const isPlaceholder = node.type === "placeholder";
-            return {
-              ...node,
-              position: isPlaceholder
-                ? node.position
-                : workflowPositions[node.id] || { x: 0, y: 0 },
-            };
-          });
-          setModel({ ...newModel, nodes: nodesWPos });
-          chartCache.current.positions = workflowPositions;
+      // We have nodes - process layout and render
+      if (flow) {
+        const layoutId = shouldLayout(
+          newModel.edges,
+          newModel.nodes,
+          isManualLayout,
+          chartCache.current.lastLayout
+        );
+
+        if (layoutId) {
+          chartCache.current.lastLayout = layoutId;
+          const viewBounds = {
+            width: workflowDiagramRef.current?.clientWidth ?? 0,
+            height: workflowDiagramRef.current?.clientHeight ?? 0,
+          };
+          if (isManualLayout) {
+            // give nodes positions
+            const nodesWPos = newModel.nodes.map(node => {
+              // during manualLayout. a placeholder wouldn't have position in
+              // positions in store hence use the position on the placeholder
+              // node
+              const isPlaceholder = node.type === "placeholder";
+
+              const newNode = {
+                ...node,
+                position: isPlaceholder
+                  ? node.position
+                  : workflowPositions[node.id],
+              };
+              ensureNodePosition(
+                newModel,
+                { ...positions, ...workflowPositions },
+                newNode,
+                positionOffsetMap
+              );
+              return newNode;
+            });
+            setModel({ ...newModel, nodes: nodesWPos });
+            chartCache.current.positions = workflowPositions;
+          } else {
+            void layout(newModel, setModel, flow, viewBounds, {
+              duration: props.layoutDuration ?? LAYOUT_DURATION,
+              forceFit: props.forceFit ?? false,
+            }).then(positions => {
+              // Note we don't update positions until animation has finished
+              chartCache.current.positions = positions;
+              return positions;
+            });
+          }
         } else {
-          void layout(newModel, setModel, flow, viewBounds, {
-            duration: props.layoutDuration ?? LAYOUT_DURATION,
-            forceFit: props.forceFit ?? false,
-          }).then(positions => {
-            // Note we don't update positions until the animation has finished
-            chartCache.current.positions = positions;
-            return positions;
+          // if isManualLayout, then we use values from store instead
+          newModel.nodes.forEach(n => {
+            if (isManualLayout && n.type !== "placeholder") {
+              n.position = workflowPositions[n.id];
+            } else if (!isManualLayout && positions[n.id]) {
+              // In auto-layout mode, preserve cached positions from previous
+              // layout
+              n.position = positions[n.id];
+            }
+            ensureNodePosition(
+              newModel,
+              { ...positions, ...workflowPositions },
+              n,
+              positionOffsetMap
+            );
           });
+          setModel(newModel);
         }
       } else {
-        // if isManualLayout, then we use values from store instead
+        // Flow not initialized yet, but we have nodes - ensure positions first
         newModel.nodes.forEach(n => {
           if (isManualLayout && n.type !== "placeholder") {
-            n.position = workflowPositions[n.id] || { x: 0, y: 0 };
+            n.position = workflowPositions[n.id];
+          } else if (!isManualLayout && positions[n.id]) {
+            n.position = positions[n.id];
           }
+          ensureNodePosition(
+            newModel,
+            { ...positions, ...workflowPositions },
+            n,
+            positionOffsetMap
+          );
         });
         setModel(newModel);
       }
-    } else {
+    } else if (workflow.jobs.length === 0 && placeholders.nodes.length === 0) {
+      // Explicitly empty workflow - show empty state
+      // Only clear canvas when BOTH workflow.jobs and placeholders are empty
+      // This prevents blank canvas during race conditions where placeholder
+      // is cleared before Y.Doc observer fires
+      setModel({ nodes: [], edges: [] });
       chartCache.current.positions = {};
     }
-  }, [workflow, flow, placeholders, el, isManualLayout, workflowPositions]);
+    // If newModel is empty but workflow has jobs, keep previous
+    // model. This prevents blank canvas during state transitions.
+  }, [
+    workflow,
+    flow,
+    placeholders,
+    el,
+    isManualLayout,
+    workflowPositions,
+    selection,
+  ]);
 
   // This effect only runs when AI assistant visibility changes, not on every selection change
   useEffect(() => {
@@ -446,21 +553,6 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
     [updatePosition, updatePlaceholderPosition]
   );
 
-  const handleNodeClick = useCallback(
-    (event: React.MouseEvent, node: Flow.Node) => {
-      if (
-        (event.target as HTMLElement).getAttribute("data-handleid") ===
-        "node-connector"
-      ) {
-        addPlaceholder(node);
-        return;
-      }
-      if (node.type !== "placeholder") cancelPlaceholder();
-      updateSelection(node.id);
-    },
-    [updateSelection, cancelPlaceholder, addPlaceholder]
-  );
-
   const handleEdgeClick = useCallback(
     (_event: React.MouseEvent, edge: Flow.Edge) => {
       cancelPlaceholder();
@@ -541,15 +633,122 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
     });
   }, [model, flow]);
 
+  // Modal handlers for adaptor selection
+  const showAdaptorModal = useCallback(
+    (sourceNode: Flow.Node, position: { x: number; y: number }) => {
+      setPendingPlaceholder({
+        sourceNode,
+        position,
+      });
+    },
+    []
+  );
+
+  const handleAdaptorSelect = useCallback(
+    (adaptorSpec: string) => {
+      if (!pendingPlaceholder) return;
+
+      const { sourceNode, position } = pendingPlaceholder;
+
+      // Extract adaptor display name (e.g., "salesforce" from "@openfn/language-salesforce@2.0.0")
+      const adaptorDisplayName = getAdaptorDisplayName(adaptorSpec, {
+        titleCase: true,
+        fallback: "Unknown",
+      });
+
+      // Generate job ID
+      const jobId = randomUUID();
+
+      // Create job directly in Y.Doc (this will trigger animation)
+      const newJob = {
+        id: jobId,
+        name: adaptorDisplayName,
+        body: "",
+        adaptor: adaptorSpec,
+      };
+
+      workflowStore.addJob(newJob);
+
+      if (isManualLayout) {
+        workflowStore.updatePosition(jobId, position);
+      }
+
+      // Create edge connecting source to new job
+      // TODO: This edge creation logic is duplicated in useConnect.ts
+      // (onConnect callback) and above in handleCommit. Consider extracting
+      // to a shared helper like createEdgeForSource() to avoid inconsistencies.
+      const sourceIsJob = jobs.some(j => j.id === sourceNode.id);
+      const newEdge: Workflow.Edge = {
+        id: randomUUID(),
+        target_job_id: jobId,
+        condition_type: "on_job_success",
+        enabled: true,
+      };
+
+      if (sourceIsJob) {
+        newEdge.source_job_id = sourceNode.id;
+        newEdge.source_trigger_id = null;
+      } else {
+        newEdge.source_job_id = null;
+        newEdge.source_trigger_id = sourceNode.id;
+      }
+
+      workflowStore.addEdge(newEdge);
+
+      // Clear pending state
+      setPendingPlaceholder(null);
+
+      // Select the new job to open inspector
+      updateSelection(jobId);
+    },
+    [pendingPlaceholder, workflowStore, isManualLayout, jobs, updateSelection]
+  );
+
+  const handleAdaptorModalClose = useCallback(() => {
+    setPendingPlaceholder(null);
+  }, []);
+
+  // Show modal immediately without creating placeholder yet
+  const showModalThenAnimate = useCallback(
+    (sourceNode: Flow.Node, position?: { x: number; y: number }) => {
+      const defaultPosition = position || {
+        x: sourceNode.position.x,
+        y: sourceNode.position.y + 120,
+      };
+
+      showAdaptorModal(sourceNode, defaultPosition);
+    },
+    [showAdaptorModal]
+  );
+
+  const handleNodeClick = useCallback(
+    (event: React.MouseEvent, node: Flow.Node) => {
+      const target = event.target as HTMLElement;
+      const handleId = target.getAttribute("data-handleid");
+
+      if (handleId === "node-connector") {
+        // Clicking the + button shows modal immediately
+        // Node will animate in after adaptor is selected
+        showModalThenAnimate(node);
+        return;
+      }
+
+      if (node.type !== "placeholder") cancelPlaceholder();
+      updateSelection(node.id);
+    },
+    [updateSelection, cancelPlaceholder, showModalThenAnimate]
+  );
+
   const connectHandlers = useConnect(
     model,
     setModel,
-    addPlaceholder,
+    showModalThenAnimate,
     () => {
       cancelPlaceholder();
       updateSelection(null);
     },
-    flowInstance
+    flowInstance,
+    workflowStore
   );
   // Set up tooltips for control buttons
   useTippyForControls(isManualLayout);
@@ -578,79 +777,84 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
   }, [redo, undo]);
 
   return (
-    <ReactFlowProvider>
-      <ReactFlow
-        ref={workflowDiagramRef}
-        maxZoom={1}
-        proOptions={{ account: "paid-pro", hideAttribution: true }}
-        nodes={model.nodes}
-        edges={model.edges}
-        onNodesChange={onNodesChange}
-        onNodeDragStop={onNodeDragStop}
-        nodesDraggable={isManualLayout}
-        nodeTypes={nodeTypes}
-        edgeTypes={edgeTypes}
-        onNodeClick={handleNodeClick}
-        onEdgeClick={handleEdgeClick}
-        onInit={setFlow}
-        deleteKeyCode={null}
-        fitView
-        fitViewOptions={{ padding: FIT_PADDING }}
-        minZoom={0.2}
-        {...connectHandlers}
-      >
-        <Controls
-          position="bottom-left"
-          showInteractive={false}
-          showFitView={false}
-          style={{
-            transform: `translateX(${drawerWidth.toString()}px)`,
-            transition: "transform 500ms ease-in-out",
-          }}
+    <>
+      <ReactFlowProvider>
+        <ReactFlow
+          ref={workflowDiagramRef}
+          maxZoom={1}
+          proOptions={{ account: "paid-pro", hideAttribution: true }}
+          nodes={model.nodes}
+          edges={model.edges}
+          onNodesChange={onNodesChange}
+          onNodeDragStop={onNodeDragStop}
+          nodesDraggable={isManualLayout}
+          nodeTypes={nodeTypes}
+          edgeTypes={edgeTypes}
+          onNodeClick={handleNodeClick}
+          onEdgeClick={handleEdgeClick}
+          onInit={setFlow}
+          deleteKeyCode={null}
+          fitView
+          fitViewOptions={{ padding: FIT_PADDING }}
+          minZoom={0.2}
+          {...connectHandlers}
         >
-          <ControlButton onClick={handleFitView} data-tooltip="Fit view">
-            <span className="text-black hero-viewfinder-circle w-4 h-4" />
-          </ControlButton>
+          <Controls
+            position="bottom-left"
+            showInteractive={false}
+            showFitView={false}
+            style={{
+              transform: `translateX(${drawerWidth.toString()}px)`,
+              transition: "transform 500ms ease-in-out",
+            }}
+          >
+            <ControlButton onClick={handleFitView} data-tooltip="Fit view">
+              <span className="text-black hero-viewfinder-circle w-4 h-4" />
+            </ControlButton>
 
-          <ControlButton
-            onClick={() => switchLayout()}
-            data-tooltip={
-              isManualLayout
-                ? "Switch to auto layout mode"
-                : "Switch to manual layout mode"
-            }
-          >
-            {isManualLayout ? (
-              <span className="text-black hero-cursor-arrow-rays w-4 h-4" />
-            ) : (
-              <span className="text-black hero-cursor-arrow-ripple w-4 h-4" />
-            )}
-          </ControlButton>
-          <ControlButton
-            onClick={() => void forceLayout()}
-            data-tooltip="Run auto layout (override manual positions)"
-          >
-            <span className="text-black hero-squares-2x2 w-4 h-4" />
-          </ControlButton>
-          <ControlButton onClick={() => undo()} data-tooltip="Undo">
-            <span className="text-black hero-arrow-uturn-left w-4 h-4" />
-          </ControlButton>
-          <ControlButton onClick={() => redo()} data-tooltip="Redo">
-            <span className="text-black hero-arrow-uturn-right w-4 h-4" />
-          </ControlButton>
-        </Controls>
-        <Background />
-        <MiniMap
-          zoomable
-          pannable
-          className="border-2 border-gray-200"
-          nodeComponent={MiniMapNode}
-          style={{
-            transform: `translateX(-${miniMapRightOffset.toString()}px)`,
-            transition: "transform duration-300 ease-in-out",
-          }}
-        />
-      </ReactFlow>
-    </ReactFlowProvider>
+            <ControlButton
+              onClick={() => switchLayout()}
+              data-tooltip={
+                isManualLayout
+                  ? "Switch to auto layout mode"
+                  : "Switch to manual layout mode"
+              }
+            >
+              {isManualLayout ? (
+                <span className="text-black hero-cursor-arrow-rays w-4 h-4" />
+              ) : (
+                <span className="text-black hero-cursor-arrow-ripple w-4 h-4" />
+              )}
+            </ControlButton>
+            <ControlButton
+              onClick={() => void forceLayout()}
+              data-tooltip="Run auto layout (override manual positions)"
+            >
+              <span className="text-black hero-squares-2x2 w-4 h-4" />
+            </ControlButton>
+            <ControlButton onClick={() => undo()} data-tooltip="Undo">
+              <span className="text-black hero-arrow-uturn-left w-4 h-4" />
+            </ControlButton>
+            <ControlButton onClick={() => redo()} data-tooltip="Redo">
+              <span className="text-black hero-arrow-uturn-right w-4 h-4" />
+            </ControlButton>
+          </Controls>
+          <Background />
+          <MiniMap
+            zoomable
+            pannable
+            className="border-2 border-gray-200"
+            nodeComponent={MiniMapNode}
+          />
+        </ReactFlow>
+      </ReactFlowProvider>
+
+      <AdaptorSelectionModal
+        isOpen={pendingPlaceholder !== null}
+        onClose={handleAdaptorModalClose}
+        onSelect={handleAdaptorSelect}
+        projectAdaptors={projectAdaptors}
+      />
+    </>
   );
 }

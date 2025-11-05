@@ -288,7 +288,9 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
                |> json_response(201)
 
       saved_workflow = get_saved_workflow(response_workflow["id"])
-      assert encode_decode(response_workflow) == encode_decode(saved_workflow)
+
+      assert encode_decode(response_workflow) |> remove_timestamps() ==
+               encode_decode(saved_workflow) |> remove_timestamps()
     end
 
     test "returns 422 when an edge has invalid condition_type", %{conn: conn} do

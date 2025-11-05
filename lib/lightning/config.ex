@@ -263,6 +263,11 @@ defmodule Lightning.Config do
       promex_config() |> Keyword.get(:metrics_endpoint_token)
     end
 
+    @impl true
+    def promex_expensive_metrics_enabled? do
+      promex_config() |> Keyword.get(:expensive_metrics_enabled)
+    end
+
     defp promex_config do
       Application.get_env(:lightning, Lightning.PromEx, [])
     end
@@ -373,6 +378,11 @@ defmodule Lightning.Config do
       webhook_retry() |> Keyword.fetch!(key)
     end
 
+    @impl true
+    def webhook_response_timeout_ms do
+      Application.get_env(:lightning, :webhook_response_timeout_ms)
+    end
+
     defp default_webhook_retry do
       [
         max_attempts: 5,
@@ -430,6 +440,7 @@ defmodule Lightning.Config do
   @callback promex_metrics_endpoint_authorization_required?() :: boolean()
   @callback promex_metrics_endpoint_scheme() :: String.t()
   @callback promex_metrics_endpoint_token() :: String.t()
+  @callback promex_expensive_metrics_enabled?() :: boolean()
   @callback purge_deleted_after_days() :: integer()
   @callback activity_cleanup_chunk_size() :: integer()
   @callback default_ecto_database_timeout() :: integer()
@@ -462,6 +473,7 @@ defmodule Lightning.Config do
   @callback sentry() :: module()
   @callback webhook_retry() :: Keyword.t()
   @callback webhook_retry(key :: atom()) :: any()
+  @callback webhook_response_timeout_ms() :: integer()
 
   @doc """
   Returns the configuration for the `Lightning.AdaptorRegistry` service
@@ -649,6 +661,10 @@ defmodule Lightning.Config do
     impl().promex_metrics_endpoint_token()
   end
 
+  def promex_expensive_metrics_enabled? do
+    impl().promex_expensive_metrics_enabled?()
+  end
+
   def ui_metrics_tracking_enabled? do
     impl().ui_metrics_tracking_enabled?()
   end
@@ -719,6 +735,10 @@ defmodule Lightning.Config do
 
   def webhook_retry(key) when is_atom(key) do
     impl().webhook_retry(key)
+  end
+
+  def webhook_response_timeout_ms do
+    impl().webhook_response_timeout_ms()
   end
 
   defp impl do

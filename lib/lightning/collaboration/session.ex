@@ -26,7 +26,14 @@ defmodule Lightning.Collaboration.Session do
 
   require Logger
 
-  defstruct [:parent_pid, :parent_ref, :shared_doc_pid, :user, :workflow]
+  defstruct [
+    :parent_pid,
+    :parent_ref,
+    :shared_doc_pid,
+    :user,
+    :workflow,
+    :document_name
+  ]
 
   @pg_scope :workflow_collaboration
 
@@ -60,8 +67,6 @@ defmodule Lightning.Collaboration.Session do
     GenServer.stop(session_pid)
   end
 
-  # ----------------------------------------------------------------------------
-
   def child_spec(opts) do
     {opts, args} =
       Keyword.put_new_lazy(opts, :session_id, fn -> Ecto.UUID.generate() end)
@@ -86,31 +91,34 @@ defmodule Lightning.Collaboration.Session do
     workflow = Keyword.fetch!(opts, :workflow)
     user = Keyword.fetch!(opts, :user)
     parent_pid = Keyword.fetch!(opts, :parent_pid)
+    document_name = Keyword.fetch!(opts, :document_name)
 
-    Logger.info("Starting session for workflow #{workflow.id}")
+    Logger.info("Starting session for document #{document_name}")
 
     parent_ref = Process.monitor(parent_pid)
 
-    # Just initialize the state, defer SharedDoc creation
     state = %__MODULE__{
       parent_pid: parent_pid,
       parent_ref: parent_ref,
       shared_doc_pid: nil,
       user: user,
-      workflow: workflow
+      workflow: workflow,
+      document_name: document_name
     }
 
-    Registry.whereis({:shared_doc, "workflow:#{workflow.id}"})
+    Registry.whereis({:shared_doc, document_name})
     |> case do
       nil ->
         {:stop, {:error, :shared_doc_not_found}}
 
       shared_doc_pid ->
         SharedDoc.observe(shared_doc_pid)
-        Logger.info("Joined SharedDoc for workflow #{workflow.id}")
+        Logger.info("Joined SharedDoc for #{document_name}")
 
         # We track the user presence here so the the original WorkflowLive.Edit
         # can be stopped from editing the workflow when someone else is editing it.
+        # Note: Presence tracking uses workflow.id, not document_name, because
+        # presence is about showing who is editing the workflow, not which version
         Presence.track_user_presence(
           user,
           workflow.id,
@@ -140,16 +148,12 @@ defmodule Lightning.Collaboration.Session do
     :ok
   end
 
-  # ----------------------------------------------------------------------------
-
-  def lookup_shared_doc(workflow_id) do
-    case :pg.get_members(@pg_scope, workflow_id) do
+  def lookup_shared_doc(document_name) do
+    case :pg.get_members(@pg_scope, document_name) do
       [] -> nil
       [shared_doc_pid | _] -> shared_doc_pid
     end
   end
-
-  # ----------------------------------------------------------------------------
 
   @doc """
   Get the current document.
@@ -250,8 +254,6 @@ defmodule Lightning.Collaboration.Session do
     GenServer.call(session_pid, {:reset_workflow, user}, 10_000)
   end
 
-  # ----------------------------------------------------------------------------
-
   @impl true
   def handle_call(:get_doc, _from, %{shared_doc_pid: shared_doc_pid} = state) do
     {:reply, SharedDoc.get_doc(shared_doc_pid), state}
@@ -277,8 +279,6 @@ defmodule Lightning.Collaboration.Session do
     {:reply, :ok, state}
   end
 
-  # Comes from the parent process, we forward it on to the SharedDoc.
-  # The SharedDoc will send a message back via the :yjs message.
   @impl true
   def handle_call(
         {:send_yjs_message, chunk},
@@ -336,9 +336,22 @@ defmodule Lightning.Collaboration.Session do
         {:reply, {:error, :workflow_deleted}, state}
 
       {:error, %Ecto.Changeset{} = changeset} ->
-        Logger.warning(
-          "Failed to save workflow #{state.workflow.id}: #{inspect(changeset.errors)}"
-        )
+        all_errors =
+          Ecto.Changeset.traverse_errors(changeset, fn {msg, opts} ->
+            Regex.replace(~r"%{(\w+)}", msg, fn _, key ->
+              opts
+              |> Keyword.get(String.to_existing_atom(key), key)
+              |> to_string()
+            end)
+          end)
+
+        Logger.warning(fn ->
+          """
+          Failed to save workflow #{state.workflow.id}
+          Top-level errors: #{inspect(changeset.errors)}
+          All validation errors: #{inspect(all_errors)}
+          """
+        end)
 
         {:reply, {:error, changeset}, state}
     end
@@ -366,8 +379,6 @@ defmodule Lightning.Collaboration.Session do
     end
   end
 
-  # Comes from the SharedDoc, for changes coming from the SharedDoc
-  # and we forward it on to the parent process.
   @impl true
   def handle_info({:yjs, reply, shared_doc_pid}, state) do
     Logger.debug(
@@ -410,8 +421,6 @@ defmodule Lightning.Collaboration.Session do
     {:noreply, state}
   end
 
-  # ----------------------------------------------------------------------------
-
   def initialize_workflow_document(
         doc,
         %Lightning.Workflows.Workflow{} = workflow
@@ -420,8 +429,6 @@ defmodule Lightning.Collaboration.Session do
     workflow = Lightning.Repo.preload(workflow, [:jobs, :edges, :triggers])
     WorkflowSerializer.serialize_to_ydoc(doc, workflow)
   end
-
-  # Private helper functions
 
   defp get_document(%{shared_doc_pid: nil}), do: {:error, :no_shared_doc}
 
@@ -437,7 +444,37 @@ defmodule Lightning.Collaboration.Session do
       {:error, :deserialization_failed, Exception.message(e)}
   end
 
+  defp fetch_workflow(
+         %{__meta__: %{state: :built}, lock_version: lock_version} = workflow
+       )
+       when lock_version > 0 do
+    case Lightning.Workflows.get_workflow(workflow.id,
+           include: [:jobs, :edges, :triggers]
+         ) do
+      nil -> {:error, :workflow_deleted}
+      workflow -> {:ok, workflow}
+    end
+  end
+
   defp fetch_workflow(%{__meta__: %{state: :built}} = workflow) do
+    workflow =
+      workflow
+      |> Map.put(:edges, %Ecto.Association.NotLoaded{
+        __cardinality__: :many,
+        __field__: :edges,
+        __owner__: Lightning.Workflows.Workflow
+      })
+      |> Map.put(:jobs, %Ecto.Association.NotLoaded{
+        __cardinality__: :many,
+        __field__: :jobs,
+        __owner__: Lightning.Workflows.Workflow
+      })
+      |> Map.put(:triggers, %Ecto.Association.NotLoaded{
+        __cardinality__: :many,
+        __field__: :triggers,
+        __owner__: Lightning.Workflows.Workflow
+      })
+
     {:ok, workflow}
   end
 
@@ -455,8 +492,6 @@ defmodule Lightning.Collaboration.Session do
          workflow
        ) do
     SharedDoc.update_doc(shared_doc_pid, fn doc ->
-      # Update the workflow map with the saved workflow data
-      # This ensures the lock_version and other fields are synced to Y.Doc
       workflow_map = Yex.Doc.get_map(doc, "workflow")
 
       Yex.Doc.transaction(doc, "merge_saved_workflow", fn ->
@@ -470,21 +505,16 @@ defmodule Lightning.Collaboration.Session do
 
   defp clear_and_reset_doc(%{shared_doc_pid: shared_doc_pid}, workflow) do
     SharedDoc.update_doc(shared_doc_pid, fn doc ->
-      # Get all Yex collections BEFORE transaction (critical for avoiding VM
-      # deadlock)
       jobs_array = Yex.Doc.get_array(doc, "jobs")
       edges_array = Yex.Doc.get_array(doc, "edges")
       triggers_array = Yex.Doc.get_array(doc, "triggers")
 
-      # Transaction 1: Clear all arrays
       Yex.Doc.transaction(doc, "clear_workflow", fn ->
         clear_array(jobs_array)
         clear_array(edges_array)
         clear_array(triggers_array)
       end)
 
-      # Transaction 2: Re-serialize workflow (WorkflowSerializer does its own
-      # transaction)
       WorkflowSerializer.serialize_to_ydoc(doc, workflow)
     end)
 

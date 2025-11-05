@@ -40,8 +40,10 @@ export namespace Session {
   export type Workflow = {
     id: string;
     name: string;
-    lock_version: number;
+    lock_version: number | null;
     deleted_at: string | null;
+    concurrency: number | null;
+    enable_job_logs: boolean;
   };
 
   export type Job = {
@@ -50,6 +52,8 @@ export namespace Session {
     body: string;
     adaptor: string;
     enabled: boolean;
+    project_credential_id: string | null;
+    keychain_credential_id: string | null;
   };
 
   export type Trigger = {
@@ -61,12 +65,13 @@ export namespace Session {
   // This could be a common type if we take the inner type out of Y.Map
   export type Edge = {
     id: string;
-    condition_expression: string;
-    condition_label: string;
+    workflow_id: string;
+    condition_expression: string | null;
+    condition_label: string | null;
     condition_type: string;
     enabled: boolean;
-    source_job_id: string;
-    source_trigger_id: string;
+    source_job_id: string | null;
+    source_trigger_id: string | null;
     target_job_id: string;
   };
 }

@@ -1,320 +1,137 @@
-import { useStore } from "@tanstack/react-form";
-import { useCallback, useEffect, useMemo } from "react";
+import { useCallback, useState } from "react";
 
-import { useAppForm } from "#/collaborative-editor/components/form";
-import { useAdaptors } from "#/collaborative-editor/hooks/useAdaptors";
-import { useCredentials } from "#/collaborative-editor/hooks/useCredentials";
-import { useWorkflowActions } from "#/collaborative-editor/hooks/useWorkflow";
-import { useWatchFields } from "#/collaborative-editor/stores/common";
-import { JobSchema } from "#/collaborative-editor/types/job";
-import type { Workflow } from "#/collaborative-editor/types/workflow";
+import { useURLState } from "#/react/lib/use-url-state";
 
-import { createZodValidator } from "../form/createZodValidator";
+import { useJobDeleteValidation } from "../../hooks/useJobDeleteValidation";
+import { usePermissions } from "../../hooks/useSessionContext";
+import { useWorkflowActions, useCanSave } from "../../hooks/useWorkflow";
+import type { Workflow } from "../../types/workflow";
+import { AlertDialog } from "../AlertDialog";
+import { Button } from "../Button";
+import { Tooltip } from "../Tooltip";
+
+import { InspectorFooter } from "./InspectorFooter";
+import { InspectorLayout } from "./InspectorLayout";
+import { JobForm } from "./JobForm";
 
 interface JobInspectorProps {
   job: Workflow.Job;
+  onClose: () => void;
+  onOpenRunPanel: (context: { jobId?: string; triggerId?: string }) => void;
 }
 
 /**
- * Resolves an adaptor specifier into its package name and version
- * @param adaptor - Full NPM package string like "@openfn/language-common@1.4.3"
- * @returns Tuple of package name and version, or null if parsing fails
+ * JobInspector - Composition layer combining layout, form, and actions.
+ * Responsibilities:
+ * - Compose InspectorLayout + JobForm + delete button
+ * - Handle delete validation and modal
+ * - Manage delete permissions
  */
-function resolveAdaptor(adaptor: string): {
-  package: string | null;
-  version: string | null;
-} {
-  const regex = /^(@[^@]+)@(.+)$/;
-  const match = adaptor.match(regex);
-  if (!match) return { package: null, version: null };
-  const [, packageName, version] = match;
+export function JobInspector({
+  job,
+  onClose,
+  onOpenRunPanel,
+}: JobInspectorProps) {
+  const { removeJobAndClearSelection } = useWorkflowActions();
+  const permissions = usePermissions();
+  const validation = useJobDeleteValidation(job.id);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
-  return {
-    package: packageName || null,
-    version: version || null,
-  };
-}
+  // URL state for Edit button
+  const { searchParams, updateSearchParams } = useURLState();
+  const isIDEOpen = searchParams.get("panel") === "editor";
 
-function extractAdaptorName(str: string): string | null {
-  const match = str.match(/language-(.+)$/);
-  return match ? match[1] || null : null;
-}
-
-function useAdaptorVersionOptions(adaptorPackage: string | null) {
-  const adaptors = useAdaptors();
-
-  const adaptor = useMemo(() => {
-    if (!adaptorPackage) return null;
-    return adaptors.find(adaptor => adaptor.name === adaptorPackage) || null;
-  }, [adaptorPackage, adaptors]);
-
-  const adaptorVersionOptions = useMemo(() => {
-    if (!adaptorPackage || !adaptor) return [];
-
-    return [
-      {
-        value: `${adaptor.name}@latest`,
-        label: `latest (≥ ${adaptor.latest})`,
-      },
-      ...adaptor.versions.map(({ version }) => ({
-        value: `${adaptor.name}@${version}`,
-        label: version,
-      })),
-    ];
-  }, [adaptorPackage, adaptor]);
-
-  const getLatestVersion = useCallback(
-    (packageName: string) => {
-      const adaptor = adaptors.find(adaptor => adaptor.name === packageName);
-      if (!adaptor) return null;
-      return `${adaptor.name}@${adaptor.latest}`;
-    },
-    [adaptors]
-  );
-
-  const adaptorPackageOptions = useMemo(() => {
-    return adaptors
-      .map(adaptor => {
-        const label = extractAdaptorName(adaptor.name);
-        if (!label) return null;
-        return {
-          value: adaptor.name,
-          label,
-        };
-      })
-      .filter(option => option !== null);
-  }, [adaptors]);
-
-  return { adaptorVersionOptions, adaptorPackageOptions, getLatestVersion };
-}
-
-const useCredentialOptions = () => {
-  const { keychainCredentials, projectCredentials, isLoading } = useCredentials(
-    state => ({
-      keychainCredentials: state.keychainCredentials,
-      projectCredentials: state.projectCredentials,
-      isLoading: state.isLoading,
-    })
-  );
-
-  const credentialOptions = useMemo(() => {
-    return [
-      ...projectCredentials.map(credential => ({
-        value: credential.project_credential_id,
-        label: credential.name,
-      })),
-      ...keychainCredentials.map(credential => ({
-        value: credential.id,
-        label: credential.name,
-        group: "Keychain Credentials",
-      })),
-    ];
-  }, [projectCredentials, keychainCredentials]);
-
-  const resolveCredentialId = useCallback(
-    (credentialId: string | null) => {
-      if (!credentialId) {
-        return { project_credential_id: null, keychain_credential_id: null };
-      }
-
-      const isProjectCredential = projectCredentials.some(
-        c => c.project_credential_id === credentialId
-      );
-      const isKeychainCredential = keychainCredentials.some(
-        c => c.id === credentialId
-      );
-
-      return {
-        project_credential_id: isProjectCredential ? credentialId : null,
-        keychain_credential_id: isKeychainCredential ? credentialId : null,
-      };
-    },
-    [projectCredentials, keychainCredentials]
-  );
-
-  return useMemo(
-    () => ({
-      credentialOptions,
-      isLoading,
-      resolveCredentialId,
-    }),
-    [credentialOptions, isLoading, resolveCredentialId]
-  );
-};
-
-export function JobInspector({ job }: JobInspectorProps) {
-  const { updateJob } = useWorkflowActions();
-  const { credentialOptions, isLoading, resolveCredentialId } =
-    useCredentialOptions();
-
-  // Parse initial adaptor value to get separate package and version
-  const initialAdaptor = job.adaptor || "@openfn/language-common@latest";
-  const { package: initialAdaptorPackage } = resolveAdaptor(initialAdaptor);
-
-  // Determine initial credential_id for the dropdown
-  const initialCredentialId =
-    job.project_credential_id || job.keychain_credential_id || null;
-
-  const defaultValues = useMemo(
-    () => ({
-      id: job.id,
-      name: job.name,
-      body: job.body,
-      adaptor: initialAdaptor,
-      // Virtual fields for UI only
-      adaptor_package: initialAdaptorPackage,
-      credential_id: initialCredentialId,
-      delete: job.delete || false,
-
-      project_credential_id: job.project_credential_id,
-      keychain_credential_id: job.keychain_credential_id,
-    }),
-    [job, initialAdaptor, initialAdaptorPackage, initialCredentialId]
-  );
-
-  const form = useAppForm({
-    defaultValues,
-    listeners: {
-      onChange: ({ formApi }) => {
-        if (job.id) {
-          updateJob(job.id, formApi.state.values);
-        }
-      },
-    },
-    validators: {
-      onChange: createZodValidator(JobSchema),
-    },
-  });
-
-  useWatchFields(
-    job,
-    changedFields => {
-      Object.entries(changedFields).forEach(([key, value]) => {
-        if (key in form.state.values) {
-          if (key === "adaptor" && value) {
-            const { package: adaptorPackage } = resolveAdaptor(value);
-
-            if (adaptorPackage) {
-              form.setFieldValue("adaptor_package", adaptorPackage);
-            }
-          }
-
-          form.setFieldValue(key as keyof typeof form.state.values, value);
-        }
-      });
-    },
-    ["name", "adaptor", "project_credential_id", "keychain_credential_id"]
-  );
-
-  // Reset form when job changes
-  useEffect(() => {
-    form.reset();
-  }, [job.id, form]);
-
-  // Subscribe to changes for the adaptor package
-  const adaptorPackage = useStore(
-    form.store,
-    state => state.values.adaptor_package
-  );
-
-  const { adaptorVersionOptions, adaptorPackageOptions, getLatestVersion } =
-    useAdaptorVersionOptions(adaptorPackage);
-
-  useEffect(() => {
-    if (!adaptorPackage) return;
-    const latestVersion = getLatestVersion(adaptorPackage);
-    if (latestVersion) {
-      form.setFieldValue("adaptor", latestVersion);
-      updateJob(job.id, form.state.values);
+  const handleDelete = useCallback(async () => {
+    setIsDeleting(true);
+    try {
+      removeJobAndClearSelection(job.id);
+      setIsDeleteDialogOpen(false);
+      // Y.Doc sync provides immediate visual feedback
+    } catch (error) {
+      console.error("Delete failed:", error);
+    } finally {
+      setIsDeleting(false);
     }
-  }, [adaptorPackage, getLatestVersion, form, job.id, updateJob]);
+  }, [job.id, removeJobAndClearSelection]);
+
+  const { canSave, tooltipMessage: saveTooltipMessage } = useCanSave();
+
+  // Determine delete button state
+  const canDelete = canSave && validation.canDelete && !isDeleting;
+  const deleteTooltipMessage = !canSave
+    ? saveTooltipMessage
+    : validation.disableReason || "Delete this job";
+
+  // Build footer with edit, run, and delete buttons (only if permission)
+  const footer = permissions?.can_edit_workflow ? (
+    <InspectorFooter
+      leftButtons={
+        <>
+          <Tooltip
+            content={
+              isIDEOpen ? "IDE is already open" : "Open full-screen code editor"
+            }
+            side="top"
+          >
+            <span className="inline-block">
+              <Button
+                variant="primary"
+                onClick={() => updateSearchParams({ panel: "editor" })}
+                disabled={isIDEOpen}
+              >
+                Edit
+              </Button>
+            </span>
+          </Tooltip>
+          <Button
+            variant="primary"
+            onClick={() => onOpenRunPanel({ jobId: job.id })}
+          >
+            Run
+          </Button>
+        </>
+      }
+      rightButtons={
+        <Tooltip content={deleteTooltipMessage}>
+          <span className="inline-block">
+            <Button
+              variant="danger"
+              onClick={() => setIsDeleteDialogOpen(true)}
+              disabled={!canDelete}
+            >
+              {isDeleting ? "Deleting..." : "Delete"}
+            </Button>
+          </span>
+        </Tooltip>
+      }
+    />
+  ) : undefined;
 
   return (
-    <div>
-      <div className="-mt-6 md:grid md:grid-cols-6 md:gap-4 p-2 @container">
-        <div className="col-span-6">
-          <form.AppField name="name">
-            {field => <field.TextField label="Name" />}
-          </form.AppField>
-        </div>
+    <>
+      <InspectorLayout
+        title={job.name}
+        onClose={onClose}
+        footer={footer}
+        data-testid="job-inspector"
+      >
+        <JobForm job={job} />
+      </InspectorLayout>
 
-        {/* Adaptor Package Dropdown */}
-        <div className="col-span-6">
-          <form.AppField name="adaptor_package">
-            {field => (
-              <field.SelectField
-                label="Adaptor"
-                options={adaptorPackageOptions}
-              />
-            )}
-          </form.AppField>
-        </div>
-
-        {/* Adaptor Version Dropdown - dependent on package selection */}
-        <div className="col-span-6">
-          <form.AppField name="adaptor">
-            {field => {
-              return (
-                <field.SelectField
-                  label="Version"
-                  options={adaptorVersionOptions}
-                />
-              );
-            }}
-          </form.AppField>
-        </div>
-
-        <div className="col-span-6">
-          <form.AppField
-            name="credential_id"
-            listeners={{
-              onChange: ({ value, fieldApi }) => {
-                const resolved = resolveCredentialId(value);
-                fieldApi.form.setFieldValue(
-                  "project_credential_id",
-                  resolved.project_credential_id
-                );
-                fieldApi.form.setFieldValue(
-                  "keychain_credential_id",
-                  resolved.keychain_credential_id
-                );
-              },
-            }}
-          >
-            {field => {
-              return (
-                <field.SelectField
-                  label="Credential"
-                  placeholder=" "
-                  options={credentialOptions}
-                  disabled={isLoading}
-                />
-              );
-            }}
-          </form.AppField>
-        </div>
-
-        {/* Display current full adaptor specifier for debugging */}
-        <div className="col-span-6">
-          <span className="text-xs text-gray-500 mb-1 block">
-            Current Adaptor Specifier
-          </span>
-          <div className="bg-gray-50 p-2 rounded text-xs font-mono">
-            <code className="text-gray-700">{form.state.values.adaptor}</code>
-          </div>
-        </div>
-      </div>
-
-      <div className="col-span-6">
-        <label htmlFor="body" className="text-xs text-gray-500 mb-1 block">
-          Body Preview
-        </label>
-        <div className="bg-gray-50 p-2 rounded text-xs font-mono max-h-32 overflow-y-auto">
-          <pre className="whitespace-pre-wrap text-gray-700">
-            {job.body || "// No code yet"}
-          </pre>
-        </div>
-      </div>
-    </div>
+      <AlertDialog
+        isOpen={isDeleteDialogOpen}
+        onClose={() => !isDeleting && setIsDeleteDialogOpen(false)}
+        onConfirm={handleDelete}
+        title="Delete Job?"
+        description={
+          `This will permanently remove "${job.name}" from the ` +
+          `workflow. This action cannot be undone.`
+        }
+        confirmLabel={isDeleting ? "Deleting..." : "Delete Job"}
+        cancelLabel="Cancel"
+        variant="danger"
+      />
+    </>
   );
 }

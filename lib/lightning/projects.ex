@@ -719,7 +719,7 @@ defmodule Lightning.Projects do
         ]
   def list_project_credentials(%Project{} = project) do
     Ecto.assoc(project, :project_credentials)
-    |> preload(:credential)
+    |> preload(credential: [:user, :oauth_client])
     |> Repo.all()
   end
 
@@ -1311,6 +1311,30 @@ defmodule Lightning.Projects do
       preload: :parent
     )
     |> Repo.all()
+  end
+
+  @doc """
+  Checks if a sandbox with the given name exists under the parent project.
+
+  Returns `true` if a sandbox exists, `false` otherwise.
+  Optionally excludes a specific sandbox by ID (useful for edit operations).
+  """
+  def sandbox_name_exists?(parent_id, name, excluding_id \\ nil)
+      when is_binary(parent_id) and is_binary(name) do
+    query =
+      from(p in Project,
+        where: p.parent_id == ^parent_id and p.name == ^name,
+        select: p.id
+      )
+
+    query =
+      if excluding_id do
+        from(p in query, where: p.id != ^excluding_id)
+      else
+        query
+      end
+
+    Repo.exists?(query)
   end
 
   @doc """

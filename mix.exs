@@ -4,7 +4,7 @@ defmodule Lightning.MixProject do
   def project do
     [
       app: :lightning,
-      version: "2.14.11-pre1",
+      version: "2.14.14-pre2",
       elixir: "~> 1.18",
       elixirc_paths: elixirc_paths(Mix.env()),
       elixirc_options: [
@@ -90,6 +90,7 @@ defmodule Lightning.MixProject do
       {:excoveralls, "~> 0.18.5", only: [:test, :dev]},
       {:floki, ">= 0.30.0", only: :test},
       {:gettext, "~> 0.26"},
+      {:git_hooks, "~> 0.8.0", only: [:dev], runtime: false},
       {:google_api_storage, "~> 0.46.0"},
       {:hackney, "~> 1.18"},
       {:heroicons, "~> 0.5.3"},
@@ -149,7 +150,7 @@ defmodule Lightning.MixProject do
       {:enacl, github: "aeternity/enacl", branch: "master"},
       {:earmark, "~> 1.4"},
       {:eventually, "~> 1.1", only: [:test]},
-      {:benchee, "~> 1.3.1", only: :dev},
+      {:benchee, "~> 1.5.0", only: :dev},
       {:statistics, "~> 0.6", only: :dev},
       {:y_ex, "~> 0.8.0"},
       {:chameleon, "~> 2.5"}
@@ -218,6 +219,9 @@ defmodule Lightning.MixProject do
       source_url: "https://github.com/OpenFn/lightning",
       homepage_url: "https://openfn.github.io/lightning",
       groups_for_modules: [
+        API: [
+          ~r/LightningWeb.API/
+        ],
         Accounts: [
           ~r/Lightning.Accounts/
         ],

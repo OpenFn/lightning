@@ -130,3 +130,37 @@ config :phoenix, :plug_init_mode, :runtime
 config :lightning, :is_resettable_demo, true
 
 config :lightning, :apollo, endpoint: "http://localhost:3000", timeout: 30_000
+
+config :git_hooks,
+  auto_install: true,
+  verbose: true,
+  hooks: [
+    pre_commit: [
+      tasks: [
+        {:cmd,
+         "git diff --cached --name-only | grep -q '^\\.context' && " <>
+           "echo 'ERROR: Cannot commit .context directory (it is a symlink shared across branches)' && " <>
+           "exit 1 || exit 0"},
+        {:cmd,
+         "FILES=$(git diff --cached --name-only --diff-filter=ACM | grep -E '\\.(ex|exs|heex)$' || true); " <>
+           "if [ -n \"$FILES\" ]; then " <>
+           "mix format $FILES && git add $FILES; " <>
+           "fi"},
+        {:cmd,
+         "FILES=$(git diff --cached --name-only --diff-filter=ACM | grep -E '\\.(js|ts|tsx|jsx|md)$' || true); " <>
+           "if [ -n \"$FILES\" ]; then " <>
+           "npx --prefix assets prettier --config .prettierrc --ignore-path .prettierignore --write $FILES && git add $FILES; " <>
+           "fi"},
+        {:cmd,
+         "git diff --cached --quiet && echo 'No changes to commit after formatting' && exit 1 || exit 0"}
+      ]
+    ]
+    # pre_push: [
+    #   verbose: false,
+    #   tasks: [
+    #     {:cmd, "mix dialyzer"},
+    #     {:cmd, "mix test --color"},
+    #     {:cmd, "echo 'success!'"}
+    #   ]
+    # ]
+  ]

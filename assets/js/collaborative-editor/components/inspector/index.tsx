@@ -3,125 +3,125 @@
  * Shows details for jobs, triggers, and edges when selected
  */
 
+import { useHotkeys } from "react-hotkeys-hook";
+
 import { useURLState } from "../../../react/lib/use-url-state";
+import { HOTKEY_SCOPES } from "../../constants/hotkeys";
 import type { Workflow } from "../../types/workflow";
 
 import { EdgeInspector } from "./EdgeInspector";
+import { InspectorLayout } from "./InspectorLayout";
 import { JobInspector } from "./JobInspector";
 import { TriggerInspector } from "./TriggerInspector";
 import { WorkflowSettings } from "./WorkflowSettings";
 
+export { InspectorLayout } from "./InspectorLayout";
+
+// import _logger from "#/utils/logger";
+// const logger = _logger.ns("Inspector").seal();
+
 interface InspectorProps {
-  workflow: Workflow;
   currentNode: {
     node: Workflow.Node | null;
     type: Workflow.NodeType | null;
     id: string | null;
   };
   onClose: () => void;
+  onOpenRunPanel: (context: { jobId?: string; triggerId?: string }) => void;
+  respondToHotKey: boolean;
 }
 
-export function Inspector({ workflow, currentNode, onClose }: InspectorProps) {
-  const { hash, updateHash } = useURLState();
+export function Inspector({
+  currentNode,
+  onClose,
+  onOpenRunPanel,
+  respondToHotKey,
+}: InspectorProps) {
+  const { searchParams, updateSearchParams } = useURLState();
 
   const hasSelectedNode = currentNode.node && currentNode.type;
 
-  // Settings hash takes precedence, then node inspector
+  // Settings panel takes precedence, then node inspector
   const mode =
-    hash === "settings" ? "settings" : hasSelectedNode ? "node" : null;
+    searchParams.get("panel") === "settings"
+      ? "settings"
+      : hasSelectedNode
+        ? "node"
+        : null;
 
   const handleClose = () => {
     if (mode === "settings") {
-      updateHash(null);
+      updateSearchParams({ panel: null });
     } else {
       onClose(); // Clears node selection
     }
   };
 
+  useHotkeys(
+    "escape",
+    () => {
+      handleClose();
+    },
+    {
+      enabled: respondToHotKey,
+      scopes: [HOTKEY_SCOPES.PANEL],
+      enableOnFormTags: true, // Allow Escape even in form fields
+    },
+    [handleClose]
+  );
+
   // Don't render if no mode selected
   if (!mode) return null;
 
-  return (
-    <div className="pointer-events-auto w-screen max-w-md h-full">
-      <div className="relative flex h-full flex-col divide-y divide-gray-200 bg-white shadow-xl">
-        <div className="flex min-h-0 flex-1 flex-col overflow-y-auto py-6">
-          <div className="px-4 sm:px-6">
-            <div className="flex items-start justify-between">
-              <h2 className="text-base font-semibold text-gray-900">
-                {mode === "settings" ? "Workflow settings" : "Inspector"}
-              </h2>
-              <div className="ml-3 flex h-7 items-center">
-                <button
-                  type="button"
-                  onClick={handleClose}
-                  className="relative rounded-md text-gray-400 hover:text-gray-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
-                >
-                  <span className="absolute -inset-2.5" />
-                  <span className="sr-only">Close panel</span>
-                  <div className="hero-x-mark size-6" />
-                </button>
-              </div>
-            </div>
-            {mode === "node" && hasSelectedNode && (
-              <div className="mt-2">
-                <span className="text-xs bg-gray-100 px-2 py-1 rounded">
-                  {currentNode.type}
-                </span>
-              </div>
-            )}
-          </div>
-          <div className="relative mt-6 flex-1 px-4 sm:px-6">
-            {mode === "settings" ? (
-              <WorkflowSettings workflow={workflow} />
-            ) : (
-              <>
-                {currentNode.type === "job" && (
-                  <JobInspector
-                    key={`job-${currentNode.id}`}
-                    job={currentNode.node as Workflow.Job}
-                  />
-                )}
-                {currentNode.type === "trigger" && (
-                  <TriggerInspector
-                    key={`trigger-${currentNode.id}`}
-                    trigger={currentNode.node as Workflow.Trigger}
-                  />
-                )}
-                {currentNode.type === "edge" && (
-                  <EdgeInspector
-                    key={`edge-${currentNode.id}`}
-                    edge={currentNode.node as Workflow.Edge}
-                  />
-                )}
-              </>
-            )}
-          </div>
-        </div>
-        <div className="flex shrink-0 justify-end px-4 py-4">
-          <button
-            type="button"
-            onClick={handleClose}
-            className="rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-xs inset-ring inset-ring-gray-300 hover:inset-ring-gray-400"
-          >
-            Cancel
-          </button>
-          {mode === "settings" && (
-            <button
-              type="submit"
-              className="ml-4 inline-flex justify-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-xs hover:bg-indigo-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
-            >
-              Save
-            </button>
-          )}
-        </div>
-      </div>
-    </div>
-  );
+  // Settings mode
+  if (mode === "settings") {
+    return (
+      <InspectorLayout title="Workflow settings" onClose={handleClose}>
+        <WorkflowSettings />
+      </InspectorLayout>
+    );
+  }
+
+  // Node inspector mode
+  if (currentNode.type === "job") {
+    return (
+      <JobInspector
+        key={`job-${currentNode.id}`}
+        job={currentNode.node as Workflow.Job}
+        onClose={handleClose}
+        onOpenRunPanel={onOpenRunPanel}
+      />
+    );
+  }
+
+  if (currentNode.type === "trigger") {
+    return (
+      <TriggerInspector
+        key={`trigger-${currentNode.id}`}
+        trigger={currentNode.node as Workflow.Trigger}
+        onClose={handleClose}
+        onOpenRunPanel={onOpenRunPanel}
+      />
+    );
+  }
+
+  if (currentNode.type === "edge") {
+    return (
+      <EdgeInspector
+        key={`edge-${currentNode.id}`}
+        edge={currentNode.node as Workflow.Edge}
+        onClose={handleClose}
+      />
+    );
+  }
+
+  return null;
 }
 
 // Helper function to open workflow settings from external components
 export const openWorkflowSettings = () => {
-  const newURL =
-    window.location.pathname + window.location.search + "#settings";
+  const params = new URLSearchParams(window.location.search);
+  params.set("panel", "settings");
+  const newURL = `${window.location.pathname}?${params.toString()}`;
   history.pushState({}, "", newURL);
 };

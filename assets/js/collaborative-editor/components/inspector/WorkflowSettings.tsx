@@ -1,20 +1,82 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
-import { usePermissions } from "../../hooks/useSessionContext";
-import { useWorkflowActions } from "../../hooks/useWorkflow";
-import type { Workflow } from "../../types/workflow";
+import { useAppForm } from "#/collaborative-editor/components/form";
+import { createZodValidator } from "#/collaborative-editor/components/form/createZodValidator";
+import { usePermissions } from "#/collaborative-editor/hooks/useSessionContext";
+import {
+  useWorkflowActions,
+  useWorkflowState,
+} from "#/collaborative-editor/hooks/useWorkflow";
+import { notifications } from "#/collaborative-editor/lib/notifications";
+import { useWatchFields } from "#/collaborative-editor/stores/common";
+import { WorkflowSchema } from "#/collaborative-editor/types/workflow";
+
 import { AlertDialog } from "../AlertDialog";
 
-interface WorkflowSettingsProps {
-  workflow: Workflow;
-}
-
-export function WorkflowSettings({ workflow }: WorkflowSettingsProps) {
+export function WorkflowSettings() {
+  // Get workflow from store - LoadingBoundary guarantees it's non-null
+  const workflow = useWorkflowState(state => state.workflow);
   const [isResetDialogOpen, setIsResetDialogOpen] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
 
-  const { resetWorkflow } = useWorkflowActions();
+  const { updateWorkflow, resetWorkflow } = useWorkflowActions();
   const permissions = usePermissions();
+
+  // LoadingBoundary guarantees workflow is non-null at this point
+  if (!workflow) {
+    throw new Error("Workflow must be loaded");
+  }
+
+  const defaultValues = useMemo(() => {
+    // Y.Doc types can be loosely typed, so we assert to expected types
+    const concurrency = workflow.concurrency ?? null;
+    const enableJobLogs = workflow.enable_job_logs ?? false;
+
+    return {
+      id: workflow.id,
+      name: workflow.name,
+      lock_version: workflow.lock_version,
+      deleted_at: workflow.deleted_at,
+      concurrency,
+      enable_job_logs: enableJobLogs,
+    };
+  }, [workflow]);
+
+  const form = useAppForm({
+    defaultValues,
+    listeners: {
+      onChange: ({ formApi }) => {
+        // Form → Y.Doc: Update workflow immediately on change
+        const { name, concurrency, enable_job_logs } = formApi.state.values;
+        updateWorkflow({
+          name,
+          concurrency,
+          enable_job_logs,
+        });
+      },
+    },
+    validators: {
+      onChange: createZodValidator(WorkflowSchema),
+    },
+  });
+
+  // Yjs → Form: Watch for external changes
+  useWatchFields(
+    workflow,
+    changedFields => {
+      Object.entries(changedFields).forEach(([key, value]) => {
+        if (key in form.state.values) {
+          form.setFieldValue(key as keyof typeof form.state.values, value);
+        }
+      });
+    },
+    ["name", "concurrency", "enable_job_logs"]
+  );
+
+  // Reset form when workflow changes
+  useEffect(() => {
+    form.reset();
+  }, [workflow.id, form]);
 
   const handleReset = async () => {
     setIsResetting(true);
@@ -22,8 +84,14 @@ export function WorkflowSettings({ workflow }: WorkflowSettingsProps) {
       await resetWorkflow();
       // Success - dialog will close, user sees changes via Y.Doc sync
     } catch (error) {
-      // Error - just log for now (no notification system exists)
-      console.error("Reset failed:", error);
+      // Show error notification to user
+      notifications.alert({
+        title: "Failed to reset workflow",
+        description:
+          error instanceof Error
+            ? error.message
+            : "An unexpected error occurred. Please try again.",
+      });
     } finally {
       setIsResetting(false);
       setIsResetDialogOpen(false);
@@ -31,18 +99,13 @@ export function WorkflowSettings({ workflow }: WorkflowSettingsProps) {
   };
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h3 className="text-sm font-medium text-gray-900 mb-4">
-          Workflow Name
-        </h3>
-        <input
-          type="text"
-          defaultValue={workflow.name}
-          className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-        />
-      </div>
+    <div className="px-6 py-6 space-y-4">
+      {/* Workflow Name Field */}
+      <form.AppField name="name">
+        {field => <field.TextField label="Workflow Name" />}
+      </form.AppField>
 
+      {/* YAML View Section - Placeholder (NOT implementing) */}
       <div>
         <h3 className="text-sm font-medium text-gray-900 mb-2">
           Workflow as YAML
@@ -55,47 +118,37 @@ export function WorkflowSettings({ workflow }: WorkflowSettingsProps) {
         </button>
       </div>
 
-      <div>
-        <h3 className="text-sm font-medium text-gray-900 mb-2">Log Output</h3>
-        <p className="text-sm text-gray-600 mb-3">
-          Control what's printed in run logs
-        </p>
-        <label className="flex items-center space-x-3">
-          <span className="text-sm text-gray-900">
-            Allow console.log() usage
-          </span>
-          <div className="relative">
-            <input type="checkbox" defaultChecked={true} className="sr-only" />
-            <div className="w-11 h-6 bg-indigo-600 rounded-full relative transition-colors">
-              <div className="absolute right-1 top-1 w-4 h-4 bg-white rounded-full flex items-center justify-center">
-                <div className="hero-check w-3 h-3 text-indigo-600" />
-              </div>
-            </div>
-          </div>
-        </label>
-      </div>
+      {/* Log Output Toggle */}
+      <form.AppField name="enable_job_logs">
+        {field => (
+          <field.ToggleField
+            label="Allow console.log() usage"
+            description="Control what's printed in run logs"
+          />
+        )}
+      </form.AppField>
 
+      {/* Concurrency Section */}
       <div>
         <h3 className="text-sm font-medium text-gray-900 mb-2">Concurrency</h3>
         <p className="text-sm text-gray-600 mb-3">
           Control how many of this workflow's <em>Runs</em> are executed at the
           same time
         </p>
-        <div>
-          <label className="flex items-center space-x-2 mb-2">
-            <span className="text-sm text-gray-900">Max Concurrency</span>
-            <div className="w-4 h-4 bg-gray-400 rounded-full flex items-center justify-center">
-              <span className="text-xs text-white font-bold">i</span>
-            </div>
-          </label>
-          <input
-            type="text"
-            className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-          />
-          <p className="text-xs text-gray-500 mt-1 italic">
-            Unlimited (up to max available)
-          </p>
-        </div>
+        <form.AppField name="concurrency">
+          {field => (
+            <field.NumberField
+              label="Max Concurrency"
+              placeholder="Unlimited (up to max available)"
+              helpText={
+                field.state.value === null
+                  ? "Unlimited (up to max available)"
+                  : undefined
+              }
+              min={1}
+            />
+          )}
+        </form.AppField>
       </div>
 
       {/* Reset Section - Only show if user has edit permission */}
@@ -112,8 +165,8 @@ export function WorkflowSettings({ workflow }: WorkflowSettingsProps) {
             type="button"
             onClick={() => setIsResetDialogOpen(true)}
             disabled={isResetting}
-            className="rounded-md bg-red-600 px-3 py-2 text-sm font-semibold
-            text-white shadow-xs hover:bg-red-500
+            className="rounded-md bg-red-600 px-3 py-2 text-sm
+            font-semibold text-white shadow-xs hover:bg-red-500
             focus-visible:outline-2 focus-visible:outline-offset-2
             focus-visible:outline-red-600
             disabled:opacity-50 disabled:cursor-not-allowed"
@@ -126,9 +179,13 @@ export function WorkflowSettings({ workflow }: WorkflowSettingsProps) {
       <AlertDialog
         isOpen={isResetDialogOpen}
         onClose={() => !isResetting && setIsResetDialogOpen(false)}
-        onConfirm={handleReset}
+        onConfirm={() => {
+          void handleReset();
+        }}
         title="Reset Workflow?"
-        description="This will undo all uncommitted changes and restore the workflow to its latest snapshot. This action cannot be undone."
+        description="This will undo all uncommitted changes and restore
+          the workflow to its latest snapshot. This action cannot
+          be undone."
         confirmLabel={isResetting ? "Resetting..." : "Reset Workflow"}
         cancelLabel="Cancel"
         variant="danger"

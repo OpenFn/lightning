@@ -45,6 +45,9 @@ import {
   usePermissions,
 } from "./useSessionContext";
 
+// import _logger from "#/utils/logger";
+// const logger = _logger.ns("useWorkflow").seal();
+
 /**
  * Hook to access the WorkflowStore context.
  *
@@ -331,6 +334,14 @@ export const useWorkflowActions = () => {
       addJob: store.addJob,
       removeJob: store.removeJob,
 
+      // Workflow actions (Pattern 1: Y.Doc sync)
+      updateWorkflow: store.updateWorkflow,
+
+      // Edge actions
+      addEdge: store.addEdge,
+      updateEdge: store.updateEdge,
+      removeEdge: store.removeEdge,
+
       // Trigger actions
       updateTrigger: store.updateTrigger,
       setEnabled: store.setEnabled,
@@ -347,15 +358,13 @@ export const useWorkflowActions = () => {
       removeJobAndClearSelection: store.removeJobAndClearSelection,
 
       // Workflow actions - wrapped to handle lock version updates
-      saveWorkflow: async () => {
-        try {
-          const response = await store.saveWorkflow();
-
-          if (!response) {
-            // saveWorkflow returns null when not connected
-            // Connection status is already shown in UI, no toast needed
-            return null;
-          }
+      saveWorkflow: (() => {
+        // Helper: Handle successful save operations
+        const handleSaveSuccess = (
+          response: Awaited<ReturnType<typeof store.saveWorkflow>>,
+          silent = false
+        ) => {
+          if (!response) return;
 
           // Update session context with new lock version if present
           if (response.lock_version !== undefined) {
@@ -381,19 +390,141 @@ export const useWorkflowActions = () => {
             }
           }
 
-          // Show success notification
-          notifications.info({
-            title: "Workflow saved",
-            description: response.saved_at
-              ? `Last saved at ${new Date(response.saved_at).toLocaleTimeString()}`
-              : "All changes have been synced",
-          });
+          // Show success notification unless silent mode
+          if (!silent) {
+            notifications.info({
+              title: "Workflow saved",
+              description: response.saved_at
+                ? `Last saved at ${new Date(response.saved_at).toLocaleTimeString()}`
+                : "All changes have been synced",
+            });
+          }
+        };
 
-          return response;
-        } catch (error) {
-          // Show error notification with retry action
+        // Helper: Handle save errors with appropriate notifications
+        const handleSaveError = (
+          error: unknown,
+          retrySaveWorkflow: () => Promise<unknown>
+        ) => {
+          const errorType = (error as Error & { type?: string }).type;
+
+          if (errorType === "unauthorized") {
+            notifications.alert({
+              title: "Permission Denied",
+              description:
+                error instanceof Error
+                  ? error.message
+                  : "You no longer have permission to edit this workflow. Your role may have changed.",
+            });
+          } else if (errorType === "validation_error") {
+            notifications.alert({
+              title: "Unable to save workflow",
+              description:
+                error instanceof Error
+                  ? error.message
+                  : "Please fix the errors and try again",
+            });
+          } else {
+            notifications.alert({
+              title: "Failed to save workflow",
+              description:
+                error instanceof Error
+                  ? error.message
+                  : "Please check your connection and try again",
+              action: {
+                label: "Retry",
+                onClick: () => {
+                  void retrySaveWorkflow();
+                },
+              },
+            });
+          }
+        };
+
+        // Main wrapped saveWorkflow function
+        const wrappedSaveWorkflow = async (options?: { silent?: boolean }) => {
+          try {
+            const response = await store.saveWorkflow();
+
+            if (!response) {
+              // saveWorkflow returns null when not connected
+              // Connection status is already shown in UI, no toast needed
+              return null;
+            }
+
+            handleSaveSuccess(response, options?.silent);
+            return response;
+          } catch (error) {
+            handleSaveError(error, wrappedSaveWorkflow);
+            // Re-throw error for any upstream error handling
+            throw error;
+          }
+        };
+
+        return wrappedSaveWorkflow;
+      })(),
+
+      // GitHub save and sync action - wrapped to handle lock version updates and errors
+      saveAndSyncWorkflow: (commitMessage: string) => {
+        // Helper: Handle successful save and sync operations
+        const handleSaveAndSyncSuccess = (
+          response: Awaited<ReturnType<typeof store.saveAndSyncWorkflow>>
+        ) => {
+          if (!response) return;
+
+          // Update session context with new lock version if present
+          if (response.lock_version !== undefined) {
+            sessionContextStore.setLatestSnapshotLockVersion(
+              response.lock_version
+            );
+          }
+
+          // Check if this is a new workflow and update URL
+          const currentState = sessionContextStore.getSnapshot();
+          if (currentState.isNewWorkflow) {
+            const workflowState = store.getSnapshot();
+            const workflowId = workflowState.workflow?.id;
+            const projectId = currentState.project?.id;
+
+            if (workflowId && projectId) {
+              // Update URL to include project_id
+              const newUrl = `/projects/${projectId}/w/${workflowId}/collaborate`;
+              window.history.pushState({}, "", newUrl);
+              // Mark workflow as no longer new after first save
+              sessionContextStore.clearIsNewWorkflow();
+            }
+          }
+
+          // Show success toast
+          const successOptions: { title: string; description?: string } = {
+            title: "Workflow saved and synced to GitHub",
+          };
+          if (response.repo) {
+            successOptions.description = `Changes pushed to ${response.repo}`;
+          }
+          notifications.success(successOptions);
+        };
+
+        // Helper: Handle save and sync errors
+        const handleSaveAndSyncError = (
+          error: unknown,
+          retrySaveAndSync: () => Promise<unknown>
+        ) => {
+          if (error && typeof error === "object" && "type" in error) {
+            const typedError = error as { type?: string; message?: string };
+            if (typedError.type === "unauthorized") {
+              notifications.alert({
+                title: "Permission denied",
+                description:
+                  typedError.message ||
+                  "You no longer have permission to edit this workflow. Your role may have changed.",
+              });
+              return;
+            }
+          }
+
           notifications.alert({
-            title: "Failed to save workflow",
+            title: "Failed to save and sync workflow",
             description:
               error instanceof Error
                 ? error.message
@@ -401,28 +532,84 @@ export const useWorkflowActions = () => {
             action: {
               label: "Retry",
               onClick: () => {
-                // Retry save operation
-                // Using void to explicitly ignore the promise
-                void (async () => {
-                  try {
-                    await store.saveWorkflow();
-                  } catch {
-                    // Error already handled by outer try-catch
-                  }
-                })();
+                void retrySaveAndSync();
               },
             },
           });
+        };
 
-          // Re-throw error for any upstream error handling
-          throw error;
-        }
+        // Main wrapped saveAndSyncWorkflow function
+        const wrappedSaveAndSyncWorkflow = async () => {
+          try {
+            const response = await store.saveAndSyncWorkflow(commitMessage);
+
+            if (!response) {
+              // saveAndSyncWorkflow returns null when not connected
+              // Connection status is already shown in UI, no toast needed
+              return null;
+            }
+
+            handleSaveAndSyncSuccess(response);
+            return response;
+          } catch (error) {
+            handleSaveAndSyncError(error, wrappedSaveAndSyncWorkflow);
+            // Re-throw error for any upstream error handling
+            throw error;
+          }
+        };
+
+        return wrappedSaveAndSyncWorkflow();
       },
+
       resetWorkflow: store.resetWorkflow,
       importWorkflow: store.importWorkflow,
     }),
     [store, sessionContextStore]
   );
+};
+
+/**
+ * Internal hook that computes workflow state conditions used by both
+ * useCanSave and useCanRun.
+ *
+ * Extracts common logic to avoid duplication following DRY principles.
+ * This hook computes four core conditions that determine whether
+ * workflow operations (save/run) are permitted:
+ *
+ * @returns Object with condition flags:
+ * - hasPermission: User has can_edit_workflow permission
+ * - isConnected: Session is synced with backend
+ * - isDeleted: Workflow has been deleted
+ * - isOldSnapshot: Viewing an old snapshot (not latest version)
+ *
+ * @internal This is shared logic between useCanSave and useCanRun
+ */
+const useWorkflowConditions = () => {
+  const { isSynced } = useSession();
+  const permissions = usePermissions();
+  const latestSnapshotLockVersion = useLatestSnapshotLockVersion();
+  const workflow = useWorkflowState(state => state.workflow);
+
+  const hasEditPermission = permissions?.can_edit_workflow ?? false;
+  const hasRunPermission = permissions?.can_run_workflow ?? false;
+  const isConnected = isSynced;
+  const isDeleted = workflow !== null && workflow.deleted_at !== null;
+
+  // Only consider it an old snapshot if workflow is loaded, latest
+  // snapshot lock version is available AND different from workflow
+  // lock version
+  const isOldSnapshot =
+    workflow !== null &&
+    latestSnapshotLockVersion !== null &&
+    workflow.lock_version !== latestSnapshotLockVersion;
+
+  return {
+    hasEditPermission,
+    hasRunPermission,
+    isConnected,
+    isDeleted,
+    isOldSnapshot,
+  };
 };
 
 /**
@@ -439,30 +626,8 @@ export const useWorkflowActions = () => {
  * 4. Workflow deletion state (deleted_at)
  */
 export const useCanSave = (): { canSave: boolean; tooltipMessage: string } => {
-  // Get session state
-  const { isSynced } = useSession();
-
-  // Get permissions and lock version from session context
-  const permissions = usePermissions();
-  const latestSnapshotLockVersion = useLatestSnapshotLockVersion();
-
-  // Get workflow data
-  const workflow = useWorkflowState(state => state.workflow);
-
-  // Compute conditions
-  const hasPermission = permissions?.can_edit_workflow ?? false;
-  const isConnected = isSynced;
-  const isDeleted = workflow !== null && workflow.deleted_at !== null;
-
-  // Only consider it an old snapshot if workflow is loaded, latest
-  // snapshot lock version is available AND different from workflow
-  // lock version
-  const isOldSnapshot =
-    workflow !== null &&
-    latestSnapshotLockVersion !== null &&
-    workflow.lock_version !== latestSnapshotLockVersion;
-
-  console.log({ workflow, hasPermission });
+  const { hasEditPermission, isConnected, isDeleted, isOldSnapshot } =
+    useWorkflowConditions();
 
   // Determine tooltip message (check in priority order)
   let tooltipMessage = "Save workflow";
@@ -471,7 +636,7 @@ export const useCanSave = (): { canSave: boolean; tooltipMessage: string } => {
   if (!isConnected) {
     canSave = false;
     tooltipMessage = "You are disconnected. Reconnecting...";
-  } else if (!hasPermission) {
+  } else if (!hasEditPermission) {
     canSave = false;
     tooltipMessage = "You do not have permission to edit this workflow";
   } else if (isDeleted) {
@@ -483,4 +648,108 @@ export const useCanSave = (): { canSave: boolean; tooltipMessage: string } => {
   }
 
   return { canSave, tooltipMessage };
+};
+
+/**
+ * Hook to determine if workflow can be run and provide tooltip message
+ *
+ * Returns object with:
+ * - canRun: boolean - whether run button should be enabled
+ * - tooltipMessage: string - message explaining button state
+ *
+ * Checks:
+ * 1. User permissions (can_edit_workflow)
+ * 2. Connection state (isSynced)
+ * 3. Lock version (viewing latest snapshot)
+ * 4. Workflow deletion state (deleted_at)
+ */
+export const useCanRun = (): { canRun: boolean; tooltipMessage: string } => {
+  const {
+    hasEditPermission,
+    hasRunPermission,
+    isConnected,
+    isDeleted,
+    isOldSnapshot,
+  } = useWorkflowConditions();
+
+  // User can run if they have EITHER edit OR run permission (matches WorkflowEdit)
+  const hasPermission = hasEditPermission || hasRunPermission;
+
+  // Determine tooltip message (check in priority order)
+  let tooltipMessage = "Run workflow";
+  let canRun = true;
+
+  if (!isConnected) {
+    canRun = false;
+    tooltipMessage = "You are disconnected. Reconnecting...";
+  } else if (!hasPermission) {
+    canRun = false;
+    tooltipMessage = "You do not have permission to run workflows";
+  } else if (isDeleted) {
+    canRun = false;
+    tooltipMessage = "Workflow has been deleted";
+  } else if (isOldSnapshot) {
+    canRun = false;
+    tooltipMessage = "You cannot run an old snapshot of a workflow";
+  }
+
+  return { canRun, tooltipMessage };
+};
+
+/**
+ * Hook to determine if workflow is read-only and provide tooltip message
+ *
+ * Returns object with:
+ * - isReadOnly: boolean - whether workflow should be read-only
+ * - tooltipMessage: string - message explaining read-only state
+ *
+ * Checks (in priority order):
+ * 1. Workflow deletion state (deleted_at)
+ * 2. User permissions (can_edit_workflow)
+ * 3. Snapshot version (viewing old snapshot)
+ */
+export const useWorkflowReadOnly = (): {
+  isReadOnly: boolean;
+  tooltipMessage: string;
+} => {
+  // Get session state and permissions (same pattern as useCanSave)
+  const permissions = usePermissions();
+  const latestSnapshotLockVersion = useLatestSnapshotLockVersion();
+  const workflow = useWorkflowState(state => state.workflow);
+
+  // Don't show read-only state until permissions are loaded
+  // This prevents flickering during initial load
+  if (permissions === null) {
+    return { isReadOnly: false, tooltipMessage: "" };
+  }
+
+  // Compute read-only conditions
+  const hasPermission = permissions.can_edit_workflow;
+  const isDeleted = workflow !== null && workflow.deleted_at !== null;
+  const isOldSnapshot =
+    workflow !== null &&
+    latestSnapshotLockVersion !== null &&
+    workflow.lock_version !== latestSnapshotLockVersion;
+
+  // Priority order: deleted > permissions > snapshot
+  if (isDeleted) {
+    return {
+      isReadOnly: true,
+      tooltipMessage: "This workflow has been deleted and cannot be edited",
+    };
+  }
+  if (!hasPermission) {
+    return {
+      isReadOnly: true,
+      tooltipMessage: "You do not have permission to edit this workflow",
+    };
+  }
+  if (isOldSnapshot) {
+    return {
+      isReadOnly: true,
+      tooltipMessage: "You cannot edit or run an old snapshot of a workflow",
+    };
+  }
+
+  return { isReadOnly: false, tooltipMessage: "" };
 };

@@ -16,22 +16,23 @@
  * These verify the component handles invalid data gracefully without crashing.
  */
 
-import { describe, expect, test } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import type React from "react";
+import { describe, expect, test } from "vitest";
 import { EmailVerificationBanner } from "../../../js/collaborative-editor/components/EmailVerificationBanner";
-import { StoreContext } from "../../../js/collaborative-editor/contexts/StoreProvider";
 import type { StoreContextValue } from "../../../js/collaborative-editor/contexts/StoreProvider";
+import { StoreContext } from "../../../js/collaborative-editor/contexts/StoreProvider";
 import { createSessionContextStore } from "../../../js/collaborative-editor/stores/createSessionContextStore";
+import {
+  createMockConfig,
+  createMockUser,
+  createSessionContext,
+  mockPermissions,
+} from "../__helpers__/sessionContextFactory";
 import {
   createMockPhoenixChannel,
   createMockPhoenixChannelProvider,
 } from "../mocks/phoenixChannel";
-import {
-  createMockUser,
-  createMockConfig,
-  mockPermissions,
-} from "../fixtures/sessionContextData";
 
 // =============================================================================
 // TEST HELPERS
@@ -55,13 +56,15 @@ function createWrapper(
   sessionContextStore._connectChannel(mockProvider as any);
 
   const emitData = () => {
-    (mockChannel as any)._test.emit("session_context", {
-      user,
-      project: null,
-      config,
-      permissions: mockPermissions,
-      latest_snapshot_lock_version: 1,
-    });
+    (mockChannel as any)._test.emit(
+      "session_context",
+      createSessionContext({
+        user,
+        project: null,
+        config,
+        permissions: mockPermissions,
+      })
+    );
   };
 
   // Emit immediately by default
@@ -105,8 +108,8 @@ describe("EmailVerificationBanner", () => {
       await waitFor(() => {
         const alert = screen.getByRole("alert");
         expect(alert).toBeInTheDocument();
-        expect(alert).toHaveTextContent(/You must verify your email/i);
-        expect(alert).toHaveTextContent(/or your account will be deleted/i);
+        expect(alert).toHaveTextContent(/Please confirm your account before/i);
+        expect(alert).toHaveTextContent(/to continue using OpenFn/i);
         expect(alert).toHaveTextContent(/Wednesday, 15 January @ 10:30 UTC/);
       });
     });

@@ -1,41 +1,74 @@
-import type { Workflow } from "../types";
+import { useCallback, useState } from "react";
+
+import { useWorkflowActions } from "../../hooks/useWorkflow";
+import type { Workflow } from "../../types/workflow";
+import { Button } from "../Button";
+import { Toggle } from "../Toggle";
+
+import { EdgeForm } from "./EdgeForm";
+import { InspectorFooter } from "./InspectorFooter";
+import { InspectorLayout } from "./InspectorLayout";
 
 interface EdgeInspectorProps {
   edge: Workflow.Edge;
+  onClose: () => void;
 }
 
-export function EdgeInspector({ edge }: EdgeInspectorProps) {
+/**
+ * EdgeInspector - Composition layer for edge configuration.
+ * Combines layout, form, and delete action.
+ */
+export function EdgeInspector({ edge, onClose }: EdgeInspectorProps) {
+  const { removeEdge, clearSelection, updateEdge } = useWorkflowActions();
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const handleDelete = useCallback(async () => {
+    if (
+      window.confirm(
+        "Are you sure you want to delete this edge? This action cannot be undone."
+      )
+    ) {
+      setIsDeleting(true);
+      try {
+        removeEdge(edge.id);
+        clearSelection();
+      } catch (error) {
+        console.error("Delete failed:", error);
+      } finally {
+        setIsDeleting(false);
+      }
+    }
+  }, [edge.id, removeEdge, clearSelection]);
+
+  const handleEnabledChange = useCallback(
+    (enabled: boolean) => {
+      updateEdge(edge.id, { enabled });
+    },
+    [edge.id, updateEdge]
+  );
+
+  // Only show footer for job edges (not trigger edges)
+  const footer = !edge.source_trigger_id ? (
+    <InspectorFooter
+      leftButtons={
+        <Toggle
+          id={`edge-enabled-${edge.id}`}
+          checked={edge.enabled ?? true}
+          onChange={handleEnabledChange}
+          label="Enabled"
+        />
+      }
+      rightButtons={
+        <Button variant="danger" onClick={handleDelete} disabled={isDeleting}>
+          {isDeleting ? "Deleting..." : "Delete"}
+        </Button>
+      }
+    />
+  ) : undefined;
+
   return (
-    <div className="space-y-4">
-      <div>
-        <h3 className="text-sm font-medium text-gray-900 mb-2">Edge Details</h3>
-        <div className="space-y-2">
-          <div>
-            <label className="text-xs text-gray-500">Source</label>
-            <p className="text-sm text-gray-900">
-              {edge.source_job_id
-                ? `Job: ${edge.source_job_id}`
-                : edge.source_trigger_id
-                  ? `Trigger: ${edge.source_trigger_id}`
-                  : "Unknown"}
-            </p>
-          </div>
-          <div>
-            <label className="text-xs text-gray-500">Target</label>
-            <p className="text-sm text-gray-900">Job: {edge.target_job_id}</p>
-          </div>
-          <div>
-            <label className="text-xs text-gray-500">Condition</label>
-            <p className="text-sm text-gray-900">
-              {edge.condition || "Always"}
-            </p>
-          </div>
-          <div>
-            <label className="text-xs text-gray-500">ID</label>
-            <p className="text-xs text-gray-500 font-mono">{edge.id}</p>
-          </div>
-        </div>
-      </div>
-    </div>
+    <InspectorLayout title="Path" onClose={onClose} footer={footer}>
+      <EdgeForm edge={edge} />
+    </InspectorLayout>
   );
 }

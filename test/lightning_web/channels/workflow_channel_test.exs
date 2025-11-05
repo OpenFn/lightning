@@ -85,6 +85,109 @@ defmodule LightningWeb.WorkflowChannelTest do
       assert is_list(credentials.project_credentials)
       assert is_list(credentials.keychain_credentials)
     end
+
+    test "returns project-specific adaptors", %{socket: socket, project: project} do
+      # Create jobs with specific adaptors in this project
+      workflow = insert(:workflow, project: project)
+
+      insert(:job,
+        workflow: workflow,
+        adaptor: "@openfn/language-salesforce@latest"
+      )
+
+      insert(:job, workflow: workflow, adaptor: "@openfn/language-http@2.0.0")
+
+      ref = push(socket, "request_project_adaptors", %{})
+
+      assert_reply ref, :ok, %{
+        project_adaptors: project_adaptors,
+        all_adaptors: all_adaptors
+      }
+
+      assert is_list(project_adaptors)
+      assert is_list(all_adaptors)
+
+      # Verify project_adaptors contains only adaptors used in the project
+      project_adaptor_names = Enum.map(project_adaptors, & &1.name)
+      assert "@openfn/language-salesforce" in project_adaptor_names
+      assert "@openfn/language-http" in project_adaptor_names
+
+      # Verify all_adaptors contains the full registry
+      assert length(all_adaptors) > 0
+    end
+
+    test "returns empty project_adaptors for project with no jobs", %{
+      socket: socket
+    } do
+      ref = push(socket, "request_project_adaptors", %{})
+
+      assert_reply ref, :ok, %{
+        project_adaptors: project_adaptors,
+        all_adaptors: all_adaptors
+      }
+
+      assert project_adaptors == []
+      assert is_list(all_adaptors)
+      assert length(all_adaptors) > 0
+    end
+
+    test "handles duplicate adaptors in project", %{
+      socket: socket,
+      project: project
+    } do
+      workflow = insert(:workflow, project: project)
+
+      # Create multiple jobs with the same adaptor
+      insert(:job,
+        workflow: workflow,
+        adaptor: "@openfn/language-common@latest"
+      )
+
+      insert(:job, workflow: workflow, adaptor: "@openfn/language-common@1.0.0")
+
+      ref = push(socket, "request_project_adaptors", %{})
+
+      assert_reply ref, :ok, %{project_adaptors: project_adaptors}
+
+      # Should only appear once in project_adaptors
+      common_adaptors =
+        Enum.filter(project_adaptors, &(&1.name == "@openfn/language-common"))
+
+      assert length(common_adaptors) <= 1
+    end
+
+    test "returns correctly structured project credentials", %{
+      socket: socket,
+      project: project
+    } do
+      # Create a credential with project association
+      credential =
+        insert(:credential,
+          name: "Test Credential",
+          schema: "raw",
+          external_id: "ext_123"
+        )
+
+      insert(:project_credential, project: project, credential: credential)
+
+      ref = push(socket, "request_credentials", %{})
+
+      assert_reply ref, :ok, %{credentials: credentials}
+
+      # Verify credential structure and values using pattern matching
+      assert [
+               %{
+                 id: _,
+                 project_credential_id: _,
+                 name: "Test Credential",
+                 external_id: "ext_123",
+                 schema: "raw",
+                 inserted_at: _,
+                 updated_at: _
+               }
+               | _
+             ] = credentials.project_credentials
+    end
   end
 
   describe "get_context" do
@@ -160,6 +263,59 @@ defmodule LightningWeb.WorkflowChannelTest do
       assert_reply ref, :ok, response
       assert %{permissions: permissions_data} = response
       assert permissions_data.can_edit_workflow == false
+    end
+
+    test "returns actual latest lock_version when viewing old snapshot", %{
+      project: project,
+      workflow: workflow,
+      user: user
+    } do
+      # Create initial snapshot so v0 is available for viewing
+      {:ok, _snapshot_v0} = Lightning.Workflows.Snapshot.create(workflow)
+
+      # Update workflow to create v1
+      workflow_changeset =
+        workflow
+        |> Lightning.Repo.preload([:jobs, :edges, :triggers])
+        |> Lightning.Workflows.Workflow.changeset(%{name: "Version 1"})
+
+      {:ok, updated_workflow_v1} =
+        Lightning.Workflows.save_workflow(workflow_changeset, user)
+
+      # Update workflow again to create v2 (the latest)
+      v2_changeset =
+        updated_workflow_v1
+        |> Lightning.Repo.reload!()
+        |> Lightning.Repo.preload([:jobs, :edges, :triggers])
+        |> Lightning.Workflows.Workflow.changeset(%{name: "Version 2"})
+
+      {:ok, updated_workflow_v2} =
+        Lightning.Workflows.save_workflow(v2_changeset, user)
+
+      # Join viewing old snapshot (v0 - the original workflow)
+      topic_with_version = "workflow:collaborate:#{workflow.id}:v0"
+
+      {:ok, _, snapshot_socket} =
+        LightningWeb.UserSocket
+        |> socket("user_#{user.id}", %{current_user: user})
+        |> subscribe_and_join(
+          LightningWeb.WorkflowChannel,
+          topic_with_version,
+          %{project_id: project.id, action: "edit"}
+        )
+
+      ref = push(snapshot_socket, "get_context", %{})
+
+      assert_reply ref, :ok, response
+
+      # CRITICAL: Even though we're viewing v0 (lock_version: 0),
+      # latest_snapshot_lock_version should be 2 (the actual latest in DB)
+      assert %{latest_snapshot_lock_version: latest_lock_version} = response
+      assert latest_lock_version == updated_workflow_v2.lock_version
+      assert latest_lock_version == 2
+      # Verify socket is viewing old version
+      assert snapshot_socket.assigns.workflow.lock_version == 0
+      assert snapshot_socket.assigns.workflow.name == workflow.name
     end
   end
 
@@ -271,8 +427,329 @@ defmodule LightningWeb.WorkflowChannelTest do
       # Try to join channel without authentication (no token)
       # This should fail at the socket connect level
       assert_raise FunctionClauseError, fn ->
-        connect(LightningWeb.UserSocket, %{}, %{})
+        connect(LightningWeb.UserSocket, %{})
       end
+    end
+
+    test "blocks viewers from saving", %{project: project, workflow: workflow} do
+      viewer_user = insert(:user)
+      insert(:project_user, project: project, user: viewer_user, role: :viewer)
+
+      {:ok, _, socket} =
+        LightningWeb.UserSocket
+        |> socket("user_#{viewer_user.id}", %{current_user: viewer_user})
+        |> subscribe_and_join(
+          LightningWeb.WorkflowChannel,
+          "workflow:collaborate:#{workflow.id}",
+          %{"project_id" => project.id, "action" => "edit"}
+        )
+
+      # Viewers can join (only requires :access_read) but cannot save
+      ref = push(socket, "save_workflow", %{})
+
+      assert_reply ref, :error, %{
+        errors: %{base: [message]},
+        type: "unauthorized"
+      }
+
+      assert message =~ "don't have permission to edit"
+    end
+
+    test "allows editors to save", %{project: project, workflow: workflow} do
+      editor_user = insert(:user)
+      insert(:project_user, project: project, user: editor_user, role: :editor)
+
+      {:ok, _, socket} =
+        LightningWeb.UserSocket
+        |> socket("user_#{editor_user.id}", %{current_user: editor_user})
+        |> subscribe_and_join(
+          LightningWeb.WorkflowChannel,
+          "workflow:collaborate:#{workflow.id}",
+          %{"project_id" => project.id, "action" => "edit"}
+        )
+
+      # Modify workflow
+      session_pid = socket.assigns.session_pid
+      doc = Lightning.Collaboration.Session.get_doc(session_pid)
+      workflow_map = Yex.Doc.get_map(doc, "workflow")
+
+      Yex.Doc.transaction(doc, "test_update", fn ->
+        Yex.Map.set(workflow_map, "name", "Editor's Change")
+      end)
+
+      ref = push(socket, "save_workflow", %{})
+
+      assert_reply ref, :ok, %{
+        saved_at: _,
+        lock_version: _
+      }
+    end
+
+    test "blocks save after user demoted to viewer mid-session", %{
+      project: project,
+      workflow: workflow
+    } do
+      editor_user = insert(:user)
+
+      project_user =
+        insert(:project_user, project: project, user: editor_user, role: :editor)
+
+      {:ok, _, socket} =
+        LightningWeb.UserSocket
+        |> socket("user_#{editor_user.id}", %{current_user: editor_user})
+        |> subscribe_and_join(
+          LightningWeb.WorkflowChannel,
+          "workflow:collaborate:#{workflow.id}",
+          %{"project_id" => project.id, "action" => "edit"}
+        )
+
+      # Verify editor can save initially
+      session_pid = socket.assigns.session_pid
+      doc = Lightning.Collaboration.Session.get_doc(session_pid)
+      workflow_map = Yex.Doc.get_map(doc, "workflow")
+
+      Yex.Doc.transaction(doc, "test_update", fn ->
+        Yex.Map.set(workflow_map, "name", "Before Demotion")
+      end)
+
+      ref1 = push(socket, "save_workflow", %{})
+      assert_reply ref1, :ok, %{saved_at: _, lock_version: _}
+
+      # Demote user to viewer
+      {:ok, _updated_project_user} =
+        Lightning.Projects.update_project_user(project_user, %{role: :viewer})
+
+      # Attempt to save after demotion should fail
+      Yex.Doc.transaction(doc, "test_update", fn ->
+        Yex.Map.set(workflow_map, "name", "After Demotion")
+      end)
+
+      ref2 = push(socket, "save_workflow", %{})
+
+      assert_reply ref2, :error, %{
+        errors: %{base: [message]},
+        type: "unauthorized"
+      }
+
+      assert message =~ "don't have permission to edit"
+    end
+  end
+
+  describe "reset_workflow" do
+    test "blocks viewers from resetting", %{
+      project: project,
+      workflow: workflow
+    } do
+      viewer_user = insert(:user)
+      insert(:project_user, project: project, user: viewer_user, role: :viewer)
+
+      {:ok, _, socket} =
+        LightningWeb.UserSocket
+        |> socket("user_#{viewer_user.id}", %{current_user: viewer_user})
+        |> subscribe_and_join(
+          LightningWeb.WorkflowChannel,
+          "workflow:collaborate:#{workflow.id}",
+          %{"project_id" => project.id, "action" => "edit"}
+        )
+
+      ref = push(socket, "reset_workflow", %{})
+
+      assert_reply ref, :error, %{
+        errors: %{base: [message]},
+        type: "unauthorized"
+      }
+
+      assert message =~ "don't have permission to edit"
+    end
+
+    test "allows editors to reset", %{project: project, workflow: workflow} do
+      editor_user = insert(:user)
+      insert(:project_user, project: project, user: editor_user, role: :editor)
+
+      {:ok, _, socket} =
+        LightningWeb.UserSocket
+        |> socket("user_#{editor_user.id}", %{current_user: editor_user})
+        |> subscribe_and_join(
+          LightningWeb.WorkflowChannel,
+          "workflow:collaborate:#{workflow.id}",
+          %{"project_id" => project.id, "action" => "edit"}
+        )
+
+      ref = push(socket, "reset_workflow", %{})
+
+      assert_reply ref, :ok, %{
+        lock_version: _,
+        workflow_id: _
+      }
+    end
+
+    test "blocks reset after user demoted mid-session", %{
+      project: project,
+      workflow: workflow
+    } do
+      editor_user = insert(:user)
+
+      project_user =
+        insert(:project_user, project: project, user: editor_user, role: :editor)
+
+      {:ok, _, socket} =
+        LightningWeb.UserSocket
+        |> socket("user_#{editor_user.id}", %{current_user: editor_user})
+        |> subscribe_and_join(
+          LightningWeb.WorkflowChannel,
+          "workflow:collaborate:#{workflow.id}",
+          %{"project_id" => project.id, "action" => "edit"}
+        )
+
+      # Verify editor can reset initially
+      ref1 = push(socket, "reset_workflow", %{})
+      assert_reply ref1, :ok, %{lock_version: _, workflow_id: _}
+
+      # Demote user to viewer
+      {:ok, _} =
+        Lightning.Projects.update_project_user(project_user, %{role: :viewer})
+
+      # Attempt to reset after demotion should fail
+      ref2 = push(socket, "reset_workflow", %{})
+
+      assert_reply ref2, :error, %{
+        errors: %{base: [message]},
+        type: "unauthorized"
+      }
+
+      assert message =~ "don't have permission to edit"
+    end
+  end
+
+  describe "save_and_sync" do
+    test "requires commit message", %{socket: socket} do
+      ref = push(socket, "save_and_sync", %{})
+
+      assert_reply ref, :error, %{
+        errors: errors,
+        type: "validation_error"
+      }
+
+      assert is_map(errors)
+    end
+
+    test "returns validation errors when workflow data is invalid", %{
+      socket: socket
+    } do
+      # Set invalid data in Y.Doc (blank name)
+      session_pid = socket.assigns.session_pid
+      doc = Lightning.Collaboration.Session.get_doc(session_pid)
+
+      # Get shared types BEFORE transaction
+      workflow_map = Yex.Doc.get_map(doc, "workflow")
+
+      Yex.Doc.transaction(doc, "test_update", fn ->
+        Yex.Map.set(workflow_map, "name", "")
+      end)
+
+      # Set up GitHub repo connection
+      insert(:project_repo_connection,
+        project: socket.assigns.project,
+        repo: "openfn/demo",
+        branch: "main"
+      )
+
+      ref =
+        push(socket, "save_and_sync", %{
+          "commit_message" => "Valid commit message"
+        })
+
+      assert_reply ref, :error, %{
+        errors: errors,
+        type: "validation_error"
+      }
+
+      assert is_map(errors)
+      assert errors[:name]
+    end
+
+    test "requires GitHub repo connection to be configured", %{socket: socket} do
+      # No GitHub repo connection exists for this project
+
+      # Modify workflow
+      session_pid = socket.assigns.session_pid
+      doc = Lightning.Collaboration.Session.get_doc(session_pid)
+      workflow_map = Yex.Doc.get_map(doc, "workflow")
+
+      Yex.Doc.transaction(doc, "test_update", fn ->
+        Yex.Map.set(workflow_map, "name", "Test")
+      end)
+
+      ref =
+        push(socket, "save_and_sync", %{"commit_message" => "Test commit"})
+
+      assert_reply ref, :error, %{
+        errors: errors,
+        type: error_type
+      }
+
+      assert is_map(errors)
+      # Should indicate GitHub connection is missing
+      assert error_type == "github_sync_error"
+    end
+
+    test "blocks viewers from saving and syncing", %{
+      project: project,
+      workflow: workflow
+    } do
+      viewer_user = insert(:user)
+      insert(:project_user, project: project, user: viewer_user, role: :viewer)
+
+      # Set up GitHub repo connection
+      insert(:project_repo_connection,
+        project: project,
+        repo: "openfn/demo",
+        branch: "main"
+      )
+
+      {:ok, _, socket} =
+        LightningWeb.UserSocket
+        |> socket("user_#{viewer_user.id}", %{current_user: viewer_user})
+        |> subscribe_and_join(
+          LightningWeb.WorkflowChannel,
+          "workflow:collaborate:#{workflow.id}",
+          %{"project_id" => project.id, "action" => "edit"}
+        )
+
+      # Viewers can join but cannot save and sync
+      ref =
+        push(socket, "save_and_sync", %{"commit_message" => "Test commit"})
+
+      assert_reply ref, :error, %{
+        errors: %{base: [message]},
+        type: "unauthorized"
+      }
+
+      assert message =~ "don't have permission to edit"
+    end
+
+    test "handles deleted workflow", %{socket: socket, workflow: workflow} do
+      # Set up GitHub repo connection
+      insert(:project_repo_connection,
+        project: socket.assigns.project,
+        repo: "openfn/demo",
+        branch: "main"
+      )
+
+      # Delete the workflow
+      Lightning.Repo.update!(
+        Ecto.Changeset.change(workflow,
+          deleted_at: DateTime.utc_now() |> DateTime.truncate(:second)
+        )
+      )
+
+      ref =
+        push(socket, "save_and_sync", %{"commit_message" => "Test commit"})
+
+      assert_reply ref, :error, %{
+        errors: %{base: ["This workflow has been deleted"]},
+        type: "workflow_deleted"
+      }
     end
   end
 
@@ -399,6 +876,300 @@ defmodule LightningWeb.WorkflowChannelTest do
       # Algorithm doesn't fill gaps, it continues from highest
       assert_reply ref, :ok, %{workflow: validated}
       assert validated["name"] == "Gap Test 2"
+    end
+  end
+
+  describe "PubSub subscription and credential broadcasting" do
+    test "receives and forwards credentials_updated broadcast to channel", %{
+      socket: socket,
+      workflow: workflow,
+      project: project
+    } do
+      # Create some test credentials
+      user = socket.assigns.current_user
+
+      credential =
+        insert(:credential,
+          name: "Broadcast Test",
+          schema: "raw",
+          user: user
+        )
+
+      insert(:project_credential, project: project, credential: credential)
+
+      # Fetch and render credentials
+      credentials =
+        Lightning.Projects.list_project_credentials(project)
+        |> Enum.concat(
+          Lightning.Credentials.list_keychain_credentials_for_project(project)
+        )
+
+      # This matches the render_credentials function in workflow_channel.ex
+      rendered_credentials = %{
+        project_credentials:
+          credentials
+          |> Enum.filter(&match?(%Lightning.Projects.ProjectCredential{}, &1))
+          |> Enum.map(fn pc ->
+            %{
+              id: pc.credential.id,
+              project_credential_id: pc.id,
+              name: pc.credential.name,
+              external_id: pc.credential.external_id,
+              schema: pc.credential.schema,
+              owner: %{
+                id: pc.credential.user.id,
+                name:
+                  "#{pc.credential.user.first_name} #{pc.credential.user.last_name}",
+                email: pc.credential.user.email
+              },
+              oauth_client_name: nil,
+              inserted_at: pc.credential.inserted_at,
+              updated_at: pc.credential.updated_at
+            }
+          end),
+        keychain_credentials: []
+      }
+
+      # Broadcast credentials_updated message
+      Phoenix.PubSub.broadcast(
+        Lightning.PubSub,
+        "workflow:collaborate:#{workflow.id}",
+        %{event: "credentials_updated", payload: rendered_credentials}
+      )
+
+      # Verify channel pushed the message to the client
+      assert_push "credentials_updated", pushed_credentials
+
+      assert %{
+               project_credentials: [cred | _],
+               keychain_credentials: []
+             } = pushed_credentials
+
+      assert cred.name == "Broadcast Test"
+      assert cred.schema == "raw"
+    end
+
+    test "forwards keychain credentials in broadcast", %{
+      socket: socket,
+      workflow: workflow,
+      project: project
+    } do
+      user = socket.assigns.current_user
+
+      # Create a keychain credential
+      keychain_cred =
+        insert(:keychain_credential,
+          name: "Keychain Broadcast",
+          path: "$.secret",
+          project: project,
+          created_by: user
+        )
+
+      # Simulate broadcast with keychain credential
+      rendered_credentials = %{
+        project_credentials: [],
+        keychain_credentials: [
+          %{
+            id: keychain_cred.id,
+            name: keychain_cred.name,
+            path: keychain_cred.path,
+            default_credential_id: keychain_cred.default_credential_id,
+            inserted_at: keychain_cred.inserted_at,
+            updated_at: keychain_cred.updated_at
+          }
+        ]
+      }
+
+      Phoenix.PubSub.broadcast(
+        Lightning.PubSub,
+        "workflow:collaborate:#{workflow.id}",
+        %{event: "credentials_updated", payload: rendered_credentials}
+      )
+
+      assert_push "credentials_updated", pushed_credentials
+
+      assert %{
+               project_credentials: [],
+               keychain_credentials: [keychain | _]
+             } = pushed_credentials
+
+      assert keychain.name == "Keychain Broadcast"
+      assert keychain.path == "$.secret"
+    end
+
+    test "broadcasts to all subscribed channels", %{workflow: workflow} do
+      # Broadcast empty credentials update
+      rendered_credentials = %{
+        project_credentials: [],
+        keychain_credentials: []
+      }
+
+      Phoenix.PubSub.broadcast(
+        Lightning.PubSub,
+        "workflow:collaborate:#{workflow.id}",
+        %{event: "credentials_updated", payload: rendered_credentials}
+      )
+
+      # Socket should receive the push
+      assert_push "credentials_updated", pushed_credentials
+
+      assert %{
+               project_credentials: [],
+               keychain_credentials: []
+             } = pushed_credentials
+    end
+
+    test "handles presence_diff without errors", %{
+      socket: socket,
+      workflow: workflow
+    } do
+      # Send a presence_diff message (already handled by channel)
+      Phoenix.PubSub.broadcast(
+        Lightning.PubSub,
+        "workflow:collaborate:#{workflow.id}",
+        %{event: "presence_diff", payload: %{}}
+      )
+
+      # Should not push credentials_updated
+      refute_push "credentials_updated", _
+
+      # Socket should still be functional
+      ref = push(socket, "request_credentials", %{})
+      assert_reply ref, :ok, %{credentials: _}
+    end
+
+    test "handles credentials with all optional fields", %{
+      socket: socket,
+      workflow: workflow,
+      project: project
+    } do
+      user = socket.assigns.current_user
+
+      oauth_client = insert(:oauth_client, name: "Google OAuth")
+
+      credential =
+        insert(:credential,
+          name: "Full Featured Credential",
+          schema: "oauth",
+          user: user,
+          external_id: "ext_456",
+          oauth_client: oauth_client
+        )
+
+      project_credential =
+        insert(:project_credential, project: project, credential: credential)
+
+      # Render with all fields populated
+      rendered_credentials = %{
+        project_credentials: [
+          %{
+            id: credential.id,
+            project_credential_id: project_credential.id,
+            name: credential.name,
+            external_id: credential.external_id,
+            schema: credential.schema,
+            owner: %{
+              id: user.id,
+              name: "#{user.first_name} #{user.last_name}",
+              email: user.email
+            },
+            oauth_client_name: oauth_client.name,
+            inserted_at: credential.inserted_at,
+            updated_at: credential.updated_at
+          }
+        ],
+        keychain_credentials: []
+      }
+
+      Phoenix.PubSub.broadcast(
+        Lightning.PubSub,
+        "workflow:collaborate:#{workflow.id}",
+        %{event: "credentials_updated", payload: rendered_credentials}
+      )
+
+      assert_push "credentials_updated", pushed_credentials
+
+      assert [
+               %{
+                 name: "Full Featured Credential",
+                 schema: "oauth",
+                 external_id: "ext_456",
+                 oauth_client_name: "Google OAuth",
+                 owner: %{
+                   id: owner_id,
+                   name: owner_name,
+                   email: owner_email
+                 }
+               }
+             ] = pushed_credentials.project_credentials
+
+      assert owner_id == user.id
+      assert owner_name == "#{user.first_name} #{user.last_name}"
+      assert owner_email == user.email
+    end
+
+    test "request_credentials renders owner and oauth_client_name correctly", %{
+      socket: socket,
+      project: project
+    } do
+      user = socket.assigns.current_user
+
+      oauth_client = insert(:oauth_client, name: "Salesforce OAuth")
+
+      credential =
+        insert(:credential,
+          name: "OAuth Test Credential",
+          schema: "oauth",
+          user: user,
+          external_id: "ext_789",
+          oauth_client: oauth_client
+        )
+
+      insert(:project_credential, project: project, credential: credential)
+
+      # Request credentials through the channel (goes through render_credentials)
+      ref = push(socket, "request_credentials", %{})
+
+      assert_reply ref, :ok, %{credentials: credentials}
+
+      # Verify render_owner was called and returned correct data
+      assert [cred | _] = credentials.project_credentials
+
+      assert cred.owner == %{
+               id: user.id,
+               name: "#{user.first_name} #{user.last_name}",
+               email: user.email
+             }
+
+      # Verify render_oauth_client_name was called
+      assert cred.oauth_client_name == "Salesforce OAuth"
+      assert cred.name == "OAuth Test Credential"
+      assert cred.external_id == "ext_789"
+    end
+
+    test "request_credentials handles nil owner and oauth_client", %{
+      socket: socket,
+      project: project
+    } do
+      # Create credential without user association (edge case)
+      credential =
+        insert(:credential,
+          name: "No Owner Credential",
+          schema: "raw",
+          user: nil,
+          oauth_client: nil
+        )
+
+      insert(:project_credential, project: project, credential: credential)
+
+      ref = push(socket, "request_credentials", %{})
+
+      assert_reply ref, :ok, %{credentials: credentials}
+
+      # Verify render_owner returns nil for nil user
+      assert [cred | _] = credentials.project_credentials
+      assert cred.owner == nil
+      assert cred.oauth_client_name == nil
     end
   end
 end

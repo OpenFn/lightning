@@ -15,6 +15,14 @@ export const UserContextSchema = z.object({
 export const ProjectContextSchema = z.object({
   id: uuidSchema,
   name: z.string(),
+  env: z.string().nullable().optional(),
+});
+
+export const ProjectRepoConnectionSchema = z.object({
+  id: uuidSchema,
+  repo: z.string(),
+  branch: z.string(),
+  github_installation_id: z.string(),
 });
 
 export const AppConfigSchema = z.object({
@@ -23,6 +31,7 @@ export const AppConfigSchema = z.object({
 
 export const PermissionsSchema = z.object({
   can_edit_workflow: z.boolean(),
+  can_run_workflow: z.boolean(),
 });
 
 export type Permissions = z.infer<typeof PermissionsSchema>;
@@ -33,10 +42,12 @@ export const SessionContextResponseSchema = z.object({
   config: AppConfigSchema,
   permissions: PermissionsSchema,
   latest_snapshot_lock_version: z.number().int(),
+  project_repo_connection: ProjectRepoConnectionSchema.nullable(),
 });
 
 export type UserContext = z.infer<typeof UserContextSchema>;
 export type ProjectContext = z.infer<typeof ProjectContextSchema>;
+export type ProjectRepoConnection = z.infer<typeof ProjectRepoConnectionSchema>;
 export type AppConfig = z.infer<typeof AppConfigSchema>;
 
 export interface SessionContextState {
@@ -45,6 +56,7 @@ export interface SessionContextState {
   config: AppConfig | null;
   permissions: Permissions | null;
   latestSnapshotLockVersion: number | null;
+  projectRepoConnection: ProjectRepoConnection | null;
   isNewWorkflow: boolean;
   isLoading: boolean;
   error: string | null;

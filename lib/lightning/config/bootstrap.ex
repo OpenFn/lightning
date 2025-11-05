@@ -303,6 +303,10 @@ defmodule Lightning.Config.Bootstrap do
            :require_email_verification,
            env!("REQUIRE_EMAIL_VERIFICATION", &Utils.ensure_boolean/1, false)
 
+    config :lightning,
+           :webhook_response_timeout_ms,
+           env!("WEBHOOK_RESPONSE_TIMEOUT_MS", :integer, 30_000)
+
     # To actually send emails you need to configure the mailer to use a real
     # adapter. You may configure the swoosh api client of your choice.
     # See # https://hexdocs.pm/swoosh/Swoosh.html#module-installation for more details.
@@ -573,6 +577,8 @@ defmodule Lightning.Config.Bootstrap do
       disabled: not env!("PROMEX_ENABLED", &Utils.ensure_boolean/1, false),
       manual_metrics_start_delay: :no_delay,
       drop_metrics_groups: [],
+      expensive_metrics_enabled:
+        env!("PROMEX_EXPENSIVE_METRICS_ENABLED", &Utils.ensure_boolean/1, false),
       grafana: [
         host: env!("PROMEX_GRAFANA_HOST", :string, ""),
         username: env!("PROMEX_GRAFANA_USER", :string, ""),
@@ -608,7 +614,7 @@ defmodule Lightning.Config.Bootstrap do
       run_queue_metrics_period_seconds:
         env!("METRICS_RUN_QUEUE_METRICS_PERIOD_SECONDS", :integer, 5),
       unclaimed_run_threshold_seconds:
-        env!("METRICS_UNCLAIMED_RUN_THRESHOLD_SECONDS", :integer, 300)
+        env!("METRICS_UNCLAIMED_RUN_THRESHOLD_SECONDS", :integer, 10)
 
     config :lightning,
            :per_workflow_claim_limit,

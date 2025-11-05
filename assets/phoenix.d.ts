@@ -1,9 +1,17 @@
 /* Minimal types for Phoenix JS client sourced from deps. */
 
 declare module "phoenix" {
+  export interface Push {
+    receive(
+      status: "ok" | "error" | "timeout",
+      callback: (response: any) => void
+    ): Push;
+  }
+
   export class Channel {
     on(event: string, callback: (data: unknown) => void): number;
     off(event: string, callback: (data: unknown) => void): void;
+    push(event: string, payload?: object, timeout?: number): Push;
   }
 
   export class Presence {}

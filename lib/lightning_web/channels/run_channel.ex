@@ -50,6 +50,41 @@ defmodule LightningWeb.RunChannel do
     end
   end
 
+  def join("run:" <> run_id, _params, socket)
+      when is_map_key(socket.assigns, :current_user) do
+    # Browser client join (from UserSocket)
+    user = socket.assigns.current_user
+
+    with run when is_map(run) <-
+           Runs.get(run_id, include: [workflow: :project]) ||
+             {:error, :not_found},
+         project <- run.workflow.project,
+         :ok <-
+           Lightning.Policies.Permissions.can(
+             Lightning.Policies.ProjectUsers,
+             :access_project,
+             user,
+             project
+           ) do
+      # Subscribe to run events
+      Runs.Events.subscribe(run)
+
+      {:ok,
+       socket
+       |> assign(:run_id, run_id)
+       |> assign(:project_id, project.id)}
+    else
+      {:error, :not_found} ->
+        {:error, %{reason: "not_found"}}
+
+      {:error, :unauthorized} ->
+        {:error, %{reason: "unauthorized"}}
+
+      _ ->
+        {:error, %{reason: "unauthorized"}}
+    end
+  end
+
   def join("run:" <> _id, _payload, _socket) do
     {:error, %{reason: "unauthorized"}}
   end
@@ -76,9 +111,15 @@ defmodule LightningWeb.RunChannel do
       {:ok, run} ->
         # TODO: Turn FailureAlerter into an Oban worker and process async
         # instead of blocking the channel.
-        run
-        |> Repo.preload([:log_lines, work_order: [:workflow]])
+        run_with_preloads =
+          run
+          |> Repo.preload([:log_lines, work_order: [:workflow, :trigger]])
+
+        run_with_preloads
         |> Lightning.FailureAlerter.alert_on_failure()
+
+        # Broadcast webhook response if after_completion is enabled
+        maybe_broadcast_webhook_response(run_with_preloads, payload)
 
         socket |> assign(run: run) |> reply_with({:ok, nil})
 
@@ -180,6 +221,120 @@ defmodule LightningWeb.RunChannel do
 
       {:ok, log_line} ->
         reply_with(socket, {:ok, %{log_line_id: log_line.id}})
+    end
+  end
+
+  # Browser client handlers
+  def handle_in("fetch:run", _payload, socket) do
+    run_id = socket.assigns.run_id
+
+    run =
+      Runs.get(run_id,
+        include: [
+          :created_by,
+          :starting_trigger,
+          :work_order,
+          steps: [:job, :input_dataclip, :output_dataclip]
+        ]
+      )
+
+    reply_with(socket, {:ok, %{run: run}})
+  end
+
+  def handle_in("fetch:logs", _payload, socket) do
+    run_id = socket.assigns.run_id
+    run = Runs.get(run_id)
+
+    # get_log_lines returns a stream that must be consumed in a transaction
+    log_lines =
+      Repo.transaction(fn ->
+        Runs.get_log_lines(run)
+        |> Enum.to_list()
+      end)
+      |> case do
+        {:ok, lines} -> lines
+        {:error, _} -> []
+      end
+
+    reply_with(socket, {:ok, %{logs: log_lines}})
+  end
+
+  # Forward PubSub events to browser clients
+  @impl true
+  def handle_info(%Runs.Events.RunUpdated{run: run}, socket) do
+    push(socket, "run:updated", %{run: run})
+    {:noreply, socket}
+  end
+
+  def handle_info(%Runs.Events.StepStarted{step: step}, socket) do
+    step = Repo.preload(step, :job)
+    push(socket, "step:started", %{step: step})
+    {:noreply, socket}
+  end
+
+  def handle_info(%Runs.Events.StepCompleted{step: step}, socket) do
+    step = Repo.preload(step, [:job, :input_dataclip, :output_dataclip])
+    push(socket, "step:completed", %{step: step})
+    {:noreply, socket}
+  end
+
+  def handle_info(%Runs.Events.LogAppended{log_line: log_line}, socket) do
+    push(socket, "logs", %{logs: [log_line]})
+    {:noreply, socket}
+  end
+
+  def handle_info(%Runs.Events.DataclipUpdated{dataclip: dataclip}, socket) do
+    push(socket, "dataclip:updated", %{dataclip: dataclip})
+    {:noreply, socket}
+  end
+
+  # Ignore other messages
+  def handle_info(_msg, socket), do: {:noreply, socket}
+
+  defp maybe_broadcast_webhook_response(run, payload) do
+    work_order = run.work_order
+    trigger = work_order.trigger
+
+    if trigger && trigger.type == :webhook &&
+         trigger.webhook_reply == :after_completion do
+      topic = "work_order:#{work_order.id}:webhook_response"
+
+      # TODO - Later allow workflow authors to customize the status code
+      # and body of the reply.
+      status_code = determine_status_code(run.state)
+
+      body = %{
+        data: payload["final_state"],
+        meta: %{
+          work_order_id: work_order.id,
+          run_id: run.id,
+          state: run.state,
+          error_type: run.error_type,
+          inserted_at: run.inserted_at,
+          started_at: run.started_at,
+          claimed_at: run.claimed_at,
+          finished_at: run.finished_at
+        }
+      }
+
+      Phoenix.PubSub.broadcast(
+        Lightning.PubSub,
+        topic,
+        {:webhook_response, status_code, body}
+      )
+    end
+  end
+
+  # TODO - decide how we should respond... do we use HTTP codes for run states?
+  defp determine_status_code(state) do
+    case state do
+      :success -> 201
+      :failed -> 201
+      :crashed -> 201
+      :exception -> 201
+      :killed -> 201
+      :cancelled -> 201
+      _other -> 201
     end
   end
 

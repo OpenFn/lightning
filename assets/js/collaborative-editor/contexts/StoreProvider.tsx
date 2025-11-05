@@ -19,6 +19,15 @@
  *   ↓ useStores
  * Components (consume stores)
  * ```
+ *
+ * ## Initialization Sequence:
+ *
+ * SessionProvider          →  Creates Y.Doc, connects Phoenix Channel
+ * SessionStore             →  Tracks isConnected, isSynced
+ * StoreProvider (this)     →  Waits for isSynced before connecting WorkflowStore
+ * WorkflowStore observers  →  Populate Immer state from Y.Doc
+ * LoadingBoundary          →  Waits for workflow !== null before rendering
+ * Components               →  Can safely assume workflow exists
  */
 
 import type React from "react";
@@ -45,9 +54,14 @@ import {
   createCredentialStore,
 } from "../stores/createCredentialStore";
 import {
+  createRunStore,
+  type RunStoreInstance,
+} from "../stores/createRunStore";
+import {
   createSessionContextStore,
   type SessionContextStoreInstance,
 } from "../stores/createSessionContextStore";
+import { createUIStore, type UIStoreInstance } from "../stores/createUIStore";
 import {
   createWorkflowStore,
   type WorkflowStoreInstance,
@@ -61,6 +75,8 @@ export interface StoreContextValue {
   awarenessStore: AwarenessStoreInstance;
   workflowStore: WorkflowStoreInstance;
   sessionContextStore: SessionContextStoreInstance;
+  uiStore: UIStoreInstance;
+  runStore: RunStoreInstance;
 }
 
 export const StoreContext = createContext<StoreContextValue | null>(null);
@@ -85,6 +101,8 @@ export const StoreProvider = ({ children }: StoreProviderProps) => {
     awarenessStore: createAwarenessStore(),
     workflowStore: createWorkflowStore(),
     sessionContextStore: createSessionContextStore(isNewWorkflow),
+    uiStore: createUIStore(),
+    runStore: createRunStore(),
   }));
 
   // Subscribe to sessionContextStore user changes
@@ -112,12 +130,14 @@ export const StoreProvider = ({ children }: StoreProviderProps) => {
       user.id &&
       user.first_name &&
       user.last_name &&
+      user.email &&
       !stores.awarenessStore.isAwarenessReady()
     ) {
       // Create LocalUserData from SessionContextStore user
       const userData = {
         id: user.id,
         name: `${user.first_name} ${user.last_name}`,
+        email: user.email,
         color: generateUserColor(user.id),
       };
 
@@ -156,9 +176,14 @@ export const StoreProvider = ({ children }: StoreProviderProps) => {
   }, [session.provider, session.isConnected, stores]);
 
   // Connect/disconnect workflowStore Y.Doc when session changes
+  // IMPORTANT: Wait for isSynced, not just isConnected
+  // isConnected = Phoenix channel is open
+  // isSynced = Y.Doc has received and applied all initial sync data
+  // We must wait for sync to complete before attaching observers,
+  // otherwise observers will read empty/partial Y.Doc state (race condition)
   useEffect(() => {
-    if (session.ydoc && session.provider && session.isConnected) {
-      logger.debug("Connecting workflowStore");
+    if (session.ydoc && session.provider && session.isSynced) {
+      logger.debug("Connecting workflowStore (Y.Doc synced)");
       stores.workflowStore.connect(
         session.ydoc as Session.WorkflowDoc,
         session.provider
@@ -171,12 +196,7 @@ export const StoreProvider = ({ children }: StoreProviderProps) => {
     } else {
       return undefined;
     }
-  }, [
-    session.ydoc,
-    session.provider,
-    stores.workflowStore,
-    session.isConnected,
-  ]);
+  }, [session.ydoc, session.provider, stores.workflowStore, session.isSynced]);
 
   useEffect(() => {
     return () => {

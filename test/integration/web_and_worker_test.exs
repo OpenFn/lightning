@@ -1,6 +1,7 @@
 defmodule Lightning.WebAndWorkerTest do
   use LightningWeb.ConnCase, async: false
 
+  import Ecto.Query
   import Lightning.Factories
   import Mox
 
@@ -266,7 +267,7 @@ defmodule Lightning.WebAndWorkerTest do
 
       version_logs = pick_out_version_logs(run)
       assert version_logs["@openfn/language-http"] =~ "3.1.12"
-      assert version_logs["worker"] =~ "1.15"
+      assert version_logs["worker"] =~ "1.17"
       assert version_logs["node.js"] =~ "22.12"
       assert version_logs["@openfn/language-common"] == "3.0.2"
 
@@ -393,6 +394,186 @@ defmodule Lightning.WebAndWorkerTest do
     end
   end
 
+  describe "webhook with delayed response (after_completion)" do
+    setup [:register_and_log_in_superuser, :stub_rate_limiter_ok]
+
+    @tag :integration
+    @tag timeout: 120_000
+    test "returns final state to webhook caller after workflow completes", %{
+      uri: uri
+    } do
+      project = insert(:project)
+
+      # Create a simple workflow
+      webhook_trigger = build(:trigger, type: :webhook, enabled: true)
+
+      job =
+        build(:job,
+          adaptor: "@openfn/language-common@latest",
+          body: """
+          fn(state => {
+            console.log("Processing data...");
+            // Add a delay to ensure the webhook request is still waiting
+            return new Promise(resolve => {
+              setTimeout(() => {
+                resolve({ result: "success", data: { value: state.data.x * 2 } });
+              }, 1000);
+            });
+          });
+          """,
+          name: "process-job"
+        )
+
+      workflow =
+        build(:workflow, project: project)
+        |> with_trigger(webhook_trigger)
+        |> with_job(job)
+        |> with_edge({webhook_trigger, job}, condition_type: :always)
+        |> insert()
+
+      # Update trigger to use after_completion
+      [trigger] = workflow.triggers
+
+      trigger =
+        trigger
+        |> Ecto.Changeset.change(webhook_reply: :after_completion)
+        |> Repo.update!()
+
+      # Create snapshot
+      Snapshot.create(workflow |> Repo.reload!())
+
+      # Post to webhook - this should wait for completion
+      webhook_body = %{"x" => 5}
+
+      # Make request in a task so we can verify it waits
+      task =
+        Task.async(fn ->
+          Tesla.client(
+            [
+              {Tesla.Middleware.BaseUrl, uri},
+              Tesla.Middleware.JSON
+            ],
+            {Tesla.Adapter.Finch, name: Lightning.Finch}
+          )
+          |> Tesla.post!("/i/#{trigger.id}", webhook_body)
+        end)
+
+      # Give it a moment to create the work order
+      Process.sleep(500)
+
+      # Verify work order was created but response not yet returned
+      refute Task.yield(task, 50),
+             "Expected webhook request to still be waiting"
+
+      # Wait for the workflow to complete (up to 10 seconds)
+      response = Task.await(task, 10_000)
+
+      # Should return 201 with the final state
+      assert response.status == 201
+
+      # The response body should be the final state from the job inside a "data"
+      # key and the metadata inside a "meta" key.
+      assert %{
+               "data" => %{"data" => %{"value" => 10}, "result" => "success"},
+               "meta" => meta
+             } = response.body
+
+      # Verify meta fields exist with correct types and values
+      assert meta["error_type"] == nil
+      assert meta["state"] == "success"
+      assert is_binary(meta["run_id"])
+      assert is_binary(meta["work_order_id"])
+
+      # Verify datetime fields are present and valid ISO8601 strings
+      assert is_binary(meta["claimed_at"])
+      assert is_binary(meta["finished_at"])
+      assert is_binary(meta["inserted_at"])
+      assert is_binary(meta["started_at"])
+
+      # Verify datetime fields match ISO8601 format
+      assert meta["claimed_at"] =~ ~r/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/
+      assert meta["finished_at"] =~ ~r/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/
+      assert meta["inserted_at"] =~ ~r/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/
+      assert meta["started_at"] =~ ~r/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/
+
+      # Verify the work order completed successfully
+      work_order =
+        Lightning.Repo.one(
+          from wo in Lightning.WorkOrder,
+            where: wo.trigger_id == ^trigger.id,
+            order_by: [desc: wo.inserted_at],
+            limit: 1
+        )
+
+      assert work_order.state == :success
+    end
+
+    @tag :integration
+    @tag timeout: 120_000
+    test "returns error state when workflow fails", %{uri: uri} do
+      project = insert(:project)
+
+      webhook_trigger = build(:trigger, type: :webhook, enabled: true)
+
+      job =
+        build(:job,
+          adaptor: "@openfn/language-common@latest",
+          body: """
+          fn(state => {
+            console.log("About to fail...");
+            throw new Error("Intentional failure");
+          });
+          """,
+          name: "failing-job"
+        )
+
+      workflow =
+        build(:workflow, project: project)
+        |> with_trigger(webhook_trigger)
+        |> with_job(job)
+        |> with_edge({webhook_trigger, job}, condition_type: :always)
+        |> insert()
+
+      [trigger] = workflow.triggers
+
+      trigger =
+        trigger
+        |> Ecto.Changeset.change(webhook_reply: :after_completion)
+        |> Repo.update!()
+
+      Snapshot.create(workflow |> Repo.reload!())
+
+      webhook_body = %{"test" => "data"}
+
+      response =
+        Tesla.client(
+          [
+            {Tesla.Middleware.BaseUrl, uri},
+            Tesla.Middleware.JSON
+          ],
+          {Tesla.Adapter.Finch, name: Lightning.Finch}
+        )
+        |> Tesla.post!("/i/#{trigger.id}", webhook_body)
+
+      # Should return 201 for failed workflow
+      assert response.status == 201
+
+      # Response should include the final state
+      assert is_map(response.body)
+
+      # Verify the work order failed
+      work_order =
+        Lightning.Repo.one(
+          from wo in Lightning.WorkOrder,
+            where: wo.trigger_id == ^trigger.id,
+            order_by: [desc: wo.inserted_at],
+            limit: 1
+        )
+
+      assert work_order.state == :failed
+    end
+  end
+
   defp webhook_expression do
     """
     fn(state => {
@@ -459,8 +640,6 @@ defmodule Lightning.WebAndWorkerTest do
   end
 
   defp select_dataclip_body(uuid) do
-    import Ecto.Query
-
     from(d in Lightning.Invocation.Dataclip,
       where: d.id == ^uuid,
       select: d.body

@@ -3,6 +3,7 @@ defmodule LightningWeb.WorkflowLive.Helpers do
   Helper functions for the Workflow LiveViews.
   """
 
+  alias Lightning.Accounts
   alias Lightning.Extensions.UsageLimiting
   alias Lightning.Extensions.UsageLimiting.Action
   alias Lightning.Extensions.UsageLimiting.Context
@@ -305,7 +306,6 @@ defmodule LightningWeb.WorkflowLive.Helpers do
 
       case value_or_opts do
         opts when is_list(opts) ->
-          # If it's already a param definition, use it
           if Keyword.has_key?(opts, :name) do
             opts
           else
@@ -328,5 +328,143 @@ defmodule LightningWeb.WorkflowLive.Helpers do
     Enum.reject(base_params, fn param ->
       MapSet.member?(override_names, Keyword.get(param, :name))
     end)
+  end
+
+  @param_mappings %{
+    direct: %{
+      "a" => "run"
+    },
+    mode_to_panel: %{
+      "expand" => "editor",
+      "workflow_input" => "run",
+      "settings" => "settings"
+    },
+    preserved: ["v", "method", "w-chat", "j-chat", "code"],
+    collaborative_only: ["panel"]
+  }
+
+  @doc """
+  Builds a URL to the collaborative editor with converted query parameters.
+
+  This function uses a data-driven approach with the `@param_mappings` configuration
+  to convert classical editor parameters to collaborative editor equivalents.
+
+  ## Conversion Rules
+
+  - `a` (followed run) → `run`
+  - `s` (selected step) → `job`/`trigger`/`edge` (context-aware based on selection)
+  - `m=expand` → `panel=editor`
+  - `m=workflow_input` → `panel=run`
+  - `m=settings` → `panel=settings`
+  - Preserves: `v`, `method`, `w-chat`, `j-chat`, `code`
+  - Skips: `panel` (collaborative-only)
+
+  ## Parameters
+
+  - `assigns` - Socket assigns containing:
+    - `query_params` - Current URL query parameters
+    - `selected_job` - Currently selected job (optional, for context)
+    - `selected_trigger` - Currently selected trigger (optional, for context)
+    - `selected_edge` - Currently selected edge (optional, for context)
+    - `project` - Project struct with `id`
+    - `workflow` - Workflow struct with `id` (if not new workflow)
+    - `live_action` - Current LiveView action (`:new` or `:edit`)
+
+  ## Returns
+
+  A complete URL string for the collaborative editor
+
+  ## Examples
+
+      iex> collaborative_editor_url(%{
+      ...>   query_params: %{"a" => "run-123", "s" => "job-abc", "m" => "expand"},
+      ...>   selected_job: %{id: "job-abc"},
+      ...>   project: %{id: "proj-1"},
+      ...>   workflow: %{id: "wf-1"},
+      ...>   live_action: :edit
+      ...> })
+      "/projects/proj-1/w/wf-1/collaborate?run=run-123&job=job-abc&panel=editor"
+
+  """
+  def collaborative_editor_url(assigns) do
+    collaborative_params =
+      assigns.query_params
+      |> Enum.reduce(%{}, fn {key, value}, acc ->
+        convert_param(key, value, acc, assigns)
+      end)
+
+    build_url_with_params(
+      collaborative_base_url(assigns),
+      collaborative_params
+    )
+  end
+
+  defp convert_param(_key, nil, acc, _assigns), do: acc
+
+  defp convert_param("a", value, acc, _assigns) do
+    Map.put(acc, @param_mappings.direct["a"], value)
+  end
+
+  defp convert_param("s", value, acc, assigns) do
+    selection_type = determine_selection_type(value, assigns)
+    Map.put(acc, selection_type, value)
+  end
+
+  defp convert_param("m", value, acc, _assigns) do
+    case Map.get(@param_mappings.mode_to_panel, value) do
+      nil -> acc
+      panel -> Map.put(acc, "panel", panel)
+    end
+  end
+
+  defp convert_param(key, value, acc, _assigns) do
+    cond do
+      key in @param_mappings.collaborative_only ->
+        acc
+
+      key in @param_mappings.preserved ->
+        Map.put(acc, key, value)
+
+      true ->
+        Map.put(acc, key, value)
+    end
+  end
+
+  defp determine_selection_type(value, assigns) do
+    cond do
+      match?(%{selected_trigger: %{id: ^value}}, assigns) -> "trigger"
+      match?(%{selected_job: %{id: ^value}}, assigns) -> "job"
+      match?(%{selected_edge: %{id: ^value}}, assigns) -> "edge"
+      true -> "job"
+    end
+  end
+
+  defp collaborative_base_url(%{live_action: :new, project: project}) do
+    "/projects/#{project.id}/w/new/collaborate"
+  end
+
+  defp collaborative_base_url(%{project: project, workflow: workflow}) do
+    "/projects/#{project.id}/w/#{workflow.id}/collaborate"
+  end
+
+  defp build_url_with_params(base_url, params) when map_size(params) == 0 do
+    base_url
+  end
+
+  defp build_url_with_params(base_url, params) do
+    query_string = URI.encode_query(params)
+    "#{base_url}?#{query_string}"
+  end
+
+  @doc """
+  Determines whether to show the collaborative editor toggle (beaker icon).
+
+  Returns `true` only if:
+  - User has experimental features enabled
+  - Currently viewing the latest version (not a snapshot)
+  """
+  def show_collaborative_editor_toggle?(user, snapshot_version_tag) do
+    Accounts.experimental_features_enabled?(user) &&
+      snapshot_version_tag == "latest"
   end
 end
