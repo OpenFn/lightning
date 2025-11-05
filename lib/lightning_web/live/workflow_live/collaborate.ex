@@ -226,7 +226,7 @@ defmodule LightningWeb.WorkflowLive.Collaborate do
 
   def handle_info(:webhook_auth_method_saved, socket) do
     # Broadcast webhook auth methods update to all connected clients
-    # broadcast_webhook_auth_methods_update(socket)
+    broadcast_webhook_auth_methods_update(socket)
 
     # Update server state to close the modal
     send(self(), :close_webhook_auth_modal_after_save)
@@ -260,20 +260,32 @@ defmodule LightningWeb.WorkflowLive.Collaborate do
     )
   end
 
-  # defp broadcast_webhook_auth_methods_update(socket) do
-  #   # Fetch updated webhook auth methods list
-  #   project = socket.assigns.project
+  defp broadcast_webhook_auth_methods_update(socket) do
+    # Fetch updated webhook auth methods list
+    project = socket.assigns.project
 
-  #   webhook_auth_methods =
-  #     Lightning.WebhookAuthMethods.list_for_project(project)
-  #     |> Repo.preload(:triggers)
-  #     # |> WorkflowJSON.render()
+    webhook_auth_methods =
+      Lightning.WebhookAuthMethods.list_for_project(project)
+      |> Enum.map(fn auth_method ->
+        %{
+          id: auth_method.id,
+          name: auth_method.name,
+          auth_type: auth_method.auth_type,
+          username: auth_method.username,
+          project_id: auth_method.project_id,
+          inserted_at: auth_method.inserted_at,
+          updated_at: auth_method.updated_at
+        }
+      end)
 
-  #   # Broadcast to all connected clients on the workflow channel
-  #   Phoenix.PubSub.broadcast(
-  #     Lightning.PubSub,
-  #     "workflow:collaborate:#{socket.assigns.workflow_id}",
-  #     %{event: "webhook_auth_methods_updated", payload: webhook_auth_methods}
-  #   )
-  # end
+    # Wrap in a map to match Phoenix WebSocket serializer requirements
+    payload = %{webhook_auth_methods: webhook_auth_methods}
+
+    # Broadcast to all connected clients on the workflow channel
+    Phoenix.PubSub.broadcast(
+      Lightning.PubSub,
+      "workflow:collaborate:#{socket.assigns.workflow_id}",
+      %{event: "webhook_auth_methods_updated", payload: payload}
+    )
+  end
 end

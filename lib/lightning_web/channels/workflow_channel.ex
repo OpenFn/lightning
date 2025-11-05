@@ -473,6 +473,15 @@ defmodule LightningWeb.WorkflowChannel do
 
   @impl true
   def handle_info(
+        %{event: "webhook_auth_methods_updated", payload: webhook_auth_methods},
+        socket
+      ) do
+    push(socket, "webhook_auth_methods_updated", webhook_auth_methods)
+    {:noreply, socket}
+  end
+
+  @impl true
+  def handle_info(
         {:DOWN, _ref, :process, _pid, _reason},
         socket
       ) do

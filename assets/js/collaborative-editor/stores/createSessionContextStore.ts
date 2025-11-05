@@ -81,6 +81,7 @@
 
 import { produce } from "immer";
 import type { PhoenixChannelProvider } from "y-phoenix-channel";
+import { z } from "zod";
 
 import _logger from "#/utils/logger";
 
@@ -89,6 +90,7 @@ import {
   type SessionContextState,
   type SessionContextStore,
   SessionContextResponseSchema,
+  WebhookAuthMethodSchema,
 } from "../types/sessionContext";
 
 import { createWithSelector } from "./common";
@@ -202,6 +204,38 @@ export const createSessionContextStore = (
     handleSessionContextReceived(rawData);
   };
 
+  /**
+   * Handle webhook auth methods update from server
+   * Updates only the webhook auth methods without affecting other session context
+   */
+  const handleWebhookAuthMethodsUpdated = (rawData: unknown) => {
+    // Validate the webhook_auth_methods array
+    if (
+      typeof rawData === "object" &&
+      rawData !== null &&
+      "webhook_auth_methods" in rawData
+    ) {
+      const result = z
+        .array(WebhookAuthMethodSchema)
+        .safeParse(
+          (rawData as { webhook_auth_methods: unknown }).webhook_auth_methods
+        );
+
+      if (result.success) {
+        state = produce(state, draft => {
+          draft.webhookAuthMethods = result.data;
+          draft.lastUpdated = Date.now();
+        });
+        notify("handleWebhookAuthMethodsUpdated");
+      } else {
+        logger.error("Failed to parse webhook auth methods data", {
+          error: result.error,
+          rawData,
+        });
+      }
+    }
+  };
+
   // =============================================================================
   // PATTERN 2: Direct Immer → Notify (Local State)
   // =============================================================================
@@ -293,11 +327,20 @@ export const createSessionContextStore = (
       }
     };
 
+    const webhookAuthMethodsUpdatedHandler = (message: unknown) => {
+      logger.debug("Received webhook_auth_methods_updated message", message);
+      handleWebhookAuthMethodsUpdated(message);
+    };
+
     // Set up channel listeners
     if (channel) {
       channel.on("session_context", sessionContextHandler);
       channel.on("session_context_updated", sessionContextUpdatedHandler);
       channel.on("workflow_saved", workflowSavedHandler);
+      channel.on(
+        "webhook_auth_methods_updated",
+        webhookAuthMethodsUpdatedHandler
+      );
     }
 
     devtools.connect();
@@ -310,6 +353,10 @@ export const createSessionContextStore = (
         channel.off("session_context", sessionContextHandler);
         channel.off("session_context_updated", sessionContextUpdatedHandler);
         channel.off("workflow_saved", workflowSavedHandler);
+        channel.off(
+          "webhook_auth_methods_updated",
+          webhookAuthMethodsUpdatedHandler
+        );
       }
       _channelProvider = null;
     };
