@@ -17,6 +17,9 @@ and this project adheres to
 
 ### Added
 
+- Show server validation errors in the collab editor forms
+  [#3783](https://github.com/OpenFn/lightning/issues/3783)
+
 ### Changed
 
 ### Fixed

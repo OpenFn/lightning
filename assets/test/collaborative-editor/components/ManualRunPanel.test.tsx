@@ -1052,8 +1052,10 @@ describe("ManualRunPanel", () => {
       // Find the close button - it's the last button with an X icon in the header
       const allButtons = screen.getAllByRole("button");
       // The close button is in the SelectedDataclipView header with ml-4 class
-      const xButton = allButtons.find(btn =>
-        btn.className.includes("ml-4") && btn.className.includes("text-gray-400")
+      const xButton = allButtons.find(
+        btn =>
+          btn.className.includes("ml-4") &&
+          btn.className.includes("text-gray-400")
       );
       await user.click(xButton!);
 
@@ -1095,8 +1097,10 @@ describe("ManualRunPanel", () => {
         expect(screen.getByText("Test Dataclip")).toBeInTheDocument();
       });
       const allButtons = screen.getAllByRole("button");
-      const xButton = allButtons.find(btn =>
-        btn.className.includes("ml-4") && btn.className.includes("text-gray-400")
+      const xButton = allButtons.find(
+        btn =>
+          btn.className.includes("ml-4") &&
+          btn.className.includes("text-gray-400")
       );
       await user.click(xButton!);
 
@@ -1150,8 +1154,10 @@ describe("ManualRunPanel", () => {
         expect(screen.getByText("Test Dataclip")).toBeInTheDocument();
       });
       const allButtons = screen.getAllByRole("button");
-      const xButton = allButtons.find(btn =>
-        btn.className.includes("ml-4") && btn.className.includes("text-gray-400")
+      const xButton = allButtons.find(
+        btn =>
+          btn.className.includes("ml-4") &&
+          btn.className.includes("text-gray-400")
       );
       await user.click(xButton!);
 
@@ -1203,8 +1209,10 @@ describe("ManualRunPanel", () => {
         expect(screen.getByText("Test Dataclip")).toBeInTheDocument();
       });
       const allButtons = screen.getAllByRole("button");
-      const xButton = allButtons.find(btn =>
-        btn.className.includes("ml-4") && btn.className.includes("text-gray-400")
+      const xButton = allButtons.find(
+        btn =>
+          btn.className.includes("ml-4") &&
+          btn.className.includes("text-gray-400")
       );
       await user.click(xButton!);
 

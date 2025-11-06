@@ -49,10 +49,10 @@ export interface Workflow extends Session.Workflow {
 }
 
 export namespace Workflow {
-  // Domain objects - use comprehensive Job type from job.ts
-  export type Job = JobType;
+  // Domain objects - use comprehensive Job type from job.ts with errors
+  export type Job = JobType & { errors?: Record<string, string[]> };
 
-  export type Trigger = TriggerType;
+  export type Trigger = TriggerType & { errors?: Record<string, string[]> };
 
   export interface Edge {
     id: string;
@@ -64,6 +64,7 @@ export namespace Workflow {
     condition_expression?: string;
     condition_label?: string;
     enabled?: boolean;
+    errors?: Record<string, string[]>;
   }
 
   export type NodeType = "job" | "trigger" | "edge";
@@ -72,11 +73,11 @@ export namespace Workflow {
   export type Positions = Record<string, { x: number; y: number }>;
 
   export interface State {
-    // Y.Doc sourced data (synced via observers)
-    workflow: Session.Workflow | null;
-    jobs: Workflow.Job[];
-    triggers: Workflow.Trigger[];
-    edges: Workflow.Edge[];
+    // Y.Doc sourced data (synced via observers) - all now have errors denormalized
+    workflow: Session.Workflow | null; // Has errors property
+    jobs: Workflow.Job[]; // Has errors property
+    triggers: Workflow.Trigger[]; // Has errors property
+    edges: Workflow.Edge[]; // Has errors property
     positions: Workflow.Positions;
 
     // Local UI state

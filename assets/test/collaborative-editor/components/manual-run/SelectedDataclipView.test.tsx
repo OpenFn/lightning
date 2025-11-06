@@ -115,9 +115,10 @@ describe("SelectedDataclipView", () => {
       );
 
       const closeButtons = screen.getAllByRole("button");
-      const xButton = closeButtons.find(btn =>
-        btn.querySelector('svg[data-slot="icon"]') &&
-        btn.className.includes("ml-4")
+      const xButton = closeButtons.find(
+        btn =>
+          btn.querySelector('svg[data-slot="icon"]') &&
+          btn.className.includes("ml-4")
       );
       expect(xButton).toBeDefined();
     });
@@ -319,7 +320,10 @@ describe("SelectedDataclipView", () => {
       await user.click(checkButton!);
 
       await waitFor(() => {
-        expect(onNameChange).toHaveBeenCalledWith("dataclip-123", "Updated Name");
+        expect(onNameChange).toHaveBeenCalledWith(
+          "dataclip-123",
+          "Updated Name"
+        );
       });
     });
 
