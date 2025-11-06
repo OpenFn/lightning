@@ -782,6 +782,7 @@ defmodule LightningWeb.RunLive.Components do
     case to_string(search_field) do
       "log" -> "Logs"
       "body" -> "Input"
+      "dataclip_name" -> "Dataclip Name"
       other -> other |> to_string |> String.capitalize()
     end
   end

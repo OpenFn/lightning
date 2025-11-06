@@ -383,6 +383,12 @@ defmodule Lightning.Config do
       Application.get_env(:lightning, :webhook_response_timeout_ms)
     end
 
+    @impl true
+    def runtime_manager_port do
+      Application.get_env(:lightning, Lightning.Runtime.RuntimeManager, [])
+      |> Keyword.get(:port, 2222)
+    end
+
     defp default_webhook_retry do
       [
         max_attempts: 5,
@@ -474,6 +480,7 @@ defmodule Lightning.Config do
   @callback webhook_retry() :: Keyword.t()
   @callback webhook_retry(key :: atom()) :: any()
   @callback webhook_response_timeout_ms() :: integer()
+  @callback runtime_manager_port() :: integer()
 
   @doc """
   Returns the configuration for the `Lightning.AdaptorRegistry` service
@@ -739,6 +746,10 @@ defmodule Lightning.Config do
 
   def webhook_response_timeout_ms do
     impl().webhook_response_timeout_ms()
+  end
+
+  def runtime_manager_port do
+    impl().runtime_manager_port()
   end
 
   defp impl do

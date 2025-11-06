@@ -21,7 +21,6 @@ defmodule Lightning.Collaboration.Session do
   import LightningWeb.CoreComponents, only: [translate_error: 1]
 
   alias Lightning.Accounts.User
-  alias Lightning.Collaboration.Registry
   alias Lightning.Collaboration.WorkflowSerializer
   alias Lightning.Workflows.Presence
   alias Yex.Sync.SharedDoc
@@ -108,7 +107,7 @@ defmodule Lightning.Collaboration.Session do
       document_name: document_name
     }
 
-    Registry.whereis({:shared_doc, document_name})
+    lookup_shared_doc(document_name)
     |> case do
       nil ->
         {:stop, {:error, :shared_doc_not_found}}

@@ -129,6 +129,15 @@ defmodule Lightning.Config.Bootstrap do
           "RTM",
           &Utils.ensure_boolean/1,
           Utils.get_env([:lightning, Lightning.Runtime.RuntimeManager, :start])
+        ),
+      port:
+        env!(
+          "RTM_PORT",
+          :integer,
+          Utils.get_env(
+            [:lightning, Lightning.Runtime.RuntimeManager, :port],
+            2222
+          )
         )
 
     config :lightning, :workers,
