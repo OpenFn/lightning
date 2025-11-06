@@ -18,10 +18,12 @@ import {
   useRunSteps,
 } from "../../hooks/useHistory";
 import { useIsNewWorkflow } from "../../hooks/useSessionContext";
+import { useVersionMismatch } from "../../hooks/useVersionMismatch";
 import { useNodeSelection } from "../../hooks/useWorkflow";
 import type { Run } from "../../types/history";
 
 import MiniHistory from "./MiniHistory";
+import { VersionMismatchBanner } from "./VersionMismatchBanner";
 import CollaborativeWorkflowDiagramImpl from "./WorkflowDiagram";
 
 interface CollaborativeWorkflowDiagramProps {
@@ -71,6 +73,9 @@ export function CollaborativeWorkflowDiagram({
 
   // Use hook to get run steps with automatic subscription management
   const currentRunSteps = useRunSteps(selectedRunId);
+
+  // Detect version mismatch for warning banner
+  const versionMismatch = useVersionMismatch(selectedRunId);
 
   // Update URL when run selection changes
   const handleRunSelect = useCallback((run: Run) => {
@@ -133,6 +138,15 @@ export function CollaborativeWorkflowDiagram({
   return (
     <div ref={containerRef} className={className}>
       <ReactFlowProvider>
+        {/* Version mismatch warning when viewing latest but run used older version */}
+        {versionMismatch && (
+          <VersionMismatchBanner
+            runVersion={versionMismatch.runVersion}
+            currentVersion={versionMismatch.currentVersion}
+            className="absolute top-4 left-1/2 -translate-x-1/2 z-10 max-w-2xl mx-4"
+          />
+        )}
+
         <CollaborativeWorkflowDiagramImpl
           selection={currentNode.id}
           onSelectionChange={selectNode}
