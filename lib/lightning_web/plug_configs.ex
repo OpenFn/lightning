@@ -15,7 +15,22 @@ defmodule LightningWeb.PlugConfigs do
         }
       ],
       pass: ["*/*"],
+      body_reader: {__MODULE__, :decompress_body, []},
       json_decoder: Phoenix.json_library()
     ]
+  end
+
+  @doc """
+  Custom body reader that decompresses gzipped request bodies.
+  """
+  def decompress_body(conn, opts) do
+    case Plug.Conn.get_req_header(conn, "content-encoding") do
+      ["gzip" | _] ->
+        {:ok, body, conn} = Plug.Conn.read_body(conn, opts)
+        {:ok, :zlib.gunzip(body), conn}
+
+      _ ->
+        Plug.Conn.read_body(conn, opts)
+    end
   end
 end
