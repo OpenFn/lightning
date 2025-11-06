@@ -1,20 +1,20 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useState } from "react";
 
-import { TriggerSchema } from '#/collaborative-editor/types/trigger';
-import _logger from '#/utils/logger';
+import { TriggerSchema } from "#/collaborative-editor/types/trigger";
+import _logger from "#/utils/logger";
 
-import { useWorkflowActions } from '../../hooks/useWorkflow';
-import type { Workflow } from '../../types/workflow';
-import { useAppForm } from '../form';
-import { createZodValidator } from '../form/createZodValidator';
+import { useWorkflowActions } from "../../hooks/useWorkflow";
+import type { Workflow } from "../../types/workflow";
+import { useAppForm } from "../form";
+import { createZodValidator } from "../form/createZodValidator";
 
-import { CronFieldBuilder } from './CronFieldBuilder';
+import { CronFieldBuilder } from "./CronFieldBuilder";
 
 interface TriggerFormProps {
   trigger: Workflow.Trigger;
 }
 
-const logger = _logger.ns('TriggerForm').seal();
+const logger = _logger.ns("TriggerForm").seal();
 
 /**
  * Pure form component for trigger configuration.
@@ -23,22 +23,25 @@ const logger = _logger.ns('TriggerForm').seal();
  */
 export function TriggerForm({ trigger }: TriggerFormProps) {
   const { updateTrigger } = useWorkflowActions();
-  const [copySuccess, setCopySuccess] = useState<string>('');
+  const [copySuccess, setCopySuccess] = useState<string>("");
   const [showAdvancedSettings, setShowAdvancedSettings] = useState(false);
 
-  const form = useAppForm({
-    defaultValues: trigger,
-    listeners: {
-      onChange: ({ formApi }) => {
-        if (trigger.id) {
-          updateTrigger(trigger.id, formApi.state.values);
-        }
+  const form = useAppForm(
+    {
+      defaultValues: trigger,
+      listeners: {
+        onChange: ({ formApi }) => {
+          if (trigger.id) {
+            updateTrigger(trigger.id, formApi.state.values);
+          }
+        },
+      },
+      validators: {
+        onChange: createZodValidator(TriggerSchema),
       },
     },
-    validators: {
-      onChange: createZodValidator(TriggerSchema),
-    },
-  });
+    `triggers.${trigger.id}` // Server validation automatically filtered to this trigger
+  );
 
   // Generate webhook URL based on trigger ID
   const webhookUrl = new URL(
@@ -51,11 +54,11 @@ export function TriggerForm({ trigger }: TriggerFormProps) {
     void (async () => {
       try {
         await navigator.clipboard.writeText(text);
-        setCopySuccess('Copied!');
-        setTimeout(() => setCopySuccess(''), 2000);
+        setCopySuccess("Copied!");
+        setTimeout(() => setCopySuccess(""), 2000);
       } catch {
-        setCopySuccess('Failed to copy');
-        setTimeout(() => setCopySuccess(''), 2000);
+        setCopySuccess("Failed to copy");
+        setTimeout(() => setCopySuccess(""), 2000);
       }
     })();
   }, []);
@@ -85,7 +88,7 @@ export function TriggerForm({ trigger }: TriggerFormProps) {
                   value={field.state.value}
                   onChange={e =>
                     field.handleChange(
-                      e.target.value as 'webhook' | 'cron' | 'kafka'
+                      e.target.value as "webhook" | "cron" | "kafka"
                     )
                   }
                   onBlur={field.handleBlur}
@@ -93,8 +96,8 @@ export function TriggerForm({ trigger }: TriggerFormProps) {
                     block w-full px-3 py-2 border rounded-md text-sm
                     ${
                       field.state.meta.errors.length > 0
-                        ? 'border-red-300 text-red-900 focus:border-red-500 focus:ring-red-500'
-                        : 'border-slate-300 focus:border-indigo-500 focus:ring-indigo-500'
+                        ? "border-red-300 text-red-900 focus:border-red-500 focus:ring-red-500"
+                        : "border-slate-300 focus:border-indigo-500 focus:ring-indigo-500"
                     }
                     focus:outline-none focus:ring-1
                   `}
@@ -117,7 +120,7 @@ export function TriggerForm({ trigger }: TriggerFormProps) {
             {field => {
               const currentType = field.state.value;
 
-              if (currentType === 'webhook') {
+              if (currentType === "webhook") {
                 return (
                   <div className="space-y-4">
                     {/* Webhook URL Display */}
@@ -142,7 +145,7 @@ export function TriggerForm({ trigger }: TriggerFormProps) {
                           onClick={() => copyToClipboard(webhookUrl)}
                           className="w-[100px] inline-block relative rounded-r-lg px-3 text-sm font-normal text-gray-900 border border-secondary-300 hover:bg-gray-50"
                         >
-                          {copySuccess || 'Copy URL'}
+                          {copySuccess || "Copy URL"}
                         </button>
                       </div>
                     </div>
@@ -150,7 +153,7 @@ export function TriggerForm({ trigger }: TriggerFormProps) {
                 );
               }
 
-              if (currentType === 'cron') {
+              if (currentType === "cron") {
                 return (
                   <div className="space-y-4">
                     {/* <div className="border-t pt-4"> */}
@@ -160,7 +163,7 @@ export function TriggerForm({ trigger }: TriggerFormProps) {
                       listeners={{ onChangeDebounceMs: 2000 }}
                     >
                       {cronField => {
-                        logger.log('Cron field state:', cronField.state);
+                        logger.log("Cron field state:", cronField.state);
                         return (
                           <div>
                             <CronFieldBuilder
@@ -188,7 +191,7 @@ export function TriggerForm({ trigger }: TriggerFormProps) {
                 );
               }
 
-              if (currentType === 'kafka') {
+              if (currentType === "kafka") {
                 return (
                   <div className="space-y-6">
                     {/* Connection Settings */}
@@ -209,7 +212,7 @@ export function TriggerForm({ trigger }: TriggerFormProps) {
                             <input
                               id={field.name}
                               type="text"
-                              value={field.state.value || ''}
+                              value={field.state.value || ""}
                               onChange={e => field.handleChange(e.target.value)}
                               onBlur={field.handleBlur}
                               placeholder="localhost:9092,broker2:9092"
@@ -217,8 +220,8 @@ export function TriggerForm({ trigger }: TriggerFormProps) {
                                   block w-full px-3 py-2 border rounded-md text-sm
                                   ${
                                     field.state.meta.errors.length > 0
-                                      ? 'border-red-300 text-red-900 focus:border-red-500 focus:ring-red-500'
-                                      : 'border-slate-300 focus:border-indigo-500 focus:ring-indigo-500'
+                                      ? "border-red-300 text-red-900 focus:border-red-500 focus:ring-red-500"
+                                      : "border-slate-300 focus:border-indigo-500 focus:ring-indigo-500"
                                   }
                                   focus:outline-none focus:ring-1
                                 `}
@@ -251,7 +254,7 @@ export function TriggerForm({ trigger }: TriggerFormProps) {
                             <input
                               id={field.name}
                               type="text"
-                              value={field.state.value || ''}
+                              value={field.state.value || ""}
                               onChange={e => field.handleChange(e.target.value)}
                               onBlur={field.handleBlur}
                               placeholder="topic1,topic2,topic3"
@@ -259,8 +262,8 @@ export function TriggerForm({ trigger }: TriggerFormProps) {
                                   block w-full px-3 py-2 border rounded-md text-sm
                                   ${
                                     field.state.meta.errors.length > 0
-                                      ? 'border-red-300 text-red-900 focus:border-red-500 focus:ring-red-500'
-                                      : 'border-slate-300 focus:border-indigo-500 focus:ring-indigo-500'
+                                      ? "border-red-300 text-red-900 focus:border-red-500 focus:ring-red-500"
+                                      : "border-slate-300 focus:border-indigo-500 focus:ring-indigo-500"
                                   }
                                   focus:outline-none focus:ring-1
                                 `}
@@ -322,14 +325,14 @@ export function TriggerForm({ trigger }: TriggerFormProps) {
                             </label>
                             <select
                               id={field.name}
-                              value={field.state.value || 'none'}
+                              value={field.state.value || "none"}
                               onChange={e =>
                                 field.handleChange(
                                   e.target.value as
-                                    | 'none'
-                                    | 'plain'
-                                    | 'scram_sha_256'
-                                    | 'scram_sha_512'
+                                    | "none"
+                                    | "plain"
+                                    | "scram_sha_256"
+                                    | "scram_sha_512"
                                 )
                               }
                               onBlur={field.handleBlur}
@@ -337,8 +340,8 @@ export function TriggerForm({ trigger }: TriggerFormProps) {
                                   block w-full px-3 py-2 border rounded-md text-sm
                                   ${
                                     field.state.meta.errors.length > 0
-                                      ? 'border-red-300 text-red-900 focus:border-red-500 focus:ring-red-500'
-                                      : 'border-slate-300 focus:border-indigo-500 focus:ring-indigo-500'
+                                      ? "border-red-300 text-red-900 focus:border-red-500 focus:ring-red-500"
+                                      : "border-slate-300 focus:border-indigo-500 focus:ring-indigo-500"
                                   }
                                   focus:outline-none focus:ring-1
                                 `}
@@ -367,7 +370,7 @@ export function TriggerForm({ trigger }: TriggerFormProps) {
                       {/* Conditional Username/Password Fields */}
                       <form.Field name="kafka_configuration.sasl">
                         {saslField => {
-                          const requiresAuth = saslField.state.value !== 'none';
+                          const requiresAuth = saslField.state.value !== "none";
 
                           if (!requiresAuth) return null;
 
@@ -386,7 +389,7 @@ export function TriggerForm({ trigger }: TriggerFormProps) {
                                     <input
                                       id={field.name}
                                       type="text"
-                                      value={field.state.value || ''}
+                                      value={field.state.value || ""}
                                       onChange={e =>
                                         field.handleChange(e.target.value)
                                       }
@@ -395,8 +398,8 @@ export function TriggerForm({ trigger }: TriggerFormProps) {
                                           block w-full px-3 py-2 border rounded-md text-sm
                                           ${
                                             field.state.meta.errors.length > 0
-                                              ? 'border-red-300 text-red-900 focus:border-red-500 focus:ring-red-500'
-                                              : 'border-slate-300 focus:border-indigo-500 focus:ring-indigo-500'
+                                              ? "border-red-300 text-red-900 focus:border-red-500 focus:ring-red-500"
+                                              : "border-slate-300 focus:border-indigo-500 focus:ring-indigo-500"
                                           }
                                           focus:outline-none focus:ring-1
                                         `}
@@ -426,7 +429,7 @@ export function TriggerForm({ trigger }: TriggerFormProps) {
                                     <input
                                       id={field.name}
                                       type="password"
-                                      value={field.state.value || ''}
+                                      value={field.state.value || ""}
                                       onChange={e =>
                                         field.handleChange(e.target.value)
                                       }
@@ -435,8 +438,8 @@ export function TriggerForm({ trigger }: TriggerFormProps) {
                                           block w-full px-3 py-2 border rounded-md text-sm
                                           ${
                                             field.state.meta.errors.length > 0
-                                              ? 'border-red-300 text-red-900 focus:border-red-500 focus:ring-red-500'
-                                              : 'border-slate-300 focus:border-indigo-500 focus:ring-indigo-500'
+                                              ? "border-red-300 text-red-900 focus:border-red-500 focus:ring-red-500"
+                                              : "border-slate-300 focus:border-indigo-500 focus:ring-indigo-500"
                                           }
                                           focus:outline-none focus:ring-1
                                         `}
@@ -469,7 +472,7 @@ export function TriggerForm({ trigger }: TriggerFormProps) {
                       >
                         <span
                           className={`hero-chevron-right h-3 w-3 transition-transform ${
-                            showAdvancedSettings ? 'rotate-90' : ''
+                            showAdvancedSettings ? "rotate-90" : ""
                           }`}
                         />
                         Advanced
@@ -489,10 +492,10 @@ export function TriggerForm({ trigger }: TriggerFormProps) {
                                 </label>
                                 <select
                                   id={field.name}
-                                  value={field.state.value || 'latest'}
+                                  value={field.state.value || "latest"}
                                   onChange={e =>
                                     field.handleChange(
-                                      e.target.value as 'earliest' | 'latest'
+                                      e.target.value as "earliest" | "latest"
                                     )
                                   }
                                   onBlur={field.handleBlur}
@@ -500,8 +503,8 @@ export function TriggerForm({ trigger }: TriggerFormProps) {
                                         block w-full px-3 py-2 border rounded-md text-sm
                                         ${
                                           field.state.meta.errors.length > 0
-                                            ? 'border-red-300 text-red-900 focus:border-red-500 focus:ring-red-500'
-                                            : 'border-slate-300 focus:border-indigo-500 focus:ring-indigo-500'
+                                            ? "border-red-300 text-red-900 focus:border-red-500 focus:ring-red-500"
+                                            : "border-slate-300 focus:border-indigo-500 focus:ring-indigo-500"
                                         }
                                         focus:outline-none focus:ring-1
                                       `}
@@ -547,8 +550,8 @@ export function TriggerForm({ trigger }: TriggerFormProps) {
                                         block w-full px-3 py-2 border rounded-md text-sm
                                         ${
                                           field.state.meta.errors.length > 0
-                                            ? 'border-red-300 text-red-900 focus:border-red-500 focus:ring-red-500'
-                                            : 'border-slate-300 focus:border-indigo-500 focus:ring-indigo-500'
+                                            ? "border-red-300 text-red-900 focus:border-red-500 focus:ring-red-500"
+                                            : "border-slate-300 focus:border-indigo-500 focus:ring-indigo-500"
                                         }
                                         focus:outline-none focus:ring-1
                                       `}
