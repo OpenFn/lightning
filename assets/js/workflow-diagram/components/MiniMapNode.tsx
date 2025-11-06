@@ -1,14 +1,14 @@
-import { ClockIcon, GlobeAltIcon } from '@heroicons/react/24/outline';
-import type { MiniMapNodeProps } from '@xyflow/react';
-import { memo } from 'react';
+import { ClockIcon, GlobeAltIcon } from "@heroicons/react/24/outline";
+import type { MiniMapNodeProps } from "@xyflow/react";
+import { memo } from "react";
 
-import { useWorkflowStore } from '../../workflow-store/store';
-import useAdaptorIcons from '../useAdaptorIcons';
-import getAdaptorName from '../util/get-adaptor-name';
+import { useWorkflowStore } from "../../workflow-store/store";
+import useAdaptorIcons from "../useAdaptorIcons";
+import getAdaptorName from "../util/get-adaptor-name";
 
 type Trigger = {
   id: string;
-  type: 'webhook' | 'cron';
+  type: "webhook" | "cron";
 };
 
 type Job = {
@@ -35,7 +35,7 @@ const MinimapNode = ({
   if (isTrigger) {
     // Use the same icons as the main Trigger component
     const icon =
-      trigger.type === 'webhook' ? (
+      trigger.type === "webhook" ? (
         <GlobeAltIcon className="w-full h-full text-gray-500" />
       ) : (
         <ClockIcon className="w-full h-full text-gray-500" />

@@ -1,7 +1,6 @@
 import { useURLState } from "../../../react/lib/use-url-state";
 import { useWorkflowState } from "../../hooks/useWorkflow";
 import type { Step } from "../../types/run";
-
 import { ElapsedIndicator } from "./ElapsedIndicator";
 import { StepIcon } from "./StepIcon";
 

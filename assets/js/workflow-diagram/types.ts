@@ -1,4 +1,4 @@
-import type * as ReactFlow from "@xyflow/react";
+import type * as ReactFlow from '@xyflow/react';
 
 // This all describes the lightning view of a workflow
 export namespace Lightning {
@@ -18,7 +18,7 @@ export namespace Lightning {
   }
 
   export interface CronTrigger extends Node {
-    type: "cron";
+    type: 'cron';
     enabled: boolean;
     cron_expression: string;
   }
@@ -26,12 +26,12 @@ export namespace Lightning {
   export interface WebhookTrigger extends Node {
     has_auth_method: boolean;
     enabled: boolean;
-    type: "webhook";
+    type: 'webhook';
     webhook_url: string;
   }
 
   export interface KafkaTrigger extends Node {
-    type: "kafka";
+    type: 'kafka';
     enabled: boolean;
     has_auth_method: boolean;
   }

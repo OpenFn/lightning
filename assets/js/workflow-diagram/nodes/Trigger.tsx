@@ -1,11 +1,11 @@
-import { memo } from "react";
-import { Position } from "@xyflow/react";
-import { ClockIcon, GlobeAltIcon } from "@heroicons/react/24/outline";
-import { kafkaIcon, lockClosedIcon } from "../components/trigger-icons";
-import cronstrue from "cronstrue";
+import { memo } from 'react';
+import { Position } from '@xyflow/react';
+import { ClockIcon, GlobeAltIcon } from '@heroicons/react/24/outline';
+import { kafkaIcon, lockClosedIcon } from '../components/trigger-icons';
+import cronstrue from 'cronstrue';
 
-import Node from "./Node";
-import type { Lightning } from "../types";
+import Node from './Node';
+import type { Lightning } from '../types';
 
 type TriggerMeta = {
   label: string;
@@ -18,7 +18,7 @@ type TriggerMeta = {
 const TriggerNode = ({
   sourcePosition = Position.Bottom,
   ...props
-}: t.DistributedOmit<React.ComponentPropsWithoutRef<typeof Node>, "data"> & {
+}: t.DistributedOmit<React.ComponentPropsWithoutRef<typeof Node>, 'data'> & {
   data: Lightning.TriggerNode;
 }): JSX.Element => {
   // Do not remove yet, we might need this snippet of code when implementing issue #1121
@@ -34,49 +34,49 @@ const TriggerNode = ({
       primaryIcon={primaryIcon}
       secondaryIcon={secondaryIcon}
       sourcePosition={sourcePosition}
-      interactive={props.data.trigger.type === "webhook"}
+      interactive={props.data.trigger.type === 'webhook'}
       // TODO: put back the toolbar when implementing issue #1121
       toolbar={false}
     />
   );
 };
 
-TriggerNode.displayName = "TriggerWorkflowNode";
+TriggerNode.displayName = 'TriggerWorkflowNode';
 
 export default memo(TriggerNode);
 
 function getTriggerMeta(trigger: Lightning.TriggerNode): TriggerMeta {
   switch (trigger.type) {
-    case "webhook":
+    case 'webhook':
       return {
-        label: "Webhook trigger",
+        label: 'Webhook trigger',
         sublabel: `On each request received`,
-        tooltip: "Click to copy webhook URL",
+        tooltip: 'Click to copy webhook URL',
         primaryIcon: <GlobeAltIcon />,
         secondaryIcon: trigger.has_auth_method ? lockClosedIcon : null,
       };
-    case "kafka":
+    case 'kafka':
       return {
-        label: "Kafka trigger",
+        label: 'Kafka trigger',
         sublabel: `On each message consumed from the cluster`,
         primaryIcon: kafkaIcon,
         secondaryIcon: trigger.has_auth_method ? lockClosedIcon : null,
       };
-    case "cron":
-      let sublabel = "Not configured";
+    case 'cron':
+      let sublabel = 'Not configured';
       try {
         if (trigger.cron_expression) {
           sublabel = cronstrue.toString(trigger.cron_expression);
         }
       } catch (_error) {
-        sublabel = "Invalid cron expression";
+        sublabel = 'Invalid cron expression';
       }
       return {
-        label: "Cron trigger",
+        label: 'Cron trigger',
         sublabel,
         primaryIcon: <ClockIcon />,
         secondaryIcon: null,
       };
   }
-  return { label: "", sublabel: "" };
+  return { label: '', sublabel: '' };
 }

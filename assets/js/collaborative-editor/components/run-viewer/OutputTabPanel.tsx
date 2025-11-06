@@ -10,7 +10,6 @@ import { DataclipViewer } from "../../../react/components/DataclipViewer";
 import { useCurrentRun, useSelectedStep } from "../../hooks/useRun";
 import type { Step } from "../../types/run";
 import { isFinalState } from "../../types/run";
-
 import { StepViewerLayout } from "./StepViewerLayout";
 
 interface OutputContentProps {

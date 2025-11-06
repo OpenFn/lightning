@@ -5,7 +5,6 @@ import { createLogStore } from "../../../log-viewer/store";
 import { channelRequest } from "../../hooks/useChannel";
 import { useCurrentRun, useSelectedStepId } from "../../hooks/useRun";
 import { useSession } from "../../hooks/useSession";
-
 import { LogLevelFilter } from "./LogLevelFilter";
 import { StepViewerLayout } from "./StepViewerLayout";
 

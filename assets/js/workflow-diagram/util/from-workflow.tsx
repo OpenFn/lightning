@@ -1,26 +1,26 @@
-import type { Lightning, Flow, Positions } from "../types";
+import type { Lightning, Flow, Positions } from '../types';
 import {
   sortOrderForSvg,
   styleEdge,
   styleNode,
   edgeLabelIconStyles,
   edgeLabelTextStyles,
-} from "../styles";
-import { NODE_HEIGHT, NODE_WIDTH } from "../constants";
-import type { RunInfo, RunStep } from "../../workflow-store/store";
+} from '../styles';
+import { NODE_HEIGHT, NODE_WIDTH } from '../constants';
+import type { RunInfo, RunStep } from '../../workflow-store/store';
 
 function getEdgeLabel(edge: Lightning.Edge) {
-  let label: string | JSX.Element = "{ }";
+  let label: string | JSX.Element = '{ }';
 
   switch (edge.condition_type) {
-    case "on_job_success":
-      label = "✓";
+    case 'on_job_success':
+      label = '✓';
       break;
-    case "on_job_failure":
-      label = "X";
+    case 'on_job_failure':
+      label = 'X';
       break;
-    case "always":
-      label = "∞";
+    case 'always':
+      label = '∞';
       break;
   }
   const { condition_label } = edge;
@@ -37,7 +37,7 @@ function getEdgeLabel(edge: Lightning.Edge) {
   if (condition_label) {
     const l =
       condition_label.length > 22
-        ? condition_label.slice(0, 22) + "..."
+        ? condition_label.slice(0, 22) + '...'
         : condition_label;
     result.push(
       <span key={`${edge.id}-label`} style={edgeLabelTextStyles}>
@@ -61,35 +61,29 @@ const fromWorkflow = (
 
   const isRun = !!runSteps.start_from;
 
-  const runStepsObj = runSteps.steps.reduce(
-    (a, b) => {
-      const exists = a[b.job_id];
-      // to make sure that a pre-existing error state preempts the success.
-      // this is for nodes that run multiple times
-      // TODO: we might want to show a state for the multiple runs of the step later on.
-      let step_value: RunStep;
-      if (b.exit_reason === "success" && exists?.exit_reason === "fail")
-        step_value = exists;
-      else step_value = b;
-      a[b.job_id] = { ...step_value };
-      return a;
-    },
-    {} as Record<string, RunStep>
-  );
+  const runStepsObj = runSteps.steps.reduce((a, b) => {
+    const exists = a[b.job_id];
+    // to make sure that a pre-existing error state preempts the success.
+    // this is for nodes that run multiple times
+    // TODO: we might want to show a state for the multiple runs of the step later on.
+    let step_value: RunStep;
+    if (b.exit_reason === 'success' && exists?.exit_reason === 'fail')
+      step_value = exists;
+    else step_value = b;
+    a[b.job_id] = { ...step_value };
+    return a;
+  }, {} as Record<string, RunStep>);
 
   // Count duplicate steps for each job_id
-  const duplicateCounts = runSteps.steps.reduce(
-    (counts, step) => {
-      counts[step.job_id] = (counts[step.job_id] || 0) + 1;
-      return counts;
-    },
-    {} as Record<string, number>
-  );
+  const duplicateCounts = runSteps.steps.reduce((counts, step) => {
+    counts[step.job_id] = (counts[step.job_id] || 0) + 1;
+    return counts;
+  }, {} as Record<string, number>);
 
   const process = (
     items: Array<Lightning.Node | Lightning.Edge>,
     collection: Array<Flow.Node | Flow.Edge>,
-    type: "job" | "trigger" | "edge"
+    type: 'job' | 'trigger' | 'edge'
   ) => {
     items.forEach(item => {
       const model: any = {
@@ -121,25 +115,25 @@ const fromWorkflow = (
         model.data.duplicateRunCount = duplicateCounts[node.id] || 0;
         if (item.id === runSteps.start_from) {
           const startBy =
-            type === "trigger" ? "Trigger" : runSteps.run_by || "unknown";
+            type === 'trigger' ? 'Trigger' : runSteps.run_by || 'unknown';
           model.data.startInfo = {
             started_at: runSteps.inserted_at,
             startBy,
           };
         }
 
-        if (type === "trigger") {
+        if (type === 'trigger') {
           const triggerNode = node as Lightning.TriggerNode;
           model.data.trigger = {
             type: triggerNode.type,
             enabled: triggerNode.enabled,
-            ...(triggerNode.type === "cron" && {
+            ...(triggerNode.type === 'cron' && {
               cron_expression: triggerNode.cron_expression,
             }),
-            ...(triggerNode.type === "webhook" && {
+            ...(triggerNode.type === 'webhook' && {
               has_auth_method: triggerNode.has_auth_method,
             }),
-            ...(triggerNode.type === "kafka" && {
+            ...(triggerNode.type === 'kafka' && {
               has_auth_method: triggerNode.has_auth_method,
             }),
           };
@@ -150,10 +144,10 @@ const fromWorkflow = (
         const label = getEdgeLabel(edge);
         model.source = edge.source_trigger_id || edge.source_job_id;
         model.target = edge.target_job_id;
-        model.type = "step";
+        model.type = 'step';
         model.label = label;
         model.markerEnd = {
-          type: "arrowclosed",
+          type: 'arrowclosed',
           width: 32,
           height: 32,
         };
@@ -176,7 +170,7 @@ const fromWorkflow = (
         // trigger to a job, but we want to show it as if it were disabled when
         // the source trigger is disabled. This code does that.
         const source = nodes.find(x => x.id == model.source);
-        if (source != null && source.type == "trigger") {
+        if (source != null && source.type == 'trigger') {
           model.data.enabled = source?.data.enabled;
         }
 
@@ -198,9 +192,9 @@ const fromWorkflow = (
 
   const edges = [...placeholders.edges.map(e => styleEdge(e))] as Flow.Edge[];
 
-  process(workflow.jobs, nodes, "job");
-  process(workflow.triggers, nodes, "trigger");
-  process(workflow.edges, edges, "edge");
+  process(workflow.jobs, nodes, 'job');
+  process(workflow.triggers, nodes, 'trigger');
+  process(workflow.edges, edges, 'edge');
 
   const sortedEdges = edges.sort(sortOrderForSvg);
 
