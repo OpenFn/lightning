@@ -16,13 +16,13 @@ import ExistingView from "../../manual-run-panel/views/ExistingView";
 import { useURLState } from "../../react/lib/use-url-state";
 import type { Dataclip } from "../api/dataclips";
 import * as dataclipApi from "../api/dataclips";
-import { RENDER_MODES, type RenderMode } from "../constants/panel";
 import { HOTKEY_SCOPES } from "../constants/hotkeys";
-import { useCanRun } from "../hooks/useWorkflow";
+import { RENDER_MODES, type RenderMode } from "../constants/panel";
 import { useCurrentRun, useRunStoreInstance } from "../hooks/useRun";
 import { useRunRetry } from "../hooks/useRunRetry";
 import { useRunRetryShortcuts } from "../hooks/useRunRetryShortcuts";
 import { useSession } from "../hooks/useSession";
+import { useCanRun } from "../hooks/useWorkflow";
 import type { Workflow } from "../types/workflow";
 
 import { InspectorFooter } from "./inspector/InspectorFooter";

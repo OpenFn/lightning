@@ -1,12 +1,12 @@
-import type { ReactNode } from 'react';
+import type { ReactNode } from "react";
 
 interface ButtonProps {
   children?: ReactNode;
-  variant?: 'primary' | 'danger' | 'secondary' | 'nakedClose';
+  variant?: "primary" | "danger" | "secondary" | "nakedClose";
   disabled?: boolean;
   loading?: boolean;
   onClick?: () => void;
-  type?: 'button' | 'submit';
+  type?: "button" | "submit";
   className?: string;
 }
 
@@ -21,12 +21,12 @@ interface ButtonProps {
  */
 export function Button({
   children,
-  variant = 'primary',
+  variant = "primary",
   disabled = false,
   loading = false,
   onClick,
-  type = 'button',
-  className = '',
+  type = "button",
+  className = "",
 }: ButtonProps) {
   const isDisabled = disabled || loading;
 
@@ -68,7 +68,7 @@ export function Button({
   };
 
   const buttonClasses =
-    variant === 'nakedClose' ? nakedCloseBaseClasses : baseClasses;
+    variant === "nakedClose" ? nakedCloseBaseClasses : baseClasses;
 
   return (
     <button
@@ -80,10 +80,10 @@ export function Button({
         ${variantClasses[variant]}
         ${className}
       `
-        .replace(/\s+/g, ' ')
+        .replace(/\s+/g, " ")
         .trim()}
     >
-      {variant === 'nakedClose' ? (
+      {variant === "nakedClose" ? (
         <>
           <span className="absolute -inset-2.5" />
           <span className="sr-only">Close panel</span>

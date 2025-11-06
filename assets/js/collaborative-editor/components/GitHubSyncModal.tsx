@@ -7,6 +7,7 @@ import {
 import { useEffect, useId, useState } from "react";
 import { useHotkeysContext } from "react-hotkeys-hook";
 
+import { HOTKEY_SCOPES } from "../constants/hotkeys";
 import {
   useProject,
   useProjectRepoConnection,
@@ -14,7 +15,6 @@ import {
 } from "../hooks/useSessionContext";
 import { useIsGitHubSyncModalOpen, useUICommands } from "../hooks/useUI";
 import { useWorkflowActions } from "../hooks/useWorkflow";
-import { HOTKEY_SCOPES } from "../constants/hotkeys";
 import { GITHUB_BASE_URL } from "../utils/constants";
 
 /**

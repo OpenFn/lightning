@@ -1,8 +1,9 @@
-import { useURLState } from '../../../react/lib/use-url-state';
-import { useWorkflowState } from '../../hooks/useWorkflow';
-import type { Step } from '../../types/run';
-import { ElapsedIndicator } from './ElapsedIndicator';
-import { StepIcon } from './StepIcon';
+import { useURLState } from "../../../react/lib/use-url-state";
+import { useWorkflowState } from "../../hooks/useWorkflow";
+import type { Step } from "../../types/run";
+
+import { ElapsedIndicator } from "./ElapsedIndicator";
+import { StepIcon } from "./StepIcon";
 
 interface StepItemProps {
   step: Step;
@@ -20,7 +21,7 @@ export function StepItem({ step, selected, onSelect }: StepItemProps) {
         return step.job.name;
       }
       const job = state.jobs.find(j => j.id === step.job_id);
-      return job?.name || 'Unknown Job';
+      return job?.name || "Unknown Job";
     },
     [step.job_id, step.job?.name]
   );
@@ -29,7 +30,7 @@ export function StepItem({ step, selected, onSelect }: StepItemProps) {
     e.stopPropagation();
 
     // Get current run ID from URL to preserve context
-    const currentRunId = searchParams.get('run');
+    const currentRunId = searchParams.get("run");
 
     // Update URL to switch job but preserve run/step context
     updateSearchParams({
@@ -47,8 +48,8 @@ export function StepItem({ step, selected, onSelect }: StepItemProps) {
         cursor-pointer border-r-4 transition-colors
         ${
           selected
-            ? 'border-primary-500 bg-primary-50 font-semibold'
-            : 'border-transparent hover:border-gray-300 hover:bg-gray-50'
+            ? "border-primary-500 bg-primary-50 font-semibold"
+            : "border-transparent hover:border-gray-300 hover:bg-gray-50"
         }
       `}
     >

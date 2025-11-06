@@ -1,7 +1,7 @@
-import { useMemo } from 'react';
+import { useMemo } from "react";
 
-import { usePermissions } from './useSessionContext';
-import { useWorkflowState } from './useWorkflow';
+import { usePermissions } from "./useSessionContext";
+import { useWorkflowState } from "./useWorkflow";
 
 interface DeleteValidation {
   canDelete: boolean;
@@ -68,7 +68,7 @@ export const useJobDeleteValidation = (jobId: string): DeleteValidation => {
       disableReason = "You don't have permission to edit this workflow";
     } else if (hasChildEdges) {
       canDelete = false;
-      disableReason = 'Cannot delete: other jobs depend on this step';
+      disableReason = "Cannot delete: other jobs depend on this step";
     } else if (isFirstJob) {
       canDelete = false;
       disableReason = "You can't delete the first step in a workflow.";

@@ -1,15 +1,15 @@
-import { useCallback } from 'react';
+import { useCallback } from "react";
 
-import { usePermissions } from '../../hooks/useSessionContext';
-import { useCanRun, useWorkflowActions } from '../../hooks/useWorkflow';
-import type { Workflow } from '../../types/workflow';
-import { Button } from '../Button';
-import { Toggle } from '../Toggle';
-import { Tooltip } from '../Tooltip';
+import { usePermissions } from "../../hooks/useSessionContext";
+import { useCanRun, useWorkflowActions } from "../../hooks/useWorkflow";
+import type { Workflow } from "../../types/workflow";
+import { Button } from "../Button";
+import { Toggle } from "../Toggle";
+import { Tooltip } from "../Tooltip";
 
-import { InspectorFooter } from './InspectorFooter';
-import { InspectorLayout } from './InspectorLayout';
-import { TriggerForm } from './TriggerForm';
+import { InspectorFooter } from "./InspectorFooter";
+import { InspectorLayout } from "./InspectorLayout";
+import { TriggerForm } from "./TriggerForm";
 
 interface TriggerInspectorProps {
   trigger: Workflow.Trigger;
@@ -22,18 +22,18 @@ interface TriggerInspectorProps {
  */
 function getTriggerTitle(trigger: Workflow.Trigger): string {
   if (!trigger.type) {
-    return 'New Trigger';
+    return "New Trigger";
   }
 
   switch (trigger.type) {
-    case 'webhook':
-      return 'Webhook Trigger';
-    case 'cron':
-      return 'Cron Trigger';
-    case 'kafka':
-      return 'Kafka Trigger';
+    case "webhook":
+      return "Webhook Trigger";
+    case "cron":
+      return "Cron Trigger";
+    case "kafka":
+      return "Kafka Trigger";
     default:
-      return 'Unknown Trigger';
+      return "Unknown Trigger";
   }
 }
 

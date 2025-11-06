@@ -6,6 +6,7 @@
  */
 
 import { useContext, useSyncExternalStore } from "react";
+
 import { StoreContext } from "../contexts/StoreProvider";
 import type { EditorPreferencesStore } from "../types/editorPreferences";
 

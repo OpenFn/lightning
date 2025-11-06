@@ -7,26 +7,27 @@ import {
   PanelResizeHandle,
 } from "react-resizable-panels";
 
+import { useUICommands } from "#/collaborative-editor/hooks/useUI";
 import { cn } from "#/utils/cn";
 
 import { useURLState } from "../../../react/lib/use-url-state";
 import * as dataclipApi from "../../api/dataclips";
 import type { Dataclip } from "../../api/dataclips";
-import { RENDER_MODES } from "../../constants/panel";
 import { HOTKEY_SCOPES } from "../../constants/hotkeys";
-import {
-  useCurrentRun,
-  useRunActions,
-  useRunStoreInstance,
-} from "../../hooks/useRun";
+import { RENDER_MODES } from "../../constants/panel";
 import { useLiveViewActions } from "../../contexts/LiveViewActionsContext";
 import { useProjectAdaptors } from "../../hooks/useAdaptors";
 import {
   useCredentials,
   useCredentialsCommands,
 } from "../../hooks/useCredentials";
-import { useSession } from "../../hooks/useSession";
+import {
+  useCurrentRun,
+  useRunActions,
+  useRunStoreInstance,
+} from "../../hooks/useRun";
 import { useRunRetry } from "../../hooks/useRunRetry";
+import { useSession } from "../../hooks/useSession";
 import {
   useLatestSnapshotLockVersion,
   useProject,
@@ -45,14 +46,13 @@ import { CollaborativeMonaco } from "../CollaborativeMonaco";
 import { ConfigureAdaptorModal } from "../ConfigureAdaptorModal";
 import { ManualRunPanel } from "../ManualRunPanel";
 import { ManualRunPanelErrorBoundary } from "../ManualRunPanelErrorBoundary";
-import { RunViewerPanel } from "../run-viewer/RunViewerPanel";
 import { RunViewerErrorBoundary } from "../run-viewer/RunViewerErrorBoundary";
+import { RunViewerPanel } from "../run-viewer/RunViewerPanel";
 import { SandboxIndicatorBanner } from "../SandboxIndicatorBanner";
 import { Tabs } from "../Tabs";
 
 import { IDEHeader } from "./IDEHeader";
 import { PanelToggleButton } from "./PanelToggleButton";
-import { useUICommands } from "#/collaborative-editor/hooks/useUI";
 
 /**
  * Resolves an adaptor specifier into its package name and version

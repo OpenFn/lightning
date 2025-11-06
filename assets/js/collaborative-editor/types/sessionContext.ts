@@ -1,7 +1,7 @@
-import type { PhoenixChannelProvider } from 'y-phoenix-channel';
-import * as z from 'zod';
+import type { PhoenixChannelProvider } from "y-phoenix-channel";
+import * as z from "zod";
 
-import { isoDateTimeSchema, uuidSchema } from './common';
+import { isoDateTimeSchema, uuidSchema } from "./common";
 
 export const UserContextSchema = z.object({
   id: uuidSchema,

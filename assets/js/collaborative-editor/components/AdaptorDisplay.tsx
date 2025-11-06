@@ -1,10 +1,10 @@
-import { useMemo } from 'react';
+import { useMemo } from "react";
 
-import { extractAdaptorDisplayName } from '../utils/adaptorUtils';
+import { extractAdaptorDisplayName } from "../utils/adaptorUtils";
 
-import { AdaptorIcon } from './AdaptorIcon';
+import { AdaptorIcon } from "./AdaptorIcon";
 
-type AdaptorDisplaySize = 'xs' | 'sm' | 'md' | 'lg' | 'xl';
+type AdaptorDisplaySize = "xs" | "sm" | "md" | "lg" | "xl";
 
 interface AdaptorDisplayProps {
   /** Full adaptor string like "@openfn/language-common@latest" */
@@ -52,7 +52,7 @@ export function AdaptorDisplay({
   credentialId,
   onEdit,
   onChangeAdaptor,
-  size = 'md',
+  size = "md",
 }: AdaptorDisplayProps) {
   // Parse adaptor package and version
   const { package: adaptorPackage, version: adaptorVersion } = useMemo(
@@ -62,11 +62,11 @@ export function AdaptorDisplay({
 
   // Get display name from package
   const adaptorDisplayName = useMemo(() => {
-    return extractAdaptorDisplayName(adaptorPackage || '');
+    return extractAdaptorDisplayName(adaptorPackage || "");
   }, [adaptorPackage]);
 
   // Safe package name for icon (fallback to empty string)
-  const safeAdaptorPackage = adaptorPackage || '';
+  const safeAdaptorPackage = adaptorPackage || "";
 
   // Check if credential is connected
   const hasCredential = !!credentialId;
@@ -76,7 +76,7 @@ export function AdaptorDisplay({
   const sizeConfig: Record<
     AdaptorDisplaySize,
     {
-      iconSize: 'sm' | 'md';
+      iconSize: "sm" | "md";
       textSize: string;
       versionTextSize: string;
       containerPadding: string;
@@ -88,59 +88,59 @@ export function AdaptorDisplay({
     }
   > = {
     xs: {
-      iconSize: 'sm',
-      textSize: 'text-xs',
-      versionTextSize: 'text-[10px]',
-      containerPadding: 'p-1.5',
-      adaptorButton: 'pl-1 pr-1.5 py-0.5 h-6',
-      editButton: 'px-2 py-0.5 h-6',
-      badgeSize: 'w-4 h-4',
-      badgeIconSize: 'h-2.5 w-2.5',
-      gap: 'gap-2',
+      iconSize: "sm",
+      textSize: "text-xs",
+      versionTextSize: "text-[10px]",
+      containerPadding: "p-1.5",
+      adaptorButton: "pl-1 pr-1.5 py-0.5 h-6",
+      editButton: "px-2 py-0.5 h-6",
+      badgeSize: "w-4 h-4",
+      badgeIconSize: "h-2.5 w-2.5",
+      gap: "gap-2",
     },
     sm: {
-      iconSize: 'sm',
-      textSize: 'text-sm',
-      versionTextSize: 'text-xs',
-      containerPadding: 'p-2',
-      adaptorButton: 'pl-1.5 pr-2 py-1 h-7',
-      editButton: 'px-2.5 py-1 h-7',
-      badgeSize: 'w-5 h-5',
-      badgeIconSize: 'h-3 w-3',
-      gap: 'gap-2',
+      iconSize: "sm",
+      textSize: "text-sm",
+      versionTextSize: "text-xs",
+      containerPadding: "p-2",
+      adaptorButton: "pl-1.5 pr-2 py-1 h-7",
+      editButton: "px-2.5 py-1 h-7",
+      badgeSize: "w-5 h-5",
+      badgeIconSize: "h-3 w-3",
+      gap: "gap-2",
     },
     md: {
-      iconSize: 'md',
-      textSize: 'text-sm',
-      versionTextSize: 'text-xs',
-      containerPadding: 'p-2',
-      adaptorButton: 'pl-2 pr-3 py-1.5 h-8',
-      editButton: 'px-3 py-1.5 h-8',
-      badgeSize: 'w-6 h-6',
-      badgeIconSize: 'h-4 w-4',
-      gap: 'gap-3',
+      iconSize: "md",
+      textSize: "text-sm",
+      versionTextSize: "text-xs",
+      containerPadding: "p-2",
+      adaptorButton: "pl-2 pr-3 py-1.5 h-8",
+      editButton: "px-3 py-1.5 h-8",
+      badgeSize: "w-6 h-6",
+      badgeIconSize: "h-4 w-4",
+      gap: "gap-3",
     },
     lg: {
-      iconSize: 'md',
-      textSize: 'text-base',
-      versionTextSize: 'text-sm',
-      containerPadding: 'p-3',
-      adaptorButton: 'pl-2.5 pr-4 py-2 h-10',
-      editButton: 'px-4 py-2 h-10',
-      badgeSize: 'w-7 h-7',
-      badgeIconSize: 'h-4.5 w-4.5',
-      gap: 'gap-3',
+      iconSize: "md",
+      textSize: "text-base",
+      versionTextSize: "text-sm",
+      containerPadding: "p-3",
+      adaptorButton: "pl-2.5 pr-4 py-2 h-10",
+      editButton: "px-4 py-2 h-10",
+      badgeSize: "w-7 h-7",
+      badgeIconSize: "h-4.5 w-4.5",
+      gap: "gap-3",
     },
     xl: {
-      iconSize: 'md',
-      textSize: 'text-lg',
-      versionTextSize: 'text-base',
-      containerPadding: 'p-4',
-      adaptorButton: 'pl-3 pr-5 py-2.5 h-12',
-      editButton: 'px-5 py-2.5 h-12',
-      badgeSize: 'w-8 h-8',
-      badgeIconSize: 'h-5 w-5',
-      gap: 'gap-4',
+      iconSize: "md",
+      textSize: "text-lg",
+      versionTextSize: "text-base",
+      containerPadding: "p-4",
+      adaptorButton: "pl-3 pr-5 py-2.5 h-12",
+      editButton: "px-5 py-2.5 h-12",
+      badgeSize: "w-8 h-8",
+      badgeIconSize: "h-5 w-5",
+      gap: "gap-4",
     },
   };
 
@@ -178,11 +178,11 @@ export function AdaptorDisplay({
         <span
           className={`${config.versionTextSize} text-gray-500 whitespace-nowrap`}
         >
-          {adaptorVersion === 'latest'
-            ? 'latest'
+          {adaptorVersion === "latest"
+            ? "latest"
             : adaptorVersion
               ? `v${adaptorVersion}`
-              : ''}
+              : ""}
         </span>
         {hasCredential && (
           <span
