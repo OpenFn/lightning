@@ -1,28 +1,28 @@
 /**
  * CollaborativeWorkflowDiagram - Wrapper for WorkflowDiagram using Yjs data
- * Phase 1: Basic rendering only - maps collaborative data to diagram format
  */
 
-import { ReactFlowProvider } from "@xyflow/react";
-import { useMemo, useRef, useState, useCallback, useEffect } from "react";
+import { ReactFlowProvider } from '@xyflow/react';
+import { useMemo, useState, useCallback, useEffect, useRef } from 'react';
 
 import {
   useHistoryPanelCollapsed,
   useEditorPreferencesCommands,
-} from "../../hooks/useEditorPreferences";
+} from '../../hooks/useEditorPreferences';
 import {
   useHistory,
   useHistoryLoading,
   useHistoryError,
   useHistoryCommands,
   useHistoryChannelConnected,
-} from "../../hooks/useHistory";
-import { useIsNewWorkflow } from "../../hooks/useSessionContext";
-import { useNodeSelection } from "../../hooks/useWorkflow";
-import type { Run } from "../../types/history";
+  useRunSteps,
+} from '../../hooks/useHistory';
+import { useIsNewWorkflow } from '../../hooks/useSessionContext';
+import { useNodeSelection } from '../../hooks/useWorkflow';
+import type { Run } from '../../types/history';
 
-import MiniHistory from "./MiniHistory";
-import CollaborativeWorkflowDiagramImpl from "./WorkflowDiagram";
+import MiniHistory from './MiniHistory';
+import CollaborativeWorkflowDiagramImpl from './WorkflowDiagram';
 
 interface CollaborativeWorkflowDiagramProps {
   className?: string;
@@ -30,18 +30,18 @@ interface CollaborativeWorkflowDiagramProps {
 }
 
 export function CollaborativeWorkflowDiagram({
-  className = "h-full w-full",
+  className = 'h-full w-full',
   inspectorId,
 }: CollaborativeWorkflowDiagramProps) {
   const { currentNode, selectNode } = useNodeSelection();
   const isNewWorkflow = useIsNewWorkflow();
   const isHistoryChannelConnected = useHistoryChannelConnected();
 
-  // Replace SAMPLE_HISTORY with HistoryStore data
+  // Get history data and commands
   const history = useHistory();
   const historyLoading = useHistoryLoading();
   const historyError = useHistoryError();
-  const { requestHistory, clearError } = useHistoryCommands();
+  const historyCommands = useHistoryCommands();
 
   // Use EditorPreferencesStore for history panel collapsed state
   const historyCollapsed = useHistoryPanelCollapsed();
@@ -50,7 +50,7 @@ export function CollaborativeWorkflowDiagram({
   // Auto-expand if there's a run ID in the URL (like LiveView behavior)
   const runIdFromUrl = useMemo(() => {
     const params = new URLSearchParams(window.location.search);
-    return params.get("run");
+    return params.get('run');
   }, []);
 
   useEffect(() => {
@@ -66,16 +66,19 @@ export function CollaborativeWorkflowDiagram({
   // Track selected run for visual feedback (stored in URL)
   const [selectedRunId, setSelectedRunId] = useState<string | null>(() => {
     const params = new URLSearchParams(window.location.search);
-    return params.get("run");
+    return params.get('run');
   });
+
+  // Use hook to get run steps with automatic subscription management
+  const currentRunSteps = useRunSteps(selectedRunId);
 
   // Update URL when run selection changes
   const handleRunSelect = useCallback((run: Run) => {
     setSelectedRunId(run.id);
 
     const url = new URL(window.location.href);
-    url.searchParams.set("run", run.id);
-    window.history.pushState({}, "", url.toString());
+    url.searchParams.set('run', run.id);
+    window.history.pushState({}, '', url.toString());
   }, []);
 
   // Clear URL parameter when deselecting run
@@ -83,8 +86,8 @@ export function CollaborativeWorkflowDiagram({
     setSelectedRunId(null);
 
     const url = new URL(window.location.href);
-    url.searchParams.delete("run");
-    window.history.pushState({}, "", url.toString());
+    url.searchParams.delete('run');
+    window.history.pushState({}, '', url.toString());
   }, []);
 
   // Request history when panel is first expanded OR when there's a run ID in URL
@@ -99,14 +102,14 @@ export function CollaborativeWorkflowDiagram({
       (!historyCollapsed || runIdFromUrl);
 
     if (shouldRequest) {
-      void requestHistory(runIdFromUrl || undefined);
+      void historyCommands.requestHistory(runIdFromUrl || undefined);
       hasRequestedHistory.current = true;
     }
   }, [
     historyCollapsed,
     isNewWorkflow,
     isHistoryChannelConnected,
-    requestHistory,
+    historyCommands,
     runIdFromUrl,
   ]);
 
@@ -137,6 +140,7 @@ export function CollaborativeWorkflowDiagram({
           showAiAssistant={false}
           inspectorId={inspectorId}
           containerEl={containerRef.current}
+          runSteps={currentRunSteps}
         />
 
         {/* Only show history panel when NOT creating a new workflow */}
@@ -150,8 +154,8 @@ export function CollaborativeWorkflowDiagram({
             loading={historyLoading}
             error={historyError}
             onRetry={() => {
-              clearError();
-              void requestHistory();
+              historyCommands.clearError();
+              void historyCommands.requestHistory();
             }}
           />
         )}

@@ -18,8 +18,8 @@ defmodule LightningWeb.WorkflowChannel do
   alias Lightning.Workflows.Job
   alias Lightning.Workflows.Snapshot
   alias Lightning.Workflows.Workflow
-  alias LightningWeb.Channels.WorkflowJSON
   alias Lightning.WorkOrders
+  alias LightningWeb.Channels.WorkflowJSON
 
   require Logger
 
@@ -229,6 +229,28 @@ defmodule LightningWeb.WorkflowChannel do
     handle_in("request_history", %{"run_id" => nil}, socket)
   end
 
+  @impl true
+  def handle_in(
+        "request_run_steps",
+        %{"run_id" => run_id},
+        %{assigns: %{project: project}} = socket
+      ) do
+    async_task(socket, "request_run_steps", fn ->
+      case Lightning.Invocation.get_run_with_steps(run_id) do
+        nil ->
+          {:error, %{reason: "run_not_found"}}
+
+        run ->
+          # Verify run belongs to this project's workflows
+          if run.work_order.workflow.project_id == project.id do
+            {:ok, format_run_steps_for_client(run)}
+          else
+            {:error, %{reason: "unauthorized"}}
+          end
+      end
+    end)
+  end
+
   @doc """
   Handles explicit workflow save requests from the collaborative editor.
 
@@ -399,39 +421,8 @@ defmodule LightningWeb.WorkflowChannel do
 
   @impl true
   def handle_info({:async_reply, socket_ref, event, reply}, socket) do
-    case event do
-      "request_adaptors" ->
-        reply(socket_ref, reply)
-        {:noreply, socket}
-
-      "request_project_adaptors" ->
-        reply(socket_ref, reply)
-        {:noreply, socket}
-
-      "request_credentials" ->
-        reply(socket_ref, reply)
-        {:noreply, socket}
-
-      "request_current_user" ->
-        reply(socket_ref, reply)
-        {:noreply, socket}
-
-      "get_context" ->
-        reply(socket_ref, reply)
-        {:noreply, socket}
-
-      "request_history" ->
-        reply(socket_ref, reply)
-        {:noreply, socket}
-
-      "request_versions" ->
-        reply(socket_ref, reply)
-        {:noreply, socket}
-
-      _ ->
-        Logger.warning("Unhandled async reply for event: #{event}")
-        {:noreply, socket}
-    end
+    handle_async_event(event, socket_ref, reply)
+    {:noreply, socket}
   end
 
   @impl true
@@ -566,6 +557,36 @@ defmodule LightningWeb.WorkflowChannel do
 
     {:noreply, socket}
   end
+
+  # Handles async replies for different event types
+  # Extracts event handling logic to reduce cyclomatic complexity
+  defp handle_async_event("request_run_steps", socket_ref, reply) do
+    # Unwrap the result from async_task - it wraps everything in {:ok, ...}
+    # but we may have {:error, ...} tuples from the handler logic
+    unwrapped_reply = unwrap_run_steps_reply(reply)
+    reply(socket_ref, unwrapped_reply)
+  end
+
+  defp handle_async_event(event, socket_ref, reply)
+       when event in [
+              "request_adaptors",
+              "request_project_adaptors",
+              "request_credentials",
+              "request_current_user",
+              "get_context",
+              "request_history",
+              "request_versions"
+            ] do
+    reply(socket_ref, reply)
+  end
+
+  defp handle_async_event(event, _socket_ref, _reply) do
+    Logger.warning("Unhandled async reply for event: #{event}")
+  end
+
+  defp unwrap_run_steps_reply({:ok, {:ok, data}}), do: {:ok, data}
+  defp unwrap_run_steps_reply({:ok, {:error, reason}}), do: {:error, reason}
+  defp unwrap_run_steps_reply(error), do: error
 
   defp render_current_user(user) do
     %{
@@ -927,6 +948,34 @@ defmodule LightningWeb.WorkflowChannel do
       error_type: run.error_type,
       started_at: run.started_at,
       finished_at: run.finished_at
+    }
+  end
+
+  defp format_run_steps_for_client(run) do
+    steps =
+      run.steps
+      |> Enum.map(fn step ->
+        %{
+          id: step.id,
+          job_id: step.job_id,
+          exit_reason: step.exit_reason,
+          error_type: step.error_type,
+          started_at: step.started_at,
+          finished_at: step.finished_at,
+          input_dataclip_id: step.input_dataclip_id
+        }
+      end)
+
+    %{
+      run_id: run.id,
+      steps: steps,
+      metadata: %{
+        starting_job_id: run.starting_job_id,
+        starting_trigger_id: run.starting_trigger_id,
+        inserted_at: run.inserted_at,
+        created_by_id: run.created_by_id,
+        created_by_email: run.created_by && run.created_by.email
+      }
     }
   end
 end

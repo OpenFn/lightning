@@ -16,7 +16,7 @@
  * SessionProvider (session state)
  *   ↓ useSession
  * StoreProvider (store management)
- *   ↓ useStores
+ *   ↓ StoreContext (useHistory, useWorkflow, etc.)
  * Components (consume stores)
  * ```
  *
