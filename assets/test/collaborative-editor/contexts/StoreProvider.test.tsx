@@ -246,6 +246,7 @@ describe("StoreProvider", () => {
           permissions: mockPermissions,
           latest_snapshot_lock_version: 1,
           project_repo_connection: null,
+          webhook_auth_methods: [],
         });
       });
 

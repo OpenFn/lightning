@@ -120,6 +120,7 @@ describe("useUser()", () => {
         permissions: mockPermissions,
         latest_snapshot_lock_version: 1,
         project_repo_connection: null,
+        webhook_auth_methods: [],
       });
     });
 
@@ -134,6 +135,7 @@ describe("useUser()", () => {
         permissions: mockPermissions,
         latest_snapshot_lock_version: 1,
         project_repo_connection: null,
+        webhook_auth_methods: [],
       });
     });
 
@@ -166,6 +168,7 @@ describe("useProject()", () => {
         permissions: mockPermissions,
         latest_snapshot_lock_version: 1,
         project_repo_connection: null,
+        webhook_auth_methods: [],
       });
     });
 
@@ -180,6 +183,7 @@ describe("useProject()", () => {
         permissions: mockPermissions,
         latest_snapshot_lock_version: 1,
         project_repo_connection: null,
+        webhook_auth_methods: [],
       });
     });
 
@@ -212,6 +216,7 @@ describe("useAppConfig()", () => {
         permissions: mockPermissions,
         latest_snapshot_lock_version: 1,
         project_repo_connection: null,
+        webhook_auth_methods: [],
       });
     });
 
@@ -226,6 +231,7 @@ describe("useAppConfig()", () => {
         permissions: mockPermissions,
         latest_snapshot_lock_version: 1,
         project_repo_connection: null,
+        webhook_auth_methods: [],
       });
     });
 
@@ -310,6 +316,7 @@ describe("Hook Integration", () => {
         permissions: mockPermissions,
         latest_snapshot_lock_version: 1,
         project_repo_connection: null,
+        webhook_auth_methods: [],
       });
     });
 

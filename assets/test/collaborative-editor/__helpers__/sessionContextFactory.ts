@@ -20,6 +20,7 @@ import type {
   ProjectContext,
   ProjectRepoConnection,
   UserContext,
+  WebhookAuthMethod,
 } from "../../../js/collaborative-editor/types/sessionContext";
 
 // =============================================================================
@@ -59,6 +60,7 @@ export const mockAppConfig: AppConfig = {
 export const mockPermissions: Permissions = {
   can_edit_workflow: true,
   can_run_workflow: true,
+  can_write_webhook_auth_method: true,
 };
 
 /**
@@ -95,6 +97,7 @@ export interface SessionContextResponse {
   permissions: Permissions;
   latest_snapshot_lock_version: number;
   project_repo_connection: ProjectRepoConnection | null;
+  webhook_auth_methods: WebhookAuthMethod[];
 }
 
 /**
@@ -107,6 +110,7 @@ export const mockSessionContextResponse: SessionContextResponse = {
   permissions: mockPermissions,
   latest_snapshot_lock_version: 1,
   project_repo_connection: null,
+  webhook_auth_methods: [],
 };
 
 /**
@@ -119,6 +123,7 @@ export const mockUnauthenticatedSessionContext: SessionContextResponse = {
   permissions: mockPermissions,
   latest_snapshot_lock_version: 1,
   project_repo_connection: null,
+  webhook_auth_methods: [],
 };
 
 /**
@@ -131,6 +136,7 @@ export const mockUpdatedSessionContext: SessionContextResponse = {
   permissions: mockPermissions,
   latest_snapshot_lock_version: 2,
   project_repo_connection: null,
+  webhook_auth_methods: [],
 };
 
 // =============================================================================
@@ -148,6 +154,7 @@ export const invalidSessionContextData = {
     permissions: mockPermissions,
     latest_snapshot_lock_version: 1,
     project_repo_connection: null,
+    webhook_auth_methods: [],
   },
 
   invalidUserId: {
@@ -160,6 +167,7 @@ export const invalidSessionContextData = {
     permissions: mockPermissions,
     latest_snapshot_lock_version: 1,
     project_repo_connection: null,
+    webhook_auth_methods: [],
   },
 
   invalidUserEmail: {
@@ -172,6 +180,7 @@ export const invalidSessionContextData = {
     permissions: mockPermissions,
     latest_snapshot_lock_version: 1,
     project_repo_connection: null,
+    webhook_auth_methods: [],
   },
 
   missingConfig: {
@@ -181,6 +190,7 @@ export const invalidSessionContextData = {
     permissions: mockPermissions,
     latest_snapshot_lock_version: 1,
     project_repo_connection: null,
+    webhook_auth_methods: [],
   },
 
   invalidConfigType: {
@@ -192,6 +202,7 @@ export const invalidSessionContextData = {
     permissions: mockPermissions,
     latest_snapshot_lock_version: 1,
     project_repo_connection: null,
+    webhook_auth_methods: [],
   },
 
   invalidProjectId: {
@@ -204,6 +215,7 @@ export const invalidSessionContextData = {
     permissions: mockPermissions,
     latest_snapshot_lock_version: 1,
     project_repo_connection: null,
+    webhook_auth_methods: [],
   },
 
   missingProjectName: {
@@ -216,6 +228,7 @@ export const invalidSessionContextData = {
     permissions: mockPermissions,
     latest_snapshot_lock_version: 1,
     project_repo_connection: null,
+    webhook_auth_methods: [],
   },
 };
 
@@ -234,6 +247,7 @@ export interface CreateSessionContextOptions {
   permissions?: Partial<Permissions>;
   latest_snapshot_lock_version?: number;
   project_repo_connection?: Partial<ProjectRepoConnection> | null;
+  webhook_auth_methods?: WebhookAuthMethod[];
 }
 
 /**
@@ -304,6 +318,7 @@ export function createSessionContext(
   const permissions: Permissions = {
     can_edit_workflow: true,
     can_run_workflow: true,
+    can_write_webhook_auth_method: true,
     ...options.permissions,
   };
 
@@ -329,6 +344,7 @@ export function createSessionContext(
     permissions,
     latest_snapshot_lock_version: options.latest_snapshot_lock_version ?? 1,
     project_repo_connection,
+    webhook_auth_methods: options.webhook_auth_methods ?? [],
   };
 }
 

@@ -16,6 +16,7 @@ import type {
   ProjectContext,
   AppConfig,
   Permissions,
+  WebhookAuthMethod,
 } from "../../../js/collaborative-editor/types/sessionContext";
 
 import {
@@ -55,6 +56,7 @@ export function configureMockChannelForContext(
     config: AppConfig;
     permissions: Permissions;
     latest_snapshot_lock_version: number;
+    webhook_auth_methods: WebhookAuthMethod[];
   },
   responseStatus: "ok" | "error" | "timeout" = "ok"
 ): void {
@@ -108,6 +110,7 @@ export function emitSessionContextEvent(
     config: AppConfig;
     permissions: Permissions;
     latest_snapshot_lock_version: number;
+    webhook_auth_methods: WebhookAuthMethod[];
   }
 ): void {
   const channelWithTest = channel as MockPhoenixChannel & {
@@ -141,6 +144,7 @@ export function emitSessionContextUpdatedEvent(
     config: AppConfig;
     permissions: Permissions;
     latest_snapshot_lock_version: number;
+    webhook_auth_methods: WebhookAuthMethod[];
   }
 ): void {
   const channelWithTest = channel as MockPhoenixChannel & {
@@ -175,6 +179,7 @@ export async function testSessionContextRequest(
     config: AppConfig;
     permissions: Permissions;
     latest_snapshot_lock_version: number;
+    webhook_auth_methods: WebhookAuthMethod[];
   }
 ): Promise<void> {
   await store.requestSessionContext();
@@ -304,6 +309,7 @@ export async function simulateContextUpdateSequence(
     config: AppConfig;
     permissions: Permissions;
     latest_snapshot_lock_version: number;
+    webhook_auth_methods: WebhookAuthMethod[];
   }>
 ): Promise<void> {
   for (const update of updates) {
@@ -369,6 +375,7 @@ export function createMockChannelForScenario(
     config: AppConfig;
     permissions: Permissions;
     latest_snapshot_lock_version: number;
+    webhook_auth_methods: WebhookAuthMethod[];
   }>
 ): MockPhoenixChannel {
   const channel = createMockPhoenixChannel();
@@ -390,6 +397,7 @@ export function createMockChannelForScenario(
         permissions: customData?.permissions ?? mockPermissions,
         latest_snapshot_lock_version:
           customData?.latest_snapshot_lock_version ?? 1,
+        webhook_auth_methods: customData?.webhook_auth_methods ?? [],
       });
       break;
 
@@ -401,6 +409,7 @@ export function createMockChannelForScenario(
         permissions: customData?.permissions ?? mockPermissions,
         latest_snapshot_lock_version:
           customData?.latest_snapshot_lock_version ?? 1,
+        webhook_auth_methods: customData?.webhook_auth_methods ?? [],
       });
       break;
 
@@ -413,6 +422,7 @@ export function createMockChannelForScenario(
           config: mockAppConfig,
           permissions: mockPermissions,
           latest_snapshot_lock_version: 1,
+          webhook_auth_methods: [],
         },
         "error"
       );
@@ -427,6 +437,7 @@ export function createMockChannelForScenario(
           config: mockAppConfig,
           permissions: mockPermissions,
           latest_snapshot_lock_version: 1,
+          webhook_auth_methods: [],
         },
         "timeout"
       );
