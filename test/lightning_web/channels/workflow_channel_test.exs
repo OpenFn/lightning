@@ -567,8 +567,9 @@ defmodule LightningWeb.WorkflowChannelTest do
       # Verify error was written to Y.Doc
       errors_map = Yex.Doc.get_map(doc, "errors")
       ydoc_errors = Yex.Map.to_json(errors_map)
-      assert is_list(ydoc_errors["name"])
-      assert "This field can't be blank." in ydoc_errors["name"]
+      workflow_errors = ydoc_errors["workflow"]
+      assert is_list(workflow_errors["name"])
+      assert "This field can't be blank." in workflow_errors["name"]
     end
 
     test "clears Y.Doc errors after successful save",
@@ -667,10 +668,11 @@ defmodule LightningWeb.WorkflowChannelTest do
       # Verify error in Y.Doc
       errors_map = Yex.Doc.get_map(doc, "errors")
       ydoc_errors = Yex.Map.to_json(errors_map)
-      assert is_list(ydoc_errors["name"])
+      workflow_errors = ydoc_errors["workflow"]
+      assert is_list(workflow_errors["name"])
 
       assert Enum.any?(
-               ydoc_errors["name"],
+               workflow_errors["name"],
                &String.contains?(&1, "already exists")
              )
     end
