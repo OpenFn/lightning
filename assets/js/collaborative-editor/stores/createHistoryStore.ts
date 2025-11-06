@@ -1,82 +1,83 @@
 /**
- * # HistoryStore
+ * # HistoryStore - Workflow Execution History Management
  *
- * This store implements the same pattern as CredentialStore:
- * useSyncExternalStore + Immer for optimal performance and referential
- * stability.
+ * Manages workflow execution history and detailed run step data with intelligent
+ * caching and real-time synchronization.
  *
- * ## Core Principles:
- * - Immer for referentially stable state updates
- * - Command Query Separation (CQS) for predictable state mutations
- * - Single source of truth for workflow execution history
- * - Runtime validation with Zod schemas
+ * ## Data Held
  *
- * ## Update Patterns:
+ * - **history**: Array of work orders (top 20 most recent), each containing runs
+ * - **runStepsCache**: Cached detailed step data keyed by run ID
+ * - **runStepsSubscribers**: Tracks which components are watching each run
+ * - **runStepsLoading**: In-flight run step requests to prevent duplicates
+ * - **isLoading/error**: Request states for user feedback
+ * - **isChannelConnected**: Phoenix channel connection status
+ * - **lastUpdated**: Timestamp of last successful history update
  *
- * ### Pattern 1: Channel Message → Zod → Immer → Notify
- * **When to use**: All server-initiated history updates
- * **Flow**: Channel message → validate with Zod → Immer update →
- *           React notification
- * **Benefits**: Automatic validation, error handling, type safety
+ * ## Channel Interactions
  *
- * ```typescript
- * // Example: Handle server history list update
- * const handleHistoryReceived = (rawData: unknown) => {
- *   const result = HistoryListSchema.safeParse(rawData);
- *   if (result.success) {
- *     state = produce(state, (draft) => {
- *       draft.history = result.data;
- *       draft.lastUpdated = Date.now();
- *       draft.error = null;
- *     });
- *     notify();
- *   }
- * };
- * ```
+ * **Listens to:**
+ * - `history_updated` - Real-time work order and run updates from server
+ *   - Handles: work_order created/updated, run created/updated
+ *   - Automatically invalidates and refetches affected run steps
  *
- * ### Pattern 2: Direct Immer → Notify (Local State)
- * **When to use**: Loading states, errors, local UI state
- * **Flow**: Direct Immer update → React notification
- * **Benefits**: Immediate response, simple implementation
+ * **Makes requests:**
+ * - `request_history` - Fetches top 20 work orders (optionally filtered to include specific run)
+ * - `request_run_steps` - Fetches detailed step execution data for a run
  *
- * ```typescript
- * // Example: Set loading state
- * const setLoading = (loading: boolean) => {
- *   state = produce(state, (draft) => {
- *     draft.isLoading = loading;
- *   });
- *   notify();
- * };
- * ```
+ * ## Hook Interface
  *
- * ## Architecture Notes:
- * - All validation happens at runtime with Zod schemas
- * - Channel messaging is handled externally (SessionProvider)
- * - Store provides both commands and queries following CQS pattern
- * - withSelector utility provides memoized selectors for performance
- */
-
-/**
+ * **State Queries:**
+ * - `useHistory()` - Returns work order array
+ * - `useHistoryLoading()` - Returns loading state
+ * - `useHistoryError()` - Returns error message
+ * - `useHistoryChannelConnected()` - Returns channel status
+ *
+ * **Commands (via useHistoryCommands):**
+ * - `requestHistory(runId?)` - Fetch history from server
+ * - `requestRunSteps(runId)` - Fetch run steps from server
+ * - `getRunSteps(runId)` - Read cached run steps (no fetch)
+ * - `clearError()` - Clear error state
+ *
+ * **Advanced Subscription Hook:**
+ * - `useRunSteps(runId)` - Subscribe to run steps with automatic lifecycle management
+ *   - Auto-subscribes on mount, unsubscribes on unmount
+ *   - Auto-fetches if not cached
+ *   - Auto-refetches when run updates (if subscribed)
+ *   - Auto-cleans cache when last subscriber unmounts
+ *   - Returns transformed RunInfo for visualization
+ *
+ * ## Key Behaviors
+ *
+ * ### Subscription-Based Caching
+ * Components declare interest via subscribeToRunSteps(runId, componentId).
+ * Store tracks subscribers per run and only caches actively watched runs.
+ * Multiple components can subscribe to the same run.
+ *
+ * ### Selective Cache Invalidation
+ * When history_updated event arrives with run changes:
+ * - Check if run has active subscribers
+ * - If yes: invalidate cache and trigger refetch
+ * - If no: ignore (no components need fresh data)
+ *
+ * ### Automatic Memory Cleanup
+ * When last subscriber unsubscribes from a run:
+ * - Remove cached run steps
+ * - Remove subscriber tracking
+ * - Clear loading state
+ * Prevents memory leaks in long-lived sessions.
+ *
+ * ### Request Deduplication
+ * Tracks in-flight requests in runStepsLoading Set to prevent
+ * duplicate concurrent fetches for the same run.
+ *
  * ## Redux DevTools Integration
  *
- * This store integrates with Redux DevTools for debugging in
- * development and test environments.
- *
- * **Features:**
- * - Real-time state inspection
+ * Install Redux DevTools extension and select "HistoryStore" to inspect:
+ * - Current state (history, cache, subscribers)
  * - Action history with timestamps
- * - Time-travel debugging (jump to previous states)
- * - State export/import for reproducing bugs
- *
- * **Usage:**
- * 1. Install Redux DevTools browser extension
- * 2. Open DevTools and select the "HistoryStore" instance
- * 3. Perform actions in the app and watch them appear in DevTools
- *
- * **Note:** DevTools is automatically disabled in production builds.
- *
- * **Excluded from DevTools:**
- * None (all state is serializable)
+ * - Time-travel debugging
+ * - State export/import for bug reproduction
  */
 
 import { produce } from 'immer';
