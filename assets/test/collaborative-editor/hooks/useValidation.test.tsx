@@ -36,14 +36,12 @@ describe("useValidation", () => {
         }),
       },
       getFieldMeta: vi.fn((fieldName: string) => {
-        return mockForm.state.fieldMeta[fieldName] || null;
+        return mockForm.state.fieldMeta[fieldName] || {};
       }),
-      setFieldMeta: vi.fn(
-        (fieldName: string, updater: (old: any) => any) => {
-          const oldMeta = mockForm.state.fieldMeta[fieldName] || {};
-          mockForm.state.fieldMeta[fieldName] = updater(oldMeta);
-        }
-      ),
+      setFieldMeta: vi.fn((fieldName: string, updater: (old: any) => any) => {
+        const oldMeta = mockForm.state.fieldMeta[fieldName] || {};
+        mockForm.state.fieldMeta[fieldName] = updater(oldMeta);
+      }),
     };
 
     mockSetClientErrors = vi.fn();
@@ -186,10 +184,14 @@ describe("useValidation", () => {
       await waitFor(() => {
         // Both fields should have collaborative errors set
         expect(
-          mockForm.setFieldMeta.mock.calls.some((call: any) => call[0] === "name")
+          mockForm.setFieldMeta.mock.calls.some(
+            (call: any) => call[0] === "name"
+          )
         ).toBe(true);
         expect(
-          mockForm.setFieldMeta.mock.calls.some((call: any) => call[0] === "body")
+          mockForm.setFieldMeta.mock.calls.some(
+            (call: any) => call[0] === "body"
+          )
         ).toBe(true);
       });
     });
@@ -260,7 +262,9 @@ describe("useValidation", () => {
         );
         if (calls.length > 0) {
           const updaterFn = calls[0][1];
-          const result = updaterFn({ errorMap: { collaborative: "old error" } });
+          const result = updaterFn({
+            errorMap: { collaborative: "old error" },
+          });
           expect(result.errorMap.collaborative).toBeUndefined();
         }
       });
@@ -291,10 +295,9 @@ describe("useValidation", () => {
       // Wait for debounced write (500ms)
       await waitFor(
         () => {
-          expect(mockSetClientErrors).toHaveBeenCalledWith(
-            "workflow",
-            { name: ["Name is too short"] }
-          );
+          expect(mockSetClientErrors).toHaveBeenCalledWith("workflow", {
+            name: ["Name is too short"],
+          });
         },
         { timeout: 1000 }
       );
@@ -323,10 +326,9 @@ describe("useValidation", () => {
       // Wait for debounced write
       await waitFor(
         () => {
-          expect(mockSetClientErrors).toHaveBeenCalledWith(
-            "jobs.job-123",
-            { body: ["Body is required"] }
-          );
+          expect(mockSetClientErrors).toHaveBeenCalledWith("jobs.job-123", {
+            body: ["Body is required"],
+          });
         },
         { timeout: 1000 }
       );
@@ -342,7 +344,10 @@ describe("useValidation", () => {
       };
       mockForm.getFieldMeta.mockImplementation((fieldName: string) => {
         if (fieldName === "name") {
-          return { errors: [{ message: "Complex error object" }, 123, null], isTouched: true };
+          return {
+            errors: [{ message: "Complex error object" }, 123, null],
+            isTouched: true,
+          };
         }
         return null;
       });
@@ -355,16 +360,9 @@ describe("useValidation", () => {
       // Wait for debounced write
       await waitFor(
         () => {
-          expect(mockSetClientErrors).toHaveBeenCalledWith(
-            "workflow",
-            {
-              name: [
-                "[object Object]",
-                "123",
-                "null",
-              ],
-            }
-          );
+          expect(mockSetClientErrors).toHaveBeenCalledWith("workflow", {
+            name: ["[object Object]", "123", "null"],
+          });
         },
         { timeout: 1000 }
       );
@@ -395,10 +393,9 @@ describe("useValidation", () => {
       // Should send empty array to clear the field
       await waitFor(
         () => {
-          expect(mockSetClientErrors).toHaveBeenCalledWith(
-            "workflow",
-            { name: [] }
-          );
+          expect(mockSetClientErrors).toHaveBeenCalledWith("workflow", {
+            name: [],
+          });
         },
         { timeout: 1000 }
       );
@@ -428,10 +425,10 @@ describe("useValidation", () => {
       // Should send empty arrays for both fields
       await waitFor(
         () => {
-          expect(mockSetClientErrors).toHaveBeenCalledWith(
-            "workflow",
-            { name: [], body: [] }
-          );
+          expect(mockSetClientErrors).toHaveBeenCalledWith("workflow", {
+            name: [],
+            body: [],
+          });
         },
         { timeout: 1000 }
       );

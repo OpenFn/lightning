@@ -4,9 +4,12 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useAppForm } from "../../../../js/collaborative-editor/components/form";
 import * as useWorkflowModule from "../../../../js/collaborative-editor/hooks/useWorkflow";
 
-// Mock useWorkflowState
+// Mock useWorkflowState and useWorkflowActions
 vi.mock("../../../../js/collaborative-editor/hooks/useWorkflow", () => ({
   useWorkflowState: vi.fn(),
+  useWorkflowActions: vi.fn(() => ({
+    setClientErrors: vi.fn(),
+  })),
 }));
 
 describe("NumberField", () => {

@@ -23,6 +23,9 @@ describe("useValidation (via useAppForm)", () => {
           name: "Workflow",
           errors: { name: ["Name is required"] },
         },
+        jobs: [],
+        triggers: [],
+        edges: [],
       };
       return selector ? selector(state) : state;
     });
@@ -54,6 +57,9 @@ describe("useValidation (via useAppForm)", () => {
           name: "Workflow",
           errors: mockErrors,
         },
+        jobs: [],
+        triggers: [],
+        edges: [],
       };
       return selector ? selector(state) : state;
     });
@@ -91,6 +97,7 @@ describe("useValidation (via useAppForm)", () => {
   it("should filter errors for specific entity using errorPath", async () => {
     const mockFn = vi.fn(selector => {
       const state = {
+        workflow: { id: "w-1", errors: {} },
         jobs: [
           {
             id: "abc-123",
@@ -103,6 +110,8 @@ describe("useValidation (via useAppForm)", () => {
             errors: { name: ["Other job name is required"] },
           },
         ],
+        triggers: [],
+        edges: [],
       };
       return selector ? selector(state) : state;
     });
@@ -142,6 +151,9 @@ describe("useValidation (via useAppForm)", () => {
             concurrency: ["Must be positive"],
           },
         },
+        jobs: [],
+        triggers: [],
+        edges: [],
       };
       return selector ? selector(state) : state;
     });
