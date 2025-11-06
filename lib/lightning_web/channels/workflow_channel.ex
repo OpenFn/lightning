@@ -367,6 +367,39 @@ defmodule LightningWeb.WorkflowChannel do
 
   @impl true
   def handle_in(
+        "request_trigger_auth_methods",
+        %{"trigger_id" => trigger_id},
+        socket
+      ) do
+    Logger.debug("""
+    WorkflowChannel: request_trigger_auth_methods
+      trigger_id: #{trigger_id}
+    """)
+
+    async_task(socket, "request_trigger_auth_methods", fn ->
+      trigger = Lightning.Repo.get!(Lightning.Workflows.Trigger, trigger_id)
+
+      webhook_auth_methods_query =
+        from(wam in Lightning.Workflows.WebhookAuthMethod,
+          where: is_nil(wam.scheduled_deletion),
+          order_by: wam.name
+        )
+
+      trigger_with_auth =
+        Lightning.Repo.preload(trigger,
+          webhook_auth_methods: webhook_auth_methods_query
+        )
+
+      %{
+        trigger_id: trigger_id,
+        webhook_auth_methods:
+          render_webhook_auth_methods(trigger_with_auth.webhook_auth_methods)
+      }
+    end)
+  end
+
+  @impl true
+  def handle_in(
         "update_trigger_auth_methods",
         %{"trigger_id" => trigger_id, "auth_method_ids" => auth_method_ids},
         socket
@@ -388,8 +421,8 @@ defmodule LightningWeb.WorkflowChannel do
              auth_methods,
              actor: socket.assigns.current_user
            ) do
-      # Broadcast update to all collaborators in the room
-      broadcast_from!(socket, "trigger_auth_methods_updated", %{
+      # Broadcast update to all collaborators in the room (including sender)
+      broadcast!(socket, "trigger_auth_methods_updated", %{
         trigger_id: trigger_id,
         webhook_auth_methods:
           render_webhook_auth_methods(updated_trigger.webhook_auth_methods)
@@ -451,6 +484,10 @@ defmodule LightningWeb.WorkflowChannel do
         {:noreply, socket}
 
       "request_versions" ->
+        reply(socket_ref, reply)
+        {:noreply, socket}
+
+      "request_trigger_auth_methods" ->
         reply(socket_ref, reply)
         {:noreply, socket}
 

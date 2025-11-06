@@ -192,6 +192,9 @@ function produceInitialState() {
       enabled: null,
       selectedNode: null,
       selectedEdge: null,
+
+      // Active trigger webhook auth methods (loaded on-demand)
+      activeTriggerAuthMethods: null,
     } as Workflow.State,
     draft => {
       // Compute derived state on initialization
@@ -370,15 +373,23 @@ export const createWorkflowStore = () => {
       ) {
         const { trigger_id, webhook_auth_methods } = payload as {
           trigger_id: string;
-          webhook_auth_methods: unknown;
+          webhook_auth_methods: Array<{
+            id: string;
+            name: string;
+            auth_type: string;
+          }>;
         };
 
-        // Update the trigger's webhook_auth_methods in local state
+        // Update activeTriggerAuthMethods if this broadcast matches the active trigger
         updateState(draft => {
-          const trigger = draft.triggers.find(t => t.id === trigger_id);
-          if (trigger && Array.isArray(webhook_auth_methods)) {
-            trigger.webhook_auth_methods =
-              webhook_auth_methods as Workflow.Trigger["webhook_auth_methods"];
+          if (
+            draft.activeTriggerAuthMethods?.trigger_id === trigger_id &&
+            Array.isArray(webhook_auth_methods)
+          ) {
+            draft.activeTriggerAuthMethods = {
+              trigger_id,
+              webhook_auth_methods,
+            };
           }
         }, "trigger_auth_methods_updated");
       }
@@ -923,6 +934,45 @@ export const createWorkflowStore = () => {
     // Note: Y.Doc observer will also fire and update the jobs array
   };
 
+  // =============================================================================
+  // Trigger Auth Methods Management (Pattern 3 - Local State)
+  // =============================================================================
+
+  const requestTriggerAuthMethods = async (triggerId: string) => {
+    if (!provider?.channel) {
+      logger.warn("Cannot request trigger auth methods - no channel available");
+      return;
+    }
+
+    try {
+      const response = await channelRequest(
+        provider.channel,
+        "request_trigger_auth_methods",
+        { trigger_id: triggerId }
+      );
+
+      if (
+        response &&
+        typeof response === "object" &&
+        "trigger_id" in response &&
+        "webhook_auth_methods" in response
+      ) {
+        updateState(draft => {
+          draft.activeTriggerAuthMethods = response as {
+            trigger_id: string;
+            webhook_auth_methods: Array<{
+              id: string;
+              name: string;
+              auth_type: string;
+            }>;
+          };
+        }, "requestTriggerAuthMethods");
+      }
+    } catch (error) {
+      logger.error("Failed to request trigger auth methods", error);
+    }
+  };
+
   return {
     // Core store interface
     subscribe,
@@ -974,6 +1024,9 @@ export const createWorkflowStore = () => {
     saveAndSyncWorkflow,
     resetWorkflow,
     validateWorkflowName,
+
+    // Trigger auth methods
+    requestTriggerAuthMethods,
   };
 };
 

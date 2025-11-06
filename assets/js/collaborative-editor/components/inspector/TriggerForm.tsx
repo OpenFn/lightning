@@ -8,7 +8,7 @@ import { useLiveViewActions } from "../../contexts/LiveViewActionsContext";
 import { channelRequest } from "../../hooks/useChannel";
 import { useSession } from "../../hooks/useSession";
 import { useSessionContext } from "../../hooks/useSessionContext";
-import { useWorkflowActions } from "../../hooks/useWorkflow";
+import { useWorkflowActions, useWorkflowState } from "../../hooks/useWorkflow";
 import { notifications } from "../../lib/notifications";
 import type { Workflow } from "../../types/workflow";
 import { useAppForm } from "../form";
@@ -29,7 +29,7 @@ const logger = _logger.ns("TriggerForm").seal();
  * (webhook URL, cron expression, kafka config).
  */
 export function TriggerForm({ trigger }: TriggerFormProps) {
-  const { updateTrigger } = useWorkflowActions();
+  const { updateTrigger, requestTriggerAuthMethods } = useWorkflowActions();
   const { pushEvent, handleEvent } = useLiveViewActions();
   const [copySuccess, setCopySuccess] = useState<string>("");
   const [showAdvancedSettings, setShowAdvancedSettings] = useState(false);
@@ -37,6 +37,27 @@ export function TriggerForm({ trigger }: TriggerFormProps) {
   const sessionContext = useSessionContext();
   const { provider } = useSession();
   const channel = provider?.channel;
+
+  // Get active trigger auth methods from workflow store
+  const activeTriggerAuthMethods = useWorkflowState(
+    state => state.activeTriggerAuthMethods
+  );
+
+  // Request auth methods when trigger is selected
+  useEffect(() => {
+    if (trigger.id) {
+      void requestTriggerAuthMethods(trigger.id);
+    }
+  }, [trigger.id, requestTriggerAuthMethods]);
+
+  // Get auth methods for this trigger
+  const triggerAuthMethods =
+    activeTriggerAuthMethods?.trigger_id === trigger.id
+      ? activeTriggerAuthMethods.webhook_auth_methods
+      : [];
+  const loadingAuthMethods =
+    activeTriggerAuthMethods === null ||
+    activeTriggerAuthMethods.trigger_id !== trigger.id;
 
   const form = useAppForm({
     defaultValues: trigger,
@@ -233,13 +254,19 @@ export function TriggerForm({ trigger }: TriggerFormProps) {
                         Webhook Authentication
                       </h4>
 
-                      {!trigger.webhook_auth_methods ||
-                      trigger.webhook_auth_methods.length === 0 ? (
+                      {loadingAuthMethods || triggerAuthMethods.length === 0 ? (
                         <div className="text-xs text-slate-600 space-y-2">
-                          <p>
-                            Add an extra layer of security with Webhook
-                            authentication
-                          </p>
+                          {loadingAuthMethods ? (
+                            <div className="flex items-center gap-1">
+                              <span className="hero-arrow-path size-4 animate-spin"></span>
+                              loading authentication methods
+                            </div>
+                          ) : (
+                            <p>
+                              Add an extra layer of security with Webhook
+                              authentication
+                            </p>
+                          )}
                           <button
                             type="button"
                             onClick={() => setShowAuthModal(true)}
@@ -270,7 +297,7 @@ export function TriggerForm({ trigger }: TriggerFormProps) {
                       ) : (
                         <div className="space-y-2">
                           <div className="space-y-1">
-                            {trigger.webhook_auth_methods.map(method => (
+                            {triggerAuthMethods.map(method => (
                               <div
                                 key={method.id}
                                 className="flex items-center gap-2 text-xs"
@@ -755,7 +782,12 @@ export function TriggerForm({ trigger }: TriggerFormProps) {
       {/* Webhook Auth Method Modal */}
       {showAuthModal && (
         <WebhookAuthMethodModal
-          trigger={trigger}
+          trigger={
+            {
+              ...trigger,
+              webhook_auth_methods: triggerAuthMethods,
+            } as unknown as Workflow.Trigger
+          }
           projectAuthMethods={sessionContext.webhookAuthMethods || []}
           projectId={sessionContext.project?.id || ""}
           onClose={() => setShowAuthModal(false)}
