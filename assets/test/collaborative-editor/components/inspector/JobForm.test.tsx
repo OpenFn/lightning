@@ -748,9 +748,7 @@ describe("JobForm - Collaborative Validation (Phase 5)", () => {
 
     // Verify error is displayed in form
     await waitFor(() => {
-      expect(
-        screen.getByText(/Job name is too long/)
-      ).toBeInTheDocument();
+      expect(screen.getByText(/Job name is too long/)).toBeInTheDocument();
     });
   });
 
@@ -971,8 +969,96 @@ describe("JobForm - Collaborative Validation (Phase 5)", () => {
     // Should display first error only
     await waitFor(() => {
       expect(screen.getByText(/First error message/)).toBeInTheDocument();
-      expect(screen.queryByText(/Second error message/)).not.toBeInTheDocument();
+      expect(
+        screen.queryByText(/Second error message/)
+      ).not.toBeInTheDocument();
       expect(screen.queryByText(/Third error message/)).not.toBeInTheDocument();
+    });
+  });
+
+  test("form values reset when switching between different jobs", async () => {
+    // This test verifies that TanStack Form properly re-initializes when
+    // the job prop changes, preventing form values from "sticking" between jobs.
+    // This is critical for collaborative editing where users frequently switch
+    // between inspecting different jobs.
+
+    // Create Y.Doc with two jobs with distinctly different values
+    const ydocWithTwoJobs = createWorkflowYDoc({
+      jobs: {
+        "job-1": {
+          id: "job-1",
+          name: "First Job Name",
+          adaptor: "@openfn/language-http@1.0.0",
+          body: "fn(state => state)",
+          project_credential_id: null,
+          keychain_credential_id: null,
+        },
+        "job-2": {
+          id: "job-2",
+          name: "Second Job Name",
+          adaptor: "@openfn/language-salesforce@2.0.0",
+          body: "fn(state => state)",
+          project_credential_id: null,
+          keychain_credential_id: null,
+        },
+      },
+    });
+
+    const twoJobsStore = createConnectedWorkflowStore(ydocWithTwoJobs);
+
+    // Get both jobs
+    const job1 = twoJobsStore.getSnapshot().jobs.find(j => j.id === "job-1");
+    const job2 = twoJobsStore.getSnapshot().jobs.find(j => j.id === "job-2");
+
+    // Render form for job-1
+    const { rerender } = render(<JobForm job={job1!} />, {
+      wrapper: createWrapper(
+        twoJobsStore,
+        credentialStore,
+        sessionContextStore,
+        adaptorStore,
+        awarenessStore
+      ),
+    });
+
+    // Verify job-1 values are displayed initially
+    await waitFor(() => {
+      expect(screen.getByDisplayValue("First Job Name")).toBeInTheDocument();
+      expect(screen.getByText("Http")).toBeInTheDocument();
+    });
+
+    // Now switch to job-2 (this simulates user clicking on a different job in the canvas)
+    rerender(<JobForm job={job2!} />);
+
+    // CRITICAL: Verify job-2 values are displayed (not job-1's values)
+    // This is what we're testing - that form values don't "stick" when switching jobs
+    await waitFor(() => {
+      expect(screen.getByDisplayValue("Second Job Name")).toBeInTheDocument();
+      // Verify job-1's name is NOT shown
+      expect(
+        screen.queryByDisplayValue("First Job Name")
+      ).not.toBeInTheDocument();
+    });
+
+    // Verify adaptor changed too
+    await waitFor(() => {
+      expect(screen.getByText("Salesforce")).toBeInTheDocument();
+      // Verify job-1's adaptor is NOT shown
+      expect(screen.queryByText("Http")).not.toBeInTheDocument();
+    });
+
+    // Switch back to job-1 to verify bidirectional switching works
+    rerender(<JobForm job={job1!} />);
+
+    // Verify job-1 values are correctly restored
+    await waitFor(() => {
+      expect(screen.getByDisplayValue("First Job Name")).toBeInTheDocument();
+      expect(screen.getByText("Http")).toBeInTheDocument();
+      // Verify job-2's values are NOT shown
+      expect(
+        screen.queryByDisplayValue("Second Job Name")
+      ).not.toBeInTheDocument();
+      expect(screen.queryByText("Salesforce")).not.toBeInTheDocument();
     });
   });
 });

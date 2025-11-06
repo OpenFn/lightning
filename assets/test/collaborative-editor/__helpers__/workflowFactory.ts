@@ -43,6 +43,9 @@ export interface CreateWorkflowInput {
     source: string;
     target: string;
     condition_type?: string;
+    condition_label?: string;
+    condition_expression?: string;
+    enabled?: boolean;
   }>;
 }
 
@@ -121,6 +124,9 @@ export function createWorkflowYDoc(config: CreateWorkflowInput): Y.Doc {
       edgeMap.set("target_job_id", edge.target);
 
       edgeMap.set("condition_type", edge.condition_type || "on_job_success");
+      edgeMap.set("condition_label", edge.condition_label || null);
+      edgeMap.set("condition_expression", edge.condition_expression || null);
+      edgeMap.set("enabled", edge.enabled ?? true);
       edgesArray.push([edgeMap]);
     });
   }
