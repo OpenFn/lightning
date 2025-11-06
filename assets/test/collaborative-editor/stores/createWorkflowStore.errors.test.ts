@@ -29,9 +29,12 @@ describe("WorkflowStore - Errors Observer (Phase 3: Denormalized)", () => {
 
     store = createWorkflowStore();
 
-    // Create mock provider
+    // Create mock provider with channel methods
     const mockProvider = {
-      channel: {},
+      channel: {
+        on: () => {},
+        off: () => {},
+      },
     } as any;
 
     store.connect(ydoc as Session.WorkflowDoc, mockProvider);
