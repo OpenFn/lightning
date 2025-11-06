@@ -582,8 +582,6 @@ defmodule LightningWeb.WorkflowChannel do
     }
   end
 
-  defp render_project_context(nil), do: nil
-
   defp render_project_context(project) do
     %{
       id: project.id,
