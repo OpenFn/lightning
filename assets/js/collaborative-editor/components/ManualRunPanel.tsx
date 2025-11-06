@@ -2,30 +2,36 @@ import {
   DocumentIcon,
   PencilSquareIcon,
   QueueListIcon,
-} from '@heroicons/react/24/outline';
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useHotkeys } from 'react-hotkeys-hook';
+} from "@heroicons/react/24/outline";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useHotkeys } from "react-hotkeys-hook";
 
-import { cn } from '#/utils/cn';
-import _logger from '#/utils/logger';
+import { cn } from "#/utils/cn";
+import _logger from "#/utils/logger";
 
-import { FilterTypes } from '../../manual-run-panel/types';
-import CustomView from '../../manual-run-panel/views/CustomView';
-import EmptyView from '../../manual-run-panel/views/EmptyView';
-import ExistingView from '../../manual-run-panel/views/ExistingView';
-import type { Dataclip } from '../api/dataclips';
-import * as dataclipApi from '../api/dataclips';
-import { useCanRun } from '../hooks/useWorkflow';
-import { notifications } from '../lib/notifications';
-import type { Workflow } from '../types/workflow';
+import { FilterTypes } from "../../manual-run-panel/types";
+import CustomView from "../../manual-run-panel/views/CustomView";
+import EmptyView from "../../manual-run-panel/views/EmptyView";
+import ExistingView from "../../manual-run-panel/views/ExistingView";
+import { useURLState } from "../../react/lib/use-url-state";
+import type { Dataclip } from "../api/dataclips";
+import * as dataclipApi from "../api/dataclips";
+import { RENDER_MODES, type RenderMode } from "../constants/panel";
+import { HOTKEY_SCOPES } from "../constants/hotkeys";
+import { useCanRun } from "../hooks/useWorkflow";
+import { useCurrentRun, useRunStoreInstance } from "../hooks/useRun";
+import { useRunRetry } from "../hooks/useRunRetry";
+import { useRunRetryShortcuts } from "../hooks/useRunRetryShortcuts";
+import { useSession } from "../hooks/useSession";
+import type { Workflow } from "../types/workflow";
 
-import { Button } from './Button';
-import { InspectorFooter } from './inspector/InspectorFooter';
-import { InspectorLayout } from './inspector/InspectorLayout';
-import { SelectedDataclipView } from './manual-run/SelectedDataclipView';
-import { Tabs } from './Tabs';
+import { InspectorFooter } from "./inspector/InspectorFooter";
+import { InspectorLayout } from "./inspector/InspectorLayout";
+import { SelectedDataclipView } from "./manual-run/SelectedDataclipView";
+import { RunRetryButton } from "./RunRetryButton";
+import { Tabs } from "./Tabs";
 
-const logger = _logger.ns('ManualRunPanel').seal();
+const logger = _logger.ns("ManualRunPanel").seal();
 
 interface ManualRunPanelProps {
   workflow: Workflow;
@@ -33,21 +39,23 @@ interface ManualRunPanelProps {
   workflowId: string;
   jobId?: string | null;
   triggerId?: string | null;
+  edgeId?: string | null;
   onClose: () => void;
-  renderMode?: 'standalone' | 'embedded';
-  onRunStateChange?: (
-    canRun: boolean,
-    isSubmitting: boolean,
-    handleRun: () => void
-  ) => void;
-  saveWorkflow: () => Promise<{
+  renderMode?: RenderMode;
+  saveWorkflow: (options?: { silent?: boolean }) => Promise<{
     saved_at?: string;
     lock_version?: number;
   } | null>;
-  onRunSubmitted?: (runId: string) => void;
+  onRunSubmitted?: (runId: string, dataclip?: Dataclip) => void;
+  onTabChange?: (tab: TabValue) => void;
+  onDataclipChange?: (dataclip: Dataclip | null) => void;
+  onCustomBodyChange?: (body: string) => void;
+  selectedTab?: TabValue;
+  selectedDataclip?: Dataclip | null;
+  customBody?: string;
 }
 
-type TabValue = 'empty' | 'custom' | 'existing';
+type TabValue = "empty" | "custom" | "existing";
 
 export function ManualRunPanel({
   workflow,
@@ -55,56 +63,95 @@ export function ManualRunPanel({
   workflowId,
   jobId,
   triggerId,
+  edgeId,
   onClose,
-  renderMode = 'standalone',
-  onRunStateChange,
+  renderMode = RENDER_MODES.STANDALONE,
   saveWorkflow,
   onRunSubmitted,
+  onTabChange,
+  onDataclipChange,
+  onCustomBodyChange,
+  selectedTab: selectedTabProp,
+  selectedDataclip: selectedDataclipProp,
+  customBody: customBodyProp,
 }: ManualRunPanelProps) {
-  const [selectedTab, setSelectedTab] = useState<TabValue>('empty');
-  const [selectedDataclip, setSelectedDataclip] = useState<Dataclip | null>(
-    null
-  );
+  const [selectedTabInternal, setSelectedTabInternal] =
+    useState<TabValue>("empty");
+  const [selectedDataclipInternal, setSelectedDataclipInternal] =
+    useState<Dataclip | null>(null);
+  const [customBodyInternal, setCustomBodyInternal] = useState("");
+
+  // Use prop if provided (controlled), otherwise use internal state (uncontrolled)
+  const selectedTab = selectedTabProp ?? selectedTabInternal;
+  const selectedDataclip = selectedDataclipProp ?? selectedDataclipInternal;
+  const customBody = customBodyProp ?? customBodyInternal;
   const [dataclips, setDataclips] = useState<Dataclip[]>([]);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [customBody, setCustomBody] = useState('{}');
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [manuallyUnselected, setManuallyUnselected] = useState(false);
+
+  const setSelectedTab = useCallback(
+    (tab: TabValue) => {
+      setSelectedTabInternal(tab);
+      onTabChange?.(tab);
+    },
+    [onTabChange]
+  );
+
+  const setSelectedDataclip = useCallback(
+    (dataclip: Dataclip | null) => {
+      setSelectedDataclipInternal(dataclip);
+      onDataclipChange?.(dataclip);
+      setManuallyUnselected(dataclip === null);
+    },
+    [onDataclipChange]
+  );
+
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const setCustomBody = useCallback(
+    (body: string) => {
+      setCustomBodyInternal(body);
+      onCustomBodyChange?.(body);
+    },
+    [onCustomBodyChange]
+  );
+
   const [nextCronRunDataclipId, setNextCronRunDataclipId] = useState<
     string | null
   >(null);
   const [canEditDataclip, setCanEditDataclip] = useState(false);
-  const [currentRunDataclip] = useState<Dataclip | null>(null);
-
-  // Filter state for ExistingView
-  const [selectedClipType, setSelectedClipType] = useState('');
+  const [selectedClipType, setSelectedClipType] = useState("");
   const [selectedDates, setSelectedDates] = useState({
-    before: '',
-    after: '',
+    before: "",
+    after: "",
   });
   const [namedOnly, setNamedOnly] = useState(false);
 
-  // Use centralized canRun hook for workflow-level permissions
   const { canRun: canRunWorkflow, tooltipMessage: workflowRunTooltipMessage } =
     useCanRun();
 
-  // Determine run context
+  const { searchParams } = useURLState();
+  const followedRunId = searchParams.get("run");
+  const currentRun = useCurrentRun();
+
+  const { provider } = useSession();
+  const runStore = useRunStoreInstance();
+
   const runContext = jobId
-    ? { type: 'job' as const, id: jobId }
+    ? { type: "job" as const, id: jobId }
     : triggerId
-      ? { type: 'trigger' as const, id: triggerId }
+      ? { type: "trigger" as const, id: triggerId }
       : {
-          type: 'trigger' as const,
-          id: workflow.triggers[0]?.id,
+          type: "trigger" as const,
+          id: workflow.triggers[0]?.id || "",
         };
 
-  // Get the node for panel title
   const contextJob =
-    runContext.type === 'job'
+    runContext.type === "job"
       ? workflow.jobs.find(j => j.id === runContext.id)
       : null;
 
   const contextTrigger =
-    runContext.type === 'trigger'
+    runContext.type === "trigger"
       ? workflow.triggers.find(t => t.id === runContext.id)
       : null;
 
@@ -112,17 +159,15 @@ export function ManualRunPanel({
     ? `Run from ${contextJob.name}`
     : contextTrigger
       ? `Run from Trigger (${contextTrigger.type})`
-      : 'Run Workflow';
+      : "Run Workflow";
 
-  // For triggers, we need to find the first connected job for dataclip fetching
-  // since dataclips are associated with jobs, not triggers
-  // This mirrors the backend logic in WorkflowController.get_selected_job
+  // For triggers: find first connected job for dataclip fetching
+  // (dataclips are associated with jobs, not triggers)
   const dataclipJobId = useMemo(() => {
-    if (runContext.type === 'job') {
+    if (runContext.type === "job") {
       return runContext.id;
     }
 
-    // Find the first edge from this trigger to a job
     const triggerEdge = workflow.edges.find(
       edge => edge.source_trigger_id === runContext.id
     );
@@ -130,17 +175,104 @@ export function ManualRunPanel({
     return triggerEdge?.target_job_id || workflow.jobs[0]?.id;
   }, [runContext, workflow.edges, workflow.jobs]);
 
-  // Watch for jobId/triggerId changes and update panel
-  useEffect(() => {
-    // Reset state when context changes
-    setSelectedDataclip(null);
-    setSearchQuery('');
-    setSelectedClipType('');
-    setSelectedDates({ before: '', after: '' });
-    setNamedOnly(false);
-  }, [jobId, triggerId]);
+  const {
+    handleRun,
+    handleRetry,
+    isSubmitting,
+    isRetryable,
+    runIsProcessing,
+    canRun,
+  } = useRunRetry({
+    projectId,
+    workflowId,
+    runContext,
+    selectedTab,
+    selectedDataclip,
+    customBody,
+    canRunWorkflow,
+    workflowRunTooltipMessage,
+    saveWorkflow,
+    onRunSubmitted: onRunSubmitted,
+    edgeId: edgeId || null,
+    workflowEdges: workflow.edges,
+  });
 
-  // Fetch initial dataclips
+  const followedRunStep = useMemo(() => {
+    if (!currentRun || !dataclipJobId) return null;
+    return currentRun.steps.find(s => s.job_id === dataclipJobId) || null;
+  }, [currentRun, dataclipJobId]);
+
+  // Find the current run's input dataclip from the dataclips list
+  const currentRunDataclip = useMemo(() => {
+    if (!followedRunStep?.input_dataclip_id || !dataclips.length) {
+      return null;
+    }
+    return (
+      dataclips.find(dc => dc.id === followedRunStep.input_dataclip_id) || null
+    );
+  }, [followedRunStep, dataclips]);
+
+  // Connect to run channel when following a run
+  // Note: In embedded mode (FullScreenIDE), parent handles the connection
+  useEffect(() => {
+    if (renderMode !== RENDER_MODES.STANDALONE) {
+      return;
+    }
+
+    if (!followedRunId || !provider) {
+      runStore._disconnectFromRun();
+      return;
+    }
+
+    const cleanup = runStore._connectToRun(provider, followedRunId);
+    return cleanup;
+  }, [followedRunId, provider, runStore, renderMode]);
+
+  useEffect(() => {
+    if (!followedRunId) {
+      setSelectedDataclip(null);
+      setSearchQuery("");
+      setSelectedClipType("");
+      setSelectedDates({ before: "", after: "" });
+      setNamedOnly(false);
+    }
+  }, [jobId, triggerId, followedRunId, setSelectedDataclip]);
+
+  useEffect(() => {
+    setManuallyUnselected(false);
+  }, [followedRunId]);
+
+  useEffect(() => {
+    if (
+      !followedRunStep?.input_dataclip_id ||
+      !dataclips.length ||
+      manuallyUnselected
+    ) {
+      return;
+    }
+
+    // Only auto-select if no dataclip is currently selected
+    // This allows users to manually select different dataclips
+    if (selectedDataclip !== null) {
+      return;
+    }
+
+    const stepDataclip = dataclips.find(
+      dc => dc.id === followedRunStep.input_dataclip_id
+    );
+
+    if (stepDataclip) {
+      setSelectedDataclip(stepDataclip);
+      setSelectedTab("existing");
+    }
+  }, [
+    followedRunStep,
+    dataclips,
+    manuallyUnselected,
+    setSelectedDataclip,
+    setSelectedTab,
+  ]);
+
   useEffect(() => {
     if (!dataclipJobId) return;
 
@@ -149,42 +281,40 @@ export function ManualRunPanel({
         const response = await dataclipApi.searchDataclips(
           projectId,
           dataclipJobId,
-          '',
+          "",
           {}
         );
         setDataclips(response.data);
         setNextCronRunDataclipId(response.next_cron_run_dataclip_id);
         setCanEditDataclip(response.can_edit_dataclip);
 
-        // Auto-select next cron run dataclip if exists
-        if (response.next_cron_run_dataclip_id) {
+        // Auto-select next cron run dataclip (unless following a run)
+        if (response.next_cron_run_dataclip_id && !followedRunId) {
           const nextCronDataclip = response.data.find(
             d => d.id === response.next_cron_run_dataclip_id
           );
           if (nextCronDataclip) {
             setSelectedDataclip(nextCronDataclip);
-            setSelectedTab('existing');
+            setSelectedTab("existing");
           }
         }
       } catch (error) {
-        logger.error('Failed to fetch dataclips:', error);
+        logger.error("Failed to fetch dataclips:", error);
       }
     };
 
     void fetchDataclips();
-  }, [projectId, dataclipJobId]);
+  }, [projectId, dataclipJobId, followedRunId]);
 
-  // Build filters object for API
   const buildFilters = useCallback(() => {
     const filters: Record<string, string> = {};
-    if (selectedClipType) filters['type'] = selectedClipType;
-    if (selectedDates.before) filters['before'] = selectedDates.before;
-    if (selectedDates.after) filters['after'] = selectedDates.after;
-    if (namedOnly) filters['named_only'] = 'true';
+    if (selectedClipType) filters["type"] = selectedClipType;
+    if (selectedDates.before) filters["before"] = selectedDates.before;
+    if (selectedDates.after) filters["after"] = selectedDates.after;
+    if (namedOnly) filters["named_only"] = "true";
     return filters;
   }, [selectedClipType, selectedDates.before, selectedDates.after, namedOnly]);
 
-  // Get active filters for display
   const getActiveFilters = useCallback(() => {
     const filters: Record<string, string | undefined> = {};
     if (selectedClipType) filters[FilterTypes.DATACLIP_TYPE] = selectedClipType;
@@ -192,21 +322,20 @@ export function ManualRunPanel({
       filters[FilterTypes.BEFORE_DATE] = selectedDates.before;
     if (selectedDates.after)
       filters[FilterTypes.AFTER_DATE] = selectedDates.after;
-    if (namedOnly) filters[FilterTypes.NAMED_ONLY] = 'true';
+    if (namedOnly) filters[FilterTypes.NAMED_ONLY] = "true";
     return filters;
   }, [selectedClipType, selectedDates.before, selectedDates.after, namedOnly]);
 
-  // Clear filter handler
   const clearFilter = useCallback((filterType: FilterTypes) => {
     switch (filterType) {
       case FilterTypes.DATACLIP_TYPE:
-        setSelectedClipType('');
+        setSelectedClipType("");
         break;
       case FilterTypes.BEFORE_DATE:
-        setSelectedDates(p => ({ ...p, before: '' }));
+        setSelectedDates(p => ({ ...p, before: "" }));
         break;
       case FilterTypes.AFTER_DATE:
-        setSelectedDates(p => ({ ...p, after: '' }));
+        setSelectedDates(p => ({ ...p, after: "" }));
         break;
       case FilterTypes.NAMED_ONLY:
         setNamedOnly(false);
@@ -214,7 +343,6 @@ export function ManualRunPanel({
     }
   }, []);
 
-  // Search handler
   const handleSearch = useCallback(async () => {
     if (!dataclipJobId) return;
 
@@ -227,33 +355,30 @@ export function ManualRunPanel({
       );
       setDataclips(response.data);
     } catch (error) {
-      logger.error('Failed to search dataclips:', error);
+      logger.error("Failed to search dataclips:", error);
     }
   }, [projectId, dataclipJobId, searchQuery, buildFilters]);
 
-  // Auto-search when filters change (debounced)
   useEffect(() => {
-    if (selectedTab !== 'existing') return;
+    if (selectedTab !== "existing") return;
 
-    const contextId = runContext.id;
-    if (!contextId) return;
+    if (!dataclipJobId) return;
 
-    // Debounce: wait 300ms after last filter change before searching
     const timeoutId = setTimeout(() => {
       const filters: Record<string, string> = {};
-      if (selectedClipType) filters['type'] = selectedClipType;
-      if (selectedDates.before) filters['before'] = selectedDates.before;
-      if (selectedDates.after) filters['after'] = selectedDates.after;
-      if (namedOnly) filters['named_only'] = 'true';
+      if (selectedClipType) filters["type"] = selectedClipType;
+      if (selectedDates.before) filters["before"] = selectedDates.before;
+      if (selectedDates.after) filters["after"] = selectedDates.after;
+      if (namedOnly) filters["named_only"] = "true";
 
       void dataclipApi
-        .searchDataclips(projectId, contextId, searchQuery, filters)
+        .searchDataclips(projectId, dataclipJobId, searchQuery, filters)
         .then(response => {
           setDataclips(response.data);
           return response;
         })
         .catch(error => {
-          logger.error('Failed to search dataclips:', error);
+          logger.error("Failed to search dataclips:", error);
         });
     }, 300);
 
@@ -266,7 +391,7 @@ export function ManualRunPanel({
     searchQuery,
     selectedTab,
     projectId,
-    runContext.id,
+    dataclipJobId,
   ]);
 
   const handleCustomBodyChange = useCallback((value: string) => {
@@ -297,99 +422,8 @@ export function ManualRunPanel({
     [projectId]
   );
 
-  const handleRun = useCallback(async () => {
-    const contextId = runContext.id;
-    if (!contextId) {
-      logger.error('No context ID available');
-      return;
-    }
-
-    // Check workflow-level permissions before running
-    if (!canRunWorkflow) {
-      notifications.alert({
-        title: 'Cannot run workflow',
-        description: workflowRunTooltipMessage,
-      });
-      return;
-    }
-
-    setIsSubmitting(true);
-    try {
-      // Save workflow first
-      await saveWorkflow();
-
-      const params: dataclipApi.ManualRunParams = {
-        workflowId,
-        projectId,
-      };
-
-      // Add job or trigger ID
-      if (runContext.type === 'job') {
-        params.jobId = contextId;
-      } else {
-        params.triggerId = contextId;
-      }
-
-      // Add dataclip or custom body based on selected tab
-      if (selectedTab === 'existing' && selectedDataclip) {
-        params.dataclipId = selectedDataclip.id;
-      } else if (selectedTab === 'custom') {
-        params.customBody = customBody;
-      }
-      // For 'empty' tab, no dataclip or body needed
-
-      const response = await dataclipApi.submitManualRun(params);
-
-      // Step 5: Invoke callback with run_id (stay in IDE, don't navigate)
-      if (onRunSubmitted) {
-        onRunSubmitted(response.data.run_id);
-      } else {
-        // Fallback: navigate away if no callback (for standalone mode)
-        window.location.href = `/projects/${projectId}/runs/${response.data.run_id}`;
-      }
-
-      // Reset submitting state after successful submission
-      setIsSubmitting(false);
-    } catch (error) {
-      logger.error('Failed to submit run:', error);
-      notifications.alert({
-        title: 'Failed to submit run',
-        description:
-          error instanceof Error ? error.message : 'An unknown error occurred',
-      });
-      setIsSubmitting(false);
-    }
-  }, [
-    workflowId,
-    projectId,
-    runContext,
-    selectedTab,
-    selectedDataclip,
-    customBody,
-    saveWorkflow,
-    canRunWorkflow,
-    workflowRunTooltipMessage,
-  ]);
-
-  // Combine workflow-level permissions with local validation
-  // Local validation: user must have selected valid input (empty, custom, or existing dataclip)
-  const hasValidInput =
-    selectedTab === 'empty' ||
-    (selectedTab === 'existing' && !!selectedDataclip) ||
-    selectedTab === 'custom';
-
-  const canRun = canRunWorkflow && hasValidInput;
-
-  // Notify parent of run state changes (for embedded mode)
-  useEffect(() => {
-    if (onRunStateChange) {
-      onRunStateChange(canRun, isSubmitting, handleRun);
-    }
-  }, [canRun, isSubmitting, handleRun, onRunStateChange]);
-
-  // Handle Escape key to close the run panel
   useHotkeys(
-    'escape',
+    "escape",
     () => {
       onClose();
     },
@@ -397,8 +431,24 @@ export function ManualRunPanel({
     [onClose]
   );
 
-  // Extract content for reuse
-  const content = selectedDataclip ? (
+  // Run/retry shortcuts (standalone mode only - embedded uses IDEHeader)
+  useRunRetryShortcuts({
+    onRun: () => void handleRun(),
+    onRetry: () => void handleRetry(),
+    canRun,
+    isRunning: isSubmitting || runIsProcessing,
+    isRetryable,
+    enabled: renderMode === RENDER_MODES.STANDALONE,
+    scope: HOTKEY_SCOPES.RUN_PANEL,
+  });
+
+  const content = edgeId ? (
+    <div className="flex justify-center flex-col items-center self-center h-full">
+      <div className="text-gray-600">
+        Select a Step or Trigger to start a Run from
+      </div>
+    </div>
+  ) : selectedDataclip ? (
     <SelectedDataclipView
       dataclip={selectedDataclip}
       onUnselect={handleUnselectDataclip}
@@ -410,8 +460,8 @@ export function ManualRunPanel({
   ) : (
     <div
       className={cn(
-        'flex flex-col h-full overflow-hidden',
-        renderMode === 'embedded' ? 'mt-2' : 'mt-4'
+        "flex flex-col overflow-hidden",
+        renderMode === RENDER_MODES.EMBEDDED ? "h-full mt-2" : "flex-1 mt-4"
       )}
     >
       <Tabs
@@ -420,32 +470,41 @@ export function ManualRunPanel({
         value={selectedTab}
         onChange={value => setSelectedTab(value)}
         options={[
-          { value: 'empty', label: 'Empty', icon: DocumentIcon },
+          { value: "empty", label: "Empty", icon: DocumentIcon },
           {
-            value: 'custom',
-            label: 'Custom',
+            value: "custom",
+            label: "Custom",
             icon: PencilSquareIcon,
           },
           {
-            value: 'existing',
-            label: 'Existing',
+            value: "existing",
+            label: "Existing",
             icon: QueueListIcon,
           },
         ]}
       />
 
-      {selectedTab === 'empty' && <EmptyView />}
-      {selectedTab === 'custom' && (
+      {selectedTab === "empty" && <EmptyView />}
+      {selectedTab === "custom" && (
         <CustomView
-          pushEvent={(_event, data) => {
-            if (data?.manual?.body !== undefined) {
+          pushEvent={(_event, data: unknown) => {
+            // Type guard for data shape
+            if (
+              data &&
+              typeof data === "object" &&
+              "manual" in data &&
+              data.manual &&
+              typeof data.manual === "object" &&
+              "body" in data.manual &&
+              typeof data.manual.body === "string"
+            ) {
               handleCustomBodyChange(data.manual.body);
             }
           }}
           renderMode={renderMode}
         />
       )}
-      {selectedTab === 'existing' && (
+      {selectedTab === "existing" && (
         <ExistingView
           dataclips={dataclips}
           query={searchQuery}
@@ -459,8 +518,10 @@ export function ManualRunPanel({
           setSelectedDates={setSelectedDates}
           namedOnly={namedOnly}
           setNamedOnly={setNamedOnly}
-          onSubmit={handleSearch}
-          fixedHeight={true}
+          onSubmit={() => {
+            void handleSearch();
+          }}
+          fixedHeight={false}
           currentRunDataclip={currentRunDataclip}
           nextCronRunDataclipId={nextCronRunDataclipId}
           renderMode={renderMode}
@@ -469,12 +530,10 @@ export function ManualRunPanel({
     </div>
   );
 
-  // Embedded mode: return content without wrapper
-  if (renderMode === 'embedded') {
+  if (renderMode === RENDER_MODES.EMBEDDED) {
     return content;
   }
 
-  // Standalone mode: wrap in InspectorLayout
   return (
     <InspectorLayout
       title={panelTitle}
@@ -484,13 +543,22 @@ export function ManualRunPanel({
       footer={
         <InspectorFooter
           rightButtons={
-            <Button
-              variant="primary"
-              onClick={handleRun}
-              disabled={!canRun || isSubmitting}
-            >
-              {isSubmitting ? 'Pending...' : 'Run (Create New Workorder)'}
-            </Button>
+            <RunRetryButton
+              isRetryable={isRetryable}
+              isDisabled={!canRun}
+              isSubmitting={isSubmitting || runIsProcessing}
+              onRun={() => {
+                void handleRun();
+              }}
+              onRetry={() => {
+                void handleRetry();
+              }}
+              buttonText={{
+                run: "Run Workflow Now",
+                retry: "Run (retry)",
+                processing: "Processing",
+              }}
+            />
           }
         />
       }

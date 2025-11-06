@@ -3,18 +3,19 @@ import {
   DialogBackdrop,
   DialogPanel,
   DialogTitle,
-} from '@headlessui/react';
-import { useEffect, useId, useState } from 'react';
-import { useHotkeysContext } from 'react-hotkeys-hook';
+} from "@headlessui/react";
+import { useEffect, useId, useState } from "react";
+import { useHotkeysContext } from "react-hotkeys-hook";
 
 import {
   useProject,
   useProjectRepoConnection,
   useUser,
-} from '../hooks/useSessionContext';
-import { useIsGitHubSyncModalOpen, useUICommands } from '../hooks/useUI';
-import { useWorkflowActions } from '../hooks/useWorkflow';
-import { GITHUB_BASE_URL } from '../utils/constants';
+} from "../hooks/useSessionContext";
+import { useIsGitHubSyncModalOpen, useUICommands } from "../hooks/useUI";
+import { useWorkflowActions } from "../hooks/useWorkflow";
+import { HOTKEY_SCOPES } from "../constants/hotkeys";
+import { GITHUB_BASE_URL } from "../utils/constants";
 
 /**
  * GitHubSyncModal - Modal for saving workflow and syncing to GitHub
@@ -45,7 +46,7 @@ export function GitHubSyncModal() {
   // Generate unique ID for form accessibility
   const commitMessageId = useId();
 
-  const [commitMessage, setCommitMessage] = useState('');
+  const [commitMessage, setCommitMessage] = useState("");
   const [isSaving, setIsSaving] = useState(false);
 
   // Use HotkeysContext to control keyboard scope precedence
@@ -55,16 +56,16 @@ export function GitHubSyncModal() {
   // When modal closes, give control back by re-enabling panel scope
   useEffect(() => {
     if (isOpen) {
-      enableScope('modal');
-      disableScope('panel');
+      enableScope(HOTKEY_SCOPES.MODAL);
+      disableScope(HOTKEY_SCOPES.PANEL);
     } else {
-      disableScope('modal');
-      enableScope('panel');
+      disableScope(HOTKEY_SCOPES.MODAL);
+      enableScope(HOTKEY_SCOPES.PANEL);
     }
 
     // Cleanup: ensure modal scope is disabled when unmounted
     return () => {
-      disableScope('modal');
+      disableScope(HOTKEY_SCOPES.MODAL);
     };
   }, [isOpen, enableScope, disableScope]);
 
@@ -86,14 +87,14 @@ export function GitHubSyncModal() {
       closeGitHubSyncModal();
     } catch (error) {
       // Error is already handled by useWorkflowActions with toast notification
-      console.error('Failed to save and sync:', error);
+      console.error("Failed to save and sync:", error);
     } finally {
       setIsSaving(false);
     }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+    if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
       e.preventDefault();
       void handleSaveAndSync();
     }
@@ -157,7 +158,7 @@ export function GitHubSyncModal() {
 
                   {project && (
                     <div className="text-xs text-gray-600">
-                      Not the right repository or branch?{' '}
+                      Not the right repository or branch?{" "}
                       <a
                         href={`/projects/${project.id}/settings#vcs`}
                         className="text-primary-600 hover:text-primary-500 underline"
@@ -210,7 +211,7 @@ export function GitHubSyncModal() {
                 focus-visible:outline-primary-600
                 sm:col-start-2"
               >
-                {isSaving ? 'Saving...' : 'Save & Sync'}
+                {isSaving ? "Saving..." : "Save & Sync"}
               </button>
               <button
                 type="button"

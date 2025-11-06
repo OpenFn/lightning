@@ -1,12 +1,9 @@
-import { useEffect } from "react";
-
 import {
   useCurrentRun,
+  useRunActions,
   useRunError,
   useRunLoading,
-  useRunStoreInstance,
 } from "../../hooks/useRun";
-import { useSession } from "../../hooks/useSession";
 
 import { InputTabPanel } from "./InputTabPanel";
 import { LogTabPanel } from "./LogTabPanel";
@@ -28,22 +25,13 @@ export function RunViewerPanel({
   activeTab,
   onTabChange: _onTabChange,
 }: RunViewerPanelProps) {
-  const runStore = useRunStoreInstance();
   const run = useCurrentRun();
   const isLoading = useRunLoading();
   const error = useRunError();
-  const { provider } = useSession();
+  const { clearError } = useRunActions();
 
-  // Connect to run channel when followRunId changes
-  useEffect(() => {
-    if (!followRunId || !provider) {
-      runStore._disconnectFromRun();
-      return;
-    }
-
-    const cleanup = runStore._connectToRun(provider, followRunId);
-    return cleanup;
-  }, [followRunId, provider, runStore]);
+  // Note: Connection to run channel is managed by parent component (FullScreenIDE)
+  // This component only reads the current run state from RunStore
 
   // Empty state - no run to display
   if (!followRunId) {
@@ -69,7 +57,7 @@ export function RunViewerPanel({
           <p className="font-semibold">Error loading run</p>
           <p className="text-sm mt-1">{error}</p>
           <button
-            onClick={() => runStore.clearError()}
+            onClick={clearError}
             className="mt-4 px-4 py-2 bg-red-100
               hover:bg-red-200 rounded text-sm"
           >

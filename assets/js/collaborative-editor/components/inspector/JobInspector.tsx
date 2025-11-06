@@ -1,19 +1,18 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useState } from "react";
 
-import { useURLState } from '#/react/lib/use-url-state';
+import { useURLState } from "#/react/lib/use-url-state";
 
-import { useJobDeleteValidation } from '../../hooks/useJobDeleteValidation';
-import { usePermissions } from '../../hooks/useSessionContext';
-import { useWorkflowActions, useCanSave } from '../../hooks/useWorkflow';
-import { notifications } from '../../lib/notifications';
-import type { Workflow } from '../../types/workflow';
-import { AlertDialog } from '../AlertDialog';
-import { Button } from '../Button';
-import { Tooltip } from '../Tooltip';
+import { useJobDeleteValidation } from "../../hooks/useJobDeleteValidation";
+import { usePermissions } from "../../hooks/useSessionContext";
+import { useWorkflowActions, useCanSave } from "../../hooks/useWorkflow";
+import type { Workflow } from "../../types/workflow";
+import { AlertDialog } from "../AlertDialog";
+import { Button } from "../Button";
+import { Tooltip } from "../Tooltip";
 
-import { InspectorFooter } from './InspectorFooter';
-import { InspectorLayout } from './InspectorLayout';
-import { JobForm } from './JobForm';
+import { InspectorFooter } from "./InspectorFooter";
+import { InspectorLayout } from "./InspectorLayout";
+import { JobForm } from "./JobForm";
 
 interface JobInspectorProps {
   job: Workflow.Job;
@@ -41,7 +40,7 @@ export function JobInspector({
 
   // URL state for Edit button
   const { searchParams, updateSearchParams } = useURLState();
-  const isIDEOpen = searchParams.get('editor') === 'open';
+  const isIDEOpen = searchParams.get("panel") === "editor";
 
   const handleDelete = useCallback(async () => {
     setIsDeleting(true);
@@ -50,14 +49,7 @@ export function JobInspector({
       setIsDeleteDialogOpen(false);
       // Y.Doc sync provides immediate visual feedback
     } catch (error) {
-      console.error('Delete failed:', error);
-      notifications.alert({
-        title: 'Failed to delete job',
-        description:
-          error instanceof Error
-            ? error.message
-            : 'An unexpected error occurred. Please try again.',
-      });
+      console.error("Delete failed:", error);
     } finally {
       setIsDeleting(false);
     }
@@ -69,7 +61,7 @@ export function JobInspector({
   const canDelete = canSave && validation.canDelete && !isDeleting;
   const deleteTooltipMessage = !canSave
     ? saveTooltipMessage
-    : validation.disableReason || 'Delete this job';
+    : validation.disableReason || "Delete this job";
 
   // Build footer with edit, run, and delete buttons (only if permission)
   const footer = permissions?.can_edit_workflow ? (
@@ -78,14 +70,14 @@ export function JobInspector({
         <>
           <Tooltip
             content={
-              isIDEOpen ? 'IDE is already open' : 'Open full-screen code editor'
+              isIDEOpen ? "IDE is already open" : "Open full-screen code editor"
             }
             side="top"
           >
             <span className="inline-block">
               <Button
                 variant="primary"
-                onClick={() => updateSearchParams({ editor: 'open' })}
+                onClick={() => updateSearchParams({ panel: "editor" })}
                 disabled={isIDEOpen}
               >
                 Edit
@@ -108,7 +100,7 @@ export function JobInspector({
               onClick={() => setIsDeleteDialogOpen(true)}
               disabled={!canDelete}
             >
-              {isDeleting ? 'Deleting...' : 'Delete'}
+              {isDeleting ? "Deleting..." : "Delete"}
             </Button>
           </span>
         </Tooltip>
@@ -136,7 +128,7 @@ export function JobInspector({
           `This will permanently remove "${job.name}" from the ` +
           `workflow. This action cannot be undone.`
         }
-        confirmLabel={isDeleting ? 'Deleting...' : 'Delete Job'}
+        confirmLabel={isDeleting ? "Deleting..." : "Delete Job"}
         cancelLabel="Cancel"
         variant="danger"
       />

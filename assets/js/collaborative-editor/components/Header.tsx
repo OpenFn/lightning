@@ -1,16 +1,17 @@
-import { Menu, MenuButton, MenuItem, MenuItems } from '@headlessui/react';
-import { useCallback } from 'react';
-import { useHotkeys } from 'react-hotkeys-hook';
+import { Menu, MenuButton, MenuItem, MenuItems } from "@headlessui/react";
+import { useCallback } from "react";
+import { useHotkeys } from "react-hotkeys-hook";
 
-import { useURLState } from '../../react/lib/use-url-state';
-import { cn } from '../../utils/cn';
+import { useURLState } from "../../react/lib/use-url-state";
+import { cn } from "../../utils/cn";
+import { buildClassicalEditorUrl } from "../../utils/editorUrlConversion";
 import {
   useIsNewWorkflow,
   useLatestSnapshotLockVersion,
   useProjectRepoConnection,
   useUser,
-} from '../hooks/useSessionContext';
-import { useUICommands } from '../hooks/useUI';
+} from "../hooks/useSessionContext";
+import { useUICommands } from "../hooks/useUI";
 import {
   useCanRun,
   useCanSave,
@@ -18,26 +19,26 @@ import {
   useWorkflowActions,
   useWorkflowEnabled,
   useWorkflowState,
-} from '../hooks/useWorkflow';
-import { getAvatarInitials } from '../utils/avatar';
+} from "../hooks/useWorkflow";
+import { getAvatarInitials } from "../utils/avatar";
 
-import { ActiveCollaborators } from './ActiveCollaborators';
-import { Breadcrumbs } from './Breadcrumbs';
-import { Button } from './Button';
-import { EmailVerificationBanner } from './EmailVerificationBanner';
-import { GitHubSyncModal } from './GitHubSyncModal';
-import { Switch } from './inputs/Switch';
-import { ReadOnlyWarning } from './ReadOnlyWarning';
-import { Tooltip } from './Tooltip';
+import { ActiveCollaborators } from "./ActiveCollaborators";
+import { Breadcrumbs } from "./Breadcrumbs";
+import { Button } from "./Button";
+import { EmailVerificationBanner } from "./EmailVerificationBanner";
+import { GitHubSyncModal } from "./GitHubSyncModal";
+import { Switch } from "./inputs/Switch";
+import { ReadOnlyWarning } from "./ReadOnlyWarning";
+import { Tooltip } from "./Tooltip";
 
 const userNavigation = [
-  { label: 'User Profile', url: '/profile', icon: 'hero-user-circle' },
-  { label: 'Credentials', url: '/credentials', icon: 'hero-key' },
-  { label: 'API Tokens', url: '/profile/tokens', icon: 'hero-key' },
+  { label: "User Profile", url: "/profile", icon: "hero-user-circle" },
+  { label: "Credentials", url: "/credentials", icon: "hero-key" },
+  { label: "API Tokens", url: "/profile/tokens", icon: "hero-key" },
   {
-    label: 'Log out',
-    url: '/users/log_out',
-    icon: 'hero-arrow-right-on-rectangle',
+    label: "Log out",
+    url: "/users/log_out",
+    icon: "hero-arrow-right-on-rectangle",
   },
 ];
 
@@ -62,7 +63,6 @@ export function SaveButton({
   const hasGitHubIntegration = repoConnection !== null;
 
   if (!hasGitHubIntegration) {
-    // Simple save button when no GitHub integration
     return (
       <div className="inline-flex rounded-md shadow-xs z-5">
         <Tooltip content={tooltipMessage} side="bottom">
@@ -86,7 +86,6 @@ export function SaveButton({
     );
   }
 
-  // Split button with dropdown when GitHub integration exists
   return (
     <div className="inline-flex rounded-md shadow-xs z-5">
       <Tooltip content={tooltipMessage} side="bottom">
@@ -146,7 +145,7 @@ export function SaveButton({
     </div>
   );
 }
-SaveButton.displayName = 'SaveButton';
+SaveButton.displayName = "SaveButton";
 
 export function Header({
   children,
@@ -157,30 +156,15 @@ export function Header({
   projectId?: string;
   workflowId?: string;
 }) {
-  // URL state management (needed early for handleRunClick)
-  const { updateHash } = useURLState();
-
-  // Node selection
+  const { updateSearchParams } = useURLState();
   const { selectNode } = useNodeSelection();
-
-  // Separate queries and commands for proper CQS
   const { enabled, setEnabled } = useWorkflowEnabled();
   const { saveWorkflow } = useWorkflowActions();
-
-  // Get save button state
   const { canSave, tooltipMessage } = useCanSave();
-
-  // Get triggers to check if workflow has any
   const triggers = useWorkflowState(state => state.triggers);
   const firstTriggerId = triggers[0]?.id;
-
-  // Get run button state from hook
   const { canRun, tooltipMessage: runTooltipMessage } = useCanRun();
-
-  // Get UI commands from store
   const { openRunPanel, openGitHubSyncModal } = useUICommands();
-
-  // Get GitHub repo connection for split button
   const repoConnection = useProjectRepoConnection();
 
   // Detect if viewing old snapshot
@@ -194,49 +178,42 @@ export function Header({
 
   const handleRunClick = useCallback(() => {
     if (firstTriggerId) {
-      // Select the trigger in the diagram
       selectNode(firstTriggerId);
-      // Open the run panel via store
       openRunPanel({ triggerId: firstTriggerId });
     }
   }, [firstTriggerId, openRunPanel, selectNode]);
 
-  // Global save shortcut: Ctrl/Cmd+S
   useHotkeys(
-    'ctrl+s,meta+s', // Windows/Linux: Ctrl+S, Mac: Cmd+S
+    "ctrl+s,meta+s",
     event => {
-      event.preventDefault(); // Always prevent browser's "Save Page" dialog
+      event.preventDefault();
       if (canSave) {
-        saveWorkflow(); // Only save when allowed
+        void saveWorkflow();
       }
     },
     {
-      enabled: true, // Always listen to prevent browser save
-      enableOnFormTags: true, // Allow in Monaco editor, input fields, textareas
+      enabled: true,
+      enableOnFormTags: true,
     },
-    [saveWorkflow, canSave] // Re-register when dependencies change
+    [saveWorkflow, canSave]
   );
 
-  // Global save and sync shortcut: Ctrl/Cmd+Shift+S (only when GitHub integration available)
   useHotkeys(
-    'ctrl+shift+s,meta+shift+s', // Windows/Linux: Ctrl+Shift+S, Mac: Cmd+Shift+S
+    "ctrl+shift+s,meta+shift+s",
     event => {
-      event.preventDefault(); // Prevent any browser shortcuts
+      event.preventDefault();
       if (canSave && repoConnection) {
-        openGitHubSyncModal(); // Open sync modal when allowed and GitHub connected
+        openGitHubSyncModal();
       }
     },
     {
-      enableOnFormTags: true, // Allow in Monaco editor, input fields, textareas
+      enableOnFormTags: true,
     },
-    [openGitHubSyncModal, canSave, repoConnection] // Re-register when dependencies change
+    [openGitHubSyncModal, canSave, repoConnection]
   );
 
-  // Session context queries
   const user = useUser();
   const isNewWorkflow = useIsNewWorkflow();
-
-  // Generate avatar initials from user data
   const avatarInitials = getAvatarInitials(user);
 
   return (
@@ -249,11 +226,12 @@ export function Header({
           <ReadOnlyWarning className="ml-3" />
           {projectId && workflowId && (
             <a
-              href={
-                isNewWorkflow
-                  ? `/projects/${projectId}/w/new`
-                  : `/projects/${projectId}/w/${workflowId}`
-              }
+              href={buildClassicalEditorUrl({
+                projectId,
+                workflowId,
+                searchParams: new URLSearchParams(window.location.search),
+                isNewWorkflow,
+              })}
               className="inline-flex items-center justify-center
               w-6 h-6 text-primary-600 hover:text-primary-700
               hover:bg-primary-50 rounded transition-colors ml-2"
@@ -278,7 +256,7 @@ export function Header({
               <div>
                 <button
                   type="button"
-                  onClick={() => updateHash('settings')}
+                  onClick={() => updateSearchParams({ panel: "settings" })}
                   className="w-5 h-5 place-self-center cursor-pointer
                   text-slate-500 hover:text-slate-400"
                 >
@@ -310,7 +288,7 @@ export function Header({
               <SaveButton
                 canSave={canSave}
                 tooltipMessage={tooltipMessage}
-                onClick={saveWorkflow}
+                onClick={() => void saveWorkflow()}
                 repoConnection={repoConnection}
                 onSyncClick={openGitHubSyncModal}
               />
@@ -363,7 +341,7 @@ export function Header({
                     <span
                       className={cn(
                         item.icon,
-                        'w-5 h-5 mr-2 text-secondary-500'
+                        "w-5 h-5 mr-2 text-secondary-500"
                       )}
                     ></span>
                     {item.label}

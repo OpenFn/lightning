@@ -545,7 +545,7 @@
                       for={@filters_changeset}
                       as={:filters}
                       phx-change="apply_filters"
-                      class="isolate inline-flex rounded-md shadow-xs"
+                      class="inline-flex"
                       id="run-toggle-form"
                     >
                       <.input
@@ -553,36 +553,42 @@
                         type="hidden"
                         field={f[:search_term]}
                       />
-                      <%= for {search_field, index} <- Enum.with_index(@search_fields) do %>
-                        <.checkbox_element
-                          id={f[search_field.id].id}
-                          name={f[search_field.id].name}
-                          value={f[search_field.id].value}
-                          class="absolute invisible"
-                          style="left: -9999px"
-                        />
+                      <div class="isolate inline-flex">
+                        <%= for search_field <- @search_fields do %>
+                          <div class="group">
+                            <.checkbox_element
+                              id={f[search_field.id].id}
+                              name={f[search_field.id].name}
+                              value={f[search_field.id].value}
+                              class="absolute invisible"
+                              style="left: -9999px"
+                            />
 
-                        <.label
-                          for={f[search_field.id].id}
-                          id={"search-button-#{search_field.label}"}
-                          class="relative inline-flex items-center"
-                          role="button"
-                          phx-hook="Tooltip"
-                          data-placement="top"
-                          aria-label={search_field.label}
-                        >
-                          <div class={"#{if(index == 0, do: "rounded-l-md", else: "-ml-px")} #{if(index == 2, do: "rounded-r-md")}
+                            <.label
+                              for={f[search_field.id].id}
+                              id={"search-button-#{search_field.label}"}
+                              class="relative inline-flex items-center"
+                              role="button"
+                              phx-hook="Tooltip"
+                              data-placement="top"
+                              aria-label={search_field.label}
+                            >
+                              <div class={"
                            ring-1 ring-inset ring-gray-300 px-3 py-2 text-sm
                            font-semibold text-gray-500 hover:bg-gray-100 focus:z-10
+                           group-first:rounded-l-md group-last:rounded-r-md
+                           -ml-px group-first:ml-0
                            #{if(checked?(@filters_changeset, search_field.id), do: "bg-gray-200", else: "bg-white")}
                            "}>
-                            <.icon
-                              name={search_field.icon}
-                              class={"h-4 w-4 inline-block align-middle #{checked?(@filters_changeset, search_field.id) && "text-indigo-800"}"}
-                            />
+                                <.icon
+                                  name={search_field.icon}
+                                  class={"h-4 w-4 inline-block align-middle #{checked?(@filters_changeset, search_field.id) && "text-indigo-800"}"}
+                                />
+                              </div>
+                            </.label>
                           </div>
-                        </.label>
-                      <% end %>
+                        <% end %>
+                      </div>
                     </.form>
                     <.button
                       type="submit"
