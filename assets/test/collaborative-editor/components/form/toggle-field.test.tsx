@@ -1,10 +1,34 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useAppForm } from "../../../../js/collaborative-editor/components/form";
-import { ToggleField } from "../../../../js/collaborative-editor/components/form/toggle-field";
+import * as useWorkflowModule from "../../../../js/collaborative-editor/hooks/useWorkflow";
+
+// Mock useWorkflowState and useWorkflowActions
+vi.mock("../../../../js/collaborative-editor/hooks/useWorkflow", () => ({
+  useWorkflowState: vi.fn(),
+  useWorkflowActions: vi.fn(() => ({
+    setClientErrors: vi.fn(),
+  })),
+}));
 
 describe("ToggleField", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    // Mock useWorkflowState to return workflow with empty errors
+    const mockFn = vi.fn(selector => {
+      const state = {
+        workflow: { id: "w-1", errors: {} },
+        jobs: [],
+        triggers: [],
+        edges: [],
+      };
+      return selector ? selector(state) : state;
+    });
+    vi.mocked(useWorkflowModule.useWorkflowState).mockImplementation(
+      mockFn as any
+    );
+  });
   function TestForm({ onSubmit }: { onSubmit: (values: any) => void }) {
     const form = useAppForm({
       defaultValues: { enabled: false },

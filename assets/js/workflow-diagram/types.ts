@@ -9,6 +9,7 @@ export namespace Lightning {
 
     // Not technically from Lightning, but we'll infer this and scribble it
     placeholder?: boolean;
+    errors?: Record<string, string[]>;
   }
 
   export interface Job extends Node {
@@ -52,7 +53,7 @@ export namespace Lightning {
     condition_type?: string;
     edge?: boolean;
     error_path?: boolean;
-    errors: any;
+    errors?: Record<string, string[]>;
     condition_label?: string;
   }
 

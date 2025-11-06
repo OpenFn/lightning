@@ -21,6 +21,7 @@ import type { WorkflowStoreInstance } from "../../../js/collaborative-editor/sto
 import type { Session } from "../../../js/collaborative-editor/types/session";
 import type { WorkflowState as YAMLWorkflowState } from "../../../js/yaml/types";
 import type { PhoenixChannelProvider } from "y-phoenix-channel";
+import { ChannelRequestError } from "../../../js/collaborative-editor/lib/errors";
 import {
   createMockChannelPushOk,
   createMockChannelPushError,
@@ -150,10 +151,17 @@ describe("WorkflowStore - Validate Workflow Name", () => {
 
     const workflowState = createSampleWorkflowState("Test");
 
-    // Should throw error
-    await expect(store.validateWorkflowName(workflowState)).rejects.toThrow(
-      "Validation failed"
-    );
+    // Should throw ChannelRequestError
+    try {
+      await store.validateWorkflowName(workflowState);
+      expect.fail("Should have thrown ChannelRequestError");
+    } catch (error) {
+      expect(error).toBeInstanceOf(ChannelRequestError);
+      expect((error as ChannelRequestError).type).toBe("validation_error");
+      expect((error as ChannelRequestError).errors.base).toEqual([
+        "Validation failed",
+      ]);
+    }
   });
 
   test("throws error on channel timeout", async () => {

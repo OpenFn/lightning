@@ -535,6 +535,149 @@ defmodule LightningWeb.WorkflowChannelTest do
     end
   end
 
+  describe "save_workflow with validation errors" do
+    setup %{socket: socket, workflow: workflow} do
+      session_pid = socket.assigns.session_pid
+      doc = Lightning.Collaboration.Session.get_doc(session_pid)
+
+      %{socket: socket, workflow: workflow, session_pid: session_pid, doc: doc}
+    end
+
+    test "returns validation errors and writes to Y.Doc for blank workflow name",
+         %{socket: socket, doc: doc} do
+      # Set blank name in Y.Doc
+      workflow_map = Yex.Doc.get_map(doc, "workflow")
+
+      Yex.Doc.transaction(doc, "test_blank_name", fn ->
+        Yex.Map.set(workflow_map, "name", "")
+      end)
+
+      # Attempt save
+      ref = push(socket, "save_workflow", %{})
+
+      # Should return validation error
+      assert_reply ref, :error, %{
+        errors: errors,
+        type: "validation_error"
+      }
+
+      assert errors[:name]
+      assert errors[:name] |> List.first() =~ "can't be blank"
+
+      # Verify error was written to Y.Doc
+      errors_map = Yex.Doc.get_map(doc, "errors")
+      ydoc_errors = Yex.Map.to_json(errors_map)
+      workflow_errors = ydoc_errors["workflow"]
+      assert is_list(workflow_errors["name"])
+      assert "This field can't be blank." in workflow_errors["name"]
+    end
+
+    test "clears Y.Doc errors after successful save",
+         %{socket: socket, doc: doc} do
+      # Manually add error to Y.Doc
+      errors_map = Yex.Doc.get_map(doc, "errors")
+
+      Yex.Doc.transaction(doc, "test_add_error", fn ->
+        Yex.Map.set(errors_map, "name", "some error")
+      end)
+
+      # Set valid unique name
+      workflow_map = Yex.Doc.get_map(doc, "workflow")
+      unique_name = "Valid Workflow #{System.unique_integer()}"
+
+      Yex.Doc.transaction(doc, "test_valid_name", fn ->
+        Yex.Map.set(workflow_map, "name", unique_name)
+      end)
+
+      # Save should succeed
+      ref = push(socket, "save_workflow", %{})
+      assert_reply ref, :ok, response
+
+      assert response[:saved_at]
+      assert response[:lock_version]
+
+      # Verify errors were cleared from Y.Doc
+      ydoc_errors = Yex.Map.to_json(errors_map)
+      assert ydoc_errors == %{}
+    end
+
+    test "writes nested job validation errors to Y.Doc",
+         %{socket: socket, doc: doc} do
+      # Add job with blank name to Y.Doc
+      jobs_array = Yex.Doc.get_array(doc, "jobs")
+      job_id = Ecto.UUID.generate()
+
+      job_map =
+        Yex.MapPrelim.from(%{
+          "id" => job_id,
+          "name" => "",
+          "body" => Yex.TextPrelim.from(""),
+          "adaptor" => "@openfn/language-common@1.0.0",
+          "project_credential_id" => nil,
+          "keychain_credential_id" => nil
+        })
+
+      Yex.Doc.transaction(doc, "test_add_invalid_job", fn ->
+        Yex.Array.push(jobs_array, job_map)
+      end)
+
+      # Attempt save
+      ref = push(socket, "save_workflow", %{})
+      assert_reply ref, :error, %{type: "validation_error"}
+
+      # Check job error in Y.Doc with nested structure
+      errors_map = Yex.Doc.get_map(doc, "errors")
+      ydoc_errors = Yex.Map.to_json(errors_map)
+
+      # Errors should be nested: %{jobs: %{job-id: %{name: ["error"]}}}
+      assert Map.has_key?(ydoc_errors, "jobs")
+      assert is_map(ydoc_errors["jobs"])
+      assert Map.has_key?(ydoc_errors["jobs"], job_id)
+      assert is_map(ydoc_errors["jobs"][job_id])
+      assert is_list(ydoc_errors["jobs"][job_id]["name"])
+
+      assert Enum.any?(
+               ydoc_errors["jobs"][job_id]["name"],
+               &String.contains?(&1, "can't be blank")
+             )
+    end
+
+    test "handles duplicate workflow name validation",
+         %{socket: socket, doc: doc, project: project} do
+      # Create another workflow with a specific name
+      insert(:workflow, project: project, name: "Existing Workflow")
+
+      # Try to set current workflow to same name
+      workflow_map = Yex.Doc.get_map(doc, "workflow")
+
+      Yex.Doc.transaction(doc, "test_duplicate_name", fn ->
+        Yex.Map.set(workflow_map, "name", "Existing Workflow")
+      end)
+
+      # Attempt save
+      ref = push(socket, "save_workflow", %{})
+
+      assert_reply ref, :error, %{
+        errors: errors,
+        type: "validation_error"
+      }
+
+      assert errors[:name]
+      assert errors[:name] |> List.first() =~ "already exists"
+
+      # Verify error in Y.Doc
+      errors_map = Yex.Doc.get_map(doc, "errors")
+      ydoc_errors = Yex.Map.to_json(errors_map)
+      workflow_errors = ydoc_errors["workflow"]
+      assert is_list(workflow_errors["name"])
+
+      assert Enum.any?(
+               workflow_errors["name"],
+               &String.contains?(&1, "already exists")
+             )
+    end
+  end
+
   describe "reset_workflow" do
     test "blocks viewers from resetting", %{
       project: project,

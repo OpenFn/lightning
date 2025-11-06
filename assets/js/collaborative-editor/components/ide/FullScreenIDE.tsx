@@ -393,11 +393,11 @@ export function FullScreenIDE({
 
       // Get current version from job
       const { version: currentVersion } = resolveAdaptor(
-        currentJob.adaptor || '@openfn/language-common@latest'
+        currentJob.adaptor || "@openfn/language-common@latest"
       );
 
       // Build new adaptor string with current version
-      const newAdaptor = `${adaptorPackage}@${currentVersion || 'latest'}`;
+      const newAdaptor = `${adaptorPackage}@${currentVersion || "latest"}`;
 
       // Persist to Y.Doc
       updateJob(currentJob.id, { adaptor: newAdaptor });
@@ -412,7 +412,7 @@ export function FullScreenIDE({
 
       // Get current adaptor package from job
       const { package: adaptorPackage } = resolveAdaptor(
-        currentJob.adaptor || '@openfn/language-common@latest'
+        currentJob.adaptor || "@openfn/language-common@latest"
       );
 
       // Build new adaptor string with new version

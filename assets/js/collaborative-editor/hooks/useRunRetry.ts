@@ -54,9 +54,7 @@ export interface UseRunRetryOptions {
   saveWorkflow: (options?: {
     silent?: boolean;
   }) => Promise<{ saved_at?: string; lock_version?: number } | null>;
-  onRunSubmitted:
-    | ((runId: string, dataclip?: Dataclip) => void)
-    | undefined;
+  onRunSubmitted: ((runId: string, dataclip?: Dataclip) => void) | undefined;
   edgeId: string | null;
   workflowEdges?: Workflow.Edge[];
 }

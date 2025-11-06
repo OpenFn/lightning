@@ -77,9 +77,8 @@ export function ManualRunPanel({
 }: ManualRunPanelProps) {
   const [selectedTabInternal, setSelectedTabInternal] =
     useState<TabValue>("empty");
-  const [selectedDataclipInternal, setSelectedDataclipInternal] = useState<
-    Dataclip | null
-  >(null);
+  const [selectedDataclipInternal, setSelectedDataclipInternal] =
+    useState<Dataclip | null>(null);
   const [customBodyInternal, setCustomBodyInternal] = useState("");
 
   // Use prop if provided (controlled), otherwise use internal state (uncontrolled)

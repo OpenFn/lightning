@@ -18,6 +18,7 @@ import type { Channel } from "phoenix";
 import { createWorkflowStore } from "../../../js/collaborative-editor/stores/createWorkflowStore";
 import type { WorkflowStoreInstance } from "../../../js/collaborative-editor/stores/createWorkflowStore";
 import type { PhoenixChannelProvider } from "y-phoenix-channel";
+import { ChannelRequestError } from "../../../js/collaborative-editor/lib/errors";
 import type { Session } from "../../../js/collaborative-editor/types/session";
 import {
   createMockChannelPushOk,
@@ -135,8 +136,17 @@ describe("WorkflowStore - Save Workflow", () => {
     const workflowMap = ydoc.getMap("workflow");
     expect(workflowMap.get("lock_version")).toBeNull();
 
-    // Try to save and expect error
-    await expect(store.saveWorkflow()).rejects.toThrow("Save failed");
+    // Try to save and expect ChannelRequestError
+    try {
+      await store.saveWorkflow();
+      expect.fail("Should have thrown ChannelRequestError");
+    } catch (error) {
+      expect(error).toBeInstanceOf(ChannelRequestError);
+      expect((error as ChannelRequestError).type).toBe("save_error");
+      expect((error as ChannelRequestError).errors.base).toEqual([
+        "Save failed",
+      ]);
+    }
 
     // Verify Y.Doc was NOT updated
     expect(workflowMap.get("lock_version")).toBeNull();
