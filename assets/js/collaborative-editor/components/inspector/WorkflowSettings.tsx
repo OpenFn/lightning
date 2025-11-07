@@ -1,18 +1,18 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from 'react';
 
-import { useAppForm } from "#/collaborative-editor/components/form";
-import { createZodValidator } from "#/collaborative-editor/components/form/createZodValidator";
-import { usePermissions } from "#/collaborative-editor/hooks/useSessionContext";
+import { useAppForm } from '#/collaborative-editor/components/form';
+import { createZodValidator } from '#/collaborative-editor/components/form/createZodValidator';
+import { usePermissions } from '#/collaborative-editor/hooks/useSessionContext';
 import {
   useWorkflowActions,
   useWorkflowState,
-} from "#/collaborative-editor/hooks/useWorkflow";
-import { notifications } from "#/collaborative-editor/lib/notifications";
-import { useWatchFields } from "#/collaborative-editor/stores/common";
-import { WorkflowSchema } from "#/collaborative-editor/types/workflow";
-import { useURLState } from "#/react/lib/use-url-state";
+} from '#/collaborative-editor/hooks/useWorkflow';
+import { notifications } from '#/collaborative-editor/lib/notifications';
+import { useWatchFields } from '#/collaborative-editor/stores/common';
+import { WorkflowSchema } from '#/collaborative-editor/types/workflow';
+import { useURLState } from '#/react/lib/use-url-state';
 
-import { AlertDialog } from "../AlertDialog";
+import { AlertDialog } from '../AlertDialog';
 
 export function WorkflowSettings() {
   // Get workflow from store - LoadingBoundary guarantees it's non-null
@@ -25,15 +25,13 @@ export function WorkflowSettings() {
 
   const { updateSearchParams } = useURLState();
 
-  const handleViewAsYAML = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    updateSearchParams({ panel: "code" });
+  const handleViewAsYAML = () => {
+    updateSearchParams({ panel: 'code' });
   };
 
   // LoadingBoundary guarantees workflow is non-null at this point
   if (!workflow) {
-    throw new Error("Workflow must be loaded");
+    throw new Error('Workflow must be loaded');
   }
 
   const defaultValues = useMemo(() => {
@@ -79,7 +77,7 @@ export function WorkflowSettings() {
         }
       });
     },
-    ["name", "concurrency", "enable_job_logs"]
+    ['name', 'concurrency', 'enable_job_logs']
   );
 
   const handleReset = async () => {
@@ -90,11 +88,11 @@ export function WorkflowSettings() {
     } catch (error) {
       // Show error notification to user
       notifications.alert({
-        title: "Failed to reset workflow",
+        title: 'Failed to reset workflow',
         description:
           error instanceof Error
             ? error.message
-            : "An unexpected error occurred. Please try again.",
+            : 'An unexpected error occurred. Please try again.',
       });
     } finally {
       setIsResetting(false);
@@ -148,7 +146,7 @@ export function WorkflowSettings() {
               placeholder="Unlimited (up to max available)"
               helpText={
                 field.state.value === null
-                  ? "Unlimited (up to max available)"
+                  ? 'Unlimited (up to max available)'
                   : undefined
               }
               min={1}
@@ -177,7 +175,7 @@ export function WorkflowSettings() {
             focus-visible:outline-red-600
             disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {isResetting ? "Resetting..." : "Reset to Latest Snapshot"}
+            {isResetting ? 'Resetting...' : 'Reset to Latest Snapshot'}
           </button>
         </div>
       )}
@@ -192,7 +190,7 @@ export function WorkflowSettings() {
         description="This will undo all uncommitted changes and restore
           the workflow to its latest snapshot. This action cannot
           be undone."
-        confirmLabel={isResetting ? "Resetting..." : "Reset Workflow"}
+        confirmLabel={isResetting ? 'Resetting...' : 'Reset Workflow'}
         cancelLabel="Cancel"
         variant="danger"
       />

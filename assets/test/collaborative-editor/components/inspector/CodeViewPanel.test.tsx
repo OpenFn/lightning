@@ -13,15 +13,15 @@
  * limitations with DOM manipulation and clipboard API.
  */
 
-import { render, screen } from "@testing-library/react";
-import { beforeEach, describe, expect, test, vi } from "vitest";
-import YAML from "yaml";
+import { render, screen } from '@testing-library/react';
+import { beforeEach, describe, expect, test, vi } from 'vitest';
+import YAML from 'yaml';
 
-import { CodeViewPanel } from "../../../../js/collaborative-editor/components/inspector/CodeViewPanel";
-import * as yamlUtil from "../../../../js/yaml/util";
+import { CodeViewPanel } from '../../../../js/collaborative-editor/components/inspector/CodeViewPanel';
+import * as yamlUtil from '../../../../js/yaml/util';
 
 // Mock yaml/util with simple pass-through
-vi.mock("../../../../js/yaml/util", () => ({
+vi.mock('../../../../js/yaml/util', () => ({
   convertWorkflowStateToSpec: vi.fn((workflowState: any) => ({
     name: workflowState.name,
     jobs: workflowState.jobs || [],
@@ -52,7 +52,7 @@ const resetMockWorkflowState = () => {
   mockWorkflowState.positions = {};
 };
 
-vi.mock("../../../../js/collaborative-editor/hooks/useWorkflow", () => ({
+vi.mock('../../../../js/collaborative-editor/hooks/useWorkflow', () => ({
   useWorkflowState: vi.fn((selector: any) => {
     // Dynamically read from mockWorkflowState to ensure fresh reads
     const state = {
@@ -66,7 +66,7 @@ vi.mock("../../../../js/collaborative-editor/hooks/useWorkflow", () => ({
   }),
 }));
 
-describe("CodeViewPanel", () => {
+describe('CodeViewPanel', () => {
   beforeEach(() => {
     // Reset all mocks
     vi.clearAllMocks();
@@ -75,32 +75,32 @@ describe("CodeViewPanel", () => {
     resetMockWorkflowState();
   });
 
-  describe("rendering and YAML generation", () => {
-    test("displays loading state when workflow is missing", async () => {
+  describe('rendering and YAML generation', () => {
+    test('displays loading state when workflow is missing', async () => {
       // Workflow state defaults to null
       render(<CodeViewPanel />);
 
-      expect(screen.getByText("Loading...")).toBeInTheDocument();
+      expect(screen.getByText('Loading...')).toBeInTheDocument();
     });
 
-    test("generates and displays workflow YAML with correct structure", async () => {
+    test('generates and displays workflow YAML with correct structure', async () => {
       setMockWorkflowState({
-        workflow: { id: "w1", name: "Test Workflow" },
+        workflow: { id: 'w1', name: 'Test Workflow' },
         jobs: [
           {
-            id: "j1",
-            name: "Test Job",
-            adaptor: "@openfn/language-http@latest",
-            body: "fn(state => state)",
+            id: 'j1',
+            name: 'Test Job',
+            adaptor: '@openfn/language-http@latest',
+            body: 'fn(state => state)',
           },
         ],
-        triggers: [{ id: "t1", type: "webhook", enabled: true }],
+        triggers: [{ id: 't1', type: 'webhook', enabled: true }],
         edges: [
           {
-            id: "e1",
-            source_trigger_id: "t1",
-            target_job_id: "j1",
-            condition_type: "always",
+            id: 'e1',
+            source_trigger_id: 't1',
+            target_job_id: 'j1',
+            condition_type: 'always',
             enabled: true,
           },
         ],
@@ -108,39 +108,39 @@ describe("CodeViewPanel", () => {
 
       render(<CodeViewPanel />);
 
-      const textarea = screen.getByRole("textbox", {
+      const textarea = screen.getByRole('textbox', {
         name: /workflow yaml code/i,
       }) as HTMLTextAreaElement;
 
       // Verify YAML is displayed
       expect(textarea).toBeInTheDocument();
-      expect(textarea.value).toContain("Test Workflow");
+      expect(textarea.value).toContain('Test Workflow');
       expect(textarea.value).toBeTruthy();
 
       // Verify it's valid YAML
       expect(() => YAML.parse(textarea.value)).not.toThrow();
     });
 
-    test("handles YAML generation errors gracefully", () => {
+    test('handles YAML generation errors gracefully', () => {
       const consoleErrorSpy = vi
-        .spyOn(console, "error")
+        .spyOn(console, 'error')
         .mockImplementation(() => {});
 
       vi.mocked(yamlUtil.convertWorkflowStateToSpec).mockImplementationOnce(
         () => {
-          throw new Error("YAML generation failed");
+          throw new Error('YAML generation failed');
         }
       );
 
       setMockWorkflowState({
-        workflow: { id: "w1", name: "Test" },
+        workflow: { id: 'w1', name: 'Test' },
         jobs: [],
       });
 
       render(<CodeViewPanel />);
 
-      const textarea = screen.getByRole("textbox") as HTMLTextAreaElement;
-      expect(textarea.value).toContain("# Error generating YAML");
+      const textarea = screen.getByRole('textbox') as HTMLTextAreaElement;
+      expect(textarea.value).toContain('# Error generating YAML');
 
       consoleErrorSpy.mockRestore();
     });

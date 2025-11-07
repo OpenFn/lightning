@@ -1,10 +1,10 @@
-import { useMemo } from "react";
-import YAML from "yaml";
+import { useMemo } from 'react';
+import YAML from 'yaml';
 
-import { useWorkflowState } from "#/collaborative-editor/hooks/useWorkflow";
-import { notifications } from "#/collaborative-editor/lib/notifications";
-import type { WorkflowState as YAMLWorkflowState } from "#/yaml/types";
-import { convertWorkflowStateToSpec } from "#/yaml/util";
+import { useWorkflowState } from '#/collaborative-editor/hooks/useWorkflow';
+import { notifications } from '#/collaborative-editor/lib/notifications';
+import type { WorkflowState as YAMLWorkflowState } from '#/yaml/types';
+import { convertWorkflowStateToSpec } from '#/yaml/util';
 
 export function CodeViewPanel() {
   // Read workflow data from store - LoadingBoundary guarantees non-null
@@ -16,16 +16,16 @@ export function CodeViewPanel() {
 
   // Generate YAML from current workflow state
   const yamlCode = useMemo(() => {
-    if (!workflow) return "";
+    if (!workflow) return '';
 
     try {
       // Build WorkflowState compatible with YAML utilities
       const workflowState: YAMLWorkflowState = {
         id: workflow.id,
         name: workflow.name,
-        jobs: jobs as YAMLWorkflowState["jobs"],
-        triggers: triggers as YAMLWorkflowState["triggers"],
-        edges: edges as YAMLWorkflowState["edges"],
+        jobs: jobs as YAMLWorkflowState['jobs'],
+        triggers: triggers as YAMLWorkflowState['triggers'],
+        edges: edges as YAMLWorkflowState['edges'],
         positions,
       };
 
@@ -33,26 +33,26 @@ export function CodeViewPanel() {
       const spec = convertWorkflowStateToSpec(workflowState, false);
       return YAML.stringify(spec);
     } catch (error) {
-      console.error("Failed to generate YAML:", error);
-      return "# Error generating YAML\n# Please check console for details";
+      console.error('Failed to generate YAML:', error);
+      return '# Error generating YAML\n# Please check console for details';
     }
   }, [workflow, jobs, triggers, edges, positions]);
 
   // Generate sanitized filename from workflow name
   const fileName = useMemo(() => {
-    if (!workflow) return "workflow.yaml";
+    if (!workflow) return 'workflow.yaml';
     // Remove special characters, replace spaces with hyphens
     const sanitized = workflow.name
-      .replace(/[^a-zA-Z0-9-_\s]/g, "")
-      .replace(/\s+/g, "-");
+      .replace(/[^a-zA-Z0-9-_\s]/g, '')
+      .replace(/\s+/g, '-');
     return `${sanitized}.yaml`;
   }, [workflow]);
 
   // Download YAML as file
   const handleDownload = () => {
-    const blob = new Blob([yamlCode], { type: "text/yaml" });
+    const blob = new Blob([yamlCode], { type: 'text/yaml' });
     const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
+    const a = document.createElement('a');
     a.href = url;
     a.download = fileName;
     document.body.appendChild(a);
@@ -66,14 +66,14 @@ export function CodeViewPanel() {
     try {
       await navigator.clipboard.writeText(yamlCode);
       notifications.info({
-        title: "Code copied",
-        description: "Workflow YAML copied to clipboard",
+        title: 'Code copied',
+        description: 'Workflow YAML copied to clipboard',
       });
     } catch (error) {
-      console.error("Failed to copy:", error);
+      console.error('Failed to copy:', error);
       notifications.alert({
-        title: "Failed to copy",
-        description: "Could not copy to clipboard. Please try again.",
+        title: 'Failed to copy',
+        description: 'Could not copy to clipboard. Please try again.',
       });
     }
   };
