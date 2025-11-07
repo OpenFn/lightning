@@ -9,7 +9,6 @@ defmodule Lightning.Runs.Handlers do
   alias Lightning.Run
   alias Lightning.Runs
   alias Lightning.RunStep
-  alias Lightning.WorkOrders
 
   defmodule StartRun do
     @moduledoc """
@@ -147,9 +146,7 @@ defmodule Lightning.Runs.Handlers do
     def call(run, params) do
       with {:ok, attrs} <- new(run, params) |> apply_action(:validate),
            {:ok, step} <- insert(attrs) do
-        run = Runs.get(attrs.run_id, include: [:workflow, :snapshot])
         step = Repo.preload(step, :snapshot)
-        WorkOrders.Events.run_updated(run.workflow.project_id, run)
         Runs.Events.step_started(attrs.run_id, step)
 
         {:ok, step}

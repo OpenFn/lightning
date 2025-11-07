@@ -41,8 +41,12 @@ import {
   getVisibleRect,
   isPointInRect,
 } from "#/workflow-diagram/util/viewport";
+import type { RunInfo } from "#/workflow-store/store";
 
+import { createEmptyRunInfo } from "../../utils/runStepsTransformer";
 import { AdaptorSelectionModal } from "../AdaptorSelectionModal";
+
+import { useInspectorOverlap } from "./useInspectorOverlap";
 
 type WorkflowDiagramProps = {
   el?: HTMLElement | null;
@@ -55,6 +59,7 @@ type WorkflowDiagramProps = {
   showInspector?: boolean;
   inspectorId?: string | undefined;
   layoutDuration?: number;
+  runSteps?: RunInfo | null;
 };
 
 type ChartCache = {
@@ -100,7 +105,13 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
   const [flow, setFlow] = useState<typeof flowInstance | null>(null);
   // value of select in props seems same as select in store.
   // one in props is always set on initial render. (helps with refresh)
-  const { selection, onSelectionChange, containerEl: el, inspectorId } = props;
+  const {
+    selection,
+    onSelectionChange,
+    containerEl: el,
+    inspectorId,
+    runSteps,
+  } = props;
 
   // Get Y.Doc workflow store for placeholder operations
   const workflowStore = useWorkflowStoreContext();
@@ -333,7 +344,7 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
         workflow,
         positions,
         placeholders,
-        { steps: [] },
+        runSteps || createEmptyRunInfo(),
         // Use current selection prop, not cached lastSelection
         // This ensures URL changes (from Header Run button) highlight nodes
         selection
@@ -448,6 +459,7 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
     isManualLayout,
     workflowPositions,
     selection,
+    runSteps,
   ]);
 
   // This effect only runs when AI assistant visibility changes, not on every selection change

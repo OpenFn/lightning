@@ -1051,4 +1051,20 @@ defmodule Lightning.Invocation do
     # Default sorting: keep the original order_by from base_query
     query
   end
+
+  @doc """
+  Get a run with all its steps preloaded, including work_order and workflow
+  for authorization checks.
+  """
+  def get_run_with_steps(run_id) do
+    from(r in Lightning.Run,
+      where: r.id == ^run_id,
+      preload: [
+        :steps,
+        :created_by,
+        work_order: [workflow: :project]
+      ]
+    )
+    |> Repo.one()
+  end
 end
