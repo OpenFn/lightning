@@ -1,15 +1,16 @@
 /*
  * Hook for placeholder management
  */
-import { useCallback, useEffect, useState } from "react";
+import type { XYPosition } from '@xyflow/react';
+import { useCallback, useEffect, useState } from 'react';
 
-import { randomUUID } from "../common";
-import { DEFAULT_TEXT } from "../editor/Editor";
-import { useWorkflowStore } from "../workflow-store/store";
-import { styleEdge } from "./styles";
-import type { Flow } from "./types";
-import toWorkflow from "./util/to-workflow";
-import type { XYPosition } from "@xyflow/react";
+import { randomUUID } from '../common';
+import { DEFAULT_TEXT } from '../editor/Editor';
+import { useWorkflowStore } from '../workflow-store/store';
+
+import { styleEdge } from './styles';
+import type { Flow } from './types';
+import toWorkflow from './util/to-workflow';
 
 // generates a placeholder node and edge as child of the parent
 export const create = (
@@ -25,7 +26,7 @@ export const create = (
   const targetId = randomUUID();
   newModel.nodes.push({
     id: targetId,
-    type: "placeholder",
+    type: 'placeholder',
     position: {
       // mark this as as default position
       // @ts-ignore _default is a temporary flag added by us
@@ -39,17 +40,17 @@ export const create = (
     },
     data: {
       body: DEFAULT_TEXT,
-      adaptor: adaptor || "@openfn/language-common@latest",
+      adaptor: adaptor || '@openfn/language-common@latest',
     },
   });
 
   newModel.edges.push(
     styleEdge({
       id: randomUUID(),
-      type: "step",
+      type: 'step',
       source: parentNode.id,
       target: targetId,
-      data: { condition_type: "on_job_success", placeholder: true },
+      data: { condition_type: 'on_job_success', placeholder: true },
     })
   );
 
@@ -94,7 +95,7 @@ export default (
   );
 
   const commit = useCallback(
-    (evt: CustomEvent<any>) => {
+    (evt: CustomEvent) => {
       const { id, name } = evt.detail;
 
       // reset the chart
@@ -110,19 +111,19 @@ export default (
     [placeholders]
   );
 
-  const cancel = useCallback((_evt?: CustomEvent<any>) => {
+  const cancel = useCallback((_evt?: CustomEvent) => {
     setPlaceholders({ nodes: [], edges: [] });
   }, []);
 
   useEffect(() => {
     if (el) {
-      el.addEventListener<any>("commit-placeholder", commit);
-      el.addEventListener<any>("cancel-placeholder", cancel);
+      el.addEventListener<any>('commit-placeholder', commit);
+      el.addEventListener<any>('cancel-placeholder', cancel);
 
       return () => {
         if (el) {
-          el.removeEventListener<any>("commit-placeholder", commit);
-          el.removeEventListener<any>("cancel-placeholder", cancel);
+          el.removeEventListener<any>('commit-placeholder', commit);
+          el.removeEventListener<any>('cancel-placeholder', cancel);
         }
       };
     }

@@ -1,20 +1,23 @@
-import type { WithActionProps } from '#/react/lib/with-props';
 import {
   DocumentIcon,
   PencilSquareIcon,
   QueueListIcon,
 } from '@heroicons/react/24/outline';
 import React from 'react';
-import constructQuery from '../utils/constructQuery';
+
+import type { WithActionProps } from '#/react/lib/with-props';
+
 import { Tabs } from '../components/Tabs';
-import { type Dataclip, FilterTypes, SeletableOptions } from './types';
+import useQuery from '../hooks/useQuery';
+import alterURLParams from '../utils/alterURLParams';
+import constructQuery from '../utils/constructQuery';
 import type { RunStep } from '../workflow-store/store';
+
+import { type Dataclip, FilterTypes, SeletableOptions } from './types';
 import CustomView from './views/CustomView';
 import EmptyView from './views/EmptyView';
 import ExistingView from './views/ExistingView';
 import SelectedClipView from './views/SelectedClipView';
-import alterURLParams from '../utils/alterURLParams';
-import useQuery from '../hooks/useQuery';
 
 interface ManualRunPanelProps {
   job_id: string;

@@ -1,7 +1,9 @@
-import React, { useCallback, useState } from 'react';
 import type * as F from '@xyflow/react';
+import React, { useCallback, useState } from 'react';
+
 import { randomUUID } from '../common';
 import { useWorkflowStore } from '../workflow-store/store';
+
 import Connection from './edges/Connection';
 import { styleEdge } from './styles';
 import type { Flow } from './types';
@@ -156,7 +158,7 @@ export default (
     (event: React.MouseEvent) => {
       if (
         event.target instanceof HTMLElement &&
-        event.target.classList?.contains('react-flow__pane') &&
+        event.target.classList.contains('react-flow__pane') &&
         !dragActive
       ) {
         bgClick();

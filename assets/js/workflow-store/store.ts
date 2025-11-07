@@ -97,7 +97,7 @@ export interface WorkflowState extends WorkflowProps {
   remove: (data: RemoveArgs) => void;
   rebase: (data: Partial<WorkflowProps>) => void;
   getById: <T = Lightning.Node | Lightning.Edge | Lightning.TriggerNode>(
-    id?: string | undefined
+    id?: string
   ) => T | undefined;
   getItem: (
     id?: string
@@ -165,7 +165,7 @@ function pushUndo(action: ReplayAction) {
     const patch = action.patches[0];
     if (
       firstPatch &&
-      firstPatch.path.join('.') === patch?.path.join('.') &&
+      firstPatch.path.join('.') === patch.path.join('.') &&
       patch.path.length >= 3
     ) {
       lastAction.patches = [...lastAction.patches, ...action.patches];
