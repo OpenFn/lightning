@@ -23,60 +23,9 @@ export function CodeViewPanel() {
       const workflowState: YAMLWorkflowState = {
         id: workflow.id,
         name: workflow.name,
-        jobs: jobs.map(job => ({
-          id: job.id,
-          name: job.name,
-          adaptor: job.adaptor,
-          body: job.body,
-        })),
-        triggers: triggers.map(trigger => {
-          // Handle discriminated union types properly
-          if (trigger.type === "cron") {
-            return {
-              id: trigger.id,
-              type: "cron" as const,
-              enabled: trigger.enabled,
-              cron_expression: trigger.cron_expression,
-            };
-          } else if (trigger.type === "webhook") {
-            return {
-              id: trigger.id,
-              type: "webhook" as const,
-              enabled: trigger.enabled,
-            };
-          } else {
-            // kafka type
-            return {
-              id: trigger.id,
-              type: "kafka" as const,
-              enabled: trigger.enabled,
-            };
-          }
-        }),
-        edges: edges.map(edge => {
-          const baseEdge: import("#/yaml/types").StateEdge = {
-            id: edge.id,
-            condition_type: edge.condition_type ?? "always",
-            enabled: edge.enabled ?? true,
-            target_job_id: edge.target_job_id,
-          };
-
-          // Add optional fields only if they exist
-          if (edge.source_job_id) {
-            baseEdge.source_job_id = edge.source_job_id;
-          }
-          if (edge.source_trigger_id) {
-            baseEdge.source_trigger_id = edge.source_trigger_id;
-          }
-          if (edge.condition_label !== undefined) {
-            baseEdge.condition_label = edge.condition_label;
-          }
-          if (edge.condition_expression !== undefined) {
-            baseEdge.condition_expression = edge.condition_expression;
-          }
-
-          return baseEdge;
-        }),
+        jobs: jobs as YAMLWorkflowState["jobs"],
+        triggers: triggers as YAMLWorkflowState["triggers"],
+        edges: edges as YAMLWorkflowState["edges"],
         positions,
       };
 
