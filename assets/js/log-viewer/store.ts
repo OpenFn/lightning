@@ -1,5 +1,5 @@
-import { createStore } from 'zustand/vanilla';
 import { subscribeWithSelector } from 'zustand/middleware';
+import { createStore } from 'zustand/vanilla';
 
 export type LogLine = {
   id: string;
@@ -119,7 +119,7 @@ function tryPrettyJSON(str: string) {
   }
 }
 
-function possiblyPrettify(str: string | string) {
+function possiblyPrettify(str: string) {
   if (isProbablyJSON(str)) {
     return tryPrettyJSON(str);
   }

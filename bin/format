@@ -93,8 +93,8 @@ while [[ $# -gt 0 ]]; do
 done
 
 # Set default file paths
-JS_FILES="${ASSETS_DIR}/js/collaborative-editor"
-PRETTIER_FILES="${ASSETS_DIR}/js/collaborative-editor ${ASSETS_DIR}/test"
+JS_FILES="${ASSETS_DIR}/js"
+PRETTIER_FILES=""
 EX_FILES=""
 
 # Override with changed files if flag is set

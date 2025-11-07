@@ -1,4 +1,8 @@
 import "@testing-library/jest-dom";
+import { enableMapSet } from "immer";
+
+// Enable Immer MapSet plugin for tests that use Set in Immer state
+enableMapSet();
 
 // Increase max listeners to avoid warning during test runs
 // This is safe for tests as multiple test files add cleanup handlers

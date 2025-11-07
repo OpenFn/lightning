@@ -1,6 +1,8 @@
-import { useCallback } from 'react';
 import type { PackageDescription } from '@openfn/describe-package';
+import { useCallback } from 'react';
+
 import useDocs from '../hooks/useDocs';
+
 import Function from './render/Function';
 
 type DocsPanelProps = {
@@ -85,7 +87,7 @@ const DocsPanel = ({ specifier, onInsert }: DocsPanelProps) => {
     );
   }
 
-  const { name, version, functions } = pkg as PackageDescription;
+  const { name, version, functions } = pkg;
 
   if (functions.length === 0) {
     return (

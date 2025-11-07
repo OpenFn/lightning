@@ -1,8 +1,11 @@
+import type { ViewHook } from 'phoenix_live_view';
+import { StrictMode } from 'react';
+import ReactDOMClient from 'react-dom/client';
 import invariant from 'tiny-invariant';
 import warning from 'tiny-warning';
 
-import ReactDOMClient from 'react-dom/client';
-
+import type { GetPhoenixHookInternalThis } from '#/hooks/PhoenixHook';
+import { Boundary } from '#/react/components';
 import {
   importComponent,
   isReactHookedElement,
@@ -11,14 +14,7 @@ import {
   withProps,
   RootObserver,
 } from '#/react/lib';
-
-import { Boundary } from '#/react/components';
-
 import type { ReactComponentHook } from '#/react/types';
-import { StrictMode } from 'react';
-import type { ViewHook } from 'phoenix_live_view';
-
-import type { GetPhoenixHookInternalThis } from '#/hooks/PhoenixHook';
 
 const rootObserver = new RootObserver();
 
@@ -51,7 +47,7 @@ export const ReactComponent = {
       this._errorMsg('Element is not valid for this hook!')
     );
 
-    // TODO: remove this, in this hook there is no difference between the 
+    // TODO: remove this, in this hook there is no difference between the
     // container and the element
     this._containerEl = this.el;
     this._Component = withProps(
@@ -359,7 +355,6 @@ export const ReactComponent = {
       '\n' +
       'In `ReactComponent` hook with ' +
       [
-        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
         this._name != null &&
           // prettier-ignore -- the above supression should not leak down
           `name \`${this._name}\``,

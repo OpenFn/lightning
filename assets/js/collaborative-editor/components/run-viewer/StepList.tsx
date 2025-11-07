@@ -1,5 +1,6 @@
-import type { Step } from "../../types/run";
-import { StepItem } from "./StepItem";
+import type { Step } from '../../types/run';
+
+import { StepItem } from './StepItem';
 
 interface StepListProps {
   steps: Step[];

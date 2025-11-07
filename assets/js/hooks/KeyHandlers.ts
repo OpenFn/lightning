@@ -1,4 +1,5 @@
 import { submitOrClick } from '../common';
+
 import type { PhoenixHook } from './PhoenixHook';
 
 /**

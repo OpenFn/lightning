@@ -1,6 +1,6 @@
-import { useEffect } from "react";
+import { useEffect } from 'react';
 
-import { useWorkflowActions, useWorkflowState } from "./useWorkflow";
+import { useWorkflowActions, useWorkflowState } from './useWorkflow';
 
 /**
  * Simple type for TanStack Form instance
@@ -53,11 +53,11 @@ export function useValidation(form: FormInstance, errorPath?: string) {
       return state.workflow?.errors || {};
     }
 
-    const [entityType, entityId] = errorPath.split(".");
-    const entityCollection = state[entityType as "jobs" | "triggers" | "edges"];
+    const [entityType, entityId] = errorPath.split('.');
+    const entityCollection = state[entityType as 'jobs' | 'triggers' | 'edges'];
 
     // Validate entity type at runtime - dynamic path parsing
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+
     if (!entityCollection) {
       return {};
     }
@@ -98,7 +98,7 @@ export function useValidation(form: FormInstance, errorPath?: string) {
           if (clientValidationErrors.length > 0) {
             // Field has client validation errors
             clientErrors[fieldName] = clientValidationErrors.map(
-              (e: unknown) => (typeof e === "string" ? e : String(e))
+              (e: unknown) => (typeof e === 'string' ? e : String(e))
             );
           } else {
             // Field is valid or only has collaborative errors - send empty array to clear
@@ -108,7 +108,7 @@ export function useValidation(form: FormInstance, errorPath?: string) {
       });
 
       // Write to store (debounced, with merge+dedupe)
-      setClientErrors(errorPath || "workflow", clientErrors);
+      setClientErrors(errorPath || 'workflow', clientErrors);
     });
 
     return () => unsubscribe();
@@ -153,14 +153,14 @@ export function useValidation(form: FormInstance, errorPath?: string) {
       // Only update if the collaborative error changed
       const oldRecord = (currentMeta || {}) as Record<string, unknown>;
       const oldErrorMap =
-        (oldRecord["errorMap"] as Record<string, unknown> | undefined) ?? {};
+        (oldRecord['errorMap'] as Record<string, unknown> | undefined) ?? {};
       const currentCollaborativeError = oldErrorMap.collaborative;
 
       if (currentCollaborativeError !== errorMessage) {
         form.setFieldMeta(fieldName, (old: unknown) => {
           const rec = (old || {}) as Record<string, unknown>;
           const errMap =
-            (rec["errorMap"] as Record<string, unknown> | undefined) ?? {};
+            (rec['errorMap'] as Record<string, unknown> | undefined) ?? {};
 
           return {
             ...rec,

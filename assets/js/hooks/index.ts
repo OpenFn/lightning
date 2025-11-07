@@ -1,22 +1,17 @@
+import { format, formatRelative } from 'date-fns';
+import { enUS } from 'date-fns/locale';
 import tippy, {
   type Instance as TippyInstance,
   type Placement,
 } from 'tippy.js';
-import { format, formatRelative } from 'date-fns';
-import { enUS } from 'date-fns/locale';
-import type { PhoenixHook } from './PhoenixHook';
 
-import LogLineHighlight from './LogLineHighlight';
+import TemplateToWorkflow from '../yaml/TemplateToWorkflow';
 import WorkflowToYAML from '../yaml/WorkflowToYAML';
 import YAMLToWorkflow from '../yaml/YAMLToWorkflow';
-import TemplateToWorkflow from '../yaml/TemplateToWorkflow';
-import ElapsedIndicator from './ElapsedIndicator';
-import {
-  TabbedContainer,
-  TabbedSelector,
-  TabbedPanels,
-} from './TabbedContainer';
 
+import CredentialSelector from './CredentialSelector';
+import ElapsedIndicator from './ElapsedIndicator';
+import FileDropzone from './FileDropzone';
 import {
   SaveViaCtrlS,
   InspectorSaveViaCtrlS,
@@ -27,9 +22,13 @@ import {
   CloseInspectorPanelViaEscape,
   CloseNodePanelViaEscape,
 } from './KeyHandlers';
-
-import FileDropzone from './FileDropzone';
-import CredentialSelector from './CredentialSelector';
+import LogLineHighlight from './LogLineHighlight';
+import type { PhoenixHook } from './PhoenixHook';
+import {
+  TabbedContainer,
+  TabbedSelector,
+  TabbedPanels,
+} from './TabbedContainer';
 
 export {
   LogLineHighlight,
@@ -274,7 +273,7 @@ export const Combobox = {
     }
   },
 
-  navigateToItem(url?: string | undefined) {
+  navigateToItem(url?: string) {
     if (url) {
       window.location.href = url;
     }
@@ -366,7 +365,7 @@ export const Combobox = {
   updateHighlight(): void;
   highlightOption(index: number): void;
   selectOption(index: number): void;
-  navigateToItem(url?: string | undefined): void;
+  navigateToItem(url?: string): void;
   toggleDropdown(): void;
   showDropdown(): void;
   hideDropdown(): void;
@@ -461,7 +460,7 @@ export const TagInput = {
     const cleanValue = value.replace(/,+$/, '');
     if (!cleanValue) return;
 
-    let currentTags = this.getCurrentTags();
+    const currentTags = this.getCurrentTags();
 
     const newTags = cleanValue
       .split(',')
@@ -480,13 +479,13 @@ export const TagInput = {
   },
 
   removeTag(tagToRemove) {
-    let currentTags = this.getCurrentTags();
+    const currentTags = this.getCurrentTags();
     const updatedTags = currentTags.filter(tag => tag !== tagToRemove);
     this.updateTags(updatedTags);
   },
 
   editTag(tagToEdit) {
-    let currentTags = this.getCurrentTags();
+    const currentTags = this.getCurrentTags();
     const updatedTags = currentTags.filter(tag => tag !== tagToEdit);
 
     this.updateTags(updatedTags);
@@ -527,7 +526,7 @@ export const ClearInput = {
 export const ModalHook = {
   mounted() {
     this.handleEvent('close_modal', () => {
-      let onClose = this.el.getAttribute('phx-on-close');
+      const onClose = this.el.getAttribute('phx-on-close');
       if (!onClose) return;
       this.liveSocket.execJS(this.el, onClose);
     });
@@ -536,7 +535,7 @@ export const ModalHook = {
 
 export const Flash = {
   mounted() {
-    let hide = () => {
+    const hide = () => {
       const click = this.el.getAttribute('phx-click');
       if (!click) return;
       this.liveSocket.execJS(this.el, click);
@@ -556,7 +555,7 @@ export const Flash = {
 export const FragmentMatch = {
   mounted() {
     if (this.el.id != '' && `#${this.el.id}` == window.location.hash) {
-      let js = this.el.getAttribute('phx-fragment-match');
+      const js = this.el.getAttribute('phx-fragment-match');
       if (js === null) {
         console.warn(
           'Fragment element missing phx-fragment-match attribute',
@@ -576,16 +575,16 @@ export const Tooltip = {
       return;
     }
 
-    let content = this.el.ariaLabel;
-    let placement = this.el.dataset.placement
+    const content = this.el.ariaLabel;
+    const placement = this.el.dataset.placement
       ? this.el.dataset.placement
       : 'top';
-    let allowHTML = this.el.dataset.allowHtml
+    const allowHTML = this.el.dataset.allowHtml
       ? this.el.dataset.allowHtml
       : 'false';
-    let hideOnClick = this.el.dataset.hideOnClick !== 'false';
+    const hideOnClick = this.el.dataset.hideOnClick !== 'false';
 
-    let interactive = this.el.dataset.interactive || false;
+    const interactive = this.el.dataset.interactive || false;
 
     this._tippyInstance = tippy(this.el, {
       placement: placement,
@@ -615,7 +614,7 @@ export const Tooltip = {
     });
   },
   updated() {
-    let content = this.el.ariaLabel;
+    const content = this.el.ariaLabel;
     if (content && this._tippyInstance) {
       this._tippyInstance.setContent(content);
       this._originalContent = content;
@@ -733,7 +732,7 @@ export const ScrollToMessage = {
 
 export const Copy = {
   mounted() {
-    let { to, content } = this.el.dataset;
+    const { to, content } = this.el.dataset;
     const phxThenAttribute = this.el.getAttribute('phx-then');
 
     this.el.addEventListener('click', ev => {
@@ -745,7 +744,7 @@ export const Copy = {
       if (content) {
         text = content;
       } else if (to) {
-        let target = document.querySelector(to);
+        const target = document.querySelector(to);
         if (
           target instanceof HTMLInputElement ||
           target instanceof HTMLTextAreaElement
@@ -757,7 +756,7 @@ export const Copy = {
       }
 
       if (text) {
-        let element = this.el;
+        const element = this.el;
         navigator.clipboard
           .writeText(text)
           .then(() => {

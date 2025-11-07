@@ -211,7 +211,7 @@ export const createWorkflowStore = () => {
   const listeners = new Set<() => void>();
 
   // Debounce state for setClientErrors
-  let debounceTimeouts = new Map<string, NodeJS.Timeout>();
+  const debounceTimeouts = new Map<string, NodeJS.Timeout>();
 
   // Redux DevTools integration (development/test only)
   const devtools = wrapStoreWithDevTools<Workflow.State>({
@@ -973,7 +973,7 @@ export const createWorkflowStore = () => {
         Object.entries(errors).forEach(([fieldName, newMessages]) => {
           if (newMessages.length === 0) {
             // Empty array clears the field
-            // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
+
             delete draft[fieldName];
           } else {
             // Replace with client errors (deduplicate within client errors)

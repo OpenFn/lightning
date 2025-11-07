@@ -45,5 +45,5 @@ export function safeFitBoundsRect(
     Number.isFinite(rect.width) &&
     Number.isFinite(rect.height);
 
-  return ok ? flow!.fitBounds(rect!, opts) : Promise.resolve();
+  return ok ? flow.fitBounds(rect, opts) : Promise.resolve();
 }

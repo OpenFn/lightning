@@ -16,7 +16,7 @@
  * SessionProvider (session state)
  *   ↓ useSession
  * StoreProvider (store management)
- *   ↓ useStores
+ *   ↓ StoreContext (useHistory, useWorkflow, etc.)
  * Components (consume stores)
  * ```
  *
@@ -50,9 +50,17 @@ import {
   createAwarenessStore,
 } from "../stores/createAwarenessStore";
 import {
-  type CredentialStoreInstance,
   createCredentialStore,
+  type CredentialStoreInstance,
 } from "../stores/createCredentialStore";
+import {
+  createEditorPreferencesStore,
+  type EditorPreferencesStoreInstance,
+} from "../stores/createEditorPreferencesStore";
+import {
+  createHistoryStore,
+  type HistoryStoreInstance,
+} from "../stores/createHistoryStore";
 import {
   createRunStore,
   type RunStoreInstance,
@@ -75,7 +83,9 @@ export interface StoreContextValue {
   awarenessStore: AwarenessStoreInstance;
   workflowStore: WorkflowStoreInstance;
   sessionContextStore: SessionContextStoreInstance;
+  historyStore: HistoryStoreInstance;
   uiStore: UIStoreInstance;
+  editorPreferencesStore: EditorPreferencesStoreInstance;
   runStore: RunStoreInstance;
 }
 
@@ -101,7 +111,9 @@ export const StoreProvider = ({ children }: StoreProviderProps) => {
     awarenessStore: createAwarenessStore(),
     workflowStore: createWorkflowStore(),
     sessionContextStore: createSessionContextStore(isNewWorkflow),
+    historyStore: createHistoryStore(),
     uiStore: createUIStore(),
+    editorPreferencesStore: createEditorPreferencesStore(),
     runStore: createRunStore(),
   }));
 
@@ -164,12 +176,14 @@ export const StoreProvider = ({ children }: StoreProviderProps) => {
       const cleanup3 = stores.sessionContextStore._connectChannel(
         session.provider
       );
+      const cleanup4 = stores.historyStore._connectChannel(session.provider);
 
       return () => {
         logger.debug("Disconnecting stores from channel");
         cleanup1();
         cleanup2();
         cleanup3();
+        cleanup4();
       };
     }
     return undefined;

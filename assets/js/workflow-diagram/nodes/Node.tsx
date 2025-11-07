@@ -1,13 +1,14 @@
 import { Handle, type NodeProps } from "@xyflow/react";
 import React, { memo } from "react";
 
+import { Tooltip } from "../../collaborative-editor/components/Tooltip";
 import { cn } from "../../utils/cn";
 import { duration } from "../../utils/duration";
-import type { RunStep } from "../../workflow-store/store";
 import formatDate from "../../utils/formatDate";
+import type { RunStep } from "../../workflow-store/store";
 import ErrorMessage from "../components/ErrorMessage";
-import Shape from "../components/Shape";
 import { renderIcon } from "../components/RunIcons";
+import Shape from "../components/Shape";
 import { nodeIconStyles, nodeLabelStyles } from "../styles";
 
 type NodeData = any;
@@ -171,7 +172,7 @@ const Node = ({
             </>
           )}
           {runData && !isTriggerNode ? (
-            <div className="absolute -left-2 -top-2">
+            <div className="absolute -left-2 -top-2 pointer-events-auto z-10">
               {renderIcon(runData.exit_reason ?? "pending", {
                 tooltip: runData?.error_type ?? "Step completed successfully",
               })}
@@ -192,16 +193,16 @@ const Node = ({
           ) : null}
           {startInfo ? (
             <div
-              className={`absolute -top-2 flex gap-2 items-center`}
+              className="absolute -top-2 flex gap-2 items-center pointer-events-auto z-10"
               style={{
                 left: "calc(100% - 24px)",
               }}
-              data-tooltip={`Started by ${startInfo.startBy}`}
-              data-tooltip-placement="top"
             >
-              <div className="flex justify-center items-center w-7 h-7 rounded-full text-slate-50 border-slate-700 bg-slate-600">
-                <span className="hero-play-solid w-3 h-3"></span>
-              </div>
+              <Tooltip content={`Started by ${startInfo.startBy}`} side="top">
+                <div className="flex justify-center items-center w-7 h-7 rounded-full text-slate-50 border-slate-700 bg-slate-600">
+                  <span className="hero-play-solid w-3 h-3"></span>
+                </div>
+              </Tooltip>
             </div>
           ) : null}
           {runData?.started_at && runData.finished_at ? (
