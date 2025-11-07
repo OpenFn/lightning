@@ -1,8 +1,8 @@
-import { useRef, useCallback } from 'react';
-import ResizeObserver from 'rc-resize-observer';
-import type { editor } from 'monaco-editor';
 import Editor, { loader, type Monaco } from '@monaco-editor/react';
+import type { editor } from 'monaco-editor';
 import * as monaco from 'monaco-editor';
+import ResizeObserver from 'rc-resize-observer';
+import { useRef, useCallback } from 'react';
 
 // Configure Monaco with ESM workers
 // This needs to be outside of the component to ensure it's only set once

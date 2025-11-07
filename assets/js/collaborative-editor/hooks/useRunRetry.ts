@@ -1,15 +1,17 @@
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from 'react';
 
-import * as dataclipApi from "../api/dataclips";
-import type { Dataclip } from "../api/dataclips";
-import { useCurrentRun } from "./useRun";
-import { getCsrfToken } from "../lib/csrf";
-import { notifications } from "../lib/notifications";
-import _logger from "#/utils/logger";
-import { useURLState } from "../../react/lib/use-url-state";
-import type { Workflow } from "../types/workflow";
+import _logger from '#/utils/logger';
 
-const logger = _logger.ns("useRunRetry").seal();
+import { useURLState } from '../../react/lib/use-url-state';
+import * as dataclipApi from '../api/dataclips';
+import type { Dataclip } from '../api/dataclips';
+import { getCsrfToken } from '../lib/csrf';
+import { notifications } from '../lib/notifications';
+import type { Workflow } from '../types/workflow';
+
+import { useCurrentRun } from './useRun';
+
+const logger = _logger.ns('useRunRetry').seal();
 
 /**
  * Final states for a run (matches Lightning.Run.final_states/0)
@@ -22,13 +24,13 @@ const logger = _logger.ns("useRunRetry").seal();
  * - lost: Run state unknown/lost connection
  */
 const FINAL_RUN_STATES = [
-  "success",
-  "failed",
-  "crashed",
-  "cancelled",
-  "killed",
-  "exception",
-  "lost",
+  'success',
+  'failed',
+  'crashed',
+  'cancelled',
+  'killed',
+  'exception',
+  'lost',
 ];
 
 function isFinalState(state: string): boolean {
@@ -43,10 +45,10 @@ export interface UseRunRetryOptions {
   projectId: string;
   workflowId: string;
   runContext: {
-    type: "job" | "trigger";
+    type: 'job' | 'trigger';
     id: string;
   };
-  selectedTab: "empty" | "custom" | "existing";
+  selectedTab: 'empty' | 'custom' | 'existing';
   selectedDataclip: Dataclip | null;
   customBody: string;
   canRunWorkflow: boolean;
@@ -109,7 +111,7 @@ export function useRunRetry({
   // Note: Connection management is handled by the parent component (FullScreenIDE or ManualRunPanel)
   // This hook only reads the current run state from RunStore
   const { searchParams } = useURLState();
-  const followedRunId = searchParams.get("run"); // 'run' param is run ID
+  const followedRunId = searchParams.get('run'); // 'run' param is run ID
   const currentRun = useCurrentRun(); // Real-time from WebSocket
 
   // Get step for current context from followed run (from real-time RunStore)
@@ -117,7 +119,7 @@ export function useRunRetry({
   // For triggers: find the first job connected to the trigger and use its step
   // This matches classical editor behavior (WorkflowController.get_selected_job)
   const dataclipJobId = useMemo(() => {
-    if (runContext.type === "job") {
+    if (runContext.type === 'job') {
       return runContext.id;
     }
 
@@ -154,7 +156,7 @@ export function useRunRetry({
     try {
       const parsed = JSON.parse(customBody);
       return (
-        parsed !== null && typeof parsed === "object" && !Array.isArray(parsed)
+        parsed !== null && typeof parsed === 'object' && !Array.isArray(parsed)
       );
     } catch {
       return false;
@@ -162,9 +164,9 @@ export function useRunRetry({
   }, [customBody]);
 
   const hasValidInput =
-    selectedTab === "empty" ||
-    (selectedTab === "existing" && !!selectedDataclip) ||
-    (selectedTab === "custom" && isValidCustomBody);
+    selectedTab === 'empty' ||
+    (selectedTab === 'existing' && !!selectedDataclip) ||
+    (selectedTab === 'custom' && isValidCustomBody);
 
   const canRun = !edgeId && canRunWorkflow && hasValidInput;
 
@@ -174,14 +176,14 @@ export function useRunRetry({
   const handleRun = useCallback(async () => {
     const contextId = runContext.id;
     if (!contextId) {
-      logger.error("No context ID available");
+      logger.error('No context ID available');
       return;
     }
 
     // Check workflow-level permissions before running
     if (!canRunWorkflow) {
       notifications.alert({
-        title: "Cannot run workflow",
+        title: 'Cannot run workflow',
         description: workflowRunTooltipMessage,
       });
       return;
@@ -198,16 +200,16 @@ export function useRunRetry({
       };
 
       // Add job or trigger ID
-      if (runContext.type === "job") {
+      if (runContext.type === 'job') {
         params.jobId = contextId;
       } else {
         params.triggerId = contextId;
       }
 
       // Add dataclip or custom body based on selected tab
-      if (selectedTab === "existing" && selectedDataclip) {
+      if (selectedTab === 'existing' && selectedDataclip) {
         params.dataclipId = selectedDataclip.id;
-      } else if (selectedTab === "custom") {
+      } else if (selectedTab === 'custom') {
         params.customBody = customBody;
       }
       // For 'empty' tab, no dataclip or body needed
@@ -215,8 +217,8 @@ export function useRunRetry({
       const response = await dataclipApi.submitManualRun(params);
 
       notifications.success({
-        title: "Run started",
-        description: "Saved latest changes and created new work order",
+        title: 'Run started',
+        description: 'Saved latest changes and created new work order',
       });
 
       // Invoke callback with run_id and dataclip (if created from custom body)
@@ -229,11 +231,11 @@ export function useRunRetry({
 
       setIsSubmitting(false);
     } catch (error) {
-      logger.error("Failed to submit run:", error);
+      logger.error('Failed to submit run:', error);
       notifications.alert({
-        title: "Failed to submit run",
+        title: 'Failed to submit run',
         description:
-          error instanceof Error ? error.message : "An unknown error occurred",
+          error instanceof Error ? error.message : 'An unknown error occurred',
       });
       setIsSubmitting(false);
     }
@@ -261,14 +263,14 @@ export function useRunRetry({
     isRetryingRef.current = true;
 
     if (!followedRunId || !followedRunStep) {
-      logger.error("Cannot retry: missing run or step data");
+      logger.error('Cannot retry: missing run or step data');
       isRetryingRef.current = false;
       return;
     }
 
     if (!canRunWorkflow) {
       notifications.alert({
-        title: "Cannot run workflow",
+        title: 'Cannot run workflow',
         description: workflowRunTooltipMessage,
       });
       isRetryingRef.current = false;
@@ -286,18 +288,18 @@ export function useRunRetry({
 
       const csrfToken = getCsrfToken();
       const response = await fetch(retryUrl, {
-        method: "POST",
-        credentials: "same-origin",
+        method: 'POST',
+        credentials: 'same-origin',
         headers: {
-          "Content-Type": "application/json",
-          "X-CSRF-Token": csrfToken || "",
+          'Content-Type': 'application/json',
+          'X-CSRF-Token': csrfToken || '',
         },
         body: JSON.stringify(retryBody),
       });
 
       if (!response.ok) {
         const error = (await response.json()) as { error?: string };
-        throw new Error(error.error || "Failed to retry run");
+        throw new Error(error.error || 'Failed to retry run');
       }
 
       const result = (await response.json()) as {
@@ -305,8 +307,8 @@ export function useRunRetry({
       };
 
       notifications.success({
-        title: "Retry started",
-        description: "Saved latest changes and re-running with previous input",
+        title: 'Retry started',
+        description: 'Saved latest changes and re-running with previous input',
       });
 
       // Invoke callback with new run_id
@@ -321,10 +323,10 @@ export function useRunRetry({
         // No need to reset ref as component will unmount
       }
     } catch (error) {
-      logger.error("Failed to retry run:", error);
+      logger.error('Failed to retry run:', error);
       notifications.alert({
-        title: "Retry failed",
-        description: error instanceof Error ? error.message : "Unknown error",
+        title: 'Retry failed',
+        description: error instanceof Error ? error.message : 'Unknown error',
       });
       setIsSubmitting(false);
       isRetryingRef.current = false;

@@ -1,8 +1,9 @@
-import { useState } from 'react';
 import { ClockIcon, KeyIcon } from '@heroicons/react/24/outline';
 import { InformationCircleIcon } from '@heroicons/react/24/solid';
-import Entity from './Entity';
+import { useState } from 'react';
+
 import Empty from './Empty';
+import Entity from './Entity';
 import mapChildren from './map-children';
 
 const PERSIST_KEY = 'lightning.metadata-explorer.settings';

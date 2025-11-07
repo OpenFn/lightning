@@ -1,4 +1,5 @@
 import type { PhoenixHook } from '../hooks/PhoenixHook';
+
 import type { WorkflowSpec, WorkflowState } from './types';
 import { parseWorkflowYAML, convertWorkflowSpecToState } from './util';
 
@@ -16,7 +17,10 @@ function transformServerErrors(
         result.push(`'${String(message)}' at '${currentPath}'`);
       });
     } else if (typeof value === 'object' && value !== null) {
-      const nestedErrors = transformServerErrors(value as Record<string, unknown>, currentPath);
+      const nestedErrors = transformServerErrors(
+        value as Record<string, unknown>,
+        currentPath
+      );
       result.push(...nestedErrors);
     }
   }
@@ -75,35 +79,38 @@ const YAMLToWorkflow = {
   },
 
   setupServerEventHandlers() {
-    this.handleEvent("workflow-validated", () => {
+    this.handleEvent('workflow-validated', () => {
       this.clearErrors();
     });
 
-    this.handleEvent("workflow-validation-errors", (payload: { errors: Record<string, unknown> }) => {
-      const errors = transformServerErrors(payload.errors);
-      this.showError(errors[0] || "Validation failed");
-    });
+    this.handleEvent(
+      'workflow-validation-errors',
+      (payload: { errors: Record<string, unknown> }) => {
+        const errors = transformServerErrors(payload.errors);
+        this.showError(errors[0] || 'Validation failed');
+      }
+    );
 
-    this.handleEvent("show-parsing-error", (payload: { error: string }) => {
+    this.handleEvent('show-parsing-error', (payload: { error: string }) => {
       this.showError(payload.error);
     });
   },
 
   validateYAML(workflowYAML: string) {
     this.clearErrors();
-    
+
     try {
       this.workflowSpec = parseWorkflowYAML(workflowYAML);
       this.workflowState = convertWorkflowSpecToState(this.workflowSpec);
 
-      this.pushEventTo(this.el, 'workflow-parsed', { 
-        workflow: this.workflowState 
+      this.pushEventTo(this.el, 'workflow-parsed', {
+        workflow: this.workflowState,
       });
     } catch (error) {
       const errorMessage = this.getErrorMessage(error);
-      
+
       this.pushEventTo(this.el, 'workflow-parsing-failed', {
-        error: errorMessage
+        error: errorMessage,
       });
     }
   },
@@ -131,18 +138,18 @@ const YAMLToWorkflow = {
         ✕
       </button>
     `;
-    
+
     this.errorEl.classList.remove('hidden');
     this.errorEl.classList.add('error-slide-in');
-    
+
     setTimeout(() => {
       this.errorEl.classList.add('error-shake');
     }, 300);
-    
+
     setTimeout(() => {
       this.errorEl.classList.remove('error-shake');
     }, 800);
-  }
+  },
 } as PhoenixHook<{
   workflowSpec: undefined | WorkflowSpec;
   workflowState: WorkflowState;

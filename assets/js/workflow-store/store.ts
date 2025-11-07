@@ -97,7 +97,7 @@ export interface WorkflowState extends WorkflowProps {
   remove: (data: RemoveArgs) => void;
   rebase: (data: Partial<WorkflowProps>) => void;
   getById: <T = Lightning.Node | Lightning.Edge | Lightning.TriggerNode>(
-    id?: string | undefined
+    id?: string
   ) => T | undefined;
   getItem: (
     id?: string
