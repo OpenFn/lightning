@@ -62,6 +62,8 @@ and this project adheres to
 
 ### Fixed
 
+- 500 error when navigating from collaborative editor to full history page
+  [#3941](https://github.com/OpenFn/lightning/pull/3941)
 - Duplicate `isReadOnly` declaration in TriggerForm that was blocking asset
   builds [#3976](https://github.com/OpenFn/lightning/issues/3976)
 - Run duration and status alignment drift in history view
