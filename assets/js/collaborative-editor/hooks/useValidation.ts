@@ -1,6 +1,6 @@
-import { useEffect } from 'react';
+import { useEffect } from "react";
 
-import { useWorkflowActions, useWorkflowState } from './useWorkflow';
+import { useWorkflowActions, useWorkflowState } from "./useWorkflow";
 
 /**
  * Simple type for TanStack Form instance
@@ -53,8 +53,8 @@ export function useValidation(form: FormInstance, errorPath?: string) {
       return state.workflow?.errors || {};
     }
 
-    const [entityType, entityId] = errorPath.split('.');
-    const entityCollection = state[entityType as 'jobs' | 'triggers' | 'edges'];
+    const [entityType, entityId] = errorPath.split(".");
+    const entityCollection = state[entityType as "jobs" | "triggers" | "edges"];
 
     // Validate entity type at runtime - dynamic path parsing
     // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
@@ -84,10 +84,10 @@ export function useValidation(form: FormInstance, errorPath?: string) {
         if (fieldMeta?.isTouched || fieldMeta?.isDirty) {
           // Get client validation errors (exclude collaborative errors from errorMap)
           const meta = fieldMeta as unknown as Record<string, unknown>;
-          const errorMap = (meta.errorMap as Record<string, unknown>) || {};
+          const errorMap = (meta?.errorMap as Record<string, unknown>) || {};
 
           // Filter out collaborative errors - only send client validation errors
-          const clientValidationErrors = (fieldMeta.errors || []).filter(
+          const clientValidationErrors = (fieldMeta?.errors || []).filter(
             (error: unknown) => {
               // If this error matches the collaborative error, exclude it
               const collaborativeError = errorMap.collaborative;
@@ -98,7 +98,7 @@ export function useValidation(form: FormInstance, errorPath?: string) {
           if (clientValidationErrors.length > 0) {
             // Field has client validation errors
             clientErrors[fieldName] = clientValidationErrors.map(
-              (e: unknown) => (typeof e === 'string' ? e : String(e))
+              (e: unknown) => (typeof e === "string" ? e : String(e))
             );
           } else {
             // Field is valid or only has collaborative errors - send empty array to clear
@@ -108,7 +108,7 @@ export function useValidation(form: FormInstance, errorPath?: string) {
       });
 
       // Write to store (debounced, with merge+dedupe)
-      setClientErrors(errorPath || 'workflow', clientErrors);
+      setClientErrors(errorPath || "workflow", clientErrors);
     });
 
     return () => unsubscribe();
@@ -129,10 +129,10 @@ export function useValidation(form: FormInstance, errorPath?: string) {
 
       // Check if field has CLIENT validation errors (excluding collaborative)
       const meta = fieldMeta as unknown as Record<string, unknown>;
-      const errorMap = (meta.errorMap as Record<string, unknown>) || {};
+      const errorMap = (meta?.errorMap as Record<string, unknown>) || {};
       const collaborativeError = errorMap.collaborative;
 
-      const hasClientValidationErrors = (fieldMeta.errors || []).some(
+      const hasClientValidationErrors = (fieldMeta?.errors || []).some(
         (error: unknown) => error !== collaborativeError
       );
 
@@ -153,14 +153,14 @@ export function useValidation(form: FormInstance, errorPath?: string) {
       // Only update if the collaborative error changed
       const oldRecord = (currentMeta || {}) as Record<string, unknown>;
       const oldErrorMap =
-        (oldRecord['errorMap'] as Record<string, unknown> | undefined) ?? {};
+        (oldRecord["errorMap"] as Record<string, unknown> | undefined) ?? {};
       const currentCollaborativeError = oldErrorMap.collaborative;
 
       if (currentCollaborativeError !== errorMessage) {
         form.setFieldMeta(fieldName, (old: unknown) => {
           const rec = (old || {}) as Record<string, unknown>;
           const errMap =
-            (rec['errorMap'] as Record<string, unknown> | undefined) ?? {};
+            (rec["errorMap"] as Record<string, unknown> | undefined) ?? {};
 
           return {
             ...rec,

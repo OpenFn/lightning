@@ -1,8 +1,7 @@
-import type { Monaco } from '@monaco-editor/react';
 import jp from 'jsonpath';
-import { languages, editor } from 'monaco-editor';
 import type ts from 'typescript';
-
+import { languages, editor } from 'monaco-editor';
+import type { Monaco } from '@monaco-editor/react';
 import type { ModelNode } from '../metadata-explorer/Model';
 
 const ensureArray = (x: any) => (Array.isArray(x) ? x : [x]);
@@ -76,7 +75,7 @@ const createCompletionProvider = (
   const lookupPropertySuggestions = (jsonPath: string) => {
     const suggestions = query(jsonPath).map(
       (prop: ModelNode): languages.CompletionItem => {
-        const label = prop.label || prop.name;
+        const label = `${prop.label || prop.name}`;
         return {
           // https://microsoft.github.io/monaco-editor/api/interfaces/monaco.languages.CompletionItem.html#kind
           label,

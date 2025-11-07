@@ -5,6 +5,7 @@ import {
   type StrictMode as ReactStrictMode,
   type Suspense as ReactSuspense,
 } from 'react';
+
 import {
   ContextConsumer,
   ContextProvider,

@@ -17,9 +17,9 @@ const model = (model: Flow.Model, isManualLayout = false) => {
   model.nodes.forEach(node => {
     const wfNode: Partial<Lightning.JobNode> = {
       id: node.id,
-      name: node.data.name,
-      body: node.data.body,
-      adaptor: node.data.adaptor,
+      name: node.data?.name,
+      body: node.data?.body,
+      adaptor: node.data?.adaptor,
       // TODO workflow id?
     };
 

@@ -211,7 +211,7 @@ export const createWorkflowStore = () => {
   const listeners = new Set<() => void>();
 
   // Debounce state for setClientErrors
-  const debounceTimeouts = new Map<string, NodeJS.Timeout>();
+  let debounceTimeouts = new Map<string, NodeJS.Timeout>();
 
   // Redux DevTools integration (development/test only)
   const devtools = wrapStoreWithDevTools<Workflow.State>({

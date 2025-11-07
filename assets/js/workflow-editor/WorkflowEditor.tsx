@@ -1,10 +1,8 @@
-import React from 'react';
-import tippy, { type Placement } from 'tippy.js';
-
 import type { WithActionProps } from '#/react/lib/with-props';
-
+import React from 'react';
 import WorkflowDiagram from '../workflow-diagram/WorkflowDiagram';
 import { RUNS_TMP, useWorkflowStore } from '../workflow-store/store';
+import tippy, { type Placement } from 'tippy.js';
 
 export const WorkflowEditor: WithActionProps<{
   selection: string;
@@ -14,20 +12,19 @@ export const WorkflowEditor: WithActionProps<{
   snapshotVersionTag?: string;
   aiAssistantEnabled?: boolean;
   liveAction?: string;
-}> = props => {
+}> = (props) => {
   const { getItem, forceFit, updateRuns } = useWorkflowStore();
 
   React.useEffect(() => {
     const globalMouseEnterHandler = (e: MouseEvent<HTMLElement>) => {
       const target = e.target as HTMLElement;
       const content = target.dataset['tooltip'];
-      const placement: Placement =
-        target.dataset['tooltipPlacement'] || 'right';
+      const placement: Placement = target.dataset['tooltipPlacement'] || "right";
       if (content) {
         let tp: ReturnType<typeof tippy>[number] | undefined = target._tippy;
         if (tp) {
           tp.setContent(content);
-          tp.setProps({ placement });
+          tp.setProps({ placement })
         } else {
           tp = tippy(target, {
             content: content,
@@ -37,11 +34,9 @@ export const WorkflowEditor: WithActionProps<{
           });
         }
       }
-    };
-    window.addEventListener('mouseover', globalMouseEnterHandler);
-    return () => {
-      window.removeEventListener('mouseover', globalMouseEnterHandler);
-    };
+    }
+    window.addEventListener("mouseover", globalMouseEnterHandler);
+    return () => { window.removeEventListener("mouseover", globalMouseEnterHandler) };
   }, []);
 
   const onSelectionChange = (id?: string) => {
@@ -81,9 +76,9 @@ export const WorkflowEditor: WithActionProps<{
     const nextUrl = new URL(currentUrl);
     nextUrl.searchParams.set('a', id);
     nextUrl.searchParams.set('v', version.toString());
-    nextUrl.searchParams.set('m', 'history');
+    nextUrl.searchParams.set('m', 'history')
     props.navigate(nextUrl.toString());
-  };
+  }
 
   const onCollapseHistory = () => {
     // remove run steps from the store
@@ -96,7 +91,7 @@ export const WorkflowEditor: WithActionProps<{
     nextUrl.searchParams.delete('v');
     nextUrl.searchParams.delete('m');
     props.navigate(nextUrl.toString());
-  };
+  }
 
   return (
     <WorkflowDiagram

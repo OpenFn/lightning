@@ -1,18 +1,18 @@
-import type { useProjectRepoConnection } from '#/collaborative-editor/hooks/useSessionContext';
-import { useURLState } from '#/react/lib/use-url-state';
-import { buildClassicalEditorUrl } from '#/utils/editorUrlConversion';
+import type { useProjectRepoConnection } from "#/collaborative-editor/hooks/useSessionContext";
+import { useURLState } from "#/react/lib/use-url-state";
+import { buildClassicalEditorUrl } from "#/utils/editorUrlConversion";
 
-import { HOTKEY_SCOPES } from '../../constants/hotkeys';
-import { useRunRetryShortcuts } from '../../hooks/useRunRetryShortcuts';
-import { useIsNewWorkflow } from '../../hooks/useSessionContext';
-import { useVersionSelect } from '../../hooks/useVersionSelect';
-import { ActiveCollaborators } from '../ActiveCollaborators';
-import { AdaptorDisplay } from '../AdaptorDisplay';
-import { Button } from '../Button';
-import { SaveButton } from '../Header';
-import { RunRetryButton } from '../RunRetryButton';
-import { Tooltip } from '../Tooltip';
-import { VersionDropdown } from '../VersionDropdown';
+import { HOTKEY_SCOPES } from "../../constants/hotkeys";
+import { useIsNewWorkflow } from "../../hooks/useSessionContext";
+import { useVersionSelect } from "../../hooks/useVersionSelect";
+import { useRunRetryShortcuts } from "../../hooks/useRunRetryShortcuts";
+import { ActiveCollaborators } from "../ActiveCollaborators";
+import { AdaptorDisplay } from "../AdaptorDisplay";
+import { Button } from "../Button";
+import { SaveButton } from "../Header";
+import { RunRetryButton } from "../RunRetryButton";
+import { Tooltip } from "../Tooltip";
+import { VersionDropdown } from "../VersionDropdown";
 
 interface IDEHeaderProps {
   jobId: string;
@@ -127,8 +127,8 @@ export function IDEHeader({
               href={(() => {
                 // Build URL with current job selected and inspector open
                 const params = new URLSearchParams(searchParams);
-                params.set('job', jobId);
-                params.set('panel', 'editor');
+                params.set("job", jobId);
+                params.set("panel", "editor");
 
                 return buildClassicalEditorUrl({
                   projectId,
@@ -160,9 +160,9 @@ export function IDEHeader({
                   onRun={onRun}
                   onRetry={onRetry}
                   buttonText={{
-                    run: 'Run',
-                    retry: 'Run (retry)',
-                    processing: 'Processing',
+                    run: "Run",
+                    retry: "Run (retry)",
+                    processing: "Processing",
                   }}
                   variant="secondary"
                   dropdownPosition="down"
@@ -177,9 +177,9 @@ export function IDEHeader({
               onRun={onRun}
               onRetry={onRetry}
               buttonText={{
-                run: 'Run',
-                retry: 'Run (retry)',
-                processing: 'Processing',
+                run: "Run",
+                retry: "Run (retry)",
+                processing: "Processing",
               }}
               variant="secondary"
               dropdownPosition="down"

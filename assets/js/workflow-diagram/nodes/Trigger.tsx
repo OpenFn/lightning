@@ -1,12 +1,11 @@
-import { ClockIcon, GlobeAltIcon } from '@heroicons/react/24/outline';
-import { Position } from '@xyflow/react';
-import cronstrue from 'cronstrue';
 import { memo } from 'react';
-
+import { Position } from '@xyflow/react';
+import { ClockIcon, GlobeAltIcon } from '@heroicons/react/24/outline';
 import { kafkaIcon, lockClosedIcon } from '../components/trigger-icons';
-import type { Lightning } from '../types';
+import cronstrue from 'cronstrue';
 
 import Node from './Node';
+import type { Lightning } from '../types';
 
 type TriggerMeta = {
   label: string;

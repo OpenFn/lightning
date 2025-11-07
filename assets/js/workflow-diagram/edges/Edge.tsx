@@ -1,5 +1,4 @@
 import { BezierEdge, type EdgeProps, EdgeLabelRenderer } from '@xyflow/react';
-
 import { edgeLabelStyles } from '../styles';
 
 const CustomEdge: React.FC<EdgeProps<{ enabled?: boolean }>> = props => {
@@ -13,7 +12,7 @@ const CustomEdge: React.FC<EdgeProps<{ enabled?: boolean }>> = props => {
   return (
     <>
       {/* Curvature does nothing?? */}
-      <BezierEdge {...stepEdgeProps} pathOptions={{ curvature: 0.4 }} />
+      <BezierEdge {...stepEdgeProps} pathOptions={{ curvature: .4 }} />
       {label && (
         <EdgeLabelRenderer>
           <div

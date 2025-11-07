@@ -1,7 +1,6 @@
 import { type PhoenixHook } from '../hooks/PhoenixHook';
-
-import { mount } from './component';
 import { createLogStore, type LogLine } from './store';
+import { mount } from './component';
 
 type LogViewer = PhoenixHook<{
   component: ReturnType<typeof mount> | null;

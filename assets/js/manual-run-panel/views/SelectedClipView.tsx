@@ -1,11 +1,10 @@
+import React from 'react';
+import { DataclipViewer } from '../../react/components/DataclipViewer';
 import { DocumentTextIcon, XMarkIcon } from '@heroicons/react/24/outline';
 import { ClockIcon } from '@heroicons/react/24/solid';
-import React from 'react';
-
-import { DataclipViewer } from '../../react/components/DataclipViewer';
+import Pill from '../Pill';
 import formatDate from '../../utils/formatDate';
 import DataclipTypePill from '../DataclipTypePill';
-import Pill from '../Pill';
 import type { Dataclip } from '../types';
 
 interface SelectedClipViewProps {

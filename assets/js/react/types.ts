@@ -1,4 +1,5 @@
 import type { View } from 'phoenix_live_view';
+
 import type * as ReactDOMClient from 'react-dom/client';
 
 import type { PhoenixHook } from '#/hooks/PhoenixHook';

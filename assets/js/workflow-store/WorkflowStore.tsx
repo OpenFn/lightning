@@ -1,10 +1,5 @@
-import React from 'react';
-
 import type { WithActionProps } from '#/react/lib/with-props';
-
-import { randomUUID } from '../common';
-import { DEFAULT_TEXT } from '../editor/Editor';
-
+import React from 'react';
 import {
   useWorkflowStore,
   type ChangeArgs,
@@ -14,12 +9,14 @@ import {
   type WorkflowProps,
   type WorkflowRunHistory,
 } from './store';
+import { randomUUID } from '../common';
+import { DEFAULT_TEXT } from '../editor/Editor';
 
 const createNewWorkflow = (): Required<ChangeArgs> => {
   const triggers = [
     {
       id: randomUUID(),
-      type: 'webhook' as const,
+      type: 'webhook' as 'webhook',
     },
   ];
   const jobs = [
@@ -54,7 +51,7 @@ export const WorkflowStore: WithActionProps = props => {
     setDisabled,
     setForceFit,
     reset,
-    updateRuns,
+    updateRuns
   } = useWorkflowStore();
 
   const pushPendingChange = React.useCallback(
@@ -64,7 +61,7 @@ export const WorkflowStore: WithActionProps = props => {
         // How do we _undo_ the change if it fails?
         props.pushEventTo('push-change', pendingChange, response => {
           console.debug('push-change response', response);
-
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
           if (response && response.patches)
             applyPatches({
               patches: response.patches || [],
@@ -97,7 +94,7 @@ export const WorkflowStore: WithActionProps = props => {
       'patches-applied',
       (response: Partial<ReplayAction>) => {
         console.debug('patches-applied', response);
-        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unnecessary-condition
         if (response && response.patches && response.patches.length)
           applyPatches({
             patches: response.patches || [],
@@ -112,7 +109,7 @@ export const WorkflowStore: WithActionProps = props => {
       'state-applied',
       (response: { state: WorkflowProps }) => {
         console.log('state-applied', response.state);
-        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unnecessary-condition
         if (response.state)
           setState({
             ...response.state,
@@ -140,13 +137,10 @@ export const WorkflowStore: WithActionProps = props => {
   }, [add, props.handleEvent, setSelection, setForceFit]);
 
   React.useEffect(() => {
-    return props.handleEvent(
-      'patch-runs',
-      (response: { run_id: string; run_steps: RunInfo }) => {
-        updateRuns(response.run_steps, response.run_id);
-      }
-    );
-  }, [props.handleEvent, updateRuns]);
+    return props.handleEvent('patch-runs', (response: { run_id: string, run_steps: RunInfo }) => {
+      updateRuns(response.run_steps, response.run_id);
+    })
+  }, [props.handleEvent, updateRuns])
 
   // Fetch initial state once on mount
   React.useEffect(() => {
@@ -161,12 +155,7 @@ export const WorkflowStore: WithActionProps = props => {
     props.pushEventTo(
       'get-current-state',
       {},
-      (response: {
-        workflow_params: WorkflowProps;
-        run_steps: RunInfo;
-        run_id: string | null;
-        history: WorkflowRunHistory;
-      }) => {
+      (response: { workflow_params: WorkflowProps, run_steps: RunInfo, run_id: string | null, history: WorkflowRunHistory }) => {
         const { workflow_params, run_steps, run_id, history } = response;
         // workflow_params can contain an empty array of nodes and edges (empty workflow)
         setState(workflow_params);

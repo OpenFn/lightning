@@ -1,58 +1,58 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useHotkeys, useHotkeysContext } from 'react-hotkeys-hook';
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useHotkeys, useHotkeysContext } from "react-hotkeys-hook";
 import {
   type ImperativePanelHandle,
   Panel,
   PanelGroup,
   PanelResizeHandle,
-} from 'react-resizable-panels';
+} from "react-resizable-panels";
 
-import { useUICommands } from '#/collaborative-editor/hooks/useUI';
-import { cn } from '#/utils/cn';
+import { cn } from "#/utils/cn";
 
-import { useURLState } from '../../../react/lib/use-url-state';
-import * as dataclipApi from '../../api/dataclips';
-import type { Dataclip } from '../../api/dataclips';
-import { HOTKEY_SCOPES } from '../../constants/hotkeys';
-import { RENDER_MODES } from '../../constants/panel';
-import { useLiveViewActions } from '../../contexts/LiveViewActionsContext';
-import { useProjectAdaptors } from '../../hooks/useAdaptors';
-import {
-  useCredentials,
-  useCredentialsCommands,
-} from '../../hooks/useCredentials';
+import { useURLState } from "../../../react/lib/use-url-state";
+import * as dataclipApi from "../../api/dataclips";
+import type { Dataclip } from "../../api/dataclips";
+import { RENDER_MODES } from "../../constants/panel";
+import { HOTKEY_SCOPES } from "../../constants/hotkeys";
 import {
   useCurrentRun,
   useRunActions,
   useRunStoreInstance,
-} from '../../hooks/useRun';
-import { useRunRetry } from '../../hooks/useRunRetry';
-import { useSession } from '../../hooks/useSession';
+} from "../../hooks/useRun";
+import { useLiveViewActions } from "../../contexts/LiveViewActionsContext";
+import { useProjectAdaptors } from "../../hooks/useAdaptors";
+import {
+  useCredentials,
+  useCredentialsCommands,
+} from "../../hooks/useCredentials";
+import { useSession } from "../../hooks/useSession";
+import { useRunRetry } from "../../hooks/useRunRetry";
 import {
   useLatestSnapshotLockVersion,
   useProject,
   useProjectRepoConnection,
-} from '../../hooks/useSessionContext';
+} from "../../hooks/useSessionContext";
 import {
   useCanRun,
   useCanSave,
   useCurrentJob,
   useWorkflowActions,
   useWorkflowState,
-} from '../../hooks/useWorkflow';
-import { notifications } from '../../lib/notifications';
-import { AdaptorSelectionModal } from '../AdaptorSelectionModal';
-import { CollaborativeMonaco } from '../CollaborativeMonaco';
-import { ConfigureAdaptorModal } from '../ConfigureAdaptorModal';
-import { ManualRunPanel } from '../ManualRunPanel';
-import { ManualRunPanelErrorBoundary } from '../ManualRunPanelErrorBoundary';
-import { RunViewerErrorBoundary } from '../run-viewer/RunViewerErrorBoundary';
-import { RunViewerPanel } from '../run-viewer/RunViewerPanel';
-import { SandboxIndicatorBanner } from '../SandboxIndicatorBanner';
-import { Tabs } from '../Tabs';
+} from "../../hooks/useWorkflow";
+import { notifications } from "../../lib/notifications";
+import { AdaptorSelectionModal } from "../AdaptorSelectionModal";
+import { CollaborativeMonaco } from "../CollaborativeMonaco";
+import { ConfigureAdaptorModal } from "../ConfigureAdaptorModal";
+import { ManualRunPanel } from "../ManualRunPanel";
+import { ManualRunPanelErrorBoundary } from "../ManualRunPanelErrorBoundary";
+import { RunViewerPanel } from "../run-viewer/RunViewerPanel";
+import { RunViewerErrorBoundary } from "../run-viewer/RunViewerErrorBoundary";
+import { SandboxIndicatorBanner } from "../SandboxIndicatorBanner";
+import { Tabs } from "../Tabs";
 
-import { IDEHeader } from './IDEHeader';
-import { PanelToggleButton } from './PanelToggleButton';
+import { IDEHeader } from "./IDEHeader";
+import { PanelToggleButton } from "./PanelToggleButton";
+import { useUICommands } from "#/collaborative-editor/hooks/useUI";
 
 /**
  * Resolves an adaptor specifier into its package name and version
@@ -103,10 +103,10 @@ export function FullScreenIDE({
   parentProjectName,
 }: FullScreenIDEProps) {
   const { searchParams, updateSearchParams } = useURLState();
-  const jobIdFromURL = searchParams.get('job');
+  const jobIdFromURL = searchParams.get("job");
   // Support both 'run' (collaborative) and 'a' (classical) parameter for run ID
-  const runIdFromURL = searchParams.get('run') || searchParams.get('a');
-  const stepIdFromURL = searchParams.get('step');
+  const runIdFromURL = searchParams.get("run") || searchParams.get("a");
+  const stepIdFromURL = searchParams.get("step");
   const { selectJob, saveWorkflow } = useWorkflowActions();
   const { selectStep } = useRunActions();
   const { job: currentJob, ytext: currentJobYText } = useCurrentJob();
@@ -151,9 +151,9 @@ export function FullScreenIDE({
   const [followRunId, setFollowRunId] = useState<string | null>(null);
   const [selectedDataclipState, setSelectedDataclipState] = useState<any>(null);
   const [selectedTab, setSelectedTab] = useState<
-    'empty' | 'custom' | 'existing'
-  >('empty');
-  const [customBody, setCustomBody] = useState('');
+    "empty" | "custom" | "existing"
+  >("empty");
+  const [customBody, setCustomBody] = useState("");
   const [manuallyUnselectedDataclip, setManuallyUnselectedDataclip] =
     useState(false);
 
@@ -171,8 +171,8 @@ export function FullScreenIDE({
       // If a dataclip was created (from custom body), select it and switch to existing tab
       if (dataclip) {
         setSelectedDataclipState(dataclip);
-        setSelectedTab('existing');
-        setCustomBody('');
+        setSelectedTab("existing");
+        setCustomBody("");
       }
 
       if (rightPanelRef.current?.isCollapsed()) {
@@ -183,10 +183,10 @@ export function FullScreenIDE({
   );
 
   const runContext = jobIdFromURL
-    ? { type: 'job' as const, id: jobIdFromURL }
+    ? { type: "job" as const, id: jobIdFromURL }
     : {
-        type: 'trigger' as const,
-        id: workflow?.triggers[0]?.id || '',
+        type: "trigger" as const,
+        id: workflow?.triggers[0]?.id || "",
       };
 
   const currentRun = useCurrentRun();
@@ -197,7 +197,7 @@ export function FullScreenIDE({
   }, [currentRun, jobIdFromURL]);
 
   useEffect(() => {
-    const runId = searchParams.get('run');
+    const runId = searchParams.get("run");
     if (runId && runId !== followRunId) {
       setManuallyUnselectedDataclip(false);
     }
@@ -221,7 +221,7 @@ export function FullScreenIDE({
       return;
     }
 
-    const runId = searchParams.get('run') || searchParams.get('a');
+    const runId = searchParams.get("run") || searchParams.get("a");
     if (!runId) {
       return;
     }
@@ -239,7 +239,7 @@ export function FullScreenIDE({
           setManuallyUnselectedDataclip(false);
         }
       } catch (error) {
-        console.error('Failed to fetch dataclip for retry:', error);
+        console.error("Failed to fetch dataclip for retry:", error);
       }
     };
 
@@ -260,8 +260,8 @@ export function FullScreenIDE({
     runIsProcessing,
     canRun: canRunFromHook,
   } = useRunRetry({
-    projectId: projectId || '',
-    workflowId: workflowId || '',
+    projectId: projectId || "",
+    workflowId: workflowId || "",
     runContext,
     selectedTab,
     selectedDataclip: selectedDataclipState,
@@ -274,18 +274,18 @@ export function FullScreenIDE({
     workflowEdges: workflow?.edges || [],
   });
 
-  type RightPanelTab = 'run' | 'log' | 'input' | 'output';
-  const [activeRightTab, setActiveRightTab] = useState<RightPanelTab>('run');
+  type RightPanelTab = "run" | "log" | "input" | "output";
+  const [activeRightTab, setActiveRightTab] = useState<RightPanelTab>("run");
 
   useEffect(() => {
     if (activeRightTab) {
-      localStorage.setItem('lightning.ide-run-viewer-tab', activeRightTab);
+      localStorage.setItem("lightning.ide-run-viewer-tab", activeRightTab);
     }
   }, [activeRightTab]);
 
   useEffect(() => {
-    const savedTab = localStorage.getItem('lightning.ide-run-viewer-tab');
-    if (savedTab && ['run', 'log', 'input', 'output'].includes(savedTab)) {
+    const savedTab = localStorage.getItem("lightning.ide-run-viewer-tab");
+    if (savedTab && ["run", "log", "input", "output"].includes(savedTab)) {
       setActiveRightTab(savedTab as RightPanelTab);
     }
   }, []);
@@ -344,7 +344,7 @@ export function FullScreenIDE({
   const handleSave = () => {
     if (!canSave) {
       notifications.alert({
-        title: 'Cannot save',
+        title: "Cannot save",
         description: tooltipMessage,
       });
       return;
@@ -365,7 +365,7 @@ export function FullScreenIDE({
     (adaptorName: string) => {
       setIsConfigureModalOpen(false);
       setIsCredentialModalOpen(true);
-      pushEvent('open_credential_modal', { schema: adaptorName });
+      pushEvent("open_credential_modal", { schema: adaptorName });
     },
     [pushEvent]
   );
@@ -393,11 +393,11 @@ export function FullScreenIDE({
 
       // Get current version from job
       const { version: currentVersion } = resolveAdaptor(
-        currentJob.adaptor || '@openfn/language-common@latest'
+        currentJob.adaptor || "@openfn/language-common@latest"
       );
 
       // Build new adaptor string with current version
-      const newAdaptor = `${adaptorPackage}@${currentVersion || 'latest'}`;
+      const newAdaptor = `${adaptorPackage}@${currentVersion || "latest"}`;
 
       // Persist to Y.Doc
       updateJob(currentJob.id, { adaptor: newAdaptor });
@@ -412,7 +412,7 @@ export function FullScreenIDE({
 
       // Get current adaptor package from job
       const { package: adaptorPackage } = resolveAdaptor(
-        currentJob.adaptor || '@openfn/language-common@latest'
+        currentJob.adaptor || "@openfn/language-common@latest"
       );
 
       // Build new adaptor string with new version
@@ -468,20 +468,20 @@ export function FullScreenIDE({
         setIsConfigureModalOpen(true);
       }, 200);
       setTimeout(() => {
-        pushEvent('close_credential_modal_complete', {});
+        pushEvent("close_credential_modal_complete", {});
       }, 500);
     };
 
-    const element = document.getElementById('collaborative-editor-react');
-    element?.addEventListener('close_credential_modal', handleModalClose);
+    const element = document.getElementById("collaborative-editor-react");
+    element?.addEventListener("close_credential_modal", handleModalClose);
 
     return () => {
-      element?.removeEventListener('close_credential_modal', handleModalClose);
+      element?.removeEventListener("close_credential_modal", handleModalClose);
     };
   }, [pushEvent]);
 
   useEffect(() => {
-    const cleanup = handleEvent('credential_saved', (payload: any) => {
+    const cleanup = handleEvent("credential_saved", (payload: any) => {
       if (!currentJob) return;
 
       setIsCredentialModalOpen(false);
@@ -507,10 +507,10 @@ export function FullScreenIDE({
   }, [handleEvent, currentJob, updateJob, requestCredentials]);
 
   useHotkeys(
-    'escape',
+    "escape",
     event => {
       const activeElement = document.activeElement;
-      const isMonacoFocused = activeElement?.closest('.monaco-editor');
+      const isMonacoFocused = activeElement?.closest(".monaco-editor");
 
       if (isMonacoFocused) {
         (activeElement as HTMLElement).blur();
@@ -638,7 +638,7 @@ export function FullScreenIDE({
               {/* Panel heading */}
               <div
                 className={`shrink-0 transition-transform ${
-                  isLeftCollapsed ? 'rotate-90' : ''
+                  isLeftCollapsed ? "rotate-90" : ""
                 }`}
               >
                 <div className="flex items-center justify-between px-3 py-1">
@@ -673,8 +673,8 @@ export function FullScreenIDE({
               {workflow && projectId && workflowId && (
                 <div
                   className={cn(
-                    'flex-1 overflow-hidden bg-white',
-                    isLeftCollapsed && 'hidden'
+                    "flex-1 overflow-hidden bg-white",
+                    isLeftCollapsed && "hidden"
                   )}
                 >
                   <ManualRunPanelErrorBoundary
@@ -724,7 +724,7 @@ export function FullScreenIDE({
               {/* Panel heading */}
               <div
                 className={`shrink-0 border-b border-gray-100 transition-transform ${
-                  isCenterCollapsed ? 'rotate-90' : ''
+                  isCenterCollapsed ? "rotate-90" : ""
                 }`}
               >
                 <div className="flex items-center justify-between px-3 py-1">
@@ -761,14 +761,14 @@ export function FullScreenIDE({
                   <CollaborativeMonaco
                     ytext={currentJobYText}
                     awareness={awareness}
-                    adaptor={currentJob.adaptor || 'common'}
+                    adaptor={currentJob.adaptor || "common"}
                     disabled={!canSave}
                     className="h-full w-full"
                     options={{
                       automaticLayout: true,
                       minimap: { enabled: true },
-                      lineNumbers: 'on',
-                      wordWrap: 'on',
+                      lineNumbers: "on",
+                      wordWrap: "on",
                     }}
                   />
                 </div>
@@ -797,7 +797,7 @@ export function FullScreenIDE({
               {/* Panel heading with tabs */}
               <div
                 className={`shrink-0 transition-transform ${
-                  isRightCollapsed ? 'rotate-90' : ''
+                  isRightCollapsed ? "rotate-90" : ""
                 }`}
               >
                 <div className="flex items-center justify-between px-3 py-1">
@@ -810,10 +810,10 @@ export function FullScreenIDE({
                           onChange={setActiveRightTab}
                           variant="underline"
                           options={[
-                            { value: 'run', label: 'Run' },
-                            { value: 'log', label: 'Log' },
-                            { value: 'input', label: 'Input' },
-                            { value: 'output', label: 'Output' },
+                            { value: "run", label: "Run" },
+                            { value: "log", label: "Log" },
+                            { value: "input", label: "Input" },
+                            { value: "output", label: "Output" },
                           ]}
                         />
                       </div>
@@ -868,13 +868,13 @@ export function FullScreenIDE({
             onOpenCredentialModal={handleOpenCredentialModal}
             currentAdaptor={
               resolveAdaptor(
-                currentJob.adaptor || '@openfn/language-common@latest'
-              ).package || '@openfn/language-common'
+                currentJob.adaptor || "@openfn/language-common@latest"
+              ).package || "@openfn/language-common"
             }
             currentVersion={
               resolveAdaptor(
-                currentJob.adaptor || '@openfn/language-common@latest'
-              ).version || 'latest'
+                currentJob.adaptor || "@openfn/language-common@latest"
+              ).version || "latest"
             }
             currentCredentialId={
               currentJob.project_credential_id ||

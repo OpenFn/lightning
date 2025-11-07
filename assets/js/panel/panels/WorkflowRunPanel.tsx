@@ -1,12 +1,10 @@
-import React from 'react';
-
-import type { WithActionProps } from '#/react/lib/with-props';
-
-import useQuery from '../../hooks/useQuery';
 import { ManualRunPanel } from '../../manual-run-panel/ManualRunPanel';
+import type { WithActionProps } from '#/react/lib/with-props';
+import { Panel } from '../Panel';
 import type { Dataclip } from '../../manual-run-panel/types';
 import type { RunStep } from '../../workflow-store/store';
-import { Panel } from '../Panel';
+import useQuery from '../../hooks/useQuery';
+import React from 'react';
 
 interface ManualRunBody {
   manual: {

@@ -1,13 +1,12 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from "react";
 
-import { mount as mountLogViewer } from '../../../log-viewer/component';
-import { createLogStore } from '../../../log-viewer/store';
-import { channelRequest } from '../../hooks/useChannel';
-import { useCurrentRun, useSelectedStepId } from '../../hooks/useRun';
-import { useSession } from '../../hooks/useSession';
-
-import { LogLevelFilter } from './LogLevelFilter';
-import { StepViewerLayout } from './StepViewerLayout';
+import { mount as mountLogViewer } from "../../../log-viewer/component";
+import { createLogStore } from "../../../log-viewer/store";
+import { channelRequest } from "../../hooks/useChannel";
+import { useCurrentRun, useSelectedStepId } from "../../hooks/useRun";
+import { useSession } from "../../hooks/useSession";
+import { LogLevelFilter } from "./LogLevelFilter";
+import { StepViewerLayout } from "./StepViewerLayout";
 
 export function LogTabPanel() {
   const run = useCurrentRun();
@@ -22,13 +21,13 @@ export function LogTabPanel() {
   const mountedRef = useRef(false);
 
   // Track log level state from store
-  const [logLevel, setLogLevel] = useState<'debug' | 'info' | 'warn' | 'error'>(
+  const [logLevel, setLogLevel] = useState<"debug" | "info" | "warn" | "error">(
     () => storeRef.current.getState().desiredLogLevel as any
   );
 
   // Handle log level change
   const handleLogLevelChange = (
-    newLevel: 'debug' | 'info' | 'warn' | 'error'
+    newLevel: "debug" | "info" | "warn" | "error"
   ) => {
     storeRef.current.getState().setDesiredLogLevel(newLevel);
     setLogLevel(newLevel);
@@ -52,7 +51,7 @@ export function LogTabPanel() {
         storeRef.current
       );
     } catch (error) {
-      console.error('[LogTabPanel] Failed to mount log viewer:', error);
+      console.error("[LogTabPanel] Failed to mount log viewer:", error);
       mountedRef.current = false;
     }
 
@@ -77,14 +76,14 @@ export function LogTabPanel() {
     const channel = channels?.find((ch: any) => ch.topic === `run:${run.id}`);
 
     if (!channel) {
-      console.warn('[LogTabPanel] Run channel not found for logs', {
+      console.warn("[LogTabPanel] Run channel not found for logs", {
         runId: run.id,
       });
       return undefined;
     }
 
     // Fetch initial logs
-    void channelRequest<{ logs: unknown }>(channel, 'fetch:logs', {})
+    void channelRequest<{ logs: unknown }>(channel, "fetch:logs", {})
       .then(response => {
         if (!response.logs || !Array.isArray(response.logs)) {
           return;
@@ -94,7 +93,7 @@ export function LogTabPanel() {
         logStore.addLogLines(response.logs as any);
       })
       .catch(error => {
-        console.error('[LogTabPanel] Failed to fetch logs', error);
+        console.error("[LogTabPanel] Failed to fetch logs", error);
       });
 
     // Listen for new logs
@@ -103,10 +102,10 @@ export function LogTabPanel() {
       logStore.addLogLines(payload.logs as any);
     };
 
-    channel.on('logs', logHandler);
+    channel.on("logs", logHandler);
 
     return () => {
-      channel.off('logs', logHandler);
+      channel.off("logs", logHandler);
     };
   }, [run, provider]);
 

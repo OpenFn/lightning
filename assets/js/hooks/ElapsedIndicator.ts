@@ -31,7 +31,7 @@ const ElapsedIndicator = {
 
     if (startTime) {
       // select the appropriate unit based on elapsed time
-      const elapsedTime = (finishTime || Date.now()) - startTime; // in milliseconds
+      let elapsedTime = (finishTime || Date.now()) - startTime; // in milliseconds
       const [elapsedTimeNum, elapsedTimeUnit] = formatParts(elapsedTime);
 
       this.el.innerText = `${elapsedTimeNum} ${elapsedTimeUnit}`;

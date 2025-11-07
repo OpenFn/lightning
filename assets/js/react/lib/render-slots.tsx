@@ -1,5 +1,6 @@
-import type { View } from 'phoenix_live_view';
 import warning from 'tiny-warning';
+
+import type { View } from 'phoenix_live_view';
 
 import { Slot, type SlotProps } from '#/react/components';
 

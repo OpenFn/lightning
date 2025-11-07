@@ -2,7 +2,6 @@ import type { ReactNode } from 'react';
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
 
 import { useCurrentRun, useRunStoreInstance } from '../../hooks/useRun';
-
 import { StepList } from './StepList';
 
 interface StepViewerLayoutProps {

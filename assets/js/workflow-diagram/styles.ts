@@ -6,7 +6,6 @@
  * if it's going to help yet
  */
 import type { RunStep } from '../workflow-store/store';
-
 import type { Flow } from './types';
 
 export const EDGE_COLOR = '#b1b1b7';
@@ -19,7 +18,7 @@ export const EDGE_COLOR_SELECTED_DISABLED = '#bdbaf3';
 
 export const ERROR_COLOR = '#ef4444';
 
-export const edgeLabelIconStyles = (type?: string) => ({
+export const edgeLabelIconStyles = (type?: string | undefined) => ({
   fontSize: 24,
   fontWeight: 700,
   display: 'flex',
@@ -100,7 +99,7 @@ export const edgeLabelStyles = (
 };
 
 export const styleItem = (item: Flow.Edge | Flow.Node) => {
-  const edge = item as Flow.Edge;
+  let edge = item as Flow.Edge;
   if (edge.target && edge.source) {
     return styleEdge(edge);
   }
@@ -110,7 +109,7 @@ export const styleItem = (item: Flow.Edge | Flow.Node) => {
 export const styleNode = (node: Flow.Node) => {
   const { data } = node;
 
-  if (data.enabled == false) {
+  if (data?.enabled == false) {
     node.style = {
       opacity: 0.5,
     };
@@ -123,8 +122,8 @@ export const styleEdge = (edge: Flow.Edge) => {
   const primaryColor = edge.selected
     ? EDGE_COLOR_SELECTED
     : edge.data?.neighbour
-      ? EDGE_COLOR_NEIGHBOUR
-      : EDGE_COLOR;
+    ? EDGE_COLOR_NEIGHBOUR
+    : EDGE_COLOR;
   const hasErrors =
     typeof edge.data?.errors === 'object' &&
     Object.values(edge.data.errors).some(errorArray => errorArray.length > 0);
@@ -189,8 +188,8 @@ export const nodeIconStyles = (
   const primaryColor = selected
     ? EDGE_COLOR_SELECTED
     : runReason
-      ? getNodeBorderColor(runReason)
-      : EDGE_COLOR;
+    ? getNodeBorderColor(runReason)
+    : EDGE_COLOR;
   return {
     width: size,
     height: size,
