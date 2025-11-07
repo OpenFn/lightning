@@ -9,6 +9,7 @@ import { useURLState } from "../../../react/lib/use-url-state";
 import { HOTKEY_SCOPES } from "../../constants/hotkeys";
 import type { Workflow } from "../../types/workflow";
 
+import { CodeViewPanel } from "./CodeViewPanel";
 import { EdgeInspector } from "./EdgeInspector";
 import { InspectorLayout } from "./InspectorLayout";
 import { JobInspector } from "./JobInspector";
@@ -41,16 +42,18 @@ export function Inspector({
 
   const hasSelectedNode = currentNode.node && currentNode.type;
 
-  // Settings panel takes precedence, then node inspector
+  // Settings and code panels take precedence, then node inspector
   const mode =
     searchParams.get("panel") === "settings"
       ? "settings"
-      : hasSelectedNode
-        ? "node"
-        : null;
+      : searchParams.get("panel") === "code"
+        ? "code"
+        : hasSelectedNode
+          ? "node"
+          : null;
 
   const handleClose = () => {
-    if (mode === "settings") {
+    if (mode === "settings" || mode === "code") {
       updateSearchParams({ panel: null });
     } else {
       onClose(); // Clears node selection
@@ -78,6 +81,15 @@ export function Inspector({
     return (
       <InspectorLayout title="Workflow settings" onClose={handleClose}>
         <WorkflowSettings />
+      </InspectorLayout>
+    );
+  }
+
+  // Code view mode
+  if (mode === "code") {
+    return (
+      <InspectorLayout title="Workflow as Code" onClose={handleClose}>
+        <CodeViewPanel />
       </InspectorLayout>
     );
   }
