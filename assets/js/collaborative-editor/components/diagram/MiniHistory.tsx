@@ -137,9 +137,10 @@ export default function MiniHistory({
     const wIdx = paths.indexOf('w');
     const workflowPaths = paths.splice(wIdx, paths.length - wIdx);
     nextUrl.pathname = paths.join('/') + `/history`;
-    nextUrl.search = `?filters[workflow_id]=${
-      workflowPaths[workflowPaths.length - 1]
-    }`;
+    // Extract workflow ID: /w/:id or /w/:id/collaborate
+    // workflowPaths = ["w", workflow_id] or ["w", workflow_id, "collaborate"]
+    const workflowId = workflowPaths[1];
+    nextUrl.search = `?filters[workflow_id]=${workflowId}`;
     window.location.assign(nextUrl.toString());
   };
 
