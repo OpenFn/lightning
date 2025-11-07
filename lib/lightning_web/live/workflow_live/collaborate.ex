@@ -153,7 +153,6 @@ defmodule LightningWeb.WorkflowLive.Collaborate do
         action={:new}
         webhook_auth_method={@webhook_auth_method}
         current_user={@current_user}
-        show_existing_credentials={false}
         on_close={
           JS.dispatch("close_webhook_auth_modal", to: "#collaborative-editor-react")
         }
@@ -228,20 +227,13 @@ defmodule LightningWeb.WorkflowLive.Collaborate do
     # Broadcast webhook auth methods update to all connected clients
     broadcast_webhook_auth_methods_update(socket)
 
-    socket = push_event(socket, "webhook_auth_method_saved", %{})
-
-    # Update server state to close the modal
-    send(self(), :close_webhook_auth_modal_after_save)
-
-    {:noreply, socket}
-  end
-
-  def handle_info(:close_webhook_auth_modal_after_save, socket) do
-    {:noreply,
-     assign(socket,
-       show_webhook_auth_modal: false,
-       webhook_auth_method: nil
-     )}
+    socket
+    |> assign(
+      show_webhook_auth_modal: false,
+      webhook_auth_method: nil
+    )
+    |> push_event("webhook_auth_method_saved", %{})
+    |> noreply()
   end
 
   defp broadcast_credential_update(socket, project) do
