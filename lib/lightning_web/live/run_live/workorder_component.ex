@@ -223,22 +223,24 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
         <.td>
           <Common.datetime datetime={@work_order.last_activity} />
         </.td>
-        <.td class="text-right w-28">
-          <LightningWeb.RunLive.Components.elapsed_indicator
-            :if={@last_run}
-            item={@last_run}
-            context="table"
-          />
-          <span :if={is_nil(@last_run)}>Not started</span>
+        <.td class="w-28">
+          <div class="text-right pr-2">
+            <LightningWeb.RunLive.Components.elapsed_indicator
+              :if={@last_run}
+              item={@last_run}
+              context="table"
+            />
+            <span :if={is_nil(@last_run)}>Not started</span>
+          </div>
         </.td>
-        <.td class="text-right w-32">
-          <div class="flex items-center justify-end gap-2">
+        <.td class="w-32">
+          <div class="flex items-center justify-center gap-2">
             <.state_pill state={@work_order.state} />
           </div>
         </.td>
-        <.td class="text-right w-20">
+        <.td class="w-20">
           <%= if @work_order.runs !== [] do %>
-            <div class="flex items-center justify-end gap-2 pr-2 -mr-3">
+            <div class="flex items-center justify-center gap-2">
               <%= if wo_dataclip_available?(@work_order) and @can_run_workflow do %>
                 <button
                   type="button"
@@ -391,16 +393,12 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
                                 />
                             <% end %>
                           </span>
-                        </div>
-                      </div>
-                      <div class="flex-shrink-0 py-3 px-4 text-right min-w-[240px]">
-                        <div class="flex items-center justify-end gap-3">
-                          <div class="w-16 text-right">
-                            <.elapsed_indicator item={run} context="details" />
-                          </div>
-                          <div class="w-24 text-right">
-                            <.state_pill state={run.state} />
-                          </div>
+                          <span class="text-gray-400">•</span>
+                          <.elapsed_indicator item={run} context="details" />
+                          <span class="text-gray-400">•</span>
+                          <span class="font-mono text-xs font-medium text-gray-600">
+                            {run.state}
+                          </span>
                         </div>
                       </div>
                     </div>

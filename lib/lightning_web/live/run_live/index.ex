@@ -131,6 +131,7 @@ defmodule LightningWeb.RunLive.Index do
        filtered_workflows: workflows,
        workflow_search: "",
        selected_workflows: [],
+       sidebar_collapsed: false,
        statuses: statuses,
        filtered_statuses: statuses,
        status_search: "",
@@ -608,6 +609,11 @@ defmodule LightningWeb.RunLive.Index do
      )}
   end
 
+  def handle_event("toggle_sidebar", _params, socket) do
+    {:noreply,
+     assign(socket, sidebar_collapsed: !socket.assigns.sidebar_collapsed)}
+  end
+
   def handle_event("toggle_workflow", %{"workflow-id" => workflow_id}, socket) do
     selected_workflows = socket.assigns.selected_workflows
 
@@ -629,6 +635,25 @@ defmodule LightningWeb.RunLive.Index do
      socket
      |> assign(selected_workflows: [])
      |> apply_workflow_filters()}
+  end
+
+  def handle_event("clear_date_filters", _params, socket) do
+    project = socket.assigns.project
+    current_filters = socket.assigns.filters
+
+    new_filters =
+      current_filters
+      |> Map.delete("wo_date_after")
+      |> Map.delete("wo_date_before")
+      |> Map.delete("date_after")
+      |> Map.delete("date_before")
+
+    {:noreply,
+     socket
+     |> assign(filters: new_filters)
+     |> push_patch(
+       to: ~p"/projects/#{project.id}/history?#{%{filters: new_filters}}"
+     )}
   end
 
   def handle_event("invalid-rerun:" <> error_message, _params, socket) do
