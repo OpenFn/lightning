@@ -93,7 +93,10 @@ defmodule LightningWeb.Components.Table do
 
   def table(assigns) do
     ~H"""
-    <div id={@id} class="shadow ring-1 ring-black/5 sm:rounded-lg bg-gray-50">
+    <div
+      id={@id}
+      class="shadow ring-1 ring-black/5 sm:rounded-lg bg-gray-50 overflow-hidden"
+    >
       <table class={["min-w-full table-fixed", @divide && "divide-y divide-gray-200"]}>
         <thead class="bg-gray-50/80 border-b-2 border-gray-200">
           {render_slot(@header)}
