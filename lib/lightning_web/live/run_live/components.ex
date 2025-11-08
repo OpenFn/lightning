@@ -94,20 +94,23 @@ defmodule LightningWeb.RunLive.Components do
   def state_pill(%{state: state} = assigns) do
     chip_styles = %{
       # only workorder states...
-      rejected: "bg-red-300 text-gray-800",
-      pending: "bg-gray-200 text-gray-800",
-      running: "bg-blue-200 text-blue-800",
+      rejected: "bg-red-50 text-red-700 ring-1 ring-inset ring-red-600/20",
+      pending: "bg-gray-50 text-gray-700 ring-1 ring-inset ring-gray-600/20",
+      running: "bg-sky-50 text-sky-700 ring-1 ring-inset ring-sky-600/20",
       #  run and workorder states...
-      available: "bg-gray-200 text-gray-800",
-      claimed: "bg-blue-200 text-blue-800",
-      started: "bg-blue-200 text-blue-800",
-      success: "bg-green-200 text-green-800",
-      failed: "bg-red-200 text-red-800",
-      crashed: "bg-orange-200 text-orange-800",
-      cancelled: "bg-gray-500 text-gray-800",
-      killed: "bg-yellow-200 text-yellow-800",
-      exception: "bg-gray-800 text-white",
-      lost: "bg-gray-800 text-white"
+      available: "bg-gray-50 text-gray-700 ring-1 ring-inset ring-gray-600/20",
+      claimed: "bg-sky-50 text-sky-700 ring-1 ring-inset ring-sky-600/20",
+      started: "bg-sky-50 text-sky-700 ring-1 ring-inset ring-sky-600/20",
+      success:
+        "bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-600/20",
+      failed: "bg-rose-50 text-rose-700 ring-1 ring-inset ring-rose-600/20",
+      crashed:
+        "bg-orange-50 text-orange-700 ring-1 ring-inset ring-orange-600/20",
+      cancelled: "bg-gray-100 text-gray-700 ring-1 ring-inset ring-gray-600/20",
+      killed:
+        "bg-yellow-50 text-yellow-700 ring-1 ring-inset ring-yellow-600/20",
+      exception: "bg-gray-900 text-white ring-1 ring-inset ring-gray-700",
+      lost: "bg-gray-900 text-white ring-1 ring-inset ring-gray-700"
     }
 
     assigns =
@@ -117,8 +120,11 @@ defmodule LightningWeb.RunLive.Components do
       )
 
     ~H"""
-    <span class={["my-auto whitespace-nowrap rounded-full
-    py-2 px-4 text-center align-baseline text-xs font-medium leading-none", @classes]}>
+    <span class={[
+      "inline-flex items-center whitespace-nowrap rounded-full
+    py-1.5 px-3 text-center text-xs font-medium transition-all duration-150",
+      @classes
+    ]}>
       {@text}
     </span>
     """

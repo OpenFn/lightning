@@ -128,7 +128,12 @@ defmodule LightningWeb.RunLive.Index do
      socket
      |> assign(
        workflows: workflows,
+       filtered_workflows: workflows,
+       workflow_search: "",
+       selected_workflows: [],
        statuses: statuses,
+       filtered_statuses: statuses,
+       status_search: "",
        search_fields: search_fields,
        string_search_limit: Invocation.get_workorders_count_limit(),
        active_menu_item: :runs,
@@ -161,11 +166,15 @@ defmodule LightningWeb.RunLive.Index do
     %{project: project} = socket.assigns
     filters = Map.get(params, "filters", init_filters())
 
+    # Extract selected_workflows from filters
+    selected_workflows = Map.get(filters, "workflow_ids", []) |> List.wrap()
+
     {:noreply,
      socket
      |> LiveHelpers.check_limits(project.id)
      |> assign(
        filters: filters,
+       selected_workflows: selected_workflows,
        page_title: "History",
        step: %Step{},
        filters_changeset: filters_changeset(filters),
@@ -509,6 +518,119 @@ defmodule LightningWeb.RunLive.Index do
      )}
   end
 
+  def handle_event("clear_status_filters", _params, socket) do
+    %{filters: filters, project: project} = socket.assigns
+
+    # Clear all status-related filters
+    new_filters =
+      filters
+      |> Map.drop([
+        "pending",
+        "running",
+        "success",
+        "failed",
+        "crashed",
+        "cancelled",
+        "killed",
+        "exception",
+        "lost",
+        "rejected"
+      ])
+
+    {:noreply,
+     socket
+     |> assign(filters: new_filters)
+     |> push_patch(
+       to: ~p"/projects/#{project.id}/history?#{%{filters: new_filters}}"
+     )}
+  end
+
+  def handle_event("clear_all_filters", _params, socket) do
+    %{project: project} = socket.assigns
+
+    # Keep only sort-related filters
+    new_filters =
+      %{
+        "sort_by" => Map.get(socket.assigns.filters, "sort_by"),
+        "sort_direction" => Map.get(socket.assigns.filters, "sort_direction")
+      }
+      |> Map.reject(fn {_k, v} -> is_nil(v) end)
+
+    {:noreply,
+     socket
+     |> assign(filters: new_filters, selected_workflows: [])
+     |> push_patch(
+       to: ~p"/projects/#{project.id}/history?#{%{filters: new_filters}}"
+     )}
+  end
+
+  def handle_event("search_workflows", %{"value" => search_term}, socket) do
+    workflows = socket.assigns.workflows
+
+    filtered_workflows =
+      if search_term == "" do
+        workflows
+      else
+        search_lower = String.downcase(search_term)
+
+        workflows
+        |> Enum.filter(fn {name, _id} ->
+          String.contains?(String.downcase(name), search_lower)
+        end)
+      end
+
+    {:noreply,
+     assign(socket,
+       filtered_workflows: filtered_workflows,
+       workflow_search: search_term
+     )}
+  end
+
+  def handle_event("search_statuses", %{"value" => search_term}, socket) do
+    statuses = socket.assigns.statuses
+
+    filtered_statuses =
+      if search_term == "" do
+        statuses
+      else
+        search_lower = String.downcase(search_term)
+
+        statuses
+        |> Enum.filter(fn status ->
+          String.contains?(String.downcase(status.label), search_lower)
+        end)
+      end
+
+    {:noreply,
+     assign(socket,
+       filtered_statuses: filtered_statuses,
+       status_search: search_term
+     )}
+  end
+
+  def handle_event("toggle_workflow", %{"workflow-id" => workflow_id}, socket) do
+    selected_workflows = socket.assigns.selected_workflows
+
+    new_selected_workflows =
+      if workflow_id in selected_workflows do
+        List.delete(selected_workflows, workflow_id)
+      else
+        [workflow_id | selected_workflows]
+      end
+
+    {:noreply,
+     socket
+     |> assign(selected_workflows: new_selected_workflows)
+     |> apply_workflow_filters()}
+  end
+
+  def handle_event("clear_workflow_filters", _params, socket) do
+    {:noreply,
+     socket
+     |> assign(selected_workflows: [])
+     |> apply_workflow_filters()}
+  end
+
   def handle_event("invalid-rerun:" <> error_message, _params, socket) do
     {:noreply,
      socket
@@ -552,6 +674,24 @@ defmodule LightningWeb.RunLive.Index do
         name
       end
     end)
+  end
+
+  defp apply_workflow_filters(socket) do
+    %{selected_workflows: selected_workflows, filters: filters, project: project} =
+      socket.assigns
+
+    new_filters =
+      if Enum.empty?(selected_workflows) do
+        Map.delete(filters, "workflow_ids")
+      else
+        Map.put(filters, "workflow_ids", selected_workflows)
+      end
+
+    socket
+    |> assign(filters: new_filters)
+    |> push_patch(
+      to: ~p"/projects/#{project.id}/history?#{%{filters: new_filters}}"
+    )
   end
 
   defp handle_bulk_rerun(socket, %{"type" => "selected", "job" => job_id}) do
@@ -624,10 +764,6 @@ defmodule LightningWeb.RunLive.Index do
     |> Enum.map(fn workorder -> workorder.workflow_id end)
     |> Enum.uniq()
     |> Enum.count()
-  end
-
-  defp maybe_humanize_date(date) do
-    date && Timex.format!(date, "{D}/{M}/{YY}")
   end
 
   defp append_to_page(socket, workorder) do

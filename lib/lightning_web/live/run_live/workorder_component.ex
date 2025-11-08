@@ -93,12 +93,12 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
     ~H"""
     <tbody id={"workorder-#{@work_order.id}"}>
       <.tr
-        class={
+        class={"transition-colors duration-150 border-b border-gray-100 #{
           cond do
-            @entry_selected -> "bg-gray-50"
-            true -> "bg-white"
+            @entry_selected -> "bg-indigo-50"
+            true -> "bg-white hover:bg-gray-50"
           end
-        }
+        }"}
         id={"toggle_details_for_#{@work_order.id}"}
         onclick={
           if @work_order.runs !== [] do
@@ -250,7 +250,7 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
                     |> JS.push("toggle_details", target: @myself)
                     |> JS.exec("event.stopPropagation()")
                   }
-                  class="inline-flex items-center p-1 text-xs font-medium text-gray-600 hover:text-primary-400 cursor-pointer rounded"
+                  class="inline-flex items-center p-1 text-xs font-medium text-gray-600 hover:text-primary-400 cursor-pointer rounded transition-all duration-150 hover:scale-110 active:scale-95"
                   phx-hook="Tooltip"
                   aria-label="Retry (run from the start)"
                 >
@@ -281,15 +281,16 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
                 </span>
               <% end %>
               <%!-- <%= if Enum.count(@work_order.runs) > 1 do %> --%>
-              <span class="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600">
+              <span class="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600 transition-all duration-150">
                 {Enum.count(@work_order.runs)}
               </span>
               <%!-- <% end %> --%>
               <.icon
-                name={
-                  if @show_details, do: "hero-chevron-up", else: "hero-chevron-down"
-                }
-                class="size-4 text-gray-400"
+                name="hero-chevron-down"
+                class={[
+                  "size-4 text-gray-400 transition-transform duration-200",
+                  @show_details && "rotate-180"
+                ]}
               />
             </div>
           <% end %>
@@ -298,14 +299,14 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
       <%= if @show_details do %>
         <.tr>
           <.td colspan={9} class="!p-0">
-            <div class="bg-gray-100 p-3 flex flex-col gap-3">
+            <div class="bg-gradient-to-br from-gray-50 to-gray-100/50 p-4 flex flex-col gap-3">
               <%= for {run, index} <- @runs |> Enum.reverse() |> Enum.with_index(1) |> Enum.reverse() do %>
                 <%= if index == Enum.count(@runs) or @show_prev_runs do %>
                   <div
                     id={"run_#{run.id}"}
-                    class="w-full bg-white border border-gray-300 rounded-lg overflow-hidden"
+                    class="w-full bg-white border border-gray-200 rounded-lg overflow-hidden transition-all duration-150"
                   >
-                    <div class="bg-gray-200 text-xs flex items-center w-full">
+                    <div class="bg-gray-100/80 text-xs flex items-center w-full">
                       <div class="flex-1 py-2 text-left">
                         <div class="pl-4">
                           Run

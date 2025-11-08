@@ -524,7 +524,7 @@ defmodule Lightning.Invocation do
 
     query
     |> filter_by_workorder_id(search_params.workorder_id)
-    |> filter_by_workflow_id(search_params.workflow_id)
+    |> filter_by_workflow_id(search_params.workflow_ids)
     |> filter_by_statuses(status_filter)
     |> filter_by_wo_date_after(search_params.wo_date_after)
     |> filter_by_wo_date_before(search_params.wo_date_before)
@@ -589,6 +589,11 @@ defmodule Lightning.Invocation do
   end
 
   defp filter_by_workflow_id(query, nil), do: query
+  defp filter_by_workflow_id(query, []), do: query
+
+  defp filter_by_workflow_id(query, workflow_ids) when is_list(workflow_ids) do
+    from([workflow: workflow] in query, where: workflow.id in ^workflow_ids)
+  end
 
   defp filter_by_workflow_id(query, workflow_id) when is_binary(workflow_id) do
     from([workflow: workflow] in query, where: workflow.id == ^workflow_id)

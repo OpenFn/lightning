@@ -11,7 +11,7 @@ defmodule Lightning.WorkOrders.SearchParams do
              :status,
              :search_fields,
              :search_term,
-             :workflow_id,
+             :workflow_ids,
              :workorder_id,
              :date_after,
              :date_before,
@@ -35,7 +35,7 @@ defmodule Lightning.WorkOrders.SearchParams do
           status: [String.t()],
           search_fields: [String.t()],
           search_term: String.t(),
-          workflow_id: Ecto.UUID.t(),
+          workflow_ids: [Ecto.UUID.t()],
           date_after: DateTime.t(),
           date_before: DateTime.t(),
           wo_date_after: DateTime.t(),
@@ -49,7 +49,7 @@ defmodule Lightning.WorkOrders.SearchParams do
     field(:status, {:array, :string})
     field(:search_fields, {:array, :string}, default: @search_fields)
     field(:search_term, :string)
-    field(:workflow_id, :binary_id)
+    field(:workflow_ids, {:array, :binary_id})
     field(:workorder_id, :binary_id)
     field(:date_after, :utc_datetime_usec)
     field(:date_before, :utc_datetime_usec)
@@ -67,7 +67,7 @@ defmodule Lightning.WorkOrders.SearchParams do
       :status,
       :search_fields,
       :search_term,
-      :workflow_id,
+      :workflow_ids,
       :workorder_id,
       :date_after,
       :date_before,

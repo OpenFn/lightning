@@ -120,7 +120,7 @@ defmodule Lightning.Invocation.Query do
     query
     |> filter_runs_by_date(params)
     |> filter_runs_by_project(params["project_id"])
-    |> filter_runs_by_workflow(params["workflow_id"])
+    |> filter_runs_by_workflow(params["workflow_ids"] || params["workflow_id"])
     |> filter_runs_by_work_order(params["work_order_id"])
   end
 
@@ -131,6 +131,11 @@ defmodule Lightning.Invocation.Query do
   end
 
   defp filter_runs_by_workflow(query, nil), do: query
+  defp filter_runs_by_workflow(query, []), do: query
+
+  defp filter_runs_by_workflow(query, workflow_ids) when is_list(workflow_ids) do
+    from([workflow: w] in query, where: w.id in ^workflow_ids)
+  end
 
   defp filter_runs_by_workflow(query, workflow_id) do
     from([workflow: w] in query, where: w.id == ^workflow_id)
@@ -306,7 +311,9 @@ defmodule Lightning.Invocation.Query do
     query
     |> filter_work_orders_by_date(params)
     |> filter_work_orders_by_project(params["project_id"])
-    |> filter_work_orders_by_workflow(params["workflow_id"])
+    |> filter_work_orders_by_workflow(
+      params["workflow_ids"] || params["workflow_id"]
+    )
   end
 
   defp filter_work_orders_by_project(query, nil), do: query
@@ -316,6 +323,12 @@ defmodule Lightning.Invocation.Query do
   end
 
   defp filter_work_orders_by_workflow(query, nil), do: query
+  defp filter_work_orders_by_workflow(query, []), do: query
+
+  defp filter_work_orders_by_workflow(query, workflow_ids)
+       when is_list(workflow_ids) do
+    from([workflow: w] in query, where: w.id in ^workflow_ids)
+  end
 
   defp filter_work_orders_by_workflow(query, workflow_id) do
     from([workflow: w] in query, where: w.id == ^workflow_id)
@@ -390,7 +403,7 @@ defmodule Lightning.Invocation.Query do
     |> filter_log_by_timestamp_after(params["timestamp_after"])
     |> filter_log_by_timestamp_before(params["timestamp_before"])
     |> filter_log_by_project(params["project_id"])
-    |> filter_log_by_workflow(params["workflow_id"])
+    |> filter_log_by_workflow(params["workflow_ids"] || params["workflow_id"])
     |> filter_log_by_job(params["job_id"])
     |> filter_log_by_work_order(params["work_order_id"])
     |> filter_log_by_run(params["run_id"])
@@ -418,6 +431,11 @@ defmodule Lightning.Invocation.Query do
   end
 
   defp filter_log_by_workflow(query, nil), do: query
+  defp filter_log_by_workflow(query, []), do: query
+
+  defp filter_log_by_workflow(query, workflow_ids) when is_list(workflow_ids) do
+    from([work_order: wo] in query, where: wo.workflow_id in ^workflow_ids)
+  end
 
   defp filter_log_by_workflow(query, workflow_id) do
     from([work_order: wo] in query, where: wo.workflow_id == ^workflow_id)

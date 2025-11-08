@@ -17,781 +17,661 @@
     id="export-confirmation-modal"
     count_work_orders={@page.total_entries}
   />
-  <LayoutComponents.centered>
-    <div>
-      <%!-- Search Bar --%>
-      <div class="top-0 self-start mb-2">
+
+  <%!-- New Sidebar + Main Content Layout --%>
+  <div class="flex h-full bg-gray-50">
+    <%!-- Sidebar with Filters --%>
+    <aside class="w-64 border-r border-gray-200 bg-white flex-shrink-0">
+      <div class="sticky top-0 p-4 space-y-6">
+        <%!-- Workflow Filter Section --%>
         <div>
+          <h3 class="text-sm font-semibold text-gray-900 mb-3 flex items-center justify-between">
+            <span>Workflow</span>
+            <%= if Enum.any?(@selected_workflows) do %>
+              <button
+                type="button"
+                phx-click="clear_workflow_filters"
+                class="text-xs text-indigo-600 hover:text-indigo-800 transition-colors"
+              >
+                Clear
+              </button>
+            <% end %>
+          </h3>
+
+          <%!-- Searchable Multi-Select Dropdown --%>
+          <div class="relative">
+            <button
+              type="button"
+              phx-click={show_dropdown("workflow-dropdown")}
+              class="relative w-full cursor-pointer rounded-md bg-white py-2 pl-3 pr-10 text-left text-sm ring-1 ring-inset ring-gray-300 hover:ring-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-600 transition-all"
+            >
+              <span class="block truncate">
+                <%= if Enum.any?(@selected_workflows) do %>
+                  {Enum.count(@selected_workflows)} selected
+                <% else %>
+                  All workflows
+                <% end %>
+              </span>
+              <span class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2">
+                <.icon name="hero-chevron-down" class="h-5 w-5 text-gray-400" />
+              </span>
+            </button>
+
+            <div
+              id="workflow-dropdown"
+              class="hidden absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded-md bg-white py-1 text-sm shadow-lg ring-1 ring-black/5 focus:outline-none"
+              phx-click-away={
+                hide_dropdown("workflow-dropdown")
+                |> JS.push("search_workflows", value: %{value: ""})
+              }
+            >
+              <%!-- Search Input --%>
+              <div class="sticky top-0 bg-white px-2 py-2 border-b border-gray-100">
+                <div class="relative">
+                  <.icon
+                    name="hero-magnifying-glass"
+                    class="pointer-events-none absolute left-3 top-2 h-4 w-4 text-gray-400"
+                  />
+                  <input
+                    type="text"
+                    value={@workflow_search}
+                    placeholder="Search workflows..."
+                    phx-keyup="search_workflows"
+                    phx-debounce="300"
+                    class="block w-full rounded-md border-0 py-1.5 pl-9 pr-3 text-sm text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600"
+                    id="workflow-search-input"
+                  />
+                </div>
+              </div>
+
+              <%!-- Workflow Options with Checkboxes --%>
+              <div class="py-1">
+                <%= for {workflow_name, workflow_id} <- @filtered_workflows do %>
+                  <label class="flex items-center gap-2 px-3 py-2 hover:bg-gray-100 cursor-pointer transition-colors group">
+                    <input
+                      type="checkbox"
+                      checked={workflow_id in @selected_workflows}
+                      phx-click="toggle_workflow"
+                      phx-value-workflow-id={workflow_id}
+                      class="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-600"
+                    />
+                    <span class="text-sm text-gray-700 group-hover:text-gray-900 flex-1 truncate">
+                      {workflow_name}
+                    </span>
+                  </label>
+                <% end %>
+
+                <%= if Enum.empty?(@filtered_workflows) do %>
+                  <div class="px-3 py-2 text-sm text-gray-500 text-center">
+                    No workflows found matching "{@workflow_search}"
+                  </div>
+                <% end %>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <%!-- Status Filter Section --%>
+        <div>
+          <h3 class="text-sm font-semibold text-gray-900 mb-3 flex items-center justify-between">
+            <span>Status</span>
+            <%= if Enum.any?(@statuses, fn status -> checked?(@filters_changeset, status.id) end) do %>
+              <button
+                type="button"
+                phx-click="clear_status_filters"
+                class="text-xs text-indigo-600 hover:text-indigo-800 transition-colors"
+              >
+                Clear
+              </button>
+            <% end %>
+          </h3>
+
+          <%!-- Searchable Multi-Select Dropdown --%>
+          <div class="relative">
+            <button
+              type="button"
+              phx-click={show_dropdown("status-dropdown")}
+              class="relative w-full cursor-pointer rounded-md bg-white py-2 pl-3 pr-10 text-left text-sm ring-1 ring-inset ring-gray-300 hover:ring-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-600 transition-all"
+            >
+              <span class="block truncate">
+                <%= if Enum.any?(@statuses, fn status -> checked?(@filters_changeset, status.id) end) do %>
+                  {Enum.count(@statuses, fn status ->
+                    checked?(@filters_changeset, status.id)
+                  end)} selected
+                <% else %>
+                  All statuses
+                <% end %>
+              </span>
+              <span class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2">
+                <.icon name="hero-chevron-down" class="h-5 w-5 text-gray-400" />
+              </span>
+            </button>
+
+            <div
+              id="status-dropdown"
+              class="hidden absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded-md bg-white py-1 text-sm shadow-lg ring-1 ring-black/5 focus:outline-none"
+              phx-click-away={
+                hide_dropdown("status-dropdown")
+                |> JS.push("search_statuses", value: %{value: ""})
+              }
+            >
+              <%!-- Search Input --%>
+              <div class="sticky top-0 bg-white px-2 py-2 border-b border-gray-100">
+                <div class="relative">
+                  <.icon
+                    name="hero-magnifying-glass"
+                    class="pointer-events-none absolute left-3 top-2 h-4 w-4 text-gray-400"
+                  />
+                  <input
+                    type="text"
+                    value={@status_search}
+                    placeholder="Search statuses..."
+                    phx-keyup="search_statuses"
+                    phx-debounce="300"
+                    class="block w-full rounded-md border-0 py-1.5 pl-9 pr-3 text-sm text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600"
+                    id="status-search-input"
+                  />
+                </div>
+              </div>
+
+              <%!-- Status Options --%>
+              <.form
+                :let={f}
+                for={@filters_changeset}
+                id="sidebar-status-filter-dropdown"
+                as={:filters}
+                phx-change="apply_filters"
+              >
+                <div class="py-1">
+                  <%= for status <- @filtered_statuses do %>
+                    <label class="flex items-center gap-2 px-3 py-2 hover:bg-gray-100 cursor-pointer transition-colors group">
+                      <.input
+                        type="checkbox"
+                        field={f[status.id]}
+                        checked={checked?(@filters_changeset, status.id)}
+                        class="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-600"
+                      />
+                      <span class="text-sm text-gray-700 group-hover:text-gray-900 flex-1">
+                        {status.label}
+                      </span>
+                    </label>
+                  <% end %>
+
+                  <%= if Enum.empty?(@filtered_statuses) do %>
+                    <div class="px-3 py-2 text-sm text-gray-500 text-center">
+                      No statuses found matching "{@status_search}"
+                    </div>
+                  <% end %>
+                </div>
+              </.form>
+            </div>
+          </div>
+        </div>
+
+        <%!-- Date Range Filters --%>
+        <div>
+          <h3 class="text-sm font-semibold text-gray-900 mb-3">Time Range</h3>
           <.form
             :let={f}
             for={@filters_changeset}
-            id="workorder-filter-form"
+            id="sidebar-date-filter"
             as={:filters}
             phx-change="apply_filters"
-            phx-submit="apply_filters"
           >
-            <div class="flex gap-2">
+            <div class="space-y-4">
+              <%!-- Work Order Received --%>
               <div>
-                <div class="font-medium mt-4 mb-2 text-gray-500 text-sm">
-                  Workflow
-                </div>
-
-                <div class="relative inline-block text-left w-60">
-                  <div>
-                    <.button
-                      type="button"
-                      theme="secondary"
-                      class="inline-flex w-full justify-between gap-x-1.5"
-                      aria-expanded="true"
-                      aria-haspopup="true"
-                      phx-click={show_dropdown("workflow_filter_dropdown")}
-                    >
-                      <span>
-                        <%= if workflow_id = get_change(@filters_changeset, :workflow_id) do %>
-                          {find_workflow_name(@workflows, workflow_id)}
-                        <% else %>
-                          Any
-                        <% end %>
-                      </span>
-                      <.icon
-                        name="hero-chevron-down"
-                        class="-mr-1 h-5 w-5 text-gray-400"
-                      />
-                    </.button>
-                  </div>
-
-                  <div
-                    class="hidden absolute right-0 z-10 mt-2 w-60 origin-top-right rounded-md bg-white shadow-lg ring-1 ring-black/5 focus:outline-none"
-                    role="menu"
-                    aria-orientation="vertical"
-                    tabindex="-1"
-                    id="workflow_filter_dropdown"
-                    phx-click-away={hide_dropdown("workflow_filter_dropdown")}
-                  >
-                    <div class="py-1" role="none">
-                      <%= for {workflow_name, workflow_id} <- [{"Any", nil}] ++ @workflows do %>
-                        <a
-                          href="#"
-                          phx-click={
-                            JS.push("apply_filters",
-                              value: %{filters: %{workflow_id: workflow_id}}
-                            )
-                            |> JS.hide(to: "#workflow_filter_dropdown")
-                          }
-                          class={"#{if(get_change(@filters_changeset, :workflow_id) == workflow_id, do: "bg-gray-100 text-gray-900", else: "text-gray-700")} block px-4 py-2 text-sm hover:bg-gray-100"}
-                          role="menuitem"
-                          tabindex="-1"
-                          id={"select-workflow-#{workflow_id}"}
-                        >
-                          {workflow_name}
-                        </a>
-                      <% end %>
-                    </div>
-                  </div>
+                <label class="block text-xs font-medium text-gray-700 mb-2">
+                  Work Order Received
+                </label>
+                <div class="space-y-2">
+                  <.input
+                    type="datetime-local"
+                    field={f[:wo_date_after]}
+                    placeholder="After"
+                    class="text-xs"
+                  />
+                  <.input
+                    type="datetime-local"
+                    field={f[:wo_date_before]}
+                    placeholder="Before"
+                    class="text-xs"
+                  />
                 </div>
               </div>
-              <div>
-                <div class="font-medium mt-4 mb-2 text-gray-500 text-sm">
-                  Status
-                </div>
-                <div class="relative inline-block text-left w-44">
-                  <div>
-                    <.button
-                      type="button"
-                      class="inline-flex w-full justify-between gap-x-1.5"
-                      theme="secondary"
-                      aria-expanded="true"
-                      aria-haspopup="true"
-                      phx-click={show_dropdown("status_filter_dropdown")}
-                    >
-                      <span>
-                        <%= if Enum.any?(@statuses, fn status -> checked?(@filters_changeset, status.id) end) do %>
-                          {Enum.count(@statuses, fn status ->
-                            checked?(@filters_changeset, status.id)
-                          end)} Selected
-                        <% else %>
-                          Any
-                        <% end %>
-                      </span>
-                      <.icon
-                        name="hero-chevron-down"
-                        class="-mr-1 h-5 w-5 text-gray-400"
-                      />
-                    </.button>
-                  </div>
 
-                  <div
-                    class="hidden absolute right-0 z-10 mt-2 w-44 origin-top-right rounded-md bg-white shadow-lg ring-1 ring-black/5 focus:outline-none"
-                    role="menu"
-                    aria-orientation="vertical"
-                    tabindex="-1"
-                    id="status_filter_dropdown"
-                    phx-click-away={hide_dropdown("status_filter_dropdown")}
-                  >
-                    <div class="pt-2 pb-1" role="none">
-                      <!-- Active: "bg-gray-100 text-gray-900", Not Active: "text-gray-700" -->
-                      <%= for status <- @statuses do %>
-                        <div class="px-4 py-1 text-gray-700 text-sm">
-                          <.input
-                            type="checkbox"
-                            field={f[status.id]}
-                            checked={checked?(@filters_changeset, status.id)}
-                            label={status.label}
-                          />
-                        </div>
-                      <% end %>
-                    </div>
-                  </div>
-                </div>
-              </div>
+              <%!-- Last Activity --%>
               <div>
-                <div class="font-medium mt-4 mb-2 text-gray-500 text-sm">
-                  Time
-                </div>
-                <div class="relative inline-block text-left w-44">
-                  <div>
-                    <.button
-                      type="button"
-                      class="inline-flex w-full justify-between gap-x-1.5"
-                      theme="secondary"
-                      aria-expanded="true"
-                      aria-haspopup="true"
-                      phx-click={show_dropdown("time_filter_dropdown")}
-                    >
-                      <%= if get_change(@filters_changeset, :wo_date_after) || get_change(@filters_changeset, :wo_date_before) || get_change(@filters_changeset, :date_after) || get_change(@filters_changeset, :date_before) do %>
-                        {Enum.reject(
-                          [
-                            get_change(@filters_changeset, :wo_date_after) ||
-                              get_change(@filters_changeset, :wo_date_before),
-                            get_change(@filters_changeset, :date_after) ||
-                              get_change(@filters_changeset, :date_before)
-                          ],
-                          &is_nil/1
-                        )
-                        |> Enum.count()} Selected
-                      <% else %>
-                        <span>Any</span>
-                      <% end %>
-                      <.icon
-                        name="hero-chevron-down"
-                        class="-mr-1 h-5 w-5 text-gray-400"
-                      />
-                    </.button>
-                  </div>
-
-                  <div
-                    class="hidden absolute right-0 z-10 mt-2 w-44 origin-top-right rounded-md bg-white shadow-lg ring-1 ring-black/5 focus:outline-none"
-                    role="menu"
-                    aria-orientation="vertical"
-                    tabindex="-1"
-                    id="time_filter_dropdown"
-                    phx-click-away={hide_dropdown("time_filter_dropdown")}
-                  >
-                    <div class="py-1" role="none">
-                      <div class="px-4 py-1 text-gray-500 text-sm">
-                        Work order
-                      </div>
-                      <div class="px-4 py-2 text-sm relative">
-                        <a
-                          href="#"
-                          phx-click={show_modal("wo_date_received_filter")}
-                          class="text-gray-700 w-full inline-flex justify-between"
-                          role="menuitem"
-                          tabindex="-1"
-                          id="menu-item-0"
-                          phx-click={show_dropdown("wo_date_received_filter")}
-                        >
-                          <span>Received Date</span>
-                          <Heroicons.chevron_right class="h-4.5 w-4" />
-                        </a>
-                        <div
-                          id="wo_date_received_filter"
-                          phx-click-away={
-                            hide_dropdown("wo_date_received_filter")
-                          }
-                          class="hidden absolute top-0 left-full ml-1.5 z-10 mt-2 origin-top-left rounded-md bg-white shadow-lg ring-1 ring-black/5 focus:outline-none"
-                        >
-                          <div class="py-3" role="none">
-                            <div class="px-4 py-1 text-gray-500 text-sm">
-                              Filter by Date Received
-                            </div>
-                            <div class="px-4 py-1 text-gray-700 text-sm">
-                              <label>Received After</label>
-                              <.input
-                                type="datetime-local"
-                                field={f[:wo_date_after]}
-                              />
-                            </div>
-                            <div class="px-4 py-1 text-gray-700 text-sm">
-                              <label>Received Before</label>
-                              <.input
-                                type="datetime-local"
-                                field={f[:wo_date_before]}
-                              />
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                      <div class="px-4 py-2 text-sm relative">
-                        <a
-                          href="#"
-                          phx-click={show_dropdown("wo_last_activity_filter")}
-                          class="text-gray-700 w-full inline-flex justify-between"
-                          role="menuitem"
-                          tabindex="-1"
-                          id="menu-item-1"
-                        >
-                          <span>Last Activity</span>
-                          <Heroicons.chevron_right class="h-4.5 w-4" />
-                        </a>
-                        <div
-                          id="wo_last_activity_filter"
-                          phx-click-away={
-                            hide_dropdown("wo_last_activity_filter")
-                          }
-                          class="hidden absolute top-0 left-full ml-1.5 z-10 mt-2 origin-top-left rounded-md bg-white shadow-lg ring-1 ring-black/5 focus:outline-none"
-                        >
-                          <div class="py-3" role="none">
-                            <div class="px-4 py-1 text-gray-500 text-sm">
-                              Filter by Last Activity
-                            </div>
-                            <div class="px-4 py-1 text-gray-700 text-sm">
-                              <label>Activity After</label>
-                              <.input
-                                type="datetime-local"
-                                field={f[:date_after]}
-                              />
-                            </div>
-                            <div class="px-4 py-1 text-gray-700 text-sm">
-                              <label>Activity Before</label>
-                              <.input
-                                type="datetime-local"
-                                field={f[:date_before]}
-                              />
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
+                <label class="block text-xs font-medium text-gray-700 mb-2">
+                  Last Activity
+                </label>
+                <div class="space-y-2">
+                  <.input
+                    type="datetime-local"
+                    field={f[:date_after]}
+                    placeholder="After"
+                    class="text-xs"
+                  />
+                  <.input
+                    type="datetime-local"
+                    field={f[:date_before]}
+                    placeholder="Before"
+                    class="text-xs"
+                  />
                 </div>
               </div>
             </div>
           </.form>
         </div>
 
-        <div class="mt-2">
-          <%= if workflow_id = get_change(@filters_changeset, :workflow_id) do %>
-            <span class="inline-flex items-center gap-x-0.5 rounded-md bg-blue-100 px-2 py-1 text-xs font-medium text-blue-700">
-              Workflow: {find_workflow_name(@workflows, workflow_id)}
+        <%!-- Clear All Filters --%>
+        <%= if Enum.any?(@selected_workflows) ||
+             Enum.any?(@statuses, fn status -> checked?(@filters_changeset, status.id) end) ||
+             get_change(@filters_changeset, :wo_date_after) ||
+             get_change(@filters_changeset, :wo_date_before) ||
+             get_change(@filters_changeset, :date_after) ||
+             get_change(@filters_changeset, :date_before) do %>
+          <div class="pt-4 border-t border-gray-200">
+            <button
+              type="button"
+              phx-click="clear_all_filters"
+              class="w-full px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors"
+            >
+              Clear All Filters
+            </button>
+          </div>
+        <% end %>
+      </div>
+    </aside>
+
+    <%!-- Main Content Area --%>
+    <main class="flex-1">
+      <div class="mx-auto">
+        <%!-- Search Bar --%>
+        <div class="bg-white border-b border-gray-200 px-6 py-4 sticky top-0 z-10">
+          <div class="flex items-center gap-4">
+            <div class="flex-1">
               <.form
                 :let={f}
                 for={@filters_changeset}
+                id="run-search-form"
                 as={:filters}
-                class="inline"
                 phx-submit="apply_filters"
               >
-                <.input
-                  id={"workflow_chip_#{workflow_id}"}
-                  type="hidden"
-                  field={f[:workflow_id]}
-                  value={nil}
-                />
+                <div class="relative">
+                  <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+                    <.icon
+                      name="hero-magnifying-glass"
+                      class="h-5 w-5 text-gray-400"
+                    />
+                  </div>
+                  <.input
+                    id="run-search-form-search-term"
+                    type="text"
+                    field={f[:search_term]}
+                    placeholder="Search work orders by ID, workflow, input, or logs..."
+                    class="block w-full rounded-lg border-0 py-3 pl-10 pr-32 text-sm text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 transition-shadow duration-150"
+                    phx-focus={JS.show(to: "#clear_search_button")}
+                    onchange="document.getElementById('run-toggle-form-search-term').value = this.value"
+                  />
 
-                <button
-                  type="submit"
-                  class="group relative -mr-1 h-3.5 w-3.5 rounded-sm hover:bg-blue-600/20"
-                >
-                  <span class="sr-only">Remove</span>
-                  <svg
-                    viewBox="0 0 14 14"
-                    class="h-3.5 w-3.5 stroke-blue-800/50 group-hover:stroke-blue-800/75"
-                  >
-                    <path d="M4 4l6 6m0-6l-6 6" />
-                  </svg>
-                  <span class="absolute -inset-1"></span>
-                </button>
-              </.form>
-            </span>
-          <% end %>
-
-          <%= if workorder_id = get_change(@filters_changeset, :workorder_id) do %>
-            <span class="inline-flex items-center gap-x-0.5 rounded-md bg-blue-100 px-2 py-1 text-xs font-medium text-blue-700">
-              Work order: {display_short_uuid(workorder_id)}
-              <.form
-                :let={f}
-                for={@filters_changeset}
-                as={:filters}
-                class="inline"
-                phx-submit="apply_filters"
-              >
-                <.input
-                  id={"workorder_chip_#{workorder_id}"}
-                  type="hidden"
-                  field={f[:workorder_id]}
-                  value={nil}
-                />
-
-                <button
-                  type="submit"
-                  class="group relative -mr-1 h-3.5 w-3.5 rounded-sm hover:bg-blue-600/20"
-                >
-                  <span class="sr-only">Remove</span>
-                  <svg
-                    viewBox="0 0 14 14"
-                    class="h-3.5 w-3.5 stroke-blue-800/50 group-hover:stroke-blue-800/75"
-                  >
-                    <path d="M4 4l6 6m0-6l-6 6" />
-                  </svg>
-                  <span class="absolute -inset-1"></span>
-                </button>
-              </.form>
-            </span>
-          <% end %>
-
-          <%= for status <- Enum.filter(@statuses, fn status -> checked?(@filters_changeset, status.id) end)  do %>
-            <span class="inline-flex items-center gap-x-0.5 rounded-md bg-blue-100 px-2 py-1 text-xs font-medium text-blue-700">
-              Work order status: {status.label}
-              <.form
-                :let={f}
-                for={@filters_changeset}
-                as={:filters}
-                class="inline"
-                phx-submit="apply_filters"
-              >
-                <.input
-                  id={"workorder_status_chip_#{status.id}"}
-                  type="hidden"
-                  field={f[status.id]}
-                  value={false}
-                />
-                <button
-                  type="submit"
-                  class="group relative -mr-1 h-3.5 w-3.5 rounded-sm hover:bg-blue-600/20"
-                >
-                  <span class="sr-only">Remove</span>
-                  <svg
-                    viewBox="0 0 14 14"
-                    class="h-3.5 w-3.5 stroke-blue-800/50 group-hover:stroke-blue-800/75"
-                  >
-                    <path d="M4 4l6 6m0-6l-6 6" />
-                  </svg>
-                  <span class="absolute -inset-1"></span>
-                </button>
-              </.form>
-            </span>
-          <% end %>
-
-          <%= if get_change(@filters_changeset, :wo_date_after) || get_change(@filters_changeset, :wo_date_before) do %>
-            <span class="inline-flex items-center gap-x-0.5 rounded-md bg-blue-100 px-2 py-1 text-xs font-medium text-blue-700">
-              {@filters_changeset
-              |> get_change(:wo_date_after)
-              |> maybe_humanize_date() || "*"} - {@filters_changeset
-              |> get_change(:wo_date_before)
-              |> maybe_humanize_date() || "*"}
-              <.form
-                :let={f}
-                for={@filters_changeset}
-                as={:filters}
-                class="inline"
-                phx-submit="apply_filters"
-              >
-                <.input
-                  id="workorder_after_date_received_chip"
-                  type="hidden"
-                  field={f[:wo_date_after]}
-                  value={nil}
-                />
-
-                <.input
-                  id="workorder_before_date_received_chip"
-                  type="hidden"
-                  field={f[:wo_date_before]}
-                  value={nil}
-                />
-                <button
-                  type="submit"
-                  class="group relative -mr-1 h-3.5 w-3.5 rounded-sm hover:bg-blue-600/20"
-                >
-                  <span class="sr-only">Remove</span>
-                  <svg
-                    viewBox="0 0 14 14"
-                    class="h-3.5 w-3.5 stroke-blue-800/50 group-hover:stroke-blue-800/75"
-                  >
-                    <path d="M4 4l6 6m0-6l-6 6" />
-                  </svg>
-                  <span class="absolute -inset-1"></span>
-                </button>
-              </.form>
-            </span>
-          <% end %>
-
-          <%= if get_change(@filters_changeset, :date_after) || get_change(@filters_changeset, :date_before) do %>
-            <span class="inline-flex items-center gap-x-0.5 rounded-md bg-blue-100 px-2 py-1 text-xs font-medium text-blue-700">
-              Last Activity: {@filters_changeset
-              |> get_change(:date_after)
-              |> maybe_humanize_date() || "*"} - {@filters_changeset
-              |> get_change(:date_before)
-              |> maybe_humanize_date() || "*"}
-              <.form
-                :let={f}
-                for={@filters_changeset}
-                as={:filters}
-                class="inline"
-                phx-submit="apply_filters"
-              >
-                <.input
-                  id="workorder_after_last_activity_chip"
-                  type="hidden"
-                  field={f[:date_after]}
-                  value={nil}
-                />
-
-                <.input
-                  id="workorder_before_last_activity_chip"
-                  type="hidden"
-                  field={f[:date_before]}
-                  value={nil}
-                />
-
-                <button
-                  type="submit"
-                  class="group relative -mr-1 h-3.5 w-3.5 rounded-sm hover:bg-blue-600/20"
-                >
-                  <span class="sr-only">Remove</span>
-                  <svg
-                    viewBox="0 0 14 14"
-                    class="h-3.5 w-3.5 stroke-blue-800/50 group-hover:stroke-blue-800/75"
-                  >
-                    <path d="M4 4l6 6m0-6l-6 6" />
-                  </svg>
-                  <span class="absolute -inset-1"></span>
-                </button>
-              </.form>
-            </span>
-          <% end %>
-        </div>
-
-        <div>
-          <div class="mt-2">
-            <div class="flex justify-between items-end">
-              <div class="text-md text-gray-500 font-medium truncate w-full">
-                <%= if search = get_change(@filters_changeset, :search_term) do %>
-                  {@page.total_entries}{if @page.total_entries >=
-                                             @string_search_limit,
-                                           do: "+"} work orders with runs matching "{search}"
-                  <%= if @page.total_entries >= @string_search_limit do %>
-                    <span class="text-xs text-gray">
-                      (try more specific filters)
-                    </span>
-                  <% end %>
-                <% else %>
-                  Work Orders
-                <% end %>
-              </div>
-              <div class="flex w-full justify-end grow">
-                <div class="flex items-end gap-1">
-                  <.form
-                    :let={f}
-                    for={@filters_changeset}
-                    id="run-search-form"
-                    as={:filters}
-                    phx-submit="apply_filters"
-                  >
-                    <div class="relative rounded-md shadow-xs flex grow">
-                      <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-                        <.icon
-                          name="hero-magnifying-glass"
-                          class="h-5 w-5 text-gray-400"
-                        />
-                      </div>
-                      <.input
-                        id="run-search-form-search-term"
-                        type="text"
-                        field={f[:search_term]}
-                        placeholder="Search"
-                        class="block w-full rounded-md border-0 py-1.5 pl-10 pr-20 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400  focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
-                        phx-focus={
-                          JS.show(to: "#clear_search_button")
-                          |> JS.show(to: "#search_button_group")
-                        }
-                        onchange="document.getElementById('run-toggle-form-search-term').value = this.value"
-                      />
-
-                      <div class="absolute inset-y-0 right-0 flex items-center pr-3">
-                        <a
-                          href="#"
-                          class="hidden"
-                          id="clear_search_button"
-                          phx-click={
-                            JS.push("apply_filters",
-                              value: %{filters: %{search_term: nil}}
-                            )
-                            |> JS.hide(to: "#search_button_group")
-                            |> JS.hide(to: "#clear_search_button")
-                          }
-                        >
-                          <.icon
-                            name="hero-x-mark"
-                            class="h-5 w-5 text-gray-400"
-                          />
-                        </a>
-                      </div>
-                    </div>
-                  </.form>
-                  <div id="search_button_group" class="hidden flex text-right">
-                    <.form
-                      :let={f}
-                      for={@filters_changeset}
-                      as={:filters}
-                      phx-change="apply_filters"
-                      class="inline-flex"
-                      id="run-toggle-form"
+                  <div class="absolute inset-y-0 right-0 flex items-center pr-3 gap-2">
+                    <a
+                      href="#"
+                      class="hidden"
+                      id="clear_search_button"
+                      phx-click={
+                        JS.push("apply_filters",
+                          value: %{filters: %{search_term: nil}}
+                        )
+                        |> JS.hide(to: "#clear_search_button")
+                      }
                     >
-                      <.input
-                        id="run-toggle-form-search-term"
-                        type="hidden"
-                        field={f[:search_term]}
+                      <.icon
+                        name="hero-x-mark"
+                        class="h-5 w-5 text-gray-400 hover:text-gray-600"
                       />
-                      <div class="isolate inline-flex">
-                        <%= for search_field <- @search_fields do %>
-                          <div class="group">
-                            <.checkbox_element
-                              id={f[search_field.id].id}
-                              name={f[search_field.id].name}
-                              value={f[search_field.id].value}
-                              class="absolute invisible"
-                              style="left: -9999px"
-                            />
-
-                            <.label
-                              for={f[search_field.id].id}
-                              id={"search-button-#{search_field.label}"}
-                              class="relative inline-flex items-center"
-                              role="button"
-                              phx-hook="Tooltip"
-                              data-placement="top"
-                              aria-label={search_field.label}
-                            >
-                              <div class={"
-                           ring-1 ring-inset ring-gray-300 px-3 py-2 text-sm
-                           font-semibold text-gray-500 hover:bg-gray-100 focus:z-10
-                           group-first:rounded-l-md group-last:rounded-r-md
-                           -ml-px group-first:ml-0
-                           #{if(checked?(@filters_changeset, search_field.id), do: "bg-gray-200", else: "bg-white")}
-                           "}>
-                                <.icon
-                                  name={search_field.icon}
-                                  class={"h-4 w-4 inline-block align-middle #{checked?(@filters_changeset, search_field.id) && "text-indigo-800"}"}
-                                />
-                              </div>
-                            </.label>
-                          </div>
-                        <% end %>
-                      </div>
-                    </.form>
-                    <.button
-                      type="submit"
-                      theme="primary"
-                      form="run-search-form"
-                      class="truncate"
-                    >
-                      Search
-                    </.button>
+                    </a>
                   </div>
                 </div>
-              </div>
+              </.form>
+            </div>
+
+            <%!-- Search Field Toggles --%>
+            <div id="search_button_group" class="flex items-center">
+              <.form
+                :let={f}
+                for={@filters_changeset}
+                as={:filters}
+                phx-change="apply_filters"
+                class="inline-flex"
+                id="run-toggle-form"
+              >
+                <.input
+                  id="run-toggle-form-search-term"
+                  type="hidden"
+                  field={f[:search_term]}
+                />
+                <div class="isolate inline-flex rounded-md">
+                  <%= for search_field <- @search_fields do %>
+                    <div class="group">
+                      <.checkbox_element
+                        id={f[search_field.id].id}
+                        name={f[search_field.id].name}
+                        value={f[search_field.id].value}
+                        class="absolute invisible"
+                        style="left: -9999px"
+                      />
+
+                      <.label
+                        for={f[search_field.id].id}
+                        id={"search-button-#{search_field.label}"}
+                        class="relative inline-flex items-center"
+                        role="button"
+                        phx-hook="Tooltip"
+                        data-placement="top"
+                        aria-label={search_field.label}
+                      >
+                        <div class={"
+                           ring-1 ring-inset ring-gray-300 px-3 py-3 text-sm
+                           font-semibold text-gray-500 hover:bg-gray-100 focus:z-10
+                           group-first:rounded-l-md group-last:rounded-r-md
+                           -ml-px group-first:ml-0 transition-colors
+                           #{if(checked?(@filters_changeset, search_field.id), do: "bg-indigo-50 text-indigo-700 ring-indigo-200", else: "bg-white")}
+                           "}>
+                          <.icon name={search_field.icon} class="h-4 w-4" />
+                        </div>
+                      </.label>
+                    </div>
+                  <% end %>
+                </div>
+              </.form>
+              <.button
+                type="submit"
+                theme="primary"
+                form="run-search-form"
+                class="ml-2 !py-3"
+              >
+                Search
+              </.button>
             </div>
           </div>
         </div>
-      </div>
-    </div>
 
-    <div>
-      <div class="mt-2">
-        <.table id="work-orders-table" page={@page} url={@pagination_path}>
-          <:header>
-            <.tr>
-              <.th>
-                <.form
-                  :let={f}
-                  for={
-                    %{
-                      "all_selections" =>
-                        if(@page.entries == [],
-                          do: false,
-                          else:
-                            all_selected?(
-                              @selected_work_orders,
-                              @page.entries
-                            )
-                        )
-                    }
-                  }
-                  phx-change="toggle_all_selections"
-                >
-                  <.input
-                    type="checkbox"
-                    field={f[:all_selections]}
-                    id="select_all"
-                    phx-hook="CheckboxIndeterminate"
-                    disabled={@page.entries == []}
-                    class={"left-4 top-1/2  h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-600 #{if partially_selected?(@selected_work_orders, @page.entries), do: "indeterminate"} #{if @page.entries == [], do: "opacity-50 cursor-not-allowed"}"}
-                  />
-                </.form>
-              </.th>
-              <.th :if={none_selected?(@selected_work_orders)}>
-                ID
-              </.th>
-              <.th :if={!none_selected?(@selected_work_orders)} colspan={2}>
-                <div class="-my-2">
-                  <.button
-                    size="sm"
+        <%!-- Active Filter Chips --%>
+        <%= if Enum.any?(@selected_workflows) ||
+             get_change(@filters_changeset, :workorder_id) ||
+             Enum.any?(@statuses, fn status -> checked?(@filters_changeset, status.id) end) ||
+             get_change(@filters_changeset, :wo_date_after) ||
+             get_change(@filters_changeset, :wo_date_before) ||
+             get_change(@filters_changeset, :date_after) ||
+             get_change(@filters_changeset, :date_before) do %>
+          <div class="bg-gray-50 border-b border-gray-200 px-6 py-3">
+            <div class="flex items-center gap-2 flex-wrap">
+              <span class="text-xs font-medium text-gray-500">
+                Active filters:
+              </span>
+
+              <%= for workflow_id <- @selected_workflows do %>
+                <span class="inline-flex items-center gap-x-1 rounded-lg bg-blue-50 px-3 py-1.5 text-xs font-medium text-blue-700 ring-1 ring-inset ring-blue-700/20 transition-all duration-150">
+                  Workflow: {find_workflow_name(@workflows, workflow_id)}
+                  <button
                     type="button"
-                    theme="secondary"
-                    id="bulk-rerun-from-start-job-modal-trigger"
-                    class="!py-1"
-                    phx-click={
-                      with :ok <-
-                             validate_bulk_rerun(
-                               @selected_work_orders,
-                               @project
-                             ),
-                           do: show_modal("bulk-rerun-from-start-modal")
-                    }
+                    phx-click="toggle_workflow"
+                    phx-value-workflow-id={workflow_id}
+                    class="group relative -mr-1 h-3.5 w-3.5 rounded-sm hover:bg-blue-600/20 transition-colors duration-150"
                   >
-                    Retry
-                  </.button>
-                  <.button
-                    :if={
-                      selected_workflow_count(@selected_work_orders) ==
-                        1
-                    }
-                    size="sm"
-                    class="ml-1 !py-1"
-                    id="bulk-rerun-from-job-modal-trigger"
-                    type="button"
-                    theme="secondary"
-                    phx-click={
-                      with :ok <-
-                             validate_bulk_rerun(
-                               @selected_work_orders,
-                               @project
-                             ),
-                           do: show_modal("bulk-rerun-from-job-modal")
-                    }
-                  >
-                    Retry from
-                  </.button>
-                </div>
-              </.th>
-              <.th :if={none_selected?(@selected_work_orders)}>
-                Workflow
-              </.th>
-              <.th>
-                Input
-              </.th>
-              <.th
-                sortable={true}
-                sort_by="inserted_at"
-                active={Map.get(@filters, "sort_by") == "inserted_at"}
-                sort_direction={Map.get(@filters, "sort_direction")}
-              >
-                Created
-              </.th>
-              <.th
-                sortable={true}
-                sort_by="last_activity"
-                active={Map.get(@filters, "sort_by") == "last_activity"}
-                sort_direction={Map.get(@filters, "sort_direction")}
-              >
-                Last Activity
-              </.th>
-              <.th class="text-right">
-                Duration
-              </.th>
-              <.th class="text-right">
-                <span class="mr-2">Status</span>
-              </.th>
-              <.th class="text-right">Runs</.th>
-            </.tr>
-          </:header>
-          <:body>
-            <.async_result :let={searched_page} assign={@async_page}>
-              <:loading>
-                <.tr>
-                  <.td colspan={9}>
-                    <Components.async_filler
-                      message="Loading work orders ..."
-                      class="animate-pulse"
-                    />
-                  </.td>
-                </.tr>
-              </:loading>
-              <:failed :let={_reason}>
-                <.tr>
-                  <.td colspan={9}>
-                    <Components.async_filler message="There was an error loading the work orders" />
-                  </.td>
-                </.tr>
-              </:failed>
-              <%= for workorder <- searched_page.entries do %>
-                <.live_component
-                  module={LightningWeb.RunLive.WorkOrderComponent}
-                  id={workorder.id}
-                  work_order={workorder}
-                  project={@project}
-                  can_edit_data_retention={@can_edit_data_retention}
-                  can_run_workflow={@can_run_workflow}
-                  entry_selected={
-                    Enum.any?(@selected_work_orders, fn wo ->
-                      wo.id == workorder.id
-                    end)
-                  }
-                />
+                    <span class="sr-only">Remove</span>
+                    <svg
+                      viewBox="0 0 14 14"
+                      class="h-3.5 w-3.5 stroke-blue-700/70 group-hover:stroke-blue-800 transition-colors duration-150"
+                    >
+                      <path d="M4 4l6 6m0-6l-6 6" />
+                    </svg>
+                  </button>
+                </span>
               <% end %>
-            </.async_result>
-          </:body>
-          <:pagination_actions>
-            <button
-              :if={@page.total_entries > 0}
-              id="export-history-button"
-              type="button"
-              phx-click="show-export-modal"
-              class="icon-button inline-flex items-center"
-              phx-hook="Tooltip"
-              aria-label={"Export all #{@page.total_entries} results matching your query"}
-            >
-              <.icon name="hero-cloud-arrow-down" class="w-5 h-5" />
-            </button>
-          </:pagination_actions>
-        </.table>
+
+              <%= if workorder_id = get_change(@filters_changeset, :workorder_id) do %>
+                <span class="inline-flex items-center gap-x-1 rounded-lg bg-blue-50 px-3 py-1.5 text-xs font-medium text-blue-700 ring-1 ring-inset ring-blue-700/20 transition-all duration-150">
+                  Work order: {display_short_uuid(workorder_id)}
+                  <button
+                    type="button"
+                    phx-click={
+                      JS.push("apply_filters",
+                        value: %{filters: %{workorder_id: nil}}
+                      )
+                    }
+                    class="group relative -mr-1 h-3.5 w-3.5 rounded-sm hover:bg-blue-600/20 transition-colors duration-150"
+                  >
+                    <span class="sr-only">Remove</span>
+                    <svg
+                      viewBox="0 0 14 14"
+                      class="h-3.5 w-3.5 stroke-blue-700/70 group-hover:stroke-blue-800 transition-colors duration-150"
+                    >
+                      <path d="M4 4l6 6m0-6l-6 6" />
+                    </svg>
+                  </button>
+                </span>
+              <% end %>
+
+              <%= for status <- Enum.filter(@statuses, fn status -> checked?(@filters_changeset, status.id) end) do %>
+                <span class="inline-flex items-center gap-x-1 rounded-lg bg-blue-50 px-3 py-1.5 text-xs font-medium text-blue-700 ring-1 ring-inset ring-blue-700/20 transition-all duration-150">
+                  Status: {status.label}
+                  <.form
+                    :let={f}
+                    for={@filters_changeset}
+                    as={:filters}
+                    class="inline"
+                    phx-submit="apply_filters"
+                  >
+                    <.input type="hidden" field={f[status.id]} value={false} />
+                    <button
+                      type="submit"
+                      class="group relative -mr-1 h-3.5 w-3.5 rounded-sm hover:bg-blue-600/20 transition-colors duration-150"
+                    >
+                      <span class="sr-only">Remove</span>
+                      <svg
+                        viewBox="0 0 14 14"
+                        class="h-3.5 w-3.5 stroke-blue-700/70 group-hover:stroke-blue-800 transition-colors duration-150"
+                      >
+                        <path d="M4 4l6 6m0-6l-6 6" />
+                      </svg>
+                    </button>
+                  </.form>
+                </span>
+              <% end %>
+            </div>
+          </div>
+        <% end %>
+
+        <%!-- Data Table --%>
+        <div class="px-6 py-4">
+          <.table id="work-orders-table" page={@page} url={@pagination_path}>
+            <:header>
+              <.tr>
+                <.th>
+                  <.form
+                    :let={f}
+                    for={
+                      %{
+                        "all_selections" =>
+                          if(@page.entries == [],
+                            do: false,
+                            else:
+                              all_selected?(
+                                @selected_work_orders,
+                                @page.entries
+                              )
+                          )
+                      }
+                    }
+                    phx-change="toggle_all_selections"
+                  >
+                    <.input
+                      type="checkbox"
+                      field={f[:all_selections]}
+                      id="select_all"
+                      phx-hook="CheckboxIndeterminate"
+                      disabled={@page.entries == []}
+                      class={"left-4 top-1/2  h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-600 #{if partially_selected?(@selected_work_orders, @page.entries), do: "indeterminate"} #{if @page.entries == [], do: "opacity-50 cursor-not-allowed"}"}
+                    />
+                  </.form>
+                </.th>
+                <.th :if={none_selected?(@selected_work_orders)}>
+                  ID
+                </.th>
+                <.th :if={!none_selected?(@selected_work_orders)} colspan={2}>
+                  <div class="-my-2">
+                    <.button
+                      size="sm"
+                      type="button"
+                      theme="secondary"
+                      id="bulk-rerun-from-start-job-modal-trigger"
+                      class="!py-1"
+                      phx-click={
+                        with :ok <-
+                               validate_bulk_rerun(
+                                 @selected_work_orders,
+                                 @project
+                               ),
+                             do: show_modal("bulk-rerun-from-start-modal")
+                      }
+                    >
+                      Retry
+                    </.button>
+                    <.button
+                      :if={
+                        selected_workflow_count(@selected_work_orders) ==
+                          1
+                      }
+                      size="sm"
+                      class="ml-1 !py-1"
+                      id="bulk-rerun-from-job-modal-trigger"
+                      type="button"
+                      theme="secondary"
+                      phx-click={
+                        with :ok <-
+                               validate_bulk_rerun(
+                                 @selected_work_orders,
+                                 @project
+                               ),
+                             do: show_modal("bulk-rerun-from-job-modal")
+                      }
+                    >
+                      Retry from
+                    </.button>
+                  </div>
+                </.th>
+                <.th :if={none_selected?(@selected_work_orders)}>
+                  Workflow
+                </.th>
+                <.th>
+                  Input
+                </.th>
+                <.th
+                  sortable={true}
+                  sort_by="inserted_at"
+                  active={Map.get(@filters, "sort_by") == "inserted_at"}
+                  sort_direction={Map.get(@filters, "sort_direction")}
+                >
+                  Created
+                </.th>
+                <.th
+                  sortable={true}
+                  sort_by="last_activity"
+                  active={Map.get(@filters, "sort_by") == "last_activity"}
+                  sort_direction={Map.get(@filters, "sort_direction")}
+                >
+                  Last Activity
+                </.th>
+                <.th class="text-right w-28">
+                  Duration
+                </.th>
+                <.th class="text-right w-32">
+                  <span class="mr-2">Status</span>
+                </.th>
+                <.th class="text-right w-20">Runs</.th>
+              </.tr>
+            </:header>
+            <:body>
+              <.async_result :let={searched_page} assign={@async_page}>
+                <:loading>
+                  <.tr>
+                    <.td colspan={9}>
+                      <Components.async_filler
+                        message="Loading work orders ..."
+                        class="animate-pulse"
+                      />
+                    </.td>
+                  </.tr>
+                </:loading>
+                <:failed :let={_reason}>
+                  <.tr>
+                    <.td colspan={9}>
+                      <Components.async_filler message="There was an error loading the work orders" />
+                    </.td>
+                  </.tr>
+                </:failed>
+                <%= for workorder <- searched_page.entries do %>
+                  <.live_component
+                    module={LightningWeb.RunLive.WorkOrderComponent}
+                    id={workorder.id}
+                    work_order={workorder}
+                    project={@project}
+                    can_edit_data_retention={@can_edit_data_retention}
+                    can_run_workflow={@can_run_workflow}
+                    entry_selected={
+                      Enum.any?(@selected_work_orders, fn wo ->
+                        wo.id == workorder.id
+                      end)
+                    }
+                  />
+                <% end %>
+              </.async_result>
+            </:body>
+            <:pagination_actions>
+              <button
+                :if={@page.total_entries > 0}
+                id="export-history-button"
+                type="button"
+                phx-click="show-export-modal"
+                class="icon-button inline-flex items-center"
+                phx-hook="Tooltip"
+                aria-label={"Export all #{@page.total_entries} results matching your query"}
+              >
+                <.icon name="hero-cloud-arrow-down" class="w-5 h-5" />
+              </button>
+            </:pagination_actions>
+          </.table>
+        </div>
       </div>
-    </div>
+    </main>
+  </div>
 
-    <div class="bg-gray-100 dark:bg-gray-700 relative flex">
-      <Components.bulk_rerun_modal
-        id="bulk-rerun-from-start-modal"
-        page_number={@page.page_number}
-        pages={@page.total_pages}
-        total_entries={@page.total_entries}
-        all_selected?={all_selected?(@selected_work_orders, @page.entries)}
-        selected_count={Enum.count(@selected_work_orders)}
-        filters={SearchParams.new(@filters)}
-        workflows={@workflows}
-        show={Map.get(assigns, :show_bulk_rerun_modal, false)}
-      />
+  <%!-- Modals --%>
+  <div class="bg-gray-100 dark:bg-gray-700 relative flex">
+    <Components.bulk_rerun_modal
+      id="bulk-rerun-from-start-modal"
+      page_number={@page.page_number}
+      pages={@page.total_pages}
+      total_entries={@page.total_entries}
+      all_selected?={all_selected?(@selected_work_orders, @page.entries)}
+      selected_count={Enum.count(@selected_work_orders)}
+      filters={SearchParams.new(@filters)}
+      workflows={@workflows}
+      show={Map.get(assigns, :show_bulk_rerun_modal, false)}
+    />
 
-      <.live_component
-        :if={selected_workflow_count(@selected_work_orders) == 1}
-        module={LightningWeb.RunLive.RerunJobComponent}
-        id="bulk-rerun-from-job-modal"
-        total_entries={@page.total_entries}
-        all_selected?={all_selected?(@selected_work_orders, @page.entries)}
-        selected_workorders={@selected_work_orders}
-        pages={@page.total_pages}
-        show={Map.get(assigns, :show_bulk_rerun_from_job_modal, false)}
-      />
-    </div>
-  </LayoutComponents.centered>
+    <.live_component
+      :if={selected_workflow_count(@selected_work_orders) == 1}
+      module={LightningWeb.RunLive.RerunJobComponent}
+      id="bulk-rerun-from-job-modal"
+      total_entries={@page.total_entries}
+      all_selected?={all_selected?(@selected_work_orders, @page.entries)}
+      selected_workorders={@selected_work_orders}
+      pages={@page.total_pages}
+      show={Map.get(assigns, :show_bulk_rerun_from_job_modal, false)}
+    />
+  </div>
 </LayoutComponents.page_content>

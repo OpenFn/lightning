@@ -94,11 +94,13 @@ defmodule LightningWeb.Components.Table do
   def table(assigns) do
     ~H"""
     <div id={@id} class="shadow ring-1 ring-black/5 sm:rounded-lg bg-gray-50">
-      <table class={["min-w-full", @divide && "divide-y divide-gray-200"]}>
-        <thead>{render_slot(@header)}</thead>
+      <table class={["min-w-full table-fixed", @divide && "divide-y divide-gray-200"]}>
+        <thead class="bg-gray-50/80 border-b-2 border-gray-200">
+          {render_slot(@header)}
+        </thead>
         <tbody class={[
           "bg-white",
-          @divide && "divide-y divide-gray-200"
+          @divide && "divide-y divide-gray-100"
         ]}>
           {render_slot(@body)}
         </tbody>
@@ -107,7 +109,9 @@ defmodule LightningWeb.Components.Table do
         <% end %>
       </table>
       <%= if @page && @url do %>
-        <div class={@divide && "border-t border-gray-200"}>
+        <div class={[
+          @divide && @page.total_entries > 0 && "border-t border-gray-200"
+        ]}>
           <LightningWeb.Pagination.pagination_bar
             page={@page}
             url={@url}
@@ -160,6 +164,7 @@ defmodule LightningWeb.Components.Table do
         "has-[td]:hover:bg-gray-50",
         @onclick && "cursor-pointer",
         "last:rounded-b-lg",
+        "[&>td]:align-middle",
         "[&>td:first-child]:py-4 [&>td:first-child]:pr-3 [&>td:first-child]:pl-4 [&>td:first-child]:sm:pl-6",
         "[&>th:first-child]:py-3.5 [&>th:first-child]:pr-3 [&>th:first-child]:pl-4 [&>th:first-child]:sm:pl-6",
         "[&>td:not(:first-child):not(:last-child)]:px-3 [&>td:not(:first-child):not(:last-child)]:py-4",
