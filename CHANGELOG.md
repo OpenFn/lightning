@@ -24,6 +24,8 @@ and this project adheres to
 
 ### Fixed
 
+- Run duration and status alignment drift in history view
+  [#3945](https://github.com/OpenFn/lightning/pull/3945)
 - Shared doc lookup in clustered environments now works across nodes instead of
   only searching locally
   [#3910](https://github.com/OpenFn/lightning/issues/3910)
