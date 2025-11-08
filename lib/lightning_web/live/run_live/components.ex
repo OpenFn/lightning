@@ -402,8 +402,8 @@ defmodule LightningWeb.RunLive.Components do
           </div>
         </div>
       </div>
-      <div role="cell" class="flex-shrink-0 text-right min-w-[240px]">
-        <div class="flex items-center justify-end gap-3 text-xs">
+      <div role="cell" class="flex-shrink-0 py-2 px-4 text-right">
+        <div class="flex items-center justify-end gap-3 text-xs min-w-[240px]">
           <%= if @can_run_workflow && @step.exit_reason do %>
             <.step_rerun_tag {assigns} />
           <% end %>
