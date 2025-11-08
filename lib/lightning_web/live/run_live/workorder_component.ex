@@ -304,7 +304,7 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
                 <%= if index == Enum.count(@runs) or @show_prev_runs do %>
                   <div
                     id={"run_#{run.id}"}
-                    class="w-full bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-all duration-200"
+                    class="w-full bg-white border border-gray-200 rounded-lg overflow-hidden transition-all duration-200"
                   >
                     <div class="bg-gradient-to-r from-indigo-50/50 via-white to-purple-50/30 border-b border-gray-200/80 text-xs flex items-center w-full">
                       <div class="flex-1 py-3 text-left">

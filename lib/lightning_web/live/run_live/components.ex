@@ -354,9 +354,9 @@ defmodule LightningWeb.RunLive.Components do
     step_item_classes =
       if is_clone,
         do:
-          ~w(flex items-center w-full bg-white/50 border border-gray-200 rounded-lg p-3 opacity-60 group hover:opacity-80 hover:shadow-sm transition-all duration-150),
+          ~w(flex items-center w-full bg-white/50 border border-gray-200 rounded-lg p-3 opacity-60 group hover:opacity-80 transition-all duration-150),
         else:
-          ~w(flex items-center w-full bg-white border border-gray-200 rounded-lg p-3 group hover:shadow-md hover:border-gray-300 transition-all duration-150)
+          ~w(flex items-center w-full bg-white border border-gray-200 rounded-lg p-3 group hover:border-gray-300 transition-all duration-150)
 
     assigns =
       assign(assigns,
