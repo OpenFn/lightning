@@ -4951,7 +4951,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
            conn: conn,
            project: project,
            workflow: workflow,
-           user: user
+           user: _user
          } do
       job = insert(:job, workflow: workflow, name: "test-job")
 

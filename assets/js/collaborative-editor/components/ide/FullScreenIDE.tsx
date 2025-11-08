@@ -468,7 +468,7 @@ export function FullScreenIDE({
         setIsConfigureModalOpen(true);
       }, 200);
       setTimeout(() => {
-        pushEvent('close_credential_modal_complete', {});
+        pushEvent('close_credential_modal', {});
       }, 500);
     };
 
