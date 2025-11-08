@@ -304,71 +304,103 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
                 <%= if index == Enum.count(@runs) or @show_prev_runs do %>
                   <div
                     id={"run_#{run.id}"}
-                    class="w-full bg-white border border-gray-200 rounded-lg overflow-hidden transition-all duration-150"
+                    class="w-full bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-all duration-200"
                   >
-                    <div class="bg-gray-100/80 text-xs flex items-center w-full">
-                      <div class="flex-1 py-2 text-left">
-                        <div class="pl-4">
-                          Run
-                          <.link navigate={
-                            ~p"/projects/#{@project.id}/runs/#{run.id}"
-                          }>
-                            <span title={run.id} class="link font-mono">
+                    <div class="bg-gradient-to-r from-indigo-50/50 via-white to-purple-50/30 border-b border-gray-200/80 text-xs flex items-center w-full">
+                      <div class="flex-1 py-3 text-left">
+                        <div class="pl-4 flex items-center gap-3">
+                          <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-indigo-100 text-indigo-700 font-semibold">
+                            <.icon name="hero-play-circle-mini" class="w-3.5 h-3.5" />
+                            Run
+                          </span>
+                          <.link
+                            navigate={~p"/projects/#{@project.id}/runs/#{run.id}"}
+                            class="link font-mono font-semibold text-gray-700 hover:text-indigo-600 transition-colors"
+                          >
+                            <span title={run.id}>
                               {display_short_uuid(run.id)}
                             </span>
                           </.link>
                           <%= if Enum.count(@runs) > 1 do %>
-                            ({index}/{Enum.count(@runs)}{if index !=
-                                                              Enum.count(@runs),
-                                                            do: ")"}
+                            <span class="text-gray-400 font-medium">
+                              ({index}/{Enum.count(@runs)})
+                            </span>
                             <%= if index == Enum.count(@runs) do %>
-                              <span>
-                                &bull; <a
-                                  id={"toggle_runs_for_#{@work_order.id}"}
-                                  href="#"
-                                  class="link"
-                                  phx-click="toggle_runs"
-                                  phx-target={@myself}
-                                >
-                            <%= if @show_prev_runs, do: "hide", else: "show" %> previous</a>)
-                              </span>
+                              <span class="text-gray-400">•</span>
+                              <a
+                                id={"toggle_runs_for_#{@work_order.id}"}
+                                href="#"
+                                class="inline-flex items-center gap-1 text-indigo-600 hover:text-indigo-700 font-medium transition-colors"
+                                phx-click="toggle_runs"
+                                phx-target={@myself}
+                              >
+                                <.icon
+                                  name={
+                                    if @show_prev_runs,
+                                      do: "hero-eye-slash-mini",
+                                      else: "hero-eye-mini"
+                                  }
+                                  class="w-3.5 h-3.5"
+                                />
+                                {if @show_prev_runs, do: "hide", else: "show"} previous
+                              </a>
                             <% end %>
                           <% end %>
-                          &bull;
-                          <%= case run.state do %>
-                            <% :available -> %>
-                              enqueued
-                              <Common.datetime
-                                datetime={run.inserted_at}
-                                format={:relative_detailed}
-                              />
-                            <% :claimed -> %>
-                              claimed
-                              <Common.datetime
-                                datetime={run.claimed_at}
-                                format={:relative_detailed}
-                              />
-                            <% :started -> %>
-                              started
-                              <Common.datetime
-                                datetime={run.started_at}
-                                format={:relative_detailed}
-                              />
-                            <% _state -> %>
-                              finished
-                              <Common.datetime
-                                datetime={run.finished_at}
-                                format={:relative_detailed}
-                              />
-                          <% end %>
+                          <span class="text-gray-400">•</span>
+                          <span class="inline-flex items-center gap-1.5 text-gray-600">
+                            <%= case run.state do %>
+                              <% :available -> %>
+                                <.icon
+                                  name="hero-clock-mini"
+                                  class="w-3.5 h-3.5 text-gray-400"
+                                />
+                                <span>enqueued</span>
+                                <Common.datetime
+                                  datetime={run.inserted_at}
+                                  format={:relative_detailed}
+                                />
+                              <% :claimed -> %>
+                                <.icon
+                                  name="hero-arrow-down-tray-mini"
+                                  class="w-3.5 h-3.5 text-blue-500"
+                                />
+                                <span>claimed</span>
+                                <Common.datetime
+                                  datetime={run.claimed_at}
+                                  format={:relative_detailed}
+                                />
+                              <% :started -> %>
+                                <.icon
+                                  name="hero-arrow-path-mini"
+                                  class="w-3.5 h-3.5 text-blue-500 animate-spin"
+                                />
+                                <span>started</span>
+                                <Common.datetime
+                                  datetime={run.started_at}
+                                  format={:relative_detailed}
+                                />
+                              <% _state -> %>
+                                <.icon
+                                  name="hero-check-circle-mini"
+                                  class="w-3.5 h-3.5 text-green-500"
+                                />
+                                <span>finished</span>
+                                <Common.datetime
+                                  datetime={run.finished_at}
+                                  format={:relative_detailed}
+                                />
+                            <% end %>
+                          </span>
                         </div>
                       </div>
-                      <div class="flex-shrink-0 py-2 px-4 text-right min-w-[240px]">
+                      <div class="flex-shrink-0 py-3 px-4 text-right min-w-[240px]">
                         <div class="flex items-center justify-end gap-3">
                           <div class="w-16 text-right">
                             <.elapsed_indicator item={run} context="details" />
                           </div>
-                          <span class="font-mono w-24 text-right">{run.state}</span>
+                          <div class="w-24 text-right">
+                            <.state_pill state={run.state} />
+                          </div>
                         </div>
                       </div>
                     </div>

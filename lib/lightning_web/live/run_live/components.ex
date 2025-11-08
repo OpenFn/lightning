@@ -318,7 +318,7 @@ defmodule LightningWeb.RunLive.Components do
       phx-mounted={JS.transition("fade-in-scale", time: 500)}
       id={"run-#{@run.id}"}
       data-entity="run"
-      class={["bg-gray-100", @step_list != [] && "border-t border-gray-300"]}
+      class="p-3 space-y-2"
     >
       <%= for step <- @step_list do %>
         <.step_list_item
@@ -353,8 +353,10 @@ defmodule LightningWeb.RunLive.Components do
 
     step_item_classes =
       if is_clone,
-        do: ~w(flex items-center w-full opacity-50 group),
-        else: ~w(flex items-center w-full group)
+        do:
+          ~w(flex items-center w-full bg-white/50 border border-gray-200 rounded-lg p-3 opacity-60 group hover:opacity-80 hover:shadow-sm transition-all duration-150),
+        else:
+          ~w(flex items-center w-full bg-white border border-gray-200 rounded-lg p-3 group hover:shadow-md hover:border-gray-300 transition-all duration-150)
 
     assigns =
       assign(assigns,
@@ -365,25 +367,22 @@ defmodule LightningWeb.RunLive.Components do
 
     ~H"""
     <div id={"step-#{@step.id}"} role="row" class={@step_item_classes}>
-      <div
-        role="cell"
-        class="flex-1 py-2 text-xs font-normal text-gray-500 text-left group-hover:bg-white"
-      >
-        <div class="flex items-center pl-4">
+      <div role="cell" class="flex-1 text-xs font-normal text-gray-500 text-left">
+        <div class="flex items-center gap-3">
           <.step_icon reason={@step.exit_reason} error_type={@step.error_type} />
-          <div class="text-gray-800 flex items-center gap-2 text-xs">
+          <div class="flex items-center gap-2 text-xs flex-1">
             <.link
               navigate={
                 ~p"/projects/#{@project_id}/runs/#{@run}?#{%{step: @step.id}}"
               }
-              class="link text-gray-800 font-normal no-underline"
+              class="font-semibold text-gray-800 hover:text-indigo-600 transition-colors"
             >
               <span>{@job.name}</span>
             </.link>
 
             <%= if @is_clone do %>
               <span
-                class="cursor-pointer"
+                class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-50 text-amber-700 border border-amber-200"
                 id={"clone_" <> @run.id <> "_" <> @step.id}
                 aria-label="This step was originally executed in a previous run.
                   It was skipped in this run; the original output has been
@@ -391,25 +390,20 @@ defmodule LightningWeb.RunLive.Components do
                 phx-hook="Tooltip"
                 data-placement="right"
               >
-                <Heroicons.paper_clip
-                  mini
-                  class="h-3 w-3 flex-shrink-0 text-gray-500"
-                />
+                <Heroicons.paper_clip mini class="h-3 w-3 flex-shrink-0" />
+                <span class="text-xs font-medium">Cloned</span>
               </span>
             <% end %>
-            &bull;
-            <span class="text-xs text-gray-500">
-              started
+            <span class="text-gray-400">•</span>
+            <span class="inline-flex items-center gap-1 text-xs text-gray-500">
+              <.icon name="hero-play-mini" class="w-3 h-3 text-gray-400" /> started
               <Common.datetime datetime={@step.started_at} format={:time_only} />
             </span>
           </div>
         </div>
       </div>
-      <div
-        role="cell"
-        class="flex-shrink-0 py-2 px-4 text-right group-hover:bg-white min-w-[240px]"
-      >
-        <div class="flex items-center justify-end gap-3 text-xs text-gray-500">
+      <div role="cell" class="flex-shrink-0 text-right min-w-[240px]">
+        <div class="flex items-center justify-end gap-3 text-xs">
           <%= if @can_run_workflow && @step.exit_reason do %>
             <.step_rerun_tag {assigns} />
           <% end %>
@@ -417,18 +411,18 @@ defmodule LightningWeb.RunLive.Components do
             id={"inspect-step-#{@step.id}"}
             phx-hook="Tooltip"
             aria-label="Inspect this step"
-            class="cursor-pointer"
+            class="p-1.5 rounded-md hover:bg-gray-100 text-gray-600 hover:text-indigo-600 transition-all duration-150"
             navigate={
               ~p"/projects/#{@project_id}/w/#{@step.snapshot.workflow_id}?#{maybe_add_snapshot_version(%{a: @run.id, m: "expand", s: @job.id}, @step.snapshot.lock_version, @workflow_version)}"
                 <> "#log"
             }
           >
-            <.icon naked name="hero-document-magnifying-glass-mini" class="h-5 w-5" />
+            <.icon naked name="hero-document-magnifying-glass-mini" class="h-4 w-4" />
           </.link>
           <div class="w-16 text-right">
             <.elapsed_indicator item={@step} context="list" />
           </div>
-          <span class="font-mono w-24 text-right">
+          <span class="font-mono text-xs w-24 text-right font-medium text-gray-600">
             {@step.exit_reason}{if @step.error_type, do: ":#{@step.error_type}"}
           </span>
         </div>
