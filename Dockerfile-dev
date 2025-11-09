@@ -47,6 +47,10 @@ RUN mix local.hex --force && \
 ARG MIX_ENV="dev"
 ENV MIX_ENV=${MIX_ENV}
 
+# Disable git hook auto-install inside Docker builds to avoid
+# compiling the :git_hooks dependency failing without a full .git repo.
+ENV GIT_HOOKS_AUTO_INSTALL=false
+
 COPY mix.* ./
 RUN mix deps.get --only $MIX_ENV
 
