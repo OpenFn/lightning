@@ -6,6 +6,7 @@ import { HOTKEY_SCOPES } from '../../constants/hotkeys';
 import { useRunRetryShortcuts } from '../../hooks/useRunRetryShortcuts';
 import { useIsNewWorkflow } from '../../hooks/useSessionContext';
 import { useVersionSelect } from '../../hooks/useVersionSelect';
+import { useWorkflowReadOnly } from '../../hooks/useWorkflow';
 import { ActiveCollaborators } from '../ActiveCollaborators';
 import { AdaptorDisplay } from '../AdaptorDisplay';
 import { Button } from '../Button';
@@ -78,6 +79,7 @@ export function IDEHeader({
   // Get URL state for building classical editor link
   const { searchParams } = useURLState();
   const isNewWorkflow = useIsNewWorkflow();
+  const { isReadOnly } = useWorkflowReadOnly();
 
   // Handle run/retry keyboard shortcuts
   // enableOnContentEditable ensures shortcuts work in Monaco editor
@@ -117,8 +119,9 @@ export function IDEHeader({
                 adaptor={jobAdaptor}
                 credentialId={jobCredentialId ?? null}
                 size="sm"
-                onEdit={onEditAdaptor}
-                onChangeAdaptor={onChangeAdaptor}
+                {...(onEditAdaptor && { onEdit: onEditAdaptor })}
+                {...(onChangeAdaptor && { onChangeAdaptor: onChangeAdaptor })}
+                isReadOnly={isReadOnly}
               />
             </div>
           )}

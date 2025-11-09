@@ -1,20 +1,23 @@
-import { useCallback, useState } from "react";
+import { useCallback, useState } from 'react';
 
-import { TriggerSchema } from "#/collaborative-editor/types/trigger";
-import _logger from "#/utils/logger";
+import { TriggerSchema } from '#/collaborative-editor/types/trigger';
+import _logger from '#/utils/logger';
 
-import { useWorkflowActions } from "../../hooks/useWorkflow";
-import type { Workflow } from "../../types/workflow";
-import { useAppForm } from "../form";
-import { createZodValidator } from "../form/createZodValidator";
+import {
+  useWorkflowActions,
+  useWorkflowReadOnly,
+} from '../../hooks/useWorkflow';
+import type { Workflow } from '../../types/workflow';
+import { useAppForm } from '../form';
+import { createZodValidator } from '../form/createZodValidator';
 
-import { CronFieldBuilder } from "./CronFieldBuilder";
+import { CronFieldBuilder } from './CronFieldBuilder';
 
 interface TriggerFormProps {
   trigger: Workflow.Trigger;
 }
 
-const logger = _logger.ns("TriggerForm").seal();
+const logger = _logger.ns('TriggerForm').seal();
 
 /**
  * Pure form component for trigger configuration.
@@ -23,7 +26,8 @@ const logger = _logger.ns("TriggerForm").seal();
  */
 export function TriggerForm({ trigger }: TriggerFormProps) {
   const { updateTrigger } = useWorkflowActions();
-  const [copySuccess, setCopySuccess] = useState<string>("");
+  const { isReadOnly } = useWorkflowReadOnly();
+  const [copySuccess, setCopySuccess] = useState<string>('');
   const [showAdvancedSettings, setShowAdvancedSettings] = useState(false);
 
   const form = useAppForm(
@@ -54,11 +58,11 @@ export function TriggerForm({ trigger }: TriggerFormProps) {
     void (async () => {
       try {
         await navigator.clipboard.writeText(text);
-        setCopySuccess("Copied!");
-        setTimeout(() => setCopySuccess(""), 2000);
+        setCopySuccess('Copied!');
+        setTimeout(() => setCopySuccess(''), 2000);
       } catch {
-        setCopySuccess("Failed to copy");
-        setTimeout(() => setCopySuccess(""), 2000);
+        setCopySuccess('Failed to copy');
+        setTimeout(() => setCopySuccess(''), 2000);
       }
     })();
   }, []);
@@ -88,18 +92,20 @@ export function TriggerForm({ trigger }: TriggerFormProps) {
                   value={field.state.value}
                   onChange={e =>
                     field.handleChange(
-                      e.target.value as "webhook" | "cron" | "kafka"
+                      e.target.value as 'webhook' | 'cron' | 'kafka'
                     )
                   }
                   onBlur={field.handleBlur}
+                  disabled={isReadOnly}
                   className={`
                     block w-full px-3 py-2 border rounded-md text-sm
                     ${
                       field.state.meta.errors.length > 0
-                        ? "border-red-300 text-red-900 focus:border-red-500 focus:ring-red-500"
-                        : "border-slate-300 focus:border-indigo-500 focus:ring-indigo-500"
+                        ? 'border-red-300 text-red-900 focus:border-red-500 focus:ring-red-500'
+                        : 'border-slate-300 focus:border-indigo-500 focus:ring-indigo-500'
                     }
                     focus:outline-none focus:ring-1
+                    disabled:opacity-50 disabled:cursor-not-allowed
                   `}
                 >
                   <option value="webhook">Webhook</option>
@@ -120,7 +126,7 @@ export function TriggerForm({ trigger }: TriggerFormProps) {
             {field => {
               const currentType = field.state.value;
 
-              if (currentType === "webhook") {
+              if (currentType === 'webhook') {
                 return (
                   <div className="space-y-4">
                     {/* Webhook URL Display */}
@@ -143,9 +149,10 @@ export function TriggerForm({ trigger }: TriggerFormProps) {
                         <button
                           type="button"
                           onClick={() => copyToClipboard(webhookUrl)}
-                          className="w-[100px] inline-block relative rounded-r-lg px-3 text-sm font-normal text-gray-900 border border-secondary-300 hover:bg-gray-50"
+                          disabled={isReadOnly}
+                          className="w-[100px] inline-block relative rounded-r-lg px-3 text-sm font-normal text-gray-900 border border-secondary-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                          {copySuccess || "Copy URL"}
+                          {copySuccess || 'Copy URL'}
                         </button>
                       </div>
                     </div>
@@ -153,7 +160,7 @@ export function TriggerForm({ trigger }: TriggerFormProps) {
                 );
               }
 
-              if (currentType === "cron") {
+              if (currentType === 'cron') {
                 return (
                   <div className="space-y-4">
                     {/* <div className="border-t pt-4"> */}
@@ -163,7 +170,7 @@ export function TriggerForm({ trigger }: TriggerFormProps) {
                       listeners={{ onChangeDebounceMs: 2000 }}
                     >
                       {cronField => {
-                        logger.log("Cron field state:", cronField.state);
+                        logger.log('Cron field state:', cronField.state);
                         return (
                           <div>
                             <CronFieldBuilder
@@ -172,6 +179,7 @@ export function TriggerForm({ trigger }: TriggerFormProps) {
                                 cronField.handleChange(cronExpr)
                               }
                               onBlur={cronField.handleBlur}
+                              disabled={isReadOnly}
                               className=""
                             />
                             {cronField.state.meta.errors.map(error => (
@@ -191,7 +199,7 @@ export function TriggerForm({ trigger }: TriggerFormProps) {
                 );
               }
 
-              if (currentType === "kafka") {
+              if (currentType === 'kafka') {
                 return (
                   <div className="space-y-6">
                     {/* Connection Settings */}
@@ -212,18 +220,20 @@ export function TriggerForm({ trigger }: TriggerFormProps) {
                             <input
                               id={field.name}
                               type="text"
-                              value={field.state.value || ""}
+                              value={field.state.value || ''}
                               onChange={e => field.handleChange(e.target.value)}
                               onBlur={field.handleBlur}
+                              disabled={isReadOnly}
                               placeholder="localhost:9092,broker2:9092"
                               className={`
                                   block w-full px-3 py-2 border rounded-md text-sm
                                   ${
                                     field.state.meta.errors.length > 0
-                                      ? "border-red-300 text-red-900 focus:border-red-500 focus:ring-red-500"
-                                      : "border-slate-300 focus:border-indigo-500 focus:ring-indigo-500"
+                                      ? 'border-red-300 text-red-900 focus:border-red-500 focus:ring-red-500'
+                                      : 'border-slate-300 focus:border-indigo-500 focus:ring-indigo-500'
                                   }
                                   focus:outline-none focus:ring-1
+                                  disabled:opacity-50 disabled:cursor-not-allowed
                                 `}
                             />
                             <p className="mt-1 text-xs text-slate-500">
@@ -254,18 +264,20 @@ export function TriggerForm({ trigger }: TriggerFormProps) {
                             <input
                               id={field.name}
                               type="text"
-                              value={field.state.value || ""}
+                              value={field.state.value || ''}
                               onChange={e => field.handleChange(e.target.value)}
                               onBlur={field.handleBlur}
+                              disabled={isReadOnly}
                               placeholder="topic1,topic2,topic3"
                               className={`
                                   block w-full px-3 py-2 border rounded-md text-sm
                                   ${
                                     field.state.meta.errors.length > 0
-                                      ? "border-red-300 text-red-900 focus:border-red-500 focus:ring-red-500"
-                                      : "border-slate-300 focus:border-indigo-500 focus:ring-indigo-500"
+                                      ? 'border-red-300 text-red-900 focus:border-red-500 focus:ring-red-500'
+                                      : 'border-slate-300 focus:border-indigo-500 focus:ring-indigo-500'
                                   }
                                   focus:outline-none focus:ring-1
+                                  disabled:opacity-50 disabled:cursor-not-allowed
                                 `}
                             />
                             <p className="mt-1 text-xs text-slate-500">
@@ -301,7 +313,8 @@ export function TriggerForm({ trigger }: TriggerFormProps) {
                                 field.handleChange(e.target.checked)
                               }
                               onBlur={field.handleBlur}
-                              className="h-4 w-4 text-indigo-600 border-slate-300 rounded focus:ring-indigo-500"
+                              disabled={isReadOnly}
+                              className="h-4 w-4 text-indigo-600 border-slate-300 rounded focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
                             />
                             <label
                               htmlFor={field.name}
@@ -325,25 +338,27 @@ export function TriggerForm({ trigger }: TriggerFormProps) {
                             </label>
                             <select
                               id={field.name}
-                              value={field.state.value || "none"}
+                              value={field.state.value || 'none'}
                               onChange={e =>
                                 field.handleChange(
                                   e.target.value as
-                                    | "none"
-                                    | "plain"
-                                    | "scram_sha_256"
-                                    | "scram_sha_512"
+                                    | 'none'
+                                    | 'plain'
+                                    | 'scram_sha_256'
+                                    | 'scram_sha_512'
                                 )
                               }
                               onBlur={field.handleBlur}
+                              disabled={isReadOnly}
                               className={`
                                   block w-full px-3 py-2 border rounded-md text-sm
                                   ${
                                     field.state.meta.errors.length > 0
-                                      ? "border-red-300 text-red-900 focus:border-red-500 focus:ring-red-500"
-                                      : "border-slate-300 focus:border-indigo-500 focus:ring-indigo-500"
+                                      ? 'border-red-300 text-red-900 focus:border-red-500 focus:ring-red-500'
+                                      : 'border-slate-300 focus:border-indigo-500 focus:ring-indigo-500'
                                   }
                                   focus:outline-none focus:ring-1
+                                  disabled:opacity-50 disabled:cursor-not-allowed
                                 `}
                             >
                               <option value="none">No Authentication</option>
@@ -370,7 +385,7 @@ export function TriggerForm({ trigger }: TriggerFormProps) {
                       {/* Conditional Username/Password Fields */}
                       <form.Field name="kafka_configuration.sasl">
                         {saslField => {
-                          const requiresAuth = saslField.state.value !== "none";
+                          const requiresAuth = saslField.state.value !== 'none';
 
                           if (!requiresAuth) return null;
 
@@ -389,19 +404,21 @@ export function TriggerForm({ trigger }: TriggerFormProps) {
                                     <input
                                       id={field.name}
                                       type="text"
-                                      value={field.state.value || ""}
+                                      value={field.state.value || ''}
                                       onChange={e =>
                                         field.handleChange(e.target.value)
                                       }
                                       onBlur={field.handleBlur}
+                                      disabled={isReadOnly}
                                       className={`
                                           block w-full px-3 py-2 border rounded-md text-sm
                                           ${
                                             field.state.meta.errors.length > 0
-                                              ? "border-red-300 text-red-900 focus:border-red-500 focus:ring-red-500"
-                                              : "border-slate-300 focus:border-indigo-500 focus:ring-indigo-500"
+                                              ? 'border-red-300 text-red-900 focus:border-red-500 focus:ring-red-500'
+                                              : 'border-slate-300 focus:border-indigo-500 focus:ring-indigo-500'
                                           }
                                           focus:outline-none focus:ring-1
+                                          disabled:opacity-50 disabled:cursor-not-allowed
                                         `}
                                     />
                                     {field.state.meta.errors.map(error => (
@@ -429,19 +446,21 @@ export function TriggerForm({ trigger }: TriggerFormProps) {
                                     <input
                                       id={field.name}
                                       type="password"
-                                      value={field.state.value || ""}
+                                      value={field.state.value || ''}
                                       onChange={e =>
                                         field.handleChange(e.target.value)
                                       }
                                       onBlur={field.handleBlur}
+                                      disabled={isReadOnly}
                                       className={`
                                           block w-full px-3 py-2 border rounded-md text-sm
                                           ${
                                             field.state.meta.errors.length > 0
-                                              ? "border-red-300 text-red-900 focus:border-red-500 focus:ring-red-500"
-                                              : "border-slate-300 focus:border-indigo-500 focus:ring-indigo-500"
+                                              ? 'border-red-300 text-red-900 focus:border-red-500 focus:ring-red-500'
+                                              : 'border-slate-300 focus:border-indigo-500 focus:ring-indigo-500'
                                           }
                                           focus:outline-none focus:ring-1
+                                          disabled:opacity-50 disabled:cursor-not-allowed
                                         `}
                                     />
                                     {field.state.meta.errors.map(error => (
@@ -468,11 +487,12 @@ export function TriggerForm({ trigger }: TriggerFormProps) {
                         onClick={() =>
                           setShowAdvancedSettings(!showAdvancedSettings)
                         }
-                        className="text-xs font-semibold text-slate-700 uppercase tracking-wide hover:text-slate-900 focus:outline-none inline-flex items-center gap-1"
+                        disabled={isReadOnly}
+                        className="text-xs font-semibold text-slate-700 uppercase tracking-wide hover:text-slate-900 focus:outline-none inline-flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         <span
                           className={`hero-chevron-right h-3 w-3 transition-transform ${
-                            showAdvancedSettings ? "rotate-90" : ""
+                            showAdvancedSettings ? 'rotate-90' : ''
                           }`}
                         />
                         Advanced
@@ -492,21 +512,23 @@ export function TriggerForm({ trigger }: TriggerFormProps) {
                                 </label>
                                 <select
                                   id={field.name}
-                                  value={field.state.value || "latest"}
+                                  value={field.state.value || 'latest'}
                                   onChange={e =>
                                     field.handleChange(
-                                      e.target.value as "earliest" | "latest"
+                                      e.target.value as 'earliest' | 'latest'
                                     )
                                   }
                                   onBlur={field.handleBlur}
+                                  disabled={isReadOnly}
                                   className={`
                                         block w-full px-3 py-2 border rounded-md text-sm
                                         ${
                                           field.state.meta.errors.length > 0
-                                            ? "border-red-300 text-red-900 focus:border-red-500 focus:ring-red-500"
-                                            : "border-slate-300 focus:border-indigo-500 focus:ring-indigo-500"
+                                            ? 'border-red-300 text-red-900 focus:border-red-500 focus:ring-red-500'
+                                            : 'border-slate-300 focus:border-indigo-500 focus:ring-indigo-500'
                                         }
                                         focus:outline-none focus:ring-1
+                                        disabled:opacity-50 disabled:cursor-not-allowed
                                       `}
                                 >
                                   <option value="latest">Latest</option>
@@ -546,14 +568,16 @@ export function TriggerForm({ trigger }: TriggerFormProps) {
                                     field.handleChange(Number(e.target.value))
                                   }
                                   onBlur={field.handleBlur}
+                                  disabled={isReadOnly}
                                   className={`
                                         block w-full px-3 py-2 border rounded-md text-sm
                                         ${
                                           field.state.meta.errors.length > 0
-                                            ? "border-red-300 text-red-900 focus:border-red-500 focus:ring-red-500"
-                                            : "border-slate-300 focus:border-indigo-500 focus:ring-indigo-500"
+                                            ? 'border-red-300 text-red-900 focus:border-red-500 focus:ring-red-500'
+                                            : 'border-slate-300 focus:border-indigo-500 focus:ring-indigo-500'
                                         }
                                         focus:outline-none focus:ring-1
+                                        disabled:opacity-50 disabled:cursor-not-allowed
                                       `}
                                 />
                                 <p className="mt-1 text-xs text-slate-500">
