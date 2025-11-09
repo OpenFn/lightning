@@ -35,14 +35,11 @@ defmodule LightningWeb.WorkflowLive.Collaborate do
 
   @impl true
   def handle_event("open_credential_modal", %{"schema" => schema}, socket) do
-    # Reset modal state when opening - this will remount the component if it was hidden
     {:noreply,
      assign(socket, show_credential_modal: true, credential_schema: schema)}
   end
 
   def handle_event("close_credential_modal_complete", _params, socket) do
-    # Called after modal is fully closed and animations are complete
-    # Reset server state so the modal can be opened again
     {:noreply,
      assign(socket, show_credential_modal: false, credential_schema: nil)}
   end
@@ -101,6 +98,7 @@ defmodule LightningWeb.WorkflowLive.Collaborate do
       }
       return_to={nil}
       sandbox_id={@project.parent_id}
+      from_collab_editor={true}
       can_create_project_credential={
         Permissions.can?(
           :project_users,
@@ -113,51 +111,80 @@ defmodule LightningWeb.WorkflowLive.Collaborate do
     """
   end
 
+  def handle_info(:clear_credential_page, socket) do
+    {:noreply,
+     assign(socket,
+       credential_page: nil,
+       credential_schema:
+         Map.get(socket.assigns, :original_credential_schema, nil)
+     )}
+  end
+
+  def handle_info({:update_credential_schema, schema}, socket) do
+    {:noreply,
+     assign(socket,
+       credential_schema: schema,
+       credential_page: nil
+     )}
+  end
+
+  def handle_info({:update_selected_credential_type, type}, socket) do
+    {:noreply,
+     assign(socket,
+       selected_credential_type_for_picker: type
+     )}
+  end
+
+  def handle_info({:back_to_advanced_picker}, socket) do
+    {:noreply,
+     assign(socket,
+       credential_page: :advanced_picker,
+       show_credential_modal: true
+     )}
+  end
+
   @impl true
   def handle_info({:credential_saved, credential}, socket) do
     project = socket.assigns.project
 
-    # Format credential data for React
-    # Determine if it's a project or keychain credential
-    {credential_id, is_project_credential} =
-      if credential.project_credentials &&
-           length(credential.project_credentials) > 0 do
-        # Project credential
-        {hd(credential.project_credentials).id, true}
-      else
-        # Keychain credential
-        {credential.id, false}
-      end
-
-    # Build credential payload matching the format React expects
     credential_data =
-      if is_project_credential do
-        %{
-          project_credential_id: credential_id,
-          id: credential.id,
-          name: credential.name,
-          schema: credential.schema
-        }
-      else
-        %{
-          id: credential_id,
-          name: credential.name,
-          schema: credential.schema
-        }
+      case credential do
+        %Lightning.Credentials.KeychainCredential{} ->
+          %{
+            id: credential.id,
+            name: credential.name,
+            schema: "keychain"
+          }
+
+        %Lightning.Credentials.Credential{} = cred ->
+          if cred.project_credentials && length(cred.project_credentials) > 0 do
+            project_credential_id = hd(cred.project_credentials).id
+
+            %{
+              project_credential_id: project_credential_id,
+              id: cred.id,
+              name: cred.name,
+              schema: cred.schema
+            }
+          else
+            %{
+              id: cred.id,
+              name: cred.name,
+              schema: cred.schema
+            }
+          end
       end
 
-    # Push event to React with the full credential data
+    is_project_credential = Map.has_key?(credential_data, :project_credential_id)
+
     socket =
       push_event(socket, "credential_saved", %{
         credential: credential_data,
         is_project_credential: is_project_credential
       })
 
-    # Broadcast credential update to all connected clients on this workflow channel
-    # This ensures the CredentialStore receives the update in real-time
     broadcast_credential_update(socket, project)
 
-    # Update server state to close the modal
     send(self(), :close_credential_modal_after_save)
 
     {:noreply, socket}
@@ -169,7 +196,6 @@ defmodule LightningWeb.WorkflowLive.Collaborate do
   end
 
   defp broadcast_credential_update(socket, project) do
-    # Fetch updated credentials list
     credentials =
       Lightning.Projects.list_project_credentials(project)
       |> Enum.concat(
@@ -177,8 +203,6 @@ defmodule LightningWeb.WorkflowLive.Collaborate do
       )
       |> WorkflowJSON.render()
 
-    # Broadcast to all connected clients on the workflow channel
-    # The CredentialStore listens for this "credentials_updated" event
     Phoenix.PubSub.broadcast(
       Lightning.PubSub,
       "workflow:collaborate:#{socket.assigns.workflow_id}",

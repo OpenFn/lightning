@@ -6,15 +6,17 @@ defmodule LightningWeb.CredentialLive.KeychainCredentialFormComponent do
 
   alias Lightning.Credentials
   alias Lightning.Policies.Permissions
-  alias LightningWeb.Components.NewInputs
 
   @valid_assigns [
     :action,
     :credentials,
     :current_user,
+    :from_collab_editor,
     :id,
     :keychain_credential,
+    :on_back,
     :on_close,
+    :on_save,
     :project,
     :project_user,
     :return_to
@@ -63,7 +65,8 @@ defmodule LightningWeb.CredentialLive.KeychainCredentialFormComponent do
        changeset: changeset,
        available_credentials: available_credentials,
        can_create: can_create,
-       can_edit: can_edit
+       can_edit: can_edit,
+       from_collab_editor: Map.get(assigns, :from_collab_editor, false)
      )}
   end
 
@@ -94,92 +97,23 @@ defmodule LightningWeb.CredentialLive.KeychainCredentialFormComponent do
   @impl true
   def render(assigns) do
     ~H"""
-    <div class="text-xs text-left">
-      <Components.Credentials.credential_modal
+    <div>
+      <Components.Credentials.keychain_credential_form
         id={@id}
-        width="xl:min-w-1/3 min-w-1/2 max-w-full"
-      >
-        <:title>
-          <div class="flex justify-between">
-            <%= if @action == :edit do %>
-              Edit keychain credential
-            <% else %>
-              Create keychain credential
-            <% end %>
-          </div>
-        </:title>
-
-        <.form
-          :let={f}
-          for={@changeset}
-          id={"keychain-credential-form-#{@keychain_credential.id || "new"}"}
-          phx-target={@myself}
-          phx-change="validate"
-          phx-submit="save"
-        >
-          <div class="space-y-6 bg-white py-5">
-            <fieldset>
-              <div class="space-y-4">
-                <div>
-                  <NewInputs.input
-                    type="text"
-                    field={f[:name]}
-                    label="Name"
-                    placeholder="Enter keychain credential name"
-                  />
-                  <p class="mt-1 text-sm text-gray-500">
-                    A descriptive name for this keychain credential
-                  </p>
-                </div>
-
-                <div>
-                  <NewInputs.input
-                    type="text"
-                    field={f[:path]}
-                    label="JSONPath Expression"
-                    placeholder="$.user_id"
-                  />
-                  <p class="mt-1 text-sm text-gray-500">
-                    JSONPath expression to extract credential selector from run data
-                  </p>
-                </div>
-
-                <div>
-                  <NewInputs.input
-                    type="select"
-                    field={f[:default_credential_id]}
-                    label="Default Credential"
-                    options={
-                      [{"No default credential", nil}] ++
-                        Enum.map(@available_credentials, &{&1.name, &1.id})
-                    }
-                  />
-                  <p class="mt-1 text-sm text-gray-500">
-                    Credential to use when JSONPath expression doesn't match
-                  </p>
-                </div>
-              </div>
-            </fieldset>
-          </div>
-
-          <.modal_footer>
-            <.button
-              id={"save-keychain-credential-button-#{@keychain_credential.id || "new"}"}
-              type="submit"
-              theme="primary"
-              disabled={!@changeset.valid?}
-            >
-              <%= case @action do %>
-                <% :edit -> %>
-                  Save Changes
-                <% :new -> %>
-                  Create
-              <% end %>
-            </.button>
-            <Components.Credentials.cancel_button modal_id={@id} />
-          </.modal_footer>
-        </.form>
-      </Components.Credentials.credential_modal>
+        keychain_credential={@keychain_credential}
+        keychain_changeset={@changeset}
+        available_credentials={@available_credentials}
+        myself={@myself}
+        action={@action}
+        from_collab_editor={@from_collab_editor}
+        on_back={JS.push("back_to_advanced_picker", target: @myself)}
+        on_modal_close={
+          JS.push("close_active_modal",
+            target: "#credentials-index-component"
+          )
+        }
+        show_modal={true}
+      />
     </div>
     """
   end
@@ -194,26 +128,21 @@ defmodule LightningWeb.CredentialLive.KeychainCredentialFormComponent do
           {:noreply,
            socket
            |> put_flash(:info, "Keychain credential updated successfully")
-           |> push_event("close_modal", %{id: socket.assigns.id})
-           |> then(fn socket ->
-             if socket.assigns[:on_close] do
-               socket.assigns.on_close.()
-             end
-
-             socket
-           end)}
+           |> push_event("close_modal", %{id: socket.assigns.id})}
 
         {:error, %Ecto.Changeset{} = changeset} ->
           {:noreply, assign(socket, :changeset, changeset)}
       end
     else
-      {:noreply,
-       socket
-       |> put_flash(
-         :error,
-         "You are not authorized to edit this keychain credential"
-       )
-       |> push_event("close_modal", %{id: socket.assigns.id})}
+      socket =
+        socket
+        |> put_flash(
+          :error,
+          "You are not authorized to edit this keychain credential"
+        )
+        |> push_event("close_modal", %{id: socket.assigns.id})
+
+      {:noreply, socket}
     end
   end
 
@@ -223,23 +152,40 @@ defmodule LightningWeb.CredentialLive.KeychainCredentialFormComponent do
              socket.assigns.keychain_credential,
              params
            ) do
-        {:ok, _keychain_credential} ->
+        {:ok, keychain_credential} ->
+          socket =
+            socket
+            |> put_flash(:info, "Keychain credential created successfully")
+
+          socket =
+            if socket.assigns[:from_collab_editor] do
+              socket
+            else
+              push_event(socket, "close_modal", %{id: socket.assigns.id})
+            end
+
           {:noreply,
-           socket
-           |> put_flash(:info, "Keychain credential created successfully")
-           |> push_event("close_modal", %{id: socket.assigns.id})}
+           then(socket, fn socket ->
+             if socket.assigns[:on_save] do
+               socket.assigns[:on_save].(keychain_credential)
+             end
+
+             socket
+           end)}
 
         {:error, %Ecto.Changeset{} = changeset} ->
           {:noreply, assign(socket, :changeset, changeset)}
       end
     else
-      {:noreply,
-       socket
-       |> put_flash(
-         :error,
-         "You are not authorized to create keychain credentials"
-       )
-       |> push_event("close_modal", %{id: socket.assigns.id})}
+      socket =
+        socket
+        |> put_flash(
+          :error,
+          "You are not authorized to create keychain credentials"
+        )
+        |> push_event("close_modal", %{id: socket.assigns.id})
+
+      {:noreply, socket}
     end
   end
 end

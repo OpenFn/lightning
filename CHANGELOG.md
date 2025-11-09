@@ -19,6 +19,9 @@ and this project adheres to
 
 - Show server validation errors in the collab editor forms
   [#3783](https://github.com/OpenFn/lightning/issues/3783)
+- Add advanced credential type picker in collaborative workflow editor allowing
+  users to create OAuth, raw JSON, and keychain credentials directly from the
+  workflow canvas [#3906](https://github.com/OpenFn/lightning/issues/3906)
 
 ### Changed
 
