@@ -72,20 +72,21 @@ defmodule Mix.Tasks.Lightning.MergeProjects do
   end
 
   defp merge_and_output(source_file, target_file, opts) do
-    if output_path = Keyword.get(opts, :output) do
+    output_path = Keyword.get(opts, :output)
+
+    if output_path do
       validate_output_path(output_path)
+      Mix.shell().info("Merging #{source_file} into #{target_file}...")
     end
 
     source_project = read_state_file(source_file, "source")
 
     target_project = read_state_file(target_file, "target")
 
-    Mix.shell().info("Merging #{source_file} into #{target_file}...")
-
     merged_project = perform_merge(source_project, target_project)
 
     output = encode_json(merged_project)
-    write_output(output, Keyword.get(opts, :output))
+    write_output(output, output_path)
   end
 
   defp perform_merge(source_project, target_project) do

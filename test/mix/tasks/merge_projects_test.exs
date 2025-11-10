@@ -39,10 +39,7 @@ defmodule Mix.Tasks.Lightning.MergeProjectsTest do
           Mix.Tasks.Lightning.MergeProjects.run([source_file, target_file])
         end)
 
-      json_output =
-        output |> String.split("\n") |> Enum.drop(1) |> Enum.join("\n")
-
-      {:ok, result} = Jason.decode(json_output)
+      {:ok, result} = Jason.decode(output)
 
       assert result["id"] == "target-id"
       assert result["name"] == "Target"
@@ -343,12 +340,14 @@ defmodule Mix.Tasks.Lightning.MergeProjectsTest do
 
       try do
         assert_raise Mix.Error, ~r/Permission denied writing to/, fn ->
-          Mix.Tasks.Lightning.MergeProjects.run([
-            source_file,
-            target_file,
-            "-o",
-            output_file
-          ])
+          capture_io(fn ->
+            Mix.Tasks.Lightning.MergeProjects.run([
+              source_file,
+              target_file,
+              "-o",
+              output_file
+            ])
+          end)
         end
       after
         File.chmod!(output_file, 0o644)
