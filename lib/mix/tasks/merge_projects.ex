@@ -235,11 +235,8 @@ defmodule Mix.Tasks.Lightning.MergeProjects do
           """)
       end
 
-    case Jason.decode(content, keys: :atoms) do
+    case Jason.decode(content) do
       {:ok, data} ->
-        # Jason's keys: :atoms option converts all string keys to atoms
-        # This is safe for controlled JSON file input (not arbitrary user input)
-        # The merge_project function requires atom keys for dot notation access
         data
 
       {:error, %Jason.DecodeError{} = error} ->
