@@ -1,17 +1,17 @@
-import { Menu, MenuButton, MenuItem, MenuItems } from "@headlessui/react";
-import { useCallback } from "react";
-import { useHotkeys } from "react-hotkeys-hook";
+import { Menu, MenuButton, MenuItem, MenuItems } from '@headlessui/react';
+import { useCallback } from 'react';
+import { useHotkeys } from 'react-hotkeys-hook';
 
-import { useURLState } from "../../react/lib/use-url-state";
-import { cn } from "../../utils/cn";
-import { buildClassicalEditorUrl } from "../../utils/editorUrlConversion";
+import { useURLState } from '../../react/lib/use-url-state';
+import { cn } from '../../utils/cn';
+import { buildClassicalEditorUrl } from '../../utils/editorUrlConversion';
 import {
   useIsNewWorkflow,
   useLatestSnapshotLockVersion,
   useProjectRepoConnection,
   useUser,
-} from "../hooks/useSessionContext";
-import { useUICommands } from "../hooks/useUI";
+} from '../hooks/useSessionContext';
+import { useUICommands } from '../hooks/useUI';
 import {
   useCanRun,
   useCanSave,
@@ -19,26 +19,27 @@ import {
   useWorkflowActions,
   useWorkflowEnabled,
   useWorkflowState,
-} from "../hooks/useWorkflow";
-import { getAvatarInitials } from "../utils/avatar";
+} from '../hooks/useWorkflow';
+import { getAvatarInitials } from '../utils/avatar';
 
-import { ActiveCollaborators } from "./ActiveCollaborators";
-import { Breadcrumbs } from "./Breadcrumbs";
-import { Button } from "./Button";
-import { EmailVerificationBanner } from "./EmailVerificationBanner";
-import { GitHubSyncModal } from "./GitHubSyncModal";
-import { Switch } from "./inputs/Switch";
-import { ReadOnlyWarning } from "./ReadOnlyWarning";
-import { Tooltip } from "./Tooltip";
+import { ActiveCollaborators } from './ActiveCollaborators';
+import { Breadcrumbs } from './Breadcrumbs';
+import { Button } from './Button';
+import { EmailVerificationBanner } from './EmailVerificationBanner';
+import { GitHubSyncModal } from './GitHubSyncModal';
+import { Switch } from './inputs/Switch';
+import { ReadOnlyWarning } from './ReadOnlyWarning';
+import { Tooltip } from './Tooltip';
+import { TooltipWithShortcut } from './TooltipWithShortcut';
 
 const userNavigation = [
-  { label: "User Profile", url: "/profile", icon: "hero-user-circle" },
-  { label: "Credentials", url: "/credentials", icon: "hero-key" },
-  { label: "API Tokens", url: "/profile/tokens", icon: "hero-key" },
+  { label: 'User Profile', url: '/profile', icon: 'hero-user-circle' },
+  { label: 'Credentials', url: '/credentials', icon: 'hero-key' },
+  { label: 'API Tokens', url: '/profile/tokens', icon: 'hero-key' },
   {
-    label: "Log out",
-    url: "/users/log_out",
-    icon: "hero-arrow-right-on-rectangle",
+    label: 'Log out',
+    url: '/users/log_out',
+    icon: 'hero-arrow-right-on-rectangle',
   },
 ];
 
@@ -65,7 +66,11 @@ export function SaveButton({
   if (!hasGitHubIntegration) {
     return (
       <div className="inline-flex rounded-md shadow-xs z-5">
-        <Tooltip content={tooltipMessage} side="bottom">
+        <TooltipWithShortcut
+          description={tooltipMessage}
+          shortcut={canSave ? ['mod', 's'] : undefined}
+          side="bottom"
+        >
           <button
             type="button"
             data-testid="save-workflow-button"
@@ -81,14 +86,18 @@ export function SaveButton({
           >
             Save
           </button>
-        </Tooltip>
+        </TooltipWithShortcut>
       </div>
     );
   }
 
   return (
     <div className="inline-flex rounded-md shadow-xs z-5">
-      <Tooltip content={tooltipMessage} side="bottom">
+      <TooltipWithShortcut
+        description={tooltipMessage}
+        shortcut={canSave ? ['mod', 's'] : undefined}
+        side="bottom"
+      >
         <button
           type="button"
           data-testid="save-workflow-button"
@@ -104,9 +113,13 @@ export function SaveButton({
         >
           Save
         </button>
-      </Tooltip>
+      </TooltipWithShortcut>
       <Menu as="div" className="relative -ml-px block">
-        <Tooltip content={tooltipMessage} side="bottom">
+        <TooltipWithShortcut
+          description={tooltipMessage}
+          shortcut={canSave ? ['mod', 'shift', 's'] : undefined}
+          side="bottom"
+        >
           <MenuButton
             disabled={!canSave}
             className="h-full rounded-r-md pr-2 pl-2 text-sm font-semibold
@@ -119,7 +132,7 @@ export function SaveButton({
             <span className="sr-only">Open sync options</span>
             <span className="hero-chevron-down w-4 h-4" />
           </MenuButton>
-        </Tooltip>
+        </TooltipWithShortcut>
         <MenuItems
           transition
           className="absolute right-0 z-10 mt-2 w-max origin-top-right
@@ -145,7 +158,7 @@ export function SaveButton({
     </div>
   );
 }
-SaveButton.displayName = "SaveButton";
+SaveButton.displayName = 'SaveButton';
 
 export function Header({
   children,
@@ -184,7 +197,7 @@ export function Header({
   }, [firstTriggerId, openRunPanel, selectNode]);
 
   useHotkeys(
-    "ctrl+s,meta+s",
+    'ctrl+s,meta+s',
     event => {
       event.preventDefault();
       if (canSave) {
@@ -199,7 +212,7 @@ export function Header({
   );
 
   useHotkeys(
-    "ctrl+shift+s,meta+shift+s",
+    'ctrl+shift+s,meta+shift+s',
     event => {
       event.preventDefault();
       if (canSave && repoConnection) {
@@ -256,7 +269,7 @@ export function Header({
               <div>
                 <button
                   type="button"
-                  onClick={() => updateSearchParams({ panel: "settings" })}
+                  onClick={() => updateSearchParams({ panel: 'settings' })}
                   className="w-5 h-5 place-self-center cursor-pointer
                   text-slate-500 hover:text-slate-400"
                 >
@@ -273,7 +286,11 @@ export function Header({
             </div>
             <div className="relative flex gap-2">
               {projectId && workflowId && firstTriggerId && (
-                <Tooltip content={runTooltipMessage} side="bottom">
+                <TooltipWithShortcut
+                  description={runTooltipMessage}
+                  shortcut={canRun ? ['mod', 'enter'] : undefined}
+                  side="bottom"
+                >
                   <span className="inline-block">
                     <Button
                       variant="primary"
@@ -283,7 +300,7 @@ export function Header({
                       Run
                     </Button>
                   </span>
-                </Tooltip>
+                </TooltipWithShortcut>
               )}
               <SaveButton
                 canSave={canSave}
@@ -341,7 +358,7 @@ export function Header({
                     <span
                       className={cn(
                         item.icon,
-                        "w-5 h-5 mr-2 text-secondary-500"
+                        'w-5 h-5 mr-2 text-secondary-500'
                       )}
                     ></span>
                     {item.label}

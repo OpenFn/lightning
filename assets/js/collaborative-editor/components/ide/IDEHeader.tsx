@@ -12,6 +12,7 @@ import { Button } from '../Button';
 import { SaveButton } from '../Header';
 import { RunRetryButton } from '../RunRetryButton';
 import { Tooltip } from '../Tooltip';
+import { TooltipWithShortcut } from '../TooltipWithShortcut';
 import { VersionDropdown } from '../VersionDropdown';
 
 interface IDEHeaderProps {
@@ -151,7 +152,11 @@ export function IDEHeader({
         {/* Right: Action buttons */}
         <div className="flex items-center gap-3">
           {!canRun && runTooltip ? (
-            <Tooltip content={runTooltip} side="bottom">
+            <TooltipWithShortcut
+              description={runTooltip}
+              shortcut={undefined}
+              side="bottom"
+            >
               <span className="inline-block">
                 <RunRetryButton
                   isRetryable={isRetryable}
@@ -168,22 +173,30 @@ export function IDEHeader({
                   dropdownPosition="down"
                 />
               </span>
-            </Tooltip>
+            </TooltipWithShortcut>
           ) : (
-            <RunRetryButton
-              isRetryable={isRetryable}
-              isDisabled={!canRun}
-              isSubmitting={isRunning}
-              onRun={onRun}
-              onRetry={onRetry}
-              buttonText={{
-                run: 'Run',
-                retry: 'Run (retry)',
-                processing: 'Processing',
-              }}
-              variant="secondary"
-              dropdownPosition="down"
-            />
+            <TooltipWithShortcut
+              description="Run workflow"
+              shortcut={canRun ? ['mod', 'enter'] : undefined}
+              side="bottom"
+            >
+              <span className="inline-block">
+                <RunRetryButton
+                  isRetryable={isRetryable}
+                  isDisabled={!canRun}
+                  isSubmitting={isRunning}
+                  onRun={onRun}
+                  onRetry={onRetry}
+                  buttonText={{
+                    run: 'Run',
+                    retry: 'Run (retry)',
+                    processing: 'Processing',
+                  }}
+                  variant="secondary"
+                  dropdownPosition="down"
+                />
+              </span>
+            </TooltipWithShortcut>
           )}
 
           <SaveButton
