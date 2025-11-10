@@ -795,4 +795,146 @@ defmodule LightningWeb.WorkflowLive.CollaborateTest do
       refute html =~ "new-credential-modal"
     end
   end
+
+  describe "webhook auth method modal interactions" do
+    test "opens webhook auth method modal via handle_event", %{conn: conn} do
+      user = insert(:user)
+
+      project =
+        insert(:project,
+          project_users: [%{user_id: user.id, role: :owner}]
+        )
+
+      workflow = workflow_fixture(project_id: project.id)
+
+      conn = log_in_user(conn, user)
+
+      {:ok, view, html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/w/#{workflow.id}/collaborate"
+        )
+
+      # Initially, modal should not be shown
+      refute html =~ "webhook-auth-method-modal"
+
+      # Trigger open_webhook_auth_modal event
+      result =
+        view
+        |> element("#collaborative-editor-react")
+        |> render_hook("open_webhook_auth_modal", %{})
+
+      # Verify modal is now shown
+      assert result =~ "webhook-auth-method-modal"
+    end
+
+    test "closes webhook auth method modal via handle_event", %{conn: conn} do
+      user = insert(:user)
+
+      project =
+        insert(:project,
+          project_users: [%{user_id: user.id, role: :owner}]
+        )
+
+      workflow = workflow_fixture(project_id: project.id)
+
+      conn = log_in_user(conn, user)
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/w/#{workflow.id}/collaborate"
+        )
+
+      # First open the modal
+      html =
+        view
+        |> element("#collaborative-editor-react")
+        |> render_hook("open_webhook_auth_modal", %{})
+
+      assert html =~ "webhook-auth-method-modal"
+
+      # Now close it
+      html =
+        view
+        |> element("#collaborative-editor-react")
+        |> render_hook("close_webhook_auth_modal_complete", %{})
+
+      # Modal should be hidden
+      refute html =~ "webhook-auth-method-modal"
+    end
+
+    test "modal not rendered when show_webhook_auth_modal is false", %{
+      conn: conn
+    } do
+      user = insert(:user)
+
+      project =
+        insert(:project,
+          project_users: [%{user_id: user.id, role: :owner}]
+        )
+
+      workflow = workflow_fixture(project_id: project.id)
+
+      conn = log_in_user(conn, user)
+
+      {:ok, _view, html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/w/#{workflow.id}/collaborate"
+        )
+
+      # By default, modal should not be rendered
+      refute html =~ "webhook-auth-method-modal"
+    end
+
+    test "multiple open/close cycles work correctly", %{conn: conn} do
+      user = insert(:user)
+
+      project =
+        insert(:project,
+          project_users: [%{user_id: user.id, role: :owner}]
+        )
+
+      workflow = workflow_fixture(project_id: project.id)
+
+      conn = log_in_user(conn, user)
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/w/#{workflow.id}/collaborate"
+        )
+
+      # First cycle
+      html =
+        view
+        |> element("#collaborative-editor-react")
+        |> render_hook("open_webhook_auth_modal", %{})
+
+      assert html =~ "webhook-auth-method-modal"
+
+      html =
+        view
+        |> element("#collaborative-editor-react")
+        |> render_hook("close_webhook_auth_modal_complete", %{})
+
+      refute html =~ "webhook-auth-method-modal"
+
+      # Second cycle
+      html =
+        view
+        |> element("#collaborative-editor-react")
+        |> render_hook("open_webhook_auth_modal", %{})
+
+      assert html =~ "webhook-auth-method-modal"
+
+      html =
+        view
+        |> element("#collaborative-editor-react")
+        |> render_hook("close_webhook_auth_modal_complete", %{})
+
+      refute html =~ "webhook-auth-method-modal"
+    end
+  end
 end
