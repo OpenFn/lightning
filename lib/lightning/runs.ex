@@ -244,9 +244,19 @@ defmodule Lightning.Runs do
         # set of preloads.
         runs
         |> Enum.map(fn run ->
-          Repo.preload(run, [:snapshot, :created_by, :starting_trigger])
+          Repo.preload(run, [
+            :snapshot,
+            :created_by,
+            :starting_trigger,
+            workflow: [:project]
+          ])
         end)
-        |> Enum.each(&Events.run_updated/1)
+        |> Enum.each(fn run ->
+          # Broadcast to run-specific topic (for run viewer)
+          Events.run_updated(run)
+          # Broadcast to project topic (for workflow channel/history)
+          Lightning.WorkOrders.Events.run_updated(run.workflow.project_id, run)
+        end)
       end
     end)
   end

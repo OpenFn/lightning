@@ -401,7 +401,7 @@ defmodule LightningWeb.RunLive.Components do
       </div>
       <div
         role="cell"
-        class="flex-shrink-0 py-2 px-4 text-right group-hover:bg-white"
+        class="flex-shrink-0 py-2 px-4 text-right group-hover:bg-white min-w-[240px]"
       >
         <div class="flex items-center justify-end gap-3 text-xs text-gray-500">
           <%= if @can_run_workflow && @step.exit_reason do %>
@@ -419,8 +419,10 @@ defmodule LightningWeb.RunLive.Components do
           >
             <.icon naked name="hero-document-magnifying-glass-mini" class="h-5 w-5" />
           </.link>
-          <.elapsed_indicator item={@step} context="list" />
-          <span class="font-mono">
+          <div class="w-16 text-right">
+            <.elapsed_indicator item={@step} context="list" />
+          </div>
+          <span class="font-mono w-24 text-right">
             {@step.exit_reason}{if @step.error_type, do: ":#{@step.error_type}"}
           </span>
         </div>

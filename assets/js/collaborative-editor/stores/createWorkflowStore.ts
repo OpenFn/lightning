@@ -214,7 +214,7 @@ export const createWorkflowStore = () => {
   const listeners = new Set<() => void>();
 
   // Debounce state for setClientErrors
-  let debounceTimeouts = new Map<string, NodeJS.Timeout>();
+  const debounceTimeouts = new Map<string, NodeJS.Timeout>();
 
   // Redux DevTools integration (development/test only)
   const devtools = wrapStoreWithDevTools<Workflow.State>({
@@ -453,14 +453,14 @@ export const createWorkflowStore = () => {
 
     // Set up channel listener for trigger auth methods updates
     const triggerAuthMethodsHandler = (payload: unknown) => {
-      logger.debug("Received trigger_auth_methods_updated broadcast", payload);
+      logger.debug('Received trigger_auth_methods_updated broadcast', payload);
 
       // Type guard and validation
       if (
-        typeof payload === "object" &&
+        typeof payload === 'object' &&
         payload !== null &&
-        "trigger_id" in payload &&
-        "webhook_auth_methods" in payload
+        'trigger_id' in payload &&
+        'webhook_auth_methods' in payload
       ) {
         const { trigger_id, webhook_auth_methods } = payload as {
           trigger_id: string;
@@ -482,12 +482,12 @@ export const createWorkflowStore = () => {
               webhook_auth_methods,
             };
           }
-        }, "trigger_auth_methods_updated");
+        }, 'trigger_auth_methods_updated');
       }
     };
 
     provider.channel.on(
-      "trigger_auth_methods_updated",
+      'trigger_auth_methods_updated',
       triggerAuthMethodsHandler
     );
 
@@ -501,7 +501,7 @@ export const createWorkflowStore = () => {
       () => positionsMap.unobserveDeep(positionsObserver),
       () =>
         provider.channel.off(
-          "trigger_auth_methods_updated",
+          'trigger_auth_methods_updated',
           triggerAuthMethodsHandler
         ),
       () => errorsMap.unobserveDeep(errorsObserver), // NEW: Cleanup function
@@ -1021,7 +1021,7 @@ export const createWorkflowStore = () => {
         Object.entries(errors).forEach(([fieldName, newMessages]) => {
           if (newMessages.length === 0) {
             // Empty array clears the field
-            // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
+
             delete draft[fieldName];
           } else {
             // Replace with client errors (deduplicate within client errors)
@@ -1285,22 +1285,22 @@ export const createWorkflowStore = () => {
 
   const requestTriggerAuthMethods = async (triggerId: string) => {
     if (!provider?.channel) {
-      logger.warn("Cannot request trigger auth methods - no channel available");
+      logger.warn('Cannot request trigger auth methods - no channel available');
       return;
     }
 
     try {
       const response = await channelRequest(
         provider.channel,
-        "request_trigger_auth_methods",
+        'request_trigger_auth_methods',
         { trigger_id: triggerId }
       );
 
       if (
         response &&
-        typeof response === "object" &&
-        "trigger_id" in response &&
-        "webhook_auth_methods" in response
+        typeof response === 'object' &&
+        'trigger_id' in response &&
+        'webhook_auth_methods' in response
       ) {
         updateState(draft => {
           draft.activeTriggerAuthMethods = response as {
@@ -1311,10 +1311,10 @@ export const createWorkflowStore = () => {
               auth_type: string;
             }>;
           };
-        }, "requestTriggerAuthMethods");
+        }, 'requestTriggerAuthMethods');
       }
     } catch (error) {
-      logger.error("Failed to request trigger auth methods", error);
+      logger.error('Failed to request trigger auth methods', error);
     }
   };
 

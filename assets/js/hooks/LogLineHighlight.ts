@@ -10,7 +10,7 @@ const LogLineHighlight = {
   highlightRows() {
     const highlightId = this.el.dataset['highlightId'];
     this.el.querySelectorAll('[data-highlight-id]').forEach(el => {
-      let elementHighlightId = (el as HTMLElement).dataset['highlightId'];
+      const elementHighlightId = (el as HTMLElement).dataset['highlightId'];
 
       if (elementHighlightId === highlightId) {
         el.setAttribute('data-highlight', '');

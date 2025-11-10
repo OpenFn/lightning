@@ -5,8 +5,8 @@
  * across different stores in the collaborative editor.
  */
 
-import { produce } from "immer";
-import { useRef, useEffect } from "react";
+import { produce } from 'immer';
+import { useRef, useEffect } from 'react';
 
 /**
  * Creates a withSelector function for a given store's getSnapshot function.
@@ -30,7 +30,7 @@ import { useRef, useEffect } from "react";
  */
 export const createWithSelector = <TState>(getSnapshot: () => TState) => {
   return <TResult>(selector: (state: TState) => TResult) => {
-    let lastResult: TResult;
+    let lastResult: TResult | undefined;
     let lastState: TState | undefined;
 
     return (): TResult => {
@@ -45,7 +45,7 @@ export const createWithSelector = <TState>(getSnapshot: () => TState) => {
         lastState = currentState;
       }
 
-      return lastResult;
+      return lastResult as TResult;
     };
   };
 };

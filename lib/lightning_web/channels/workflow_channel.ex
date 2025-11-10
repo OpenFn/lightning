@@ -13,10 +13,12 @@ defmodule LightningWeb.WorkflowChannel do
   alias Lightning.Collaboration.Session
   alias Lightning.Collaboration.Utils
   alias Lightning.Policies.Permissions
+  alias Lightning.Repo
   alias Lightning.VersionControl
   alias Lightning.Workflows.Job
   alias Lightning.Workflows.Snapshot
   alias Lightning.Workflows.Workflow
+  alias Lightning.WorkOrders
   alias LightningWeb.Channels.WorkflowJSON
 
   require Logger
@@ -59,6 +61,9 @@ defmodule LightningWeb.WorkflowChannel do
         )
 
       project_user = Lightning.Projects.get_project_user(project, user)
+
+      # Subscribe to work order events for this workflow's project
+      WorkOrders.subscribe(project.id)
 
       Phoenix.PubSub.subscribe(
         Lightning.PubSub,
@@ -205,6 +210,43 @@ defmodule LightningWeb.WorkflowChannel do
 
     Session.send_yjs_message(socket.assigns.session_pid, chunk)
     {:noreply, socket}
+  end
+
+  @impl true
+  def handle_in("request_history", %{"run_id" => run_id}, socket) do
+    workflow = socket.assigns.workflow
+
+    async_task(socket, "request_history", fn ->
+      history = get_workflow_run_history(workflow.id, run_id)
+      %{history: history}
+    end)
+  end
+
+  def handle_in("request_history", _params, socket) do
+    # No run_id provided - fetch top 20
+    handle_in("request_history", %{"run_id" => nil}, socket)
+  end
+
+  @impl true
+  def handle_in(
+        "request_run_steps",
+        %{"run_id" => run_id},
+        %{assigns: %{project: project}} = socket
+      ) do
+    async_task(socket, "request_run_steps", fn ->
+      case Lightning.Invocation.get_run_with_steps(run_id) do
+        nil ->
+          {:error, %{reason: "run_not_found"}}
+
+        run ->
+          # Verify run belongs to this project's workflows
+          if run.work_order.workflow.project_id == project.id do
+            {:ok, format_run_steps_for_client(run)}
+          else
+            {:error, %{reason: "unauthorized"}}
+          end
+      end
+    end)
   end
 
   @doc """
@@ -462,39 +504,8 @@ defmodule LightningWeb.WorkflowChannel do
 
   @impl true
   def handle_info({:async_reply, socket_ref, event, reply}, socket) do
-    case event do
-      "request_adaptors" ->
-        reply(socket_ref, reply)
-        {:noreply, socket}
-
-      "request_project_adaptors" ->
-        reply(socket_ref, reply)
-        {:noreply, socket}
-
-      "request_credentials" ->
-        reply(socket_ref, reply)
-        {:noreply, socket}
-
-      "request_current_user" ->
-        reply(socket_ref, reply)
-        {:noreply, socket}
-
-      "get_context" ->
-        reply(socket_ref, reply)
-        {:noreply, socket}
-
-      "request_versions" ->
-        reply(socket_ref, reply)
-        {:noreply, socket}
-
-      "request_trigger_auth_methods" ->
-        reply(socket_ref, reply)
-        {:noreply, socket}
-
-      _ ->
-        Logger.warning("Unhandled async reply for event: #{event}")
-        {:noreply, socket}
-    end
+    handle_async_event(event, socket_ref, reply)
+    {:noreply, socket}
   end
 
   @impl true
@@ -504,6 +515,7 @@ defmodule LightningWeb.WorkflowChannel do
 
   @impl true
   def handle_info(%{event: "credentials_updated", payload: credentials}, socket) do
+    # Forward credential updates from PubSub to connected channel clients
     push(socket, "credentials_updated", credentials)
     {:noreply, socket}
   end
@@ -523,6 +535,89 @@ defmodule LightningWeb.WorkflowChannel do
         socket
       ) do
     {:stop, {:error, "remote process crash"}, socket}
+  end
+
+  @impl true
+  def handle_info(
+        %WorkOrders.Events.WorkOrderCreated{
+          work_order: wo,
+          project_id: _project_id
+        },
+        socket
+      ) do
+    if wo.workflow_id == socket.assigns.workflow_id do
+      formatted_wo = format_work_order_for_history(wo)
+
+      push(socket, "history_updated", %{
+        work_order: formatted_wo,
+        action: "created"
+      })
+    end
+
+    {:noreply, socket}
+  end
+
+  @impl true
+  def handle_info(
+        %WorkOrders.Events.WorkOrderUpdated{work_order: wo},
+        socket
+      ) do
+    if wo.workflow_id == socket.assigns.workflow_id do
+      formatted_wo = format_work_order_for_history(wo)
+
+      push(socket, "history_updated", %{
+        work_order: formatted_wo,
+        action: "updated"
+      })
+    end
+
+    {:noreply, socket}
+  end
+
+  @impl true
+  def handle_info(
+        %WorkOrders.Events.RunCreated{run: run, project_id: _project_id},
+        socket
+      ) do
+    case WorkOrders.get(run.work_order_id, include: [:workflow]) do
+      %{workflow_id: workflow_id}
+      when workflow_id == socket.assigns.workflow_id ->
+        formatted_run = format_run_for_history(run)
+
+        push(socket, "history_updated", %{
+          run: formatted_run,
+          work_order_id: run.work_order_id,
+          action: "run_created"
+        })
+
+      _ ->
+        :ok
+    end
+
+    {:noreply, socket}
+  end
+
+  @impl true
+  def handle_info(
+        %WorkOrders.Events.RunUpdated{run: run},
+        socket
+      ) do
+    case WorkOrders.get(run.work_order_id, include: [:workflow]) do
+      %{workflow_id: workflow_id}
+      when workflow_id == socket.assigns.workflow_id ->
+        formatted_run = format_run_for_history(run)
+
+        push(socket, "history_updated", %{
+          run: formatted_run,
+          work_order_id: run.work_order_id,
+          action: "run_updated"
+        })
+
+      _ ->
+        :ok
+    end
+
+    {:noreply, socket}
   end
 
   @impl true
@@ -557,6 +652,37 @@ defmodule LightningWeb.WorkflowChannel do
 
     {:noreply, socket}
   end
+
+  # Handles async replies for different event types
+  # Extracts event handling logic to reduce cyclomatic complexity
+  defp handle_async_event("request_run_steps", socket_ref, reply) do
+    # Unwrap the result from async_task - it wraps everything in {:ok, ...}
+    # but we may have {:error, ...} tuples from the handler logic
+    unwrapped_reply = unwrap_run_steps_reply(reply)
+    reply(socket_ref, unwrapped_reply)
+  end
+
+  defp handle_async_event(event, socket_ref, reply)
+       when event in [
+              "request_adaptors",
+              "request_project_adaptors",
+              "request_credentials",
+              "request_current_user",
+              "get_context",
+              "request_history",
+              "request_versions",
+              "request_trigger_auth_methods"
+            ] do
+    reply(socket_ref, reply)
+  end
+
+  defp handle_async_event(event, _socket_ref, _reply) do
+    Logger.warning("Unhandled async reply for event: #{event}")
+  end
+
+  defp unwrap_run_steps_reply({:ok, {:ok, data}}), do: {:ok, data}
+  defp unwrap_run_steps_reply({:ok, {:error, reason}}), do: {:error, reason}
+  defp unwrap_run_steps_reply(error), do: error
 
   defp render_current_user(user) do
     %{
@@ -904,5 +1030,78 @@ defmodule LightningWeb.WorkflowChannel do
 
   defp load_workflow(action, _workflow_id, _project, _user, _version) do
     {:error, "invalid action '#{action}', must be 'new' or 'edit'"}
+  end
+
+  defp get_workflow_run_history(workflow_id, includes_run_id) do
+    Lightning.WorkOrders.get_workorders_with_runs(workflow_id, includes_run_id)
+    |> Enum.map(fn worder ->
+      %{
+        id: worder.id,
+        state: worder.state,
+        last_activity: worder.last_activity,
+        version: worder.snapshot.lock_version,
+        runs:
+          Enum.map(worder.runs, fn run ->
+            %{
+              id: run.id,
+              state: run.state,
+              error_type: run.error_type,
+              started_at: run.started_at,
+              finished_at: run.finished_at
+            }
+          end)
+      }
+    end)
+  end
+
+  defp format_work_order_for_history(wo) do
+    # Preload if needed
+    wo = Repo.preload(wo, [:snapshot, :runs])
+
+    %{
+      id: wo.id,
+      state: wo.state,
+      last_activity: wo.last_activity,
+      version: wo.snapshot.lock_version,
+      runs: Enum.map(wo.runs, &format_run_for_history/1)
+    }
+  end
+
+  defp format_run_for_history(run) do
+    %{
+      id: run.id,
+      state: run.state,
+      error_type: run.error_type,
+      started_at: run.started_at,
+      finished_at: run.finished_at
+    }
+  end
+
+  defp format_run_steps_for_client(run) do
+    steps =
+      run.steps
+      |> Enum.map(fn step ->
+        %{
+          id: step.id,
+          job_id: step.job_id,
+          exit_reason: step.exit_reason,
+          error_type: step.error_type,
+          started_at: step.started_at,
+          finished_at: step.finished_at,
+          input_dataclip_id: step.input_dataclip_id
+        }
+      end)
+
+    %{
+      run_id: run.id,
+      steps: steps,
+      metadata: %{
+        starting_job_id: run.starting_job_id,
+        starting_trigger_id: run.starting_trigger_id,
+        inserted_at: run.inserted_at,
+        created_by_id: run.created_by_id,
+        created_by_email: run.created_by && run.created_by.email
+      }
+    }
   end
 end
