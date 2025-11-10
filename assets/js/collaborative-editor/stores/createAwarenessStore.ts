@@ -90,22 +90,22 @@
  * rawAwareness (too large/circular)
  */
 
-import { produce } from "immer";
-import type { Awareness } from "y-protocols/awareness";
+import { produce } from 'immer';
+import type { Awareness } from 'y-protocols/awareness';
 
-import _logger from "#/utils/logger";
+import _logger from '#/utils/logger';
 
 import type {
   AwarenessState,
   AwarenessStore,
   AwarenessUser,
   LocalUserData,
-} from "../types/awareness";
+} from '../types/awareness';
 
-import { createWithSelector } from "./common";
-import { wrapStoreWithDevTools } from "./devtools";
+import { createWithSelector } from './common';
+import { wrapStoreWithDevTools } from './devtools';
 
-const logger = _logger.ns("AwarenessStore").seal();
+const logger = _logger.ns('AwarenessStore').seal();
 
 /**
  * Creates an awareness store instance with useSyncExternalStore + Immer pattern
@@ -131,12 +131,12 @@ export const createAwarenessStore = (): AwarenessStore => {
 
   // Redux DevTools integration
   const devtools = wrapStoreWithDevTools({
-    name: "AwarenessStore",
-    excludeKeys: ["rawAwareness"], // Exclude Y.js Awareness object
+    name: 'AwarenessStore',
+    excludeKeys: ['rawAwareness'], // Exclude Y.js Awareness object
     maxAge: 200, // Higher limit since awareness changes are frequent
   });
 
-  const notify = (actionName: string = "stateChange") => {
+  const notify = (actionName: string = 'stateChange') => {
     devtools.notifyWithAction(actionName, () => state);
     listeners.forEach(listener => {
       listener();
@@ -169,22 +169,22 @@ export const createAwarenessStore = (): AwarenessStore => {
 
     awareness.getStates().forEach((awarenessState, clientId) => {
       // Validate user data structure
-      if (awarenessState["user"]) {
+      if (awarenessState['user']) {
         try {
           // Note: We're not using Zod validation here as it's runtime performance critical
           // and we trust the awareness protocol more than external API data
           const user: AwarenessUser = {
             clientId,
-            user: awarenessState["user"] as AwarenessUser["user"],
-            cursor: awarenessState["cursor"] as AwarenessUser["cursor"],
+            user: awarenessState['user'] as AwarenessUser['user'],
+            cursor: awarenessState['cursor'] as AwarenessUser['cursor'],
             selection: awarenessState[
-              "selection"
-            ] as AwarenessUser["selection"],
-            lastSeen: awarenessState["lastSeen"] as number | undefined,
+              'selection'
+            ] as AwarenessUser['selection'],
+            lastSeen: awarenessState['lastSeen'] as number | undefined,
           };
           users.push(user);
         } catch (error) {
-          logger.warn("Invalid user data for client", clientId, error);
+          logger.warn('Invalid user data for client', clientId, error);
         }
       }
     });
@@ -200,7 +200,7 @@ export const createAwarenessStore = (): AwarenessStore => {
    */
   const handleAwarenessChange = () => {
     if (!awarenessInstance) {
-      logger.warn("handleAwarenessChange called without awareness instance");
+      logger.warn('handleAwarenessChange called without awareness instance');
       return;
     }
 
@@ -210,7 +210,7 @@ export const createAwarenessStore = (): AwarenessStore => {
       draft.users = users;
       draft.lastUpdated = Date.now();
     });
-    notify("awarenessChange");
+    notify('awarenessChange');
   };
 
   // =============================================================================
@@ -224,16 +224,16 @@ export const createAwarenessStore = (): AwarenessStore => {
     awareness: Awareness,
     userData: LocalUserData
   ) => {
-    logger.debug("Initializing awareness", { userData });
+    logger.debug('Initializing awareness', { userData });
 
     awarenessInstance = awareness;
 
     // Set up awareness with user data
-    awareness.setLocalStateField("user", userData);
-    awareness.setLocalStateField("lastSeen", Date.now());
+    awareness.setLocalStateField('user', userData);
+    awareness.setLocalStateField('lastSeen', Date.now());
 
     // Set up awareness observer for Pattern 1 updates
-    awareness.on("change", handleAwarenessChange);
+    awareness.on('change', handleAwarenessChange);
 
     // Update local state
     state = produce(state, draft => {
@@ -248,17 +248,17 @@ export const createAwarenessStore = (): AwarenessStore => {
     handleAwarenessChange();
 
     devtools.connect();
-    notify("initializeAwareness");
+    notify('initializeAwareness');
   };
 
   /**
    * Clean up awareness instance
    */
   const destroyAwareness = () => {
-    logger.debug("Destroying awareness");
+    logger.debug('Destroying awareness');
 
     if (awarenessInstance) {
-      awarenessInstance.off("change", handleAwarenessChange);
+      awarenessInstance.off('change', handleAwarenessChange);
       awarenessInstance = null;
     }
 
@@ -277,7 +277,7 @@ export const createAwarenessStore = (): AwarenessStore => {
       draft.isConnected = false;
       draft.lastUpdated = Date.now();
     });
-    notify("destroyAwareness");
+    notify('destroyAwareness');
   };
 
   /**
@@ -285,20 +285,20 @@ export const createAwarenessStore = (): AwarenessStore => {
    */
   const updateLocalUserData = (userData: Partial<LocalUserData>) => {
     if (!awarenessInstance || !state.localUser) {
-      logger.warn("Cannot update user data - awareness not initialized");
+      logger.warn('Cannot update user data - awareness not initialized');
       return;
     }
 
     const updatedUserData = { ...state.localUser, ...userData };
 
     // Update awareness first
-    awarenessInstance.setLocalStateField("user", updatedUserData);
+    awarenessInstance.setLocalStateField('user', updatedUserData);
 
     // Update local state for immediate UI response
     state = produce(state, draft => {
       draft.localUser = updatedUserData;
     });
-    notify("updateLocalUserData");
+    notify('updateLocalUserData');
 
     // Note: awareness observer will also fire and update the users array
   };
@@ -308,12 +308,12 @@ export const createAwarenessStore = (): AwarenessStore => {
    */
   const updateLocalCursor = (cursor: { x: number; y: number } | null) => {
     if (!awarenessInstance) {
-      logger.warn("Cannot update cursor - awareness not initialized");
+      logger.warn('Cannot update cursor - awareness not initialized');
       return;
     }
 
     // Update awareness
-    awarenessInstance.setLocalStateField("cursor", cursor);
+    awarenessInstance.setLocalStateField('cursor', cursor);
 
     // Immediate local state update for responsiveness
     state = produce(state, draft => {
@@ -330,22 +330,22 @@ export const createAwarenessStore = (): AwarenessStore => {
         }
       }
     });
-    notify("updateLocalCursor");
+    notify('updateLocalCursor');
   };
 
   /**
    * Update local text selection
    */
   const updateLocalSelection = (
-    selection: AwarenessUser["selection"] | null
+    selection: AwarenessUser['selection'] | null
   ) => {
     if (!awarenessInstance) {
-      logger.warn("Cannot update selection - awareness not initialized");
+      logger.warn('Cannot update selection - awareness not initialized');
       return;
     }
 
     // Update awareness
-    awarenessInstance.setLocalStateField("selection", selection);
+    awarenessInstance.setLocalStateField('selection', selection);
 
     // Immediate local state update for responsiveness
     state = produce(state, draft => {
@@ -362,19 +362,20 @@ export const createAwarenessStore = (): AwarenessStore => {
         }
       }
     });
-    notify("updateLocalSelection");
+    notify('updateLocalSelection');
   };
 
   /**
    * Update last seen timestamp
+   * @param forceTimestamp - Optional timestamp to use instead of Date.now()
    */
-  const updateLastSeen = () => {
+  const updateLastSeen = (forceTimestamp?: number) => {
     if (!awarenessInstance) {
       return;
     }
 
-    const timestamp = Date.now();
-    awarenessInstance.setLocalStateField("lastSeen", timestamp);
+    const timestamp = forceTimestamp ?? Date.now();
+    awarenessInstance.setLocalStateField('lastSeen', timestamp);
 
     // Note: We don't update local state here as awareness observer will handle it
   };
@@ -383,18 +384,95 @@ export const createAwarenessStore = (): AwarenessStore => {
    * Set up automatic last seen updates
    */
   const setupLastSeenTimer = () => {
-    if (lastSeenTimer) {
-      clearInterval(lastSeenTimer);
+    let frozenTimestamp: number | null = null;
+
+    const startTimer = () => {
+      if (lastSeenTimer) {
+        clearInterval(lastSeenTimer);
+      }
+      lastSeenTimer = setInterval(() => {
+        // If page is hidden, use frozen timestamp, otherwise use current time
+        if (frozenTimestamp) frozenTimestamp++; // This is to make sure that state is updated and data gets transmitted
+        updateLastSeen(frozenTimestamp ?? undefined);
+      }, 10000); // Update every 10 seconds
+    };
+
+    const getVisibilityProps = () => {
+      if (typeof document.hidden !== 'undefined') {
+        return { hidden: 'hidden', visibilityChange: 'visibilitychange' };
+      }
+
+      if (
+        // @ts-expect-error webkitHidden not defined
+        typeof (document as unknown as Document).webkitHidden !== 'undefined'
+      ) {
+        return {
+          hidden: 'webkitHidden',
+          visibilityChange: 'webkitvisibilitychange',
+        };
+      }
+      // @ts-expect-error mozHidden not defined
+      if (typeof (document as unknown as Document).mozHidden !== 'undefined') {
+        return { hidden: 'mozHidden', visibilityChange: 'mozvisibilitychange' };
+      }
+      // @ts-expect-error msHidden not defined
+      if (typeof (document as unknown as Document).msHidden !== 'undefined') {
+        return { hidden: 'msHidden', visibilityChange: 'msvisibilitychange' };
+      }
+      return null;
+    };
+
+    const visibilityProps = getVisibilityProps();
+
+    const handleVisibilityChange = () => {
+      if (!visibilityProps) return;
+
+      const isHidden = (document as unknown as Document)[
+        visibilityProps.hidden as keyof Document
+      ];
+
+      if (isHidden) {
+        // Page is hidden, freeze the current timestamp
+        frozenTimestamp = Date.now();
+      } else {
+        // Page is visible, unfreeze and update immediately
+        frozenTimestamp = null;
+        updateLastSeen();
+      }
+    };
+
+    // Set up visibility change listener if supported
+    if (visibilityProps) {
+      document.addEventListener(
+        visibilityProps.visibilityChange,
+        handleVisibilityChange
+      );
+
+      // Check initial visibility state
+      const isHidden = (document as unknown as Document)[
+        visibilityProps.hidden as keyof Document
+      ];
+      if (isHidden) {
+        // Start with frozen timestamp if already hidden
+        frozenTimestamp = Date.now();
+      }
     }
 
-    lastSeenTimer = setInterval(() => {
-      updateLastSeen();
-    }, 10000); // Update every 10 seconds
+    // Always start the timer (whether visible or hidden)
+    startTimer();
 
+    // cleanup
     return () => {
       if (lastSeenTimer) {
         clearInterval(lastSeenTimer);
         lastSeenTimer = null;
+      }
+
+      if (visibilityProps) {
+        document.removeEventListener(
+          visibilityProps.visibilityChange,
+          handleVisibilityChange
+        );
       }
     };
   };
@@ -410,7 +488,7 @@ export const createAwarenessStore = (): AwarenessStore => {
     state = produce(state, draft => {
       draft.isConnected = isConnected;
     });
-    notify("setConnected");
+    notify('setConnected');
   };
 
   // =============================================================================
