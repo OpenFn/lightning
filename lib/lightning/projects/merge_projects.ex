@@ -4,12 +4,11 @@ defmodule Lightning.Projects.MergeProjects do
   sandbox workflows back onto their parent workflows.
   """
   import Lightning.Utils.Maps, only: [stringify_keys: 1]
-  import Ecto.Query
 
+  # alias Lightning.AdaptorRegistry
   alias Lightning.Projects.Project
   alias Lightning.Repo
   alias Lightning.Workflows.Workflow
-  alias Lightning.Workflows.WorkflowVersion
 
   @doc """
   Merges a source project onto a target project using workflow name matching.
@@ -468,7 +467,6 @@ defmodule Lightning.Projects.MergeProjects do
     |> stringify_keys()
     |> Map.merge(%{
       "id" => target_workflow.id,
-      "lock_version" => target_workflow.lock_version,
       "positions" => merged_positions,
       "jobs" => merged_jobs,
       "triggers" => merged_triggers,
@@ -477,8 +475,6 @@ defmodule Lightning.Projects.MergeProjects do
   end
 
   defp build_merged_jobs(source_jobs, target_jobs, job_mappings) do
-    target_jobs_by_id = Map.new(target_jobs, &{&1.id, &1})
-
     # Process source jobs (matched and new)
     {new_mapping, merged_from_source} =
       Enum.reduce(
@@ -487,8 +483,6 @@ defmodule Lightning.Projects.MergeProjects do
         fn source_job, {new_mapping, merged_jobs} ->
           mapped_id =
             Map.get(job_mappings, source_job.id) || Ecto.UUID.generate()
-
-          target_job = Map.get(target_jobs_by_id, mapped_id)
 
           merged_job =
             source_job
@@ -499,21 +493,6 @@ defmodule Lightning.Projects.MergeProjects do
               :project_credential_id,
               :keychain_credential_id
             ])
-            |> then(fn job_attrs ->
-              if target_job do
-                job_attrs
-                |> Map.put(
-                  :project_credential_id,
-                  target_job.project_credential_id
-                )
-                |> Map.put(
-                  :keychain_credential_id,
-                  target_job.keychain_credential_id
-                )
-              else
-                job_attrs
-              end
-            end)
             |> Map.put(:id, mapped_id)
             |> stringify_keys()
 
@@ -763,60 +742,5 @@ defmodule Lightning.Projects.MergeProjects do
       "edges" => edges
     })
     |> stringify_keys()
-  end
-
-  @doc """
-  Checks if the target project has diverged from the source sandbox.
-
-  Divergence occurs when any workflow in the target project has a different
-  version hash compared to when the source sandbox was created. This indicates
-  that changes have been made to the target that the sandbox doesn't know about,
-  which could lead to data loss during merge.
-
-  ## Parameters
-    * `source_project` - The sandbox project with workflows
-    * `target_project` - The target project to check with workflows
-
-  ## Returns
-    * `true` if the target has diverged (workflow versions differ)
-    * `false` if no divergence detected
-  """
-  @spec has_diverged?(Project.t(), Project.t()) :: boolean()
-  def has_diverged?(%Project{} = source_project, %Project{} = target_project) do
-    source_project = Repo.preload(source_project, :workflows)
-    target_project = Repo.preload(target_project, :workflows)
-
-    sandbox_workflow_versions =
-      get_workflow_version_hashes_by_name(source_project.workflows)
-
-    target_workflow_versions =
-      get_workflow_version_hashes_by_name(target_project.workflows)
-
-    Enum.any?(target_workflow_versions, fn {workflow_name, target_hash} ->
-      case Map.get(sandbox_workflow_versions, workflow_name) do
-        nil -> false
-        sandbox_hash -> target_hash != sandbox_hash
-      end
-    end)
-  end
-
-  defp get_workflow_version_hashes_by_name(workflows) do
-    workflow_ids = Enum.map(workflows, & &1.id)
-    workflow_name_map = Map.new(workflows, fn w -> {w.id, w.name} end)
-
-    from(version in WorkflowVersion,
-      where: version.workflow_id in ^workflow_ids,
-      distinct: version.workflow_id,
-      order_by: [
-        asc: version.workflow_id,
-        desc: version.inserted_at,
-        desc: version.id
-      ],
-      select: {version.workflow_id, version.hash}
-    )
-    |> Repo.all()
-    |> Map.new(fn {workflow_id, hash} ->
-      {Map.get(workflow_name_map, workflow_id), hash}
-    end)
   end
 end

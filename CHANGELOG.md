@@ -19,6 +19,8 @@ and this project adheres to
 
 - Show server validation errors in the collab editor forms
   [#3783](https://github.com/OpenFn/lightning/issues/3783)
+- Mix task to merge project state files without database access
+  [#3615](https://github.com/OpenFn/lightning/issues/3615)
 
 ### Changed
 
