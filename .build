@@ -408,6 +408,7 @@ Mix.Tasks.Lightning.GenWorkerKeys.html
 Mix.Tasks.Lightning.InstallAdaptorIcons.html
 Mix.Tasks.Lightning.InstallRuntime.html
 Mix.Tasks.Lightning.InstallSchemas.html
+Mix.Tasks.Lightning.MergeProjects.html
 ObanPruner.html
 React.CompileError.html
 React.Component.html
@@ -424,8 +425,8 @@ dist/lato-latin-700-normal-2XVSBPG4.woff2
 dist/lato-latin-ext-400-normal-N27NCBWW.woff2
 dist/lato-latin-ext-700-normal-Q2L5DVMW.woff2
 dist/remixicon-QPNJX265.woff2
-dist/search_data-2077030F.js
-dist/sidebar_items-93FF728E.js
+dist/search_data-A5CCC5FA.js
+dist/sidebar_items-2F1CD62C.js
 index.html
 provisioning.html
 readme.html
