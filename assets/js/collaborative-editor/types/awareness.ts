@@ -38,6 +38,14 @@ export interface LocalUserData {
 }
 
 /**
+ * Cached user entry for fallback when awareness is throttled
+ */
+export interface CachedUser {
+  user: AwarenessUser;
+  cachedAt: number;
+}
+
+/**
  * Awareness store state
  */
 export interface AwarenessState {
@@ -55,6 +63,9 @@ export interface AwarenessState {
   // Connection state
   isConnected: boolean;
   lastUpdated: number | null;
+
+  // Fallback cache for throttled awareness updates (1 minute TTL)
+  userCache: Map<string, CachedUser>;
 }
 
 /**
