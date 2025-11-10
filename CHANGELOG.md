@@ -62,6 +62,8 @@ and this project adheres to
 
 ### Fixed
 
+- Fix flickering of active collaborator icons between states(active, inactive,
+  unavailable) [#3931](https://github.com/OpenFn/lightning/issues/3931)
 - Restored footers to inspectors on the canvas while in read only mode
   [#4018](https://github.com/OpenFn/lightning/issues/4018)
 - Fix vertical scrolling in workflow panels

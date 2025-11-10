@@ -121,6 +121,7 @@ export const createAwarenessStore = (): AwarenessStore => {
       rawAwareness: null,
       isConnected: false,
       lastUpdated: null,
+      userCache: new Map(),
     } as AwarenessState,
     // No initial transformations needed
     draft => draft
@@ -129,11 +130,15 @@ export const createAwarenessStore = (): AwarenessStore => {
   const listeners = new Set<() => void>();
   let awarenessInstance: Awareness | null = null;
   let lastSeenTimer: NodeJS.Timeout | null = null;
+  let cacheCleanupTimer: NodeJS.Timeout | null = null;
+
+  // Cache configuration
+  const CACHE_TTL = 60 * 1000; // 1 minute in milliseconds
 
   // Redux DevTools integration
   const devtools = wrapStoreWithDevTools({
     name: 'AwarenessStore',
-    excludeKeys: ['rawAwareness'], // Exclude Y.js Awareness object
+    excludeKeys: ['rawAwareness', 'userCache'], // Exclude Y.js Awareness object and Map cache
     maxAge: 200, // Higher limit since awareness changes are frequent
   });
 
@@ -210,6 +215,7 @@ export const createAwarenessStore = (): AwarenessStore => {
 
     state = produce(state, draft => {
       const awarenessStates = awareness.getStates();
+      const now = Date.now();
 
       // Track which clientIds we've seen in this update
       const seenClientIds = new Set<number>();
@@ -285,12 +291,18 @@ export const createAwarenessStore = (): AwarenessStore => {
               lastSeen,
             });
           }
+
+          // Update cache for this active user
+          draft.userCache.set(userData.id, {
+            user: draft.cursorsMap.get(clientId)!,
+            cachedAt: now,
+          });
         } catch (error) {
           logger.warn('Invalid user data for client', clientId, error);
         }
       });
 
-      // Remove users that are no longer in awareness
+      // Remove users that are no longer in awareness from cursorsMap
       const entriesToDelete: number[] = [];
       draft.cursorsMap.forEach((_, clientId) => {
         if (!seenClientIds.has(clientId)) {
@@ -301,9 +313,27 @@ export const createAwarenessStore = (): AwarenessStore => {
         draft.cursorsMap.delete(clientId);
       });
 
-      // Rebuild users array from cursorsMap for compatibility
-      // Sort by name for consistent ordering
-      draft.users = Array.from(draft.cursorsMap.values()).sort((a, b) =>
+      // Rebuild users array from cursorsMap
+      const liveUsers = Array.from(draft.cursorsMap.values());
+
+      // Merge with cached users (inactive collaborators within cache TTL)
+      const liveUserIds = new Set(liveUsers.map(u => u.user.id));
+      const cachedUsers: AwarenessUser[] = [];
+
+      draft.userCache.forEach((cachedUser, userId) => {
+        if (!liveUserIds.has(userId)) {
+          // Only add if cache is still valid
+          if (now - cachedUser.cachedAt <= CACHE_TTL) {
+            cachedUsers.push(cachedUser.user);
+          } else {
+            // Clean up expired cache entry
+            draft.userCache.delete(userId);
+          }
+        }
+      });
+
+      // Combine live and cached users, then sort by name for consistent ordering
+      draft.users = [...liveUsers, ...cachedUsers].sort((a, b) =>
         a.user.name.localeCompare(b.user.name)
       );
 
@@ -315,6 +345,36 @@ export const createAwarenessStore = (): AwarenessStore => {
   // =============================================================================
   // PATTERN 2: Direct Immer → Notify + Awareness Update (Local Commands)
   // =============================================================================
+
+  /**
+   * Set up periodic cache cleanup
+   */
+  const setupCacheCleanup = () => {
+    if (cacheCleanupTimer) {
+      clearInterval(cacheCleanupTimer);
+    }
+
+    // Clean up expired cache entries every 30 seconds
+    cacheCleanupTimer = setInterval(() => {
+      const now = Date.now();
+      const newCache = new Map(state.userCache);
+      let hasChanges = false;
+
+      newCache.forEach((cachedUser, userId) => {
+        if (now - cachedUser.cachedAt > CACHE_TTL) {
+          newCache.delete(userId);
+          hasChanges = true;
+        }
+      });
+
+      if (hasChanges) {
+        state = produce(state, draft => {
+          draft.userCache = newCache;
+        });
+        notify('cacheCleanup');
+      }
+    }, 30000); // Check every 30 seconds
+  };
 
   /**
    * Initialize awareness instance and set up observers
@@ -333,6 +393,9 @@ export const createAwarenessStore = (): AwarenessStore => {
 
     // Set up awareness observer for Pattern 1 updates
     awareness.on('change', handleAwarenessChange);
+
+    // Set up cache cleanup
+    setupCacheCleanup();
 
     // Update local state
     state = produce(state, draft => {
@@ -366,6 +429,11 @@ export const createAwarenessStore = (): AwarenessStore => {
       lastSeenTimer = null;
     }
 
+    if (cacheCleanupTimer) {
+      clearInterval(cacheCleanupTimer);
+      cacheCleanupTimer = null;
+    }
+
     devtools.disconnect();
 
     state = produce(state, draft => {
@@ -376,6 +444,7 @@ export const createAwarenessStore = (): AwarenessStore => {
       draft.isInitialized = false;
       draft.isConnected = false;
       draft.lastUpdated = Date.now();
+      draft.userCache = new Map();
     });
     notify('destroyAwareness');
   };
@@ -467,13 +536,14 @@ export const createAwarenessStore = (): AwarenessStore => {
 
   /**
    * Update last seen timestamp
+   * @param forceTimestamp - Optional timestamp to use instead of Date.now()
    */
-  const updateLastSeen = () => {
+  const updateLastSeen = (forceTimestamp?: number) => {
     if (!awarenessInstance) {
       return;
     }
 
-    const timestamp = Date.now();
+    const timestamp = forceTimestamp ?? Date.now();
     awarenessInstance.setLocalStateField('lastSeen', timestamp);
 
     // Note: We don't update local state here as awareness observer will handle it
@@ -483,18 +553,95 @@ export const createAwarenessStore = (): AwarenessStore => {
    * Set up automatic last seen updates
    */
   const setupLastSeenTimer = () => {
-    if (lastSeenTimer) {
-      clearInterval(lastSeenTimer);
+    let frozenTimestamp: number | null = null;
+
+    const startTimer = () => {
+      if (lastSeenTimer) {
+        clearInterval(lastSeenTimer);
+      }
+      lastSeenTimer = setInterval(() => {
+        // If page is hidden, use frozen timestamp, otherwise use current time
+        if (frozenTimestamp) frozenTimestamp++; // This is to make sure that state is updated and data gets transmitted
+        updateLastSeen(frozenTimestamp ?? undefined);
+      }, 10000); // Update every 10 seconds
+    };
+
+    const getVisibilityProps = () => {
+      if (typeof document.hidden !== 'undefined') {
+        return { hidden: 'hidden', visibilityChange: 'visibilitychange' };
+      }
+
+      if (
+        // @ts-expect-error webkitHidden not defined
+        typeof (document as unknown as Document).webkitHidden !== 'undefined'
+      ) {
+        return {
+          hidden: 'webkitHidden',
+          visibilityChange: 'webkitvisibilitychange',
+        };
+      }
+      // @ts-expect-error mozHidden not defined
+      if (typeof (document as unknown as Document).mozHidden !== 'undefined') {
+        return { hidden: 'mozHidden', visibilityChange: 'mozvisibilitychange' };
+      }
+      // @ts-expect-error msHidden not defined
+      if (typeof (document as unknown as Document).msHidden !== 'undefined') {
+        return { hidden: 'msHidden', visibilityChange: 'msvisibilitychange' };
+      }
+      return null;
+    };
+
+    const visibilityProps = getVisibilityProps();
+
+    const handleVisibilityChange = () => {
+      if (!visibilityProps) return;
+
+      const isHidden = (document as unknown as Document)[
+        visibilityProps.hidden as keyof Document
+      ];
+
+      if (isHidden) {
+        // Page is hidden, freeze the current timestamp
+        frozenTimestamp = Date.now();
+      } else {
+        // Page is visible, unfreeze and update immediately
+        frozenTimestamp = null;
+        updateLastSeen();
+      }
+    };
+
+    // Set up visibility change listener if supported
+    if (visibilityProps) {
+      document.addEventListener(
+        visibilityProps.visibilityChange,
+        handleVisibilityChange
+      );
+
+      // Check initial visibility state
+      const isHidden = (document as unknown as Document)[
+        visibilityProps.hidden as keyof Document
+      ];
+      if (isHidden) {
+        // Start with frozen timestamp if already hidden
+        frozenTimestamp = Date.now();
+      }
     }
 
-    lastSeenTimer = setInterval(() => {
-      updateLastSeen();
-    }, 10000); // Update every 10 seconds
+    // Always start the timer (whether visible or hidden)
+    startTimer();
 
+    // cleanup
     return () => {
       if (lastSeenTimer) {
         clearInterval(lastSeenTimer);
         lastSeenTimer = null;
+      }
+
+      if (visibilityProps) {
+        document.removeEventListener(
+          visibilityProps.visibilityChange,
+          handleVisibilityChange
+        );
       }
     };
   };
