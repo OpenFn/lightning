@@ -4,31 +4,12 @@ defmodule Lightning.Projects.MergeProjects do
   sandbox workflows back onto their parent workflows.
   """
   import Ecto.Query
+  import Lightning.Utils.Maps, only: [deep_stringify_keys: 1]
 
   alias Lightning.Projects.Project
   alias Lightning.Repo
   alias Lightning.Workflows.Workflow
   alias Lightning.Workflows.WorkflowVersion
-
-  # Recursively converts structs and maps to maps with string keys
-  defp deep_stringify_keys(%_{} = struct) do
-    struct
-    |> Map.from_struct()
-    |> deep_stringify_keys()
-  end
-
-  defp deep_stringify_keys(map) when is_map(map) do
-    Map.new(map, fn {key, value} ->
-      string_key = if is_atom(key), do: to_string(key), else: key
-      {string_key, deep_stringify_keys(value)}
-    end)
-  end
-
-  defp deep_stringify_keys(list) when is_list(list) do
-    Enum.map(list, &deep_stringify_keys/1)
-  end
-
-  defp deep_stringify_keys(value), do: value
 
   @doc """
   Merges a source project onto a target project using workflow name matching.

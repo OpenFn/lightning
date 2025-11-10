@@ -19,6 +19,7 @@ defmodule Lightning.Collaboration.Session do
   use GenServer, restart: :temporary
 
   import LightningWeb.CoreComponents, only: [translate_error: 1]
+  import Lightning.Utils.Maps, only: [deep_stringify_keys: 1]
 
   alias Lightning.Accounts.User
   alias Lightning.Collaboration.WorkflowSerializer
@@ -664,19 +665,8 @@ defmodule Lightning.Collaboration.Session do
       end
 
     # Convert atom keys to strings to match Y.Doc structure
-    Map.new(result, fn {key, value} ->
-      {to_string(key), atomize_map_keys_to_strings(value)}
-    end)
+    deep_stringify_keys(result)
   end
-
-  # Helper to convert nested atom keys to strings
-  defp atomize_map_keys_to_strings(value) when is_map(value) do
-    Map.new(value, fn {k, v} ->
-      {to_string(k), atomize_map_keys_to_strings(v)}
-    end)
-  end
-
-  defp atomize_map_keys_to_strings(value), do: value
 
   defp extract_changeset_errors(changeset) do
     changeset.errors
