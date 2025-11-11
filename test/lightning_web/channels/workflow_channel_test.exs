@@ -54,6 +54,22 @@ defmodule LightningWeb.WorkflowChannelTest do
                )
     end
 
+    test "rejects join with non-existent workflow_id", %{
+      project: project,
+      user: user
+    } do
+      non_existent_workflow_id = Ecto.UUID.generate()
+
+      assert {:error, %{reason: "workflow not found"}} =
+               LightningWeb.UserSocket
+               |> socket("user_#{user.id}", %{current_user: user})
+               |> subscribe_and_join(
+                 LightningWeb.WorkflowChannel,
+                 "workflow:collaborate:#{non_existent_workflow_id}",
+                 %{"project_id" => project.id, "action" => "edit"}
+               )
+    end
+
     test "accepts authorized users with proper assigns", %{
       socket: socket,
       workflow: workflow,
