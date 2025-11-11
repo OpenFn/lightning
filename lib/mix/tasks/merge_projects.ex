@@ -131,7 +131,16 @@ defmodule Mix.Tasks.Lightning.MergeProjects do
         [source_id, target_id] ->
           source_id = String.trim(source_id)
           target_id = String.trim(target_id)
-          Map.put(acc, source_id, target_id)
+
+          # Support both string and integer keys by adding both forms
+          acc
+          |> Map.put(source_id, target_id)
+          |> then(fn map ->
+            case Integer.parse(source_id) do
+              {int_id, ""} -> Map.put(map, int_id, target_id)
+              _ -> map
+            end
+          end)
 
         _other ->
           Mix.raise("""
