@@ -132,7 +132,12 @@ config :lightning, :is_resettable_demo, true
 config :lightning, :apollo, endpoint: "http://localhost:3000", timeout: 30_000
 
 config :git_hooks,
-  auto_install: true,
+  # In local dev (with a real .git repo) we auto-install hooks.
+  # In Docker builds the .git directory is not present (or incomplete),
+  # so skip auto-install to avoid compile-time failures.
+  auto_install:
+    System.get_env("GIT_HOOKS_AUTO_INSTALL", "true") == "true" and
+      File.exists?(".git/config"),
   verbose: true,
   hooks: [
     pre_commit: [
