@@ -167,6 +167,241 @@ defmodule Mix.Tasks.Lightning.MergeProjectsTest do
     end
   end
 
+  describe "run/1 - UUID mapping" do
+    test "uses provided UUID for new job", %{tmp_dir: tmp_dir} do
+      job_uuid = Ecto.UUID.generate()
+
+      # Target has a workflow, source has same workflow plus an extra job
+      target_state = build_simple_project(name: "Target", workflow_name: "Main")
+      source_state = build_simple_project(name: "Source", workflow_name: "Main")
+
+      # Add a second job to source workflow
+      source_workflow = hd(source_state["workflows"])
+      new_job = build_job(name: "New Job", body: "fn(s => s)")
+
+      updated_workflow =
+        Map.put(source_workflow, "jobs", source_workflow["jobs"] ++ [new_job])
+
+      source_state = Map.put(source_state, "workflows", [updated_workflow])
+
+      source_file = Path.join(tmp_dir, "source.json")
+      target_file = Path.join(tmp_dir, "target.json")
+
+      File.write!(source_file, Jason.encode!(source_state))
+      File.write!(target_file, Jason.encode!(target_state))
+
+      output =
+        capture_io(fn ->
+          Mix.Tasks.Lightning.MergeProjects.run([
+            source_file,
+            target_file,
+            "--uuid",
+            "#{new_job["id"]}:#{job_uuid}"
+          ])
+        end)
+
+      {:ok, result} = Jason.decode(output)
+      workflow = hd(result["workflows"])
+      merged_job = Enum.find(workflow["jobs"], &(&1["name"] == "New Job"))
+
+      assert merged_job["id"] == job_uuid
+    end
+
+    test "uses provided UUID for new edge", %{tmp_dir: tmp_dir} do
+      edge_uuid = Ecto.UUID.generate()
+
+      # Target has workflow with 1 job, source has 2 jobs with an edge between them
+      target_state = build_simple_project(name: "Target", workflow_name: "Main")
+      source_state = build_simple_project(name: "Source", workflow_name: "Main")
+
+      # Add a second job and edge to source workflow
+      source_workflow = hd(source_state["workflows"])
+      existing_job = hd(source_workflow["jobs"])
+      new_job = build_job(name: "Second Job", body: "console.log('second');")
+
+      new_edge =
+        build_edge(
+          source_job_id: existing_job["id"],
+          target_job_id: new_job["id"]
+        )
+
+      updated_workflow =
+        source_workflow
+        |> Map.put("jobs", source_workflow["jobs"] ++ [new_job])
+        |> Map.put("edges", source_workflow["edges"] ++ [new_edge])
+
+      source_state = Map.put(source_state, "workflows", [updated_workflow])
+
+      source_file = Path.join(tmp_dir, "source.json")
+      target_file = Path.join(tmp_dir, "target.json")
+
+      File.write!(source_file, Jason.encode!(source_state))
+      File.write!(target_file, Jason.encode!(target_state))
+
+      output =
+        capture_io(fn ->
+          Mix.Tasks.Lightning.MergeProjects.run([
+            source_file,
+            target_file,
+            "--uuid",
+            "#{new_edge["id"]}:#{edge_uuid}"
+          ])
+        end)
+
+      {:ok, result} = Jason.decode(output)
+      workflow = hd(result["workflows"])
+      # Find the job-to-job edge (not trigger-to-job)
+      merged_edge = Enum.find(workflow["edges"], &(&1["source_job_id"] != nil))
+
+      assert merged_edge["id"] == edge_uuid
+    end
+
+    test "uses provided UUID for new workflow", %{tmp_dir: tmp_dir} do
+      workflow_uuid = Ecto.UUID.generate()
+
+      # Target has no workflows, source has one
+      source_state =
+        build_simple_project(name: "Source", workflow_name: "New Workflow")
+
+      target_state = build_project_state(name: "Target", workflows: [])
+
+      source_file = Path.join(tmp_dir, "source.json")
+      target_file = Path.join(tmp_dir, "target.json")
+
+      File.write!(source_file, Jason.encode!(source_state))
+      File.write!(target_file, Jason.encode!(target_state))
+
+      source_workflow = hd(source_state["workflows"])
+
+      output =
+        capture_io(fn ->
+          Mix.Tasks.Lightning.MergeProjects.run([
+            source_file,
+            target_file,
+            "--uuid",
+            "#{source_workflow["id"]}:#{workflow_uuid}"
+          ])
+        end)
+
+      {:ok, result} = Jason.decode(output)
+      workflow = hd(result["workflows"])
+
+      assert workflow["id"] == workflow_uuid
+    end
+
+    test "handles multiple UUID mappings", %{tmp_dir: tmp_dir} do
+      job_uuid = Ecto.UUID.generate()
+      edge_uuid = Ecto.UUID.generate()
+
+      target_state = build_simple_project(name: "Target", workflow_name: "Main")
+      source_state = build_simple_project(name: "Source", workflow_name: "Main")
+
+      source_workflow = hd(source_state["workflows"])
+      existing_job = hd(source_workflow["jobs"])
+      new_job = build_job(name: "New Job", body: "console.log('new');")
+
+      new_edge =
+        build_edge(
+          source_job_id: existing_job["id"],
+          target_job_id: new_job["id"]
+        )
+
+      updated_workflow =
+        source_workflow
+        |> Map.put("jobs", source_workflow["jobs"] ++ [new_job])
+        |> Map.put("edges", source_workflow["edges"] ++ [new_edge])
+
+      source_state = Map.put(source_state, "workflows", [updated_workflow])
+
+      source_file = Path.join(tmp_dir, "source.json")
+      target_file = Path.join(tmp_dir, "target.json")
+
+      File.write!(source_file, Jason.encode!(source_state))
+      File.write!(target_file, Jason.encode!(target_state))
+
+      output =
+        capture_io(fn ->
+          Mix.Tasks.Lightning.MergeProjects.run([
+            source_file,
+            target_file,
+            "--uuid",
+            "#{new_job["id"]}:#{job_uuid}",
+            "--uuid",
+            "#{new_edge["id"]}:#{edge_uuid}"
+          ])
+        end)
+
+      {:ok, result} = Jason.decode(output)
+      workflow = hd(result["workflows"])
+      merged_job = Enum.find(workflow["jobs"], &(&1["name"] == "New Job"))
+      merged_edge = Enum.find(workflow["edges"], &(&1["source_job_id"] != nil))
+
+      assert merged_job["id"] == job_uuid
+      assert merged_edge["id"] == edge_uuid
+    end
+
+    test "raises error for invalid UUID format in source", %{tmp_dir: tmp_dir} do
+      source_file = Path.join(tmp_dir, "source.json")
+      target_file = Path.join(tmp_dir, "target.json")
+
+      assert_raise Mix.Error, ~r/Invalid source UUID in mapping/, fn ->
+        Mix.Tasks.Lightning.MergeProjects.run([
+          source_file,
+          target_file,
+          "--uuid",
+          "invalid-uuid:#{Ecto.UUID.generate()}"
+        ])
+      end
+    end
+
+    test "raises error for invalid UUID format in target", %{tmp_dir: tmp_dir} do
+      source_file = Path.join(tmp_dir, "source.json")
+      target_file = Path.join(tmp_dir, "target.json")
+
+      assert_raise Mix.Error, ~r/Invalid target UUID in mapping/, fn ->
+        Mix.Tasks.Lightning.MergeProjects.run([
+          source_file,
+          target_file,
+          "--uuid",
+          "#{Ecto.UUID.generate()}:invalid-uuid"
+        ])
+      end
+    end
+
+    test "raises error for malformed UUID mapping", %{tmp_dir: tmp_dir} do
+      source_file = Path.join(tmp_dir, "source.json")
+      target_file = Path.join(tmp_dir, "target.json")
+
+      assert_raise Mix.Error, ~r/Invalid UUID mapping format/, fn ->
+        Mix.Tasks.Lightning.MergeProjects.run([
+          source_file,
+          target_file,
+          "--uuid",
+          "missing-colon"
+        ])
+      end
+    end
+
+    test "raises error for duplicate source UUID with different target", %{
+      tmp_dir: tmp_dir
+    } do
+      source_file = Path.join(tmp_dir, "source.json")
+      target_file = Path.join(tmp_dir, "target.json")
+      source_uuid = Ecto.UUID.generate()
+
+      assert_raise Mix.Error, ~r/Duplicate UUID mapping/, fn ->
+        Mix.Tasks.Lightning.MergeProjects.run([
+          source_file,
+          target_file,
+          "--uuid",
+          "#{source_uuid}:#{Ecto.UUID.generate()}",
+          "--uuid",
+          "#{source_uuid}:#{Ecto.UUID.generate()}"
+        ])
+      end
+    end
+  end
+
   describe "run/1 - file operation errors" do
     test "raises error when source file does not exist", %{tmp_dir: tmp_dir} do
       target_file = Path.join(tmp_dir, "target.json")

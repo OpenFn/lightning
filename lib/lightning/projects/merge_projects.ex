@@ -489,7 +489,7 @@ defmodule Lightning.Projects.MergeProjects do
     })
   end
 
-  defp build_merged_jobs(source_jobs, target_jobs, job_mappings, uuid_map \\ %{}) do
+  defp build_merged_jobs(source_jobs, target_jobs, job_mappings, uuid_map) do
     target_jobs_by_id = Map.new(target_jobs, &{&1.id, &1})
 
     # Process source jobs (matched and new)
@@ -594,7 +594,7 @@ defmodule Lightning.Projects.MergeProjects do
          source_edges,
          target_edges,
          node_mappings,
-         uuid_map \\ %{}
+         uuid_map
        ) do
     merged_from_source =
       Enum.map(source_edges, fn source_edge ->
@@ -722,7 +722,7 @@ defmodule Lightning.Projects.MergeProjects do
     merged_from_source ++ deleted_targets
   end
 
-  defp build_new_workflow(source_workflow, uuid_map \\ %{}) do
+  defp build_new_workflow(source_workflow, uuid_map) do
     job_id_map =
       Map.new(source_workflow.jobs, fn job ->
         {job.id, Map.get(uuid_map, job.id) || Ecto.UUID.generate()}
