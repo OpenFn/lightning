@@ -196,31 +196,31 @@ Workflows are directed acyclic graphs (DAGs) that define data processing pipelin
 
 <p>Creates a new workflow in a project.</p><p>Creates a workflow with jobs, triggers, and edges. Validates the workflow
 structure and ensures it forms a valid DAG with no cycles.</p><h2 id="create/2-parameters" class="section-heading"><a href="#create/2-parameters" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Parameters</span></h2><ul><li><code class="inline">conn</code> - The Plug connection struct with the current resource assigned</li><li><code class="inline">params</code> - Map containing:<ul><li><code class="inline">project_id</code> - Project UUID (required)</li><li><code class="inline">name</code> - Workflow name (required)</li><li><code class="inline">jobs</code> - List of job definitions with UUIDs (required)</li><li><code class="inline">triggers</code> - List of trigger definitions with UUIDs (required)</li><li><code class="inline">edges</code> - List of edge definitions connecting jobs/triggers (required)</li></ul></li></ul><h2 id="create/2-returns" class="section-heading"><a href="#create/2-returns" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Returns</span></h2><ul><li><code class="inline">201 Created</code> with workflow JSON on success</li><li><code class="inline">422 Unprocessable Entity</code> with validation errors</li><li><code class="inline">403 Forbidden</code> if user lacks write access</li></ul><h2 id="create/2-examples" class="section-heading"><a href="#create/2-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="nc">POST</span><span class="w"> </span><span class="o">/</span><span class="n">api</span><span class="o">/</span><span class="n">workflows</span><span class="w">
-</span><span class="p" data-group-id="9388426917-1">{</span><span class="w">
+</span><span class="p" data-group-id="8348218890-1">{</span><span class="w">
   </span><span class="ss">&quot;project_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;a1b2c3d4-...&quot;</span><span class="p">,</span><span class="w">
   </span><span class="ss">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Data Processing Pipeline&quot;</span><span class="p">,</span><span class="w">
-  </span><span class="ss">&quot;jobs&quot;</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="9388426917-2">[</span><span class="w">
-    </span><span class="p" data-group-id="9388426917-3">{</span><span class="w">
+  </span><span class="ss">&quot;jobs&quot;</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="8348218890-2">[</span><span class="w">
+    </span><span class="p" data-group-id="8348218890-3">{</span><span class="w">
       </span><span class="ss">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;job-uuid-1&quot;</span><span class="p">,</span><span class="w">
       </span><span class="ss">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Extract Data&quot;</span><span class="p">,</span><span class="w">
       </span><span class="ss">&quot;body&quot;</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;fn(state =&gt; state)&quot;</span><span class="w">
-    </span><span class="p" data-group-id="9388426917-3">}</span><span class="w">
-  </span><span class="p" data-group-id="9388426917-2">]</span><span class="p">,</span><span class="w">
-  </span><span class="ss">&quot;triggers&quot;</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="9388426917-4">[</span><span class="w">
-    </span><span class="p" data-group-id="9388426917-5">{</span><span class="w">
+    </span><span class="p" data-group-id="8348218890-3">}</span><span class="w">
+  </span><span class="p" data-group-id="8348218890-2">]</span><span class="p">,</span><span class="w">
+  </span><span class="ss">&quot;triggers&quot;</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="8348218890-4">[</span><span class="w">
+    </span><span class="p" data-group-id="8348218890-5">{</span><span class="w">
       </span><span class="ss">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;trigger-uuid-1&quot;</span><span class="p">,</span><span class="w">
       </span><span class="ss">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;webhook&quot;</span><span class="p">,</span><span class="w">
       </span><span class="ss">&quot;enabled&quot;</span><span class="p">:</span><span class="w"> </span><span class="no">true</span><span class="w">
-    </span><span class="p" data-group-id="9388426917-5">}</span><span class="w">
-  </span><span class="p" data-group-id="9388426917-4">]</span><span class="p">,</span><span class="w">
-  </span><span class="ss">&quot;edges&quot;</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="9388426917-6">[</span><span class="w">
-    </span><span class="p" data-group-id="9388426917-7">{</span><span class="w">
+    </span><span class="p" data-group-id="8348218890-5">}</span><span class="w">
+  </span><span class="p" data-group-id="8348218890-4">]</span><span class="p">,</span><span class="w">
+  </span><span class="ss">&quot;edges&quot;</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="8348218890-6">[</span><span class="w">
+    </span><span class="p" data-group-id="8348218890-7">{</span><span class="w">
       </span><span class="ss">&quot;source_trigger_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;trigger-uuid-1&quot;</span><span class="p">,</span><span class="w">
       </span><span class="ss">&quot;target_job_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;job-uuid-1&quot;</span><span class="p">,</span><span class="w">
       </span><span class="ss">&quot;condition&quot;</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;always&quot;</span><span class="w">
-    </span><span class="p" data-group-id="9388426917-7">}</span><span class="w">
-  </span><span class="p" data-group-id="9388426917-6">]</span><span class="w">
-</span><span class="p" data-group-id="9388426917-1">}</span></code></pre>
+    </span><span class="p" data-group-id="8348218890-7">}</span><span class="w">
+  </span><span class="p" data-group-id="8348218890-6">]</span><span class="w">
+</span><span class="p" data-group-id="8348218890-1">}</span></code></pre>
   </section>
 </section>
 <section class="detail" id="index/2">
@@ -315,10 +315,10 @@ structure and ensures it forms a valid DAG with no cycles.</p><h2 id="create/2-p
 <p>Updates an existing workflow.</p><p>Modifies a workflow's structure, including its jobs, triggers, and edges.
 Validates the updated workflow forms a valid DAG. Prevents updates while
 workflow is being edited in the UI (active presence).</p><h2 id="update/2-parameters" class="section-heading"><a href="#update/2-parameters" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Parameters</span></h2><ul><li><code class="inline">conn</code> - The Plug connection struct with the current resource assigned</li><li><code class="inline">params</code> - Map containing:<ul><li><code class="inline">project_id</code> - Project UUID (required, must match workflow's project)</li><li><code class="inline">id</code> - Workflow UUID (required)</li><li><code class="inline">name</code> - Updated workflow name (optional)</li><li><code class="inline">jobs</code> - Updated jobs list (optional)</li><li><code class="inline">triggers</code> - Updated triggers list (optional, cannot replace existing)</li><li><code class="inline">edges</code> - Updated edges list (optional)</li></ul></li></ul><h2 id="update/2-returns" class="section-heading"><a href="#update/2-returns" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Returns</span></h2><ul><li><code class="inline">200 OK</code> with updated workflow JSON on success</li><li><code class="inline">422 Unprocessable Entity</code> with validation errors</li><li><code class="inline">409 Conflict</code> if workflow has active presence</li><li><code class="inline">403 Forbidden</code> if user lacks write access</li><li><code class="inline">404 Not Found</code> if workflow doesn't exist</li></ul><h2 id="update/2-examples" class="section-heading"><a href="#update/2-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="nc">PATCH</span><span class="w"> </span><span class="o">/</span><span class="n">api</span><span class="o">/</span><span class="n">workflows</span><span class="o">/</span><span class="n">workflow</span><span class="o">-</span><span class="n">uuid</span><span class="o">-</span><span class="mi">1</span><span class="sc">?p</span><span class="n">roject_id</span><span class="o">=</span><span class="n">a1b2c3d4</span><span class="o">-</span><span class="n">...</span><span class="w">
-</span><span class="p" data-group-id="5386912871-1">{</span><span class="w">
+</span><span class="p" data-group-id="4987827370-1">{</span><span class="w">
   </span><span class="ss">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Updated Pipeline Name&quot;</span><span class="p">,</span><span class="w">
-  </span><span class="ss">&quot;jobs&quot;</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="5386912871-2">[</span><span class="n">...</span><span class="p" data-group-id="5386912871-2">]</span><span class="w">
-</span><span class="p" data-group-id="5386912871-1">}</span></code></pre>
+  </span><span class="ss">&quot;jobs&quot;</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="4987827370-2">[</span><span class="n">...</span><span class="p" data-group-id="4987827370-2">]</span><span class="w">
+</span><span class="p" data-group-id="4987827370-1">}</span></code></pre>
   </section>
 </section>
 
