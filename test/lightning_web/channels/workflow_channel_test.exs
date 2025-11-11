@@ -2093,6 +2093,36 @@ defmodule LightningWeb.WorkflowChannelTest do
       assert_push "webhook_auth_methods_updated", ^webhook_auth_methods
     end
 
+    test "update_trigger_auth_methods with nil auth_method_ids returns empty list",
+         %{
+           socket: socket,
+           workflow: workflow
+         } do
+      trigger =
+        insert(:trigger,
+          type: :webhook,
+          workflow: workflow,
+          enabled: true
+        )
+
+      ref =
+        push(socket, "update_trigger_auth_methods", %{
+          "trigger_id" => trigger.id,
+          "auth_method_ids" => nil
+        })
+
+      # Should succeed even with nil auth_method_ids (fetch_auth_methods returns [])
+      assert_reply ref, :ok, %{success: true}
+
+      # Should broadcast with empty webhook_auth_methods
+      trigger_id = trigger.id
+
+      assert_broadcast "trigger_auth_methods_updated", %{
+        trigger_id: ^trigger_id,
+        webhook_auth_methods: []
+      }
+    end
+
     test "webhook_auth_methods_updated broadcast is received by all collaborators",
          %{
            workflow: workflow,
