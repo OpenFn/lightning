@@ -1841,15 +1841,17 @@ defmodule LightningWeb.WorkflowChannelTest do
       assert methods == []
     end
 
-    @tag :capture_log
     test "request_trigger_auth_methods logs debug message", %{
       socket: socket,
       workflow: workflow
     } do
       trigger = insert(:trigger, workflow: workflow, type: :webhook)
 
+      original_level = Logger.level()
+      Logger.configure(level: :debug)
+
       log =
-        capture_log([level: :debug], fn ->
+        capture_log(fn ->
           ref =
             push(socket, "request_trigger_auth_methods", %{
               "trigger_id" => trigger.id
@@ -1857,6 +1859,8 @@ defmodule LightningWeb.WorkflowChannelTest do
 
           assert_reply ref, :ok, %{}
         end)
+
+      Logger.configure(level: original_level)
 
       assert log =~ "WorkflowChannel: request_trigger_auth_methods"
       assert log =~ trigger.id
@@ -1901,7 +1905,6 @@ defmodule LightningWeb.WorkflowChannelTest do
       assert length(broadcasted_methods) == 2
     end
 
-    @tag :capture_log
     test "update_trigger_auth_methods logs debug message", %{
       socket: socket,
       workflow: workflow,
@@ -1916,8 +1919,11 @@ defmodule LightningWeb.WorkflowChannelTest do
           auth_type: :api
         )
 
+      original_level = Logger.level()
+      Logger.configure(level: :debug)
+
       log =
-        capture_log([level: :debug], fn ->
+        capture_log(fn ->
           ref =
             push(socket, "update_trigger_auth_methods", %{
               "trigger_id" => trigger.id,
@@ -1926,6 +1932,8 @@ defmodule LightningWeb.WorkflowChannelTest do
 
           assert_reply ref, :ok, %{success: true}
         end)
+
+      Logger.configure(level: original_level)
 
       assert log =~ "WorkflowChannel: update_trigger_auth_methods"
       assert log =~ trigger.id
