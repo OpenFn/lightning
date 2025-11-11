@@ -471,6 +471,18 @@ export const createWorkflowStore = () => {
           }>;
         };
 
+        // Update has_auth_method flag in Y.Doc (outside updateState to avoid side effects)
+        const triggers = triggersArray.toArray() as Y.Map<unknown>[];
+        const triggerIndex = triggers.findIndex(
+          t => t.get('id') === trigger_id
+        );
+
+        if (triggerIndex >= 0) {
+          const yjsTrigger = triggers[triggerIndex];
+          const hasAuthMethod = webhook_auth_methods.length > 0;
+          yjsTrigger.set('has_auth_method', hasAuthMethod);
+        }
+
         // Update activeTriggerAuthMethods if this broadcast matches the active trigger
         updateState(draft => {
           if (
@@ -499,11 +511,14 @@ export const createWorkflowStore = () => {
       () => triggersArray.unobserveDeep(triggersObserver),
       () => edgesArray.unobserveDeep(edgesObserver),
       () => positionsMap.unobserveDeep(positionsObserver),
-      () =>
-        provider.channel.off(
-          'trigger_auth_methods_updated',
-          triggerAuthMethodsHandler
-        ),
+      () => {
+        if (provider?.channel) {
+          provider.channel.off(
+            'trigger_auth_methods_updated',
+            triggerAuthMethodsHandler
+          );
+        }
+      },
       () => errorsMap.unobserveDeep(errorsObserver), // NEW: Cleanup function
     ];
 

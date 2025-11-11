@@ -931,6 +931,25 @@ defmodule LightningWeb.WorkflowChannel do
             {:error, "snapshot version #{version} not found"}
 
           snapshot ->
+            trigger_ids =
+              snapshot.triggers
+              |> Enum.map(& &1.id)
+              |> Enum.map(&Ecto.UUID.dump!/1)
+
+            trigger_auth_methods =
+              from(twam in "trigger_webhook_auth_methods",
+                where: twam.trigger_id in ^trigger_ids,
+                join: wam in Lightning.Workflows.WebhookAuthMethod,
+                on: twam.webhook_auth_method_id == wam.id,
+                where: is_nil(wam.scheduled_deletion),
+                select: %{trigger_id: twam.trigger_id, auth_method: wam}
+              )
+              |> Lightning.Repo.all()
+              |> Enum.group_by(
+                &Ecto.UUID.cast!(&1.trigger_id),
+                & &1.auth_method
+              )
+
             workflow = %Workflow{
               id: workflow_id,
               project_id: project.id,
@@ -939,7 +958,14 @@ defmodule LightningWeb.WorkflowChannel do
               deleted_at: nil,
               jobs: Enum.map(snapshot.jobs, &Map.from_struct/1),
               edges: Enum.map(snapshot.edges, &Map.from_struct/1),
-              triggers: Enum.map(snapshot.triggers, &Map.from_struct/1)
+              triggers:
+                Enum.map(snapshot.triggers, fn trigger ->
+                  auth_methods = Map.get(trigger_auth_methods, trigger.id, [])
+
+                  trigger
+                  |> Map.from_struct()
+                  |> Map.put(:has_auth_method, length(auth_methods) > 0)
+                end)
             }
 
             case Permissions.can(
@@ -995,7 +1021,19 @@ defmodule LightningWeb.WorkflowChannel do
                  project
                ) do
             :ok ->
-              {:ok, workflow}
+              workflow_with_auth_flags = %{
+                workflow
+                | triggers:
+                    Enum.map(workflow.triggers, fn trigger ->
+                      %{
+                        trigger
+                        | has_auth_method:
+                            length(trigger.webhook_auth_methods || []) > 0
+                      }
+                    end)
+              }
+
+              {:ok, workflow_with_auth_flags}
 
             {:error, :unauthorized} ->
               {:error, "unauthorized"}

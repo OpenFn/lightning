@@ -1,27 +1,32 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from 'react';
 
-import { TriggerSchema } from "#/collaborative-editor/types/trigger";
-import { cn } from "#/utils/cn";
-import _logger from "#/utils/logger";
+import { TriggerSchema } from '#/collaborative-editor/types/trigger';
+import { cn } from '#/utils/cn';
+import _logger from '#/utils/logger';
 
-import { useLiveViewActions } from "../../contexts/LiveViewActionsContext";
-import { channelRequest } from "../../hooks/useChannel";
-import { useSession } from "../../hooks/useSession";
-import { useSessionContext } from "../../hooks/useSessionContext";
-import { useWorkflowActions, useWorkflowState } from "../../hooks/useWorkflow";
-import { notifications } from "../../lib/notifications";
-import type { Workflow } from "../../types/workflow";
-import { useAppForm } from "../form";
-import { createZodValidator } from "../form/createZodValidator";
+import { useLiveViewActions } from '../../contexts/LiveViewActionsContext';
+import { channelRequest } from '../../hooks/useChannel';
+import { useSession } from '../../hooks/useSession';
+import { useSessionContext } from '../../hooks/useSessionContext';
+import {
+  useWorkflowActions,
+  useWorkflowReadOnly,
+  useWorkflowState,
+} from '../../hooks/useWorkflow';
+import { notifications } from '../../lib/notifications';
+import type { Workflow } from '../../types/workflow';
+import { useAppForm } from '../form';
+import { createZodValidator } from '../form/createZodValidator';
+import { Tooltip } from '../Tooltip';
 
-import { CronFieldBuilder } from "./CronFieldBuilder";
-import { WebhookAuthMethodModal } from "./WebhookAuthMethodModal";
+import { CronFieldBuilder } from './CronFieldBuilder';
+import { WebhookAuthMethodModal } from './WebhookAuthMethodModal';
 
 interface TriggerFormProps {
   trigger: Workflow.Trigger;
 }
 
-const logger = _logger.ns("TriggerForm").seal();
+const logger = _logger.ns('TriggerForm').seal();
 
 /**
  * Pure form component for trigger configuration.
@@ -31,12 +36,13 @@ const logger = _logger.ns("TriggerForm").seal();
 export function TriggerForm({ trigger }: TriggerFormProps) {
   const { updateTrigger, requestTriggerAuthMethods } = useWorkflowActions();
   const { pushEvent, handleEvent } = useLiveViewActions();
-  const [copySuccess, setCopySuccess] = useState<string>("");
+  const [copySuccess, setCopySuccess] = useState<string>('');
   const [showAdvancedSettings, setShowAdvancedSettings] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const sessionContext = useSessionContext();
   const { provider } = useSession();
   const channel = provider?.channel;
+  const { isReadOnly } = useWorkflowReadOnly();
 
   // Get active trigger auth methods from workflow store
   const activeTriggerAuthMethods = useWorkflowState(
@@ -83,7 +89,7 @@ export function TriggerForm({ trigger }: TriggerFormProps) {
   ).toString();
 
   useEffect(() => {
-    handleEvent("webhook_auth_method_saved", () => {
+    handleEvent('webhook_auth_method_saved', () => {
       setShowAuthModal(true);
     });
   }, [handleEvent]);
@@ -91,15 +97,15 @@ export function TriggerForm({ trigger }: TriggerFormProps) {
   // Listen for webhook auth modal close event
   useEffect(() => {
     const handleModalClose = () => {
-      pushEvent("close_webhook_auth_modal_complete", {});
+      pushEvent('close_webhook_auth_modal_complete', {});
     };
 
-    const element = document.getElementById("collaborative-editor-react");
-    element?.addEventListener("close_webhook_auth_modal", handleModalClose);
+    const element = document.getElementById('collaborative-editor-react');
+    element?.addEventListener('close_webhook_auth_modal', handleModalClose);
 
     return () => {
       element?.removeEventListener(
-        "close_webhook_auth_modal",
+        'close_webhook_auth_modal',
         handleModalClose
       );
     };
@@ -110,11 +116,11 @@ export function TriggerForm({ trigger }: TriggerFormProps) {
     void (async () => {
       try {
         await navigator.clipboard.writeText(text);
-        setCopySuccess("Copied!");
-        setTimeout(() => setCopySuccess(""), 2000);
+        setCopySuccess('Copied!');
+        setTimeout(() => setCopySuccess(''), 2000);
       } catch {
-        setCopySuccess("Failed to copy");
-        setTimeout(() => setCopySuccess(""), 2000);
+        setCopySuccess('Failed to copy');
+        setTimeout(() => setCopySuccess(''), 2000);
       }
     })();
   }, []);
@@ -124,26 +130,26 @@ export function TriggerForm({ trigger }: TriggerFormProps) {
     async (selectedMethodIds: string[]) => {
       if (!channel || !trigger.id) {
         throw new Error(
-          "Cannot save: channel not connected or trigger not saved"
+          'Cannot save: channel not connected or trigger not saved'
         );
       }
 
       try {
-        await channelRequest(channel, "update_trigger_auth_methods", {
+        await channelRequest(channel, 'update_trigger_auth_methods', {
           trigger_id: trigger.id,
           auth_method_ids: selectedMethodIds,
         });
 
         notifications.info({
-          title: "Authentication updated",
-          description: "Webhook authentication methods have been updated",
+          title: 'Authentication updated',
+          description: 'Webhook authentication methods have been updated',
         });
       } catch (error) {
         const errorMessage =
-          error instanceof Error ? error.message : "An error occurred";
+          error instanceof Error ? error.message : 'An error occurred';
 
         notifications.alert({
-          title: "Failed to update",
+          title: 'Failed to update',
           description: errorMessage,
         });
 
@@ -178,7 +184,7 @@ export function TriggerForm({ trigger }: TriggerFormProps) {
                   value={field.state.value}
                   onChange={e =>
                     field.handleChange(
-                      e.target.value as "webhook" | "cron" | "kafka"
+                      e.target.value as 'webhook' | 'cron' | 'kafka'
                     )
                   }
                   onBlur={field.handleBlur}
@@ -186,8 +192,8 @@ export function TriggerForm({ trigger }: TriggerFormProps) {
                     block w-full px-3 py-2 border rounded-md text-sm
                     ${
                       field.state.meta.errors.length > 0
-                        ? "border-red-300 text-red-900 focus:border-red-500 focus:ring-red-500"
-                        : "border-slate-300 focus:border-indigo-500 focus:ring-indigo-500"
+                        ? 'border-red-300 text-red-900 focus:border-red-500 focus:ring-red-500'
+                        : 'border-slate-300 focus:border-indigo-500 focus:ring-indigo-500'
                     }
                     focus:outline-none focus:ring-1
                   `}
@@ -210,7 +216,7 @@ export function TriggerForm({ trigger }: TriggerFormProps) {
             {field => {
               const currentType = field.state.value;
 
-              if (currentType === "webhook") {
+              if (currentType === 'webhook') {
                 return (
                   <div className="space-y-4">
                     {/* Webhook URL Display */}
@@ -243,7 +249,7 @@ export function TriggerForm({ trigger }: TriggerFormProps) {
                             text-gray-900 border border-secondary-300
                             hover:bg-gray-50"
                         >
-                          {copySuccess || "Copy URL"}
+                          {copySuccess || 'Copy URL'}
                         </button>
                       </div>
                     </div>
@@ -253,9 +259,17 @@ export function TriggerForm({ trigger }: TriggerFormProps) {
                       className="space-y-2 pt-4 border-t
                       border-slate-200"
                     >
-                      <h4 className="text-sm font-medium text-slate-800">
-                        Webhook Authentication
-                      </h4>
+                      <div className="flex items-center gap-1">
+                        <h4 className="text-sm font-medium text-slate-800">
+                          Webhook Authentication
+                        </h4>
+                        <Tooltip
+                          content="Require requests to this endpoint to use specific authentication protocols."
+                          side="right"
+                        >
+                          <span className="hero-information-circle h-4 w-4 text-gray-400 cursor-help" />
+                        </Tooltip>
+                      </div>
 
                       {loadingAuthMethods || triggerAuthMethods.length === 0 ? (
                         <div className="text-xs text-slate-600 space-y-2">
@@ -270,31 +284,35 @@ export function TriggerForm({ trigger }: TriggerFormProps) {
                               authentication
                             </p>
                           )}
-                          <button
-                            type="button"
-                            onClick={() => setShowAuthModal(true)}
-                            disabled={
-                              !trigger.id ||
-                              !sessionContext.permissions
-                                ?.can_write_webhook_auth_method
-                            }
-                            className={cn(
-                              "link text-sm font-semibold inline-flex",
-                              "items-center gap-1",
-                              (!trigger.id ||
-                                !sessionContext.permissions
-                                  ?.can_write_webhook_auth_method) &&
-                                "text-gray-400 cursor-not-allowed",
-                              "no-underline"
-                            )}
-                          >
-                            <span className="hero-plus-micro h-4 w-4" />
-                            Add authentication
-                          </button>
-                          {!trigger.id && (
-                            <p className="text-xs text-amber-600 italic">
-                              Save the trigger first to add authentication
-                            </p>
+                          {!isReadOnly && (
+                            <>
+                              <button
+                                type="button"
+                                onClick={() => setShowAuthModal(true)}
+                                disabled={
+                                  !trigger.id ||
+                                  !sessionContext.permissions
+                                    ?.can_write_webhook_auth_method
+                                }
+                                className={cn(
+                                  'link text-sm font-semibold inline-flex',
+                                  'items-center gap-1',
+                                  (!trigger.id ||
+                                    !sessionContext.permissions
+                                      ?.can_write_webhook_auth_method) &&
+                                    'text-gray-400 cursor-not-allowed',
+                                  'no-underline'
+                                )}
+                              >
+                                <span className="hero-plus-micro h-4 w-4" />
+                                Add authentication
+                              </button>
+                              {!trigger.id && (
+                                <p className="text-xs text-amber-600 italic">
+                                  Save the trigger first to add authentication
+                                </p>
+                              )}
+                            </>
                           )}
                         </div>
                       ) : (
@@ -317,33 +335,35 @@ export function TriggerForm({ trigger }: TriggerFormProps) {
                                 </span>
                                 <span className="text-slate-400">
                                   (
-                                  {method.auth_type === "api"
-                                    ? "API Key"
-                                    : "Basic Auth"}
+                                  {method.auth_type === 'api'
+                                    ? 'API Key'
+                                    : 'Basic Auth'}
                                   )
                                 </span>
                               </div>
                             ))}
                           </div>
-                          <button
-                            type="button"
-                            onClick={() => setShowAuthModal(true)}
-                            disabled={
-                              !trigger.id ||
-                              !sessionContext.permissions
-                                ?.can_write_webhook_auth_method
-                            }
-                            className={cn(
-                              "link text-sm font-semibold",
-                              (!trigger.id ||
+                          {!isReadOnly && (
+                            <button
+                              type="button"
+                              onClick={() => setShowAuthModal(true)}
+                              disabled={
+                                !trigger.id ||
                                 !sessionContext.permissions
-                                  ?.can_write_webhook_auth_method) &&
-                                "text-gray-400 cursor-not-allowed",
-                              "no-underline"
-                            )}
-                          >
-                            Manage authentication
-                          </button>
+                                  ?.can_write_webhook_auth_method
+                              }
+                              className={cn(
+                                'link text-sm font-semibold',
+                                (!trigger.id ||
+                                  !sessionContext.permissions
+                                    ?.can_write_webhook_auth_method) &&
+                                  'text-gray-400 cursor-not-allowed',
+                                'no-underline'
+                              )}
+                            >
+                              Manage authentication
+                            </button>
+                          )}
                         </div>
                       )}
                     </div>
@@ -351,7 +371,7 @@ export function TriggerForm({ trigger }: TriggerFormProps) {
                 );
               }
 
-              if (currentType === "cron") {
+              if (currentType === 'cron') {
                 return (
                   <div className="space-y-4">
                     {/* <div className="border-t pt-4"> */}
@@ -361,7 +381,7 @@ export function TriggerForm({ trigger }: TriggerFormProps) {
                       listeners={{ onChangeDebounceMs: 2000 }}
                     >
                       {cronField => {
-                        logger.log("Cron field state:", cronField.state);
+                        logger.log('Cron field state:', cronField.state);
                         return (
                           <div>
                             <CronFieldBuilder
@@ -389,7 +409,7 @@ export function TriggerForm({ trigger }: TriggerFormProps) {
                 );
               }
 
-              if (currentType === "kafka") {
+              if (currentType === 'kafka') {
                 return (
                   <div className="space-y-6">
                     {/* Connection Settings */}
@@ -410,7 +430,7 @@ export function TriggerForm({ trigger }: TriggerFormProps) {
                             <input
                               id={field.name}
                               type="text"
-                              value={field.state.value || ""}
+                              value={field.state.value || ''}
                               onChange={e => field.handleChange(e.target.value)}
                               onBlur={field.handleBlur}
                               placeholder="localhost:9092,broker2:9092"
@@ -418,8 +438,8 @@ export function TriggerForm({ trigger }: TriggerFormProps) {
                                   block w-full px-3 py-2 border rounded-md text-sm
                                   ${
                                     field.state.meta.errors.length > 0
-                                      ? "border-red-300 text-red-900 focus:border-red-500 focus:ring-red-500"
-                                      : "border-slate-300 focus:border-indigo-500 focus:ring-indigo-500"
+                                      ? 'border-red-300 text-red-900 focus:border-red-500 focus:ring-red-500'
+                                      : 'border-slate-300 focus:border-indigo-500 focus:ring-indigo-500'
                                   }
                                   focus:outline-none focus:ring-1
                                 `}
@@ -452,7 +472,7 @@ export function TriggerForm({ trigger }: TriggerFormProps) {
                             <input
                               id={field.name}
                               type="text"
-                              value={field.state.value || ""}
+                              value={field.state.value || ''}
                               onChange={e => field.handleChange(e.target.value)}
                               onBlur={field.handleBlur}
                               placeholder="topic1,topic2,topic3"
@@ -460,8 +480,8 @@ export function TriggerForm({ trigger }: TriggerFormProps) {
                                   block w-full px-3 py-2 border rounded-md text-sm
                                   ${
                                     field.state.meta.errors.length > 0
-                                      ? "border-red-300 text-red-900 focus:border-red-500 focus:ring-red-500"
-                                      : "border-slate-300 focus:border-indigo-500 focus:ring-indigo-500"
+                                      ? 'border-red-300 text-red-900 focus:border-red-500 focus:ring-red-500'
+                                      : 'border-slate-300 focus:border-indigo-500 focus:ring-indigo-500'
                                   }
                                   focus:outline-none focus:ring-1
                                 `}
@@ -523,14 +543,14 @@ export function TriggerForm({ trigger }: TriggerFormProps) {
                             </label>
                             <select
                               id={field.name}
-                              value={field.state.value || "none"}
+                              value={field.state.value || 'none'}
                               onChange={e =>
                                 field.handleChange(
                                   e.target.value as
-                                    | "none"
-                                    | "plain"
-                                    | "scram_sha_256"
-                                    | "scram_sha_512"
+                                    | 'none'
+                                    | 'plain'
+                                    | 'scram_sha_256'
+                                    | 'scram_sha_512'
                                 )
                               }
                               onBlur={field.handleBlur}
@@ -538,8 +558,8 @@ export function TriggerForm({ trigger }: TriggerFormProps) {
                                   block w-full px-3 py-2 border rounded-md text-sm
                                   ${
                                     field.state.meta.errors.length > 0
-                                      ? "border-red-300 text-red-900 focus:border-red-500 focus:ring-red-500"
-                                      : "border-slate-300 focus:border-indigo-500 focus:ring-indigo-500"
+                                      ? 'border-red-300 text-red-900 focus:border-red-500 focus:ring-red-500'
+                                      : 'border-slate-300 focus:border-indigo-500 focus:ring-indigo-500'
                                   }
                                   focus:outline-none focus:ring-1
                                 `}
@@ -568,7 +588,7 @@ export function TriggerForm({ trigger }: TriggerFormProps) {
                       {/* Conditional Username/Password Fields */}
                       <form.Field name="kafka_configuration.sasl">
                         {saslField => {
-                          const requiresAuth = saslField.state.value !== "none";
+                          const requiresAuth = saslField.state.value !== 'none';
 
                           if (!requiresAuth) return null;
 
@@ -587,7 +607,7 @@ export function TriggerForm({ trigger }: TriggerFormProps) {
                                     <input
                                       id={field.name}
                                       type="text"
-                                      value={field.state.value || ""}
+                                      value={field.state.value || ''}
                                       onChange={e =>
                                         field.handleChange(e.target.value)
                                       }
@@ -596,8 +616,8 @@ export function TriggerForm({ trigger }: TriggerFormProps) {
                                           block w-full px-3 py-2 border rounded-md text-sm
                                           ${
                                             field.state.meta.errors.length > 0
-                                              ? "border-red-300 text-red-900 focus:border-red-500 focus:ring-red-500"
-                                              : "border-slate-300 focus:border-indigo-500 focus:ring-indigo-500"
+                                              ? 'border-red-300 text-red-900 focus:border-red-500 focus:ring-red-500'
+                                              : 'border-slate-300 focus:border-indigo-500 focus:ring-indigo-500'
                                           }
                                           focus:outline-none focus:ring-1
                                         `}
@@ -627,7 +647,7 @@ export function TriggerForm({ trigger }: TriggerFormProps) {
                                     <input
                                       id={field.name}
                                       type="password"
-                                      value={field.state.value || ""}
+                                      value={field.state.value || ''}
                                       onChange={e =>
                                         field.handleChange(e.target.value)
                                       }
@@ -636,8 +656,8 @@ export function TriggerForm({ trigger }: TriggerFormProps) {
                                           block w-full px-3 py-2 border rounded-md text-sm
                                           ${
                                             field.state.meta.errors.length > 0
-                                              ? "border-red-300 text-red-900 focus:border-red-500 focus:ring-red-500"
-                                              : "border-slate-300 focus:border-indigo-500 focus:ring-indigo-500"
+                                              ? 'border-red-300 text-red-900 focus:border-red-500 focus:ring-red-500'
+                                              : 'border-slate-300 focus:border-indigo-500 focus:ring-indigo-500'
                                           }
                                           focus:outline-none focus:ring-1
                                         `}
@@ -670,7 +690,7 @@ export function TriggerForm({ trigger }: TriggerFormProps) {
                       >
                         <span
                           className={`hero-chevron-right h-3 w-3 transition-transform ${
-                            showAdvancedSettings ? "rotate-90" : ""
+                            showAdvancedSettings ? 'rotate-90' : ''
                           }`}
                         />
                         Advanced
@@ -690,10 +710,10 @@ export function TriggerForm({ trigger }: TriggerFormProps) {
                                 </label>
                                 <select
                                   id={field.name}
-                                  value={field.state.value || "latest"}
+                                  value={field.state.value || 'latest'}
                                   onChange={e =>
                                     field.handleChange(
-                                      e.target.value as "earliest" | "latest"
+                                      e.target.value as 'earliest' | 'latest'
                                     )
                                   }
                                   onBlur={field.handleBlur}
@@ -701,8 +721,8 @@ export function TriggerForm({ trigger }: TriggerFormProps) {
                                         block w-full px-3 py-2 border rounded-md text-sm
                                         ${
                                           field.state.meta.errors.length > 0
-                                            ? "border-red-300 text-red-900 focus:border-red-500 focus:ring-red-500"
-                                            : "border-slate-300 focus:border-indigo-500 focus:ring-indigo-500"
+                                            ? 'border-red-300 text-red-900 focus:border-red-500 focus:ring-red-500'
+                                            : 'border-slate-300 focus:border-indigo-500 focus:ring-indigo-500'
                                         }
                                         focus:outline-none focus:ring-1
                                       `}
@@ -748,8 +768,8 @@ export function TriggerForm({ trigger }: TriggerFormProps) {
                                         block w-full px-3 py-2 border rounded-md text-sm
                                         ${
                                           field.state.meta.errors.length > 0
-                                            ? "border-red-300 text-red-900 focus:border-red-500 focus:ring-red-500"
-                                            : "border-slate-300 focus:border-indigo-500 focus:ring-indigo-500"
+                                            ? 'border-red-300 text-red-900 focus:border-red-500 focus:ring-red-500'
+                                            : 'border-slate-300 focus:border-indigo-500 focus:ring-indigo-500'
                                         }
                                         focus:outline-none focus:ring-1
                                       `}
@@ -792,7 +812,7 @@ export function TriggerForm({ trigger }: TriggerFormProps) {
             } as unknown as Workflow.Trigger
           }
           projectAuthMethods={sessionContext.webhookAuthMethods || []}
-          projectId={sessionContext.project?.id || ""}
+          projectId={sessionContext.project?.id || ''}
           onClose={() => setShowAuthModal(false)}
           onSave={handleSaveAuthMethods}
         />
