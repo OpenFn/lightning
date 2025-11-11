@@ -128,20 +128,10 @@ defmodule Mix.Tasks.Lightning.MergeProjects do
     |> Keyword.get_values(:uuid)
     |> Enum.reduce(%{}, fn mapping_str, acc ->
       case String.split(mapping_str, ":") do
-        [source_uuid, target_uuid] ->
-          with {:ok, valid_source} <- validate_uuid(source_uuid, "source"),
-               {:ok, valid_target} <- validate_uuid(target_uuid, "target") do
-            if Map.has_key?(acc, valid_source) and
-                 acc[valid_source] != valid_target do
-              Mix.raise("""
-              Duplicate UUID mapping for source UUID: #{valid_source}
-              Previous target: #{acc[valid_source]}
-              New target: #{valid_target}
-              """)
-            end
-
-            Map.put(acc, valid_source, valid_target)
-          end
+        [source_id, target_id] ->
+          source_id = String.trim(source_id)
+          target_id = String.trim(target_id)
+          Map.put(acc, source_id, target_id)
 
         _other ->
           Mix.raise("""
@@ -152,22 +142,6 @@ defmodule Mix.Tasks.Lightning.MergeProjects do
           """)
       end
     end)
-  end
-
-  defp validate_uuid(uuid_str, position) do
-    uuid_str = String.trim(uuid_str)
-
-    case Ecto.UUID.cast(uuid_str) do
-      {:ok, valid_uuid} ->
-        {:ok, valid_uuid}
-
-      :error ->
-        Mix.raise("""
-        Invalid #{position} UUID in mapping: #{uuid_str}
-
-        UUIDs must be in the format: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
-        """)
-    end
   end
 
   defp encode_json(project) do

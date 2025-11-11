@@ -340,34 +340,6 @@ defmodule Mix.Tasks.Lightning.MergeProjectsTest do
       assert merged_edge["id"] == edge_uuid
     end
 
-    test "raises error for invalid UUID format in source", %{tmp_dir: tmp_dir} do
-      source_file = Path.join(tmp_dir, "source.json")
-      target_file = Path.join(tmp_dir, "target.json")
-
-      assert_raise Mix.Error, ~r/Invalid source UUID in mapping/, fn ->
-        Mix.Tasks.Lightning.MergeProjects.run([
-          source_file,
-          target_file,
-          "--uuid",
-          "invalid-uuid:#{Ecto.UUID.generate()}"
-        ])
-      end
-    end
-
-    test "raises error for invalid UUID format in target", %{tmp_dir: tmp_dir} do
-      source_file = Path.join(tmp_dir, "source.json")
-      target_file = Path.join(tmp_dir, "target.json")
-
-      assert_raise Mix.Error, ~r/Invalid target UUID in mapping/, fn ->
-        Mix.Tasks.Lightning.MergeProjects.run([
-          source_file,
-          target_file,
-          "--uuid",
-          "#{Ecto.UUID.generate()}:invalid-uuid"
-        ])
-      end
-    end
-
     test "raises error for malformed UUID mapping", %{tmp_dir: tmp_dir} do
       source_file = Path.join(tmp_dir, "source.json")
       target_file = Path.join(tmp_dir, "target.json")
@@ -378,25 +350,6 @@ defmodule Mix.Tasks.Lightning.MergeProjectsTest do
           target_file,
           "--uuid",
           "missing-colon"
-        ])
-      end
-    end
-
-    test "raises error for duplicate source UUID with different target", %{
-      tmp_dir: tmp_dir
-    } do
-      source_file = Path.join(tmp_dir, "source.json")
-      target_file = Path.join(tmp_dir, "target.json")
-      source_uuid = Ecto.UUID.generate()
-
-      assert_raise Mix.Error, ~r/Duplicate UUID mapping/, fn ->
-        Mix.Tasks.Lightning.MergeProjects.run([
-          source_file,
-          target_file,
-          "--uuid",
-          "#{source_uuid}:#{Ecto.UUID.generate()}",
-          "--uuid",
-          "#{source_uuid}:#{Ecto.UUID.generate()}"
         ])
       end
     end
