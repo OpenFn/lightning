@@ -2063,6 +2063,36 @@ defmodule LightningWeb.WorkflowChannelTest do
       assert hd(methods).name == "Active Method"
     end
 
+    test "handle_info for webhook_auth_methods_updated pushes to channel", %{
+      socket: socket,
+      project: project
+    } do
+      auth_method =
+        insert(:webhook_auth_method,
+          project: project,
+          name: "Test Method",
+          auth_type: :api
+        )
+
+      webhook_auth_methods = [
+        %{
+          id: auth_method.id,
+          name: auth_method.name,
+          auth_type: auth_method.auth_type
+        }
+      ]
+
+      # Send the handle_info message directly
+      send(socket.channel_pid, %{
+        event: "webhook_auth_methods_updated",
+        payload: webhook_auth_methods,
+        socket: socket
+      })
+
+      # Verify the push was sent to the client
+      assert_push "webhook_auth_methods_updated", ^webhook_auth_methods
+    end
+
     test "webhook_auth_methods_updated broadcast is received by all collaborators",
          %{
            workflow: workflow,
