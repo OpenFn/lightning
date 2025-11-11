@@ -51,6 +51,7 @@ function setPermissions(channelMock: any, can_edit_workflow: boolean) {
       permissions: { ...mockPermissions, can_edit_workflow },
       latest_snapshot_lock_version: 1,
       project_repo_connection: null,
+      webhook_auth_methods: [],
     });
   });
 }

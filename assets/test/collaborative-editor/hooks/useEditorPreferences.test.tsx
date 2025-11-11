@@ -9,18 +9,18 @@
  * - Re-render optimization
  */
 
-import { renderHook, act } from "@testing-library/react";
-import { describe, expect, test, beforeEach, afterEach } from "vitest";
-import type React from "react";
+import { renderHook, act } from '@testing-library/react';
+import { describe, expect, test, beforeEach, afterEach } from 'vitest';
+import type React from 'react';
 import {
   useHistoryPanelCollapsed,
   useEditorPreferencesCommands,
-} from "../../../js/collaborative-editor/hooks/useEditorPreferences";
-import { StoreContext } from "../../../js/collaborative-editor/contexts/StoreProvider";
-import type { StoreContextValue } from "../../../js/collaborative-editor/contexts/StoreProvider";
-import { createEditorPreferencesStore } from "../../../js/collaborative-editor/stores/createEditorPreferencesStore";
-import type { EditorPreferencesStore } from "../../../js/collaborative-editor/types/editorPreferences";
-import * as storage from "lib0/storage";
+} from '../../../js/collaborative-editor/hooks/useEditorPreferences';
+import { StoreContext } from '../../../js/collaborative-editor/contexts/StoreProvider';
+import type { StoreContextValue } from '../../../js/collaborative-editor/contexts/StoreProvider';
+import { createEditorPreferencesStore } from '../../../js/collaborative-editor/stores/createEditorPreferencesStore';
+import type { EditorPreferencesStore } from '../../../js/collaborative-editor/types/editorPreferences';
+import * as storage from 'lib0/storage';
 
 function createWrapper(
   editorPreferencesStore: EditorPreferencesStore
@@ -43,7 +43,7 @@ function createWrapper(
   );
 }
 
-describe("useEditorPreferences hooks", () => {
+describe('useEditorPreferences hooks', () => {
   let store: EditorPreferencesStore;
 
   beforeEach(() => {
@@ -65,8 +65,8 @@ describe("useEditorPreferences hooks", () => {
   // useHistoryPanelCollapsed
   // ==========================================================================
 
-  describe("useHistoryPanelCollapsed", () => {
-    test("returns default value on first render", () => {
+  describe('useHistoryPanelCollapsed', () => {
+    test('returns default value on first render', () => {
       store = createEditorPreferencesStore();
       const { result } = renderHook(() => useHistoryPanelCollapsed(), {
         wrapper: createWrapper(store),
@@ -75,11 +75,11 @@ describe("useEditorPreferences hooks", () => {
       expect(result.current).toBe(true);
     });
 
-    test("returns stored value if exists", () => {
+    test('returns stored value if exists', () => {
       // Pre-populate storage
       storage.varStorage.setItem(
-        "lightning.editor.historyPanelCollapsed",
-        "false"
+        'lightning.editor.historyPanelCollapsed',
+        'false'
       );
 
       store = createEditorPreferencesStore();
@@ -90,7 +90,7 @@ describe("useEditorPreferences hooks", () => {
       expect(result.current).toBe(false);
     });
 
-    test("updates when preference changes", () => {
+    test('updates when preference changes', () => {
       store = createEditorPreferencesStore();
       const wrapper = createWrapper(store);
       const { result: collapsedResult } = renderHook(
@@ -111,7 +111,7 @@ describe("useEditorPreferences hooks", () => {
       expect(collapsedResult.current).toBe(false);
     });
 
-    test("throws error when used outside StoreProvider", () => {
+    test('throws error when used outside StoreProvider', () => {
       // Suppress console.error for this test
       const consoleError = console.error;
       console.error = () => {};
@@ -119,13 +119,13 @@ describe("useEditorPreferences hooks", () => {
       expect(() => {
         renderHook(() => useHistoryPanelCollapsed());
       }).toThrow(
-        "useEditorPreferencesStore must be used within a StoreProvider"
+        'useEditorPreferencesStore must be used within a StoreProvider'
       );
 
       console.error = consoleError;
     });
 
-    test("maintains referential stability when value unchanged", () => {
+    test('maintains referential stability when value unchanged', () => {
       store = createEditorPreferencesStore();
       const { result, rerender } = renderHook(
         () => useHistoryPanelCollapsed(),
@@ -144,8 +144,8 @@ describe("useEditorPreferences hooks", () => {
   // useEditorPreferencesCommands
   // ==========================================================================
 
-  describe("useEditorPreferencesCommands", () => {
-    test("returns stable command functions", () => {
+  describe('useEditorPreferencesCommands', () => {
+    test('returns stable command functions', () => {
       store = createEditorPreferencesStore();
       const { result, rerender } = renderHook(
         () => useEditorPreferencesCommands(),
@@ -164,7 +164,7 @@ describe("useEditorPreferences hooks", () => {
       );
     });
 
-    test("setHistoryPanelCollapsed updates state and storage", () => {
+    test('setHistoryPanelCollapsed updates state and storage', () => {
       store = createEditorPreferencesStore();
       const { result } = renderHook(() => useEditorPreferencesCommands(), {
         wrapper: createWrapper(store),
@@ -175,12 +175,12 @@ describe("useEditorPreferences hooks", () => {
       });
 
       const stored = storage.varStorage.getItem(
-        "lightning.editor.historyPanelCollapsed"
+        'lightning.editor.historyPanelCollapsed'
       );
-      expect(stored).toBe("false");
+      expect(stored).toBe('false');
     });
 
-    test("resetToDefaults resets all preferences", () => {
+    test('resetToDefaults resets all preferences', () => {
       store = createEditorPreferencesStore();
       const wrapper = createWrapper(store);
       const { result: commandsResult } = renderHook(
@@ -205,8 +205,8 @@ describe("useEditorPreferences hooks", () => {
 
       expect(collapsedResult.current).toBe(true);
       expect(
-        storage.varStorage.getItem("lightning.editor.historyPanelCollapsed")
-      ).toBe("true");
+        storage.varStorage.getItem('lightning.editor.historyPanelCollapsed')
+      ).toBe('true');
     });
   });
 
@@ -214,8 +214,8 @@ describe("useEditorPreferences hooks", () => {
   // INTEGRATION
   // ==========================================================================
 
-  describe("integration", () => {
-    test("multiple components can read same preference", () => {
+  describe('integration', () => {
+    test('multiple components can read same preference', () => {
       store = createEditorPreferencesStore();
       const wrapper = createWrapper(store);
       const { result: result1 } = renderHook(() => useHistoryPanelCollapsed(), {
@@ -229,7 +229,7 @@ describe("useEditorPreferences hooks", () => {
       expect(result1.current).toBe(true);
     });
 
-    test("preference change propagates to all consumers", () => {
+    test('preference change propagates to all consumers', () => {
       store = createEditorPreferencesStore();
       const wrapper = createWrapper(store);
       const { result: result1 } = renderHook(() => useHistoryPanelCollapsed(), {

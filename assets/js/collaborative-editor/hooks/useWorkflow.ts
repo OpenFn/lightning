@@ -594,6 +594,9 @@ export const useWorkflowActions = () => {
 
       resetWorkflow: store.resetWorkflow,
       importWorkflow: store.importWorkflow,
+
+      // Trigger auth methods
+      requestTriggerAuthMethods: store.requestTriggerAuthMethods,
     }),
     [store, sessionContextStore]
   );

@@ -5,17 +5,17 @@
  * when history_updated messages are received from the channel.
  */
 
-import { render, waitFor } from "@testing-library/react";
-import type React from "react";
-import { describe, expect, test, beforeEach, vi } from "vitest";
-import { CollaborativeWorkflowDiagram } from "../../../../js/collaborative-editor/components/diagram/CollaborativeWorkflowDiagram";
-import { StoreContext } from "../../../../js/collaborative-editor/contexts/StoreProvider";
-import type { StoreContextValue } from "../../../../js/collaborative-editor/contexts/StoreProvider";
+import { render, waitFor } from '@testing-library/react';
+import type React from 'react';
+import { describe, expect, test, beforeEach, vi } from 'vitest';
+import { CollaborativeWorkflowDiagram } from '../../../../js/collaborative-editor/components/diagram/CollaborativeWorkflowDiagram';
+import { StoreContext } from '../../../../js/collaborative-editor/contexts/StoreProvider';
+import type { StoreContextValue } from '../../../../js/collaborative-editor/contexts/StoreProvider';
 import type {
   WorkOrder,
   Run,
   RunStepsData,
-} from "../../../../js/collaborative-editor/types/history";
+} from '../../../../js/collaborative-editor/types/history';
 
 // Helper to create a withSelector mock that implements proper caching
 function createWithSelectorMock(getSnapshot: () => any) {
@@ -38,7 +38,7 @@ function createWithSelectorMock(getSnapshot: () => any) {
 }
 
 // Mock dependencies
-vi.mock("@xyflow/react", () => ({
+vi.mock('@xyflow/react', () => ({
   ReactFlow: () => <div data-testid="react-flow">Workflow Diagram</div>,
   ReactFlowProvider: ({ children }: { children: React.ReactNode }) => (
     <div>{children}</div>
@@ -53,27 +53,27 @@ vi.mock("@xyflow/react", () => ({
 
 // Mock WorkflowDiagram implementation
 vi.mock(
-  "../../../../js/collaborative-editor/components/diagram/WorkflowDiagram",
+  '../../../../js/collaborative-editor/components/diagram/WorkflowDiagram',
   () => ({
     default: () => <div data-testid="workflow-diagram-impl" />,
   })
 );
 
 // Mock hooks module to avoid Phoenix LiveView dependencies
-vi.mock("../../../../js/hooks", () => ({
+vi.mock('../../../../js/hooks', () => ({
   relativeLocale: {},
 }));
 
 // Mock date-fns formatRelative to avoid locale issues in tests
-vi.mock("date-fns", async () => {
-  const actual = await vi.importActual("date-fns");
+vi.mock('date-fns', async () => {
+  const actual = await vi.importActual('date-fns');
   return {
     ...actual,
-    formatRelative: vi.fn(() => "2 hours ago"),
+    formatRelative: vi.fn(() => '2 hours ago'),
   };
 });
 
-describe("CollaborativeWorkflowDiagram - Real-time Run Updates", () => {
+describe('CollaborativeWorkflowDiagram - Real-time Run Updates', () => {
   let historyState: {
     history: WorkOrder[];
     loading: boolean;
@@ -92,8 +92,8 @@ describe("CollaborativeWorkflowDiagram - Real-time Run Updates", () => {
     children: React.ReactNode;
   }> {
     const workflowState = {
-      workflow: { id: "workflow-1", jobs: [], triggers: [], edges: [] },
-      selectedNode: { type: "job" as const, id: null },
+      workflow: { id: 'workflow-1', jobs: [], triggers: [], edges: [] },
+      selectedNode: { type: 'job' as const, id: null },
     };
     const sessionState = {
       isNewWorkflow: false,
@@ -232,24 +232,24 @@ describe("CollaborativeWorkflowDiagram - Real-time Run Updates", () => {
 
     // Mock run steps data
     const mockRunStepsData: RunStepsData = {
-      run_id: "run-1",
+      run_id: 'run-1',
       steps: [
         {
-          id: "step-1",
-          job_id: "job-1",
-          exit_reason: "success",
+          id: 'step-1',
+          job_id: 'job-1',
+          exit_reason: 'success',
           error_type: null,
-          started_at: "2024-01-01T10:00:00Z",
-          finished_at: "2024-01-01T10:01:00Z",
-          input_dataclip_id: "dataclip-1",
+          started_at: '2024-01-01T10:00:00Z',
+          finished_at: '2024-01-01T10:01:00Z',
+          input_dataclip_id: 'dataclip-1',
         },
       ],
       metadata: {
-        starting_job_id: "job-1",
+        starting_job_id: 'job-1',
         starting_trigger_id: null,
-        inserted_at: "2024-01-01T10:00:00Z",
-        created_by_id: "user-1",
-        created_by_email: "demo@openfn.org",
+        inserted_at: '2024-01-01T10:00:00Z',
+        created_by_id: 'user-1',
+        created_by_email: 'demo@openfn.org',
       },
     };
 
@@ -260,16 +260,16 @@ describe("CollaborativeWorkflowDiagram - Real-time Run Updates", () => {
     historyState = {
       history: [
         {
-          id: "wo-1",
-          state: "running",
-          last_activity: "2024-01-01T10:00:00Z",
+          id: 'wo-1',
+          state: 'running',
+          last_activity: '2024-01-01T10:00:00Z',
           version: 1,
           runs: [
             {
-              id: "run-1",
-              state: "started",
+              id: 'run-1',
+              state: 'started',
               error_type: null,
-              started_at: "2024-01-01T10:00:00Z",
+              started_at: '2024-01-01T10:00:00Z',
               finished_at: null,
             } as Run,
           ],
@@ -293,10 +293,10 @@ describe("CollaborativeWorkflowDiagram - Real-time Run Updates", () => {
     };
 
     // Mock URL with run ID
-    Object.defineProperty(window, "location", {
+    Object.defineProperty(window, 'location', {
       value: {
-        search: "?run=run-1",
-        href: "http://localhost?run=run-1",
+        search: '?run=run-1',
+        href: 'http://localhost?run=run-1',
       },
       writable: true,
       configurable: true,
@@ -304,14 +304,14 @@ describe("CollaborativeWorkflowDiagram - Real-time Run Updates", () => {
     window.history.pushState = vi.fn();
   });
 
-  test("re-fetches run steps when history updates for selected run", async () => {
+  test('re-fetches run steps when history updates for selected run', async () => {
     const wrapper = createWrapper();
     render(<CollaborativeWorkflowDiagram />, { wrapper });
 
     // Wait for initial fetch
     await waitFor(() => {
       expect(requestRunStepsMock).toHaveBeenCalledTimes(1);
-      expect(requestRunStepsMock).toHaveBeenCalledWith("run-1");
+      expect(requestRunStepsMock).toHaveBeenCalledWith('run-1');
     });
 
     // Simulate history update: run transitions from "started" to "success"
@@ -320,14 +320,14 @@ describe("CollaborativeWorkflowDiagram - Real-time Run Updates", () => {
       history: [
         {
           ...historyState.history[0],
-          state: "success",
+          state: 'success',
           runs: [
             {
-              id: "run-1",
-              state: "success",
+              id: 'run-1',
+              state: 'success',
               error_type: null,
-              started_at: "2024-01-01T10:00:00Z",
-              finished_at: "2024-01-01T10:01:00Z",
+              started_at: '2024-01-01T10:00:00Z',
+              finished_at: '2024-01-01T10:01:00Z',
             } as Run,
           ],
         } as WorkOrder,
@@ -344,7 +344,7 @@ describe("CollaborativeWorkflowDiagram - Real-time Run Updates", () => {
     });
   });
 
-  test("re-fetches run steps multiple times as run progresses", async () => {
+  test('re-fetches run steps multiple times as run progresses', async () => {
     const wrapper = createWrapper();
     render(<CollaborativeWorkflowDiagram />, { wrapper });
 
@@ -363,8 +363,8 @@ describe("CollaborativeWorkflowDiagram - Real-time Run Updates", () => {
           runs: [
             {
               ...historyState.history[0].runs[0],
-              state: "started",
-              started_at: "2024-01-01T10:00:30Z", // 30 seconds later
+              state: 'started',
+              started_at: '2024-01-01T10:00:30Z', // 30 seconds later
             } as Run,
           ],
         } as WorkOrder,
@@ -382,12 +382,12 @@ describe("CollaborativeWorkflowDiagram - Real-time Run Updates", () => {
       history: [
         {
           ...historyState.history[0],
-          state: "success",
+          state: 'success',
           runs: [
             {
               ...historyState.history[0].runs[0],
-              state: "success",
-              finished_at: "2024-01-01T10:01:00Z",
+              state: 'success',
+              finished_at: '2024-01-01T10:01:00Z',
             } as Run,
           ],
         } as WorkOrder,
@@ -400,12 +400,12 @@ describe("CollaborativeWorkflowDiagram - Real-time Run Updates", () => {
     });
   });
 
-  test("does not re-fetch when no run is selected", async () => {
+  test('does not re-fetch when no run is selected', async () => {
     // Remove run ID from URL
-    Object.defineProperty(window, "location", {
+    Object.defineProperty(window, 'location', {
       value: {
-        search: "",
-        href: "http://localhost",
+        search: '',
+        href: 'http://localhost',
       },
       writable: true,
       configurable: true,
@@ -424,7 +424,7 @@ describe("CollaborativeWorkflowDiagram - Real-time Run Updates", () => {
       history: [
         {
           ...historyState.history[0],
-          state: "success",
+          state: 'success',
         } as WorkOrder,
       ],
     };
@@ -435,7 +435,7 @@ describe("CollaborativeWorkflowDiagram - Real-time Run Updates", () => {
     expect(requestRunStepsMock).not.toHaveBeenCalled();
   });
 
-  test("only re-fetches for the currently selected run", async () => {
+  test('only re-fetches for the currently selected run', async () => {
     // Add a second run to history
     historyState = {
       ...historyState,
@@ -445,10 +445,10 @@ describe("CollaborativeWorkflowDiagram - Real-time Run Updates", () => {
           runs: [
             ...historyState.history[0].runs,
             {
-              id: "run-2",
-              state: "started",
+              id: 'run-2',
+              state: 'started',
               error_type: null,
-              started_at: "2024-01-01T10:05:00Z",
+              started_at: '2024-01-01T10:05:00Z',
               finished_at: null,
             } as Run,
           ],
@@ -462,7 +462,7 @@ describe("CollaborativeWorkflowDiagram - Real-time Run Updates", () => {
     // Wait for initial fetch of run-1 (from URL)
     await waitFor(() => {
       expect(requestRunStepsMock).toHaveBeenCalledTimes(1);
-      expect(requestRunStepsMock).toHaveBeenCalledWith("run-1");
+      expect(requestRunStepsMock).toHaveBeenCalledWith('run-1');
     });
 
     // Simulate update to run-2 (not selected)
@@ -475,8 +475,8 @@ describe("CollaborativeWorkflowDiagram - Real-time Run Updates", () => {
             historyState.history[0].runs[0],
             {
               ...historyState.history[0].runs[1],
-              state: "success",
-              finished_at: "2024-01-01T10:06:00Z",
+              state: 'success',
+              finished_at: '2024-01-01T10:06:00Z',
             } as Run,
           ],
         } as WorkOrder,
@@ -489,6 +489,6 @@ describe("CollaborativeWorkflowDiagram - Real-time Run Updates", () => {
     // This is more efficient than refetching on every history update
     await new Promise(resolve => setTimeout(resolve, 100));
     expect(requestRunStepsMock).toHaveBeenCalledTimes(1); // Still just the initial fetch
-    expect(requestRunStepsMock).toHaveBeenCalledWith("run-1");
+    expect(requestRunStepsMock).toHaveBeenCalledWith('run-1');
   });
 });

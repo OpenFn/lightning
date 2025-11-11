@@ -174,13 +174,17 @@ defmodule LightningWeb.WorkflowChannel do
       project_repo_connection =
         VersionControl.get_repo_connection_for_project(project.id)
 
+      webhook_auth_methods =
+        Lightning.WebhookAuthMethods.list_for_project(project)
+
       %{
         user: render_user_context(user),
         project: render_project_context(project),
         config: render_config_context(),
         permissions: render_permissions(user, project_user),
         latest_snapshot_lock_version: fresh_workflow.lock_version,
-        project_repo_connection: render_repo_connection(project_repo_connection)
+        project_repo_connection: render_repo_connection(project_repo_connection),
+        webhook_auth_methods: render_webhook_auth_methods(webhook_auth_methods)
       }
     end)
   end
@@ -404,6 +408,95 @@ defmodule LightningWeb.WorkflowChannel do
   end
 
   @impl true
+  def handle_in(
+        "request_trigger_auth_methods",
+        %{"trigger_id" => trigger_id},
+        socket
+      ) do
+    Logger.debug("""
+    WorkflowChannel: request_trigger_auth_methods
+      trigger_id: #{trigger_id}
+    """)
+
+    async_task(socket, "request_trigger_auth_methods", fn ->
+      trigger = Lightning.Repo.get!(Lightning.Workflows.Trigger, trigger_id)
+
+      webhook_auth_methods_query =
+        from(wam in Lightning.Workflows.WebhookAuthMethod,
+          where: is_nil(wam.scheduled_deletion),
+          order_by: wam.name
+        )
+
+      trigger_with_auth =
+        Lightning.Repo.preload(trigger,
+          webhook_auth_methods: webhook_auth_methods_query
+        )
+
+      %{
+        trigger_id: trigger_id,
+        webhook_auth_methods:
+          render_webhook_auth_methods(trigger_with_auth.webhook_auth_methods)
+      }
+    end)
+  end
+
+  @impl true
+  def handle_in(
+        "update_trigger_auth_methods",
+        %{"trigger_id" => trigger_id, "auth_method_ids" => auth_method_ids},
+        socket
+      ) do
+    Logger.debug("""
+    WorkflowChannel: update_trigger_auth_methods
+      trigger_id: #{trigger_id}
+      auth_method_ids: #{inspect(auth_method_ids)}
+    """)
+
+    with :ok <- authorize_edit_workflow(socket),
+         trigger <- Lightning.Repo.get!(Lightning.Workflows.Trigger, trigger_id),
+         :ok <- verify_trigger_in_workflow(trigger, socket.assigns.workflow_id),
+         auth_methods <-
+           fetch_auth_methods(auth_method_ids, socket.assigns.project),
+         {:ok, updated_trigger} <-
+           Lightning.WebhookAuthMethods.update_trigger_auth_methods(
+             trigger,
+             auth_methods,
+             actor: socket.assigns.current_user
+           ) do
+      # Broadcast update to all collaborators in the room (including sender)
+      broadcast!(socket, "trigger_auth_methods_updated", %{
+        trigger_id: trigger_id,
+        webhook_auth_methods:
+          render_webhook_auth_methods(updated_trigger.webhook_auth_methods)
+      })
+
+      {:reply, {:ok, %{success: true}}, socket}
+    else
+      {:error, %{type: "unauthorized", message: message}} ->
+        {:reply, {:error, %{reason: message}}, socket}
+
+      {:error, :wrong_workflow} ->
+        {:reply, {:error, %{reason: "trigger does not belong to this workflow"}},
+         socket}
+
+      {:error, %Ecto.Changeset{} = changeset} ->
+        errors =
+          Ecto.Changeset.traverse_errors(changeset, fn {msg, opts} ->
+            Enum.reduce(opts, msg, fn {key, value}, acc ->
+              String.replace(acc, "%{#{key}}", to_string(value))
+            end)
+          end)
+
+        {:reply, {:error, %{reason: "validation failed", errors: errors}},
+         socket}
+
+      error ->
+        Logger.error("Failed to update trigger auth methods: #{inspect(error)}")
+        {:reply, {:error, %{reason: "internal error"}}, socket}
+    end
+  end
+
+  @impl true
   def handle_info({:yjs, chunk}, socket) do
     push(socket, "yjs", {:binary, chunk})
     {:noreply, socket}
@@ -424,6 +517,15 @@ defmodule LightningWeb.WorkflowChannel do
   def handle_info(%{event: "credentials_updated", payload: credentials}, socket) do
     # Forward credential updates from PubSub to connected channel clients
     push(socket, "credentials_updated", credentials)
+    {:noreply, socket}
+  end
+
+  @impl true
+  def handle_info(
+        %{event: "webhook_auth_methods_updated", payload: webhook_auth_methods},
+        socket
+      ) do
+    push(socket, "webhook_auth_methods_updated", webhook_auth_methods)
     {:noreply, socket}
   end
 
@@ -568,7 +670,8 @@ defmodule LightningWeb.WorkflowChannel do
               "request_current_user",
               "get_context",
               "request_history",
-              "request_versions"
+              "request_versions",
+              "request_trigger_auth_methods"
             ] do
     reply(socket_ref, reply)
   end
@@ -605,8 +708,6 @@ defmodule LightningWeb.WorkflowChannel do
     }
   end
 
-  defp render_project_context(nil), do: nil
-
   defp render_project_context(project) do
     %{
       id: project.id,
@@ -638,9 +739,18 @@ defmodule LightningWeb.WorkflowChannel do
         project_user
       )
 
+    can_write_webhook_auth =
+      Permissions.can?(
+        :project_users,
+        :write_webhook_auth_method,
+        user,
+        project_user
+      )
+
     %{
       can_edit_workflow: can_edit,
-      can_run_workflow: can_run
+      can_run_workflow: can_run,
+      can_write_webhook_auth_method: can_write_webhook_auth
     }
   end
 
@@ -653,6 +763,16 @@ defmodule LightningWeb.WorkflowChannel do
       branch: repo_connection.branch,
       github_installation_id: repo_connection.github_installation_id
     }
+  end
+
+  defp render_webhook_auth_methods(methods) do
+    Enum.map(methods, fn method ->
+      %{
+        id: method.id,
+        name: method.name,
+        auth_type: method.auth_type
+      }
+    end)
   end
 
   # Private helper functions for save_workflow and reset_workflow
@@ -785,6 +905,21 @@ defmodule LightningWeb.WorkflowChannel do
     not MapSet.member?(existing_names, name)
   end
 
+  defp verify_trigger_in_workflow(trigger, workflow_id) do
+    if trigger.workflow_id == workflow_id do
+      :ok
+    else
+      {:error, :wrong_workflow}
+    end
+  end
+
+  defp fetch_auth_methods(ids, project) when is_list(ids) do
+    Lightning.WebhookAuthMethods.list_for_project(project)
+    |> Enum.filter(fn method -> method.id in ids end)
+  end
+
+  defp fetch_auth_methods(_ids, _project), do: []
+
   defp load_workflow("edit", workflow_id, project, user, version)
        when is_binary(version) do
     Logger.info("Loading workflow snapshot version: #{version}")
@@ -796,6 +931,25 @@ defmodule LightningWeb.WorkflowChannel do
             {:error, "snapshot version #{version} not found"}
 
           snapshot ->
+            trigger_ids =
+              snapshot.triggers
+              |> Enum.map(& &1.id)
+              |> Enum.map(&Ecto.UUID.dump!/1)
+
+            trigger_auth_methods =
+              from(twam in "trigger_webhook_auth_methods",
+                where: twam.trigger_id in ^trigger_ids,
+                join: wam in Lightning.Workflows.WebhookAuthMethod,
+                on: twam.webhook_auth_method_id == wam.id,
+                where: is_nil(wam.scheduled_deletion),
+                select: %{trigger_id: twam.trigger_id, auth_method: wam}
+              )
+              |> Lightning.Repo.all()
+              |> Enum.group_by(
+                &Ecto.UUID.cast!(&1.trigger_id),
+                & &1.auth_method
+              )
+
             workflow = %Workflow{
               id: workflow_id,
               project_id: project.id,
@@ -804,7 +958,14 @@ defmodule LightningWeb.WorkflowChannel do
               deleted_at: nil,
               jobs: Enum.map(snapshot.jobs, &Map.from_struct/1),
               edges: Enum.map(snapshot.edges, &Map.from_struct/1),
-              triggers: Enum.map(snapshot.triggers, &Map.from_struct/1)
+              triggers:
+                Enum.map(snapshot.triggers, fn trigger ->
+                  auth_methods = Map.get(trigger_auth_methods, trigger.id, [])
+
+                  trigger
+                  |> Map.from_struct()
+                  |> Map.put(:has_auth_method, length(auth_methods) > 0)
+                end)
             }
 
             case Permissions.can(
@@ -831,7 +992,20 @@ defmodule LightningWeb.WorkflowChannel do
     # When no persisted Y.Doc state exists, the workflow is serialized to Y.Doc
     # and needs jobs, edges, and triggers loaded to avoid empty workflow state
     case Lightning.Workflows.get_workflow(workflow_id,
-           include: [:jobs, :edges, :triggers]
+           include: [
+             :jobs,
+             :edges,
+             triggers:
+               from(t in Lightning.Workflows.Trigger,
+                 preload: [
+                   webhook_auth_methods:
+                     ^from(wam in Lightning.Workflows.WebhookAuthMethod,
+                       where: is_nil(wam.scheduled_deletion),
+                       order_by: wam.name
+                     )
+                 ]
+               )
+           ]
          ) do
       nil ->
         {:error, "workflow not found"}
@@ -847,7 +1021,19 @@ defmodule LightningWeb.WorkflowChannel do
                  project
                ) do
             :ok ->
-              {:ok, workflow}
+              workflow_with_auth_flags = %{
+                workflow
+                | triggers:
+                    Enum.map(workflow.triggers, fn trigger ->
+                      %{
+                        trigger
+                        | has_auth_method:
+                            length(trigger.webhook_auth_methods || []) > 0
+                      }
+                    end)
+              }
+
+              {:ok, workflow_with_auth_flags}
 
             {:error, :unauthorized} ->
               {:error, "unauthorized"}

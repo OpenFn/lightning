@@ -14,12 +14,12 @@
  * - Verify referential stability guarantees
  */
 
-import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
-import { createEditorPreferencesStore } from "../../../js/collaborative-editor/stores/createEditorPreferencesStore";
-import type { EditorPreferencesStore } from "../../../js/collaborative-editor/types/editorPreferences";
-import * as storage from "lib0/storage";
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
+import { createEditorPreferencesStore } from '../../../js/collaborative-editor/stores/createEditorPreferencesStore';
+import type { EditorPreferencesStore } from '../../../js/collaborative-editor/types/editorPreferences';
+import * as storage from 'lib0/storage';
 
-describe("createEditorPreferencesStore", () => {
+describe('createEditorPreferencesStore', () => {
   let store: EditorPreferencesStore;
 
   beforeEach(() => {
@@ -42,19 +42,19 @@ describe("createEditorPreferencesStore", () => {
   // INITIALIZATION
   // ========================================================================
 
-  describe("initialization", () => {
-    test("uses default values when no stored preferences exist", () => {
+  describe('initialization', () => {
+    test('uses default values when no stored preferences exist', () => {
       store = createEditorPreferencesStore();
       const state = store.getSnapshot();
 
       expect(state.historyPanelCollapsed).toBe(true);
     });
 
-    test("loads existing preferences from storage", () => {
+    test('loads existing preferences from storage', () => {
       // Pre-populate storage
       storage.varStorage.setItem(
-        "lightning.editor.historyPanelCollapsed",
-        "false"
+        'lightning.editor.historyPanelCollapsed',
+        'false'
       );
 
       store = createEditorPreferencesStore();
@@ -63,11 +63,11 @@ describe("createEditorPreferencesStore", () => {
       expect(state.historyPanelCollapsed).toBe(false);
     });
 
-    test("handles corrupted storage gracefully", () => {
+    test('handles corrupted storage gracefully', () => {
       // Set invalid value
       storage.varStorage.setItem(
-        "lightning.editor.historyPanelCollapsed",
-        "invalid"
+        'lightning.editor.historyPanelCollapsed',
+        'invalid'
       );
 
       store = createEditorPreferencesStore();
@@ -82,12 +82,12 @@ describe("createEditorPreferencesStore", () => {
   // STATE UPDATES
   // ========================================================================
 
-  describe("setHistoryPanelCollapsed", () => {
+  describe('setHistoryPanelCollapsed', () => {
     beforeEach(() => {
       store = createEditorPreferencesStore();
     });
 
-    test("updates state and persists to storage", () => {
+    test('updates state and persists to storage', () => {
       store.setHistoryPanelCollapsed(false);
 
       const state = store.getSnapshot();
@@ -95,12 +95,12 @@ describe("createEditorPreferencesStore", () => {
 
       // Verify storage was updated
       const stored = storage.varStorage.getItem(
-        "lightning.editor.historyPanelCollapsed"
+        'lightning.editor.historyPanelCollapsed'
       );
-      expect(stored).toBe("false");
+      expect(stored).toBe('false');
     });
 
-    test("notifies subscribers when state changes", () => {
+    test('notifies subscribers when state changes', () => {
       const listener = vi.fn();
       store.subscribe(listener);
 
@@ -109,7 +109,7 @@ describe("createEditorPreferencesStore", () => {
       expect(listener).toHaveBeenCalledTimes(1);
     });
 
-    test("notifies on every call even if value is same", () => {
+    test('notifies on every call even if value is same', () => {
       store.setHistoryPanelCollapsed(true); // Already default
 
       const listener = vi.fn();
@@ -123,18 +123,18 @@ describe("createEditorPreferencesStore", () => {
 
       // Storage should still be updated
       const stored = storage.varStorage.getItem(
-        "lightning.editor.historyPanelCollapsed"
+        'lightning.editor.historyPanelCollapsed'
       );
-      expect(stored).toBe("true");
+      expect(stored).toBe('true');
     });
   });
 
-  describe("resetToDefaults", () => {
+  describe('resetToDefaults', () => {
     beforeEach(() => {
       store = createEditorPreferencesStore();
     });
 
-    test("resets all preferences to defaults", () => {
+    test('resets all preferences to defaults', () => {
       // Set non-default value
       store.setHistoryPanelCollapsed(false);
       expect(store.getSnapshot().historyPanelCollapsed).toBe(false);
@@ -147,12 +147,12 @@ describe("createEditorPreferencesStore", () => {
 
       // Verify storage was updated
       const stored = storage.varStorage.getItem(
-        "lightning.editor.historyPanelCollapsed"
+        'lightning.editor.historyPanelCollapsed'
       );
-      expect(stored).toBe("true");
+      expect(stored).toBe('true');
     });
 
-    test("notifies subscribers", () => {
+    test('notifies subscribers', () => {
       const listener = vi.fn();
       store.subscribe(listener);
 
@@ -166,19 +166,19 @@ describe("createEditorPreferencesStore", () => {
   // REFERENTIAL STABILITY
   // ========================================================================
 
-  describe("referential stability", () => {
+  describe('referential stability', () => {
     beforeEach(() => {
       store = createEditorPreferencesStore();
     });
 
-    test("returns same state reference when no changes occur", () => {
+    test('returns same state reference when no changes occur', () => {
       const state1 = store.getSnapshot();
       const state2 = store.getSnapshot();
 
       expect(state1).toBe(state2); // Same reference
     });
 
-    test("returns new state reference after change", () => {
+    test('returns new state reference after change', () => {
       const state1 = store.getSnapshot();
 
       store.setHistoryPanelCollapsed(false);
@@ -187,7 +187,7 @@ describe("createEditorPreferencesStore", () => {
       expect(state1).not.toBe(state2); // Different references
     });
 
-    test("withSelector returns stable result when state unchanged", () => {
+    test('withSelector returns stable result when state unchanged', () => {
       const selector = store.withSelector(s => s.historyPanelCollapsed);
 
       const result1 = selector();
@@ -196,7 +196,7 @@ describe("createEditorPreferencesStore", () => {
       expect(result1).toBe(result2);
     });
 
-    test("withSelector returns new result when state changes", () => {
+    test('withSelector returns new result when state changes', () => {
       const selector = store.withSelector(s => s.historyPanelCollapsed);
 
       const result1 = selector();
@@ -213,12 +213,12 @@ describe("createEditorPreferencesStore", () => {
   // SUBSCRIPTION MANAGEMENT
   // ========================================================================
 
-  describe("subscription management", () => {
+  describe('subscription management', () => {
     beforeEach(() => {
       store = createEditorPreferencesStore();
     });
 
-    test("allows multiple subscribers", () => {
+    test('allows multiple subscribers', () => {
       const listener1 = vi.fn();
       const listener2 = vi.fn();
 
@@ -231,7 +231,7 @@ describe("createEditorPreferencesStore", () => {
       expect(listener2).toHaveBeenCalledTimes(1);
     });
 
-    test("unsubscribe removes listener", () => {
+    test('unsubscribe removes listener', () => {
       const listener = vi.fn();
       const unsubscribe = store.subscribe(listener);
 
@@ -245,7 +245,7 @@ describe("createEditorPreferencesStore", () => {
       expect(listener).not.toHaveBeenCalled();
     });
 
-    test("handles multiple unsubscribes safely", () => {
+    test('handles multiple unsubscribes safely', () => {
       const listener = vi.fn();
       const unsubscribe = store.subscribe(listener);
 
@@ -261,14 +261,14 @@ describe("createEditorPreferencesStore", () => {
   // ERROR HANDLING
   // ========================================================================
 
-  describe("error handling", () => {
-    test("handles storage errors during save", () => {
+  describe('error handling', () => {
+    test('handles storage errors during save', () => {
       store = createEditorPreferencesStore();
 
       // Mock storage.setItem to throw
       const originalSetItem = storage.varStorage.setItem;
       storage.varStorage.setItem = vi.fn(() => {
-        throw new Error("Storage quota exceeded");
+        throw new Error('Storage quota exceeded');
       });
 
       // Should not throw
@@ -283,11 +283,11 @@ describe("createEditorPreferencesStore", () => {
       storage.varStorage.setItem = originalSetItem;
     });
 
-    test("handles storage errors during load", () => {
+    test('handles storage errors during load', () => {
       // Mock storage.getItem to throw
       const originalGetItem = storage.varStorage.getItem;
       storage.varStorage.getItem = vi.fn(() => {
-        throw new Error("Storage access denied");
+        throw new Error('Storage access denied');
       });
 
       // Should not throw, should use defaults

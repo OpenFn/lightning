@@ -5,10 +5,10 @@
  * Follows the established pattern from useHistory.ts and useCredentials.ts.
  */
 
-import { useContext, useSyncExternalStore } from "react";
+import { useContext, useSyncExternalStore } from 'react';
 
-import { StoreContext } from "../contexts/StoreProvider";
-import type { EditorPreferencesStore } from "../types/editorPreferences";
+import { StoreContext } from '../contexts/StoreProvider';
+import type { EditorPreferencesStore } from '../types/editorPreferences';
 
 /**
  * Main hook for accessing the EditorPreferencesStore instance
@@ -19,7 +19,7 @@ const useEditorPreferencesStore = (): EditorPreferencesStore => {
   const context = useContext(StoreContext);
   if (!context) {
     throw new Error(
-      "useEditorPreferencesStore must be used within a StoreProvider"
+      'useEditorPreferencesStore must be used within a StoreProvider'
     );
   }
   return context.editorPreferencesStore;
