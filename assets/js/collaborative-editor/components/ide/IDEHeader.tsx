@@ -11,8 +11,8 @@ import { AdaptorDisplay } from '../AdaptorDisplay';
 import { Button } from '../Button';
 import { SaveButton } from '../Header';
 import { RunRetryButton } from '../RunRetryButton';
+import { ShortcutKeys } from '../ShortcutKeys';
 import { Tooltip } from '../Tooltip';
-import { TooltipWithShortcut } from '../TooltipWithShortcut';
 import { VersionDropdown } from '../VersionDropdown';
 
 interface IDEHeaderProps {
@@ -152,11 +152,7 @@ export function IDEHeader({
         {/* Right: Action buttons */}
         <div className="flex items-center gap-3">
           {!canRun && runTooltip ? (
-            <TooltipWithShortcut
-              description={runTooltip}
-              shortcut={undefined}
-              side="bottom"
-            >
+            <Tooltip content={runTooltip} side="bottom">
               <span className="inline-block">
                 <RunRetryButton
                   isRetryable={isRetryable}
@@ -173,11 +169,20 @@ export function IDEHeader({
                   dropdownPosition="down"
                 />
               </span>
-            </TooltipWithShortcut>
+            </Tooltip>
           ) : (
-            <TooltipWithShortcut
-              description="Run workflow"
-              shortcut={canRun ? ['mod', 'enter'] : undefined}
+            <Tooltip
+              content={
+                <>
+                  Run workflow
+                  {canRun && (
+                    <>
+                      {' '}
+                      <ShortcutKeys keys={['mod', 'enter']} />
+                    </>
+                  )}
+                </>
+              }
               side="bottom"
             >
               <span className="inline-block">
@@ -196,7 +201,7 @@ export function IDEHeader({
                   dropdownPosition="down"
                 />
               </span>
-            </TooltipWithShortcut>
+            </Tooltip>
           )}
 
           <SaveButton

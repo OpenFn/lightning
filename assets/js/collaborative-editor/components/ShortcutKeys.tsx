@@ -1,21 +1,15 @@
-import type { ReactNode } from 'react';
-
 /**
- * Formats keyboard shortcut keys as JSX with <kbd> elements and platform-specific notation.
+ * ShortcutKeys - Displays keyboard shortcut keys with platform-specific notation
  *
  * On macOS: "mod" becomes "⌘", other platforms: "Ctrl"
  * All other keys are capitalized text (Shift, Enter, Esc, etc.)
  * Each key is wrapped in a <kbd> element for semantic HTML.
  *
- * @param keys - Array of key names (e.g., ["mod", "s"] or ["mod", "shift", "enter"])
- * @returns JSX with <kbd> elements (e.g., <kbd>⌘</kbd> <kbd>S</kbd>)
- *
  * @example
- * formatShortcut(["mod", "s"]) // <kbd>⌘</kbd> <kbd>S</kbd> on Mac
- * formatShortcut(["mod", "shift", "s"]) // <kbd>⌘</kbd> <kbd>Shift</kbd> <kbd>S</kbd>
- * formatShortcut(["escape"]) // <kbd>Escape</kbd>
+ * <ShortcutKeys keys={['mod', 's']} /> // ⌘ S on Mac, Ctrl S elsewhere
+ * <ShortcutKeys keys={['mod', 'shift', 'enter']} /> // ⌘ Shift Enter on Mac
  */
-export function formatShortcut(keys: string[]): ReactNode {
+export function ShortcutKeys({ keys }: { keys: string[] }) {
   const isMac =
     typeof navigator !== 'undefined'
       ? /Mac|iPod|iPhone|iPad/.test(navigator.platform)

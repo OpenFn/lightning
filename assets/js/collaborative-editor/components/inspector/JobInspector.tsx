@@ -8,8 +8,8 @@ import { useWorkflowActions, useCanSave } from '../../hooks/useWorkflow';
 import type { Workflow } from '../../types/workflow';
 import { AlertDialog } from '../AlertDialog';
 import { Button } from '../Button';
+import { ShortcutKeys } from '../ShortcutKeys';
 import { Tooltip } from '../Tooltip';
-import { TooltipWithShortcut } from '../TooltipWithShortcut';
 
 import { InspectorFooter } from './InspectorFooter';
 import { InspectorLayout } from './InspectorLayout';
@@ -69,11 +69,20 @@ export function JobInspector({
     <InspectorFooter
       leftButtons={
         <>
-          <TooltipWithShortcut
-            description={
-              isIDEOpen ? 'IDE is already open' : 'Open full-screen code editor'
+          <Tooltip
+            content={
+              <>
+                {isIDEOpen
+                  ? 'IDE is already open'
+                  : 'Open full-screen code editor'}
+                {!isIDEOpen && (
+                  <>
+                    {' '}
+                    <ShortcutKeys keys={['mod', 'e']} />
+                  </>
+                )}
+              </>
             }
-            shortcut={!isIDEOpen ? ['mod', 'e'] : undefined}
             side="top"
           >
             <span className="inline-block">
@@ -85,7 +94,7 @@ export function JobInspector({
                 Edit
               </Button>
             </span>
-          </TooltipWithShortcut>
+          </Tooltip>
           <Button
             variant="primary"
             onClick={() => onOpenRunPanel({ jobId: job.id })}

@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import { formatShortcut } from '#/collaborative-editor/utils/formatShortcut';
+import { ShortcutKeys } from '#/collaborative-editor/components/ShortcutKeys';
 
-describe('formatShortcut', () => {
+describe('ShortcutKeys', () => {
   let originalNavigator: Navigator;
 
   beforeEach(() => {
@@ -30,8 +30,11 @@ describe('formatShortcut', () => {
     });
 
     it('displays ⌘ symbol for mod key', () => {
-      const result = formatShortcut(['mod', 's']);
-      render(<div data-testid="shortcut">{result}</div>);
+      render(
+        <div data-testid="shortcut">
+          <ShortcutKeys keys={['mod', 's']} />
+        </div>
+      );
 
       const kbdElements = document.querySelectorAll('kbd');
       const kbdTexts = Array.from(kbdElements).map(el => el.textContent);
@@ -40,8 +43,11 @@ describe('formatShortcut', () => {
     });
 
     it('displays Shift as text', () => {
-      const result = formatShortcut(['mod', 'shift', 's']);
-      render(<div data-testid="shortcut">{result}</div>);
+      render(
+        <div data-testid="shortcut">
+          <ShortcutKeys keys={['mod', 'shift', 's']} />
+        </div>
+      );
 
       const kbdElements = document.querySelectorAll('kbd');
       const kbdTexts = Array.from(kbdElements).map(el => el.textContent);
@@ -50,8 +56,11 @@ describe('formatShortcut', () => {
     });
 
     it('displays Enter as text', () => {
-      const result = formatShortcut(['mod', 'enter']);
-      render(<div data-testid="shortcut">{result}</div>);
+      render(
+        <div data-testid="shortcut">
+          <ShortcutKeys keys={['mod', 'enter']} />
+        </div>
+      );
 
       const kbdElements = document.querySelectorAll('kbd');
       const kbdTexts = Array.from(kbdElements).map(el => el.textContent);
@@ -60,8 +69,11 @@ describe('formatShortcut', () => {
     });
 
     it('displays Escape as text', () => {
-      const result = formatShortcut(['escape']);
-      render(<div data-testid="shortcut">{result}</div>);
+      render(
+        <div data-testid="shortcut">
+          <ShortcutKeys keys={['escape']} />
+        </div>
+      );
 
       const kbd = document.querySelector('kbd');
       expect(kbd?.textContent).toBe('Escape');
@@ -79,8 +91,11 @@ describe('formatShortcut', () => {
     });
 
     it('displays Ctrl text for mod key', () => {
-      const result = formatShortcut(['mod', 's']);
-      render(<div data-testid="shortcut">{result}</div>);
+      render(
+        <div data-testid="shortcut">
+          <ShortcutKeys keys={['mod', 's']} />
+        </div>
+      );
 
       const kbdElements = document.querySelectorAll('kbd');
       const kbdTexts = Array.from(kbdElements).map(el => el.textContent);
@@ -89,8 +104,11 @@ describe('formatShortcut', () => {
     });
 
     it('displays Shift as text', () => {
-      const result = formatShortcut(['mod', 'shift', 's']);
-      render(<div data-testid="shortcut">{result}</div>);
+      render(
+        <div data-testid="shortcut">
+          <ShortcutKeys keys={['mod', 'shift', 's']} />
+        </div>
+      );
 
       const kbdElements = document.querySelectorAll('kbd');
       const kbdTexts = Array.from(kbdElements).map(el => el.textContent);
@@ -99,8 +117,11 @@ describe('formatShortcut', () => {
     });
 
     it('displays Enter as text', () => {
-      const result = formatShortcut(['mod', 'enter']);
-      render(<div data-testid="shortcut">{result}</div>);
+      render(
+        <div data-testid="shortcut">
+          <ShortcutKeys keys={['mod', 'enter']} />
+        </div>
+      );
 
       const kbdElements = document.querySelectorAll('kbd');
       const kbdTexts = Array.from(kbdElements).map(el => el.textContent);
@@ -120,8 +141,11 @@ describe('formatShortcut', () => {
     });
 
     it('displays Ctrl text for mod key', () => {
-      const result = formatShortcut(['mod', 's']);
-      render(<div data-testid="shortcut">{result}</div>);
+      render(
+        <div data-testid="shortcut">
+          <ShortcutKeys keys={['mod', 's']} />
+        </div>
+      );
 
       const kbdElements = document.querySelectorAll('kbd');
       const kbdTexts = Array.from(kbdElements).map(el => el.textContent);
@@ -141,8 +165,11 @@ describe('formatShortcut', () => {
     });
 
     it('capitalizes single letter keys', () => {
-      const result = formatShortcut(['mod', 's']);
-      render(<div data-testid="shortcut">{result}</div>);
+      render(
+        <div data-testid="shortcut">
+          <ShortcutKeys keys={['mod', 's']} />
+        </div>
+      );
 
       const kbdElements = document.querySelectorAll('kbd');
       const kbdTexts = Array.from(kbdElements).map(el => el.textContent);
@@ -152,8 +179,11 @@ describe('formatShortcut', () => {
     });
 
     it('handles multiple keys with space separator', () => {
-      const result = formatShortcut(['mod', 'shift', 's']);
-      render(<div data-testid="shortcut">{result}</div>);
+      render(
+        <div data-testid="shortcut">
+          <ShortcutKeys keys={['mod', 'shift', 's']} />
+        </div>
+      );
 
       const container = screen.getByTestId('shortcut');
       expect(container.textContent).toBe('⌘ Shift S');
@@ -163,16 +193,22 @@ describe('formatShortcut', () => {
     });
 
     it('handles single key', () => {
-      const result = formatShortcut(['escape']);
-      render(<div data-testid="shortcut">{result}</div>);
+      render(
+        <div data-testid="shortcut">
+          <ShortcutKeys keys={['escape']} />
+        </div>
+      );
 
       const container = screen.getByTestId('shortcut');
       expect(container.textContent).toBe('Escape');
     });
 
     it('handles empty array', () => {
-      const result = formatShortcut([]);
-      render(<div data-testid="shortcut">{result}</div>);
+      render(
+        <div data-testid="shortcut">
+          <ShortcutKeys keys={[]} />
+        </div>
+      );
 
       const kbdElements = document.querySelectorAll('kbd');
       expect(kbdElements).toHaveLength(0);
@@ -187,8 +223,11 @@ describe('formatShortcut', () => {
         writable: true,
       });
 
-      const result = formatShortcut(['mod', 's']);
-      render(<div data-testid="shortcut">{result}</div>);
+      render(
+        <div data-testid="shortcut">
+          <ShortcutKeys keys={['mod', 's']} />
+        </div>
+      );
 
       const kbdElements = document.querySelectorAll('kbd');
       const kbdTexts = Array.from(kbdElements).map(el => el.textContent);
@@ -203,8 +242,11 @@ describe('formatShortcut', () => {
         writable: true,
       });
 
-      const result = formatShortcut(['mod', 's']);
-      render(<div data-testid="shortcut">{result}</div>);
+      render(
+        <div data-testid="shortcut">
+          <ShortcutKeys keys={['mod', 's']} />
+        </div>
+      );
 
       const kbdElements = document.querySelectorAll('kbd');
       const kbdTexts = Array.from(kbdElements).map(el => el.textContent);
@@ -223,8 +265,11 @@ describe('formatShortcut', () => {
     });
 
     it('applies correct Tailwind classes to kbd elements', () => {
-      const result = formatShortcut(['mod', 's']);
-      render(<div data-testid="shortcut">{result}</div>);
+      render(
+        <div data-testid="shortcut">
+          <ShortcutKeys keys={['mod', 's']} />
+        </div>
+      );
 
       const kbdElements = document.querySelectorAll('kbd');
       kbdElements.forEach(kbd => {

@@ -29,8 +29,8 @@ import { EmailVerificationBanner } from './EmailVerificationBanner';
 import { GitHubSyncModal } from './GitHubSyncModal';
 import { Switch } from './inputs/Switch';
 import { ReadOnlyWarning } from './ReadOnlyWarning';
+import { ShortcutKeys } from './ShortcutKeys';
 import { Tooltip } from './Tooltip';
-import { TooltipWithShortcut } from './TooltipWithShortcut';
 
 const userNavigation = [
   { label: 'User Profile', url: '/profile', icon: 'hero-user-circle' },
@@ -66,9 +66,18 @@ export function SaveButton({
   if (!hasGitHubIntegration) {
     return (
       <div className="inline-flex rounded-md shadow-xs z-5">
-        <TooltipWithShortcut
-          description={tooltipMessage}
-          shortcut={canSave ? ['mod', 's'] : undefined}
+        <Tooltip
+          content={
+            <>
+              {tooltipMessage}
+              {canSave && (
+                <>
+                  {' '}
+                  <ShortcutKeys keys={['mod', 's']} />
+                </>
+              )}
+            </>
+          }
           side="bottom"
         >
           <button
@@ -86,16 +95,25 @@ export function SaveButton({
           >
             Save
           </button>
-        </TooltipWithShortcut>
+        </Tooltip>
       </div>
     );
   }
 
   return (
     <div className="inline-flex rounded-md shadow-xs z-5">
-      <TooltipWithShortcut
-        description={tooltipMessage}
-        shortcut={canSave ? ['mod', 's'] : undefined}
+      <Tooltip
+        content={
+          <>
+            {tooltipMessage}
+            {canSave && (
+              <>
+                {' '}
+                <ShortcutKeys keys={['mod', 's']} />
+              </>
+            )}
+          </>
+        }
         side="bottom"
       >
         <button
@@ -113,11 +131,20 @@ export function SaveButton({
         >
           Save
         </button>
-      </TooltipWithShortcut>
+      </Tooltip>
       <Menu as="div" className="relative -ml-px block">
-        <TooltipWithShortcut
-          description={tooltipMessage}
-          shortcut={canSave ? ['mod', 'shift', 's'] : undefined}
+        <Tooltip
+          content={
+            <>
+              {tooltipMessage}
+              {canSave && (
+                <>
+                  {' '}
+                  <ShortcutKeys keys={['mod', 'shift', 's']} />
+                </>
+              )}
+            </>
+          }
           side="bottom"
         >
           <MenuButton
@@ -132,7 +159,7 @@ export function SaveButton({
             <span className="sr-only">Open sync options</span>
             <span className="hero-chevron-down w-4 h-4" />
           </MenuButton>
-        </TooltipWithShortcut>
+        </Tooltip>
         <MenuItems
           transition
           className="absolute right-0 z-10 mt-2 w-max origin-top-right
@@ -286,9 +313,18 @@ export function Header({
             </div>
             <div className="relative flex gap-2">
               {projectId && workflowId && firstTriggerId && (
-                <TooltipWithShortcut
-                  description={runTooltipMessage}
-                  shortcut={canRun ? ['mod', 'enter'] : undefined}
+                <Tooltip
+                  content={
+                    <>
+                      {runTooltipMessage}
+                      {canRun && (
+                        <>
+                          {' '}
+                          <ShortcutKeys keys={['mod', 'enter']} />
+                        </>
+                      )}
+                    </>
+                  }
                   side="bottom"
                 >
                   <span className="inline-block">
@@ -300,7 +336,7 @@ export function Header({
                       Run
                     </Button>
                   </span>
-                </TooltipWithShortcut>
+                </Tooltip>
               )}
               <SaveButton
                 canSave={canSave}
