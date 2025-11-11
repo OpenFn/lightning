@@ -89,6 +89,16 @@ export namespace Workflow {
     enabled: boolean | null; // Computed from triggers
     selectedNode: Workflow.Job | Workflow.Trigger | null;
     selectedEdge: Workflow.Edge | null;
+
+    // Active trigger webhook auth methods (loaded on-demand from server)
+    activeTriggerAuthMethods: {
+      trigger_id: string;
+      webhook_auth_methods: Array<{
+        id: string;
+        name: string;
+        auth_type: string;
+      }>;
+    } | null;
   }
 
   export interface Actions {

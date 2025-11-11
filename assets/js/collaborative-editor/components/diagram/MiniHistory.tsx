@@ -23,41 +23,41 @@
  * ```
  */
 
-import { formatRelative } from "date-fns";
-import React, { useState } from "react";
+import { formatRelative } from 'date-fns';
+import React, { useState } from 'react';
 
-import { relativeLocale } from "../../../hooks";
-import { duration } from "../../../utils/duration";
-import truncateUid from "../../../utils/truncateUID";
-import type { Run, WorkOrder } from "../../types/history";
+import { relativeLocale } from '../../../hooks';
+import { duration } from '../../../utils/duration';
+import truncateUid from '../../../utils/truncateUID';
+import type { Run, WorkOrder } from '../../types/history';
 
 // Extended types with selection state for UI
 type RunWithSelection = Run & { selected?: boolean };
-type WorkOrderWithSelection = Omit<WorkOrder, "runs"> & {
+type WorkOrderWithSelection = Omit<WorkOrder, 'runs'> & {
   runs: RunWithSelection[];
   selected?: boolean;
 };
 
 const CHIP_STYLES: Record<string, string> = {
   // only workorder states...
-  rejected: "bg-red-300 text-gray-800",
-  pending: "bg-gray-200 text-gray-800",
-  running: "bg-blue-200 text-blue-800",
+  rejected: 'bg-red-300 text-gray-800',
+  pending: 'bg-gray-200 text-gray-800',
+  running: 'bg-blue-200 text-blue-800',
   //  run and workorder states...
-  available: "bg-gray-200 text-gray-800",
-  claimed: "bg-blue-200 text-blue-800",
-  started: "bg-blue-200 text-blue-800",
-  success: "bg-green-200 text-green-800",
-  failed: "bg-red-200 text-red-800",
-  crashed: "bg-orange-200 text-orange-800",
-  cancelled: "bg-gray-500 text-gray-800",
-  killed: "bg-yellow-200 text-yellow-800",
-  exception: "bg-gray-800 text-white",
-  lost: "bg-gray-800 text-white",
+  available: 'bg-gray-200 text-gray-800',
+  claimed: 'bg-blue-200 text-blue-800',
+  started: 'bg-blue-200 text-blue-800',
+  success: 'bg-green-200 text-green-800',
+  failed: 'bg-red-200 text-red-800',
+  crashed: 'bg-orange-200 text-orange-800',
+  cancelled: 'bg-gray-500 text-gray-800',
+  killed: 'bg-yellow-200 text-yellow-800',
+  exception: 'bg-gray-800 text-white',
+  lost: 'bg-gray-800 text-white',
 };
 
 const displayTextFromState = (state: string): string => {
-  if (state.length === 0) return "";
+  if (state.length === 0) return '';
   return state.charAt(0).toUpperCase() + state.substring(1);
 };
 
@@ -65,13 +65,13 @@ const StatePill: React.FC<{ state: string; mini?: boolean }> = ({
   state,
   mini = false,
 }) => {
-  const classes = CHIP_STYLES[state] || CHIP_STYLES["pending"];
+  const classes = CHIP_STYLES[state] || CHIP_STYLES['pending'];
   const text = displayTextFromState(state);
 
   const baseClasses =
-    "my-auto whitespace-nowrap rounded-full text-center " +
-    "align-baseline font-medium leading-none";
-  const sizeClasses = mini ? "py-1 px-2 text-[10px]" : "py-2 px-4 text-xs";
+    'my-auto whitespace-nowrap rounded-full text-center ' +
+    'align-baseline font-medium leading-none';
+  const sizeClasses = mini ? 'py-1 px-2 text-[10px]' : 'py-2 px-4 text-xs';
 
   return (
     <span className={`${baseClasses} ${sizeClasses} ${classes}`}>{text}</span>
@@ -99,13 +99,13 @@ export default function MiniHistory({
   error = null,
   onRetry,
 }: MiniHistoryProps) {
-  const [expandedWorder, setExpandedWorder] = useState("");
+  const [expandedWorder, setExpandedWorder] = useState('');
   const now = new Date();
 
   // Clear expanded work order when panel collapses
   React.useEffect(() => {
     if (collapsed) {
-      setExpandedWorder("");
+      setExpandedWorder('');
     }
   }, [collapsed]);
 
@@ -121,7 +121,7 @@ export default function MiniHistory({
       selectRunHandler(workorder.runs[0]);
     }
 
-    setExpandedWorder(prev => (prev === workorder.id ? "" : workorder.id));
+    setExpandedWorder(prev => (prev === workorder.id ? '' : workorder.id));
   };
 
   const historyToggle = () => {
@@ -133,10 +133,10 @@ export default function MiniHistory({
     e.stopPropagation();
     const currentUrl = new URL(window.location.href);
     const nextUrl = new URL(currentUrl);
-    const paths = nextUrl.pathname.split("/");
-    const wIdx = paths.indexOf("w");
+    const paths = nextUrl.pathname.split('/');
+    const wIdx = paths.indexOf('w');
     const workflowPaths = paths.splice(wIdx, paths.length - wIdx);
-    nextUrl.pathname = paths.join("/") + `/history`;
+    nextUrl.pathname = paths.join('/') + `/history`;
     nextUrl.search = `?filters[workflow_id]=${
       workflowPaths[workflowPaths.length - 1]
     }`;
@@ -151,8 +151,8 @@ export default function MiniHistory({
     e.stopPropagation();
     const currentUrl = new URL(window.location.href);
     const nextUrl = new URL(currentUrl);
-    const paths = nextUrl.pathname.split("/");
-    const projectIndex = paths.indexOf("projects");
+    const paths = nextUrl.pathname.split('/');
+    const projectIndex = paths.indexOf('projects');
     const projectId = projectIndex !== -1 ? paths[projectIndex + 1] : null;
 
     if (projectId) {
@@ -167,8 +167,8 @@ export default function MiniHistory({
     e.stopPropagation();
     const currentUrl = new URL(window.location.href);
     const nextUrl = new URL(currentUrl);
-    const paths = nextUrl.pathname.split("/");
-    const projectIndex = paths.indexOf("projects");
+    const paths = nextUrl.pathname.split('/');
+    const projectIndex = paths.indexOf('projects');
     const projectId = projectIndex !== -1 ? paths[projectIndex + 1] : null;
 
     if (projectId) {
@@ -192,12 +192,12 @@ export default function MiniHistory({
         className={`flex items-center cursor-pointer justify-between
           px-3 py-2 border-gray-200 bg-gray-50 hover:bg-gray-100
           transition-colors w-full text-left
-          ${collapsed ? "border-b-0" : "border-b"}`}
+          ${collapsed ? 'border-b-0' : 'border-b'}`}
         onClick={() => historyToggle()}
       >
         <div className="flex items-center gap-2">
           <h3 className="text-sm font-medium text-gray-700">
-            {collapsed ? "View History" : "Recent History"}
+            {collapsed ? 'View History' : 'Recent History'}
           </h3>
           <button
             id="view-history"
@@ -207,7 +207,7 @@ export default function MiniHistory({
             aria-label="View full history for this workflow"
             onClick={gotoHistory}
             onKeyDown={e => {
-              if (e.key === "Enter" || e.key === " ") {
+              if (e.key === 'Enter' || e.key === ' ') {
                 e.preventDefault();
                 gotoHistory(e);
               }
@@ -233,7 +233,7 @@ export default function MiniHistory({
       <div
         className={`overflow-y-auto no-scrollbar max-h-82
           transition-opacity duration-200 ${
-            collapsed ? "opacity-0 h-0 hidden" : "opacity-100"
+            collapsed ? 'opacity-0 h-0 hidden' : 'opacity-100'
           }`}
       >
         {loading ? (
@@ -320,7 +320,7 @@ export default function MiniHistory({
                         }}
                         className="flex items-center text-gray-400
                           hover:text-gray-600 transition-colors"
-                        aria-label={`${expandedWorder === workorder.id ? "Collapse" : "Expand"} work order details`}
+                        aria-label={`${expandedWorder === workorder.id ? 'Collapse' : 'Expand'} work order details`}
                       >
                         {workorder.selected ? (
                           <span
@@ -377,13 +377,13 @@ export default function MiniHistory({
                     <div
                       key={run.id}
                       className={[
-                        "px-3 py-1.5 text-xs hover:bg-gray-50 " +
-                          "transition-colors cursor-pointer border-l-2 " +
-                          "w-full text-left",
+                        'px-3 py-1.5 text-xs hover:bg-gray-50 ' +
+                          'transition-colors cursor-pointer border-l-2 ' +
+                          'w-full text-left',
                         run.selected
-                          ? "bg-indigo-50 border-l-indigo-500"
-                          : " border-l-transparent",
-                      ].join(" ")}
+                          ? 'bg-indigo-50 border-l-indigo-500'
+                          : ' border-l-transparent',
+                      ].join(' ')}
                       onClick={e => {
                         e.stopPropagation();
                         if (run.selected) {

@@ -68,6 +68,7 @@ describe("WorkflowStore - Validate Workflow Name", () => {
           return { okResponse: { status: "ok" } };
         }
       ),
+      on: () => {}, // Mock the on method to prevent errors
     } as unknown as Channel;
 
     // Create mock provider with channel

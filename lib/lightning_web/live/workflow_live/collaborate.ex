@@ -6,9 +6,10 @@ defmodule LightningWeb.WorkflowLive.Collaborate do
 
   alias Lightning.Policies.Permissions
   alias Lightning.Workflows
+  alias Lightning.Workflows.WebhookAuthMethod
   alias LightningWeb.Channels.WorkflowJSON
 
-  on_mount {LightningWeb.Hooks, :project_scope}
+  on_mount({LightningWeb.Hooks, :project_scope})
 
   @impl true
   def mount(%{"id" => workflow_id}, _session, socket) do
@@ -24,7 +25,9 @@ defmodule LightningWeb.WorkflowLive.Collaborate do
        workflow_id: workflow_id,
        project: project,
        show_credential_modal: false,
-       credential_schema: nil
+       credential_schema: nil,
+       show_webhook_auth_modal: false,
+       webhook_auth_method: nil
      )}
   end
 
@@ -45,6 +48,30 @@ defmodule LightningWeb.WorkflowLive.Collaborate do
     # Reset server state so the modal can be opened again
     {:noreply,
      assign(socket, show_credential_modal: false, credential_schema: nil)}
+  end
+
+  def handle_event("open_webhook_auth_modal", %{}, socket) do
+    # Open the webhook auth method creation modal
+    # Create a new webhook auth method for the form
+    webhook_auth_method = %WebhookAuthMethod{
+      project_id: socket.assigns.project.id
+    }
+
+    {:noreply,
+     assign(socket,
+       show_webhook_auth_modal: true,
+       webhook_auth_method: webhook_auth_method
+     )}
+  end
+
+  def handle_event("close_webhook_auth_modal_complete", _params, socket) do
+    # Called after modal is fully closed and animations are complete
+    # Reset server state so the modal can be opened again
+    {:noreply,
+     assign(socket,
+       show_webhook_auth_modal: false,
+       webhook_auth_method: nil
+     )}
   end
 
   @impl true
@@ -110,6 +137,34 @@ defmodule LightningWeb.WorkflowLive.Collaborate do
         )
       }
     />
+
+    <.modal
+      :if={@show_webhook_auth_modal}
+      id="webhook-auth-method-modal"
+      show={true}
+      on_close={
+        JS.dispatch("close_webhook_auth_modal", to: "#collaborative-editor-react")
+      }
+      width="min-w-1/3 max-w-xl"
+    >
+      <.live_component
+        module={LightningWeb.WorkflowLive.WebhookAuthMethodFormComponent}
+        id="webhook-auth-method-form"
+        action={:new}
+        webhook_auth_method={@webhook_auth_method}
+        current_user={@current_user}
+        on_close={
+          JS.dispatch("close_webhook_auth_modal", to: "#collaborative-editor-react")
+        }
+        on_save={
+          fn _ ->
+            send(self(), :webhook_auth_method_saved)
+            :ok
+          end
+        }
+        return_to={nil}
+      />
+    </.modal>
     """
   end
 
@@ -168,6 +223,19 @@ defmodule LightningWeb.WorkflowLive.Collaborate do
      assign(socket, show_credential_modal: false, credential_schema: nil)}
   end
 
+  def handle_info(:webhook_auth_method_saved, socket) do
+    # Broadcast webhook auth methods update to all connected clients
+    broadcast_webhook_auth_methods_update(socket)
+
+    socket
+    |> assign(
+      show_webhook_auth_modal: false,
+      webhook_auth_method: nil
+    )
+    |> push_event("webhook_auth_method_saved", %{})
+    |> noreply()
+  end
+
   defp broadcast_credential_update(socket, project) do
     # Fetch updated credentials list
     credentials =
@@ -183,6 +251,35 @@ defmodule LightningWeb.WorkflowLive.Collaborate do
       Lightning.PubSub,
       "workflow:collaborate:#{socket.assigns.workflow_id}",
       %{event: "credentials_updated", payload: credentials}
+    )
+  end
+
+  defp broadcast_webhook_auth_methods_update(socket) do
+    # Fetch updated webhook auth methods list
+    project = socket.assigns.project
+
+    webhook_auth_methods =
+      Lightning.WebhookAuthMethods.list_for_project(project)
+      |> Enum.map(fn auth_method ->
+        %{
+          id: auth_method.id,
+          name: auth_method.name,
+          auth_type: auth_method.auth_type,
+          username: auth_method.username,
+          project_id: auth_method.project_id,
+          inserted_at: auth_method.inserted_at,
+          updated_at: auth_method.updated_at
+        }
+      end)
+
+    # Wrap in a map to match Phoenix WebSocket serializer requirements
+    payload = %{webhook_auth_methods: webhook_auth_methods}
+
+    # Broadcast to all connected clients on the workflow channel
+    Phoenix.PubSub.broadcast(
+      Lightning.PubSub,
+      "workflow:collaborate:#{socket.assigns.workflow_id}",
+      %{event: "webhook_auth_methods_updated", payload: payload}
     )
   end
 end

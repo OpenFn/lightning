@@ -31,7 +31,7 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodFormComponent do
      |> assign(assigns)
      |> assign(sudo_mode?: false)
      |> assign(show_2fa_options: false)
-     |> assign_new(:on_save, fn -> nil end)}
+     |> assign_new(:on_save, fn _ -> nil end)}
   end
 
   @impl true
@@ -133,10 +133,10 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodFormComponent do
           socket.assigns.on_save.(webhook_auth_method)
         end
 
-        {:noreply,
-         socket
-         |> put_flash(:info, "Webhook auth method updated successfully")
-         |> push_patch(to: socket.assigns.return_to)}
+        socket
+        |> put_flash(:info, "Webhook auth method updated successfully")
+        |> maybe_return_to()
+        |> noreply()
 
       {:error, %Ecto.Changeset{} = changeset} ->
         {:noreply, assign(socket, :changeset, changeset)}
@@ -158,10 +158,10 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodFormComponent do
           socket.assigns.on_save.(auth_method)
         end
 
-        {:noreply,
-         socket
-         |> put_flash(:info, "Webhook auth method created successfully")
-         |> push_patch(to: socket.assigns.return_to)}
+        socket
+        |> put_flash(:info, "Webhook auth method created successfully")
+        |> maybe_return_to()
+        |> noreply()
 
       {:error, %Ecto.Changeset{} = changeset} ->
         {:noreply, assign(socket, changeset: changeset)}
@@ -179,13 +179,21 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodFormComponent do
           socket.assigns.on_save.(webhook_auth_method)
         end
 
-        {:noreply,
-         socket
-         |> put_flash(:info, "Webhook auth method created successfully")
-         |> push_patch(to: socket.assigns.return_to)}
+        socket
+        |> put_flash(:info, "Webhook auth method created successfully")
+        |> maybe_return_to()
+        |> noreply()
 
       {:error, %Ecto.Changeset{} = changeset} ->
         {:noreply, assign(socket, :changeset, changeset)}
+    end
+  end
+
+  defp maybe_return_to(socket) do
+    if socket.assigns.return_to do
+      push_patch(socket, to: socket.assigns.return_to)
+    else
+      socket
     end
   end
 
