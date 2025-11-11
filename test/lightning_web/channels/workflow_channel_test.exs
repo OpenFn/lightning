@@ -4,6 +4,7 @@ defmodule LightningWeb.WorkflowChannelTest do
   import Lightning.CollaborationHelpers
   import Lightning.Factories
   import Mox
+  import ExUnit.CaptureLog
 
   setup :verify_on_exit!
 
@@ -1840,6 +1841,27 @@ defmodule LightningWeb.WorkflowChannelTest do
       assert methods == []
     end
 
+    @tag :capture_log
+    test "request_trigger_auth_methods logs debug message", %{
+      socket: socket,
+      workflow: workflow
+    } do
+      trigger = insert(:trigger, workflow: workflow, type: :webhook)
+
+      log =
+        capture_log([level: :debug], fn ->
+          ref =
+            push(socket, "request_trigger_auth_methods", %{
+              "trigger_id" => trigger.id
+            })
+
+          assert_reply ref, :ok, %{}
+        end)
+
+      assert log =~ "WorkflowChannel: request_trigger_auth_methods"
+      assert log =~ trigger.id
+    end
+
     test "update_trigger_auth_methods associates auth methods with trigger", %{
       socket: socket,
       workflow: workflow,
@@ -1877,6 +1899,37 @@ defmodule LightningWeb.WorkflowChannelTest do
 
       assert broadcasted_trigger_id == trigger.id
       assert length(broadcasted_methods) == 2
+    end
+
+    @tag :capture_log
+    test "update_trigger_auth_methods logs debug message", %{
+      socket: socket,
+      workflow: workflow,
+      project: project
+    } do
+      trigger = insert(:trigger, workflow: workflow, type: :webhook)
+
+      auth_method =
+        insert(:webhook_auth_method,
+          project: project,
+          name: "Test Method",
+          auth_type: :api
+        )
+
+      log =
+        capture_log([level: :debug], fn ->
+          ref =
+            push(socket, "update_trigger_auth_methods", %{
+              "trigger_id" => trigger.id,
+              "auth_method_ids" => [auth_method.id]
+            })
+
+          assert_reply ref, :ok, %{success: true}
+        end)
+
+      assert log =~ "WorkflowChannel: update_trigger_auth_methods"
+      assert log =~ trigger.id
+      assert log =~ auth_method.id
     end
 
     test "update_trigger_auth_methods can clear all auth methods", %{
