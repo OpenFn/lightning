@@ -18,6 +18,7 @@ defmodule Mix.Tasks.Lightning.MergeProjects do
   ## Options
 
     * `-o, --output PATH` - Write output to file instead of stdout
+    * `--uuid SOURCE_UUID:TARGET_UUID` - Map source UUID to target UUID for any entity (workflow, job, or edge) (repeatable)
 
   ## Examples
 
@@ -29,6 +30,13 @@ defmodule Mix.Tasks.Lightning.MergeProjects do
 
       # Merge with explicit output flag
       mix lightning.merge_projects staging.state.json main.state.json --output result.json
+
+      # Merge with UUID mappings for workflows, jobs, and edges
+      mix lightning.merge_projects staging.state.json main.state.json \\
+        --uuid 550e8400-e29b-41d4-a716-446655440000:650e8400-e29b-41d4-a716-446655440001 \\
+        --uuid a1b2c3d4-e5f6-4a5b-8c7d-1e2f3a4b5c6d:b2c3d4e5-f6a7-4b5c-8d7e-2f3a4b5c6d7e \\
+        --uuid f6a7b8c9-d0e1-4f5a-9b0c-5d6e7f8a9b0c:a7b8c9d0-e1f2-4a5b-9c0d-6e7f8a9b0c1d \\
+        -o merged.json
   """
   use Mix.Task
 
@@ -38,7 +46,7 @@ defmodule Mix.Tasks.Lightning.MergeProjects do
   def run(args) do
     {opts, positional, invalid} =
       OptionParser.parse(args,
-        strict: [output: :string],
+        strict: [output: :string, uuid: :keep],
         aliases: [o: :output]
       )
 
@@ -50,7 +58,8 @@ defmodule Mix.Tasks.Lightning.MergeProjects do
         Unknown option(s): #{invalid_opts}
 
         Valid options:
-          -o, --output PATH    Write output to file instead of stdout
+          -o, --output PATH              Write output to file instead of stdout
+          --uuid SOURCE_UUID:TARGET_UUID Map source UUID to target UUID (repeatable)
 
         Run `mix help lightning.merge_projects` for more information.
         """)
@@ -67,11 +76,12 @@ defmodule Mix.Tasks.Lightning.MergeProjects do
 
       true ->
         [source_file, target_file] = positional
-        merge_and_output(source_file, target_file, opts)
+        uuid_map = parse_uuid_mappings(opts)
+        merge_and_output(source_file, target_file, opts, uuid_map)
     end
   end
 
-  defp merge_and_output(source_file, target_file, opts) do
+  defp merge_and_output(source_file, target_file, opts, uuid_map) do
     output_path = Keyword.get(opts, :output)
 
     if output_path do
@@ -83,14 +93,14 @@ defmodule Mix.Tasks.Lightning.MergeProjects do
 
     target_project = read_state_file(target_file, "target")
 
-    merged_project = perform_merge(source_project, target_project)
+    merged_project = perform_merge(source_project, target_project, uuid_map)
 
     output = encode_json(merged_project)
     write_output(output, output_path)
   end
 
-  defp perform_merge(source_project, target_project) do
-    MergeProjects.merge_project(source_project, target_project)
+  defp perform_merge(source_project, target_project, uuid_map) do
+    MergeProjects.merge_project(source_project, target_project, uuid_map)
   rescue
     e in KeyError ->
       Mix.raise("""
@@ -111,6 +121,53 @@ defmodule Mix.Tasks.Lightning.MergeProjects do
       This may indicate incompatible project structures or corrupted data.
       Please verify both files are valid Lightning project exports.
       """)
+  end
+
+  defp parse_uuid_mappings(opts) do
+    opts
+    |> Keyword.get_values(:uuid)
+    |> Enum.reduce(%{}, fn mapping_str, acc ->
+      case String.split(mapping_str, ":") do
+        [source_uuid, target_uuid] ->
+          with {:ok, valid_source} <- validate_uuid(source_uuid, "source"),
+               {:ok, valid_target} <- validate_uuid(target_uuid, "target") do
+            if Map.has_key?(acc, valid_source) and
+                 acc[valid_source] != valid_target do
+              Mix.raise("""
+              Duplicate UUID mapping for source UUID: #{valid_source}
+              Previous target: #{acc[valid_source]}
+              New target: #{valid_target}
+              """)
+            end
+
+            Map.put(acc, valid_source, valid_target)
+          end
+
+        _other ->
+          Mix.raise("""
+          Invalid UUID mapping format: #{mapping_str}
+
+          Expected format: SOURCE_UUID:TARGET_UUID
+          Example: --uuid 550e8400-e29b-41d4-a716-446655440000:650e8400-e29b-41d4-a716-446655440001
+          """)
+      end
+    end)
+  end
+
+  defp validate_uuid(uuid_str, position) do
+    uuid_str = String.trim(uuid_str)
+
+    case Ecto.UUID.cast(uuid_str) do
+      {:ok, valid_uuid} ->
+        {:ok, valid_uuid}
+
+      :error ->
+        Mix.raise("""
+        Invalid #{position} UUID in mapping: #{uuid_str}
+
+        UUIDs must be in the format: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+        """)
+    end
   end
 
   defp encode_json(project) do
