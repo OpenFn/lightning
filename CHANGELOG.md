@@ -22,8 +22,16 @@ and this project adheres to
 - Add advanced credential type picker in collaborative workflow editor allowing
   users to create OAuth, raw JSON, and keychain credentials directly from the
   workflow canvas [#3906](https://github.com/OpenFn/lightning/issues/3906)
+- Webhook authentication management in the collaborative editor
+  [#3887](https://github.com/OpenFn/lightning/issues/3887)
+- Mix task to merge project state files without database access
+  [#3615](https://github.com/OpenFn/lightning/issues/3615)
 
 ### Changed
+
+- Merged CollaborateNew and Collaborate LiveViews into a single unified LiveView
+  for improved maintainability and consistent modal behavior
+  [#3942](https://github.com/OpenFn/lightning/pull/3942)
 
 ### Fixed
 

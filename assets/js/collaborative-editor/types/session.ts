@@ -1,8 +1,8 @@
 /* eslint-disable @typescript-eslint/no-namespace */
-import type * as Y from "yjs";
-import type { TypedArray, TypedDoc, TypedMap } from "yjs-types";
+import type * as Y from 'yjs';
+import type { TypedArray, TypedDoc, TypedMap } from 'yjs-types';
 
-import type { Workflow as WorkflowType } from "./workflow";
+import type { Workflow as WorkflowType } from './workflow';
 
 // Why isn't this used anywhere, it definity was!
 export interface AwarenessUser {
@@ -66,8 +66,15 @@ export namespace Session {
 
   export type Trigger = {
     id: string;
-    cron_expression: string;
+    type: string;
     enabled: boolean;
+    cron_expression: string | null;
+    has_auth_method: boolean;
+    webhook_auth_methods: Array<{
+      id: string;
+      name: string;
+      auth_type: string;
+    }> | null;
     errors?: Record<string, string[]>;
   };
 

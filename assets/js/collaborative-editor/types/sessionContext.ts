@@ -1,7 +1,7 @@
-import type { PhoenixChannelProvider } from "y-phoenix-channel";
-import * as z from "zod";
+import type { PhoenixChannelProvider } from 'y-phoenix-channel';
+import * as z from 'zod';
 
-import { isoDateTimeSchema, uuidSchema } from "./common";
+import { isoDateTimeSchema, uuidSchema } from './common';
 
 export const UserContextSchema = z.object({
   id: uuidSchema,
@@ -32,9 +32,18 @@ export const AppConfigSchema = z.object({
 export const PermissionsSchema = z.object({
   can_edit_workflow: z.boolean(),
   can_run_workflow: z.boolean(),
+  can_write_webhook_auth_method: z.boolean(),
 });
 
 export type Permissions = z.infer<typeof PermissionsSchema>;
+
+export const WebhookAuthMethodSchema = z.object({
+  id: uuidSchema,
+  name: z.string(),
+  auth_type: z.enum(['basic', 'api']),
+});
+
+export type WebhookAuthMethod = z.infer<typeof WebhookAuthMethodSchema>;
 
 export const SessionContextResponseSchema = z.object({
   user: UserContextSchema.nullable(),
@@ -43,6 +52,7 @@ export const SessionContextResponseSchema = z.object({
   permissions: PermissionsSchema,
   latest_snapshot_lock_version: z.number().int(),
   project_repo_connection: ProjectRepoConnectionSchema.nullable(),
+  webhook_auth_methods: z.array(WebhookAuthMethodSchema),
 });
 
 export type UserContext = z.infer<typeof UserContextSchema>;
@@ -57,6 +67,7 @@ export interface SessionContextState {
   permissions: Permissions | null;
   latestSnapshotLockVersion: number | null;
   projectRepoConnection: ProjectRepoConnection | null;
+  webhookAuthMethods: WebhookAuthMethod[];
   isNewWorkflow: boolean;
   isLoading: boolean;
   error: string | null;

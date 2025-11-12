@@ -2311,12 +2311,18 @@ defmodule LightningWeb.WorkflowLive.Edit do
         {:webhook_auth_method_updated, _trigger_or_auth_method},
         socket
       ) do
-    %{workflow: current_workflow, snapshot: snapshot} = socket.assigns
+    %{
+      workflow: current_workflow,
+      snapshot: snapshot,
+      workflow_params: current_params
+    } =
+      socket.assigns
 
     updated_workflow = get_workflow_by_id(current_workflow.id)
 
     socket
     |> assign_workflow(updated_workflow, snapshot)
+    |> apply_params(current_params, :workflow)
     |> apply_mode_and_selection()
     |> noreply()
   end

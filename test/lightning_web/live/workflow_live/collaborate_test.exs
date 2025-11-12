@@ -709,7 +709,7 @@ defmodule LightningWeb.WorkflowLive.CollaborateTest do
       html =
         view
         |> element("#collaborative-editor-react")
-        |> render_hook("close_credential_modal_complete", %{})
+        |> render_hook("close_credential_modal", %{})
 
       # Modal should be hidden
       refute html =~ "new-credential-modal"
@@ -829,7 +829,7 @@ defmodule LightningWeb.WorkflowLive.CollaborateTest do
       html =
         view
         |> element("#collaborative-editor-react")
-        |> render_hook("close_credential_modal_complete", %{})
+        |> render_hook("close_credential_modal", %{})
 
       refute html =~ "new-credential-modal"
 
@@ -844,7 +844,7 @@ defmodule LightningWeb.WorkflowLive.CollaborateTest do
       html =
         view
         |> element("#collaborative-editor-react")
-        |> render_hook("close_credential_modal_complete", %{})
+        |> render_hook("close_credential_modal", %{})
 
       refute html =~ "new-credential-modal"
     end
@@ -1799,6 +1799,207 @@ defmodule LightningWeb.WorkflowLive.CollaborateTest do
       # The view should still be responsive and modal should remain open
       html = render(view)
       assert html =~ "new-credential-modal"
+    end
+  end
+
+  describe "webhook auth method modal interactions" do
+    test "opens webhook auth method modal via handle_event", %{conn: conn} do
+      user = insert(:user)
+
+      project =
+        insert(:project,
+          project_users: [%{user_id: user.id, role: :owner}]
+        )
+
+      workflow = workflow_fixture(project_id: project.id)
+
+      conn = log_in_user(conn, user)
+
+      {:ok, view, html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/w/#{workflow.id}/collaborate"
+        )
+
+      # Initially, modal should not be shown
+      refute html =~ "webhook-auth-method-modal"
+
+      # Trigger open_webhook_auth_modal event
+      result =
+        view
+        |> element("#collaborative-editor-react")
+        |> render_hook("open_webhook_auth_modal", %{})
+
+      # Verify modal is now shown
+      assert result =~ "webhook-auth-method-modal"
+    end
+
+    test "closes webhook auth method modal via handle_event", %{conn: conn} do
+      user = insert(:user)
+
+      project =
+        insert(:project,
+          project_users: [%{user_id: user.id, role: :owner}]
+        )
+
+      workflow = workflow_fixture(project_id: project.id)
+
+      conn = log_in_user(conn, user)
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/w/#{workflow.id}/collaborate"
+        )
+
+      # First open the modal
+      html =
+        view
+        |> element("#collaborative-editor-react")
+        |> render_hook("open_webhook_auth_modal", %{})
+
+      assert html =~ "webhook-auth-method-modal"
+
+      # Now close it
+      html =
+        view
+        |> element("#collaborative-editor-react")
+        |> render_hook("close_webhook_auth_modal_complete", %{})
+
+      # Modal should be hidden
+      refute html =~ "webhook-auth-method-modal"
+    end
+
+    test "modal not rendered when show_webhook_auth_modal is false", %{
+      conn: conn
+    } do
+      user = insert(:user)
+
+      project =
+        insert(:project,
+          project_users: [%{user_id: user.id, role: :owner}]
+        )
+
+      workflow = workflow_fixture(project_id: project.id)
+
+      conn = log_in_user(conn, user)
+
+      {:ok, _view, html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/w/#{workflow.id}/collaborate"
+        )
+
+      # By default, modal should not be rendered
+      refute html =~ "webhook-auth-method-modal"
+    end
+
+    test "multiple open/close cycles work correctly", %{conn: conn} do
+      user = insert(:user)
+
+      project =
+        insert(:project,
+          project_users: [%{user_id: user.id, role: :owner}]
+        )
+
+      workflow = workflow_fixture(project_id: project.id)
+
+      conn = log_in_user(conn, user)
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/w/#{workflow.id}/collaborate"
+        )
+
+      # First cycle
+      html =
+        view
+        |> element("#collaborative-editor-react")
+        |> render_hook("open_webhook_auth_modal", %{})
+
+      assert html =~ "webhook-auth-method-modal"
+
+      html =
+        view
+        |> element("#collaborative-editor-react")
+        |> render_hook("close_webhook_auth_modal_complete", %{})
+
+      refute html =~ "webhook-auth-method-modal"
+
+      # Second cycle
+      html =
+        view
+        |> element("#collaborative-editor-react")
+        |> render_hook("open_webhook_auth_modal", %{})
+
+      assert html =~ "webhook-auth-method-modal"
+
+      html =
+        view
+        |> element("#collaborative-editor-react")
+        |> render_hook("close_webhook_auth_modal_complete", %{})
+
+      refute html =~ "webhook-auth-method-modal"
+    end
+
+    test "webhook auth method saved triggers broadcast and closes modal", %{
+      conn: conn
+    } do
+      user = insert(:user)
+
+      project =
+        insert(:project,
+          project_users: [%{user_id: user.id, role: :owner}]
+        )
+
+      workflow = workflow_fixture(project_id: project.id)
+
+      # Create webhook auth method for project
+      auth_method =
+        insert(:webhook_auth_method,
+          project: project,
+          name: "Saved Auth Method",
+          auth_type: :basic
+        )
+
+      conn = log_in_user(conn, user)
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/w/#{workflow.id}/collaborate"
+        )
+
+      # Subscribe to PubSub to verify broadcast
+      Phoenix.PubSub.subscribe(
+        Lightning.PubSub,
+        "workflow:collaborate:#{workflow.id}"
+      )
+
+      # Trigger save
+      send(view.pid, :webhook_auth_method_saved)
+
+      # Verify broadcast was sent
+      assert_receive %{
+        event: "webhook_auth_methods_updated",
+        payload: payload
+      }
+
+      assert is_map(payload)
+      assert Map.has_key?(payload, :webhook_auth_methods)
+      webhook_auth_methods = payload.webhook_auth_methods
+      assert is_list(webhook_auth_methods)
+      assert length(webhook_auth_methods) == 1
+
+      saved_method = hd(webhook_auth_methods)
+      assert saved_method.id == auth_method.id
+      assert saved_method.name == "Saved Auth Method"
+      assert saved_method.auth_type == :basic
+
+      # Verify the view is still alive and functional after save
+      html = render(view)
+      refute html =~ "webhook-auth-method-modal"
     end
   end
 end
