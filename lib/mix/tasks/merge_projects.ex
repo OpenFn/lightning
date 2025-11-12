@@ -90,9 +90,6 @@ defmodule Mix.Tasks.Lightning.MergeProjects do
   end
 
   defp perform_merge(source_data, target_data) do
-    # Convert string-keyed maps to atom-keyed maps using only existing atoms
-    # This prevents atom exhaustion attacks while allowing the merge algorithm
-    # to work with its expected data structure
     source_project = atomize_keys(source_data)
     target_project = atomize_keys(target_data)
 
@@ -111,8 +108,6 @@ defmodule Mix.Tasks.Lightning.MergeProjects do
     Map.new(data, fn {key, value} ->
       atom_key =
         if is_binary(key) do
-          # Only convert to atoms that already exist
-          # This prevents creating new atoms from malicious input
           String.to_existing_atom(key)
         else
           key
