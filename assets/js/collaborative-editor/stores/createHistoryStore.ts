@@ -80,12 +80,12 @@
  * - State export/import for bug reproduction
  */
 
-import { produce } from "immer";
-import type { PhoenixChannelProvider } from "y-phoenix-channel";
+import { produce } from 'immer';
+import type { PhoenixChannelProvider } from 'y-phoenix-channel';
 
-import _logger from "#/utils/logger";
+import _logger from '#/utils/logger';
 
-import { channelRequest } from "../hooks/useChannel";
+import { channelRequest } from '../hooks/useChannel';
 import {
   type HistoryState,
   type HistoryStore,
@@ -93,12 +93,12 @@ import {
   type WorkOrder,
   type Run,
   type RunStepsData,
-} from "../types/history";
+} from '../types/history';
 
-import { createWithSelector } from "./common";
-import { wrapStoreWithDevTools } from "./devtools";
+import { createWithSelector } from './common';
+import { wrapStoreWithDevTools } from './devtools';
 
-const logger = _logger.ns("HistoryStore").seal();
+const logger = _logger.ns('HistoryStore').seal();
 
 /**
  * Creates a history store instance with useSyncExternalStore +
@@ -125,12 +125,12 @@ export const createHistoryStore = (): HistoryStore => {
 
   // Redux DevTools integration
   const devtools = wrapStoreWithDevTools({
-    name: "HistoryStore",
+    name: 'HistoryStore',
     excludeKeys: [], // All state is serializable
     maxAge: 100,
   });
 
-  const notify = (actionName: string = "stateChange") => {
+  const notify = (actionName: string = 'stateChange') => {
     devtools.notifyWithAction(actionName, () => state);
     listeners.forEach(listener => {
       listener();
@@ -170,10 +170,10 @@ export const createHistoryStore = (): HistoryStore => {
         draft.error = null;
         draft.lastUpdated = Date.now();
       });
-      notify("handleHistoryReceived");
+      notify('handleHistoryReceived');
     } else {
       const errorMessage = `Invalid history data: ${result.error.message}`;
-      logger.error("Failed to parse history data", {
+      logger.error('Failed to parse history data', {
         error: result.error,
         rawData,
       });
@@ -182,7 +182,7 @@ export const createHistoryStore = (): HistoryStore => {
         draft.isLoading = false;
         draft.error = errorMessage;
       });
-      notify("historyError");
+      notify('historyError');
     }
   };
 
@@ -192,7 +192,7 @@ export const createHistoryStore = (): HistoryStore => {
    * run_updated
    */
   const handleHistoryUpdated = (payload: {
-    action: "created" | "updated" | "run_created" | "run_updated";
+    action: 'created' | 'updated' | 'run_created' | 'run_updated';
     work_order?: WorkOrder;
     run?: Run;
     work_order_id?: string;
@@ -201,7 +201,7 @@ export const createHistoryStore = (): HistoryStore => {
 
     state = produce(state, draft => {
       // Handle work order created/updated
-      if ((action === "created" || action === "updated") && work_order) {
+      if ((action === 'created' || action === 'updated') && work_order) {
         const existingIndex = draft.history.findIndex(
           wo => wo.id === work_order.id
         );
@@ -219,13 +219,13 @@ export const createHistoryStore = (): HistoryStore => {
 
       // Handle run created/updated
       if (
-        (action === "run_created" || action === "run_updated") &&
+        (action === 'run_created' || action === 'run_updated') &&
         run &&
         work_order_id
       ) {
         const wo = draft.history.find(wo => wo.id === work_order_id);
         if (!wo) {
-          logger.warn("Work order not found in history", {
+          logger.warn('Work order not found in history', {
             workOrderId: work_order_id,
             existingWorkOrderIds: draft.history.map(wo => wo.id),
           });
@@ -236,12 +236,12 @@ export const createHistoryStore = (): HistoryStore => {
         if (existingRunIndex !== -1) {
           // Update existing run
           wo.runs[existingRunIndex] = run;
-        } else if (action === "run_created") {
+        } else if (action === 'run_created') {
           // Add new run (only for "created" action)
           wo.runs.unshift(run);
         } else {
           // run_updated but run doesn't exist - unusual but log it
-          logger.warn("Run not found in work order runs array", {
+          logger.warn('Run not found in work order runs array', {
             runId: run.id,
             workOrderId: work_order_id,
             existingRunIds: wo.runs.map(r => r.id),
@@ -250,7 +250,7 @@ export const createHistoryStore = (): HistoryStore => {
       }
 
       // Invalidate cached run steps if someone is watching this run
-      if ((action === "run_updated" || action === "run_created") && run) {
+      if ((action === 'run_updated' || action === 'run_created') && run) {
         const subscribersForThisRun = draft.runStepsSubscribers[run.id];
         if (subscribersForThisRun && subscribersForThisRun.size > 0) {
           // Invalidate cache - next read will trigger refetch
@@ -260,10 +260,10 @@ export const createHistoryStore = (): HistoryStore => {
 
       draft.lastUpdated = Date.now();
     });
-    notify("handleHistoryUpdated");
+    notify('handleHistoryUpdated');
 
     // Trigger refetch for invalidated runs with subscribers
-    if ((action === "run_updated" || action === "run_created") && run) {
+    if ((action === 'run_updated' || action === 'run_created') && run) {
       const currentState = getSnapshot();
       const subscribers = currentState.runStepsSubscribers[run.id];
       if (subscribers && subscribers.size > 0) {
@@ -281,7 +281,7 @@ export const createHistoryStore = (): HistoryStore => {
     state = produce(state, draft => {
       draft.isLoading = loading;
     });
-    notify("setLoading");
+    notify('setLoading');
   };
 
   const setError = (error: string | null) => {
@@ -289,14 +289,14 @@ export const createHistoryStore = (): HistoryStore => {
       draft.error = error;
       draft.isLoading = false;
     });
-    notify("setError");
+    notify('setError');
   };
 
   const clearError = () => {
     state = produce(state, draft => {
       draft.error = null;
     });
-    notify("clearError");
+    notify('clearError');
   };
 
   // ===========================================================================
@@ -316,12 +316,12 @@ export const createHistoryStore = (): HistoryStore => {
     state = produce(state, draft => {
       draft.isChannelConnected = true;
     });
-    notify("channelConnected");
+    notify('channelConnected');
 
     // Listen for history-related channel messages
     const historyUpdatedHandler = (message: unknown) => {
       const payload = message as {
-        action: "created" | "updated" | "run_created" | "run_updated";
+        action: 'created' | 'updated' | 'run_created' | 'run_updated';
         work_order?: WorkOrder;
         run?: Run;
         work_order_id?: string;
@@ -331,23 +331,23 @@ export const createHistoryStore = (): HistoryStore => {
 
     // Set up channel listeners
     if (channel) {
-      channel.on("history_updated", historyUpdatedHandler);
+      channel.on('history_updated', historyUpdatedHandler);
 
       devtools.connect();
 
       return () => {
         devtools.disconnect();
-        channel.off("history_updated", historyUpdatedHandler);
+        channel.off('history_updated', historyUpdatedHandler);
         _channelProvider = null;
 
         // Update connection state
         state = produce(state, draft => {
           draft.isChannelConnected = false;
         });
-        notify("channelDisconnected");
+        notify('channelDisconnected');
       };
     } else {
-      logger.warn("No channel available to set up listeners");
+      logger.warn('No channel available to set up listeners');
       devtools.connect();
 
       return () => {
@@ -358,7 +358,7 @@ export const createHistoryStore = (): HistoryStore => {
         state = produce(state, draft => {
           draft.isChannelConnected = false;
         });
-        notify("channelDisconnected");
+        notify('channelDisconnected');
       };
     }
   };
@@ -370,8 +370,8 @@ export const createHistoryStore = (): HistoryStore => {
    */
   const requestHistory = async (runId?: string): Promise<void> => {
     if (!_channelProvider?.channel) {
-      logger.warn("Cannot request history - no channel connected");
-      setError("No connection available");
+      logger.warn('Cannot request history - no channel connected');
+      setError('No connection available');
       return;
     }
 
@@ -381,7 +381,7 @@ export const createHistoryStore = (): HistoryStore => {
     try {
       const response = await channelRequest<{ history: unknown }>(
         _channelProvider.channel,
-        "request_history",
+        'request_history',
         runId ? { run_id: runId } : {}
       );
 
@@ -392,8 +392,8 @@ export const createHistoryStore = (): HistoryStore => {
         setLoading(false);
       }
     } catch (error) {
-      logger.error("History request failed", error);
-      setError("Failed to request history");
+      logger.error('History request failed', error);
+      setError('Failed to request history');
     }
   };
 
@@ -405,7 +405,7 @@ export const createHistoryStore = (): HistoryStore => {
     runId: string
   ): Promise<RunStepsData | null> => {
     if (!_channelProvider?.channel) {
-      logger.warn("Cannot request run steps - no channel connected");
+      logger.warn('Cannot request run steps - no channel connected');
       return null;
     }
 
@@ -414,12 +414,12 @@ export const createHistoryStore = (): HistoryStore => {
       draft.error = null;
       draft.runStepsLoading.add(runId);
     });
-    notify("requestRunSteps/start");
+    notify('requestRunSteps/start');
 
     try {
       const response = await channelRequest<RunStepsData>(
         _channelProvider.channel,
-        "request_run_steps",
+        'request_run_steps',
         { run_id: runId }
       );
 
@@ -428,21 +428,21 @@ export const createHistoryStore = (): HistoryStore => {
         draft.isLoading = false;
         draft.runStepsLoading.delete(runId);
       });
-      notify("requestRunSteps/success");
+      notify('requestRunSteps/success');
 
       return response;
     } catch (error) {
       const errorMessage =
-        error instanceof Error ? error.message : "Failed to fetch run steps";
+        error instanceof Error ? error.message : 'Failed to fetch run steps';
 
-      logger.error("Run steps request failed", { error, runId });
+      logger.error('Run steps request failed', { error, runId });
 
       state = produce(state, draft => {
         draft.error = errorMessage;
         draft.isLoading = false;
         draft.runStepsLoading.delete(runId);
       });
-      notify("requestRunSteps/error");
+      notify('requestRunSteps/error');
 
       return null;
     }
@@ -485,7 +485,7 @@ export const createHistoryStore = (): HistoryStore => {
       // Add this component to subscribers
       draft.runStepsSubscribers[runId].add(subscriberId);
     });
-    notify("subscribeToRunSteps");
+    notify('subscribeToRunSteps');
 
     // Fetch if we don't have cached data and aren't already loading
     const currentState = getSnapshot();
@@ -514,7 +514,7 @@ export const createHistoryStore = (): HistoryStore => {
     state = produce(state, draft => {
       const subscribers = draft.runStepsSubscribers[runId];
       if (!subscribers) {
-        logger.warn("Attempted to unsubscribe from non-existent subscription", {
+        logger.warn('Attempted to unsubscribe from non-existent subscription', {
           runId,
           subscriberId,
         });
@@ -532,7 +532,7 @@ export const createHistoryStore = (): HistoryStore => {
         draft.runStepsLoading.delete(runId);
       }
     });
-    notify("unsubscribeFromRunSteps");
+    notify('unsubscribeFromRunSteps');
   };
 
   // ===========================================================================

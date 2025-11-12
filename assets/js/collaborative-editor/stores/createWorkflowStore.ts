@@ -192,6 +192,9 @@ function produceInitialState() {
       enabled: null,
       selectedNode: null,
       selectedEdge: null,
+
+      // Active trigger webhook auth methods (loaded on-demand)
+      activeTriggerAuthMethods: null,
     } as Workflow.State,
     draft => {
       // Compute derived state on initialization
@@ -448,6 +451,58 @@ export const createWorkflowStore = () => {
     positionsMap.observeDeep(positionsObserver);
     errorsMap.observeDeep(errorsObserver); // NEW: Attach errors observer
 
+    // Set up channel listener for trigger auth methods updates
+    const triggerAuthMethodsHandler = (payload: unknown) => {
+      logger.debug('Received trigger_auth_methods_updated broadcast', payload);
+
+      // Type guard and validation
+      if (
+        typeof payload === 'object' &&
+        payload !== null &&
+        'trigger_id' in payload &&
+        'webhook_auth_methods' in payload
+      ) {
+        const { trigger_id, webhook_auth_methods } = payload as {
+          trigger_id: string;
+          webhook_auth_methods: Array<{
+            id: string;
+            name: string;
+            auth_type: string;
+          }>;
+        };
+
+        // Update has_auth_method flag in Y.Doc (outside updateState to avoid side effects)
+        const triggers = triggersArray.toArray() as Y.Map<unknown>[];
+        const triggerIndex = triggers.findIndex(
+          t => t.get('id') === trigger_id
+        );
+
+        if (triggerIndex >= 0) {
+          const yjsTrigger = triggers[triggerIndex];
+          const hasAuthMethod = webhook_auth_methods.length > 0;
+          yjsTrigger.set('has_auth_method', hasAuthMethod);
+        }
+
+        // Update activeTriggerAuthMethods if this broadcast matches the active trigger
+        updateState(draft => {
+          if (
+            draft.activeTriggerAuthMethods?.trigger_id === trigger_id &&
+            Array.isArray(webhook_auth_methods)
+          ) {
+            draft.activeTriggerAuthMethods = {
+              trigger_id,
+              webhook_auth_methods,
+            };
+          }
+        }, 'trigger_auth_methods_updated');
+      }
+    };
+
+    provider.channel.on(
+      'trigger_auth_methods_updated',
+      triggerAuthMethodsHandler
+    );
+
     // Store cleanup functions
     logger.debug('Attaching observers');
     observerCleanups = [
@@ -456,6 +511,14 @@ export const createWorkflowStore = () => {
       () => triggersArray.unobserveDeep(triggersObserver),
       () => edgesArray.unobserveDeep(edgesObserver),
       () => positionsMap.unobserveDeep(positionsObserver),
+      () => {
+        if (provider?.channel) {
+          provider.channel.off(
+            'trigger_auth_methods_updated',
+            triggerAuthMethodsHandler
+          );
+        }
+      },
       () => errorsMap.unobserveDeep(errorsObserver), // NEW: Cleanup function
     ];
 
@@ -1231,6 +1294,45 @@ export const createWorkflowStore = () => {
     // Note: Y.Doc observer will also fire and update the jobs array
   };
 
+  // =============================================================================
+  // Trigger Auth Methods Management (Pattern 3 - Local State)
+  // =============================================================================
+
+  const requestTriggerAuthMethods = async (triggerId: string) => {
+    if (!provider?.channel) {
+      logger.warn('Cannot request trigger auth methods - no channel available');
+      return;
+    }
+
+    try {
+      const response = await channelRequest(
+        provider.channel,
+        'request_trigger_auth_methods',
+        { trigger_id: triggerId }
+      );
+
+      if (
+        response &&
+        typeof response === 'object' &&
+        'trigger_id' in response &&
+        'webhook_auth_methods' in response
+      ) {
+        updateState(draft => {
+          draft.activeTriggerAuthMethods = response as {
+            trigger_id: string;
+            webhook_auth_methods: Array<{
+              id: string;
+              name: string;
+              auth_type: string;
+            }>;
+          };
+        }, 'requestTriggerAuthMethods');
+      }
+    } catch (error) {
+      logger.error('Failed to request trigger auth methods', error);
+    }
+  };
+
   return {
     // Core store interface
     subscribe,
@@ -1284,6 +1386,9 @@ export const createWorkflowStore = () => {
     saveAndSyncWorkflow,
     resetWorkflow,
     validateWorkflowName,
+
+    // Trigger auth methods
+    requestTriggerAuthMethods,
   };
 };
 

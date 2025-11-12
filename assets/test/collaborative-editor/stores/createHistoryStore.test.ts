@@ -9,34 +9,34 @@
  * - Error handling for channel operations
  */
 
-import { describe, test, expect, beforeEach } from "vitest";
-import { createHistoryStore } from "../../../js/collaborative-editor/stores/createHistoryStore";
-import type { HistoryStoreInstance } from "../../../js/collaborative-editor/stores/createHistoryStore";
-import type { RunStepsData } from "../../../js/collaborative-editor/types/history";
+import { describe, test, expect, beforeEach } from 'vitest';
+import { createHistoryStore } from '../../../js/collaborative-editor/stores/createHistoryStore';
+import type { HistoryStoreInstance } from '../../../js/collaborative-editor/stores/createHistoryStore';
+import type { RunStepsData } from '../../../js/collaborative-editor/types/history';
 
 import {
   createMockPhoenixChannel,
   createMockPhoenixChannelProvider,
   waitForCondition,
-} from "../mocks/phoenixChannel";
+} from '../mocks/phoenixChannel';
 import type {
   MockPhoenixChannel,
   MockPhoenixChannelProvider,
-} from "../mocks/phoenixChannel";
+} from '../mocks/phoenixChannel';
 
-describe("createHistoryStore", () => {
+describe('createHistoryStore', () => {
   let store: HistoryStoreInstance;
   let mockChannel: MockPhoenixChannel;
   let mockChannelProvider: MockPhoenixChannelProvider;
 
   beforeEach(() => {
     store = createHistoryStore();
-    mockChannel = createMockPhoenixChannel("workflow:collaborate:test");
+    mockChannel = createMockPhoenixChannel('workflow:collaborate:test');
     mockChannelProvider = createMockPhoenixChannelProvider(mockChannel);
   });
 
-  describe("core store interface", () => {
-    test("getSnapshot returns initial state", () => {
+  describe('core store interface', () => {
+    test('getSnapshot returns initial state', () => {
       const initialState = store.getSnapshot();
 
       expect(initialState.history).toEqual([]);
@@ -45,7 +45,7 @@ describe("createHistoryStore", () => {
       expect(initialState.lastUpdated).toBe(null);
     });
 
-    test("subscribe/unsubscribe functionality works correctly", () => {
+    test('subscribe/unsubscribe functionality works correctly', () => {
       let callCount = 0;
 
       const listener = () => {
@@ -61,7 +61,7 @@ describe("createHistoryStore", () => {
       expect(callCount).toBe(1); // Listener should be called once
 
       // Trigger another state change
-      store.setError("test error");
+      store.setError('test error');
 
       expect(callCount).toBe(2); // Listener should be called twice
 
@@ -72,7 +72,7 @@ describe("createHistoryStore", () => {
       expect(callCount).toBe(2); // Listener not called after unsubscribe
     });
 
-    test("withSelector creates memoized selector with referential stability", () => {
+    test('withSelector creates memoized selector with referential stability', () => {
       const selectHistory = store.withSelector(state => state.history);
       const selectIsLoading = store.withSelector(state => state.isLoading);
 
@@ -97,8 +97,8 @@ describe("createHistoryStore", () => {
     });
   });
 
-  describe("state management", () => {
-    test("setLoading updates loading state and notifies subscribers", () => {
+  describe('state management', () => {
+    test('setLoading updates loading state and notifies subscribers', () => {
       let notificationCount = 0;
 
       store.subscribe(() => {
@@ -120,13 +120,13 @@ describe("createHistoryStore", () => {
       expect(notificationCount).toBe(2);
     });
 
-    test("setError updates error state and sets loading to false", () => {
+    test('setError updates error state and sets loading to false', () => {
       // First set loading to true
       store.setLoading(true);
       expect(store.getSnapshot().isLoading).toBe(true);
 
       // Set error - should clear loading state
-      const errorMessage = "Test error message";
+      const errorMessage = 'Test error message';
       store.setError(errorMessage);
 
       const state = store.getSnapshot();
@@ -134,20 +134,20 @@ describe("createHistoryStore", () => {
       expect(state.isLoading).toBe(false); // Setting error clears loading
     });
 
-    test("setError with null clears error", () => {
+    test('setError with null clears error', () => {
       // Set error first
-      store.setError("Test error");
-      expect(store.getSnapshot().error).toBe("Test error");
+      store.setError('Test error');
+      expect(store.getSnapshot().error).toBe('Test error');
 
       // Set error to null
       store.setError(null);
       expect(store.getSnapshot().error).toBe(null);
     });
 
-    test("clearError removes error state", () => {
+    test('clearError removes error state', () => {
       // Set error first
-      store.setError("Test error");
-      expect(store.getSnapshot().error).toBe("Test error");
+      store.setError('Test error');
+      expect(store.getSnapshot().error).toBe('Test error');
 
       // Clear error
       store.clearError();
@@ -155,41 +155,41 @@ describe("createHistoryStore", () => {
     });
   });
 
-  describe("channel integration", () => {
-    test("_connectChannel registers history_updated listener", () => {
+  describe('channel integration', () => {
+    test('_connectChannel registers history_updated listener', () => {
       store._connectChannel(mockChannelProvider as any);
 
       const handlers = (mockChannel as any)._test.getHandlers(
-        "history_updated"
+        'history_updated'
       );
       expect(handlers?.size).toBe(1);
     });
 
-    test("_connectChannel returns cleanup function that unregisters listeners", () => {
+    test('_connectChannel returns cleanup function that unregisters listeners', () => {
       const cleanup = store._connectChannel(mockChannelProvider as any);
 
       // Verify listener is registered
-      let handlers = (mockChannel as any)._test.getHandlers("history_updated");
+      let handlers = (mockChannel as any)._test.getHandlers('history_updated');
       expect(handlers?.size).toBe(1);
 
       // Call cleanup
       cleanup();
 
       // Verify listener is removed
-      handlers = (mockChannel as any)._test.getHandlers("history_updated");
+      handlers = (mockChannel as any)._test.getHandlers('history_updated');
       expect(handlers?.size).toBe(0);
     });
   });
 
-  describe("requestHistory", () => {
-    test("sets loading state before request", async () => {
+  describe('requestHistory', () => {
+    test('sets loading state before request', async () => {
       store._connectChannel(mockChannelProvider as any);
 
       // Mock the channel push to respond with history
       mockChannel.push = () => {
         return {
           receive: (status: string, callback: (response?: unknown) => void) => {
-            if (status === "ok") {
+            if (status === 'ok') {
               setTimeout(() => callback({ history: [] }), 10);
             }
             return { receive: () => ({ receive: () => ({}) }) };
@@ -206,22 +206,22 @@ describe("createHistoryStore", () => {
       await promise;
     });
 
-    test("handles successful response with valid history data", async () => {
+    test('handles successful response with valid history data', async () => {
       store._connectChannel(mockChannelProvider as any);
 
       const mockHistory = [
         {
-          id: "e2107d46-cf29-4930-b11b-cbcfcf83549d",
-          state: "success",
-          last_activity: "2025-10-23T21:00:02.293382Z",
+          id: 'e2107d46-cf29-4930-b11b-cbcfcf83549d',
+          state: 'success',
+          last_activity: '2025-10-23T21:00:02.293382Z',
           version: 29,
           runs: [
             {
-              id: "f3218e57-df40-4a41-b22c-dcdfdf94650e",
-              state: "success",
+              id: 'f3218e57-df40-4a41-b22c-dcdfdf94650e',
+              state: 'success',
               error_type: null,
-              started_at: "2025-10-23T20:59:58.293382Z",
-              finished_at: "2025-10-23T21:00:02.293382Z",
+              started_at: '2025-10-23T20:59:58.293382Z',
+              finished_at: '2025-10-23T21:00:02.293382Z',
             },
           ],
         },
@@ -231,7 +231,7 @@ describe("createHistoryStore", () => {
       mockChannel.push = () => {
         return {
           receive: (status: string, callback: (response?: unknown) => void) => {
-            if (status === "ok") {
+            if (status === 'ok') {
               setTimeout(() => callback({ history: mockHistory }), 0);
             }
             return { receive: () => ({ receive: () => ({}) }) };
@@ -250,23 +250,23 @@ describe("createHistoryStore", () => {
       expect(state.lastUpdated).toBeGreaterThan(0);
     });
 
-    test("handles successful response with run_id parameter", async () => {
+    test('handles successful response with run_id parameter', async () => {
       store._connectChannel(mockChannelProvider as any);
 
-      const runId = "f3218e57-df40-4a41-b22c-dcdfdf94650e";
+      const runId = 'f3218e57-df40-4a41-b22c-dcdfdf94650e';
       const mockHistory = [
         {
-          id: "e2107d46-cf29-4930-b11b-cbcfcf83549d",
-          state: "success",
-          last_activity: "2025-10-23T21:00:02.293382Z",
+          id: 'e2107d46-cf29-4930-b11b-cbcfcf83549d',
+          state: 'success',
+          last_activity: '2025-10-23T21:00:02.293382Z',
           version: 29,
           runs: [
             {
               id: runId,
-              state: "success",
+              state: 'success',
               error_type: null,
-              started_at: "2025-10-23T20:59:58.293382Z",
-              finished_at: "2025-10-23T21:00:02.293382Z",
+              started_at: '2025-10-23T20:59:58.293382Z',
+              finished_at: '2025-10-23T21:00:02.293382Z',
             },
           ],
         },
@@ -278,7 +278,7 @@ describe("createHistoryStore", () => {
         pushedPayload = payload;
         return {
           receive: (status: string, callback: (response?: unknown) => void) => {
-            if (status === "ok") {
+            if (status === 'ok') {
               setTimeout(() => callback({ history: mockHistory }), 0);
             }
             return { receive: () => ({ receive: () => ({}) }) };
@@ -294,13 +294,13 @@ describe("createHistoryStore", () => {
       expect(store.getSnapshot().history).toEqual(mockHistory);
     });
 
-    test("handles invalid history data with Zod validation error", async () => {
+    test('handles invalid history data with Zod validation error', async () => {
       store._connectChannel(mockChannelProvider as any);
 
       const invalidHistory = [
         {
-          id: "not-a-uuid", // Invalid UUID
-          state: "success",
+          id: 'not-a-uuid', // Invalid UUID
+          state: 'success',
           // Missing required fields
         },
       ];
@@ -308,7 +308,7 @@ describe("createHistoryStore", () => {
       mockChannel.push = () => {
         return {
           receive: (status: string, callback: (response?: unknown) => void) => {
-            if (status === "ok") {
+            if (status === 'ok') {
               setTimeout(() => callback({ history: invalidHistory }), 0);
             }
             return { receive: () => ({ receive: () => ({}) }) };
@@ -321,34 +321,34 @@ describe("createHistoryStore", () => {
       await waitForCondition(() => !store.getSnapshot().isLoading);
 
       const state = store.getSnapshot();
-      expect(state.error).toContain("Invalid history data");
+      expect(state.error).toContain('Invalid history data');
       expect(state.isLoading).toBe(false);
       expect(state.history).toEqual([]); // Should remain empty
     });
 
-    test("handles channel request failure", async () => {
+    test('handles channel request failure', async () => {
       store._connectChannel(mockChannelProvider as any);
 
       mockChannel.push = () => {
         return {
           receive: (status: string, callback: (response?: unknown) => void) => {
-            if (status === "error") {
+            if (status === 'error') {
               setTimeout(
                 () =>
-                  callback({ errors: { base: ["timeout"] }, type: "error" }),
+                  callback({ errors: { base: ['timeout'] }, type: 'error' }),
                 0
               );
-            } else if (status === "timeout") {
+            } else if (status === 'timeout') {
               setTimeout(() => callback(), 0);
             }
             return {
               receive: (s: string, cb: (r?: unknown) => void) => {
-                if (s === "error") {
+                if (s === 'error') {
                   setTimeout(
-                    () => cb({ errors: { base: ["timeout"] }, type: "error" }),
+                    () => cb({ errors: { base: ['timeout'] }, type: 'error' }),
                     0
                   );
-                } else if (s === "timeout") {
+                } else if (s === 'timeout') {
                   setTimeout(() => cb(), 0);
                 }
                 return { receive: () => ({}) };
@@ -366,34 +366,34 @@ describe("createHistoryStore", () => {
       });
 
       const state = store.getSnapshot();
-      expect(state.error).toBe("Failed to request history");
+      expect(state.error).toBe('Failed to request history');
       expect(state.isLoading).toBe(false);
     });
 
-    test("handles request when no channel is connected", async () => {
+    test('handles request when no channel is connected', async () => {
       // Don't connect channel
       await store.requestHistory();
 
       const state = store.getSnapshot();
-      expect(state.error).toBe("No connection available");
+      expect(state.error).toBe('No connection available');
       expect(state.isLoading).toBe(false);
     });
   });
 
-  describe("real-time updates", () => {
-    test("handles work order created event", () => {
+  describe('real-time updates', () => {
+    test('handles work order created event', () => {
       store._connectChannel(mockChannelProvider as any);
 
       const newWorkOrder = {
-        id: "e2107d46-cf29-4930-b11b-cbcfcf83549d",
-        state: "pending",
-        last_activity: "2025-10-23T21:00:02.293382Z",
+        id: 'e2107d46-cf29-4930-b11b-cbcfcf83549d',
+        state: 'pending',
+        last_activity: '2025-10-23T21:00:02.293382Z',
         version: 30,
         runs: [],
       };
 
-      (mockChannel as any)._test.emit("history_updated", {
-        action: "created",
+      (mockChannel as any)._test.emit('history_updated', {
+        action: 'created',
         work_order: newWorkOrder,
       });
 
@@ -402,17 +402,17 @@ describe("createHistoryStore", () => {
       expect(state.history[0]).toEqual(newWorkOrder);
     });
 
-    test("limits history to 20 work orders when adding new one", () => {
+    test('limits history to 20 work orders when adding new one', () => {
       store._connectChannel(mockChannelProvider as any);
 
       // Add 20 work orders
       for (let i = 0; i < 20; i++) {
-        (mockChannel as any)._test.emit("history_updated", {
-          action: "created",
+        (mockChannel as any)._test.emit('history_updated', {
+          action: 'created',
           work_order: {
-            id: `e2107d46-cf29-4930-b11b-cbcfcf8354${i.toString().padStart(2, "0")}`,
-            state: "success",
-            last_activity: "2025-10-23T21:00:02.293382Z",
+            id: `e2107d46-cf29-4930-b11b-cbcfcf8354${i.toString().padStart(2, '0')}`,
+            state: 'success',
+            last_activity: '2025-10-23T21:00:02.293382Z',
             version: i,
             runs: [],
           },
@@ -422,12 +422,12 @@ describe("createHistoryStore", () => {
       expect(store.getSnapshot().history).toHaveLength(20);
 
       // Add 21st work order
-      (mockChannel as any)._test.emit("history_updated", {
-        action: "created",
+      (mockChannel as any)._test.emit('history_updated', {
+        action: 'created',
         work_order: {
-          id: "f3218e57-df40-4a41-b22c-dcdfdf946521",
-          state: "success",
-          last_activity: "2025-10-23T21:00:02.293382Z",
+          id: 'f3218e57-df40-4a41-b22c-dcdfdf946521',
+          state: 'success',
+          last_activity: '2025-10-23T21:00:02.293382Z',
           version: 21,
           runs: [],
         },
@@ -435,75 +435,75 @@ describe("createHistoryStore", () => {
 
       const state = store.getSnapshot();
       expect(state.history).toHaveLength(20);
-      expect(state.history[0].id).toBe("f3218e57-df40-4a41-b22c-dcdfdf946521");
+      expect(state.history[0].id).toBe('f3218e57-df40-4a41-b22c-dcdfdf946521');
     });
 
-    test("handles work order updated event", () => {
+    test('handles work order updated event', () => {
       store._connectChannel(mockChannelProvider as any);
 
       const workOrder = {
-        id: "e2107d46-cf29-4930-b11b-cbcfcf83549d",
-        state: "running",
-        last_activity: "2025-10-23T21:00:02.293382Z",
+        id: 'e2107d46-cf29-4930-b11b-cbcfcf83549d',
+        state: 'running',
+        last_activity: '2025-10-23T21:00:02.293382Z',
         version: 30,
         runs: [],
       };
 
       // Add initial work order
-      (mockChannel as any)._test.emit("history_updated", {
-        action: "created",
+      (mockChannel as any)._test.emit('history_updated', {
+        action: 'created',
         work_order: workOrder,
       });
 
       // Update it
       const updatedWorkOrder = {
         ...workOrder,
-        state: "success",
-        last_activity: "2025-10-23T21:05:00.000000Z",
+        state: 'success',
+        last_activity: '2025-10-23T21:05:00.000000Z',
       };
 
-      (mockChannel as any)._test.emit("history_updated", {
-        action: "updated",
+      (mockChannel as any)._test.emit('history_updated', {
+        action: 'updated',
         work_order: updatedWorkOrder,
       });
 
       const state = store.getSnapshot();
       expect(state.history).toHaveLength(1);
-      expect(state.history[0].state).toBe("success");
+      expect(state.history[0].state).toBe('success');
       expect(state.history[0].last_activity).toBe(
-        "2025-10-23T21:05:00.000000Z"
+        '2025-10-23T21:05:00.000000Z'
       );
     });
 
-    test("handles run created event", () => {
+    test('handles run created event', () => {
       store._connectChannel(mockChannelProvider as any);
 
       const workOrder = {
-        id: "e2107d46-cf29-4930-b11b-cbcfcf83549d",
-        state: "running",
-        last_activity: "2025-10-23T21:00:02.293382Z",
+        id: 'e2107d46-cf29-4930-b11b-cbcfcf83549d',
+        state: 'running',
+        last_activity: '2025-10-23T21:00:02.293382Z',
         version: 30,
         runs: [],
       };
 
       // Add initial work order
-      (mockChannel as any)._test.emit("history_updated", {
-        action: "created",
+      (mockChannel as any)._test.emit('history_updated', {
+        action: 'created',
         work_order: workOrder,
       });
 
       // Add run
       const newRun = {
-        id: "f3218e57-df40-4a41-b22c-dcdfdf94650e",
-        state: "started",
+        id: 'f3218e57-df40-4a41-b22c-dcdfdf94650e',
+        state: 'started',
         error_type: null,
-        started_at: "2025-10-23T21:00:00.000000Z",
+        started_at: '2025-10-23T21:00:00.000000Z',
         finished_at: null,
       };
 
-      (mockChannel as any)._test.emit("history_updated", {
-        action: "run_created",
-        work_order_id: "e2107d46-cf29-4930-b11b-cbcfcf83549d",
+      (mockChannel as any)._test.emit('history_updated', {
+        action: 'run_created',
+        work_order_id: 'e2107d46-cf29-4930-b11b-cbcfcf83549d',
         run: newRun,
       });
 
@@ -512,66 +512,66 @@ describe("createHistoryStore", () => {
       expect(state.history[0].runs[0]).toEqual(newRun);
     });
 
-    test("handles run updated event", () => {
+    test('handles run updated event', () => {
       store._connectChannel(mockChannelProvider as any);
 
       const run = {
-        id: "f3218e57-df40-4a41-b22c-dcdfdf94650e",
-        state: "started",
+        id: 'f3218e57-df40-4a41-b22c-dcdfdf94650e',
+        state: 'started',
         error_type: null,
-        started_at: "2025-10-23T21:00:00.000000Z",
+        started_at: '2025-10-23T21:00:00.000000Z',
         finished_at: null,
       };
 
       const workOrder = {
-        id: "e2107d46-cf29-4930-b11b-cbcfcf83549d",
-        state: "running",
-        last_activity: "2025-10-23T21:00:02.293382Z",
+        id: 'e2107d46-cf29-4930-b11b-cbcfcf83549d',
+        state: 'running',
+        last_activity: '2025-10-23T21:00:02.293382Z',
         version: 30,
         runs: [run],
       };
 
       // Add initial work order with run
-      (mockChannel as any)._test.emit("history_updated", {
-        action: "created",
+      (mockChannel as any)._test.emit('history_updated', {
+        action: 'created',
         work_order: workOrder,
       });
 
       // Update run
       const updatedRun = {
         ...run,
-        state: "success",
-        finished_at: "2025-10-23T21:00:05.000000Z",
+        state: 'success',
+        finished_at: '2025-10-23T21:00:05.000000Z',
       };
 
-      (mockChannel as any)._test.emit("history_updated", {
-        action: "run_updated",
-        work_order_id: "e2107d46-cf29-4930-b11b-cbcfcf83549d",
+      (mockChannel as any)._test.emit('history_updated', {
+        action: 'run_updated',
+        work_order_id: 'e2107d46-cf29-4930-b11b-cbcfcf83549d',
         run: updatedRun,
       });
 
       const state = store.getSnapshot();
-      expect(state.history[0].runs[0].state).toBe("success");
+      expect(state.history[0].runs[0].state).toBe('success');
       expect(state.history[0].runs[0].finished_at).toBe(
-        "2025-10-23T21:00:05.000000Z"
+        '2025-10-23T21:00:05.000000Z'
       );
     });
 
-    test("ignores run events for non-existent work orders", () => {
+    test('ignores run events for non-existent work orders', () => {
       store._connectChannel(mockChannelProvider as any);
 
       const newRun = {
-        id: "f3218e57-df40-4a41-b22c-dcdfdf94650e",
-        state: "started",
+        id: 'f3218e57-df40-4a41-b22c-dcdfdf94650e',
+        state: 'started',
         error_type: null,
-        started_at: "2025-10-23T21:00:00.000000Z",
+        started_at: '2025-10-23T21:00:00.000000Z',
         finished_at: null,
       };
 
       // Try to add run to non-existent work order
-      (mockChannel as any)._test.emit("history_updated", {
-        action: "run_created",
-        work_order_id: "e2107d46-cf29-4930-b11b-cbcfcf83549d",
+      (mockChannel as any)._test.emit('history_updated', {
+        action: 'run_created',
+        work_order_id: 'e2107d46-cf29-4930-b11b-cbcfcf83549d',
         run: newRun,
       });
 
@@ -580,26 +580,26 @@ describe("createHistoryStore", () => {
     });
   });
 
-  describe("run steps subscription management", () => {
-    test("subscribeToRunSteps adds subscriber and fetches if not cached", async () => {
+  describe('run steps subscription management', () => {
+    test('subscribeToRunSteps adds subscriber and fetches if not cached', async () => {
       store._connectChannel(mockChannelProvider as any);
 
       const mockRunSteps: RunStepsData = {
-        run_id: "run-123",
+        run_id: 'run-123',
         steps: [],
         metadata: {
-          starting_job_id: "job-1",
+          starting_job_id: 'job-1',
           starting_trigger_id: null,
-          inserted_at: "2025-01-08T10:00:00Z",
-          created_by_id: "user-1",
-          created_by_email: "user@example.com",
+          inserted_at: '2025-01-08T10:00:00Z',
+          created_by_id: 'user-1',
+          created_by_email: 'user@example.com',
         },
       };
 
       mockChannel.push = () =>
         ({
           receive: (status: string, callback: (response?: unknown) => void) => {
-            if (status === "ok") {
+            if (status === 'ok') {
               setTimeout(() => callback(mockRunSteps), 0);
             }
             return { receive: () => ({ receive: () => ({}) }) };
@@ -607,12 +607,12 @@ describe("createHistoryStore", () => {
         }) as any;
 
       // Subscribe
-      store.subscribeToRunSteps("run-123", "component-1");
+      store.subscribeToRunSteps('run-123', 'component-1');
 
       // Verify subscriber added
       let state = store.getSnapshot();
-      expect(state.runStepsSubscribers["run-123"]).toBeDefined();
-      expect(state.runStepsSubscribers["run-123"].has("component-1")).toBe(
+      expect(state.runStepsSubscribers['run-123']).toBeDefined();
+      expect(state.runStepsSubscribers['run-123'].has('component-1')).toBe(
         true
       );
 
@@ -621,20 +621,20 @@ describe("createHistoryStore", () => {
 
       // Verify data cached
       state = store.getSnapshot();
-      expect(state.runStepsCache["run-123"]).toEqual(mockRunSteps);
+      expect(state.runStepsCache['run-123']).toEqual(mockRunSteps);
     });
 
-    test("subscribeToRunSteps uses cached data if available", async () => {
+    test('subscribeToRunSteps uses cached data if available', async () => {
       store._connectChannel(mockChannelProvider as any);
       const mockRunSteps: RunStepsData = {
-        run_id: "run-456",
+        run_id: 'run-456',
         steps: [],
         metadata: {
-          starting_job_id: "job-2",
+          starting_job_id: 'job-2',
           starting_trigger_id: null,
-          inserted_at: "2025-01-08T11:00:00Z",
-          created_by_id: "user-2",
-          created_by_email: "user2@example.com",
+          inserted_at: '2025-01-08T11:00:00Z',
+          created_by_id: 'user-2',
+          created_by_email: 'user2@example.com',
         },
       };
 
@@ -642,14 +642,14 @@ describe("createHistoryStore", () => {
       mockChannel.push = () =>
         ({
           receive: (status: string, callback: (response?: unknown) => void) => {
-            if (status === "ok") {
+            if (status === 'ok') {
               setTimeout(() => callback(mockRunSteps), 0);
             }
             return { receive: () => ({ receive: () => ({}) }) };
           },
         }) as any;
 
-      await store.requestRunSteps("run-456");
+      await store.requestRunSteps('run-456');
       await waitForCondition(() => !store.getSnapshot().isLoading);
 
       // Track if push was called again
@@ -662,49 +662,49 @@ describe("createHistoryStore", () => {
       };
 
       // Subscribe - should use cached data
-      store.subscribeToRunSteps("run-456", "component-2");
+      store.subscribeToRunSteps('run-456', 'component-2');
 
       // Verify subscriber added but no fetch happened
       const state = store.getSnapshot();
-      expect(state.runStepsSubscribers["run-456"].has("component-2")).toBe(
+      expect(state.runStepsSubscribers['run-456'].has('component-2')).toBe(
         true
       );
       expect(pushCalled).toBe(false);
     });
 
-    test("multiple components can subscribe to same run", () => {
-      store.subscribeToRunSteps("run-789", "component-a");
-      store.subscribeToRunSteps("run-789", "component-b");
-      store.subscribeToRunSteps("run-789", "component-c");
+    test('multiple components can subscribe to same run', () => {
+      store.subscribeToRunSteps('run-789', 'component-a');
+      store.subscribeToRunSteps('run-789', 'component-b');
+      store.subscribeToRunSteps('run-789', 'component-c');
 
       const state = store.getSnapshot();
-      const subscribers = state.runStepsSubscribers["run-789"];
+      const subscribers = state.runStepsSubscribers['run-789'];
 
       expect(subscribers.size).toBe(3);
-      expect(subscribers.has("component-a")).toBe(true);
-      expect(subscribers.has("component-b")).toBe(true);
-      expect(subscribers.has("component-c")).toBe(true);
+      expect(subscribers.has('component-a')).toBe(true);
+      expect(subscribers.has('component-b')).toBe(true);
+      expect(subscribers.has('component-c')).toBe(true);
     });
 
-    test("unsubscribeFromRunSteps removes subscriber but keeps cache if others remain", async () => {
+    test('unsubscribeFromRunSteps removes subscriber but keeps cache if others remain', async () => {
       store._connectChannel(mockChannelProvider as any);
 
       // Mock channel response
       mockChannel.push = () =>
         ({
           receive: (status: string, callback: (response?: unknown) => void) => {
-            if (status === "ok") {
+            if (status === 'ok') {
               setTimeout(
                 () =>
                   callback({
-                    run_id: "run-111",
+                    run_id: 'run-111',
                     steps: [],
                     metadata: {
-                      starting_job_id: "job-111",
+                      starting_job_id: 'job-111',
                       starting_trigger_id: null,
-                      inserted_at: "2025-01-08T10:00:00Z",
-                      created_by_id: "user-111",
-                      created_by_email: "user111@example.com",
+                      inserted_at: '2025-01-08T10:00:00Z',
+                      created_by_id: 'user-111',
+                      created_by_email: 'user111@example.com',
                     },
                   }),
                 0
@@ -715,45 +715,45 @@ describe("createHistoryStore", () => {
         }) as any;
 
       // Setup: Two subscribers (first one triggers fetch)
-      store.subscribeToRunSteps("run-111", "component-1");
-      store.subscribeToRunSteps("run-111", "component-2");
+      store.subscribeToRunSteps('run-111', 'component-1');
+      store.subscribeToRunSteps('run-111', 'component-2');
 
       // Wait for fetch to complete
       await waitForCondition(() => !store.getSnapshot().isLoading);
 
       // Unsubscribe first component
-      store.unsubscribeFromRunSteps("run-111", "component-1");
+      store.unsubscribeFromRunSteps('run-111', 'component-1');
 
       const state = store.getSnapshot();
-      const subscribers = state.runStepsSubscribers["run-111"];
+      const subscribers = state.runStepsSubscribers['run-111'];
 
       // Verify one subscriber remains
       expect(subscribers.size).toBe(1);
-      expect(subscribers.has("component-2")).toBe(true);
+      expect(subscribers.has('component-2')).toBe(true);
 
       // Cache should still exist
-      expect(state.runStepsCache["run-111"]).toBeDefined();
+      expect(state.runStepsCache['run-111']).toBeDefined();
     });
 
-    test("unsubscribeFromRunSteps cleans up cache when last subscriber leaves", async () => {
+    test('unsubscribeFromRunSteps cleans up cache when last subscriber leaves', async () => {
       store._connectChannel(mockChannelProvider as any);
 
       // Mock channel response
       mockChannel.push = () =>
         ({
           receive: (status: string, callback: (response?: unknown) => void) => {
-            if (status === "ok") {
+            if (status === 'ok') {
               setTimeout(
                 () =>
                   callback({
-                    run_id: "run-222",
+                    run_id: 'run-222',
                     steps: [],
                     metadata: {
-                      starting_job_id: "job-222",
+                      starting_job_id: 'job-222',
                       starting_trigger_id: null,
-                      inserted_at: "2025-01-08T10:00:00Z",
-                      created_by_id: "user-222",
-                      created_by_email: "user222@example.com",
+                      inserted_at: '2025-01-08T10:00:00Z',
+                      created_by_id: 'user-222',
+                      created_by_email: 'user222@example.com',
                     },
                   }),
                 0
@@ -764,41 +764,41 @@ describe("createHistoryStore", () => {
         }) as any;
 
       // Setup: One subscriber (triggers fetch)
-      store.subscribeToRunSteps("run-222", "component-solo");
+      store.subscribeToRunSteps('run-222', 'component-solo');
 
       // Wait for fetch to complete
       await waitForCondition(() => !store.getSnapshot().isLoading);
 
       // Unsubscribe
-      store.unsubscribeFromRunSteps("run-222", "component-solo");
+      store.unsubscribeFromRunSteps('run-222', 'component-solo');
 
       const state = store.getSnapshot();
 
       // Verify everything cleaned up
-      expect(state.runStepsSubscribers["run-222"]).toBeUndefined();
-      expect(state.runStepsCache["run-222"]).toBeUndefined();
+      expect(state.runStepsSubscribers['run-222']).toBeUndefined();
+      expect(state.runStepsCache['run-222']).toBeUndefined();
     });
 
-    test("handleHistoryUpdated invalidates cache for subscribed runs", async () => {
+    test('handleHistoryUpdated invalidates cache for subscribed runs', async () => {
       store._connectChannel(mockChannelProvider as any);
 
       // Mock initial fetch
       const oldRunSteps: RunStepsData = {
-        run_id: "run-333",
-        steps: [{ id: "step-old" } as any],
+        run_id: 'run-333',
+        steps: [{ id: 'step-old' } as any],
         metadata: {
-          starting_job_id: "job-3",
+          starting_job_id: 'job-3',
           starting_trigger_id: null,
-          inserted_at: "2025-01-08T12:00:00Z",
-          created_by_id: "user-3",
-          created_by_email: "user3@example.com",
+          inserted_at: '2025-01-08T12:00:00Z',
+          created_by_id: 'user-3',
+          created_by_email: 'user3@example.com',
         },
       };
 
       mockChannel.push = () =>
         ({
           receive: (status: string, callback: (response?: unknown) => void) => {
-            if (status === "ok") {
+            if (status === 'ok') {
               setTimeout(() => callback(oldRunSteps), 0);
             }
             return { receive: () => ({ receive: () => ({}) }) };
@@ -806,26 +806,26 @@ describe("createHistoryStore", () => {
         }) as any;
 
       // Setup: Subscribe (triggers initial fetch)
-      store.subscribeToRunSteps("run-333", "component-1");
+      store.subscribeToRunSteps('run-333', 'component-1');
       await waitForCondition(() => !store.getSnapshot().isLoading);
 
       // Mock fetch for refetch with new data
       const newRunSteps: RunStepsData = {
-        run_id: "run-333",
-        steps: [{ id: "step-new" } as any],
+        run_id: 'run-333',
+        steps: [{ id: 'step-new' } as any],
         metadata: {
-          starting_job_id: "job-3",
+          starting_job_id: 'job-3',
           starting_trigger_id: null,
-          inserted_at: "2025-01-08T12:00:00Z",
-          created_by_id: "user-3",
-          created_by_email: "user3@example.com",
+          inserted_at: '2025-01-08T12:00:00Z',
+          created_by_id: 'user-3',
+          created_by_email: 'user3@example.com',
         },
       };
 
       mockChannel.push = () =>
         ({
           receive: (status: string, callback: (response?: unknown) => void) => {
-            if (status === "ok") {
+            if (status === 'ok') {
               setTimeout(() => callback(newRunSteps), 0);
             }
             return { receive: () => ({ receive: () => ({}) }) };
@@ -833,24 +833,24 @@ describe("createHistoryStore", () => {
         }) as any;
 
       // Emit run_updated event
-      (mockChannel as any)._test.emit("history_updated", {
-        action: "run_updated",
-        run: { id: "run-333", state: "success" },
-        work_order_id: "wo-1",
+      (mockChannel as any)._test.emit('history_updated', {
+        action: 'run_updated',
+        run: { id: 'run-333', state: 'success' },
+        work_order_id: 'wo-1',
       });
 
       // Wait for refetch
       await waitForCondition(() => {
         const state = store.getSnapshot();
-        return state.runStepsCache["run-333"]?.steps?.[0]?.id === "step-new";
+        return state.runStepsCache['run-333']?.steps?.[0]?.id === 'step-new';
       });
 
       // Verify cache was updated
       const state = store.getSnapshot();
-      expect(state.runStepsCache["run-333"].steps[0].id).toBe("step-new");
+      expect(state.runStepsCache['run-333'].steps[0].id).toBe('step-new');
     });
 
-    test("handleHistoryUpdated does not refetch for unsubscribed runs", () => {
+    test('handleHistoryUpdated does not refetch for unsubscribed runs', () => {
       store._connectChannel(mockChannelProvider as any);
 
       // Track if fetch was called
@@ -863,17 +863,17 @@ describe("createHistoryStore", () => {
       };
 
       // Emit run_updated for run with no subscribers
-      (mockChannel as any)._test.emit("history_updated", {
-        action: "run_updated",
-        run: { id: "run-no-subs", state: "success" },
-        work_order_id: "wo-2",
+      (mockChannel as any)._test.emit('history_updated', {
+        action: 'run_updated',
+        run: { id: 'run-no-subs', state: 'success' },
+        work_order_id: 'wo-2',
       });
 
       // Should not fetch
       expect(fetchCalled).toBe(false);
     });
 
-    test("runStepsLoading prevents duplicate concurrent fetches", async () => {
+    test('runStepsLoading prevents duplicate concurrent fetches', async () => {
       store._connectChannel(mockChannelProvider as any);
 
       let fetchCount = 0;
@@ -881,18 +881,18 @@ describe("createHistoryStore", () => {
         fetchCount++;
         return {
           receive: (status: string, callback: (response?: unknown) => void) => {
-            if (status === "ok") {
+            if (status === 'ok') {
               setTimeout(
                 () =>
                   callback({
-                    run_id: "run-444",
+                    run_id: 'run-444',
                     steps: [],
                     metadata: {
-                      starting_job_id: "job-4",
+                      starting_job_id: 'job-4',
                       starting_trigger_id: null,
-                      inserted_at: "2025-01-08T13:00:00Z",
-                      created_by_id: "user-4",
-                      created_by_email: "user4@example.com",
+                      inserted_at: '2025-01-08T13:00:00Z',
+                      created_by_id: 'user-4',
+                      created_by_email: 'user4@example.com',
                     },
                   }),
                 50
@@ -904,8 +904,8 @@ describe("createHistoryStore", () => {
       };
 
       // Subscribe twice quickly (before first fetch completes)
-      store.subscribeToRunSteps("run-444", "component-1");
-      store.subscribeToRunSteps("run-444", "component-2");
+      store.subscribeToRunSteps('run-444', 'component-1');
+      store.subscribeToRunSteps('run-444', 'component-2');
 
       // Should only fetch once
       expect(fetchCount).toBe(1);
@@ -915,7 +915,7 @@ describe("createHistoryStore", () => {
 
       // Verify both subscribers exist
       const state = store.getSnapshot();
-      expect(state.runStepsSubscribers["run-444"].size).toBe(2);
+      expect(state.runStepsSubscribers['run-444'].size).toBe(2);
     });
   });
 });

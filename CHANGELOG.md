@@ -19,6 +19,10 @@ and this project adheres to
 
 - Show server validation errors in the collab editor forms
   [#3783](https://github.com/OpenFn/lightning/issues/3783)
+- Webhook authentication management in the collaborative editor
+  [#3887](https://github.com/OpenFn/lightning/issues/3887)
+- Mix task to merge project state files without database access
+  [#3615](https://github.com/OpenFn/lightning/issues/3615)
 
 ### Changed
 
@@ -28,6 +32,8 @@ and this project adheres to
 
 ### Fixed
 
+- Run duration and status alignment drift in history view
+  [#3945](https://github.com/OpenFn/lightning/pull/3945)
 - Shared doc lookup in clustered environments now works across nodes instead of
   only searching locally
   [#3910](https://github.com/OpenFn/lightning/issues/3910)
