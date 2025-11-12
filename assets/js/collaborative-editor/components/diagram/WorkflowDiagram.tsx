@@ -72,7 +72,11 @@ type ChartCache = {
 const LAYOUT_DURATION = 300;
 
 // Simple React hook for Tippy tooltips that finds buttons by their content
-const useTippyForControls = (isManualLayout: boolean) => {
+const useTippyForControls = (
+  isManualLayout: boolean,
+  canUndo: boolean,
+  canRedo: boolean
+) => {
   useEffect(() => {
     // Find the control buttons and initialize tooltips based on their dataset attributes
     const buttons = document.querySelectorAll('.react-flow__controls button');
@@ -95,7 +99,7 @@ const useTippyForControls = (isManualLayout: boolean) => {
         f();
       });
     };
-  }, [isManualLayout]); // Only run once on mount
+  }, [isManualLayout, canUndo, canRedo]);
 };
 
 const logger = _logger.ns('WorkflowDiagram').seal();
@@ -123,9 +127,14 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
     updatePositions,
   } = usePositions();
 
-  // TODO: implement these
-  const undo = useCallback(() => {}, []);
-  const redo = useCallback(() => {}, []);
+  // Undo/redo functions
+  const undo = useCallback(() => {
+    workflowStore.undo();
+  }, [workflowStore]);
+
+  const redo = useCallback(() => {
+    workflowStore.redo();
+  }, [workflowStore]);
 
   const { jobs, triggers, edges } = useWorkflowState(state => ({
     jobs: state.jobs,
@@ -150,6 +159,42 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
   const [model, setModel] = useState<Flow.Model>({ nodes: [], edges: [] });
   const [drawerWidth, setDrawerWidth] = useState(0);
   const workflowDiagramRef = useRef<HTMLDivElement>(null);
+
+  // Undo/redo state
+  const [canUndo, setCanUndo] = useState(false);
+  const [canRedo, setCanRedo] = useState(false);
+
+  const undoManager = workflowStore.getSnapshot().undoManager;
+
+  // Listen to UndoManager stack changes
+  useEffect(() => {
+    if (!undoManager) {
+      setCanUndo(false);
+      setCanRedo(false);
+      return;
+    }
+
+    const updateUndoRedoState = () => {
+      // Read directly from undoManager instead of calling store methods
+      // This avoids potential stale closures and is more reliable
+      setCanUndo(undoManager.undoStack.length > 0);
+      setCanRedo(undoManager.redoStack.length > 0);
+    };
+
+    // Initial state
+    updateUndoRedoState();
+
+    // Listen to stack changes
+    undoManager.on('stack-item-added', updateUndoRedoState);
+    undoManager.on('stack-item-popped', updateUndoRedoState);
+    undoManager.on('stack-cleared', updateUndoRedoState);
+
+    return () => {
+      undoManager.off('stack-item-added', updateUndoRedoState);
+      undoManager.off('stack-item-popped', updateUndoRedoState);
+      undoManager.off('stack-cleared', updateUndoRedoState);
+    };
+  }, [undoManager]);
 
   // Modal state for adaptor selection
   const [pendingPlaceholder, setPendingPlaceholder] = useState<{
@@ -763,7 +808,7 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
     workflowStore
   );
   // Set up tooltips for control buttons
-  useTippyForControls(isManualLayout);
+  useTippyForControls(isManualLayout, canUndo, canRedo);
 
   // undo/redo keyboard shortcuts
   useEffect(() => {
@@ -844,10 +889,20 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
             >
               <span className="text-black hero-squares-2x2 w-4 h-4" />
             </ControlButton>
-            <ControlButton onClick={() => undo()} data-tooltip="Undo">
+            <ControlButton
+              onClick={() => undo()}
+              data-tooltip={canUndo ? 'Undo' : 'Nothing to undo'}
+              data-testid="undo-button"
+              disabled={!canUndo}
+            >
               <span className="text-black hero-arrow-uturn-left w-4 h-4" />
             </ControlButton>
-            <ControlButton onClick={() => redo()} data-tooltip="Redo">
+            <ControlButton
+              onClick={() => redo()}
+              data-tooltip={canRedo ? 'Redo' : 'Nothing to redo'}
+              data-testid="redo-button"
+              disabled={!canRedo}
+            >
               <span className="text-black hero-arrow-uturn-right w-4 h-4" />
             </ControlButton>
           </Controls>

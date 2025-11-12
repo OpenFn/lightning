@@ -183,6 +183,9 @@ function produceInitialState() {
       edges: [],
       positions: {},
 
+      // Initialize UndoManager
+      undoManager: null,
+
       // Initialize UI state
       selectedJobId: null,
       selectedTriggerId: null,
@@ -219,7 +222,7 @@ export const createWorkflowStore = () => {
   // Redux DevTools integration (development/test only)
   const devtools = wrapStoreWithDevTools<Workflow.State>({
     name: 'WorkflowStore',
-    excludeKeys: ['ydoc', 'provider'], // Exclude Y.Doc and provider (too large/circular)
+    excludeKeys: ['ydoc', 'provider', 'undoManager'], // Exclude Y.Doc, provider, and undoManager (too large/circular)
     maxAge: 200, // Higher limit to prevent history loss from frequent updates
     trace: false,
   });
@@ -331,6 +334,15 @@ export const createWorkflowStore = () => {
     const edgesArray = ydoc.getArray('edges');
     const positionsMap = ydoc.getMap('positions');
     const errorsMap = ydoc.getMap('errors'); // NEW: Get errors map
+
+    // Create UndoManager tracking all workflow collections
+    const undoManager = new Y.UndoManager(
+      [workflowMap, jobsArray, triggersArray, edgesArray, positionsMap],
+      {
+        captureTimeout: 500, // Merge edits within 500ms
+        trackedOrigins: new Set([null]), // Track local changes only
+      }
+    );
 
     // Set up observers
     const workflowObserver = () => {
@@ -520,6 +532,11 @@ export const createWorkflowStore = () => {
         }
       },
       () => errorsMap.unobserveDeep(errorsObserver), // NEW: Cleanup function
+      () => {
+        // UndoManager cleanup
+        undoManager.clear();
+        undoManager.destroy();
+      },
     ];
 
     state = produce(state, draft => {
@@ -533,6 +550,11 @@ export const createWorkflowStore = () => {
     edgesObserver();
     positionsObserver();
     errorsObserver(); // NEW: Initial sync
+
+    // Update state with undoManager
+    updateState(draft => {
+      draft.undoManager = undoManager;
+    }, 'undoManager/initialized');
 
     // Initialize DevTools connection
     devtools.connect();
@@ -554,8 +576,10 @@ export const createWorkflowStore = () => {
     // Disconnect DevTools
     devtools.disconnect();
 
-    // Update collaboration status
-    updateState(_draft => {}, 'disconnected');
+    // Update collaboration status and reset undoManager
+    updateState(draft => {
+      draft.undoManager = null;
+    }, 'disconnected');
   };
 
   // =============================================================================
@@ -1333,6 +1357,37 @@ export const createWorkflowStore = () => {
     }
   };
 
+  // Undo/Redo Commands
+  // =============================================================================
+  // These commands trigger Y.Doc changes via UndoManager, which then flow
+  // through the normal observer pattern (Pattern 1)
+
+  const undo = () => {
+    if (state.undoManager && state.undoManager.undoStack.length > 0) {
+      state.undoManager.undo();
+    }
+  };
+
+  const redo = () => {
+    if (state.undoManager && state.undoManager.redoStack.length > 0) {
+      state.undoManager.redo();
+    }
+  };
+
+  const canUndo = (): boolean => {
+    return (state.undoManager?.undoStack.length ?? 0) > 0;
+  };
+
+  const canRedo = (): boolean => {
+    return (state.undoManager?.redoStack.length ?? 0) > 0;
+  };
+
+  const clearHistory = () => {
+    if (state.undoManager) {
+      state.undoManager.clear();
+    }
+  };
+
   return {
     // Core store interface
     subscribe,
@@ -1389,6 +1444,14 @@ export const createWorkflowStore = () => {
 
     // Trigger auth methods
     requestTriggerAuthMethods,
+    // =============================================================================
+    // Undo/Redo Commands
+    // =============================================================================
+    undo,
+    redo,
+    canUndo,
+    canRedo,
+    clearHistory,
   };
 };
 
