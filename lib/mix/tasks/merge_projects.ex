@@ -106,13 +106,7 @@ defmodule Mix.Tasks.Lightning.MergeProjects do
 
   defp atomize_keys(data) when is_map(data) do
     Map.new(data, fn {key, value} ->
-      atom_key =
-        if is_binary(key) do
-          String.to_existing_atom(key)
-        else
-          key
-        end
-
+      atom_key = if is_binary(key), do: String.to_existing_atom(key), else: key
       {atom_key, atomize_keys(value)}
     end)
   end
