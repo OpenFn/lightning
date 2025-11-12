@@ -183,6 +183,19 @@ defmodule LightningWeb.WorkflowLive.Collaborate do
      |> assign(show_credential_modal: false, credential_schema: nil)}
   end
 
+  def handle_info(:webhook_auth_method_saved, socket) do
+    # Broadcast webhook auth methods update to all connected clients
+    broadcast_webhook_auth_methods_update(socket)
+
+    socket
+    |> assign(
+      show_webhook_auth_modal: false,
+      webhook_auth_method: nil
+    )
+    |> push_event("webhook_auth_method_saved", %{})
+    |> noreply()
+  end
+
   defp workflow_assigns(params, project) do
     case params do
       %{"id" => workflow_id} ->
@@ -245,19 +258,6 @@ defmodule LightningWeb.WorkflowLive.Collaborate do
     else
       %{base_data | id: credential_id}
     end
-  end
-
-  def handle_info(:webhook_auth_method_saved, socket) do
-    # Broadcast webhook auth methods update to all connected clients
-    broadcast_webhook_auth_methods_update(socket)
-
-    socket
-    |> assign(
-      show_webhook_auth_modal: false,
-      webhook_auth_method: nil
-    )
-    |> push_event("webhook_auth_method_saved", %{})
-    |> noreply()
   end
 
   defp broadcast_credential_update(socket, project) do
