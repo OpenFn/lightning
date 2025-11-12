@@ -22,10 +22,16 @@ and this project adheres to
 - Add advanced credential type picker in collaborative workflow editor allowing
   users to create OAuth, raw JSON, and keychain credentials directly from the
   workflow canvas [#3906](https://github.com/OpenFn/lightning/issues/3906)
+- Enforce readonly state in collaborative editor forms for viewers and old
+  snapshots [#3948](https://github.com/OpenFn/lightning/pull/3948)
+- Collab Editor: Add Workflow YAML code viewer panel
+  [#3646](https://github.com/OpenFn/lightning/issues/3646)
 - Webhook authentication management in the collaborative editor
   [#3887](https://github.com/OpenFn/lightning/issues/3887)
 - Mix task to merge project state files without database access
   [#3615](https://github.com/OpenFn/lightning/issues/3615)
+- Show Error indication on workflow settings button
+  [#3632](https://github.com/OpenFn/lightning/issues/3632)
 
 ### Changed
 
