@@ -11,7 +11,7 @@
  * - Verifies Y.Doc state directly (not just response validation)
  */
 
-import { describe, test, expect, beforeEach } from "vitest";
+import { describe, test, expect, beforeEach, vi } from "vitest";
 import * as Y from "yjs";
 import type { Channel } from "phoenix";
 
@@ -23,6 +23,8 @@ import type { Session } from "../../../js/collaborative-editor/types/session";
 import {
   createMockChannelPushOk,
   createMockChannelPushError,
+  createMockPhoenixChannel,
+  type MockPhoenixChannel,
 } from "../__helpers__/channelMocks";
 
 describe("WorkflowStore - Save Workflow", () => {
@@ -42,6 +44,8 @@ describe("WorkflowStore - Save Workflow", () => {
         saved_at: new Date().toISOString(),
         lock_version: 1,
       }),
+      on: vi.fn(),
+      off: vi.fn(),
     } as unknown as Channel;
 
     // Create mock provider with channel
@@ -297,6 +301,8 @@ describe("WorkflowStore - ensureConnected utility", () => {
     // Mock Phoenix Channel
     const mockChannel = {
       push: createMockChannelPushOk({}),
+      on: vi.fn(),
+      off: vi.fn(),
     } as unknown as Channel;
 
     // Create mock provider with channel
@@ -427,7 +433,7 @@ describe("WorkflowStore - ensureConnected utility", () => {
 describe("WorkflowStore - addJob", () => {
   let store: WorkflowStoreInstance;
   let ydoc: Session.WorkflowDoc;
-  let mockProvider: PhoenixChannelProvider & { channel: Channel };
+  let mockProvider: PhoenixChannelProvider & { channel: MockPhoenixChannel };
 
   beforeEach(() => {
     // Create fresh store and Y.Doc instances
@@ -441,10 +447,10 @@ describe("WorkflowStore - addJob", () => {
     ydoc.getArray("edges");
     ydoc.getMap("positions");
 
-    // Create mock channel (minimal implementation)
-    const mockChannel = {
-      push: createMockChannelPushOk({}),
-    } as unknown as Channel;
+    // Create mock channel with full implementation including on/off methods
+    const mockChannel = createMockPhoenixChannel("workflow:test");
+    // Override push to return ok responses for this test
+    mockChannel.push = createMockChannelPushOk({}) as typeof mockChannel.push;
 
     // Create mock provider with channel
     mockProvider = {
@@ -452,7 +458,7 @@ describe("WorkflowStore - addJob", () => {
       synced: true,
       awareness: null,
       doc: ydoc,
-    } as unknown as PhoenixChannelProvider & { channel: Channel };
+    } as unknown as PhoenixChannelProvider & { channel: MockPhoenixChannel };
 
     // Connect store to Y.Doc and provider
     store.connect(ydoc, mockProvider);

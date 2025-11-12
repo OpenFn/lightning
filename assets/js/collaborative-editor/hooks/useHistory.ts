@@ -11,22 +11,22 @@ import {
   useMemo,
   useEffect,
   useId,
-} from "react";
+} from 'react';
 
-import _logger from "#/utils/logger";
-import type { RunInfo } from "#/workflow-store/store";
+import _logger from '#/utils/logger';
+import type { RunInfo } from '#/workflow-store/store';
 
-import { StoreContext } from "../contexts/StoreProvider";
+import { StoreContext } from '../contexts/StoreProvider';
 import type {
   HistoryStore,
   WorkflowRunHistory,
   RunStepsData,
-} from "../types/history";
-import { transformToRunInfo } from "../utils/runStepsTransformer";
+} from '../types/history';
+import { transformToRunInfo } from '../utils/runStepsTransformer';
 
-import { useWorkflowState } from "./useWorkflow";
+import { useWorkflowState } from './useWorkflow';
 
-const logger = _logger.ns("useHistory").seal();
+const logger = _logger.ns('useHistory').seal();
 
 /**
  * Main hook for accessing the HistoryStore instance
@@ -40,7 +40,7 @@ const logger = _logger.ns("useHistory").seal();
 const useHistoryStore = (): HistoryStore => {
   const context = useContext(StoreContext);
   if (!context) {
-    throw new Error("useHistoryStore must be used within a StoreProvider");
+    throw new Error('useHistoryStore must be used within a StoreProvider');
   }
 
   return context.historyStore;
@@ -136,7 +136,7 @@ export const useHistoryCommands = () => {
 export const useRunSteps = (runId: string | null): RunInfo | null => {
   const historyStore = useHistoryStore();
   const workflow = useWorkflowState(state => state.workflow);
-  const workflowId = workflow?.id || "";
+  const workflowId = workflow?.id || '';
 
   // Generate stable component ID for subscription tracking
   // React's useId provides a stable identifier per component instance
@@ -146,11 +146,11 @@ export const useRunSteps = (runId: string | null): RunInfo | null => {
   useEffect(() => {
     if (!runId) return;
 
-    logger.debug("useRunSteps: Subscribing", { runId, componentId });
+    logger.debug('useRunSteps: Subscribing', { runId, componentId });
     historyStore.subscribeToRunSteps(runId, componentId);
 
     return () => {
-      logger.debug("useRunSteps: Unsubscribing", { runId, componentId });
+      logger.debug('useRunSteps: Unsubscribing', { runId, componentId });
       historyStore.unsubscribeFromRunSteps(runId, componentId);
     };
   }, [runId, componentId, historyStore]);

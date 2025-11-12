@@ -148,7 +148,7 @@ export function JobForm({ job }: JobFormProps) {
       // 500ms accounts for: Phoenix.JS animation (250ms) + LiveView update time + buffer
       // This prevents race conditions if user quickly reopens modal
       setTimeout(() => {
-        pushEvent('close_credential_modal_complete', {});
+        pushEvent('close_credential_modal', {});
       }, 500);
     };
 

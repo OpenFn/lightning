@@ -9,13 +9,13 @@
  * Preference keys supported by the store
  * Add new preferences here as they're needed
  */
-export type EditorPreferenceKey = "historyPanelCollapsed";
+export type EditorPreferenceKey = 'historyPanelCollapsed';
 
 /**
  * Type-safe value types for each preference key
  */
 export type EditorPreferenceValue<K extends EditorPreferenceKey> =
-  K extends "historyPanelCollapsed" ? boolean : never;
+  K extends 'historyPanelCollapsed' ? boolean : never;
 
 /**
  * Store state shape
