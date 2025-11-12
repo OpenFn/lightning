@@ -10,7 +10,10 @@ import {
   useCredentials,
   useCredentialsCommands,
 } from '#/collaborative-editor/hooks/useCredentials';
-import { useWorkflowActions } from '#/collaborative-editor/hooks/useWorkflow';
+import {
+  useWorkflowActions,
+  useWorkflowReadOnly,
+} from '#/collaborative-editor/hooks/useWorkflow';
 import { useWatchFields } from '#/collaborative-editor/stores/common';
 import { JobSchema } from '#/collaborative-editor/types/job';
 import type { Workflow } from '#/collaborative-editor/types/workflow';
@@ -58,6 +61,7 @@ export function JobForm({ job }: JobFormProps) {
   const { projectAdaptors, allAdaptors } = useProjectAdaptors();
   const { pushEvent, handleEvent } = useLiveViewActions();
   const { enableScope, disableScope } = useHotkeysContext();
+  const { isReadOnly } = useWorkflowReadOnly();
 
   // Modal state for adaptor configuration
   const [isConfigureModalOpen, setIsConfigureModalOpen] = useState(false);
@@ -145,7 +149,7 @@ export function JobForm({ job }: JobFormProps) {
       // 500ms accounts for: Phoenix.JS animation (250ms) + LiveView update time + buffer
       // This prevents race conditions if user quickly reopens modal
       setTimeout(() => {
-        pushEvent('close_credential_modal_complete', {});
+        pushEvent('close_credential_modal', {});
       }, 500);
     };
 
@@ -355,7 +359,7 @@ export function JobForm({ job }: JobFormProps) {
       {/* Job Name Field */}
       <div className="col-span-6">
         <form.AppField name="name">
-          {field => <field.TextField label="Job Name" />}
+          {field => <field.TextField label="Job Name" disabled={isReadOnly} />}
         </form.AppField>
       </div>
 
@@ -380,6 +384,7 @@ export function JobForm({ job }: JobFormProps) {
           onEdit={() => setIsConfigureModalOpen(true)}
           onChangeAdaptor={handleOpenAdaptorPicker}
           size="sm"
+          isReadOnly={isReadOnly}
         />
       </div>
 

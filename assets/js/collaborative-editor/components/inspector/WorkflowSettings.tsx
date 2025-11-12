@@ -1,15 +1,17 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 
 import { useAppForm } from '#/collaborative-editor/components/form';
 import { createZodValidator } from '#/collaborative-editor/components/form/createZodValidator';
 import { usePermissions } from '#/collaborative-editor/hooks/useSessionContext';
 import {
   useWorkflowActions,
+  useWorkflowReadOnly,
   useWorkflowState,
 } from '#/collaborative-editor/hooks/useWorkflow';
 import { notifications } from '#/collaborative-editor/lib/notifications';
 import { useWatchFields } from '#/collaborative-editor/stores/common';
 import { WorkflowSchema } from '#/collaborative-editor/types/workflow';
+import { useURLState } from '#/react/lib/use-url-state';
 
 import { AlertDialog } from '../AlertDialog';
 
@@ -20,7 +22,14 @@ export function WorkflowSettings() {
   const [isResetting, setIsResetting] = useState(false);
 
   const { updateWorkflow, resetWorkflow } = useWorkflowActions();
+  const { isReadOnly } = useWorkflowReadOnly();
   const permissions = usePermissions();
+
+  const { updateSearchParams } = useURLState();
+
+  const handleViewAsYAML = () => {
+    updateSearchParams({ panel: 'code' });
+  };
 
   // LoadingBoundary guarantees workflow is non-null at this point
   if (!workflow) {
@@ -97,7 +106,9 @@ export function WorkflowSettings() {
     <div className="px-6 py-6 space-y-4">
       {/* Workflow Name Field */}
       <form.AppField name="name">
-        {field => <field.TextField label="Workflow Name" />}
+        {field => (
+          <field.TextField label="Workflow Name" disabled={isReadOnly} />
+        )}
       </form.AppField>
 
       {/* YAML View Section - Placeholder (NOT implementing) */}
@@ -107,7 +118,9 @@ export function WorkflowSettings() {
         </h3>
         <button
           type="button"
+          onClick={handleViewAsYAML}
           className="text-sm text-indigo-600 hover:text-indigo-500"
+          id="view-workflow-as-yaml-link"
         >
           View your workflow as YAML code
         </button>
@@ -119,6 +132,7 @@ export function WorkflowSettings() {
           <field.ToggleField
             label="Allow console.log() usage"
             description="Control what's printed in run logs"
+            disabled={isReadOnly}
           />
         )}
       </form.AppField>
@@ -141,13 +155,14 @@ export function WorkflowSettings() {
                   : undefined
               }
               min={1}
+              disabled={isReadOnly}
             />
           )}
         </form.AppField>
       </div>
 
       {/* Reset Section - Only show if user has edit permission */}
-      {permissions?.can_edit_workflow && (
+      {permissions?.can_edit_workflow && !isReadOnly && (
         <div className="border-t border-gray-200 pt-6">
           <h3 className="text-sm font-medium text-gray-900 mb-2">
             Reset Workflow

@@ -21,12 +21,22 @@ and this project adheres to
   [#3919](https://github.com/OpenFn/lightning/issues/3919)
 - Show server validation errors in the collab editor forms
   [#3783](https://github.com/OpenFn/lightning/issues/3783)
+- Enforce readonly state in collaborative editor forms for viewers and old
+  snapshots [#3948](https://github.com/OpenFn/lightning/pull/3948)
+- Collab Editor: Add Workflow YAML code viewer panel
+  [#3646](https://github.com/OpenFn/lightning/issues/3646)
 - Webhook authentication management in the collaborative editor
   [#3887](https://github.com/OpenFn/lightning/issues/3887)
 - Mix task to merge project state files without database access
   [#3615](https://github.com/OpenFn/lightning/issues/3615)
+- Show Error indication on workflow settings button
+  [#3632](https://github.com/OpenFn/lightning/issues/3632)
 
 ### Changed
+
+- Merged CollaborateNew and Collaborate LiveViews into a single unified LiveView
+  for improved maintainability and consistent modal behavior
+  [#3942](https://github.com/OpenFn/lightning/pull/3942)
 
 ### Fixed
 

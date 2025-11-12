@@ -1,6 +1,6 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo } from 'react';
 
-import { cn } from "../../../utils/cn";
+import { cn } from '../../../utils/cn';
 
 interface CronFieldBuilderProps {
   value: string;
@@ -12,15 +12,15 @@ interface CronFieldBuilderProps {
 
 interface CronData {
   frequency:
-    | "every_n_minutes"
-    | "every_n_hours"
-    | "hourly"
-    | "daily"
-    | "weekly"
-    | "weekdays"
-    | "monthly"
-    | "specific_months"
-    | "custom";
+    | 'every_n_minutes'
+    | 'every_n_hours'
+    | 'hourly'
+    | 'daily'
+    | 'weekly'
+    | 'weekdays'
+    | 'monthly'
+    | 'specific_months'
+    | 'custom';
   minute: string;
   hour: string;
   weekday: string | string[]; // Support multiple weekdays
@@ -38,17 +38,17 @@ export function CronFieldBuilder({
   onChange,
   onBlur,
   disabled = false,
-  className = "",
+  className = '',
 }: CronFieldBuilderProps) {
   // Parse initial cron expression to determine frequency and field values
   const parseCronExpression = (expr: string): CronData => {
     if (!expr) {
       return {
-        frequency: "daily",
-        minute: "00",
-        hour: "00",
-        weekday: "01",
-        monthday: "01",
+        frequency: 'daily',
+        minute: '00',
+        hour: '00',
+        weekday: '01',
+        monthday: '01',
       };
     }
 
@@ -56,11 +56,11 @@ export function CronFieldBuilder({
     const everyNMinutesMatch = expr.match(/^\*\/(\d+) \* \* \* \*$/);
     if (everyNMinutesMatch) {
       return {
-        frequency: "every_n_minutes",
-        minute: "00",
-        hour: "00",
-        weekday: "01",
-        monthday: "01",
+        frequency: 'every_n_minutes',
+        minute: '00',
+        hour: '00',
+        weekday: '01',
+        monthday: '01',
         interval: everyNMinutesMatch[1],
       };
     }
@@ -69,11 +69,11 @@ export function CronFieldBuilder({
     const everyNHoursMatch = expr.match(/^0 \*\/(\d+) \* \* \*$/);
     if (everyNHoursMatch) {
       return {
-        frequency: "every_n_hours",
-        minute: "00",
-        hour: "00",
-        weekday: "01",
-        monthday: "01",
+        frequency: 'every_n_hours',
+        minute: '00',
+        hour: '00',
+        weekday: '01',
+        monthday: '01',
         interval: everyNHoursMatch[1],
       };
     }
@@ -82,11 +82,11 @@ export function CronFieldBuilder({
     const weekdaysMatch = expr.match(/^(\d{1,2}) (\d{1,2}) \* \* 1-5$/);
     if (weekdaysMatch) {
       return {
-        frequency: "weekdays",
-        minute: weekdaysMatch[1].padStart(2, "0"),
-        hour: weekdaysMatch[2].padStart(2, "0"),
-        weekday: "1-5",
-        monthday: "01",
+        frequency: 'weekdays',
+        minute: weekdaysMatch[1].padStart(2, '0'),
+        hour: weekdaysMatch[2].padStart(2, '0'),
+        weekday: '1-5',
+        monthday: '01',
       };
     }
 
@@ -94,11 +94,11 @@ export function CronFieldBuilder({
     const hourlyMatch = expr.match(/^(\d{1,2}) \* \* \* \*$/);
     if (hourlyMatch) {
       return {
-        frequency: "hourly",
-        minute: hourlyMatch[1].padStart(2, "0"),
-        hour: "00",
-        weekday: "01",
-        monthday: "01",
+        frequency: 'hourly',
+        minute: hourlyMatch[1].padStart(2, '0'),
+        hour: '00',
+        weekday: '01',
+        monthday: '01',
       };
     }
 
@@ -106,11 +106,11 @@ export function CronFieldBuilder({
     const dailyMatch = expr.match(/^(\d{1,2}) (\d{1,2}) \* \* \*$/);
     if (dailyMatch) {
       return {
-        frequency: "daily",
-        minute: dailyMatch[1].padStart(2, "0"),
-        hour: dailyMatch[2].padStart(2, "0"),
-        weekday: "01",
-        monthday: "01",
+        frequency: 'daily',
+        minute: dailyMatch[1].padStart(2, '0'),
+        hour: dailyMatch[2].padStart(2, '0'),
+        weekday: '01',
+        monthday: '01',
       };
     }
 
@@ -118,11 +118,11 @@ export function CronFieldBuilder({
     const multiWeeklyMatch = expr.match(/^(\d{1,2}) (\d{1,2}) \* \* ([\d,]+)$/);
     if (multiWeeklyMatch) {
       return {
-        frequency: "weekly",
-        minute: multiWeeklyMatch[1].padStart(2, "0"),
-        hour: multiWeeklyMatch[2].padStart(2, "0"),
-        weekday: multiWeeklyMatch[3].split(","),
-        monthday: "01",
+        frequency: 'weekly',
+        minute: multiWeeklyMatch[1].padStart(2, '0'),
+        hour: multiWeeklyMatch[2].padStart(2, '0'),
+        weekday: multiWeeklyMatch[3].split(','),
+        monthday: '01',
       };
     }
 
@@ -130,11 +130,11 @@ export function CronFieldBuilder({
     const weeklyMatch = expr.match(/^(\d{1,2}) (\d{1,2}) \* \* (\d{1,2})$/);
     if (weeklyMatch) {
       return {
-        frequency: "weekly",
-        minute: weeklyMatch[1].padStart(2, "0"),
-        hour: weeklyMatch[2].padStart(2, "0"),
-        weekday: weeklyMatch[3].padStart(2, "0"),
-        monthday: "01",
+        frequency: 'weekly',
+        minute: weeklyMatch[1].padStart(2, '0'),
+        hour: weeklyMatch[2].padStart(2, '0'),
+        weekday: weeklyMatch[3].padStart(2, '0'),
+        monthday: '01',
       };
     }
 
@@ -144,12 +144,12 @@ export function CronFieldBuilder({
     );
     if (specificMonthsMatch) {
       return {
-        frequency: "specific_months",
-        minute: specificMonthsMatch[1].padStart(2, "0"),
-        hour: specificMonthsMatch[2].padStart(2, "0"),
-        weekday: "01",
-        monthday: specificMonthsMatch[3].padStart(2, "0"),
-        months: specificMonthsMatch[4].split(","),
+        frequency: 'specific_months',
+        minute: specificMonthsMatch[1].padStart(2, '0'),
+        hour: specificMonthsMatch[2].padStart(2, '0'),
+        weekday: '01',
+        monthday: specificMonthsMatch[3].padStart(2, '0'),
+        months: specificMonthsMatch[4].split(','),
       };
     }
 
@@ -157,21 +157,21 @@ export function CronFieldBuilder({
     const monthlyMatch = expr.match(/^(\d{1,2}) (\d{1,2}) (\d{1,2}) \* \*$/);
     if (monthlyMatch) {
       return {
-        frequency: "monthly",
-        minute: monthlyMatch[1].padStart(2, "0"),
-        hour: monthlyMatch[2].padStart(2, "0"),
-        weekday: "01",
-        monthday: monthlyMatch[3].padStart(2, "0"),
+        frequency: 'monthly',
+        minute: monthlyMatch[1].padStart(2, '0'),
+        hour: monthlyMatch[2].padStart(2, '0'),
+        weekday: '01',
+        monthday: monthlyMatch[3].padStart(2, '0'),
       };
     }
 
     // Custom (doesn't match any pattern)
     return {
-      frequency: "custom",
-      minute: "00",
-      hour: "00",
-      weekday: "01",
-      monthday: "01",
+      frequency: 'custom',
+      minute: '00',
+      hour: '00',
+      weekday: '01',
+      monthday: '01',
     };
   };
 
@@ -188,29 +188,29 @@ export function CronFieldBuilder({
   // Build cron expression from current state
   const buildCronExpression = (data: CronData): string => {
     switch (data.frequency) {
-      case "every_n_minutes":
-        return `*/${data.interval || "15"} * * * *`;
-      case "every_n_hours":
-        return `0 */${data.interval || "6"} * * *`;
-      case "hourly":
+      case 'every_n_minutes':
+        return `*/${data.interval || '15'} * * * *`;
+      case 'every_n_hours':
+        return `0 */${data.interval || '6'} * * *`;
+      case 'hourly':
         return `${data.minute} * * * *`;
-      case "daily":
+      case 'daily':
         return `${data.minute} ${data.hour} * * *`;
-      case "weekdays":
+      case 'weekdays':
         return `${data.minute} ${data.hour} * * 1-5`;
-      case "weekly": {
+      case 'weekly': {
         const days = Array.isArray(data.weekday)
-          ? data.weekday.join(",")
+          ? data.weekday.join(',')
           : data.weekday;
         return `${data.minute} ${data.hour} * * ${days}`;
       }
-      case "monthly":
+      case 'monthly':
         return `${data.minute} ${data.hour} ${data.monthday} * *`;
-      case "specific_months": {
-        const months = data.months?.join(",") || "1";
+      case 'specific_months': {
+        const months = data.months?.join(',') || '1';
         return `${data.minute} ${data.hour} ${data.monthday} ${months} *`;
       }
-      case "custom":
+      case 'custom':
       default:
         return value; // Keep current value for custom
     }
@@ -219,13 +219,13 @@ export function CronFieldBuilder({
   // Update a field and rebuild expression
   const updateField = (
     field: keyof CronData,
-    fieldValue: string | string[] | CronData["frequency"]
+    fieldValue: string | string[] | CronData['frequency']
   ) => {
     const newData = { ...cronData, [field]: fieldValue };
     setCronData(newData);
 
     // Only build expression if not custom (custom is manually edited)
-    if (field === "frequency" && fieldValue === "custom") {
+    if (field === 'frequency' && fieldValue === 'custom') {
       // Don't change the expression when switching to custom
       return;
     }
@@ -236,23 +236,27 @@ export function CronFieldBuilder({
 
   // Generate options
   const minuteOptions = useMemo(
-    () => Array.from({ length: 60 }, (_, i) => i.toString().padStart(2, "0")),
+    () => Array.from({ length: 60 }, (_, i) => i.toString().padStart(2, '0')),
     []
   );
 
   const hourOptions = useMemo(
-    () => Array.from({ length: 24 }, (_, i) => i.toString().padStart(2, "0")),
+    () => Array.from({ length: 24 }, (_, i) => i.toString().padStart(2, '0')),
     []
   );
 
   const monthdayOptions = useMemo(
     () =>
-      Array.from({ length: 31 }, (_, i) => (i + 1).toString().padStart(2, "0")),
+      Array.from({ length: 31 }, (_, i) => (i + 1).toString().padStart(2, '0')),
     []
   );
 
+  // Base select styling with disabled states
+  const selectClassName =
+    'block w-full px-3 py-2 border border-slate-300 rounded-md text-sm focus:border-indigo-500 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-50';
+
   return (
-    <div className={cn("space-y-2", className)}>
+    <div className={cn('space-y-2', className)}>
       <div>
         <label
           htmlFor="cron-frequency"
@@ -264,10 +268,10 @@ export function CronFieldBuilder({
           id="cron-frequency"
           value={cronData.frequency}
           onChange={e =>
-            updateField("frequency", e.target.value as CronData["frequency"])
+            updateField('frequency', e.target.value as CronData['frequency'])
           }
           disabled={disabled}
-          className="block w-full px-3 py-2 border border-slate-300 rounded-md text-sm focus:border-indigo-500 focus:ring-indigo-500"
+          className={selectClassName}
         >
           <option value="every_n_minutes">Every N minutes</option>
           <option value="every_n_hours">Every N hours</option>
@@ -282,7 +286,7 @@ export function CronFieldBuilder({
       </div>
 
       {/* Conditional fields based on frequency */}
-      {cronData.frequency === "every_n_minutes" && (
+      {cronData.frequency === 'every_n_minutes' && (
         <div>
           <label
             htmlFor="cron-interval-minutes"
@@ -292,10 +296,10 @@ export function CronFieldBuilder({
           </label>
           <select
             id="cron-interval-minutes"
-            value={cronData.interval || "15"}
-            onChange={e => updateField("interval", e.target.value)}
+            value={cronData.interval || '15'}
+            onChange={e => updateField('interval', e.target.value)}
             disabled={disabled}
-            className="block w-full px-3 py-2 border border-slate-300 rounded-md text-sm focus:border-indigo-500 focus:ring-indigo-500"
+            className={selectClassName}
           >
             <option value="5">5 minutes</option>
             <option value="10">10 minutes</option>
@@ -306,7 +310,7 @@ export function CronFieldBuilder({
         </div>
       )}
 
-      {cronData.frequency === "every_n_hours" && (
+      {cronData.frequency === 'every_n_hours' && (
         <div>
           <label
             htmlFor="cron-interval-hours"
@@ -316,10 +320,10 @@ export function CronFieldBuilder({
           </label>
           <select
             id="cron-interval-hours"
-            value={cronData.interval || "6"}
-            onChange={e => updateField("interval", e.target.value)}
+            value={cronData.interval || '6'}
+            onChange={e => updateField('interval', e.target.value)}
             disabled={disabled}
-            className="block w-full px-3 py-2 border border-slate-300 rounded-md text-sm focus:border-indigo-500 focus:ring-indigo-500"
+            className={selectClassName}
           >
             <option value="2">2 hours</option>
             <option value="3">3 hours</option>
@@ -331,7 +335,7 @@ export function CronFieldBuilder({
         </div>
       )}
 
-      {cronData.frequency === "hourly" && (
+      {cronData.frequency === 'hourly' && (
         <div>
           <label
             htmlFor="cron-minute"
@@ -342,9 +346,9 @@ export function CronFieldBuilder({
           <select
             id="cron-minute"
             value={cronData.minute}
-            onChange={e => updateField("minute", e.target.value)}
+            onChange={e => updateField('minute', e.target.value)}
             disabled={disabled}
-            className="block w-full px-3 py-2 border border-slate-300 rounded-md text-sm focus:border-indigo-500 focus:ring-indigo-500"
+            className={selectClassName}
           >
             {minuteOptions.map(min => (
               <option key={min} value={min}>
@@ -355,7 +359,7 @@ export function CronFieldBuilder({
         </div>
       )}
 
-      {cronData.frequency === "daily" && (
+      {cronData.frequency === 'daily' && (
         <div className="grid grid-cols-2 gap-2">
           <div>
             <label
@@ -367,9 +371,9 @@ export function CronFieldBuilder({
             <select
               id="cron-hour"
               value={cronData.hour}
-              onChange={e => updateField("hour", e.target.value)}
+              onChange={e => updateField('hour', e.target.value)}
               disabled={disabled}
-              className="block w-full px-3 py-2 border border-slate-300 rounded-md text-sm focus:border-indigo-500 focus:ring-indigo-500"
+              className={selectClassName}
             >
               {hourOptions.map(hr => (
                 <option key={hr} value={hr}>
@@ -388,9 +392,9 @@ export function CronFieldBuilder({
             <select
               id="cron-minute"
               value={cronData.minute}
-              onChange={e => updateField("minute", e.target.value)}
+              onChange={e => updateField('minute', e.target.value)}
               disabled={disabled}
-              className="block w-full px-3 py-2 border border-slate-300 rounded-md text-sm focus:border-indigo-500 focus:ring-indigo-500"
+              className={selectClassName}
             >
               {minuteOptions.map(min => (
                 <option key={min} value={min}>
@@ -402,7 +406,7 @@ export function CronFieldBuilder({
         </div>
       )}
 
-      {cronData.frequency === "weekdays" && (
+      {cronData.frequency === 'weekdays' && (
         <div className="grid grid-cols-2 gap-2">
           <div>
             <label
@@ -414,9 +418,9 @@ export function CronFieldBuilder({
             <select
               id="cron-hour"
               value={cronData.hour}
-              onChange={e => updateField("hour", e.target.value)}
+              onChange={e => updateField('hour', e.target.value)}
               disabled={disabled}
-              className="block w-full px-3 py-2 border border-slate-300 rounded-md text-sm focus:border-indigo-500 focus:ring-indigo-500"
+              className={selectClassName}
             >
               {hourOptions.map(hr => (
                 <option key={hr} value={hr}>
@@ -435,9 +439,9 @@ export function CronFieldBuilder({
             <select
               id="cron-minute"
               value={cronData.minute}
-              onChange={e => updateField("minute", e.target.value)}
+              onChange={e => updateField('minute', e.target.value)}
               disabled={disabled}
-              className="block w-full px-3 py-2 border border-slate-300 rounded-md text-sm focus:border-indigo-500 focus:ring-indigo-500"
+              className={selectClassName}
             >
               {minuteOptions.map(min => (
                 <option key={min} value={min}>
@@ -449,7 +453,7 @@ export function CronFieldBuilder({
         </div>
       )}
 
-      {cronData.frequency === "weekly" && (
+      {cronData.frequency === 'weekly' && (
         <div className="grid grid-cols-2 gap-2">
           <div className="col-span-2">
             <label
@@ -461,9 +465,9 @@ export function CronFieldBuilder({
             <select
               id="cron-weekday"
               value={cronData.weekday}
-              onChange={e => updateField("weekday", e.target.value)}
+              onChange={e => updateField('weekday', e.target.value)}
               disabled={disabled}
-              className="block w-full px-3 py-2 border border-slate-300 rounded-md text-sm focus:border-indigo-500 focus:ring-indigo-500"
+              className={selectClassName}
             >
               <option value="01">Monday</option>
               <option value="02">Tuesday</option>
@@ -484,9 +488,9 @@ export function CronFieldBuilder({
             <select
               id="cron-hour"
               value={cronData.hour}
-              onChange={e => updateField("hour", e.target.value)}
+              onChange={e => updateField('hour', e.target.value)}
               disabled={disabled}
-              className="block w-full px-3 py-2 border border-slate-300 rounded-md text-sm focus:border-indigo-500 focus:ring-indigo-500"
+              className={selectClassName}
             >
               {hourOptions.map(hr => (
                 <option key={hr} value={hr}>
@@ -505,9 +509,9 @@ export function CronFieldBuilder({
             <select
               id="cron-minute"
               value={cronData.minute}
-              onChange={e => updateField("minute", e.target.value)}
+              onChange={e => updateField('minute', e.target.value)}
               disabled={disabled}
-              className="block w-full px-3 py-2 border border-slate-300 rounded-md text-sm focus:border-indigo-500 focus:ring-indigo-500"
+              className={selectClassName}
             >
               {minuteOptions.map(min => (
                 <option key={min} value={min}>
@@ -519,7 +523,7 @@ export function CronFieldBuilder({
         </div>
       )}
 
-      {cronData.frequency === "monthly" && (
+      {cronData.frequency === 'monthly' && (
         <div className="grid grid-cols-3 gap-2">
           <div>
             <label
@@ -531,9 +535,9 @@ export function CronFieldBuilder({
             <select
               id="cron-monthday"
               value={cronData.monthday}
-              onChange={e => updateField("monthday", e.target.value)}
+              onChange={e => updateField('monthday', e.target.value)}
               disabled={disabled}
-              className="block w-full px-3 py-2 border border-slate-300 rounded-md text-sm focus:border-indigo-500 focus:ring-indigo-500"
+              className={selectClassName}
             >
               {monthdayOptions.map(day => (
                 <option key={day} value={day}>
@@ -552,9 +556,9 @@ export function CronFieldBuilder({
             <select
               id="cron-hour"
               value={cronData.hour}
-              onChange={e => updateField("hour", e.target.value)}
+              onChange={e => updateField('hour', e.target.value)}
               disabled={disabled}
-              className="block w-full px-3 py-2 border border-slate-300 rounded-md text-sm focus:border-indigo-500 focus:ring-indigo-500"
+              className={selectClassName}
             >
               {hourOptions.map(hr => (
                 <option key={hr} value={hr}>
@@ -573,9 +577,9 @@ export function CronFieldBuilder({
             <select
               id="cron-minute"
               value={cronData.minute}
-              onChange={e => updateField("minute", e.target.value)}
+              onChange={e => updateField('minute', e.target.value)}
               disabled={disabled}
-              className="block w-full px-3 py-2 border border-slate-300 rounded-md text-sm focus:border-indigo-500 focus:ring-indigo-500"
+              className={selectClassName}
             >
               {minuteOptions.map(min => (
                 <option key={min} value={min}>
@@ -587,7 +591,7 @@ export function CronFieldBuilder({
         </div>
       )}
 
-      {cronData.frequency === "specific_months" && (
+      {cronData.frequency === 'specific_months' && (
         <div className="space-y-4">
           <div className="grid grid-cols-3 gap-2">
             <div>
@@ -600,9 +604,9 @@ export function CronFieldBuilder({
               <select
                 id="cron-monthday"
                 value={cronData.monthday}
-                onChange={e => updateField("monthday", e.target.value)}
+                onChange={e => updateField('monthday', e.target.value)}
                 disabled={disabled}
-                className="block w-full px-3 py-2 border border-slate-300 rounded-md text-sm focus:border-indigo-500 focus:ring-indigo-500"
+                className={selectClassName}
               >
                 {monthdayOptions.map(day => (
                   <option key={day} value={day}>
@@ -621,9 +625,9 @@ export function CronFieldBuilder({
               <select
                 id="cron-hour"
                 value={cronData.hour}
-                onChange={e => updateField("hour", e.target.value)}
+                onChange={e => updateField('hour', e.target.value)}
                 disabled={disabled}
-                className="block w-full px-3 py-2 border border-slate-300 rounded-md text-sm focus:border-indigo-500 focus:ring-indigo-500"
+                className={selectClassName}
               >
                 {hourOptions.map(hr => (
                   <option key={hr} value={hr}>
@@ -642,9 +646,9 @@ export function CronFieldBuilder({
               <select
                 id="cron-minute"
                 value={cronData.minute}
-                onChange={e => updateField("minute", e.target.value)}
+                onChange={e => updateField('minute', e.target.value)}
                 disabled={disabled}
-                className="block w-full px-3 py-2 border border-slate-300 rounded-md text-sm focus:border-indigo-500 focus:ring-indigo-500"
+                className={selectClassName}
               >
                 {minuteOptions.map(min => (
                   <option key={min} value={min}>
@@ -660,18 +664,18 @@ export function CronFieldBuilder({
             </label>
             <div className="grid grid-cols-3 gap-2">
               {[
-                { value: "1", label: "Jan" },
-                { value: "2", label: "Feb" },
-                { value: "3", label: "Mar" },
-                { value: "4", label: "Apr" },
-                { value: "5", label: "May" },
-                { value: "6", label: "Jun" },
-                { value: "7", label: "Jul" },
-                { value: "8", label: "Aug" },
-                { value: "9", label: "Sep" },
-                { value: "10", label: "Oct" },
-                { value: "11", label: "Nov" },
-                { value: "12", label: "Dec" },
+                { value: '1', label: 'Jan' },
+                { value: '2', label: 'Feb' },
+                { value: '3', label: 'Mar' },
+                { value: '4', label: 'Apr' },
+                { value: '5', label: 'May' },
+                { value: '6', label: 'Jun' },
+                { value: '7', label: 'Jul' },
+                { value: '8', label: 'Aug' },
+                { value: '9', label: 'Sep' },
+                { value: '10', label: 'Oct' },
+                { value: '11', label: 'Nov' },
+                { value: '12', label: 'Dec' },
               ].map(month => (
                 <label
                   key={month.value}
@@ -685,10 +689,10 @@ export function CronFieldBuilder({
                       const newMonths = e.target.checked
                         ? [...months, month.value]
                         : months.filter(m => m !== month.value);
-                      updateField("months", newMonths);
+                      updateField('months', newMonths);
                     }}
                     disabled={disabled}
-                    className="mr-2 h-4 w-4 text-indigo-600 border-slate-300 rounded focus:ring-indigo-500"
+                    className="mr-2 h-4 w-4 text-indigo-600 border-slate-300 rounded focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
                   />
                   {month.label}
                 </label>
@@ -708,7 +712,7 @@ export function CronFieldBuilder({
         >
           <span
             className={`hero-chevron-right h-3 w-3 transition-transform ${
-              showAdvanced ? "rotate-90" : ""
+              showAdvanced ? 'rotate-90' : ''
             }`}
           />
           Cron Expression
@@ -727,7 +731,7 @@ export function CronFieldBuilder({
               onBlur={onBlur}
               disabled={disabled}
               placeholder="0 0 * * *"
-              className="block w-full px-3 py-2 border border-slate-300 rounded-md text-sm focus:border-indigo-500 focus:ring-indigo-500 focus:outline-none focus:ring-1 font-mono text-slate-700"
+              className="block w-full px-3 py-2 border border-slate-300 rounded-md text-sm focus:border-indigo-500 focus:ring-indigo-500 focus:outline-none focus:ring-1 font-mono text-slate-700 disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-50"
             />
           </div>
         )}
