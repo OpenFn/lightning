@@ -57,7 +57,7 @@ export function useValidation(form: FormInstance, errorPath?: string) {
     const entityCollection = state[entityType as 'jobs' | 'triggers' | 'edges'];
 
     // Validate entity type at runtime - dynamic path parsing
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+
     if (!entityCollection) {
       return {};
     }
@@ -84,10 +84,10 @@ export function useValidation(form: FormInstance, errorPath?: string) {
         if (fieldMeta?.isTouched || fieldMeta?.isDirty) {
           // Get client validation errors (exclude collaborative errors from errorMap)
           const meta = fieldMeta as unknown as Record<string, unknown>;
-          const errorMap = (meta.errorMap as Record<string, unknown>) || {};
+          const errorMap = (meta?.errorMap as Record<string, unknown>) || {};
 
           // Filter out collaborative errors - only send client validation errors
-          const clientValidationErrors = (fieldMeta.errors || []).filter(
+          const clientValidationErrors = (fieldMeta?.errors || []).filter(
             (error: unknown) => {
               // If this error matches the collaborative error, exclude it
               const collaborativeError = errorMap.collaborative;
@@ -129,10 +129,10 @@ export function useValidation(form: FormInstance, errorPath?: string) {
 
       // Check if field has CLIENT validation errors (excluding collaborative)
       const meta = fieldMeta as unknown as Record<string, unknown>;
-      const errorMap = (meta.errorMap as Record<string, unknown>) || {};
+      const errorMap = (meta?.errorMap as Record<string, unknown>) || {};
       const collaborativeError = errorMap.collaborative;
 
-      const hasClientValidationErrors = (fieldMeta.errors || []).some(
+      const hasClientValidationErrors = (fieldMeta?.errors || []).some(
         (error: unknown) => error !== collaborativeError
       );
 

@@ -10,21 +10,22 @@
  *   await testSessionContextRequest(store, expectedData);
  */
 
-import type { SessionContextStore } from "../../../js/collaborative-editor/stores/createSessionContextStore";
+import type { SessionContextStore } from '../../../js/collaborative-editor/stores/createSessionContextStore';
 import type {
   UserContext,
   ProjectContext,
   AppConfig,
   Permissions,
-} from "../../../js/collaborative-editor/types/sessionContext";
+  WebhookAuthMethod,
+} from '../../../js/collaborative-editor/types/sessionContext';
 
 import {
   createMockPhoenixChannel,
   createMockPushWithAllStatuses,
   type MockPhoenixChannel,
-} from "./channelMocks";
+} from './channelMocks';
 
-import { waitForAsync } from "../mocks/phoenixChannel";
+import { waitForAsync } from '../mocks/phoenixChannel';
 
 // Re-export waitForAsync for convenience
 export { waitForAsync };
@@ -55,22 +56,23 @@ export function configureMockChannelForContext(
     config: AppConfig;
     permissions: Permissions;
     latest_snapshot_lock_version: number;
+    webhook_auth_methods: WebhookAuthMethod[];
   },
-  responseStatus: "ok" | "error" | "timeout" = "ok"
+  responseStatus: 'ok' | 'error' | 'timeout' = 'ok'
 ): void {
   channel.push = (event: string, _payload: unknown) => {
-    if (event === "get_context") {
-      if (responseStatus === "ok") {
+    if (event === 'get_context') {
+      if (responseStatus === 'ok') {
         return createMockPushWithAllStatuses(response);
-      } else if (responseStatus === "error") {
+      } else if (responseStatus === 'error') {
         return createMockPushWithAllStatuses(undefined, {
-          reason: "Server error",
+          reason: 'Server error',
         });
       } else {
         // timeout
         return {
           receive(status: string, callback: (response?: unknown) => void) {
-            if (status === "timeout") {
+            if (status === 'timeout') {
               setTimeout(() => callback(), 0);
             }
             return this;
@@ -80,7 +82,7 @@ export function configureMockChannelForContext(
     }
 
     // Default response for other events
-    return createMockPushWithAllStatuses({ status: "ok" });
+    return createMockPushWithAllStatuses({ status: 'ok' });
   };
 }
 
@@ -108,13 +110,14 @@ export function emitSessionContextEvent(
     config: AppConfig;
     permissions: Permissions;
     latest_snapshot_lock_version: number;
+    webhook_auth_methods: WebhookAuthMethod[];
   }
 ): void {
   const channelWithTest = channel as MockPhoenixChannel & {
     _test: { emit: (event: string, message: unknown) => void };
   };
 
-  channelWithTest._test.emit("session_context", contextData);
+  channelWithTest._test.emit('session_context', contextData);
 }
 
 /**
@@ -141,13 +144,14 @@ export function emitSessionContextUpdatedEvent(
     config: AppConfig;
     permissions: Permissions;
     latest_snapshot_lock_version: number;
+    webhook_auth_methods: WebhookAuthMethod[];
   }
 ): void {
   const channelWithTest = channel as MockPhoenixChannel & {
     _test: { emit: (event: string, message: unknown) => void };
   };
 
-  channelWithTest._test.emit("session_context_updated", contextData);
+  channelWithTest._test.emit('session_context_updated', contextData);
 }
 
 /**
@@ -175,6 +179,7 @@ export async function testSessionContextRequest(
     config: AppConfig;
     permissions: Permissions;
     latest_snapshot_lock_version: number;
+    webhook_auth_methods: WebhookAuthMethod[];
   }
 ): Promise<void> {
   await store.requestSessionContext();
@@ -304,6 +309,7 @@ export async function simulateContextUpdateSequence(
     config: AppConfig;
     permissions: Permissions;
     latest_snapshot_lock_version: number;
+    webhook_auth_methods: WebhookAuthMethod[];
   }>
 ): Promise<void> {
   for (const update of updates) {
@@ -339,7 +345,7 @@ export async function simulateContextUpdateSequence(
 export function verifyTimestampUpdated(store: SessionContextStore): number {
   const state = store.getSnapshot();
   expect(state.lastUpdated).not.toBe(null);
-  expect(typeof state.lastUpdated).toBe("number");
+  expect(typeof state.lastUpdated).toBe('number');
   expect(state.lastUpdated! > 0).toBe(true);
   return state.lastUpdated!;
 }
@@ -362,13 +368,14 @@ export function verifyTimestampUpdated(store: SessionContextStore): number {
  * const channel = createMockChannelForScenario("error");
  */
 export function createMockChannelForScenario(
-  scenario: "authenticated" | "unauthenticated" | "error" | "timeout",
+  scenario: 'authenticated' | 'unauthenticated' | 'error' | 'timeout',
   customData?: Partial<{
     user: UserContext | null;
     project: ProjectContext | null;
     config: AppConfig;
     permissions: Permissions;
     latest_snapshot_lock_version: number;
+    webhook_auth_methods: WebhookAuthMethod[];
   }>
 ): MockPhoenixChannel {
   const channel = createMockPhoenixChannel();
@@ -379,10 +386,10 @@ export function createMockChannelForScenario(
     mockProjectContext,
     mockAppConfig,
     mockPermissions,
-  } = require("../fixtures/sessionContextData");
+  } = require('../fixtures/sessionContextData');
 
   switch (scenario) {
-    case "authenticated":
+    case 'authenticated':
       configureMockChannelForContext(channel, {
         user: customData?.user ?? mockUserContext,
         project: customData?.project ?? mockProjectContext,
@@ -390,10 +397,11 @@ export function createMockChannelForScenario(
         permissions: customData?.permissions ?? mockPermissions,
         latest_snapshot_lock_version:
           customData?.latest_snapshot_lock_version ?? 1,
+        webhook_auth_methods: customData?.webhook_auth_methods ?? [],
       });
       break;
 
-    case "unauthenticated":
+    case 'unauthenticated':
       configureMockChannelForContext(channel, {
         user: null,
         project: null,
@@ -401,10 +409,11 @@ export function createMockChannelForScenario(
         permissions: customData?.permissions ?? mockPermissions,
         latest_snapshot_lock_version:
           customData?.latest_snapshot_lock_version ?? 1,
+        webhook_auth_methods: customData?.webhook_auth_methods ?? [],
       });
       break;
 
-    case "error":
+    case 'error':
       configureMockChannelForContext(
         channel,
         {
@@ -413,12 +422,13 @@ export function createMockChannelForScenario(
           config: mockAppConfig,
           permissions: mockPermissions,
           latest_snapshot_lock_version: 1,
+          webhook_auth_methods: [],
         },
-        "error"
+        'error'
       );
       break;
 
-    case "timeout":
+    case 'timeout':
       configureMockChannelForContext(
         channel,
         {
@@ -427,8 +437,9 @@ export function createMockChannelForScenario(
           config: mockAppConfig,
           permissions: mockPermissions,
           latest_snapshot_lock_version: 1,
+          webhook_auth_methods: [],
         },
-        "timeout"
+        'timeout'
       );
       break;
   }

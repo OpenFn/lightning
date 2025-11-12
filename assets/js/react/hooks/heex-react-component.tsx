@@ -362,7 +362,6 @@ export const HeexReactComponent = {
       '\n' +
       'In `ReactComponent` hook with ' +
       [
-        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
         this._name != null &&
           // prettier-ignore -- the above supression should not leak down
           `name \`${this._name}\``,

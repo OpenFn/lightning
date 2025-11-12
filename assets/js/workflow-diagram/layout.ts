@@ -25,7 +25,7 @@ const calculateLayout = async (
 
   // Before we layout, work out whether there are any new unpositioned placeholders
   // @ts-ignore _default is a temporary flag added by us
-  const newPlaceholders = model.nodes.filter(n => n.position._default);
+  const newPlaceholders = model.nodes.filter(n => n.position?._default);
 
   const g = new Dagre.graphlib.Graph().setDefaultEdgeLabel(() => ({}));
   g.setGraph({
@@ -54,10 +54,10 @@ const calculateLayout = async (
     edges,
   };
 
-  const finalPositions = newModel.nodes.reduce<Positions>((obj, next) => {
+  const finalPositions = newModel.nodes.reduce((obj, next) => {
     obj[next.id] = next.position;
     return obj;
-  }, {});
+  }, {} as Positions);
 
   const hasOldPositions = nodes.find(n => n.position);
 
@@ -66,10 +66,10 @@ const calculateLayout = async (
   const fitTargets: Flow.Node[] = [];
 
   if (hasOldPositions) {
-    const oldPositions = nodes.reduce<Positions>((obj, next) => {
+    const oldPositions = nodes.reduce((obj, next) => {
       obj[next.id] = next.position;
       return obj;
-    }, {});
+    }, {} as Positions);
 
     // When updating the layout, we should try and fit to the currently visible nodes
     // This usually just occurs when adding or removing placeholder nodes
@@ -93,7 +93,7 @@ const calculateLayout = async (
           if (!doFit && !isPointInRect(finalPositions[id], rect)) {
             doFit = true;
           }
-        } else if (node.type === 'placeholder') {
+        } else if (node?.type === 'placeholder') {
           // If the placeholder is NOT visible within the bounds,
           // include it in the set of visible nodes and force a fit
           doFit = true;

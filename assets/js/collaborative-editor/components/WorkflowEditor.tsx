@@ -126,7 +126,7 @@ export function WorkflowEditor({
         openRunPanel({ triggerId: currentNode.node.id });
       } else {
         const firstTrigger = workflow.triggers[0];
-        if (firstTrigger.id) {
+        if (firstTrigger?.id) {
           openRunPanel({ triggerId: firstTrigger.id });
         }
       }

@@ -165,7 +165,7 @@ function pushUndo(action: ReplayAction) {
     const patch = action.patches[0];
     if (
       firstPatch &&
-      firstPatch.path.join('.') === patch.path.join('.') &&
+      firstPatch.path.join('.') === patch?.path.join('.') &&
       patch.path.length >= 3
     ) {
       lastAction.patches = [...lastAction.patches, ...action.patches];

@@ -1,5 +1,4 @@
 import { test, expect } from '@playwright/test';
-
 import { authenticateViaUI } from '../../utils/auth';
 
 test.describe('Collaborative Editor - Node Addition', () => {

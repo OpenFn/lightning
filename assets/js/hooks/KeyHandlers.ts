@@ -140,7 +140,7 @@ function createKeyCombinationHook(
         const target = e.target as HTMLElement;
         const focusedScope =
           target
-            .closest('[data-keybinding-scope]')
+            ?.closest('[data-keybinding-scope]')
             ?.getAttribute('data-keybinding-scope') || null;
 
         const keyMatchingHandlers = Array.from(keyHandlers).filter(h =>
@@ -167,7 +167,7 @@ function createKeyCombinationHook(
         // Take the last handler if there are more than one with the same priority.
         const lastHandler = topPriorityHandlers[topPriorityHandlers.length - 1];
 
-        if (lastHandler.hook === this) {
+        if (lastHandler?.hook === this) {
           lastHandler.action(e, this.el);
         }
       };

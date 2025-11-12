@@ -819,7 +819,7 @@ export const DownloadText = {
       }
     });
   },
-} as PhoenixHook;
+} as PhoenixHook<{}>;
 
 // Sets the checkbox to indeterminate state if the element has the
 // `indeterminate` class

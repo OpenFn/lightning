@@ -378,10 +378,10 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
       setModel({ nodes: newNodes, edges: model.edges });
 
       // we just need to recalculate this to update the cache.
-      const newPositions = newNodes.reduce<Positions>((obj, next) => {
+      const newPositions = newNodes.reduce((obj, next) => {
         obj[next.id] = next.position;
         return obj;
-      }, {});
+      }, {} as Positions);
       chartCache.current.positions = newPositions;
     },
     [setModel, model]
@@ -449,7 +449,7 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
           };
           const rect = getVisibleRect(flow.getViewport(), viewBounds, 1);
           const visible = model.nodes.filter(
-            n => n.position && isPointInRect(n.position, rect)
+            n => n?.position && isPointInRect(n.position, rect)
           );
           const vb = safeGetNodesBounds(visible);
           if (vb) cachedTargetBounds = vb;

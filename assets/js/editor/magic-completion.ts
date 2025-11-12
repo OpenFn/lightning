@@ -76,7 +76,7 @@ const createCompletionProvider = (
   const lookupPropertySuggestions = (jsonPath: string) => {
     const suggestions = query(jsonPath).map(
       (prop: ModelNode): languages.CompletionItem => {
-        const label = prop.label || prop.name;
+        const label = `${prop.label || prop.name}`;
         return {
           // https://microsoft.github.io/monaco-editor/api/interfaces/monaco.languages.CompletionItem.html#kind
           label,

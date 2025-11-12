@@ -27,7 +27,7 @@ const CHIP_STYLES: Record<string, string> = {
 };
 
 const displayTextFromState = (state: string): string =>
-  `${state[0].toUpperCase()}${state.substring(1)}`;
+  `${state[0]?.toUpperCase()}${state.substring(1)}`;
 
 const StatePill: React.FC<{ state: string; mini?: boolean }> = ({
   state,

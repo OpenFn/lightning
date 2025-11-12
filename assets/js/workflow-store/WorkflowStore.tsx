@@ -97,7 +97,7 @@ export const WorkflowStore: WithActionProps = props => {
       'patches-applied',
       (response: Partial<ReplayAction>) => {
         console.debug('patches-applied', response);
-        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+
         if (response && response.patches && response.patches.length)
           applyPatches({
             patches: response.patches || [],
@@ -112,7 +112,7 @@ export const WorkflowStore: WithActionProps = props => {
       'state-applied',
       (response: { state: WorkflowProps }) => {
         console.log('state-applied', response.state);
-        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+
         if (response.state)
           setState({
             ...response.state,

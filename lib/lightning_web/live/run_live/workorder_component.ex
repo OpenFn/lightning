@@ -223,7 +223,7 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
         <.td>
           <Common.datetime datetime={@work_order.last_activity} />
         </.td>
-        <.td class="text-right">
+        <.td class="text-right w-28">
           <LightningWeb.RunLive.Components.elapsed_indicator
             :if={@last_run}
             item={@last_run}
@@ -231,12 +231,12 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
           />
           <span :if={is_nil(@last_run)}>Not started</span>
         </.td>
-        <.td class="text-right">
+        <.td class="text-right w-32">
           <div class="flex items-center justify-end gap-2">
             <.state_pill state={@work_order.state} />
           </div>
         </.td>
-        <.td class="text-right">
+        <.td class="text-right w-20">
           <%= if @work_order.runs !== [] do %>
             <div class="flex items-center justify-end gap-2 pr-2 -mr-3">
               <%= if wo_dataclip_available?(@work_order) and @can_run_workflow do %>
@@ -362,10 +362,12 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
                           <% end %>
                         </div>
                       </div>
-                      <div class="flex-shrink-0 py-2 px-4 text-right">
-                        <div class="flex items-center justify-end gap-4">
-                          <.elapsed_indicator item={run} context="details" />
-                          <span class="font-mono">{run.state}</span>
+                      <div class="flex-shrink-0 py-2 px-4 text-right min-w-[240px]">
+                        <div class="flex items-center justify-end gap-3">
+                          <div class="w-16 text-right">
+                            <.elapsed_indicator item={run} context="details" />
+                          </div>
+                          <span class="font-mono w-24 text-right">{run.state}</span>
                         </div>
                       </div>
                     </div>

@@ -1,5 +1,4 @@
 import { test as setup } from '@playwright/test';
-
 import { reset, isAvailable } from './e2e-helper';
 import { resetTestDataCache } from './test-data';
 

@@ -5,31 +5,31 @@
  * data from the session context store.
  */
 
-import { act, renderHook, waitFor } from "@testing-library/react";
-import type React from "react";
-import { beforeEach, describe, expect, test } from "vitest";
+import { act, renderHook, waitFor } from '@testing-library/react';
+import type React from 'react';
+import { beforeEach, describe, expect, test } from 'vitest';
 
-import type { StoreContextValue } from "../../../js/collaborative-editor/contexts/StoreProvider";
-import { StoreContext } from "../../../js/collaborative-editor/contexts/StoreProvider";
+import type { StoreContextValue } from '../../../js/collaborative-editor/contexts/StoreProvider';
+import { StoreContext } from '../../../js/collaborative-editor/contexts/StoreProvider';
 import {
   useAppConfig,
   useProject,
   useSessionContextError,
   useSessionContextLoading,
   useUser,
-} from "../../../js/collaborative-editor/hooks/useSessionContext";
-import type { SessionContextStoreInstance } from "../../../js/collaborative-editor/stores/createSessionContextStore";
-import { createSessionContextStore } from "../../../js/collaborative-editor/stores/createSessionContextStore";
+} from '../../../js/collaborative-editor/hooks/useSessionContext';
+import type { SessionContextStoreInstance } from '../../../js/collaborative-editor/stores/createSessionContextStore';
+import { createSessionContextStore } from '../../../js/collaborative-editor/stores/createSessionContextStore';
 import type {
   AppConfig,
   ProjectContext,
   UserContext,
-} from "../../../js/collaborative-editor/types/sessionContext";
-import { mockPermissions } from "../__helpers__/sessionContextFactory";
+} from '../../../js/collaborative-editor/types/sessionContext';
+import { mockPermissions } from '../__helpers__/sessionContextFactory';
 import {
   createMockPhoenixChannel,
   createMockPhoenixChannelProvider,
-} from "../mocks/phoenixChannel";
+} from '../mocks/phoenixChannel';
 
 function createWrapper(
   sessionContextStore: SessionContextStoreInstance
@@ -51,10 +51,10 @@ function createWrapper(
 
 function createMockUser(): UserContext {
   return {
-    id: "00000000-0000-4000-8000-000000000001",
-    first_name: "Test",
-    last_name: "User",
-    email: "test@example.com",
+    id: '00000000-0000-4000-8000-000000000001',
+    first_name: 'Test',
+    last_name: 'User',
+    email: 'test@example.com',
     email_confirmed: true,
     inserted_at: new Date().toISOString(),
   };
@@ -62,8 +62,8 @@ function createMockUser(): UserContext {
 
 function createMockProject(): ProjectContext {
   return {
-    id: "00000000-0000-4000-8000-000000000002",
-    name: "Test Project",
+    id: '00000000-0000-4000-8000-000000000002',
+    name: 'Test Project',
   };
 }
 
@@ -80,10 +80,10 @@ function setupHookTest(store: SessionContextStoreInstance) {
   return { mockChannel, mockProvider };
 }
 
-describe("useSessionContext Hooks - Context Validation", () => {
-  test("all hooks throw error when used outside StoreProvider", () => {
+describe('useSessionContext Hooks - Context Validation', () => {
+  test('all hooks throw error when used outside StoreProvider', () => {
     const expectedError =
-      "useSessionContextStore must be used within a StoreProvider";
+      'useSessionContextStore must be used within a StoreProvider';
 
     expect(() => renderHook(() => useUser())).toThrow(expectedError);
     expect(() => renderHook(() => useProject())).toThrow(expectedError);
@@ -97,13 +97,13 @@ describe("useSessionContext Hooks - Context Validation", () => {
   });
 });
 
-describe("useUser()", () => {
+describe('useUser()', () => {
   let store: SessionContextStoreInstance;
   beforeEach(() => {
     store = createSessionContextStore();
   });
 
-  test("manages user data lifecycle", async () => {
+  test('manages user data lifecycle', async () => {
     const { mockChannel } = setupHookTest(store);
     const { result } = renderHook(() => useUser(), {
       wrapper: createWrapper(store),
@@ -113,43 +113,45 @@ describe("useUser()", () => {
 
     const mockUser = createMockUser();
     act(() => {
-      (mockChannel as any)._test.emit("session_context", {
+      (mockChannel as any)._test.emit('session_context', {
         user: mockUser,
         project: null,
         config: createMockAppConfig(),
         permissions: mockPermissions,
         latest_snapshot_lock_version: 1,
         project_repo_connection: null,
+        webhook_auth_methods: [],
       });
     });
 
     await waitFor(() => expect(result.current).toEqual(mockUser));
 
-    const updatedUser = { ...mockUser, first_name: "Updated" };
+    const updatedUser = { ...mockUser, first_name: 'Updated' };
     act(() => {
-      (mockChannel as any)._test.emit("session_context_updated", {
+      (mockChannel as any)._test.emit('session_context_updated', {
         user: updatedUser,
         project: null,
         config: createMockAppConfig(),
         permissions: mockPermissions,
         latest_snapshot_lock_version: 1,
         project_repo_connection: null,
+        webhook_auth_methods: [],
       });
     });
 
     await waitFor(() => {
-      expect(result.current?.first_name).toBe("Updated");
+      expect(result.current?.first_name).toBe('Updated');
     });
   });
 });
 
-describe("useProject()", () => {
+describe('useProject()', () => {
   let store: SessionContextStoreInstance;
   beforeEach(() => {
     store = createSessionContextStore();
   });
 
-  test("manages project data lifecycle", async () => {
+  test('manages project data lifecycle', async () => {
     const { mockChannel } = setupHookTest(store);
     const { result } = renderHook(() => useProject(), {
       wrapper: createWrapper(store),
@@ -159,43 +161,45 @@ describe("useProject()", () => {
 
     const mockProject = createMockProject();
     act(() => {
-      (mockChannel as any)._test.emit("session_context", {
+      (mockChannel as any)._test.emit('session_context', {
         user: null,
         project: mockProject,
         config: createMockAppConfig(),
         permissions: mockPermissions,
         latest_snapshot_lock_version: 1,
         project_repo_connection: null,
+        webhook_auth_methods: [],
       });
     });
 
     await waitFor(() => expect(result.current).toEqual(mockProject));
 
-    const updatedProject = { ...mockProject, name: "Updated Project" };
+    const updatedProject = { ...mockProject, name: 'Updated Project' };
     act(() => {
-      (mockChannel as any)._test.emit("session_context_updated", {
+      (mockChannel as any)._test.emit('session_context_updated', {
         user: null,
         project: updatedProject,
         config: createMockAppConfig(),
         permissions: mockPermissions,
         latest_snapshot_lock_version: 1,
         project_repo_connection: null,
+        webhook_auth_methods: [],
       });
     });
 
     await waitFor(() => {
-      expect(result.current?.name).toBe("Updated Project");
+      expect(result.current?.name).toBe('Updated Project');
     });
   });
 });
 
-describe("useAppConfig()", () => {
+describe('useAppConfig()', () => {
   let store: SessionContextStoreInstance;
   beforeEach(() => {
     store = createSessionContextStore();
   });
 
-  test("manages app config data lifecycle", async () => {
+  test('manages app config data lifecycle', async () => {
     const { mockChannel } = setupHookTest(store);
     const { result } = renderHook(() => useAppConfig(), {
       wrapper: createWrapper(store),
@@ -205,13 +209,14 @@ describe("useAppConfig()", () => {
 
     const mockConfig = createMockAppConfig();
     act(() => {
-      (mockChannel as any)._test.emit("session_context", {
+      (mockChannel as any)._test.emit('session_context', {
         user: null,
         project: null,
         config: mockConfig,
         permissions: mockPermissions,
         latest_snapshot_lock_version: 1,
         project_repo_connection: null,
+        webhook_auth_methods: [],
       });
     });
 
@@ -219,13 +224,14 @@ describe("useAppConfig()", () => {
 
     const updatedConfig = { ...mockConfig, require_email_verification: true };
     act(() => {
-      (mockChannel as any)._test.emit("session_context_updated", {
+      (mockChannel as any)._test.emit('session_context_updated', {
         user: null,
         project: null,
         config: updatedConfig,
         permissions: mockPermissions,
         latest_snapshot_lock_version: 1,
         project_repo_connection: null,
+        webhook_auth_methods: [],
       });
     });
 
@@ -235,13 +241,13 @@ describe("useAppConfig()", () => {
   });
 });
 
-describe("useSessionContextLoading()", () => {
+describe('useSessionContextLoading()', () => {
   let store: SessionContextStoreInstance;
   beforeEach(() => {
     store = createSessionContextStore();
   });
 
-  test("manages loading state lifecycle", () => {
+  test('manages loading state lifecycle', () => {
     const { result } = renderHook(() => useSessionContextLoading(), {
       wrapper: createWrapper(store),
     });
@@ -254,34 +260,34 @@ describe("useSessionContextLoading()", () => {
   });
 });
 
-describe("useSessionContextError()", () => {
+describe('useSessionContextError()', () => {
   let store: SessionContextStoreInstance;
   beforeEach(() => {
     store = createSessionContextStore();
   });
 
-  test("manages error state lifecycle", () => {
+  test('manages error state lifecycle', () => {
     const { result } = renderHook(() => useSessionContextError(), {
       wrapper: createWrapper(store),
     });
 
     expect(result.current).toBe(null);
-    act(() => store.setError("Test error"));
-    expect(result.current).toBe("Test error");
-    act(() => store.setError("Another error"));
-    expect(result.current).toBe("Another error");
+    act(() => store.setError('Test error'));
+    expect(result.current).toBe('Test error');
+    act(() => store.setError('Another error'));
+    expect(result.current).toBe('Another error');
     act(() => store.clearError());
     expect(result.current).toBe(null);
   });
 });
 
-describe("Hook Integration", () => {
+describe('Hook Integration', () => {
   let store: SessionContextStoreInstance;
   beforeEach(() => {
     store = createSessionContextStore();
   });
 
-  test("session_context event updates all data hooks simultaneously", async () => {
+  test('session_context event updates all data hooks simultaneously', async () => {
     const { mockChannel } = setupHookTest(store);
 
     const { result: userResult } = renderHook(() => useUser(), {
@@ -303,13 +309,14 @@ describe("Hook Integration", () => {
     const mockConfig = createMockAppConfig();
 
     act(() => {
-      (mockChannel as any)._test.emit("session_context", {
+      (mockChannel as any)._test.emit('session_context', {
         user: mockUser,
         project: mockProject,
         config: mockConfig,
         permissions: mockPermissions,
         latest_snapshot_lock_version: 1,
         project_repo_connection: null,
+        webhook_auth_methods: [],
       });
     });
 
@@ -320,7 +327,7 @@ describe("Hook Integration", () => {
     });
   });
 
-  test("error state clears loading state", () => {
+  test('error state clears loading state', () => {
     const { result: loadingResult } = renderHook(
       () => useSessionContextLoading(),
       { wrapper: createWrapper(store) }
@@ -333,8 +340,8 @@ describe("Hook Integration", () => {
     expect(loadingResult.current).toBe(true);
     expect(errorResult.current).toBe(null);
 
-    act(() => store.setError("Something went wrong"));
+    act(() => store.setError('Something went wrong'));
     expect(loadingResult.current).toBe(false);
-    expect(errorResult.current).toBe("Something went wrong");
+    expect(errorResult.current).toBe('Something went wrong');
   });
 });

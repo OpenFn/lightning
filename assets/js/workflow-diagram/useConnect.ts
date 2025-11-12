@@ -158,7 +158,7 @@ export default (
     (event: React.MouseEvent) => {
       if (
         event.target instanceof HTMLElement &&
-        event.target.classList.contains('react-flow__pane') &&
+        event.target.classList?.contains('react-flow__pane') &&
         !dragActive
       ) {
         bgClick();

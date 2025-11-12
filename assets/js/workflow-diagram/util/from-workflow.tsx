@@ -61,26 +61,29 @@ const fromWorkflow = (
 
   const isRun = !!runSteps.start_from;
 
-  const runStepsObj = runSteps.steps.reduce<Record<string, RunStep>>((a, b) => {
-    const exists = a[b.job_id];
-    // to make sure that a pre-existing error state preempts the success.
-    // this is for nodes that run multiple times
-    // TODO: we might want to show a state for the multiple runs of the step later on.
-    let step_value: RunStep;
-    if (b.exit_reason === 'success' && exists.exit_reason === 'fail')
-      step_value = exists;
-    else step_value = b;
-    a[b.job_id] = { ...step_value };
-    return a;
-  }, {});
+  const runStepsObj = runSteps.steps.reduce(
+    (a, b) => {
+      const exists = a[b.job_id];
+      // to make sure that a pre-existing error state preempts the success.
+      // this is for nodes that run multiple times
+      // TODO: we might want to show a state for the multiple runs of the step later on.
+      let step_value: RunStep;
+      if (b.exit_reason === 'success' && exists?.exit_reason === 'fail')
+        step_value = exists;
+      else step_value = b;
+      a[b.job_id] = { ...step_value };
+      return a;
+    },
+    {} as Record<string, RunStep>
+  );
 
   // Count duplicate steps for each job_id
-  const duplicateCounts = runSteps.steps.reduce<Record<string, number>>(
+  const duplicateCounts = runSteps.steps.reduce(
     (counts, step) => {
       counts[step.job_id] = (counts[step.job_id] || 0) + 1;
       return counts;
     },
-    {}
+    {} as Record<string, number>
   );
 
   const process = (
@@ -174,7 +177,7 @@ const fromWorkflow = (
         // the source trigger is disabled. This code does that.
         const source = nodes.find(x => x.id == model.source);
         if (source != null && source.type == 'trigger') {
-          model.data.enabled = source.data.enabled;
+          model.data.enabled = source?.data.enabled;
         }
 
         styleEdge(model);

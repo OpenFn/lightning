@@ -7,25 +7,25 @@
  * Preferences are persisted to localStorage via lib0/storage.
  */
 
-import { produce } from "immer";
-import * as storage from "lib0/storage";
+import { produce } from 'immer';
+import * as storage from 'lib0/storage';
 
-import _logger from "#/utils/logger";
+import _logger from '#/utils/logger';
 
 import type {
   EditorPreferencesState,
   EditorPreferencesStore,
-} from "../types/editorPreferences";
+} from '../types/editorPreferences';
 
-import { createWithSelector } from "./common";
-import { wrapStoreWithDevTools } from "./devtools";
+import { createWithSelector } from './common';
+import { wrapStoreWithDevTools } from './devtools';
 
-const logger = _logger.ns("EditorPreferencesStore").seal();
+const logger = _logger.ns('EditorPreferencesStore').seal();
 
 /**
  * Storage key prefix for all editor preferences
  */
-const STORAGE_PREFIX = "lightning.editor";
+const STORAGE_PREFIX = 'lightning.editor';
 
 /**
  * Default values for all preferences
@@ -50,8 +50,8 @@ function loadPreference<K extends keyof EditorPreferencesState>(
     }
 
     // Handle boolean values (stored as strings)
-    if (typeof defaultValue === "boolean") {
-      return (stored === "true") as EditorPreferencesState[K];
+    if (typeof defaultValue === 'boolean') {
+      return (stored === 'true') as EditorPreferencesState[K];
     }
 
     // Add more type handlers here as needed
@@ -85,7 +85,7 @@ export const createEditorPreferencesStore = (): EditorPreferencesStore => {
   let state: EditorPreferencesState = produce(
     {
       historyPanelCollapsed: loadPreference(
-        "historyPanelCollapsed",
+        'historyPanelCollapsed',
         DEFAULT_STATE.historyPanelCollapsed
       ),
     } as EditorPreferencesState,
@@ -97,7 +97,7 @@ export const createEditorPreferencesStore = (): EditorPreferencesStore => {
 
   // Initialize Redux DevTools integration
   const devtools = wrapStoreWithDevTools({
-    name: "EditorPreferencesStore",
+    name: 'EditorPreferencesStore',
     excludeKeys: [], // All state is serializable
     maxAge: 50,
   });
@@ -106,7 +106,7 @@ export const createEditorPreferencesStore = (): EditorPreferencesStore => {
   devtools.connect();
 
   // Create notify function
-  const notify = (actionName: string = "stateChange") => {
+  const notify = (actionName: string = 'stateChange') => {
     devtools.notifyWithAction(actionName, () => state);
     listeners.forEach(listener => {
       listener();
@@ -129,8 +129,8 @@ export const createEditorPreferencesStore = (): EditorPreferencesStore => {
     state = produce(state, draft => {
       draft.historyPanelCollapsed = collapsed;
     });
-    savePreference("historyPanelCollapsed", collapsed);
-    notify("setHistoryPanelCollapsed");
+    savePreference('historyPanelCollapsed', collapsed);
+    notify('setHistoryPanelCollapsed');
   };
 
   const resetToDefaults = () => {
@@ -141,7 +141,7 @@ export const createEditorPreferencesStore = (): EditorPreferencesStore => {
     Object.entries(DEFAULT_STATE).forEach(([key, value]) => {
       savePreference(key as keyof EditorPreferencesState, value);
     });
-    notify("resetToDefaults");
+    notify('resetToDefaults');
   };
 
   return {

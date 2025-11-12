@@ -1,5 +1,4 @@
 import { defineConfig, devices } from '@playwright/test';
-
 import { binPath } from './test/e2e/e2e-helper';
 
 const testDir = new URL('./test/e2e', import.meta.url).pathname;

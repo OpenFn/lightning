@@ -110,7 +110,7 @@ export const styleItem = (item: Flow.Edge | Flow.Node) => {
 export const styleNode = (node: Flow.Node) => {
   const { data } = node;
 
-  if (data.enabled == false) {
+  if (data?.enabled == false) {
     node.style = {
       opacity: 0.5,
     };

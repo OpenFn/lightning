@@ -85,9 +85,9 @@ export default {
     // See your `CoreComponents.icon/1` for more information.
     //
     plugin(function ({ matchComponents, theme }) {
-      const iconsDir = path.join(__dirname, './vendor/heroicons/optimized');
-      const values = {};
-      const icons = [
+      let iconsDir = path.join(__dirname, './vendor/heroicons/optimized');
+      let values = {};
+      let icons = [
         ['', '/24/outline'],
         ['-solid', '/24/solid'],
         ['-mini', '/20/solid'],
@@ -95,14 +95,14 @@ export default {
       ];
       icons.forEach(([suffix, dir]) => {
         fs.readdirSync(path.join(iconsDir, dir)).forEach(file => {
-          const name = path.basename(file, '.svg') + suffix;
+          let name = path.basename(file, '.svg') + suffix;
           values[name] = { name, fullPath: path.join(iconsDir, dir, file) };
         });
       });
       matchComponents(
         {
           hero: ({ name, fullPath }) => {
-            const content = fs
+            let content = fs
               .readFileSync(fullPath)
               .toString()
               .replace(/\r?\n|\r/g, '');

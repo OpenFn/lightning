@@ -333,7 +333,7 @@ export default function Editor({
 
     return () => {
       overflowNode.parentNode?.removeChild(overflowNode);
-      if (listeners.current.insertSnippet) {
+      if (listeners.current?.insertSnippet) {
         document.removeEventListener(
           'insert-snippet',
           listeners.current.insertSnippet

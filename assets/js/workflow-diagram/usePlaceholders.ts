@@ -95,7 +95,7 @@ export default (
   );
 
   const commit = useCallback(
-    (evt: CustomEvent) => {
+    (evt: CustomEvent<any>) => {
       const { id, name } = evt.detail;
 
       // reset the chart
@@ -111,7 +111,7 @@ export default (
     [placeholders]
   );
 
-  const cancel = useCallback((_evt?: CustomEvent) => {
+  const cancel = useCallback((_evt?: CustomEvent<any>) => {
     setPlaceholders({ nodes: [], edges: [] });
   }, []);
 

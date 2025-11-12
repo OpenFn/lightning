@@ -33,7 +33,7 @@ type LabelProps = React.PropsWithChildren<{
 
 function errorsMessage(errors: ErrorObject): string {
   const messages = Object.entries(errors).map(([key, errorArray]) => {
-    return errorArray.join(', ');
+    return `${errorArray.join(', ')}`;
   });
 
   return messages.join(', ');
@@ -174,7 +174,7 @@ const Node = ({
           {runData && !isTriggerNode ? (
             <div className="absolute -left-2 -top-2 pointer-events-auto z-10">
               {renderIcon(runData.exit_reason ?? 'pending', {
-                tooltip: runData.error_type ?? 'Step completed successfully',
+                tooltip: runData?.error_type ?? 'Step completed successfully',
               })}
             </div>
           ) : null}

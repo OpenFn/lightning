@@ -15,7 +15,6 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, test, vi } from 'vitest';
-
 import { LogLevelFilter } from '../../../../js/collaborative-editor/components/run-viewer/LogLevelFilter';
 
 describe('LogLevelFilter', () => {

@@ -46,7 +46,7 @@ export function formatChannelErrorMessage(channelError: ChannelError): string {
   }
 
   const firstField = Object.keys(channelError.errors)[0];
-  const firstError = channelError.errors[firstField][0];
+  const firstError = channelError.errors[firstField]?.[0];
 
   if (firstField && firstError) {
     const formattedField = toTitleCase(firstField);

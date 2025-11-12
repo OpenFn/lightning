@@ -4,6 +4,7 @@ defmodule LightningWeb.WorkflowChannelTest do
   import Lightning.CollaborationHelpers
   import Lightning.Factories
   import Mox
+  import ExUnit.CaptureLog
 
   setup :verify_on_exit!
 
@@ -50,6 +51,22 @@ defmodule LightningWeb.WorkflowChannelTest do
                |> subscribe_and_join(
                  LightningWeb.WorkflowChannel,
                  "workflow:collaborate:#{workflow.id}",
+                 %{"project_id" => project.id, "action" => "edit"}
+               )
+    end
+
+    test "rejects join with non-existent workflow_id", %{
+      project: project,
+      user: user
+    } do
+      non_existent_workflow_id = Ecto.UUID.generate()
+
+      assert {:error, %{reason: "workflow not found"}} =
+               LightningWeb.UserSocket
+               |> socket("user_#{user.id}", %{current_user: user})
+               |> subscribe_and_join(
+                 LightningWeb.WorkflowChannel,
+                 "workflow:collaborate:#{non_existent_workflow_id}",
                  %{"project_id" => project.id, "action" => "edit"}
                )
     end
@@ -1706,6 +1723,534 @@ defmodule LightningWeb.WorkflowChannelTest do
 
       # Should not push any message
       refute_push "history_updated", _payload
+    end
+  end
+
+  describe "webhook authentication methods" do
+    test "request_trigger_auth_methods returns auth methods for a trigger", %{
+      socket: socket,
+      workflow: workflow,
+      project: project
+    } do
+      # Create a trigger with webhook auth methods
+      trigger = insert(:trigger, workflow: workflow, type: :webhook)
+
+      auth_method1 =
+        insert(:webhook_auth_method,
+          project: project,
+          name: "API Key Auth",
+          auth_type: :api
+        )
+
+      auth_method2 =
+        insert(:webhook_auth_method,
+          project: project,
+          name: "Basic Auth",
+          auth_type: :basic
+        )
+
+      # Associate auth methods with trigger
+      Lightning.WebhookAuthMethods.update_trigger_auth_methods(
+        trigger,
+        [auth_method1, auth_method2],
+        actor: socket.assigns.current_user
+      )
+
+      ref =
+        push(socket, "request_trigger_auth_methods", %{
+          "trigger_id" => trigger.id
+        })
+
+      assert_reply ref, :ok, %{
+        trigger_id: returned_trigger_id,
+        webhook_auth_methods: methods
+      }
+
+      assert returned_trigger_id == trigger.id
+      assert length(methods) == 2
+
+      assert Enum.any?(methods, fn m ->
+               m.id == auth_method1.id && m.name == "API Key Auth" &&
+                 m.auth_type == :api
+             end)
+
+      assert Enum.any?(methods, fn m ->
+               m.id == auth_method2.id && m.name == "Basic Auth" &&
+                 m.auth_type == :basic
+             end)
+    end
+
+    test "request_trigger_auth_methods excludes deleted auth methods", %{
+      socket: socket,
+      workflow: workflow,
+      project: project
+    } do
+      trigger = insert(:trigger, workflow: workflow, type: :webhook)
+
+      active_method =
+        insert(:webhook_auth_method,
+          project: project,
+          name: "Active Auth",
+          auth_type: :api
+        )
+
+      deleted_method =
+        insert(:webhook_auth_method,
+          project: project,
+          name: "Deleted Auth",
+          auth_type: :basic,
+          scheduled_deletion: DateTime.utc_now()
+        )
+
+      Lightning.WebhookAuthMethods.update_trigger_auth_methods(
+        trigger,
+        [active_method, deleted_method],
+        actor: socket.assigns.current_user
+      )
+
+      ref =
+        push(socket, "request_trigger_auth_methods", %{
+          "trigger_id" => trigger.id
+        })
+
+      assert_reply ref, :ok, %{webhook_auth_methods: methods}
+
+      # Should only include active method
+      assert length(methods) == 1
+      assert hd(methods).id == active_method.id
+    end
+
+    test "request_trigger_auth_methods returns empty list for trigger without auth",
+         %{
+           socket: socket,
+           workflow: workflow
+         } do
+      trigger = insert(:trigger, workflow: workflow, type: :webhook)
+
+      ref =
+        push(socket, "request_trigger_auth_methods", %{
+          "trigger_id" => trigger.id
+        })
+
+      assert_reply ref, :ok, %{
+        trigger_id: returned_trigger_id,
+        webhook_auth_methods: methods
+      }
+
+      assert returned_trigger_id == trigger.id
+      assert methods == []
+    end
+
+    test "request_trigger_auth_methods logs debug message", %{
+      socket: socket,
+      workflow: workflow
+    } do
+      trigger = insert(:trigger, workflow: workflow, type: :webhook)
+
+      original_level = Logger.level()
+      Logger.configure(level: :debug)
+
+      log =
+        capture_log(fn ->
+          ref =
+            push(socket, "request_trigger_auth_methods", %{
+              "trigger_id" => trigger.id
+            })
+
+          assert_reply ref, :ok, %{}
+        end)
+
+      Logger.configure(level: original_level)
+
+      assert log =~ "WorkflowChannel: request_trigger_auth_methods"
+      assert log =~ trigger.id
+    end
+
+    test "update_trigger_auth_methods associates auth methods with trigger", %{
+      socket: socket,
+      workflow: workflow,
+      project: project
+    } do
+      trigger = insert(:trigger, workflow: workflow, type: :webhook)
+
+      auth_method1 =
+        insert(:webhook_auth_method,
+          project: project,
+          name: "Method 1",
+          auth_type: :api
+        )
+
+      auth_method2 =
+        insert(:webhook_auth_method,
+          project: project,
+          name: "Method 2",
+          auth_type: :basic
+        )
+
+      ref =
+        push(socket, "update_trigger_auth_methods", %{
+          "trigger_id" => trigger.id,
+          "auth_method_ids" => [auth_method1.id, auth_method2.id]
+        })
+
+      assert_reply ref, :ok, %{success: true}
+
+      # Verify broadcast was sent to all collaborators
+      assert_broadcast "trigger_auth_methods_updated", %{
+        trigger_id: broadcasted_trigger_id,
+        webhook_auth_methods: broadcasted_methods
+      }
+
+      assert broadcasted_trigger_id == trigger.id
+      assert length(broadcasted_methods) == 2
+    end
+
+    test "update_trigger_auth_methods logs debug message", %{
+      socket: socket,
+      workflow: workflow,
+      project: project
+    } do
+      trigger = insert(:trigger, workflow: workflow, type: :webhook)
+
+      auth_method =
+        insert(:webhook_auth_method,
+          project: project,
+          name: "Test Method",
+          auth_type: :api
+        )
+
+      original_level = Logger.level()
+      Logger.configure(level: :debug)
+
+      log =
+        capture_log(fn ->
+          ref =
+            push(socket, "update_trigger_auth_methods", %{
+              "trigger_id" => trigger.id,
+              "auth_method_ids" => [auth_method.id]
+            })
+
+          assert_reply ref, :ok, %{success: true}
+        end)
+
+      Logger.configure(level: original_level)
+
+      assert log =~ "WorkflowChannel: update_trigger_auth_methods"
+      assert log =~ trigger.id
+      assert log =~ auth_method.id
+    end
+
+    test "update_trigger_auth_methods can clear all auth methods", %{
+      socket: socket,
+      workflow: workflow,
+      project: project
+    } do
+      trigger = insert(:trigger, workflow: workflow, type: :webhook)
+
+      auth_method =
+        insert(:webhook_auth_method,
+          project: project,
+          name: "Method to Remove",
+          auth_type: :api
+        )
+
+      # First associate
+      Lightning.WebhookAuthMethods.update_trigger_auth_methods(
+        trigger,
+        [auth_method],
+        actor: socket.assigns.current_user
+      )
+
+      # Then clear
+      ref =
+        push(socket, "update_trigger_auth_methods", %{
+          "trigger_id" => trigger.id,
+          "auth_method_ids" => []
+        })
+
+      assert_reply ref, :ok, %{success: true}
+
+      assert_broadcast "trigger_auth_methods_updated", %{
+        trigger_id: _,
+        webhook_auth_methods: methods
+      }
+
+      assert methods == []
+    end
+
+    test "update_trigger_auth_methods rejects unauthorized user", %{
+      workflow: workflow,
+      project: project
+    } do
+      # Create a user without edit permissions
+      viewer = insert(:user)
+      insert(:project_user, project: project, user: viewer, role: :viewer)
+
+      {:ok, _, viewer_socket} =
+        LightningWeb.UserSocket
+        |> socket("user_#{viewer.id}", %{current_user: viewer})
+        |> subscribe_and_join(
+          LightningWeb.WorkflowChannel,
+          "workflow:collaborate:#{workflow.id}",
+          %{"project_id" => project.id, "action" => "edit"}
+        )
+
+      trigger = insert(:trigger, workflow: workflow, type: :webhook)
+
+      auth_method =
+        insert(:webhook_auth_method,
+          project: project,
+          name: "Test Method",
+          auth_type: :api
+        )
+
+      ref =
+        push(viewer_socket, "update_trigger_auth_methods", %{
+          "trigger_id" => trigger.id,
+          "auth_method_ids" => [auth_method.id]
+        })
+
+      assert_reply ref, :error, %{reason: reason}
+      assert reason =~ "permission"
+    end
+
+    test "update_trigger_auth_methods rejects trigger from different workflow",
+         %{
+           socket: socket,
+           project: project
+         } do
+      # Create a different workflow
+      other_workflow = insert(:workflow, project: project)
+      other_trigger = insert(:trigger, workflow: other_workflow, type: :webhook)
+
+      auth_method =
+        insert(:webhook_auth_method,
+          project: project,
+          name: "Test Method",
+          auth_type: :api
+        )
+
+      ref =
+        push(socket, "update_trigger_auth_methods", %{
+          "trigger_id" => other_trigger.id,
+          "auth_method_ids" => [auth_method.id]
+        })
+
+      assert_reply ref, :error, %{reason: reason}
+      assert reason =~ "does not belong"
+    end
+
+    test "update_trigger_auth_methods filters out non-existent auth method IDs",
+         %{
+           socket: socket,
+           workflow: workflow,
+           project: project
+         } do
+      trigger = insert(:trigger, workflow: workflow, type: :webhook)
+
+      valid_method =
+        insert(:webhook_auth_method,
+          project: project,
+          name: "Valid Method",
+          auth_type: :api
+        )
+
+      # Include a non-existent UUID
+      fake_uuid = Ecto.UUID.generate()
+
+      ref =
+        push(socket, "update_trigger_auth_methods", %{
+          "trigger_id" => trigger.id,
+          "auth_method_ids" => [valid_method.id, fake_uuid]
+        })
+
+      assert_reply ref, :ok, %{success: true}
+
+      assert_broadcast "trigger_auth_methods_updated", %{
+        webhook_auth_methods: methods
+      }
+
+      # Should only include the valid method
+      assert length(methods) == 1
+      assert hd(methods).id == valid_method.id
+    end
+
+    test "get_context includes webhook_auth_methods", %{
+      socket: socket,
+      project: project
+    } do
+      # Create webhook auth methods for the project
+      auth_method1 =
+        insert(:webhook_auth_method,
+          project: project,
+          name: "API Key Auth",
+          auth_type: :api
+        )
+
+      auth_method2 =
+        insert(:webhook_auth_method,
+          project: project,
+          name: "Basic Auth",
+          auth_type: :basic
+        )
+
+      ref = push(socket, "get_context", %{})
+
+      assert_reply ref, :ok, context
+
+      assert %{webhook_auth_methods: methods} = context
+      assert length(methods) == 2
+
+      assert Enum.any?(methods, fn m ->
+               m.id == auth_method1.id && m.name == "API Key Auth" &&
+                 m.auth_type == :api
+             end)
+
+      assert Enum.any?(methods, fn m ->
+               m.id == auth_method2.id && m.name == "Basic Auth" &&
+                 m.auth_type == :basic
+             end)
+    end
+
+    test "get_context excludes deleted webhook_auth_methods", %{
+      socket: socket,
+      project: project
+    } do
+      # Create active and deleted auth methods
+      insert(:webhook_auth_method,
+        project: project,
+        name: "Active Method",
+        auth_type: :api
+      )
+
+      insert(:webhook_auth_method,
+        project: project,
+        name: "Deleted Method",
+        auth_type: :basic,
+        scheduled_deletion: DateTime.utc_now()
+      )
+
+      ref = push(socket, "get_context", %{})
+
+      assert_reply ref, :ok, context
+
+      assert %{webhook_auth_methods: methods} = context
+      # Should only include active method
+      assert length(methods) == 1
+      assert hd(methods).name == "Active Method"
+    end
+
+    test "handle_info for webhook_auth_methods_updated pushes to channel", %{
+      socket: socket,
+      project: project
+    } do
+      auth_method =
+        insert(:webhook_auth_method,
+          project: project,
+          name: "Test Method",
+          auth_type: :api
+        )
+
+      webhook_auth_methods = [
+        %{
+          id: auth_method.id,
+          name: auth_method.name,
+          auth_type: auth_method.auth_type
+        }
+      ]
+
+      # Send the handle_info message directly
+      send(socket.channel_pid, %{
+        event: "webhook_auth_methods_updated",
+        payload: webhook_auth_methods,
+        socket: socket
+      })
+
+      # Verify the push was sent to the client
+      assert_push "webhook_auth_methods_updated", ^webhook_auth_methods
+    end
+
+    test "update_trigger_auth_methods with nil auth_method_ids returns empty list",
+         %{
+           socket: socket,
+           workflow: workflow
+         } do
+      trigger =
+        insert(:trigger,
+          type: :webhook,
+          workflow: workflow,
+          enabled: true
+        )
+
+      ref =
+        push(socket, "update_trigger_auth_methods", %{
+          "trigger_id" => trigger.id,
+          "auth_method_ids" => nil
+        })
+
+      # Should succeed even with nil auth_method_ids (fetch_auth_methods returns [])
+      assert_reply ref, :ok, %{success: true}
+
+      # Should broadcast with empty webhook_auth_methods
+      trigger_id = trigger.id
+
+      assert_broadcast "trigger_auth_methods_updated", %{
+        trigger_id: ^trigger_id,
+        webhook_auth_methods: []
+      }
+    end
+
+    test "webhook_auth_methods_updated broadcast is received by all collaborators",
+         %{
+           workflow: workflow,
+           project: project
+         } do
+      # Create two users
+      user1 = insert(:user)
+      user2 = insert(:user)
+
+      insert(:project_user, project: project, user: user1, role: :editor)
+      insert(:project_user, project: project, user: user2, role: :editor)
+
+      # Both join the channel
+      {:ok, _, socket1} =
+        LightningWeb.UserSocket
+        |> socket("user_#{user1.id}", %{current_user: user1})
+        |> subscribe_and_join(
+          LightningWeb.WorkflowChannel,
+          "workflow:collaborate:#{workflow.id}",
+          %{"project_id" => project.id, "action" => "edit"}
+        )
+
+      {:ok, _, _socket2} =
+        LightningWeb.UserSocket
+        |> socket("user_#{user2.id}", %{current_user: user2})
+        |> subscribe_and_join(
+          LightningWeb.WorkflowChannel,
+          "workflow:collaborate:#{workflow.id}",
+          %{"project_id" => project.id, "action" => "edit"}
+        )
+
+      trigger = insert(:trigger, workflow: workflow, type: :webhook)
+
+      auth_method =
+        insert(:webhook_auth_method,
+          project: project,
+          name: "Shared Method",
+          auth_type: :api
+        )
+
+      # User 1 updates auth methods
+      push(socket1, "update_trigger_auth_methods", %{
+        "trigger_id" => trigger.id,
+        "auth_method_ids" => [auth_method.id]
+      })
+
+      # Both sockets should receive the broadcast
+      assert_broadcast "trigger_auth_methods_updated", %{
+        trigger_id: _,
+        webhook_auth_methods: _
+      }
     end
   end
 end
