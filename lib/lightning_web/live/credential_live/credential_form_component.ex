@@ -1079,12 +1079,12 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
       {"Raw JSON", "raw",
        Routes.static_path(
          LightningWeb.Endpoint,
-         "/images/raw-square.png"
+         "/images/raw.png"
        ), nil},
       {"Keychain", "keychain",
        Routes.static_path(
          LightningWeb.Endpoint,
-         "/images/keychain-square.png"
+         "/images/keychain.png"
        ), nil}
     ])
     |> Enum.sort_by(&String.downcase(elem(&1, 0)), :asc)
