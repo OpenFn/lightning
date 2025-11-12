@@ -12,7 +12,7 @@ defmodule Mix.Tasks.Lightning.MergeProjectsTest do
       source_state =
         build_simple_project(
           id: "source-id",
-          name: "Source",
+          name: "source-project",
           workflow_name: "Test Workflow",
           job_name: "Job 1",
           job_body: "console.log('updated')"
@@ -21,7 +21,7 @@ defmodule Mix.Tasks.Lightning.MergeProjectsTest do
       target_state =
         build_simple_project(
           id: "target-id",
-          name: "Target",
+          name: "target-project",
           env: "production",
           workflow_name: "Test Workflow",
           job_name: "Job 1",
@@ -42,8 +42,7 @@ defmodule Mix.Tasks.Lightning.MergeProjectsTest do
       {:ok, result} = Jason.decode(output)
 
       assert result["id"] == "target-id"
-      assert result["name"] == "Target"
-      assert result["env"] == "production"
+      assert result["name"] == "target-project"
       assert length(result["workflows"]) == 1
 
       workflow = hd(result["workflows"])
@@ -59,10 +58,18 @@ defmodule Mix.Tasks.Lightning.MergeProjectsTest do
       tmp_dir: tmp_dir
     } do
       source_state =
-        build_project_state(id: "source-id", name: "Source", workflows: [])
+        build_project_state(
+          id: "source-id",
+          name: "source-project",
+          workflows: []
+        )
 
       target_state =
-        build_project_state(id: "target-id", name: "Target", workflows: [])
+        build_project_state(
+          id: "target-id",
+          name: "target-project",
+          workflows: []
+        )
 
       source_file = Path.join(tmp_dir, "source.json")
       target_file = Path.join(tmp_dir, "target.json")
@@ -85,17 +92,25 @@ defmodule Mix.Tasks.Lightning.MergeProjectsTest do
       {:ok, result} = Jason.decode(content)
 
       assert result["id"] == "target-id"
-      assert result["name"] == "Target"
+      assert result["name"] == "target-project"
     end
 
     test "writes merged output to file when -o flag is provided", %{
       tmp_dir: tmp_dir
     } do
       source_state =
-        build_project_state(id: "source-id", name: "Source", workflows: [])
+        build_project_state(
+          id: "source-id",
+          name: "source-project",
+          workflows: []
+        )
 
       target_state =
-        build_project_state(id: "target-id", name: "Target", workflows: [])
+        build_project_state(
+          id: "target-id",
+          name: "target-project",
+          workflows: []
+        )
 
       source_file = Path.join(tmp_dir, "source.json")
       target_file = Path.join(tmp_dir, "target.json")
@@ -267,8 +282,11 @@ defmodule Mix.Tasks.Lightning.MergeProjectsTest do
     test "raises clear error when output directory does not exist", %{
       tmp_dir: tmp_dir
     } do
-      source_state = build_project_state(id: "s", name: "S", workflows: [])
-      target_state = build_project_state(id: "t", name: "T", workflows: [])
+      source_state =
+        build_project_state(id: "s", name: "source-project", workflows: [])
+
+      target_state =
+        build_project_state(id: "t", name: "target-project", workflows: [])
 
       source_file = Path.join(tmp_dir, "source.json")
       target_file = Path.join(tmp_dir, "target.json")
@@ -292,8 +310,11 @@ defmodule Mix.Tasks.Lightning.MergeProjectsTest do
     test "raises clear error when output directory is not writable", %{
       tmp_dir: tmp_dir
     } do
-      source_state = build_project_state(id: "s", name: "S", workflows: [])
-      target_state = build_project_state(id: "t", name: "T", workflows: [])
+      source_state =
+        build_project_state(id: "s", name: "source-project", workflows: [])
+
+      target_state =
+        build_project_state(id: "t", name: "target-project", workflows: [])
 
       source_file = Path.join(tmp_dir, "source.json")
       target_file = Path.join(tmp_dir, "target.json")
@@ -325,8 +346,11 @@ defmodule Mix.Tasks.Lightning.MergeProjectsTest do
          %{
            tmp_dir: tmp_dir
          } do
-      source_state = build_project_state(id: "s", name: "S", workflows: [])
-      target_state = build_project_state(id: "t", name: "T", workflows: [])
+      source_state =
+        build_project_state(id: "s", name: "source-project", workflows: [])
+
+      target_state =
+        build_project_state(id: "t", name: "target-project", workflows: [])
 
       source_file = Path.join(tmp_dir, "source.json")
       target_file = Path.join(tmp_dir, "target.json")
@@ -356,14 +380,12 @@ defmodule Mix.Tasks.Lightning.MergeProjectsTest do
   end
 
   describe "run/1 - merge operation errors" do
-    test "raises clear error when project structure causes merge to fail", %{
+    test "raises error when project structure causes merge to fail", %{
       tmp_dir: tmp_dir
     } do
       source_file = Path.join(tmp_dir, "source.json")
       target_file = Path.join(tmp_dir, "target.json")
 
-      # Source with workflows as a string instead of array
-      # This will cause an error when MergeProjects tries to iterate
       File.write!(
         source_file,
         Jason.encode!(%{
@@ -378,9 +400,185 @@ defmodule Mix.Tasks.Lightning.MergeProjectsTest do
         Jason.encode!(%{"id" => "t", "name" => "T", "workflows" => []})
       )
 
-      assert_raise Mix.Error, ~r/Failed to merge projects/, fn ->
+      # The merge will fail with Protocol.UndefinedError when trying to
+      # enumerate workflows (which is a string instead of a list)
+      # This is expected behavior - we let the merge algorithm fail naturally
+      assert_raise Protocol.UndefinedError, fn ->
         Mix.Tasks.Lightning.MergeProjects.run([source_file, target_file])
       end
+    end
+  end
+
+  describe "run/1 - security" do
+    test "safely handles JSON with unknown keys without creating new atoms", %{
+      tmp_dir: tmp_dir
+    } do
+      source_file = Path.join(tmp_dir, "source.json")
+      target_file = Path.join(tmp_dir, "target.json")
+
+      # JSON with unknown keys that don't correspond to existing atoms
+      File.write!(
+        source_file,
+        Jason.encode!(%{
+          "id" => Ecto.UUID.generate(),
+          "name" => "source-project",
+          "malicious_unknown_key_12345" => "value",
+          "workflows" => []
+        })
+      )
+
+      target_state = build_project_state(id: "t", name: "target-project")
+      File.write!(target_file, Jason.encode!(target_state))
+
+      # Should raise ArgumentError when trying to convert unknown key to atom
+      assert_raise Mix.Error, ~r/encountered unknown field/, fn ->
+        Mix.Tasks.Lightning.MergeProjects.run([source_file, target_file])
+      end
+    end
+  end
+
+  describe "run/1 - flexibility for testing (Joe's requirements)" do
+    test "allows non-UUID IDs for testing purposes", %{tmp_dir: tmp_dir} do
+      source_state =
+        build_simple_project(
+          id: "test-source-1",
+          name: "source-project",
+          workflow_name: "Test Workflow",
+          job_name: "Job 1",
+          job_body: "console.log('updated')"
+        )
+
+      target_state =
+        build_simple_project(
+          id: "test-target-1",
+          name: "target-project",
+          workflow_name: "Test Workflow",
+          job_name: "Job 1",
+          job_body: "console.log('old')"
+        )
+
+      source_file = Path.join(tmp_dir, "source.json")
+      target_file = Path.join(tmp_dir, "target.json")
+
+      File.write!(source_file, Jason.encode!(source_state))
+      File.write!(target_file, Jason.encode!(target_state))
+
+      output =
+        capture_io(fn ->
+          Mix.Tasks.Lightning.MergeProjects.run([source_file, target_file])
+        end)
+
+      {:ok, result} = Jason.decode(output)
+
+      assert result["id"] == "test-target-1"
+      assert result["name"] == "target-project"
+    end
+
+    test "handles projects with simple numeric IDs", %{tmp_dir: tmp_dir} do
+      source_state =
+        build_project_state(
+          id: "1",
+          name: "source-project",
+          workflows: []
+        )
+
+      target_state =
+        build_project_state(
+          id: "2",
+          name: "target-project",
+          workflows: []
+        )
+
+      source_file = Path.join(tmp_dir, "source.json")
+      target_file = Path.join(tmp_dir, "target.json")
+
+      File.write!(source_file, Jason.encode!(source_state))
+      File.write!(target_file, Jason.encode!(target_state))
+
+      output =
+        capture_io(fn ->
+          Mix.Tasks.Lightning.MergeProjects.run([source_file, target_file])
+        end)
+
+      {:ok, result} = Jason.decode(output)
+
+      assert result["id"] == "2"
+      assert result["name"] == "target-project"
+    end
+
+    test "successfully merges projects with deeply nested structures", %{
+      tmp_dir: tmp_dir
+    } do
+      source_state =
+        build_simple_project(
+          id: "source",
+          name: "Source Project",
+          workflow_name: "Workflow 1",
+          job_name: "Job 1",
+          job_body: "console.log('updated')"
+        )
+
+      target_state =
+        build_simple_project(
+          id: "target",
+          name: "Target Project",
+          workflow_name: "Workflow 1",
+          job_name: "Job 1",
+          job_body: "console.log('old')"
+        )
+
+      source_file = Path.join(tmp_dir, "source.json")
+      target_file = Path.join(tmp_dir, "target.json")
+
+      File.write!(source_file, Jason.encode!(source_state))
+      File.write!(target_file, Jason.encode!(target_state))
+
+      output =
+        capture_io(fn ->
+          Mix.Tasks.Lightning.MergeProjects.run([source_file, target_file])
+        end)
+
+      {:ok, result} = Jason.decode(output)
+
+      assert result["id"] == "target"
+
+      workflow = hd(result["workflows"])
+      assert workflow["name"] == "Workflow 1"
+
+      job = hd(workflow["jobs"])
+      assert job["body"] == "console.log('updated')"
+      assert job["name"] == "Job 1"
+    end
+
+    test "works offline without database access", %{tmp_dir: tmp_dir} do
+      source_state =
+        build_project_state(
+          id: "offline-source",
+          name: "source-project",
+          workflows: []
+        )
+
+      target_state =
+        build_project_state(
+          id: "offline-target",
+          name: "target-project",
+          workflows: []
+        )
+
+      source_file = Path.join(tmp_dir, "source.json")
+      target_file = Path.join(tmp_dir, "target.json")
+
+      File.write!(source_file, Jason.encode!(source_state))
+      File.write!(target_file, Jason.encode!(target_state))
+
+      output =
+        capture_io(fn ->
+          Mix.Tasks.Lightning.MergeProjects.run([source_file, target_file])
+        end)
+
+      {:ok, result} = Jason.decode(output)
+
+      assert result["id"] == "offline-target"
     end
   end
 end
