@@ -132,6 +132,7 @@ import { produce } from 'immer';
 import type { Channel } from 'phoenix';
 import type { PhoenixChannelProvider } from 'y-phoenix-channel';
 import * as Y from 'yjs';
+import { z } from 'zod';
 
 import _logger from '#/utils/logger';
 
@@ -142,6 +143,7 @@ import { EdgeSchema } from '../types/edge';
 import { JobSchema } from '../types/job';
 import type { Session } from '../types/session';
 import type { Workflow } from '../types/workflow';
+import { WorkflowSchema } from '../types/workflow';
 
 import { createWithSelector } from './common';
 import { wrapStoreWithDevTools } from './devtools';
@@ -150,6 +152,50 @@ const logger = _logger.ns('WorkflowStore').seal();
 
 const JobShape = JobSchema.shape;
 const EdgeShape = EdgeSchema.shape;
+
+/**
+ * Validates workflow data and returns errors for name and concurrency
+ * fields.
+ * Returns null if workflow is not loaded, empty object if no errors
+ */
+function validateWorkflowSettings(
+  workflow: Session.Workflow | null
+): { name?: string[]; concurrency?: string[] } | null {
+  if (!workflow) return null;
+
+  try {
+    WorkflowSchema.parse({
+      id: workflow.id,
+      name: workflow.name,
+      lock_version: workflow.lock_version,
+      deleted_at: workflow.deleted_at,
+      concurrency: workflow.concurrency,
+      enable_job_logs: workflow.enable_job_logs,
+    });
+    // No validation errors
+    return {};
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      const errors: { name?: string[]; concurrency?: string[] } = {};
+
+      // Extract only name and concurrency errors
+      error.issues.forEach(err => {
+        const field = err.path[0];
+        if (field === 'name' || field === 'concurrency') {
+          if (!errors[field]) {
+            errors[field] = [];
+          }
+          errors[field]!.push(err.message);
+        }
+      });
+
+      return errors;
+    }
+    // Unknown error type - return null
+    return null;
+  }
+}
+
 // Helper to update derived state (defined first to avoid hoisting issues)
 function updateDerivedState(draft: Workflow.State) {
   // Compute enabled from triggers
@@ -195,6 +241,8 @@ function produceInitialState() {
 
       // Active trigger webhook auth methods (loaded on-demand)
       activeTriggerAuthMethods: null,
+      // Initialize validation state
+      validationErrors: null,
     } as Workflow.State,
     draft => {
       // Compute derived state on initialization
@@ -335,7 +383,11 @@ export const createWorkflowStore = () => {
     // Set up observers
     const workflowObserver = () => {
       updateState(draft => {
-        draft.workflow = workflowMap.toJSON() as Session.Workflow;
+        const workflowData = workflowMap.toJSON() as Session.Workflow;
+        draft.workflow = workflowData;
+
+        // Recompute validation errors whenever workflow changes
+        draft.validationErrors = validateWorkflowSettings(workflowData);
       }, 'workflow/observerUpdate');
     };
 
