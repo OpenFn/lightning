@@ -89,29 +89,44 @@ defmodule Mix.Tasks.Lightning.MergeProjects do
     write_output(output, output_path)
   end
 
-  defp perform_merge(source_project, target_project) do
+  defp perform_merge(source_data, target_data) do
+    # Convert string-keyed maps to atom-keyed maps using only existing atoms
+    # This prevents atom exhaustion attacks while allowing the merge algorithm
+    # to work with its expected data structure
+    source_project = atomize_keys(source_data)
+    target_project = atomize_keys(target_data)
+
     MergeProjects.merge_project(source_project, target_project)
   rescue
-    e in KeyError ->
+    ArgumentError ->
       Mix.raise("""
-      Failed to merge projects - missing required field: #{inspect(e.key)}
+      Failed to merge projects - encountered unknown field in JSON
 
-      #{Exception.message(e)}
-
-      This may indicate incompatible or corrupted project state files.
-      Please verify both files are valid Lightning project exports.
-      """)
-
-    e ->
-      Mix.raise("""
-      Failed to merge projects
-
-      #{Exception.message(e)}
-
-      This may indicate incompatible project structures or corrupted data.
-      Please verify both files are valid Lightning project exports.
+      This may indicate the JSON contains invalid or unexpected fields.
+      Please ensure both files are valid Lightning project exports.
       """)
   end
+
+  defp atomize_keys(data) when is_map(data) do
+    Map.new(data, fn {key, value} ->
+      atom_key =
+        if is_binary(key) do
+          # Only convert to atoms that already exist
+          # This prevents creating new atoms from malicious input
+          String.to_existing_atom(key)
+        else
+          key
+        end
+
+      {atom_key, atomize_keys(value)}
+    end)
+  end
+
+  defp atomize_keys(data) when is_list(data) do
+    Enum.map(data, &atomize_keys/1)
+  end
+
+  defp atomize_keys(data), do: data
 
   defp encode_json(project) do
     Jason.encode!(project, pretty: true)
