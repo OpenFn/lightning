@@ -38,6 +38,8 @@ and this project adheres to
 
 ### Fixed
 
+- Duplicate `isReadOnly` declaration in TriggerForm that was blocking asset builds
+  [#3976](https://github.com/OpenFn/lightning/issues/3976)
 - Run duration and status alignment drift in history view
   [#3945](https://github.com/OpenFn/lightning/pull/3945)
 - Shared doc lookup in clustered environments now works across nodes instead of
