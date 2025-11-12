@@ -3,14 +3,14 @@ import { useEffect, useRef, useState } from 'react';
 import { mount as mountLogViewer } from '../../../log-viewer/component';
 import { createLogStore } from '../../../log-viewer/store';
 import { channelRequest } from '../../hooks/useChannel';
-import { useCurrentRun, useSelectedStepId } from '../../hooks/useRun';
+import { useActiveRun, useSelectedStepId } from '../../hooks/useHistory';
 import { useSession } from '../../hooks/useSession';
 
 import { LogLevelFilter } from './LogLevelFilter';
 import { StepViewerLayout } from './StepViewerLayout';
 
 export function LogTabPanel() {
-  const run = useCurrentRun();
+  const run = useActiveRun();
   const selectedStepId = useSelectedStepId();
   const { provider } = useSession();
 

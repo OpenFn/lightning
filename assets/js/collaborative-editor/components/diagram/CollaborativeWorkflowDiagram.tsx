@@ -19,7 +19,7 @@ import {
 } from '../../hooks/useHistory';
 import { useIsNewWorkflow } from '../../hooks/useSessionContext';
 import { useNodeSelection } from '../../hooks/useWorkflow';
-import type { Run } from '../../types/history';
+import type { RunSummary } from '../../types/history';
 
 import MiniHistory from './MiniHistory';
 import CollaborativeWorkflowDiagramImpl from './WorkflowDiagram';
@@ -73,7 +73,7 @@ export function CollaborativeWorkflowDiagram({
   const currentRunSteps = useRunSteps(selectedRunId);
 
   // Update URL when run selection changes
-  const handleRunSelect = useCallback((run: Run) => {
+  const handleRunSelect = useCallback((run: RunSummary) => {
     setSelectedRunId(run.id);
 
     const url = new URL(window.location.href);

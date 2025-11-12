@@ -1,12 +1,12 @@
 import { useURLState } from '../../../react/lib/use-url-state';
 import { useWorkflowState } from '../../hooks/useWorkflow';
-import type { Step } from '../../types/run';
+import type { StepDetail } from '../../types/history';
 
 import { ElapsedIndicator } from './ElapsedIndicator';
 import { StepIcon } from './StepIcon';
 
 interface StepItemProps {
-  step: Step;
+  step: StepDetail;
   selected: boolean;
   onSelect: () => void;
 }

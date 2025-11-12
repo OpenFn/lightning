@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
 
-import { useCurrentRun, useRunStoreInstance } from '../../hooks/useRun';
+import { useActiveRun, useHistoryCommands } from '../../hooks/useHistory';
 
 import { StepList } from './StepList';
 
@@ -21,8 +21,8 @@ export function StepViewerLayout({
   children,
   selectedStepId,
 }: StepViewerLayoutProps) {
-  const run = useCurrentRun();
-  const runStore = useRunStoreInstance();
+  const run = useActiveRun();
+  const { selectStep } = useHistoryCommands();
 
   if (!run) {
     return <div className="p-4 text-gray-500">No run selected</div>;
@@ -36,7 +36,7 @@ export function StepViewerLayout({
           <StepList
             steps={run.steps}
             selectedStepId={selectedStepId}
-            onSelectStep={runStore.selectStep}
+            onSelectStep={selectStep}
           />
         </div>
       </Panel>

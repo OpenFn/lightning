@@ -9,7 +9,7 @@ import { getCsrfToken } from '../lib/csrf';
 import { notifications } from '../lib/notifications';
 import type { Workflow } from '../types/workflow';
 
-import { useCurrentRun } from './useRun';
+import { useActiveRun } from './useHistory';
 
 const logger = _logger.ns('useRunRetry').seal();
 
@@ -107,12 +107,12 @@ export function useRunRetry({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const isRetryingRef = useRef(false);
 
-  // Retry state tracking via RunStore (WebSocket updates)
+  // Retry state tracking via HistoryStore (WebSocket updates)
   // Note: Connection management is handled by the parent component (FullScreenIDE or ManualRunPanel)
-  // This hook only reads the current run state from RunStore
+  // This hook only reads the current run state from HistoryStore
   const { searchParams } = useURLState();
   const followedRunId = searchParams.get('run'); // 'run' param is run ID
-  const currentRun = useCurrentRun(); // Real-time from WebSocket
+  const currentRun = useActiveRun(); // Real-time from WebSocket
 
   // Get step for current context from followed run (from real-time RunStore)
   // For jobs: use the job's step directly
