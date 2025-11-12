@@ -11,25 +11,25 @@
  * - Tests error handling and graceful degradation
  */
 
-import { describe, test, expect, beforeEach } from "vitest";
-import type { Channel } from "phoenix";
+import { describe, test, expect, beforeEach } from 'vitest';
+import type { Channel } from 'phoenix';
 
-import * as Y from "yjs";
+import * as Y from 'yjs';
 
-import { createWorkflowStore } from "../../../js/collaborative-editor/stores/createWorkflowStore";
-import type { WorkflowStoreInstance } from "../../../js/collaborative-editor/stores/createWorkflowStore";
-import type { Session } from "../../../js/collaborative-editor/types/session";
-import type { WorkflowState as YAMLWorkflowState } from "../../../js/yaml/types";
-import type { PhoenixChannelProvider } from "y-phoenix-channel";
-import { ChannelRequestError } from "../../../js/collaborative-editor/lib/errors";
+import { createWorkflowStore } from '../../../js/collaborative-editor/stores/createWorkflowStore';
+import type { WorkflowStoreInstance } from '../../../js/collaborative-editor/stores/createWorkflowStore';
+import type { Session } from '../../../js/collaborative-editor/types/session';
+import type { WorkflowState as YAMLWorkflowState } from '../../../js/yaml/types';
+import type { PhoenixChannelProvider } from 'y-phoenix-channel';
+import { ChannelRequestError } from '../../../js/collaborative-editor/lib/errors';
 import {
   createMockChannelPushOk,
   createMockChannelPushError,
   createMockChannelPushTimeout,
   createMockChannelPushWithHandler,
-} from "../__helpers__/channelMocks";
+} from '../__helpers__/channelMocks';
 
-describe("WorkflowStore - Validate Workflow Name", () => {
+describe('WorkflowStore - Validate Workflow Name', () => {
   let store: WorkflowStoreInstance;
   let ydoc: Session.WorkflowDoc;
   let mockChannel: Channel;
@@ -37,7 +37,7 @@ describe("WorkflowStore - Validate Workflow Name", () => {
 
   // Helper to create a sample workflow state for testing
   const createSampleWorkflowState = (name: string): YAMLWorkflowState => ({
-    id: "test-workflow-id",
+    id: 'test-workflow-id',
     name,
     jobs: [],
     triggers: [],
@@ -55,17 +55,17 @@ describe("WorkflowStore - Validate Workflow Name", () => {
     mockChannel = {
       push: createMockChannelPushWithHandler(
         (event: string, payload: unknown) => {
-          if (event === "validate_workflow_name") {
+          if (event === 'validate_workflow_name') {
             const workflowPayload = payload as { workflow: { name: string } };
             return {
               okResponse: {
                 workflow: {
-                  name: workflowPayload.workflow.name + " 1",
+                  name: workflowPayload.workflow.name + ' 1',
                 },
               },
             };
           }
-          return { okResponse: { status: "ok" } };
+          return { okResponse: { status: 'ok' } };
         }
       ),
       on: () => {}, // Mock the on method to prevent errors
@@ -80,27 +80,27 @@ describe("WorkflowStore - Validate Workflow Name", () => {
     } as unknown as PhoenixChannelProvider & { channel: Channel };
 
     // Initialize workflow in Y.Doc
-    const workflowMap = ydoc.getMap("workflow");
-    workflowMap.set("id", "workflow-123");
-    workflowMap.set("name", "Existing Workflow");
+    const workflowMap = ydoc.getMap('workflow');
+    workflowMap.set('id', 'workflow-123');
+    workflowMap.set('name', 'Existing Workflow');
 
     // Initialize empty arrays
-    ydoc.getArray("jobs");
-    ydoc.getArray("triggers");
-    ydoc.getArray("edges");
-    ydoc.getMap("positions");
+    ydoc.getArray('jobs');
+    ydoc.getArray('triggers');
+    ydoc.getArray('edges');
+    ydoc.getMap('positions');
 
     // Connect store to Y.Doc and provider
     store.connect(ydoc, mockProvider);
   });
 
-  test("validates workflow name and returns modified state", async () => {
-    const workflowState = createSampleWorkflowState("My Workflow");
+  test('validates workflow name and returns modified state', async () => {
+    const workflowState = createSampleWorkflowState('My Workflow');
 
     const validatedState = await store.validateWorkflowName(workflowState);
 
     // Verify the name was modified by the server
-    expect(validatedState.name).toBe("My Workflow 1");
+    expect(validatedState.name).toBe('My Workflow 1');
 
     // Verify other properties are preserved
     expect(validatedState.id).toBe(workflowState.id);
@@ -109,117 +109,117 @@ describe("WorkflowStore - Validate Workflow Name", () => {
     expect(validatedState.edges).toEqual(workflowState.edges);
 
     // Verify channel was called with correct payload
-    expect(mockChannel.push).toHaveBeenCalledWith("validate_workflow_name", {
-      workflow: { name: "My Workflow" },
+    expect(mockChannel.push).toHaveBeenCalledWith('validate_workflow_name', {
+      workflow: { name: 'My Workflow' },
     });
   });
 
-  test("sends correct channel request format", async () => {
-    const workflowState = createSampleWorkflowState("Test Name");
+  test('sends correct channel request format', async () => {
+    const workflowState = createSampleWorkflowState('Test Name');
 
     await store.validateWorkflowName(workflowState);
 
     // Verify channel.push was called with the expected message and payload structure
     expect(mockChannel.push).toHaveBeenCalledTimes(1);
-    expect(mockChannel.push).toHaveBeenCalledWith("validate_workflow_name", {
+    expect(mockChannel.push).toHaveBeenCalledWith('validate_workflow_name', {
       workflow: {
-        name: "Test Name",
+        name: 'Test Name',
       },
     });
   });
 
-  test("handles server response correctly", async () => {
+  test('handles server response correctly', async () => {
     // Mock specific server response
     mockChannel.push = createMockChannelPushOk({
       workflow: {
-        name: "Unique Name Generated By Server",
+        name: 'Unique Name Generated By Server',
       },
     });
 
-    const workflowState = createSampleWorkflowState("Original Name");
+    const workflowState = createSampleWorkflowState('Original Name');
     const validatedState = await store.validateWorkflowName(workflowState);
 
-    expect(validatedState.name).toBe("Unique Name Generated By Server");
+    expect(validatedState.name).toBe('Unique Name Generated By Server');
   });
 
-  test("throws error when channel request fails", async () => {
+  test('throws error when channel request fails', async () => {
     // Mock error response with correct error structure
     mockChannel.push = createMockChannelPushError(
-      "Validation failed",
-      "validation_error"
+      'Validation failed',
+      'validation_error'
     );
 
-    const workflowState = createSampleWorkflowState("Test");
+    const workflowState = createSampleWorkflowState('Test');
 
     // Should throw ChannelRequestError
     try {
       await store.validateWorkflowName(workflowState);
-      expect.fail("Should have thrown ChannelRequestError");
+      expect.fail('Should have thrown ChannelRequestError');
     } catch (error) {
       expect(error).toBeInstanceOf(ChannelRequestError);
-      expect((error as ChannelRequestError).type).toBe("validation_error");
+      expect((error as ChannelRequestError).type).toBe('validation_error');
       expect((error as ChannelRequestError).errors.base).toEqual([
-        "Validation failed",
+        'Validation failed',
       ]);
     }
   });
 
-  test("throws error on channel timeout", async () => {
+  test('throws error on channel timeout', async () => {
     // Mock timeout
     mockChannel.push = createMockChannelPushTimeout();
 
-    const workflowState = createSampleWorkflowState("Test");
+    const workflowState = createSampleWorkflowState('Test');
 
     // Should throw timeout error
     await expect(store.validateWorkflowName(workflowState)).rejects.toThrow(
-      "Request timed out"
+      'Request timed out'
     );
   });
 
-  test("returns original state if provider not connected", async () => {
+  test('returns original state if provider not connected', async () => {
     // Create disconnected store
     const disconnectedStore = createWorkflowStore();
-    const workflowState = createSampleWorkflowState("Test Workflow");
+    const workflowState = createSampleWorkflowState('Test Workflow');
 
     // Should return original state without attempting channel request
     const result = await disconnectedStore.validateWorkflowName(workflowState);
 
     expect(result).toBe(workflowState);
-    expect(result.name).toBe("Test Workflow");
+    expect(result.name).toBe('Test Workflow');
   });
 
-  test("preserves all workflow state properties during validation", async () => {
+  test('preserves all workflow state properties during validation', async () => {
     // Create a workflow state with complete data
     const workflowState: YAMLWorkflowState = {
-      id: "complex-workflow",
-      name: "Complex Workflow",
+      id: 'complex-workflow',
+      name: 'Complex Workflow',
       jobs: [
         {
-          id: "job-1",
-          name: "Job 1",
+          id: 'job-1',
+          name: 'Job 1',
           body: "console.log('test')",
-          adaptor: "@openfn/language-http@latest",
+          adaptor: '@openfn/language-http@latest',
         },
       ],
       triggers: [
         {
-          id: "trigger-1",
-          type: "webhook" as const,
+          id: 'trigger-1',
+          type: 'webhook' as const,
           enabled: true,
         },
       ],
       edges: [
         {
-          id: "edge-1",
-          source_trigger_id: "trigger-1",
-          target_job_id: "job-1",
-          condition_type: "always" as const,
+          id: 'edge-1',
+          source_trigger_id: 'trigger-1',
+          target_job_id: 'job-1',
+          condition_type: 'always' as const,
           enabled: true,
         },
       ],
       positions: {
-        "job-1": { x: 100, y: 200 },
-        "trigger-1": { x: 50, y: 100 },
+        'job-1': { x: 100, y: 200 },
+        'trigger-1': { x: 50, y: 100 },
       },
     };
 
@@ -234,22 +234,22 @@ describe("WorkflowStore - Validate Workflow Name", () => {
     expect(validatedState.positions).toEqual(workflowState.positions);
   });
 
-  test("handles empty workflow name", async () => {
-    const workflowState = createSampleWorkflowState("");
+  test('handles empty workflow name', async () => {
+    const workflowState = createSampleWorkflowState('');
 
     const validatedState = await store.validateWorkflowName(workflowState);
 
     // Server should handle empty name (likely returns "Untitled workflow")
-    expect(validatedState.name).not.toBe("");
-    expect(mockChannel.push).toHaveBeenCalledWith("validate_workflow_name", {
-      workflow: { name: "" },
+    expect(validatedState.name).not.toBe('');
+    expect(mockChannel.push).toHaveBeenCalledWith('validate_workflow_name', {
+      workflow: { name: '' },
     });
   });
 
-  test("can be called multiple times with different names", async () => {
-    const workflowState1 = createSampleWorkflowState("Workflow A");
-    const workflowState2 = createSampleWorkflowState("Workflow B");
-    const workflowState3 = createSampleWorkflowState("Workflow C");
+  test('can be called multiple times with different names', async () => {
+    const workflowState1 = createSampleWorkflowState('Workflow A');
+    const workflowState2 = createSampleWorkflowState('Workflow B');
+    const workflowState3 = createSampleWorkflowState('Workflow C');
 
     // Mock to return different unique names each time
     let callCount = 0;
@@ -271,9 +271,9 @@ describe("WorkflowStore - Validate Workflow Name", () => {
     const validated2 = await store.validateWorkflowName(workflowState2);
     const validated3 = await store.validateWorkflowName(workflowState3);
 
-    expect(validated1.name).toBe("Workflow A 1");
-    expect(validated2.name).toBe("Workflow B 2");
-    expect(validated3.name).toBe("Workflow C 3");
+    expect(validated1.name).toBe('Workflow A 1');
+    expect(validated2.name).toBe('Workflow B 2');
+    expect(validated3.name).toBe('Workflow C 3');
     expect(mockChannel.push).toHaveBeenCalledTimes(3);
   });
 });

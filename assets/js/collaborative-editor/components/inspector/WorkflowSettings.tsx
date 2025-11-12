@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 
 import { useAppForm } from '#/collaborative-editor/components/form';
 import { createZodValidator } from '#/collaborative-editor/components/form/createZodValidator';
@@ -11,6 +11,7 @@ import {
 import { notifications } from '#/collaborative-editor/lib/notifications';
 import { useWatchFields } from '#/collaborative-editor/stores/common';
 import { WorkflowSchema } from '#/collaborative-editor/types/workflow';
+import { useURLState } from '#/react/lib/use-url-state';
 
 import { AlertDialog } from '../AlertDialog';
 
@@ -23,6 +24,12 @@ export function WorkflowSettings() {
   const { updateWorkflow, resetWorkflow } = useWorkflowActions();
   const { isReadOnly } = useWorkflowReadOnly();
   const permissions = usePermissions();
+
+  const { updateSearchParams } = useURLState();
+
+  const handleViewAsYAML = () => {
+    updateSearchParams({ panel: 'code' });
+  };
 
   // LoadingBoundary guarantees workflow is non-null at this point
   if (!workflow) {
@@ -111,7 +118,9 @@ export function WorkflowSettings() {
         </h3>
         <button
           type="button"
+          onClick={handleViewAsYAML}
           className="text-sm text-indigo-600 hover:text-indigo-500"
+          id="view-workflow-as-yaml-link"
         >
           View your workflow as YAML code
         </button>

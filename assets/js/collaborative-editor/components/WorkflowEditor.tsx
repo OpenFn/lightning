@@ -217,7 +217,9 @@ export function WorkflowEditor({
   };
 
   const showInspector =
-    searchParams.get('panel') === 'settings' || Boolean(currentNode.node);
+    searchParams.get('panel') === 'settings' ||
+    searchParams.get('panel') === 'code' ||
+    Boolean(currentNode.node);
 
   const handleMethodChange = (method: 'template' | 'import' | 'ai' | null) => {
     updateSearchParams({ method });
