@@ -33,6 +33,8 @@ defmodule Mix.Tasks.Lightning.MergeProjects do
   use Mix.Task
 
   alias Lightning.Projects.MergeProjects
+  alias Lightning.Projects.Project
+  alias Lightning.Projects.Provisioner
 
   @impl Mix.Task
   def run(args) do
@@ -89,8 +91,24 @@ defmodule Mix.Tasks.Lightning.MergeProjects do
     write_output(output, output_path)
   end
 
-  defp perform_merge(source_project, target_project) do
-    MergeProjects.merge_project(source_project, target_project)
+  defp perform_merge(source_data, target_data) do
+    # Use Provisioner to validate and convert string keys to proper structs
+    # Provisioner.parse_document uses Ecto's cast() which safely handles
+    # string->atom conversion for known schema fields only (no atom exhaustion risk)
+    # This ensures we follow all the same validation rules as the API import
+    source_changeset = Provisioner.parse_document(%Project{}, source_data)
+    target_changeset = Provisioner.parse_document(%Project{}, target_data)
+
+    # Check if both are valid according to Provisioner rules
+    with :ok <- validate_changeset(source_changeset, "source"),
+         :ok <- validate_changeset(target_changeset, "target") do
+      # Apply changes to get proper structs (no database involved!)
+      source_project = Ecto.Changeset.apply_changes(source_changeset)
+      target_project = Ecto.Changeset.apply_changes(target_changeset)
+
+      # Now merge with validated structs
+      MergeProjects.merge_project(source_project, target_project)
+    end
   rescue
     e in KeyError ->
       Mix.raise("""
@@ -111,6 +129,41 @@ defmodule Mix.Tasks.Lightning.MergeProjects do
       This may indicate incompatible project structures or corrupted data.
       Please verify both files are valid Lightning project exports.
       """)
+  end
+
+  defp validate_changeset(changeset, label) do
+    if changeset.valid? do
+      :ok
+    else
+      errors = format_changeset_errors(changeset)
+
+      Mix.raise("""
+      Invalid #{label} project structure
+
+      Validation errors:
+      #{errors}
+
+      The project must follow Lightning's validation rules:
+        - Project name must be lowercase with dashes/digits only (e.g., 'my-project-123')
+        - All required fields must be present
+        - All IDs must be valid UUIDs
+        - Workflows, jobs, triggers, and edges must have valid structure
+
+      Please ensure the file is a valid Lightning project export.
+      """)
+    end
+  end
+
+  defp format_changeset_errors(changeset) do
+    Ecto.Changeset.traverse_errors(changeset, fn {msg, opts} ->
+      Regex.replace(~r"%{(\w+)}", msg, fn _, key ->
+        opts |> Keyword.get(String.to_existing_atom(key), key) |> to_string()
+      end)
+    end)
+    |> Enum.map(fn {field, errors} ->
+      "  - #{field}: #{Enum.join(errors, ", ")}"
+    end)
+    |> Enum.join("\n")
   end
 
   defp encode_json(project) do
@@ -235,11 +288,10 @@ defmodule Mix.Tasks.Lightning.MergeProjects do
           """)
       end
 
-    case Jason.decode(content, keys: :atoms) do
+    case Jason.decode(content) do
       {:ok, data} ->
-        # Jason's keys: :atoms option converts all string keys to atoms
-        # This is safe for controlled JSON file input (not arbitrary user input)
-        # The merge_project function requires atom keys for dot notation access
+        # Return data with string keys (as-is from JSON)
+        # Provisioner.parse_document will handle validation and conversion
         data
 
       {:error, %Jason.DecodeError{} = error} ->

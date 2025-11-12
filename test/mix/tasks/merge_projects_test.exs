@@ -12,7 +12,7 @@ defmodule Mix.Tasks.Lightning.MergeProjectsTest do
       source_state =
         build_simple_project(
           id: "source-id",
-          name: "Source",
+          name: "source-project",
           workflow_name: "Test Workflow",
           job_name: "Job 1",
           job_body: "console.log('updated')"
@@ -21,7 +21,7 @@ defmodule Mix.Tasks.Lightning.MergeProjectsTest do
       target_state =
         build_simple_project(
           id: "target-id",
-          name: "Target",
+          name: "target-project",
           env: "production",
           workflow_name: "Test Workflow",
           job_name: "Job 1",
@@ -42,8 +42,9 @@ defmodule Mix.Tasks.Lightning.MergeProjectsTest do
       {:ok, result} = Jason.decode(output)
 
       assert result["id"] == "target-id"
-      assert result["name"] == "Target"
-      assert result["env"] == "production"
+      assert result["name"] == "target-project"
+
+      # Note: Provisioner does not cast 'env' or 'color' fields, so they won't be in the result
       assert length(result["workflows"]) == 1
 
       workflow = hd(result["workflows"])
@@ -59,10 +60,18 @@ defmodule Mix.Tasks.Lightning.MergeProjectsTest do
       tmp_dir: tmp_dir
     } do
       source_state =
-        build_project_state(id: "source-id", name: "Source", workflows: [])
+        build_project_state(
+          id: "source-id",
+          name: "source-project",
+          workflows: []
+        )
 
       target_state =
-        build_project_state(id: "target-id", name: "Target", workflows: [])
+        build_project_state(
+          id: "target-id",
+          name: "target-project",
+          workflows: []
+        )
 
       source_file = Path.join(tmp_dir, "source.json")
       target_file = Path.join(tmp_dir, "target.json")
@@ -85,17 +94,25 @@ defmodule Mix.Tasks.Lightning.MergeProjectsTest do
       {:ok, result} = Jason.decode(content)
 
       assert result["id"] == "target-id"
-      assert result["name"] == "Target"
+      assert result["name"] == "target-project"
     end
 
     test "writes merged output to file when -o flag is provided", %{
       tmp_dir: tmp_dir
     } do
       source_state =
-        build_project_state(id: "source-id", name: "Source", workflows: [])
+        build_project_state(
+          id: "source-id",
+          name: "source-project",
+          workflows: []
+        )
 
       target_state =
-        build_project_state(id: "target-id", name: "Target", workflows: [])
+        build_project_state(
+          id: "target-id",
+          name: "target-project",
+          workflows: []
+        )
 
       source_file = Path.join(tmp_dir, "source.json")
       target_file = Path.join(tmp_dir, "target.json")
@@ -267,8 +284,11 @@ defmodule Mix.Tasks.Lightning.MergeProjectsTest do
     test "raises clear error when output directory does not exist", %{
       tmp_dir: tmp_dir
     } do
-      source_state = build_project_state(id: "s", name: "S", workflows: [])
-      target_state = build_project_state(id: "t", name: "T", workflows: [])
+      source_state =
+        build_project_state(id: "s", name: "source-project", workflows: [])
+
+      target_state =
+        build_project_state(id: "t", name: "target-project", workflows: [])
 
       source_file = Path.join(tmp_dir, "source.json")
       target_file = Path.join(tmp_dir, "target.json")
@@ -292,8 +312,11 @@ defmodule Mix.Tasks.Lightning.MergeProjectsTest do
     test "raises clear error when output directory is not writable", %{
       tmp_dir: tmp_dir
     } do
-      source_state = build_project_state(id: "s", name: "S", workflows: [])
-      target_state = build_project_state(id: "t", name: "T", workflows: [])
+      source_state =
+        build_project_state(id: "s", name: "source-project", workflows: [])
+
+      target_state =
+        build_project_state(id: "t", name: "target-project", workflows: [])
 
       source_file = Path.join(tmp_dir, "source.json")
       target_file = Path.join(tmp_dir, "target.json")
@@ -325,8 +348,11 @@ defmodule Mix.Tasks.Lightning.MergeProjectsTest do
          %{
            tmp_dir: tmp_dir
          } do
-      source_state = build_project_state(id: "s", name: "S", workflows: [])
-      target_state = build_project_state(id: "t", name: "T", workflows: [])
+      source_state =
+        build_project_state(id: "s", name: "source-project", workflows: [])
+
+      target_state =
+        build_project_state(id: "t", name: "target-project", workflows: [])
 
       source_file = Path.join(tmp_dir, "source.json")
       target_file = Path.join(tmp_dir, "target.json")
@@ -381,6 +407,165 @@ defmodule Mix.Tasks.Lightning.MergeProjectsTest do
       assert_raise Mix.Error, ~r/Failed to merge projects/, fn ->
         Mix.Tasks.Lightning.MergeProjects.run([source_file, target_file])
       end
+    end
+  end
+
+  describe "run/1 - Provisioner validation (security)" do
+    test "rejects source project with invalid name format (security: prevents atom exhaustion)",
+         %{
+           tmp_dir: tmp_dir
+         } do
+      source_file = Path.join(tmp_dir, "source.json")
+      target_file = Path.join(tmp_dir, "target.json")
+
+      # Invalid name with uppercase - Provisioner enforces lowercase only
+      File.write!(
+        source_file,
+        Jason.encode!(%{
+          "id" => Ecto.UUID.generate(),
+          "name" => "InvalidName",
+          "workflows" => []
+        })
+      )
+
+      target_state = build_project_state(id: "t", name: "target-project")
+      File.write!(target_file, Jason.encode!(target_state))
+
+      assert_raise Mix.Error, ~r/Invalid source project structure/, fn ->
+        Mix.Tasks.Lightning.MergeProjects.run([source_file, target_file])
+      end
+    end
+
+    test "rejects target project with invalid name format", %{
+      tmp_dir: tmp_dir
+    } do
+      source_file = Path.join(tmp_dir, "source.json")
+      target_file = Path.join(tmp_dir, "target.json")
+
+      source_state = build_project_state(id: "s", name: "source-project")
+      File.write!(source_file, Jason.encode!(source_state))
+
+      # Invalid name with uppercase
+      File.write!(
+        target_file,
+        Jason.encode!(%{
+          "id" => Ecto.UUID.generate(),
+          "name" => "InvalidName",
+          "workflows" => []
+        })
+      )
+
+      assert_raise Mix.Error, ~r/Invalid target project structure/, fn ->
+        Mix.Tasks.Lightning.MergeProjects.run([source_file, target_file])
+      end
+    end
+
+    test "rejects source project with malicious unknown keys (security: atom exhaustion attack)",
+         %{
+           tmp_dir: tmp_dir
+         } do
+      source_file = Path.join(tmp_dir, "source.json")
+      target_file = Path.join(tmp_dir, "target.json")
+
+      # Malicious JSON with extra keys that could create unlimited atoms
+      File.write!(
+        source_file,
+        Jason.encode!(%{
+          "id" => Ecto.UUID.generate(),
+          "name" => "source-project",
+          "malicious_unknown_key" => "evil value",
+          "another_attack_vector" => "more malicious data",
+          "workflows" => []
+        })
+      )
+
+      target_state = build_project_state(id: "t", name: "target-project")
+      File.write!(target_file, Jason.encode!(target_state))
+
+      assert_raise Mix.Error, ~r/Invalid source project structure/, fn ->
+        Mix.Tasks.Lightning.MergeProjects.run([source_file, target_file])
+      end
+    end
+
+    test "rejects project missing required id field", %{tmp_dir: tmp_dir} do
+      source_file = Path.join(tmp_dir, "source.json")
+      target_file = Path.join(tmp_dir, "target.json")
+
+      # Missing required 'id' field
+      File.write!(
+        source_file,
+        Jason.encode!(%{
+          "name" => "source-project",
+          "workflows" => []
+        })
+      )
+
+      target_state = build_project_state(id: "t", name: "target-project")
+      File.write!(target_file, Jason.encode!(target_state))
+
+      assert_raise Mix.Error, ~r/Invalid source project structure/, fn ->
+        Mix.Tasks.Lightning.MergeProjects.run([source_file, target_file])
+      end
+    end
+
+    test "rejects project with name containing special characters", %{
+      tmp_dir: tmp_dir
+    } do
+      source_file = Path.join(tmp_dir, "source.json")
+      target_file = Path.join(tmp_dir, "target.json")
+
+      # Name with special characters not allowed by Provisioner
+      File.write!(
+        source_file,
+        Jason.encode!(%{
+          "id" => Ecto.UUID.generate(),
+          "name" => "project_with_underscores",
+          "workflows" => []
+        })
+      )
+
+      target_state = build_project_state(id: "t", name: "target-project")
+      File.write!(target_file, Jason.encode!(target_state))
+
+      assert_raise Mix.Error, ~r/Invalid source project structure/, fn ->
+        Mix.Tasks.Lightning.MergeProjects.run([source_file, target_file])
+      end
+    end
+
+    test "successfully merges valid projects with only allowed fields", %{
+      tmp_dir: tmp_dir
+    } do
+      source_state =
+        build_project_state(
+          id: "source-id",
+          name: "source-project",
+          description: "Valid source"
+        )
+
+      target_state =
+        build_project_state(
+          id: "target-id",
+          name: "target-project",
+          description: "Valid target"
+        )
+
+      source_file = Path.join(tmp_dir, "source.json")
+      target_file = Path.join(tmp_dir, "target.json")
+
+      File.write!(source_file, Jason.encode!(source_state))
+      File.write!(target_file, Jason.encode!(target_state))
+
+      output =
+        capture_io(fn ->
+          Mix.Tasks.Lightning.MergeProjects.run([source_file, target_file])
+        end)
+
+      {:ok, result} = Jason.decode(output)
+
+      assert result["id"] == "target-id"
+      assert result["name"] == "target-project"
+      # Provisioner only casts id, name, description
+      assert result["description"] == "Valid target"
     end
   end
 end
