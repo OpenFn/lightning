@@ -1,7 +1,7 @@
-import type { PhoenixChannelProvider } from "y-phoenix-channel";
-import * as z from "zod";
+import type { PhoenixChannelProvider } from 'y-phoenix-channel';
+import * as z from 'zod';
 
-import { isoDateTimeSchema, uuidSchema } from "./common";
+import { isoDateTimeSchema, uuidSchema } from './common';
 
 export const UserContextSchema = z.object({
   id: uuidSchema,
@@ -40,7 +40,7 @@ export type Permissions = z.infer<typeof PermissionsSchema>;
 export const WebhookAuthMethodSchema = z.object({
   id: uuidSchema,
   name: z.string(),
-  auth_type: z.enum(["basic", "api"]),
+  auth_type: z.enum(['basic', 'api']),
 });
 
 export type WebhookAuthMethod = z.infer<typeof WebhookAuthMethodSchema>;
