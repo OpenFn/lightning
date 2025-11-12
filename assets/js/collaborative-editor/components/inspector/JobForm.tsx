@@ -1,24 +1,24 @@
-import { useStore } from "@tanstack/react-form";
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { useHotkeysContext } from "react-hotkeys-hook";
+import { useStore } from '@tanstack/react-form';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useHotkeysContext } from 'react-hotkeys-hook';
 
-import { useAppForm } from "#/collaborative-editor/components/form";
-import { HOTKEY_SCOPES } from "#/collaborative-editor/constants/hotkeys";
-import { useLiveViewActions } from "#/collaborative-editor/contexts/LiveViewActionsContext";
-import { useProjectAdaptors } from "#/collaborative-editor/hooks/useAdaptors";
+import { useAppForm } from '#/collaborative-editor/components/form';
+import { HOTKEY_SCOPES } from '#/collaborative-editor/constants/hotkeys';
+import { useLiveViewActions } from '#/collaborative-editor/contexts/LiveViewActionsContext';
+import { useProjectAdaptors } from '#/collaborative-editor/hooks/useAdaptors';
 import {
   useCredentials,
   useCredentialsCommands,
-} from "#/collaborative-editor/hooks/useCredentials";
-import { useWorkflowActions } from "#/collaborative-editor/hooks/useWorkflow";
-import { useWatchFields } from "#/collaborative-editor/stores/common";
-import { JobSchema } from "#/collaborative-editor/types/job";
-import type { Workflow } from "#/collaborative-editor/types/workflow";
+} from '#/collaborative-editor/hooks/useCredentials';
+import { useWorkflowActions } from '#/collaborative-editor/hooks/useWorkflow';
+import { useWatchFields } from '#/collaborative-editor/stores/common';
+import { JobSchema } from '#/collaborative-editor/types/job';
+import type { Workflow } from '#/collaborative-editor/types/workflow';
 
-import { AdaptorDisplay } from "../AdaptorDisplay";
-import { AdaptorSelectionModal } from "../AdaptorSelectionModal";
-import { ConfigureAdaptorModal } from "../ConfigureAdaptorModal";
-import { createZodValidator } from "../form/createZodValidator";
+import { AdaptorDisplay } from '../AdaptorDisplay';
+import { AdaptorSelectionModal } from '../AdaptorSelectionModal';
+import { ConfigureAdaptorModal } from '../ConfigureAdaptorModal';
+import { createZodValidator } from '../form/createZodValidator';
 
 interface JobFormProps {
   job: Workflow.Job;
@@ -73,7 +73,7 @@ export function JobForm({ job }: JobFormProps) {
   }, [isCredentialModalOpen, enableScope, disableScope]);
 
   // Parse initial adaptor value
-  const initialAdaptor = job.adaptor || "@openfn/language-common@latest";
+  const initialAdaptor = job.adaptor || '@openfn/language-common@latest';
   const { package: initialAdaptorPackage } = resolveAdaptor(initialAdaptor);
 
   // Determine initial credential_id
@@ -118,17 +118,17 @@ export function JobForm({ job }: JobFormProps) {
     changedFields => {
       Object.entries(changedFields).forEach(([key, value]) => {
         if (key in form.state.values) {
-          if (key === "adaptor" && value) {
+          if (key === 'adaptor' && value) {
             const { package: adaptorPackage } = resolveAdaptor(value);
             if (adaptorPackage) {
-              form.setFieldValue("adaptor_package", adaptorPackage);
+              form.setFieldValue('adaptor_package', adaptorPackage);
             }
           }
           form.setFieldValue(key as keyof typeof form.state.values, value);
         }
       });
     },
-    ["name", "adaptor", "project_credential_id", "keychain_credential_id"]
+    ['name', 'adaptor', 'project_credential_id', 'keychain_credential_id']
   );
 
   // Listen for credential modal close event to reopen configure modal
@@ -144,21 +144,21 @@ export function JobForm({ job }: JobFormProps) {
       // 500ms accounts for: Phoenix.JS animation (250ms) + LiveView update time + buffer
       // This prevents race conditions if user quickly reopens modal
       setTimeout(() => {
-        pushEvent("close_credential_modal_complete", {});
+        pushEvent('close_credential_modal', {});
       }, 500);
     };
 
-    const element = document.getElementById("collaborative-editor-react");
-    element?.addEventListener("close_credential_modal", handleModalClose);
+    const element = document.getElementById('collaborative-editor-react');
+    element?.addEventListener('close_credential_modal', handleModalClose);
 
     return () => {
-      element?.removeEventListener("close_credential_modal", handleModalClose);
+      element?.removeEventListener('close_credential_modal', handleModalClose);
     };
   }, [pushEvent]);
 
   // Listen for credential saved event from LiveView
   useEffect(() => {
-    const cleanup = handleEvent("credential_saved", (payload: any) => {
+    const cleanup = handleEvent('credential_saved', (payload: any) => {
       setIsCredentialModalOpen(false);
 
       const { credential, is_project_credential } = payload;
@@ -167,14 +167,14 @@ export function JobForm({ job }: JobFormProps) {
         : credential.id;
 
       // Select the credential immediately - we have the data from the server
-      form.setFieldValue("credential_id", credentialId);
+      form.setFieldValue('credential_id', credentialId);
 
       if (is_project_credential) {
-        form.setFieldValue("project_credential_id", credentialId);
-        form.setFieldValue("keychain_credential_id", null);
+        form.setFieldValue('project_credential_id', credentialId);
+        form.setFieldValue('keychain_credential_id', null);
       } else {
-        form.setFieldValue("keychain_credential_id", credentialId);
-        form.setFieldValue("project_credential_id", null);
+        form.setFieldValue('keychain_credential_id', credentialId);
+        form.setFieldValue('project_credential_id', null);
       }
 
       // Persist to Y.Doc
@@ -213,7 +213,7 @@ export function JobForm({ job }: JobFormProps) {
     (adaptorName: string) => {
       setIsConfigureModalOpen(false);
       setIsCredentialModalOpen(true);
-      pushEvent("open_credential_modal", { schema: adaptorName });
+      pushEvent('open_credential_modal', { schema: adaptorName });
     },
     [pushEvent]
   );
@@ -224,11 +224,11 @@ export function JobForm({ job }: JobFormProps) {
       // Update the adaptor package in form
       const packageMatch = adaptorName.match(/(.+?)(@|$)/);
       const newPackage = packageMatch ? packageMatch[1] : adaptorName;
-      form.setFieldValue("adaptor_package", newPackage || null);
+      form.setFieldValue('adaptor_package', newPackage || null);
 
       // Set version to "latest" by default when picking an adaptor
       const fullAdaptor = `${newPackage}@latest`;
-      form.setFieldValue("adaptor", fullAdaptor);
+      form.setFieldValue('adaptor', fullAdaptor);
 
       // Close adaptor picker and reopen configure modal
       setIsAdaptorPickerOpen(false);
@@ -241,15 +241,15 @@ export function JobForm({ job }: JobFormProps) {
   const handleAdaptorChange = useCallback(
     (adaptorPackage: string) => {
       // Get current version from form
-      const currentAdaptor = form.getFieldValue("adaptor");
+      const currentAdaptor = form.getFieldValue('adaptor');
       const { version: currentVersion } = resolveAdaptor(currentAdaptor);
 
       // Build new adaptor string with current version
-      const newAdaptor = `${adaptorPackage}@${currentVersion || "latest"}`;
+      const newAdaptor = `${adaptorPackage}@${currentVersion || 'latest'}`;
 
       // Update form state
-      form.setFieldValue("adaptor_package", adaptorPackage);
-      form.setFieldValue("adaptor", newAdaptor);
+      form.setFieldValue('adaptor_package', adaptorPackage);
+      form.setFieldValue('adaptor', newAdaptor);
 
       // Persist to Y.Doc
       updateJob(job.id, { adaptor: newAdaptor });
@@ -261,13 +261,13 @@ export function JobForm({ job }: JobFormProps) {
   const handleVersionChange = useCallback(
     (version: string) => {
       // Get current adaptor package from form
-      const adaptorPackage = form.getFieldValue("adaptor_package");
+      const adaptorPackage = form.getFieldValue('adaptor_package');
 
       // Build new adaptor string with new version
       const newAdaptor = `${adaptorPackage}@${version}`;
 
       // Update form state
-      form.setFieldValue("adaptor", newAdaptor);
+      form.setFieldValue('adaptor', newAdaptor);
 
       // Persist to Y.Doc
       updateJob(job.id, { adaptor: newAdaptor });
@@ -306,13 +306,13 @@ export function JobForm({ job }: JobFormProps) {
       }
 
       // Update form state
-      form.setFieldValue("credential_id", credentialId);
+      form.setFieldValue('credential_id', credentialId);
       form.setFieldValue(
-        "project_credential_id",
+        'project_credential_id',
         jobUpdates.project_credential_id
       );
       form.setFieldValue(
-        "keychain_credential_id",
+        'keychain_credential_id',
         jobUpdates.keychain_credential_id
       );
 
@@ -393,9 +393,9 @@ export function JobForm({ job }: JobFormProps) {
         onOpenAdaptorPicker={handleOpenAdaptorPicker}
         onOpenCredentialModal={handleOpenCredentialModal}
         currentAdaptor={
-          resolveAdaptor(currentAdaptor).package || "@openfn/language-common"
+          resolveAdaptor(currentAdaptor).package || '@openfn/language-common'
         }
-        currentVersion={resolveAdaptor(currentAdaptor).version || "latest"}
+        currentVersion={resolveAdaptor(currentAdaptor).version || 'latest'}
         currentCredentialId={currentCredentialId}
         allAdaptors={allAdaptors}
       />

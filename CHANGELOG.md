@@ -26,6 +26,10 @@ and this project adheres to
 
 ### Changed
 
+- Merged CollaborateNew and Collaborate LiveViews into a single unified LiveView
+  for improved maintainability and consistent modal behavior
+  [#3942](https://github.com/OpenFn/lightning/pull/3942)
+
 ### Fixed
 
 - Run duration and status alignment drift in history view

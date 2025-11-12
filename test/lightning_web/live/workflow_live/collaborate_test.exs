@@ -655,7 +655,7 @@ defmodule LightningWeb.WorkflowLive.CollaborateTest do
       html =
         view
         |> element("#collaborative-editor-react")
-        |> render_hook("close_credential_modal_complete", %{})
+        |> render_hook("close_credential_modal", %{})
 
       # Modal should be hidden
       refute html =~ "new-credential-modal"
@@ -775,7 +775,7 @@ defmodule LightningWeb.WorkflowLive.CollaborateTest do
       html =
         view
         |> element("#collaborative-editor-react")
-        |> render_hook("close_credential_modal_complete", %{})
+        |> render_hook("close_credential_modal", %{})
 
       refute html =~ "new-credential-modal"
 
@@ -790,7 +790,7 @@ defmodule LightningWeb.WorkflowLive.CollaborateTest do
       html =
         view
         |> element("#collaborative-editor-react")
-        |> render_hook("close_credential_modal_complete", %{})
+        |> render_hook("close_credential_modal", %{})
 
       refute html =~ "new-credential-modal"
     end

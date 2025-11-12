@@ -1,28 +1,30 @@
 defmodule LightningWeb.WorkflowLive.Collaborate do
   @moduledoc """
   LiveView for collaborative workflow editing using shared Y.js documents.
+
+  This LiveView handles both creating new workflows and editing existing ones:
+  - For new workflows: Creates an ephemeral workflow with a temporary UUID
+  - For existing workflows: Loads the workflow from the database
+
+  Supports credential creation modal for both new and existing workflows.
   """
   use LightningWeb, {:live_view, container: {:div, []}}
 
   alias Lightning.Policies.Permissions
   alias Lightning.Workflows
   alias Lightning.Workflows.WebhookAuthMethod
+  alias Lightning.Workflows.Workflow
   alias LightningWeb.Channels.WorkflowJSON
 
   on_mount({LightningWeb.Hooks, :project_scope})
 
   @impl true
-  def mount(%{"id" => workflow_id}, _session, socket) do
-    workflow = Workflows.get_workflow!(workflow_id)
-    project = socket.assigns.project
-
+  def mount(params, _session, %{assigns: %{project: project}} = socket) do
     {:ok,
      socket
+     |> assign(workflow_assigns(params, project))
      |> assign(
        active_menu_item: :overview,
-       page_title: "Collaborate on #{workflow.name}",
-       workflow: workflow,
-       workflow_id: workflow_id,
        project: project,
        show_credential_modal: false,
        credential_schema: nil,
@@ -38,14 +40,11 @@ defmodule LightningWeb.WorkflowLive.Collaborate do
 
   @impl true
   def handle_event("open_credential_modal", %{"schema" => schema}, socket) do
-    # Reset modal state when opening - this will remount the component if it was hidden
     {:noreply,
      assign(socket, show_credential_modal: true, credential_schema: schema)}
   end
 
-  def handle_event("close_credential_modal_complete", _params, socket) do
-    # Called after modal is fully closed and animations are complete
-    # Reset server state so the modal can be opened again
+  def handle_event("close_credential_modal", _params, socket) do
     {:noreply,
      assign(socket, show_credential_modal: false, credential_schema: nil)}
   end
@@ -96,6 +95,7 @@ defmodule LightningWeb.WorkflowLive.Collaborate do
         if @project.parent, do: Lightning.Projects.root_of(@project).name, else: nil
       }
       data-project-env={@project.env}
+      data-is-new-workflow={if @is_new_workflow, do: "true", else: nil}
     />
 
     <.live_component
@@ -171,56 +171,16 @@ defmodule LightningWeb.WorkflowLive.Collaborate do
   @impl true
   def handle_info({:credential_saved, credential}, socket) do
     project = socket.assigns.project
+    credential_payload = build_credential_payload(credential)
 
-    # Format credential data for React
-    # Determine if it's a project or keychain credential
-    {credential_id, is_project_credential} =
-      if credential.project_credentials &&
-           length(credential.project_credentials) > 0 do
-        # Project credential
-        {hd(credential.project_credentials).id, true}
-      else
-        # Keychain credential
-        {credential.id, false}
-      end
-
-    # Build credential payload matching the format React expects
-    credential_data =
-      if is_project_credential do
-        %{
-          project_credential_id: credential_id,
-          id: credential.id,
-          name: credential.name,
-          schema: credential.schema
-        }
-      else
-        %{
-          id: credential_id,
-          name: credential.name,
-          schema: credential.schema
-        }
-      end
-
-    # Push event to React with the full credential data
-    socket =
-      push_event(socket, "credential_saved", %{
-        credential: credential_data,
-        is_project_credential: is_project_credential
-      })
-
-    # Broadcast credential update to all connected clients on this workflow channel
-    # This ensures the CredentialStore receives the update in real-time
-    broadcast_credential_update(socket, project)
-
-    # Update server state to close the modal
-    send(self(), :close_credential_modal_after_save)
-
-    {:noreply, socket}
-  end
-
-  def handle_info(:close_credential_modal_after_save, socket) do
     {:noreply,
-     assign(socket, show_credential_modal: false, credential_schema: nil)}
+     socket
+     |> push_event("credential_saved", credential_payload)
+     |> then(fn socket ->
+       broadcast_credential_update(socket, project)
+       socket
+     end)
+     |> assign(show_credential_modal: false, credential_schema: nil)}
   end
 
   def handle_info(:webhook_auth_method_saved, socket) do
@@ -236,8 +196,71 @@ defmodule LightningWeb.WorkflowLive.Collaborate do
     |> noreply()
   end
 
+  defp workflow_assigns(params, project) do
+    case params do
+      %{"id" => workflow_id} ->
+        workflow = Workflows.get_workflow!(workflow_id)
+
+        %{
+          workflow: workflow,
+          workflow_id: workflow_id,
+          is_new_workflow: false,
+          page_title: "Collaborate on #{workflow.name}"
+        }
+
+      _other ->
+        workflow_id = Ecto.UUID.generate()
+
+        workflow = %Workflow{
+          id: workflow_id,
+          name: "Untitled Workflow",
+          project_id: project.id
+        }
+
+        %{
+          workflow: workflow,
+          workflow_id: workflow_id,
+          is_new_workflow: true,
+          page_title: "New Workflow"
+        }
+    end
+  end
+
+  defp build_credential_payload(credential) do
+    {credential_id, is_project_credential} =
+      determine_credential_type(credential)
+
+    credential_data =
+      build_credential_data(credential_id, credential, is_project_credential)
+
+    %{
+      credential: credential_data,
+      is_project_credential: is_project_credential
+    }
+  end
+
+  defp determine_credential_type(credential) do
+    case credential.project_credentials do
+      [%{id: id} | _] -> {id, true}
+      _ -> {credential.id, false}
+    end
+  end
+
+  defp build_credential_data(credential_id, credential, is_project_credential) do
+    base_data = %{
+      id: credential.id,
+      name: credential.name,
+      schema: credential.schema
+    }
+
+    if is_project_credential do
+      Map.put(base_data, :project_credential_id, credential_id)
+    else
+      %{base_data | id: credential_id}
+    end
+  end
+
   defp broadcast_credential_update(socket, project) do
-    # Fetch updated credentials list
     credentials =
       Lightning.Projects.list_project_credentials(project)
       |> Enum.concat(
@@ -245,8 +268,6 @@ defmodule LightningWeb.WorkflowLive.Collaborate do
       )
       |> WorkflowJSON.render()
 
-    # Broadcast to all connected clients on the workflow channel
-    # The CredentialStore listens for this "credentials_updated" event
     Phoenix.PubSub.broadcast(
       Lightning.PubSub,
       "workflow:collaborate:#{socket.assigns.workflow_id}",
