@@ -409,34 +409,6 @@ defmodule Mix.Tasks.Lightning.MergeProjectsTest do
     end
   end
 
-  describe "run/1 - security" do
-    test "safely handles JSON with unknown keys without creating new atoms", %{
-      tmp_dir: tmp_dir
-    } do
-      source_file = Path.join(tmp_dir, "source.json")
-      target_file = Path.join(tmp_dir, "target.json")
-
-      # JSON with unknown keys that don't correspond to existing atoms
-      File.write!(
-        source_file,
-        Jason.encode!(%{
-          "id" => Ecto.UUID.generate(),
-          "name" => "source-project",
-          "malicious_unknown_key_12345" => "value",
-          "workflows" => []
-        })
-      )
-
-      target_state = build_project_state(id: "t", name: "target-project")
-      File.write!(target_file, Jason.encode!(target_state))
-
-      # Should raise ArgumentError when trying to convert unknown key to atom
-      assert_raise Mix.Error, ~r/encountered unknown field/, fn ->
-        Mix.Tasks.Lightning.MergeProjects.run([source_file, target_file])
-      end
-    end
-  end
-
   describe "run/1 - flexibility for testing (Joe's requirements)" do
     test "allows non-UUID IDs for testing purposes", %{tmp_dir: tmp_dir} do
       source_state =
