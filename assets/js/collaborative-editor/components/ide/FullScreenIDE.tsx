@@ -6,6 +6,12 @@ import {
   PanelGroup,
   PanelResizeHandle,
 } from 'react-resizable-panels';
+import {
+  DocumentTextIcon,
+  SparklesIcon,
+  ViewColumnsIcon,
+  XMarkIcon,
+} from '@heroicons/react/24/outline';
 
 import { useUICommands } from '#/collaborative-editor/hooks/useUI';
 import { cn } from '#/utils/cn';
@@ -50,6 +56,8 @@ import { RunViewerErrorBoundary } from '../run-viewer/RunViewerErrorBoundary';
 import { RunViewerPanel } from '../run-viewer/RunViewerPanel';
 import { SandboxIndicatorBanner } from '../SandboxIndicatorBanner';
 import { Tabs } from '../Tabs';
+import Docs from '../../../adaptor-docs/Docs';
+import Metadata from '../../../metadata-explorer/Explorer';
 
 import { IDEHeader } from './IDEHeader';
 import { PanelToggleButton } from './PanelToggleButton';
@@ -127,7 +135,7 @@ export function FullScreenIDE({
   const workflow = useWorkflowState(state =>
     state.workflow
       ? {
-          name: state.workflow.name,
+          ...state.workflow,
           jobs: state.jobs,
           triggers: state.triggers,
           edges: state.edges,
@@ -147,6 +155,22 @@ export function FullScreenIDE({
   const [isLeftCollapsed, setIsLeftCollapsed] = useState(false);
   const [isCenterCollapsed, setIsCenterCollapsed] = useState(false);
   const [isRightCollapsed, setIsRightCollapsed] = useState(true);
+
+  // Docs/Metadata panel state
+  const [isDocsCollapsed, setIsDocsCollapsed] = useState<boolean>(() => {
+    const saved = localStorage.getItem('lightning.ide.docsPanel.collapsed');
+    return saved ? JSON.parse(saved) === true : false;
+  });
+  const [docsOrientation, setDocsOrientation] = useState<
+    'horizontal' | 'vertical'
+  >(() => {
+    const saved = localStorage.getItem('lightning.ide.docsPanel.orientation');
+    return (saved as 'horizontal' | 'vertical') || 'horizontal';
+  });
+  const [selectedDocsTab, setSelectedDocsTab] = useState<'docs' | 'metadata'>(
+    'docs'
+  );
+  const docsPanelRef = useRef<ImperativePanelHandle>(null);
 
   const [followRunId, setFollowRunId] = useState<string | null>(null);
   const [selectedDataclipState, setSelectedDataclipState] = useState<any>(null);
@@ -527,6 +551,14 @@ export function FullScreenIDE({
     [onClose]
   );
 
+  // Save docs panel collapsed state to localStorage
+  useEffect(() => {
+    localStorage.setItem(
+      'lightning.ide.docsPanel.collapsed',
+      JSON.stringify(isDocsCollapsed)
+    );
+  }, [isDocsCollapsed]);
+
   // Loading state: Wait for Y.Text and awareness to be ready
   if (!currentJob || !currentJobYText || !awareness) {
     return (
@@ -575,6 +607,28 @@ export function FullScreenIDE({
       rightPanelRef.current?.expand();
     } else {
       rightPanelRef.current?.collapse();
+    }
+  };
+
+  const toggleDocsPanel = () => {
+    if (isDocsCollapsed) {
+      docsPanelRef.current?.expand();
+    } else {
+      docsPanelRef.current?.collapse();
+    }
+  };
+
+  const toggleDocsOrientation = () => {
+    const newOrientation =
+      docsOrientation === 'horizontal' ? 'vertical' : 'horizontal';
+    setDocsOrientation(newOrientation);
+    localStorage.setItem('lightning.ide.docsPanel.orientation', newOrientation);
+  };
+
+  const handleDocsTabChange = (tab: 'docs' | 'metadata') => {
+    setSelectedDocsTab(tab);
+    if (isDocsCollapsed) {
+      docsPanelRef.current?.expand();
     }
   };
 
@@ -653,6 +707,7 @@ export function FullScreenIDE({
                       <PanelToggleButton
                         onClick={toggleLeftPanel}
                         disabled={openPanelCount === 1}
+                        isCollapsed={isLeftCollapsed}
                         ariaLabel="Collapse left panel"
                       />
                     </>
@@ -709,7 +764,7 @@ export function FullScreenIDE({
             transition-colors cursor-col-resize"
           />
 
-          {/* Center Panel - CollaborativeMonaco Editor */}
+          {/* Center Panel - CollaborativeMonaco Editor with nested Docs/Metadata */}
           <Panel
             ref={centerPanelRef}
             defaultSize={100}
@@ -736,11 +791,41 @@ export function FullScreenIDE({
                       >
                         Code
                       </div>
-                      <PanelToggleButton
-                        onClick={toggleCenterPanel}
-                        disabled={openPanelCount === 1}
-                        ariaLabel="Collapse code panel"
-                      />
+                      <div className="flex items-center gap-1">
+                        {/* Docs/Metadata toggle buttons */}
+                        <button
+                          onClick={() => handleDocsTabChange('docs')}
+                          className={cn(
+                            'flex items-center gap-1 px-2 py-1 text-xs rounded transition-colors',
+                            selectedDocsTab === 'docs' && !isDocsCollapsed
+                              ? 'bg-primary-100 text-primary-800'
+                              : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'
+                          )}
+                          title="Show adaptor documentation"
+                        >
+                          <DocumentTextIcon className="h-3.5 w-3.5" />
+                          Docs
+                        </button>
+                        <button
+                          onClick={() => handleDocsTabChange('metadata')}
+                          className={cn(
+                            'flex items-center gap-1 px-2 py-1 text-xs rounded transition-colors',
+                            selectedDocsTab === 'metadata' && !isDocsCollapsed
+                              ? 'bg-primary-100 text-primary-800'
+                              : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'
+                          )}
+                          title="Show metadata explorer"
+                        >
+                          <SparklesIcon className="h-3.5 w-3.5" />
+                          Metadata
+                        </button>
+                        <PanelToggleButton
+                          onClick={toggleCenterPanel}
+                          disabled={openPanelCount === 1}
+                          isCollapsed={isCenterCollapsed}
+                          ariaLabel="Collapse code panel"
+                        />
+                      </div>
                     </>
                   ) : (
                     <button
@@ -755,22 +840,143 @@ export function FullScreenIDE({
                 </div>
               </div>
 
-              {/* Editor */}
+              {/* Nested PanelGroup for Editor + Docs/Metadata */}
               {!isCenterCollapsed && (
                 <div className="flex-1 overflow-hidden">
-                  <CollaborativeMonaco
-                    ytext={currentJobYText}
-                    awareness={awareness}
-                    adaptor={currentJob.adaptor || 'common'}
-                    disabled={!canSave}
-                    className="h-full w-full"
-                    options={{
-                      automaticLayout: true,
-                      minimap: { enabled: true },
-                      lineNumbers: 'on',
-                      wordWrap: 'on',
-                    }}
-                  />
+                  <PanelGroup
+                    key={docsOrientation}
+                    direction={docsOrientation}
+                    autoSaveId="lightning.ide-docs-layout"
+                    className="h-full"
+                  >
+                    {/* Monaco Editor Panel */}
+                    <Panel defaultSize={60} minSize={25}>
+                      <div className="h-full flex flex-col">
+                        <div className="flex-1 overflow-hidden">
+                          <CollaborativeMonaco
+                            ytext={currentJobYText}
+                            awareness={awareness}
+                            adaptor={currentJob.adaptor || 'common'}
+                            disabled={!canSave}
+                            className="h-full w-full"
+                            options={{
+                              automaticLayout: true,
+                              minimap: { enabled: true },
+                              lineNumbers: 'on',
+                              wordWrap: 'on',
+                            }}
+                          />
+                        </div>
+                      </div>
+                    </Panel>
+
+                    {/* Resize Handle */}
+                    {docsOrientation === 'horizontal' ? (
+                      <PanelResizeHandle
+                        className="w-1 bg-gray-200 hover:bg-blue-400
+                        transition-colors cursor-col-resize"
+                      />
+                    ) : (
+                      <PanelResizeHandle
+                        className="h-1 bg-gray-200 hover:bg-blue-400
+                        transition-colors cursor-row-resize"
+                      />
+                    )}
+
+                    {/* Docs/Metadata Panel */}
+                    <Panel
+                      ref={docsPanelRef}
+                      defaultSize={40}
+                      minSize={20}
+                      collapsible
+                      collapsedSize={0}
+                      onCollapse={() => setIsDocsCollapsed(true)}
+                      onExpand={() => setIsDocsCollapsed(false)}
+                      className="bg-white"
+                    >
+                      <div className="h-full flex flex-col">
+                        {/* Docs panel header with controls */}
+                        {!isDocsCollapsed && (
+                          <div className="shrink-0 border-b border-gray-100">
+                            <div className="flex items-center justify-between px-2 py-1">
+                              <div className="text-xs font-medium text-gray-500">
+                                {selectedDocsTab === 'docs'
+                                  ? 'Adaptor Documentation'
+                                  : 'Metadata Explorer'}
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <button
+                                  onClick={() =>
+                                    handleDocsTabChange(
+                                      selectedDocsTab === 'docs'
+                                        ? 'metadata'
+                                        : 'docs'
+                                    )
+                                  }
+                                  className="p-1 hover:bg-gray-100 rounded transition-colors"
+                                  title={
+                                    selectedDocsTab === 'docs'
+                                      ? 'Switch to Metadata'
+                                      : 'Switch to Docs'
+                                  }
+                                >
+                                  {selectedDocsTab === 'docs' ? (
+                                    <SparklesIcon className="h-4 w-4 text-gray-500" />
+                                  ) : (
+                                    <DocumentTextIcon className="h-4 w-4 text-gray-500" />
+                                  )}
+                                </button>
+                                <button
+                                  onClick={toggleDocsOrientation}
+                                  className="p-1 hover:bg-gray-100 rounded transition-colors"
+                                  title="Toggle panel orientation"
+                                >
+                                  <ViewColumnsIcon
+                                    className={cn(
+                                      'h-4 w-4 text-gray-500',
+                                      docsOrientation === 'vertical' &&
+                                        'rotate-90'
+                                    )}
+                                  />
+                                </button>
+                                <button
+                                  onClick={toggleDocsPanel}
+                                  className="p-1 hover:bg-gray-100 rounded transition-colors"
+                                  aria-label="Close docs panel"
+                                  title="Close docs panel"
+                                >
+                                  <XMarkIcon className="h-4 w-4 text-gray-500" />
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Docs/Metadata content */}
+                        {!isDocsCollapsed && (
+                          <div className="flex-1 overflow-auto p-2">
+                            {selectedDocsTab === 'docs' && (
+                              <Docs
+                                adaptor={
+                                  currentJob.adaptor ||
+                                  '@openfn/language-common@latest'
+                                }
+                              />
+                            )}
+                            {selectedDocsTab === 'metadata' && (
+                              <Metadata
+                                adaptor={
+                                  currentJob.adaptor ||
+                                  '@openfn/language-common@latest'
+                                }
+                                metadata={null}
+                              />
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </Panel>
+                  </PanelGroup>
                 </div>
               )}
             </div>
@@ -821,6 +1027,7 @@ export function FullScreenIDE({
                       <PanelToggleButton
                         onClick={toggleRightPanel}
                         disabled={openPanelCount === 1}
+                        isCollapsed={isRightCollapsed}
                         ariaLabel="Collapse right panel"
                       />
                     </>
