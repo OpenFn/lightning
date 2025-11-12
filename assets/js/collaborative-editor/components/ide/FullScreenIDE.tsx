@@ -897,35 +897,32 @@ export function FullScreenIDE({
                       <div className="h-full flex flex-col">
                         {/* Docs panel header with controls */}
                         {!isDocsCollapsed && (
-                          <div className="shrink-0 border-b border-gray-100">
-                            <div className="flex items-center justify-between px-2 py-1">
-                              <div className="text-xs font-medium text-gray-500">
-                                {selectedDocsTab === 'docs'
-                                  ? 'Adaptor Documentation'
-                                  : 'Metadata Explorer'}
-                              </div>
-                              <div className="flex items-center gap-1">
-                                <button
-                                  onClick={() =>
-                                    handleDocsTabChange(
-                                      selectedDocsTab === 'docs'
-                                        ? 'metadata'
-                                        : 'docs'
+                          <div className="shrink-0">
+                            <div className="flex items-center justify-between px-3 pt-2 pb-1">
+                              <div className="flex-1">
+                                <Tabs
+                                  value={selectedDocsTab}
+                                  onChange={tab =>
+                                    setSelectedDocsTab(
+                                      tab as 'docs' | 'metadata'
                                     )
                                   }
-                                  className="p-1 hover:bg-gray-100 rounded transition-colors"
-                                  title={
-                                    selectedDocsTab === 'docs'
-                                      ? 'Switch to Metadata'
-                                      : 'Switch to Docs'
-                                  }
-                                >
-                                  {selectedDocsTab === 'docs' ? (
-                                    <SparklesIcon className="h-4 w-4 text-gray-500" />
-                                  ) : (
-                                    <DocumentTextIcon className="h-4 w-4 text-gray-500" />
-                                  )}
-                                </button>
+                                  variant="pills"
+                                  options={[
+                                    {
+                                      value: 'docs',
+                                      label: 'Docs',
+                                      icon: DocumentTextIcon,
+                                    },
+                                    {
+                                      value: 'metadata',
+                                      label: 'Metadata',
+                                      icon: SparklesIcon,
+                                    },
+                                  ]}
+                                />
+                              </div>
+                              <div className="flex items-center gap-1 pl-2">
                                 <button
                                   onClick={toggleDocsOrientation}
                                   className="p-1 hover:bg-gray-100 rounded transition-colors"
