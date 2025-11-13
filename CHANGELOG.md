@@ -17,6 +17,14 @@ and this project adheres to
 
 ### Added
 
+### Changed
+
+### Fixed
+
+## [2.14.15-pre] - 2025-11-13
+
+### Added
+
 - Add missing adaptor and credential tooltips to the collab editor
   [#3919](https://github.com/OpenFn/lightning/issues/3919)
 - Show server validation errors in the collab editor forms
@@ -40,8 +48,8 @@ and this project adheres to
 
 ### Fixed
 
-- Duplicate `isReadOnly` declaration in TriggerForm that was blocking asset builds
-  [#3976](https://github.com/OpenFn/lightning/issues/3976)
+- Duplicate `isReadOnly` declaration in TriggerForm that was blocking asset
+  builds [#3976](https://github.com/OpenFn/lightning/issues/3976)
 - Run duration and status alignment drift in history view
   [#3945](https://github.com/OpenFn/lightning/pull/3945)
 - Shared doc lookup in clustered environments now works across nodes instead of
