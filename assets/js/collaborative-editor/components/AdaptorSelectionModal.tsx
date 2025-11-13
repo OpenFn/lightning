@@ -1,14 +1,14 @@
-import { Dialog, DialogBackdrop, DialogPanel } from "@headlessui/react";
-import { useEffect, useMemo, useState } from "react";
-import { useHotkeysContext } from "react-hotkeys-hook";
+import { Dialog, DialogBackdrop, DialogPanel } from '@headlessui/react';
+import { useEffect, useMemo, useState } from 'react';
+import { useHotkeysContext } from 'react-hotkeys-hook';
 
-import { HOTKEY_SCOPES } from "../constants/hotkeys";
-import { useAdaptors } from "../hooks/useAdaptors";
-import type { Adaptor } from "../types/adaptor";
-import { getAdaptorDisplayName } from "../utils/adaptorUtils";
+import { HOTKEY_SCOPES } from '../constants/hotkeys';
+import { useAdaptors } from '../hooks/useAdaptors';
+import type { Adaptor } from '../types/adaptor';
+import { getAdaptorDisplayName } from '../utils/adaptorUtils';
 
-import { AdaptorIcon } from "./AdaptorIcon";
-import { ListRow, ListSection, SearchableList } from "./SearchableList";
+import { AdaptorIcon } from './AdaptorIcon';
+import { ListRow, ListSection, SearchableList } from './SearchableList';
 
 interface AdaptorSelectionModalProps {
   isOpen: boolean;
@@ -28,7 +28,7 @@ export function AdaptorSelectionModal({
   projectAdaptors = [],
 }: AdaptorSelectionModalProps) {
   const allAdaptors = useAdaptors();
-  const [searchQuery, setSearchQuery] = useState("");
+  const [searchQuery, setSearchQuery] = useState('');
   const [focusedIndex, setFocusedIndex] = useState<number>(0);
 
   // Keyboard scope management
@@ -38,6 +38,7 @@ export function AdaptorSelectionModal({
     if (isOpen) {
       enableScope(HOTKEY_SCOPES.MODAL);
       disableScope(HOTKEY_SCOPES.PANEL);
+      disableScope(HOTKEY_SCOPES.RUN_PANEL);
     } else {
       disableScope(HOTKEY_SCOPES.MODAL);
       enableScope(HOTKEY_SCOPES.PANEL);
@@ -51,7 +52,7 @@ export function AdaptorSelectionModal({
   // Reset state when modal closes
   useEffect(() => {
     if (!isOpen) {
-      setSearchQuery("");
+      setSearchQuery('');
       setFocusedIndex(0);
     }
   }, [isOpen]);
@@ -62,7 +63,7 @@ export function AdaptorSelectionModal({
   }, [searchQuery]);
 
   const httpAdaptor = useMemo(
-    () => allAdaptors.find(a => a.name.includes("language-http")),
+    () => allAdaptors.find(a => a.name.includes('language-http')),
     [allAdaptors]
   );
 
@@ -161,15 +162,15 @@ export function AdaptorSelectionModal({
     if (totalItems === 0) return;
 
     switch (e.key) {
-      case "ArrowDown":
+      case 'ArrowDown':
         e.preventDefault();
         setFocusedIndex(prev => (prev + 1) % totalItems);
         break;
-      case "ArrowUp":
+      case 'ArrowUp':
         e.preventDefault();
         setFocusedIndex(prev => (prev - 1 + totalItems) % totalItems);
         break;
-      case "Enter": {
+      case 'Enter': {
         e.preventDefault();
         const focusedAdaptor = allVisibleAdaptors[focusedIndex];
         handleRowClick(focusedAdaptor);
@@ -234,7 +235,7 @@ export function AdaptorSelectionModal({
                   {showingHttpFallback && (
                     <div className="mb-4 px-3 py-4 bg-blue-50 rounded-lg border border-blue-100">
                       <p className="text-sm text-gray-700 mb-1">
-                        <span className="font-medium">No adaptor found</span>{" "}
+                        <span className="font-medium">No adaptor found</span>{' '}
                         for "{searchQuery}"
                       </p>
                       <p className="text-sm text-gray-600">
@@ -264,8 +265,8 @@ export function AdaptorSelectionModal({
                     <ListSection
                       title={
                         filteredProjectAdaptors.length > 0
-                          ? "All adaptors"
-                          : "Available adaptors"
+                          ? 'All adaptors'
+                          : 'Available adaptors'
                       }
                     >
                       {filteredAllAdaptors.map(adaptor => (

@@ -72,6 +72,7 @@ export function ConfigureAdaptorModal({
     if (isOpen) {
       enableScope(HOTKEY_SCOPES.MODAL);
       disableScope(HOTKEY_SCOPES.PANEL);
+      disableScope(HOTKEY_SCOPES.RUN_PANEL);
     } else {
       disableScope(HOTKEY_SCOPES.MODAL);
       enableScope(HOTKEY_SCOPES.PANEL);

@@ -520,11 +520,12 @@ export function FullScreenIDE({
       }
     },
     {
-      enabled: true,
+      enabled:
+        !isConfigureModalOpen && !isAdaptorPickerOpen && !isCredentialModalOpen,
       scopes: [HOTKEY_SCOPES.IDE],
       enableOnFormTags: true,
     },
-    [onClose]
+    [onClose, isConfigureModalOpen, isAdaptorPickerOpen, isCredentialModalOpen]
   );
 
   useHotkeys(
