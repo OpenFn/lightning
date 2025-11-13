@@ -5,14 +5,14 @@
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="generator" content="ExDoc v0.38.4">
-    <meta name="project" content="Lightning v2.14.14">
+    <meta name="project" content="Lightning v2.14.15-pre">
 
 
-    <title>Lightning.Storage.ProjectFileDefinition — Lightning v2.14.14</title>
+    <title>Lightning.Storage.ProjectFileDefinition — Lightning v2.14.15-pre</title>
 
     <link rel="stylesheet" href="dist/html-elixir-RLZO5U2C.css" />
 
-    <script defer src="dist/sidebar_items-777DBDD4.js"></script>
+    <script defer src="dist/sidebar_items-69BD9905.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-Y223O6DN.js"></script>
 
@@ -41,7 +41,7 @@
 Lightning
         </a>
         <div class="sidebar-projectVersion" translate="no">
-          v2.14.14
+          v2.14.15-pre
         </div>
       </div>
     </div>
@@ -80,7 +80,7 @@ Lightning
   <div class="heading-with-actions top-heading">
     <h1>
       <span translate="no">Lightning.Storage.ProjectFileDefinition</span> 
-      <small class="app-vsn" translate="no">(Lightning v2.14.14)</small>
+      <small class="app-vsn" translate="no">(Lightning v2.14.15-pre)</small>
 
     </h1>
 
@@ -94,13 +94,13 @@ Lightning
 
     <section id="moduledoc">
 <p>  This module provides functionality for managing the storage and retrieval of project files.</p><p>  It handles operations related to storing project files, generating URLs for accessing these files, and constructing storage paths for exported files. It serves as an abstraction layer over the underlying storage mechanism provided by the <a href="Lightning.Storage.html"><code class="inline">Lightning.Storage</code></a> module.</p><p>  ## Functions</p><ul><li><a href="#store/2"><code class="inline">store/2</code></a>: Stores a file from a given source path into the storage system based on the file's path.</li><li><a href="#get_url/1"><code class="inline">get_url/1</code></a>: Retrieves the URL for accessing a stored file.</li><li><a href="#storage_path_for_exports/2"><code class="inline">storage_path_for_exports/2</code></a>: Constructs a storage path for exported files, defaulting to a <code class="inline">.zip</code> extension.</li></ul><p>  ## Example Usage</p><pre><code class="makeup elixir" translate="no"><span class="w">  </span><span class="c1"># Store a file</span><span class="w">
-  </span><span class="nc">Lightning.Storage.ProjectFileDefinition</span><span class="o">.</span><span class="n">store</span><span class="p" data-group-id="0708770260-1">(</span><span class="s">&quot;/path/to/source&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">project_file</span><span class="p" data-group-id="0708770260-1">)</span><span class="w">
+  </span><span class="nc">Lightning.Storage.ProjectFileDefinition</span><span class="o">.</span><span class="n">store</span><span class="p" data-group-id="1597114207-1">(</span><span class="s">&quot;/path/to/source&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">project_file</span><span class="p" data-group-id="1597114207-1">)</span><span class="w">
 
   </span><span class="c1"># Get a URL for the stored file</span><span class="w">
-  </span><span class="n">url</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">Lightning.Storage.ProjectFileDefinition</span><span class="o">.</span><span class="n">get_url</span><span class="p" data-group-id="0708770260-2">(</span><span class="n">project_file</span><span class="p" data-group-id="0708770260-2">)</span><span class="w">
+  </span><span class="n">url</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">Lightning.Storage.ProjectFileDefinition</span><span class="o">.</span><span class="n">get_url</span><span class="p" data-group-id="1597114207-2">(</span><span class="n">project_file</span><span class="p" data-group-id="1597114207-2">)</span><span class="w">
 
   </span><span class="c1"># Get the storage path for an exported file</span><span class="w">
-  </span><span class="n">path</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">Lightning.Storage.ProjectFileDefinition</span><span class="o">.</span><span class="n">storage_path_for_exports</span><span class="p" data-group-id="0708770260-3">(</span><span class="n">project_file</span><span class="p" data-group-id="0708770260-3">)</span></code></pre>
+  </span><span class="n">path</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">Lightning.Storage.ProjectFileDefinition</span><span class="o">.</span><span class="n">storage_path_for_exports</span><span class="p" data-group-id="1597114207-3">(</span><span class="n">project_file</span><span class="p" data-group-id="1597114207-3">)</span></code></pre>
     </section>
 
 </div>
