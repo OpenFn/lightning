@@ -171,9 +171,9 @@ headers and data as received by the Kafka pipeline and write this to a file
 within the subdirectory. The file will be named based on the pattern
 <code class="inline">&lt;trigger_id&gt;_&lt;message_topic&gt;_&lt;message_partition&gt;_&lt;message_offset&gt;.json</code>.</p><p>To recover the persisted messages, it is suggested that the affected triggers be
 disabled before commencing. Once this is done, the following code needs to be
-run from an IEx console on each node that is running Lightning:</p><pre><code class="makeup elixir" translate="no"><span class="nc">Lightning.KafkaTriggers.MessageRecovery</span><span class="o">.</span><span class="n">recover_messages</span><span class="p" data-group-id="3373021278-1">(</span><span class="w">
-  </span><span class="nc">Lightning.Config</span><span class="o">.</span><span class="n">kafka_alternate_storage_file_path</span><span class="p" data-group-id="3373021278-2">(</span><span class="p" data-group-id="3373021278-2">)</span><span class="w">
-</span><span class="p" data-group-id="3373021278-1">)</span></code></pre><p>Further details regarding the behaviour of <code class="inline">MessageRecovery.recover_messages/1</code>
+run from an IEx console on each node that is running Lightning:</p><pre><code class="makeup elixir" translate="no"><span class="nc">Lightning.KafkaTriggers.MessageRecovery</span><span class="o">.</span><span class="n">recover_messages</span><span class="p" data-group-id="9702872140-1">(</span><span class="w">
+  </span><span class="nc">Lightning.Config</span><span class="o">.</span><span class="n">kafka_alternate_storage_file_path</span><span class="p" data-group-id="9702872140-2">(</span><span class="p" data-group-id="9702872140-2">)</span><span class="w">
+</span><span class="p" data-group-id="9702872140-1">)</span></code></pre><p>Further details regarding the behaviour of <code class="inline">MessageRecovery.recover_messages/1</code>
 can be found in the module documentation of <code class="inline">MessageRecovery</code>. Recovered
 messages will have the <code class="inline">.json</code> extension modified to <code class="inline">.json.recovered</code> but they
 will be left in place. Future recovery runs will not process files that have
