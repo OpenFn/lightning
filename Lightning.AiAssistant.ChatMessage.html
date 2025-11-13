@@ -12,7 +12,7 @@
 
     <link rel="stylesheet" href="dist/html-elixir-RLZO5U2C.css" />
 
-    <script defer src="dist/sidebar_items-69BD9905.js"></script>
+    <script defer src="dist/sidebar_items-764528B7.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-Y223O6DN.js"></script>
 
@@ -333,10 +333,10 @@ Assistant messages typically have :success status when created.</p><h2 id="modul
 
 <p>Creates a changeset for updating message status.</p><p>This is a focused changeset that only updates the status field,
 useful for updating message state during processing.</p><h2 id="status_changeset/2-parameters" class="section-heading"><a href="#status_changeset/2-parameters" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Parameters</span></h2><ul><li><code class="inline">chat_message</code> - The existing ChatMessage struct</li><li><code class="inline">status</code> - New status (<code class="inline">:pending</code>, <code class="inline">:success</code>, <code class="inline">:error</code>, or <code class="inline">:cancelled</code>)</li></ul><h2 id="status_changeset/2-examples" class="section-heading"><a href="#status_changeset/2-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="c1"># Mark message as successful</span><span class="w">
-</span><span class="nc">ChatMessage</span><span class="o">.</span><span class="n">status_changeset</span><span class="p" data-group-id="2301033320-1">(</span><span class="n">message</span><span class="p">,</span><span class="w"> </span><span class="ss">:success</span><span class="p" data-group-id="2301033320-1">)</span><span class="w">
+</span><span class="nc">ChatMessage</span><span class="o">.</span><span class="n">status_changeset</span><span class="p" data-group-id="5733850254-1">(</span><span class="n">message</span><span class="p">,</span><span class="w"> </span><span class="ss">:success</span><span class="p" data-group-id="5733850254-1">)</span><span class="w">
 
 </span><span class="c1"># Mark message as failed</span><span class="w">
-</span><span class="nc">ChatMessage</span><span class="o">.</span><span class="n">status_changeset</span><span class="p" data-group-id="2301033320-2">(</span><span class="n">message</span><span class="p">,</span><span class="w"> </span><span class="ss">:error</span><span class="p" data-group-id="2301033320-2">)</span></code></pre>
+</span><span class="nc">ChatMessage</span><span class="o">.</span><span class="n">status_changeset</span><span class="p" data-group-id="5733850254-2">(</span><span class="n">message</span><span class="p">,</span><span class="w"> </span><span class="ss">:error</span><span class="p" data-group-id="5733850254-2">)</span></code></pre>
   </section>
 </section>
 

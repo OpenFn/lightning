@@ -12,7 +12,7 @@
 
     <link rel="stylesheet" href="dist/html-elixir-RLZO5U2C.css" />
 
-    <script defer src="dist/sidebar_items-69BD9905.js"></script>
+    <script defer src="dist/sidebar_items-764528B7.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-Y223O6DN.js"></script>
 
@@ -123,7 +123,7 @@ sandbox workflows back onto their parent workflows.</p>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#merge_project/2" data-no-tooltip="" translate="no">merge_project(source_project, target_project)</a>
+        <a href="#merge_project/3" data-no-tooltip="" translate="no">merge_project(source, target, new_uuid_map \\ %{})</a>
 
       </div>
 
@@ -133,7 +133,7 @@ sandbox workflows back onto their parent workflows.</p>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#merge_workflow/2" data-no-tooltip="" translate="no">merge_workflow(source_workflow, target_workflow)</a>
+        <a href="#merge_workflow/3" data-no-tooltip="" translate="no">merge_workflow(source, target, new_uuid_map \\ %{})</a>
 
       </div>
 
@@ -165,7 +165,7 @@ sandbox workflows back onto their parent workflows.</p>
       <h1 class="signature" translate="no">has_diverged?(source_project, target_project)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/merge_projects.ex#L785" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/merge_projects.ex#L824" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -187,14 +187,16 @@ that changes have been made to the target that the sandbox doesn't know about,
 which could lead to data loss during merge.</p><h2 id="has_diverged?/2-parameters" class="section-heading"><a href="#has_diverged?/2-parameters" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Parameters</span></h2><ul><li><code class="inline">source_project</code> - The sandbox project with workflows</li><li><code class="inline">target_project</code> - The target project to check with workflows</li></ul><h2 id="has_diverged?/2-returns" class="section-heading"><a href="#has_diverged?/2-returns" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Returns</span></h2><ul><li><code class="inline">true</code> if the target has diverged (workflow versions differ)</li><li><code class="inline">false</code> if no divergence detected</li></ul>
   </section>
 </section>
-<section class="detail" id="merge_project/2">
+<section class="detail" id="merge_project/3">
+
+    <span id="merge_project/2"></span>
 
   <div class="detail-header">
-    <a href="#merge_project/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+    <a href="#merge_project/3" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
     </a>
     <div class="heading-with-actions">
-      <h1 class="signature" translate="no">merge_project(source_project, target_project)</h1>
+      <h1 class="signature" translate="no">merge_project(source, target, new_uuid_map \\ %{})</h1>
 
 
         <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/merge_projects.ex#L30" class="icon-action" rel="help" aria-label="View Source">
@@ -208,28 +210,33 @@ which could lead to data loss during merge.</p><h2 id="has_diverged?/2-parameter
 
       <div class="specs">
 
-          <pre translate="no"><span class="attribute">@spec</span> merge_project(<a href="Lightning.Projects.Project.html#t:t/0">Lightning.Projects.Project.t</a>(), <a href="Lightning.Projects.Project.html#t:t/0">Lightning.Projects.Project.t</a>()) ::
-  <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>()</pre>
+          <pre translate="no"><span class="attribute">@spec</span> merge_project(
+  <a href="Lightning.Projects.Project.html#t:t/0">Lightning.Projects.Project.t</a>(),
+  <a href="Lightning.Projects.Project.html#t:t/0">Lightning.Projects.Project.t</a>(),
+  <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>()
+) :: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>()</pre>
 
       </div>
 
 <p>Merges a source project onto a target project using workflow name matching.</p><p>Maps workflows from source to target project based on exact name matching.
 Uses the existing merge_workflow/2 logic for individual workflow merging.
-Workflows that don't match are marked for deletion (target) or creation (source).</p><h2 id="merge_project/2-parameters" class="section-heading"><a href="#merge_project/2-parameters" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Parameters</span></h2><ul><li><code class="inline">source_project</code> - The project with modifications to merge</li><li><code class="inline">target_project</code> - The target project to merge changes onto</li></ul><h2 id="merge_project/2-returns" class="section-heading"><a href="#merge_project/2-returns" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Returns</span></h2><p>  A map with the merged project structure ready for import, containing
+Workflows that don't match are marked for deletion (target) or creation (source).</p><h2 id="merge_project/3-parameters" class="section-heading"><a href="#merge_project/3-parameters" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Parameters</span></h2><ul><li><code class="inline">source_project</code> - The project with modifications to merge</li><li><code class="inline">target_project</code> - The target project to merge changes onto</li></ul><h2 id="merge_project/3-returns" class="section-heading"><a href="#merge_project/3-returns" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Returns</span></h2><p>  A map with the merged project structure ready for import, containing
   workflow mappings and project data.</p>
   </section>
 </section>
-<section class="detail" id="merge_workflow/2">
+<section class="detail" id="merge_workflow/3">
+
+    <span id="merge_workflow/2"></span>
 
   <div class="detail-header">
-    <a href="#merge_workflow/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+    <a href="#merge_workflow/3" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
     </a>
     <div class="heading-with-actions">
-      <h1 class="signature" translate="no">merge_workflow(source_workflow, target_workflow)</h1>
+      <h1 class="signature" translate="no">merge_workflow(source, target, new_uuid_map \\ %{})</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/merge_projects.ex#L79" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/merge_projects.ex#L84" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -242,13 +249,14 @@ Workflows that don't match are marked for deletion (target) or creation (source)
 
           <pre translate="no"><span class="attribute">@spec</span> merge_workflow(
   <a href="Lightning.Workflows.Workflow.html#t:t/0">Lightning.Workflows.Workflow.t</a>(),
-  <a href="Lightning.Workflows.Workflow.html#t:t/0">Lightning.Workflows.Workflow.t</a>()
+  <a href="Lightning.Workflows.Workflow.html#t:t/0">Lightning.Workflows.Workflow.t</a>(),
+  <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>()
 ) :: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>()</pre>
 
       </div>
 
 <p>Merges a sandbox workflow back onto its parent workflow using UUID mapping.</p><p>Maps nodes and edges from source to target workflow, preserving UUIDs where
-possible when merging two workflows (likely one is a fork of the other).</p><p>The algorithm follows these phases:</p><ol><li>Direct ID Matching - matches nodes with identical IDs</li><li>Root Node Mapping - always maps root nodes</li><li>Structural and Expression Matching - iterative matching using parents, children, and expression</li><li>Edge Mapping - maps edges based on node mappings</li></ol><h2 id="merge_workflow/2-parameters" class="section-heading"><a href="#merge_workflow/2-parameters" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Parameters</span></h2><ul><li><code class="inline">source_workflow</code> - The sandbox workflow with modifications (i.e staging)</li><li><code class="inline">target_workflow</code> - The parent workflow to merge changes onto (i.e main)</li></ul><h2 id="merge_workflow/2-returns" class="section-heading"><a href="#merge_workflow/2-returns" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Returns</span></h2><p>  A map with the merged workflow structure ready for import, containing
+possible when merging two workflows (likely one is a fork of the other).</p><p>The algorithm follows these phases:</p><ol><li>Direct ID Matching - matches nodes with identical IDs</li><li>Root Node Mapping - always maps root nodes</li><li>Structural and Expression Matching - iterative matching using parents, children, and expression</li><li>Edge Mapping - maps edges based on node mappings</li></ol><h2 id="merge_workflow/3-parameters" class="section-heading"><a href="#merge_workflow/3-parameters" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Parameters</span></h2><ul><li><code class="inline">source_workflow</code> - The sandbox workflow with modifications (i.e staging)</li><li><code class="inline">target_workflow</code> - The parent workflow to merge changes onto (i.e main)</li></ul><h2 id="merge_workflow/3-returns" class="section-heading"><a href="#merge_workflow/3-returns" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Returns</span></h2><p>  A map with the merged workflow structure ready for import, containing
   UUID mappings and workflow data.</p>
   </section>
 </section>
