@@ -573,6 +573,16 @@ defmodule LightningWeb.ProjectLiveTest do
 
       assert {user2.id, :editor} in user_roles
       assert {user3.id, :viewer} in user_roles
+
+      # Check that newly added collaborators have failure_alert defaulting to false
+      user2_project_user =
+        Enum.find(updated_project.project_users, &(&1.user_id == user2.id))
+
+      user3_project_user =
+        Enum.find(updated_project.project_users, &(&1.user_id == user3.id))
+
+      assert user2_project_user.failure_alert == false
+      assert user3_project_user.failure_alert == false
     end
 
     test "removing collaborators from project works correctly", %{conn: conn} do
