@@ -17,6 +17,8 @@ and this project adheres to
 
 ### Added
 
+- Add missing adaptor and credential tooltips to the collab editor
+  [#3919](https://github.com/OpenFn/lightning/issues/3919)
 - Show server validation errors in the collab editor forms
   [#3783](https://github.com/OpenFn/lightning/issues/3783)
 - Enforce readonly state in collaborative editor forms for viewers and old
