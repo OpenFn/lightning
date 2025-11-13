@@ -963,7 +963,7 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
 
         <div class="space-y-6">
           <p class="text-gray-700 leading-relaxed">
-            Create your own credential, or reference a value from a Keychain credential.
+            Create a new multi-purpose credential.
           </p>
 
           <div>
