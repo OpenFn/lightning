@@ -20,7 +20,8 @@ import type {
   ProjectContext,
   ProjectRepoConnection,
   UserContext,
-} from "../../../js/collaborative-editor/types/sessionContext";
+  WebhookAuthMethod,
+} from '../../../js/collaborative-editor/types/sessionContext';
 
 // =============================================================================
 // BASE MOCK DATA (used as defaults in factories)
@@ -30,20 +31,20 @@ import type {
  * Sample user context for testing
  */
 export const mockUserContext: UserContext = {
-  id: "550e8400-e29b-41d4-a716-446655440000",
-  first_name: "Test",
-  last_name: "User",
-  email: "test@example.com",
+  id: '550e8400-e29b-41d4-a716-446655440000',
+  first_name: 'Test',
+  last_name: 'User',
+  email: 'test@example.com',
   email_confirmed: true,
-  inserted_at: "2024-01-15T10:30:00Z",
+  inserted_at: '2024-01-15T10:30:00Z',
 };
 
 /**
  * Sample project context for testing
  */
 export const mockProjectContext: ProjectContext = {
-  id: "660e8400-e29b-41d4-a716-446655440000",
-  name: "Test Project",
+  id: '660e8400-e29b-41d4-a716-446655440000',
+  name: 'Test Project',
 };
 
 /**
@@ -59,26 +60,27 @@ export const mockAppConfig: AppConfig = {
 export const mockPermissions: Permissions = {
   can_edit_workflow: true,
   can_run_workflow: true,
+  can_write_webhook_auth_method: true,
 };
 
 /**
  * Alternative user for testing updates
  */
 export const mockAlternativeUserContext: UserContext = {
-  id: "770e8400-e29b-41d4-a716-446655440000",
-  first_name: "Jane",
-  last_name: "Smith",
-  email: "jane@example.com",
+  id: '770e8400-e29b-41d4-a716-446655440000',
+  first_name: 'Jane',
+  last_name: 'Smith',
+  email: 'jane@example.com',
   email_confirmed: false,
-  inserted_at: "2024-01-20T15:45:00Z",
+  inserted_at: '2024-01-20T15:45:00Z',
 };
 
 /**
  * Alternative project for testing updates
  */
 export const mockAlternativeProjectContext: ProjectContext = {
-  id: "880e8400-e29b-41d4-a716-446655440000",
-  name: "Another Project",
+  id: '880e8400-e29b-41d4-a716-446655440000',
+  name: 'Another Project',
 };
 
 // =============================================================================
@@ -95,6 +97,7 @@ export interface SessionContextResponse {
   permissions: Permissions;
   latest_snapshot_lock_version: number;
   project_repo_connection: ProjectRepoConnection | null;
+  webhook_auth_methods: WebhookAuthMethod[];
 }
 
 /**
@@ -107,6 +110,7 @@ export const mockSessionContextResponse: SessionContextResponse = {
   permissions: mockPermissions,
   latest_snapshot_lock_version: 1,
   project_repo_connection: null,
+  webhook_auth_methods: [],
 };
 
 /**
@@ -119,6 +123,7 @@ export const mockUnauthenticatedSessionContext: SessionContextResponse = {
   permissions: mockPermissions,
   latest_snapshot_lock_version: 1,
   project_repo_connection: null,
+  webhook_auth_methods: [],
 };
 
 /**
@@ -131,6 +136,7 @@ export const mockUpdatedSessionContext: SessionContextResponse = {
   permissions: mockPermissions,
   latest_snapshot_lock_version: 2,
   project_repo_connection: null,
+  webhook_auth_methods: [],
 };
 
 // =============================================================================
@@ -148,30 +154,33 @@ export const invalidSessionContextData = {
     permissions: mockPermissions,
     latest_snapshot_lock_version: 1,
     project_repo_connection: null,
+    webhook_auth_methods: [],
   },
 
   invalidUserId: {
     user: {
       ...mockUserContext,
-      id: "not-a-uuid", // invalid UUID format
+      id: 'not-a-uuid', // invalid UUID format
     },
     project: mockProjectContext,
     config: mockAppConfig,
     permissions: mockPermissions,
     latest_snapshot_lock_version: 1,
     project_repo_connection: null,
+    webhook_auth_methods: [],
   },
 
   invalidUserEmail: {
     user: {
       ...mockUserContext,
-      email: "not-an-email", // invalid email format
+      email: 'not-an-email', // invalid email format
     },
     project: mockProjectContext,
     config: mockAppConfig,
     permissions: mockPermissions,
     latest_snapshot_lock_version: 1,
     project_repo_connection: null,
+    webhook_auth_methods: [],
   },
 
   missingConfig: {
@@ -181,17 +190,19 @@ export const invalidSessionContextData = {
     permissions: mockPermissions,
     latest_snapshot_lock_version: 1,
     project_repo_connection: null,
+    webhook_auth_methods: [],
   },
 
   invalidConfigType: {
     user: mockUserContext,
     project: mockProjectContext,
     config: {
-      require_email_verification: "invalid", // should be boolean
+      require_email_verification: 'invalid', // should be boolean
     },
     permissions: mockPermissions,
     latest_snapshot_lock_version: 1,
     project_repo_connection: null,
+    webhook_auth_methods: [],
   },
 
   invalidProjectId: {
@@ -204,6 +215,7 @@ export const invalidSessionContextData = {
     permissions: mockPermissions,
     latest_snapshot_lock_version: 1,
     project_repo_connection: null,
+    webhook_auth_methods: [],
   },
 
   missingProjectName: {
@@ -216,6 +228,7 @@ export const invalidSessionContextData = {
     permissions: mockPermissions,
     latest_snapshot_lock_version: 1,
     project_repo_connection: null,
+    webhook_auth_methods: [],
   },
 };
 
@@ -234,6 +247,7 @@ export interface CreateSessionContextOptions {
   permissions?: Partial<Permissions>;
   latest_snapshot_lock_version?: number;
   project_repo_connection?: Partial<ProjectRepoConnection> | null;
+  webhook_auth_methods?: WebhookAuthMethod[];
 }
 
 /**
@@ -275,12 +289,12 @@ export function createSessionContext(
     options.user === null
       ? null
       : {
-          id: "550e8400-e29b-41d4-a716-446655440000",
-          first_name: "Test",
-          last_name: "User",
-          email: "test@example.com",
+          id: '550e8400-e29b-41d4-a716-446655440000',
+          first_name: 'Test',
+          last_name: 'User',
+          email: 'test@example.com',
           email_confirmed: true,
-          inserted_at: "2025-01-13T10:30:00Z",
+          inserted_at: '2025-01-13T10:30:00Z',
           ...options.user,
         };
 
@@ -289,8 +303,8 @@ export function createSessionContext(
     options.project === null
       ? null
       : {
-          id: "660e8400-e29b-41d4-a716-446655440000",
-          name: "Test Project",
+          id: '660e8400-e29b-41d4-a716-446655440000',
+          name: 'Test Project',
           ...options.project,
         };
 
@@ -304,6 +318,7 @@ export function createSessionContext(
   const permissions: Permissions = {
     can_edit_workflow: true,
     can_run_workflow: true,
+    can_write_webhook_auth_method: true,
     ...options.permissions,
   };
 
@@ -314,10 +329,10 @@ export function createSessionContext(
     options.project_repo_connection !== null
   ) {
     project_repo_connection = {
-      id: "770e8400-e29b-41d4-a716-446655440000",
-      repo: "openfn/demo",
-      branch: "main",
-      github_installation_id: "12345678",
+      id: '770e8400-e29b-41d4-a716-446655440000',
+      repo: 'openfn/demo',
+      branch: 'main',
+      github_installation_id: '12345678',
       ...options.project_repo_connection,
     };
   }
@@ -329,6 +344,7 @@ export function createSessionContext(
     permissions,
     latest_snapshot_lock_version: options.latest_snapshot_lock_version ?? 1,
     project_repo_connection,
+    webhook_auth_methods: options.webhook_auth_methods ?? [],
   };
 }
 
@@ -359,8 +375,8 @@ export function createUnauthenticatedContext(): SessionContextResponse {
  * expect(context.project_repo_connection?.branch).toBe("develop");
  */
 export function createGithubConnectedContext(
-  repo = "openfn/demo",
-  branch = "main"
+  repo = 'openfn/demo',
+  branch = 'main'
 ): SessionContextResponse {
   return createSessionContext({
     project_repo_connection: { repo, branch },
@@ -438,12 +454,12 @@ export function createMockUser(
   overrides: Partial<UserContext> = {}
 ): UserContext {
   return {
-    id: "990e8400-e29b-41d4-a716-446655440000", // Valid UUIDv4 format
-    email: "test@example.com",
-    first_name: "Test",
-    last_name: "User",
+    id: '990e8400-e29b-41d4-a716-446655440000', // Valid UUIDv4 format
+    email: 'test@example.com',
+    first_name: 'Test',
+    last_name: 'User',
     email_confirmed: true,
-    inserted_at: "2025-01-13T10:30:00Z",
+    inserted_at: '2025-01-13T10:30:00Z',
     ...overrides,
   };
 }
@@ -484,8 +500,8 @@ export function createMockProject(
   overrides: Partial<ProjectContext> = {}
 ): ProjectContext {
   return {
-    id: "660e8400-e29b-41d4-a716-446655440000",
-    name: "Test Project",
+    id: '660e8400-e29b-41d4-a716-446655440000',
+    name: 'Test Project',
     ...overrides,
   };
 }

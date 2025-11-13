@@ -15,50 +15,50 @@
  * - Use descriptive test names that explain the behavior being tested
  */
 
-import { describe, expect, test, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
-import MiniHistory from "../../../../js/collaborative-editor/components/diagram/MiniHistory";
+import { describe, expect, test, vi, beforeEach } from 'vitest';
+import { render, screen, fireEvent } from '@testing-library/react';
+import MiniHistory from '../../../../js/collaborative-editor/components/diagram/MiniHistory';
 import {
   createMockWorkOrder,
   mockHistoryList,
   mockMultiRunWorkOrder,
   mockSelectedWorkOrder,
   createWorkOrdersForAllStates,
-} from "../../fixtures/historyData";
+} from '../../fixtures/historyData';
 
 // Mock date-fns formatRelative to avoid locale issues in tests
-vi.mock("date-fns", async () => {
-  const actual = await vi.importActual("date-fns");
+vi.mock('date-fns', async () => {
+  const actual = await vi.importActual('date-fns');
   return {
     ...actual,
-    formatRelative: vi.fn(() => "2 hours ago"),
+    formatRelative: vi.fn(() => '2 hours ago'),
   };
 });
 
 // Mock the hooks module to avoid Phoenix LiveView dependencies in tests
-vi.mock("../../../../js/hooks", () => ({
+vi.mock('../../../../js/hooks', () => ({
   relativeLocale: {},
 }));
 
 // Mock window.location for navigation tests
 const mockLocationAssign = vi.fn();
 const mockLocation = {
-  href: "http://localhost/projects/test-project-id/w/test-workflow-id",
-  pathname: "/projects/test-project-id/w/test-workflow-id",
+  href: 'http://localhost/projects/test-project-id/w/test-workflow-id',
+  pathname: '/projects/test-project-id/w/test-workflow-id',
   assign: mockLocationAssign,
 };
 
-Object.defineProperty(window, "location", {
+Object.defineProperty(window, 'location', {
   value: mockLocation,
   writable: true,
 });
 
-describe("MiniHistory", () => {
+describe('MiniHistory', () => {
   beforeEach(() => {
     // Reset location and mock before each test
     mockLocation.href =
-      "http://localhost/projects/test-project-id/w/test-workflow-id";
-    mockLocation.pathname = "/projects/test-project-id/w/test-workflow-id";
+      'http://localhost/projects/test-project-id/w/test-workflow-id';
+    mockLocation.pathname = '/projects/test-project-id/w/test-workflow-id';
     mockLocationAssign.mockClear();
   });
 
@@ -66,8 +66,8 @@ describe("MiniHistory", () => {
   // COLLAPSED STATE
   // ==========================================================================
 
-  describe("renders correctly in collapsed state", () => {
-    test("displays minimal UI with expand button and view history link", () => {
+  describe('renders correctly in collapsed state', () => {
+    test('displays minimal UI with expand button and view history link', () => {
       const onCollapseHistory = vi.fn();
       const selectRunHandler = vi.fn();
 
@@ -81,25 +81,25 @@ describe("MiniHistory", () => {
       );
 
       // Header shows "View History" text when collapsed
-      expect(screen.getByText("View History")).toBeInTheDocument();
+      expect(screen.getByText('View History')).toBeInTheDocument();
 
       // View full history button is present
-      const viewHistoryButton = screen.getByRole("button", {
+      const viewHistoryButton = screen.getByRole('button', {
         name: /View full history for this workflow/i,
       });
       expect(viewHistoryButton).toBeInTheDocument();
 
       // Chevron is present (right-pointing chevron for collapsed state)
-      const header = screen.getByText("View History").closest("div.px-3");
-      const chevronIcon = header?.querySelector("span.hero-chevron-right");
+      const header = screen.getByText('View History').closest('div.px-3');
+      const chevronIcon = header?.querySelector('span.hero-chevron-right');
       expect(chevronIcon).toBeInTheDocument();
 
       // Work order list is hidden (element exists but not visible)
-      const workOrderList = document.querySelector(".overflow-y-auto");
-      expect(workOrderList).toHaveClass("hidden");
+      const workOrderList = document.querySelector('.overflow-y-auto');
+      expect(workOrderList).toHaveClass('hidden');
     });
 
-    test("toggles when header is clicked", () => {
+    test('toggles when header is clicked', () => {
       const onCollapseHistory = vi.fn();
       const selectRunHandler = vi.fn();
 
@@ -113,7 +113,7 @@ describe("MiniHistory", () => {
       );
 
       // Click anywhere in the header section
-      const header = screen.getByText("View History").parentElement;
+      const header = screen.getByText('View History').parentElement;
       fireEvent.click(header!);
 
       expect(onCollapseHistory).toHaveBeenCalledTimes(1);
@@ -124,8 +124,8 @@ describe("MiniHistory", () => {
   // EXPANDED STATE
   // ==========================================================================
 
-  describe("renders correctly in expanded state", () => {
-    test("displays full UI with work order list", () => {
+  describe('renders correctly in expanded state', () => {
+    test('displays full UI with work order list', () => {
       const onCollapseHistory = vi.fn();
       const selectRunHandler = vi.fn();
 
@@ -139,11 +139,11 @@ describe("MiniHistory", () => {
       );
 
       // Header shows "Recent History" when expanded
-      expect(screen.getByText("Recent History")).toBeInTheDocument();
+      expect(screen.getByText('Recent History')).toBeInTheDocument();
 
       // Chevron is present (left-pointing chevron for expanded state)
-      const header = screen.getByText("Recent History").closest("div.px-3");
-      const chevronIcon = header?.querySelector("span.hero-chevron-left");
+      const header = screen.getByText('Recent History').closest('div.px-3');
+      const chevronIcon = header?.querySelector('span.hero-chevron-left');
       expect(chevronIcon).toBeInTheDocument();
 
       // Work order list is visible - check for truncated work order IDs
@@ -151,7 +151,7 @@ describe("MiniHistory", () => {
       expect(screen.getByText(/547d11ad/)).toBeInTheDocument();
     });
 
-    test("collapses when header is clicked", () => {
+    test('collapses when header is clicked', () => {
       const onCollapseHistory = vi.fn();
       const selectRunHandler = vi.fn();
 
@@ -165,7 +165,7 @@ describe("MiniHistory", () => {
       );
 
       // Click the header element
-      const header = screen.getByText("Recent History").parentElement;
+      const header = screen.getByText('Recent History').parentElement;
       fireEvent.click(header!);
 
       expect(onCollapseHistory).toHaveBeenCalledTimes(1);
@@ -176,8 +176,8 @@ describe("MiniHistory", () => {
   // EMPTY STATE
   // ==========================================================================
 
-  describe("displays empty state correctly", () => {
-    test("shows helpful message when no history is available", () => {
+  describe('displays empty state correctly', () => {
+    test('shows helpful message when no history is available', () => {
       const onCollapseHistory = vi.fn();
       const selectRunHandler = vi.fn();
 
@@ -191,20 +191,20 @@ describe("MiniHistory", () => {
       );
 
       // Empty state displays icon and message
-      expect(screen.getByText("No related history")).toBeInTheDocument();
+      expect(screen.getByText('No related history')).toBeInTheDocument();
       expect(
         screen.getByText(/Why not run it a few times to see some history?/i)
       ).toBeInTheDocument();
 
       // Empty state icon is present
       const emptyStateIcon = screen
-        .getByText("No related history")
-        .closest("div")
-        ?.querySelector("span.hero-rectangle-stack");
+        .getByText('No related history')
+        .closest('div')
+        ?.querySelector('span.hero-rectangle-stack');
       expect(emptyStateIcon).toBeInTheDocument();
     });
 
-    test("does not display work order list when empty", () => {
+    test('does not display work order list when empty', () => {
       const onCollapseHistory = vi.fn();
       const selectRunHandler = vi.fn();
 
@@ -227,8 +227,8 @@ describe("MiniHistory", () => {
   // WORK ORDER LIST RENDERING
   // ==========================================================================
 
-  describe("work order list renders correctly", () => {
-    test("displays all work orders with truncated IDs, status pills, and timestamps", () => {
+  describe('work order list renders correctly', () => {
+    test('displays all work orders with truncated IDs, status pills, and timestamps', () => {
       const onCollapseHistory = vi.fn();
       const selectRunHandler = vi.fn();
 
@@ -248,17 +248,17 @@ describe("MiniHistory", () => {
       expect(screen.getByText(/b18b25b7/)).toBeInTheDocument(); // Running
 
       // Status pills are present for each work order
-      expect(screen.getByText("Success")).toBeInTheDocument();
-      expect(screen.getByText("Failed")).toBeInTheDocument();
-      expect(screen.getByText("Crashed")).toBeInTheDocument();
-      expect(screen.getByText("Running")).toBeInTheDocument();
+      expect(screen.getByText('Success')).toBeInTheDocument();
+      expect(screen.getByText('Failed')).toBeInTheDocument();
+      expect(screen.getByText('Crashed')).toBeInTheDocument();
+      expect(screen.getByText('Running')).toBeInTheDocument();
 
       // Relative timestamps are displayed
       const timestamps = screen.getAllByText(/ago|yesterday|today/i);
       expect(timestamps.length).toBeGreaterThan(0);
     });
 
-    test("work order chevron indicates collapsed state by default", () => {
+    test('work order chevron indicates collapsed state by default', () => {
       const onCollapseHistory = vi.fn();
       const selectRunHandler = vi.fn();
 
@@ -274,12 +274,12 @@ describe("MiniHistory", () => {
       // All work orders should have right-pointing chevrons (collapsed)
       const chevrons = screen
         .getByText(/e2107d46/)
-        .closest("div")
-        ?.querySelectorAll("span.hero-chevron-right");
+        .closest('div')
+        ?.querySelectorAll('span.hero-chevron-right');
       expect(chevrons!.length).toBeGreaterThan(0);
     });
 
-    test("clicking work order expands to show runs", () => {
+    test('clicking work order expands to show runs', () => {
       const onCollapseHistory = vi.fn();
       const selectRunHandler = vi.fn();
       const history = [mockMultiRunWorkOrder]; // Work order with 3 runs
@@ -297,7 +297,7 @@ describe("MiniHistory", () => {
       expect(screen.queryByText(/8c7087f8/)).not.toBeInTheDocument();
 
       // Click the chevron button to expand
-      const expandButton = screen.getByRole("button", {
+      const expandButton = screen.getByRole('button', {
         name: /Expand work order details/i,
       });
       fireEvent.click(expandButton);
@@ -308,17 +308,17 @@ describe("MiniHistory", () => {
       expect(screen.getByText(/ac7087f8/)).toBeInTheDocument();
     });
 
-    test("clicking work order with single run calls selectRunHandler directly", () => {
+    test('clicking work order with single run calls selectRunHandler directly', () => {
       const onCollapseHistory = vi.fn();
       const selectRunHandler = vi.fn();
       const singleRunWorkOrder = createMockWorkOrder({
-        id: "single-run-wo",
+        id: 'single-run-wo',
         runs: [
           {
-            id: "single-run-id",
-            state: "success",
-            started_at: "2025-10-23T20:00:00Z",
-            finished_at: "2025-10-23T20:00:01Z",
+            id: 'single-run-id',
+            state: 'success',
+            started_at: '2025-10-23T20:00:00Z',
+            finished_at: '2025-10-23T20:00:01Z',
             error_type: null,
             selected: false,
           },
@@ -335,7 +335,7 @@ describe("MiniHistory", () => {
       );
 
       // Click chevron/expand button to trigger work order action
-      const expandButton = screen.getByRole("button", {
+      const expandButton = screen.getByRole('button', {
         name: /Expand work order details/i,
       });
       fireEvent.click(expandButton);
@@ -343,8 +343,8 @@ describe("MiniHistory", () => {
       // Should call selectRunHandler with the run (auto-selects single run)
       expect(selectRunHandler).toHaveBeenCalledWith(
         expect.objectContaining({
-          id: "single-run-id",
-          state: "success",
+          id: 'single-run-id',
+          state: 'success',
         })
       );
     });
@@ -354,8 +354,8 @@ describe("MiniHistory", () => {
   // RUN LIST RENDERING
   // ==========================================================================
 
-  describe("run list renders correctly when work order expanded", () => {
-    test("displays all runs with IDs, timestamps, durations, and status pills", () => {
+  describe('run list renders correctly when work order expanded', () => {
+    test('displays all runs with IDs, timestamps, durations, and status pills', () => {
       const onCollapseHistory = vi.fn();
       const selectRunHandler = vi.fn();
 
@@ -369,7 +369,7 @@ describe("MiniHistory", () => {
       );
 
       // Expand work order by clicking the chevron button
-      const expandButton = screen.getByRole("button", {
+      const expandButton = screen.getByRole('button', {
         name: /Expand work order details/i,
       });
       fireEvent.click(expandButton);
@@ -384,11 +384,11 @@ describe("MiniHistory", () => {
       // Look for duration text with "s" suffix (seconds)
       const allText =
         screen.getByText(/8c7087f8/).closest("div[class*='px-3']")
-          ?.textContent || "";
-      expect(allText).toContain("s"); // Duration should be present
+          ?.textContent || '';
+      expect(allText).toContain('s'); // Duration should be present
     });
 
-    test("run selection highlights selected run and displays X icon", () => {
+    test('run selection highlights selected run and displays X icon', () => {
       const onCollapseHistory = vi.fn();
       const selectRunHandler = vi.fn();
 
@@ -407,15 +407,15 @@ describe("MiniHistory", () => {
 
       // Selected run should have special styling - find the run container (px-3 py-1.5)
       const runElement = selectedRun.closest("div[class*='px-3']");
-      expect(runElement?.className).toContain("bg-indigo-50");
-      expect(runElement?.className).toContain("border-l-indigo-500");
+      expect(runElement?.className).toContain('bg-indigo-50');
+      expect(runElement?.className).toContain('border-l-indigo-500');
 
       // X icon should be visible for selected run
-      const xIcon = runElement?.querySelector("span.hero-x-mark");
+      const xIcon = runElement?.querySelector('span.hero-x-mark');
       expect(xIcon).toBeInTheDocument();
     });
 
-    test("clicking run calls selectRunHandler", () => {
+    test('clicking run calls selectRunHandler', () => {
       const onCollapseHistory = vi.fn();
       const selectRunHandler = vi.fn();
 
@@ -429,7 +429,7 @@ describe("MiniHistory", () => {
       );
 
       // Expand work order
-      const expandButton = screen.getByRole("button", {
+      const expandButton = screen.getByRole('button', {
         name: /Expand work order details/i,
       });
       fireEvent.click(expandButton);
@@ -442,13 +442,13 @@ describe("MiniHistory", () => {
       // Should call selectRunHandler
       expect(selectRunHandler).toHaveBeenCalledWith(
         expect.objectContaining({
-          id: "8c7087f8-7f9e-48d9-a074-dc58b5fd9fb9",
-          state: "success",
+          id: '8c7087f8-7f9e-48d9-a074-dc58b5fd9fb9',
+          state: 'success',
         })
       );
     });
 
-    test("clicking selected run calls onDeselectRun", () => {
+    test('clicking selected run calls onDeselectRun', () => {
       const onCollapseHistory = vi.fn();
       const selectRunHandler = vi.fn();
       const onDeselectRun = vi.fn();
@@ -479,56 +479,56 @@ describe("MiniHistory", () => {
   // STATUS PILLS
   // ==========================================================================
 
-  describe("status pills show correct colors for each state", () => {
+  describe('status pills show correct colors for each state', () => {
     test.each([
       {
-        state: "success",
-        expectedColor: "bg-green-200",
-        textColor: "text-green-800",
+        state: 'success',
+        expectedColor: 'bg-green-200',
+        textColor: 'text-green-800',
       },
       {
-        state: "failed",
-        expectedColor: "bg-red-200",
-        textColor: "text-red-800",
+        state: 'failed',
+        expectedColor: 'bg-red-200',
+        textColor: 'text-red-800',
       },
       {
-        state: "crashed",
-        expectedColor: "bg-orange-200",
-        textColor: "text-orange-800",
+        state: 'crashed',
+        expectedColor: 'bg-orange-200',
+        textColor: 'text-orange-800',
       },
       {
-        state: "started",
-        expectedColor: "bg-blue-200",
-        textColor: "text-blue-800",
+        state: 'started',
+        expectedColor: 'bg-blue-200',
+        textColor: 'text-blue-800',
       },
       {
-        state: "available",
-        expectedColor: "bg-gray-200",
-        textColor: "text-gray-800",
+        state: 'available',
+        expectedColor: 'bg-gray-200',
+        textColor: 'text-gray-800',
       },
       {
-        state: "claimed",
-        expectedColor: "bg-blue-200",
-        textColor: "text-blue-800",
+        state: 'claimed',
+        expectedColor: 'bg-blue-200',
+        textColor: 'text-blue-800',
       },
       {
-        state: "cancelled",
-        expectedColor: "bg-gray-500",
-        textColor: "text-gray-800",
+        state: 'cancelled',
+        expectedColor: 'bg-gray-500',
+        textColor: 'text-gray-800',
       },
       {
-        state: "killed",
-        expectedColor: "bg-yellow-200",
-        textColor: "text-yellow-800",
+        state: 'killed',
+        expectedColor: 'bg-yellow-200',
+        textColor: 'text-yellow-800',
       },
       {
-        state: "exception",
-        expectedColor: "bg-gray-800",
-        textColor: "text-white",
+        state: 'exception',
+        expectedColor: 'bg-gray-800',
+        textColor: 'text-white',
       },
-      { state: "lost", expectedColor: "bg-gray-800", textColor: "text-white" },
+      { state: 'lost', expectedColor: 'bg-gray-800', textColor: 'text-white' },
     ])(
-      "$state state has correct colors",
+      '$state state has correct colors',
       ({ state, expectedColor, textColor }) => {
         const onCollapseHistory = vi.fn();
         const selectRunHandler = vi.fn();
@@ -539,8 +539,8 @@ describe("MiniHistory", () => {
             {
               id: `test-run-${state}`,
               state: state as any,
-              started_at: "2025-10-23T20:00:00Z",
-              finished_at: "2025-10-23T20:00:01Z",
+              started_at: '2025-10-23T20:00:00Z',
+              finished_at: '2025-10-23T20:00:01Z',
               error_type: null,
               selected: false,
             },
@@ -566,7 +566,7 @@ describe("MiniHistory", () => {
       }
     );
 
-    test("all possible states render with appropriate colors", () => {
+    test('all possible states render with appropriate colors', () => {
       const onCollapseHistory = vi.fn();
       const selectRunHandler = vi.fn();
       const allStateWorkOrders = createWorkOrdersForAllStates();
@@ -585,13 +585,13 @@ describe("MiniHistory", () => {
       // Expected work order states that match run states:
       // success, failed, killed, exception, crashed, cancelled, lost
       const uniqueWorkOrderStates = [
-        "Success", // appears multiple times (for available, claimed, started runs)
-        "Failed",
-        "Killed",
-        "Exception",
-        "Crashed",
-        "Cancelled",
-        "Lost",
+        'Success', // appears multiple times (for available, claimed, started runs)
+        'Failed',
+        'Killed',
+        'Exception',
+        'Crashed',
+        'Cancelled',
+        'Lost',
       ];
 
       uniqueWorkOrderStates.forEach(state => {
@@ -606,8 +606,8 @@ describe("MiniHistory", () => {
   // NAVIGATION BEHAVIOR
   // ==========================================================================
 
-  describe("navigation behavior", () => {
-    test("clicking view full history button navigates to history page", () => {
+  describe('navigation behavior', () => {
+    test('clicking view full history button navigates to history page', () => {
       const onCollapseHistory = vi.fn();
       const selectRunHandler = vi.fn();
 
@@ -620,7 +620,7 @@ describe("MiniHistory", () => {
         />
       );
 
-      const viewHistoryButton = screen.getByRole("button", {
+      const viewHistoryButton = screen.getByRole('button', {
         name: /View full history for this workflow/i,
       });
 
@@ -629,11 +629,11 @@ describe("MiniHistory", () => {
       // Should navigate to history page with workflow filter
       expect(mockLocationAssign).toHaveBeenCalledOnce();
       const calledUrl = mockLocationAssign.mock.calls[0][0];
-      expect(calledUrl).toContain("/history");
-      expect(calledUrl).toContain("filters[workflow_id]=test-workflow-id");
+      expect(calledUrl).toContain('/history');
+      expect(calledUrl).toContain('filters[workflow_id]=test-workflow-id');
     });
 
-    test("view history button supports keyboard navigation", () => {
+    test('view history button supports keyboard navigation', () => {
       const onCollapseHistory = vi.fn();
       const selectRunHandler = vi.fn();
 
@@ -646,18 +646,18 @@ describe("MiniHistory", () => {
         />
       );
 
-      const viewHistoryButton = screen.getByRole("button", {
+      const viewHistoryButton = screen.getByRole('button', {
         name: /View full history for this workflow/i,
       });
 
       // Test Enter key
-      fireEvent.keyDown(viewHistoryButton, { key: "Enter" });
+      fireEvent.keyDown(viewHistoryButton, { key: 'Enter' });
       expect(mockLocationAssign).toHaveBeenCalledOnce();
       const calledUrl = mockLocationAssign.mock.calls[0][0];
-      expect(calledUrl).toContain("/history");
+      expect(calledUrl).toContain('/history');
     });
 
-    test("clicking work order ID navigates to work order detail page", () => {
+    test('clicking work order ID navigates to work order detail page', () => {
       const onCollapseHistory = vi.fn();
       const selectRunHandler = vi.fn();
 
@@ -676,13 +676,13 @@ describe("MiniHistory", () => {
       // Should navigate to work order detail page
       expect(mockLocationAssign).toHaveBeenCalledOnce();
       const calledUrl = mockLocationAssign.mock.calls[0][0];
-      expect(calledUrl).toContain("/projects/test-project-id/history");
+      expect(calledUrl).toContain('/projects/test-project-id/history');
       expect(calledUrl).toContain(
-        "filters[workorder_id]=e2107d46-cf29-4930-b11b-cbcfcf83549d"
+        'filters[workorder_id]=e2107d46-cf29-4930-b11b-cbcfcf83549d'
       );
     });
 
-    test("clicking run ID navigates to run detail page", () => {
+    test('clicking run ID navigates to run detail page', () => {
       const onCollapseHistory = vi.fn();
       const selectRunHandler = vi.fn();
 
@@ -696,20 +696,20 @@ describe("MiniHistory", () => {
       );
 
       // Expand work order
-      const expandButton = screen.getByRole("button", {
+      const expandButton = screen.getByRole('button', {
         name: /Expand work order details/i,
       });
       fireEvent.click(expandButton);
 
       // Click run ID link directly (find the button within the run)
-      const runLink = screen.getByText(/8c7087f8/).closest("button");
+      const runLink = screen.getByText(/8c7087f8/).closest('button');
       fireEvent.click(runLink!);
 
       // Should navigate to run detail page
       expect(mockLocationAssign).toHaveBeenCalledOnce();
       const calledUrl = mockLocationAssign.mock.calls[0][0];
       expect(calledUrl).toContain(
-        "/projects/test-project-id/runs/8c7087f8-7f9e-48d9-a074-dc58b5fd9fb9"
+        '/projects/test-project-id/runs/8c7087f8-7f9e-48d9-a074-dc58b5fd9fb9'
       );
     });
   });
@@ -718,8 +718,8 @@ describe("MiniHistory", () => {
   // AUTO-EXPAND SELECTED WORK ORDER
   // ==========================================================================
 
-  describe("auto-expand behavior for selected items", () => {
-    test("selected work order is visible when panel is not collapsed", () => {
+  describe('auto-expand behavior for selected items', () => {
+    test('selected work order is visible when panel is not collapsed', () => {
       const onCollapseHistory = vi.fn();
       const selectRunHandler = vi.fn();
 
@@ -734,11 +734,11 @@ describe("MiniHistory", () => {
       );
 
       // Panel should show expanded state with work order visible
-      expect(screen.getByText("Recent History")).toBeInTheDocument();
+      expect(screen.getByText('Recent History')).toBeInTheDocument();
       expect(screen.getByText(/7f0419b6/)).toBeInTheDocument();
     });
 
-    test("selected work order is automatically expanded to show runs", () => {
+    test('selected work order is automatically expanded to show runs', () => {
       const onCollapseHistory = vi.fn();
       const selectRunHandler = vi.fn();
 
@@ -757,8 +757,8 @@ describe("MiniHistory", () => {
       // Chevron should point down for expanded selected work order
       const chevron = screen
         .getByText(/7f0419b6/)
-        .closest("div")
-        ?.querySelector("span.hero-chevron-down");
+        .closest('div')
+        ?.querySelector('span.hero-chevron-down');
       expect(chevron).toBeInTheDocument();
     });
   });
@@ -767,8 +767,8 @@ describe("MiniHistory", () => {
   // ACCESSIBILITY
   // ==========================================================================
 
-  describe("accessibility", () => {
-    test("view history button has descriptive aria-label", () => {
+  describe('accessibility', () => {
+    test('view history button has descriptive aria-label', () => {
       const onCollapseHistory = vi.fn();
       const selectRunHandler = vi.fn();
 
@@ -781,16 +781,16 @@ describe("MiniHistory", () => {
         />
       );
 
-      const button = screen.getByRole("button", {
+      const button = screen.getByRole('button', {
         name: /View full history for this workflow/i,
       });
       expect(button).toHaveAttribute(
-        "aria-label",
-        "View full history for this workflow"
+        'aria-label',
+        'View full history for this workflow'
       );
     });
 
-    test("work order and run links have title attributes with full IDs", () => {
+    test('work order and run links have title attributes with full IDs', () => {
       const onCollapseHistory = vi.fn();
       const selectRunHandler = vi.fn();
 
@@ -804,23 +804,23 @@ describe("MiniHistory", () => {
       );
 
       // Work order link (button) has full ID in title
-      const workOrderButton = screen.getByText(/b65107f9/).closest("button");
+      const workOrderButton = screen.getByText(/b65107f9/).closest('button');
       expect(workOrderButton).toHaveAttribute(
-        "title",
-        "b65107f9-2a5f-4bd1-b97d-b8500a58f621"
+        'title',
+        'b65107f9-2a5f-4bd1-b97d-b8500a58f621'
       );
 
       // Expand to see runs
-      const expandButton = screen.getByRole("button", {
+      const expandButton = screen.getByRole('button', {
         name: /Expand work order details/i,
       });
       fireEvent.click(expandButton);
 
       // Run links (buttons) have full IDs in title
-      const runButton = screen.getByText(/8c7087f8/).closest("button");
+      const runButton = screen.getByText(/8c7087f8/).closest('button');
       expect(runButton).toHaveAttribute(
-        "title",
-        "8c7087f8-7f9e-48d9-a074-dc58b5fd9fb9"
+        'title',
+        '8c7087f8-7f9e-48d9-a074-dc58b5fd9fb9'
       );
     });
   });
@@ -829,8 +829,8 @@ describe("MiniHistory", () => {
   // LOADING STATE
   // ==========================================================================
 
-  describe("Loading State", () => {
-    test("shows loading spinner when loading=true", () => {
+  describe('Loading State', () => {
+    test('shows loading spinner when loading=true', () => {
       const onCollapseHistory = vi.fn();
       const selectRunHandler = vi.fn();
 
@@ -845,19 +845,19 @@ describe("MiniHistory", () => {
       );
 
       // Loading message should be visible
-      expect(screen.getByText("Loading history...")).toBeInTheDocument();
+      expect(screen.getByText('Loading history...')).toBeInTheDocument();
 
       // Spinner should be present (has animate-spin class)
       const spinner = screen
-        .getByText("Loading history...")
-        .parentElement?.querySelector(".animate-spin");
+        .getByText('Loading history...')
+        .parentElement?.querySelector('.animate-spin');
       expect(spinner).toBeInTheDocument();
 
       // History list should not be visible
       expect(screen.queryByText(/No related history/)).not.toBeInTheDocument();
     });
 
-    test("does not show loading when loading=false", () => {
+    test('does not show loading when loading=false', () => {
       const onCollapseHistory = vi.fn();
       const selectRunHandler = vi.fn();
 
@@ -872,10 +872,10 @@ describe("MiniHistory", () => {
       );
 
       // Loading message should not be visible
-      expect(screen.queryByText("Loading history...")).not.toBeInTheDocument();
+      expect(screen.queryByText('Loading history...')).not.toBeInTheDocument();
 
       // Empty state should show instead
-      expect(screen.getByText("No related history")).toBeInTheDocument();
+      expect(screen.getByText('No related history')).toBeInTheDocument();
     });
   });
 
@@ -883,8 +883,8 @@ describe("MiniHistory", () => {
   // ERROR STATE
   // ==========================================================================
 
-  describe("Error State", () => {
-    test("shows error message when error is provided", () => {
+  describe('Error State', () => {
+    test('shows error message when error is provided', () => {
       const onCollapseHistory = vi.fn();
       const selectRunHandler = vi.fn();
       const onRetry = vi.fn();
@@ -901,17 +901,17 @@ describe("MiniHistory", () => {
       );
 
       // Error heading should be visible
-      expect(screen.getByText("Failed to load history")).toBeInTheDocument();
+      expect(screen.getByText('Failed to load history')).toBeInTheDocument();
 
       // Specific error message should be visible
-      expect(screen.getByText("Failed to fetch history")).toBeInTheDocument();
+      expect(screen.getByText('Failed to fetch history')).toBeInTheDocument();
 
       // Retry button should be present
-      const retryButton = screen.getByRole("button", { name: /Retry/i });
+      const retryButton = screen.getByRole('button', { name: /Retry/i });
       expect(retryButton).toBeInTheDocument();
     });
 
-    test("calls onRetry when retry button clicked", () => {
+    test('calls onRetry when retry button clicked', () => {
       const onCollapseHistory = vi.fn();
       const selectRunHandler = vi.fn();
       const onRetry = vi.fn();
@@ -927,13 +927,13 @@ describe("MiniHistory", () => {
         />
       );
 
-      const retryButton = screen.getByRole("button", { name: /Retry/i });
+      const retryButton = screen.getByRole('button', { name: /Retry/i });
       fireEvent.click(retryButton);
 
       expect(onRetry).toHaveBeenCalledOnce();
     });
 
-    test("does not show retry button when onRetry is not provided", () => {
+    test('does not show retry button when onRetry is not provided', () => {
       const onCollapseHistory = vi.fn();
       const selectRunHandler = vi.fn();
 
@@ -948,15 +948,15 @@ describe("MiniHistory", () => {
       );
 
       // Error message should still be visible
-      expect(screen.getByText("Failed to load history")).toBeInTheDocument();
+      expect(screen.getByText('Failed to load history')).toBeInTheDocument();
 
       // But retry button should not be present
       expect(
-        screen.queryByRole("button", { name: /Retry/i })
+        screen.queryByRole('button', { name: /Retry/i })
       ).not.toBeInTheDocument();
     });
 
-    test("shows error instead of loading when both are true", () => {
+    test('shows error instead of loading when both are true', () => {
       const onCollapseHistory = vi.fn();
       const selectRunHandler = vi.fn();
 
@@ -972,9 +972,9 @@ describe("MiniHistory", () => {
       );
 
       // Loading takes precedence in the conditional check
-      expect(screen.getByText("Loading history...")).toBeInTheDocument();
+      expect(screen.getByText('Loading history...')).toBeInTheDocument();
       expect(
-        screen.queryByText("Failed to load history")
+        screen.queryByText('Failed to load history')
       ).not.toBeInTheDocument();
     });
   });

@@ -1,8 +1,8 @@
-import { useMemo } from "react";
+import { useMemo } from 'react';
 
-import { FormField } from "./form-field";
+import { FormField } from './form-field';
 
-import { useFieldContext } from ".";
+import { useFieldContext } from '.';
 
 interface SelectOption {
   value: string;
@@ -26,7 +26,7 @@ export function SelectField({
       if (option.group) {
         acc[option.group] = [...(acc[option.group] || []), option];
       } else {
-        acc[""] = [...(acc[""] || []), option];
+        acc[''] = [...(acc[''] || []), option];
       }
       return acc;
     }, {});
@@ -39,9 +39,9 @@ export function SelectField({
       <select
         id={field.name}
         disabled={disabled}
-        value={field.state.value || ""}
+        value={field.state.value || ''}
         onChange={e => field.handleChange(e.target.value)}
-        className="block w-full rounded-md border-secondary-300 shadow-xs sm:text-sm focus:border-primary-300 focus:ring focus:ring-primary-200/50 disabled:cursor-not-allowed"
+        className="block w-full rounded-md border-secondary-300 shadow-xs sm:text-sm focus:border-primary-300 focus:ring focus:ring-primary-200/50 disabled:cursor-not-allowed disabled:opacity-50 disabled:bg-gray-50"
       >
         {placeholder && <option value="">{placeholder}</option>}
         {Object.entries(groups).map(([group, options]) =>

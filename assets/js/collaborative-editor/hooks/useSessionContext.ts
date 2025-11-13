@@ -32,17 +32,17 @@
  * ```
  */
 
-import { useSyncExternalStore, useContext } from "react";
+import { useSyncExternalStore, useContext } from 'react';
 
-import { StoreContext } from "../contexts/StoreProvider";
-import type { SessionContextStoreInstance } from "../stores/createSessionContextStore";
+import { StoreContext } from '../contexts/StoreProvider';
+import type { SessionContextStoreInstance } from '../stores/createSessionContextStore';
 import type {
   UserContext,
   ProjectContext,
   ProjectRepoConnection,
   AppConfig,
   Permissions,
-} from "../types/sessionContext";
+} from '../types/sessionContext';
 
 /**
  * Main hook for accessing the SessionContextStore instance
@@ -52,7 +52,7 @@ const useSessionContextStore = (): SessionContextStoreInstance => {
   const context = useContext(StoreContext);
   if (!context) {
     throw new Error(
-      "useSessionContextStore must be used within a StoreProvider"
+      'useSessionContextStore must be used within a StoreProvider'
     );
   }
   return context.sessionContextStore;
@@ -182,4 +182,17 @@ export const useIsNewWorkflow = (): boolean => {
     sessionContextStore.subscribe,
     selectIsNewWorkflow
   );
+};
+
+/**
+ * Hook to get the entire session context state
+ * Useful when you need multiple pieces of session context at once
+ * Returns the full session context state object
+ */
+export const useSessionContext = () => {
+  const sessionContextStore = useSessionContextStore();
+
+  const selectState = sessionContextStore.withSelector(state => state);
+
+  return useSyncExternalStore(sessionContextStore.subscribe, selectState);
 };

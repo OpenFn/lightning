@@ -22,9 +22,9 @@
  * - unknown states → fail (defensive)
  */
 
-import type { RunInfo, RunStep } from "#/workflow-store/store";
+import type { RunInfo, RunStep } from '#/workflow-store/store';
 
-import type { RunStepsData, Step } from "../types/history";
+import type { RunStepsData, Step } from '../types/history';
 
 /**
  * Transform backend run steps data to frontend RunInfo format
@@ -44,11 +44,11 @@ export function transformToRunInfo(
     job_id: step.job_id,
     error_type: step.error_type ?? null,
     exit_reason: mapExitReason(step.exit_reason),
-    started_at: step.started_at || "",
-    finished_at: step.finished_at || "",
+    started_at: step.started_at || '',
+    finished_at: step.finished_at || '',
     input_dataclip_id: step.input_dataclip_id,
     startNode: step.job_id === runStepsData.metadata.starting_job_id,
-    startBy: runStepsData.metadata.created_by_email || "unknown",
+    startBy: runStepsData.metadata.created_by_email || 'unknown',
   }));
 
   return {
@@ -71,21 +71,21 @@ export function transformToRunInfo(
  */
 function mapExitReason(
   exitReason: string | null
-): "fail" | "success" | "crash" | null {
+): 'fail' | 'success' | 'crash' | null {
   if (!exitReason) return null; // Step not finished yet
 
   switch (exitReason) {
-    case "success":
-      return "success";
-    case "fail":
-      return "fail";
-    case "crash":
-    case "exception":
-    case "lost":
-      return "crash";
+    case 'success':
+      return 'success';
+    case 'fail':
+      return 'fail';
+    case 'crash':
+    case 'exception':
+    case 'lost':
+      return 'crash';
     default:
       // Treat unknown states as failures (defensive)
-      return "fail";
+      return 'fail';
   }
 }
 
@@ -97,7 +97,7 @@ function mapExitReason(
 export function createEmptyRunInfo(): RunInfo {
   return {
     start_from: null,
-    inserted_at: "",
+    inserted_at: '',
     isTrigger: false,
     steps: [],
     run_by: null,

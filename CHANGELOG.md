@@ -17,15 +17,50 @@ and this project adheres to
 
 ### Added
 
+### Changed
+
+- Default failure notifications for project users are now disabled to minimize
+  email volume [#3517](https://github.com/OpenFn/lightning/issues/3517)
+
+### Fixed
+
+- Fix run/save-and-run keystroke mapping for canvas & IDE
+  [#3902](https://github.com/OpenFn/lightning/issues/3902) &
+  [#3903](https://github.com/OpenFn/lightning/issues/3903)
+
+## [2.14.15-pre] - 2025-11-13
+
+### Added
+
+- Add missing adaptor and credential tooltips to the collab editor
+  [#3919](https://github.com/OpenFn/lightning/issues/3919)
 - Show server validation errors in the collab editor forms
   [#3783](https://github.com/OpenFn/lightning/issues/3783)
+- Enforce readonly state in collaborative editor forms for viewers and old
+  snapshots [#3948](https://github.com/OpenFn/lightning/pull/3948)
+- Collab Editor: Add Workflow YAML code viewer panel
+  [#3646](https://github.com/OpenFn/lightning/issues/3646)
+- Webhook authentication management in the collaborative editor
+  [#3887](https://github.com/OpenFn/lightning/issues/3887)
+- Mix task to merge project state files without database access
+  [#3615](https://github.com/OpenFn/lightning/issues/3615)
+- Show Error indication on workflow settings button
+  [#3632](https://github.com/OpenFn/lightning/issues/3632)
 
 ### Changed
+
+- Merged CollaborateNew and Collaborate LiveViews into a single unified LiveView
+  for improved maintainability and consistent modal behavior
+  [#3942](https://github.com/OpenFn/lightning/pull/3942)
 
 ### Fixed
 
 - Monaco tooltips get cut off
   [#3900](https://github.com/OpenFn/lightning/issues/3900)
+- Duplicate `isReadOnly` declaration in TriggerForm that was blocking asset
+  builds [#3976](https://github.com/OpenFn/lightning/issues/3976)
+- Run duration and status alignment drift in history view
+  [#3945](https://github.com/OpenFn/lightning/pull/3945)
 - Shared doc lookup in clustered environments now works across nodes instead of
   only searching locally
   [#3910](https://github.com/OpenFn/lightning/issues/3910)
