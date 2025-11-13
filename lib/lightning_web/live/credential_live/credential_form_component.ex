@@ -963,12 +963,12 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
 
         <div class="space-y-6">
           <p class="text-gray-700 leading-relaxed">
-            You like to live life on the edge. Break all the conventions. Do things a little differently. Congratulations—you're in the right place. Here you can choose a Bespoke and Unique credential for your project.
+            Create your own credential, or reference a value from a Keychain credential.
           </p>
 
           <div>
             <h3 class="text-sm font-medium text-gray-500 mb-4">
-              Multi-purpose credentials
+              Select credential type:
             </h3>
             <ul class="space-y-1">
               <li :for={{name, key, logo, type} <- @filtered_type_options}>
@@ -1241,13 +1241,13 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
   end
 
   defp get_credential_description("raw", _type),
-    do: "Define custom credentials in JSON."
+    do: "Define custom credentials in JSON"
 
   defp get_credential_description("keychain", _type),
-    do: "Securely store and reuse API keys."
+    do: "Securely store and reuse API keys"
 
   defp get_credential_description(_key, "oauth"),
-    do: "Connect with standards-based authorization."
+    do: "Connect with standards-based authorization"
 
   defp assigns_for_credential(socket) do
     %{
