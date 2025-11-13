@@ -21,6 +21,7 @@ import {
 } from '#/collaborative-editor/utils/adaptorUtils';
 
 import { AdaptorIcon } from './AdaptorIcon';
+import { Tooltip } from './Tooltip';
 import { VersionPicker } from './VersionPicker';
 
 interface ConfigureAdaptorModalProps {
@@ -352,12 +353,17 @@ export function ConfigureAdaptorModal({
                       font-medium text-gray-700 mb-2"
                     >
                       Adaptor
-                      <span
-                        className="hero-information-circle h-4 w-4
-                        text-gray-400"
-                        aria-label="Information"
-                        role="img"
-                      />
+                      <Tooltip
+                        content="Choose an adaptor to perform operations (via helper functions) in a specific application. Pick 'http' for generic REST APIs or the 'common' adaptor if this job only performs data manipulation."
+                        side="top"
+                      >
+                        <span
+                          className="hero-information-circle h-4 w-4
+                          text-gray-400"
+                          aria-label="Information"
+                          role="img"
+                        />
+                      </Tooltip>
                     </label>
                     <div
                       className="flex items-center justify-between p-3
@@ -409,12 +415,17 @@ export function ConfigureAdaptorModal({
                       font-medium text-gray-700"
                     >
                       Credentials
-                      <span
-                        className="hero-information-circle h-4 w-4
-                        text-gray-400"
-                        aria-label="Information"
-                        role="img"
-                      />
+                      <Tooltip
+                        content="If the system you're working with requires authentication, choose a credential with login details (secrets) that will allow this job to connect. If you're not connecting to an external system you don't need a credential."
+                        side="top"
+                      >
+                        <span
+                          className="hero-information-circle h-4 w-4
+                          text-gray-400"
+                          aria-label="Information"
+                          role="img"
+                        />
+                      </Tooltip>
                     </label>
                     {adaptorNeedsCredentials && (
                       <button

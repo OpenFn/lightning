@@ -1,18 +1,18 @@
-import { InformationCircleIcon } from "@heroicons/react/24/outline";
-import React from "react";
+import { InformationCircleIcon } from '@heroicons/react/24/outline';
+import React from 'react';
 
-import { cn } from "#/utils/cn";
+import { cn } from '#/utils/cn';
 
-import { MonacoEditor } from "../../monaco";
-import FileUploader from "../FileUploader";
+import { MonacoEditor } from '../../monaco';
+import FileUploader from '../FileUploader';
 
-const iconStyle = "h-4 w-4 text-grey-400";
+const iconStyle = 'h-4 w-4 text-grey-400';
 
 const CustomView: React.FC<{
   pushEvent: (event: string, data: any) => void;
-  renderMode?: "standalone" | "embedded";
-}> = ({ pushEvent, renderMode = "standalone" }) => {
-  const [editorValue, setEditorValue] = React.useState("");
+  renderMode?: 'standalone' | 'embedded';
+}> = ({ pushEvent, renderMode = 'standalone' }) => {
+  const [editorValue, setEditorValue] = React.useState('');
 
   async function uploadFiles(f: File[]) {
     if (f.length) {
@@ -33,17 +33,17 @@ const CustomView: React.FC<{
     try {
       const parsed = JSON.parse(editorValue);
       if (Array.isArray(parsed))
-        return { success: false, message: "Must be an object" };
+        return { success: false, message: 'Must be an object' };
       return { success: true };
     } catch (e) {
-      return { success: false, message: "Invalid JSON format" };
+      return { success: false, message: 'Invalid JSON format' };
     }
   }, [editorValue]);
 
   const handleEditorChange = React.useCallback(
     (value: string) => {
       setEditorValue(value);
-      pushEvent("manual_run_change", {
+      pushEvent('manual_run_change', {
         manual: {
           body: value,
           dataclip_id: null,
@@ -56,12 +56,12 @@ const CustomView: React.FC<{
   return (
     <div
       className={cn(
-        "h-full flex flex-col pb-6",
-        renderMode === "embedded" ? "pt-2" : "px-3 pt-3"
+        'h-full flex flex-col',
+        renderMode === 'embedded' ? 'pt-2' : 'pt-3'
       )}
     >
-      <div className={cn(renderMode === "embedded" && "px-3")}>
-        <FileUploader count={1} formats={["json"]} onUpload={uploadFiles} />
+      <div className="px-3">
+        <FileUploader count={1} formats={['json']} onUpload={uploadFiles} />
         <div className="relative">
           <div
             className="absolute inset-0 flex items-center"
@@ -70,14 +70,14 @@ const CustomView: React.FC<{
             <div className="w-full border-t border-gray-300"></div>
           </div>
           <div className="relative flex justify-center">
-            <span className="bg-white px-2 text-sm text-gray-500">OR</span>
+            <span className="bg-white px-2 text-sm text-gray-500 py-2">OR</span>
           </div>
         </div>
       </div>
       <div className="relative h-full flex flex-col overflow-hidden">
         {!isEmpty && !jsonParseResult.success ? (
           <div className="text-red-700 text-sm flex gap-1 mb-1 items-center">
-            <InformationCircleIcon className={iconStyle} />{" "}
+            <InformationCircleIcon className={iconStyle} />{' '}
             {jsonParseResult.message}
           </div>
         ) : null}
@@ -95,13 +95,13 @@ const CustomView: React.FC<{
               scrollBeyondLastLine: false,
               overviewRulerLanes: 0,
               overviewRulerBorder: false,
-              fontFamily: "Fira Code VF",
+              fontFamily: 'Fira Code VF',
               fontSize: 14,
               fontLigatures: true,
               minimap: {
                 enabled: false,
               },
-              wordWrap: "on",
+              wordWrap: 'on',
             }}
           />
         </div>
