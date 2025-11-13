@@ -324,7 +324,7 @@ export function ConfigureAdaptorModal({
                 className="flex items-center justify-between px-6 py-4
                 border-b border-gray-200"
               >
-                <DialogTitle className="text-xl font-medium text-gray-900">
+                <DialogTitle className="text-lg font-bold leading-5 text-zinc-800">
                   Configure connection
                 </DialogTitle>
                 <button
@@ -731,10 +731,10 @@ export function ConfigureAdaptorModal({
                   type="button"
                   onClick={onClose}
                   aria-label="Close modal"
-                  className="px-6 py-2.5 bg-primary-600 text-white
-                  rounded-md font-medium hover:bg-primary-700
-                  focus:outline-none focus:ring-2 focus:ring-offset-2
-                  focus:ring-primary-500"
+                  className="rounded-md text-sm font-semibold shadow-xs px-3 py-2
+                  bg-primary-600 hover:bg-primary-500 text-white
+                  focus-visible:outline-2 focus-visible:outline-offset-2
+                  focus-visible:outline-primary-600"
                 >
                   Close
                 </button>

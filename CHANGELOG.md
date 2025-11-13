@@ -36,6 +36,9 @@ and this project adheres to
   [#3919](https://github.com/OpenFn/lightning/issues/3919)
 - Show server validation errors in the collab editor forms
   [#3783](https://github.com/OpenFn/lightning/issues/3783)
+- Add advanced credential type picker in collaborative workflow editor allowing
+  users to create OAuth, raw JSON, and keychain credentials directly from the
+  workflow canvas [#3906](https://github.com/OpenFn/lightning/issues/3906)
 - Enforce readonly state in collaborative editor forms for viewers and old
   snapshots [#3948](https://github.com/OpenFn/lightning/pull/3948)
 - Collab Editor: Add Workflow YAML code viewer panel
