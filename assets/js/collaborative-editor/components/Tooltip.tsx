@@ -25,6 +25,7 @@ export function Tooltip({
   align?: 'start' | 'center' | 'end';
   delayDuration?: number;
 }) {
+  if (!content) return <>{children}</>;
   return (
     <RadixTooltip.Provider delayDuration={delayDuration}>
       <RadixTooltip.Root>

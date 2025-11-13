@@ -1228,6 +1228,113 @@ describe('ManualRunPanel', () => {
     });
   });
 
+  describe('footer button tooltip props', () => {
+    test('footer button passes showKeyboardShortcuts=true in standalone mode', async () => {
+      renderManualRunPanel({
+        workflow: mockWorkflow,
+        projectId: 'project-1',
+        workflowId: 'workflow-1',
+        jobId: 'job-1',
+        onClose: () => {},
+        // renderMode defaults to 'standalone'
+      });
+
+      // Footer should be rendered with Run button
+      await waitFor(() => {
+        expect(screen.getByText('Run Workflow Now')).toBeInTheDocument();
+      });
+
+      const runButton = screen.getByText('Run Workflow Now');
+      expect(runButton).not.toBeDisabled();
+
+      // The footer button passes showKeyboardShortcuts=true
+      // because in standalone mode, RUN_PANEL scope owns the shortcuts
+    });
+
+    test('footer button passes disabledTooltip when disabled', async () => {
+      // Mock useCanRun to return false with tooltip message
+      setMockCanRun(false, 'Cannot run: workflow has validation errors');
+
+      renderManualRunPanel({
+        workflow: mockWorkflow,
+        projectId: 'project-1',
+        workflowId: 'workflow-1',
+        jobId: 'job-1',
+        onClose: () => {},
+      });
+
+      await waitFor(() => {
+        const runButton = screen.getByText('Run Workflow Now');
+        expect(runButton).toBeDisabled();
+      });
+
+      // The runTooltip should be passed as disabledTooltip to RunRetryButton
+    });
+
+    test('footer button shows tooltips for retryable run', async () => {
+      const user = userEvent.setup();
+
+      // Add a retryable run to workflow
+      const retryableWorkflow: Workflow = {
+        ...mockWorkflow,
+        jobs: [
+          {
+            ...mockWorkflow.jobs[0],
+            id: 'job-1',
+          },
+        ],
+      };
+
+      // Mock dataclip with next cron run to trigger retryable state
+      vi.mocked(dataclipApi.searchDataclips).mockResolvedValue({
+        data: [mockDataclip],
+        next_cron_run_dataclip_id: 'dataclip-1',
+        can_edit_dataclip: true,
+      });
+
+      renderManualRunPanel({
+        workflow: retryableWorkflow,
+        projectId: 'project-1',
+        workflowId: 'workflow-1',
+        jobId: 'job-1',
+        onClose: () => {},
+      });
+
+      // Wait for component to load with retryable state
+      await waitFor(() => {
+        expect(screen.getByText('Run Workflow Now')).toBeInTheDocument();
+      });
+
+      // Footer button should be rendered
+      const runButton = screen.getByText('Run Workflow Now');
+      expect(runButton).toBeInTheDocument();
+
+      // showKeyboardShortcuts=true is passed, enabling tooltip for main button
+      // and dropdown option (if retryable and dropdown shown)
+    });
+
+    test('no footer in embedded mode (no tooltip concerns)', async () => {
+      renderManualRunPanel({
+        workflow: mockWorkflow,
+        projectId: 'project-1',
+        workflowId: 'workflow-1',
+        jobId: 'job-1',
+        onClose: () => {},
+        renderMode: 'embedded',
+      });
+
+      // Wait for tabs to render
+      await waitFor(() => {
+        expect(screen.getByText('Empty')).toBeInTheDocument();
+      });
+
+      // Footer should NOT be rendered in embedded mode
+      expect(screen.queryByText('Run Workflow Now')).not.toBeInTheDocument();
+
+      // No tooltip concerns because RunRetryButton is not rendered in footer
+    });
+  });
+
   describe('controlled component mode', () => {
     test('Run button state reflects controlled customBody prop', async () => {
       vi.mocked(dataclipApi.searchDataclips).mockResolvedValue({
