@@ -474,11 +474,20 @@ defmodule LightningWeb.WorkflowLive.Edit do
               fn credential ->
                 form = single_inputs_for(@workflow_form, :jobs, @selected_job.id)
 
+                project_credential_id =
+                  credential.project_credentials |> Enum.at(0) |> Map.get(:id)
+
+                job_index = Integer.to_string(form.index)
+
                 params =
                   LightningWeb.Utils.build_params_for_field(
                     form,
                     :project_credential_id,
-                    credential.project_credentials |> Enum.at(0) |> Map.get(:id)
+                    project_credential_id
+                  )
+                  |> put_in(
+                    ["workflow", "jobs", job_index, "keychain_credential_id"],
+                    nil
                   )
 
                 send_form_changed(params)

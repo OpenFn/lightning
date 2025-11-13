@@ -787,3 +787,28 @@ export const useWorkflowReadOnly = (): {
 
   return { isReadOnly: false, tooltipMessage: '' };
 };
+
+/**
+ * Hook to check if workflow settings have validation errors
+ *
+ * Returns object with:
+ * - hasErrors: boolean - true if name or concurrency have validation
+ *   errors
+ * - errors: validation error object or null
+ *
+ * Used by Header component to display error indication on settings
+ * button
+ */
+export const useWorkflowSettingsErrors = (): {
+  hasErrors: boolean;
+  errors: { name?: string[]; concurrency?: string[] } | null;
+} => {
+  const validationErrors = useWorkflowState(state => state.validationErrors);
+
+  const hasErrors =
+    validationErrors !== null &&
+    (validationErrors.name !== undefined ||
+      validationErrors.concurrency !== undefined);
+
+  return { hasErrors, errors: validationErrors };
+};

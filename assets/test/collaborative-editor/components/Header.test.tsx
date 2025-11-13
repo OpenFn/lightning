@@ -12,32 +12,32 @@ import {
   screen,
   waitFor,
   fireEvent,
-} from "@testing-library/react";
-import type React from "react";
-import { describe, expect, test, vi } from "vitest";
-import * as Y from "yjs";
+} from '@testing-library/react';
+import type React from 'react';
+import { describe, expect, test, vi } from 'vitest';
+import * as Y from 'yjs';
 
-import { Header } from "../../../js/collaborative-editor/components/Header";
-import { SessionContext } from "../../../js/collaborative-editor/contexts/SessionProvider";
-import { LiveViewActionsProvider } from "../../../js/collaborative-editor/contexts/LiveViewActionsContext";
-import type { StoreContextValue } from "../../../js/collaborative-editor/contexts/StoreProvider";
-import { StoreContext } from "../../../js/collaborative-editor/contexts/StoreProvider";
-import { createAdaptorStore } from "../../../js/collaborative-editor/stores/createAdaptorStore";
-import { createAwarenessStore } from "../../../js/collaborative-editor/stores/createAwarenessStore";
-import { createCredentialStore } from "../../../js/collaborative-editor/stores/createCredentialStore";
-import { createSessionContextStore } from "../../../js/collaborative-editor/stores/createSessionContextStore";
-import { createSessionStore } from "../../../js/collaborative-editor/stores/createSessionStore";
-import { createUIStore } from "../../../js/collaborative-editor/stores/createUIStore";
-import { createWorkflowStore } from "../../../js/collaborative-editor/stores/createWorkflowStore";
-import type { Session } from "../../../js/collaborative-editor/types/session";
-import { createSessionContext } from "../__helpers__/sessionContextFactory";
+import { Header } from '../../../js/collaborative-editor/components/Header';
+import { SessionContext } from '../../../js/collaborative-editor/contexts/SessionProvider';
+import { LiveViewActionsProvider } from '../../../js/collaborative-editor/contexts/LiveViewActionsContext';
+import type { StoreContextValue } from '../../../js/collaborative-editor/contexts/StoreProvider';
+import { StoreContext } from '../../../js/collaborative-editor/contexts/StoreProvider';
+import { createAdaptorStore } from '../../../js/collaborative-editor/stores/createAdaptorStore';
+import { createAwarenessStore } from '../../../js/collaborative-editor/stores/createAwarenessStore';
+import { createCredentialStore } from '../../../js/collaborative-editor/stores/createCredentialStore';
+import { createSessionContextStore } from '../../../js/collaborative-editor/stores/createSessionContextStore';
+import { createSessionStore } from '../../../js/collaborative-editor/stores/createSessionStore';
+import { createUIStore } from '../../../js/collaborative-editor/stores/createUIStore';
+import { createWorkflowStore } from '../../../js/collaborative-editor/stores/createWorkflowStore';
+import type { Session } from '../../../js/collaborative-editor/types/session';
+import { createSessionContext } from '../__helpers__/sessionContextFactory';
 import {
   createMockPhoenixChannel,
   createMockPhoenixChannelProvider,
-} from "../mocks/phoenixChannel";
-import { createMockSocket } from "../mocks/phoenixSocket";
-import { vi } from "vitest";
-import { HotkeysProvider } from "react-hotkeys-hook";
+} from '../mocks/phoenixChannel';
+import { createMockSocket } from '../mocks/phoenixSocket';
+import { vi } from 'vitest';
+import { HotkeysProvider } from 'react-hotkeys-hook';
 
 // =============================================================================
 // TEST HELPERS
@@ -62,8 +62,8 @@ function createTestSetup(options: WrapperOptions = {}) {
     workflowDeletedAt = null,
     isNewWorkflow = false,
     hasGithubConnection = false,
-    repoName = "openfn/demo",
-    branchName = "main",
+    repoName = 'openfn/demo',
+    branchName = 'main',
   } = options;
 
   // Create all stores
@@ -77,30 +77,30 @@ function createTestSetup(options: WrapperOptions = {}) {
 
   // Initialize session store
   const mockSocket = createMockSocket();
-  sessionStore.initializeSession(mockSocket, "test:room", {
-    id: "user-1",
-    name: "Test User",
-    color: "#ff0000",
+  sessionStore.initializeSession(mockSocket, 'test:room', {
+    id: 'user-1',
+    name: 'Test User',
+    color: '#ff0000',
   });
 
   // Set up Y.Doc and workflow
   const ydoc = new Y.Doc() as Session.WorkflowDoc;
-  const workflowMap = ydoc.getMap("workflow");
+  const workflowMap = ydoc.getMap('workflow');
 
   if (!isNewWorkflow) {
-    workflowMap.set("id", "test-workflow-123");
+    workflowMap.set('id', 'test-workflow-123');
   }
-  workflowMap.set("name", "Test Workflow");
-  workflowMap.set("lock_version", workflowLockVersion);
-  workflowMap.set("deleted_at", workflowDeletedAt);
+  workflowMap.set('name', 'Test Workflow');
+  workflowMap.set('lock_version', workflowLockVersion);
+  workflowMap.set('deleted_at', workflowDeletedAt);
 
-  ydoc.getArray("jobs");
-  ydoc.getArray("triggers");
-  ydoc.getArray("edges");
-  ydoc.getMap("positions");
+  ydoc.getArray('jobs');
+  ydoc.getArray('triggers');
+  ydoc.getArray('edges');
+  ydoc.getMap('positions');
 
   // Connect stores
-  const mockChannel = createMockPhoenixChannel("test:room");
+  const mockChannel = createMockPhoenixChannel('test:room');
   const mockProvider = createMockPhoenixChannelProvider(mockChannel);
   (mockProvider as any).doc = ydoc;
 
@@ -122,7 +122,7 @@ function createTestSetup(options: WrapperOptions = {}) {
           latest_snapshot_lock_version: latestSnapshotLockVersion,
         });
 
-    (mockChannel as any)._test.emit("session_context", context);
+    (mockChannel as any)._test.emit('session_context', context);
   };
 
   const mockStoreValue: StoreContextValue = {
@@ -158,8 +158,8 @@ function createTestSetup(options: WrapperOptions = {}) {
 // HEADER INTEGRATION TESTS
 // =============================================================================
 
-describe("Header - ReadOnlyWarning Integration", () => {
-  test("renders ReadOnlyWarning in correct position (after Breadcrumbs, inside header)", async () => {
+describe('Header - ReadOnlyWarning Integration', () => {
+  test('renders ReadOnlyWarning in correct position (after Breadcrumbs, inside header)', async () => {
     const { wrapper, emitSessionContext } = createTestSetup({
       permissions: { can_edit_workflow: false },
     });
@@ -176,12 +176,12 @@ describe("Header - ReadOnlyWarning Integration", () => {
     });
 
     await waitFor(() => {
-      expect(screen.getByText("Read-only")).toBeInTheDocument();
+      expect(screen.getByText('Read-only')).toBeInTheDocument();
     });
 
     // Verify ReadOnlyWarning appears inside the main header div
-    const readOnlyElement = screen.getByText("Read-only").parentElement;
-    const headerDiv = container.querySelector(".flex-none.bg-white");
+    const readOnlyElement = screen.getByText('Read-only').parentElement;
+    const headerDiv = container.querySelector('.flex-none.bg-white');
 
     // Both should exist
     expect(readOnlyElement).toBeInTheDocument();
@@ -191,15 +191,15 @@ describe("Header - ReadOnlyWarning Integration", () => {
     expect(headerDiv).toContainElement(readOnlyElement);
 
     // ReadOnlyWarning should come after the breadcrumbs
-    const breadcrumb = screen.getByText("Breadcrumb");
-    const allElements = Array.from(container.querySelectorAll("*"));
+    const breadcrumb = screen.getByText('Breadcrumb');
+    const allElements = Array.from(container.querySelectorAll('*'));
     const breadcrumbIndex = allElements.indexOf(breadcrumb);
     const readOnlyIndex = allElements.indexOf(readOnlyElement!);
 
     expect(readOnlyIndex).toBeGreaterThan(breadcrumbIndex);
   });
 
-  test("shows ReadOnlyWarning when workflow is read-only", async () => {
+  test('shows ReadOnlyWarning when workflow is read-only', async () => {
     const { wrapper, emitSessionContext } = createTestSetup({
       permissions: { can_edit_workflow: false },
     });
@@ -216,11 +216,11 @@ describe("Header - ReadOnlyWarning Integration", () => {
     });
 
     await waitFor(() => {
-      expect(screen.getByText("Read-only")).toBeInTheDocument();
+      expect(screen.getByText('Read-only')).toBeInTheDocument();
     });
   });
 
-  test("does not show ReadOnlyWarning when workflow is editable", async () => {
+  test('does not show ReadOnlyWarning when workflow is editable', async () => {
     const { wrapper, emitSessionContext } = createTestSetup({
       permissions: { can_edit_workflow: true, can_run_workflow: true },
     });
@@ -236,10 +236,10 @@ describe("Header - ReadOnlyWarning Integration", () => {
       emitSessionContext();
     });
 
-    expect(screen.queryByText("Read-only")).not.toBeInTheDocument();
+    expect(screen.queryByText('Read-only')).not.toBeInTheDocument();
   });
 
-  test("hides ReadOnlyWarning during new workflow creation", async () => {
+  test('hides ReadOnlyWarning during new workflow creation', async () => {
     const { wrapper, emitSessionContext } = createTestSetup({
       permissions: { can_edit_workflow: false },
       isNewWorkflow: true,
@@ -257,7 +257,7 @@ describe("Header - ReadOnlyWarning Integration", () => {
     });
 
     // Should not show warning even with no permission when creating new workflow
-    expect(screen.queryByText("Read-only")).not.toBeInTheDocument();
+    expect(screen.queryByText('Read-only')).not.toBeInTheDocument();
   });
 });
 
@@ -265,8 +265,8 @@ describe("Header - ReadOnlyWarning Integration", () => {
 // HEADER COMPONENT BASELINE TESTS
 // =============================================================================
 
-describe("Header - Basic Rendering", () => {
-  test("renders breadcrumbs", async () => {
+describe('Header - Basic Rendering', () => {
+  test('renders breadcrumbs', async () => {
     const { wrapper, emitSessionContext } = createTestSetup();
 
     render(
@@ -280,10 +280,10 @@ describe("Header - Basic Rendering", () => {
       emitSessionContext();
     });
 
-    expect(screen.getByText("Test Breadcrumb")).toBeInTheDocument();
+    expect(screen.getByText('Test Breadcrumb')).toBeInTheDocument();
   });
 
-  test("renders save button", async () => {
+  test('renders save button', async () => {
     const { wrapper, emitSessionContext } = createTestSetup();
 
     render(
@@ -297,20 +297,20 @@ describe("Header - Basic Rendering", () => {
       emitSessionContext();
     });
 
-    expect(screen.getByRole("button", { name: /save/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /save/i })).toBeInTheDocument();
   });
 
-  test("renders run button when projectId and workflowId and triggers provided", async () => {
+  test('renders run button when projectId and workflowId and triggers provided', async () => {
     const { wrapper, emitSessionContext, ydoc } = createTestSetup();
 
     // Add a trigger so the Run button appears (must be a Y.Map, not plain object)
-    const triggersArray = ydoc.getArray("triggers");
+    const triggersArray = ydoc.getArray('triggers');
     const triggerMap = new Y.Map();
-    triggerMap.set("id", "trigger-123");
-    triggerMap.set("type", "webhook");
-    triggerMap.set("enabled", true);
-    triggerMap.set("cron_expression", null);
-    triggerMap.set("kafka_configuration", null);
+    triggerMap.set('id', 'trigger-123');
+    triggerMap.set('type', 'webhook');
+    triggerMap.set('enabled', true);
+    triggerMap.set('cron_expression', null);
+    triggerMap.set('kafka_configuration', null);
     triggersArray.push([triggerMap]);
 
     render(
@@ -325,11 +325,11 @@ describe("Header - Basic Rendering", () => {
     });
 
     await waitFor(() => {
-      expect(screen.getByRole("button", { name: /run/i })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /run/i })).toBeInTheDocument();
     });
   });
 
-  test("renders user menu button", async () => {
+  test('renders user menu button', async () => {
     const { wrapper, emitSessionContext } = createTestSetup();
 
     render(
@@ -344,8 +344,119 @@ describe("Header - Basic Rendering", () => {
     });
 
     expect(
-      screen.getByRole("button", { name: /open user menu/i })
+      screen.getByRole('button', { name: /open user menu/i })
     ).toBeInTheDocument();
+  });
+
+  test('settings button shows error styling when workflow has validation errors', async () => {
+    const { wrapper, emitSessionContext, ydoc } = createTestSetup();
+
+    const { container } = render(
+      <Header projectId="project-1" workflowId="workflow-1">
+        {[<span key="breadcrumb-1">Breadcrumb</span>]}
+      </Header>,
+      { wrapper }
+    );
+
+    act(() => {
+      emitSessionContext();
+    });
+
+    // Initially, settings button should have gray styling
+    const settingsButton = container.querySelector(
+      'button[type="button"] .hero-adjustments-vertical'
+    )?.parentElement;
+    expect(settingsButton).toHaveClass('text-slate-500');
+    expect(settingsButton).toHaveClass('hover:text-slate-400');
+
+    // Set workflow name to empty string (invalid)
+    act(() => {
+      const workflowMap = ydoc.getMap('workflow');
+      workflowMap.set('name', '');
+    });
+
+    await waitFor(() => {
+      // Settings button should now have red error styling
+      expect(settingsButton).toHaveClass('text-danger-500');
+      expect(settingsButton).toHaveClass('hover:text-danger-400');
+    });
+
+    // Fix the validation error
+    act(() => {
+      const workflowMap = ydoc.getMap('workflow');
+      workflowMap.set('name', 'Valid Workflow Name');
+    });
+
+    await waitFor(() => {
+      // Settings button should return to gray styling
+      expect(settingsButton).toHaveClass('text-slate-500');
+      expect(settingsButton).toHaveClass('hover:text-slate-400');
+    });
+  });
+
+  test('settings button shows error styling when concurrency is invalid', async () => {
+    const { wrapper, emitSessionContext, ydoc } = createTestSetup();
+
+    const { container } = render(
+      <Header projectId="project-1" workflowId="workflow-1">
+        {[<span key="breadcrumb-1">Breadcrumb</span>]}
+      </Header>,
+      { wrapper }
+    );
+
+    act(() => {
+      emitSessionContext();
+    });
+
+    // Set concurrency to 0 (invalid)
+    act(() => {
+      const workflowMap = ydoc.getMap('workflow');
+      workflowMap.set('concurrency', 0);
+    });
+
+    await waitFor(() => {
+      const settingsButton = container.querySelector(
+        'button[type="button"] .hero-adjustments-vertical'
+      )?.parentElement;
+      // Settings button should have red error styling
+      expect(settingsButton).toHaveClass('text-danger-500');
+      expect(settingsButton).toHaveClass('hover:text-danger-400');
+    });
+  });
+
+  test('settings button remains clickable when validation errors exist', async () => {
+    const { wrapper, emitSessionContext, ydoc } = createTestSetup();
+
+    const { container } = render(
+      <Header projectId="project-1" workflowId="workflow-1">
+        {[<span key="breadcrumb-1">Breadcrumb</span>]}
+      </Header>,
+      { wrapper }
+    );
+
+    act(() => {
+      emitSessionContext();
+    });
+
+    // Set workflow name to empty string (invalid)
+    act(() => {
+      const workflowMap = ydoc.getMap('workflow');
+      workflowMap.set('name', '');
+    });
+
+    await waitFor(() => {
+      const settingsButton = container.querySelector(
+        'button[type="button"] .hero-adjustments-vertical'
+      )?.parentElement;
+      expect(settingsButton).toHaveClass('text-danger-500');
+    });
+
+    // Verify button is still clickable (not disabled)
+    const settingsButton = container.querySelector(
+      'button[type="button"] .hero-adjustments-vertical'
+    )?.parentElement as HTMLButtonElement;
+    expect(settingsButton).not.toBeDisabled();
+    expect(settingsButton).toHaveClass('cursor-pointer');
   });
 });
 
@@ -353,8 +464,8 @@ describe("Header - Basic Rendering", () => {
 // HEADER STATE INTERACTION TESTS
 // =============================================================================
 
-describe("Header - Read-Only State Changes", () => {
-  test("ReadOnlyWarning appears when workflow becomes read-only", async () => {
+describe('Header - Read-Only State Changes', () => {
+  test('ReadOnlyWarning appears when workflow becomes read-only', async () => {
     const { wrapper, emitSessionContext, ydoc } = createTestSetup({
       permissions: { can_edit_workflow: true, can_run_workflow: true },
     });
@@ -370,12 +481,12 @@ describe("Header - Read-Only State Changes", () => {
       emitSessionContext();
     });
 
-    expect(screen.queryByText("Read-only")).not.toBeInTheDocument();
+    expect(screen.queryByText('Read-only')).not.toBeInTheDocument();
 
     // Make workflow deleted
     act(() => {
-      const workflowMap = ydoc.getMap("workflow");
-      workflowMap.set("deleted_at", new Date().toISOString());
+      const workflowMap = ydoc.getMap('workflow');
+      workflowMap.set('deleted_at', new Date().toISOString());
     });
 
     rerender(
@@ -385,11 +496,11 @@ describe("Header - Read-Only State Changes", () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText("Read-only")).toBeInTheDocument();
+      expect(screen.getByText('Read-only')).toBeInTheDocument();
     });
   });
 
-  test("ReadOnlyWarning disappears when workflow becomes editable", async () => {
+  test('ReadOnlyWarning disappears when workflow becomes editable', async () => {
     const { wrapper, emitSessionContext, ydoc } = createTestSetup({
       permissions: { can_edit_workflow: true, can_run_workflow: true },
       workflowDeletedAt: new Date().toISOString(),
@@ -407,13 +518,13 @@ describe("Header - Read-Only State Changes", () => {
     });
 
     await waitFor(() => {
-      expect(screen.getByText("Read-only")).toBeInTheDocument();
+      expect(screen.getByText('Read-only')).toBeInTheDocument();
     });
 
     // Make workflow not deleted
     act(() => {
-      const workflowMap = ydoc.getMap("workflow");
-      workflowMap.set("deleted_at", null);
+      const workflowMap = ydoc.getMap('workflow');
+      workflowMap.set('deleted_at', null);
     });
 
     rerender(
@@ -423,7 +534,7 @@ describe("Header - Read-Only State Changes", () => {
     );
 
     await waitFor(() => {
-      expect(screen.queryByText("Read-only")).not.toBeInTheDocument();
+      expect(screen.queryByText('Read-only')).not.toBeInTheDocument();
     });
   });
 });
@@ -432,8 +543,8 @@ describe("Header - Read-Only State Changes", () => {
 // SPLIT BUTTON TESTS (GitHub Integration)
 // =============================================================================
 
-describe("Header - Split Button Behavior", () => {
-  test("renders simple save button when no GitHub connection", async () => {
+describe('Header - Split Button Behavior', () => {
+  test('renders simple save button when no GitHub connection', async () => {
     const { wrapper, emitSessionContext } = createTestSetup();
 
     render(
@@ -448,14 +559,14 @@ describe("Header - Split Button Behavior", () => {
     });
 
     // Should have save button
-    const saveButton = screen.getByRole("button", { name: /save/i });
+    const saveButton = screen.getByRole('button', { name: /save/i });
     expect(saveButton).toBeInTheDocument();
 
     // Should not have dropdown chevron
     expect(screen.queryByText(/open sync options/i)).not.toBeInTheDocument();
   });
 
-  test("renders split button when GitHub connection exists", async () => {
+  test('renders split button when GitHub connection exists', async () => {
     const { wrapper, emitSessionContext } = createTestSetup({
       hasGithubConnection: true,
     });
@@ -472,17 +583,17 @@ describe("Header - Split Button Behavior", () => {
     });
 
     // Should have save button
-    const saveButton = screen.getByRole("button", { name: /save/i });
+    const saveButton = screen.getByRole('button', { name: /save/i });
     expect(saveButton).toBeInTheDocument();
 
     // Should have dropdown button
-    const dropdownButton = screen.getByRole("button", {
+    const dropdownButton = screen.getByRole('button', {
       name: /open sync options/i,
     });
     expect(dropdownButton).toBeInTheDocument();
   });
 
-  test("split button dropdown shows dropdown trigger button", async () => {
+  test('split button dropdown shows dropdown trigger button', async () => {
     const { wrapper, emitSessionContext } = createTestSetup({
       hasGithubConnection: true,
     });
@@ -499,17 +610,17 @@ describe("Header - Split Button Behavior", () => {
     });
 
     // Verify dropdown button is present
-    const dropdownButton = screen.getByRole("button", {
+    const dropdownButton = screen.getByRole('button', {
       name: /open sync options/i,
     });
     expect(dropdownButton).toBeInTheDocument();
 
     // Verify the button has the chevron icon (as a child span)
-    const chevron = container.querySelector(".hero-chevron-down");
+    const chevron = container.querySelector('.hero-chevron-down');
     expect(chevron).toBeInTheDocument();
   });
 
-  test("split button has correct structure with two buttons", async () => {
+  test('split button has correct structure with two buttons', async () => {
     const { wrapper, emitSessionContext } = createTestSetup({
       hasGithubConnection: true,
     });
@@ -527,16 +638,16 @@ describe("Header - Split Button Behavior", () => {
 
     // Find the split button container
     const splitButtonContainer = container.querySelector(
-      ".inline-flex.rounded-md.shadow-xs"
+      '.inline-flex.rounded-md.shadow-xs'
     );
     expect(splitButtonContainer).toBeInTheDocument();
 
     // Should have both Save button and dropdown button
-    const saveButton = screen.getByTestId("save-workflow-button");
+    const saveButton = screen.getByTestId('save-workflow-button');
     expect(saveButton).toBeInTheDocument();
-    expect(saveButton).toHaveTextContent("Save");
+    expect(saveButton).toHaveTextContent('Save');
 
-    const dropdownButton = screen.getByRole("button", {
+    const dropdownButton = screen.getByRole('button', {
       name: /open sync options/i,
     });
     expect(dropdownButton).toBeInTheDocument();
@@ -547,8 +658,8 @@ describe("Header - Split Button Behavior", () => {
 // KEYBOARD SHORTCUT TESTS
 // =============================================================================
 
-describe("Header - Keyboard Shortcuts", () => {
-  test("Header registers Ctrl+S keyboard shortcut handler", async () => {
+describe('Header - Keyboard Shortcuts', () => {
+  test('Header registers Ctrl+S keyboard shortcut handler', async () => {
     const { wrapper, emitSessionContext } = createTestSetup();
 
     render(
@@ -565,10 +676,10 @@ describe("Header - Keyboard Shortcuts", () => {
     // The Header component should render without errors and register hotkeys
     // Testing actual keyboard events with react-hotkeys-hook is difficult in test environment
     // This test verifies the component renders correctly with hotkey setup
-    expect(screen.getByRole("button", { name: /save/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /save/i })).toBeInTheDocument();
   });
 
-  test("Header registers Cmd+S keyboard shortcut handler (Mac)", async () => {
+  test('Header registers Cmd+S keyboard shortcut handler (Mac)', async () => {
     const { wrapper, emitSessionContext } = createTestSetup();
 
     render(
@@ -585,10 +696,10 @@ describe("Header - Keyboard Shortcuts", () => {
     // The Header component should render without errors and register hotkeys
     // Testing actual keyboard events with react-hotkeys-hook is difficult in test environment
     // This test verifies the component renders correctly with hotkey setup
-    expect(screen.getByRole("button", { name: /save/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /save/i })).toBeInTheDocument();
   });
 
-  test("save button is disabled when user lacks permissions", async () => {
+  test('save button is disabled when user lacks permissions', async () => {
     const { wrapper, emitSessionContext } = createTestSetup({
       permissions: { can_edit_workflow: false },
     });
@@ -605,11 +716,11 @@ describe("Header - Keyboard Shortcuts", () => {
     });
 
     // Save button should be disabled
-    const saveButton = screen.getByRole("button", { name: /save/i });
+    const saveButton = screen.getByRole('button', { name: /save/i });
     expect(saveButton).toBeDisabled();
   });
 
-  test("Header renders with GitHub connection and sync options available", async () => {
+  test('Header renders with GitHub connection and sync options available', async () => {
     const { wrapper, emitSessionContext } = createTestSetup({
       hasGithubConnection: true,
     });
@@ -626,13 +737,13 @@ describe("Header - Keyboard Shortcuts", () => {
     });
 
     // Should have split button with dropdown for sync options
-    const dropdownButton = screen.getByRole("button", {
+    const dropdownButton = screen.getByRole('button', {
       name: /open sync options/i,
     });
     expect(dropdownButton).toBeInTheDocument();
   });
 
-  test("Header renders without GitHub connection and no sync options", async () => {
+  test('Header renders without GitHub connection and no sync options', async () => {
     const { wrapper, emitSessionContext } = createTestSetup({
       hasGithubConnection: false,
     });
@@ -649,13 +760,13 @@ describe("Header - Keyboard Shortcuts", () => {
     });
 
     // Should NOT have split button dropdown
-    const dropdownButton = screen.queryByRole("button", {
+    const dropdownButton = screen.queryByRole('button', {
       name: /open sync options/i,
     });
     expect(dropdownButton).not.toBeInTheDocument();
   });
 
-  test("split button dropdown is disabled when user lacks permissions", async () => {
+  test('split button dropdown is disabled when user lacks permissions', async () => {
     const { wrapper, emitSessionContext } = createTestSetup({
       hasGithubConnection: true,
       permissions: { can_edit_workflow: false },
@@ -673,16 +784,16 @@ describe("Header - Keyboard Shortcuts", () => {
     });
 
     // Both save and dropdown buttons should be disabled
-    const saveButton = screen.getByRole("button", { name: /save/i });
+    const saveButton = screen.getByRole('button', { name: /save/i });
     expect(saveButton).toBeDisabled();
 
-    const dropdownButton = screen.getByRole("button", {
+    const dropdownButton = screen.getByRole('button', {
       name: /open sync options/i,
     });
     expect(dropdownButton).toBeDisabled();
   });
 
-  test("Header renders correctly with all navigation elements", async () => {
+  test('Header renders correctly with all navigation elements', async () => {
     const { wrapper, emitSessionContext } = createTestSetup();
 
     render(
@@ -698,15 +809,15 @@ describe("Header - Keyboard Shortcuts", () => {
 
     // Should have breadcrumbs
     expect(
-      screen.getByRole("navigation", { name: /breadcrumb/i })
+      screen.getByRole('navigation', { name: /breadcrumb/i })
     ).toBeInTheDocument();
 
     // Should have save button
-    expect(screen.getByRole("button", { name: /save/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /save/i })).toBeInTheDocument();
 
     // Should have user menu
     expect(
-      screen.getByRole("button", { name: /open user menu/i })
+      screen.getByRole('button', { name: /open user menu/i })
     ).toBeInTheDocument();
   });
 });

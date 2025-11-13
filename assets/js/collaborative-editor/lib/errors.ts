@@ -1,6 +1,6 @@
-import { toTitleCase } from "#/collaborative-editor/utils/adaptorUtils";
+import { toTitleCase } from '#/collaborative-editor/utils/adaptorUtils';
 
-import type { ChannelError } from "../hooks/useChannel";
+import type { ChannelError } from '../hooks/useChannel';
 
 /**
  * Custom error thrown by channelRequest when backend returns an error.
@@ -8,20 +8,20 @@ import type { ChannelError } from "../hooks/useChannel";
  */
 export class ChannelRequestError extends Error {
   type:
-    | "unauthorized"
-    | "validation_error"
-    | "workflow_deleted"
-    | "deserialization_error"
-    | "internal_error"
-    | "optimistic_lock_error";
+    | 'unauthorized'
+    | 'validation_error'
+    | 'workflow_deleted'
+    | 'deserialization_error'
+    | 'internal_error'
+    | 'optimistic_lock_error';
   errors: Record<string, string[] | undefined>;
 
   constructor(
-    type: ChannelRequestError["type"],
+    type: ChannelRequestError['type'],
     errors: Record<string, string[] | undefined>
   ) {
-    super("Channel request failed");
-    this.name = "ChannelRequestError";
+    super('Channel request failed');
+    this.name = 'ChannelRequestError';
     this.type = type;
     this.errors = errors;
   }
@@ -53,5 +53,5 @@ export function formatChannelErrorMessage(channelError: ChannelError): string {
     return `${formattedField}: ${firstError}`;
   }
 
-  return "An error occurred";
+  return 'An error occurred';
 }

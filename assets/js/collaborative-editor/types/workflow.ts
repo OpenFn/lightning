@@ -7,12 +7,12 @@
  * collaborative data (Y.Doc sourced) and local UI state.
  */
 
-import type * as Y from "yjs";
-import { z } from "zod";
+import type * as Y from 'yjs';
+import { z } from 'zod';
 
-import type { Job as JobType } from "./job";
-import type { Session } from "./session";
-import type { Trigger as TriggerType } from "./trigger";
+import type { Job as JobType } from './job';
+import type { Session } from './session';
+import type { Trigger as TriggerType } from './trigger';
 
 /**
  * Zod schema for workflow validation
@@ -24,7 +24,7 @@ export const WorkflowSchema = z.object({
   name: z
     .string()
     .min(1, "can't be blank")
-    .max(255, "should be at most 255 character(s)"),
+    .max(255, 'should be at most 255 character(s)'),
   lock_version: z.number().int(),
   deleted_at: z.string().nullable(),
 
@@ -33,7 +33,7 @@ export const WorkflowSchema = z.object({
   concurrency: z
     .number()
     .int()
-    .min(1, "must be at least 1")
+    .min(1, 'must be at least 1')
     .nullable()
     .optional(),
   enable_job_logs: z.boolean().optional(),
@@ -67,7 +67,7 @@ export namespace Workflow {
     errors?: Record<string, string[]>;
   }
 
-  export type NodeType = "job" | "trigger" | "edge";
+  export type NodeType = 'job' | 'trigger' | 'edge';
   export type Node = Job | Trigger | Edge;
 
   export type Positions = Record<string, { x: number; y: number }>;
@@ -98,6 +98,10 @@ export namespace Workflow {
         name: string;
         auth_type: string;
       }>;
+    };
+    validationErrors: {
+      name?: string[];
+      concurrency?: string[];
     } | null;
   }
 
