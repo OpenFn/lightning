@@ -96,9 +96,9 @@ Lightning
 <p>Registry process to query and maintain a list of adaptors available for
 writing jobs.</p><p>Currently it queries NPM for all modules in the <code class="inline">@openfn</code> organization and
 filters out modules that are known not to be adaptors.</p><p><strong>Usage</strong></p><pre><code class="makeup elixir" translate="no"><span class="c1"># Starting the process</span><span class="w">
-</span><span class="nc">AdaptorRegistry</span><span class="o">.</span><span class="n">start_link</span><span class="p" data-group-id="7402822467-1">(</span><span class="p" data-group-id="7402822467-1">)</span><span class="w">
+</span><span class="nc">AdaptorRegistry</span><span class="o">.</span><span class="n">start_link</span><span class="p" data-group-id="6398326894-1">(</span><span class="p" data-group-id="6398326894-1">)</span><span class="w">
 </span><span class="c1"># Getting a list of all adaptors</span><span class="w">
-</span><span class="nc">Lightning.AdaptorRegistry.AdaptorRegistry</span><span class="o">.</span><span class="n">all</span><span class="p" data-group-id="7402822467-2">(</span><span class="p" data-group-id="7402822467-2">)</span></code></pre><p><strong>Caching</strong></p><p>By default the results are cached to disk, and will be reused every start.</p><p>In order to disable or configure caching pass see: <a href="#start_link/1"><code class="inline">start_link/1</code></a>.</p><p>The process uses <code class="inline">:continue</code> to return before the adaptors have been queried.
+</span><span class="nc">Lightning.AdaptorRegistry.AdaptorRegistry</span><span class="o">.</span><span class="n">all</span><span class="p" data-group-id="6398326894-2">(</span><span class="p" data-group-id="6398326894-2">)</span></code></pre><p><strong>Caching</strong></p><p>By default the results are cached to disk, and will be reused every start.</p><p>In order to disable or configure caching pass see: <a href="#start_link/1"><code class="inline">start_link/1</code></a>.</p><p>The process uses <code class="inline">:continue</code> to return before the adaptors have been queried.
 This does mean that the first call to the process will be delayed until
 the <code class="inline">handle_continue/2</code> has finished.</p><p><strong>Timeouts</strong></p><p>There is a 'general' timeout of 30s, this is used for GenServer calls like
 <a href="#all/1"><code class="inline">all/1</code></a> and also internally when the modules are being queried. NPM can
@@ -420,10 +420,10 @@ been fetched yet).</p>
 
       </div>
 
-<p>Destructures an NPM style package name into module name and version.</p><p><strong>Example</strong></p><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">resolve_package_name</span><span class="p" data-group-id="3045530467-1">(</span><span class="s">&quot;@openfn/language-salesforce@1.2.3&quot;</span><span class="p" data-group-id="3045530467-1">)</span><span class="w">
-</span><span class="p" data-group-id="3045530467-2">{</span><span class="w"> </span><span class="s">&quot;@openfn/language-salesforce&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;1.2.3&quot;</span><span class="w"> </span><span class="p" data-group-id="3045530467-2">}</span><span class="w">
-</span><span class="gp unselectable">iex&gt; </span><span class="n">resolve_package_name</span><span class="p" data-group-id="3045530467-3">(</span><span class="s">&quot;@openfn/language-salesforce&quot;</span><span class="p" data-group-id="3045530467-3">)</span><span class="w">
-</span><span class="p" data-group-id="3045530467-4">{</span><span class="w"> </span><span class="s">&quot;@openfn/language-salesforce&quot;</span><span class="p">,</span><span class="w"> </span><span class="no">nil</span><span class="w"> </span><span class="p" data-group-id="3045530467-4">}</span></code></pre>
+<p>Destructures an NPM style package name into module name and version.</p><p><strong>Example</strong></p><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">resolve_package_name</span><span class="p" data-group-id="2936144658-1">(</span><span class="s">&quot;@openfn/language-salesforce@1.2.3&quot;</span><span class="p" data-group-id="2936144658-1">)</span><span class="w">
+</span><span class="p" data-group-id="2936144658-2">{</span><span class="w"> </span><span class="s">&quot;@openfn/language-salesforce&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;1.2.3&quot;</span><span class="w"> </span><span class="p" data-group-id="2936144658-2">}</span><span class="w">
+</span><span class="gp unselectable">iex&gt; </span><span class="n">resolve_package_name</span><span class="p" data-group-id="2936144658-3">(</span><span class="s">&quot;@openfn/language-salesforce&quot;</span><span class="p" data-group-id="2936144658-3">)</span><span class="w">
+</span><span class="p" data-group-id="2936144658-4">{</span><span class="w"> </span><span class="s">&quot;@openfn/language-salesforce&quot;</span><span class="p">,</span><span class="w"> </span><span class="no">nil</span><span class="w"> </span><span class="p" data-group-id="2936144658-4">}</span></code></pre>
   </section>
 </section>
 <section class="detail" id="resolve_package_name!/1">
