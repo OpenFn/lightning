@@ -68,15 +68,7 @@ export function SaveButton({
       <div className="inline-flex rounded-md shadow-xs z-5">
         <Tooltip
           content={
-            <>
-              {tooltipMessage}
-              {canSave && (
-                <>
-                  {' '}
-                  <ShortcutKeys keys={['mod', 's']} />
-                </>
-              )}
-            </>
+            canSave ? <ShortcutKeys keys={['mod', 's']} /> : tooltipMessage
           }
           side="bottom"
         >
@@ -104,15 +96,7 @@ export function SaveButton({
     <div className="inline-flex rounded-md shadow-xs z-5">
       <Tooltip
         content={
-          <>
-            {tooltipMessage}
-            {canSave && (
-              <>
-                {' '}
-                <ShortcutKeys keys={['mod', 's']} />
-              </>
-            )}
-          </>
+          canSave ? <ShortcutKeys keys={['mod', 's']} /> : tooltipMessage
         }
         side="bottom"
       >
@@ -135,15 +119,11 @@ export function SaveButton({
       <Menu as="div" className="relative -ml-px block">
         <Tooltip
           content={
-            <>
-              {tooltipMessage}
-              {canSave && (
-                <>
-                  {' '}
-                  <ShortcutKeys keys={['mod', 'shift', 's']} />
-                </>
-              )}
-            </>
+            canSave ? (
+              <ShortcutKeys keys={['mod', 'shift', 's']} />
+            ) : (
+              tooltipMessage
+            )
           }
           side="bottom"
         >
@@ -315,15 +295,11 @@ export function Header({
               {projectId && workflowId && firstTriggerId && (
                 <Tooltip
                   content={
-                    <>
-                      {runTooltipMessage}
-                      {canRun && (
-                        <>
-                          {' '}
-                          <ShortcutKeys keys={['mod', 'enter']} />
-                        </>
-                      )}
-                    </>
+                    canRun ? (
+                      <ShortcutKeys keys={['mod', 'enter']} />
+                    ) : (
+                      runTooltipMessage
+                    )
                   }
                   side="bottom"
                 >

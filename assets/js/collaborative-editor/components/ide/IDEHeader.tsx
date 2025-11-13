@@ -173,15 +173,11 @@ export function IDEHeader({
           ) : (
             <Tooltip
               content={
-                <>
-                  Run workflow
-                  {canRun && (
-                    <>
-                      {' '}
-                      <ShortcutKeys keys={['mod', 'enter']} />
-                    </>
-                  )}
-                </>
+                canRun ? (
+                  <ShortcutKeys keys={['mod', 'enter']} />
+                ) : (
+                  'Unable to run workflow'
+                )
               }
               side="bottom"
             >

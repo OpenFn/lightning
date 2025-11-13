@@ -74,11 +74,13 @@ export function JobInspector({
               <>
                 {isIDEOpen
                   ? 'IDE is already open'
-                  : 'Open full-screen code editor'}
+                  : 'Open full-screen code editor '}
                 {!isIDEOpen && (
                   <>
                     {' '}
+                    {'( '}
                     <ShortcutKeys keys={['mod', 'e']} />
+                    {' )'}
                   </>
                 )}
               </>

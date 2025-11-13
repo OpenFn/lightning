@@ -178,18 +178,22 @@ describe('ShortcutKeys', () => {
       expect(kbdTexts[1]).not.toBe('s');
     });
 
-    it('handles multiple keys with space separator', () => {
+    it('handles multiple keys with + separator', () => {
       render(
         <div data-testid="shortcut">
           <ShortcutKeys keys={['mod', 'shift', 's']} />
         </div>
       );
 
-      const container = screen.getByTestId('shortcut');
-      expect(container.textContent).toBe('⌘ Shift S');
-
       const kbdElements = document.querySelectorAll('kbd');
       expect(kbdElements).toHaveLength(3);
+
+      // Check for + separators between keys
+      const container = screen.getByTestId('shortcut');
+      expect(container.textContent).toContain('+');
+      expect(container.textContent).toContain('⌘');
+      expect(container.textContent).toContain('Shift');
+      expect(container.textContent).toContain('S');
     });
 
     it('handles single key', () => {
@@ -255,7 +259,7 @@ describe('ShortcutKeys', () => {
     });
   });
 
-  describe('kbd element styling', () => {
+  describe('kbd element structure', () => {
     beforeEach(() => {
       Object.defineProperty(global, 'navigator', {
         value: { platform: 'MacIntel' },
@@ -264,7 +268,7 @@ describe('ShortcutKeys', () => {
       });
     });
 
-    it('applies correct Tailwind classes to kbd elements', () => {
+    it('renders kbd elements without styling', () => {
       render(
         <div data-testid="shortcut">
           <ShortcutKeys keys={['mod', 's']} />
@@ -272,11 +276,11 @@ describe('ShortcutKeys', () => {
       );
 
       const kbdElements = document.querySelectorAll('kbd');
+      expect(kbdElements).toHaveLength(2);
+
+      // kbd elements should have no className
       kbdElements.forEach(kbd => {
-        expect(kbd.className).toContain('rounded');
-        expect(kbd.className).toContain('border');
-        expect(kbd.className).toContain('bg-gray-800');
-        expect(kbd.className).toContain('text-gray-200');
+        expect(kbd.className).toBe('');
       });
     });
   });
