@@ -129,18 +129,10 @@ defmodule Mix.Tasks.Lightning.MergeProjects do
     |> Enum.reduce(%{}, fn mapping_str, acc ->
       case String.split(mapping_str, ":") do
         [source_id, target_id] ->
-          source_id = String.trim(source_id)
-          target_id = String.trim(target_id)
+          source_id = cast_int_or_string(source_id)
+          target_id = cast_int_or_string(target_id)
 
-          # Support both string and integer keys by adding both forms
-          acc
-          |> Map.put(source_id, target_id)
-          |> then(fn map ->
-            case Integer.parse(source_id) do
-              {int_id, ""} -> Map.put(map, int_id, target_id)
-              _ -> map
-            end
-          end)
+          Map.put(acc, source_id, target_id)
 
         _other ->
           Mix.raise("""
@@ -151,6 +143,13 @@ defmodule Mix.Tasks.Lightning.MergeProjects do
           """)
       end
     end)
+  end
+
+  defp cast_int_or_string(value) do
+    case Integer.parse(value) do
+      {int, ""} -> int
+      _ -> String.trim(value)
+    end
   end
 
   defp encode_json(project) do
