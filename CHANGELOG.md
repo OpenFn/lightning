@@ -21,6 +21,10 @@ and this project adheres to
 
 ### Fixed
 
+- Fix run/save-and-run keystroke mapping for canvas & IDE
+  [#3902](https://github.com/OpenFn/lightning/issues/3902) &
+  [#3903](https://github.com/OpenFn/lightning/issues/3903)
+
 ## [2.14.15-pre] - 2025-11-13
 
 ### Added

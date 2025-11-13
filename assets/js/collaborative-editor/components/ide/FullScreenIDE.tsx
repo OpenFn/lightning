@@ -527,6 +527,44 @@ export function FullScreenIDE({
     [onClose]
   );
 
+  useHotkeys(
+    'meta+enter, ctrl+enter',
+    event => {
+      event.preventDefault();
+      event.stopPropagation();
+      if (isRetryable) {
+        handleRetry();
+      } else {
+        handleRun();
+      }
+    },
+    {
+      enabled: true,
+      scopes: [HOTKEY_SCOPES.IDE],
+      enableOnFormTags: true,
+      enableOnContentEditable: true,
+      preventDefault: true,
+    },
+    [handleRun, handleRetry, isRetryable]
+  );
+
+  useHotkeys(
+    'meta+shift+enter, ctrl+shift+enter',
+    event => {
+      event.preventDefault();
+      event.stopPropagation();
+      handleRun();
+    },
+    {
+      enabled: true,
+      scopes: [HOTKEY_SCOPES.IDE],
+      enableOnFormTags: true,
+      enableOnContentEditable: true,
+      preventDefault: true,
+    },
+    [handleRun]
+  );
+
   // Loading state: Wait for Y.Text and awareness to be ready
   if (!currentJob || !currentJobYText || !awareness) {
     return (

@@ -269,6 +269,37 @@ export function WorkflowEditor({
     [currentNode, isIDEOpen, updateSearchParams]
   );
 
+  // CMD+Enter: Open run panel or run workflow
+  useHotkeys(
+    'mod+enter',
+    event => {
+      event.preventDefault();
+
+      // If run panel is already open, let the ManualRunPanel handle it
+      if (isRunPanelOpen) {
+        return;
+      }
+
+      // Open run panel based on current selection
+      if (currentNode.type === 'job' && currentNode.node) {
+        openRunPanel({ jobId: currentNode.node.id });
+      } else if (currentNode.type === 'trigger' && currentNode.node) {
+        openRunPanel({ triggerId: currentNode.node.id });
+      } else {
+        // No selection - open from first trigger
+        const firstTrigger = workflow.triggers[0];
+        if (firstTrigger?.id) {
+          openRunPanel({ triggerId: firstTrigger.id });
+        }
+      }
+    },
+    {
+      enabled: !isIDEOpen && !isRunPanelOpen,
+      enableOnFormTags: true,
+    },
+    [currentNode, isIDEOpen, isRunPanelOpen, openRunPanel, workflow.triggers]
+  );
+
   return (
     <div className="relative flex h-full w-full">
       {!isIDEOpen && (
