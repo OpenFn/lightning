@@ -1244,7 +1244,7 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
     do: "Define custom credentials in JSON"
 
   defp get_credential_description("keychain", _type),
-    do: "Securely store and reuse API keys"
+    do: "Dynamically select linked credentials at runtime"
 
   defp get_credential_description(_key, "oauth"),
     do: "Connect with standards-based authorization"
