@@ -49,6 +49,7 @@ export function WebhookAuthMethodModal({
   useEffect(() => {
     enableScope(HOTKEY_SCOPES.MODAL);
     disableScope(HOTKEY_SCOPES.PANEL);
+    disableScope(HOTKEY_SCOPES.RUN_PANEL);
 
     return () => {
       disableScope(HOTKEY_SCOPES.MODAL);

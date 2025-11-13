@@ -427,7 +427,11 @@ export function ManualRunPanel({
     () => {
       onClose();
     },
-    { enabled: true, enableOnFormTags: true },
+    {
+      enabled: true,
+      scopes: [HOTKEY_SCOPES.RUN_PANEL],
+      enableOnFormTags: true,
+    },
     [onClose]
   );
 
