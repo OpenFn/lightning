@@ -795,7 +795,7 @@ export function FullScreenIDE({
 
               {/* Editor */}
               {!isCenterCollapsed && (
-                <div className="flex-1 overflow-hidden">
+                <div className="flex-1">
                   <CollaborativeMonaco
                     ytext={currentJobYText}
                     awareness={awareness}

@@ -27,6 +27,8 @@ and this project adheres to
 - Fix run/save-and-run keystroke mapping for canvas & IDE
   [#3902](https://github.com/OpenFn/lightning/issues/3902) &
   [#3903](https://github.com/OpenFn/lightning/issues/3903)
+- Monaco tooltips get cut off
+  [#3900](https://github.com/OpenFn/lightning/issues/3900)
 
 ## [2.14.15-pre] - 2025-11-13
 
