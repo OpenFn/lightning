@@ -705,7 +705,7 @@ defmodule Mix.Tasks.Lightning.MergeProjectsTest do
       assert result["name"] == "target-project"
     end
 
-    test "works offline without database access", %{tmp_dir: tmp_dir} do
+    test "runs standalone without database fixtures", %{tmp_dir: tmp_dir} do
       source_state =
         build_project_state(
           id: "offline-source",
