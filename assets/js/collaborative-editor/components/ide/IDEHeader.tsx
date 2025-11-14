@@ -153,41 +153,22 @@ export function IDEHeader({
 
         {/* Right: Action buttons */}
         <div className="flex items-center gap-3">
-          {!canRun && runTooltip ? (
-            <Tooltip content={runTooltip} side="bottom">
-              <span className="inline-block">
-                <RunRetryButton
-                  isRetryable={isRetryable}
-                  isDisabled={!canRun}
-                  isSubmitting={isRunning}
-                  onRun={onRun}
-                  onRetry={onRetry}
-                  buttonText={{
-                    run: 'Run',
-                    retry: 'Run (retry)',
-                    processing: 'Processing',
-                  }}
-                  variant="secondary"
-                  dropdownPosition="down"
-                />
-              </span>
-            </Tooltip>
-          ) : (
-            <RunRetryButton
-              isRetryable={isRetryable}
-              isDisabled={!canRun}
-              isSubmitting={isRunning}
-              onRun={onRun}
-              onRetry={onRetry}
-              buttonText={{
-                run: 'Run',
-                retry: 'Run (retry)',
-                processing: 'Processing',
-              }}
-              variant="secondary"
-              dropdownPosition="down"
-            />
-          )}
+          <RunRetryButton
+            isRetryable={isRetryable}
+            isDisabled={!canRun}
+            isSubmitting={isRunning}
+            onRun={onRun}
+            onRetry={onRetry}
+            buttonText={{
+              run: 'Run',
+              retry: 'Run (retry)',
+              processing: 'Processing',
+            }}
+            variant="secondary"
+            dropdownPosition="down"
+            showKeyboardShortcuts={true}
+            disabledTooltip={runTooltip}
+          />
 
           <SaveButton
             canSave={canSave}

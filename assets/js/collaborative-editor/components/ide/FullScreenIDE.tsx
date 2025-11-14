@@ -552,44 +552,6 @@ export function FullScreenIDE({
     [onClose, isConfigureModalOpen, isAdaptorPickerOpen, isCredentialModalOpen]
   );
 
-  useHotkeys(
-    'meta+enter, ctrl+enter',
-    event => {
-      event.preventDefault();
-      event.stopPropagation();
-      if (isRetryable) {
-        handleRetry();
-      } else {
-        handleRun();
-      }
-    },
-    {
-      enabled: true,
-      scopes: [HOTKEY_SCOPES.IDE],
-      enableOnFormTags: true,
-      enableOnContentEditable: true,
-      preventDefault: true,
-    },
-    [handleRun, handleRetry, isRetryable]
-  );
-
-  useHotkeys(
-    'meta+shift+enter, ctrl+shift+enter',
-    event => {
-      event.preventDefault();
-      event.stopPropagation();
-      handleRun();
-    },
-    {
-      enabled: true,
-      scopes: [HOTKEY_SCOPES.IDE],
-      enableOnFormTags: true,
-      enableOnContentEditable: true,
-      preventDefault: true,
-    },
-    [handleRun]
-  );
-
   // Save docs panel collapsed state to localStorage
   useEffect(() => {
     localStorage.setItem(

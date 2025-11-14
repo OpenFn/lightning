@@ -20,11 +20,12 @@ export function Tooltip({
   delayDuration = 200,
 }: {
   children: ReactNode;
-  content: string;
+  content: ReactNode;
   side?: 'top' | 'right' | 'bottom' | 'left';
   align?: 'start' | 'center' | 'end';
   delayDuration?: number;
 }) {
+  if (!content) return <>{children}</>;
   return (
     <RadixTooltip.Provider delayDuration={delayDuration}>
       <RadixTooltip.Root>

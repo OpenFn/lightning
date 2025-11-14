@@ -1,5 +1,5 @@
 import { Menu, MenuButton, MenuItem, MenuItems } from '@headlessui/react';
-import { useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
 import { useHotkeys } from 'react-hotkeys-hook';
 
 import { useURLState } from '../../react/lib/use-url-state';
@@ -30,6 +30,7 @@ import { EmailVerificationBanner } from './EmailVerificationBanner';
 import { GitHubSyncModal } from './GitHubSyncModal';
 import { Switch } from './inputs/Switch';
 import { ReadOnlyWarning } from './ReadOnlyWarning';
+import { ShortcutKeys } from './ShortcutKeys';
 import { Tooltip } from './Tooltip';
 
 const userNavigation = [
@@ -66,7 +67,12 @@ export function SaveButton({
   if (!hasGitHubIntegration) {
     return (
       <div className="inline-flex rounded-md shadow-xs z-5">
-        <Tooltip content={tooltipMessage} side="bottom">
+        <Tooltip
+          content={
+            canSave ? <ShortcutKeys keys={['mod', 's']} /> : tooltipMessage
+          }
+          side="bottom"
+        >
           <button
             type="button"
             data-testid="save-workflow-button"
@@ -89,7 +95,12 @@ export function SaveButton({
 
   return (
     <div className="inline-flex rounded-md shadow-xs z-5">
-      <Tooltip content={tooltipMessage} side="bottom">
+      <Tooltip
+        content={
+          canSave ? <ShortcutKeys keys={['mod', 's']} /> : tooltipMessage
+        }
+        side="bottom"
+      >
         <button
           type="button"
           data-testid="save-workflow-button"
@@ -107,39 +118,48 @@ export function SaveButton({
         </button>
       </Tooltip>
       <Menu as="div" className="relative -ml-px block">
-        <Tooltip content={tooltipMessage} side="bottom">
-          <MenuButton
-            disabled={!canSave}
-            className="h-full rounded-r-md pr-2 pl-2 text-sm font-semibold
+        <MenuButton
+          disabled={!canSave}
+          className="h-full rounded-r-md pr-2 pl-2 text-sm font-semibold
             shadow-xs cursor-pointer disabled:cursor-not-allowed
             disabled:opacity-50 bg-primary-600 hover:bg-primary-500
             disabled:hover:bg-primary-600 text-white
             focus-visible:outline-2 focus-visible:outline-offset-2
             focus-visible:outline-primary-600 focus:ring-transparent"
-          >
-            <span className="sr-only">Open sync options</span>
-            <span className="hero-chevron-down w-4 h-4" />
-          </MenuButton>
-        </Tooltip>
+        >
+          <span className="sr-only">Open sync options</span>
+          <span className="hero-chevron-down w-4 h-4" />
+        </MenuButton>
         <MenuItems
           transition
-          className="absolute right-0 z-10 mt-2 w-max origin-top-right
+          className="absolute right-0 z-[100] mt-2 w-max origin-top-right
           rounded-md bg-white py-1 shadow-lg outline outline-black/5
           transition data-closed:scale-95 data-closed:transform
           data-closed:opacity-0 data-enter:duration-200 data-enter:ease-out
           data-leave:duration-75 data-leave:ease-in"
         >
           <MenuItem>
-            <button
-              type="button"
-              onClick={onSyncClick}
-              disabled={!canSave}
-              className="block w-full text-left px-4 py-2 text-sm text-gray-700
+            <Tooltip
+              content={
+                canSave ? (
+                  <ShortcutKeys keys={['mod', 'shift', 's']} />
+                ) : (
+                  tooltipMessage
+                )
+              }
+              side="bottom"
+            >
+              <button
+                type="button"
+                onClick={onSyncClick}
+                disabled={!canSave}
+                className="block w-full text-left px-4 py-2 text-sm text-gray-700
               data-focus:bg-gray-100 data-focus:outline-hidden
               disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              Save & Sync
-            </button>
+              >
+                Save & Sync
+              </button>
+            </Tooltip>
           </MenuItem>
         </MenuItems>
       </Menu>
@@ -152,10 +172,12 @@ export function Header({
   children,
   projectId,
   workflowId,
+  isRunPanelOpen = false,
 }: {
   children: React.ReactNode[];
   projectId?: string;
   workflowId?: string;
+  isRunPanelOpen?: boolean;
 }) {
   const { updateSearchParams } = useURLState();
   const { selectNode } = useNodeSelection();
@@ -186,6 +208,13 @@ export function Header({
       openRunPanel({ triggerId: firstTriggerId });
     }
   }, [firstTriggerId, openRunPanel, selectNode]);
+
+  // Compute Run button tooltip content
+  const runButtonTooltip = useMemo(() => {
+    if (!canRun) return runTooltipMessage; // Error message
+    if (isRunPanelOpen) return null; // Shortcut captured by panel
+    return <ShortcutKeys keys={['mod', 'enter']} />; // Shortcut applies
+  }, [canRun, runTooltipMessage, isRunPanelOpen]);
 
   useHotkeys(
     'ctrl+s,meta+s',
@@ -224,7 +253,7 @@ export function Header({
     <>
       <EmailVerificationBanner />
 
-      <div className="flex-none bg-white shadow-xs border-b border-gray-200">
+      <div className="flex-none bg-white shadow-xs border-b border-gray-200 relative z-30">
         <div className="mx-auto sm:px-6 lg:px-8 py-6 flex items-center h-20 text-sm">
           <Breadcrumbs>{children}</Breadcrumbs>
           <ReadOnlyWarning className="ml-3" />
@@ -280,7 +309,7 @@ export function Header({
             </div>
             <div className="relative flex gap-2">
               {projectId && workflowId && firstTriggerId && (
-                <Tooltip content={runTooltipMessage} side="bottom">
+                <Tooltip content={runButtonTooltip} side="bottom">
                   <span className="inline-block">
                     <Button
                       variant="primary"

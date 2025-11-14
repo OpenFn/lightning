@@ -562,6 +562,8 @@ export function ManualRunPanel({
                 retry: 'Run (retry)',
                 processing: 'Processing',
               }}
+              showKeyboardShortcuts={true}
+              disabledTooltip={workflowRunTooltipMessage}
             />
           }
         />

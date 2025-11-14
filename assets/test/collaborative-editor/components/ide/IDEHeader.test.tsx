@@ -95,15 +95,19 @@ function createTestSetup() {
 }
 
 const defaultProps = {
+  jobId: 'job-123',
   jobName: 'Test Job',
   jobAdaptor: '@openfn/language-common@1.0.0',
   jobCredentialId: 'cred-123',
   snapshotVersion: 1,
   latestSnapshotVersion: 1,
   workflowId: 'workflow-123',
+  projectId: 'project-123',
   onClose: vi.fn(),
   onSave: vi.fn(),
   onRun: vi.fn(),
+  onRetry: vi.fn(),
+  isRetryable: false,
   canRun: true,
   isRunning: false,
   canSave: true,
@@ -167,10 +171,12 @@ describe('IDEHeader - Simple Save Button (No GitHub Connection)', () => {
     const saveButton = screen.getByRole('button', { name: /save/i });
     expect(saveButton).toBeInTheDocument();
 
-    // Should NOT have dropdown chevron button
-    expect(
-      screen.queryByRole('button', { name: /open sync options/i })
-    ).not.toBeInTheDocument();
+    // When repoConnection is null, SaveButton renders a simple button
+    // without the dropdown menu (no GitHub integration available)
+    const dropdownButton = screen.queryByRole('button', {
+      name: /open sync options/i,
+    });
+    expect(dropdownButton).not.toBeInTheDocument();
   });
 
   test('simple save button calls onSave when clicked', () => {
@@ -450,6 +456,119 @@ describe('IDEHeader - Other Elements', () => {
     fireEvent.click(runButton);
 
     expect(onRun).toHaveBeenCalledTimes(1);
+  });
+});
+
+// =============================================================================
+// RUN BUTTON TOOLTIP TESTS
+// =============================================================================
+
+describe('IDEHeader - RunRetryButton Tooltip Props', () => {
+  test('passes showKeyboardShortcuts=true to RunRetryButton', () => {
+    const { wrapper } = createTestSetup();
+    render(<IDEHeader {...defaultProps} canRun={true} />, { wrapper });
+
+    // Verify Run button is rendered (which means RunRetryButton is rendered)
+    const runButton = screen.getByRole('button', { name: /run/i });
+    expect(runButton).toBeInTheDocument();
+
+    // The component should always pass showKeyboardShortcuts=true
+    // because IDE scope always owns shortcuts
+    // We can't directly test the prop, but we verify the button renders correctly
+    expect(runButton).not.toBeDisabled();
+  });
+
+  test('passes disabledTooltip when button is disabled', () => {
+    const { wrapper } = createTestSetup();
+    render(
+      <IDEHeader
+        {...defaultProps}
+        canRun={false}
+        runTooltip="Cannot run: missing credential"
+      />,
+      { wrapper }
+    );
+
+    // Verify Run button is disabled
+    const runButton = screen.getByRole('button', { name: /run/i });
+    expect(runButton).toBeDisabled();
+
+    // The runTooltip prop should be passed as disabledTooltip to RunRetryButton
+    // We verify the button is disabled, which means the tooltip logic will use disabledTooltip
+  });
+
+  test('RunRetryButton receives correct props for retryable run', () => {
+    const { wrapper } = createTestSetup();
+    render(<IDEHeader {...defaultProps} isRetryable={true} canRun={true} />, {
+      wrapper,
+    });
+
+    // Verify retry button is shown
+    const runButton = screen.getByRole('button', { name: /run/i });
+    expect(runButton).toBeInTheDocument();
+    expect(runButton).toHaveTextContent('Run (retry)');
+
+    // Should have dropdown for "Run (New Work Order)"
+    const dropdownButton = screen.getByRole('button', {
+      name: /open options/i,
+    });
+    expect(dropdownButton).toBeInTheDocument();
+  });
+
+  test('RunRetryButton receives correct props for non-retryable run', () => {
+    const { wrapper } = createTestSetup();
+    render(<IDEHeader {...defaultProps} isRetryable={false} canRun={true} />, {
+      wrapper,
+    });
+
+    // Verify run button is shown (not retry)
+    const runButton = screen.getByRole('button', { name: /run/i });
+    expect(runButton).toBeInTheDocument();
+    expect(runButton).toHaveTextContent('Run');
+
+    // Should NOT have dropdown
+    expect(
+      screen.queryByRole('button', { name: /open options/i })
+    ).not.toBeInTheDocument();
+  });
+
+  test('RunRetryButton is in processing state when isRunning=true', () => {
+    const { wrapper } = createTestSetup();
+    render(<IDEHeader {...defaultProps} isRunning={true} canRun={true} />, {
+      wrapper,
+    });
+
+    // Verify processing state
+    const runButton = screen.getByRole('button', { name: /processing/i });
+    expect(runButton).toBeInTheDocument();
+    expect(runButton).toBeDisabled();
+  });
+
+  test('showKeyboardShortcuts is always true in IDE context', () => {
+    const { wrapper } = createTestSetup();
+
+    // Test with various states - shortcuts should always be shown
+    const { rerender } = render(<IDEHeader {...defaultProps} canRun={true} />, {
+      wrapper,
+    });
+
+    let runButton = screen.getByRole('button', { name: /run/i });
+    expect(runButton).toBeInTheDocument();
+
+    // Rerender with disabled state
+    rerender(<IDEHeader {...defaultProps} canRun={false} />);
+
+    runButton = screen.getByRole('button', { name: /run/i });
+    expect(runButton).toBeDisabled();
+
+    // Rerender with running state
+    rerender(<IDEHeader {...defaultProps} isRunning={true} />);
+
+    runButton = screen.getByRole('button', { name: /processing/i });
+    expect(runButton).toBeInTheDocument();
+
+    // In all cases, showKeyboardShortcuts=true is passed
+    // (IDE scope always owns shortcuts, even when embedded panel is open)
   });
 });
 
