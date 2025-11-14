@@ -15,28 +15,40 @@
 // Channel mocks
 export {
   createMockPhoenixChannel,
-  createMockPushWithResponse,
-  createMockPushWithAllStatuses,
   createMockPhoenixChannelProvider,
-  configureMockChannelPush,
-  createMockChannelWithResponses,
-  createMockChannelWithError,
-  createMockChannelWithTimeout,
   type MockPhoenixChannel,
   type MockPhoenixChannelProvider,
   type MockPush,
-} from "./channelMocks";
+} from './channelMocks';
 
 // Store setup helpers
 export {
   setupAdaptorStoreTest,
   setupSessionContextStoreTest,
   setupSessionStoreTest,
+  setupUIStoreTest,
   setupMultipleStores,
   type AdaptorStoreTestSetup,
   type SessionContextStoreTestSetup,
   type SessionStoreTestSetup,
-} from "./storeHelpers";
+  type UIStoreTestSetup,
+} from './storeHelpers';
+
+// Workflow store helpers
+export {
+  setupWorkflowStoreTest,
+  createEmptyWorkflowYDoc,
+  createMinimalWorkflowYDoc,
+  type WorkflowStoreTestSetup,
+} from './workflowStoreHelpers';
+
+// Workflow factory helpers
+export {
+  createWorkflowYDoc,
+  createLinearWorkflowYDoc,
+  createDiamondWorkflowYDoc,
+  type CreateWorkflowInput,
+} from './workflowFactory';
 
 // Session store helpers
 export {
@@ -51,7 +63,7 @@ export {
   simulateRemoteUserJoin,
   simulateRemoteUserLeave,
   waitForAsync,
-} from "./sessionStoreHelpers";
+} from './sessionStoreHelpers';
 
 // Session context helpers
 export {
@@ -65,7 +77,7 @@ export {
   simulateContextUpdateSequence,
   verifyTimestampUpdated,
   createMockChannelForScenario,
-} from "./sessionContextHelpers";
+} from './sessionContextHelpers';
 
 // Store provider helpers
 export {
@@ -80,7 +92,7 @@ export {
   simulateProviderLifecycle,
   type StoreProviderSimulation,
   type ConnectedStoreProviderSimulation,
-} from "./storeProviderHelpers";
+} from './storeProviderHelpers';
 
 // Breadcrumb helpers
 export {
@@ -95,4 +107,4 @@ export {
   createBreadcrumbScenario,
   createEdgeCaseTestData,
   type BreadcrumbItem,
-} from "./breadcrumbHelpers";
+} from './breadcrumbHelpers';
