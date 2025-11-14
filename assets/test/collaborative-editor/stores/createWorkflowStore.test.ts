@@ -490,6 +490,292 @@ describe('WorkflowStore - addJob', () => {
   });
 });
 
+describe('WorkflowStore - UndoManager lifecycle', () => {
+  let store: WorkflowStoreInstance;
+  let ydoc: Session.WorkflowDoc;
+  let mockProvider: PhoenixChannelProvider & { channel: Channel };
+
+  beforeEach(() => {
+    // Create fresh store and Y.Doc instances
+    store = createWorkflowStore();
+    ydoc = new Y.Doc() as Session.WorkflowDoc;
+
+    // Initialize Y.Doc structure
+    const workflowMap = ydoc.getMap('workflow');
+    workflowMap.set('id', 'workflow-123');
+    workflowMap.set('name', 'Test Workflow');
+
+    ydoc.getArray('jobs');
+    ydoc.getArray('triggers');
+    ydoc.getArray('edges');
+    ydoc.getMap('positions');
+
+    // Create mock channel with on/off methods
+    const mockChannel = createMockPhoenixChannel();
+    mockChannel.push = createMockChannelPushOk({});
+
+    // Create mock provider with channel
+    mockProvider = {
+      channel: mockChannel,
+      synced: true,
+      awareness: null,
+      doc: ydoc,
+    } as unknown as PhoenixChannelProvider & { channel: Channel };
+  });
+
+  test('creates UndoManager when connected to Y.Doc', () => {
+    // Before connection
+    expect(store.getSnapshot().undoManager).toBeNull();
+
+    // Connect store
+    store.connect(ydoc, mockProvider);
+
+    // After connection
+    const snapshot = store.getSnapshot();
+    expect(snapshot.undoManager).toBeDefined();
+    expect(snapshot.undoManager).toBeInstanceOf(Y.UndoManager);
+  });
+
+  test('cleans up UndoManager on disconnect', () => {
+    // Connect and get UndoManager
+    store.connect(ydoc, mockProvider);
+    const snapshot = store.getSnapshot();
+    const undoManager = snapshot.undoManager;
+
+    expect(undoManager).toBeDefined();
+
+    // Spy on cleanup methods
+    const clearSpy = vi.spyOn(undoManager!, 'clear');
+    const destroySpy = vi.spyOn(undoManager!, 'destroy');
+
+    // Disconnect
+    store.disconnect();
+
+    // Verify cleanup was called
+    expect(clearSpy).toHaveBeenCalled();
+    expect(destroySpy).toHaveBeenCalled();
+
+    // Verify undoManager is null in state
+    expect(store.getSnapshot().undoManager).toBeNull();
+  });
+
+  test('tracks local changes only', () => {
+    store.connect(ydoc, mockProvider);
+    const undoManager = store.getSnapshot().undoManager!;
+
+    // Add a job (local change)
+    store.addJob({ id: 'job1', name: 'Test Job', body: '' });
+
+    // Should track local change
+    expect(undoManager.undoStack.length).toBe(1);
+
+    // Simulate remote change with origin
+    const remoteProvider = { some: 'provider' };
+    const jobsArray = ydoc.getArray('jobs');
+    ydoc.transact(() => {
+      const jobMap = new Y.Map();
+      jobMap.set('id', 'job2');
+      jobMap.set('name', 'Remote Job');
+      jobMap.set('body', new Y.Text(''));
+      jobsArray.push([jobMap]);
+    }, remoteProvider);
+
+    // Undo stack should still be 1 (remote change not tracked)
+    expect(undoManager.undoStack.length).toBe(1);
+  });
+
+  test('undo() command reverts local changes', () => {
+    store.connect(ydoc, mockProvider);
+
+    // Add a job
+    store.addJob({ id: 'job1', name: 'Test Job', body: '' });
+    expect(store.getSnapshot().jobs.length).toBe(1);
+
+    // Undo
+    store.undo();
+
+    // Job should be removed
+    expect(store.getSnapshot().jobs.length).toBe(0);
+  });
+
+  test('redo() command reapplies undone changes', () => {
+    store.connect(ydoc, mockProvider);
+
+    // Add job, undo, redo
+    store.addJob({ id: 'job1', name: 'Test Job', body: '' });
+    store.undo();
+    store.redo();
+
+    // Job should be back
+    expect(store.getSnapshot().jobs.length).toBe(1);
+    expect(store.getSnapshot().jobs[0].name).toBe('Test Job');
+  });
+
+  test('canUndo() returns correct boolean', () => {
+    store.connect(ydoc, mockProvider);
+
+    // Initially no undo available
+    expect(store.canUndo()).toBe(false);
+
+    // Add a job
+    store.addJob({ id: 'job1', name: 'Test Job', body: '' });
+    expect(store.canUndo()).toBe(true);
+
+    // After undo, no more undo available
+    store.undo();
+    expect(store.canUndo()).toBe(false);
+  });
+
+  test('canRedo() returns correct boolean', () => {
+    store.connect(ydoc, mockProvider);
+
+    // Initially no redo available
+    expect(store.canRedo()).toBe(false);
+
+    // Add job and undo
+    store.addJob({ id: 'job1', name: 'Test Job', body: '' });
+    store.undo();
+
+    // Redo should be available
+    expect(store.canRedo()).toBe(true);
+
+    // After redo, no more redo available
+    store.redo();
+    expect(store.canRedo()).toBe(false);
+  });
+
+  test('handles multiple undo/redo operations in sequence', async () => {
+    store.connect(ydoc, mockProvider);
+
+    // Add three jobs with delays to prevent grouping
+    // Y.UndoManager groups operations within captureTimeout (500ms)
+    store.addJob({ id: 'job1', name: 'Job 1', body: '' });
+    await new Promise(resolve => setTimeout(resolve, 600));
+
+    store.addJob({ id: 'job2', name: 'Job 2', body: '' });
+    await new Promise(resolve => setTimeout(resolve, 600));
+
+    store.addJob({ id: 'job3', name: 'Job 3', body: '' });
+    expect(store.getSnapshot().jobs.length).toBe(3);
+
+    // Undo all three
+    store.undo();
+    expect(store.getSnapshot().jobs.length).toBe(2);
+    store.undo();
+    expect(store.getSnapshot().jobs.length).toBe(1);
+    store.undo();
+    expect(store.getSnapshot().jobs.length).toBe(0);
+
+    // Redo all three
+    store.redo();
+    expect(store.getSnapshot().jobs.length).toBe(1);
+    store.redo();
+    expect(store.getSnapshot().jobs.length).toBe(2);
+    store.redo();
+    expect(store.getSnapshot().jobs.length).toBe(3);
+  });
+
+  test('clearHistory() clears undo and redo stacks', () => {
+    store.connect(ydoc, mockProvider);
+
+    // Add job, undo to create history
+    store.addJob({ id: 'job1', name: 'Test Job', body: '' });
+    store.undo();
+
+    // Should have redo available
+    expect(store.canRedo()).toBe(true);
+
+    // Clear history
+    store.clearHistory();
+
+    // No undo or redo available
+    expect(store.canUndo()).toBe(false);
+    expect(store.canRedo()).toBe(false);
+  });
+
+  test('undo() is safe when nothing to undo', () => {
+    store.connect(ydoc, mockProvider);
+
+    // No operations performed
+    expect(store.canUndo()).toBe(false);
+
+    // Calling undo should not throw
+    expect(() => store.undo()).not.toThrow();
+  });
+
+  test('redo() is safe when nothing to redo', () => {
+    store.connect(ydoc, mockProvider);
+
+    // No operations performed
+    expect(store.canRedo()).toBe(false);
+
+    // Calling redo should not throw
+    expect(() => store.redo()).not.toThrow();
+  });
+
+  test('undoManager tracks local changes via trackedOrigins', () => {
+    store.connect(ydoc, mockProvider);
+    const undoManager = store.getSnapshot().undoManager!;
+
+    // Verify UndoManager has null origin in trackedOrigins set
+    // This ensures only local changes (origin = null) are tracked
+    expect(undoManager.trackedOrigins.has(null)).toBe(true);
+
+    // Note: Y.UndoManager may track additional internal origins
+    // The important check is that null is included for local changes
+  });
+
+  test('UndoManager works with edge operations', () => {
+    store.connect(ydoc, mockProvider);
+
+    // Add job and trigger first
+    store.addJob({ id: 'job1', name: 'Test Job', body: '' });
+    const triggersArray = ydoc.getArray('triggers');
+    const triggerMap = new Y.Map();
+    triggerMap.set('id', 'trigger1');
+    triggerMap.set('type', 'webhook');
+    ydoc.transact(() => {
+      triggersArray.push([triggerMap]);
+    });
+
+    // Add edge
+    store.addEdge({
+      id: 'edge1',
+      source_trigger_id: 'trigger1',
+      target_job_id: 'job1',
+    });
+
+    expect(store.getSnapshot().edges.length).toBe(1);
+
+    // Undo edge creation
+    store.undo();
+    expect(store.getSnapshot().edges.length).toBe(0);
+
+    // Redo edge creation
+    store.redo();
+    expect(store.getSnapshot().edges.length).toBe(1);
+  });
+
+  test('UndoManager works with position updates', () => {
+    store.connect(ydoc, mockProvider);
+
+    // Add job
+    store.addJob({ id: 'job1', name: 'Test Job', body: '' });
+
+    // Update position
+    store.updatePosition('job1', { x: 100, y: 200 });
+    expect(store.getSnapshot().positions['job1']).toEqual({ x: 100, y: 200 });
+
+    // Undo position update
+    store.undo();
+    expect(store.getSnapshot().positions['job1']).toBeUndefined();
+
+    // Redo position update
+    store.redo();
+    expect(store.getSnapshot().positions['job1']).toEqual({ x: 100, y: 200 });
+  });
+});
+
 describe('WorkflowStore - removeJob with edge cleanup', () => {
   let store: WorkflowStoreInstance;
   let ydoc: Session.WorkflowDoc;

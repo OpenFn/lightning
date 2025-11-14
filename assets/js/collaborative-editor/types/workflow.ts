@@ -80,6 +80,9 @@ export namespace Workflow {
     edges: Workflow.Edge[]; // Has errors property
     positions: Workflow.Positions;
 
+    // UndoManager for undo/redo operations
+    undoManager: Y.UndoManager | null;
+
     // Local UI state
     selectedJobId: string | null;
     selectedTriggerId: string | null;

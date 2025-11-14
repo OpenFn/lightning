@@ -11,6 +11,7 @@
 import { act, render, renderHook, waitFor } from '@testing-library/react';
 import { useContext } from 'react';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
+import * as Y from 'yjs';
 
 import {
   StoreContext,
@@ -18,6 +19,7 @@ import {
 } from '../../../js/collaborative-editor/contexts/StoreProvider';
 import * as useSessionModule from '../../../js/collaborative-editor/hooks/useSession';
 import type { SessionState } from '../../../js/collaborative-editor/stores/createSessionStore';
+import type { Session } from '../../../js/collaborative-editor/types/session';
 import {
   createMockConfig,
   createMockUser,
@@ -62,27 +64,6 @@ const createMockProvider = () => ({
     on: vi.fn(),
     off: vi.fn(),
   },
-});
-
-const createMockYDoc = () => ({
-  getMap: vi.fn().mockReturnValue({
-    set: vi.fn(),
-    get: vi.fn(),
-    observe: vi.fn(),
-    observeDeep: vi.fn(),
-    unobserve: vi.fn(),
-    unobserveDeep: vi.fn(),
-    toJSON: vi.fn().mockReturnValue({}),
-  }),
-  getArray: vi.fn().mockReturnValue({
-    push: vi.fn(),
-    get: vi.fn(),
-    observe: vi.fn(),
-    observeDeep: vi.fn(),
-    unobserve: vi.fn(),
-    unobserveDeep: vi.fn(),
-    toArray: vi.fn().mockReturnValue([]),
-  }),
 });
 
 const createMockUserData = () => ({
@@ -380,7 +361,8 @@ describe('StoreProvider', () => {
       const connectSpy = vi.spyOn(workflowStore, 'connect');
       const disconnectSpy = vi.spyOn(workflowStore, 'disconnect');
 
-      const mockYDoc = createMockYDoc() as any;
+      // Use real Y.Doc to support UndoManager
+      const mockYDoc = new Y.Doc() as Session.WorkflowDoc;
       const mockProvider = createMockProvider() as any;
 
       mockUseSession.mockReturnValue(
@@ -526,7 +508,8 @@ describe('StoreProvider', () => {
       const workflowStore = result.current!.workflowStore;
       const connectSpy = vi.spyOn(workflowStore, 'connect');
 
-      const mockYDoc = createMockYDoc() as any;
+      // Use real Y.Doc to support UndoManager
+      const mockYDoc = new Y.Doc() as Session.WorkflowDoc;
       const mockProvider = createMockProvider() as any;
 
       // Update session to synced
