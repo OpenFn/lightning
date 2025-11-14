@@ -24,6 +24,8 @@ and this project adheres to
 
 ### Fixed
 
+- Fix tooltip styling inconsistencies in collaborative editor
+  [#3980](https://github.com/OpenFn/lightning/issues/3980)
 - Fix ESC key closing IDE when pressed on adaptor modal
   [#3978](https://github.com/OpenFn/lightning/issues/3978)
 - Fix run/save-and-run keystroke mapping for canvas & IDE
