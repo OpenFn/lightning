@@ -336,6 +336,10 @@ export const createWorkflowStore = () => {
     const errorsMap = ydoc.getMap('errors'); // NEW: Get errors map
 
     // Create UndoManager tracking all workflow collections
+    // NOTE: Job body Y.Text instances are intentionally NOT tracked here.
+    // Monaco Editor has its own undo/redo (Cmd+Z) that handles text editing.
+    // Including job bodies here would create conflicts and lead to jobs being
+    // deleted when undoing body edits.
     const undoManager = new Y.UndoManager(
       [workflowMap, jobsArray, triggersArray, edgesArray, positionsMap],
       {
@@ -1361,30 +1365,39 @@ export const createWorkflowStore = () => {
   // =============================================================================
   // These commands trigger Y.Doc changes via UndoManager, which then flow
   // through the normal observer pattern (Pattern 1)
+  //
+  // Note: UndoManager tracks local changes only (trackedOrigins: new Set([null])).
+  // Remote changes from other collaborators are NOT undoable by this client,
+  // since they represent other users' intentional actions.
 
   const undo = () => {
-    if (state.undoManager && state.undoManager.undoStack.length > 0) {
-      state.undoManager.undo();
+    const undoManager = state.undoManager;
+    if (undoManager && undoManager.undoStack.length > 0) {
+      undoManager.undo();
     }
   };
 
   const redo = () => {
-    if (state.undoManager && state.undoManager.redoStack.length > 0) {
-      state.undoManager.redo();
+    const undoManager = state.undoManager;
+    if (undoManager && undoManager.redoStack.length > 0) {
+      undoManager.redo();
     }
   };
 
   const canUndo = (): boolean => {
-    return (state.undoManager?.undoStack.length ?? 0) > 0;
+    const undoManager = state.undoManager;
+    return undoManager ? undoManager.undoStack.length > 0 : false;
   };
 
   const canRedo = (): boolean => {
-    return (state.undoManager?.redoStack.length ?? 0) > 0;
+    const undoManager = state.undoManager;
+    return undoManager ? undoManager.redoStack.length > 0 : false;
   };
 
   const clearHistory = () => {
-    if (state.undoManager) {
-      state.undoManager.clear();
+    const undoManager = state.undoManager;
+    if (undoManager) {
+      undoManager.clear();
     }
   };
 
