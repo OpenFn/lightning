@@ -8,6 +8,7 @@ import {
 import { useWatchFields } from '../../stores/common';
 import { EdgeSchema } from '../../types/edge';
 import type { Workflow } from '../../types/workflow';
+import { isEdgeFromTrigger } from '../../utils/workflowGraph';
 import { useAppForm } from '../form';
 import { createZodValidator } from '../form/createZodValidator';
 import { ErrorMessage } from '../form/error-message';
@@ -62,7 +63,7 @@ export function EdgeForm({ edge }: EdgeFormProps) {
 
   // Condition options based on source
   const conditionOptions = useMemo(() => {
-    const isSourceTrigger = !!edge.source_trigger_id;
+    const isSourceTrigger = isEdgeFromTrigger(edge);
 
     if (isSourceTrigger) {
       return [
@@ -77,7 +78,7 @@ export function EdgeForm({ edge }: EdgeFormProps) {
       { value: 'always', label: 'Always' },
       { value: 'js_expression', label: 'Matches a Javascript Expression' },
     ];
-  }, [edge.source_trigger_id]);
+  }, [edge]);
 
   // Watch condition type
   const conditionType = useStore(

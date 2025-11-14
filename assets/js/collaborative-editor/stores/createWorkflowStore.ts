@@ -144,6 +144,7 @@ import { JobSchema } from '../types/job';
 import type { Session } from '../types/session';
 import type { Workflow } from '../types/workflow';
 import { WorkflowSchema } from '../types/workflow';
+import { getIncomingEdgeIndices } from '../utils/workflowGraph';
 
 import { createWithSelector } from './common';
 import { wrapStoreWithDevTools } from './devtools';
@@ -737,11 +738,7 @@ export const createWorkflowStore = () => {
       const edges = edgesArray.toArray() as Y.Map<unknown>[];
 
       // Find all incoming edges (where this job is the target)
-      const incomingEdgeIndices = edges
-        .map((edge, index) => ({ edge, index }))
-        .filter(({ edge }) => edge.get('target_job_id') === id)
-        .map(({ index }) => index)
-        .sort((a, b) => b - a); // Sort descending for safe deletion
+      const incomingEdgeIndices = getIncomingEdgeIndices(edges, id);
 
       ydoc.transact(() => {
         // Delete incoming edges first (highest index to lowest)
