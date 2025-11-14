@@ -1,5 +1,5 @@
-import type { ReactNode } from "react";
-import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
+import type { ReactNode } from 'react';
+import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
 
 import { useCurrentRun, useRunStoreInstance } from '../../hooks/useRun';
 
@@ -45,7 +45,7 @@ export function StepViewerLayout({
       <PanelResizeHandle className="h-1 bg-gray-200 hover:bg-blue-400 transition-colors cursor-row-resize" />
 
       {/* Content viewer (logs, input, or output) */}
-      <Panel minSize={30} style={{ overflow: "unset" }}>
+      <Panel minSize={30} style={{ overflow: 'unset' }}>
         <div className="h-full">{children}</div>
       </Panel>
     </PanelGroup>
