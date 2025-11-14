@@ -757,10 +757,13 @@ defmodule LightningWeb.RunLive.Components do
   defp humanize_workflow(filter, workflows) do
     case filter do
       %{workflow_id: workflow_id} ->
-        {workflow, _id} =
-          Enum.find(workflows, fn {_name, id} -> id == workflow_id end)
+        case Enum.find(workflows, fn {_name, id} -> id == workflow_id end) do
+          {workflow, _id} ->
+            "for #{workflow} workflow"
 
-        "for #{workflow} workflow"
+          nil ->
+            ""
+        end
 
       _other ->
         ""

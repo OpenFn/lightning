@@ -3,11 +3,11 @@ import {
   DialogBackdrop,
   DialogPanel,
   DialogTitle,
-} from "@headlessui/react";
-import { useEffect } from "react";
-import { useHotkeysContext } from "react-hotkeys-hook";
+} from '@headlessui/react';
+import { useEffect } from 'react';
+import { useHotkeysContext } from 'react-hotkeys-hook';
 
-import { HOTKEY_SCOPES } from "#/collaborative-editor/constants/hotkeys";
+import { HOTKEY_SCOPES } from '#/collaborative-editor/constants/hotkeys';
 
 interface AlertDialogProps {
   isOpen: boolean;
@@ -17,7 +17,7 @@ interface AlertDialogProps {
   description: string;
   confirmLabel?: string;
   cancelLabel?: string;
-  variant?: "danger" | "primary";
+  variant?: 'danger' | 'primary';
 }
 
 /**
@@ -43,33 +43,28 @@ export function AlertDialog({
   onConfirm,
   title,
   description,
-  confirmLabel = "Confirm",
-  cancelLabel = "Cancel",
-  variant = "primary",
+  confirmLabel = 'Confirm',
+  cancelLabel = 'Cancel',
+  variant = 'primary',
 }: AlertDialogProps) {
   const confirmButtonClass =
-    variant === "danger"
-      ? "bg-red-600 hover:bg-red-500 focus-visible:outline-red-600"
-      : "bg-primary-600 hover:bg-primary-500 focus-visible:outline-primary-600";
+    variant === 'danger'
+      ? 'bg-red-600 hover:bg-red-500 focus-visible:outline-red-600'
+      : 'bg-primary-600 hover:bg-primary-500 focus-visible:outline-primary-600';
 
   // Use HotkeysContext to control keyboard scope precedence
   const { enableScope, disableScope } = useHotkeysContext();
 
-  // When modal opens, take control by disabling panel scope
-  // When modal closes, give control back by re-enabling panel scope
-  // This prevents Inspector's Escape handler from conflicting with
-  // HeadlessUI's native Escape handling without Inspector needing
-  // to know about modals.
   useEffect(() => {
     if (isOpen) {
       enableScope(HOTKEY_SCOPES.MODAL);
       disableScope(HOTKEY_SCOPES.PANEL);
+      disableScope(HOTKEY_SCOPES.RUN_PANEL);
     } else {
       disableScope(HOTKEY_SCOPES.MODAL);
       enableScope(HOTKEY_SCOPES.PANEL);
     }
 
-    // Cleanup: ensure modal scope is disabled when unmounted
     return () => {
       disableScope(HOTKEY_SCOPES.MODAL);
     };

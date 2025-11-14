@@ -43,7 +43,6 @@ export function TriggerForm({ trigger }: TriggerFormProps) {
   const sessionContext = useSessionContext();
   const { provider } = useSession();
   const channel = provider?.channel;
-  const { isReadOnly } = useWorkflowReadOnly();
 
   // Get active trigger auth methods from workflow store
   const activeTriggerAuthMethods = useWorkflowState(

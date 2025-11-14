@@ -29,7 +29,14 @@ import React, { useState } from 'react';
 import { relativeLocale } from '../../../hooks';
 import { duration } from '../../../utils/duration';
 import truncateUid from '../../../utils/truncateUID';
+import { useProject } from '../../hooks/useSessionContext';
+import { useWorkflowState } from '../../hooks/useWorkflow';
 import type { Run, WorkOrder } from '../../types/history';
+import {
+  navigateToRun,
+  navigateToWorkOrderHistory,
+  navigateToWorkflowHistory,
+} from '../../utils/navigation';
 
 // Extended types with selection state for UI
 type RunWithSelection = Run & { selected?: boolean };
@@ -102,6 +109,10 @@ export default function MiniHistory({
   const [expandedWorder, setExpandedWorder] = useState('');
   const now = new Date();
 
+  // Get project and workflow IDs from state for navigation
+  const project = useProject();
+  const workflow = useWorkflowState(state => state.workflow);
+
   // Clear expanded work order when panel collapses
   React.useEffect(() => {
     if (collapsed) {
@@ -131,49 +142,30 @@ export default function MiniHistory({
   const gotoHistory = (e: React.MouseEvent | React.KeyboardEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    const currentUrl = new URL(window.location.href);
-    const nextUrl = new URL(currentUrl);
-    const paths = nextUrl.pathname.split('/');
-    const wIdx = paths.indexOf('w');
-    const workflowPaths = paths.splice(wIdx, paths.length - wIdx);
-    nextUrl.pathname = paths.join('/') + `/history`;
-    nextUrl.search = `?filters[workflow_id]=${
-      workflowPaths[workflowPaths.length - 1]
-    }`;
-    window.location.assign(nextUrl.toString());
+
+    if (project?.id && workflow?.id) {
+      navigateToWorkflowHistory(project.id, workflow.id);
+    }
   };
 
-  const navigateToWorkorderHistory = (
+  const handleNavigateToWorkorderHistory = (
     e: React.MouseEvent,
     workorderId: string
   ) => {
     e.preventDefault();
     e.stopPropagation();
-    const currentUrl = new URL(window.location.href);
-    const nextUrl = new URL(currentUrl);
-    const paths = nextUrl.pathname.split('/');
-    const projectIndex = paths.indexOf('projects');
-    const projectId = projectIndex !== -1 ? paths[projectIndex + 1] : null;
 
-    if (projectId) {
-      nextUrl.pathname = `/projects/${projectId}/history`;
-      nextUrl.search = `?filters[workorder_id]=${workorderId}`;
-      window.location.assign(nextUrl.toString());
+    if (project?.id) {
+      navigateToWorkOrderHistory(project.id, workorderId);
     }
   };
 
-  const navigateToRunView = (e: React.MouseEvent, runId: string) => {
+  const handleNavigateToRunView = (e: React.MouseEvent, runId: string) => {
     e.preventDefault();
     e.stopPropagation();
-    const currentUrl = new URL(window.location.href);
-    const nextUrl = new URL(currentUrl);
-    const paths = nextUrl.pathname.split('/');
-    const projectIndex = paths.indexOf('projects');
-    const projectId = projectIndex !== -1 ? paths[projectIndex + 1] : null;
 
-    if (projectId) {
-      nextUrl.pathname = `/projects/${projectId}/runs/${runId}`;
-      window.location.assign(nextUrl.toString());
+    if (project?.id) {
+      navigateToRun(project.id, runId);
     }
   };
 
@@ -342,7 +334,7 @@ export default function MiniHistory({
                       <button
                         type="button"
                         onClick={e =>
-                          navigateToWorkorderHistory(e, workorder.id)
+                          handleNavigateToWorkorderHistory(e, workorder.id)
                         }
                         className="link-uuid"
                         title={workorder.id}
@@ -420,7 +412,7 @@ export default function MiniHistory({
                           )}
                           <button
                             type="button"
-                            onClick={e => navigateToRunView(e, run.id)}
+                            onClick={e => handleNavigateToRunView(e, run.id)}
                             className="link-uuid"
                             title={run.id}
                             aria-label={`View full details for run ${truncateUid(run.id)}`}

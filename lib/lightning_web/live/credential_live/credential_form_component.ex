@@ -10,6 +10,11 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
   alias LightningWeb.CredentialLive.GenericOauthComponent
   alias LightningWeb.CredentialLive.Helpers
 
+  attr :from_collab_editor, :boolean,
+    default: false,
+    doc:
+      "When true, shows Advanced button to access credential type picker from collaborative editor"
+
   @impl true
   def mount(%{assigns: init_assigns} = socket) do
     allow_credential_transfer =
@@ -33,7 +38,10 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
       credential_environments: [%{name: "main"}],
       credential_bodies: %{"main" => %{}},
       original_environment_names: [],
-      environment_name_error: nil
+      environment_name_error: nil,
+      from_collab_editor: false,
+      came_from_advanced_picker: false,
+      show_modal: true
     }
 
     {:ok,
@@ -53,6 +61,19 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
   end
 
   def update(assigns, socket) do
+    assigns =
+      if socket.assigns[:credential] && socket.assigns.credential.schema &&
+           assigns[:credential] && !assigns.credential.schema do
+        updated_credential = %{
+          assigns.credential
+          | schema: socket.assigns.credential.schema
+        }
+
+        Map.put(assigns, :credential, updated_credential)
+      else
+        assigns
+      end
+
     {:ok,
      socket
      |> assign(assigns)
@@ -102,12 +123,15 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
 
     schema = if client, do: "oauth", else: type
 
+    credential = %{socket.assigns.credential | schema: schema}
+
     changeset =
-      Credentials.change_credential(socket.assigns.credential, %{schema: schema})
+      Credentials.change_credential(credential, %{schema: schema})
 
     {:noreply,
      socket
      |> assign(
+       credential: credential,
        changeset: changeset,
        schema: schema,
        selected_oauth_client: client,
@@ -233,6 +257,170 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
        |> assign(credential_environments: new_environments)
        |> assign(credential_bodies: new_bodies)
        |> assign(current_tab: new_current_tab)}
+    end
+  end
+
+  def handle_event("show_advanced_picker", _params, socket) do
+    {:noreply,
+     assign(socket,
+       page: :advanced_picker,
+       original_credential_schema: socket.assigns.credential.schema
+     )}
+  end
+
+  def handle_event(
+        "select_credential_type_option",
+        %{"key" => key} = params,
+        socket
+      ) do
+    type = Map.get(params, "type", "")
+
+    {:noreply,
+     assign(socket,
+       selected_credential_type: key,
+       selected_credential_type_type: type
+     )}
+  end
+
+  def handle_event("continue_from_advanced_picker", _params, socket) do
+    key = socket.assigns.selected_credential_type
+    type = socket.assigns[:selected_credential_type_type]
+
+    if is_nil(key) do
+      {:noreply, socket}
+    else
+      case {key, type} do
+        {"keychain", _} ->
+          keychain_credential = %Lightning.Credentials.KeychainCredential{
+            project_id: socket.assigns.project.id,
+            created_by_id: socket.assigns.current_user.id
+          }
+
+          keychain_changeset =
+            Credentials.change_keychain_credential(keychain_credential)
+
+          available_credentials_for_keychain =
+            if socket.assigns.project do
+              Credentials.list_credentials(socket.assigns.project)
+            else
+              []
+            end
+
+          {:noreply,
+           assign(socket,
+             page: :keychain,
+             keychain_credential: keychain_credential,
+             keychain_changeset: keychain_changeset,
+             available_credentials_for_keychain:
+               available_credentials_for_keychain,
+             came_from_advanced_picker: true
+           )}
+
+        {_, "oauth"} ->
+          oauth_client = Enum.find(socket.assigns.oauth_clients, &(&1.id == key))
+          credential = %{socket.assigns.credential | schema: "oauth"}
+
+          if socket.assigns[:from_collab_editor] do
+            send(self(), {:update_credential_schema, "oauth"})
+            send(self(), {:update_selected_credential_type, key})
+          end
+
+          {:noreply,
+           socket
+           |> assign(
+             credential: credential,
+             schema: "oauth",
+             oauth_client: oauth_client,
+             selected_oauth_client: oauth_client,
+             came_from_advanced_picker: true
+           )
+           |> assigns_for_action()
+           |> assign(page: :second)}
+
+        {schema, _} ->
+          credential = %{socket.assigns.credential | schema: schema}
+
+          if socket.assigns[:from_collab_editor] do
+            send(self(), {:update_credential_schema, schema})
+            send(self(), {:update_selected_credential_type, key})
+          end
+
+          {:noreply,
+           socket
+           |> assign(
+             credential: credential,
+             schema: schema,
+             came_from_advanced_picker: true
+           )
+           |> assigns_for_action()
+           |> assign(page: :second)}
+      end
+    end
+  end
+
+  def handle_event("cancel_advanced_picker", _params, socket) do
+    if socket.assigns[:from_collab_editor] do
+      send(self(), :clear_credential_page)
+    end
+
+    {:noreply, assign(socket, page: :second)}
+  end
+
+  def handle_event("back_to_advanced_picker_from_second", _params, socket) do
+    original_schema =
+      Map.get(socket.assigns, :original_credential_schema, nil)
+
+    credential = %{socket.assigns.credential | schema: original_schema}
+
+    {:noreply,
+     assign(socket,
+       page: :advanced_picker,
+       came_from_advanced_picker: false,
+       credential: credential,
+       selected_credential_type: nil,
+       selected_credential_type_type: nil
+     )}
+  end
+
+  def handle_event("back_to_advanced_picker_from_keychain", _params, socket) do
+    {:noreply,
+     assign(socket,
+       page: :advanced_picker,
+       came_from_advanced_picker: false,
+       keychain_credential: nil,
+       keychain_changeset: nil,
+       selected_credential_type: nil,
+       selected_credential_type_type: nil
+     )}
+  end
+
+  def handle_event(
+        "validate_keychain",
+        %{"keychain_credential" => params},
+        socket
+      ) do
+    changeset =
+      socket.assigns.keychain_credential
+      |> Credentials.change_keychain_credential(params)
+      |> Map.put(:action, :validate)
+
+    {:noreply, assign(socket, keychain_changeset: changeset)}
+  end
+
+  def handle_event("save_keychain", %{"keychain_credential" => params}, socket) do
+    case Credentials.create_keychain_credential(
+           socket.assigns.keychain_credential,
+           params
+         ) do
+      {:ok, keychain_credential} ->
+        if socket.assigns[:on_save] do
+          socket.assigns[:on_save].(keychain_credential)
+        end
+
+        {:noreply, socket}
+
+      {:error, changeset} ->
+        {:noreply, assign(socket, keychain_changeset: changeset)}
     end
   end
 
@@ -397,6 +585,7 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
       <Components.Credentials.credential_modal
         id={@id}
         width="xl:min-w-1/3 min-w-1/2 max-w-full"
+        show={Map.get(assigns, :show_modal, true)}
         {if @on_modal_close, do: %{on_modal_close: @on_modal_close}, else: %{}}
       >
         <:title>
@@ -439,6 +628,11 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
           </.form>
         </div>
         <.modal_footer>
+          <Components.Credentials.cancel_button
+            id="cancel-credential-type-picker"
+            modal_id={@id}
+            {if @on_modal_close, do: %{on_modal_close: @on_modal_close}, else: %{}}
+          />
           <.button
             type="button"
             theme="primary"
@@ -448,11 +642,6 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
           >
             Configure credential
           </.button>
-          <Components.Credentials.cancel_button
-            id="cancel-credential-type-picker"
-            modal_id={@id}
-            {if @on_modal_close, do: %{on_modal_close: @on_modal_close}, else: %{}}
-          />
         </.modal_footer>
       </Components.Credentials.credential_modal>
     </div>
@@ -468,10 +657,15 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
       <Components.Credentials.credential_modal
         id={@id}
         width="xl:min-w-1/3 min-w-1/2 w-[600px]"
+        show={Map.get(assigns, :show_modal, true)}
         {if @on_modal_close, do: %{on_modal_close: @on_modal_close}, else: %{}}
       >
         <:title>
-          {if @action in [:edit], do: "Edit a credential", else: "Add a credential"}
+          <%= if @action in [:edit] do %>
+            Edit {@credential.name || "credential"}
+          <% else %>
+            Create {format_schema_name(@schema)} credential
+          <% end %>
         </:title>
 
         <LightningWeb.Components.Oauth.missing_client_warning :if={
@@ -688,22 +882,168 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
             <Components.Credentials.credential_transfer form={f} users={@users} />
           </div>
 
-          <.modal_footer>
-            <Components.Credentials.cancel_button
-              modal_id={@id}
-              {if @on_modal_close, do: %{on_modal_close: @on_modal_close}, else: %{}}
-            />
-            <.button
-              id={"save-credential-button-#{@credential.id || "new"}"}
-              type="submit"
-              theme="primary"
-              disabled={!@changeset.valid? or @scopes_changed or @sandbox_changed}
-            >
-              Save Credential
-            </.button>
+          <.modal_footer class="sm:flex sm:flex-row justify-between items-center gap-3">
+            <%= if @from_collab_editor and not @came_from_advanced_picker do %>
+              <button
+                type="button"
+                phx-click="show_advanced_picker"
+                phx-target={@myself}
+                class="text-primary-600 hover:text-primary-700 text-sm font-medium underline focus:outline-none"
+              >
+                Advanced
+              </button>
+            <% else %>
+              <div></div>
+            <% end %>
+            <div class="flex gap-2">
+              <%= if @from_collab_editor and @came_from_advanced_picker do %>
+                <.button
+                  type="button"
+                  phx-click="back_to_advanced_picker_from_second"
+                  phx-target={@myself}
+                  theme="secondary"
+                >
+                  Back
+                </.button>
+              <% else %>
+                <Components.Credentials.cancel_button
+                  modal_id={@id}
+                  {if @on_modal_close, do: %{on_modal_close: @on_modal_close}, else: %{}}
+                >
+                  {if @from_collab_editor, do: "Back", else: "Cancel"}
+                </Components.Credentials.cancel_button>
+              <% end %>
+              <.button
+                id={"save-credential-button-#{@credential.id || "new"}"}
+                type="submit"
+                theme="primary"
+                disabled={!@changeset.valid? or @scopes_changed or @sandbox_changed}
+              >
+                Save Credential
+              </.button>
+            </div>
           </.modal_footer>
         </.form>
       </Components.Credentials.credential_modal>
+    </div>
+    """
+  end
+
+  def render(%{page: :advanced_picker} = assigns) do
+    assigns =
+      assigns
+      |> assign(
+        :filtered_type_options,
+        assigns.type_options
+        |> Enum.filter(fn {_name, key, _logo, type} ->
+          key in ["raw", "keychain"] or type == "oauth"
+        end)
+        |> Enum.sort_by(fn {name, key, _logo, type} ->
+          cond do
+            type == "oauth" -> {0, String.downcase(name)}
+            key == "raw" -> {1, ""}
+            key == "keychain" -> {2, ""}
+          end
+        end)
+      )
+      |> assign(
+        :selected_credential_type,
+        assigns[:selected_credential_type] || nil
+      )
+
+    ~H"""
+    <div class="text-left" phx-mounted={JS.transition("fade-in-scale", time: 200)}>
+      <Components.Credentials.credential_modal
+        id={@id}
+        width="xl:min-w-1/3 min-w-1/2 w-[600px]"
+        show={Map.get(assigns, :show_modal, true)}
+        {if @on_modal_close, do: %{on_modal_close: @on_modal_close}, else: %{}}
+      >
+        <:title>Advanced setup</:title>
+
+        <div class="space-y-6">
+          <p class="text-gray-700 leading-relaxed">
+            Create a new multi-purpose credential.
+          </p>
+
+          <div>
+            <h3 class="text-sm font-medium text-gray-500 mb-4">
+              Select credential type:
+            </h3>
+            <ul class="space-y-1">
+              <li :for={{name, key, logo, type} <- @filtered_type_options}>
+                <button
+                  type="button"
+                  phx-click="select_credential_type_option"
+                  phx-value-key={key}
+                  phx-value-type={type}
+                  phx-target={@myself}
+                  class={[
+                    "w-full flex items-start gap-4 p-3 rounded-lg transition-colors text-left",
+                    if(@selected_credential_type == key,
+                      do: "bg-primary-50 border-2 border-primary-500",
+                      else: "hover:bg-gray-50 border-2 border-transparent"
+                    )
+                  ]}
+                >
+                  <img src={logo} alt="" class="w-10 h-10 rounded shrink-0" />
+                  <div class="flex-1 min-w-0">
+                    <h4 class="text-base font-medium text-gray-900">{name}</h4>
+                    <p class="text-sm text-gray-500 mt-0.5">
+                      {get_credential_description(key, type)}
+                    </p>
+                  </div>
+                </button>
+              </li>
+            </ul>
+          </div>
+        </div>
+
+        <.modal_footer>
+          <.button
+            type="button"
+            phx-click="continue_from_advanced_picker"
+            phx-target={@myself}
+            theme="primary"
+            disabled={is_nil(@selected_credential_type)}
+          >
+            Continue
+          </.button>
+          <.button
+            type="button"
+            phx-click="cancel_advanced_picker"
+            phx-target={@myself}
+            theme="secondary"
+          >
+            Back
+          </.button>
+        </.modal_footer>
+      </Components.Credentials.credential_modal>
+    </div>
+    """
+  end
+
+  def render(%{page: :keychain} = assigns) do
+    ~H"""
+    <div>
+      <Components.Credentials.keychain_credential_form
+        id={@id}
+        keychain_credential={@keychain_credential}
+        keychain_changeset={@keychain_changeset}
+        available_credentials={@available_credentials_for_keychain}
+        myself={@myself}
+        action={:new}
+        from_collab_editor={true}
+        on_validate="validate_keychain"
+        on_submit="save_keychain"
+        on_back={
+          Phoenix.LiveView.JS.push("back_to_advanced_picker_from_keychain",
+            target: @myself
+          )
+        }
+        on_modal_close={@on_modal_close}
+        show_modal={Map.get(assigns, :show_modal, true)}
+      />
     </div>
     """
   end
@@ -735,7 +1075,18 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
     |> Enum.reject(fn {_, name, _, _} ->
       name in ["googlesheets", "gmail", "collections"]
     end)
-    |> Enum.concat([{"Raw JSON", "raw", nil, nil}])
+    |> Enum.concat([
+      {"Raw JSON", "raw",
+       Routes.static_path(
+         LightningWeb.Endpoint,
+         "/images/raw.png"
+       ), nil},
+      {"Keychain", "keychain",
+       Routes.static_path(
+         LightningWeb.Endpoint,
+         "/images/keychain.png"
+       ), nil}
+    ])
     |> Enum.sort_by(&String.downcase(elem(&1, 0)), :asc)
   end
 
@@ -822,14 +1173,7 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
   end
 
   defp assigns_for_action(socket, opts \\ []) do
-    # If action is :new but credential already has a schema, skip to :second page
-    # This happens when creating a credential from the collaborative editor with a pre-selected schema
-    page =
-      if socket.assigns.action == :new and
-           socket.assigns.credential.schema == nil,
-         do: :first,
-         else: :second
-
+    page = determine_page(socket)
     is_reset? = Keyword.get(opts, :reset, false)
 
     socket =
@@ -843,6 +1187,19 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
       page: page,
       selected_oauth_client: socket.assigns[:oauth_client]
     )
+  end
+
+  defp determine_page(socket) do
+    cond do
+      Map.has_key?(socket.assigns, :page) and socket.assigns.page != nil ->
+        socket.assigns.page
+
+      socket.assigns.action == :new and socket.assigns.credential.schema == nil ->
+        :first
+
+      true ->
+        :second
+    end
   end
 
   defp assign_oauth_clients_and_type_options(socket) do
@@ -872,6 +1229,25 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
 
     assign(socket, oauth_clients: oauth_clients, type_options: type_options)
   end
+
+  defp format_schema_name("raw"), do: "Raw JSON"
+  defp format_schema_name("oauth"), do: "OAuth"
+  defp format_schema_name("http"), do: "HTTP"
+
+  defp format_schema_name(schema) when is_binary(schema) do
+    schema
+    |> String.split("_")
+    |> Enum.map_join(" ", &String.capitalize/1)
+  end
+
+  defp get_credential_description("raw", _type),
+    do: "Define custom credentials in JSON"
+
+  defp get_credential_description("keychain", _type),
+    do: "Dynamically select linked credentials at runtime"
+
+  defp get_credential_description(_key, "oauth"),
+    do: "Connect with standards-based authorization"
 
   defp assigns_for_credential(socket) do
     %{

@@ -3,25 +3,26 @@ import {
   DialogBackdrop,
   DialogPanel,
   DialogTitle,
-} from "@headlessui/react";
-import { useEffect, useMemo, useState, useRef } from "react";
-import { useHotkeysContext } from "react-hotkeys-hook";
+} from '@headlessui/react';
+import { useEffect, useMemo, useState, useRef } from 'react';
+import { useHotkeysContext } from 'react-hotkeys-hook';
 
-import { HOTKEY_SCOPES } from "#/collaborative-editor/constants/hotkeys";
+import { HOTKEY_SCOPES } from '#/collaborative-editor/constants/hotkeys';
 import {
   useCredentials,
   useCredentialQueries,
-} from "#/collaborative-editor/hooks/useCredentials";
-import type { Adaptor } from "#/collaborative-editor/types/adaptor";
-import type { CredentialWithType } from "#/collaborative-editor/types/credential";
+} from '#/collaborative-editor/hooks/useCredentials';
+import type { Adaptor } from '#/collaborative-editor/types/adaptor';
+import type { CredentialWithType } from '#/collaborative-editor/types/credential';
 import {
   extractAdaptorName,
   extractAdaptorDisplayName,
   extractPackageName,
-} from "#/collaborative-editor/utils/adaptorUtils";
+} from '#/collaborative-editor/utils/adaptorUtils';
 
-import { AdaptorIcon } from "./AdaptorIcon";
-import { VersionPicker } from "./VersionPicker";
+import { AdaptorIcon } from './AdaptorIcon';
+import { Tooltip } from './Tooltip';
+import { VersionPicker } from './VersionPicker';
 
 interface ConfigureAdaptorModalProps {
   isOpen: boolean;
@@ -71,6 +72,7 @@ export function ConfigureAdaptorModal({
     if (isOpen) {
       enableScope(HOTKEY_SCOPES.MODAL);
       disableScope(HOTKEY_SCOPES.PANEL);
+      disableScope(HOTKEY_SCOPES.RUN_PANEL);
     } else {
       disableScope(HOTKEY_SCOPES.MODAL);
       enableScope(HOTKEY_SCOPES.PANEL);
@@ -98,10 +100,10 @@ export function ConfigureAdaptorModal({
       if (adaptor) {
         const sortedVersions = adaptor.versions
           .map(v => v.version)
-          .filter(v => v !== "latest")
+          .filter(v => v !== 'latest')
           .sort((a, b) => {
-            const aParts = a.split(".").map(Number);
-            const bParts = b.split(".").map(Number);
+            const aParts = a.split('.').map(Number);
+            const bParts = b.split('.').map(Number);
             for (let i = 0; i < Math.max(aParts.length, bParts.length); i++) {
               const aNum = aParts[i] || 0;
               const bNum = bParts[i] || 0;
@@ -138,7 +140,7 @@ export function ConfigureAdaptorModal({
   const adaptorNeedsCredentials = useMemo(() => {
     const adaptorName = extractAdaptorName(currentAdaptor);
     // Common adaptor doesn't require credentials
-    return adaptorName !== "common";
+    return adaptorName !== 'common';
   }, [currentAdaptor]);
 
   // Filter credentials into sections
@@ -159,10 +161,10 @@ export function ConfigureAdaptorModal({
         if (c.schema === adaptorName) return true;
 
         // Smart OAuth matching: if credential is OAuth, check oauth_client_name
-        if (c.schema === "oauth" && c.oauth_client_name) {
+        if (c.schema === 'oauth' && c.oauth_client_name) {
           // Normalize both strings: lowercase, remove spaces/hyphens/underscores
           const normalizeString = (str: string) =>
-            str.toLowerCase().replace(/[\s\-_]/g, "");
+            str.toLowerCase().replace(/[\s\-_]/g, '');
 
           const normalizedClientName = normalizeString(c.oauth_client_name);
           const normalizedAdaptorName = normalizeString(adaptorName);
@@ -177,22 +179,22 @@ export function ConfigureAdaptorModal({
 
         return false;
       })
-      .map(c => ({ ...c, type: "project" as const }));
+      .map(c => ({ ...c, type: 'project' as const }));
 
     // Universal project credentials (http and raw work with all adaptors)
     // Only show if not already in schemaMatched (avoid duplicates)
     const universal: CredentialWithType[] = projectCredentials
       .filter(c => {
-        const isUniversal = c.schema === "http" || c.schema === "raw";
-        const alreadyMatched = adaptorName === "http" || adaptorName === "raw";
+        const isUniversal = c.schema === 'http' || c.schema === 'raw';
+        const alreadyMatched = adaptorName === 'http' || adaptorName === 'raw';
         return isUniversal && !alreadyMatched;
       })
-      .map(c => ({ ...c, type: "project" as const }));
+      .map(c => ({ ...c, type: 'project' as const }));
 
     // All keychain credentials (can't reliably filter by schema)
     const keychain: CredentialWithType[] = keychainCredentials.map(c => ({
       ...c,
-      type: "keychain" as const,
+      type: 'keychain' as const,
     }));
 
     return { schemaMatched, universal, keychain };
@@ -253,11 +255,11 @@ export function ConfigureAdaptorModal({
     // Sort versions using semantic versioning (newest first)
     const sortedVersions = adaptor.versions
       .map(v => v.version)
-      .filter(v => v !== "latest")
+      .filter(v => v !== 'latest')
       .sort((a, b) => {
         // Split version strings into parts [major, minor, patch]
-        const aParts = a.split(".").map(Number);
-        const bParts = b.split(".").map(Number);
+        const aParts = a.split('.').map(Number);
+        const bParts = b.split('.').map(Number);
 
         // Compare major, minor, patch in order
         for (let i = 0; i < Math.max(aParts.length, bParts.length); i++) {
@@ -271,7 +273,7 @@ export function ConfigureAdaptorModal({
       });
 
     // Add "latest" as the first option
-    return ["latest", ...sortedVersions];
+    return ['latest', ...sortedVersions];
   }, [currentAdaptor, allAdaptors]);
 
   // Extract adaptor display name
@@ -323,7 +325,7 @@ export function ConfigureAdaptorModal({
                 className="flex items-center justify-between px-6 py-4
                 border-b border-gray-200"
               >
-                <DialogTitle className="text-xl font-medium text-gray-900">
+                <DialogTitle className="text-lg font-bold leading-5 text-zinc-800">
                   Configure connection
                 </DialogTitle>
                 <button
@@ -352,12 +354,17 @@ export function ConfigureAdaptorModal({
                       font-medium text-gray-700 mb-2"
                     >
                       Adaptor
-                      <span
-                        className="hero-information-circle h-4 w-4
-                        text-gray-400"
-                        aria-label="Information"
-                        role="img"
-                      />
+                      <Tooltip
+                        content="Choose an adaptor to perform operations (via helper functions) in a specific application. Pick 'http' for generic REST APIs or the 'common' adaptor if this job only performs data manipulation."
+                        side="top"
+                      >
+                        <span
+                          className="hero-information-circle h-4 w-4
+                          text-gray-400"
+                          aria-label="Information"
+                          role="img"
+                        />
+                      </Tooltip>
                     </label>
                     <div
                       className="flex items-center justify-between p-3
@@ -409,12 +416,17 @@ export function ConfigureAdaptorModal({
                       font-medium text-gray-700"
                     >
                       Credentials
-                      <span
-                        className="hero-information-circle h-4 w-4
-                        text-gray-400"
-                        aria-label="Information"
-                        role="img"
-                      />
+                      <Tooltip
+                        content="If the system you're working with requires authentication, choose a credential with login details (secrets) that will allow this job to connect. If you're not connecting to an external system you don't need a credential."
+                        side="top"
+                      >
+                        <span
+                          className="hero-information-circle h-4 w-4
+                          text-gray-400"
+                          aria-label="Information"
+                          role="img"
+                        />
+                      </Tooltip>
                     </label>
                     {adaptorNeedsCredentials && (
                       <button
@@ -492,7 +504,7 @@ export function ConfigureAdaptorModal({
                                     {cred.name}
                                   </span>
                                 </div>
-                                {cred.type === "project" && cred.owner && (
+                                {cred.type === 'project' && cred.owner && (
                                   <div className="flex items-center gap-1 text-sm text-gray-500">
                                     <span
                                       className="hero-user-solid h-4 w-4"
@@ -589,7 +601,7 @@ export function ConfigureAdaptorModal({
                                           {cred.name}
                                         </span>
                                       </div>
-                                      {cred.type === "project" &&
+                                      {cred.type === 'project' &&
                                         cred.owner && (
                                           <div className="flex items-center gap-1 text-sm text-gray-500">
                                             <span
@@ -720,10 +732,10 @@ export function ConfigureAdaptorModal({
                   type="button"
                   onClick={onClose}
                   aria-label="Close modal"
-                  className="px-6 py-2.5 bg-primary-600 text-white
-                  rounded-md font-medium hover:bg-primary-700
-                  focus:outline-none focus:ring-2 focus:ring-offset-2
-                  focus:ring-primary-500"
+                  className="rounded-md text-sm font-semibold shadow-xs px-3 py-2
+                  bg-primary-600 hover:bg-primary-500 text-white
+                  focus-visible:outline-2 focus-visible:outline-offset-2
+                  focus-visible:outline-primary-600"
                 >
                   Close
                 </button>
