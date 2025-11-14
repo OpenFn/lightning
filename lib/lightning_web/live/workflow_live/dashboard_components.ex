@@ -310,7 +310,7 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
           tooltip={
             if @trigger_enabled,
               do: @workflow.name,
-              else: "#{@workflow.name}\n(disabled)"
+              else: "#{@workflow.name} (disabled)"
           }
         >
           <div class="flex items-center">
