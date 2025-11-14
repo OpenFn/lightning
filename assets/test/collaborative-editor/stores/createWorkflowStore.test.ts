@@ -489,3 +489,366 @@ describe('WorkflowStore - addJob', () => {
     });
   });
 });
+
+describe('WorkflowStore - removeJob with edge cleanup', () => {
+  let store: WorkflowStoreInstance;
+  let ydoc: Session.WorkflowDoc;
+  let mockProvider: PhoenixChannelProvider & { channel: MockPhoenixChannel };
+
+  beforeEach(() => {
+    // Create fresh store and Y.Doc instances
+    store = createWorkflowStore();
+    ydoc = new Y.Doc() as Session.WorkflowDoc;
+
+    // Initialize Y.Doc structure
+    ydoc.getArray('jobs');
+    ydoc.getMap('workflow');
+    ydoc.getArray('triggers');
+    ydoc.getArray('edges');
+    ydoc.getMap('positions');
+
+    // Create mock channel
+    const mockChannel = createMockPhoenixChannel('workflow:test');
+    mockChannel.push = createMockChannelPushOk({}) as typeof mockChannel.push;
+
+    // Create mock provider
+    mockProvider = {
+      channel: mockChannel,
+      synced: true,
+      awareness: null,
+      doc: ydoc,
+    } as unknown as PhoenixChannelProvider & { channel: MockPhoenixChannel };
+
+    // Connect store to Y.Doc and provider
+    store.connect(ydoc, mockProvider);
+  });
+
+  test('removes leaf node with single incoming job-to-job edge', () => {
+    // Setup: Job A → Job B (Job B is leaf)
+    store.addJob({
+      id: 'job-a',
+      name: 'Job A',
+      body: 'fn(state => state)',
+    });
+
+    store.addJob({
+      id: 'job-b',
+      name: 'Job B',
+      body: 'fn(state => state)',
+    });
+
+    store.addEdge({
+      id: 'edge-a-to-b',
+      source_job_id: 'job-a',
+      target_job_id: 'job-b',
+      condition_type: 'always',
+    });
+
+    // Verify setup
+    let snapshot = store.getSnapshot();
+    expect(snapshot.jobs).toHaveLength(2);
+    expect(snapshot.edges).toHaveLength(1);
+
+    // Action: Delete Job B (leaf node)
+    store.removeJob('job-b');
+
+    // Assert: Job B deleted, edge A→B deleted, Job A remains
+    snapshot = store.getSnapshot();
+    expect(snapshot.jobs).toHaveLength(1);
+    expect(snapshot.jobs?.[0]?.id).toBe('job-a');
+    expect(snapshot.edges).toHaveLength(0);
+  });
+
+  test('removes leaf node with single incoming trigger-to-job edge', () => {
+    // Setup: Trigger → Job A (Job A is leaf)
+    // Add trigger directly to Y.Doc
+    const triggersArray = ydoc.getArray('triggers');
+    const triggerMap = new Y.Map();
+    triggerMap.set('id', 'trigger-1');
+    triggerMap.set('type', 'webhook');
+    triggerMap.set('enabled', true);
+    triggersArray.push([triggerMap]);
+
+    store.addJob({
+      id: 'job-a',
+      name: 'Job A',
+      body: 'fn(state => state)',
+    });
+
+    store.addEdge({
+      id: 'edge-trigger-to-a',
+      source_trigger_id: 'trigger-1',
+      target_job_id: 'job-a',
+      condition_type: 'always',
+    });
+
+    // Verify setup
+    let snapshot = store.getSnapshot();
+    expect(snapshot.jobs).toHaveLength(1);
+    expect(snapshot.triggers).toHaveLength(1);
+    expect(snapshot.edges).toHaveLength(1);
+
+    // Action: Delete Job A (leaf node)
+    store.removeJob('job-a');
+
+    // Assert: Job A deleted, trigger→A edge deleted, trigger remains
+    snapshot = store.getSnapshot();
+    expect(snapshot.jobs).toHaveLength(0);
+    expect(snapshot.triggers).toHaveLength(1);
+    expect(snapshot.triggers?.[0]?.id).toBe('trigger-1');
+    expect(snapshot.edges).toHaveLength(0);
+  });
+
+  test('removes leaf node with multiple incoming edges from different parents', () => {
+    // Setup: Job A → Job C, Job B → Job C (Job C is leaf with multiple parents)
+    store.addJob({
+      id: 'job-a',
+      name: 'Job A',
+      body: 'fn(state => state)',
+    });
+
+    store.addJob({
+      id: 'job-b',
+      name: 'Job B',
+      body: 'fn(state => state)',
+    });
+
+    store.addJob({
+      id: 'job-c',
+      name: 'Job C',
+      body: 'fn(state => state)',
+    });
+
+    store.addEdge({
+      id: 'edge-a-to-c',
+      source_job_id: 'job-a',
+      target_job_id: 'job-c',
+      condition_type: 'always',
+    });
+
+    store.addEdge({
+      id: 'edge-b-to-c',
+      source_job_id: 'job-b',
+      target_job_id: 'job-c',
+      condition_type: 'always',
+    });
+
+    // Verify setup
+    let snapshot = store.getSnapshot();
+    expect(snapshot.jobs).toHaveLength(3);
+    expect(snapshot.edges).toHaveLength(2);
+
+    // Action: Delete Job C (leaf node with multiple incoming edges)
+    store.removeJob('job-c');
+
+    // Assert: Job C deleted, both incoming edges deleted, Jobs A & B remain
+    snapshot = store.getSnapshot();
+    expect(snapshot.jobs).toHaveLength(2);
+    expect(snapshot.jobs?.map(j => j.id).sort()).toEqual(['job-a', 'job-b']);
+    expect(snapshot.edges).toHaveLength(0);
+  });
+
+  test('removes leaf node with mixed incoming edges from trigger and job', () => {
+    // Setup: Trigger → Job C, Job B → Job C (Job C is leaf)
+    // Add trigger directly to Y.Doc
+    const triggersArray = ydoc.getArray('triggers');
+    const triggerMap = new Y.Map();
+    triggerMap.set('id', 'trigger-1');
+    triggerMap.set('type', 'webhook');
+    triggerMap.set('enabled', true);
+    triggersArray.push([triggerMap]);
+
+    store.addJob({
+      id: 'job-b',
+      name: 'Job B',
+      body: 'fn(state => state)',
+    });
+
+    store.addJob({
+      id: 'job-c',
+      name: 'Job C',
+      body: 'fn(state => state)',
+    });
+
+    store.addEdge({
+      id: 'edge-trigger-to-c',
+      source_trigger_id: 'trigger-1',
+      target_job_id: 'job-c',
+      condition_type: 'always',
+    });
+
+    store.addEdge({
+      id: 'edge-b-to-c',
+      source_job_id: 'job-b',
+      target_job_id: 'job-c',
+      condition_type: 'always',
+    });
+
+    // Verify setup
+    let snapshot = store.getSnapshot();
+    expect(snapshot.jobs).toHaveLength(2);
+    expect(snapshot.triggers).toHaveLength(1);
+    expect(snapshot.edges).toHaveLength(2);
+
+    // Action: Delete Job C (leaf node with mixed incoming edges)
+    store.removeJob('job-c');
+
+    // Assert: Job C deleted, both edges deleted, trigger and Job B remain
+    snapshot = store.getSnapshot();
+    expect(snapshot.jobs).toHaveLength(1);
+    expect(snapshot.jobs?.[0]?.id).toBe('job-b');
+    expect(snapshot.triggers).toHaveLength(1);
+    expect(snapshot.triggers?.[0]?.id).toBe('trigger-1');
+    expect(snapshot.edges).toHaveLength(0);
+  });
+
+  test('removes orphan job with no incoming edges', () => {
+    // Setup: Isolated Job A (no edges)
+    store.addJob({
+      id: 'job-a',
+      name: 'Job A',
+      body: 'fn(state => state)',
+    });
+
+    // Verify setup
+    let snapshot = store.getSnapshot();
+    expect(snapshot.jobs).toHaveLength(1);
+    expect(snapshot.edges).toHaveLength(0);
+
+    // Action: Delete Job A (orphan node)
+    store.removeJob('job-a');
+
+    // Assert: Job A deleted, no errors
+    snapshot = store.getSnapshot();
+    expect(snapshot.jobs).toHaveLength(0);
+    expect(snapshot.edges).toHaveLength(0);
+  });
+
+  test('does not affect other edges when removing job', () => {
+    // Setup: Job A → Job B, Job A → Job C (Job B is leaf)
+    store.addJob({
+      id: 'job-a',
+      name: 'Job A',
+      body: 'fn(state => state)',
+    });
+
+    store.addJob({
+      id: 'job-b',
+      name: 'Job B',
+      body: 'fn(state => state)',
+    });
+
+    store.addJob({
+      id: 'job-c',
+      name: 'Job C',
+      body: 'fn(state => state)',
+    });
+
+    store.addEdge({
+      id: 'edge-a-to-b',
+      source_job_id: 'job-a',
+      target_job_id: 'job-b',
+      condition_type: 'always',
+    });
+
+    store.addEdge({
+      id: 'edge-a-to-c',
+      source_job_id: 'job-a',
+      target_job_id: 'job-c',
+      condition_type: 'always',
+    });
+
+    // Verify setup
+    let snapshot = store.getSnapshot();
+    expect(snapshot.jobs).toHaveLength(3);
+    expect(snapshot.edges).toHaveLength(2);
+
+    // Action: Delete Job B
+    store.removeJob('job-b');
+
+    // Assert: Job B deleted, edge A→B deleted, edge A→C remains
+    snapshot = store.getSnapshot();
+    expect(snapshot.jobs).toHaveLength(2);
+    expect(snapshot.jobs?.map(j => j.id).sort()).toEqual(['job-a', 'job-c']);
+    expect(snapshot.edges).toHaveLength(1);
+    expect(snapshot.edges?.[0]?.id).toBe('edge-a-to-c');
+    expect(snapshot.edges?.[0]?.source_job_id).toBe('job-a');
+    expect(snapshot.edges?.[0]?.target_job_id).toBe('job-c');
+  });
+
+  test('performs edge and job deletion in single Y.Doc transaction', () => {
+    // Setup: Job A → Job B
+    store.addJob({
+      id: 'job-a',
+      name: 'Job A',
+      body: 'fn(state => state)',
+    });
+
+    store.addJob({
+      id: 'job-b',
+      name: 'Job B',
+      body: 'fn(state => state)',
+    });
+
+    store.addEdge({
+      id: 'edge-a-to-b',
+      source_job_id: 'job-a',
+      target_job_id: 'job-b',
+      condition_type: 'always',
+    });
+
+    // Verify setup state
+    let snapshot = store.getSnapshot();
+    expect(snapshot.jobs).toHaveLength(2);
+    expect(snapshot.edges).toHaveLength(1);
+
+    // Access Y.Doc directly to verify transaction behavior
+    const edgesArray = ydoc.getArray('edges');
+    const jobsArray = ydoc.getArray('jobs');
+
+    // Track Y.Doc transaction events
+    let transactionCount = 0;
+    const transactionHandler = () => {
+      transactionCount++;
+    };
+    ydoc.on('afterTransaction', transactionHandler);
+
+    // Action: Delete Job B
+    store.removeJob('job-b');
+
+    // Assert: Single Y.Doc transaction for both deletions
+    // This verifies atomicity at the Y.Doc level
+    expect(transactionCount).toBe(1);
+
+    // Verify both deletions occurred atomically
+    expect(jobsArray.length).toBe(1);
+    expect(edgesArray.length).toBe(0);
+
+    // Verify store state is consistent
+    snapshot = store.getSnapshot();
+    expect(snapshot.jobs).toHaveLength(1);
+    expect(snapshot.edges).toHaveLength(0);
+
+    ydoc.off('afterTransaction', transactionHandler);
+  });
+
+  test('handles deletion when job does not exist gracefully', () => {
+    // Setup: Add a single job
+    store.addJob({
+      id: 'job-a',
+      name: 'Job A',
+      body: 'fn(state => state)',
+    });
+
+    const snapshot = store.getSnapshot();
+    expect(snapshot.jobs).toHaveLength(1);
+
+    // Action: Try to delete non-existent job
+    store.removeJob('non-existent-job');
+
+    // Assert: No changes to workflow state
+    const snapshotAfter = store.getSnapshot();
+    expect(snapshotAfter.jobs).toHaveLength(1);
+    expect(snapshotAfter.jobs?.[0]?.id).toBe('job-a');
+  });
+});
