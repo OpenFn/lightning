@@ -26,6 +26,8 @@ and this project adheres to
 
 ### Fixed
 
+- Fix ghost edges blocking saves and breaking autolayout when deleting jobs in
+  collaborative editor [#3983](https://github.com/OpenFn/lightning/issues/3983)
 - Fix tooltip styling inconsistencies in collaborative editor
   [#3980](https://github.com/OpenFn/lightning/issues/3980)
 - Fix beaker icon appearing active in classical editor
