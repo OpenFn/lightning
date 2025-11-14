@@ -23,6 +23,7 @@ import {
 } from '#/collaborative-editor/hooks/useWorkflow';
 import type { Workflow } from '#/collaborative-editor/types/workflow';
 import { getAdaptorDisplayName } from '#/collaborative-editor/utils/adaptorUtils';
+import { isSourceNodeJob } from '#/collaborative-editor/utils/workflowGraph';
 import { randomUUID } from '#/common';
 import _logger from '#/utils/logger';
 import MiniMapNode from '#/workflow-diagram/components/MiniMapNode';
@@ -277,7 +278,7 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
         const edgeData = placeholderEdge.data as any;
 
         // Determine if source is a job or trigger by checking the workflow state
-        const sourceIsJob = jobs.some(j => j.id === placeholderEdge.source);
+        const sourceIsJob = isSourceNodeJob(placeholderEdge.source, jobs);
 
         const newEdge: Record<string, any> = {
           id: placeholderEdge.id,
@@ -734,7 +735,7 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
       // TODO: This edge creation logic is duplicated in useConnect.ts
       // (onConnect callback) and above in handleCommit. Consider extracting
       // to a shared helper like createEdgeForSource() to avoid inconsistencies.
-      const sourceIsJob = jobs.some(j => j.id === sourceNode.id);
+      const sourceIsJob = isSourceNodeJob(sourceNode.id, jobs);
       const newEdge: Workflow.Edge = {
         id: randomUUID(),
         target_job_id: jobId,

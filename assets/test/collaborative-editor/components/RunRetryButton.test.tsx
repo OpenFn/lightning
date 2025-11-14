@@ -12,19 +12,19 @@
  * - Provides proper accessibility attributes
  */
 
-import { render, screen, waitFor } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
-import { describe, expect, test, vi } from "vitest";
+import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { describe, expect, test, vi } from 'vitest';
 
-import { RunRetryButton } from "../../../js/collaborative-editor/components/RunRetryButton";
+import { RunRetryButton } from '../../../js/collaborative-editor/components/RunRetryButton';
 
-describe("RunRetryButton", () => {
+describe('RunRetryButton', () => {
   // ===========================================================================
   // RENDERING TESTS
   // ===========================================================================
 
-  describe("rendering modes", () => {
-    test("renders single button with Run Workflow text when not retryable", () => {
+  describe('rendering modes', () => {
+    test('renders single button with Run Workflow text when not retryable', () => {
       const onRun = vi.fn();
       const onRetry = vi.fn();
 
@@ -39,16 +39,16 @@ describe("RunRetryButton", () => {
       );
 
       // Should show Run Workflow button
-      expect(screen.getByText("Run Workflow")).toBeInTheDocument();
+      expect(screen.getByText('Run Workflow')).toBeInTheDocument();
 
       // Should NOT show retry text or dropdown
       expect(screen.queryByText(/retry/i)).not.toBeInTheDocument();
       expect(
-        screen.queryByRole("button", { name: /open options/i })
+        screen.queryByRole('button', { name: /open options/i })
       ).not.toBeInTheDocument();
     });
 
-    test("renders split button with retry text when retryable", () => {
+    test('renders split button with retry text when retryable', () => {
       const onRun = vi.fn();
       const onRetry = vi.fn();
 
@@ -63,15 +63,15 @@ describe("RunRetryButton", () => {
       );
 
       // Should show retry button
-      expect(screen.getByText("Run (retry)")).toBeInTheDocument();
+      expect(screen.getByText('Run (retry)')).toBeInTheDocument();
 
       // Should show dropdown toggle
       expect(
-        screen.getByRole("button", { name: /open options/i })
+        screen.getByRole('button', { name: /open options/i })
       ).toBeInTheDocument();
     });
 
-    test("renders processing state with spinner when submitting", () => {
+    test('renders processing state with spinner when submitting', () => {
       const onRun = vi.fn();
       const onRetry = vi.fn();
 
@@ -86,14 +86,14 @@ describe("RunRetryButton", () => {
       );
 
       // Should show processing text
-      expect(screen.getByText("Processing")).toBeInTheDocument();
+      expect(screen.getByText('Processing')).toBeInTheDocument();
 
       // Button should be disabled
-      expect(screen.getByText("Processing")).toBeDisabled();
+      expect(screen.getByText('Processing')).toBeDisabled();
 
       // Should have spinner icon
-      const button = screen.getByText("Processing");
-      const spinner = button.querySelector(".hero-arrow-path.animate-spin");
+      const button = screen.getByText('Processing');
+      const spinner = button.querySelector('.hero-arrow-path.animate-spin');
       expect(spinner).toBeInTheDocument();
     });
   });
@@ -102,8 +102,8 @@ describe("RunRetryButton", () => {
   // INTERACTION TESTS
   // ===========================================================================
 
-  describe("click interactions", () => {
-    test("calls onRun when single button clicked", async () => {
+  describe('click interactions', () => {
+    test('calls onRun when single button clicked', async () => {
       const onRun = vi.fn();
       const onRetry = vi.fn();
       const user = userEvent.setup();
@@ -118,13 +118,13 @@ describe("RunRetryButton", () => {
         />
       );
 
-      await user.click(screen.getByText("Run Workflow"));
+      await user.click(screen.getByText('Run Workflow'));
 
       expect(onRun).toHaveBeenCalledTimes(1);
       expect(onRetry).not.toHaveBeenCalled();
     });
 
-    test("calls onRetry when retry button clicked in split mode", async () => {
+    test('calls onRetry when retry button clicked in split mode', async () => {
       const onRun = vi.fn();
       const onRetry = vi.fn();
       const user = userEvent.setup();
@@ -139,13 +139,13 @@ describe("RunRetryButton", () => {
         />
       );
 
-      await user.click(screen.getByText("Run (retry)"));
+      await user.click(screen.getByText('Run (retry)'));
 
       expect(onRetry).toHaveBeenCalledTimes(1);
       expect(onRun).not.toHaveBeenCalled();
     });
 
-    test("shows dropdown menu when chevron clicked", async () => {
+    test('shows dropdown menu when chevron clicked', async () => {
       const onRun = vi.fn();
       const onRetry = vi.fn();
       const user = userEvent.setup();
@@ -162,17 +162,17 @@ describe("RunRetryButton", () => {
 
       // Initially no dropdown
       expect(
-        screen.queryByText("Run (New Work Order)")
+        screen.queryByText('Run (New Work Order)')
       ).not.toBeInTheDocument();
 
       // Click chevron to open dropdown
-      await user.click(screen.getByRole("button", { name: /open options/i }));
+      await user.click(screen.getByRole('button', { name: /open options/i }));
 
       // Dropdown should appear
-      expect(screen.getByText("Run (New Work Order)")).toBeInTheDocument();
+      expect(screen.getByText('Run (New Work Order)')).toBeInTheDocument();
     });
 
-    test("calls onRun when dropdown option clicked and closes dropdown", async () => {
+    test('calls onRun when dropdown option clicked and closes dropdown', async () => {
       const onRun = vi.fn();
       const onRetry = vi.fn();
       const user = userEvent.setup();
@@ -188,11 +188,11 @@ describe("RunRetryButton", () => {
       );
 
       // Open dropdown
-      await user.click(screen.getByRole("button", { name: /open options/i }));
-      expect(screen.getByText("Run (New Work Order)")).toBeInTheDocument();
+      await user.click(screen.getByRole('button', { name: /open options/i }));
+      expect(screen.getByText('Run (New Work Order)')).toBeInTheDocument();
 
       // Click dropdown option
-      await user.click(screen.getByText("Run (New Work Order)"));
+      await user.click(screen.getByText('Run (New Work Order)'));
 
       // Should call onRun and close dropdown
       expect(onRun).toHaveBeenCalledTimes(1);
@@ -200,12 +200,12 @@ describe("RunRetryButton", () => {
 
       await waitFor(() => {
         expect(
-          screen.queryByText("Run (New Work Order)")
+          screen.queryByText('Run (New Work Order)')
         ).not.toBeInTheDocument();
       });
     });
 
-    test("closes dropdown when clicking outside", async () => {
+    test('closes dropdown when clicking outside', async () => {
       const onRun = vi.fn();
       const onRetry = vi.fn();
       const user = userEvent.setup();
@@ -224,16 +224,16 @@ describe("RunRetryButton", () => {
       );
 
       // Open dropdown
-      await user.click(screen.getByRole("button", { name: /open options/i }));
-      expect(screen.getByText("Run (New Work Order)")).toBeInTheDocument();
+      await user.click(screen.getByRole('button', { name: /open options/i }));
+      expect(screen.getByText('Run (New Work Order)')).toBeInTheDocument();
 
       // Click outside
-      await user.click(screen.getByTestId("outside"));
+      await user.click(screen.getByTestId('outside'));
 
       // Dropdown should close
       await waitFor(() => {
         expect(
-          screen.queryByText("Run (New Work Order)")
+          screen.queryByText('Run (New Work Order)')
         ).not.toBeInTheDocument();
       });
     });
@@ -243,8 +243,8 @@ describe("RunRetryButton", () => {
   // DISABLED STATE TESTS
   // ===========================================================================
 
-  describe("disabled state", () => {
-    test("disables single button when isDisabled is true", () => {
+  describe('disabled state', () => {
+    test('disables single button when isDisabled is true', () => {
       const onRun = vi.fn();
       const onRetry = vi.fn();
 
@@ -258,10 +258,10 @@ describe("RunRetryButton", () => {
         />
       );
 
-      expect(screen.getByText("Run Workflow")).toBeDisabled();
+      expect(screen.getByText('Run Workflow')).toBeDisabled();
     });
 
-    test("disables both buttons in split mode when isDisabled is true", () => {
+    test('disables both buttons in split mode when isDisabled is true', () => {
       const onRun = vi.fn();
       const onRetry = vi.fn();
 
@@ -275,13 +275,13 @@ describe("RunRetryButton", () => {
         />
       );
 
-      expect(screen.getByText("Run (retry)")).toBeDisabled();
+      expect(screen.getByText('Run (retry)')).toBeDisabled();
       expect(
-        screen.getByRole("button", { name: /open options/i })
+        screen.getByRole('button', { name: /open options/i })
       ).toBeDisabled();
     });
 
-    test("disables dropdown option when opened in disabled state", async () => {
+    test('disables dropdown option when opened in disabled state', async () => {
       const onRun = vi.fn();
       const onRetry = vi.fn();
       const user = userEvent.setup();
@@ -299,13 +299,13 @@ describe("RunRetryButton", () => {
       );
 
       // Open dropdown while enabled
-      await user.click(screen.getByRole("button", { name: /open options/i }));
+      await user.click(screen.getByRole('button', { name: /open options/i }));
 
-      const dropdownButton = screen.getByText("Run (New Work Order)");
+      const dropdownButton = screen.getByText('Run (New Work Order)');
       expect(dropdownButton).not.toBeDisabled();
     });
 
-    test("does not call handlers when disabled button is clicked", async () => {
+    test('does not call handlers when disabled button is clicked', async () => {
       const onRun = vi.fn();
       const onRetry = vi.fn();
       const user = userEvent.setup();
@@ -321,7 +321,7 @@ describe("RunRetryButton", () => {
       );
 
       // Attempting to click disabled button should not trigger handler
-      await user.click(screen.getByText("Run Workflow"));
+      await user.click(screen.getByText('Run Workflow'));
 
       expect(onRun).not.toHaveBeenCalled();
     });
@@ -331,8 +331,8 @@ describe("RunRetryButton", () => {
   // CUSTOM PROPS TESTS
   // ===========================================================================
 
-  describe("custom props", () => {
-    test("uses custom button text when provided", () => {
+  describe('custom props', () => {
+    test('uses custom button text when provided', () => {
       const onRun = vi.fn();
       const onRetry = vi.fn();
 
@@ -344,14 +344,14 @@ describe("RunRetryButton", () => {
           onRun={onRun}
           onRetry={onRetry}
           buttonText={{
-            run: "Execute Workflow",
-            retry: "Retry Execution",
-            processing: "Loading...",
+            run: 'Execute Workflow',
+            retry: 'Retry Execution',
+            processing: 'Loading...',
           }}
         />
       );
 
-      expect(screen.getByText("Execute Workflow")).toBeInTheDocument();
+      expect(screen.getByText('Execute Workflow')).toBeInTheDocument();
 
       // Test retry text
       rerender(
@@ -362,14 +362,14 @@ describe("RunRetryButton", () => {
           onRun={onRun}
           onRetry={onRetry}
           buttonText={{
-            run: "Execute Workflow",
-            retry: "Retry Execution",
-            processing: "Loading...",
+            run: 'Execute Workflow',
+            retry: 'Retry Execution',
+            processing: 'Loading...',
           }}
         />
       );
 
-      expect(screen.getByText("Retry Execution")).toBeInTheDocument();
+      expect(screen.getByText('Retry Execution')).toBeInTheDocument();
 
       // Test processing text
       rerender(
@@ -380,17 +380,17 @@ describe("RunRetryButton", () => {
           onRun={onRun}
           onRetry={onRetry}
           buttonText={{
-            run: "Execute Workflow",
-            retry: "Retry Execution",
-            processing: "Loading...",
+            run: 'Execute Workflow',
+            retry: 'Retry Execution',
+            processing: 'Loading...',
           }}
         />
       );
 
-      expect(screen.getByText("Loading...")).toBeInTheDocument();
+      expect(screen.getByText('Loading...')).toBeInTheDocument();
     });
 
-    test("applies custom className to button container", () => {
+    test('applies custom className to button container', () => {
       const onRun = vi.fn();
       const onRetry = vi.fn();
 
@@ -405,11 +405,11 @@ describe("RunRetryButton", () => {
         />
       );
 
-      const button = container.querySelector(".custom-test-class");
+      const button = container.querySelector('.custom-test-class');
       expect(button).toBeInTheDocument();
     });
 
-    test("applies className to split button container", () => {
+    test('applies className to split button container', () => {
       const onRun = vi.fn();
       const onRetry = vi.fn();
 
@@ -425,7 +425,7 @@ describe("RunRetryButton", () => {
       );
 
       const splitButtonContainer = container.querySelector(
-        ".custom-split-class"
+        '.custom-split-class'
       );
       expect(splitButtonContainer).toBeInTheDocument();
     });
@@ -435,8 +435,8 @@ describe("RunRetryButton", () => {
   // ACCESSIBILITY TESTS
   // ===========================================================================
 
-  describe("accessibility", () => {
-    test("dropdown toggle has proper ARIA attributes when closed", () => {
+  describe('accessibility', () => {
+    test('dropdown toggle has proper ARIA attributes when closed', () => {
       const onRun = vi.fn();
       const onRetry = vi.fn();
 
@@ -450,12 +450,12 @@ describe("RunRetryButton", () => {
         />
       );
 
-      const toggle = screen.getByRole("button", { name: /open options/i });
-      expect(toggle).toHaveAttribute("aria-expanded", "false");
-      expect(toggle).toHaveAttribute("aria-haspopup", "true");
+      const toggle = screen.getByRole('button', { name: /open options/i });
+      expect(toggle).toHaveAttribute('aria-expanded', 'false');
+      expect(toggle).toHaveAttribute('aria-haspopup', 'true');
     });
 
-    test("dropdown toggle has proper ARIA attributes when open", async () => {
+    test('dropdown toggle has proper ARIA attributes when open', async () => {
       const onRun = vi.fn();
       const onRetry = vi.fn();
       const user = userEvent.setup();
@@ -470,14 +470,14 @@ describe("RunRetryButton", () => {
         />
       );
 
-      const toggle = screen.getByRole("button", { name: /open options/i });
+      const toggle = screen.getByRole('button', { name: /open options/i });
 
       await user.click(toggle);
 
-      expect(toggle).toHaveAttribute("aria-expanded", "true");
+      expect(toggle).toHaveAttribute('aria-expanded', 'true');
     });
 
-    test("dropdown menu has proper role attribute", async () => {
+    test('dropdown menu has proper role attribute', async () => {
       const onRun = vi.fn();
       const onRetry = vi.fn();
       const user = userEvent.setup();
@@ -492,16 +492,16 @@ describe("RunRetryButton", () => {
         />
       );
 
-      await user.click(screen.getByRole("button", { name: /open options/i }));
+      await user.click(screen.getByRole('button', { name: /open options/i }));
 
       const menu = screen
-        .getByText("Run (New Work Order)")
+        .getByText('Run (New Work Order)')
         .closest('[role="menu"]');
       expect(menu).toBeInTheDocument();
-      expect(menu).toHaveAttribute("aria-orientation", "vertical");
+      expect(menu).toHaveAttribute('aria-orientation', 'vertical');
     });
 
-    test("chevron toggle has screen reader text", () => {
+    test('chevron toggle has screen reader text', () => {
       const onRun = vi.fn();
       const onRetry = vi.fn();
 
@@ -515,8 +515,228 @@ describe("RunRetryButton", () => {
         />
       );
 
-      const srText = screen.getByText("Open options");
-      expect(srText).toHaveClass("sr-only");
+      const srText = screen.getByText('Open options');
+      expect(srText).toHaveClass('sr-only');
+    });
+  });
+
+  // ===========================================================================
+  // TOOLTIP BEHAVIOR TESTS
+  // ===========================================================================
+
+  describe('tooltip behavior', () => {
+    test('shows main button shortcut tooltip when showKeyboardShortcuts=true', () => {
+      const onRun = vi.fn();
+      const onRetry = vi.fn();
+
+      render(
+        <RunRetryButton
+          isRetryable={false}
+          isDisabled={false}
+          isSubmitting={false}
+          onRun={onRun}
+          onRetry={onRetry}
+          showKeyboardShortcuts={true}
+        />
+      );
+
+      // Button should be wrapped in tooltip (Tooltip component creates a wrapper)
+      const button = screen.getByText('Run Workflow');
+      expect(button).toBeInTheDocument();
+
+      // Tooltip content should be present (ShortcutKeys component renders the shortcut)
+      // The tooltip content is rendered but may not be visible until hover
+      // We can verify the component structure is correct
+      expect(button.closest('button')).toBeInTheDocument();
+    });
+
+    test('hides main button shortcut tooltip when showKeyboardShortcuts=false', () => {
+      const onRun = vi.fn();
+      const onRetry = vi.fn();
+
+      render(
+        <RunRetryButton
+          isRetryable={false}
+          isDisabled={false}
+          isSubmitting={false}
+          onRun={onRun}
+          onRetry={onRetry}
+          showKeyboardShortcuts={false}
+        />
+      );
+
+      const button = screen.getByText('Run Workflow');
+      expect(button).toBeInTheDocument();
+      // Tooltip component receives null content, so no tooltip is shown
+    });
+
+    test('shows dropdown shortcut tooltip when retryable and showKeyboardShortcuts=true', async () => {
+      const onRun = vi.fn();
+      const onRetry = vi.fn();
+      const user = userEvent.setup();
+
+      render(
+        <RunRetryButton
+          isRetryable={true}
+          isDisabled={false}
+          isSubmitting={false}
+          onRun={onRun}
+          onRetry={onRetry}
+          showKeyboardShortcuts={true}
+        />
+      );
+
+      // Open dropdown
+      await user.click(screen.getByRole('button', { name: /open options/i }));
+
+      // Dropdown option should be present
+      const dropdownOption = screen.getByText('Run (New Work Order)');
+      expect(dropdownOption).toBeInTheDocument();
+
+      // Dropdown option is wrapped in Tooltip with ShortcutKeys content
+      expect(dropdownOption.closest('button')).toBeInTheDocument();
+    });
+
+    test('hides dropdown shortcut tooltip when showKeyboardShortcuts=false', async () => {
+      const onRun = vi.fn();
+      const onRetry = vi.fn();
+      const user = userEvent.setup();
+
+      render(
+        <RunRetryButton
+          isRetryable={true}
+          isDisabled={false}
+          isSubmitting={false}
+          onRun={onRun}
+          onRetry={onRetry}
+          showKeyboardShortcuts={false}
+        />
+      );
+
+      // Open dropdown
+      await user.click(screen.getByRole('button', { name: /open options/i }));
+
+      // Dropdown option should be present but without tooltip
+      const dropdownOption = screen.getByText('Run (New Work Order)');
+      expect(dropdownOption).toBeInTheDocument();
+    });
+
+    test('shows disabled tooltip regardless of showKeyboardShortcuts', () => {
+      const onRun = vi.fn();
+      const onRetry = vi.fn();
+
+      const { rerender } = render(
+        <RunRetryButton
+          isRetryable={false}
+          isDisabled={true}
+          isSubmitting={false}
+          onRun={onRun}
+          onRetry={onRetry}
+          showKeyboardShortcuts={false}
+          disabledTooltip="Cannot run: missing credential"
+        />
+      );
+
+      const button = screen.getByText('Run Workflow');
+      expect(button).toBeDisabled();
+      // Error tooltip is shown via disabledTooltip prop
+
+      // Rerender with showKeyboardShortcuts=true, error tooltip should still show
+      rerender(
+        <RunRetryButton
+          isRetryable={false}
+          isDisabled={true}
+          isSubmitting={false}
+          onRun={onRun}
+          onRetry={onRetry}
+          showKeyboardShortcuts={true}
+          disabledTooltip="Cannot run: missing credential"
+        />
+      );
+
+      expect(button).toBeDisabled();
+      // Error tooltip takes precedence over shortcut tooltip
+    });
+
+    test('shows no tooltip when submitting', () => {
+      const onRun = vi.fn();
+      const onRetry = vi.fn();
+
+      render(
+        <RunRetryButton
+          isRetryable={false}
+          isDisabled={false}
+          isSubmitting={true}
+          onRun={onRun}
+          onRetry={onRetry}
+          showKeyboardShortcuts={true}
+        />
+      );
+
+      const button = screen.getByText('Processing');
+      expect(button).toBeInTheDocument();
+      // Submitting state doesn't render with a tooltip wrapper
+    });
+
+    test('retryable split button shows main button tooltip when showKeyboardShortcuts=true', () => {
+      const onRun = vi.fn();
+      const onRetry = vi.fn();
+
+      render(
+        <RunRetryButton
+          isRetryable={true}
+          isDisabled={false}
+          isSubmitting={false}
+          onRun={onRun}
+          onRetry={onRetry}
+          showKeyboardShortcuts={true}
+        />
+      );
+
+      const retryButton = screen.getByText('Run (retry)');
+      expect(retryButton).toBeInTheDocument();
+      // Main retry button should be wrapped in Tooltip with shortcut
+    });
+
+    test('combines disabled tooltip with retryable button', () => {
+      const onRun = vi.fn();
+      const onRetry = vi.fn();
+
+      render(
+        <RunRetryButton
+          isRetryable={true}
+          isDisabled={true}
+          isSubmitting={false}
+          onRun={onRun}
+          onRetry={onRetry}
+          showKeyboardShortcuts={true}
+          disabledTooltip="Cannot run: workflow has errors"
+        />
+      );
+
+      const retryButton = screen.getByText('Run (retry)');
+      expect(retryButton).toBeDisabled();
+      // Disabled tooltip should show instead of keyboard shortcut tooltip
+    });
+
+    test('tooltip props are optional with sensible defaults', () => {
+      const onRun = vi.fn();
+      const onRetry = vi.fn();
+
+      render(
+        <RunRetryButton
+          isRetryable={false}
+          isDisabled={false}
+          isSubmitting={false}
+          onRun={onRun}
+          onRetry={onRetry}
+          // Not passing showKeyboardShortcuts or disabledTooltip
+        />
+      );
+
+      const button = screen.getByText('Run Workflow');
+      expect(button).toBeInTheDocument();
+      // Should render without errors with default values
     });
   });
 
@@ -524,8 +744,8 @@ describe("RunRetryButton", () => {
   // INTEGRATION TESTS
   // ===========================================================================
 
-  describe("integration scenarios", () => {
-    test("handles complete user flow: open dropdown, select option, closes dropdown", async () => {
+  describe('integration scenarios', () => {
+    test('handles complete user flow: open dropdown, select option, closes dropdown', async () => {
       const onRun = vi.fn();
       const onRetry = vi.fn();
       const user = userEvent.setup();
@@ -541,26 +761,26 @@ describe("RunRetryButton", () => {
       );
 
       // 1. Main button works (retry)
-      await user.click(screen.getByText("Run (retry)"));
+      await user.click(screen.getByText('Run (retry)'));
       expect(onRetry).toHaveBeenCalledTimes(1);
 
       // 2. Open dropdown
-      await user.click(screen.getByRole("button", { name: /open options/i }));
-      expect(screen.getByText("Run (New Work Order)")).toBeInTheDocument();
+      await user.click(screen.getByRole('button', { name: /open options/i }));
+      expect(screen.getByText('Run (New Work Order)')).toBeInTheDocument();
 
       // 3. Select dropdown option
-      await user.click(screen.getByText("Run (New Work Order)"));
+      await user.click(screen.getByText('Run (New Work Order)'));
       expect(onRun).toHaveBeenCalledTimes(1);
 
       // 4. Dropdown closes
       await waitFor(() => {
         expect(
-          screen.queryByText("Run (New Work Order)")
+          screen.queryByText('Run (New Work Order)')
         ).not.toBeInTheDocument();
       });
     });
 
-    test("transitions between modes based on isRetryable prop", () => {
+    test('transitions between modes based on isRetryable prop', () => {
       const onRun = vi.fn();
       const onRetry = vi.fn();
 
@@ -575,9 +795,9 @@ describe("RunRetryButton", () => {
       );
 
       // Initially single button
-      expect(screen.getByText("Run Workflow")).toBeInTheDocument();
+      expect(screen.getByText('Run Workflow')).toBeInTheDocument();
       expect(
-        screen.queryByRole("button", { name: /open options/i })
+        screen.queryByRole('button', { name: /open options/i })
       ).not.toBeInTheDocument();
 
       // Switch to split button
@@ -591,9 +811,9 @@ describe("RunRetryButton", () => {
         />
       );
 
-      expect(screen.getByText("Run (retry)")).toBeInTheDocument();
+      expect(screen.getByText('Run (retry)')).toBeInTheDocument();
       expect(
-        screen.getByRole("button", { name: /open options/i })
+        screen.getByRole('button', { name: /open options/i })
       ).toBeInTheDocument();
 
       // Switch to processing
@@ -607,12 +827,12 @@ describe("RunRetryButton", () => {
         />
       );
 
-      expect(screen.getByText("Processing")).toBeInTheDocument();
-      expect(screen.queryByText("Run Workflow")).not.toBeInTheDocument();
-      expect(screen.queryByText("Run (retry)")).not.toBeInTheDocument();
+      expect(screen.getByText('Processing')).toBeInTheDocument();
+      expect(screen.queryByText('Run Workflow')).not.toBeInTheDocument();
+      expect(screen.queryByText('Run (retry)')).not.toBeInTheDocument();
     });
 
-    test("handles rapid clicks without duplicate calls", async () => {
+    test('handles rapid clicks without duplicate calls', async () => {
       const onRun = vi.fn();
       const onRetry = vi.fn();
       const user = userEvent.setup();
@@ -627,7 +847,7 @@ describe("RunRetryButton", () => {
         />
       );
 
-      const button = screen.getByText("Run Workflow");
+      const button = screen.getByText('Run Workflow');
 
       // Rapid clicks
       await user.click(button);

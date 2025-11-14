@@ -1,10 +1,14 @@
 import { useStore } from '@tanstack/react-form';
-import { useEffect, useMemo } from 'react';
+import { useMemo } from 'react';
 
-import { useWorkflowActions } from '../../hooks/useWorkflow';
+import {
+  useWorkflowActions,
+  useWorkflowReadOnly,
+} from '../../hooks/useWorkflow';
 import { useWatchFields } from '../../stores/common';
 import { EdgeSchema } from '../../types/edge';
 import type { Workflow } from '../../types/workflow';
+import { isEdgeFromTrigger } from '../../utils/workflowGraph';
 import { useAppForm } from '../form';
 import { createZodValidator } from '../form/createZodValidator';
 import { ErrorMessage } from '../form/error-message';
@@ -21,6 +25,7 @@ interface EdgeFormProps {
  */
 export function EdgeForm({ edge }: EdgeFormProps) {
   const { updateEdge } = useWorkflowActions();
+  const { isReadOnly } = useWorkflowReadOnly();
 
   // Initialize form
   const form = useAppForm(
@@ -58,7 +63,7 @@ export function EdgeForm({ edge }: EdgeFormProps) {
 
   // Condition options based on source
   const conditionOptions = useMemo(() => {
-    const isSourceTrigger = !!edge.source_trigger_id;
+    const isSourceTrigger = isEdgeFromTrigger(edge);
 
     if (isSourceTrigger) {
       return [
@@ -73,7 +78,7 @@ export function EdgeForm({ edge }: EdgeFormProps) {
       { value: 'always', label: 'Always' },
       { value: 'js_expression', label: 'Matches a Javascript Expression' },
     ];
-  }, [edge.source_trigger_id]);
+  }, [edge]);
 
   // Watch condition type
   const conditionType = useStore(
@@ -96,13 +101,17 @@ export function EdgeForm({ edge }: EdgeFormProps) {
     <div className="px-6 py-6 space-y-4">
       {/* Label Field */}
       <form.AppField name="condition_label">
-        {field => <field.TextField label="Label" />}
+        {field => <field.TextField label="Label" disabled={isReadOnly} />}
       </form.AppField>
 
       {/* Condition Type Dropdown */}
       <form.AppField name="condition_type">
         {field => (
-          <field.SelectField label="Condition" options={conditionOptions} />
+          <field.SelectField
+            label="Condition"
+            options={conditionOptions}
+            disabled={isReadOnly}
+          />
         )}
       </form.AppField>
 
@@ -133,9 +142,11 @@ export function EdgeForm({ edge }: EdgeFormProps) {
                   value={field.state.value || ''}
                   onChange={e => field.handleChange(e.target.value)}
                   placeholder="eg: !state.error"
+                  disabled={isReadOnly}
                   className="block w-full h-24 px-3 py-2 rounded-md border-slate-300
                                font-mono text-slate-200 bg-slate-700 text-sm
-                               focus:border-slate-400 focus:ring-0"
+                               focus:border-slate-400 focus:ring-0
+                               disabled:opacity-50 disabled:cursor-not-allowed"
                 />
                 <ErrorMessage meta={field.state.meta} />
               </div>

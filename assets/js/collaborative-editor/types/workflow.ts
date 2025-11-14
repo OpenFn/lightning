@@ -101,6 +101,10 @@ export namespace Workflow {
         name: string;
         auth_type: string;
       }>;
+    };
+    validationErrors: {
+      name?: string[];
+      concurrency?: string[];
     } | null;
   }
 

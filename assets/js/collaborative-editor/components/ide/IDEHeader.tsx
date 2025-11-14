@@ -6,6 +6,7 @@ import { HOTKEY_SCOPES } from '../../constants/hotkeys';
 import { useRunRetryShortcuts } from '../../hooks/useRunRetryShortcuts';
 import { useIsNewWorkflow } from '../../hooks/useSessionContext';
 import { useVersionSelect } from '../../hooks/useVersionSelect';
+import { useWorkflowReadOnly } from '../../hooks/useWorkflow';
 import { ActiveCollaborators } from '../ActiveCollaborators';
 import { AdaptorDisplay } from '../AdaptorDisplay';
 import { Button } from '../Button';
@@ -78,6 +79,7 @@ export function IDEHeader({
   // Get URL state for building classical editor link
   const { searchParams } = useURLState();
   const isNewWorkflow = useIsNewWorkflow();
+  const { isReadOnly } = useWorkflowReadOnly();
 
   // Handle run/retry keyboard shortcuts
   // enableOnContentEditable ensures shortcuts work in Monaco editor
@@ -117,8 +119,9 @@ export function IDEHeader({
                 adaptor={jobAdaptor}
                 credentialId={jobCredentialId ?? null}
                 size="sm"
-                onEdit={onEditAdaptor}
-                onChangeAdaptor={onChangeAdaptor}
+                {...(onEditAdaptor && { onEdit: onEditAdaptor })}
+                {...(onChangeAdaptor && { onChangeAdaptor: onChangeAdaptor })}
+                isReadOnly={isReadOnly}
               />
             </div>
           )}
@@ -150,41 +153,22 @@ export function IDEHeader({
 
         {/* Right: Action buttons */}
         <div className="flex items-center gap-3">
-          {!canRun && runTooltip ? (
-            <Tooltip content={runTooltip} side="bottom">
-              <span className="inline-block">
-                <RunRetryButton
-                  isRetryable={isRetryable}
-                  isDisabled={!canRun}
-                  isSubmitting={isRunning}
-                  onRun={onRun}
-                  onRetry={onRetry}
-                  buttonText={{
-                    run: 'Run',
-                    retry: 'Run (retry)',
-                    processing: 'Processing',
-                  }}
-                  variant="secondary"
-                  dropdownPosition="down"
-                />
-              </span>
-            </Tooltip>
-          ) : (
-            <RunRetryButton
-              isRetryable={isRetryable}
-              isDisabled={!canRun}
-              isSubmitting={isRunning}
-              onRun={onRun}
-              onRetry={onRetry}
-              buttonText={{
-                run: 'Run',
-                retry: 'Run (retry)',
-                processing: 'Processing',
-              }}
-              variant="secondary"
-              dropdownPosition="down"
-            />
-          )}
+          <RunRetryButton
+            isRetryable={isRetryable}
+            isDisabled={!canRun}
+            isSubmitting={isRunning}
+            onRun={onRun}
+            onRetry={onRetry}
+            buttonText={{
+              run: 'Run',
+              retry: 'Run (retry)',
+              processing: 'Processing',
+            }}
+            variant="secondary"
+            dropdownPosition="down"
+            showKeyboardShortcuts={true}
+            disabledTooltip={runTooltip}
+          />
 
           <SaveButton
             canSave={canSave}

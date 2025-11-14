@@ -1,8 +1,8 @@
 /* eslint-disable @typescript-eslint/no-namespace */
-import type * as Y from "yjs";
-import type { TypedArray, TypedDoc, TypedMap } from "yjs-types";
+import type * as Y from 'yjs';
+import type { TypedArray, TypedDoc, TypedMap } from 'yjs-types';
 
-import type { Workflow as WorkflowType } from "./workflow";
+import type { Workflow as WorkflowType } from './workflow';
 
 // Why isn't this used anywhere, it definity was!
 export interface AwarenessUser {

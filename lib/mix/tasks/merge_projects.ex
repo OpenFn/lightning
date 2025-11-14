@@ -18,6 +18,7 @@ defmodule Mix.Tasks.Lightning.MergeProjects do
   ## Options
 
     * `-o, --output PATH` - Write output to file instead of stdout
+    * `--uuid SOURCE_UUID:TARGET_UUID` - Map source UUID to target UUID for any entity (workflow, job, or edge) (repeatable)
 
   ## Examples
 
@@ -29,16 +30,33 @@ defmodule Mix.Tasks.Lightning.MergeProjects do
 
       # Merge with explicit output flag
       mix lightning.merge_projects staging.state.json main.state.json --output result.json
+
+      # Merge with UUID mappings for workflows, jobs, and edges
+      mix lightning.merge_projects staging.state.json main.state.json \\
+        --uuid 550e8400-e29b-41d4-a716-446655440000:650e8400-e29b-41d4-a716-446655440001 \\
+        --uuid a1b2c3d4-e5f6-4a5b-8c7d-1e2f3a4b5c6d:b2c3d4e5-f6a7-4b5c-8d7e-2f3a4b5c6d7e \\
+        --uuid f6a7b8c9-d0e1-4f5a-9b0c-5d6e7f8a9b0c:a7b8c9d0-e1f2-4a5b-9c0d-6e7f8a9b0c1d \\
+        -o merged.json
   """
   use Mix.Task
 
   alias Lightning.Projects.MergeProjects
 
+  # Schema modules that must be loaded before atomizing JSON keys.
+  # These schemas define the field atoms used in project export files.
+  @required_schemas [
+    Lightning.Projects.Project,
+    Lightning.Workflows.Workflow,
+    Lightning.Workflows.Job,
+    Lightning.Workflows.Trigger,
+    Lightning.Workflows.Edge
+  ]
+
   @impl Mix.Task
   def run(args) do
     {opts, positional, invalid} =
       OptionParser.parse(args,
-        strict: [output: :string],
+        strict: [output: :string, uuid: :keep],
         aliases: [o: :output]
       )
 
@@ -50,7 +68,8 @@ defmodule Mix.Tasks.Lightning.MergeProjects do
         Unknown option(s): #{invalid_opts}
 
         Valid options:
-          -o, --output PATH    Write output to file instead of stdout
+          -o, --output PATH              Write output to file instead of stdout
+          --uuid SOURCE_UUID:TARGET_UUID Map source UUID to target UUID (repeatable)
 
         Run `mix help lightning.merge_projects` for more information.
         """)
@@ -67,11 +86,12 @@ defmodule Mix.Tasks.Lightning.MergeProjects do
 
       true ->
         [source_file, target_file] = positional
-        merge_and_output(source_file, target_file, opts)
+        uuid_map = parse_uuid_mappings(opts)
+        merge_and_output(source_file, target_file, opts, uuid_map)
     end
   end
 
-  defp merge_and_output(source_file, target_file, opts) do
+  defp merge_and_output(source_file, target_file, opts, uuid_map) do
     output_path = Keyword.get(opts, :output)
 
     if output_path do
@@ -80,37 +100,82 @@ defmodule Mix.Tasks.Lightning.MergeProjects do
     end
 
     source_project = read_state_file(source_file, "source")
-
     target_project = read_state_file(target_file, "target")
 
-    merged_project = perform_merge(source_project, target_project)
+    ensure_schemas_loaded()
+
+    merged_project = perform_merge(source_project, target_project, uuid_map)
 
     output = encode_json(merged_project)
     write_output(output, output_path)
   end
 
-  defp perform_merge(source_project, target_project) do
-    MergeProjects.merge_project(source_project, target_project)
+  defp ensure_schemas_loaded do
+    # IMPORTANT: Load schema modules to ensure their field atoms exist in memory.
+    # This enables safe String.to_existing_atom/1 conversion when atomizing JSON keys.
+    #
+    # When adding schemas referenced in project exports, add them to the
+    # @required_schemas list at the top of this module to prevent ArgumentError
+    # during merge operations.
+    Enum.each(@required_schemas, &Code.ensure_loaded/1)
+  end
+
+  defp perform_merge(source_data, target_data, uuid_map) do
+    MergeProjects.merge_project(
+      atomize(source_data),
+      atomize(target_data),
+      uuid_map
+    )
   rescue
-    e in KeyError ->
+    ArgumentError ->
       Mix.raise("""
-      Failed to merge projects - missing required field: #{inspect(e.key)}
+      Failed to merge projects - encountered unknown field in JSON
 
-      #{Exception.message(e)}
-
-      This may indicate incompatible or corrupted project state files.
-      Please verify both files are valid Lightning project exports.
+      This may indicate the JSON contains invalid or unexpected fields.
+      Please ensure both files are valid Lightning project exports.
       """)
+  end
 
-    e ->
-      Mix.raise("""
-      Failed to merge projects
+  defp atomize(data) when is_map(data) do
+    Map.new(data, fn {key, value} ->
+      atom_key = if is_binary(key), do: String.to_existing_atom(key), else: key
+      {atom_key, atomize(value)}
+    end)
+  end
 
-      #{Exception.message(e)}
+  defp atomize(data) when is_list(data) do
+    Enum.map(data, &atomize/1)
+  end
 
-      This may indicate incompatible project structures or corrupted data.
-      Please verify both files are valid Lightning project exports.
-      """)
+  defp atomize(data), do: data
+
+  defp parse_uuid_mappings(opts) do
+    opts
+    |> Keyword.get_values(:uuid)
+    |> Enum.reduce(%{}, fn mapping_str, acc ->
+      case String.split(mapping_str, ":") do
+        [source_id, target_id] ->
+          source_id = cast_int_or_string(source_id)
+          target_id = cast_int_or_string(target_id)
+
+          Map.put(acc, source_id, target_id)
+
+        _other ->
+          Mix.raise("""
+          Invalid UUID mapping format: #{mapping_str}
+
+          Expected format: SOURCE_UUID:TARGET_UUID
+          Example: --uuid 550e8400-e29b-41d4-a716-446655440000:650e8400-e29b-41d4-a716-446655440001
+          """)
+      end
+    end)
+  end
+
+  defp cast_int_or_string(value) do
+    case Integer.parse(value) do
+      {int, ""} -> int
+      _ -> String.trim(value)
+    end
   end
 
   defp encode_json(project) do
@@ -235,11 +300,8 @@ defmodule Mix.Tasks.Lightning.MergeProjects do
           """)
       end
 
-    case Jason.decode(content, keys: :atoms) do
+    case Jason.decode(content) do
       {:ok, data} ->
-        # Jason's keys: :atoms option converts all string keys to atoms
-        # This is safe for controlled JSON file input (not arbitrary user input)
-        # The merge_project function requires atom keys for dot notation access
         data
 
       {:error, %Jason.DecodeError{} = error} ->
