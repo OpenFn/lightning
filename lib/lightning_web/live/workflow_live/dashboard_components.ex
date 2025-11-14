@@ -307,31 +307,27 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
       <div class="text-sm">
         <Common.wrapper_tooltip
           id={"workflow-name-#{@workflow.id}"}
-          tooltip={@workflow.name}
+          tooltip={
+            if @trigger_enabled,
+              do: @workflow.name,
+              else: "#{@workflow.name}\n(disabled)"
+          }
         >
           <div class="flex items-center">
             <span
-              class="flex-shrink truncate text-gray-900 font-medium workflow-name"
+              class={[
+                "flex-shrink truncate font-medium workflow-name",
+                if(@trigger_enabled, do: "text-gray-900", else: "text-gray-400")
+              ]}
               style="max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"
             >
               {@workflow.name}
             </span>
           </div>
         </Common.wrapper_tooltip>
-        <%= if @trigger_enabled do %>
-          <p class="text-gray-500 text-xs mt-1">
-            Updated <Common.datetime datetime={@workflow.updated_at} />
-          </p>
-        <% else %>
-          <div class="flex items-center mt-1">
-            <div style="background: #8b5f0d" class="w-2 h-2 rounded-full"></div>
-            <div>
-              <p class="text-[#8b5f0d] text-xs">
-                &nbsp; Disabled
-              </p>
-            </div>
-          </div>
-        <% end %>
+        <p class="text-gray-500 text-xs mt-1">
+          Updated <Common.datetime datetime={@workflow.updated_at} />
+        </p>
       </div>
     </div>
     """
