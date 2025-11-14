@@ -21,6 +21,8 @@ and this project adheres to
 
 - Default failure notifications for project users are now disabled to minimize
   email volume [#3517](https://github.com/OpenFn/lightning/issues/3517)
+- Simpler "disabled" state for workflows, still show last mod
+  [#3962](https://github.com/OpenFn/lightning/issues/3962)
 
 ### Fixed
 
