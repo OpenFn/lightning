@@ -190,9 +190,6 @@ export function WorkflowEditor({
 
   const [showLeftPanel, setShowLeftPanel] = useState(isNewWorkflow);
 
-  const { canRun: canOpenRunPanel, tooltipMessage: runDisabledReason } =
-    useCanRun();
-
   const workflow = useWorkflowState(state => ({
     ...state.workflow!,
     jobs: state.jobs,
@@ -302,60 +299,56 @@ export function WorkflowEditor({
 
   return (
     <div className="relative flex h-full w-full">
-      {!isIDEOpen && (
-        <>
+      <div
+        className={`flex-1 relative transition-all duration-300 ease-in-out ${
+          showLeftPanel ? 'ml-[33.333333%]' : 'ml-0'
+        }`}
+      >
+        <CollaborativeWorkflowDiagram inspectorId="inspector" />
+
+        {!isRunPanelOpen && (
           <div
-            className={`flex-1 relative transition-all duration-300 ease-in-out ${
-              showLeftPanel ? 'ml-[33.333333%]' : 'ml-0'
+            id="inspector"
+            className={`absolute top-0 right-0 transition-transform duration-300 ease-in-out z-10 ${
+              showInspector
+                ? 'translate-x-0'
+                : 'translate-x-full pointer-events-none'
             }`}
           >
-            <CollaborativeWorkflowDiagram inspectorId="inspector" />
-
-            {!isRunPanelOpen && (
-              <div
-                id="inspector"
-                className={`absolute top-0 bottom-0 right-0 transition-transform duration-300 ease-in-out z-10 ${
-                  showInspector
-                    ? 'translate-x-0'
-                    : 'translate-x-full pointer-events-none'
-                }`}
-              >
-                <Inspector
-                  currentNode={currentNode}
-                  onClose={handleCloseInspector}
-                  onOpenRunPanel={openRunPanel}
-                  respondToHotKey={!isRunPanelOpen}
-                />
-              </div>
-            )}
-
-            {isRunPanelOpen && runPanelContext && projectId && workflowId && (
-              <div className="absolute inset-y-0 right-0 flex pointer-events-none z-20">
-                <ManualRunPanelErrorBoundary onClose={closeRunPanel}>
-                  <ManualRunPanel
-                    workflow={workflow}
-                    projectId={projectId}
-                    workflowId={workflowId}
-                    jobId={runPanelContext.jobId ?? null}
-                    triggerId={runPanelContext.triggerId ?? null}
-                    edgeId={runPanelContext.edgeId ?? null}
-                    onClose={closeRunPanel}
-                    saveWorkflow={saveWorkflow}
-                  />
-                </ManualRunPanelErrorBoundary>
-              </div>
-            )}
+            <Inspector
+              currentNode={currentNode}
+              onClose={handleCloseInspector}
+              onOpenRunPanel={openRunPanel}
+              respondToHotKey={!isRunPanelOpen}
+            />
           </div>
+        )}
 
-          <LeftPanel
-            method={leftPanelMethod}
-            onMethodChange={handleMethodChange}
-            onImport={handleImport}
-            onClosePanel={handleCloseLeftPanel}
-            onSave={handleSaveAndClose}
-          />
-        </>
-      )}
+        {isRunPanelOpen && runPanelContext && projectId && workflowId && (
+          <div className="absolute inset-y-0 right-0 flex pointer-events-none z-20">
+            <ManualRunPanelErrorBoundary onClose={closeRunPanel}>
+              <ManualRunPanel
+                workflow={workflow}
+                projectId={projectId}
+                workflowId={workflowId}
+                jobId={runPanelContext.jobId ?? null}
+                triggerId={runPanelContext.triggerId ?? null}
+                edgeId={runPanelContext.edgeId ?? null}
+                onClose={closeRunPanel}
+                saveWorkflow={saveWorkflow}
+              />
+            </ManualRunPanelErrorBoundary>
+          </div>
+        )}
+      </div>
+
+      <LeftPanel
+        method={leftPanelMethod}
+        onMethodChange={handleMethodChange}
+        onImport={handleImport}
+        onClosePanel={handleCloseLeftPanel}
+        onSave={handleSaveAndClose}
+      />
 
       {isIDEOpen && selectedJobId && (
         <FullScreenIDE
