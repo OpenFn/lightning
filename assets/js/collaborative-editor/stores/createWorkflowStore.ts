@@ -733,10 +733,27 @@ export const createWorkflowStore = () => {
     const jobIndex = jobs.findIndex(job => job.get('id') === id);
 
     if (jobIndex >= 0) {
+      const edgesArray = ydoc.getArray('edges');
+      const edges = edgesArray.toArray() as Y.Map<unknown>[];
+
+      // Find all incoming edges (where this job is the target)
+      const incomingEdgeIndices = edges
+        .map((edge, index) => ({ edge, index }))
+        .filter(({ edge }) => edge.get('target_job_id') === id)
+        .map(({ index }) => index)
+        .sort((a, b) => b - a); // Sort descending for safe deletion
+
       ydoc.transact(() => {
+        // Delete incoming edges first (highest index to lowest)
+        incomingEdgeIndices.forEach(edgeIndex => {
+          edgesArray.delete(edgeIndex, 1);
+        });
+
+        // Then delete the job
         jobsArray.delete(jobIndex, 1);
       });
     }
+    // Observer handles: Y.Doc → Immer → notify
   };
 
   const addEdge = (edge: Partial<Session.Edge>) => {
