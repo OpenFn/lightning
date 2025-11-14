@@ -18,10 +18,13 @@ import {
   useRunSteps,
 } from '../../hooks/useHistory';
 import { useIsNewWorkflow } from '../../hooks/useSessionContext';
+import { useVersionMismatch } from '../../hooks/useVersionMismatch';
+import { useVersionSelect } from '../../hooks/useVersionSelect';
 import { useNodeSelection } from '../../hooks/useWorkflow';
 import type { RunSummary } from '../../types/history';
 
 import MiniHistory from './MiniHistory';
+import { VersionMismatchBanner } from './VersionMismatchBanner';
 import CollaborativeWorkflowDiagramImpl from './WorkflowDiagram';
 
 interface CollaborativeWorkflowDiagramProps {
@@ -72,14 +75,31 @@ export function CollaborativeWorkflowDiagram({
   // Use hook to get run steps with automatic subscription management
   const currentRunSteps = useRunSteps(selectedRunId);
 
-  // Update URL when run selection changes
-  const handleRunSelect = useCallback((run: RunSummary) => {
-    setSelectedRunId(run.id);
+  // Detect version mismatch for warning banner
+  const versionMismatch = useVersionMismatch(selectedRunId);
 
-    const url = new URL(window.location.href);
-    url.searchParams.set('run', run.id);
-    window.history.pushState({}, '', url.toString());
-  }, []);
+  // Get version selection handler
+  const handleVersionSelect = useVersionSelect();
+
+  // Update URL when run selection changes
+  const handleRunSelect = useCallback(
+    (run: RunSummary) => {
+      setSelectedRunId(run.id);
+
+      // Find the workorder that contains this run
+      const workorder = history.find(wo => wo.runs.some(r => r.id === run.id));
+
+      // Switch to the version this run was executed on
+      if (workorder) {
+        handleVersionSelect(workorder.version);
+      }
+
+      const url = new URL(window.location.href);
+      url.searchParams.set('run', run.id);
+      window.history.pushState({}, '', url.toString());
+    },
+    [history, handleVersionSelect]
+  );
 
   // Clear URL parameter when deselecting run
   const handleDeselectRun = useCallback(() => {
@@ -133,6 +153,15 @@ export function CollaborativeWorkflowDiagram({
   return (
     <div ref={containerRef} className={className}>
       <ReactFlowProvider>
+        {/* Version mismatch warning when viewing latest but run used older version */}
+        {versionMismatch && (
+          <VersionMismatchBanner
+            runVersion={versionMismatch.runVersion}
+            currentVersion={versionMismatch.currentVersion}
+            className="absolute top-0 left-0 right-0 z-10"
+          />
+        )}
+
         <CollaborativeWorkflowDiagramImpl
           selection={currentNode.id}
           onSelectionChange={selectNode}

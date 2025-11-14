@@ -126,7 +126,7 @@ export function LogTabPanel() {
         </div>
 
         {/* Log viewer */}
-        <div ref={containerRef} className="flex-1 overflow-hidden" />
+        <div ref={containerRef} className="flex-1" />
       </div>
     </StepViewerLayout>
   );

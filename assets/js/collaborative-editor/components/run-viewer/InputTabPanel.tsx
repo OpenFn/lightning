@@ -55,7 +55,7 @@ export function InputTabPanel() {
 
   return (
     <StepViewerLayout selectedStepId={selectedStep?.id || null}>
-      <div className="h-full overflow-auto">
+      <div className="h-full">
         <InputContent selectedStep={selectedStep} runFinished={runFinished} />
       </div>
     </StepViewerLayout>

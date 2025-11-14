@@ -504,11 +504,50 @@ export function FullScreenIDE({
       }
     },
     {
-      enabled: true,
+      enabled:
+        !isConfigureModalOpen && !isAdaptorPickerOpen && !isCredentialModalOpen,
       scopes: [HOTKEY_SCOPES.IDE],
       enableOnFormTags: true,
     },
-    [onClose]
+    [onClose, isConfigureModalOpen, isAdaptorPickerOpen, isCredentialModalOpen]
+  );
+
+  useHotkeys(
+    'meta+enter, ctrl+enter',
+    event => {
+      event.preventDefault();
+      event.stopPropagation();
+      if (isRetryable) {
+        handleRetry();
+      } else {
+        handleRun();
+      }
+    },
+    {
+      enabled: true,
+      scopes: [HOTKEY_SCOPES.IDE],
+      enableOnFormTags: true,
+      enableOnContentEditable: true,
+      preventDefault: true,
+    },
+    [handleRun, handleRetry, isRetryable]
+  );
+
+  useHotkeys(
+    'meta+shift+enter, ctrl+shift+enter',
+    event => {
+      event.preventDefault();
+      event.stopPropagation();
+      handleRun();
+    },
+    {
+      enabled: true,
+      scopes: [HOTKEY_SCOPES.IDE],
+      enableOnFormTags: true,
+      enableOnContentEditable: true,
+      preventDefault: true,
+    },
+    [handleRun]
   );
 
   // Loading state: Wait for Y.Text and awareness to be ready
@@ -741,7 +780,7 @@ export function FullScreenIDE({
 
               {/* Editor */}
               {!isCenterCollapsed && (
-                <div className="flex-1 overflow-hidden">
+                <div className="flex-1">
                   <CollaborativeMonaco
                     ytext={currentJobYText}
                     awareness={awareness}

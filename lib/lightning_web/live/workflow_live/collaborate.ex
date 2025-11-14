@@ -128,6 +128,7 @@ defmodule LightningWeb.WorkflowLive.Collaborate do
       }
       return_to={nil}
       sandbox_id={@project.parent_id}
+      from_collab_editor={true}
       can_create_project_credential={
         Permissions.can?(
           :project_users,
@@ -166,6 +167,38 @@ defmodule LightningWeb.WorkflowLive.Collaborate do
       />
     </.modal>
     """
+  end
+
+  def handle_info(:clear_credential_page, socket) do
+    {:noreply,
+     assign(socket,
+       credential_page: nil,
+       credential_schema:
+         Map.get(socket.assigns, :original_credential_schema, nil)
+     )}
+  end
+
+  def handle_info({:update_credential_schema, schema}, socket) do
+    {:noreply,
+     assign(socket,
+       credential_schema: schema,
+       credential_page: nil
+     )}
+  end
+
+  def handle_info({:update_selected_credential_type, type}, socket) do
+    {:noreply,
+     assign(socket,
+       selected_credential_type_for_picker: type
+     )}
+  end
+
+  def handle_info({:back_to_advanced_picker}, socket) do
+    {:noreply,
+     assign(socket,
+       credential_page: :advanced_picker,
+       show_credential_modal: true
+     )}
   end
 
   @impl true
@@ -240,17 +273,29 @@ defmodule LightningWeb.WorkflowLive.Collaborate do
   end
 
   defp determine_credential_type(credential) do
-    case credential.project_credentials do
-      [%{id: id} | _] -> {id, true}
-      _ -> {credential.id, false}
+    case credential do
+      %Lightning.Credentials.KeychainCredential{} ->
+        {credential.id, false}
+
+      %Lightning.Credentials.Credential{project_credentials: [%{id: id} | _]} ->
+        {id, true}
+
+      _ ->
+        {credential.id, false}
     end
   end
 
   defp build_credential_data(credential_id, credential, is_project_credential) do
+    schema =
+      case credential do
+        %Lightning.Credentials.KeychainCredential{} -> "keychain"
+        _ -> credential.schema
+      end
+
     base_data = %{
       id: credential.id,
       name: credential.name,
-      schema: credential.schema
+      schema: schema
     }
 
     if is_project_credential do

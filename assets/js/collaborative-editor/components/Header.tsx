@@ -1,44 +1,45 @@
-import { Menu, MenuButton, MenuItem, MenuItems } from "@headlessui/react";
-import { useCallback } from "react";
-import { useHotkeys } from "react-hotkeys-hook";
+import { Menu, MenuButton, MenuItem, MenuItems } from '@headlessui/react';
+import { useCallback } from 'react';
+import { useHotkeys } from 'react-hotkeys-hook';
 
-import { useURLState } from "../../react/lib/use-url-state";
-import { cn } from "../../utils/cn";
-import { buildClassicalEditorUrl } from "../../utils/editorUrlConversion";
+import { useURLState } from '../../react/lib/use-url-state';
+import { cn } from '../../utils/cn';
+import { buildClassicalEditorUrl } from '../../utils/editorUrlConversion';
 import {
   useIsNewWorkflow,
   useLatestSnapshotLockVersion,
   useProjectRepoConnection,
   useUser,
-} from "../hooks/useSessionContext";
-import { useUICommands } from "../hooks/useUI";
+} from '../hooks/useSessionContext';
+import { useUICommands } from '../hooks/useUI';
 import {
   useCanRun,
   useCanSave,
   useNodeSelection,
   useWorkflowActions,
   useWorkflowEnabled,
+  useWorkflowSettingsErrors,
   useWorkflowState,
-} from "../hooks/useWorkflow";
-import { getAvatarInitials } from "../utils/avatar";
+} from '../hooks/useWorkflow';
+import { getAvatarInitials } from '../utils/avatar';
 
-import { ActiveCollaborators } from "./ActiveCollaborators";
-import { Breadcrumbs } from "./Breadcrumbs";
-import { Button } from "./Button";
-import { EmailVerificationBanner } from "./EmailVerificationBanner";
-import { GitHubSyncModal } from "./GitHubSyncModal";
-import { Switch } from "./inputs/Switch";
-import { ReadOnlyWarning } from "./ReadOnlyWarning";
-import { Tooltip } from "./Tooltip";
+import { ActiveCollaborators } from './ActiveCollaborators';
+import { Breadcrumbs } from './Breadcrumbs';
+import { Button } from './Button';
+import { EmailVerificationBanner } from './EmailVerificationBanner';
+import { GitHubSyncModal } from './GitHubSyncModal';
+import { Switch } from './inputs/Switch';
+import { ReadOnlyWarning } from './ReadOnlyWarning';
+import { Tooltip } from './Tooltip';
 
 const userNavigation = [
-  { label: "User Profile", url: "/profile", icon: "hero-user-circle" },
-  { label: "Credentials", url: "/credentials", icon: "hero-key" },
-  { label: "API Tokens", url: "/profile/tokens", icon: "hero-key" },
+  { label: 'User Profile', url: '/profile', icon: 'hero-user-circle' },
+  { label: 'Credentials', url: '/credentials', icon: 'hero-key' },
+  { label: 'API Tokens', url: '/profile/tokens', icon: 'hero-key' },
   {
-    label: "Log out",
-    url: "/users/log_out",
-    icon: "hero-arrow-right-on-rectangle",
+    label: 'Log out',
+    url: '/users/log_out',
+    icon: 'hero-arrow-right-on-rectangle',
   },
 ];
 
@@ -145,7 +146,7 @@ export function SaveButton({
     </div>
   );
 }
-SaveButton.displayName = "SaveButton";
+SaveButton.displayName = 'SaveButton';
 
 export function Header({
   children,
@@ -167,6 +168,9 @@ export function Header({
   const { openRunPanel, openGitHubSyncModal } = useUICommands();
   const repoConnection = useProjectRepoConnection();
 
+  // Get validation state for settings button styling
+  const { hasErrors: hasSettingsErrors } = useWorkflowSettingsErrors();
+
   // Detect if viewing old snapshot
   const workflow = useWorkflowState(state => state.workflow);
   const latestSnapshotLockVersion = useLatestSnapshotLockVersion();
@@ -184,7 +188,7 @@ export function Header({
   }, [firstTriggerId, openRunPanel, selectNode]);
 
   useHotkeys(
-    "ctrl+s,meta+s",
+    'ctrl+s,meta+s',
     event => {
       event.preventDefault();
       if (canSave) {
@@ -199,7 +203,7 @@ export function Header({
   );
 
   useHotkeys(
-    "ctrl+shift+s,meta+shift+s",
+    'ctrl+shift+s,meta+shift+s',
     event => {
       event.preventDefault();
       if (canSave && repoConnection) {
@@ -256,9 +260,12 @@ export function Header({
               <div>
                 <button
                   type="button"
-                  onClick={() => updateSearchParams({ panel: "settings" })}
-                  className="w-5 h-5 place-self-center cursor-pointer
-                  text-slate-500 hover:text-slate-400"
+                  onClick={() => updateSearchParams({ panel: 'settings' })}
+                  className={`w-5 h-5 place-self-center cursor-pointer ${
+                    hasSettingsErrors
+                      ? 'text-danger-500 hover:text-danger-400'
+                      : 'text-slate-500 hover:text-slate-400'
+                  }`}
                 >
                   <span className="hero-adjustments-vertical"></span>
                 </button>
@@ -286,7 +293,7 @@ export function Header({
                 </Tooltip>
               )}
               <SaveButton
-                canSave={canSave}
+                canSave={canSave && !hasSettingsErrors}
                 tooltipMessage={tooltipMessage}
                 onClick={() => void saveWorkflow()}
                 repoConnection={repoConnection}
@@ -341,7 +348,7 @@ export function Header({
                     <span
                       className={cn(
                         item.icon,
-                        "w-5 h-5 mr-2 text-secondary-500"
+                        'w-5 h-5 mr-2 text-secondary-500'
                       )}
                     ></span>
                     {item.label}

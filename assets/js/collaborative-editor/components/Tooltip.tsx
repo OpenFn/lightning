@@ -1,5 +1,5 @@
-import * as RadixTooltip from "@radix-ui/react-tooltip";
-import type { ReactNode } from "react";
+import * as RadixTooltip from '@radix-ui/react-tooltip';
+import type { ReactNode } from 'react';
 
 /**
  * Tooltip component using Radix UI primitives
@@ -15,14 +15,14 @@ import type { ReactNode } from "react";
 export function Tooltip({
   children,
   content,
-  side = "bottom",
-  align = "center",
+  side = 'bottom',
+  align = 'center',
   delayDuration = 200,
 }: {
   children: ReactNode;
   content: string;
-  side?: "top" | "right" | "bottom" | "left";
-  align?: "start" | "center" | "end";
+  side?: 'top' | 'right' | 'bottom' | 'left';
+  align?: 'start' | 'center' | 'end';
   delayDuration?: number;
 }) {
   return (
@@ -33,7 +33,7 @@ export function Tooltip({
           <RadixTooltip.Content
             side={side}
             align={align}
-            className="z-50 overflow-hidden rounded-md bg-gray-900
+            className="z-50 max-w-xs overflow-hidden rounded-md bg-gray-900
             px-3 py-1.5 text-xs text-white shadow-md
             animate-in fade-in-0 zoom-in-95
             data-[state=closed]:animate-out

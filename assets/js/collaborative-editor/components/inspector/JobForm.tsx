@@ -21,6 +21,7 @@ import type { Workflow } from '#/collaborative-editor/types/workflow';
 import { AdaptorDisplay } from '../AdaptorDisplay';
 import { AdaptorSelectionModal } from '../AdaptorSelectionModal';
 import { ConfigureAdaptorModal } from '../ConfigureAdaptorModal';
+import { Tooltip } from '../Tooltip';
 import { createZodValidator } from '../form/createZodValidator';
 
 interface JobFormProps {
@@ -366,11 +367,16 @@ export function JobForm({ job }: JobFormProps) {
       <div className="col-span-6">
         <label className="flex items-center gap-1 text-sm font-medium text-gray-700 mb-2">
           Adaptor
-          <span
-            className="hero-information-circle h-4 w-4 text-gray-400"
-            aria-label="Information"
-            role="img"
-          />
+          <Tooltip
+            content="Choose an adaptor to perform operations (via helper functions) in a specific application. Pick 'http' for generic REST APIs or the 'common' adaptor if this job only performs data manipulation."
+            side="top"
+          >
+            <span
+              className="hero-information-circle h-4 w-4 text-gray-400"
+              aria-label="Information"
+              role="img"
+            />
+          </Tooltip>
         </label>
         <AdaptorDisplay
           adaptor={currentAdaptor}
