@@ -171,14 +171,12 @@ describe('IDEHeader - Simple Save Button (No GitHub Connection)', () => {
     const saveButton = screen.getByRole('button', { name: /save/i });
     expect(saveButton).toBeInTheDocument();
 
-    // Note: SaveButton currently always renders split button with dropdown,
-    // even when repoConnection is null. This may not be the intended
-    // behavior (see commented code in Header.tsx), but it's the current
-    // implementation.
+    // When repoConnection is null, SaveButton renders a simple button
+    // without the dropdown menu (no GitHub integration available)
     const dropdownButton = screen.queryByRole('button', {
       name: /open sync options/i,
     });
-    expect(dropdownButton).toBeInTheDocument();
+    expect(dropdownButton).not.toBeInTheDocument();
   });
 
   test('simple save button calls onSave when clicked', () => {
