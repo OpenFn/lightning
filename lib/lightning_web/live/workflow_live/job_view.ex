@@ -157,7 +157,7 @@ defmodule LightningWeb.WorkflowLive.JobView do
               data-placement="bottom"
               aria-label="Switch to collaborative editor (experimental)"
             >
-              <Heroicons.beaker class="h-4 w-4" solid />
+              <Heroicons.beaker class="h-4 w-4" />
             </.link>
           </div>
           <div class="flex grow items-center justify-end">
