@@ -51,6 +51,8 @@ and this project adheres to
   [#3887](https://github.com/OpenFn/lightning/issues/3887)
 - Mix task to merge project state files without database access
   [#3615](https://github.com/OpenFn/lightning/issues/3615)
+- Added adaptor docs & metadata panel to IDE
+  [#3857](https://github.com/OpenFn/lightning/issues/3857)
 - Show Error indication on workflow settings button
   [#3632](https://github.com/OpenFn/lightning/issues/3632)
 
