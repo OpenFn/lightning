@@ -24,6 +24,8 @@ and this project adheres to
 
 ### Fixed
 
+- Fix tooltip styling inconsistencies in collaborative editor
+  [#3980](https://github.com/OpenFn/lightning/issues/3980)
 - Fix beaker icon appearing active in classical editor
   [#3988](https://github.com/OpenFn/lightning/issues/3988)
 - Fix ESC key closing IDE when pressed on adaptor modal
