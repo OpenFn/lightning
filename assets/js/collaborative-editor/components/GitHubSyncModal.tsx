@@ -52,18 +52,16 @@ export function GitHubSyncModal() {
   // Use HotkeysContext to control keyboard scope precedence
   const { enableScope, disableScope } = useHotkeysContext();
 
-  // When modal opens, take control by disabling panel scope
-  // When modal closes, give control back by re-enabling panel scope
   useEffect(() => {
     if (isOpen) {
       enableScope(HOTKEY_SCOPES.MODAL);
       disableScope(HOTKEY_SCOPES.PANEL);
+      disableScope(HOTKEY_SCOPES.RUN_PANEL);
     } else {
       disableScope(HOTKEY_SCOPES.MODAL);
       enableScope(HOTKEY_SCOPES.PANEL);
     }
 
-    // Cleanup: ensure modal scope is disabled when unmounted
     return () => {
       disableScope(HOTKEY_SCOPES.MODAL);
     };

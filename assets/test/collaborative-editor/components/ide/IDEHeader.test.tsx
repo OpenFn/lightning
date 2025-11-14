@@ -409,9 +409,9 @@ describe('IDEHeader - Other Elements', () => {
     const { wrapper } = createTestSetup();
     render(<IDEHeader {...defaultProps} />, { wrapper });
 
-    // Close button uses sr-only text "Close panel"
+    // Close button uses sr-only text "Close full-screen editor"
     const closeButton = screen.getByRole('button', {
-      name: /close panel/i,
+      name: /close full-screen editor/i,
     });
     expect(closeButton).toBeInTheDocument();
   });
@@ -438,9 +438,9 @@ describe('IDEHeader - Other Elements', () => {
     const onClose = vi.fn();
     render(<IDEHeader {...defaultProps} onClose={onClose} />, { wrapper });
 
-    // Close button uses sr-only text "Close panel"
+    // Close button uses sr-only text "Close full-screen editor"
     const closeButton = screen.getByRole('button', {
-      name: /close panel/i,
+      name: /close full-screen editor/i,
     });
     fireEvent.click(closeButton);
 

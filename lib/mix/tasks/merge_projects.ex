@@ -42,6 +42,16 @@ defmodule Mix.Tasks.Lightning.MergeProjects do
 
   alias Lightning.Projects.MergeProjects
 
+  # Schema modules that must be loaded before atomizing JSON keys.
+  # These schemas define the field atoms used in project export files.
+  @required_schemas [
+    Lightning.Projects.Project,
+    Lightning.Workflows.Workflow,
+    Lightning.Workflows.Job,
+    Lightning.Workflows.Trigger,
+    Lightning.Workflows.Edge
+  ]
+
   @impl Mix.Task
   def run(args) do
     {opts, positional, invalid} =
@@ -90,8 +100,9 @@ defmodule Mix.Tasks.Lightning.MergeProjects do
     end
 
     source_project = read_state_file(source_file, "source")
-
     target_project = read_state_file(target_file, "target")
+
+    ensure_schemas_loaded()
 
     merged_project = perform_merge(source_project, target_project, uuid_map)
 
@@ -99,29 +110,44 @@ defmodule Mix.Tasks.Lightning.MergeProjects do
     write_output(output, output_path)
   end
 
-  defp perform_merge(source_project, target_project, uuid_map) do
-    MergeProjects.merge_project(source_project, target_project, uuid_map)
+  defp ensure_schemas_loaded do
+    # IMPORTANT: Load schema modules to ensure their field atoms exist in memory.
+    # This enables safe String.to_existing_atom/1 conversion when atomizing JSON keys.
+    #
+    # When adding schemas referenced in project exports, add them to the
+    # @required_schemas list at the top of this module to prevent ArgumentError
+    # during merge operations.
+    Enum.each(@required_schemas, &Code.ensure_loaded/1)
+  end
+
+  defp perform_merge(source_data, target_data, uuid_map) do
+    MergeProjects.merge_project(
+      atomize(source_data),
+      atomize(target_data),
+      uuid_map
+    )
   rescue
-    e in KeyError ->
+    ArgumentError ->
       Mix.raise("""
-      Failed to merge projects - missing required field: #{inspect(e.key)}
+      Failed to merge projects - encountered unknown field in JSON
 
-      #{Exception.message(e)}
-
-      This may indicate incompatible or corrupted project state files.
-      Please verify both files are valid Lightning project exports.
-      """)
-
-    e ->
-      Mix.raise("""
-      Failed to merge projects
-
-      #{Exception.message(e)}
-
-      This may indicate incompatible project structures or corrupted data.
-      Please verify both files are valid Lightning project exports.
+      This may indicate the JSON contains invalid or unexpected fields.
+      Please ensure both files are valid Lightning project exports.
       """)
   end
+
+  defp atomize(data) when is_map(data) do
+    Map.new(data, fn {key, value} ->
+      atom_key = if is_binary(key), do: String.to_existing_atom(key), else: key
+      {atom_key, atomize(value)}
+    end)
+  end
+
+  defp atomize(data) when is_list(data) do
+    Enum.map(data, &atomize/1)
+  end
+
+  defp atomize(data), do: data
 
   defp parse_uuid_mappings(opts) do
     opts
@@ -274,11 +300,8 @@ defmodule Mix.Tasks.Lightning.MergeProjects do
           """)
       end
 
-    case Jason.decode(content, keys: :atoms) do
+    case Jason.decode(content) do
       {:ok, data} ->
-        # Jason's keys: :atoms option converts all string keys to atoms
-        # This is safe for controlled JSON file input (not arbitrary user input)
-        # The merge_project function requires atom keys for dot notation access
         data
 
       {:error, %Jason.DecodeError{} = error} ->

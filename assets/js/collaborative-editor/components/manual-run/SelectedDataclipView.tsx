@@ -1,12 +1,12 @@
-import { CheckIcon, PencilIcon, XMarkIcon } from "@heroicons/react/24/outline";
-import { useCallback, useState } from "react";
+import { CheckIcon, PencilIcon, XMarkIcon } from '@heroicons/react/24/outline';
+import { useCallback, useState } from 'react';
 
-import { cn } from "#/utils/cn";
+import { cn } from '#/utils/cn';
 
-import { DataclipViewer } from "../../../react/components/DataclipViewer";
-import type { Dataclip } from "../../api/dataclips";
-import { RENDER_MODES, type RenderMode } from "../../constants/panel";
-import { Button } from "../Button";
+import { DataclipViewer } from '../../../react/components/DataclipViewer';
+import type { Dataclip } from '../../api/dataclips';
+import { RENDER_MODES, type RenderMode } from '../../constants/panel';
+import { Button } from '../Button';
 
 interface SelectedDataclipViewProps {
   dataclip: Dataclip;
@@ -26,13 +26,13 @@ export function SelectedDataclipView({
   renderMode = RENDER_MODES.STANDALONE,
 }: SelectedDataclipViewProps) {
   const [isEditingName, setIsEditingName] = useState(false);
-  const [editedName, setEditedName] = useState(dataclip.name || "");
+  const [editedName, setEditedName] = useState(dataclip.name || '');
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const handleCancelEdit = useCallback(() => {
     setIsEditingName(false);
-    setEditedName(dataclip.name || "");
+    setEditedName(dataclip.name || '');
     setError(null);
   }, [dataclip.name]);
 
@@ -51,7 +51,7 @@ export function SelectedDataclipView({
       await onNameChange(dataclip.id, newName);
       setIsEditingName(false);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to save name");
+      setError(err instanceof Error ? err.message : 'Failed to save name');
     } finally {
       setIsSaving(false);
     }
@@ -62,8 +62,8 @@ export function SelectedDataclipView({
       {/* Header */}
       <div
         className={cn(
-          "flex items-center justify-between pb-4",
-          renderMode === RENDER_MODES.EMBEDDED ? "px-3 pt-3" : "px-6 pt-4"
+          'flex items-center justify-between pb-4',
+          renderMode === RENDER_MODES.EMBEDDED ? 'px-3 pt-3' : 'px-6 pt-4'
         )}
       >
         <div className="flex-1">
@@ -74,10 +74,10 @@ export function SelectedDataclipView({
                 value={editedName}
                 onChange={e => setEditedName(e.target.value)}
                 onKeyDown={e => {
-                  if (e.key === "Enter" && !isSaving) {
+                  if (e.key === 'Enter' && !isSaving) {
                     e.preventDefault();
                     void handleSaveName();
-                  } else if (e.key === "Escape") {
+                  } else if (e.key === 'Escape') {
                     e.preventDefault();
                     handleCancelEdit();
                   }
@@ -109,7 +109,7 @@ export function SelectedDataclipView({
             <>
               <div className="flex items-center gap-2">
                 <h3 className="font-medium text-gray-900">
-                  {dataclip.name || "Unnamed"}
+                  {dataclip.name || 'Unnamed'}
                 </h3>
                 {canEdit && (
                   <button
@@ -125,7 +125,7 @@ export function SelectedDataclipView({
                   text-gray-500 mt-1"
               >
                 <span className="capitalize">
-                  {dataclip.type.replace("_", " ")}
+                  {dataclip.type.replace('_', ' ')}
                 </span>
                 <span>•</span>
                 <span>
@@ -148,8 +148,8 @@ export function SelectedDataclipView({
       {isNextCronRun && (
         <div
           className={cn(
-            "alert-warning flex flex-col gap-1 px-3 py-2 rounded-md border mb-4",
-            renderMode === RENDER_MODES.EMBEDDED ? "mx-3" : "mx-6"
+            'alert-warning flex flex-col gap-1 px-3 py-2 rounded-md border mb-4',
+            renderMode === RENDER_MODES.EMBEDDED ? 'mx-3' : 'mx-6'
           )}
         >
           <span className="text-sm font-medium">
@@ -164,7 +164,7 @@ export function SelectedDataclipView({
       )}
 
       {/* Body Preview */}
-      <div className="flex-1 overflow-hidden">
+      <div className="flex-1">
         <DataclipViewer dataclipId={dataclip.id} />
       </div>
     </div>

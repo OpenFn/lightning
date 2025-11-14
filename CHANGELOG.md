@@ -24,9 +24,17 @@ and this project adheres to
 
 ### Fixed
 
+- Fix tooltip styling inconsistencies in collaborative editor
+  [#3980](https://github.com/OpenFn/lightning/issues/3980)
+- Fix beaker icon appearing active in classical editor
+  [#3988](https://github.com/OpenFn/lightning/issues/3988)
+- Fix ESC key closing IDE when pressed on adaptor modal
+  [#3978](https://github.com/OpenFn/lightning/issues/3978)
 - Fix run/save-and-run keystroke mapping for canvas & IDE
   [#3902](https://github.com/OpenFn/lightning/issues/3902) &
   [#3903](https://github.com/OpenFn/lightning/issues/3903)
+- Monaco tooltips get cut off
+  [#3900](https://github.com/OpenFn/lightning/issues/3900)
 
 ## [2.14.15-pre] - 2025-11-13
 
@@ -47,6 +55,8 @@ and this project adheres to
   [#3887](https://github.com/OpenFn/lightning/issues/3887)
 - Mix task to merge project state files without database access
   [#3615](https://github.com/OpenFn/lightning/issues/3615)
+- Added adaptor docs & metadata panel to IDE
+  [#3857](https://github.com/OpenFn/lightning/issues/3857)
 - Show Error indication on workflow settings button
   [#3632](https://github.com/OpenFn/lightning/issues/3632)
 
@@ -58,6 +68,8 @@ and this project adheres to
 
 ### Fixed
 
+- 500 error when navigating from collaborative editor to full history page
+  [#3941](https://github.com/OpenFn/lightning/pull/3941)
 - Duplicate `isReadOnly` declaration in TriggerForm that was blocking asset
   builds [#3976](https://github.com/OpenFn/lightning/issues/3976)
 - Run duration and status alignment drift in history view

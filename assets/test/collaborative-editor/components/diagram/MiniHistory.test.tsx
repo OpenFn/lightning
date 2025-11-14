@@ -40,9 +40,31 @@ vi.mock('../../../../js/hooks', () => ({
   relativeLocale: {},
 }));
 
+// Mock session context hooks to provide project ID
+vi.mock('../../../../js/collaborative-editor/hooks/useSessionContext', () => ({
+  useProject: () => ({
+    id: 'test-project-id',
+    name: 'Test Project',
+  }),
+}));
+
+// Mock workflow hooks to provide workflow ID
+vi.mock('../../../../js/collaborative-editor/hooks/useWorkflow', () => ({
+  useWorkflowState: (selector: any) => {
+    const state = {
+      workflow: {
+        id: 'test-workflow-id',
+        name: 'Test Workflow',
+      },
+    };
+    return typeof selector === 'function' ? selector(state) : state;
+  },
+}));
+
 // Mock window.location for navigation tests
 const mockLocationAssign = vi.fn();
 const mockLocation = {
+  origin: 'http://localhost',
   href: 'http://localhost/projects/test-project-id/w/test-workflow-id',
   pathname: '/projects/test-project-id/w/test-workflow-id',
   assign: mockLocationAssign,
@@ -56,6 +78,7 @@ Object.defineProperty(window, 'location', {
 describe('MiniHistory', () => {
   beforeEach(() => {
     // Reset location and mock before each test
+    mockLocation.origin = 'http://localhost';
     mockLocation.href =
       'http://localhost/projects/test-project-id/w/test-workflow-id';
     mockLocation.pathname = '/projects/test-project-id/w/test-workflow-id';
@@ -630,7 +653,10 @@ describe('MiniHistory', () => {
       expect(mockLocationAssign).toHaveBeenCalledOnce();
       const calledUrl = mockLocationAssign.mock.calls[0][0];
       expect(calledUrl).toContain('/history');
-      expect(calledUrl).toContain('filters[workflow_id]=test-workflow-id');
+      // URLSearchParams encodes square brackets, so we need to decode or check the encoded version
+      expect(decodeURIComponent(calledUrl)).toContain(
+        'filters[workflow_id]=test-workflow-id'
+      );
     });
 
     test('view history button supports keyboard navigation', () => {
@@ -677,7 +703,8 @@ describe('MiniHistory', () => {
       expect(mockLocationAssign).toHaveBeenCalledOnce();
       const calledUrl = mockLocationAssign.mock.calls[0][0];
       expect(calledUrl).toContain('/projects/test-project-id/history');
-      expect(calledUrl).toContain(
+      // URLSearchParams encodes square brackets, so we need to decode or check the encoded version
+      expect(decodeURIComponent(calledUrl)).toContain(
         'filters[workorder_id]=e2107d46-cf29-4930-b11b-cbcfcf83549d'
       );
     });
