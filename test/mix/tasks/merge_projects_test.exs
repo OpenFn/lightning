@@ -41,17 +41,21 @@ defmodule Mix.Tasks.Lightning.MergeProjectsTest do
 
       {:ok, result} = Jason.decode(output)
 
+      # Preserves target project metadata
       assert result["id"] == "target-id"
       assert result["name"] == "target-project"
       assert length(result["workflows"]) == 1
 
+      # Merges workflow structure
       workflow = hd(result["workflows"])
       target_workflow = hd(target_state["workflows"])
       assert workflow["id"] == target_workflow["id"]
       assert workflow["name"] == "Test Workflow"
 
+      # Updates job content from source
       job = hd(workflow["jobs"])
       assert job["body"] == "console.log('updated')"
+      assert job["name"] == "Job 1"
     end
 
     test "writes merged output to file when --output flag is provided", %{
@@ -632,7 +636,7 @@ defmodule Mix.Tasks.Lightning.MergeProjectsTest do
     end
   end
 
-  describe "run/1 - flexibility for testing (Joe's requirements)" do
+  describe "run/1 - flexibility for testing" do
     test "allows non-UUID IDs for testing purposes", %{tmp_dir: tmp_dir} do
       source_state =
         build_simple_project(
@@ -699,50 +703,6 @@ defmodule Mix.Tasks.Lightning.MergeProjectsTest do
 
       assert result["id"] == "2"
       assert result["name"] == "target-project"
-    end
-
-    test "successfully merges projects with deeply nested structures", %{
-      tmp_dir: tmp_dir
-    } do
-      source_state =
-        build_simple_project(
-          id: "source",
-          name: "Source Project",
-          workflow_name: "Workflow 1",
-          job_name: "Job 1",
-          job_body: "console.log('updated')"
-        )
-
-      target_state =
-        build_simple_project(
-          id: "target",
-          name: "Target Project",
-          workflow_name: "Workflow 1",
-          job_name: "Job 1",
-          job_body: "console.log('old')"
-        )
-
-      source_file = Path.join(tmp_dir, "source.json")
-      target_file = Path.join(tmp_dir, "target.json")
-
-      File.write!(source_file, Jason.encode!(source_state))
-      File.write!(target_file, Jason.encode!(target_state))
-
-      output =
-        capture_io(fn ->
-          Mix.Tasks.Lightning.MergeProjects.run([source_file, target_file])
-        end)
-
-      {:ok, result} = Jason.decode(output)
-
-      assert result["id"] == "target"
-
-      workflow = hd(result["workflows"])
-      assert workflow["name"] == "Workflow 1"
-
-      job = hd(workflow["jobs"])
-      assert job["body"] == "console.log('updated')"
-      assert job["name"] == "Job 1"
     end
 
     test "works offline without database access", %{tmp_dir: tmp_dir} do
