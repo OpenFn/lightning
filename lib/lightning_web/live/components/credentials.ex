@@ -33,12 +33,13 @@ defmodule LightningWeb.Components.Credentials do
   attr :id, :string, required: true
   attr :width, :string, default: "max-w-md"
   attr :on_modal_close, Phoenix.LiveView.JS, default: @close_active_modal
+  attr :show, :boolean, default: true
   slot :inner_block, required: true
   slot :title, required: true
 
   def credential_modal(assigns) do
     ~H"""
-    <.modal id={@id} width={@width} on_close={@on_modal_close} show={true}>
+    <.modal id={@id} width={@width} on_close={@on_modal_close} show={@show}>
       <:title>
         <div class="flex justify-between">
           <span class="font-bold">
@@ -195,6 +196,120 @@ defmodule LightningWeb.Components.Credentials do
     Enum.map(projects, fn %{id: id, name: name} ->
       {name, id}
     end)
+  end
+
+  attr :id, :string, required: true
+
+  attr :keychain_credential, Lightning.Credentials.KeychainCredential,
+    required: true
+
+  attr :keychain_changeset, Ecto.Changeset, required: true
+  attr :available_credentials, :list, required: true
+  attr :myself, :any, required: true
+  attr :action, :atom, default: :new
+  attr :from_collab_editor, :boolean, default: false
+  attr :on_modal_close, Phoenix.LiveView.JS, required: true
+  attr :show_modal, :boolean, default: true
+  attr :on_back, :any, default: nil
+  attr :on_validate, :string, default: "validate"
+  attr :on_submit, :string, default: "save"
+
+  def keychain_credential_form(assigns) do
+    ~H"""
+    <div class="text-xs text-left">
+      <.credential_modal
+        id={@id}
+        width="xl:min-w-1/3 min-w-1/2 max-w-full"
+        show={@show_modal}
+        on_modal_close={@on_modal_close}
+      >
+        <:title>
+          <%= if @action == :edit do %>
+            Edit {@keychain_credential.name || "keychain credential"}
+          <% else %>
+            Create keychain credential
+          <% end %>
+        </:title>
+
+        <.form
+          :let={f}
+          for={@keychain_changeset}
+          id={"keychain-credential-form-#{@keychain_credential.id || "new"}"}
+          phx-target={@myself}
+          phx-change={@on_validate}
+          phx-submit={@on_submit}
+        >
+          <div class="space-y-6 bg-white py-5">
+            <fieldset>
+              <div class="space-y-4">
+                <div>
+                  <.input
+                    type="text"
+                    field={f[:name]}
+                    label="Name"
+                    placeholder="Enter keychain credential name"
+                  />
+                  <p class="mt-1 text-sm text-gray-500">
+                    A descriptive name for this keychain credential
+                  </p>
+                </div>
+
+                <div>
+                  <.input
+                    type="text"
+                    field={f[:path]}
+                    label="JSONPath Expression"
+                    placeholder="$.user_id"
+                  />
+                  <p class="mt-1 text-sm text-gray-500">
+                    JSONPath expression to extract credential selector from run data
+                  </p>
+                </div>
+
+                <div>
+                  <.input
+                    type="select"
+                    field={f[:default_credential_id]}
+                    label="Default Credential"
+                    options={
+                      [{"No default credential", nil}] ++
+                        Enum.map(@available_credentials, &{&1.name, &1.id})
+                    }
+                  />
+                  <p class="mt-1 text-sm text-gray-500">
+                    Credential to use when JSONPath expression doesn't match
+                  </p>
+                </div>
+              </div>
+            </fieldset>
+          </div>
+
+          <.modal_footer>
+            <.button
+              id={"save-keychain-credential-button-#{@keychain_credential.id || "new"}"}
+              type="submit"
+              theme="primary"
+              disabled={!f.source.valid?}
+            >
+              <%= case @action do %>
+                <% :edit -> %>
+                  Save Changes
+                <% :new -> %>
+                  Create
+              <% end %>
+            </.button>
+            <%= if @from_collab_editor do %>
+              <.button type="button" phx-click={@on_back} theme="secondary">
+                Back
+              </.button>
+            <% else %>
+              <.cancel_button modal_id={@id} />
+            <% end %>
+          </.modal_footer>
+        </.form>
+      </.credential_modal>
+    </div>
+    """
   end
 
   attr :users, :list, required: true

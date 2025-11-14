@@ -3,16 +3,16 @@ import {
   DialogBackdrop,
   DialogPanel,
   DialogTitle,
-} from "@headlessui/react";
-import { useEffect, useState } from "react";
-import { useHotkeysContext } from "react-hotkeys-hook";
+} from '@headlessui/react';
+import { useEffect, useState } from 'react';
+import { useHotkeysContext } from 'react-hotkeys-hook';
 
-import { cn } from "#/utils/cn";
+import { cn } from '#/utils/cn';
 
-import { HOTKEY_SCOPES } from "../../constants/hotkeys";
-import { useLiveViewActions } from "../../contexts/LiveViewActionsContext";
-import type { WebhookAuthMethod } from "../../types/sessionContext";
-import type { Workflow } from "../../types/workflow";
+import { HOTKEY_SCOPES } from '../../constants/hotkeys';
+import { useLiveViewActions } from '../../contexts/LiveViewActionsContext';
+import type { WebhookAuthMethod } from '../../types/sessionContext';
+import type { Workflow } from '../../types/workflow';
 
 interface WebhookAuthMethodModalProps {
   trigger: Workflow.Trigger;
@@ -49,6 +49,7 @@ export function WebhookAuthMethodModal({
   useEffect(() => {
     enableScope(HOTKEY_SCOPES.MODAL);
     disableScope(HOTKEY_SCOPES.PANEL);
+    disableScope(HOTKEY_SCOPES.RUN_PANEL);
 
     return () => {
       disableScope(HOTKEY_SCOPES.MODAL);
@@ -75,7 +76,7 @@ export function WebhookAuthMethodModal({
       await onSave(selectedIds);
       onClose();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to save");
+      setError(err instanceof Error ? err.message : 'Failed to save');
     } finally {
       setIsSaving(false);
     }
@@ -155,7 +156,7 @@ export function WebhookAuthMethodModal({
                     type="button"
                     onClick={() => {
                       onClose();
-                      pushEvent("open_webhook_auth_modal", {});
+                      pushEvent('open_webhook_auth_modal', {});
                     }}
                     className="link text-sm"
                   >
@@ -168,11 +169,11 @@ export function WebhookAuthMethodModal({
                     <label
                       key={method.id}
                       className={cn(
-                        "flex items-center gap-3 p-3 border rounded-lg",
-                        "cursor-pointer transition-colors",
+                        'flex items-center gap-3 p-3 border rounded-lg',
+                        'cursor-pointer transition-colors',
                         selections[method.id]
-                          ? "border-indigo-300 bg-indigo-50"
-                          : "border-gray-200 hover:bg-gray-50"
+                          ? 'border-indigo-300 bg-indigo-50'
+                          : 'border-gray-200 hover:bg-gray-50'
                       )}
                     >
                       <input
@@ -190,9 +191,9 @@ export function WebhookAuthMethodModal({
                           {method.name}
                         </div>
                         <div className="text-xs text-gray-500">
-                          {method.auth_type === "api"
-                            ? "API Key"
-                            : "Basic Authentication"}
+                          {method.auth_type === 'api'
+                            ? 'API Key'
+                            : 'Basic Authentication'}
                         </div>
                       </div>
                       {selections[method.id] && (
@@ -213,13 +214,13 @@ export function WebhookAuthMethodModal({
                       type="button"
                       onClick={() => {
                         onClose();
-                        pushEvent("open_webhook_auth_modal", {});
+                        pushEvent('open_webhook_auth_modal', {});
                       }}
                       className="link"
                     >
                       Create a new authentication method
                     </button>
-                    {" or manage them in "}
+                    {' or manage them in '}
                     <a
                       href={`/projects/${projectId}/settings#webhook_security`}
                       className="link"
@@ -239,8 +240,8 @@ export function WebhookAuthMethodModal({
               justify-between items-center bg-gray-50"
             >
               <div className="text-sm text-gray-600">
-                {selectedCount} {selectedCount === 1 ? "method" : "methods"}
-                {" selected"}
+                {selectedCount} {selectedCount === 1 ? 'method' : 'methods'}
+                {' selected'}
               </div>
               <div className="flex gap-3">
                 <button
@@ -267,7 +268,7 @@ export function WebhookAuthMethodModal({
                   focus:ring-indigo-500 disabled:opacity-50
                   disabled:cursor-not-allowed"
                 >
-                  {isSaving ? "Saving..." : "Save"}
+                  {isSaving ? 'Saving...' : 'Save'}
                 </button>
               </div>
             </div>

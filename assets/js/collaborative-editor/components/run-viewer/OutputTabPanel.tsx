@@ -55,7 +55,7 @@ export function OutputTabPanel() {
 
   return (
     <StepViewerLayout selectedStepId={selectedStep?.id || null}>
-      <div className="h-full overflow-auto">
+      <div className="h-full">
         <OutputContent selectedStep={selectedStep} runFinished={runFinished} />
       </div>
     </StepViewerLayout>

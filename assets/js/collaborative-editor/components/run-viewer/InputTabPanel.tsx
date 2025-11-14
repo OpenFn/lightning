@@ -4,7 +4,7 @@
 // differing only in the dataclip field accessed (input_dataclip_id vs output_dataclip_id)
 // and display text.
 
-import { useMemo } from 'react';
+import { useMemo } from "react";
 
 import { DataclipViewer } from '../../../react/components/DataclipViewer';
 import { useCurrentRun, useSelectedStep } from '../../hooks/useRun';
@@ -55,7 +55,7 @@ export function InputTabPanel() {
 
   return (
     <StepViewerLayout selectedStepId={selectedStep?.id || null}>
-      <div className="h-full overflow-auto">
+      <div className="h-full">
         <InputContent selectedStep={selectedStep} runFinished={runFinished} />
       </div>
     </StepViewerLayout>

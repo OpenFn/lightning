@@ -427,7 +427,11 @@ export function ManualRunPanel({
     () => {
       onClose();
     },
-    { enabled: true, enableOnFormTags: true },
+    {
+      enabled: true,
+      scopes: [HOTKEY_SCOPES.RUN_PANEL],
+      enableOnFormTags: true,
+    },
     [onClose]
   );
 
@@ -460,7 +464,7 @@ export function ManualRunPanel({
   ) : (
     <div
       className={cn(
-        'flex flex-col overflow-hidden',
+        'flex flex-col overflow-hidden h-full',
         renderMode === RENDER_MODES.EMBEDDED ? 'h-full mt-2' : 'flex-1 mt-4'
       )}
     >

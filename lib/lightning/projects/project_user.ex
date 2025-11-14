@@ -34,7 +34,7 @@ defmodule Lightning.Projects.ProjectUser do
     belongs_to :user, User
     belongs_to :project, Project
     field :delete, :boolean, virtual: true
-    field :failure_alert, :boolean, default: true
+    field :failure_alert, :boolean, default: false
     field :role, RolesEnum
     field :digest, DigestEnum, default: :never
 

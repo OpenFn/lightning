@@ -206,30 +206,30 @@ defmodule Lightning.MergeProjectsHelpers do
 
     id = Keyword.get_lazy(opts, :id, &Ecto.UUID.generate/0)
 
-    string_params_for(
-      :edge,
-      opts
-      |> Keyword.put_new(:condition_type, :always)
-      |> Keyword.put_new(:enabled, true)
-    )
-    |> Map.take([
-      "source_trigger_id",
-      "source_job_id",
-      "target_job_id",
-      "condition_type",
-      "condition_expression",
-      "condition_label",
-      "enabled"
-    ])
-    |> Map.put("id", id)
-    |> Enum.reject(fn {k, v} ->
-      k in [
+    edge_data =
+      string_params_for(
+        :edge,
+        opts
+        |> Keyword.put_new(:condition_type, :always)
+        |> Keyword.put_new(:enabled, true)
+      )
+      |> Map.take([
+        "source_trigger_id",
+        "source_job_id",
+        "target_job_id",
+        "condition_type",
         "condition_expression",
         "condition_label",
-        "source_trigger_id",
-        "source_job_id"
-      ] and
-        is_nil(v)
+        "enabled"
+      ])
+      |> Map.put("id", id)
+
+    # Ensure both source fields exist (one will be nil)
+    edge_data
+    |> Map.put_new("source_trigger_id", nil)
+    |> Map.put_new("source_job_id", nil)
+    |> Enum.reject(fn {k, v} ->
+      k in ["condition_expression", "condition_label"] and is_nil(v)
     end)
     |> Map.new()
   end

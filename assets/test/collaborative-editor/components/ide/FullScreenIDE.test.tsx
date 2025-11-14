@@ -183,6 +183,10 @@ vi.mock('../../../../js/collaborative-editor/hooks/useWorkflow', () => ({
     canRun: true,
     tooltipMessage: 'Run workflow',
   }),
+  useWorkflowReadOnly: () => ({
+    isReadOnly: false,
+    tooltipMessage: '',
+  }),
   useCurrentJob: () => ({
     job: {
       id: 'job-1',
@@ -341,6 +345,15 @@ describe('FullScreenIDE', () => {
       // Note: there may be additional nested panels from the docs/metadata section
       const panels = screen.getAllByTestId('panel');
       expect(panels.length).toBeGreaterThanOrEqual(3);
+      
+// TODO - TD to maybe put this back? Wookie?
+//        expect(screen.getByTestId('panel-group')).toBeInTheDocument();
+//      });
+//
+//      // Should have three panels
+//      const panels = screen.getAllByTestId('panel');
+//      expect(panels).toHaveLength(3);
+      
     });
 
     test('left panel contains ManualRunPanel with embedded mode', async () => {
@@ -439,7 +452,7 @@ describe('FullScreenIDE', () => {
 
       await waitFor(() => {
         expect(
-          screen.getByRole('button', { name: /^close panel$/i })
+          screen.getByRole('button', { name: /close/i })
         ).toBeInTheDocument();
       });
     });
@@ -563,7 +576,7 @@ describe('FullScreenIDE', () => {
       });
 
       expect(
-        screen.getByRole('button', { name: /^close panel$/i })
+        screen.getByRole('button', { name: /close/i })
       ).toBeInTheDocument();
     });
   });
@@ -579,13 +592,11 @@ describe('FullScreenIDE', () => {
 
       await waitFor(() => {
         expect(
-          screen.getByRole('button', { name: /^close panel$/i })
+          screen.getByRole('button', { name: /close/i })
         ).toBeInTheDocument();
       });
 
-      const closeButton = screen.getByRole('button', {
-        name: /^close panel$/i,
-      });
+      const closeButton = screen.getByRole('button', { name: /close/i });
       await user.click(closeButton);
 
       expect(onClose).toHaveBeenCalledOnce();

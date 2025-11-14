@@ -573,6 +573,16 @@ defmodule LightningWeb.ProjectLiveTest do
 
       assert {user2.id, :editor} in user_roles
       assert {user3.id, :viewer} in user_roles
+
+      # Check that newly added collaborators have failure_alert defaulting to false
+      user2_project_user =
+        Enum.find(updated_project.project_users, &(&1.user_id == user2.id))
+
+      user3_project_user =
+        Enum.find(updated_project.project_users, &(&1.user_id == user3.id))
+
+      assert user2_project_user.failure_alert == false
+      assert user3_project_user.failure_alert == false
     end
 
     test "removing collaborators from project works correctly", %{conn: conn} do
@@ -1432,6 +1442,225 @@ defmodule LightningWeb.ProjectLiveTest do
 
       refute html =~
                "keychain-credential-actions-#{keychain_credential.id}-dropdown"
+    end
+
+    test "project admin can create keychain credential from settings", %{
+      conn: conn,
+      user: user
+    } do
+      credential = insert(:credential, user: user)
+
+      project =
+        insert(:project,
+          name: "project-1",
+          project_users: [%{user_id: user.id, role: :admin}]
+        )
+
+      insert(:project_credential, project: project, credential: credential)
+
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{project}/settings#credentials",
+          on_error: :raise
+        )
+
+      # Open create keychain credential modal
+      html =
+        view
+        |> element("#new-keychain-credential-option-menu-item")
+        |> render_click()
+
+      # Verify modal opened and form is present (testing from_collab_editor: false path)
+      assert html =~ "Keychain"
+      assert html =~ "keychain-credential-form-new"
+
+      # Submit form with name and path (covers save handler and push_event)
+      view
+      |> form("#keychain-credential-form-new", %{
+        "keychain_credential" => %{
+          "name" => "My Keychain Credential",
+          "path" => "$.user_id"
+        }
+      })
+      |> render_submit()
+
+      # Verify keychain credential was created (proves the form submitted successfully)
+      keychain_credential =
+        Repo.get_by(
+          Lightning.Credentials.KeychainCredential,
+          name: "My Keychain Credential"
+        )
+
+      assert keychain_credential
+      assert keychain_credential.created_by_id == user.id
+    end
+
+    test "project admin can update keychain credential from settings", %{
+      conn: conn,
+      user: user
+    } do
+      credential_1 = insert(:credential, user: user)
+
+      project =
+        insert(:project,
+          name: "project-1",
+          project_users: [%{user_id: user.id, role: :admin}]
+        )
+
+      insert(:project_credential, project: project, credential: credential_1)
+
+      keychain_credential =
+        insert(:keychain_credential,
+          created_by: user,
+          project: project,
+          name: "Original Name",
+          path: "$.org_id"
+        )
+
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{project}/settings#credentials",
+          on_error: :raise
+        )
+
+      # Open edit keychain credential modal
+      html =
+        view
+        |> element(
+          "a#keychain-credential-actions-#{keychain_credential.id}-edit"
+        )
+        |> render_click()
+
+      # Verify modal opened (testing from_collab_editor: false path)
+      assert html =~ "Keychain"
+      assert html =~ "keychain-credential-form-#{keychain_credential.id}"
+
+      # Update the form (covers update handler and push_event)
+      view
+      |> form("#keychain-credential-form-#{keychain_credential.id}", %{
+        "keychain_credential" => %{
+          "name" => "Updated Name",
+          "path" => "$.updated_path"
+        }
+      })
+      |> render_submit()
+
+      # Verify keychain credential was updated (proves the form submitted successfully)
+      updated =
+        Repo.get(
+          Lightning.Credentials.KeychainCredential,
+          keychain_credential.id
+        )
+
+      assert updated.name == "Updated Name"
+      assert updated.path == "$.updated_path"
+    end
+
+    test "shows validation errors when creating invalid keychain credential",
+         %{
+           conn: conn,
+           user: user
+         } do
+      project =
+        insert(:project,
+          name: "project-1",
+          project_users: [%{user_id: user.id, role: :admin}]
+        )
+
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{project}/settings#credentials",
+          on_error: :raise
+        )
+
+      # Open create keychain credential modal
+      view
+      |> element("#new-keychain-credential-option-menu-item")
+      |> render_click()
+
+      # Submit empty form (covers validation error path)
+      html =
+        view
+        |> form("#keychain-credential-form-new", %{
+          "keychain_credential" => %{
+            "name" => "",
+            "path" => ""
+          }
+        })
+        |> render_submit()
+
+      assert html =~ "can&#39;t be blank"
+    end
+
+    test "viewer cannot create keychain credential (authorization check)", %{
+      conn: conn,
+      user: user
+    } do
+      project =
+        insert(:project,
+          name: "project-1",
+          project_users: [%{user_id: user.id, role: :viewer}]
+        )
+
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{project}/settings#credentials",
+          on_error: :raise
+        )
+
+      # Button appears disabled for viewers
+      assert view
+             |> element("#new-keychain-credential-option-menu-item")
+             |> render() =~ "cursor-not-allowed"
+
+      # Send event anyway (bypassing UI)
+      view
+      |> with_target("#credentials-index-component")
+      |> render_click("show_modal", %{"target" => "new_keychain_credential"})
+
+      # Authorization check in credential_index_component blocks it
+      assert render(view) =~ "You are not authorized to perform this action"
+    end
+
+    test "viewer cannot edit keychain credential (authorization check)", %{
+      conn: conn,
+      user: viewer_user
+    } do
+      admin_user = insert(:user)
+
+      project =
+        insert(:project,
+          name: "project-1",
+          project_users: [
+            %{user_id: admin_user.id, role: :admin},
+            %{user_id: viewer_user.id, role: :viewer}
+          ]
+        )
+
+      keychain_credential =
+        insert(:keychain_credential,
+          created_by: admin_user,
+          project: project,
+          name: "Protected",
+          path: "$.secret"
+        )
+
+      {:ok, view, html} =
+        live(conn, ~p"/projects/#{project}/settings#credentials",
+          on_error: :raise
+        )
+
+      # Viewer sees the credential but not the edit button
+      assert html =~ "Protected"
+
+      refute html =~
+               "keychain-credential-actions-#{keychain_credential.id}-dropdown"
+
+      # Send edit event anyway (bypassing UI)
+      view
+      |> with_target("#credentials-index-component")
+      |> render_click("edit_keychain_credential", %{
+        "id" => keychain_credential.id
+      })
+
+      # Authorization check in credential_index_component blocks it
+      assert render(view) =~ "You are not authorized to perform this action"
     end
 
     test "project admin can't edit project name and description with invalid data",

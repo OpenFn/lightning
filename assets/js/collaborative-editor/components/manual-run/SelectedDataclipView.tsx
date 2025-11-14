@@ -164,7 +164,7 @@ export function SelectedDataclipView({
       )}
 
       {/* Body Preview */}
-      <div className="flex-1 overflow-hidden">
+      <div className="flex-1">
         <DataclipViewer dataclipId={dataclip.id} />
       </div>
     </div>

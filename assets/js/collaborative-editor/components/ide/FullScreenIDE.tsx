@@ -492,7 +492,7 @@ export function FullScreenIDE({
         setIsConfigureModalOpen(true);
       }, 200);
       setTimeout(() => {
-        pushEvent('close_credential_modal_complete', {});
+        pushEvent('close_credential_modal', {});
       }, 500);
     };
 
@@ -544,11 +544,50 @@ export function FullScreenIDE({
       }
     },
     {
-      enabled: true,
+      enabled:
+        !isConfigureModalOpen && !isAdaptorPickerOpen && !isCredentialModalOpen,
       scopes: [HOTKEY_SCOPES.IDE],
       enableOnFormTags: true,
     },
-    [onClose]
+    [onClose, isConfigureModalOpen, isAdaptorPickerOpen, isCredentialModalOpen]
+  );
+
+  useHotkeys(
+    'meta+enter, ctrl+enter',
+    event => {
+      event.preventDefault();
+      event.stopPropagation();
+      if (isRetryable) {
+        handleRetry();
+      } else {
+        handleRun();
+      }
+    },
+    {
+      enabled: true,
+      scopes: [HOTKEY_SCOPES.IDE],
+      enableOnFormTags: true,
+      enableOnContentEditable: true,
+      preventDefault: true,
+    },
+    [handleRun, handleRetry, isRetryable]
+  );
+
+  useHotkeys(
+    'meta+shift+enter, ctrl+shift+enter',
+    event => {
+      event.preventDefault();
+      event.stopPropagation();
+      handleRun();
+    },
+    {
+      enabled: true,
+      scopes: [HOTKEY_SCOPES.IDE],
+      enableOnFormTags: true,
+      enableOnContentEditable: true,
+      preventDefault: true,
+    },
+    [handleRun]
   );
 
   // Save docs panel collapsed state to localStorage

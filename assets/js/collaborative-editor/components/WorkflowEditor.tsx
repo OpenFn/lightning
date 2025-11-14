@@ -217,7 +217,9 @@ export function WorkflowEditor({
   };
 
   const showInspector =
-    searchParams.get('panel') === 'settings' || Boolean(currentNode.node);
+    searchParams.get('panel') === 'settings' ||
+    searchParams.get('panel') === 'code' ||
+    Boolean(currentNode.node);
 
   const handleMethodChange = (method: 'template' | 'import' | 'ai' | null) => {
     updateSearchParams({ method });
@@ -265,6 +267,37 @@ export function WorkflowEditor({
       enableOnFormTags: true,
     },
     [currentNode, isIDEOpen, updateSearchParams]
+  );
+
+  // CMD+Enter: Open run panel or run workflow
+  useHotkeys(
+    'mod+enter',
+    event => {
+      event.preventDefault();
+
+      // If run panel is already open, let the ManualRunPanel handle it
+      if (isRunPanelOpen) {
+        return;
+      }
+
+      // Open run panel based on current selection
+      if (currentNode.type === 'job' && currentNode.node) {
+        openRunPanel({ jobId: currentNode.node.id });
+      } else if (currentNode.type === 'trigger' && currentNode.node) {
+        openRunPanel({ triggerId: currentNode.node.id });
+      } else {
+        // No selection - open from first trigger
+        const firstTrigger = workflow.triggers[0];
+        if (firstTrigger?.id) {
+          openRunPanel({ triggerId: firstTrigger.id });
+        }
+      }
+    },
+    {
+      enabled: !isIDEOpen && !isRunPanelOpen,
+      enableOnFormTags: true,
+    },
+    [currentNode, isIDEOpen, isRunPanelOpen, openRunPanel, workflow.triggers]
   );
 
   return (

@@ -51,6 +51,36 @@ export function CollaborativeMonaco({
       const language = getLanguageFromAdaptor(adaptor);
       monaco.editor.setModelLanguage(editor.getModel()!, language);
 
+      // Override Monaco's CMD+Enter to allow react-hotkeys-hook to handle it
+      editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter, () => {
+        const event = new KeyboardEvent('keydown', {
+          key: 'Enter',
+          code: 'Enter',
+          metaKey: true,
+          ctrlKey: true,
+          bubbles: true,
+          cancelable: true,
+        });
+        document.dispatchEvent(event);
+      });
+
+      // Override Monaco's CMD+Shift+Enter to allow react-hotkeys-hook to handle it
+      editor.addCommand(
+        monaco.KeyMod.CtrlCmd | monaco.KeyMod.Shift | monaco.KeyCode.Enter,
+        () => {
+          const event = new KeyboardEvent('keydown', {
+            key: 'Enter',
+            code: 'Enter',
+            metaKey: true,
+            ctrlKey: true,
+            shiftKey: true,
+            bubbles: true,
+            cancelable: true,
+          });
+          document.dispatchEvent(event);
+        }
+      );
+
       // Create initial binding if ytext and awareness are available
       if (ytext && awareness) {
         logger.log('🔄 Creating initial Monaco binding on mount');
