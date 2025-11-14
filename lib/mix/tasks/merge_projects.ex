@@ -34,6 +34,16 @@ defmodule Mix.Tasks.Lightning.MergeProjects do
 
   alias Lightning.Projects.MergeProjects
 
+  # Schema modules that must be loaded before atomizing JSON keys.
+  # These schemas define the field atoms used in project export files.
+  @required_schemas [
+    Lightning.Projects.Project,
+    Lightning.Workflows.Workflow,
+    Lightning.Workflows.Job,
+    Lightning.Workflows.Trigger,
+    Lightning.Workflows.Edge
+  ]
+
   @impl Mix.Task
   def run(args) do
     {opts, positional, invalid} =
@@ -80,8 +90,9 @@ defmodule Mix.Tasks.Lightning.MergeProjects do
     end
 
     source_project = read_state_file(source_file, "source")
-
     target_project = read_state_file(target_file, "target")
+
+    ensure_schemas_loaded()
 
     merged_project = perform_merge(source_project, target_project)
 
@@ -89,11 +100,18 @@ defmodule Mix.Tasks.Lightning.MergeProjects do
     write_output(output, output_path)
   end
 
-  defp perform_merge(source_data, target_data) do
-    source_project = atomize_keys(source_data)
-    target_project = atomize_keys(target_data)
+  defp ensure_schemas_loaded do
+    # IMPORTANT: Load schema modules to ensure their field atoms exist in memory.
+    # This enables safe String.to_existing_atom/1 conversion when atomizing JSON keys.
+    #
+    # When adding schemas referenced in project exports, add them to the
+    # @required_schemas list at the top of this module to prevent ArgumentError
+    # during merge operations.
+    Enum.each(@required_schemas, &Code.ensure_loaded/1)
+  end
 
-    MergeProjects.merge_project(source_project, target_project)
+  defp perform_merge(source_data, target_data) do
+    MergeProjects.merge_project(atomize(source_data), atomize(target_data))
   rescue
     ArgumentError ->
       Mix.raise("""
@@ -104,18 +122,18 @@ defmodule Mix.Tasks.Lightning.MergeProjects do
       """)
   end
 
-  defp atomize_keys(data) when is_map(data) do
+  defp atomize(data) when is_map(data) do
     Map.new(data, fn {key, value} ->
       atom_key = if is_binary(key), do: String.to_existing_atom(key), else: key
-      {atom_key, atomize_keys(value)}
+      {atom_key, atomize(value)}
     end)
   end
 
-  defp atomize_keys(data) when is_list(data) do
-    Enum.map(data, &atomize_keys/1)
+  defp atomize(data) when is_list(data) do
+    Enum.map(data, &atomize/1)
   end
 
-  defp atomize_keys(data), do: data
+  defp atomize(data), do: data
 
   defp encode_json(project) do
     Jason.encode!(project, pretty: true)
@@ -239,11 +257,8 @@ defmodule Mix.Tasks.Lightning.MergeProjects do
           """)
       end
 
-    case Jason.decode(content, keys: :atoms) do
+    case Jason.decode(content) do
       {:ok, data} ->
-        # Jason's keys: :atoms option converts all string keys to atoms
-        # This is safe for controlled JSON file input (not arbitrary user input)
-        # The merge_project function requires atom keys for dot notation access
         data
 
       {:error, %Jason.DecodeError{} = error} ->

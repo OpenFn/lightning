@@ -407,6 +407,41 @@ defmodule Mix.Tasks.Lightning.MergeProjectsTest do
         Mix.Tasks.Lightning.MergeProjects.run([source_file, target_file])
       end
     end
+
+    test "raises error when JSON contains unknown fields (atom exhaustion protection)",
+         %{
+           tmp_dir: tmp_dir
+         } do
+      source_file = Path.join(tmp_dir, "source.json")
+      target_file = Path.join(tmp_dir, "target.json")
+
+      # Create JSON with a field that won't exist as an atom
+      # This protects against atom exhaustion attacks
+      File.write!(
+        source_file,
+        Jason.encode!(%{
+          "id" => "source-id",
+          "name" => "Source",
+          "unknown_field_that_does_not_exist_as_atom_#{System.unique_integer()}" =>
+            "value",
+          "workflows" => []
+        })
+      )
+
+      File.write!(
+        target_file,
+        Jason.encode!(%{"id" => "t", "name" => "T", "workflows" => []})
+      )
+
+      assert_raise Mix.Error,
+                   ~r/Failed to merge projects - encountered unknown field in JSON/,
+                   fn ->
+                     Mix.Tasks.Lightning.MergeProjects.run([
+                       source_file,
+                       target_file
+                     ])
+                   end
+    end
   end
 
   describe "run/1 - flexibility for testing (Joe's requirements)" do
