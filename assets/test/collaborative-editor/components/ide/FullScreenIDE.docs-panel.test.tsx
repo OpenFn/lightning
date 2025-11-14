@@ -176,6 +176,10 @@ vi.mock('../../../../js/collaborative-editor/hooks/useWorkflow', () => ({
     canRun: true,
     tooltipMessage: 'Run workflow',
   }),
+  useWorkflowReadOnly: () => ({
+    isReadOnly: false,
+    tooltipMessage: '',
+  }),
   useCurrentJob: () => ({
     job: {
       id: 'job-1',

@@ -753,7 +753,7 @@ export function FullScreenIDE({
                   ) : (
                     <button
                       onClick={toggleLeftPanel}
-                      className="ml-2 text-xs font-medium text-gray-400
+                      className="ml-4 text-xs font-medium text-gray-400
                         uppercase tracking-wide hover:text-gray-600
                         transition-colors cursor-pointer"
                     >
@@ -869,7 +869,7 @@ export function FullScreenIDE({
                   ) : (
                     <button
                       onClick={toggleCenterPanel}
-                      className="ml-2 text-xs font-medium text-gray-400
+                      className="ml-4 text-xs font-medium text-gray-400
                         uppercase tracking-wide hover:text-gray-600
                         transition-colors cursor-pointer"
                     >
@@ -1070,7 +1070,7 @@ export function FullScreenIDE({
                   ) : (
                     <button
                       onClick={toggleRightPanel}
-                      className="ml-2 text-xs font-medium text-gray-400
+                      className="ml-4 text-xs font-medium text-gray-400
                         uppercase tracking-wide hover:text-gray-600
                         transition-colors cursor-pointer"
                     >
