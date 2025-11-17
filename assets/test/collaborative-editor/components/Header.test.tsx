@@ -329,7 +329,7 @@ describe('Header - Basic Rendering', () => {
     });
   });
 
-  test('renders user menu button', async () => {
+  test('renders AI button', async () => {
     const { wrapper, emitSessionContext } = createTestSetup();
 
     render(
@@ -343,9 +343,13 @@ describe('Header - Basic Rendering', () => {
       emitSessionContext();
     });
 
-    expect(
-      screen.getByRole('button', { name: /open user menu/i })
-    ).toBeInTheDocument();
+    // AI button is rendered (disabled by default)
+    const aiButtons = screen.getAllByRole('button');
+    const aiButton = aiButtons.find(button =>
+      button.querySelector('.hero-chat-bubble-left-right')
+    );
+    expect(aiButton).toBeInTheDocument();
+    expect(aiButton).toBeDisabled();
   });
 
   test('settings button shows error styling when workflow has validation errors', async () => {
@@ -1067,9 +1071,12 @@ describe('Header - Keyboard Shortcuts', () => {
     // Should have save button
     expect(screen.getByRole('button', { name: /save/i })).toBeInTheDocument();
 
-    // Should have user menu
-    expect(
-      screen.getByRole('button', { name: /open user menu/i })
-    ).toBeInTheDocument();
+    // Should have AI button
+    const aiButtons = screen.getAllByRole('button');
+    const aiButton = aiButtons.find(button =>
+      button.querySelector('.hero-chat-bubble-left-right')
+    );
+    expect(aiButton).toBeInTheDocument();
+    expect(aiButton).toBeDisabled();
   });
 });
