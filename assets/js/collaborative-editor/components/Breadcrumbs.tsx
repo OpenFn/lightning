@@ -4,17 +4,30 @@ import { useMemo } from 'react';
 import { cn } from '../../utils/cn';
 
 export function Breadcrumbs({ children }: { children: React.ReactNode[] }) {
-  // Split breadcrumbs: if more than 1, hide all but the last in dropdown
-  const { hiddenItems, visibleItems } = useMemo(() => {
-    if (children.length > 1) {
+  // Split: Last item is always the title (always visible)
+  // Of the remaining breadcrumbs, show only the last one, hide the rest
+  const { hiddenItems, visibleBreadcrumb, title } = useMemo(() => {
+    if (children.length === 0) {
+      return { hiddenItems: [], visibleBreadcrumb: null, title: null };
+    }
+
+    // Last child is the title
+    const titleItem = children[children.length - 1];
+    const breadcrumbs = children.slice(0, -1);
+
+    if (breadcrumbs.length > 1) {
+      // Hide all but the last breadcrumb
       return {
-        hiddenItems: children.slice(0, -1),
-        visibleItems: children.slice(-1),
+        hiddenItems: breadcrumbs.slice(0, -1),
+        visibleBreadcrumb: breadcrumbs[breadcrumbs.length - 1],
+        title: titleItem,
       };
     }
+
     return {
       hiddenItems: [],
-      visibleItems: children,
+      visibleBreadcrumb: breadcrumbs[0] ?? null,
+      title: titleItem,
     };
   }, [children]);
 
@@ -26,26 +39,44 @@ export function Breadcrumbs({ children }: { children: React.ReactNode[] }) {
       result.push(<BreadcrumbDropdown key="dropdown" items={hiddenItems} />);
     }
 
-    // Add visible items with separators
-    visibleItems.forEach((child, i) => {
-      const showSeparator = hiddenItems.length > 0 || i > 0;
-      if (showSeparator) {
+    // Add visible breadcrumb (if exists)
+    if (visibleBreadcrumb) {
+      // Only show separator if there are hidden items (ellipsis dropdown before this)
+      if (hiddenItems.length > 0) {
         result.push(
           <span
-            key={`chevron-${i}`}
+            key="chevron-breadcrumb"
             className="hero-chevron-right-mini w-5 h-5 text-secondary-500"
           />
         );
       }
       result.push(
-        <li key={`breadcrumb-${i}`} className="flex items-center">
-          {child}
+        <li key="visible-breadcrumb" className="flex items-center">
+          {visibleBreadcrumb}
         </li>
       );
-    });
+    }
+
+    // Add title (with separator only if there's something before it)
+    if (title) {
+      // Show separator if there are hidden items OR a visible breadcrumb
+      if (hiddenItems.length > 0 || visibleBreadcrumb !== null) {
+        result.push(
+          <span
+            key="chevron-title"
+            className="hero-chevron-right-mini w-5 h-5 text-secondary-500"
+          />
+        );
+      }
+      result.push(
+        <li key="title" className="flex items-center">
+          {title}
+        </li>
+      );
+    }
 
     return result;
-  }, [hiddenItems, visibleItems]);
+  }, [hiddenItems, visibleBreadcrumb, title]);
 
   return (
     <nav className="flex" aria-label="Breadcrumb">
@@ -64,7 +95,7 @@ function BreadcrumbDropdown({ items }: { items: React.ReactNode[] }) {
           </MenuButton>
           <MenuItems
             transition
-            className="absolute left-0 z-[9999] mt-2 w-48 origin-top-left rounded-md bg-white shadow-lg outline-1 outline-black/5 transition data-closed:scale-95 data-closed:transform data-closed:opacity-0 data-enter:duration-100 data-enter:ease-out data-leave:duration-75 data-leave:ease-in"
+            className="absolute left-0 z-[99999] mt-2 w-48 origin-top-left rounded-md bg-white shadow-lg outline-1 outline-black/5 transition data-closed:scale-95 data-closed:transform data-closed:opacity-0 data-enter:duration-100 data-enter:ease-out data-leave:duration-75 data-leave:ease-in"
           >
             <div className="py-1">
               {items.map((item, index) => (

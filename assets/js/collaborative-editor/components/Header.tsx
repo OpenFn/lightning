@@ -253,7 +253,7 @@ export function Header({
     <>
       <EmailVerificationBanner />
 
-      <div className="flex-none bg-white shadow-xs border-b border-gray-200 relative z-30">
+      <div className="flex-none bg-white shadow-xs border-b border-gray-200 relative z-50">
         <div className="mx-auto sm:px-6 lg:px-8 py-6 flex items-center h-20 text-sm">
           <Breadcrumbs>{children}</Breadcrumbs>
           <ReadOnlyWarning className="ml-3" />

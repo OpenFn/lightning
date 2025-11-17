@@ -162,9 +162,6 @@ defmodule LightningWeb.LayoutComponents do
   slot :inner_block
 
   defp collect_breadcrumbs(assigns) do
-    # Always start with Home
-    crumbs = [{"Home", "/"}]
-
     # Add project breadcrumbs if project is scoped
     crumbs =
       if Map.get(assigns, :project) do
@@ -175,18 +172,17 @@ defmodule LightningWeb.LayoutComponents do
 
         if assigns.project.parent_id &&
              Ecto.assoc_loaded?(assigns.project.parent) do
-          crumbs ++
-            [
-              {"Projects", "/projects"},
-              {assigns.project.parent.name,
-               "/projects/#{assigns.project.parent.id}/w"},
-              {assigns.project.name, "/projects/#{assigns.project.id}/w"}
-            ]
+          [
+            {"Projects", "/projects"},
+            {assigns.project.parent.name,
+             "/projects/#{assigns.project.parent.id}/w"},
+            {assigns.project.name, "/projects/#{assigns.project.id}/w"}
+          ]
         else
-          crumbs ++ base_crumbs
+          base_crumbs
         end
       else
-        crumbs
+        []
       end
 
     # Add manual breadcrumbs
@@ -258,14 +254,16 @@ defmodule LightningWeb.LayoutComponents do
               <%= for {{label, path}, index} <- Enum.with_index(@visible_crumbs) do %>
                 <.breadcrumb
                   path={path}
-                  show_separator={@hidden_crumbs != [] or index > 0}
+                  show_separator={(@hidden_crumbs != [] and index == 0) or index > 0}
                 >
                   <:label>{label}</:label>
                 </.breadcrumb>
               <% end %>
 
               <%!-- And finally, we always show the page title --%>
-              <.breadcrumb>
+              <.breadcrumb show_separator={
+                @hidden_crumbs != [] or @visible_crumbs != []
+              }>
                 <:label>
                   {if assigns[:title], do: render_slot(@title)}
                 </:label>
@@ -392,13 +390,19 @@ defmodule LightningWeb.LayoutComponents do
         <%= if @path do %>
           <.link
             patch={@path}
-            class="flex ml-2 text-sm font-medium text-gray-500 hover:text-gray-700"
+            class={[
+              "flex text-sm font-medium text-gray-500 hover:text-gray-700",
+              @show_separator && "ml-2"
+            ]}
             aria-current="page"
           >
             {if assigns[:label], do: render_slot(@label)}
           </.link>
         <% else %>
-          <span class="flex items-center ml-2 text-sm font-medium text-gray-500">
+          <span class={[
+            "flex items-center text-sm font-medium text-gray-500",
+            @show_separator && "ml-2"
+          ]}>
             {if assigns[:label], do: render_slot(@label)}
           </span>
         <% end %>
