@@ -223,7 +223,8 @@ defmodule LightningWeb.LayoutComponents do
     ~H"""
     <LightningWeb.Components.Common.banner
       :if={
-        Lightning.Config.check_flag?(:require_email_verification) && @current_user &&
+        Lightning.Config.check_flag?(:require_email_verification) &&
+          assigns[:current_user] &&
           !@current_user.confirmed_at
       }
       id="account-confirmation-alert"
@@ -242,7 +243,7 @@ defmodule LightningWeb.LayoutComponents do
       data-testid="top-bar"
     >
       <div class={[@title_class, @title_height]}>
-        <%= if @current_user do %>
+        <%= if assigns[:current_user] do %>
           <nav class="flex" aria-label="Breadcrumb">
             <ol role="list" class="flex items-center space-x-2">
               <%!-- Show ellipsis dropdown if there are hidden breadcrumbs --%>
