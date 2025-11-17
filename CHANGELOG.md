@@ -26,6 +26,8 @@ and this project adheres to
 
 ### Fixed
 
+- Fixed AI chat session persistence when switching between jobs in workflow
+  editor [#3745](https://github.com/OpenFn/lightning/issues/3745)
 - Fix ghost edges blocking saves and breaking autolayout when deleting jobs in
   collaborative editor [#3983](https://github.com/OpenFn/lightning/issues/3983)
 - Fix tooltip styling inconsistencies in collaborative editor
@@ -252,8 +254,6 @@ and this project adheres to
 
 ### Fixed
 
-- Fixed AI chat session persistence when switching between jobs in workflow
-  editor [#3745](https://github.com/OpenFn/lightning/issues/3745)
 - Fixed credential preservation during sandbox workflow merge - credentials are
   now correctly maintained when merging sandboxes back to parent projects
   [#3782](https://github.com/OpenFn/lightning/issues/3782)
