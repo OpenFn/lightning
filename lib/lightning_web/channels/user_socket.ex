@@ -9,6 +9,7 @@ defmodule LightningWeb.UserSocket do
   ## Channels
 
   channel "workflow:*", LightningWeb.WorkflowChannel
+  channel "run:*", LightningWeb.RunChannel
 
   # Socket params are passed from the client and can
   # be used to verify and authenticate a user. After

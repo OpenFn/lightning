@@ -1,8 +1,8 @@
 /* eslint-disable @typescript-eslint/no-namespace */
-import type * as Y from "yjs";
-import type { TypedArray, TypedDoc, TypedMap } from "yjs-types";
+import type * as Y from 'yjs';
+import type { TypedArray, TypedDoc, TypedMap } from 'yjs-types';
 
-import type { Workflow as WorkflowType } from "./workflow";
+import type { Workflow as WorkflowType } from './workflow';
 
 // Why isn't this used anywhere, it definity was!
 export interface AwarenessUser {
@@ -28,6 +28,12 @@ export namespace Session {
     {
       workflow: TypedMap<Workflow>;
       positions: TypedMap<WorkflowType.Positions>;
+      errors: TypedMap<{
+        workflow?: Record<string, string[]>;
+        jobs?: Record<string, Record<string, string[]>>;
+        triggers?: Record<string, Record<string, string[]>>;
+        edges?: Record<string, Record<string, string[]>>;
+      }>;
     },
     {
       jobs: TypedArray<TypedMap<Job & { body: Y.Text }>>;
@@ -42,6 +48,9 @@ export namespace Session {
     name: string;
     lock_version: number | null;
     deleted_at: string | null;
+    concurrency: number | null;
+    enable_job_logs: boolean;
+    errors?: Record<string, string[]>;
   };
 
   export type Job = {
@@ -52,12 +61,21 @@ export namespace Session {
     enabled: boolean;
     project_credential_id: string | null;
     keychain_credential_id: string | null;
+    errors?: Record<string, string[]>;
   };
 
   export type Trigger = {
     id: string;
-    cron_expression: string;
+    type: string;
     enabled: boolean;
+    cron_expression: string | null;
+    has_auth_method: boolean;
+    webhook_auth_methods: Array<{
+      id: string;
+      name: string;
+      auth_type: string;
+    }> | null;
+    errors?: Record<string, string[]>;
   };
 
   // This could be a common type if we take the inner type out of Y.Map
@@ -71,6 +89,7 @@ export namespace Session {
     source_job_id: string | null;
     source_trigger_id: string | null;
     target_job_id: string;
+    errors?: Record<string, string[]>;
   };
 }
 

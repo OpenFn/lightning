@@ -1,5 +1,7 @@
 import type { HTMLAttributes, ReactNode } from 'react';
 
+import { cn } from '../utils/cn';
+
 interface PanelProps extends HTMLAttributes<HTMLDivElement> {
   heading: ReactNode;
   className?: string;
@@ -19,7 +21,10 @@ export const Panel: React.FC<PanelProps> = ({
 }) => {
   return (
     <div
-      className={`absolute right-0 sm:m-4 w-full sm:w-1/2 md:w-1/3 lg:w-1/4 max-h-content ${className}`}
+      className={cn(
+        'absolute right-0 sm:m-4 w-full sm:w-1/2 md:w-1/3 lg:w-1/4 max-h-content',
+        className
+      )}
     >
       <div className="divide-y divide-gray-200 rounded-lg bg-white shadow h-full flex flex-col">
         <div className="flex px-4 py-5 sm:px-6 gap-2 items-center">

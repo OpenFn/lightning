@@ -9,6 +9,7 @@ defmodule Lightning.SessionTest do
 
   import Eventually
   import Lightning.Factories
+  import Lightning.CollaborationHelpers
 
   alias Lightning.Collaboration.DocumentState
   alias Lightning.Collaboration.DocumentSupervisor
@@ -39,14 +40,22 @@ defmodule Lightning.SessionTest do
       }
 
       assert {:error, {{:error, :shared_doc_not_found}, _}} =
-               start_supervised({Session, user: user, workflow: workflow})
+               start_supervised(
+                 {Session,
+                  user: user,
+                  workflow: workflow,
+                  document_name: "workflow:#{workflow.id}"}
+               )
     end
 
     test "start/1 can join an existing shared doc", %{user: user1} do
       user2 = insert(:user)
       workflow = insert(:simple_workflow)
 
-      Lightning.Collaborate.start_document(workflow)
+      Lightning.Collaborate.start_document(
+        workflow,
+        "workflow:#{workflow.id}"
+      )
 
       [parent1, parent2] = build_parents(2)
 
@@ -56,7 +65,8 @@ defmodule Lightning.SessionTest do
             Session.start_link(
               user: user,
               workflow: workflow,
-              parent_pid: parent
+              parent_pid: parent,
+              document_name: "workflow:#{workflow.id}"
             )
 
           client
@@ -98,9 +108,11 @@ defmodule Lightning.SessionTest do
       assert MapSet.size(shared_doc_pids) == 1,
              "Expected exactly one shared doc pid, got #{inspect(shared_doc_pids)}"
 
-      # Check there is only one SharedDoc process for this workflow
+      # Check there is only one SharedDoc process for this workflow (now keyed by document_name)
+      document_name = "workflow:#{workflow.id}"
+
       assert_eventually(
-        length(:pg.get_members(:workflow_collaboration, workflow.id)) == 1
+        length(:pg.get_members(:workflow_collaboration, document_name)) == 1
       )
 
       Process.exit(parent2, :normal)
@@ -128,11 +140,19 @@ defmodule Lightning.SessionTest do
         build(:complex_workflow, name: "Test Workflow")
         |> insert()
 
-      start_supervised!({DocumentSupervisor, workflow: workflow})
+      start_supervised!(
+        {DocumentSupervisor,
+         workflow: workflow, document_name: "workflow:#{workflow.id}"}
+      )
 
       # Start a session - this should initialize the SharedDoc with workflow data
       session_pid =
-        start_supervised!({Session, user: user, workflow: workflow})
+        start_supervised!(
+          {Session,
+           user: user,
+           workflow: workflow,
+           document_name: "workflow:#{workflow.id}"}
+        )
 
       # Send a message to allow :handle_continue to finish
       shared_doc = Session.get_doc(session_pid)
@@ -217,11 +237,19 @@ defmodule Lightning.SessionTest do
 
       insert(:job, workflow: workflow, name: "Original Job", body: "original")
 
-      start_supervised!({DocumentSupervisor, workflow: workflow})
+      start_supervised!(
+        {DocumentSupervisor,
+         workflow: workflow, document_name: "workflow:#{workflow.id}"}
+      )
 
       # Start first session
       session_1 =
-        start_supervised!({Session, workflow: workflow, user: user})
+        start_supervised!(
+          {Session,
+           workflow: workflow,
+           user: user,
+           document_name: "workflow:#{workflow.id}"}
+        )
 
       shared_doc_1 = Session.get_doc(session_1)
 
@@ -232,7 +260,12 @@ defmodule Lightning.SessionTest do
 
       # Start second session - should connect to existing SharedDoc
       session_2 =
-        start_supervised!({Session, workflow: workflow, user: user})
+        start_supervised!(
+          {Session,
+           workflow: workflow,
+           user: user,
+           document_name: "workflow:#{workflow.id}"}
+        )
 
       shared_doc_2 = Session.get_doc(session_2)
 
@@ -262,11 +295,19 @@ defmodule Lightning.SessionTest do
           body: "console.log('sync')"
         )
 
-      start_supervised!({DocumentSupervisor, workflow: workflow})
+      start_supervised!(
+        {DocumentSupervisor,
+         workflow: workflow, document_name: "workflow:#{workflow.id}"}
+      )
 
       # Start session to initialize SharedDoc
       session_pid =
-        start_supervised!({Session, user: user, workflow: workflow})
+        start_supervised!(
+          {Session,
+           user: user,
+           workflow: workflow,
+           document_name: "workflow:#{workflow.id}"}
+        )
 
       %Session{shared_doc_pid: shared_doc_pid} = :sys.get_state(session_pid)
 
@@ -308,10 +349,18 @@ defmodule Lightning.SessionTest do
       workflow = insert(:simple_workflow)
 
       _document_supervisor =
-        start_supervised!({DocumentSupervisor, workflow: workflow})
+        start_supervised!(
+          {DocumentSupervisor,
+           workflow: workflow, document_name: "workflow:#{workflow.id}"}
+        )
 
       session_pid =
-        start_supervised!({Session, user: user, workflow: workflow})
+        start_supervised!(
+          {Session,
+           user: user,
+           workflow: workflow,
+           document_name: "workflow:#{workflow.id}"}
+        )
 
       # This is an existing workflow, so when the session starts, it should
       # both initialize the workflow document and save the initial state
@@ -324,7 +373,9 @@ defmodule Lightning.SessionTest do
         "id" => workflow_id,
         "name" => workflow.name,
         "lock_version" => workflow.lock_version,
-        "deleted_at" => nil
+        "deleted_at" => nil,
+        "concurrency" => nil,
+        "enable_job_logs" => true
       }
 
       assert Session.get_doc(session_pid)
@@ -419,13 +470,21 @@ defmodule Lightning.SessionTest do
       workflow = insert(:simple_workflow)
 
       document_supervisor =
-        start_supervised!({DocumentSupervisor, workflow: workflow})
+        start_supervised!(
+          {DocumentSupervisor,
+           workflow: workflow, document_name: "workflow:#{workflow.id}"}
+        )
 
       %{shared_doc: shared_doc, persistence_writer: persistence_writer} =
         Registry.get_group("workflow:#{workflow.id}")
 
       session_pid =
-        start_supervised!({Session, user: user, workflow: workflow})
+        start_supervised!(
+          {Session,
+           user: user,
+           workflow: workflow,
+           document_name: "workflow:#{workflow.id}"}
+        )
 
       {:ok, client_pid} =
         GenServer.start(TestClient, shared_doc_pid: shared_doc)
@@ -464,11 +523,19 @@ defmodule Lightning.SessionTest do
       # Starting a new document supervisor, like when the frontend reconnects
       # At this point, client is still running, and the SharedDoc should
       # pick up the existing document from the database.
-      start_supervised!({DocumentSupervisor, workflow: workflow})
+      start_supervised!(
+        {DocumentSupervisor,
+         workflow: workflow, document_name: "workflow:#{workflow.id}"}
+      )
 
       # Starting a new session
       _session_pid =
-        start_supervised!({Session, user: user, workflow: workflow})
+        start_supervised!(
+          {Session,
+           user: user,
+           workflow: workflow,
+           document_name: "workflow:#{workflow.id}"}
+        )
 
       shared_doc_pid = Registry.get_group("workflow:#{workflow.id}").shared_doc
 
@@ -530,7 +597,10 @@ defmodule Lightning.SessionTest do
       user2 = insert(:user)
       user3 = insert(:user)
 
-      start_supervised!({DocumentSupervisor, workflow: workflow})
+      start_supervised!(
+        {DocumentSupervisor,
+         workflow: workflow, document_name: "workflow:#{workflow.id}"}
+      )
 
       [{client1, parent1}, {client2, parent2}, {client3, _parent3}] =
         Enum.map([user1, user2, user3], fn user ->
@@ -538,7 +608,11 @@ defmodule Lightning.SessionTest do
 
           client =
             start_supervised!(
-              {Session, user: user, workflow: workflow, parent_pid: parent}
+              {Session,
+               user: user,
+               workflow: workflow,
+               parent_pid: parent,
+               document_name: "workflow:#{workflow.id}"}
             )
 
           {client, parent}
@@ -661,10 +735,18 @@ defmodule Lightning.SessionTest do
       # Add a job so we have something to modify
       job = insert(:job, workflow: workflow, name: "Original Job")
 
-      start_supervised!({DocumentSupervisor, workflow: workflow})
+      start_supervised!(
+        {DocumentSupervisor,
+         workflow: workflow, document_name: "workflow:#{workflow.id}"}
+      )
 
       session_pid =
-        start_supervised!({Session, workflow: workflow, user: user})
+        start_supervised!(
+          {Session,
+           workflow: workflow,
+           user: user,
+           document_name: "workflow:#{workflow.id}"}
+        )
 
       %{
         session: session_pid,
@@ -803,6 +885,648 @@ defmodule Lightning.SessionTest do
         {:ok, _} -> assert true
         {:error, _} -> assert true
       end
+    end
+
+    test "saves workflow with :built state and lock_version > 0", %{
+      user: user,
+      project: project
+    } do
+      # Create a new workflow struct (not yet saved)
+      workflow_id = Ecto.UUID.generate()
+
+      new_workflow = %Workflow{
+        id: workflow_id,
+        name: "New Workflow",
+        project_id: project.id,
+        lock_version: 0,
+        edges: [],
+        jobs: [],
+        triggers: []
+      }
+
+      # Start document and session with the new workflow
+      start_supervised!(
+        {DocumentSupervisor,
+         workflow: new_workflow, document_name: "workflow:#{workflow_id}"}
+      )
+
+      session_pid =
+        start_supervised!(
+          {Session,
+           workflow: new_workflow,
+           user: user,
+           document_name: "workflow:#{workflow_id}"}
+        )
+
+      # First save - this creates the workflow in DB (lock_version becomes 1)
+      assert {:ok, saved_workflow} = Session.save_workflow(session_pid, user)
+      assert saved_workflow.lock_version == 1
+
+      # Now we have a workflow with state: :built but lock_version > 0
+      # Modify it again via Y.Doc
+      doc = Session.get_doc(session_pid)
+      workflow_map = Yex.Doc.get_map(doc, "workflow")
+
+      Yex.Doc.transaction(doc, "second_update", fn ->
+        Yex.Map.set(workflow_map, "name", "Updated After First Save")
+      end)
+
+      # Second save - this should fetch the workflow from DB (covering line 472-476)
+      assert {:ok, saved_workflow2} = Session.save_workflow(session_pid, user)
+      assert saved_workflow2.name == "Updated After First Save"
+      assert saved_workflow2.lock_version == 2
+
+      # Verify in database
+      from_db = Lightning.Workflows.get_workflow!(workflow_id)
+      assert from_db.name == "Updated After First Save"
+      assert from_db.lock_version == 2
+    end
+
+    test "handles workflow deleted for :built workflow with lock_version > 0", %{
+      user: user,
+      project: project
+    } do
+      # Create a workflow and save it once to get lock_version > 0
+      workflow_id = Ecto.UUID.generate()
+
+      new_workflow = %Workflow{
+        id: workflow_id,
+        name: "To Be Deleted",
+        project_id: project.id,
+        lock_version: 0,
+        edges: [],
+        jobs: [],
+        triggers: []
+      }
+
+      start_supervised!(
+        {DocumentSupervisor,
+         workflow: new_workflow, document_name: "workflow:#{workflow_id}"}
+      )
+
+      session_pid =
+        start_supervised!(
+          {Session,
+           workflow: new_workflow,
+           user: user,
+           document_name: "workflow:#{workflow_id}"}
+        )
+
+      # First save to create in DB
+      assert {:ok, _saved_workflow} = Session.save_workflow(session_pid, user)
+
+      # Now delete the workflow from DB
+      from_db = Lightning.Workflows.get_workflow!(workflow_id)
+
+      Lightning.Repo.update!(
+        Ecto.Changeset.change(from_db,
+          deleted_at: DateTime.utc_now() |> DateTime.truncate(:second)
+        )
+      )
+
+      # Try to save again - should get workflow_deleted error (covering line 475)
+      assert {:error, :workflow_deleted} =
+               Session.save_workflow(session_pid, user)
+    end
+  end
+
+  describe "save_workflow/2 validation errors" do
+    setup do
+      # Set global mode for the mock to allow cross-process calls
+      Mox.set_mox_global(LightningMock)
+      # Stub the broadcast calls that save_workflow makes
+      Mox.stub(LightningMock, :broadcast, fn _topic, _message -> :ok end)
+
+      user = insert(:user)
+      project = insert(:project)
+      workflow = insert(:workflow, name: "Original Name", project: project)
+
+      start_supervised!(
+        {DocumentSupervisor,
+         workflow: workflow, document_name: "workflow:#{workflow.id}"}
+      )
+
+      session_pid =
+        start_supervised!(
+          {Session,
+           workflow: workflow,
+           user: user,
+           document_name: "workflow:#{workflow.id}"}
+        )
+
+      %{
+        session: session_pid,
+        user: user,
+        workflow: workflow,
+        project: project
+      }
+    end
+
+    test "writes validation errors to Y.Doc when workflow name is blank", %{
+      session: session,
+      user: user
+    } do
+      # Get Y.Doc and set blank name
+      doc = Session.get_doc(session)
+      workflow_map = Yex.Doc.get_map(doc, "workflow")
+
+      Yex.Doc.transaction(doc, "test_blank_name", fn ->
+        Yex.Map.set(workflow_map, "name", "")
+      end)
+
+      # Attempt save (should fail validation)
+      assert {:error, %Ecto.Changeset{}} = Session.save_workflow(session, user)
+
+      # Check errors were written to Y.Doc
+      errors_map = Yex.Doc.get_map(doc, "errors")
+      errors = Yex.Map.to_json(errors_map)
+
+      # Workflow errors should be nested under 'workflow' key
+      assert Map.has_key?(errors, "workflow")
+      assert is_map(errors["workflow"])
+      assert is_list(errors["workflow"]["name"])
+      assert "This field can't be blank." in errors["workflow"]["name"]
+    end
+
+    test "clears errors from Y.Doc after successful save", %{
+      session: session,
+      user: user
+    } do
+      # Set up: Create errors in Y.Doc manually
+      doc = Session.get_doc(session)
+      errors_map = Yex.Doc.get_map(doc, "errors")
+
+      Yex.Doc.transaction(doc, "test_add_error", fn ->
+        Yex.Map.set(errors_map, "name", "some error")
+      end)
+
+      # Set valid name
+      workflow_map = Yex.Doc.get_map(doc, "workflow")
+
+      Yex.Doc.transaction(doc, "test_valid_name", fn ->
+        Yex.Map.set(
+          workflow_map,
+          "name",
+          "Valid Workflow Name #{System.unique_integer()}"
+        )
+      end)
+
+      # Save should succeed and clear errors
+      assert {:ok, _saved_workflow} = Session.save_workflow(session, user)
+
+      # Verify errors were cleared
+      errors = Yex.Map.to_json(errors_map)
+      assert errors == %{}
+    end
+
+    test "writes nested job validation errors to Y.Doc", %{
+      session: session,
+      user: user
+    } do
+      # Add a job with blank name
+      doc = Session.get_doc(session)
+      jobs_array = Yex.Doc.get_array(doc, "jobs")
+
+      job_id = Ecto.UUID.generate()
+
+      job_map =
+        Yex.MapPrelim.from(%{
+          "id" => job_id,
+          "name" => "",
+          # Invalid - blank
+          "body" => Yex.TextPrelim.from(""),
+          "adaptor" => "@openfn/language-common@1.0.0",
+          "project_credential_id" => nil,
+          "keychain_credential_id" => nil
+        })
+
+      Yex.Doc.transaction(doc, "test_add_invalid_job", fn ->
+        Yex.Array.push(jobs_array, job_map)
+      end)
+
+      # Attempt save (should fail validation)
+      assert {:error, %Ecto.Changeset{}} = Session.save_workflow(session, user)
+
+      # Check job error was written to Y.Doc with nested structure
+      errors_map = Yex.Doc.get_map(doc, "errors")
+      errors = Yex.Map.to_json(errors_map)
+
+      # Errors should be nested: %{jobs: %{job-id: %{name: ["error"]}}}
+      assert Map.has_key?(errors, "jobs")
+      assert is_map(errors["jobs"])
+      assert Map.has_key?(errors["jobs"], job_id)
+      assert is_map(errors["jobs"][job_id])
+      assert is_list(errors["jobs"][job_id]["name"])
+
+      assert Enum.any?(
+               errors["jobs"][job_id]["name"],
+               &String.contains?(&1, "can't be blank")
+             )
+    end
+
+    test "nests workflow-level and entity errors correctly in Y.Doc", %{
+      session: session,
+      user: user
+    } do
+      # Create validation errors at both workflow and job level
+      doc = Session.get_doc(session)
+      workflow_map = Yex.Doc.get_map(doc, "workflow")
+      jobs_array = Yex.Doc.get_array(doc, "jobs")
+
+      job_id = Ecto.UUID.generate()
+
+      Yex.Doc.transaction(doc, "test_mixed_errors", fn ->
+        # Set blank workflow name (workflow-level error)
+        Yex.Map.set(workflow_map, "name", "")
+
+        # Add job with blank name (entity-level error)
+        job_map =
+          Yex.MapPrelim.from(%{
+            "id" => job_id,
+            "name" => "",
+            "body" => Yex.TextPrelim.from("console.log('test');"),
+            "adaptor" => "@openfn/language-common@1.0.0",
+            "project_credential_id" => nil,
+            "keychain_credential_id" => nil
+          })
+
+        Yex.Array.push(jobs_array, job_map)
+      end)
+
+      # Attempt save (should fail validation at both levels)
+      assert {:error, %Ecto.Changeset{}} = Session.save_workflow(session, user)
+
+      # Check error structure in Y.Doc
+      errors_map = Yex.Doc.get_map(doc, "errors")
+      errors = Yex.Map.to_json(errors_map)
+
+      # Verify workflow errors are nested under 'workflow' key
+      assert Map.has_key?(errors, "workflow")
+      assert is_map(errors["workflow"])
+      assert is_list(errors["workflow"]["name"])
+
+      assert Enum.any?(
+               errors["workflow"]["name"],
+               &String.contains?(&1, "can't be blank")
+             )
+
+      # Verify entity errors still nested under entity type keys
+      assert Map.has_key?(errors, "jobs")
+      assert is_map(errors["jobs"])
+      assert Map.has_key?(errors["jobs"], job_id)
+      assert is_map(errors["jobs"][job_id])
+      assert is_list(errors["jobs"][job_id]["name"])
+
+      assert Enum.any?(
+               errors["jobs"][job_id]["name"],
+               &String.contains?(&1, "can't be blank")
+             )
+
+      # Verify structure matches Y.Doc top-level organization
+      # Y.Doc has: workflow (map), jobs (array), triggers (array), edges (array)
+      # Errors mirror this: workflow (map), jobs (map), triggers (map), edges (map)
+      assert Map.keys(errors) |> Enum.sort() == ["jobs", "workflow"]
+    end
+
+    test "merges server errors with existing client errors", %{
+      session: session,
+      user: user
+    } do
+      # Simulate client-side validation errors already in Y.Doc
+      doc = Session.get_doc(session)
+      errors_map = Yex.Doc.get_map(doc, "errors")
+
+      job_id_1 = Ecto.UUID.generate()
+      job_id_2 = Ecto.UUID.generate()
+
+      # Add client errors for two jobs
+      Yex.Doc.transaction(doc, "test_add_client_errors", fn ->
+        jobs_errors =
+          Yex.MapPrelim.from(%{
+            job_id_1 => Yex.MapPrelim.from(%{"body" => ["client error"]}),
+            job_id_2 => Yex.MapPrelim.from(%{"adaptor" => ["invalid adaptor"]})
+          })
+
+        Yex.Map.set(errors_map, "jobs", jobs_errors)
+      end)
+
+      # Now create server validation error for job_id_1 (different field)
+      jobs_array = Yex.Doc.get_array(doc, "jobs")
+
+      job_map =
+        Yex.MapPrelim.from(%{
+          "id" => job_id_1,
+          "name" => "",
+          # Server will validate this
+          "body" => Yex.TextPrelim.from("console.log('test');"),
+          "adaptor" => "@openfn/language-common@1.0.0",
+          "project_credential_id" => nil,
+          "keychain_credential_id" => nil
+        })
+
+      Yex.Doc.transaction(doc, "test_add_invalid_job", fn ->
+        Yex.Array.push(jobs_array, job_map)
+      end)
+
+      # Attempt save (should fail validation on job_id_1 name)
+      assert {:error, %Ecto.Changeset{}} = Session.save_workflow(session, user)
+
+      # Check that BOTH client and server errors are present
+      errors = Yex.Map.to_json(errors_map)
+
+      # job_id_1 should have server error for 'name' AND client error for 'body'
+      assert Map.has_key?(errors, "jobs")
+      assert Map.has_key?(errors["jobs"], job_id_1)
+
+      # Server error should be present
+      assert is_list(errors["jobs"][job_id_1]["name"])
+
+      assert Enum.any?(
+               errors["jobs"][job_id_1]["name"],
+               &String.contains?(&1, "can't be blank")
+             )
+
+      # Client error should still be present
+      assert is_list(errors["jobs"][job_id_1]["body"])
+      assert "client error" in errors["jobs"][job_id_1]["body"]
+
+      # job_id_2 should still have its client error (untouched by server)
+      assert Map.has_key?(errors["jobs"], job_id_2)
+      assert is_list(errors["jobs"][job_id_2]["adaptor"])
+      assert "invalid adaptor" in errors["jobs"][job_id_2]["adaptor"]
+    end
+
+    test "server errors take precedence over client errors for same field", %{
+      session: session,
+      user: user
+    } do
+      # Add client error for workflow name
+      doc = Session.get_doc(session)
+      errors_map = Yex.Doc.get_map(doc, "errors")
+
+      Yex.Doc.transaction(doc, "test_add_client_error", fn ->
+        client_workflow_errors =
+          Yex.MapPrelim.from(%{"name" => ["client side validation error"]})
+
+        Yex.Map.set(errors_map, "workflow", client_workflow_errors)
+      end)
+
+      # Now cause server validation error on the same field
+      workflow_map = Yex.Doc.get_map(doc, "workflow")
+
+      Yex.Doc.transaction(doc, "test_blank_name", fn ->
+        Yex.Map.set(workflow_map, "name", "")
+      end)
+
+      # Attempt save (should fail validation)
+      assert {:error, %Ecto.Changeset{}} = Session.save_workflow(session, user)
+
+      # Check that server error replaced client error
+      errors = Yex.Map.to_json(errors_map)
+
+      assert Map.has_key?(errors, "workflow")
+      assert is_list(errors["workflow"]["name"])
+
+      # Should have server error, not client error
+      assert Enum.any?(
+               errors["workflow"]["name"],
+               &String.contains?(&1, "can't be blank")
+             )
+
+      refute "client side validation error" in errors["workflow"]["name"]
+    end
+
+    test "preserves client errors for entities not validated by server", %{
+      session: session,
+      user: user
+    } do
+      # Simulate multiple client errors across different entity types
+      doc = Session.get_doc(session)
+      errors_map = Yex.Doc.get_map(doc, "errors")
+
+      job_id = Ecto.UUID.generate()
+      edge_id = Ecto.UUID.generate()
+
+      Yex.Doc.transaction(doc, "test_add_multiple_client_errors", fn ->
+        # Client errors for job
+        Yex.Map.set(
+          errors_map,
+          "jobs",
+          Yex.MapPrelim.from(%{
+            job_id => Yex.MapPrelim.from(%{"body" => ["client job error"]})
+          })
+        )
+
+        # Client errors for edge
+        Yex.Map.set(
+          errors_map,
+          "edges",
+          Yex.MapPrelim.from(%{
+            edge_id =>
+              Yex.MapPrelim.from(%{
+                "condition_expression" => ["client edge error"]
+              })
+          })
+        )
+
+        # Client error for workflow
+        Yex.Map.set(
+          errors_map,
+          "workflow",
+          Yex.MapPrelim.from(%{"concurrency" => ["client workflow error"]})
+        )
+      end)
+
+      # Now cause server validation error on workflow name only
+      workflow_map = Yex.Doc.get_map(doc, "workflow")
+
+      Yex.Doc.transaction(doc, "test_blank_workflow_name", fn ->
+        Yex.Map.set(workflow_map, "name", "")
+      end)
+
+      # Attempt save (should fail validation on workflow name)
+      assert {:error, %Ecto.Changeset{}} = Session.save_workflow(session, user)
+
+      # Check that client errors for jobs and edges are preserved
+      errors = Yex.Map.to_json(errors_map)
+
+      # Workflow should have BOTH server error (name) and client error (concurrency)
+      assert Map.has_key?(errors, "workflow")
+
+      assert Enum.any?(
+               errors["workflow"]["name"],
+               &String.contains?(&1, "can't be blank")
+             )
+
+      assert "client workflow error" in errors["workflow"]["concurrency"]
+
+      # Job client error should be preserved
+      assert Map.has_key?(errors, "jobs")
+      assert Map.has_key?(errors["jobs"], job_id)
+      assert "client job error" in errors["jobs"][job_id]["body"]
+
+      # Edge client error should be preserved
+      assert Map.has_key?(errors, "edges")
+      assert Map.has_key?(errors["edges"], edge_id)
+
+      assert "client edge error" in errors["edges"][edge_id][
+               "condition_expression"
+             ]
+    end
+  end
+
+  describe "persistence reconciliation" do
+    test "reconciles lock_version when loading persisted Y.Doc state", %{
+      user: user
+    } do
+      workflow = insert(:simple_workflow)
+
+      # Start initial session and make some changes
+      {:ok, _doc_supervisor} =
+        Lightning.Collaborate.start_document(
+          workflow,
+          "workflow:#{workflow.id}"
+        )
+
+      {:ok, session1} =
+        Session.start_link(
+          user: user,
+          workflow: workflow,
+          parent_pid: self(),
+          document_name: "workflow:#{workflow.id}"
+        )
+
+      # Get the SharedDoc and verify initial lock_version
+      shared_doc = Session.get_doc(session1)
+      workflow_map = Yex.Doc.get_map(shared_doc, "workflow")
+      initial_lock_version = Yex.Map.fetch!(workflow_map, "lock_version")
+
+      # Simulate workflow changes in database (e.g., from another save)
+      # This increments lock_version in the database
+      new_lock_version = initial_lock_version + 1
+
+      {:ok, updated_workflow} =
+        Lightning.Workflows.save_workflow(
+          Lightning.Workflows.change_workflow(workflow, %{
+            name: "Updated Name"
+          }),
+          user
+        )
+
+      # Verify database has new lock_version
+      assert updated_workflow.lock_version == new_lock_version
+
+      # Stop the session and document supervisor to simulate server restart
+      Session.stop(session1)
+      ensure_doc_supervisor_stopped(workflow.id)
+
+      # Start a new session - this will load persisted Y.Doc state
+      # The persisted state has old lock_version, but fresh workflow has new one
+      {:ok, _doc_supervisor2} =
+        Lightning.Collaborate.start_document(
+          updated_workflow,
+          "workflow:#{workflow.id}"
+        )
+
+      {:ok, session2} =
+        Session.start_link(
+          user: user,
+          workflow: updated_workflow,
+          parent_pid: self(),
+          document_name: "workflow:#{workflow.id}"
+        )
+
+      # Get the SharedDoc and check lock_version was reconciled
+      shared_doc2 = Session.get_doc(session2)
+      workflow_map2 = Yex.Doc.get_map(shared_doc2, "workflow")
+      reconciled_lock_version = Yex.Map.fetch!(workflow_map2, "lock_version")
+
+      # The lock_version should match the database, not the stale persisted state
+      assert reconciled_lock_version == new_lock_version,
+             "Expected lock_version #{new_lock_version} but got #{reconciled_lock_version}"
+
+      # Verify name was also reconciled
+      reconciled_name = Yex.Map.fetch!(workflow_map2, "name")
+      assert reconciled_name == "Updated Name"
+
+      Session.stop(session2)
+    end
+
+    test "discards stale persisted Y.Doc when lock_version changes", %{
+      user: user
+    } do
+      workflow = insert(:simple_workflow)
+
+      # Start initial session with lock_version 0
+      {:ok, _doc_supervisor} =
+        Lightning.Collaborate.start_document(
+          workflow,
+          "workflow:#{workflow.id}"
+        )
+
+      {:ok, session1} =
+        Session.start_link(
+          user: user,
+          workflow: workflow,
+          parent_pid: self(),
+          document_name: "workflow:#{workflow.id}"
+        )
+
+      # Get initial state
+      shared_doc = Session.get_doc(session1)
+      jobs_array = Yex.Doc.get_array(shared_doc, "jobs")
+      initial_job_count = Yex.Array.length(jobs_array)
+
+      # Workflow is saved (lock_version increments)
+      {:ok, updated_workflow} =
+        Lightning.Workflows.save_workflow(
+          Lightning.Workflows.change_workflow(workflow, %{
+            name: "Changed by another user"
+          }),
+          user
+        )
+
+      new_lock_version = updated_workflow.lock_version
+
+      # Simulate server restart - persisted Y.Doc has old lock_version
+      Session.stop(session1)
+      ensure_doc_supervisor_stopped(workflow.id)
+
+      # Start new session with updated workflow
+      # Persistence should detect stale lock_version and reload from DB
+      {:ok, _doc_supervisor2} =
+        Lightning.Collaborate.start_document(
+          updated_workflow,
+          "workflow:#{workflow.id}"
+        )
+
+      {:ok, session2} =
+        Session.start_link(
+          user: user,
+          workflow: updated_workflow,
+          parent_pid: self(),
+          document_name: "workflow:#{workflow.id}"
+        )
+
+      # Verify Y.Doc was reloaded from database
+      shared_doc2 = Session.get_doc(session2)
+      jobs_array2 = Yex.Doc.get_array(shared_doc2, "jobs")
+
+      # Should have original jobs from DB (persisted Y.Doc was discarded)
+      assert Yex.Array.length(jobs_array2) == initial_job_count
+
+      # Verify lock_version matches database
+      workflow_map2 = Yex.Doc.get_map(shared_doc2, "workflow")
+      reconciled_lock_version = Yex.Map.fetch!(workflow_map2, "lock_version")
+
+      assert reconciled_lock_version == new_lock_version,
+             "Lock version should match database"
+
+      # Verify workflow name was updated from database
+      reconciled_name = Yex.Map.fetch!(workflow_map2, "name")
+      assert reconciled_name == "Changed by another user"
+
+      Session.stop(session2)
     end
   end
 end

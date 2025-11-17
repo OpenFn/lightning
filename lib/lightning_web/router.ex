@@ -135,6 +135,30 @@ defmodule LightningWeb.Router do
     get "/download/yaml", DownloadsController, :download_project_yaml
     get "/dataclip/body/:id", DataclipController, :show
 
+    get "/projects/:project_id/jobs/:job_id/dataclips",
+        DataclipController,
+        :search
+
+    get "/projects/:project_id/runs/:run_id/dataclip",
+        DataclipController,
+        :show_for_run
+
+    patch "/projects/:project_id/dataclips/:dataclip_id",
+          DataclipController,
+          :update_name
+
+    post "/projects/:project_id/workflows/:workflow_id/runs",
+         WorkflowController,
+         :create_run
+
+    get "/projects/:project_id/runs/:run_id/steps",
+        WorkflowController,
+        :get_run_steps
+
+    post "/projects/:project_id/runs/:run_id/retry",
+         WorkflowController,
+         :retry_run
+
     get "/project_files/:id/download", ProjectFileController, :download
 
     get "/profile/confirm_email/:token",
@@ -202,7 +226,7 @@ defmodule LightningWeb.Router do
 
         live "/w", WorkflowLive.Index, :index
         live "/w/new", WorkflowLive.Edit, :new
-        live "/w/new/collaborate", WorkflowLive.CollaborateNew, :new
+        live "/w/new/collaborate", WorkflowLive.Collaborate, :new
         live "/w/:id", WorkflowLive.Edit, :edit
         live "/w/:id/collaborate", WorkflowLive.Collaborate, :edit
 

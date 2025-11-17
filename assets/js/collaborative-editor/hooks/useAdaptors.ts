@@ -5,11 +5,11 @@
  * from the StoreProvider context using the useSyncExternalStore pattern.
  */
 
-import { useSyncExternalStore, useContext } from "react";
+import { useSyncExternalStore, useContext } from 'react';
 
-import { StoreContext } from "../contexts/StoreProvider";
-import type { AdaptorStoreInstance } from "../stores/createAdaptorStore";
-import type { Adaptor } from "../types/adaptor";
+import { StoreContext } from '../contexts/StoreProvider';
+import type { AdaptorStoreInstance } from '../stores/createAdaptorStore';
+import type { Adaptor } from '../types/adaptor';
 
 /**
  * Main hook for accessing the AdaptorStore instance
@@ -18,7 +18,7 @@ import type { Adaptor } from "../types/adaptor";
 const useAdaptorStore = (): AdaptorStoreInstance => {
   const context = useContext(StoreContext);
   if (!context) {
-    throw new Error("useAdaptorStore must be used within a StoreProvider");
+    throw new Error('useAdaptorStore must be used within a StoreProvider');
   }
   return context.adaptorStore;
 };
@@ -82,4 +82,24 @@ export const useAdaptor = (name: string): Adaptor | null => {
   );
 
   return useSyncExternalStore(adaptorStore.subscribe, selectAdaptor);
+};
+
+/**
+ * Hook to get project-specific adaptors and all adaptors
+ * Returns both project adaptors and all adaptors from backend endpoint
+ */
+export const useProjectAdaptors = (): {
+  projectAdaptors: Adaptor[];
+  allAdaptors: Adaptor[];
+  isLoading: boolean;
+} => {
+  const adaptorStore = useAdaptorStore();
+
+  const selectProjectData = adaptorStore.withSelector(state => ({
+    projectAdaptors: state.projectAdaptors || [],
+    allAdaptors: state.adaptors,
+    isLoading: state.isLoading,
+  }));
+
+  return useSyncExternalStore(adaptorStore.subscribe, selectProjectData);
 };

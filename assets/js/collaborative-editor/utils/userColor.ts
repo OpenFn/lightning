@@ -5,15 +5,15 @@
  * Same user ID will always get the same color.
  */
 
-const USER_COLORS = [
-  "#FF6B6B",
-  "#4ECDC4",
-  "#45B7D1",
-  "#FFA07A",
-  "#98D8C8",
-  "#FFCF56",
-  "#FF8B94",
-  "#AED581",
+export const USER_COLORS = [
+  '#E53935', // red
+  '#8E24AA', // purple
+  '#00ACC1', // cyan
+  '#43A047', // green
+  '#FB8C00', // orange
+  '#3949AB', // indigo
+  '#D81B60', // magenta
+  '#6D4C41', // brown
 ];
 
 /**
@@ -21,10 +21,18 @@ const USER_COLORS = [
  * Uses a simple hash function to map user ID to color palette
  */
 export function generateUserColor(userId: string): string {
-  const hash = userId.split("").reduce((a, b) => {
-    a = (a << 5) - a + b.charCodeAt(0);
-    return a & a;
-  }, 0);
+  const index = hashToIndex(userId, USER_COLORS.length);
+  return USER_COLORS[index];
+}
 
-  return USER_COLORS[Math.abs(hash) % USER_COLORS.length] || "#999999";
+// FNV-1a with a slight twist.
+function hashToIndex(userId: string, paletteLength: number) {
+  const str = userId.replace(/-/g, '').toLowerCase();
+  let hash = 2166136261;
+  for (let i = 0; i < str.length; i++) {
+    hash ^= str.charCodeAt(i);
+    hash = Math.imul(hash, 16777619) >>> 0;
+  }
+  hash ^= hash >> 16; // twist
+  return Math.abs(hash) % paletteLength;
 }

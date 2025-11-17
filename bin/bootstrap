@@ -168,6 +168,17 @@ install_missing_homebrew_packages() {
 
 setup_environment_variables() {
   if [[ "$OS" == "Darwin" ]]; then
+    # Explicitly set C/C++ compilers to avoid CMake detection issues
+    if command -v clang &>/dev/null; then
+      export CC="$(command -v clang)"
+      echo "🔧 Set CC to $CC"
+    fi
+
+    if command -v clang++ &>/dev/null; then
+      export CXX="$(command -v clang++)"
+      echo "🔧 Set CXX to $CXX"
+    fi
+
     if echo "$HOMEBREW_PACKAGES_INSTALLED" | grep -q "^libsodium$" || brew list libsodium &>/dev/null; then
       export CPATH="$HOMEBREW_PREFIX/include"
       export LIBRARY_PATH="$HOMEBREW_PREFIX/lib"
@@ -253,7 +264,15 @@ main() {
 
   detect_stale_native_caches
 
+  echo "🔨 Compiling Elixir dependencies..."
   mix deps.compile
+
+  # Clean up stray object file created by crc32cer cmake compilation
+  # This file sometimes escapes the build directory during cmake's compiler tests
+  if [[ -f "-.o" ]]; then
+    echo "🧹 Cleaning up stray cmake artifact (-.o)"
+    rm -f ./-.o
+  fi
 
   # If you have already compiled Rambo explicitly via `mix compile.rambo`, and you
   # are still seeing the following error:

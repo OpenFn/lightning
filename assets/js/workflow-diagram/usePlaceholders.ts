@@ -1,18 +1,23 @@
 /*
  * Hook for placeholder management
  */
+import type { XYPosition } from '@xyflow/react';
 import { useCallback, useEffect, useState } from 'react';
 
 import { randomUUID } from '../common';
 import { DEFAULT_TEXT } from '../editor/Editor';
 import { useWorkflowStore } from '../workflow-store/store';
+
 import { styleEdge } from './styles';
 import type { Flow } from './types';
 import toWorkflow from './util/to-workflow';
-import type { XYPosition } from '@xyflow/react';
 
 // generates a placeholder node and edge as child of the parent
-export const create = (parentNode: Flow.Node, where?: XYPosition) => {
+export const create = (
+  parentNode: Flow.Node,
+  where?: XYPosition,
+  adaptor?: string
+) => {
   const newModel: Flow.Model = {
     nodes: [],
     edges: [],
@@ -35,7 +40,7 @@ export const create = (parentNode: Flow.Node, where?: XYPosition) => {
     },
     data: {
       body: DEFAULT_TEXT,
-      adaptor: '@openfn/language-common@latest',
+      adaptor: adaptor || '@openfn/language-common@latest',
     },
   });
 
@@ -78,13 +83,16 @@ export default (
     []
   );
 
-  const add = useCallback((parentNode: Flow.Node, where?: XYPosition) => {
-    // Generate a placeholder node and edge
-    const updated = create(parentNode, where);
-    setPlaceholders(updated);
+  const add = useCallback(
+    (parentNode: Flow.Node, where?: XYPosition, adaptor?: string) => {
+      // Generate a placeholder node and edge
+      const updated = create(parentNode, where, adaptor);
+      setPlaceholders(updated);
 
-    requestSelectionChange(updated.nodes[0].id);
-  }, []);
+      requestSelectionChange(updated.nodes[0].id);
+    },
+    []
+  );
 
   const commit = useCallback(
     (evt: CustomEvent<any>) => {

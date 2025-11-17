@@ -1,7 +1,10 @@
-import { relativeLocale } from '../hooks';
-import type { WorkflowRunHistory } from '#/workflow-store/store';
 import { formatRelative } from 'date-fns';
 import React, { useState } from 'react';
+
+import type { WorkflowRunHistory } from '#/workflow-store/store';
+
+import { relativeLocale } from '../hooks';
+import { cn } from '../utils/cn';
 import { duration } from '../utils/duration';
 import truncateUid from '../utils/truncateUID';
 
@@ -37,9 +40,7 @@ const StatePill: React.FC<{ state: string; mini?: boolean }> = ({
     'my-auto whitespace-nowrap rounded-full text-center align-baseline font-medium leading-none';
   const sizeClasses = mini ? 'py-1 px-2 text-[10px]' : 'py-2 px-4 text-xs';
 
-  return (
-    <span className={`${baseClasses} ${sizeClasses} ${classes}`}>{text}</span>
-  );
+  return <span className={cn(baseClasses, sizeClasses, classes)}>{text}</span>;
 };
 
 interface MiniHistoryProps {
@@ -144,9 +145,10 @@ export default function MiniHistory({
       }}
     >
       <div
-        className={`flex items-center cursor-pointer justify-between px-3 py-2 border-gray-200 bg-gray-50 hover:bg-gray-100 transition-colors ${
+        className={cn(
+          'flex items-center cursor-pointer justify-between px-3 py-2 border-gray-200 bg-gray-50 hover:bg-gray-100 transition-colors',
           isCollapsed ? 'border-b-0' : 'border-b'
-        }`}
+        )}
         onClick={() => historyToggle()}
       >
         <div className="flex items-center gap-2">
@@ -185,9 +187,10 @@ export default function MiniHistory({
       </div>
 
       <div
-        className={`overflow-y-auto no-scrollbar max-h-82 ${
+        className={cn(
+          'overflow-y-auto no-scrollbar max-h-82',
           isCollapsed ? 'hidden' : 'block'
-        }`}
+        )}
       >
         {history.length === 0 ? (
           <div className="flex flex-col items-center justify-center p-8 text-gray-500">
@@ -201,7 +204,7 @@ export default function MiniHistory({
           <div className="divide-y divide-gray-100">
             {history.map(workorder => (
               <div key={workorder.id}>
-                <div className={`px-3 py-2 hover:bg-gray-50 transition-colors`}>
+                <div className="px-3 py-2 hover:bg-gray-50 transition-colors">
                   <div
                     className="flex items-center justify-between cursor-pointer"
                     onClick={() => expandWorkorderHandler(workorder)}
@@ -255,12 +258,12 @@ export default function MiniHistory({
                   workorder.runs.map(run => (
                     <div
                       key={run.id}
-                      className={[
+                      className={cn(
                         'px-3 py-1.5 text-xs hover:bg-gray-50 transition-colors cursor-pointer border-l-2',
                         run.selected
                           ? 'bg-indigo-50 border-l-indigo-500'
-                          : ' border-l-transparent',
-                      ].join(' ')}
+                          : 'border-l-transparent'
+                      )}
                       onClick={() =>
                         run.selected
                           ? onCollapseHistory()
@@ -270,9 +273,10 @@ export default function MiniHistory({
                       <div className="flex items-center justify-between w-full mr-2">
                         <div className="flex items-center gap-2 min-w-0 flex-1">
                           <span
-                            className={`hero-x-mark w-4 h-4 text-gray-400 ${
+                            className={cn(
+                              'hero-x-mark w-4 h-4 text-gray-400',
                               run.selected ? 'visible' : 'invisible'
-                            }`}
+                            )}
                           ></span>
                           <button
                             onClick={e => navigateToRunView(e, run.id)}

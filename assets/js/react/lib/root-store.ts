@@ -1,7 +1,6 @@
 import invariant from 'tiny-invariant';
-
-import { createStore } from 'zustand/vanilla';
 import { devtools } from 'zustand/middleware';
+import { createStore } from 'zustand/vanilla';
 
 import type { ReactComponentHook, RootMessage } from '#/react/types';
 

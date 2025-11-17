@@ -132,11 +132,24 @@ config :lightning, :is_resettable_demo, true
 config :lightning, :apollo, endpoint: "http://localhost:3000", timeout: 30_000
 
 config :git_hooks,
-  auto_install: true,
+  # In local dev (with a real .git repo) we auto-install hooks.
+  # In Docker builds the .git directory is not present (or incomplete),
+  # so skip auto-install to avoid compile-time failures.
+  auto_install:
+    System.get_env("GIT_HOOKS_AUTO_INSTALL", "true") == "true" and
+      File.exists?(".git/config"),
   verbose: true,
   hooks: [
     pre_commit: [
       tasks: [
+        {:cmd,
+         "git diff --cached --name-only | grep -q '^\\.context' && " <>
+           "echo 'ERROR: Cannot commit .context directory (it is a symlink shared across branches)' && " <>
+           "exit 1 || exit 0"},
+        {:cmd,
+         "git diff --cached | grep -E '^[+](<<<<<<<\\s|=======$|>>>>>>>\\s)' && " <>
+           "echo 'ERROR: Unresolved merge conflict markers found in staged files' && " <>
+           "exit 1 || exit 0"},
         {:cmd,
          "FILES=$(git diff --cached --name-only --diff-filter=ACM | grep -E '\\.(ex|exs|heex)$' || true); " <>
            "if [ -n \"$FILES\" ]; then " <>
@@ -145,7 +158,7 @@ config :git_hooks,
         {:cmd,
          "FILES=$(git diff --cached --name-only --diff-filter=ACM | grep -E '\\.(js|ts|tsx|jsx|md)$' || true); " <>
            "if [ -n \"$FILES\" ]; then " <>
-           "npx --prefix assets prettier --write $FILES && git add $FILES; " <>
+           "npx --prefix assets prettier --config .prettierrc --ignore-path .prettierignore --write $FILES && git add $FILES; " <>
            "fi"},
         {:cmd,
          "git diff --cached --quiet && echo 'No changes to commit after formatting' && exit 1 || exit 0"}

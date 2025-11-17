@@ -813,7 +813,8 @@ defmodule Lightning.SetupUtils do
       Lightning.Projects.File,
       Lightning.Projects.ProjectOauthClient,
       Lightning.Credentials.OauthClient,
-      Lightning.Projects.Project
+      Lightning.Projects.Project,
+      Lightning.Collaboration.DocumentState
     ])
 
     if opts[:destroy_super] do

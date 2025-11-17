@@ -283,11 +283,10 @@ defmodule Lightning.RunsTest do
       assert Repo.get_by(Lightning.RunStep, step_id: step.id),
              "There is a corresponding RunStep linking it to the run"
 
-      run_id = run.id
-
-      assert_received %Lightning.WorkOrders.Events.RunUpdated{
-        run: %{id: ^run_id}
-      }
+      # Note: start_step no longer broadcasts RunUpdated event
+      # The run state doesn't change when a step starts (already in :started state)
+      # Instead, a StepStarted event is broadcast for step-level tracking
+      refute_received %Lightning.WorkOrders.Events.RunUpdated{}
     end
 
     test "should not allow referencing job that is not on the snapshot" do

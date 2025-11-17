@@ -1,13 +1,14 @@
-import type { ReactNode } from "react";
+import type { ReactNode } from 'react';
 
 interface ButtonProps {
-  children: ReactNode;
-  variant?: "primary" | "danger" | "secondary";
+  children?: ReactNode;
+  variant?: 'primary' | 'danger' | 'secondary' | 'nakedClose';
   disabled?: boolean;
   loading?: boolean;
   onClick?: () => void;
-  type?: "button" | "submit";
+  type?: 'button' | 'submit';
   className?: string;
+  'aria-label'?: string;
 }
 
 /**
@@ -21,19 +22,28 @@ interface ButtonProps {
  */
 export function Button({
   children,
-  variant = "primary",
+  variant = 'primary',
   disabled = false,
   loading = false,
   onClick,
-  type = "button",
-  className = "",
+  type = 'button',
+  className = '',
+  'aria-label': ariaLabel,
 }: ButtonProps) {
   const isDisabled = disabled || loading;
 
-  // Base classes for all buttons
+  // Base classes for standard buttons (not nakedClose)
   const baseClasses = `
     rounded-md px-3 py-2 text-sm font-semibold shadow-xs
     focus-visible:outline-2 focus-visible:outline-offset-2
+    disabled:opacity-50 disabled:cursor-not-allowed
+  `;
+
+  // nakedClose button has different base classes (no padding/shadow)
+  const nakedCloseBaseClasses = `
+    relative rounded-md
+    focus-visible:outline-2 focus-visible:outline-offset-2
+    focus-visible:outline-indigo-600
     disabled:opacity-50 disabled:cursor-not-allowed
   `;
 
@@ -54,22 +64,37 @@ export function Button({
       inset-ring inset-ring-gray-300
       hover:inset-ring-gray-400
     `,
+    nakedClose: `
+      text-gray-400 hover:text-gray-500
+    `,
   };
+
+  const buttonClasses =
+    variant === 'nakedClose' ? nakedCloseBaseClasses : baseClasses;
 
   return (
     <button
       type={type}
       onClick={onClick}
       disabled={isDisabled}
+      aria-label={ariaLabel}
       className={`
-        ${baseClasses}
+        ${buttonClasses}
         ${variantClasses[variant]}
         ${className}
       `
-        .replace(/\s+/g, " ")
+        .replace(/\s+/g, ' ')
         .trim()}
     >
-      {children}
+      {variant === 'nakedClose' ? (
+        <>
+          <span className="absolute -inset-2.5" />
+          <span className="sr-only">{ariaLabel || 'Close panel'}</span>
+          <div className="hero-x-mark size-6" />
+        </>
+      ) : (
+        children
+      )}
     </button>
   );
 }

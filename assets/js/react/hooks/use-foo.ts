@@ -1,6 +1,5 @@
-import invariant from 'tiny-invariant';
-
 import { useContext } from 'react';
+import invariant from 'tiny-invariant';
 
 import { FooContext } from '#/react/contexts/FooContext';
 

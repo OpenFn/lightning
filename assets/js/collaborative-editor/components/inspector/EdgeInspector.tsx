@@ -1,12 +1,16 @@
-import { useCallback, useState } from "react";
+import { useCallback, useState } from 'react';
 
-import { useWorkflowActions } from "../../hooks/useWorkflow";
-import type { Workflow } from "../../types/workflow";
-import { Button } from "../Button";
+import {
+  useWorkflowActions,
+  useWorkflowReadOnly,
+} from '../../hooks/useWorkflow';
+import type { Workflow } from '../../types/workflow';
+import { Button } from '../Button';
+import { Toggle } from '../Toggle';
 
-import { EdgeForm } from "./EdgeForm";
-import { InspectorFooter } from "./InspectorFooter";
-import { InspectorLayout } from "./InspectorLayout";
+import { EdgeForm } from './EdgeForm';
+import { InspectorFooter } from './InspectorFooter';
+import { InspectorLayout } from './InspectorLayout';
 
 interface EdgeInspectorProps {
   edge: Workflow.Edge;
@@ -18,13 +22,14 @@ interface EdgeInspectorProps {
  * Combines layout, form, and delete action.
  */
 export function EdgeInspector({ edge, onClose }: EdgeInspectorProps) {
-  const { removeEdge, clearSelection } = useWorkflowActions();
+  const { removeEdge, clearSelection, updateEdge } = useWorkflowActions();
+  const { isReadOnly } = useWorkflowReadOnly();
   const [isDeleting, setIsDeleting] = useState(false);
 
   const handleDelete = useCallback(async () => {
     if (
       window.confirm(
-        "Are you sure you want to delete this edge? This action cannot be undone."
+        'Are you sure you want to delete this edge? This action cannot be undone.'
       )
     ) {
       setIsDeleting(true);
@@ -32,31 +37,42 @@ export function EdgeInspector({ edge, onClose }: EdgeInspectorProps) {
         removeEdge(edge.id);
         clearSelection();
       } catch (error) {
-        console.error("Delete failed:", error);
+        console.error('Delete failed:', error);
       } finally {
         setIsDeleting(false);
       }
     }
   }, [edge.id, removeEdge, clearSelection]);
 
-  // Only show delete button for job edges (not trigger edges)
-  const footer = !edge.source_trigger_id ? (
-    <InspectorFooter
-      rightButtons={
-        <Button variant="danger" onClick={handleDelete} disabled={isDeleting}>
-          {isDeleting ? "Deleting..." : "Delete"}
-        </Button>
-      }
-    />
-  ) : undefined;
+  const handleEnabledChange = useCallback(
+    (enabled: boolean) => {
+      updateEdge(edge.id, { enabled });
+    },
+    [edge.id, updateEdge]
+  );
+
+  // Only show footer for job edges (not trigger edges) and when not readonly
+  const footer =
+    !edge.source_trigger_id && !isReadOnly ? (
+      <InspectorFooter
+        leftButtons={
+          <Toggle
+            id={`edge-enabled-${edge.id}`}
+            checked={edge.enabled ?? true}
+            onChange={handleEnabledChange}
+            label="Enabled"
+          />
+        }
+        rightButtons={
+          <Button variant="danger" onClick={handleDelete} disabled={isDeleting}>
+            {isDeleting ? 'Deleting...' : 'Delete'}
+          </Button>
+        }
+      />
+    ) : undefined;
 
   return (
-    <InspectorLayout
-      title="Inspector"
-      nodeType="edge"
-      onClose={onClose}
-      footer={footer}
-    >
+    <InspectorLayout title="Path" onClose={onClose} footer={footer}>
       <EdgeForm edge={edge} />
     </InspectorLayout>
   );

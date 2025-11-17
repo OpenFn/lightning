@@ -9,6 +9,7 @@ export namespace Lightning {
 
     // Not technically from Lightning, but we'll infer this and scribble it
     placeholder?: boolean;
+    errors?: Record<string, string[]>;
   }
 
   export interface Job extends Node {
@@ -29,7 +30,13 @@ export namespace Lightning {
     webhook_url: string;
   }
 
-  export type TriggerNode = CronTrigger | WebhookTrigger;
+  export interface KafkaTrigger extends Node {
+    type: 'kafka';
+    enabled: boolean;
+    has_auth_method: boolean;
+  }
+
+  export type TriggerNode = CronTrigger | WebhookTrigger | KafkaTrigger;
 
   export interface JobNode extends Node {
     body?: string;
@@ -46,7 +53,7 @@ export namespace Lightning {
     condition_type?: string;
     edge?: boolean;
     error_path?: boolean;
-    errors: any;
+    errors?: Record<string, string[]>;
     condition_label?: string;
   }
 

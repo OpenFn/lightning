@@ -7,12 +7,12 @@
  * collaborative data (Y.Doc sourced) and local UI state.
  */
 
-import type * as Y from "yjs";
-import { z } from "zod";
+import type * as Y from 'yjs';
+import { z } from 'zod';
 
-import type { Job as JobType } from "./job";
-import type { Session } from "./session";
-import type { Trigger as TriggerType } from "./trigger";
+import type { Job as JobType } from './job';
+import type { Session } from './session';
+import type { Trigger as TriggerType } from './trigger';
 
 /**
  * Zod schema for workflow validation
@@ -24,7 +24,7 @@ export const WorkflowSchema = z.object({
   name: z
     .string()
     .min(1, "can't be blank")
-    .max(255, "should be at most 255 character(s)"),
+    .max(255, 'should be at most 255 character(s)'),
   lock_version: z.number().int(),
   deleted_at: z.string().nullable(),
 
@@ -33,7 +33,7 @@ export const WorkflowSchema = z.object({
   concurrency: z
     .number()
     .int()
-    .min(1, "must be at least 1")
+    .min(1, 'must be at least 1')
     .nullable()
     .optional(),
   enable_job_logs: z.boolean().optional(),
@@ -41,8 +41,7 @@ export const WorkflowSchema = z.object({
 
 export type WorkflowFormValues = z.infer<typeof WorkflowSchema>;
 
-export interface Workflow {
-  name: string;
+export interface Workflow extends Session.Workflow {
   jobs: Workflow.Job[];
   triggers: Workflow.Trigger[];
   edges: Workflow.Edge[];
@@ -50,35 +49,39 @@ export interface Workflow {
 }
 
 export namespace Workflow {
-  // Domain objects - use comprehensive Job type from job.ts
-  export type Job = JobType;
+  // Domain objects - use comprehensive Job type from job.ts with errors
+  export type Job = JobType & { errors?: Record<string, string[]> };
 
-  export type Trigger = TriggerType;
+  export type Trigger = TriggerType & { errors?: Record<string, string[]> };
 
   export interface Edge {
     id: string;
-    source_job_id?: string;
-    source_trigger_id?: string;
+    source_job_id?: string | null;
+    source_trigger_id?: string | null;
     target_job_id: string;
     condition?: string;
     condition_type?: string;
     condition_expression?: string;
     condition_label?: string;
     enabled?: boolean;
+    errors?: Record<string, string[]>;
   }
 
-  export type NodeType = "job" | "trigger" | "edge";
+  export type NodeType = 'job' | 'trigger' | 'edge';
   export type Node = Job | Trigger | Edge;
 
   export type Positions = Record<string, { x: number; y: number }>;
 
   export interface State {
-    // Y.Doc sourced data (synced via observers)
-    workflow: Session.Workflow | null;
-    jobs: Workflow.Job[];
-    triggers: Workflow.Trigger[];
-    edges: Workflow.Edge[];
+    // Y.Doc sourced data (synced via observers) - all now have errors denormalized
+    workflow: Session.Workflow | null; // Has errors property
+    jobs: Workflow.Job[]; // Has errors property
+    triggers: Workflow.Trigger[]; // Has errors property
+    edges: Workflow.Edge[]; // Has errors property
     positions: Workflow.Positions;
+
+    // UndoManager for undo/redo operations
+    undoManager: Y.UndoManager | null;
 
     // Local UI state
     selectedJobId: string | null;
@@ -89,6 +92,20 @@ export namespace Workflow {
     enabled: boolean | null; // Computed from triggers
     selectedNode: Workflow.Job | Workflow.Trigger | null;
     selectedEdge: Workflow.Edge | null;
+
+    // Active trigger webhook auth methods (loaded on-demand from server)
+    activeTriggerAuthMethods: {
+      trigger_id: string;
+      webhook_auth_methods: Array<{
+        id: string;
+        name: string;
+        auth_type: string;
+      }>;
+    };
+    validationErrors: {
+      name?: string[];
+      concurrency?: string[];
+    } | null;
   }
 
   export interface Actions {

@@ -4,11 +4,12 @@ defmodule Lightning.Projects.MergeProjects do
   sandbox workflows back onto their parent workflows.
   """
   import Lightning.Utils.Maps, only: [stringify_keys: 1]
+  import Ecto.Query
 
-  # alias Lightning.AdaptorRegistry
   alias Lightning.Projects.Project
   alias Lightning.Repo
   alias Lightning.Workflows.Workflow
+  alias Lightning.Workflows.WorkflowVersion
 
   @doc """
   Merges a source project onto a target project using workflow name matching.
@@ -25,10 +26,13 @@ defmodule Lightning.Projects.MergeProjects do
     A map with the merged project structure ready for import, containing
     workflow mappings and project data.
   """
-  @spec merge_project(Project.t(), Project.t()) :: map()
+  @spec merge_project(Project.t(), Project.t(), map()) :: map()
+  def merge_project(source, target, new_uuid_map \\ %{})
+
   def merge_project(
         %Project{} = source_project,
-        %Project{} = target_project
+        %Project{} = target_project,
+        new_uuid_map
       ) do
     source_project =
       Repo.preload(source_project, workflows: [:jobs, :triggers, :edges])
@@ -38,11 +42,12 @@ defmodule Lightning.Projects.MergeProjects do
 
     merge_project(
       Map.from_struct(source_project),
-      Map.from_struct(target_project)
+      Map.from_struct(target_project),
+      new_uuid_map
     )
   end
 
-  def merge_project(source_project, target_project) do
+  def merge_project(source_project, target_project, new_uuid_map) do
     workflow_mappings =
       map_project_workflow_names(source_project, target_project)
 
@@ -50,7 +55,8 @@ defmodule Lightning.Projects.MergeProjects do
     build_merged_project(
       source_project,
       target_project,
-      workflow_mappings
+      workflow_mappings,
+      new_uuid_map
     )
   end
 
@@ -74,24 +80,33 @@ defmodule Lightning.Projects.MergeProjects do
     A map with the merged workflow structure ready for import, containing
     UUID mappings and workflow data.
   """
-  @spec merge_workflow(Workflow.t(), Workflow.t()) :: map()
+  @spec merge_workflow(Workflow.t(), Workflow.t(), map()) :: map()
+  def merge_workflow(source, target, new_uuid_map \\ %{})
+
   def merge_workflow(
         %Workflow{} = source_workflow,
-        %Workflow{} = target_workflow
+        %Workflow{} = target_workflow,
+        new_uuid_map
       ) do
     source_workflow = Repo.preload(source_workflow, [:jobs, :triggers, :edges])
     target_workflow = Repo.preload(target_workflow, [:jobs, :triggers, :edges])
 
     merge_workflow(
       Map.from_struct(source_workflow),
-      Map.from_struct(target_workflow)
+      Map.from_struct(target_workflow),
+      new_uuid_map
     )
   end
 
-  def merge_workflow(source_workflow, target_workflow) do
+  def merge_workflow(source_workflow, target_workflow, new_uuid_map) do
     node_mappings = map_workflow_node_ids(source_workflow, target_workflow)
 
-    build_merged_workflow(source_workflow, target_workflow, node_mappings)
+    build_merged_workflow(
+      source_workflow,
+      target_workflow,
+      node_mappings,
+      new_uuid_map
+    )
   end
 
   defp map_workflow_node_ids(source_workflow, target_workflow) do
@@ -424,7 +439,12 @@ defmodule Lightning.Projects.MergeProjects do
     end)
   end
 
-  defp build_merged_workflow(source_workflow, target_workflow, node_mappings) do
+  defp build_merged_workflow(
+         source_workflow,
+         target_workflow,
+         node_mappings,
+         new_uuid_map
+       ) do
     source_trigger_ids = Enum.map(source_workflow.triggers, & &1.id)
 
     {trigger_mappings, job_mappings} =
@@ -434,7 +454,8 @@ defmodule Lightning.Projects.MergeProjects do
       build_merged_jobs(
         source_workflow.jobs,
         target_workflow.jobs,
-        job_mappings
+        job_mappings,
+        new_uuid_map
       )
 
     {trigger_mappings, merged_triggers} =
@@ -451,7 +472,8 @@ defmodule Lightning.Projects.MergeProjects do
       build_merged_edges(
         source_workflow.edges,
         target_workflow.edges,
-        node_mappings
+        node_mappings,
+        new_uuid_map
       )
 
     initial_positions = Map.get(source_workflow, :positions) || %{}
@@ -467,6 +489,7 @@ defmodule Lightning.Projects.MergeProjects do
     |> stringify_keys()
     |> Map.merge(%{
       "id" => target_workflow.id,
+      "lock_version" => target_workflow.lock_version,
       "positions" => merged_positions,
       "jobs" => merged_jobs,
       "triggers" => merged_triggers,
@@ -474,7 +497,9 @@ defmodule Lightning.Projects.MergeProjects do
     })
   end
 
-  defp build_merged_jobs(source_jobs, target_jobs, job_mappings) do
+  defp build_merged_jobs(source_jobs, target_jobs, job_mappings, new_uuid_map) do
+    target_jobs_by_id = Map.new(target_jobs, &{&1.id, &1})
+
     # Process source jobs (matched and new)
     {new_mapping, merged_from_source} =
       Enum.reduce(
@@ -482,7 +507,11 @@ defmodule Lightning.Projects.MergeProjects do
         {%{}, []},
         fn source_job, {new_mapping, merged_jobs} ->
           mapped_id =
-            Map.get(job_mappings, source_job.id) || Ecto.UUID.generate()
+            Map.get(job_mappings, source_job.id) ||
+              Map.get(new_uuid_map, source_job.id) ||
+              Ecto.UUID.generate()
+
+          target_job = Map.get(target_jobs_by_id, mapped_id)
 
           merged_job =
             source_job
@@ -493,6 +522,21 @@ defmodule Lightning.Projects.MergeProjects do
               :project_credential_id,
               :keychain_credential_id
             ])
+            |> then(fn job_attrs ->
+              if target_job do
+                job_attrs
+                |> Map.put(
+                  :project_credential_id,
+                  target_job.project_credential_id
+                )
+                |> Map.put(
+                  :keychain_credential_id,
+                  target_job.keychain_credential_id
+                )
+              else
+                job_attrs
+              end
+            end)
             |> Map.put(:id, mapped_id)
             |> stringify_keys()
 
@@ -554,7 +598,12 @@ defmodule Lightning.Projects.MergeProjects do
     {new_mapping, merged_from_source ++ deleted_targets}
   end
 
-  defp build_merged_edges(source_edges, target_edges, node_mappings) do
+  defp build_merged_edges(
+         source_edges,
+         target_edges,
+         node_mappings,
+         new_uuid_map
+       ) do
     merged_from_source =
       Enum.map(source_edges, fn source_edge ->
         from_id =
@@ -568,7 +617,11 @@ defmodule Lightning.Projects.MergeProjects do
         target_edge = find_edge(target_edges, mapped_from_id, mapped_to_id)
 
         mapped_id =
-          if target_edge, do: target_edge.id, else: Ecto.UUID.generate()
+          if target_edge do
+            target_edge.id
+          else
+            Map.get(new_uuid_map, source_edge.id) || Ecto.UUID.generate()
+          end
 
         source_edge
         |> Map.take([
@@ -621,12 +674,18 @@ defmodule Lightning.Projects.MergeProjects do
     Enum.find(workflows, &(&1.name == name))
   end
 
-  defp build_merged_project(source_project, target_project, workflow_mappings) do
+  defp build_merged_project(
+         source_project,
+         target_project,
+         workflow_mappings,
+         new_uuid_map
+       ) do
     merged_workflows =
       build_merged_workflows(
         source_project.workflows,
         target_project.workflows,
-        workflow_mappings
+        workflow_mappings,
+        new_uuid_map
       )
 
     target_project
@@ -641,19 +700,20 @@ defmodule Lightning.Projects.MergeProjects do
   defp build_merged_workflows(
          source_workflows,
          target_workflows,
-         workflow_mappings
+         workflow_mappings,
+         new_uuid_map
        ) do
     # Process source workflows (matched and new)
     merged_from_source =
       Enum.map(source_workflows, fn source_workflow ->
         case Map.get(workflow_mappings, source_workflow.id) do
           nil ->
-            build_new_workflow(source_workflow)
+            build_new_workflow(source_workflow, new_uuid_map)
 
           target_id ->
             # Matched workflow - merge using existing merge_workflow logic
             target_workflow = Enum.find(target_workflows, &(&1.id == target_id))
-            merge_workflow(source_workflow, target_workflow)
+            merge_workflow(source_workflow, target_workflow, new_uuid_map)
         end
       end)
 
@@ -670,10 +730,10 @@ defmodule Lightning.Projects.MergeProjects do
     merged_from_source ++ deleted_targets
   end
 
-  defp build_new_workflow(source_workflow) do
+  defp build_new_workflow(source_workflow, new_uuid_map) do
     job_id_map =
       Map.new(source_workflow.jobs, fn job ->
-        {job.id, Ecto.UUID.generate()}
+        {job.id, Map.get(new_uuid_map, job.id) || Ecto.UUID.generate()}
       end)
 
     trigger_id_map =
@@ -725,7 +785,7 @@ defmodule Lightning.Projects.MergeProjects do
           :enabled
         ])
         |> Map.merge(%{
-          id: Ecto.UUID.generate(),
+          id: Map.get(new_uuid_map, edge.id) || Ecto.UUID.generate(),
           source_job_id: edge.source_job_id && mapped_from_id,
           source_trigger_id: edge.source_trigger_id && mapped_from_id,
           target_job_id: mapped_to_id
@@ -736,11 +796,66 @@ defmodule Lightning.Projects.MergeProjects do
     source_workflow
     |> Map.take([:name, :concurrency, :enable_job_logs])
     |> Map.merge(%{
-      "id" => Ecto.UUID.generate(),
+      "id" => Map.get(new_uuid_map, source_workflow.id) || Ecto.UUID.generate(),
       "jobs" => jobs,
       "triggers" => triggers,
       "edges" => edges
     })
     |> stringify_keys()
+  end
+
+  @doc """
+  Checks if the target project has diverged from the source sandbox.
+
+  Divergence occurs when any workflow in the target project has a different
+  version hash compared to when the source sandbox was created. This indicates
+  that changes have been made to the target that the sandbox doesn't know about,
+  which could lead to data loss during merge.
+
+  ## Parameters
+    * `source_project` - The sandbox project with workflows
+    * `target_project` - The target project to check with workflows
+
+  ## Returns
+    * `true` if the target has diverged (workflow versions differ)
+    * `false` if no divergence detected
+  """
+  @spec has_diverged?(Project.t(), Project.t()) :: boolean()
+  def has_diverged?(%Project{} = source_project, %Project{} = target_project) do
+    source_project = Repo.preload(source_project, :workflows)
+    target_project = Repo.preload(target_project, :workflows)
+
+    sandbox_workflow_versions =
+      get_workflow_version_hashes_by_name(source_project.workflows)
+
+    target_workflow_versions =
+      get_workflow_version_hashes_by_name(target_project.workflows)
+
+    Enum.any?(target_workflow_versions, fn {workflow_name, target_hash} ->
+      case Map.get(sandbox_workflow_versions, workflow_name) do
+        nil -> false
+        sandbox_hash -> target_hash != sandbox_hash
+      end
+    end)
+  end
+
+  defp get_workflow_version_hashes_by_name(workflows) do
+    workflow_ids = Enum.map(workflows, & &1.id)
+    workflow_name_map = Map.new(workflows, fn w -> {w.id, w.name} end)
+
+    from(version in WorkflowVersion,
+      where: version.workflow_id in ^workflow_ids,
+      distinct: version.workflow_id,
+      order_by: [
+        asc: version.workflow_id,
+        desc: version.inserted_at,
+        desc: version.id
+      ],
+      select: {version.workflow_id, version.hash}
+    )
+    |> Repo.all()
+    |> Map.new(fn {workflow_id, hash} ->
+      {Map.get(workflow_name_map, workflow_id), hash}
+    end)
   end
 end

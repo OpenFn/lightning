@@ -77,22 +77,25 @@
  * None (all state is serializable)
  */
 
-import { produce } from "immer";
-import type { PhoenixChannelProvider } from "y-phoenix-channel";
+import { produce } from 'immer';
+import type { PhoenixChannelProvider } from 'y-phoenix-channel';
 
-import _logger from "#/utils/logger";
+import _logger from '#/utils/logger';
 
-import { channelRequest } from "../hooks/useChannel";
+import { channelRequest } from '../hooks/useChannel';
 import {
   type CredentialState,
   type CredentialStore,
+  type CredentialWithType,
+  type ProjectCredential,
+  type KeychainCredential,
   CredentialsListSchema,
-} from "../types/credential";
+} from '../types/credential';
 
-import { createWithSelector } from "./common";
-import { wrapStoreWithDevTools } from "./devtools";
+import { createWithSelector } from './common';
+import { wrapStoreWithDevTools } from './devtools';
 
-const logger = _logger.ns("CredentialStore").seal();
+const logger = _logger.ns('CredentialStore').seal();
 
 /**
  * Creates an credential store instance with useSyncExternalStore + Immer pattern
@@ -115,12 +118,12 @@ export const createCredentialStore = (): CredentialStore => {
 
   // Redux DevTools integration
   const devtools = wrapStoreWithDevTools({
-    name: "CredentialStore",
+    name: 'CredentialStore',
     excludeKeys: [], // All state is serializable
     maxAge: 100,
   });
 
-  const notify = (actionName: string = "stateChange") => {
+  const notify = (actionName: string = 'stateChange') => {
     devtools.notifyWithAction(actionName, () => state);
     listeners.forEach(listener => {
       listener();
@@ -140,6 +143,57 @@ export const createCredentialStore = (): CredentialStore => {
 
   // withSelector utility - creates memoized selectors for referential stability
   const withSelector = createWithSelector(getSnapshot);
+
+  // =============================================================================
+  // QUERIES (CQS pattern - read-only operations)
+  // =============================================================================
+
+  /**
+   * Find a credential by ID
+   * For ProjectCredentials: checks both 'id' and 'project_credential_id'
+   * For KeychainCredentials: checks 'id'
+   * Returns credential with type discriminator
+   */
+  const findCredentialById = (
+    searchId: string | null
+  ): CredentialWithType | null => {
+    if (!searchId) return null;
+
+    // Check project credentials (match either id or project_credential_id)
+    const projectCred = state.projectCredentials.find(
+      c => c.id === searchId || c.project_credential_id === searchId
+    );
+    if (projectCred) {
+      return { ...projectCred, type: 'project' };
+    }
+
+    // Check keychain credentials (match id)
+    const keychainCred = state.keychainCredentials.find(c => c.id === searchId);
+    if (keychainCred) {
+      return { ...keychainCred, type: 'keychain' };
+    }
+
+    return null;
+  };
+
+  /**
+   * Check if a credential exists by ID
+   */
+  const credentialExists = (searchId: string | null): boolean => {
+    return findCredentialById(searchId) !== null;
+  };
+
+  /**
+   * Get the ID used for credential selection
+   * (project_credential_id for project creds, id for keychain)
+   */
+  const getCredentialId = (
+    cred: ProjectCredential | KeychainCredential
+  ): string => {
+    return 'project_credential_id' in cred
+      ? cred.project_credential_id
+      : cred.id;
+  };
 
   // =============================================================================
   // PATTERN 1: Channel Message → Immer → Notify (Server Updates)
@@ -169,10 +223,10 @@ export const createCredentialStore = (): CredentialStore => {
         draft.error = null;
         draft.lastUpdated = Date.now();
       });
-      notify("handleCredentialsReceived");
+      notify('handleCredentialsReceived');
     } else {
       const errorMessage = `Invalid credentials data: ${result.error.message}`;
-      logger.error("Failed to parse credentials data", {
+      logger.error('Failed to parse credentials data', {
         error: result.error,
         rawData,
       });
@@ -181,7 +235,7 @@ export const createCredentialStore = (): CredentialStore => {
         draft.isLoading = false;
         draft.error = errorMessage;
       });
-      notify("credentialsError");
+      notify('credentialsError');
     }
   };
 
@@ -201,7 +255,7 @@ export const createCredentialStore = (): CredentialStore => {
     state = produce(state, draft => {
       draft.isLoading = loading;
     });
-    notify("setLoading");
+    notify('setLoading');
   };
 
   const setError = (error: string | null) => {
@@ -209,14 +263,14 @@ export const createCredentialStore = (): CredentialStore => {
       draft.error = error;
       draft.isLoading = false;
     });
-    notify("setError");
+    notify('setError');
   };
 
   const clearError = () => {
     state = produce(state, draft => {
       draft.error = null;
     });
-    notify("clearError");
+    notify('clearError');
   };
 
   // =============================================================================
@@ -234,19 +288,19 @@ export const createCredentialStore = (): CredentialStore => {
 
     // Listen for credential-related channel messages
     const credentialsListHandler = (message: unknown) => {
-      logger.debug("Received credentials_list message", message);
+      logger.debug('Received credentials_list message', message);
       handleCredentialsReceived(message);
     };
 
     const credentialsUpdatedHandler = (message: unknown) => {
-      logger.debug("Received credentials_updated message", message);
+      logger.debug('Received credentials_updated message', message);
       handleCredentialsUpdated(message);
     };
 
     // Set up channel listeners
     if (channel) {
-      channel.on("credentials_list", credentialsListHandler);
-      channel.on("credentials_updated", credentialsUpdatedHandler);
+      channel.on('credentials_list', credentialsListHandler);
+      channel.on('credentials_updated', credentialsUpdatedHandler);
     }
 
     devtools.connect();
@@ -256,8 +310,8 @@ export const createCredentialStore = (): CredentialStore => {
     return () => {
       devtools.disconnect();
       if (channel) {
-        channel.off("credentials_list", credentialsListHandler);
-        channel.off("credentials_updated", credentialsUpdatedHandler);
+        channel.off('credentials_list', credentialsListHandler);
+        channel.off('credentials_updated', credentialsUpdatedHandler);
       }
       _channelProvider = null;
     };
@@ -268,8 +322,8 @@ export const createCredentialStore = (): CredentialStore => {
    */
   const requestCredentials = async (): Promise<void> => {
     if (!_channelProvider?.channel) {
-      logger.warn("Cannot request credentials - no channel connected");
-      setError("No connection available");
+      logger.warn('Cannot request credentials - no channel connected');
+      setError('No connection available');
       return;
     }
 
@@ -277,10 +331,10 @@ export const createCredentialStore = (): CredentialStore => {
     clearError();
 
     try {
-      logger.debug("Requesting credentials");
+      logger.debug('Requesting credentials');
       const response = await channelRequest<{ credentials: unknown }>(
         _channelProvider.channel,
-        "request_credentials",
+        'request_credentials',
         {}
       );
 
@@ -288,8 +342,8 @@ export const createCredentialStore = (): CredentialStore => {
         handleCredentialsReceived(response.credentials);
       }
     } catch (error) {
-      logger.error("Credential request failed", error);
-      setError("Failed to request credentials");
+      logger.error('Credential request failed', error);
+      setError('Failed to request credentials');
     }
   };
 
@@ -302,6 +356,11 @@ export const createCredentialStore = (): CredentialStore => {
     subscribe,
     getSnapshot,
     withSelector,
+
+    // Queries (CQS pattern)
+    findCredentialById,
+    credentialExists,
+    getCredentialId,
 
     // Commands (CQS pattern)
     requestCredentials,

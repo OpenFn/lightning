@@ -1,12 +1,12 @@
-import { Handle, Position } from '@xyflow/react';
 import { LinkIcon } from '@heroicons/react/24/outline';
+import { Handle, Position } from '@xyflow/react';
 import type { PropsWithChildren } from 'react';
 
 interface PathButtonProps {
-  id: string
+  id: string;
 }
 
-const PathButton: React.FC<PropsWithChildren<PathButtonProps>> = (props) => {
+const PathButton: React.FC<PropsWithChildren<PathButtonProps>> = props => {
   return (
     <Handle
       id={props.id}
@@ -34,6 +34,6 @@ const PathButton: React.FC<PropsWithChildren<PathButtonProps>> = (props) => {
       {props.children}
     </Handle>
   );
-}
+};
 
 export default PathButton;

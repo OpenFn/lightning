@@ -1597,6 +1597,119 @@ defmodule Lightning.InvocationTest do
     end
   end
 
+  describe "search_workorders by dataclip_name" do
+    test "finds case-insensitive substring matches on workorder input dataclip name" do
+      project = insert(:project)
+
+      %{workflow: workflow, trigger: trigger, snapshot: snapshot} =
+        build_workflow(project: project)
+
+      dataclip = insert(:dataclip, project: project, name: "My Test Dataclip")
+
+      workorder =
+        insert(:workorder,
+          workflow: workflow,
+          trigger: trigger,
+          dataclip: dataclip,
+          snapshot: snapshot
+        )
+
+      for term <- ["test", "TEST", "clip"] do
+        params =
+          SearchParams.new(%{
+            "search_term" => term,
+            "search_fields" => ["dataclip_name"]
+          })
+
+        page = Invocation.search_workorders(project, params)
+        assert Enum.any?(page.entries, &(&1.id == workorder.id))
+      end
+    end
+
+    test "does not match when dataclip_name is not enabled" do
+      project = insert(:project)
+
+      %{workflow: workflow, trigger: trigger, snapshot: snapshot} =
+        build_workflow(project: project)
+
+      dataclip = insert(:dataclip, project: project, name: "Label Only")
+
+      _workorder =
+        insert(:workorder,
+          workflow: workflow,
+          trigger: trigger,
+          dataclip: dataclip,
+          snapshot: snapshot
+        )
+
+      params =
+        SearchParams.new(%{
+          "search_term" => "Label",
+          "search_fields" => ["log"]
+        })
+
+      page = Invocation.search_workorders(project, params)
+      assert length(page.entries) == 0
+    end
+
+    test "does not match unnamed workorder dataclip" do
+      project = insert(:project)
+
+      %{workflow: workflow, trigger: trigger, snapshot: snapshot} =
+        build_workflow(project: project)
+
+      dataclip = insert(:dataclip, project: project, name: nil)
+
+      _workorder =
+        insert(:workorder,
+          workflow: workflow,
+          trigger: trigger,
+          dataclip: dataclip,
+          snapshot: snapshot
+        )
+
+      params =
+        SearchParams.new(%{
+          "search_term" => "anything",
+          "search_fields" => ["dataclip_name"]
+        })
+
+      page = Invocation.search_workorders(project, params)
+      assert length(page.entries) == 0
+    end
+
+    test "matches wiped dataclip names (body/request wiped, name retained)" do
+      project = insert(:project)
+
+      %{workflow: workflow, trigger: trigger, snapshot: snapshot} =
+        build_workflow(project: project)
+
+      dataclip =
+        insert(:dataclip,
+          project: project,
+          name: "Wiped Name",
+          wiped_at: Timex.now()
+        )
+
+      workorder =
+        insert(:workorder,
+          workflow: workflow,
+          trigger: trigger,
+          dataclip: dataclip,
+          snapshot: snapshot
+        )
+
+      params =
+        SearchParams.new(%{
+          "search_term" => "Wiped",
+          "search_fields" => ["dataclip_name"]
+        })
+
+      page = Invocation.search_workorders(project, params)
+      assert Enum.any?(page.entries, &(&1.id == workorder.id))
+    end
+  end
+
   describe "step logs" do
     test "logs_for_step/1 returns an array of the logs for a given step" do
       step =

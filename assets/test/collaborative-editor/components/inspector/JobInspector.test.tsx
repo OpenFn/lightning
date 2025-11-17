@@ -7,31 +7,48 @@
  * Focus: Test credential selection behavior through user interactions and Y.Doc synchronization
  */
 
-import { render, screen, waitFor } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
-import type React from "react";
-import { act } from "react";
-import { beforeEach, describe, expect, test } from "vitest";
-import type * as Y from "yjs";
+import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import type React from 'react';
+import { act } from 'react';
+import { beforeEach, describe, expect, test } from 'vitest';
+import type * as Y from 'yjs';
 
-import { JobInspector } from "../../../../js/collaborative-editor/components/inspector/JobInspector";
-import type { StoreContextValue } from "../../../../js/collaborative-editor/contexts/StoreProvider";
-import { StoreContext } from "../../../../js/collaborative-editor/contexts/StoreProvider";
-import type { AdaptorStoreInstance } from "../../../../js/collaborative-editor/stores/createAdaptorStore";
-import { createAdaptorStore } from "../../../../js/collaborative-editor/stores/createAdaptorStore";
-import type { AwarenessStoreInstance } from "../../../../js/collaborative-editor/stores/createAwarenessStore";
-import { createAwarenessStore } from "../../../../js/collaborative-editor/stores/createAwarenessStore";
-import type { CredentialStoreInstance } from "../../../../js/collaborative-editor/stores/createCredentialStore";
-import { createCredentialStore } from "../../../../js/collaborative-editor/stores/createCredentialStore";
-import type { SessionContextStoreInstance } from "../../../../js/collaborative-editor/stores/createSessionContextStore";
-import { createSessionContextStore } from "../../../../js/collaborative-editor/stores/createSessionContextStore";
-import type { WorkflowStoreInstance } from "../../../../js/collaborative-editor/stores/createWorkflowStore";
-import { createWorkflowStore } from "../../../../js/collaborative-editor/stores/createWorkflowStore";
+import { JobInspector } from '../../../../js/collaborative-editor/components/inspector/JobInspector';
+import { SessionContext } from '../../../../js/collaborative-editor/contexts/SessionProvider';
+import { LiveViewActionsProvider } from '../../../../js/collaborative-editor/contexts/LiveViewActionsContext';
+import type { StoreContextValue } from '../../../../js/collaborative-editor/contexts/StoreProvider';
+import { StoreContext } from '../../../../js/collaborative-editor/contexts/StoreProvider';
+import { createSessionStore } from '../../../../js/collaborative-editor/stores/createSessionStore';
+import type { AdaptorStoreInstance } from '../../../../js/collaborative-editor/stores/createAdaptorStore';
+import { createAdaptorStore } from '../../../../js/collaborative-editor/stores/createAdaptorStore';
+import type { AwarenessStoreInstance } from '../../../../js/collaborative-editor/stores/createAwarenessStore';
+import { createAwarenessStore } from '../../../../js/collaborative-editor/stores/createAwarenessStore';
+import type { CredentialStoreInstance } from '../../../../js/collaborative-editor/stores/createCredentialStore';
+import { createCredentialStore } from '../../../../js/collaborative-editor/stores/createCredentialStore';
+import type { SessionContextStoreInstance } from '../../../../js/collaborative-editor/stores/createSessionContextStore';
+import { createSessionContextStore } from '../../../../js/collaborative-editor/stores/createSessionContextStore';
+import type { WorkflowStoreInstance } from '../../../../js/collaborative-editor/stores/createWorkflowStore';
+import { createWorkflowStore } from '../../../../js/collaborative-editor/stores/createWorkflowStore';
 import {
   createMockPhoenixChannel,
   createMockPhoenixChannelProvider,
-} from "../../__helpers__/channelMocks";
-import { createWorkflowYDoc } from "../../__helpers__/workflowFactory";
+} from '../../__helpers__/channelMocks';
+import { createWorkflowYDoc } from '../../__helpers__/workflowFactory';
+
+// Mock the useCanRun hook from useWorkflow
+vi.mock('../../../../js/collaborative-editor/hooks/useWorkflow', async () => {
+  const actual = await vi.importActual(
+    '../../../../js/collaborative-editor/hooks/useWorkflow'
+  );
+  return {
+    ...actual,
+    useCanRun: () => ({
+      canRun: true,
+      tooltipMessage: 'Run workflow',
+    }),
+  };
+});
 
 /**
  * Helper to create and connect a workflow store with Y.Doc
@@ -63,14 +80,27 @@ function createWrapper(
     awarenessStore,
   };
 
+  const mockLiveViewActions = {
+    pushEvent: vi.fn(),
+    pushEventTo: vi.fn(),
+    handleEvent: vi.fn(() => vi.fn()),
+    navigate: vi.fn(),
+  };
+
+  const sessionStore = createSessionStore();
+
   return ({ children }: { children: React.ReactNode }) => (
-    <StoreContext.Provider value={mockStoreValue}>
-      {children}
-    </StoreContext.Provider>
+    <SessionContext.Provider value={{ sessionStore, isNewWorkflow: false }}>
+      <LiveViewActionsProvider actions={mockLiveViewActions}>
+        <StoreContext.Provider value={mockStoreValue}>
+          {children}
+        </StoreContext.Provider>
+      </LiveViewActionsProvider>
+    </SessionContext.Provider>
   );
 }
 
-describe("JobInspector - Credential Selection", () => {
+describe('JobInspector - Credential Selection', () => {
   let ydoc: Y.Doc;
   let workflowStore: WorkflowStoreInstance;
   let credentialStore: CredentialStoreInstance;
@@ -83,11 +113,11 @@ describe("JobInspector - Credential Selection", () => {
     // Create Y.Doc with a job (credentials explicitly null)
     ydoc = createWorkflowYDoc({
       jobs: {
-        "job-1": {
-          id: "job-1",
-          name: "Test Job",
-          adaptor: "@openfn/language-common@latest",
-          body: "fn(state => state)",
+        'job-1': {
+          id: 'job-1',
+          name: 'Test Job',
+          adaptor: '@openfn/language-common@latest',
+          body: 'fn(state => state)',
           project_credential_id: null,
           keychain_credential_id: null,
         },
@@ -109,12 +139,12 @@ describe("JobInspector - Credential Selection", () => {
 
     // Emit adaptors from channel
     act(() => {
-      (mockChannel as any)._test.emit("adaptors", {
+      (mockChannel as any)._test.emit('adaptors', {
         adaptors: [
           {
-            name: "@openfn/language-common",
-            latest: "2.0.0",
-            versions: [{ version: "2.0.0" }, { version: "1.0.0" }],
+            name: '@openfn/language-common',
+            latest: '2.0.0',
+            versions: [{ version: '2.0.0' }, { version: '1.0.0' }],
           },
         ],
       });
@@ -122,37 +152,39 @@ describe("JobInspector - Credential Selection", () => {
 
     // Emit credentials from channel
     act(() => {
-      (mockChannel as any)._test.emit("credentials_list", {
+      (mockChannel as any)._test.emit('credentials_list', {
         project_credentials: [
           {
-            id: "cred-id-1",
-            project_credential_id: "pc-1",
-            name: "Project Cred 1",
-            external_id: "ext-1",
-            production: false,
-            schema: "raw",
-            inserted_at: "2024-01-01T00:00:00Z",
-            updated_at: "2024-01-01T00:00:00Z",
+            id: 'a50e8400-e29b-41d4-a716-446655440001',
+            project_credential_id: 'b50e8400-e29b-41d4-a716-446655440001',
+            name: 'Project Cred 1',
+            external_id: 'ext-1',
+            schema: 'raw',
+            owner: null,
+            oauth_client_name: null,
+            inserted_at: '2024-01-01T00:00:00Z',
+            updated_at: '2024-01-01T00:00:00Z',
           },
           {
-            id: "cred-id-2",
-            project_credential_id: "pc-2",
-            name: "Project Cred 2",
-            external_id: "ext-2",
-            production: false,
-            schema: "oauth",
-            inserted_at: "2024-01-01T00:00:00Z",
-            updated_at: "2024-01-01T00:00:00Z",
+            id: 'a50e8400-e29b-41d4-a716-446655440002',
+            project_credential_id: 'b50e8400-e29b-41d4-a716-446655440002',
+            name: 'Project Cred 2',
+            external_id: 'ext-2',
+            schema: 'oauth',
+            owner: null,
+            oauth_client_name: null,
+            inserted_at: '2024-01-01T00:00:00Z',
+            updated_at: '2024-01-01T00:00:00Z',
           },
         ],
         keychain_credentials: [
           {
-            id: "kc-1",
-            name: "Keychain Cred 1",
-            path: "/keychain/cred-1",
+            id: 'c50e8400-e29b-41d4-a716-446655440001',
+            name: 'Keychain Cred 1',
+            path: '/keychain/cred-1',
             default_credential_id: null,
-            inserted_at: "2024-01-01T00:00:00Z",
-            updated_at: "2024-01-01T00:00:00Z",
+            inserted_at: '2024-01-01T00:00:00Z',
+            updated_at: '2024-01-01T00:00:00Z',
           },
         ],
       });
@@ -160,42 +192,23 @@ describe("JobInspector - Credential Selection", () => {
 
     // Set permissions
     act(() => {
-      (mockChannel as any)._test.emit("session_context", {
+      (mockChannel as any)._test.emit('session_context', {
         user: null,
         project: null,
         config: { require_email_verification: false },
-        permissions: { can_edit_workflow: true },
+        permissions: {
+          can_edit_workflow: true,
+          can_run_workflow: true,
+          can_write_webhook_auth_method: true,
+        },
         latest_snapshot_lock_version: 1,
+        project_repo_connection: null,
+        webhook_auth_methods: [],
       });
     });
   });
 
-  test("renders credential dropdown field", async () => {
-    const job = workflowStore.getSnapshot().jobs[0];
-
-    render(<JobInspector job={job} />, {
-      wrapper: createWrapper(
-        workflowStore,
-        credentialStore,
-        sessionContextStore,
-        adaptorStore,
-        awarenessStore
-      ),
-    });
-
-    // Credential field should render
-    const credentialSelect = screen.getByLabelText("Credential");
-    expect(credentialSelect).toBeInTheDocument();
-
-    // Should have at least the placeholder option
-    const options = credentialSelect.querySelectorAll("option");
-    expect(options.length).toBeGreaterThanOrEqual(1);
-
-    // Should start with no credential selected (empty value)
-    expect(credentialSelect).toHaveValue("");
-  });
-
-  test("saves job without credential when none is selected", async () => {
+  test('saves job without credential when none is selected', async () => {
     const user = userEvent.setup();
     const job = workflowStore.getSnapshot().jobs[0];
 
@@ -212,30 +225,30 @@ describe("JobInspector - Credential Selection", () => {
     // Change job name to trigger form update
     const nameInput = screen.getByLabelText(/name/i);
     await user.clear(nameInput);
-    await user.type(nameInput, "Updated Job Name");
+    await user.type(nameInput, 'Updated Job Name');
 
     // Verify Y.Doc has null credentials
-    const jobsArray = ydoc.getArray("jobs");
+    const jobsArray = ydoc.getArray('jobs');
     const jobMap = jobsArray.get(0) as Y.Map<unknown>;
 
     await waitFor(() => {
-      expect(jobMap.get("name")).toBe("Updated Job Name");
-      expect(jobMap.get("project_credential_id")).toBe(null);
-      expect(jobMap.get("keychain_credential_id")).toBe(null);
+      expect(jobMap.get('name')).toBe('Updated Job Name');
+      expect(jobMap.get('project_credential_id')).toBe(null);
+      expect(jobMap.get('keychain_credential_id')).toBe(null);
     });
   });
 
-  test("initializes job with null credentials in Y.Doc", () => {
+  test('initializes job with null credentials in Y.Doc', () => {
     // Verify that job created by workflowFactory has null credentials in Y.Doc
-    const jobsArray = ydoc.getArray("jobs");
+    const jobsArray = ydoc.getArray('jobs');
     const jobMap = jobsArray.get(0) as Y.Map<unknown>;
 
     // Both credentials should be explicitly set to null (not undefined)
-    expect(jobMap.get("project_credential_id")).toBe(null);
-    expect(jobMap.get("keychain_credential_id")).toBe(null);
+    expect(jobMap.get('project_credential_id')).toBe(null);
+    expect(jobMap.get('keychain_credential_id')).toBe(null);
   });
 
-  test("maintains null credentials when job name is updated", async () => {
+  test('maintains null credentials when job name is updated', async () => {
     const user = userEvent.setup();
     const job = workflowStore.getSnapshot().jobs[0];
 
@@ -252,106 +265,87 @@ describe("JobInspector - Credential Selection", () => {
     // Update the job name
     const nameInput = screen.getByLabelText(/name/i);
     await user.clear(nameInput);
-    await user.type(nameInput, "Updated Name");
+    await user.type(nameInput, 'Updated Name');
 
     // Verify credentials remain null after update
-    const jobsArray = ydoc.getArray("jobs");
+    const jobsArray = ydoc.getArray('jobs');
     const jobMap = jobsArray.get(0) as Y.Map<unknown>;
 
     await waitFor(() => {
-      expect(jobMap.get("name")).toBe("Updated Name");
-      expect(jobMap.get("project_credential_id")).toBe(null);
-      expect(jobMap.get("keychain_credential_id")).toBe(null);
+      expect(jobMap.get('name')).toBe('Updated Name');
+      expect(jobMap.get('project_credential_id')).toBe(null);
+      expect(jobMap.get('keychain_credential_id')).toBe(null);
     });
   });
 
-  test("handles job with pre-existing project credential in Y.Doc", () => {
+  test('handles job with pre-existing project credential in Y.Doc', () => {
     // Create a new Y.Doc with a job that has a project credential
     const ydocWithCred = createWorkflowYDoc({
       jobs: {
-        "job-1": {
-          id: "job-1",
-          name: "Job With Credential",
-          adaptor: "@openfn/language-common@latest",
-          body: "fn(state => state)",
-          project_credential_id: "pc-123",
+        'job-1': {
+          id: 'job-1',
+          name: 'Job With Credential',
+          adaptor: '@openfn/language-common@latest',
+          body: 'fn(state => state)',
+          project_credential_id: 'pc-123',
           keychain_credential_id: null,
         },
       },
     });
 
-    const jobsArray = ydocWithCred.getArray("jobs");
+    const jobsArray = ydocWithCred.getArray('jobs');
     const jobMap = jobsArray.get(0) as Y.Map<unknown>;
 
     // Verify the credential is properly set in Y.Doc
-    expect(jobMap.get("project_credential_id")).toBe("pc-123");
-    expect(jobMap.get("keychain_credential_id")).toBe(null);
+    expect(jobMap.get('project_credential_id')).toBe('pc-123');
+    expect(jobMap.get('keychain_credential_id')).toBe(null);
   });
 
-  test("handles job with pre-existing keychain credential in Y.Doc", () => {
+  test('handles job with pre-existing keychain credential in Y.Doc', () => {
     // Create a new Y.Doc with a job that has a keychain credential
     const ydocWithCred = createWorkflowYDoc({
       jobs: {
-        "job-1": {
-          id: "job-1",
-          name: "Job With Keychain Credential",
-          adaptor: "@openfn/language-common@latest",
-          body: "fn(state => state)",
+        'job-1': {
+          id: 'job-1',
+          name: 'Job With Keychain Credential',
+          adaptor: '@openfn/language-common@latest',
+          body: 'fn(state => state)',
           project_credential_id: null,
-          keychain_credential_id: "kc-456",
+          keychain_credential_id: 'kc-456',
         },
       },
     });
 
-    const jobsArray = ydocWithCred.getArray("jobs");
+    const jobsArray = ydocWithCred.getArray('jobs');
     const jobMap = jobsArray.get(0) as Y.Map<unknown>;
 
     // Verify the credential is properly set in Y.Doc
-    expect(jobMap.get("project_credential_id")).toBe(null);
-    expect(jobMap.get("keychain_credential_id")).toBe("kc-456");
+    expect(jobMap.get('project_credential_id')).toBe(null);
+    expect(jobMap.get('keychain_credential_id')).toBe('kc-456');
   });
 
-  test("credential field renders as enabled when permissions allow editing", async () => {
-    // Test that credential field is enabled when user has edit permissions (default in beforeEach)
-    const job = workflowStore.getSnapshot().jobs[0];
-
-    render(<JobInspector job={job} />, {
-      wrapper: createWrapper(
-        workflowStore,
-        credentialStore,
-        sessionContextStore,
-        adaptorStore,
-        awarenessStore
-      ),
-    });
-
-    const credentialSelect = screen.getByLabelText("Credential");
-    // With can_edit_workflow=true (set in beforeEach), field should be enabled
-    expect(credentialSelect).not.toBeDisabled();
-  });
-
-  test("job initialized via createWorkflowYDoc has both credential fields as null", () => {
+  test('job initialized via createWorkflowYDoc has both credential fields as null', () => {
     // This is the core test for the bug fix: verifying that workflowFactory
     // properly initializes credential fields to null (not undefined)
     const testYdoc = createWorkflowYDoc({
       jobs: {
-        "test-job": {
-          id: "test-job",
-          name: "Test Job",
-          adaptor: "@openfn/language-common@latest",
-          body: "fn(state => state)",
+        'test-job': {
+          id: 'test-job',
+          name: 'Test Job',
+          adaptor: '@openfn/language-common@latest',
+          body: 'fn(state => state)',
           // Explicitly not providing credentials - they should default to null
         },
       },
     });
 
-    const jobsArray = testYdoc.getArray("jobs");
+    const jobsArray = testYdoc.getArray('jobs');
     const jobMap = jobsArray.get(0) as Y.Map<unknown>;
 
     // Both fields must be null, not undefined
-    expect(jobMap.has("project_credential_id")).toBe(true);
-    expect(jobMap.has("keychain_credential_id")).toBe(true);
-    expect(jobMap.get("project_credential_id")).toBe(null);
-    expect(jobMap.get("keychain_credential_id")).toBe(null);
+    expect(jobMap.has('project_credential_id')).toBe(true);
+    expect(jobMap.has('keychain_credential_id')).toBe(true);
+    expect(jobMap.get('project_credential_id')).toBe(null);
+    expect(jobMap.get('keychain_credential_id')).toBe(null);
   });
 });

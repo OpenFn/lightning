@@ -1,8 +1,8 @@
-import type { Awareness } from "y-protocols/awareness";
-import type { RelativePosition } from "yjs";
-import { z } from "zod";
+import type { Awareness } from 'y-protocols/awareness';
+import type { RelativePosition } from 'yjs';
+import { z } from 'zod';
 
-import type { WithSelector } from "../stores/common";
+import type { WithSelector } from '../stores/common';
 
 /**
  * User information stored in awareness
@@ -12,6 +12,7 @@ export interface AwarenessUser {
   user: {
     id: string;
     name: string;
+    email: string;
     color: string;
   };
   cursor?: {
@@ -23,6 +24,7 @@ export interface AwarenessUser {
     head: RelativePosition;
   };
   lastSeen?: number;
+  connectionCount?: number;
 }
 
 /**
@@ -31,6 +33,7 @@ export interface AwarenessUser {
 export interface LocalUserData {
   id: string;
   name: string;
+  email: string;
   color: string;
 }
 
@@ -57,6 +60,7 @@ export interface AwarenessState {
 export const AwarenessUserDataSchema = z.object({
   id: z.string(),
   name: z.string(),
+  email: z.email(),
   color: z.string(),
 });
 
@@ -71,7 +75,7 @@ export interface AwarenessCommands {
   // Local user updates
   updateLocalUserData: (userData: Partial<LocalUserData>) => void;
   updateLocalCursor: (cursor: { x: number; y: number } | null) => void;
-  updateLocalSelection: (selection: AwarenessUser["selection"] | null) => void;
+  updateLocalSelection: (selection: AwarenessUser['selection'] | null) => void;
   updateLastSeen: () => void;
 
   // Connection state

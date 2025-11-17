@@ -48,18 +48,14 @@ export const performPatch = (
     view.liveSocket.triggerDOM('onNodeAdded', [el]);
     view.maybeAddNewHook(el);
     // @ts-expect-error -- this was in the OG `DOMPatch`
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+
     if (el.getAttribute) {
       view.maybeMounted(el);
     }
   });
 
   patch.after('phxChildAdded', el => {
-    if (
-      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-      el.getAttribute &&
-      el.getAttribute('data-phx-sticky') !== null
-    ) {
+    if (el.getAttribute && el.getAttribute('data-phx-sticky') !== null) {
       view.liveSocket.joinRootViews();
     } else {
       phxChildrenAdded = true;

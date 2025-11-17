@@ -4,7 +4,7 @@ defmodule Lightning.MixProject do
   def project do
     [
       app: :lightning,
-      version: "2.14.12",
+      version: "2.14.15-pre",
       elixir: "~> 1.18",
       elixirc_paths: elixirc_paths(Mix.env()),
       elixirc_options: [
@@ -150,7 +150,7 @@ defmodule Lightning.MixProject do
       {:enacl, github: "aeternity/enacl", branch: "master"},
       {:earmark, "~> 1.4"},
       {:eventually, "~> 1.1", only: [:test]},
-      {:benchee, "~> 1.4.0", only: :dev},
+      {:benchee, "~> 1.5.0", only: :dev},
       {:statistics, "~> 0.6", only: :dev},
       {:y_ex, "~> 0.8.0"},
       {:chameleon, "~> 2.5"}

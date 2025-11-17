@@ -1,15 +1,15 @@
 import {
+  CheckCircleIcon,
+  InformationCircleIcon,
+} from '@heroicons/react/24/outline';
+import { Handle, type NodeProps, Position } from '@xyflow/react';
+import React, {
   type SyntheticEvent,
   memo,
   useCallback,
   useRef,
   useState,
 } from 'react';
-import { Handle, type NodeProps, Position } from '@xyflow/react';
-import {
-  CheckCircleIcon,
-  InformationCircleIcon,
-} from '@heroicons/react/24/outline';
 
 type NodeData = any;
 
@@ -38,8 +38,10 @@ const dispatch = (
   el.dispatchEvent(e);
 };
 
-const PlaceholderJobNode = ({ id, selected }: NodeProps<NodeData>) => {
+const PlaceholderJobNode = ({ id, data, selected }: NodeProps<NodeData>) => {
   const textRef = useRef<HTMLInputElement | null>(null);
+
+  const [jobName, setJobName] = useState('');
 
   const [validationResult, setValidationResult] = useState<ValidationResult>({
     isValid: true,
@@ -91,22 +93,28 @@ const PlaceholderJobNode = ({ id, selected }: NodeProps<NodeData>) => {
   };
 
   // TODO what if a name hasn't been entered?
-  const handleCommit = useCallback((evt?: SyntheticEvent) => {
-    if (textRef.current) {
-      dispatch(textRef.current, 'commit-placeholder', {
-        id,
-        name: textRef.current.value,
-      });
-    }
-    evt?.stopPropagation();
-  }, []);
+  const handleCommit = useCallback(
+    (evt?: SyntheticEvent) => {
+      if (textRef.current) {
+        dispatch(textRef.current, 'commit-placeholder', {
+          id,
+          name: textRef.current.value,
+        });
+      }
+      evt?.stopPropagation();
+    },
+    [id]
+  );
 
-  const handleCancel = useCallback((evt?: SyntheticEvent) => {
-    if (textRef.current) {
-      dispatch(textRef.current, 'cancel-placeholder', { id });
-    }
-    evt?.stopPropagation();
-  }, []);
+  const handleCancel = useCallback(
+    (evt?: SyntheticEvent) => {
+      if (textRef.current) {
+        dispatch(textRef.current, 'cancel-placeholder', { id });
+      }
+      evt?.stopPropagation();
+    },
+    [id]
+  );
 
   return (
     <div
@@ -170,6 +178,11 @@ const PlaceholderJobNode = ({ id, selected }: NodeProps<NodeData>) => {
               inputRef?.focus();
             }}
             autoFocus
+            value={jobName}
+            onChange={e => {
+              setJobName(e.target.value);
+              handleChange(e);
+            }}
             data-placeholder={id}
             className={[
               'line-clamp-2',
@@ -182,7 +195,6 @@ const PlaceholderJobNode = ({ id, selected }: NodeProps<NodeData>) => {
               'text-xs',
             ].join(' ')}
             onKeyDown={handleKeyDown}
-            onChange={handleChange}
           />
           {validationResult.isValid ? (
             <CheckCircleIcon

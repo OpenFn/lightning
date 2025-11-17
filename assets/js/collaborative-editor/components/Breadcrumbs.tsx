@@ -1,4 +1,6 @@
-import { useMemo } from "react";
+import { useMemo } from 'react';
+
+import { cn } from '../../utils/cn';
 
 export function Breadcrumbs({ children }: { children: React.ReactNode[] }) {
   const items = useMemo(() => {
@@ -41,8 +43,8 @@ export function BreadcrumbLink({
       href={href}
       className="text-gray-400 hover:text-gray-500 flex items-center"
     >
-      {icon && <span className={`${icon} w-5 h-5 text-secondary-500`}></span>}
-      <span className={`font-medium text-gray-500 ${icon ? "ml-2" : ""}`}>
+      {icon && <span className={cn(icon, 'w-5 h-5 text-secondary-500')}></span>}
+      <span className={cn('font-medium text-gray-500', icon ? 'ml-2' : '')}>
         {children}
       </span>
     </a>
@@ -57,8 +59,8 @@ export function BreadcrumbText({
 }) {
   return (
     <span className="flex items-center">
-      {icon && <span className={`${icon} w-5 h-5 text-secondary-500`}></span>}
-      <span className={`font-medium text-gray-500 ${icon ? "ml-2" : ""}`}>
+      {icon && <span className={cn(icon, 'w-5 h-5 text-secondary-500')}></span>}
+      <span className={cn('font-medium text-gray-500', icon ? 'ml-2' : '')}>
         {children}
       </span>
     </span>

@@ -621,4 +621,32 @@ defmodule LightningWeb.RunLive.ComponentsTest do
     )
     |> Enum.any?()
   end
+
+  describe "bulk_rerun_modal/1" do
+    test "handles missing workflow in humanize_search_params" do
+      workflow = insert(:simple_workflow)
+      workflows = [{"Test Workflow", workflow.id}]
+
+      filters = %Lightning.WorkOrders.SearchParams{
+        workflow_id: Ecto.UUID.generate()
+      }
+
+      html =
+        render_component(&Components.bulk_rerun_modal/1,
+          id: "bulk-rerun-modal",
+          show: true,
+          all_selected?: true,
+          selected_count: 5,
+          page_number: 1,
+          pages: 2,
+          total_entries: 10,
+          filters: filters,
+          workflows: workflows
+        )
+
+      assert html =~ "Run Selected Work Orders"
+      assert html =~ "You've selected all 5 work orders"
+      refute html =~ "for #{workflow.name} workflow"
+    end
+  end
 end

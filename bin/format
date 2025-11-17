@@ -2,39 +2,131 @@
 
 set -e
 
-# Get the directory of this script
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
+# Get the project root from git
+PROJECT_ROOT="$(git rev-parse --show-toplevel)"
+ASSETS_DIR="$(basename "$PROJECT_ROOT/assets")"
 
-cd "$PROJECT_ROOT/assets"
+show_help() {
+  cat << EOF
+Usage: format [OPTIONS]
 
-npm run lint -- \
-  --concurrency 4 \
-  --fix js/collaborative-editor \
-  --exit-on-fatal-error || {
-  exit_code=$?
-  if [ $exit_code -le 1 ]; then
-    echo "Continuing with warnings/fixes"
+Format code across the Lightning project (ESLint, Prettier, and Elixir).
+
+OPTIONS:
+  --changed, -c    Only format files changed on current branch vs main
+  --help, -h       Show this help message
+
+EXAMPLES:
+  format              # Format all files in collaborative-editor
+  format --changed    # Format only changed files on current branch
+EOF
+  exit 0
+}
+
+run_eslint() {
+  local files="$1"
+
+  echo "Running ESLint..."
+  # Strip assets directory prefix for relative paths
+  echo "$files" | sed "s|^${ASSETS_DIR}/||g" | xargs npm --prefix "$PROJECT_ROOT/$ASSETS_DIR" run lint -- \
+    --concurrency 4 \
+    --fix \
+    --exit-on-fatal-error || {
+    exit_code=$?
+    if [ $exit_code -le 1 ]; then
+      echo "Continuing with warnings/fixes"
+    else
+      echo "ESLint exited with code $exit_code"
+      echo "Skipping rest of the script due to ESLint error"
+      exit $exit_code
+    fi
+  }
+}
+
+run_prettier() {
+  local files="$1"
+
+  echo "Running Prettier..."
+  echo "$files" | xargs npm --prefix "$PROJECT_ROOT/$ASSETS_DIR" exec prettier -- \
+    --config "$PROJECT_ROOT/.prettierrc" \
+    --ignore-path "$PROJECT_ROOT/.prettierignore" \
+    --write | grep -v "unchanged" || {
+    exit_code=$?
+    if [ $exit_code -eq 1 ]; then
+      echo "✓ No changes needed for Prettier"
+    else
+      exit $exit_code
+    fi
+  }
+}
+
+run_mix_format() {
+  local files="$1"
+
+  echo "Running mix format..."
+  if [ -z "$files" ]; then
+    mix format && echo "✓ Elixir code formatted successfully"
   else
-    echo "ESLint exited with code $exit_code"
-    echo "Skipping rest of the script due to ESLint error"
-    exit $exit_code
+    echo "$files" | xargs mix format && echo "✓ Elixir code formatted successfully"
   fi
 }
 
-npm exec prettier -- \
-  --config "$PROJECT_ROOT/.prettierrc" \
-  --ignore-path "$PROJECT_ROOT/.prettierignore" \
-  --write \
-  js/collaborative-editor test | grep -v "unchanged" || {
-  exit_code=$?
-  if [ $exit_code -eq 1 ]; then
-    echo "✓ No changes needed for Prettier"
-  else
-    exit $exit_code
+# Parse arguments
+CHANGED_ONLY=false
+BASE_BRANCH="main"
+
+while [[ $# -gt 0 ]]; do
+  case $1 in
+    --changed|-c)
+      CHANGED_ONLY=true
+      shift
+      ;;
+    --help|-h)
+      show_help
+      ;;
+    *)
+      echo "Unknown option: $1"
+      echo "Use --help for usage information"
+      exit 1
+      ;;
+  esac
+done
+
+# Set default file paths
+JS_FILES="${ASSETS_DIR}/js"
+PRETTIER_FILES=""
+EX_FILES=""
+
+# Override with changed files if flag is set
+if [ "$CHANGED_ONLY" = true ]; then
+  echo "Finding files changed on current branch vs $BASE_BRANCH..."
+
+  # Get files changed on current branch (excluding deleted files)
+  CHANGED_FILES=$(git diff --name-only --diff-filter=ACMR "$BASE_BRANCH"...HEAD || true)
+
+  if [ -z "$CHANGED_FILES" ]; then
+    echo "✓ No changed files found on current branch"
+    exit 0
   fi
-}
 
-cd "$PROJECT_ROOT"
+  # Filter for JS/TS files in collaborative-editor or test
+  JS_CHANGED=$(echo "$CHANGED_FILES" | grep -E "^${ASSETS_DIR}/(js/collaborative-editor|test)/.*\.(js|jsx|ts|tsx)$" || true)
+  EX_CHANGED=$(echo "$CHANGED_FILES" | grep -E '\.(ex|exs)$' || true)
 
-mix format && echo "✓ Elixir code formatted successfully"
+  # Override defaults with changed files (or empty if none)
+  [ -n "$JS_CHANGED" ] && JS_FILES="$JS_CHANGED" || JS_FILES=""
+  [ -n "$JS_CHANGED" ] && PRETTIER_FILES="$JS_CHANGED" || PRETTIER_FILES=""
+  EX_FILES="$EX_CHANGED"
+
+  echo "Found $(echo "$CHANGED_FILES" | wc -l | xargs) changed file(s)"
+fi
+
+# Run formatters
+[ -n "$JS_FILES" ] && run_eslint "$JS_FILES" || echo "✓ No JS/TS files to lint"
+[ -n "$PRETTIER_FILES" ] && run_prettier "$PRETTIER_FILES" || echo "✓ No JS/TS files for Prettier"
+
+if [ "$CHANGED_ONLY" = true ] && [ -z "$EX_FILES" ]; then
+  echo "✓ No Elixir files to format"
+else
+  run_mix_format "$EX_FILES"
+fi

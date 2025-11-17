@@ -1,17 +1,9 @@
 import Ajv, { type ErrorObject } from 'ajv';
 import YAML from 'yaml';
-import { randomUUID } from '../common';
-import workflowV1Schema from './schema/workflow-spec.json';
-import {
-  WorkflowError,
-  YamlSyntaxError,
-  JobNotFoundError,
-  TriggerNotFoundError,
-  DuplicateJobNameError,
-  SchemaValidationError,
-  createWorkflowError
-} from './workflow-errors';
 
+import { randomUUID } from '../common';
+
+import workflowV1Schema from './schema/workflow-spec.json';
 import type {
   Position,
   SpecEdge,
@@ -23,6 +15,15 @@ import type {
   WorkflowSpec,
   WorkflowState,
 } from './types';
+import {
+  WorkflowError,
+  YamlSyntaxError,
+  JobNotFoundError,
+  TriggerNotFoundError,
+  DuplicateJobNameError,
+  SchemaValidationError,
+  createWorkflowError,
+} from './workflow-errors';
 
 const hyphenate = (str: string) => {
   return str.replace(/\s+/g, '-');
@@ -41,13 +42,13 @@ export const convertWorkflowStateToSpec = (
 ): WorkflowSpec => {
   const jobs: { [key: string]: SpecJob } = {};
   workflowState.jobs.forEach(job => {
-    const pos = workflowState.positions?.[job.id]
+    const pos = workflowState.positions?.[job.id];
     const jobDetails: SpecJob = {
       ...(includeIds && { id: job.id }),
       name: job.name,
       adaptor: job.adaptor,
       body: job.body,
-      pos: pos ? roundPosition(pos): undefined
+      pos: pos ? roundPosition(pos) : undefined,
     };
     jobs[hyphenate(job.name)] = jobDetails;
   });
@@ -60,7 +61,10 @@ export const convertWorkflowStateToSpec = (
       type: trigger.type,
       enabled: trigger.enabled,
       pos: trigger.type !== 'kafka' && pos ? roundPosition(pos) : undefined,
-      cron_expression: trigger.type === 'cron' && 'cron_expression' in trigger ? trigger.cron_expression : undefined
+      cron_expression:
+        trigger.type === 'cron' && 'cron_expression' in trigger
+          ? trigger.cron_expression
+          : undefined,
     } as SpecTrigger;
 
     // TODO: handle kafka config
@@ -73,7 +77,7 @@ export const convertWorkflowStateToSpec = (
       ...(includeIds && { id: edge.id }),
       condition_type: edge.condition_type,
       enabled: edge.enabled,
-      target_job: ''
+      target_job: '',
     };
 
     if (edge.source_trigger_id) {
@@ -115,7 +119,7 @@ export const convertWorkflowStateToSpec = (
     name: workflowState.name,
     jobs: jobs,
     triggers: triggers,
-    edges: edges
+    edges: edges,
   };
 
   return workflowSpec;
@@ -215,7 +219,7 @@ export const convertWorkflowSpecToState = (
 export const parseWorkflowYAML = (yamlString: string): WorkflowSpec => {
   try {
     const parsedYAML = YAML.parse(yamlString);
-    
+
     const ajv = new Ajv({ allErrors: true });
     const validate = ajv.compile(workflowV1Schema);
     const isSchemaValid = validate(parsedYAML);
@@ -244,12 +248,12 @@ export const parseWorkflowYAML = (yamlString: string): WorkflowSpec => {
     if (error instanceof WorkflowError) {
       throw error;
     }
-    
+
     // If it's a YAML parsing error
     if (error instanceof Error && error.name === 'YAMLParseError') {
       throw new YamlSyntaxError(error.message, error);
     }
-    
+
     // For any other error, create a workflow error
     throw createWorkflowError(error);
   }

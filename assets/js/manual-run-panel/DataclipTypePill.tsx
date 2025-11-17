@@ -1,3 +1,5 @@
+import { cn } from '../utils/cn';
+
 type DataclipType = 'step_result' | 'http_request' | 'global' | 'saved_input';
 
 interface DataclipTypePillProps {
@@ -22,7 +24,7 @@ const DataclipTypePill: React.FC<DataclipTypePillProps> = ({
       saved_input: 'bg-yellow-500 text-yellow-900',
     }[type] || '';
 
-  return <div className={`${baseClasses} ${typeClasses}`}>{type}</div>;
+  return <div className={cn(baseClasses, typeClasses)}>{type}</div>;
 };
 
-export default DataclipTypePill
+export default DataclipTypePill;

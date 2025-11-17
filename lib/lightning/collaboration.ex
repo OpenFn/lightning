@@ -41,45 +41,77 @@ defmodule Lightning.Collaborate do
 
     user = Keyword.fetch!(opts, :user)
     workflow = Keyword.fetch!(opts, :workflow)
+    room_topic = Keyword.get(opts, :room_topic, "workflow:#{workflow.id}")
 
-    case lookup_shared_doc(workflow.id) do
+    # Extract document name from room topic
+    # "workflow:collaborate:123" -> "workflow:123"
+    # "workflow:collaborate:123:v22" -> "workflow:123:v22"
+    document_name = extract_document_name(room_topic)
+
+    Logger.info(
+      "Starting collaboration for document: #{document_name} (workflow: #{workflow.id})"
+    )
+
+    # Ensure document supervisor exists for this document
+    case lookup_shared_doc(document_name) do
       nil ->
-        Logger.info("Starting document for workflow #{workflow.id}")
-        {:ok, _doc_supervisor_pid} = start_document(workflow)
+        Logger.info("Starting document for #{document_name}")
+        {:ok, _doc_supervisor_pid} = start_document(workflow, document_name)
 
-      shared_doc_pid when is_pid(shared_doc_pid) ->
-        shared_doc_pid
+      _shared_doc_pid ->
+        Logger.info("Found existing document for #{document_name}")
+        :ok
     end
 
+    # Start session for this user
     SessionSupervisor.start_child({
       Session,
       workflow: workflow,
       user: user,
       parent_pid: parent_pid,
-      name:
-        Registry.via(
-          {:session, "workflow:#{workflow.id}:#{session_id}", user.id}
-        )
+      document_name: document_name,
+      name: Registry.via({:session, "#{document_name}:#{session_id}", user.id})
     })
   end
 
-  def start_document(%Lightning.Workflows.Workflow{} = workflow) do
+  def start_document(
+        %Lightning.Workflows.Workflow{} = workflow,
+        document_name
+      ) do
     {:ok, doc_supervisor_pid} =
       SessionSupervisor.start_child(
         {DocumentSupervisor,
          workflow: workflow,
-         name: Registry.via({:doc_supervisor, "workflow:#{workflow.id}"})}
+         document_name: document_name,
+         name: Registry.via({:doc_supervisor, document_name})}
       )
 
     {:ok, doc_supervisor_pid}
   end
 
-  defp lookup_shared_doc(workflow_id) do
-    case :pg.get_members(@pg_scope, workflow_id) do
+  defp lookup_shared_doc(document_name) do
+    case :pg.get_members(@pg_scope, document_name) do
       [] -> nil
       [shared_doc_pid | _] -> shared_doc_pid
     end
   end
+
+  # Extracts document name from room topic.
+  #
+  # Examples:
+  #   "workflow:collaborate:123" -> "workflow:123"
+  #   "workflow:collaborate:123:v22" -> "workflow:123:v22"
+  #   "workflow:123" -> "workflow:123"
+  @spec extract_document_name(String.t()) :: String.t()
+  defp extract_document_name("workflow:collaborate:" <> rest) do
+    case String.split(rest, ":v", parts: 2) do
+      [workflow_id, version] -> "workflow:#{workflow_id}:v#{version}"
+      [workflow_id] -> "workflow:#{workflow_id}"
+    end
+  end
+
+  # Fallback for topics that don't match "workflow:collaborate:" pattern
+  defp extract_document_name(topic), do: topic
 
   defdelegate lookup(key), to: Registry
   defdelegate whereis(key), to: Registry

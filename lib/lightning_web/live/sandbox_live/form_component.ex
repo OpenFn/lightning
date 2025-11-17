@@ -14,10 +14,11 @@ defmodule LightningWeb.SandboxLive.FormComponent do
   @impl true
   def update(%{mode: mode} = assigns, socket) when mode in [:new, :edit] do
     base = base_struct(assigns)
+    parent_id = get_parent_id(assigns)
 
     changeset =
       base
-      |> form_changeset(initial_params(assigns))
+      |> form_changeset(initial_params(assigns), parent_id)
       |> Map.put(:action, :validate)
 
     initial_color = Changeset.get_field(changeset, :color)
@@ -46,10 +47,12 @@ defmodule LightningWeb.SandboxLive.FormComponent do
         %{"project" => params},
         %{assigns: assigns} = socket
       ) do
+    parent_id = get_parent_id(assigns)
+
     changeset =
       assigns
       |> base_struct()
-      |> form_changeset(params)
+      |> form_changeset(params, parent_id)
       |> Map.put(:action, :validate)
 
     new_color = params["color"]
@@ -202,29 +205,31 @@ defmodule LightningWeb.SandboxLive.FormComponent do
               />
               <.input type="hidden" field={f[:name]} />
 
-              <small class={[
-                "block text-xs",
-                if(to_string(f[:name].value) != "",
-                  do: "text-gray-600",
-                  else: "text-gray-400"
-                )
-              ]}>
-                {case @mode do
-                  :new -> "Your sandbox will be named"
-                  :edit -> "The sandbox will be named"
-                end}
-                <%= if to_string(f[:name].value) != "" do %>
-                  <span class={[
-                    "ml-1 rounded-md border border-slate-300",
-                    "bg-yellow-100 p-1 font-mono text-xs"
-                  ]}><%= @name %></span>.
-                <% else %>
-                  <span class={[
-                    "ml-1 rounded-md border border-slate-200",
-                    "bg-gray-50 p-1 font-mono text-xs"
-                  ]}>my-sandbox</span>.
-                <% end %>
-              </small>
+              <%= if f[:raw_name].errors == [] do %>
+                <small class={[
+                  "block text-xs",
+                  if(to_string(f[:name].value) != "",
+                    do: "text-gray-600",
+                    else: "text-gray-400"
+                  )
+                ]}>
+                  {case @mode do
+                    :new -> "Your sandbox will be named"
+                    :edit -> "The sandbox will be named"
+                  end}
+                  <%= if to_string(f[:name].value) != "" do %>
+                    <span class={[
+                      "ml-1 rounded-md border border-slate-300",
+                      "bg-yellow-100 p-1 font-mono text-xs"
+                    ]}><%= @name %></span>.
+                  <% else %>
+                    <span class={[
+                      "ml-1 rounded-md border border-slate-200",
+                      "bg-gray-50 p-1 font-mono text-xs"
+                    ]}>my-sandbox</span>.
+                  <% end %>
+                </small>
+              <% end %>
             </div>
 
             <.input
@@ -265,6 +270,8 @@ defmodule LightningWeb.SandboxLive.FormComponent do
   defp base_struct(%{sandbox: %Project{} = sandbox}), do: sandbox
   defp base_struct(_assigns), do: %Project{}
 
+  defp get_parent_id(%{parent: %Project{id: id}}), do: id
+
   defp initial_params(%{sandbox: %Project{} = sandbox}) do
     %{
       "name" => sandbox.name,
@@ -278,12 +285,30 @@ defmodule LightningWeb.SandboxLive.FormComponent do
     %{"color" => get_random_color()}
   end
 
-  defp initial_params(_assigns), do: %{}
-
-  defp form_changeset(%Project{} = base, params) do
+  defp form_changeset(%Project{} = base, params, parent_id) do
     params
     |> coerce_raw_name_to_safe_name()
     |> then(&Project.changeset(base, &1))
+    |> validate_unique_sandbox_name(parent_id)
+  end
+
+  defp validate_unique_sandbox_name(changeset, parent_id) do
+    name = Changeset.get_field(changeset, :name)
+    id = Changeset.get_field(changeset, :id)
+
+    if parent_id && name do
+      if Projects.sandbox_name_exists?(parent_id, name, id) do
+        Changeset.add_error(
+          changeset,
+          :raw_name,
+          "Sandbox name already exists"
+        )
+      else
+        changeset
+      end
+    else
+      changeset
+    end
   end
 
   defp coerce_raw_name_to_safe_name(%{"raw_name" => raw} = params) do

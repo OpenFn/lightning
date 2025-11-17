@@ -1,4 +1,18 @@
+import {
+  CalendarDaysIcon,
+  MagnifyingGlassIcon,
+  RectangleGroupIcon,
+  XMarkIcon,
+} from '@heroicons/react/24/outline';
 import React, { type KeyboardEvent } from 'react';
+
+import useOutsideClick from '#/hooks/useOutsideClick';
+import { cn } from '#/utils/cn';
+import formatDate from '#/utils/formatDate';
+import truncateUid from '#/utils/truncateUID';
+
+import DataclipTypePill from '../DataclipTypePill';
+import Pill from '../Pill';
 import {
   DataclipTypeNames,
   DataclipTypes,
@@ -6,17 +20,6 @@ import {
   type Dataclip,
   type SetDates,
 } from '../types';
-import useOutsideClick from '#/hooks/useOutsideClick';
-import Pill from '../Pill';
-import DataclipTypePill from '../DataclipTypePill';
-import {
-  CalendarDaysIcon,
-  MagnifyingGlassIcon,
-  RectangleGroupIcon,
-  XMarkIcon,
-} from '@heroicons/react/24/outline';
-import formatDate from '#/utils/formatDate';
-import truncateUid from '#/utils/truncateUID';
 
 interface ExistingViewProps {
   dataclips: Dataclip[];
@@ -35,6 +38,7 @@ interface ExistingViewProps {
   fixedHeight: boolean;
   currentRunDataclip?: Dataclip | null;
   nextCronRunDataclipId?: string | null;
+  renderMode?: 'standalone' | 'embedded';
 }
 
 const ExistingView: React.FC<ExistingViewProps> = ({
@@ -54,6 +58,7 @@ const ExistingView: React.FC<ExistingViewProps> = ({
   fixedHeight,
   currentRunDataclip,
   nextCronRunDataclipId,
+  renderMode = 'standalone',
 }) => {
   const [typesOpen, setTypesOpen] = React.useState(false);
   const [dateOpen, setDateOpen] = React.useState(false);
@@ -68,6 +73,7 @@ const ExistingView: React.FC<ExistingViewProps> = ({
     .filter(([_, value]) => value !== undefined)
     .map(([key, value]) => (
       <Pill
+        key={key}
         onClose={() => {
           clearFilter(key as FilterTypes);
         }}
@@ -91,11 +97,12 @@ const ExistingView: React.FC<ExistingViewProps> = ({
   };
 
   return (
-    <>
-      <div className="mt-2 flex flex-col gap-3">
-        <div>
-          <div className="flex gap-1 flex-wrap">
-            <div className="relative rounded-md shadow-xs flex grow">
+    <div className="flex flex-col gap-3 pt-4 pb-6 px-3">
+      <div>
+        <div className="flex items-center gap-2">
+          {/* Search input + button group */}
+          <div className="flex flex-1">
+            <div className="relative flex-1">
               <input
                 onKeyDown={keyDownHandler}
                 value={query}
@@ -103,7 +110,7 @@ const ExistingView: React.FC<ExistingViewProps> = ({
                   setQuery(e.target.value);
                 }}
                 type="text"
-                className="focus:outline focus:outline-2 focus:-outline-offset-2 focus:ring-0  disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-500 border-slate-300 focus:border-slate-400 focus:outline-indigo-600 block w-full rounded-md border-0 py-1.5 pl-10 pr-20 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400  focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
+                className="focus:outline focus:outline-2 focus:-outline-offset-2 focus:ring-0  disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-500 border-slate-300 focus:border-slate-400 focus:outline-indigo-600 block w-full rounded-l-md border-0 border-r-0 py-1.5 pl-10 pr-10 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400  focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
                 placeholder="Search names or UUID prefixes"
               />
               <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
@@ -120,6 +127,19 @@ const ExistingView: React.FC<ExistingViewProps> = ({
                 </div>
               ) : null}
             </div>
+            <button
+              type="button"
+              onClick={() => {
+                onSubmit();
+              }}
+              className="rounded-r-md text-sm font-semibold shadow-xs phx-submit-loading:opacity-75 bg-primary-600 hover:bg-primary-500 text-white disabled:bg-primary-300 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600 px-3 py-2"
+            >
+              Search
+            </button>
+          </div>
+
+          {/* Filter buttons group */}
+          <div className="flex gap-2">
             <div className="relative inline-block">
               <button
                 type="button"
@@ -220,7 +240,6 @@ const ExistingView: React.FC<ExistingViewProps> = ({
                 type="button"
                 onClick={() => {
                   setNamedOnly(!namedOnly);
-                  onSubmit();
                 }}
                 className={`border rounded-md px-1 py-1 h-full flex justify-center items-center hover:bg-slate-100 hover:border-slate-300 ${
                   namedOnly ? 'bg-primary-100 border-primary-300' : ''
@@ -229,81 +248,72 @@ const ExistingView: React.FC<ExistingViewProps> = ({
                 <span className="hero-tag h-5 w-5 text-slate-700" />
               </button>
             </div>
-            <div className="relative inline-block">
-              <button
-                type="button"
-                onClick={() => {
-                  onSubmit();
-                }}
-                // TODO: This should come from app.css (lib/lightning_web/components/new_inputs.ex button_base_classes)
-                className="rounded-md text-sm font-semibold shadow-xs phx-submit-loading:opacity-75 bg-primary-600 hover:bg-primary-500 text-white disabled:bg-primary-300 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600 px-3 py-2"
-              >
-                Search
-              </button>
-            </div>
           </div>
-          <div className="flex gap-1 mt-2">{pills}</div>
         </div>
-        <div
-          className={`${fixedHeight ? 'h-64' : ''} flex flex-col gap-3 overflow-auto`}
-        >
-          {dataclips.length ? (
-            dataclips.map(clip => {
-              const isCurrent =
-                currentRunDataclip && clip.id === currentRunDataclip.id;
-              const isNextCronRun =
-                nextCronRunDataclipId && clip.id === nextCronRunDataclipId;
-              return (
-                <div
-                  key={clip.id}
-                  onClick={() => {
-                    setSelected(clip);
-                  }}
-                  className="flex items-center justify-between border rounded-md px-3 py-2 cursor-pointer hover:bg-slate-100 hover:border-primary-600 group"
-                >
-                  <div className="flex gap-2 items-center text-sm max-w-9/10">
-                    <span className="flex items-center">
-                      {isCurrent ? (
-                        <span
-                          className="hero-star-solid size-4 text-primary-400 group-hover:text-primary-600"
-                          title="Current dataclip for this step"
-                        />
-                      ) : isNextCronRun ? (
-                        <span
-                          className="hero-clock-solid size-4 text-primary-400 group-hover:text-primary-600"
-                          title="Next state that will be used for cron execution"
-                        />
-                      ) : (
-                        <span className="hero-document-text size-4 group-hover:text-primary-600" />
-                      )}
-                    </span>
-                    <span className="font-mono leading-none align-middle truncate">
-                      {clip.name || truncateUid(clip.id)}
-                    </span>
-                    <span className="align-middle">
-                      <DataclipTypePill type={clip.type} size="small" />
-                    </span>
-                  </div>
-                  <div className="text-xs truncate ml-2">
-                    {formatDate(new Date(clip.inserted_at))}
-                  </div>
-                </div>
-              );
-            })
-          ) : (
-            <div className="text-center text-sm">
-              No dataclips match the filter.
-            </div>
-          )}
-          {dataclips.length ? (
-            <div className="text-center text-sm text-gray-600">
-              Search results are limited to the 10 most recent matches for this
-              step.
-            </div>
-          ) : null}
-        </div>
+        <div className="flex gap-1 mt-2">{pills}</div>
       </div>
-    </>
+      <div
+        className={cn(
+          'flex flex-col gap-3 overflow-auto',
+          fixedHeight ? 'h-64' : 'flex-1 min-h-0'
+        )}
+      >
+        {dataclips.length ? (
+          dataclips.map(clip => {
+            const isCurrent =
+              currentRunDataclip && clip.id === currentRunDataclip.id;
+            const isNextCronRun =
+              nextCronRunDataclipId && clip.id === nextCronRunDataclipId;
+            return (
+              <div
+                key={clip.id}
+                onClick={() => {
+                  setSelected(clip);
+                }}
+                className="flex items-center justify-between border rounded-md px-3 py-2 cursor-pointer hover:bg-slate-100 hover:border-primary-600 group"
+              >
+                <div className="flex gap-2 items-center text-sm max-w-9/10">
+                  <span className="flex items-center">
+                    {isCurrent ? (
+                      <span
+                        className="hero-star-solid size-4 text-primary-400 group-hover:text-primary-600"
+                        title="Current dataclip for this step"
+                      />
+                    ) : isNextCronRun ? (
+                      <span
+                        className="hero-clock-solid size-4 text-primary-400 group-hover:text-primary-600"
+                        title="Next state that will be used for cron execution"
+                      />
+                    ) : (
+                      <span className="hero-document-text size-4 group-hover:text-primary-600" />
+                    )}
+                  </span>
+                  <span className="font-mono leading-none align-middle truncate">
+                    {clip.name || truncateUid(clip.id)}
+                  </span>
+                  <span className="align-middle">
+                    <DataclipTypePill type={clip.type} size="small" />
+                  </span>
+                </div>
+                <div className="text-xs truncate ml-2">
+                  {formatDate(new Date(clip.inserted_at))}
+                </div>
+              </div>
+            );
+          })
+        ) : (
+          <div className="text-center text-sm">
+            No dataclips match the filter.
+          </div>
+        )}
+        {dataclips.length ? (
+          <div className="text-center text-sm text-gray-600">
+            Search results are limited to the 10 most recent matches for this
+            step.
+          </div>
+        ) : null}
+      </div>
+    </div>
   );
 };
 

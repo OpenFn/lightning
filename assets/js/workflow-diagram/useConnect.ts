@@ -1,7 +1,9 @@
-import React, { useCallback, useState } from 'react';
 import type * as F from '@xyflow/react';
+import React, { useCallback, useState } from 'react';
+
 import { randomUUID } from '../common';
 import { useWorkflowStore } from '../workflow-store/store';
+
 import Connection from './edges/Connection';
 import { styleEdge } from './styles';
 import type { Flow } from './types';

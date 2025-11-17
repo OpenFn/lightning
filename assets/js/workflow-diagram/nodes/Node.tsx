@@ -1,12 +1,14 @@
 import { Handle, type NodeProps } from '@xyflow/react';
 import React, { memo } from 'react';
 
+import { Tooltip } from '../../collaborative-editor/components/Tooltip';
+import { cn } from '../../utils/cn';
 import { duration } from '../../utils/duration';
-import type { RunStep } from '../../workflow-store/store';
 import formatDate from '../../utils/formatDate';
+import type { RunStep } from '../../workflow-store/store';
 import ErrorMessage from '../components/ErrorMessage';
-import Shape from '../components/Shape';
 import { renderIcon } from '../components/RunIcons';
+import Shape from '../components/Shape';
 import { nodeIconStyles, nodeLabelStyles } from '../styles';
 
 type NodeData = any;
@@ -44,12 +46,13 @@ const hasErrors = (errors: ErrorObject | null | undefined): boolean => {
 };
 
 const Label: React.FC<LabelProps> = ({ children, hasErrors = false }) => {
-  const textColorClass = hasErrors ? 'text-red-500' : '';
-
   if (children && (children as any).length) {
     return (
       <p
-        className={`line-clamp-2 align-left text-m max-w-[220px] text-ellipsis overflow-hidden ${textColorClass}`}
+        className={cn(
+          'line-clamp-2 align-left text-m max-w-[220px] text-ellipsis overflow-hidden',
+          hasErrors && 'text-red-500'
+        )}
       >
         {children}
       </p>
@@ -109,7 +112,7 @@ const Node = ({
 
   return (
     <div
-      className={`group ${didRun ? 'opacity-100' : 'opacity-30'}`}
+      className={cn('group', didRun ? 'opacity-100' : 'opacity-30')}
       data-a-node
       data-id={id}
       data-testid={type === 'trigger' ? `trigger-node-${id}` : `job-node-${id}`}
@@ -169,7 +172,7 @@ const Node = ({
             </>
           )}
           {runData && !isTriggerNode ? (
-            <div className="absolute -left-2 -top-2">
+            <div className="absolute -left-2 -top-2 pointer-events-auto z-10">
               {renderIcon(runData.exit_reason ?? 'pending', {
                 tooltip: runData?.error_type ?? 'Step completed successfully',
               })}
@@ -190,16 +193,16 @@ const Node = ({
           ) : null}
           {startInfo ? (
             <div
-              className={`absolute -top-2 flex gap-2 items-center`}
+              className="absolute -top-2 flex gap-2 items-center pointer-events-auto z-10"
               style={{
                 left: 'calc(100% - 24px)',
               }}
-              data-tooltip={`Started by ${startInfo.startBy}`}
-              data-tooltip-placement="top"
             >
-              <div className="flex justify-center items-center w-7 h-7 rounded-full text-slate-50 border-slate-700 bg-slate-600">
-                <span className="hero-play-solid w-3 h-3"></span>
-              </div>
+              <Tooltip content={`Started by ${startInfo.startBy}`} side="top">
+                <div className="flex justify-center items-center w-7 h-7 rounded-full text-slate-50 border-slate-700 bg-slate-600">
+                  <span className="hero-play-solid w-3 h-3"></span>
+                </div>
+              </Tooltip>
             </div>
           ) : null}
           {runData?.started_at && runData.finished_at ? (
@@ -331,12 +334,10 @@ const Node = ({
             marginTop: '-18px',
             justifyContent: 'center',
           }}
-          className={`flex flex-row items-center
-                    opacity-0  ${
-                      (!data.isActiveDropTarget && 'group-hover:opacity-100') ??
-                      ''
-                    }
-                    transition duration-150 ease-in-out`}
+          className={cn(
+            'flex flex-row items-center opacity-0 transition duration-150 ease-in-out',
+            !data.isActiveDropTarget && 'group-hover:opacity-100'
+          )}
         >
           {toolbar()}
         </div>

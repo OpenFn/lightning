@@ -1092,10 +1092,11 @@ defmodule LightningWeb.SandboxLive.IndexTest do
       Mimic.expect(
         Lightning.Projects.Provisioner,
         :import_document,
-        fn target, actor, yaml ->
+        fn target, actor, yaml, opts ->
           assert target.id == root.id
           assert actor.id == user.id
           assert yaml == "merged_yaml"
+          assert opts[:allow_stale] == true
           {:ok, target}
         end
       )
@@ -1139,7 +1140,7 @@ defmodule LightningWeb.SandboxLive.IndexTest do
       Mimic.expect(
         Lightning.Projects.Provisioner,
         :import_document,
-        fn _target, _actor, _yaml ->
+        fn _target, _actor, _yaml, _opts ->
           {:error, :import_failed}
         end
       )
@@ -1320,7 +1321,8 @@ defmodule LightningWeb.SandboxLive.IndexTest do
 
       Mimic.expect(Lightning.Projects.Provisioner, :import_document, fn _target,
                                                                         _actor,
-                                                                        _yaml ->
+                                                                        _yaml,
+                                                                        _opts ->
         {:ok, root}
       end)
 
@@ -1366,7 +1368,8 @@ defmodule LightningWeb.SandboxLive.IndexTest do
 
       Mimic.expect(Lightning.Projects.Provisioner, :import_document, fn _target,
                                                                         _actor,
-                                                                        _yaml ->
+                                                                        _yaml,
+                                                                        _opts ->
         {:error, changeset}
       end)
 
@@ -1400,7 +1403,8 @@ defmodule LightningWeb.SandboxLive.IndexTest do
 
       Mimic.expect(Lightning.Projects.Provisioner, :import_document, fn _target,
                                                                         _actor,
-                                                                        _yaml ->
+                                                                        _yaml,
+                                                                        _opts ->
         {:error, %{text: "Custom import error message"}}
       end)
 
@@ -1434,7 +1438,8 @@ defmodule LightningWeb.SandboxLive.IndexTest do
 
       Mimic.expect(Lightning.Projects.Provisioner, :import_document, fn _target,
                                                                         _actor,
-                                                                        _yaml ->
+                                                                        _yaml,
+                                                                        _opts ->
         {:error, {:unexpected, "something went wrong"}}
       end)
 
@@ -1631,7 +1636,7 @@ defmodule LightningWeb.SandboxLive.IndexTest do
       Mimic.expect(
         Lightning.Projects.Provisioner,
         :import_document,
-        fn _target, _actor, _yaml -> {:ok, parent} end
+        fn _target, _actor, _yaml, _opts -> {:ok, parent} end
       )
 
       Mimic.expect(
@@ -1670,6 +1675,261 @@ defmodule LightningWeb.SandboxLive.IndexTest do
         })
 
       assert html =~ "Invalid merge request"
+    end
+
+    test "merges sandbox successfully when parent workflow was modified with new nodes/edges",
+         %{
+           conn: conn,
+           owner_user: owner_user,
+           parent: parent
+         } do
+      # This test simulates Joe's scenario:
+      # 1. Create a sandbox from parent
+      # 2. Add a new node/edge to parent (after sandbox creation)
+      # 3. Merge sandbox back to parent
+      # Expected: Merge succeeds and parent's new edges are deleted (overwrite behavior)
+
+      # Create initial parent workflow with job1
+      parent_workflow =
+        insert(:workflow, project: parent, name: "Main Workflow")
+
+      job1 =
+        insert(:job,
+          workflow: parent_workflow,
+          name: "Initial Job",
+          body: "job1()"
+        )
+
+      trigger = insert(:trigger, workflow: parent_workflow, type: :webhook)
+
+      insert(:edge,
+        workflow: parent_workflow,
+        source_trigger: trigger,
+        target_job: job1
+      )
+
+      # Create sandbox from parent (at this point, parent only has job1)
+      sandbox = insert(:project, name: "Sandbox", parent: parent)
+
+      sandbox_workflow =
+        insert(:workflow,
+          project: sandbox,
+          name: "Main Workflow",
+          lock_version: parent_workflow.lock_version
+        )
+
+      sandbox_job1 =
+        insert(:job,
+          workflow: sandbox_workflow,
+          name: "Initial Job",
+          body: "job1_modified()"
+        )
+
+      sandbox_trigger =
+        insert(:trigger, workflow: sandbox_workflow, type: :webhook)
+
+      insert(:edge,
+        workflow: sandbox_workflow,
+        source_trigger: sandbox_trigger,
+        target_job: sandbox_job1
+      )
+
+      # NOW: Parent gets modified with a new job2 and edge (simulating concurrent work)
+      job2 =
+        insert(:job,
+          workflow: parent_workflow,
+          name: "New Job Added After Sandbox",
+          body: "job2()"
+        )
+
+      new_edge =
+        insert(:edge,
+          workflow: parent_workflow,
+          source_job: job1,
+          target_job: job2
+        )
+
+      # Update parent workflow to increment lock_version (simulating the modification)
+      parent_workflow =
+        parent_workflow
+        |> Ecto.Changeset.change()
+        |> Ecto.Changeset.optimistic_lock(:lock_version)
+        |> Repo.update!()
+
+      initial_parent_lock_version = parent_workflow.lock_version
+
+      # Now perform the merge from sandbox to parent
+      conn = log_in_user(conn, owner_user)
+      {:ok, view, _html} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
+
+      # Open the merge modal
+      view
+      |> element("#branch-rewire-sandbox-#{sandbox.id} button")
+      |> render_click()
+
+      # Submit the merge
+      view
+      |> form("#merge-sandbox-modal form", %{
+        "merge" => %{"target_id" => parent.id}
+      })
+      |> render_submit()
+
+      # Verify redirect to parent project
+      assert_redirect(view, ~p"/projects/#{parent.id}/w")
+
+      # Verify the merge succeeded with allow_stale
+      updated_parent_workflow =
+        Repo.reload(parent_workflow) |> Repo.preload([:edges, :jobs])
+
+      # The workflow lock_version should have incremented (merge was applied)
+      assert updated_parent_workflow.lock_version > initial_parent_lock_version
+
+      # The new edge added to parent should be DELETED (overwrite behavior)
+      edge_ids = Enum.map(updated_parent_workflow.edges, & &1.id)
+
+      refute new_edge.id in edge_ids,
+             "Parent's new edge should be deleted during merge"
+
+      # Only the trigger->job1 edge should remain
+      assert length(updated_parent_workflow.edges) == 1
+
+      # job2 should also be deleted (not in sandbox)
+      job_ids = Enum.map(updated_parent_workflow.jobs, & &1.id)
+
+      refute job2.id in job_ids,
+             "Parent's new job should be deleted during merge"
+
+      # job1 should have the sandbox's modified body
+      remaining_job =
+        Enum.find(updated_parent_workflow.jobs, &(&1.name == "Initial Job"))
+
+      assert remaining_job.body == "job1_modified()"
+    end
+
+    test "checks for divergence when opening merge modal with default target",
+         %{
+           conn: conn,
+           parent: parent,
+           sandbox: sandbox
+         } do
+      parent_workflow =
+        insert(:workflow, project: parent, name: "Test Workflow")
+
+      insert(:workflow_version,
+        workflow: parent_workflow,
+        hash: "parent_hash",
+        source: "app"
+      )
+
+      sandbox_workflow =
+        insert(:workflow, project: sandbox, name: "Test Workflow")
+
+      insert(:workflow_version,
+        workflow: sandbox_workflow,
+        hash: "sandbox_hash",
+        source: "app"
+      )
+
+      {:ok, view, _} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
+
+      # Open the merge modal
+      view
+      |> render_click("open-merge-modal", %{"id" => sandbox.id})
+
+      assert view
+             |> element("#merge-divergence-alert")
+             |> has_element?()
+    end
+  end
+
+  describe "Edge cases for divergence and nil handling" do
+    test "handles nil target_id in select-merge-target", %{conn: conn} do
+      owner = insert(:user)
+
+      root =
+        insert(:project, project_users: [%{user: owner, role: :owner}])
+
+      child1 =
+        insert(:project,
+          parent: root,
+          project_users: [%{user: owner, role: :owner}]
+        )
+
+      conn = log_in_user(conn, owner)
+
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{root.id}/sandboxes")
+
+      view
+      |> element("#branch-rewire-sandbox-#{child1.id} button")
+      |> render_click()
+
+      render_click(view, "select-merge-target", %{
+        "merge" => %{"target_id" => ""}
+      })
+
+      # Should not crash - the has_diverged will be false for nil target
+      assigns = :sys.get_state(view.pid).socket.assigns
+      refute assigns.merge_has_diverged
+    end
+
+    test "displays MAIN when selected target not found in options", %{conn: conn} do
+      owner = insert(:user)
+
+      root =
+        insert(:project, project_users: [%{user: owner, role: :owner}])
+
+      child1 =
+        insert(:project,
+          parent: root,
+          project_users: [%{user: owner, role: :owner}]
+        )
+
+      _child2 =
+        insert(:project,
+          parent: root,
+          project_users: [%{user: owner, role: :owner}]
+        )
+
+      conn = log_in_user(conn, owner)
+
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{root.id}/sandboxes")
+
+      view
+      |> element("#branch-rewire-sandbox-#{child1.id} button")
+      |> render_click()
+
+      invalid_id = Ecto.UUID.generate()
+
+      render_click(view, "select-merge-target", %{
+        "merge" => %{"target_id" => invalid_id}
+      })
+
+      # The modal should still render without crashing
+      # and the label should fall back to "MAIN"
+      html = render(view)
+      assert html =~ "MAIN"
+    end
+
+    test "has_environment? handles project without env field", %{conn: conn} do
+      owner = insert(:user)
+
+      root =
+        insert(:project,
+          project_users: [%{user: owner, role: :owner}],
+          env: ""
+        )
+
+      conn = log_in_user(conn, owner)
+
+      {:ok, view, html} =
+        live(conn, ~p"/projects/#{root.id}/sandboxes")
+
+      # With empty string env, it should show "main" badge
+      assert html =~ "main"
+
+      assert has_element?(view, "#env-badge-#{root.id}")
     end
   end
 end

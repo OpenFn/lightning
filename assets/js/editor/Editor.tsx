@@ -1,14 +1,15 @@
 import type { EditorProps as MonacoProps } from '@monaco-editor/react';
+import { fetchDTSListing, fetchFile } from '@openfn/describe-package';
 import type { editor } from 'monaco-editor';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-import { fetchDTSListing, fetchFile } from '@openfn/describe-package';
 import { submitOrClick } from '../common';
 import { MonacoEditor, type Monaco } from '../monaco';
+
+import dts_es5 from './lib/es5.min.dts';
 import createCompletionProvider from './magic-completion';
 
 // static imports for core lib
-import dts_es5 from './lib/es5.min.dts';
 
 export const DEFAULT_TEXT = `// Check out the Job Writing Guide for help getting started:
 // https://docs.openfn.org/documentation/jobs/job-writing-guide
@@ -153,7 +154,7 @@ async function loadDTS(specifier: string): Promise<Lib[]> {
       // this regex means: find a * then an @ (with 1+ space in between), then match everything up to a closing comment */
       // content = content.replace(/\* +@(.+?)\*\//gs, '*/');
 
-      let fileName = filePath.split('/').at(-1).replace('.d.ts', '');
+      const fileName = filePath.split('/').at(-1).replace('.d.ts', '');
 
       // Import the index as the global namespace - but take care to convert all paths to absolute
       if (fileName === 'index' || fileName === 'Adaptor') {

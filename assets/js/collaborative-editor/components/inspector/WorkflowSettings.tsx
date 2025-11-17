@@ -1,49 +1,66 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from 'react';
 
-import { useAppForm } from "#/collaborative-editor/components/form";
-import { createZodValidator } from "#/collaborative-editor/components/form/createZodValidator";
-import { usePermissions } from "#/collaborative-editor/hooks/useSessionContext";
-import { useWorkflowActions } from "#/collaborative-editor/hooks/useWorkflow";
-import { useWatchFields } from "#/collaborative-editor/stores/common";
-import type { Workflow } from "#/collaborative-editor/types/workflow";
-import { WorkflowSchema } from "#/collaborative-editor/types/workflow";
+import { useAppForm } from '#/collaborative-editor/components/form';
+import { createZodValidator } from '#/collaborative-editor/components/form/createZodValidator';
+import { usePermissions } from '#/collaborative-editor/hooks/useSessionContext';
+import {
+  useWorkflowActions,
+  useWorkflowReadOnly,
+  useWorkflowState,
+} from '#/collaborative-editor/hooks/useWorkflow';
+import { notifications } from '#/collaborative-editor/lib/notifications';
+import { useWatchFields } from '#/collaborative-editor/stores/common';
+import { WorkflowSchema } from '#/collaborative-editor/types/workflow';
+import { useURLState } from '#/react/lib/use-url-state';
 
-import { AlertDialog } from "../AlertDialog";
+import { AlertDialog } from '../AlertDialog';
 
-interface WorkflowSettingsProps {
-  workflow: Workflow;
-}
-
-export function WorkflowSettings({ workflow }: WorkflowSettingsProps) {
+export function WorkflowSettings() {
+  // Get workflow from store - LoadingBoundary guarantees it's non-null
+  const workflow = useWorkflowState(state => state.workflow);
   const [isResetDialogOpen, setIsResetDialogOpen] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
 
   const { updateWorkflow, resetWorkflow } = useWorkflowActions();
+  const { isReadOnly } = useWorkflowReadOnly();
   const permissions = usePermissions();
 
-  const defaultValues = useMemo(
-    () => ({
+  const { updateSearchParams } = useURLState();
+
+  const handleViewAsYAML = () => {
+    updateSearchParams({ panel: 'code' });
+  };
+
+  // LoadingBoundary guarantees workflow is non-null at this point
+  if (!workflow) {
+    throw new Error('Workflow must be loaded');
+  }
+
+  const defaultValues = useMemo(() => {
+    // Y.Doc types can be loosely typed, so we assert to expected types
+    const concurrency = workflow.concurrency ?? null;
+    const enableJobLogs = workflow.enable_job_logs ?? false;
+
+    return {
       id: workflow.id,
       name: workflow.name,
       lock_version: workflow.lock_version,
       deleted_at: workflow.deleted_at,
-      // Virtual fields for future use (not yet in Y.Doc)
-      concurrency: null as number | null,
-      enable_job_logs: true,
-    }),
-    [workflow]
-  );
+      concurrency,
+      enable_job_logs: enableJobLogs,
+    };
+  }, [workflow]);
 
   const form = useAppForm({
     defaultValues,
     listeners: {
       onChange: ({ formApi }) => {
         // Form → Y.Doc: Update workflow immediately on change
-        const { name } = formApi.state.values;
+        const { name, concurrency, enable_job_logs } = formApi.state.values;
         updateWorkflow({
           name,
-          // Note: concurrency and enable_job_logs will be no-ops
-          // until Y.Doc type is updated
+          concurrency,
+          enable_job_logs,
         });
       },
     },
@@ -62,13 +79,8 @@ export function WorkflowSettings({ workflow }: WorkflowSettingsProps) {
         }
       });
     },
-    ["name"]
+    ['name', 'concurrency', 'enable_job_logs']
   );
-
-  // Reset form when workflow changes
-  useEffect(() => {
-    form.reset();
-  }, [workflow.id, form]);
 
   const handleReset = async () => {
     setIsResetting(true);
@@ -76,8 +88,14 @@ export function WorkflowSettings({ workflow }: WorkflowSettingsProps) {
       await resetWorkflow();
       // Success - dialog will close, user sees changes via Y.Doc sync
     } catch (error) {
-      // Error - just log for now (no notification system exists)
-      console.error("Reset failed:", error);
+      // Show error notification to user
+      notifications.alert({
+        title: 'Failed to reset workflow',
+        description:
+          error instanceof Error
+            ? error.message
+            : 'An unexpected error occurred. Please try again.',
+      });
     } finally {
       setIsResetting(false);
       setIsResetDialogOpen(false);
@@ -85,13 +103,13 @@ export function WorkflowSettings({ workflow }: WorkflowSettingsProps) {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="px-6 py-6 space-y-4">
       {/* Workflow Name Field */}
-      <div>
-        <form.AppField name="name">
-          {field => <field.TextField label="Workflow Name" />}
-        </form.AppField>
-      </div>
+      <form.AppField name="name">
+        {field => (
+          <field.TextField label="Workflow Name" disabled={isReadOnly} />
+        )}
+      </form.AppField>
 
       {/* YAML View Section - Placeholder (NOT implementing) */}
       <div>
@@ -100,23 +118,24 @@ export function WorkflowSettings({ workflow }: WorkflowSettingsProps) {
         </h3>
         <button
           type="button"
+          onClick={handleViewAsYAML}
           className="text-sm text-indigo-600 hover:text-indigo-500"
+          id="view-workflow-as-yaml-link"
         >
           View your workflow as YAML code
         </button>
       </div>
 
       {/* Log Output Toggle */}
-      <div>
-        <form.AppField name="enable_job_logs">
-          {field => (
-            <field.ToggleField
-              label="Allow console.log() usage"
-              description="Control what's printed in run logs"
-            />
-          )}
-        </form.AppField>
-      </div>
+      <form.AppField name="enable_job_logs">
+        {field => (
+          <field.ToggleField
+            label="Allow console.log() usage"
+            description="Control what's printed in run logs"
+            disabled={isReadOnly}
+          />
+        )}
+      </form.AppField>
 
       {/* Concurrency Section */}
       <div>
@@ -132,17 +151,18 @@ export function WorkflowSettings({ workflow }: WorkflowSettingsProps) {
               placeholder="Unlimited (up to max available)"
               helpText={
                 field.state.value === null
-                  ? "Unlimited (up to max available)"
+                  ? 'Unlimited (up to max available)'
                   : undefined
               }
               min={1}
+              disabled={isReadOnly}
             />
           )}
         </form.AppField>
       </div>
 
       {/* Reset Section - Only show if user has edit permission */}
-      {permissions?.can_edit_workflow && (
+      {permissions?.can_edit_workflow && !isReadOnly && (
         <div className="border-t border-gray-200 pt-6">
           <h3 className="text-sm font-medium text-gray-900 mb-2">
             Reset Workflow
@@ -161,7 +181,7 @@ export function WorkflowSettings({ workflow }: WorkflowSettingsProps) {
             focus-visible:outline-red-600
             disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {isResetting ? "Resetting..." : "Reset to Latest Snapshot"}
+            {isResetting ? 'Resetting...' : 'Reset to Latest Snapshot'}
           </button>
         </div>
       )}
@@ -169,12 +189,14 @@ export function WorkflowSettings({ workflow }: WorkflowSettingsProps) {
       <AlertDialog
         isOpen={isResetDialogOpen}
         onClose={() => !isResetting && setIsResetDialogOpen(false)}
-        onConfirm={handleReset}
+        onConfirm={() => {
+          void handleReset();
+        }}
         title="Reset Workflow?"
         description="This will undo all uncommitted changes and restore
           the workflow to its latest snapshot. This action cannot
           be undone."
-        confirmLabel={isResetting ? "Resetting..." : "Reset Workflow"}
+        confirmLabel={isResetting ? 'Resetting...' : 'Reset Workflow'}
         cancelLabel="Cancel"
         variant="danger"
       />

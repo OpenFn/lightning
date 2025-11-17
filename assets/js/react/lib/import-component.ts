@@ -1,6 +1,5 @@
-import invariant from 'tiny-invariant';
-
 import * as ReactIs from 'react-is';
+import invariant from 'tiny-invariant';
 
 /**
  * Load the source file and resolve with a reference to the React component.

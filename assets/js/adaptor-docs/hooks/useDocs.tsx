@@ -1,8 +1,8 @@
-import { useState, useEffect, useMemo } from 'react';
 import {
   describePackage,
   type PackageDescription,
 } from '@openfn/describe-package';
+import { useState, useEffect, useMemo } from 'react';
 
 // Describe package is slow right now even if data is available
 // This in-mamory cache will help when switching tabs etc

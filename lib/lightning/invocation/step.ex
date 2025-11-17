@@ -43,7 +43,9 @@ defmodule Lightning.Invocation.Step do
              :started_at,
              :job_id,
              :input_dataclip_id,
-             :output_dataclip_id
+             :output_dataclip_id,
+             :inserted_at,
+             :updated_at
            ]}
 
   schema "steps" do

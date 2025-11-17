@@ -1,14 +1,18 @@
-import { useStore } from "@tanstack/react-form";
-import { useEffect, useMemo } from "react";
+import { useStore } from '@tanstack/react-form';
+import { useMemo } from 'react';
 
-import { useWorkflowActions } from "../../hooks/useWorkflow";
-import { useWatchFields } from "../../stores/common";
-import { EdgeSchema } from "../../types/edge";
-import type { Workflow } from "../../types/workflow";
-import { useAppForm } from "../form";
-import { createZodValidator } from "../form/createZodValidator";
-import { ErrorMessage } from "../form/error-message";
-import { Tooltip } from "../Tooltip";
+import {
+  useWorkflowActions,
+  useWorkflowReadOnly,
+} from '../../hooks/useWorkflow';
+import { useWatchFields } from '../../stores/common';
+import { EdgeSchema } from '../../types/edge';
+import type { Workflow } from '../../types/workflow';
+import { isEdgeFromTrigger } from '../../utils/workflowGraph';
+import { useAppForm } from '../form';
+import { createZodValidator } from '../form/createZodValidator';
+import { ErrorMessage } from '../form/error-message';
+import { Tooltip } from '../Tooltip';
 
 interface EdgeFormProps {
   edge: Workflow.Edge;
@@ -21,21 +25,25 @@ interface EdgeFormProps {
  */
 export function EdgeForm({ edge }: EdgeFormProps) {
   const { updateEdge } = useWorkflowActions();
+  const { isReadOnly } = useWorkflowReadOnly();
 
   // Initialize form
-  const form = useAppForm({
-    defaultValues: edge,
-    listeners: {
-      onChange: ({ formApi }) => {
-        if (edge.id) {
-          updateEdge(edge.id, formApi.state.values);
-        }
+  const form = useAppForm(
+    {
+      defaultValues: edge,
+      listeners: {
+        onChange: ({ formApi }) => {
+          if (edge.id) {
+            updateEdge(edge.id, formApi.state.values);
+          }
+        },
+      },
+      validators: {
+        onChange: createZodValidator(EdgeSchema),
       },
     },
-    validators: {
-      onChange: createZodValidator(EdgeSchema),
-    },
-  });
+    `edges.${edge.id}` // Server validation automatically filtered to this edge
+  );
 
   // Sync Y.js changes
   useWatchFields(
@@ -50,44 +58,39 @@ export function EdgeForm({ edge }: EdgeFormProps) {
         }
       });
     },
-    ["condition_label", "condition_type", "condition_expression", "enabled"]
+    ['condition_label', 'condition_type', 'condition_expression', 'enabled']
   );
-
-  // Reset form when edge changes
-  useEffect(() => {
-    form.reset();
-  }, [edge.id, form.reset]);
 
   // Condition options based on source
   const conditionOptions = useMemo(() => {
-    const isSourceTrigger = !!edge.source_trigger_id;
+    const isSourceTrigger = isEdgeFromTrigger(edge);
 
     if (isSourceTrigger) {
       return [
-        { value: "always", label: "Always" },
-        { value: "js_expression", label: "Matches a Javascript Expression" },
+        { value: 'always', label: 'Always' },
+        { value: 'js_expression', label: 'Matches a Javascript Expression' },
       ];
     }
 
     return [
-      { value: "on_job_success", label: "On Success" },
-      { value: "on_job_failure", label: "On Failure" },
-      { value: "always", label: "Always" },
-      { value: "js_expression", label: "Matches a Javascript Expression" },
+      { value: 'on_job_success', label: 'On Success' },
+      { value: 'on_job_failure', label: 'On Failure' },
+      { value: 'always', label: 'Always' },
+      { value: 'js_expression', label: 'Matches a Javascript Expression' },
     ];
-  }, [edge.source_trigger_id]);
+  }, [edge]);
 
   // Watch condition type
   const conditionType = useStore(
     form.store,
     state => state.values.condition_type
   );
-  const showExpressionEditor = conditionType === "js_expression";
+  const showExpressionEditor = conditionType === 'js_expression';
 
   // Unsafe keyword detection
   const conditionExpression = useStore(
     form.store,
-    state => state.values.condition_expression || ""
+    state => state.values.condition_expression || ''
   );
   const isExpressionUnsafe =
     /(\bimport\b|\brequire\b|\bprocess\b|\bawait\b|\beval\b)/.test(
@@ -95,16 +98,20 @@ export function EdgeForm({ edge }: EdgeFormProps) {
     );
 
   return (
-    <div>
+    <div className="px-6 py-6 space-y-4">
       {/* Label Field */}
       <form.AppField name="condition_label">
-        {field => <field.TextField label="Label" />}
+        {field => <field.TextField label="Label" disabled={isReadOnly} />}
       </form.AppField>
 
       {/* Condition Type Dropdown */}
       <form.AppField name="condition_type">
         {field => (
-          <field.SelectField label="Condition" options={conditionOptions} />
+          <field.SelectField
+            label="Condition"
+            options={conditionOptions}
+            disabled={isReadOnly}
+          />
         )}
       </form.AppField>
 
@@ -132,12 +139,14 @@ export function EdgeForm({ edge }: EdgeFormProps) {
                 </div>
                 <textarea
                   id={field.name}
-                  value={field.state.value || ""}
+                  value={field.state.value || ''}
                   onChange={e => field.handleChange(e.target.value)}
                   placeholder="eg: !state.error"
+                  disabled={isReadOnly}
                   className="block w-full h-24 px-3 py-2 rounded-md border-slate-300
                                font-mono text-slate-200 bg-slate-700 text-sm
-                               focus:border-slate-400 focus:ring-0"
+                               focus:border-slate-400 focus:ring-0
+                               disabled:opacity-50 disabled:cursor-not-allowed"
                 />
                 <ErrorMessage meta={field.state.meta} />
               </div>
@@ -157,7 +166,7 @@ export function EdgeForm({ edge }: EdgeFormProps) {
                 Must be a single JavaScript expression with `state` in scope.
               </p>
               <p>
-                Check{" "}
+                Check{' '}
                 <a
                   href="https://docs.openfn.org/documentation/build/paths#writing-javascript-expressions-for-custom-path-conditions"
                   target="_blank"
@@ -165,33 +174,11 @@ export function EdgeForm({ edge }: EdgeFormProps) {
                   className="text-indigo-600 hover:underline"
                 >
                   docs.openfn.org
-                </a>{" "}
+                </a>{' '}
                 for more details.
               </p>
             </div>
           </details>
-        </div>
-      )}
-
-      {/* Enabled toggle (only for job edges) */}
-      {!edge.source_trigger_id && (
-        <div className="mt-4">
-          <form.Field name="enabled">
-            {field => (
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={field.state.value ?? true}
-                  onChange={e => field.handleChange(e.target.checked)}
-                  className="rounded border-slate-300 text-indigo-600
-                             focus:ring-indigo-500"
-                />
-                <span className="text-sm font-medium text-slate-800">
-                  Enabled
-                </span>
-              </label>
-            )}
-          </form.Field>
         </div>
       )}
 

@@ -8,17 +8,17 @@
  * - Edge cases and error handling
  */
 
-import { act, renderHook, waitFor } from "@testing-library/react";
-import type React from "react";
-import { useEffect, useState } from "react";
-import { afterEach, beforeEach, describe, expect, test } from "vitest";
+import { act, renderHook, waitFor } from '@testing-library/react';
+import type React from 'react';
+import { useEffect, useState } from 'react';
+import { afterEach, beforeEach, describe, expect, test } from 'vitest';
 
-import { useSession } from "../../js/collaborative-editor/hooks/useSession";
-import type { SessionStoreInstance } from "../../js/collaborative-editor/stores/createSessionStore";
-import { createSessionStore } from "../../js/collaborative-editor/stores/createSessionStore";
+import { useSession } from '../../js/collaborative-editor/hooks/useSession';
+import type { SessionStoreInstance } from '../../js/collaborative-editor/stores/createSessionStore';
+import { createSessionStore } from '../../js/collaborative-editor/stores/createSessionStore';
 
-import { SessionContext } from "../../js/collaborative-editor/contexts/SessionProvider";
-import { createMockSocket } from "./mocks/phoenixSocket";
+import { SessionContext } from '../../js/collaborative-editor/contexts/SessionProvider';
+import { createMockSocket } from './mocks/phoenixSocket';
 
 // =============================================================================
 // TEST HELPERS
@@ -33,10 +33,10 @@ function createWrapper() {
   const mockSocket = createMockSocket();
 
   // Initialize the session store
-  store.initializeSession(mockSocket, "test:room", {
-    id: "user-1",
-    name: "Test User",
-    color: "#ff0000",
+  store.initializeSession(mockSocket, 'test:room', {
+    id: 'user-1',
+    name: 'Test User',
+    color: '#ff0000',
   });
 
   const wrapper = ({ children }: { children: React.ReactNode }) => (
@@ -72,9 +72,9 @@ function createUninitializedWrapper() {
 // BASIC HOOK FUNCTIONALITY TESTS
 // =============================================================================
 
-describe("useSession", () => {
-  describe("basic functionality", () => {
-    test("returns session state with default and custom selectors", () => {
+describe('useSession', () => {
+  describe('basic functionality', () => {
+    test('returns session state with default and custom selectors', () => {
       const { wrapper, store } = createWrapper();
 
       // Test default selector returns full state
@@ -93,13 +93,13 @@ describe("useSession", () => {
         { wrapper }
       );
       expect(ydocResult.current).toBeDefined();
-      expect(ydocResult.current.constructor.name).toBe("Doc");
+      expect(ydocResult.current.constructor.name).toBe('Doc');
 
       const { result: primitiveResult } = renderHook(
         () => useSession(state => state.isConnected),
         { wrapper }
       );
-      expect(typeof primitiveResult.current).toBe("boolean");
+      expect(typeof primitiveResult.current).toBe('boolean');
 
       const { result: objectResult } = renderHook(
         () =>
@@ -115,20 +115,20 @@ describe("useSession", () => {
       });
     });
 
-    test("throws error when used outside provider", () => {
+    test('throws error when used outside provider', () => {
       // renderHook without wrapper means no SessionProvider
       expect(() => {
         renderHook(() => useSession());
-      }).toThrow("useSession must be used within a SessionProvider");
+      }).toThrow('useSession must be used within a SessionProvider');
     });
 
-    test("throws error with helpful message outside provider", () => {
+    test('throws error with helpful message outside provider', () => {
       try {
         renderHook(() => useSession());
-        expect.fail("Should have thrown error");
+        expect.fail('Should have thrown error');
       } catch (error: unknown) {
         expect((error as Error).message).toContain(
-          "useSession must be used within a SessionProvider"
+          'useSession must be used within a SessionProvider'
         );
       }
     });
@@ -138,8 +138,8 @@ describe("useSession", () => {
   // REACTIVITY TESTS
   // =============================================================================
 
-  describe("reactivity", () => {
-    test("hook updates when store changes", async () => {
+  describe('reactivity', () => {
+    test('hook updates when store changes', async () => {
       const { wrapper, store } = createUninitializedWrapper();
 
       const { result } = renderHook(
@@ -151,10 +151,10 @@ describe("useSession", () => {
 
       // Initialize session which should trigger connection
       const mockSocket = createMockSocket();
-      store.initializeSession(mockSocket, "test:room", {
-        id: "user-1",
-        name: "Test User",
-        color: "#ff0000",
+      store.initializeSession(mockSocket, 'test:room', {
+        id: 'user-1',
+        name: 'Test User',
+        color: '#ff0000',
       });
 
       await waitFor(() => {
@@ -162,7 +162,7 @@ describe("useSession", () => {
       });
     });
 
-    test("multiple hooks share same state", () => {
+    test('multiple hooks share same state', () => {
       const { wrapper } = createWrapper();
 
       const { result: result1 } = renderHook(
@@ -184,11 +184,11 @@ describe("useSession", () => {
   // ERROR HANDLING TESTS
   // =============================================================================
 
-  describe("error handling", () => {
-    test("handles rapid state updates", async () => {
+  describe('error handling', () => {
+    test('handles rapid state updates', async () => {
       const { wrapper, store } = createWrapper();
 
-      const { result } = renderHook(() => useSession(state => state.settled), {
+      const { result } = renderHook(() => useSession(state => state.isSynced), {
         wrapper,
       });
 
@@ -198,7 +198,7 @@ describe("useSession", () => {
         store.initializeSession(mockSocket, `test:room-${i}`, {
           id: `user-${i}`,
           name: `Test User ${i}`,
-          color: "#ff0000",
+          color: '#ff0000',
         });
       }
 
@@ -208,7 +208,7 @@ describe("useSession", () => {
       });
     });
 
-    test("handles null values before initialization", () => {
+    test('handles null values before initialization', () => {
       const { wrapper, store } = createUninitializedWrapper();
 
       const { result } = renderHook(() => useSession(), { wrapper });
@@ -220,7 +220,7 @@ describe("useSession", () => {
       expect(store).toBeDefined();
     });
 
-    test("handles undefined selector result", () => {
+    test('handles undefined selector result', () => {
       const { wrapper } = createWrapper();
 
       const { result } = renderHook(
@@ -231,16 +231,16 @@ describe("useSession", () => {
       expect(result.current).toBeUndefined();
     });
 
-    test("selector throws error is handled gracefully", () => {
+    test('selector throws error is handled gracefully', () => {
       const { wrapper } = createWrapper();
 
       const faultySelector = () => {
-        throw new Error("Selector error");
+        throw new Error('Selector error');
       };
 
       expect(() => {
         renderHook(() => useSession(faultySelector), { wrapper });
-      }).toThrow("Selector error");
+      }).toThrow('Selector error');
     });
   });
 
@@ -248,8 +248,8 @@ describe("useSession", () => {
   // INTEGRATION TESTS
   // =============================================================================
 
-  describe("integration", () => {
-    test("works with store initialization and updates", async () => {
+  describe('integration', () => {
+    test('works with store initialization and updates', async () => {
       const { wrapper, store } = createWrapper();
 
       const { result } = renderHook(() => useSession(), { wrapper });
@@ -260,7 +260,7 @@ describe("useSession", () => {
       expect(store.isReady()).toBe(true);
     });
 
-    test("provider updates propagate to hook", async () => {
+    test('provider updates propagate to hook', async () => {
       const { wrapper, store } = createUninitializedWrapper();
 
       const { result } = renderHook(() => useSession(), { wrapper });
@@ -269,10 +269,10 @@ describe("useSession", () => {
 
       const mockSocket = createMockSocket();
       act(() => {
-        store.initializeSession(mockSocket, "test:room", {
-          id: "user-1",
-          name: "Test User",
-          color: "#ff0000",
+        store.initializeSession(mockSocket, 'test:room', {
+          id: 'user-1',
+          name: 'Test User',
+          color: '#ff0000',
         });
       });
 
@@ -281,7 +281,7 @@ describe("useSession", () => {
       });
     });
 
-    test("store destroy cleans up state", async () => {
+    test('store destroy cleans up state', async () => {
       const { wrapper, store } = createWrapper();
 
       const { result, unmount } = renderHook(() => useSession(), { wrapper });
@@ -299,7 +299,7 @@ describe("useSession", () => {
       unmount();
     });
 
-    test("hook works with component state and effects", async () => {
+    test('hook works with component state and effects', async () => {
       const { wrapper } = createWrapper();
 
       function useSessionWithLocalState() {
@@ -326,7 +326,7 @@ describe("useSession", () => {
       expect(result.current.session).toBeDefined();
     });
 
-    test("hook works with conditional rendering", () => {
+    test('hook works with conditional rendering', () => {
       const { wrapper } = createWrapper();
 
       function useConditionalSession(enabled: boolean) {

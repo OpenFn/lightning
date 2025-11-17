@@ -29,18 +29,8 @@ defmodule Lightning.Collaboration.Persistence do
 
     case load_document_records(doc_name) do
       {:ok, checkpoint, updates} ->
-        # Apply checkpoint first if exists
-        if checkpoint do
-          Logger.info("Applying checkpoint to document. document=#{doc_name}")
-          Yex.apply_update(doc, checkpoint.state_data)
-        end
-
-        # Then apply updates in chronological order
-        Enum.each(updates, fn update ->
-          Yex.apply_update(doc, update.state_data)
-        end)
-
-        Logger.debug("Loaded #{length(updates)} updates. document=#{doc_name}")
+        apply_persisted_state(doc, doc_name, checkpoint, updates)
+        reconcile_or_reset(doc, doc_name, workflow)
 
       {:error, :not_found} ->
         Logger.info(
@@ -48,8 +38,6 @@ defmodule Lightning.Collaboration.Persistence do
         )
 
         Session.initialize_workflow_document(doc, workflow)
-
-        :ok
     end
 
     # Return state for tracking
@@ -125,5 +113,106 @@ defmodule Lightning.Collaboration.Persistence do
     else
       {:error, :not_found}
     end
+  end
+
+  defp apply_persisted_state(doc, doc_name, checkpoint, updates) do
+    # Apply checkpoint first if exists
+    if checkpoint do
+      Logger.info("Applying checkpoint to document. document=#{doc_name}")
+      Yex.apply_update(doc, checkpoint.state_data)
+    end
+
+    # Then apply updates in chronological order
+    Enum.each(updates, fn update ->
+      Yex.apply_update(doc, update.state_data)
+    end)
+
+    Logger.debug("Loaded #{length(updates)} updates. document=#{doc_name}")
+  end
+
+  defp reconcile_or_reset(doc, doc_name, workflow) do
+    workflow_map = Yex.Doc.get_map(doc, "workflow")
+    persisted_lock_version = extract_lock_version(workflow_map)
+    current_lock_version = workflow.lock_version
+
+    if stale?(persisted_lock_version, current_lock_version) do
+      Logger.warning("""
+      Persisted Y.Doc is stale (persisted: #{inspect(persisted_lock_version)}, \
+      current: #{current_lock_version})
+      Discarding persisted state and reloading from database.
+      document=#{doc_name}
+      """)
+
+      clear_and_reset_workflow(doc, workflow)
+    else
+      Logger.debug(
+        "Persisted Y.Doc is current (lock_version: #{current_lock_version}). document=#{doc_name}"
+      )
+
+      reconcile_workflow_metadata(doc, workflow)
+    end
+  end
+
+  defp extract_lock_version(workflow_map) do
+    case Yex.Map.fetch(workflow_map, "lock_version") do
+      {:ok, version} when is_float(version) -> trunc(version)
+      {:ok, version} when is_integer(version) -> version
+      :error -> nil
+    end
+  end
+
+  defp stale?(persisted_version, current_version) do
+    persisted_version != current_version and not is_nil(persisted_version)
+  end
+
+  defp clear_and_reset_workflow(doc, workflow) do
+    # Same pattern as Session.clear_and_reset_doc
+    # Get all Yex collections BEFORE transaction to avoid VM deadlock
+    jobs_array = Yex.Doc.get_array(doc, "jobs")
+    edges_array = Yex.Doc.get_array(doc, "edges")
+    triggers_array = Yex.Doc.get_array(doc, "triggers")
+
+    # Transaction 1: Clear all arrays
+    Yex.Doc.transaction(doc, "clear_stale_workflow", fn ->
+      clear_array(jobs_array)
+      clear_array(edges_array)
+      clear_array(triggers_array)
+    end)
+
+    # Transaction 2: Re-serialize workflow from database
+    Session.initialize_workflow_document(doc, workflow)
+
+    :ok
+  end
+
+  defp clear_array(array) do
+    length = Yex.Array.length(array)
+
+    if length > 0 do
+      Yex.Array.delete_range(array, 0, length)
+    end
+  end
+
+  defp reconcile_workflow_metadata(doc, workflow) do
+    # Update workflow metadata fields to match current database state
+    # This is critical when loading persisted Y.Doc state that may be stale
+    workflow_map = Yex.Doc.get_map(doc, "workflow")
+
+    Yex.Doc.transaction(doc, "reconcile_metadata", fn ->
+      # Update lock_version to current database value
+      Yex.Map.set(workflow_map, "lock_version", workflow.lock_version)
+
+      # Update name in case it changed
+      Yex.Map.set(workflow_map, "name", workflow.name)
+
+      # Update deleted_at if present
+      Yex.Map.set(workflow_map, "deleted_at", workflow.deleted_at)
+    end)
+
+    Logger.debug(
+      "Reconciled workflow metadata: lock_version=#{workflow.lock_version}, name=#{workflow.name}"
+    )
+
+    :ok
   end
 end

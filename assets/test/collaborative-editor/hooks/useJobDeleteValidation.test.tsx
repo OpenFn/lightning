@@ -1,20 +1,20 @@
-import { describe, expect, test, beforeEach } from "vitest";
-import { act, renderHook } from "@testing-library/react";
-import type React from "react";
+import { act, renderHook } from '@testing-library/react';
+import type React from 'react';
+import { beforeEach, describe, expect, test } from 'vitest';
 
-import { useJobDeleteValidation } from "../../../js/collaborative-editor/hooks/useJobDeleteValidation";
-import { StoreContext } from "../../../js/collaborative-editor/contexts/StoreProvider";
-import type { StoreContextValue } from "../../../js/collaborative-editor/contexts/StoreProvider";
-import { createSessionContextStore } from "../../../js/collaborative-editor/stores/createSessionContextStore";
-import { createWorkflowStore } from "../../../js/collaborative-editor/stores/createWorkflowStore";
-import { mockPermissions } from "../fixtures/sessionContextData";
-import { createWorkflowYDoc } from "../__helpers__/workflowFactory";
+import type { StoreContextValue } from '../../../js/collaborative-editor/contexts/StoreProvider';
+import { StoreContext } from '../../../js/collaborative-editor/contexts/StoreProvider';
+import { useJobDeleteValidation } from '../../../js/collaborative-editor/hooks/useJobDeleteValidation';
+import type { SessionContextStoreInstance } from '../../../js/collaborative-editor/stores/createSessionContextStore';
+import { createSessionContextStore } from '../../../js/collaborative-editor/stores/createSessionContextStore';
+import type { WorkflowStoreInstance } from '../../../js/collaborative-editor/stores/createWorkflowStore';
+import { createWorkflowStore } from '../../../js/collaborative-editor/stores/createWorkflowStore';
+import { mockPermissions } from '../__helpers__/sessionContextFactory';
+import { createWorkflowYDoc } from '../__helpers__/workflowFactory';
 import {
   createMockPhoenixChannel,
   createMockPhoenixChannelProvider,
-} from "../mocks/phoenixChannel";
-import type { WorkflowStoreInstance } from "../../../js/collaborative-editor/stores/createWorkflowStore";
-import type { SessionContextStoreInstance } from "../../../js/collaborative-editor/stores/createSessionContextStore";
+} from '../mocks/phoenixChannel';
 
 /**
  * Creates a React wrapper with store providers for hook testing
@@ -29,6 +29,7 @@ function createWrapper(
     adaptorStore: {} as any,
     credentialStore: {} as any,
     awarenessStore: {} as any,
+    uiStore: {} as any,
   };
 
   return ({ children }: { children: React.ReactNode }) => (
@@ -43,12 +44,14 @@ function createWrapper(
  */
 function setPermissions(channelMock: any, can_edit_workflow: boolean) {
   act(() => {
-    channelMock._test.emit("session_context", {
+    channelMock._test.emit('session_context', {
       user: null,
       project: null,
       config: { require_email_verification: false },
       permissions: { ...mockPermissions, can_edit_workflow },
       latest_snapshot_lock_version: 1,
+      project_repo_connection: null,
+      webhook_auth_methods: [],
     });
   });
 }
@@ -65,7 +68,7 @@ function createConnectedWorkflowStore(ydoc: any): WorkflowStoreInstance {
   return store;
 }
 
-describe("useJobDeleteValidation - Permission Validation", () => {
+describe('useJobDeleteValidation - Permission Validation', () => {
   let workflowStore: WorkflowStoreInstance;
   let sessionContextStore: SessionContextStoreInstance;
   let channelMock: any;
@@ -73,10 +76,10 @@ describe("useJobDeleteValidation - Permission Validation", () => {
   beforeEach(() => {
     const ydoc = createWorkflowYDoc({
       jobs: {
-        "job-a": {
-          id: "job-a",
-          name: "Job A",
-          adaptor: "@openfn/language-common",
+        'job-a': {
+          id: 'job-a',
+          name: 'Job A',
+          adaptor: '@openfn/language-common',
         },
       },
       edges: [],
@@ -89,10 +92,10 @@ describe("useJobDeleteValidation - Permission Validation", () => {
     sessionContextStore._connectChannel(mockProvider as any);
   });
 
-  test("allows deletion when user has can_edit_workflow permission", () => {
+  test('allows deletion when user has can_edit_workflow permission', () => {
     setPermissions(channelMock, true);
 
-    const { result } = renderHook(() => useJobDeleteValidation("job-a"), {
+    const { result } = renderHook(() => useJobDeleteValidation('job-a'), {
       wrapper: createWrapper(workflowStore, sessionContextStore),
     });
 
@@ -100,10 +103,10 @@ describe("useJobDeleteValidation - Permission Validation", () => {
     expect(result.current.disableReason).toBe(null);
   });
 
-  test("blocks deletion when user lacks can_edit_workflow permission", () => {
+  test('blocks deletion when user lacks can_edit_workflow permission', () => {
     setPermissions(channelMock, false);
 
-    const { result } = renderHook(() => useJobDeleteValidation("job-a"), {
+    const { result } = renderHook(() => useJobDeleteValidation('job-a'), {
       wrapper: createWrapper(workflowStore, sessionContextStore),
     });
 
@@ -113,10 +116,10 @@ describe("useJobDeleteValidation - Permission Validation", () => {
     );
   });
 
-  test("blocks deletion when permissions are null (not loaded)", () => {
+  test('blocks deletion when permissions are null (not loaded)', () => {
     // Don't set permissions - leave them as null
 
-    const { result } = renderHook(() => useJobDeleteValidation("job-a"), {
+    const { result } = renderHook(() => useJobDeleteValidation('job-a'), {
       wrapper: createWrapper(workflowStore, sessionContextStore),
     });
 
@@ -127,7 +130,7 @@ describe("useJobDeleteValidation - Permission Validation", () => {
   });
 });
 
-describe("useJobDeleteValidation - First Job Detection", () => {
+describe('useJobDeleteValidation - First Job Detection', () => {
   let workflowStore: WorkflowStoreInstance;
   let sessionContextStore: SessionContextStoreInstance;
   let channelMock: any;
@@ -140,60 +143,60 @@ describe("useJobDeleteValidation - First Job Detection", () => {
     setPermissions(channelMock, true);
   });
 
-  test("blocks deletion of job with ONLY trigger parent (first job)", () => {
+  test('blocks deletion of job with ONLY trigger parent (first job)', () => {
     const ydoc = createWorkflowYDoc({
       triggers: {
-        "trigger-1": { id: "trigger-1", type: "webhook" },
+        'trigger-1': { id: 'trigger-1', type: 'webhook' },
       },
       jobs: {
-        "job-a": {
-          id: "job-a",
-          name: "Job A",
-          adaptor: "@openfn/language-common",
+        'job-a': {
+          id: 'job-a',
+          name: 'Job A',
+          adaptor: '@openfn/language-common',
         },
       },
-      edges: [{ id: "e1", source: "trigger-1", target: "job-a" }],
+      edges: [{ id: 'e1', source: 'trigger-1', target: 'job-a' }],
     });
 
     workflowStore = createConnectedWorkflowStore(ydoc);
 
-    const { result } = renderHook(() => useJobDeleteValidation("job-a"), {
+    const { result } = renderHook(() => useJobDeleteValidation('job-a'), {
       wrapper: createWrapper(workflowStore, sessionContextStore),
     });
 
     expect(result.current.isFirstJob).toBe(true);
     expect(result.current.canDelete).toBe(false);
     expect(result.current.disableReason).toBe(
-      "Cannot delete: this is the first job in the workflow"
+      "You can't delete the first step in a workflow."
     );
   });
 
-  test("allows deletion of job with ONLY job parent (not first job)", () => {
+  test('allows deletion of job with ONLY job parent (not first job)', () => {
     const ydoc = createWorkflowYDoc({
       triggers: {
-        "trigger-1": { id: "trigger-1", type: "webhook" },
+        'trigger-1': { id: 'trigger-1', type: 'webhook' },
       },
       jobs: {
-        "job-a": {
-          id: "job-a",
-          name: "Job A",
-          adaptor: "@openfn/language-common",
+        'job-a': {
+          id: 'job-a',
+          name: 'Job A',
+          adaptor: '@openfn/language-common',
         },
-        "job-b": {
-          id: "job-b",
-          name: "Job B",
-          adaptor: "@openfn/language-common",
+        'job-b': {
+          id: 'job-b',
+          name: 'Job B',
+          adaptor: '@openfn/language-common',
         },
       },
       edges: [
-        { id: "e1", source: "trigger-1", target: "job-a" },
-        { id: "e2", source: "job-a", target: "job-b" },
+        { id: 'e1', source: 'trigger-1', target: 'job-a' },
+        { id: 'e2', source: 'job-a', target: 'job-b' },
       ],
     });
 
     workflowStore = createConnectedWorkflowStore(ydoc);
 
-    const { result } = renderHook(() => useJobDeleteValidation("job-b"), {
+    const { result } = renderHook(() => useJobDeleteValidation('job-b'), {
       wrapper: createWrapper(workflowStore, sessionContextStore),
     });
 
@@ -202,7 +205,7 @@ describe("useJobDeleteValidation - First Job Detection", () => {
     expect(result.current.disableReason).toBe(null);
   });
 
-  test("allows deletion of job with BOTH trigger AND job parents (CRITICAL BUG FIX)", () => {
+  test('allows deletion of job with BOTH trigger AND job parents (CRITICAL BUG FIX)', () => {
     // This is the critical bug fix scenario:
     // Job C has TWO parents: a trigger AND job-b
     // Previously this was incorrectly blocked as a "first job"
@@ -212,36 +215,36 @@ describe("useJobDeleteValidation - First Job Detection", () => {
     //             ↘ Job C ↗
     const ydoc = createWorkflowYDoc({
       triggers: {
-        "trigger-1": { id: "trigger-1", type: "webhook" },
+        'trigger-1': { id: 'trigger-1', type: 'webhook' },
       },
       jobs: {
-        "job-a": {
-          id: "job-a",
-          name: "Job A",
-          adaptor: "@openfn/language-common",
+        'job-a': {
+          id: 'job-a',
+          name: 'Job A',
+          adaptor: '@openfn/language-common',
         },
-        "job-b": {
-          id: "job-b",
-          name: "Job B",
-          adaptor: "@openfn/language-common",
+        'job-b': {
+          id: 'job-b',
+          name: 'Job B',
+          adaptor: '@openfn/language-common',
         },
-        "job-c": {
-          id: "job-c",
-          name: "Job C",
-          adaptor: "@openfn/language-common",
+        'job-c': {
+          id: 'job-c',
+          name: 'Job C',
+          adaptor: '@openfn/language-common',
         },
       },
       edges: [
-        { id: "e1", source: "trigger-1", target: "job-a" },
-        { id: "e2", source: "job-a", target: "job-b" },
-        { id: "e3", source: "trigger-1", target: "job-c" },
-        { id: "e4", source: "job-b", target: "job-c" },
+        { id: 'e1', source: 'trigger-1', target: 'job-a' },
+        { id: 'e2', source: 'job-a', target: 'job-b' },
+        { id: 'e3', source: 'trigger-1', target: 'job-c' },
+        { id: 'e4', source: 'job-b', target: 'job-c' },
       ],
     });
 
     workflowStore = createConnectedWorkflowStore(ydoc);
 
-    const { result } = renderHook(() => useJobDeleteValidation("job-c"), {
+    const { result } = renderHook(() => useJobDeleteValidation('job-c'), {
       wrapper: createWrapper(workflowStore, sessionContextStore),
     });
 
@@ -251,29 +254,29 @@ describe("useJobDeleteValidation - First Job Detection", () => {
     expect(result.current.disableReason).toBe(null);
   });
 
-  test("allows deletion of orphan job with no parents", () => {
+  test('allows deletion of orphan job with no parents', () => {
     const ydoc = createWorkflowYDoc({
       triggers: {
-        "trigger-1": { id: "trigger-1", type: "webhook" },
+        'trigger-1': { id: 'trigger-1', type: 'webhook' },
       },
       jobs: {
-        "job-a": {
-          id: "job-a",
-          name: "Job A",
-          adaptor: "@openfn/language-common",
+        'job-a': {
+          id: 'job-a',
+          name: 'Job A',
+          adaptor: '@openfn/language-common',
         },
-        "job-orphan": {
-          id: "job-orphan",
-          name: "Orphan Job",
-          adaptor: "@openfn/language-common",
+        'job-orphan': {
+          id: 'job-orphan',
+          name: 'Orphan Job',
+          adaptor: '@openfn/language-common',
         },
       },
-      edges: [{ id: "e1", source: "trigger-1", target: "job-a" }],
+      edges: [{ id: 'e1', source: 'trigger-1', target: 'job-a' }],
     });
 
     workflowStore = createConnectedWorkflowStore(ydoc);
 
-    const { result } = renderHook(() => useJobDeleteValidation("job-orphan"), {
+    const { result } = renderHook(() => useJobDeleteValidation('job-orphan'), {
       wrapper: createWrapper(workflowStore, sessionContextStore),
     });
 
@@ -282,42 +285,42 @@ describe("useJobDeleteValidation - First Job Detection", () => {
     expect(result.current.disableReason).toBe(null);
   });
 
-  test("allows deletion of job with multiple job parents", () => {
+  test('allows deletion of job with multiple job parents', () => {
     // Create diamond pattern: Job A and Job B both feed into Job C
     // Trigger → Job A → Job C
     //        ↘ Job B ↗
     const ydoc = createWorkflowYDoc({
       triggers: {
-        "trigger-1": { id: "trigger-1", type: "webhook" },
+        'trigger-1': { id: 'trigger-1', type: 'webhook' },
       },
       jobs: {
-        "job-a": {
-          id: "job-a",
-          name: "Job A",
-          adaptor: "@openfn/language-common",
+        'job-a': {
+          id: 'job-a',
+          name: 'Job A',
+          adaptor: '@openfn/language-common',
         },
-        "job-b": {
-          id: "job-b",
-          name: "Job B",
-          adaptor: "@openfn/language-common",
+        'job-b': {
+          id: 'job-b',
+          name: 'Job B',
+          adaptor: '@openfn/language-common',
         },
-        "job-c": {
-          id: "job-c",
-          name: "Job C",
-          adaptor: "@openfn/language-common",
+        'job-c': {
+          id: 'job-c',
+          name: 'Job C',
+          adaptor: '@openfn/language-common',
         },
       },
       edges: [
-        { id: "e1", source: "trigger-1", target: "job-a" },
-        { id: "e2", source: "trigger-1", target: "job-b" },
-        { id: "e3", source: "job-a", target: "job-c" },
-        { id: "e4", source: "job-b", target: "job-c" },
+        { id: 'e1', source: 'trigger-1', target: 'job-a' },
+        { id: 'e2', source: 'trigger-1', target: 'job-b' },
+        { id: 'e3', source: 'job-a', target: 'job-c' },
+        { id: 'e4', source: 'job-b', target: 'job-c' },
       ],
     });
 
     workflowStore = createConnectedWorkflowStore(ydoc);
 
-    const { result } = renderHook(() => useJobDeleteValidation("job-c"), {
+    const { result } = renderHook(() => useJobDeleteValidation('job-c'), {
       wrapper: createWrapper(workflowStore, sessionContextStore),
     });
 
@@ -327,7 +330,7 @@ describe("useJobDeleteValidation - First Job Detection", () => {
   });
 });
 
-describe("useJobDeleteValidation - Child Edge Validation", () => {
+describe('useJobDeleteValidation - Child Edge Validation', () => {
   let workflowStore: WorkflowStoreInstance;
   let sessionContextStore: SessionContextStoreInstance;
   let channelMock: any;
@@ -340,68 +343,68 @@ describe("useJobDeleteValidation - Child Edge Validation", () => {
     setPermissions(channelMock, true);
   });
 
-  test("blocks deletion of job with child edges (downstream dependencies)", () => {
+  test('blocks deletion of job with child edges (downstream dependencies)', () => {
     const ydoc = createWorkflowYDoc({
       triggers: {
-        "trigger-1": { id: "trigger-1", type: "webhook" },
+        'trigger-1': { id: 'trigger-1', type: 'webhook' },
       },
       jobs: {
-        "job-a": {
-          id: "job-a",
-          name: "Job A",
-          adaptor: "@openfn/language-common",
+        'job-a': {
+          id: 'job-a',
+          name: 'Job A',
+          adaptor: '@openfn/language-common',
         },
-        "job-b": {
-          id: "job-b",
-          name: "Job B",
-          adaptor: "@openfn/language-common",
+        'job-b': {
+          id: 'job-b',
+          name: 'Job B',
+          adaptor: '@openfn/language-common',
         },
       },
       edges: [
-        { id: "e1", source: "trigger-1", target: "job-a" },
-        { id: "e2", source: "job-a", target: "job-b" },
+        { id: 'e1', source: 'trigger-1', target: 'job-a' },
+        { id: 'e2', source: 'job-a', target: 'job-b' },
       ],
     });
 
     workflowStore = createConnectedWorkflowStore(ydoc);
 
-    const { result } = renderHook(() => useJobDeleteValidation("job-a"), {
+    const { result } = renderHook(() => useJobDeleteValidation('job-a'), {
       wrapper: createWrapper(workflowStore, sessionContextStore),
     });
 
     expect(result.current.hasChildEdges).toBe(true);
     expect(result.current.canDelete).toBe(false);
     expect(result.current.disableReason).toBe(
-      "Cannot delete: other jobs depend on this step"
+      'Cannot delete: other jobs depend on this step'
     );
   });
 
-  test("allows deletion of job with no child edges (leaf node)", () => {
+  test('allows deletion of job with no child edges (leaf node)', () => {
     const ydoc = createWorkflowYDoc({
       triggers: {
-        "trigger-1": { id: "trigger-1", type: "webhook" },
+        'trigger-1': { id: 'trigger-1', type: 'webhook' },
       },
       jobs: {
-        "job-a": {
-          id: "job-a",
-          name: "Job A",
-          adaptor: "@openfn/language-common",
+        'job-a': {
+          id: 'job-a',
+          name: 'Job A',
+          adaptor: '@openfn/language-common',
         },
-        "job-b": {
-          id: "job-b",
-          name: "Job B",
-          adaptor: "@openfn/language-common",
+        'job-b': {
+          id: 'job-b',
+          name: 'Job B',
+          adaptor: '@openfn/language-common',
         },
       },
       edges: [
-        { id: "e1", source: "trigger-1", target: "job-a" },
-        { id: "e2", source: "job-a", target: "job-b" },
+        { id: 'e1', source: 'trigger-1', target: 'job-a' },
+        { id: 'e2', source: 'job-a', target: 'job-b' },
       ],
     });
 
     workflowStore = createConnectedWorkflowStore(ydoc);
 
-    const { result } = renderHook(() => useJobDeleteValidation("job-b"), {
+    const { result } = renderHook(() => useJobDeleteValidation('job-b'), {
       wrapper: createWrapper(workflowStore, sessionContextStore),
     });
 
@@ -410,50 +413,50 @@ describe("useJobDeleteValidation - Child Edge Validation", () => {
     expect(result.current.disableReason).toBe(null);
   });
 
-  test("blocks deletion of job with multiple child edges", () => {
+  test('blocks deletion of job with multiple child edges', () => {
     const ydoc = createWorkflowYDoc({
       triggers: {
-        "trigger-1": { id: "trigger-1", type: "webhook" },
+        'trigger-1': { id: 'trigger-1', type: 'webhook' },
       },
       jobs: {
-        "job-a": {
-          id: "job-a",
-          name: "Job A",
-          adaptor: "@openfn/language-common",
+        'job-a': {
+          id: 'job-a',
+          name: 'Job A',
+          adaptor: '@openfn/language-common',
         },
-        "job-b": {
-          id: "job-b",
-          name: "Job B",
-          adaptor: "@openfn/language-common",
+        'job-b': {
+          id: 'job-b',
+          name: 'Job B',
+          adaptor: '@openfn/language-common',
         },
-        "job-c": {
-          id: "job-c",
-          name: "Job C",
-          adaptor: "@openfn/language-common",
+        'job-c': {
+          id: 'job-c',
+          name: 'Job C',
+          adaptor: '@openfn/language-common',
         },
       },
       edges: [
-        { id: "e1", source: "trigger-1", target: "job-a" },
-        { id: "e2", source: "job-a", target: "job-b" },
-        { id: "e3", source: "job-a", target: "job-c" },
+        { id: 'e1', source: 'trigger-1', target: 'job-a' },
+        { id: 'e2', source: 'job-a', target: 'job-b' },
+        { id: 'e3', source: 'job-a', target: 'job-c' },
       ],
     });
 
     workflowStore = createConnectedWorkflowStore(ydoc);
 
-    const { result } = renderHook(() => useJobDeleteValidation("job-a"), {
+    const { result } = renderHook(() => useJobDeleteValidation('job-a'), {
       wrapper: createWrapper(workflowStore, sessionContextStore),
     });
 
     expect(result.current.hasChildEdges).toBe(true);
     expect(result.current.canDelete).toBe(false);
     expect(result.current.disableReason).toBe(
-      "Cannot delete: other jobs depend on this step"
+      'Cannot delete: other jobs depend on this step'
     );
   });
 });
 
-describe("useJobDeleteValidation - Combined Validation Scenarios", () => {
+describe('useJobDeleteValidation - Combined Validation Scenarios', () => {
   let workflowStore: WorkflowStoreInstance;
   let sessionContextStore: SessionContextStoreInstance;
   let channelMock: any;
@@ -465,33 +468,33 @@ describe("useJobDeleteValidation - Combined Validation Scenarios", () => {
     sessionContextStore._connectChannel(mockProvider as any);
   });
 
-  test("shows highest priority message when multiple validations fail (permission > children > first)", () => {
+  test('shows highest priority message when multiple validations fail (permission > children > first)', () => {
     const ydoc = createWorkflowYDoc({
       triggers: {
-        "trigger-1": { id: "trigger-1", type: "webhook" },
+        'trigger-1': { id: 'trigger-1', type: 'webhook' },
       },
       jobs: {
-        "job-a": {
-          id: "job-a",
-          name: "Job A",
-          adaptor: "@openfn/language-common",
+        'job-a': {
+          id: 'job-a',
+          name: 'Job A',
+          adaptor: '@openfn/language-common',
         },
-        "job-b": {
-          id: "job-b",
-          name: "Job B",
-          adaptor: "@openfn/language-common",
+        'job-b': {
+          id: 'job-b',
+          name: 'Job B',
+          adaptor: '@openfn/language-common',
         },
       },
       edges: [
-        { id: "e1", source: "trigger-1", target: "job-a" },
-        { id: "e2", source: "job-a", target: "job-b" },
+        { id: 'e1', source: 'trigger-1', target: 'job-a' },
+        { id: 'e2', source: 'job-a', target: 'job-b' },
       ],
     });
 
     workflowStore = createConnectedWorkflowStore(ydoc);
     setPermissions(channelMock, false);
 
-    const { result } = renderHook(() => useJobDeleteValidation("job-a"), {
+    const { result } = renderHook(() => useJobDeleteValidation('job-a'), {
       wrapper: createWrapper(workflowStore, sessionContextStore),
     });
 
@@ -504,70 +507,70 @@ describe("useJobDeleteValidation - Combined Validation Scenarios", () => {
     expect(result.current.hasChildEdges).toBe(true);
   });
 
-  test("shows child edges message when permission passes but job has children", () => {
+  test('shows child edges message when permission passes but job has children', () => {
     const ydoc = createWorkflowYDoc({
       triggers: {
-        "trigger-1": { id: "trigger-1", type: "webhook" },
+        'trigger-1': { id: 'trigger-1', type: 'webhook' },
       },
       jobs: {
-        "job-a": {
-          id: "job-a",
-          name: "Job A",
-          adaptor: "@openfn/language-common",
+        'job-a': {
+          id: 'job-a',
+          name: 'Job A',
+          adaptor: '@openfn/language-common',
         },
-        "job-b": {
-          id: "job-b",
-          name: "Job B",
-          adaptor: "@openfn/language-common",
+        'job-b': {
+          id: 'job-b',
+          name: 'Job B',
+          adaptor: '@openfn/language-common',
         },
       },
       edges: [
-        { id: "e1", source: "trigger-1", target: "job-a" },
-        { id: "e2", source: "job-a", target: "job-b" },
+        { id: 'e1', source: 'trigger-1', target: 'job-a' },
+        { id: 'e2', source: 'job-a', target: 'job-b' },
       ],
     });
 
     workflowStore = createConnectedWorkflowStore(ydoc);
     setPermissions(channelMock, true);
 
-    const { result } = renderHook(() => useJobDeleteValidation("job-a"), {
+    const { result } = renderHook(() => useJobDeleteValidation('job-a'), {
       wrapper: createWrapper(workflowStore, sessionContextStore),
     });
 
     // Should show child edges message (second priority)
     expect(result.current.canDelete).toBe(false);
     expect(result.current.disableReason).toBe(
-      "Cannot delete: other jobs depend on this step"
+      'Cannot delete: other jobs depend on this step'
     );
   });
 
-  test("returns all validation state when job passes all checks", () => {
+  test('returns all validation state when job passes all checks', () => {
     const ydoc = createWorkflowYDoc({
       triggers: {
-        "trigger-1": { id: "trigger-1", type: "webhook" },
+        'trigger-1': { id: 'trigger-1', type: 'webhook' },
       },
       jobs: {
-        "job-a": {
-          id: "job-a",
-          name: "Job A",
-          adaptor: "@openfn/language-common",
+        'job-a': {
+          id: 'job-a',
+          name: 'Job A',
+          adaptor: '@openfn/language-common',
         },
-        "job-b": {
-          id: "job-b",
-          name: "Job B",
-          adaptor: "@openfn/language-common",
+        'job-b': {
+          id: 'job-b',
+          name: 'Job B',
+          adaptor: '@openfn/language-common',
         },
       },
       edges: [
-        { id: "e1", source: "trigger-1", target: "job-a" },
-        { id: "e2", source: "job-a", target: "job-b" },
+        { id: 'e1', source: 'trigger-1', target: 'job-a' },
+        { id: 'e2', source: 'job-a', target: 'job-b' },
       ],
     });
 
     workflowStore = createConnectedWorkflowStore(ydoc);
     setPermissions(channelMock, true);
 
-    const { result } = renderHook(() => useJobDeleteValidation("job-b"), {
+    const { result } = renderHook(() => useJobDeleteValidation('job-b'), {
       wrapper: createWrapper(workflowStore, sessionContextStore),
     });
 
@@ -581,7 +584,7 @@ describe("useJobDeleteValidation - Combined Validation Scenarios", () => {
   });
 });
 
-describe("useJobDeleteValidation - Edge Case Scenarios", () => {
+describe('useJobDeleteValidation - Edge Case Scenarios', () => {
   let workflowStore: WorkflowStoreInstance;
   let sessionContextStore: SessionContextStoreInstance;
   let channelMock: any;
@@ -594,13 +597,13 @@ describe("useJobDeleteValidation - Edge Case Scenarios", () => {
     setPermissions(channelMock, true);
   });
 
-  test("handles non-existent job ID gracefully", () => {
+  test('handles non-existent job ID gracefully', () => {
     const ydoc = createWorkflowYDoc({
       jobs: {
-        "job-a": {
-          id: "job-a",
-          name: "Job A",
-          adaptor: "@openfn/language-common",
+        'job-a': {
+          id: 'job-a',
+          name: 'Job A',
+          adaptor: '@openfn/language-common',
         },
       },
       edges: [],
@@ -609,7 +612,7 @@ describe("useJobDeleteValidation - Edge Case Scenarios", () => {
     workflowStore = createConnectedWorkflowStore(ydoc);
 
     const { result } = renderHook(
-      () => useJobDeleteValidation("non-existent-job"),
+      () => useJobDeleteValidation('non-existent-job'),
       {
         wrapper: createWrapper(workflowStore, sessionContextStore),
       }
@@ -622,28 +625,28 @@ describe("useJobDeleteValidation - Edge Case Scenarios", () => {
     expect(result.current.isFirstJob).toBe(false);
   });
 
-  test("handles workflow with multiple triggers", () => {
+  test('handles workflow with multiple triggers', () => {
     const ydoc = createWorkflowYDoc({
       triggers: {
-        "trigger-1": { id: "trigger-1", type: "webhook" },
-        "trigger-2": { id: "trigger-2", type: "cron" },
+        'trigger-1': { id: 'trigger-1', type: 'webhook' },
+        'trigger-2': { id: 'trigger-2', type: 'cron' },
       },
       jobs: {
-        "job-a": {
-          id: "job-a",
-          name: "Job A",
-          adaptor: "@openfn/language-common",
+        'job-a': {
+          id: 'job-a',
+          name: 'Job A',
+          adaptor: '@openfn/language-common',
         },
       },
       edges: [
-        { id: "e1", source: "trigger-1", target: "job-a" },
-        { id: "e2", source: "trigger-2", target: "job-a" },
+        { id: 'e1', source: 'trigger-1', target: 'job-a' },
+        { id: 'e2', source: 'trigger-2', target: 'job-a' },
       ],
     });
 
     workflowStore = createConnectedWorkflowStore(ydoc);
 
-    const { result } = renderHook(() => useJobDeleteValidation("job-a"), {
+    const { result } = renderHook(() => useJobDeleteValidation('job-a'), {
       wrapper: createWrapper(workflowStore, sessionContextStore),
     });
 
@@ -651,17 +654,17 @@ describe("useJobDeleteValidation - Edge Case Scenarios", () => {
     expect(result.current.isFirstJob).toBe(true);
     expect(result.current.canDelete).toBe(false);
     expect(result.current.disableReason).toBe(
-      "Cannot delete: this is the first job in the workflow"
+      "You can't delete the first step in a workflow."
     );
   });
 
-  test("handles empty workflow (no edges)", () => {
+  test('handles empty workflow (no edges)', () => {
     const ydoc = createWorkflowYDoc({
       jobs: {
-        "job-a": {
-          id: "job-a",
-          name: "Job A",
-          adaptor: "@openfn/language-common",
+        'job-a': {
+          id: 'job-a',
+          name: 'Job A',
+          adaptor: '@openfn/language-common',
         },
       },
       edges: [],
@@ -669,7 +672,7 @@ describe("useJobDeleteValidation - Edge Case Scenarios", () => {
 
     workflowStore = createConnectedWorkflowStore(ydoc);
 
-    const { result } = renderHook(() => useJobDeleteValidation("job-a"), {
+    const { result } = renderHook(() => useJobDeleteValidation('job-a'), {
       wrapper: createWrapper(workflowStore, sessionContextStore),
     });
 

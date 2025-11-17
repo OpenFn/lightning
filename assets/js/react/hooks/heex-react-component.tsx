@@ -1,8 +1,11 @@
+import type { ViewHook } from 'phoenix_live_view';
+import { StrictMode } from 'react';
+import ReactDOMClient from 'react-dom/client';
 import invariant from 'tiny-invariant';
 import warning from 'tiny-warning';
 
-import ReactDOMClient from 'react-dom/client';
-
+import type { GetPhoenixHookInternalThis } from '#/hooks/PhoenixHook';
+import { Boundary } from '#/react/components';
 import {
   importComponent,
   isReactContainerElement,
@@ -12,14 +15,7 @@ import {
   withProps,
   RootObserver,
 } from '#/react/lib';
-
-import { Boundary } from '#/react/components';
-
 import type { ReactComponentHook } from '#/react/types';
-import { StrictMode } from 'react';
-import type { ViewHook } from 'phoenix_live_view';
-
-import type { GetPhoenixHookInternalThis } from '#/hooks/PhoenixHook';
 
 const rootObserver = new RootObserver();
 
@@ -47,7 +43,6 @@ export const HeexReactComponent = {
     this._listeners = new Set();
     this._boundaryMounted = false;
 
-
     invariant(
       isReactHookedElement(this.el),
       this._errorMsg('Element is not valid for this hook!')
@@ -55,7 +50,7 @@ export const HeexReactComponent = {
 
     invariant(
       isReactContainerElement(this.el.nextElementSibling) &&
-      this.el.nextElementSibling.dataset.reactContainer === this.el.id,
+        this.el.nextElementSibling.dataset.reactContainer === this.el.id,
       this._errorMsg(`Missing valid React container element!`)
     );
 
@@ -73,13 +68,18 @@ export const HeexReactComponent = {
         pushEvent: this.pushEvent.bind(this),
         handleEvent: (name, callback) => {
           const ref = this.handleEvent(name, callback);
-          return () => { this.removeHandleEvent(ref); }
+          return () => {
+            this.removeHandleEvent(ref);
+          };
         },
         pushEventTo: this.pushEventTo.bind(this, this.el),
         el: this.el,
         containerEl: this._containerEl,
-        navigate: (path) => {
-          this.liveSocket.execJS(this.el, '[["patch",{"replace":false,"href":"' + path + '"}]]')
+        navigate: path => {
+          this.liveSocket.execJS(
+            this.el,
+            '[["patch",{"replace":false,"href":"' + path + '"}]]'
+          );
         },
       },
       /* eslint-enable */
@@ -362,10 +362,9 @@ export const HeexReactComponent = {
       '\n' +
       'In `ReactComponent` hook with ' +
       [
-        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
         this._name != null &&
-        // prettier-ignore -- the above supression should not leak down
-        `name \`${this._name}\``,
+          // prettier-ignore -- the above supression should not leak down
+          `name \`${this._name}\``,
         `id \`${this.el.id}\``,
       ]
         .filter(Boolean)

@@ -3,6 +3,7 @@ defmodule LightningWeb.SandboxLive.Index do
 
   alias Ecto.Changeset
   alias Lightning.Projects
+  alias Lightning.Projects.MergeProjects
   alias Lightning.Projects.ProjectLimiter
   alias LightningWeb.SandboxLive.Components
 
@@ -188,13 +189,31 @@ defmodule LightningWeb.SandboxLive.Index do
               target_id: default_target && default_target.value
             })
 
+          has_diverged =
+            if default_target do
+              target_project =
+                Enum.find(
+                  socket.assigns.workspace_projects,
+                  &(&1.id == default_target.value)
+                )
+
+              target_project &&
+                MergeProjects.has_diverged?(
+                  sandbox,
+                  target_project
+                )
+            else
+              false
+            end
+
           {:noreply,
            socket
            |> assign(:merge_modal_open?, true)
            |> assign(:merge_source_sandbox, sandbox)
            |> assign(:merge_target_options, target_options)
            |> assign(:merge_changeset, merge_changeset)
-           |> assign(:merge_descendants, descendants)}
+           |> assign(:merge_descendants, descendants)
+           |> assign(:merge_has_diverged, has_diverged)}
         else
           {:noreply,
            socket
@@ -216,7 +235,26 @@ defmodule LightningWeb.SandboxLive.Index do
       ) do
     merge_changeset = merge_changeset(%{target_id: target_id})
 
-    {:noreply, assign(socket, :merge_changeset, merge_changeset)}
+    has_diverged =
+      if target_id do
+        source = socket.assigns.merge_source_sandbox
+
+        target_project =
+          Enum.find(
+            socket.assigns.workspace_projects,
+            &(&1.id == target_id)
+          )
+
+        target_project &&
+          MergeProjects.has_diverged?(source, target_project)
+      else
+        false
+      end
+
+    {:noreply,
+     socket
+     |> assign(:merge_changeset, merge_changeset)
+     |> assign(:merge_has_diverged, has_diverged)}
   end
 
   @impl true
@@ -320,6 +358,7 @@ defmodule LightningWeb.SandboxLive.Index do
           target_options={@merge_target_options}
           changeset={@merge_changeset}
           descendants={@merge_descendants}
+          has_diverged={@merge_has_diverged}
         />
 
         <.live_component
@@ -406,6 +445,7 @@ defmodule LightningWeb.SandboxLive.Index do
     |> assign(:merge_changeset, merge_changeset())
     |> assign(:merge_target_options, [])
     |> assign(:merge_descendants, [])
+    |> assign(:merge_has_diverged, false)
   end
 
   defp merge_changeset(params \\ %{}) do
@@ -528,8 +568,12 @@ defmodule LightningWeb.SandboxLive.Index do
 
   defp perform_merge(source, target, actor) do
     source
-    |> Lightning.Projects.MergeProjects.merge_project(target)
-    |> then(&Lightning.Projects.Provisioner.import_document(target, actor, &1))
+    |> MergeProjects.merge_project(target)
+    |> then(
+      &Lightning.Projects.Provisioner.import_document(target, actor, &1,
+        allow_stale: true
+      )
+    )
   end
 
   defp handle_merge_result(

@@ -150,7 +150,6 @@ defmodule Lightning.Collaboration.WorkflowSerializerTest do
 
       # Should be converted to string
       assert edge["condition_type"] == "on_job_failure"
-      assert is_binary(edge["condition_type"])
     end
 
     test "writes triggers array to Y.Doc with webhook trigger" do
@@ -225,7 +224,6 @@ defmodule Lightning.Collaboration.WorkflowSerializerTest do
 
       # Should be converted to string
       assert trigger["type"] == "kafka"
-      assert is_binary(trigger["type"])
     end
 
     test "writes positions map to Y.Doc" do
@@ -504,6 +502,170 @@ defmodule Lightning.Collaboration.WorkflowSerializerTest do
     end
   end
 
+  describe "concurrency field" do
+    test "serializes concurrency to Y.Doc" do
+      workflow =
+        insert(:workflow, name: "Test Workflow", concurrency: 10)
+        |> preload_workflow_associations()
+
+      doc = Yex.Doc.new()
+
+      WorkflowSerializer.serialize_to_ydoc(doc, workflow)
+
+      workflow_map = Yex.Doc.get_map(doc, "workflow")
+      assert Yex.Map.fetch!(workflow_map, "concurrency") == 10
+    end
+
+    test "handles concurrency field with float-to-integer conversion" do
+      workflow =
+        insert(:workflow, name: "Test Workflow", concurrency: 10)
+        |> preload_workflow_associations()
+
+      doc = Yex.Doc.new()
+
+      # Serialize
+      WorkflowSerializer.serialize_to_ydoc(doc, workflow)
+
+      # Y.js stores numbers as floats, so manually set it as float to simulate
+      workflow_map = Yex.Doc.get_map(doc, "workflow")
+      Yex.Map.set(workflow_map, "concurrency", 10.0)
+
+      # Deserialize - should convert float to integer
+      extracted = WorkflowSerializer.deserialize_from_ydoc(doc, workflow.id)
+
+      assert extracted["concurrency"] == 10
+      assert is_integer(extracted["concurrency"])
+    end
+
+    test "handles nil concurrency field" do
+      workflow =
+        insert(:workflow, name: "Test Workflow", concurrency: nil)
+        |> preload_workflow_associations()
+
+      doc = Yex.Doc.new()
+
+      WorkflowSerializer.serialize_to_ydoc(doc, workflow)
+      extracted = WorkflowSerializer.deserialize_from_ydoc(doc, workflow.id)
+
+      assert is_nil(extracted["concurrency"])
+    end
+
+    test "concurrency is included in deserialized data" do
+      workflow =
+        insert(:workflow, name: "Test", concurrency: 5)
+        |> preload_workflow_associations()
+
+      doc = Yex.Doc.new()
+
+      WorkflowSerializer.serialize_to_ydoc(doc, workflow)
+      extracted = WorkflowSerializer.deserialize_from_ydoc(doc, workflow.id)
+
+      # Concurrency should be in the deserialized data
+      assert Map.fetch(extracted, "concurrency") == {:ok, 5}
+    end
+
+    test "handles missing concurrency field with nil default" do
+      workflow =
+        insert(:workflow, name: "Test Workflow")
+        |> preload_workflow_associations()
+
+      doc = Yex.Doc.new()
+
+      WorkflowSerializer.serialize_to_ydoc(doc, workflow)
+
+      # Remove the field to simulate legacy Y.Doc without concurrency
+      workflow_map = Yex.Doc.get_map(doc, "workflow")
+      Yex.Map.delete(workflow_map, "concurrency")
+
+      extracted = WorkflowSerializer.deserialize_from_ydoc(doc, workflow.id)
+
+      # Field should be completely omitted to allow schema defaults
+      refute Map.has_key?(extracted, "concurrency"),
+             "Missing fields should be omitted, not set to nil"
+    end
+  end
+
+  describe "enable_job_logs field" do
+    test "serializes enable_job_logs to Y.Doc" do
+      workflow =
+        insert(:workflow, name: "Test Workflow", enable_job_logs: false)
+        |> preload_workflow_associations()
+
+      doc = Yex.Doc.new()
+
+      WorkflowSerializer.serialize_to_ydoc(doc, workflow)
+
+      workflow_map = Yex.Doc.get_map(doc, "workflow")
+      assert Yex.Map.fetch!(workflow_map, "enable_job_logs") == false
+    end
+
+    test "handles enable_job_logs boolean values" do
+      workflow =
+        insert(:workflow, name: "Test Workflow", enable_job_logs: true)
+        |> preload_workflow_associations()
+
+      doc = Yex.Doc.new()
+
+      WorkflowSerializer.serialize_to_ydoc(doc, workflow)
+      extracted = WorkflowSerializer.deserialize_from_ydoc(doc, workflow.id)
+
+      assert extracted["enable_job_logs"] == true
+    end
+
+    test "handles missing enable_job_logs field with nil default" do
+      workflow =
+        insert(:workflow, name: "Test Workflow")
+        |> preload_workflow_associations()
+
+      doc = Yex.Doc.new()
+
+      WorkflowSerializer.serialize_to_ydoc(doc, workflow)
+
+      # Remove the field to simulate legacy Y.Doc
+      workflow_map = Yex.Doc.get_map(doc, "workflow")
+      Yex.Map.delete(workflow_map, "enable_job_logs")
+
+      extracted = WorkflowSerializer.deserialize_from_ydoc(doc, workflow.id)
+
+      # Field should be completely omitted to allow schema defaults
+      refute Map.has_key?(extracted, "enable_job_logs"),
+             "Missing fields should be omitted, not set to nil"
+    end
+
+    test "handles explicit nil enable_job_logs value" do
+      workflow =
+        insert(:workflow, name: "Test Workflow")
+        |> preload_workflow_associations()
+
+      doc = Yex.Doc.new()
+
+      WorkflowSerializer.serialize_to_ydoc(doc, workflow)
+
+      # Explicitly set to nil (different from missing)
+      workflow_map = Yex.Doc.get_map(doc, "workflow")
+      Yex.Map.set(workflow_map, "enable_job_logs", nil)
+
+      extracted = WorkflowSerializer.deserialize_from_ydoc(doc, workflow.id)
+
+      # Explicit nil should be included in attrs (key exists with nil value)
+      assert Map.fetch(extracted, "enable_job_logs") == {:ok, nil},
+             "Explicit nil values should be preserved in attrs"
+    end
+
+    test "enable_job_logs is included in deserialized data" do
+      workflow =
+        insert(:workflow, name: "Test", enable_job_logs: false)
+        |> preload_workflow_associations()
+
+      doc = Yex.Doc.new()
+
+      WorkflowSerializer.serialize_to_ydoc(doc, workflow)
+      extracted = WorkflowSerializer.deserialize_from_ydoc(doc, workflow.id)
+
+      assert Map.fetch(extracted, "enable_job_logs") == {:ok, false}
+    end
+  end
+
   describe "deserialize_from_ydoc/2" do
     test "extracts workflow data from Y.Doc" do
       # Create a workflow with all components
@@ -529,16 +691,14 @@ defmodule Lightning.Collaboration.WorkflowSerializerTest do
       # Now deserialize
       extracted = WorkflowSerializer.deserialize_from_ydoc(doc, workflow.id)
 
-      # Verify structure uses string keys
-      assert is_map(extracted)
-      assert Map.has_key?(extracted, "name")
-      assert Map.has_key?(extracted, "jobs")
-      assert Map.has_key?(extracted, "edges")
-      assert Map.has_key?(extracted, "triggers")
-      assert Map.has_key?(extracted, "positions")
-
-      # Verify workflow name
-      assert extracted["name"] == "Test Workflow"
+      # Verify structure uses string keys and workflow name
+      assert %{
+               "name" => "Test Workflow",
+               "jobs" => _,
+               "edges" => _,
+               "triggers" => _,
+               "positions" => _
+             } = extracted
 
       # Verify jobs
       assert length(extracted["jobs"]) == 2
@@ -625,10 +785,9 @@ defmodule Lightning.Collaboration.WorkflowSerializerTest do
 
       job = List.first(extracted["jobs"])
 
-      # Body should be converted from Y.Text to String
-      assert is_binary(job["body"])
-      refute is_struct(job["body"], Yex.Text)
+      # Body should be converted from Y.Text to String (not a struct)
       assert job["body"] == "fn(state => { return state; })"
+      refute is_struct(job["body"], Yex.Text)
     end
 
     test "preserves trigger type as strings" do
@@ -704,8 +863,11 @@ defmodule Lightning.Collaboration.WorkflowSerializerTest do
       extracted = WorkflowSerializer.deserialize_from_ydoc(doc, workflow.id)
 
       edge = List.first(extracted["edges"])
-      assert edge["condition_type"] == "js_expression"
-      assert edge["condition_expression"] == "state.data.success === true"
+
+      assert %{
+               "condition_type" => "js_expression",
+               "condition_expression" => "state.data.success === true"
+             } = edge
     end
 
     test "round-trip: serialize then deserialize produces equivalent data" do
@@ -916,7 +1078,7 @@ defmodule Lightning.Collaboration.WorkflowSerializerTest do
       extracted = WorkflowSerializer.deserialize_from_ydoc(doc, workflow.id)
 
       trigger = List.first(extracted["triggers"])
-      assert is_nil(trigger["cron_expression"])
+      assert %{"cron_expression" => nil} = trigger
     end
 
     test "handles empty strings in job fields" do
@@ -1176,8 +1338,8 @@ defmodule Lightning.Collaboration.WorkflowSerializerTest do
       WorkflowSerializer.serialize_to_ydoc(doc, workflow)
       extracted = WorkflowSerializer.deserialize_from_ydoc(doc, workflow.id)
 
-      refute is_nil(extracted["positions"])
       assert extracted["positions"] == positions
+      refute is_nil(extracted["positions"])
     end
   end
 end

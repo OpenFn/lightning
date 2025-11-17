@@ -673,6 +673,12 @@ defmodule Lightning.Invocation do
               ^ts_query
             )
         )
+
+      :dataclip_name, dynamic ->
+        dynamic(
+          [dataclip: d],
+          ^dynamic or ilike(d.name, ^"%#{search_term}%")
+        )
     end)
   end
 
@@ -694,6 +700,9 @@ defmodule Lightning.Invocation do
 
       :id, query ->
         safe_join_steps(query)
+
+      :dataclip_name, query ->
+        safe_join_dataclip(query)
     end)
   end
 
@@ -714,6 +723,16 @@ defmodule Lightning.Invocation do
       from [runs: run] in safe_join_runs(query),
         left_join: step in assoc(run, :steps),
         as: :steps
+    end
+  end
+
+  defp safe_join_dataclip(query) do
+    if has_named_binding?(query, :dataclip) do
+      query
+    else
+      join(query, :left, [workorder: workorder], assoc(workorder, :dataclip),
+        as: :dataclip
+      )
     end
   end
 
@@ -1031,5 +1050,21 @@ defmodule Lightning.Invocation do
   defp apply_sorting(query, _sort_by, _sort_direction) do
     # Default sorting: keep the original order_by from base_query
     query
+  end
+
+  @doc """
+  Get a run with all its steps preloaded, including work_order and workflow
+  for authorization checks.
+  """
+  def get_run_with_steps(run_id) do
+    from(r in Lightning.Run,
+      where: r.id == ^run_id,
+      preload: [
+        :steps,
+        :created_by,
+        work_order: [workflow: :project]
+      ]
+    )
+    |> Repo.one()
   end
 end

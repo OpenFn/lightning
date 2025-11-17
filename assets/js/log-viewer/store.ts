@@ -1,5 +1,5 @@
-import { createStore } from 'zustand/vanilla';
 import { subscribeWithSelector } from 'zustand/middleware';
+import { createStore } from 'zustand/vanilla';
 
 export type LogLine = {
   id: string;
@@ -94,10 +94,12 @@ function findSelectedRanges(
 }
 
 function coerceLogs(logs: LogLine[]): LogLine[] {
-  return logs.map(log => ({
-    ...log,
-    timestamp: new Date(log.timestamp),
-  }));
+  return logs.map(log => {
+    return {
+      ...log,
+      timestamp: new Date(log.timestamp),
+    };
+  });
 }
 
 function isProbablyJSON(str: string) {
@@ -117,7 +119,7 @@ function tryPrettyJSON(str: string) {
   }
 }
 
-function possiblyPrettify(str: string | string) {
+function possiblyPrettify(str: string) {
   if (isProbablyJSON(str)) {
     return tryPrettyJSON(str);
   }
@@ -154,14 +156,20 @@ export const createLogStore = () => {
       formattedLogLines: '',
       addLogLines: newLogs => {
         newLogs = coerceLogs(newLogs);
-        const logLines = get().logLines.concat(newLogs);
+
+        // Deduplicate logs by ID
+        const existingIds = new Set(get().logLines.map(log => log.id));
+        const uniqueNewLogs = newLogs.filter(log => !existingIds.has(log.id));
+
+        const logLines = get().logLines.concat(uniqueNewLogs);
 
         logLines.sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
 
         const desiredLogLevel = get().desiredLogLevel;
+        const formatted = stringifyLogLines(logLines, desiredLogLevel);
 
         set({
-          formattedLogLines: stringifyLogLines(logLines, desiredLogLevel),
+          formattedLogLines: formatted,
           logLines,
         });
       },
@@ -176,7 +184,7 @@ export const createLogStore = () => {
       [logLines, stepId, desiredLogLevel],
       [_prevLogLines, _prevStepId, prevLogLevel]
     ) => {
-      const state = {
+      const state: Partial<LogStore> = {
         highlightedRanges: findSelectedRanges(
           logLines,
           stepId,

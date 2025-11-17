@@ -19,11 +19,18 @@ defmodule Lightning.Collaboration.WorkflowReconciler do
   @doc """
   Takes a changeset that was used to update a workflow and reconciles it with
   the active SharedDocs for that workflow.
+
+  Note: This always reconciles to the latest (unversioned) document only.
+  Versioned snapshots (e.g., "workflow:123:v22") are read-only historical views
+  and should never receive live updates from saves.
   """
   @spec reconcile_workflow_changes(Ecto.Changeset.t(), Workflow.t()) :: :ok
   def reconcile_workflow_changes(%Ecto.Changeset{} = changeset, workflow) do
-    # Check if there's an active SharedDoc for this workflow
-    case Session.lookup_shared_doc(workflow.id) do
+    # Always reconcile to the latest (unversioned) document
+    # Format: "workflow:123" (not "workflow:123:v22")
+    document_name = "workflow:#{workflow.id}"
+
+    case Session.lookup_shared_doc(document_name) do
       nil ->
         Logger.debug(
           "No active SharedDoc for workflow #{workflow.id}, skipping reconciliation"
@@ -44,7 +51,16 @@ defmodule Lightning.Collaboration.WorkflowReconciler do
   end
 
   defp generate_ydoc_operations(%Ecto.Changeset{} = changeset, workflow, doc) do
-    [:jobs, :edges, :triggers, :positions, :name, :concurrency, :enable_job_logs]
+    [
+      :jobs,
+      :edges,
+      :triggers,
+      :positions,
+      :name,
+      :concurrency,
+      :enable_job_logs,
+      :lock_version
+    ]
     |> Enum.flat_map(fn assoc ->
       case Ecto.Changeset.get_change(changeset, assoc) do
         nil ->

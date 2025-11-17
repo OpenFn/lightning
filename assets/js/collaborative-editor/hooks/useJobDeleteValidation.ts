@@ -1,7 +1,13 @@
-import { useMemo } from "react";
+import { useMemo } from 'react';
 
-import { usePermissions } from "./useSessionContext";
-import { useWorkflowState } from "./useWorkflow";
+import {
+  getOutgoingJobEdges,
+  isFirstJobInWorkflow,
+  removeGhostEdges,
+} from '../utils/workflowGraph';
+
+import { usePermissions } from './useSessionContext';
+import { useWorkflowState } from './useWorkflow';
 
 interface DeleteValidation {
   canDelete: boolean;
@@ -21,43 +27,30 @@ export const useJobDeleteValidation = (jobId: string): DeleteValidation => {
   const permissions = usePermissions();
 
   const edges = useWorkflowState(state => state.edges, []);
+  const jobs = useWorkflowState(state => state.jobs, []);
 
-  const childEdges = useMemo(
-    () => edges.filter(edge => edge.source_job_id === jobId),
-    [edges, jobId]
-  );
-
-  const parentEdges = useMemo(
-    () => edges.filter(edge => edge.target_job_id === jobId),
-    [edges, jobId]
-  );
+  const childEdges = useMemo(() => {
+    return removeGhostEdges(getOutgoingJobEdges(edges, jobId), jobs);
+  }, [edges, jobs, jobId]);
 
   const hasChildEdges = childEdges.length > 0;
-
-  // Check if job is first in workflow (has ONLY triggers as parents, no job parents)
-  const hasTriggerParent = parentEdges.some(
-    edge => edge.source_trigger_id !== undefined
-  );
-  const hasJobParent = parentEdges.some(
-    edge => edge.source_job_id !== undefined
-  );
-  const isFirstJob = hasTriggerParent && !hasJobParent;
+  const isFirstJob = isFirstJobInWorkflow(edges, jobId);
 
   return useMemo(() => {
     const canEdit = permissions?.can_edit_workflow ?? false;
     let canDelete = true;
     let disableReason: string | null = null;
 
-    // Check in priority order
+    // Check in priority order (must match WorkflowEdit rules)
     if (!canEdit) {
       canDelete = false;
       disableReason = "You don't have permission to edit this workflow";
     } else if (hasChildEdges) {
       canDelete = false;
-      disableReason = "Cannot delete: other jobs depend on this step";
+      disableReason = 'Cannot delete: other jobs depend on this step';
     } else if (isFirstJob) {
       canDelete = false;
-      disableReason = "Cannot delete: this is the first job in the workflow";
+      disableReason = "You can't delete the first step in a workflow.";
     }
 
     return {

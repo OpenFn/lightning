@@ -79,22 +79,24 @@
  * None (all state is serializable)
  */
 
-import { produce } from "immer";
-import type { PhoenixChannelProvider } from "y-phoenix-channel";
+import { produce } from 'immer';
+import type { PhoenixChannelProvider } from 'y-phoenix-channel';
+import { z } from 'zod';
 
-import _logger from "#/utils/logger";
+import _logger from '#/utils/logger';
 
-import { channelRequest } from "../hooks/useChannel";
+import { channelRequest } from '../hooks/useChannel';
 import {
   type SessionContextState,
   type SessionContextStore,
   SessionContextResponseSchema,
-} from "../types/sessionContext";
+  WebhookAuthMethodSchema,
+} from '../types/sessionContext';
 
-import { createWithSelector } from "./common";
-import { wrapStoreWithDevTools } from "./devtools";
+import { createWithSelector } from './common';
+import { wrapStoreWithDevTools } from './devtools';
 
-const logger = _logger.ns("SessionContextStore").seal();
+const logger = _logger.ns('SessionContextStore').seal();
 
 /**
  * Creates a session context store instance with useSyncExternalStore + Immer pattern
@@ -110,6 +112,8 @@ export const createSessionContextStore = (
       config: null,
       permissions: null,
       latestSnapshotLockVersion: null,
+      projectRepoConnection: null,
+      webhookAuthMethods: [],
       isNewWorkflow,
       isLoading: false,
       error: null,
@@ -123,12 +127,12 @@ export const createSessionContextStore = (
 
   // Redux DevTools integration
   const devtools = wrapStoreWithDevTools({
-    name: "SessionContextStore",
+    name: 'SessionContextStore',
     excludeKeys: [], // All state is serializable
     maxAge: 100,
   });
 
-  const notify = (actionName: string = "stateChange") => {
+  const notify = (actionName: string = 'stateChange') => {
     devtools.notifyWithAction(actionName, () => state);
     listeners.forEach(listener => {
       listener();
@@ -170,14 +174,16 @@ export const createSessionContextStore = (
         draft.permissions = sessionContext.permissions;
         draft.latestSnapshotLockVersion =
           sessionContext.latest_snapshot_lock_version;
+        draft.projectRepoConnection = sessionContext.project_repo_connection;
+        draft.webhookAuthMethods = sessionContext.webhook_auth_methods;
         draft.isLoading = false;
         draft.error = null;
         draft.lastUpdated = Date.now();
       });
-      notify("handleSessionContextReceived");
+      notify('handleSessionContextReceived');
     } else {
       const errorMessage = `Invalid session context data: ${result.error.message}`;
-      logger.error("Failed to parse session context data", {
+      logger.error('Failed to parse session context data', {
         error: result.error,
         rawData,
       });
@@ -186,7 +192,7 @@ export const createSessionContextStore = (
         draft.isLoading = false;
         draft.error = errorMessage;
       });
-      notify("sessionContextError");
+      notify('sessionContextError');
     }
   };
 
@@ -198,6 +204,38 @@ export const createSessionContextStore = (
     handleSessionContextReceived(rawData);
   };
 
+  /**
+   * Handle webhook auth methods update from server
+   * Updates only the webhook auth methods without affecting other session context
+   */
+  const handleWebhookAuthMethodsUpdated = (rawData: unknown) => {
+    // Validate the webhook_auth_methods array
+    if (
+      typeof rawData === 'object' &&
+      rawData !== null &&
+      'webhook_auth_methods' in rawData
+    ) {
+      const result = z
+        .array(WebhookAuthMethodSchema)
+        .safeParse(
+          (rawData as { webhook_auth_methods: unknown }).webhook_auth_methods
+        );
+
+      if (result.success) {
+        state = produce(state, draft => {
+          draft.webhookAuthMethods = result.data;
+          draft.lastUpdated = Date.now();
+        });
+        notify('handleWebhookAuthMethodsUpdated');
+      } else {
+        logger.error('Failed to parse webhook auth methods data', {
+          error: result.error,
+          rawData,
+        });
+      }
+    }
+  };
+
   // =============================================================================
   // PATTERN 2: Direct Immer → Notify (Local State)
   // =============================================================================
@@ -206,7 +244,7 @@ export const createSessionContextStore = (
     state = produce(state, draft => {
       draft.isLoading = loading;
     });
-    notify("setLoading");
+    notify('setLoading');
   };
 
   const setError = (error: string | null) => {
@@ -214,14 +252,14 @@ export const createSessionContextStore = (
       draft.error = error;
       draft.isLoading = false;
     });
-    notify("setError");
+    notify('setError');
   };
 
   const clearError = () => {
     state = produce(state, draft => {
       draft.error = null;
     });
-    notify("clearError");
+    notify('clearError');
   };
 
   /**
@@ -233,7 +271,7 @@ export const createSessionContextStore = (
       draft.latestSnapshotLockVersion = lockVersion;
       draft.lastUpdated = Date.now();
     });
-    notify("setLatestSnapshotLockVersion");
+    notify('setLatestSnapshotLockVersion');
   };
 
   /**
@@ -244,7 +282,7 @@ export const createSessionContextStore = (
     state = produce(state, draft => {
       draft.isNewWorkflow = false;
     });
-    notify("clearIsNewWorkflow");
+    notify('clearIsNewWorkflow');
   };
 
   // =============================================================================
@@ -262,38 +300,47 @@ export const createSessionContextStore = (
 
     // Listen for session-context-related channel messages
     const sessionContextHandler = (message: unknown) => {
-      logger.debug("Received session_context message", message);
+      logger.debug('Received session_context message', message);
       handleSessionContextReceived(message);
     };
 
     const sessionContextUpdatedHandler = (message: unknown) => {
-      logger.debug("Received session_context_updated message", message);
+      logger.debug('Received session_context_updated message', message);
       handleSessionContextUpdated(message);
     };
 
     const workflowSavedHandler = (message: unknown) => {
-      logger.debug("Received workflow_saved message", message);
+      logger.debug('Received workflow_saved message', message);
       // Type guard for workflow saved message
       if (
-        typeof message === "object" &&
+        typeof message === 'object' &&
         message !== null &&
-        "latest_snapshot_lock_version" in message &&
+        'latest_snapshot_lock_version' in message &&
         typeof (message as { latest_snapshot_lock_version: unknown })
-          .latest_snapshot_lock_version === "number"
+          .latest_snapshot_lock_version === 'number'
       ) {
         const lockVersion = (
           message as { latest_snapshot_lock_version: number }
         ).latest_snapshot_lock_version;
-        logger.debug("Workflow saved - updating lock version", lockVersion);
+        logger.debug('Workflow saved - updating lock version', lockVersion);
         setLatestSnapshotLockVersion(lockVersion);
       }
     };
 
+    const webhookAuthMethodsUpdatedHandler = (message: unknown) => {
+      logger.debug('Received webhook_auth_methods_updated message', message);
+      handleWebhookAuthMethodsUpdated(message);
+    };
+
     // Set up channel listeners
     if (channel) {
-      channel.on("session_context", sessionContextHandler);
-      channel.on("session_context_updated", sessionContextUpdatedHandler);
-      channel.on("workflow_saved", workflowSavedHandler);
+      channel.on('session_context', sessionContextHandler);
+      channel.on('session_context_updated', sessionContextUpdatedHandler);
+      channel.on('workflow_saved', workflowSavedHandler);
+      channel.on(
+        'webhook_auth_methods_updated',
+        webhookAuthMethodsUpdatedHandler
+      );
     }
 
     devtools.connect();
@@ -303,9 +350,13 @@ export const createSessionContextStore = (
     return () => {
       devtools.disconnect();
       if (channel) {
-        channel.off("session_context", sessionContextHandler);
-        channel.off("session_context_updated", sessionContextUpdatedHandler);
-        channel.off("workflow_saved", workflowSavedHandler);
+        channel.off('session_context', sessionContextHandler);
+        channel.off('session_context_updated', sessionContextUpdatedHandler);
+        channel.off('workflow_saved', workflowSavedHandler);
+        channel.off(
+          'webhook_auth_methods_updated',
+          webhookAuthMethodsUpdatedHandler
+        );
       }
       _channelProvider = null;
     };
@@ -316,8 +367,8 @@ export const createSessionContextStore = (
    */
   const requestSessionContext = async (): Promise<void> => {
     if (!_channelProvider?.channel) {
-      logger.warn("Cannot request session context - no channel connected");
-      setError("No connection available");
+      logger.warn('Cannot request session context - no channel connected');
+      setError('No connection available');
       return;
     }
 
@@ -325,20 +376,20 @@ export const createSessionContextStore = (
     clearError();
 
     try {
-      logger.debug("Requesting session context");
+      logger.debug('Requesting session context');
       // Note: Elixir handler returns {user, project, config} directly
       // NOT wrapped in session_context key
       // See lib/lightning_web/channels/workflow_channel.ex line 96-102
       const response = await channelRequest(
         _channelProvider.channel,
-        "get_context",
+        'get_context',
         {}
       );
 
       handleSessionContextReceived(response);
     } catch (error) {
-      logger.error("Session context request failed", error);
-      setError("Failed to request session context");
+      logger.error('Session context request failed', error);
+      setError('Failed to request session context');
     }
   };
 

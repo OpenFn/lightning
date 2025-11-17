@@ -1,24 +1,25 @@
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from 'vitest';
+
 import {
   UserContextSchema,
   ProjectContextSchema,
   AppConfigSchema,
   SessionContextResponseSchema,
-} from "../../../js/collaborative-editor/types/sessionContext";
+} from '../../../js/collaborative-editor/types/sessionContext';
 
 // =============================================================================
 // VALID DATA TESTS
 // =============================================================================
 
-describe.concurrent("UserContextSchema", () => {
-  test("validates correct user data with all required fields", () => {
+describe.concurrent('UserContextSchema', () => {
+  test('validates correct user data with all required fields', () => {
     const validUser = {
-      id: "550e8400-e29b-41d4-a716-446655440000",
-      first_name: "John",
-      last_name: "Doe",
-      email: "john.doe@example.com",
+      id: '550e8400-e29b-41d4-a716-446655440000',
+      first_name: 'John',
+      last_name: 'Doe',
+      email: 'john.doe@example.com',
       email_confirmed: true,
-      inserted_at: "2024-01-15T10:30:00.000Z",
+      inserted_at: '2024-01-15T10:30:00.000Z',
     };
 
     const result = UserContextSchema.safeParse(validUser);
@@ -29,14 +30,14 @@ describe.concurrent("UserContextSchema", () => {
     }
   });
 
-  test("validates user with unconfirmed email", () => {
+  test('validates user with unconfirmed email', () => {
     const validUser = {
-      id: "550e8400-e29b-41d4-a716-446655440000",
-      first_name: "Jane",
-      last_name: "Smith",
-      email: "jane.smith@test.com",
+      id: '550e8400-e29b-41d4-a716-446655440000',
+      first_name: 'Jane',
+      last_name: 'Smith',
+      email: 'jane.smith@test.com',
       email_confirmed: false,
-      inserted_at: "2024-01-15T10:30:00.000Z",
+      inserted_at: '2024-01-15T10:30:00.000Z',
     };
 
     const result = UserContextSchema.safeParse(validUser);
@@ -44,120 +45,120 @@ describe.concurrent("UserContextSchema", () => {
     expect(result.success).toBe(true);
   });
 
-  test("rejects invalid UUID format in user id", () => {
+  test('rejects invalid UUID format in user id', () => {
     const invalidUser = {
-      id: "not-a-valid-uuid",
-      first_name: "John",
-      last_name: "Doe",
-      email: "john.doe@example.com",
+      id: 'not-a-valid-uuid',
+      first_name: 'John',
+      last_name: 'Doe',
+      email: 'john.doe@example.com',
       email_confirmed: true,
-      inserted_at: "2024-01-15T10:30:00.000Z",
+      inserted_at: '2024-01-15T10:30:00.000Z',
     };
 
     const result = UserContextSchema.safeParse(invalidUser);
 
     expect(result.success).toBe(false);
     if (!result.success) {
-      expect(result.error.issues[0].message).toContain("Invalid UUID");
+      expect(result.error.issues[0].message).toContain('Invalid UUID');
     }
   });
 
-  test("rejects invalid email format", () => {
+  test('rejects invalid email format', () => {
     const invalidUser = {
-      id: "550e8400-e29b-41d4-a716-446655440000",
-      first_name: "John",
-      last_name: "Doe",
-      email: "not-an-email",
+      id: '550e8400-e29b-41d4-a716-446655440000',
+      first_name: 'John',
+      last_name: 'Doe',
+      email: 'not-an-email',
       email_confirmed: true,
-      inserted_at: "2024-01-15T10:30:00.000Z",
+      inserted_at: '2024-01-15T10:30:00.000Z',
     };
 
     const result = UserContextSchema.safeParse(invalidUser);
 
     expect(result.success).toBe(false);
     if (!result.success) {
-      expect(result.error.issues[0].path).toContain("email");
+      expect(result.error.issues[0].path).toContain('email');
     }
   });
 
-  test("rejects missing required first_name field", () => {
+  test('rejects missing required first_name field', () => {
     const invalidUser = {
-      id: "550e8400-e29b-41d4-a716-446655440000",
-      last_name: "Doe",
-      email: "john.doe@example.com",
+      id: '550e8400-e29b-41d4-a716-446655440000',
+      last_name: 'Doe',
+      email: 'john.doe@example.com',
       email_confirmed: true,
-      inserted_at: "2024-01-15T10:30:00.000Z",
+      inserted_at: '2024-01-15T10:30:00.000Z',
     };
 
     const result = UserContextSchema.safeParse(invalidUser);
 
     expect(result.success).toBe(false);
     if (!result.success) {
-      expect(result.error.issues[0].path).toContain("first_name");
+      expect(result.error.issues[0].path).toContain('first_name');
     }
   });
 
-  test("rejects missing required last_name field", () => {
+  test('rejects missing required last_name field', () => {
     const invalidUser = {
-      id: "550e8400-e29b-41d4-a716-446655440000",
-      first_name: "John",
-      email: "john.doe@example.com",
+      id: '550e8400-e29b-41d4-a716-446655440000',
+      first_name: 'John',
+      email: 'john.doe@example.com',
       email_confirmed: true,
-      inserted_at: "2024-01-15T10:30:00.000Z",
+      inserted_at: '2024-01-15T10:30:00.000Z',
     };
 
     const result = UserContextSchema.safeParse(invalidUser);
 
     expect(result.success).toBe(false);
     if (!result.success) {
-      expect(result.error.issues[0].path).toContain("last_name");
+      expect(result.error.issues[0].path).toContain('last_name');
     }
   });
 
-  test("rejects wrong data type for email_confirmed (string instead of boolean)", () => {
+  test('rejects wrong data type for email_confirmed (string instead of boolean)', () => {
     const invalidUser = {
-      id: "550e8400-e29b-41d4-a716-446655440000",
-      first_name: "John",
-      last_name: "Doe",
-      email: "john.doe@example.com",
-      email_confirmed: "true",
-      inserted_at: "2024-01-15T10:30:00.000Z",
+      id: '550e8400-e29b-41d4-a716-446655440000',
+      first_name: 'John',
+      last_name: 'Doe',
+      email: 'john.doe@example.com',
+      email_confirmed: 'true',
+      inserted_at: '2024-01-15T10:30:00.000Z',
     };
 
     const result = UserContextSchema.safeParse(invalidUser);
 
     expect(result.success).toBe(false);
     if (!result.success) {
-      expect(result.error.issues[0].path).toContain("email_confirmed");
+      expect(result.error.issues[0].path).toContain('email_confirmed');
     }
   });
 
-  test("rejects invalid ISO datetime format in inserted_at", () => {
+  test('rejects invalid ISO datetime format in inserted_at', () => {
     const invalidUser = {
-      id: "550e8400-e29b-41d4-a716-446655440000",
-      first_name: "John",
-      last_name: "Doe",
-      email: "john.doe@example.com",
+      id: '550e8400-e29b-41d4-a716-446655440000',
+      first_name: 'John',
+      last_name: 'Doe',
+      email: 'john.doe@example.com',
       email_confirmed: true,
-      inserted_at: "2024-01-15",
+      inserted_at: '2024-01-15',
     };
 
     const result = UserContextSchema.safeParse(invalidUser);
 
     expect(result.success).toBe(false);
     if (!result.success) {
-      expect(result.error.issues[0].message).toContain("Invalid datetime");
+      expect(result.error.issues[0].message).toContain('Invalid datetime');
     }
   });
 
-  test("rejects null value for required field", () => {
+  test('rejects null value for required field', () => {
     const invalidUser = {
-      id: "550e8400-e29b-41d4-a716-446655440000",
+      id: '550e8400-e29b-41d4-a716-446655440000',
       first_name: null,
-      last_name: "Doe",
-      email: "john.doe@example.com",
+      last_name: 'Doe',
+      email: 'john.doe@example.com',
       email_confirmed: true,
-      inserted_at: "2024-01-15T10:30:00.000Z",
+      inserted_at: '2024-01-15T10:30:00.000Z',
     };
 
     const result = UserContextSchema.safeParse(invalidUser);
@@ -165,14 +166,14 @@ describe.concurrent("UserContextSchema", () => {
     expect(result.success).toBe(false);
   });
 
-  test("rejects undefined value for required field", () => {
+  test('rejects undefined value for required field', () => {
     const invalidUser = {
-      id: "550e8400-e29b-41d4-a716-446655440000",
+      id: '550e8400-e29b-41d4-a716-446655440000',
       first_name: undefined,
-      last_name: "Doe",
-      email: "john.doe@example.com",
+      last_name: 'Doe',
+      email: 'john.doe@example.com',
       email_confirmed: true,
-      inserted_at: "2024-01-15T10:30:00.000Z",
+      inserted_at: '2024-01-15T10:30:00.000Z',
     };
 
     const result = UserContextSchema.safeParse(invalidUser);
@@ -185,11 +186,11 @@ describe.concurrent("UserContextSchema", () => {
 // PROJECT CONTEXT SCHEMA TESTS
 // =============================================================================
 
-describe.concurrent("ProjectContextSchema", () => {
-  test("validates correct project data with all required fields", () => {
+describe.concurrent('ProjectContextSchema', () => {
+  test('validates correct project data with all required fields', () => {
     const validProject = {
-      id: "a50e8400-e29b-41d4-a716-446655440000",
-      name: "My Project",
+      id: 'a50e8400-e29b-41d4-a716-446655440000',
+      name: 'My Project',
     };
 
     const result = ProjectContextSchema.safeParse(validProject);
@@ -200,36 +201,36 @@ describe.concurrent("ProjectContextSchema", () => {
     }
   });
 
-  test("rejects invalid UUID format in project id", () => {
+  test('rejects invalid UUID format in project id', () => {
     const invalidProject = {
-      id: "invalid-uuid",
-      name: "My Project",
+      id: 'invalid-uuid',
+      name: 'My Project',
     };
 
     const result = ProjectContextSchema.safeParse(invalidProject);
 
     expect(result.success).toBe(false);
     if (!result.success) {
-      expect(result.error.issues[0].message).toContain("Invalid UUID");
+      expect(result.error.issues[0].message).toContain('Invalid UUID');
     }
   });
 
-  test("rejects missing required name field", () => {
+  test('rejects missing required name field', () => {
     const invalidProject = {
-      id: "a50e8400-e29b-41d4-a716-446655440000",
+      id: 'a50e8400-e29b-41d4-a716-446655440000',
     };
 
     const result = ProjectContextSchema.safeParse(invalidProject);
 
     expect(result.success).toBe(false);
     if (!result.success) {
-      expect(result.error.issues[0].path).toContain("name");
+      expect(result.error.issues[0].path).toContain('name');
     }
   });
 
-  test("rejects wrong data type for name (number instead of string)", () => {
+  test('rejects wrong data type for name (number instead of string)', () => {
     const invalidProject = {
-      id: "a50e8400-e29b-41d4-a716-446655440000",
+      id: 'a50e8400-e29b-41d4-a716-446655440000',
       name: 12345,
     };
 
@@ -237,7 +238,7 @@ describe.concurrent("ProjectContextSchema", () => {
 
     expect(result.success).toBe(false);
     if (!result.success) {
-      expect(result.error.issues[0].path).toContain("name");
+      expect(result.error.issues[0].path).toContain('name');
     }
   });
 });
@@ -246,8 +247,8 @@ describe.concurrent("ProjectContextSchema", () => {
 // APP CONFIG SCHEMA TESTS
 // =============================================================================
 
-describe.concurrent("AppConfigSchema", () => {
-  test("validates correct config with require_email_verification as true", () => {
+describe.concurrent('AppConfigSchema', () => {
+  test('validates correct config with require_email_verification as true', () => {
     const validConfig = {
       require_email_verification: true,
     };
@@ -260,7 +261,7 @@ describe.concurrent("AppConfigSchema", () => {
     }
   });
 
-  test("validates correct config with require_email_verification as false", () => {
+  test('validates correct config with require_email_verification as false', () => {
     const validConfig = {
       require_email_verification: false,
     };
@@ -273,9 +274,9 @@ describe.concurrent("AppConfigSchema", () => {
     }
   });
 
-  test("rejects wrong data type for require_email_verification (string instead of boolean)", () => {
+  test('rejects wrong data type for require_email_verification (string instead of boolean)', () => {
     const invalidConfig = {
-      require_email_verification: "true",
+      require_email_verification: 'true',
     };
 
     const result = AppConfigSchema.safeParse(invalidConfig);
@@ -283,12 +284,12 @@ describe.concurrent("AppConfigSchema", () => {
     expect(result.success).toBe(false);
     if (!result.success) {
       expect(result.error.issues[0].path).toContain(
-        "require_email_verification"
+        'require_email_verification'
       );
     }
   });
 
-  test("rejects missing required require_email_verification field", () => {
+  test('rejects missing required require_email_verification field', () => {
     const invalidConfig = {};
 
     const result = AppConfigSchema.safeParse(invalidConfig);
@@ -296,12 +297,12 @@ describe.concurrent("AppConfigSchema", () => {
     expect(result.success).toBe(false);
     if (!result.success) {
       expect(result.error.issues[0].path).toContain(
-        "require_email_verification"
+        'require_email_verification'
       );
     }
   });
 
-  test("rejects null value for require_email_verification", () => {
+  test('rejects null value for require_email_verification', () => {
     const invalidConfig = {
       require_email_verification: null,
     };
@@ -316,28 +317,32 @@ describe.concurrent("AppConfigSchema", () => {
 // SESSION CONTEXT RESPONSE SCHEMA TESTS
 // =============================================================================
 
-describe.concurrent("SessionContextResponseSchema", () => {
-  test("validates complete valid session context response", () => {
+describe.concurrent('SessionContextResponseSchema', () => {
+  test('validates complete valid session context response', () => {
     const validResponse = {
       user: {
-        id: "550e8400-e29b-41d4-a716-446655440000",
-        first_name: "John",
-        last_name: "Doe",
-        email: "john.doe@example.com",
+        id: '550e8400-e29b-41d4-a716-446655440000',
+        first_name: 'John',
+        last_name: 'Doe',
+        email: 'john.doe@example.com',
         email_confirmed: true,
-        inserted_at: "2024-01-15T10:30:00.000Z",
+        inserted_at: '2024-01-15T10:30:00.000Z',
       },
       project: {
-        id: "a50e8400-e29b-41d4-a716-446655440000",
-        name: "My Project",
+        id: 'a50e8400-e29b-41d4-a716-446655440000',
+        name: 'My Project',
       },
       config: {
         require_email_verification: true,
       },
       permissions: {
         can_edit_workflow: true,
+        can_run_workflow: true,
+        can_write_webhook_auth_method: true,
       },
       latest_snapshot_lock_version: 1,
+      project_repo_connection: null,
+      webhook_auth_methods: [],
     };
 
     const result = SessionContextResponseSchema.safeParse(validResponse);
@@ -348,20 +353,24 @@ describe.concurrent("SessionContextResponseSchema", () => {
     }
   });
 
-  test("validates session context response with null user", () => {
+  test('validates session context response with null user', () => {
     const validResponse = {
       user: null,
       project: {
-        id: "a50e8400-e29b-41d4-a716-446655440000",
-        name: "My Project",
+        id: 'a50e8400-e29b-41d4-a716-446655440000',
+        name: 'My Project',
       },
       config: {
         require_email_verification: false,
       },
       permissions: {
         can_edit_workflow: true,
+        can_run_workflow: true,
+        can_write_webhook_auth_method: true,
       },
       latest_snapshot_lock_version: 1,
+      project_repo_connection: null,
+      webhook_auth_methods: [],
     };
 
     const result = SessionContextResponseSchema.safeParse(validResponse);
@@ -372,15 +381,15 @@ describe.concurrent("SessionContextResponseSchema", () => {
     }
   });
 
-  test("validates session context response with null project", () => {
+  test('validates session context response with null project', () => {
     const validResponse = {
       user: {
-        id: "550e8400-e29b-41d4-a716-446655440000",
-        first_name: "John",
-        last_name: "Doe",
-        email: "john.doe@example.com",
+        id: '550e8400-e29b-41d4-a716-446655440000',
+        first_name: 'John',
+        last_name: 'Doe',
+        email: 'john.doe@example.com',
         email_confirmed: false,
-        inserted_at: "2024-01-15T10:30:00.000Z",
+        inserted_at: '2024-01-15T10:30:00.000Z',
       },
       project: null,
       config: {
@@ -388,8 +397,12 @@ describe.concurrent("SessionContextResponseSchema", () => {
       },
       permissions: {
         can_edit_workflow: true,
+        can_run_workflow: true,
+        can_write_webhook_auth_method: true,
       },
       latest_snapshot_lock_version: 1,
+      project_repo_connection: null,
+      webhook_auth_methods: [],
     };
 
     const result = SessionContextResponseSchema.safeParse(validResponse);
@@ -400,7 +413,7 @@ describe.concurrent("SessionContextResponseSchema", () => {
     }
   });
 
-  test("validates session context response with both user and project null", () => {
+  test('validates session context response with both user and project null', () => {
     const validResponse = {
       user: null,
       project: null,
@@ -409,8 +422,12 @@ describe.concurrent("SessionContextResponseSchema", () => {
       },
       permissions: {
         can_edit_workflow: true,
+        can_run_workflow: true,
+        can_write_webhook_auth_method: true,
       },
       latest_snapshot_lock_version: 1,
+      project_repo_connection: null,
+      webhook_auth_methods: [],
     };
 
     const result = SessionContextResponseSchema.safeParse(validResponse);
@@ -423,33 +440,37 @@ describe.concurrent("SessionContextResponseSchema", () => {
     }
   });
 
-  test("rejects response with missing required config field", () => {
+  test('rejects response with missing required config field', () => {
     const invalidResponse = {
       user: null,
       project: null,
       permissions: {
         can_edit_workflow: true,
+        can_run_workflow: true,
+        can_write_webhook_auth_method: true,
       },
       latest_snapshot_lock_version: 1,
+      project_repo_connection: null,
+      webhook_auth_methods: [],
     };
 
     const result = SessionContextResponseSchema.safeParse(invalidResponse);
 
     expect(result.success).toBe(false);
     if (!result.success) {
-      expect(result.error.issues[0].path).toContain("config");
+      expect(result.error.issues[0].path).toContain('config');
     }
   });
 
-  test("rejects response with invalid user data", () => {
+  test('rejects response with invalid user data', () => {
     const invalidResponse = {
       user: {
-        id: "invalid-uuid",
-        first_name: "John",
-        last_name: "Doe",
-        email: "john.doe@example.com",
+        id: 'invalid-uuid',
+        first_name: 'John',
+        last_name: 'Doe',
+        email: 'john.doe@example.com',
         email_confirmed: true,
-        inserted_at: "2024-01-15T10:30:00.000Z",
+        inserted_at: '2024-01-15T10:30:00.000Z',
       },
       project: null,
       config: {
@@ -457,53 +478,65 @@ describe.concurrent("SessionContextResponseSchema", () => {
       },
       permissions: {
         can_edit_workflow: true,
+        can_run_workflow: true,
+        can_write_webhook_auth_method: true,
       },
       latest_snapshot_lock_version: 1,
+      project_repo_connection: null,
+      webhook_auth_methods: [],
     };
 
     const result = SessionContextResponseSchema.safeParse(invalidResponse);
 
     expect(result.success).toBe(false);
     if (!result.success) {
-      expect(result.error.issues[0].message).toContain("Invalid UUID");
+      expect(result.error.issues[0].message).toContain('Invalid UUID');
     }
   });
 
-  test("rejects response with invalid project data", () => {
+  test('rejects response with invalid project data', () => {
     const invalidResponse = {
       user: null,
       project: {
-        id: "not-a-uuid",
-        name: "My Project",
+        id: 'not-a-uuid',
+        name: 'My Project',
       },
       config: {
         require_email_verification: true,
       },
       permissions: {
         can_edit_workflow: true,
+        can_run_workflow: true,
+        can_write_webhook_auth_method: true,
       },
       latest_snapshot_lock_version: 1,
+      project_repo_connection: null,
+      webhook_auth_methods: [],
     };
 
     const result = SessionContextResponseSchema.safeParse(invalidResponse);
 
     expect(result.success).toBe(false);
     if (!result.success) {
-      expect(result.error.issues[0].message).toContain("Invalid UUID");
+      expect(result.error.issues[0].message).toContain('Invalid UUID');
     }
   });
 
-  test("rejects response with invalid config data", () => {
+  test('rejects response with invalid config data', () => {
     const invalidResponse = {
       user: null,
       project: null,
       config: {
-        require_email_verification: "not-a-boolean",
+        require_email_verification: 'not-a-boolean',
       },
       permissions: {
         can_edit_workflow: true,
+        can_run_workflow: true,
+        can_write_webhook_auth_method: true,
       },
       latest_snapshot_lock_version: 1,
+      project_repo_connection: null,
+      webhook_auth_methods: [],
     };
 
     const result = SessionContextResponseSchema.safeParse(invalidResponse);
@@ -511,15 +544,19 @@ describe.concurrent("SessionContextResponseSchema", () => {
     expect(result.success).toBe(false);
   });
 
-  test("rejects response when config is null", () => {
+  test('rejects response when config is null', () => {
     const invalidResponse = {
       user: null,
       project: null,
       config: null,
       permissions: {
         can_edit_workflow: true,
+        can_run_workflow: true,
+        can_write_webhook_auth_method: true,
       },
       latest_snapshot_lock_version: 1,
+      project_repo_connection: null,
+      webhook_auth_methods: [],
     };
 
     const result = SessionContextResponseSchema.safeParse(invalidResponse);
@@ -527,7 +564,7 @@ describe.concurrent("SessionContextResponseSchema", () => {
     expect(result.success).toBe(false);
   });
 
-  test("rejects response with undefined user (not null)", () => {
+  test('rejects response with undefined user (not null)', () => {
     const invalidResponse = {
       user: undefined,
       project: null,
@@ -536,8 +573,12 @@ describe.concurrent("SessionContextResponseSchema", () => {
       },
       permissions: {
         can_edit_workflow: true,
+        can_run_workflow: true,
+        can_write_webhook_auth_method: true,
       },
       latest_snapshot_lock_version: 1,
+      project_repo_connection: null,
+      webhook_auth_methods: [],
     };
 
     const result = SessionContextResponseSchema.safeParse(invalidResponse);
@@ -550,15 +591,15 @@ describe.concurrent("SessionContextResponseSchema", () => {
 // EDGE CASE AND BOUNDARY TESTS
 // =============================================================================
 
-describe.concurrent("SessionContext edge cases", () => {
-  test("validates user with special characters in name fields", () => {
+describe.concurrent('SessionContext edge cases', () => {
+  test('validates user with special characters in name fields', () => {
     const validUser = {
-      id: "550e8400-e29b-41d4-a716-446655440000",
-      first_name: "Jean-François",
+      id: '550e8400-e29b-41d4-a716-446655440000',
+      first_name: 'Jean-François',
       last_name: "O'Brien-Smith",
-      email: "jean.francois@example.com",
+      email: 'jean.francois@example.com',
       email_confirmed: true,
-      inserted_at: "2024-01-15T10:30:00.000Z",
+      inserted_at: '2024-01-15T10:30:00.000Z',
     };
 
     const result = UserContextSchema.safeParse(validUser);
@@ -566,10 +607,10 @@ describe.concurrent("SessionContext edge cases", () => {
     expect(result.success).toBe(true);
   });
 
-  test("validates project with empty string name", () => {
+  test('validates project with empty string name', () => {
     const project = {
-      id: "a50e8400-e29b-41d4-a716-446655440000",
-      name: "",
+      id: 'a50e8400-e29b-41d4-a716-446655440000',
+      name: '',
     };
 
     const result = ProjectContextSchema.safeParse(project);
@@ -577,14 +618,14 @@ describe.concurrent("SessionContext edge cases", () => {
     expect(result.success).toBe(true);
   });
 
-  test("validates user with email containing plus sign", () => {
+  test('validates user with email containing plus sign', () => {
     const validUser = {
-      id: "550e8400-e29b-41d4-a716-446655440000",
-      first_name: "Test",
-      last_name: "User",
-      email: "test+tag@example.com",
+      id: '550e8400-e29b-41d4-a716-446655440000',
+      first_name: 'Test',
+      last_name: 'User',
+      email: 'test+tag@example.com',
       email_confirmed: true,
-      inserted_at: "2024-01-15T10:30:00.000Z",
+      inserted_at: '2024-01-15T10:30:00.000Z',
     };
 
     const result = UserContextSchema.safeParse(validUser);
@@ -592,14 +633,14 @@ describe.concurrent("SessionContext edge cases", () => {
     expect(result.success).toBe(true);
   });
 
-  test("validates ISO datetime with milliseconds and timezone", () => {
+  test('validates ISO datetime with milliseconds and timezone', () => {
     const validUser = {
-      id: "550e8400-e29b-41d4-a716-446655440000",
-      first_name: "John",
-      last_name: "Doe",
-      email: "john@example.com",
+      id: '550e8400-e29b-41d4-a716-446655440000',
+      first_name: 'John',
+      last_name: 'Doe',
+      email: 'john@example.com',
       email_confirmed: true,
-      inserted_at: "2024-01-15T10:30:00.123Z",
+      inserted_at: '2024-01-15T10:30:00.123Z',
     };
 
     const result = UserContextSchema.safeParse(validUser);
@@ -607,15 +648,15 @@ describe.concurrent("SessionContext edge cases", () => {
     expect(result.success).toBe(true);
   });
 
-  test("rejects extra unexpected fields in user schema", () => {
+  test('rejects extra unexpected fields in user schema', () => {
     const userData = {
-      id: "550e8400-e29b-41d4-a716-446655440000",
-      first_name: "John",
-      last_name: "Doe",
-      email: "john@example.com",
+      id: '550e8400-e29b-41d4-a716-446655440000',
+      first_name: 'John',
+      last_name: 'Doe',
+      email: 'john@example.com',
       email_confirmed: true,
-      inserted_at: "2024-01-15T10:30:00.000Z",
-      unexpected_field: "should be stripped",
+      inserted_at: '2024-01-15T10:30:00.000Z',
+      unexpected_field: 'should be stripped',
     };
 
     const result = UserContextSchema.safeParse(userData);
@@ -623,7 +664,7 @@ describe.concurrent("SessionContext edge cases", () => {
     // Zod by default allows extra fields but doesn't include them in output
     expect(result.success).toBe(true);
     if (result.success) {
-      expect("unexpected_field" in result.data).toBe(false);
+      expect('unexpected_field' in result.data).toBe(false);
     }
   });
 });

@@ -17,8 +17,216 @@ and this project adheres to
 
 ### Added
 
-- Ability to delay webhook trigger replies until a workflow finishes
-  [#PR3785](https://github.com/OpenFn/lightning/pull/3785)
+### Changed
+
+- Default failure notifications for project users are now disabled to minimize
+  email volume [#3517](https://github.com/OpenFn/lightning/issues/3517)
+- Simpler "disabled" state for workflows, still show last mod
+  [#3962](https://github.com/OpenFn/lightning/issues/3962)
+
+### Fixed
+
+- Fix ghost edges blocking saves and breaking autolayout when deleting jobs in
+  collaborative editor [#3983](https://github.com/OpenFn/lightning/issues/3983)
+- Fix tooltip styling inconsistencies in collaborative editor
+  [#3980](https://github.com/OpenFn/lightning/issues/3980)
+- Fix beaker icon appearing active in classical editor
+  [#3988](https://github.com/OpenFn/lightning/issues/3988)
+- Fix ESC key closing IDE when pressed on adaptor modal
+  [#3978](https://github.com/OpenFn/lightning/issues/3978)
+- Fix run/save-and-run keystroke mapping for canvas & IDE
+  [#3902](https://github.com/OpenFn/lightning/issues/3902) &
+  [#3903](https://github.com/OpenFn/lightning/issues/3903)
+- Monaco tooltips get cut off
+  [#3900](https://github.com/OpenFn/lightning/issues/3900)
+
+## [2.14.15-pre] - 2025-11-13
+
+### Added
+
+- Add missing adaptor and credential tooltips to the collab editor
+  [#3919](https://github.com/OpenFn/lightning/issues/3919)
+- Show server validation errors in the collab editor forms
+  [#3783](https://github.com/OpenFn/lightning/issues/3783)
+- Add advanced credential type picker in collaborative workflow editor allowing
+  users to create OAuth, raw JSON, and keychain credentials directly from the
+  workflow canvas [#3906](https://github.com/OpenFn/lightning/issues/3906)
+- Enforce readonly state in collaborative editor forms for viewers and old
+  snapshots [#3948](https://github.com/OpenFn/lightning/pull/3948)
+- Collab Editor: Add Workflow YAML code viewer panel
+  [#3646](https://github.com/OpenFn/lightning/issues/3646)
+- Webhook authentication management in the collaborative editor
+  [#3887](https://github.com/OpenFn/lightning/issues/3887)
+- Mix task to merge project state files without database access
+  [#3615](https://github.com/OpenFn/lightning/issues/3615)
+- Support Undo/Redo commands in the collab editor
+  [#3712](https://github.com/OpenFn/lightning/issues/3712)
+- Added adaptor docs & metadata panel to IDE
+  [#3857](https://github.com/OpenFn/lightning/issues/3857)
+- Show Error indication on workflow settings button
+  [#3632](https://github.com/OpenFn/lightning/issues/3632)
+
+### Changed
+
+- Merged CollaborateNew and Collaborate LiveViews into a single unified LiveView
+  for improved maintainability and consistent modal behavior
+  [#3942](https://github.com/OpenFn/lightning/pull/3942)
+
+### Fixed
+
+- 500 error when navigating from collaborative editor to full history page
+  [#3941](https://github.com/OpenFn/lightning/pull/3941)
+- Duplicate `isReadOnly` declaration in TriggerForm that was blocking asset
+  builds [#3976](https://github.com/OpenFn/lightning/issues/3976)
+- Run duration and status alignment drift in history view
+  [#3945](https://github.com/OpenFn/lightning/pull/3945)
+- Shared doc lookup in clustered environments now works across nodes instead of
+  only searching locally
+  [#3910](https://github.com/OpenFn/lightning/issues/3910)
+
+## [2.14.14] - 2025-11-05
+
+### Added
+
+- Add the ability to search by dataclip name on the history page
+  [#3486](https://github.com/OpenFn/lightning/issues/3486)
+
+### Fixed
+
+- Exception when cleaning up old persisted documents
+  [#3932](https://github.com/OpenFn/lightning/issues/3932)
+- Legacy canvas new job nodes no longer auto-populate with adaptor name
+  [#3920](https://github.com/OpenFn/lightning/issues/3920)
+
+## [2.14.14-pre2] - 2025-11-04
+
+### Added
+
+- Run/retry split button in collaborative editor allowing users to retry
+  existing runs or create new work orders from both the ManualRunPanel and
+  fullscreen IDE header [#3876](https://github.com/OpenFn/lightning/issues/3876)
+- Keyboard shortcuts for run/retry actions - `Cmd+Enter` (or `Ctrl+Enter`)
+  triggers run/retry, `Cmd+Shift+Enter` create new work order
+  [#3861](https://github.com/OpenFn/lightning/issues/3861)
+
+### Changed
+
+- Updated styles on new IDE to match (nay, exceed!) those on the legacy IDE
+  [#3894](https://github.com/OpenFn/lightning/issues/3894)
+- Add save & sync split button to new canvas & IDE header
+  [#3908](https://github.com/OpenFn/lightning/issues/3908)
+- Show collaborators in the header of the new canvas & IDE
+  [#3845](https://github.com/OpenFn/lightning/issues/3845)
+
+### Fixed
+
+- Channel error handling crash when error responses don't include expected
+  structure [#3928](https://github.com/OpenFn/lightning/issues/3928)
+- Dataclip body display timing out due to slow credentials query - optimised
+  query to leverage indexes better using a self-join
+  [#3924](https://github.com/OpenFn/lightning/issues/3924)
+- Adaptor picker changes now sync immediately to Y.Doc instead of requiring
+  manual save [#3904](https://github.com/OpenFn/lightning/issues/3904)
+- Fixed Cmd+Enter creating duplicate work orders in workflow editor - both
+  ManualRunPanel and WorkflowEditor keyboard handlers were firing simultaneously
+  [#3876](https://github.com/OpenFn/lightning/issues/3876)
+- Fixed GenServer crash when retrying from collaborative editor due to Y.Doc
+  workflow data structure issues
+  [#3876](https://github.com/OpenFn/lightning/issues/3876)
+- Fixed run panel blocking node selection and causing screen flashes when
+  switching between nodes
+  [#3876](https://github.com/OpenFn/lightning/issues/3876)
+
+## [2.14.14-pre1] - 2025-10-30
+
+### Added
+
+- Adaptor and credential configuration in canvas job inspector - users can now
+  configure adaptor version and connect credentials directly from the canvas
+  [#3834](https://github.com/OpenFn/lightning/issues/3834)
+- Press `Control-E` (or `⌘+E`) to open the IDE when a job/step is selected
+  [#3890](https://github.com/OpenFn/lightning/issues/3890)
+- Drag-to-connect nodes on workflow canvas - users can now drag from the plus
+  button on a node and drop it onto another node to create connections
+  [#3825](https://github.com/OpenFn/lightning/issues/3825)
+- Read-only indicator in collaborative editor header
+  [#3627](https://github.com/OpenFn/lightning/issues/3627)
+- Sync workflow concurrency and enable_job_logs settings in collaborative
+  editor - allows users to configure max concurrency and console.log() usage
+  with real-time collaborative editing support
+  [#3798](https://github.com/OpenFn/lightning/issues/3798) and
+  [#3799](https://github.com/OpenFn/lightning/issues/3799)
+- Show validation error message when creating sandbox with duplicate name
+  [#3776](https://github.com/OpenFn/lightning/issues/3776)
+- Divergence warning when merging sandboxes - displays alert if target branch
+  was modified after sandbox creation to prevent data loss
+  [#3747](https://github.com/OpenFn/lightning/issues/3747)
+- Sandbox indicator banners in workflow editor (inspector) to help indicate when
+  working in a sandbox environment
+  [#3413](https://github.com/OpenFn/lightning/issues/3413)
+- Manual runs from the canvas and the IDE
+  [#3827](https://github.com/openfn/lightning/issues/3827) and
+  [$3634](https://github.com/openfn/lightning/issues/3634)
+- View and switch versions
+  [#3819](https://github.com/openfn/lightning/issues/3819)
+- Run viewer panel in collaborative IDE with Run, Log, Input, and Output tabs
+  [#3844](https://github.com/OpenFn/lightning/issues/3844)
+
+### Changed
+
+- Error messages in collaborative editor now include field names for validation
+  errors (e.g., "Name: can't be blank")
+  [#3843](https://github.com/OpenFn/lightning/issues/3843)
+- Added error notifications when workflow reset fails in collaborative editor
+  [#3843](https://github.com/OpenFn/lightning/issues/3843)
+- Consolidated toast notification styling in collaborative editor for better
+  maintainability [#3843](https://github.com/OpenFn/lightning/issues/3843)
+
+### Fixed
+
+- Prevent manual run panel from opening via keystroke if running isn't possible
+  (permissions or snapshot)
+- Default Next Input for Cron-Triggered Workflows
+  [#3856](https://github.com/OpenFn/lightning/issues/3856)
+- Error toasts not appearing when workflow save fails (validation errors,
+  permission denied, etc.) in collaborative editor
+  [#3843](https://github.com/OpenFn/lightning/issues/3843)
+- Toast notification colors not displaying correctly due to CSS specificity
+  issues [#3843](https://github.com/OpenFn/lightning/issues/3843)
+- Canvas goes blank when adding nodes in collaborative workflow editor
+  [#3848](https://github.com/OpenFn/lightning/issues/3848)
+- Crash when switching from old to collaborative editor
+  [#3865](https://github.com/OpenFn/lightning/issues/3865)
+- Position errors when rendering nodes
+  [#3866](https://github.com/OpenFn/lightning/issues/3866)
+- Layout animation crashes when adding nodes
+  [#3867](https://github.com/OpenFn/lightning/issues/3867)
+- Fixed sandbox merge failing with StaleEntryError when parent workflow was
+  modified after sandbox creation
+  [#3765](https://github.com/OpenFn/lightning/issues/3765)
+- Workflow is either decapitated or uneditable
+  [#3842](https://github.com/OpenFn/lightning/issues/3842)
+- User can navigate to React canvas from LiveView version
+  [#3847](https://github.com/openfn/lightning/issues/3847)
+- Fixed missing cron icon in trigger on new canvas
+  [#3849](https://github.com/OpenFn/lightning/issues/3849)
+
+## [2.14.13] - 2025-10-24
+
+## [2.14.13-pre1] - 2025-10-24
+
+### Added
+
+- Ability to run a workflow from the new react canvas
+  [#3634](https://github.com/OpenFn/lightning/issues/3634)
+
+## [2.14.13-pre] - 2025-10-24
+
+### Added
+
+- Ability to delay webhook trigger replies until a workflow finishes; ⚠️ note
+  that this is an experimental feature (API subject to change, only enabled via
+  DB updates) [#PR3785](https://github.com/OpenFn/lightning/pull/3785)
 - REST API for runs, work_orders, and log_lines to refresh GovStack compliance
   [#1656](https://github.com/OpenFn/lightning/issues/1656) &
   [PR#3786](https://github.com/OpenFn/lightning/pull/3786)
@@ -46,6 +254,9 @@ and this project adheres to
 
 - Fixed AI chat session persistence when switching between jobs in workflow
   editor [#3745](https://github.com/OpenFn/lightning/issues/3745)
+- Fixed credential preservation during sandbox workflow merge - credentials are
+  now correctly maintained when merging sandboxes back to parent projects
+  [#3782](https://github.com/OpenFn/lightning/issues/3782)
 - Backfilled `env` field for existing root projects to ensure environment chips
   display correctly in workflow editor and inspector
   [#3839](https://github.com/OpenFn/lightning/issues/3839)

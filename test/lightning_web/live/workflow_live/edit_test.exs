@@ -4917,6 +4917,251 @@ defmodule LightningWeb.WorkflowLive.EditTest do
                "a[aria-label*='collaborative editor (experimental)']"
              )
     end
+
+    test "shows collaborative editor toggle in job inspector with experimental features",
+         %{
+           conn: conn,
+           project: project,
+           workflow: workflow,
+           user: user
+         } do
+      # Enable experimental features for user
+      user
+      |> Ecto.Changeset.change(%{
+        preferences: %{"experimental_features" => true}
+      })
+      |> Lightning.Repo.update!()
+
+      job = insert(:job, workflow: workflow, name: "test-job")
+
+      {:ok, _view, html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/w/#{workflow.id}?s=#{job.id}&m=expand&v=#{workflow.lock_version}"
+        )
+
+      # Should show beaker icon in job inspector
+      assert html =~ "inspector-collaborative-editor-toggle"
+      assert html =~ "hero-beaker"
+      assert html =~ "collaborative editor (experimental)"
+    end
+
+    test "hides collaborative editor toggle in job inspector without experimental features",
+         %{
+           conn: conn,
+           project: project,
+           workflow: workflow,
+           user: _user
+         } do
+      job = insert(:job, workflow: workflow, name: "test-job")
+
+      {:ok, _view, html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/w/#{workflow.id}?s=#{job.id}&m=expand&v=#{workflow.lock_version}"
+        )
+
+      # Should not show beaker icon in job inspector
+      refute html =~ "inspector-collaborative-editor-toggle"
+    end
+  end
+
+  describe "sandbox indicator banner" do
+    test "shows banner when viewing workflow in sandbox project", %{conn: conn} do
+      user = insert(:user)
+      parent_project = insert(:project, name: "Production Project")
+
+      sandbox =
+        insert(:sandbox,
+          parent: parent_project,
+          name: "test-sandbox",
+          project_users: [%{user_id: user.id, role: :owner}]
+        )
+
+      workflow = workflow_fixture(project_id: sandbox.id)
+      job = insert(:job, workflow: workflow, name: "test-job")
+
+      conn = log_in_user(conn, user)
+
+      {:ok, _view, html} =
+        live(
+          conn,
+          ~p"/projects/#{sandbox.id}/w/#{workflow.id}?s=#{job.id}&m=expand&v=#{workflow.lock_version}"
+        )
+
+      # Banner only shows in inspector, not on canvas
+      assert html =~ "You are currently working in the sandbox"
+      assert html =~ sandbox.name
+      # No "Switch to" link per Joe's feedback
+      refute html =~ "Switch to"
+    end
+
+    test "does not show banner when viewing workflow in root project", %{
+      conn: conn
+    } do
+      user = insert(:user)
+
+      project =
+        insert(:project,
+          name: "Production Project",
+          project_users: [%{user_id: user.id, role: :owner}]
+        )
+
+      workflow = workflow_fixture(project_id: project.id)
+
+      conn = log_in_user(conn, user)
+
+      {:ok, _view, html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/w/#{workflow.id}?v=#{workflow.lock_version}"
+        )
+
+      refute html =~ "You are currently working in the sandbox"
+      refute html =~ "Switch to"
+    end
+
+    test "shows correct root project in deeply nested sandbox", %{conn: conn} do
+      user = insert(:user)
+      root_project = insert(:project, name: "Root Project")
+
+      sandbox_a =
+        insert(:sandbox,
+          parent: root_project,
+          name: "sandbox-a",
+          project_users: [%{user_id: user.id, role: :owner}]
+        )
+
+      sandbox_b =
+        insert(:sandbox,
+          parent: sandbox_a,
+          name: "sandbox-b",
+          project_users: [%{user_id: user.id, role: :owner}]
+        )
+
+      workflow = workflow_fixture(project_id: sandbox_b.id)
+      job = insert(:job, workflow: workflow, name: "test-job")
+
+      conn = log_in_user(conn, user)
+
+      {:ok, _view, html} =
+        live(
+          conn,
+          ~p"/projects/#{sandbox_b.id}/w/#{workflow.id}?s=#{job.id}&m=expand&v=#{workflow.lock_version}"
+        )
+
+      # Banner shows in inspector with current sandbox name
+      assert html =~ "You are currently working in the sandbox"
+      assert html =~ sandbox_b.name
+      # No "Switch to" link per Joe's feedback
+      refute html =~ "Switch to"
+    end
+
+    test "shows banner in job inspector when editing job in sandbox", %{
+      conn: conn
+    } do
+      user = insert(:user)
+      parent_project = insert(:project, name: "Production Project")
+
+      sandbox =
+        insert(:sandbox,
+          parent: parent_project,
+          name: "test-sandbox",
+          project_users: [%{user_id: user.id, role: :owner}]
+        )
+
+      workflow = workflow_fixture(project_id: sandbox.id)
+      job = insert(:job, workflow: workflow, name: "test-job")
+
+      conn = log_in_user(conn, user)
+
+      {:ok, _view, html} =
+        live(
+          conn,
+          ~p"/projects/#{sandbox.id}/w/#{workflow.id}?s=#{job.id}&m=expand&v=#{workflow.lock_version}"
+        )
+
+      assert html =~ "You are currently working in the sandbox"
+      assert html =~ sandbox.name
+      # No "Switch to" link per Joe's feedback
+      refute html =~ "Switch to"
+    end
+
+    test "does not show banner in job inspector when editing job in root project",
+         %{conn: conn} do
+      user = insert(:user)
+
+      project =
+        insert(:project,
+          name: "Production Project",
+          project_users: [%{user_id: user.id, role: :owner}]
+        )
+
+      workflow = workflow_fixture(project_id: project.id)
+      job = insert(:job, workflow: workflow, name: "test-job")
+
+      conn = log_in_user(conn, user)
+
+      {:ok, _view, html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/w/#{workflow.id}?s=#{job.id}&m=expand&v=#{workflow.lock_version}"
+        )
+
+      refute html =~ "You are currently working in the sandbox"
+      refute html =~ "Switch to"
+    end
+
+    test "shows env chip on canvas when project has env", %{conn: conn} do
+      user = insert(:user)
+
+      project =
+        insert(:project,
+          name: "Production Project",
+          env: "production",
+          project_users: [%{user_id: user.id, role: :owner}]
+        )
+
+      workflow = workflow_fixture(project_id: project.id)
+
+      conn = log_in_user(conn, user)
+
+      {:ok, _view, html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/w/#{workflow.id}?v=#{workflow.lock_version}"
+        )
+
+      assert html =~ "canvas-project-env"
+      assert html =~ "production"
+      assert html =~ "Project environment is production"
+    end
+
+    test "shows env chip in inspector when project has env", %{conn: conn} do
+      user = insert(:user)
+
+      project =
+        insert(:project,
+          name: "Production Project",
+          env: "staging",
+          project_users: [%{user_id: user.id, role: :owner}]
+        )
+
+      workflow = workflow_fixture(project_id: project.id)
+      job = insert(:job, workflow: workflow, name: "test-job")
+
+      conn = log_in_user(conn, user)
+
+      {:ok, _view, html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/w/#{workflow.id}?s=#{job.id}&m=expand&v=#{workflow.lock_version}"
+        )
+
+      assert html =~ "inspector-project-env"
+      assert html =~ "staging"
+      assert html =~ "Project environment is staging"
+    end
   end
 
   defp stub_apollo_unavailable(_context) do

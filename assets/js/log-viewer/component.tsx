@@ -1,9 +1,11 @@
+import { editor as e } from 'monaco-editor';
 import { useEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { useStore } from 'zustand';
 import { useShallow } from 'zustand/react/shallow';
-import { editor as e } from 'monaco-editor';
+
 import { type Monaco, MonacoEditor } from '../monaco';
+
 import { createLogStore } from './store';
 
 export function mount(
@@ -43,7 +45,7 @@ const LogViewer = ({
 
   useEffect(() => {
     if (stepId && highlightedRanges.length > 0) {
-      let firstLine = highlightedRanges[0].start;
+      const firstLine = highlightedRanges[0].start;
 
       editor?.revealLineNearTop(firstLine);
     }
@@ -73,10 +75,10 @@ const LogViewer = ({
   useEffect(() => {
     if (monaco) {
       // Define a language for our logs
-      monaco!.languages.register({ id: 'openFnLogs' });
+      monaco.languages.register({ id: 'openFnLogs' });
 
       // Define a simple tokenizer for the language
-      monaco!.languages.setMonarchTokensProvider('openFnLogs', {
+      monaco.languages.setMonarchTokensProvider('openFnLogs', {
         tokenizer: {
           root: [[/^([A-Z\/]{2,4})/, 'logSource']],
         },
@@ -105,6 +107,7 @@ const LogViewer = ({
         },
         wordWrap: 'on',
         lineNumbersMinChars: 3,
+        automaticLayout: true,
       }}
     />
   );

@@ -18,6 +18,7 @@
   "[javascript]": {
     "editor.defaultFormatter": "esbenp.prettier-vscode"
   },
+  "prettier.prettierPath": "./assets/node_modules/prettier",
   "files.associations": {
     "*.heex": "phoenix-heex",
     "app.css": "tailwindcss"

@@ -1,4 +1,4 @@
-import { toast, type ExternalToast } from "sonner";
+import { toast, type ExternalToast } from 'sonner';
 
 interface NotificationOptions extends ExternalToast {
   title: string;
@@ -46,6 +46,13 @@ interface NotificationOptions extends ExternalToast {
  * // Dismiss all toasts
  * notifications.dismiss();
  * ```
+ *
+ * Architecture:
+ * - Styling & durations: THIS FILE (notifications.ts)
+ * - Container setup: Toaster.tsx (position, close button)
+ *
+ * All toast styling is self-contained here using Tailwind classes with !important
+ * to override Sonner's defaults. This keeps everything in one place.
  */
 export const notifications = {
   /**
@@ -62,9 +69,10 @@ export const notifications = {
       description,
       duration: 2000, // 2s for info messages
       classNames: {
-        toast: "border-l-4 border-blue-500 bg-blue-50",
-        title: "text-blue-900 font-semibold",
-        description: "text-blue-700 text-sm",
+        toast: '!bg-blue-50 !border-l-4 !border-l-blue-500',
+        title: '!text-blue-900 !font-semibold',
+        description: '!text-blue-700 !text-sm',
+        icon: '!text-blue-500',
       },
       ...options,
     });
@@ -84,9 +92,10 @@ export const notifications = {
       description,
       duration: 4000, // 4s for alert messages (need more attention)
       classNames: {
-        toast: "border-l-4 border-red-500 bg-red-50",
-        title: "text-red-900 font-semibold",
-        description: "text-red-700 text-sm",
+        toast: '!bg-red-50 !border-l-4 !border-l-red-500',
+        title: '!text-red-900 !font-semibold',
+        description: '!text-red-700 !text-sm',
+        icon: '!text-red-500',
       },
       ...options,
     });
@@ -106,9 +115,10 @@ export const notifications = {
       description,
       duration: 2000,
       classNames: {
-        toast: "border-l-4 border-green-500 bg-green-50",
-        title: "text-green-900 font-semibold",
-        description: "text-green-700 text-sm",
+        toast: '!bg-green-50 !border-l-4 !border-l-green-500',
+        title: '!text-green-900 !font-semibold',
+        description: '!text-green-700 !text-sm',
+        icon: '!text-green-500',
       },
       ...options,
     });
@@ -127,9 +137,10 @@ export const notifications = {
       description,
       duration: 3000,
       classNames: {
-        toast: "border-l-4 border-amber-500 bg-amber-50",
-        title: "text-amber-900 font-semibold",
-        description: "text-amber-700 text-sm",
+        toast: '!bg-amber-50 !border-l-4 !border-l-amber-500',
+        title: '!text-amber-900 !font-semibold',
+        description: '!text-amber-700 !text-sm',
+        icon: '!text-amber-500',
       },
       ...options,
     });

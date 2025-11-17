@@ -66,6 +66,7 @@ defmodule LightningWeb.WorkflowLive.JobView do
   attr :banner_message, :string, default: ""
   attr :presences, :list, required: true
   attr :prior_user_presence, :any, required: true
+  attr :query_params, :map, default: %{}
 
   slot :footer
 
@@ -110,14 +111,56 @@ defmodule LightningWeb.WorkflowLive.JobView do
                     "You are viewing a snapshot of this workflow that was taken on #{Lightning.Helpers.format_date(@snapshot.inserted_at, "%F at %T")}"
               }
             />
+            <%= if @project.env do %>
+              <div
+                id="inspector-project-env-container"
+                class="flex items-middle text-sm font-normal"
+              >
+                <span
+                  id="inspector-project-env"
+                  phx-hook="Tooltip"
+                  data-placement="bottom"
+                  aria-label={"Project environment is #{@project.env}"}
+                  class="inline-flex items-center rounded-md px-1.5 py-0.5 text-xs font-medium bg-primary-100 text-primary-800"
+                >
+                  {@project.env}
+                </span>
+              </div>
+            <% end %>
             <LightningWeb.WorkflowLive.Components.online_users
               id="inspector-online-users"
               presences={@presences}
               current_user={@current_user}
               prior_user={@prior_user_presence.user}
             />
+            <.link
+              :if={
+                LightningWeb.WorkflowLive.Helpers.show_collaborative_editor_toggle?(
+                  @current_user,
+                  @snapshot_version
+                )
+              }
+              id={"inspector-collaborative-editor-toggle-#{@job.id}"}
+              navigate={
+                LightningWeb.WorkflowLive.Helpers.collaborative_editor_url(%{
+                  query_params: @query_params,
+                  selected_job: @job,
+                  live_action: :edit,
+                  project: @project,
+                  workflow: %{id: @job.workflow_id}
+                })
+              }
+              class="inline-flex items-center justify-center
+              w-6 h-6 text-primary-600 hover:text-primary-700
+              hover:bg-primary-50 rounded transition-colors"
+              phx-hook="Tooltip"
+              data-placement="bottom"
+              aria-label="Switch to collaborative editor (experimental)"
+            >
+              <Heroicons.beaker class="h-4 w-4" />
+            </.link>
           </div>
-          <div class="flex flex-grow items-center justify-end">
+          <div class="flex grow items-center justify-end">
             <.offline_indicator />
             <.link
               id={"close-job-edit-view-#{@job.id}"}
@@ -136,6 +179,17 @@ defmodule LightningWeb.WorkflowLive.JobView do
             </.link>
           </div>
         </div>
+        <Common.banner
+          :if={@project.parent}
+          type="info"
+          id="sandbox-mode-alert"
+          icon_name="hero-beaker"
+          icon
+          centered
+        >
+          You are currently working in the sandbox
+          <span class="font-bold">{@project.name}</span>
+        </Common.banner>
       </:top>
       <%= for slot <- @collapsible_panel do %>
         <.collapsible_panel

@@ -1,4 +1,5 @@
-import type { Lightning, Flow, Positions } from '../types';
+import type { RunInfo, RunStep } from '../../workflow-store/store';
+import { NODE_HEIGHT, NODE_WIDTH } from '../constants';
 import {
   sortOrderForSvg,
   styleEdge,
@@ -6,8 +7,7 @@ import {
   edgeLabelIconStyles,
   edgeLabelTextStyles,
 } from '../styles';
-import { NODE_HEIGHT, NODE_WIDTH } from '../constants';
-import type { RunInfo, RunStep } from '../../workflow-store/store';
+import type { Lightning, Flow, Positions } from '../types';
 
 function getEdgeLabel(edge: Lightning.Edge) {
   let label: string | JSX.Element = '{ }';
@@ -61,24 +61,30 @@ const fromWorkflow = (
 
   const isRun = !!runSteps.start_from;
 
-  const runStepsObj = runSteps.steps.reduce((a, b) => {
-    const exists = a[b.job_id];
-    // to make sure that a pre-existing error state preempts the success.
-    // this is for nodes that run multiple times
-    // TODO: we might want to show a state for the multiple runs of the step later on.
-    let step_value: RunStep;
-    if (b.exit_reason === 'success' && exists?.exit_reason === 'fail')
-      step_value = exists;
-    else step_value = b;
-    a[b.job_id] = { ...step_value };
-    return a;
-  }, {} as Record<string, RunStep>);
+  const runStepsObj = runSteps.steps.reduce(
+    (a, b) => {
+      const exists = a[b.job_id];
+      // to make sure that a pre-existing error state preempts the success.
+      // this is for nodes that run multiple times
+      // TODO: we might want to show a state for the multiple runs of the step later on.
+      let step_value: RunStep;
+      if (b.exit_reason === 'success' && exists?.exit_reason === 'fail')
+        step_value = exists;
+      else step_value = b;
+      a[b.job_id] = { ...step_value };
+      return a;
+    },
+    {} as Record<string, RunStep>
+  );
 
   // Count duplicate steps for each job_id
-  const duplicateCounts = runSteps.steps.reduce((counts, step) => {
-    counts[step.job_id] = (counts[step.job_id] || 0) + 1;
-    return counts;
-  }, {} as Record<string, number>);
+  const duplicateCounts = runSteps.steps.reduce(
+    (counts, step) => {
+      counts[step.job_id] = (counts[step.job_id] || 0) + 1;
+      return counts;
+    },
+    {} as Record<string, number>
+  );
 
   const process = (
     items: Array<Lightning.Node | Lightning.Edge>,
@@ -123,9 +129,19 @@ const fromWorkflow = (
         }
 
         if (type === 'trigger') {
+          const triggerNode = node as Lightning.TriggerNode;
           model.data.trigger = {
-            type: (node as Lightning.TriggerNode).type,
-            enabled: (node as Lightning.TriggerNode).enabled,
+            type: triggerNode.type,
+            enabled: triggerNode.enabled,
+            ...(triggerNode.type === 'cron' && {
+              cron_expression: triggerNode.cron_expression,
+            }),
+            ...(triggerNode.type === 'webhook' && {
+              has_auth_method: triggerNode.has_auth_method,
+            }),
+            ...(triggerNode.type === 'kafka' && {
+              has_auth_method: triggerNode.has_auth_method,
+            }),
           };
         }
         styleNode(model);

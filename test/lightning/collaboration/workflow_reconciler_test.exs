@@ -466,6 +466,49 @@ defmodule Lightning.Collaboration.WorkflowReconcilerTest do
       assert Yex.Map.fetch!(workflow_map, "concurrency") == 5
     end
 
+    test "lock_version updates are applied to YDoc", %{
+      user: user,
+      workflow: workflow
+    } do
+      # Start a session to create the SharedDoc
+      {:ok, session_pid} =
+        Collaborate.start(workflow: workflow, user: user)
+
+      # Get initial lock_version from YDoc
+      shared_doc = Session.get_doc(session_pid)
+      workflow_map = Yex.Doc.get_map(shared_doc, "workflow")
+      initial_lock_version = Yex.Map.fetch!(workflow_map, "lock_version")
+
+      # Simulate a save operation that increments lock_version
+      new_lock_version = initial_lock_version + 1
+
+      # Create changeset with updated lock_version
+      # Note: lock_version is managed by optimistic_lock() so we manually
+      # add it to changes to simulate what happens after a real save
+      workflow_changeset =
+        workflow
+        |> Workflows.change_workflow(%{})
+        |> Ecto.Changeset.put_change(:lock_version, new_lock_version)
+        |> Map.put(:action, :update)
+
+      Yex.Doc.monitor_update(shared_doc)
+
+      # Reconcile the changes
+      WorkflowReconciler.reconcile_workflow_changes(workflow_changeset, workflow)
+
+      # Verify exactly one update was sent
+      assert_one_update(shared_doc)
+
+      # Verify the lock_version was updated in the YDoc
+      updated_workflow_map = Yex.Doc.get_map(shared_doc, "workflow")
+
+      assert Yex.Map.fetch!(updated_workflow_map, "lock_version") ==
+               new_lock_version
+
+      Session.stop(session_pid)
+      ensure_doc_supervisor_stopped(workflow.id)
+    end
+
     test "positions updates are applied to YDoc", %{
       user: user,
       workflow: workflow

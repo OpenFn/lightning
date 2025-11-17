@@ -1,4 +1,4 @@
-import type { Flow, Positions } from "./types";
+import type { Flow, Positions } from './types';
 
 export const ensureNodePosition = (
   model: Flow.Model,
@@ -40,7 +40,15 @@ export const ensureNodePosition = (
       };
       return true;
     } else {
-      console.warn("WARNING: could not auto-calculate position for ", node.id);
+      // Only warn if positions map has data but we still couldn't find a parent
+      // Empty positions on initial render is expected before layout runs
+      const hasPositions = Object.keys(positions).length > 0;
+      if (hasPositions) {
+        console.warn(
+          'WARNING: could not auto-calculate position for ',
+          node.id
+        );
+      }
       node.position = { x: 0, y: 0 };
     }
   }

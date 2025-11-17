@@ -560,6 +560,9 @@ defmodule LightningWeb.WebhooksControllerTest do
     test "returns timeout if workflow doesn't complete within timeout period", %{
       conn: conn
     } do
+      # Set a shorter timeout for this test (2 seconds instead of default)
+      expect(Lightning.MockConfig, :webhook_response_timeout_ms, fn -> 2_000 end)
+
       %{triggers: [trigger]} =
         insert(:simple_workflow)
         |> Lightning.Repo.preload(:triggers)

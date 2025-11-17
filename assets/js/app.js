@@ -21,108 +21,112 @@
 //
 
 // Include phoenix_html to handle method=PUT/DELETE in forms and buttons.
-import "phoenix_html";
+import 'phoenix_html';
 // Establish Phoenix Socket and LiveView configuration.
-import * as Sentry from "@sentry/react";
-import { Socket } from "phoenix";
-import { LiveSocket } from "phoenix_live_view";
+import * as Sentry from '@sentry/react';
+// Enable Immer plugins for Set/Map support in stores
+import { enableMapSet } from 'immer';
+import { Socket } from 'phoenix';
+import { LiveSocket } from 'phoenix_live_view';
 
-import topbar from "../vendor/topbar.cjs";
-import * as Hooks from "./hooks";
-import LogViewer from "./log-viewer";
+import topbar from '../vendor/topbar.cjs';
 
+import * as Hooks from './hooks';
+import LogViewer from './log-viewer';
+
+enableMapSet();
 const sentry = Sentry.init({
-	dsn: "https://ad733cbe78ef48f0b1623b8262624942@o55451.ingest.us.sentry.io/118735",
+  dsn: 'https://ad733cbe78ef48f0b1623b8262624942@o55451.ingest.us.sentry.io/118735',
 
-	// Adds request headers and IP for users, for more info visit:
-	// https://docs.sentry.io/platforms/javascript/configuration/options/#sendDefaultPii
-	sendDefaultPii: true,
+  // Adds request headers and IP for users, for more info visit:
+  // https://docs.sentry.io/platforms/javascript/configuration/options/#sendDefaultPii
+  sendDefaultPii: true,
 
-	// Alternatively, use `process.env.npm_package_version` for a dynamic release version
-	// if your build tool supports it.
-	release: "my-project-name@2.3.12",
-	integrations: [],
-	enabled: false,
-  debug: true
+  // Alternatively, use `process.env.npm_package_version` for a dynamic release version
+  // if your build tool supports it.
+  release: 'my-project-name@2.3.12',
+  integrations: [],
+  enabled: false,
+  debug: true,
 });
 
 window.sentry = sentry;
 
 const hooks = {
-	LogViewer,
-	...Hooks,
+  LogViewer,
+  ...Hooks,
 };
 
 // @ts-ignore
 const csrfToken = document
-	.querySelector("meta[name='csrf-token']")
-	.getAttribute("content");
+  .querySelector("meta[name='csrf-token']")
+  .getAttribute('content');
 
-const liveSocket = new LiveSocket("/live", Socket, {
-	params: { _csrf_token: csrfToken },
-	hooks,
-	dom: {
-		onBeforeElUpdated(from, to) {
-			// If an element has any of the 'lv-keep-*' attributes, copy across
-			// the given attribute to maintain various styles and properties
-			// that have had their control handed-over to a Hook or JS implementation.
-			if (from.attributes["lv-keep-style"]) {
-				const style = from.getAttribute("style");
-				if (style != null) {
-					to.setAttribute("style", style);
-				}
-			}
+const liveSocket = new LiveSocket('/live', Socket, {
+  params: { _csrf_token: csrfToken },
+  hooks,
+  dom: {
+    onBeforeElUpdated(from, to) {
+      // If an element has any of the 'lv-keep-*' attributes, copy across
+      // the given attribute to maintain various styles and properties
+      // that have had their control handed-over to a Hook or JS implementation.
+      if (from.attributes['lv-keep-style']) {
+        const style = from.getAttribute('style');
+        if (style != null) {
+          to.setAttribute('style', style);
+        }
+      }
 
-			if (from.attributes["lv-keep-class"]) {
-				const className = from.getAttribute("class");
-				if (className != null) {
-					to.setAttribute("class", className);
-				}
-			}
+      if (from.attributes['lv-keep-class']) {
+        const className = from.getAttribute('class');
+        if (className != null) {
+          to.setAttribute('class', className);
+        }
+      }
 
-			if (from.attributes["lv-keep-hidden"]) {
-				const hidden = from.getAttribute("hidden");
-				if (hidden != null) {
-					to.setAttribute("hidden", hidden);
-				}
-			}
+      if (from.attributes['lv-keep-hidden']) {
+        const hidden = from.getAttribute('hidden');
+        if (hidden != null) {
+          to.setAttribute('hidden', hidden);
+        }
+      }
 
-			if (from.attributes["lv-keep-type"]) {
-				const type = from.getAttribute("type");
-				if (type != null) {
-					to.setAttribute("type", type);
-				}
-			}
+      if (from.attributes['lv-keep-type']) {
+        const type = from.getAttribute('type');
+        if (type != null) {
+          to.setAttribute('type', type);
+        }
+      }
 
-			if (from.attributes["lv-keep-aria"]) {
-				Object.values(from.attributes).forEach((attr) => {
-					if (attr.name.startsWith("aria-")) {
-						to.setAttribute(attr.name, attr.value);
-					}
-				});
-			}
+      if (from.attributes['lv-keep-aria']) {
+        Object.values(from.attributes).forEach(attr => {
+          if (attr.name.startsWith('aria-')) {
+            to.setAttribute(attr.name, attr.value);
+          }
+        });
+      }
 
-			return true;
-		},
-	},
+      return true;
+    },
+  },
 });
 
 // Show progress bar on live navigation and form submits
 // Include a 120ms timeout to avoid small flashes when things load quickly.
-topbar.config({ barColors: { 0: "#29d" }, shadowColor: "rgba(0, 0, 0, .3)" });
+topbar.config({ barColors: { 0: '#29d' }, shadowColor: 'rgba(0, 0, 0, .3)' });
 
 let topBarScheduled = 0;
 
-window.addEventListener("phx:page-loading-start", () => {
-	if (!topBarScheduled) {
-		topBarScheduled = setTimeout(() => topbar.show(), 120);
-	}
+window.addEventListener('phx:page-loading-start', () => {
+  if (!topBarScheduled) {
+    topBarScheduled = setTimeout(() => topbar.show(), 120);
+  }
 });
 
-window.addEventListener("phx:page-loading-stop", () => {
-	clearTimeout(topBarScheduled);
-	topBarScheduled = 0;
-	topbar.hide();
+window.addEventListener('phx:page-loading-stop', () => {
+  clearTimeout(topBarScheduled);
+  topBarScheduled = 0;
+  topbar.hide();
 });
 
 // connect if there are any LiveViews on the page
@@ -135,7 +139,6 @@ window.liveSocket = liveSocket;
 
 // Testing helper to simulate a reconnect
 window.triggerReconnect = function triggerReconnect(timeout = 5000) {
-	liveSocket.disconnect(() => {});
-	setTimeout(liveSocket.connect.bind(liveSocket), timeout);
+  liveSocket.disconnect(() => {});
+  setTimeout(liveSocket.connect.bind(liveSocket), timeout);
 };
-

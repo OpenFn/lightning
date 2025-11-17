@@ -5,8 +5,8 @@
  * and provides runtime validation with Zod schemas.
  */
 
-import type { PhoenixChannelProvider } from "y-phoenix-channel";
-import { z } from "zod";
+import type { PhoenixChannelProvider } from 'y-phoenix-channel';
+import { z } from 'zod';
 
 // =============================================================================
 // ZOD SCHEMAS (Runtime Validation)
@@ -60,6 +60,9 @@ export interface AdaptorState {
   /** Current list of available adaptors */
   adaptors: AdaptorsList;
 
+  /** Project-specific adaptors used across workflows */
+  projectAdaptors: AdaptorsList;
+
   /** Loading state for initial fetch */
   isLoading: boolean;
 
@@ -76,6 +79,9 @@ export interface AdaptorState {
 export interface AdaptorCommands {
   /** Request adaptors list from server */
   requestAdaptors: () => Promise<void>;
+
+  /** Request project-specific adaptors from server */
+  requestProjectAdaptors: () => Promise<void>;
 
   /** Manually set adaptors (for testing/fallback) */
   setAdaptors: (adaptors: AdaptorsList) => void;

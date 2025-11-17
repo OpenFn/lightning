@@ -10,14 +10,15 @@ defmodule Lightning.Collaboration.WorkflowSerializer do
 
   ## Y.Doc Structure
 
-  The Y.Doc contains five top-level collections:
+  The Y.Doc contains six top-level collections:
 
   - `workflow` (Map): Core workflow metadata (id, name, lock_version,
-    deleted_at)
+    deleted_at, concurrency, enable_job_logs)
   - `jobs` (Array): Array of job objects with Y.Text body field
   - `edges` (Array): Array of edge objects connecting jobs/triggers
   - `triggers` (Array): Array of trigger objects (webhook, cron, kafka)
   - `positions` (Map): Canvas positions for visual editor (node_id → {x, y})
+  - `errors` (Map): Field-level validation errors (field_path → error_message)
 
   ## Field Mappings
 
@@ -34,7 +35,8 @@ defmodule Lightning.Collaboration.WorkflowSerializer do
   Writes a workflow's data into a Y.Doc.
 
   This initializes the Y.Doc structure with:
-  - `workflow` map: Core workflow metadata (id, name, lock_version, deleted_at)
+  - `workflow` map: Core workflow metadata (id, name, lock_version, deleted_at,
+    concurrency, enable_job_logs)
   - `jobs` array: Array of job objects
   - `edges` array: Array of edge objects
   - `triggers` array: Array of trigger objects
@@ -58,6 +60,7 @@ defmodule Lightning.Collaboration.WorkflowSerializer do
     edges_array = Yex.Doc.get_array(doc, "edges")
     triggers_array = Yex.Doc.get_array(doc, "triggers")
     positions = Yex.Doc.get_map(doc, "positions")
+    errors = Yex.Doc.get_map(doc, "errors")
 
     Yex.Doc.transaction(doc, "initialize_workflow_document", fn ->
       # Set workflow properties
@@ -71,10 +74,18 @@ defmodule Lightning.Collaboration.WorkflowSerializer do
         datetime_to_string(workflow.deleted_at)
       )
 
+      Yex.Map.set(workflow_map, "concurrency", workflow.concurrency)
+      Yex.Map.set(workflow_map, "enable_job_logs", workflow.enable_job_logs)
+
       initialize_jobs(jobs_array, workflow.jobs)
       initialize_edges(edges_array, workflow.edges)
       initialize_triggers(triggers_array, workflow.triggers)
       initialize_positions(positions, workflow.positions)
+
+      # Initialize empty errors map (no errors on fresh load)
+      # Note: We don't set individual keys here, just ensure the map exists
+      # Keys will be added by validation error writing logic
+      _errors_initialized = errors
     end)
 
     doc
@@ -106,10 +117,26 @@ defmodule Lightning.Collaboration.WorkflowSerializer do
     id = Yex.Map.fetch!(workflow_map, "id")
     name = Yex.Map.fetch!(workflow_map, "name")
 
+    # Y.js numbers are floats - convert to integer for database
+    # Use :not_found sentinel to distinguish missing fields from explicit nil
+    concurrency =
+      case Yex.Map.fetch(workflow_map, "concurrency") do
+        {:ok, value} when is_float(value) -> trunc(value)
+        {:ok, nil} -> nil
+        :error -> :not_found
+      end
+
+    enable_job_logs =
+      case Yex.Map.fetch(workflow_map, "enable_job_logs") do
+        {:ok, value} when is_boolean(value) -> value
+        {:ok, nil} -> nil
+        :error -> :not_found
+      end
+
     positions = extract_positions(positions_map)
 
-    # Build the map for save_workflow/2
-    %{
+    # Build the base map for save_workflow/2
+    base_map = %{
       "id" => id,
       "name" => name,
       "jobs" => extract_jobs(jobs_array),
@@ -117,6 +144,13 @@ defmodule Lightning.Collaboration.WorkflowSerializer do
       "triggers" => extract_triggers(triggers_array),
       "positions" => if(Enum.empty?(positions), do: nil, else: positions)
     }
+
+    # Add optional fields only if they were present in Y.Doc
+    # This allows schema defaults to apply for old documents while
+    # preserving explicit nil values in new documents
+    base_map
+    |> maybe_put_field("concurrency", concurrency)
+    |> maybe_put_field("enable_job_logs", enable_job_logs)
   end
 
   # Private helper functions
@@ -225,6 +259,23 @@ defmodule Lightning.Collaboration.WorkflowSerializer do
 
   defp extract_text_field(string) when is_binary(string), do: string
   defp extract_text_field(nil), do: ""
+
+  # Catch-all for unexpected types - log and return empty string
+  defp extract_text_field(value) do
+    require Logger
+
+    Logger.warning(
+      "extract_text_field received unexpected type: #{inspect(value)}"
+    )
+
+    ""
+  end
+
+  # Helper to conditionally add a field to a map
+  # Only adds the field if value is not :not_found (i.e., field existed in Y.Doc)
+  # This allows schema defaults to apply for truly missing fields
+  defp maybe_put_field(map, _key, :not_found), do: map
+  defp maybe_put_field(map, key, value), do: Map.put(map, key, value)
 
   # Convert DateTime to ISO8601 string for Y.Doc storage
   # Y.Doc can't store DateTime structs directly
