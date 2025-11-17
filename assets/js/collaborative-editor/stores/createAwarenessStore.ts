@@ -120,6 +120,7 @@ export const createAwarenessStore = (): AwarenessStore => {
       rawAwareness: null,
       isConnected: false,
       lastUpdated: null,
+      userCache: new Map(),
     } as AwarenessState,
     // No initial transformations needed
     draft => draft
@@ -128,11 +129,15 @@ export const createAwarenessStore = (): AwarenessStore => {
   const listeners = new Set<() => void>();
   let awarenessInstance: Awareness | null = null;
   let lastSeenTimer: NodeJS.Timeout | null = null;
+  let cacheCleanupTimer: NodeJS.Timeout | null = null;
+
+  // Cache configuration
+  const CACHE_TTL = 60 * 1000; // 1 minute in milliseconds
 
   // Redux DevTools integration
   const devtools = wrapStoreWithDevTools({
     name: 'AwarenessStore',
-    excludeKeys: ['rawAwareness'], // Exclude Y.js Awareness object
+    excludeKeys: ['rawAwareness', 'userCache'], // Exclude Y.js Awareness object and Map cache
     maxAge: 200, // Higher limit since awareness changes are frequent
   });
 
@@ -196,6 +201,53 @@ export const createAwarenessStore = (): AwarenessStore => {
   };
 
   /**
+   * Update cache with current users
+   */
+  const updateCache = (users: AwarenessUser[]) => {
+    const now = Date.now();
+    const newCache = new Map(state.userCache);
+
+    // Add/update users in cache
+    users.forEach(user => {
+      newCache.set(user.user.id, {
+        user,
+        cachedAt: now,
+      });
+    });
+
+    // Clean up expired entries (older than 1 minute)
+    newCache.forEach((cachedUser, userId) => {
+      if (now - cachedUser.cachedAt > CACHE_TTL) {
+        newCache.delete(userId);
+      }
+    });
+
+    return newCache;
+  };
+
+  /**
+   * Merge live users with cached users
+   * Cached users are used as fallback when they're missing from live awareness
+   */
+  const mergeUsersWithCache = (liveUsers: AwarenessUser[]): AwarenessUser[] => {
+    const liveUserIds = new Set(liveUsers.map(u => u.user.id));
+    const mergedUsers = [...liveUsers];
+
+    // Add cached users that aren't in the live set
+    state.userCache.forEach((cachedUser, userId) => {
+      if (!liveUserIds.has(userId)) {
+        // Only add if cache is still valid
+        const now = Date.now();
+        if (now - cachedUser.cachedAt <= CACHE_TTL) {
+          mergedUsers.push(cachedUser.user);
+        }
+      }
+    });
+
+    return mergedUsers;
+  };
+
+  /**
    * Handle awareness state changes - core collaborative data update pattern
    */
   const handleAwarenessChange = () => {
@@ -204,10 +256,13 @@ export const createAwarenessStore = (): AwarenessStore => {
       return;
     }
 
-    const users = extractUsersFromAwareness(awarenessInstance);
+    const liveUsers = extractUsersFromAwareness(awarenessInstance);
+    const mergedUsers = mergeUsersWithCache(liveUsers);
+    const updatedCache = updateCache(liveUsers);
 
     state = produce(state, draft => {
-      draft.users = users;
+      draft.users = mergedUsers;
+      draft.userCache = updatedCache;
       draft.lastUpdated = Date.now();
     });
     notify('awarenessChange');
@@ -216,6 +271,36 @@ export const createAwarenessStore = (): AwarenessStore => {
   // =============================================================================
   // PATTERN 2: Direct Immer → Notify + Awareness Update (Local Commands)
   // =============================================================================
+
+  /**
+   * Set up periodic cache cleanup
+   */
+  const setupCacheCleanup = () => {
+    if (cacheCleanupTimer) {
+      clearInterval(cacheCleanupTimer);
+    }
+
+    // Clean up expired cache entries every 30 seconds
+    cacheCleanupTimer = setInterval(() => {
+      const now = Date.now();
+      const newCache = new Map(state.userCache);
+      let hasChanges = false;
+
+      newCache.forEach((cachedUser, userId) => {
+        if (now - cachedUser.cachedAt > CACHE_TTL) {
+          newCache.delete(userId);
+          hasChanges = true;
+        }
+      });
+
+      if (hasChanges) {
+        state = produce(state, draft => {
+          draft.userCache = newCache;
+        });
+        notify('cacheCleanup');
+      }
+    }, 30000); // Check every 30 seconds
+  };
 
   /**
    * Initialize awareness instance and set up observers
@@ -234,6 +319,9 @@ export const createAwarenessStore = (): AwarenessStore => {
 
     // Set up awareness observer for Pattern 1 updates
     awareness.on('change', handleAwarenessChange);
+
+    // Set up cache cleanup
+    setupCacheCleanup();
 
     // Update local state
     state = produce(state, draft => {
@@ -267,6 +355,11 @@ export const createAwarenessStore = (): AwarenessStore => {
       lastSeenTimer = null;
     }
 
+    if (cacheCleanupTimer) {
+      clearInterval(cacheCleanupTimer);
+      cacheCleanupTimer = null;
+    }
+
     devtools.disconnect();
 
     state = produce(state, draft => {
@@ -276,6 +369,7 @@ export const createAwarenessStore = (): AwarenessStore => {
       draft.isInitialized = false;
       draft.isConnected = false;
       draft.lastUpdated = Date.now();
+      draft.userCache = new Map();
     });
     notify('destroyAwareness');
   };
