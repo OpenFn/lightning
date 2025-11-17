@@ -219,6 +219,7 @@ export function WorkflowEditor({
   const showInspector =
     searchParams.get('panel') === 'settings' ||
     searchParams.get('panel') === 'code' ||
+    searchParams.get('panel') === 'publish-template' ||
     Boolean(currentNode.node);
 
   const handleMethodChange = (method: 'template' | 'import' | 'ai' | null) => {

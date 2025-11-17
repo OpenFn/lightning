@@ -91,6 +91,7 @@ import {
   type SessionContextStore,
   SessionContextResponseSchema,
   WebhookAuthMethodSchema,
+  WorkflowTemplateSchema,
 } from '../types/sessionContext';
 
 import { createWithSelector } from './common';
@@ -114,6 +115,7 @@ export const createSessionContextStore = (
       latestSnapshotLockVersion: null,
       projectRepoConnection: null,
       webhookAuthMethods: [],
+      workflow_template: null,
       isNewWorkflow,
       isLoading: false,
       error: null,
@@ -176,6 +178,7 @@ export const createSessionContextStore = (
           sessionContext.latest_snapshot_lock_version;
         draft.projectRepoConnection = sessionContext.project_repo_connection;
         draft.webhookAuthMethods = sessionContext.webhook_auth_methods;
+        draft.workflow_template = sessionContext.workflow_template;
         draft.isLoading = false;
         draft.error = null;
         draft.lastUpdated = Date.now();
@@ -332,6 +335,29 @@ export const createSessionContextStore = (
       handleWebhookAuthMethodsUpdated(message);
     };
 
+    const templateUpdatedHandler = (message: unknown) => {
+      logger.debug('Received template_updated message', message);
+
+      const result = z
+        .object({
+          workflow_template: WorkflowTemplateSchema.nullable(),
+        })
+        .safeParse(message);
+
+      if (result.success) {
+        state = produce(state, draft => {
+          draft.workflow_template = result.data.workflow_template;
+          draft.lastUpdated = Date.now();
+        });
+        notify('templateUpdated');
+      } else {
+        logger.error('Failed to parse template_updated message', {
+          error: result.error,
+          message,
+        });
+      }
+    };
+
     // Set up channel listeners
     if (channel) {
       channel.on('session_context', sessionContextHandler);
@@ -341,6 +367,7 @@ export const createSessionContextStore = (
         'webhook_auth_methods_updated',
         webhookAuthMethodsUpdatedHandler
       );
+      channel.on('template_updated', templateUpdatedHandler);
     }
 
     devtools.connect();
@@ -357,6 +384,7 @@ export const createSessionContextStore = (
           'webhook_auth_methods_updated',
           webhookAuthMethodsUpdatedHandler
         );
+        channel.off('template_updated', templateUpdatedHandler);
       }
       _channelProvider = null;
     };

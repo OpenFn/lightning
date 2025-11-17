@@ -5,6 +5,13 @@ import { useWorkflowState } from '#/collaborative-editor/hooks/useWorkflow';
 import { notifications } from '#/collaborative-editor/lib/notifications';
 import type { WorkflowState as YAMLWorkflowState } from '#/yaml/types';
 import { convertWorkflowStateToSpec } from '#/yaml/util';
+import {
+  useUser,
+  useWorkflowTemplate,
+  useLatestSnapshotLockVersion,
+} from '#/collaborative-editor/hooks/useSessionContext';
+import { useURLState } from '#/react/lib/use-url-state';
+import { cn } from '#/utils/cn';
 
 export function CodeViewPanel() {
   // Read workflow data from store - LoadingBoundary guarantees non-null
@@ -78,6 +85,30 @@ export function CodeViewPanel() {
     }
   };
 
+  // Template publishing state and handlers
+  const user = useUser();
+  const workflowTemplate = useWorkflowTemplate();
+  const latestSnapshotLockVersion = useLatestSnapshotLockVersion();
+  const { updateSearchParams } = useURLState();
+
+  // Check if workflow has unsaved changes by comparing lock versions
+  const hasUnsavedChanges =
+    workflow?.lock_version !== latestSnapshotLockVersion;
+
+  const handlePublishTemplate = () => {
+    updateSearchParams({ panel: 'publish-template' });
+  };
+
+  const buttonText = workflowTemplate ? 'Update Template' : 'Publish Template';
+
+  const buttonDisabled = hasUnsavedChanges || !user?.support_user;
+
+  const tooltipMessage = hasUnsavedChanges
+    ? `You must save your workflow first before ${workflowTemplate ? 'updating' : 'publishing'} a template.`
+    : !user?.support_user
+      ? 'Only superusers can publish templates'
+      : undefined;
+
   if (!workflow) {
     return <div className="px-4 py-5 text-gray-500">Loading...</div>;
   }
@@ -125,6 +156,23 @@ export function CodeViewPanel() {
           >
             Copy Code
           </button>
+          {user?.support_user && (
+            <button
+              id="publish-template-btn"
+              type="button"
+              onClick={handlePublishTemplate}
+              disabled={buttonDisabled}
+              title={tooltipMessage}
+              className={cn(
+                'rounded-md px-3 py-2 text-sm font-semibold shadow-xs min-w-[8rem]',
+                buttonDisabled
+                  ? 'bg-primary-300 text-white cursor-not-allowed'
+                  : 'bg-primary-600 text-white hover:bg-primary-700 cursor-pointer'
+              )}
+            >
+              {buttonText}
+            </button>
+          )}
         </div>
       </div>
     </>
