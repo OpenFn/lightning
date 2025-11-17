@@ -195,7 +195,10 @@ describe('Header - Save Workflow (Cmd+S / Ctrl+S)', () => {
         permissions: { can_edit_workflow: true, can_run_workflow: true },
       });
 
-    await renderAndWaitForReady(wrapper, emitSessionContext!);
+    const { unmount } = await renderAndWaitForReady(
+      wrapper,
+      emitSessionContext!
+    );
 
     // Verify the save button is rendered (confirms Header is mounted)
     const saveButton = screen.getByTestId('save-workflow-button');
@@ -205,6 +208,7 @@ describe('Header - Save Workflow (Cmd+S / Ctrl+S)', () => {
 
     await waitFor(() => expect(saveWorkflowSpy).toHaveBeenCalledTimes(1));
 
+    unmount();
     cleanup();
   });
 
@@ -215,12 +219,16 @@ describe('Header - Save Workflow (Cmd+S / Ctrl+S)', () => {
         permissions: { can_edit_workflow: true, can_run_workflow: true },
       });
 
-    await renderAndWaitForReady(wrapper, emitSessionContext!);
+    const { unmount } = await renderAndWaitForReady(
+      wrapper,
+      emitSessionContext!
+    );
 
     await user.keyboard('{Control>}s{/Control}');
 
     await waitFor(() => expect(saveWorkflowSpy).toHaveBeenCalledTimes(1));
 
+    unmount();
     cleanup();
   });
 
@@ -231,7 +239,10 @@ describe('Header - Save Workflow (Cmd+S / Ctrl+S)', () => {
         permissions: { can_edit_workflow: false, can_run_workflow: true },
       });
 
-    await renderAndWaitForReady(wrapper, emitSessionContext!);
+    const { unmount } = await renderAndWaitForReady(
+      wrapper,
+      emitSessionContext!
+    );
 
     await user.keyboard('{Meta>}s{/Meta}');
 
@@ -240,6 +251,7 @@ describe('Header - Save Workflow (Cmd+S / Ctrl+S)', () => {
 
     expect(saveWorkflowSpy).not.toHaveBeenCalled();
 
+    unmount();
     cleanup();
   });
 
@@ -251,7 +263,10 @@ describe('Header - Save Workflow (Cmd+S / Ctrl+S)', () => {
         workflowDeleted: true,
       });
 
-    await renderAndWaitForReady(wrapper, emitSessionContext!);
+    const { unmount } = await renderAndWaitForReady(
+      wrapper,
+      emitSessionContext!
+    );
 
     await user.keyboard('{Meta>}s{/Meta}');
 
@@ -260,6 +275,7 @@ describe('Header - Save Workflow (Cmd+S / Ctrl+S)', () => {
 
     expect(saveWorkflowSpy).not.toHaveBeenCalled();
 
+    unmount();
     cleanup();
   });
 
@@ -272,7 +288,10 @@ describe('Header - Save Workflow (Cmd+S / Ctrl+S)', () => {
         latestSnapshotLockVersion: 2,
       });
 
-    await renderAndWaitForReady(wrapper, emitSessionContext!);
+    const { unmount } = await renderAndWaitForReady(
+      wrapper,
+      emitSessionContext!
+    );
 
     await user.keyboard('{Meta>}s{/Meta}');
 
@@ -281,6 +300,7 @@ describe('Header - Save Workflow (Cmd+S / Ctrl+S)', () => {
 
     expect(saveWorkflowSpy).not.toHaveBeenCalled();
 
+    unmount();
     cleanup();
   });
 
@@ -291,7 +311,7 @@ describe('Header - Save Workflow (Cmd+S / Ctrl+S)', () => {
         permissions: { can_edit_workflow: true, can_run_workflow: true },
       });
 
-    render(
+    const { unmount } = render(
       <>
         <input data-testid="test-input" />
         <Header projectId="project-1" workflowId="workflow-1">
@@ -317,6 +337,7 @@ describe('Header - Save Workflow (Cmd+S / Ctrl+S)', () => {
 
     await waitFor(() => expect(saveWorkflowSpy).toHaveBeenCalled());
 
+    unmount();
     cleanup();
   });
 
@@ -327,7 +348,7 @@ describe('Header - Save Workflow (Cmd+S / Ctrl+S)', () => {
         permissions: { can_edit_workflow: true, can_run_workflow: true },
       });
 
-    render(
+    const { unmount } = render(
       <>
         <textarea data-testid="test-textarea" />
         <Header projectId="project-1" workflowId="workflow-1">
@@ -353,6 +374,7 @@ describe('Header - Save Workflow (Cmd+S / Ctrl+S)', () => {
 
     await waitFor(() => expect(saveWorkflowSpy).toHaveBeenCalled());
 
+    unmount();
     cleanup();
   });
 
@@ -363,7 +385,7 @@ describe('Header - Save Workflow (Cmd+S / Ctrl+S)', () => {
         permissions: { can_edit_workflow: true, can_run_workflow: true },
       });
 
-    render(
+    const { unmount } = render(
       <>
         <select data-testid="test-select">
           <option value="1">Option 1</option>
@@ -391,6 +413,7 @@ describe('Header - Save Workflow (Cmd+S / Ctrl+S)', () => {
 
     await waitFor(() => expect(saveWorkflowSpy).toHaveBeenCalled());
 
+    unmount();
     cleanup();
   });
 
@@ -401,9 +424,13 @@ describe('Header - Save Workflow (Cmd+S / Ctrl+S)', () => {
         permissions: { can_edit_workflow: true, can_run_workflow: true },
       });
 
-    render(
+    const { unmount } = render(
       <>
-        <div contentEditable data-testid="test-contenteditable">
+        <div
+          contentEditable
+          suppressContentEditableWarning
+          data-testid="test-contenteditable"
+        >
           Test
         </div>
         <Header projectId="project-1" workflowId="workflow-1">
@@ -429,6 +456,7 @@ describe('Header - Save Workflow (Cmd+S / Ctrl+S)', () => {
 
     await waitFor(() => expect(saveWorkflowSpy).toHaveBeenCalled());
 
+    unmount();
     cleanup();
   });
 });
@@ -457,7 +485,10 @@ describe('Header - Save & Sync to GitHub (Cmd+Shift+S / Ctrl+Shift+S)', () => {
         hasGithubConnection: true,
       });
 
-    await renderAndWaitForReady(wrapper, emitSessionContext!);
+    const { unmount } = await renderAndWaitForReady(
+      wrapper,
+      emitSessionContext!
+    );
 
     await user.keyboard('{Meta>}{Shift>}s{/Shift}{/Meta}');
 
@@ -465,6 +496,7 @@ describe('Header - Save & Sync to GitHub (Cmd+Shift+S / Ctrl+Shift+S)', () => {
       expect(openGitHubSyncModalSpy).toHaveBeenCalledTimes(1)
     );
 
+    unmount();
     cleanup();
   });
 
@@ -476,7 +508,10 @@ describe('Header - Save & Sync to GitHub (Cmd+Shift+S / Ctrl+Shift+S)', () => {
         hasGithubConnection: true,
       });
 
-    await renderAndWaitForReady(wrapper, emitSessionContext!);
+    const { unmount } = await renderAndWaitForReady(
+      wrapper,
+      emitSessionContext!
+    );
 
     await user.keyboard('{Control>}{Shift>}s{/Shift}{/Control}');
 
@@ -484,6 +519,7 @@ describe('Header - Save & Sync to GitHub (Cmd+Shift+S / Ctrl+Shift+S)', () => {
       expect(openGitHubSyncModalSpy).toHaveBeenCalledTimes(1)
     );
 
+    unmount();
     cleanup();
   });
 
@@ -495,7 +531,10 @@ describe('Header - Save & Sync to GitHub (Cmd+Shift+S / Ctrl+Shift+S)', () => {
         hasGithubConnection: false,
       });
 
-    await renderAndWaitForReady(wrapper, emitSessionContext!);
+    const { unmount } = await renderAndWaitForReady(
+      wrapper,
+      emitSessionContext!
+    );
 
     await user.keyboard('{Meta>}{Shift>}s{/Shift}{/Meta}');
 
@@ -504,6 +543,7 @@ describe('Header - Save & Sync to GitHub (Cmd+Shift+S / Ctrl+Shift+S)', () => {
 
     expect(openGitHubSyncModalSpy).not.toHaveBeenCalled();
 
+    unmount();
     cleanup();
   });
 
@@ -515,7 +555,10 @@ describe('Header - Save & Sync to GitHub (Cmd+Shift+S / Ctrl+Shift+S)', () => {
         hasGithubConnection: true,
       });
 
-    await renderAndWaitForReady(wrapper, emitSessionContext!);
+    const { unmount } = await renderAndWaitForReady(
+      wrapper,
+      emitSessionContext!
+    );
 
     await user.keyboard('{Meta>}{Shift>}s{/Shift}{/Meta}');
 
@@ -524,6 +567,7 @@ describe('Header - Save & Sync to GitHub (Cmd+Shift+S / Ctrl+Shift+S)', () => {
 
     expect(openGitHubSyncModalSpy).not.toHaveBeenCalled();
 
+    unmount();
     cleanup();
   });
 
@@ -536,7 +580,10 @@ describe('Header - Save & Sync to GitHub (Cmd+Shift+S / Ctrl+Shift+S)', () => {
         workflowDeleted: true,
       });
 
-    await renderAndWaitForReady(wrapper, emitSessionContext!);
+    const { unmount } = await renderAndWaitForReady(
+      wrapper,
+      emitSessionContext!
+    );
 
     await user.keyboard('{Meta>}{Shift>}s{/Shift}{/Meta}');
 
@@ -545,6 +592,7 @@ describe('Header - Save & Sync to GitHub (Cmd+Shift+S / Ctrl+Shift+S)', () => {
 
     expect(openGitHubSyncModalSpy).not.toHaveBeenCalled();
 
+    unmount();
     cleanup();
   });
 
@@ -558,7 +606,10 @@ describe('Header - Save & Sync to GitHub (Cmd+Shift+S / Ctrl+Shift+S)', () => {
         latestSnapshotLockVersion: 2,
       });
 
-    await renderAndWaitForReady(wrapper, emitSessionContext!);
+    const { unmount } = await renderAndWaitForReady(
+      wrapper,
+      emitSessionContext!
+    );
 
     await user.keyboard('{Meta>}{Shift>}s{/Shift}{/Meta}');
 
@@ -567,6 +618,7 @@ describe('Header - Save & Sync to GitHub (Cmd+Shift+S / Ctrl+Shift+S)', () => {
 
     expect(openGitHubSyncModalSpy).not.toHaveBeenCalled();
 
+    unmount();
     cleanup();
   });
 
@@ -578,7 +630,7 @@ describe('Header - Save & Sync to GitHub (Cmd+Shift+S / Ctrl+Shift+S)', () => {
         hasGithubConnection: true,
       });
 
-    render(
+    const { unmount } = render(
       <>
         <input data-testid="test-input" />
         <Header projectId="project-1" workflowId="workflow-1">
@@ -604,6 +656,7 @@ describe('Header - Save & Sync to GitHub (Cmd+Shift+S / Ctrl+Shift+S)', () => {
 
     await waitFor(() => expect(openGitHubSyncModalSpy).toHaveBeenCalled());
 
+    unmount();
     cleanup();
   });
 
@@ -615,7 +668,7 @@ describe('Header - Save & Sync to GitHub (Cmd+Shift+S / Ctrl+Shift+S)', () => {
         hasGithubConnection: true,
       });
 
-    render(
+    const { unmount } = render(
       <>
         <textarea data-testid="test-textarea" />
         <Header projectId="project-1" workflowId="workflow-1">
@@ -641,6 +694,7 @@ describe('Header - Save & Sync to GitHub (Cmd+Shift+S / Ctrl+Shift+S)', () => {
 
     await waitFor(() => expect(openGitHubSyncModalSpy).toHaveBeenCalled());
 
+    unmount();
     cleanup();
   });
 
@@ -652,7 +706,7 @@ describe('Header - Save & Sync to GitHub (Cmd+Shift+S / Ctrl+Shift+S)', () => {
         hasGithubConnection: true,
       });
 
-    render(
+    const { unmount } = render(
       <>
         <select data-testid="test-select">
           <option value="1">Option 1</option>
@@ -680,6 +734,7 @@ describe('Header - Save & Sync to GitHub (Cmd+Shift+S / Ctrl+Shift+S)', () => {
 
     await waitFor(() => expect(openGitHubSyncModalSpy).toHaveBeenCalled());
 
+    unmount();
     cleanup();
   });
 
@@ -691,9 +746,13 @@ describe('Header - Save & Sync to GitHub (Cmd+Shift+S / Ctrl+Shift+S)', () => {
         hasGithubConnection: true,
       });
 
-    render(
+    const { unmount } = render(
       <>
-        <div contentEditable data-testid="test-contenteditable">
+        <div
+          contentEditable
+          suppressContentEditableWarning
+          data-testid="test-contenteditable"
+        >
           Test
         </div>
         <Header projectId="project-1" workflowId="workflow-1">
@@ -719,6 +778,7 @@ describe('Header - Save & Sync to GitHub (Cmd+Shift+S / Ctrl+Shift+S)', () => {
 
     await waitFor(() => expect(openGitHubSyncModalSpy).toHaveBeenCalled());
 
+    unmount();
     cleanup();
   });
 });
@@ -752,7 +812,10 @@ describe('Header - Guard Condition Interactions', () => {
       hasGithubConnection: true,
     });
 
-    await renderAndWaitForReady(wrapper, emitSessionContext!);
+    const { unmount } = await renderAndWaitForReady(
+      wrapper,
+      emitSessionContext!
+    );
 
     // Try Cmd+S
     await user.keyboard('{Meta>}s{/Meta}');
@@ -764,6 +827,7 @@ describe('Header - Guard Condition Interactions', () => {
     await new Promise(resolve => setTimeout(resolve, 150));
     expect(openGitHubSyncModalSpy).not.toHaveBeenCalled();
 
+    unmount();
     cleanup();
   });
 
@@ -780,7 +844,10 @@ describe('Header - Guard Condition Interactions', () => {
       hasGithubConnection: false,
     });
 
-    await renderAndWaitForReady(wrapper, emitSessionContext!);
+    const { unmount } = await renderAndWaitForReady(
+      wrapper,
+      emitSessionContext!
+    );
 
     // Cmd+S should work
     await user.keyboard('{Meta>}s{/Meta}');
@@ -791,6 +858,7 @@ describe('Header - Guard Condition Interactions', () => {
     await new Promise(resolve => setTimeout(resolve, 150));
     expect(openGitHubSyncModalSpy).not.toHaveBeenCalled();
 
+    unmount();
     cleanup();
   });
 
@@ -807,7 +875,10 @@ describe('Header - Guard Condition Interactions', () => {
       hasGithubConnection: true,
     });
 
-    await renderAndWaitForReady(wrapper, emitSessionContext!);
+    const { unmount } = await renderAndWaitForReady(
+      wrapper,
+      emitSessionContext!
+    );
 
     // Cmd+S should work
     await user.keyboard('{Meta>}s{/Meta}');
@@ -819,6 +890,7 @@ describe('Header - Guard Condition Interactions', () => {
       expect(openGitHubSyncModalSpy).toHaveBeenCalledTimes(1)
     );
 
+    unmount();
     cleanup();
   });
 });

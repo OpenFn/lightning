@@ -100,7 +100,11 @@ function FullScreenIDE({
   return (
     <div data-testid="ide">
       <div className="monaco-editor">
-        <div contentEditable data-testid="monaco-content">
+        <div
+          contentEditable
+          suppressContentEditableWarning
+          data-testid="monaco-content"
+        >
           Code editor
         </div>
       </div>

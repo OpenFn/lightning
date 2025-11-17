@@ -61,6 +61,7 @@ const TestShortcutComponent: FC<{
       // Save shortcut should NOT work in contentEditable
       const target = e.target as HTMLElement;
       const isInContentEditable =
+        target instanceof HTMLElement &&
         target.closest('[contenteditable="true"]') !== null;
       if (isInContentEditable) {
         return true;
@@ -82,6 +83,7 @@ const TestShortcutComponent: FC<{
 
       const target = e.target as HTMLElement;
       const isInContentEditable =
+        target instanceof HTMLElement &&
         target.closest('[contenteditable="true"]') !== null;
       if (isInContentEditable) {
         return true;
@@ -104,6 +106,7 @@ const TestShortcutComponent: FC<{
       // Check if we're in contentEditable
       const target = e.target as HTMLElement;
       const isInContentEditable =
+        target instanceof HTMLElement &&
         target.closest('[contenteditable="true"]') !== null;
 
       // If we're in contentEditable and it's not explicitly enabled, pass through
@@ -126,6 +129,7 @@ const TestShortcutComponent: FC<{
 
       const target = e.target as HTMLElement;
       const isInContentEditable =
+        target instanceof HTMLElement &&
         target.closest('[contenteditable="true"]') !== null;
 
       if (isInContentEditable && !enableOnContentEditable) {
@@ -162,6 +166,7 @@ const TestShortcutComponent: FC<{
 
       const target = e.target as HTMLElement;
       const isInContentEditable =
+        target instanceof HTMLElement &&
         target.closest('[contenteditable="true"]') !== null;
       if (isInContentEditable) {
         return true;
@@ -408,7 +413,17 @@ describe('ContentEditable keyboard shortcuts', () => {
         </TestShortcutComponent>
       );
 
-      await expectShortcutNotToFire('Enter', { metaKey: true }, mockRun);
+      const editable = document.querySelector(
+        '[data-testid="generic-editable"]'
+      ) as HTMLElement;
+      editable.focus();
+
+      await expectShortcutNotToFire(
+        'Enter',
+        { metaKey: true },
+        mockRun,
+        editable
+      );
     });
 
     test('save shortcut does NOT work in generic contentEditable', async () => {
