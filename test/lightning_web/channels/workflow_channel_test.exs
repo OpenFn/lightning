@@ -2309,11 +2309,11 @@ defmodule LightningWeb.WorkflowChannelTest do
       assert broadcast_template.name == "Test Template"
     end
 
-    test "successfully updates existing template as superuser", %{
+    test "successfully updates existing template as suport user", %{
       workflow: workflow,
       project: project
     } do
-      # Create a superuser
+      # Create a suport user
       superuser = insert(:user, support_user: true)
       insert(:project_user, project: project, user: superuser, role: :editor)
 
@@ -2336,9 +2336,6 @@ defmodule LightningWeb.WorkflowChannelTest do
           "positions" => %{},
           "workflow_id" => workflow.id
         })
-
-      # Small delay to ensure different timestamp
-      :timer.sleep(1100)
 
       # Update the template
       ref =
