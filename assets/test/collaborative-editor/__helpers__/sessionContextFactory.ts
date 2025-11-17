@@ -36,6 +36,7 @@ export const mockUserContext: UserContext = {
   last_name: 'User',
   email: 'test@example.com',
   email_confirmed: true,
+  support_user: false,
   inserted_at: '2024-01-15T10:30:00Z',
 };
 
@@ -72,6 +73,7 @@ export const mockAlternativeUserContext: UserContext = {
   last_name: 'Smith',
   email: 'jane@example.com',
   email_confirmed: false,
+  support_user: false,
   inserted_at: '2024-01-20T15:45:00Z',
 };
 
@@ -98,6 +100,7 @@ export interface SessionContextResponse {
   latest_snapshot_lock_version: number;
   project_repo_connection: ProjectRepoConnection | null;
   webhook_auth_methods: WebhookAuthMethod[];
+  workflow_template: any | null;
 }
 
 /**
@@ -111,6 +114,7 @@ export const mockSessionContextResponse: SessionContextResponse = {
   latest_snapshot_lock_version: 1,
   project_repo_connection: null,
   webhook_auth_methods: [],
+  workflow_template: null,
 };
 
 /**
@@ -124,6 +128,7 @@ export const mockUnauthenticatedSessionContext: SessionContextResponse = {
   latest_snapshot_lock_version: 1,
   project_repo_connection: null,
   webhook_auth_methods: [],
+  workflow_template: null,
 };
 
 /**
@@ -137,6 +142,7 @@ export const mockUpdatedSessionContext: SessionContextResponse = {
   latest_snapshot_lock_version: 2,
   project_repo_connection: null,
   webhook_auth_methods: [],
+  workflow_template: null,
 };
 
 // =============================================================================
@@ -294,6 +300,7 @@ export function createSessionContext(
           last_name: 'User',
           email: 'test@example.com',
           email_confirmed: true,
+          support_user: false,
           inserted_at: '2025-01-13T10:30:00Z',
           ...options.user,
         };
@@ -345,6 +352,7 @@ export function createSessionContext(
     latest_snapshot_lock_version: options.latest_snapshot_lock_version ?? 1,
     project_repo_connection,
     webhook_auth_methods: options.webhook_auth_methods ?? [],
+    workflow_template: null,
   };
 }
 
@@ -459,6 +467,7 @@ export function createMockUser(
     first_name: 'Test',
     last_name: 'User',
     email_confirmed: true,
+    support_user: false,
     inserted_at: '2025-01-13T10:30:00Z',
     ...overrides,
   };
