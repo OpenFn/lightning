@@ -17,6 +17,9 @@ and this project adheres to
 
 ### Added
 
+- Add workflow template publishing to collaborative editor
+  [#3921](https://github.com/OpenFn/lightning/issues/3921)
+
 ### Changed
 
 - Enable usage limit checks across the whole application
