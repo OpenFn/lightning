@@ -3721,12 +3721,12 @@ defmodule LightningWeb.WorkflowLive.Edit do
        })
        when is_binary(chat_id) do
     case Lightning.AiAssistant.get_session(chat_id) do
-      {:ok, session} ->
+      %Lightning.AiAssistant.ChatSession{} = session ->
         Lightning.AiAssistant.associate_workflow(session, workflow)
 
-      {:error, reason} ->
+      nil ->
         Logger.warning(
-          "Failed to associate workflow with chat session #{chat_id}: #{inspect(reason)}"
+          "Failed to associate workflow with chat session #{chat_id}: not found"
         )
     end
   end

@@ -239,6 +239,49 @@ defmodule Lightning.AiAssistant do
     |> handle_transaction_result()
   end
 
+  defp session_query(session_id, opts \\ []) do
+    job_id = Keyword.get(opts, :job_id)
+
+    query = from(s in ChatSession, where: s.id == ^session_id)
+
+    if job_id do
+      where(query, [s], s.job_id == ^job_id)
+    else
+      query
+    end
+  end
+
+  defp preload_session(session) do
+    session =
+      Repo.preload(session, [:user, messages: {session_messages_query(), :user}])
+
+    if session.session_type == "workflow_template" do
+      Repo.preload(session, :project)
+    else
+      session
+    end
+  end
+
+  @doc """
+  Gets a session by ID.
+
+  Returns the session or `nil` if not found.
+
+  ## Examples
+
+      iex> get_session(session_id)
+      %ChatSession{}
+
+      iex> get_session("nonexistent")
+      nil
+  """
+  def get_session(session_id) when is_binary(session_id) do
+    case session_query(session_id) |> Repo.one() do
+      nil -> nil
+      session -> preload_session(session)
+    end
+  end
+
   @doc """
   Retrieves a chat session by ID with all related data preloaded.
 
@@ -261,47 +304,47 @@ defmodule Lightning.AiAssistant do
 
   `Ecto.NoResultsError` if no session exists with the given ID.
   """
-  def get_session!(id) do
-    session =
-      ChatSession
-      |> Repo.get!(id)
-      |> Repo.preload([:user, messages: {session_messages_query(), :user}])
-
-    if session.session_type == "workflow_template" do
-      Repo.preload(session, :project)
-    else
-      session
-    end
+  def get_session!(session_id) when is_binary(session_id) do
+    session_query(session_id)
+    |> Repo.one!()
+    |> preload_session()
   end
 
   @doc """
   Gets a session scoped to a specific job.
 
-  Returns the session only if it belongs to the given job.
-  Raises `Ecto.NoResultsError` if the session doesn't exist or doesn't belong to the job.
+  Returns the session or `nil` if not found or doesn't belong to the job.
+
+  ## Examples
+
+      iex> get_session(session_id, job)
+      %ChatSession{}
+
+      iex> get_session(session_id, different_job)
+      nil
+  """
+  def get_session(session_id, %Job{id: job_id}) do
+    case session_query(session_id, job_id: job_id) |> Repo.one() do
+      nil -> nil
+      session -> preload_session(session)
+    end
+  end
+
+  @doc """
+  Gets a session scoped to a specific job, raising if not found.
 
   ## Examples
 
       iex> get_session!(session_id, job)
       %ChatSession{}
+
+      iex> get_session!(session_id, different_job)
+      ** (Ecto.NoResultsError)
   """
   def get_session!(session_id, %Job{id: job_id}) do
-    ChatSession
-    |> where([s], s.id == ^session_id and s.job_id == ^job_id)
+    session_query(session_id, job_id: job_id)
     |> Repo.one!()
-    |> Repo.preload([:user, messages: {session_messages_query(), :user}])
-  end
-
-  def get_session(id) do
-    case Repo.get(ChatSession, id) do
-      nil ->
-        {:error, :not_found}
-
-      session ->
-        {:ok,
-         session
-         |> Repo.preload([:user, messages: {session_messages_query(), :user}])}
-    end
+    |> preload_session()
   end
 
   defp session_messages_query do

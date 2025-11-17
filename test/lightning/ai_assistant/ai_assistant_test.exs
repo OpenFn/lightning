@@ -938,12 +938,12 @@ defmodule Lightning.AiAssistantTest do
     } do
       session = insert(:chat_session, user: user, job: job)
 
-      assert {:ok, retrieved_session} = AiAssistant.get_session(session.id)
+      assert retrieved_session = AiAssistant.get_session(session.id)
       assert retrieved_session.id == session.id
     end
 
-    test "returns {:error, :not_found} when not found" do
-      assert {:error, :not_found} = AiAssistant.get_session(Ecto.UUID.generate())
+    test "returns nil when not found" do
+      assert nil == AiAssistant.get_session(Ecto.UUID.generate())
     end
   end
 

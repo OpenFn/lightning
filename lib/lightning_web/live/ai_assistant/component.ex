@@ -328,7 +328,7 @@ defmodule LightningWeb.AiAssistant.Component do
     |> AiAssistant.retry_message()
     |> case do
       {:ok, {_message, _oban_job}} ->
-        {:ok, session} = AiAssistant.get_session(socket.assigns.session.id)
+        session = AiAssistant.get_session!(socket.assigns.session.id)
 
         {:noreply,
          socket
