@@ -332,60 +332,6 @@ export function Header({
           </div>
 
           <GitHubSyncModal />
-
-          <div className="w-5"></div>
-          <Menu as="div" className="relative ml-3">
-            <MenuButton
-              className="relative flex max-w-xs items-center
-            rounded-full focus-visible:outline-2
-            focus-visible:outline-offset-2
-            focus-visible:outline-indigo-600"
-            >
-              <span className="absolute -inset-1.5" />
-              <span className="sr-only">Open user menu</span>
-              <div
-                className="inline-flex items-center justify-center
-              align-middle"
-              >
-                <div className="size-8 rounded-full bg-gray-100">
-                  <div
-                    className="size-full flex items-center
-                  justify-center text-sm font-semibold text-gray-500"
-                  >
-                    {avatarInitials}
-                  </div>
-                </div>
-              </div>
-            </MenuButton>
-
-            <MenuItems
-              transition
-              className="absolute right-0 z-50 mt-2 w-48
-              origin-top-right rounded-md bg-white py-1 shadow-lg
-              outline outline-black/5 transition data-closed:scale-95
-              data-closed:transform data-closed:opacity-0
-              data-enter:duration-200 data-enter:ease-out
-              data-leave:duration-75 data-leave:ease-in"
-            >
-              {userNavigation.map(item => (
-                <MenuItem key={item.label}>
-                  <a
-                    href={item.url}
-                    className="block px-4 py-2 text-sm text-gray-700
-                    data-focus:bg-gray-100 data-focus:outline-hidden"
-                  >
-                    <span
-                      className={cn(
-                        item.icon,
-                        'w-5 h-5 mr-2 text-secondary-500'
-                      )}
-                    ></span>
-                    {item.label}
-                  </a>
-                </MenuItem>
-              ))}
-            </MenuItems>
-          </Menu>
         </div>
       </div>
     </>

@@ -90,15 +90,6 @@ function BreadcrumbContent({
 
   const breadcrumbElements = useMemo(() => {
     return [
-      <BreadcrumbLink href="/" icon="hero-home-mini" key="home">
-        Home
-      </BreadcrumbLink>,
-      <BreadcrumbLink href="/projects" key="projects">
-        Projects
-      </BreadcrumbLink>,
-      <BreadcrumbLink href={`/projects/${projectId}/w`} key="project">
-        {projectName}
-      </BreadcrumbLink>,
       <BreadcrumbLink href={`/projects/${projectId}/w`} key="workflows">
         Workflows
       </BreadcrumbLink>,
