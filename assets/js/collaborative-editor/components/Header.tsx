@@ -24,6 +24,7 @@ import {
 import { getAvatarInitials } from '../utils/avatar';
 
 import { ActiveCollaborators } from './ActiveCollaborators';
+import { AIButton } from './AIButton';
 import { Breadcrumbs } from './Breadcrumbs';
 import { Button } from './Button';
 import { EmailVerificationBanner } from './EmailVerificationBanner';
@@ -330,6 +331,8 @@ export function Header({
               />
             </div>
           </div>
+
+          <AIButton className="ml-2" />
 
           <GitHubSyncModal />
         </div>
