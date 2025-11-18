@@ -2,10 +2,104 @@ defmodule LightningWeb.LayoutComponents do
   @moduledoc false
   use LightningWeb, :html
 
-  import PetalComponents.Dropdown
   import PetalComponents.Avatar
 
   alias LightningWeb.Components.Menu
+
+  attr :current_user, Lightning.Accounts.User, required: true
+
+  def user_menu_dropdown(assigns) do
+    menu_id = "user-menu-#{:erlang.phash2(assigns.current_user.id)}"
+    assigns = assign(assigns, :menu_id, menu_id)
+
+    ~H"""
+    <div
+      class="relative w-full"
+      phx-click-away={Phoenix.LiveView.JS.hide(to: "##{@menu_id}")}
+      phx-window-keydown={Phoenix.LiveView.JS.hide(to: "##{@menu_id}")}
+      phx-key="Escape"
+    >
+      <button
+        class="w-full bg-white/10 hover:bg-white/20 rounded-lg px-3 py-2.5 text-left transition-colors focus:outline-none focus:ring-2 focus:ring-white/30 max-w-full"
+        phx-click={
+          Phoenix.LiveView.JS.toggle(
+            to: "##{@menu_id}",
+            in: "transition ease-out duration-100",
+            out: "transition ease-in duration-75"
+          )
+        }
+        type="button"
+        aria-haspopup="true"
+      >
+        <div class="flex items-center gap-2 min-w-0">
+          <div class="shrink-0">
+            <.avatar
+              size="sm"
+              name={
+                String.at(@current_user.first_name, 0) <>
+                  if is_nil(@current_user.last_name),
+                    do: "",
+                    else: String.at(@current_user.last_name, 0)
+              }
+            />
+          </div>
+          <div class="min-w-0 overflow-hidden flex-1">
+            <div class="text-sm font-medium text-white truncate">
+              {@current_user.first_name}
+              {if @current_user.last_name, do: " " <> @current_user.last_name}
+            </div>
+          </div>
+          <.icon name="hero-chevron-down" class="w-4 h-4 text-white/70 shrink-0" />
+        </div>
+      </button>
+      <div
+        id={@menu_id}
+        class="hidden absolute left-0 z-[9999] mt-2 w-56 origin-top-left divide-y divide-gray-100 rounded-md bg-white shadow-lg outline-1 outline-black/5"
+        role="menu"
+        aria-orientation="vertical"
+      >
+        <div class="px-4 py-3">
+          <p class="text-sm text-gray-700">Signed in as</p>
+          <p class="truncate text-sm font-medium text-gray-900">
+            {@current_user.email}
+          </p>
+        </div>
+        <div class="py-1">
+          <.link
+            navigate={~p"/profile"}
+            class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900"
+            role="menuitem"
+          >
+            User Profile
+          </.link>
+          <.link
+            navigate={~p"/credentials"}
+            class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900"
+            role="menuitem"
+          >
+            Credentials
+          </.link>
+          <.link
+            navigate={~p"/profile/tokens"}
+            class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900"
+            role="menuitem"
+          >
+            API Tokens
+          </.link>
+        </div>
+        <div class="py-1">
+          <.link
+            navigate={~p"/users/log_out"}
+            class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900"
+            role="menuitem"
+          >
+            Log out
+          </.link>
+        </div>
+      </div>
+    </div>
+    """
+  end
 
   def menu_items(assigns) do
     assigns =
@@ -67,26 +161,70 @@ defmodule LightningWeb.LayoutComponents do
   slot :description
   slot :inner_block
 
+  defp collect_breadcrumbs(assigns) do
+    # Add project breadcrumbs if project is scoped
+    crumbs =
+      if Map.get(assigns, :project) do
+        base_crumbs = [
+          {"Projects", "/projects"},
+          {assigns.project.name, "/projects/#{assigns.project.id}/w"}
+        ]
+
+        if assigns.project.parent_id &&
+             Ecto.assoc_loaded?(assigns.project.parent) do
+          [
+            {"Projects", "/projects"},
+            {assigns.project.parent.name,
+             "/projects/#{assigns.project.parent.id}/w"},
+            {assigns.project.name, "/projects/#{assigns.project.id}/w"}
+          ]
+        else
+          base_crumbs
+        end
+      else
+        []
+      end
+
+    # Add manual breadcrumbs
+    crumbs ++ Map.get(assigns, :breadcrumbs, [])
+  end
+
   def header(assigns) do
     # TODO - remove title_height once we confirm that :description is unused
     title_height =
-      if Enum.any?(assigns[:description]) do
+      if assigns[:description] && assigns[:description] != [] do
         "mt-4 h-10"
       else
         "h-20"
+      end
+
+    all_crumbs = collect_breadcrumbs(assigns)
+
+    # We want max 2 items total (including the page title which is always shown)
+    # So we can show at most 1 breadcrumb. If there are more, hide the earlier ones
+    {hidden_crumbs, visible_crumbs} =
+      if length(all_crumbs) > 1 do
+        # Show only the last breadcrumb, hide all earlier ones
+        {Enum.take(all_crumbs, length(all_crumbs) - 1),
+         Enum.take(all_crumbs, -1)}
+      else
+        {[], all_crumbs}
       end
 
     # description has the same title class except for height and font
     assigns =
       assign(assigns,
         title_class: "max-w-7xl mx-auto sm:px-6 lg:px-8",
-        title_height: "py-6 flex items-center " <> title_height
+        title_height: "py-6 flex items-center " <> title_height,
+        hidden_crumbs: hidden_crumbs,
+        visible_crumbs: visible_crumbs
       )
 
     ~H"""
     <LightningWeb.Components.Common.banner
       :if={
-        Lightning.Config.check_flag?(:require_email_verification) && @current_user &&
+        Lightning.Config.check_flag?(:require_email_verification) &&
+          assigns[:current_user] &&
           !@current_user.confirmed_at
       }
       id="account-confirmation-alert"
@@ -105,55 +243,28 @@ defmodule LightningWeb.LayoutComponents do
       data-testid="top-bar"
     >
       <div class={[@title_class, @title_height]}>
-        <%= if @current_user do %>
+        <%= if assigns[:current_user] do %>
           <nav class="flex" aria-label="Breadcrumb">
             <ol role="list" class="flex items-center space-x-2">
-              <li>
-                <div>
-                  <a href="/" class="text-gray-400 hover:text-gray-500">
-                    <svg
-                      class="h-5 w-5 flex-shrink-0"
-                      viewBox="0 0 20 20"
-                      fill="currentColor"
-                      aria-hidden="true"
-                    >
-                      <path
-                        fill-rule="evenodd"
-                        d="M9.293 2.293a1 1 0 011.414 0l7 7A1 1 0 0117 11h-1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-3a1 1 0 00-1-1H9a1 1 0 00-1 1v3a1 1 0 01-1 1H5a1 1 0 01-1-1v-6H3a1 1 0 01-.707-1.707l7-7z"
-                        clip-rule="evenodd"
-                      />
-                    </svg>
-                    <span class="sr-only">Home</span>
-                  </a>
-                </div>
-              </li>
-
-              <%!-- If a project is scoped, we automatically generate the base crumbs --%>
-              <%= if @project do %>
-                <.breadcrumb path="/projects">
-                  <:label>Projects</:label>
-                </.breadcrumb>
-
-                <%= if @project.parent_id && Ecto.assoc_loaded?(@project.parent) do %>
-                  <.breadcrumb path={"/projects/#{@project.parent.id}/w"}>
-                    <:label>{@project.parent.name}</:label>
-                  </.breadcrumb>
-                <% end %>
-
-                <.breadcrumb path={"/projects/#{@project.id}/w"}>
-                  <:label>{@project.name}</:label>
-                </.breadcrumb>
+              <%!-- Show ellipsis dropdown if there are hidden breadcrumbs --%>
+              <%= if @hidden_crumbs != [] do %>
+                <.breadcrumb_dropdown items={@hidden_crumbs} />
               <% end %>
 
-              <%!-- If breamcrumbs are passed manually, we generate those --%>
-              <%= for {label, path} <- @breadcrumbs do %>
-                <.breadcrumb path={path}>
+              <%!-- Show visible breadcrumbs --%>
+              <%= for {{label, path}, index} <- Enum.with_index(@visible_crumbs) do %>
+                <.breadcrumb
+                  path={path}
+                  show_separator={(@hidden_crumbs != [] and index == 0) or index > 0}
+                >
                   <:label>{label}</:label>
                 </.breadcrumb>
               <% end %>
 
               <%!-- And finally, we always show the page title --%>
-              <.breadcrumb>
+              <.breadcrumb show_separator={
+                @hidden_crumbs != [] or @visible_crumbs != []
+              }>
                 <:label>
                   {if assigns[:title], do: render_slot(@title)}
                 </:label>
@@ -167,45 +278,6 @@ defmodule LightningWeb.LayoutComponents do
         <% end %>
         <div class="grow"></div>
         {if assigns[:inner_block], do: render_slot(@inner_block)}
-        <%= if assigns[:current_user] do %>
-          <div class="w-5" />
-          <.dropdown js_lib="live_view_js">
-            <:trigger_element>
-              <div class="inline-flex items-center justify-center w-full align-middle focus:outline-none">
-                <.avatar
-                  size="sm"
-                  name={
-                    String.at(@current_user.first_name, 0) <>
-                      if is_nil(@current_user.last_name),
-                        do: "",
-                        else: String.at(@current_user.last_name, 0)
-                  }
-                />
-                <.icon
-                  name="hero-chevron-down"
-                  class="w-4 h-4 ml-1 -mr-1 text-secondary-400 dark:text-secondary-100"
-                />
-              </div>
-            </:trigger_element>
-            <.dropdown_menu_item link_type="live_redirect" to={~p"/profile"}>
-              <.icon name="hero-user-circle" class="w-5 h-5 text-secondary-500" />
-              User Profile
-            </.dropdown_menu_item>
-            <.dropdown_menu_item link_type="live_redirect" to={~p"/credentials"}>
-              <.icon name="hero-key" class="w-5 h-5 text-secondary-500" />
-              Credentials
-            </.dropdown_menu_item>
-            <.dropdown_menu_item link_type="live_redirect" to={~p"/profile/tokens"}>
-              <.icon name="hero-key" class="w-5 h-5 text-secondary-500" /> API Tokens
-            </.dropdown_menu_item>
-            <.dropdown_menu_item link_type="live_redirect" to={~p"/users/log_out"}>
-              <.icon
-                name="hero-arrow-right-on-rectangle"
-                class="w-5 h-5 text-secondary-500"
-              /> Log out
-            </.dropdown_menu_item>
-          </.dropdown>
-        <% end %>
       </div>
     </div>
     """
@@ -242,35 +314,96 @@ defmodule LightningWeb.LayoutComponents do
     """
   end
 
+  attr :items, :list, required: true
+
+  def breadcrumb_dropdown(assigns) do
+    dropdown_id = "breadcrumb-dropdown-#{:erlang.phash2(assigns.items)}"
+    assigns = assign(assigns, :dropdown_id, dropdown_id)
+
+    ~H"""
+    <li>
+      <div class="flex items-center">
+        <div
+          class="relative"
+          phx-click-away={Phoenix.LiveView.JS.hide(to: "##{@dropdown_id}")}
+          phx-window-keydown={Phoenix.LiveView.JS.hide(to: "##{@dropdown_id}")}
+          phx-key="Escape"
+        >
+          <button
+            class="flex items-center text-sm font-medium text-gray-500 hover:text-gray-700"
+            phx-click={
+              Phoenix.LiveView.JS.toggle(
+                to: "##{@dropdown_id}",
+                in: "transition ease-out duration-100",
+                out: "transition ease-in duration-75"
+              )
+            }
+            type="button"
+            aria-haspopup="true"
+          >
+            <.icon name="hero-ellipsis-horizontal" class="h-5 w-5" />
+          </button>
+          <div
+            id={@dropdown_id}
+            class="hidden absolute left-0 z-[9999] mt-2 w-48 origin-top-left rounded-md bg-white shadow-lg outline-1 outline-black/5"
+            role="menu"
+          >
+            <div class="py-1">
+              <%= for {label, path} <- @items do %>
+                <.link
+                  patch={path}
+                  class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                  role="menuitem"
+                >
+                  {label}
+                </.link>
+              <% end %>
+            </div>
+          </div>
+        </div>
+      </div>
+    </li>
+    """
+  end
+
   attr :path, :string, default: nil
+  attr :show_separator, :boolean, default: true
   slot :label
 
   def breadcrumb(assigns) do
     ~H"""
     <li>
       <div class="flex items-center">
-        <svg
-          class="h-5 w-5 flex-shrink-0 text-gray-400"
-          viewBox="0 0 20 20"
-          fill="currentColor"
-          aria-hidden="true"
-        >
-          <path
-            fill-rule="evenodd"
-            d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z"
-            clip-rule="evenodd"
-          />
-        </svg>
+        <%= if @show_separator do %>
+          <svg
+            class="h-5 w-5 shrink-0 text-gray-400"
+            viewBox="0 0 20 20"
+            fill="currentColor"
+            aria-hidden="true"
+          >
+            <path
+              fill-rule="evenodd"
+              d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z"
+              clip-rule="evenodd"
+            />
+          </svg>
+        <% end %>
         <%= if @path do %>
           <.link
             patch={@path}
-            class="flex ml-2 text-sm font-medium text-gray-500 hover:text-gray-700"
+            class={[
+              "flex text-sm font-medium text-gray-500 hover:text-gray-700",
+              @show_separator && "ml-2"
+            ]}
             aria-current="page"
           >
             {if assigns[:label], do: render_slot(@label)}
           </.link>
         <% else %>
-          <span class="flex items-center ml-2 text-sm font-medium text-gray-500">
+          <span class={[
+            "flex items-center text-sm font-medium text-gray-500",
+            @show_separator && "ml-2"
+          ]}>
             {if assigns[:label], do: render_slot(@label)}
           </span>
         <% end %>

@@ -23,6 +23,10 @@ and this project adheres to
   email volume [#3517](https://github.com/OpenFn/lightning/issues/3517)
 - Simpler "disabled" state for workflows, still show last mod
   [#3962](https://github.com/OpenFn/lightning/issues/3962)
+- Move user profile to top left corner
+  [#3997](https://github.com/OpenFn/lightning/issues/3997)
+- Collapse breadcrumbs when there are more than 2 of them
+  [#3997](https://github.com/OpenFn/lightning/issues/3997)
 
 ### Fixed
 
