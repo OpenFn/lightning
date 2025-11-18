@@ -137,6 +137,15 @@ vi.mock('../../../../js/collaborative-editor/hooks/useSessionContext', () => ({
   useProjectRepoConnection: () => undefined,
   useLatestSnapshotLockVersion: () => 1,
   useIsNewWorkflow: () => false,
+  useUser: () => ({
+    id: 'user-1',
+    first_name: 'Test',
+    last_name: 'User',
+    email: 'test@example.com',
+  }),
+  useAppConfig: () => ({
+    ai_enabled: false,
+  }),
 }));
 
 // Mock workflow hooks
@@ -180,6 +189,10 @@ vi.mock('../../../../js/collaborative-editor/hooks/useWorkflow', () => ({
     isReadOnly: false,
     tooltipMessage: '',
   }),
+  useWorkflowSettingsErrors: () => ({
+    hasErrors: false,
+    errors: [],
+  }),
   useCurrentJob: () => ({
     job: {
       id: 'job-1',
@@ -190,6 +203,14 @@ vi.mock('../../../../js/collaborative-editor/hooks/useWorkflow', () => ({
       keychain_credential_id: null,
     },
     ytext: mockYText,
+  }),
+  useNodeSelection: () => ({
+    currentNode: { node: null, type: null, id: null },
+    selectNode: vi.fn(),
+  }),
+  useWorkflowEnabled: () => ({
+    enabled: true,
+    setEnabled: vi.fn(),
   }),
   useWorkflowActions: () => ({
     selectJob: vi.fn(),
@@ -288,8 +309,21 @@ vi.mock('../../../../js/collaborative-editor/hooks/useRunRetry', () => ({
 vi.mock('../../../../js/collaborative-editor/hooks/useUI', () => ({
   useUICommands: () => ({
     openGitHubSyncModal: vi.fn(),
+    openRunPanel: vi.fn(),
+    closeRunPanel: vi.fn(),
   }),
+  useIsRunPanelOpen: () => false,
+  useIsGitHubSyncModalOpen: () => false,
+  useRunPanelContext: () => null,
 }));
+
+// Mock GitHubSyncModal
+vi.mock(
+  '../../../../js/collaborative-editor/components/GitHubSyncModal',
+  () => ({
+    GitHubSyncModal: () => null,
+  })
+);
 
 // Mock react-resizable-panels with ref support
 vi.mock('react-resizable-panels', async () => {
