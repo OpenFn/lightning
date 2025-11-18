@@ -9,22 +9,6 @@
         <div class="app-logo-container w-full h-20 flex items-center justify-center px-3">
           <%= if assigns[:current_user] do %>
             <LayoutComponents.user_menu_dropdown current_user={@current_user} />
-          <% else %>
-            <a href="/" class="flex items-center justify-center">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 45 36"
-                class="h-12 w-12"
-              >
-                <path
-                  fill="#fff"
-                  fill-rule="evenodd"
-                  d="m22.465 0 1.95 3.372h-6.43L22.465 0ZM15.84 7.008h13.25l2.084 3.609H13.757l2.083-3.609Zm-3.89 7.218h21.029l2.084 3.608H9.866l2.083-3.608ZM28.95 32.054a1.872 1.872 0 0 0 1.807-1.384 1.83 1.83 0 0 0-.499-1.899 1.917 1.917 0 0 0-1.94-.487 1.877 1.877 0 0 0-1.412 1.775 1.862 1.862 0 0 0 2.043 1.995Zm-11.976 0a1.872 1.872 0 0 0 1.806-1.384 1.83 1.83 0 0 0-.498-1.899 1.917 1.917 0 0 0-1.94-.487 1.877 1.877 0 0 0-1.412 1.775 1.862 1.862 0 0 0 2.044 1.995Zm19.16-10.728H.82l1.563 2.706H22.53l12.042 6.951h5.607l-4.045-9.657ZM6.116 24.688a1.872 1.872 0 0 0 1.807-1.384 1.829 1.829 0 0 0-.499-1.899 1.917 1.917 0 0 0-1.94-.487A1.877 1.877 0 0 0 4.072 22.7a1.862 1.862 0 0 0 2.044 1.988Z"
-                  clip-rule="evenodd"
-                />
-              </svg>
-            </a>
           <% end %>
         </div>
         <%= unless assigns[:is_first_setup] do %>
