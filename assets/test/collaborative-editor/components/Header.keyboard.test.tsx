@@ -14,16 +14,16 @@
 
 import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { HotkeysProvider } from 'react-hotkeys-hook';
 import type React from 'react';
-import { beforeEach, describe, expect, test, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 
 import { Header } from '../../../js/collaborative-editor/components/Header';
 import { SessionContext } from '../../../js/collaborative-editor/contexts/SessionProvider';
 import { StoreContext } from '../../../js/collaborative-editor/contexts/StoreProvider';
+import { KeyboardProvider } from '../../../js/collaborative-editor/keyboard';
+import type { CreateSessionContextOptions } from '../__helpers__/sessionContextFactory';
 import { simulateStoreProviderWithConnection } from '../__helpers__/storeProviderHelpers';
 import { createMinimalWorkflowYDoc } from '../__helpers__/workflowStoreHelpers';
-import type { CreateSessionContextOptions } from '../__helpers__/sessionContextFactory';
 
 // =============================================================================
 // TEST MOCKS
@@ -127,13 +127,13 @@ async function createTestSetup(options: WrapperOptions = {}) {
     'openGitHubSyncModal'
   );
 
-  // Wrapper with HotkeysProvider (keyboard-specific)
+  // Wrapper with KeyboardProvider (keyboard-specific)
   const wrapper = ({ children }: { children: React.ReactNode }) => (
-    <HotkeysProvider initiallyActiveScopes={['*']}>
+    <KeyboardProvider>
       <SessionContext.Provider value={{ sessionStore, isNewWorkflow: false }}>
         <StoreContext.Provider value={stores}>{children}</StoreContext.Provider>
       </SessionContext.Provider>
-    </HotkeysProvider>
+    </KeyboardProvider>
   );
 
   return {

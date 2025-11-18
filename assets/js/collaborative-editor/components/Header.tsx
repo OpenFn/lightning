@@ -20,6 +20,9 @@ import {
   useWorkflowSettingsErrors,
   useWorkflowState,
 } from '../hooks/useWorkflow';
+import { useKeyboardShortcut } from '../keyboard';
+import { getAvatarInitials } from '../utils/avatar';
+
 import { ActiveCollaborators } from './ActiveCollaborators';
 import { AIButton } from './AIButton';
 import { Breadcrumbs } from './Breadcrumbs';
@@ -241,19 +244,13 @@ export function Header({
     return <ShortcutKeys keys={['mod', 'enter']} />; // Shortcut applies
   }, [canRun, runTooltipMessage, isRunPanelOpen]);
 
-  useHotkeys(
-    'ctrl+s,meta+s',
-    event => {
-      event.preventDefault();
-      if (canSave) {
-        void saveWorkflow();
-      }
+  useKeyboardShortcut(
+    'Control+s, Meta+s',
+    () => {
+      void saveWorkflow();
     },
-    {
-      enabled: true,
-      enableOnFormTags: true,
-    },
-    [saveWorkflow, canSave]
+    0,
+    { enabled: canSave }
   );
 
   useHotkeys(
