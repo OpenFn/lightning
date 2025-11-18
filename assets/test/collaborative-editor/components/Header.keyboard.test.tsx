@@ -279,6 +279,55 @@ describe('Header - Save Workflow (Cmd+S / Ctrl+S)', () => {
     cleanup();
   });
 
+  test('Cmd+S responds to dynamic canSave changes (enable → disable → enable)', async () => {
+    const user = userEvent.setup();
+
+    // Start with canSave = true
+    const { wrapper, emitSessionContext, saveWorkflowSpy, cleanup } =
+      await createTestSetup({
+        permissions: { can_edit_workflow: true, can_run_workflow: true },
+      });
+
+    const { unmount } = await renderAndWaitForReady(
+      wrapper,
+      emitSessionContext!
+    );
+
+    // Phase 1: canSave = true, shortcut should work
+    await user.keyboard('{Meta>}s{/Meta}');
+    await waitFor(() => expect(saveWorkflowSpy).toHaveBeenCalledTimes(1));
+
+    saveWorkflowSpy.mockClear();
+
+    // Phase 2: Change to canSave = false (simulate permission loss)
+    await act(async () => {
+      emitSessionContext!({
+        permissions: { can_edit_workflow: false, can_run_workflow: true },
+      });
+      await new Promise(resolve => setTimeout(resolve, 100));
+    });
+
+    // Shortcut should NOT work
+    await user.keyboard('{Meta>}s{/Meta}');
+    await new Promise(resolve => setTimeout(resolve, 150));
+    expect(saveWorkflowSpy).not.toHaveBeenCalled();
+
+    // Phase 3: Change back to canSave = true
+    await act(async () => {
+      emitSessionContext!({
+        permissions: { can_edit_workflow: true, can_run_workflow: true },
+      });
+      await new Promise(resolve => setTimeout(resolve, 100));
+    });
+
+    // Shortcut should work again
+    await user.keyboard('{Meta>}s{/Meta}');
+    await waitFor(() => expect(saveWorkflowSpy).toHaveBeenCalledTimes(1));
+
+    unmount();
+    cleanup();
+  });
+
   test('Cmd+S does NOT call saveWorkflow when viewing old snapshot', async () => {
     const user = userEvent.setup();
     const { wrapper, emitSessionContext, saveWorkflowSpy, cleanup } =

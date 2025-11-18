@@ -33,6 +33,7 @@ import {
   useRef,
   useEffect,
   useCallback,
+  useMemo,
   type ReactNode,
 } from 'react';
 import { tinykeys } from 'tinykeys';
@@ -233,6 +234,9 @@ export function useKeyboardShortcut(
     optionsRef.current = options;
   }, [options]);
 
+  // Serialize options for shallow comparison
+  const serializedOptions = useMemo(() => JSON.stringify(options), [options]);
+
   useEffect(() => {
     return register(
       combos,
@@ -247,5 +251,5 @@ export function useKeyboardShortcut(
             options: optionsRef.current,
           }
     );
-  }, [combos, priority, register]);
+  }, [combos, priority, serializedOptions, register]);
 }
