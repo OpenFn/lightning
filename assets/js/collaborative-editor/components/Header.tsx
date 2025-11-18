@@ -3,7 +3,6 @@ import { useCallback, useMemo } from 'react';
 import { useHotkeys } from 'react-hotkeys-hook';
 
 import { useURLState } from '../../react/lib/use-url-state';
-import { cn } from '../../utils/cn';
 import { buildClassicalEditorUrl } from '../../utils/editorUrlConversion';
 import {
   useIsNewWorkflow,
@@ -21,8 +20,6 @@ import {
   useWorkflowSettingsErrors,
   useWorkflowState,
 } from '../hooks/useWorkflow';
-import { getAvatarInitials } from '../utils/avatar';
-
 import { ActiveCollaborators } from './ActiveCollaborators';
 import { AIButton } from './AIButton';
 import { Breadcrumbs } from './Breadcrumbs';
@@ -33,17 +30,6 @@ import { Switch } from './inputs/Switch';
 import { ReadOnlyWarning } from './ReadOnlyWarning';
 import { ShortcutKeys } from './ShortcutKeys';
 import { Tooltip } from './Tooltip';
-
-const userNavigation = [
-  { label: 'User Profile', url: '/profile', icon: 'hero-user-circle' },
-  { label: 'Credentials', url: '/credentials', icon: 'hero-key' },
-  { label: 'API Tokens', url: '/profile/tokens', icon: 'hero-key' },
-  {
-    label: 'Log out',
-    url: '/users/log_out',
-    icon: 'hero-arrow-right-on-rectangle',
-  },
-];
 
 /**
  * Save button component - visible in React DevTools
@@ -174,11 +160,19 @@ export function Header({
   projectId,
   workflowId,
   isRunPanelOpen = false,
+  adaptorDisplay,
+  onRunClick,
+  canRun: canRunProp,
+  runTooltipMessage: runTooltipMessageProp,
 }: {
   children: React.ReactNode[];
   projectId?: string;
   workflowId?: string;
   isRunPanelOpen?: boolean;
+  adaptorDisplay?: React.ReactNode;
+  onRunClick?: () => void;
+  canRun?: boolean;
+  runTooltipMessage?: string;
 }) {
   const { updateSearchParams } = useURLState();
   const { selectNode } = useNodeSelection();
@@ -187,7 +181,8 @@ export function Header({
   const { canSave, tooltipMessage } = useCanSave();
   const triggers = useWorkflowState(state => state.triggers);
   const firstTriggerId = triggers[0]?.id;
-  const { canRun, tooltipMessage: runTooltipMessage } = useCanRun();
+  const { canRun: canRunDefault, tooltipMessage: runTooltipMessageDefault } =
+    useCanRun();
   const { openRunPanel, openGitHubSyncModal } = useUICommands();
   const repoConnection = useProjectRepoConnection();
 
@@ -203,12 +198,23 @@ export function Header({
     latestSnapshotLockVersion !== null &&
     workflow.lock_version !== latestSnapshotLockVersion;
 
+  // Use IDE-provided handlers if available, otherwise use Canvas default
+  const canRun = canRunProp !== undefined ? canRunProp : canRunDefault;
+  const runTooltipMessage =
+    runTooltipMessageProp !== undefined
+      ? runTooltipMessageProp
+      : runTooltipMessageDefault;
+
   const handleRunClick = useCallback(() => {
-    if (firstTriggerId) {
+    if (onRunClick) {
+      // IDE context: use provided handler
+      onRunClick();
+    } else if (firstTriggerId) {
+      // Canvas context: open run panel with first trigger
       selectNode(firstTriggerId);
       openRunPanel({ triggerId: firstTriggerId });
     }
-  }, [firstTriggerId, openRunPanel, selectNode]);
+  }, [onRunClick, firstTriggerId, openRunPanel, selectNode]);
 
   // Compute Run button tooltip content
   const runButtonTooltip = useMemo(() => {
@@ -246,9 +252,7 @@ export function Header({
     [openGitHubSyncModal, canSave, repoConnection]
   );
 
-  const user = useUser();
   const isNewWorkflow = useIsNewWorkflow();
-  const avatarInitials = getAvatarInitials(user);
 
   return (
     <>
@@ -257,6 +261,7 @@ export function Header({
       <div className="flex-none bg-white shadow-xs border-b border-gray-200 relative z-50">
         <div className="mx-auto sm:px-6 lg:px-8 py-6 flex items-center h-20 text-sm">
           <Breadcrumbs>{children}</Breadcrumbs>
+          {adaptorDisplay && <div className="ml-3">{adaptorDisplay}</div>}
           <ReadOnlyWarning className="ml-3" />
           {projectId && workflowId && (
             <a
