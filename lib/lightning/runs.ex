@@ -262,6 +262,9 @@ defmodule Lightning.Runs do
   end
 
   def append_run_log(run, params, scrubber \\ nil) do
+    %{"message" => message, "run_id" => run_id, "timestamp" => timestamp} =
+      params
+
     LogLine.new(run, params, scrubber)
     |> Ecto.Changeset.validate_change(:step_id, fn _field, step_id ->
       if is_nil(step_id) do
@@ -276,10 +279,25 @@ defmodule Lightning.Runs do
         end
       end
     end)
+    |> tap(fn _ ->
+      IO.puts(
+        "RUN LOG B1 [#{run_id}] (#{DateTime.from_unix!(String.to_integer(timestamp), :microsecond)}) <#{message}> at #{DateTime.utc_now()}"
+      )
+    end)
     |> Repo.insert()
+    |> tap(fn _ ->
+      IO.puts(
+        "RUN LOG B2 [#{run_id}] (#{DateTime.from_unix!(String.to_integer(timestamp), :microsecond)}) <#{message}> at #{DateTime.utc_now()}"
+      )
+    end)
     |> case do
       {:ok, log_line} ->
         Events.log_appended(log_line)
+
+        IO.puts(
+          "RUN LOG B3 [#{run_id}] (#{DateTime.from_unix!(String.to_integer(timestamp), :microsecond)}) <#{message}> at #{DateTime.utc_now()}"
+        )
+
         {:ok, log_line}
 
       {:error, changeset} ->

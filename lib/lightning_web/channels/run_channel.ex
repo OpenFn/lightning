@@ -213,6 +213,13 @@ defmodule LightningWeb.RunChannel do
   end
 
   def handle_in("run:log", payload, socket) do
+    %{"message" => message, "run_id" => run_id, "timestamp" => timestamp} =
+      payload
+
+    IO.puts(
+      "RUN LOG A1 [#{run_id}] (#{DateTime.from_unix!(String.to_integer(timestamp), :microsecond)}) <#{message}> at #{DateTime.utc_now()}"
+    )
+
     %{run: run, scrubber: scrubber} = socket.assigns
 
     case Runs.append_run_log(run, payload, scrubber) do
@@ -220,6 +227,10 @@ defmodule LightningWeb.RunChannel do
         reply_with(socket, {:error, changeset})
 
       {:ok, log_line} ->
+        IO.puts(
+          "RUN LOG A2 [#{run_id}] (#{DateTime.from_unix!(String.to_integer(timestamp), :microsecond)}) <#{message}> at #{DateTime.utc_now()}"
+        )
+
         reply_with(socket, {:ok, %{log_line_id: log_line.id}})
     end
   end
