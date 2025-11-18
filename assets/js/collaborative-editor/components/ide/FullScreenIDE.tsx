@@ -659,20 +659,6 @@ export function FullScreenIDE({
     }
   };
 
-  // DEBUG: Log run/retry state
-  console.log('[FullScreenIDE] Run/Retry state:', {
-    isRetryable,
-    isSubmitting,
-    runIsProcessing,
-    canRunSnapshot,
-    canRunFromHook,
-    selectedTab,
-    selectedDataclipState,
-    customBody,
-    finalCanRun:
-      canRunSnapshot && canRunFromHook && !isSubmitting && !runIsProcessing,
-  });
-
   // Build adaptor display with version dropdown for IDE Header
   const adaptorDisplay = currentJob ? (
     <div className="flex items-center gap-3">
