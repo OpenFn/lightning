@@ -1,3 +1,5 @@
+import { cn } from '#/utils/cn';
+
 import { Tooltip } from './Tooltip';
 
 interface AIButtonProps {
@@ -20,7 +22,13 @@ export function AIButton({
         type="button"
         onClick={onClick}
         disabled={disabled}
-        className={`rounded-full bg-primary-600 p-2 text-white shadow-xs hover:bg-primary-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600 disabled:opacity-50 disabled:cursor-not-allowed ${className}`}
+        className={cn(
+          'rounded-full bg-primary-600 p-2 text-white shadow-xs',
+          'hover:bg-primary-500',
+          'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600',
+          'disabled:opacity-50 disabled:cursor-not-allowed',
+          className
+        )}
       >
         <span
           className="hero-chat-bubble-left-right size-5"
