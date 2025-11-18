@@ -369,34 +369,6 @@ export function FullScreenIDE({
     }
   }, [jobIdFromURL, selectJob]);
 
-  // Reset input panel when job changes (unless there's a matching run step)
-  useEffect(() => {
-    if (!jobIdFromURL) return;
-
-    // If there's no run being followed, reset to empty
-    if (!followRunId) {
-      setSelectedDataclipState(null);
-      setSelectedTab('empty');
-      setCustomBody('');
-      setManuallyUnselectedDataclip(false);
-      return;
-    }
-
-    // If there's a run but no matching step for this job, reset to empty
-    // The auto-select logic in the other effect will handle selecting the dataclip if there IS a match
-    if (currentRun && currentRun.steps) {
-      const hasMatchingStep = currentRun.steps.some(
-        s => s.job_id === jobIdFromURL
-      );
-      if (!hasMatchingStep) {
-        setSelectedDataclipState(null);
-        setSelectedTab('empty');
-        setCustomBody('');
-        setManuallyUnselectedDataclip(false);
-      }
-    }
-  }, [jobIdFromURL, followRunId, currentRun]);
-
   useEffect(() => {
     if (!runIdFromURL || !provider) {
       runStore._disconnectFromRun();
