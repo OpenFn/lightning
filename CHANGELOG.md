@@ -26,6 +26,8 @@ and this project adheres to
 
 ### Fixed
 
+- Fix flickering of active collaborator icons between states(active, inactive,
+  unavailable) [#3931](https://github.com/OpenFn/lightning/issues/3931)
 - Fix ghost edges blocking saves and breaking autolayout when deleting jobs in
   collaborative editor [#3983](https://github.com/OpenFn/lightning/issues/3983)
 - Fix tooltip styling inconsistencies in collaborative editor
