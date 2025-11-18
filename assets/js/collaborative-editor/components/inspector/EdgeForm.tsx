@@ -1,5 +1,5 @@
 import { useStore } from '@tanstack/react-form';
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 
 import {
   useWorkflowActions,
@@ -30,7 +30,10 @@ export function EdgeForm({ edge }: EdgeFormProps) {
   // Initialize form
   const form = useAppForm(
     {
-      defaultValues: edge,
+      defaultValues: {
+        ...edge,
+        condition_expression: edge.condition_expression || '',
+      },
       listeners: {
         onChange: ({ formApi }) => {
           if (edge.id) {
@@ -96,6 +99,13 @@ export function EdgeForm({ edge }: EdgeFormProps) {
     /(\bimport\b|\brequire\b|\bprocess\b|\bawait\b|\beval\b)/.test(
       conditionExpression
     );
+
+  // Trigger validation when switching to js_expression
+  useEffect(() => {
+    if (conditionType === 'js_expression') {
+      form.validateField('condition_expression', 'change');
+    }
+  }, [conditionType, form]);
 
   return (
     <div className="px-6 py-6 space-y-4">
