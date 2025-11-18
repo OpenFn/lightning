@@ -1,0 +1,73 @@
+---
+id: register-user
+title: "Register a new user"
+description: "Creates a new user account. Self-registration may be disabled on some"
+sidebar_label: "Register a new user"
+hide_title: true
+hide_table_of_contents: true
+api: eJy1Vt1v2zYQ/1cO3MsKKLa77WHQ09yiLbIFjZGmGIY4SM7SWWJDkSx5iuMa/t+Ho2RbroesQzG/mCLv+373sVGMVVT5jbqiSkcOyNpZdZupkmIRtE+fuXodCJkiIFhaQRspABaFay2P4AOZ5VkYsEODa1gQlDriwlAJzkJ0Dc2ttpHRFhRHc6sy5Tx1HOelylUngsLHSEFlKlLRBs1rld/cZirQ55Yiv3LlWuWb9KkDlSrn0FKmCmeZLMsTem90kcSOP0WxfqNiUVODcuK1J5Urt/hEBatsIOhGUYPaqEx5jHHlQqkytdQh8p3FhlSmDO7Ot5nyQaxnTVHEdqwH+ZGDtpUIcKFBVnlPsR1If456YEKj7QXZimuV/7o9suhEwHZo4+nrNlOs2ciVxPgo49utPAeK3tnY+fTT5KX8HQNBGGGXKSohtkVBMS5bY9bqO/JwHE4B2L9T6edj2La6lJD8h9x8R3AzpW2kwFTeIT+rrUSmM9YNnWQkZSEloiGunRSFdzE5jpJ/NUavxxKcON7lIFVKeKQgVbxRbTAqVzWzj/l4jN6PnCe7tCMXxIjjZM6CK9silWwnQ22zoYh8PDauQFO7yPkvk8nkRMKFPENJj2Scb8jyXtDtoYI/SNa7lL0iDBSmrXizD5GoEjcSmcrVIhGprD+83QXu9z+vTwyYzs4BW67Jcg82aKO2FXSagN0D2TiCd2Sl1xBgdwXL4BpYuzakbja3PrilNgTaAtcEF7qq2YqgAY6la0l2BM5Xh4b05gkbb2jQBxKAf6PuflS4ZthVhpgY4O1wO4DZEbyWLgWtB8zBwunsXGVKINDF5OVoMvqHVO3pdQS0ILiA6NpQEKxceFgatwJvkAWosHQBKvdIwUpWhaEE6+xZChPHuWUHjXskqAkN1+k9tuGR1lAiIyyIVyQK1pGpiSO4rnUUS8EH96hLinKoAjYNsi7mFlMfARGLFiuSZ6n6mO2tixkUgUpJNZqYJZ2Ns5pdOHhAT1S04rLMmLn94QeYHsFDLqfGJFPIlt5pca8fA98EpXNbmLakDjzT2bnEQhDVI0fUuaC/dBJqwpJCLlrv7+/n9ug134n+6/Lj1d10dn53ffnHm/c96dyKjZ1WKNDKSK16GJdf4Re+Eb4pIFdSBxe60axttdPTD9gIGAhimzquZCMVjemJR/C6puIBdnOidy8muAjl3CZSELBK1Q60zrDSdp+CCx15EP/Yeu8Cg98TwUpzDfceK7pPmU7Hu6i/0D18bimswWPAhphCzOf2rKfNRRGBbZsFBfixpCW2hnN4+WJP0wnJ4X1H45agBaPgJY7CPOCaZNDgkxwmL9LOIhMOi9Th+xK99GTfytNx712tVsPeK+NDF2QjDVin72YXZz+nYj1lrmwrnOOeLY6x8kaoR2RHNTcm9SIZEA3agdCrfjIMlrWvm8HmMKj/p9Wub+1MTzz2BrWVACQfN/0wu1HotTgu4yxtYv1Au82UDByh2GwWGOljMNutXKe0d/vgIwYtFsjXNlMdDtMEfKC1eNX5d3Ytdgi5acWek6VEBl7HMS0K8vws7e1gMM8uP8g0WvQLaeNK4Qm4EldwpXKVFtzUidLGKncbZdBWLVZC28mU398j8RDB
+sidebar_class_name: "post api-method"
+info_path: docs/api/lightning-api
+custom_edit_url: null
+---
+
+import MethodEndpoint from "@theme/ApiExplorer/MethodEndpoint";
+import ParamsDetails from "@theme/ParamsDetails";
+import RequestSchema from "@theme/RequestSchema";
+import StatusCodes from "@theme/StatusCodes";
+import OperationTabs from "@theme/OperationTabs";
+import TabItem from "@theme/TabItem";
+import Heading from "@theme/Heading";
+
+<Heading
+  as={"h1"}
+  className={"openapi__heading"}
+  children={"Register a new user"}
+>
+</Heading>
+
+<MethodEndpoint
+  method={"post"}
+  path={"/api/users/register"}
+  context={"endpoint"}
+>
+  
+</MethodEndpoint>
+
+
+
+Creates a new user account. Self-registration may be disabled on some
+instances.
+
+
+<Heading
+  id={"request"}
+  as={"h2"}
+  className={"openapi-tabs__heading"}
+  children={"Request"}
+>
+</Heading>
+
+<ParamsDetails
+  parameters={undefined}
+>
+  
+</ParamsDetails>
+
+<RequestSchema
+  title={"Body"}
+  body={{"required":true,"content":{"application/json":{"schema":{"type":"object","required":["email","password","first_name","last_name"],"properties":{"email":{"type":"string","format":"email"},"password":{"type":"string","format":"password","minLength":8},"first_name":{"type":"string"},"last_name":{"type":"string"}},"title":"UserRegistration"}}}}}
+>
+  
+</RequestSchema>
+
+<StatusCodes
+  id={undefined}
+  label={undefined}
+  responses={{"201":{"description":"User registered successfully","content":{"application/json":{"schema":{"type":"object","properties":{"user":{"type":"object","properties":{"id":{"type":"string","format":"uuid"},"email":{"type":"string","format":"email"},"first_name":{"type":"string"},"last_name":{"type":"string"},"inserted_at":{"type":"string","format":"date-time"}},"title":"User"}}}}}}}}
+>
+  
+</StatusCodes>
+
+
+      

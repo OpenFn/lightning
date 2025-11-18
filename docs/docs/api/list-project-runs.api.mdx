@@ -1,0 +1,71 @@
+---
+id: list-project-runs
+title: "List runs for a project"
+description: "Returns paginated run history for a specific project."
+sidebar_label: "List runs for a project"
+hide_title: true
+hide_table_of_contents: true
+api: eJylV99v2zYQ/lcO7EsLKLaz7Ulv3tYW3oLWSBMMQxzYtHSW2FCkSh6duIb+9+Eo2VZir3W3vEQSj/cd78fHz1tBsvAivRPXwXhxn4gcfeZUTcoakYprpOCMh1oWykjCHFwwUCpP1m1gZR1I8DVmaqUyqJ39jBkNRCJsjU6yj0kuUqGVp2m7GGESUUsnKyR0jL0VRlYoUtE5mKtcJEIxfi2pFIlw+CUoh7lIyQV8GWTnGm5vJ7+LRPisxEqKdCtoU7NbT06ZQiRiZV0lSaQiBJWLpkkOyLLAHeaXgG4jjkBkgWBCtUQXz91lhBdPQCpDWKCLXlYyaBLpZSIqZVQVKpFevsSee/X1OwF8aLHtChRh5aHGGASeCz/q4yeikk/d82jUNPecY19b49Gzn59GI/73PIJPIcvQ+1XQsDMWicisITTE5rKutcpiUoafPe/ZHsdml1ws7gHHXUKqRcwl9a2kc5JzEM/6/d0qP6PeiXi07mFuXY5ufuaOz3Z5rqknSXjKEg3n+U7ItVRaLnUsGUlHyH3u26yyR6l0/JQ56cv49KB0+wmfMmzrcN/sd88lfTOyXBJekKoY0ATdYscRahKxUkYxyv9yoozHH4ukaRJBitgHc058jxPQztaJJt4ZxBE5sfzc4ZXydL3rzob/ElEhlZaJqMDYOkwqqRjKWg07yvHD7YF8mqFrWcqjW+8oKjgtUlES1T4dDmVdD2yNZmUG1hXHZOFsHjJ+gdaH4Hk/uEiHQ20zqUvrKf1lNBodebjiZchxjdrWFRraO7rnuLLgFG1iYL+idOjGgc90d99f/sSj185H32ifQY5kxx78voxGIuke3u2K98dfN0fxjacTkIFKNNRNPASvTAEtEpB9QOMH8B4N3wQIsv0EK2cr2NjgIHh0M1M7u1IaQRmgEuFKFSUZdtQjk8Gs7RNlVjbG35X7YDyeTkQiuFhteJeD0eBEUvf2yoM0wBUEb4PLEJgaVto+Qq0lcd9Gli/sGp3h/POGHIw1FzFi8jNDFiq7RihRairjug9ujRtgMoMl0iMywMYziQ3gplSeI+WLcq1y9PxQOFlVklQ2MzISAbBbafi62TVnso/OJ5A5zDnrUvskYlbWKLLucAJ8wizwkf1gZmbm1SsYP6sUfxxrHUNBk9dW8fG6O/asqk5MpkOObR3H0wnngovbFZHhrFNfWw8lyhxdyqiLxWJmnq2mO9d/f7y9no+nk/nNxz/ffuhMZ4ZjbFEhkwaWCEXXUfmLVoIzOykm5Jpb8kpVipQpdjicAfRcaYfgQ7xpuBqxf3VnPIDfSswe9jdgdzwf24UtZyaaAjcrD1APdbrXDPyBmaqXfx/q2jrqCQt4VFTCgslvESu92PPgAqJIgIOOSmfmorNNoS9WXncSIIXLN3ub1kkK/yYq+rtGCVTyiR9Gb2amu/FlFgm/kzAfazTveOk5Sz4+PvZZskmEVhkyMR+2jt9Pry5+jsN6vLkwgXcOu21+KItas/UAzaCkSrfXh/VUSdNzGlPLJN5J1G6QXhLC9iBe/rPS7biU8ImGtZbK8DHjSbbdRXMnZK1axRKnWSQifaZ0XSe9+TZg8+12KT3eOt00/LmVg0z1ufJ8++YiXUntX+rg/mm+qVZPhvyAm4MOXksd2CReW+ejfkOifgdzp38PwPf84lSrNn7o7K+vu18Lb+DFL4OTQewEp9n08ffBHQrVsPJqpz1G1BqMMxZmva1HIpiPslcg79/eiKb5B1Lssq8=
+sidebar_class_name: "get api-method"
+info_path: docs/api/lightning-api
+custom_edit_url: null
+---
+
+import MethodEndpoint from "@theme/ApiExplorer/MethodEndpoint";
+import ParamsDetails from "@theme/ParamsDetails";
+import RequestSchema from "@theme/RequestSchema";
+import StatusCodes from "@theme/StatusCodes";
+import OperationTabs from "@theme/OperationTabs";
+import TabItem from "@theme/TabItem";
+import Heading from "@theme/Heading";
+
+<Heading
+  as={"h1"}
+  className={"openapi__heading"}
+  children={"List runs for a project"}
+>
+</Heading>
+
+<MethodEndpoint
+  method={"get"}
+  path={"/api/projects/{project_id}/runs"}
+  context={"endpoint"}
+>
+  
+</MethodEndpoint>
+
+
+
+Returns paginated run history for a specific project.
+
+<Heading
+  id={"request"}
+  as={"h2"}
+  className={"openapi-tabs__heading"}
+  children={"Request"}
+>
+</Heading>
+
+<ParamsDetails
+  parameters={[{"name":"project_id","in":"path","required":true,"description":"Project UUID","schema":{"type":"string","format":"uuid"}},{"name":"page","in":"query","description":"Page number for pagination","schema":{"type":"integer","default":1,"minimum":1}},{"name":"page_size","in":"query","description":"Number of items per page","schema":{"type":"integer","default":10,"minimum":1,"maximum":100}}]}
+>
+  
+</ParamsDetails>
+
+<RequestSchema
+  title={"Body"}
+  body={undefined}
+>
+  
+</RequestSchema>
+
+<StatusCodes
+  id={undefined}
+  label={undefined}
+  responses={{"200":{"description":"Successful response","content":{"application/json":{"schema":{"type":"object","properties":{"data":{"type":"array","items":{"type":"object","properties":{"id":{"type":"string","format":"uuid"},"work_order_id":{"type":"string","format":"uuid"},"job_id":{"type":"string","format":"uuid"},"state":{"type":"string","enum":["available","started","success","failed","crashed","killed","exception"]},"started_at":{"type":"string","format":"date-time","nullable":true},"finished_at":{"type":"string","format":"date-time","nullable":true},"inserted_at":{"type":"string","format":"date-time"}},"title":"Run"}},"page_number":{"type":"integer"},"page_size":{"type":"integer"}},"title":"RunListResponse"}}}}}}
+>
+  
+</StatusCodes>
+
+
+      

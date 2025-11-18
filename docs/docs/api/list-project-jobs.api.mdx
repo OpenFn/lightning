@@ -1,0 +1,71 @@
+---
+id: list-project-jobs
+title: "List jobs for a project"
+description: "Returns all jobs within a specific project."
+sidebar_label: "List jobs for a project"
+hide_title: true
+hide_table_of_contents: true
+api: eJyVVttu20YQ/ZXB9iUGaEpp+8SnqM0FSt1EcGwUhWXYI3JErr3c3exFiiLw34tZUrJkG42jF5HcM5c9c92KgLUXxZX4aBZeXGeiIl86aYM0WhTinEJ02gMqBXdm4WEtQyM1IHhLpVzKEqwzd1SGXGTCWHLIktNKFEJJH2b9YVKeCYsOWwrk2OJWaGxJFGJQcCMrkQnJVi2GRmTC0dcoHVWiCC7SY9cG1XB5OX0rMuHLhloUxVaEjWW1Pjipa5GJpXEtBlGIGGUluu6aNXtrtCfP+F/HY/471v4lliV5v4wKdmCRidLoQDowHK1Vsky3Hd15ltk+9cEs2EW+uWNuguwtMpMHKHQON3z3QK1/TvqBiCuRWErMZWJhqg3H7Fi7rF7AwqDjGeAxDx/NAhKyG8z9WAJX+CW9Q2kqgmCAvlEZQ9KBFdpg3HNqdFQKF4qeD/en2d8wCIPF8h5rSo7BK8rrPIO5eGMs6aUeKdR1xJpOmxDsG4WBfJiLE7ZeOqpIB4nq5iUs/cinifemlBioggfNMH3LpqT25AJVNxj+11CFgU6D7BmOll9/RqbLRJCBHeRQiW74ZaKl0Bguw5pSAnJJFWKEVo6GgvOj7UPpdaO7vkY9udWuQKNTohBMoy9GI7Q27ynOjXsa95kzVSz5BXodossOVRSjkTIlqsb4UPw+Ho+faDjjY6hoRcrYlnTYK7pmv8roZNgkx/4gdOQmke90dX14/IVLsK+DQ9CeTPZk1y34fZFAXEvp4f2O4o//XDzxbzKbAsbQcJz7yofopa6htwTB3JP2OXwgzX2QAPtPsHSmhY2JDqInN9fWmaVUBFJDaAjOZN0EzYoOmko+1ym6Ui9N8n+I8gN4MpuKTHCwevde5+P8GVL3eOkBNXAEwZvoSoK1cfdLZdZgFQbOLlgaB7VZkdPMPwtUoI0+TR4HP9fBQGtWBA2hCk0699GtaAMVBoQFhTWxgY3nZpbDRSM9e8pjYiUr8vxQO2xbDLKca0xtlptEi5prepec2d47nx1Ul8+SzdZoyZ1gf4O+xUijfT7Xc/3LLzA5ihR/nCiVXCFdWSP5ekNjfVFUp7pUsaI+jpPZlLng4A5BZHPGye+9hoawIlew1dvb27k+Oi12qv/9fHl+M5lNby4+//Xu0wCda/axtwolalgQ1ENGVY9SCV6YSYmQc07JM9nKIHW9s8MMkOdIOwIf08ThaKT8VQM4hz8bKu/3k3C4nk/pwsi5TlDgZOUCOrA6w1rqfQjOpA8H/PtorXEB7B6UFgy4tVjTbYp0erzx8jvdwtdIbgMPW0Qx16cDtmBDBDq2C3LwqqIlRhUKeH2yx/RKCvjUY8wS0sAFyzyy8IHUOIMWv/HD+GSuh8mPZWrLw9ry2ZJ+z0fHXXK9Xh92yS4TSpbE68OD6OTD7Oz0t1SsT4VrHVlyNIj5EdZWMTonnTehVaktWONDi/pAaaI27WgcFdwV0uOGsH1YYn5yuxs6aKBvYWQVSp0mFvu/HcbLlUAr+20n1bDIRHG03d0NSybPAIZvtwv0dOlU1/HnFF/u6JlYoZP94L3aikp6fq5EsUTlH4/hwxu9Oh9WpRN4tB8+6/1uAdO8fq1QRX4TmbinzfFi2l13meizPnnUAyZlSTYciD5ZCnk07Sfxh3cXouv+A7svAnM=
+sidebar_class_name: "get api-method"
+info_path: docs/api/lightning-api
+custom_edit_url: null
+---
+
+import MethodEndpoint from "@theme/ApiExplorer/MethodEndpoint";
+import ParamsDetails from "@theme/ParamsDetails";
+import RequestSchema from "@theme/RequestSchema";
+import StatusCodes from "@theme/StatusCodes";
+import OperationTabs from "@theme/OperationTabs";
+import TabItem from "@theme/TabItem";
+import Heading from "@theme/Heading";
+
+<Heading
+  as={"h1"}
+  className={"openapi__heading"}
+  children={"List jobs for a project"}
+>
+</Heading>
+
+<MethodEndpoint
+  method={"get"}
+  path={"/api/projects/{project_id}/jobs"}
+  context={"endpoint"}
+>
+  
+</MethodEndpoint>
+
+
+
+Returns all jobs within a specific project.
+
+<Heading
+  id={"request"}
+  as={"h2"}
+  className={"openapi-tabs__heading"}
+  children={"Request"}
+>
+</Heading>
+
+<ParamsDetails
+  parameters={[{"name":"project_id","in":"path","required":true,"description":"Project UUID","schema":{"type":"string","format":"uuid"}}]}
+>
+  
+</ParamsDetails>
+
+<RequestSchema
+  title={"Body"}
+  body={undefined}
+>
+  
+</RequestSchema>
+
+<StatusCodes
+  id={undefined}
+  label={undefined}
+  responses={{"200":{"description":"Successful response","content":{"application/json":{"schema":{"type":"object","properties":{"jobs":{"type":"array","items":{"type":"object","required":["id","name","body"],"properties":{"id":{"type":"string","format":"uuid"},"name":{"type":"string","description":"Job name"},"body":{"type":"string","description":"JavaScript code to execute"},"adaptor":{"type":"string","nullable":true,"description":"NPM adaptor package name (e.g., \"@openfn/language-http@latest\")"},"credential_id":{"type":"string","format":"uuid","nullable":true,"description":"Associated credential ID"},"inserted_at":{"type":"string","format":"date-time"},"updated_at":{"type":"string","format":"date-time"}},"title":"Job"}}}}}}}}}
+>
+  
+</StatusCodes>
+
+
+      
