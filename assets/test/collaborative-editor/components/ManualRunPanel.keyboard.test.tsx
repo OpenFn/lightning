@@ -3,6 +3,12 @@
  *
  * Tests keyboard shortcuts for ManualRunPanel:
  * 1. Escape (Close Panel) - Lines 425-436
+ *    - Configuration tests (lines 250-294)
+ *    - Basic close behavior (lines 296-322)
+ *    - Form field compatibility with enableOnFormTags: true (lines 324-444)
+ *      * Search input (Existing tab)
+ *      * Date filter inputs (Existing tab)
+ *      * Monaco editor (Custom tab)
  * 2. Run/Retry Shortcuts via useRunRetryShortcuts - Lines 439-447
  *    - Mod+Enter: Run or Retry based on state
  *    - Mod+Shift+Enter: Force new run (even when retry available)
@@ -12,37 +18,32 @@
  * - Guards (canRun, isRunning, isRetryable)
  * - Platform variants (Mac Cmd/Windows Ctrl)
  * - Scope isolation (HOTKEY_SCOPES.RUN_PANEL)
- *
- * NOTE: These tests verify the configuration and integration of keyboard shortcuts,
- * but cannot test the actual keyboard event handling due to limitations in the test
- * environment with react-hotkeys-hook. The shortcuts are manually verified to work
- * in the browser. We focus on testing:
- * - Render mode logic (standalone vs embedded)
- * - Guard conditions (canRun, isRunning, isRetryable)
- * - Integration with save/run workflows
+ * - Form field compatibility (enableOnFormTags: true allows Escape in inputs)
  */
 
 import { render, screen, waitFor } from '@testing-library/react';
-import { HotkeysProvider } from 'react-hotkeys-hook';
-import type React from 'react';
+import userEvent from '@testing-library/user-event';
 import { act } from 'react';
+import type React from 'react';
+import { HotkeysProvider } from 'react-hotkeys-hook';
 import { beforeEach, describe, expect, test, vi } from 'vitest';
+
 import * as dataclipApi from '../../../js/collaborative-editor/api/dataclips';
 import { ManualRunPanel } from '../../../js/collaborative-editor/components/ManualRunPanel';
+import { HOTKEY_SCOPES } from '../../../js/collaborative-editor/constants/hotkeys';
+import { RENDER_MODES } from '../../../js/collaborative-editor/constants/panel';
+import { LiveViewActionsProvider } from '../../../js/collaborative-editor/contexts/LiveViewActionsContext';
+import { SessionContext } from '../../../js/collaborative-editor/contexts/SessionProvider';
 import { StoreContext } from '../../../js/collaborative-editor/contexts/StoreProvider';
 import type { StoreContextValue } from '../../../js/collaborative-editor/contexts/StoreProvider';
-import { createAdaptorStore } from '../../../js/collaborative-editor/stores/createAdaptorStore';
-import { createAwarenessStore } from '../../../js/collaborative-editor/stores/createAwarenessStore';
-import { createCredentialStore } from '../../../js/collaborative-editor/stores/createCredentialStore';
-import { createRunStore } from '../../../js/collaborative-editor/stores/createRunStore';
-import { createSessionContextStore } from '../../../js/collaborative-editor/stores/createSessionContextStore';
-import { createUIStore } from '../../../js/collaborative-editor/stores/createUIStore';
-import { createWorkflowStore } from '../../../js/collaborative-editor/stores/createWorkflowStore';
+import { createSessionStore } from '../../../js/collaborative-editor/stores/createSessionStore';
 import type { Workflow } from '../../../js/collaborative-editor/types/workflow';
 import {
   createMockPhoenixChannel,
   createMockPhoenixChannelProvider,
+  type MockPhoenixChannel,
 } from '../__helpers__';
+import { createStores } from '../__helpers__/storeProviderHelpers';
 
 // Mock the API module
 vi.mock('../../../js/collaborative-editor/api/dataclips');
@@ -75,6 +76,34 @@ vi.mock('../../../js/collaborative-editor/hooks/useWorkflow', async () => {
 // Helper function to override canRun mock
 function setMockCanRun(canRun: boolean, tooltipMessage: string) {
   mockCanRunValue = { canRun, tooltipMessage };
+}
+
+/**
+ * Creates a test wrapper with all required providers for keyboard shortcut testing
+ */
+function createTestWrapper() {
+  const sessionStore = createSessionStore();
+
+  const mockLiveViewActions = {
+    pushEvent: vi.fn(),
+    pushEventTo: vi.fn(),
+    handleEvent: vi.fn(() => vi.fn()),
+    navigate: vi.fn(),
+  };
+
+  return function Wrapper({ children }: { children: React.ReactNode }) {
+    return (
+      <HotkeysProvider initiallyActiveScopes={[HOTKEY_SCOPES.RUN_PANEL]}>
+        <SessionContext.Provider value={{ sessionStore, isNewWorkflow: false }}>
+          <LiveViewActionsProvider actions={mockLiveViewActions}>
+            <StoreContext.Provider value={stores}>
+              {children}
+            </StoreContext.Provider>
+          </LiveViewActionsProvider>
+        </SessionContext.Provider>
+      </HotkeysProvider>
+    );
+  };
 }
 
 // Mock MonacoEditor to avoid loading issues in tests
@@ -120,9 +149,9 @@ const mockWorkflow: Workflow = {
       name: 'Test Job',
       adaptor: '@openfn/language-http@latest',
       body: 'fn(state => state)',
-      enabled: true,
       project_credential_id: null,
       keychain_credential_id: null,
+      workflow_id: 'workflow-1',
     },
   ],
   triggers: [
@@ -130,34 +159,22 @@ const mockWorkflow: Workflow = {
       id: 'trigger-1',
       type: 'webhook',
       enabled: true,
+      has_auth_method: false,
+      cron_expression: null,
+      kafka_configuration: null,
     },
   ],
   edges: [],
-};
-
-const mockDataclip: dataclipApi.Dataclip = {
-  id: 'dataclip-1',
-  name: 'Test Dataclip',
-  type: 'http_request',
-  body: {
-    data: { test: 'data' },
-    request: {
-      headers: { accept: '*/*', host: 'example.com', 'user-agent': 'test' },
-      method: 'POST',
-      path: ['test'],
-      query_params: {},
-    },
-  },
-  request: null,
-  inserted_at: '2025-01-01T00:00:00Z',
-  updated_at: '2025-01-01T00:00:00Z',
-  project_id: 'project-1',
-  wiped_at: null,
+  positions: {},
+  lock_version: 1,
+  deleted_at: null,
+  concurrency: 1,
+  enable_job_logs: true,
 };
 
 // Create stores for tests
 let stores: StoreContextValue;
-let mockChannel: any;
+let mockChannel: MockPhoenixChannel;
 
 // Helper function to render ManualRunPanel with all providers
 function renderManualRunPanel(
@@ -165,26 +182,21 @@ function renderManualRunPanel(
     saveWorkflow?: () => Promise<{
       saved_at?: string;
       lock_version?: number;
-    } | null>;
+    }>;
   }
 ) {
   return render(
-    <HotkeysProvider initiallyActiveScopes={['runpanel']}>
-      <StoreContext.Provider value={stores}>
-        <ManualRunPanel
-          {...props}
-          saveWorkflow={
-            props.saveWorkflow ||
-            vi
-              .fn()
-              .mockResolvedValue({
-                saved_at: '2025-01-01T00:00:00Z',
-                lock_version: 1,
-              })
-          }
-        />
-      </StoreContext.Provider>
-    </HotkeysProvider>
+    <ManualRunPanel
+      {...props}
+      saveWorkflow={
+        props.saveWorkflow ||
+        vi.fn().mockResolvedValue({
+          saved_at: '2025-01-01T00:00:00Z',
+          lock_version: 1,
+        })
+      }
+    />,
+    { wrapper: createTestWrapper() }
   );
 }
 
@@ -195,25 +207,18 @@ describe('ManualRunPanel Keyboard Shortcuts', () => {
     // Reset mock to default state
     setMockCanRun(true, 'Run workflow');
 
-    // Create fresh store instances
-    stores = {
-      workflowStore: createWorkflowStore(),
-      credentialStore: createCredentialStore(),
-      sessionContextStore: createSessionContextStore(),
-      adaptorStore: createAdaptorStore(),
-      awarenessStore: createAwarenessStore(),
-      uiStore: createUIStore(),
-      runStore: createRunStore(),
-    };
+    // Create fresh store instances using createStores helper
+    stores = createStores();
 
     // Create mock channel and connect session context store
     mockChannel = createMockPhoenixChannel();
     const mockProvider = createMockPhoenixChannelProvider(mockChannel);
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-explicit-any
     stores.sessionContextStore._connectChannel(mockProvider as any);
 
     // Set permissions with can_edit_workflow: true by default
     act(() => {
-      (mockChannel as any)._test.emit('session_context', {
+      mockChannel._test.emit('session_context', {
         user: null,
         project: null,
         config: { require_email_verification: false },
@@ -243,8 +248,8 @@ describe('ManualRunPanel Keyboard Shortcuts', () => {
     // Mock fetch for dataclip body fetching (used by DataclipViewer)
     global.fetch = vi.fn().mockResolvedValue({
       ok: true,
-      text: async () => JSON.stringify({ data: { test: 'data' } }),
-      json: async () => ({ data: { test: 'data' } }),
+      text: () => Promise.resolve(JSON.stringify({ data: { test: 'data' } })),
+      json: () => Promise.resolve({ data: { test: 'data' } }),
     } as Response);
   });
 
@@ -291,6 +296,170 @@ describe('ManualRunPanel Keyboard Shortcuts', () => {
 
       await waitFor(() => {
         expect(onClose).toHaveBeenCalledOnce();
+      });
+    });
+
+    test('Escape closes panel in standalone mode', async () => {
+      const user = userEvent.setup();
+      const onClose = vi.fn();
+
+      renderManualRunPanel({
+        workflow: mockWorkflow,
+        projectId: 'project-1',
+        workflowId: 'workflow-1',
+        jobId: 'job-1',
+        onClose,
+        renderMode: RENDER_MODES.STANDALONE,
+      });
+
+      await waitFor(() => {
+        expect(screen.getByText('Run from Test Job')).toBeInTheDocument();
+      });
+
+      // Wait for scope activation
+      await new Promise(resolve => setTimeout(resolve, 200));
+
+      // Press Escape
+      await user.keyboard('{Escape}');
+
+      await waitFor(() => {
+        expect(onClose).toHaveBeenCalledTimes(1);
+      });
+    });
+
+    test('Escape works when typing in search input (Existing tab)', async () => {
+      const user = userEvent.setup();
+      const onClose = vi.fn();
+
+      renderManualRunPanel({
+        workflow: mockWorkflow,
+        projectId: 'project-1',
+        workflowId: 'workflow-1',
+        jobId: 'job-1',
+        onClose,
+        renderMode: RENDER_MODES.STANDALONE,
+      });
+
+      await waitFor(() => {
+        expect(screen.getByText('Run from Test Job')).toBeInTheDocument();
+      });
+
+      // Wait for scope activation
+      await new Promise(resolve => setTimeout(resolve, 200));
+
+      // Switch to Existing tab
+      const existingTab = screen.getByText('Existing');
+      await user.click(existingTab);
+
+      // Find and focus the search input
+      const searchInput = screen.getByPlaceholderText(
+        'Search names or UUID prefixes'
+      );
+      await user.click(searchInput);
+      await user.type(searchInput, 'test search');
+
+      // Press Escape while in input
+      await user.keyboard('{Escape}');
+
+      await waitFor(() => {
+        expect(onClose).toHaveBeenCalledTimes(1);
+      });
+    });
+
+    test('Escape works when typing in date filter input (Existing tab)', async () => {
+      const user = userEvent.setup();
+      const onClose = vi.fn();
+
+      renderManualRunPanel({
+        workflow: mockWorkflow,
+        projectId: 'project-1',
+        workflowId: 'workflow-1',
+        jobId: 'job-1',
+        onClose,
+        renderMode: RENDER_MODES.STANDALONE,
+      });
+
+      await waitFor(() => {
+        expect(screen.getByText('Run from Test Job')).toBeInTheDocument();
+      });
+
+      // Wait for scope activation
+      await new Promise(resolve => setTimeout(resolve, 200));
+
+      // Switch to Existing tab
+      const existingTab = screen.getByText('Existing');
+      await user.click(existingTab);
+
+      // Find the date filter button by finding all buttons and selecting the calendar icon one
+      // The buttons are ordered: Search, Calendar (date filter), Type filter, Named filter
+      // We need to find the calendar icon button
+      await waitFor(() => {
+        expect(
+          screen.getByPlaceholderText('Search names or UUID prefixes')
+        ).toBeInTheDocument();
+      });
+
+      // Get all buttons - we need to click one to open the date dropdown
+      // The date filter input will appear after clicking the calendar button
+      const allButtons = screen.getAllByRole('button');
+      // Find the button with calendar icon (should be after Search button in the filter section)
+      // Based on the DOM structure, it's the first button without text content in the filter area
+      const searchButton = screen.getByText('Search');
+      const searchButtonIndex = allButtons.indexOf(searchButton);
+      // The date filter button is the next icon-only button after search
+      const dateFilterButton = allButtons[searchButtonIndex + 1];
+      await user.click(dateFilterButton);
+
+      // Focus the "Created After" input (now visible)
+      const createdAfterInput =
+        screen.getByLabelText<HTMLInputElement>('Created After');
+      await user.click(createdAfterInput);
+      await user.type(createdAfterInput, '2025-01-01T00:00');
+
+      // Press Escape while in datetime input
+      await user.keyboard('{Escape}');
+
+      await waitFor(() => {
+        expect(onClose).toHaveBeenCalledTimes(1);
+      });
+    });
+
+    test('Escape works when typing in Monaco editor (Custom tab)', async () => {
+      const user = userEvent.setup();
+      const onClose = vi.fn();
+
+      renderManualRunPanel({
+        workflow: mockWorkflow,
+        projectId: 'project-1',
+        workflowId: 'workflow-1',
+        jobId: 'job-1',
+        onClose,
+        renderMode: RENDER_MODES.STANDALONE,
+      });
+
+      await waitFor(() => {
+        expect(screen.getByText('Run from Test Job')).toBeInTheDocument();
+      });
+
+      // Wait for scope activation
+      await new Promise(resolve => setTimeout(resolve, 200));
+
+      // Switch to Custom tab
+      const customTab = screen.getByText('Custom');
+      await user.click(customTab);
+
+      // The Monaco editor is mocked, so we need to find the mock element
+      const monacoEditor = screen.getByTestId('monaco-editor');
+      expect(monacoEditor).toBeInTheDocument();
+
+      // Focus the editor area (mocked, so just click it)
+      await user.click(monacoEditor);
+
+      // Press Escape - should close panel even when editor is "focused"
+      await user.keyboard('{Escape}');
+
+      await waitFor(() => {
+        expect(onClose).toHaveBeenCalledTimes(1);
       });
     });
   });
@@ -375,7 +544,7 @@ describe('ManualRunPanel Keyboard Shortcuts', () => {
 
     test('run button shows processing state when running', async () => {
       const saveWorkflow = vi.fn(() => {
-        return new Promise(() => {
+        return new Promise<{ saved_at?: string; lock_version?: number }>(() => {
           // Never resolve - simulates long-running save
         });
       });
@@ -469,7 +638,7 @@ describe('ManualRunPanel Keyboard Shortcuts', () => {
       });
 
       // Test standalone mode
-      const { rerender: rerenderStandalone } = renderManualRunPanel({
+      renderManualRunPanel({
         workflow: mockWorkflow,
         projectId: 'project-1',
         workflowId: 'workflow-1',
