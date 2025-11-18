@@ -28,6 +28,7 @@ import { EmailVerificationBanner } from './EmailVerificationBanner';
 import { GitHubSyncModal } from './GitHubSyncModal';
 import { Switch } from './inputs/Switch';
 import { ReadOnlyWarning } from './ReadOnlyWarning';
+import { RunRetryButton } from './RunRetryButton';
 import { ShortcutKeys } from './ShortcutKeys';
 import { Tooltip } from './Tooltip';
 
@@ -162,8 +163,11 @@ export function Header({
   isRunPanelOpen = false,
   adaptorDisplay,
   onRunClick,
+  onRetryClick,
   canRun: canRunProp,
   runTooltipMessage: runTooltipMessageProp,
+  isRetryable: isRetryableProp,
+  isRunning: isRunningProp,
 }: {
   children: React.ReactNode[];
   projectId?: string;
@@ -171,27 +175,30 @@ export function Header({
   isRunPanelOpen?: boolean;
   adaptorDisplay?: React.ReactNode;
   onRunClick?: () => void;
+  onRetryClick?: () => void;
   canRun?: boolean;
   runTooltipMessage?: string;
+  isRetryable?: boolean;
+  isRunning?: boolean;
 }) {
+  // IMPORTANT: All hooks must be called unconditionally before any early returns or conditional logic
   const { updateSearchParams } = useURLState();
   const { selectNode } = useNodeSelection();
   const { enabled, setEnabled } = useWorkflowEnabled();
   const { saveWorkflow } = useWorkflowActions();
   const { canSave, tooltipMessage } = useCanSave();
   const triggers = useWorkflowState(state => state.triggers);
-  const firstTriggerId = triggers[0]?.id;
   const { canRun: canRunDefault, tooltipMessage: runTooltipMessageDefault } =
     useCanRun();
   const { openRunPanel, openGitHubSyncModal } = useUICommands();
   const repoConnection = useProjectRepoConnection();
-
-  // Get validation state for settings button styling
   const { hasErrors: hasSettingsErrors } = useWorkflowSettingsErrors();
-
-  // Detect if viewing old snapshot
   const workflow = useWorkflowState(state => state.workflow);
   const latestSnapshotLockVersion = useLatestSnapshotLockVersion();
+  const isNewWorkflow = useIsNewWorkflow();
+
+  // Derived values after all hooks are called
+  const firstTriggerId = triggers[0]?.id;
 
   const isOldSnapshot =
     workflow !== null &&
@@ -204,6 +211,11 @@ export function Header({
     runTooltipMessageProp !== undefined
       ? runTooltipMessageProp
       : runTooltipMessageDefault;
+  const isRetryable = isRetryableProp ?? false;
+  const isRunning = isRunningProp ?? false;
+
+  // Determine if we're in IDE mode (has both onRunClick and onRetryClick)
+  const isIDEMode = onRunClick !== undefined && onRetryClick !== undefined;
 
   const handleRunClick = useCallback(() => {
     if (onRunClick) {
@@ -215,6 +227,12 @@ export function Header({
       openRunPanel({ triggerId: firstTriggerId });
     }
   }, [onRunClick, firstTriggerId, openRunPanel, selectNode]);
+
+  const handleRetryClick = useCallback(() => {
+    if (onRetryClick) {
+      onRetryClick();
+    }
+  }, [onRetryClick]);
 
   // Compute Run button tooltip content
   const runButtonTooltip = useMemo(() => {
@@ -251,8 +269,6 @@ export function Header({
     },
     [openGitHubSyncModal, canSave, repoConnection]
   );
-
-  const isNewWorkflow = useIsNewWorkflow();
 
   return (
     <>
@@ -314,18 +330,39 @@ export function Header({
               </div>
             </div>
             <div className="relative flex gap-2">
-              {projectId && workflowId && firstTriggerId && (
-                <Tooltip content={runButtonTooltip} side="bottom">
-                  <span className="inline-block">
-                    <Button
+              {projectId && workflowId && (isIDEMode || firstTriggerId) && (
+                <>
+                  {isIDEMode ? (
+                    <RunRetryButton
+                      isRetryable={isRetryable}
+                      isDisabled={!canRun}
+                      isSubmitting={isRunning}
+                      onRun={handleRunClick}
+                      onRetry={handleRetryClick}
+                      buttonText={{
+                        run: 'Run',
+                        retry: 'Run (retry)',
+                        processing: 'Processing',
+                      }}
                       variant="primary"
-                      onClick={handleRunClick}
-                      disabled={!canRun}
-                    >
-                      Run
-                    </Button>
-                  </span>
-                </Tooltip>
+                      dropdownPosition="down"
+                      showKeyboardShortcuts={!isRunPanelOpen && canRun}
+                      disabledTooltip={runTooltipMessage}
+                    />
+                  ) : (
+                    <Tooltip content={runButtonTooltip} side="bottom">
+                      <span className="inline-block">
+                        <Button
+                          variant="primary"
+                          onClick={handleRunClick}
+                          disabled={!canRun}
+                        >
+                          Run
+                        </Button>
+                      </span>
+                    </Tooltip>
+                  )}
+                </>
               )}
               <SaveButton
                 canSave={canSave && !hasSettingsErrors}
