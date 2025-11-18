@@ -123,24 +123,32 @@ export function BreadcrumbLink({
   children: React.ReactNode;
   onClick?: (e: React.MouseEvent) => void;
 }) {
-  const handleClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
-    if (onClick) {
-      e.preventDefault();
-      onClick(e);
-    }
-  };
-
-  return (
-    <a
-      href={href || '#'}
-      onClick={handleClick}
-      className="text-gray-400 hover:text-gray-500 flex items-center cursor-pointer"
-    >
-      {icon && <span className={cn(icon, 'w-5 h-5 text-secondary-500')}></span>}
+  const content = (
+    <>
+      {icon && <span className={cn(icon, 'w-5 h-5 text-secondary-500')} />}
       <span className={cn('font-medium text-gray-500', icon ? 'ml-2' : '')}>
         {children}
       </span>
-    </a>
+    </>
+  );
+
+  const className =
+    'text-gray-400 hover:text-gray-500 flex items-center cursor-pointer';
+
+  // If there's a real href, use a link (for navigation)
+  if (href) {
+    return (
+      <a href={href} onClick={onClick} className={className}>
+        {content}
+      </a>
+    );
+  }
+
+  // Otherwise, use a button (for actions)
+  return (
+    <button type="button" onClick={onClick} className={className}>
+      {content}
+    </button>
   );
 }
 export function BreadcrumbText({
