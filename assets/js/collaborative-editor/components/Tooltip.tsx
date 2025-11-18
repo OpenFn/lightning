@@ -20,11 +20,12 @@ export function Tooltip({
   delayDuration = 200,
 }: {
   children: ReactNode;
-  content: string;
+  content: ReactNode;
   side?: 'top' | 'right' | 'bottom' | 'left';
   align?: 'start' | 'center' | 'end';
   delayDuration?: number;
 }) {
+  if (!content) return <>{children}</>;
   return (
     <RadixTooltip.Provider delayDuration={delayDuration}>
       <RadixTooltip.Root>
@@ -33,8 +34,8 @@ export function Tooltip({
           <RadixTooltip.Content
             side={side}
             align={align}
-            className="z-50 max-w-xs overflow-hidden rounded-md bg-gray-900
-            px-3 py-1.5 text-xs text-white shadow-md
+            className="z-50 max-w-xs overflow-hidden rounded-md bg-primary-950
+            px-3 py-1.5 text-xs text-primary-50 text-center shadow-md
             animate-in fade-in-0 zoom-in-95
             data-[state=closed]:animate-out
             data-[state=closed]:fade-out-0
@@ -46,7 +47,7 @@ export function Tooltip({
             sideOffset={5}
           >
             {content}
-            <RadixTooltip.Arrow className="fill-gray-900" />
+            <RadixTooltip.Arrow className="fill-primary-950" />
           </RadixTooltip.Content>
         </RadixTooltip.Portal>
       </RadixTooltip.Root>

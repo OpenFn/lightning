@@ -8,6 +8,7 @@ import type { Dataclip } from '../api/dataclips';
 import { getCsrfToken } from '../lib/csrf';
 import { notifications } from '../lib/notifications';
 import type { Workflow } from '../types/workflow';
+import { findFirstJobFromTrigger } from '../utils/workflowGraph';
 
 import { useActiveRun } from './useHistory';
 
@@ -125,9 +126,7 @@ export function useRunRetry({
 
     // For triggers: find the connected job (matching classical editor behavior)
     // This allows retry to work when a trigger is selected
-    // Find the edge from this trigger to a job
-    const edge = workflowEdges.find(e => e.source_trigger_id === runContext.id);
-    return edge?.target_job_id || undefined;
+    return findFirstJobFromTrigger(workflowEdges, runContext.id);
   }, [runContext, workflowEdges]);
 
   const followedRunStep = useMemo(() => {

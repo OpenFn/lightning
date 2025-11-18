@@ -12,6 +12,7 @@ import {
 import type { Workflow } from '../../types/workflow';
 import { AlertDialog } from '../AlertDialog';
 import { Button } from '../Button';
+import { ShortcutKeys } from '../ShortcutKeys';
 import { Tooltip } from '../Tooltip';
 
 import { InspectorFooter } from './InspectorFooter';
@@ -68,7 +69,7 @@ export function JobInspector({
     ? saveTooltipMessage
     : validation.disableReason || 'Delete this job';
 
-  // Build footer with edit, run, and delete buttons (only if permission and not readonly)
+  // Build footer with edit, run, and delete buttons (only if permission and not read only)
   const footer =
     permissions?.can_edit_workflow && !isReadOnly ? (
       <InspectorFooter
@@ -76,9 +77,19 @@ export function JobInspector({
           <>
             <Tooltip
               content={
-                isIDEOpen
-                  ? 'IDE is already open'
-                  : 'Open full-screen code editor'
+                <>
+                  {isIDEOpen
+                    ? 'IDE is already open'
+                    : 'Open full-screen code editor '}
+                  {!isIDEOpen && (
+                    <>
+                      {' '}
+                      {'( '}
+                      <ShortcutKeys keys={['mod', 'e']} />
+                      {' )'}
+                    </>
+                  )}
+                </>
               }
               side="top"
             >

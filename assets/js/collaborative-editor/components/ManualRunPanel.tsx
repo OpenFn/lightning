@@ -9,6 +9,8 @@ import { useHotkeys } from 'react-hotkeys-hook';
 import { cn } from '#/utils/cn';
 import _logger from '#/utils/logger';
 
+import { findFirstJobFromTrigger } from '../utils/workflowGraph';
+
 import { FilterTypes } from '../../manual-run-panel/types';
 import CustomView from '../../manual-run-panel/views/CustomView';
 import EmptyView from '../../manual-run-panel/views/EmptyView';
@@ -171,11 +173,8 @@ export function ManualRunPanel({
       return runContext.id;
     }
 
-    const triggerEdge = workflow.edges.find(
-      edge => edge.source_trigger_id === runContext.id
-    );
-
-    return triggerEdge?.target_job_id || workflow.jobs[0]?.id;
+    const jobId = findFirstJobFromTrigger(workflow.edges, runContext.id);
+    return jobId || workflow.jobs[0]?.id;
   }, [runContext, workflow.edges, workflow.jobs]);
 
   const {
@@ -549,6 +548,8 @@ export function ManualRunPanel({
                 retry: 'Run (retry)',
                 processing: 'Processing',
               }}
+              showKeyboardShortcuts={true}
+              disabledTooltip={workflowRunTooltipMessage}
             />
           }
         />

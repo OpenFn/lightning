@@ -21,9 +21,17 @@ and this project adheres to
 
 - Default failure notifications for project users are now disabled to minimize
   email volume [#3517](https://github.com/OpenFn/lightning/issues/3517)
+- Simpler "disabled" state for workflows, still show last mod
+  [#3962](https://github.com/OpenFn/lightning/issues/3962)
 
 ### Fixed
 
+- Fix ghost edges blocking saves and breaking autolayout when deleting jobs in
+  collaborative editor [#3983](https://github.com/OpenFn/lightning/issues/3983)
+- Fix tooltip styling inconsistencies in collaborative editor
+  [#3980](https://github.com/OpenFn/lightning/issues/3980)
+- Fix beaker icon appearing active in classical editor
+  [#3988](https://github.com/OpenFn/lightning/issues/3988)
 - Fix ESC key closing IDE when pressed on adaptor modal
   [#3978](https://github.com/OpenFn/lightning/issues/3978)
 - Fix run/save-and-run keystroke mapping for canvas & IDE
@@ -51,6 +59,10 @@ and this project adheres to
   [#3887](https://github.com/OpenFn/lightning/issues/3887)
 - Mix task to merge project state files without database access
   [#3615](https://github.com/OpenFn/lightning/issues/3615)
+- Support Undo/Redo commands in the collab editor
+  [#3712](https://github.com/OpenFn/lightning/issues/3712)
+- Added adaptor docs & metadata panel to IDE
+  [#3857](https://github.com/OpenFn/lightning/issues/3857)
 - Show Error indication on workflow settings button
   [#3632](https://github.com/OpenFn/lightning/issues/3632)
 

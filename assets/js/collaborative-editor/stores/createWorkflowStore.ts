@@ -144,6 +144,7 @@ import { JobSchema } from '../types/job';
 import type { Session } from '../types/session';
 import type { Workflow } from '../types/workflow';
 import { WorkflowSchema } from '../types/workflow';
+import { getIncomingEdgeIndices } from '../utils/workflowGraph';
 
 import { createWithSelector } from './common';
 import { wrapStoreWithDevTools } from './devtools';
@@ -229,6 +230,9 @@ function produceInitialState() {
       edges: [],
       positions: {},
 
+      // Initialize UndoManager
+      undoManager: null,
+
       // Initialize UI state
       selectedJobId: null,
       selectedTriggerId: null,
@@ -267,7 +271,7 @@ export const createWorkflowStore = () => {
   // Redux DevTools integration (development/test only)
   const devtools = wrapStoreWithDevTools<Workflow.State>({
     name: 'WorkflowStore',
-    excludeKeys: ['ydoc', 'provider'], // Exclude Y.Doc and provider (too large/circular)
+    excludeKeys: ['ydoc', 'provider', 'undoManager'], // Exclude Y.Doc, provider, and undoManager (too large/circular)
     maxAge: 200, // Higher limit to prevent history loss from frequent updates
     trace: false,
   });
@@ -379,6 +383,19 @@ export const createWorkflowStore = () => {
     const edgesArray = ydoc.getArray('edges');
     const positionsMap = ydoc.getMap('positions');
     const errorsMap = ydoc.getMap('errors'); // NEW: Get errors map
+
+    // Create UndoManager tracking all workflow collections
+    // NOTE: Job body Y.Text instances are intentionally NOT tracked here.
+    // Monaco Editor has its own undo/redo (Cmd+Z) that handles text editing.
+    // Including job bodies here would create conflicts and lead to jobs being
+    // deleted when undoing body edits.
+    const undoManager = new Y.UndoManager(
+      [workflowMap, jobsArray, triggersArray, edgesArray, positionsMap],
+      {
+        captureTimeout: 500, // Merge edits within 500ms
+        trackedOrigins: new Set([null]), // Track local changes only
+      }
+    );
 
     // Set up observers
     const workflowObserver = () => {
@@ -572,6 +589,11 @@ export const createWorkflowStore = () => {
         }
       },
       () => errorsMap.unobserveDeep(errorsObserver), // NEW: Cleanup function
+      () => {
+        // UndoManager cleanup
+        undoManager.clear();
+        undoManager.destroy();
+      },
     ];
 
     state = produce(state, draft => {
@@ -585,6 +607,11 @@ export const createWorkflowStore = () => {
     edgesObserver();
     positionsObserver();
     errorsObserver(); // NEW: Initial sync
+
+    // Update state with undoManager
+    updateState(draft => {
+      draft.undoManager = undoManager;
+    }, 'undoManager/initialized');
 
     // Initialize DevTools connection
     devtools.connect();
@@ -606,8 +633,10 @@ export const createWorkflowStore = () => {
     // Disconnect DevTools
     devtools.disconnect();
 
-    // Update collaboration status
-    updateState(_draft => {}, 'disconnected');
+    // Update collaboration status and reset undoManager
+    updateState(draft => {
+      draft.undoManager = null;
+    }, 'disconnected');
   };
 
   // =============================================================================
@@ -733,10 +762,23 @@ export const createWorkflowStore = () => {
     const jobIndex = jobs.findIndex(job => job.get('id') === id);
 
     if (jobIndex >= 0) {
+      const edgesArray = ydoc.getArray('edges');
+      const edges = edgesArray.toArray() as Y.Map<unknown>[];
+
+      // Find all incoming edges (where this job is the target)
+      const incomingEdgeIndices = getIncomingEdgeIndices(edges, id);
+
       ydoc.transact(() => {
+        // Delete incoming edges first (highest index to lowest)
+        incomingEdgeIndices.forEach(edgeIndex => {
+          edgesArray.delete(edgeIndex, 1);
+        });
+
+        // Then delete the job
         jobsArray.delete(jobIndex, 1);
       });
     }
+    // Observer handles: Y.Doc → Immer → notify
   };
 
   const addEdge = (edge: Partial<Session.Edge>) => {
@@ -1385,6 +1427,46 @@ export const createWorkflowStore = () => {
     }
   };
 
+  // Undo/Redo Commands
+  // =============================================================================
+  // These commands trigger Y.Doc changes via UndoManager, which then flow
+  // through the normal observer pattern (Pattern 1)
+  //
+  // Note: UndoManager tracks local changes only (trackedOrigins: new Set([null])).
+  // Remote changes from other collaborators are NOT undoable by this client,
+  // since they represent other users' intentional actions.
+
+  const undo = () => {
+    const undoManager = state.undoManager;
+    if (undoManager && undoManager.undoStack.length > 0) {
+      undoManager.undo();
+    }
+  };
+
+  const redo = () => {
+    const undoManager = state.undoManager;
+    if (undoManager && undoManager.redoStack.length > 0) {
+      undoManager.redo();
+    }
+  };
+
+  const canUndo = (): boolean => {
+    const undoManager = state.undoManager;
+    return undoManager ? undoManager.undoStack.length > 0 : false;
+  };
+
+  const canRedo = (): boolean => {
+    const undoManager = state.undoManager;
+    return undoManager ? undoManager.redoStack.length > 0 : false;
+  };
+
+  const clearHistory = () => {
+    const undoManager = state.undoManager;
+    if (undoManager) {
+      undoManager.clear();
+    }
+  };
+
   return {
     // Core store interface
     subscribe,
@@ -1441,6 +1523,14 @@ export const createWorkflowStore = () => {
 
     // Trigger auth methods
     requestTriggerAuthMethods,
+    // =============================================================================
+    // Undo/Redo Commands
+    // =============================================================================
+    undo,
+    redo,
+    canUndo,
+    canRedo,
+    clearHistory,
   };
 };
 

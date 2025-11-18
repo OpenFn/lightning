@@ -664,7 +664,7 @@ export const useCanSave = (): { canSave: boolean; tooltipMessage: string } => {
     useWorkflowConditions();
 
   // Determine tooltip message (check in priority order)
-  let tooltipMessage = 'Save workflow';
+  let tooltipMessage = '';
   let canSave = true;
 
   if (!isConnected) {
@@ -710,7 +710,7 @@ export const useCanRun = (): { canRun: boolean; tooltipMessage: string } => {
   const hasPermission = hasEditPermission || hasRunPermission;
 
   // Determine tooltip message (check in priority order)
-  let tooltipMessage = 'Run workflow';
+  let tooltipMessage = '';
   let canRun = true;
 
   if (!isConnected) {

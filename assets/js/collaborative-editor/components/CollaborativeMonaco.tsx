@@ -170,6 +170,70 @@ export function CollaborativeMonaco({
     }
   }, [disabled]);
 
+  // Effect to handle insert-snippet events from docs panel
+  useEffect(() => {
+    const handleInsertSnippet = (e: Event) => {
+      const editor = editorRef.current;
+      const monaco = monacoRef.current;
+      if (!editor || !monaco) {
+        logger.log('❌ Insert snippet: editor or monaco not ready');
+        return;
+      }
+
+      // @ts-ignore - custom event property
+      const snippetText = e.snippet;
+      if (!snippetText) {
+        logger.log('❌ Insert snippet: no snippet text in event');
+        return;
+      }
+
+      logger.log('✨ Inserting snippet at cursor position:', snippetText);
+
+      const model = editor.getModel();
+      if (!model) return;
+
+      // Get current cursor position
+      const selection = editor.getSelection();
+      if (!selection) return;
+
+      const position = selection.getStartPosition();
+
+      // Insert at current cursor position
+      const op = {
+        range: new monaco.Range(
+          position.lineNumber,
+          position.column,
+          position.lineNumber,
+          position.column
+        ),
+        text: `\n${snippetText}\n`,
+        forceMoveMarkers: true,
+      };
+
+      // Execute the edit
+      editor.executeEdits('insert-snippet', [op]);
+
+      // Move cursor to after the inserted snippet
+      const lines = snippetText.split('\n');
+      const newLineNumber = position.lineNumber + lines.length + 1;
+      editor.setPosition({ lineNumber: newLineNumber, column: 1 });
+
+      // Reveal the inserted snippet
+      editor.revealLineInCenter(newLineNumber);
+
+      // Focus the editor
+      editor.focus();
+
+      logger.log('✅ Snippet inserted successfully');
+    };
+
+    document.addEventListener('insert-snippet', handleInsertSnippet);
+
+    return () => {
+      document.removeEventListener('insert-snippet', handleInsertSnippet);
+    };
+  }, []);
+
   const editorOptions: editor.IStandaloneEditorConstructionOptions = {
     fontSize: 14,
     minimap: { enabled: false },
