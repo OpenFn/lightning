@@ -27,7 +27,7 @@ export const EdgeSchema = z
     condition_expression: z
       .string()
       .trim()
-      .min(1, "can't be blank")
+      .min(1, "This field can't be blank")
       .max(255, 'should be at most 255 character(s)'),
     condition_label: z
       .string()
@@ -54,7 +54,7 @@ export const EdgeSchema = z
       return true;
     },
     {
-      message: "can't be blank",
+      message: "This field can't be blank",
       path: ['condition_expression'],
     }
   );
