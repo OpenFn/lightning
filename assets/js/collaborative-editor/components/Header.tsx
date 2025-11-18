@@ -1,6 +1,5 @@
 import { Menu, MenuButton, MenuItem, MenuItems } from '@headlessui/react';
 import { useCallback, useMemo } from 'react';
-import { useHotkeys } from 'react-hotkeys-hook';
 
 import { useURLState } from '../../react/lib/use-url-state';
 import { buildClassicalEditorUrl } from '../../utils/editorUrlConversion';
@@ -253,18 +252,13 @@ export function Header({
     { enabled: canSave }
   );
 
-  useHotkeys(
-    'ctrl+shift+s,meta+shift+s',
-    event => {
-      event.preventDefault();
-      if (canSave && repoConnection) {
-        openGitHubSyncModal();
-      }
+  useKeyboardShortcut(
+    'Control+Shift+s, Meta+Shift+s',
+    () => {
+      openGitHubSyncModal();
     },
-    {
-      enableOnFormTags: true,
-    },
-    [openGitHubSyncModal, canSave, repoConnection]
+    0,
+    { enabled: canSave && !!repoConnection }
   );
 
   return (
