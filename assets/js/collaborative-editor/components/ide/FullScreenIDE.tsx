@@ -33,36 +33,23 @@ import {
   useRunActions,
   useRunStoreInstance,
 } from '../../hooks/useRun';
-import { useRunRetry } from '../../hooks/useRunRetry';
-import { useRunRetryShortcuts } from '../../hooks/useRunRetryShortcuts';
 import { useSession } from '../../hooks/useSession';
+import { useProject } from '../../hooks/useSessionContext';
 import {
-  useLatestSnapshotLockVersion,
-  useProject,
-} from '../../hooks/useSessionContext';
-import { useVersionSelect } from '../../hooks/useVersionSelect';
-import {
-  useCanRun,
   useCanSave,
   useCurrentJob,
   useWorkflowActions,
   useWorkflowState,
 } from '../../hooks/useWorkflow';
-import type { Job } from '../../types/job';
-import { AdaptorDisplay } from '../AdaptorDisplay';
 import { AdaptorSelectionModal } from '../AdaptorSelectionModal';
-import { BreadcrumbLink } from '../Breadcrumbs';
 import { CollaborativeMonaco } from '../CollaborativeMonaco';
 import { ConfigureAdaptorModal } from '../ConfigureAdaptorModal';
-import { Header } from '../Header';
-import { JobSelector } from '../JobSelector';
 import { ManualRunPanel } from '../ManualRunPanel';
 import { ManualRunPanelErrorBoundary } from '../ManualRunPanelErrorBoundary';
 import { RunViewerErrorBoundary } from '../run-viewer/RunViewerErrorBoundary';
 import { RunViewerPanel } from '../run-viewer/RunViewerPanel';
 import { SandboxIndicatorBanner } from '../SandboxIndicatorBanner';
 import { Tabs } from '../Tabs';
-import { VersionDropdown } from '../VersionDropdown';
 
 import { PanelToggleButton } from './PanelToggleButton';
 
@@ -126,11 +113,6 @@ export function FullScreenIDE({
   const provider = useSession(selectProvider);
   const { canSave } = useCanSave();
   const runStore = useRunStoreInstance();
-
-  const snapshotVersion = useWorkflowState(
-    state => state.workflow?.lock_version
-  );
-  const latestSnapshotLockVersion = useLatestSnapshotLockVersion();
 
   const workflow = useWorkflowState(state =>
     state.workflow
@@ -520,120 +502,6 @@ export function FullScreenIDE({
     );
   }, [isDocsCollapsed]);
 
-  // Run/Retry functionality for IDE context
-  const { canRun: canRunSnapshot, tooltipMessage: runTooltipMessage } =
-    useCanRun();
-
-  const runContext = useMemo(
-    () => ({
-      type: 'job' as const,
-      id: jobIdFromURL || '',
-    }),
-    [jobIdFromURL]
-  );
-
-  const {
-    handleRun,
-    handleRetry,
-    isSubmitting,
-    isRetryable,
-    runIsProcessing,
-    canRun: canRunFromHook,
-  } = useRunRetry({
-    projectId: projectId || '',
-    workflowId: workflowId || '',
-    runContext,
-    selectedTab,
-    selectedDataclip: selectedDataclipState,
-    customBody,
-    canRunWorkflow: canRunSnapshot,
-    workflowRunTooltipMessage: runTooltipMessage,
-    saveWorkflow,
-    onRunSubmitted: handleRunSubmitted,
-    edgeId: null,
-    workflowEdges: workflow?.edges || [],
-  });
-
-  // Enable run/retry keyboard shortcuts
-  // enableOnContentEditable ensures shortcuts work in Monaco editor
-  useRunRetryShortcuts({
-    onRun: handleRun,
-    onRetry: handleRetry,
-    canRun:
-      canRunSnapshot && canRunFromHook && !isSubmitting && !runIsProcessing,
-    isRunning: isSubmitting || runIsProcessing,
-    isRetryable,
-    scope: HOTKEY_SCOPES.IDE,
-    enableOnContentEditable: true,
-  });
-
-  // Build breadcrumbs for Header (MUST be before early return to satisfy React hooks rules)
-  const handleVersionSelect = useVersionSelect();
-  const allJobs = useWorkflowState(state => state.jobs);
-
-  const handleJobSelect = useCallback(
-    (job: Job) => {
-      updateSearchParams({ job: job.id });
-      selectJob(job.id);
-    },
-    [updateSearchParams, selectJob]
-  );
-
-  const breadcrumbElements = useMemo(() => {
-    return [
-      <BreadcrumbLink href="/projects" key="projects">
-        Projects
-      </BreadcrumbLink>,
-      <BreadcrumbLink href={`/projects/${projectId}/w`} key="project">
-        {project?.name || 'Project'}
-      </BreadcrumbLink>,
-      <BreadcrumbLink href={`/projects/${projectId}/w`} key="workflows">
-        Workflows
-      </BreadcrumbLink>,
-      <BreadcrumbLink onClick={onClose} key="workflow-name">
-        {workflow?.name || 'Workflow'}
-      </BreadcrumbLink>,
-      currentJob && (
-        <JobSelector
-          key="job-selector"
-          currentJob={currentJob}
-          jobs={allJobs}
-          onChange={handleJobSelect}
-        />
-      ),
-    ].filter(Boolean);
-  }, [
-    projectId,
-    project?.name,
-    workflow?.name,
-    onClose,
-    currentJob,
-    allJobs,
-    handleJobSelect,
-  ]);
-
-  const adaptorDisplayElement: React.ReactNode = currentJob ? (
-    <div className="flex items-center gap-2">
-      <AdaptorDisplay
-        adaptor={currentJob.adaptor || '@openfn/language-common@latest'}
-        credentialId={
-          currentJob.project_credential_id ||
-          currentJob.keychain_credential_id ||
-          null
-        }
-        size="sm"
-        onEdit={() => setIsConfigureModalOpen(true)}
-        onChangeAdaptor={handleOpenAdaptorPicker}
-        isReadOnly={!canSave}
-      />
-      <VersionDropdown
-        currentVersion={snapshotVersion ?? null}
-        latestVersion={latestSnapshotLockVersion}
-        onVersionSelect={handleVersionSelect}
-      />
-    </div>
-  ) : undefined;
-
   // Loading state: Wait for Y.Text and awareness to be ready
   if (!currentJob || !currentJobYText || !awareness) {
     return (
@@ -708,21 +576,7 @@ export function FullScreenIDE({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-white flex flex-col">
-      <Header
-        {...(projectId && { projectId })}
-        {...(workflowId && { workflowId })}
-        {...(adaptorDisplayElement && {
-          adaptorDisplay: adaptorDisplayElement,
-        })}
-        onRunClick={isRetryable ? handleRetry : handleRun}
-        canRun={
-          canRunSnapshot && canRunFromHook && !isSubmitting && !runIsProcessing
-        }
-        runTooltipMessage={runTooltipMessage}
-      >
-        {breadcrumbElements}
-      </Header>
+    <div className="absolute inset-0 bg-white flex flex-col">
       <SandboxIndicatorBanner
         parentProjectId={parentProjectId}
         parentProjectName={parentProjectName}
