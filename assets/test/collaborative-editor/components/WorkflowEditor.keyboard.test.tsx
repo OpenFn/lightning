@@ -10,12 +10,15 @@
  * - Mod+Enter: Open run panel for selected node or first trigger
  */
 
-import { render, screen, waitFor } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, test, vi } from 'vitest';
-import { HotkeysProvider } from 'react-hotkeys-hook';
 import { WorkflowEditor } from '../../../js/collaborative-editor/components/WorkflowEditor';
 import type { Workflow } from '../../../js/collaborative-editor/types/workflow';
+import {
+  expectShortcutNotToFire,
+  renderWithKeyboard,
+} from '../../keyboard-test-utils';
 
 // Mock dependencies
 vi.mock('../../../js/collaborative-editor/api/dataclips', () => ({
@@ -199,15 +202,6 @@ vi.mock('../../../js/collaborative-editor/hooks/useWorkflow', () => ({
   }),
 }));
 
-// Helper function to render WorkflowEditor with HotkeysProvider
-function renderWorkflowEditor() {
-  return render(
-    <HotkeysProvider>
-      <WorkflowEditor />
-    </HotkeysProvider>
-  );
-}
-
 describe('WorkflowEditor keyboard shortcuts', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -229,7 +223,7 @@ describe('WorkflowEditor keyboard shortcuts', () => {
         node: mockWorkflow.jobs[0],
       };
 
-      const { container } = renderWorkflowEditor();
+      const { container } = renderWithKeyboard(<WorkflowEditor />);
 
       await waitFor(() => {
         expect(screen.getByTestId('workflow-diagram')).toBeInTheDocument();
@@ -255,7 +249,7 @@ describe('WorkflowEditor keyboard shortcuts', () => {
         node: mockWorkflow.jobs[0],
       };
 
-      const { container } = renderWorkflowEditor();
+      const { container } = renderWithKeyboard(<WorkflowEditor />);
 
       await waitFor(() => {
         expect(screen.getByTestId('workflow-diagram')).toBeInTheDocument();
@@ -281,7 +275,7 @@ describe('WorkflowEditor keyboard shortcuts', () => {
         node: mockWorkflow.triggers[0],
       };
 
-      const { container } = renderWorkflowEditor();
+      const { container } = renderWithKeyboard(<WorkflowEditor />);
 
       await waitFor(() => {
         expect(screen.getByTestId('workflow-diagram')).toBeInTheDocument();
@@ -291,9 +285,11 @@ describe('WorkflowEditor keyboard shortcuts', () => {
 
       await user.keyboard('{Control>}e{/Control}');
 
-      // Wait to ensure handler doesn't fire
-      await new Promise(resolve => setTimeout(resolve, 100));
-      expect(mockUpdateSearchParams).not.toHaveBeenCalled();
+      await expectShortcutNotToFire(
+        'e',
+        { ctrlKey: true },
+        mockUpdateSearchParams
+      );
     });
 
     test('does not open IDE when nothing is selected', async () => {
@@ -301,7 +297,7 @@ describe('WorkflowEditor keyboard shortcuts', () => {
 
       currentNode = { type: null, node: null };
 
-      const { container } = renderWorkflowEditor();
+      const { container } = renderWithKeyboard(<WorkflowEditor />);
 
       await waitFor(() => {
         expect(screen.getByTestId('workflow-diagram')).toBeInTheDocument();
@@ -311,8 +307,11 @@ describe('WorkflowEditor keyboard shortcuts', () => {
 
       await user.keyboard('{Control>}e{/Control}');
 
-      await new Promise(resolve => setTimeout(resolve, 100));
-      expect(mockUpdateSearchParams).not.toHaveBeenCalled();
+      await expectShortcutNotToFire(
+        'e',
+        { ctrlKey: true },
+        mockUpdateSearchParams
+      );
     });
 
     test('does not trigger when IDE is already open', async () => {
@@ -327,7 +326,7 @@ describe('WorkflowEditor keyboard shortcuts', () => {
       mockSearchParams.set('panel', 'editor');
       mockSearchParams.set('job', 'job-1');
 
-      const { container } = renderWorkflowEditor();
+      const { container } = renderWithKeyboard(<WorkflowEditor />);
 
       await waitFor(() => {
         expect(screen.getByTestId('fullscreen-ide')).toBeInTheDocument();
@@ -337,9 +336,11 @@ describe('WorkflowEditor keyboard shortcuts', () => {
 
       await user.keyboard('{Control>}e{/Control}');
 
-      // Wait to ensure handler doesn't fire
-      await new Promise(resolve => setTimeout(resolve, 100));
-      expect(mockUpdateSearchParams).not.toHaveBeenCalled();
+      await expectShortcutNotToFire(
+        'e',
+        { ctrlKey: true },
+        mockUpdateSearchParams
+      );
     });
 
     test('works in form fields (enableOnFormTags)', async () => {
@@ -350,7 +351,7 @@ describe('WorkflowEditor keyboard shortcuts', () => {
         node: mockWorkflow.jobs[0],
       };
 
-      const { container } = renderWorkflowEditor();
+      const { container } = renderWithKeyboard(<WorkflowEditor />);
 
       await waitFor(() => {
         expect(screen.getByTestId('workflow-diagram')).toBeInTheDocument();
@@ -381,7 +382,7 @@ describe('WorkflowEditor keyboard shortcuts', () => {
         node: mockWorkflow.jobs[0],
       };
 
-      const { container } = renderWorkflowEditor();
+      const { container } = renderWithKeyboard(<WorkflowEditor />);
 
       await waitFor(() => {
         expect(screen.getByTestId('workflow-diagram')).toBeInTheDocument();
@@ -405,7 +406,7 @@ describe('WorkflowEditor keyboard shortcuts', () => {
         node: mockWorkflow.jobs[0],
       };
 
-      const { container } = renderWorkflowEditor();
+      const { container } = renderWithKeyboard(<WorkflowEditor />);
 
       await waitFor(() => {
         expect(screen.getByTestId('workflow-diagram')).toBeInTheDocument();
@@ -429,7 +430,7 @@ describe('WorkflowEditor keyboard shortcuts', () => {
         node: mockWorkflow.triggers[0],
       };
 
-      const { container } = renderWorkflowEditor();
+      const { container } = renderWithKeyboard(<WorkflowEditor />);
 
       await waitFor(() => {
         expect(screen.getByTestId('workflow-diagram')).toBeInTheDocument();
@@ -451,7 +452,7 @@ describe('WorkflowEditor keyboard shortcuts', () => {
 
       currentNode = { type: null, node: null };
 
-      const { container } = renderWorkflowEditor();
+      const { container } = renderWithKeyboard(<WorkflowEditor />);
 
       await waitFor(() => {
         expect(screen.getByTestId('workflow-diagram')).toBeInTheDocument();
@@ -480,7 +481,7 @@ describe('WorkflowEditor keyboard shortcuts', () => {
       mockIsRunPanelOpen.mockReturnValue(true);
       mockRunPanelContext.mockReturnValue({ jobId: 'job-1' });
 
-      const { container } = renderWorkflowEditor();
+      const { container } = renderWithKeyboard(<WorkflowEditor />);
 
       await waitFor(() => {
         expect(screen.getByTestId('manual-run-panel')).toBeInTheDocument();
@@ -492,8 +493,11 @@ describe('WorkflowEditor keyboard shortcuts', () => {
       // (ManualRunPanel's shortcut handler will execute instead)
       await user.keyboard('{Meta>}{Enter}{/Meta}');
 
-      await new Promise(resolve => setTimeout(resolve, 100));
-      expect(mockOpenRunPanel).not.toHaveBeenCalled();
+      await expectShortcutNotToFire(
+        'Enter',
+        { metaKey: true },
+        mockOpenRunPanel
+      );
     });
 
     test('does not trigger when IDE is open', async () => {
@@ -508,7 +512,7 @@ describe('WorkflowEditor keyboard shortcuts', () => {
       mockSearchParams.set('panel', 'editor');
       mockSearchParams.set('job', 'job-1');
 
-      const { container } = renderWorkflowEditor();
+      const { container } = renderWithKeyboard(<WorkflowEditor />);
 
       await waitFor(() => {
         expect(screen.getByTestId('fullscreen-ide')).toBeInTheDocument();
@@ -518,8 +522,11 @@ describe('WorkflowEditor keyboard shortcuts', () => {
 
       await user.keyboard('{Meta>}{Enter}{/Meta}');
 
-      await new Promise(resolve => setTimeout(resolve, 100));
-      expect(mockOpenRunPanel).not.toHaveBeenCalled();
+      await expectShortcutNotToFire(
+        'Enter',
+        { metaKey: true },
+        mockOpenRunPanel
+      );
     });
 
     test('works in form fields (enableOnFormTags)', async () => {
@@ -530,7 +537,7 @@ describe('WorkflowEditor keyboard shortcuts', () => {
         node: mockWorkflow.jobs[0],
       };
 
-      const { container } = renderWorkflowEditor();
+      const { container } = renderWithKeyboard(<WorkflowEditor />);
 
       await waitFor(() => {
         expect(screen.getByTestId('workflow-diagram')).toBeInTheDocument();
@@ -560,7 +567,7 @@ describe('WorkflowEditor keyboard shortcuts', () => {
         node: mockWorkflow.jobs[0],
       };
 
-      const { container } = renderWorkflowEditor();
+      const { container } = renderWithKeyboard(<WorkflowEditor />);
 
       await waitFor(() => {
         expect(screen.getByTestId('workflow-diagram')).toBeInTheDocument();
@@ -588,7 +595,7 @@ describe('WorkflowEditor keyboard shortcuts', () => {
       mockSearchParams.set('panel', 'editor');
       mockSearchParams.set('job', 'job-1');
 
-      const { container } = renderWorkflowEditor();
+      const { container } = renderWithKeyboard(<WorkflowEditor />);
 
       await waitFor(() => {
         expect(screen.getByTestId('fullscreen-ide')).toBeInTheDocument();
@@ -598,8 +605,11 @@ describe('WorkflowEditor keyboard shortcuts', () => {
 
       await user.keyboard('{Control>}{Enter}{/Control}');
 
-      await new Promise(resolve => setTimeout(resolve, 100));
-      expect(mockOpenRunPanel).not.toHaveBeenCalled();
+      await expectShortcutNotToFire(
+        'Enter',
+        { ctrlKey: true },
+        mockOpenRunPanel
+      );
     });
 
     test('Mod+Enter disabled when run panel already open', async () => {
@@ -613,7 +623,7 @@ describe('WorkflowEditor keyboard shortcuts', () => {
       mockIsRunPanelOpen.mockReturnValue(true);
       mockRunPanelContext.mockReturnValue({ jobId: 'job-1' });
 
-      const { container } = renderWorkflowEditor();
+      const { container } = renderWithKeyboard(<WorkflowEditor />);
 
       await waitFor(() => {
         expect(screen.getByTestId('manual-run-panel')).toBeInTheDocument();
@@ -623,8 +633,11 @@ describe('WorkflowEditor keyboard shortcuts', () => {
 
       await user.keyboard('{Control>}{Enter}{/Control}');
 
-      await new Promise(resolve => setTimeout(resolve, 100));
-      expect(mockOpenRunPanel).not.toHaveBeenCalled();
+      await expectShortcutNotToFire(
+        'Enter',
+        { ctrlKey: true },
+        mockOpenRunPanel
+      );
     });
   });
 
@@ -638,7 +651,7 @@ describe('WorkflowEditor keyboard shortcuts', () => {
         node: mockWorkflow.jobs[1],
       };
 
-      const { container } = renderWorkflowEditor();
+      const { container } = renderWithKeyboard(<WorkflowEditor />);
 
       await waitFor(() => {
         expect(screen.getByTestId('workflow-diagram')).toBeInTheDocument();
@@ -662,7 +675,7 @@ describe('WorkflowEditor keyboard shortcuts', () => {
         node: mockWorkflow.triggers[1],
       };
 
-      const { container } = renderWorkflowEditor();
+      const { container } = renderWithKeyboard(<WorkflowEditor />);
 
       await waitFor(() => {
         expect(screen.getByTestId('workflow-diagram')).toBeInTheDocument();

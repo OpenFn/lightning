@@ -9,6 +9,7 @@ import { useURLState } from '../../react/lib/use-url-state';
 import type { WorkflowState as YAMLWorkflowState } from '../../yaml/types';
 import { HOTKEY_SCOPES } from '../constants/hotkeys';
 import { useIsNewWorkflow, useProject } from '../hooks/useSessionContext';
+import { useKeyboardShortcut } from '../keyboard';
 import {
   useIsRunPanelOpen,
   useRunPanelContext,
@@ -248,22 +249,20 @@ export function WorkflowEditor({
     updateSearchParams({ panel: null });
   };
 
-  useHotkeys(
-    'ctrl+e,meta+e',
-    event => {
-      event.preventDefault();
-
+  // Open Code Editor with Cmd+E / Ctrl+E
+  useKeyboardShortcut(
+    'Control+e, Meta+e',
+    () => {
       if (currentNode.type !== 'job' || !currentNode.node) {
         return;
       }
 
       updateSearchParams({ panel: 'editor' });
     },
+    0, // GLOBAL priority
     {
       enabled: !isIDEOpen,
-      enableOnFormTags: true,
-    },
-    [currentNode, isIDEOpen, updateSearchParams]
+    }
   );
 
   // CMD+Enter: Open run panel or run workflow

@@ -22,6 +22,7 @@ import {
 import { useIsRunPanelOpen } from './hooks/useUI';
 import { useVersionSelect } from './hooks/useVersionSelect';
 import { useWorkflowState } from './hooks/useWorkflow';
+import { KeyboardProvider } from './keyboard';
 
 export interface CollaborativeEditorDataProps {
   'data-workflow-id': string;
@@ -178,57 +179,59 @@ export const CollaborativeEditor: WithActionProps<
   };
 
   return (
-    <HotkeysProvider>
-      <div
-        className="collaborative-editor h-full flex flex-col"
-        data-testid="collaborative-editor"
-      >
-        <SocketProvider>
-          <SessionProvider
-            workflowId={workflowId}
-            projectId={projectId}
-            isNewWorkflow={isNewWorkflow}
-          >
-            <StoreProvider>
-              <LiveViewActionsProvider actions={liveViewActions}>
-                <VersionDebugLogger />
-                <Toaster />
-                <BreadcrumbContent
-                  workflowId={workflowId}
-                  workflowName={workflowName}
-                  {...(projectId !== undefined && {
-                    projectIdFallback: projectId,
-                  })}
-                  {...(projectName !== undefined && {
-                    projectNameFallback: projectName,
-                  })}
-                  {...(projectEnv !== undefined && {
-                    projectEnvFallback: projectEnv,
-                  })}
-                  {...(rootProjectId !== null && {
-                    rootProjectIdFallback: rootProjectId,
-                  })}
-                  {...(rootProjectName !== null && {
-                    rootProjectNameFallback: rootProjectName,
-                  })}
-                />
-                <LoadingBoundary>
-                  <div className="flex-1 min-h-0 overflow-hidden">
-                    <WorkflowEditor
-                      {...(rootProjectId !== null && {
-                        parentProjectId: rootProjectId,
-                      })}
-                      {...(rootProjectName !== null && {
-                        parentProjectName: rootProjectName,
-                      })}
-                    />
-                  </div>
-                </LoadingBoundary>
-              </LiveViewActionsProvider>
-            </StoreProvider>
-          </SessionProvider>
-        </SocketProvider>
-      </div>
-    </HotkeysProvider>
+    <KeyboardProvider>
+      <HotkeysProvider>
+        <div
+          className="collaborative-editor h-full flex flex-col"
+          data-testid="collaborative-editor"
+        >
+          <SocketProvider>
+            <SessionProvider
+              workflowId={workflowId}
+              projectId={projectId}
+              isNewWorkflow={isNewWorkflow}
+            >
+              <StoreProvider>
+                <LiveViewActionsProvider actions={liveViewActions}>
+                  <VersionDebugLogger />
+                  <Toaster />
+                  <BreadcrumbContent
+                    workflowId={workflowId}
+                    workflowName={workflowName}
+                    {...(projectId !== undefined && {
+                      projectIdFallback: projectId,
+                    })}
+                    {...(projectName !== undefined && {
+                      projectNameFallback: projectName,
+                    })}
+                    {...(projectEnv !== undefined && {
+                      projectEnvFallback: projectEnv,
+                    })}
+                    {...(rootProjectId !== null && {
+                      rootProjectIdFallback: rootProjectId,
+                    })}
+                    {...(rootProjectName !== null && {
+                      rootProjectNameFallback: rootProjectName,
+                    })}
+                  />
+                  <LoadingBoundary>
+                    <div className="flex-1 min-h-0 overflow-hidden">
+                      <WorkflowEditor
+                        {...(rootProjectId !== null && {
+                          parentProjectId: rootProjectId,
+                        })}
+                        {...(rootProjectName !== null && {
+                          parentProjectName: rootProjectName,
+                        })}
+                      />
+                    </div>
+                  </LoadingBoundary>
+                </LiveViewActionsProvider>
+              </StoreProvider>
+            </SessionProvider>
+          </SocketProvider>
+        </div>
+      </HotkeysProvider>
+    </KeyboardProvider>
   );
 };
