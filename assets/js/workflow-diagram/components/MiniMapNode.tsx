@@ -1,14 +1,14 @@
-import { ClockIcon, GlobeAltIcon } from "@heroicons/react/24/outline";
-import type { MiniMapNodeProps } from "@xyflow/react";
-import { memo } from "react";
+import { ClockIcon, GlobeAltIcon } from '@heroicons/react/24/outline';
+import type { MiniMapNodeProps } from '@xyflow/react';
+import { memo } from 'react';
 
-import { useWorkflowStore } from "../../workflow-store/store";
-import useAdaptorIcons from "../useAdaptorIcons";
-import getAdaptorName from "../util/get-adaptor-name";
+import { useWorkflowStore } from '../../workflow-store/store';
+import useAdaptorIcons from '../useAdaptorIcons';
+import getAdaptorName from '../util/get-adaptor-name';
 
 type Trigger = {
   id: string;
-  type: "webhook" | "cron";
+  type: 'webhook' | 'cron' | 'kafka';
 };
 
 type Job = {
@@ -16,15 +16,44 @@ type Job = {
   adaptor?: string;
 };
 
-const MinimapNode = ({
+/**
+ * MiniMap node renderer for workflow diagrams.
+ *
+ * This component is shared between Phoenix LiveView and Collaborative Editor:
+ * - Phoenix LiveView: Uses Zustand store (no props needed)
+ * - Collaborative Editor: Pass jobs/triggers as props
+ *
+ * @param jobs - Optional jobs array (falls back to useWorkflowStore if not
+ *   provided)
+ * @param triggers - Optional triggers array (falls back to useWorkflowStore
+ *   if not provided)
+ *
+ * @example
+ * // Phoenix LiveView usage (store-based)
+ * <MiniMap nodeComponent={MiniMapNode} />
+ *
+ * @example
+ * // Collaborative Editor usage (props-based)
+ * <MiniMap
+ *   nodeComponent={(props) => (
+ *     <MiniMapNode {...props} jobs={jobs} triggers={triggers} />
+ *   )}
+ * />
+ */
+const MiniMapNode = ({
   x,
   y,
   width: _width,
   height: _height,
   id,
   selected: _selected,
-}: MiniMapNodeProps) => {
-  const { triggers, jobs } = useWorkflowStore();
+  jobs: propJobs,
+  triggers: propTriggers,
+}: MiniMapNodeProps & { jobs?: Job[]; triggers?: Trigger[] }) => {
+  // Fallback to store when props not provided (Phoenix LiveView pattern)
+  const storeData = useWorkflowStore();
+  const jobs = propJobs ?? storeData.jobs;
+  const triggers = propTriggers ?? storeData.triggers;
   const adaptorIconsData = useAdaptorIcons();
 
   // Check if this node is a trigger by looking it up in the triggers array
@@ -35,7 +64,7 @@ const MinimapNode = ({
   if (isTrigger) {
     // Use the same icons as the main Trigger component
     const icon =
-      trigger.type === "webhook" ? (
+      trigger.type === 'webhook' ? (
         <GlobeAltIcon className="w-full h-full text-gray-500" />
       ) : (
         <ClockIcon className="w-full h-full text-gray-500" />
@@ -86,4 +115,4 @@ const MinimapNode = ({
   );
 };
 
-export default memo(MinimapNode);
+export default memo(MiniMapNode);
