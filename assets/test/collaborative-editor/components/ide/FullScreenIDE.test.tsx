@@ -14,7 +14,6 @@
 
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { HotkeysProvider } from 'react-hotkeys-hook';
 import * as Y from 'yjs';
 import { beforeEach, describe, expect, test, vi } from 'vitest';
 import { FullScreenIDE } from '../../../../js/collaborative-editor/components/ide/FullScreenIDE';
@@ -345,13 +344,11 @@ function renderFullScreenIDE(
   props: React.ComponentProps<typeof FullScreenIDE>
 ) {
   return render(
-    <HotkeysProvider>
-      <KeyboardProvider>
-        <StoreProvider>
-          <FullScreenIDE {...props} />
-        </StoreProvider>
-      </KeyboardProvider>
-    </HotkeysProvider>
+    <KeyboardProvider>
+      <StoreProvider>
+        <FullScreenIDE {...props} />
+      </StoreProvider>
+    </KeyboardProvider>
   );
 }
 

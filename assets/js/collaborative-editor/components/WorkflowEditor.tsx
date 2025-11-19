@@ -3,11 +3,9 @@
  */
 
 import { useEffect, useRef, useState } from 'react';
-import { useHotkeysContext } from 'react-hotkeys-hook';
 
 import { useURLState } from '../../react/lib/use-url-state';
 import type { WorkflowState as YAMLWorkflowState } from '../../yaml/types';
-import { HOTKEY_SCOPES } from '../constants/hotkeys';
 import { useIsNewWorkflow, useProject } from '../hooks/useSessionContext';
 import { useKeyboardShortcut } from '../keyboard';
 import {
@@ -52,16 +50,6 @@ export function WorkflowEditor({
 
   const isSyncingRef = useRef(false);
   const isInitialMountRef = useRef(true);
-
-  const { enableScope, disableScope } = useHotkeysContext();
-
-  useEffect(() => {
-    if (isRunPanelOpen) {
-      enableScope(HOTKEY_SCOPES.RUN_PANEL);
-    } else {
-      disableScope(HOTKEY_SCOPES.RUN_PANEL);
-    }
-  }, [isRunPanelOpen, enableScope, disableScope]);
 
   useEffect(() => {
     if (isSyncingRef.current) return;

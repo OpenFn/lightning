@@ -9,36 +9,36 @@
  * Phase 3R will add ConfigureAdaptorModal tests for version/credential selection.
  */
 
-import { render, screen, waitFor } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
-import type React from "react";
-import { act } from "react";
-import { beforeEach, describe, expect, test, vi } from "vitest";
-import type * as Y from "yjs";
+import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import type React from 'react';
+import { act } from 'react';
+import { beforeEach, describe, expect, test, vi } from 'vitest';
+import type * as Y from 'yjs';
 
-import { JobForm } from "../../../../js/collaborative-editor/components/inspector/JobForm";
-import type { StoreContextValue } from "../../../../js/collaborative-editor/contexts/StoreProvider";
-import { StoreContext } from "../../../../js/collaborative-editor/contexts/StoreProvider";
-import { LiveViewActionsProvider } from "../../../../js/collaborative-editor/contexts/LiveViewActionsContext";
-import type { AdaptorStoreInstance } from "../../../../js/collaborative-editor/stores/createAdaptorStore";
-import { createAdaptorStore } from "../../../../js/collaborative-editor/stores/createAdaptorStore";
-import type { AwarenessStoreInstance } from "../../../../js/collaborative-editor/stores/createAwarenessStore";
-import { createAwarenessStore } from "../../../../js/collaborative-editor/stores/createAwarenessStore";
-import type { CredentialStoreInstance } from "../../../../js/collaborative-editor/stores/createCredentialStore";
-import { createCredentialStore } from "../../../../js/collaborative-editor/stores/createCredentialStore";
-import type { SessionContextStoreInstance } from "../../../../js/collaborative-editor/stores/createSessionContextStore";
-import { createSessionContextStore } from "../../../../js/collaborative-editor/stores/createSessionContextStore";
-import type { WorkflowStoreInstance } from "../../../../js/collaborative-editor/stores/createWorkflowStore";
-import { createWorkflowStore } from "../../../../js/collaborative-editor/stores/createWorkflowStore";
+import { JobForm } from '../../../../js/collaborative-editor/components/inspector/JobForm';
+import type { StoreContextValue } from '../../../../js/collaborative-editor/contexts/StoreProvider';
+import { StoreContext } from '../../../../js/collaborative-editor/contexts/StoreProvider';
+import { LiveViewActionsProvider } from '../../../../js/collaborative-editor/contexts/LiveViewActionsContext';
+import type { AdaptorStoreInstance } from '../../../../js/collaborative-editor/stores/createAdaptorStore';
+import { createAdaptorStore } from '../../../../js/collaborative-editor/stores/createAdaptorStore';
+import type { AwarenessStoreInstance } from '../../../../js/collaborative-editor/stores/createAwarenessStore';
+import { createAwarenessStore } from '../../../../js/collaborative-editor/stores/createAwarenessStore';
+import type { CredentialStoreInstance } from '../../../../js/collaborative-editor/stores/createCredentialStore';
+import { createCredentialStore } from '../../../../js/collaborative-editor/stores/createCredentialStore';
+import type { SessionContextStoreInstance } from '../../../../js/collaborative-editor/stores/createSessionContextStore';
+import { createSessionContextStore } from '../../../../js/collaborative-editor/stores/createSessionContextStore';
+import type { WorkflowStoreInstance } from '../../../../js/collaborative-editor/stores/createWorkflowStore';
+import { createWorkflowStore } from '../../../../js/collaborative-editor/stores/createWorkflowStore';
 import {
   createMockPhoenixChannel,
   createMockPhoenixChannelProvider,
-} from "../../__helpers__/channelMocks";
-import { createWorkflowYDoc } from "../../__helpers__/workflowFactory";
-import { HotkeysProvider } from "react-hotkeys-hook";
+} from '../../__helpers__/channelMocks';
+import { createWorkflowYDoc } from '../../__helpers__/workflowFactory';
+import { KeyboardProvider } from '#/collaborative-editor/keyboard';
 
 // Mock useAdaptorIcons to avoid fetching icon manifest
-vi.mock("#/workflow-diagram/useAdaptorIcons", () => ({
+vi.mock('#/workflow-diagram/useAdaptorIcons', () => ({
   default: () => null,
 }));
 
@@ -81,16 +81,16 @@ function createWrapper(
 
   return ({ children }: { children: React.ReactNode }) => (
     <LiveViewActionsProvider actions={mockLiveViewActions}>
-      <HotkeysProvider>
+      <KeyboardProvider>
         <StoreContext.Provider value={mockStoreValue}>
           {children}
         </StoreContext.Provider>
-      </HotkeysProvider>
+      </KeyboardProvider>
     </LiveViewActionsProvider>
   );
 }
 
-describe("JobForm - Adaptor Display Section", () => {
+describe('JobForm - Adaptor Display Section', () => {
   let ydoc: Y.Doc;
   let workflowStore: WorkflowStoreInstance;
   let credentialStore: CredentialStoreInstance;
@@ -103,11 +103,11 @@ describe("JobForm - Adaptor Display Section", () => {
     // Create Y.Doc with a job using HTTP adaptor
     ydoc = createWorkflowYDoc({
       jobs: {
-        "job-1": {
-          id: "job-1",
-          name: "Test Job",
-          adaptor: "@openfn/language-http@1.0.0",
-          body: "fn(state => state)",
+        'job-1': {
+          id: 'job-1',
+          name: 'Test Job',
+          adaptor: '@openfn/language-http@1.0.0',
+          body: 'fn(state => state)',
           project_credential_id: null,
           keychain_credential_id: null,
         },
@@ -129,22 +129,22 @@ describe("JobForm - Adaptor Display Section", () => {
 
     // Emit adaptors from channel
     act(() => {
-      (mockChannel as any)._test.emit("adaptors", {
+      (mockChannel as any)._test.emit('adaptors', {
         adaptors: [
           {
-            name: "@openfn/language-http",
-            latest: "1.0.0",
-            versions: [{ version: "1.0.0" }, { version: "0.9.0" }],
+            name: '@openfn/language-http',
+            latest: '1.0.0',
+            versions: [{ version: '1.0.0' }, { version: '0.9.0' }],
           },
           {
-            name: "@openfn/language-salesforce",
-            latest: "2.0.0",
-            versions: [{ version: "2.0.0" }, { version: "1.0.0" }],
+            name: '@openfn/language-salesforce',
+            latest: '2.0.0',
+            versions: [{ version: '2.0.0' }, { version: '1.0.0' }],
           },
           {
-            name: "@openfn/language-common",
-            latest: "2.0.0",
-            versions: [{ version: "2.0.0" }],
+            name: '@openfn/language-common',
+            latest: '2.0.0',
+            versions: [{ version: '2.0.0' }],
           },
         ],
       });
@@ -152,7 +152,7 @@ describe("JobForm - Adaptor Display Section", () => {
 
     // Emit credentials from channel
     act(() => {
-      (mockChannel as any)._test.emit("credentials_list", {
+      (mockChannel as any)._test.emit('credentials_list', {
         project_credentials: [],
         keychain_credentials: [],
       });
@@ -160,7 +160,7 @@ describe("JobForm - Adaptor Display Section", () => {
 
     // Set permissions
     act(() => {
-      (mockChannel as any)._test.emit("session_context", {
+      (mockChannel as any)._test.emit('session_context', {
         user: null,
         project: null,
         config: { require_email_verification: false },
@@ -170,7 +170,7 @@ describe("JobForm - Adaptor Display Section", () => {
     });
   });
 
-  test("displays adaptor information with icon (Phase 2R: simplified)", async () => {
+  test('displays adaptor information with icon (Phase 2R: simplified)', async () => {
     const job = workflowStore.getSnapshot().jobs[0];
 
     render(<JobForm job={job} />, {
@@ -184,20 +184,20 @@ describe("JobForm - Adaptor Display Section", () => {
     });
 
     // Check adaptor display section exists
-    expect(screen.getByText("Adaptor")).toBeInTheDocument();
+    expect(screen.getByText('Adaptor')).toBeInTheDocument();
 
     // Check display name is shown (Http instead of @openfn/language-http)
     await waitFor(() => {
-      expect(screen.getByText("Http")).toBeInTheDocument();
+      expect(screen.getByText('Http')).toBeInTheDocument();
     });
 
     // Phase 2R: Version is NO LONGER displayed in inspector
     // Version selection moved to ConfigureAdaptorModal (Phase 3R)
 
     // Check "Edit" button exists (changed from "Connect")
-    const editButton = screen.getByRole("button", { name: /edit adaptor/i });
+    const editButton = screen.getByRole('button', { name: /edit adaptor/i });
     expect(editButton).toBeInTheDocument();
-    expect(editButton).toHaveTextContent("Edit");
+    expect(editButton).toHaveTextContent('Edit');
   });
 
   test("opens ConfigureAdaptorModal when 'Edit' clicked (Phase 3R)", async () => {
@@ -215,19 +215,19 @@ describe("JobForm - Adaptor Display Section", () => {
     });
 
     // Click "Edit" button to open ConfigureAdaptorModal
-    const editButton = screen.getByRole("button", { name: /edit adaptor/i });
+    const editButton = screen.getByRole('button', { name: /edit adaptor/i });
     await user.click(editButton);
 
     // Phase 3R: ConfigureAdaptorModal should open (not AdaptorSelectionModal)
     await waitFor(
       () => {
-        expect(screen.getByText("Configure connection")).toBeInTheDocument();
+        expect(screen.getByText('Configure connection')).toBeInTheDocument();
       },
       { timeout: 3000 }
     );
   });
 
-  test("ConfigureAdaptorModal closes when Escape pressed (Phase 3R)", async () => {
+  test('ConfigureAdaptorModal closes when Escape pressed (Phase 3R)', async () => {
     const user = userEvent.setup();
     const job = workflowStore.getSnapshot().jobs[0];
 
@@ -242,43 +242,43 @@ describe("JobForm - Adaptor Display Section", () => {
     });
 
     // Verify initial adaptor
-    expect(screen.getByText("Http")).toBeInTheDocument();
+    expect(screen.getByText('Http')).toBeInTheDocument();
 
     // Open modal with "Edit" button
-    const editButton = screen.getByRole("button", { name: /edit adaptor/i });
+    const editButton = screen.getByRole('button', { name: /edit adaptor/i });
     await user.click(editButton);
 
     // ConfigureAdaptorModal should open
     await waitFor(
       () => {
-        expect(screen.getByText("Configure connection")).toBeInTheDocument();
+        expect(screen.getByText('Configure connection')).toBeInTheDocument();
       },
       { timeout: 3000 }
     );
 
     // Close modal by pressing Escape
-    await user.keyboard("{Escape}");
+    await user.keyboard('{Escape}');
 
     // Modal should close
     await waitFor(
       () => {
         expect(
-          screen.queryByText("Configure connection")
+          screen.queryByText('Configure connection')
         ).not.toBeInTheDocument();
       },
       { timeout: 3000 }
     );
   });
 
-  test("displays correct adaptor name for different adaptors", async () => {
+  test('displays correct adaptor name for different adaptors', async () => {
     // Create job with salesforce adaptor
     const ydocWithSalesforce = createWorkflowYDoc({
       jobs: {
-        "job-1": {
-          id: "job-1",
-          name: "Salesforce Job",
-          adaptor: "@openfn/language-salesforce@latest",
-          body: "fn(state => state)",
+        'job-1': {
+          id: 'job-1',
+          name: 'Salesforce Job',
+          adaptor: '@openfn/language-salesforce@latest',
+          body: 'fn(state => state)',
         },
       },
     });
@@ -299,7 +299,7 @@ describe("JobForm - Adaptor Display Section", () => {
 
     // Should display "Salesforce" not "@openfn/language-salesforce"
     await waitFor(() => {
-      expect(screen.getByText("Salesforce")).toBeInTheDocument();
+      expect(screen.getByText('Salesforce')).toBeInTheDocument();
     });
   });
 
@@ -506,7 +506,7 @@ describe("JobForm - Credential Display", () => {
 
 */
 
-describe("JobForm - Complete Integration (Phase 2R: Simplified)", () => {
+describe('JobForm - Complete Integration (Phase 2R: Simplified)', () => {
   let ydoc: Y.Doc;
   let workflowStore: WorkflowStoreInstance;
   let credentialStore: CredentialStoreInstance;
@@ -519,11 +519,11 @@ describe("JobForm - Complete Integration (Phase 2R: Simplified)", () => {
     // Create Y.Doc with a job
     ydoc = createWorkflowYDoc({
       jobs: {
-        "job-1": {
-          id: "job-1",
-          name: "Initial Name",
-          adaptor: "@openfn/language-salesforce@latest",
-          body: "fn(state => state)",
+        'job-1': {
+          id: 'job-1',
+          name: 'Initial Name',
+          adaptor: '@openfn/language-salesforce@latest',
+          body: 'fn(state => state)',
           project_credential_id: null,
           keychain_credential_id: null,
         },
@@ -545,17 +545,17 @@ describe("JobForm - Complete Integration (Phase 2R: Simplified)", () => {
 
     // Emit adaptors
     act(() => {
-      (mockChannel as any)._test.emit("adaptors", {
+      (mockChannel as any)._test.emit('adaptors', {
         adaptors: [
           {
-            name: "@openfn/language-http",
-            latest: "1.0.0",
-            versions: [{ version: "1.0.0" }],
+            name: '@openfn/language-http',
+            latest: '1.0.0',
+            versions: [{ version: '1.0.0' }],
           },
           {
-            name: "@openfn/language-salesforce",
-            latest: "2.0.0",
-            versions: [{ version: "2.0.0" }, { version: "1.0.0" }],
+            name: '@openfn/language-salesforce',
+            latest: '2.0.0',
+            versions: [{ version: '2.0.0' }, { version: '1.0.0' }],
           },
         ],
       });
@@ -563,7 +563,7 @@ describe("JobForm - Complete Integration (Phase 2R: Simplified)", () => {
 
     // Emit permissions
     act(() => {
-      (mockChannel as any)._test.emit("session_context", {
+      (mockChannel as any)._test.emit('session_context', {
         user: null,
         project: null,
         config: { require_email_verification: false },
@@ -573,12 +573,12 @@ describe("JobForm - Complete Integration (Phase 2R: Simplified)", () => {
     });
   });
 
-  test("handles job name update and ConfigureAdaptorModal flow (Phase 3R)", async () => {
+  test('handles job name update and ConfigureAdaptorModal flow (Phase 3R)', async () => {
     const user = userEvent.setup();
 
     // Emit empty credentials (credential selection in ConfigureAdaptorModal)
     act(() => {
-      (mockChannel as any)._test.emit("credentials_list", {
+      (mockChannel as any)._test.emit('credentials_list', {
         project_credentials: [],
         keychain_credentials: [],
       });
@@ -597,41 +597,41 @@ describe("JobForm - Complete Integration (Phase 2R: Simplified)", () => {
     });
 
     // 1. Verify initial state - Job Name field label updated in Phase 2R
-    expect(screen.getByDisplayValue("Initial Name")).toBeInTheDocument();
+    expect(screen.getByDisplayValue('Initial Name')).toBeInTheDocument();
     await waitFor(() => {
-      expect(screen.getByText("Salesforce")).toBeInTheDocument();
+      expect(screen.getByText('Salesforce')).toBeInTheDocument();
     });
 
     // 2. Change job name
-    const nameInput = screen.getByLabelText("Job Name");
+    const nameInput = screen.getByLabelText('Job Name');
     await user.clear(nameInput);
-    await user.type(nameInput, "Updated Name");
+    await user.type(nameInput, 'Updated Name');
 
     await waitFor(() => {
       const updatedJob = workflowStore.getSnapshot().jobs[0];
-      expect(updatedJob.name).toBe("Updated Name");
+      expect(updatedJob.name).toBe('Updated Name');
     });
 
     // 3. Verify "Edit" button opens ConfigureAdaptorModal (Phase 3R)
-    const editButton = screen.getByRole("button", { name: /edit adaptor/i });
+    const editButton = screen.getByRole('button', { name: /edit adaptor/i });
     await user.click(editButton);
 
     // Wait for ConfigureAdaptorModal to open
     await waitFor(
       () => {
-        expect(screen.getByText("Configure connection")).toBeInTheDocument();
+        expect(screen.getByText('Configure connection')).toBeInTheDocument();
       },
       { timeout: 3000 }
     );
 
     // Close modal with Escape key
-    await user.keyboard("{Escape}");
+    await user.keyboard('{Escape}');
 
     // Wait for modal to close
     await waitFor(
       () => {
         expect(
-          screen.queryByText("Configure connection")
+          screen.queryByText('Configure connection')
         ).not.toBeInTheDocument();
       },
       { timeout: 3000 }
@@ -642,16 +642,16 @@ describe("JobForm - Complete Integration (Phase 2R: Simplified)", () => {
     // 4. Verify job name changed in store
     await waitFor(() => {
       const finalJob = workflowStore.getSnapshot().jobs[0];
-      expect(finalJob.name).toBe("Updated Name");
+      expect(finalJob.name).toBe('Updated Name');
     });
 
     // Verify adaptor didn't change (since we canceled modal)
     const finalJob = workflowStore.getSnapshot().jobs[0];
-    expect(finalJob.adaptor).toContain("salesforce");
+    expect(finalJob.adaptor).toContain('salesforce');
   });
 });
 
-describe("JobForm - Collaborative Validation (Phase 5)", () => {
+describe('JobForm - Collaborative Validation (Phase 5)', () => {
   let ydoc: Y.Doc;
   let workflowStore: WorkflowStoreInstance;
   let credentialStore: CredentialStoreInstance;
@@ -664,11 +664,11 @@ describe("JobForm - Collaborative Validation (Phase 5)", () => {
     // Create Y.Doc with a job
     ydoc = createWorkflowYDoc({
       jobs: {
-        "job-1": {
-          id: "job-1",
-          name: "Test Job",
-          adaptor: "@openfn/language-http@1.0.0",
-          body: "fn(state => state)",
+        'job-1': {
+          id: 'job-1',
+          name: 'Test Job',
+          adaptor: '@openfn/language-http@1.0.0',
+          body: 'fn(state => state)',
           project_credential_id: null,
           keychain_credential_id: null,
         },
@@ -690,12 +690,12 @@ describe("JobForm - Collaborative Validation (Phase 5)", () => {
 
     // Emit adaptors
     act(() => {
-      (mockChannel as any)._test.emit("adaptors", {
+      (mockChannel as any)._test.emit('adaptors', {
         adaptors: [
           {
-            name: "@openfn/language-http",
-            latest: "1.0.0",
-            versions: [{ version: "1.0.0" }],
+            name: '@openfn/language-http',
+            latest: '1.0.0',
+            versions: [{ version: '1.0.0' }],
           },
         ],
       });
@@ -703,7 +703,7 @@ describe("JobForm - Collaborative Validation (Phase 5)", () => {
 
     // Emit credentials
     act(() => {
-      (mockChannel as any)._test.emit("credentials_list", {
+      (mockChannel as any)._test.emit('credentials_list', {
         project_credentials: [],
         keychain_credentials: [],
       });
@@ -711,7 +711,7 @@ describe("JobForm - Collaborative Validation (Phase 5)", () => {
 
     // Emit permissions
     act(() => {
-      (mockChannel as any)._test.emit("session_context", {
+      (mockChannel as any)._test.emit('session_context', {
         user: null,
         project: null,
         config: { require_email_verification: false },
@@ -721,14 +721,14 @@ describe("JobForm - Collaborative Validation (Phase 5)", () => {
     });
   });
 
-  test("displays server validation errors from Y.Doc", async () => {
+  test('displays server validation errors from Y.Doc', async () => {
     // Add server validation errors to Y.Doc
-    const errorsMap = ydoc.getMap("errors");
+    const errorsMap = ydoc.getMap('errors');
     act(() => {
       ydoc.transact(() => {
-        errorsMap.set("jobs", {
-          "job-1": {
-            name: ["Job name is too long (max 100 characters)"],
+        errorsMap.set('jobs', {
+          'job-1': {
+            name: ['Job name is too long (max 100 characters)'],
           },
         });
       });
@@ -752,16 +752,16 @@ describe("JobForm - Collaborative Validation (Phase 5)", () => {
     });
   });
 
-  test("displays multiple validation errors for different fields", async () => {
+  test('displays multiple validation errors for different fields', async () => {
     // Add multiple errors to Y.Doc
     // Note: JobForm only renders the name field, not body
-    const errorsMap = ydoc.getMap("errors");
+    const errorsMap = ydoc.getMap('errors');
     act(() => {
       ydoc.transact(() => {
-        errorsMap.set("jobs", {
-          "job-1": {
-            name: ["Job name is required"],
-            adaptor: ["Adaptor is invalid"],
+        errorsMap.set('jobs', {
+          'job-1': {
+            name: ['Job name is required'],
+            adaptor: ['Adaptor is invalid'],
           },
         });
       });
@@ -787,14 +787,14 @@ describe("JobForm - Collaborative Validation (Phase 5)", () => {
     // adaptor is selected via modal, not a direct form field
   });
 
-  test("preserves errors when reopening inspector", async () => {
+  test('preserves errors when reopening inspector', async () => {
     // Add validation errors
-    const errorsMap = ydoc.getMap("errors");
+    const errorsMap = ydoc.getMap('errors');
     act(() => {
       ydoc.transact(() => {
-        errorsMap.set("jobs", {
-          "job-1": {
-            name: ["Invalid job name"],
+        errorsMap.set('jobs', {
+          'job-1': {
+            name: ['Invalid job name'],
           },
         });
       });
@@ -838,14 +838,14 @@ describe("JobForm - Collaborative Validation (Phase 5)", () => {
     });
   });
 
-  test("clears errors when removed from Y.Doc", async () => {
+  test('clears errors when removed from Y.Doc', async () => {
     // Start with errors
-    const errorsMap = ydoc.getMap("errors");
+    const errorsMap = ydoc.getMap('errors');
     act(() => {
       ydoc.transact(() => {
-        errorsMap.set("jobs", {
-          "job-1": {
-            name: ["Job name is invalid"],
+        errorsMap.set('jobs', {
+          'job-1': {
+            name: ['Job name is invalid'],
           },
         });
       });
@@ -871,7 +871,7 @@ describe("JobForm - Collaborative Validation (Phase 5)", () => {
     // Clear errors from Y.Doc
     act(() => {
       ydoc.transact(() => {
-        errorsMap.set("jobs", {});
+        errorsMap.set('jobs', {});
       });
     });
 
@@ -881,23 +881,23 @@ describe("JobForm - Collaborative Validation (Phase 5)", () => {
     });
   });
 
-  test("handles errors for specific job only (not other jobs)", async () => {
+  test('handles errors for specific job only (not other jobs)', async () => {
     // Create a second Y.Doc with two jobs to test isolation
     const ydocWithTwoJobs = createWorkflowYDoc({
       jobs: {
-        "job-1": {
-          id: "job-1",
-          name: "First Job",
-          adaptor: "@openfn/language-http@1.0.0",
-          body: "fn(state => state)",
+        'job-1': {
+          id: 'job-1',
+          name: 'First Job',
+          adaptor: '@openfn/language-http@1.0.0',
+          body: 'fn(state => state)',
           project_credential_id: null,
           keychain_credential_id: null,
         },
-        "job-2": {
-          id: "job-2",
-          name: "Second Job",
-          adaptor: "@openfn/language-http@1.0.0",
-          body: "fn(state => state)",
+        'job-2': {
+          id: 'job-2',
+          name: 'Second Job',
+          adaptor: '@openfn/language-http@1.0.0',
+          body: 'fn(state => state)',
           project_credential_id: null,
           keychain_credential_id: null,
         },
@@ -907,19 +907,19 @@ describe("JobForm - Collaborative Validation (Phase 5)", () => {
     const twoJobsStore = createConnectedWorkflowStore(ydocWithTwoJobs);
 
     // Add errors only for job-2
-    const errorsMap = ydocWithTwoJobs.getMap("errors");
+    const errorsMap = ydocWithTwoJobs.getMap('errors');
     act(() => {
       ydocWithTwoJobs.transact(() => {
-        errorsMap.set("jobs", {
-          "job-2": {
-            name: ["Error on job 2"],
+        errorsMap.set('jobs', {
+          'job-2': {
+            name: ['Error on job 2'],
           },
         });
       });
     });
 
     // Render form for job-1
-    const job1 = twoJobsStore.getSnapshot().jobs.find(j => j.id === "job-1");
+    const job1 = twoJobsStore.getSnapshot().jobs.find(j => j.id === 'job-1');
 
     render(<JobForm job={job1!} />, {
       wrapper: createWrapper(
@@ -937,17 +937,17 @@ describe("JobForm - Collaborative Validation (Phase 5)", () => {
     });
   });
 
-  test("displays first error when field has multiple errors", async () => {
+  test('displays first error when field has multiple errors', async () => {
     // Add multiple errors for same field
-    const errorsMap = ydoc.getMap("errors");
+    const errorsMap = ydoc.getMap('errors');
     act(() => {
       ydoc.transact(() => {
-        errorsMap.set("jobs", {
-          "job-1": {
+        errorsMap.set('jobs', {
+          'job-1': {
             name: [
-              "First error message",
-              "Second error message",
-              "Third error message",
+              'First error message',
+              'Second error message',
+              'Third error message',
             ],
           },
         });
@@ -976,7 +976,7 @@ describe("JobForm - Collaborative Validation (Phase 5)", () => {
     });
   });
 
-  test("form values reset when switching between different jobs", async () => {
+  test('form values reset when switching between different jobs', async () => {
     // This test verifies that TanStack Form properly re-initializes when
     // the job prop changes, preventing form values from "sticking" between jobs.
     // This is critical for collaborative editing where users frequently switch
@@ -985,19 +985,19 @@ describe("JobForm - Collaborative Validation (Phase 5)", () => {
     // Create Y.Doc with two jobs with distinctly different values
     const ydocWithTwoJobs = createWorkflowYDoc({
       jobs: {
-        "job-1": {
-          id: "job-1",
-          name: "First Job Name",
-          adaptor: "@openfn/language-http@1.0.0",
-          body: "fn(state => state)",
+        'job-1': {
+          id: 'job-1',
+          name: 'First Job Name',
+          adaptor: '@openfn/language-http@1.0.0',
+          body: 'fn(state => state)',
           project_credential_id: null,
           keychain_credential_id: null,
         },
-        "job-2": {
-          id: "job-2",
-          name: "Second Job Name",
-          adaptor: "@openfn/language-salesforce@2.0.0",
-          body: "fn(state => state)",
+        'job-2': {
+          id: 'job-2',
+          name: 'Second Job Name',
+          adaptor: '@openfn/language-salesforce@2.0.0',
+          body: 'fn(state => state)',
           project_credential_id: null,
           keychain_credential_id: null,
         },
@@ -1007,8 +1007,8 @@ describe("JobForm - Collaborative Validation (Phase 5)", () => {
     const twoJobsStore = createConnectedWorkflowStore(ydocWithTwoJobs);
 
     // Get both jobs
-    const job1 = twoJobsStore.getSnapshot().jobs.find(j => j.id === "job-1");
-    const job2 = twoJobsStore.getSnapshot().jobs.find(j => j.id === "job-2");
+    const job1 = twoJobsStore.getSnapshot().jobs.find(j => j.id === 'job-1');
+    const job2 = twoJobsStore.getSnapshot().jobs.find(j => j.id === 'job-2');
 
     // Render form for job-1
     const { rerender } = render(<JobForm job={job1!} />, {
@@ -1023,8 +1023,8 @@ describe("JobForm - Collaborative Validation (Phase 5)", () => {
 
     // Verify job-1 values are displayed initially
     await waitFor(() => {
-      expect(screen.getByDisplayValue("First Job Name")).toBeInTheDocument();
-      expect(screen.getByText("Http")).toBeInTheDocument();
+      expect(screen.getByDisplayValue('First Job Name')).toBeInTheDocument();
+      expect(screen.getByText('Http')).toBeInTheDocument();
     });
 
     // Now switch to job-2 (this simulates user clicking on a different job in the canvas)
@@ -1033,18 +1033,18 @@ describe("JobForm - Collaborative Validation (Phase 5)", () => {
     // CRITICAL: Verify job-2 values are displayed (not job-1's values)
     // This is what we're testing - that form values don't "stick" when switching jobs
     await waitFor(() => {
-      expect(screen.getByDisplayValue("Second Job Name")).toBeInTheDocument();
+      expect(screen.getByDisplayValue('Second Job Name')).toBeInTheDocument();
       // Verify job-1's name is NOT shown
       expect(
-        screen.queryByDisplayValue("First Job Name")
+        screen.queryByDisplayValue('First Job Name')
       ).not.toBeInTheDocument();
     });
 
     // Verify adaptor changed too
     await waitFor(() => {
-      expect(screen.getByText("Salesforce")).toBeInTheDocument();
+      expect(screen.getByText('Salesforce')).toBeInTheDocument();
       // Verify job-1's adaptor is NOT shown
-      expect(screen.queryByText("Http")).not.toBeInTheDocument();
+      expect(screen.queryByText('Http')).not.toBeInTheDocument();
     });
 
     // Switch back to job-1 to verify bidirectional switching works
@@ -1052,13 +1052,13 @@ describe("JobForm - Collaborative Validation (Phase 5)", () => {
 
     // Verify job-1 values are correctly restored
     await waitFor(() => {
-      expect(screen.getByDisplayValue("First Job Name")).toBeInTheDocument();
-      expect(screen.getByText("Http")).toBeInTheDocument();
+      expect(screen.getByDisplayValue('First Job Name')).toBeInTheDocument();
+      expect(screen.getByText('Http')).toBeInTheDocument();
       // Verify job-2's values are NOT shown
       expect(
-        screen.queryByDisplayValue("Second Job Name")
+        screen.queryByDisplayValue('Second Job Name')
       ).not.toBeInTheDocument();
-      expect(screen.queryByText("Salesforce")).not.toBeInTheDocument();
+      expect(screen.queryByText('Salesforce')).not.toBeInTheDocument();
     });
   });
 });

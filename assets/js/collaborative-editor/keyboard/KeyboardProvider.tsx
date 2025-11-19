@@ -94,9 +94,6 @@ export function KeyboardProvider({ children }: KeyboardProviderProps) {
           const unsubscribe = tinykeys(window, {
             [combo]: (event: KeyboardEvent) => {
               const handlers = registry.current.get(combo);
-              console.log(
-                `[KeyboardProvider] Key combo "${combo}" triggered with ${handlers?.length || 0} handler(s).`
-              );
               if (!handlers || handlers.length === 0) return;
 
               // Sort by priority (desc), then by registeredAt (desc)

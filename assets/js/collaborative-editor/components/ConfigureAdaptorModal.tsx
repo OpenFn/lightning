@@ -5,9 +5,7 @@ import {
   DialogTitle,
 } from '@headlessui/react';
 import { useEffect, useMemo, useState, useRef } from 'react';
-import { useHotkeysContext } from 'react-hotkeys-hook';
 
-import { HOTKEY_SCOPES } from '#/collaborative-editor/constants/hotkeys';
 import {
   useCredentials,
   useCredentialQueries,
@@ -64,24 +62,6 @@ export function ConfigureAdaptorModal({
   // Get credentials from store
   const { projectCredentials, keychainCredentials } = useCredentials();
   const { credentialExists, getCredentialId } = useCredentialQueries();
-
-  // Keyboard scope management
-  const { enableScope, disableScope } = useHotkeysContext();
-
-  useEffect(() => {
-    if (isOpen) {
-      enableScope(HOTKEY_SCOPES.MODAL);
-      disableScope(HOTKEY_SCOPES.PANEL);
-      disableScope(HOTKEY_SCOPES.RUN_PANEL);
-    } else {
-      disableScope(HOTKEY_SCOPES.MODAL);
-      enableScope(HOTKEY_SCOPES.PANEL);
-    }
-
-    return () => {
-      disableScope(HOTKEY_SCOPES.MODAL);
-    };
-  }, [isOpen, enableScope, disableScope]);
 
   // When adaptor changes externally (from Y.Doc or adaptor picker),
   // automatically update to newest version and clear invalid credentials

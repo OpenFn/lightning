@@ -1,9 +1,7 @@
 import { useStore } from '@tanstack/react-form';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useHotkeysContext } from 'react-hotkeys-hook';
 
 import { useAppForm } from '#/collaborative-editor/components/form';
-import { HOTKEY_SCOPES } from '#/collaborative-editor/constants/hotkeys';
 import { useLiveViewActions } from '#/collaborative-editor/contexts/LiveViewActionsContext';
 import { useProjectAdaptors } from '#/collaborative-editor/hooks/useAdaptors';
 import {
@@ -60,22 +58,12 @@ export function JobForm({ job }: JobFormProps) {
   const { requestCredentials } = useCredentialsCommands();
   const { projectAdaptors, allAdaptors } = useProjectAdaptors();
   const { pushEvent, handleEvent } = useLiveViewActions();
-  const { enableScope, disableScope } = useHotkeysContext();
   const { isReadOnly } = useWorkflowReadOnly();
 
   // Modal state for adaptor configuration
   const [isConfigureModalOpen, setIsConfigureModalOpen] = useState(false);
   const [isAdaptorPickerOpen, setIsAdaptorPickerOpen] = useState(false);
   const [isCredentialModalOpen, setIsCredentialModalOpen] = useState(false);
-
-  // Disable panel hotkeys when credential modal is open
-  useEffect(() => {
-    if (isCredentialModalOpen) {
-      disableScope(HOTKEY_SCOPES.PANEL);
-    } else {
-      enableScope(HOTKEY_SCOPES.PANEL);
-    }
-  }, [isCredentialModalOpen, enableScope, disableScope]);
 
   // Parse initial adaptor value
   const initialAdaptor = job.adaptor || '@openfn/language-common@latest';

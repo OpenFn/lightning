@@ -5,13 +5,14 @@
  * run/retry keyboard shortcuts (Cmd/Ctrl+Enter and Cmd/Ctrl+Shift+Enter).
  *
  * Note: These tests verify hook behavior and logic. The underlying
- * react-hotkeys-hook library is well-tested by its maintainers.
+ * KeyboardProvider is well-tested by its maintainers.
  */
 
 import { act, render, waitFor } from '@testing-library/react';
-import { HotkeysProvider } from 'react-hotkeys-hook';
 import * as React from 'react';
 import { beforeEach, describe, expect, test, vi } from 'vitest';
+
+import { KeyboardProvider } from '#/collaborative-editor/keyboard';
 
 import { useRunRetryShortcuts } from '../../../js/collaborative-editor/hooks/useRunRetryShortcuts';
 import type { UseRunRetryShortcutsOptions } from '../../../js/collaborative-editor/hooks/useRunRetryShortcuts';
@@ -64,7 +65,7 @@ function TestComponent(
 }
 
 /**
- * Helper to render hook with HotkeysProvider
+ * Helper to render hook with KeyboardProvider
  */
 function renderHookWithHotkeys(
   options: UseRunRetryShortcutsOptions & {
@@ -72,9 +73,9 @@ function renderHookWithHotkeys(
   }
 ) {
   return render(
-    <HotkeysProvider>
+    <KeyboardProvider>
       <TestComponent {...options} />
-    </HotkeysProvider>
+    </KeyboardProvider>
   );
 }
 
@@ -93,6 +94,7 @@ describe('useRunRetryShortcuts - Hook Behavior', () => {
         canRun: true,
         isRunning: false,
         isRetryable: false,
+        priority: 50,
       });
     }).not.toThrow();
   });
@@ -105,9 +107,7 @@ describe('useRunRetryShortcuts - Hook Behavior', () => {
         isRunning: false,
         isRetryable: true,
         enabled: true,
-        scope: 'ide',
-        enableOnFormTags: true,
-        enableOnContentEditable: true,
+        priority: 50,
       });
     }).not.toThrow();
   });
@@ -119,6 +119,7 @@ describe('useRunRetryShortcuts - Hook Behavior', () => {
         canRun: true,
         isRunning: false,
         isRetryable: false,
+        priority: 50,
         enabled: false,
       });
     }).not.toThrow();
@@ -139,6 +140,7 @@ describe('useRunRetryShortcuts - Smart Run/Retry Logic', () => {
       canRun: true,
       isRunning: false,
       isRetryable: true,
+      priority: 50,
       testTrigger: 'retry',
     });
 
@@ -152,6 +154,7 @@ describe('useRunRetryShortcuts - Smart Run/Retry Logic', () => {
       canRun: true,
       isRunning: false,
       isRetryable: false,
+      priority: 50,
       testTrigger: 'run',
     });
 
@@ -167,6 +170,7 @@ describe('useRunRetryShortcuts - Smart Run/Retry Logic', () => {
       canRun: true,
       isRunning: false,
       isRetryable: true,
+      priority: 50,
       testTrigger: 'run',
     });
 
@@ -191,6 +195,7 @@ describe('useRunRetryShortcuts - Guard Conditions', () => {
       canRun: false,
       isRunning: false,
       isRetryable: false,
+      priority: 50,
       testTrigger: 'run',
     });
 
@@ -203,6 +208,7 @@ describe('useRunRetryShortcuts - Guard Conditions', () => {
       canRun: true,
       isRunning: true,
       isRetryable: false,
+      priority: 50,
       testTrigger: 'run',
     });
 
@@ -215,6 +221,7 @@ describe('useRunRetryShortcuts - Guard Conditions', () => {
       canRun: true,
       isRunning: false,
       isRetryable: false,
+      priority: 50,
       testTrigger: 'retry',
     });
 
@@ -227,6 +234,7 @@ describe('useRunRetryShortcuts - Guard Conditions', () => {
       canRun: false,
       isRunning: true,
       isRetryable: true,
+      priority: 50,
       testTrigger: 'retry',
     });
 
@@ -251,8 +259,7 @@ describe('useRunRetryShortcuts - Configuration Scenarios', () => {
         isRunning: false,
         isRetryable: true,
         enabled: true,
-        scope: 'runpanel',
-        enableOnContentEditable: false,
+        priority: 25, // RUN_PANEL priority
       });
     }).not.toThrow();
   });
@@ -264,20 +271,19 @@ describe('useRunRetryShortcuts - Configuration Scenarios', () => {
         canRun: true,
         isRunning: false,
         isRetryable: false,
-        scope: 'ide',
-        enableOnContentEditable: true,
+        priority: 50, // IDE priority
       });
     }).not.toThrow();
   });
 
-  test('hook with no scope (global shortcuts)', () => {
+  test('hook with global priority', () => {
     expect(() => {
       renderHookWithHotkeys({
         ...handlers,
         canRun: true,
         isRunning: false,
         isRetryable: false,
-        // scope omitted - global shortcuts
+        priority: 0, // GLOBAL priority
       });
     }).not.toThrow();
   });
@@ -289,6 +295,7 @@ describe('useRunRetryShortcuts - Configuration Scenarios', () => {
         canRun: true,
         isRunning: false,
         isRetryable: false,
+        priority: 50,
         enabled: false,
       });
     }).not.toThrow();
@@ -309,6 +316,7 @@ describe('useRunRetryShortcuts - Hook Lifecycle', () => {
       canRun: true,
       isRunning: false,
       isRetryable: false,
+      priority: 50,
     });
 
     expect(() => unmount()).not.toThrow();
@@ -320,6 +328,7 @@ describe('useRunRetryShortcuts - Hook Lifecycle', () => {
       canRun: true,
       isRunning: false,
       isRetryable: false,
+      priority: 50,
       testTrigger: 'run',
     });
 
@@ -328,15 +337,16 @@ describe('useRunRetryShortcuts - Hook Lifecycle', () => {
     // Update to retryable state
     act(() => {
       rerender(
-        <HotkeysProvider>
+        <KeyboardProvider>
           <TestComponent
             {...handlers}
             canRun={true}
             isRunning={false}
             isRetryable={true}
+            priority={50}
             testTrigger="retry"
           />
-        </HotkeysProvider>
+        </KeyboardProvider>
       );
     });
 
@@ -350,6 +360,7 @@ describe('useRunRetryShortcuts - Hook Lifecycle', () => {
       canRun: true,
       isRunning: false,
       isRetryable: false,
+      priority: 50,
       enabled: true,
       testTrigger: 'run',
     });
@@ -359,16 +370,17 @@ describe('useRunRetryShortcuts - Hook Lifecycle', () => {
     // Disable shortcuts - verify it doesn't throw
     act(() => {
       rerender(
-        <HotkeysProvider>
+        <KeyboardProvider>
           <TestComponent
             {...handlers}
             canRun={true}
             isRunning={false}
             isRetryable={false}
+            priority={50}
             enabled={false}
             // No testTrigger - not testing execution, just option change
           />
-        </HotkeysProvider>
+        </KeyboardProvider>
       );
     });
 
@@ -383,45 +395,49 @@ describe('useRunRetryShortcuts - Hook Lifecycle', () => {
       canRun: true,
       isRunning: false,
       isRetryable: false,
+      priority: 50,
     });
 
     // Cycle through multiple state changes
     act(() => {
       rerender(
-        <HotkeysProvider>
+        <KeyboardProvider>
           <TestComponent
             {...handlers}
             canRun={false}
             isRunning={false}
             isRetryable={false}
+            priority={50}
           />
-        </HotkeysProvider>
+        </KeyboardProvider>
       );
     });
 
     act(() => {
       rerender(
-        <HotkeysProvider>
+        <KeyboardProvider>
           <TestComponent
             {...handlers}
             canRun={true}
             isRunning={true}
             isRetryable={false}
+            priority={50}
           />
-        </HotkeysProvider>
+        </KeyboardProvider>
       );
     });
 
     act(() => {
       rerender(
-        <HotkeysProvider>
+        <KeyboardProvider>
           <TestComponent
             {...handlers}
             canRun={true}
             isRunning={false}
             isRetryable={true}
+            priority={50}
           />
-        </HotkeysProvider>
+        </KeyboardProvider>
       );
     });
 
@@ -430,7 +446,7 @@ describe('useRunRetryShortcuts - Hook Lifecycle', () => {
   });
 });
 
-describe('useRunRetryShortcuts - Options Validation', () => {
+describe('useRunRetryShortcuts - Priority Levels', () => {
   let handlers: ReturnType<typeof createMockHandlers>;
 
   beforeEach(() => {
@@ -438,68 +454,64 @@ describe('useRunRetryShortcuts - Options Validation', () => {
     vi.clearAllMocks();
   });
 
-  test('works with enableOnFormTags=true', () => {
+  test('works with GLOBAL priority (0)', () => {
     expect(() => {
       renderHookWithHotkeys({
         ...handlers,
         canRun: true,
         isRunning: false,
         isRetryable: false,
-        enableOnFormTags: true,
+        priority: 0,
       });
     }).not.toThrow();
   });
 
-  test('works with enableOnFormTags=false', () => {
+  test('works with PANEL priority (10)', () => {
     expect(() => {
       renderHookWithHotkeys({
         ...handlers,
         canRun: true,
         isRunning: false,
         isRetryable: false,
-        enableOnFormTags: false,
+        priority: 10,
       });
     }).not.toThrow();
   });
 
-  test('works with enableOnContentEditable=true', () => {
+  test('works with RUN_PANEL priority (25)', () => {
     expect(() => {
       renderHookWithHotkeys({
         ...handlers,
         canRun: true,
         isRunning: false,
         isRetryable: false,
-        enableOnContentEditable: true,
+        priority: 25,
       });
     }).not.toThrow();
   });
 
-  test('works with enableOnContentEditable=false', () => {
+  test('works with IDE priority (50)', () => {
     expect(() => {
       renderHookWithHotkeys({
         ...handlers,
         canRun: true,
         isRunning: false,
         isRetryable: false,
-        enableOnContentEditable: false,
+        priority: 50,
       });
     }).not.toThrow();
   });
 
-  test('accepts custom scope strings', () => {
-    const scopes = ['ide', 'runpanel', 'panel', 'modal'];
-
-    scopes.forEach(scope => {
-      expect(() => {
-        renderHookWithHotkeys({
-          ...handlers,
-          canRun: true,
-          isRunning: false,
-          isRetryable: false,
-          scope,
-        });
-      }).not.toThrow();
-    });
+  test('works with MODAL priority (100)', () => {
+    expect(() => {
+      renderHookWithHotkeys({
+        ...handlers,
+        canRun: true,
+        isRunning: false,
+        isRetryable: false,
+        priority: 100,
+      });
+    }).not.toThrow();
   });
 });
 
@@ -517,6 +529,7 @@ describe('useRunRetryShortcuts - Real-World Usage Patterns', () => {
       canRun: true,
       isRunning: false,
       isRetryable: true,
+      priority: 50,
       testTrigger: 'retry',
     });
 
@@ -531,6 +544,7 @@ describe('useRunRetryShortcuts - Real-World Usage Patterns', () => {
       canRun: true,
       isRunning: false,
       isRetryable: false,
+      priority: 50,
       testTrigger: 'run',
     });
 
@@ -545,6 +559,7 @@ describe('useRunRetryShortcuts - Real-World Usage Patterns', () => {
       canRun: true,
       isRunning: true,
       isRetryable: false,
+      priority: 50,
       testTrigger: 'run',
     });
 
@@ -558,6 +573,7 @@ describe('useRunRetryShortcuts - Real-World Usage Patterns', () => {
       canRun: false,
       isRunning: false,
       isRetryable: false,
+      priority: 50,
       testTrigger: 'run',
     });
 
@@ -571,6 +587,7 @@ describe('useRunRetryShortcuts - Real-World Usage Patterns', () => {
       canRun: false, // canRun would be false when edge is selected
       isRunning: false,
       isRetryable: false,
+      priority: 50,
       testTrigger: 'run',
     });
 

@@ -20,7 +20,7 @@ import * as Y from 'yjs';
 import { Header } from '../../../js/collaborative-editor/components/Header';
 import { SessionContext } from '../../../js/collaborative-editor/contexts/SessionProvider';
 import { StoreContext } from '../../../js/collaborative-editor/contexts/StoreProvider';
-import { HotkeysProvider } from 'react-hotkeys-hook';
+import { KeyboardProvider } from '../../../js/collaborative-editor/keyboard';
 
 import { simulateStoreProviderWithConnection } from '../__helpers__/storeProviderHelpers';
 import { createMinimalWorkflowYDoc } from '../__helpers__/workflowStoreHelpers';
@@ -134,11 +134,11 @@ async function createTestSetup(options: WrapperOptions = {}) {
 
   // Create wrapper (still needed for React context)
   const wrapper = ({ children }: { children: React.ReactNode }) => (
-    <HotkeysProvider>
+    <KeyboardProvider>
       <SessionContext.Provider value={{ sessionStore, isNewWorkflow }}>
         <StoreContext.Provider value={stores}>{children}</StoreContext.Provider>
       </SessionContext.Provider>
-    </HotkeysProvider>
+    </KeyboardProvider>
   );
 
   return {
@@ -947,7 +947,7 @@ describe('Header - Keyboard Shortcuts', () => {
     });
 
     // The Header component should render without errors and register hotkeys
-    // Testing actual keyboard events with react-hotkeys-hook is difficult in test environment
+    // Testing actual keyboard events with KeyboardProvider is difficult in test environment
     // This test verifies the component renders correctly with hotkey setup
     expect(screen.getByRole('button', { name: /save/i })).toBeInTheDocument();
   });
@@ -968,7 +968,7 @@ describe('Header - Keyboard Shortcuts', () => {
     });
 
     // The Header component should render without errors and register hotkeys
-    // Testing actual keyboard events with react-hotkeys-hook is difficult in test environment
+    // Testing actual keyboard events with KeyboardProvider is difficult in test environment
     // This test verifies the component renders correctly with hotkey setup
     expect(screen.getByRole('button', { name: /save/i })).toBeInTheDocument();
   });

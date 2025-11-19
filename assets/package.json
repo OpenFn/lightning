@@ -49,7 +49,6 @@
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-error-boundary": "^5.0.0",
-    "react-hotkeys-hook": "^5.2.1",
     "react-is": "^18.3.1",
     "react-resizable-panels": "^3.0.6",
     "sonner": "^2.0.7",
