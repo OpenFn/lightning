@@ -209,6 +209,40 @@ export const useSelectedStep = (): StepDetail | null => {
 };
 
 /**
+ * Hook to check if the currently selected job has a corresponding step
+ * in the active run.
+ *
+ * Returns true if:
+ * - No run is loaded (null case)
+ * - The selected job has at least one step in the active run
+ *
+ * Returns false if:
+ * - A run is loaded AND the selected job has no steps in that run
+ *
+ * @param selectedJobId - The ID of the currently selected job
+ * @returns boolean indicating if the job matches the run
+ */
+export const useJobMatchesRun = (selectedJobId: string | null): boolean => {
+  const historyStore = useHistoryStore();
+  const selectMatch = historyStore.withSelector(state => {
+    // If no run is loaded, consider it a match (no visual indication needed)
+    if (!state.activeRun) {
+      return true;
+    }
+
+    // If no job is selected, consider it a match
+    if (!selectedJobId) {
+      return true;
+    }
+
+    // Check if any step in the run matches the selected job
+    return state.activeRun.steps.some(step => step.job_id === selectedJobId);
+  });
+
+  return useSyncExternalStore(historyStore.subscribe, selectMatch);
+};
+
+/**
  * Hook to get run steps for a specific run with automatic subscription
  * management
  *

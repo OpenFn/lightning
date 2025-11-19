@@ -28,7 +28,11 @@ import {
   useCredentials,
   useCredentialsCommands,
 } from '../../hooks/useCredentials';
-import { useFollowRun, useHistoryCommands } from '../../hooks/useHistory';
+import {
+  useFollowRun,
+  useHistoryCommands,
+  useJobMatchesRun,
+} from '../../hooks/useHistory';
 import { useRunRetry } from '../../hooks/useRunRetry';
 import { useRunRetryShortcuts } from '../../hooks/useRunRetryShortcuts';
 import { useSession } from '../../hooks/useSession';
@@ -197,6 +201,9 @@ export function FullScreenIDE({
   // Declaratively connect to run channel when runIdFromURL changes
   const currentRun = useFollowRun(runIdFromURL);
 
+  // Check if the currently selected job matches the loaded run
+  const jobMatchesRun = useJobMatchesRun(currentJob?.id || null);
+
   const followedRunStep = useMemo(() => {
     if (!currentRun || !currentRun.steps || !jobIdFromURL) return null;
     return currentRun.steps.find(s => s.job_id === jobIdFromURL) || null;
@@ -322,7 +329,11 @@ export function FullScreenIDE({
     onRun: handleRun,
     onRetry: handleRetry,
     canRun:
-      canRunSnapshot && canRunFromHook && !isSubmitting && !runIsProcessing,
+      canRunSnapshot &&
+      canRunFromHook &&
+      !isSubmitting &&
+      !runIsProcessing &&
+      jobMatchesRun,
     isRunning: isSubmitting || runIsProcessing,
     isRetryable,
     scope: HOTKEY_SCOPES.IDE,
@@ -665,9 +676,17 @@ export function FullScreenIDE({
         onRunClick={handleRun}
         onRetryClick={handleRetry}
         canRun={
-          canRunSnapshot && canRunFromHook && !isSubmitting && !runIsProcessing
+          canRunSnapshot &&
+          canRunFromHook &&
+          !isSubmitting &&
+          !runIsProcessing &&
+          jobMatchesRun
         }
-        runTooltipMessage={runTooltipMessage}
+        runTooltipMessage={
+          !jobMatchesRun
+            ? 'Selected job was not part of this run'
+            : runTooltipMessage
+        }
         isRetryable={isRetryable}
         isRunning={isSubmitting || runIsProcessing}
         adaptorDisplay={adaptorDisplay}
