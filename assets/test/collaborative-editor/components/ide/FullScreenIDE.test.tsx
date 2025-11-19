@@ -21,6 +21,7 @@ import { FullScreenIDE } from '../../../../js/collaborative-editor/components/id
 import * as dataclipApi from '../../../../js/collaborative-editor/api/dataclips';
 import type { Workflow } from '../../../../js/collaborative-editor/types/workflow';
 import { StoreProvider } from '#/collaborative-editor/contexts/StoreProvider';
+import { KeyboardProvider } from '#/collaborative-editor/keyboard';
 
 // Mock dependencies
 vi.mock('../../../../js/collaborative-editor/api/dataclips');
@@ -339,15 +340,17 @@ vi.mock('react-resizable-panels', () => ({
   PanelResizeHandle: () => <div data-testid="resize-handle" />,
 }));
 
-// Helper function to render FullScreenIDE with HotkeysProvider
+// Helper function to render FullScreenIDE with providers
 function renderFullScreenIDE(
   props: React.ComponentProps<typeof FullScreenIDE>
 ) {
   return render(
     <HotkeysProvider>
-      <StoreProvider>
-        <FullScreenIDE {...props} />
-      </StoreProvider>
+      <KeyboardProvider>
+        <StoreProvider>
+          <FullScreenIDE {...props} />
+        </StoreProvider>
+      </KeyboardProvider>
     </HotkeysProvider>
   );
 }

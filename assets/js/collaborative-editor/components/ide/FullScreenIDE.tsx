@@ -13,6 +13,7 @@ import {
   PanelResizeHandle,
 } from 'react-resizable-panels';
 
+import { useKeyboardShortcut } from '#/collaborative-editor/keyboard';
 import { cn } from '#/utils/cn';
 
 import Docs from '../../../adaptor-docs/Docs';
@@ -532,26 +533,23 @@ export function FullScreenIDE({
     return cleanup;
   }, [handleEvent, currentJob, updateJob, requestCredentials]);
 
-  useHotkeys(
-    'escape',
-    event => {
+  useKeyboardShortcut(
+    'Escape',
+    () => {
       const activeElement = document.activeElement;
       const isMonacoFocused = activeElement?.closest('.monaco-editor');
 
       if (isMonacoFocused) {
         (activeElement as HTMLElement).blur();
-        event.preventDefault();
       } else {
         onClose();
       }
     },
+    50, // IDE priority
     {
       enabled:
         !isConfigureModalOpen && !isAdaptorPickerOpen && !isCredentialModalOpen,
-      scopes: [HOTKEY_SCOPES.IDE],
-      enableOnFormTags: true,
-    },
-    [onClose, isConfigureModalOpen, isAdaptorPickerOpen, isCredentialModalOpen]
+    }
   );
 
   // Save docs panel collapsed state to localStorage

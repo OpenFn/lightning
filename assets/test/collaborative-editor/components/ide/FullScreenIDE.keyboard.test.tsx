@@ -15,15 +15,13 @@
 
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { HotkeysProvider } from 'react-hotkeys-hook';
 import { beforeEach, describe, expect, test, vi } from 'vitest';
 import * as Y from 'yjs';
 
-import { HOTKEY_SCOPES } from '../../../../js/collaborative-editor/constants/hotkeys';
-import { FullScreenIDE } from '../../../../js/collaborative-editor/components/ide/FullScreenIDE';
-import type { Workflow } from '../../../../js/collaborative-editor/types/workflow';
-import type { UseRunRetryReturn } from '../../../../js/collaborative-editor/hooks/useRunRetry';
 import * as dataclipApi from '../../../../js/collaborative-editor/api/dataclips';
+import { FullScreenIDE } from '../../../../js/collaborative-editor/components/ide/FullScreenIDE';
+import type { UseRunRetryReturn } from '../../../../js/collaborative-editor/hooks/useRunRetry';
+import { KeyboardProvider } from '../../../../js/collaborative-editor/keyboard/KeyboardProvider';
 import { focusElement } from '../../../keyboard-test-utils';
 
 // Helper to fire keyboard event and wait for component to process
@@ -382,7 +380,7 @@ function setupMockUseRunRetry(options: Partial<UseRunRetryReturn> = {}) {
   return { handleRun: stableHandleRun, handleRetry: stableHandleRetry };
 }
 
-// Helper to render FullScreenIDE with HotkeysProvider
+// Helper to render FullScreenIDE with KeyboardProvider
 function renderFullScreenIDE(props = {}) {
   const defaultProps = {
     onClose: vi.fn(),
@@ -392,9 +390,9 @@ function renderFullScreenIDE(props = {}) {
   };
 
   return render(
-    <HotkeysProvider initiallyActiveScopes={[HOTKEY_SCOPES.IDE]}>
+    <KeyboardProvider>
       <FullScreenIDE {...defaultProps} />
-    </HotkeysProvider>
+    </KeyboardProvider>
   );
 }
 
