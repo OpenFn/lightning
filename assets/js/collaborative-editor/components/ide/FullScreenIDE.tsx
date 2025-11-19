@@ -286,7 +286,6 @@ export function FullScreenIDE({
   const { pushEvent, handleEvent } = useLiveViewActions();
   const { updateJob } = useWorkflowActions();
 
-<<<<<<< HEAD
   // Run/Retry functionality for IDE Header
   const { canRun: canRunSnapshot, tooltipMessage: runTooltipMessage } =
     useCanRun();
