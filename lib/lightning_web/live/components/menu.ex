@@ -89,7 +89,7 @@ defmodule LightningWeb.Components.Menu do
       |> assign_new(:target, fn -> "_blank" end)
 
     ~H"""
-    <div class="h-12 mx-2">
+    <div class="h-12 mx-3">
       <%= if assigns[:href] do %>
         <.link href={@href} target={@target} class={@class}>
           <%= if assigns[:inner_block] do %>

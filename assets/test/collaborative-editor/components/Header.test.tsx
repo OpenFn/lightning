@@ -329,7 +329,7 @@ describe('Header - Basic Rendering', () => {
     });
   });
 
-  test('renders user menu button', async () => {
+  test('renders AI button', async () => {
     const { wrapper, emitSessionContext } = createTestSetup();
 
     render(
@@ -343,9 +343,13 @@ describe('Header - Basic Rendering', () => {
       emitSessionContext();
     });
 
-    expect(
-      screen.getByRole('button', { name: /open user menu/i })
-    ).toBeInTheDocument();
+    // AI button is rendered (disabled by default)
+    const aiButtons = screen.getAllByRole('button');
+    const aiButton = aiButtons.find(button =>
+      button.querySelector('.hero-chat-bubble-left-right')
+    );
+    expect(aiButton).toBeInTheDocument();
+    expect(aiButton).toBeDisabled();
   });
 
   test('settings button shows error styling when workflow has validation errors', async () => {
@@ -1067,9 +1071,280 @@ describe('Header - Keyboard Shortcuts', () => {
     // Should have save button
     expect(screen.getByRole('button', { name: /save/i })).toBeInTheDocument();
 
-    // Should have user menu
+    // Should have AI button
+    const aiButtons = screen.getAllByRole('button');
+    const aiButton = aiButtons.find(button =>
+      button.querySelector('.hero-chat-bubble-left-right')
+    );
+    expect(aiButton).toBeInTheDocument();
+    expect(aiButton).toBeDisabled();
+  });
+});
+
+// =============================================================================
+// IDE MODE TESTS (Run/Retry Button)
+// =============================================================================
+
+describe('Header - IDE Mode Run/Retry Button', () => {
+  test('renders simple Run button in IDE mode when not retryable', async () => {
+    const { wrapper, emitSessionContext, ydoc } = createTestSetup();
+
+    render(
+      <Header
+        projectId="project-1"
+        workflowId="workflow-1"
+        onRunClick={vi.fn()}
+        onRetryClick={vi.fn()}
+        canRun={true}
+        isRetryable={false}
+        isRunning={false}
+      >
+        {[<span key="breadcrumb-1">Breadcrumb</span>]}
+      </Header>,
+      { wrapper }
+    );
+
+    act(() => {
+      emitSessionContext();
+    });
+
+    await waitFor(() => {
+      const runButton = screen.getByRole('button', { name: /^run$/i });
+      expect(runButton).toBeInTheDocument();
+      expect(runButton).not.toBeDisabled();
+    });
+  });
+
+  test('renders split button with "Run (retry)" in IDE mode when retryable', async () => {
+    const { wrapper, emitSessionContext } = createTestSetup();
+
+    render(
+      <Header
+        projectId="project-1"
+        workflowId="workflow-1"
+        onRunClick={vi.fn()}
+        onRetryClick={vi.fn()}
+        canRun={true}
+        isRetryable={true}
+        isRunning={false}
+      >
+        {[<span key="breadcrumb-1">Breadcrumb</span>]}
+      </Header>,
+      { wrapper }
+    );
+
+    act(() => {
+      emitSessionContext();
+    });
+
+    await waitFor(() => {
+      const retryButton = screen.getByRole('button', {
+        name: /run \(retry\)/i,
+      });
+      expect(retryButton).toBeInTheDocument();
+      expect(retryButton).not.toBeDisabled();
+    });
+  });
+
+  test('calls onRunClick when simple Run button is clicked', async () => {
+    const { wrapper, emitSessionContext } = createTestSetup();
+    const mockOnRunClick = vi.fn();
+
+    render(
+      <Header
+        projectId="project-1"
+        workflowId="workflow-1"
+        onRunClick={mockOnRunClick}
+        onRetryClick={vi.fn()}
+        canRun={true}
+        isRetryable={false}
+        isRunning={false}
+      >
+        {[<span key="breadcrumb-1">Breadcrumb</span>]}
+      </Header>,
+      { wrapper }
+    );
+
+    act(() => {
+      emitSessionContext();
+    });
+
+    await waitFor(() => {
+      const runButton = screen.getByRole('button', { name: /^run$/i });
+      expect(runButton).toBeInTheDocument();
+    });
+
+    const runButton = screen.getByRole('button', { name: /^run$/i });
+    fireEvent.click(runButton);
+
+    expect(mockOnRunClick).toHaveBeenCalledTimes(1);
+  });
+
+  test('calls onRetryClick when "Run (retry)" button is clicked', async () => {
+    const { wrapper, emitSessionContext } = createTestSetup();
+    const mockOnRetryClick = vi.fn();
+
+    render(
+      <Header
+        projectId="project-1"
+        workflowId="workflow-1"
+        onRunClick={vi.fn()}
+        onRetryClick={mockOnRetryClick}
+        canRun={true}
+        isRetryable={true}
+        isRunning={false}
+      >
+        {[<span key="breadcrumb-1">Breadcrumb</span>]}
+      </Header>,
+      { wrapper }
+    );
+
+    act(() => {
+      emitSessionContext();
+    });
+
+    await waitFor(() => {
+      const retryButton = screen.getByRole('button', {
+        name: /run \(retry\)/i,
+      });
+      expect(retryButton).toBeInTheDocument();
+    });
+
+    const retryButton = screen.getByRole('button', { name: /run \(retry\)/i });
+    fireEvent.click(retryButton);
+
+    expect(mockOnRetryClick).toHaveBeenCalledTimes(1);
+  });
+
+  test('disables run button in IDE mode when canRun is false', async () => {
+    const { wrapper, emitSessionContext } = createTestSetup();
+
+    render(
+      <Header
+        projectId="project-1"
+        workflowId="workflow-1"
+        onRunClick={vi.fn()}
+        onRetryClick={vi.fn()}
+        canRun={false}
+        runTooltipMessage="Cannot run: validation errors"
+        isRetryable={false}
+        isRunning={false}
+      >
+        {[<span key="breadcrumb-1">Breadcrumb</span>]}
+      </Header>,
+      { wrapper }
+    );
+
+    act(() => {
+      emitSessionContext();
+    });
+
+    await waitFor(() => {
+      const runButton = screen.getByRole('button', { name: /^run$/i });
+      expect(runButton).toBeInTheDocument();
+      expect(runButton).toBeDisabled();
+    });
+  });
+
+  test('shows "Processing" when isRunning is true', async () => {
+    const { wrapper, emitSessionContext } = createTestSetup();
+
+    render(
+      <Header
+        projectId="project-1"
+        workflowId="workflow-1"
+        onRunClick={vi.fn()}
+        onRetryClick={vi.fn()}
+        canRun={true}
+        isRetryable={false}
+        isRunning={true}
+      >
+        {[<span key="breadcrumb-1">Breadcrumb</span>]}
+      </Header>,
+      { wrapper }
+    );
+
+    act(() => {
+      emitSessionContext();
+    });
+
+    await waitFor(() => {
+      const processingButton = screen.getByRole('button', {
+        name: /processing/i,
+      });
+      expect(processingButton).toBeInTheDocument();
+      expect(processingButton).toBeDisabled();
+    });
+  });
+
+  test('renders Canvas mode Run button when onRunClick provided but onRetryClick missing', async () => {
+    const { wrapper, emitSessionContext, ydoc } = createTestSetup();
+
+    // Add a trigger for Canvas mode
+    const triggersArray = ydoc.getArray('triggers');
+    const triggerMap = new Y.Map();
+    triggerMap.set('id', 'trigger-123');
+    triggerMap.set('type', 'webhook');
+    triggerMap.set('enabled', true);
+    triggerMap.set('has_auth_method', true);
+    triggersArray.push([triggerMap]);
+
+    render(
+      <Header
+        projectId="project-1"
+        workflowId="workflow-1"
+        onRunClick={vi.fn()}
+        // No onRetryClick - should render Canvas mode
+      >
+        {[<span key="breadcrumb-1">Breadcrumb</span>]}
+      </Header>,
+      { wrapper }
+    );
+
+    act(() => {
+      emitSessionContext();
+    });
+
+    await waitFor(() => {
+      const runButton = screen.getByRole('button', { name: /run/i });
+      expect(runButton).toBeInTheDocument();
+    });
+
+    // Should be simple button, not split button
     expect(
-      screen.getByRole('button', { name: /open user menu/i })
-    ).toBeInTheDocument();
+      screen.queryByRole('button', { name: /run \(retry\)/i })
+    ).not.toBeInTheDocument();
+  });
+
+  test('renders adaptorDisplay prop in IDE mode', async () => {
+    const { wrapper, emitSessionContext } = createTestSetup();
+    const adaptorDisplay = (
+      <div data-testid="adaptor-display">Adaptor Display</div>
+    );
+
+    render(
+      <Header
+        projectId="project-1"
+        workflowId="workflow-1"
+        onRunClick={vi.fn()}
+        onRetryClick={vi.fn()}
+        canRun={true}
+        isRetryable={false}
+        isRunning={false}
+        adaptorDisplay={adaptorDisplay}
+      >
+        {[<span key="breadcrumb-1">Breadcrumb</span>]}
+      </Header>,
+      { wrapper }
+    );
+
+    act(() => {
+      emitSessionContext();
+    });
+
+    await waitFor(() => {
+      expect(screen.getByTestId('adaptor-display')).toBeInTheDocument();
+      expect(screen.getByText('Adaptor Display')).toBeInTheDocument();
+    });
   });
 });

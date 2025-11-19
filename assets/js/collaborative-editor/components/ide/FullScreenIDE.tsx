@@ -1,3 +1,9 @@
+import {
+  DocumentTextIcon,
+  SparklesIcon,
+  ViewColumnsIcon,
+  XMarkIcon,
+} from '@heroicons/react/24/outline';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useHotkeys, useHotkeysContext } from 'react-hotkeys-hook';
 import {
@@ -6,19 +12,14 @@ import {
   PanelGroup,
   PanelResizeHandle,
 } from 'react-resizable-panels';
-import {
-  DocumentTextIcon,
-  SparklesIcon,
-  ViewColumnsIcon,
-  XMarkIcon,
-} from '@heroicons/react/24/outline';
 
-import { useUICommands } from '#/collaborative-editor/hooks/useUI';
 import { cn } from '#/utils/cn';
 
+import Docs from '../../../adaptor-docs/Docs';
+import Metadata from '../../../metadata-explorer/Explorer';
 import { useURLState } from '../../../react/lib/use-url-state';
-import * as dataclipApi from '../../api/dataclips';
 import type { Dataclip } from '../../api/dataclips';
+import * as dataclipApi from '../../api/dataclips';
 import { HOTKEY_SCOPES } from '../../constants/hotkeys';
 import { RENDER_MODES } from '../../constants/panel';
 import { useLiveViewActions } from '../../contexts/LiveViewActionsContext';
@@ -29,33 +30,38 @@ import {
 } from '../../hooks/useCredentials';
 import { useFollowRun, useHistoryCommands } from '../../hooks/useHistory';
 import { useRunRetry } from '../../hooks/useRunRetry';
+import { useRunRetryShortcuts } from '../../hooks/useRunRetryShortcuts';
 import { useSession } from '../../hooks/useSession';
 import {
   useLatestSnapshotLockVersion,
   useProject,
   useProjectRepoConnection,
 } from '../../hooks/useSessionContext';
+import { useUICommands } from '../../hooks/useUI';
+import { useVersionSelect } from '../../hooks/useVersionSelect';
 import {
   useCanRun,
   useCanSave,
   useCurrentJob,
   useWorkflowActions,
+  useWorkflowReadOnly,
   useWorkflowState,
 } from '../../hooks/useWorkflow';
-import { notifications } from '../../lib/notifications';
+import { AdaptorDisplay } from '../AdaptorDisplay';
 import { AdaptorSelectionModal } from '../AdaptorSelectionModal';
+import { BreadcrumbLink } from '../Breadcrumbs';
 import { CollaborativeMonaco } from '../CollaborativeMonaco';
 import { ConfigureAdaptorModal } from '../ConfigureAdaptorModal';
+import { Header } from '../Header';
+import { JobSelector } from '../JobSelector';
 import { ManualRunPanel } from '../ManualRunPanel';
 import { ManualRunPanelErrorBoundary } from '../ManualRunPanelErrorBoundary';
 import { RunViewerErrorBoundary } from '../run-viewer/RunViewerErrorBoundary';
 import { RunViewerPanel } from '../run-viewer/RunViewerPanel';
 import { SandboxIndicatorBanner } from '../SandboxIndicatorBanner';
 import { Tabs } from '../Tabs';
-import Docs from '../../../adaptor-docs/Docs';
-import Metadata from '../../../metadata-explorer/Explorer';
+import { VersionDropdown } from '../VersionDropdown';
 
-import { IDEHeader } from './IDEHeader';
 import { PanelToggleButton } from './PanelToggleButton';
 
 /**
@@ -114,16 +120,7 @@ export function FullScreenIDE({
   const { selectStep } = useHistoryCommands();
   const { job: currentJob, ytext: currentJobYText } = useCurrentJob();
   const awareness = useSession(selectAwareness);
-  const { canSave, tooltipMessage } = useCanSave();
-  const repoConnection = useProjectRepoConnection();
-  const { openGitHubSyncModal } = useUICommands();
-  const { canRun: canRunSnapshot, tooltipMessage: runTooltipMessage } =
-    useCanRun();
-
-  const snapshotVersion = useWorkflowState(
-    state => state.workflow?.lock_version
-  );
-  const latestSnapshotLockVersion = useLatestSnapshotLockVersion();
+  const { canSave } = useCanSave();
 
   const workflow = useWorkflowState(state =>
     state.workflow
@@ -270,28 +267,6 @@ export function FullScreenIDE({
     manuallyUnselectedDataclip,
   ]);
 
-  const {
-    handleRun,
-    handleRetry,
-    isSubmitting,
-    isRetryable,
-    runIsProcessing,
-    canRun: canRunFromHook,
-  } = useRunRetry({
-    projectId: projectId || '',
-    workflowId: workflowId || '',
-    runContext,
-    selectedTab,
-    selectedDataclip: selectedDataclipState,
-    customBody,
-    canRunWorkflow: canRunSnapshot,
-    workflowRunTooltipMessage: runTooltipMessage,
-    saveWorkflow,
-    onRunSubmitted: handleRunSubmitted,
-    edgeId: null,
-    workflowEdges: workflow?.edges || [],
-  });
-
   type RightPanelTab = 'run' | 'log' | 'input' | 'output';
   const [activeRightTab, setActiveRightTab] = useState<RightPanelTab>('run');
 
@@ -317,6 +292,67 @@ export function FullScreenIDE({
   const { projectAdaptors, allAdaptors } = useProjectAdaptors();
   const { pushEvent, handleEvent } = useLiveViewActions();
   const { updateJob } = useWorkflowActions();
+
+  // Run/Retry functionality for IDE Header
+  const { canRun: canRunSnapshot, tooltipMessage: runTooltipMessage } =
+    useCanRun();
+  const runContext = jobIdFromURL
+    ? { type: 'job' as const, id: jobIdFromURL }
+    : { type: 'trigger' as const, id: workflow?.triggers[0]?.id || '' };
+
+  const {
+    handleRun,
+    handleRetry,
+    isSubmitting,
+    isRetryable,
+    runIsProcessing,
+    canRun: canRunFromHook,
+  } = useRunRetry({
+    projectId: projectId || '',
+    workflowId: workflowId || '',
+    runContext,
+    selectedTab,
+    selectedDataclip: selectedDataclipState,
+    customBody,
+    canRunWorkflow: canRunSnapshot,
+    workflowRunTooltipMessage: runTooltipMessage,
+    saveWorkflow,
+    onRunSubmitted: handleRunSubmitted,
+    edgeId: null,
+    workflowEdges: workflow?.edges || [],
+  });
+
+  // Enable run/retry keyboard shortcuts in IDE
+  useRunRetryShortcuts({
+    onRun: handleRun,
+    onRetry: handleRetry,
+    canRun:
+      canRunSnapshot && canRunFromHook && !isSubmitting && !runIsProcessing,
+    isRunning: isSubmitting || runIsProcessing,
+    isRetryable,
+    scope: HOTKEY_SCOPES.IDE,
+    enableOnContentEditable: true,
+  });
+
+  // Get data for Header
+  const latestSnapshotLockVersion = useLatestSnapshotLockVersion();
+  const repoConnection = useProjectRepoConnection();
+  const { openGitHubSyncModal } = useUICommands();
+
+  // Handle job selection from JobSelector
+  const allJobs = workflow?.jobs || [];
+  const handleJobSelect = useCallback(
+    (job: any) => {
+      updateSearchParams({ job: job.id });
+      selectJob(job.id);
+    },
+    [updateSearchParams, selectJob]
+  );
+
+  // Handle close IDE
+  const handleCloseIDE = useCallback(() => {
+    onClose();
+  }, [onClose]);
 
   const { enableScope, disableScope } = useHotkeysContext();
 
@@ -348,17 +384,6 @@ export function FullScreenIDE({
       selectStep(stepIdFromURL);
     }
   }, [stepIdFromURL, runIdFromURL, selectStep]);
-
-  const handleSave = () => {
-    if (!canSave) {
-      notifications.alert({
-        title: 'Cannot save',
-        description: tooltipMessage,
-      });
-      return;
-    }
-    void saveWorkflow();
-  };
 
   const handleCollapseLeftPanel = () => {
     leftPanelRef.current?.collapse();
@@ -544,8 +569,15 @@ export function FullScreenIDE({
     );
   }, [isDocsCollapsed]);
 
-  // Loading state: Wait for Y.Text and awareness to be ready
-  if (!currentJob || !currentJobYText || !awareness) {
+  // IMPORTANT: All hooks must be called before any early returns
+  const { isReadOnly } = useWorkflowReadOnly();
+  const handleVersionSelect = useVersionSelect();
+
+  // Check loading state but don't use early return (violates rules of hooks)
+  const isLoading = !currentJob || !currentJobYText || !awareness;
+
+  // If loading, render loading state at the end instead of early return
+  if (isLoading) {
     return (
       <div
         className="fixed inset-0 z-50 bg-white flex
@@ -617,38 +649,70 @@ export function FullScreenIDE({
     }
   };
 
-  return (
-    <div className="fixed inset-0 z-50 bg-white flex flex-col">
-      <IDEHeader
-        jobId={currentJob.id}
-        jobName={currentJob.name}
-        jobAdaptor={currentJob.adaptor || undefined}
-        jobCredentialId={
+  // Build adaptor display with version dropdown for IDE Header
+  const adaptorDisplay = currentJob ? (
+    <div className="flex items-center gap-3">
+      <AdaptorDisplay
+        adaptor={currentJob.adaptor || '@openfn/language-common@latest'}
+        credentialId={
           currentJob.project_credential_id ||
           currentJob.keychain_credential_id ||
           null
         }
-        snapshotVersion={snapshotVersion}
-        latestSnapshotVersion={latestSnapshotLockVersion}
-        workflowId={workflowId}
+        size="sm"
+        onEdit={() => setIsConfigureModalOpen(true)}
+        onChangeAdaptor={handleOpenAdaptorPicker}
+        isReadOnly={isReadOnly}
+      />
+      <VersionDropdown
+        currentVersion={workflow?.lock_version ?? null}
+        latestVersion={latestSnapshotLockVersion ?? null}
+        onVersionSelect={handleVersionSelect}
+      />
+    </div>
+  ) : null;
+
+  return (
+    <div className="absolute inset-0 bg-white flex flex-col">
+      <Header
+        key="ide-header"
         projectId={projectId}
-        onClose={onClose}
-        onSave={handleSave}
-        onRun={handleRun}
-        onRetry={handleRetry}
-        isRetryable={isRetryable}
+        workflowId={workflowId}
+        onRunClick={handleRun}
+        onRetryClick={handleRetry}
         canRun={
           canRunSnapshot && canRunFromHook && !isSubmitting && !runIsProcessing
         }
+        runTooltipMessage={runTooltipMessage}
+        isRetryable={isRetryable}
         isRunning={isSubmitting || runIsProcessing}
-        canSave={canSave}
-        saveTooltip={tooltipMessage}
-        runTooltip={runTooltipMessage}
-        onEditAdaptor={() => setIsConfigureModalOpen(true)}
-        onChangeAdaptor={handleOpenAdaptorPicker}
-        repoConnection={repoConnection}
-        openGitHubSyncModal={openGitHubSyncModal}
-      />
+        adaptorDisplay={adaptorDisplay}
+      >
+        {/* IDE Breadcrumbs: Projects > Project > Workflows > Workflow > JobSelector */}
+        {currentJob
+          ? [
+              <BreadcrumbLink href="/projects" key="projects">
+                Projects
+              </BreadcrumbLink>,
+              <BreadcrumbLink href={`/projects/${projectId}/w`} key="project">
+                {project?.name}
+              </BreadcrumbLink>,
+              <BreadcrumbLink href={`/projects/${projectId}/w`} key="workflows">
+                Workflows
+              </BreadcrumbLink>,
+              <BreadcrumbLink onClick={handleCloseIDE} key="workflow-name">
+                {workflow?.name}
+              </BreadcrumbLink>,
+              <JobSelector
+                key="job-selector"
+                currentJob={currentJob}
+                jobs={allJobs}
+                onChange={handleJobSelect}
+              />,
+            ]
+          : []}
+      </Header>
+
       <SandboxIndicatorBanner
         parentProjectId={parentProjectId}
         parentProjectName={parentProjectName}

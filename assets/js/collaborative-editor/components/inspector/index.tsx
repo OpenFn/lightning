@@ -53,7 +53,10 @@ export function Inspector({
           : null;
 
   const handleClose = () => {
-    if (mode === 'settings' || mode === 'code') {
+    if (mode === 'code') {
+      // When closing code view, go back to settings
+      updateSearchParams({ panel: 'settings' });
+    } else if (mode === 'settings') {
       updateSearchParams({ panel: null });
     } else {
       onClose(); // Clears node selection
@@ -79,7 +82,11 @@ export function Inspector({
   // Settings mode
   if (mode === 'settings') {
     return (
-      <InspectorLayout title="Workflow settings" onClose={handleClose}>
+      <InspectorLayout
+        title="Workflow settings"
+        onClose={handleClose}
+        fullHeight
+      >
         <WorkflowSettings />
       </InspectorLayout>
     );
@@ -88,7 +95,11 @@ export function Inspector({
   // Code view mode
   if (mode === 'code') {
     return (
-      <InspectorLayout title="Workflow as Code" onClose={handleClose}>
+      <InspectorLayout
+        title="Workflow as Code"
+        onClose={handleClose}
+        fullHeight
+      >
         <CodeViewPanel />
       </InspectorLayout>
     );

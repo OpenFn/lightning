@@ -546,7 +546,7 @@ defmodule LightningWeb.Components.Common do
 
   def combobox(assigns) do
     ~H"""
-    <div id="combobox-wrapper" phx-hook="Combobox" class="relative my-4 mx-2 px-0">
+    <div id="combobox-wrapper" phx-hook="Combobox" class="relative my-4 mx-3 px-0">
       <input
         id="combobox"
         type="text"

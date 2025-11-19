@@ -23,9 +23,15 @@ and this project adheres to
   email volume [#3517](https://github.com/OpenFn/lightning/issues/3517)
 - Simpler "disabled" state for workflows, still show last mod
   [#3962](https://github.com/OpenFn/lightning/issues/3962)
+- Move user profile to top left corner
+  [#3997](https://github.com/OpenFn/lightning/issues/3997)
+- Collapse breadcrumbs when there are more than 2 of them
+  [#3997](https://github.com/OpenFn/lightning/issues/3997)
 
 ### Fixed
 
+- Fix vertical scrolling in workflow panels
+  [#3979](https://github.com/OpenFn/lightning/issues/3979)
 - Fix ghost edges blocking saves and breaking autolayout when deleting jobs in
   collaborative editor [#3983](https://github.com/OpenFn/lightning/issues/3983)
 - Fix tooltip styling inconsistencies in collaborative editor

@@ -144,6 +144,15 @@ vi.mock('../../../../js/collaborative-editor/hooks/useSessionContext', () => ({
   useProjectRepoConnection: () => undefined,
   useLatestSnapshotLockVersion: () => 1,
   useIsNewWorkflow: () => false,
+  useUser: () => ({
+    id: 'user-1',
+    first_name: 'Test',
+    last_name: 'User',
+    email: 'test@example.com',
+  }),
+  useAppConfig: () => ({
+    ai_enabled: false,
+  }),
 }));
 
 // Mock workflow hooks
@@ -187,6 +196,10 @@ vi.mock('../../../../js/collaborative-editor/hooks/useWorkflow', () => ({
     isReadOnly: false,
     tooltipMessage: '',
   }),
+  useWorkflowSettingsErrors: () => ({
+    hasErrors: false,
+    errors: [],
+  }),
   useCurrentJob: () => ({
     job: {
       id: 'job-1',
@@ -197,6 +210,14 @@ vi.mock('../../../../js/collaborative-editor/hooks/useWorkflow', () => ({
       keychain_credential_id: null,
     },
     ytext: mockYText,
+  }),
+  useNodeSelection: () => ({
+    currentNode: { node: null, type: null, id: null },
+    selectNode: vi.fn(),
+  }),
+  useWorkflowEnabled: () => ({
+    enabled: true,
+    setEnabled: vi.fn(),
   }),
   useWorkflowActions: () => ({
     selectJob: vi.fn(),
@@ -276,6 +297,26 @@ vi.mock(
   '../../../../js/collaborative-editor/components/AdaptorSelectionModal',
   () => ({
     AdaptorSelectionModal: () => <div data-testid="adaptor-selection-modal" />,
+  })
+);
+
+// Mock UI commands
+vi.mock('../../../../js/collaborative-editor/hooks/useUI', () => ({
+  useUICommands: () => ({
+    openGitHubSyncModal: vi.fn(),
+    openRunPanel: vi.fn(),
+    closeRunPanel: vi.fn(),
+  }),
+  useIsRunPanelOpen: () => false,
+  useIsGitHubSyncModalOpen: () => false,
+  useRunPanelContext: () => null,
+}));
+
+// Mock GitHubSyncModal
+vi.mock(
+  '../../../../js/collaborative-editor/components/GitHubSyncModal',
+  () => ({
+    GitHubSyncModal: () => null,
   })
 );
 
@@ -434,7 +475,7 @@ describe('FullScreenIDE', () => {
       });
     });
 
-    test('displays Close button in header', async () => {
+    test('displays workflow name breadcrumb for closing IDE', async () => {
       const onClose = vi.fn();
 
       renderFullScreenIDE({
@@ -442,9 +483,7 @@ describe('FullScreenIDE', () => {
       });
 
       await waitFor(() => {
-        expect(
-          screen.getByRole('button', { name: /close full-screen editor/i })
-        ).toBeInTheDocument();
+        expect(screen.getByText('Test Workflow')).toBeInTheDocument();
       });
     });
   });
@@ -553,7 +592,7 @@ describe('FullScreenIDE', () => {
   });
 
   describe('button functionality', () => {
-    test('Save and Close buttons are present', async () => {
+    test('Save button is present', async () => {
       const onClose = vi.fn();
 
       renderFullScreenIDE({
@@ -565,15 +604,11 @@ describe('FullScreenIDE', () => {
           screen.getByRole('button', { name: /save/i })
         ).toBeInTheDocument();
       });
-
-      expect(
-        screen.getByRole('button', { name: /close full-screen editor/i })
-      ).toBeInTheDocument();
     });
   });
 
-  describe('Close button functionality', () => {
-    test('Close button calls onClose when clicked', async () => {
+  describe('Close IDE functionality', () => {
+    test('clicking workflow name breadcrumb calls onClose', async () => {
       const user = userEvent.setup();
       const onClose = vi.fn();
 
@@ -582,15 +617,11 @@ describe('FullScreenIDE', () => {
       });
 
       await waitFor(() => {
-        expect(
-          screen.getByRole('button', { name: /close full-screen editor/i })
-        ).toBeInTheDocument();
+        expect(screen.getByText('Test Workflow')).toBeInTheDocument();
       });
 
-      const closeButton = screen.getByRole('button', {
-        name: /close full-screen editor/i,
-      });
-      await user.click(closeButton);
+      const workflowBreadcrumb = screen.getByText('Test Workflow');
+      await user.click(workflowBreadcrumb);
 
       expect(onClose).toHaveBeenCalledOnce();
     });

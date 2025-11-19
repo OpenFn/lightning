@@ -6,16 +6,10 @@
       style={"width: 192px; #{if(@theme_style, do: @theme_style, else: "")}"}
     >
       <div class="flex flex-col h-full">
-        <div class="app-logo-container w-full h-20 flex items-center justify-center">
-          <.link navigate={Routes.dashboard_index_path(@socket, :index)}>
-            <img
-              class="h-10 w-10"
-              src={
-                Routes.static_path(@socket || @conn, "/images/logo-white.svg")
-              }
-              alt="OpenFn"
-            />
-          </.link>
+        <div class="app-logo-container w-full h-20 flex items-center justify-center px-3">
+          <%= if assigns[:current_user] do %>
+            <LayoutComponents.user_menu_dropdown current_user={@current_user} />
+          <% end %>
         </div>
         <%= unless assigns[:is_first_setup] do %>
           <LayoutComponents.menu_items {assigns} />
@@ -46,6 +40,13 @@
             </Menu.menu_item>
           <% end %>
         <% end %>
+        <div class="px-3 pb-1 flex justify-center">
+          <img
+            src={Routes.static_path(@socket, "/images/openfn-logo-sidebar.png")}
+            alt="OpenFn"
+            class="h-8 opacity-40"
+          />
+        </div>
         <LightningWeb.Components.Common.version_chip />
       </div>
     </nav>

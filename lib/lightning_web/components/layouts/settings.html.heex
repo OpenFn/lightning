@@ -6,16 +6,8 @@
       style="width: 192px"
     >
       <div class="flex flex-col h-full">
-        <div class="app-logo-container w-full h-20 flex items-center justify-center">
-          <.link navigate={Routes.dashboard_index_path(@socket, :index)}>
-            <img
-              class="h-10 w-10"
-              src={
-                Routes.static_path(@socket || @conn, "/images/logo-white.svg")
-              }
-              alt="OpenFn"
-            />
-          </.link>
+        <div class="app-logo-container w-full h-20 flex items-center justify-center px-3">
+          <LayoutComponents.user_menu_dropdown current_user={@current_user} />
         </div>
         <div class="mt-4"></div>
         <Menu.menu_item
@@ -58,6 +50,13 @@
           <Icon.left class="h-5 w-5 inline-block mr-2" />
           <span class="inline-block align-middle">Back</span>
         </Menu.menu_item>
+        <div class="px-3 pb-1 flex justify-center">
+          <img
+            src={Routes.static_path(@socket, "/images/openfn-logo-sidebar.png")}
+            alt="OpenFn"
+            class="h-8 opacity-40"
+          />
+        </div>
         <LightningWeb.Components.Common.version_chip />
       </div>
     </nav>

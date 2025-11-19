@@ -3,7 +3,6 @@ import { useCallback, useMemo } from 'react';
 import { useHotkeys } from 'react-hotkeys-hook';
 
 import { useURLState } from '../../react/lib/use-url-state';
-import { cn } from '../../utils/cn';
 import { buildClassicalEditorUrl } from '../../utils/editorUrlConversion';
 import {
   useIsNewWorkflow,
@@ -21,28 +20,17 @@ import {
   useWorkflowSettingsErrors,
   useWorkflowState,
 } from '../hooks/useWorkflow';
-import { getAvatarInitials } from '../utils/avatar';
-
 import { ActiveCollaborators } from './ActiveCollaborators';
+import { AIButton } from './AIButton';
 import { Breadcrumbs } from './Breadcrumbs';
 import { Button } from './Button';
 import { EmailVerificationBanner } from './EmailVerificationBanner';
 import { GitHubSyncModal } from './GitHubSyncModal';
 import { Switch } from './inputs/Switch';
 import { ReadOnlyWarning } from './ReadOnlyWarning';
+import { RunRetryButton } from './RunRetryButton';
 import { ShortcutKeys } from './ShortcutKeys';
 import { Tooltip } from './Tooltip';
-
-const userNavigation = [
-  { label: 'User Profile', url: '/profile', icon: 'hero-user-circle' },
-  { label: 'Credentials', url: '/credentials', icon: 'hero-key' },
-  { label: 'API Tokens', url: '/profile/tokens', icon: 'hero-key' },
-  {
-    label: 'Log out',
-    url: '/users/log_out',
-    icon: 'hero-arrow-right-on-rectangle',
-  },
-];
 
 /**
  * Save button component - visible in React DevTools
@@ -173,41 +161,78 @@ export function Header({
   projectId,
   workflowId,
   isRunPanelOpen = false,
+  adaptorDisplay,
+  onRunClick,
+  onRetryClick,
+  canRun: canRunProp,
+  runTooltipMessage: runTooltipMessageProp,
+  isRetryable: isRetryableProp,
+  isRunning: isRunningProp,
 }: {
   children: React.ReactNode[];
   projectId?: string;
   workflowId?: string;
   isRunPanelOpen?: boolean;
+  adaptorDisplay?: React.ReactNode;
+  onRunClick?: () => void;
+  onRetryClick?: () => void;
+  canRun?: boolean;
+  runTooltipMessage?: string;
+  isRetryable?: boolean;
+  isRunning?: boolean;
 }) {
+  // IMPORTANT: All hooks must be called unconditionally before any early returns or conditional logic
   const { updateSearchParams } = useURLState();
   const { selectNode } = useNodeSelection();
   const { enabled, setEnabled } = useWorkflowEnabled();
   const { saveWorkflow } = useWorkflowActions();
   const { canSave, tooltipMessage } = useCanSave();
   const triggers = useWorkflowState(state => state.triggers);
-  const firstTriggerId = triggers[0]?.id;
-  const { canRun, tooltipMessage: runTooltipMessage } = useCanRun();
+  const { canRun: canRunDefault, tooltipMessage: runTooltipMessageDefault } =
+    useCanRun();
   const { openRunPanel, openGitHubSyncModal } = useUICommands();
   const repoConnection = useProjectRepoConnection();
-
-  // Get validation state for settings button styling
   const { hasErrors: hasSettingsErrors } = useWorkflowSettingsErrors();
-
-  // Detect if viewing old snapshot
   const workflow = useWorkflowState(state => state.workflow);
   const latestSnapshotLockVersion = useLatestSnapshotLockVersion();
+  const isNewWorkflow = useIsNewWorkflow();
+
+  // Derived values after all hooks are called
+  const firstTriggerId = triggers[0]?.id;
 
   const isOldSnapshot =
     workflow !== null &&
     latestSnapshotLockVersion !== null &&
     workflow.lock_version !== latestSnapshotLockVersion;
 
+  // Use IDE-provided handlers if available, otherwise use Canvas default
+  const canRun = canRunProp !== undefined ? canRunProp : canRunDefault;
+  const runTooltipMessage =
+    runTooltipMessageProp !== undefined
+      ? runTooltipMessageProp
+      : runTooltipMessageDefault;
+  const isRetryable = isRetryableProp ?? false;
+  const isRunning = isRunningProp ?? false;
+
+  // Determine if we're in IDE mode (has both onRunClick and onRetryClick)
+  const isIDEMode = onRunClick !== undefined && onRetryClick !== undefined;
+
   const handleRunClick = useCallback(() => {
-    if (firstTriggerId) {
+    if (onRunClick) {
+      // IDE context: use provided handler
+      onRunClick();
+    } else if (firstTriggerId) {
+      // Canvas context: open run panel with first trigger
       selectNode(firstTriggerId);
       openRunPanel({ triggerId: firstTriggerId });
     }
-  }, [firstTriggerId, openRunPanel, selectNode]);
+  }, [onRunClick, firstTriggerId, openRunPanel, selectNode]);
+
+  const handleRetryClick = useCallback(() => {
+    if (onRetryClick) {
+      onRetryClick();
+    }
+  }, [onRetryClick]);
 
   // Compute Run button tooltip content
   const runButtonTooltip = useMemo(() => {
@@ -245,17 +270,14 @@ export function Header({
     [openGitHubSyncModal, canSave, repoConnection]
   );
 
-  const user = useUser();
-  const isNewWorkflow = useIsNewWorkflow();
-  const avatarInitials = getAvatarInitials(user);
-
   return (
     <>
       <EmailVerificationBanner />
 
-      <div className="flex-none bg-white shadow-xs border-b border-gray-200 relative z-30">
+      <div className="flex-none bg-white shadow-xs border-b border-gray-200 relative z-50">
         <div className="mx-auto sm:px-6 lg:px-8 py-6 flex items-center h-20 text-sm">
           <Breadcrumbs>{children}</Breadcrumbs>
+          {adaptorDisplay && <div className="ml-3">{adaptorDisplay}</div>}
           <ReadOnlyWarning className="ml-3" />
           {projectId && workflowId && (
             <a
@@ -308,18 +330,39 @@ export function Header({
               </div>
             </div>
             <div className="relative flex gap-2">
-              {projectId && workflowId && firstTriggerId && (
-                <Tooltip content={runButtonTooltip} side="bottom">
-                  <span className="inline-block">
-                    <Button
+              {projectId && workflowId && (isIDEMode || firstTriggerId) && (
+                <>
+                  {isIDEMode ? (
+                    <RunRetryButton
+                      isRetryable={isRetryable}
+                      isDisabled={!canRun}
+                      isSubmitting={isRunning}
+                      onRun={handleRunClick}
+                      onRetry={handleRetryClick}
+                      buttonText={{
+                        run: 'Run',
+                        retry: 'Run (retry)',
+                        processing: 'Processing',
+                      }}
                       variant="primary"
-                      onClick={handleRunClick}
-                      disabled={!canRun}
-                    >
-                      Run
-                    </Button>
-                  </span>
-                </Tooltip>
+                      dropdownPosition="down"
+                      showKeyboardShortcuts={!isRunPanelOpen && canRun}
+                      disabledTooltip={runTooltipMessage}
+                    />
+                  ) : (
+                    <Tooltip content={runButtonTooltip} side="bottom">
+                      <span className="inline-block">
+                        <Button
+                          variant="primary"
+                          onClick={handleRunClick}
+                          disabled={!canRun}
+                        >
+                          Run
+                        </Button>
+                      </span>
+                    </Tooltip>
+                  )}
+                </>
               )}
               <SaveButton
                 canSave={canSave && !hasSettingsErrors}
@@ -331,61 +374,9 @@ export function Header({
             </div>
           </div>
 
+          <AIButton className="ml-2" />
+
           <GitHubSyncModal />
-
-          <div className="w-5"></div>
-          <Menu as="div" className="relative ml-3">
-            <MenuButton
-              className="relative flex max-w-xs items-center
-            rounded-full focus-visible:outline-2
-            focus-visible:outline-offset-2
-            focus-visible:outline-indigo-600"
-            >
-              <span className="absolute -inset-1.5" />
-              <span className="sr-only">Open user menu</span>
-              <div
-                className="inline-flex items-center justify-center
-              align-middle"
-              >
-                <div className="size-8 rounded-full bg-gray-100">
-                  <div
-                    className="size-full flex items-center
-                  justify-center text-sm font-semibold text-gray-500"
-                  >
-                    {avatarInitials}
-                  </div>
-                </div>
-              </div>
-            </MenuButton>
-
-            <MenuItems
-              transition
-              className="absolute right-0 z-50 mt-2 w-48
-              origin-top-right rounded-md bg-white py-1 shadow-lg
-              outline outline-black/5 transition data-closed:scale-95
-              data-closed:transform data-closed:opacity-0
-              data-enter:duration-200 data-enter:ease-out
-              data-leave:duration-75 data-leave:ease-in"
-            >
-              {userNavigation.map(item => (
-                <MenuItem key={item.label}>
-                  <a
-                    href={item.url}
-                    className="block px-4 py-2 text-sm text-gray-700
-                    data-focus:bg-gray-100 data-focus:outline-hidden"
-                  >
-                    <span
-                      className={cn(
-                        item.icon,
-                        'w-5 h-5 mr-2 text-secondary-500'
-                      )}
-                    ></span>
-                    {item.label}
-                  </a>
-                </MenuItem>
-              ))}
-            </MenuItems>
-          </Menu>
         </div>
       </div>
     </>

@@ -25,28 +25,23 @@ function getEdgeLabel(edge: Lightning.Edge) {
   }
   const { condition_label } = edge;
 
-  const result = [
-    <span
-      key={`${edge.id}-icon`}
-      style={edgeLabelIconStyles(edge.condition_type)}
-    >
-      {label}
-    </span>,
-  ];
-
-  if (condition_label) {
-    const l =
-      condition_label.length > 22
-        ? condition_label.slice(0, 22) + '...'
-        : condition_label;
-    result.push(
-      <span key={`${edge.id}-label`} style={edgeLabelTextStyles}>
-        {l}
+  return (
+    <>
+      <span
+        key={`${edge.id}-icon`}
+        style={edgeLabelIconStyles(edge.condition_type)}
+      >
+        {label}
       </span>
-    );
-  }
-
-  return result;
+      {condition_label && (
+        <span key={`${edge.id}-label`} style={edgeLabelTextStyles}>
+          {condition_label.length > 22
+            ? condition_label.slice(0, 22) + '...'
+            : condition_label}
+        </span>
+      )}
+    </>
+  );
 }
 
 const fromWorkflow = (

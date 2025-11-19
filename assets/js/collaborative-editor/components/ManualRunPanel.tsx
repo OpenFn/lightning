@@ -450,7 +450,7 @@ export function ManualRunPanel({
   ) : (
     <div
       className={cn(
-        'flex flex-col overflow-hidden h-full',
+        'flex flex-col h-full min-h-0',
         renderMode === RENDER_MODES.EMBEDDED ? 'h-full mt-2' : 'flex-1 mt-4'
       )}
     >
