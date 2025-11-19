@@ -51,25 +51,29 @@ export function EdgeInspector({ edge, onClose }: EdgeInspectorProps) {
     [edge.id, updateEdge]
   );
 
-  // Only show footer for job edges (not trigger edges) and when not readonly
-  const footer =
-    !edge.source_trigger_id && !isReadOnly ? (
-      <InspectorFooter
-        leftButtons={
-          <Toggle
-            id={`edge-enabled-${edge.id}`}
-            checked={edge.enabled ?? true}
-            onChange={handleEnabledChange}
-            label="Enabled"
-          />
-        }
-        rightButtons={
-          <Button variant="danger" onClick={handleDelete} disabled={isDeleting}>
-            {isDeleting ? 'Deleting...' : 'Delete'}
-          </Button>
-        }
-      />
-    ) : undefined;
+  // Only show footer for job edges (not trigger edges)
+  const footer = !edge.source_trigger_id ? (
+    <InspectorFooter
+      leftButtons={
+        <Toggle
+          id={`edge-enabled-${edge.id}`}
+          checked={edge.enabled ?? true}
+          onChange={handleEnabledChange}
+          label="Enabled"
+          disabled={isReadOnly}
+        />
+      }
+      rightButtons={
+        <Button
+          variant="danger"
+          onClick={handleDelete}
+          disabled={isDeleting || isReadOnly}
+        >
+          {isDeleting ? 'Deleting...' : 'Delete'}
+        </Button>
+      }
+    />
+  ) : undefined;
 
   return (
     <InspectorLayout title="Path" onClose={onClose} footer={footer}>
