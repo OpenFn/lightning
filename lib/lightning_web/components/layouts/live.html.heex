@@ -40,12 +40,8 @@
             </Menu.menu_item>
           <% end %>
         <% end %>
-        <div class="px-3 pb-1 flex justify-center">
-          <img
-            src={Routes.static_path(@socket, "/images/openfn-logo-sidebar.png")}
-            alt="OpenFn"
-            class="h-8 opacity-40"
-          />
+        <div class="px-3 py-1 flex justify-center">
+          <Common.openfn_logo class="h-6 primary-light" />
         </div>
         <LightningWeb.Components.Common.version_chip />
       </div>
