@@ -73,7 +73,7 @@ function RemoteCursor({ name, color, x, y }: RemoteCursorProps) {
       style={{
         left: `${x}px`,
         top: `${y}px`,
-        transform: 'translate(-4px, -12px)', // small shift to align pointer well
+        transform: 'translate(-2px, -2px)', // small shift to align pointer well
       }}
     >
       {/* Cursor pointer (SVG arrow) */}
