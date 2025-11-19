@@ -138,13 +138,11 @@ export function FullScreenIDE({
   const projectId = project?.id;
   const workflowId = useWorkflowState(state => state.workflow?.id);
 
-  const leftPanelRef = useRef<ImperativePanelHandle>(null);
   const centerPanelRef = useRef<ImperativePanelHandle>(null);
   const rightPanelRef = useRef<ImperativePanelHandle>(null);
 
-  const [isLeftCollapsed, setIsLeftCollapsed] = useState(false);
   const [isCenterCollapsed, setIsCenterCollapsed] = useState(false);
-  const [isRightCollapsed, setIsRightCollapsed] = useState(true);
+  const [isRightCollapsed, setIsRightCollapsed] = useState(false);
 
   // Docs/Metadata panel state
   const [isDocsCollapsed, setIsDocsCollapsed] = useState<boolean>(() => {
@@ -589,18 +587,7 @@ export function FullScreenIDE({
   }
 
   const openPanelCount =
-    (!isLeftCollapsed ? 1 : 0) +
-    (!isCenterCollapsed ? 1 : 0) +
-    (!isRightCollapsed ? 1 : 0);
-
-  const toggleLeftPanel = () => {
-    if (!isLeftCollapsed && openPanelCount === 1) return;
-    if (isLeftCollapsed) {
-      leftPanelRef.current?.expand();
-    } else {
-      leftPanelRef.current?.collapse();
-    }
-  };
+    (!isCenterCollapsed ? 1 : 0) + (!isRightCollapsed ? 1 : 0);
 
   const toggleCenterPanel = () => {
     if (!isCenterCollapsed && openPanelCount === 1) return;
@@ -719,93 +706,6 @@ export function FullScreenIDE({
           autoSaveId="lightning.ide-layout"
           className="h-full"
         >
-          {/* Left Panel - ManualRunPanel */}
-          <Panel
-            ref={leftPanelRef}
-            defaultSize={25}
-            minSize={25}
-            collapsible
-            collapsedSize={2}
-            onCollapse={() => setIsLeftCollapsed(true)}
-            onExpand={() => setIsLeftCollapsed(false)}
-            className="bg-slate-100 border-r border-gray-200"
-          >
-            <div className="h-full flex flex-col">
-              {/* Panel heading */}
-              <div
-                className={`shrink-0 transition-transform ${
-                  isLeftCollapsed ? 'rotate-90' : ''
-                }`}
-              >
-                <div className="flex items-center justify-between px-3 py-1">
-                  {!isLeftCollapsed ? (
-                    <>
-                      <div
-                        className="text-xs font-medium text-gray-400
-                        uppercase tracking-wide"
-                      >
-                        Input
-                      </div>
-                      <PanelToggleButton
-                        onClick={toggleLeftPanel}
-                        disabled={openPanelCount === 1}
-                        isCollapsed={isLeftCollapsed}
-                        ariaLabel="Collapse left panel"
-                      />
-                    </>
-                  ) : (
-                    <button
-                      onClick={toggleLeftPanel}
-                      className="ml-4 text-xs font-medium text-gray-400
-                        uppercase tracking-wide hover:text-gray-600
-                        transition-colors cursor-pointer"
-                    >
-                      Input
-                    </button>
-                  )}
-                </div>
-              </div>
-
-              {/* Panel content */}
-              {workflow && projectId && workflowId && (
-                <div
-                  className={cn(
-                    'flex-1 overflow-hidden bg-white',
-                    isLeftCollapsed && 'hidden'
-                  )}
-                >
-                  <ManualRunPanelErrorBoundary
-                    onClose={handleCollapseLeftPanel}
-                  >
-                    <ManualRunPanel
-                      workflow={workflow}
-                      projectId={projectId}
-                      workflowId={workflowId}
-                      jobId={jobIdFromURL ?? null}
-                      triggerId={null}
-                      onClose={handleCollapseLeftPanel}
-                      renderMode={RENDER_MODES.EMBEDDED}
-                      saveWorkflow={saveWorkflow}
-                      onRunSubmitted={handleRunSubmitted}
-                      onTabChange={setSelectedTab}
-                      onDataclipChange={handleDataclipChange}
-                      onCustomBodyChange={setCustomBody}
-                      selectedTab={selectedTab}
-                      selectedDataclip={selectedDataclipState}
-                      customBody={customBody}
-                    />
-                  </ManualRunPanelErrorBoundary>
-                </div>
-              )}
-            </div>
-          </Panel>
-
-          {/* Resize Handle */}
-          <PanelResizeHandle
-            className="w-1 bg-gray-200 hover:bg-blue-400
-            transition-colors cursor-col-resize"
-          />
-
           {/* Center Panel - CollaborativeMonaco Editor with nested Docs/Metadata */}
           <Panel
             ref={centerPanelRef}
@@ -1027,11 +927,11 @@ export function FullScreenIDE({
             transition-colors cursor-col-resize"
           />
 
-          {/* Right Panel - Placeholder for Run / Logs / Step I/O */}
+          {/* Right Panel - ManualRunPanel or RunViewerPanel */}
           <Panel
             ref={rightPanelRef}
-            defaultSize={1}
-            minSize={25}
+            defaultSize={30}
+            minSize={20}
             collapsible
             collapsedSize={2}
             onCollapse={() => setIsRightCollapsed(true)}
@@ -1039,7 +939,7 @@ export function FullScreenIDE({
             className="bg-slate-100 bg-gray-50 border-l border-gray-200"
           >
             <div className="h-full flex flex-col">
-              {/* Panel heading with tabs */}
+              {/* Panel heading with tabs or title */}
               <div
                 className={`shrink-0 transition-transform ${
                   isRightCollapsed ? 'rotate-90' : ''
@@ -1048,20 +948,48 @@ export function FullScreenIDE({
                 <div className="flex items-center justify-between px-3 py-1">
                   {!isRightCollapsed ? (
                     <>
-                      {/* Tabs as header content */}
-                      <div className="flex-1">
-                        <Tabs
-                          value={activeRightTab}
-                          onChange={setActiveRightTab}
-                          variant="underline"
-                          options={[
-                            { value: 'run', label: 'Run' },
-                            { value: 'log', label: 'Log' },
-                            { value: 'input', label: 'Input' },
-                            { value: 'output', label: 'Output' },
-                          ]}
-                        />
-                      </div>
+                      {followRunId ? (
+                        <>
+                          {/* Tabs as header content when showing run */}
+                          <div className="flex-1">
+                            <Tabs
+                              value={activeRightTab}
+                              onChange={setActiveRightTab}
+                              variant="underline"
+                              options={[
+                                { value: 'run', label: 'Run' },
+                                { value: 'log', label: 'Log' },
+                                { value: 'input', label: 'Input' },
+                                { value: 'output', label: 'Output' },
+                              ]}
+                            />
+                          </div>
+                          {/* Close run button */}
+                          <button
+                            onClick={() => {
+                              setFollowRunId(null);
+                              updateSearchParams({ run: null });
+                            }}
+                            aria-label="Close run"
+                            title="Close run"
+                          >
+                            <span
+                              className="w-5 h-5 hero-x-circle hover:bg-slate-400 text-slate-500"
+                              aria-hidden="true"
+                            />
+                          </button>
+                        </>
+                      ) : (
+                        <>
+                          {/* Simple title when showing manual run panel */}
+                          <div
+                            className="text-xs font-medium text-gray-400
+                            uppercase tracking-wide"
+                          >
+                            New Run (Select Input)
+                          </div>
+                        </>
+                      )}
                       {/* Collapse button */}
                       <PanelToggleButton
                         onClick={toggleRightPanel}
@@ -1077,7 +1005,7 @@ export function FullScreenIDE({
                         uppercase tracking-wide hover:text-gray-600
                         transition-colors cursor-pointer"
                     >
-                      Output
+                      {followRunId ? 'Output' : 'Input'}
                     </button>
                   )}
                 </div>
@@ -1086,14 +1014,42 @@ export function FullScreenIDE({
               {/* Panel content */}
               {!isRightCollapsed && (
                 <div className="flex-1 overflow-hidden bg-white">
-                  <RunViewerErrorBoundary>
-                    <RunViewerPanel
-                      followRunId={followRunId}
-                      onClearFollowRun={() => setFollowRunId(null)}
-                      activeTab={activeRightTab}
-                      onTabChange={setActiveRightTab}
-                    />
-                  </RunViewerErrorBoundary>
+                  {followRunId ? (
+                    <RunViewerErrorBoundary>
+                      <RunViewerPanel
+                        followRunId={followRunId}
+                        onClearFollowRun={() => setFollowRunId(null)}
+                        activeTab={activeRightTab}
+                        onTabChange={setActiveRightTab}
+                      />
+                    </RunViewerErrorBoundary>
+                  ) : (
+                    workflow &&
+                    projectId &&
+                    workflowId && (
+                      <ManualRunPanelErrorBoundary
+                        onClose={() => rightPanelRef.current?.collapse()}
+                      >
+                        <ManualRunPanel
+                          workflow={workflow}
+                          projectId={projectId}
+                          workflowId={workflowId}
+                          jobId={jobIdFromURL ?? null}
+                          triggerId={null}
+                          onClose={() => rightPanelRef.current?.collapse()}
+                          renderMode={RENDER_MODES.EMBEDDED}
+                          saveWorkflow={saveWorkflow}
+                          onRunSubmitted={handleRunSubmitted}
+                          onTabChange={setSelectedTab}
+                          onDataclipChange={handleDataclipChange}
+                          onCustomBodyChange={setCustomBody}
+                          selectedTab={selectedTab}
+                          selectedDataclip={selectedDataclipState}
+                          customBody={customBody}
+                        />
+                      </ManualRunPanelErrorBoundary>
+                    )
+                  )}
                 </div>
               )}
             </div>

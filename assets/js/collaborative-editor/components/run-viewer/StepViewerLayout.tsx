@@ -45,7 +45,7 @@ export function StepViewerLayout({
       <PanelResizeHandle className="h-1 bg-gray-200 hover:bg-blue-400 transition-colors cursor-row-resize" />
 
       {/* Content viewer (logs, input, or output) */}
-      <Panel minSize={30} style={{ overflow: 'unset' }}>
+      <Panel minSize={30}>
         <div className="h-full">{children}</div>
       </Panel>
     </PanelGroup>
