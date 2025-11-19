@@ -52,7 +52,7 @@ export function TriggerInspector({
 }: TriggerInspectorProps) {
   const permissions = usePermissions();
   const { updateTrigger } = useWorkflowActions();
-  const { isReadOnly } = useWorkflowReadOnly();
+  const { isReadOnly, tooltipMessage } = useWorkflowReadOnly();
 
   // Use centralized canRun hook for all run permission/state checks
   const { canRun, tooltipMessage: runTooltipMessage } = useCanRun();
@@ -64,17 +64,27 @@ export function TriggerInspector({
     [trigger.id, updateTrigger]
   );
 
+  // Determine toggle tooltip based on disabled state
+  const isToggleDisabled = !permissions?.can_edit_workflow || isReadOnly;
+  const toggleTooltip = isToggleDisabled
+    ? tooltipMessage || 'You do not have permission to edit this workflow'
+    : 'Enable or disable this trigger';
+
   // Build footer with enabled toggle and run button
   const footer = (
     <InspectorFooter
       leftButtons={
-        <Toggle
-          id={`trigger-enabled-${trigger.id}`}
-          checked={trigger.enabled}
-          onChange={handleEnabledChange}
-          label="Enabled"
-          disabled={!permissions?.can_edit_workflow || isReadOnly}
-        />
+        <Tooltip content={toggleTooltip} side="top">
+          <span className="inline-block">
+            <Toggle
+              id={`trigger-enabled-${trigger.id}`}
+              checked={trigger.enabled}
+              onChange={handleEnabledChange}
+              label="Enabled"
+              disabled={isToggleDisabled}
+            />
+          </span>
+        </Tooltip>
       }
       rightButtons={
         <Tooltip content={runTooltipMessage} side="top">
