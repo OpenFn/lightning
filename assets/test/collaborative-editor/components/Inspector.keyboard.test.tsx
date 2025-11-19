@@ -5,16 +5,16 @@
  * approach to ensure tests remain valid through keyboard library migrations.
  */
 
-import { describe, test, expect, beforeEach, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type React from 'react';
+import { beforeEach, describe, expect, test, vi } from 'vitest';
 
-import { HotkeysProvider } from 'react-hotkeys-hook';
+import { KeyboardProvider } from '#/collaborative-editor/keyboard';
 
 import { Inspector } from '#/collaborative-editor/components/Inspector';
-import { SessionContext } from '#/collaborative-editor/contexts/SessionProvider';
 import { LiveViewActionsProvider } from '#/collaborative-editor/contexts/LiveViewActionsContext';
+import { SessionContext } from '#/collaborative-editor/contexts/SessionProvider';
 import { StoreContext } from '#/collaborative-editor/contexts/StoreProvider';
 import { createSessionStore } from '#/collaborative-editor/stores/createSessionStore';
 import { createStores } from '../__helpers__/storeProviderHelpers';
@@ -68,7 +68,7 @@ function createTestWrapper() {
 
   return function Wrapper({ children }: { children: React.ReactNode }) {
     return (
-      <HotkeysProvider initiallyActiveScopes={['panel']}>
+      <KeyboardProvider>
         <SessionContext.Provider value={{ sessionStore, isNewWorkflow: false }}>
           <LiveViewActionsProvider actions={mockLiveViewActions}>
             <StoreContext.Provider value={stores}>
@@ -76,7 +76,7 @@ function createTestWrapper() {
             </StoreContext.Provider>
           </LiveViewActionsProvider>
         </SessionContext.Provider>
-      </HotkeysProvider>
+      </KeyboardProvider>
     );
   };
 }
