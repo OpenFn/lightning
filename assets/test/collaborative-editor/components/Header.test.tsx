@@ -75,13 +75,20 @@ function createTestSetup(options: WrapperOptions = {}) {
   const credentialStore = createCredentialStore();
   const uiStore = createUIStore();
 
-  // Initialize session store
+  // Initialize session store with mock socket - it starts connected
   const mockSocket = createMockSocket();
-  sessionStore.initializeSession(mockSocket, 'test:room', {
-    id: 'user-1',
-    name: 'Test User',
-    color: '#ff0000',
-  });
+  sessionStore.initializeSession(
+    mockSocket as any,
+    'test:room',
+    {
+      id: 'user-1',
+      name: 'Test User',
+      color: '#ff0000',
+    },
+    {
+      connect: true, // Ensure connected state
+    }
+  );
 
   // Set up Y.Doc and workflow
   const ydoc = new Y.Doc() as Session.WorkflowDoc;
@@ -236,7 +243,9 @@ describe('Header - ReadOnlyWarning Integration', () => {
       emitSessionContext();
     });
 
-    expect(screen.queryByText('Read-only')).not.toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.queryByText('Read-only')).not.toBeInTheDocument();
+    });
   });
 
   test('hides ReadOnlyWarning during new workflow creation', async () => {
@@ -485,7 +494,9 @@ describe('Header - Read-Only State Changes', () => {
       emitSessionContext();
     });
 
-    expect(screen.queryByText('Read-only')).not.toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.queryByText('Read-only')).not.toBeInTheDocument();
+    });
 
     // Make workflow deleted
     act(() => {

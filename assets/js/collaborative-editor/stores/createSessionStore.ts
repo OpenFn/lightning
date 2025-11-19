@@ -188,6 +188,14 @@ export const createSessionStore = (): SessionStore => {
       throw new Error('Socket must be connected before initializing session');
     }
 
+    // Step 0: Clean up existing provider if reinitializing
+    if (state.provider) {
+      logger.debug('Destroying existing provider before reinitializing');
+      cleanupProviderHandlers?.();
+      cleanupProviderHandlers = null;
+      state.provider.destroy();
+    }
+
     // Step 1: Use existing YDoc or create new one
     const ydoc = state.ydoc || new YDoc();
 
@@ -215,7 +223,6 @@ export const createSessionStore = (): SessionStore => {
     }, 'initializeSession');
 
     // Step 5: Attach provider event handlers and store cleanup function
-    cleanupProviderHandlers?.(); // Clean up any existing handlers
     cleanupProviderHandlers = attachProvider(provider, updateState);
 
     // Step 6: Initialize settling subscription if not already active

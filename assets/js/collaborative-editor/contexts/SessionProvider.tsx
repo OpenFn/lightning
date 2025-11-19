@@ -4,7 +4,7 @@
  */
 
 import type React from 'react';
-import { createContext, useEffect, useMemo, useState } from 'react';
+import { createContext, useEffect, useMemo, useRef, useState } from 'react';
 
 import _logger from '#/utils/logger';
 
@@ -46,10 +46,30 @@ export const SessionProvider = ({
   // Create store instance once - stable reference
   const [sessionStore] = useState(() => createSessionStore());
 
+  // Track if this is the initial mount or a reconnection
+  const isInitialMount = useRef(true);
+  const prevConnectedRef = useRef(isConnected);
+
   useEffect(() => {
     if (!isConnected || !socket) return;
 
     logger.log('Initializing Session with PhoenixChannelProvider', { version });
+
+    // Track previous connection state
+    if (!isConnected) {
+      prevConnectedRef.current = isConnected;
+      return;
+    }
+
+    // Detect reconnection: was disconnected, now connected, not initial mount
+    const isReconnection =
+      !prevConnectedRef.current && isConnected && !isInitialMount.current;
+
+    logger.log('Initializing Session with PhoenixChannelProvider', {
+      version,
+      isReconnection,
+      isInitialMount: isInitialMount.current,
+    });
 
     // Create the Yjs channel provider
     // IMPORTANT: Room naming strategy for snapshots vs collaborative editing:
@@ -68,6 +88,7 @@ export const SessionProvider = ({
       socketConnected: socket.isConnected(),
       version,
       isLatestRoom: !version,
+      isReconnection,
     });
 
     // Initialize session - createSessionStore handles everything
@@ -77,10 +98,17 @@ export const SessionProvider = ({
       action: isNewWorkflow ? 'new' : 'edit',
     };
 
+    // Always initialize session, even on reconnection
+    // PhoenixChannelProvider handles reconnection internally, but we need
+    // to ensure SessionStore event handlers are attached to track connection state
     sessionStore.initializeSession(socket, roomname, null, {
       connect: true,
       joinParams,
     });
+
+    // Mark that we've completed initial mount
+    isInitialMount.current = false;
+    prevConnectedRef.current = isConnected;
 
     // Testing helper to simulate a reconnect
     window.triggerSessionReconnect = (timeout = 1000) => {
@@ -97,10 +125,15 @@ export const SessionProvider = ({
       );
     };
 
-    // Cleanup function
+    // Cleanup function - only destroy on unmount, not on reconnection
     return () => {
       logger.debug('PhoenixChannelProvider: cleaning up', { version });
-      sessionStore.destroy();
+
+      // Only destroy if we're unmounting (not just disconnecting)
+      // Unmount is detected by checking if socket is still valid
+      if (socket) {
+        sessionStore.destroy();
+      }
     };
   }, [
     isConnected,
