@@ -3,18 +3,18 @@
  */
 
 import { ReactFlowProvider } from '@xyflow/react';
-import { useMemo, useState, useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import {
-  useHistoryPanelCollapsed,
   useEditorPreferencesCommands,
+  useHistoryPanelCollapsed,
 } from '../../hooks/useEditorPreferences';
 import {
   useHistory,
-  useHistoryLoading,
-  useHistoryError,
-  useHistoryCommands,
   useHistoryChannelConnected,
+  useHistoryCommands,
+  useHistoryError,
+  useHistoryLoading,
   useRunSteps,
 } from '../../hooks/useHistory';
 import { useIsNewWorkflow } from '../../hooks/useSessionContext';
@@ -168,7 +168,7 @@ export function CollaborativeWorkflowDiagram({
           forceFit={true}
           showAiAssistant={false}
           inspectorId={inspectorId}
-          containerEl={containerRef.current}
+          containerEl={containerRef.current!}
           runSteps={currentRunSteps}
         />
 
