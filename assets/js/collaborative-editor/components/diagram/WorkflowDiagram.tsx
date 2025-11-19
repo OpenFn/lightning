@@ -912,7 +912,9 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
             zoomable
             pannable
             className="border-2 border-gray-200"
-            nodeComponent={MiniMapNode}
+            nodeComponent={props => (
+              <MiniMapNode {...props} jobs={jobs} triggers={triggers} />
+            )}
           />
         </ReactFlow>
       </ReactFlowProvider>
