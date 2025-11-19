@@ -86,6 +86,8 @@ and this project adheres to
   [#3903](https://github.com/OpenFn/lightning/issues/3903)
 - Monaco tooltips get cut off
   [#3900](https://github.com/OpenFn/lightning/issues/3900)
+- Loading workflow screen appears when disconnected from server
+  [#3972](https://github.com/OpenFn/lightning/issues/3972)
 
 ## [2.14.15-pre] - 2025-11-13
 

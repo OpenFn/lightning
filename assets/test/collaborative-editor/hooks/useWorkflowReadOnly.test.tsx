@@ -10,11 +10,13 @@ import type React from 'react';
 import { describe, expect, test } from 'vitest';
 import * as Y from 'yjs';
 
+import { SessionContext } from '../../../js/collaborative-editor/contexts/SessionProvider';
 import type { StoreContextValue } from '../../../js/collaborative-editor/contexts/StoreProvider';
 import { StoreContext } from '../../../js/collaborative-editor/contexts/StoreProvider';
 import { useWorkflowReadOnly } from '../../../js/collaborative-editor/hooks/useWorkflow';
 import type { SessionContextStoreInstance } from '../../../js/collaborative-editor/stores/createSessionContextStore';
 import { createSessionContextStore } from '../../../js/collaborative-editor/stores/createSessionContextStore';
+import { createSessionStore } from '../../../js/collaborative-editor/stores/createSessionStore';
 import type { WorkflowStoreInstance } from '../../../js/collaborative-editor/stores/createWorkflowStore';
 import { createWorkflowStore } from '../../../js/collaborative-editor/stores/createWorkflowStore';
 import type { Session } from '../../../js/collaborative-editor/types/session';
@@ -26,6 +28,7 @@ import {
   createMockPhoenixChannel,
   createMockPhoenixChannelProvider,
 } from '../mocks/phoenixChannel';
+import { createMockSocket } from '../mocks/phoenixSocket';
 
 // =============================================================================
 // TEST HELPERS
@@ -56,6 +59,7 @@ function createWrapper(options: WrapperOptions = {}): [
   } = options;
 
   // Create stores
+  const sessionStore = createSessionStore();
   const sessionContextStore = createSessionContextStore();
   const workflowStore = createWorkflowStore();
 
@@ -78,6 +82,19 @@ function createWrapper(options: WrapperOptions = {}): [
   const mockProvider = createMockPhoenixChannelProvider(mockChannel);
   (mockProvider as any).doc = ydoc;
   workflowStore.connect(ydoc, mockProvider as any);
+
+  // Initialize session store with mock socket - it starts connected
+  const mockSocket = createMockSocket();
+  const { provider } = sessionStore.initializeSession(
+    mockSocket as any,
+    'test:room',
+    null,
+    {
+      connect: true, // Changed to true to ensure connected state
+    }
+  );
+
+  // PhoenixChannelProvider will emit status "connected" automatically when initialized
 
   // Connect session context store to channel
   sessionContextStore._connectChannel(mockProvider as any);
@@ -102,10 +119,17 @@ function createWrapper(options: WrapperOptions = {}): [
     uiStore: {} as any,
   };
 
+  const mockSessionValue = {
+    sessionStore,
+    isNewWorkflow: false,
+  };
+
   const wrapper = ({ children }: { children: React.ReactNode }) => (
-    <StoreContext.Provider value={mockStoreValue}>
-      {children}
-    </StoreContext.Provider>
+    <SessionContext.Provider value={mockSessionValue}>
+      <StoreContext.Provider value={mockStoreValue}>
+        {children}
+      </StoreContext.Provider>
+    </SessionContext.Provider>
   );
 
   return [
@@ -316,6 +340,7 @@ describe('useWorkflowReadOnly - Valid Editing', () => {
 
 describe('useWorkflowReadOnly - Edge Cases', () => {
   test('handles null workflow gracefully', async () => {
+    const sessionStore = createSessionStore();
     const sessionContextStore = createSessionContextStore();
     const workflowStore = createWorkflowStore();
 
@@ -323,6 +348,17 @@ describe('useWorkflowReadOnly - Edge Cases', () => {
     const mockChannel = createMockPhoenixChannel('test:room');
     const mockProvider = createMockPhoenixChannelProvider(mockChannel);
     sessionContextStore._connectChannel(mockProvider as any);
+
+    // Initialize session store with mock socket - it starts connected
+    const mockSocket = createMockSocket();
+    const { provider } = sessionStore.initializeSession(
+      mockSocket as any,
+      'test:room',
+      null,
+      {
+        connect: true, // Changed to true to ensure connected state
+      }
+    );
 
     const mockStoreValue: StoreContextValue = {
       sessionContextStore,
@@ -333,10 +369,17 @@ describe('useWorkflowReadOnly - Edge Cases', () => {
       uiStore: {} as any,
     };
 
+    const mockSessionValue = {
+      sessionStore,
+      isNewWorkflow: false,
+    };
+
     const wrapper = ({ children }: { children: React.ReactNode }) => (
-      <StoreContext.Provider value={mockStoreValue}>
-        {children}
-      </StoreContext.Provider>
+      <SessionContext.Provider value={mockSessionValue}>
+        <StoreContext.Provider value={mockStoreValue}>
+          {children}
+        </StoreContext.Provider>
+      </SessionContext.Provider>
     );
 
     const { result } = renderHook(() => useWorkflowReadOnly(), { wrapper });
@@ -359,6 +402,7 @@ describe('useWorkflowReadOnly - Edge Cases', () => {
   });
 
   test('handles null permissions gracefully (loading state - not read-only)', async () => {
+    const sessionStore = createSessionStore();
     const sessionContextStore = createSessionContextStore();
     const workflowStore = createWorkflowStore();
 
@@ -380,6 +424,17 @@ describe('useWorkflowReadOnly - Edge Cases', () => {
     workflowStore.connect(ydoc, mockProvider as any);
     sessionContextStore._connectChannel(mockProvider as any);
 
+    // Initialize session store with mock socket - it starts connected
+    const mockSocket = createMockSocket();
+    const { provider } = sessionStore.initializeSession(
+      mockSocket as any,
+      'test:room',
+      null,
+      {
+        connect: true, // Changed to true to ensure connected state
+      }
+    );
+
     const mockStoreValue: StoreContextValue = {
       sessionContextStore,
       workflowStore,
@@ -389,10 +444,17 @@ describe('useWorkflowReadOnly - Edge Cases', () => {
       uiStore: {} as any,
     };
 
+    const mockSessionValue = {
+      sessionStore,
+      isNewWorkflow: false,
+    };
+
     const wrapper = ({ children }: { children: React.ReactNode }) => (
-      <StoreContext.Provider value={mockStoreValue}>
-        {children}
-      </StoreContext.Provider>
+      <SessionContext.Provider value={mockSessionValue}>
+        <StoreContext.Provider value={mockStoreValue}>
+          {children}
+        </StoreContext.Provider>
+      </SessionContext.Provider>
     );
 
     const { result } = renderHook(() => useWorkflowReadOnly(), { wrapper });
