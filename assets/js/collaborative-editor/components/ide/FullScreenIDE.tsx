@@ -196,13 +196,6 @@ export function FullScreenIDE({
     [updateSearchParams]
   );
 
-  const runContext = jobIdFromURL
-    ? { type: 'job' as const, id: jobIdFromURL }
-    : {
-        type: 'trigger' as const,
-        id: workflow?.triggers[0]?.id || '',
-      };
-
   // Declaratively connect to run channel when runIdFromURL changes
   const currentRun = useFollowRun(runIdFromURL);
 
