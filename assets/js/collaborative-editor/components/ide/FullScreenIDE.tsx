@@ -731,7 +731,7 @@ export function FullScreenIDE({
                         className="text-xs font-medium text-gray-400
                         uppercase tracking-wide"
                       >
-                        Code
+                        Code - {currentJob?.name || 'Untitled'}
                       </div>
                       <div className="flex items-center gap-1">
                         {/* Docs/Metadata toggle buttons */}
@@ -774,9 +774,9 @@ export function FullScreenIDE({
                       onClick={toggleCenterPanel}
                       className="ml-4 text-xs font-medium text-gray-400
                         uppercase tracking-wide hover:text-gray-600
-                        transition-colors cursor-pointer"
+                        transition-colors cursor-pointer whitespace-nowrap"
                     >
-                      Code
+                      Code - {currentJob?.name || 'Untitled'}
                     </button>
                   )}
                 </div>
@@ -1003,9 +1003,11 @@ export function FullScreenIDE({
                       onClick={toggleRightPanel}
                       className="ml-4 text-xs font-medium text-gray-400
                         uppercase tracking-wide hover:text-gray-600
-                        transition-colors cursor-pointer"
+                        transition-colors cursor-pointer whitespace-nowrap"
                     >
-                      {followRunId ? 'Output' : 'Input'}
+                      {followRunId
+                        ? `Run - ${followRunId.slice(0, 7)}`
+                        : 'New Run (Select Input)'}
                     </button>
                   )}
                 </div>
