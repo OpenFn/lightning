@@ -86,8 +86,8 @@ function RemoteCursor({ name, color, x, y }: RemoteCursorProps) {
         className="drop-shadow-md"
       >
         <path
-          d="M5.65376 12.3673L5.46026 12.4976L5.44561 12.7075L5.07907 21.2476L5.05896 21.6761L5.43874 21.5034L9.53826 19.7668L9.71372 19.6861L9.81905 19.5245L14.8446 12.6621L15.1695 12.2222L14.6252 12.1005L6.3 10.2801L5.65376 12.3673Z"
-          fill={color}
+          d="m 4.580503,0.60395675 a 2,2 0 0 1 2.27,-0.42 v 0 L 22.780503,7.4039568 a 2,2 0 0 1 1.2,2.12 2.26,2.26 0 0 1 -1.8,2.0000002 l -5.58,1.13 -1.13,5.58 a 2.26,2.26 0 0 1 -2,1.8 h -0.25 a 2,2 0 0 1 -1.87,-1.2 l -7.19,-15.9600002 a 2,2 0 0 1 0.42,-2.27000005 z"
+          fill="currentColor"
           stroke="white"
           strokeWidth="1.5"
         />
@@ -96,7 +96,7 @@ function RemoteCursor({ name, color, x, y }: RemoteCursorProps) {
       {/* User name label */}
       <div
         className={cn(
-          'absolute left-5 top-0 whitespace-nowrap rounded px-2 py-1',
+          'absolute left-7 top-0 whitespace-nowrap rounded px-2 py-1',
           'text-xs font-medium text-white shadow-md'
         )}
         style={{ backgroundColor: color }}
