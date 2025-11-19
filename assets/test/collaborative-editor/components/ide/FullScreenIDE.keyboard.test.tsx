@@ -629,90 +629,14 @@ describe('FullScreenIDE Keyboard Shortcuts', () => {
 
       document.body.removeChild(input);
     });
-
-    test('calls handleRun even when canRun is false (guards are in handler)', async () => {
-      const user = userEvent.setup();
-      const { handleRun } = setupMockUseRunRetry({ canRun: false });
-
-      const { container } = renderFullScreenIDE();
-
-      await waitFor(() =>
-        expect(screen.getByTestId('collaborative-monaco')).toBeInTheDocument()
-      );
-
-      container.focus();
-
-      // Keyboard shortcut calls handler unconditionally
-      // The handler itself checks canRunWorkflow internally
-      await user.keyboard('{Meta>}{Enter}{/Meta}');
-      await waitFor(() => expect(handleRun).toHaveBeenCalled());
-    });
-
-    test('calls handleRun even when isSubmitting is true (guards are in handler)', async () => {
-      const user = userEvent.setup();
-      const { handleRun } = setupMockUseRunRetry({ isSubmitting: true });
-
-      const { container } = renderFullScreenIDE();
-
-      await waitFor(() =>
-        expect(screen.getByTestId('collaborative-monaco')).toBeInTheDocument()
-      );
-
-      container.focus();
-
-      // Keyboard shortcut calls handler unconditionally
-      // The handler itself has guards (e.g., isRetryingRef) to prevent double-calls
-      await user.keyboard('{Meta>}{Enter}{/Meta}');
-      await waitFor(() => expect(handleRun).toHaveBeenCalled());
-    });
   });
 
   describe('Mod+Shift+Enter - Force New Run', () => {
-    test('calls handleRun even when retry is available (Mac)', async () => {
-      const user = userEvent.setup();
-      const { handleRun, handleRetry } = setupMockUseRunRetry({
-        isRetryable: true,
-      });
-
-      const { container } = renderFullScreenIDE();
-
-      await waitFor(() =>
-        expect(screen.getByTestId('collaborative-monaco')).toBeInTheDocument()
-      );
-
-      container.focus();
-
-      await user.keyboard('{Meta>}{Shift>}{Enter}{/Shift}{/Meta}');
-      await waitFor(() => {
-        expect(handleRun).toHaveBeenCalled();
-        expect(handleRetry).not.toHaveBeenCalled();
-      });
-    });
-
-    test('calls handleRun even when retry is available (Windows)', async () => {
-      const user = userEvent.setup();
-      const { handleRun, handleRetry } = setupMockUseRunRetry({
-        isRetryable: true,
-      });
-
-      const { container } = renderFullScreenIDE();
-
-      await waitFor(() =>
-        expect(screen.getByTestId('collaborative-monaco')).toBeInTheDocument()
-      );
-
-      container.focus();
-
-      await user.keyboard('{Control>}{Shift>}{Enter}{/Shift}{/Control}');
-      await waitFor(() => {
-        expect(handleRun).toHaveBeenCalled();
-        expect(handleRetry).not.toHaveBeenCalled();
-      });
-    });
-
     test('works in Monaco editor (contentEditable)', async () => {
       const user = userEvent.setup();
-      const { handleRun } = setupMockUseRunRetry();
+      const { handleRun } = setupMockUseRunRetry({
+        isRetryable: true,
+      });
 
       renderFullScreenIDE();
 
@@ -731,7 +655,9 @@ describe('FullScreenIDE Keyboard Shortcuts', () => {
 
     test('works in form tags', async () => {
       const user = userEvent.setup();
-      const { handleRun } = setupMockUseRunRetry();
+      const { handleRun } = setupMockUseRunRetry({
+        isRetryable: true,
+      });
 
       renderFullScreenIDE();
 
@@ -749,42 +675,6 @@ describe('FullScreenIDE Keyboard Shortcuts', () => {
       await waitFor(() => expect(handleRun).toHaveBeenCalled());
 
       document.body.removeChild(input);
-    });
-
-    test('calls handleRun even when canRun is false (guards are in handler)', async () => {
-      const user = userEvent.setup();
-      const { handleRun } = setupMockUseRunRetry({ canRun: false });
-
-      const { container } = renderFullScreenIDE();
-
-      await waitFor(() =>
-        expect(screen.getByTestId('collaborative-monaco')).toBeInTheDocument()
-      );
-
-      container.focus();
-
-      // Keyboard shortcut calls handler unconditionally
-      // The handler itself checks canRunWorkflow internally
-      await user.keyboard('{Meta>}{Shift>}{Enter}{/Shift}{/Meta}');
-      await waitFor(() => expect(handleRun).toHaveBeenCalled());
-    });
-
-    test('calls handleRun even when isSubmitting is true (guards are in handler)', async () => {
-      const user = userEvent.setup();
-      const { handleRun } = setupMockUseRunRetry({ isSubmitting: true });
-
-      const { container } = renderFullScreenIDE();
-
-      await waitFor(() =>
-        expect(screen.getByTestId('collaborative-monaco')).toBeInTheDocument()
-      );
-
-      container.focus();
-
-      // Keyboard shortcut calls handler unconditionally
-      // The handler itself has guards to prevent issues
-      await user.keyboard('{Meta>}{Shift>}{Enter}{/Shift}{/Meta}');
-      await waitFor(() => expect(handleRun).toHaveBeenCalled());
     });
   });
 

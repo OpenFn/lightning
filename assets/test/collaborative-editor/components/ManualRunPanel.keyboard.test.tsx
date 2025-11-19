@@ -797,10 +797,10 @@ describe('ManualRunPanel Keyboard Shortcuts', () => {
         // Should trigger retry (submit with existing dataclip)
         await waitFor(() => {
           expect(vi.mocked(dataclipApi.submitManualRun)).toHaveBeenCalledWith({
-            project_id: 'project-1',
-            workflow_id: 'workflow-1',
-            job_id: 'job-1',
-            dataclip_id: 'dataclip-1',
+            projectId: 'project-1',
+            workflowId: 'workflow-1',
+            jobId: 'job-1',
+            dataclipId: 'dataclip-1',
           });
         });
       });
@@ -866,10 +866,10 @@ describe('ManualRunPanel Keyboard Shortcuts', () => {
         // Should trigger retry (submit with existing dataclip)
         await waitFor(() => {
           expect(vi.mocked(dataclipApi.submitManualRun)).toHaveBeenCalledWith({
-            project_id: 'project-1',
-            workflow_id: 'workflow-1',
-            job_id: 'job-1',
-            dataclip_id: 'dataclip-1',
+            projectId: 'project-1',
+            workflowId: 'workflow-1',
+            jobId: 'job-1',
+            dataclipId: 'dataclip-1',
           });
         });
       });
