@@ -30,6 +30,8 @@ and this project adheres to
 
 ### Fixed
 
+- Fix vertical scrolling in workflow panels
+  [#3979](https://github.com/OpenFn/lightning/issues/3979)
 - Fix ghost edges blocking saves and breaking autolayout when deleting jobs in
   collaborative editor [#3983](https://github.com/OpenFn/lightning/issues/3983)
 - Fix tooltip styling inconsistencies in collaborative editor

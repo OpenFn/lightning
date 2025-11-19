@@ -122,7 +122,7 @@ export const WorkflowRunPanel: WithActionProps<WorkflowRunPanel> = props => {
         onBack={() => {
           props.navigate(back_url);
         }}
-        className="flex flex-col bg-red"
+        fixedHeight={true}
         footer={
           <div className="flex justify-end">
             {shouldShowRetry ? (
@@ -188,8 +188,8 @@ export const WorkflowRunPanel: WithActionProps<WorkflowRunPanel> = props => {
             <div>Select a Step or Trigger to start a Run from</div>
           </div>
         ) : (
-          <>
-            <div className="truncate">Select input to start a run</div>
+          <div className="flex flex-col h-full">
+            <div className="truncate shrink-0">Select input to start a run</div>
             <ManualRunPanel
               {...actionProps}
               pushEvent={pushEventProxy}
@@ -198,7 +198,7 @@ export const WorkflowRunPanel: WithActionProps<WorkflowRunPanel> = props => {
               onRunStepChange={handleRunStepChange}
               onDataclipChange={handleDataclipChange}
             />
-          </>
+          </div>
         )}
       </Panel>
     </>
