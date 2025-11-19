@@ -1,13 +1,14 @@
+import type { Channel } from 'phoenix';
 import type { PhoenixChannelProvider } from 'y-phoenix-channel';
 import * as z from 'zod';
 
 import { isoDateTimeSchema, uuidSchema } from './common';
 
 /**
- * Zod schema for a single Run
+ * Zod schema for a single RunSummary (lightweight run data in work orders)
  * Matches the backend Run structure from WorkOrders
  */
-export const RunSchema = z.object({
+export const RunSummarySchema = z.object({
   id: uuidSchema,
   state: z.enum([
     'available',
@@ -46,7 +47,7 @@ export const WorkOrderSchema = z.object({
   ]),
   last_activity: isoDateTimeSchema,
   version: z.number(),
-  runs: z.array(RunSchema),
+  runs: z.array(RunSummarySchema),
 });
 
 /**
@@ -55,11 +56,95 @@ export const WorkOrderSchema = z.object({
 export const HistoryListSchema = z.array(WorkOrderSchema);
 
 /**
+ * Define run states as constants (single source of truth)
+ */
+export const ALL_RUN_STATES = [
+  'available',
+  'claimed',
+  'started',
+  'success',
+  'failed',
+  'crashed',
+  'cancelled',
+  'killed',
+  'exception',
+  'lost',
+] as const;
+
+export const FINAL_STATES = [
+  'success',
+  'failed',
+  'crashed',
+  'cancelled',
+  'killed',
+  'exception',
+  'lost',
+] as const;
+
+export type RunState = (typeof ALL_RUN_STATES)[number];
+export type FinalState = (typeof FINAL_STATES)[number];
+
+/**
+ * Type guard function to check if a state is final
+ */
+export function isFinalState(state: RunState): state is FinalState {
+  return FINAL_STATES.includes(state as FinalState);
+}
+
+/**
+ * Zod schema for StepDetail (detailed step data from run channel)
+ */
+export const StepDetailSchema = z.object({
+  id: z.string().uuid(),
+  job_id: z.string().uuid().nullable(),
+  job: z
+    .object({
+      name: z.string(),
+    })
+    .nullish(), // Allow null or undefined
+  exit_reason: z.string().nullable(),
+  error_type: z.string().nullable(),
+  started_at: z.string().nullable(),
+  finished_at: z.string().nullable(),
+  input_dataclip_id: z.string().uuid().nullable(),
+  output_dataclip_id: z.string().uuid().nullable(),
+  inserted_at: z.string(),
+});
+
+/**
+ * Zod schema for RunDetail (full run data from dedicated run channel)
+ */
+export const RunDetailSchema = z.object({
+  id: z.string().uuid(),
+  work_order_id: z.string().uuid(),
+  work_order: z.object({
+    id: z.string().uuid(),
+    workflow_id: z.string().uuid(),
+  }),
+  state: z.enum(ALL_RUN_STATES),
+  created_by: z
+    .object({
+      email: z.string(),
+    })
+    .nullable(),
+  starting_trigger: z
+    .object({
+      type: z.string(),
+    })
+    .nullable(),
+  started_at: z.string().nullable(),
+  finished_at: z.string().nullable(),
+  steps: z.array(StepDetailSchema),
+});
+
+/**
  * TypeScript types inferred from Zod schemas
  */
-export type Run = z.infer<typeof RunSchema>;
+export type RunSummary = z.infer<typeof RunSummarySchema>;
 export type WorkOrder = z.infer<typeof WorkOrderSchema>;
 export type WorkflowRunHistory = WorkOrder[];
+export type StepDetail = z.infer<typeof StepDetailSchema>;
+export type RunDetail = z.infer<typeof RunDetailSchema>;
 
 /**
  * Step data from backend
@@ -93,6 +178,7 @@ export interface RunStepsData {
  * Store state interface
  */
 export interface HistoryState {
+  // === HISTORY BROWSER STATE (Existing) ===
   history: WorkflowRunHistory;
   isLoading: boolean;
   error: string | null;
@@ -101,6 +187,14 @@ export interface HistoryState {
   runStepsCache: Record<string, RunStepsData>;
   runStepsSubscribers: Record<string, Set<string>>;
   runStepsLoading: Set<string>;
+
+  // === ACTIVE RUN VIEWER STATE (New) ===
+  activeRunId: string | null;
+  activeRun: RunDetail | null;
+  activeRunChannel: Channel | null;
+  activeRunLoading: boolean;
+  activeRunError: string | null;
+  selectedStepId: string | null;
 }
 
 /**
@@ -108,6 +202,7 @@ export interface HistoryState {
  * Commands mutate state and return void
  */
 interface HistoryCommands {
+  // Existing history commands
   requestHistory: (runId?: string) => Promise<void>;
   requestRunSteps: (runId: string) => Promise<RunStepsData | null>;
   setLoading: (loading: boolean) => void;
@@ -115,6 +210,14 @@ interface HistoryCommands {
   clearError: () => void;
   subscribeToRunSteps: (runId: string, subscriberId: string) => void;
   unsubscribeFromRunSteps: (runId: string, subscriberId: string) => void;
+
+  // New active run commands
+  _viewRun: (runId: string) => void;
+  _closeRunViewer: () => void;
+  selectStep: (stepId: string | null) => void;
+  setActiveRunLoading: (loading: boolean) => void;
+  setActiveRunError: (error: string | null) => void;
+  clearActiveRunError: () => void;
 }
 
 /**
@@ -122,10 +225,17 @@ interface HistoryCommands {
  * Queries return data without side effects
  */
 interface HistoryQueries {
+  // Existing queries
   getSnapshot: () => HistoryState;
   subscribe: (listener: () => void) => () => void;
   withSelector: <T>(selector: (state: HistoryState) => T) => () => T;
   getRunSteps: (runId: string) => RunStepsData | null;
+
+  // New active run queries
+  getActiveRun: () => RunDetail | null;
+  getSelectedStep: () => StepDetail | null;
+  isActiveRunLoading: () => boolean;
+  getActiveRunError: () => string | null;
 }
 
 /**
@@ -134,6 +244,8 @@ interface HistoryQueries {
  */
 interface HistoryStoreInternals {
   _connectChannel: (provider: PhoenixChannelProvider) => () => void;
+  _viewRun: (runId: string) => void;
+  _closeRunViewer: () => void;
 }
 
 /**

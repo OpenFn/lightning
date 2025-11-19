@@ -21,7 +21,7 @@ import { useIsNewWorkflow } from '../../hooks/useSessionContext';
 import { useVersionMismatch } from '../../hooks/useVersionMismatch';
 import { useVersionSelect } from '../../hooks/useVersionSelect';
 import { useNodeSelection } from '../../hooks/useWorkflow';
-import type { Run } from '../../types/history';
+import type { RunSummary } from '../../types/history';
 
 import MiniHistory from './MiniHistory';
 import { VersionMismatchBanner } from './VersionMismatchBanner';
@@ -83,7 +83,7 @@ export function CollaborativeWorkflowDiagram({
 
   // Update URL when run selection changes
   const handleRunSelect = useCallback(
-    (run: Run) => {
+    (run: RunSummary) => {
       setSelectedRunId(run.id);
 
       // Find the workorder that contains this run

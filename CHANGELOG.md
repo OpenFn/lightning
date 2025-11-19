@@ -19,6 +19,8 @@ and this project adheres to
 
 ### Changed
 
+- Consolidated RunStore functionality into HistoryStore in collaborative editor
+  for improved state management and reduced complexity
 - Default failure notifications for project users are now disabled to minimize
   email volume [#3517](https://github.com/OpenFn/lightning/issues/3517)
 - Simpler "disabled" state for workflows, still show last mod

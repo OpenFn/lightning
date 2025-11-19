@@ -25,7 +25,7 @@ import type { StoreContextValue } from '../../../js/collaborative-editor/context
 import { createAdaptorStore } from '../../../js/collaborative-editor/stores/createAdaptorStore';
 import { createAwarenessStore } from '../../../js/collaborative-editor/stores/createAwarenessStore';
 import { createCredentialStore } from '../../../js/collaborative-editor/stores/createCredentialStore';
-import { createRunStore } from '../../../js/collaborative-editor/stores/createRunStore';
+import { createHistoryStore } from '../../../js/collaborative-editor/stores/createHistoryStore';
 import { createSessionContextStore } from '../../../js/collaborative-editor/stores/createSessionContextStore';
 import { createUIStore } from '../../../js/collaborative-editor/stores/createUIStore';
 import { createWorkflowStore } from '../../../js/collaborative-editor/stores/createWorkflowStore';
@@ -185,7 +185,8 @@ describe('ManualRunPanel', () => {
       adaptorStore: createAdaptorStore(),
       awarenessStore: createAwarenessStore(),
       uiStore: createUIStore(),
-      runStore: createRunStore(),
+      historyStore: createHistoryStore(),
+      editorPreferencesStore: {} as any,
     };
 
     // Create mock channel and connect session context store

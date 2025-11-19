@@ -1,17 +1,17 @@
 import {
-  useCurrentRun,
-  useRunActions,
-  useRunError,
-  useRunLoading,
-} from "../../hooks/useRun";
+  useActiveRun,
+  useActiveRunError,
+  useActiveRunLoading,
+  useHistoryCommands,
+} from '../../hooks/useHistory';
 
-import { InputTabPanel } from "./InputTabPanel";
-import { LogTabPanel } from "./LogTabPanel";
-import { OutputTabPanel } from "./OutputTabPanel";
-import { RunSkeleton } from "./RunSkeleton";
-import { RunTabPanel } from "./RunTabPanel";
+import { InputTabPanel } from './InputTabPanel';
+import { LogTabPanel } from './LogTabPanel';
+import { OutputTabPanel } from './OutputTabPanel';
+import { RunSkeleton } from './RunSkeleton';
+import { RunTabPanel } from './RunTabPanel';
 
-type TabValue = "run" | "log" | "input" | "output";
+type TabValue = 'run' | 'log' | 'input' | 'output';
 
 interface RunViewerPanelProps {
   followRunId: string | null;
@@ -25,13 +25,13 @@ export function RunViewerPanel({
   activeTab,
   onTabChange: _onTabChange,
 }: RunViewerPanelProps) {
-  const run = useCurrentRun();
-  const isLoading = useRunLoading();
-  const error = useRunError();
-  const { clearError } = useRunActions();
+  const run = useActiveRun();
+  const isLoading = useActiveRunLoading();
+  const error = useActiveRunError();
+  const { clearActiveRunError } = useHistoryCommands();
 
   // Note: Connection to run channel is managed by parent component (FullScreenIDE)
-  // This component only reads the current run state from RunStore
+  // This component only reads the current run state from HistoryStore
 
   // Empty state - no run to display
   if (!followRunId) {
@@ -57,7 +57,7 @@ export function RunViewerPanel({
           <p className="font-semibold">Error loading run</p>
           <p className="text-sm mt-1">{error}</p>
           <button
-            onClick={clearError}
+            onClick={clearActiveRunError}
             className="mt-4 px-4 py-2 bg-red-100
               hover:bg-red-200 rounded text-sm"
           >
@@ -85,10 +85,10 @@ export function RunViewerPanel({
       aria-label="Run output viewer"
     >
       <div className="flex-1 overflow-hidden">
-        {activeTab === "run" && <RunTabPanel />}
-        {activeTab === "log" && <LogTabPanel />}
-        {activeTab === "input" && <InputTabPanel />}
-        {activeTab === "output" && <OutputTabPanel />}
+        {activeTab === 'run' && <RunTabPanel />}
+        {activeTab === 'log' && <LogTabPanel />}
+        {activeTab === 'input' && <InputTabPanel />}
+        {activeTab === 'output' && <OutputTabPanel />}
       </div>
     </div>
   );

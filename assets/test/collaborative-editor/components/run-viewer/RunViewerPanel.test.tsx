@@ -14,94 +14,84 @@
  * - Channel connection/disconnection lifecycle
  */
 
-import { render, screen } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
-import { beforeEach, describe, expect, test, vi } from "vitest";
-import { RunViewerPanel } from "../../../../js/collaborative-editor/components/run-viewer/RunViewerPanel";
-import * as useRunModule from "../../../../js/collaborative-editor/hooks/useRun";
-import * as useSessionModule from "../../../../js/collaborative-editor/hooks/useSession";
-import type { Run } from "../../../../js/collaborative-editor/types/run";
+import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { beforeEach, describe, expect, test, vi } from 'vitest';
+import { RunViewerPanel } from '../../../../js/collaborative-editor/components/run-viewer/RunViewerPanel';
+import * as useHistoryModule from '../../../../js/collaborative-editor/hooks/useHistory';
+import * as useSessionModule from '../../../../js/collaborative-editor/hooks/useSession';
+import type { RunDetail } from '../../../../js/collaborative-editor/types/history';
 
 // Mock tab panel components to avoid monaco-editor dependency
 vi.mock(
-  "../../../../js/collaborative-editor/components/run-viewer/RunTabPanel",
+  '../../../../js/collaborative-editor/components/run-viewer/RunTabPanel',
   () => ({
     RunTabPanel: () => <div>Run Tab Content</div>,
   })
 );
 
 vi.mock(
-  "../../../../js/collaborative-editor/components/run-viewer/LogTabPanel",
+  '../../../../js/collaborative-editor/components/run-viewer/LogTabPanel',
   () => ({
     LogTabPanel: () => <div>Log Tab Content</div>,
   })
 );
 
 vi.mock(
-  "../../../../js/collaborative-editor/components/run-viewer/InputTabPanel",
+  '../../../../js/collaborative-editor/components/run-viewer/InputTabPanel',
   () => ({
     InputTabPanel: () => <div>Input Tab Content</div>,
   })
 );
 
 vi.mock(
-  "../../../../js/collaborative-editor/components/run-viewer/OutputTabPanel",
+  '../../../../js/collaborative-editor/components/run-viewer/OutputTabPanel',
   () => ({
     OutputTabPanel: () => <div>Output Tab Content</div>,
   })
 );
 
 // Mock hooks
-const mockUseCurrentRun = vi.spyOn(useRunModule, "useCurrentRun");
-const mockUseRunLoading = vi.spyOn(useRunModule, "useRunLoading");
-const mockUseRunError = vi.spyOn(useRunModule, "useRunError");
-const mockUseRunStoreInstance = vi.spyOn(useRunModule, "useRunStoreInstance");
-const mockUseRunActions = vi.spyOn(useRunModule, "useRunActions");
-const mockUseSession = vi.spyOn(useSessionModule, "useSession");
+const mockUseActiveRun = vi.spyOn(useHistoryModule, 'useActiveRun');
+const mockUseActiveRunLoading = vi.spyOn(
+  useHistoryModule,
+  'useActiveRunLoading'
+);
+const mockUseActiveRunError = vi.spyOn(useHistoryModule, 'useActiveRunError');
+const mockUseHistoryCommands = vi.spyOn(useHistoryModule, 'useHistoryCommands');
+const mockUseSession = vi.spyOn(useSessionModule, 'useSession');
 
 // Mock run factory
-const createMockRun = (overrides?: Partial<Run>): Run => ({
-  id: "run-1",
-  work_order_id: "wo-1",
-  state: "started",
+const createMockRun = (overrides?: Partial<RunDetail>): RunDetail => ({
+  id: 'run-1',
+  work_order_id: 'wo-1',
+  work_order: {
+    id: 'wo-1',
+    workflow_id: 'wf-1',
+  },
+  state: 'started',
+  created_by: null,
+  starting_trigger: null,
   started_at: new Date().toISOString(),
   finished_at: null,
   steps: [],
   ...overrides,
 });
 
-// Mock store instance
-const createMockRunStore = () => ({
-  _connectToRun: vi.fn(() => vi.fn()),
-  _disconnectFromRun: vi.fn(),
-  clearError: vi.fn(),
-  selectStep: vi.fn(),
-  getSnapshot: vi.fn(),
-  subscribe: vi.fn(),
-  withSelector: vi.fn(),
-  setRun: vi.fn(),
-  updateRunState: vi.fn(),
-  addOrUpdateStep: vi.fn(),
-  setLoading: vi.fn(),
-  setError: vi.fn(),
-  clear: vi.fn(),
-  findStepById: vi.fn(),
-  getSelectedStep: vi.fn(),
+// Mock history commands
+const createMockHistoryCommands = () => ({
+  clearActiveRunError: vi.fn(),
 });
 
-describe("RunViewerPanel", () => {
-  let mockStore: ReturnType<typeof createMockRunStore>;
+describe('RunViewerPanel', () => {
+  let mockCommands: ReturnType<typeof createMockHistoryCommands>;
 
   beforeEach(() => {
     vi.clearAllMocks();
-    mockStore = createMockRunStore();
+    mockCommands = createMockHistoryCommands();
 
     // Default mocks
-    mockUseRunStoreInstance.mockReturnValue(mockStore as any);
-    mockUseRunActions.mockReturnValue({
-      selectStep: mockStore.selectStep,
-      clearError: mockStore.clearError,
-    } as any);
+    mockUseHistoryCommands.mockReturnValue(mockCommands as any);
     mockUseSession.mockReturnValue({
       provider: {
         socket: {},
@@ -119,11 +109,11 @@ describe("RunViewerPanel", () => {
     localStorage.clear();
   });
 
-  describe("empty state", () => {
-    test("shows empty state when no followRunId provided", () => {
-      mockUseCurrentRun.mockReturnValue(null);
-      mockUseRunLoading.mockReturnValue(false);
-      mockUseRunError.mockReturnValue(null);
+  describe('empty state', () => {
+    test('shows empty state when no followRunId provided', () => {
+      mockUseActiveRun.mockReturnValue(null);
+      mockUseActiveRunLoading.mockReturnValue(false);
+      mockUseActiveRunError.mockReturnValue(null);
 
       render(
         <RunViewerPanel
@@ -137,11 +127,11 @@ describe("RunViewerPanel", () => {
     });
   });
 
-  describe("loading state", () => {
-    test("shows skeleton when loading and no run data", () => {
-      mockUseCurrentRun.mockReturnValue(null);
-      mockUseRunLoading.mockReturnValue(true);
-      mockUseRunError.mockReturnValue(null);
+  describe('loading state', () => {
+    test('shows skeleton when loading and no run data', () => {
+      mockUseActiveRun.mockReturnValue(null);
+      mockUseActiveRunLoading.mockReturnValue(true);
+      mockUseActiveRunError.mockReturnValue(null);
 
       render(
         <RunViewerPanel
@@ -152,14 +142,14 @@ describe("RunViewerPanel", () => {
       );
 
       // Check for skeleton (animated pulse)
-      const skeleton = document.querySelector(".animate-pulse");
+      const skeleton = document.querySelector('.animate-pulse');
       expect(skeleton).toBeInTheDocument();
     });
 
-    test("does not show skeleton when loading but run exists", () => {
-      mockUseCurrentRun.mockReturnValue(createMockRun());
-      mockUseRunLoading.mockReturnValue(true);
-      mockUseRunError.mockReturnValue(null);
+    test('does not show skeleton when loading but run exists', () => {
+      mockUseActiveRun.mockReturnValue(createMockRun());
+      mockUseActiveRunLoading.mockReturnValue(true);
+      mockUseActiveRunError.mockReturnValue(null);
 
       render(
         <RunViewerPanel
@@ -170,15 +160,15 @@ describe("RunViewerPanel", () => {
       );
 
       // Should show tab content (Run Tab Content), not skeleton
-      expect(screen.getByText("Run Tab Content")).toBeInTheDocument();
+      expect(screen.getByText('Run Tab Content')).toBeInTheDocument();
     });
   });
 
-  describe("error state", () => {
-    test("shows error message when error exists", () => {
-      mockUseCurrentRun.mockReturnValue(null);
-      mockUseRunLoading.mockReturnValue(false);
-      mockUseRunError.mockReturnValue("Failed to load run");
+  describe('error state', () => {
+    test('shows error message when error exists', () => {
+      mockUseActiveRun.mockReturnValue(null);
+      mockUseActiveRunLoading.mockReturnValue(false);
+      mockUseActiveRunError.mockReturnValue('Failed to load run');
 
       render(
         <RunViewerPanel
@@ -188,15 +178,15 @@ describe("RunViewerPanel", () => {
         />
       );
 
-      expect(screen.getByText("Error loading run")).toBeInTheDocument();
-      expect(screen.getByText("Failed to load run")).toBeInTheDocument();
+      expect(screen.getByText('Error loading run')).toBeInTheDocument();
+      expect(screen.getByText('Failed to load run')).toBeInTheDocument();
     });
 
-    test("dismiss button clears error", async () => {
+    test('dismiss button clears error', async () => {
       const user = userEvent.setup();
-      mockUseCurrentRun.mockReturnValue(null);
-      mockUseRunLoading.mockReturnValue(false);
-      mockUseRunError.mockReturnValue("Failed to load run");
+      mockUseActiveRun.mockReturnValue(null);
+      mockUseActiveRunLoading.mockReturnValue(false);
+      mockUseActiveRunError.mockReturnValue('Failed to load run');
 
       render(
         <RunViewerPanel
@@ -206,18 +196,18 @@ describe("RunViewerPanel", () => {
         />
       );
 
-      const dismissButton = screen.getByText("Dismiss");
+      const dismissButton = screen.getByText('Dismiss');
       await user.click(dismissButton);
 
-      expect(mockStore.clearError).toHaveBeenCalled();
+      expect(mockCommands.clearActiveRunError).toHaveBeenCalled();
     });
   });
 
-  describe("tab content rendering", () => {
+  describe('tab content rendering', () => {
     test("renders Run tab content when activeTab is 'run'", () => {
-      mockUseCurrentRun.mockReturnValue(createMockRun());
-      mockUseRunLoading.mockReturnValue(false);
-      mockUseRunError.mockReturnValue(null);
+      mockUseActiveRun.mockReturnValue(createMockRun());
+      mockUseActiveRunLoading.mockReturnValue(false);
+      mockUseActiveRunError.mockReturnValue(null);
 
       render(
         <RunViewerPanel
@@ -227,13 +217,13 @@ describe("RunViewerPanel", () => {
         />
       );
 
-      expect(screen.getByText("Run Tab Content")).toBeInTheDocument();
+      expect(screen.getByText('Run Tab Content')).toBeInTheDocument();
     });
 
     test("renders Log tab content when activeTab is 'log'", () => {
-      mockUseCurrentRun.mockReturnValue(createMockRun());
-      mockUseRunLoading.mockReturnValue(false);
-      mockUseRunError.mockReturnValue(null);
+      mockUseActiveRun.mockReturnValue(createMockRun());
+      mockUseActiveRunLoading.mockReturnValue(false);
+      mockUseActiveRunError.mockReturnValue(null);
 
       render(
         <RunViewerPanel
@@ -243,13 +233,13 @@ describe("RunViewerPanel", () => {
         />
       );
 
-      expect(screen.getByText("Log Tab Content")).toBeInTheDocument();
+      expect(screen.getByText('Log Tab Content')).toBeInTheDocument();
     });
 
     test("renders Input tab content when activeTab is 'input'", () => {
-      mockUseCurrentRun.mockReturnValue(createMockRun());
-      mockUseRunLoading.mockReturnValue(false);
-      mockUseRunError.mockReturnValue(null);
+      mockUseActiveRun.mockReturnValue(createMockRun());
+      mockUseActiveRunLoading.mockReturnValue(false);
+      mockUseActiveRunError.mockReturnValue(null);
 
       render(
         <RunViewerPanel
@@ -259,13 +249,13 @@ describe("RunViewerPanel", () => {
         />
       );
 
-      expect(screen.getByText("Input Tab Content")).toBeInTheDocument();
+      expect(screen.getByText('Input Tab Content')).toBeInTheDocument();
     });
 
     test("renders Output tab content when activeTab is 'output'", () => {
-      mockUseCurrentRun.mockReturnValue(createMockRun());
-      mockUseRunLoading.mockReturnValue(false);
-      mockUseRunError.mockReturnValue(null);
+      mockUseActiveRun.mockReturnValue(createMockRun());
+      mockUseActiveRunLoading.mockReturnValue(false);
+      mockUseActiveRunError.mockReturnValue(null);
 
       render(
         <RunViewerPanel
@@ -275,29 +265,20 @@ describe("RunViewerPanel", () => {
         />
       );
 
-      expect(screen.getByText("Output Tab Content")).toBeInTheDocument();
+      expect(screen.getByText('Output Tab Content')).toBeInTheDocument();
     });
   });
 
-  // NOTE: Connection lifecycle tests were removed in this PR.
-  // Connection management is now handled by parent component (FullScreenIDE),
-  // not by RunViewerPanel. RunViewerPanel only reads from RunStore.
-  describe("channel connection lifecycle", () => {
-    test("does not connect when provider is null", () => {
-      mockUseSession.mockReturnValue({
-        provider: null,
-        ydoc: null,
-        awareness: null,
-        userData: null,
-        isConnected: false,
-        isSynced: false,
-        settled: false,
-        lastStatus: null,
-      });
+  // NOTE: Connection lifecycle tests were removed.
+  // Connection management is now handled by parent component (FullScreenIDE)
+  // via useFollowRun hook, not by RunViewerPanel. RunViewerPanel only reads
+  // from HistoryStore via useActiveRun hooks.
 
-      mockUseCurrentRun.mockReturnValue(null);
-      mockUseRunLoading.mockReturnValue(false);
-      mockUseRunError.mockReturnValue(null);
+  describe('accessibility', () => {
+    test('has proper ARIA labels', () => {
+      mockUseActiveRun.mockReturnValue(createMockRun());
+      mockUseActiveRunLoading.mockReturnValue(false);
+      mockUseActiveRunError.mockReturnValue(null);
 
       render(
         <RunViewerPanel
@@ -307,26 +288,7 @@ describe("RunViewerPanel", () => {
         />
       );
 
-      // Should not attempt connection without provider
-      expect(mockStore._connectToRun).not.toHaveBeenCalled();
-    });
-  });
-
-  describe("accessibility", () => {
-    test("has proper ARIA labels", () => {
-      mockUseCurrentRun.mockReturnValue(createMockRun());
-      mockUseRunLoading.mockReturnValue(false);
-      mockUseRunError.mockReturnValue(null);
-
-      render(
-        <RunViewerPanel
-          followRunId="run-1"
-          activeTab="run"
-          onTabChange={vi.fn()}
-        />
-      );
-
-      const region = screen.getByRole("region", {
+      const region = screen.getByRole('region', {
         name: /run output viewer/i,
       });
       expect(region).toBeInTheDocument();

@@ -20,10 +20,9 @@ import type { Dataclip } from '../api/dataclips';
 import * as dataclipApi from '../api/dataclips';
 import { HOTKEY_SCOPES } from '../constants/hotkeys';
 import { RENDER_MODES, type RenderMode } from '../constants/panel';
-import { useCurrentRun, useRunStoreInstance } from '../hooks/useRun';
+import { useActiveRun, useFollowRun } from '../hooks/useHistory';
 import { useRunRetry } from '../hooks/useRunRetry';
 import { useRunRetryShortcuts } from '../hooks/useRunRetryShortcuts';
-import { useSession } from '../hooks/useSession';
 import { useCanRun } from '../hooks/useWorkflow';
 import type { Workflow } from '../types/workflow';
 
@@ -133,10 +132,14 @@ export function ManualRunPanel({
 
   const { searchParams } = useURLState();
   const followedRunId = searchParams.get('run');
-  const currentRun = useCurrentRun();
 
-  const { provider } = useSession();
-  const runStore = useRunStoreInstance();
+  // Connect to run channel when following a run in standalone mode
+  // In embedded mode (FullScreenIDE), parent handles the connection
+  const shouldFollow =
+    renderMode === RENDER_MODES.STANDALONE ? followedRunId : null;
+  useFollowRun(shouldFollow);
+
+  const currentRun = useActiveRun();
 
   const runContext = jobId
     ? { type: 'job' as const, id: jobId }
@@ -210,22 +213,6 @@ export function ManualRunPanel({
       dataclips.find(dc => dc.id === followedRunStep.input_dataclip_id) || null
     );
   }, [followedRunStep, dataclips]);
-
-  // Connect to run channel when following a run
-  // Note: In embedded mode (FullScreenIDE), parent handles the connection
-  useEffect(() => {
-    if (renderMode !== RENDER_MODES.STANDALONE) {
-      return;
-    }
-
-    if (!followedRunId || !provider) {
-      runStore._disconnectFromRun();
-      return;
-    }
-
-    const cleanup = runStore._connectToRun(provider, followedRunId);
-    return cleanup;
-  }, [followedRunId, provider, runStore, renderMode]);
 
   useEffect(() => {
     if (!followedRunId) {

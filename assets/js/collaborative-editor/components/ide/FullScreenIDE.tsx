@@ -1,10 +1,10 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   DocumentTextIcon,
   SparklesIcon,
   ViewColumnsIcon,
   XMarkIcon,
 } from '@heroicons/react/24/outline';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useHotkeys, useHotkeysContext } from 'react-hotkeys-hook';
 import {
   type ImperativePanelHandle,
@@ -28,11 +28,7 @@ import {
   useCredentials,
   useCredentialsCommands,
 } from '../../hooks/useCredentials';
-import {
-  useCurrentRun,
-  useRunActions,
-  useRunStoreInstance,
-} from '../../hooks/useRun';
+import { useFollowRun, useHistoryCommands } from '../../hooks/useHistory';
 import { useRunRetry } from '../../hooks/useRunRetry';
 import { useRunRetryShortcuts } from '../../hooks/useRunRetryShortcuts';
 import { useSession } from '../../hooks/useSession';
@@ -58,13 +54,13 @@ import { CollaborativeMonaco } from '../CollaborativeMonaco';
 import { ConfigureAdaptorModal } from '../ConfigureAdaptorModal';
 import { Header } from '../Header';
 import { JobSelector } from '../JobSelector';
-import { VersionDropdown } from '../VersionDropdown';
 import { ManualRunPanel } from '../ManualRunPanel';
 import { ManualRunPanelErrorBoundary } from '../ManualRunPanelErrorBoundary';
 import { RunViewerErrorBoundary } from '../run-viewer/RunViewerErrorBoundary';
 import { RunViewerPanel } from '../run-viewer/RunViewerPanel';
 import { SandboxIndicatorBanner } from '../SandboxIndicatorBanner';
 import { Tabs } from '../Tabs';
+import { VersionDropdown } from '../VersionDropdown';
 
 import { PanelToggleButton } from './PanelToggleButton';
 
@@ -89,7 +85,6 @@ function resolveAdaptor(adaptor: string): {
 }
 
 // Stable selector functions to prevent useEffect re-runs
-const selectProvider = (state: any) => state.provider;
 const selectAwareness = (state: any) => state.awareness;
 
 interface FullScreenIDEProps {
@@ -122,12 +117,10 @@ export function FullScreenIDE({
   const runIdFromURL = searchParams.get('run') || searchParams.get('a');
   const stepIdFromURL = searchParams.get('step');
   const { selectJob, saveWorkflow } = useWorkflowActions();
-  const { selectStep } = useRunActions();
+  const { selectStep } = useHistoryCommands();
   const { job: currentJob, ytext: currentJobYText } = useCurrentJob();
   const awareness = useSession(selectAwareness);
-  const provider = useSession(selectProvider);
   const { canSave } = useCanSave();
-  const runStore = useRunStoreInstance();
 
   const workflow = useWorkflowState(state =>
     state.workflow
@@ -203,7 +196,8 @@ export function FullScreenIDE({
     [updateSearchParams]
   );
 
-  const currentRun = useCurrentRun();
+  // Declaratively connect to run channel when runIdFromURL changes
+  const currentRun = useFollowRun(runIdFromURL);
 
   const followedRunStep = useMemo(() => {
     if (!currentRun || !currentRun.steps || !jobIdFromURL) return null;
@@ -334,7 +328,6 @@ export function FullScreenIDE({
   });
 
   // Get data for Header
-  const { tooltipMessage: saveTooltipMessage } = useCanSave();
   const latestSnapshotLockVersion = useLatestSnapshotLockVersion();
   const repoConnection = useProjectRepoConnection();
   const { openGitHubSyncModal } = useUICommands();
@@ -368,16 +361,6 @@ export function FullScreenIDE({
       selectJob(jobIdFromURL);
     }
   }, [jobIdFromURL, selectJob]);
-
-  useEffect(() => {
-    if (!runIdFromURL || !provider) {
-      runStore._disconnectFromRun();
-      return;
-    }
-
-    const cleanup = runStore._connectToRun(provider, runIdFromURL);
-    return cleanup;
-  }, [runIdFromURL, provider, runStore]);
 
   useEffect(() => {
     if (runIdFromURL && runIdFromURL !== followRunId) {

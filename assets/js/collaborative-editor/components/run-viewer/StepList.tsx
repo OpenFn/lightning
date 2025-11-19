@@ -1,9 +1,9 @@
-import type { Step } from '../../types/run';
+import type { StepDetail } from '../../types/history';
 
 import { StepItem } from './StepItem';
 
 interface StepListProps {
-  steps: Step[];
+  steps: StepDetail[];
   selectedStepId: string | null;
   onSelectStep: (stepId: string) => void;
 }
