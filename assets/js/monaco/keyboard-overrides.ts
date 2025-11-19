@@ -31,13 +31,16 @@ export function addKeyboardShortcutOverrides(
   editor: editor.IStandaloneCodeEditor,
   monaco: Monaco
 ): void {
+  // Detect platform to set correct modifier key
+  const isMac = /(Mac|iPhone|iPod|iPad)/i.test(navigator.userAgent);
+
   // Override Monaco's Cmd/Ctrl+Enter
   editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter, () => {
     const event = new KeyboardEvent('keydown', {
       key: 'Enter',
       code: 'Enter',
-      metaKey: true,
-      ctrlKey: true,
+      metaKey: isMac,
+      ctrlKey: !isMac,
       bubbles: true,
       cancelable: true,
     });
@@ -51,8 +54,8 @@ export function addKeyboardShortcutOverrides(
       const event = new KeyboardEvent('keydown', {
         key: 'Enter',
         code: 'Enter',
-        metaKey: true,
-        ctrlKey: true,
+        metaKey: isMac,
+        ctrlKey: !isMac,
         shiftKey: true,
         bubbles: true,
         cancelable: true,
