@@ -20,6 +20,7 @@ import { beforeEach, describe, expect, test, vi } from 'vitest';
 import * as dataclipApi from '../../../js/collaborative-editor/api/dataclips';
 import { notifications } from '../../../js/collaborative-editor/lib/notifications';
 import { ManualRunPanel } from '../../../js/collaborative-editor/components/ManualRunPanel';
+import { KeyboardProvider } from '../../../js/collaborative-editor/keyboard';
 import { StoreContext } from '../../../js/collaborative-editor/contexts/StoreProvider';
 import type { StoreContextValue } from '../../../js/collaborative-editor/contexts/StoreProvider';
 import { createAdaptorStore } from '../../../js/collaborative-editor/stores/createAdaptorStore';
@@ -158,14 +159,16 @@ function renderManualRunPanel(
 ) {
   return render(
     <StoreContext.Provider value={stores}>
-      <HotkeysProvider>
-        <ManualRunPanel
-          {...props}
-          saveWorkflow={
-            props.saveWorkflow || vi.fn().mockResolvedValue(undefined)
-          }
-        />
-      </HotkeysProvider>
+      <KeyboardProvider>
+        <HotkeysProvider>
+          <ManualRunPanel
+            {...props}
+            saveWorkflow={
+              props.saveWorkflow || vi.fn().mockResolvedValue(undefined)
+            }
+          />
+        </HotkeysProvider>
+      </KeyboardProvider>
     </StoreContext.Provider>
   );
 }

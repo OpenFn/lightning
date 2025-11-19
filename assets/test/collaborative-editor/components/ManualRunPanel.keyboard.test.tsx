@@ -5,7 +5,7 @@
  * 1. Escape (Close Panel) - Lines 425-436
  *    - Configuration tests (lines 250-294)
  *    - Basic close behavior (lines 296-322)
- *    - Form field compatibility with enableOnFormTags: true (lines 324-444)
+ *    - Form field compatibility (works in inputs by default with KeyboardProvider)
  *      * Search input (Existing tab)
  *      * Date filter inputs (Existing tab)
  *      * Monaco editor (Custom tab)
@@ -17,25 +17,24 @@
  * - Conflict prevention pattern (enabled: renderMode === STANDALONE)
  * - Guards (canRun, isRunning, isRetryable)
  * - Platform variants (Mac Cmd/Windows Ctrl)
- * - Scope isolation (HOTKEY_SCOPES.RUN_PANEL)
- * - Form field compatibility (enableOnFormTags: true allows Escape in inputs)
+ * - Priority-based handler registration (KeyboardProvider)
+ * - Form field compatibility (works in inputs/textarea/select by default)
  */
 
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { act } from 'react';
 import type React from 'react';
-import { HotkeysProvider } from 'react-hotkeys-hook';
+import { act } from 'react';
 import { beforeEach, describe, expect, test, vi } from 'vitest';
 
 import * as dataclipApi from '../../../js/collaborative-editor/api/dataclips';
 import { ManualRunPanel } from '../../../js/collaborative-editor/components/ManualRunPanel';
-import { HOTKEY_SCOPES } from '../../../js/collaborative-editor/constants/hotkeys';
 import { RENDER_MODES } from '../../../js/collaborative-editor/constants/panel';
 import { LiveViewActionsProvider } from '../../../js/collaborative-editor/contexts/LiveViewActionsContext';
 import { SessionContext } from '../../../js/collaborative-editor/contexts/SessionProvider';
-import { StoreContext } from '../../../js/collaborative-editor/contexts/StoreProvider';
 import type { StoreContextValue } from '../../../js/collaborative-editor/contexts/StoreProvider';
+import { StoreContext } from '../../../js/collaborative-editor/contexts/StoreProvider';
+import { KeyboardProvider } from '../../../js/collaborative-editor/keyboard/KeyboardProvider';
 import { createSessionStore } from '../../../js/collaborative-editor/stores/createSessionStore';
 import type { Workflow } from '../../../js/collaborative-editor/types/workflow';
 import {
@@ -93,7 +92,7 @@ function createTestWrapper() {
 
   return function Wrapper({ children }: { children: React.ReactNode }) {
     return (
-      <HotkeysProvider initiallyActiveScopes={[HOTKEY_SCOPES.RUN_PANEL]}>
+      <KeyboardProvider>
         <SessionContext.Provider value={{ sessionStore, isNewWorkflow: false }}>
           <LiveViewActionsProvider actions={mockLiveViewActions}>
             <StoreContext.Provider value={stores}>
@@ -101,7 +100,7 @@ function createTestWrapper() {
             </StoreContext.Provider>
           </LiveViewActionsProvider>
         </SessionContext.Provider>
-      </HotkeysProvider>
+      </KeyboardProvider>
     );
   };
 }
@@ -270,8 +269,7 @@ describe('ManualRunPanel Keyboard Shortcuts', () => {
       });
 
       // Verify component rendered successfully
-      // The escape handler is configured in the component (lines 425-436)
-      // with enabled: true, scopes: [HOTKEY_SCOPES.RUN_PANEL], enableOnFormTags: true
+      // The escape handler is configured in the component with priority 25
       expect(onClose).not.toHaveBeenCalled();
     });
 
@@ -316,7 +314,7 @@ describe('ManualRunPanel Keyboard Shortcuts', () => {
         expect(screen.getByText('Run from Test Job')).toBeInTheDocument();
       });
 
-      // Wait for scope activation
+      // Wait for component to be fully ready
       await new Promise(resolve => setTimeout(resolve, 200));
 
       // Press Escape
@@ -344,7 +342,7 @@ describe('ManualRunPanel Keyboard Shortcuts', () => {
         expect(screen.getByText('Run from Test Job')).toBeInTheDocument();
       });
 
-      // Wait for scope activation
+      // Wait for component to be fully ready
       await new Promise(resolve => setTimeout(resolve, 200));
 
       // Switch to Existing tab
@@ -383,7 +381,7 @@ describe('ManualRunPanel Keyboard Shortcuts', () => {
         expect(screen.getByText('Run from Test Job')).toBeInTheDocument();
       });
 
-      // Wait for scope activation
+      // Wait for component to be fully ready
       await new Promise(resolve => setTimeout(resolve, 200));
 
       // Switch to Existing tab
@@ -441,7 +439,7 @@ describe('ManualRunPanel Keyboard Shortcuts', () => {
         expect(screen.getByText('Run from Test Job')).toBeInTheDocument();
       });
 
-      // Wait for scope activation
+      // Wait for component to be fully ready
       await new Promise(resolve => setTimeout(resolve, 200));
 
       // Switch to Custom tab
