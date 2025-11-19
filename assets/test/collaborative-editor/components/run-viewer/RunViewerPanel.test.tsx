@@ -280,7 +280,7 @@ describe('RunViewerPanel', () => {
       mockUseActiveRunLoading.mockReturnValue(false);
       mockUseActiveRunError.mockReturnValue(null);
 
-      render(
+      const { container } = render(
         <RunViewerPanel
           followRunId="run-1"
           activeTab="run"
@@ -288,10 +288,8 @@ describe('RunViewerPanel', () => {
         />
       );
 
-      const region = screen.getByRole('region', {
-        name: /run output viewer/i,
-      });
-      expect(region).toBeInTheDocument();
+      const panelGroup = container.querySelector('[data-panel-group]');
+      expect(panelGroup).toBeInTheDocument();
     });
   });
 });

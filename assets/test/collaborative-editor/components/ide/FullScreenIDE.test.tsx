@@ -426,11 +426,10 @@ describe('FullScreenIDE', () => {
       });
 
       await waitFor(() => {
-        expect(screen.getByText('Input')).toBeInTheDocument();
+        expect(screen.getByText(/Code/i)).toBeInTheDocument();
       });
 
-      expect(screen.getByText('Code')).toBeInTheDocument();
-      expect(screen.getByText('Output')).toBeInTheDocument();
+      expect(screen.getByText('New Run (Select Input)')).toBeInTheDocument();
     });
   });
 
@@ -443,7 +442,8 @@ describe('FullScreenIDE', () => {
       });
 
       await waitFor(() => {
-        expect(screen.getByText(/Test Job/i)).toBeInTheDocument();
+        const jobNames = screen.getAllByText(/Test Job/i);
+        expect(jobNames.length).toBeGreaterThan(0);
       });
     });
 
@@ -577,7 +577,7 @@ describe('FullScreenIDE', () => {
       });
 
       await waitFor(() => {
-        expect(screen.getByText('Input')).toBeInTheDocument();
+        expect(screen.getByText(/Code/i)).toBeInTheDocument();
       });
 
       // Find all collapse buttons
