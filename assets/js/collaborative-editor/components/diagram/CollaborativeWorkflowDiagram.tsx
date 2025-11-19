@@ -50,27 +50,22 @@ export function CollaborativeWorkflowDiagram({
   const historyCollapsed = useHistoryPanelCollapsed();
   const { setHistoryPanelCollapsed } = useEditorPreferencesCommands();
 
-  // Auto-expand if there's a run ID in the URL (like LiveView behavior)
-  const runIdFromUrl = useMemo(() => {
-    const params = new URLSearchParams(window.location.search);
-    return params.get('run');
-  }, []);
-
-  useEffect(() => {
-    if (runIdFromUrl && historyCollapsed) {
-      setHistoryPanelCollapsed(false);
-    }
-  }, [runIdFromUrl, historyCollapsed, setHistoryPanelCollapsed]);
-
-  const handleToggleHistory = useCallback(() => {
-    setHistoryPanelCollapsed(!historyCollapsed);
-  }, [historyCollapsed, setHistoryPanelCollapsed]);
-
   // Track selected run for visual feedback (stored in URL)
   const [selectedRunId, setSelectedRunId] = useState<string | null>(() => {
     const params = new URLSearchParams(window.location.search);
     return params.get('run');
   });
+
+  // Auto-expand history panel when a run is selected
+  useEffect(() => {
+    if (selectedRunId && historyCollapsed) {
+      setHistoryPanelCollapsed(false);
+    }
+  }, [selectedRunId, historyCollapsed, setHistoryPanelCollapsed]);
+
+  const handleToggleHistory = useCallback(() => {
+    setHistoryPanelCollapsed(!historyCollapsed);
+  }, [historyCollapsed, setHistoryPanelCollapsed]);
 
   // Use hook to get run steps with automatic subscription management
   const currentRunSteps = useRunSteps(selectedRunId);
@@ -110,19 +105,19 @@ export function CollaborativeWorkflowDiagram({
     window.history.pushState({}, '', url.toString());
   }, []);
 
-  // Request history when panel is first expanded OR when there's a run ID in URL
+  // Request history when panel is first expanded OR when there's a run ID selected
   // Wait for channel to be connected before making request
   const hasRequestedHistory = useRef(false);
   useEffect(() => {
-    // Request if: channel connected AND (panel expanded OR run ID in URL) AND not already requested AND not new workflow
+    // Request if: channel connected AND (panel expanded OR run ID selected) AND not already requested AND not new workflow
     const shouldRequest =
       isHistoryChannelConnected &&
       !hasRequestedHistory.current &&
       !isNewWorkflow &&
-      (!historyCollapsed || runIdFromUrl);
+      (!historyCollapsed || selectedRunId);
 
     if (shouldRequest) {
-      void historyCommands.requestHistory(runIdFromUrl || undefined);
+      void historyCommands.requestHistory(selectedRunId || undefined);
       hasRequestedHistory.current = true;
     }
   }, [
@@ -130,7 +125,7 @@ export function CollaborativeWorkflowDiagram({
     isNewWorkflow,
     isHistoryChannelConnected,
     historyCommands,
-    runIdFromUrl,
+    selectedRunId,
   ]);
 
   // Transform history to mark selected run
