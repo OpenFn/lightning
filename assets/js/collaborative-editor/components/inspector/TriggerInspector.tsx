@@ -52,7 +52,7 @@ export function TriggerInspector({
 }: TriggerInspectorProps) {
   const permissions = usePermissions();
   const { updateTrigger } = useWorkflowActions();
-  const { isReadOnly } = useWorkflowReadOnly();
+  const { isReadOnly, tooltipMessage } = useWorkflowReadOnly();
 
   // Use centralized canRun hook for all run permission/state checks
   const { canRun, tooltipMessage: runTooltipMessage } = useCanRun();
@@ -64,34 +64,44 @@ export function TriggerInspector({
     [trigger.id, updateTrigger]
   );
 
-  // Build footer with enabled toggle and run button (only if user has permission and not readonly)
-  const footer =
-    permissions?.can_edit_workflow && !isReadOnly ? (
-      <InspectorFooter
-        leftButtons={
-          <Toggle
-            id={`trigger-enabled-${trigger.id}`}
-            checked={trigger.enabled}
-            onChange={handleEnabledChange}
-            label="Enabled"
-          />
-        }
-        rightButtons={
-          <Tooltip content={runTooltipMessage} side="top">
-            <span className="inline-block">
-              <Button
-                variant="primary"
-                onClick={() => onOpenRunPanel({ triggerId: trigger.id })}
-                disabled={!canRun}
-              >
-                <span className="hero-play-solid h-4 w-4" />
-                Run
-              </Button>
-            </span>
-          </Tooltip>
-        }
-      />
-    ) : undefined;
+  // Determine toggle tooltip based on disabled state
+  const isToggleDisabled = !permissions?.can_edit_workflow || isReadOnly;
+  const toggleTooltip = isToggleDisabled
+    ? tooltipMessage || 'You do not have permission to edit this workflow'
+    : 'Enable or disable this trigger';
+
+  // Build footer with enabled toggle and run button
+  const footer = (
+    <InspectorFooter
+      leftButtons={
+        <Tooltip content={toggleTooltip} side="top">
+          <span className="inline-block">
+            <Toggle
+              id={`trigger-enabled-${trigger.id}`}
+              checked={trigger.enabled}
+              onChange={handleEnabledChange}
+              label="Enabled"
+              disabled={isToggleDisabled}
+            />
+          </span>
+        </Tooltip>
+      }
+      rightButtons={
+        <Tooltip content={runTooltipMessage} side="top">
+          <span className="inline-block">
+            <Button
+              variant="primary"
+              onClick={() => onOpenRunPanel({ triggerId: trigger.id })}
+              disabled={!canRun}
+            >
+              <span className="hero-play-solid h-4 w-4" />
+              Run
+            </Button>
+          </span>
+        </Tooltip>
+      }
+    />
+  );
 
   return (
     <InspectorLayout

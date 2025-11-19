@@ -32,6 +32,8 @@ and this project adheres to
 
 ### Fixed
 
+- Restored footers to inspectors on the canvas while in read only mode
+  [#4018](https://github.com/OpenFn/lightning/issues/4018)
 - Fix vertical scrolling in workflow panels
   [#3979](https://github.com/OpenFn/lightning/issues/3979)
 - Fix ghost edges blocking saves and breaking autolayout when deleting jobs in
