@@ -315,7 +315,6 @@ export function WorkflowEditor({
               currentNode={currentNode}
               onClose={handleCloseInspector}
               onOpenRunPanel={openRunPanel}
-              respondToHotKey={!isRunPanelOpen}
             />
           </div>
         )}

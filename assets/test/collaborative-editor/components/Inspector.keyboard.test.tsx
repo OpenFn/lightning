@@ -1,8 +1,8 @@
 /**
  * Inspector Keyboard Shortcut Tests
  *
- * Tests the Inspector component's keyboard shortcuts using library-agnostic
- * approach to ensure tests remain valid through keyboard library migrations.
+ * Tests the Inspector component's keyboard shortcuts.
+ * Priority system (PANEL priority 10) is tested in keyboard-scopes.test.tsx.
  */
 
 import { render, screen } from '@testing-library/react';
@@ -12,7 +12,7 @@ import { beforeEach, describe, expect, test, vi } from 'vitest';
 
 import { KeyboardProvider } from '#/collaborative-editor/keyboard';
 
-import { Inspector } from '#/collaborative-editor/components/Inspector';
+import { Inspector } from '#/collaborative-editor/components/inspector';
 import { LiveViewActionsProvider } from '#/collaborative-editor/contexts/LiveViewActionsContext';
 import { SessionContext } from '#/collaborative-editor/contexts/SessionProvider';
 import { StoreContext } from '#/collaborative-editor/contexts/StoreProvider';
@@ -20,7 +20,7 @@ import { createSessionStore } from '#/collaborative-editor/stores/createSessionS
 import { createStores } from '../__helpers__/storeProviderHelpers';
 
 // Mock child inspector components to avoid needing full workflow setup
-vi.mock('#/collaborative-editor/components/Inspector/JobInspector', () => ({
+vi.mock('#/collaborative-editor/components/inspector/JobInspector', () => ({
   JobInspector: ({ onClose }: any) => (
     <div data-testid="job-inspector">
       <button onClick={onClose}>Close</button>
@@ -28,7 +28,7 @@ vi.mock('#/collaborative-editor/components/Inspector/JobInspector', () => ({
   ),
 }));
 
-vi.mock('#/collaborative-editor/components/Inspector/TriggerInspector', () => ({
+vi.mock('#/collaborative-editor/components/inspector/TriggerInspector', () => ({
   TriggerInspector: ({ onClose }: any) => (
     <div data-testid="trigger-inspector">
       <button onClick={onClose}>Close</button>
@@ -36,7 +36,7 @@ vi.mock('#/collaborative-editor/components/Inspector/TriggerInspector', () => ({
   ),
 }));
 
-vi.mock('#/collaborative-editor/components/Inspector/EdgeInspector', () => ({
+vi.mock('#/collaborative-editor/components/inspector/EdgeInspector', () => ({
   EdgeInspector: ({ onClose }: any) => (
     <div data-testid="edge-inspector">
       <button onClick={onClose}>Close</button>
@@ -44,11 +44,11 @@ vi.mock('#/collaborative-editor/components/Inspector/EdgeInspector', () => ({
   ),
 }));
 
-vi.mock('#/collaborative-editor/components/Inspector/WorkflowSettings', () => ({
+vi.mock('#/collaborative-editor/components/inspector/WorkflowSettings', () => ({
   WorkflowSettings: () => <div data-testid="workflow-settings">Settings</div>,
 }));
 
-vi.mock('#/collaborative-editor/components/Inspector/CodeViewPanel', () => ({
+vi.mock('#/collaborative-editor/components/inspector/CodeViewPanel', () => ({
   CodeViewPanel: () => <div data-testid="code-view-panel">Code</div>,
 }));
 
@@ -105,7 +105,6 @@ describe('Inspector keyboard shortcuts', () => {
           }}
           onClose={mockClose}
           onOpenRunPanel={vi.fn()}
-          respondToHotKey={true}
         />,
         { wrapper: createTestWrapper() }
       );
@@ -128,7 +127,6 @@ describe('Inspector keyboard shortcuts', () => {
           }}
           onClose={mockClose}
           onOpenRunPanel={vi.fn()}
-          respondToHotKey={true}
         />,
         { wrapper: createTestWrapper() }
       );
@@ -155,7 +153,6 @@ describe('Inspector keyboard shortcuts', () => {
           }}
           onClose={mockClose}
           onOpenRunPanel={vi.fn()}
-          respondToHotKey={true}
         />,
         { wrapper: createTestWrapper() }
       );
@@ -179,7 +176,6 @@ describe('Inspector keyboard shortcuts', () => {
           currentNode={{ id: null, type: null, node: null }}
           onClose={mockClose}
           onOpenRunPanel={vi.fn()}
-          respondToHotKey={true}
         />,
         { wrapper: createTestWrapper() }
       );
@@ -211,7 +207,6 @@ describe('Inspector keyboard shortcuts', () => {
           currentNode={{ id: null, type: null, node: null }}
           onClose={mockClose}
           onOpenRunPanel={vi.fn()}
-          respondToHotKey={true}
         />,
         { wrapper: createTestWrapper() }
       );
@@ -227,97 +222,6 @@ describe('Inspector keyboard shortcuts', () => {
 
       // onClose should NOT be called - only URL updated
       expect(mockClose).not.toHaveBeenCalled();
-    });
-  });
-
-  describe('respondToHotKey prop behavior', () => {
-    test('respects respondToHotKey=false and does not close', async () => {
-      const user = userEvent.setup();
-      const mockClose = vi.fn();
-
-      render(
-        <Inspector
-          currentNode={{
-            id: 'job-1',
-            type: 'job',
-            node: { id: 'job-1', name: 'Test Job' } as any,
-          }}
-          onClose={mockClose}
-          onOpenRunPanel={vi.fn()}
-          respondToHotKey={false}
-        />,
-        { wrapper: createTestWrapper() }
-      );
-
-      await user.keyboard('{Escape}');
-
-      // Should NOT close when respondToHotKey is false
-      expect(mockClose).not.toHaveBeenCalled();
-    });
-
-    test('respects respondToHotKey=true and closes', async () => {
-      const user = userEvent.setup();
-      const mockClose = vi.fn();
-
-      render(
-        <Inspector
-          currentNode={{
-            id: 'job-1',
-            type: 'job',
-            node: { id: 'job-1', name: 'Test Job' } as any,
-          }}
-          onClose={mockClose}
-          onOpenRunPanel={vi.fn()}
-          respondToHotKey={true}
-        />,
-        { wrapper: createTestWrapper() }
-      );
-
-      await user.keyboard('{Escape}');
-
-      expect(mockClose).toHaveBeenCalledTimes(1);
-    });
-
-    test('parent can dynamically enable/disable shortcut', async () => {
-      const user = userEvent.setup();
-      const mockClose = vi.fn();
-      const wrapper = createTestWrapper();
-
-      const { rerender } = render(
-        <Inspector
-          currentNode={{
-            id: 'job-1',
-            type: 'job',
-            node: { id: 'job-1', name: 'Test Job' } as any,
-          }}
-          onClose={mockClose}
-          onOpenRunPanel={vi.fn()}
-          respondToHotKey={false}
-        />,
-        { wrapper }
-      );
-
-      // Should not respond when disabled
-      await user.keyboard('{Escape}');
-      expect(mockClose).not.toHaveBeenCalled();
-
-      // Re-render with enabled
-      rerender(
-        <Inspector
-          currentNode={{
-            id: 'job-1',
-            type: 'job',
-            node: { id: 'job-1', name: 'Test Job' } as any,
-          }}
-          onClose={mockClose}
-          onOpenRunPanel={vi.fn()}
-          respondToHotKey={true}
-        />
-      );
-
-      // Now should respond
-      await user.keyboard('{Escape}');
-      expect(mockClose).toHaveBeenCalledTimes(1);
     });
   });
 
@@ -337,7 +241,6 @@ describe('Inspector keyboard shortcuts', () => {
             }}
             onClose={mockClose}
             onOpenRunPanel={vi.fn()}
-            respondToHotKey={true}
           />
         </>,
         { wrapper: createTestWrapper() }
@@ -368,7 +271,6 @@ describe('Inspector keyboard shortcuts', () => {
             }}
             onClose={mockClose}
             onOpenRunPanel={vi.fn()}
-            respondToHotKey={true}
           />
         </>,
         { wrapper: createTestWrapper() }
@@ -402,7 +304,6 @@ describe('Inspector keyboard shortcuts', () => {
             }}
             onClose={mockClose}
             onOpenRunPanel={vi.fn()}
-            respondToHotKey={true}
           />
         </>,
         { wrapper: createTestWrapper() }
@@ -442,7 +343,6 @@ describe('Inspector keyboard shortcuts', () => {
           }}
           onClose={mockClose}
           onOpenRunPanel={vi.fn()}
-          respondToHotKey={true}
         />,
         { wrapper: createTestWrapper() }
       );
@@ -463,7 +363,6 @@ describe('Inspector keyboard shortcuts', () => {
           currentNode={{ id: null, type: null, node: null }}
           onClose={mockClose}
           onOpenRunPanel={vi.fn()}
-          respondToHotKey={true}
         />,
         { wrapper: createTestWrapper() }
       );
@@ -484,7 +383,6 @@ describe('Inspector keyboard shortcuts', () => {
           }}
           onClose={mockClose}
           onOpenRunPanel={vi.fn()}
-          respondToHotKey={true}
         />,
         { wrapper: createTestWrapper() }
       );
@@ -504,7 +402,6 @@ describe('Inspector keyboard shortcuts', () => {
           }}
           onClose={mockClose}
           onOpenRunPanel={vi.fn()}
-          respondToHotKey={true}
         />,
         { wrapper: createTestWrapper() }
       );
@@ -528,7 +425,6 @@ describe('Inspector keyboard shortcuts', () => {
           }}
           onClose={mockClose}
           onOpenRunPanel={vi.fn()}
-          respondToHotKey={true}
         />,
         { wrapper: createTestWrapper() }
       );

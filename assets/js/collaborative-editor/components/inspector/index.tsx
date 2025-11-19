@@ -27,14 +27,12 @@ interface InspectorProps {
   };
   onClose: () => void;
   onOpenRunPanel: (context: { jobId?: string; triggerId?: string }) => void;
-  respondToHotKey: boolean;
 }
 
 export function Inspector({
   currentNode,
   onClose,
   onOpenRunPanel,
-  respondToHotKey,
 }: InspectorProps) {
   const { searchParams, updateSearchParams } = useURLState();
 
@@ -66,10 +64,7 @@ export function Inspector({
     () => {
       handleClose();
     },
-    10, // PANEL priority
-    {
-      enabled: respondToHotKey,
-    }
+    10 // PANEL priority
   );
 
   // Don't render if no mode selected
