@@ -19,6 +19,9 @@ and this project adheres to
 
 ### Changed
 
+- Simplified IDE by only letting users see the "Create a New Manual Run Panel"
+  when an existing Run isn't already loaded. Cleaned up the Run panel.
+  [#4006](https://github.com/OpenFn/lightning/issues/4006)
 - Consolidated RunStore functionality into HistoryStore in collaborative editor
   for improved state management and reduced complexity
 - Default failure notifications for project users are now disabled to minimize
