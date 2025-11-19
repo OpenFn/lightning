@@ -312,7 +312,6 @@ export function verifyAllStoresPresent(stores: StoreContextValue): void {
   expect(stores.historyStore).toBeDefined();
   expect(stores.uiStore).toBeDefined();
   expect(stores.editorPreferencesStore).toBeDefined();
-  expect(stores.runStore).toBeDefined();
 
   // Verify each store has the expected interface
   [
@@ -322,7 +321,6 @@ export function verifyAllStoresPresent(stores: StoreContextValue): void {
     stores.historyStore,
     stores.uiStore,
     stores.editorPreferencesStore,
-    stores.runStore,
   ].forEach(store => {
     expect(typeof store.subscribe).toBe('function');
     expect(typeof store.getSnapshot).toBe('function');

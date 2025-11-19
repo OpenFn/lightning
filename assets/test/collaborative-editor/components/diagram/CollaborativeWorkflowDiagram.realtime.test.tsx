@@ -217,7 +217,6 @@ describe('CollaborativeWorkflowDiagram - Real-time Run Updates', () => {
         ),
       } as any,
       uiStore: {} as any,
-      runStore: {} as any,
     };
 
     return ({ children }: { children: React.ReactNode }) => (

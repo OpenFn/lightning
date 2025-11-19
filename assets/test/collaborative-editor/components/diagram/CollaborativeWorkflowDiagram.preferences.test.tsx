@@ -132,7 +132,6 @@ function createWrapper(
       unsubscribeFromRunSteps: vi.fn(),
     } as any,
     uiStore: {} as any,
-    runStore: {} as any,
   };
 
   return ({ children }: { children: React.ReactNode }) => (

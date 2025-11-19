@@ -40,7 +40,7 @@ import type { StoreContextValue } from '../../../js/collaborative-editor/context
 import { StoreContext } from '../../../js/collaborative-editor/contexts/StoreProvider';
 import { KeyboardProvider } from '../../../js/collaborative-editor/keyboard/KeyboardProvider';
 import { createSessionStore } from '../../../js/collaborative-editor/stores/createSessionStore';
-import type { Run } from '../../../js/collaborative-editor/types/run';
+import type { RunDetail } from '../../../js/collaborative-editor/types/history';
 import type { Workflow } from '../../../js/collaborative-editor/types/workflow';
 import {
   createMockPhoenixChannel,
@@ -162,7 +162,7 @@ vi.mock('../../../js/react/lib/use-url-state', () => ({
  * These helpers configure the retry state needed for testing retry behavior.
  * Retry requires three pieces of state:
  * 1. followedRunId - from URL searchParams.get('run')
- * 2. followedRunStep - from RunStore.currentRun.steps
+ * 2. followedRunStep - from HistoryStore.activeRun.steps
  * 3. selectedDataclip - from component state (already mocked via searchDataclips)
  *
  * Usage:
@@ -175,7 +175,7 @@ vi.mock('../../../js/react/lib/use-url-state', () => ({
 
 /**
  * Helper to configure followed run state for retry testing
- * Sets URL param and RunStore currentRun with proper step structure
+ * Sets URL param and HistoryStore activeRun with proper step structure
  */
 function setFollowedRun(
   runId: string | null,
@@ -188,12 +188,18 @@ function setFollowedRun(
     mockSearchParams.set('run', runId);
   }
 
-  // Set currentRun in RunStore with matching step
+  // Set activeRun in HistoryStore with matching step
   if (runId && stores) {
-    const mockRun: Run = {
+    const mockRun: RunDetail = {
       id: runId,
       work_order_id: 'work-order-1',
+      work_order: {
+        id: 'work-order-1',
+        workflow_id: 'workflow-1',
+      },
       state: 'success',
+      created_by: null,
+      starting_trigger: null,
       started_at: '2025-01-01T00:00:00Z',
       finished_at: '2025-01-01T00:01:00Z',
       steps: [
@@ -201,7 +207,6 @@ function setFollowedRun(
           id: 'step-1',
           job_id: jobId,
           job: {
-            id: jobId,
             name: 'Test Job',
           },
           exit_reason: null,
@@ -217,11 +222,11 @@ function setFollowedRun(
 
     // Wrap in act() so React components see the store update
     act(() => {
-      stores.runStore.setRun(mockRun);
+      stores.historyStore._setActiveRunForTesting(mockRun);
     });
   } else if (stores) {
     act(() => {
-      stores.runStore.clear();
+      stores.historyStore._closeRunViewer();
     });
   }
 }
@@ -233,7 +238,7 @@ function clearFollowedRun() {
   mockSearchParams = new URLSearchParams();
   if (stores) {
     act(() => {
-      stores.runStore.clear();
+      stores.historyStore._closeRunViewer();
     });
   }
 }
@@ -1025,9 +1030,9 @@ describe('ManualRunPanel Keyboard Shortcuts', () => {
           await new Promise(resolve => setTimeout(resolve, 50));
         });
 
-        // Verify RunStore state was set correctly BEFORE rendering
-        expect(stores.runStore.getSnapshot().currentRun).toBeTruthy();
-        expect(stores.runStore.getSnapshot().currentRun?.id).toBe('run-1');
+        // Verify HistoryStore state was set correctly BEFORE rendering
+        expect(stores.historyStore.getSnapshot().activeRun).toBeTruthy();
+        expect(stores.historyStore.getSnapshot().activeRun?.id).toBe('run-1');
 
         renderManualRunPanel({
           workflow: mockWorkflow,
@@ -1121,9 +1126,9 @@ describe('ManualRunPanel Keyboard Shortcuts', () => {
           await new Promise(resolve => setTimeout(resolve, 50));
         });
 
-        // Verify RunStore state was set correctly BEFORE rendering
-        expect(stores.runStore.getSnapshot().currentRun).toBeTruthy();
-        expect(stores.runStore.getSnapshot().currentRun?.id).toBe('run-1');
+        // Verify HistoryStore state was set correctly BEFORE rendering
+        expect(stores.historyStore.getSnapshot().activeRun).toBeTruthy();
+        expect(stores.historyStore.getSnapshot().activeRun?.id).toBe('run-1');
 
         renderManualRunPanel({
           workflow: mockWorkflow,
