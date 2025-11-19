@@ -262,8 +262,8 @@ export function FullScreenIDE({
     selectedDataclipState,
   ]);
 
-  type RightPanelTab = 'run' | 'log' | 'input' | 'output';
-  const [activeRightTab, setActiveRightTab] = useState<RightPanelTab>('run');
+  type RightPanelTab = 'log' | 'input' | 'output';
+  const [activeRightTab, setActiveRightTab] = useState<RightPanelTab>('log');
 
   useEffect(() => {
     if (activeRightTab) {
@@ -273,7 +273,7 @@ export function FullScreenIDE({
 
   useEffect(() => {
     const savedTab = localStorage.getItem('lightning.ide-run-viewer-tab');
-    if (savedTab && ['run', 'log', 'input', 'output'].includes(savedTab)) {
+    if (savedTab && ['log', 'input', 'output'].includes(savedTab)) {
       setActiveRightTab(savedTab as RightPanelTab);
     }
   }, []);
@@ -935,7 +935,7 @@ export function FullScreenIDE({
           <Panel
             ref={rightPanelRef}
             defaultSize={30}
-            minSize={20}
+            minSize={30}
             collapsible
             collapsedSize={2}
             onCollapse={() => setIsRightCollapsed(true)}
@@ -954,6 +954,23 @@ export function FullScreenIDE({
                     <>
                       {followRunId ? (
                         <>
+                          {/* Close run chip */}
+                          <div className="inline-flex justify-between items-center gap-x-1 rounded-md bg-blue-100 px-2 py-1 text-xs font-medium text-blue-700 mr-3">
+                            <span>Run {followRunId?.slice(0, 7)}</span>
+                            <button
+                              onClick={() => {
+                                setFollowRunId(null);
+                                updateSearchParams({ run: null });
+                              }}
+                              className="group relative -mr-1 h-3.5 w-3.5 rounded-sm hover:bg-blue-600/20"
+                              aria-label="Close run"
+                              title="Close run"
+                            >
+                              <span className="sr-only">Remove</span>
+                              <XMarkIcon className="h-3.5 w-3.5" />
+                              <span className="absolute -inset-1"></span>
+                            </button>
+                          </div>
                           {/* Tabs as header content when showing run */}
                           <div className="flex-1">
                             <Tabs
@@ -961,27 +978,12 @@ export function FullScreenIDE({
                               onChange={setActiveRightTab}
                               variant="underline"
                               options={[
-                                { value: 'run', label: 'Run' },
-                                { value: 'log', label: 'Log' },
+                                { value: 'log', label: 'Logs' },
                                 { value: 'input', label: 'Input' },
                                 { value: 'output', label: 'Output' },
                               ]}
                             />
                           </div>
-                          {/* Close run button */}
-                          <button
-                            onClick={() => {
-                              setFollowRunId(null);
-                              updateSearchParams({ run: null });
-                            }}
-                            aria-label="Close run"
-                            title="Close run"
-                          >
-                            <span
-                              className="w-5 h-5 hero-x-circle hover:bg-slate-400 text-slate-500"
-                              aria-hidden="true"
-                            />
-                          </button>
                         </>
                       ) : (
                         <>
