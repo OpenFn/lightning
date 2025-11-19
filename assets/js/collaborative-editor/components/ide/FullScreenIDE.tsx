@@ -221,9 +221,12 @@ export function FullScreenIDE({
       return;
     }
 
-    // Only auto-select if no dataclip is currently selected
-    // This allows users to manually select different dataclips
-    if (selectedDataclipState !== null) {
+    // Only auto-select if no dataclip is currently selected OR
+    // if the selected dataclip doesn't match the expected one for this step
+    if (
+      selectedDataclipState !== null &&
+      selectedDataclipState.id === inputDataclipId
+    ) {
       return;
     }
 
@@ -256,6 +259,7 @@ export function FullScreenIDE({
     projectId,
     searchParams,
     manuallyUnselectedDataclip,
+    selectedDataclipState,
   ]);
 
   type RightPanelTab = 'run' | 'log' | 'input' | 'output';
@@ -772,7 +776,7 @@ export function FullScreenIDE({
                   ) : (
                     <button
                       onClick={toggleCenterPanel}
-                      className="ml-4 text-xs font-medium text-gray-400
+                      className="ml-2 text-xs font-medium text-gray-400
                         uppercase tracking-wide hover:text-gray-600
                         transition-colors cursor-pointer whitespace-nowrap"
                     >
@@ -1001,7 +1005,7 @@ export function FullScreenIDE({
                   ) : (
                     <button
                       onClick={toggleRightPanel}
-                      className="ml-4 text-xs font-medium text-gray-400
+                      className="ml-2 text-xs font-medium text-gray-400
                         uppercase tracking-wide hover:text-gray-600
                         transition-colors cursor-pointer whitespace-nowrap"
                     >
