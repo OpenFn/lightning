@@ -17,6 +17,9 @@ and this project adheres to
 
 ### Added
 
+- Add validation for edge expressions
+  [#3704](https://github.com/OpenFn/lightning/issues/3704)
+
 ### Changed
 
 - Default failure notifications for project users are now disabled to minimize
