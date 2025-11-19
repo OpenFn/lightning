@@ -17,7 +17,6 @@ import ExistingView from '../../manual-run-panel/views/ExistingView';
 import { useURLState } from '../../react/lib/use-url-state';
 import type { Dataclip } from '../api/dataclips';
 import * as dataclipApi from '../api/dataclips';
-import { HOTKEY_SCOPES } from '../constants/hotkeys';
 import { RENDER_MODES, type RenderMode } from '../constants/panel';
 import { useActiveRun, useFollowRun } from '../hooks/useHistory';
 import { useRunRetry } from '../hooks/useRunRetry';
@@ -423,8 +422,8 @@ export function ManualRunPanel({
     canRun,
     isRunning: isSubmitting || runIsProcessing,
     isRetryable,
+    priority: 25, // RUN_PANEL priority
     enabled: renderMode === RENDER_MODES.STANDALONE,
-    scope: HOTKEY_SCOPES.RUN_PANEL,
   });
 
   const content = edgeId ? (

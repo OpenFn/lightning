@@ -5,7 +5,6 @@ import {
   XMarkIcon,
 } from '@heroicons/react/24/outline';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useHotkeys, useHotkeysContext } from 'react-hotkeys-hook';
 import {
   type ImperativePanelHandle,
   Panel,
@@ -287,6 +286,7 @@ export function FullScreenIDE({
   const { pushEvent, handleEvent } = useLiveViewActions();
   const { updateJob } = useWorkflowActions();
 
+<<<<<<< HEAD
   // Run/Retry functionality for IDE Header
   const { canRun: canRunSnapshot, tooltipMessage: runTooltipMessage } =
     useCanRun();
@@ -347,15 +347,6 @@ export function FullScreenIDE({
   const handleCloseIDE = useCallback(() => {
     onClose();
   }, [onClose]);
-
-  const { enableScope, disableScope } = useHotkeysContext();
-
-  useEffect(() => {
-    enableScope(HOTKEY_SCOPES.IDE);
-    return () => {
-      disableScope(HOTKEY_SCOPES.IDE);
-    };
-  }, [enableScope, disableScope]);
 
   useEffect(() => {
     if (jobIdFromURL) {
