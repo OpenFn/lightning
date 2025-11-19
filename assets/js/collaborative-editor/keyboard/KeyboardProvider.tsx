@@ -43,6 +43,8 @@ import type {
   KeyboardContextValue,
   KeyboardHandlerOptions,
   KeyboardHandlerCallback,
+  KeyboardDebugInfo,
+  HandlerDebugInfo,
 } from './types';
 
 const KeyboardContext = createContext<KeyboardContextValue | null>(null);
@@ -92,6 +94,9 @@ export function KeyboardProvider({ children }: KeyboardProviderProps) {
           const unsubscribe = tinykeys(window, {
             [combo]: (event: KeyboardEvent) => {
               const handlers = registry.current.get(combo);
+              console.log(
+                `[KeyboardProvider] Key combo "${combo}" triggered with ${handlers?.length || 0} handler(s).`
+              );
               if (!handlers || handlers.length === 0) return;
 
               // Sort by priority (desc), then by registeredAt (desc)
@@ -157,6 +162,42 @@ export function KeyboardProvider({ children }: KeyboardProviderProps) {
     []
   );
 
+  /**
+   * Get debug information about all registered handlers
+   */
+  const getDebugInfo = useCallback((): KeyboardDebugInfo => {
+    const handlers = new Map<string, HandlerDebugInfo[]>();
+    let handlerCount = 0;
+
+    registry.current.forEach((handlerList, combo) => {
+      const debugInfoList = handlerList.map(handler => ({
+        id: handler.id,
+        priority: handler.priority,
+        enabled: handler.options.enabled,
+        registeredAt: handler.registeredAt,
+        preventDefault: handler.options.preventDefault,
+        stopPropagation: handler.options.stopPropagation,
+      }));
+
+      // Sort by priority (desc), then by registeredAt (desc) to match execution order
+      debugInfoList.sort((a, b) => {
+        if (b.priority !== a.priority) {
+          return b.priority - a.priority;
+        }
+        return b.registeredAt - a.registeredAt;
+      });
+
+      handlers.set(combo, debugInfoList);
+      handlerCount += handlerList.length;
+    });
+
+    return {
+      handlers,
+      comboCount: handlers.size,
+      handlerCount,
+    };
+  }, []);
+
   // Cleanup all on unmount
   useEffect(() => {
     const unsubs = unsubscribers.current;
@@ -169,7 +210,7 @@ export function KeyboardProvider({ children }: KeyboardProviderProps) {
   }, []);
 
   return (
-    <KeyboardContext.Provider value={{ register }}>
+    <KeyboardContext.Provider value={{ register, getDebugInfo }}>
       {children}
     </KeyboardContext.Provider>
   );
@@ -252,4 +293,42 @@ export function useKeyboardShortcut(
           }
     );
   }, [combos, priority, serializedOptions, register]);
+}
+
+/**
+ * Hook to get debug information about registered keyboard shortcuts
+ *
+ * This hook is useful for debugging and testing to inspect what shortcuts
+ * are currently registered, their priorities, and their enabled status.
+ *
+ * @returns Debug information including all registered handlers and stats
+ *
+ * @example
+ * ```tsx
+ * function DebugPanel() {
+ *   const debugInfo = useKeyboardDebugInfo();
+ *
+ *   console.log(`Total combos: ${debugInfo.comboCount}`);
+ *   console.log(`Total handlers: ${debugInfo.handlerCount}`);
+ *
+ *   debugInfo.handlers.forEach((handlers, combo) => {
+ *     console.log(`${combo}:`, handlers);
+ *   });
+ *
+ *   return <div>See console for keyboard shortcuts</div>;
+ * }
+ * ```
+ */
+export function useKeyboardDebugInfo(): KeyboardDebugInfo {
+  const context = useContext(KeyboardContext);
+
+  if (!context) {
+    throw new Error(
+      'useKeyboardDebugInfo must be used within KeyboardProvider'
+    );
+  }
+
+  const { getDebugInfo } = context;
+
+  return getDebugInfo();
 }

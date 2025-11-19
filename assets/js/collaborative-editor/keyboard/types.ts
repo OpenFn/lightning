@@ -44,6 +44,30 @@ export interface Handler {
 }
 
 /**
+ * Debug information about a registered handler
+ */
+export interface HandlerDebugInfo {
+  id: string;
+  priority: number;
+  enabled: boolean;
+  registeredAt: number;
+  preventDefault: boolean;
+  stopPropagation: boolean;
+}
+
+/**
+ * Debug information about all registered handlers
+ */
+export interface KeyboardDebugInfo {
+  /** Map of key combinations to their registered handlers */
+  handlers: Map<string, HandlerDebugInfo[]>;
+  /** Total number of unique key combinations registered */
+  comboCount: number;
+  /** Total number of handlers across all combos */
+  handlerCount: number;
+}
+
+/**
  * Context value exposed by KeyboardProvider
  */
 export interface KeyboardContextValue {
@@ -60,6 +84,12 @@ export interface KeyboardContextValue {
       options?: KeyboardHandlerOptions;
     }
   ) => () => void;
+
+  /**
+   * Get debug information about all registered handlers (for debugging only)
+   * @returns Debug information including all registered handlers and stats
+   */
+  getDebugInfo: () => KeyboardDebugInfo;
 }
 
 // No constants - library is generic. Consuming applications can define

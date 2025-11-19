@@ -4,5 +4,14 @@
  * @module keyboard
  */
 
-export { KeyboardProvider, useKeyboardShortcut } from './KeyboardProvider';
-export type { KeyboardHandlerOptions, KeyboardHandlerCallback } from './types';
+export {
+  KeyboardProvider,
+  useKeyboardShortcut,
+  useKeyboardDebugInfo,
+} from './KeyboardProvider';
+export type {
+  KeyboardHandlerOptions,
+  KeyboardHandlerCallback,
+  KeyboardDebugInfo,
+  HandlerDebugInfo,
+} from './types';
