@@ -3,7 +3,7 @@
  */
 
 import { useEffect, useRef, useState } from 'react';
-import { useHotkeys, useHotkeysContext } from 'react-hotkeys-hook';
+import { useHotkeysContext } from 'react-hotkeys-hook';
 
 import { useURLState } from '../../react/lib/use-url-state';
 import type { WorkflowState as YAMLWorkflowState } from '../../yaml/types';
@@ -266,11 +266,9 @@ export function WorkflowEditor({
   );
 
   // CMD+Enter: Open run panel or run workflow
-  useHotkeys(
-    'mod+enter',
-    event => {
-      event.preventDefault();
-
+  useKeyboardShortcut(
+    'Control+Enter, Meta+Enter',
+    () => {
       // If run panel is already open, let the ManualRunPanel handle it
       if (isRunPanelOpen) {
         return;
@@ -289,11 +287,10 @@ export function WorkflowEditor({
         }
       }
     },
+    0, // GLOBAL priority
     {
       enabled: !isIDEOpen && !isRunPanelOpen,
-      enableOnFormTags: true,
-    },
-    [currentNode, isIDEOpen, isRunPanelOpen, openRunPanel, workflow.triggers]
+    }
   );
 
   return (

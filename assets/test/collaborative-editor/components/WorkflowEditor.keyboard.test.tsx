@@ -6,8 +6,8 @@
  * Tests survive library migrations and document expected user behavior.
  *
  * Shortcuts tested:
- * - Cmd+E: Open job editor (IDE) for selected job
- * - Mod+Enter: Open run panel for selected node or first trigger
+ * - Cmd+E / Ctrl+E: Open job editor (IDE) for selected job [MIGRATED to KeyboardProvider]
+ * - Mod+Enter: Open run panel for selected node or first trigger [PENDING MIGRATION]
  */
 
 import { screen, waitFor } from '@testing-library/react';
@@ -374,6 +374,11 @@ describe('WorkflowEditor keyboard shortcuts', () => {
   });
 
   describe('Mod+Enter - Open Run Panel', () => {
+    // NOTE: These tests are written in a library-agnostic way and will work
+    // with both react-hotkeys-hook (current) and KeyboardProvider (future).
+    // The component implementation still uses useHotkeys but tests use
+    // renderWithKeyboard wrapper to ensure compatibility after migration.
+
     test('opens run panel for selected job with Cmd+Enter on Mac', async () => {
       const user = userEvent.setup();
 
