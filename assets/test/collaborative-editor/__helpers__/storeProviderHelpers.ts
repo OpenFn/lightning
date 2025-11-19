@@ -24,7 +24,6 @@ import { createSessionContextStore } from '../../../js/collaborative-editor/stor
 import { createHistoryStore } from '../../../js/collaborative-editor/stores/createHistoryStore';
 import { createUIStore } from '../../../js/collaborative-editor/stores/createUIStore';
 import { createEditorPreferencesStore } from '../../../js/collaborative-editor/stores/createEditorPreferencesStore';
-import { createRunStore } from '../../../js/collaborative-editor/stores/createRunStore';
 
 import { createMockSocket } from '../mocks/phoenixSocket';
 import { waitForAsync } from '../mocks/phoenixChannel';
@@ -100,7 +99,6 @@ export function createStores(): StoreContextValue {
     historyStore: createHistoryStore(),
     uiStore: createUIStore(),
     editorPreferencesStore: createEditorPreferencesStore(),
-    runStore: createRunStore(),
   };
 }
 

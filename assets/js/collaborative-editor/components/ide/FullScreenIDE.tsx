@@ -20,7 +20,6 @@ import Metadata from '../../../metadata-explorer/Explorer';
 import { useURLState } from '../../../react/lib/use-url-state';
 import type { Dataclip } from '../../api/dataclips';
 import * as dataclipApi from '../../api/dataclips';
-import { HOTKEY_SCOPES } from '../../constants/hotkeys';
 import { RENDER_MODES } from '../../constants/panel';
 import { useLiveViewActions } from '../../contexts/LiveViewActionsContext';
 import { useProjectAdaptors } from '../../hooks/useAdaptors';
@@ -323,8 +322,7 @@ export function FullScreenIDE({
       canRunSnapshot && canRunFromHook && !isSubmitting && !runIsProcessing,
     isRunning: isSubmitting || runIsProcessing,
     isRetryable,
-    scope: HOTKEY_SCOPES.IDE,
-    enableOnContentEditable: true,
+    priority: 50, // IDE priority
   });
 
   // Get data for Header
