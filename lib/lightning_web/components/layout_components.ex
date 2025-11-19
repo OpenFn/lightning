@@ -10,7 +10,14 @@ defmodule LightningWeb.LayoutComponents do
 
   def user_menu_dropdown(assigns) do
     menu_id = "user-menu-#{:erlang.phash2(assigns.current_user.id)}"
-    assigns = assign(assigns, :menu_id, menu_id)
+
+    assigns =
+      assigns
+      |> assign(:menu_id, menu_id)
+      |> assign(
+        :custom_user_menu_items,
+        Application.get_env(:lightning, :user_menu_items)
+      )
 
     ~H"""
     <div
@@ -64,38 +71,54 @@ defmodule LightningWeb.LayoutComponents do
             {@current_user.email}
           </p>
         </div>
-        <div class="py-1">
-          <.link
-            navigate={~p"/profile"}
-            class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900"
-            role="menuitem"
-          >
-            User Profile
-          </.link>
-          <.link
-            navigate={~p"/credentials"}
-            class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900"
-            role="menuitem"
-          >
-            Credentials
-          </.link>
-          <.link
-            navigate={~p"/profile/tokens"}
-            class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900"
-            role="menuitem"
-          >
-            API Tokens
-          </.link>
-        </div>
-        <div class="py-1">
-          <.link
-            navigate={~p"/users/log_out"}
-            class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900"
-            role="menuitem"
-          >
-            Log out
-          </.link>
-        </div>
+        <%= if @custom_user_menu_items do %>
+          {Phoenix.LiveView.TagEngine.component(
+            @custom_user_menu_items.component,
+            Map.take(assigns, @custom_user_menu_items.assigns_keys),
+            {__ENV__.module, __ENV__.function, __ENV__.file, __ENV__.line}
+          )}
+        <% else %>
+          <div class="py-1">
+            <.link
+              navigate={~p"/projects"}
+              class="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900"
+              role="menuitem"
+            >
+              <Heroicons.folder class="h-5 w-5 inline-block mr-2" /> Projects
+            </.link>
+            <.link
+              navigate={~p"/profile"}
+              class="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900"
+              role="menuitem"
+            >
+              <Heroicons.user_circle class="h-5 w-5 inline-block mr-2" />
+              User Profile
+            </.link>
+            <.link
+              navigate={~p"/credentials"}
+              class="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900"
+              role="menuitem"
+            >
+              <Heroicons.key class="h-5 w-5 inline-block mr-2" /> Credentials
+            </.link>
+            <.link
+              navigate={~p"/profile/tokens"}
+              class="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900"
+              role="menuitem"
+            >
+              <Heroicons.command_line class="h-5 w-5 inline-block mr-2" /> API Tokens
+            </.link>
+          </div>
+          <div class="py-1">
+            <.link
+              navigate={~p"/users/log_out"}
+              class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900"
+              role="menuitem"
+            >
+              Log out
+            </.link>
+          </div>
+        <% end %>
       </div>
     </div>
     """
