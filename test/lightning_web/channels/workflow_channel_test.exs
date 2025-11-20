@@ -550,6 +550,63 @@ defmodule LightningWeb.WorkflowChannelTest do
 
       assert message =~ "don't have permission to edit"
     end
+
+    test "broadcasts workflow_saved to all users including sender", %{
+      project: project,
+      workflow: workflow
+    } do
+      # Create two editors
+      user1 = insert(:user)
+      user2 = insert(:user)
+
+      insert(:project_user, project: project, user: user1, role: :editor)
+      insert(:project_user, project: project, user: user2, role: :editor)
+
+      # Both join the channel
+      {:ok, _, socket1} =
+        LightningWeb.UserSocket
+        |> socket("user_#{user1.id}", %{current_user: user1})
+        |> subscribe_and_join(
+          LightningWeb.WorkflowChannel,
+          "workflow:collaborate:#{workflow.id}",
+          %{"project_id" => project.id, "action" => "edit"}
+        )
+
+      {:ok, _, _socket2} =
+        LightningWeb.UserSocket
+        |> socket("user_#{user2.id}", %{current_user: user2})
+        |> subscribe_and_join(
+          LightningWeb.WorkflowChannel,
+          "workflow:collaborate:#{workflow.id}",
+          %{"project_id" => project.id, "action" => "edit"}
+        )
+
+      # User 1 modifies and saves workflow
+      session_pid = socket1.assigns.session_pid
+      doc = Lightning.Collaboration.Session.get_doc(session_pid)
+      workflow_map = Yex.Doc.get_map(doc, "workflow")
+
+      Yex.Doc.transaction(doc, "test_update", fn ->
+        Yex.Map.set(workflow_map, "name", "Updated by User 1")
+      end)
+
+      ref = push(socket1, "save_workflow", %{})
+
+      assert_reply ref, :ok, %{
+        saved_at: _,
+        lock_version: new_lock_version
+      }
+
+      # CRITICAL: Both users (including the sender) should receive the broadcast
+      # This allows all users to update their SessionContextStore and clear
+      # cached version lists. See issues #3985 and #4024.
+      assert_broadcast "workflow_saved", %{
+        latest_snapshot_lock_version: broadcasted_lock_version
+      }
+
+      assert broadcasted_lock_version == new_lock_version
+      assert new_lock_version == workflow.lock_version + 1
+    end
   end
 
   describe "save_workflow with validation errors" do
