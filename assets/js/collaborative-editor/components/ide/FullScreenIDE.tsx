@@ -351,8 +351,13 @@ export function FullScreenIDE({
     (job: any) => {
       updateSearchParams({ job: job.id });
       selectJob(job.id);
+      // Update selected step to match the new job
+      if (currentRun?.steps) {
+        const matchingStep = currentRun.steps.find(s => s.job_id === job.id);
+        selectStep(matchingStep?.id || null);
+      }
     },
-    [updateSearchParams, selectJob]
+    [updateSearchParams, selectJob, currentRun, selectStep]
   );
 
   // Handle close IDE

@@ -169,6 +169,15 @@ const mockWorkflow: Workflow = {
       project_credential_id: null,
       keychain_credential_id: null,
     },
+    {
+      id: 'job-2',
+      name: 'Second Job',
+      adaptor: '@openfn/language-http@latest',
+      body: 'fn(state => state)',
+      enabled: true,
+      project_credential_id: null,
+      keychain_credential_id: null,
+    },
   ],
   triggers: [
     {
@@ -255,6 +264,64 @@ vi.mock('../../../../js/collaborative-editor/hooks/useRun', () => ({
   useCurrentRun: () => null,
 }));
 
+// Mock useHistory hooks
+const mockSelectStep = vi.fn();
+const mockCurrentRun = {
+  id: 'run-1',
+  work_order_id: 'wo-1',
+  work_order: {
+    id: 'wo-1',
+    workflow_id: 'workflow-1',
+  },
+  state: 'success' as const,
+  created_by: null,
+  starting_trigger: null,
+  started_at: '2024-01-01T00:00:00Z',
+  finished_at: '2024-01-01T00:01:00Z',
+  inserted_at: '2024-01-01T00:00:00Z',
+  steps: [
+    {
+      id: 'step-1',
+      job_id: 'job-1',
+      job: { name: 'Test Job' },
+      exit_reason: null,
+      error_type: null,
+      started_at: '2024-01-01T00:00:00Z',
+      finished_at: '2024-01-01T00:00:30Z',
+      input_dataclip_id: 'input-1',
+      output_dataclip_id: 'output-1',
+      inserted_at: '2024-01-01T00:00:00Z',
+    },
+    {
+      id: 'step-2',
+      job_id: 'job-2',
+      job: { name: 'Second Job' },
+      exit_reason: null,
+      error_type: null,
+      started_at: '2024-01-01T00:00:30Z',
+      finished_at: '2024-01-01T00:01:00Z',
+      input_dataclip_id: 'output-1',
+      output_dataclip_id: 'output-2',
+      inserted_at: '2024-01-01T00:00:30Z',
+    },
+  ],
+};
+
+vi.mock('../../../../js/collaborative-editor/hooks/useHistory', () => ({
+  useFollowRun: vi.fn(() => mockCurrentRun),
+  useHistoryCommands: () => ({
+    selectStep: mockSelectStep,
+    requestHistory: vi.fn(),
+    requestRunSteps: vi.fn(),
+    getRunSteps: vi.fn(),
+    clearError: vi.fn(),
+    clearActiveRunError: vi.fn(),
+  }),
+  useJobMatchesRun: () => true,
+  useActiveRun: () => null,
+  useSelectedStepId: () => null,
+}));
+
 // Mock credential hooks
 vi.mock('../../../../js/collaborative-editor/hooks/useCredentials', () => ({
   useCredentials: () => ({
@@ -327,6 +394,60 @@ vi.mock(
     ActiveCollaborators: () => <div data-testid="active-collaborators" />,
   })
 );
+
+// Mock run retry hooks
+vi.mock('../../../../js/collaborative-editor/hooks/useRunRetry', () => ({
+  useRunRetry: () => ({
+    handleRun: vi.fn(),
+    handleRetry: vi.fn(),
+    isRetryable: false,
+    runIsProcessing: false,
+    runTooltipMessage: '',
+  }),
+}));
+
+vi.mock(
+  '../../../../js/collaborative-editor/hooks/useRunRetryShortcuts',
+  () => ({
+    useRunRetryShortcuts: vi.fn(),
+  })
+);
+
+// Mock version select hook
+vi.mock('../../../../js/collaborative-editor/hooks/useVersionSelect', () => ({
+  useVersionSelect: () => vi.fn(),
+}));
+
+// Mock JobSelector
+vi.mock('../../../../js/collaborative-editor/components/JobSelector', () => ({
+  JobSelector: ({
+    currentJob,
+    jobs,
+    onChange,
+  }: {
+    currentJob: any;
+    jobs: any[];
+    onChange: (job: any) => void;
+  }) => (
+    <div data-testid="job-selector">
+      <span data-testid="current-job-name">{currentJob.name}</span>
+      <select
+        data-testid="job-select"
+        value={currentJob.id}
+        onChange={e => {
+          const selectedJob = jobs.find(j => j.id === e.target.value);
+          if (selectedJob) onChange(selectedJob);
+        }}
+      >
+        {jobs.map(job => (
+          <option key={job.id} value={job.id}>
+            {job.name}
+          </option>
+        ))}
+      </select>
+    </div>
+  ),
+}));
 
 // Mock react-resizable-panels
 vi.mock('react-resizable-panels', () => ({
@@ -624,6 +745,76 @@ describe('FullScreenIDE', () => {
       await user.click(workflowBreadcrumb);
 
       expect(onClose).toHaveBeenCalledOnce();
+    });
+  });
+
+  describe('Job selection and run step selection', () => {
+    test('changing job in JobSelector selects the related run step', async () => {
+      const user = userEvent.setup();
+      const onClose = vi.fn();
+
+      // Clear any previous calls to mockSelectStep
+      mockSelectStep.mockClear();
+
+      renderFullScreenIDE({
+        onClose,
+      });
+
+      // Wait for JobSelector to render
+      await waitFor(() => {
+        expect(screen.getByTestId('job-selector')).toBeInTheDocument();
+      });
+
+      // Verify initial job is displayed
+      expect(screen.getByTestId('current-job-name')).toHaveTextContent(
+        'Test Job'
+      );
+
+      // Select the second job
+      const jobSelect = screen.getByTestId('job-select');
+      await user.selectOptions(jobSelect, 'job-2');
+
+      // Verify selectStep was called with the corresponding step ID
+      await waitFor(() => {
+        expect(mockSelectStep).toHaveBeenCalledWith('step-2');
+      });
+    });
+
+    test('changing job when run has no steps for that job calls selectStep with null', async () => {
+      const user = userEvent.setup();
+      const onClose = vi.fn();
+
+      // Clear any previous calls to mockSelectStep
+      mockSelectStep.mockClear();
+
+      renderFullScreenIDE({
+        onClose,
+      });
+
+      // Wait for JobSelector to render
+      await waitFor(() => {
+        expect(screen.getByTestId('job-selector')).toBeInTheDocument();
+      });
+
+      // First select job-2 to ensure we have a clean state
+      const jobSelect = screen.getByTestId('job-select');
+      await user.selectOptions(jobSelect, 'job-2');
+
+      // Wait for that selection to complete
+      await waitFor(() => {
+        expect(mockSelectStep).toHaveBeenCalledWith('step-2');
+      });
+
+      // Clear the mock again
+      mockSelectStep.mockClear();
+
+      // Now select job-1 again
+      await user.selectOptions(jobSelect, 'job-1');
+
+      // Verify selectStep was called with step-1 this time
+      await waitFor(() => {
+        expect(mockSelectStep).toHaveBeenCalledWith('step-1');
+      });
     });
   });
 });
