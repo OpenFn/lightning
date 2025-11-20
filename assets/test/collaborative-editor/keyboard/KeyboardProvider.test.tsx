@@ -366,7 +366,7 @@ describe('KeyboardProvider', () => {
       consoleError.mockRestore();
     });
 
-    it('should handle errors in handler gracefully', async () => {
+    it('should re-throw errors and stop handler chain', async () => {
       const errorHandler = vi.fn(() => {
         throw new Error('Handler error');
       });
@@ -374,6 +374,10 @@ describe('KeyboardProvider', () => {
       const consoleError = vi
         .spyOn(console, 'error')
         .mockImplementation(() => {});
+
+      // Spy on window error event
+      const errorSpy = vi.fn();
+      window.addEventListener('error', errorSpy);
 
       render(
         <KeyboardProvider>
@@ -395,10 +399,12 @@ describe('KeyboardProvider', () => {
 
       await waitFor(() => {
         expect(errorHandler).toHaveBeenCalled();
-        expect(fallbackHandler).toHaveBeenCalled();
         expect(consoleError).toHaveBeenCalled();
       });
 
+      expect(fallbackHandler).not.toHaveBeenCalled(); // Chain stopped
+
+      window.removeEventListener('error', errorSpy);
       consoleError.mockRestore();
     });
 
@@ -449,6 +455,154 @@ describe('KeyboardProvider', () => {
       await waitFor(() => {
         expect(escapeHandler).toHaveBeenCalledTimes(1);
         expect(enterHandler).toHaveBeenCalledTimes(1);
+      });
+    });
+  });
+
+  describe('Error handling', () => {
+    it('should re-throw errors from handlers immediately', async () => {
+      const testError = new Error('Test error');
+      const errorHandler = vi.fn(() => {
+        throw testError;
+      });
+      const consoleError = vi
+        .spyOn(console, 'error')
+        .mockImplementation(() => {});
+
+      // Spy on window error event to catch uncaught errors
+      const errorSpy = vi.fn();
+      window.addEventListener('error', errorSpy);
+
+      render(
+        <KeyboardProvider>
+          <TestComponent combos="Escape" callback={errorHandler} />
+        </KeyboardProvider>
+      );
+
+      const event = new KeyboardEvent('keydown', { key: 'Escape' });
+
+      // dispatchEvent itself doesn't throw in tests, but the error should propagate
+      window.dispatchEvent(event);
+
+      // Wait for error to be logged
+      await waitFor(() => {
+        expect(consoleError).toHaveBeenCalledWith(
+          '[KeyboardProvider] Error in handler for "Escape":',
+          testError
+        );
+      });
+
+      // The error should have propagated (uncaught)
+      await waitFor(() => {
+        expect(errorSpy).toHaveBeenCalled();
+      });
+
+      window.removeEventListener('error', errorSpy);
+      consoleError.mockRestore();
+    });
+
+    it('should NOT call fallback handler when higher priority throws', async () => {
+      const testError = new Error('High priority error');
+      const errorHandler = vi.fn(() => {
+        throw testError;
+      });
+      const fallbackHandler = vi.fn();
+      const consoleError = vi
+        .spyOn(console, 'error')
+        .mockImplementation(() => {});
+
+      // Spy on window error event
+      const errorSpy = vi.fn();
+      window.addEventListener('error', errorSpy);
+
+      render(
+        <KeyboardProvider>
+          <TestComponent
+            combos="Escape"
+            callback={errorHandler}
+            priority={10}
+          />
+          <TestComponent
+            combos="Escape"
+            callback={fallbackHandler}
+            priority={0}
+          />
+        </KeyboardProvider>
+      );
+
+      const event = new KeyboardEvent('keydown', { key: 'Escape' });
+      window.dispatchEvent(event);
+
+      await waitFor(() => {
+        // Error handler was called
+        expect(errorHandler).toHaveBeenCalled();
+      });
+
+      // Fallback handler should NOT be called (error stops the chain)
+      expect(fallbackHandler).not.toHaveBeenCalled();
+
+      window.removeEventListener('error', errorSpy);
+      consoleError.mockRestore();
+    });
+
+    it('should log error to console before re-throwing', async () => {
+      const testError = new Error('Test error');
+      const errorHandler = vi.fn(() => {
+        throw testError;
+      });
+      const consoleError = vi
+        .spyOn(console, 'error')
+        .mockImplementation(() => {});
+
+      // Spy on window error event
+      const errorSpy = vi.fn();
+      window.addEventListener('error', errorSpy);
+
+      render(
+        <KeyboardProvider>
+          <TestComponent combos="Escape" callback={errorHandler} />
+        </KeyboardProvider>
+      );
+
+      const event = new KeyboardEvent('keydown', { key: 'Escape' });
+      window.dispatchEvent(event);
+
+      await waitFor(() => {
+        expect(consoleError).toHaveBeenCalledWith(
+          '[KeyboardProvider] Error in handler for "Escape":',
+          testError
+        );
+      });
+
+      window.removeEventListener('error', errorSpy);
+      consoleError.mockRestore();
+    });
+
+    it('should only fallback on "return false", not on errors', async () => {
+      const highPriorityPass = vi.fn(() => false); // Returns false - should pass
+      const lowPriorityHandler = vi.fn();
+
+      render(
+        <KeyboardProvider>
+          <TestComponent
+            combos="Escape"
+            callback={highPriorityPass}
+            priority={10}
+          />
+          <TestComponent
+            combos="Escape"
+            callback={lowPriorityHandler}
+            priority={0}
+          />
+        </KeyboardProvider>
+      );
+
+      const event = new KeyboardEvent('keydown', { key: 'Escape' });
+      window.dispatchEvent(event);
+
+      await waitFor(() => {
+        expect(highPriorityPass).toHaveBeenCalled();
+        expect(lowPriorityHandler).toHaveBeenCalled(); // Should be called
       });
     });
   });

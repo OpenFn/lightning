@@ -127,7 +127,9 @@ export function KeyboardProvider({ children }: KeyboardProviderProps) {
                     `[KeyboardProvider] Error in handler for "${combo}":`,
                     error
                   );
-                  // Continue to next handler on error
+                  // Re-throw immediately - errors should not fallback to other handlers
+                  // Only "return false" should trigger fallback behavior
+                  throw error;
                 }
               }
             },

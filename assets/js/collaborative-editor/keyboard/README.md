@@ -14,11 +14,6 @@ simplifying keyboard logic.
 - **Type-safe**: Full TypeScript support
 - **Enable/disable**: Control handlers without unmounting
 
-## Installation
-
-The system is already installed and ready to use. No additional dependencies
-needed.
-
 ## Basic Usage
 
 ### 1. Wrap your app with KeyboardProvider
@@ -59,7 +54,6 @@ Priority is just a number:
 **Suggested approach**: Define constants in your application:
 
 ```typescript
-// In your application code (not the library):
 const PRIORITY = {
   MODAL: 100, // Highest priority
   IDE: 50, // Full-screen IDE
@@ -103,6 +97,31 @@ useKeyboardShortcut(
   10
 ); // Panel priority
 ```
+
+### Error Handling
+
+**Errors stop the handler chain immediately and propagate to React:**
+
+```tsx
+useKeyboardShortcut(
+  'Cmd+s',
+  () => {
+    if (!canSave) {
+      throw new Error('Cannot save in current state');
+    }
+    saveDocument();
+  },
+  10
+);
+```
+
+**Key behaviors:**
+
+- Errors are logged to console with context (for debugging)
+- Errors are re-thrown to React error boundaries and monitoring tools
+- **Lower-priority handlers do NOT run** when an error is thrown
+- Only `return false` triggers fallback to next handler
+- Use errors for exceptional cases, `return false` for intentional pass-through
 
 ### Enable/Disable Without Unmounting
 
@@ -209,63 +228,6 @@ combo parsing. Common patterns:
 | stopPropagation      | Manual in callback       | Default true                   |
 | Pass to next handler | Not possible             | Return false                   |
 
-## Migration Guide (Future)
-
-When ready to migrate from react-hotkeys-hook:
-
-1. **Define your priority constants** (in application code):
-
-   ```typescript
-   // constants/keyboard.ts (in your application)
-   export const PRIORITY = {
-     MODAL: 100,
-     IDE: 50,
-     RUN_PANEL: 25,
-     PANEL: 10,
-     DEFAULT: 0,
-   };
-   ```
-
-2. **Replace useHotkeys with useKeyboardShortcut:**
-
-   ```tsx
-   // Before
-   import { useHotkeys } from 'react-hotkeys-hook';
-   import { HOTKEY_SCOPES } from './constants/hotkeys';
-
-   useHotkeys('Escape', handleEscape, {
-     scopes: [HOTKEY_SCOPES.PANEL],
-     enableOnFormTags: true,
-   });
-
-   // After
-   import { useKeyboardShortcut } from '#/collaborative-editor/keyboard';
-   import { PRIORITY } from './constants/keyboard';
-
-   useKeyboardShortcut('Escape', handleEscape, PRIORITY.PANEL);
-   // enableOnFormTags is now always true by default
-   ```
-
-3. **Remove scope management:**
-
-   ```tsx
-   // Before
-   const { enableScope, disableScope } = useHotkeysContext();
-   useEffect(() => {
-     enableScope(HOTKEY_SCOPES.MODAL);
-     disableScope(HOTKEY_SCOPES.PANEL);
-     return () => {
-       disableScope(HOTKEY_SCOPES.MODAL);
-       enableScope(HOTKEY_SCOPES.PANEL);
-     };
-   }, []);
-
-   // After
-   useKeyboardShortcut('Escape', handleEscape, PRIORITY.MODAL, {
-     enabled: isModalOpen, // Component controls its own state
-   });
-   ```
-
 ## Testing
 
 Unit tests are in `KeyboardProvider.test.tsx`. Run with:
@@ -291,7 +253,7 @@ keyboard/
 - Single tinykeys listener per combo (efficient)
 - Registry in ref (doesn't trigger re-renders)
 - Stable callback refs (prevents unnecessary re-registration)
-- Try-catch around handlers (one bad handler doesn't break others)
+- Errors are logged and re-thrown (visible to error boundaries/monitoring)
 - Default preventDefault/stopPropagation (matches existing behavior)
 
 ## Troubleshooting
