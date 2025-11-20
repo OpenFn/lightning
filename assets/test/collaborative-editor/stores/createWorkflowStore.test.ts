@@ -329,7 +329,7 @@ describe('WorkflowStore - ensureConnected utility', () => {
         name: 'Test Job',
         body: 'fn(state => state)',
       });
-    }).toThrow('Cannot modify workflow: Y.Doc not connected');
+    }).toThrow('Cannot modify workflow: Y.Doc not initialized');
   });
 
   test('throws error when provider is not connected', () => {
@@ -349,7 +349,7 @@ describe('WorkflowStore - ensureConnected utility', () => {
         name: 'Test Job',
         body: 'fn(state => state)',
       });
-    }).toThrow('Cannot modify workflow: Y.Doc not connected');
+    }).toThrow('Cannot modify workflow: Y.Doc not initialized');
   });
 
   test('returns ydoc and provider when both are connected', () => {
@@ -381,15 +381,15 @@ describe('WorkflowStore - ensureConnected utility', () => {
     }).toThrow(/This is likely a bug/);
   });
 
-  test('error message mentions mutations should not be called before sync', () => {
-    // The error message should mention sync timing
+  test('error message mentions mutations should not be called before connection', () => {
+    // The error message should mention connection timing
     expect(() => {
       store.removeJob('job-1');
-    }).toThrow(/mutations should not be called before sync/);
+    }).toThrow(/mutations should not be called before connection/);
   });
 
-  test('all mutation methods use ensureConnected guard', () => {
-    // This test documents that ensureConnected is used by all mutation methods
+  test('all mutation methods use ensureYDoc guard', () => {
+    // This test documents that ensureYDoc is used by all mutation methods
     // Testing a few representative methods to verify the pattern
 
     const mutationMethods = [
@@ -409,7 +409,7 @@ describe('WorkflowStore - ensureConnected utility', () => {
 
     // All should throw when not connected
     mutationMethods.forEach(method => {
-      expect(method).toThrow('Cannot modify workflow: Y.Doc not connected');
+      expect(method).toThrow('Cannot modify workflow: Y.Doc not initialized');
     });
   });
 
@@ -536,7 +536,7 @@ describe('WorkflowStore - UndoManager lifecycle', () => {
     expect(snapshot.undoManager).toBeInstanceOf(Y.UndoManager);
   });
 
-  test('cleans up UndoManager on disconnect', () => {
+  test('keeps UndoManager alive on disconnect for offline undo/redo', () => {
     // Connect and get UndoManager
     store.connect(ydoc, mockProvider);
     const snapshot = store.getSnapshot();
@@ -551,12 +551,13 @@ describe('WorkflowStore - UndoManager lifecycle', () => {
     // Disconnect
     store.disconnect();
 
-    // Verify cleanup was called
-    expect(clearSpy).toHaveBeenCalled();
-    expect(destroySpy).toHaveBeenCalled();
+    // Verify cleanup was NOT called (undoManager persists for offline use)
+    expect(clearSpy).not.toHaveBeenCalled();
+    expect(destroySpy).not.toHaveBeenCalled();
 
-    // Verify undoManager is null in state
-    expect(store.getSnapshot().undoManager).toBeNull();
+    // Verify undoManager is still available in state (not null)
+    expect(store.getSnapshot().undoManager).toBe(undoManager);
+    expect(store.getSnapshot().undoManager).not.toBeNull();
   });
 
   test('tracks local changes only', () => {

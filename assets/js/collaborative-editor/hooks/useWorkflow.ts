@@ -741,17 +741,19 @@ export const useCanRun = (): { canRun: boolean; tooltipMessage: string } => {
  * 1. Workflow deletion state (deleted_at)
  * 2. User permissions (can_edit_workflow)
  * 3. Snapshot version (viewing old snapshot)
- * 4. Connection state (disconnected)
+ *
+ * Note: Connection state does not affect read-only status. Offline editing
+ * is fully supported - Y.Doc buffers transactions locally and syncs when
+ * reconnected.
  */
 export const useWorkflowReadOnly = (): {
   isReadOnly: boolean;
   tooltipMessage: string;
 } => {
-  // Get session state and permissions (same pattern as useCanSave)
+  // Get permissions and workflow state
   const permissions = usePermissions();
   const latestSnapshotLockVersion = useLatestSnapshotLockVersion();
   const workflow = useWorkflowState(state => state.workflow);
-  const { isConnected } = useSession();
 
   // Don't show read-only state until permissions are loaded
   // This prevents flickering during initial load
@@ -767,7 +769,7 @@ export const useWorkflowReadOnly = (): {
     latestSnapshotLockVersion !== null &&
     workflow.lock_version !== latestSnapshotLockVersion;
 
-  // Priority order: deleted > permissions > snapshot > disconnected
+  // Priority order: deleted > permissions > snapshot
   if (isDeleted) {
     return {
       isReadOnly: true,
@@ -784,13 +786,6 @@ export const useWorkflowReadOnly = (): {
     return {
       isReadOnly: true,
       tooltipMessage: 'You cannot edit or run an old snapshot of a workflow',
-    };
-  }
-  if (!isConnected) {
-    return {
-      isReadOnly: true,
-      tooltipMessage:
-        'Connection lost - workflow is read-only until reconnected',
     };
   }
 

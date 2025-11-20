@@ -46,72 +46,136 @@ export const SessionProvider = ({
   // Create store instance once - stable reference
   const [sessionStore] = useState(() => createSessionStore());
 
-  // Track if this is the initial mount or a reconnection
-  const isInitialMount = useRef(true);
-  const prevConnectedRef = useRef(isConnected);
+  // Track if we've initialized to prevent re-initialization
+  const hasInitialized = useRef(false);
 
+  // Initialize session once when connected
   useEffect(() => {
     if (!isConnected || !socket) return;
 
-    logger.log('Initializing Session with PhoenixChannelProvider', { version });
-
-    // Track previous connection state
-    if (!isConnected) {
-      prevConnectedRef.current = isConnected;
+    // Prevent re-initialization if already done
+    if (hasInitialized.current) {
       return;
     }
 
-    // Detect reconnection: was disconnected, now connected, not initial mount
-    const isReconnection =
-      !prevConnectedRef.current && isConnected && !isInitialMount.current;
+    logger.log('Initializing Session with PhoenixChannelProvider', { version });
 
-    logger.log('Initializing Session with PhoenixChannelProvider', {
+    logger.log('=== SessionProvider INITIALIZATION ===', {
       version,
-      isReconnection,
-      isInitialMount: isInitialMount.current,
+      workflowId,
+      isConnected,
     });
 
-    // Create the Yjs channel provider
-    // IMPORTANT: Room naming strategy for snapshots vs collaborative editing:
-    // - NO version param (?v not in URL) → `workflow:collaborate:${workflowId}`
-    //   This is the "latest" room where all users collaborate in real-time
-    //   Everyone in this room sees the same state and moves forward together
-    // - WITH version param (?v=22) → `workflow:collaborate:${workflowId}:v22`
-    //   This is a separate, isolated room for viewing that specific snapshot
-    //   Users viewing old versions don't interfere with users on latest
+    // Room naming strategy for snapshots vs collaborative editing:
+    // - NO version param → `workflow:collaborate:${workflowId}` (latest/collaborative)
+    // - WITH version param → `workflow:collaborate:${workflowId}:v${version}` (snapshot)
     const roomname = version
       ? `workflow:collaborate:${workflowId}:v${version}`
       : `workflow:collaborate:${workflowId}`;
 
-    logger.log('Creating PhoenixChannelProvider with:', {
-      roomname,
-      socketConnected: socket.isConnected(),
-      version,
-      isLatestRoom: !version,
-      isReconnection,
-    });
-
-    // Initialize session - createSessionStore handles everything
-    // Pass null for userData - StoreProvider will initialize it from SessionContextStore
     const joinParams = {
       project_id: projectId,
       action: isNewWorkflow ? 'new' : 'edit',
     };
 
-    // Always initialize session, even on reconnection
-    // PhoenixChannelProvider handles reconnection internally, but we need
-    // to ensure SessionStore event handlers are attached to track connection state
+    logger.log('Initializing session (one-time)', {
+      roomname,
+      socketConnected: socket.isConnected(),
+    });
+
     sessionStore.initializeSession(socket, roomname, null, {
       connect: true,
       joinParams,
     });
 
-    // Mark that we've completed initial mount
-    isInitialMount.current = false;
-    prevConnectedRef.current = isConnected;
+    logger.log('Session initialized with Y.Doc', {
+      hasYDoc: !!sessionStore.ydoc,
+    });
 
+    hasInitialized.current = true;
+  }, [
+    socket,
+    workflowId,
+    projectId,
+    isNewWorkflow,
+    sessionStore,
+    version,
+    isConnected,
+  ]);
+
+  // Cleanup on unmount only - in separate effect to avoid cleanup on reconnection
+  useEffect(() => {
+    return () => {
+      logger.debug('SessionProvider unmounting - destroying session', {
+        version,
+      });
+      sessionStore.destroy();
+      hasInitialized.current = false;
+    };
+  }, [sessionStore, version]);
+
+  // Handle reconnections separately - preserve Y.Doc, recreate provider
+  useEffect(() => {
+    if (!socket || !sessionStore.ydoc) {
+      return;
+    }
+
+    // Only handle reconnection logic, not initial connection
+    if (isConnected && sessionStore.provider) {
+      // Already connected and have provider, nothing to do
+      return;
+    }
+
+    if (isConnected && !sessionStore.provider) {
+      // Reconnected but lost provider - recreate it
+      logger.log('=== RECONNECTION DETECTED ===', {
+        hasYDoc: !!sessionStore.ydoc,
+        hasProvider: !!sessionStore.provider,
+      });
+
+      const roomname = version
+        ? `workflow:collaborate:${workflowId}:v${version}`
+        : `workflow:collaborate:${workflowId}`;
+
+      const joinParams = {
+        project_id: projectId,
+        action: isNewWorkflow ? 'new' : 'edit',
+      };
+
+      logger.log('Recreating provider for reconnection', {
+        roomname,
+        willReuseYDoc: true,
+      });
+
+      // Reinitialize to create new provider but reuse existing Y.Doc
+      sessionStore.initializeSession(socket, roomname, null, {
+        connect: true,
+        joinParams,
+      });
+
+      logger.log('Provider recreated, Y.Doc preserved', {
+        hasYDoc: !!sessionStore.ydoc,
+        hasProvider: !!sessionStore.provider,
+      });
+    }
+  }, [
+    isConnected,
+    socket,
+    workflowId,
+    projectId,
+    isNewWorkflow,
+    sessionStore,
+    version,
+  ]);
+
+  // Testing and debug helpers
+  useEffect(() => {
     // Testing helper to simulate a reconnect
     window.triggerSessionReconnect = (timeout = 1000) => {
+      if (!socket) {
+        console.error('Socket not available');
+        return;
+      }
       socket.disconnect(
         () => {
           logger.log('socket disconnected');
@@ -125,25 +189,98 @@ export const SessionProvider = ({
       );
     };
 
-    // Cleanup function - only destroy on unmount, not on reconnection
-    return () => {
-      logger.debug('PhoenixChannelProvider: cleaning up', { version });
+    // Track Y.Doc updates during testing
+    let updateCounter = 0;
+    const updateLog: any[] = [];
 
-      // Only destroy if we're unmounting (not just disconnecting)
-      // Unmount is detected by checking if socket is still valid
-      if (socket) {
-        sessionStore.destroy();
+    // Debug helper to start tracking updates
+    window.startTrackingUpdates = () => {
+      const ydoc = sessionStore.ydoc;
+      if (!ydoc) {
+        console.log('No Y.Doc instance');
+        return;
       }
+
+      updateCounter = 0;
+      updateLog.length = 0;
+
+      const handler = (update: Uint8Array, origin: any) => {
+        updateCounter++;
+        const log = {
+          count: updateCounter,
+          timestamp: new Date().toISOString(),
+          updateSize: update.length,
+          origin: origin?.constructor?.name || String(origin),
+          connected: sessionStore.isConnected,
+          providerSynced: sessionStore.provider?.synced,
+        };
+        updateLog.push(log);
+        console.log('📝 Y.Doc Update:', log);
+      };
+
+      ydoc.on('update', handler);
+      console.log('✅ Started tracking Y.Doc updates');
+
+      return () => {
+        ydoc.off('update', handler);
+        console.log('🛑 Stopped tracking updates');
+      };
     };
-  }, [
-    isConnected,
-    socket,
-    workflowId,
-    projectId,
-    isNewWorkflow,
-    sessionStore,
-    version,
-  ]);
+
+    // Debug helper to inspect Y.Doc content
+    window.inspectYDoc = () => {
+      const ydoc = sessionStore.ydoc;
+      if (!ydoc) {
+        console.log('No Y.Doc instance');
+        return null;
+      }
+
+      const jobs = ydoc.getArray('jobs').toArray();
+      const triggers = ydoc.getArray('triggers').toArray();
+      const edges = ydoc.getArray('edges').toArray();
+
+      const result = {
+        jobs: jobs.map(j => {
+          const body = j.get('body');
+          let bodyPreview = '(empty)';
+          if (body) {
+            if (typeof body === 'string') {
+              bodyPreview = body.substring(0, 50) + '...';
+            } else if (body.toString) {
+              const bodyStr = body.toString();
+              bodyPreview = bodyStr.substring(0, 50) + '...';
+            }
+          }
+          return {
+            id: j.get('id'),
+            name: j.get('name'),
+            body: bodyPreview,
+          };
+        }),
+        triggers: triggers.map(t => ({
+          id: t.get('id'),
+          type: t.get('type'),
+        })),
+        edges: edges.map(e => ({
+          id: e.get('id'),
+          source_job_id: e.get('source_job_id'),
+          target_job_id: e.get('target_job_id'),
+        })),
+        provider: {
+          exists: !!sessionStore.provider,
+          synced: sessionStore.provider?.synced,
+          connected: sessionStore.isConnected,
+        },
+        updateStats: {
+          totalUpdates: updateCounter,
+          recentUpdates: updateLog.slice(-5),
+        },
+      };
+
+      console.log('Y.Doc Content:', result);
+      return result;
+    };
+  }, [sessionStore, socket]);
 
   // Memoize context value to prevent unnecessary re-renders
   // isNewWorkflow can change from true to false after user saves
