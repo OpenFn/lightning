@@ -1,4 +1,4 @@
-import { useHotkeys } from "react-hotkeys-hook";
+import { useHotkeys } from 'react-hotkeys-hook';
 
 /**
  * Options for useRunRetryShortcuts hook
@@ -104,7 +104,7 @@ export function useRunRetryShortcuts({
 }: UseRunRetryShortcutsOptions): void {
   // Cmd/Ctrl+Enter: Run or Retry based on state
   useHotkeys(
-    "mod+enter",
+    'mod+enter',
     e => {
       e.preventDefault();
       e.stopPropagation(); // Prevent parent handlers from firing
@@ -127,7 +127,7 @@ export function useRunRetryShortcuts({
 
   // Cmd/Ctrl+Shift+Enter: Force new work order
   useHotkeys(
-    "mod+shift+enter",
+    'mod+shift+enter',
     e => {
       e.preventDefault();
       e.stopPropagation();

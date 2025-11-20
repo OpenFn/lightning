@@ -1,4 +1,4 @@
-import type { Locator, Page } from "@playwright/test";
+import type { Locator, Page } from '@playwright/test';
 
 /**
  * Page Object Model for the Job Inspector Panel
@@ -93,7 +93,7 @@ export class JobInspectorPage {
    * credential.
    */
   async clearCredential(): Promise<void> {
-    await this.credentialSelect.selectOption("");
+    await this.credentialSelect.selectOption('');
   }
 
   /**
@@ -110,13 +110,13 @@ export class JobInspectorPage {
    * Verify the job inspector is visible
    */
   async waitForVisible(): Promise<void> {
-    await this.container.waitFor({ state: "visible" });
+    await this.container.waitFor({ state: 'visible' });
   }
 
   /**
    * Verify the job inspector is hidden
    */
   async waitForHidden(): Promise<void> {
-    await this.container.waitFor({ state: "hidden" });
+    await this.container.waitFor({ state: 'hidden' });
   }
 }

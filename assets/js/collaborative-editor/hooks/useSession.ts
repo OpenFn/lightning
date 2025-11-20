@@ -21,10 +21,10 @@
  * accessors and optimized selector-based subscriptions.
  */
 
-import { useContext, useMemo, useSyncExternalStore } from "react";
+import { useContext, useMemo, useSyncExternalStore } from 'react';
 
-import { SessionContext } from "../contexts/SessionProvider";
-import type { SessionState } from "../stores/createSessionStore";
+import { SessionContext } from '../contexts/SessionProvider';
+import type { SessionState } from '../stores/createSessionStore';
 
 function defaultSelector(state: SessionState): SessionState {
   return state;
@@ -49,7 +49,7 @@ export function useSession<T = SessionState>(
 ): T {
   const context = useContext(SessionContext);
   if (!context) {
-    throw new Error("useSession must be used within a SessionProvider");
+    throw new Error('useSession must be used within a SessionProvider');
   }
 
   const sessionStore = context.sessionStore;

@@ -1,5 +1,5 @@
-import { expect } from "@playwright/test";
-import type { Page, Locator } from "@playwright/test";
+import { expect } from '@playwright/test';
+import type { Page, Locator } from '@playwright/test';
 
 /**
  * Page Object Model for WorkflowDiagram node interactions
@@ -7,10 +7,10 @@ import type { Page, Locator } from "@playwright/test";
  */
 export class WorkflowDiagramNodesPage {
   protected selectors = {
-    nodes: ".react-flow__node",
-    jobNodes: ".react-flow__node-job",
-    triggerNodes: ".react-flow__node-trigger",
-    placeholderNode: ".react-flow__node-placeholder",
+    nodes: '.react-flow__node',
+    jobNodes: '.react-flow__node-job',
+    triggerNodes: '.react-flow__node-trigger',
+    placeholderNode: '.react-flow__node-placeholder',
     nodeConnector: '[data-handleid="node-connector"]',
     validDropTarget: '[data-valid-drop-target="true"]',
     invalidDropTarget: '[data-valid-drop-target="false"]',
@@ -80,7 +80,7 @@ export class WorkflowDiagramNodesPage {
     // Check for valid drop target attribute or child elements
     const isValid = await node.evaluate(el => {
       return (
-        el.getAttribute("data-valid-drop-target") === "true" ||
+        el.getAttribute('data-valid-drop-target') === 'true' ||
         el.querySelector('[data-valid-drop-target="true"]') !== null
       );
     });
@@ -98,7 +98,7 @@ export class WorkflowDiagramNodesPage {
 
     const isInvalid = await node.evaluate(el => {
       return (
-        el.getAttribute("data-valid-drop-target") === "false" ||
+        el.getAttribute('data-valid-drop-target') === 'false' ||
         el.querySelector('[data-valid-drop-target="false"]') !== null
       );
     });
@@ -168,7 +168,7 @@ export class WorkflowDiagramNodesPage {
 
     await textbox.click();
     await textbox.fill(name);
-    await textbox.press("Enter");
+    await textbox.press('Enter');
   }
 
   /**

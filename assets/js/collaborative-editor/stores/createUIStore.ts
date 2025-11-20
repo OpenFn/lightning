@@ -59,16 +59,16 @@
  * None (all state is serializable)
  */
 
-import { produce } from "immer";
+import { produce } from 'immer';
 
-import _logger from "#/utils/logger";
+import _logger from '#/utils/logger';
 
-import type { UIState, UIStore } from "../types/ui";
+import type { UIState, UIStore } from '../types/ui';
 
-import { createWithSelector } from "./common";
-import { wrapStoreWithDevTools } from "./devtools";
+import { createWithSelector } from './common';
+import { wrapStoreWithDevTools } from './devtools';
 
-const logger = _logger.ns("UIStore").seal();
+const logger = _logger.ns('UIStore').seal();
 
 /**
  * Creates a UI store instance with useSyncExternalStore + Immer pattern
@@ -89,12 +89,12 @@ export const createUIStore = (): UIStore => {
 
   // Redux DevTools integration
   const devtools = wrapStoreWithDevTools({
-    name: "UIStore",
+    name: 'UIStore',
     excludeKeys: [], // All state is serializable
     maxAge: 50, // Keep fewer actions for UI state
   });
 
-  const notify = (actionName: string = "stateChange") => {
+  const notify = (actionName: string = 'stateChange') => {
     devtools.notifyWithAction(actionName, () => state);
     listeners.forEach(listener => {
       listener();
@@ -120,37 +120,37 @@ export const createUIStore = (): UIStore => {
   // ===========================================================================
 
   const openRunPanel = (context: { jobId?: string; triggerId?: string }) => {
-    logger.debug("Opening run panel", { context });
+    logger.debug('Opening run panel', { context });
     state = produce(state, draft => {
       draft.runPanelContext = context;
       draft.runPanelOpen = true;
     });
-    notify("openRunPanel");
+    notify('openRunPanel');
   };
 
   const closeRunPanel = () => {
-    logger.debug("Closing run panel");
+    logger.debug('Closing run panel');
     state = produce(state, draft => {
       draft.runPanelContext = null;
       draft.runPanelOpen = false;
     });
-    notify("closeRunPanel");
+    notify('closeRunPanel');
   };
 
   const openGitHubSyncModal = () => {
-    logger.debug("Opening GitHub sync modal");
+    logger.debug('Opening GitHub sync modal');
     state = produce(state, draft => {
       draft.githubSyncModalOpen = true;
     });
-    notify("openGitHubSyncModal");
+    notify('openGitHubSyncModal');
   };
 
   const closeGitHubSyncModal = () => {
-    logger.debug("Closing GitHub sync modal");
+    logger.debug('Closing GitHub sync modal');
     state = produce(state, draft => {
       draft.githubSyncModalOpen = false;
     });
-    notify("closeGitHubSyncModal");
+    notify('closeGitHubSyncModal');
   };
 
   devtools.connect();

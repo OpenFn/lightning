@@ -1,10 +1,4 @@
-import {
-  useState,
-  useEffect,
-  useCallback,
-  useRef,
-  useMemo,
-} from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 
 import WorkflowDiagram from '../../js/workflow-diagram/WorkflowDiagram';
 // import useStore from './store'
@@ -56,7 +50,7 @@ export default () => {
     setHistory(h => [evt, ...h]);
   };
 
-  const [store, setStore] = useState(() => createWorkflowStore({}, () => { }));
+  const [store, setStore] = useState(() => createWorkflowStore({}, () => {}));
 
   const [selectedId, setSelectedId] = useState<string>();
   const ref = useRef(null);

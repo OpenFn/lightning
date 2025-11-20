@@ -1,5 +1,5 @@
-import { expect } from "@playwright/test";
-import type { Page, Locator } from "@playwright/test";
+import { expect } from '@playwright/test';
+import type { Page, Locator } from '@playwright/test';
 
 /**
  * Page Object Model for WorkflowDiagram edge interactions
@@ -7,10 +7,10 @@ import type { Page, Locator } from "@playwright/test";
  */
 export class WorkflowDiagramEdgesPage {
   protected selectors = {
-    edges: ".react-flow__edge",
-    edgePath: ".react-flow__edge-path",
+    edges: '.react-flow__edge',
+    edgePath: '.react-flow__edge-path',
     nodeConnector: '[data-handleid="node-connector"]', // The plus button IS a ReactFlow handle
-    nodes: ".react-flow__node",
+    nodes: '.react-flow__node',
   };
 
   constructor(protected page: Page) {}
@@ -53,7 +53,7 @@ export class WorkflowDiagramEdgesPage {
     // Get handle position
     const handleBox = await sourceHandle.boundingBox();
     if (!handleBox) {
-      throw new Error("Could not get source handle bounding box");
+      throw new Error('Could not get source handle bounding box');
     }
 
     const handleX = handleBox.x + handleBox.width / 2;
@@ -68,7 +68,7 @@ export class WorkflowDiagramEdgesPage {
     // Get target node position - hover directly to it
     const targetBox = await targetNode.boundingBox();
     if (!targetBox) {
-      throw new Error("Could not get target node bounding box");
+      throw new Error('Could not get target node bounding box');
     }
 
     const targetX = targetBox.x + targetBox.width / 2;
@@ -127,7 +127,7 @@ export class WorkflowDiagramEdgesPage {
     // Get the bounding box of the plus button to start the drag
     const bbox = await plusButton.boundingBox();
     if (!bbox) {
-      throw new Error("Could not get plus button bounding box");
+      throw new Error('Could not get plus button bounding box');
     }
 
     // Start drag by moving to button center and pressing mouse down
@@ -159,7 +159,7 @@ export class WorkflowDiagramEdgesPage {
     // Release mouse button first
     await this.page.mouse.up();
     // Then press Escape to cancel any pending connection state
-    await this.page.keyboard.press("Escape");
+    await this.page.keyboard.press('Escape');
   }
 
   /**

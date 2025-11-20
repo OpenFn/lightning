@@ -70,10 +70,10 @@ npm test -- SessionContext
 Store tests verify business logic and state management:
 
 ```typescript
-import { createAdaptorStore } from "../../../js/collaborative-editor/stores/createAdaptorStore";
+import { createAdaptorStore } from '../../../js/collaborative-editor/stores/createAdaptorStore';
 
-describe("createAdaptorStore", () => {
-  test("initializes with empty state", () => {
+describe('createAdaptorStore', () => {
+  test('initializes with empty state', () => {
     const store = createAdaptorStore();
     const snapshot = store.getSnapshot();
 
@@ -96,11 +96,11 @@ describe("createAdaptorStore", () => {
 Use `renderHook` from React Testing Library to test actual React hooks:
 
 ```typescript
-import { renderHook, waitFor } from "@testing-library/react";
-import { useSession } from "../../../js/collaborative-editor/hooks/useSession";
+import { renderHook, waitFor } from '@testing-library/react';
+import { useSession } from '../../../js/collaborative-editor/hooks/useSession';
 
-describe("useSession", () => {
-  test("subscribes to store on mount", () => {
+describe('useSession', () => {
+  test('subscribes to store on mount', () => {
     const { result } = renderHook(() => useSession(), {
       wrapper: createWrapper(),
     });
@@ -108,7 +108,7 @@ describe("useSession", () => {
     expect(result.current.isConnected).toBe(false);
   });
 
-  test("cleans up subscription on unmount", () => {
+  test('cleans up subscription on unmount', () => {
     const { unmount } = renderHook(() => useSession(), {
       wrapper: createWrapper(),
     });
@@ -164,10 +164,10 @@ Use `test.each` for testing multiple similar cases:
 
 ```typescript
 test.each([
-  { input: "January", expected: true },
-  { input: "February", expected: true },
-  { input: "InvalidMonth", expected: false },
-])("validates month $input correctly", ({ input, expected }) => {
+  { input: 'January', expected: true },
+  { input: 'February', expected: true },
+  { input: 'InvalidMonth', expected: false },
+])('validates month $input correctly', ({ input, expected }) => {
   const result = monthSchema.safeParse(input);
   expect(result.success).toBe(expected);
 });
@@ -193,8 +193,8 @@ await waitFor(() => {
 Reuse setup code via **helpers**/:
 
 ```typescript
-import { createMockPhoenixChannel } from "../__helpers__/channelMocks";
-import { setupAdaptorStoreTest } from "../__helpers__/storeHelpers";
+import { createMockPhoenixChannel } from '../__helpers__/channelMocks';
+import { setupAdaptorStoreTest } from '../__helpers__/storeHelpers';
 ```
 
 ## Test Coverage
@@ -448,7 +448,7 @@ test('updates when user data changes via channel message', () => { ... });
 Structure tests consistently:
 
 ```typescript
-test("updates when loading state changes", () => {
+test('updates when loading state changes', () => {
   // Arrange - Set up test conditions
   const store = createSessionContextStore();
   const { result } = renderHook(() => useSessionContextLoading(), {

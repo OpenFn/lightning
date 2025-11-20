@@ -8,8 +8,8 @@
  * - Selector performance and referential stability
  */
 
-import { describe, expect, test } from "vitest";
-import { createSessionContextStore } from "../../../js/collaborative-editor/stores/createSessionContextStore";
+import { describe, expect, test } from 'vitest';
+import { createSessionContextStore } from '../../../js/collaborative-editor/stores/createSessionContextStore';
 
 import {
   createMockSessionContext,
@@ -19,17 +19,17 @@ import {
   mockUnauthenticatedSessionContext,
   mockUpdatedSessionContext,
   mockUserContext,
-} from "../__helpers__/sessionContextFactory";
+} from '../__helpers__/sessionContextFactory';
 import {
   createMockPhoenixChannel,
   createMockPhoenixChannelProvider,
   waitForCondition,
   type MockPhoenixChannel,
-} from "../mocks/phoenixChannel";
+} from '../mocks/phoenixChannel';
 
-describe("createSessionContextStore - Event Handling & Performance", () => {
-  describe("event handling", () => {
-    test("channel session_context events are processed correctly", async () => {
+describe('createSessionContextStore - Event Handling & Performance', () => {
+  describe('event handling', () => {
+    test('channel session_context events are processed correctly', async () => {
       const store = createSessionContextStore();
       const mockChannel = createMockPhoenixChannel();
       const mockProvider = createMockPhoenixChannelProvider(mockChannel);
@@ -38,7 +38,7 @@ describe("createSessionContextStore - Event Handling & Performance", () => {
       mockChannel.push = (_event: string, _payload: unknown) => {
         return {
           receive: (status: string, callback: (response?: unknown) => void) => {
-            if (status === "ok") {
+            if (status === 'ok') {
               setTimeout(() => {
                 callback(mockUnauthenticatedSessionContext);
               }, 0);
@@ -64,7 +64,7 @@ describe("createSessionContextStore - Event Handling & Performance", () => {
         _test: { emit: (event: string, message: unknown) => void };
       };
       mockChannelWithTest._test.emit(
-        "session_context",
+        'session_context',
         mockSessionContextResponse
       );
 
@@ -81,7 +81,7 @@ describe("createSessionContextStore - Event Handling & Performance", () => {
       cleanup();
     });
 
-    test("channel session_context_updated events are processed correctly", async () => {
+    test('channel session_context_updated events are processed correctly', async () => {
       const store = createSessionContextStore();
       const mockChannel = createMockPhoenixChannel();
       const mockProvider = createMockPhoenixChannelProvider(mockChannel);
@@ -90,7 +90,7 @@ describe("createSessionContextStore - Event Handling & Performance", () => {
       mockChannel.push = (_event: string, _payload: unknown) => {
         return {
           receive: (status: string, callback: (response?: unknown) => void) => {
-            if (status === "ok") {
+            if (status === 'ok') {
               setTimeout(() => {
                 callback(mockSessionContextResponse);
               }, 0);
@@ -119,7 +119,7 @@ describe("createSessionContextStore - Event Handling & Performance", () => {
         _test: { emit: (event: string, message: unknown) => void };
       };
       mockChannelWithTest._test.emit(
-        "session_context_updated",
+        'session_context_updated',
         mockUpdatedSessionContext
       );
 
@@ -138,7 +138,7 @@ describe("createSessionContextStore - Event Handling & Performance", () => {
       cleanup();
     });
 
-    test("connectChannel sets up event listeners and requests session context", async () => {
+    test('connectChannel sets up event listeners and requests session context', async () => {
       const store = createSessionContextStore();
       const mockChannel = createMockPhoenixChannel();
       const mockProvider = createMockPhoenixChannelProvider(mockChannel);
@@ -147,7 +147,7 @@ describe("createSessionContextStore - Event Handling & Performance", () => {
       mockChannel.push = (_event: string, _payload: unknown) => {
         return {
           receive: (status: string, callback: (response?: unknown) => void) => {
-            if (status === "ok") {
+            if (status === 'ok') {
               setTimeout(() => {
                 callback(mockSessionContextResponse);
               }, 0);
@@ -178,7 +178,7 @@ describe("createSessionContextStore - Event Handling & Performance", () => {
         _test: { emit: (event: string, message: unknown) => void };
       };
       mockChannelWithTest._test.emit(
-        "session_context_updated",
+        'session_context_updated',
         mockUpdatedSessionContext
       );
 
@@ -197,7 +197,7 @@ describe("createSessionContextStore - Event Handling & Performance", () => {
       cleanup();
     });
 
-    test("handleSessionContextReceived updates lastUpdated timestamp", async () => {
+    test('handleSessionContextReceived updates lastUpdated timestamp', async () => {
       const store = createSessionContextStore();
       const mockChannel = createMockPhoenixChannel();
       const mockProvider = createMockPhoenixChannelProvider(mockChannel);
@@ -207,7 +207,7 @@ describe("createSessionContextStore - Event Handling & Performance", () => {
       mockChannel.push = (_event: string, _payload: unknown) => {
         return {
           receive: (status: string, callback: (response?: unknown) => void) => {
-            if (status === "ok") {
+            if (status === 'ok') {
               setTimeout(() => {
                 callback(mockSessionContextResponse);
               }, 0);
@@ -231,7 +231,7 @@ describe("createSessionContextStore - Event Handling & Performance", () => {
       ).toBe(true);
     });
 
-    test("handleSessionContextUpdated updates lastUpdated timestamp", async () => {
+    test('handleSessionContextUpdated updates lastUpdated timestamp', async () => {
       const store = createSessionContextStore();
       const mockChannel = createMockPhoenixChannel();
       const mockProvider = createMockPhoenixChannelProvider(mockChannel);
@@ -239,7 +239,7 @@ describe("createSessionContextStore - Event Handling & Performance", () => {
       mockChannel.push = (_event: string, _payload: unknown) => {
         return {
           receive: (status: string, callback: (response?: unknown) => void) => {
-            if (status === "ok") {
+            if (status === 'ok') {
               setTimeout(() => {
                 callback(mockSessionContextResponse);
               }, 0);
@@ -267,7 +267,7 @@ describe("createSessionContextStore - Event Handling & Performance", () => {
         _test: { emit: (event: string, message: unknown) => void };
       };
       mockChannelWithTest._test.emit(
-        "session_context_updated",
+        'session_context_updated',
         mockUpdatedSessionContext
       );
 
@@ -285,7 +285,7 @@ describe("createSessionContextStore - Event Handling & Performance", () => {
       ).toBe(true);
     });
 
-    test("channel cleanup removes event listeners", async () => {
+    test('channel cleanup removes event listeners', async () => {
       const store = createSessionContextStore();
       const mockChannel = createMockPhoenixChannel();
       const mockProvider = createMockPhoenixChannelProvider(mockChannel);
@@ -293,7 +293,7 @@ describe("createSessionContextStore - Event Handling & Performance", () => {
       mockChannel.push = (_event: string, _payload: unknown) => {
         return {
           receive: (status: string, callback: (response?: unknown) => void) => {
-            if (status === "ok") {
+            if (status === 'ok') {
               setTimeout(() => {
                 callback(mockSessionContextResponse);
               }, 0);
@@ -318,10 +318,10 @@ describe("createSessionContextStore - Event Handling & Performance", () => {
         _test: { getHandlers: (event: string) => Set<unknown> | undefined };
       };
       expect(
-        mockChannelWithTest._test.getHandlers("session_context")?.size
+        mockChannelWithTest._test.getHandlers('session_context')?.size
       ).toBe(1);
       expect(
-        mockChannelWithTest._test.getHandlers("session_context_updated")?.size
+        mockChannelWithTest._test.getHandlers('session_context_updated')?.size
       ).toBe(1);
 
       // Cleanup
@@ -329,16 +329,16 @@ describe("createSessionContextStore - Event Handling & Performance", () => {
 
       // Verify handlers are removed
       expect(
-        mockChannelWithTest._test.getHandlers("session_context")?.size
+        mockChannelWithTest._test.getHandlers('session_context')?.size
       ).toBe(0);
       expect(
-        mockChannelWithTest._test.getHandlers("session_context_updated")?.size
+        mockChannelWithTest._test.getHandlers('session_context_updated')?.size
       ).toBe(0);
     });
   });
 
-  describe("selector performance", () => {
-    test("withSelector provides optimized access to state", () => {
+  describe('selector performance', () => {
+    test('withSelector provides optimized access to state', () => {
       const store = createSessionContextStore();
       const mockChannel = createMockPhoenixChannel();
       const mockProvider = createMockPhoenixChannelProvider(mockChannel);
@@ -346,7 +346,7 @@ describe("createSessionContextStore - Event Handling & Performance", () => {
       mockChannel.push = (_event: string, _payload: unknown) => {
         return {
           receive: (status: string, callback: (response?: unknown) => void) => {
-            if (status === "ok") {
+            if (status === 'ok') {
               setTimeout(() => {
                 callback(mockSessionContextResponse);
               }, 0);
@@ -377,7 +377,7 @@ describe("createSessionContextStore - Event Handling & Performance", () => {
       expect(selectProject()).toBe(selectProject());
     });
 
-    test("complex session context updates maintain referential stability", async () => {
+    test('complex session context updates maintain referential stability', async () => {
       const store = createSessionContextStore();
       const mockChannel = createMockPhoenixChannel();
       const mockProvider = createMockPhoenixChannelProvider(mockChannel);
@@ -385,17 +385,17 @@ describe("createSessionContextStore - Event Handling & Performance", () => {
       mockChannel.push = (_event: string, _payload: unknown) => {
         return {
           receive: (status: string, callback: (response?: unknown) => void) => {
-            if (status === "ok") {
+            if (status === 'ok') {
               setTimeout(() => {
                 callback(
                   createMockSessionContext({
                     user: {
-                      id: "111e8400-e29b-41d4-a716-446655440000",
-                      first_name: "Complex",
-                      last_name: "User",
-                      email: "complex@example.com",
+                      id: '111e8400-e29b-41d4-a716-446655440000',
+                      first_name: 'Complex',
+                      last_name: 'User',
+                      email: 'complex@example.com',
                       email_confirmed: true,
-                      inserted_at: "2024-02-01T12:00:00Z",
+                      inserted_at: '2024-02-01T12:00:00Z',
                     },
                   })
                 );
@@ -414,8 +414,8 @@ describe("createSessionContextStore - Event Handling & Performance", () => {
       await store.requestSessionContext();
 
       const state = store.getSnapshot();
-      expect(state.user?.first_name).toBe("Complex");
-      expect(state.user?.email).toBe("complex@example.com");
+      expect(state.user?.first_name).toBe('Complex');
+      expect(state.user?.email).toBe('complex@example.com');
 
       // Create selector
       const selectUser = store.withSelector(state => state.user);

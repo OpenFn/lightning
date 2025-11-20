@@ -1,6 +1,6 @@
-import type { Channel } from "phoenix";
+import type { Channel } from 'phoenix';
 
-import { ChannelRequestError } from "../lib/errors";
+import { ChannelRequestError } from '../lib/errors';
 
 /**
  * Channel error response from backend
@@ -34,12 +34,12 @@ export interface ChannelError {
    * - optimistic_lock_error: Concurrent modification conflict (stale lock_version)
    */
   type:
-    | "unauthorized"
-    | "workflow_deleted"
-    | "deserialization_error"
-    | "internal_error"
-    | "validation_error"
-    | "optimistic_lock_error";
+    | 'unauthorized'
+    | 'workflow_deleted'
+    | 'deserialization_error'
+    | 'internal_error'
+    | 'validation_error'
+    | 'optimistic_lock_error';
 }
 
 export async function channelRequest<T = unknown>(
@@ -50,14 +50,14 @@ export async function channelRequest<T = unknown>(
   return new Promise((resolve, reject) => {
     channel
       .push(message, payload)
-      .receive("ok", (response: T) => {
+      .receive('ok', (response: T) => {
         resolve(response);
       })
-      .receive("error", (channelError: ChannelError) => {
+      .receive('error', (channelError: ChannelError) => {
         reject(new ChannelRequestError(channelError.type, channelError.errors));
       })
-      .receive("timeout", () => {
-        reject(new Error("Request timed out"));
+      .receive('timeout', () => {
+        reject(new Error('Request timed out'));
       });
   });
 }

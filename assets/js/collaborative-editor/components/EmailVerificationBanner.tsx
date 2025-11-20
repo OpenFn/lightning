@@ -10,8 +10,8 @@
  * Uses red danger styling to match LiveView banner appearance.
  */
 
-import { useAppConfig, useUser } from "../hooks/useSessionContext";
-import { calculateDeadline, formatDeadline } from "../utils/dateFormatting";
+import { useAppConfig, useUser } from '../hooks/useSessionContext';
+import { calculateDeadline, formatDeadline } from '../utils/dateFormatting';
 
 export function EmailVerificationBanner() {
   const user = useUser();
@@ -34,9 +34,9 @@ export function EmailVerificationBanner() {
       role="alert"
     >
       <p className="text-sm leading-6">
-        <span className="hero-x-circle-solid h-5 w-5 inline-block align-middle mr-2" />{" "}
+        <span className="hero-x-circle-solid h-5 w-5 inline-block align-middle mr-2" />{' '}
         Please confirm your account before {formattedDeadline} to continue using
-        OpenFn.{" "}
+        OpenFn.{' '}
         <a
           href="/users/send-confirmation-email"
           className="whitespace-nowrap font-semibold"

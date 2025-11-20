@@ -1,5 +1,5 @@
-import type React from "react";
-import { useEffect, useRef, useState } from "react";
+import type React from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 interface SearchableListProps {
   placeholder?: string;
@@ -12,15 +12,15 @@ interface SearchableListProps {
 }
 
 export function SearchableList({
-  placeholder = "Search...",
+  placeholder = 'Search...',
   children,
   onSearch,
   autoFocus = true,
   onKeyDown,
-  listboxId = "searchable-listbox",
+  listboxId = 'searchable-listbox',
   activeDescendantId,
 }: SearchableListProps) {
-  const [query, setQuery] = useState("");
+  const [query, setQuery] = useState('');
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   // Auto-focus search input when mounted
@@ -37,8 +37,8 @@ export function SearchableList({
   };
 
   const handleClear = () => {
-    setQuery("");
-    onSearch("");
+    setQuery('');
+    onSearch('');
     searchInputRef.current?.focus();
   };
 

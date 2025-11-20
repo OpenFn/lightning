@@ -4,9 +4,9 @@
  * Tests file upload validation, drag-and-drop functionality, and error handling
  */
 
-import { describe, expect, test, vi } from "vitest";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
-import { YAMLFileDropzone } from "../../../../js/collaborative-editor/components/yaml-import/YAMLFileDropzone";
+import { describe, expect, test, vi } from 'vitest';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { YAMLFileDropzone } from '../../../../js/collaborative-editor/components/yaml-import/YAMLFileDropzone';
 
 // Mock FileReader
 class MockFileReader {
@@ -18,7 +18,7 @@ class MockFileReader {
 
   readAsText(file: Blob) {
     setTimeout(() => {
-      this.result = "name: Test Workflow";
+      this.result = 'name: Test Workflow';
       if (this.onload) {
         this.onload({ target: this } as any);
       }
@@ -28,13 +28,13 @@ class MockFileReader {
 
 global.FileReader = MockFileReader as any;
 
-describe("YAMLFileDropzone", () => {
-  describe("File validation", () => {
-    test("accepts .yaml files", async () => {
+describe('YAMLFileDropzone', () => {
+  describe('File validation', () => {
+    test('accepts .yaml files', async () => {
       const onUpload = vi.fn();
       render(<YAMLFileDropzone onUpload={onUpload} />);
 
-      const file = new File(["name: Test"], "test.yaml", { type: "text/yaml" });
+      const file = new File(['name: Test'], 'test.yaml', { type: 'text/yaml' });
       const input = document.querySelector(
         'input[type="file"]'
       ) as HTMLInputElement;
@@ -42,15 +42,15 @@ describe("YAMLFileDropzone", () => {
       fireEvent.change(input, { target: { files: [file] } });
 
       await waitFor(() => {
-        expect(onUpload).toHaveBeenCalledWith("name: Test Workflow");
+        expect(onUpload).toHaveBeenCalledWith('name: Test Workflow');
       });
     });
 
-    test("accepts .yml files", async () => {
+    test('accepts .yml files', async () => {
       const onUpload = vi.fn();
       render(<YAMLFileDropzone onUpload={onUpload} />);
 
-      const file = new File(["name: Test"], "test.yml", { type: "text/yaml" });
+      const file = new File(['name: Test'], 'test.yml', { type: 'text/yaml' });
       const input = document.querySelector(
         'input[type="file"]'
       ) as HTMLInputElement;
@@ -62,11 +62,11 @@ describe("YAMLFileDropzone", () => {
       });
     });
 
-    test("rejects non-YAML files", async () => {
+    test('rejects non-YAML files', async () => {
       const onUpload = vi.fn();
       render(<YAMLFileDropzone onUpload={onUpload} />);
 
-      const file = new File(["test"], "test.txt", { type: "text/plain" });
+      const file = new File(['test'], 'test.txt', { type: 'text/plain' });
       const input = document.querySelector(
         'input[type="file"]'
       ) as HTMLInputElement;
@@ -81,16 +81,16 @@ describe("YAMLFileDropzone", () => {
       });
     });
 
-    test("rejects files larger than 8MB", async () => {
+    test('rejects files larger than 8MB', async () => {
       const onUpload = vi.fn();
       render(<YAMLFileDropzone onUpload={onUpload} />);
 
       // Create a file larger than 8MB
-      const largeContent = "x".repeat(9 * 1024 * 1024); // 9MB
-      const file = new File([largeContent], "large.yaml", {
-        type: "text/yaml",
+      const largeContent = 'x'.repeat(9 * 1024 * 1024); // 9MB
+      const file = new File([largeContent], 'large.yaml', {
+        type: 'text/yaml',
       });
-      Object.defineProperty(file, "size", { value: 9 * 1024 * 1024 });
+      Object.defineProperty(file, 'size', { value: 9 * 1024 * 1024 });
 
       const input = document.querySelector(
         'input[type="file"]'
@@ -104,13 +104,13 @@ describe("YAMLFileDropzone", () => {
       });
     });
 
-    test("accepts files exactly at 8MB limit", async () => {
+    test('accepts files exactly at 8MB limit', async () => {
       const onUpload = vi.fn();
       render(<YAMLFileDropzone onUpload={onUpload} />);
 
-      const content = "x".repeat(8 * 1024 * 1024);
-      const file = new File([content], "exact.yaml", { type: "text/yaml" });
-      Object.defineProperty(file, "size", { value: 8 * 1024 * 1024 });
+      const content = 'x'.repeat(8 * 1024 * 1024);
+      const file = new File([content], 'exact.yaml', { type: 'text/yaml' });
+      Object.defineProperty(file, 'size', { value: 8 * 1024 * 1024 });
 
       const input = document.querySelector(
         'input[type="file"]'
@@ -125,8 +125,8 @@ describe("YAMLFileDropzone", () => {
     });
   });
 
-  describe("Drag and drop", () => {
-    test("shows visual feedback during drag", () => {
+  describe('Drag and drop', () => {
+    test('shows visual feedback during drag', () => {
       const onUpload = vi.fn();
       const { container } = render(<YAMLFileDropzone onUpload={onUpload} />);
 
@@ -134,11 +134,11 @@ describe("YAMLFileDropzone", () => {
 
       fireEvent.dragOver(dropzone);
 
-      expect(dropzone.className).toContain("border-indigo-500");
-      expect(dropzone.className).toContain("bg-indigo-50");
+      expect(dropzone.className).toContain('border-indigo-500');
+      expect(dropzone.className).toContain('bg-indigo-50');
     });
 
-    test("removes visual feedback when drag leaves", () => {
+    test('removes visual feedback when drag leaves', () => {
       const onUpload = vi.fn();
       const { container } = render(<YAMLFileDropzone onUpload={onUpload} />);
 
@@ -147,18 +147,18 @@ describe("YAMLFileDropzone", () => {
       fireEvent.dragOver(dropzone);
       fireEvent.dragLeave(dropzone);
 
-      expect(dropzone.className).not.toContain("border-indigo-500");
+      expect(dropzone.className).not.toContain('border-indigo-500');
     });
 
-    test("handles file drop", async () => {
+    test('handles file drop', async () => {
       const onUpload = vi.fn();
       const { container } = render(<YAMLFileDropzone onUpload={onUpload} />);
 
       const dropzone = container.querySelector('div[class*="border-dashed"]')!;
-      const file = new File(["name: Test"], "test.yaml", { type: "text/yaml" });
+      const file = new File(['name: Test'], 'test.yaml', { type: 'text/yaml' });
 
-      const dropEvent = new Event("drop", { bubbles: true });
-      Object.defineProperty(dropEvent, "dataTransfer", {
+      const dropEvent = new Event('drop', { bubbles: true });
+      Object.defineProperty(dropEvent, 'dataTransfer', {
         value: { files: [file] },
       });
 
@@ -170,8 +170,8 @@ describe("YAMLFileDropzone", () => {
     });
   });
 
-  describe("UI elements", () => {
-    test("displays upload instructions", () => {
+  describe('UI elements', () => {
+    test('displays upload instructions', () => {
       const onUpload = vi.fn();
       render(<YAMLFileDropzone onUpload={onUpload} />);
 
@@ -180,15 +180,15 @@ describe("YAMLFileDropzone", () => {
       expect(screen.getByText(/YML or YAML, up to 8MB/i)).toBeInTheDocument();
     });
 
-    test("displays upload icon", () => {
+    test('displays upload icon', () => {
       const onUpload = vi.fn();
       const { container } = render(<YAMLFileDropzone onUpload={onUpload} />);
 
-      const icon = container.querySelector("span.hero-cloud-arrow-up");
+      const icon = container.querySelector('span.hero-cloud-arrow-up');
       expect(icon).toBeInTheDocument();
     });
 
-    test("has accessible file input", () => {
+    test('has accessible file input', () => {
       const onUpload = vi.fn();
       render(<YAMLFileDropzone onUpload={onUpload} />);
 
@@ -196,7 +196,7 @@ describe("YAMLFileDropzone", () => {
         'input[type="file"]'
       ) as HTMLInputElement;
       expect(input).toBeInTheDocument();
-      expect(input).toHaveAttribute("accept", ".yaml,.yml");
+      expect(input).toHaveAttribute('accept', '.yaml,.yml');
     });
   });
 });

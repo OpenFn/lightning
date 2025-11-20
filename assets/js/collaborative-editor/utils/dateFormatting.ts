@@ -5,7 +5,7 @@
  * Matches LiveView's datetime formatting pattern: "Monday, 15 January @ 14:30 UTC"
  */
 
-import { addHours } from "date-fns";
+import { addHours } from 'date-fns';
 
 /**
  * Calculates the deadline for email verification by adding 48 hours to the given timestamp.
@@ -25,31 +25,31 @@ export function calculateDeadline(insertedAt: string): Date {
  * Month names for formatting
  */
 const MONTHS = [
-  "January",
-  "February",
-  "March",
-  "April",
-  "May",
-  "June",
-  "July",
-  "August",
-  "September",
-  "October",
-  "November",
-  "December",
+  'January',
+  'February',
+  'March',
+  'April',
+  'May',
+  'June',
+  'July',
+  'August',
+  'September',
+  'October',
+  'November',
+  'December',
 ];
 
 /**
  * Weekday names for formatting
  */
 const WEEKDAYS = [
-  "Sunday",
-  "Monday",
-  "Tuesday",
-  "Wednesday",
-  "Thursday",
-  "Friday",
-  "Saturday",
+  'Sunday',
+  'Monday',
+  'Tuesday',
+  'Wednesday',
+  'Thursday',
+  'Friday',
+  'Saturday',
 ];
 
 /**
@@ -73,8 +73,8 @@ export function formatDeadline(deadline: Date): string {
   const weekday = WEEKDAYS[deadline.getUTCDay()];
   const day = deadline.getUTCDate();
   const month = MONTHS[deadline.getUTCMonth()];
-  const hours = String(deadline.getUTCHours()).padStart(2, "0");
-  const minutes = String(deadline.getUTCMinutes()).padStart(2, "0");
+  const hours = String(deadline.getUTCHours()).padStart(2, '0');
+  const minutes = String(deadline.getUTCMinutes()).padStart(2, '0');
 
   // Format: "Monday, 15 January @ 14:30 UTC"
   return `${weekday}, ${day} ${month} @ ${hours}:${minutes} UTC`;

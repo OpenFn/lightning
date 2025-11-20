@@ -6,18 +6,18 @@
  * - State machine: initial -> parsing -> valid/invalid -> importing
  */
 
-import pDebounce from "p-debounce";
-import { useState, useCallback } from "react";
+import pDebounce from 'p-debounce';
+import { useState, useCallback } from 'react';
 
-import type { WorkflowState as YAMLWorkflowState } from "../../../yaml/types";
+import type { WorkflowState as YAMLWorkflowState } from '../../../yaml/types';
 import {
   parseWorkflowYAML,
   convertWorkflowSpecToState,
-} from "../../../yaml/util";
-import { WorkflowError } from "../../../yaml/workflow-errors";
-import { ValidationErrorDisplay } from "../yaml-import/ValidationErrorDisplay";
-import { YAMLCodeEditor } from "../yaml-import/YAMLCodeEditor";
-import { YAMLFileDropzone } from "../yaml-import/YAMLFileDropzone";
+} from '../../../yaml/util';
+import { WorkflowError } from '../../../yaml/workflow-errors';
+import { ValidationErrorDisplay } from '../yaml-import/ValidationErrorDisplay';
+import { YAMLCodeEditor } from '../yaml-import/YAMLCodeEditor';
+import { YAMLFileDropzone } from '../yaml-import/YAMLFileDropzone';
 
 /**
  * Import state machine:
@@ -27,7 +27,7 @@ import { YAMLFileDropzone } from "../yaml-import/YAMLFileDropzone";
  * - invalid: Invalid YAML, button disabled
  * - importing: Import in progress, button shows spinner
  */
-type ImportState = "initial" | "parsing" | "valid" | "invalid" | "importing";
+type ImportState = 'initial' | 'parsing' | 'valid' | 'invalid' | 'importing';
 
 interface YAMLImportPanelProps {
   onImport: (workflowState: YAMLWorkflowState) => void;
@@ -40,9 +40,9 @@ export function YAMLImportPanel({
   onSave,
   onBack,
 }: YAMLImportPanelProps) {
-  const [yamlContent, setYamlContent] = useState("");
+  const [yamlContent, setYamlContent] = useState('');
   const [errors, setErrors] = useState<WorkflowError[]>([]);
-  const [importState, setImportState] = useState<ImportState>("initial");
+  const [importState, setImportState] = useState<ImportState>('initial');
   const [validatedState, setValidatedState] =
     useState<YAMLWorkflowState | null>(null);
 
@@ -50,18 +50,18 @@ export function YAMLImportPanel({
   const validateYAML = useCallback(
     pDebounce((content: string) => {
       if (!content.trim()) {
-        setImportState("initial");
+        setImportState('initial');
         setErrors([]);
         setValidatedState(null);
         return;
       }
 
-      setImportState("parsing");
+      setImportState('parsing');
       try {
         const spec = parseWorkflowYAML(content);
         const state = convertWorkflowSpecToState(spec);
         setValidatedState(state);
-        setImportState("valid");
+        setImportState('valid');
         setErrors([]);
 
         // Automatically preview the workflow in the diagram
@@ -70,10 +70,10 @@ export function YAMLImportPanel({
         if (error instanceof WorkflowError) {
           setErrors([error]);
         } else {
-          console.error("Unexpected validation error:", error);
+          console.error('Unexpected validation error:', error);
           setErrors([]);
         }
-        setImportState("invalid");
+        setImportState('invalid');
         setValidatedState(null);
       }
     }, 300),
@@ -96,35 +96,35 @@ export function YAMLImportPanel({
     }
 
     // Set importing state to show spinner
-    setImportState("importing");
+    setImportState('importing');
 
     try {
       // Save the workflow (this also closes the panel)
       await onSave();
 
       // Reset state after successful save
-      setYamlContent("");
+      setYamlContent('');
       setValidatedState(null);
-      setImportState("initial");
+      setImportState('initial');
     } catch (error) {
       // On error, reset to valid state so user can retry
-      setImportState("valid");
-      console.error("Failed to save workflow:", error);
+      setImportState('valid');
+      console.error('Failed to save workflow:', error);
     }
   };
 
   const isButtonDisabled =
-    importState === "initial" ||
-    importState === "parsing" ||
-    importState === "invalid" ||
-    importState === "importing";
+    importState === 'initial' ||
+    importState === 'parsing' ||
+    importState === 'invalid' ||
+    importState === 'importing';
 
   const buttonText =
-    importState === "parsing"
-      ? "Validating..."
-      : importState === "importing"
-        ? "Importing..."
-        : "Create";
+    importState === 'parsing'
+      ? 'Validating...'
+      : importState === 'importing'
+        ? 'Importing...'
+        : 'Create';
 
   return (
     <div className="w-full h-full flex flex-col bg-white border-r border-gray-200 shadow-xl">
@@ -154,7 +154,7 @@ export function YAMLImportPanel({
         <YAMLCodeEditor
           value={yamlContent}
           onChange={handleYAMLChange}
-          isValidating={importState === "parsing"}
+          isValidating={importState === 'parsing'}
         />
       </div>
 
@@ -173,11 +173,11 @@ export function YAMLImportPanel({
           disabled={isButtonDisabled}
           className={`rounded-md px-4 py-2 text-sm font-semibold shadow-xs focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 inline-flex items-center gap-x-1.5 transition-colors ${
             isButtonDisabled
-              ? "bg-primary-300 text-white opacity-50 cursor-not-allowed"
-              : "bg-primary-600 text-white hover:bg-primary-700 focus-visible:outline-primary-600"
+              ? 'bg-primary-300 text-white opacity-50 cursor-not-allowed'
+              : 'bg-primary-600 text-white hover:bg-primary-700 focus-visible:outline-primary-600'
           }`}
         >
-          {(importState === "parsing" || importState === "importing") && (
+          {(importState === 'parsing' || importState === 'importing') && (
             <svg
               className="animate-spin h-4 w-4"
               xmlns="http://www.w3.org/2000/svg"

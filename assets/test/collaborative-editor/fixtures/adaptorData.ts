@@ -9,48 +9,48 @@ import type {
   Adaptor,
   AdaptorVersion,
   AdaptorsList,
-} from "../../../js/collaborative-editor/types/adaptor";
+} from '../../../js/collaborative-editor/types/adaptor';
 
 /**
  * Sample adaptor versions for testing
  */
 export const mockAdaptorVersions: AdaptorVersion[] = [
-  { version: "2.1.0" },
-  { version: "2.0.5" },
-  { version: "2.0.0" },
-  { version: "1.9.5" },
+  { version: '2.1.0' },
+  { version: '2.0.5' },
+  { version: '2.0.0' },
+  { version: '1.9.5' },
 ];
 
 /**
  * Sample single adaptor for testing
  */
 export const mockAdaptor: Adaptor = {
-  name: "@openfn/language-http",
+  name: '@openfn/language-http',
   versions: mockAdaptorVersions,
-  repo: "https://github.com/OpenFn/adaptors/tree/main/packages/http",
-  latest: "2.1.0",
+  repo: 'https://github.com/OpenFn/adaptors/tree/main/packages/http',
+  latest: '2.1.0',
 };
 
 /**
  * Additional adaptors for comprehensive testing
  */
 export const mockAdaptorDhis2: Adaptor = {
-  name: "@openfn/language-dhis2",
-  versions: [{ version: "4.2.1" }, { version: "4.2.0" }, { version: "4.1.3" }],
-  repo: "https://github.com/OpenFn/adaptors/tree/main/packages/dhis2",
-  latest: "4.2.1",
+  name: '@openfn/language-dhis2',
+  versions: [{ version: '4.2.1' }, { version: '4.2.0' }, { version: '4.1.3' }],
+  repo: 'https://github.com/OpenFn/adaptors/tree/main/packages/dhis2',
+  latest: '4.2.1',
 };
 
 export const mockAdaptorSalesforce: Adaptor = {
-  name: "@openfn/language-salesforce",
+  name: '@openfn/language-salesforce',
   versions: [
-    { version: "3.5.2" },
-    { version: "3.5.1" },
-    { version: "3.5.0" },
-    { version: "3.4.9" },
+    { version: '3.5.2' },
+    { version: '3.5.1' },
+    { version: '3.5.0' },
+    { version: '3.4.9' },
   ],
-  repo: "https://github.com/OpenFn/adaptors/tree/main/packages/salesforce",
-  latest: "3.5.2",
+  repo: 'https://github.com/OpenFn/adaptors/tree/main/packages/salesforce',
+  latest: '3.5.2',
 };
 
 /**
@@ -74,32 +74,32 @@ export const invalidAdaptorData = {
   missingName: {
     // name missing
     versions: mockAdaptorVersions,
-    repo: "https://github.com/test",
-    latest: "1.0.0",
+    repo: 'https://github.com/test',
+    latest: '1.0.0',
   },
 
   invalidVersions: {
-    name: "@openfn/language-test",
-    versions: "invalid", // should be array
-    repo: "https://github.com/test",
-    latest: "1.0.0",
+    name: '@openfn/language-test',
+    versions: 'invalid', // should be array
+    repo: 'https://github.com/test',
+    latest: '1.0.0',
   },
 
   missingLatest: {
-    name: "@openfn/language-test",
+    name: '@openfn/language-test',
     versions: mockAdaptorVersions,
-    repo: "https://github.com/test",
+    repo: 'https://github.com/test',
     // latest missing
   },
 
   invalidVersionStructure: {
-    name: "@openfn/language-test",
+    name: '@openfn/language-test',
     versions: [
-      { version: "1.0.0" },
-      { invalidField: "invalid" }, // wrong structure
+      { version: '1.0.0' },
+      { invalidField: 'invalid' }, // wrong structure
     ],
-    repo: "https://github.com/test",
-    latest: "1.0.0",
+    repo: 'https://github.com/test',
+    latest: '1.0.0',
   },
 };
 

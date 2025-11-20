@@ -1,6 +1,6 @@
-import { expect } from "@playwright/test";
-import type { Page } from "@playwright/test";
-import { LiveViewPage } from "./base";
+import { expect } from '@playwright/test';
+import type { Page } from '@playwright/test';
+import { LiveViewPage } from './base';
 
 /**
  * Page Object Model for the Login page
@@ -8,7 +8,7 @@ import { LiveViewPage } from "./base";
  */
 export class LoginPage extends LiveViewPage {
   protected selectors = {
-    loginForm: "#login form",
+    loginForm: '#login form',
     emailInput: 'input[name="user[email]"]',
     passwordInput: 'input[name="user[password]"]',
     submitButton: 'button[type="submit"]',
@@ -48,7 +48,7 @@ export class LoginPage extends LiveViewPage {
       await loginButton.click();
     }
 
-    await this.page.waitForLoadState("networkidle");
+    await this.page.waitForLoadState('networkidle');
   }
 
   /**
