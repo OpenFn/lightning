@@ -100,7 +100,7 @@ defmodule LightningWeb.Live.AiAssistant.Modes.JobCode do
   @impl true
   @spec get_session!(assigns()) :: session()
   def get_session!(%{chat_session_id: session_id, selected_job: job} = assigns) do
-    AiAssistant.get_session!(session_id)
+    AiAssistant.get_session!(session_id, job)
     |> AiAssistant.put_expression_and_adaptor(job.body, job.adaptor)
     |> maybe_add_run_logs(job, assigns[:follow_run])
   end

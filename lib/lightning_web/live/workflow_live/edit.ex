@@ -1440,6 +1440,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
        page_title: "",
        selected_edge: nil,
        selected_job: nil,
+       last_selected_job: nil,
        selected_run: nil,
        selected_trigger: nil,
        selection_mode: nil,
@@ -3610,10 +3611,19 @@ defmodule LightningWeb.WorkflowLive.Edit do
   end
 
   defp assign_chat_session_id(socket, params) do
+    job_chat_session_id =
+      if changed?(socket, :selected_job) &&
+           not is_nil(socket.assigns[:last_selected_job]) do
+        nil
+      else
+        params["j-chat"]
+      end
+
     socket
     |> assign(
       workflow_chat_session_id: params["w-chat"],
-      job_chat_session_id: params["j-chat"]
+      job_chat_session_id: job_chat_session_id,
+      last_selected_job: socket.assigns[:selected_job]
     )
   end
 
@@ -3737,12 +3747,12 @@ defmodule LightningWeb.WorkflowLive.Edit do
        })
        when is_binary(chat_id) do
     case Lightning.AiAssistant.get_session(chat_id) do
-      {:ok, session} ->
+      %Lightning.AiAssistant.ChatSession{} = session ->
         Lightning.AiAssistant.associate_workflow(session, workflow)
 
-      {:error, reason} ->
+      nil ->
         Logger.warning(
-          "Failed to associate workflow with chat session #{chat_id}: #{inspect(reason)}"
+          "Failed to associate workflow with chat session #{chat_id}: not found"
         )
     end
   end

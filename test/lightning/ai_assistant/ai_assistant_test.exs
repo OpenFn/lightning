@@ -938,12 +938,12 @@ defmodule Lightning.AiAssistantTest do
     } do
       session = insert(:chat_session, user: user, job: job)
 
-      assert {:ok, retrieved_session} = AiAssistant.get_session(session.id)
+      assert retrieved_session = AiAssistant.get_session(session.id)
       assert retrieved_session.id == session.id
     end
 
-    test "returns {:error, :not_found} when not found" do
-      assert {:error, :not_found} = AiAssistant.get_session(Ecto.UUID.generate())
+    test "returns nil when not found" do
+      assert nil == AiAssistant.get_session(Ecto.UUID.generate())
     end
   end
 
@@ -2048,6 +2048,126 @@ defmodule Lightning.AiAssistantTest do
   describe "title_max_length/0" do
     test "returns the configured maximum title length" do
       assert AiAssistant.title_max_length() == 40
+    end
+  end
+
+  describe "list_sessions/2 - job scoping" do
+    test "only shows sessions for the currently selected job" do
+      user = insert(:user)
+      project = insert(:project)
+      workflow = insert(:workflow, project: project)
+      job_a = insert(:job, workflow: workflow, name: "Job A")
+      job_b = insert(:job, workflow: workflow, name: "Job B")
+
+      # Create sessions directly in the database (bypass AI processing)
+      session_a1 =
+        insert(:chat_session,
+          job: job_a,
+          user: user,
+          title: "Help with Job A - 1",
+          session_type: "job_code"
+        )
+
+      session_a2 =
+        insert(:chat_session,
+          job: job_a,
+          user: user,
+          title: "Help with Job A - 2",
+          session_type: "job_code"
+        )
+
+      _session_b =
+        insert(:chat_session,
+          job: job_b,
+          user: user,
+          title: "Help with Job B",
+          session_type: "job_code"
+        )
+
+      # List sessions for job_a
+      result = AiAssistant.list_sessions(job_a, :desc)
+
+      # Should only return job_a sessions
+      session_ids = Enum.map(result.sessions, & &1.id)
+      assert session_a1.id in session_ids
+      assert session_a2.id in session_ids
+      assert length(result.sessions) == 2
+    end
+
+    test "list_sessions for job_b doesn't include job_a sessions" do
+      user = insert(:user)
+      project = insert(:project)
+      workflow = insert(:workflow, project: project)
+      job_a = insert(:job, workflow: workflow, name: "Job A")
+      job_b = insert(:job, workflow: workflow, name: "Job B")
+
+      # Create sessions directly in the database
+      _session_a =
+        insert(:chat_session,
+          job: job_a,
+          user: user,
+          title: "Help with Job A",
+          session_type: "job_code"
+        )
+
+      session_b =
+        insert(:chat_session,
+          job: job_b,
+          user: user,
+          title: "Help with Job B",
+          session_type: "job_code"
+        )
+
+      # List sessions for job_b
+      result = AiAssistant.list_sessions(job_b, :desc)
+
+      # Should only return job_b session
+      session_ids = Enum.map(result.sessions, & &1.id)
+      assert session_b.id in session_ids
+      assert length(result.sessions) == 1
+    end
+
+    test "sessions from multiple jobs don't cross-contaminate" do
+      user = insert(:user)
+      project = insert(:project)
+      workflow = insert(:workflow, project: project)
+      job_a = insert(:job, workflow: workflow, name: "Job A")
+      job_b = insert(:job, workflow: workflow, name: "Job B")
+      job_c = insert(:job, workflow: workflow, name: "Job C")
+
+      # Create sessions for all jobs
+      session_a =
+        insert(:chat_session,
+          job: job_a,
+          user: user,
+          title: "Session A",
+          session_type: "job_code"
+        )
+
+      session_b =
+        insert(:chat_session,
+          job: job_b,
+          user: user,
+          title: "Session B",
+          session_type: "job_code"
+        )
+
+      session_c =
+        insert(:chat_session,
+          job: job_c,
+          user: user,
+          title: "Session C",
+          session_type: "job_code"
+        )
+
+      # Each job should only see its own session
+      result_a = AiAssistant.list_sessions(job_a, :desc)
+      result_b = AiAssistant.list_sessions(job_b, :desc)
+      result_c = AiAssistant.list_sessions(job_c, :desc)
+
+      assert [session_a.id] == Enum.map(result_a.sessions, & &1.id)
+      assert [session_b.id] == Enum.map(result_b.sessions, & &1.id)
+      assert [session_c.id] == Enum.map(result_c.sessions, & &1.id)
     end
   end
 end

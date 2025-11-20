@@ -21,6 +21,9 @@ and this project adheres to
 
 ### Fixed
 
+- Fixed AI chat session persistence when switching between jobs in workflow
+  editor [#3745](https://github.com/OpenFn/lightning/issues/3745)
+
 ## [2.15.0-pre] - 2025-11-20
 
 ### Added
