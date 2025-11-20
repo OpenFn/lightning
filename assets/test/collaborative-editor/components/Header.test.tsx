@@ -1347,4 +1347,88 @@ describe('Header - IDE Mode Run/Retry Button', () => {
       expect(screen.getByText('Adaptor Display')).toBeInTheDocument();
     });
   });
+
+  test('renders close IDE button when onCloseIDE prop is provided', async () => {
+    const { wrapper, emitSessionContext } = createTestSetup();
+    const mockOnCloseIDE = vi.fn();
+
+    render(
+      <Header
+        projectId="project-1"
+        workflowId="workflow-1"
+        onRunClick={vi.fn()}
+        onRetryClick={vi.fn()}
+        canRun={true}
+        isRetryable={false}
+        isRunning={false}
+        onCloseIDE={mockOnCloseIDE}
+      >
+        {[<span key="breadcrumb-1">Breadcrumb</span>]}
+      </Header>,
+      { wrapper }
+    );
+
+    act(() => {
+      emitSessionContext();
+    });
+
+    await waitFor(() => {
+      const closeButton = screen.getByRole('button', { name: /close ide/i });
+      expect(closeButton).toBeInTheDocument();
+    });
+  });
+
+  test('calls onCloseIDE when close IDE button is clicked', async () => {
+    const { wrapper, emitSessionContext } = createTestSetup();
+    const mockOnCloseIDE = vi.fn();
+
+    render(
+      <Header
+        projectId="project-1"
+        workflowId="workflow-1"
+        onRunClick={vi.fn()}
+        onRetryClick={vi.fn()}
+        canRun={true}
+        isRetryable={false}
+        isRunning={false}
+        onCloseIDE={mockOnCloseIDE}
+      >
+        {[<span key="breadcrumb-1">Breadcrumb</span>]}
+      </Header>,
+      { wrapper }
+    );
+
+    act(() => {
+      emitSessionContext();
+    });
+
+    await waitFor(() => {
+      const closeButton = screen.getByRole('button', { name: /close ide/i });
+      expect(closeButton).toBeInTheDocument();
+    });
+
+    const closeButton = screen.getByRole('button', { name: /close ide/i });
+    fireEvent.click(closeButton);
+
+    expect(mockOnCloseIDE).toHaveBeenCalledTimes(1);
+  });
+
+  test('does not render close IDE button when onCloseIDE prop is not provided', async () => {
+    const { wrapper, emitSessionContext } = createTestSetup();
+
+    render(
+      <Header projectId="project-1" workflowId="workflow-1">
+        {[<span key="breadcrumb-1">Breadcrumb</span>]}
+      </Header>,
+      { wrapper }
+    );
+
+    act(() => {
+      emitSessionContext();
+    });
+
+    expect(
+      screen.queryByRole('button', { name: /close ide/i })
+    ).not.toBeInTheDocument();
+  });
 });

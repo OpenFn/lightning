@@ -695,6 +695,7 @@ export function FullScreenIDE({
         isRetryable={isRetryable}
         isRunning={isSubmitting || runIsProcessing}
         adaptorDisplay={adaptorDisplay}
+        onCloseIDE={handleCloseIDE}
       >
         {/* IDE Breadcrumbs: Projects > Project > Workflows > Workflow > JobSelector */}
         {currentJob
