@@ -18,12 +18,12 @@
  */
 
 import { describe, test, expect, vi } from 'vitest';
-import { FC } from 'react';
+import { waitFor } from '@testing-library/react';
+import type { FC } from 'react';
 import {
   renderWithKeyboard,
-  pressKey,
-  testContexts,
   expectShortcutNotToFire,
+  keys,
 } from '../../keyboard-test-utils';
 import { useKeyboardShortcut } from '../../../js/collaborative-editor/keyboard';
 
@@ -75,7 +75,6 @@ const TestShortcutComponent: FC<{
   );
 
   // GitHub sync shortcut (Cmd+Shift+S / Ctrl+Shift+S)
-  // Does NOT work in contentEditable
   useKeyboardShortcut(
     'Meta+Shift+s, Control+Shift+s',
     e => {
@@ -187,43 +186,55 @@ describe('Form element keyboard shortcuts', () => {
     test('works when typing in input field', async () => {
       const mockSave = vi.fn();
 
-      renderWithKeyboard(
+      const { shortcuts } = renderWithKeyboard(
         <TestShortcutComponent onSave={mockSave}>
           <input data-testid="test-input" defaultValue="test" />
         </TestShortcutComponent>
       );
 
-      await testContexts.inInput('s', { metaKey: true }, () => {
-        expect(mockSave).toHaveBeenCalled();
-      });
+      const input = document.querySelector(
+        '[data-testid="test-input"]'
+      ) as HTMLInputElement;
+      input.focus();
+
+      await shortcuts.save();
+      await waitFor(() => expect(mockSave).toHaveBeenCalled());
     });
 
     test('works when typing in textarea', async () => {
       const mockSave = vi.fn();
 
-      renderWithKeyboard(
+      const { shortcuts } = renderWithKeyboard(
         <TestShortcutComponent onSave={mockSave}>
           <textarea data-testid="test-textarea" defaultValue="test" />
         </TestShortcutComponent>
       );
 
-      await testContexts.inTextarea('s', { metaKey: true }, () => {
-        expect(mockSave).toHaveBeenCalled();
-      });
+      const textarea = document.querySelector(
+        '[data-testid="test-textarea"]'
+      ) as HTMLTextAreaElement;
+      textarea.focus();
+
+      await shortcuts.save();
+      await waitFor(() => expect(mockSave).toHaveBeenCalled());
     });
 
     test('works with Ctrl modifier (Windows/Linux)', async () => {
       const mockSave = vi.fn();
 
-      renderWithKeyboard(
+      const { shortcuts } = renderWithKeyboard(
         <TestShortcutComponent onSave={mockSave}>
           <input data-testid="test-input" />
         </TestShortcutComponent>
       );
 
-      await testContexts.inInput('s', { ctrlKey: true }, () => {
-        expect(mockSave).toHaveBeenCalled();
-      });
+      const input = document.querySelector(
+        '[data-testid="test-input"]'
+      ) as HTMLInputElement;
+      input.focus();
+
+      await shortcuts.save('ctrl');
+      await waitFor(() => expect(mockSave).toHaveBeenCalled());
     });
   });
 
@@ -231,35 +242,43 @@ describe('Form element keyboard shortcuts', () => {
     test('works when focus is in input', async () => {
       const mockClose = vi.fn();
 
-      renderWithKeyboard(
+      const { shortcuts } = renderWithKeyboard(
         <TestShortcutComponent onClose={mockClose}>
           <input data-testid="test-input" />
         </TestShortcutComponent>
       );
 
-      await testContexts.inInput('Escape', {}, () => {
-        expect(mockClose).toHaveBeenCalled();
-      });
+      const input = document.querySelector(
+        '[data-testid="test-input"]'
+      ) as HTMLInputElement;
+      input.focus();
+
+      await shortcuts.escape();
+      await waitFor(() => expect(mockClose).toHaveBeenCalled());
     });
 
     test('works when focus is in textarea', async () => {
       const mockClose = vi.fn();
 
-      renderWithKeyboard(
+      const { shortcuts } = renderWithKeyboard(
         <TestShortcutComponent onClose={mockClose}>
           <textarea data-testid="test-textarea" />
         </TestShortcutComponent>
       );
 
-      await testContexts.inTextarea('Escape', {}, () => {
-        expect(mockClose).toHaveBeenCalled();
-      });
+      const textarea = document.querySelector(
+        '[data-testid="test-textarea"]'
+      ) as HTMLTextAreaElement;
+      textarea.focus();
+
+      await shortcuts.escape();
+      await waitFor(() => expect(mockClose).toHaveBeenCalled());
     });
 
     test('works when focus is in select', async () => {
       const mockClose = vi.fn();
 
-      renderWithKeyboard(
+      const { shortcuts } = renderWithKeyboard(
         <TestShortcutComponent onClose={mockClose}>
           <select data-testid="test-select">
             <option value="1">Option 1</option>
@@ -268,9 +287,13 @@ describe('Form element keyboard shortcuts', () => {
         </TestShortcutComponent>
       );
 
-      await testContexts.inSelect('Escape', {}, () => {
-        expect(mockClose).toHaveBeenCalled();
-      });
+      const select = document.querySelector(
+        '[data-testid="test-select"]'
+      ) as HTMLSelectElement;
+      select.focus();
+
+      await shortcuts.escape();
+      await waitFor(() => expect(mockClose).toHaveBeenCalled());
     });
   });
 
@@ -278,29 +301,37 @@ describe('Form element keyboard shortcuts', () => {
     test('works in textarea (for job body editing)', async () => {
       const mockRun = vi.fn();
 
-      renderWithKeyboard(
+      const { shortcuts } = renderWithKeyboard(
         <TestShortcutComponent onRun={mockRun}>
           <textarea data-testid="job-body" defaultValue="fn(state => state);" />
         </TestShortcutComponent>
       );
 
-      await testContexts.inTextarea('Enter', { metaKey: true }, () => {
-        expect(mockRun).toHaveBeenCalled();
-      });
+      const textarea = document.querySelector(
+        '[data-testid="job-body"]'
+      ) as HTMLTextAreaElement;
+      textarea.focus();
+
+      await shortcuts.run();
+      await waitFor(() => expect(mockRun).toHaveBeenCalled());
     });
 
     test('works with Ctrl modifier in textarea', async () => {
       const mockRun = vi.fn();
 
-      renderWithKeyboard(
+      const { shortcuts } = renderWithKeyboard(
         <TestShortcutComponent onRun={mockRun}>
           <textarea data-testid="job-body" />
         </TestShortcutComponent>
       );
 
-      await testContexts.inTextarea('Enter', { ctrlKey: true }, () => {
-        expect(mockRun).toHaveBeenCalled();
-      });
+      const textarea = document.querySelector(
+        '[data-testid="job-body"]'
+      ) as HTMLTextAreaElement;
+      textarea.focus();
+
+      await shortcuts.run('ctrl');
+      await waitFor(() => expect(mockRun).toHaveBeenCalled());
     });
   });
 
@@ -308,15 +339,20 @@ describe('Form element keyboard shortcuts', () => {
     test('Cmd+Shift+S works in input field', async () => {
       const mockGitHubSync = vi.fn();
 
-      renderWithKeyboard(
+      const { shortcuts } = renderWithKeyboard(
         <TestShortcutComponent onGitHubSync={mockGitHubSync}>
           <input data-testid="test-input" />
         </TestShortcutComponent>
       );
 
-      await testContexts.inInput('s', { metaKey: true, shiftKey: true }, () => {
-        expect(mockGitHubSync).toHaveBeenCalled();
-      });
+      const editable = document.querySelector(
+        '[data-testid="test-input"]'
+      ) as HTMLElement;
+      editable.focus();
+
+      await shortcuts.saveAndSync('ctrl');
+      await new Promise(resolve => setTimeout(resolve, 50));
+      expect(mockGitHubSync).toHaveBeenCalled();
     });
   });
 });
@@ -326,7 +362,7 @@ describe('ContentEditable keyboard shortcuts', () => {
     test('Cmd+Enter works in Monaco editor when enabled', async () => {
       const mockRun = vi.fn();
 
-      renderWithKeyboard(
+      const { shortcuts } = renderWithKeyboard(
         <TestShortcutComponent onRun={mockRun} enableOnContentEditable={true}>
           <div className="monaco-editor">
             <div
@@ -340,15 +376,19 @@ describe('ContentEditable keyboard shortcuts', () => {
         </TestShortcutComponent>
       );
 
-      await testContexts.inContentEditable('Enter', { metaKey: true }, () => {
-        expect(mockRun).toHaveBeenCalled();
-      });
+      const editable = document.querySelector(
+        '[data-testid="monaco-editable"]'
+      ) as HTMLElement;
+      editable.focus();
+
+      await shortcuts.run('cmd');
+      await waitFor(() => expect(mockRun).toHaveBeenCalled());
     });
 
     test('Ctrl+Enter works in Monaco editor when enabled', async () => {
       const mockRun = vi.fn();
 
-      renderWithKeyboard(
+      const { shortcuts } = renderWithKeyboard(
         <TestShortcutComponent onRun={mockRun} enableOnContentEditable={true}>
           <div className="monaco-editor">
             <div
@@ -362,15 +402,19 @@ describe('ContentEditable keyboard shortcuts', () => {
         </TestShortcutComponent>
       );
 
-      await testContexts.inContentEditable('Enter', { ctrlKey: true }, () => {
-        expect(mockRun).toHaveBeenCalled();
-      });
+      const editable = document.querySelector(
+        '[data-testid="monaco-editable"]'
+      ) as HTMLElement;
+      editable.focus();
+
+      await shortcuts.run('ctrl');
+      await waitFor(() => expect(mockRun).toHaveBeenCalled());
     });
 
     test('Cmd+Shift+Enter works in Monaco editor when enabled', async () => {
       const mockForceRun = vi.fn();
 
-      renderWithKeyboard(
+      const { user } = renderWithKeyboard(
         <TestShortcutComponent
           onForceRun={mockForceRun}
           enableOnContentEditable={true}
@@ -387,13 +431,13 @@ describe('ContentEditable keyboard shortcuts', () => {
         </TestShortcutComponent>
       );
 
-      await testContexts.inContentEditable(
-        'Enter',
-        { metaKey: true, shiftKey: true },
-        () => {
-          expect(mockForceRun).toHaveBeenCalled();
-        }
-      );
+      const editable = document.querySelector(
+        '[data-testid="monaco-editable"]'
+      ) as HTMLElement;
+      editable.focus();
+
+      await user.keyboard(keys.forceRun());
+      await waitFor(() => expect(mockForceRun).toHaveBeenCalled());
     });
   });
 
@@ -401,7 +445,7 @@ describe('ContentEditable keyboard shortcuts', () => {
     test('run shortcut does NOT work in contentEditable when not explicitly enabled', async () => {
       const mockRun = vi.fn();
 
-      renderWithKeyboard(
+      const { user } = renderWithKeyboard(
         <TestShortcutComponent onRun={mockRun} enableOnContentEditable={false}>
           <div
             contentEditable={true}
@@ -418,18 +462,13 @@ describe('ContentEditable keyboard shortcuts', () => {
       ) as HTMLElement;
       editable.focus();
 
-      await expectShortcutNotToFire(
-        'Enter',
-        { metaKey: true },
-        mockRun,
-        editable
-      );
+      await expectShortcutNotToFire(keys.run(), mockRun, user);
     });
 
     test('save shortcut does NOT work in generic contentEditable', async () => {
       const mockSave = vi.fn();
 
-      renderWithKeyboard(
+      const { user } = renderWithKeyboard(
         <TestShortcutComponent onSave={mockSave}>
           <div
             contentEditable={true}
@@ -446,13 +485,13 @@ describe('ContentEditable keyboard shortcuts', () => {
       ) as HTMLElement;
       editable.focus();
 
-      await expectShortcutNotToFire('s', { metaKey: true }, mockSave, editable);
+      await expectShortcutNotToFire(keys.cmd('s'), mockSave, user);
     });
 
     test('open IDE shortcut does NOT work in generic contentEditable', async () => {
       const mockOpenIDE = vi.fn();
 
-      renderWithKeyboard(
+      const { user } = renderWithKeyboard(
         <TestShortcutComponent onOpenIDE={mockOpenIDE}>
           <div
             contentEditable={true}
@@ -469,12 +508,7 @@ describe('ContentEditable keyboard shortcuts', () => {
       ) as HTMLElement;
       editable.focus();
 
-      await expectShortcutNotToFire(
-        'e',
-        { metaKey: true },
-        mockOpenIDE,
-        editable
-      );
+      await expectShortcutNotToFire(keys.cmd('e'), mockOpenIDE, user);
     });
   });
 
@@ -483,7 +517,7 @@ describe('ContentEditable keyboard shortcuts', () => {
       const mockIDERun = vi.fn();
       const mockSave = vi.fn();
 
-      renderWithKeyboard(
+      const { user, shortcuts } = renderWithKeyboard(
         <>
           <TestShortcutComponent
             onRun={mockIDERun}
@@ -510,18 +544,13 @@ describe('ContentEditable keyboard shortcuts', () => {
       monacoEditable.focus();
 
       // IDE run should work
-      pressKey('Enter', { metaKey: true }, monacoEditable);
+      await shortcuts.run();
       await new Promise(resolve => setTimeout(resolve, 50));
       expect(mockIDERun).toHaveBeenCalled();
 
       // But save should NOT work in contentEditable
       mockSave.mockClear();
-      await expectShortcutNotToFire(
-        's',
-        { metaKey: true },
-        mockSave,
-        monacoEditable
-      );
+      await expectShortcutNotToFire(keys.save(), mockSave, user);
     });
   });
 });
@@ -533,7 +562,7 @@ describe('Edge cases and complex scenarios', () => {
       const mockRun = vi.fn();
 
       // Use single component with both callbacks
-      renderWithKeyboard(
+      const { user, shortcuts } = renderWithKeyboard(
         <TestShortcutComponent
           onSave={mockSave}
           onRun={mockRun}
@@ -562,7 +591,7 @@ describe('Edge cases and complex scenarios', () => {
 
       // Save should work in input
       input.focus();
-      pressKey('s', { metaKey: true }, input);
+      await shortcuts.save();
       await new Promise(resolve => setTimeout(resolve, 50));
       expect(mockSave).toHaveBeenCalled();
 
@@ -570,17 +599,12 @@ describe('Edge cases and complex scenarios', () => {
 
       // Run should work in Monaco
       monacoEditable.focus();
-      pressKey('Enter', { metaKey: true }, monacoEditable);
+      await shortcuts.run();
       await new Promise(resolve => setTimeout(resolve, 50));
       expect(mockRun).toHaveBeenCalled();
 
       // Save should NOT work in Monaco
-      await expectShortcutNotToFire(
-        's',
-        { metaKey: true },
-        mockSave,
-        monacoEditable
-      );
+      await expectShortcutNotToFire(keys.save(), mockSave, user);
     });
   });
 
@@ -639,7 +663,7 @@ describe('Edge cases and complex scenarios', () => {
     test('both Cmd and Ctrl modifiers work', async () => {
       const mockRun = vi.fn();
 
-      renderWithKeyboard(
+      const { user, shortcuts } = renderWithKeyboard(
         <TestShortcutComponent onRun={mockRun} enableOnContentEditable={true}>
           <div className="monaco-editor">
             <div
@@ -659,12 +683,12 @@ describe('Edge cases and complex scenarios', () => {
       monacoEditable.focus();
 
       // Test Cmd modifier (Mac)
-      pressKey('Enter', { metaKey: true }, monacoEditable);
+      await shortcuts.run('cmd');
       await new Promise(resolve => setTimeout(resolve, 50));
       expect(mockRun).toHaveBeenCalledTimes(1);
 
       // Test Ctrl modifier (Windows/Linux)
-      pressKey('Enter', { ctrlKey: true }, monacoEditable);
+      await shortcuts.run('ctrl');
       await new Promise(resolve => setTimeout(resolve, 50));
       expect(mockRun).toHaveBeenCalledTimes(2);
     });
@@ -674,7 +698,7 @@ describe('Edge cases and complex scenarios', () => {
     test('Escape works in select dropdown', async () => {
       const mockClose = vi.fn();
 
-      renderWithKeyboard(
+      const { shortcuts } = renderWithKeyboard(
         <TestShortcutComponent onClose={mockClose}>
           <select data-testid="adaptor-select">
             <option value="http">@openfn/language-http</option>
@@ -684,9 +708,13 @@ describe('Edge cases and complex scenarios', () => {
         </TestShortcutComponent>
       );
 
-      await testContexts.inSelect('Escape', {}, () => {
-        expect(mockClose).toHaveBeenCalled();
-      });
+      const select = document.querySelector(
+        '[data-testid="adaptor-select"]'
+      ) as HTMLSelectElement;
+      select.focus();
+
+      await shortcuts.escape();
+      await waitFor(() => expect(mockClose).toHaveBeenCalled());
     });
   });
 
@@ -694,7 +722,7 @@ describe('Edge cases and complex scenarios', () => {
     test('Cmd+Enter in textarea for job body', async () => {
       const mockRun = vi.fn();
 
-      renderWithKeyboard(
+      const { shortcuts } = renderWithKeyboard(
         <TestShortcutComponent onRun={mockRun}>
           <textarea
             data-testid="job-body"
@@ -706,15 +734,19 @@ describe('Edge cases and complex scenarios', () => {
         </TestShortcutComponent>
       );
 
-      await testContexts.inTextarea('Enter', { metaKey: true }, () => {
-        expect(mockRun).toHaveBeenCalled();
-      });
+      const textarea = document.querySelector(
+        '[data-testid="job-body"]'
+      ) as HTMLTextAreaElement;
+      textarea.focus();
+
+      await shortcuts.run();
+      await waitFor(() => expect(mockRun).toHaveBeenCalled());
     });
 
     test('Cmd+S in textarea for adaptor configuration', async () => {
       const mockSave = vi.fn();
 
-      renderWithKeyboard(
+      const { shortcuts } = renderWithKeyboard(
         <TestShortcutComponent onSave={mockSave}>
           <textarea
             data-testid="adaptor-config"
@@ -723,9 +755,13 @@ describe('Edge cases and complex scenarios', () => {
         </TestShortcutComponent>
       );
 
-      await testContexts.inTextarea('s', { metaKey: true }, () => {
-        expect(mockSave).toHaveBeenCalled();
-      });
+      const textarea = document.querySelector(
+        '[data-testid="adaptor-config"]'
+      ) as HTMLTextAreaElement;
+      textarea.focus();
+
+      await shortcuts.save();
+      await waitFor(() => expect(mockSave).toHaveBeenCalled());
     });
   });
 });

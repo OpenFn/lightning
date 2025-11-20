@@ -216,9 +216,9 @@ describe('Inspector keyboard shortcuts', () => {
 
       await user.keyboard('{Escape}');
 
-      // URL param should be cleared
+      // URL param should go back to settings
       const searchParams = new URLSearchParams(window.location.search);
-      expect(searchParams.get('panel')).toBeNull();
+      expect(searchParams.get('panel')).toBe('settings');
 
       // onClose should NOT be called - only URL updated
       expect(mockClose).not.toHaveBeenCalled();

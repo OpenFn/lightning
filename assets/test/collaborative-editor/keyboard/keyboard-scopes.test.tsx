@@ -16,7 +16,7 @@ import { render, waitFor, fireEvent } from '@testing-library/react';
 import React from 'react';
 import { describe, test, expect, vi, beforeEach } from 'vitest';
 
-import { renderWithKeyboard, pressKey, keys } from '../../keyboard-test-utils';
+import { renderWithKeyboard, keys } from '../../keyboard-test-utils';
 import { useKeyboardShortcut } from '#/collaborative-editor/keyboard/KeyboardProvider';
 
 /**
@@ -182,14 +182,14 @@ describe('Keyboard shortcut scope interactions', () => {
       const mockCloseModal = vi.fn();
       const mockCloseInspector = vi.fn();
 
-      renderWithKeyboard(
+      const { shortcuts } = renderWithKeyboard(
         <>
           <Inspector isOpen={true} onClose={mockCloseInspector} />
           <Modal isOpen={true} onClose={mockCloseModal} />
         </>
       );
 
-      pressKey('Escape');
+      await shortcuts.escape();
 
       await waitFor(() => {
         expect(mockCloseModal).toHaveBeenCalledTimes(1);
@@ -208,10 +208,10 @@ describe('Keyboard shortcut scope interactions', () => {
         </>
       );
 
-      const { rerender } = renderWithKeyboard(<TestWrapper />);
+      const { rerender, shortcuts } = renderWithKeyboard(<TestWrapper />);
 
       // Modal is open - Escape should close modal, not inspector
-      pressKey('Escape');
+      await shortcuts.escape();
       await new Promise(resolve => setTimeout(resolve, 50));
       expect(mockCloseInspector).not.toHaveBeenCalled();
 
@@ -223,7 +223,7 @@ describe('Keyboard shortcut scope interactions', () => {
       await new Promise(resolve => setTimeout(resolve, 50));
 
       // Now Escape should close inspector
-      pressKey('Escape');
+      await shortcuts.escape();
 
       await waitFor(() => {
         expect(mockCloseInspector).toHaveBeenCalledTimes(1);
@@ -234,7 +234,7 @@ describe('Keyboard shortcut scope interactions', () => {
       const mockModalClose = vi.fn();
       const mockPanelClose = vi.fn();
 
-      renderWithKeyboard(
+      const { shortcuts } = renderWithKeyboard(
         <>
           <ManualRunPanel isOpen={true} onClose={mockPanelClose} />
           <Modal isOpen={true} onClose={mockModalClose} />
@@ -242,7 +242,7 @@ describe('Keyboard shortcut scope interactions', () => {
       );
 
       // Escape should close modal, not run panel
-      pressKey('Escape');
+      await shortcuts.escape();
 
       await waitFor(() => {
         expect(mockModalClose).toHaveBeenCalledTimes(1);
@@ -254,7 +254,7 @@ describe('Keyboard shortcut scope interactions', () => {
       const mockModalClose = vi.fn();
       const mockIDEClose = vi.fn();
 
-      renderWithKeyboard(
+      const { shortcuts } = renderWithKeyboard(
         <>
           <FullScreenIDE isOpen={true} onClose={mockIDEClose} />
           <Modal isOpen={true} onClose={mockModalClose} />
@@ -262,7 +262,7 @@ describe('Keyboard shortcut scope interactions', () => {
       );
 
       // Escape should close modal, not IDE
-      pressKey('Escape');
+      await shortcuts.escape();
 
       await waitFor(() => {
         expect(mockModalClose).toHaveBeenCalledTimes(1);
@@ -276,14 +276,14 @@ describe('Keyboard shortcut scope interactions', () => {
       const mockIDEClose = vi.fn();
       const mockPanelClose = vi.fn();
 
-      renderWithKeyboard(
+      const { shortcuts } = renderWithKeyboard(
         <>
           <FullScreenIDE isOpen={true} onClose={mockIDEClose} />
           <ManualRunPanel isOpen={true} onClose={mockPanelClose} />
         </>
       );
 
-      pressKey('Escape');
+      await shortcuts.escape();
 
       await waitFor(() => {
         expect(mockIDEClose).toHaveBeenCalledTimes(1);
@@ -295,14 +295,14 @@ describe('Keyboard shortcut scope interactions', () => {
       const mockIDEClose = vi.fn();
       const mockInspectorClose = vi.fn();
 
-      renderWithKeyboard(
+      const { shortcuts } = renderWithKeyboard(
         <>
           <FullScreenIDE isOpen={true} onClose={mockIDEClose} />
           <Inspector isOpen={true} onClose={mockInspectorClose} />
         </>
       );
 
-      pressKey('Escape');
+      await shortcuts.escape();
 
       await waitFor(() => {
         expect(mockIDEClose).toHaveBeenCalledTimes(1);
@@ -314,14 +314,14 @@ describe('Keyboard shortcut scope interactions', () => {
       const mockPanelClose = vi.fn();
       const mockInspectorClose = vi.fn();
 
-      renderWithKeyboard(
+      const { shortcuts } = renderWithKeyboard(
         <>
           <ManualRunPanel isOpen={true} onClose={mockPanelClose} />
           <Inspector isOpen={true} onClose={mockInspectorClose} />
         </>
       );
 
-      pressKey('Escape');
+      await shortcuts.escape();
 
       await waitFor(() => {
         expect(mockPanelClose).toHaveBeenCalledTimes(1);
@@ -346,10 +346,10 @@ describe('Keyboard shortcut scope interactions', () => {
         </>
       );
 
-      const { rerender } = renderWithKeyboard(<TestWrapper />);
+      const { rerender, shortcuts } = renderWithKeyboard(<TestWrapper />);
 
       // First Escape closes IDE (highest priority)
-      pressKey('Escape');
+      await shortcuts.escape();
       await waitFor(() => expect(mockIDEClose).toHaveBeenCalledTimes(1));
       expect(mockPanelClose).not.toHaveBeenCalled();
       expect(mockInspectorClose).not.toHaveBeenCalled();
@@ -360,7 +360,7 @@ describe('Keyboard shortcut scope interactions', () => {
       await new Promise(resolve => setTimeout(resolve, 50));
 
       // Second Escape closes run panel (next highest priority)
-      pressKey('Escape');
+      await shortcuts.escape();
       await waitFor(() => expect(mockPanelClose).toHaveBeenCalledTimes(1));
       expect(mockInspectorClose).not.toHaveBeenCalled();
 
@@ -370,7 +370,7 @@ describe('Keyboard shortcut scope interactions', () => {
       await new Promise(resolve => setTimeout(resolve, 50));
 
       // Third Escape closes inspector (lowest priority)
-      pressKey('Escape');
+      await shortcuts.escape();
       await waitFor(() => expect(mockInspectorClose).toHaveBeenCalledTimes(1));
     });
   });
@@ -379,7 +379,7 @@ describe('Keyboard shortcut scope interactions', () => {
     test('first Escape blurs Monaco editor, second closes IDE', async () => {
       const mockIDEClose = vi.fn();
 
-      const { container } = renderWithKeyboard(
+      const { container, shortcuts } = renderWithKeyboard(
         <FullScreenIDE isOpen={true} onClose={mockIDEClose} />
       );
 
@@ -392,7 +392,7 @@ describe('Keyboard shortcut scope interactions', () => {
       expect(document.activeElement).toBe(monacoContent);
 
       // First Escape should blur Monaco, not close IDE
-      pressKey('Escape');
+      await shortcuts.escape();
 
       await waitFor(() => {
         expect(document.activeElement).not.toBe(monacoContent);
@@ -400,7 +400,7 @@ describe('Keyboard shortcut scope interactions', () => {
       });
 
       // Second Escape should close IDE
-      pressKey('Escape');
+      await shortcuts.escape();
 
       await waitFor(() => {
         expect(mockIDEClose).toHaveBeenCalledTimes(1);
@@ -410,12 +410,12 @@ describe('Keyboard shortcut scope interactions', () => {
     test('Escape closes IDE immediately when Monaco not focused', async () => {
       const mockIDEClose = vi.fn();
 
-      renderWithKeyboard(
+      const { shortcuts } = renderWithKeyboard(
         <FullScreenIDE isOpen={true} onClose={mockIDEClose} />
       );
 
       // Monaco not focused - Escape should close IDE immediately
-      pressKey('Escape');
+      await shortcuts.escape();
 
       await waitFor(() => {
         expect(mockIDEClose).toHaveBeenCalledTimes(1);
@@ -428,7 +428,7 @@ describe('Keyboard shortcut scope interactions', () => {
       const mockIDERun = vi.fn();
       const mockPanelRun = vi.fn();
 
-      renderWithKeyboard(
+      const { user, shortcuts } = renderWithKeyboard(
         <>
           <FullScreenIDE isOpen={true} onClose={() => {}} onRun={mockIDERun} />
           <ManualRunPanel
@@ -440,9 +440,7 @@ describe('Keyboard shortcut scope interactions', () => {
         </>
       );
 
-      window.dispatchEvent(
-        new KeyboardEvent('keydown', { key: 'Enter', metaKey: true })
-      );
+      await shortcuts.run();
 
       await waitFor(() => {
         expect(mockIDERun).toHaveBeenCalledTimes(1);
@@ -453,7 +451,7 @@ describe('Keyboard shortcut scope interactions', () => {
     test('Panel handles run shortcut when standalone', async () => {
       const mockPanelRun = vi.fn();
 
-      renderWithKeyboard(
+      const { user, shortcuts } = renderWithKeyboard(
         <ManualRunPanel
           isOpen={true}
           onClose={() => {}}
@@ -462,9 +460,7 @@ describe('Keyboard shortcut scope interactions', () => {
         />
       );
 
-      window.dispatchEvent(
-        new KeyboardEvent('keydown', { key: 'Enter', metaKey: true })
-      );
+      await shortcuts.run();
 
       await waitFor(() => {
         expect(mockPanelRun).toHaveBeenCalledTimes(1);
@@ -474,7 +470,7 @@ describe('Keyboard shortcut scope interactions', () => {
     test('embedded panel still handles Escape', async () => {
       const mockPanelClose = vi.fn();
 
-      renderWithKeyboard(
+      const { user, shortcuts } = renderWithKeyboard(
         <>
           <FullScreenIDE isOpen={true} onClose={() => {}} />
           <ManualRunPanel
@@ -488,7 +484,7 @@ describe('Keyboard shortcut scope interactions', () => {
       // Escape should close panel (higher priority than IDE in this case)
       // Actually, IDE has higher priority, but this tests that panel still registers
       // the shortcut even in embedded mode
-      pressKey('Escape');
+      await shortcuts.escape();
 
       // IDE has higher priority, so it gets called first
       // But if we test just the panel...
@@ -498,7 +494,7 @@ describe('Keyboard shortcut scope interactions', () => {
       const mockIDEClose = vi.fn();
       const mockPanelClose = vi.fn();
 
-      renderWithKeyboard(
+      const { user, shortcuts } = renderWithKeyboard(
         <>
           <FullScreenIDE isOpen={true} onClose={mockIDEClose} />
           <ManualRunPanel
@@ -509,7 +505,7 @@ describe('Keyboard shortcut scope interactions', () => {
         </>
       );
 
-      pressKey('Escape');
+      await shortcuts.escape();
 
       await waitFor(() => {
         expect(mockIDEClose).toHaveBeenCalledTimes(1);
@@ -530,10 +526,10 @@ describe('Keyboard shortcut scope interactions', () => {
           <div>No panel</div>
         );
 
-      const { rerender } = renderWithKeyboard(<TestWrapper />);
+      const { rerender, user, shortcuts } = renderWithKeyboard(<TestWrapper />);
 
       // Shortcut doesn't work when panel not rendered
-      pressKey('Escape');
+      await shortcuts.escape();
       await new Promise(resolve => setTimeout(resolve, 50));
       expect(mockPanelClose).not.toHaveBeenCalled();
 
@@ -545,7 +541,7 @@ describe('Keyboard shortcut scope interactions', () => {
       await new Promise(resolve => setTimeout(resolve, 50));
 
       // Now shortcut works
-      pressKey('Escape');
+      await shortcuts.escape();
 
       await waitFor(() => {
         expect(mockPanelClose).toHaveBeenCalledTimes(1);
@@ -563,10 +559,10 @@ describe('Keyboard shortcut scope interactions', () => {
           <div>No IDE</div>
         );
 
-      const { rerender } = renderWithKeyboard(<TestWrapper />);
+      const { rerender, user, shortcuts } = renderWithKeyboard(<TestWrapper />);
 
       // Shortcut doesn't work when IDE not rendered
-      pressKey('Escape');
+      await shortcuts.escape();
       await new Promise(resolve => setTimeout(resolve, 50));
       expect(mockIDEClose).not.toHaveBeenCalled();
 
@@ -578,7 +574,7 @@ describe('Keyboard shortcut scope interactions', () => {
       await new Promise(resolve => setTimeout(resolve, 50));
 
       // Now shortcut works
-      pressKey('Escape');
+      await shortcuts.escape();
 
       await waitFor(() => {
         expect(mockIDEClose).toHaveBeenCalledTimes(1);
@@ -602,10 +598,10 @@ describe('Keyboard shortcut scope interactions', () => {
         </>
       );
 
-      const { rerender } = renderWithKeyboard(<TestWrapper />);
+      const { rerender, user, shortcuts } = renderWithKeyboard(<TestWrapper />);
 
       // IDE Escape works initially
-      pressKey('Escape');
+      await shortcuts.escape();
       await waitFor(() => expect(mockIDEClose).toHaveBeenCalledTimes(1));
 
       // Open modal (mount it and tell IDE about it)
@@ -618,7 +614,7 @@ describe('Keyboard shortcut scope interactions', () => {
 
       // Now modal Escape should work, IDE should not
       mockIDEClose.mockClear();
-      pressKey('Escape');
+      await shortcuts.escape();
 
       await waitFor(() => {
         expect(mockModalClose).toHaveBeenCalledTimes(1);
@@ -644,10 +640,10 @@ describe('Keyboard shortcut scope interactions', () => {
         </>
       );
 
-      const { rerender } = renderWithKeyboard(<TestWrapper />);
+      const { rerender, user, shortcuts } = renderWithKeyboard(<TestWrapper />);
 
       // Modal handles Escape
-      pressKey('Escape');
+      await shortcuts.escape();
       await waitFor(() => expect(mockModalEscape).toHaveBeenCalledTimes(1));
       expect(mockInspectorClose).not.toHaveBeenCalled();
 
@@ -659,7 +655,7 @@ describe('Keyboard shortcut scope interactions', () => {
       await new Promise(resolve => setTimeout(resolve, 50));
 
       // Now inspector should handle Escape
-      pressKey('Escape');
+      await shortcuts.escape();
 
       await waitFor(() => {
         expect(mockInspectorClose).toHaveBeenCalledTimes(1);
@@ -668,38 +664,10 @@ describe('Keyboard shortcut scope interactions', () => {
   });
 
   describe('Platform-specific modifiers', () => {
-    test('run shortcut works with both Cmd (Mac) and Ctrl (Windows)', async () => {
-      const mockRun = vi.fn();
-
-      renderWithKeyboard(
-        <FullScreenIDE isOpen={true} onClose={() => {}} onRun={mockRun} />
-      );
-
-      // Test Mac (metaKey)
-      window.dispatchEvent(
-        new KeyboardEvent('keydown', { key: 'Enter', metaKey: true })
-      );
-
-      await waitFor(() => {
-        expect(mockRun).toHaveBeenCalledTimes(1);
-      });
-
-      mockRun.mockClear();
-
-      // Test Windows/Linux (ctrlKey)
-      window.dispatchEvent(
-        new KeyboardEvent('keydown', { key: 'Enter', ctrlKey: true })
-      );
-
-      await waitFor(() => {
-        expect(mockRun).toHaveBeenCalledTimes(1);
-      });
-    });
-
     test('Meta+Enter and Control+Enter both work', async () => {
       const mockPanelRun = vi.fn();
 
-      renderWithKeyboard(
+      const { user, shortcuts } = renderWithKeyboard(
         <ManualRunPanel
           isOpen={true}
           onClose={() => {}}
@@ -709,9 +677,7 @@ describe('Keyboard shortcut scope interactions', () => {
       );
 
       // Should work with metaKey
-      window.dispatchEvent(
-        new KeyboardEvent('keydown', { key: 'Enter', metaKey: true })
-      );
+      await shortcuts.run('cmd');
 
       await waitFor(() => {
         expect(mockPanelRun).toHaveBeenCalledTimes(1);
@@ -720,9 +686,7 @@ describe('Keyboard shortcut scope interactions', () => {
       mockPanelRun.mockClear();
 
       // Should also work with ctrlKey
-      window.dispatchEvent(
-        new KeyboardEvent('keydown', { key: 'Enter', ctrlKey: true })
-      );
+      await shortcuts.run('ctrl');
 
       await waitFor(() => {
         expect(mockPanelRun).toHaveBeenCalledTimes(1);
@@ -736,7 +700,7 @@ describe('Keyboard shortcut scope interactions', () => {
       const mockPanelClose = vi.fn();
       const mockInspectorClose = vi.fn();
 
-      renderWithKeyboard(
+      const { shortcuts } = renderWithKeyboard(
         <>
           <FullScreenIDE isOpen={true} onClose={mockIDEClose} />
           <ManualRunPanel isOpen={true} onClose={mockPanelClose} />
@@ -745,7 +709,7 @@ describe('Keyboard shortcut scope interactions', () => {
       );
 
       // IDE should win (highest priority)
-      pressKey('Escape');
+      await shortcuts.escape();
 
       await waitFor(() => {
         expect(mockIDEClose).toHaveBeenCalledTimes(1);
@@ -760,7 +724,7 @@ describe('Keyboard shortcut scope interactions', () => {
       const mockPanelClose = vi.fn();
       const mockInspectorClose = vi.fn();
 
-      renderWithKeyboard(
+      const { shortcuts } = renderWithKeyboard(
         <>
           <FullScreenIDE isOpen={true} onClose={mockIDEClose} />
           <ManualRunPanel isOpen={true} onClose={mockPanelClose} />
@@ -770,7 +734,7 @@ describe('Keyboard shortcut scope interactions', () => {
       );
 
       // Modal should win (highest priority)
-      pressKey('Escape');
+      await shortcuts.escape();
 
       await waitFor(() => {
         expect(mockModalClose).toHaveBeenCalledTimes(1);
@@ -780,42 +744,77 @@ describe('Keyboard shortcut scope interactions', () => {
       });
     });
 
-    test('closing contexts in sequence activates next priority', async () => {
-      const mockModalClose = vi.fn();
+    test('shortcuts work correctly when switching between contexts', async () => {
       const mockIDEClose = vi.fn();
       const mockPanelClose = vi.fn();
-      let isModalOpen = true;
       let isIDEOpen = true;
+      let isPanelOpen = true;
 
       const TestWrapper = () => (
         <>
           {isIDEOpen && <FullScreenIDE isOpen={true} onClose={mockIDEClose} />}
-          <ManualRunPanel isOpen={true} onClose={mockPanelClose} />
-          {isModalOpen && <Modal isOpen={true} onClose={mockModalClose} />}
+          {isPanelOpen && (
+            <ManualRunPanel isOpen={true} onClose={mockPanelClose} />
+          )}
         </>
       );
 
-      const { rerender } = renderWithKeyboard(<TestWrapper />);
+      const { rerender, shortcuts } = renderWithKeyboard(<TestWrapper />);
 
-      // Step 1: Modal handles Escape
-      pressKey('Escape');
-      await waitFor(() => expect(mockModalClose).toHaveBeenCalledTimes(1));
-
-      // Step 2: Close modal (unmount it), IDE now handles Escape
-      isModalOpen = false;
-      rerender(<TestWrapper />);
-      await new Promise(resolve => setTimeout(resolve, 50));
-
-      pressKey('Escape');
+      // IDE handles Escape
+      await shortcuts.escape();
       await waitFor(() => expect(mockIDEClose).toHaveBeenCalledTimes(1));
+      expect(mockPanelClose).not.toHaveBeenCalled();
 
-      // Step 3: Close IDE (unmount it), panel now handles Escape
+      // Close IDE
       isIDEOpen = false;
       rerender(<TestWrapper />);
       await new Promise(resolve => setTimeout(resolve, 50));
 
-      pressKey('Escape');
+      // Panel handles Escape
+      await shortcuts.escape();
       await waitFor(() => expect(mockPanelClose).toHaveBeenCalledTimes(1));
+
+      // Re-open IDE
+      isIDEOpen = true;
+      rerender(<TestWrapper />);
+      await new Promise(resolve => setTimeout(resolve, 50));
+
+      // IDE handles Escape again
+      mockIDEClose.mockClear();
+      await shortcuts.escape();
+      await waitFor(() => expect(mockIDEClose).toHaveBeenCalledTimes(1));
+    });
+
+    test('shortcuts work correctly when switching between panel and inspector', async () => {
+      const mockPanelClose = vi.fn();
+      const mockInspectorClose = vi.fn();
+      let isPanelOpen = true;
+
+      const TestWrapper = () => (
+        <>
+          {isPanelOpen && (
+            <ManualRunPanel isOpen={true} onClose={mockPanelClose} />
+          )}
+          <Inspector isOpen={true} onClose={mockInspectorClose} />
+        </>
+      );
+
+      const { rerender, shortcuts } = renderWithKeyboard(<TestWrapper />);
+
+      // Panel handles Escape
+      await shortcuts.escape();
+      await waitFor(() => expect(mockPanelClose).toHaveBeenCalledTimes(1));
+      expect(mockInspectorClose).not.toHaveBeenCalled();
+
+      // Close Panel
+      isPanelOpen = false;
+      rerender(<TestWrapper />);
+      await new Promise(resolve => setTimeout(resolve, 50));
+
+      // Inspector handles Escape
+      await shortcuts.escape();
+      await waitFor(() => expect(mockInspectorClose).toHaveBeenCalledTimes(1));
     });
   });
 
@@ -831,10 +830,10 @@ describe('Keyboard shortcut scope interactions', () => {
           <div>No inspector</div>
         );
 
-      const { rerender } = renderWithKeyboard(<TestWrapper />);
+      const { rerender, shortcuts } = renderWithKeyboard(<TestWrapper />);
 
       // Handler not registered yet
-      pressKey('Escape');
+      await shortcuts.escape();
       await new Promise(resolve => setTimeout(resolve, 50));
       expect(mockHandler).not.toHaveBeenCalled();
 
@@ -846,7 +845,7 @@ describe('Keyboard shortcut scope interactions', () => {
       await new Promise(resolve => setTimeout(resolve, 50));
 
       // Now handler works
-      pressKey('Escape');
+      await shortcuts.escape();
       await waitFor(() => expect(mockHandler).toHaveBeenCalledTimes(1));
     });
 
@@ -861,10 +860,10 @@ describe('Keyboard shortcut scope interactions', () => {
           <div>No inspector</div>
         );
 
-      const { rerender } = renderWithKeyboard(<TestWrapper />);
+      const { rerender, shortcuts } = renderWithKeyboard(<TestWrapper />);
 
       // Works when mounted
-      pressKey('Escape');
+      await shortcuts.escape();
       await waitFor(() => expect(mockHandler).toHaveBeenCalledTimes(1));
 
       // Unmount
@@ -875,20 +874,18 @@ describe('Keyboard shortcut scope interactions', () => {
       // Wait for unmount
       await new Promise(resolve => setTimeout(resolve, 50));
 
-      // Handler should not fire
-      pressKey('Escape');
+      // Handler not registered yet
+      await shortcuts.escape();
       await new Promise(resolve => setTimeout(resolve, 50));
       expect(mockHandler).not.toHaveBeenCalled();
 
-      // Re-mount
+      // Show inspector (mount component)
       showInspector = true;
       rerender(<TestWrapper />);
-
-      // Wait for mount
       await new Promise(resolve => setTimeout(resolve, 50));
 
-      // Handler works again
-      pressKey('Escape');
+      // Now handler works
+      await shortcuts.escape();
       await waitFor(() => expect(mockHandler).toHaveBeenCalledTimes(1));
     });
   });

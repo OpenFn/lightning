@@ -20,52 +20,14 @@ import * as Y from 'yjs';
 
 import * as dataclipApi from '../../../../js/collaborative-editor/api/dataclips';
 import { FullScreenIDE } from '../../../../js/collaborative-editor/components/ide/FullScreenIDE';
+import { StoreContext } from '../../../../js/collaborative-editor/contexts/StoreProvider';
 import type { UseRunRetryReturn } from '../../../../js/collaborative-editor/hooks/useRunRetry';
 import { KeyboardProvider } from '../../../../js/collaborative-editor/keyboard/KeyboardProvider';
-import { focusElement } from '../../../keyboard-test-utils';
-
-// Helper to fire keyboard event and wait for component to process
-async function pressKey(
-  key: string,
-  modifiers: Partial<KeyboardEventInit> = {},
-  target: Element | Document = document
-) {
-  fireEvent.keyDown(target, {
-    key,
-    code: key,
-    bubbles: true,
-    cancelable: true,
-    ...modifiers,
-  });
-  // Small delay to let react-hotkeys-hook process the event
-  await new Promise(resolve => setTimeout(resolve, 10));
-}
-
-// Helper to test platform variants (Mac Cmd vs Windows Ctrl)
-async function testPlatformVariants(
-  testFn: (
-    modifierKey: { metaKey: boolean } | { ctrlKey: boolean }
-  ) => Promise<void>
-) {
-  await testFn({ metaKey: true });
-  await testFn({ ctrlKey: true });
-}
-
-// Helper to verify a shortcut does NOT fire
-async function expectShortcutNotToFire(
-  key: string,
-  modifiers: Partial<KeyboardEventInit>,
-  mockFn: any,
-  target: Element | Document = document
-) {
-  const callCountBefore = mockFn.mock.calls.length;
-  await pressKey(key, modifiers, target);
-
-  // Wait a bit to ensure handler doesn't fire
-  await new Promise(resolve => setTimeout(resolve, 50));
-
-  expect(mockFn.mock.calls.length).toBe(callCountBefore);
-}
+import {
+  expectShortcutNotToFire,
+  focusElement,
+} from '../../../keyboard-test-utils';
+import { simulateStoreProvider } from '../../__helpers__/storeProviderHelpers';
 
 // Mock dependencies
 vi.mock('../../../../js/collaborative-editor/api/dataclips');
@@ -225,13 +187,22 @@ vi.mock('../../../../js/collaborative-editor/hooks/useSessionContext', () => ({
   useProjectRepoConnection: () => undefined,
   useLatestSnapshotLockVersion: () => 1,
   useIsNewWorkflow: () => false,
+  useUser: () => ({
+    email_confirmed: true,
+    inserted_at: new Date().toISOString(),
+  }),
+  useAppConfig: () => ({
+    require_email_verification: false,
+  }),
 }));
 
 // Mock UI commands
 vi.mock('../../../../js/collaborative-editor/hooks/useUI', () => ({
   useUICommands: () => ({
     openGitHubSyncModal: vi.fn(),
+    closeGitHubSyncModal: vi.fn(),
   }),
+  useIsGitHubSyncModalOpen: () => false,
 }));
 
 // Mock workflow hooks
@@ -293,6 +264,17 @@ vi.mock('../../../../js/collaborative-editor/hooks/useWorkflow', () => ({
     };
     return typeof selector === 'function' ? selector(state) : state;
   },
+  useNodeSelection: () => ({
+    selectNode: vi.fn(),
+    selectedNodeId: null,
+  }),
+  useWorkflowEnabled: () => ({
+    enabled: true,
+    setEnabled: vi.fn(),
+  }),
+  useWorkflowSettingsErrors: () => ({
+    hasErrors: false,
+  }),
 }));
 
 // Mock useRun hooks
@@ -361,10 +343,10 @@ let stableHandleRetry: ReturnType<typeof vi.fn>;
 function setupMockUseRunRetry(options: Partial<UseRunRetryReturn> = {}) {
   // Create new stable functions if not provided, or reuse existing ones
   if (!stableHandleRun || options.handleRun) {
-    stableHandleRun = options.handleRun || vi.fn();
+    stableHandleRun = (options.handleRun as any) || vi.fn();
   }
   if (!stableHandleRetry || options.handleRetry) {
-    stableHandleRetry = options.handleRetry || vi.fn();
+    stableHandleRetry = (options.handleRetry as any) || vi.fn();
   }
 
   mockUseRunRetry.mockImplementation(() => ({
@@ -380,7 +362,7 @@ function setupMockUseRunRetry(options: Partial<UseRunRetryReturn> = {}) {
   return { handleRun: stableHandleRun, handleRetry: stableHandleRetry };
 }
 
-// Helper to render FullScreenIDE with KeyboardProvider
+// Helper to render FullScreenIDE with KeyboardProvider and StoreProvider
 function renderFullScreenIDE(props = {}) {
   const defaultProps = {
     onClose: vi.fn(),
@@ -389,10 +371,15 @@ function renderFullScreenIDE(props = {}) {
     ...props,
   };
 
+  // Create fresh stores for each render
+  const { stores } = simulateStoreProvider();
+
   return render(
-    <KeyboardProvider>
-      <FullScreenIDE {...defaultProps} />
-    </KeyboardProvider>
+    <StoreContext.Provider value={stores}>
+      <KeyboardProvider>
+        <FullScreenIDE {...defaultProps} />
+      </KeyboardProvider>
+    </StoreContext.Provider>
   );
 }
 
@@ -406,6 +393,7 @@ describe('FullScreenIDE Keyboard Shortcuts', () => {
     mockUseRunRetry.mockClear();
     vi.mocked(dataclipApi.getRunDataclip).mockResolvedValue({
       dataclip: null,
+      run_step: null,
     });
 
     // Note: Each test calls setupMockUseRunRetry() to create fresh stable refs
@@ -413,6 +401,7 @@ describe('FullScreenIDE Keyboard Shortcuts', () => {
 
   describe('Escape - Close IDE / Blur Monaco', () => {
     test('closes IDE when Monaco is not focused', async () => {
+      const user = userEvent.setup();
       setupMockUseRunRetry();
       const onClose = vi.fn();
       renderFullScreenIDE({ onClose });
@@ -429,7 +418,7 @@ describe('FullScreenIDE Keyboard Shortcuts', () => {
       await new Promise(resolve => setTimeout(resolve, 200));
 
       // Fire escape directly on document
-      fireEvent.keyDown(document, { key: 'Escape', code: 'Escape' });
+      await user.keyboard('{Escape}');
 
       await waitFor(() => expect(onClose).toHaveBeenCalled(), {
         timeout: 2000,
@@ -437,6 +426,7 @@ describe('FullScreenIDE Keyboard Shortcuts', () => {
     });
 
     test('blurs Monaco on first Escape, closes IDE on second Escape', async () => {
+      const user = userEvent.setup();
       setupMockUseRunRetry();
       const onClose = vi.fn();
       renderFullScreenIDE({ onClose });
@@ -456,7 +446,7 @@ describe('FullScreenIDE Keyboard Shortcuts', () => {
       focusElement(monacoContent);
 
       // First Escape: blur Monaco
-      await pressKey('Escape');
+      await user.keyboard('{Escape}');
 
       await waitFor(() => {
         expect(document.activeElement).not.toBe(monacoContent);
@@ -466,7 +456,7 @@ describe('FullScreenIDE Keyboard Shortcuts', () => {
       expect(onClose).not.toHaveBeenCalled();
 
       // Second Escape: close IDE
-      await pressKey('Escape');
+      await user.keyboard('{Escape}');
 
       await waitFor(() => expect(onClose).toHaveBeenCalled());
     });
@@ -479,6 +469,7 @@ describe('FullScreenIDE Keyboard Shortcuts', () => {
       // We can't easily test the full modal interaction in this unit test,
       // but the logic is verified by reading lines 523-524 of FullScreenIDE.tsx
 
+      const user = userEvent.setup();
       setupMockUseRunRetry();
       const onClose = vi.fn();
       renderFullScreenIDE({ onClose });
@@ -494,7 +485,7 @@ describe('FullScreenIDE Keyboard Shortcuts', () => {
       await new Promise(resolve => setTimeout(resolve, 200));
 
       // When no modals are open, Escape should work
-      await pressKey('Escape');
+      await user.keyboard('{Escape}');
       await waitFor(() => expect(onClose).toHaveBeenCalled());
 
       // The enabled option in the actual implementation prevents Escape
@@ -503,6 +494,7 @@ describe('FullScreenIDE Keyboard Shortcuts', () => {
     });
 
     test('works with enableOnFormTags (input, textarea, select)', async () => {
+      const user = userEvent.setup();
       setupMockUseRunRetry();
       const onClose = vi.fn();
       renderFullScreenIDE({ onClose });
@@ -523,7 +515,7 @@ describe('FullScreenIDE Keyboard Shortcuts', () => {
       focusElement(input);
 
       // Escape should still work in form tags
-      await pressKey('Escape');
+      await user.keyboard('{Escape}');
 
       await waitFor(() => expect(onClose).toHaveBeenCalled());
 
@@ -680,6 +672,7 @@ describe('FullScreenIDE Keyboard Shortcuts', () => {
 
   describe('Keyboard Scope Integration', () => {
     test('shortcuts only work when IDE scope is enabled', async () => {
+      const user = userEvent.setup();
       setupMockUseRunRetry();
       const onClose = vi.fn();
       const { unmount } = renderFullScreenIDE({ onClose });
@@ -692,7 +685,7 @@ describe('FullScreenIDE Keyboard Shortcuts', () => {
       await new Promise(resolve => setTimeout(resolve, 200));
 
       // Escape should work when IDE is mounted (scope enabled)
-      await pressKey('Escape');
+      await user.keyboard('{Escape}');
       await waitFor(() => expect(onClose).toHaveBeenCalled());
 
       // Unmount IDE (scope disabled)
@@ -700,7 +693,7 @@ describe('FullScreenIDE Keyboard Shortcuts', () => {
 
       // Escape should not work after unmount
       onClose.mockClear();
-      await pressKey('Escape');
+      await user.keyboard('{Escape}');
       await new Promise(resolve => setTimeout(resolve, 50));
       expect(onClose).not.toHaveBeenCalled();
     });
@@ -723,7 +716,7 @@ describe('FullScreenIDE Keyboard Shortcuts', () => {
       focusElement(monacoContent);
 
       // First Escape: blur Monaco
-      await pressKey('Escape');
+      await user.keyboard('{Escape}');
       await waitFor(() => {
         expect(document.activeElement).not.toBe(monacoContent);
       });
@@ -734,7 +727,7 @@ describe('FullScreenIDE Keyboard Shortcuts', () => {
       await waitFor(() => expect(handleRun).toHaveBeenCalled());
 
       // Second Escape: close IDE
-      await pressKey('Escape');
+      await user.keyboard('{Escape}');
       await waitFor(() => expect(onClose).toHaveBeenCalled());
     });
 
