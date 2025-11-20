@@ -1,6 +1,6 @@
-import { expect } from "@playwright/test";
-import type { Page } from "@playwright/test";
-import { LiveViewPage } from "./base";
+import { expect } from '@playwright/test';
+import type { Page } from '@playwright/test';
+import { LiveViewPage } from './base';
 
 /**
  * Page Object Model for the Projects listing page
@@ -21,9 +21,9 @@ export class ProjectsPage extends LiveViewPage {
    */
   async navigateToProject(projectName: string): Promise<void> {
     const projectRow = this.page
-      .getByRole("cell", { name: projectName })
-      .locator("..");
-    await this.waitForEventAttached(projectRow, "click");
+      .getByRole('cell', { name: projectName })
+      .locator('..');
+    await this.waitForEventAttached(projectRow, 'click');
     await expect(projectRow).toBeVisible();
     await projectRow.click();
   }
@@ -32,7 +32,7 @@ export class ProjectsPage extends LiveViewPage {
    * Navigate to the projects listing page
    */
   async navigateToProjects(): Promise<void> {
-    await this.clickMenuItem("Projects");
+    await this.clickMenuItem('Projects');
     await this.waitForConnected();
   }
 
@@ -42,7 +42,7 @@ export class ProjectsPage extends LiveViewPage {
    */
   async verifyProjectVisible(projectName: string): Promise<void> {
     await expect(
-      this.page.getByRole("cell", { name: projectName })
+      this.page.getByRole('cell', { name: projectName })
     ).toBeVisible();
   }
 
@@ -50,7 +50,7 @@ export class ProjectsPage extends LiveViewPage {
    * Verify that at least one project is visible in the projects list
    */
   async verifyProjectsListNotEmpty(): Promise<void> {
-    const projectCells = this.page.getByRole("cell");
+    const projectCells = this.page.getByRole('cell');
     await expect(projectCells).not.toHaveCount(0);
   }
 }

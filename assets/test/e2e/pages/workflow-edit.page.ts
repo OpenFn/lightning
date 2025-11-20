@@ -1,7 +1,7 @@
-import { expect } from "@playwright/test";
-import type { Locator, Page } from "@playwright/test";
-import { WorkflowDiagramPage, JobFormPage } from "./components";
-import { LiveViewPage } from "./base";
+import { expect } from '@playwright/test';
+import type { Locator, Page } from '@playwright/test';
+import { WorkflowDiagramPage, JobFormPage } from './components';
+import { LiveViewPage } from './base';
 
 /**
  * Page Object Model for the Workflow Edit page
@@ -11,8 +11,8 @@ export class WorkflowEditPage extends LiveViewPage {
   readonly diagram: WorkflowDiagramPage;
 
   protected selectors = {
-    createButton: "#create_workflow_btn",
-    newWorkflowPanel: "#new-workflow-panel",
+    createButton: '#create_workflow_btn',
+    newWorkflowPanel: '#new-workflow-panel',
     runButton: '[data-testid="run-workflow-btn"]',
     saveButton: 'button:has-text("Save")',
     topBar: '[data-testid="top-bar"]',
@@ -64,9 +64,9 @@ export class WorkflowEditPage extends LiveViewPage {
 
     // Find the save button's parent container which should contain the unsaved indicator
     const saveButtonContainer = saveButton
-      .locator("..")
-      .locator("..")
-      .locator("..");
+      .locator('..')
+      .locator('..')
+      .locator('..');
     const unsavedIndicator = saveButtonContainer.locator(
       this.selectors.unsavedChangesIndicator
     );
@@ -100,7 +100,7 @@ export class WorkflowEditPage extends LiveViewPage {
     await beakerIcon.click();
 
     // Wait for navigation to complete
-    await this.page.waitForLoadState("networkidle");
+    await this.page.waitForLoadState('networkidle');
   }
 
   /**
@@ -114,7 +114,7 @@ export class WorkflowEditPage extends LiveViewPage {
     ).toBeVisible();
 
     // Find the label containing the type text and click its associated radio button
-    const label = this.page.locator("label").filter({ hasText: typeText });
+    const label = this.page.locator('label').filter({ hasText: typeText });
     await expect(label).toBeVisible();
     await label.click();
   }

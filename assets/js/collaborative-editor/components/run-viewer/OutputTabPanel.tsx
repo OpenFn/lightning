@@ -7,14 +7,12 @@
 import { useMemo } from 'react';
 
 import { DataclipViewer } from '../../../react/components/DataclipViewer';
-import { useCurrentRun, useSelectedStep } from '../../hooks/useRun';
-import type { Step } from '../../types/run';
-import { isFinalState } from '../../types/run';
-
-import { StepViewerLayout } from './StepViewerLayout';
+import { useActiveRun, useSelectedStep } from '../../hooks/useHistory';
+import type { StepDetail } from '../../types/history';
+import { isFinalState } from '../../types/history';
 
 interface OutputContentProps {
-  selectedStep: Step | null;
+  selectedStep: StepDetail | null;
   runFinished: boolean;
 }
 
@@ -45,7 +43,7 @@ function OutputContent({ selectedStep, runFinished }: OutputContentProps) {
 }
 
 export function OutputTabPanel() {
-  const run = useCurrentRun();
+  const run = useActiveRun();
   const selectedStep = useSelectedStep();
 
   const runFinished = useMemo(
@@ -54,10 +52,8 @@ export function OutputTabPanel() {
   );
 
   return (
-    <StepViewerLayout selectedStepId={selectedStep?.id || null}>
-      <div className="h-full">
-        <OutputContent selectedStep={selectedStep} runFinished={runFinished} />
-      </div>
-    </StepViewerLayout>
+    <div className="h-full">
+      <OutputContent selectedStep={selectedStep} runFinished={runFinished} />
+    </div>
   );
 }

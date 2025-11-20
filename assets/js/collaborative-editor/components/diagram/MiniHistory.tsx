@@ -31,7 +31,7 @@ import { duration } from '../../../utils/duration';
 import truncateUid from '../../../utils/truncateUID';
 import { useProject } from '../../hooks/useSessionContext';
 import { useWorkflowState } from '../../hooks/useWorkflow';
-import type { Run, WorkOrder } from '../../types/history';
+import type { RunSummary, WorkOrder } from '../../types/history';
 import {
   navigateToRun,
   navigateToWorkOrderHistory,
@@ -39,7 +39,7 @@ import {
 } from '../../utils/navigation';
 
 // Extended types with selection state for UI
-type RunWithSelection = Run & { selected?: boolean };
+type RunWithSelection = RunSummary & { selected?: boolean };
 type WorkOrderWithSelection = Omit<WorkOrder, 'runs'> & {
   runs: RunWithSelection[];
   selected?: boolean;
@@ -89,7 +89,7 @@ interface MiniHistoryProps {
   collapsed: boolean;
   history: WorkOrderWithSelection[];
   onCollapseHistory: () => void;
-  selectRunHandler: (run: Run) => void;
+  selectRunHandler: (run: RunSummary) => void;
   onDeselectRun?: () => void;
   loading?: boolean;
   error?: string | null;
@@ -171,7 +171,7 @@ export default function MiniHistory({
 
   return (
     <div
-      className={`absolute left-4 top-16 bg-white border
+      className={`absolute left-6 top-6 bg-white border
         border-gray-200 rounded-lg shadow-sm overflow-hidden z-40
         transition-all duration-300 ease-in-out`}
     >

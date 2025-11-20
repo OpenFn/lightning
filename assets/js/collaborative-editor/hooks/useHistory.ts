@@ -21,6 +21,8 @@ import type {
   HistoryStore,
   WorkflowRunHistory,
   RunStepsData,
+  RunDetail,
+  StepDetail,
 } from '../types/history';
 import { transformToRunInfo } from '../utils/runStepsTransformer';
 
@@ -100,13 +102,144 @@ export const useHistoryCommands = () => {
   // useMemo prevents error type propagation through the return object
   return useMemo(
     () => ({
+      // View history commands
       requestHistory: historyStore.requestHistory,
       requestRunSteps: historyStore.requestRunSteps,
       getRunSteps: historyStore.getRunSteps,
       clearError: historyStore.clearError,
+      // Active run commands
+      selectStep: historyStore.selectStep,
+      clearActiveRunError: historyStore.clearActiveRunError,
     }),
     [historyStore]
   );
+};
+
+/**
+ * Hook to follow (connect to) a specific run
+ * Handles channel connection/disconnection automatically
+ *
+ * This is the primary hook for following runs - it manages lifecycle
+ * so components don't need to manually connect/disconnect
+ *
+ * @param runId - Run ID to follow, or null to stop following
+ * @returns RunDetail for the followed run, or null if not
+ * following/loading
+ *
+ * @example
+ * // In FullScreenIDE:
+ * const runId = useRunIdFromURL(); // string | null
+ * const run = useFollowRun(runId); // Automatic connect/disconnect
+ */
+export const useFollowRun = (runId: string | null): RunDetail | null => {
+  const historyStore: HistoryStore = useHistoryStore();
+  const run = useActiveRun();
+
+  useEffect(() => {
+    if (runId) {
+      // Connect to run when runId provided
+      historyStore._viewRun(runId);
+    }
+
+    return () => {
+      // Disconnect on unmount or when runId changes
+      if (runId) {
+        historyStore._closeRunViewer();
+      }
+    };
+  }, [runId, historyStore]);
+
+  return run;
+};
+
+/**
+ * Hook to get currently active run (without managing lifecycle)
+ * Use this in child components that don't control the connection
+ */
+export const useActiveRun = (): RunDetail | null => {
+  const historyStore = useHistoryStore();
+  const selectActiveRun = historyStore.withSelector(state => state.activeRun);
+  return useSyncExternalStore(historyStore.subscribe, selectActiveRun);
+};
+
+/**
+ * Hook to get active run loading state
+ */
+export const useActiveRunLoading = (): boolean => {
+  const historyStore = useHistoryStore();
+  const selectLoading = historyStore.withSelector(
+    state => state.activeRunLoading
+  );
+  return useSyncExternalStore(historyStore.subscribe, selectLoading);
+};
+
+/**
+ * Hook to get active run error state
+ */
+export const useActiveRunError = (): string | null => {
+  const historyStore = useHistoryStore();
+  const selectError = historyStore.withSelector(state => state.activeRunError);
+  return useSyncExternalStore(historyStore.subscribe, selectError);
+};
+
+/**
+ * Hook to get currently selected step ID
+ */
+export const useSelectedStepId = (): string | null => {
+  const historyStore = useHistoryStore();
+  const selectStepId = historyStore.withSelector(state => state.selectedStepId);
+  return useSyncExternalStore(historyStore.subscribe, selectStepId);
+};
+
+/**
+ * Hook to get currently selected step (with lookup)
+ */
+export const useSelectedStep = (): StepDetail | null => {
+  const historyStore = useHistoryStore();
+  const selectStep = historyStore.withSelector(state => {
+    if (!state.selectedStepId || !state.activeRun) {
+      return null;
+    }
+    return (
+      state.activeRun.steps.find(step => step.id === state.selectedStepId) ||
+      null
+    );
+  });
+  return useSyncExternalStore(historyStore.subscribe, selectStep);
+};
+
+/**
+ * Hook to check if the currently selected job has a corresponding step
+ * in the active run.
+ *
+ * Returns true if:
+ * - No run is loaded (null case)
+ * - The selected job has at least one step in the active run
+ *
+ * Returns false if:
+ * - A run is loaded AND the selected job has no steps in that run
+ *
+ * @param selectedJobId - The ID of the currently selected job
+ * @returns boolean indicating if the job matches the run
+ */
+export const useJobMatchesRun = (selectedJobId: string | null): boolean => {
+  const historyStore = useHistoryStore();
+  const selectMatch = historyStore.withSelector(state => {
+    // If no run is loaded, consider it a match (no visual indication needed)
+    if (!state.activeRun) {
+      return true;
+    }
+
+    // If no job is selected, consider it a match
+    if (!selectedJobId) {
+      return true;
+    }
+
+    // Check if any step in the run matches the selected job
+    return state.activeRun.steps.some(step => step.job_id === selectedJobId);
+  });
+
+  return useSyncExternalStore(historyStore.subscribe, selectMatch);
 };
 
 /**

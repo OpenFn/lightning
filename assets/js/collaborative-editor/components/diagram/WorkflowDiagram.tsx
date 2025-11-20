@@ -7,7 +7,6 @@ import {
   type NodeChange,
   ReactFlow,
   ReactFlowProvider,
-  type Rect,
   useReactFlow,
 } from '@xyflow/react';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
@@ -23,6 +22,7 @@ import {
 } from '#/collaborative-editor/hooks/useWorkflow';
 import type { Workflow } from '#/collaborative-editor/types/workflow';
 import { getAdaptorDisplayName } from '#/collaborative-editor/utils/adaptorUtils';
+import debounce from '#/collaborative-editor/utils/debounce';
 import { isSourceNodeJob } from '#/collaborative-editor/utils/workflowGraph';
 import { randomUUID } from '#/common';
 import _logger from '#/utils/logger';
@@ -36,7 +36,6 @@ import usePlaceholders from '#/workflow-diagram/usePlaceholders';
 import { ensureNodePosition } from '#/workflow-diagram/util/ensure-node-position';
 import fromWorkflow from '#/workflow-diagram/util/from-workflow';
 import shouldLayout from '#/workflow-diagram/util/should-layout';
-import throttle from '#/workflow-diagram/util/throttle';
 import updateSelectionStyles from '#/workflow-diagram/util/update-selection';
 import {
   getVisibleRect,
@@ -47,11 +46,11 @@ import type { RunInfo } from '#/workflow-store/store';
 import { createEmptyRunInfo } from '../../utils/runStepsTransformer';
 import { AdaptorSelectionModal } from '../AdaptorSelectionModal';
 
-import { useInspectorOverlap } from './useInspectorOverlap';
+import { PointerTrackerViewer } from './PointerTrackerViewer';
 
 type WorkflowDiagramProps = {
   el?: HTMLElement | null;
-  containerEl?: HTMLElement | null;
+  containerEl: HTMLElement;
   selection: string | null;
   onSelectionChange: (id: string | null) => void;
   forceFit?: boolean;
@@ -110,15 +109,8 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
   const [flow, setFlow] = useState<typeof flowInstance | null>(null);
   // value of select in props seems same as select in store.
   // one in props is always set on initial render. (helps with refresh)
-  const {
-    selection,
-    onSelectionChange,
-    containerEl: el,
-    inspectorId,
-    runSteps,
-  } = props;
+  const { selection, onSelectionChange, containerEl: el, runSteps } = props;
 
-  // Get Y.Doc workflow store for placeholder operations
   const workflowStore = useWorkflowStoreContext();
 
   // Get workflow actions including position updates
@@ -363,6 +355,24 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
   // This usually means the workflow has changed or its the first load, so we don't want to animate
   // Later, if responding to changes from other users live, we may want to animate
   useEffect(() => {
+    logger.debug('main useEffect triggered', {
+      jobCount: workflow.jobs.length,
+      triggerCount: workflow.triggers.length,
+      edgeCount: workflow.edges.length,
+      workflowPositionsCount: Object.keys(workflowPositions).length,
+      cachedPositionsCount: Object.keys(chartCache.current.positions).length,
+      isManualLayout,
+      hasFlow: !!flow,
+    });
+
+    // Don't update model until ReactFlow is initialized
+    // This prevents visual artifacts during version switches where nodes
+    // would flash at position (0,0) before ReactFlow is ready
+    if (!flow) {
+      logger.debug('flow not initialized yet, skipping model update');
+      return;
+    }
+
     // Clear cache if positions were cleared (e.g., after reset workflow)
     // This prevents stale cached positions from being used when Y.Doc positions are empty
     // Also clear lastLayout so shouldLayout() will trigger a new layout
@@ -370,6 +380,7 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
       Object.keys(workflowPositions).length === 0 &&
       Object.keys(chartCache.current.positions).length > 0
     ) {
+      logger.debug('clearing cached positions');
       chartCache.current.positions = {};
       chartCache.current.lastLayout = undefined;
     }
@@ -383,8 +394,6 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
     }
 
     // create model from workflow and also apply selection styling to the model.
-    logger.log('calling fromWorkflow');
-
     const newModel = updateSelectionStyles(
       fromWorkflow(
         workflow,
@@ -397,6 +406,16 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
       ),
       selection
     );
+
+    logger.debug('fromWorkflow result', {
+      nodeCount: newModel.nodes.length,
+      edgeCount: newModel.edges.length,
+      nodeIds: newModel.nodes.map(n => n.id),
+      hasPositions: newModel.nodes.map(n => ({
+        id: n.id,
+        hasPos: !!n.position,
+      })),
+    });
     if (newModel.nodes.length > 0) {
       // If defaulting positions for multiple nodes,
       // try to offset them a bit
@@ -411,12 +430,26 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
           chartCache.current.lastLayout
         );
 
+        logger.debug('shouldLayout decision', {
+          layoutId,
+          lastLayout: chartCache.current.lastLayout,
+          isManualLayout,
+          willLayout: !!layoutId,
+        });
+
         if (layoutId) {
           chartCache.current.lastLayout = layoutId;
           const viewBounds = {
             width: workflowDiagramRef.current?.clientWidth ?? 0,
             height: workflowDiagramRef.current?.clientHeight ?? 0,
           };
+          logger.debug('layout triggered', {
+            layoutId,
+            isManualLayout,
+            viewBounds,
+            nodeCount: newModel.nodes.length,
+          });
+
           if (isManualLayout) {
             // give nodes positions
             const nodesWPos = newModel.nodes.map(node => {
@@ -441,17 +474,36 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
             });
             setModel({ ...newModel, nodes: nodesWPos });
             chartCache.current.positions = workflowPositions;
+            logger.debug('manual layout: applied positions from store', {
+              positionCount: Object.keys(workflowPositions).length,
+            });
           } else {
+            logger.debug('auto layout: calling layout()', {
+              nodePositions: newModel.nodes.map(n => ({
+                id: n.id,
+                pos: n.position,
+              })),
+              viewBounds,
+            });
             void layout(newModel, setModel, flow, viewBounds, {
               duration: props.layoutDuration ?? LAYOUT_DURATION,
               forceFit: props.forceFit ?? false,
             }).then(positions => {
               // Note we don't update positions until animation has finished
               chartCache.current.positions = positions;
+              logger.debug('auto layout: completed', {
+                positionCount: Object.keys(positions).length,
+                positions,
+              });
               return positions;
             });
           }
         } else {
+          logger.debug('no layout needed: using cached/stored positions', {
+            isManualLayout,
+            cachedPositionCount: Object.keys(positions).length,
+            workflowPositionCount: Object.keys(workflowPositions).length,
+          });
           // if isManualLayout, then we use values from store instead
           newModel.nodes.forEach(n => {
             if (isManualLayout && n.type !== 'placeholder') {
@@ -471,6 +523,7 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
           setModel(newModel);
         }
       } else {
+        logger.debug('flow not initialized: setting positions on newModel');
         // Flow not initialized yet, but we have nodes - ensure positions first
         newModel.nodes.forEach(n => {
           if (isManualLayout && n.type !== 'placeholder') {
@@ -488,6 +541,7 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
         setModel(newModel);
       }
     } else if (workflow.jobs.length === 0 && placeholders.nodes.length === 0) {
+      logger.debug('empty workflow: clearing canvas');
       // Explicitly empty workflow - show empty state
       // Only clear canvas when BOTH workflow.jobs and placeholders are empty
       // This prevents blank canvas during race conditions where placeholder
@@ -620,26 +674,20 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
   );
 
   // Trigger a fit to bounds when the parent div changes size
-  // To keep the chart more stable, try and take a snapshot of the target bounds
-  // when a new resize starts
-  // This will be imperfect but stops the user completely losing context
+  // Debounced to wait until resize completes before fitting
   useEffect(() => {
     if (flow && el) {
       let isFirstCallback = true;
 
-      let cachedTargetBounds: Rect | null = null;
-      let cacheTimeout: NodeJS.Timeout | undefined;
+      const debouncedResize = debounce(
+        async (signal: AbortSignal) => {
+          // Caller responsibility: only called when flow exists
+          if (!flow) {
+            logger.warn('fitBounds called without flow instance');
+            return;
+          }
 
-      const throttledResize = throttle(() => {
-        if (cacheTimeout) clearTimeout(cacheTimeout);
-
-        // After 3 seconds, clear the timeout and take a new cache snapshot
-        cacheTimeout = setTimeout(() => {
-          cachedTargetBounds = null;
-        }, 3000);
-
-        if (!cachedTargetBounds) {
-          // Take a snapshot of what bounds to try and maintain throughout the resize
+          // Compute bounds based on current viewport
           const viewBounds = {
             width: el.clientWidth || 0,
             height: el.clientHeight || 0,
@@ -648,27 +696,50 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
           const visible = model.nodes.filter(n =>
             isPointInRect(n.position, rect)
           );
-          cachedTargetBounds = flow.getNodesBounds(visible);
-        }
+          const targetBounds = flow.getNodesBounds(visible);
 
-        // Run an animated fit
-        flow.fitBounds(cachedTargetBounds, {
-          duration: FIT_DURATION,
-          padding: FIT_PADDING,
-        });
-      }, FIT_DURATION * 2);
+          // Validate rect has finite numbers (borrowed from safeFitBoundsRect logic)
+          const isValidRect =
+            targetBounds &&
+            Number.isFinite(targetBounds.x) &&
+            Number.isFinite(targetBounds.y) &&
+            Number.isFinite(targetBounds.width) &&
+            Number.isFinite(targetBounds.height);
+
+          if (!isValidRect) {
+            logger.warn('fitBounds called with invalid rect', targetBounds);
+            return;
+          }
+
+          // Check if aborted before async operation
+          if (signal.aborted) {
+            return;
+          }
+
+          try {
+            // Wait for fitBounds animation to complete
+            await flow.fitBounds(targetBounds, {
+              duration: FIT_DURATION,
+              padding: FIT_PADDING,
+            });
+          } catch (err) {
+            logger.error('fitBounds failed', err);
+          }
+        },
+        200 // ~200ms after resize stops
+      );
 
       const resizeOb = new ResizeObserver(_entries => {
         if (!isFirstCallback) {
           // Don't fit when the listener attaches (it callsback immediately)
-          throttledResize();
+          debouncedResize();
         }
         isFirstCallback = false;
       });
       resizeOb.observe(el);
 
       return () => {
-        throttledResize.cancel();
+        debouncedResize.cancel();
         resizeOb.unobserve(el);
       };
     }
@@ -912,8 +983,11 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
             zoomable
             pannable
             className="border-2 border-gray-200"
-            nodeComponent={MiniMapNode}
+            nodeComponent={props => (
+              <MiniMapNode {...props} jobs={jobs} triggers={triggers} />
+            )}
           />
+          <PointerTrackerViewer containerEl={props.containerEl} />
         </ReactFlow>
       </ReactFlowProvider>
 

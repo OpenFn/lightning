@@ -11,9 +11,11 @@ import {
 } from '../../../js/collaborative-editor/hooks/useRunRetry';
 import type { Dataclip } from '../../../js/collaborative-editor/api/dataclips';
 import * as dataclipApi from '../../../js/collaborative-editor/api/dataclips';
-import { createRunStore } from '../../../js/collaborative-editor/stores/createRunStore';
 import { createSessionStore } from '../../../js/collaborative-editor/stores/createSessionStore';
-import type { Run, Step } from '../../../js/collaborative-editor/types/run';
+import type {
+  RunDetail,
+  StepDetail,
+} from '../../../js/collaborative-editor/types/history';
 import {
   createMockPhoenixChannel,
   createMockPhoenixChannelProvider,
@@ -52,20 +54,37 @@ vi.mock('../../../js/react/lib/use-url-state', () => ({
   }),
 }));
 
+// Global variable to control active run in tests
+let mockActiveRun: RunDetail | null = null;
+
+/**
+ * Helper to set the active run in tests
+ */
+function setMockActiveRun(run: RunDetail | null) {
+  mockActiveRun = run;
+}
+
 /**
  * Creates a React wrapper with store providers for hook testing
  */
-function createWrapper(
-  runStore: ReturnType<typeof createRunStore>
-): React.ComponentType<{ children: React.ReactNode }> {
+function createWrapper(): React.ComponentType<{ children: React.ReactNode }> {
   // Create session store and initialize it
   const sessionStore = createSessionStore();
   const mockSocket = createMockSocket();
   sessionStore.initializeSession(mockSocket, 'test:room', {
     id: 'user-1',
     name: 'Test User',
+    email: 'test@example.com',
     color: '#ff0000',
   });
+
+  // Create a mock history store with the methods useActiveRun needs
+  const mockHistoryStore = {
+    subscribe: vi.fn(() => vi.fn()),
+    withSelector: vi.fn(
+      selector => () => selector({ activeRun: mockActiveRun })
+    ),
+  };
 
   const mockStoreValue: StoreContextValue = {
     workflowStore: {} as any,
@@ -73,8 +92,9 @@ function createWrapper(
     adaptorStore: {} as any,
     credentialStore: {} as any,
     awarenessStore: {} as any,
+    historyStore: mockHistoryStore as any,
     uiStore: {} as any,
-    runStore,
+    editorPreferencesStore: {} as any,
   };
 
   return ({ children }: { children: React.ReactNode }) => (
@@ -129,11 +149,17 @@ function createMockDataclip(overrides?: Partial<Dataclip>): Dataclip {
 /**
  * Creates a mock run
  */
-function createMockRun(overrides?: Partial<Run>): Run {
+function createMockRun(overrides?: Partial<RunDetail>): RunDetail {
   return {
     id: 'run-123',
     work_order_id: 'wo-123',
+    work_order: {
+      id: 'wo-123',
+      workflow_id: 'wf-123',
+    },
     state: 'success',
+    created_by: null,
+    starting_trigger: null,
     started_at: '2024-01-01T00:00:00Z',
     finished_at: '2024-01-01T00:01:00Z',
     steps: [],
@@ -144,11 +170,11 @@ function createMockRun(overrides?: Partial<Run>): Run {
 /**
  * Creates a mock step
  */
-function createMockStep(overrides?: Partial<Step>): Step {
+function createMockStep(overrides?: Partial<StepDetail>): StepDetail {
   return {
     id: 'step-123',
     job_id: 'job-789',
-    job: { id: 'job-789', name: 'Job 1' },
+    job: { name: 'Job 1' },
     exit_reason: 'success',
     error_type: null,
     started_at: '2024-01-01T00:00:00Z',
@@ -161,17 +187,15 @@ function createMockStep(overrides?: Partial<Step>): Step {
 }
 
 describe('useRunRetry - Basic Functionality', () => {
-  let runStore: ReturnType<typeof createRunStore>;
-
   beforeEach(() => {
-    runStore = createRunStore();
     vi.clearAllMocks();
+    mockActiveRun = null;
   });
 
   test('initializes with correct default state', () => {
     const options = createMockOptions();
     const { result } = renderHook(() => useRunRetry(options), {
-      wrapper: createWrapper(runStore),
+      wrapper: createWrapper(),
     });
 
     expect(result.current.isSubmitting).toBe(false);
@@ -183,7 +207,7 @@ describe('useRunRetry - Basic Functionality', () => {
   test('canRun is false when edge is selected', () => {
     const options = createMockOptions({ edgeId: 'edge-123' });
     const { result } = renderHook(() => useRunRetry(options), {
-      wrapper: createWrapper(runStore),
+      wrapper: createWrapper(),
     });
 
     expect(result.current.canRun).toBe(false);
@@ -192,7 +216,7 @@ describe('useRunRetry - Basic Functionality', () => {
   test('canRun is false when workflow cannot be run', () => {
     const options = createMockOptions({ canRunWorkflow: false });
     const { result } = renderHook(() => useRunRetry(options), {
-      wrapper: createWrapper(runStore),
+      wrapper: createWrapper(),
     });
 
     expect(result.current.canRun).toBe(false);
@@ -204,7 +228,7 @@ describe('useRunRetry - Basic Functionality', () => {
       selectedDataclip: null,
     });
     const { result } = renderHook(() => useRunRetry(options), {
-      wrapper: createWrapper(runStore),
+      wrapper: createWrapper(),
     });
 
     expect(result.current.canRun).toBe(false);
@@ -216,7 +240,7 @@ describe('useRunRetry - Basic Functionality', () => {
       selectedDataclip: createMockDataclip(),
     });
     const { result } = renderHook(() => useRunRetry(options), {
-      wrapper: createWrapper(runStore),
+      wrapper: createWrapper(),
     });
 
     expect(result.current.canRun).toBe(true);
@@ -225,7 +249,7 @@ describe('useRunRetry - Basic Functionality', () => {
   test("canRun is true for 'empty' tab", () => {
     const options = createMockOptions({ selectedTab: 'empty' });
     const { result } = renderHook(() => useRunRetry(options), {
-      wrapper: createWrapper(runStore),
+      wrapper: createWrapper(),
     });
 
     expect(result.current.canRun).toBe(true);
@@ -237,7 +261,7 @@ describe('useRunRetry - Basic Functionality', () => {
       customBody: '{"valid": "json"}',
     });
     const { result } = renderHook(() => useRunRetry(options), {
-      wrapper: createWrapper(runStore),
+      wrapper: createWrapper(),
     });
 
     expect(result.current.canRun).toBe(true);
@@ -249,7 +273,7 @@ describe('useRunRetry - Basic Functionality', () => {
       customBody: '',
     });
     const { result } = renderHook(() => useRunRetry(options), {
-      wrapper: createWrapper(runStore),
+      wrapper: createWrapper(),
     });
 
     expect(result.current.canRun).toBe(false);
@@ -261,7 +285,7 @@ describe('useRunRetry - Basic Functionality', () => {
       customBody: '   ',
     });
     const { result } = renderHook(() => useRunRetry(options), {
-      wrapper: createWrapper(runStore),
+      wrapper: createWrapper(),
     });
 
     expect(result.current.canRun).toBe(false);
@@ -273,7 +297,7 @@ describe('useRunRetry - Basic Functionality', () => {
       customBody: '{ invalid json }',
     });
     const { result } = renderHook(() => useRunRetry(options), {
-      wrapper: createWrapper(runStore),
+      wrapper: createWrapper(),
     });
 
     expect(result.current.canRun).toBe(false);
@@ -285,7 +309,7 @@ describe('useRunRetry - Basic Functionality', () => {
       customBody: '["array", "not", "object"]',
     });
     const { result } = renderHook(() => useRunRetry(options), {
-      wrapper: createWrapper(runStore),
+      wrapper: createWrapper(),
     });
 
     expect(result.current.canRun).toBe(false);
@@ -297,7 +321,7 @@ describe('useRunRetry - Basic Functionality', () => {
       customBody: 'null',
     });
     const { result } = renderHook(() => useRunRetry(options), {
-      wrapper: createWrapper(runStore),
+      wrapper: createWrapper(),
     });
 
     expect(result.current.canRun).toBe(false);
@@ -309,7 +333,7 @@ describe('useRunRetry - Basic Functionality', () => {
       customBody: '"string value"',
     });
     const { result } = renderHook(() => useRunRetry(options), {
-      wrapper: createWrapper(runStore),
+      wrapper: createWrapper(),
     });
 
     expect(result.current.canRun).toBe(false);
@@ -321,7 +345,7 @@ describe('useRunRetry - Basic Functionality', () => {
       customBody: '123',
     });
     const { result } = renderHook(() => useRunRetry(options), {
-      wrapper: createWrapper(runStore),
+      wrapper: createWrapper(),
     });
 
     expect(result.current.canRun).toBe(false);
@@ -329,11 +353,9 @@ describe('useRunRetry - Basic Functionality', () => {
 });
 
 describe('useRunRetry - Retry Detection', () => {
-  let runStore: ReturnType<typeof createRunStore>;
-
   beforeEach(() => {
-    runStore = createRunStore();
     vi.clearAllMocks();
+    mockActiveRun = null;
 
     // Set URL state to include run parameter
     mockSearchParams = new URLSearchParams('run=run-123');
@@ -342,7 +364,7 @@ describe('useRunRetry - Retry Detection', () => {
   test('isRetryable is false when no run is followed', () => {
     const options = createMockOptions();
     const { result } = renderHook(() => useRunRetry(options), {
-      wrapper: createWrapper(runStore),
+      wrapper: createWrapper(),
     });
 
     expect(result.current.isRetryable).toBe(false);
@@ -356,18 +378,17 @@ describe('useRunRetry - Retry Detection', () => {
     });
     const run = createMockRun({ id: 'run-123', steps: [step] });
 
-    // Set run in store BEFORE rendering hook
-    act(() => {
-      runStore.setRun(run);
-    });
-
     const options = createMockOptions({
       selectedDataclip: dataclip,
       runContext: { type: 'job', id: 'job-789' },
     });
 
+    act(() => {
+      setMockActiveRun(run);
+    });
+
     const { result } = renderHook(() => useRunRetry(options), {
-      wrapper: createWrapper(runStore),
+      wrapper: createWrapper(),
     });
 
     // Wait for the hook to process the run from store
@@ -390,11 +411,11 @@ describe('useRunRetry - Retry Detection', () => {
     });
 
     act(() => {
-      runStore.setRun(run);
+      setMockActiveRun(run);
     });
 
     const { result } = renderHook(() => useRunRetry(options), {
-      wrapper: createWrapper(runStore),
+      wrapper: createWrapper(),
     });
 
     expect(result.current.isRetryable).toBe(false);
@@ -417,11 +438,11 @@ describe('useRunRetry - Retry Detection', () => {
     });
 
     act(() => {
-      runStore.setRun(run);
+      setMockActiveRun(run);
     });
 
     const { result } = renderHook(() => useRunRetry(options), {
-      wrapper: createWrapper(runStore),
+      wrapper: createWrapper(),
     });
 
     expect(result.current.isRetryable).toBe(false);
@@ -432,13 +453,13 @@ describe('useRunRetry - Retry Detection', () => {
 
     // Set run in store BEFORE rendering hook
     act(() => {
-      runStore.setRun(run);
+      setMockActiveRun(run);
     });
 
     const options = createMockOptions();
 
     const { result } = renderHook(() => useRunRetry(options), {
-      wrapper: createWrapper(runStore),
+      wrapper: createWrapper(),
     });
 
     // Wait for the hook to process the run from store
@@ -452,11 +473,11 @@ describe('useRunRetry - Retry Detection', () => {
     const options = createMockOptions();
 
     act(() => {
-      runStore.setRun(run);
+      setMockActiveRun(run);
     });
 
     const { result } = renderHook(() => useRunRetry(options), {
-      wrapper: createWrapper(runStore),
+      wrapper: createWrapper(),
     });
 
     expect(result.current.runIsProcessing).toBe(false);
@@ -464,11 +485,9 @@ describe('useRunRetry - Retry Detection', () => {
 });
 
 describe('useRunRetry - handleRun', () => {
-  let runStore: ReturnType<typeof createRunStore>;
-
   beforeEach(() => {
-    runStore = createRunStore();
     vi.clearAllMocks();
+    mockActiveRun = null;
   });
 
   test('submits run with empty input', async () => {
@@ -486,7 +505,7 @@ describe('useRunRetry - handleRun', () => {
     });
 
     const { result } = renderHook(() => useRunRetry(options), {
-      wrapper: createWrapper(runStore),
+      wrapper: createWrapper(),
     });
 
     await act(async () => {
@@ -519,7 +538,7 @@ describe('useRunRetry - handleRun', () => {
     });
 
     const { result } = renderHook(() => useRunRetry(options), {
-      wrapper: createWrapper(runStore),
+      wrapper: createWrapper(),
     });
 
     await act(async () => {
@@ -558,7 +577,7 @@ describe('useRunRetry - handleRun', () => {
     });
 
     const { result } = renderHook(() => useRunRetry(options), {
-      wrapper: createWrapper(runStore),
+      wrapper: createWrapper(),
     });
 
     await act(async () => {
@@ -589,7 +608,7 @@ describe('useRunRetry - handleRun', () => {
     });
 
     const { result } = renderHook(() => useRunRetry(options), {
-      wrapper: createWrapper(runStore),
+      wrapper: createWrapper(),
     });
 
     await act(async () => {
@@ -606,11 +625,9 @@ describe('useRunRetry - handleRun', () => {
 });
 
 describe('useRunRetry - handleRetry', () => {
-  let runStore: ReturnType<typeof createRunStore>;
-
   beforeEach(() => {
-    runStore = createRunStore();
     vi.clearAllMocks();
+    mockActiveRun = null;
 
     // Set URL state to include run parameter
     mockSearchParams = new URLSearchParams('run=run-123');
@@ -637,17 +654,17 @@ describe('useRunRetry - handleRetry', () => {
       onRunSubmitted,
     });
 
-    act(() => {
-      runStore.setRun(run);
-    });
-
     vi.mocked(fetch).mockResolvedValue({
       ok: true,
       json: async () => ({ data: { run_id: 'run-456' } }),
     } as Response);
 
+    act(() => {
+      setMockActiveRun(run);
+    });
+
     const { result } = renderHook(() => useRunRetry(options), {
-      wrapper: createWrapper(runStore),
+      wrapper: createWrapper(),
     });
 
     await act(async () => {

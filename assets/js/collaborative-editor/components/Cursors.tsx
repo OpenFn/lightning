@@ -1,6 +1,6 @@
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo } from 'react';
 
-import { useUserCursors, useRemoteUsers } from "../hooks/useAwareness";
+import { useUserCursors, useRemoteUsers } from '../hooks/useAwareness';
 
 function BaseStyles() {
   const baseStyles = `
@@ -59,7 +59,7 @@ export function Cursors() {
 
   // Dynamic user-specific cursor styles - now using Map entries
   const userStyles = useMemo(() => {
-    let cursorStyles = "";
+    let cursorStyles = '';
 
     // Only iterate over users who actually have cursor/selection data
     for (const [clientId, user] of cursorsMap) {
@@ -99,7 +99,7 @@ export function Cursors() {
       cursors.forEach(cursor => {
         const rect = cursor.getBoundingClientRect();
         const editorContainer =
-          cursor.closest(".monaco-editor") ||
+          cursor.closest('.monaco-editor') ||
           cursor.closest('[data-mode-id="javascript"]');
 
         if (editorContainer) {
@@ -108,9 +108,9 @@ export function Cursors() {
 
           // If cursor is within 30px of the top of the editor, add the class
           if (relativeTop < 30) {
-            cursor.classList.add("cursor-at-top");
+            cursor.classList.add('cursor-at-top');
           } else {
-            cursor.classList.remove("cursor-at-top");
+            cursor.classList.remove('cursor-at-top');
           }
         }
       });
@@ -119,13 +119,13 @@ export function Cursors() {
     // Also check on scroll events
     // FIXME: This references the first editor anywhere on the page.
     // We need to pass in the editor element to the component.
-    const editorElement = document.querySelector(".monaco-editor");
-    editorElement?.addEventListener("scroll", checkCursorPositions);
+    const editorElement = document.querySelector('.monaco-editor');
+    editorElement?.addEventListener('scroll', checkCursorPositions);
 
     checkCursorPositions();
 
     return () => {
-      editorElement?.removeEventListener("scroll", checkCursorPositions);
+      editorElement?.removeEventListener('scroll', checkCursorPositions);
     };
   }, [remoteUsers.length]); // Only re-run when remote users change
 

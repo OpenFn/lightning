@@ -2,7 +2,7 @@
  * StepList Component Tests
  *
  * Tests for StepList component that displays a list of execution steps
- * with selection handling and inspect actions.
+ * with selection handling.
  *
  * Test Coverage:
  * - Empty state when no steps
@@ -16,13 +16,14 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, test, vi } from 'vitest';
 import { StepList } from '../../../../js/collaborative-editor/components/run-viewer/StepList';
-import type { Step } from '../../../../js/collaborative-editor/types/run';
+import type { StepDetail } from '../../../../js/collaborative-editor/types/history';
 
 // Mock useURLState hook
+const mockUpdateSearchParams = vi.fn();
 vi.mock('../../../../js/react/lib/use-url-state', () => ({
   useURLState: () => ({
     searchParams: new URLSearchParams(),
-    updateSearchParams: vi.fn(),
+    updateSearchParams: mockUpdateSearchParams,
   }),
 }));
 
@@ -49,11 +50,10 @@ vi.mock('../../../../js/collaborative-editor/hooks/useWorkflow', () => ({
 }));
 
 // Mock step factory
-const createMockStep = (overrides?: Partial<Step>): Step => ({
+const createMockStep = (overrides?: Partial<StepDetail>): StepDetail => ({
   id: `step-${Math.random()}`,
   job_id: 'job-1',
   job: {
-    id: 'job-1',
     name: 'Test Job',
   },
   exit_reason: null,
@@ -67,6 +67,8 @@ const createMockStep = (overrides?: Partial<Step>): Step => ({
 });
 
 describe('StepList', () => {
+  const mockRunInsertedAt = new Date().toISOString();
+
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -74,7 +76,11 @@ describe('StepList', () => {
   describe('empty state', () => {
     test('shows empty message when no steps', () => {
       render(
-        <StepList steps={[]} selectedStepId={null} onSelectStep={vi.fn()} />
+        <StepList
+          steps={[]}
+          selectedStepId={null}
+          runInsertedAt={mockRunInsertedAt}
+        />
       );
 
       expect(screen.getByText('No steps yet')).toBeInTheDocument();
@@ -84,11 +90,15 @@ describe('StepList', () => {
   describe('rendering steps', () => {
     test('renders single step', () => {
       const step = createMockStep({
-        job: { id: 'job-1', name: 'My Job' },
+        job: { name: 'My Job' },
       });
 
       render(
-        <StepList steps={[step]} selectedStepId={null} onSelectStep={vi.fn()} />
+        <StepList
+          steps={[step]}
+          selectedStepId={null}
+          runInsertedAt={mockRunInsertedAt}
+        />
       );
 
       expect(screen.getByText('My Job')).toBeInTheDocument();
@@ -96,13 +106,17 @@ describe('StepList', () => {
 
     test('renders multiple steps', () => {
       const steps = [
-        createMockStep({ job: { id: 'job-1', name: 'Job 1' } }),
-        createMockStep({ job: { id: 'job-2', name: 'Job 2' } }),
-        createMockStep({ job: { id: 'job-3', name: 'Job 3' } }),
+        createMockStep({ job: { name: 'Job 1' } }),
+        createMockStep({ job: { name: 'Job 2' } }),
+        createMockStep({ job: { name: 'Job 3' } }),
       ];
 
       render(
-        <StepList steps={steps} selectedStepId={null} onSelectStep={vi.fn()} />
+        <StepList
+          steps={steps}
+          selectedStepId={null}
+          runInsertedAt={mockRunInsertedAt}
+        />
       );
 
       expect(screen.getByText('Job 1')).toBeInTheDocument();
@@ -114,23 +128,27 @@ describe('StepList', () => {
       const steps = [
         createMockStep({
           id: 'step-1',
-          job: { id: 'job-1', name: 'Success Job' },
+          job: { name: 'Success Job' },
           exit_reason: 'success',
         }),
         createMockStep({
           id: 'step-2',
-          job: { id: 'job-2', name: 'Failed Job' },
+          job: { name: 'Failed Job' },
           exit_reason: 'fail',
         }),
         createMockStep({
           id: 'step-3',
-          job: { id: 'job-3', name: 'Running Job' },
+          job: { name: 'Running Job' },
           exit_reason: null,
         }),
       ];
 
       render(
-        <StepList steps={steps} selectedStepId={null} onSelectStep={vi.fn()} />
+        <StepList
+          steps={steps}
+          selectedStepId={null}
+          runInsertedAt={mockRunInsertedAt}
+        />
       );
 
       expect(screen.getByText('Success Job')).toBeInTheDocument();
@@ -140,36 +158,40 @@ describe('StepList', () => {
   });
 
   describe('step selection', () => {
-    test('calls onSelectStep when step clicked', async () => {
+    test('updates URL when step clicked', async () => {
       const user = userEvent.setup();
-      const onSelectStep = vi.fn();
       const step = createMockStep({
         id: 'step-1',
-        job: { id: 'job-1', name: 'My Job' },
+        job_id: 'job-1',
+        job: { name: 'My Job' },
       });
 
       render(
         <StepList
           steps={[step]}
           selectedStepId={null}
-          onSelectStep={onSelectStep}
+          runInsertedAt={mockRunInsertedAt}
         />
       );
 
       await user.click(screen.getByText('My Job'));
 
-      expect(onSelectStep).toHaveBeenCalledWith('step-1');
+      expect(mockUpdateSearchParams).toHaveBeenCalledWith({
+        job: 'job-1',
+        run: null,
+        step: 'step-1',
+      });
     });
 
     test('highlights selected step', () => {
       const steps = [
         createMockStep({
           id: 'step-1',
-          job: { id: 'job-1', name: 'Job 1' },
+          job: { name: 'Job 1' },
         }),
         createMockStep({
           id: 'step-2',
-          job: { id: 'job-2', name: 'Job 2' },
+          job: { name: 'Job 2' },
         }),
       ];
 
@@ -177,7 +199,7 @@ describe('StepList', () => {
         <StepList
           steps={steps}
           selectedStepId="step-2"
-          onSelectStep={vi.fn()}
+          runInsertedAt={mockRunInsertedAt}
         />
       );
 
@@ -190,7 +212,7 @@ describe('StepList', () => {
       const steps = [
         createMockStep({
           id: 'step-1',
-          job: { id: 'job-1', name: 'Selected Job' },
+          job: { name: 'Selected Job' },
         }),
       ];
 
@@ -198,7 +220,7 @@ describe('StepList', () => {
         <StepList
           steps={steps}
           selectedStepId="step-1"
-          onSelectStep={vi.fn()}
+          runInsertedAt={mockRunInsertedAt}
         />
       );
 
@@ -211,44 +233,16 @@ describe('StepList', () => {
     });
   });
 
-  describe('inspect functionality', () => {
-    test('renders inspect button for each step', () => {
-      const step = createMockStep({
-        job: { id: 'job-1', name: 'My Job' },
-      });
-
-      render(
-        <StepList steps={[step]} selectedStepId={null} onSelectStep={vi.fn()} />
-      );
-
-      const inspectButton = screen.getByRole('button', {
-        name: /inspect step/i,
-      });
-      expect(inspectButton).toBeInTheDocument();
-    });
-
-    test('inspect button has proper accessibility label', () => {
-      const step = createMockStep({
-        job: { id: 'job-1', name: 'Data Fetch' },
-      });
-
-      render(
-        <StepList steps={[step]} selectedStepId={null} onSelectStep={vi.fn()} />
-      );
-
-      const inspectButton = screen.getByRole('button', {
-        name: 'Inspect step Data Fetch',
-      });
-      expect(inspectButton).toBeInTheDocument();
-    });
-  });
-
   describe('accessibility', () => {
     test('has proper ARIA list role', () => {
       const step = createMockStep();
 
       render(
-        <StepList steps={[step]} selectedStepId={null} onSelectStep={vi.fn()} />
+        <StepList
+          steps={[step]}
+          selectedStepId={null}
+          runInsertedAt={mockRunInsertedAt}
+        />
       );
 
       const list = screen.getByRole('list', {
@@ -264,7 +258,11 @@ describe('StepList', () => {
       ];
 
       render(
-        <StepList steps={steps} selectedStepId={null} onSelectStep={vi.fn()} />
+        <StepList
+          steps={steps}
+          selectedStepId={null}
+          runInsertedAt={mockRunInsertedAt}
+        />
       );
 
       const listItems = screen.getAllByRole('listitem');
@@ -280,7 +278,11 @@ describe('StepList', () => {
       });
 
       render(
-        <StepList steps={[step]} selectedStepId={null} onSelectStep={vi.fn()} />
+        <StepList
+          steps={[step]}
+          selectedStepId={null}
+          runInsertedAt={mockRunInsertedAt}
+        />
       );
 
       expect(screen.getByText('Unknown Job')).toBeInTheDocument();
@@ -289,11 +291,15 @@ describe('StepList', () => {
     test('handles step with very long job name', () => {
       const longName = 'A'.repeat(100);
       const step = createMockStep({
-        job: { id: 'job-1', name: longName },
+        job: { name: longName },
       });
 
       const { container } = render(
-        <StepList steps={[step]} selectedStepId={null} onSelectStep={vi.fn()} />
+        <StepList
+          steps={[step]}
+          selectedStepId={null}
+          runInsertedAt={mockRunInsertedAt}
+        />
       );
 
       // Should have truncate class
@@ -321,12 +327,16 @@ describe('StepList', () => {
       const steps = Array.from({ length: 50 }, (_, i) =>
         createMockStep({
           id: `step-${i}`,
-          job: { id: `job-${i}`, name: `Job ${i}` },
+          job: { name: `Job ${i}` },
         })
       );
 
       const { container } = render(
-        <StepList steps={steps} selectedStepId={null} onSelectStep={vi.fn()} />
+        <StepList
+          steps={steps}
+          selectedStepId={null}
+          runInsertedAt={mockRunInsertedAt}
+        />
       );
 
       const listItems = container.querySelectorAll('li');

@@ -13,7 +13,7 @@ const FileDropzone = {
       console.error('No target selector specified');
       return;
     }
-    
+
     const fileInput = document.querySelector<HTMLInputElement>(targetSelector);
 
     if (!fileInput) {
@@ -38,19 +38,19 @@ const FileDropzone = {
 
       const dt = e.dataTransfer;
       if (!dt?.files) return;
-      
+
       const files = dt.files;
       if (files.length > 0) {
         const file = files[0];
         if (!file) return;
-        
+
         // Check if file is yaml/yml
         if (file.name.match(/\.(ya?ml)$/i)) {
           // Create a new FileList-like object
           const dataTransfer = new DataTransfer();
           dataTransfer.items.add(file);
           fileInput.files = dataTransfer.files;
-          
+
           // Trigger change event to notify any listeners
           fileInput.dispatchEvent(new Event('change', { bubbles: true }));
         } else {
@@ -89,7 +89,7 @@ const FileDropzone = {
     if (this.destroy) {
       this.destroy();
     }
-  }
+  },
 } as FileDropzoneHook;
 
-export default FileDropzone; 
+export default FileDropzone;

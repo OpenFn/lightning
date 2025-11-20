@@ -1,9 +1,9 @@
 /* Minimal types for Phoenix JS client sourced from deps. */
 
-declare module "phoenix" {
+declare module 'phoenix' {
   export interface Push {
     receive(
-      status: "ok" | "error" | "timeout",
+      status: 'ok' | 'error' | 'timeout',
       callback: (response: any) => void
     ): Push;
   }

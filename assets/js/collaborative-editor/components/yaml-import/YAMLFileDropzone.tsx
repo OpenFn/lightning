@@ -7,7 +7,7 @@
  * - Visual feedback for drag states
  */
 
-import { useState, useCallback } from "react";
+import { useState, useCallback } from 'react';
 
 interface YAMLFileDropzoneProps {
   onUpload: (content: string) => void;
@@ -25,20 +25,20 @@ export function YAMLFileDropzone({ onUpload }: YAMLFileDropzoneProps) {
       setError(null);
     };
     reader.onerror = () => {
-      setError("Failed to read file");
+      setError('Failed to read file');
     };
     reader.readAsText(file);
   };
 
   const validateFile = (file: File): boolean => {
     // Check file extension
-    const validExtensions = [".yaml", ".yml"];
+    const validExtensions = ['.yaml', '.yml'];
     const hasValidExtension = validExtensions.some(ext =>
       file.name.toLowerCase().endsWith(ext)
     );
 
     if (!hasValidExtension) {
-      setError("File must be .yml or .yaml format");
+      setError('File must be .yml or .yaml format');
       return false;
     }
 
@@ -100,8 +100,8 @@ export function YAMLFileDropzone({ onUpload }: YAMLFileDropzoneProps) {
         onDragLeave={handleDragLeave}
         className={`relative border-2 border-dashed rounded-lg p-6 transition-colors ${
           isDragging
-            ? "border-indigo-500 bg-indigo-50"
-            : "border-gray-300 hover:border-gray-400"
+            ? 'border-indigo-500 bg-indigo-50'
+            : 'border-gray-300 hover:border-gray-400'
         }`}
       >
         <input

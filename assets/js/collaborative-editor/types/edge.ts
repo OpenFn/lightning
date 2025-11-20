@@ -1,12 +1,12 @@
-import { z } from "zod";
+import { z } from 'zod';
 
-import { uuidSchema } from "./common";
+import { uuidSchema } from './common';
 
 export const EdgeConditionType = z.enum([
-  "on_job_success",
-  "on_job_failure",
-  "always",
-  "js_expression",
+  'on_job_success',
+  'on_job_failure',
+  'always',
+  'js_expression',
 ]);
 
 export const EdgeSchema = z
@@ -23,15 +23,15 @@ export const EdgeSchema = z
     target_job_id: uuidSchema,
 
     // Condition configuration
-    condition_type: EdgeConditionType.default("on_job_success"),
+    condition_type: EdgeConditionType.default('on_job_success'),
     condition_expression: z
       .string()
-      .max(255, "should be at most 255 character(s)")
+      .max(255, 'should be at most 255 character(s)')
       .nullable()
       .optional(),
     condition_label: z
       .string()
-      .max(255, "should be at most 255 character(s)")
+      .max(255, 'should be at most 255 character(s)')
       .nullable()
       .optional(),
 
@@ -48,14 +48,14 @@ export const EdgeSchema = z
   .refine(
     data => {
       // Require expression when type is js_expression
-      if (data.condition_type === "js_expression") {
+      if (data.condition_type === 'js_expression') {
         return !!data.condition_expression;
       }
       return true;
     },
     {
       message: "can't be blank",
-      path: ["condition_expression"],
+      path: ['condition_expression'],
     }
   );
 

@@ -1,12 +1,12 @@
-import type { Run } from '../../types/run';
+import type { RunDetail } from '../../types/history';
 
 interface StatePillProps {
-  state: Run['state'];
+  state: RunDetail['state'];
 }
 
 // Ported from lib/lightning_web/live/run_live/components.ex:94-125
 export function StatePill({ state }: StatePillProps) {
-  const chipStyles: Record<Run['state'], string> = {
+  const chipStyles: Record<RunDetail['state'], string> = {
     // work order states
     available: 'bg-gray-200 text-gray-800',
     claimed: 'bg-blue-200 text-blue-800',
@@ -21,7 +21,7 @@ export function StatePill({ state }: StatePillProps) {
     lost: 'bg-gray-800 text-white',
   };
 
-  const displayText = (state: Run['state']): string => {
+  const displayText = (state: RunDetail['state']): string => {
     switch (state) {
       case 'available':
         return 'Enqueued';

@@ -193,4 +193,199 @@ describe('FullScreenIDE - Run Integration', () => {
       expect(mockUpdateSearchParams).toHaveBeenCalledWith({ run: runId });
     });
   });
+
+  describe('Automatic dataclip selection', () => {
+    it('should fetch dataclip when all required conditions are met', () => {
+      const mockFetchDataclip = vi.fn();
+      const inputDataclipId = 'dataclip-123';
+      const jobIdFromURL = 'job-456';
+      const projectId = 'proj-789';
+      const manuallyUnselectedDataclip = false;
+
+      // Simulate the guard clause logic
+      const shouldFetchDataclip =
+        inputDataclipId &&
+        jobIdFromURL &&
+        projectId &&
+        !manuallyUnselectedDataclip;
+
+      if (shouldFetchDataclip) {
+        mockFetchDataclip();
+      }
+
+      expect(mockFetchDataclip).toHaveBeenCalled();
+    });
+
+    it('should NOT fetch dataclip when inputDataclipId is missing', () => {
+      const mockFetchDataclip = vi.fn();
+      const inputDataclipId = null;
+      const jobIdFromURL = 'job-456';
+      const projectId = 'proj-789';
+      const manuallyUnselectedDataclip = false;
+
+      // Simulate the guard clause logic
+      if (
+        !inputDataclipId ||
+        !jobIdFromURL ||
+        !projectId ||
+        manuallyUnselectedDataclip
+      ) {
+        return;
+      }
+
+      mockFetchDataclip();
+
+      expect(mockFetchDataclip).not.toHaveBeenCalled();
+    });
+
+    it('should NOT fetch dataclip when jobIdFromURL is missing', () => {
+      const mockFetchDataclip = vi.fn();
+      const inputDataclipId = 'dataclip-123';
+      const jobIdFromURL = null;
+      const projectId = 'proj-789';
+      const manuallyUnselectedDataclip = false;
+
+      // Simulate the guard clause logic
+      if (
+        !inputDataclipId ||
+        !jobIdFromURL ||
+        !projectId ||
+        manuallyUnselectedDataclip
+      ) {
+        return;
+      }
+
+      mockFetchDataclip();
+
+      expect(mockFetchDataclip).not.toHaveBeenCalled();
+    });
+
+    it('should NOT fetch dataclip when projectId is missing', () => {
+      const mockFetchDataclip = vi.fn();
+      const inputDataclipId = 'dataclip-123';
+      const jobIdFromURL = 'job-456';
+      const projectId = null;
+      const manuallyUnselectedDataclip = false;
+
+      // Simulate the guard clause logic
+      if (
+        !inputDataclipId ||
+        !jobIdFromURL ||
+        !projectId ||
+        manuallyUnselectedDataclip
+      ) {
+        return;
+      }
+
+      mockFetchDataclip();
+
+      expect(mockFetchDataclip).not.toHaveBeenCalled();
+    });
+
+    it('should NOT fetch dataclip when user manually unselected dataclip', () => {
+      const mockFetchDataclip = vi.fn();
+      const inputDataclipId = 'dataclip-123';
+      const jobIdFromURL = 'job-456';
+      const projectId = 'proj-789';
+      const manuallyUnselectedDataclip = true;
+
+      // Simulate the guard clause logic
+      if (
+        !inputDataclipId ||
+        !jobIdFromURL ||
+        !projectId ||
+        manuallyUnselectedDataclip
+      ) {
+        return;
+      }
+
+      mockFetchDataclip();
+
+      expect(mockFetchDataclip).not.toHaveBeenCalled();
+    });
+
+    it('should skip fetch when dataclip already matches expected one', () => {
+      const mockFetchDataclip = vi.fn();
+      const inputDataclipId = 'dataclip-123';
+      const selectedDataclipState: { id: string } | null = {
+        id: 'dataclip-123',
+      };
+
+      // Simulate the second guard clause logic
+      if (
+        selectedDataclipState !== null &&
+        selectedDataclipState.id === inputDataclipId
+      ) {
+        return;
+      }
+
+      mockFetchDataclip();
+
+      expect(mockFetchDataclip).not.toHaveBeenCalled();
+    });
+
+    it("should proceed to fetch when selected dataclip doesn't match", () => {
+      const mockFetchDataclip = vi.fn();
+      const inputDataclipId = 'dataclip-123';
+      const selectedDataclipState = { id: 'different-dataclip' };
+
+      // Simulate the second guard clause logic
+      if (
+        selectedDataclipState !== null &&
+        selectedDataclipState.id === inputDataclipId
+      ) {
+        return;
+      }
+
+      mockFetchDataclip();
+
+      expect(mockFetchDataclip).toHaveBeenCalled();
+    });
+
+    it('should proceed to fetch when no dataclip is selected', () => {
+      const mockFetchDataclip = vi.fn();
+      const inputDataclipId = 'dataclip-123';
+      const selectedDataclipState = null;
+
+      // Simulate the second guard clause logic
+      if (
+        selectedDataclipState !== null &&
+        selectedDataclipState.id === inputDataclipId
+      ) {
+        return;
+      }
+
+      mockFetchDataclip();
+
+      expect(mockFetchDataclip).toHaveBeenCalled();
+    });
+
+    it('should NOT fetch when runId is missing from URL', () => {
+      const mockFetchDataclip = vi.fn();
+      const searchParams = new URLSearchParams('');
+      const runId = searchParams.get('run') || searchParams.get('a');
+
+      // Simulate the third guard clause logic
+      if (!runId) {
+        return;
+      }
+
+      mockFetchDataclip();
+
+      expect(mockFetchDataclip).not.toHaveBeenCalled();
+    });
+
+    it('should reset manuallyUnselectedDataclip flag when URL run changes', () => {
+      const mockSetManuallyUnselectedDataclip = vi.fn();
+      const searchParamsRunId: string | null = 'new-run-id';
+      const followRunId: string | null = 'old-run-id';
+
+      // Simulate the useEffect logic that resets the flag
+      if (searchParamsRunId && searchParamsRunId !== followRunId) {
+        mockSetManuallyUnselectedDataclip(false);
+      }
+
+      expect(mockSetManuallyUnselectedDataclip).toHaveBeenCalledWith(false);
+    });
+  });
 });

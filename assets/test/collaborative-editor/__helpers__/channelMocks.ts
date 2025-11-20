@@ -13,9 +13,9 @@
  * This matches the expected format in useChannel.ts channelRequest()
  */
 
-import { vi } from "vitest";
-import type { Channel } from "phoenix";
-import type { MockPush } from "../mocks/phoenixChannel";
+import { vi } from 'vitest';
+import type { Channel } from 'phoenix';
+import type { MockPush } from '../mocks/phoenixChannel';
 
 // Re-export base Phoenix Channel mocks
 export {
@@ -24,7 +24,7 @@ export {
   type MockPhoenixChannel,
   type MockPhoenixChannelProvider,
   type MockPush,
-} from "../mocks/phoenixChannel";
+} from '../mocks/phoenixChannel';
 
 /**
  * Phoenix Channel Error Structure
@@ -48,7 +48,7 @@ export interface PhoenixChannelError {
  */
 export function createChannelError(
   message: string,
-  type: string = "error"
+  type: string = 'error'
 ): PhoenixChannelError {
   return {
     errors: { base: [message] },
@@ -102,17 +102,17 @@ export function createMockPush(config: MockPushConfig = {}): MockPush {
 
   const mockPush: MockPush = {
     receive(status: string, callback: (response?: unknown) => void) {
-      if (status === "ok" && okResponse !== undefined) {
+      if (status === 'ok' && okResponse !== undefined) {
         setTimeout(() => callback(okResponse), delay);
-      } else if (status === "error" && errorResponse !== undefined) {
+      } else if (status === 'error' && errorResponse !== undefined) {
         setTimeout(() => {
           const error =
-            typeof errorResponse === "string"
-              ? createChannelError(errorResponse, "error")
+            typeof errorResponse === 'string'
+              ? createChannelError(errorResponse, 'error')
               : errorResponse;
           callback(error);
         }, delay);
-      } else if (status === "timeout" && shouldTimeout) {
+      } else if (status === 'timeout' && shouldTimeout) {
         setTimeout(() => callback(), delay);
       }
       return mockPush;
@@ -139,11 +139,11 @@ export function createMockPush(config: MockPushConfig = {}): MockPush {
  * @example
  * mockChannel.push = createMockChannelPushOk({ saved_at: "...", lock_version: 1 });
  */
-export function createMockChannelPushOk(response: unknown): Channel["push"] {
+export function createMockChannelPushOk(response: unknown): Channel['push'] {
   const pushFn = (_event: string, _payload: unknown) =>
     createMockPush({ okResponse: response });
 
-  return vi.fn(pushFn) as unknown as Channel["push"];
+  return vi.fn(pushFn) as unknown as Channel['push'];
 }
 
 /**
@@ -166,12 +166,12 @@ export function createMockChannelPushOk(response: unknown): Channel["push"] {
  */
 export function createMockChannelPushError(
   message: string,
-  type: string = "error"
-): Channel["push"] {
+  type: string = 'error'
+): Channel['push'] {
   const pushFn = (_event: string, _payload: unknown) =>
     createMockPush({ errorResponse: createChannelError(message, type) });
 
-  return vi.fn(pushFn) as unknown as Channel["push"];
+  return vi.fn(pushFn) as unknown as Channel['push'];
 }
 
 /**
@@ -187,11 +187,11 @@ export function createMockChannelPushError(
  * @example
  * mockChannel.push = createMockChannelPushTimeout();
  */
-export function createMockChannelPushTimeout(): Channel["push"] {
+export function createMockChannelPushTimeout(): Channel['push'] {
   const pushFn = (_event: string, _payload: unknown) =>
     createMockPush({ shouldTimeout: true });
 
-  return vi.fn(pushFn) as unknown as Channel["push"];
+  return vi.fn(pushFn) as unknown as Channel['push'];
 }
 
 /**
@@ -254,7 +254,7 @@ interface EventResponseConfig {
  */
 export function createMockChannelPushByEvent(
   config: EventResponseConfig
-): Channel["push"] {
+): Channel['push'] {
   const { events, defaultResponse } = config;
 
   const pushFn = (event: string, _payload: unknown) => {
@@ -262,17 +262,17 @@ export function createMockChannelPushByEvent(
 
     if (!eventConfig) {
       return createMockPush({
-        okResponse: defaultResponse ?? { status: "ok" },
+        okResponse: defaultResponse ?? { status: 'ok' },
       });
     }
 
     // Handle simple response (just the data)
     if (
-      typeof eventConfig !== "object" ||
+      typeof eventConfig !== 'object' ||
       !(
-        "ok" in eventConfig ||
-        "error" in eventConfig ||
-        "timeout" in eventConfig
+        'ok' in eventConfig ||
+        'error' in eventConfig ||
+        'timeout' in eventConfig
       )
     ) {
       return createMockPush({ okResponse: eventConfig });
@@ -291,7 +291,7 @@ export function createMockChannelPushByEvent(
     });
   };
 
-  return vi.fn(pushFn) as unknown as Channel["push"];
+  return vi.fn(pushFn) as unknown as Channel['push'];
 }
 
 /**
@@ -331,11 +331,11 @@ export function createMockChannelPushByEvent(
  */
 export function createMockChannelPushWithHandler(
   handler: (event: string, payload: unknown) => MockPushConfig
-): Channel["push"] {
+): Channel['push'] {
   const pushFn = (event: string, payload: unknown) => {
     const config = handler(event, payload);
     return createMockPush(config);
   };
 
-  return vi.fn(pushFn) as unknown as Channel["push"];
+  return vi.fn(pushFn) as unknown as Channel['push'];
 }

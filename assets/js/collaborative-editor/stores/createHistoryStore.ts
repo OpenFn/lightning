@@ -81,6 +81,7 @@
  */
 
 import { produce } from 'immer';
+import type { Channel } from 'phoenix';
 import type { PhoenixChannelProvider } from 'y-phoenix-channel';
 
 import _logger from '#/utils/logger';
@@ -91,8 +92,11 @@ import {
   type HistoryStore,
   HistoryListSchema,
   type WorkOrder,
-  type Run,
+  type RunSummary,
   type RunStepsData,
+  type StepDetail,
+  RunDetailSchema,
+  StepDetailSchema,
 } from '../types/history';
 
 import { createWithSelector } from './common';
@@ -108,6 +112,7 @@ export const createHistoryStore = (): HistoryStore => {
   // Single Immer-managed state object (referentially stable)
   let state: HistoryState = produce(
     {
+      // History browser state
       history: [],
       isLoading: false,
       error: null,
@@ -116,6 +121,14 @@ export const createHistoryStore = (): HistoryStore => {
       runStepsCache: {},
       runStepsSubscribers: {},
       runStepsLoading: new Set(),
+
+      // Active run viewer state
+      activeRunId: null,
+      activeRun: null,
+      activeRunChannel: null,
+      activeRunLoading: false,
+      activeRunError: null,
+      selectedStepId: null,
     } as HistoryState,
     // No initial transformations needed
     draft => draft
@@ -194,7 +207,7 @@ export const createHistoryStore = (): HistoryStore => {
   const handleHistoryUpdated = (payload: {
     action: 'created' | 'updated' | 'run_created' | 'run_updated';
     work_order?: WorkOrder;
-    run?: Run;
+    run?: RunSummary;
     work_order_id?: string;
   }) => {
     const { action, work_order, run, work_order_id } = payload;
@@ -273,6 +286,132 @@ export const createHistoryStore = (): HistoryStore => {
     }
   };
 
+  /**
+   * Handle run data received from dedicated run channel
+   * Full RunDetail with metadata for active viewing
+   */
+  const handleRunReceived = (rawData: unknown) => {
+    const result = RunDetailSchema.safeParse(rawData);
+
+    if (result.success) {
+      state = produce(state, draft => {
+        draft.activeRun = result.data;
+        draft.activeRunLoading = false;
+        draft.activeRunError = null;
+        draft.lastUpdated = Date.now();
+
+        // Auto-select first step if none selected
+        if (!draft.selectedStepId && result.data.steps.length > 0) {
+          draft.selectedStepId = result.data.steps[0]?.id || null;
+        }
+      });
+      notify('handleRunReceived');
+    } else {
+      logger.error('Failed to parse run detail', result.error);
+      state = produce(state, draft => {
+        draft.activeRunLoading = false;
+        draft.activeRunError = `Invalid run data: ${result.error.message}`;
+      });
+      notify('runError');
+    }
+  };
+
+  /**
+   * Handle run:updated event from dedicated run channel
+   */
+  const handleRunUpdated = (payload: { run: unknown }) => {
+    const result = RunDetailSchema.safeParse(payload.run);
+
+    if (result.success) {
+      const updates = result.data;
+
+      state = produce(state, draft => {
+        if (draft.activeRun && draft.activeRun.id === updates.id) {
+          // Merge updates while preserving steps array
+          draft.activeRun = {
+            ...draft.activeRun,
+            ...updates,
+          };
+          draft.lastUpdated = Date.now();
+        }
+      });
+      notify('handleRunUpdated');
+    }
+  };
+
+  /**
+   * Handle step:started event from dedicated run channel
+   */
+  const handleStepStarted = (payload: { step: unknown }) => {
+    const result = StepDetailSchema.safeParse(payload.step);
+
+    if (result.success) {
+      handleStepUpdate(result.data);
+    }
+  };
+
+  /**
+   * Handle step:completed event from dedicated run channel
+   */
+  const handleStepCompleted = (payload: { step: unknown }) => {
+    const result = StepDetailSchema.safeParse(payload.step);
+
+    if (result.success) {
+      handleStepUpdate(result.data);
+    }
+  };
+
+  /**
+   * Update step in active run AND cache (cache coordination)
+   */
+  const handleStepUpdate = (step: StepDetail) => {
+    state = produce(state, draft => {
+      // 1. Update active run
+      if (draft.activeRun) {
+        const activeIndex = draft.activeRun.steps.findIndex(
+          s => s.id === step.id
+        );
+        if (activeIndex !== -1) {
+          draft.activeRun.steps[activeIndex] = step;
+        } else {
+          // Add new step and sort by started_at
+          draft.activeRun.steps.push(step);
+          draft.activeRun.steps.sort((a, b) => {
+            if (!a.started_at) return 1;
+            if (!b.started_at) return -1;
+            return (
+              new Date(a.started_at).getTime() -
+              new Date(b.started_at).getTime()
+            );
+          });
+        }
+      }
+
+      // 2. Update cache if this run is cached (cache coordination)
+      const runId = draft.activeRunId;
+      if (runId && draft.runStepsCache[runId]) {
+        const cachedSteps = draft.runStepsCache[runId].steps;
+        const cacheIndex = cachedSteps.findIndex(s => s.id === step.id);
+        if (cacheIndex !== -1 && cachedSteps[cacheIndex]) {
+          // Update shared fields (StepDetail and cached Step have
+          // significant overlap)
+          const cachedStep = cachedSteps[cacheIndex];
+          cachedStep.started_at = step.started_at;
+          cachedStep.finished_at = step.finished_at;
+          cachedStep.exit_reason = step.exit_reason;
+          cachedStep.error_type = step.error_type;
+          // Only update input_dataclip_id if it's not null
+          if (step.input_dataclip_id !== null) {
+            cachedStep.input_dataclip_id = step.input_dataclip_id;
+          }
+        }
+      }
+
+      draft.lastUpdated = Date.now();
+    });
+    notify('handleStepUpdate');
+  };
+
   // ===========================================================================
   // PATTERN 2: Direct Immer → Notify (Local State)
   // ===========================================================================
@@ -299,6 +438,43 @@ export const createHistoryStore = (): HistoryStore => {
     notify('clearError');
   };
 
+  const setActiveRunLoading = (loading: boolean) => {
+    state = produce(state, draft => {
+      draft.activeRunLoading = loading;
+    });
+    notify('setActiveRunLoading');
+  };
+
+  const setActiveRunError = (error: string | null) => {
+    state = produce(state, draft => {
+      draft.activeRunError = error;
+      draft.activeRunLoading = false;
+    });
+    notify('setActiveRunError');
+  };
+
+  const clearActiveRunError = () => {
+    state = produce(state, draft => {
+      draft.activeRunError = null;
+    });
+    notify('clearActiveRunError');
+  };
+
+  const selectStep = (stepId: string | null) => {
+    state = produce(state, draft => {
+      // Validate step exists in active run
+      if (stepId && draft.activeRun) {
+        const stepExists = draft.activeRun.steps.some(s => s.id === stepId);
+        if (stepExists) {
+          draft.selectedStepId = stepId;
+        }
+      } else {
+        draft.selectedStepId = null;
+      }
+    });
+    notify('selectStep');
+  };
+
   // ===========================================================================
   // CHANNEL INTEGRATION
   // ===========================================================================
@@ -323,7 +499,7 @@ export const createHistoryStore = (): HistoryStore => {
       const payload = message as {
         action: 'created' | 'updated' | 'run_created' | 'run_updated';
         work_order?: WorkOrder;
-        run?: Run;
+        run?: RunSummary;
         work_order_id?: string;
       };
       handleHistoryUpdated(payload);
@@ -536,6 +712,192 @@ export const createHistoryStore = (): HistoryStore => {
   };
 
   // ===========================================================================
+  // ACTIVE RUN QUERIES
+  // ===========================================================================
+
+  /**
+   * Get the currently active run
+   */
+  const getActiveRun = () => {
+    const currentState = getSnapshot();
+    return currentState.activeRun;
+  };
+
+  /**
+   * Get the currently selected step
+   */
+  const getSelectedStep = () => {
+    const currentState = getSnapshot();
+    if (!currentState.selectedStepId || !currentState.activeRun) {
+      return null;
+    }
+    return (
+      currentState.activeRun.steps.find(
+        step => step.id === currentState.selectedStepId
+      ) || null
+    );
+  };
+
+  /**
+   * Check if active run is loading
+   */
+  const isActiveRunLoading = () => {
+    const currentState = getSnapshot();
+    return currentState.activeRunLoading;
+  };
+
+  /**
+   * Get active run error
+   */
+  const getActiveRunError = () => {
+    const currentState = getSnapshot();
+    return currentState.activeRunError;
+  };
+
+  // ===========================================================================
+  // ACTIVE RUN CHANNEL MANAGEMENT
+  // ===========================================================================
+
+  /**
+   * Connect to and view a specific run in detail
+   * Creates dedicated run:${runId} channel for real-time updates
+   *
+   * CRITICAL: Includes race condition prevention guards
+   */
+  const _viewRun = (runId: string): void => {
+    // GUARD 1: Idempotency - don't reconnect to same run
+    if (state.activeRunId === runId && state.activeRunChannel) {
+      logger.debug('Already connected to run', runId);
+      return;
+    }
+
+    // GUARD 2: Disconnect only if switching to DIFFERENT run
+    if (state.activeRunChannel && state.activeRunId !== runId) {
+      _closeRunViewer();
+    }
+
+    if (!_channelProvider?.socket) {
+      logger.warn('Cannot view run - no channel provider');
+      setActiveRunError('No connection available');
+      return;
+    }
+
+    // Capture runId in closure to detect stale responses
+    const requestedRunId = runId;
+
+    state = produce(state, draft => {
+      draft.activeRunId = runId;
+      draft.activeRunLoading = true;
+      draft.activeRunError = null;
+    });
+    notify('_viewRun/start');
+
+    // Create dedicated channel: run:${runId}
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any
+    const channel: Channel = (_channelProvider.socket as any).channel(
+      `run:${runId}`,
+      {}
+    );
+
+    // Set up event handlers
+    channel.on('run:updated', (payload: unknown) => {
+      handleRunUpdated(payload as { run: unknown });
+    });
+
+    channel.on('step:started', (payload: unknown) => {
+      handleStepStarted(payload as { step: unknown });
+    });
+
+    channel.on('step:completed', (payload: unknown) => {
+      handleStepCompleted(payload as { step: unknown });
+    });
+
+    // Join channel and fetch initial data
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any
+    const channelJoin = (channel as any).join();
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
+    channelJoin.receive('ok', () => {
+      // GUARD 3: Ignore stale responses from previous requests
+      if (state.activeRunId !== requestedRunId) {
+        logger.debug('Ignoring stale run response', {
+          received: requestedRunId,
+          current: state.activeRunId,
+        });
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any
+        (channel as any).leave(); // Clean up the stale channel
+        return;
+      }
+
+      logger.debug('Joined run channel', runId);
+
+      // Fetch initial run data
+      void channelRequest<{ run: unknown }>(channel, 'fetch:run', {})
+        .then(response => {
+          // Double-check we're still viewing this run
+          if (state.activeRunId === requestedRunId) {
+            handleRunReceived(response.run);
+
+            // Only set channel after successful fetch
+            state = produce(state, draft => {
+              draft.activeRunChannel = channel;
+            });
+            notify('_viewRun/success');
+          } else {
+            // Switched to different run during fetch
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any
+            (channel as any).leave();
+          }
+          return undefined;
+        })
+        .catch(error => {
+          // Only update error if still waiting for this run
+          if (state.activeRunId === requestedRunId) {
+            logger.error('Failed to fetch run', error);
+            setActiveRunError(
+              `Failed to load run: ${error instanceof Error ? error.message : 'Unknown error'}`
+            );
+          }
+          return undefined;
+        });
+    });
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any
+    channelJoin.receive('error', (error: any) => {
+      // Only update error if still waiting for this run
+      if (state.activeRunId === requestedRunId) {
+        logger.error('Failed to join run channel', error);
+        setActiveRunError(
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+          `Failed to connect: ${error.reason || 'Unknown error'}`
+        );
+      }
+      // Don't set activeRunChannel on error - leave it null
+    });
+  };
+
+  /**
+   * Disconnect from active run and clean up channel
+   */
+  const _closeRunViewer = (): void => {
+    // Leave channel before updating state (can't call methods on draft)
+    if (state.activeRunChannel) {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any
+      (state.activeRunChannel as any).leave();
+    }
+
+    state = produce(state, draft => {
+      // Clear channel reference
+      draft.activeRunChannel = null;
+
+      // Clear active run state
+      draft.activeRunId = null;
+      draft.activeRun = null;
+      draft.activeRunError = null;
+      draft.selectedStepId = null;
+    });
+    notify('_closeRunViewer');
+  };
+
+  // ===========================================================================
   // PUBLIC INTERFACE
   // ===========================================================================
 
@@ -547,6 +909,10 @@ export const createHistoryStore = (): HistoryStore => {
 
     // Queries (CQS pattern)
     getRunSteps,
+    getActiveRun,
+    getSelectedStep,
+    isActiveRunLoading,
+    getActiveRunError,
 
     // Commands (CQS pattern)
     requestHistory,
@@ -556,9 +922,15 @@ export const createHistoryStore = (): HistoryStore => {
     clearError,
     subscribeToRunSteps,
     unsubscribeFromRunSteps,
+    selectStep,
+    setActiveRunLoading,
+    setActiveRunError,
+    clearActiveRunError,
 
     // Internal methods (not part of public HistoryStore interface)
     _connectChannel,
+    _viewRun,
+    _closeRunViewer,
   };
 };
 

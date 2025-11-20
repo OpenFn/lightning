@@ -30,7 +30,7 @@
  */
 
 import { produce } from 'immer';
-import { Socket as PhoenixSocket } from 'phoenix';
+import type { Socket as PhoenixSocket } from 'phoenix';
 import { PhoenixChannelProvider } from 'y-phoenix-channel';
 import type * as awarenessProtocol from 'y-protocols/awareness';
 import { Awareness } from 'y-protocols/awareness';

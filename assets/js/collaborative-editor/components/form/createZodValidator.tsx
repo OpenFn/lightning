@@ -1,4 +1,4 @@
-import type { z } from "zod";
+import type { z } from 'zod';
 
 /**
  * Creates a TanStack Form validator function using a Zod schema.
@@ -14,7 +14,7 @@ export const createZodValidator = <T, S extends z.ZodType>(schema: S) => {
       // Convert Zod errors to TanStack Form format
       const formErrors: Record<string, string> = {};
       result.error.issues.forEach((issue: z.core.$ZodIssue) => {
-        const path = issue.path.join(".");
+        const path = issue.path.join('.');
         formErrors[path] = issue.message;
       });
       return { fields: formErrors };

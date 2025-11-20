@@ -19,15 +19,40 @@ and this project adheres to
 
 ### Changed
 
-- Default failure notifications for project users are now disabled to minimize
-  email volume [#3517](https://github.com/OpenFn/lightning/issues/3517)
-- Simpler "disabled" state for workflows, still show last mod
-  [#3962](https://github.com/OpenFn/lightning/issues/3962)
-
 ### Fixed
 
 - Fixed AI chat session persistence when switching between jobs in workflow
   editor [#3745](https://github.com/OpenFn/lightning/issues/3745)
+
+## [2.15.0-pre] - 2025-11-20
+
+### Added
+
+- Show collaborators mouse pointers on the workflow canvas
+  [#3810](https://github.com/OpenFn/lightning/issues/3810)
+
+### Changed
+
+- Simplified IDE by only letting users see the "Create a New Manual Run Panel"
+  when an existing Run isn't already loaded. Cleaned up the Run panel.
+  [#4006](https://github.com/OpenFn/lightning/issues/4006)
+- Consolidated RunStore functionality into HistoryStore in collaborative editor
+  for improved state management and reduced complexity
+- Default failure notifications for project users are now disabled to minimize
+  email volume [#3517](https://github.com/OpenFn/lightning/issues/3517)
+- Simpler "disabled" state for workflows, still show last mod
+  [#3962](https://github.com/OpenFn/lightning/issues/3962)
+- Move user profile to top left corner
+  [#3997](https://github.com/OpenFn/lightning/issues/3997)
+- Collapse breadcrumbs when there are more than 2 of them
+  [#3997](https://github.com/OpenFn/lightning/issues/3997)
+
+### Fixed
+
+- Restored footers to inspectors on the canvas while in read only mode
+  [#4018](https://github.com/OpenFn/lightning/issues/4018)
+- Fix vertical scrolling in workflow panels
+  [#3979](https://github.com/OpenFn/lightning/issues/3979)
 - Fix ghost edges blocking saves and breaking autolayout when deleting jobs in
   collaborative editor [#3983](https://github.com/OpenFn/lightning/issues/3983)
 - Fix tooltip styling inconsistencies in collaborative editor

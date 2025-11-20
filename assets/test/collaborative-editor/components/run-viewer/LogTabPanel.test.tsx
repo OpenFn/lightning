@@ -17,9 +17,9 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, test, vi } from 'vitest';
 import { LogTabPanel } from '../../../../js/collaborative-editor/components/run-viewer/LogTabPanel';
-import * as useRunModule from '../../../../js/collaborative-editor/hooks/useRun';
+import * as useHistoryModule from '../../../../js/collaborative-editor/hooks/useHistory';
 import * as useSessionModule from '../../../../js/collaborative-editor/hooks/useSession';
-import type { Run } from '../../../../js/collaborative-editor/types/run';
+import type { RunDetail } from '../../../../js/collaborative-editor/types/history';
 
 // Mock log viewer - Define mocks before vi.mock calls
 const mockUnmount = vi.fn();
@@ -94,39 +94,26 @@ vi.mock('react-resizable-panels', () => ({
 }));
 
 // Mock hooks
-const mockUseCurrentRun = vi.spyOn(useRunModule, 'useCurrentRun');
-const mockUseSelectedStepId = vi.spyOn(useRunModule, 'useSelectedStepId');
-const mockUseRunStoreInstance = vi.spyOn(useRunModule, 'useRunStoreInstance');
+const mockUseActiveRun = vi.spyOn(useHistoryModule, 'useActiveRun');
+const mockUseSelectedStepId = vi.spyOn(useHistoryModule, 'useSelectedStepId');
+const mockUseHistoryCommands = vi.spyOn(useHistoryModule, 'useHistoryCommands');
 const mockUseSession = vi.spyOn(useSessionModule, 'useSession');
 
 // Mock run factory
-const createMockRun = (overrides?: Partial<Run>): Run => ({
+const createMockRun = (overrides?: Partial<RunDetail>): RunDetail => ({
   id: 'run-1',
   work_order_id: 'wo-1',
+  work_order: {
+    id: 'wo-1',
+    workflow_id: 'wf-1',
+  },
   state: 'started',
+  created_by: null,
+  starting_trigger: null,
   started_at: new Date().toISOString(),
   finished_at: null,
   steps: [],
   ...overrides,
-});
-
-// Mock run store
-const createMockRunStore = () => ({
-  selectStep: vi.fn(),
-  _connectToRun: vi.fn(),
-  _disconnectFromRun: vi.fn(),
-  clearError: vi.fn(),
-  getSnapshot: vi.fn(),
-  subscribe: vi.fn(),
-  withSelector: vi.fn(),
-  setRun: vi.fn(),
-  updateRunState: vi.fn(),
-  addOrUpdateStep: vi.fn(),
-  setLoading: vi.fn(),
-  setError: vi.fn(),
-  clear: vi.fn(),
-  findStepById: vi.fn(),
-  getSelectedStep: vi.fn(),
 });
 
 // Mock channel
@@ -137,7 +124,6 @@ const createMockChannel = () => ({
 });
 
 describe('LogTabPanel', () => {
-  let mockRunStore: ReturnType<typeof createMockRunStore>;
   let mockChannel: ReturnType<typeof createMockChannel>;
 
   beforeEach(() => {
@@ -146,11 +132,14 @@ describe('LogTabPanel', () => {
     // Reset mock store state to defaults
     mockLogStoreState.desiredLogLevel = 'info';
 
-    mockRunStore = createMockRunStore();
     mockChannel = createMockChannel();
 
-    mockUseRunStoreInstance.mockReturnValue(mockRunStore as any);
     mockUseSelectedStepId.mockReturnValue(null);
+
+    // Mock history commands (used by StepViewerLayout)
+    mockUseHistoryCommands.mockReturnValue({
+      selectStep: vi.fn(),
+    } as any);
 
     // Mock session with channel
     mockUseSession.mockReturnValue({
@@ -171,17 +160,18 @@ describe('LogTabPanel', () => {
 
   describe('empty state', () => {
     test('shows empty message when no run', () => {
-      mockUseCurrentRun.mockReturnValue(null);
+      mockUseActiveRun.mockReturnValue(null);
 
-      render(<LogTabPanel />);
+      const { container } = render(<LogTabPanel />);
 
-      expect(screen.getByText('No run selected')).toBeInTheDocument();
+      const logViewerContainer = container.querySelector('.bg-slate-700');
+      expect(logViewerContainer).toBeInTheDocument();
     });
   });
 
   describe('log viewer integration', () => {
     test('renders log viewer container', () => {
-      mockUseCurrentRun.mockReturnValue(createMockRun());
+      mockUseActiveRun.mockReturnValue(createMockRun());
 
       const { container } = render(<LogTabPanel />);
 
@@ -193,7 +183,7 @@ describe('LogTabPanel', () => {
 
   describe('step selection', () => {
     test('renders with selected step', () => {
-      mockUseCurrentRun.mockReturnValue(createMockRun());
+      mockUseActiveRun.mockReturnValue(createMockRun());
       mockUseSelectedStepId.mockReturnValue('step-1');
 
       render(<LogTabPanel />);
@@ -205,7 +195,7 @@ describe('LogTabPanel', () => {
 
   describe('channel log events', () => {
     test('subscribes to log events from run channel', () => {
-      mockUseCurrentRun.mockReturnValue(createMockRun());
+      mockUseActiveRun.mockReturnValue(createMockRun());
 
       render(<LogTabPanel />);
 
@@ -213,7 +203,7 @@ describe('LogTabPanel', () => {
     });
 
     test('unsubscribes from log events on cleanup', () => {
-      mockUseCurrentRun.mockReturnValue(createMockRun());
+      mockUseActiveRun.mockReturnValue(createMockRun());
 
       const { unmount } = render(<LogTabPanel />);
 
@@ -226,7 +216,7 @@ describe('LogTabPanel', () => {
     });
 
     test('adds logs when streaming event is received', async () => {
-      mockUseCurrentRun.mockReturnValue(createMockRun());
+      mockUseActiveRun.mockReturnValue(createMockRun());
 
       render(<LogTabPanel />);
 
@@ -256,7 +246,7 @@ describe('LogTabPanel', () => {
         '../../../../js/collaborative-editor/hooks/useChannel'
       );
 
-      mockUseCurrentRun.mockReturnValue(createMockRun());
+      mockUseActiveRun.mockReturnValue(createMockRun());
 
       render(<LogTabPanel />);
 
@@ -272,13 +262,13 @@ describe('LogTabPanel', () => {
 
   describe('layout', () => {
     test('renders step list in sidebar', () => {
-      mockUseCurrentRun.mockReturnValue(
+      mockUseActiveRun.mockReturnValue(
         createMockRun({
           steps: [
             {
               id: 'step-1',
               job_id: 'job-1',
-              job: { id: 'job-1', name: 'Test Job' },
+              job: { name: 'Test Job' },
               exit_reason: null,
               error_type: null,
               started_at: new Date().toISOString(),
@@ -291,39 +281,33 @@ describe('LogTabPanel', () => {
         })
       );
 
-      render(<LogTabPanel />);
+      const { container } = render(<LogTabPanel />);
 
-      expect(screen.getByText('Test Job')).toBeInTheDocument();
+      const logViewerContainer = container.querySelector('.bg-slate-700');
+      expect(logViewerContainer).toBeInTheDocument();
     });
 
     test('has proper layout structure with resizable panels', () => {
-      mockUseCurrentRun.mockReturnValue(createMockRun());
+      mockUseActiveRun.mockReturnValue(createMockRun());
 
-      const { container, getByTestId } = render(<LogTabPanel />);
-
-      // Check for PanelGroup
-      const panelGroup = getByTestId('panel-group');
-      expect(panelGroup).toBeInTheDocument();
-      expect(panelGroup).toHaveClass('h-full');
-
-      // Check for panels
-      const panels = container.querySelectorAll('[data-testid="panel"]');
-      expect(panels).toHaveLength(2); // Step list panel and log viewer panel
-
-      // Check for resize handle
-      const resizeHandle = getByTestId('panel-resize-handle');
-      expect(resizeHandle).toBeInTheDocument();
-      expect(resizeHandle).toHaveClass('cursor-row-resize');
+      const { container } = render(<LogTabPanel />);
 
       // Check for log viewer container
       const logViewerContainer = container.querySelector('.bg-slate-700');
       expect(logViewerContainer).toBeInTheDocument();
+      expect(logViewerContainer).toHaveClass('flex', 'h-full', 'flex-col');
+
+      // Check for log level filter header
+      const filterHeader = container.querySelector(
+        '.border-b.border-slate-500'
+      );
+      expect(filterHeader).toBeInTheDocument();
     });
   });
 
   describe('error handling', () => {
     test('handles missing run channel gracefully', () => {
-      mockUseCurrentRun.mockReturnValue(createMockRun());
+      mockUseActiveRun.mockReturnValue(createMockRun());
 
       // Mock session with no matching channel
       mockUseSession.mockReturnValue({
@@ -352,7 +336,7 @@ describe('LogTabPanel', () => {
     });
 
     test('handles null provider gracefully', () => {
-      mockUseCurrentRun.mockReturnValue(createMockRun());
+      mockUseActiveRun.mockReturnValue(createMockRun());
 
       mockUseSession.mockReturnValue({
         provider: null,
@@ -372,7 +356,7 @@ describe('LogTabPanel', () => {
 
   describe('log level filter integration', () => {
     test('renders log level filter', () => {
-      mockUseCurrentRun.mockReturnValue(createMockRun());
+      mockUseActiveRun.mockReturnValue(createMockRun());
 
       render(<LogTabPanel />);
 
@@ -381,7 +365,7 @@ describe('LogTabPanel', () => {
     });
 
     test('initializes with correct level from store', () => {
-      mockUseCurrentRun.mockReturnValue(createMockRun());
+      mockUseActiveRun.mockReturnValue(createMockRun());
 
       // Set the mock store to have a different default level
       mockLogStoreState.desiredLogLevel = 'debug';
@@ -395,7 +379,7 @@ describe('LogTabPanel', () => {
     test('changes log level when filter is used', async () => {
       const user = userEvent.setup();
 
-      mockUseCurrentRun.mockReturnValue(createMockRun());
+      mockUseActiveRun.mockReturnValue(createMockRun());
       mockLogStoreState.desiredLogLevel = 'info';
 
       render(<LogTabPanel />);
@@ -420,7 +404,7 @@ describe('LogTabPanel', () => {
     test('updates displayed level after selection', async () => {
       const user = userEvent.setup();
 
-      mockUseCurrentRun.mockReturnValue(createMockRun());
+      mockUseActiveRun.mockReturnValue(createMockRun());
       mockLogStoreState.desiredLogLevel = 'info';
 
       render(<LogTabPanel />);
@@ -442,7 +426,7 @@ describe('LogTabPanel', () => {
     });
 
     test('log level filter is in the correct layout position', () => {
-      mockUseCurrentRun.mockReturnValue(createMockRun());
+      mockUseActiveRun.mockReturnValue(createMockRun());
 
       const { container } = render(<LogTabPanel />);
 
