@@ -51,10 +51,10 @@ export function RunTabPanel() {
           <button
             onClick={() => metaPanelRef.current?.expand()}
             className="h-full w-full flex items-center justify-center text-xs font-medium text-gray-400
-              uppercase tracking-wide hover:text-gray-600 transition-colors cursor-pointer whitespace-nowrap writing-mode-vertical"
+              uppercase tracking-wide hover:text-gray-600 transition-colors cursor-pointer whitespace-nowrap"
             style={{ writingMode: 'vertical-rl' }}
           >
-            Meta
+            Run Metadata
           </button>
         ) : (
           <div className="h-full overflow-auto border-r border-gray-200 p-4">
@@ -147,7 +147,7 @@ export function RunTabPanel() {
               uppercase tracking-wide hover:text-gray-600 transition-colors cursor-pointer whitespace-nowrap"
             style={{ writingMode: 'vertical-rl' }}
           >
-            Steps
+            Run Steps
           </button>
         ) : (
           <div className="h-full overflow-auto p-4">
