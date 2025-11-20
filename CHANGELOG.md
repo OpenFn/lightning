@@ -17,6 +17,9 @@ and this project adheres to
 
 ### Added
 
+- Show collaborators mouse pointers on the workflow canvas
+  [#3810](https://github.com/OpenFn/lightning/issues/3810)
+
 ### Changed
 
 - Simplified IDE by only letting users see the "Create a New Manual Run Panel"

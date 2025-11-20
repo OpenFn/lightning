@@ -32,16 +32,16 @@
  * ```
  */
 
-import { useSyncExternalStore, useContext } from 'react';
+import { useContext, useSyncExternalStore } from 'react';
 
 import { StoreContext } from '../contexts/StoreProvider';
 import type { SessionContextStoreInstance } from '../stores/createSessionContextStore';
 import type {
-  UserContext,
-  ProjectContext,
-  ProjectRepoConnection,
   AppConfig,
   Permissions,
+  ProjectContext,
+  ProjectRepoConnection,
+  UserContext,
 } from '../types/sessionContext';
 
 /**

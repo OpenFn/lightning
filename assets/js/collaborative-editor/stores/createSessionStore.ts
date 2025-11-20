@@ -29,21 +29,21 @@
  * Y.Doc, Provider, Awareness (too large/circular)
  */
 
-import { produce } from "immer";
-import { Socket as PhoenixSocket } from "phoenix";
-import { PhoenixChannelProvider } from "y-phoenix-channel";
-import type * as awarenessProtocol from "y-protocols/awareness";
-import { Awareness } from "y-protocols/awareness";
-import { Doc as YDoc } from "yjs";
+import { produce } from 'immer';
+import type { Socket as PhoenixSocket } from 'phoenix';
+import { PhoenixChannelProvider } from 'y-phoenix-channel';
+import type * as awarenessProtocol from 'y-protocols/awareness';
+import { Awareness } from 'y-protocols/awareness';
+import { Doc as YDoc } from 'yjs';
 
-import _logger from "#/utils/logger";
+import _logger from '#/utils/logger';
 
-import type { LocalUserData } from "../types/awareness";
+import type { LocalUserData } from '../types/awareness';
 
-import { createWithSelector, type WithSelector } from "./common";
-import { wrapStoreWithDevTools } from "./devtools";
+import { createWithSelector, type WithSelector } from './common';
+import { wrapStoreWithDevTools } from './devtools';
 
-const logger = _logger.ns("SessionStore").seal();
+const logger = _logger.ns('SessionStore').seal();
 
 export interface SessionState {
   ydoc: YDoc | null;
@@ -110,8 +110,8 @@ export const createSessionStore = (): SessionStore => {
 
   // Redux DevTools integration
   const devtools = wrapStoreWithDevTools({
-    name: "SessionStore",
-    excludeKeys: ["ydoc", "provider", "awareness"], // Exclude large Y.js objects
+    name: 'SessionStore',
+    excludeKeys: ['ydoc', 'provider', 'awareness'], // Exclude large Y.js objects
     maxAge: 100,
   });
 
@@ -122,7 +122,7 @@ export const createSessionStore = (): SessionStore => {
   // Helper to update state
   const updateState: UpdateFn<SessionState> = (
     updater,
-    actionName = "updateState"
+    actionName = 'updateState'
   ) => {
     const nextState = produce(state, updater);
     // const changedKeys = Object.keys(nextState).filter(key => {
@@ -153,7 +153,7 @@ export const createSessionStore = (): SessionStore => {
     const ydoc = new YDoc();
     updateState(draft => {
       draft.ydoc = ydoc;
-    }, "initializeYDoc");
+    }, 'initializeYDoc');
     return ydoc;
   };
 
@@ -171,7 +171,7 @@ export const createSessionStore = (): SessionStore => {
       draft.ydoc = null;
       draft.awareness = null;
       draft.userData = null;
-    }, "destroyYDoc");
+    }, 'destroyYDoc');
   };
 
   const initializeSession = (
@@ -185,7 +185,7 @@ export const createSessionStore = (): SessionStore => {
   ) => {
     // Atomic initialization to prevent partial states
     if (!socket) {
-      throw new Error("Socket must be connected before initializing session");
+      throw new Error('Socket must be connected before initializing session');
     }
 
     // Step 1: Use existing YDoc or create new one
@@ -212,7 +212,7 @@ export const createSessionStore = (): SessionStore => {
       draft.provider = provider;
       draft.userData = userData;
       draft.isSynced = provider.synced;
-    }, "initializeSession");
+    }, 'initializeSession');
 
     // Step 5: Attach provider event handlers and store cleanup function
     cleanupProviderHandlers?.(); // Clean up any existing handlers
@@ -239,7 +239,7 @@ export const createSessionStore = (): SessionStore => {
    * - Resets all state to null
    */
   const destroy = () => {
-    logger.debug("Destroying session");
+    logger.debug('Destroying session');
     // Clean up all event handlers first
     cleanupProviderHandlers?.();
     cleanupProviderHandlers = null;
@@ -264,7 +264,7 @@ export const createSessionStore = (): SessionStore => {
       draft.isSynced = false;
       draft.settled = false;
       draft.lastStatus = null;
-    }, "destroy");
+    }, 'destroy');
   };
 
   // Queries (CQS)
@@ -327,39 +327,39 @@ function attachProvider(
     const next = event.status;
 
     if (next) {
-      const nowConnected = next === "connected";
+      const nowConnected = next === 'connected';
 
       updateState(draft => {
         draft.isConnected = nowConnected;
         draft.lastStatus = next;
-      }, "connectionStatusChange");
+      }, 'connectionStatusChange');
     }
   };
 
   const syncHandler = (synced: boolean) => {
     updateState(draft => {
       draft.isSynced = synced;
-    }, "syncStatusChange");
+    }, 'syncStatusChange');
   };
 
-  provider.on("status", statusHandler);
-  provider.on("sync", syncHandler);
+  provider.on('status', statusHandler);
+  provider.on('sync', syncHandler);
 
   return () => {
-    provider.off("status", statusHandler);
-    provider.off("sync", syncHandler);
+    provider.off('status', statusHandler);
+    provider.off('sync', syncHandler);
   };
 }
 
 function createSettlingSubscription(
-  subscribe: SessionStore["subscribe"],
-  getSnapshot: SessionStore["getSnapshot"],
+  subscribe: SessionStore['subscribe'],
+  getSnapshot: SessionStore['getSnapshot'],
   updateState: UpdateFn<SessionState>
 ) {
   const state = getSnapshot();
   if (!state.provider || !state.ydoc) {
     throw new Error(
-      "Provider and YDoc must be initialized before creating settling subscription"
+      'Provider and YDoc must be initialized before creating settling subscription'
     );
   }
 
@@ -368,8 +368,8 @@ function createSettlingSubscription(
 
   // Type-cast state since we've already verified provider and ydoc exist
   const stateWithProviderAndYdoc = state as SessionState & {
-    provider: NonNullable<SessionState["provider"]>;
-    ydoc: NonNullable<SessionState["ydoc"]>;
+    provider: NonNullable<SessionState['provider']>;
+    ydoc: NonNullable<SessionState['ydoc']>;
   };
 
   const startSettling = () => {
@@ -380,7 +380,7 @@ function createSettlingSubscription(
     // Reset settled state
     updateState(draft => {
       draft.settled = false;
-    }, "settlingStarted");
+    }, 'settlingStarted');
 
     // Start waiting for settled state
     Promise.all([
@@ -390,9 +390,9 @@ function createSettlingSubscription(
       .then(() => {
         if (!currentController?.signal.aborted) {
           updateState(draft => {
-            logger.debug("Settled");
+            logger.debug('Settled');
             draft.settled = true;
-          }, "settledStatusChange");
+          }, 'settledStatusChange');
         }
         return undefined;
       })
@@ -417,7 +417,7 @@ function createSettlingSubscription(
       currentController?.abort();
       updateState(draft => {
         draft.settled = false;
-      }, "disconnected");
+      }, 'disconnected');
     }
   };
 
@@ -438,7 +438,7 @@ function createSettlingSubscription(
 function waitForChannelSynced(
   controller: AbortController,
   state: SessionState & {
-    provider: NonNullable<SessionState["provider"]>;
+    provider: NonNullable<SessionState['provider']>;
   }
 ) {
   const { provider } = state;
@@ -449,7 +449,7 @@ function waitForChannelSynced(
     // }
 
     const cleanup = () => {
-      provider.off("sync", handler);
+      provider.off('sync', handler);
     };
 
     const handler = (synced: boolean) => {
@@ -459,9 +459,9 @@ function waitForChannelSynced(
       }
     };
 
-    provider.on("sync", handler);
+    provider.on('sync', handler);
 
-    controller.signal.addEventListener("abort", () => {
+    controller.signal.addEventListener('abort', () => {
       cleanup();
       resolve();
     });
@@ -471,15 +471,15 @@ function waitForChannelSynced(
 function waitForFirstUpdate(
   controller: AbortController,
   state: SessionState & {
-    ydoc: NonNullable<SessionState["ydoc"]>;
-    provider: NonNullable<SessionState["provider"]>;
+    ydoc: NonNullable<SessionState['ydoc']>;
+    provider: NonNullable<SessionState['provider']>;
   }
 ) {
   const { ydoc, provider } = state;
 
   return new Promise<void>(resolve => {
     const cleanup = () => {
-      ydoc.off("update", handler);
+      ydoc.off('update', handler);
     };
 
     const handler = (_update: Uint8Array, origin: unknown) => {
@@ -489,11 +489,11 @@ function waitForFirstUpdate(
       }
     };
 
-    controller.signal.addEventListener("abort", () => {
+    controller.signal.addEventListener('abort', () => {
       cleanup();
       resolve();
     });
 
-    ydoc.on("update", handler);
+    ydoc.on('update', handler);
   });
 }
