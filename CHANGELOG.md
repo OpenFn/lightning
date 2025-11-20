@@ -17,6 +17,14 @@ and this project adheres to
 
 ### Added
 
+### Changed
+
+### Fixed
+
+## [2.15.0-pre] - 2025-11-20
+
+### Added
+
 - Show collaborators mouse pointers on the workflow canvas
   [#3810](https://github.com/OpenFn/lightning/issues/3810)
 
