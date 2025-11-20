@@ -6,13 +6,10 @@ import {
   PanelResizeHandle,
 } from 'react-resizable-panels';
 
-import {
-  useActiveRun,
-  useHistoryCommands,
-  useSelectedStepId,
-} from '../../hooks/useHistory';
+import { useActiveRun, useSelectedStepId } from '../../hooks/useHistory';
 import { useProject } from '../../hooks/useSessionContext';
 
+import { Tooltip } from '../Tooltip';
 import { ElapsedIndicator } from './ElapsedIndicator';
 import { StatePill } from './StatePill';
 import { StepList } from './StepList';
@@ -27,7 +24,6 @@ function displayShortUuid(uuid: string): string {
 export function RunTabPanel() {
   const run = useActiveRun();
   const selectedStepId = useSelectedStepId();
-  const { selectStep } = useHistoryCommands();
   const project = useProject();
 
   const metaPanelRef = useRef<ImperativePanelHandle>(null);
@@ -155,13 +151,23 @@ export function RunTabPanel() {
           </button>
         ) : (
           <div className="h-full overflow-auto p-4">
-            <p className="mb-3 text-sm font-medium text-gray-600">
-              Steps (this run)
+            <p className="mb-3 flex items-center gap-1 text-sm font-medium text-gray-600">
+              Run Steps
+              <Tooltip
+                content="This run may not have executed all steps in the workflow. Only the steps that were executed in this specific run are shown here."
+                side="top"
+              >
+                <span
+                  className="hero-information-circle h-4 w-4 text-gray-400"
+                  aria-label="Information"
+                  role="img"
+                />
+              </Tooltip>
             </p>
             <StepList
               steps={run.steps}
               selectedStepId={selectedStepId}
-              onSelectStep={selectStep}
+              runInsertedAt={run.inserted_at}
             />
           </div>
         )}
