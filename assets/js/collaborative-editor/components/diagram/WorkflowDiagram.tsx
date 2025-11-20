@@ -47,11 +47,11 @@ import type { RunInfo } from '#/workflow-store/store';
 import { createEmptyRunInfo } from '../../utils/runStepsTransformer';
 import { AdaptorSelectionModal } from '../AdaptorSelectionModal';
 
-import { useInspectorOverlap } from './useInspectorOverlap';
+import { PointerTrackerViewer } from './PointerTrackerViewer';
 
 type WorkflowDiagramProps = {
   el?: HTMLElement | null;
-  containerEl?: HTMLElement | null;
+  containerEl: HTMLElement;
   selection: string | null;
   onSelectionChange: (id: string | null) => void;
   forceFit?: boolean;
@@ -110,13 +110,7 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
   const [flow, setFlow] = useState<typeof flowInstance | null>(null);
   // value of select in props seems same as select in store.
   // one in props is always set on initial render. (helps with refresh)
-  const {
-    selection,
-    onSelectionChange,
-    containerEl: el,
-    inspectorId,
-    runSteps,
-  } = props;
+  const { selection, onSelectionChange, containerEl: el, runSteps } = props;
 
   // Get Y.Doc workflow store for placeholder operations
   const workflowStore = useWorkflowStoreContext();
@@ -916,6 +910,7 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
               <MiniMapNode {...props} jobs={jobs} triggers={triggers} />
             )}
           />
+          <PointerTrackerViewer containerEl={props.containerEl} />
         </ReactFlow>
       </ReactFlowProvider>
 
