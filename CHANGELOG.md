@@ -21,6 +21,9 @@ and this project adheres to
 
 ### Fixed
 
+- Fix flickering of active collaborator icons between states(active, inactive,
+  unavailable) [#3931](https://github.com/OpenFn/lightning/issues/3931)
+
 ## [2.15.0-pre] - 2025-11-20
 
 ### Added

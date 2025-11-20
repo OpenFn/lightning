@@ -160,9 +160,9 @@ describe('ActiveCollaborators - Activity Indicator', () => {
     mockRemoteUsers = [];
   });
 
-  test('shows green border for users active within last 2 minutes', () => {
+  test('shows green border for users active within last 12 seconds (0.2 minutes)', () => {
     const now = Date.now();
-    const oneMinuteAgo = now - 60 * 1000; // 1 minute ago
+    const fiveSecondsAgo = now - 5 * 1000; // 5 seconds ago
 
     mockRemoteUsers = [
       createMockAwarenessUser({
@@ -172,7 +172,7 @@ describe('ActiveCollaborators - Activity Indicator', () => {
           email: 'john@example.com',
           color: '#ff0000',
         },
-        lastSeen: oneMinuteAgo,
+        lastSeen: fiveSecondsAgo,
       }),
     ];
 
@@ -182,9 +182,9 @@ describe('ActiveCollaborators - Activity Indicator', () => {
     expect(borderDiv).toBeInTheDocument();
   });
 
-  test('shows gray border for users inactive for more than 2 minutes', () => {
+  test('shows gray border for users inactive for more than 12 seconds (0.2 minutes)', () => {
     const now = Date.now();
-    const threeMinutesAgo = now - 3 * 60 * 1000; // 3 minutes ago
+    const thirtySecondsAgo = now - 30 * 1000; // 30 seconds ago
 
     mockRemoteUsers = [
       createMockAwarenessUser({
@@ -194,7 +194,7 @@ describe('ActiveCollaborators - Activity Indicator', () => {
           email: 'john@example.com',
           color: '#ff0000',
         },
-        lastSeen: threeMinutesAgo,
+        lastSeen: thirtySecondsAgo,
       }),
     ];
 
@@ -223,12 +223,12 @@ describe('ActiveCollaborators - Activity Indicator', () => {
     expect(borderDiv).toBeInTheDocument();
   });
 
-  test('correctly implements the 2-minute threshold (120,000ms)', () => {
+  test('correctly implements the 12-second threshold (0.2 minutes = 12,000ms)', () => {
     const now = Date.now();
-    const justUnderTwoMinutes = now - (2 * 60 * 1000 - 1000); // 1 second before threshold
-    const justOverTwoMinutes = now - (2 * 60 * 1000 + 1000); // 1 second after threshold
+    const justUnderThreshold = now - (0.2 * 60 * 1000 - 1000); // 1 second before threshold (11 seconds ago)
+    const justOverThreshold = now - (0.2 * 60 * 1000 + 1000); // 1 second after threshold (13 seconds ago)
 
-    // User just under 2 minutes should have green border
+    // User just under 12 seconds should have green border
     mockRemoteUsers = [
       createMockAwarenessUser({
         clientId: 1,
@@ -238,7 +238,7 @@ describe('ActiveCollaborators - Activity Indicator', () => {
           email: 'active@example.com',
           color: '#ff0000',
         },
-        lastSeen: justUnderTwoMinutes,
+        lastSeen: justUnderThreshold,
       }),
       createMockAwarenessUser({
         clientId: 2,
@@ -248,7 +248,7 @@ describe('ActiveCollaborators - Activity Indicator', () => {
           email: 'inactive@example.com',
           color: '#00ff00',
         },
-        lastSeen: justOverTwoMinutes,
+        lastSeen: justOverThreshold,
       }),
     ];
 
@@ -261,7 +261,7 @@ describe('ActiveCollaborators - Activity Indicator', () => {
     expect(grayBorder).toBeInTheDocument();
   });
 
-  test('border color updates when user crosses the 2-minute threshold', () => {
+  test('border color updates when user crosses the 12-second threshold', () => {
     vi.useFakeTimers();
     const now = Date.now();
 
@@ -282,8 +282,8 @@ describe('ActiveCollaborators - Activity Indicator', () => {
     // Initially should have green border
     expect(container.querySelector('.border-green-500')).toBeInTheDocument();
 
-    // Advance time by 3 minutes
-    vi.advanceTimersByTime(3 * 60 * 1000);
+    // Advance time by 15 seconds (beyond the 12-second threshold)
+    vi.advanceTimersByTime(15 * 1000);
 
     // Re-render to trigger the component to re-evaluate
     rerender(<ActiveCollaborators />);
@@ -376,6 +376,98 @@ describe('ActiveCollaborators - Store Integration', () => {
     const { container } = render(<ActiveCollaborators />);
 
     expect(container.firstChild).toBeNull();
+  });
+});
+
+describe('ActiveCollaborators - Cache Behavior', () => {
+  beforeEach(() => {
+    mockRemoteUsers = [];
+  });
+
+  test('continues showing users from cache when awareness is throttled', () => {
+    const now = Date.now();
+
+    // Initial user list
+    mockRemoteUsers = [
+      createMockAwarenessUser({
+        user: {
+          id: 'user-1',
+          name: 'John Doe',
+          email: 'john@example.com',
+          color: '#ff0000',
+        },
+        lastSeen: now,
+      }),
+    ];
+
+    const { rerender } = render(<ActiveCollaborators />);
+    expect(screen.getByText('JD')).toBeInTheDocument();
+
+    // Simulate throttling - user still in cache (via merged users from store)
+    // The cache keeps users for 1 minute, so they should still appear
+    mockRemoteUsers = [
+      createMockAwarenessUser({
+        user: {
+          id: 'user-1',
+          name: 'John Doe',
+          email: 'john@example.com',
+          color: '#ff0000',
+        },
+        lastSeen: now,
+      }),
+    ];
+
+    rerender(<ActiveCollaborators />);
+    expect(screen.getByText('JD')).toBeInTheDocument();
+  });
+
+  test('cached users appear with their last known state', () => {
+    const now = Date.now();
+    const fiveSecondsAgo = now - 5 * 1000;
+
+    // User active 5 seconds ago
+    mockRemoteUsers = [
+      createMockAwarenessUser({
+        user: {
+          id: 'user-1',
+          name: 'Jane Smith',
+          email: 'jane@example.com',
+          color: '#00ff00',
+        },
+        lastSeen: fiveSecondsAgo,
+      }),
+    ];
+
+    render(<ActiveCollaborators />);
+
+    // Should still show as active (green border) because < 12 seconds
+    expect(screen.getByText('JS')).toBeInTheDocument();
+    expect(screen.getByText('JS').closest('div')?.parentElement).toHaveClass(
+      'border-green-500'
+    );
+  });
+
+  test('cached users eventually expire after threshold', () => {
+    const now = Date.now();
+    const thirtySecondsAgo = now - 30 * 1000; // Well over 12 seconds
+
+    mockRemoteUsers = [
+      createMockAwarenessUser({
+        user: {
+          id: 'user-1',
+          name: 'Old User',
+          email: 'old@example.com',
+          color: '#ff0000',
+        },
+        lastSeen: thirtySecondsAgo,
+      }),
+    ];
+
+    const { container } = render(<ActiveCollaborators />);
+
+    // Should show with gray border (inactive) because > 12 seconds
+    expect(screen.getByText('OU')).toBeInTheDocument();
+    expect(container.querySelector('.border-gray-500')).toBeInTheDocument();
   });
 });
 
