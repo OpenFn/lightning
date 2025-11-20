@@ -276,9 +276,7 @@ describe('ManualRunPanel', () => {
 
     // Empty view should be visible
     await waitFor(() => {
-      expect(
-        screen.getByText(/empty JSON object will be used/i)
-      ).toBeInTheDocument();
+      expect(screen.getByText(/an empty JSON object/i)).toBeInTheDocument();
     });
   });
 

@@ -1,4 +1,5 @@
 import { Menu, MenuButton, MenuItem, MenuItems } from '@headlessui/react';
+import { XMarkIcon } from '@heroicons/react/24/outline';
 import { useCallback, useMemo } from 'react';
 import { useHotkeys } from 'react-hotkeys-hook';
 
@@ -8,7 +9,6 @@ import {
   useIsNewWorkflow,
   useLatestSnapshotLockVersion,
   useProjectRepoConnection,
-  useUser,
 } from '../hooks/useSessionContext';
 import { useUICommands } from '../hooks/useUI';
 import {
@@ -20,6 +20,7 @@ import {
   useWorkflowSettingsErrors,
   useWorkflowState,
 } from '../hooks/useWorkflow';
+
 import { ActiveCollaborators } from './ActiveCollaborators';
 import { AIButton } from './AIButton';
 import { Breadcrumbs } from './Breadcrumbs';
@@ -306,25 +307,6 @@ export function Header({
 
           <div className="flex flex-row gap-2 items-center">
             <div className="flex flex-row gap-2 items-center">
-              {onCloseIDE && (
-                <Tooltip
-                  content={<ShortcutKeys keys={['esc']} />}
-                  side="bottom"
-                >
-                  <button
-                    type="button"
-                    onClick={onCloseIDE}
-                    className="inline-flex items-center gap-1.5 px-2.5 py-1.5
-                      text-sm font-medium text-gray-700 bg-white border
-                      border-gray-300 rounded-md hover:bg-gray-50
-                      focus:outline-none focus:ring-2 focus:ring-offset-2
-                      focus:ring-primary-500 transition-colors"
-                  >
-                    <span className="hero-x-mark h-4 w-4" />
-                    <span>Close IDE</span>
-                  </button>
-                </Tooltip>
-              )}
               {!isOldSnapshot && (
                 <Switch checked={enabled ?? false} onChange={setEnabled} />
               )}
@@ -394,6 +376,18 @@ export function Header({
               />
             </div>
           </div>
+
+          {onCloseIDE && (
+            <Tooltip content={<ShortcutKeys keys={['esc']} />} side="bottom">
+              <button
+                onClick={onCloseIDE}
+                className="ml-2 p-1 hover:bg-gray-100 rounded transition-colors flex-shrink-0"
+                aria-label="Close IDE"
+              >
+                <XMarkIcon className="h-5 w-5 text-gray-500" />
+              </button>
+            </Tooltip>
+          )}
 
           <AIButton className="ml-2" />
 

@@ -56,7 +56,7 @@ export function LogLevelFilter({
 
       {isOpen && (
         <ul
-          className="absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded-md bg-slate-600 py-1 text-base shadow-lg ring-1 ring-black/5 focus:outline-none sm:text-sm"
+          className="absolute z-10 mt-1 max-h-60 min-w-full w-max overflow-auto rounded-md bg-slate-600 py-1 text-base shadow-lg ring-1 ring-black/5 focus:outline-none sm:text-sm"
           role="listbox"
         >
           {LOG_LEVELS.map(level => (
