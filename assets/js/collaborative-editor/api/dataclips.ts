@@ -1,5 +1,5 @@
-import type { Dataclip } from "../../manual-run-panel/types";
-import { getCsrfToken } from "../lib/csrf";
+import type { Dataclip } from '../../manual-run-panel/types';
+import { getCsrfToken } from '../lib/csrf';
 
 export type { Dataclip };
 
@@ -50,13 +50,13 @@ export async function searchDataclips(
     ...(filters?.named_only !== undefined && {
       named_only: String(filters.named_only),
     }),
-    limit: "10",
+    limit: '10',
   });
 
   const response = await fetch(
     `/projects/${projectId}/jobs/${jobId}/dataclips?${params}`,
     {
-      credentials: "same-origin",
+      credentials: 'same-origin',
     }
   );
 
@@ -78,7 +78,7 @@ export async function getRunDataclip(
   const response = await fetch(
     `/projects/${projectId}/runs/${runId}/dataclip?job_id=${jobId}`,
     {
-      credentials: "same-origin",
+      credentials: 'same-origin',
     }
   );
 
@@ -105,18 +105,18 @@ export async function updateDataclipName(
   const response = await fetch(
     `/projects/${projectId}/dataclips/${dataclipId}`,
     {
-      method: "PATCH",
-      credentials: "same-origin",
+      method: 'PATCH',
+      credentials: 'same-origin',
       headers: {
-        "Content-Type": "application/json",
-        "X-CSRF-Token": csrfToken || "",
+        'Content-Type': 'application/json',
+        'X-CSRF-Token': csrfToken || '',
       },
       body: JSON.stringify({ name }),
     }
   );
 
   if (!response.ok) {
-    let errorMessage = "Failed to update dataclip name";
+    let errorMessage = 'Failed to update dataclip name';
     try {
       const error = (await response.json()) as { error?: string };
       errorMessage = error.error || errorMessage;
@@ -146,11 +146,11 @@ export async function submitManualRun(
   const response = await fetch(
     `/projects/${params.projectId}/workflows/${params.workflowId}/runs`,
     {
-      method: "POST",
-      credentials: "same-origin",
+      method: 'POST',
+      credentials: 'same-origin',
       headers: {
-        "Content-Type": "application/json",
-        "X-CSRF-Token": csrfToken || "",
+        'Content-Type': 'application/json',
+        'X-CSRF-Token': csrfToken || '',
       },
       body: JSON.stringify(body),
     }
@@ -158,7 +158,7 @@ export async function submitManualRun(
 
   if (!response.ok) {
     const error = (await response.json()) as { error?: string };
-    throw new Error(error.error || "Failed to submit manual run");
+    throw new Error(error.error || 'Failed to submit manual run');
   }
 
   return response.json() as Promise<ManualRunResponse>;

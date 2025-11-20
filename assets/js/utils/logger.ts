@@ -1,9 +1,10 @@
-import adze, { setup } from "adze";
+import adze, { setup } from 'adze';
 
 // Set the format to "json"
 setup({
-  activeLevel: "debug",
-  timestampFormatter: (date) => date.toLocaleTimeString('en-US', { hour12: false }),
+  activeLevel: 'debug',
+  timestampFormatter: date =>
+    date.toLocaleTimeString('en-US', { hour12: false }),
 });
 
 const logger = adze.seal();

@@ -10,9 +10,9 @@
  * and is fully synchronized, eliminating the need for defensive null checks.
  */
 
-import { useSession } from "../hooks/useSession";
-import { useSessionContextLoading } from "../hooks/useSessionContext";
-import { useWorkflowState } from "../hooks/useWorkflow";
+import { useSession } from '../hooks/useSession';
+import { useSessionContextLoading } from '../hooks/useSessionContext';
+import { useWorkflowState } from '../hooks/useWorkflow';
 
 interface LoadingBoundaryProps {
   children: React.ReactNode;

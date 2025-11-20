@@ -19,6 +19,7 @@ import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, test, vi } from 'vitest';
 import { RunViewerPanel } from '../../../../js/collaborative-editor/components/run-viewer/RunViewerPanel';
 import * as useHistoryModule from '../../../../js/collaborative-editor/hooks/useHistory';
+import * as useWorkflowModule from '../../../../js/collaborative-editor/hooks/useWorkflow';
 import * as useSessionModule from '../../../../js/collaborative-editor/hooks/useSession';
 import type { RunDetail } from '../../../../js/collaborative-editor/types/history';
 
@@ -59,6 +60,8 @@ const mockUseActiveRunLoading = vi.spyOn(
 );
 const mockUseActiveRunError = vi.spyOn(useHistoryModule, 'useActiveRunError');
 const mockUseHistoryCommands = vi.spyOn(useHistoryModule, 'useHistoryCommands');
+const mockUseJobMatchesRun = vi.spyOn(useHistoryModule, 'useJobMatchesRun');
+const mockUseCurrentJob = vi.spyOn(useWorkflowModule, 'useCurrentJob');
 const mockUseSession = vi.spyOn(useSessionModule, 'useSession');
 
 // Mock run factory
@@ -92,6 +95,8 @@ describe('RunViewerPanel', () => {
 
     // Default mocks
     mockUseHistoryCommands.mockReturnValue(mockCommands as any);
+    mockUseJobMatchesRun.mockReturnValue(true); // Default: job matches run
+    mockUseCurrentJob.mockReturnValue({ job: null, ytext: null }); // Default: no job selected
     mockUseSession.mockReturnValue({
       provider: {
         socket: {},
@@ -280,7 +285,7 @@ describe('RunViewerPanel', () => {
       mockUseActiveRunLoading.mockReturnValue(false);
       mockUseActiveRunError.mockReturnValue(null);
 
-      render(
+      const { container } = render(
         <RunViewerPanel
           followRunId="run-1"
           activeTab="run"
@@ -288,10 +293,162 @@ describe('RunViewerPanel', () => {
         />
       );
 
-      const region = screen.getByRole('region', {
-        name: /run output viewer/i,
+      const panelGroup = container.querySelector('[data-panel-group]');
+      expect(panelGroup).toBeInTheDocument();
+    });
+  });
+
+  describe('job matching visual feedback', () => {
+    test('panel has normal opacity when job matches run', () => {
+      mockUseActiveRun.mockReturnValue(createMockRun());
+      mockUseActiveRunLoading.mockReturnValue(false);
+      mockUseActiveRunError.mockReturnValue(null);
+      mockUseJobMatchesRun.mockReturnValue(true);
+      mockUseCurrentJob.mockReturnValue({
+        job: { id: 'job-1', name: 'Test Job' } as any,
+        ytext: null,
       });
-      expect(region).toBeInTheDocument();
+
+      const { container } = render(
+        <RunViewerPanel
+          followRunId="run-1"
+          activeTab="log"
+          onTabChange={vi.fn()}
+        />
+      );
+
+      const panelGroup = container.querySelector('[data-panel-group]');
+      expect(panelGroup).toHaveClass('h-full');
+      expect(panelGroup).not.toHaveClass('opacity-50');
+    });
+
+    test('panel is greyed out when job does not match run', () => {
+      mockUseActiveRun.mockReturnValue(createMockRun());
+      mockUseActiveRunLoading.mockReturnValue(false);
+      mockUseActiveRunError.mockReturnValue(null);
+      mockUseJobMatchesRun.mockReturnValue(false);
+      mockUseCurrentJob.mockReturnValue({
+        job: { id: 'job-2', name: 'Different Job' } as any,
+        ytext: null,
+      });
+
+      const { container } = render(
+        <RunViewerPanel
+          followRunId="run-1"
+          activeTab="log"
+          onTabChange={vi.fn()}
+        />
+      );
+
+      const panelGroup = container.querySelector('[data-panel-group]');
+      expect(panelGroup).toHaveClass('h-full');
+      expect(panelGroup).toHaveClass('opacity-50');
+    });
+
+    test('panel remains normal when no run is loaded', () => {
+      mockUseActiveRun.mockReturnValue(null);
+      mockUseActiveRunLoading.mockReturnValue(false);
+      mockUseActiveRunError.mockReturnValue(null);
+      mockUseJobMatchesRun.mockReturnValue(true); // Hook returns true when no run
+      mockUseCurrentJob.mockReturnValue({
+        job: { id: 'job-1', name: 'Test Job' } as any,
+        ytext: null,
+      });
+
+      render(
+        <RunViewerPanel
+          followRunId={null}
+          activeTab="log"
+          onTabChange={vi.fn()}
+        />
+      );
+
+      // Should show empty state, not the panel with opacity
+      expect(screen.getByText(/after you click run/i)).toBeInTheDocument();
+    });
+
+    test('panel opacity changes when job matching state changes', () => {
+      mockUseActiveRun.mockReturnValue(createMockRun());
+      mockUseActiveRunLoading.mockReturnValue(false);
+      mockUseActiveRunError.mockReturnValue(null);
+      mockUseJobMatchesRun.mockReturnValue(true);
+      mockUseCurrentJob.mockReturnValue({
+        job: { id: 'job-1', name: 'Test Job' } as any,
+        ytext: null,
+      });
+
+      const { container, rerender } = render(
+        <RunViewerPanel
+          followRunId="run-1"
+          activeTab="log"
+          onTabChange={vi.fn()}
+        />
+      );
+
+      let panelGroup = container.querySelector('[data-panel-group]');
+      expect(panelGroup).not.toHaveClass('opacity-50');
+
+      // Simulate job change to non-matching job
+      mockUseJobMatchesRun.mockReturnValue(false);
+      mockUseCurrentJob.mockReturnValue({
+        job: { id: 'job-2', name: 'Different Job' } as any,
+        ytext: null,
+      });
+
+      rerender(
+        <RunViewerPanel
+          followRunId="run-1"
+          activeTab="log"
+          onTabChange={vi.fn()}
+        />
+      );
+
+      panelGroup = container.querySelector('[data-panel-group]');
+      expect(panelGroup).toHaveClass('opacity-50');
+    });
+
+    test('panel works correctly across all tab types when job does not match', () => {
+      mockUseActiveRun.mockReturnValue(createMockRun());
+      mockUseActiveRunLoading.mockReturnValue(false);
+      mockUseActiveRunError.mockReturnValue(null);
+      mockUseJobMatchesRun.mockReturnValue(false);
+      mockUseCurrentJob.mockReturnValue({
+        job: { id: 'job-2', name: 'Different Job' } as any,
+        ytext: null,
+      });
+
+      const { container: logContainer } = render(
+        <RunViewerPanel
+          followRunId="run-1"
+          activeTab="log"
+          onTabChange={vi.fn()}
+        />
+      );
+      expect(logContainer.querySelector('[data-panel-group]')).toHaveClass(
+        'opacity-50'
+      );
+
+      const { container: inputContainer } = render(
+        <RunViewerPanel
+          followRunId="run-1"
+          activeTab="input"
+          onTabChange={vi.fn()}
+        />
+      );
+      expect(inputContainer.querySelector('[data-panel-group]')).toHaveClass(
+        'opacity-50'
+      );
+
+      const { container: outputContainer } = render(
+        <RunViewerPanel
+          followRunId="run-1"
+          activeTab="output"
+          onTabChange={vi.fn()}
+        />
+      );
+      expect(outputContainer.querySelector('[data-panel-group]')).toHaveClass(
+        'opacity-50'
+      );
     });
   });
 });

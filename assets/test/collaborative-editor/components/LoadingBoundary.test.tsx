@@ -12,22 +12,22 @@
  * - Prevents race conditions from rendering before sync
  */
 
-import { render, screen } from "@testing-library/react";
-import { beforeEach, describe, expect, test, vi } from "vitest";
-import { LoadingBoundary } from "../../../js/collaborative-editor/components/LoadingBoundary";
-import * as useSessionModule from "../../../js/collaborative-editor/hooks/useSession";
-import * as useSessionContextModule from "../../../js/collaborative-editor/hooks/useSessionContext";
-import * as useWorkflowModule from "../../../js/collaborative-editor/hooks/useWorkflow";
-import type { SessionState } from "../../../js/collaborative-editor/stores/createSessionStore";
-import type { Workflow } from "../../../js/collaborative-editor/types/workflow";
+import { render, screen } from '@testing-library/react';
+import { beforeEach, describe, expect, test, vi } from 'vitest';
+import { LoadingBoundary } from '../../../js/collaborative-editor/components/LoadingBoundary';
+import * as useSessionModule from '../../../js/collaborative-editor/hooks/useSession';
+import * as useSessionContextModule from '../../../js/collaborative-editor/hooks/useSessionContext';
+import * as useWorkflowModule from '../../../js/collaborative-editor/hooks/useWorkflow';
+import type { SessionState } from '../../../js/collaborative-editor/stores/createSessionStore';
+import type { Workflow } from '../../../js/collaborative-editor/types/workflow';
 
 // Mock hooks
-const mockUseSession = vi.spyOn(useSessionModule, "useSession");
+const mockUseSession = vi.spyOn(useSessionModule, 'useSession');
 const mockUseSessionContextLoading = vi.spyOn(
   useSessionContextModule,
-  "useSessionContextLoading"
+  'useSessionContextLoading'
 );
-const mockUseWorkflowState = vi.spyOn(useWorkflowModule, "useWorkflowState");
+const mockUseWorkflowState = vi.spyOn(useWorkflowModule, 'useWorkflowState');
 
 // Mock session state factory
 const createMockSessionState = (
@@ -46,23 +46,23 @@ const createMockSessionState = (
 
 // Mock workflow factory
 const createMockWorkflow = (overrides?: Partial<Workflow>): Workflow => ({
-  id: "workflow-1",
-  name: "Test Workflow",
+  id: 'workflow-1',
+  name: 'Test Workflow',
   jobs: [],
   triggers: [],
   edges: [],
   ...overrides,
 });
 
-describe("LoadingBoundary", () => {
+describe('LoadingBoundary', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     // By default, mock session context as loaded (not loading)
     mockUseSessionContextLoading.mockReturnValue(false);
   });
 
-  describe("loading states", () => {
-    test("renders loading screen when session.isSynced is false", () => {
+  describe('loading states', () => {
+    test('renders loading screen when session.isSynced is false', () => {
       // Session not synced yet
       mockUseSession.mockReturnValue(
         createMockSessionState({
@@ -81,11 +81,11 @@ describe("LoadingBoundary", () => {
       );
 
       // Should show loading screen
-      expect(screen.queryByTestId("child-content")).not.toBeInTheDocument();
-      expect(screen.getByText("Loading workflow")).toBeInTheDocument();
+      expect(screen.queryByTestId('child-content')).not.toBeInTheDocument();
+      expect(screen.getByText('Loading workflow')).toBeInTheDocument();
     });
 
-    test("renders loading screen when workflow is null", () => {
+    test('renders loading screen when workflow is null', () => {
       // Session is synced
       mockUseSession.mockReturnValue(
         createMockSessionState({
@@ -104,11 +104,11 @@ describe("LoadingBoundary", () => {
       );
 
       // Should show loading screen
-      expect(screen.queryByTestId("child-content")).not.toBeInTheDocument();
-      expect(screen.getByText("Loading workflow")).toBeInTheDocument();
+      expect(screen.queryByTestId('child-content')).not.toBeInTheDocument();
+      expect(screen.getByText('Loading workflow')).toBeInTheDocument();
     });
 
-    test("renders loading screen when both conditions are false", () => {
+    test('renders loading screen when both conditions are false', () => {
       // Neither synced nor workflow available
       mockUseSession.mockReturnValue(
         createMockSessionState({
@@ -126,13 +126,13 @@ describe("LoadingBoundary", () => {
       );
 
       // Should show loading screen
-      expect(screen.queryByTestId("child-content")).not.toBeInTheDocument();
-      expect(screen.getByText("Loading workflow")).toBeInTheDocument();
+      expect(screen.queryByTestId('child-content')).not.toBeInTheDocument();
+      expect(screen.getByText('Loading workflow')).toBeInTheDocument();
     });
   });
 
-  describe("ready state", () => {
-    test("renders children when session.isSynced is true AND workflow is not null", () => {
+  describe('ready state', () => {
+    test('renders children when session.isSynced is true AND workflow is not null', () => {
       // Session is synced
       mockUseSession.mockReturnValue(
         createMockSessionState({
@@ -152,14 +152,14 @@ describe("LoadingBoundary", () => {
       );
 
       // Should render children
-      expect(screen.getByTestId("child-content")).toBeInTheDocument();
-      expect(screen.getByText("Child Content")).toBeInTheDocument();
+      expect(screen.getByTestId('child-content')).toBeInTheDocument();
+      expect(screen.getByText('Child Content')).toBeInTheDocument();
 
       // Should NOT show loading screen
-      expect(screen.queryByText("Loading workflow")).not.toBeInTheDocument();
+      expect(screen.queryByText('Loading workflow')).not.toBeInTheDocument();
     });
 
-    test("renders multiple children when ready", () => {
+    test('renders multiple children when ready', () => {
       mockUseSession.mockReturnValue(
         createMockSessionState({
           isConnected: true,
@@ -179,14 +179,14 @@ describe("LoadingBoundary", () => {
       );
 
       // All children should be rendered
-      expect(screen.getByTestId("child-1")).toBeInTheDocument();
-      expect(screen.getByTestId("child-2")).toBeInTheDocument();
-      expect(screen.getByTestId("child-3")).toBeInTheDocument();
+      expect(screen.getByTestId('child-1')).toBeInTheDocument();
+      expect(screen.getByTestId('child-2')).toBeInTheDocument();
+      expect(screen.getByTestId('child-3')).toBeInTheDocument();
     });
   });
 
-  describe("loading message", () => {
-    test("shows correct loading message", () => {
+  describe('loading message', () => {
+    test('shows correct loading message', () => {
       mockUseSession.mockReturnValue(
         createMockSessionState({
           isSynced: false,
@@ -201,10 +201,10 @@ describe("LoadingBoundary", () => {
         </LoadingBoundary>
       );
 
-      expect(screen.getByText("Loading workflow")).toBeInTheDocument();
+      expect(screen.getByText('Loading workflow')).toBeInTheDocument();
     });
 
-    test("loading screen has proper structure", () => {
+    test('loading screen has proper structure', () => {
       mockUseSession.mockReturnValue(
         createMockSessionState({
           isSynced: false,
@@ -221,25 +221,25 @@ describe("LoadingBoundary", () => {
 
       // Check for flex container with centering
       const flexContainer = container.querySelector(
-        ".flex.items-center.justify-center"
+        '.flex.items-center.justify-center'
       );
       expect(flexContainer).toBeInTheDocument();
 
       // Check for loading text
-      const loadingText = container.querySelector(".text-gray-600");
+      const loadingText = container.querySelector('.text-gray-600');
       expect(loadingText).toBeInTheDocument();
-      expect(loadingText).toHaveTextContent("Loading workflow");
+      expect(loadingText).toHaveTextContent('Loading workflow');
 
       // Check for animated ping spinner
-      const pingSpin = container.querySelector(".animate-ping");
+      const pingSpin = container.querySelector('.animate-ping');
       expect(pingSpin).toBeInTheDocument();
-      expect(pingSpin).toHaveClass("rounded-full");
-      expect(pingSpin).toHaveClass("bg-primary-400");
+      expect(pingSpin).toHaveClass('rounded-full');
+      expect(pingSpin).toHaveClass('bg-primary-400');
     });
   });
 
-  describe("edge cases", () => {
-    test("handles empty children gracefully", () => {
+  describe('edge cases', () => {
+    test('handles empty children gracefully', () => {
       mockUseSession.mockReturnValue(
         createMockSessionState({
           isConnected: true,
@@ -254,10 +254,10 @@ describe("LoadingBoundary", () => {
 
       // Should render without errors
       expect(container).toBeInTheDocument();
-      expect(screen.queryByText("Loading workflow")).not.toBeInTheDocument();
+      expect(screen.queryByText('Loading workflow')).not.toBeInTheDocument();
     });
 
-    test("handles isConnected false but isSynced true (edge case)", () => {
+    test('handles isConnected false but isSynced true (edge case)', () => {
       // This shouldn't happen in practice, but test defensive behavior
       mockUseSession.mockReturnValue(
         createMockSessionState({
@@ -276,10 +276,10 @@ describe("LoadingBoundary", () => {
       );
 
       // Should render children since settled is true
-      expect(screen.getByTestId("child-content")).toBeInTheDocument();
+      expect(screen.getByTestId('child-content')).toBeInTheDocument();
     });
 
-    test("handles workflow with minimal data", () => {
+    test('handles workflow with minimal data', () => {
       mockUseSession.mockReturnValue(
         createMockSessionState({
           isConnected: true,
@@ -304,12 +304,12 @@ describe("LoadingBoundary", () => {
       );
 
       // Should render children - workflow exists even if empty
-      expect(screen.getByTestId("child-content")).toBeInTheDocument();
+      expect(screen.getByTestId('child-content')).toBeInTheDocument();
     });
   });
 
-  describe("bug prevention", () => {
-    test("prevents rendering before sync (Bug 1: nodes collapsing)", () => {
+  describe('bug prevention', () => {
+    test('prevents rendering before sync (Bug 1: nodes collapsing)', () => {
       // Simulates scenario where positions not yet synced
       mockUseSession.mockReturnValue(
         createMockSessionState({
@@ -327,11 +327,11 @@ describe("LoadingBoundary", () => {
       );
 
       // Should NOT render diagram until synced
-      expect(screen.queryByTestId("workflow-diagram")).not.toBeInTheDocument();
-      expect(screen.getByText("Loading workflow")).toBeInTheDocument();
+      expect(screen.queryByTestId('workflow-diagram')).not.toBeInTheDocument();
+      expect(screen.getByText('Loading workflow')).toBeInTheDocument();
     });
 
-    test("prevents rendering before workflow loaded (Bug 2: old version errors)", () => {
+    test('prevents rendering before workflow loaded (Bug 2: old version errors)', () => {
       // Simulates scenario where lock_version not yet synced
       mockUseSession.mockReturnValue(
         createMockSessionState({
@@ -349,11 +349,11 @@ describe("LoadingBoundary", () => {
       );
 
       // Should NOT render editor until workflow available
-      expect(screen.queryByTestId("workflow-editor")).not.toBeInTheDocument();
-      expect(screen.getByText("Loading workflow")).toBeInTheDocument();
+      expect(screen.queryByTestId('workflow-editor')).not.toBeInTheDocument();
+      expect(screen.getByText('Loading workflow')).toBeInTheDocument();
     });
 
-    test("allows rendering only when both conditions met", () => {
+    test('allows rendering only when both conditions met', () => {
       // First: not synced
       mockUseSession.mockReturnValue(
         createMockSessionState({
@@ -369,7 +369,7 @@ describe("LoadingBoundary", () => {
         </LoadingBoundary>
       );
 
-      expect(screen.queryByTestId("content")).not.toBeInTheDocument();
+      expect(screen.queryByTestId('content')).not.toBeInTheDocument();
 
       // Second: synced but no workflow
       mockUseSession.mockReturnValue(
@@ -386,7 +386,7 @@ describe("LoadingBoundary", () => {
         </LoadingBoundary>
       );
 
-      expect(screen.queryByTestId("content")).not.toBeInTheDocument();
+      expect(screen.queryByTestId('content')).not.toBeInTheDocument();
 
       // Third: both conditions met
       mockUseSession.mockReturnValue(
@@ -404,12 +404,12 @@ describe("LoadingBoundary", () => {
       );
 
       // NOW it should render
-      expect(screen.getByTestId("content")).toBeInTheDocument();
+      expect(screen.getByTestId('content')).toBeInTheDocument();
     });
   });
 
-  describe("integration with hooks", () => {
-    test("calls useSession hook", () => {
+  describe('integration with hooks', () => {
+    test('calls useSession hook', () => {
       mockUseSession.mockReturnValue(
         createMockSessionState({
           isSynced: true,
@@ -427,7 +427,7 @@ describe("LoadingBoundary", () => {
       expect(mockUseSession).toHaveBeenCalled();
     });
 
-    test("calls useWorkflowState hook with correct selector", () => {
+    test('calls useWorkflowState hook with correct selector', () => {
       mockUseSession.mockReturnValue(
         createMockSessionState({
           isSynced: true,

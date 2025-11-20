@@ -6,7 +6,7 @@ enableMapSet();
 
 // Increase max listeners to avoid warning during test runs
 // This is safe for tests as multiple test files add cleanup handlers
-process.setMaxListeners(20);
+process.setMaxListeners(24);
 
 // Suppress debug logs during tests
 console.debug = () => {};

@@ -40,7 +40,7 @@ interface ReduxDevToolsConfig {
     lock?: boolean;
     persist?: boolean;
     export?: boolean;
-    import?: "custom" | boolean;
+    import?: 'custom' | boolean;
     jump?: boolean;
     skip?: boolean;
     reorder?: boolean;
@@ -137,7 +137,7 @@ function serializeState<T extends Record<string, any>>(
     // Handle special cases
     if (value === null || value === undefined) {
       serialized[key] = value;
-    } else if (typeof value === "function") {
+    } else if (typeof value === 'function') {
       // Skip functions
       continue;
     } else if (value instanceof Map) {
@@ -180,7 +180,7 @@ export function wrapStoreWithDevTools<TState extends Record<string, any>>(
   if (!devToolsExtension) {
     console.warn(
       `[${config.name}] Redux DevTools extension not found. ` +
-        "Install it from https://github.com/reduxjs/redux-devtools"
+        'Install it from https://github.com/reduxjs/redux-devtools'
     );
     return {
       connect: () => {},
@@ -210,7 +210,7 @@ export function wrapStoreWithDevTools<TState extends Record<string, any>>(
         lock: true,
         persist: false,
         export: true,
-        import: "custom",
+        import: 'custom',
         jump: true,
         skip: true,
         reorder: true,
@@ -229,7 +229,7 @@ export function wrapStoreWithDevTools<TState extends Record<string, any>>(
 
     // Subscribe to DevTools actions (time-travel, reset, etc.)
     devTools.subscribe((message: any) => {
-      if (message.type === "DISPATCH" && message.state) {
+      if (message.type === 'DISPATCH' && message.state) {
         // Time-travel: DevTools is asking us to load a previous state
         try {
           isTimeTravel = true;
@@ -242,7 +242,7 @@ export function wrapStoreWithDevTools<TState extends Record<string, any>>(
           console.debug(
             `[${config.name}] Time-travel requested:`,
             message.payload,
-            "(not fully implemented yet)"
+            '(not fully implemented yet)'
           );
 
           // The store will need to handle this - we'll provide a callback
@@ -255,7 +255,7 @@ export function wrapStoreWithDevTools<TState extends Record<string, any>>(
         } finally {
           isTimeTravel = false;
         }
-      } else if (message.type === "ACTION" && message.payload) {
+      } else if (message.type === 'ACTION' && message.payload) {
         // Custom action dispatched from DevTools
         console.debug(
           `[${config.name}] Custom action from DevTools:`,

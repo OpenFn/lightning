@@ -17,7 +17,7 @@
  * 4. Y.Doc syncs fresh data from the server for the selected version
  */
 
-import { useURLState } from "#/react/lib/use-url-state";
+import { useURLState } from '#/react/lib/use-url-state';
 
 /**
  * Hook that provides a version selection handler.
@@ -27,10 +27,10 @@ import { useURLState } from "#/react/lib/use-url-state";
 export function useVersionSelect() {
   const { updateSearchParams } = useURLState();
 
-  const handleVersionSelect = (version: number | "latest") => {
+  const handleVersionSelect = (version: number | 'latest') => {
     // Update URL parameter to trigger version switch
     // SessionProvider will detect the change and recreate the Y.Doc/provider
-    if (version === "latest") {
+    if (version === 'latest') {
       updateSearchParams({ v: null }); // Remove version param
     } else {
       updateSearchParams({ v: String(version) }); // Set version param

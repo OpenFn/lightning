@@ -58,8 +58,8 @@ export const AiAssistantToggle: React.FC<AiAssistantToggleProps> = ({
   const tooltipText = isDisabled
     ? 'Switch to the latest version of this workflow to use the AI Assistant.'
     : showAiAssistant === true
-    ? 'Click to close the AI Assistant'
-    : 'Click to open the AI Assistant';
+      ? 'Click to close the AI Assistant'
+      : 'Click to open the AI Assistant';
 
   useEffect(() => {
     if (!containerRef.current) return;

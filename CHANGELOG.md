@@ -17,6 +17,14 @@ and this project adheres to
 
 ### Added
 
+### Changed
+
+### Fixed
+
+## [2.15.0-pre] - 2025-11-20
+
+### Added
+
 - Show collaborators mouse pointers on the workflow canvas
   [#3810](https://github.com/OpenFn/lightning/issues/3810)
 
@@ -26,6 +34,9 @@ and this project adheres to
   [#3981](https://github.com/OpenFn/lightning/issues/3981)
 - Dropped react-hotkeys-hook for custom priority based key handler hook
   [#3981](https://github.com/OpenFn/lightning/issues/3981)
+- Simplified IDE by only letting users see the "Create a New Manual Run Panel"
+  when an existing Run isn't already loaded. Cleaned up the Run panel.
+  [#4006](https://github.com/OpenFn/lightning/issues/4006)
 - Consolidated RunStore functionality into HistoryStore in collaborative editor
   for improved state management and reduced complexity
 - Default failure notifications for project users are now disabled to minimize

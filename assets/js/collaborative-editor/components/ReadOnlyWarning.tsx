@@ -1,8 +1,8 @@
-import { cn } from "../../utils/cn";
-import { useIsNewWorkflow } from "../hooks/useSessionContext";
-import { useWorkflowReadOnly } from "../hooks/useWorkflow";
+import { cn } from '../../utils/cn';
+import { useIsNewWorkflow } from '../hooks/useSessionContext';
+import { useWorkflowReadOnly } from '../hooks/useWorkflow';
 
-import { Tooltip } from "./Tooltip";
+import { Tooltip } from './Tooltip';
 
 interface ReadOnlyWarningProps {
   id?: string;
@@ -20,8 +20,8 @@ interface ReadOnlyWarningProps {
  * @heroicons/react
  */
 export const ReadOnlyWarning: React.FC<ReadOnlyWarningProps> = ({
-  id = "edit-disabled-warning",
-  className = "",
+  id = 'edit-disabled-warning',
+  className = '',
 }) => {
   const { isReadOnly, tooltipMessage } = useWorkflowReadOnly();
   const isNewWorkflow = useIsNewWorkflow();
@@ -33,7 +33,7 @@ export const ReadOnlyWarning: React.FC<ReadOnlyWarningProps> = ({
     <Tooltip content={tooltipMessage} side="bottom">
       <span
         id={id}
-        className={cn("cursor-pointer text-xs flex items-center", className)}
+        className={cn('cursor-pointer text-xs flex items-center', className)}
       >
         <span
           className="hero-information-circle-solid h-4 w-4

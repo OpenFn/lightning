@@ -5,27 +5,27 @@
  * should be editable based on deletion state, permissions, and snapshot version.
  */
 
-import { act, renderHook, waitFor } from "@testing-library/react";
-import type React from "react";
-import { describe, expect, test } from "vitest";
-import * as Y from "yjs";
+import { act, renderHook, waitFor } from '@testing-library/react';
+import type React from 'react';
+import { describe, expect, test } from 'vitest';
+import * as Y from 'yjs';
 
-import type { StoreContextValue } from "../../../js/collaborative-editor/contexts/StoreProvider";
-import { StoreContext } from "../../../js/collaborative-editor/contexts/StoreProvider";
-import { useWorkflowReadOnly } from "../../../js/collaborative-editor/hooks/useWorkflow";
-import type { SessionContextStoreInstance } from "../../../js/collaborative-editor/stores/createSessionContextStore";
-import { createSessionContextStore } from "../../../js/collaborative-editor/stores/createSessionContextStore";
-import type { WorkflowStoreInstance } from "../../../js/collaborative-editor/stores/createWorkflowStore";
-import { createWorkflowStore } from "../../../js/collaborative-editor/stores/createWorkflowStore";
-import type { Session } from "../../../js/collaborative-editor/types/session";
+import type { StoreContextValue } from '../../../js/collaborative-editor/contexts/StoreProvider';
+import { StoreContext } from '../../../js/collaborative-editor/contexts/StoreProvider';
+import { useWorkflowReadOnly } from '../../../js/collaborative-editor/hooks/useWorkflow';
+import type { SessionContextStoreInstance } from '../../../js/collaborative-editor/stores/createSessionContextStore';
+import { createSessionContextStore } from '../../../js/collaborative-editor/stores/createSessionContextStore';
+import type { WorkflowStoreInstance } from '../../../js/collaborative-editor/stores/createWorkflowStore';
+import { createWorkflowStore } from '../../../js/collaborative-editor/stores/createWorkflowStore';
+import type { Session } from '../../../js/collaborative-editor/types/session';
 import {
   createSessionContext,
   mockPermissions,
-} from "../__helpers__/sessionContextFactory";
+} from '../__helpers__/sessionContextFactory';
 import {
   createMockPhoenixChannel,
   createMockPhoenixChannelProvider,
-} from "../mocks/phoenixChannel";
+} from '../mocks/phoenixChannel';
 
 // =============================================================================
 // TEST HELPERS
@@ -61,20 +61,20 @@ function createWrapper(options: WrapperOptions = {}): [
 
   // Create Y.Doc and set up workflow data
   const ydoc = new Y.Doc() as Session.WorkflowDoc;
-  const workflowMap = ydoc.getMap("workflow");
-  workflowMap.set("id", "test-workflow-123");
-  workflowMap.set("name", "Test Workflow");
-  workflowMap.set("lock_version", workflowLockVersion);
-  workflowMap.set("deleted_at", workflowDeletedAt);
+  const workflowMap = ydoc.getMap('workflow');
+  workflowMap.set('id', 'test-workflow-123');
+  workflowMap.set('name', 'Test Workflow');
+  workflowMap.set('lock_version', workflowLockVersion);
+  workflowMap.set('deleted_at', workflowDeletedAt);
 
   // Initialize empty arrays for jobs, triggers, edges
-  ydoc.getArray("jobs");
-  ydoc.getArray("triggers");
-  ydoc.getArray("edges");
-  ydoc.getMap("positions");
+  ydoc.getArray('jobs');
+  ydoc.getArray('triggers');
+  ydoc.getArray('edges');
+  ydoc.getMap('positions');
 
   // Connect workflow store to Y.Doc
-  const mockChannel = createMockPhoenixChannel("test:room");
+  const mockChannel = createMockPhoenixChannel('test:room');
   const mockProvider = createMockPhoenixChannelProvider(mockChannel);
   (mockProvider as any).doc = ydoc;
   workflowStore.connect(ydoc, mockProvider as any);
@@ -85,7 +85,7 @@ function createWrapper(options: WrapperOptions = {}): [
   // Helper function to emit session context
   const emitSessionContext = () => {
     (mockChannel as any)._test.emit(
-      "session_context",
+      'session_context',
       createSessionContext({
         permissions,
         latest_snapshot_lock_version: latestSnapshotLockVersion,
@@ -124,8 +124,8 @@ function createWrapper(options: WrapperOptions = {}): [
 // DELETED WORKFLOW TESTS
 // =============================================================================
 
-describe("useWorkflowReadOnly - Deleted Workflow", () => {
-  test("returns read-only true with deletion message for deleted workflow", async () => {
+describe('useWorkflowReadOnly - Deleted Workflow', () => {
+  test('returns read-only true with deletion message for deleted workflow', async () => {
     const [wrapper, { emitSessionContext }] = createWrapper({
       permissions: { can_edit_workflow: true, can_run_workflow: true },
       workflowDeletedAt: new Date().toISOString(),
@@ -140,12 +140,12 @@ describe("useWorkflowReadOnly - Deleted Workflow", () => {
     await waitFor(() => {
       expect(result.current.isReadOnly).toBe(true);
       expect(result.current.tooltipMessage).toBe(
-        "This workflow has been deleted and cannot be edited"
+        'This workflow has been deleted and cannot be edited'
       );
     });
   });
 
-  test("deleted state takes priority over permission restrictions", async () => {
+  test('deleted state takes priority over permission restrictions', async () => {
     const [wrapper, { emitSessionContext }] = createWrapper({
       permissions: { can_edit_workflow: false, can_run_workflow: false },
       workflowDeletedAt: new Date().toISOString(),
@@ -160,12 +160,12 @@ describe("useWorkflowReadOnly - Deleted Workflow", () => {
     await waitFor(() => {
       expect(result.current.isReadOnly).toBe(true);
       expect(result.current.tooltipMessage).toBe(
-        "This workflow has been deleted and cannot be edited"
+        'This workflow has been deleted and cannot be edited'
       );
     });
   });
 
-  test("deleted state takes priority over old snapshot", async () => {
+  test('deleted state takes priority over old snapshot', async () => {
     const [wrapper, { emitSessionContext }] = createWrapper({
       permissions: { can_edit_workflow: true, can_run_workflow: true },
       latestSnapshotLockVersion: 2,
@@ -182,7 +182,7 @@ describe("useWorkflowReadOnly - Deleted Workflow", () => {
     await waitFor(() => {
       expect(result.current.isReadOnly).toBe(true);
       expect(result.current.tooltipMessage).toBe(
-        "This workflow has been deleted and cannot be edited"
+        'This workflow has been deleted and cannot be edited'
       );
     });
   });
@@ -192,8 +192,8 @@ describe("useWorkflowReadOnly - Deleted Workflow", () => {
 // PERMISSION TESTS
 // =============================================================================
 
-describe("useWorkflowReadOnly - Permissions", () => {
-  test("returns read-only true with permission message when user lacks edit permission", async () => {
+describe('useWorkflowReadOnly - Permissions', () => {
+  test('returns read-only true with permission message when user lacks edit permission', async () => {
     const [wrapper, { emitSessionContext }] = createWrapper({
       permissions: { can_edit_workflow: false, can_run_workflow: false },
       workflowDeletedAt: null,
@@ -208,12 +208,12 @@ describe("useWorkflowReadOnly - Permissions", () => {
     await waitFor(() => {
       expect(result.current.isReadOnly).toBe(true);
       expect(result.current.tooltipMessage).toBe(
-        "You do not have permission to edit this workflow"
+        'You do not have permission to edit this workflow'
       );
     });
   });
 
-  test("permission restriction takes priority over old snapshot", async () => {
+  test('permission restriction takes priority over old snapshot', async () => {
     const [wrapper, { emitSessionContext }] = createWrapper({
       permissions: { can_edit_workflow: false, can_run_workflow: false },
       latestSnapshotLockVersion: 2,
@@ -230,7 +230,7 @@ describe("useWorkflowReadOnly - Permissions", () => {
     await waitFor(() => {
       expect(result.current.isReadOnly).toBe(true);
       expect(result.current.tooltipMessage).toBe(
-        "You do not have permission to edit this workflow"
+        'You do not have permission to edit this workflow'
       );
     });
   });
@@ -240,8 +240,8 @@ describe("useWorkflowReadOnly - Permissions", () => {
 // SNAPSHOT VERSION TESTS
 // =============================================================================
 
-describe("useWorkflowReadOnly - Snapshot Version", () => {
-  test("returns read-only true with snapshot message for old snapshot", async () => {
+describe('useWorkflowReadOnly - Snapshot Version', () => {
+  test('returns read-only true with snapshot message for old snapshot', async () => {
     const [wrapper, { emitSessionContext }] = createWrapper({
       permissions: { can_edit_workflow: true, can_run_workflow: true },
       latestSnapshotLockVersion: 2,
@@ -258,12 +258,12 @@ describe("useWorkflowReadOnly - Snapshot Version", () => {
     await waitFor(() => {
       expect(result.current.isReadOnly).toBe(true);
       expect(result.current.tooltipMessage).toBe(
-        "You cannot edit or run an old snapshot of a workflow"
+        'You cannot edit or run an old snapshot of a workflow'
       );
     });
   });
 
-  test("returns not read-only when viewing latest snapshot", async () => {
+  test('returns not read-only when viewing latest snapshot', async () => {
     const [wrapper, { emitSessionContext }] = createWrapper({
       permissions: { can_edit_workflow: true, can_run_workflow: true },
       latestSnapshotLockVersion: 1,
@@ -279,7 +279,7 @@ describe("useWorkflowReadOnly - Snapshot Version", () => {
 
     await waitFor(() => {
       expect(result.current.isReadOnly).toBe(false);
-      expect(result.current.tooltipMessage).toBe("");
+      expect(result.current.tooltipMessage).toBe('');
     });
   });
 });
@@ -288,8 +288,8 @@ describe("useWorkflowReadOnly - Snapshot Version", () => {
 // VALID EDITING SCENARIO TESTS
 // =============================================================================
 
-describe("useWorkflowReadOnly - Valid Editing", () => {
-  test("returns not read-only for valid editing scenario", async () => {
+describe('useWorkflowReadOnly - Valid Editing', () => {
+  test('returns not read-only for valid editing scenario', async () => {
     const [wrapper, { emitSessionContext }] = createWrapper({
       permissions: { can_edit_workflow: true, can_run_workflow: true },
       latestSnapshotLockVersion: 1,
@@ -305,7 +305,7 @@ describe("useWorkflowReadOnly - Valid Editing", () => {
 
     await waitFor(() => {
       expect(result.current.isReadOnly).toBe(false);
-      expect(result.current.tooltipMessage).toBe("");
+      expect(result.current.tooltipMessage).toBe('');
     });
   });
 });
@@ -314,13 +314,13 @@ describe("useWorkflowReadOnly - Valid Editing", () => {
 // EDGE CASES AND NULL HANDLING
 // =============================================================================
 
-describe("useWorkflowReadOnly - Edge Cases", () => {
-  test("handles null workflow gracefully", async () => {
+describe('useWorkflowReadOnly - Edge Cases', () => {
+  test('handles null workflow gracefully', async () => {
     const sessionContextStore = createSessionContextStore();
     const workflowStore = createWorkflowStore();
 
     // Don't connect workflow store to Y.Doc (workflow will be null)
-    const mockChannel = createMockPhoenixChannel("test:room");
+    const mockChannel = createMockPhoenixChannel('test:room');
     const mockProvider = createMockPhoenixChannelProvider(mockChannel);
     sessionContextStore._connectChannel(mockProvider as any);
 
@@ -343,7 +343,7 @@ describe("useWorkflowReadOnly - Edge Cases", () => {
 
     act(() => {
       (mockChannel as any)._test.emit(
-        "session_context",
+        'session_context',
         createSessionContext({
           user: null,
           project: null,
@@ -354,27 +354,27 @@ describe("useWorkflowReadOnly - Edge Cases", () => {
 
     await waitFor(() => {
       expect(result.current.isReadOnly).toBe(false);
-      expect(result.current.tooltipMessage).toBe("");
+      expect(result.current.tooltipMessage).toBe('');
     });
   });
 
-  test("handles null permissions gracefully (loading state - not read-only)", async () => {
+  test('handles null permissions gracefully (loading state - not read-only)', async () => {
     const sessionContextStore = createSessionContextStore();
     const workflowStore = createWorkflowStore();
 
     const ydoc = new Y.Doc() as Session.WorkflowDoc;
-    const workflowMap = ydoc.getMap("workflow");
-    workflowMap.set("id", "test-workflow-123");
-    workflowMap.set("name", "Test Workflow");
-    workflowMap.set("lock_version", 1);
-    workflowMap.set("deleted_at", null);
+    const workflowMap = ydoc.getMap('workflow');
+    workflowMap.set('id', 'test-workflow-123');
+    workflowMap.set('name', 'Test Workflow');
+    workflowMap.set('lock_version', 1);
+    workflowMap.set('deleted_at', null);
 
-    ydoc.getArray("jobs");
-    ydoc.getArray("triggers");
-    ydoc.getArray("edges");
-    ydoc.getMap("positions");
+    ydoc.getArray('jobs');
+    ydoc.getArray('triggers');
+    ydoc.getArray('edges');
+    ydoc.getMap('positions');
 
-    const mockChannel = createMockPhoenixChannel("test:room");
+    const mockChannel = createMockPhoenixChannel('test:room');
     const mockProvider = createMockPhoenixChannelProvider(mockChannel);
     (mockProvider as any).doc = ydoc;
     workflowStore.connect(ydoc, mockProvider as any);
@@ -400,7 +400,7 @@ describe("useWorkflowReadOnly - Edge Cases", () => {
     // Emit session context with null permissions (loading state)
     act(() => {
       (mockChannel as any)._test.emit(
-        "session_context",
+        'session_context',
         createSessionContext({
           user: null,
           project: null,
@@ -413,7 +413,7 @@ describe("useWorkflowReadOnly - Edge Cases", () => {
     // This prevents flickering on initial load
     await waitFor(() => {
       expect(result.current.isReadOnly).toBe(false);
-      expect(result.current.tooltipMessage).toBe("");
+      expect(result.current.tooltipMessage).toBe('');
     });
   });
 });
@@ -422,8 +422,8 @@ describe("useWorkflowReadOnly - Edge Cases", () => {
 // PRIORITY ORDER TESTS
 // =============================================================================
 
-describe("useWorkflowReadOnly - Priority Order", () => {
-  test("verifies complete priority order: deleted > permissions > snapshot", async () => {
+describe('useWorkflowReadOnly - Priority Order', () => {
+  test('verifies complete priority order: deleted > permissions > snapshot', async () => {
     // Test 1: All three conditions apply - deleted takes priority
     const [wrapper1, { emitSessionContext: emit1 }] = createWrapper({
       permissions: { can_edit_workflow: false, can_run_workflow: false },
@@ -442,7 +442,7 @@ describe("useWorkflowReadOnly - Priority Order", () => {
 
     await waitFor(() => {
       expect(result1.current.tooltipMessage).toBe(
-        "This workflow has been deleted and cannot be edited"
+        'This workflow has been deleted and cannot be edited'
       );
     });
 
@@ -464,7 +464,7 @@ describe("useWorkflowReadOnly - Priority Order", () => {
 
     await waitFor(() => {
       expect(result2.current.tooltipMessage).toBe(
-        "You do not have permission to edit this workflow"
+        'You do not have permission to edit this workflow'
       );
     });
 
@@ -486,7 +486,7 @@ describe("useWorkflowReadOnly - Priority Order", () => {
 
     await waitFor(() => {
       expect(result3.current.tooltipMessage).toBe(
-        "You cannot edit or run an old snapshot of a workflow"
+        'You cannot edit or run an old snapshot of a workflow'
       );
     });
   });

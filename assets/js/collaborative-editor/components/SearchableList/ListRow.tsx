@@ -1,5 +1,5 @@
-import type React from "react";
-import { useEffect, useRef } from "react";
+import type React from 'react';
+import { useEffect, useRef } from 'react';
 
 interface ListRowProps {
   icon?: React.ReactNode;
@@ -26,8 +26,8 @@ export function ListRow({
   useEffect(() => {
     if (focused && buttonRef.current && buttonRef.current.scrollIntoView) {
       buttonRef.current.scrollIntoView({
-        block: "nearest",
-        behavior: "smooth",
+        block: 'nearest',
+        behavior: 'smooth',
       });
     }
   }, [focused]);
@@ -45,7 +45,7 @@ export function ListRow({
         w-full text-left px-3 py-2 rounded-md
         hover:bg-gray-100 focus:outline-none
         flex items-center gap-3 transition-colors
-        ${focused ? "bg-gray-100" : ""}
+        ${focused ? 'bg-gray-100' : ''}
       `}
     >
       {icon && <div className="shrink-0">{icon}</div>}

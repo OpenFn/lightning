@@ -1,12 +1,12 @@
-import type { FormOptions } from "@tanstack/react-form";
-import { createFormHook, createFormHookContexts } from "@tanstack/react-form";
+import type { FormOptions } from '@tanstack/react-form';
+import { createFormHook, createFormHookContexts } from '@tanstack/react-form';
 
-import { useValidation } from "#/collaborative-editor/hooks/useValidation";
+import { useValidation } from '#/collaborative-editor/hooks/useValidation';
 
-import { NumberField } from "./number-field";
-import { SelectField } from "./select-field";
-import { TextField } from "./text-field";
-import { ToggleField } from "./toggle-field";
+import { NumberField } from './number-field';
+import { SelectField } from './select-field';
+import { TextField } from './text-field';
+import { ToggleField } from './toggle-field';
 
 export const { fieldContext, formContext, useFieldContext } =
   createFormHookContexts();

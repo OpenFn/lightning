@@ -1,4 +1,4 @@
-import { toast, type ExternalToast } from "sonner";
+import { toast, type ExternalToast } from 'sonner';
 
 interface NotificationOptions extends ExternalToast {
   title: string;
@@ -69,10 +69,10 @@ export const notifications = {
       description,
       duration: 2000, // 2s for info messages
       classNames: {
-        toast: "!bg-blue-50 !border-l-4 !border-l-blue-500",
-        title: "!text-blue-900 !font-semibold",
-        description: "!text-blue-700 !text-sm",
-        icon: "!text-blue-500",
+        toast: '!bg-blue-50 !border-l-4 !border-l-blue-500',
+        title: '!text-blue-900 !font-semibold',
+        description: '!text-blue-700 !text-sm',
+        icon: '!text-blue-500',
       },
       ...options,
     });
@@ -92,10 +92,10 @@ export const notifications = {
       description,
       duration: 4000, // 4s for alert messages (need more attention)
       classNames: {
-        toast: "!bg-red-50 !border-l-4 !border-l-red-500",
-        title: "!text-red-900 !font-semibold",
-        description: "!text-red-700 !text-sm",
-        icon: "!text-red-500",
+        toast: '!bg-red-50 !border-l-4 !border-l-red-500',
+        title: '!text-red-900 !font-semibold',
+        description: '!text-red-700 !text-sm',
+        icon: '!text-red-500',
       },
       ...options,
     });
@@ -115,10 +115,10 @@ export const notifications = {
       description,
       duration: 2000,
       classNames: {
-        toast: "!bg-green-50 !border-l-4 !border-l-green-500",
-        title: "!text-green-900 !font-semibold",
-        description: "!text-green-700 !text-sm",
-        icon: "!text-green-500",
+        toast: '!bg-green-50 !border-l-4 !border-l-green-500',
+        title: '!text-green-900 !font-semibold',
+        description: '!text-green-700 !text-sm',
+        icon: '!text-green-500',
       },
       ...options,
     });
@@ -137,10 +137,10 @@ export const notifications = {
       description,
       duration: 3000,
       classNames: {
-        toast: "!bg-amber-50 !border-l-4 !border-l-amber-500",
-        title: "!text-amber-900 !font-semibold",
-        description: "!text-amber-700 !text-sm",
-        icon: "!text-amber-500",
+        toast: '!bg-amber-50 !border-l-4 !border-l-amber-500',
+        title: '!text-amber-900 !font-semibold',
+        description: '!text-amber-700 !text-sm',
+        icon: '!text-amber-500',
       },
       ...options,
     });

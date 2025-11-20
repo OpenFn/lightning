@@ -1,11 +1,11 @@
-import type * as F from "@xyflow/react";
-import React, { useCallback, useState } from "react";
+import type * as F from '@xyflow/react';
+import React, { useCallback, useState } from 'react';
 
-import { randomUUID } from "../../common";
-import Connection from "../../workflow-diagram/edges/Connection";
-import type { Flow } from "../../workflow-diagram/types";
-import { getDropTargetError } from "../../workflow-diagram/useConnect";
-import type { Session } from "../types/session";
+import { randomUUID } from '../../common';
+import Connection from '../../workflow-diagram/edges/Connection';
+import type { Flow } from '../../workflow-diagram/types';
+import { getDropTargetError } from '../../workflow-diagram/useConnect';
+import type { Session } from '../types/session';
 
 const setValidDropTargets = (model: Flow.Model, source: string) => {
   const newModel = {
@@ -78,13 +78,13 @@ export default (
         source_job_id: null,
         source_trigger_id: null,
         target_job_id: args.target,
-        condition_type: "on_job_success",
+        condition_type: 'on_job_success',
         enabled: true,
       };
 
       // Determine if source is job or trigger
       const sourceNode = model.nodes.find(n => n.id === args.source);
-      if (sourceNode?.type === "trigger") {
+      if (sourceNode?.type === 'trigger') {
         newEdge.source_trigger_id = args.source;
       } else {
         newEdge.source_job_id = args.source;
@@ -111,7 +111,7 @@ export default (
     (event: React.MouseEvent) => {
       if (
         event.target instanceof HTMLElement &&
-        event.target.classList.contains("react-flow__pane") &&
+        event.target.classList.contains('react-flow__pane') &&
         !dragActive
       ) {
         bgClick();
@@ -126,7 +126,7 @@ export default (
         evt.stopPropagation();
         evt.preventDefault();
         const { clientX, clientY } =
-          "changedTouches" in evt ? evt.changedTouches[0] : evt;
+          'changedTouches' in evt ? evt.changedTouches[0] : evt;
 
         // Use screenToFlowPosition to calculate flow coordinates
         const position = flow.screenToFlowPosition({
@@ -144,7 +144,7 @@ export default (
 
         // wait for any deselection to be done!
         setTimeout(() => {
-          const isOnNode = (evt.target as HTMLElement).closest("[data-a-node]");
+          const isOnNode = (evt.target as HTMLElement).closest('[data-a-node]');
           if (isOnNode) {
             // dropped connect line on an existing node -> do nothing
             setDragActive(false);
@@ -173,7 +173,7 @@ export default (
   const onNodeMouseLeave: F.NodeMouseHandler = useCallback(
     (_evt, _args) => {
       if (dragActive) {
-        setModel(setActiveDropTarget(model, ""));
+        setModel(setActiveDropTarget(model, ''));
       }
     },
     [model, dragActive, setModel]

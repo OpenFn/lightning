@@ -170,6 +170,7 @@ export function Header({
   runTooltipMessage: runTooltipMessageProp,
   isRetryable: isRetryableProp,
   isRunning: isRunningProp,
+  onCloseIDE,
 }: {
   children: React.ReactNode[];
   projectId?: string;
@@ -182,6 +183,7 @@ export function Header({
   runTooltipMessage?: string;
   isRetryable?: boolean;
   isRunning?: boolean;
+  onCloseIDE?: () => void;
 }) {
   // IMPORTANT: All hooks must be called unconditionally before any early returns or conditional logic
   const { updateSearchParams } = useURLState();
@@ -293,8 +295,27 @@ export function Header({
           <ActiveCollaborators className="ml-2" />
           <div className="grow ml-2"></div>
 
-          <div className="flex flex-row gap-2">
-            <div className="flex flex-row m-auto gap-2">
+          <div className="flex flex-row gap-2 items-center">
+            <div className="flex flex-row gap-2 items-center">
+              {onCloseIDE && (
+                <Tooltip
+                  content={<ShortcutKeys keys={['esc']} />}
+                  side="bottom"
+                >
+                  <button
+                    type="button"
+                    onClick={onCloseIDE}
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1.5
+                      text-sm font-medium text-gray-700 bg-white border
+                      border-gray-300 rounded-md hover:bg-gray-50
+                      focus:outline-none focus:ring-2 focus:ring-offset-2
+                      focus:ring-primary-500 transition-colors"
+                  >
+                    <span className="hero-x-mark h-4 w-4" />
+                    <span>Close IDE</span>
+                  </button>
+                </Tooltip>
+              )}
               {!isOldSnapshot && (
                 <Switch checked={enabled ?? false} onChange={setEnabled} />
               )}

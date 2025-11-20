@@ -33,11 +33,11 @@
  * ```
  */
 
-import { useSyncExternalStore, useContext } from "react";
+import { useSyncExternalStore, useContext } from 'react';
 
-import { StoreContext } from "../contexts/StoreProvider";
-import type { AwarenessStoreInstance } from "../stores/createAwarenessStore";
-import type { AwarenessUser, LocalUserData } from "../types/awareness";
+import { StoreContext } from '../contexts/StoreProvider';
+import type { AwarenessStoreInstance } from '../stores/createAwarenessStore';
+import type { AwarenessUser, LocalUserData } from '../types/awareness';
 
 /**
  * Main hook for accessing the AwarenessStore instance
@@ -46,7 +46,7 @@ import type { AwarenessUser, LocalUserData } from "../types/awareness";
 const useAwarenessStore = (): AwarenessStoreInstance => {
   const context = useContext(StoreContext);
   if (!context) {
-    throw new Error("useAwarenessStore must be used within a StoreProvider");
+    throw new Error('useAwarenessStore must be used within a StoreProvider');
   }
   return context.awarenessStore;
 };

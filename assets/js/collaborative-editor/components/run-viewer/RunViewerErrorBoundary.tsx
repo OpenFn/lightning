@@ -1,4 +1,4 @@
-import { Component, type ReactNode } from "react";
+import { Component, type ReactNode } from 'react';
 
 interface Props {
   children: ReactNode;
@@ -21,7 +21,7 @@ export class RunViewerErrorBoundary extends Component<Props, State> {
   }
 
   override componentDidCatch(error: Error) {
-    console.error("RunViewer error:", error);
+    console.error('RunViewer error:', error);
     this.props.onError?.(error);
   }
 

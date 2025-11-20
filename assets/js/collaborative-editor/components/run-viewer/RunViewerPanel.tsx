@@ -1,9 +1,15 @@
+import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
+
+import { cn } from '#/utils/cn';
+
 import {
   useActiveRun,
   useActiveRunError,
   useActiveRunLoading,
   useHistoryCommands,
+  useJobMatchesRun,
 } from '../../hooks/useHistory';
+import { useCurrentJob } from '../../hooks/useWorkflow';
 
 import { InputTabPanel } from './InputTabPanel';
 import { LogTabPanel } from './LogTabPanel';
@@ -11,7 +17,7 @@ import { OutputTabPanel } from './OutputTabPanel';
 import { RunSkeleton } from './RunSkeleton';
 import { RunTabPanel } from './RunTabPanel';
 
-type TabValue = 'run' | 'log' | 'input' | 'output';
+type TabValue = 'log' | 'input' | 'output';
 
 interface RunViewerPanelProps {
   followRunId: string | null;
@@ -29,6 +35,8 @@ export function RunViewerPanel({
   const isLoading = useActiveRunLoading();
   const error = useActiveRunError();
   const { clearActiveRunError } = useHistoryCommands();
+  const { job: currentJob } = useCurrentJob();
+  const jobMatchesRun = useJobMatchesRun(currentJob?.id || null);
 
   // Note: Connection to run channel is managed by parent component (FullScreenIDE)
   // This component only reads the current run state from HistoryStore
@@ -77,19 +85,29 @@ export function RunViewerPanel({
     );
   }
 
-  // Render tab content based on activeTab prop
+  // Render with shared RunTabPanel at top and tab content below
   return (
-    <div
-      className="h-full flex flex-col"
-      role="region"
-      aria-label="Run output viewer"
+    <PanelGroup
+      direction="vertical"
+      className={cn('h-full', !jobMatchesRun && 'opacity-50')}
+      autoSaveId="lightning.run-viewer-layout"
     >
-      <div className="flex-1 overflow-hidden">
-        {activeTab === 'run' && <RunTabPanel />}
-        {activeTab === 'log' && <LogTabPanel />}
-        {activeTab === 'input' && <InputTabPanel />}
-        {activeTab === 'output' && <OutputTabPanel />}
-      </div>
-    </div>
+      {/* Shared Run metadata + Steps panel */}
+      <Panel defaultSize={20} minSize={10} maxSize={40}>
+        <RunTabPanel />
+      </Panel>
+
+      {/* Resize handle */}
+      <PanelResizeHandle className="h-1 bg-gray-200 hover:bg-blue-400 transition-colors cursor-row-resize" />
+
+      {/* Tab content (logs, input, or output) */}
+      <Panel minSize={30}>
+        <div className="h-full">
+          {activeTab === 'log' && <LogTabPanel />}
+          {activeTab === 'input' && <InputTabPanel />}
+          {activeTab === 'output' && <OutputTabPanel />}
+        </div>
+      </Panel>
+    </PanelGroup>
   );
 }

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState } from 'react';
 
 interface ElapsedIndicatorProps {
   startedAt: string | null;
@@ -8,13 +8,13 @@ interface ElapsedIndicatorProps {
 // Ported from assets/js/hooks/ElapsedIndicator.ts
 function formatParts(elapsedTimeMs: number): [number, string] {
   if (elapsedTimeMs < 1000) {
-    return [elapsedTimeMs, "ms"];
+    return [elapsedTimeMs, 'ms'];
   } else if (elapsedTimeMs < 60 * 1000) {
     const seconds = Math.floor(elapsedTimeMs / 1000);
-    return [seconds, "s"];
+    return [seconds, 's'];
   } else {
     const minutes = Math.floor(elapsedTimeMs / 1000 / 60);
-    return [minutes, "m"];
+    return [minutes, 'm'];
   }
 }
 
@@ -22,11 +22,11 @@ export function ElapsedIndicator({
   startedAt,
   finishedAt,
 }: ElapsedIndicatorProps) {
-  const [elapsedText, setElapsedText] = useState<string>("Not started");
+  const [elapsedText, setElapsedText] = useState<string>('Not started');
 
   useEffect(() => {
     if (!startedAt) {
-      setElapsedText("Not started");
+      setElapsedText('Not started');
       return undefined;
     }
 

@@ -14,34 +14,34 @@
 const PARAM_MAPPINGS = {
   // Classical -> Collaborative
   classicalToCollaborative: {
-    a: "run", // Followed run ID
-    s: ["job", "trigger", "edge"], // Selected step (type determined by context)
+    a: 'run', // Followed run ID
+    s: ['job', 'trigger', 'edge'], // Selected step (type determined by context)
     m: {
       // Mode/Panel mappings
-      expand: "editor",
-      workflow_input: "run",
-      settings: "settings",
+      expand: 'editor',
+      workflow_input: 'run',
+      settings: 'settings',
     },
   },
 
   // Collaborative -> Classical
   collaborativeToClassical: {
-    run: "a", // Followed run ID
-    selection: "s", // Job/trigger/edge all map to 's'
+    run: 'a', // Followed run ID
+    selection: 's', // Job/trigger/edge all map to 's'
     panel: {
       // Panel/Mode mappings
-      editor: "expand",
-      run: "workflow_input",
-      settings: "settings",
+      editor: 'expand',
+      run: 'workflow_input',
+      settings: 'settings',
     },
   },
 
   // Params that should be preserved as-is in both directions
-  preservedParams: ["v", "method", "w-chat", "j-chat", "code"],
+  preservedParams: ['v', 'method', 'w-chat', 'j-chat', 'code'],
 
   // Params that are editor-specific and should be skipped
-  classicalOnlyParams: ["m"], // Handled specially, converted to panel
-  collaborativeOnlyParams: ["panel", "job", "trigger", "edge"], // Handled specially
+  classicalOnlyParams: ['m'], // Handled specially, converted to panel
+  collaborativeOnlyParams: ['panel', 'job', 'trigger', 'edge'], // Handled specially
 } as const;
 
 /**
@@ -61,20 +61,20 @@ export function collaborativeToClassicalParams(
   const classicalParams = new URLSearchParams();
 
   for (const [key, value] of searchParams.entries()) {
-    if (key === "run") {
+    if (key === 'run') {
       // Convert run -> a (followed run)
-      classicalParams.set("a", value);
-    } else if (key === "job" || key === "trigger" || key === "edge") {
+      classicalParams.set('a', value);
+    } else if (key === 'job' || key === 'trigger' || key === 'edge') {
       // Convert job/trigger/edge -> s (selected step)
       // All three types collapse into single 's' param in classical editor
-      classicalParams.set("s", value);
-    } else if (key === "panel") {
+      classicalParams.set('s', value);
+    } else if (key === 'panel') {
       // Convert panel values to mode values
       const panelToMode = PARAM_MAPPINGS.collaborativeToClassical
         .panel as Record<string, string>;
       const mode = panelToMode[value];
       if (mode) {
-        classicalParams.set("m", mode);
+        classicalParams.set('m', mode);
       }
       // panel param itself is not preserved - only converted to m
     } else if (PARAM_MAPPINGS.preservedParams.includes(key)) {
@@ -107,7 +107,7 @@ export function collaborativeToClassicalParams(
 export function classicalToCollaborativeParams(
   searchParams: URLSearchParams,
   context?: {
-    selectedType?: "job" | "trigger" | "edge";
+    selectedType?: 'job' | 'trigger' | 'edge';
   }
 ): URLSearchParams {
   const collaborativeParams = new URLSearchParams();
@@ -115,15 +115,15 @@ export function classicalToCollaborativeParams(
   for (const [key, value] of searchParams.entries()) {
     if (!value) continue; // Skip nil/empty values
 
-    if (key === "a") {
+    if (key === 'a') {
       // Convert a -> run (followed run)
-      collaborativeParams.set("run", value);
-    } else if (key === "s") {
+      collaborativeParams.set('run', value);
+    } else if (key === 's') {
       // Convert s -> job/trigger/edge (based on context)
       // Default to 'job' if context not provided (backwards compatibility)
-      const selectedType = context?.selectedType ?? "job";
+      const selectedType = context?.selectedType ?? 'job';
       collaborativeParams.set(selectedType, value);
-    } else if (key === "m") {
+    } else if (key === 'm') {
       // Convert mode values to panel values
       const modeToPanel = PARAM_MAPPINGS.classicalToCollaborative.m as Record<
         string,
@@ -131,10 +131,10 @@ export function classicalToCollaborativeParams(
       >;
       const panel = modeToPanel[value];
       if (panel) {
-        collaborativeParams.set("panel", panel);
+        collaborativeParams.set('panel', panel);
       }
       // m param itself is not preserved - only converted to panel
-    } else if (key === "panel") {
+    } else if (key === 'panel') {
       // Skip panel param from classical side (shouldn't exist there)
       continue;
     } else if (PARAM_MAPPINGS.preservedParams.includes(key)) {
@@ -181,7 +181,7 @@ export function buildClassicalEditorUrl(options: {
   const queryString =
     classicalParams.toString().length > 0
       ? `?${classicalParams.toString()}`
-      : "";
+      : '';
 
   const basePath = isNewWorkflow
     ? `/projects/${projectId}/w/new`
@@ -211,7 +211,7 @@ export function buildCollaborativeEditorUrl(options: {
   workflowId: string | null;
   searchParams: URLSearchParams;
   isNewWorkflow?: boolean;
-  selectedType?: "job" | "trigger" | "edge";
+  selectedType?: 'job' | 'trigger' | 'edge';
 }): string {
   const {
     projectId,
@@ -227,7 +227,7 @@ export function buildCollaborativeEditorUrl(options: {
   const queryString =
     collaborativeParams.toString().length > 0
       ? `?${collaborativeParams.toString()}`
-      : "";
+      : '';
 
   const basePath = isNewWorkflow
     ? `/projects/${projectId}/w/new/collaborate`
@@ -241,8 +241,8 @@ export function buildCollaborativeEditorUrl(options: {
  */
 export function isValidPanelType(
   value: string
-): value is "editor" | "run" | "settings" {
-  return ["editor", "run", "settings"].includes(value);
+): value is 'editor' | 'run' | 'settings' {
+  return ['editor', 'run', 'settings'].includes(value);
 }
 
 /**
@@ -250,8 +250,8 @@ export function isValidPanelType(
  */
 export function isValidModeType(
   value: string
-): value is "expand" | "workflow_input" | "settings" {
-  return ["expand", "workflow_input", "settings"].includes(value);
+): value is 'expand' | 'workflow_input' | 'settings' {
+  return ['expand', 'workflow_input', 'settings'].includes(value);
 }
 
 /**
