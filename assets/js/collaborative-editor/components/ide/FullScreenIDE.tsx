@@ -673,7 +673,7 @@ export function FullScreenIDE({
   ) : null;
 
   return (
-    <div className="absolute inset-0 bg-white flex flex-col">
+    <div className="h-full w-full bg-white flex flex-col">
       <Header
         key="ide-header"
         projectId={projectId}

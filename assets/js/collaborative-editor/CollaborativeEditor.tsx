@@ -1,10 +1,12 @@
-import { useMemo } from 'react';
+import { useMemo, useState, useRef, useEffect } from 'react';
 import { HotkeysProvider } from 'react-hotkeys-hook';
 
 import { SocketProvider } from '../react/contexts/SocketProvider';
 import { useURLState } from '../react/lib/use-url-state';
 import type { WithActionProps } from '../react/lib/with-props';
 
+import { AIAssistantPanel } from './components/AIAssistantPanel';
+import { ChatInterface } from './components/ChatInterface';
 import { BreadcrumbLink, BreadcrumbText } from './components/Breadcrumbs';
 import { Header } from './components/Header';
 import { LoadingBoundary } from './components/LoadingBoundary';
@@ -19,7 +21,11 @@ import {
   useLatestSnapshotLockVersion,
   useProject,
 } from './hooks/useSessionContext';
-import { useIsRunPanelOpen } from './hooks/useUI';
+import {
+  useIsAIAssistantPanelOpen,
+  useIsRunPanelOpen,
+  useUICommands,
+} from './hooks/useUI';
 import { useVersionSelect } from './hooks/useVersionSelect';
 import { useWorkflowState } from './hooks/useWorkflow';
 
@@ -33,6 +39,116 @@ export interface CollaborativeEditorDataProps {
   'data-root-project-id'?: string;
   'data-root-project-name'?: string;
   'data-is-new-workflow'?: string;
+}
+
+/**
+ * AIAssistantPanelWrapper Component
+ *
+ * Wrapper for AI Assistant panel that accesses UI store state.
+ * Must be inside StoreProvider to access uiStore.
+ *
+ * Features:
+ * - Smooth CSS animations when opening/closing
+ * - Draggable resize handle
+ * - Persists width in localStorage
+ * - Syncs open/closed state with URL query param (?chat=true)
+ */
+function AIAssistantPanelWrapper() {
+  const isAIAssistantPanelOpen = useIsAIAssistantPanelOpen();
+  const { closeAIAssistantPanel, openAIAssistantPanel } = useUICommands();
+  const { updateSearchParams } = useURLState();
+
+  const [width, setWidth] = useState(() => {
+    const saved = localStorage.getItem('ai-assistant-panel-width');
+    return saved ? parseInt(saved, 10) : 400;
+  });
+  const [isResizing, setIsResizing] = useState(false);
+  const startXRef = useRef<number>(0);
+  const startWidthRef = useRef<number>(0);
+  const isSyncingRef = useRef(false);
+
+  // Sync store state to URL
+  useEffect(() => {
+    if (isSyncingRef.current) return;
+
+    isSyncingRef.current = true;
+    updateSearchParams({
+      chat: isAIAssistantPanelOpen ? 'true' : null,
+    });
+    setTimeout(() => {
+      isSyncingRef.current = false;
+    }, 0);
+  }, [isAIAssistantPanelOpen, updateSearchParams]);
+
+  useEffect(() => {
+    if (!isResizing) return;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      const deltaX = startXRef.current - e.clientX;
+      const newWidth = Math.max(
+        300,
+        Math.min(800, startWidthRef.current + deltaX)
+      );
+      setWidth(newWidth);
+    };
+
+    const handleMouseUp = () => {
+      setIsResizing(false);
+      localStorage.setItem('ai-assistant-panel-width', width.toString());
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isResizing, width]);
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    e.preventDefault();
+    setIsResizing(true);
+    startXRef.current = e.clientX;
+    startWidthRef.current = width;
+  };
+
+  return (
+    <div
+      className="flex h-full flex-shrink-0"
+      style={{
+        width: isAIAssistantPanelOpen ? `${width}px` : '0px',
+        transition: isResizing
+          ? 'none'
+          : 'width 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+      }}
+    >
+      {isAIAssistantPanelOpen && (
+        <>
+          <div
+            className="w-1 bg-gray-200 hover:bg-blue-400 transition-colors cursor-col-resize flex-shrink-0"
+            onMouseDown={handleMouseDown}
+          />
+          <div className="flex-1 overflow-hidden">
+            <AIAssistantPanel
+              isOpen={isAIAssistantPanelOpen}
+              onClose={closeAIAssistantPanel}
+              isResizable={true}
+            >
+              <ChatInterface
+                messages={[]}
+                onSendMessage={content => {
+                  console.log('Send message:', content);
+                  // TODO: Implement message sending
+                }}
+                isLoading={false}
+              />
+            </AIAssistantPanel>
+          </div>
+        </>
+      )}
+    </div>
+  );
 }
 
 /**
@@ -193,37 +309,42 @@ export const CollaborativeEditor: WithActionProps<
               <LiveViewActionsProvider actions={liveViewActions}>
                 <VersionDebugLogger />
                 <Toaster />
-                <BreadcrumbContent
-                  workflowId={workflowId}
-                  workflowName={workflowName}
-                  {...(projectId !== undefined && {
-                    projectIdFallback: projectId,
-                  })}
-                  {...(projectName !== undefined && {
-                    projectNameFallback: projectName,
-                  })}
-                  {...(projectEnv !== undefined && {
-                    projectEnvFallback: projectEnv,
-                  })}
-                  {...(rootProjectId !== null && {
-                    rootProjectIdFallback: rootProjectId,
-                  })}
-                  {...(rootProjectName !== null && {
-                    rootProjectNameFallback: rootProjectName,
-                  })}
-                />
-                <LoadingBoundary>
-                  <div className="flex-1 min-h-0 overflow-hidden">
-                    <WorkflowEditor
+                <div className="flex-1 min-h-0 overflow-hidden flex">
+                  <div className="flex-1 h-full flex flex-col overflow-hidden">
+                    <BreadcrumbContent
+                      workflowId={workflowId}
+                      workflowName={workflowName}
+                      {...(projectId !== undefined && {
+                        projectIdFallback: projectId,
+                      })}
+                      {...(projectName !== undefined && {
+                        projectNameFallback: projectName,
+                      })}
+                      {...(projectEnv !== undefined && {
+                        projectEnvFallback: projectEnv,
+                      })}
                       {...(rootProjectId !== null && {
-                        parentProjectId: rootProjectId,
+                        rootProjectIdFallback: rootProjectId,
                       })}
                       {...(rootProjectName !== null && {
-                        parentProjectName: rootProjectName,
+                        rootProjectNameFallback: rootProjectName,
                       })}
                     />
+                    <LoadingBoundary>
+                      <div className="flex-1 min-h-0 overflow-hidden">
+                        <WorkflowEditor
+                          {...(rootProjectId !== null && {
+                            parentProjectId: rootProjectId,
+                          })}
+                          {...(rootProjectName !== null && {
+                            parentProjectName: rootProjectName,
+                          })}
+                        />
+                      </div>
+                    </LoadingBoundary>
                   </div>
-                </LoadingBoundary>
+                  <AIAssistantPanelWrapper />
+                </div>
               </LiveViewActionsProvider>
             </StoreProvider>
           </SessionProvider>
