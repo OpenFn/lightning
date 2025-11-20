@@ -134,6 +134,7 @@ export const RunDetailSchema = z.object({
     .nullable(),
   started_at: z.string().nullable(),
   finished_at: z.string().nullable(),
+  inserted_at: z.string(),
   steps: z.array(StepDetailSchema),
 });
 

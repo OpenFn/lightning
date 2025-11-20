@@ -11,8 +11,6 @@ import { useActiveRun, useSelectedStep } from '../../hooks/useHistory';
 import type { StepDetail } from '../../types/history';
 import { isFinalState } from '../../types/history';
 
-import { StepViewerLayout } from './StepViewerLayout';
-
 interface OutputContentProps {
   selectedStep: StepDetail | null;
   runFinished: boolean;
@@ -54,10 +52,8 @@ export function OutputTabPanel() {
   );
 
   return (
-    <StepViewerLayout selectedStepId={selectedStep?.id || null}>
-      <div className="h-full">
-        <OutputContent selectedStep={selectedStep} runFinished={runFinished} />
-      </div>
-    </StepViewerLayout>
+    <div className="h-full">
+      <OutputContent selectedStep={selectedStep} runFinished={runFinished} />
+    </div>
   );
 }
