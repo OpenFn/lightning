@@ -22,6 +22,10 @@ and this project adheres to
 
 ### Changed
 
+- Always keep the Diagram mounted even when the IDE is present
+  [#3981](https://github.com/OpenFn/lightning/issues/3981)
+- Dropped react-hotkeys-hook for custom priority based key handler hook
+  [#3981](https://github.com/OpenFn/lightning/issues/3981)
 - Consolidated RunStore functionality into HistoryStore in collaborative editor
   for improved state management and reduced complexity
 - Default failure notifications for project users are now disabled to minimize
