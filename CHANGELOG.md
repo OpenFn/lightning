@@ -32,6 +32,8 @@ and this project adheres to
 
 ### Fixed
 
+- Fix history panel unable to close after selecting/deselecting run
+  [#4027](https://github.com/OpenFn/lightning/issues/4027)
 - Restored footers to inspectors on the canvas while in read only mode
   [#4018](https://github.com/OpenFn/lightning/issues/4018)
 - Fix vertical scrolling in workflow panels
