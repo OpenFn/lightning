@@ -99,8 +99,8 @@ abstracts the runtime configuration into a module that can be tested and
 called from other places (aside from <code class="inline">config/runtime.exs</code>) file.</p><section role="note" class="admonition info"><h4 class="admonition-title info">Sourcing envs</h4><p>Internally this module uses <a href="https://hexdocs.pm/dotenvy/1.1.0/Dotenvy.html#source/1"><code class="inline">Dotenvy.source/1</code></a> to source environment variables
 from the <code class="inline">.env</code>, <code class="inline">.env.&lt;config_env&gt;</code>, and <code class="inline">.env.&lt;config_env&gt;.override</code> files.
 It also sources the system environment variables.</p><p>Calling <a href="#configure/0"><code class="inline">configure/0</code></a> without calling <a href="#source_envs/0"><code class="inline">source_envs/0</code></a> or <a href="https://hexdocs.pm/dotenvy/1.1.0/Dotenvy.html#source/2"><code class="inline">Dotenvy.source/2</code></a>
-first will result in no environment variables being loaded.</p></section><p>Usage:</p><pre><code class="makeup elixir" translate="no"><span class="nc">Lightning.Config.Bootstrap</span><span class="o">.</span><span class="n">source_envs</span><span class="p" data-group-id="0260218915-1">(</span><span class="p" data-group-id="0260218915-1">)</span><span class="w">
-</span><span class="nc">Lightning.Config.Bootstrap</span><span class="o">.</span><span class="n">configure</span><span class="p" data-group-id="0260218915-2">(</span><span class="p" data-group-id="0260218915-2">)</span></code></pre>
+first will result in no environment variables being loaded.</p></section><p>Usage:</p><pre><code class="makeup elixir" translate="no"><span class="nc">Lightning.Config.Bootstrap</span><span class="o">.</span><span class="n">source_envs</span><span class="p" data-group-id="1251757221-1">(</span><span class="p" data-group-id="1251757221-1">)</span><span class="w">
+</span><span class="nc">Lightning.Config.Bootstrap</span><span class="o">.</span><span class="n">configure</span><span class="p" data-group-id="1251757221-2">(</span><span class="p" data-group-id="1251757221-2">)</span></code></pre>
     </section>
 
 </div>
