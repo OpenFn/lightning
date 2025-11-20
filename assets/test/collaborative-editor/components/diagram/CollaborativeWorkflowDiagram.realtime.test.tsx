@@ -7,14 +7,14 @@
 
 import { render, waitFor } from '@testing-library/react';
 import type React from 'react';
-import { describe, expect, test, beforeEach, vi } from 'vitest';
+import { beforeEach, describe, expect, test, vi } from 'vitest';
 import { CollaborativeWorkflowDiagram } from '../../../../js/collaborative-editor/components/diagram/CollaborativeWorkflowDiagram';
-import { StoreContext } from '../../../../js/collaborative-editor/contexts/StoreProvider';
 import type { StoreContextValue } from '../../../../js/collaborative-editor/contexts/StoreProvider';
+import { StoreContext } from '../../../../js/collaborative-editor/contexts/StoreProvider';
 import type {
-  WorkOrder,
   Run,
   RunStepsData,
+  WorkOrder,
 } from '../../../../js/collaborative-editor/types/history';
 
 // Helper to create a withSelector mock that implements proper caching

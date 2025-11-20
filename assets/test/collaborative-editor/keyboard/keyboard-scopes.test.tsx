@@ -12,12 +12,12 @@
  * rather than implementation details.
  */
 
-import { render, waitFor, fireEvent } from '@testing-library/react';
-import React from 'react';
-import { describe, test, expect, vi, beforeEach } from 'vitest';
+import { waitFor } from '@testing-library/react';
+import { beforeEach, describe, expect, test, vi } from 'vitest';
 
-import { renderWithKeyboard, keys } from '../../keyboard-test-utils';
 import { useKeyboardShortcut } from '#/collaborative-editor/keyboard/KeyboardProvider';
+
+import { renderWithKeyboard } from '../../keyboard-test-utils';
 
 /**
  * Priority constants matching the scope hierarchy documented in analysis

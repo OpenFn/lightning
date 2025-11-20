@@ -12,8 +12,8 @@
  */
 
 import { createAdaptorStore } from '../../../js/collaborative-editor/stores/createAdaptorStore';
-import { createSessionStore } from '../../../js/collaborative-editor/stores/createSessionStore';
 import { createSessionContextStore } from '../../../js/collaborative-editor/stores/createSessionContextStore';
+import { createSessionStore } from '../../../js/collaborative-editor/stores/createSessionStore';
 import { createUIStore } from '../../../js/collaborative-editor/stores/createUIStore';
 
 import {

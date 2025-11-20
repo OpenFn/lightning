@@ -7,20 +7,18 @@ import { useEffect, useRef, useState } from 'react';
 import { useURLState } from '../../react/lib/use-url-state';
 import type { WorkflowState as YAMLWorkflowState } from '../../yaml/types';
 import { useIsNewWorkflow, useProject } from '../hooks/useSessionContext';
-import { useKeyboardShortcut } from '../keyboard';
 import {
   useIsRunPanelOpen,
   useRunPanelContext,
   useUICommands,
 } from '../hooks/useUI';
 import {
-  useCanRun,
   useNodeSelection,
   useWorkflowActions,
   useWorkflowState,
   useWorkflowStoreContext,
 } from '../hooks/useWorkflow';
-import { notifications } from '../lib/notifications';
+import { useKeyboardShortcut } from '../keyboard';
 
 import { CollaborativeWorkflowDiagram } from './diagram/CollaborativeWorkflowDiagram';
 import { FullScreenIDE } from './ide/FullScreenIDE';

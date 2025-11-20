@@ -14,19 +14,19 @@
 import * as Y from 'yjs';
 
 import type { StoreContextValue } from '../../../js/collaborative-editor/contexts/StoreProvider';
+import { createAdaptorStore } from '../../../js/collaborative-editor/stores/createAdaptorStore';
+import { createAwarenessStore } from '../../../js/collaborative-editor/stores/createAwarenessStore';
+import { createCredentialStore } from '../../../js/collaborative-editor/stores/createCredentialStore';
+import { createEditorPreferencesStore } from '../../../js/collaborative-editor/stores/createEditorPreferencesStore';
+import { createHistoryStore } from '../../../js/collaborative-editor/stores/createHistoryStore';
+import { createSessionContextStore } from '../../../js/collaborative-editor/stores/createSessionContextStore';
 import type { SessionStoreInstance } from '../../../js/collaborative-editor/stores/createSessionStore';
 import { createSessionStore } from '../../../js/collaborative-editor/stores/createSessionStore';
-import { createAdaptorStore } from '../../../js/collaborative-editor/stores/createAdaptorStore';
-import { createCredentialStore } from '../../../js/collaborative-editor/stores/createCredentialStore';
-import { createAwarenessStore } from '../../../js/collaborative-editor/stores/createAwarenessStore';
-import { createWorkflowStore } from '../../../js/collaborative-editor/stores/createWorkflowStore';
-import { createSessionContextStore } from '../../../js/collaborative-editor/stores/createSessionContextStore';
-import { createHistoryStore } from '../../../js/collaborative-editor/stores/createHistoryStore';
 import { createUIStore } from '../../../js/collaborative-editor/stores/createUIStore';
-import { createEditorPreferencesStore } from '../../../js/collaborative-editor/stores/createEditorPreferencesStore';
+import { createWorkflowStore } from '../../../js/collaborative-editor/stores/createWorkflowStore';
 
-import { createMockSocket } from '../mocks/phoenixSocket';
 import { waitForAsync } from '../mocks/phoenixChannel';
+import { createMockSocket } from '../mocks/phoenixSocket';
 
 import {
   createSessionContext,

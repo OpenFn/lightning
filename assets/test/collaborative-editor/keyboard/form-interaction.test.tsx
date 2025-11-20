@@ -8,24 +8,20 @@
  *
  * These tests verify that the keyboard shortcut system correctly handles:
  * 1. Shortcuts in form elements (input, textarea, select)
- * 2. Shortcuts in Monaco editor (contentEditable)
- * 3. Proper scoping (IDE shortcuts work in Monaco, but not other shortcuts)
+ * 2. Shortcuts in contentEditable elements
+ * 3. Proper scoping (IDE shortcuts work in IDE, but not other shortcuts)
  * 4. preventDefault behavior
- *
- * Note: react-hotkeys-hook had `enableOnFormTags` and `enableOnContentEditable`
- * options. Our new KeyboardProvider works in form elements by default (no option
- * needed), and contentEditable handling is done in the handler logic.
  */
 
-import { describe, test, expect, vi } from 'vitest';
 import { waitFor } from '@testing-library/react';
 import type { FC } from 'react';
+import { describe, expect, test, vi } from 'vitest';
+import { useKeyboardShortcut } from '../../../js/collaborative-editor/keyboard';
 import {
-  renderWithKeyboard,
   expectShortcutNotToFire,
   keys,
+  renderWithKeyboard,
 } from '../../keyboard-test-utils';
-import { useKeyboardShortcut } from '../../../js/collaborative-editor/keyboard';
 
 /**
  * Test component that registers keyboard shortcuts for testing form elements
@@ -358,8 +354,8 @@ describe('Form element keyboard shortcuts', () => {
 });
 
 describe('ContentEditable keyboard shortcuts', () => {
-  describe('Monaco editor (enableOnContentEditable: true)', () => {
-    test('Cmd+Enter works in Monaco editor when enabled', async () => {
+  describe('enableOnContentEditable: true', () => {
+    test('Cmd+Enter works in elements when enabled', async () => {
       const mockRun = vi.fn();
 
       const { shortcuts } = renderWithKeyboard(
@@ -385,7 +381,7 @@ describe('ContentEditable keyboard shortcuts', () => {
       await waitFor(() => expect(mockRun).toHaveBeenCalled());
     });
 
-    test('Ctrl+Enter works in Monaco editor when enabled', async () => {
+    test('Ctrl+Enter works in content editable elements when enabled', async () => {
       const mockRun = vi.fn();
 
       const { shortcuts } = renderWithKeyboard(
@@ -411,7 +407,7 @@ describe('ContentEditable keyboard shortcuts', () => {
       await waitFor(() => expect(mockRun).toHaveBeenCalled());
     });
 
-    test('Cmd+Shift+Enter works in Monaco editor when enabled', async () => {
+    test('Cmd+Shift+Enter works in content editable elements when enabled', async () => {
       const mockForceRun = vi.fn();
 
       const { user } = renderWithKeyboard(

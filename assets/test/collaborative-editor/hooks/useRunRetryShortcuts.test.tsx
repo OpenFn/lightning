@@ -8,14 +8,14 @@
  * KeyboardProvider is well-tested by its maintainers.
  */
 
-import { act, render, waitFor } from '@testing-library/react';
+import { act, render } from '@testing-library/react';
 import * as React from 'react';
 import { beforeEach, describe, expect, test, vi } from 'vitest';
 
 import { KeyboardProvider } from '#/collaborative-editor/keyboard';
 
-import { useRunRetryShortcuts } from '../../../js/collaborative-editor/hooks/useRunRetryShortcuts';
 import type { UseRunRetryShortcutsOptions } from '../../../js/collaborative-editor/hooks/useRunRetryShortcuts';
+import { useRunRetryShortcuts } from '../../../js/collaborative-editor/hooks/useRunRetryShortcuts';
 
 /**
  * Helper to create mock handlers

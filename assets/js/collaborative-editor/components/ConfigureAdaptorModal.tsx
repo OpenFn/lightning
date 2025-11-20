@@ -4,17 +4,17 @@ import {
   DialogPanel,
   DialogTitle,
 } from '@headlessui/react';
-import { useEffect, useMemo, useState, useRef } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 import {
-  useCredentials,
   useCredentialQueries,
+  useCredentials,
 } from '#/collaborative-editor/hooks/useCredentials';
 import type { Adaptor } from '#/collaborative-editor/types/adaptor';
 import type { CredentialWithType } from '#/collaborative-editor/types/credential';
 import {
-  extractAdaptorName,
   extractAdaptorDisplayName,
+  extractAdaptorName,
   extractPackageName,
 } from '#/collaborative-editor/utils/adaptorUtils';
 

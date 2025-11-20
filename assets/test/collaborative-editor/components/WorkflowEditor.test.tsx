@@ -13,10 +13,10 @@
 
 import { render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, test, vi } from 'vitest';
-import { WorkflowEditor } from '../../../js/collaborative-editor/components/WorkflowEditor';
-import type { Workflow } from '../../../js/collaborative-editor/types/workflow';
 import * as dataclipApi from '../../../js/collaborative-editor/api/dataclips';
+import { WorkflowEditor } from '../../../js/collaborative-editor/components/WorkflowEditor';
 import { KeyboardProvider } from '../../../js/collaborative-editor/keyboard';
+import type { Workflow } from '../../../js/collaborative-editor/types/workflow';
 
 // Mock dependencies
 vi.mock('../../../js/collaborative-editor/api/dataclips');

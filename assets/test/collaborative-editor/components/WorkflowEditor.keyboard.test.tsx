@@ -16,8 +16,8 @@ import { WorkflowEditor } from '../../../js/collaborative-editor/components/Work
 import type { Workflow } from '../../../js/collaborative-editor/types/workflow';
 import {
   expectShortcutNotToFire,
-  renderWithKeyboard,
   keys,
+  renderWithKeyboard,
 } from '../../keyboard-test-utils';
 
 // Mock dependencies
@@ -353,11 +353,6 @@ describe('WorkflowEditor keyboard shortcuts', () => {
   });
 
   describe('Mod+Enter - Open Run Panel', () => {
-    // NOTE: These tests are written in a library-agnostic way and will work
-    // with both react-hotkeys-hook (current) and KeyboardProvider (future).
-    // The component implementation still uses useHotkeys but tests use
-    // renderWithKeyboard wrapper to ensure compatibility after migration.
-
     test('opens run panel for selected job with Cmd+Enter on Mac', async () => {
       currentNode = {
         type: 'job',

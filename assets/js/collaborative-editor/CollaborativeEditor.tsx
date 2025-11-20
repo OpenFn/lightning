@@ -1,5 +1,4 @@
 import { useMemo } from 'react';
-import { HotkeysProvider } from 'react-hotkeys-hook';
 
 import { SocketProvider } from '../react/contexts/SocketProvider';
 import { useURLState } from '../react/lib/use-url-state';

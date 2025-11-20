@@ -6,12 +6,12 @@
  * details, ensuring tests remain valid through library migrations.
  */
 
-import { ReactElement } from 'react';
-import { render, RenderOptions, waitFor } from '@testing-library/react';
+import { render, type RenderOptions } from '@testing-library/react';
 import userEvent, { type UserEvent } from '@testing-library/user-event';
+import type { ReactElement } from 'react';
 import { expect } from 'vitest';
+
 import { KeyboardProvider } from '../js/collaborative-editor/keyboard/KeyboardProvider';
-import { escape } from 'querystring';
 
 /**
  * Platform-specific key event helpers

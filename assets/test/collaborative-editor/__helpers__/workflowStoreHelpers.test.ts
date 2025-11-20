@@ -5,14 +5,14 @@
  * WorkflowStore with Y.Doc and provider connections.
  */
 
-import { describe, test, expect } from 'vitest';
+import { describe, expect, test } from 'vitest';
 
+import { createWorkflowYDoc } from './workflowFactory';
 import {
-  setupWorkflowStoreTest,
   createEmptyWorkflowYDoc,
   createMinimalWorkflowYDoc,
+  setupWorkflowStoreTest,
 } from './workflowStoreHelpers';
-import { createWorkflowYDoc } from './workflowFactory';
 
 describe('setupWorkflowStoreTest', () => {
   test('creates store with empty Y.Doc by default', () => {

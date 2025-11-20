@@ -12,15 +12,15 @@
  * - Panel collapse/expand functionality
  */
 
-import { render, screen, waitFor } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
-import * as Y from 'yjs';
-import { beforeEach, describe, expect, test, vi } from 'vitest';
-import { FullScreenIDE } from '../../../../js/collaborative-editor/components/ide/FullScreenIDE';
-import * as dataclipApi from '../../../../js/collaborative-editor/api/dataclips';
-import type { Workflow } from '../../../../js/collaborative-editor/types/workflow';
 import { StoreProvider } from '#/collaborative-editor/contexts/StoreProvider';
 import { KeyboardProvider } from '#/collaborative-editor/keyboard';
+import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { beforeEach, describe, expect, test, vi } from 'vitest';
+import * as Y from 'yjs';
+import * as dataclipApi from '../../../../js/collaborative-editor/api/dataclips';
+import { FullScreenIDE } from '../../../../js/collaborative-editor/components/ide/FullScreenIDE';
+import type { Workflow } from '../../../../js/collaborative-editor/types/workflow';
 
 // Mock dependencies
 vi.mock('../../../../js/collaborative-editor/api/dataclips');

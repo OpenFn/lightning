@@ -7,7 +7,6 @@ import {
   useIsNewWorkflow,
   useLatestSnapshotLockVersion,
   useProjectRepoConnection,
-  useUser,
 } from '../hooks/useSessionContext';
 import { useUICommands } from '../hooks/useUI';
 import {
@@ -20,7 +19,6 @@ import {
   useWorkflowState,
 } from '../hooks/useWorkflow';
 import { useKeyboardShortcut } from '../keyboard';
-import { getAvatarInitials } from '../utils/avatar';
 
 import { ActiveCollaborators } from './ActiveCollaborators';
 import { AIButton } from './AIButton';

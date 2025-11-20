@@ -14,24 +14,18 @@
  * - Modal close behavior
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import {
-  render,
-  screen,
-  fireEvent,
-  waitFor,
-  within,
-} from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
 import { KeyboardProvider } from '#/collaborative-editor/keyboard';
+import { render, screen, waitFor, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ConfigureAdaptorModal } from '../../../js/collaborative-editor/components/ConfigureAdaptorModal';
 import { LiveViewActionsProvider } from '../../../js/collaborative-editor/contexts/LiveViewActionsContext';
 import { StoreContext } from '../../../js/collaborative-editor/contexts/StoreProvider';
 import type { Adaptor } from '../../../js/collaborative-editor/types/adaptor';
 import type {
-  ProjectCredential,
   KeychainCredential,
+  ProjectCredential,
 } from '../../../js/collaborative-editor/types/credential';
 
 // Mock useAdaptorIcons to avoid fetching icon manifest

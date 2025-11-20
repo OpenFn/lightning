@@ -5,8 +5,8 @@
  * when creating new job nodes in the workflow canvas.
  */
 
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { KeyboardProvider } from '#/collaborative-editor/keyboard';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { AdaptorSelectionModal } from '../../../js/collaborative-editor/components/AdaptorSelectionModal';
 import { StoreContext } from '../../../js/collaborative-editor/contexts/StoreProvider';

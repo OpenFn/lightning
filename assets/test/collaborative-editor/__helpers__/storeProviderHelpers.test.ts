@@ -9,12 +9,12 @@
 
 import { describe, expect, test } from 'vitest';
 
+import { waitForAsync } from '../mocks/phoenixChannel';
 import {
   simulateStoreProviderWithConnection,
   type StoreProviderConnectionOptions,
 } from './storeProviderHelpers';
 import { createWorkflowYDoc } from './workflowFactory';
-import { waitForAsync } from '../mocks/phoenixChannel';
 
 describe('simulateStoreProviderWithConnection - Enhanced Options', () => {
   // =========================================================================

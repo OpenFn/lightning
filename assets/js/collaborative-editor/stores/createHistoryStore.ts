@@ -90,11 +90,11 @@ import { channelRequest } from '../hooks/useChannel';
 import {
   type HistoryState,
   type HistoryStore,
-  HistoryListSchema,
-  type WorkOrder,
-  type RunSummary,
   type RunStepsData,
+  type RunSummary,
   type StepDetail,
+  type WorkOrder,
+  HistoryListSchema,
   RunDetailSchema,
   StepDetailSchema,
 } from '../types/history';

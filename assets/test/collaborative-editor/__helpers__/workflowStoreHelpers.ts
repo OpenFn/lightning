@@ -14,13 +14,11 @@
  *   cleanup();
  */
 
-import * as Y from 'yjs';
-import { vi } from 'vitest';
 import type { Channel } from 'phoenix';
-import type { PhoenixChannelProvider } from 'y-phoenix-channel';
+import * as Y from 'yjs';
 
-import { createWorkflowStore } from '../../../js/collaborative-editor/stores/createWorkflowStore';
 import type { WorkflowStoreInstance } from '../../../js/collaborative-editor/stores/createWorkflowStore';
+import { createWorkflowStore } from '../../../js/collaborative-editor/stores/createWorkflowStore';
 import type { Session } from '../../../js/collaborative-editor/types/session';
 
 import {

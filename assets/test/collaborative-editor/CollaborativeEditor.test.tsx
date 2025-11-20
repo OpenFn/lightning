@@ -17,13 +17,11 @@
 
 import { describe, expect, test } from 'vitest';
 
-import type { ProjectContext } from '../../js/collaborative-editor/types/sessionContext';
 import {
   createMockProject,
-  selectBreadcrumbProjectData,
-  generateBreadcrumbUrls,
   generateBreadcrumbStructure,
-  type BreadcrumbItem,
+  generateBreadcrumbUrls,
+  selectBreadcrumbProjectData,
 } from './__helpers__/breadcrumbHelpers';
 
 // =============================================================================

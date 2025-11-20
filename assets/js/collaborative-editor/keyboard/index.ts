@@ -6,12 +6,12 @@
 
 export {
   KeyboardProvider,
-  useKeyboardShortcut,
   useKeyboardDebugInfo,
+  useKeyboardShortcut,
 } from './KeyboardProvider';
 export type {
-  KeyboardHandlerOptions,
-  KeyboardHandlerCallback,
-  KeyboardDebugInfo,
   HandlerDebugInfo,
+  KeyboardDebugInfo,
+  KeyboardHandlerCallback,
+  KeyboardHandlerOptions,
 } from './types';

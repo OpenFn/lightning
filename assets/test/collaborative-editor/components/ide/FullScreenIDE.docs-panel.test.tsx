@@ -14,15 +14,15 @@
  * - LocalStorage persistence
  */
 
-import { render, screen, waitFor, within } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
-import * as Y from 'yjs';
-import { beforeEach, describe, expect, test, vi } from 'vitest';
-import { FullScreenIDE } from '../../../../js/collaborative-editor/components/ide/FullScreenIDE';
-import * as dataclipApi from '../../../../js/collaborative-editor/api/dataclips';
-import type { Workflow } from '../../../../js/collaborative-editor/types/workflow';
-import { KeyboardProvider } from '../../../../js/collaborative-editor/keyboard';
 import { StoreProvider } from '#/collaborative-editor/contexts/StoreProvider';
+import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { beforeEach, describe, expect, test, vi } from 'vitest';
+import * as Y from 'yjs';
+import * as dataclipApi from '../../../../js/collaborative-editor/api/dataclips';
+import { FullScreenIDE } from '../../../../js/collaborative-editor/components/ide/FullScreenIDE';
+import { KeyboardProvider } from '../../../../js/collaborative-editor/keyboard';
+import type { Workflow } from '../../../../js/collaborative-editor/types/workflow';
 
 // Mock dependencies
 vi.mock('../../../../js/collaborative-editor/api/dataclips');
