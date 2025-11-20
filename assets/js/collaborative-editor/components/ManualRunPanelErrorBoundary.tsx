@@ -1,6 +1,6 @@
-import { Component, type ReactNode } from "react";
+import { Component, type ReactNode } from 'react';
 
-import { notifications } from "../lib/notifications";
+import { notifications } from '../lib/notifications';
 
 interface Props {
   children: ReactNode;
@@ -45,13 +45,13 @@ export class ManualRunPanelErrorBoundary extends Component<Props, State> {
   }
 
   override componentDidCatch(error: Error) {
-    console.error("ManualRunPanel error:", error);
+    console.error('ManualRunPanel error:', error);
 
     // Show toast notification
     notifications.alert({
-      title: "Error loading run panel",
+      title: 'Error loading run panel',
       description:
-        error.message || "An unexpected error occurred. Please try again.",
+        error.message || 'An unexpected error occurred. Please try again.',
     });
 
     // Call optional error callback for error reporting
@@ -95,7 +95,7 @@ export class ManualRunPanelErrorBoundary extends Component<Props, State> {
 
             <p className="text-sm text-gray-600 mb-6">
               {this.state.error?.message ||
-                "An unexpected error occurred while loading the run panel."}
+                'An unexpected error occurred while loading the run panel.'}
             </p>
 
             <div className="flex gap-3 justify-center">

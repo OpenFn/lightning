@@ -24,22 +24,31 @@ export function VersionMismatchBanner({
 }: VersionMismatchBannerProps) {
   return (
     <div
-      className={cn(
-        'w-full bg-yellow-50 text-yellow-700 justify-center flex items-center gap-x-2 px-6 py-2.5 sm:px-3.5',
-        className
-      )}
+      className={cn('rounded-md bg-yellow-50 p-4', className)}
       role="alert"
       aria-live="polite"
     >
-      <span
-        className="hero-exclamation-triangle h-5 w-5 inline-block"
-        aria-hidden="true"
-      />
-      <p className="text-sm leading-6">
-        This run was executed on version {runVersion}, but you're viewing
-        version {currentVersion}. Steps shown may not match the current workflow
-        structure.
-      </p>
+      <div className="flex">
+        <div className="shrink-0">
+          <span
+            className="hero-exclamation-triangle h-5 w-5 text-yellow-400"
+            aria-hidden="true"
+          />
+        </div>
+        <div className="ml-3">
+          <h3 className="text-sm font-medium text-yellow-800">
+            Version mismatch
+          </h3>
+          <div className="mt-2 text-sm text-yellow-700">
+            <p>
+              This run was executed with version {runVersion}, but you're
+              viewing version {currentVersion}. Not all steps executed in the
+              run will appear on the canvas if the workflow structure has
+              changed.
+            </p>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

@@ -77,23 +77,23 @@
  * None (all state is serializable)
  */
 
-import { produce } from "immer";
-import type { PhoenixChannelProvider } from "y-phoenix-channel";
+import { produce } from 'immer';
+import type { PhoenixChannelProvider } from 'y-phoenix-channel';
 
-import _logger from "#/utils/logger";
+import _logger from '#/utils/logger';
 
-import { channelRequest } from "../hooks/useChannel";
+import { channelRequest } from '../hooks/useChannel';
 import {
   type Adaptor,
   type AdaptorState,
   type AdaptorStore,
   AdaptorsListSchema,
-} from "../types/adaptor";
+} from '../types/adaptor';
 
-import { createWithSelector } from "./common";
-import { wrapStoreWithDevTools } from "./devtools";
+import { createWithSelector } from './common';
+import { wrapStoreWithDevTools } from './devtools';
 
-const logger = _logger.ns("AdaptorStore").seal();
+const logger = _logger.ns('AdaptorStore').seal();
 
 /**
  * Creates an adaptor store instance with useSyncExternalStore + Immer pattern
@@ -116,12 +116,12 @@ export const createAdaptorStore = (): AdaptorStore => {
 
   // Redux DevTools integration
   const devtools = wrapStoreWithDevTools({
-    name: "AdaptorStore",
+    name: 'AdaptorStore',
     excludeKeys: [], // All state is serializable
     maxAge: 100,
   });
 
-  const notify = (actionName: string = "stateChange") => {
+  const notify = (actionName: string = 'stateChange') => {
     devtools.notifyWithAction(actionName, () => state);
     listeners.forEach(listener => {
       listener();
@@ -166,10 +166,10 @@ export const createAdaptorStore = (): AdaptorStore => {
         draft.error = null;
         draft.lastUpdated = Date.now();
       });
-      notify("handleAdaptorsReceived");
+      notify('handleAdaptorsReceived');
     } else {
       const errorMessage = `Invalid adaptors data: ${result.error.message}`;
-      logger.error("Failed to parse adaptors data", {
+      logger.error('Failed to parse adaptors data', {
         error: result.error,
         rawData,
       });
@@ -178,7 +178,7 @@ export const createAdaptorStore = (): AdaptorStore => {
         draft.isLoading = false;
         draft.error = errorMessage;
       });
-      notify("adaptorsError");
+      notify('adaptorsError');
     }
   };
 
@@ -198,7 +198,7 @@ export const createAdaptorStore = (): AdaptorStore => {
     state = produce(state, draft => {
       draft.isLoading = loading;
     });
-    notify("setLoading");
+    notify('setLoading');
   };
 
   const setError = (error: string | null) => {
@@ -206,14 +206,14 @@ export const createAdaptorStore = (): AdaptorStore => {
       draft.error = error;
       draft.isLoading = false;
     });
-    notify("setError");
+    notify('setError');
   };
 
   const clearError = () => {
     state = produce(state, draft => {
       draft.error = null;
     });
-    notify("clearError");
+    notify('clearError');
   };
 
   const setAdaptors = (adaptors: Adaptor[]) => {
@@ -222,7 +222,7 @@ export const createAdaptorStore = (): AdaptorStore => {
       draft.lastUpdated = Date.now();
       draft.error = null;
     });
-    notify("setAdaptors");
+    notify('setAdaptors');
   };
 
   // =============================================================================
@@ -238,18 +238,18 @@ export const createAdaptorStore = (): AdaptorStore => {
     channelProvider = provider;
 
     const adaptorsListHandler = (message: unknown) => {
-      logger.debug("Received adaptors_list message", message);
+      logger.debug('Received adaptors_list message', message);
       handleAdaptorsReceived(message);
     };
 
     const adaptorsUpdatedHandler = (message: unknown) => {
-      logger.debug("Received adaptors_updated message", message);
+      logger.debug('Received adaptors_updated message', message);
       handleAdaptorsUpdated(message);
     };
 
     // Set up channel listeners
     if (provider.channel) {
-      provider.channel.on("adaptors_updated", adaptorsUpdatedHandler);
+      provider.channel.on('adaptors_updated', adaptorsUpdatedHandler);
     }
 
     devtools.connect();
@@ -260,8 +260,8 @@ export const createAdaptorStore = (): AdaptorStore => {
     return () => {
       devtools.disconnect();
       if (provider.channel) {
-        provider.channel.off("adaptors_list", adaptorsListHandler);
-        provider.channel.off("adaptors_updated", adaptorsUpdatedHandler);
+        provider.channel.off('adaptors_list', adaptorsListHandler);
+        provider.channel.off('adaptors_updated', adaptorsUpdatedHandler);
       }
       channelProvider = null;
     };
@@ -272,8 +272,8 @@ export const createAdaptorStore = (): AdaptorStore => {
    */
   const requestAdaptors = async (): Promise<void> => {
     if (!channelProvider?.channel) {
-      logger.warn("Cannot request adaptors - no channel connected");
-      setError("No connection available");
+      logger.warn('Cannot request adaptors - no channel connected');
+      setError('No connection available');
       return;
     }
 
@@ -283,7 +283,7 @@ export const createAdaptorStore = (): AdaptorStore => {
     try {
       const response = await channelRequest<{ adaptors: unknown }>(
         channelProvider.channel,
-        "request_adaptors",
+        'request_adaptors',
         {}
       );
 
@@ -291,9 +291,9 @@ export const createAdaptorStore = (): AdaptorStore => {
         handleAdaptorsReceived(response.adaptors);
       }
     } catch (error) {
-      logger.error("Adaptor request failed", error);
+      logger.error('Adaptor request failed', error);
       setError(
-        `Failed to request adaptors: ${error instanceof Error ? error.message : "Unknown error"}`
+        `Failed to request adaptors: ${error instanceof Error ? error.message : 'Unknown error'}`
       );
     }
   };
@@ -303,8 +303,8 @@ export const createAdaptorStore = (): AdaptorStore => {
    */
   const requestProjectAdaptors = async (): Promise<void> => {
     if (!channelProvider?.channel) {
-      logger.warn("Cannot request project adaptors - no channel connected");
-      setError("No connection available");
+      logger.warn('Cannot request project adaptors - no channel connected');
+      setError('No connection available');
       return;
     }
 
@@ -312,14 +312,14 @@ export const createAdaptorStore = (): AdaptorStore => {
     clearError();
 
     try {
-      logger.debug("Requesting project adaptors");
+      logger.debug('Requesting project adaptors');
       const response = await channelRequest(
         channelProvider.channel,
-        "request_project_adaptors",
+        'request_project_adaptors',
         {}
       );
 
-      if (response && typeof response === "object") {
+      if (response && typeof response === 'object') {
         const { project_adaptors, all_adaptors } = response as {
           project_adaptors: unknown;
           all_adaptors: unknown;
@@ -335,16 +335,16 @@ export const createAdaptorStore = (): AdaptorStore => {
             draft.isLoading = false;
             draft.error = null;
           });
-          notify("requestProjectAdaptors");
+          notify('requestProjectAdaptors');
         } else {
-          const errorMessage = "Invalid project adaptors data";
+          const errorMessage = 'Invalid project adaptors data';
           logger.error(errorMessage, { projectResult, allResult });
           setError(errorMessage);
         }
       }
     } catch (error) {
-      logger.error("Project adaptors request failed", error);
-      setError("Failed to request project adaptors");
+      logger.error('Project adaptors request failed', error);
+      setError('Failed to request project adaptors');
     }
   };
 

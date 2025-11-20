@@ -75,7 +75,7 @@ defmodule LightningWeb.CredentialLiveTest do
              |> has_element?()
 
       assert index_live
-             |> element("nav#side-menu a", "User Profile")
+             |> element("nav#side-menu a.menu-item", "User Profile")
              |> render_click()
              |> follow_redirect(conn, ~p"/profile")
     end

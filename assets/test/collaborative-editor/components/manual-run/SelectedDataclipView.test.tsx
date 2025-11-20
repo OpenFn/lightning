@@ -11,40 +11,40 @@
  * - Next cron run warning banner
  */
 
-import { render, screen, waitFor } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
-import { describe, expect, test, vi, beforeEach } from "vitest";
+import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { describe, expect, test, vi, beforeEach } from 'vitest';
 
-import type { Dataclip } from "../../../../js/collaborative-editor/api/dataclips";
-import { SelectedDataclipView } from "../../../../js/collaborative-editor/components/manual-run/SelectedDataclipView";
+import type { Dataclip } from '../../../../js/collaborative-editor/api/dataclips';
+import { SelectedDataclipView } from '../../../../js/collaborative-editor/components/manual-run/SelectedDataclipView';
 
 // Mock DataclipViewer component
-vi.mock("../../../../js/react/components/DataclipViewer", () => ({
+vi.mock('../../../../js/react/components/DataclipViewer', () => ({
   DataclipViewer: ({ dataclipId }: { dataclipId: string }) => (
     <div data-testid="dataclip-viewer">Viewer for {dataclipId}</div>
   ),
 }));
 
 const mockDataclip: Dataclip = {
-  id: "dataclip-123",
-  name: "Test Dataclip",
-  type: "http_request",
-  body: { data: "test" },
-  inserted_at: "2024-01-15T10:30:00Z",
-  updated_at: "2024-01-15T10:30:00Z",
-  project_id: "project-1",
+  id: 'dataclip-123',
+  name: 'Test Dataclip',
+  type: 'http_request',
+  body: { data: 'test' },
+  inserted_at: '2024-01-15T10:30:00Z',
+  updated_at: '2024-01-15T10:30:00Z',
+  project_id: 'project-1',
   wiped_at: null,
   step_id: null,
   request: null,
 };
 
-describe("SelectedDataclipView", () => {
+describe('SelectedDataclipView', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  describe("Basic Rendering", () => {
-    test("renders dataclip name and metadata", () => {
+  describe('Basic Rendering', () => {
+    test('renders dataclip name and metadata', () => {
       const onUnselect = vi.fn();
       const onNameChange = vi.fn();
 
@@ -58,9 +58,9 @@ describe("SelectedDataclipView", () => {
         />
       );
 
-      expect(screen.getByText("Test Dataclip")).toBeInTheDocument();
-      expect(screen.getByText("http request")).toBeInTheDocument();
-      expect(screen.getByText("1/15/2024")).toBeInTheDocument();
+      expect(screen.getByText('Test Dataclip')).toBeInTheDocument();
+      expect(screen.getByText('http request')).toBeInTheDocument();
+      expect(screen.getByText('1/15/2024')).toBeInTheDocument();
     });
 
     test("renders 'Unnamed' when dataclip has no name", () => {
@@ -78,10 +78,10 @@ describe("SelectedDataclipView", () => {
         />
       );
 
-      expect(screen.getByText("Unnamed")).toBeInTheDocument();
+      expect(screen.getByText('Unnamed')).toBeInTheDocument();
     });
 
-    test("renders dataclip viewer with correct ID", () => {
+    test('renders dataclip viewer with correct ID', () => {
       const onUnselect = vi.fn();
       const onNameChange = vi.fn();
 
@@ -95,12 +95,12 @@ describe("SelectedDataclipView", () => {
         />
       );
 
-      expect(screen.getByTestId("dataclip-viewer")).toHaveTextContent(
-        "Viewer for dataclip-123"
+      expect(screen.getByTestId('dataclip-viewer')).toHaveTextContent(
+        'Viewer for dataclip-123'
       );
     });
 
-    test("renders close button", () => {
+    test('renders close button', () => {
       const onUnselect = vi.fn();
       const onNameChange = vi.fn();
 
@@ -114,16 +114,16 @@ describe("SelectedDataclipView", () => {
         />
       );
 
-      const closeButtons = screen.getAllByRole("button");
+      const closeButtons = screen.getAllByRole('button');
       const xButton = closeButtons.find(
         btn =>
           btn.querySelector('svg[data-slot="icon"]') &&
-          btn.className.includes("ml-4")
+          btn.className.includes('ml-4')
       );
       expect(xButton).toBeDefined();
     });
 
-    test("shows next cron run warning when isNextCronRun is true", () => {
+    test('shows next cron run warning when isNextCronRun is true', () => {
       const onUnselect = vi.fn();
       const onNameChange = vi.fn();
 
@@ -138,14 +138,14 @@ describe("SelectedDataclipView", () => {
       );
 
       expect(
-        screen.getByText("Default Next Input for Cron")
+        screen.getByText('Default Next Input for Cron')
       ).toBeInTheDocument();
       expect(
         screen.getByText(/This workflow has a "cron" trigger/)
       ).toBeInTheDocument();
     });
 
-    test("does not show next cron run warning when isNextCronRun is false", () => {
+    test('does not show next cron run warning when isNextCronRun is false', () => {
       const onUnselect = vi.fn();
       const onNameChange = vi.fn();
 
@@ -160,13 +160,13 @@ describe("SelectedDataclipView", () => {
       );
 
       expect(
-        screen.queryByText("Default Next Input for Cron")
+        screen.queryByText('Default Next Input for Cron')
       ).not.toBeInTheDocument();
     });
   });
 
-  describe("Edit Permissions", () => {
-    test("shows edit button when canEdit is true", () => {
+  describe('Edit Permissions', () => {
+    test('shows edit button when canEdit is true', () => {
       const onUnselect = vi.fn();
       const onNameChange = vi.fn();
 
@@ -180,14 +180,14 @@ describe("SelectedDataclipView", () => {
         />
       );
 
-      const editButtons = screen.getAllByRole("button");
+      const editButtons = screen.getAllByRole('button');
       const pencilButton = editButtons.find(btn =>
         btn.querySelector('svg path[d*="16.862"]')
       );
       expect(pencilButton).toBeDefined();
     });
 
-    test("does not show edit button when canEdit is false", () => {
+    test('does not show edit button when canEdit is false', () => {
       const onUnselect = vi.fn();
       const onNameChange = vi.fn();
 
@@ -201,7 +201,7 @@ describe("SelectedDataclipView", () => {
         />
       );
 
-      const editButtons = screen.getAllByRole("button");
+      const editButtons = screen.getAllByRole('button');
       const pencilButton = editButtons.find(btn =>
         btn.querySelector('svg path[d*="16.862"]')
       );
@@ -209,8 +209,8 @@ describe("SelectedDataclipView", () => {
     });
   });
 
-  describe("Name Editing", () => {
-    test("enters edit mode when pencil icon clicked", async () => {
+  describe('Name Editing', () => {
+    test('enters edit mode when pencil icon clicked', async () => {
       const user = userEvent.setup();
       const onUnselect = vi.fn();
       const onNameChange = vi.fn();
@@ -226,16 +226,16 @@ describe("SelectedDataclipView", () => {
       );
 
       // Find edit button (pencil icon, first button)
-      const buttons = screen.getAllByRole("button");
+      const buttons = screen.getAllByRole('button');
       const pencilButton = buttons[0];
 
       await user.click(pencilButton);
 
-      expect(screen.getByPlaceholderText("Dataclip name")).toBeInTheDocument();
-      expect(screen.getByDisplayValue("Test Dataclip")).toBeInTheDocument();
+      expect(screen.getByPlaceholderText('Dataclip name')).toBeInTheDocument();
+      expect(screen.getByDisplayValue('Test Dataclip')).toBeInTheDocument();
     });
 
-    test("shows save and cancel buttons in edit mode", async () => {
+    test('shows save and cancel buttons in edit mode', async () => {
       const user = userEvent.setup();
       const onUnselect = vi.fn();
       const onNameChange = vi.fn();
@@ -250,12 +250,12 @@ describe("SelectedDataclipView", () => {
         />
       );
 
-      const editButtons = screen.getAllByRole("button");
+      const editButtons = screen.getAllByRole('button');
       const pencilButton = editButtons[0];
 
       await user.click(pencilButton!);
 
-      const allButtons = screen.getAllByRole("button");
+      const allButtons = screen.getAllByRole('button');
       const checkButton = allButtons[0]; // Check button (first in edit mode)
       const xButton = allButtons[1]; // Cancel button (second in edit mode)
 
@@ -263,7 +263,7 @@ describe("SelectedDataclipView", () => {
       expect(xButton).toBeInTheDocument();
     });
 
-    test("updates input value when typing", async () => {
+    test('updates input value when typing', async () => {
       const user = userEvent.setup();
       const onUnselect = vi.fn();
       const onNameChange = vi.fn();
@@ -278,19 +278,19 @@ describe("SelectedDataclipView", () => {
         />
       );
 
-      const editButtons = screen.getAllByRole("button");
+      const editButtons = screen.getAllByRole('button');
       const pencilButton = editButtons[0];
 
       await user.click(pencilButton!);
 
-      const input = screen.getByPlaceholderText("Dataclip name");
+      const input = screen.getByPlaceholderText('Dataclip name');
       await user.clear(input);
-      await user.type(input, "New Name");
+      await user.type(input, 'New Name');
 
-      expect(input).toHaveValue("New Name");
+      expect(input).toHaveValue('New Name');
     });
 
-    test("calls onNameChange when save button clicked with new name", async () => {
+    test('calls onNameChange when save button clicked with new name', async () => {
       const user = userEvent.setup();
       const onUnselect = vi.fn();
       const onNameChange = vi.fn().mockResolvedValue(undefined);
@@ -305,29 +305,29 @@ describe("SelectedDataclipView", () => {
         />
       );
 
-      const editButtons = screen.getAllByRole("button");
+      const editButtons = screen.getAllByRole('button');
       const pencilButton = editButtons[0];
 
       await user.click(pencilButton!);
 
-      const input = screen.getByPlaceholderText("Dataclip name");
+      const input = screen.getByPlaceholderText('Dataclip name');
       await user.clear(input);
-      await user.type(input, "Updated Name");
+      await user.type(input, 'Updated Name');
 
-      const allButtons = screen.getAllByRole("button");
+      const allButtons = screen.getAllByRole('button');
       const checkButton = allButtons[0]; // Check button (first in edit mode)
 
       await user.click(checkButton!);
 
       await waitFor(() => {
         expect(onNameChange).toHaveBeenCalledWith(
-          "dataclip-123",
-          "Updated Name"
+          'dataclip-123',
+          'Updated Name'
         );
       });
     });
 
-    test("exits edit mode after successful save", async () => {
+    test('exits edit mode after successful save', async () => {
       const user = userEvent.setup();
       const onUnselect = vi.fn();
       const onNameChange = vi.fn().mockResolvedValue(undefined);
@@ -342,28 +342,28 @@ describe("SelectedDataclipView", () => {
         />
       );
 
-      const editButtons = screen.getAllByRole("button");
+      const editButtons = screen.getAllByRole('button');
       const pencilButton = editButtons[0];
 
       await user.click(pencilButton!);
 
-      const input = screen.getByPlaceholderText("Dataclip name");
+      const input = screen.getByPlaceholderText('Dataclip name');
       await user.clear(input);
-      await user.type(input, "Updated Name");
+      await user.type(input, 'Updated Name');
 
-      const allButtons = screen.getAllByRole("button");
+      const allButtons = screen.getAllByRole('button');
       const checkButton = allButtons[0]; // Check button (first in edit mode)
 
       await user.click(checkButton!);
 
       await waitFor(() => {
         expect(
-          screen.queryByPlaceholderText("Dataclip name")
+          screen.queryByPlaceholderText('Dataclip name')
         ).not.toBeInTheDocument();
       });
     });
 
-    test("does NOT call onNameChange when name is unchanged", async () => {
+    test('does NOT call onNameChange when name is unchanged', async () => {
       const user = userEvent.setup();
       const onUnselect = vi.fn();
       const onNameChange = vi.fn().mockResolvedValue(undefined);
@@ -378,26 +378,26 @@ describe("SelectedDataclipView", () => {
         />
       );
 
-      const editButtons = screen.getAllByRole("button");
+      const editButtons = screen.getAllByRole('button');
       const pencilButton = editButtons[0];
 
       await user.click(pencilButton!);
 
-      const allButtons = screen.getAllByRole("button");
+      const allButtons = screen.getAllByRole('button');
       const checkButton = allButtons[0]; // Check button (first in edit mode)
 
       await user.click(checkButton!);
 
       await waitFor(() => {
         expect(
-          screen.queryByPlaceholderText("Dataclip name")
+          screen.queryByPlaceholderText('Dataclip name')
         ).not.toBeInTheDocument();
       });
 
       expect(onNameChange).not.toHaveBeenCalled();
     });
 
-    test("does NOT call onNameChange when only whitespace changes", async () => {
+    test('does NOT call onNameChange when only whitespace changes', async () => {
       const user = userEvent.setup();
       const onUnselect = vi.fn();
       const onNameChange = vi.fn().mockResolvedValue(undefined);
@@ -412,29 +412,29 @@ describe("SelectedDataclipView", () => {
         />
       );
 
-      const editButtons = screen.getAllByRole("button");
+      const editButtons = screen.getAllByRole('button');
       const pencilButton = editButtons[0];
 
       await user.click(pencilButton!);
 
-      const input = screen.getByPlaceholderText("Dataclip name");
-      await user.type(input, "   ");
+      const input = screen.getByPlaceholderText('Dataclip name');
+      await user.type(input, '   ');
 
-      const allButtons = screen.getAllByRole("button");
+      const allButtons = screen.getAllByRole('button');
       const checkButton = allButtons[0]; // Check button (first in edit mode)
 
       await user.click(checkButton!);
 
       await waitFor(() => {
         expect(
-          screen.queryByPlaceholderText("Dataclip name")
+          screen.queryByPlaceholderText('Dataclip name')
         ).not.toBeInTheDocument();
       });
 
       expect(onNameChange).not.toHaveBeenCalled();
     });
 
-    test("cancels edit when cancel button clicked", async () => {
+    test('cancels edit when cancel button clicked', async () => {
       const user = userEvent.setup();
       const onUnselect = vi.fn();
       const onNameChange = vi.fn();
@@ -449,36 +449,36 @@ describe("SelectedDataclipView", () => {
         />
       );
 
-      const editButtons = screen.getAllByRole("button");
+      const editButtons = screen.getAllByRole('button');
       const pencilButton = editButtons[0];
 
       await user.click(pencilButton!);
 
-      const input = screen.getByPlaceholderText("Dataclip name");
+      const input = screen.getByPlaceholderText('Dataclip name');
       await user.clear(input);
-      await user.type(input, "Changed Name");
+      await user.type(input, 'Changed Name');
 
-      const allButtons = screen.getAllByRole("button");
+      const allButtons = screen.getAllByRole('button');
       const xButton = allButtons[1]; // Cancel button (second in edit mode)
 
       await user.click(xButton!);
 
       await waitFor(() => {
         expect(
-          screen.queryByPlaceholderText("Dataclip name")
+          screen.queryByPlaceholderText('Dataclip name')
         ).not.toBeInTheDocument();
       });
 
       expect(onNameChange).not.toHaveBeenCalled();
-      expect(screen.getByText("Test Dataclip")).toBeInTheDocument();
+      expect(screen.getByText('Test Dataclip')).toBeInTheDocument();
     });
 
-    test("shows error message when save fails", async () => {
+    test('shows error message when save fails', async () => {
       const user = userEvent.setup();
       const onUnselect = vi.fn();
       const onNameChange = vi
         .fn()
-        .mockRejectedValue(new Error("Network error"));
+        .mockRejectedValue(new Error('Network error'));
 
       render(
         <SelectedDataclipView
@@ -490,31 +490,31 @@ describe("SelectedDataclipView", () => {
         />
       );
 
-      const editButtons = screen.getAllByRole("button");
+      const editButtons = screen.getAllByRole('button');
       const pencilButton = editButtons[0];
 
       await user.click(pencilButton!);
 
-      const input = screen.getByPlaceholderText("Dataclip name");
+      const input = screen.getByPlaceholderText('Dataclip name');
       await user.clear(input);
-      await user.type(input, "New Name");
+      await user.type(input, 'New Name');
 
-      const allButtons = screen.getAllByRole("button");
+      const allButtons = screen.getAllByRole('button');
       const checkButton = allButtons[0]; // Check button (first in edit mode)
 
       await user.click(checkButton!);
 
       await waitFor(() => {
-        expect(screen.getByText("Network error")).toBeInTheDocument();
+        expect(screen.getByText('Network error')).toBeInTheDocument();
       });
 
-      expect(screen.getByPlaceholderText("Dataclip name")).toBeInTheDocument();
+      expect(screen.getByPlaceholderText('Dataclip name')).toBeInTheDocument();
     });
 
-    test("shows generic error message when non-Error thrown", async () => {
+    test('shows generic error message when non-Error thrown', async () => {
       const user = userEvent.setup();
       const onUnselect = vi.fn();
-      const onNameChange = vi.fn().mockRejectedValue("Unknown failure");
+      const onNameChange = vi.fn().mockRejectedValue('Unknown failure');
 
       render(
         <SelectedDataclipView
@@ -526,26 +526,26 @@ describe("SelectedDataclipView", () => {
         />
       );
 
-      const editButtons = screen.getAllByRole("button");
+      const editButtons = screen.getAllByRole('button');
       const pencilButton = editButtons[0];
 
       await user.click(pencilButton!);
 
-      const input = screen.getByPlaceholderText("Dataclip name");
+      const input = screen.getByPlaceholderText('Dataclip name');
       await user.clear(input);
-      await user.type(input, "New Name");
+      await user.type(input, 'New Name');
 
-      const allButtons = screen.getAllByRole("button");
+      const allButtons = screen.getAllByRole('button');
       const checkButton = allButtons[0]; // Check button (first in edit mode)
 
       await user.click(checkButton!);
 
       await waitFor(() => {
-        expect(screen.getByText("Failed to save name")).toBeInTheDocument();
+        expect(screen.getByText('Failed to save name')).toBeInTheDocument();
       });
     });
 
-    test("disables buttons while saving", async () => {
+    test('disables buttons while saving', async () => {
       const user = userEvent.setup();
       const onUnselect = vi.fn();
       let resolveNameChange: () => void;
@@ -564,16 +564,16 @@ describe("SelectedDataclipView", () => {
         />
       );
 
-      const editButtons = screen.getAllByRole("button");
+      const editButtons = screen.getAllByRole('button');
       const pencilButton = editButtons[0];
 
       await user.click(pencilButton!);
 
-      const input = screen.getByPlaceholderText("Dataclip name");
+      const input = screen.getByPlaceholderText('Dataclip name');
       await user.clear(input);
-      await user.type(input, "New Name");
+      await user.type(input, 'New Name');
 
-      const allButtons = screen.getAllByRole("button");
+      const allButtons = screen.getAllByRole('button');
       const checkButton = allButtons[0]; // Check button (first in edit mode)
 
       await user.click(checkButton!);
@@ -589,8 +589,8 @@ describe("SelectedDataclipView", () => {
     });
   });
 
-  describe("Keyboard Shortcuts", () => {
-    test("saves name when Enter key pressed", async () => {
+  describe('Keyboard Shortcuts', () => {
+    test('saves name when Enter key pressed', async () => {
       const user = userEvent.setup();
       const onUnselect = vi.fn();
       const onNameChange = vi.fn().mockResolvedValue(undefined);
@@ -605,25 +605,25 @@ describe("SelectedDataclipView", () => {
         />
       );
 
-      const editButtons = screen.getAllByRole("button");
+      const editButtons = screen.getAllByRole('button');
       const pencilButton = editButtons[0];
 
       await user.click(pencilButton!);
 
-      const input = screen.getByPlaceholderText("Dataclip name");
+      const input = screen.getByPlaceholderText('Dataclip name');
       await user.clear(input);
-      await user.type(input, "Keyboard Name");
-      await user.keyboard("{Enter}");
+      await user.type(input, 'Keyboard Name');
+      await user.keyboard('{Enter}');
 
       await waitFor(() => {
         expect(onNameChange).toHaveBeenCalledWith(
-          "dataclip-123",
-          "Keyboard Name"
+          'dataclip-123',
+          'Keyboard Name'
         );
       });
     });
 
-    test("does NOT save when Enter pressed with unchanged name", async () => {
+    test('does NOT save when Enter pressed with unchanged name', async () => {
       const user = userEvent.setup();
       const onUnselect = vi.fn();
       const onNameChange = vi.fn().mockResolvedValue(undefined);
@@ -638,24 +638,24 @@ describe("SelectedDataclipView", () => {
         />
       );
 
-      const editButtons = screen.getAllByRole("button");
+      const editButtons = screen.getAllByRole('button');
       const pencilButton = editButtons[0];
 
       await user.click(pencilButton!);
 
-      const input = screen.getByPlaceholderText("Dataclip name");
-      await user.keyboard("{Enter}");
+      const input = screen.getByPlaceholderText('Dataclip name');
+      await user.keyboard('{Enter}');
 
       await waitFor(() => {
         expect(
-          screen.queryByPlaceholderText("Dataclip name")
+          screen.queryByPlaceholderText('Dataclip name')
         ).not.toBeInTheDocument();
       });
 
       expect(onNameChange).not.toHaveBeenCalled();
     });
 
-    test("cancels edit when Escape key pressed", async () => {
+    test('cancels edit when Escape key pressed', async () => {
       const user = userEvent.setup();
       const onUnselect = vi.fn();
       const onNameChange = vi.fn();
@@ -670,27 +670,27 @@ describe("SelectedDataclipView", () => {
         />
       );
 
-      const editButtons = screen.getAllByRole("button");
+      const editButtons = screen.getAllByRole('button');
       const pencilButton = editButtons[0];
 
       await user.click(pencilButton!);
 
-      const input = screen.getByPlaceholderText("Dataclip name");
+      const input = screen.getByPlaceholderText('Dataclip name');
       await user.clear(input);
-      await user.type(input, "Changed Name");
-      await user.keyboard("{Escape}");
+      await user.type(input, 'Changed Name');
+      await user.keyboard('{Escape}');
 
       await waitFor(() => {
         expect(
-          screen.queryByPlaceholderText("Dataclip name")
+          screen.queryByPlaceholderText('Dataclip name')
         ).not.toBeInTheDocument();
       });
 
       expect(onNameChange).not.toHaveBeenCalled();
-      expect(screen.getByText("Test Dataclip")).toBeInTheDocument();
+      expect(screen.getByText('Test Dataclip')).toBeInTheDocument();
     });
 
-    test("does not save when Enter pressed while saving", async () => {
+    test('does not save when Enter pressed while saving', async () => {
       const user = userEvent.setup();
       const onUnselect = vi.fn();
       let resolveNameChange: () => void;
@@ -709,21 +709,21 @@ describe("SelectedDataclipView", () => {
         />
       );
 
-      const editButtons = screen.getAllByRole("button");
+      const editButtons = screen.getAllByRole('button');
       const pencilButton = editButtons[0];
 
       await user.click(pencilButton!);
 
-      const input = screen.getByPlaceholderText("Dataclip name");
+      const input = screen.getByPlaceholderText('Dataclip name');
       await user.clear(input);
-      await user.type(input, "New Name");
-      await user.keyboard("{Enter}");
+      await user.type(input, 'New Name');
+      await user.keyboard('{Enter}');
 
       await waitFor(() => {
         expect(onNameChange).toHaveBeenCalledTimes(1);
       });
 
-      await user.keyboard("{Enter}");
+      await user.keyboard('{Enter}');
 
       expect(onNameChange).toHaveBeenCalledTimes(1);
 
@@ -731,8 +731,8 @@ describe("SelectedDataclipView", () => {
     });
   });
 
-  describe("Unselect Behavior", () => {
-    test("calls onUnselect when close button clicked", async () => {
+  describe('Unselect Behavior', () => {
+    test('calls onUnselect when close button clicked', async () => {
       const user = userEvent.setup();
       const onUnselect = vi.fn();
       const onNameChange = vi.fn();
@@ -747,7 +747,7 @@ describe("SelectedDataclipView", () => {
         />
       );
 
-      const closeButtons = screen.getAllByRole("button");
+      const closeButtons = screen.getAllByRole('button');
       const xButton = closeButtons[1]; // Close button (last button)
 
       await user.click(xButton!);
@@ -756,8 +756,8 @@ describe("SelectedDataclipView", () => {
     });
   });
 
-  describe("Empty Name Handling", () => {
-    test("saves null when input is cleared", async () => {
+  describe('Empty Name Handling', () => {
+    test('saves null when input is cleared', async () => {
       const user = userEvent.setup();
       const onUnselect = vi.fn();
       const onNameChange = vi.fn().mockResolvedValue(undefined);
@@ -772,25 +772,25 @@ describe("SelectedDataclipView", () => {
         />
       );
 
-      const editButtons = screen.getAllByRole("button");
+      const editButtons = screen.getAllByRole('button');
       const pencilButton = editButtons[0];
 
       await user.click(pencilButton!);
 
-      const input = screen.getByPlaceholderText("Dataclip name");
+      const input = screen.getByPlaceholderText('Dataclip name');
       await user.clear(input);
 
-      const allButtons = screen.getAllByRole("button");
+      const allButtons = screen.getAllByRole('button');
       const checkButton = allButtons[0]; // Check button (first in edit mode)
 
       await user.click(checkButton!);
 
       await waitFor(() => {
-        expect(onNameChange).toHaveBeenCalledWith("dataclip-123", null);
+        expect(onNameChange).toHaveBeenCalledWith('dataclip-123', null);
       });
     });
 
-    test("initializes input with empty string for unnamed dataclip", async () => {
+    test('initializes input with empty string for unnamed dataclip', async () => {
       const user = userEvent.setup();
       const dataclip = { ...mockDataclip, name: null };
       const onUnselect = vi.fn();
@@ -806,13 +806,13 @@ describe("SelectedDataclipView", () => {
         />
       );
 
-      const editButtons = screen.getAllByRole("button");
+      const editButtons = screen.getAllByRole('button');
       const pencilButton = editButtons[0];
 
       await user.click(pencilButton!);
 
-      const input = screen.getByPlaceholderText("Dataclip name");
-      expect(input).toHaveValue("");
+      const input = screen.getByPlaceholderText('Dataclip name');
+      expect(input).toHaveValue('');
     });
   });
 });

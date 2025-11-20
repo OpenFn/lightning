@@ -8,7 +8,7 @@ type AdaptorDisplaySize = 'xs' | 'sm' | 'md' | 'lg' | 'xl';
 
 interface AdaptorDisplayProps {
   /** Full adaptor string like "@openfn/language-common@latest" */
-  adaptor: string;
+  adaptor: string | null | undefined;
   /** Optional credential ID to show credential indicator */
   credentialId?: string | null;
   /** Callback when Edit button is clicked */
@@ -26,10 +26,11 @@ interface AdaptorDisplayProps {
  * @param adaptor - Full NPM package string like "@openfn/language-common@1.4.3"
  * @returns Tuple of package name and version, or null if parsing fails
  */
-function resolveAdaptor(adaptor: string): {
+function resolveAdaptor(adaptor: string | null | undefined): {
   package: string | null;
   version: string | null;
 } {
+  if (!adaptor) return { package: null, version: null };
   const regex = /^(@[^@]+)@(.+)$/;
   const match = adaptor.match(regex);
   if (!match) return { package: null, version: null };

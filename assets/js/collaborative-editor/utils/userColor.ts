@@ -6,14 +6,14 @@
  */
 
 export const USER_COLORS = [
-  "#E53935", // red
-  "#8E24AA", // purple
-  "#00ACC1", // cyan
-  "#43A047", // green
-  "#FB8C00", // orange
-  "#3949AB", // indigo
-  "#D81B60", // magenta
-  "#6D4C41", // brown
+  '#E53935', // red
+  '#8E24AA', // purple
+  '#00ACC1', // cyan
+  '#43A047', // green
+  '#FB8C00', // orange
+  '#3949AB', // indigo
+  '#D81B60', // magenta
+  '#6D4C41', // brown
 ];
 
 /**
@@ -27,7 +27,7 @@ export function generateUserColor(userId: string): string {
 
 // FNV-1a with a slight twist.
 function hashToIndex(userId: string, paletteLength: number) {
-  const str = userId.replace(/-/g, "").toLowerCase();
+  const str = userId.replace(/-/g, '').toLowerCase();
   let hash = 2166136261;
   for (let i = 0; i < str.length; i++) {
     hash ^= str.charCodeAt(i);

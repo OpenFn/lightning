@@ -94,7 +94,7 @@ done
 
 # Set default file paths
 JS_FILES="${ASSETS_DIR}/js"
-PRETTIER_FILES=""
+PRETTIER_FILES="assets"
 EX_FILES=""
 
 # Override with changed files if flag is set

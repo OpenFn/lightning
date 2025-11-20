@@ -179,7 +179,6 @@ defmodule Lightning.Collaboration.WorkflowSerializerTest do
       assert trigger["id"] == workflow_trigger.id
       assert trigger["type"] == "webhook"
       assert trigger["enabled"] == true
-      assert trigger["has_auth_method"] == false
       assert is_nil(trigger["cron_expression"])
     end
 
@@ -759,7 +758,6 @@ defmodule Lightning.Collaboration.WorkflowSerializerTest do
                "id" => trigger.id,
                "type" => "webhook",
                "enabled" => true,
-               "has_auth_method" => trigger.has_auth_method,
                "cron_expression" => nil
              } == extracted_trigger
 
@@ -978,8 +976,7 @@ defmodule Lightning.Collaboration.WorkflowSerializerTest do
                "id" => original_trigger.id,
                "type" => to_string(original_trigger.type),
                "enabled" => original_trigger.enabled,
-               "cron_expression" => original_trigger.cron_expression,
-               "has_auth_method" => original_trigger.has_auth_method
+               "cron_expression" => original_trigger.cron_expression
              } == extracted_trigger
 
       # Positions
@@ -1259,7 +1256,7 @@ defmodule Lightning.Collaboration.WorkflowSerializerTest do
              } == edge
     end
 
-    test "preserves all 5 trigger fields" do
+    test "preserves all trigger fields" do
       workflow =
         build(:workflow)
         |> with_trigger(
@@ -1281,13 +1278,12 @@ defmodule Lightning.Collaboration.WorkflowSerializerTest do
       trigger = List.first(extracted["triggers"])
       original_trigger = List.first(workflow.triggers)
 
-      # All 5 fields should be present
+      # All trigger fields should be present (excluding virtual fields)
       assert %{
                "id" => original_trigger.id,
                "type" => "cron",
                "enabled" => true,
-               "cron_expression" => "0 */6 * * *",
-               "has_auth_method" => false
+               "cron_expression" => "0 */6 * * *"
              } == trigger
     end
 

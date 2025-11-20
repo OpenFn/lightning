@@ -220,7 +220,7 @@ defmodule Lightning.SessionTest do
         assert doc_trigger = find_in_ydoc_array(triggers_array, trigger.id),
                "Trigger #{trigger.id} not found in doc"
 
-        ~w(cron_expression enabled has_auth_method id type)
+        ~w(cron_expression enabled id type)
         |> Enum.each(fn key ->
           doc_value = Yex.Map.fetch!(doc_trigger, key)
 

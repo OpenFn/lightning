@@ -69,63 +69,74 @@ export function JobInspector({
     ? saveTooltipMessage
     : validation.disableReason || 'Delete this job';
 
-  // Build footer with edit, run, and delete buttons (only if permission and not read only)
-  const footer =
-    permissions?.can_edit_workflow && !isReadOnly ? (
-      <InspectorFooter
-        leftButtons={
-          <>
-            <Tooltip
-              content={
-                <>
-                  {isIDEOpen
-                    ? 'IDE is already open'
-                    : 'Open full-screen code editor '}
-                  {!isIDEOpen && (
-                    <>
-                      {' '}
-                      {'( '}
-                      <ShortcutKeys keys={['mod', 'e']} />
-                      {' )'}
-                    </>
-                  )}
-                </>
-              }
-              side="top"
-            >
-              <span className="inline-block">
-                <Button
-                  variant="primary"
-                  onClick={() => updateSearchParams({ panel: 'editor' })}
-                  disabled={isIDEOpen}
-                >
-                  Edit
-                </Button>
-              </span>
-            </Tooltip>
-            <Button
-              variant="primary"
-              onClick={() => onOpenRunPanel({ jobId: job.id })}
-            >
-              Run
-            </Button>
-          </>
-        }
-        rightButtons={
-          <Tooltip content={deleteTooltipMessage}>
+  // Determine if Run and Delete should be disabled
+  const canEdit = permissions?.can_edit_workflow && !isReadOnly;
+  const runDisabled = !canEdit;
+  const runTooltipMessage = runDisabled
+    ? 'Cannot run jobs in read-only mode'
+    : 'Run this job';
+
+  // Build footer with edit, run, and delete buttons
+  const footer = (
+    <InspectorFooter
+      leftButtons={
+        <>
+          <Tooltip
+            content={
+              <>
+                {isIDEOpen
+                  ? 'IDE is already open'
+                  : 'Open full-screen code editor '}
+                {!isIDEOpen && (
+                  <>
+                    {' '}
+                    {'( '}
+                    <ShortcutKeys keys={['mod', 'e']} />
+                    {' )'}
+                  </>
+                )}
+              </>
+            }
+            side="top"
+          >
             <span className="inline-block">
               <Button
-                variant="danger"
-                onClick={() => setIsDeleteDialogOpen(true)}
-                disabled={!canDelete}
+                variant="primary"
+                onClick={() => updateSearchParams({ panel: 'editor' })}
+                disabled={isIDEOpen}
               >
-                {isDeleting ? 'Deleting...' : 'Delete'}
+                Code
               </Button>
             </span>
           </Tooltip>
-        }
-      />
-    ) : undefined;
+          <Tooltip content={runTooltipMessage}>
+            <span className="inline-block">
+              <Button
+                variant="primary"
+                onClick={() => onOpenRunPanel({ jobId: job.id })}
+                disabled={runDisabled}
+              >
+                Run
+              </Button>
+            </span>
+          </Tooltip>
+        </>
+      }
+      rightButtons={
+        <Tooltip content={deleteTooltipMessage}>
+          <span className="inline-block">
+            <Button
+              variant="danger"
+              onClick={() => setIsDeleteDialogOpen(true)}
+              disabled={!canDelete || !canEdit}
+            >
+              {isDeleting ? 'Deleting...' : 'Delete'}
+            </Button>
+          </span>
+        </Tooltip>
+      }
+    />
+  );
 
   return (
     <>

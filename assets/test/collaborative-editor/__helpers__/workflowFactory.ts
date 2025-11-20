@@ -12,7 +12,7 @@
  *   });
  */
 
-import * as Y from "yjs";
+import * as Y from 'yjs';
 
 /**
  * Input for creating a workflow Y.Doc with factory functions.
@@ -74,59 +74,59 @@ export function createWorkflowYDoc(config: CreateWorkflowInput): Y.Doc {
   const ydoc = new Y.Doc();
 
   // Set up jobs
-  const jobsArray = ydoc.getArray("jobs");
+  const jobsArray = ydoc.getArray('jobs');
   if (config.jobs) {
     Object.entries(config.jobs).forEach(([_id, job]) => {
       const jobMap = new Y.Map();
-      jobMap.set("id", job.id);
-      jobMap.set("name", job.name);
-      jobMap.set("adaptor", job.adaptor);
+      jobMap.set('id', job.id);
+      jobMap.set('name', job.name);
+      jobMap.set('adaptor', job.adaptor);
       if (job.body) {
-        jobMap.set("body", new Y.Text(job.body));
+        jobMap.set('body', new Y.Text(job.body));
       } else {
-        jobMap.set("body", new Y.Text(""));
+        jobMap.set('body', new Y.Text(''));
       }
       // Set credential fields explicitly - default to null if not provided
-      jobMap.set("project_credential_id", job.project_credential_id ?? null);
-      jobMap.set("keychain_credential_id", job.keychain_credential_id ?? null);
+      jobMap.set('project_credential_id', job.project_credential_id ?? null);
+      jobMap.set('keychain_credential_id', job.keychain_credential_id ?? null);
       jobsArray.push([jobMap]);
     });
   }
 
   // Set up triggers
-  const triggersArray = ydoc.getArray("triggers");
+  const triggersArray = ydoc.getArray('triggers');
   if (config.triggers) {
     Object.entries(config.triggers).forEach(([_id, trigger]) => {
       const triggerMap = new Y.Map();
-      triggerMap.set("id", trigger.id);
-      triggerMap.set("type", trigger.type);
-      triggerMap.set("enabled", trigger.enabled ?? true);
+      triggerMap.set('id', trigger.id);
+      triggerMap.set('type', trigger.type);
+      triggerMap.set('enabled', trigger.enabled ?? true);
       triggersArray.push([triggerMap]);
     });
   }
 
   // Set up edges
-  const edgesArray = ydoc.getArray("edges");
+  const edgesArray = ydoc.getArray('edges');
   if (config.edges) {
     config.edges.forEach(edge => {
       const edgeMap = new Y.Map();
-      edgeMap.set("id", edge.id);
+      edgeMap.set('id', edge.id);
 
       // Determine if source is a job or trigger by checking the config
       const isSourceTrigger = config.triggers?.[edge.source] !== undefined;
       if (isSourceTrigger) {
-        edgeMap.set("source_trigger_id", edge.source);
+        edgeMap.set('source_trigger_id', edge.source);
       } else {
-        edgeMap.set("source_job_id", edge.source);
+        edgeMap.set('source_job_id', edge.source);
       }
 
       // Target is always a job
-      edgeMap.set("target_job_id", edge.target);
+      edgeMap.set('target_job_id', edge.target);
 
-      edgeMap.set("condition_type", edge.condition_type || "on_job_success");
-      edgeMap.set("condition_label", edge.condition_label || null);
-      edgeMap.set("condition_expression", edge.condition_expression || null);
-      edgeMap.set("enabled", edge.enabled ?? true);
+      edgeMap.set('condition_type', edge.condition_type || 'on_job_success');
+      edgeMap.set('condition_label', edge.condition_label || null);
+      edgeMap.set('condition_expression', edge.condition_expression || null);
+      edgeMap.set('enabled', edge.enabled ?? true);
       edgesArray.push([edgeMap]);
     });
   }
@@ -148,29 +148,29 @@ export function createWorkflowYDoc(config: CreateWorkflowInput): Y.Doc {
 export function createLinearWorkflowYDoc(): Y.Doc {
   return createWorkflowYDoc({
     triggers: {
-      "trigger-1": { id: "trigger-1", type: "webhook" },
+      'trigger-1': { id: 'trigger-1', type: 'webhook' },
     },
     jobs: {
-      "job-a": {
-        id: "job-a",
-        name: "Job A",
-        adaptor: "@openfn/language-common",
+      'job-a': {
+        id: 'job-a',
+        name: 'Job A',
+        adaptor: '@openfn/language-common',
       },
-      "job-b": {
-        id: "job-b",
-        name: "Job B",
-        adaptor: "@openfn/language-common",
+      'job-b': {
+        id: 'job-b',
+        name: 'Job B',
+        adaptor: '@openfn/language-common',
       },
-      "job-c": {
-        id: "job-c",
-        name: "Job C",
-        adaptor: "@openfn/language-common",
+      'job-c': {
+        id: 'job-c',
+        name: 'Job C',
+        adaptor: '@openfn/language-common',
       },
     },
     edges: [
-      { id: "e1", source: "trigger-1", target: "job-a" },
-      { id: "e2", source: "job-a", target: "job-b" },
-      { id: "e3", source: "job-b", target: "job-c" },
+      { id: 'e1', source: 'trigger-1', target: 'job-a' },
+      { id: 'e2', source: 'job-a', target: 'job-b' },
+      { id: 'e3', source: 'job-b', target: 'job-c' },
     ],
   });
 }
@@ -191,36 +191,36 @@ export function createLinearWorkflowYDoc(): Y.Doc {
 export function createDiamondWorkflowYDoc(): Y.Doc {
   return createWorkflowYDoc({
     triggers: {
-      "trigger-1": { id: "trigger-1", type: "webhook" },
+      'trigger-1': { id: 'trigger-1', type: 'webhook' },
     },
     jobs: {
-      "job-a": {
-        id: "job-a",
-        name: "Job A",
-        adaptor: "@openfn/language-common",
+      'job-a': {
+        id: 'job-a',
+        name: 'Job A',
+        adaptor: '@openfn/language-common',
       },
-      "job-b": {
-        id: "job-b",
-        name: "Job B",
-        adaptor: "@openfn/language-common",
+      'job-b': {
+        id: 'job-b',
+        name: 'Job B',
+        adaptor: '@openfn/language-common',
       },
-      "job-c": {
-        id: "job-c",
-        name: "Job C",
-        adaptor: "@openfn/language-common",
+      'job-c': {
+        id: 'job-c',
+        name: 'Job C',
+        adaptor: '@openfn/language-common',
       },
-      "job-d": {
-        id: "job-d",
-        name: "Job D",
-        adaptor: "@openfn/language-common",
+      'job-d': {
+        id: 'job-d',
+        name: 'Job D',
+        adaptor: '@openfn/language-common',
       },
     },
     edges: [
-      { id: "e1", source: "trigger-1", target: "job-a" },
-      { id: "e2", source: "job-a", target: "job-b" },
-      { id: "e3", source: "job-a", target: "job-c" },
-      { id: "e4", source: "job-b", target: "job-d" },
-      { id: "e5", source: "job-c", target: "job-d" },
+      { id: 'e1', source: 'trigger-1', target: 'job-a' },
+      { id: 'e2', source: 'job-a', target: 'job-b' },
+      { id: 'e3', source: 'job-a', target: 'job-c' },
+      { id: 'e4', source: 'job-b', target: 'job-d' },
+      { id: 'e5', source: 'job-c', target: 'job-d' },
     ],
   });
 }

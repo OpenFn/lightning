@@ -1,6 +1,6 @@
-import { FormField, INPUT_CLASSES } from "./form-field";
+import { FormField, INPUT_CLASSES } from './form-field';
 
-import { useFieldContext } from ".";
+import { useFieldContext } from '.';
 
 interface NumberFieldProps {
   label: string;
@@ -61,7 +61,7 @@ export function NumberField({
       <input
         type="number"
         id={field.name}
-        value={field.state.value === null ? "" : field.state.value}
+        value={field.state.value === null ? '' : field.state.value}
         onChange={handleChange}
         placeholder={placeholder}
         disabled={disabled}

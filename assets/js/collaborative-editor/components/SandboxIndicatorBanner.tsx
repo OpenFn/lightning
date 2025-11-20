@@ -16,25 +16,25 @@
  * - compact: Shows only "sandbox: name" (for inspector panel)
  */
 
-import { cn } from "../../utils/cn";
+import { cn } from '../../utils/cn';
 
 interface SandboxIndicatorBannerProps {
   parentProjectId?: string | null | undefined;
   parentProjectName?: string | null | undefined;
   projectName?: string | null | undefined;
-  position?: "absolute" | "relative";
-  variant?: "full" | "compact";
+  position?: 'absolute' | 'relative';
+  variant?: 'full' | 'compact';
 }
 
 export function SandboxIndicatorBanner({
   parentProjectId,
   parentProjectName,
   projectName,
-  position = "absolute",
-  variant = "full",
+  position = 'absolute',
+  variant = 'full',
 }: SandboxIndicatorBannerProps) {
   const isSandbox = !!parentProjectId;
-  const sandboxName = projectName || "sandbox";
+  const sandboxName = projectName || 'sandbox';
 
   if (!isSandbox) {
     return null;
@@ -44,20 +44,20 @@ export function SandboxIndicatorBanner({
     <div
       id="sandbox-mode-alert"
       className={cn(
-        "bg-primary-100 text-primary-800 w-full flex items-center gap-x-6 px-6 py-2.5 sm:px-3.5 sm:before:flex-1",
-        position === "absolute" ? "absolute z-5" : "relative"
+        'bg-primary-100 text-primary-800 w-full flex items-center gap-x-6 px-6 py-2.5 sm:px-3.5 sm:before:flex-1',
+        position === 'absolute' ? 'absolute z-5' : 'relative'
       )}
       data-testid="sandbox-indicator-banner"
     >
       <p className="text-sm leading-6">
-        <span className="hero-beaker h-5 w-5 inline-block align-middle mr-2" />{" "}
-        {variant === "compact" ? (
+        <span className="hero-beaker h-5 w-5 inline-block align-middle mr-2" />{' '}
+        {variant === 'compact' ? (
           <>
             sandbox: <span className="font-bold">{sandboxName}</span>
           </>
         ) : (
           <>
-            You are currently working in the sandbox{" "}
+            You are currently working in the sandbox{' '}
             <span className="font-bold">{sandboxName}</span>
           </>
         )}

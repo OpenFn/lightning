@@ -1,11 +1,11 @@
-import { Position, type NodeProps } from "@xyflow/react";
-import { memo } from "react";
+import { Position, type NodeProps } from '@xyflow/react';
+import { memo } from 'react';
 
-import PathButton from "../components/PathButton";
-import useAdaptorIcons, { type AdaptorIconData } from "../useAdaptorIcons";
-import getAdaptorName from "../util/get-adaptor-name";
+import PathButton from '../components/PathButton';
+import useAdaptorIcons, { type AdaptorIconData } from '../useAdaptorIcons';
+import getAdaptorName from '../util/get-adaptor-name';
 
-import Node from "./Node";
+import Node from './Node';
 
 type NodeData = any;
 
@@ -43,7 +43,7 @@ const JobNode = ({
   );
 };
 
-JobNode.displayName = "JobNode";
+JobNode.displayName = 'JobNode';
 
 function getAdaptorIcon(
   adaptor: string,

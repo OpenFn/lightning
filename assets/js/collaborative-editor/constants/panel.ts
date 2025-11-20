@@ -5,9 +5,9 @@
  */
 export const RENDER_MODES = {
   /** Standalone mode - panel is the main UI element (WorkflowEditor) */
-  STANDALONE: "standalone",
+  STANDALONE: 'standalone',
   /** Embedded mode - panel is embedded within another UI (FullScreenIDE) */
-  EMBEDDED: "embedded",
+  EMBEDDED: 'embedded',
 } as const;
 
 export type RenderMode = (typeof RENDER_MODES)[keyof typeof RENDER_MODES];

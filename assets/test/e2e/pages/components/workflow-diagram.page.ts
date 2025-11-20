@@ -1,7 +1,7 @@
-import { expect } from "@playwright/test";
-import type { Page } from "@playwright/test";
-import { WorkflowDiagramEdgesPage } from "./workflow-diagram-edges.page";
-import { WorkflowDiagramNodesPage } from "./workflow-diagram-nodes.page";
+import { expect } from '@playwright/test';
+import type { Page } from '@playwright/test';
+import { WorkflowDiagramEdgesPage } from './workflow-diagram-edges.page';
+import { WorkflowDiagramNodesPage } from './workflow-diagram-nodes.page';
 
 /**
  * Page Object Model for the WorkflowDiagram React component
@@ -13,8 +13,8 @@ export class WorkflowDiagramPage {
   readonly nodes: WorkflowDiagramNodesPage;
 
   protected selectors = {
-    reactFlow: ".react-flow",
-    viewport: ".react-flow__viewport",
+    reactFlow: '.react-flow',
+    viewport: '.react-flow__viewport',
     fitViewButton: '.react-flow__controls-button[data-tooltip="Fit view"]',
   };
 

@@ -1,6 +1,6 @@
-import type { ReactNode } from "react";
+import type { ReactNode } from 'react';
 
-import { Button } from "../Button";
+import { Button } from '../Button';
 
 // import _logger from "#/utils/logger";
 
@@ -8,13 +8,14 @@ import { Button } from "../Button";
 
 interface InspectorLayoutProps {
   title: string;
-  nodeType?: "job" | "trigger" | "edge";
+  nodeType?: 'job' | 'trigger' | 'edge';
   onClose: () => void;
   footer?: ReactNode;
   children: ReactNode;
-  "data-testid"?: string;
+  'data-testid'?: string;
   fixedHeight?: boolean;
   showBackButton?: boolean;
+  fullHeight?: boolean;
 }
 
 /**
@@ -28,9 +29,10 @@ export function InspectorLayout({
   onClose,
   footer,
   children,
-  "data-testid": dataTestId,
+  'data-testid': dataTestId,
   fixedHeight = false,
   showBackButton = false,
+  fullHeight = false,
 }: InspectorLayoutProps) {
   return (
     <div
@@ -39,7 +41,11 @@ export function InspectorLayout({
     >
       <div
         className={`relative flex flex-col bg-white shadow-sm rounded-lg w-full ${
-          fixedHeight ? "h-[600px]" : "max-h-full"
+          fixedHeight
+            ? 'h-[600px] max-h-full'
+            : fullHeight
+              ? 'max-h-full min-h-0'
+              : 'max-h-full'
         }`}
       >
         {/* Header */}

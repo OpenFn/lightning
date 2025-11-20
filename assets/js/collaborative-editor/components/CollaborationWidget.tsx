@@ -3,10 +3,10 @@
  * and online users
  */
 
-import { useSocket } from "../../react/contexts/SocketProvider";
-import { cn } from "../../utils/cn";
-import { useAwarenessUsers } from "../hooks/useAwareness";
-import { useSession } from "../hooks/useSession";
+import { useSocket } from '../../react/contexts/SocketProvider';
+import { cn } from '../../utils/cn';
+import { useAwarenessUsers } from '../hooks/useAwareness';
+import { useSession } from '../hooks/useSession';
 
 export function CollaborationWidget() {
   const { isConnected: socketConnected, connectionError } = useSocket();
@@ -15,16 +15,16 @@ export function CollaborationWidget() {
   const users = useAwarenessUsers();
 
   const getStatusColor = () => {
-    if (socketConnected && yjsConnected && isSynced) return "bg-green-500";
-    if (socketConnected && yjsConnected) return "bg-yellow-500";
-    return "bg-red-500";
+    if (socketConnected && yjsConnected && isSynced) return 'bg-green-500';
+    if (socketConnected && yjsConnected) return 'bg-yellow-500';
+    return 'bg-red-500';
   };
 
   const getStatusText = () => {
-    if (socketConnected && yjsConnected && isSynced) return "Synced";
-    if (socketConnected && yjsConnected) return "Connected";
-    if (socketConnected) return "Socket only";
-    return "Disconnected";
+    if (socketConnected && yjsConnected && isSynced) return 'Synced';
+    if (socketConnected && yjsConnected) return 'Connected';
+    if (socketConnected) return 'Socket only';
+    return 'Disconnected';
   };
 
   return (
@@ -35,7 +35,7 @@ export function CollaborationWidget() {
       >
         {/* Connection status */}
         <div className="flex items-center gap-2">
-          <div className={cn("w-2 h-2 rounded-full", getStatusColor())} />
+          <div className={cn('w-2 h-2 rounded-full', getStatusColor())} />
           <span className="text-gray-600 font-medium">{getStatusText()}</span>
         </div>
 
@@ -46,7 +46,7 @@ export function CollaborationWidget() {
         {users.length > 0 && (
           <div className="flex items-center gap-1">
             <span className="text-gray-500">
-              {users.length} user{users.length !== 1 ? "s" : ""}:
+              {users.length} user{users.length !== 1 ? 's' : ''}:
             </span>
             <div className="flex gap-1">
               {users.slice(0, 3).map(user => (

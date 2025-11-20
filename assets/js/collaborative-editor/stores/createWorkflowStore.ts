@@ -261,6 +261,10 @@ export const createWorkflowStore = () => {
   let observerCleanups: (() => void)[] = [];
   let provider: (PhoenixChannelProvider & { channel: Channel }) | null = null;
 
+  // Flag to suppress notifications during initial sync
+  // This prevents multiple React renders when connect() populates state
+  let isSyncing = false;
+
   let state = produceInitialState();
 
   const listeners = new Set<() => void>();
@@ -332,7 +336,12 @@ export const createWorkflowStore = () => {
     if (nextState !== lastState) {
       lastState = nextState;
       state = nextState;
-      notify(actionName);
+      // Skip notification if we're in the middle of a batch sync
+      if (!isSyncing) {
+        notify(actionName);
+      } else {
+        logger.debug('skipping notify due to isSyncing', { actionName });
+      }
     }
   };
 
@@ -600,23 +609,26 @@ export const createWorkflowStore = () => {
       updateDerivedState(draft);
     });
 
-    // Initial sync from Y.Doc to state
+    // Initial sync from Y.Doc to state - batch all updates
+    // This prevents 7 intermediate React renders with incomplete data
+    isSyncing = true;
     workflowObserver();
     jobsObserver();
     triggersObserver();
     edgesObserver();
     positionsObserver();
-    errorsObserver(); // NEW: Initial sync
+    errorsObserver();
 
-    // Update state with undoManager
+    // Update state with undoManager (still batched)
     updateState(draft => {
       draft.undoManager = undoManager;
     }, 'undoManager/initialized');
+    isSyncing = false;
 
     // Initialize DevTools connection
     devtools.connect();
 
-    // Send initial state
+    // Send initial state - this is the ONLY notification/render
     notify('connected');
   };
 

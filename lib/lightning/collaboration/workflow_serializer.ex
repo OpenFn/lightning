@@ -196,7 +196,6 @@ defmodule Lightning.Collaboration.WorkflowSerializer do
         Yex.MapPrelim.from(%{
           "cron_expression" => trigger.cron_expression,
           "enabled" => trigger.enabled,
-          "has_auth_method" => trigger.has_auth_method,
           "id" => trigger.id,
           "type" => trigger.type |> to_string()
         })
@@ -244,7 +243,7 @@ defmodule Lightning.Collaboration.WorkflowSerializer do
     |> Enum.map(fn trigger ->
       Map.take(
         trigger,
-        ~w(id type enabled cron_expression has_auth_method)
+        ~w(id type enabled cron_expression)
       )
     end)
   end

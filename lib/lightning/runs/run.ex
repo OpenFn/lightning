@@ -32,7 +32,8 @@ defmodule Lightning.Run do
              :created_by,
              :starting_trigger,
              :steps,
-             :work_order
+             :work_order,
+             :inserted_at
            ]}
 
   @final_states [

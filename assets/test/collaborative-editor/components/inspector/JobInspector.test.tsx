@@ -35,6 +35,16 @@ import {
   createMockPhoenixChannelProvider,
 } from '../../__helpers__/channelMocks';
 import { createWorkflowYDoc } from '../../__helpers__/workflowFactory';
+import { createMockSocket } from '../../__helpers__/sessionStoreHelpers';
+
+// Mock useURLState hook
+vi.mock('../../../../js/react/lib/use-url-state', () => ({
+  useURLState: () => ({
+    searchParams: new URLSearchParams(),
+    updateSearchParams: vi.fn(),
+    hash: '',
+  }),
+}));
 
 // Mock the useCanRun hook from useWorkflow
 vi.mock('../../../../js/collaborative-editor/hooks/useWorkflow', async () => {
@@ -88,6 +98,20 @@ function createWrapper(
   };
 
   const sessionStore = createSessionStore();
+  // Initialize session with proper mock socket so isSynced works
+  const mockSocket = createMockSocket();
+  sessionStore.initializeSession(
+    mockSocket,
+    'test:room',
+    { id: 'test-user', name: 'Test', email: 'test@example.com', color: '#000' },
+    { connect: false }
+  );
+  // Manually trigger sync and connect events on the provider
+  const provider = sessionStore.getSnapshot().provider;
+  if (provider) {
+    provider.emit('sync', [true]);
+    provider.emit('status', [{ status: 'connected' }]);
+  }
 
   return ({ children }: { children: React.ReactNode }) => (
     <SessionContext.Provider value={{ sessionStore, isNewWorkflow: false }}>
@@ -99,6 +123,419 @@ function createWrapper(
     </SessionContext.Provider>
   );
 }
+
+describe('JobInspector - Footer Button States', () => {
+  let ydoc: Y.Doc;
+  let workflowStore: WorkflowStoreInstance;
+  let credentialStore: CredentialStoreInstance;
+  let sessionContextStore: SessionContextStoreInstance;
+  let adaptorStore: AdaptorStoreInstance;
+  let awarenessStore: AwarenessStoreInstance;
+  let mockChannel: any;
+
+  beforeEach(() => {
+    // Create Y.Doc with a job
+    ydoc = createWorkflowYDoc({
+      jobs: {
+        'job-1': {
+          id: 'job-1',
+          name: 'Test Job',
+          adaptor: '@openfn/language-common@latest',
+          body: 'fn(state => state)',
+          project_credential_id: null,
+          keychain_credential_id: null,
+        },
+      },
+    });
+
+    // Set workflow lock_version to match session context
+    const workflowMap = ydoc.getMap('workflow');
+    workflowMap.set('lock_version', 1);
+
+    // Create connected stores
+    workflowStore = createConnectedWorkflowStore(ydoc);
+    credentialStore = createCredentialStore();
+    sessionContextStore = createSessionContextStore();
+    adaptorStore = createAdaptorStore();
+    awarenessStore = createAwarenessStore();
+
+    // Mock available credentials and adaptors
+    mockChannel = createMockPhoenixChannel();
+    const mockProvider = createMockPhoenixChannelProvider(mockChannel);
+    credentialStore._connectChannel(mockProvider as any);
+    adaptorStore._connectChannel(mockProvider as any);
+    sessionContextStore._connectChannel(mockProvider as any);
+
+    // Emit adaptors from channel
+    act(() => {
+      (mockChannel as any)._test.emit('adaptors', {
+        adaptors: [
+          {
+            name: '@openfn/language-common',
+            latest: '2.0.0',
+            versions: [{ version: '2.0.0' }, { version: '1.0.0' }],
+          },
+        ],
+      });
+    });
+  });
+
+  test('footer is rendered in read-only mode', () => {
+    // Set read-only permissions
+    act(() => {
+      (mockChannel as any)._test.emit('session_context', {
+        user: null,
+        project: null,
+        config: { require_email_verification: false },
+        permissions: {
+          can_edit_workflow: false,
+          can_run_workflow: false,
+          can_write_webhook_auth_method: false,
+        },
+        latest_snapshot_lock_version: 1,
+        project_repo_connection: null,
+        webhook_auth_methods: [],
+      });
+    });
+
+    const job = workflowStore.getSnapshot().jobs[0];
+    const mockOnClose = vi.fn();
+    const mockOnOpenRunPanel = vi.fn();
+
+    render(
+      <JobInspector
+        job={job}
+        onClose={mockOnClose}
+        onOpenRunPanel={mockOnOpenRunPanel}
+      />,
+      {
+        wrapper: createWrapper(
+          workflowStore,
+          credentialStore,
+          sessionContextStore,
+          adaptorStore,
+          awarenessStore
+        ),
+      }
+    );
+
+    // Footer should be rendered with all three buttons
+    expect(screen.getByRole('button', { name: /code/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /run/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /delete/i })).toBeInTheDocument();
+  });
+
+  test('Code button is enabled in read-only mode', () => {
+    // Set read-only permissions
+    act(() => {
+      (mockChannel as any)._test.emit('session_context', {
+        user: null,
+        project: null,
+        config: { require_email_verification: false },
+        permissions: {
+          can_edit_workflow: false,
+          can_run_workflow: false,
+          can_write_webhook_auth_method: false,
+        },
+        latest_snapshot_lock_version: 1,
+        project_repo_connection: null,
+        webhook_auth_methods: [],
+      });
+    });
+
+    const job = workflowStore.getSnapshot().jobs[0];
+    const mockOnClose = vi.fn();
+    const mockOnOpenRunPanel = vi.fn();
+
+    render(
+      <JobInspector
+        job={job}
+        onClose={mockOnClose}
+        onOpenRunPanel={mockOnOpenRunPanel}
+      />,
+      {
+        wrapper: createWrapper(
+          workflowStore,
+          credentialStore,
+          sessionContextStore,
+          adaptorStore,
+          awarenessStore
+        ),
+      }
+    );
+
+    const codeButton = screen.getByRole('button', { name: /code/i });
+    expect(codeButton).not.toBeDisabled();
+  });
+
+  test('Run and Delete buttons are disabled in read-only mode', () => {
+    // Set read-only permissions
+    act(() => {
+      (mockChannel as any)._test.emit('session_context', {
+        user: null,
+        project: null,
+        config: { require_email_verification: false },
+        permissions: {
+          can_edit_workflow: false,
+          can_run_workflow: false,
+          can_write_webhook_auth_method: false,
+        },
+        latest_snapshot_lock_version: 1,
+        project_repo_connection: null,
+        webhook_auth_methods: [],
+      });
+    });
+
+    const job = workflowStore.getSnapshot().jobs[0];
+    const mockOnClose = vi.fn();
+    const mockOnOpenRunPanel = vi.fn();
+
+    render(
+      <JobInspector
+        job={job}
+        onClose={mockOnClose}
+        onOpenRunPanel={mockOnOpenRunPanel}
+      />,
+      {
+        wrapper: createWrapper(
+          workflowStore,
+          credentialStore,
+          sessionContextStore,
+          adaptorStore,
+          awarenessStore
+        ),
+      }
+    );
+
+    const runButton = screen.getByRole('button', { name: /run/i });
+    const deleteButton = screen.getByRole('button', { name: /delete/i });
+
+    expect(runButton).toBeDisabled();
+    expect(deleteButton).toBeDisabled();
+  });
+
+  test('Code button is clickable in read-only mode', async () => {
+    const user = userEvent.setup();
+
+    // Set read-only permissions
+    act(() => {
+      (mockChannel as any)._test.emit('session_context', {
+        user: null,
+        project: null,
+        config: { require_email_verification: false },
+        permissions: {
+          can_edit_workflow: false,
+          can_run_workflow: false,
+          can_write_webhook_auth_method: false,
+        },
+        latest_snapshot_lock_version: 1,
+        project_repo_connection: null,
+        webhook_auth_methods: [],
+      });
+    });
+
+    const job = workflowStore.getSnapshot().jobs[0];
+    const mockOnClose = vi.fn();
+    const mockOnOpenRunPanel = vi.fn();
+
+    render(
+      <JobInspector
+        job={job}
+        onClose={mockOnClose}
+        onOpenRunPanel={mockOnOpenRunPanel}
+      />,
+      {
+        wrapper: createWrapper(
+          workflowStore,
+          credentialStore,
+          sessionContextStore,
+          adaptorStore,
+          awarenessStore
+        ),
+      }
+    );
+
+    const codeButton = screen.getByRole('button', { name: /code/i });
+
+    // Should be able to click the Code button
+    await user.click(codeButton);
+
+    // Verify the button was clicked (URL would be updated in real scenario)
+    expect(codeButton).not.toBeDisabled();
+  });
+
+  test('Delete button is disabled when job has downstream dependencies', () => {
+    // Create a workflow with two jobs where job-2 depends on job-1
+    const ydocWithDeps = createWorkflowYDoc({
+      jobs: {
+        'job-1': {
+          id: 'job-1',
+          name: 'First Job',
+          adaptor: '@openfn/language-common@latest',
+          body: 'fn(state => state)',
+          project_credential_id: null,
+          keychain_credential_id: null,
+        },
+        'job-2': {
+          id: 'job-2',
+          name: 'Second Job',
+          adaptor: '@openfn/language-common@latest',
+          body: 'fn(state => state)',
+          project_credential_id: null,
+          keychain_credential_id: null,
+        },
+      },
+      edges: [
+        {
+          id: 'edge-1',
+          source: 'job-1',
+          target: 'job-2',
+          condition_type: 'on_job_success',
+        },
+      ],
+    });
+
+    const workflowStoreWithDeps = createConnectedWorkflowStore(ydocWithDeps);
+
+    // Set edit permissions
+    act(() => {
+      (mockChannel as any)._test.emit('session_context', {
+        user: null,
+        project: null,
+        config: { require_email_verification: false },
+        permissions: {
+          can_edit_workflow: true,
+          can_run_workflow: true,
+          can_write_webhook_auth_method: true,
+        },
+        latest_snapshot_lock_version: 1,
+        project_repo_connection: null,
+        webhook_auth_methods: [],
+      });
+    });
+
+    const job1 = workflowStoreWithDeps.getSnapshot().jobs[0];
+    const mockOnClose = vi.fn();
+    const mockOnOpenRunPanel = vi.fn();
+
+    render(
+      <JobInspector
+        job={job1}
+        onClose={mockOnClose}
+        onOpenRunPanel={mockOnOpenRunPanel}
+      />,
+      {
+        wrapper: createWrapper(
+          workflowStoreWithDeps,
+          credentialStore,
+          sessionContextStore,
+          adaptorStore,
+          awarenessStore
+        ),
+      }
+    );
+
+    const deleteButton = screen.getByRole('button', { name: /delete/i });
+
+    // Delete button should be disabled because job-2 depends on job-1
+    expect(deleteButton).toBeDisabled();
+  });
+
+  test('Footer is rendered in edit mode with all buttons visible', () => {
+    // Set edit permissions
+    act(() => {
+      (mockChannel as any)._test.emit('session_context', {
+        user: null,
+        project: null,
+        config: { require_email_verification: false },
+        permissions: {
+          can_edit_workflow: true,
+          can_run_workflow: true,
+          can_write_webhook_auth_method: true,
+        },
+        latest_snapshot_lock_version: 1,
+        project_repo_connection: null,
+        webhook_auth_methods: [],
+      });
+    });
+
+    const job = workflowStore.getSnapshot().jobs[0];
+    const mockOnClose = vi.fn();
+    const mockOnOpenRunPanel = vi.fn();
+
+    render(
+      <JobInspector
+        job={job}
+        onClose={mockOnClose}
+        onOpenRunPanel={mockOnOpenRunPanel}
+      />,
+      {
+        wrapper: createWrapper(
+          workflowStore,
+          credentialStore,
+          sessionContextStore,
+          adaptorStore,
+          awarenessStore
+        ),
+      }
+    );
+
+    // All three buttons should be present in edit mode
+    expect(screen.getByRole('button', { name: /code/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /run/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /delete/i })).toBeInTheDocument();
+
+    // Code button should be enabled
+    const codeButton = screen.getByRole('button', { name: /code/i });
+    expect(codeButton).not.toBeDisabled();
+  });
+
+  test('Delete button is disabled for leaf node in read-only mode', () => {
+    // Set read-only permissions
+    act(() => {
+      (mockChannel as any)._test.emit('session_context', {
+        user: null,
+        project: null,
+        config: { require_email_verification: false },
+        permissions: {
+          can_edit_workflow: false,
+          can_run_workflow: false,
+          can_write_webhook_auth_method: false,
+        },
+        latest_snapshot_lock_version: 1,
+        project_repo_connection: null,
+        webhook_auth_methods: [],
+      });
+    });
+
+    // Using the default ydoc which has a single job with no dependencies
+    const job = workflowStore.getSnapshot().jobs[0];
+    const mockOnClose = vi.fn();
+    const mockOnOpenRunPanel = vi.fn();
+
+    render(
+      <JobInspector
+        job={job}
+        onClose={mockOnClose}
+        onOpenRunPanel={mockOnOpenRunPanel}
+      />,
+      {
+        wrapper: createWrapper(
+          workflowStore,
+          credentialStore,
+          sessionContextStore,
+          adaptorStore,
+          awarenessStore
+        ),
+      }
+    );
+
+    const deleteButton = screen.getByRole('button', { name: /delete/i });
+
+    // Delete button should be disabled in read-only mode even for leaf nodes
+    expect(deleteButton).toBeDisabled();
+  });
+});
 
 describe('JobInspector - Credential Selection', () => {
   let ydoc: Y.Doc;

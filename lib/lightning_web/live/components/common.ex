@@ -6,6 +6,61 @@ defmodule LightningWeb.Components.Common do
 
   alias Phoenix.LiveView.JS
 
+  attr :class, :string, default: "h-8"
+
+  def openfn_logo(assigns) do
+    ~H"""
+    <svg viewBox="0 0 2162.5173 800.00009" class={@class} aria-label="OpenFn">
+      <g transform="translate(2093.4261,112.28066)">
+        <g transform="translate(-846.97982)" style="fill:currentColor">
+          <rect
+            y="-92.133614"
+            x="136.21805"
+            height="759.70593"
+            width="759.70593"
+            style="opacity:0.99;fill:currentColor;fill-opacity:0;stroke:currentColor;stroke-width:40.2941;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1"
+          />
+          <text
+            transform="scale(1.0183501,0.98198054)"
+            y="467.23065"
+            x="233.22781"
+            style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;line-height:0%;font-family:'Neuzeit S LT Std';text-align:start;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:start;fill:currentColor;fill-opacity:1;stroke:none"
+          >
+            <tspan
+              style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:463.382px;line-height:125%;font-family:'Neuzeit S LT Std';text-align:start;writing-mode:lr-tb;text-anchor:start;fill:currentColor"
+              y="467.23065"
+              x="233.22781"
+            >
+              Fn
+            </tspan>
+          </text>
+          <rect
+            style="fill:currentColor;stroke:currentColor;stroke-width:0.561"
+            width="140.75856"
+            height="3.8146973e-06"
+            x="755.16541"
+            y="287.71933"
+          />
+        </g>
+        <text
+          style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;line-height:0%;font-family:'Neuzeit S LT Std';text-align:start;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:start;fill:currentColor;fill-opacity:1;stroke:none"
+          x="-2078.8728"
+          y="467.20993"
+          transform="scale(1.0183501,0.98198055)"
+        >
+          <tspan
+            x="-2078.8728"
+            y="467.20993"
+            style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:463.382px;line-height:125%;font-family:'Neuzeit S LT Std';text-align:start;writing-mode:lr-tb;text-anchor:start;fill:currentColor"
+          >
+            Open
+          </tspan>
+        </text>
+      </g>
+    </svg>
+    """
+  end
+
   defp select_icon(type) do
     case type do
       "success" -> "hero-check-circle-solid"
@@ -208,8 +263,7 @@ defmodule LightningWeb.Components.Common do
     """
   end
 
-  attr :icon_classes, :string,
-    default: "size-4 flex-none my-auto align-middle opacity-20"
+  attr :icon_classes, :string, default: "size-4 flex-none my-auto align-middle"
 
   def version_chip(assigns) do
     {display, message, type} =
@@ -237,7 +291,7 @@ defmodule LightningWeb.Components.Common do
       )
 
     ~H"""
-    <div class="px-3 pb-3 text-xs block flex gap-1 justify-center">
+    <div class="px-3 pb-3 text-xs flex gap-1 justify-center">
       <%= case @type do %>
         <% :release -> %>
           <.icon name="hero-check-badge" class={@icon_classes} title={@message} />
@@ -253,8 +307,8 @@ defmodule LightningWeb.Components.Common do
       <% end %>
       <code
         class={[
-          "py-1 opacity-20 rounded-md",
-          "break-keep font-mono text-gray-100",
+          "py-1 rounded-md",
+          "break-keep primary-light",
           "inline-block align-middle text-center"
         ]}
         title={"OpenFn/Lightning #{@display}"}
@@ -546,7 +600,7 @@ defmodule LightningWeb.Components.Common do
 
   def combobox(assigns) do
     ~H"""
-    <div id="combobox-wrapper" phx-hook="Combobox" class="relative my-4 mx-2 px-0">
+    <div id="combobox-wrapper" phx-hook="Combobox" class="relative my-4 mx-3 px-0">
       <input
         id="combobox"
         type="text"

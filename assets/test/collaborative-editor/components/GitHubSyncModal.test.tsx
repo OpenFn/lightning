@@ -9,33 +9,33 @@
  * - Integration with workflow actions
  */
 
-import { act, render, screen, waitFor } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
-import type React from "react";
-import { describe, expect, test, vi } from "vitest";
-import * as Y from "yjs";
+import { act, render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import type React from 'react';
+import { describe, expect, test, vi } from 'vitest';
+import * as Y from 'yjs';
 
-import { GitHubSyncModal } from "../../../js/collaborative-editor/components/GitHubSyncModal";
-import { SessionContext } from "../../../js/collaborative-editor/contexts/SessionProvider";
-import type { StoreContextValue } from "../../../js/collaborative-editor/contexts/StoreProvider";
-import { StoreContext } from "../../../js/collaborative-editor/contexts/StoreProvider";
-import { createAdaptorStore } from "../../../js/collaborative-editor/stores/createAdaptorStore";
-import { createAwarenessStore } from "../../../js/collaborative-editor/stores/createAwarenessStore";
-import { createCredentialStore } from "../../../js/collaborative-editor/stores/createCredentialStore";
-import { createSessionContextStore } from "../../../js/collaborative-editor/stores/createSessionContextStore";
-import { createSessionStore } from "../../../js/collaborative-editor/stores/createSessionStore";
-import { createUIStore } from "../../../js/collaborative-editor/stores/createUIStore";
-import { createWorkflowStore } from "../../../js/collaborative-editor/stores/createWorkflowStore";
-import type { Session } from "../../../js/collaborative-editor/types/session";
+import { GitHubSyncModal } from '../../../js/collaborative-editor/components/GitHubSyncModal';
+import { SessionContext } from '../../../js/collaborative-editor/contexts/SessionProvider';
+import type { StoreContextValue } from '../../../js/collaborative-editor/contexts/StoreProvider';
+import { StoreContext } from '../../../js/collaborative-editor/contexts/StoreProvider';
+import { createAdaptorStore } from '../../../js/collaborative-editor/stores/createAdaptorStore';
+import { createAwarenessStore } from '../../../js/collaborative-editor/stores/createAwarenessStore';
+import { createCredentialStore } from '../../../js/collaborative-editor/stores/createCredentialStore';
+import { createSessionContextStore } from '../../../js/collaborative-editor/stores/createSessionContextStore';
+import { createSessionStore } from '../../../js/collaborative-editor/stores/createSessionStore';
+import { createUIStore } from '../../../js/collaborative-editor/stores/createUIStore';
+import { createWorkflowStore } from '../../../js/collaborative-editor/stores/createWorkflowStore';
+import type { Session } from '../../../js/collaborative-editor/types/session';
 import {
   createGithubConnectedContext,
   createSessionContext,
-} from "../__helpers__/sessionContextFactory";
+} from '../__helpers__/sessionContextFactory';
 import {
   createMockPhoenixChannel,
   createMockPhoenixChannelProvider,
-} from "../mocks/phoenixChannel";
-import { createMockSocket } from "../mocks/phoenixSocket";
+} from '../mocks/phoenixChannel';
+import { createMockSocket } from '../mocks/phoenixSocket';
 
 // =============================================================================
 // TEST HELPERS
@@ -51,9 +51,9 @@ interface WrapperOptions {
 function createTestSetup(options: WrapperOptions = {}) {
   const {
     hasGitHubConnection = true,
-    userEmail = "test@example.com",
-    repoName = "openfn/demo",
-    branchName = "main",
+    userEmail = 'test@example.com',
+    repoName = 'openfn/demo',
+    branchName = 'main',
   } = options;
 
   // Create all stores
@@ -67,27 +67,27 @@ function createTestSetup(options: WrapperOptions = {}) {
 
   // Initialize session store
   const mockSocket = createMockSocket();
-  sessionStore.initializeSession(mockSocket, "test:room", {
-    id: "user-1",
-    name: "Test User",
-    color: "#ff0000",
+  sessionStore.initializeSession(mockSocket, 'test:room', {
+    id: 'user-1',
+    name: 'Test User',
+    color: '#ff0000',
   });
 
   // Set up Y.Doc and workflow
   const ydoc = new Y.Doc() as Session.WorkflowDoc;
-  const workflowMap = ydoc.getMap("workflow");
-  workflowMap.set("id", "test-workflow-123");
-  workflowMap.set("name", "Test Workflow");
-  workflowMap.set("lock_version", 1);
-  workflowMap.set("deleted_at", null);
+  const workflowMap = ydoc.getMap('workflow');
+  workflowMap.set('id', 'test-workflow-123');
+  workflowMap.set('name', 'Test Workflow');
+  workflowMap.set('lock_version', 1);
+  workflowMap.set('deleted_at', null);
 
-  ydoc.getArray("jobs");
-  ydoc.getArray("triggers");
-  ydoc.getArray("edges");
-  ydoc.getMap("positions");
+  ydoc.getArray('jobs');
+  ydoc.getArray('triggers');
+  ydoc.getArray('edges');
+  ydoc.getMap('positions');
 
   // Connect stores
-  const mockChannel = createMockPhoenixChannel("test:room");
+  const mockChannel = createMockPhoenixChannel('test:room');
   const mockProvider = createMockPhoenixChannelProvider(mockChannel);
   (mockProvider as any).doc = ydoc;
 
@@ -105,7 +105,7 @@ function createTestSetup(options: WrapperOptions = {}) {
       context.user.email = userEmail;
     }
 
-    (mockChannel as any)._test.emit("session_context", context);
+    (mockChannel as any)._test.emit('session_context', context);
   };
 
   const mockStoreValue: StoreContextValue = {
@@ -139,8 +139,8 @@ function createTestSetup(options: WrapperOptions = {}) {
 // MODAL VISIBILITY TESTS
 // =============================================================================
 
-describe("GitHubSyncModal - Visibility", () => {
-  test("modal is hidden by default", async () => {
+describe('GitHubSyncModal - Visibility', () => {
+  test('modal is hidden by default', async () => {
     const { wrapper, emitSessionContext } = createTestSetup();
 
     render(<GitHubSyncModal />, { wrapper });
@@ -151,11 +151,11 @@ describe("GitHubSyncModal - Visibility", () => {
 
     // Modal should not be visible
     expect(
-      screen.queryByText("Save and sync changes to GitHub")
+      screen.queryByText('Save and sync changes to GitHub')
     ).not.toBeInTheDocument();
   });
 
-  test("modal opens when uiStore.openGitHubSyncModal is called", async () => {
+  test('modal opens when uiStore.openGitHubSyncModal is called', async () => {
     const { wrapper, emitSessionContext, uiStore } = createTestSetup();
 
     render(<GitHubSyncModal />, { wrapper });
@@ -171,12 +171,12 @@ describe("GitHubSyncModal - Visibility", () => {
 
     await waitFor(() => {
       expect(
-        screen.getByText("Save and sync changes to GitHub")
+        screen.getByText('Save and sync changes to GitHub')
       ).toBeInTheDocument();
     });
   });
 
-  test("modal closes when Cancel button is clicked", async () => {
+  test('modal closes when Cancel button is clicked', async () => {
     const user = userEvent.setup();
     const { wrapper, emitSessionContext, uiStore } = createTestSetup();
 
@@ -189,22 +189,22 @@ describe("GitHubSyncModal - Visibility", () => {
 
     await waitFor(() => {
       expect(
-        screen.getByText("Save and sync changes to GitHub")
+        screen.getByText('Save and sync changes to GitHub')
       ).toBeInTheDocument();
     });
 
     // Click Cancel
-    const cancelButton = screen.getByRole("button", { name: /cancel/i });
+    const cancelButton = screen.getByRole('button', { name: /cancel/i });
     await user.click(cancelButton);
 
     await waitFor(() => {
       expect(
-        screen.queryByText("Save and sync changes to GitHub")
+        screen.queryByText('Save and sync changes to GitHub')
       ).not.toBeInTheDocument();
     });
   });
 
-  test("modal closes when clicking backdrop", async () => {
+  test('modal closes when clicking backdrop', async () => {
     const user = userEvent.setup();
     const { wrapper, emitSessionContext, uiStore } = createTestSetup();
 
@@ -217,12 +217,12 @@ describe("GitHubSyncModal - Visibility", () => {
 
     await waitFor(() => {
       expect(
-        screen.getByText("Save and sync changes to GitHub")
+        screen.getByText('Save and sync changes to GitHub')
       ).toBeInTheDocument();
     });
 
     // Click backdrop (the Dialog component handles this)
-    const backdrop = screen.getByText("Save and sync changes to GitHub")
+    const backdrop = screen.getByText('Save and sync changes to GitHub')
       .parentElement?.parentElement?.parentElement?.previousElementSibling;
 
     if (backdrop) {
@@ -238,10 +238,10 @@ describe("GitHubSyncModal - Visibility", () => {
 // FORM INPUT TESTS
 // =============================================================================
 
-describe("GitHubSyncModal - Form Input", () => {
-  test("displays default commit message based on user email", async () => {
+describe('GitHubSyncModal - Form Input', () => {
+  test('displays default commit message based on user email', async () => {
     const { wrapper, emitSessionContext, uiStore } = createTestSetup({
-      userEmail: "john@example.com",
+      userEmail: 'john@example.com',
     });
 
     render(<GitHubSyncModal />, { wrapper });
@@ -256,12 +256,12 @@ describe("GitHubSyncModal - Form Input", () => {
         /commit message/i
       ) as HTMLTextAreaElement;
       expect(textarea.value).toBe(
-        "john@example.com initiated a sync from Lightning"
+        'john@example.com initiated a sync from Lightning'
       );
     });
   });
 
-  test("allows user to edit commit message", async () => {
+  test('allows user to edit commit message', async () => {
     const user = userEvent.setup();
     const { wrapper, emitSessionContext, uiStore } = createTestSetup();
 
@@ -280,15 +280,15 @@ describe("GitHubSyncModal - Form Input", () => {
 
     // Clear and type new message
     await user.clear(textarea);
-    await user.type(textarea, "Custom commit message");
+    await user.type(textarea, 'Custom commit message');
 
-    expect(textarea).toHaveValue("Custom commit message");
+    expect(textarea).toHaveValue('Custom commit message');
   });
 
-  test("commit message resets when modal reopens", async () => {
+  test('commit message resets when modal reopens', async () => {
     const user = userEvent.setup();
     const { wrapper, emitSessionContext, uiStore } = createTestSetup({
-      userEmail: "test@example.com",
+      userEmail: 'test@example.com',
     });
 
     render(<GitHubSyncModal />, { wrapper });
@@ -305,15 +305,15 @@ describe("GitHubSyncModal - Form Input", () => {
     // Edit commit message
     const textarea = screen.getByLabelText(/commit message/i);
     await user.clear(textarea);
-    await user.type(textarea, "Modified message");
+    await user.type(textarea, 'Modified message');
 
     // Close modal
-    const cancelButton = screen.getByRole("button", { name: /cancel/i });
+    const cancelButton = screen.getByRole('button', { name: /cancel/i });
     await user.click(cancelButton);
 
     await waitFor(() => {
       expect(
-        screen.queryByText("Save and sync changes to GitHub")
+        screen.queryByText('Save and sync changes to GitHub')
       ).not.toBeInTheDocument();
     });
 
@@ -325,12 +325,12 @@ describe("GitHubSyncModal - Form Input", () => {
     await waitFor(() => {
       const newTextarea = screen.getByLabelText(/commit message/i);
       expect(newTextarea).toHaveValue(
-        "test@example.com initiated a sync from Lightning"
+        'test@example.com initiated a sync from Lightning'
       );
     });
   });
 
-  test("textarea has proper accessibility attributes", async () => {
+  test('textarea has proper accessibility attributes', async () => {
     const { wrapper, emitSessionContext, uiStore } = createTestSetup();
 
     render(<GitHubSyncModal />, { wrapper });
@@ -342,12 +342,12 @@ describe("GitHubSyncModal - Form Input", () => {
 
     await waitFor(() => {
       const textarea = screen.getByLabelText(/commit message/i);
-      expect(textarea).toHaveAttribute("id");
+      expect(textarea).toHaveAttribute('id');
       expect(textarea).toHaveAttribute(
-        "placeholder",
-        "Describe your changes..."
+        'placeholder',
+        'Describe your changes...'
       );
-      expect(textarea).toHaveAttribute("rows", "2");
+      expect(textarea).toHaveAttribute('rows', '2');
     });
   });
 });
@@ -356,12 +356,12 @@ describe("GitHubSyncModal - Form Input", () => {
 // REPOSITORY INFORMATION DISPLAY TESTS
 // =============================================================================
 
-describe("GitHubSyncModal - Repository Information", () => {
-  test("displays repository information when GitHub is connected", async () => {
+describe('GitHubSyncModal - Repository Information', () => {
+  test('displays repository information when GitHub is connected', async () => {
     const { wrapper, emitSessionContext, uiStore } = createTestSetup({
       hasGitHubConnection: true,
-      repoName: "openfn/workflows",
-      branchName: "develop",
+      repoName: 'openfn/workflows',
+      branchName: 'develop',
     });
 
     render(<GitHubSyncModal />, { wrapper });
@@ -372,16 +372,16 @@ describe("GitHubSyncModal - Repository Information", () => {
     });
 
     await waitFor(() => {
-      expect(screen.getByText("Repository:")).toBeInTheDocument();
-      expect(screen.getByText("openfn/workflows")).toBeInTheDocument();
-      expect(screen.getByText("Branch:")).toBeInTheDocument();
-      expect(screen.getByText("develop")).toBeInTheDocument();
+      expect(screen.getByText('Repository:')).toBeInTheDocument();
+      expect(screen.getByText('openfn/workflows')).toBeInTheDocument();
+      expect(screen.getByText('Branch:')).toBeInTheDocument();
+      expect(screen.getByText('develop')).toBeInTheDocument();
     });
   });
 
-  test("repository link opens in new tab", async () => {
+  test('repository link opens in new tab', async () => {
     const { wrapper, emitSessionContext, uiStore } = createTestSetup({
-      repoName: "openfn/demo",
+      repoName: 'openfn/demo',
     });
 
     render(<GitHubSyncModal />, { wrapper });
@@ -392,17 +392,17 @@ describe("GitHubSyncModal - Repository Information", () => {
     });
 
     await waitFor(() => {
-      const repoLink = screen.getByRole("link", { name: /openfn\/demo/i });
+      const repoLink = screen.getByRole('link', { name: /openfn\/demo/i });
       expect(repoLink).toHaveAttribute(
-        "href",
-        "https://github.com/openfn/demo"
+        'href',
+        'https://github.com/openfn/demo'
       );
-      expect(repoLink).toHaveAttribute("target", "_blank");
-      expect(repoLink).toHaveAttribute("rel", "noopener noreferrer");
+      expect(repoLink).toHaveAttribute('target', '_blank');
+      expect(repoLink).toHaveAttribute('rel', 'noopener noreferrer');
     });
   });
 
-  test("displays modify connection link", async () => {
+  test('displays modify connection link', async () => {
     const { wrapper, emitSessionContext, uiStore } = createTestSetup();
 
     render(<GitHubSyncModal />, { wrapper });
@@ -413,12 +413,12 @@ describe("GitHubSyncModal - Repository Information", () => {
     });
 
     await waitFor(() => {
-      const modifyLink = screen.getByRole("link", {
+      const modifyLink = screen.getByRole('link', {
         name: /modify connection/i,
       });
       expect(modifyLink).toBeInTheDocument();
-      expect(modifyLink).toHaveAttribute("href");
-      expect(modifyLink.getAttribute("href")).toContain("/settings#vcs");
+      expect(modifyLink).toHaveAttribute('href');
+      expect(modifyLink.getAttribute('href')).toContain('/settings#vcs');
     });
   });
 });
@@ -427,8 +427,8 @@ describe("GitHubSyncModal - Repository Information", () => {
 // SAVE & SYNC ACTION TESTS
 // =============================================================================
 
-describe("GitHubSyncModal - Save & Sync Action", () => {
-  test("Save & Sync button is disabled when commit message is empty", async () => {
+describe('GitHubSyncModal - Save & Sync Action', () => {
+  test('Save & Sync button is disabled when commit message is empty', async () => {
     const user = userEvent.setup();
     const { wrapper, emitSessionContext, uiStore } = createTestSetup();
 
@@ -448,11 +448,11 @@ describe("GitHubSyncModal - Save & Sync Action", () => {
     await user.clear(textarea);
 
     // Button should be disabled
-    const saveButton = screen.getByRole("button", { name: /save & sync/i });
+    const saveButton = screen.getByRole('button', { name: /save & sync/i });
     expect(saveButton).toBeDisabled();
   });
 
-  test("Save & Sync button is disabled when commit message is only whitespace", async () => {
+  test('Save & Sync button is disabled when commit message is only whitespace', async () => {
     const user = userEvent.setup();
     const { wrapper, emitSessionContext, uiStore } = createTestSetup();
 
@@ -470,27 +470,27 @@ describe("GitHubSyncModal - Save & Sync Action", () => {
     // Set whitespace-only message
     const textarea = screen.getByLabelText(/commit message/i);
     await user.clear(textarea);
-    await user.type(textarea, "   ");
+    await user.type(textarea, '   ');
 
     // Button should be disabled
-    const saveButton = screen.getByRole("button", { name: /save & sync/i });
+    const saveButton = screen.getByRole('button', { name: /save & sync/i });
     expect(saveButton).toBeDisabled();
   });
 
-  test("calls saveAndSyncWorkflow when Save & Sync is clicked", async () => {
+  test('calls saveAndSyncWorkflow when Save & Sync is clicked', async () => {
     const user = userEvent.setup();
     const { wrapper, emitSessionContext, uiStore, mockChannel, workflowStore } =
       createTestSetup();
 
     // Mock the channel push to simulate successful save
-    const pushSpy = vi.spyOn(mockChannel, "push").mockImplementation(() => {
+    const pushSpy = vi.spyOn(mockChannel, 'push').mockImplementation(() => {
       return {
         receive(status: string, callback: (response: any) => void) {
-          if (status === "ok") {
+          if (status === 'ok') {
             callback({
               saved_at: new Date().toISOString(),
               lock_version: 2,
-              repo: "openfn/demo",
+              repo: 'openfn/demo',
             });
           }
           return this;
@@ -507,43 +507,43 @@ describe("GitHubSyncModal - Save & Sync Action", () => {
 
     await waitFor(() => {
       expect(
-        screen.getByRole("button", { name: /save & sync/i })
+        screen.getByRole('button', { name: /save & sync/i })
       ).toBeInTheDocument();
     });
 
     // Click Save & Sync
-    const saveButton = screen.getByRole("button", { name: /save & sync/i });
+    const saveButton = screen.getByRole('button', { name: /save & sync/i });
     await user.click(saveButton);
 
     // Wait for the channel push to be called
     await waitFor(() => {
       expect(pushSpy).toHaveBeenCalledWith(
-        "save_and_sync",
+        'save_and_sync',
         expect.objectContaining({
           commit_message: expect.stringContaining(
-            "initiated a sync from Lightning"
+            'initiated a sync from Lightning'
           ),
         })
       );
     });
   });
 
-  test("shows loading state while saving", async () => {
+  test('shows loading state while saving', async () => {
     const user = userEvent.setup();
     const { wrapper, emitSessionContext, uiStore, mockChannel } =
       createTestSetup();
 
     // Mock a delayed response
-    vi.spyOn(mockChannel, "push").mockImplementation(() => {
+    vi.spyOn(mockChannel, 'push').mockImplementation(() => {
       return {
         receive(status: string, callback: (response: any) => void) {
           // Simulate delay
           setTimeout(() => {
-            if (status === "ok") {
+            if (status === 'ok') {
               callback({
                 saved_at: new Date().toISOString(),
                 lock_version: 2,
-                repo: "openfn/demo",
+                repo: 'openfn/demo',
               });
             }
           }, 100);
@@ -561,37 +561,37 @@ describe("GitHubSyncModal - Save & Sync Action", () => {
 
     await waitFor(() => {
       expect(
-        screen.getByRole("button", { name: /save & sync/i })
+        screen.getByRole('button', { name: /save & sync/i })
       ).toBeInTheDocument();
     });
 
     // Click Save & Sync
-    const saveButton = screen.getByRole("button", { name: /save & sync/i });
+    const saveButton = screen.getByRole('button', { name: /save & sync/i });
     await user.click(saveButton);
 
     // Should show loading state
     await waitFor(() => {
       expect(
-        screen.getByRole("button", { name: /saving/i })
+        screen.getByRole('button', { name: /saving/i })
       ).toBeInTheDocument();
-      expect(screen.getByRole("button", { name: /saving/i })).toBeDisabled();
+      expect(screen.getByRole('button', { name: /saving/i })).toBeDisabled();
     });
   });
 
-  test("closes modal after successful save", async () => {
+  test('closes modal after successful save', async () => {
     const user = userEvent.setup();
     const { wrapper, emitSessionContext, uiStore, mockChannel } =
       createTestSetup();
 
     // Mock successful save
-    vi.spyOn(mockChannel, "push").mockImplementation(() => {
+    vi.spyOn(mockChannel, 'push').mockImplementation(() => {
       return {
         receive(status: string, callback: (response: any) => void) {
-          if (status === "ok") {
+          if (status === 'ok') {
             callback({
               saved_at: new Date().toISOString(),
               lock_version: 2,
-              repo: "openfn/demo",
+              repo: 'openfn/demo',
             });
           }
           return this;
@@ -608,35 +608,35 @@ describe("GitHubSyncModal - Save & Sync Action", () => {
 
     await waitFor(() => {
       expect(
-        screen.getByRole("button", { name: /save & sync/i })
+        screen.getByRole('button', { name: /save & sync/i })
       ).toBeInTheDocument();
     });
 
     // Click Save & Sync
-    const saveButton = screen.getByRole("button", { name: /save & sync/i });
+    const saveButton = screen.getByRole('button', { name: /save & sync/i });
     await user.click(saveButton);
 
     // Modal should close
     await waitFor(() => {
       expect(
-        screen.queryByText("Save and sync changes to GitHub")
+        screen.queryByText('Save and sync changes to GitHub')
       ).not.toBeInTheDocument();
     });
   });
 
-  test("trims whitespace from commit message before saving", async () => {
+  test('trims whitespace from commit message before saving', async () => {
     const user = userEvent.setup();
     const { wrapper, emitSessionContext, uiStore, mockChannel } =
       createTestSetup();
 
-    const pushSpy = vi.spyOn(mockChannel, "push").mockImplementation(() => {
+    const pushSpy = vi.spyOn(mockChannel, 'push').mockImplementation(() => {
       return {
         receive(status: string, callback: (response: any) => void) {
-          if (status === "ok") {
+          if (status === 'ok') {
             callback({
               saved_at: new Date().toISOString(),
               lock_version: 2,
-              repo: "openfn/demo",
+              repo: 'openfn/demo',
             });
           }
           return this;
@@ -658,16 +658,16 @@ describe("GitHubSyncModal - Save & Sync Action", () => {
     // Set message with leading/trailing whitespace
     const textarea = screen.getByLabelText(/commit message/i);
     await user.clear(textarea);
-    await user.type(textarea, "  Test commit message  ");
+    await user.type(textarea, '  Test commit message  ');
 
-    const saveButton = screen.getByRole("button", { name: /save & sync/i });
+    const saveButton = screen.getByRole('button', { name: /save & sync/i });
     await user.click(saveButton);
 
     await waitFor(() => {
       expect(pushSpy).toHaveBeenCalledWith(
-        "save_and_sync",
+        'save_and_sync',
         expect.objectContaining({
-          commit_message: "Test commit message",
+          commit_message: 'Test commit message',
         })
       );
     });
@@ -678,20 +678,20 @@ describe("GitHubSyncModal - Save & Sync Action", () => {
 // KEYBOARD SHORTCUT TESTS
 // =============================================================================
 
-describe("GitHubSyncModal - Keyboard Shortcuts", () => {
-  test("Ctrl+Enter triggers save and sync", async () => {
+describe('GitHubSyncModal - Keyboard Shortcuts', () => {
+  test('Ctrl+Enter triggers save and sync', async () => {
     const user = userEvent.setup();
     const { wrapper, emitSessionContext, uiStore, mockChannel } =
       createTestSetup();
 
-    const pushSpy = vi.spyOn(mockChannel, "push").mockImplementation(() => {
+    const pushSpy = vi.spyOn(mockChannel, 'push').mockImplementation(() => {
       return {
         receive(status: string, callback: (response: any) => void) {
-          if (status === "ok") {
+          if (status === 'ok') {
             callback({
               saved_at: new Date().toISOString(),
               lock_version: 2,
-              repo: "openfn/demo",
+              repo: 'openfn/demo',
             });
           }
           return this;
@@ -713,26 +713,26 @@ describe("GitHubSyncModal - Keyboard Shortcuts", () => {
     const textarea = screen.getByLabelText(/commit message/i);
 
     // Press Ctrl+Enter
-    await user.type(textarea, "{Control>}{Enter}{/Control}");
+    await user.type(textarea, '{Control>}{Enter}{/Control}');
 
     await waitFor(() => {
-      expect(pushSpy).toHaveBeenCalledWith("save_and_sync", expect.any(Object));
+      expect(pushSpy).toHaveBeenCalledWith('save_and_sync', expect.any(Object));
     });
   });
 
-  test("Cmd+Enter triggers save and sync (Mac)", async () => {
+  test('Cmd+Enter triggers save and sync (Mac)', async () => {
     const user = userEvent.setup();
     const { wrapper, emitSessionContext, uiStore, mockChannel } =
       createTestSetup();
 
-    const pushSpy = vi.spyOn(mockChannel, "push").mockImplementation(() => {
+    const pushSpy = vi.spyOn(mockChannel, 'push').mockImplementation(() => {
       return {
         receive(status: string, callback: (response: any) => void) {
-          if (status === "ok") {
+          if (status === 'ok') {
             callback({
               saved_at: new Date().toISOString(),
               lock_version: 2,
-              repo: "openfn/demo",
+              repo: 'openfn/demo',
             });
           }
           return this;
@@ -754,19 +754,19 @@ describe("GitHubSyncModal - Keyboard Shortcuts", () => {
     const textarea = screen.getByLabelText(/commit message/i);
 
     // Press Cmd+Enter (Meta key on Mac)
-    await user.type(textarea, "{Meta>}{Enter}{/Meta}");
+    await user.type(textarea, '{Meta>}{Enter}{/Meta}');
 
     await waitFor(() => {
-      expect(pushSpy).toHaveBeenCalledWith("save_and_sync", expect.any(Object));
+      expect(pushSpy).toHaveBeenCalledWith('save_and_sync', expect.any(Object));
     });
   });
 
-  test("keyboard shortcut does not trigger when message is empty", async () => {
+  test('keyboard shortcut does not trigger when message is empty', async () => {
     const user = userEvent.setup();
     const { wrapper, emitSessionContext, uiStore, mockChannel } =
       createTestSetup();
 
-    const pushSpy = vi.spyOn(mockChannel, "push");
+    const pushSpy = vi.spyOn(mockChannel, 'push');
 
     render(<GitHubSyncModal />, { wrapper });
 
@@ -783,13 +783,13 @@ describe("GitHubSyncModal - Keyboard Shortcuts", () => {
     await user.clear(textarea);
 
     // Press Ctrl+Enter
-    await user.type(textarea, "{Control>}{Enter}{/Control}");
+    await user.type(textarea, '{Control>}{Enter}{/Control}');
 
     // Should not trigger save
     expect(pushSpy).not.toHaveBeenCalled();
   });
 
-  test("displays keyboard shortcut hint", async () => {
+  test('displays keyboard shortcut hint', async () => {
     const { wrapper, emitSessionContext, uiStore } = createTestSetup();
 
     render(<GitHubSyncModal />, { wrapper });

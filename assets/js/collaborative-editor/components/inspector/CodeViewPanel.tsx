@@ -83,7 +83,7 @@ export function CodeViewPanel() {
   }
 
   return (
-    <div className="flex flex-col h-full">
+    <>
       {/* Code Display */}
       <div className="px-4 py-5 sm:p-6">
         <textarea
@@ -103,7 +103,7 @@ export function CodeViewPanel() {
       </div>
 
       {/* Actions Footer */}
-      <div className="shrink-0 border-t border-gray-200 p-3">
+      <div className="shrink-0 border-t border-gray-200 p-3 -mt-px">
         <div className="flex justify-end gap-2">
           <button
             id="download-workflow-code-btn"
@@ -127,6 +127,6 @@ export function CodeViewPanel() {
           </button>
         </div>
       </div>
-    </div>
+    </>
   );
 }

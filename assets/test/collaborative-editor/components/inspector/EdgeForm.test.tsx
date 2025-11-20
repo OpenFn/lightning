@@ -7,30 +7,30 @@
  * - Collaborative validation integration
  */
 
-import { render, screen, waitFor } from "@testing-library/react";
-import type React from "react";
-import { act } from "react";
-import { beforeEach, describe, expect, test, vi } from "vitest";
-import type * as Y from "yjs";
+import { render, screen, waitFor } from '@testing-library/react';
+import type React from 'react';
+import { act } from 'react';
+import { beforeEach, describe, expect, test, vi } from 'vitest';
+import type * as Y from 'yjs';
 
-import { EdgeForm } from "../../../../js/collaborative-editor/components/inspector/EdgeForm";
-import type { StoreContextValue } from "../../../../js/collaborative-editor/contexts/StoreProvider";
-import { StoreContext } from "../../../../js/collaborative-editor/contexts/StoreProvider";
-import type { AdaptorStoreInstance } from "../../../../js/collaborative-editor/stores/createAdaptorStore";
-import { createAdaptorStore } from "../../../../js/collaborative-editor/stores/createAdaptorStore";
-import type { AwarenessStoreInstance } from "../../../../js/collaborative-editor/stores/createAwarenessStore";
-import { createAwarenessStore } from "../../../../js/collaborative-editor/stores/createAwarenessStore";
-import type { CredentialStoreInstance } from "../../../../js/collaborative-editor/stores/createCredentialStore";
-import { createCredentialStore } from "../../../../js/collaborative-editor/stores/createCredentialStore";
-import type { SessionContextStoreInstance } from "../../../../js/collaborative-editor/stores/createSessionContextStore";
-import { createSessionContextStore } from "../../../../js/collaborative-editor/stores/createSessionContextStore";
-import type { WorkflowStoreInstance } from "../../../../js/collaborative-editor/stores/createWorkflowStore";
-import { createWorkflowStore } from "../../../../js/collaborative-editor/stores/createWorkflowStore";
+import { EdgeForm } from '../../../../js/collaborative-editor/components/inspector/EdgeForm';
+import type { StoreContextValue } from '../../../../js/collaborative-editor/contexts/StoreProvider';
+import { StoreContext } from '../../../../js/collaborative-editor/contexts/StoreProvider';
+import type { AdaptorStoreInstance } from '../../../../js/collaborative-editor/stores/createAdaptorStore';
+import { createAdaptorStore } from '../../../../js/collaborative-editor/stores/createAdaptorStore';
+import type { AwarenessStoreInstance } from '../../../../js/collaborative-editor/stores/createAwarenessStore';
+import { createAwarenessStore } from '../../../../js/collaborative-editor/stores/createAwarenessStore';
+import type { CredentialStoreInstance } from '../../../../js/collaborative-editor/stores/createCredentialStore';
+import { createCredentialStore } from '../../../../js/collaborative-editor/stores/createCredentialStore';
+import type { SessionContextStoreInstance } from '../../../../js/collaborative-editor/stores/createSessionContextStore';
+import { createSessionContextStore } from '../../../../js/collaborative-editor/stores/createSessionContextStore';
+import type { WorkflowStoreInstance } from '../../../../js/collaborative-editor/stores/createWorkflowStore';
+import { createWorkflowStore } from '../../../../js/collaborative-editor/stores/createWorkflowStore';
 import {
   createMockPhoenixChannel,
   createMockPhoenixChannelProvider,
-} from "../../__helpers__/channelMocks";
-import { createWorkflowYDoc } from "../../__helpers__/workflowFactory";
+} from '../../__helpers__/channelMocks';
+import { createWorkflowYDoc } from '../../__helpers__/workflowFactory';
 
 /**
  * Helper to create and connect a workflow store with Y.Doc
@@ -69,7 +69,7 @@ function createWrapper(
   );
 }
 
-describe("EdgeForm - Basic Rendering", () => {
+describe('EdgeForm - Basic Rendering', () => {
   let ydoc: Y.Doc;
   let workflowStore: WorkflowStoreInstance;
   let credentialStore: CredentialStoreInstance;
@@ -82,36 +82,36 @@ describe("EdgeForm - Basic Rendering", () => {
     // Create Y.Doc with a simple workflow: trigger -> job-a -> job-b
     ydoc = createWorkflowYDoc({
       triggers: {
-        "trigger-1": { id: "trigger-1", type: "webhook" },
+        'trigger-1': { id: 'trigger-1', type: 'webhook' },
       },
       jobs: {
-        "job-a": {
-          id: "job-a",
-          name: "Job A",
-          adaptor: "@openfn/language-common@latest",
-          body: "fn(state => state)",
+        'job-a': {
+          id: 'job-a',
+          name: 'Job A',
+          adaptor: '@openfn/language-common@latest',
+          body: 'fn(state => state)',
         },
-        "job-b": {
-          id: "job-b",
-          name: "Job B",
-          adaptor: "@openfn/language-common@latest",
-          body: "fn(state => state)",
+        'job-b': {
+          id: 'job-b',
+          name: 'Job B',
+          adaptor: '@openfn/language-common@latest',
+          body: 'fn(state => state)',
         },
       },
       edges: [
         {
-          id: "edge-1",
-          source: "trigger-1",
-          target: "job-a",
-          condition_type: "always",
-          condition_label: "Trigger to Job A",
+          id: 'edge-1',
+          source: 'trigger-1',
+          target: 'job-a',
+          condition_type: 'always',
+          condition_label: 'Trigger to Job A',
         },
         {
-          id: "edge-2",
-          source: "job-a",
-          target: "job-b",
-          condition_type: "on_job_success",
-          condition_label: "Job A to Job B",
+          id: 'edge-2',
+          source: 'job-a',
+          target: 'job-b',
+          condition_type: 'on_job_success',
+          condition_label: 'Job A to Job B',
         },
       ],
     });
@@ -131,7 +131,7 @@ describe("EdgeForm - Basic Rendering", () => {
 
     // Emit session context
     act(() => {
-      (mockChannel as any)._test.emit("session_context", {
+      (mockChannel as any)._test.emit('session_context', {
         user: null,
         project: null,
         config: { require_email_verification: false },
@@ -141,7 +141,7 @@ describe("EdgeForm - Basic Rendering", () => {
     });
   });
 
-  test("renders edge form with label and condition fields", async () => {
+  test('renders edge form with label and condition fields', async () => {
     const edge = workflowStore.getSnapshot().edges[0];
 
     render(<EdgeForm edge={edge} />, {
@@ -155,16 +155,16 @@ describe("EdgeForm - Basic Rendering", () => {
     });
 
     // Check form fields exist
-    expect(screen.getByLabelText("Label")).toBeInTheDocument();
-    expect(screen.getByLabelText("Condition")).toBeInTheDocument();
+    expect(screen.getByLabelText('Label')).toBeInTheDocument();
+    expect(screen.getByLabelText('Condition')).toBeInTheDocument();
 
     // Check initial values
     await waitFor(() => {
-      expect(screen.getByDisplayValue("Trigger to Job A")).toBeInTheDocument();
+      expect(screen.getByDisplayValue('Trigger to Job A')).toBeInTheDocument();
     });
   });
 
-  test("displays correct condition options for trigger edges", async () => {
+  test('displays correct condition options for trigger edges', async () => {
     const edge = workflowStore.getSnapshot().edges[0]; // trigger -> job-a
 
     render(<EdgeForm edge={edge} />, {
@@ -178,16 +178,16 @@ describe("EdgeForm - Basic Rendering", () => {
     });
 
     // Trigger edges should only have "Always" and "Matches a Javascript Expression"
-    const select = screen.getByLabelText("Condition");
+    const select = screen.getByLabelText('Condition');
     expect(select).toBeInTheDocument();
 
     // Check selected value
     await waitFor(() => {
-      expect(screen.getByDisplayValue("Always")).toBeInTheDocument();
+      expect(screen.getByDisplayValue('Always')).toBeInTheDocument();
     });
   });
 
-  test("displays correct condition options for job edges", async () => {
+  test('displays correct condition options for job edges', async () => {
     const edge = workflowStore.getSnapshot().edges[1]; // job-a -> job-b
 
     render(<EdgeForm edge={edge} />, {
@@ -201,17 +201,17 @@ describe("EdgeForm - Basic Rendering", () => {
     });
 
     // Job edges should have all condition types
-    const select = screen.getByLabelText("Condition");
+    const select = screen.getByLabelText('Condition');
     expect(select).toBeInTheDocument();
 
     // Check selected value is "On Success"
     await waitFor(() => {
-      expect(screen.getByDisplayValue("On Success")).toBeInTheDocument();
+      expect(screen.getByDisplayValue('On Success')).toBeInTheDocument();
     });
   });
 });
 
-describe("EdgeForm - Form Value Reset", () => {
+describe('EdgeForm - Form Value Reset', () => {
   let ydoc: Y.Doc;
   let workflowStore: WorkflowStoreInstance;
   let credentialStore: CredentialStoreInstance;
@@ -224,41 +224,41 @@ describe("EdgeForm - Form Value Reset", () => {
     // Create Y.Doc with two edges with distinctly different values
     ydoc = createWorkflowYDoc({
       jobs: {
-        "job-a": {
-          id: "job-a",
-          name: "Job A",
-          adaptor: "@openfn/language-common@latest",
-          body: "fn(state => state)",
+        'job-a': {
+          id: 'job-a',
+          name: 'Job A',
+          adaptor: '@openfn/language-common@latest',
+          body: 'fn(state => state)',
         },
-        "job-b": {
-          id: "job-b",
-          name: "Job B",
-          adaptor: "@openfn/language-common@latest",
-          body: "fn(state => state)",
+        'job-b': {
+          id: 'job-b',
+          name: 'Job B',
+          adaptor: '@openfn/language-common@latest',
+          body: 'fn(state => state)',
         },
-        "job-c": {
-          id: "job-c",
-          name: "Job C",
-          adaptor: "@openfn/language-common@latest",
-          body: "fn(state => state)",
+        'job-c': {
+          id: 'job-c',
+          name: 'Job C',
+          adaptor: '@openfn/language-common@latest',
+          body: 'fn(state => state)',
         },
       },
       edges: [
         {
-          id: "edge-1",
-          source: "job-a",
-          target: "job-b",
-          condition_type: "on_job_success",
-          condition_label: "First Edge Label",
+          id: 'edge-1',
+          source: 'job-a',
+          target: 'job-b',
+          condition_type: 'on_job_success',
+          condition_label: 'First Edge Label',
           condition_expression: null,
         },
         {
-          id: "edge-2",
-          source: "job-b",
-          target: "job-c",
-          condition_type: "js_expression",
-          condition_label: "Second Edge Label",
-          condition_expression: "state.data.success === true",
+          id: 'edge-2',
+          source: 'job-b',
+          target: 'job-c',
+          condition_type: 'js_expression',
+          condition_label: 'Second Edge Label',
+          condition_expression: 'state.data.success === true',
         },
       ],
     });
@@ -278,7 +278,7 @@ describe("EdgeForm - Form Value Reset", () => {
 
     // Emit session context
     act(() => {
-      (mockChannel as any)._test.emit("session_context", {
+      (mockChannel as any)._test.emit('session_context', {
         user: null,
         project: null,
         config: { require_email_verification: false },
@@ -288,7 +288,7 @@ describe("EdgeForm - Form Value Reset", () => {
     });
   });
 
-  test("form values reset when switching between different edges", async () => {
+  test('form values reset when switching between different edges', async () => {
     // This test verifies that TanStack Form properly re-initializes when
     // the edge prop changes, preventing form values from "sticking" between edges.
     // This is critical for collaborative editing where users frequently switch
@@ -297,10 +297,10 @@ describe("EdgeForm - Form Value Reset", () => {
     // Get both edges
     const edge1 = workflowStore
       .getSnapshot()
-      .edges.find(e => e.id === "edge-1");
+      .edges.find(e => e.id === 'edge-1');
     const edge2 = workflowStore
       .getSnapshot()
-      .edges.find(e => e.id === "edge-2");
+      .edges.find(e => e.id === 'edge-2');
 
     // Render form for edge-1
     const { rerender } = render(<EdgeForm edge={edge1!} />, {
@@ -315,12 +315,12 @@ describe("EdgeForm - Form Value Reset", () => {
 
     // Verify edge-1 values are displayed initially
     await waitFor(() => {
-      expect(screen.getByDisplayValue("First Edge Label")).toBeInTheDocument();
-      expect(screen.getByDisplayValue("On Success")).toBeInTheDocument();
+      expect(screen.getByDisplayValue('First Edge Label')).toBeInTheDocument();
+      expect(screen.getByDisplayValue('On Success')).toBeInTheDocument();
     });
 
     // Verify expression editor is NOT shown for edge-1
-    expect(screen.queryByLabelText("JS Expression")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('JS Expression')).not.toBeInTheDocument();
 
     // Now switch to edge-2 (this simulates user clicking on a different edge in the canvas)
     rerender(<EdgeForm edge={edge2!} />);
@@ -328,27 +328,27 @@ describe("EdgeForm - Form Value Reset", () => {
     // CRITICAL: Verify edge-2 values are displayed (not edge-1's values)
     // This is what we're testing - that form values don't "stick" when switching edges
     await waitFor(() => {
-      expect(screen.getByDisplayValue("Second Edge Label")).toBeInTheDocument();
+      expect(screen.getByDisplayValue('Second Edge Label')).toBeInTheDocument();
       // Verify edge-1's label is NOT shown
       expect(
-        screen.queryByDisplayValue("First Edge Label")
+        screen.queryByDisplayValue('First Edge Label')
       ).not.toBeInTheDocument();
     });
 
     // Verify condition type changed
     await waitFor(() => {
       expect(
-        screen.getByDisplayValue("Matches a Javascript Expression")
+        screen.getByDisplayValue('Matches a Javascript Expression')
       ).toBeInTheDocument();
       // Verify edge-1's condition type is NOT shown
-      expect(screen.queryByDisplayValue("On Success")).not.toBeInTheDocument();
+      expect(screen.queryByDisplayValue('On Success')).not.toBeInTheDocument();
     });
 
     // Verify expression editor is NOW shown for edge-2
     await waitFor(() => {
-      expect(screen.getByLabelText("JS Expression")).toBeInTheDocument();
+      expect(screen.getByLabelText('JS Expression')).toBeInTheDocument();
       expect(
-        screen.getByDisplayValue("state.data.success === true")
+        screen.getByDisplayValue('state.data.success === true')
       ).toBeInTheDocument();
     });
 
@@ -357,23 +357,23 @@ describe("EdgeForm - Form Value Reset", () => {
 
     // Verify edge-1 values are correctly restored
     await waitFor(() => {
-      expect(screen.getByDisplayValue("First Edge Label")).toBeInTheDocument();
-      expect(screen.getByDisplayValue("On Success")).toBeInTheDocument();
+      expect(screen.getByDisplayValue('First Edge Label')).toBeInTheDocument();
+      expect(screen.getByDisplayValue('On Success')).toBeInTheDocument();
       // Verify edge-2's values are NOT shown
       expect(
-        screen.queryByDisplayValue("Second Edge Label")
+        screen.queryByDisplayValue('Second Edge Label')
       ).not.toBeInTheDocument();
       expect(
-        screen.queryByDisplayValue("Matches a Javascript Expression")
+        screen.queryByDisplayValue('Matches a Javascript Expression')
       ).not.toBeInTheDocument();
     });
 
     // Verify expression editor is hidden again
-    expect(screen.queryByLabelText("JS Expression")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('JS Expression')).not.toBeInTheDocument();
   });
 });
 
-describe("EdgeForm - Collaborative Validation", () => {
+describe('EdgeForm - Collaborative Validation', () => {
   let ydoc: Y.Doc;
   let workflowStore: WorkflowStoreInstance;
   let credentialStore: CredentialStoreInstance;
@@ -386,26 +386,26 @@ describe("EdgeForm - Collaborative Validation", () => {
     // Create Y.Doc with a simple edge
     ydoc = createWorkflowYDoc({
       jobs: {
-        "job-a": {
-          id: "job-a",
-          name: "Job A",
-          adaptor: "@openfn/language-common@latest",
-          body: "fn(state => state)",
+        'job-a': {
+          id: 'job-a',
+          name: 'Job A',
+          adaptor: '@openfn/language-common@latest',
+          body: 'fn(state => state)',
         },
-        "job-b": {
-          id: "job-b",
-          name: "Job B",
-          adaptor: "@openfn/language-common@latest",
-          body: "fn(state => state)",
+        'job-b': {
+          id: 'job-b',
+          name: 'Job B',
+          adaptor: '@openfn/language-common@latest',
+          body: 'fn(state => state)',
         },
       },
       edges: [
         {
-          id: "edge-1",
-          source: "job-a",
-          target: "job-b",
-          condition_type: "on_job_success",
-          condition_label: "Test Edge",
+          id: 'edge-1',
+          source: 'job-a',
+          target: 'job-b',
+          condition_type: 'on_job_success',
+          condition_label: 'Test Edge',
         },
       ],
     });
@@ -425,7 +425,7 @@ describe("EdgeForm - Collaborative Validation", () => {
 
     // Emit session context
     act(() => {
-      (mockChannel as any)._test.emit("session_context", {
+      (mockChannel as any)._test.emit('session_context', {
         user: null,
         project: null,
         config: { require_email_verification: false },
@@ -435,14 +435,14 @@ describe("EdgeForm - Collaborative Validation", () => {
     });
   });
 
-  test("displays server validation errors from Y.Doc", async () => {
+  test('displays server validation errors from Y.Doc', async () => {
     // Add server validation errors to Y.Doc
-    const errorsMap = ydoc.getMap("errors");
+    const errorsMap = ydoc.getMap('errors');
     act(() => {
       ydoc.transact(() => {
-        errorsMap.set("edges", {
-          "edge-1": {
-            condition_label: ["Label is too long (max 50 characters)"],
+        errorsMap.set('edges', {
+          'edge-1': {
+            condition_label: ['Label is too long (max 50 characters)'],
           },
         });
       });
@@ -466,14 +466,14 @@ describe("EdgeForm - Collaborative Validation", () => {
     });
   });
 
-  test("clears errors when removed from Y.Doc", async () => {
+  test('clears errors when removed from Y.Doc', async () => {
     // Start with errors
-    const errorsMap = ydoc.getMap("errors");
+    const errorsMap = ydoc.getMap('errors');
     act(() => {
       ydoc.transact(() => {
-        errorsMap.set("edges", {
-          "edge-1": {
-            condition_label: ["Invalid label"],
+        errorsMap.set('edges', {
+          'edge-1': {
+            condition_label: ['Invalid label'],
           },
         });
       });
@@ -499,7 +499,7 @@ describe("EdgeForm - Collaborative Validation", () => {
     // Clear errors from Y.Doc
     act(() => {
       ydoc.transact(() => {
-        errorsMap.set("edges", {});
+        errorsMap.set('edges', {});
       });
     });
 
@@ -509,43 +509,43 @@ describe("EdgeForm - Collaborative Validation", () => {
     });
   });
 
-  test("handles errors for specific edge only (not other edges)", async () => {
+  test('handles errors for specific edge only (not other edges)', async () => {
     // Create a second Y.Doc with two edges to test isolation
     const ydocWithTwoEdges = createWorkflowYDoc({
       jobs: {
-        "job-a": {
-          id: "job-a",
-          name: "Job A",
-          adaptor: "@openfn/language-common@latest",
-          body: "fn(state => state)",
+        'job-a': {
+          id: 'job-a',
+          name: 'Job A',
+          adaptor: '@openfn/language-common@latest',
+          body: 'fn(state => state)',
         },
-        "job-b": {
-          id: "job-b",
-          name: "Job B",
-          adaptor: "@openfn/language-common@latest",
-          body: "fn(state => state)",
+        'job-b': {
+          id: 'job-b',
+          name: 'Job B',
+          adaptor: '@openfn/language-common@latest',
+          body: 'fn(state => state)',
         },
-        "job-c": {
-          id: "job-c",
-          name: "Job C",
-          adaptor: "@openfn/language-common@latest",
-          body: "fn(state => state)",
+        'job-c': {
+          id: 'job-c',
+          name: 'Job C',
+          adaptor: '@openfn/language-common@latest',
+          body: 'fn(state => state)',
         },
       },
       edges: [
         {
-          id: "edge-1",
-          source: "job-a",
-          target: "job-b",
-          condition_type: "on_job_success",
-          condition_label: "Edge 1",
+          id: 'edge-1',
+          source: 'job-a',
+          target: 'job-b',
+          condition_type: 'on_job_success',
+          condition_label: 'Edge 1',
         },
         {
-          id: "edge-2",
-          source: "job-b",
-          target: "job-c",
-          condition_type: "on_job_success",
-          condition_label: "Edge 2",
+          id: 'edge-2',
+          source: 'job-b',
+          target: 'job-c',
+          condition_type: 'on_job_success',
+          condition_label: 'Edge 2',
         },
       ],
     });
@@ -553,12 +553,12 @@ describe("EdgeForm - Collaborative Validation", () => {
     const twoEdgesStore = createConnectedWorkflowStore(ydocWithTwoEdges);
 
     // Add errors only for edge-2
-    const errorsMap = ydocWithTwoEdges.getMap("errors");
+    const errorsMap = ydocWithTwoEdges.getMap('errors');
     act(() => {
       ydocWithTwoEdges.transact(() => {
-        errorsMap.set("edges", {
-          "edge-2": {
-            condition_label: ["Error on edge 2"],
+        errorsMap.set('edges', {
+          'edge-2': {
+            condition_label: ['Error on edge 2'],
           },
         });
       });
@@ -567,7 +567,7 @@ describe("EdgeForm - Collaborative Validation", () => {
     // Render form for edge-1
     const edge1 = twoEdgesStore
       .getSnapshot()
-      .edges.find(e => e.id === "edge-1");
+      .edges.find(e => e.id === 'edge-1');
 
     render(<EdgeForm edge={edge1!} />, {
       wrapper: createWrapper(

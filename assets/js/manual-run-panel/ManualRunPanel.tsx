@@ -433,10 +433,10 @@ export const ManualRunPanel: WithActionProps<ManualRunPanelProps> = props => {
   ]);
 
   return (
-    <>
+    <div className="flex flex-col h-full">
       <form ref={formRef} id="manual_run_form" className="hidden"></form>
       {selectedDataclip ? (
-        <div className="grow overflow-hidden">
+        <div className="flex-1 overflow-hidden">
           <SelectedClipView
             dataclip={selectedDataclip}
             onUnselect={() => {
@@ -449,9 +449,9 @@ export const ManualRunPanel: WithActionProps<ManualRunPanelProps> = props => {
           />
         </div>
       ) : (
-        <div className="grow overflow-visible no-scrollbar">
+        <div className="flex-1 overflow-hidden">
           <div className="flex flex-col h-full">
-            <div className="flex justify-center flex-wrap mb-1">
+            <div className="flex justify-center flex-wrap mb-1 shrink-0">
               <Tabs
                 options={[
                   {
@@ -479,6 +479,6 @@ export const ManualRunPanel: WithActionProps<ManualRunPanelProps> = props => {
           </div>
         </div>
       )}
-    </>
+    </div>
   );
 };

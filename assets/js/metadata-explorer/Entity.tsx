@@ -1,7 +1,7 @@
-import { cn } from "../utils/cn";
+import { cn } from '../utils/cn';
 
-import mapChildren from "./map-children";
-import type { ModelNode } from "./Model";
+import mapChildren from './map-children';
+import type { ModelNode } from './Model';
 
 type EntityProps = {
   level: number;
@@ -9,7 +9,7 @@ type EntityProps = {
 };
 
 const summaryStyle =
-  "text-sm text-secondary-700 mb-1 marker:text-slate-600 marker:text-sm select-none whitespace-nowrap hover:bg-sky-50/50";
+  'text-sm text-secondary-700 mb-1 marker:text-slate-600 marker:text-sm select-none whitespace-nowrap hover:bg-sky-50/50';
 
 const hasChildren = ({ children }: Partial<ModelNode> = {}) => {
   if (children) {
@@ -50,7 +50,7 @@ const Entity = ({ data, level }: EntityProps) => {
     // Best layout I can find for now - I'd really like the pills to be neatly right-aligned without scrolling
     return (
       <details>
-        <summary className={cn(summaryStyle, "cursor-pointer")}>
+        <summary className={cn(summaryStyle, 'cursor-pointer')}>
           <Label data={data} />
         </summary>
         <ul className="list-disc ml-4">
@@ -63,14 +63,14 @@ const Entity = ({ data, level }: EntityProps) => {
   }
 
   const indent = `ml-${level * 2}`;
-  if (typeof data === "string") {
+  if (typeof data === 'string') {
     return (
-      <li className={cn(summaryStyle, "cursor-default", indent)}>"{data}"</li>
+      <li className={cn(summaryStyle, 'cursor-default', indent)}>"{data}"</li>
     );
   }
   // TODO how do we drive formatting rules for adaptor specific types?
   return (
-    <li className={cn(summaryStyle, "cursor-default", indent)}>
+    <li className={cn(summaryStyle, 'cursor-default', indent)}>
       <Label data={data} />
     </li>
   );

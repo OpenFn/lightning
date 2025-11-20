@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { HotkeysProvider } from 'react-hotkeys-hook';
 
 import { SocketProvider } from '../react/contexts/SocketProvider';
+import { useURLState } from '../react/lib/use-url-state';
 import type { WithActionProps } from '../react/lib/with-props';
 
 import { BreadcrumbLink, BreadcrumbText } from './components/Breadcrumbs';
@@ -52,8 +53,6 @@ interface BreadcrumbContentProps {
   projectIdFallback?: string;
   projectNameFallback?: string;
   projectEnvFallback?: string;
-  rootProjectIdFallback?: string | null | undefined;
-  rootProjectNameFallback?: string | null | undefined;
 }
 
 function BreadcrumbContent({
@@ -62,8 +61,6 @@ function BreadcrumbContent({
   projectIdFallback,
   projectNameFallback,
   projectEnvFallback,
-  rootProjectIdFallback,
-  rootProjectNameFallback,
 }: BreadcrumbContentProps) {
   // Get project from store (may be null if not yet loaded)
   const projectFromStore = useProject();
@@ -74,6 +71,10 @@ function BreadcrumbContent({
 
   // Get run panel state for Header tooltip logic
   const isRunPanelOpen = useIsRunPanelOpen();
+
+  // Detect IDE mode
+  const { searchParams } = useURLState();
+  const isIDEOpen = searchParams.get('panel') === 'editor';
 
   // Store-first with props-fallback pattern
   // This ensures breadcrumbs work during:
@@ -88,11 +89,10 @@ function BreadcrumbContent({
   // Use shared version selection handler (destroys Y.Doc before switching)
   const handleVersionSelect = useVersionSelect();
 
+  // Build breadcrumbs for Canvas mode only (IDE has its own breadcrumbs in FullScreenIDE)
   const breadcrumbElements = useMemo(() => {
+    // Canvas mode: Projects > Project > Workflows > Workflow (with version dropdown)
     return [
-      <BreadcrumbLink href="/" icon="hero-home-mini" key="home">
-        Home
-      </BreadcrumbLink>,
       <BreadcrumbLink href="/projects" key="projects">
         Projects
       </BreadcrumbLink>,
@@ -139,13 +139,19 @@ function BreadcrumbContent({
   ]);
 
   return (
-    <Header
-      {...(projectId !== undefined && { projectId })}
-      workflowId={workflowId}
-      isRunPanelOpen={isRunPanelOpen}
-    >
-      {breadcrumbElements}
-    </Header>
+    <>
+      {/* Only render Header for Canvas mode - IDE mode has its own Header in FullScreenIDE */}
+      {!isIDEOpen && (
+        <Header
+          key="canvas-header"
+          {...(projectId !== undefined && { projectId })}
+          workflowId={workflowId}
+          isRunPanelOpen={isRunPanelOpen}
+        >
+          {breadcrumbElements}
+        </Header>
+      )}
+    </>
   );
 }
 

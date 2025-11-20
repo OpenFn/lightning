@@ -3,14 +3,13 @@ import { useEffect, useRef, useState } from 'react';
 import { mount as mountLogViewer } from '../../../log-viewer/component';
 import { createLogStore } from '../../../log-viewer/store';
 import { channelRequest } from '../../hooks/useChannel';
-import { useCurrentRun, useSelectedStepId } from '../../hooks/useRun';
+import { useActiveRun, useSelectedStepId } from '../../hooks/useHistory';
 import { useSession } from '../../hooks/useSession';
 
 import { LogLevelFilter } from './LogLevelFilter';
-import { StepViewerLayout } from './StepViewerLayout';
 
 export function LogTabPanel() {
-  const run = useCurrentRun();
+  const run = useActiveRun();
   const selectedStepId = useSelectedStepId();
   const { provider } = useSession();
 
@@ -111,23 +110,21 @@ export function LogTabPanel() {
   }, [run, provider]);
 
   return (
-    <StepViewerLayout selectedStepId={selectedStepId}>
-      <div className="flex h-full flex-col rounded-md bg-slate-700 font-mono text-gray-200">
-        {/* Log level filter header */}
-        <div className="flex-none border-b border-slate-500">
-          <div className="mx-auto px-2">
-            <div className="flex h-6 flex-row-reverse items-center">
-              <LogLevelFilter
-                selectedLevel={logLevel}
-                onLevelChange={handleLogLevelChange}
-              />
-            </div>
+    <div className="flex h-full flex-col rounded-md bg-slate-700 font-mono text-gray-200">
+      {/* Log level filter header */}
+      <div className="flex-none border-b border-slate-500">
+        <div className="mx-auto px-2">
+          <div className="flex h-6 flex-row-reverse items-center">
+            <LogLevelFilter
+              selectedLevel={logLevel}
+              onLevelChange={handleLogLevelChange}
+            />
           </div>
         </div>
-
-        {/* Log viewer */}
-        <div ref={containerRef} className="flex-1" />
       </div>
-    </StepViewerLayout>
+
+      {/* Log viewer */}
+      <div ref={containerRef} className="flex-1" />
+    </div>
   );
 }

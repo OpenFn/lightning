@@ -49,12 +49,12 @@ defmodule LightningWeb.DashboardLiveTest do
 
       assert {:ok, profile_live, _html} =
                index_live
-               |> element("nav#side-menu a", "User Profile")
+               |> element("nav#side-menu a.menu-item", "User Profile")
                |> render_click()
                |> follow_redirect(conn, ~p"/profile")
 
       assert profile_live
-             |> element("nav#side-menu a", "Credentials")
+             |> element("nav#side-menu a.menu-item", "Credentials")
              |> render_click()
              |> follow_redirect(conn, ~p"/credentials")
     end

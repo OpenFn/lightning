@@ -1,8 +1,8 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from 'react';
 
-import { cn } from "../../utils/cn";
-import { channelRequest } from "../hooks/useChannel";
-import { useSession } from "../hooks/useSession";
+import { cn } from '../../utils/cn';
+import { channelRequest } from '../hooks/useChannel';
+import { useSession } from '../hooks/useSession';
 
 interface Version {
   lock_version: number;
@@ -13,7 +13,7 @@ interface Version {
 interface VersionDropdownProps {
   currentVersion: number | null;
   latestVersion: number | null;
-  onVersionSelect: (version: number | "latest") => void;
+  onVersionSelect: (version: number | 'latest') => void;
 }
 
 export function VersionDropdown({
@@ -37,17 +37,17 @@ export function VersionDropdown({
 
   // Format version display
   const currentVersionDisplay = isLoadingVersion
-    ? "•"
+    ? '•'
     : isLatestVersion
-      ? "latest"
+      ? 'latest'
       : `v${String(currentVersion).substring(0, 7)}`;
 
   // Style based on version (matching snapshot_version_chip)
   const buttonStyles = isLoadingVersion
-    ? "bg-gray-100 text-gray-600 hover:bg-gray-200"
+    ? 'bg-gray-100 text-gray-600 hover:bg-gray-200'
     : isLatestVersion
-      ? "bg-primary-100 text-primary-800 hover:bg-primary-200"
-      : "bg-yellow-100 text-yellow-800 hover:bg-yellow-200";
+      ? 'bg-primary-100 text-primary-800 hover:bg-primary-200'
+      : 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200';
 
   // Close dropdown when clicking outside or pressing Escape
   useEffect(() => {
@@ -61,25 +61,25 @@ export function VersionDropdown({
     }
 
     function handleEscape(event: KeyboardEvent) {
-      if (event.key === "Escape") {
+      if (event.key === 'Escape') {
         setIsOpen(false);
       }
     }
 
     if (isOpen) {
       // Use capture phase to catch events before they're stopped by React Flow
-      document.addEventListener("mousedown", handleClickOutside, true);
-      document.addEventListener("keydown", handleEscape);
+      document.addEventListener('mousedown', handleClickOutside, true);
+      document.addEventListener('keydown', handleEscape);
       return () => {
-        document.removeEventListener("mousedown", handleClickOutside, true);
-        document.removeEventListener("keydown", handleEscape);
+        document.removeEventListener('mousedown', handleClickOutside, true);
+        document.removeEventListener('keydown', handleEscape);
       };
     }
   }, [isOpen]);
 
   // Fetch versions when dropdown opens
   useEffect(() => {
-    console.log("VersionDropdown effect:", {
+    console.log('VersionDropdown effect:', {
       isOpen,
       versionsLength: versions.length,
       hasChannel: !!channel,
@@ -89,21 +89,21 @@ export function VersionDropdown({
     if (isOpen && channel) {
       // Only fetch if we don't already have versions OR if we're not already loading
       if (versions.length === 0 && !isLoading) {
-        console.log("Fetching versions from channel...");
+        console.log('Fetching versions from channel...');
         setIsLoading(true);
         setError(null);
 
-        channelRequest<{ versions: Version[] }>(channel, "request_versions", {})
+        channelRequest<{ versions: Version[] }>(channel, 'request_versions', {})
           .then(response => {
-            console.log("Received versions response:", response);
-            console.log("Versions array:", response.versions);
-            console.log("Versions length:", response.versions.length);
+            console.log('Received versions response:', response);
+            console.log('Versions array:', response.versions);
+            console.log('Versions length:', response.versions.length);
             setVersions(response.versions || []);
             setIsLoading(false);
           })
           .catch(err => {
-            console.error("Failed to fetch versions:", err);
-            setError("Failed to load versions");
+            console.error('Failed to fetch versions:', err);
+            setError('Failed to load versions');
             setIsLoading(false);
           });
       }
@@ -115,25 +115,25 @@ export function VersionDropdown({
     if (!channel) return;
 
     const handleWorkflowSaved = (payload: unknown) => {
-      console.log("workflow_saved broadcast received:", payload);
-      console.log("Current versions before clear:", versions);
+      console.log('workflow_saved broadcast received:', payload);
+      console.log('Current versions before clear:', versions);
 
       // Clear the versions list to force refetch on next dropdown open
       // This prevents duplicates and ensures fresh data
       setVersions([]);
-      console.log("Cleared version list after workflow save");
+      console.log('Cleared version list after workflow save');
     };
 
-    channel.on("workflow_saved", handleWorkflowSaved);
+    channel.on('workflow_saved', handleWorkflowSaved);
 
     return () => {
-      channel.off("workflow_saved", handleWorkflowSaved);
+      channel.off('workflow_saved', handleWorkflowSaved);
     };
   }, [channel, versions]);
 
   const handleVersionClick = (version: Version) => {
     if (version.is_latest) {
-      onVersionSelect("latest");
+      onVersionSelect('latest');
     } else {
       onVersionSelect(version.lock_version);
     }
@@ -146,7 +146,7 @@ export function VersionDropdown({
         type="button"
         onClick={() => setIsOpen(!isOpen)}
         className={cn(
-          "inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-xs font-medium transition-colors",
+          'inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-xs font-medium transition-colors',
           buttonStyles
         )}
         aria-expanded={isOpen}
@@ -155,8 +155,8 @@ export function VersionDropdown({
         <span>{currentVersionDisplay}</span>
         <span
           className={cn(
-            "hero-chevron-down h-3 w-3 transition-transform",
-            isOpen && "rotate-180"
+            'hero-chevron-down h-3 w-3 transition-transform',
+            isOpen && 'rotate-180'
           )}
         />
       </button>
@@ -190,7 +190,7 @@ export function VersionDropdown({
                 // For subsequent items, show version number even if they have is_latest=true
                 const displayText =
                   index === 0 && version.is_latest
-                    ? "latest"
+                    ? 'latest'
                     : `v${String(version.lock_version).substring(0, 7)}`;
 
                 return (
@@ -199,10 +199,10 @@ export function VersionDropdown({
                     type="button"
                     onClick={() => handleVersionClick(version)}
                     className={cn(
-                      "w-full text-left px-4 py-2 text-sm hover:bg-gray-100 flex items-center justify-between",
+                      'w-full text-left px-4 py-2 text-sm hover:bg-gray-100 flex items-center justify-between',
                       isSelected
-                        ? "bg-primary-50 text-primary-900"
-                        : "text-gray-700"
+                        ? 'bg-primary-50 text-primary-900'
+                        : 'text-gray-700'
                     )}
                     role="menuitem"
                   >

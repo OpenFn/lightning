@@ -1,13 +1,13 @@
-import { test, expect } from "@playwright/test";
-import { getTestData } from "../../test-data";
-import { enableExperimentalFeatures } from "../../e2e-helper";
+import { test, expect } from '@playwright/test';
+import { getTestData } from '../../test-data';
+import { enableExperimentalFeatures } from '../../e2e-helper';
 import {
   LoginPage,
   ProjectsPage,
   WorkflowsPage,
   WorkflowEditPage,
   WorkflowCollaborativePage,
-} from "../../pages";
+} from '../../pages';
 
 /**
  * E2E Test Suite: Run/Retry Keyboard Shortcuts
@@ -26,7 +26,7 @@ import {
  * @see assets/js/collaborative-editor/hooks/useRunRetry.ts
  */
 
-test.describe("Run/Retry Keyboard Shortcuts @collaborative @critical", () => {
+test.describe('Run/Retry Keyboard Shortcuts @collaborative @critical', () => {
   let testData: Awaited<ReturnType<typeof getTestData>>;
 
   test.beforeAll(async () => {
@@ -38,7 +38,7 @@ test.describe("Run/Retry Keyboard Shortcuts @collaborative @critical", () => {
     await enableExperimentalFeatures(testData.users.editor.email);
 
     // Login as editor user
-    await page.goto("/");
+    await page.goto('/');
     const loginPage = new LoginPage(page);
     await loginPage.loginIfNeeded(
       testData.users.editor.email,
@@ -70,11 +70,11 @@ test.describe("Run/Retry Keyboard Shortcuts @collaborative @critical", () => {
       .waitFor({ timeout: 30000 });
   });
 
-  test("Cmd+Enter triggers run from Manual Run Panel", async ({
+  test('Cmd+Enter triggers run from Manual Run Panel', async ({
     page,
     browserName,
   }) => {
-    await test.step("Open Manual Run Panel", async () => {
+    await test.step('Open Manual Run Panel', async () => {
       // Click on a job to open inspector
       const jobNode = page.locator('[data-testid="job-node"]').first();
       await jobNode.click();
@@ -87,9 +87,9 @@ test.describe("Run/Retry Keyboard Shortcuts @collaborative @critical", () => {
       await expect(page.locator('text="Run from"').first()).toBeVisible();
     });
 
-    await test.step("Press Cmd+Enter to trigger run", async () => {
+    await test.step('Press Cmd+Enter to trigger run', async () => {
       // Get the modifier key based on platform
-      const modifierKey = browserName === "webkit" ? "Meta" : "Control";
+      const modifierKey = browserName === 'webkit' ? 'Meta' : 'Control';
 
       // Press keyboard shortcut
       await page.keyboard.press(`${modifierKey}+Enter`);
@@ -105,11 +105,11 @@ test.describe("Run/Retry Keyboard Shortcuts @collaborative @critical", () => {
     });
   });
 
-  test("Cmd+Enter triggers retry when following a run", async ({
+  test('Cmd+Enter triggers retry when following a run', async ({
     page,
     browserName,
   }) => {
-    await test.step("Create a run first", async () => {
+    await test.step('Create a run first', async () => {
       // Click on a job
       const jobNode = page.locator('[data-testid="job-node"]').first();
       await jobNode.click();
@@ -130,15 +130,15 @@ test.describe("Run/Retry Keyboard Shortcuts @collaborative @critical", () => {
       });
     });
 
-    await test.step("Verify button shows retry mode", async () => {
+    await test.step('Verify button shows retry mode', async () => {
       // Button should now show "Run (retry)"
       await expect(page.locator('button:has-text("Run (retry)")')).toBeVisible({
         timeout: 10000,
       });
     });
 
-    await test.step("Press Cmd+Enter to trigger retry", async () => {
-      const modifierKey = browserName === "webkit" ? "Meta" : "Control";
+    await test.step('Press Cmd+Enter to trigger retry', async () => {
+      const modifierKey = browserName === 'webkit' ? 'Meta' : 'Control';
 
       // Press keyboard shortcut
       await page.keyboard.press(`${modifierKey}+Enter`);
@@ -156,11 +156,11 @@ test.describe("Run/Retry Keyboard Shortcuts @collaborative @critical", () => {
     });
   });
 
-  test("Cmd+Shift+Enter forces new work order", async ({
+  test('Cmd+Shift+Enter forces new work order', async ({
     page,
     browserName,
   }) => {
-    await test.step("Create a run to enable retry mode", async () => {
+    await test.step('Create a run to enable retry mode', async () => {
       const jobNode = page.locator('[data-testid="job-node"]').first();
       await jobNode.click();
 
@@ -182,8 +182,8 @@ test.describe("Run/Retry Keyboard Shortcuts @collaborative @critical", () => {
       });
     });
 
-    await test.step("Press Cmd+Shift+Enter to force new work order", async () => {
-      const modifierKey = browserName === "webkit" ? "Meta" : "Control";
+    await test.step('Press Cmd+Shift+Enter to force new work order', async () => {
+      const modifierKey = browserName === 'webkit' ? 'Meta' : 'Control';
 
       // Press keyboard shortcut with Shift
       await page.keyboard.press(`${modifierKey}+Shift+Enter`);
@@ -200,11 +200,11 @@ test.describe("Run/Retry Keyboard Shortcuts @collaborative @critical", () => {
     });
   });
 
-  test("Keyboard shortcuts work in Monaco editor (IDE)", async ({
+  test('Keyboard shortcuts work in Monaco editor (IDE)', async ({
     page,
     browserName,
   }) => {
-    await test.step("Open fullscreen IDE", async () => {
+    await test.step('Open fullscreen IDE', async () => {
       // Click on a job
       const jobNode = page.locator('[data-testid="job-node"]').first();
       await jobNode.click();
@@ -221,12 +221,12 @@ test.describe("Run/Retry Keyboard Shortcuts @collaborative @critical", () => {
       });
     });
 
-    await test.step("Focus Monaco editor and press Cmd+Enter", async () => {
+    await test.step('Focus Monaco editor and press Cmd+Enter', async () => {
       // Click into Monaco editor to focus it
       const monacoEditor = page.locator('[data-testid="monaco-editor"]');
       await monacoEditor.click();
 
-      const modifierKey = browserName === "webkit" ? "Meta" : "Control";
+      const modifierKey = browserName === 'webkit' ? 'Meta' : 'Control';
 
       // Press keyboard shortcut while focused in editor
       await page.keyboard.press(`${modifierKey}+Enter`);
@@ -238,11 +238,11 @@ test.describe("Run/Retry Keyboard Shortcuts @collaborative @critical", () => {
     });
   });
 
-  test("Keyboard shortcuts respect disabled state", async ({
+  test('Keyboard shortcuts respect disabled state', async ({
     page,
     browserName,
   }) => {
-    await test.step("Open Manual Run Panel", async () => {
+    await test.step('Open Manual Run Panel', async () => {
       const jobNode = page.locator('[data-testid="job-node"]').first();
       await jobNode.click();
 
@@ -250,12 +250,12 @@ test.describe("Run/Retry Keyboard Shortcuts @collaborative @critical", () => {
       await runButton.click();
     });
 
-    await test.step("Try to run without selecting input", async () => {
+    await test.step('Try to run without selecting input', async () => {
       // Switch to "existing" tab without selecting a dataclip
       const existingTab = page.locator('button:has-text("Existing")');
       await existingTab.click();
 
-      const modifierKey = browserName === "webkit" ? "Meta" : "Control";
+      const modifierKey = browserName === 'webkit' ? 'Meta' : 'Control';
 
       // Press keyboard shortcut
       await page.keyboard.press(`${modifierKey}+Enter`);
@@ -267,8 +267,8 @@ test.describe("Run/Retry Keyboard Shortcuts @collaborative @critical", () => {
     });
   });
 
-  test("Split button dropdown works with mouse clicks", async ({ page }) => {
-    await test.step("Create a run to enable split button", async () => {
+  test('Split button dropdown works with mouse clicks', async ({ page }) => {
+    await test.step('Create a run to enable split button', async () => {
       const jobNode = page.locator('[data-testid="job-node"]').first();
       await jobNode.click();
 
@@ -290,7 +290,7 @@ test.describe("Run/Retry Keyboard Shortcuts @collaborative @critical", () => {
       });
     });
 
-    await test.step("Click main button to retry", async () => {
+    await test.step('Click main button to retry', async () => {
       const retryButton = page.locator('button:has-text("Run (retry)")');
       await retryButton.click();
 
@@ -303,7 +303,7 @@ test.describe("Run/Retry Keyboard Shortcuts @collaborative @critical", () => {
   test("Split button dropdown shows 'New Work Order' option", async ({
     page,
   }) => {
-    await test.step("Create a run to enable split button", async () => {
+    await test.step('Create a run to enable split button', async () => {
       const jobNode = page.locator('[data-testid="job-node"]').first();
       await jobNode.click();
 
@@ -346,8 +346,8 @@ test.describe("Run/Retry Keyboard Shortcuts @collaborative @critical", () => {
     });
   });
 
-  test("Run state updates in real-time via WebSocket", async ({ page }) => {
-    await test.step("Create a run", async () => {
+  test('Run state updates in real-time via WebSocket', async ({ page }) => {
+    await test.step('Create a run', async () => {
       const jobNode = page.locator('[data-testid="job-node"]').first();
       await jobNode.click();
 
@@ -364,14 +364,14 @@ test.describe("Run/Retry Keyboard Shortcuts @collaborative @critical", () => {
       });
     });
 
-    await test.step("Verify button changes to Processing state", async () => {
+    await test.step('Verify button changes to Processing state', async () => {
       // Button should show processing state
       await expect(page.locator('button:has-text("Processing")')).toBeVisible({
         timeout: 5000,
       });
     });
 
-    await test.step("Verify button changes to Retry when complete", async () => {
+    await test.step('Verify button changes to Retry when complete', async () => {
       // Wait for run to complete and button to change to retry
       await expect(page.locator('button:has-text("Run (retry)")')).toBeVisible({
         timeout: 30000,
@@ -379,11 +379,11 @@ test.describe("Run/Retry Keyboard Shortcuts @collaborative @critical", () => {
     });
   });
 
-  test("Cross-platform modifier keys work correctly", async ({
+  test('Cross-platform modifier keys work correctly', async ({
     page,
     browserName,
   }) => {
-    await test.step("Verify correct modifier key for platform", async () => {
+    await test.step('Verify correct modifier key for platform', async () => {
       const jobNode = page.locator('[data-testid="job-node"]').first();
       await jobNode.click();
 
@@ -391,12 +391,12 @@ test.describe("Run/Retry Keyboard Shortcuts @collaborative @critical", () => {
       await runButton.click();
 
       // Test platform-specific modifier
-      if (browserName === "webkit") {
+      if (browserName === 'webkit') {
         // Mac: Use Command (Meta)
-        await page.keyboard.press("Meta+Enter");
+        await page.keyboard.press('Meta+Enter');
       } else {
         // Windows/Linux: Use Control
-        await page.keyboard.press("Control+Enter");
+        await page.keyboard.press('Control+Enter');
       }
 
       // Both should trigger run

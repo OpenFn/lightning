@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect } from 'react';
 
 export type AdaptorIconData = {
   [adaptor: string]:
@@ -19,10 +19,10 @@ const useAdaptorIcons = (): AdaptorIconData | null => {
     if (!deffered) {
       // The first request to adaptor data will initiate the fetch
       // and read the data
-      deffered = fetch("/images/adaptors/adaptor_icons.json")
+      deffered = fetch('/images/adaptors/adaptor_icons.json')
         .then(response => response.json() as Promise<AdaptorIconData>)
         .catch(err => {
-          console.error("Error fetching Adaptor Icons manifest:", err);
+          console.error('Error fetching Adaptor Icons manifest:', err);
           return {} as AdaptorIconData;
         });
     }

@@ -1,5 +1,5 @@
-import { useState, useRef, useEffect } from "react";
-import { createPortal } from "react-dom";
+import { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 
 interface VersionPickerProps {
   versions: string[];
@@ -16,7 +16,7 @@ export function VersionPicker({
   selectedVersion,
   onVersionChange,
 }: VersionPickerProps) {
-  const [query, setQuery] = useState("");
+  const [query, setQuery] = useState('');
   const [isOpen, setIsOpen] = useState(false);
   const wrapperRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -29,7 +29,7 @@ export function VersionPicker({
 
   // Filter versions based on search query
   const filteredVersions =
-    query === ""
+    query === ''
       ? versions
       : versions.filter(version => {
           return version.toLowerCase().includes(query.toLowerCase());
@@ -60,13 +60,13 @@ export function VersionPicker({
       }
     }
 
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
   const handleSelect = (version: string) => {
     onVersionChange(version);
-    setQuery("");
+    setQuery('');
     setIsOpen(false);
   };
 
@@ -97,13 +97,13 @@ export function VersionPicker({
               role="option"
               aria-selected={isSelected}
               className={`relative cursor-pointer select-none py-2 pl-10 pr-4 hover:bg-primary-600 hover:text-white ${
-                isSelected ? "bg-primary-50" : "text-gray-900"
+                isSelected ? 'bg-primary-50' : 'text-gray-900'
               }`}
               onClick={() => handleSelect(version)}
             >
               <span
                 className={`block truncate ${
-                  isSelected ? "font-medium" : "font-normal"
+                  isSelected ? 'font-medium' : 'font-normal'
                 }`}
               >
                 {version}
@@ -156,7 +156,7 @@ export function VersionPicker({
       </div>
 
       {/* Render dropdown in portal to escape modal overflow */}
-      {typeof document !== "undefined" &&
+      {typeof document !== 'undefined' &&
         createPortal(dropdownContent, document.body)}
     </div>
   );

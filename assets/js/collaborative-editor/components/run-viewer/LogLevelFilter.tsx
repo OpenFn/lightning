@@ -1,6 +1,6 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect } from 'react';
 
-const LOG_LEVELS = ["debug", "info", "warn", "error"] as const;
+const LOG_LEVELS = ['debug', 'info', 'warn', 'error'] as const;
 type LogLevel = (typeof LOG_LEVELS)[number];
 
 interface LogLevelFilterProps {
@@ -28,8 +28,8 @@ export function LogLevelFilter({
       }
     }
 
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [isOpen]);
 
   return (
@@ -71,7 +71,7 @@ export function LogLevelFilter({
             >
               <span
                 className={`block truncate ${
-                  level === selectedLevel ? "font-semibold" : "font-normal"
+                  level === selectedLevel ? 'font-semibold' : 'font-normal'
                 }`}
               >
                 {level}

@@ -47,7 +47,11 @@ defmodule LightningWeb.WorkflowLive.UserPresencesTest do
       refute_eventually(amy_view |> has_element?("#canvas-banner"))
 
       # We do not render current user in the list of online users
-      refute_eventually(render(amy_view) =~ amy.first_name)
+      refute_eventually(
+        amy_view
+        |> element("#canvas-online-users", amy.first_name)
+        |> has_element?()
+      )
     end
 
     test "in inspector", %{conn: conn} do
@@ -85,7 +89,11 @@ defmodule LightningWeb.WorkflowLive.UserPresencesTest do
       refute_eventually(amy_view |> has_element?("#inspector-banner"))
 
       # We do not render current user in the list of online users
-      refute_eventually(render(amy_view) =~ amy.first_name)
+      refute_eventually(
+        amy_view
+        |> element("#inspector-online-users", amy.first_name)
+        |> has_element?()
+      )
     end
   end
 
@@ -141,10 +149,23 @@ defmodule LightningWeb.WorkflowLive.UserPresencesTest do
 
       refute_eventually(amy_view |> has_element?("#canvas-banner"))
 
-      refute_eventually(render(amy_view) =~ amy.first_name)
+      refute_eventually(
+        amy_view
+        |> element("#canvas-online-users", amy.first_name)
+        |> has_element?()
+      )
 
-      refute_eventually(render(amy_view) =~ ana.first_name)
-      refute_eventually(render(amy_view) =~ aly.first_name)
+      refute_eventually(
+        amy_view
+        |> element("#canvas-online-users", ana.first_name)
+        |> has_element?()
+      )
+
+      refute_eventually(
+        amy_view
+        |> element("#inspector-online-users", aly.first_name)
+        |> has_element?()
+      )
 
       # Ana joins
       {:ok, ana_view, _html} =
@@ -182,11 +203,29 @@ defmodule LightningWeb.WorkflowLive.UserPresencesTest do
           "Amy Ly is currently active and you can&#39;t edit this workflow until they close the editor and canvas."
       )
 
-      refute_eventually(render(amy_view) =~ amy.first_name)
-      assert_eventually(render(amy_view) =~ ana.first_name)
+      refute_eventually(
+        amy_view
+        |> element("#canvas-online-users", amy.first_name)
+        |> has_element?()
+      )
 
-      refute_eventually(render(ana_view) =~ ana.first_name)
-      assert_eventually(render(ana_view) =~ amy.first_name)
+      assert_eventually(
+        amy_view
+        |> element("#canvas-online-users", ana.first_name)
+        |> has_element?()
+      )
+
+      refute_eventually(
+        ana_view
+        |> element("#canvas-online-users", ana.first_name)
+        |> has_element?()
+      )
+
+      assert_eventually(
+        ana_view
+        |> element("#canvas-online-users", amy.first_name)
+        |> has_element?()
+      )
 
       # Aly joins
       {:ok, aly_view, _html} =
@@ -256,17 +295,59 @@ defmodule LightningWeb.WorkflowLive.UserPresencesTest do
           "Amy Ly is currently active and you can&#39;t edit this workflow until they close the editor and canvas."
       )
 
-      refute_eventually(render(amy_view) =~ amy.first_name)
-      assert_eventually(render(amy_view) =~ ana.first_name)
-      assert_eventually(render(amy_view) =~ aly.first_name)
+      refute_eventually(
+        amy_view
+        |> element("#canvas-online-users", amy.first_name)
+        |> has_element?()
+      )
 
-      refute_eventually(render(ana_view) =~ ana.first_name)
-      assert_eventually(render(ana_view) =~ amy.first_name)
-      assert_eventually(render(ana_view) =~ aly.first_name)
+      assert_eventually(
+        amy_view
+        |> element("#canvas-online-users", ana.first_name)
+        |> has_element?()
+      )
 
-      refute_eventually(render(aly_view) =~ aly.first_name)
-      assert_eventually(render(aly_view) =~ amy.first_name)
-      assert_eventually(render(aly_view) =~ ana.first_name)
+      assert_eventually(
+        amy_view
+        |> element("#canvas-online-users", aly.first_name)
+        |> has_element?()
+      )
+
+      refute_eventually(
+        ana_view
+        |> element("#canvas-online-users", ana.first_name)
+        |> has_element?()
+      )
+
+      assert_eventually(
+        ana_view
+        |> element("#canvas-online-users", amy.first_name)
+        |> has_element?()
+      )
+
+      assert_eventually(
+        ana_view
+        |> element("#canvas-online-users", aly.first_name)
+        |> has_element?()
+      )
+
+      refute_eventually(
+        aly_view
+        |> element("#canvas-online-users", aly.first_name)
+        |> has_element?()
+      )
+
+      assert_eventually(
+        aly_view
+        |> element("#canvas-online-users", amy.first_name)
+        |> has_element?()
+      )
+
+      assert_eventually(
+        aly_view
+        |> element("#canvas-online-users", ana.first_name)
+        |> has_element?()
+      )
 
       last_job = workflow.jobs |> List.last()
       last_edge = workflow.edges |> List.last()
@@ -355,10 +436,23 @@ defmodule LightningWeb.WorkflowLive.UserPresencesTest do
 
       refute_eventually(amy_view |> has_element?("#inspector-banner"))
 
-      refute_eventually(render(amy_view) =~ amy.first_name)
+      refute_eventually(
+        amy_view
+        |> element("#canvas-online-users", amy.first_name)
+        |> has_element?()
+      )
 
-      refute_eventually(render(amy_view) =~ ana.first_name)
-      refute_eventually(render(amy_view) =~ aly.first_name)
+      refute_eventually(
+        amy_view
+        |> element("#inspector-online-users", ana.first_name)
+        |> has_element?()
+      )
+
+      refute_eventually(
+        amy_view
+        |> element("#inspector-online-users", aly.first_name)
+        |> has_element?()
+      )
 
       # Ana joins
       {:ok, ana_view, _html} =
@@ -396,11 +490,29 @@ defmodule LightningWeb.WorkflowLive.UserPresencesTest do
           "Amy Ly is currently active and you can&#39;t edit this workflow until they close the editor and canvas."
       )
 
-      refute_eventually(render(amy_view) =~ amy.first_name)
-      assert_eventually(render(amy_view) =~ ana.first_name)
+      refute_eventually(
+        amy_view
+        |> element("#canvas-online-users", amy.first_name)
+        |> has_element?()
+      )
 
-      refute_eventually(render(ana_view) =~ ana.first_name)
-      assert_eventually(render(ana_view) =~ amy.first_name)
+      assert_eventually(
+        amy_view
+        |> element("#canvas-online-users", ana.first_name)
+        |> has_element?()
+      )
+
+      refute_eventually(
+        ana_view
+        |> element("#canvas-online-users", ana.first_name)
+        |> has_element?()
+      )
+
+      assert_eventually(
+        ana_view
+        |> element("#canvas-online-users", amy.first_name)
+        |> has_element?()
+      )
 
       # Aly joins
       {:ok, aly_view, _html} =
@@ -470,17 +582,59 @@ defmodule LightningWeb.WorkflowLive.UserPresencesTest do
           "Amy Ly is currently active and you can&#39;t edit this workflow until they close the editor and canvas."
       )
 
-      refute_eventually(render(amy_view) =~ amy.first_name)
-      assert_eventually(render(amy_view) =~ ana.first_name)
-      assert_eventually(render(amy_view) =~ aly.first_name)
+      refute_eventually(
+        amy_view
+        |> element("#canvas-online-users", amy.first_name)
+        |> has_element?()
+      )
 
-      refute_eventually(render(ana_view) =~ ana.first_name)
-      assert_eventually(render(ana_view) =~ amy.first_name)
-      assert_eventually(render(ana_view) =~ aly.first_name)
+      assert_eventually(
+        amy_view
+        |> element("#canvas-online-users", ana.first_name)
+        |> has_element?()
+      )
 
-      refute_eventually(render(aly_view) =~ aly.first_name)
-      assert_eventually(render(aly_view) =~ amy.first_name)
-      assert_eventually(render(aly_view) =~ ana.first_name)
+      assert_eventually(
+        amy_view
+        |> element("#canvas-online-users", aly.first_name)
+        |> has_element?()
+      )
+
+      refute_eventually(
+        ana_view
+        |> element("#canvas-online-users", ana.first_name)
+        |> has_element?()
+      )
+
+      assert_eventually(
+        ana_view
+        |> element("#canvas-online-users", amy.first_name)
+        |> has_element?()
+      )
+
+      assert_eventually(
+        ana_view
+        |> element("#canvas-online-users", aly.first_name)
+        |> has_element?()
+      )
+
+      refute_eventually(
+        aly_view
+        |> element("#canvas-online-users", aly.first_name)
+        |> has_element?()
+      )
+
+      assert_eventually(
+        aly_view
+        |> element("#canvas-online-users", amy.first_name)
+        |> has_element?()
+      )
+
+      assert_eventually(
+        aly_view
+        |> element("#canvas-online-users", ana.first_name)
+        |> has_element?()
+      )
     end
   end
 

@@ -60,7 +60,7 @@ const CustomView: React.FC<{
         renderMode === 'embedded' ? 'pt-2' : 'pt-3'
       )}
     >
-      <div className="px-3">
+      <div className="px-3 shrink-0">
         <FileUploader count={1} formats={['json']} onUpload={uploadFiles} />
         <div className="relative">
           <div
@@ -74,7 +74,7 @@ const CustomView: React.FC<{
           </div>
         </div>
       </div>
-      <div className="relative h-full flex flex-col overflow-hidden">
+      <div className="relative flex-1 min-h-0 flex flex-col overflow-hidden">
         {!isEmpty && !jsonParseResult.success ? (
           <div className="text-red-700 text-sm flex gap-1 mb-1 items-center">
             <InformationCircleIcon className={iconStyle} />{' '}

@@ -6,37 +6,37 @@ import {
   ChevronDownIcon,
   DocumentTextIcon,
   SparklesIcon,
-} from "@heroicons/react/24/outline";
-import React, { useState, useCallback, useMemo, useEffect } from "react";
+} from '@heroicons/react/24/outline';
+import React, { useState, useCallback, useMemo, useEffect } from 'react';
 
-import Docs from "../adaptor-docs/Docs";
-import { Tabs } from "../components/Tabs";
-import Editor from "../editor/Editor";
-import Metadata from "../metadata-explorer/Explorer";
-import { cn } from "../utils/cn";
+import Docs from '../adaptor-docs/Docs';
+import { Tabs } from '../components/Tabs';
+import Editor from '../editor/Editor';
+import Metadata from '../metadata-explorer/Explorer';
+import { cn } from '../utils/cn';
 
 enum SettingsKeys {
-  ORIENTATION = "lightning.job-editor.orientation",
-  SHOW_PANEL = "lightning.job-editor.showPanel",
-  ACTIVE_TAB = "lightning.job-editor.activeTab",
+  ORIENTATION = 'lightning.job-editor.orientation',
+  SHOW_PANEL = 'lightning.job-editor.showPanel',
+  ACTIVE_TAB = 'lightning.job-editor.activeTab',
 }
 
 // TODO maybe a usePersist() hook which takes defaults as an argument and returns a) the persisted values and b) a setter (shallow merge)
-const persistedSettings = localStorage.getItem("lightning.job-editor.settings");
+const persistedSettings = localStorage.getItem('lightning.job-editor.settings');
 const settings = persistedSettings
   ? JSON.parse(persistedSettings)
   : {
-      [SettingsKeys.ORIENTATION]: "h",
+      [SettingsKeys.ORIENTATION]: 'h',
       [SettingsKeys.SHOW_PANEL]: false,
     };
 
 const persistSettings = () =>
   localStorage.setItem(
-    "lightning.job-editor.settings",
+    'lightning.job-editor.settings',
     JSON.stringify(settings)
   );
 
-const iconStyle = "inline cursor-pointer h-5 w-5 ml-1 hover:text-primary-600";
+const iconStyle = 'inline cursor-pointer h-5 w-5 ml-1 hover:text-primary-600';
 
 type JobEditorComponentProps = {
   adaptor: string;
@@ -56,16 +56,16 @@ export default ({
   onSourceChanged,
 }: JobEditorComponentProps) => {
   const [vertical, setVertical] = useState(
-    () => settings[SettingsKeys.ORIENTATION] === "v"
+    () => settings[SettingsKeys.ORIENTATION] === 'v'
   );
   const [showPanel, setShowPanel] = useState(
     () => settings[SettingsKeys.SHOW_PANEL]
   );
-  const [selectedTab, setSelectedTab] = useState("docs");
+  const [selectedTab, setSelectedTab] = useState('docs');
 
   const toggleOrientiation = useCallback(() => {
     setVertical(!vertical);
-    settings[SettingsKeys.ORIENTATION] = vertical ? "h" : "v";
+    settings[SettingsKeys.ORIENTATION] = vertical ? 'h' : 'v';
     persistSettings();
   }, [vertical]);
 
@@ -93,7 +93,7 @@ export default ({
   return (
     <>
       <div className="cursor-pointer"></div>
-      <div className={`flex h-full flex-${vertical ? "col" : "row"}`}>
+      <div className={`flex h-full flex-${vertical ? 'col' : 'row'}`}>
         <div className="flex-1 rounded-md overflow-hidden">
           <Editor
             source={source}
@@ -106,16 +106,16 @@ export default ({
         </div>
         <div
           className={cn(
-            "bg-white",
-            showPanel ? "flex flex-col flex-1 z-10 overflow-hidden" : "",
-            vertical ? "pt-2" : "pl-2"
+            'bg-white',
+            showPanel ? 'flex flex-col flex-1 z-10 overflow-hidden' : '',
+            vertical ? 'pt-2' : 'pl-2'
           )}
         >
           <div className={`relative flex`}>
             <Tabs
               options={[
-                { label: "Docs", id: "docs", icon: DocumentTextIcon },
-                { label: "Metadata", id: "metadata", icon: SparklesIcon },
+                { label: 'Docs', id: 'docs', icon: DocumentTextIcon },
+                { label: 'Metadata', id: 'metadata', icon: SparklesIcon },
               ]}
               initialSelection={selectedTab}
               onSelectionChange={handleSelectionChange}
@@ -125,7 +125,7 @@ export default ({
             {showPanel && (
               <div className="bg-white rounded-lg p-1 flex space-x-1 z-20 items-center">
                 <ViewColumnsIcon
-                  className={cn(iconStyle, !vertical ? "rotate-90" : "")}
+                  className={cn(iconStyle, !vertical ? 'rotate-90' : '')}
                   onClick={toggleOrientiation}
                   title="Toggle panel orientation"
                 />
@@ -140,12 +140,12 @@ export default ({
           {showPanel && (
             <div
               className={cn(
-                "flex flex-1 mt-1",
-                vertical ? "overflow-auto" : "overflow-hidden"
+                'flex flex-1 mt-1',
+                vertical ? 'overflow-auto' : 'overflow-hidden'
               )}
             >
-              {selectedTab === "docs" && <Docs adaptor={adaptor} />}
-              {selectedTab === "metadata" && (
+              {selectedTab === 'docs' && <Docs adaptor={adaptor} />}
+              {selectedTab === 'metadata' && (
                 <Metadata adaptor={adaptor} metadata={metadata} />
               )}
             </div>

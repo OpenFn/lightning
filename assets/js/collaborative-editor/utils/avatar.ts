@@ -4,7 +4,7 @@
  * Utilities for generating avatar initials from user data.
  */
 
-import type { UserContext } from "../types/sessionContext";
+import type { UserContext } from '../types/sessionContext';
 
 /**
  * Generates avatar initials from user data
@@ -26,7 +26,7 @@ import type { UserContext } from "../types/sessionContext";
 export function getAvatarInitials(user: UserContext | null): string {
   // Handle null user
   if (!user) {
-    return "??";
+    return '??';
   }
 
   // Extract first and last name, trimming whitespace
@@ -35,7 +35,7 @@ export function getAvatarInitials(user: UserContext | null): string {
 
   // If either name is empty, return fallback
   if (!firstName || !lastName) {
-    return "??";
+    return '??';
   }
 
   // Get first character of each name, uppercase

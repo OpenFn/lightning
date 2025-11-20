@@ -9,22 +9,22 @@
  * on component rendering and user-visible behavior.
  */
 
-import { act, render, screen, waitFor } from "@testing-library/react";
-import type React from "react";
-import { describe, expect, test } from "vitest";
-import * as Y from "yjs";
+import { act, render, screen, waitFor } from '@testing-library/react';
+import type React from 'react';
+import { describe, expect, test } from 'vitest';
+import * as Y from 'yjs';
 
-import { ReadOnlyWarning } from "../../../js/collaborative-editor/components/ReadOnlyWarning";
-import type { StoreContextValue } from "../../../js/collaborative-editor/contexts/StoreProvider";
-import { StoreContext } from "../../../js/collaborative-editor/contexts/StoreProvider";
-import { createSessionContextStore } from "../../../js/collaborative-editor/stores/createSessionContextStore";
-import { createWorkflowStore } from "../../../js/collaborative-editor/stores/createWorkflowStore";
-import type { Session } from "../../../js/collaborative-editor/types/session";
-import { createSessionContext } from "../__helpers__/sessionContextFactory";
+import { ReadOnlyWarning } from '../../../js/collaborative-editor/components/ReadOnlyWarning';
+import type { StoreContextValue } from '../../../js/collaborative-editor/contexts/StoreProvider';
+import { StoreContext } from '../../../js/collaborative-editor/contexts/StoreProvider';
+import { createSessionContextStore } from '../../../js/collaborative-editor/stores/createSessionContextStore';
+import { createWorkflowStore } from '../../../js/collaborative-editor/stores/createWorkflowStore';
+import type { Session } from '../../../js/collaborative-editor/types/session';
+import { createSessionContext } from '../__helpers__/sessionContextFactory';
 import {
   createMockPhoenixChannel,
   createMockPhoenixChannelProvider,
-} from "../mocks/phoenixChannel";
+} from '../mocks/phoenixChannel';
 
 // =============================================================================
 // TEST HELPERS
@@ -51,22 +51,22 @@ function createTestSetup(options: WrapperOptions = {}) {
   const workflowStore = createWorkflowStore();
 
   const ydoc = new Y.Doc() as Session.WorkflowDoc;
-  const workflowMap = ydoc.getMap("workflow");
+  const workflowMap = ydoc.getMap('workflow');
 
   // Only set id if not a new workflow (new workflows have no id yet)
   if (!isNewWorkflow) {
-    workflowMap.set("id", "test-workflow-123");
+    workflowMap.set('id', 'test-workflow-123');
   }
-  workflowMap.set("name", "Test Workflow");
-  workflowMap.set("lock_version", workflowLockVersion);
-  workflowMap.set("deleted_at", workflowDeletedAt);
+  workflowMap.set('name', 'Test Workflow');
+  workflowMap.set('lock_version', workflowLockVersion);
+  workflowMap.set('deleted_at', workflowDeletedAt);
 
-  ydoc.getArray("jobs");
-  ydoc.getArray("triggers");
-  ydoc.getArray("edges");
-  ydoc.getMap("positions");
+  ydoc.getArray('jobs');
+  ydoc.getArray('triggers');
+  ydoc.getArray('edges');
+  ydoc.getMap('positions');
 
-  const mockChannel = createMockPhoenixChannel("test:room");
+  const mockChannel = createMockPhoenixChannel('test:room');
   const mockProvider = createMockPhoenixChannelProvider(mockChannel);
   (mockProvider as any).doc = ydoc;
 
@@ -75,7 +75,7 @@ function createTestSetup(options: WrapperOptions = {}) {
 
   const emitSessionContext = () => {
     (mockChannel as any)._test.emit(
-      "session_context",
+      'session_context',
       createSessionContext({
         permissions,
         latest_snapshot_lock_version: latestSnapshotLockVersion,
@@ -105,8 +105,8 @@ function createTestSetup(options: WrapperOptions = {}) {
 // COMPONENT RENDERING TESTS
 // =============================================================================
 
-describe("ReadOnlyWarning - Core Rendering", () => {
-  test("renders warning with correct text when workflow is read-only", async () => {
+describe('ReadOnlyWarning - Core Rendering', () => {
+  test('renders warning with correct text when workflow is read-only', async () => {
     const { wrapper, emitSessionContext } = createTestSetup({
       permissions: { can_edit_workflow: false },
     });
@@ -118,11 +118,11 @@ describe("ReadOnlyWarning - Core Rendering", () => {
     });
 
     await waitFor(() => {
-      expect(screen.getByText("Read-only")).toBeInTheDocument();
+      expect(screen.getByText('Read-only')).toBeInTheDocument();
     });
   });
 
-  test("does not render when workflow is editable", async () => {
+  test('does not render when workflow is editable', async () => {
     const { wrapper, emitSessionContext } = createTestSetup({
       permissions: { can_edit_workflow: true, can_run_workflow: true },
     });
@@ -133,10 +133,10 @@ describe("ReadOnlyWarning - Core Rendering", () => {
       emitSessionContext();
     });
 
-    expect(screen.queryByText("Read-only")).not.toBeInTheDocument();
+    expect(screen.queryByText('Read-only')).not.toBeInTheDocument();
   });
 
-  test("does not render during new workflow creation", async () => {
+  test('does not render during new workflow creation', async () => {
     const { wrapper, emitSessionContext } = createTestSetup({
       permissions: { can_edit_workflow: false },
       isNewWorkflow: true,
@@ -148,7 +148,7 @@ describe("ReadOnlyWarning - Core Rendering", () => {
       emitSessionContext();
     });
 
-    expect(screen.queryByText("Read-only")).not.toBeInTheDocument();
+    expect(screen.queryByText('Read-only')).not.toBeInTheDocument();
   });
 });
 
@@ -156,8 +156,8 @@ describe("ReadOnlyWarning - Core Rendering", () => {
 // COMPONENT PROPS TESTS
 // =============================================================================
 
-describe("ReadOnlyWarning - Props", () => {
-  test("uses default ID when not specified", async () => {
+describe('ReadOnlyWarning - Props', () => {
+  test('uses default ID when not specified', async () => {
     const { wrapper, emitSessionContext } = createTestSetup({
       permissions: { can_edit_workflow: false },
     });
@@ -169,12 +169,12 @@ describe("ReadOnlyWarning - Props", () => {
     });
 
     await waitFor(() => {
-      const element = screen.getByText("Read-only").parentElement;
-      expect(element).toHaveAttribute("id", "edit-disabled-warning");
+      const element = screen.getByText('Read-only').parentElement;
+      expect(element).toHaveAttribute('id', 'edit-disabled-warning');
     });
   });
 
-  test("accepts custom ID prop", async () => {
+  test('accepts custom ID prop', async () => {
     const { wrapper, emitSessionContext } = createTestSetup({
       permissions: { can_edit_workflow: false },
     });
@@ -186,12 +186,12 @@ describe("ReadOnlyWarning - Props", () => {
     });
 
     await waitFor(() => {
-      const element = screen.getByText("Read-only").parentElement;
-      expect(element).toHaveAttribute("id", "custom-id");
+      const element = screen.getByText('Read-only').parentElement;
+      expect(element).toHaveAttribute('id', 'custom-id');
     });
   });
 
-  test("accepts custom className prop", async () => {
+  test('accepts custom className prop', async () => {
     const { wrapper, emitSessionContext } = createTestSetup({
       permissions: { can_edit_workflow: false },
     });
@@ -203,8 +203,8 @@ describe("ReadOnlyWarning - Props", () => {
     });
 
     await waitFor(() => {
-      const element = screen.getByText("Read-only").parentElement;
-      expect(element).toHaveClass("custom-class");
+      const element = screen.getByText('Read-only').parentElement;
+      expect(element).toHaveClass('custom-class');
     });
   });
 });
@@ -213,8 +213,8 @@ describe("ReadOnlyWarning - Props", () => {
 // STYLING TESTS
 // =============================================================================
 
-describe("ReadOnlyWarning - Styling", () => {
-  test("applies correct styling classes", async () => {
+describe('ReadOnlyWarning - Styling', () => {
+  test('applies correct styling classes', async () => {
     const { wrapper, emitSessionContext } = createTestSetup({
       permissions: { can_edit_workflow: false },
     });
@@ -226,15 +226,15 @@ describe("ReadOnlyWarning - Styling", () => {
     });
 
     await waitFor(() => {
-      const element = screen.getByText("Read-only").parentElement;
-      expect(element).toHaveClass("cursor-pointer");
-      expect(element).toHaveClass("text-xs");
-      expect(element).toHaveClass("flex");
-      expect(element).toHaveClass("items-center");
+      const element = screen.getByText('Read-only').parentElement;
+      expect(element).toHaveClass('cursor-pointer');
+      expect(element).toHaveClass('text-xs');
+      expect(element).toHaveClass('flex');
+      expect(element).toHaveClass('items-center');
     });
   });
 
-  test("includes information icon with correct styling", async () => {
+  test('includes information icon with correct styling', async () => {
     const { wrapper, emitSessionContext } = createTestSetup({
       permissions: { can_edit_workflow: false },
     });
@@ -246,17 +246,17 @@ describe("ReadOnlyWarning - Styling", () => {
     });
 
     await waitFor(() => {
-      const container = screen.getByText("Read-only").parentElement;
-      const icon = container?.querySelector(".hero-information-circle-solid");
+      const container = screen.getByText('Read-only').parentElement;
+      const icon = container?.querySelector('.hero-information-circle-solid');
       expect(icon).toBeInTheDocument();
-      expect(icon).toHaveClass("h-4");
-      expect(icon).toHaveClass("w-4");
-      expect(icon).toHaveClass("text-primary-600");
-      expect(icon).toHaveClass("opacity-50");
+      expect(icon).toHaveClass('h-4');
+      expect(icon).toHaveClass('w-4');
+      expect(icon).toHaveClass('text-primary-600');
+      expect(icon).toHaveClass('opacity-50');
     });
   });
 
-  test("text has correct spacing from icon", async () => {
+  test('text has correct spacing from icon', async () => {
     const { wrapper, emitSessionContext } = createTestSetup({
       permissions: { can_edit_workflow: false },
     });
@@ -268,8 +268,8 @@ describe("ReadOnlyWarning - Styling", () => {
     });
 
     await waitFor(() => {
-      const textElement = screen.getByText("Read-only");
-      expect(textElement).toHaveClass("ml-1");
+      const textElement = screen.getByText('Read-only');
+      expect(textElement).toHaveClass('ml-1');
     });
   });
 });
@@ -278,8 +278,8 @@ describe("ReadOnlyWarning - Styling", () => {
 // READ-ONLY STATE INTEGRATION TESTS
 // =============================================================================
 
-describe("ReadOnlyWarning - Read-Only States", () => {
-  test("renders for deleted workflow", async () => {
+describe('ReadOnlyWarning - Read-Only States', () => {
+  test('renders for deleted workflow', async () => {
     const { wrapper, emitSessionContext } = createTestSetup({
       workflowDeletedAt: new Date().toISOString(),
     });
@@ -291,11 +291,11 @@ describe("ReadOnlyWarning - Read-Only States", () => {
     });
 
     await waitFor(() => {
-      expect(screen.getByText("Read-only")).toBeInTheDocument();
+      expect(screen.getByText('Read-only')).toBeInTheDocument();
     });
   });
 
-  test("renders for users without edit permission", async () => {
+  test('renders for users without edit permission', async () => {
     const { wrapper, emitSessionContext } = createTestSetup({
       permissions: { can_edit_workflow: false },
     });
@@ -307,11 +307,11 @@ describe("ReadOnlyWarning - Read-Only States", () => {
     });
 
     await waitFor(() => {
-      expect(screen.getByText("Read-only")).toBeInTheDocument();
+      expect(screen.getByText('Read-only')).toBeInTheDocument();
     });
   });
 
-  test("renders for old snapshots", async () => {
+  test('renders for old snapshots', async () => {
     const { wrapper, emitSessionContext } = createTestSetup({
       latestSnapshotLockVersion: 2,
       workflowLockVersion: 1,
@@ -324,7 +324,7 @@ describe("ReadOnlyWarning - Read-Only States", () => {
     });
 
     await waitFor(() => {
-      expect(screen.getByText("Read-only")).toBeInTheDocument();
+      expect(screen.getByText('Read-only')).toBeInTheDocument();
     });
   });
 });
@@ -333,8 +333,8 @@ describe("ReadOnlyWarning - Read-Only States", () => {
 // DYNAMIC STATE CHANGES TESTS
 // =============================================================================
 
-describe("ReadOnlyWarning - Dynamic Changes", () => {
-  test("appears when workflow becomes deleted", async () => {
+describe('ReadOnlyWarning - Dynamic Changes', () => {
+  test('appears when workflow becomes deleted', async () => {
     const { wrapper, emitSessionContext, ydoc } = createTestSetup({
       permissions: { can_edit_workflow: true, can_run_workflow: true },
     });
@@ -345,22 +345,22 @@ describe("ReadOnlyWarning - Dynamic Changes", () => {
       emitSessionContext();
     });
 
-    expect(screen.queryByText("Read-only")).not.toBeInTheDocument();
+    expect(screen.queryByText('Read-only')).not.toBeInTheDocument();
 
     // Make workflow deleted
     act(() => {
-      const workflowMap = ydoc.getMap("workflow");
-      workflowMap.set("deleted_at", new Date().toISOString());
+      const workflowMap = ydoc.getMap('workflow');
+      workflowMap.set('deleted_at', new Date().toISOString());
     });
 
     rerender(<ReadOnlyWarning />);
 
     await waitFor(() => {
-      expect(screen.getByText("Read-only")).toBeInTheDocument();
+      expect(screen.getByText('Read-only')).toBeInTheDocument();
     });
   });
 
-  test("disappears when workflow is no longer deleted", async () => {
+  test('disappears when workflow is no longer deleted', async () => {
     const { wrapper, emitSessionContext, ydoc } = createTestSetup({
       permissions: { can_edit_workflow: true, can_run_workflow: true },
       workflowDeletedAt: new Date().toISOString(),
@@ -373,19 +373,19 @@ describe("ReadOnlyWarning - Dynamic Changes", () => {
     });
 
     await waitFor(() => {
-      expect(screen.getByText("Read-only")).toBeInTheDocument();
+      expect(screen.getByText('Read-only')).toBeInTheDocument();
     });
 
     // Make workflow not deleted
     act(() => {
-      const workflowMap = ydoc.getMap("workflow");
-      workflowMap.set("deleted_at", null);
+      const workflowMap = ydoc.getMap('workflow');
+      workflowMap.set('deleted_at', null);
     });
 
     rerender(<ReadOnlyWarning />);
 
     await waitFor(() => {
-      expect(screen.queryByText("Read-only")).not.toBeInTheDocument();
+      expect(screen.queryByText('Read-only')).not.toBeInTheDocument();
     });
   });
 });

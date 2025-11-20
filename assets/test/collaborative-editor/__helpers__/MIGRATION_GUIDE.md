@@ -10,7 +10,7 @@ functions.
 **Before** (in createAdaptorStore.test.ts):
 
 ```typescript
-test("requestAdaptors processes valid data correctly via channel", async () => {
+test('requestAdaptors processes valid data correctly via channel', async () => {
   const store = createAdaptorStore();
   const mockChannel = createMockPhoenixChannel();
   const mockProvider = createMockPhoenixChannelProvider(mockChannel);
@@ -23,15 +23,15 @@ test("requestAdaptors processes valid data correctly via channel", async () => {
   mockChannel.push = (_event: string, _payload: unknown) => {
     return {
       receive: (status: string, callback: (response?: unknown) => void) => {
-        if (status === "ok") {
+        if (status === 'ok') {
           setTimeout(() => {
             callback({ adaptors: mockAdaptorsList });
           }, 0);
-        } else if (status === "error") {
+        } else if (status === 'error') {
           setTimeout(() => {
-            callback({ reason: "Error" });
+            callback({ reason: 'Error' });
           }, 0);
-        } else if (status === "timeout") {
+        } else if (status === 'timeout') {
           setTimeout(() => {
             callback();
           }, 0);
@@ -59,9 +59,9 @@ test("requestAdaptors processes valid data correctly via channel", async () => {
 import {
   setupAdaptorStoreTest,
   createMockPushWithResponse,
-} from "./__helpers__";
+} from './__helpers__';
 
-test("requestAdaptors processes valid data correctly via channel", async () => {
+test('requestAdaptors processes valid data correctly via channel', async () => {
   const { store, mockChannel, cleanup } = setupAdaptorStoreTest();
   let notificationCount = 0;
 
@@ -70,7 +70,7 @@ test("requestAdaptors processes valid data correctly via channel", async () => {
   });
 
   mockChannel.push = () =>
-    createMockPushWithResponse("ok", { adaptors: mockAdaptorsList });
+    createMockPushWithResponse('ok', { adaptors: mockAdaptorsList });
 
   await store.requestAdaptors();
 
@@ -93,7 +93,7 @@ test("requestAdaptors processes valid data correctly via channel", async () => {
 **Before** (in createSessionContextStore.test.ts):
 
 ```typescript
-test("requestSessionContext processes valid data correctly via channel", async () => {
+test('requestSessionContext processes valid data correctly via channel', async () => {
   const store = createSessionContextStore();
   const mockChannel = createMockPhoenixChannel();
   const mockProvider = createMockPhoenixChannelProvider(mockChannel);
@@ -106,15 +106,15 @@ test("requestSessionContext processes valid data correctly via channel", async (
   mockChannel.push = (_event: string, _payload: unknown) => {
     return {
       receive: (status: string, callback: (response?: unknown) => void) => {
-        if (status === "ok") {
+        if (status === 'ok') {
           setTimeout(() => {
             callback(mockSessionContextResponse);
           }, 0);
-        } else if (status === "error") {
+        } else if (status === 'error') {
           setTimeout(() => {
-            callback({ reason: "Error" });
+            callback({ reason: 'Error' });
           }, 0);
-        } else if (status === "timeout") {
+        } else if (status === 'timeout') {
           setTimeout(() => {
             callback();
           }, 0);
@@ -146,9 +146,9 @@ test("requestSessionContext processes valid data correctly via channel", async (
 import {
   setupSessionContextStoreTest,
   testSessionContextRequest,
-} from "./__helpers__";
+} from './__helpers__';
 
-test("requestSessionContext processes valid data correctly via channel", async () => {
+test('requestSessionContext processes valid data correctly via channel', async () => {
   const { store, mockChannel, cleanup } = setupSessionContextStoreTest();
 
   configureMockChannelForContext(mockChannel, mockSessionContextResponse);
@@ -183,7 +183,7 @@ function waitForState(
   const stack = new Error().stack;
   return new Promise((resolve, reject) => {
     const timeoutId = setTimeout(() => {
-      const error = new Error("Timeout waiting for state");
+      const error = new Error('Timeout waiting for state');
       error.stack = stack;
       reject(error);
     }, timeout);
@@ -203,19 +203,19 @@ function waitForState(
   });
 }
 
-test("provider sync updates state", async () => {
+test('provider sync updates state', async () => {
   const store = createSessionStore();
   const socket = createMockSocket();
 
-  store.initializeSession(socket, "test:room", {
-    id: "user-1",
-    name: "Test User",
-    color: "#ff0000",
+  store.initializeSession(socket, 'test:room', {
+    id: 'user-1',
+    name: 'Test User',
+    color: '#ff0000',
   });
 
   await waitForState(store, state => state.isConnected);
 
-  store.provider!.emit("sync", [true]);
+  store.provider!.emit('sync', [true]);
 
   await waitForState(store, state => state.isSynced);
 
@@ -232,13 +232,13 @@ import {
   setupSessionStoreTest,
   waitForState,
   triggerProviderSync,
-} from "./__helpers__";
+} from './__helpers__';
 
-test("provider sync updates state", async () => {
-  const { store, cleanup } = setupSessionStoreTest("test:room", {
-    id: "user-1",
-    name: "Test User",
-    color: "#ff0000",
+test('provider sync updates state', async () => {
+  const { store, cleanup } = setupSessionStoreTest('test:room', {
+    id: 'user-1',
+    name: 'Test User',
+    color: '#ff0000',
   });
 
   await waitForState(store, state => state.isConnected);
@@ -298,18 +298,18 @@ function simulateChannelConnection(
   return () => {};
 }
 
-test("sessionContextStore connects to channel when provider is ready", async () => {
+test('sessionContextStore connects to channel when provider is ready', async () => {
   const sessionStore = createSessionStore();
   const stores = createStores();
   const mockSocket = createMockSocket();
 
   sessionStore.initializeSession(
     mockSocket,
-    "test:workflow",
+    'test:workflow',
     {
-      id: "user-1",
-      name: "Test User",
-      color: "#ff0000",
+      id: 'user-1',
+      name: 'Test User',
+      color: '#ff0000',
     },
     { connect: true }
   );
@@ -328,9 +328,9 @@ test("sessionContextStore connects to channel when provider is ready", async () 
 **After** (using helpers):
 
 ```typescript
-import { simulateStoreProviderWithConnection } from "./__helpers__";
+import { simulateStoreProviderWithConnection } from './__helpers__';
 
-test("sessionContextStore connects to channel when provider is ready", async () => {
+test('sessionContextStore connects to channel when provider is ready', async () => {
   const { stores, channelCleanup, cleanup } =
     await simulateStoreProviderWithConnection();
 
@@ -357,8 +357,8 @@ function createMockProject(
   overrides: Partial<ProjectContext> = {}
 ): ProjectContext {
   return {
-    id: "project-123",
-    name: "Test Project",
+    id: 'project-123',
+    name: 'Test Project',
     ...overrides,
   };
 }
@@ -381,22 +381,22 @@ function generateBreadcrumbStructure(
 ): BreadcrumbItem[] {
   return [
     {
-      type: "link",
-      href: "/",
-      text: "Home",
-      icon: "hero-home-mini",
+      type: 'link',
+      href: '/',
+      text: 'Home',
+      icon: 'hero-home-mini',
     },
     // ... more items
   ];
 }
 
-test("uses project data from store when available", () => {
+test('uses project data from store when available', () => {
   const projectFromStore = createMockProject({
-    id: "store-project-123",
-    name: "Store Project Name",
+    id: 'store-project-123',
+    name: 'Store Project Name',
   });
-  const projectIdFallback = "fallback-project-456";
-  const projectNameFallback = "Fallback Project Name";
+  const projectIdFallback = 'fallback-project-456';
+  const projectNameFallback = 'Fallback Project Name';
 
   const result = selectBreadcrumbProjectData(
     projectFromStore,
@@ -404,8 +404,8 @@ test("uses project data from store when available", () => {
     projectNameFallback
   );
 
-  expect(result.projectId).toBe("store-project-123");
-  expect(result.projectName).toBe("Store Project Name");
+  expect(result.projectId).toBe('store-project-123');
+  expect(result.projectName).toBe('Store Project Name');
 });
 ```
 
@@ -416,18 +416,18 @@ import {
   createMockProject,
   selectBreadcrumbProjectData,
   testStoreFirstPattern,
-} from "./__helpers__";
+} from './__helpers__';
 
-test("uses project data from store when available", () => {
+test('uses project data from store when available', () => {
   const projectFromStore = createMockProject({
-    id: "store-project-123",
-    name: "Store Project Name",
+    id: 'store-project-123',
+    name: 'Store Project Name',
   });
 
   testStoreFirstPattern(
     projectFromStore,
-    "fallback-project-456",
-    "Fallback Project Name"
+    'fallback-project-456',
+    'Fallback Project Name'
   );
 });
 ```
@@ -479,7 +479,7 @@ cleanup();
 mockChannel.push = (_event, _payload) => {
   return {
     receive: (status, callback) => {
-      if (status === "ok") {
+      if (status === 'ok') {
         setTimeout(() => callback({ data }), 0);
       }
       // ... more status handling
@@ -489,7 +489,7 @@ mockChannel.push = (_event, _payload) => {
 };
 
 // New
-mockChannel.push = () => createMockPushWithResponse("ok", { data });
+mockChannel.push = () => createMockPushWithResponse('ok', { data });
 ```
 
 ### Pattern 3: Wait for Async State
@@ -503,7 +503,7 @@ function waitForState(store, callback, timeout = 200) {
 }
 
 // New
-import { waitForState } from "./__helpers__";
+import { waitForState } from './__helpers__';
 await waitForState(store, state => state.isConnected);
 ```
 

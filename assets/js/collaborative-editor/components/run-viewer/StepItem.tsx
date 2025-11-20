@@ -1,17 +1,19 @@
 import { useURLState } from '../../../react/lib/use-url-state';
+import { cn } from '../../../utils/cn';
 import { useWorkflowState } from '../../hooks/useWorkflow';
-import type { Step } from '../../types/run';
+import type { StepDetail } from '../../types/history';
 
+import { Tooltip } from '../Tooltip';
 import { ElapsedIndicator } from './ElapsedIndicator';
 import { StepIcon } from './StepIcon';
 
 interface StepItemProps {
-  step: Step;
+  step: StepDetail;
   selected: boolean;
-  onSelect: () => void;
+  runInsertedAt: string;
 }
 
-export function StepItem({ step, selected, onSelect }: StepItemProps) {
+export function StepItem({ step, selected, runInsertedAt }: StepItemProps) {
   const { searchParams, updateSearchParams } = useURLState();
 
   // Look up job name from workflow state if not included in step
@@ -40,35 +42,42 @@ export function StepItem({ step, selected, onSelect }: StepItemProps) {
     });
   };
 
+  // Determine if this step is from a previous run (cloned)
+  const isClone = new Date(step.inserted_at) < new Date(runInsertedAt);
+
   return (
-    <div
-      onClick={onSelect}
-      className={`
-        relative flex items-center space-x-3 p-2 rounded
-        cursor-pointer border-r-4 transition-colors
-        ${
-          selected
-            ? 'border-primary-500 bg-primary-50 font-semibold'
-            : 'border-transparent hover:border-gray-300 hover:bg-gray-50'
-        }
-      `}
+    <button
+      type="button"
+      onClick={handleInspect}
+      className={cn(
+        'relative flex items-center space-x-3 p-2 rounded w-full text-left',
+        'cursor-pointer border-r-4 transition-colors',
+        selected
+          ? 'border-primary-500 bg-primary-50 font-semibold'
+          : 'border-transparent hover:border-gray-300 hover:bg-gray-50'
+      )}
     >
       <StepIcon exitReason={step.exit_reason} errorType={step.error_type} />
 
-      <div className="flex-1 min-w-0 flex items-center space-x-2">
+      <div
+        className={cn(
+          'flex-1 min-w-0 flex items-center space-x-2',
+          isClone && 'opacity-50'
+        )}
+      >
+        {isClone && (
+          <Tooltip
+            content="This step was originally executed in a previous run. It was skipped in this run; the original output has been used as the starting point for downstream jobs."
+            side="bottom"
+          >
+            <span
+              className="hero-paper-clip h-3 w-3 flex-shrink-0 text-gray-500"
+              aria-label="Cloned from previous run"
+              role="img"
+            />
+          </Tooltip>
+        )}
         <span className="text-sm truncate">{jobName}</span>
-
-        <button
-          onClick={handleInspect}
-          className="flex-shrink-0 text-gray-400 hover:text-primary-600"
-          title="Inspect Step"
-          aria-label={`Inspect step ${jobName}`}
-        >
-          <span
-            className="hero-document-magnifying-glass-mini size-5"
-            aria-hidden="true"
-          />
-        </button>
       </div>
 
       <div className="flex-shrink-0 text-xs text-gray-500">
@@ -77,6 +86,6 @@ export function StepItem({ step, selected, onSelect }: StepItemProps) {
           finishedAt={step.finished_at}
         />
       </div>
-    </div>
+    </button>
   );
 }

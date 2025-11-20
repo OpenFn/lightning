@@ -5,11 +5,11 @@
  * from the StoreProvider context using the useSyncExternalStore pattern.
  */
 
-import { useSyncExternalStore, useContext } from "react";
+import { useSyncExternalStore, useContext } from 'react';
 
-import { StoreContext } from "../contexts/StoreProvider";
-import type { CredentialStoreInstance } from "../stores/createCredentialStore";
-import type { CredentialState } from "../types/credential";
+import { StoreContext } from '../contexts/StoreProvider';
+import type { CredentialStoreInstance } from '../stores/createCredentialStore';
+import type { CredentialState } from '../types/credential';
 
 /**
  * Main hook for accessing the CredentialStore instance
@@ -18,14 +18,14 @@ import type { CredentialState } from "../types/credential";
 const useCredentialStore = (): CredentialStoreInstance => {
   const context = useContext(StoreContext);
   if (!context) {
-    throw new Error("useCredentialStore must be used within a StoreProvider");
+    throw new Error('useCredentialStore must be used within a StoreProvider');
   }
   return context.credentialStore;
 };
 
 type ProjectAndKeychainCredentials = Pick<
   CredentialState,
-  "projectCredentials" | "keychainCredentials"
+  'projectCredentials' | 'keychainCredentials'
 >;
 
 /**
