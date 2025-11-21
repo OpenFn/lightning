@@ -1,10 +1,21 @@
 /**
  * SessionProvider - Handles shared Yjs document, awareness, and Phoenix Channel concerns
  * Provides common infrastructure for TodoStore and WorkflowStore
+ *
+ * Refactored to use focused hooks for better separation of concerns:
+ * - useProviderLifecycle: Manages provider creation/reconnection
+ * - ConnectionStatusProvider: Exposes connection state to components
  */
 
 import type React from 'react';
-import { createContext, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  createContext,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 
 import _logger from '#/utils/logger';
 
@@ -14,6 +25,8 @@ import {
   createSessionStore,
   type SessionStoreInstance,
 } from '../stores/createSessionStore';
+import { ConnectionStatusProvider } from './ConnectionStatusContext';
+import { useProviderLifecycle } from '../hooks/useProviderLifecycle';
 
 const logger = _logger.ns('SessionProvider').seal();
 
@@ -46,19 +59,41 @@ export const SessionProvider = ({
   // Create store instance once - stable reference
   const [sessionStore] = useState(() => createSessionStore());
 
-  // Track if we've initialized to prevent re-initialization
+  // Track initialization and sync state for ConnectionStatusContext
   const hasInitialized = useRef(false);
+  const [isSynced, setIsSynced] = useState(false);
+  const [lastSyncTime, setLastSyncTime] = useState<Date | null>(null);
+  const [connectionError, setConnectionError] = useState<Error | null>(null);
+
+  // Room naming strategy for snapshots vs collaborative editing:
+  // - NO version param → `workflow:collaborate:${workflowId}` (latest/collaborative)
+  // - WITH version param → `workflow:collaborate:${workflowId}:v${version}` (snapshot)
+  const roomname = useMemo(
+    () =>
+      version
+        ? `workflow:collaborate:${workflowId}:v${version}`
+        : `workflow:collaborate:${workflowId}`,
+    [version, workflowId]
+  );
+
+  const joinParams = useMemo(
+    () => ({
+      project_id: projectId,
+      action: isNewWorkflow ? 'new' : 'edit',
+    }),
+    [projectId, isNewWorkflow]
+  );
 
   // Initialize session once when connected
   useEffect(() => {
-    if (!isConnected || !socket) return;
+    if (!socket || !isConnected) {
+      return;
+    }
 
     // Prevent re-initialization if already done
     if (hasInitialized.current) {
       return;
     }
-
-    logger.log('Initializing Session with PhoenixChannelProvider', { version });
 
     logger.log('=== SessionProvider INITIALIZATION ===', {
       version,
@@ -66,33 +101,27 @@ export const SessionProvider = ({
       isConnected,
     });
 
-    // Room naming strategy for snapshots vs collaborative editing:
-    // - NO version param → `workflow:collaborate:${workflowId}` (latest/collaborative)
-    // - WITH version param → `workflow:collaborate:${workflowId}:v${version}` (snapshot)
-    const roomname = version
-      ? `workflow:collaborate:${workflowId}:v${version}`
-      : `workflow:collaborate:${workflowId}`;
-
-    const joinParams = {
-      project_id: projectId,
-      action: isNewWorkflow ? 'new' : 'edit',
-    };
-
     logger.log('Initializing session (one-time)', {
       roomname,
       socketConnected: socket.isConnected(),
     });
 
-    sessionStore.initializeSession(socket, roomname, null, {
-      connect: true,
-      joinParams,
-    });
+    try {
+      sessionStore.initializeSession(socket, roomname, null, {
+        connect: true,
+        joinParams,
+      });
 
-    logger.log('Session initialized with Y.Doc', {
-      hasYDoc: !!sessionStore.ydoc,
-    });
+      logger.log('Session initialized with Y.Doc', {
+        hasYDoc: !!sessionStore.ydoc,
+      });
 
-    hasInitialized.current = true;
+      hasInitialized.current = true;
+      setConnectionError(null);
+    } catch (error) {
+      logger.error('Failed to initialize session', error);
+      setConnectionError(error as Error);
+    }
   }, [
     socket,
     workflowId,
@@ -101,9 +130,11 @@ export const SessionProvider = ({
     sessionStore,
     version,
     isConnected,
+    roomname,
+    joinParams,
   ]);
 
-  // Cleanup on unmount only - in separate effect to avoid cleanup on reconnection
+  // Cleanup on unmount only - preserve Y.Doc during disconnections
   useEffect(() => {
     return () => {
       logger.debug('SessionProvider unmounting - destroying session', {
@@ -114,59 +145,54 @@ export const SessionProvider = ({
     };
   }, [sessionStore, version]);
 
-  // Handle reconnections separately - preserve Y.Doc, recreate provider
-  useEffect(() => {
-    if (!socket || !sessionStore.ydoc) {
-      return;
-    }
+  // Use provider lifecycle hook for reconnection management
+  const handleProviderReady = useCallback(() => {
+    logger.log('Provider ready');
+    setIsSynced(false); // Will become true after sync
+  }, []);
 
-    // Only handle reconnection logic, not initial connection
-    if (isConnected && sessionStore.provider) {
-      // Already connected and have provider, nothing to do
-      return;
-    }
+  const handleProviderReconnected = useCallback(() => {
+    logger.log('Provider reconnected, syncing...');
+    setIsSynced(false); // Will become true after sync
+  }, []);
 
-    if (isConnected && !sessionStore.provider) {
-      // Reconnected but lost provider - recreate it
-      logger.log('=== RECONNECTION DETECTED ===', {
-        hasYDoc: !!sessionStore.ydoc,
-        hasProvider: !!sessionStore.provider,
-      });
-
-      const roomname = version
-        ? `workflow:collaborate:${workflowId}:v${version}`
-        : `workflow:collaborate:${workflowId}`;
-
-      const joinParams = {
-        project_id: projectId,
-        action: isNewWorkflow ? 'new' : 'edit',
-      };
-
-      logger.log('Recreating provider for reconnection', {
-        roomname,
-        willReuseYDoc: true,
-      });
-
-      // Reinitialize to create new provider but reuse existing Y.Doc
-      sessionStore.initializeSession(socket, roomname, null, {
-        connect: true,
-        joinParams,
-      });
-
-      logger.log('Provider recreated, Y.Doc preserved', {
-        hasYDoc: !!sessionStore.ydoc,
-        hasProvider: !!sessionStore.provider,
-      });
-    }
-  }, [
-    isConnected,
+  useProviderLifecycle({
     socket,
-    workflowId,
-    projectId,
-    isNewWorkflow,
+    isConnected,
     sessionStore,
-    version,
-  ]);
+    roomname,
+    joinParams,
+    hasInitialized: hasInitialized.current,
+    onProviderReady: handleProviderReady,
+    onProviderReconnected: handleProviderReconnected,
+  });
+
+  // Track sync status from provider
+  useEffect(() => {
+    if (!sessionStore.provider) {
+      setIsSynced(false);
+      return;
+    }
+
+    const provider = sessionStore.provider;
+
+    const handleSynced = (synced: boolean) => {
+      setIsSynced(synced);
+      if (synced) {
+        setLastSyncTime(new Date());
+      }
+    };
+
+    // Initial sync state
+    handleSynced(provider.synced || false);
+
+    // Listen for sync events
+    provider.on('synced', handleSynced);
+
+    return () => {
+      provider.off('synced', handleSynced);
+    };
+  }, [sessionStore.provider]);
 
   // Testing and debug helpers
   useEffect(() => {
@@ -188,98 +214,6 @@ export const SessionProvider = ({
         'Testing reconnect'
       );
     };
-
-    // Track Y.Doc updates during testing
-    let updateCounter = 0;
-    const updateLog: any[] = [];
-
-    // Debug helper to start tracking updates
-    window.startTrackingUpdates = () => {
-      const ydoc = sessionStore.ydoc;
-      if (!ydoc) {
-        console.log('No Y.Doc instance');
-        return;
-      }
-
-      updateCounter = 0;
-      updateLog.length = 0;
-
-      const handler = (update: Uint8Array, origin: any) => {
-        updateCounter++;
-        const log = {
-          count: updateCounter,
-          timestamp: new Date().toISOString(),
-          updateSize: update.length,
-          origin: origin?.constructor?.name || String(origin),
-          connected: sessionStore.isConnected,
-          providerSynced: sessionStore.provider?.synced,
-        };
-        updateLog.push(log);
-        console.log('📝 Y.Doc Update:', log);
-      };
-
-      ydoc.on('update', handler);
-      console.log('✅ Started tracking Y.Doc updates');
-
-      return () => {
-        ydoc.off('update', handler);
-        console.log('🛑 Stopped tracking updates');
-      };
-    };
-
-    // Debug helper to inspect Y.Doc content
-    window.inspectYDoc = () => {
-      const ydoc = sessionStore.ydoc;
-      if (!ydoc) {
-        console.log('No Y.Doc instance');
-        return null;
-      }
-
-      const jobs = ydoc.getArray('jobs').toArray();
-      const triggers = ydoc.getArray('triggers').toArray();
-      const edges = ydoc.getArray('edges').toArray();
-
-      const result = {
-        jobs: jobs.map(j => {
-          const body = j.get('body');
-          let bodyPreview = '(empty)';
-          if (body) {
-            if (typeof body === 'string') {
-              bodyPreview = body.substring(0, 50) + '...';
-            } else if (body.toString) {
-              const bodyStr = body.toString();
-              bodyPreview = bodyStr.substring(0, 50) + '...';
-            }
-          }
-          return {
-            id: j.get('id'),
-            name: j.get('name'),
-            body: bodyPreview,
-          };
-        }),
-        triggers: triggers.map(t => ({
-          id: t.get('id'),
-          type: t.get('type'),
-        })),
-        edges: edges.map(e => ({
-          id: e.get('id'),
-          source_job_id: e.get('source_job_id'),
-          target_job_id: e.get('target_job_id'),
-        })),
-        provider: {
-          exists: !!sessionStore.provider,
-          synced: sessionStore.provider?.synced,
-          connected: sessionStore.isConnected,
-        },
-        updateStats: {
-          totalUpdates: updateCounter,
-          recentUpdates: updateLog.slice(-5),
-        },
-      };
-
-      console.log('Y.Doc Content:', result);
-      return result;
-    };
   }, [sessionStore, socket]);
 
   // Memoize context value to prevent unnecessary re-renders
@@ -290,8 +224,15 @@ export const SessionProvider = ({
   );
 
   return (
-    <SessionContext.Provider value={contextValue}>
-      {children}
-    </SessionContext.Provider>
+    <ConnectionStatusProvider
+      isConnected={isConnected}
+      isSynced={isSynced}
+      lastSyncTime={lastSyncTime}
+      error={connectionError}
+    >
+      <SessionContext.Provider value={contextValue}>
+        {children}
+      </SessionContext.Provider>
+    </ConnectionStatusProvider>
   );
 };

@@ -150,13 +150,9 @@ describe('ReadOnlyWarning - Core Rendering', () => {
       emitSessionContext();
     });
 
-<<<<<<< HEAD
-    expect(screen.queryByText('Read-only')).not.toBeInTheDocument();
-=======
     await waitFor(() => {
       expect(screen.queryByText('Read-only')).not.toBeInTheDocument();
     });
->>>>>>> bdcb847fb6 (Enable graceful degradation during workflow editor disconnection)
   });
 
   test('does not render during new workflow creation', async () => {
