@@ -6,9 +6,9 @@
  *
  * Test categories:
  * 1. Basic Rendering - Component visibility and avatar count
- * 4. Activity Indicator - Border colors based on lastSeen timestamp
- * 6. Store Integration - Integration with useAwareness hook
- * 7. Edge Cases - Empty states and state transitions
+ * 2. Activity Indicator - Border colors based on lastState (active/away/idle)
+ * 3. Store Integration - Integration with useRemoteUsers hook
+ * 4. Edge Cases - Empty states and state transitions
  */
 
 import { render, screen } from '@testing-library/react';
@@ -160,10 +160,7 @@ describe('ActiveCollaborators - Activity Indicator', () => {
     mockRemoteUsers = [];
   });
 
-  test('shows green border for users active within last 12 seconds (0.2 minutes)', () => {
-    const now = Date.now();
-    const fiveSecondsAgo = now - 5 * 1000; // 5 seconds ago
-
+  test('shows green border for active users', () => {
     mockRemoteUsers = [
       createMockAwarenessUser({
         user: {
@@ -172,7 +169,7 @@ describe('ActiveCollaborators - Activity Indicator', () => {
           email: 'john@example.com',
           color: '#ff0000',
         },
-        lastSeen: fiveSecondsAgo,
+        lastState: 'active',
       }),
     ];
 
@@ -182,10 +179,7 @@ describe('ActiveCollaborators - Activity Indicator', () => {
     expect(borderDiv).toBeInTheDocument();
   });
 
-  test('shows gray border for users inactive for more than 12 seconds (0.2 minutes)', () => {
-    const now = Date.now();
-    const thirtySecondsAgo = now - 30 * 1000; // 30 seconds ago
-
+  test('shows gray border for away users', () => {
     mockRemoteUsers = [
       createMockAwarenessUser({
         user: {
@@ -194,7 +188,7 @@ describe('ActiveCollaborators - Activity Indicator', () => {
           email: 'john@example.com',
           color: '#ff0000',
         },
-        lastSeen: thirtySecondsAgo,
+        lastState: 'away',
       }),
     ];
 
@@ -204,7 +198,7 @@ describe('ActiveCollaborators - Activity Indicator', () => {
     expect(borderDiv).toBeInTheDocument();
   });
 
-  test('shows gray border when lastSeen is undefined', () => {
+  test('shows gray border for idle users', () => {
     mockRemoteUsers = [
       createMockAwarenessUser({
         user: {
@@ -213,7 +207,7 @@ describe('ActiveCollaborators - Activity Indicator', () => {
           email: 'john@example.com',
           color: '#ff0000',
         },
-        lastSeen: undefined,
+        lastState: 'idle',
       }),
     ];
 
@@ -223,12 +217,26 @@ describe('ActiveCollaborators - Activity Indicator', () => {
     expect(borderDiv).toBeInTheDocument();
   });
 
-  test('correctly implements the 12-second threshold (0.2 minutes = 12,000ms)', () => {
-    const now = Date.now();
-    const justUnderThreshold = now - (0.2 * 60 * 1000 - 1000); // 1 second before threshold (11 seconds ago)
-    const justOverThreshold = now - (0.2 * 60 * 1000 + 1000); // 1 second after threshold (13 seconds ago)
+  test('shows gray border when lastState is undefined', () => {
+    mockRemoteUsers = [
+      createMockAwarenessUser({
+        user: {
+          id: 'user-1',
+          name: 'John Doe',
+          email: 'john@example.com',
+          color: '#ff0000',
+        },
+        lastState: undefined,
+      }),
+    ];
 
-    // User just under 12 seconds should have green border
+    const { container } = render(<ActiveCollaborators />);
+
+    const borderDiv = container.querySelector('.border-gray-500');
+    expect(borderDiv).toBeInTheDocument();
+  });
+
+  test('distinguishes between active and non-active states', () => {
     mockRemoteUsers = [
       createMockAwarenessUser({
         clientId: 1,
@@ -238,17 +246,17 @@ describe('ActiveCollaborators - Activity Indicator', () => {
           email: 'active@example.com',
           color: '#ff0000',
         },
-        lastSeen: justUnderThreshold,
+        lastState: 'active',
       }),
       createMockAwarenessUser({
         clientId: 2,
         user: {
           id: 'user-2',
-          name: 'Inactive User',
-          email: 'inactive@example.com',
+          name: 'Away User',
+          email: 'away@example.com',
           color: '#00ff00',
         },
-        lastSeen: justOverThreshold,
+        lastState: 'away',
       }),
     ];
 
@@ -261,10 +269,7 @@ describe('ActiveCollaborators - Activity Indicator', () => {
     expect(grayBorder).toBeInTheDocument();
   });
 
-  test('border color updates when user crosses the 12-second threshold', () => {
-    vi.useFakeTimers();
-    const now = Date.now();
-
+  test('border color updates when user activity state changes', () => {
     mockRemoteUsers = [
       createMockAwarenessUser({
         user: {
@@ -273,7 +278,7 @@ describe('ActiveCollaborators - Activity Indicator', () => {
           email: 'john@example.com',
           color: '#ff0000',
         },
-        lastSeen: now,
+        lastState: 'active',
       }),
     ];
 
@@ -282,16 +287,23 @@ describe('ActiveCollaborators - Activity Indicator', () => {
     // Initially should have green border
     expect(container.querySelector('.border-green-500')).toBeInTheDocument();
 
-    // Advance time by 15 seconds (beyond the 12-second threshold)
-    vi.advanceTimersByTime(15 * 1000);
+    // User goes away
+    mockRemoteUsers = [
+      createMockAwarenessUser({
+        user: {
+          id: 'user-1',
+          name: 'John Doe',
+          email: 'john@example.com',
+          color: '#ff0000',
+        },
+        lastState: 'away',
+      }),
+    ];
 
-    // Re-render to trigger the component to re-evaluate
     rerender(<ActiveCollaborators />);
 
     // Now should have gray border
     expect(container.querySelector('.border-gray-500')).toBeInTheDocument();
-
-    vi.useRealTimers();
   });
 });
 
