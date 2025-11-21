@@ -270,9 +270,9 @@ defmodule LightningWeb.WorkflowChannel do
 
     with :ok <- authorize_edit_workflow(socket),
          {:ok, workflow} <- Session.save_workflow(session_pid, user) do
-      # Broadcast the new lock_version to all users in the channel
+      # Broadcast the new lock_version to all users (including the sender) in the channel
       # so they can update their latestSnapshotLockVersion in SessionContextStore
-      broadcast_from!(socket, "workflow_saved", %{
+      broadcast!(socket, "workflow_saved", %{
         latest_snapshot_lock_version: workflow.lock_version
       })
 
@@ -309,7 +309,7 @@ defmodule LightningWeb.WorkflowChannel do
          repo_connection when not is_nil(repo_connection) <-
            VersionControl.get_repo_connection_for_project(project.id),
          :ok <- VersionControl.initiate_sync(repo_connection, commit_message) do
-      broadcast_from!(socket, "workflow_saved", %{
+      broadcast!(socket, "workflow_saved", %{
         latest_snapshot_lock_version: workflow.lock_version
       })
 

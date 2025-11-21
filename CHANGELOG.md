@@ -21,6 +21,9 @@ and this project adheres to
 
 ### Fixed
 
+- Version dropdown now updates correctly for all users after workflow save
+  [#3985](https://github.com/OpenFn/lightning/issues/3985)
+  [#4024](https://github.com/OpenFn/lightning/issues/4024)
 - Put close button in top right
   [PR#4037](https://github.com/OpenFn/lightning/pull/4037)
 - Don't grey out in-progress runs
