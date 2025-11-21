@@ -822,7 +822,7 @@ export function FullScreenIDE({
                             ytext={currentJobYText}
                             awareness={awareness}
                             adaptor={currentJob.adaptor || 'common'}
-                            disabled={isReadOnly}
+                            disabled={!canSave}
                             className="h-full w-full"
                             options={{
                               automaticLayout: true,
