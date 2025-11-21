@@ -155,6 +155,11 @@ export const StoreProvider = ({ children }: StoreProviderProps) => {
       // Set up last seen timer
       const cleanupTimer = stores.awarenessStore._internal.setupLastSeenTimer();
 
+      // set up activityState handler
+      stores.awarenessStore._internal.initActivityStateChange(state => {
+        session.awareness?.setLocalStateField('lastState', state);
+      });
+
       return cleanupTimer;
     }
     return undefined;
