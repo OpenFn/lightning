@@ -30,6 +30,8 @@ and this project adheres to
   [PR#4037](https://github.com/OpenFn/lightning/pull/4037)
 - Fix history panel unable to close after selecting/deselecting run
   [#4027](https://github.com/OpenFn/lightning/issues/4027)
+- Loading workflow screen appears when disconnected from server
+  [#3972](https://github.com/OpenFn/lightning/issues/3972)
 
 ## [2.15.0-pre] - 2025-11-20
 
