@@ -7,11 +7,11 @@ defmodule LightningWeb.WorkflowLive.Index do
   alias Lightning.Policies.ProjectUsers
   alias Lightning.Workflows
   alias LightningWeb.Live.Helpers.TableHelpers
-  alias LightningWeb.LiveHelpers
   alias LightningWeb.WorkflowLive.DashboardComponents
   alias LightningWeb.WorkflowLive.Helpers
 
   on_mount {LightningWeb.Hooks, :project_scope}
+  on_mount {LightningWeb.Hooks, :check_limits}
 
   # TODO - make this configurable some day
   @dashboard_period "last 30 days"
@@ -25,9 +25,7 @@ defmodule LightningWeb.WorkflowLive.Index do
   attr :search_term, :string, default: ""
 
   @impl true
-  def render(%{project: %{id: project_id}} = assigns) do
-    assigns = check_run_limits(assigns, project_id)
-
+  def render(assigns) do
     ~H"""
     <LayoutComponents.page_content>
       <:banner>
@@ -278,9 +276,5 @@ defmodule LightningWeb.WorkflowLive.Index do
     else
       base_params
     end
-  end
-
-  defp check_run_limits(assigns, project_id) do
-    LiveHelpers.check_limits(assigns, project_id)
   end
 end
