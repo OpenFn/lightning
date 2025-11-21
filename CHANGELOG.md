@@ -30,6 +30,8 @@ and this project adheres to
   [PR#4037](https://github.com/OpenFn/lightning/pull/4037)
 - Fix history panel unable to close after selecting/deselecting run
   [#4027](https://github.com/OpenFn/lightning/issues/4027)
+- Fix version chip (and sidebar scroll) when line breaks needed
+  [PR#4047](https://github.com/OpenFn/lightning/pull/4047)
 
 ## [2.15.0-pre] - 2025-11-20
 
