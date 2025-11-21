@@ -244,7 +244,7 @@ describe('WorkflowStore - Save Workflow', () => {
 
     // Try to save without connecting - should throw
     await expect(disconnectedStore.saveWorkflow()).rejects.toThrow(
-      'Cannot modify workflow: Y.Doc not connected'
+      'Cannot save workflow: Connection lost. Please wait for reconnection.'
     );
   });
 
@@ -261,7 +261,7 @@ describe('WorkflowStore - Save Workflow', () => {
 
     // Try to save - should throw
     await expect(storeWithoutProvider.saveWorkflow()).rejects.toThrow(
-      'Cannot modify workflow: Y.Doc not connected'
+      'Cannot save workflow: Connection lost. Please wait for reconnection.'
     );
   });
 
