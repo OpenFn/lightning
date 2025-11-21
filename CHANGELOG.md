@@ -21,6 +21,16 @@ and this project adheres to
 
 ### Fixed
 
+- Put close button in top right
+  [PR#4037](https://github.com/OpenFn/lightning/pull/4037)
+- Don't grey out in-progress runs
+  [PR#4037](https://github.com/OpenFn/lightning/pull/4037)
+- Explain why run panel is grey for edge-case when the workflow step selected
+  not in the list of run steps
+  [PR#4037](https://github.com/OpenFn/lightning/pull/4037)
+- Fix history panel unable to close after selecting/deselecting run
+  [#4027](https://github.com/OpenFn/lightning/issues/4027)
+
 ## [2.15.0-pre] - 2025-11-20
 
 ### Added

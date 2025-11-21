@@ -32,6 +32,7 @@ import {
   useHistoryCommands,
   useJobMatchesRun,
 } from '../../hooks/useHistory';
+import { isFinalState } from '../../types/history';
 import { useRunRetry } from '../../hooks/useRunRetry';
 import { useRunRetryShortcuts } from '../../hooks/useRunRetryShortcuts';
 import { useSession } from '../../hooks/useSession';
@@ -63,6 +64,7 @@ import { RunViewerErrorBoundary } from '../run-viewer/RunViewerErrorBoundary';
 import { RunViewerPanel } from '../run-viewer/RunViewerPanel';
 import { SandboxIndicatorBanner } from '../SandboxIndicatorBanner';
 import { Tabs } from '../Tabs';
+import { Tooltip } from '../Tooltip';
 import { VersionDropdown } from '../VersionDropdown';
 
 import { PanelToggleButton } from './PanelToggleButton';
@@ -202,6 +204,9 @@ export function FullScreenIDE({
 
   // Check if the currently selected job matches the loaded run
   const jobMatchesRun = useJobMatchesRun(currentJob?.id || null);
+  const shouldShowMismatch =
+    !jobMatchesRun && currentRun && isFinalState(currentRun.state);
+  const selectedStepName = currentJob?.name || 'This step';
 
   const followedRunStep = useMemo(() => {
     if (!currentRun || !currentRun.steps || !jobIdFromURL) return null;
@@ -966,22 +971,43 @@ export function FullScreenIDE({
                       {followRunId ? (
                         <>
                           {/* Close run chip */}
-                          <div className="inline-flex justify-between items-center gap-x-1 rounded-md bg-blue-100 px-2 py-1 text-xs font-medium text-blue-700 mr-3">
-                            <span>Run {followRunId?.slice(0, 7)}</span>
-                            <button
-                              onClick={() => {
-                                setFollowRunId(null);
-                                updateSearchParams({ run: null });
-                              }}
-                              className="group relative -mr-1 h-3.5 w-3.5 rounded-sm hover:bg-blue-600/20"
-                              aria-label="Close run"
-                              title="Close run"
+                          <Tooltip
+                            content={
+                              shouldShowMismatch
+                                ? `${selectedStepName} was not part of this run. Pick another step or deselect the run.`
+                                : undefined
+                            }
+                            side="bottom"
+                          >
+                            <div
+                              className={cn(
+                                'inline-flex justify-between items-center gap-x-1 rounded-md px-2 py-1 text-xs font-medium mr-3',
+                                shouldShowMismatch
+                                  ? 'bg-yellow-100 text-yellow-700'
+                                  : 'bg-blue-100 text-blue-700'
+                              )}
                             >
-                              <span className="sr-only">Remove</span>
-                              <XMarkIcon className="h-3.5 w-3.5" />
-                              <span className="absolute -inset-1"></span>
-                            </button>
-                          </div>
+                              <span>Run {followRunId?.slice(0, 7)}</span>
+                              <button
+                                onClick={() => {
+                                  setFollowRunId(null);
+                                  updateSearchParams({ run: null });
+                                }}
+                                className={cn(
+                                  'group relative -mr-1 h-3.5 w-3.5 rounded-sm',
+                                  shouldShowMismatch
+                                    ? 'hover:bg-yellow-600/20'
+                                    : 'hover:bg-blue-600/20'
+                                )}
+                                aria-label="Close run"
+                                title="Close run"
+                              >
+                                <span className="sr-only">Remove</span>
+                                <XMarkIcon className="h-3.5 w-3.5" />
+                                <span className="absolute -inset-1"></span>
+                              </button>
+                            </div>
+                          </Tooltip>
                           {/* Tabs as header content when showing run */}
                           <div className="flex-1">
                             <Tabs
