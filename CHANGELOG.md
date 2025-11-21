@@ -19,6 +19,9 @@ and this project adheres to
 
 ### Changed
 
+- Enable usage limit checks across the whole application
+  [#PR4050](https://github.com/OpenFn/lightning/pull/4050)
+
 ### Fixed
 
 - Put close button in top right
