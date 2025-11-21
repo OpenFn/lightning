@@ -15,11 +15,11 @@ defmodule LightningWeb.ProjectLive.Settings do
   alias Lightning.VersionControl
   alias Lightning.WebhookAuthMethods
   alias LightningWeb.Components.GithubComponents
-  alias LightningWeb.LiveHelpers
 
   require Logger
 
   on_mount {LightningWeb.Hooks, :project_scope}
+  on_mount {LightningWeb.Hooks, :check_limits}
   on_mount {LightningWeb.Hooks, :limit_github_sync}
   on_mount {LightningWeb.Hooks, :limit_mfa}
   on_mount {LightningWeb.Hooks, :limit_retention_periods}
@@ -141,11 +141,10 @@ defmodule LightningWeb.ProjectLive.Settings do
 
   @impl true
   def handle_params(params, _url, socket) do
-    %{project: %{id: project_id}, live_action: live_action} = socket.assigns
+    %{project: %{id: _project_id}, live_action: live_action} = socket.assigns
 
     {:noreply,
      socket
-     |> LiveHelpers.check_limits(project_id)
      |> apply_action(live_action, params)}
   end
 

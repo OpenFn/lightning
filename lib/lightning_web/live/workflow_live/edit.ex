@@ -41,6 +41,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
   require Logger
 
   on_mount({LightningWeb.Hooks, :project_scope})
+  on_mount {LightningWeb.Hooks, :check_limits}
 
   attr :selection, :string, required: false
   attr :aiAssistantId, :string, required: false
@@ -86,6 +87,13 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
     ~H"""
     <LayoutComponents.page_content>
+      <:banner>
+        <Common.dynamic_component
+          :if={assigns[:banner]}
+          function={@banner.function}
+          args={@banner.attrs}
+        />
+      </:banner>
       <:header>
         <LayoutComponents.header
           current_user={@current_user}

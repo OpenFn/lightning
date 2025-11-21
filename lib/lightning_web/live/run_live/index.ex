@@ -17,7 +17,6 @@ defmodule LightningWeb.RunLive.Index do
   alias Lightning.WorkOrders
   alias Lightning.WorkOrders.Events
   alias Lightning.WorkOrders.SearchParams
-  alias LightningWeb.LiveHelpers
   alias LightningWeb.RunLive.Components
 
   alias Phoenix.LiveView.AsyncResult
@@ -58,6 +57,7 @@ defmodule LightningWeb.RunLive.Index do
   }
 
   on_mount {LightningWeb.Hooks, :project_scope}
+  on_mount {LightningWeb.Hooks, :check_limits}
 
   @impl true
   def mount(
@@ -163,7 +163,6 @@ defmodule LightningWeb.RunLive.Index do
 
     {:noreply,
      socket
-     |> LiveHelpers.check_limits(project.id)
      |> assign(
        filters: filters,
        page_title: "History",
@@ -345,7 +344,7 @@ defmodule LightningWeb.RunLive.Index do
              }),
            {:ok, _run} <-
              WorkOrders.retry(run_id, step_id, created_by: current_user) do
-        {:noreply, LiveHelpers.check_limits(socket, project_id)}
+        {:noreply, socket}
       else
         {:error, _reason, %{text: error_text}} ->
           {:noreply,

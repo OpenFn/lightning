@@ -15,6 +15,7 @@ defmodule LightningWeb.Hooks do
   alias Lightning.Services.UsageLimiter
   alias Lightning.VersionControl.VersionControlUsageLimiter
   alias LightningWeb.Live.Helpers.ProjectTheme
+  alias LightningWeb.LiveHelpers
 
   @doc """
   Finds and assigns a project to the socket, if a user doesn't have access
@@ -124,5 +125,15 @@ defmodule LightningWeb.Hooks do
        data_retention_periods: retention_periods,
        data_retention_limit_message: retention_message
      )}
+  end
+
+  def on_mount(:check_limits, _params, _session, socket) do
+    case socket.assigns do
+      %{current_user: _user, project: %{id: project_id}} ->
+        {:cont, LiveHelpers.check_limits(socket, project_id)}
+
+      _ ->
+        {:cont, socket}
+    end
   end
 end
