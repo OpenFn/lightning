@@ -117,6 +117,7 @@ export const createAwarenessStore = (): AwarenessStore => {
       users: [],
       localUser: null,
       isInitialized: false,
+      cursorsMap: new Map(),
       rawAwareness: null,
       isConnected: false,
       lastUpdated: null,
@@ -162,37 +163,33 @@ export const createAwarenessStore = (): AwarenessStore => {
   // =============================================================================
 
   /**
-   * Extract users from awareness states with validation and sorting
+   * Helper: Compare cursor positions for referential stability
    */
-  const extractUsersFromAwareness = (awareness: Awareness): AwarenessUser[] => {
-    const users: AwarenessUser[] = [];
+  const arePositionsEqual = (
+    a: { x: number; y: number } | undefined,
+    b: { x: number; y: number } | undefined
+  ): boolean => {
+    if (a === undefined && b === undefined) return true;
+    if (a === undefined || b === undefined) return false;
+    return a.x === b.x && a.y === b.y;
+  };
 
-    awareness.getStates().forEach((awarenessState, clientId) => {
-      // Validate user data structure
-      if (awarenessState['user']) {
-        try {
-          // Note: We're not using Zod validation here as it's runtime performance critical
-          // and we trust the awareness protocol more than external API data
-          const user: AwarenessUser = {
-            clientId,
-            user: awarenessState['user'] as AwarenessUser['user'],
-            cursor: awarenessState['cursor'] as AwarenessUser['cursor'],
-            selection: awarenessState[
-              'selection'
-            ] as AwarenessUser['selection'],
-            lastSeen: awarenessState['lastSeen'] as number | undefined,
-          };
-          users.push(user);
-        } catch (error) {
-          logger.warn('Invalid user data for client', clientId, error);
-        }
-      }
-    });
+  /**
+   * Helper: Compare selections (RelativePosition) for referential stability
+   */
+  const areSelectionsEqual = (
+    a: AwarenessUser['selection'] | undefined,
+    b: AwarenessUser['selection'] | undefined
+  ): boolean => {
+    if (a === undefined && b === undefined) return true;
+    if (a === undefined || b === undefined) return false;
 
-    // Sort users by name for consistent ordering (referential stability)
-    users.sort((a, b) => a.user.name.localeCompare(b.user.name));
-
-    return users;
+    // RelativePosition objects from Yjs need proper comparison
+    // Using JSON.stringify for deep equality check
+    return (
+      JSON.stringify(a.anchor) === JSON.stringify(b.anchor) &&
+      JSON.stringify(a.head) === JSON.stringify(b.head)
+    );
   };
 
   /**
@@ -204,10 +201,108 @@ export const createAwarenessStore = (): AwarenessStore => {
       return;
     }
 
-    const users = extractUsersFromAwareness(awarenessInstance);
+    // Capture awareness instance for closure
+    const awareness = awarenessInstance;
 
     state = produce(state, draft => {
-      draft.users = users;
+      const awarenessStates = awareness.getStates();
+
+      // Track which clientIds we've seen in this update
+      const seenClientIds = new Set<number>();
+
+      // Update or add users using Immer's Map support
+      awarenessStates.forEach((awarenessState, clientId) => {
+        seenClientIds.add(clientId);
+
+        // Validate user data exists
+        if (!awarenessState['user']) {
+          return;
+        }
+
+        try {
+          // Get existing user from Map (if any)
+          const existingUser = draft.cursorsMap.get(clientId);
+
+          // Extract new data
+          const userData = awarenessState['user'] as AwarenessUser['user'];
+          const cursor = awarenessState['cursor'] as AwarenessUser['cursor'];
+          const selection = awarenessState[
+            'selection'
+          ] as AwarenessUser['selection'];
+          const lastSeen = awarenessState['lastSeen'] as number | undefined;
+
+          // Check if user data actually changed
+          if (existingUser) {
+            let hasChanged = false;
+
+            // Compare user fields
+            if (
+              existingUser.user.id !== userData.id ||
+              existingUser.user.name !== userData.name ||
+              existingUser.user.email !== userData.email ||
+              existingUser.user.color !== userData.color
+            ) {
+              hasChanged = true;
+            }
+
+            // Compare cursor
+            if (!arePositionsEqual(existingUser.cursor, cursor)) {
+              hasChanged = true;
+            }
+
+            // Compare selection
+            if (!areSelectionsEqual(existingUser.selection, selection)) {
+              hasChanged = true;
+            }
+
+            // Compare lastSeen
+            if (existingUser.lastSeen !== lastSeen) {
+              hasChanged = true;
+            }
+
+            // Only update if something changed
+            // If not changed, Immer preserves the existing reference
+            if (hasChanged) {
+              draft.cursorsMap.set(clientId, {
+                clientId,
+                user: userData,
+                cursor,
+                selection,
+                lastSeen,
+              });
+            }
+          } else {
+            // New user - add to map
+            draft.cursorsMap.set(clientId, {
+              clientId,
+              user: userData,
+              cursor,
+              selection,
+              lastSeen,
+            });
+          }
+        } catch (error) {
+          logger.warn('Invalid user data for client', clientId, error);
+        }
+      });
+
+      // Remove users that are no longer in awareness
+      const entriesToDelete: number[] = [];
+      draft.cursorsMap.forEach((_, clientId) => {
+        if (!seenClientIds.has(clientId)) {
+          entriesToDelete.push(clientId);
+        }
+      });
+      entriesToDelete.forEach(clientId => {
+        draft.cursorsMap.delete(clientId);
+      });
+
+      // Rebuild users array from cursorsMap for compatibility
+      // Sort by name for consistent ordering
+      draft.users = Array.from(draft.cursorsMap.values()).sort((a, b) =>
+        a.user.name.localeCompare(b.user.name)
+      );
+
       draft.lastUpdated = Date.now();
     });
     notify('awarenessChange');
@@ -271,6 +366,7 @@ export const createAwarenessStore = (): AwarenessStore => {
 
     state = produce(state, draft => {
       draft.users = [];
+      draft.cursorsMap.clear();
       draft.localUser = null;
       draft.rawAwareness = null;
       draft.isInitialized = false;

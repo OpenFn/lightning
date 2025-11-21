@@ -87,7 +87,7 @@ export function Cursors() {
     }
 
     return { __html: cursorStyles };
-  }, [cursorsMap.size, ...Array.from(cursorsMap.keys())]);
+  }, [cursorsMap]);
 
   // Detect when a users cursor is near the top of the editor and flip the
   // position of the label to below their position.

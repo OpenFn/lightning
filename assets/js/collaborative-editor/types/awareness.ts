@@ -46,6 +46,9 @@ export interface AwarenessState {
   localUser: LocalUserData | null;
   isInitialized: boolean;
 
+  // Map of user cursors keyed by clientId
+  cursorsMap: Map<number, AwarenessUser>;
+
   // Raw awareness access (for components that need it)
   rawAwareness: Awareness | null;
 
