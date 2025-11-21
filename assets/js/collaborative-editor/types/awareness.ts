@@ -18,11 +18,11 @@ export interface AwarenessUser {
   cursor?: {
     x: number;
     y: number;
-  };
+  } | null;
   selection?: {
     anchor: RelativePosition;
     head: RelativePosition;
-  };
+  } | null;
   lastSeen?: number;
   connectionCount?: number;
 }

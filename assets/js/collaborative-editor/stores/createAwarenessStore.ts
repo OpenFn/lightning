@@ -164,25 +164,29 @@ export const createAwarenessStore = (): AwarenessStore => {
 
   /**
    * Helper: Compare cursor positions for referential stability
+   * Handles both null and undefined (Y.js awareness uses null when clearing)
    */
   const arePositionsEqual = (
-    a: { x: number; y: number } | undefined,
-    b: { x: number; y: number } | undefined
+    a: { x: number; y: number } | undefined | null,
+    b: { x: number; y: number } | undefined | null
   ): boolean => {
-    if (a === undefined && b === undefined) return true;
-    if (a === undefined || b === undefined) return false;
+    // Use == null to catch both null and undefined
+    if (a == null && b == null) return true;
+    if (a == null || b == null) return false;
     return a.x === b.x && a.y === b.y;
   };
 
   /**
    * Helper: Compare selections (RelativePosition) for referential stability
+   * Handles both null and undefined (Y.js awareness uses null when clearing)
    */
   const areSelectionsEqual = (
-    a: AwarenessUser['selection'] | undefined,
-    b: AwarenessUser['selection'] | undefined
+    a: AwarenessUser['selection'] | undefined | null,
+    b: AwarenessUser['selection'] | undefined | null
   ): boolean => {
-    if (a === undefined && b === undefined) return true;
-    if (a === undefined || b === undefined) return false;
+    // Use == null to catch both null and undefined
+    if (a == null && b == null) return true;
+    if (a == null || b == null) return false;
 
     // RelativePosition objects from Yjs need proper comparison
     // Using JSON.stringify for deep equality check
