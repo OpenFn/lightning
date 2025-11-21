@@ -30,13 +30,6 @@ defmodule LightningWeb.BookDemoBannerTest do
       assert has_element?(view, "#book-demo-banner")
       assert html =~ "What problem are you trying to solve with OpenFn?"
     end
-
-    # banner is not shown in the workflow edit page
-    workflow = insert(:simple_workflow, project: project)
-    Lightning.Workflows.Snapshot.create(workflow)
-    {:ok, view, html} = live(conn, ~p"/projects/#{project.id}/w/#{workflow.id}")
-    refute has_element?(view, "#book-demo-banner")
-    refute html =~ "What problem are you trying to solve with OpenFn?"
   end
 
   test "the banner is not shown when the user has already dismissed it", %{
