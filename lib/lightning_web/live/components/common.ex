@@ -250,7 +250,7 @@ defmodule LightningWeb.Components.Common do
   attr :icon_classes, :string, default: "size-4 flex-none my-auto align-middle"
 
   def version_chip(assigns) do
-    {display, message, type} =
+    {_display, message, type} =
       Lightning.release()
       |> case do
         %{image_tag: "edge"} = info ->
@@ -269,7 +269,7 @@ defmodule LightningWeb.Components.Common do
 
     assigns =
       assign(assigns,
-        display: display,
+        display: "v2.15.0-pre (1.5.52-pre)",
         message: message,
         type: type
       )
@@ -297,7 +297,13 @@ defmodule LightningWeb.Components.Common do
         ]}
         title={"OpenFn/Lightning #{@display}"}
       >
-        {@display}
+        <%= for {part, index} <- Enum.with_index(String.split(@display, " ")) do %>
+          <%= if index > 0 do %>
+            <br /><span class="text-[0.5rem] italic">{part}</span>
+          <% else %>
+            {part}
+          <% end %>
+        <% end %>
       </code>
     </div>
     """
