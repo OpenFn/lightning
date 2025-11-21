@@ -6,54 +6,58 @@
       style="width: 192px"
     >
       <div class="flex flex-col h-full">
-        <div class="app-logo-container w-full h-20 flex items-center justify-center px-3">
-          <LayoutComponents.user_menu_dropdown current_user={@current_user} />
+        <div class="flex-1 overflow-y-auto min-h-0 flex flex-col">
+          <div class="app-logo-container w-full h-20 flex items-center justify-center px-3">
+            <LayoutComponents.user_menu_dropdown current_user={@current_user} />
+          </div>
+          <div class="mt-4"></div>
+          <Menu.menu_item
+            to={~p"/settings/projects"}
+            active={@active_menu_item == :projects}
+          >
+            <Heroicons.building_library class="h-5 w-5 inline-block mr-2" />
+            <span class="inline-block align-middle">Projects</span>
+          </Menu.menu_item>
+          <Menu.menu_item
+            to={~p"/settings/users"}
+            active={@active_menu_item == :users}
+          >
+            <Heroicons.user_group class="h-5 w-5 inline-block mr-2" />
+            <span class="inline-block align-middle">Users</span>
+          </Menu.menu_item>
+          <Menu.menu_item
+            to={~p"/settings/authentication/new"}
+            active={@active_menu_item == :authentication}
+          >
+            <Heroicons.key class="h-5 w-5 inline-block mr-2" />
+            <span class="inline-block align-middle">Authentication</span>
+          </Menu.menu_item>
+          <Menu.menu_item
+            to={~p"/settings/audit"}
+            active={@active_menu_item == :audit}
+          >
+            <Heroicons.archive_box class="h-5 w-5 inline-block mr-2" />
+            <span class="inline-block align-middle">Audit</span>
+          </Menu.menu_item>
+          <Menu.menu_item
+            to={~p"/settings/collections"}
+            active={@active_menu_item == :collections}
+          >
+            <Heroicons.circle_stack class="h-5 w-5 inline-block mr-2" />
+            <span class="inline-block align-middle">Collections</span>
+          </Menu.menu_item>
+          <div class="grow"></div>
+          <Menu.menu_item to={~p"/projects"}>
+            <Icon.left class="h-5 w-5 inline-block mr-2" />
+            <span class="inline-block align-middle">Back</span>
+          </Menu.menu_item>
         </div>
-        <div class="mt-4"></div>
-        <Menu.menu_item
-          to={~p"/settings/projects"}
-          active={@active_menu_item == :projects}
-        >
-          <Heroicons.building_library class="h-5 w-5 inline-block mr-2" />
-          <span class="inline-block align-middle">Projects</span>
-        </Menu.menu_item>
-        <Menu.menu_item
-          to={~p"/settings/users"}
-          active={@active_menu_item == :users}
-        >
-          <Heroicons.user_group class="h-5 w-5 inline-block mr-2" />
-          <span class="inline-block align-middle">Users</span>
-        </Menu.menu_item>
-        <Menu.menu_item
-          to={~p"/settings/authentication/new"}
-          active={@active_menu_item == :authentication}
-        >
-          <Heroicons.key class="h-5 w-5 inline-block mr-2" />
-          <span class="inline-block align-middle">Authentication</span>
-        </Menu.menu_item>
-        <Menu.menu_item
-          to={~p"/settings/audit"}
-          active={@active_menu_item == :audit}
-        >
-          <Heroicons.archive_box class="h-5 w-5 inline-block mr-2" />
-          <span class="inline-block align-middle">Audit</span>
-        </Menu.menu_item>
-        <Menu.menu_item
-          to={~p"/settings/collections"}
-          active={@active_menu_item == :collections}
-        >
-          <Heroicons.circle_stack class="h-5 w-5 inline-block mr-2" />
-          <span class="inline-block align-middle">Collections</span>
-        </Menu.menu_item>
-        <div class="grow"></div>
-        <Menu.menu_item to={~p"/projects"}>
-          <Icon.left class="h-5 w-5 inline-block mr-2" />
-          <span class="inline-block align-middle">Back</span>
-        </Menu.menu_item>
-        <div class="px-3 py-1 flex justify-center">
-          <Common.openfn_logo class="h-6 primary-light" />
+        <div class="flex-shrink-0">
+          <div class="px-3 py-1 flex justify-center">
+            <Common.openfn_logo class="h-6 primary-light" />
+          </div>
+          <LightningWeb.Components.Common.version_chip />
         </div>
-        <LightningWeb.Components.Common.version_chip />
       </div>
     </nav>
     <div class="flex-auto">

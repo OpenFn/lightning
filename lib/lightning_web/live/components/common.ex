@@ -250,7 +250,7 @@ defmodule LightningWeb.Components.Common do
   attr :icon_classes, :string, default: "size-4 flex-none my-auto align-middle"
 
   def version_chip(assigns) do
-    {_display, message, type} =
+    {display, message, type} =
       Lightning.release()
       |> case do
         %{image_tag: "edge"} = info ->
@@ -269,13 +269,13 @@ defmodule LightningWeb.Components.Common do
 
     assigns =
       assign(assigns,
-        display: "v2.15.0-pre (1.5.52-pre)",
+        display: display,
         message: message,
         type: type
       )
 
     ~H"""
-    <div class="px-3 pb-3 text-xs flex gap-1 justify-center">
+    <div class="px-3 pb-2 text-xs flex gap-1 justify-center">
       <%= case @type do %>
         <% :release -> %>
           <.icon name="hero-check-badge" class={@icon_classes} title={@message} />
