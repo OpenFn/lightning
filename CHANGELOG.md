@@ -21,6 +21,8 @@ and this project adheres to
 
 ### Fixed
 
+- Fix flickering of active collaborator icons between activity states(active,
+  away, offline) [#3931](https://github.com/OpenFn/lightning/issues/3931)
 - Put close button in top right
   [PR#4037](https://github.com/OpenFn/lightning/pull/4037)
 - Don't grey out in-progress runs
