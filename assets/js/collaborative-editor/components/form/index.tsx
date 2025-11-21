@@ -6,6 +6,7 @@ import { useValidation } from '#/collaborative-editor/hooks/useValidation';
 import { NumberField } from './number-field';
 import { SelectField } from './select-field';
 import { TextField } from './text-field';
+import { TextAreaField } from './textarea-field';
 import { ToggleField } from './toggle-field';
 
 export const { fieldContext, formContext, useFieldContext } =
@@ -17,6 +18,7 @@ const { useAppForm: useBaseAppForm } = createFormHook({
   formContext,
   fieldComponents: {
     TextField,
+    TextAreaField,
     SelectField,
     ToggleField,
     NumberField,

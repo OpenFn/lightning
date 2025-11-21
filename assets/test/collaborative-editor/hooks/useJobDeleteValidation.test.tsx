@@ -52,6 +52,7 @@ function setPermissions(channelMock: any, can_edit_workflow: boolean) {
       latest_snapshot_lock_version: 1,
       project_repo_connection: null,
       webhook_auth_methods: [],
+      workflow_template: null,
     });
   });
 }

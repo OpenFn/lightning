@@ -177,6 +177,9 @@ defmodule LightningWeb.WorkflowChannel do
       webhook_auth_methods =
         Lightning.WebhookAuthMethods.list_for_project(project)
 
+      workflow_template =
+        Lightning.WorkflowTemplates.get_template_by_workflow_id(workflow.id)
+
       %{
         user: render_user_context(user),
         project: render_project_context(project),
@@ -184,7 +187,8 @@ defmodule LightningWeb.WorkflowChannel do
         permissions: render_permissions(user, project_user),
         latest_snapshot_lock_version: fresh_workflow.lock_version,
         project_repo_connection: render_repo_connection(project_repo_connection),
-        webhook_auth_methods: render_webhook_auth_methods(webhook_auth_methods)
+        webhook_auth_methods: render_webhook_auth_methods(webhook_auth_methods),
+        workflow_template: render_workflow_template(workflow_template)
       }
     end)
   end
@@ -497,6 +501,22 @@ defmodule LightningWeb.WorkflowChannel do
   end
 
   @impl true
+  def handle_in("publish_template", params, socket) do
+    with :ok <- can_publish_template(socket),
+         {:ok, template} <- publish_template(socket, params) do
+      broadcast_from!(socket, "template_updated", %{
+        workflow_template: render_workflow_template(template)
+      })
+
+      {:reply,
+       {:ok,
+        %{
+          template: render_workflow_template(template)
+        }}, socket}
+    end
+  end
+
+  @impl true
   def handle_info({:yjs, chunk}, socket) do
     push(socket, "yjs", {:binary, chunk})
     {:noreply, socket}
@@ -704,6 +724,7 @@ defmodule LightningWeb.WorkflowChannel do
       first_name: user.first_name,
       last_name: user.last_name,
       email_confirmed: !is_nil(user.confirmed_at),
+      support_user: user.support_user,
       inserted_at: user.inserted_at
     }
   end
@@ -773,6 +794,51 @@ defmodule LightningWeb.WorkflowChannel do
         auth_type: method.auth_type
       }
     end)
+  end
+
+  defp render_workflow_template(nil), do: nil
+
+  defp render_workflow_template(template) do
+    Map.take(template, [
+      :id,
+      :name,
+      :description,
+      :code,
+      :positions,
+      :tags,
+      :workflow_id
+    ])
+  end
+
+  defp can_publish_template(socket) do
+    if socket.assigns.current_user.support_user do
+      :ok
+    else
+      {:reply,
+       {:error,
+        %{
+          errors: %{base: ["Only superusers can publish templates"]},
+          type: "unauthorized"
+        }}, socket}
+    end
+  end
+
+  defp publish_template(socket, params) do
+    workflow = socket.assigns.workflow
+    template_params = Map.put(params, "workflow_id", workflow.id)
+
+    case Lightning.WorkflowTemplates.create_template(template_params) do
+      {:ok, template} ->
+        {:ok, template}
+
+      {:error, %Ecto.Changeset{} = changeset} ->
+        {:reply,
+         {:error,
+          %{
+            errors: format_changeset_errors(changeset),
+            type: "validation_error"
+          }}, socket}
+    end
   end
 
   # Private helper functions for save_workflow and reset_workflow

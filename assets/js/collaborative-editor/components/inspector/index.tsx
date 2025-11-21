@@ -13,6 +13,8 @@ import { InspectorLayout } from './InspectorLayout';
 import { JobInspector } from './JobInspector';
 import { TriggerInspector } from './TriggerInspector';
 import { WorkflowSettings } from './WorkflowSettings';
+import { TemplatePublishPanel } from './TemplatePublishPanel';
+import { useWorkflowTemplate } from '../../hooks/useSessionContext';
 
 export { InspectorLayout } from './InspectorLayout';
 
@@ -35,6 +37,7 @@ export function Inspector({
   onOpenRunPanel,
 }: InspectorProps) {
   const { searchParams, updateSearchParams } = useURLState();
+  const workflowTemplate = useWorkflowTemplate();
 
   const hasSelectedNode = currentNode.node && currentNode.type;
 
@@ -44,14 +47,18 @@ export function Inspector({
       ? 'settings'
       : searchParams.get('panel') === 'code'
         ? 'code'
-        : hasSelectedNode
-          ? 'node'
-          : null;
+        : searchParams.get('panel') === 'publish-template'
+          ? 'publish-template'
+          : hasSelectedNode
+            ? 'node'
+            : null;
 
   const handleClose = () => {
     if (mode === 'code') {
       // When closing code view, go back to settings
       updateSearchParams({ panel: 'settings' });
+    } else if (mode === 'publish-template') {
+      updateSearchParams({ panel: 'code' });
     } else if (mode === 'settings') {
       updateSearchParams({ panel: null });
     } else {
@@ -92,6 +99,19 @@ export function Inspector({
         fullHeight
       >
         <CodeViewPanel />
+      </InspectorLayout>
+    );
+  }
+
+  // Publish template mode
+  if (mode === 'publish-template') {
+    const title = workflowTemplate
+      ? 'Update Template'
+      : 'Publish Workflow as Template';
+
+    return (
+      <InspectorLayout title={title} onClose={handleClose}>
+        <TemplatePublishPanel />
       </InspectorLayout>
     );
   }

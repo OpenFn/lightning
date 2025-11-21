@@ -66,6 +66,29 @@ vi.mock('../../../../js/collaborative-editor/hooks/useWorkflow', () => ({
   }),
 }));
 
+// Mock useSessionContext hooks
+vi.mock('../../../../js/collaborative-editor/hooks/useSessionContext', () => ({
+  useUser: vi.fn(() => ({
+    id: 'test-user-id',
+    email: 'test@example.com',
+    first_name: 'Test',
+    last_name: 'User',
+    email_confirmed: true,
+    support_user: true, // Make user a superuser for template functionality
+    inserted_at: '2024-01-01T00:00:00Z',
+  })),
+  useWorkflowTemplate: vi.fn(() => null), // No template by default
+  useLatestSnapshotLockVersion: vi.fn(() => 1),
+}));
+
+// Mock useURLState hook
+vi.mock('../../../../js/react/lib/use-url-state', () => ({
+  useURLState: vi.fn(() => ({
+    updateSearchParams: vi.fn(),
+    getSearchParam: vi.fn(),
+  })),
+}));
+
 describe('CodeViewPanel', () => {
   beforeEach(() => {
     // Reset all mocks
