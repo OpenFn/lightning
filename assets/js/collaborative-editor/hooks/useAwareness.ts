@@ -93,11 +93,19 @@ export const useAwarenessUsers = (): AwarenessUser[] => {
   return useSyncExternalStore(awarenessStore.subscribe, selectUsers);
 };
 
+const awayUserCache = new Map<
+  string,
+  { user: AwarenessUser; expiresAt: number }
+>();
+
+const AWAY_CACHE_DURATION = 60000; // 60 seconds
+
 /**
  * Hook to get only remote users (excluding the local user)
  * Useful for cursor rendering where you don't want to show your own cursor
  * Deduplicates users by keeping the one with the highest priority state
  * (active > away > idle), then by latest lastSeen timestamp
+ * Caches away users for 60s to prevent flickering when presence is throttled
  * Adds connectionCount to show how many connections they have
  */
 export const useRemoteUsers = (): AwarenessUser[] => {
@@ -106,6 +114,7 @@ export const useRemoteUsers = (): AwarenessUser[] => {
   const selectRemoteUsers = awarenessStore.withSelector(state => {
     if (!state.localUser) return state.users;
 
+    const now = Date.now();
     const remoteUsers = state.users.filter(
       user => user.user.id !== state.localUser?.id
     );
@@ -120,7 +129,7 @@ export const useRemoteUsers = (): AwarenessUser[] => {
       (userMap.get(userId) || userMap.set(userId, []).get(userId)!).push(user);
     });
 
-    return Array.from(userMap.values()).map(users => {
+    const selectedUsers = Array.from(userMap.values()).map(users => {
       const selected = users.sort((a, b) => {
         const stateDiff =
           (statePriority[b.lastState || 'idle'] || 0) -
@@ -128,11 +137,40 @@ export const useRemoteUsers = (): AwarenessUser[] => {
         return stateDiff || (b.lastSeen || 0) - (a.lastSeen || 0);
       })[0];
 
+      const userId = selected.user.id;
+
+      // clear cache if user becomes active
+      if (selected.lastState === 'active') {
+        awayUserCache.delete(userId);
+      }
+
+      // cache away users
+      if (selected.lastState === 'away') {
+        awayUserCache.set(userId, {
+          user: selected,
+          expiresAt: now + AWAY_CACHE_DURATION,
+        });
+      }
+
       return {
         ...selected,
-        connectionCount: connectionCounts.get(selected.user.id) || 1,
+        connectionCount: connectionCounts.get(userId) || 1,
       };
     });
+
+    // Add cached away users that aren't in current results
+    awayUserCache.forEach((cached, userId) => {
+      if (now > cached.expiresAt) {
+        awayUserCache.delete(userId);
+      } else if (!userMap.has(userId)) {
+        selectedUsers.push({
+          ...cached.user,
+          connectionCount: 0,
+        });
+      }
+    });
+
+    return selectedUsers;
   });
 
   return useSyncExternalStore(awarenessStore.subscribe, selectRemoteUsers);
