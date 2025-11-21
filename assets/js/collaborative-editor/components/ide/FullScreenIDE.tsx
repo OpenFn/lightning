@@ -166,7 +166,8 @@ export function FullScreenIDE({
   const docsPanelRef = useRef<ImperativePanelHandle>(null);
 
   const [followRunId, setFollowRunId] = useState<string | null>(null);
-  const [selectedDataclipState, setSelectedDataclipState] = useState<any>(null);
+  const [selectedDataclipState, setSelectedDataclipState] =
+    useState<Dataclip | null>(null);
   const [selectedTab, setSelectedTab] = useState<
     'empty' | 'custom' | 'existing'
   >('empty');
@@ -174,7 +175,7 @@ export function FullScreenIDE({
   const [manuallyUnselectedDataclip, setManuallyUnselectedDataclip] =
     useState(false);
 
-  const handleDataclipChange = useCallback((dataclip: any) => {
+  const handleDataclipChange = useCallback((dataclip: Dataclip | null) => {
     setSelectedDataclipState(dataclip);
     setManuallyUnselectedDataclip(dataclip === null);
   }, []);
@@ -582,7 +583,7 @@ export function FullScreenIDE({
   if (isLoading) {
     return (
       <div
-        className="fixed inset-0 z-50 bg-white flex
+        className="absolute inset-0 z-50 bg-white flex
           items-center justify-center"
       >
         <div className="text-center">
@@ -664,7 +665,7 @@ export function FullScreenIDE({
   ) : null;
 
   return (
-    <div className="absolute inset-0 bg-white flex flex-col">
+    <div className="absolute inset-0 z-60 bg-white flex flex-col">
       <Header
         key="ide-header"
         projectId={projectId}

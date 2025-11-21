@@ -280,7 +280,7 @@ export function WorkflowEditor({
   );
 
   return (
-    <div className="relative flex h-full w-full">
+    <div className="flex h-full w-full">
       <div
         className={`flex-1 relative transition-all duration-300 ease-in-out ${
           showLeftPanel ? 'ml-[33.333333%]' : 'ml-0'

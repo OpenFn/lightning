@@ -139,19 +139,14 @@ function BreadcrumbContent({
   ]);
 
   return (
-    <>
-      {/* Only render Header for Canvas mode - IDE mode has its own Header in FullScreenIDE */}
-      {!isIDEOpen && (
-        <Header
-          key="canvas-header"
-          {...(projectId !== undefined && { projectId })}
-          workflowId={workflowId}
-          isRunPanelOpen={isRunPanelOpen}
-        >
-          {breadcrumbElements}
-        </Header>
-      )}
-    </>
+    <Header
+      key="canvas-header"
+      {...(projectId !== undefined && { projectId })}
+      workflowId={workflowId}
+      isRunPanelOpen={isRunPanelOpen}
+    >
+      {breadcrumbElements}
+    </Header>
   );
 }
 
@@ -180,7 +175,7 @@ export const CollaborativeEditor: WithActionProps<
   return (
     <KeyboardProvider>
       <div
-        className="collaborative-editor h-full flex flex-col"
+        className="collaborative-editor h-full flex flex-col relative"
         data-testid="collaborative-editor"
       >
         <SocketProvider>
