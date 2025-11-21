@@ -4,12 +4,6 @@ import { getAvatarInitials } from '../utils/avatar';
 
 import { Tooltip } from './Tooltip';
 
-function lessthanmin(val: number, mins: number) {
-  const now = Date.now();
-  const threshold = now - mins * 60 * 1000;
-  return val > threshold;
-}
-
 interface ActiveCollaboratorsProps {
   className?: string;
 }
@@ -44,7 +38,7 @@ export function ActiveCollaborators({ className }: ActiveCollaboratorsProps) {
         return (
           <Tooltip key={user.clientId} content={tooltipContent} side="right">
             <div
-              className={`relative inline-flex items-center justify-center rounded-full border-2 ${user.lastSeen && lessthanmin(user.lastSeen, 0.2) ? 'border-green-500' : 'border-gray-500 '}`}
+              className={`relative inline-flex items-center justify-center rounded-full border-2 ${user.lastState === 'active' ? 'border-green-500' : 'border-gray-500 '}`}
             >
               <div
                 className="w-5 h-5 rounded-full flex items-center justify-center font-normal text-[9px] font-semibold text-white cursor-default"

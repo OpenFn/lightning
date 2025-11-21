@@ -96,11 +96,14 @@ import type { Awareness } from 'y-protocols/awareness';
 import _logger from '#/utils/logger';
 
 import type {
+  ActivityState,
   AwarenessState,
   AwarenessStore,
   AwarenessUser,
   LocalUserData,
+  SetStateHandler,
 } from '../types/awareness';
+import { getVisibilityProps } from '../utils/visibility';
 
 import { createWithSelector } from './common';
 import { wrapStoreWithDevTools } from './devtools';
@@ -240,6 +243,9 @@ export const createAwarenessStore = (): AwarenessStore => {
             'selection'
           ] as AwarenessUser['selection'];
           const lastSeen = awarenessState['lastSeen'] as number | undefined;
+          const lastState = awarenessState['lastState'] as
+            | ActivityState
+            | undefined;
 
           // Check if user data actually changed
           if (existingUser) {
@@ -270,6 +276,11 @@ export const createAwarenessStore = (): AwarenessStore => {
               hasChanged = true;
             }
 
+            // compare lastState
+            if (existingUser.lastState !== lastState) {
+              hasChanged = true;
+            }
+
             // Only update if something changed
             // If not changed, Immer preserves the existing reference
             if (hasChanged) {
@@ -279,6 +290,7 @@ export const createAwarenessStore = (): AwarenessStore => {
                 cursor,
                 selection,
                 lastSeen,
+                lastState,
               });
             }
           } else {
@@ -289,6 +301,7 @@ export const createAwarenessStore = (): AwarenessStore => {
               cursor,
               selection,
               lastSeen,
+              lastState,
             });
           }
 
@@ -340,6 +353,30 @@ export const createAwarenessStore = (): AwarenessStore => {
       draft.lastUpdated = Date.now();
     });
     notify('awarenessChange');
+  };
+
+  const visibilityProps = getVisibilityProps();
+  const activityStateChangeHandler = (setState: SetStateHandler) => {
+    const isHidden = document[visibilityProps?.hidden as keyof Document];
+    if (isHidden) {
+      setState('away');
+    } else {
+      setState('active');
+    }
+  };
+
+  const initActivityStateChange = (setState: SetStateHandler) => {
+    if (visibilityProps) {
+      const handler = activityStateChangeHandler.bind(undefined, setState);
+      // initial call
+      handler();
+      document.addEventListener(visibilityProps.visibilityChange, handler);
+
+      // return cleanup function
+      return () => {
+        document.removeEventListener(visibilityProps.visibilityChange, handler);
+      };
+    }
   };
 
   // =============================================================================
@@ -723,6 +760,7 @@ export const createAwarenessStore = (): AwarenessStore => {
     _internal: {
       handleAwarenessChange,
       setupLastSeenTimer,
+      initActivityStateChange,
     },
   };
 };
