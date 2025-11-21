@@ -42,6 +42,10 @@ and this project adheres to
 
 ### Changed
 
+- Always keep the Diagram mounted even when the IDE is present
+  [#3981](https://github.com/OpenFn/lightning/issues/3981)
+- Dropped react-hotkeys-hook for custom priority based key handler hook
+  [#3981](https://github.com/OpenFn/lightning/issues/3981)
 - Simplified IDE by only letting users see the "Create a New Manual Run Panel"
   when an existing Run isn't already loaded. Cleaned up the Run panel.
   [#4006](https://github.com/OpenFn/lightning/issues/4006)

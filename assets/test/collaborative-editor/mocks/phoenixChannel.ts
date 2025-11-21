@@ -19,6 +19,13 @@ export interface MockPhoenixChannel extends Channel {
   topic: string;
   joinPush: MockPush;
   socket: unknown;
+  _test: {
+    emit: (event: string, message: unknown) => void;
+    triggerClose: () => void;
+    triggerError: (error: unknown) => void;
+    getHandlers: (event: string) => Set<(message: unknown) => void> | undefined;
+    setState: (state: MockPhoenixChannel['state']) => void;
+  };
 }
 
 export interface MockPush {
@@ -117,6 +124,9 @@ export function createMockPhoenixChannel(
     onError(callback: (error: unknown) => void) {
       errorCallbacks.push(callback);
     },
+
+    // Test helper methods (defined below but included in type for proper typing)
+    _test: {} as any,
   };
 
   // Add helper methods for testing

@@ -17,13 +17,11 @@
 
 import { describe, expect, test } from 'vitest';
 
-import type { ProjectContext } from '../../js/collaborative-editor/types/sessionContext';
 import {
   createMockProject,
-  selectBreadcrumbProjectData,
-  generateBreadcrumbUrls,
   generateBreadcrumbStructure,
-  type BreadcrumbItem,
+  generateBreadcrumbUrls,
+  selectBreadcrumbProjectData,
 } from './__helpers__/breadcrumbHelpers';
 
 // =============================================================================
@@ -648,7 +646,7 @@ describe('CollaborativeEditor - LoadingBoundary Integration', () => {
     // but NOT the Header (BreadcrumbContent) or Toaster.
     //
     // Expected structure:
-    // - HotkeysProvider
+    // - KeyboardProvider
     //   - div.collaborative-editor
     //     - SocketProvider
     //       - SessionProvider

@@ -12,12 +12,11 @@
  */
 
 import { render, screen, waitFor } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
-import { HotkeysProvider } from 'react-hotkeys-hook';
 import { beforeEach, describe, expect, test, vi } from 'vitest';
-import { WorkflowEditor } from '../../../js/collaborative-editor/components/WorkflowEditor';
-import type { Workflow } from '../../../js/collaborative-editor/types/workflow';
 import * as dataclipApi from '../../../js/collaborative-editor/api/dataclips';
+import { WorkflowEditor } from '../../../js/collaborative-editor/components/WorkflowEditor';
+import { KeyboardProvider } from '../../../js/collaborative-editor/keyboard';
+import type { Workflow } from '../../../js/collaborative-editor/types/workflow';
 
 // Mock dependencies
 vi.mock('../../../js/collaborative-editor/api/dataclips');
@@ -239,12 +238,12 @@ vi.mock('../../../js/collaborative-editor/hooks/useWorkflow', () => ({
   }),
 }));
 
-// Helper function to render WorkflowEditor with HotkeysProvider
+// Helper function to render WorkflowEditor with providers
 function renderWorkflowEditor() {
   return render(
-    <HotkeysProvider>
+    <KeyboardProvider>
       <WorkflowEditor />
-    </HotkeysProvider>
+    </KeyboardProvider>
   );
 }
 
@@ -386,24 +385,25 @@ describe('WorkflowEditor', () => {
 
   describe('Ctrl+E keyboard shortcut - open IDE', () => {
     test('opens IDE when Ctrl+E pressed with job selected', async () => {
-      const user = userEvent.setup();
-
       // Select a job
       currentNode = {
         type: 'job',
         node: mockWorkflow.jobs[0],
       };
 
-      const { container } = renderWorkflowEditor();
+      renderWorkflowEditor();
 
       await waitFor(() => {
         expect(screen.getByTestId('workflow-diagram')).toBeInTheDocument();
       });
 
-      container.focus();
-
-      // Press Ctrl+E
-      await user.keyboard('{Control>}e{/Control}');
+      // Press Ctrl+E - dispatch to window (KeyboardProvider listens on window)
+      const event = new KeyboardEvent('keydown', {
+        key: 'e',
+        ctrlKey: true,
+        bubbles: true,
+      });
+      window.dispatchEvent(event);
 
       // Should open IDE by setting editor=open in URL
       await waitFor(() => {
@@ -414,24 +414,25 @@ describe('WorkflowEditor', () => {
     });
 
     test('does NOT open IDE when Ctrl+E pressed with trigger selected', async () => {
-      const user = userEvent.setup();
-
       // Select a trigger (not a job)
       currentNode = {
         type: 'trigger',
         node: mockWorkflow.triggers[0],
       };
 
-      const { container } = renderWorkflowEditor();
+      renderWorkflowEditor();
 
       await waitFor(() => {
         expect(screen.getByTestId('workflow-diagram')).toBeInTheDocument();
       });
 
-      container.focus();
-
-      // Press Ctrl+E
-      await user.keyboard('{Control>}e{/Control}');
+      // Press Ctrl+E - dispatch to window (KeyboardProvider listens on window)
+      const event = new KeyboardEvent('keydown', {
+        key: 'e',
+        ctrlKey: true,
+        bubbles: true,
+      });
+      window.dispatchEvent(event);
 
       // Should NOT open IDE - silent no-op
       await new Promise(resolve => setTimeout(resolve, 100));
@@ -441,21 +442,22 @@ describe('WorkflowEditor', () => {
     });
 
     test('does NOT open IDE when Ctrl+E pressed with nothing selected', async () => {
-      const user = userEvent.setup();
-
       // Nothing selected
       currentNode = { type: null, node: null };
 
-      const { container } = renderWorkflowEditor();
+      renderWorkflowEditor();
 
       await waitFor(() => {
         expect(screen.getByTestId('workflow-diagram')).toBeInTheDocument();
       });
 
-      container.focus();
-
-      // Press Ctrl+E
-      await user.keyboard('{Control>}e{/Control}');
+      // Press Ctrl+E - dispatch to window (KeyboardProvider listens on window)
+      const event = new KeyboardEvent('keydown', {
+        key: 'e',
+        ctrlKey: true,
+        bubbles: true,
+      });
+      window.dispatchEvent(event);
 
       // Should NOT open IDE - silent no-op
       await new Promise(resolve => setTimeout(resolve, 100));
@@ -465,8 +467,6 @@ describe('WorkflowEditor', () => {
     });
 
     test('does NOT trigger when IDE is already open', async () => {
-      const user = userEvent.setup();
-
       // Select a job
       currentNode = {
         type: 'job',
@@ -477,16 +477,19 @@ describe('WorkflowEditor', () => {
       mockSearchParams.set('panel', 'editor');
       mockSearchParams.set('job', 'job-1');
 
-      const { container } = renderWorkflowEditor();
+      renderWorkflowEditor();
 
       await waitFor(() => {
         expect(screen.getByTestId('fullscreen-ide')).toBeInTheDocument();
       });
 
-      container.focus();
-
-      // Press Ctrl+E
-      await user.keyboard('{Control>}e{/Control}');
+      // Press Ctrl+E - dispatch to window (KeyboardProvider listens on window)
+      const event = new KeyboardEvent('keydown', {
+        key: 'e',
+        ctrlKey: true,
+        bubbles: true,
+      });
+      window.dispatchEvent(event);
 
       // Handler should be disabled - no call to updateSearchParams
       await new Promise(resolve => setTimeout(resolve, 100));

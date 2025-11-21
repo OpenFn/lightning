@@ -156,23 +156,12 @@ export const useUserById = (userId: string | null): AwarenessUser | null => {
 };
 
 /**
- * Hook to get cursor data optimized for rendering
- * Returns a Map for efficient lookups by clientId
+ * Hook to get the map of user cursors
  */
 export const useUserCursors = (): Map<number, AwarenessUser> => {
   const awarenessStore = useAwarenessStore();
 
-  const selectCursors = awarenessStore.withSelector(state => {
-    const cursorsMap = new Map<number, AwarenessUser>();
-
-    state.users.forEach(user => {
-      if (user.cursor || user.selection) {
-        cursorsMap.set(user.clientId, user);
-      }
-    });
-
-    return cursorsMap;
-  });
+  const selectCursors = awarenessStore.withSelector(state => state.cursorsMap);
 
   return useSyncExternalStore(awarenessStore.subscribe, selectCursors);
 };

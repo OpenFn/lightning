@@ -4,7 +4,6 @@ import {
   QueueListIcon,
 } from '@heroicons/react/24/outline';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useHotkeys } from 'react-hotkeys-hook';
 
 import { cn } from '#/utils/cn';
 import _logger from '#/utils/logger';
@@ -18,12 +17,12 @@ import ExistingView from '../../manual-run-panel/views/ExistingView';
 import { useURLState } from '../../react/lib/use-url-state';
 import type { Dataclip } from '../api/dataclips';
 import * as dataclipApi from '../api/dataclips';
-import { HOTKEY_SCOPES } from '../constants/hotkeys';
 import { RENDER_MODES, type RenderMode } from '../constants/panel';
 import { useActiveRun, useFollowRun } from '../hooks/useHistory';
 import { useRunRetry } from '../hooks/useRunRetry';
 import { useRunRetryShortcuts } from '../hooks/useRunRetryShortcuts';
 import { useCanRun } from '../hooks/useWorkflow';
+import { useKeyboardShortcut } from '../keyboard';
 import type { Workflow } from '../types/workflow';
 
 import { InspectorFooter } from './inspector/InspectorFooter';
@@ -408,17 +407,12 @@ export function ManualRunPanel({
     [projectId]
   );
 
-  useHotkeys(
-    'escape',
+  useKeyboardShortcut(
+    'Escape',
     () => {
       onClose();
     },
-    {
-      enabled: true,
-      scopes: [HOTKEY_SCOPES.RUN_PANEL],
-      enableOnFormTags: true,
-    },
-    [onClose]
+    25 // RUN_PANEL priority
   );
 
   // Run/retry shortcuts (standalone mode only - embedded uses IDEHeader)
@@ -428,8 +422,8 @@ export function ManualRunPanel({
     canRun,
     isRunning: isSubmitting || runIsProcessing,
     isRetryable,
+    priority: 25, // RUN_PANEL priority
     enabled: renderMode === RENDER_MODES.STANDALONE,
-    scope: HOTKEY_SCOPES.RUN_PANEL,
   });
 
   const content = edgeId ? (

@@ -79,13 +79,6 @@ export function VersionDropdown({
 
   // Fetch versions when dropdown opens
   useEffect(() => {
-    console.log('VersionDropdown effect:', {
-      isOpen,
-      versionsLength: versions.length,
-      hasChannel: !!channel,
-      channel,
-    });
-
     if (isOpen && channel) {
       // Only fetch if we don't already have versions OR if we're not already loading
       if (versions.length === 0 && !isLoading) {

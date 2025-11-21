@@ -1,8 +1,6 @@
 import { Dialog, DialogBackdrop, DialogPanel } from '@headlessui/react';
 import { useEffect, useMemo, useState } from 'react';
-import { useHotkeysContext } from 'react-hotkeys-hook';
 
-import { HOTKEY_SCOPES } from '../constants/hotkeys';
 import { useAdaptors } from '../hooks/useAdaptors';
 import type { Adaptor } from '../types/adaptor';
 import { getAdaptorDisplayName } from '../utils/adaptorUtils';
@@ -30,24 +28,6 @@ export function AdaptorSelectionModal({
   const allAdaptors = useAdaptors();
   const [searchQuery, setSearchQuery] = useState('');
   const [focusedIndex, setFocusedIndex] = useState<number>(0);
-
-  // Keyboard scope management
-  const { enableScope, disableScope } = useHotkeysContext();
-
-  useEffect(() => {
-    if (isOpen) {
-      enableScope(HOTKEY_SCOPES.MODAL);
-      disableScope(HOTKEY_SCOPES.PANEL);
-      disableScope(HOTKEY_SCOPES.RUN_PANEL);
-    } else {
-      disableScope(HOTKEY_SCOPES.MODAL);
-      enableScope(HOTKEY_SCOPES.PANEL);
-    }
-
-    return () => {
-      disableScope(HOTKEY_SCOPES.MODAL);
-    };
-  }, [isOpen, enableScope, disableScope]);
 
   // Reset state when modal closes
   useEffect(() => {

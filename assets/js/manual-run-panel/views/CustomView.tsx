@@ -4,6 +4,7 @@ import React from 'react';
 import { cn } from '#/utils/cn';
 
 import { MonacoEditor } from '../../monaco';
+import { addKeyboardShortcutOverrides } from '../../monaco/keyboard-overrides';
 import FileUploader from '../FileUploader';
 
 const iconStyle = 'h-4 w-4 text-grey-400';
@@ -87,6 +88,9 @@ const CustomView: React.FC<{
             theme="default"
             value={editorValue}
             onChange={handleEditorChange}
+            onMount={(editor, monaco) => {
+              addKeyboardShortcutOverrides(editor, monaco);
+            }}
             loading={<div>Loading...</div>}
             options={{
               readOnly: false,
