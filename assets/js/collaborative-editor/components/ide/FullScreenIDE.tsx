@@ -67,7 +67,12 @@ import { Tabs } from '../Tabs';
 import { Tooltip } from '../Tooltip';
 import { VersionDropdown } from '../VersionDropdown';
 
-import { PanelToggleButton } from './PanelToggleButton';
+import {
+  HistoryBrowserPanel,
+  HistoryBrowserPanelErrorBoundary,
+  PanelToggleButton,
+  RightPanelEmptyState,
+} from './';
 
 /**
  * Resolves an adaptor specifier into its package name and version
@@ -166,6 +171,10 @@ export function FullScreenIDE({
   const docsPanelRef = useRef<ImperativePanelHandle>(null);
 
   const [followRunId, setFollowRunId] = useState<string | null>(null);
+
+  type RightPanelMode = 'empty' | 'history' | 'manual-run' | 'run-viewer';
+  const [rightPanelMode, setRightPanelMode] = useState<RightPanelMode>('empty');
+
   const [selectedDataclipState, setSelectedDataclipState] =
     useState<Dataclip | null>(null);
   const [selectedTab, setSelectedTab] = useState<
@@ -184,15 +193,52 @@ export function FullScreenIDE({
     (runId: string, dataclip?: Dataclip) => {
       setFollowRunId(runId);
       updateSearchParams({ run: runId });
+      setRightPanelMode('run-viewer');
       setManuallyUnselectedDataclip(false);
 
-      // If a dataclip was created (from custom body), select it and switch to existing tab
+      // Clear manual run state after successful submission
+      setSelectedDataclipState(null);
+      setSelectedTab('empty');
+      setCustomBody('');
+
+      // If a dataclip was created (from custom body), handle it
       if (dataclip) {
-        setSelectedDataclipState(dataclip);
-        setSelectedTab('existing');
-        setCustomBody('');
+        // Note: We're not setting it here because we just cleared state
+        // The run viewer will show the dataclip used for the run
       }
 
+      if (rightPanelRef.current?.isCollapsed()) {
+        rightPanelRef.current.expand();
+      }
+    },
+    [updateSearchParams]
+  );
+
+  const handleCloseRun = useCallback(() => {
+    setFollowRunId(null);
+    updateSearchParams({ run: null });
+    setRightPanelMode('empty');
+  }, [updateSearchParams]);
+
+  const handleBrowseHistory = useCallback(() => {
+    setRightPanelMode('history');
+  }, []);
+
+  const handleCreateRun = useCallback(() => {
+    setRightPanelMode('manual-run');
+  }, []);
+
+  const handleHistoryClose = useCallback(() => {
+    setRightPanelMode('empty');
+  }, []);
+
+  const handleHistorySelectRun = useCallback(
+    (runId: string) => {
+      setFollowRunId(runId);
+      updateSearchParams({ run: runId });
+      setRightPanelMode('run-viewer');
+
+      // Auto-expand panel
       if (rightPanelRef.current?.isCollapsed()) {
         rightPanelRef.current.expand();
       }
@@ -378,10 +424,15 @@ export function FullScreenIDE({
   useEffect(() => {
     if (runIdFromURL && runIdFromURL !== followRunId) {
       setFollowRunId(runIdFromURL);
+      setRightPanelMode('run-viewer');
 
       if (rightPanelRef.current?.isCollapsed()) {
         rightPanelRef.current.expand();
       }
+    } else if (!runIdFromURL && followRunId) {
+      // URL cleared but we still have followRunId - reset to empty
+      setFollowRunId(null);
+      setRightPanelMode('empty');
     }
   }, [runIdFromURL, followRunId]);
 
@@ -951,8 +1002,8 @@ export function FullScreenIDE({
           {/* Right Panel - ManualRunPanel or RunViewerPanel */}
           <Panel
             ref={rightPanelRef}
-            defaultSize={30}
-            minSize={30}
+            defaultSize={20}
+            minSize={10}
             collapsible
             collapsedSize={2}
             onCollapse={() => setIsRightCollapsed(true)}
@@ -990,10 +1041,7 @@ export function FullScreenIDE({
                             >
                               <span>Run {followRunId?.slice(0, 7)}</span>
                               <button
-                                onClick={() => {
-                                  setFollowRunId(null);
-                                  updateSearchParams({ run: null });
-                                }}
+                                onClick={handleCloseRun}
                                 className={cn(
                                   'group relative -mr-1 h-3.5 w-3.5 rounded-sm',
                                   shouldShowMismatch
@@ -1023,16 +1071,27 @@ export function FullScreenIDE({
                             />
                           </div>
                         </>
+                      ) : rightPanelMode === 'history' ? (
+                        <div
+                          className="text-xs font-medium text-gray-400
+                          uppercase tracking-wide"
+                        >
+                          Browse History
+                        </div>
+                      ) : rightPanelMode === 'manual-run' ? (
+                        <div
+                          className="text-xs font-medium text-gray-400
+                          uppercase tracking-wide"
+                        >
+                          New Run (Select Input)
+                        </div>
                       ) : (
-                        <>
-                          {/* Simple title when showing manual run panel */}
-                          <div
-                            className="text-xs font-medium text-gray-400
-                            uppercase tracking-wide"
-                          >
-                            New Run (Select Input)
-                          </div>
-                        </>
+                        <div
+                          className="text-xs font-medium text-gray-400
+                          uppercase tracking-wide"
+                        >
+                          Select Action
+                        </div>
                       )}
                       {/* Collapse button */}
                       <PanelToggleButton
@@ -1051,7 +1110,11 @@ export function FullScreenIDE({
                     >
                       {followRunId
                         ? `Run - ${followRunId.slice(0, 7)}`
-                        : 'New Run (Select Input)'}
+                        : rightPanelMode === 'history'
+                          ? 'Browse History'
+                          : rightPanelMode === 'manual-run'
+                            ? 'New Run (Select Input)'
+                            : 'Select Action'}
                     </button>
                   )}
                 </div>
@@ -1060,42 +1123,78 @@ export function FullScreenIDE({
               {/* Panel content */}
               {!isRightCollapsed && (
                 <div className="flex-1 overflow-hidden bg-white">
-                  {followRunId ? (
-                    <RunViewerErrorBoundary>
-                      <RunViewerPanel
-                        followRunId={followRunId}
-                        onClearFollowRun={() => setFollowRunId(null)}
-                        activeTab={activeRightTab}
-                        onTabChange={setActiveRightTab}
-                      />
-                    </RunViewerErrorBoundary>
-                  ) : (
-                    workflow &&
-                    projectId &&
-                    workflowId && (
-                      <ManualRunPanelErrorBoundary
-                        onClose={() => rightPanelRef.current?.collapse()}
-                      >
-                        <ManualRunPanel
-                          workflow={workflow}
-                          projectId={projectId}
-                          workflowId={workflowId}
-                          jobId={jobIdFromURL ?? null}
-                          triggerId={null}
-                          onClose={() => rightPanelRef.current?.collapse()}
-                          renderMode={RENDER_MODES.EMBEDDED}
-                          saveWorkflow={saveWorkflow}
-                          onRunSubmitted={handleRunSubmitted}
-                          onTabChange={setSelectedTab}
-                          onDataclipChange={handleDataclipChange}
-                          onCustomBodyChange={setCustomBody}
-                          selectedTab={selectedTab}
-                          selectedDataclip={selectedDataclipState}
-                          customBody={customBody}
-                        />
-                      </ManualRunPanelErrorBoundary>
-                    )
-                  )}
+                  {(() => {
+                    switch (rightPanelMode) {
+                      case 'run-viewer':
+                        return (
+                          <RunViewerErrorBoundary>
+                            <RunViewerPanel
+                              followRunId={followRunId}
+                              onClearFollowRun={handleCloseRun}
+                              activeTab={activeRightTab}
+                              onTabChange={setActiveRightTab}
+                            />
+                          </RunViewerErrorBoundary>
+                        );
+
+                      case 'manual-run':
+                        return (
+                          workflow &&
+                          projectId &&
+                          workflowId && (
+                            <ManualRunPanelErrorBoundary
+                              onClose={() => rightPanelRef.current?.collapse()}
+                            >
+                              <ManualRunPanel
+                                workflow={workflow}
+                                projectId={projectId}
+                                workflowId={workflowId}
+                                jobId={jobIdFromURL ?? null}
+                                triggerId={null}
+                                onClose={() =>
+                                  rightPanelRef.current?.collapse()
+                                }
+                                renderMode={RENDER_MODES.EMBEDDED}
+                                saveWorkflow={saveWorkflow}
+                                onRunSubmitted={handleRunSubmitted}
+                                onTabChange={setSelectedTab}
+                                onDataclipChange={handleDataclipChange}
+                                onCustomBodyChange={setCustomBody}
+                                selectedTab={selectedTab}
+                                selectedDataclip={selectedDataclipState}
+                                customBody={customBody}
+                              />
+                            </ManualRunPanelErrorBoundary>
+                          )
+                        );
+
+                      case 'history':
+                        return (
+                          projectId &&
+                          workflowId && (
+                            <HistoryBrowserPanelErrorBoundary
+                              onClose={handleHistoryClose}
+                            >
+                              <HistoryBrowserPanel
+                                onSelectRun={handleHistorySelectRun}
+                                onClose={handleHistoryClose}
+                                projectId={projectId}
+                                workflowId={workflowId}
+                              />
+                            </HistoryBrowserPanelErrorBoundary>
+                          )
+                        );
+
+                      case 'empty':
+                      default:
+                        return (
+                          <RightPanelEmptyState
+                            onBrowseHistory={handleBrowseHistory}
+                            onCreateRun={handleCreateRun}
+                          />
+                        );
+                    }
+                  })()}
                 </div>
               )}
             </div>
