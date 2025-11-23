@@ -332,7 +332,8 @@ defmodule Lightning.AiAssistant do
             workflow,
             sort_direction,
             offset,
-            limit
+            limit,
+            opts
           )
 
         %{__struct__: struct_type} = job
@@ -484,6 +485,18 @@ defmodule Lightning.AiAssistant do
     usage = Keyword.get(opts, :usage, %{})
     meta = Keyword.get(opts, :meta)
     code = Keyword.get(opts, :code)
+
+    require Logger
+
+    Logger.debug("""
+    [AiAssistant.save_message] Saving message
+    Session ID: #{session.id}
+    Session type: #{session.session_type}
+    Role: #{message_attrs[:role] || message_attrs["role"]}
+    Has code in opts: #{!is_nil(code)}
+    Code length: #{if code, do: byte_size(code), else: 0}
+    Code preview: #{if code, do: String.slice(code, 0, 100), else: "nil"}
+    """)
 
     message_attrs =
       message_attrs
@@ -702,7 +715,8 @@ defmodule Lightning.AiAssistant do
          workflow,
          sort_direction,
          offset,
-         limit
+         limit,
+         opts
        ) do
     base_query =
       from(s in ChatSession,
@@ -711,10 +725,18 @@ defmodule Lightning.AiAssistant do
       )
 
     query =
-      if workflow do
-        where(base_query, [s], s.workflow_id == ^workflow.id)
-      else
-        where(base_query, [s], is_nil(s.workflow_id))
+      cond do
+        # If workflow option was explicitly passed (even if nil), filter by it
+        Keyword.has_key?(opts, :workflow) ->
+          if workflow do
+            where(base_query, [s], s.workflow_id == ^workflow.id)
+          else
+            where(base_query, [s], is_nil(s.workflow_id))
+          end
+
+        # If workflow option was not passed, return all sessions for the project
+        true ->
+          base_query
       end
 
     total_count =

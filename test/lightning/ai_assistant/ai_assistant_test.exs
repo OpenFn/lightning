@@ -671,6 +671,48 @@ defmodule Lightning.AiAssistantTest do
       end)
     end
 
+    test "saves workflow code to message when provided" do
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        user = insert(:user)
+        project = insert(:project)
+        workflow = insert(:workflow, project: project)
+
+        session =
+          insert(:chat_session,
+            project: project,
+            workflow: workflow,
+            user: user,
+            session_type: "workflow_template"
+          )
+
+        workflow_yaml = """
+        workflow:
+          name: Test Workflow
+          jobs:
+            - id: job1
+              name: Fetch Data
+              adaptor: "@openfn/language-http@latest"
+              body: "fn(state => state)"
+        """
+
+        {:ok, updated_session} =
+          AiAssistant.save_message(
+            session,
+            %{
+              role: :user,
+              content: "Please improve this workflow",
+              user: user
+            },
+            code: workflow_yaml
+          )
+
+        # Get the saved message
+        saved_message = List.last(updated_session.messages)
+        assert saved_message.code == workflow_yaml
+        assert saved_message.role == :user
+      end)
+    end
+
     test "enqueues user message for processing when pending", %{user: user} do
       job = insert(:job, workflow: build(:workflow))
       session = insert(:chat_session, job: job, user: user)

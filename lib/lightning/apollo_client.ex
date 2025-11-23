@@ -125,6 +125,18 @@ defmodule Lightning.ApolloClient do
     history = Keyword.get(opts, :history, [])
     meta = Keyword.get(opts, :meta, %{})
 
+    require Logger
+
+    Logger.debug("""
+    [ApolloClient] Sending workflow_chat request
+    Content length: #{byte_size(content)}
+    Has code: #{!is_nil(code)}
+    Code length: #{if code, do: byte_size(code), else: 0}
+    Code preview: #{if code, do: String.slice(code, 0, 100), else: "nil"}
+    Has errors: #{!is_nil(errors)}
+    History length: #{length(history)}
+    """)
+
     payload =
       %{
         "api_key" => Lightning.Config.apollo(:ai_assistant_api_key),
