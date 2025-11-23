@@ -1,12 +1,14 @@
-import { useMemo, useState, useRef, useEffect } from 'react';
+import { useMemo, useState, useRef, useEffect, useCallback } from 'react';
 import { HotkeysProvider } from 'react-hotkeys-hook';
+import YAML from 'yaml';
 
 import { SocketProvider } from '../react/contexts/SocketProvider';
 import { useURLState } from '../react/lib/use-url-state';
 import type { WithActionProps } from '../react/lib/with-props';
+import { convertWorkflowStateToSpec } from '../yaml/util';
 
 import { AIAssistantPanel } from './components/AIAssistantPanel';
-import { ChatInterface } from './components/ChatInterface';
+import { MessageList } from './components/MessageList';
 import { BreadcrumbLink, BreadcrumbText } from './components/Breadcrumbs';
 import { Header } from './components/Header';
 import { LoadingBoundary } from './components/LoadingBoundary';
@@ -17,6 +19,13 @@ import { WorkflowEditor } from './components/WorkflowEditor';
 import { LiveViewActionsProvider } from './contexts/LiveViewActionsContext';
 import { SessionProvider } from './contexts/SessionProvider';
 import { StoreProvider } from './contexts/StoreProvider';
+import {
+  useAIIsLoading,
+  useAIMessages,
+  useAISessionId,
+  useAIStore,
+} from './hooks/useAIAssistant';
+import { useAIAssistantChannel } from './hooks/useAIAssistantChannel';
 import {
   useLatestSnapshotLockVersion,
   useProject,
@@ -55,8 +64,23 @@ export interface CollaborativeEditorDataProps {
  */
 function AIAssistantPanelWrapper() {
   const isAIAssistantPanelOpen = useIsAIAssistantPanelOpen();
-  const { closeAIAssistantPanel, openAIAssistantPanel } = useUICommands();
+  const { closeAIAssistantPanel } = useUICommands();
   const { updateSearchParams } = useURLState();
+
+  // AI Assistant integration
+  const aiStore = useAIStore();
+  const { sendMessage: sendMessageToChannel } = useAIAssistantChannel(aiStore);
+  const messages = useAIMessages();
+  const isLoading = useAIIsLoading();
+  const sessionId = useAISessionId();
+  const project = useProject();
+  const workflow = useWorkflowState(state => state.workflow);
+
+  // Get workflow data for YAML serialization
+  const jobs = useWorkflowState(state => state.jobs);
+  const triggers = useWorkflowState(state => state.triggers);
+  const edges = useWorkflowState(state => state.edges);
+  const positions = useWorkflowState(state => state.positions);
 
   const [width, setWidth] = useState(() => {
     const saved = localStorage.getItem('ai-assistant-panel-width');
@@ -113,6 +137,299 @@ function AIAssistantPanelWrapper() {
     startWidthRef.current = width;
   };
 
+  // Connect to AI when panel opens
+  useEffect(() => {
+    if (!isAIAssistantPanelOpen || !project) return;
+
+    const state = aiStore.getSnapshot();
+
+    // Skip if already connected or connecting
+    if (state.connectionState !== 'disconnected') return;
+
+    // Convert workflow to YAML format
+    let workflowYAML: string | undefined = undefined;
+    if (workflow && jobs.length > 0) {
+      try {
+        const workflowSpec = convertWorkflowStateToSpec(
+          {
+            id: workflow.id,
+            name: workflow.name,
+            jobs: jobs.map(job => ({
+              id: job.id,
+              name: job.name,
+              adaptor: job.adaptor,
+              body: job.body,
+            })),
+            triggers: triggers,
+            edges: edges.map(edge => ({
+              id: edge.id,
+              condition_type: edge.condition_type || 'always',
+              enabled: edge.enabled !== false,
+              target_job_id: edge.target_job_id,
+              ...(edge.source_job_id && {
+                source_job_id: edge.source_job_id,
+              }),
+              ...(edge.source_trigger_id && {
+                source_trigger_id: edge.source_trigger_id,
+              }),
+              ...(edge.condition_label && {
+                condition_label: edge.condition_label,
+              }),
+              ...(edge.condition_expression && {
+                condition_expression: edge.condition_expression,
+              }),
+            })),
+            positions: positions,
+          },
+          false // Don't include IDs in YAML
+        );
+        workflowYAML = YAML.stringify(workflowSpec);
+        console.log('[AI Assistant] Generated workflow YAML:', {
+          length: workflowYAML.length,
+          jobCount: jobs.length,
+          yaml: workflowYAML,
+        });
+      } catch (error) {
+        console.error('Failed to serialize workflow to YAML:', error);
+      }
+    } else {
+      console.log('[AI Assistant] No workflow to serialize:', {
+        hasWorkflow: !!workflow,
+        jobCount: jobs.length,
+      });
+    }
+
+    // Default to workflow_template mode
+    // TODO: Add job mode detection when job panel is implemented
+    const context: {
+      project_id: string;
+      workflow_id?: string;
+      code?: string;
+    } = {
+      project_id: project.id,
+      ...(workflow?.id && { workflow_id: workflow.id }),
+      ...(workflowYAML && { code: workflowYAML }),
+    };
+
+    // Try to load existing session from localStorage or use in-memory sessionId
+    const sessionId =
+      state.sessionId ||
+      (workflow?.id ? aiStore.loadStoredSessionForWorkflow(workflow.id) : null);
+
+    // Pass session ID to reconnect to same session (or undefined to create new)
+    aiStore.connect('workflow_template', context, sessionId || undefined);
+  }, [
+    isAIAssistantPanelOpen,
+    project,
+    workflow,
+    jobs,
+    triggers,
+    edges,
+    positions,
+    aiStore,
+  ]);
+
+  // Disconnect when panel closes
+  useEffect(() => {
+    if (!isAIAssistantPanelOpen) {
+      aiStore.disconnect();
+    }
+  }, [isAIAssistantPanelOpen, aiStore]);
+
+  // Handler for starting a new conversation
+  const handleNewConversation = useCallback(() => {
+    if (!project) return;
+
+    // Clear the current session
+    aiStore.clearSession();
+
+    // Disconnect and reconnect to create a new session
+    aiStore.disconnect();
+
+    // The useEffect above will reconnect automatically when panel reopens
+    // For now, just manually trigger reconnect after a brief delay
+    setTimeout(() => {
+      const state = aiStore.getSnapshot();
+      if (state.connectionState === 'disconnected') {
+        // Build fresh context
+        let workflowYAML: string | undefined = undefined;
+        if (workflow && jobs.length > 0) {
+          try {
+            const workflowSpec = convertWorkflowStateToSpec(
+              {
+                id: workflow.id,
+                name: workflow.name,
+                jobs: jobs.map(job => ({
+                  id: job.id,
+                  name: job.name,
+                  adaptor: job.adaptor,
+                  body: job.body,
+                })),
+                triggers: triggers,
+                edges: edges.map(edge => ({
+                  id: edge.id,
+                  condition_type: edge.condition_type || 'always',
+                  enabled: edge.enabled !== false,
+                  target_job_id: edge.target_job_id,
+                  ...(edge.source_job_id && {
+                    source_job_id: edge.source_job_id,
+                  }),
+                  ...(edge.source_trigger_id && {
+                    source_trigger_id: edge.source_trigger_id,
+                  }),
+                  ...(edge.condition_label && {
+                    condition_label: edge.condition_label,
+                  }),
+                  ...(edge.condition_expression && {
+                    condition_expression: edge.condition_expression,
+                  }),
+                })),
+                positions: positions,
+              },
+              false
+            );
+            workflowYAML = YAML.stringify(workflowSpec);
+          } catch (error) {
+            console.error('Failed to serialize workflow to YAML:', error);
+          }
+        }
+
+        const context = {
+          project_id: project.id,
+          ...(workflow?.id && { workflow_id: workflow.id }),
+          ...(workflowYAML && { code: workflowYAML }),
+        };
+
+        // Connect with NO session ID to force creation of new session
+        aiStore.connect('workflow_template', context);
+      }
+    }, 100);
+  }, [aiStore, workflow, jobs, triggers, edges, positions, project]);
+
+  // Handler for loading an existing session
+  const handleSessionSelect = useCallback(
+    (selectedSessionId: string) => {
+      if (!project) return;
+
+      // Load the selected session by triggering reconnection
+      aiStore.loadSession(selectedSessionId);
+
+      // Disconnect and reconnect with the selected session ID
+      aiStore.disconnect();
+
+      setTimeout(() => {
+        const state = aiStore.getSnapshot();
+        if (state.connectionState === 'disconnected') {
+          // Build context for reconnection
+          let workflowYAML: string | undefined = undefined;
+          if (workflow && jobs.length > 0) {
+            try {
+              const workflowSpec = convertWorkflowStateToSpec(
+                {
+                  id: workflow.id,
+                  name: workflow.name,
+                  jobs: jobs.map(job => ({
+                    id: job.id,
+                    name: job.name,
+                    adaptor: job.adaptor,
+                    body: job.body,
+                  })),
+                  triggers: triggers,
+                  edges: edges.map(edge => ({
+                    id: edge.id,
+                    condition_type: edge.condition_type || 'always',
+                    enabled: edge.enabled !== false,
+                    target_job_id: edge.target_job_id,
+                    ...(edge.source_job_id && {
+                      source_job_id: edge.source_job_id,
+                    }),
+                    ...(edge.source_trigger_id && {
+                      source_trigger_id: edge.source_trigger_id,
+                    }),
+                    ...(edge.condition_label && {
+                      condition_label: edge.condition_label,
+                    }),
+                    ...(edge.condition_expression && {
+                      condition_expression: edge.condition_expression,
+                    }),
+                  })),
+                  positions: positions,
+                },
+                false
+              );
+              workflowYAML = YAML.stringify(workflowSpec);
+            } catch (error) {
+              console.error('Failed to serialize workflow to YAML:', error);
+            }
+          }
+
+          const context = {
+            project_id: project.id,
+            ...(workflow?.id && { workflow_id: workflow.id }),
+            ...(workflowYAML && { code: workflowYAML }),
+          };
+
+          // Reconnect with the selected session ID
+          aiStore.connect('workflow_template', context, selectedSessionId);
+        }
+      }, 100);
+    },
+    [aiStore, project, workflow, jobs, triggers, edges, positions]
+  );
+
+  // Wrapper function to send messages with workflow code
+  const sendMessage = useCallback(
+    (content: string) => {
+      // Generate current workflow YAML
+      let workflowYAML: string | undefined = undefined;
+      if (workflow && jobs.length > 0) {
+        try {
+          const workflowSpec = convertWorkflowStateToSpec(
+            {
+              id: workflow.id,
+              name: workflow.name,
+              jobs: jobs.map(job => ({
+                id: job.id,
+                name: job.name,
+                adaptor: job.adaptor,
+                body: job.body,
+              })),
+              triggers: triggers,
+              edges: edges.map(edge => ({
+                id: edge.id,
+                condition_type: edge.condition_type || 'always',
+                enabled: edge.enabled !== false,
+                target_job_id: edge.target_job_id,
+                ...(edge.source_job_id && {
+                  source_job_id: edge.source_job_id,
+                }),
+                ...(edge.source_trigger_id && {
+                  source_trigger_id: edge.source_trigger_id,
+                }),
+                ...(edge.condition_label && {
+                  condition_label: edge.condition_label,
+                }),
+                ...(edge.condition_expression && {
+                  condition_expression: edge.condition_expression,
+                }),
+              })),
+              positions: positions,
+            },
+            false // Don't include IDs in YAML
+          );
+          workflowYAML = YAML.stringify(workflowSpec);
+        } catch (error) {
+          console.error('Failed to serialize workflow to YAML:', error);
+        }
+      }
+
+      // Send message with workflow code
+      const options = workflowYAML ? { code: workflowYAML } : undefined;
+      sendMessageToChannel(content, options);
+    },
+    [workflow, jobs, triggers, edges, positions, sendMessageToChannel]
+  );
+
   return (
     <div
       className="flex h-full flex-shrink-0"
@@ -133,16 +450,16 @@ function AIAssistantPanelWrapper() {
             <AIAssistantPanel
               isOpen={isAIAssistantPanelOpen}
               onClose={closeAIAssistantPanel}
+              onNewConversation={handleNewConversation}
+              onSessionSelect={handleSessionSelect}
+              onSendMessage={sendMessage}
+              sessionId={sessionId}
+              messageCount={messages.length}
+              isLoading={isLoading}
               isResizable={true}
+              store={aiStore}
             >
-              <ChatInterface
-                messages={[]}
-                onSendMessage={content => {
-                  console.log('Send message:', content);
-                  // TODO: Implement message sending
-                }}
-                isLoading={false}
-              />
+              <MessageList messages={messages} />
             </AIAssistantPanel>
           </div>
         </>
@@ -309,27 +626,29 @@ export const CollaborativeEditor: WithActionProps<
               <LiveViewActionsProvider actions={liveViewActions}>
                 <VersionDebugLogger />
                 <Toaster />
+                {/* Breadcrumb bar at top */}
+                <BreadcrumbContent
+                  workflowId={workflowId}
+                  workflowName={workflowName}
+                  {...(projectId !== undefined && {
+                    projectIdFallback: projectId,
+                  })}
+                  {...(projectName !== undefined && {
+                    projectNameFallback: projectName,
+                  })}
+                  {...(projectEnv !== undefined && {
+                    projectEnvFallback: projectEnv,
+                  })}
+                  {...(rootProjectId !== null && {
+                    rootProjectIdFallback: rootProjectId,
+                  })}
+                  {...(rootProjectName !== null && {
+                    rootProjectNameFallback: rootProjectName,
+                  })}
+                />
+                {/* Main content area below breadcrumbs */}
                 <div className="flex-1 min-h-0 overflow-hidden flex">
                   <div className="flex-1 h-full flex flex-col overflow-hidden">
-                    <BreadcrumbContent
-                      workflowId={workflowId}
-                      workflowName={workflowName}
-                      {...(projectId !== undefined && {
-                        projectIdFallback: projectId,
-                      })}
-                      {...(projectName !== undefined && {
-                        projectNameFallback: projectName,
-                      })}
-                      {...(projectEnv !== undefined && {
-                        projectEnvFallback: projectEnv,
-                      })}
-                      {...(rootProjectId !== null && {
-                        rootProjectIdFallback: rootProjectId,
-                      })}
-                      {...(rootProjectName !== null && {
-                        rootProjectNameFallback: rootProjectName,
-                      })}
-                    />
                     <LoadingBoundary>
                       <div className="flex-1 min-h-0 overflow-hidden">
                         <WorkflowEditor

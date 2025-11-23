@@ -46,6 +46,10 @@ import { useSession } from '../hooks/useSession';
 import type { AdaptorStoreInstance } from '../stores/createAdaptorStore';
 import { createAdaptorStore } from '../stores/createAdaptorStore';
 import {
+  createAIAssistantStore,
+  type AIAssistantStoreInstance,
+} from '../stores/createAIAssistantStore';
+import {
   type AwarenessStoreInstance,
   createAwarenessStore,
 } from '../stores/createAwarenessStore';
@@ -82,6 +86,7 @@ export interface StoreContextValue {
   historyStore: HistoryStoreInstance;
   uiStore: UIStoreInstance;
   editorPreferencesStore: EditorPreferencesStoreInstance;
+  aiAssistantStore: AIAssistantStoreInstance;
 }
 
 export const StoreContext = createContext<StoreContextValue | null>(null);
@@ -109,6 +114,7 @@ export const StoreProvider = ({ children }: StoreProviderProps) => {
     historyStore: createHistoryStore(),
     uiStore: createUIStore(),
     editorPreferencesStore: createEditorPreferencesStore(),
+    aiAssistantStore: createAIAssistantStore(),
   }));
 
   // Subscribe to sessionContextStore user changes
