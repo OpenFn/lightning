@@ -12,15 +12,15 @@
  * - Panel collapse/expand functionality
  */
 
+import { StoreProvider } from '#/collaborative-editor/contexts/StoreProvider';
+import { KeyboardProvider } from '#/collaborative-editor/keyboard';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { HotkeysProvider } from 'react-hotkeys-hook';
-import * as Y from 'yjs';
 import { beforeEach, describe, expect, test, vi } from 'vitest';
-import { FullScreenIDE } from '../../../../js/collaborative-editor/components/ide/FullScreenIDE';
+import * as Y from 'yjs';
 import * as dataclipApi from '../../../../js/collaborative-editor/api/dataclips';
+import { FullScreenIDE } from '../../../../js/collaborative-editor/components/ide/FullScreenIDE';
 import type { Workflow } from '../../../../js/collaborative-editor/types/workflow';
-import { StoreProvider } from '#/collaborative-editor/contexts/StoreProvider';
 
 // Mock dependencies
 vi.mock('../../../../js/collaborative-editor/api/dataclips');
@@ -460,16 +460,16 @@ vi.mock('react-resizable-panels', () => ({
   PanelResizeHandle: () => <div data-testid="resize-handle" />,
 }));
 
-// Helper function to render FullScreenIDE with HotkeysProvider
+// Helper function to render FullScreenIDE with providers
 function renderFullScreenIDE(
   props: React.ComponentProps<typeof FullScreenIDE>
 ) {
   return render(
-    <HotkeysProvider>
+    <KeyboardProvider>
       <StoreProvider>
         <FullScreenIDE {...props} />
       </StoreProvider>
-    </HotkeysProvider>
+    </KeyboardProvider>
   );
 }
 

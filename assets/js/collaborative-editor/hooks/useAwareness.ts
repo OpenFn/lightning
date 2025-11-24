@@ -4,32 +4,62 @@
  * Provides React hooks for consuming awareness data with maximum referential stability.
  * These hooks use useSyncExternalStore with memoized selectors to minimize re-renders.
  *
- * ## Core Hooks:
- * - `useAwareness()`: Access to awareness store methods
+ * ## Unified API (Recommended):
+ * - `useAwareness(options?)`: Flexible hook with options for all use cases
+ *
+ * ## Legacy Hooks (Deprecated - use useAwareness instead):
  * - `useAwarenessUsers()`: All connected users
- * - `useRemoteUsers()`: Remote users (excluding local user)
+ * - `useRemoteUsers()`: Remote users with deduplication
+ * - `useLiveRemoteUsers()`: Live remote users only
+ * - `useUserCursors()`: Cursor map for rendering
+ *
+ * ## Other Hooks:
  * - `useLocalUser()`: Current user data
- * - `useUserCursors()`: Cursor data for rendering
  * - `useRawAwareness()`: Raw awareness instance (for Monaco bindings)
+ * - `useAwarenessCommands()`: Command functions
  *
  * ## Usage Examples:
  *
  * ```typescript
- * // Get all users
- * const users = useAwarenessUsers();
+ * // Live remote users only (default) - for cursor rendering
+ * const users = useAwareness();
  *
- * // Get only remote users for cursor rendering
- * const remoteUsers = useRemoteUsers();
+ * // Include cached users (recently disconnected) - for avatar lists
+ * const users = useAwareness({ cached: true });
+ *
+ * // Return as Map keyed by clientId - for Monaco CSS generation
+ * const usersMap = useAwareness({ format: 'map' });
+ *
+ * // Combination: cached + map format
+ * const usersMap = useAwareness({
+ *   cached: true,
+ *   format: 'map'
+ * });
  *
  * // Get local user info
  * const localUser = useLocalUser();
  *
  * // Access store commands
- * const awareness = useAwareness();
- * awareness.updateLocalCursor({ x: 100, y: 200 });
+ * const { updateLocalCursor } = useAwarenessCommands();
+ * updateLocalCursor({ x: 100, y: 200 });
  *
  * // Raw awareness for Monaco (referentially stable)
  * const rawAwareness = useRawAwareness();
+ * ```
+ *
+ * ## Migration Guide:
+ * ```typescript
+ * // Old: useLiveRemoteUsers()
+ * // New: useAwareness()
+ * const users = useAwareness();
+ *
+ * // Old: useRemoteUsers()
+ * // New: useAwareness({ cached: true })
+ * const users = useAwareness({ cached: true });
+ *
+ * // Old: useUserCursors()
+ * // New: useAwareness({ format: 'map' })
+ * const usersMap = useAwareness({ format: 'map' });
  * ```
  */
 
@@ -156,25 +186,36 @@ export const useUserById = (userId: string | null): AwarenessUser | null => {
 };
 
 /**
- * Hook to get cursor data optimized for rendering
- * Returns a Map for efficient lookups by clientId
+ * Hook to get the map of user cursors
  */
 export const useUserCursors = (): Map<number, AwarenessUser> => {
   const awarenessStore = useAwarenessStore();
 
-  const selectCursors = awarenessStore.withSelector(state => {
-    const cursorsMap = new Map<number, AwarenessUser>();
-
-    state.users.forEach(user => {
-      if (user.cursor || user.selection) {
-        cursorsMap.set(user.clientId, user);
-      }
-    });
-
-    return cursorsMap;
-  });
+  const selectCursors = awarenessStore.withSelector(state => state.cursorsMap);
 
   return useSyncExternalStore(awarenessStore.subscribe, selectCursors);
+};
+
+/**
+ * Hook to get only live/active remote users (excluding cached/inactive users)
+ * Use this for cursor rendering where you only want to show active users
+ * Use useRemoteUsers() for avatar lists where you want to show cached users too
+ */
+export const useLiveRemoteUsers = (): AwarenessUser[] => {
+  const awarenessStore = useAwarenessStore();
+
+  const selectLiveRemoteUsers = awarenessStore.withSelector(state => {
+    if (!state.localUser) {
+      return Array.from(state.cursorsMap.values());
+    }
+
+    // Filter out local user from cursorsMap
+    return Array.from(state.cursorsMap.values()).filter(
+      user => user.user.id !== state.localUser?.id
+    );
+  });
+
+  return useSyncExternalStore(awarenessStore.subscribe, selectLiveRemoteUsers);
 };
 
 /**
@@ -222,3 +263,122 @@ export const useAwarenessCommands = () => {
     setConnected: awarenessStore.setConnected,
   };
 };
+
+/**
+ * Options for the unified useAwareness hook
+ */
+export interface UseAwarenessOptions {
+  /**
+   * Use cached users (live + recently disconnected within 60s TTL)
+   * Default: false (live only from cursorsMap)
+   */
+  cached?: boolean;
+  /**
+   * Return format
+   * Default: 'array'
+   */
+  format?: 'array' | 'map';
+}
+
+// TypeScript overloads for type-safe return types
+export function useAwareness(
+  options: { format: 'map' } & Omit<UseAwarenessOptions, 'format'>
+): Map<number, AwarenessUser>;
+export function useAwareness(options?: UseAwarenessOptions): AwarenessUser[];
+
+/**
+ * Unified hook for accessing awareness data with flexible options
+ *
+ * This hook consolidates the functionality of useRemoteUsers(),
+ * useLiveRemoteUsers(), and useUserCursors() into a single,
+ * flexible API.
+ *
+ * The hook always excludes the local user from results, as no
+ * component needs to render the current user's cursor or avatar.
+ *
+ * @example
+ * // Live remote users only (default) - for cursor rendering
+ * const users = useAwareness();
+ *
+ * @example
+ * // Include cached users (recently disconnected) - for avatar lists
+ * const users = useAwareness({ cached: true });
+ *
+ * @example
+ * // Return as Map keyed by clientId - for Monaco CSS generation
+ * const usersMap = useAwareness({ format: 'map' });
+ *
+ * @example
+ * // Combination: cached + map format
+ * const usersMap = useAwareness({
+ *   cached: true,
+ *   format: 'map'
+ * });
+ */
+export function useAwareness(
+  options?: UseAwarenessOptions
+): AwarenessUser[] | Map<number, AwarenessUser> {
+  const awarenessStore = useAwarenessStore();
+
+  // Normalize options with defaults
+  const opts = {
+    cached: options?.cached ?? false,
+    format: options?.format ?? 'array',
+  } as const;
+
+  const selectUsers = awarenessStore.withSelector(state => {
+    // 1. Choose data source
+    let users: AwarenessUser[];
+
+    if (opts.cached) {
+      // Use state.users (live + cached users within 60s TTL)
+      users = state.users;
+
+      // Apply deduplication (same logic as useRemoteUsers)
+      const userMap = new Map<string, AwarenessUser>();
+      const connectionCounts = new Map<string, number>();
+
+      users.forEach(user => {
+        const userId = user.user.id;
+        const count = connectionCounts.get(userId) || 0;
+        connectionCounts.set(userId, count + 1);
+
+        const existingUser = userMap.get(userId);
+        if (!existingUser) {
+          userMap.set(userId, user);
+        } else {
+          // Keep the user with the latest lastSeen timestamp
+          const existingLastSeen = existingUser.lastSeen || 0;
+          const currentLastSeen = user.lastSeen || 0;
+          if (currentLastSeen > existingLastSeen) {
+            userMap.set(userId, user);
+          }
+        }
+      });
+
+      // Add connection counts
+      users = Array.from(userMap.values()).map(user => ({
+        ...user,
+        connectionCount: connectionCounts.get(user.user.id) || 1,
+      }));
+    } else {
+      // Use cursorsMap (live users only, no deduplication needed)
+      users = Array.from(state.cursorsMap.values());
+    }
+
+    // 2. Always filter out local user
+    if (state.localUser) {
+      users = users.filter(u => u.user.id !== state.localUser?.id);
+    }
+
+    // 3. Return in requested format
+    if (opts.format === 'map') {
+      // Convert array to Map keyed by clientId
+      return new Map(users.map(user => [user.clientId, user]));
+    }
+
+    return users;
+  });
+
+  return useSyncExternalStore(awarenessStore.subscribe, selectUsers);
+}

@@ -117,9 +117,11 @@ export const createAwarenessStore = (): AwarenessStore => {
       users: [],
       localUser: null,
       isInitialized: false,
+      cursorsMap: new Map(),
       rawAwareness: null,
       isConnected: false,
       lastUpdated: null,
+      userCache: new Map(),
     } as AwarenessState,
     // No initial transformations needed
     draft => draft
@@ -128,11 +130,15 @@ export const createAwarenessStore = (): AwarenessStore => {
   const listeners = new Set<() => void>();
   let awarenessInstance: Awareness | null = null;
   let lastSeenTimer: NodeJS.Timeout | null = null;
+  let cacheCleanupTimer: NodeJS.Timeout | null = null;
+
+  // Cache configuration
+  const CACHE_TTL = 60 * 1000; // 1 minute in milliseconds
 
   // Redux DevTools integration
   const devtools = wrapStoreWithDevTools({
     name: 'AwarenessStore',
-    excludeKeys: ['rawAwareness'], // Exclude Y.js Awareness object
+    excludeKeys: ['rawAwareness', 'userCache'], // Exclude Y.js Awareness object and Map cache
     maxAge: 200, // Higher limit since awareness changes are frequent
   });
 
@@ -162,37 +168,37 @@ export const createAwarenessStore = (): AwarenessStore => {
   // =============================================================================
 
   /**
-   * Extract users from awareness states with validation and sorting
+   * Helper: Compare cursor positions for referential stability
+   * Handles both null and undefined (Y.js awareness uses null when clearing)
    */
-  const extractUsersFromAwareness = (awareness: Awareness): AwarenessUser[] => {
-    const users: AwarenessUser[] = [];
+  const arePositionsEqual = (
+    a: { x: number; y: number } | undefined | null,
+    b: { x: number; y: number } | undefined | null
+  ): boolean => {
+    // Use == null to catch both null and undefined
+    if (a == null && b == null) return true;
+    if (a == null || b == null) return false;
+    return a.x === b.x && a.y === b.y;
+  };
 
-    awareness.getStates().forEach((awarenessState, clientId) => {
-      // Validate user data structure
-      if (awarenessState['user']) {
-        try {
-          // Note: We're not using Zod validation here as it's runtime performance critical
-          // and we trust the awareness protocol more than external API data
-          const user: AwarenessUser = {
-            clientId,
-            user: awarenessState['user'] as AwarenessUser['user'],
-            cursor: awarenessState['cursor'] as AwarenessUser['cursor'],
-            selection: awarenessState[
-              'selection'
-            ] as AwarenessUser['selection'],
-            lastSeen: awarenessState['lastSeen'] as number | undefined,
-          };
-          users.push(user);
-        } catch (error) {
-          logger.warn('Invalid user data for client', clientId, error);
-        }
-      }
-    });
+  /**
+   * Helper: Compare selections (RelativePosition) for referential stability
+   * Handles both null and undefined (Y.js awareness uses null when clearing)
+   */
+  const areSelectionsEqual = (
+    a: AwarenessUser['selection'] | undefined | null,
+    b: AwarenessUser['selection'] | undefined | null
+  ): boolean => {
+    // Use == null to catch both null and undefined
+    if (a == null && b == null) return true;
+    if (a == null || b == null) return false;
 
-    // Sort users by name for consistent ordering (referential stability)
-    users.sort((a, b) => a.user.name.localeCompare(b.user.name));
-
-    return users;
+    // RelativePosition objects from Yjs need proper comparison
+    // Using JSON.stringify for deep equality check
+    return (
+      JSON.stringify(a.anchor) === JSON.stringify(b.anchor) &&
+      JSON.stringify(a.head) === JSON.stringify(b.head)
+    );
   };
 
   /**
@@ -204,10 +210,133 @@ export const createAwarenessStore = (): AwarenessStore => {
       return;
     }
 
-    const users = extractUsersFromAwareness(awarenessInstance);
+    // Capture awareness instance for closure
+    const awareness = awarenessInstance;
 
     state = produce(state, draft => {
-      draft.users = users;
+      const awarenessStates = awareness.getStates();
+      const now = Date.now();
+
+      // Track which clientIds we've seen in this update
+      const seenClientIds = new Set<number>();
+
+      // Update or add users using Immer's Map support
+      awarenessStates.forEach((awarenessState, clientId) => {
+        seenClientIds.add(clientId);
+
+        // Validate user data exists
+        if (!awarenessState['user']) {
+          return;
+        }
+
+        try {
+          // Get existing user from Map (if any)
+          const existingUser = draft.cursorsMap.get(clientId);
+
+          // Extract new data
+          const userData = awarenessState['user'] as AwarenessUser['user'];
+          const cursor = awarenessState['cursor'] as AwarenessUser['cursor'];
+          const selection = awarenessState[
+            'selection'
+          ] as AwarenessUser['selection'];
+          const lastSeen = awarenessState['lastSeen'] as number | undefined;
+
+          // Check if user data actually changed
+          if (existingUser) {
+            let hasChanged = false;
+
+            // Compare user fields
+            if (
+              existingUser.user.id !== userData.id ||
+              existingUser.user.name !== userData.name ||
+              existingUser.user.email !== userData.email ||
+              existingUser.user.color !== userData.color
+            ) {
+              hasChanged = true;
+            }
+
+            // Compare cursor
+            if (!arePositionsEqual(existingUser.cursor, cursor)) {
+              hasChanged = true;
+            }
+
+            // Compare selection
+            if (!areSelectionsEqual(existingUser.selection, selection)) {
+              hasChanged = true;
+            }
+
+            // Compare lastSeen
+            if (existingUser.lastSeen !== lastSeen) {
+              hasChanged = true;
+            }
+
+            // Only update if something changed
+            // If not changed, Immer preserves the existing reference
+            if (hasChanged) {
+              draft.cursorsMap.set(clientId, {
+                clientId,
+                user: userData,
+                cursor,
+                selection,
+                lastSeen,
+              });
+            }
+          } else {
+            // New user - add to map
+            draft.cursorsMap.set(clientId, {
+              clientId,
+              user: userData,
+              cursor,
+              selection,
+              lastSeen,
+            });
+          }
+
+          // Update cache for this active user
+          draft.userCache.set(userData.id, {
+            user: draft.cursorsMap.get(clientId)!,
+            cachedAt: now,
+          });
+        } catch (error) {
+          logger.warn('Invalid user data for client', clientId, error);
+        }
+      });
+
+      // Remove users that are no longer in awareness from cursorsMap
+      const entriesToDelete: number[] = [];
+      draft.cursorsMap.forEach((_, clientId) => {
+        if (!seenClientIds.has(clientId)) {
+          entriesToDelete.push(clientId);
+        }
+      });
+      entriesToDelete.forEach(clientId => {
+        draft.cursorsMap.delete(clientId);
+      });
+
+      // Rebuild users array from cursorsMap
+      const liveUsers = Array.from(draft.cursorsMap.values());
+
+      // Merge with cached users (inactive collaborators within cache TTL)
+      const liveUserIds = new Set(liveUsers.map(u => u.user.id));
+      const cachedUsers: AwarenessUser[] = [];
+
+      draft.userCache.forEach((cachedUser, userId) => {
+        if (!liveUserIds.has(userId)) {
+          // Only add if cache is still valid
+          if (now - cachedUser.cachedAt <= CACHE_TTL) {
+            cachedUsers.push(cachedUser.user);
+          } else {
+            // Clean up expired cache entry
+            draft.userCache.delete(userId);
+          }
+        }
+      });
+
+      // Combine live and cached users, then sort by name for consistent ordering
+      draft.users = [...liveUsers, ...cachedUsers].sort((a, b) =>
+        a.user.name.localeCompare(b.user.name)
+      );
+
       draft.lastUpdated = Date.now();
     });
     notify('awarenessChange');
@@ -216,6 +345,36 @@ export const createAwarenessStore = (): AwarenessStore => {
   // =============================================================================
   // PATTERN 2: Direct Immer → Notify + Awareness Update (Local Commands)
   // =============================================================================
+
+  /**
+   * Set up periodic cache cleanup
+   */
+  const setupCacheCleanup = () => {
+    if (cacheCleanupTimer) {
+      clearInterval(cacheCleanupTimer);
+    }
+
+    // Clean up expired cache entries every 30 seconds
+    cacheCleanupTimer = setInterval(() => {
+      const now = Date.now();
+      const newCache = new Map(state.userCache);
+      let hasChanges = false;
+
+      newCache.forEach((cachedUser, userId) => {
+        if (now - cachedUser.cachedAt > CACHE_TTL) {
+          newCache.delete(userId);
+          hasChanges = true;
+        }
+      });
+
+      if (hasChanges) {
+        state = produce(state, draft => {
+          draft.userCache = newCache;
+        });
+        notify('cacheCleanup');
+      }
+    }, 30000); // Check every 30 seconds
+  };
 
   /**
    * Initialize awareness instance and set up observers
@@ -234,6 +393,9 @@ export const createAwarenessStore = (): AwarenessStore => {
 
     // Set up awareness observer for Pattern 1 updates
     awareness.on('change', handleAwarenessChange);
+
+    // Set up cache cleanup
+    setupCacheCleanup();
 
     // Update local state
     state = produce(state, draft => {
@@ -267,15 +429,22 @@ export const createAwarenessStore = (): AwarenessStore => {
       lastSeenTimer = null;
     }
 
+    if (cacheCleanupTimer) {
+      clearInterval(cacheCleanupTimer);
+      cacheCleanupTimer = null;
+    }
+
     devtools.disconnect();
 
     state = produce(state, draft => {
       draft.users = [];
+      draft.cursorsMap.clear();
       draft.localUser = null;
       draft.rawAwareness = null;
       draft.isInitialized = false;
       draft.isConnected = false;
       draft.lastUpdated = Date.now();
+      draft.userCache = new Map();
     });
     notify('destroyAwareness');
   };
@@ -367,13 +536,14 @@ export const createAwarenessStore = (): AwarenessStore => {
 
   /**
    * Update last seen timestamp
+   * @param forceTimestamp - Optional timestamp to use instead of Date.now()
    */
-  const updateLastSeen = () => {
+  const updateLastSeen = (forceTimestamp?: number) => {
     if (!awarenessInstance) {
       return;
     }
 
-    const timestamp = Date.now();
+    const timestamp = forceTimestamp ?? Date.now();
     awarenessInstance.setLocalStateField('lastSeen', timestamp);
 
     // Note: We don't update local state here as awareness observer will handle it
@@ -383,18 +553,95 @@ export const createAwarenessStore = (): AwarenessStore => {
    * Set up automatic last seen updates
    */
   const setupLastSeenTimer = () => {
-    if (lastSeenTimer) {
-      clearInterval(lastSeenTimer);
+    let frozenTimestamp: number | null = null;
+
+    const startTimer = () => {
+      if (lastSeenTimer) {
+        clearInterval(lastSeenTimer);
+      }
+      lastSeenTimer = setInterval(() => {
+        // If page is hidden, use frozen timestamp, otherwise use current time
+        if (frozenTimestamp) frozenTimestamp++; // This is to make sure that state is updated and data gets transmitted
+        updateLastSeen(frozenTimestamp ?? undefined);
+      }, 10000); // Update every 10 seconds
+    };
+
+    const getVisibilityProps = () => {
+      if (typeof document.hidden !== 'undefined') {
+        return { hidden: 'hidden', visibilityChange: 'visibilitychange' };
+      }
+
+      if (
+        // @ts-expect-error webkitHidden not defined
+        typeof (document as unknown as Document).webkitHidden !== 'undefined'
+      ) {
+        return {
+          hidden: 'webkitHidden',
+          visibilityChange: 'webkitvisibilitychange',
+        };
+      }
+      // @ts-expect-error mozHidden not defined
+      if (typeof (document as unknown as Document).mozHidden !== 'undefined') {
+        return { hidden: 'mozHidden', visibilityChange: 'mozvisibilitychange' };
+      }
+      // @ts-expect-error msHidden not defined
+      if (typeof (document as unknown as Document).msHidden !== 'undefined') {
+        return { hidden: 'msHidden', visibilityChange: 'msvisibilitychange' };
+      }
+      return null;
+    };
+
+    const visibilityProps = getVisibilityProps();
+
+    const handleVisibilityChange = () => {
+      if (!visibilityProps) return;
+
+      const isHidden = (document as unknown as Document)[
+        visibilityProps.hidden as keyof Document
+      ];
+
+      if (isHidden) {
+        // Page is hidden, freeze the current timestamp
+        frozenTimestamp = Date.now();
+      } else {
+        // Page is visible, unfreeze and update immediately
+        frozenTimestamp = null;
+        updateLastSeen();
+      }
+    };
+
+    // Set up visibility change listener if supported
+    if (visibilityProps) {
+      document.addEventListener(
+        visibilityProps.visibilityChange,
+        handleVisibilityChange
+      );
+
+      // Check initial visibility state
+      const isHidden = (document as unknown as Document)[
+        visibilityProps.hidden as keyof Document
+      ];
+      if (isHidden) {
+        // Start with frozen timestamp if already hidden
+        frozenTimestamp = Date.now();
+      }
     }
 
-    lastSeenTimer = setInterval(() => {
-      updateLastSeen();
-    }, 10000); // Update every 10 seconds
+    // Always start the timer (whether visible or hidden)
+    startTimer();
 
+    // cleanup
     return () => {
       if (lastSeenTimer) {
         clearInterval(lastSeenTimer);
         lastSeenTimer = null;
+      }
+
+      if (visibilityProps) {
+        document.removeEventListener(
+          visibilityProps.visibilityChange,
+          handleVisibilityChange
+        );
       }
     };
   };

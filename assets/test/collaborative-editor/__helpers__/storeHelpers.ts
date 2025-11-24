@@ -12,8 +12,9 @@
  */
 
 import { createAdaptorStore } from '../../../js/collaborative-editor/stores/createAdaptorStore';
-import { createSessionStore } from '../../../js/collaborative-editor/stores/createSessionStore';
 import { createSessionContextStore } from '../../../js/collaborative-editor/stores/createSessionContextStore';
+import { createSessionStore } from '../../../js/collaborative-editor/stores/createSessionStore';
+import { createUIStore } from '../../../js/collaborative-editor/stores/createUIStore';
 
 import {
   createMockPhoenixChannel,
@@ -148,6 +149,16 @@ export interface SessionStoreTestSetup {
 }
 
 /**
+ * Result of setting up a UI store test
+ */
+export interface UIStoreTestSetup {
+  /** The UI store instance */
+  store: ReturnType<typeof createUIStore>;
+  /** Cleanup function to call after test */
+  cleanup: () => void;
+}
+
+/**
  * Sets up a session store test with initialized YDoc and provider
  *
  * This is more complex than other store setups because it involves
@@ -191,6 +202,43 @@ export function setupSessionStoreTest(
     mockSocket,
     cleanup: () => {
       store.destroy();
+    },
+  };
+}
+
+/**
+ * Sets up a UI store test with minimal configuration
+ *
+ * The UI store manages transient, local-only UI state like panel
+ * visibility and context. It requires no channel or Y.Doc connections,
+ * making it the simplest store to set up for testing.
+ *
+ * This helper provides a consistent starting point for UI store tests.
+ *
+ * @returns Test setup with store and cleanup function
+ *
+ * @example
+ * test("UI store panel management", () => {
+ *   const { store, cleanup } = setupUIStoreTest();
+ *
+ *   // Test panel opening
+ *   store.openRunPanel({ jobId: "job-1" });
+ *   const state = store.getSnapshot();
+ *   expect(state.runPanelOpen).toBe(true);
+ *   expect(state.runPanelContext?.jobId).toBe("job-1");
+ *
+ *   // Cleanup
+ *   cleanup();
+ * });
+ */
+export function setupUIStoreTest(): UIStoreTestSetup {
+  const store = createUIStore();
+
+  return {
+    store,
+    cleanup: () => {
+      // UI store has no external connections to clean up
+      // Just ensure no lingering listeners
     },
   };
 }

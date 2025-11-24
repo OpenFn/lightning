@@ -275,7 +275,7 @@ defmodule LightningWeb.Components.Common do
       )
 
     ~H"""
-    <div class="px-3 pb-3 text-xs flex gap-1 justify-center">
+    <div class="px-3 pb-2 text-xs flex gap-1 justify-center">
       <%= case @type do %>
         <% :release -> %>
           <.icon name="hero-check-badge" class={@icon_classes} title={@message} />
@@ -297,7 +297,13 @@ defmodule LightningWeb.Components.Common do
         ]}
         title={"OpenFn/Lightning #{@display}"}
       >
-        {@display}
+        <%= for {part, index} <- Enum.with_index(String.split(@display, " ")) do %>
+          <%= if index > 0 do %>
+            <br /><span class="text-[0.5rem] italic">{part}</span>
+          <% else %>
+            {part}
+          <% end %>
+        <% end %>
       </code>
     </div>
     """

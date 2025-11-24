@@ -1,7 +1,6 @@
 import { Menu, MenuButton, MenuItem, MenuItems } from '@headlessui/react';
 import { XMarkIcon } from '@heroicons/react/24/outline';
 import { useCallback, useMemo } from 'react';
-import { useHotkeys } from 'react-hotkeys-hook';
 
 import { useURLState } from '../../react/lib/use-url-state';
 import { buildClassicalEditorUrl } from '../../utils/editorUrlConversion';
@@ -20,6 +19,7 @@ import {
   useWorkflowSettingsErrors,
   useWorkflowState,
 } from '../hooks/useWorkflow';
+import { useKeyboardShortcut } from '../keyboard';
 
 import { ActiveCollaborators } from './ActiveCollaborators';
 import { AIButton } from './AIButton';
@@ -244,33 +244,22 @@ export function Header({
     return <ShortcutKeys keys={['mod', 'enter']} />; // Shortcut applies
   }, [canRun, runTooltipMessage, isRunPanelOpen]);
 
-  useHotkeys(
-    'ctrl+s,meta+s',
-    event => {
-      event.preventDefault();
-      if (canSave) {
-        void saveWorkflow();
-      }
+  useKeyboardShortcut(
+    'Control+s, Meta+s',
+    () => {
+      void saveWorkflow();
     },
-    {
-      enabled: true,
-      enableOnFormTags: true,
-    },
-    [saveWorkflow, canSave]
+    0,
+    { enabled: canSave }
   );
 
-  useHotkeys(
-    'ctrl+shift+s,meta+shift+s',
-    event => {
-      event.preventDefault();
-      if (canSave && repoConnection) {
-        openGitHubSyncModal();
-      }
+  useKeyboardShortcut(
+    'Control+Shift+s, Meta+Shift+s',
+    () => {
+      openGitHubSyncModal();
     },
-    {
-      enableOnFormTags: true,
-    },
-    [openGitHubSyncModal, canSave, repoConnection]
+    0,
+    { enabled: canSave && !!repoConnection }
   );
 
   return (

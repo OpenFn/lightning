@@ -5,9 +5,7 @@ import {
   DialogTitle,
 } from '@headlessui/react';
 import { useEffect, useId, useState } from 'react';
-import { useHotkeysContext } from 'react-hotkeys-hook';
 
-import { HOTKEY_SCOPES } from '../constants/hotkeys';
 import {
   useProject,
   useProjectRepoConnection,
@@ -27,7 +25,6 @@ import { GITHUB_BASE_URL } from '../utils/constants';
  * - Textarea for commit message input
  * - Save & Sync button that triggers workflow save and GitHub sync
  * - Cancel button to close without syncing
- * - Proper keyboard scope management
  *
  * @example
  * // Add to WorkflowEditor or Header component
@@ -48,24 +45,6 @@ export function GitHubSyncModal() {
 
   const [commitMessage, setCommitMessage] = useState('');
   const [isSaving, setIsSaving] = useState(false);
-
-  // Use HotkeysContext to control keyboard scope precedence
-  const { enableScope, disableScope } = useHotkeysContext();
-
-  useEffect(() => {
-    if (isOpen) {
-      enableScope(HOTKEY_SCOPES.MODAL);
-      disableScope(HOTKEY_SCOPES.PANEL);
-      disableScope(HOTKEY_SCOPES.RUN_PANEL);
-    } else {
-      disableScope(HOTKEY_SCOPES.MODAL);
-      enableScope(HOTKEY_SCOPES.PANEL);
-    }
-
-    return () => {
-      disableScope(HOTKEY_SCOPES.MODAL);
-    };
-  }, [isOpen, enableScope, disableScope]);
 
   // Set default commit message when modal opens
   useEffect(() => {

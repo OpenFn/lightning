@@ -16,10 +16,11 @@ import { act } from 'react';
 import { beforeEach, describe, expect, test, vi } from 'vitest';
 import type * as Y from 'yjs';
 
+import { KeyboardProvider } from '#/collaborative-editor/keyboard';
 import { JobForm } from '../../../../js/collaborative-editor/components/inspector/JobForm';
+import { LiveViewActionsProvider } from '../../../../js/collaborative-editor/contexts/LiveViewActionsContext';
 import type { StoreContextValue } from '../../../../js/collaborative-editor/contexts/StoreProvider';
 import { StoreContext } from '../../../../js/collaborative-editor/contexts/StoreProvider';
-import { LiveViewActionsProvider } from '../../../../js/collaborative-editor/contexts/LiveViewActionsContext';
 import type { AdaptorStoreInstance } from '../../../../js/collaborative-editor/stores/createAdaptorStore';
 import { createAdaptorStore } from '../../../../js/collaborative-editor/stores/createAdaptorStore';
 import type { AwarenessStoreInstance } from '../../../../js/collaborative-editor/stores/createAwarenessStore';
@@ -35,7 +36,6 @@ import {
   createMockPhoenixChannelProvider,
 } from '../../__helpers__/channelMocks';
 import { createWorkflowYDoc } from '../../__helpers__/workflowFactory';
-import { HotkeysProvider } from 'react-hotkeys-hook';
 
 // Mock useAdaptorIcons to avoid fetching icon manifest
 vi.mock('#/workflow-diagram/useAdaptorIcons', () => ({
@@ -81,11 +81,11 @@ function createWrapper(
 
   return ({ children }: { children: React.ReactNode }) => (
     <LiveViewActionsProvider actions={mockLiveViewActions}>
-      <HotkeysProvider>
+      <KeyboardProvider>
         <StoreContext.Provider value={mockStoreValue}>
           {children}
         </StoreContext.Provider>
-      </HotkeysProvider>
+      </KeyboardProvider>
     </LiveViewActionsProvider>
   );
 }

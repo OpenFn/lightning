@@ -5,7 +5,6 @@ import {
   XMarkIcon,
 } from '@heroicons/react/24/outline';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useHotkeys, useHotkeysContext } from 'react-hotkeys-hook';
 import {
   type ImperativePanelHandle,
   Panel,
@@ -13,6 +12,7 @@ import {
   PanelResizeHandle,
 } from 'react-resizable-panels';
 
+import { useKeyboardShortcut } from '#/collaborative-editor/keyboard';
 import { cn } from '#/utils/cn';
 
 import Docs from '../../../adaptor-docs/Docs';
@@ -20,7 +20,6 @@ import Metadata from '../../../metadata-explorer/Explorer';
 import { useURLState } from '../../../react/lib/use-url-state';
 import type { Dataclip } from '../../api/dataclips';
 import * as dataclipApi from '../../api/dataclips';
-import { HOTKEY_SCOPES } from '../../constants/hotkeys';
 import { RENDER_MODES } from '../../constants/panel';
 import { useLiveViewActions } from '../../contexts/LiveViewActionsContext';
 import { useProjectAdaptors } from '../../hooks/useAdaptors';
@@ -167,7 +166,8 @@ export function FullScreenIDE({
   const docsPanelRef = useRef<ImperativePanelHandle>(null);
 
   const [followRunId, setFollowRunId] = useState<string | null>(null);
-  const [selectedDataclipState, setSelectedDataclipState] = useState<any>(null);
+  const [selectedDataclipState, setSelectedDataclipState] =
+    useState<Dataclip | null>(null);
   const [selectedTab, setSelectedTab] = useState<
     'empty' | 'custom' | 'existing'
   >('empty');
@@ -175,7 +175,7 @@ export function FullScreenIDE({
   const [manuallyUnselectedDataclip, setManuallyUnselectedDataclip] =
     useState(false);
 
-  const handleDataclipChange = useCallback((dataclip: any) => {
+  const handleDataclipChange = useCallback((dataclip: Dataclip | null) => {
     setSelectedDataclipState(dataclip);
     setManuallyUnselectedDataclip(dataclip === null);
   }, []);
@@ -341,8 +341,7 @@ export function FullScreenIDE({
       jobMatchesRun,
     isRunning: isSubmitting || runIsProcessing,
     isRetryable,
-    scope: HOTKEY_SCOPES.IDE,
-    enableOnContentEditable: true,
+    priority: 50, // IDE priority
   });
 
   // Get data for Header
@@ -369,15 +368,6 @@ export function FullScreenIDE({
   const handleCloseIDE = useCallback(() => {
     onClose();
   }, [onClose]);
-
-  const { enableScope, disableScope } = useHotkeysContext();
-
-  useEffect(() => {
-    enableScope(HOTKEY_SCOPES.IDE);
-    return () => {
-      disableScope(HOTKEY_SCOPES.IDE);
-    };
-  }, [enableScope, disableScope]);
 
   useEffect(() => {
     if (jobIdFromURL) {
@@ -555,26 +545,23 @@ export function FullScreenIDE({
     return cleanup;
   }, [handleEvent, currentJob, updateJob, requestCredentials]);
 
-  useHotkeys(
-    'escape',
-    event => {
+  useKeyboardShortcut(
+    'Escape',
+    () => {
       const activeElement = document.activeElement;
       const isMonacoFocused = activeElement?.closest('.monaco-editor');
 
       if (isMonacoFocused) {
         (activeElement as HTMLElement).blur();
-        event.preventDefault();
       } else {
         onClose();
       }
     },
+    50, // IDE priority
     {
       enabled:
         !isConfigureModalOpen && !isAdaptorPickerOpen && !isCredentialModalOpen,
-      scopes: [HOTKEY_SCOPES.IDE],
-      enableOnFormTags: true,
-    },
-    [onClose, isConfigureModalOpen, isAdaptorPickerOpen, isCredentialModalOpen]
+    }
   );
 
   // Save docs panel collapsed state to localStorage
@@ -596,7 +583,7 @@ export function FullScreenIDE({
   if (isLoading) {
     return (
       <div
-        className="fixed inset-0 z-50 bg-white flex
+        className="absolute inset-0 z-50 bg-white flex
           items-center justify-center"
       >
         <div className="text-center">
@@ -678,7 +665,7 @@ export function FullScreenIDE({
   ) : null;
 
   return (
-    <div className="absolute inset-0 bg-white flex flex-col">
+    <div className="absolute inset-0 z-60 bg-white flex flex-col">
       <Header
         key="ide-header"
         projectId={projectId}

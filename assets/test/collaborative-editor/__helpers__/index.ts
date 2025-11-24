@@ -15,13 +15,7 @@
 // Channel mocks
 export {
   createMockPhoenixChannel,
-  createMockPushWithResponse,
-  createMockPushWithAllStatuses,
   createMockPhoenixChannelProvider,
-  configureMockChannelPush,
-  createMockChannelWithResponses,
-  createMockChannelWithError,
-  createMockChannelWithTimeout,
   type MockPhoenixChannel,
   type MockPhoenixChannelProvider,
   type MockPush,
@@ -32,11 +26,29 @@ export {
   setupAdaptorStoreTest,
   setupSessionContextStoreTest,
   setupSessionStoreTest,
+  setupUIStoreTest,
   setupMultipleStores,
   type AdaptorStoreTestSetup,
   type SessionContextStoreTestSetup,
   type SessionStoreTestSetup,
+  type UIStoreTestSetup,
 } from './storeHelpers';
+
+// Workflow store helpers
+export {
+  setupWorkflowStoreTest,
+  createEmptyWorkflowYDoc,
+  createMinimalWorkflowYDoc,
+  type WorkflowStoreTestSetup,
+} from './workflowStoreHelpers';
+
+// Workflow factory helpers
+export {
+  createWorkflowYDoc,
+  createLinearWorkflowYDoc,
+  createDiamondWorkflowYDoc,
+  type CreateWorkflowInput,
+} from './workflowFactory';
 
 // Session store helpers
 export {

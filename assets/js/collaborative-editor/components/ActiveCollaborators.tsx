@@ -1,5 +1,5 @@
 import { cn } from '../../utils/cn';
-import { useRemoteUsers } from '../hooks/useAwareness';
+import { useAwareness } from '../hooks/useAwareness';
 import { getAvatarInitials } from '../utils/avatar';
 
 import { Tooltip } from './Tooltip';
@@ -15,7 +15,7 @@ interface ActiveCollaboratorsProps {
 }
 
 export function ActiveCollaborators({ className }: ActiveCollaboratorsProps) {
-  const remoteUsers = useRemoteUsers();
+  const remoteUsers = useAwareness({ cached: true });
 
   if (remoteUsers.length === 0) {
     return null;
@@ -44,7 +44,7 @@ export function ActiveCollaborators({ className }: ActiveCollaboratorsProps) {
         return (
           <Tooltip key={user.clientId} content={tooltipContent} side="right">
             <div
-              className={`relative inline-flex items-center justify-center rounded-full border-2 ${user.lastSeen && lessthanmin(user.lastSeen, 2) ? 'border-green-500' : 'border-gray-500 '}`}
+              className={`relative inline-flex items-center justify-center rounded-full border-2 ${user.lastSeen && lessthanmin(user.lastSeen, 0.2) ? 'border-green-500' : 'border-gray-500 '}`}
             >
               <div
                 className="w-5 h-5 rounded-full flex items-center justify-center font-normal text-[9px] font-semibold text-white cursor-default"

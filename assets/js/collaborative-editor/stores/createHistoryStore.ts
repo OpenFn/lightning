@@ -90,11 +90,11 @@ import { channelRequest } from '../hooks/useChannel';
 import {
   type HistoryState,
   type HistoryStore,
-  HistoryListSchema,
-  type WorkOrder,
-  type RunSummary,
   type RunStepsData,
+  type RunSummary,
   type StepDetail,
+  type WorkOrder,
+  HistoryListSchema,
   RunDetailSchema,
   StepDetailSchema,
 } from '../types/history';
@@ -897,6 +897,27 @@ export const createHistoryStore = (): HistoryStore => {
     notify('_closeRunViewer');
   };
 
+  /**
+   * TEST-ONLY helper to directly set active run without channel requests
+   * This bypasses the normal _viewRun flow which requires Phoenix channels
+   * and is intended ONLY for use in test environments
+   *
+   * @param run - The run to set as active
+   */
+  const _setActiveRunForTesting = (run: RunDetail): void => {
+    state = produce(state, draft => {
+      draft.activeRunId = run.id;
+      draft.activeRun = run;
+      draft.activeRunLoading = false;
+      draft.activeRunError = null;
+      // Auto-select first step if none selected
+      if (!draft.selectedStepId && run.steps.length > 0) {
+        draft.selectedStepId = run.steps[0]?.id || null;
+      }
+    });
+    notify('_setActiveRunForTesting');
+  };
+
   // ===========================================================================
   // PUBLIC INTERFACE
   // ===========================================================================
@@ -931,6 +952,7 @@ export const createHistoryStore = (): HistoryStore => {
     _connectChannel,
     _viewRun,
     _closeRunViewer,
+    _setActiveRunForTesting,
   };
 };
 

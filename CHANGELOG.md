@@ -33,6 +33,8 @@ and this project adheres to
   [PR#4037](https://github.com/OpenFn/lightning/pull/4037)
 - Fix history panel unable to close after selecting/deselecting run
   [#4027](https://github.com/OpenFn/lightning/issues/4027)
+- Fix version chip (and sidebar scroll) when line breaks needed
+  [PR#4047](https://github.com/OpenFn/lightning/pull/4047)
 
 ## [2.15.0-pre] - 2025-11-20
 
@@ -43,6 +45,10 @@ and this project adheres to
 
 ### Changed
 
+- Always keep the Diagram mounted even when the IDE is present
+  [#3981](https://github.com/OpenFn/lightning/issues/3981)
+- Dropped react-hotkeys-hook for custom priority based key handler hook
+  [#3981](https://github.com/OpenFn/lightning/issues/3981)
 - Simplified IDE by only letting users see the "Create a New Manual Run Panel"
   when an existing Run isn't already loaded. Cleaned up the Run panel.
   [#4006](https://github.com/OpenFn/lightning/issues/4006)
@@ -59,6 +65,8 @@ and this project adheres to
 
 ### Fixed
 
+- Fix flickering of active collaborator icons between states(active, inactive,
+  unavailable) [#3931](https://github.com/OpenFn/lightning/issues/3931)
 - Restored footers to inspectors on the canvas while in read only mode
   [#4018](https://github.com/OpenFn/lightning/issues/4018)
 - Fix vertical scrolling in workflow panels

@@ -14,24 +14,18 @@
  * - Modal close behavior
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import {
-  render,
-  screen,
-  fireEvent,
-  waitFor,
-  within,
-} from '@testing-library/react';
+import { KeyboardProvider } from '#/collaborative-editor/keyboard';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { HotkeysProvider } from 'react-hotkeys-hook';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ConfigureAdaptorModal } from '../../../js/collaborative-editor/components/ConfigureAdaptorModal';
 import { LiveViewActionsProvider } from '../../../js/collaborative-editor/contexts/LiveViewActionsContext';
 import { StoreContext } from '../../../js/collaborative-editor/contexts/StoreProvider';
 import type { Adaptor } from '../../../js/collaborative-editor/types/adaptor';
 import type {
-  ProjectCredential,
   KeychainCredential,
+  ProjectCredential,
 } from '../../../js/collaborative-editor/types/credential';
 
 // Mock useAdaptorIcons to avoid fetching icon manifest
@@ -243,13 +237,13 @@ function renderWithProviders(
   mockLiveViewActions = createMockLiveViewActions()
 ) {
   return render(
-    <HotkeysProvider>
+    <KeyboardProvider>
       <StoreContext.Provider value={mockStoreContext as any}>
         <LiveViewActionsProvider actions={mockLiveViewActions}>
           {ui}
         </LiveViewActionsProvider>
       </StoreContext.Provider>
-    </HotkeysProvider>
+    </KeyboardProvider>
   );
 }
 
@@ -898,7 +892,7 @@ describe('ConfigureAdaptorModal', () => {
 
       // Close modal (simulating user clicking Change button)
       rerender(
-        <HotkeysProvider>
+        <KeyboardProvider>
           <StoreContext.Provider value={mockStoreContext as any}>
             <LiveViewActionsProvider actions={mockLiveViewActions}>
               <ConfigureAdaptorModal
@@ -908,12 +902,12 @@ describe('ConfigureAdaptorModal', () => {
               />
             </LiveViewActionsProvider>
           </StoreContext.Provider>
-        </HotkeysProvider>
+        </KeyboardProvider>
       );
 
       // Reopen with new adaptor (simulating selection from AdaptorSelectionModal)
       rerender(
-        <HotkeysProvider>
+        <KeyboardProvider>
           <StoreContext.Provider value={mockStoreContext as any}>
             <LiveViewActionsProvider actions={mockLiveViewActions}>
               <ConfigureAdaptorModal
@@ -925,7 +919,7 @@ describe('ConfigureAdaptorModal', () => {
               />
             </LiveViewActionsProvider>
           </StoreContext.Provider>
-        </HotkeysProvider>
+        </KeyboardProvider>
       );
 
       // Should show HTTP adaptor now
@@ -986,7 +980,7 @@ describe('ConfigureAdaptorModal', () => {
 
       // Close modal (simulating: Close → Adaptor Picker)
       rerender(
-        <HotkeysProvider>
+        <KeyboardProvider>
           <StoreContext.Provider value={mockStoreContext as any}>
             <LiveViewActionsProvider actions={mockLiveViewActions}>
               <ConfigureAdaptorModal
@@ -996,12 +990,12 @@ describe('ConfigureAdaptorModal', () => {
               />
             </LiveViewActionsProvider>
           </StoreContext.Provider>
-        </HotkeysProvider>
+        </KeyboardProvider>
       );
 
       // Reopen with HTTP (simulating: Adaptor Picker → Reopen)
       rerender(
-        <HotkeysProvider>
+        <KeyboardProvider>
           <StoreContext.Provider value={mockStoreContext as any}>
             <LiveViewActionsProvider actions={mockLiveViewActions}>
               <ConfigureAdaptorModal
@@ -1012,7 +1006,7 @@ describe('ConfigureAdaptorModal', () => {
               />
             </LiveViewActionsProvider>
           </StoreContext.Provider>
-        </HotkeysProvider>
+        </KeyboardProvider>
       );
 
       // Verify HTTP is shown
@@ -1059,24 +1053,24 @@ describe('ConfigureAdaptorModal', () => {
 
       // Close modal
       rerender(
-        <HotkeysProvider>
+        <KeyboardProvider>
           <StoreContext.Provider value={mockStoreContext as any}>
             <LiveViewActionsProvider actions={mockLiveViewActions}>
               <ConfigureAdaptorModal {...defaultProps} isOpen={false} />
             </LiveViewActionsProvider>
           </StoreContext.Provider>
-        </HotkeysProvider>
+        </KeyboardProvider>
       );
 
       // Reopen modal
       rerender(
-        <HotkeysProvider>
+        <KeyboardProvider>
           <StoreContext.Provider value={mockStoreContext as any}>
             <LiveViewActionsProvider actions={mockLiveViewActions}>
               <ConfigureAdaptorModal {...defaultProps} isOpen={true} />
             </LiveViewActionsProvider>
           </StoreContext.Provider>
-        </HotkeysProvider>
+        </KeyboardProvider>
       );
 
       // Should reset to initial values

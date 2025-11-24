@@ -6,15 +6,15 @@
  * persistence.
  */
 
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import * as storage from 'lib0/storage';
 import type React from 'react';
-import { describe, expect, test, beforeEach, afterEach, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import { CollaborativeWorkflowDiagram } from '../../../../js/collaborative-editor/components/diagram/CollaborativeWorkflowDiagram';
-import { StoreContext } from '../../../../js/collaborative-editor/contexts/StoreProvider';
 import type { StoreContextValue } from '../../../../js/collaborative-editor/contexts/StoreProvider';
+import { StoreContext } from '../../../../js/collaborative-editor/contexts/StoreProvider';
 import { createEditorPreferencesStore } from '../../../../js/collaborative-editor/stores/createEditorPreferencesStore';
 import type { EditorPreferencesStore } from '../../../../js/collaborative-editor/types/editorPreferences';
-import * as storage from 'lib0/storage';
 
 // Helper to create a withSelector mock that implements proper caching
 // Must be defined before mocks to avoid JSX parsing issues
@@ -132,7 +132,6 @@ function createWrapper(
       unsubscribeFromRunSteps: vi.fn(),
     } as any,
     uiStore: {} as any,
-    runStore: {} as any,
   };
 
   return ({ children }: { children: React.ReactNode }) => (

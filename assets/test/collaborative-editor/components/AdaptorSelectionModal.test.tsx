@@ -5,8 +5,8 @@
  * when creating new job nodes in the workflow canvas.
  */
 
+import { KeyboardProvider } from '#/collaborative-editor/keyboard';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { HotkeysProvider } from 'react-hotkeys-hook';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { AdaptorSelectionModal } from '../../../js/collaborative-editor/components/AdaptorSelectionModal';
 import { StoreContext } from '../../../js/collaborative-editor/contexts/StoreProvider';
@@ -102,11 +102,11 @@ function renderWithProviders(
   mockStoreContext = createMockStoreContext()
 ) {
   return render(
-    <HotkeysProvider>
+    <KeyboardProvider>
       <StoreContext.Provider value={mockStoreContext as any}>
         {ui}
       </StoreContext.Provider>
-    </HotkeysProvider>
+    </KeyboardProvider>
   );
 }
 
@@ -281,7 +281,7 @@ describe('AdaptorSelectionModal', () => {
       const mockContext = createMockStoreContext();
 
       const TestWrapper = ({ isOpen }: { isOpen: boolean }) => (
-        <HotkeysProvider>
+        <KeyboardProvider>
           <StoreContext.Provider value={mockContext as any}>
             <AdaptorSelectionModal
               isOpen={isOpen}
@@ -290,7 +290,7 @@ describe('AdaptorSelectionModal', () => {
               projectAdaptors={mockProjectAdaptors}
             />
           </StoreContext.Provider>
-        </HotkeysProvider>
+        </KeyboardProvider>
       );
 
       const { rerender } = render(<TestWrapper isOpen={true} />);

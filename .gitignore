@@ -91,3 +91,4 @@ assets/test-results
 
 .claude/settings.local.json
 test-results
+assets/coverage

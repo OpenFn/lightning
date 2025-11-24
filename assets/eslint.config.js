@@ -45,7 +45,7 @@ const javascriptFiles = [
 ].map(ext => `**/*.${ext}`);
 const nodeFiles = allExtensions.map(ext => `*.${ext}`);
 const browserFiles = allExtensions.flatMap(ext =>
-  ['js', 'vendor', 'dev-server'].map(dir => `${dir}/**/*.${ext}`)
+  ['js', 'vendor', 'dev-server', 'test'].map(dir => `${dir}/**/*.${ext}`)
 );
 const reactFiles = [
   ...jsxExtensions,

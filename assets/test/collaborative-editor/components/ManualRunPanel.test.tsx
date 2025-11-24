@@ -13,15 +13,15 @@
 
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { HotkeysProvider } from 'react-hotkeys-hook';
 import type React from 'react';
 import { act } from 'react';
 import { beforeEach, describe, expect, test, vi } from 'vitest';
 import * as dataclipApi from '../../../js/collaborative-editor/api/dataclips';
-import { notifications } from '../../../js/collaborative-editor/lib/notifications';
 import { ManualRunPanel } from '../../../js/collaborative-editor/components/ManualRunPanel';
-import { StoreContext } from '../../../js/collaborative-editor/contexts/StoreProvider';
 import type { StoreContextValue } from '../../../js/collaborative-editor/contexts/StoreProvider';
+import { StoreContext } from '../../../js/collaborative-editor/contexts/StoreProvider';
+import { KeyboardProvider } from '../../../js/collaborative-editor/keyboard';
+import { notifications } from '../../../js/collaborative-editor/lib/notifications';
 import { createAdaptorStore } from '../../../js/collaborative-editor/stores/createAdaptorStore';
 import { createAwarenessStore } from '../../../js/collaborative-editor/stores/createAwarenessStore';
 import { createCredentialStore } from '../../../js/collaborative-editor/stores/createCredentialStore';
@@ -158,14 +158,14 @@ function renderManualRunPanel(
 ) {
   return render(
     <StoreContext.Provider value={stores}>
-      <HotkeysProvider>
+      <KeyboardProvider>
         <ManualRunPanel
           {...props}
           saveWorkflow={
             props.saveWorkflow || vi.fn().mockResolvedValue(undefined)
           }
         />
-      </HotkeysProvider>
+      </KeyboardProvider>
     </StoreContext.Provider>
   );
 }

@@ -18,11 +18,11 @@ export interface AwarenessUser {
   cursor?: {
     x: number;
     y: number;
-  };
+  } | null;
   selection?: {
     anchor: RelativePosition;
     head: RelativePosition;
-  };
+  } | null;
   lastSeen?: number;
   connectionCount?: number;
 }
@@ -38,6 +38,14 @@ export interface LocalUserData {
 }
 
 /**
+ * Cached user entry for fallback when awareness is throttled
+ */
+export interface CachedUser {
+  user: AwarenessUser;
+  cachedAt: number;
+}
+
+/**
  * Awareness store state
  */
 export interface AwarenessState {
@@ -46,12 +54,18 @@ export interface AwarenessState {
   localUser: LocalUserData | null;
   isInitialized: boolean;
 
+  // Map of user cursors keyed by clientId
+  cursorsMap: Map<number, AwarenessUser>;
+
   // Raw awareness access (for components that need it)
   rawAwareness: Awareness | null;
 
   // Connection state
   isConnected: boolean;
   lastUpdated: number | null;
+
+  // Fallback cache for throttled awareness updates (1 minute TTL)
+  userCache: Map<string, CachedUser>;
 }
 
 /**

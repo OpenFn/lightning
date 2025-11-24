@@ -3,10 +3,8 @@
  * Shows details for jobs, triggers, and edges when selected
  */
 
-import { useHotkeys } from 'react-hotkeys-hook';
-
 import { useURLState } from '../../../react/lib/use-url-state';
-import { HOTKEY_SCOPES } from '../../constants/hotkeys';
+import { useKeyboardShortcut } from '../../keyboard';
 import type { Workflow } from '../../types/workflow';
 
 import { CodeViewPanel } from './CodeViewPanel';
@@ -29,14 +27,12 @@ interface InspectorProps {
   };
   onClose: () => void;
   onOpenRunPanel: (context: { jobId?: string; triggerId?: string }) => void;
-  respondToHotKey: boolean;
 }
 
 export function Inspector({
   currentNode,
   onClose,
   onOpenRunPanel,
-  respondToHotKey,
 }: InspectorProps) {
   const { searchParams, updateSearchParams } = useURLState();
 
@@ -63,17 +59,12 @@ export function Inspector({
     }
   };
 
-  useHotkeys(
-    'escape',
+  useKeyboardShortcut(
+    'Escape',
     () => {
       handleClose();
     },
-    {
-      enabled: respondToHotKey,
-      scopes: [HOTKEY_SCOPES.PANEL],
-      enableOnFormTags: true, // Allow Escape even in form fields
-    },
-    [handleClose]
+    10 // PANEL priority
   );
 
   // Don't render if no mode selected
