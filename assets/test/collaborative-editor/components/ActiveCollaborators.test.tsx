@@ -433,32 +433,6 @@ describe('ActiveCollaborators - Cache Behavior', () => {
     expect(screen.getByText('JD')).toBeInTheDocument();
   });
 
-  test('cached users appear with their last known state', () => {
-    const now = Date.now();
-    const fiveSecondsAgo = now - 5 * 1000;
-
-    // User active 5 seconds ago
-    mockRemoteUsers = [
-      createMockAwarenessUser({
-        user: {
-          id: 'user-1',
-          name: 'Jane Smith',
-          email: 'jane@example.com',
-          color: '#00ff00',
-        },
-        lastSeen: fiveSecondsAgo,
-      }),
-    ];
-
-    render(<ActiveCollaborators />);
-
-    // Should still show as active (green border) because < 12 seconds
-    expect(screen.getByText('JS')).toBeInTheDocument();
-    expect(screen.getByText('JS').closest('div')?.parentElement).toHaveClass(
-      'border-green-500'
-    );
-  });
-
   test('cached users eventually expire after threshold', () => {
     const now = Date.now();
     const thirtySecondsAgo = now - 30 * 1000; // Well over 12 seconds
