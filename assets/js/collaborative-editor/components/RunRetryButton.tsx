@@ -17,6 +17,7 @@ interface RunRetryButtonProps {
     processing?: string;
   };
   variant?: 'primary' | 'secondary';
+  size?: 'default' | 'mini';
   dropdownPosition?: 'up' | 'down';
   className?: string;
   showKeyboardShortcuts?: boolean;
@@ -47,6 +48,7 @@ export function RunRetryButton({
   onRetry,
   buttonText = {},
   variant = 'primary',
+  size = 'default',
   dropdownPosition = 'up',
   className,
   showKeyboardShortcuts = false,
@@ -57,6 +59,24 @@ export function RunRetryButton({
     retry = 'Run (retry)',
     processing = 'Processing',
   } = buttonText;
+
+  // Size-specific styles
+  const sizeStyles = {
+    default: {
+      button: 'text-sm px-3 py-2',
+      icon: 'w-4 h-4',
+      dropdown: 'px-1 py-2',
+      dropdownItem: 'text-sm px-3 py-2',
+    },
+    mini: {
+      button: 'text-xs px-2 py-1',
+      icon: 'w-3 h-3',
+      dropdown: 'px-0.5 py-1',
+      dropdownItem: 'text-xs px-2 py-1',
+    },
+  };
+
+  const sizeClasses = sizeStyles[size];
 
   // Compute tooltip content based on props and state
   const mainButtonTooltip =
@@ -127,14 +147,17 @@ export function RunRetryButton({
         type="button"
         disabled
         className={cn(
-          'rounded-md text-sm font-semibold shadow-xs px-3 py-2',
+          'rounded-md font-semibold shadow-xs',
+          sizeClasses.button,
           styles.submitting,
           'cursor-not-allowed',
           'flex items-center gap-1',
           className
         )}
       >
-        <span className="hero-arrow-path w-4 h-4 animate-spin"></span>
+        <span
+          className={cn('hero-arrow-path animate-spin', sizeClasses.icon)}
+        ></span>
         {processing}
       </button>
     );
@@ -148,7 +171,8 @@ export function RunRetryButton({
           onClick={handleMainClick}
           disabled={isDisabled}
           className={cn(
-            'rounded-md text-sm font-semibold shadow-xs px-3 py-2',
+            'rounded-md font-semibold shadow-xs',
+            sizeClasses.button,
             styles.base,
             styles.disabled,
             'disabled:cursor-not-allowed',
@@ -158,7 +182,7 @@ export function RunRetryButton({
             className
           )}
         >
-          <span className="hero-play-mini w-4 h-4"></span>
+          <span className={cn('hero-play-mini', sizeClasses.icon)}></span>
           {run}
         </button>
       </Tooltip>
@@ -176,7 +200,8 @@ export function RunRetryButton({
           onClick={handleMainClick}
           disabled={isDisabled}
           className={cn(
-            'rounded-md text-sm font-semibold shadow-xs px-3 py-2',
+            'rounded-md font-semibold shadow-xs',
+            sizeClasses.button,
             styles.base,
             styles.disabled,
             'disabled:cursor-not-allowed',
@@ -185,7 +210,7 @@ export function RunRetryButton({
             'relative inline-flex items-center rounded-r-none'
           )}
         >
-          <span className="hero-play-mini w-4 h-4 mr-1"></span>
+          <span className={cn('hero-play-mini mr-1', sizeClasses.icon)}></span>
           {retry}
         </button>
       </Tooltip>
@@ -196,7 +221,8 @@ export function RunRetryButton({
           onClick={() => setIsDropdownOpen(!isDropdownOpen)}
           disabled={isDisabled}
           className={cn(
-            'rounded-md text-sm font-semibold shadow-xs px-1 py-2',
+            'rounded-md font-semibold shadow-xs',
+            sizeClasses.dropdown,
             styles.base,
             styles.disabled,
             'disabled:cursor-not-allowed',
@@ -208,7 +234,7 @@ export function RunRetryButton({
           aria-haspopup="true"
         >
           <span className="sr-only">Open options</span>
-          <span className="hero-chevron-down w-4 h-4"></span>
+          <span className={cn('hero-chevron-down', sizeClasses.icon)}></span>
         </button>
 
         {isDropdownOpen && (
@@ -226,14 +252,17 @@ export function RunRetryButton({
                 onClick={handleDropdownClick}
                 disabled={isDisabled}
                 className={cn(
-                  'rounded-md text-sm font-semibold shadow-lg px-3 py-2',
+                  'rounded-md font-semibold shadow-lg',
+                  sizeClasses.dropdownItem,
                   'bg-white hover:bg-gray-50 text-gray-900',
                   'ring-1 ring-gray-300 ring-inset',
                   'disabled:opacity-50 disabled:cursor-not-allowed',
                   'flex items-center gap-1 whitespace-nowrap'
                 )}
               >
-                <span className="hero-play-solid w-4 h-4"></span>
+                <span
+                  className={cn('hero-play-solid', sizeClasses.icon)}
+                ></span>
                 Run (New Work Order)
               </button>
             </Tooltip>

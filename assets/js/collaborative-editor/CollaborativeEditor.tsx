@@ -89,9 +89,7 @@ function BreadcrumbContent({
   // Use shared version selection handler (destroys Y.Doc before switching)
   const handleVersionSelect = useVersionSelect();
 
-  // Build breadcrumbs for Canvas mode only (IDE has its own breadcrumbs in FullScreenIDE)
   const breadcrumbElements = useMemo(() => {
-    // Canvas mode: Projects > Project > Workflows > Workflow (with version dropdown)
     return [
       <BreadcrumbLink href="/projects" key="projects">
         Projects
@@ -103,7 +101,20 @@ function BreadcrumbContent({
         Workflows
       </BreadcrumbLink>,
       <div key="workflow" className="flex items-center gap-2">
-        <BreadcrumbText>{currentWorkflowName}</BreadcrumbText>
+        {isIDEOpen ? (
+          <BreadcrumbLink
+            onClick={() => {
+              const params = new URLSearchParams(window.location.search);
+              params.delete('panel');
+              params.delete('job');
+              window.history.pushState({}, '', `?${params.toString()}`);
+            }}
+          >
+            {currentWorkflowName}
+          </BreadcrumbLink>
+        ) : (
+          <BreadcrumbText>{currentWorkflowName}</BreadcrumbText>
+        )}
         <div className="flex items-center gap-1.5">
           <VersionDropdown
             currentVersion={workflowFromStore?.lock_version ?? null}
@@ -136,6 +147,7 @@ function BreadcrumbContent({
     workflowFromStore?.lock_version,
     latestSnapshotLockVersion,
     handleVersionSelect,
+    isIDEOpen,
   ]);
 
   return (

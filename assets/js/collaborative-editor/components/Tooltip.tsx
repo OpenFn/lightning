@@ -34,7 +34,7 @@ export function Tooltip({
           <RadixTooltip.Content
             side={side}
             align={align}
-            className="z-50 max-w-xs overflow-hidden rounded-md bg-primary-950
+            className="z-[9999] max-w-xs overflow-hidden rounded-md bg-primary-950
             px-3 py-1.5 text-xs text-primary-50 text-center shadow-md
             animate-in fade-in-0 zoom-in-95
             data-[state=closed]:animate-out
