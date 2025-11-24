@@ -5,7 +5,7 @@
 
 import { useSocket } from '../../react/contexts/SocketProvider';
 import { cn } from '../../utils/cn';
-import { useAwareness } from '../hooks/useAwareness';
+import { useRemoteUsers } from '../hooks/useAwareness';
 import { useSession } from '../hooks/useSession';
 
 export function CollaborationWidget() {
@@ -13,7 +13,7 @@ export function CollaborationWidget() {
   const { isConnected: yjsConnected, isSynced } = useSession();
 
   // Get remote users only (local user is always excluded)
-  const remoteUsers = useAwareness({ cached: true });
+  const remoteUsers = useRemoteUsers();
 
   const getStatusColor = () => {
     if (socketConnected && yjsConnected && isSynced) return 'bg-green-500';

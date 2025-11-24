@@ -93,11 +93,20 @@ export const useAwarenessUsers = (): AwarenessUser[] => {
   return useSyncExternalStore(awarenessStore.subscribe, selectUsers);
 };
 
+const awayUserCache = new Map<
+  string,
+  { user: AwarenessUser; expiresAt: number }
+>();
+
+const AWAY_CACHE_DURATION = 60000; // 60 seconds
+
 /**
  * Hook to get only remote users (excluding the local user)
  * Useful for cursor rendering where you don't want to show your own cursor
- * Deduplicates users by keeping the one with the latest lastSeen timestamp
- * and adds connectionCount to show how many connections they have
+ * Deduplicates users by keeping the one with the highest priority state
+ * (active > away > idle), then by latest lastSeen timestamp
+ * Caches away users for 60s to prevent flickering when presence is throttled
+ * Adds connectionCount to show how many connections they have
  */
 export const useRemoteUsers = (): AwarenessUser[] => {
   const awarenessStore = useAwarenessStore();
@@ -105,38 +114,63 @@ export const useRemoteUsers = (): AwarenessUser[] => {
   const selectRemoteUsers = awarenessStore.withSelector(state => {
     if (!state.localUser) return state.users;
 
-    // Filter out local user
+    const now = Date.now();
     const remoteUsers = state.users.filter(
       user => user.user.id !== state.localUser?.id
     );
 
-    // Group users by user ID and deduplicate
-    const userMap = new Map<string, AwarenessUser>();
+    const statePriority = { active: 3, away: 2, idle: 1 };
+    const userMap = new Map<string, AwarenessUser[]>();
     const connectionCounts = new Map<string, number>();
 
     remoteUsers.forEach(user => {
       const userId = user.user.id;
-      const count = connectionCounts.get(userId) || 0;
-      connectionCounts.set(userId, count + 1);
+      connectionCounts.set(userId, (connectionCounts.get(userId) || 0) + 1);
+      (userMap.get(userId) || userMap.set(userId, []).get(userId)!).push(user);
+    });
 
-      const existingUser = userMap.get(userId);
-      if (!existingUser) {
-        userMap.set(userId, user);
-      } else {
-        // Keep the user with the latest lastSeen timestamp
-        const existingLastSeen = existingUser.lastSeen || 0;
-        const currentLastSeen = user.lastSeen || 0;
-        if (currentLastSeen > existingLastSeen) {
-          userMap.set(userId, user);
-        }
+    const selectedUsers = Array.from(userMap.values()).map(users => {
+      const selected = users.sort((a, b) => {
+        const stateDiff =
+          (statePriority[b.lastState || 'idle'] || 0) -
+          (statePriority[a.lastState || 'idle'] || 0);
+        return stateDiff || (b.lastSeen || 0) - (a.lastSeen || 0);
+      })[0];
+
+      const userId = selected.user.id;
+
+      // clear cache if user becomes active
+      if (selected.lastState === 'active') {
+        awayUserCache.delete(userId);
+      }
+
+      // cache away users
+      if (selected.lastState === 'away') {
+        awayUserCache.set(userId, {
+          user: selected,
+          expiresAt: now + AWAY_CACHE_DURATION,
+        });
+      }
+
+      return {
+        ...selected,
+        connectionCount: connectionCounts.get(userId) || 1,
+      };
+    });
+
+    // Add cached away users that aren't in current results
+    awayUserCache.forEach((cached, userId) => {
+      if (now > cached.expiresAt) {
+        awayUserCache.delete(userId);
+      } else if (!userMap.has(userId)) {
+        selectedUsers.push({
+          ...cached.user,
+          connectionCount: 0,
+        });
       }
     });
 
-    // Add connection counts to users
-    return Array.from(userMap.values()).map(user => ({
-      ...user,
-      connectionCount: connectionCounts.get(user.user.id) || 1,
-    }));
+    return selectedUsers;
   });
 
   return useSyncExternalStore(awarenessStore.subscribe, selectRemoteUsers);

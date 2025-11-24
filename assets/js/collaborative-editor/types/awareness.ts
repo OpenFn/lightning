@@ -4,6 +4,8 @@ import { z } from 'zod';
 
 import type { WithSelector } from '../stores/common';
 
+export type ActivityState = 'active' | 'away' | 'idle';
+
 /**
  * User information stored in awareness
  */
@@ -24,6 +26,7 @@ export interface AwarenessUser {
     head: RelativePosition;
   } | null;
   lastSeen?: number;
+  lastState?: ActivityState;
   connectionCount?: number;
 }
 
@@ -115,6 +118,8 @@ export interface AwarenessQueries {
   getRawAwareness: () => Awareness | null;
 }
 
+export type SetStateHandler = (state: ActivityState) => void;
+
 /**
  * Complete awareness store interface following CQS pattern
  */
@@ -128,5 +133,6 @@ export interface AwarenessStore extends AwarenessCommands, AwarenessQueries {
   _internal: {
     handleAwarenessChange: () => void;
     setupLastSeenTimer: () => () => void;
+    initActivityStateChange: (setState: SetStateHandler) => void;
   };
 }
