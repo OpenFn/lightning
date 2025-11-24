@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import { cn } from '../../utils/cn';
 import { channelRequest } from '../hooks/useChannel';
 import { useSession } from '../hooks/useSession';
+import { notifications } from '../lib/notifications';
 
 interface Version {
   lock_version: number;
@@ -82,7 +83,6 @@ export function VersionDropdown({
     if (isOpen && channel) {
       // Only fetch if we don't already have versions OR if we're not already loading
       if (versions.length === 0 && !isLoading) {
-        console.log('Fetching versions from channel...');
         setIsLoading(true);
         setError(null);
 
@@ -93,9 +93,14 @@ export function VersionDropdown({
             console.log('Versions length:', response.versions.length);
             setVersions(response.versions || []);
             setIsLoading(false);
+            return;
           })
           .catch(err => {
             console.error('Failed to fetch versions:', err);
+            notifications.alert({
+              title: 'Failed to load versions',
+              description: 'Please try again',
+            });
             setError('Failed to load versions');
             setIsLoading(false);
           });
@@ -103,26 +108,30 @@ export function VersionDropdown({
     }
   }, [isOpen, versions.length, channel, isLoading]);
 
-  // Listen for workflow_saved broadcasts to update version list
+  // Clear version cache when latest version changes
+  // This makes the component reactive to state (SessionContextStore) instead of
+  // directly listening to channel events, providing better separation of concerns
+  //
+  // When latestVersion changes, ALL users (even those viewing snapshots) should
+  // clear their cache so the dropdown shows the updated version list with the
+  // new latest version when they open it.
+  const prevLatestVersionRef = useRef<number | null>(latestVersion);
+
   useEffect(() => {
-    if (!channel) return;
+    const prevLatestVersion = prevLatestVersionRef.current;
 
-    const handleWorkflowSaved = (payload: unknown) => {
-      console.log('workflow_saved broadcast received:', payload);
-      console.log('Current versions before clear:', versions);
-
-      // Clear the versions list to force refetch on next dropdown open
-      // This prevents duplicates and ensures fresh data
+    // Only clear if we had a previous value and it changed
+    // This prevents clearing on initial mount (when prevLatestVersion is null)
+    if (
+      prevLatestVersion !== null &&
+      latestVersion !== null &&
+      prevLatestVersion !== latestVersion
+    ) {
       setVersions([]);
-      console.log('Cleared version list after workflow save');
-    };
+    }
 
-    channel.on('workflow_saved', handleWorkflowSaved);
-
-    return () => {
-      channel.off('workflow_saved', handleWorkflowSaved);
-    };
-  }, [channel, versions]);
+    prevLatestVersionRef.current = latestVersion;
+  }, [latestVersion]);
 
   const handleVersionClick = (version: Version) => {
     if (version.is_latest) {
