@@ -1,6 +1,6 @@
 import { useEffect, useMemo } from 'react';
 
-import { useUserCursors, useRemoteUsers } from '../hooks/useAwareness';
+import { useAwareness } from '../hooks/useAwareness';
 
 function BaseStyles() {
   const baseStyles = `
@@ -46,16 +46,14 @@ function BaseStyles() {
  * Cursors component using awareness hooks for better performance and maintainability
  *
  * Key improvements:
- * - Uses useUserCursors() hook with memoized Map for efficient lookups
- * - Uses useRemoteUsers() for selection data (referentially stable)
+ * - Uses useAwareness() hook with Map format for efficient clientId lookups
+ * - Returns referentially stable data that only changes when users change
  * - Eliminates manual awareness state management and reduces re-renders
  */
 export function Cursors() {
   // Get cursor data as a Map for efficient clientId lookups
-  const cursorsMap = useUserCursors();
-
-  // Get remote users for selection data
-  const remoteUsers = useRemoteUsers();
+  // Note: Uses live users only (not cached), always excludes local user
+  const cursorsMap = useAwareness({ format: 'map' });
 
   // Dynamic user-specific cursor styles - now using Map entries
   const userStyles = useMemo(() => {
@@ -127,7 +125,7 @@ export function Cursors() {
     return () => {
       editorElement?.removeEventListener('scroll', checkCursorPositions);
     };
-  }, [remoteUsers.length]); // Only re-run when remote users change
+  }, [cursorsMap.size]); // Only re-run when live users change
 
   return (
     <>

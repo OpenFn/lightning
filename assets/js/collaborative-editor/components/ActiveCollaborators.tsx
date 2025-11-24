@@ -1,5 +1,5 @@
 import { cn } from '../../utils/cn';
-import { useRemoteUsers } from '../hooks/useAwareness';
+import { useAwareness } from '../hooks/useAwareness';
 import { getAvatarInitials } from '../utils/avatar';
 
 import { Tooltip } from './Tooltip';
@@ -15,7 +15,7 @@ interface ActiveCollaboratorsProps {
 }
 
 export function ActiveCollaborators({ className }: ActiveCollaboratorsProps) {
-  const remoteUsers = useRemoteUsers();
+  const remoteUsers = useAwareness({ cached: true });
 
   if (remoteUsers.length === 0) {
     return null;
