@@ -49,8 +49,8 @@ const { useAppForm: useBaseAppForm } = createFormHook({
  * // Job-specific form (with path)
  * const form = useAppForm({ defaultValues: { name: "" } }, `jobs.${jobId}`);
  */
-export function useAppForm<TFormData>(
-  formOptions: FormOptions<TFormData>,
+export function useAppForm(
+  formOptions: Parameters<typeof useBaseAppForm>[0],
   errorPath?: string
 ) {
   const form = useBaseAppForm(formOptions);

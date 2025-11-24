@@ -45,13 +45,14 @@ export function formatChannelErrorMessage(channelError: ChannelError): string {
     return channelError.errors.base[0];
   }
 
-  const firstField = Object.keys(channelError.errors)[0];
-  const firstError = channelError.errors[firstField]?.[0];
-
-  if (firstField && firstError) {
-    const formattedField = toTitleCase(firstField);
-    return `${formattedField}: ${firstError}`;
-  }
-
-  return 'An error occurred';
+  const fError = Object.values(channelError.errors)
+    .flat(2)
+    .find(v => Object.keys(v).length) as unknown as Record<string, string[]>;
+  if (!fError) return 'An error occurred';
+  const msg = Object.entries(fError)
+    .map(([key, val]) => {
+      return `${toTitleCase(key)}: ${val.join(', ')}`;
+    })
+    .join('\n');
+  return msg;
 }

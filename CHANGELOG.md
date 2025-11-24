@@ -35,6 +35,8 @@ and this project adheres to
   [#4027](https://github.com/OpenFn/lightning/issues/4027)
 - Fix version chip (and sidebar scroll) when line breaks needed
   [PR#4047](https://github.com/OpenFn/lightning/pull/4047)
+- Fix error validation for nodes/edges & show better error messages on save
+  [PR#4061](https://github.com/OpenFn/lightning/pull/4061)
 
 ## [2.15.0-pre] - 2025-11-20
 

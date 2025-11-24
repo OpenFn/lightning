@@ -10,8 +10,7 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import type React from 'react';
 import { act } from 'react';
-import { beforeEach, describe, expect, test, vi } from 'vitest';
-import type * as Y from 'yjs';
+import { beforeEach, describe, expect, test } from 'vitest';
 
 import { EdgeForm } from '../../../../js/collaborative-editor/components/inspector/EdgeForm';
 import type { StoreContextValue } from '../../../../js/collaborative-editor/contexts/StoreProvider';
@@ -26,6 +25,7 @@ import type { SessionContextStoreInstance } from '../../../../js/collaborative-e
 import { createSessionContextStore } from '../../../../js/collaborative-editor/stores/createSessionContextStore';
 import type { WorkflowStoreInstance } from '../../../../js/collaborative-editor/stores/createWorkflowStore';
 import { createWorkflowStore } from '../../../../js/collaborative-editor/stores/createWorkflowStore';
+import type { Session } from '../../../../js/collaborative-editor/types/session';
 import {
   createMockPhoenixChannel,
   createMockPhoenixChannelProvider,
@@ -35,7 +35,9 @@ import { createWorkflowYDoc } from '../../__helpers__/workflowFactory';
 /**
  * Helper to create and connect a workflow store with Y.Doc
  */
-function createConnectedWorkflowStore(ydoc: Y.Doc): WorkflowStoreInstance {
+function createConnectedWorkflowStore(
+  ydoc: Session.WorkflowDoc
+): WorkflowStoreInstance {
   const store = createWorkflowStore();
   const mockProvider = createMockPhoenixChannelProvider(
     createMockPhoenixChannel()
@@ -60,6 +62,9 @@ function createWrapper(
     sessionContextStore,
     adaptorStore,
     awarenessStore,
+    historyStore: {} as any,
+    uiStore: {} as any,
+    editorPreferencesStore: {} as any,
   };
 
   return ({ children }: { children: React.ReactNode }) => (
@@ -70,7 +75,7 @@ function createWrapper(
 }
 
 describe('EdgeForm - Basic Rendering', () => {
-  let ydoc: Y.Doc;
+  let ydoc: Session.WorkflowDoc;
   let workflowStore: WorkflowStoreInstance;
   let credentialStore: CredentialStoreInstance;
   let sessionContextStore: SessionContextStoreInstance;
@@ -114,7 +119,7 @@ describe('EdgeForm - Basic Rendering', () => {
           condition_label: 'Job A to Job B',
         },
       ],
-    });
+    }) as Session.WorkflowDoc;
 
     // Create connected stores
     workflowStore = createConnectedWorkflowStore(ydoc);
@@ -212,7 +217,7 @@ describe('EdgeForm - Basic Rendering', () => {
 });
 
 describe('EdgeForm - Form Value Reset', () => {
-  let ydoc: Y.Doc;
+  let ydoc: Session.WorkflowDoc;
   let workflowStore: WorkflowStoreInstance;
   let credentialStore: CredentialStoreInstance;
   let sessionContextStore: SessionContextStoreInstance;
@@ -250,7 +255,7 @@ describe('EdgeForm - Form Value Reset', () => {
           target: 'job-b',
           condition_type: 'on_job_success',
           condition_label: 'First Edge Label',
-          condition_expression: null,
+          condition_expression: undefined,
         },
         {
           id: 'edge-2',
@@ -261,7 +266,7 @@ describe('EdgeForm - Form Value Reset', () => {
           condition_expression: 'state.data.success === true',
         },
       ],
-    });
+    }) as Session.WorkflowDoc;
 
     // Create connected stores
     workflowStore = createConnectedWorkflowStore(ydoc);
@@ -374,7 +379,7 @@ describe('EdgeForm - Form Value Reset', () => {
 });
 
 describe('EdgeForm - Collaborative Validation', () => {
-  let ydoc: Y.Doc;
+  let ydoc: Session.WorkflowDoc;
   let workflowStore: WorkflowStoreInstance;
   let credentialStore: CredentialStoreInstance;
   let sessionContextStore: SessionContextStoreInstance;
@@ -408,7 +413,7 @@ describe('EdgeForm - Collaborative Validation', () => {
           condition_label: 'Test Edge',
         },
       ],
-    });
+    }) as Session.WorkflowDoc;
 
     // Create connected stores
     workflowStore = createConnectedWorkflowStore(ydoc);
@@ -550,7 +555,9 @@ describe('EdgeForm - Collaborative Validation', () => {
       ],
     });
 
-    const twoEdgesStore = createConnectedWorkflowStore(ydocWithTwoEdges);
+    const twoEdgesStore = createConnectedWorkflowStore(
+      ydocWithTwoEdges as Session.WorkflowDoc
+    );
 
     // Add errors only for edge-2
     const errorsMap = ydocWithTwoEdges.getMap('errors');
@@ -583,5 +590,275 @@ describe('EdgeForm - Collaborative Validation', () => {
     await waitFor(() => {
       expect(screen.queryByText(/Error on edge 2/)).not.toBeInTheDocument();
     });
+  });
+});
+
+describe('EdgeForm - Conditional Expression Validation', () => {
+  let ydoc: Session.WorkflowDoc;
+  let workflowStore: WorkflowStoreInstance;
+  let credentialStore: CredentialStoreInstance;
+  let sessionContextStore: SessionContextStoreInstance;
+  let adaptorStore: AdaptorStoreInstance;
+  let awarenessStore: AwarenessStoreInstance;
+  let mockChannel: any;
+
+  beforeEach(() => {
+    // Create Y.Doc with an edge that has js_expression condition type
+    ydoc = createWorkflowYDoc({
+      jobs: {
+        'job-a': {
+          id: 'job-a',
+          name: 'Job A',
+          adaptor: '@openfn/language-common@latest',
+          body: 'fn(state => state)',
+        },
+        'job-b': {
+          id: 'job-b',
+          name: 'Job B',
+          adaptor: '@openfn/language-common@latest',
+          body: 'fn(state => state)',
+        },
+      },
+      edges: [
+        {
+          id: 'edge-1',
+          source: 'job-a',
+          target: 'job-b',
+          condition_type: 'js_expression',
+          condition_expression: 'state.data.success === true',
+          condition_label: 'Conditional Edge',
+        },
+      ],
+    }) as Session.WorkflowDoc;
+
+    // Create connected stores
+    workflowStore = createConnectedWorkflowStore(ydoc);
+    credentialStore = createCredentialStore();
+    sessionContextStore = createSessionContextStore();
+    adaptorStore = createAdaptorStore();
+    awarenessStore = createAwarenessStore();
+
+    // Mock channel
+    mockChannel = createMockPhoenixChannel();
+    const mockProvider = createMockPhoenixChannelProvider(mockChannel);
+    credentialStore._connectChannel(mockProvider as any);
+    adaptorStore._connectChannel(mockProvider as any);
+
+    // Emit session context
+    act(() => {
+      (mockChannel as any)._test.emit('session_context', {
+        user: null,
+        project: null,
+        config: { require_email_verification: false },
+        permissions: { can_edit_workflow: true, can_run_workflow: true },
+        latest_snapshot_lock_version: 1,
+      });
+    });
+  });
+
+  test('shows expression field when condition_type is js_expression', async () => {
+    const edge = workflowStore.getSnapshot().edges[0];
+
+    render(<EdgeForm edge={edge} />, {
+      wrapper: createWrapper(
+        workflowStore,
+        credentialStore,
+        sessionContextStore,
+        adaptorStore,
+        awarenessStore
+      ),
+    });
+
+    // Expression field should be visible for js_expression type
+    await waitFor(() => {
+      expect(screen.getByLabelText('JS Expression')).toBeInTheDocument();
+      expect(
+        screen.getByDisplayValue('state.data.success === true')
+      ).toBeInTheDocument();
+    });
+  });
+
+  test('shows empty expression field for js_expression edges with empty value', async () => {
+    // Create edge with empty expression
+    const ydocEmptyExpr = createWorkflowYDoc({
+      jobs: {
+        'job-a': {
+          id: 'job-a',
+          name: 'Job A',
+          adaptor: '@openfn/language-common@latest',
+          body: 'fn(state => state)',
+        },
+        'job-b': {
+          id: 'job-b',
+          name: 'Job B',
+          adaptor: '@openfn/language-common@latest',
+          body: 'fn(state => state)',
+        },
+      },
+      edges: [
+        {
+          id: 'edge-1',
+          source: 'job-a',
+          target: 'job-b',
+          condition_type: 'js_expression',
+          condition_expression: '',
+          condition_label: 'Conditional Edge',
+        },
+      ],
+    });
+
+    const storeEmptyExpr = createConnectedWorkflowStore(
+      ydocEmptyExpr as Session.WorkflowDoc
+    );
+    const edge = storeEmptyExpr.getSnapshot().edges[0];
+
+    render(<EdgeForm edge={edge} />, {
+      wrapper: createWrapper(
+        storeEmptyExpr,
+        credentialStore,
+        sessionContextStore,
+        adaptorStore,
+        awarenessStore
+      ),
+    });
+
+    // Expression field should be visible but empty
+    await waitFor(() => {
+      expect(screen.getByLabelText('JS Expression')).toBeInTheDocument();
+      const textarea = screen.getByLabelText(
+        'JS Expression'
+      ) as HTMLTextAreaElement;
+      expect(textarea.value).toBe('');
+    });
+  });
+
+  test('renders expression field with valid content', async () => {
+    const edge = workflowStore.getSnapshot().edges[0];
+
+    render(<EdgeForm edge={edge} />, {
+      wrapper: createWrapper(
+        workflowStore,
+        credentialStore,
+        sessionContextStore,
+        adaptorStore,
+        awarenessStore
+      ),
+    });
+
+    await waitFor(() => {
+      expect(screen.getByLabelText('JS Expression')).toBeInTheDocument();
+      const textarea = screen.getByLabelText(
+        'JS Expression'
+      ) as HTMLTextAreaElement;
+      // Verify it contains the expected expression
+      expect(textarea.value).toBe('state.data.success === true');
+    });
+  });
+
+  test('does not require condition_expression when condition_type is not js_expression', async () => {
+    // Create edge with on_job_success condition type
+    const ydocNoExpr = createWorkflowYDoc({
+      jobs: {
+        'job-a': {
+          id: 'job-a',
+          name: 'Job A',
+          adaptor: '@openfn/language-common@latest',
+          body: 'fn(state => state)',
+        },
+        'job-b': {
+          id: 'job-b',
+          name: 'Job B',
+          adaptor: '@openfn/language-common@latest',
+          body: 'fn(state => state)',
+        },
+      },
+      edges: [
+        {
+          id: 'edge-1',
+          source: 'job-a',
+          target: 'job-b',
+          condition_type: 'on_job_success',
+          condition_expression: undefined,
+          condition_label: 'Success Edge',
+        },
+      ],
+    });
+
+    const storeNoExpr = createConnectedWorkflowStore(
+      ydocNoExpr as Session.WorkflowDoc
+    );
+    const edge = storeNoExpr.getSnapshot().edges[0];
+
+    render(<EdgeForm edge={edge} />, {
+      wrapper: createWrapper(
+        storeNoExpr,
+        credentialStore,
+        sessionContextStore,
+        adaptorStore,
+        awarenessStore
+      ),
+    });
+
+    await waitFor(() => {
+      expect(screen.getByDisplayValue('On Success')).toBeInTheDocument();
+    });
+
+    // Expression field should not be visible
+    expect(screen.queryByLabelText('JS Expression')).not.toBeInTheDocument();
+
+    // Should not show any validation errors
+    expect(screen.queryByText(/can't be blank/i)).not.toBeInTheDocument();
+  });
+
+  test('initializes with correct default value for condition_expression', async () => {
+    // Start with on_job_success (no expression required)
+    const ydocChanging = createWorkflowYDoc({
+      jobs: {
+        'job-a': {
+          id: 'job-a',
+          name: 'Job A',
+          adaptor: '@openfn/language-common@latest',
+          body: 'fn(state => state)',
+        },
+        'job-b': {
+          id: 'job-b',
+          name: 'Job B',
+          adaptor: '@openfn/language-common@latest',
+          body: 'fn(state => state)',
+        },
+      },
+      edges: [
+        {
+          id: 'edge-1',
+          source: 'job-a',
+          target: 'job-b',
+          condition_type: 'on_job_success',
+          condition_expression: undefined,
+          condition_label: 'Changing Edge',
+        },
+      ],
+    });
+
+    const storeChanging = createConnectedWorkflowStore(
+      ydocChanging as Session.WorkflowDoc
+    );
+    const edge = storeChanging.getSnapshot().edges[0];
+
+    render(<EdgeForm edge={edge} />, {
+      wrapper: createWrapper(
+        storeChanging,
+        credentialStore,
+        sessionContextStore,
+        adaptorStore,
+        awarenessStore
+      ),
+    });
+
+    await waitFor(() => {
+      expect(screen.getByDisplayValue('On Success')).toBeInTheDocument();
+    });
+
+    // Expression field should not be visible for non-js_expression types
+    expect(screen.queryByLabelText('JS Expression')).not.toBeInTheDocument();
   });
 });
