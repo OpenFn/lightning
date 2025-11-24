@@ -277,7 +277,7 @@ export const createWorkflowStore = () => {
     name: 'WorkflowStore',
     excludeKeys: ['ydoc', 'provider', 'undoManager'], // Exclude Y.Doc, provider, and undoManager (too large/circular)
     maxAge: 200, // Higher limit to prevent history loss from frequent updates
-    trace: false,
+    trace: true,
   });
 
   /**
@@ -428,9 +428,15 @@ export const createWorkflowStore = () => {
           sameOrigin: transaction.origin === provider,
         });
       }
+
       updateState(draft => {
         const yjsJobs = jobsArray.toArray() as Y.Map<unknown>[];
-        draft.jobs = yjsJobs.map(yjsJob => yjsJob.toJSON() as Workflow.Job);
+        draft.jobs = yjsJobs.map(yjsJob => {
+          // we preserve the error state of jobs
+          const yjob = yjsJob.toJSON();
+          const _j = draft.jobs.find(j => j.id === yjob.id);
+          return { ...yjob, errors: _j?.errors } as Workflow.Job;
+        });
       }, 'jobs/observerUpdate');
     };
 
@@ -446,9 +452,12 @@ export const createWorkflowStore = () => {
     const edgesObserver = () => {
       updateState(draft => {
         const yjsEdges = edgesArray.toArray() as Y.Map<unknown>[];
-        draft.edges = yjsEdges.map(
-          yjsEdge => yjsEdge.toJSON() as Workflow.Edge
-        );
+        draft.edges = yjsEdges.map(yjsEdge => {
+          // we preserve the error state of edges
+          const yEdge = yjsEdge.toJSON();
+          const _j = draft.edges.find(j => j.id === yEdge.id);
+          return { ...yEdge, errors: _j?.errors } as Workflow.Edge;
+        });
       }, 'edges/observerUpdate');
     };
 
@@ -990,7 +999,7 @@ export const createWorkflowStore = () => {
       logger.debug('setError: no changes detected, skipping transaction', {
         path,
       });
-      return;
+      return; // why this causes the issue.
     }
 
     // 3. Apply changes in transaction
