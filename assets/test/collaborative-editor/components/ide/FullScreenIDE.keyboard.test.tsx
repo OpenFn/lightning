@@ -331,7 +331,7 @@ vi.mock('../../../../js/collaborative-editor/hooks/useAwareness', () => ({
     })),
     subscribe: vi.fn(),
   }),
-  useRemoteUsers: () => [],
+  useAwareness: () => [],
 }));
 
 // Create stable function references that persist across test renders

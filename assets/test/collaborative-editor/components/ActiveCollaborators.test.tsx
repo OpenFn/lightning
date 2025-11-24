@@ -7,7 +7,7 @@
  * Test categories:
  * 1. Basic Rendering - Component visibility and avatar count
  * 4. Activity Indicator - Border colors based on lastSeen timestamp
- * 6. Store Integration - Integration with useRemoteUsers hook
+ * 6. Store Integration - Integration with useAwareness hook
  * 7. Edge Cases - Empty states and state transitions
  */
 
@@ -17,11 +17,11 @@ import { beforeEach, describe, expect, test, vi } from 'vitest';
 import { ActiveCollaborators } from '../../../js/collaborative-editor/components/ActiveCollaborators';
 import type { AwarenessUser } from '../../../js/collaborative-editor/types/awareness';
 
-// Mock the useRemoteUsers hook
+// Mock the useAwareness hook
 let mockRemoteUsers: AwarenessUser[] = [];
 
 vi.mock('../../../js/collaborative-editor/hooks/useAwareness', () => ({
-  useRemoteUsers: () => mockRemoteUsers,
+  useAwareness: () => mockRemoteUsers,
 }));
 
 /**
@@ -300,7 +300,7 @@ describe('ActiveCollaborators - Store Integration', () => {
     mockRemoteUsers = [];
   });
 
-  test('uses useRemoteUsers hook correctly (excludes local user)', () => {
+  test('uses useAwareness hook correctly (excludes local user)', () => {
     // The hook should already filter out local users, so we only set remote users
     mockRemoteUsers = [
       createMockAwarenessUser({

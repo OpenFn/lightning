@@ -12,7 +12,7 @@ import type { StoreContextValue } from '../../../../js/collaborative-editor/cont
 
 // Mock the awareness hook
 vi.mock('../../../../js/collaborative-editor/hooks/useAwareness', () => ({
-  useRemoteUsers: () => [],
+  useAwareness: () => [],
 }));
 
 const validYAML = `
