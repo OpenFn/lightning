@@ -15,6 +15,9 @@ vi.mock('#/collaborative-editor/hooks/useWorkflow', () => ({
  *
  * Tests the unified collaborative validation system that handles both
  * server-side (Ecto) and client-side (TanStack Form/Zod) validation errors.
+ *
+ * Note: Integration tests using real WorkflowStore are in
+ * useValidation.integration.test.tsx to avoid mock conflicts.
  */
 describe('useValidation', () => {
   let mockForm: any;
