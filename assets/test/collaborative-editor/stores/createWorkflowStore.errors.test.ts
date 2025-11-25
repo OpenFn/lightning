@@ -310,6 +310,16 @@ describe('WorkflowStore - Errors Observer (Phase 3: Denormalized)', () => {
         edgeMap.set('enabled', true);
         edgesArray.push([edgeMap]);
       });
+
+      const triggersArray = ydoc.getArray('triggers');
+      const triggerMap = new Y.Map();
+
+      ydoc.transact(() => {
+        triggerMap.set('id', 'trigger-789');
+        triggerMap.set('cron_expression', '0 * * * *');
+        triggerMap.set('enabled', true);
+        triggersArray.push([triggerMap]);
+      });
     });
 
     it('should preserve job errors when jobs array is updated', () => {
@@ -373,6 +383,40 @@ describe('WorkflowStore - Errors Observer (Phase 3: Denormalized)', () => {
       expect(edge?.condition_type).toBe('always');
       expect(edge?.errors).toEqual({
         condition_expression: ["can't be blank"],
+      });
+    });
+
+    it('should preserve trigger errors when triggers array is updated', () => {
+      const errorsMap = ydoc.getMap('errors');
+
+      // Set trigger errors
+      ydoc.transact(() => {
+        errorsMap.set('triggers', {
+          'trigger-789': { cron_expression: ['Invalid cron expression'] },
+        });
+      });
+
+      // Verify errors are present
+      let state = store.getSnapshot();
+      let trigger = state.triggers.find(t => t.id === 'trigger-789');
+      expect(trigger?.errors).toEqual({
+        cron_expression: ['Invalid cron expression'],
+      });
+
+      // Update the trigger cron_expression in Y.Doc (simulating collaborative edit)
+      const triggersArray = ydoc.getArray('triggers');
+      const triggerMap = triggersArray.get(0) as Y.Map<unknown>;
+
+      ydoc.transact(() => {
+        triggerMap.set('cron_expression', '0 0 * * *');
+      });
+
+      // Verify errors are still preserved after Y.Doc update
+      state = store.getSnapshot();
+      trigger = state.triggers.find(t => t.id === 'trigger-789');
+      expect(trigger?.cron_expression).toBe('0 0 * * *');
+      expect(trigger?.errors).toEqual({
+        cron_expression: ['Invalid cron expression'],
       });
     });
 
