@@ -21,6 +21,9 @@ and this project adheres to
 
 ### Fixed
 
+- Settings panel now opens correctly when Run Panel is visible; also improved
+  Run Panel to stay open and update context when switching between nodes
+  [#4008](https://github.com/OpenFn/lightning/issues/4008)
 - Version dropdown now updates correctly for all users after workflow save
   [#3985](https://github.com/OpenFn/lightning/issues/3985)
   [#4024](https://github.com/OpenFn/lightning/issues/4024)
