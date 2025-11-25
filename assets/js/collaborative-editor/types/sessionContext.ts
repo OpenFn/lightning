@@ -45,6 +45,14 @@ export const WebhookAuthMethodSchema = z.object({
 
 export type WebhookAuthMethod = z.infer<typeof WebhookAuthMethodSchema>;
 
+export const VersionSchema = z.object({
+  lock_version: z.number().int(),
+  inserted_at: z.string(),
+  is_latest: z.boolean(),
+});
+
+export type Version = z.infer<typeof VersionSchema>;
+
 export const SessionContextResponseSchema = z.object({
   user: UserContextSchema.nullable(),
   project: ProjectContextSchema.nullable(),
@@ -68,6 +76,9 @@ export interface SessionContextState {
   latestSnapshotLockVersion: number | null;
   projectRepoConnection: ProjectRepoConnection | null;
   webhookAuthMethods: WebhookAuthMethod[];
+  versions: Version[];
+  versionsLoading: boolean;
+  versionsError: string | null;
   isNewWorkflow: boolean;
   isLoading: boolean;
   error: string | null;
@@ -76,6 +87,8 @@ export interface SessionContextState {
 
 interface SessionContextCommands {
   requestSessionContext: () => Promise<void>;
+  requestVersions: () => Promise<void>;
+  clearVersions: () => void;
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
   clearError: () => void;

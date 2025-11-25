@@ -146,6 +146,10 @@ vi.mock('../../../../js/collaborative-editor/hooks/useSessionContext', () => ({
   useAppConfig: () => ({
     ai_enabled: false,
   }),
+  useVersions: () => [],
+  useVersionsLoading: () => false,
+  useVersionsError: () => null,
+  useRequestVersions: () => vi.fn(),
 }));
 
 // Mock workflow hooks

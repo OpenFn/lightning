@@ -17,6 +17,10 @@ vi.mock('../../../js/collaborative-editor/hooks/useHistory', () => ({
 
 vi.mock('../../../js/collaborative-editor/hooks/useSessionContext', () => ({
   useLatestSnapshotLockVersion: vi.fn(),
+  useVersions: vi.fn(() => []),
+  useVersionsLoading: vi.fn(() => false),
+  useVersionsError: vi.fn(() => null),
+  useRequestVersions: vi.fn(() => vi.fn()),
 }));
 
 vi.mock('../../../js/collaborative-editor/hooks/useWorkflow', () => ({
