@@ -298,13 +298,23 @@ export const useNodeSelection = () => {
       const foundTrigger = state.triggers.find(trigger => trigger.id === id);
       const foundEdge = state.edges.find(edge => edge.id === id);
 
+      // Clear panel parameter to show node inspector
+      const updates: Record<string, string | null> = {
+        job: null,
+        trigger: null,
+        edge: null,
+        panel: null,
+      };
+
       if (foundJob) {
-        updateSearchParams({ job: id, trigger: null, edge: null });
+        updates.job = id;
       } else if (foundTrigger) {
-        updateSearchParams({ trigger: id, job: null, edge: null });
+        updates.trigger = id;
       } else if (foundEdge) {
-        updateSearchParams({ edge: id, job: null, trigger: null });
+        updates.edge = id;
       }
+
+      updateSearchParams(updates);
     },
     [updateSearchParams, store]
   );
