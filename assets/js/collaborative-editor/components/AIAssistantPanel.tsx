@@ -169,7 +169,7 @@ export function AIAssistantPanel({
     >
       {/* Panel Header */}
       <div className="flex-none bg-white shadow-xs border-b border-gray-200">
-        <div className="mx-auto sm:px-6 lg:px-8 py-4 flex items-center justify-between text-sm">
+        <div className="mx-auto sm:px-6 lg:px-8 py-6 flex items-center justify-between h-20 text-sm">
           <div className="flex items-center gap-2 min-w-0 flex-1">
             {view === 'sessions' && (
               <button

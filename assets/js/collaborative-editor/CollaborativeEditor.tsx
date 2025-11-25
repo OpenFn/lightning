@@ -613,7 +613,7 @@ export const CollaborativeEditor: WithActionProps<
   return (
     <HotkeysProvider>
       <div
-        className="collaborative-editor h-full flex flex-col"
+        className="collaborative-editor h-full flex"
         data-testid="collaborative-editor"
       >
         <SocketProvider>
@@ -626,31 +626,32 @@ export const CollaborativeEditor: WithActionProps<
               <LiveViewActionsProvider actions={liveViewActions}>
                 <VersionDebugLogger />
                 <Toaster />
-                {/* Breadcrumb bar at top */}
-                <BreadcrumbContent
-                  workflowId={workflowId}
-                  workflowName={workflowName}
-                  {...(projectId !== undefined && {
-                    projectIdFallback: projectId,
-                  })}
-                  {...(projectName !== undefined && {
-                    projectNameFallback: projectName,
-                  })}
-                  {...(projectEnv !== undefined && {
-                    projectEnvFallback: projectEnv,
-                  })}
-                  {...(rootProjectId !== null && {
-                    rootProjectIdFallback: rootProjectId,
-                  })}
-                  {...(rootProjectName !== null && {
-                    rootProjectNameFallback: rootProjectName,
-                  })}
-                />
-                {/* Main content area below breadcrumbs */}
-                <div className="flex-1 min-h-0 overflow-hidden flex">
-                  <div className="flex-1 h-full flex flex-col overflow-hidden">
+                {/* Main content area - pushed by AI panel */}
+                <div className="flex-1 min-h-0 h-full overflow-hidden flex flex-col">
+                  {/* Breadcrumb bar at top */}
+                  <BreadcrumbContent
+                    workflowId={workflowId}
+                    workflowName={workflowName}
+                    {...(projectId !== undefined && {
+                      projectIdFallback: projectId,
+                    })}
+                    {...(projectName !== undefined && {
+                      projectNameFallback: projectName,
+                    })}
+                    {...(projectEnv !== undefined && {
+                      projectEnvFallback: projectEnv,
+                    })}
+                    {...(rootProjectId !== null && {
+                      rootProjectIdFallback: rootProjectId,
+                    })}
+                    {...(rootProjectName !== null && {
+                      rootProjectNameFallback: rootProjectName,
+                    })}
+                  />
+                  {/* Content area below breadcrumbs */}
+                  <div className="flex-1 min-h-0 h-full overflow-hidden">
                     <LoadingBoundary>
-                      <div className="flex-1 min-h-0 overflow-hidden">
+                      <div className="h-full w-full">
                         <WorkflowEditor
                           {...(rootProjectId !== null && {
                             parentProjectId: rootProjectId,
@@ -662,8 +663,9 @@ export const CollaborativeEditor: WithActionProps<
                       </div>
                     </LoadingBoundary>
                   </div>
-                  <AIAssistantPanelWrapper />
                 </div>
+                {/* AI Assistant Panel - at root level, pushes everything */}
+                <AIAssistantPanelWrapper />
               </LiveViewActionsProvider>
             </StoreProvider>
           </SessionProvider>
