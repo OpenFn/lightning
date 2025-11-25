@@ -196,6 +196,25 @@ export const createAIAssistantStore = (): AIAssistantStore => {
     return null;
   };
 
+  /**
+   * Helper to generate storage key based on current mode and context
+   * Returns the localStorage key to use for persisting the session ID
+   */
+  const getStorageKeyFromContext = (): string | null => {
+    if (state.sessionType === 'job_code' && state.jobCodeContext?.job_id) {
+      return `ai-job-${state.jobCodeContext.job_id}`;
+    }
+    if (state.sessionType === 'workflow_template') {
+      if (state.workflowTemplateContext?.workflow_id) {
+        return `ai-workflow-${state.workflowTemplateContext.workflow_id}`;
+      }
+      if (state.workflowTemplateContext?.project_id) {
+        return `ai-project-${state.workflowTemplateContext.project_id}`;
+      }
+    }
+    return null;
+  };
+
   // ===========================================================================
   // CORE STORE INTERFACE
   // ===========================================================================
@@ -439,10 +458,18 @@ export const createAIAssistantStore = (): AIAssistantStore => {
       draft.isSending = false;
     });
 
-    // Save session to localStorage for persistence across reloads
-    const workflowId = getWorkflowIdFromContext();
-    if (workflowId) {
-      saveSession(workflowId, session.id, session.session_type);
+    // Save session to localStorage with mode-specific key
+    const storageKey = getStorageKeyFromContext();
+    if (storageKey) {
+      try {
+        localStorage.setItem(storageKey, session.id);
+        logger.debug('Saved session to storage', {
+          storageKey,
+          sessionId: session.id,
+        });
+      } catch (error) {
+        logger.error('Failed to save session to localStorage', error);
+      }
     }
 
     notify('_setSession');

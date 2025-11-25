@@ -25,6 +25,7 @@ import {
   useAISessionId,
   useAIStore,
 } from './hooks/useAIAssistant';
+import { useAIMode } from './hooks/useAIMode';
 import { useAIAssistantChannel } from './hooks/useAIAssistantChannel';
 import {
   useLatestSnapshotLockVersion,
@@ -137,90 +138,86 @@ function AIAssistantPanelWrapper() {
     startWidthRef.current = width;
   };
 
-  // Connect to AI when panel opens
+  // Detect current AI mode (job_code or workflow_template)
+  const aiMode = useAIMode();
+
+  // Connect to AI when panel opens or mode changes
   useEffect(() => {
-    if (!isAIAssistantPanelOpen || !project) return;
+    if (!isAIAssistantPanelOpen || !aiMode) return;
 
     const state = aiStore.getSnapshot();
+    const { mode, context, storageKey } = aiMode;
 
-    // Skip if already connected or connecting
-    if (state.connectionState !== 'disconnected') return;
+    // Check if we need to switch modes
+    const needsModeSwitch = state.sessionType !== mode;
 
-    // Convert workflow to YAML format
-    let workflowYAML: string | undefined = undefined;
-    if (workflow && jobs.length > 0) {
-      try {
-        const workflowSpec = convertWorkflowStateToSpec(
-          {
-            id: workflow.id,
-            name: workflow.name,
-            jobs: jobs.map(job => ({
-              id: job.id,
-              name: job.name,
-              adaptor: job.adaptor,
-              body: job.body,
-            })),
-            triggers: triggers,
-            edges: edges.map(edge => ({
-              id: edge.id,
-              condition_type: edge.condition_type || 'always',
-              enabled: edge.enabled !== false,
-              target_job_id: edge.target_job_id,
-              ...(edge.source_job_id && {
-                source_job_id: edge.source_job_id,
-              }),
-              ...(edge.source_trigger_id && {
-                source_trigger_id: edge.source_trigger_id,
-              }),
-              ...(edge.condition_label && {
-                condition_label: edge.condition_label,
-              }),
-              ...(edge.condition_expression && {
-                condition_expression: edge.condition_expression,
-              }),
-            })),
-            positions: positions,
-          },
-          false // Don't include IDs in YAML
-        );
-        workflowYAML = YAML.stringify(workflowSpec);
-        console.log('[AI Assistant] Generated workflow YAML:', {
-          length: workflowYAML.length,
-          jobCount: jobs.length,
-          yaml: workflowYAML,
+    if (needsModeSwitch) {
+      // Disconnect from current session
+      if (state.connectionState !== 'disconnected') {
+        console.log('[AI Assistant] Switching mode:', {
+          from: state.sessionType,
+          to: mode,
         });
-      } catch (error) {
-        console.error('Failed to serialize workflow to YAML:', error);
+        aiStore.disconnect();
       }
-    } else {
-      console.log('[AI Assistant] No workflow to serialize:', {
-        hasWorkflow: !!workflow,
-        jobCount: jobs.length,
-      });
+
+      // Load stored session for new mode
+      const storedSessionId = localStorage.getItem(storageKey);
+
+      // Add workflow YAML for workflow_template mode
+      let finalContext = context;
+      if (mode === 'workflow_template' && workflow && jobs.length > 0) {
+        try {
+          const workflowSpec = convertWorkflowStateToSpec(
+            {
+              id: workflow.id,
+              name: workflow.name,
+              jobs: jobs.map(job => ({
+                id: job.id,
+                name: job.name,
+                adaptor: job.adaptor,
+                body: job.body,
+              })),
+              triggers: triggers,
+              edges: edges.map(edge => ({
+                id: edge.id,
+                condition_type: edge.condition_type || 'always',
+                enabled: edge.enabled !== false,
+                target_job_id: edge.target_job_id,
+                ...(edge.source_job_id && {
+                  source_job_id: edge.source_job_id,
+                }),
+                ...(edge.source_trigger_id && {
+                  source_trigger_id: edge.source_trigger_id,
+                }),
+                ...(edge.condition_label && {
+                  condition_label: edge.condition_label,
+                }),
+                ...(edge.condition_expression && {
+                  condition_expression: edge.condition_expression,
+                }),
+              })),
+              positions: positions,
+            },
+            false
+          );
+          const workflowYAML = YAML.stringify(workflowSpec);
+          finalContext = { ...context, code: workflowYAML };
+        } catch (error) {
+          console.error('Failed to serialize workflow to YAML:', error);
+        }
+      }
+
+      // Connect with new mode and context
+      aiStore.connect(mode, finalContext, storedSessionId || undefined);
+    } else if (state.connectionState === 'disconnected') {
+      // Not switching modes, but disconnected - reconnect with same mode
+      const storedSessionId = localStorage.getItem(storageKey);
+      aiStore.connect(mode, context, storedSessionId || undefined);
     }
-
-    // Default to workflow_template mode
-    // TODO: Add job mode detection when job panel is implemented
-    const context: {
-      project_id: string;
-      workflow_id?: string;
-      code?: string;
-    } = {
-      project_id: project.id,
-      ...(workflow?.id && { workflow_id: workflow.id }),
-      ...(workflowYAML && { code: workflowYAML }),
-    };
-
-    // Try to load existing session from localStorage or use in-memory sessionId
-    const sessionId =
-      state.sessionId ||
-      (workflow?.id ? aiStore.loadStoredSessionForWorkflow(workflow.id) : null);
-
-    // Pass session ID to reconnect to same session (or undefined to create new)
-    aiStore.connect('workflow_template', context, sessionId || undefined);
   }, [
     isAIAssistantPanelOpen,
-    project,
+    aiMode,
     workflow,
     jobs,
     triggers,
