@@ -313,6 +313,11 @@ export function WorkflowEditor({
           <div className="absolute inset-y-0 right-0 flex pointer-events-none z-20">
             <ManualRunPanelErrorBoundary onClose={closeRunPanel}>
               <ManualRunPanel
+                key={
+                  runPanelContext.jobId ||
+                  runPanelContext.triggerId ||
+                  runPanelContext.edgeId
+                }
                 workflow={workflow}
                 projectId={projectId}
                 workflowId={workflowId}
