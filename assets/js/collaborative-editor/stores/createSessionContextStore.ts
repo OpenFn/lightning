@@ -90,6 +90,7 @@ import {
   type SessionContextState,
   type SessionContextStore,
   SessionContextResponseSchema,
+  VersionSchema,
   WebhookAuthMethodSchema,
 } from '../types/sessionContext';
 
@@ -114,6 +115,9 @@ export const createSessionContextStore = (
       latestSnapshotLockVersion: null,
       projectRepoConnection: null,
       webhookAuthMethods: [],
+      versions: [],
+      versionsLoading: false,
+      versionsError: null,
       isNewWorkflow,
       isLoading: false,
       error: null,
@@ -265,9 +269,17 @@ export const createSessionContextStore = (
   /**
    * Update latest snapshot lock version
    * Called when workflow is saved and backend returns new lock version
+   * Clears versions cache when lock version changes (not on initial set)
    */
   const setLatestSnapshotLockVersion = (lockVersion: number) => {
     state = produce(state, draft => {
+      const previousLockVersion = draft.latestSnapshotLockVersion;
+
+      // Clear versions if lock version changed (not on initial set)
+      if (previousLockVersion !== null && previousLockVersion !== lockVersion) {
+        draft.versions = [];
+      }
+
       draft.latestSnapshotLockVersion = lockVersion;
       draft.lastUpdated = Date.now();
     });
@@ -283,6 +295,75 @@ export const createSessionContextStore = (
       draft.isNewWorkflow = false;
     });
     notify('clearIsNewWorkflow');
+  };
+
+  /**
+   * Request workflow versions from server via channel
+   */
+  const requestVersions = async (): Promise<void> => {
+    // Early return if already loading or no channel
+    if (state.versionsLoading || !_channelProvider?.channel) {
+      if (!_channelProvider?.channel) {
+        logger.warn('Cannot request versions - no channel connected');
+      }
+      return;
+    }
+
+    state = produce(state, draft => {
+      draft.versionsLoading = true;
+      draft.versionsError = null;
+    });
+    notify('requestVersions:start');
+
+    try {
+      logger.debug('Requesting workflow versions');
+      const response = await channelRequest<{ versions: unknown[] }>(
+        _channelProvider.channel,
+        'request_versions',
+        {}
+      );
+
+      // Validate versions array with Zod
+      const result = z.array(VersionSchema).safeParse(response.versions);
+
+      if (result.success) {
+        state = produce(state, draft => {
+          draft.versions = result.data;
+          draft.versionsLoading = false;
+          draft.versionsError = null;
+        });
+        notify('requestVersions:success');
+      } else {
+        const errorMessage = `Invalid versions data: ${result.error.message}`;
+        logger.error('Failed to parse versions data', {
+          error: result.error,
+          response,
+        });
+
+        state = produce(state, draft => {
+          draft.versionsError = errorMessage;
+          draft.versionsLoading = false;
+        });
+        notify('requestVersions:error');
+      }
+    } catch (error) {
+      logger.error('Versions request failed', error);
+      state = produce(state, draft => {
+        draft.versionsError = 'Failed to load versions';
+        draft.versionsLoading = false;
+      });
+      notify('requestVersions:error');
+    }
+  };
+
+  /**
+   * Clear versions cache
+   */
+  const clearVersions = () => {
+    state = produce(state, draft => {
+      draft.versions = [];
+    });
+    notify('clearVersions');
   };
 
   // =============================================================================
@@ -405,6 +486,8 @@ export const createSessionContextStore = (
 
     // Commands (CQS pattern)
     requestSessionContext,
+    requestVersions,
+    clearVersions,
     setLoading,
     setError,
     clearError,

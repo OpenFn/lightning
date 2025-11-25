@@ -111,6 +111,10 @@ vi.mock('../../../js/collaborative-editor/hooks/useSessionContext', () => ({
     id: 'project-1',
     name: 'Test Project',
   }),
+  useVersions: () => [],
+  useVersionsLoading: () => false,
+  useVersionsError: () => null,
+  useRequestVersions: () => vi.fn(),
 }));
 
 // Create mock workflow

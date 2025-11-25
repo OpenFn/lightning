@@ -46,6 +46,10 @@ vi.mock('../../../../js/collaborative-editor/hooks/useSessionContext', () => ({
     id: 'test-project-id',
     name: 'Test Project',
   }),
+  useVersions: () => [],
+  useVersionsLoading: () => false,
+  useVersionsError: () => null,
+  useRequestVersions: () => vi.fn(),
 }));
 
 // Mock workflow hooks to provide workflow ID

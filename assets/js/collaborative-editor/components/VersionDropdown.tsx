@@ -1,15 +1,14 @@
 import { useEffect, useRef, useState } from 'react';
 
 import { cn } from '../../utils/cn';
-import { channelRequest } from '../hooks/useChannel';
-import { useSession } from '../hooks/useSession';
+import {
+  useRequestVersions,
+  useVersions,
+  useVersionsError,
+  useVersionsLoading,
+} from '../hooks/useSessionContext';
 import { notifications } from '../lib/notifications';
-
-interface Version {
-  lock_version: number;
-  inserted_at: string;
-  is_latest: boolean;
-}
+import type { Version } from '../types/sessionContext';
 
 interface VersionDropdownProps {
   currentVersion: number | null;
@@ -23,12 +22,13 @@ export function VersionDropdown({
   onVersionSelect,
 }: VersionDropdownProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const [versions, setVersions] = useState<Version[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
-  const { provider } = useSession();
-  const channel = provider?.channel;
+
+  // Get versions state from SessionContextStore
+  const versions = useVersions();
+  const isLoading = useVersionsLoading();
+  const versionsError = useVersionsError();
+  const requestVersions = useRequestVersions();
 
   // Show placeholder while loading version information
   const isLoadingVersion = currentVersion === null || latestVersion === null;
@@ -80,58 +80,20 @@ export function VersionDropdown({
 
   // Fetch versions when dropdown opens
   useEffect(() => {
-    if (isOpen && channel) {
-      // Only fetch if we don't already have versions OR if we're not already loading
-      if (versions.length === 0 && !isLoading) {
-        setIsLoading(true);
-        setError(null);
-
-        channelRequest<{ versions: Version[] }>(channel, 'request_versions', {})
-          .then(response => {
-            console.log('Received versions response:', response);
-            console.log('Versions array:', response.versions);
-            console.log('Versions length:', response.versions.length);
-            setVersions(response.versions || []);
-            setIsLoading(false);
-            return;
-          })
-          .catch(err => {
-            console.error('Failed to fetch versions:', err);
-            notifications.alert({
-              title: 'Failed to load versions',
-              description: 'Please try again',
-            });
-            setError('Failed to load versions');
-            setIsLoading(false);
-          });
-      }
+    if (isOpen && versions.length === 0 && !isLoading) {
+      void requestVersions();
     }
-  }, [isOpen, versions.length, channel, isLoading]);
+  }, [isOpen, versions.length, isLoading, requestVersions]);
 
-  // Clear version cache when latest version changes
-  // This makes the component reactive to state (SessionContextStore) instead of
-  // directly listening to channel events, providing better separation of concerns
-  //
-  // When latestVersion changes, ALL users (even those viewing snapshots) should
-  // clear their cache so the dropdown shows the updated version list with the
-  // new latest version when they open it.
-  const prevLatestVersionRef = useRef<number | null>(latestVersion);
-
+  // Show error notification when versionsError is set
   useEffect(() => {
-    const prevLatestVersion = prevLatestVersionRef.current;
-
-    // Only clear if we had a previous value and it changed
-    // This prevents clearing on initial mount (when prevLatestVersion is null)
-    if (
-      prevLatestVersion !== null &&
-      latestVersion !== null &&
-      prevLatestVersion !== latestVersion
-    ) {
-      setVersions([]);
+    if (versionsError) {
+      notifications.alert({
+        title: 'Failed to load versions',
+        description: 'Please try again',
+      });
     }
-
-    prevLatestVersionRef.current = latestVersion;
-  }, [latestVersion]);
+  }, [versionsError]);
 
   const handleVersionClick = (version: Version) => {
     if (version.is_latest) {
@@ -175,8 +137,10 @@ export function VersionDropdown({
               <div className="px-4 py-2 text-sm text-gray-500">
                 Loading versions...
               </div>
-            ) : error ? (
-              <div className="px-4 py-2 text-sm text-red-600">{error}</div>
+            ) : versionsError ? (
+              <div className="px-4 py-2 text-sm text-red-600">
+                {versionsError}
+              </div>
             ) : versions.length === 0 ? (
               <div className="px-4 py-2 text-sm text-gray-500">
                 No versions available
