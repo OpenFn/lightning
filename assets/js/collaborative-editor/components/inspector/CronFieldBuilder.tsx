@@ -319,7 +319,10 @@ export function CronFieldBuilder({
             {cronData.interval &&
             [5, 10, 15, 20, 30].includes(parseInt(cronData.interval)) ? null : (
               <option value={cronData.interval}>
-                {cronData.interval} minutes
+                {cronData.interval} minute
+                {cronData.interval && parseInt(cronData.interval) !== 1
+                  ? 's'
+                  : ''}
               </option>
             )}
             <option value="5">5 minutes</option>
@@ -349,7 +352,10 @@ export function CronFieldBuilder({
             {cronData.interval &&
             [2, 3, 4, 6, 8, 12].includes(parseInt(cronData.interval)) ? null : (
               <option value={cronData.interval}>
-                {cronData.interval} hours
+                {cronData.interval} hour
+                {cronData.interval && parseInt(cronData.interval) !== 1
+                  ? 's'
+                  : ''}
               </option>
             )}
             <option value="2">2 hours</option>
