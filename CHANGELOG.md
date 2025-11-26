@@ -41,6 +41,8 @@ and this project adheres to
   [#4011](https://github.com/OpenFn/lightning/issues/4011)
 - Fix monaco popups and tooltips getting cut off
   [PR#4072](https://github.com/OpenFn/lightning/pull/4072)
+- Fix metadata/docs panel reopening when resizing adjacent panel
+  [#4073](https://github.com/OpenFn/lightning/issues/4073)
 
 ## [2.15.0-pre] - 2025-11-20
 

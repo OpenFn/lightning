@@ -835,10 +835,12 @@ export function FullScreenIDE({
 
                     {/* Resize Handle */}
                     {docsOrientation === 'horizontal' ? (
-                      <PanelResizeHandle
-                        className="w-1 bg-gray-200 hover:bg-blue-400
+                      isDocsCollapsed ? null : (
+                        <PanelResizeHandle
+                          className="w-1 bg-gray-200 hover:bg-blue-400
                         transition-colors cursor-col-resize"
-                      />
+                        />
+                      )
                     ) : (
                       <PanelResizeHandle
                         className="h-1 bg-gray-200 hover:bg-blue-400
