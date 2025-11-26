@@ -21,6 +21,8 @@ and this project adheres to
 
 - Enable usage limit checks across the whole application
   [#PR4050](https://github.com/OpenFn/lightning/pull/4050)
+- Make IDE heading separate from top menu
+  [#4077](https://github.com/OpenFn/lightning/issues/4077)
 
 ### Fixed
 

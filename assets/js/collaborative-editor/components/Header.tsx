@@ -1,5 +1,4 @@
 import { Menu, MenuButton, MenuItem, MenuItems } from '@headlessui/react';
-import { XMarkIcon } from '@heroicons/react/24/outline';
 import { useCallback, useMemo } from 'react';
 
 import { useURLState } from '../../react/lib/use-url-state';
@@ -29,7 +28,6 @@ import { EmailVerificationBanner } from './EmailVerificationBanner';
 import { GitHubSyncModal } from './GitHubSyncModal';
 import { Switch } from './inputs/Switch';
 import { ReadOnlyWarning } from './ReadOnlyWarning';
-import { RunRetryButton } from './RunRetryButton';
 import { ShortcutKeys } from './ShortcutKeys';
 import { Tooltip } from './Tooltip';
 
@@ -162,27 +160,15 @@ export function Header({
   projectId,
   workflowId,
   isRunPanelOpen = false,
-  adaptorDisplay,
-  onRunClick,
-  onRetryClick,
-  canRun: canRunProp,
-  runTooltipMessage: runTooltipMessageProp,
-  isRetryable: isRetryableProp,
-  isRunning: isRunningProp,
-  onCloseIDE,
+  isIDEOpen = false,
 }: {
   children: React.ReactNode[];
   projectId?: string;
   workflowId?: string;
   isRunPanelOpen?: boolean;
-  adaptorDisplay?: React.ReactNode;
-  onRunClick?: () => void;
-  onRetryClick?: () => void;
+  isIDEOpen?: boolean;
   canRun?: boolean;
   runTooltipMessage?: string;
-  isRetryable?: boolean;
-  isRunning?: boolean;
-  onCloseIDE?: () => void;
 }) {
   // IMPORTANT: All hooks must be called unconditionally before any early returns or conditional logic
   const { updateSearchParams } = useURLState();
@@ -191,8 +177,7 @@ export function Header({
   const { saveWorkflow } = useWorkflowActions();
   const { canSave, tooltipMessage } = useCanSave();
   const triggers = useWorkflowState(state => state.triggers);
-  const { canRun: canRunDefault, tooltipMessage: runTooltipMessageDefault } =
-    useCanRun();
+  const { canRun, tooltipMessage: runTooltipMessage } = useCanRun();
   const { openRunPanel, openGitHubSyncModal } = useUICommands();
   const repoConnection = useProjectRepoConnection();
   const { hasErrors: hasSettingsErrors } = useWorkflowSettingsErrors();
@@ -208,41 +193,20 @@ export function Header({
     latestSnapshotLockVersion !== null &&
     workflow.lock_version !== latestSnapshotLockVersion;
 
-  // Use IDE-provided handlers if available, otherwise use Canvas default
-  const canRun = canRunProp !== undefined ? canRunProp : canRunDefault;
-  const runTooltipMessage =
-    runTooltipMessageProp !== undefined
-      ? runTooltipMessageProp
-      : runTooltipMessageDefault;
-  const isRetryable = isRetryableProp ?? false;
-  const isRunning = isRunningProp ?? false;
-
-  // Determine if we're in IDE mode (has both onRunClick and onRetryClick)
-  const isIDEMode = onRunClick !== undefined && onRetryClick !== undefined;
-
   const handleRunClick = useCallback(() => {
-    if (onRunClick) {
-      // IDE context: use provided handler
-      onRunClick();
-    } else if (firstTriggerId) {
+    if (firstTriggerId) {
       // Canvas context: open run panel with first trigger
       selectNode(firstTriggerId);
       openRunPanel({ triggerId: firstTriggerId });
     }
-  }, [onRunClick, firstTriggerId, openRunPanel, selectNode]);
-
-  const handleRetryClick = useCallback(() => {
-    if (onRetryClick) {
-      onRetryClick();
-    }
-  }, [onRetryClick]);
+  }, [firstTriggerId, openRunPanel, selectNode]);
 
   // Compute Run button tooltip content
   const runButtonTooltip = useMemo(() => {
     if (!canRun) return runTooltipMessage; // Error message
-    if (isRunPanelOpen) return null; // Shortcut captured by panel
+    if (isRunPanelOpen || isIDEOpen) return null; // Shortcut captured by panel
     return <ShortcutKeys keys={['mod', 'enter']} />; // Shortcut applies
-  }, [canRun, runTooltipMessage, isRunPanelOpen]);
+  }, [canRun, runTooltipMessage, isRunPanelOpen, isIDEOpen]);
 
   useKeyboardShortcut(
     'Control+s, Meta+s',
@@ -269,7 +233,6 @@ export function Header({
       <div className="flex-none bg-white shadow-xs border-b border-gray-200 relative z-50">
         <div className="mx-auto sm:px-6 lg:px-8 py-6 flex items-center h-20 text-sm">
           <Breadcrumbs>{children}</Breadcrumbs>
-          {adaptorDisplay && <div className="ml-3">{adaptorDisplay}</div>}
           <ReadOnlyWarning className="ml-3" />
           {projectId && workflowId && (
             <a
@@ -322,39 +285,18 @@ export function Header({
               </div>
             </div>
             <div className="relative flex gap-2">
-              {projectId && workflowId && (isIDEMode || firstTriggerId) && (
-                <>
-                  {isIDEMode ? (
-                    <RunRetryButton
-                      isRetryable={isRetryable}
-                      isDisabled={!canRun}
-                      isSubmitting={isRunning}
-                      onRun={handleRunClick}
-                      onRetry={handleRetryClick}
-                      buttonText={{
-                        run: 'Run',
-                        retry: 'Run (retry)',
-                        processing: 'Processing',
-                      }}
+              {projectId && workflowId && firstTriggerId && (
+                <Tooltip content={runButtonTooltip} side="bottom">
+                  <span className="inline-block">
+                    <Button
                       variant="primary"
-                      dropdownPosition="down"
-                      showKeyboardShortcuts={!isRunPanelOpen && canRun}
-                      disabledTooltip={runTooltipMessage}
-                    />
-                  ) : (
-                    <Tooltip content={runButtonTooltip} side="bottom">
-                      <span className="inline-block">
-                        <Button
-                          variant="primary"
-                          onClick={handleRunClick}
-                          disabled={!canRun}
-                        >
-                          Run
-                        </Button>
-                      </span>
-                    </Tooltip>
-                  )}
-                </>
+                      onClick={handleRunClick}
+                      disabled={!canRun || isRunPanelOpen || isIDEOpen}
+                    >
+                      Run
+                    </Button>
+                  </span>
+                </Tooltip>
               )}
               <SaveButton
                 canSave={canSave && !hasSettingsErrors}
@@ -365,18 +307,6 @@ export function Header({
               />
             </div>
           </div>
-
-          {onCloseIDE && (
-            <Tooltip content={<ShortcutKeys keys={['esc']} />} side="bottom">
-              <button
-                onClick={onCloseIDE}
-                className="ml-2 p-1 hover:bg-gray-100 rounded transition-colors flex-shrink-0"
-                aria-label="Close IDE"
-              >
-                <XMarkIcon className="h-5 w-5 text-gray-500" />
-              </button>
-            </Tooltip>
-          )}
 
           <AIButton className="ml-2" />
 

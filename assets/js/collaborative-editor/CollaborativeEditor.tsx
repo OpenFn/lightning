@@ -144,6 +144,7 @@ function BreadcrumbContent({
       {...(projectId !== undefined && { projectId })}
       workflowId={workflowId}
       isRunPanelOpen={isRunPanelOpen}
+      isIDEOpen={isIDEOpen}
     >
       {breadcrumbElements}
     </Header>
