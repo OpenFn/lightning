@@ -21,6 +21,7 @@ import type {
   ProjectRepoConnection,
   UserContext,
   WebhookAuthMethod,
+  WorkflowTemplate,
 } from '../../../js/collaborative-editor/types/sessionContext';
 
 // =============================================================================
@@ -62,6 +63,19 @@ export const mockPermissions: Permissions = {
   can_edit_workflow: true,
   can_run_workflow: true,
   can_write_webhook_auth_method: true,
+};
+
+/**
+ * Sample workflow template for testing
+ */
+export const mockWorkflowTemplate: WorkflowTemplate = {
+  id: '990e8400-e29b-41d4-a716-446655440000',
+  name: 'Existing Template',
+  description: 'An existing template description',
+  tags: ['tag1', 'tag2'],
+  workflow_id: '660e8400-e29b-41d4-a716-446655440000',
+  code: 'name: Test Workflow\njobs:\n  test-job:\n    adaptor: "@openfn/language-common@latest"',
+  positions: { 'job-1': { x: 100, y: 100 } },
 };
 
 /**
@@ -254,6 +268,7 @@ export interface CreateSessionContextOptions {
   latest_snapshot_lock_version?: number;
   project_repo_connection?: Partial<ProjectRepoConnection> | null;
   webhook_auth_methods?: WebhookAuthMethod[];
+  workflow_template?: WorkflowTemplate | null;
 }
 
 /**
@@ -352,7 +367,7 @@ export function createSessionContext(
     latest_snapshot_lock_version: options.latest_snapshot_lock_version ?? 1,
     project_repo_connection,
     webhook_auth_methods: options.webhook_auth_methods ?? [],
-    workflow_template: null,
+    workflow_template: options.workflow_template ?? null,
   };
 }
 
@@ -511,6 +526,34 @@ export function createMockProject(
   return {
     id: '660e8400-e29b-41d4-a716-446655440000',
     name: 'Test Project',
+    ...overrides,
+  };
+}
+
+/**
+ * Helper to create a mock WorkflowTemplate with custom properties
+ *
+ * Creates a workflow template object with sensible defaults that can be
+ * overridden for specific test scenarios.
+ *
+ * @param overrides - Partial WorkflowTemplate to override defaults
+ * @returns Complete WorkflowTemplate object
+ *
+ * @example
+ * const template = createMockWorkflowTemplate({ name: "My Template" });
+ * expect(template.name).toBe("My Template");
+ *
+ * @example
+ * // Use with session context
+ * const context = createSessionContext({
+ *   workflow_template: createMockWorkflowTemplate({ name: "Test Template" })
+ * });
+ */
+export function createMockWorkflowTemplate(
+  overrides: Partial<WorkflowTemplate> = {}
+): WorkflowTemplate {
+  return {
+    ...mockWorkflowTemplate,
     ...overrides,
   };
 }
