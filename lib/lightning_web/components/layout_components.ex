@@ -27,7 +27,7 @@ defmodule LightningWeb.LayoutComponents do
       phx-key="Escape"
     >
       <button
-        class="w-full bg-white/10 hover:bg-white/20 rounded-lg px-3 py-2.5 text-left transition-colors focus:outline-none focus:ring-2 focus:ring-white/30 max-w-full"
+        class="w-full bg-white/10 hover:bg-white/20 rounded-lg px-2 py-1.5 text-left transition-colors focus:outline-none focus:ring-2 focus:ring-white/30 max-w-full"
         phx-click={
           Phoenix.LiveView.JS.toggle(
             to: "##{@menu_id}",
@@ -38,10 +38,10 @@ defmodule LightningWeb.LayoutComponents do
         type="button"
         aria-haspopup="true"
       >
-        <div class="flex items-center gap-2 min-w-0">
+        <div class="flex items-center gap-1.5 min-w-0">
           <div class="shrink-0">
             <.avatar
-              size="sm"
+              size="xs"
               name={
                 String.at(@current_user.first_name, 0) <>
                   if is_nil(@current_user.last_name),
@@ -51,23 +51,23 @@ defmodule LightningWeb.LayoutComponents do
             />
           </div>
           <div class="min-w-0 overflow-hidden flex-1">
-            <div class="text-sm font-medium text-white truncate">
+            <div class="text-xs font-medium text-white truncate">
               {@current_user.first_name}
               {if @current_user.last_name, do: " " <> @current_user.last_name}
             </div>
           </div>
-          <.icon name="hero-chevron-down" class="w-4 h-4 text-white/70 shrink-0" />
+          <.icon name="hero-chevron-down" class="w-3 h-3 text-white/70 shrink-0" />
         </div>
       </button>
       <div
         id={@menu_id}
-        class="hidden absolute left-0 z-[9999] mt-2 w-56 origin-top-left divide-y divide-gray-100 rounded-md bg-white shadow-lg outline-1 outline-black/5"
+        class="hidden absolute left-0 z-[100] mt-2 w-48 origin-top-left divide-y divide-gray-100 rounded-md bg-white shadow-lg outline-1 outline-black/5"
         role="menu"
         aria-orientation="vertical"
       >
-        <div class="px-4 py-3">
-          <p class="text-sm text-gray-700">Signed in as</p>
-          <p class="truncate text-sm font-medium text-gray-900">
+        <div class="px-3 py-2">
+          <p class="text-xs text-gray-500">Signed in as</p>
+          <p class="truncate text-xs font-medium text-gray-900">
             {@current_user.email}
           </p>
         </div>
@@ -81,38 +81,37 @@ defmodule LightningWeb.LayoutComponents do
           <div class="py-1">
             <.link
               navigate={~p"/projects"}
-              class="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900"
+              class="flex items-center px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900"
               role="menuitem"
             >
-              <Heroicons.folder class="h-5 w-5 inline-block mr-2" /> Projects
+              <Heroicons.folder class="h-4 w-4 inline-block mr-2" /> Projects
             </.link>
             <.link
               navigate={~p"/profile"}
-              class="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900"
+              class="flex items-center px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900"
               role="menuitem"
             >
-              <Heroicons.user_circle class="h-5 w-5 inline-block mr-2" />
-              User Profile
+              <Heroicons.user_circle class="h-4 w-4 inline-block mr-2" /> Profile
             </.link>
             <.link
               navigate={~p"/credentials"}
-              class="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900"
+              class="flex items-center px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900"
               role="menuitem"
             >
-              <Heroicons.key class="h-5 w-5 inline-block mr-2" /> Credentials
+              <Heroicons.key class="h-4 w-4 inline-block mr-2" /> Credentials
             </.link>
             <.link
               navigate={~p"/profile/tokens"}
-              class="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900"
+              class="flex items-center px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900"
               role="menuitem"
             >
-              <Heroicons.command_line class="h-5 w-5 inline-block mr-2" /> API Tokens
+              <Heroicons.command_line class="h-4 w-4 inline-block mr-2" /> API Tokens
             </.link>
           </div>
           <div class="py-1">
             <.link
               navigate={~p"/users/log_out"}
-              class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900"
+              class="block px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900"
               role="menuitem"
             >
               Log out
@@ -218,7 +217,7 @@ defmodule LightningWeb.LayoutComponents do
       if assigns[:description] && assigns[:description] != [] do
         "mt-4 h-10"
       else
-        "h-20"
+        "h-14"
       end
 
     all_crumbs = collect_breadcrumbs(assigns)
@@ -238,7 +237,7 @@ defmodule LightningWeb.LayoutComponents do
     assigns =
       assign(assigns,
         title_class: "max-w-7xl mx-auto sm:px-6 lg:px-8",
-        title_height: "py-6 flex items-center " <> title_height,
+        title_height: "py-3 flex items-center " <> title_height,
         hidden_crumbs: hidden_crumbs,
         visible_crumbs: visible_crumbs
       )
