@@ -15,9 +15,6 @@ export interface ConnectionStatus {
   /** Whether the Y.Doc provider is synced with the server */
   isSynced: boolean;
 
-  /** Number of pending changes waiting to sync (if available) */
-  pendingChanges?: number;
-
   /** Timestamp of last successful sync */
   lastSyncTime: Date | null;
 
@@ -31,7 +28,6 @@ export interface ConnectionStatusProviderProps {
   children: React.ReactNode;
   isConnected: boolean;
   isSynced: boolean;
-  pendingChanges?: number;
   lastSyncTime: Date | null;
   error: Error | null;
 }
@@ -43,7 +39,6 @@ export function ConnectionStatusProvider({
   children,
   isConnected,
   isSynced,
-  pendingChanges,
   lastSyncTime,
   error,
 }: ConnectionStatusProviderProps) {
@@ -51,11 +46,10 @@ export function ConnectionStatusProvider({
     () => ({
       isConnected,
       isSynced,
-      pendingChanges,
       lastSyncTime,
       error,
     }),
-    [isConnected, isSynced, pendingChanges, lastSyncTime, error]
+    [isConnected, isSynced, lastSyncTime, error]
   );
 
   return (
