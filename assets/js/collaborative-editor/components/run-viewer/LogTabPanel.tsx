@@ -124,7 +124,8 @@ export function LogTabPanel() {
       </div>
 
       {/* Log viewer */}
-      <div ref={containerRef} className="flex-1" />
+      {/* 24px from the h-6 above and the 1px for the border */}
+      <div ref={containerRef} style={{ height: 'calc(100% - 25px)' }} />
     </div>
   );
 }
