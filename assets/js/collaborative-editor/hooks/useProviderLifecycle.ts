@@ -86,8 +86,9 @@ export function useProviderLifecycle({
 }: ProviderLifecycleOptions): ProviderLifecycleResult {
   const hasProviderInitialized = useRef(false);
   const [initError, setInitError] = useState<Error | null>(null);
+  const prevProviderRef = useRef(sessionStore.provider);
 
-  // Handle initial provider creation and reconnections
+  // Handle initial provider creation
   useEffect(() => {
     if (!socket || !isConnected) {
       return;
@@ -114,13 +115,31 @@ export function useProviderLifecycle({
         setInitError(err);
         onError?.(err);
       }
-
-      return;
     }
+  }, [
+    socket,
+    isConnected,
+    sessionStore,
+    roomname,
+    joinParams,
+    onError,
+    onProviderReady,
+  ]);
 
-    // Reconnection: recreate provider if we have Y.Doc but lost provider
-    if (hasProviderInitialized.current && !sessionStore.provider) {
-      logger.log('Reconnection detected - recreating provider', {
+  // Separate effect to detect provider loss and handle reconnection
+  useEffect(() => {
+    const hadProvider = prevProviderRef.current !== null;
+    const hasProvider = sessionStore.provider !== null;
+
+    // Detect provider loss: had provider but now don't
+    if (
+      hadProvider &&
+      !hasProvider &&
+      hasProviderInitialized.current &&
+      socket &&
+      isConnected
+    ) {
+      logger.log('Provider lost - reconnecting', {
         roomname,
         willReuseYDoc: true,
       });
@@ -142,14 +161,17 @@ export function useProviderLifecycle({
         onError?.(err);
       }
     }
+
+    // Update ref for next comparison
+    prevProviderRef.current = sessionStore.provider;
   }, [
+    sessionStore.provider,
     socket,
     isConnected,
     sessionStore,
     roomname,
     joinParams,
     onError,
-    onProviderReady,
     onProviderReconnected,
   ]);
 

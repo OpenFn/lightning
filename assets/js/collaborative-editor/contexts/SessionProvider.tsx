@@ -84,21 +84,25 @@ export const SessionProvider = ({
   );
 
   // Use Y.Doc persistence hook to manage Y.Doc lifecycle
+  const handleYDocInitialized = useCallback(() => {
+    logger.log('Y.Doc initialized', { version });
+  }, [version]);
+
+  const handleYDocDestroyed = useCallback(() => {
+    logger.log('Y.Doc destroyed (version change or unmount)', { version });
+    // Reset connection state when Y.Doc is destroyed
+    sessionStore.destroy();
+    setIsSynced(false);
+    setLastSyncTime(null);
+    setConnectionError(null);
+  }, [version, sessionStore]);
+
   const { hasInitialized: hasYDocInitialized } = useYDocPersistence({
     sessionStore,
     shouldInitialize: socket !== null && isConnected,
     version,
-    onInitialized: () => {
-      logger.log('Y.Doc initialized', { version });
-    },
-    onDestroyed: () => {
-      logger.log('Y.Doc destroyed (version change or unmount)', { version });
-      // Reset connection state when Y.Doc is destroyed
-      sessionStore.destroy();
-      setIsSynced(false);
-      setLastSyncTime(null);
-      setConnectionError(null);
-    },
+    onInitialized: handleYDocInitialized,
+    onDestroyed: handleYDocDestroyed,
   });
 
   // Use provider lifecycle hook to manage provider initialization
