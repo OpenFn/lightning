@@ -56,6 +56,15 @@ export function CollaborativeWorkflowDiagram({
     return params.get('run');
   });
 
+  // Clear URL parameter when deselecting run
+  const handleDeselectRun = useCallback(() => {
+    setSelectedRunId(null);
+
+    const url = new URL(window.location.href);
+    url.searchParams.delete('run');
+    window.history.pushState({}, '', url.toString());
+  }, []);
+
   // Auto-expand history panel when a run is selected
   useEffect(() => {
     if (selectedRunId && historyCollapsed) {
@@ -64,8 +73,17 @@ export function CollaborativeWorkflowDiagram({
   }, [selectedRunId, historyCollapsed, setHistoryPanelCollapsed]);
 
   const handleToggleHistory = useCallback(() => {
+    // If collapsing the panel and a run is selected, deselect it
+    if (!historyCollapsed && selectedRunId) {
+      handleDeselectRun();
+    }
     setHistoryPanelCollapsed(!historyCollapsed);
-  }, [historyCollapsed, setHistoryPanelCollapsed]);
+  }, [
+    historyCollapsed,
+    setHistoryPanelCollapsed,
+    selectedRunId,
+    handleDeselectRun,
+  ]);
 
   // Use hook to get run steps with automatic subscription management
   const currentRunSteps = useRunSteps(selectedRunId);
@@ -95,15 +113,6 @@ export function CollaborativeWorkflowDiagram({
     },
     [history, handleVersionSelect]
   );
-
-  // Clear URL parameter when deselecting run
-  const handleDeselectRun = useCallback(() => {
-    setSelectedRunId(null);
-
-    const url = new URL(window.location.href);
-    url.searchParams.delete('run');
-    window.history.pushState({}, '', url.toString());
-  }, []);
 
   // Request history when panel is first expanded OR when there's a run ID selected
   // Wait for channel to be connected before making request

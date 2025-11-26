@@ -317,4 +317,61 @@ describe('CollaborativeWorkflowDiagram - EditorPreferences Integration', () => {
       expect(newKey).toBeNull();
     });
   });
+
+  // ========================================================================
+  // RUN SELECTION AND PANEL COLLAPSE
+  // ========================================================================
+
+  describe('run selection and panel collapse', () => {
+    test('collapsing panel deselects run and clears URL parameter', async () => {
+      // Mock URL with run parameter
+      const originalPushState = window.history.pushState;
+      const pushStateMock = vi.fn();
+      window.history.pushState = pushStateMock;
+
+      // Set URL to have a run parameter (simulating user selected a run)
+      const mockUrl = new URL('http://localhost/?run=test-run-id');
+      Object.defineProperty(window, 'location', {
+        value: {
+          href: mockUrl.toString(),
+          search: mockUrl.search,
+          pathname: '/',
+          origin: 'http://localhost',
+        },
+        writable: true,
+        configurable: true,
+      });
+
+      // Pre-expand the history panel (simulating auto-expand when run selected)
+      storage.varStorage.setItem(
+        'lightning.editor.historyPanelCollapsed',
+        'false'
+      );
+      store = createEditorPreferencesStore();
+      wrapper = createWrapper(store);
+
+      render(<CollaborativeWorkflowDiagram />, { wrapper });
+
+      // Panel should be expanded
+      await waitFor(() => {
+        expect(screen.getByText(/Recent History/i)).toBeInTheDocument();
+      });
+
+      // Click to collapse the panel
+      const collapseButton = screen.getByText(/Recent History/i).closest('div');
+      fireEvent.click(collapseButton!);
+
+      // Should clear the URL parameter (via pushState)
+      await waitFor(() => {
+        expect(pushStateMock).toHaveBeenCalled();
+        const lastCall =
+          pushStateMock.mock.calls[pushStateMock.mock.calls.length - 1];
+        const urlArg = lastCall[2] as string;
+        expect(urlArg).not.toContain('run=');
+      });
+
+      // Restore original pushState
+      window.history.pushState = originalPushState;
+    });
+  });
 });
