@@ -21,6 +21,9 @@ and this project adheres to
 
 ### Fixed
 
+- Improved version mismatch banner UX: made compact, dismissible, and
+  repositioned to top-center; auto-deselect runs when collapsing history panel
+  [#4044](https://github.com/OpenFn/lightning/issues/4044)
 - Version dropdown now updates correctly for all users after workflow save
   [#3985](https://github.com/OpenFn/lightning/issues/3985)
   [#4024](https://github.com/OpenFn/lightning/issues/4024)
