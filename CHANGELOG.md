@@ -38,7 +38,7 @@ and this project adheres to
 - Fix error validation for nodes/edges & show better error messages on save
   [PR#4061](https://github.com/OpenFn/lightning/pull/4061)
 - Fix custom cron expressions getting overwritten & additional cron support
-  [PR#4063](https://github.com/OpenFn/lightning/pull/4063)
+  [#4011](https://github.com/OpenFn/lightning/issues/4011)
 
 ## [2.15.0-pre] - 2025-11-20
 
