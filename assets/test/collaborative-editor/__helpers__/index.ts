@@ -108,3 +108,18 @@ export {
   createEdgeCaseTestData,
   type BreadcrumbItem,
 } from './breadcrumbHelpers';
+
+// Session context factory
+export {
+  createSessionContext,
+  createMockWorkflowTemplate,
+  createMockUser,
+  createMockConfig,
+  mockWorkflowTemplate,
+  mockUserContext,
+  mockProjectContext,
+  mockAppConfig,
+  mockPermissions,
+  type SessionContextResponse,
+  type CreateSessionContextOptions,
+} from './sessionContextFactory';

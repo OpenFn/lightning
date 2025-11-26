@@ -1,17 +1,21 @@
-import { useMemo, useState } from 'react';
-import { z } from 'zod';
-import YAML from 'yaml';
 import { useAppForm } from '#/collaborative-editor/components/form';
 import { createZodValidator } from '#/collaborative-editor/components/form/createZodValidator';
+import { channelRequest } from '#/collaborative-editor/hooks/useChannel';
+import { useSession } from '#/collaborative-editor/hooks/useSession';
 import { useWorkflowTemplate } from '#/collaborative-editor/hooks/useSessionContext';
 import { useWorkflowState } from '#/collaborative-editor/hooks/useWorkflow';
 import { notifications } from '#/collaborative-editor/lib/notifications';
 import { useURLState } from '#/react/lib/use-url-state';
-import { useSession } from '#/collaborative-editor/hooks/useSession';
-import { channelRequest } from '#/collaborative-editor/hooks/useChannel';
 import { cn } from '#/utils/cn';
-import { convertWorkflowStateToSpec } from '#/yaml/util';
 import type { WorkflowState as YAMLWorkflowState } from '#/yaml/types';
+import { convertWorkflowStateToSpec } from '#/yaml/util';
+import { useMemo, useState } from 'react';
+import YAML from 'yaml';
+import { z } from 'zod';
+
+import logger from '#/utils/logger';
+
+logger.ns('TemplatePublishPanel').seal();
 
 // Validation schema matching backend constraints
 const TemplatePublishSchema = z.object({
@@ -133,7 +137,7 @@ export function TemplatePublishPanel() {
       // Navigate back to code view
       updateSearchParams({ panel: 'code' });
     } catch (error) {
-      console.error('Failed to publish template:', error);
+      logger.error('Failed to publish template:', error);
       notifications.alert({
         title: 'Failed to publish template',
         description:
