@@ -102,6 +102,7 @@ const LogViewer = ({
         fontSize: 14,
         fontLigatures: true,
         folding: false,
+        fixedOverflowWidgets: true,
         minimap: {
           enabled: false,
         },
