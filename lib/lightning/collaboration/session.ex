@@ -314,7 +314,9 @@ defmodule Lightning.Collaboration.Session do
            Lightning.Workflows.save_workflow(changeset, user,
              skip_reconcile: true
            ),
-         :ok <- merge_saved_workflow_into_ydoc(state, saved_workflow) do
+         :ok <- merge_saved_workflow_into_ydoc(state, saved_workflow),
+         {:ok, _cleanup_count} <-
+           Lightning.AiAssistant.cleanup_unsaved_job_sessions(saved_workflow) do
       Logger.info("Successfully saved workflow #{state.workflow.id}")
       {:reply, {:ok, saved_workflow}, %{state | workflow: saved_workflow}}
     else

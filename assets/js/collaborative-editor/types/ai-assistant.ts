@@ -53,6 +53,13 @@ export interface JobCodeContext {
   attach_code?: boolean; // Include job code in AI context
   attach_logs?: boolean; // Include run logs in AI context
   follow_run_id?: string; // Optional run ID to follow for logs
+  content?: string; // Initial message content when creating new session
+
+  // For unsaved jobs (exist in Y.Doc but not in DB yet)
+  job_name?: string; // Job name from Y.Doc
+  job_body?: string; // Job code from Y.Doc
+  job_adaptor?: string; // Job adaptor from Y.Doc
+  workflow_id?: string; // Workflow ID for authorization
 }
 
 /**
@@ -63,6 +70,7 @@ export interface WorkflowTemplateContext {
   workflow_id?: string; // Optional for editing existing workflows
   code?: string; // Current workflow YAML
   errors?: string; // Validation errors to fix
+  content?: string; // Initial message content when creating new session
 }
 
 /**
@@ -145,20 +153,23 @@ export interface AIAssistantStore {
   // Session management
   clearSession: () => void;
   loadSession: (sessionId: string) => void;
+  updateContext: (context: Partial<JobCodeContext>) => void;
 
-  // Session list
-  loadSessionList: () => void;
+  // Session list (HTTP-based, used when no channel connection)
+  loadSessionList: (options?: {
+    offset?: number;
+    limit?: number;
+    append?: boolean;
+  }) => Promise<void>;
 
   // Disclaimer
   markDisclaimerRead: () => void;
-
-  // Session persistence
-  loadStoredSessionForWorkflow: (workflowId: string) => string | null;
 
   // Internal state updates (called by channel hook)
   _setConnectionState: (state: ConnectionState, error?: string) => void;
   _setSession: (session: Session) => void;
   _clearSession: () => void;
+  _clearSessionList: () => void;
   _addMessage: (message: Message) => void;
   _updateMessageStatus: (messageId: string, status: MessageStatus) => void;
   _setSessionList: (response: SessionListResponse) => void;

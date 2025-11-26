@@ -626,7 +626,12 @@ defmodule Lightning.AiAssistantTest do
             usage: %{}
           )
 
-        assert updated_session.meta == new_meta
+        # Meta should be merged with existing meta, preserving "existing" key
+        assert updated_session.meta == %{
+                 "existing" => "data",
+                 "new" => "metadata",
+                 "updated" => true
+               }
       end)
     end
 

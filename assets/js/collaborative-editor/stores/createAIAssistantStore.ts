@@ -71,82 +71,6 @@ import { wrapStoreWithDevTools } from './devtools';
 const logger = _logger.ns('AIAssistantStore').seal();
 
 /**
- * LocalStorage helpers for session persistence
- */
-const SESSION_STORAGE_KEY = 'ai_assistant_sessions';
-
-interface StoredSessions {
-  [workflowId: string]: {
-    sessionId: string;
-    sessionType: SessionType;
-    timestamp: number;
-  };
-}
-
-const loadStoredSession = (
-  workflowId: string
-): { sessionId: string; sessionType: SessionType } | null => {
-  try {
-    const stored = localStorage.getItem(SESSION_STORAGE_KEY);
-    if (!stored) return null;
-
-    const sessions = JSON.parse(stored) as StoredSessions;
-    const session = sessions[workflowId];
-
-    if (!session) return null;
-
-    // Clear sessions older than 7 days
-    const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
-    if (session.timestamp < sevenDaysAgo) {
-      delete sessions[workflowId];
-      localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(sessions));
-      return null;
-    }
-
-    return { sessionId: session.sessionId, sessionType: session.sessionType };
-  } catch (error) {
-    logger.error('Failed to load stored session', error);
-    return null;
-  }
-};
-
-const saveSession = (
-  workflowId: string,
-  sessionId: string,
-  sessionType: SessionType
-) => {
-  try {
-    const stored = localStorage.getItem(SESSION_STORAGE_KEY);
-    const sessions: StoredSessions = stored
-      ? (JSON.parse(stored) as StoredSessions)
-      : {};
-
-    sessions[workflowId] = {
-      sessionId,
-      sessionType,
-      timestamp: Date.now(),
-    };
-
-    localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(sessions));
-  } catch (error) {
-    logger.error('Failed to save session', error);
-  }
-};
-
-const clearStoredSession = (workflowId: string) => {
-  try {
-    const stored = localStorage.getItem(SESSION_STORAGE_KEY);
-    if (!stored) return;
-
-    const sessions = JSON.parse(stored) as StoredSessions;
-    delete sessions[workflowId];
-    localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(sessions));
-  } catch (error) {
-    logger.error('Failed to clear stored session', error);
-  }
-};
-
-/**
  * Creates an AI Assistant store instance
  */
 export const createAIAssistantStore = (): AIAssistantStore => {
@@ -318,19 +242,6 @@ export const createAIAssistantStore = (): AIAssistantStore => {
   };
 
   /**
-   * Load stored session for a workflow (if it exists in localStorage)
-   * @returns Session ID if found, null otherwise
-   */
-  const loadStoredSessionForWorkflow = (workflowId: string): string | null => {
-    const stored = loadStoredSession(workflowId);
-    if (stored) {
-      logger.debug('Found stored session', { workflowId, stored });
-      return stored.sessionId;
-    }
-    return null;
-  };
-
-  /**
    * Mark AI disclaimer as read
    */
   const markDisclaimerRead = () => {
@@ -349,11 +260,6 @@ export const createAIAssistantStore = (): AIAssistantStore => {
    */
   const clearSession = () => {
     logger.debug('Clearing session to start new conversation');
-
-    const workflowId = getWorkflowIdFromContext();
-    if (workflowId) {
-      clearStoredSession(workflowId);
-    }
 
     state = produce(state, draft => {
       draft.sessionId = null;
@@ -384,17 +290,123 @@ export const createAIAssistantStore = (): AIAssistantStore => {
   };
 
   /**
-   * Request to load the session list
-   * Actual loading happens in the channel hook
+   * Update job context (adaptor, body, name) for an active session
+   * This notifies the AI of changes to the job being edited
    */
-  const loadSessionList = () => {
-    logger.debug('Requesting session list');
+  const updateContext = (context: Partial<JobCodeContext>) => {
+    logger.debug('Updating job context', { context });
+
+    state = produce(state, draft => {
+      if (draft.jobCodeContext) {
+        // Update only the provided fields
+        if (context.job_adaptor !== undefined) {
+          draft.jobCodeContext.job_adaptor = context.job_adaptor;
+        }
+        if (context.job_body !== undefined) {
+          draft.jobCodeContext.job_body = context.job_body;
+        }
+        if (context.job_name !== undefined) {
+          draft.jobCodeContext.job_name = context.job_name;
+        }
+      }
+    });
+
+    notify('updateContext');
+  };
+
+  /**
+   * Load session list via HTTP API (used when no channel connection)
+   * When a channel IS connected, the channel's loadSessions should be used instead
+   *
+   * @param options.offset - Number of sessions to skip (for pagination)
+   * @param options.limit - Number of sessions to fetch (default: 20)
+   * @param options.append - If true, append to existing list; if false, replace (default: false)
+   */
+  const loadSessionList = async (
+    options: { offset?: number; limit?: number; append?: boolean } = {}
+  ) => {
+    const { offset = 0, limit = 20, append = false } = options;
+
+    logger.debug('Loading session list via HTTP API', {
+      offset,
+      limit,
+      append,
+    });
 
     state = produce(state, draft => {
       draft.sessionListLoading = true;
     });
-
     notify('loadSessionList');
+
+    try {
+      const sessionType = state.sessionType;
+      const jobContext = state.jobCodeContext;
+      const workflowContext = state.workflowTemplateContext;
+
+      if (!sessionType || (!jobContext && !workflowContext)) {
+        logger.warn('Cannot load sessions: no session type or context', {
+          sessionType,
+          hasJobContext: !!jobContext,
+          hasWorkflowContext: !!workflowContext,
+        });
+        state = produce(state, draft => {
+          draft.sessionList = [];
+          draft.sessionListPagination = {
+            total_count: 0,
+            has_next_page: false,
+            has_prev_page: false,
+          };
+          draft.sessionListLoading = false;
+        });
+        notify('_setSessionList');
+        return;
+      }
+
+      const params = new URLSearchParams();
+      params.append('session_type', sessionType);
+      params.append('offset', offset.toString());
+      params.append('limit', limit.toString());
+
+      if (sessionType === 'job_code' && jobContext) {
+        params.append('job_id', jobContext.job_id);
+      } else if (sessionType === 'workflow_template' && workflowContext) {
+        params.append('project_id', workflowContext.project_id);
+      }
+
+      const response = await fetch(
+        `/api/ai_assistant/sessions?${params.toString()}`
+      );
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const data =
+        (await response.json()) as import('../types/ai-assistant').SessionListResponse;
+      logger.debug('Sessions loaded via HTTP', { data, append });
+
+      if (append) {
+        // Append new sessions to existing list
+        _appendSessionList(data);
+      } else {
+        // Replace session list
+        _setSessionList(data);
+      }
+    } catch (error) {
+      logger.error('Failed to load sessions via HTTP', { error });
+      state = produce(state, draft => {
+        if (!append) {
+          draft.sessionList = [];
+        }
+        draft.sessionListPagination = {
+          total_count: 0,
+          has_next_page: false,
+          has_prev_page: false,
+        };
+        draft.sessionListLoading = false;
+      });
+      notify('_setSessionList');
+    }
   };
 
   /**
@@ -403,11 +415,6 @@ export const createAIAssistantStore = (): AIAssistantStore => {
    */
   const _clearSession = () => {
     logger.debug('Clearing invalid session');
-
-    const workflowId = getWorkflowIdFromContext();
-    if (workflowId) {
-      clearStoredSession(workflowId);
-    }
 
     state = produce(state, draft => {
       draft.sessionId = null;
@@ -454,7 +461,23 @@ export const createAIAssistantStore = (): AIAssistantStore => {
       draft.sessionId = session.id;
       draft.sessionType = session.session_type;
       draft.messages = session.messages;
-      draft.isLoading = false;
+
+      // Keep isLoading true if there are any messages being processed
+      const hasProcessingMessages = session.messages.some(
+        m => m.status === 'processing' || m.status === 'pending'
+      );
+
+      console.log('[AI Store] _setSession - checking for processing messages', {
+        messagesCount: session.messages.length,
+        hasProcessingMessages,
+        messages: session.messages.map(m => ({
+          id: m.id,
+          role: m.role,
+          status: m.status,
+        })),
+      });
+
+      draft.isLoading = hasProcessingMessages;
       draft.isSending = false;
     });
 
@@ -491,9 +514,43 @@ export const createAIAssistantStore = (): AIAssistantStore => {
 
       draft.isSending = false;
 
-      // If it's an assistant message, we're no longer loading
-      if (message.role === 'assistant') {
-        draft.isLoading = false;
+      // Handle loading state based on message role and status
+      if (message.role === 'user') {
+        // User message added - keep isLoading true to show waiting state
+        // The assistant hasn't responded yet, so we should keep showing loading
+        console.log('[AI Store] User message added, keeping isLoading true', {
+          messageId: message.id,
+          currentLoading: draft.isLoading,
+        });
+        // Don't modify draft.isLoading here - let it stay true
+      } else if (message.role === 'assistant') {
+        // Only stop loading if assistant message is in a final state
+        if (message.status === 'success' || message.status === 'error') {
+          console.log(
+            '[AI Store] Assistant message arrived with final status, stopping loading',
+            {
+              messageId: message.id,
+              status: message.status,
+              wasLoading: draft.isLoading,
+            }
+          );
+          draft.isLoading = false;
+        } else if (message.status === 'processing') {
+          console.log(
+            '[AI Store] Assistant message is processing, setting loading',
+            {
+              messageId: message.id,
+              status: message.status,
+            }
+          );
+          draft.isLoading = true;
+        } else {
+          console.log('[AI Store] Assistant message with non-final status', {
+            messageId: message.id,
+            status: message.status,
+            currentLoading: draft.isLoading,
+          });
+        }
       }
     });
 
@@ -542,6 +599,44 @@ export const createAIAssistantStore = (): AIAssistantStore => {
     notify('_setSessionList');
   };
 
+  /**
+   * Append sessions to existing session list
+   * @internal Used for pagination (load more)
+   */
+  const _appendSessionList = (
+    response: import('../types/ai-assistant').SessionListResponse
+  ) => {
+    logger.debug('Appending sessions to list', { response });
+
+    state = produce(state, draft => {
+      // Append new sessions, avoiding duplicates
+      const existingIds = new Set(draft.sessionList.map(s => s.id));
+      const newSessions = response.sessions.filter(s => !existingIds.has(s.id));
+      draft.sessionList.push(...newSessions);
+      draft.sessionListPagination = response.pagination;
+      draft.sessionListLoading = false;
+    });
+
+    notify('_appendSessionList');
+  };
+
+  /**
+   * Clear session list and set to loading state
+   * Used when switching modes to prevent showing stale sessions
+   * @internal
+   */
+  const _clearSessionList = () => {
+    logger.debug('Clearing session list');
+
+    state = produce(state, draft => {
+      draft.sessionList = [];
+      draft.sessionListPagination = null;
+      draft.sessionListLoading = true;
+    });
+
+    notify('_clearSessionList');
+  };
+
   devtools.connect();
 
   // ===========================================================================
@@ -563,15 +658,17 @@ export const createAIAssistantStore = (): AIAssistantStore => {
     clearSession,
     loadSession,
     loadSessionList,
-    loadStoredSessionForWorkflow,
+    updateContext,
 
     // Internal updates (prefixed with _)
     _setConnectionState,
     _setSession,
     _clearSession,
+    _clearSessionList,
     _addMessage,
     _updateMessageStatus,
     _setSessionList,
+    _appendSessionList,
   };
 };
 

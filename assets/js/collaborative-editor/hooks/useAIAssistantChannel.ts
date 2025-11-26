@@ -84,12 +84,6 @@ export const useAIAssistantChannel = (store: AIAssistantStore) => {
     store.withSelector(state => state.connectionState)
   );
 
-  // Subscribe to session list loading requests
-  const sessionListLoading = useSyncExternalStore(
-    store.subscribe,
-    store.withSelector(state => state.sessionListLoading)
-  );
-
   /**
    * Join AI Assistant channel
    */
@@ -150,10 +144,48 @@ export const useAIAssistantChannel = (store: AIAssistantStore) => {
         const typedResponse = response as ErrorResponse;
         logger.error('Failed to join AI Assistant channel', typedResponse);
 
-        // If session not found, clear it from store (user can reconnect to create new)
-        if (typedResponse.reason === 'session not found') {
-          logger.warn('Stored session not found, clearing session ID');
+        // If session not found or type mismatch, clear it from store
+        if (
+          typedResponse.reason === 'session not found' ||
+          typedResponse.reason === 'session type mismatch'
+        ) {
+          logger.warn(
+            'Session issue detected, clearing session ID from store',
+            typedResponse.reason
+          );
           store._clearSession();
+        }
+
+        // If job not found (Ecto.NoResultsError), the job hasn't been saved yet
+        // or was deleted when the workflow was replaced/updated
+        if (
+          typedResponse.reason &&
+          (typedResponse.reason.includes('Ecto.NoResultsError') ||
+            typedResponse.reason.includes('expected at least one result') ||
+            typedResponse.reason.includes('join crashed'))
+        ) {
+          logger.error(
+            'Job not found - either not saved yet or deleted during workflow update',
+            typedResponse
+          );
+          store._clearSession();
+
+          // Show user-friendly error message
+          // Note: Using setTimeout to ensure the toast doesn't get lost during state transitions
+          setTimeout(() => {
+            // Import notifications dynamically to avoid circular dependencies
+            import('../lib/notifications')
+              .then(({ notifications }) => {
+                notifications.alert({
+                  title: 'Job not available',
+                  description:
+                    "This job hasn't been saved to the database yet, or was deleted. Please save the workflow first.",
+                });
+              })
+              .catch(err => {
+                logger.error('Failed to show notification', err);
+              });
+          }, 100);
         }
 
         store._setConnectionState(
@@ -282,44 +314,6 @@ export const useAIAssistantChannel = (store: AIAssistantStore) => {
       });
   }, [store]);
 
-  /**
-   * Load session list from backend
-   */
-  const fetchSessionList = useCallback(
-    (offset: number = 0, limit: number = 20) => {
-      const channel = channelRef.current;
-      if (!channel) {
-        logger.error('Cannot load sessions: channel not connected');
-        return;
-      }
-
-      logger.debug('Fetching session list', { offset, limit });
-
-      channel
-        .push('list_sessions', { offset, limit })
-        .receive('ok', (response: unknown) => {
-          const typedResponse =
-            response as import('../types/ai-assistant').SessionListResponse;
-          logger.debug('Session list loaded', typedResponse);
-          store._setSessionList(typedResponse);
-        })
-        .receive('error', (response: unknown) => {
-          const typedResponse = response as ErrorResponse;
-          logger.error('Failed to load session list', typedResponse);
-          // Reset loading state on error
-          store._setSessionList({
-            sessions: [],
-            pagination: {
-              total_count: 0,
-              has_next_page: false,
-              has_prev_page: false,
-            },
-          });
-        });
-    },
-    [store]
-  );
-
   // Effect: Connect/disconnect based on store state
   useEffect(() => {
     if (connectionState === 'connecting' && socket) {
@@ -330,13 +324,6 @@ export const useAIAssistantChannel = (store: AIAssistantStore) => {
     // If connected, stay connected (do nothing)
   }, [connectionState, socket, joinChannel, leaveChannel]);
 
-  // Effect: Load session list when requested
-  useEffect(() => {
-    if (sessionListLoading && connectionState === 'connected') {
-      fetchSessionList();
-    }
-  }, [sessionListLoading, connectionState, fetchSessionList]);
-
   // Separate effect for cleanup on unmount only
   useEffect(() => {
     return () => {
@@ -344,11 +331,101 @@ export const useAIAssistantChannel = (store: AIAssistantStore) => {
     };
   }, []); // Empty deps - only run on mount/unmount
 
+  /**
+   * Load sessions list via channel
+   */
+  const loadSessions = useCallback(
+    (offset = 0, limit = 20) => {
+      const channel = channelRef.current;
+      if (!channel) {
+        logger.error('Cannot load sessions: channel not connected');
+        return Promise.reject(new Error('Channel not connected'));
+      }
+
+      logger.debug('Loading sessions via channel', { offset, limit });
+
+      return new Promise<void>((resolve, reject) => {
+        channel
+          .push('list_sessions', { offset, limit })
+          .receive('ok', (response: unknown) => {
+            const typedResponse = response as {
+              sessions: unknown[];
+              pagination: {
+                total_count: number;
+                has_next_page: boolean;
+                has_prev_page: boolean;
+              };
+            };
+            logger.debug(
+              'Sessions loaded successfully via channel',
+              typedResponse
+            );
+            // Update store with session list
+            store._setSessionList(typedResponse);
+            resolve();
+          })
+          .receive('error', (response: unknown) => {
+            const typedResponse = response as ErrorResponse;
+            logger.error('Failed to load sessions via channel', typedResponse);
+            reject(
+              new Error(typedResponse.reason || 'Failed to load sessions')
+            );
+          })
+          .receive('timeout', () => {
+            logger.error('Load sessions timeout');
+            reject(new Error('Request timeout'));
+          });
+      });
+    },
+    [store]
+  );
+
+  /**
+   * Update job context (adaptor, body, name) for the active session
+   * Notifies the backend that the job's code or adaptor has changed
+   */
+  const updateContext = useCallback(
+    (context: {
+      job_adaptor?: string;
+      job_body?: string;
+      job_name?: string;
+    }) => {
+      const channel = channelRef.current;
+      if (!channel) {
+        logger.error('Cannot update context: channel not connected');
+        return;
+      }
+
+      logger.debug('Updating context via channel', context);
+
+      // Update store immediately (optimistic update)
+      store.updateContext(context);
+
+      // Notify backend
+      channel
+        .push('update_context', context)
+        .receive('ok', () => {
+          logger.debug('Context updated successfully on backend');
+        })
+        .receive('error', (response: unknown) => {
+          const typedResponse = response as ErrorResponse;
+          logger.error('Failed to update context', typedResponse);
+          // Context is already updated in store, so we don't revert
+          // The AI will use the old context until next channel join
+        })
+        .receive('timeout', () => {
+          logger.error('Context update timeout');
+        });
+    },
+    [store]
+  );
+
   return {
     sendMessage,
     retryMessage,
     markDisclaimerRead,
-    fetchSessionList,
+    loadSessions,
+    updateContext,
   };
 };
 
@@ -367,9 +444,24 @@ function buildJoinParams(
       params['follow_run_id'] = state.jobCodeContext.follow_run_id;
     }
 
-    // If this is a new session, include the initial content
-    if (!state.sessionId) {
-      params['content'] = 'Hello, I need help with my job.';
+    // Include unsaved job data from Y.Doc (for jobs not yet saved to DB)
+    if (state.jobCodeContext.job_name) {
+      params['job_name'] = state.jobCodeContext.job_name;
+    }
+    if (state.jobCodeContext.job_body) {
+      params['job_body'] = state.jobCodeContext.job_body;
+    }
+    if (state.jobCodeContext.job_adaptor) {
+      params['job_adaptor'] = state.jobCodeContext.job_adaptor;
+    }
+    if (state.jobCodeContext.workflow_id) {
+      params['workflow_id'] = state.jobCodeContext.workflow_id;
+    }
+
+    // If this is a new session and context has content, include it
+    // This content comes from the user's first message
+    if (!state.sessionId && state.jobCodeContext.content) {
+      params['content'] = state.jobCodeContext.content;
     }
   } else if (
     state.sessionType === 'workflow_template' &&
@@ -385,11 +477,17 @@ function buildJoinParams(
       params['code'] = state.workflowTemplateContext.code;
     }
 
-    // If this is a new session, include the initial content
-    if (!state.sessionId) {
-      params['content'] = 'Help me build a workflow';
+    // If this is a new session and context has content, include it
+    // This content comes from the user's first message
+    if (!state.sessionId && state.workflowTemplateContext.content) {
+      params['content'] = state.workflowTemplateContext.content;
     }
   }
+
+  logger.debug('Built join params', {
+    params,
+    context: state.jobCodeContext || state.workflowTemplateContext,
+  });
 
   return params;
 }

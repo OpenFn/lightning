@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useSyncExternalStore } from 'react';
 
 import { cn } from '#/utils/cn';
 
@@ -12,7 +12,8 @@ interface AIAssistantPanelProps {
   onClose: () => void;
   onNewConversation?: () => void;
   onSessionSelect?: (sessionId: string) => void;
-  onSendMessage?: (content: string) => void;
+  onShowSessions?: () => void;
+  onSendMessage?: (content: string, options?: MessageOptions) => void;
   children?: React.ReactNode;
   sessionId?: string | null;
   messageCount?: number;
@@ -26,6 +27,20 @@ interface AIAssistantPanelProps {
    * AI Assistant store for session list
    */
   store?: AIAssistantStore;
+  /**
+   * Current session type (job_code or workflow_template)
+   * Used to show mode-specific UI
+   */
+  sessionType?: 'job_code' | 'workflow_template' | null;
+  /**
+   * Load sessions via Phoenix Channel (preferred over HTTP)
+   */
+  loadSessions?: (offset?: number, limit?: number) => Promise<void>;
+}
+
+interface MessageOptions {
+  attach_code?: boolean;
+  attach_logs?: boolean;
 }
 
 /**
@@ -45,15 +60,18 @@ interface AIAssistantPanelProps {
 export function AIAssistantPanel({
   isOpen,
   onClose,
-  onNewConversation,
+  onNewConversation: _onNewConversation,
   onSessionSelect,
+  onShowSessions,
   onSendMessage,
   children,
   sessionId,
-  messageCount = 0,
+  messageCount: _messageCount = 0,
   isLoading = false,
   isResizable = false,
   store,
+  sessionType = null,
+  loadSessions,
 }: AIAssistantPanelProps) {
   // Start with sessions list if no active session
   const [view, setView] = useState<'chat' | 'sessions'>(
@@ -62,11 +80,48 @@ export function AIAssistantPanel({
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isAboutOpen, setIsAboutOpen] = useState(false);
 
-  // When sessionId changes, update view accordingly
+  // Subscribe to store context changes to compute storage key reactively
+  const storageKey: string | undefined = useSyncExternalStore(
+    store?.subscribe ?? (() => () => {}),
+    () => {
+      if (!store) {
+        console.log('[AIAssistantPanel] No store available for storageKey');
+        return undefined;
+      }
+      const state = store.getSnapshot();
+      if (state.sessionType === 'job_code' && state.jobCodeContext?.job_id) {
+        const key = `ai-job-${state.jobCodeContext.job_id}`;
+        console.log('[AIAssistantPanel] Computed storageKey:', key);
+        return key;
+      }
+      if (state.sessionType === 'workflow_template') {
+        if (state.workflowTemplateContext?.workflow_id) {
+          const key = `ai-workflow-${state.workflowTemplateContext.workflow_id}`;
+          console.log('[AIAssistantPanel] Computed storageKey:', key);
+          return key;
+        }
+        if (state.workflowTemplateContext?.project_id) {
+          const key = `ai-project-${state.workflowTemplateContext.project_id}`;
+          console.log('[AIAssistantPanel] Computed storageKey:', key);
+          return key;
+        }
+      }
+      console.log('[AIAssistantPanel] No valid context for storageKey', {
+        sessionType: state.sessionType,
+        hasJobContext: !!state.jobCodeContext,
+        hasWorkflowContext: !!state.workflowTemplateContext,
+      });
+      return undefined;
+    }
+  );
+
+  // Switch view based on sessionId changes
   useEffect(() => {
     if (sessionId && view === 'sessions') {
+      // Session created/loaded -> show chat
       setView('chat');
     } else if (!sessionId && view === 'chat') {
+      // Session cleared -> show sessions list
       setView('sessions');
     }
   }, [sessionId, view]);
@@ -83,16 +138,60 @@ export function AIAssistantPanel({
     return () => document.removeEventListener('keydown', handleEscape);
   }, [isOpen, onClose]);
 
-  // Load session list when sessions view opens
+  // Subscribe to store context to detect when it's initialized
+  const storeSessionType = useSyncExternalStore(
+    store?.subscribe ?? (() => () => {}),
+    () => store?.getSnapshot().sessionType ?? null
+  );
+
+  // Load session list when view is 'sessions' AND context is ready
   useEffect(() => {
-    if (view === 'sessions' && store) {
-      store.loadSessionList();
+    if (view !== 'sessions' || !store || !storeSessionType) return;
+
+    // Double-check context is actually set
+    const state = store.getSnapshot();
+    const hasContext = !!(
+      state.jobCodeContext || state.workflowTemplateContext
+    );
+
+    if (!hasContext) {
+      console.warn('[AIAssistantPanel] Context not ready yet', {
+        sessionType: storeSessionType,
+        hasJobContext: !!state.jobCodeContext,
+        hasWorkflowContext: !!state.workflowTemplateContext,
+      });
+      return;
     }
-  }, [view, store]);
+
+    console.log(
+      '[AIAssistantPanel] Loading sessions for mode:',
+      storeSessionType
+    );
+
+    // Prefer Phoenix Channel when available, fallback to HTTP
+    if (loadSessions) {
+      void loadSessions().catch(error => {
+        console.warn(
+          '[AIAssistantPanel] Channel load failed, using HTTP:',
+          error
+        );
+        void store.loadSessionList();
+      });
+    } else {
+      void store.loadSessionList();
+    }
+  }, [view, store, storeSessionType, loadSessions]);
 
   const handleShowSessions = () => {
+    // Set view to sessions without clearing session
+    // This keeps the connection alive for fetching sessions
     setView('sessions');
     setIsMenuOpen(false);
+
+    // Clear URL params only (don't disconnect)
+    if (onShowSessions) {
+      onShowSessions();
+    }
   };
 
   const handleToggleMenu = () => {
@@ -111,26 +210,15 @@ export function AIAssistantPanel({
     }
   };
 
-  const handleBackToChat = () => {
-    setView('chat');
-  };
-
-  const handleNewConversation = () => {
-    if (onNewConversation) {
-      onNewConversation();
-      setView('chat');
-    }
-  };
-
   const handleClose = () => {
-    // If we're in a chat session, close it and go to sessions list
-    if (view === 'chat' && sessionId && store) {
-      // Disconnect from current session to clear sessionId
-      store.disconnect();
-      // Switch to sessions view
-      setView('sessions');
+    if (sessionId) {
+      // If viewing a session, close it and return to sessions list
+      // View will automatically switch to 'sessions' via the effect when sessionId becomes null
+      if (onShowSessions) {
+        onShowSessions();
+      }
     } else {
-      // Otherwise, close the entire panel
+      // If in sessions list (no session), close entire panel
       onClose();
     }
   };
@@ -169,47 +257,31 @@ export function AIAssistantPanel({
     >
       {/* Panel Header */}
       <div className="flex-none bg-white shadow-xs border-b border-gray-200">
-        <div className="mx-auto sm:px-6 lg:px-8 py-6 flex items-center justify-between h-20 text-sm">
+        <div className="mx-auto px-6 py-6 flex items-center justify-between h-20 text-sm">
           <div className="flex items-center gap-2 min-w-0 flex-1">
-            {view === 'sessions' && (
-              <button
-                type="button"
-                onClick={handleBackToChat}
-                className={cn(
-                  'inline-flex items-center justify-center',
-                  'h-8 w-8 rounded-md',
-                  'text-gray-500 hover:text-gray-700 hover:bg-gray-100',
-                  'focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500',
-                  'transition-all duration-150'
-                )}
-                aria-label="Back to chat"
-              >
-                <span className="hero-arrow-left h-5 w-5" />
-              </button>
-            )}
             <img src="/images/logo.svg" alt="OpenFn" className="size-6" />
             <div className="min-w-0 flex-1">
-              <h2 className="text-base font-semibold text-gray-900">
-                {view === 'sessions' ? 'Chat History' : 'Assistant'}
-              </h2>
+              <div className="flex items-center gap-2">
+                <h2 className="text-base font-semibold text-gray-900">
+                  Assistant
+                </h2>
+                {/* Mode indicator badge */}
+                {sessionType && (
+                  <span
+                    className={cn(
+                      'inline-flex items-center px-2 py-0.5 rounded text-xs font-medium',
+                      sessionType === 'job_code'
+                        ? 'bg-blue-100 text-blue-800'
+                        : 'bg-purple-100 text-purple-800'
+                    )}
+                  >
+                    {sessionType === 'job_code' ? 'Job' : 'Workflow'}
+                  </span>
+                )}
+              </div>
             </div>
           </div>
           <div className="flex items-center gap-2">
-            {onNewConversation && sessionId && (
-              <button
-                type="button"
-                onClick={handleNewConversation}
-                className="inline-flex items-center gap-1.5 px-2.5 py-1.5
-                    text-sm font-medium text-gray-700 bg-white border
-                    border-gray-300 rounded-md hover:bg-gray-50
-                    focus:outline-none focus:ring-2 focus:ring-offset-2
-                    focus:ring-primary-500 transition-colors"
-                aria-label="Start new conversation"
-              >
-                <span className="hero-plus h-5 w-5" />
-                New session
-              </button>
-            )}
             {/* 3-dot vertical menu */}
             {store && (
               <div className="relative">
@@ -310,14 +382,16 @@ export function AIAssistantPanel({
               type="button"
               onClick={handleClose}
               className={cn(
-                'rounded-md text-gray-400 hover:text-gray-600',
-                'hover:bg-gray-100 transition-colors',
-                'focus:outline-none focus:ring-2 focus:ring-primary-500',
-                'flex-shrink-0 p-1.5'
+                'inline-flex items-center justify-center',
+                'h-8 w-8 rounded-md',
+                'text-gray-400 hover:text-gray-600 hover:bg-gray-100',
+                'focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500',
+                'transition-all duration-150',
+                'flex-shrink-0'
               )}
               aria-label={
-                view === 'chat' && sessionId
-                  ? 'Close session'
+                sessionId
+                  ? 'Close session and return to sessions list'
                   : 'Close AI Assistant'
               }
             >
@@ -343,7 +417,12 @@ export function AIAssistantPanel({
       </div>
 
       {/* Chat Input - Always visible at bottom */}
-      <ChatInput onSendMessage={onSendMessage} isLoading={isLoading} />
+      <ChatInput
+        onSendMessage={onSendMessage}
+        isLoading={isLoading}
+        showJobControls={sessionType === 'job_code'}
+        storageKey={storageKey}
+      />
 
       {/* About AI Assistant Modal */}
       {isAboutOpen && (

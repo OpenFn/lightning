@@ -96,10 +96,14 @@ export const useAIMessages = () => {
  */
 export const useAIIsLoading = () => {
   const store = useAIStore();
-  return useSyncExternalStore(
+  const isLoading = useSyncExternalStore(
     store.subscribe,
     store.withSelector(state => state.isLoading)
   );
+
+  console.log('[useAIIsLoading] Current loading state:', isLoading);
+
+  return isLoading;
 };
 
 /**

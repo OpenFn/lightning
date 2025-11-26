@@ -1,4 +1,4 @@
-import { useSyncExternalStore } from 'react';
+import { useSyncExternalStore, useState, useMemo } from 'react';
 
 import { cn } from '#/utils/cn';
 
@@ -23,12 +23,16 @@ interface SessionListProps {
  * - Relative timestamps
  * - Message count badges
  * - Click to switch sessions
+ * - Search/filter sessions by title
  */
 export function SessionList({
   store,
   onSessionSelect,
   currentSessionId,
 }: SessionListProps) {
+  const [searchQuery, setSearchQuery] = useState('');
+  const [sortOrder, setSortOrder] = useState<'desc' | 'asc'>('desc');
+
   const sessionList = useSyncExternalStore(
     store.subscribe,
     store.withSelector(state => state.sessionList)
@@ -44,17 +48,49 @@ export function SessionList({
     store.withSelector(state => state.sessionListPagination)
   );
 
+  // Filter and sort sessions
+  const filteredSessions = useMemo(() => {
+    let filtered = sessionList;
+
+    // Apply search filter
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter(session =>
+        session.title.toLowerCase().includes(query)
+      );
+    }
+
+    // Apply sorting by time
+    const sorted = [...filtered].sort((a, b) => {
+      const timeA = new Date(a.updated_at).getTime();
+      const timeB = new Date(b.updated_at).getTime();
+
+      if (sortOrder === 'desc') {
+        return timeB - timeA; // Most recent first
+      } else {
+        return timeA - timeB; // Oldest first
+      }
+    });
+
+    return sorted;
+  }, [sessionList, searchQuery, sortOrder]);
+
   const handleLoadMore = () => {
     if (pagination && pagination.has_next_page) {
-      const currentOffset = sessionList.length;
-      store.loadSessionList(currentOffset);
+      // Load more sessions starting from current list length
+      void store.loadSessionList({
+        offset: sessionList.length,
+        limit: 20,
+        append: true,
+      });
     }
   };
 
   if (isLoading && sessionList.length === 0) {
     return (
-      <div className="flex items-center justify-center py-8">
-        <div className="text-sm text-gray-500">Loading sessions...</div>
+      <div className="flex flex-col items-center justify-center py-12 px-4">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600 mb-3"></div>
+        <p className="text-sm text-gray-500">Loading sessions...</p>
       </div>
     );
   }
@@ -73,117 +109,168 @@ export function SessionList({
 
   return (
     <div className="flex flex-col h-full overflow-hidden bg-white">
-      <div className="flex-1 overflow-y-auto">
-        {/* Pagination info at top of scroll area */}
-        {pagination && pagination.total_count > 0 && (
-          <div className="sticky top-0 z-10 px-4 py-3 border-b border-gray-200 bg-white">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
-                  {sessionList.length} of {pagination.total_count}
-                </span>
-              </div>
-            </div>
-          </div>
-        )}
-
-        <div className="space-y-0">
-          {sessionList.map(session => (
-            <button
-              key={session.id}
-              onClick={() => onSessionSelect(session.id)}
+      {/* Search and Sort Controls */}
+      <div className="flex-none px-6 pt-3 pb-2">
+        <div className="flex items-center gap-2">
+          {/* Search Input */}
+          <div className="relative flex-1">
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 hero-magnifying-glass h-4 w-4 text-gray-400" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              placeholder="Search conversations..."
               className={cn(
-                'w-full text-left px-4 py-4 transition-all border-b border-gray-100',
-                'focus:outline-none',
-                'group',
-                session.id === currentSessionId
-                  ? 'bg-primary-50 border-l-4 border-l-primary-500'
-                  : 'hover:bg-gray-50 border-l-4 border-l-transparent'
+                'w-full h-[34px] pl-9 pr-3 text-sm',
+                'bg-gray-50 border border-gray-200 rounded-lg',
+                'placeholder:text-gray-400',
+                'focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent',
+                'transition-all duration-200'
+              )}
+            />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => setSearchQuery('')}
+                className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded hover:bg-gray-200 transition-colors"
+                aria-label="Clear search"
+              >
+                <span className="hero-x-mark h-3.5 w-3.5 text-gray-500" />
+              </button>
+            )}
+          </div>
+
+          {/* Sort Toggle */}
+          <button
+            type="button"
+            onClick={() => setSortOrder(sortOrder === 'desc' ? 'asc' : 'desc')}
+            className={cn(
+              'flex-shrink-0 flex items-center gap-2 h-9 px-3 rounded-lg',
+              'text-xs font-medium transition-all duration-200',
+              'bg-gray-50',
+              'text-gray-600 hover:bg-gray-100 hover:text-gray-900',
+              'focus:outline-none'
+            )}
+          >
+            <span
+              className={cn(
+                'transition-transform duration-300',
+                sortOrder === 'desc' ? 'rotate-0' : 'rotate-180'
               )}
             >
-              <div className="min-w-0 flex-1">
-                {/* Title and message count on same line */}
-                <div className="flex items-baseline gap-2 mb-1.5">
+              <span className="hero-arrow-down h-3.5 w-3.5" />
+            </span>
+            <span className="transition-all duration-200">
+              {sortOrder === 'desc' ? 'Latest' : 'Oldest'}
+            </span>
+          </button>
+        </div>
+      </div>
+
+      <div className="flex-1 overflow-y-auto">
+        {filteredSessions.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-12 px-4">
+            <div className="hero-magnifying-glass h-12 w-12 text-gray-300 mb-3" />
+            <p className="text-sm text-gray-500 text-center">
+              No sessions found
+            </p>
+            <p className="text-xs text-gray-400 text-center mt-1">
+              Try a different search term
+            </p>
+          </div>
+        ) : (
+          <div className="px-3 py-3 space-y-0.5">
+            {filteredSessions.map(session => (
+              <button
+                key={session.id}
+                onClick={() => onSessionSelect(session.id)}
+                className={cn(
+                  'w-full text-left px-3 py-3 rounded-lg transition-all duration-200',
+                  'focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-1',
+                  'group relative',
+                  session.id === currentSessionId
+                    ? 'bg-primary-50 shadow-sm ring-1 ring-primary-200'
+                    : 'hover:bg-gray-50 active:bg-gray-100'
+                )}
+              >
+                {/* Active indicator dot */}
+                {session.id === currentSessionId && (
+                  <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-primary-500 rounded-r-full" />
+                )}
+
+                <div className="min-w-0 flex-1 pr-0">
+                  {/* Title */}
                   <h4
                     className={cn(
-                      'text-[15px] font-medium truncate flex-1',
+                      'text-sm font-medium truncate mb-1.5 leading-snug',
                       session.id === currentSessionId
                         ? 'text-gray-900'
-                        : 'text-gray-900'
+                        : 'text-gray-700 group-hover:text-gray-900'
                     )}
                   >
                     {session.title}
                   </h4>
-                  {session.message_count > 0 && (
+
+                  {/* Metadata row */}
+                  <div className="flex items-center justify-between gap-3">
                     <span
                       className={cn(
-                        'flex-shrink-0 text-xs font-medium tabular-nums',
+                        'text-xs tabular-nums',
                         session.id === currentSessionId
-                          ? 'text-primary-600'
+                          ? 'text-primary-600 font-medium'
                           : 'text-gray-500'
                       )}
                     >
-                      {session.message_count}
+                      {formatRelativeTime(session.updated_at)}
                     </span>
-                  )}
-                </div>
-
-                {/* Timestamp */}
-                <div className="flex items-center gap-1.5">
-                  <span
-                    className={cn(
-                      'hero-clock h-3.5 w-3.5 flex-shrink-0',
-                      session.id === currentSessionId
-                        ? 'text-primary-500'
-                        : 'text-gray-400'
+                    {session.message_count > 0 && (
+                      <span
+                        className={cn(
+                          'flex-shrink-0 inline-flex items-center justify-center',
+                          'min-w-[20px] h-5 px-1.5 rounded-full',
+                          'text-xs font-medium tabular-nums',
+                          session.id === currentSessionId
+                            ? 'bg-primary-100 text-primary-700'
+                            : 'bg-gray-100 text-gray-600 group-hover:bg-gray-200'
+                        )}
+                      >
+                        {session.message_count}
+                      </span>
                     )}
-                  />
-                  <p
-                    className={cn(
-                      'text-xs',
-                      session.id === currentSessionId
-                        ? 'text-primary-600'
-                        : 'text-gray-500'
-                    )}
-                  >
-                    {formatRelativeTime(session.updated_at)}
-                  </p>
+                  </div>
                 </div>
-              </div>
-            </button>
-          ))}
+              </button>
+            ))}
 
-          {/* Load More Button */}
-          {pagination && pagination.has_next_page && (
-            <div className="px-4 py-4 border-t border-gray-100">
+            {/* Load More Button */}
+            {pagination && pagination.has_next_page && (
               <button
                 onClick={handleLoadMore}
                 disabled={isLoading}
                 className={cn(
-                  'w-full px-4 py-2.5 text-sm font-medium rounded-lg',
-                  'border border-gray-300 transition-all',
+                  'w-full px-3 py-2.5 text-xs font-medium rounded-lg',
+                  'transition-all duration-200',
+                  'focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-1',
                   isLoading
                     ? 'bg-gray-50 text-gray-400 cursor-not-allowed'
-                    : 'bg-white text-gray-700 hover:bg-gray-50 hover:border-gray-400'
+                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
                 )}
               >
                 {isLoading ? (
                   <span className="flex items-center justify-center gap-2">
-                    <span className="hero-arrow-path h-4 w-4 animate-spin" />
+                    <span className="hero-arrow-path h-3.5 w-3.5 animate-spin" />
                     Loading...
                   </span>
                 ) : (
                   <span className="flex items-center justify-center gap-2">
-                    <span className="hero-chevron-down h-4 w-4" />
-                    Load more ({pagination.total_count -
-                      sessionList.length}{' '}
-                    remaining)
+                    <span className="hero-chevron-down h-3.5 w-3.5" />
+                    Load {pagination.total_count - sessionList.length} more
                   </span>
                 )}
               </button>
-            </div>
-          )}
-        </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

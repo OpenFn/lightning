@@ -183,6 +183,60 @@ defmodule Lightning.AiAssistant do
   end
 
   @doc """
+  Creates a new chat session for an unsaved job (exists in Y.Doc but not DB).
+
+  This is used during collaborative editing when users want AI assistance
+  for jobs they've created but haven't saved to the database yet.
+
+  ## Parameters
+
+  - `user` - The `%User{}` creating the session
+  - `content` - Initial message content that will become the session title
+  - `meta` - Metadata including unsaved job data with keys:
+    - `"unsaved_job"` - Map with job data:
+      - `"id"` - The Y.Doc job ID (for future linking when saved)
+      - `"name"` - Job name
+      - `"body"` - Job expression code
+      - `"adaptor"` - Job adaptor
+      - `"workflow_id"` - Workflow the job belongs to
+
+  ## Returns
+
+  - `{:ok, session}` - Successfully created session with initial message
+  - `{:error, changeset}` - Validation errors during creation
+  """
+  @spec create_session_for_unsaved_job(User.t(), String.t(), map()) ::
+          {:ok, ChatSession.t()} | {:error, Ecto.Changeset.t()}
+  def create_session_for_unsaved_job(user, content, meta) do
+    unsaved_job = meta["unsaved_job"]
+
+    session_attrs = %{
+      user_id: user.id,
+      title: create_title(content),
+      session_type: "job_code",
+      meta: meta
+      # job_id is intentionally nil - will be set when job is saved
+    }
+
+    Multi.new()
+    |> Multi.insert(
+      :session,
+      ChatSession.changeset(%ChatSession{}, session_attrs)
+    )
+    |> Multi.run(:session_with_message, fn repo, %{session: session} ->
+      session
+      |> repo.preload(:messages)
+      |> put_expression_and_adaptor(
+        unsaved_job["body"],
+        unsaved_job["adaptor"]
+      )
+      |> save_message(%{role: :user, content: content, user: user}, [])
+    end)
+    |> Repo.transaction()
+    |> handle_transaction_result()
+  end
+
+  @doc """
   Creates a new chat session for workflow template generation.
 
   Initializes a session specifically for creating workflow templates:
@@ -237,6 +291,92 @@ defmodule Lightning.AiAssistant do
     end)
     |> Repo.transaction()
     |> handle_transaction_result()
+  end
+
+  @doc """
+  Cleans up unsaved job data in AI sessions after workflow is saved.
+
+  When a workflow is saved and jobs get database IDs, this function:
+  1. Finds all sessions with matching Y.Doc job IDs in meta["unsaved_job"]
+  2. Updates those sessions to set job_id to the real database ID
+  3. Removes the meta["unsaved_job"] data
+
+  ## Parameters
+
+  - `workflow` - The saved `%Workflow{}` with jobs that have database IDs
+
+  ## Returns
+
+  - `{:ok, updated_count}` - Number of sessions updated
+  - `{:error, reason}` - If update fails
+
+  ## Example
+
+      iex> cleanup_unsaved_job_sessions(workflow)
+      {:ok, 3}  # Updated 3 sessions
+  """
+  @spec cleanup_unsaved_job_sessions(Workflow.t()) ::
+          {:ok, non_neg_integer()} | {:error, term()}
+  def cleanup_unsaved_job_sessions(%Workflow{} = workflow) do
+    workflow = Repo.preload(workflow, :jobs)
+
+    # Build a set of all job IDs in this workflow
+    # These are UUIDs that were generated in Y.Doc and now exist in the database
+    job_ids = MapSet.new(workflow.jobs, & &1.id)
+
+    if MapSet.size(job_ids) == 0 do
+      {:ok, 0}
+    else
+      # Find all job_code sessions with unsaved_job data for this workflow
+      query =
+        from s in ChatSession,
+          where: s.session_type == "job_code",
+          where: is_nil(s.job_id),
+          where:
+            fragment(
+              "? -> 'unsaved_job' ->> 'workflow_id' = ?",
+              s.meta,
+              ^workflow.id
+            )
+
+      sessions = Repo.all(query)
+
+      # Update each session if its job now exists in the database
+      updated_count =
+        Enum.reduce(sessions, 0, fn session, count ->
+          unsaved_job = session.meta["unsaved_job"]
+          unsaved_job_id = unsaved_job["id"]
+
+          # Check if this unsaved job now exists in the database
+          if MapSet.member?(job_ids, unsaved_job_id) do
+            # Update session to use real job_id and remove unsaved_job
+            case session
+                 |> Changeset.change(%{
+                   job_id: unsaved_job_id,
+                   meta: Map.delete(session.meta, "unsaved_job")
+                 })
+                 |> Repo.update() do
+              {:ok, _} ->
+                Logger.info(
+                  "Cleaned up unsaved_job for session #{session.id}, set job_id to #{unsaved_job_id}"
+                )
+
+                count + 1
+
+              {:error, changeset} ->
+                Logger.error(
+                  "Failed to cleanup unsaved_job for session #{session.id}: #{inspect(changeset.errors)}"
+                )
+
+                count
+            end
+          else
+            count
+          end
+        end)
+
+      {:ok, updated_count}
+    end
   end
 
   @doc """
@@ -342,6 +482,10 @@ defmodule Lightning.AiAssistant do
                Lightning.Workflows.Snapshot.Job
              ] ->
           get_job_sessions_with_count(job, sort_direction, offset, limit)
+
+        # Handle job_id string (for unsaved jobs from channel)
+        job_id when is_binary(job_id) ->
+          get_job_sessions_with_count(job_id, sort_direction, offset, limit)
       end
 
     pagination =
@@ -407,6 +551,8 @@ defmodule Lightning.AiAssistant do
   - Job expression code and adaptor information
   - Run logs if following a specific run (via session.meta["follow_run_id"])
 
+  For unsaved jobs (job_id is nil), uses job data from session.meta.
+
   ## Parameters
   - `session` - The chat session to enrich
 
@@ -414,14 +560,47 @@ defmodule Lightning.AiAssistant do
   The enriched session with job context loaded
   """
   @spec enrich_session_with_job_context(ChatSession.t()) :: ChatSession.t()
-  def enrich_session_with_job_context(%{job_id: nil} = session), do: session
-
   def enrich_session_with_job_context(session) do
-    job = Repo.get!(Lightning.Workflows.Job, session.job_id)
+    cond do
+      # Check for runtime context first (from update_context channel event)
+      # This takes precedence over all other sources
+      session.meta["runtime_context"] ->
+        runtime_context = session.meta["runtime_context"]
 
-    session
-    |> put_expression_and_adaptor(job.body, job.adaptor)
-    |> maybe_add_run_logs()
+        session
+        |> put_expression_and_adaptor(
+          runtime_context["job_body"] || "",
+          runtime_context["job_adaptor"] || "@openfn/language-common@latest"
+        )
+        |> maybe_add_run_logs()
+
+      # Check for unsaved job data in meta
+      session.meta["unsaved_job"] ->
+        unsaved_job = session.meta["unsaved_job"]
+
+        session
+        |> put_expression_and_adaptor(
+          unsaved_job["body"],
+          unsaved_job["adaptor"]
+        )
+
+      # If job_id exists, load from database
+      session.job_id ->
+        case Repo.get(Lightning.Workflows.Job, session.job_id) do
+          nil ->
+            # Job was deleted - return session as-is
+            session
+
+          job ->
+            session
+            |> put_expression_and_adaptor(job.body, job.adaptor)
+            |> maybe_add_run_logs()
+        end
+
+      # No job data available
+      true ->
+        session
+    end
   end
 
   @doc false
@@ -511,7 +690,13 @@ defmodule Lightning.AiAssistant do
       ChatMessage.changeset(%ChatMessage{}, message_attrs)
     )
     |> Multi.update(:session, fn %{message: _message} ->
-      ChatSession.changeset(session, %{meta: meta || session.meta})
+      # Use meta_changeset to avoid triggering session type validations
+      # when only updating metadata (e.g., RAG data from Apollo)
+      # Merge new meta with existing meta to preserve fields like unsaved_job
+      merged_meta =
+        if meta, do: Map.merge(session.meta || %{}, meta), else: session.meta
+
+      ChatSession.meta_changeset(session, %{meta: merged_meta})
     end)
     |> Multi.merge(&maybe_increment_ai_usage/1)
     |> Multi.run(:enqueue_if_user_message, fn _repo, %{message: message} ->
@@ -612,15 +797,29 @@ defmodule Lightning.AiAssistant do
   def query(session, content, opts \\ []) do
     Logger.metadata(prompt_size: byte_size(content), session_id: session.id)
 
-    context =
-      build_context(
-        %{
-          expression: session.expression,
-          adaptor: session.adaptor,
-          log: session.logs
-        },
-        opts
-      )
+    initial_context = %{
+      expression: session.expression,
+      adaptor: session.adaptor,
+      log: session.logs
+    }
+
+    Logger.info("""
+    [AiAssistant.query] Building context
+    Session ID: #{session.id}
+    Has session.expression: #{!is_nil(session.expression)}
+    Expression length: #{if session.expression, do: byte_size(session.expression), else: 0}
+    Has session.adaptor: #{!is_nil(session.adaptor)}
+    Has session.logs: #{!is_nil(session.logs)}
+    Opts: #{inspect(opts)}
+    Initial context keys: #{inspect(Map.keys(initial_context))}
+    """)
+
+    context = build_context(initial_context, opts)
+
+    Logger.info("""
+    [AiAssistant.query] After build_context
+    Final context keys: #{inspect(Map.keys(context))}
+    """)
 
     history = build_history(session)
     meta = session.meta || %{}
@@ -638,6 +837,10 @@ defmodule Lightning.AiAssistant do
     Enum.reduce(opts, context, fn
       {:code, false}, acc ->
         Map.drop(acc, [:expression])
+
+      # Support both :log and :logs for backwards compatibility
+      {:log, false}, acc ->
+        Map.drop(acc, [:log])
 
       {:logs, false}, acc ->
         Map.drop(acc, [:log])
@@ -758,25 +961,48 @@ defmodule Lightning.AiAssistant do
     {sessions, total_count}
   end
 
-  defp get_job_sessions_with_count(job, sort_direction, offset, limit) do
-    total_count =
-      from(s in ChatSession,
-        where: s.job_id == ^job.id,
-        select: count(s.id)
-      )
-      |> Repo.one()
+  defp get_job_sessions_with_count(job, sort_direction, offset, limit)
+       when is_map(job) do
+    # Extract job_id from Job struct
+    get_job_sessions_with_count(job.id, sort_direction, offset, limit)
+  end
 
-    sessions =
+  defp get_job_sessions_with_count(job_id, sort_direction, offset, limit)
+       when is_binary(job_id) do
+    # Query sessions by job_id (saved jobs)
+    saved_sessions_query =
       from(s in ChatSession,
-        where: s.job_id == ^job.id,
+        where: s.job_id == ^job_id,
         left_join: m in assoc(s, :messages),
         group_by: [s.id, s.title, s.updated_at, s.inserted_at],
-        select: %{s | message_count: count(m.id)},
-        order_by: [{^sort_direction, s.updated_at}],
-        preload: [:user],
-        limit: ^limit,
-        offset: ^offset
+        select: %{s | message_count: count(m.id)}
       )
+
+    # Query sessions with unsaved job data matching this job_id
+    unsaved_sessions_query =
+      from(s in ChatSession,
+        where: s.session_type == "job_code",
+        where: is_nil(s.job_id),
+        where: fragment("? -> 'unsaved_job' ->> 'id' = ?", s.meta, ^job_id),
+        left_join: m in assoc(s, :messages),
+        group_by: [s.id, s.title, s.updated_at, s.inserted_at],
+        select: %{s | message_count: count(m.id)}
+      )
+
+    # Union both queries to get all sessions for this job
+    combined_query =
+      saved_sessions_query
+      |> union_all(^unsaved_sessions_query)
+      |> subquery()
+      |> order_by([s], [{^sort_direction, s.updated_at}])
+
+    total_count = Repo.aggregate(combined_query, :count, :id)
+
+    sessions =
+      combined_query
+      |> limit(^limit)
+      |> offset(^offset)
+      |> preload([:user])
       |> Repo.all()
 
     {sessions, total_count}

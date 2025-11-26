@@ -32,6 +32,7 @@ export function useAIMode(): AIModeResult | null {
   const { searchParams } = useURLState();
   const project = useProject();
   const workflow = useWorkflowState(state => state.workflow);
+  const jobs = useWorkflowState(state => state.jobs);
 
   return useMemo(() => {
     if (!project) return null;
@@ -41,14 +42,37 @@ export function useAIMode(): AIModeResult | null {
     const selectedJobId = searchParams.get('job');
 
     if (isIDEOpen && selectedJobId) {
+      // Find job data from Y.Doc
+      const job = jobs.find(j => j.id === selectedJobId);
+
       // Job Code Mode - editing a specific job
+      const context: JobCodeContext = {
+        job_id: selectedJobId,
+        attach_code: false,
+        attach_logs: false,
+      };
+
+      // Always include workflow_id if available (even for unsaved jobs)
+      if (workflow?.id) {
+        context.workflow_id = workflow.id;
+      }
+
+      // If job exists in Y.Doc, include its data for unsaved job support
+      if (job) {
+        context.job_name = job.name;
+        context.job_body = job.body;
+        context.job_adaptor = job.adaptor;
+      }
+
+      // Include follow_run_id if run parameter is present in URL
+      const runId = searchParams.get('run');
+      if (runId) {
+        context.follow_run_id = runId;
+      }
+
       return {
         mode: 'job_code',
-        context: {
-          job_id: selectedJobId,
-          attach_code: false,
-          attach_logs: false,
-        },
+        context,
         storageKey: `ai-job-${selectedJobId}`,
       };
     }
@@ -64,5 +88,5 @@ export function useAIMode(): AIModeResult | null {
         ? `ai-workflow-${workflow.id}`
         : `ai-project-${project.id}`,
     };
-  }, [searchParams, project, workflow]);
+  }, [searchParams, project, workflow, jobs]);
 }
