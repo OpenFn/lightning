@@ -65,9 +65,6 @@ export const SessionProvider = ({
   const [lastSyncTime, setLastSyncTime] = useState<Date | null>(null);
   const [connectionError, setConnectionError] = useState<Error | null>(null);
 
-  // Track previous roomname for detecting changes
-  const prevRoomnameRef = useRef<string | null>(null);
-
   // Room naming strategy for snapshots vs collaborative editing:
   // - NO version param → `workflow:collaborate:${workflowId}` (latest/collaborative)
   // - WITH version param → `workflow:collaborate:${workflowId}:v${version}` (snapshot)
@@ -88,24 +85,14 @@ export const SessionProvider = ({
   );
 
   // Handle roomname changes (version switching)
-  // When switching versions, we need to destroy the old session and create a new one
-  // for the new room to get fresh data from the server
+  // When roomname changes, destroy session in cleanup to allow reinitialization
   useEffect(() => {
-    // Skip the initial mount
-    if (
-      prevRoomnameRef.current !== null &&
-      prevRoomnameRef.current !== roomname
-    ) {
-      logger.log('Room changed - destroying session for reinitialization', {
-        from: prevRoomnameRef.current,
-        to: roomname,
+    return () => {
+      logger.log('Room changing - destroying session for reinitialization', {
+        roomname,
       });
-
-      // Destroy the session to trigger reinitialization with the new room
       sessionStore.destroy();
-    }
-
-    prevRoomnameRef.current = roomname;
+    };
   }, [roomname, sessionStore]);
 
   // Use Y.Doc persistence hook to manage Y.Doc lifecycle
@@ -115,12 +102,10 @@ export const SessionProvider = ({
 
   const handleYDocDestroyed = useCallback(() => {
     logger.log('Y.Doc destroyed (version change or unmount)', { version });
-    // Reset connection state when Y.Doc is destroyed
-    sessionStore.destroy();
     setIsSynced(false);
     setLastSyncTime(null);
     setConnectionError(null);
-  }, [version, sessionStore]);
+  }, [version]);
 
   useYDocPersistence({
     sessionStore,
