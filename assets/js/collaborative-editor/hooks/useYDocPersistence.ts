@@ -22,6 +22,9 @@ export interface YDocPersistenceOptions {
   /** Whether to initialize Y.Doc (usually once per session) */
   shouldInitialize: boolean;
 
+  /** Version identifier - when this changes, Y.Doc is reset */
+  version: string | null;
+
   /** Callback when Y.Doc is initialized */
   onInitialized?: (ydoc: Y.Doc) => void;
 
@@ -33,21 +36,37 @@ export interface YDocPersistenceOptions {
  * Hook that manages Y.Doc lifecycle with proper persistence
  *
  * @example
- * const ydoc = useYDocPersistence({
+ * const { ydoc, hasInitialized } = useYDocPersistence({
  *   sessionStore,
  *   shouldInitialize: socket && isConnected,
+ *   version: versionParam,
  *   onInitialized: (ydoc) => console.log('Y.Doc ready'),
  * });
  */
 export function useYDocPersistence({
   sessionStore,
   shouldInitialize,
+  version,
   onInitialized,
   onDestroyed,
-}: YDocPersistenceOptions): Y.Doc | null {
+}: YDocPersistenceOptions): {
+  ydoc: Y.Doc | null;
+  hasInitialized: boolean;
+} {
   const hasInitialized = useRef(false);
+  const prevVersionRef = useRef(version);
 
-  // Initialize Y.Doc when conditions are met
+  // Handle version changes - reset Y.Doc completely
+  useEffect(() => {
+    if (prevVersionRef.current !== version && hasInitialized.current) {
+      // Version changed, need to reset
+      onDestroyed?.();
+      hasInitialized.current = false;
+      prevVersionRef.current = version;
+    }
+  }, [version, onDestroyed]);
+
+  // Track Y.Doc initialization
   useEffect(() => {
     if (!shouldInitialize || hasInitialized.current) {
       return;
@@ -71,5 +90,8 @@ export function useYDocPersistence({
     };
   }, [onDestroyed]);
 
-  return sessionStore.ydoc;
+  return {
+    ydoc: sessionStore.ydoc,
+    hasInitialized: hasInitialized.current,
+  };
 }

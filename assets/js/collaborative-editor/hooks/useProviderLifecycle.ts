@@ -9,7 +9,7 @@
  * Key principle: Provider can be recreated, but Y.Doc must persist.
  */
 
-import { useEffect } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { Socket } from 'phoenix';
 
 import _logger from '#/utils/logger';
@@ -34,27 +34,43 @@ export interface ProviderLifecycleOptions {
   /** Parameters for joining the channel */
   joinParams: Record<string, any>;
 
-  /** Whether provider has been initialized at least once */
-  hasInitialized: boolean;
+  /** Callback when provider initialization fails */
+  onError?: (error: Error) => void;
 
-  /** Callback when provider is ready */
+  /** Callback when provider is ready (initial connection) */
   onProviderReady?: () => void;
 
   /** Callback when provider is reconnected */
   onProviderReconnected?: () => void;
 }
 
+export interface ProviderLifecycleResult {
+  /** Whether provider has been initialized at least once */
+  hasProviderInitialized: boolean;
+
+  /** Last initialization error, if any */
+  initError: Error | null;
+}
+
 /**
  * Hook that manages provider lifecycle with reconnection support
  *
+ * Responsibilities:
+ * - Creates provider on initial connection (once Y.Doc exists)
+ * - Recreates provider on reconnection (preserving Y.Doc)
+ * - Handles initialization errors
+ * - Reports provider initialization state
+ *
+ * Note: Y.Doc lifecycle is managed separately by useYDocPersistence
+ *
  * @example
- * useProviderLifecycle({
+ * const { hasProviderInitialized, initError } = useProviderLifecycle({
  *   socket,
  *   isConnected,
  *   sessionStore,
  *   roomname: 'workflow:collaborate:xyz',
  *   joinParams: { project_id: '123', action: 'edit' },
- *   hasInitialized: true,
+ *   onError: (error) => setConnectionError(error),
  *   onProviderReconnected: () => console.log('Syncing...'),
  * });
  */
@@ -64,53 +80,67 @@ export function useProviderLifecycle({
   sessionStore,
   roomname,
   joinParams,
-  hasInitialized,
+  onError,
   onProviderReady,
   onProviderReconnected,
-}: ProviderLifecycleOptions): void {
+}: ProviderLifecycleOptions): ProviderLifecycleResult {
+  const hasProviderInitialized = useRef(false);
+  const [initError, setInitError] = useState<Error | null>(null);
+
   // Handle initial provider creation and reconnections
   useEffect(() => {
-    if (!socket || !sessionStore.ydoc) {
+    if (!socket || !isConnected) {
       return;
     }
 
     // Initial connection: create provider if not initialized
-    if (isConnected && !hasInitialized && !sessionStore.provider) {
+    // Note: This will create Y.Doc as part of initialization
+    if (!hasProviderInitialized.current && !sessionStore.provider) {
       logger.log('Creating initial provider', { roomname });
 
-      sessionStore.initializeSession(socket, roomname, null, {
-        connect: true,
-        joinParams,
-      });
+      try {
+        sessionStore.initializeSession(socket, roomname, null, {
+          connect: true,
+          joinParams,
+        });
 
-      onProviderReady?.();
+        hasProviderInitialized.current = true;
+        setInitError(null);
+        onError?.(null as any); // Clear error
+        onProviderReady?.();
+      } catch (error) {
+        const err = error as Error;
+        logger.error('Failed to initialize provider', err);
+        setInitError(err);
+        onError?.(err);
+      }
+
       return;
     }
 
     // Reconnection: recreate provider if we have Y.Doc but lost provider
-    if (isConnected && hasInitialized && !sessionStore.provider) {
-      logger.log('=== RECONNECTION DETECTED ===', {
-        hasYDoc: !!sessionStore.ydoc,
-        hasProvider: !!sessionStore.provider,
-      });
-
-      logger.log('Recreating provider for reconnection', {
+    if (hasProviderInitialized.current && !sessionStore.provider) {
+      logger.log('Reconnection detected - recreating provider', {
         roomname,
         willReuseYDoc: true,
       });
 
-      // Reinitialize to create new provider but reuse existing Y.Doc
-      sessionStore.initializeSession(socket, roomname, null, {
-        connect: true,
-        joinParams,
-      });
+      try {
+        // Reinitialize to create new provider but reuse existing Y.Doc
+        sessionStore.initializeSession(socket, roomname, null, {
+          connect: true,
+          joinParams,
+        });
 
-      logger.log('Provider recreated, Y.Doc preserved', {
-        hasYDoc: !!sessionStore.ydoc,
-        hasProvider: !!sessionStore.provider,
-      });
-
-      onProviderReconnected?.();
+        setInitError(null);
+        onError?.(null as any); // Clear error
+        onProviderReconnected?.();
+      } catch (error) {
+        const err = error as Error;
+        logger.error('Failed to reconnect provider', err);
+        setInitError(err);
+        onError?.(err);
+      }
     }
   }, [
     socket,
@@ -118,8 +148,13 @@ export function useProviderLifecycle({
     sessionStore,
     roomname,
     joinParams,
-    hasInitialized,
+    onError,
     onProviderReady,
     onProviderReconnected,
   ]);
+
+  return {
+    hasProviderInitialized: hasProviderInitialized.current,
+    initError,
+  };
 }

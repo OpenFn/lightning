@@ -13,7 +13,6 @@ import {
   useCallback,
   useEffect,
   useMemo,
-  useRef,
   useState,
 } from 'react';
 
@@ -27,6 +26,7 @@ import {
 } from '../stores/createSessionStore';
 import { ConnectionStatusProvider } from './ConnectionStatusContext';
 import { useProviderLifecycle } from '../hooks/useProviderLifecycle';
+import { useYDocPersistence } from '../hooks/useYDocPersistence';
 
 const logger = _logger.ns('SessionProvider').seal();
 
@@ -59,8 +59,7 @@ export const SessionProvider = ({
   // Create store instance once - stable reference
   const [sessionStore] = useState(() => createSessionStore());
 
-  // Track initialization and sync state for ConnectionStatusContext
-  const hasInitialized = useRef(false);
+  // Track sync state for ConnectionStatusContext
   const [isSynced, setIsSynced] = useState(false);
   const [lastSyncTime, setLastSyncTime] = useState<Date | null>(null);
   const [connectionError, setConnectionError] = useState<Error | null>(null);
@@ -84,68 +83,29 @@ export const SessionProvider = ({
     [projectId, isNewWorkflow]
   );
 
-  // Initialize session once when connected
-  useEffect(() => {
-    if (!socket || !isConnected) {
-      return;
-    }
-
-    // Prevent re-initialization if already done
-    if (hasInitialized.current) {
-      return;
-    }
-
-    logger.log('=== SessionProvider INITIALIZATION ===', {
-      version,
-      workflowId,
-      isConnected,
-    });
-
-    logger.log('Initializing session (one-time)', {
-      roomname,
-      socketConnected: socket.isConnected(),
-    });
-
-    try {
-      sessionStore.initializeSession(socket, roomname, null, {
-        connect: true,
-        joinParams,
-      });
-
-      logger.log('Session initialized with Y.Doc', {
-        hasYDoc: !!sessionStore.ydoc,
-      });
-
-      hasInitialized.current = true;
-      setConnectionError(null);
-    } catch (error) {
-      logger.error('Failed to initialize session', error);
-      setConnectionError(error as Error);
-    }
-  }, [
-    socket,
-    workflowId,
-    projectId,
-    isNewWorkflow,
+  // Use Y.Doc persistence hook to manage Y.Doc lifecycle
+  const { hasInitialized: hasYDocInitialized } = useYDocPersistence({
     sessionStore,
+    shouldInitialize: socket !== null && isConnected,
     version,
-    isConnected,
-    roomname,
-    joinParams,
-  ]);
-
-  // Cleanup on unmount only - preserve Y.Doc during disconnections
-  useEffect(() => {
-    return () => {
-      logger.debug('SessionProvider unmounting - destroying session', {
-        version,
-      });
+    onInitialized: () => {
+      logger.log('Y.Doc initialized', { version });
+    },
+    onDestroyed: () => {
+      logger.log('Y.Doc destroyed (version change or unmount)', { version });
+      // Reset connection state when Y.Doc is destroyed
       sessionStore.destroy();
-      hasInitialized.current = false;
-    };
-  }, [sessionStore, version]);
+      setIsSynced(false);
+      setLastSyncTime(null);
+      setConnectionError(null);
+    },
+  });
 
-  // Use provider lifecycle hook for reconnection management
+  // Use provider lifecycle hook to manage provider initialization
+  const handleProviderError = useCallback((error: Error | null) => {
+    setConnectionError(error);
+  }, []);
+
   const handleProviderReady = useCallback(() => {
     logger.log('Provider ready');
     setIsSynced(false); // Will become true after sync
@@ -162,7 +122,7 @@ export const SessionProvider = ({
     sessionStore,
     roomname,
     joinParams,
-    hasInitialized: hasInitialized.current,
+    onError: handleProviderError,
     onProviderReady: handleProviderReady,
     onProviderReconnected: handleProviderReconnected,
   });
@@ -176,7 +136,7 @@ export const SessionProvider = ({
 
     const provider = sessionStore.provider;
 
-    const handleSynced = (synced: boolean) => {
+    const handleSync = (synced: boolean) => {
       setIsSynced(synced);
       if (synced) {
         setLastSyncTime(new Date());
@@ -184,13 +144,13 @@ export const SessionProvider = ({
     };
 
     // Initial sync state
-    handleSynced(provider.synced || false);
+    handleSync(provider.synced || false);
 
     // Listen for sync events
-    provider.on('synced', handleSynced);
+    provider.on('sync', handleSync);
 
     return () => {
-      provider.off('synced', handleSynced);
+      provider.off('sync', handleSync);
     };
   }, [sessionStore.provider]);
 
