@@ -502,17 +502,15 @@ defmodule LightningWeb.WorkflowChannel do
 
   @impl true
   def handle_in("publish_template", params, socket) do
-    with :ok <- can_publish_template(socket),
+    with :ok <- authorize_publish_template(socket),
          {:ok, template} <- publish_template(socket, params) do
       broadcast_from!(socket, "template_updated", %{
         workflow_template: render_workflow_template(template)
       })
 
-      {:reply,
-       {:ok,
-        %{
-          template: render_workflow_template(template)
-        }}, socket}
+      {:reply, {:ok, %{template: render_workflow_template(template)}}, socket}
+    else
+      error -> workflow_error_reply(socket, error)
     end
   end
 
@@ -810,34 +808,13 @@ defmodule LightningWeb.WorkflowChannel do
     ])
   end
 
-  defp can_publish_template(socket) do
-    if socket.assigns.current_user.support_user do
-      :ok
-    else
-      {:reply,
-       {:error,
-        %{
-          errors: %{base: ["Only superusers can publish templates"]},
-          type: "unauthorized"
-        }}, socket}
-    end
-  end
-
   defp publish_template(socket, params) do
     workflow = socket.assigns.workflow
     template_params = Map.put(params, "workflow_id", workflow.id)
 
     case Lightning.WorkflowTemplates.create_template(template_params) do
-      {:ok, template} ->
-        {:ok, template}
-
-      {:error, %Ecto.Changeset{} = changeset} ->
-        {:reply,
-         {:error,
-          %{
-            errors: format_changeset_errors(changeset),
-            type: "validation_error"
-          }}, socket}
+      {:ok, template} -> {:ok, template}
+      {:error, changeset} -> {:error, changeset}
     end
   end
 
@@ -930,6 +907,23 @@ defmodule LightningWeb.WorkflowChannel do
          %{
            type: "unauthorized",
            message: "You don't have permission to edit this workflow"
+         }}
+    end
+  end
+
+  defp authorize_publish_template(socket) do
+    user = socket.assigns.current_user
+    project = socket.assigns.project
+
+    case Permissions.can(:project_users, :publish_template, user, project) do
+      :ok ->
+        :ok
+
+      {:error, :unauthorized} ->
+        {:error,
+         %{
+           type: "unauthorized",
+           message: "You don't have permission to publish templates"
          }}
     end
   end

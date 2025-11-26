@@ -2309,11 +2309,11 @@ defmodule LightningWeb.WorkflowChannelTest do
       assert broadcast_template.name == "Test Template"
     end
 
-    test "successfully updates existing template as suport user", %{
+    test "successfully updates existing template as support user", %{
       workflow: workflow,
       project: project
     } do
-      # Create a suport user
+      # Create a support user
       superuser = insert(:user, support_user: true)
       insert(:project_user, project: project, user: superuser, role: :editor)
 
@@ -2372,7 +2372,7 @@ defmodule LightningWeb.WorkflowChannelTest do
         })
 
       assert_reply ref, :error, %{
-        errors: %{base: ["Only superusers can publish templates"]},
+        errors: %{base: ["You don't have permission to publish templates"]},
         type: "unauthorized"
       }
 
