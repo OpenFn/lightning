@@ -5,8 +5,6 @@
 import { ReactFlowProvider } from '@xyflow/react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
-import { cn } from '#/utils/cn';
-
 import {
   useEditorPreferencesCommands,
   useHistoryPanelCollapsed,
@@ -150,12 +148,11 @@ export function CollaborativeWorkflowDiagram({
   return (
     <div ref={containerRef} className={className}>
       <ReactFlowProvider>
-        {/* Version mismatch warning when viewing latest but run used older version */}
         {versionMismatch && (
           <VersionMismatchBanner
             runVersion={versionMismatch.runVersion}
             currentVersion={versionMismatch.currentVersion}
-            className="absolute top-6 left-6 right-4 z-10 max-w-2xl mx-auto"
+            className="absolute top-4 left-1/2 -translate-x-1/2 z-50 max-w-md"
           />
         )}
 

@@ -1,13 +1,20 @@
 /**
- * VersionMismatchBanner - Warning when viewing latest workflow but selected run used older version
+ * VersionMismatchBanner - Informational banner when canvas version differs from selected run version
  *
  * Displays when:
  * - A run is selected
- * - Viewing "latest" workflow (not a specific snapshot)
- * - The run was executed on a different version than currently displayed
+ * - The canvas is showing a different workflow version than the run was executed on
  *
- * This prevents confusion when the workflow structure has changed since the run executed.
+ * Alerts users that the canvas layout may differ from the actual run execution,
+ * as the workflow structure may have changed between versions.
+ *
+ * Features:
+ * - Compact two-line design with version information
+ * - Dismissible via X button
+ * - Positioned at top-center of canvas
  */
+
+import { useState } from 'react';
 
 import { cn } from '#/utils/cn';
 
@@ -22,32 +29,39 @@ export function VersionMismatchBanner({
   currentVersion,
   className,
 }: VersionMismatchBannerProps) {
+  const [dismissed, setDismissed] = useState(false);
+
+  if (dismissed) {
+    return null;
+  }
+
   return (
     <div
-      className={cn('rounded-md bg-yellow-50 p-4', className)}
+      className={cn('bg-yellow-50 rounded-md shadow-sm', className)}
       role="alert"
       aria-live="polite"
     >
-      <div className="flex">
-        <div className="shrink-0">
-          <span
-            className="hero-exclamation-triangle h-5 w-5 text-yellow-400"
-            aria-hidden="true"
-          />
-        </div>
-        <div className="ml-3">
-          <h3 className="text-sm font-medium text-yellow-800">
-            Version mismatch
-          </h3>
-          <div className="mt-2 text-sm text-yellow-700">
-            <p>
-              This run was executed with version {runVersion}, but you're
-              viewing version {currentVersion}. Not all steps executed in the
-              run will appear on the canvas if the workflow structure has
-              changed.
-            </p>
+      <div className="flex items-start gap-2 p-3">
+        <span
+          className="hero-information-circle h-5 w-5 text-yellow-800 shrink-0"
+          aria-hidden="true"
+        />
+        <div className="flex-1 min-w-0">
+          <div className="text-xs text-yellow-800 font-medium">
+            Canvas shows v{currentVersion} (Selected run: v{runVersion})
+          </div>
+          <div className="text-xs text-yellow-700 mt-0.5">
+            Canvas layout may differ from actual run
           </div>
         </div>
+        <button
+          type="button"
+          onClick={() => setDismissed(true)}
+          className="shrink-0 text-yellow-700 cursor-pointer hover:text-yellow-800 transition-colors"
+          aria-label="Dismiss version mismatch warning"
+        >
+          <span className="hero-x-mark h-4 w-4 -mt-3" />
+        </button>
       </div>
     </div>
   );
