@@ -22,6 +22,8 @@ and this project adheres to
 
 ### Changed
 
+- Optimize dashboard stats queries with database aggregation
+  [#4070](https://github.com/OpenFn/lightning/issues/4070)
 - Enable usage limit checks across the whole application
   [#PR4050](https://github.com/OpenFn/lightning/pull/4050)
 - Make IDE heading separate from top menu
