@@ -5,7 +5,6 @@ import {
   XMarkIcon,
 } from '@heroicons/react/24/outline';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useHotkeys, useHotkeysContext } from 'react-hotkeys-hook';
 import {
   type ImperativePanelHandle,
   Panel,
@@ -13,6 +12,7 @@ import {
   PanelResizeHandle,
 } from 'react-resizable-panels';
 
+import { useKeyboardShortcut } from '#/collaborative-editor/keyboard';
 import { cn } from '#/utils/cn';
 
 import Docs from '../../../adaptor-docs/Docs';
@@ -20,7 +20,6 @@ import Metadata from '../../../metadata-explorer/Explorer';
 import { useURLState } from '../../../react/lib/use-url-state';
 import type { Dataclip } from '../../api/dataclips';
 import * as dataclipApi from '../../api/dataclips';
-import { HOTKEY_SCOPES } from '../../constants/hotkeys';
 import { RENDER_MODES } from '../../constants/panel';
 import { useLiveViewActions } from '../../contexts/LiveViewActionsContext';
 import { useProjectAdaptors } from '../../hooks/useAdaptors';
@@ -33,16 +32,11 @@ import {
   useHistoryCommands,
   useJobMatchesRun,
 } from '../../hooks/useHistory';
+import { isFinalState } from '../../types/history';
 import { useRunRetry } from '../../hooks/useRunRetry';
 import { useRunRetryShortcuts } from '../../hooks/useRunRetryShortcuts';
 import { useSession } from '../../hooks/useSession';
-import {
-  useLatestSnapshotLockVersion,
-  useProject,
-  useProjectRepoConnection,
-} from '../../hooks/useSessionContext';
-import { useUICommands } from '../../hooks/useUI';
-import { useVersionSelect } from '../../hooks/useVersionSelect';
+import { useProject } from '../../hooks/useSessionContext';
 import {
   useCanRun,
   useCanSave,
@@ -53,18 +47,18 @@ import {
 } from '../../hooks/useWorkflow';
 import { AdaptorDisplay } from '../AdaptorDisplay';
 import { AdaptorSelectionModal } from '../AdaptorSelectionModal';
-import { BreadcrumbLink } from '../Breadcrumbs';
 import { CollaborativeMonaco } from '../CollaborativeMonaco';
 import { ConfigureAdaptorModal } from '../ConfigureAdaptorModal';
-import { Header } from '../Header';
 import { JobSelector } from '../JobSelector';
 import { ManualRunPanel } from '../ManualRunPanel';
 import { ManualRunPanelErrorBoundary } from '../ManualRunPanelErrorBoundary';
 import { RunViewerErrorBoundary } from '../run-viewer/RunViewerErrorBoundary';
 import { RunViewerPanel } from '../run-viewer/RunViewerPanel';
+import { RunRetryButton } from '../RunRetryButton';
 import { SandboxIndicatorBanner } from '../SandboxIndicatorBanner';
+import { ShortcutKeys } from '../ShortcutKeys';
 import { Tabs } from '../Tabs';
-import { VersionDropdown } from '../VersionDropdown';
+import { Tooltip } from '../Tooltip';
 
 import { PanelToggleButton } from './PanelToggleButton';
 
@@ -165,7 +159,8 @@ export function FullScreenIDE({
   const docsPanelRef = useRef<ImperativePanelHandle>(null);
 
   const [followRunId, setFollowRunId] = useState<string | null>(null);
-  const [selectedDataclipState, setSelectedDataclipState] = useState<any>(null);
+  const [selectedDataclipState, setSelectedDataclipState] =
+    useState<Dataclip | null>(null);
   const [selectedTab, setSelectedTab] = useState<
     'empty' | 'custom' | 'existing'
   >('empty');
@@ -173,7 +168,7 @@ export function FullScreenIDE({
   const [manuallyUnselectedDataclip, setManuallyUnselectedDataclip] =
     useState(false);
 
-  const handleDataclipChange = useCallback((dataclip: any) => {
+  const handleDataclipChange = useCallback((dataclip: Dataclip | null) => {
     setSelectedDataclipState(dataclip);
     setManuallyUnselectedDataclip(dataclip === null);
   }, []);
@@ -203,6 +198,9 @@ export function FullScreenIDE({
 
   // Check if the currently selected job matches the loaded run
   const jobMatchesRun = useJobMatchesRun(currentJob?.id || null);
+  const shouldShowMismatch =
+    !jobMatchesRun && currentRun && isFinalState(currentRun.state);
+  const selectedStepName = currentJob?.name || 'This step';
 
   const followedRunStep = useMemo(() => {
     if (!currentRun || !currentRun.steps || !jobIdFromURL) return null;
@@ -326,8 +324,12 @@ export function FullScreenIDE({
 
   // Enable run/retry keyboard shortcuts in IDE
   useRunRetryShortcuts({
-    onRun: handleRun,
-    onRetry: handleRetry,
+    onRun: () => {
+      void handleRun();
+    },
+    onRetry: () => {
+      void handleRetry();
+    },
     canRun:
       canRunSnapshot &&
       canRunFromHook &&
@@ -336,14 +338,8 @@ export function FullScreenIDE({
       jobMatchesRun,
     isRunning: isSubmitting || runIsProcessing,
     isRetryable,
-    scope: HOTKEY_SCOPES.IDE,
-    enableOnContentEditable: true,
+    priority: 50, // IDE priority
   });
-
-  // Get data for Header
-  const latestSnapshotLockVersion = useLatestSnapshotLockVersion();
-  const repoConnection = useProjectRepoConnection();
-  const { openGitHubSyncModal } = useUICommands();
 
   // Handle job selection from JobSelector
   const allJobs = workflow?.jobs || [];
@@ -364,15 +360,6 @@ export function FullScreenIDE({
   const handleCloseIDE = useCallback(() => {
     onClose();
   }, [onClose]);
-
-  const { enableScope, disableScope } = useHotkeysContext();
-
-  useEffect(() => {
-    enableScope(HOTKEY_SCOPES.IDE);
-    return () => {
-      disableScope(HOTKEY_SCOPES.IDE);
-    };
-  }, [enableScope, disableScope]);
 
   useEffect(() => {
     if (jobIdFromURL) {
@@ -395,10 +382,6 @@ export function FullScreenIDE({
       selectStep(stepIdFromURL);
     }
   }, [stepIdFromURL, runIdFromURL, selectStep]);
-
-  const handleCollapseLeftPanel = () => {
-    leftPanelRef.current?.collapse();
-  };
 
   const handleOpenAdaptorPicker = useCallback(() => {
     setIsConfigureModalOpen(false);
@@ -550,26 +533,23 @@ export function FullScreenIDE({
     return cleanup;
   }, [handleEvent, currentJob, updateJob, requestCredentials]);
 
-  useHotkeys(
-    'escape',
-    event => {
+  useKeyboardShortcut(
+    'Escape, Control+e, Meta+e',
+    () => {
       const activeElement = document.activeElement;
       const isMonacoFocused = activeElement?.closest('.monaco-editor');
 
       if (isMonacoFocused) {
         (activeElement as HTMLElement).blur();
-        event.preventDefault();
       } else {
         onClose();
       }
     },
+    50, // IDE priority
     {
       enabled:
         !isConfigureModalOpen && !isAdaptorPickerOpen && !isCredentialModalOpen,
-      scopes: [HOTKEY_SCOPES.IDE],
-      enableOnFormTags: true,
-    },
-    [onClose, isConfigureModalOpen, isAdaptorPickerOpen, isCredentialModalOpen]
+    }
   );
 
   // Save docs panel collapsed state to localStorage
@@ -582,7 +562,6 @@ export function FullScreenIDE({
 
   // IMPORTANT: All hooks must be called before any early returns
   const { isReadOnly } = useWorkflowReadOnly();
-  const handleVersionSelect = useVersionSelect();
 
   // Check loading state but don't use early return (violates rules of hooks)
   const isLoading = !currentJob || !currentJobYText || !awareness;
@@ -591,7 +570,7 @@ export function FullScreenIDE({
   if (isLoading) {
     return (
       <div
-        className="fixed inset-0 z-50 bg-white flex
+        className="absolute inset-0 z-50 bg-white flex
           items-center justify-center"
       >
         <div className="text-center">
@@ -649,85 +628,97 @@ export function FullScreenIDE({
     }
   };
 
-  // Build adaptor display with version dropdown for IDE Header
-  const adaptorDisplay = currentJob ? (
-    <div className="flex items-center gap-3">
-      <AdaptorDisplay
-        adaptor={currentJob.adaptor || '@openfn/language-common@latest'}
-        credentialId={
-          currentJob.project_credential_id ||
-          currentJob.keychain_credential_id ||
-          null
-        }
-        size="sm"
-        onEdit={() => setIsConfigureModalOpen(true)}
-        onChangeAdaptor={handleOpenAdaptorPicker}
-        isReadOnly={isReadOnly}
-      />
-      <VersionDropdown
-        currentVersion={workflow?.lock_version ?? null}
-        latestVersion={latestSnapshotLockVersion ?? null}
-        onVersionSelect={handleVersionSelect}
-      />
-    </div>
-  ) : null;
-
   return (
-    <div className="absolute inset-0 bg-white flex flex-col">
-      <Header
-        key="ide-header"
-        projectId={projectId}
-        workflowId={workflowId}
-        onRunClick={handleRun}
-        onRetryClick={handleRetry}
-        canRun={
-          canRunSnapshot &&
-          canRunFromHook &&
-          !isSubmitting &&
-          !runIsProcessing &&
-          jobMatchesRun
-        }
-        runTooltipMessage={
-          !jobMatchesRun
-            ? 'Selected job was not part of this run'
-            : runTooltipMessage
-        }
-        isRetryable={isRetryable}
-        isRunning={isSubmitting || runIsProcessing}
-        adaptorDisplay={adaptorDisplay}
-        onCloseIDE={handleCloseIDE}
-      >
-        {/* IDE Breadcrumbs: Projects > Project > Workflows > Workflow > JobSelector */}
-        {currentJob
-          ? [
-              <BreadcrumbLink href="/projects" key="projects">
-                Projects
-              </BreadcrumbLink>,
-              <BreadcrumbLink href={`/projects/${projectId}/w`} key="project">
-                {project?.name}
-              </BreadcrumbLink>,
-              <BreadcrumbLink href={`/projects/${projectId}/w`} key="workflows">
-                Workflows
-              </BreadcrumbLink>,
-              <BreadcrumbLink onClick={handleCloseIDE} key="workflow-name">
-                {workflow?.name}
-              </BreadcrumbLink>,
-              <JobSelector
-                key="job-selector"
-                currentJob={currentJob}
-                jobs={allJobs}
-                onChange={handleJobSelect}
-              />,
-            ]
-          : []}
-      </Header>
-
+    <div className="absolute inset-0 top-20 bottom-0 z-49 bg-white flex flex-col">
       <SandboxIndicatorBanner
         parentProjectId={parentProjectId}
         parentProjectName={parentProjectName}
         projectName={project?.name}
         position="relative"
       />
+
+      {/* IDE Heading Bar */}
+      <div className="flex-none bg-white border-b border-gray-200">
+        <div className="flex items-center justify-between px-6 py-2">
+          <div className="flex items-center gap-3 flex-1 min-w-0">
+            {/* Job Selector */}
+            <div className="shrink-0">
+              <JobSelector
+                currentJob={currentJob}
+                jobs={allJobs}
+                onChange={handleJobSelect}
+              />
+            </div>
+
+            {/* Adaptor Display with Version Dropdown */}
+            {currentJob && (
+              <div className="flex items-center gap-3 shrink-0">
+                <AdaptorDisplay
+                  adaptor={
+                    currentJob.adaptor || '@openfn/language-common@latest'
+                  }
+                  credentialId={
+                    currentJob.project_credential_id ||
+                    currentJob.keychain_credential_id ||
+                    null
+                  }
+                  size="sm"
+                  onEdit={() => setIsConfigureModalOpen(true)}
+                  onChangeAdaptor={handleOpenAdaptorPicker}
+                  isReadOnly={isReadOnly}
+                />
+              </div>
+            )}
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0">
+            {/* Run/Retry button */}
+            <RunRetryButton
+              isRetryable={isRetryable}
+              isDisabled={
+                !(
+                  canRunSnapshot &&
+                  canRunFromHook &&
+                  !isSubmitting &&
+                  !runIsProcessing &&
+                  jobMatchesRun
+                )
+              }
+              isSubmitting={isSubmitting || runIsProcessing}
+              onRun={() => {
+                void handleRun();
+              }}
+              onRetry={() => {
+                void handleRetry();
+              }}
+              buttonText={{
+                run: 'Run',
+                retry: 'Run (retry)',
+                processing: 'Processing',
+              }}
+              variant="primary"
+              dropdownPosition="down"
+              showKeyboardShortcuts={true}
+              disabledTooltip={
+                !jobMatchesRun
+                  ? 'Selected job was not part of this run'
+                  : runTooltipMessage
+              }
+            />
+
+            {/* Close button */}
+            <Tooltip content={<ShortcutKeys keys={['esc']} />} side="bottom">
+              <button
+                onClick={handleCloseIDE}
+                className="p-1 hover:bg-gray-100 rounded transition-colors"
+                aria-label="Close IDE"
+              >
+                <XMarkIcon className="h-5 w-5 text-gray-500" />
+              </button>
+            </Tooltip>
+          </div>
+        </div>
+      </div>
 
       <div className="flex-1 overflow-hidden">
         <PanelGroup
@@ -842,15 +833,14 @@ export function FullScreenIDE({
                     </Panel>
 
                     {/* Resize Handle */}
-                    {docsOrientation === 'horizontal' ? (
+                    {!isDocsCollapsed && (
                       <PanelResizeHandle
-                        className="w-1 bg-gray-200 hover:bg-blue-400
-                        transition-colors cursor-col-resize"
-                      />
-                    ) : (
-                      <PanelResizeHandle
-                        className="h-1 bg-gray-200 hover:bg-blue-400
-                        transition-colors cursor-row-resize"
+                        className={cn(
+                          'bg-gray-200 hover:bg-blue-400 transition-colors',
+                          docsOrientation === 'horizontal'
+                            ? 'w-1 cursor-col-resize'
+                            : 'h-1 cursor-row-resize'
+                        )}
                       />
                     )}
 
@@ -980,22 +970,43 @@ export function FullScreenIDE({
                       {followRunId ? (
                         <>
                           {/* Close run chip */}
-                          <div className="inline-flex justify-between items-center gap-x-1 rounded-md bg-blue-100 px-2 py-1 text-xs font-medium text-blue-700 mr-3">
-                            <span>Run {followRunId?.slice(0, 7)}</span>
-                            <button
-                              onClick={() => {
-                                setFollowRunId(null);
-                                updateSearchParams({ run: null });
-                              }}
-                              className="group relative -mr-1 h-3.5 w-3.5 rounded-sm hover:bg-blue-600/20"
-                              aria-label="Close run"
-                              title="Close run"
+                          <Tooltip
+                            content={
+                              shouldShowMismatch
+                                ? `${selectedStepName} was not part of this run. Pick another step or deselect the run.`
+                                : undefined
+                            }
+                            side="bottom"
+                          >
+                            <div
+                              className={cn(
+                                'inline-flex justify-between items-center gap-x-1 rounded-md px-2 py-1 text-xs font-medium mr-3',
+                                shouldShowMismatch
+                                  ? 'bg-yellow-100 text-yellow-700'
+                                  : 'bg-blue-100 text-blue-700'
+                              )}
                             >
-                              <span className="sr-only">Remove</span>
-                              <XMarkIcon className="h-3.5 w-3.5" />
-                              <span className="absolute -inset-1"></span>
-                            </button>
-                          </div>
+                              <span>Run {followRunId?.slice(0, 7)}</span>
+                              <button
+                                onClick={() => {
+                                  setFollowRunId(null);
+                                  updateSearchParams({ run: null });
+                                }}
+                                className={cn(
+                                  'group relative -mr-1 h-3.5 w-3.5 rounded-sm',
+                                  shouldShowMismatch
+                                    ? 'hover:bg-yellow-600/20'
+                                    : 'hover:bg-blue-600/20'
+                                )}
+                                aria-label="Close run"
+                                title="Close run"
+                              >
+                                <span className="sr-only">Remove</span>
+                                <XMarkIcon className="h-3.5 w-3.5" />
+                                <span className="absolute -inset-1"></span>
+                              </button>
+                            </div>
+                          </Tooltip>
                           {/* Tabs as header content when showing run */}
                           <div className="flex-1">
                             <Tabs

@@ -11,9 +11,9 @@
  */
 export function extractPackageName(adaptorString: string): string {
   // Handle scoped packages (@scope/package@version)
-  if (adaptorString.startsWith("@")) {
+  if (adaptorString.startsWith('@')) {
     // Find the last @ which separates package from version
-    const lastAtIndex = adaptorString.lastIndexOf("@");
+    const lastAtIndex = adaptorString.lastIndexOf('@');
     // If there's only one @ (the scoped package prefix), return as-is
     if (lastAtIndex === 0) {
       return adaptorString;
@@ -23,7 +23,7 @@ export function extractPackageName(adaptorString: string): string {
   }
 
   // Handle unscoped packages (package@version)
-  const atIndex = adaptorString.indexOf("@");
+  const atIndex = adaptorString.indexOf('@');
   if (atIndex === -1) {
     return adaptorString;
   }
@@ -56,7 +56,7 @@ export function toTitleCase(name: string): string {
   return name
     .split(/[-_]/)
     .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-    .join(" ");
+    .join(' ');
 }
 
 /**

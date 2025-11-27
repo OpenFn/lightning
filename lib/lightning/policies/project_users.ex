@@ -27,6 +27,7 @@ defmodule Lightning.Policies.ProjectUsers do
           | :write_github_connection
           | :initiate_github_sync
           | :create_collection
+          | :publish_template
 
   @doc """
   authorize/3 takes an action, a user, and a project. It checks the user's role
@@ -58,6 +59,12 @@ defmodule Lightning.Policies.ProjectUsers do
 
   def authorize(:delete_project, %User{} = user, %Project{} = project),
     do: Projects.get_project_user_role(user, project) == :owner
+
+  def authorize(:publish_template, %User{} = user, %Project{} = project) do
+    user.support_user and
+      (Projects.member_of?(project, user) or
+         allow_as_support_user?(user, project))
+  end
 
   def authorize(action, %User{} = user, %Project{} = project) do
     project_user = Projects.get_project_user(project, user)

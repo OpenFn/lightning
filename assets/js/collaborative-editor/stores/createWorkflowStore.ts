@@ -277,7 +277,7 @@ export const createWorkflowStore = () => {
     name: 'WorkflowStore',
     excludeKeys: ['ydoc', 'provider', 'undoManager'], // Exclude Y.Doc, provider, and undoManager (too large/circular)
     maxAge: 200, // Higher limit to prevent history loss from frequent updates
-    trace: false,
+    trace: true,
   });
 
   /**
@@ -374,6 +374,28 @@ export const createWorkflowStore = () => {
     });
   }
 
+  /**
+   * Merges Y.Doc entity data with preserved error state from existing entities.
+   * This ensures errors set by errorsObserver survive entity observer updates.
+   *
+   * When entity observers fire (jobs, triggers, edges), they reconstruct the
+   * entity arrays from Y.Doc. This helper preserves the `errors` field from
+   * the existing entities to maintain error state set by errorsObserver.
+   *
+   * @param yjsEntities - Array of Y.Map entities from Y.Doc
+   * @param existingEntities - Current entities from Immer state
+   * @returns Array of entities with preserved error state
+   */
+  function mergeWithPreservedErrors<
+    T extends { id: string; errors?: Record<string, string[]> },
+  >(yjsEntities: Y.Map<unknown>[], existingEntities: T[]): T[] {
+    return yjsEntities.map(yjsEntity => {
+      const entity = yjsEntity.toJSON() as T;
+      const existing = existingEntities.find(e => e.id === entity.id);
+      return { ...entity, errors: existing?.errors } as T;
+    });
+  }
+
   // Connect Y.Doc and set up observers
   const connect = (d: Session.WorkflowDoc, p: PhoenixChannelProvider) => {
     // Clean up previous connection
@@ -428,27 +450,24 @@ export const createWorkflowStore = () => {
           sameOrigin: transaction.origin === provider,
         });
       }
+
       updateState(draft => {
         const yjsJobs = jobsArray.toArray() as Y.Map<unknown>[];
-        draft.jobs = yjsJobs.map(yjsJob => yjsJob.toJSON() as Workflow.Job);
+        draft.jobs = mergeWithPreservedErrors(yjsJobs, draft.jobs);
       }, 'jobs/observerUpdate');
     };
 
     const triggersObserver = () => {
       updateState(draft => {
         const yjsTriggers = triggersArray.toArray() as Y.Map<unknown>[];
-        draft.triggers = yjsTriggers.map(
-          yjsTrigger => yjsTrigger.toJSON() as Workflow.Trigger
-        );
+        draft.triggers = mergeWithPreservedErrors(yjsTriggers, draft.triggers);
       }, 'triggers/observerUpdate');
     };
 
     const edgesObserver = () => {
       updateState(draft => {
         const yjsEdges = edgesArray.toArray() as Y.Map<unknown>[];
-        draft.edges = yjsEdges.map(
-          yjsEdge => yjsEdge.toJSON() as Workflow.Edge
-        );
+        draft.edges = mergeWithPreservedErrors(yjsEdges, draft.edges);
       }, 'edges/observerUpdate');
     };
 
@@ -990,7 +1009,7 @@ export const createWorkflowStore = () => {
       logger.debug('setError: no changes detected, skipping transaction', {
         path,
       });
-      return;
+      return; // why this causes the issue.
     }
 
     // 3. Apply changes in transaction

@@ -1,4 +1,4 @@
-import type { Page, Locator } from "@playwright/test";
+import type { Page, Locator } from '@playwright/test';
 
 /**
  * Page Object Model for the Job Form component
@@ -8,8 +8,8 @@ export class JobFormPage {
   private jobIndex: number;
 
   protected selectors = {
-    workflowForm: "#workflow-form",
-    workflowFormHeader: "#workflow-form div",
+    workflowForm: '#workflow-form',
+    workflowFormHeader: '#workflow-form div',
     closeNodePanelButton: '[data-testid="CloseNodePanelViaEscape"]',
   };
 
@@ -29,7 +29,7 @@ export class JobFormPage {
       `select[name="workflow[jobs][${this.jobIndex}][${fieldName}]"]`,
       `input[name="workflow[jobs][${this.jobIndex}][${fieldName}]"]`,
       `textarea[name="workflow[jobs][${this.jobIndex}][${fieldName}]"]`,
-    ].join(",");
+    ].join(',');
   }
 
   /**
@@ -68,13 +68,13 @@ export class JobFormPage {
    * Get the version select dropdown
    */
   get versionSelect(): Locator {
-    return this.page.locator(this.getJobFieldSelector("adaptor"));
+    return this.page.locator(this.getJobFieldSelector('adaptor'));
   }
 
   /**
    * Get the job name input
    */
   get nameInput(): Locator {
-    return this.page.locator(this.getJobFieldSelector("name"));
+    return this.page.locator(this.getJobFieldSelector('name'));
   }
 }

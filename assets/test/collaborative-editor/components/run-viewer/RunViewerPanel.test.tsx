@@ -322,8 +322,13 @@ describe('RunViewerPanel', () => {
       expect(panelGroup).not.toHaveClass('opacity-50');
     });
 
-    test('panel is greyed out when job does not match run', () => {
-      mockUseActiveRun.mockReturnValue(createMockRun());
+    test('panel is greyed out when job does not match run and run is finished', () => {
+      mockUseActiveRun.mockReturnValue(
+        createMockRun({
+          state: 'success',
+          finished_at: new Date().toISOString(),
+        })
+      );
       mockUseActiveRunLoading.mockReturnValue(false);
       mockUseActiveRunError.mockReturnValue(null);
       mockUseJobMatchesRun.mockReturnValue(false);
@@ -343,6 +348,31 @@ describe('RunViewerPanel', () => {
       const panelGroup = container.querySelector('[data-panel-group]');
       expect(panelGroup).toHaveClass('h-full');
       expect(panelGroup).toHaveClass('opacity-50');
+    });
+
+    test('panel is NOT greyed out when job does not match run but run is still in progress', () => {
+      mockUseActiveRun.mockReturnValue(
+        createMockRun({ state: 'started', finished_at: null })
+      );
+      mockUseActiveRunLoading.mockReturnValue(false);
+      mockUseActiveRunError.mockReturnValue(null);
+      mockUseJobMatchesRun.mockReturnValue(false);
+      mockUseCurrentJob.mockReturnValue({
+        job: { id: 'job-2', name: 'Different Job' } as any,
+        ytext: null,
+      });
+
+      const { container } = render(
+        <RunViewerPanel
+          followRunId="run-1"
+          activeTab="log"
+          onTabChange={vi.fn()}
+        />
+      );
+
+      const panelGroup = container.querySelector('[data-panel-group]');
+      expect(panelGroup).toHaveClass('h-full');
+      expect(panelGroup).not.toHaveClass('opacity-50');
     });
 
     test('panel remains normal when no run is loaded', () => {
@@ -367,8 +397,13 @@ describe('RunViewerPanel', () => {
       expect(screen.getByText(/after you click run/i)).toBeInTheDocument();
     });
 
-    test('panel opacity changes when job matching state changes', () => {
-      mockUseActiveRun.mockReturnValue(createMockRun());
+    test('panel opacity changes when job matching state changes and run is finished', () => {
+      mockUseActiveRun.mockReturnValue(
+        createMockRun({
+          state: 'success',
+          finished_at: new Date().toISOString(),
+        })
+      );
       mockUseActiveRunLoading.mockReturnValue(false);
       mockUseActiveRunError.mockReturnValue(null);
       mockUseJobMatchesRun.mockReturnValue(true);
@@ -388,7 +423,7 @@ describe('RunViewerPanel', () => {
       let panelGroup = container.querySelector('[data-panel-group]');
       expect(panelGroup).not.toHaveClass('opacity-50');
 
-      // Simulate job change to non-matching job
+      // Simulate job change to non-matching job (run is finished)
       mockUseJobMatchesRun.mockReturnValue(false);
       mockUseCurrentJob.mockReturnValue({
         job: { id: 'job-2', name: 'Different Job' } as any,
@@ -407,8 +442,13 @@ describe('RunViewerPanel', () => {
       expect(panelGroup).toHaveClass('opacity-50');
     });
 
-    test('panel works correctly across all tab types when job does not match', () => {
-      mockUseActiveRun.mockReturnValue(createMockRun());
+    test('panel works correctly across all tab types when job does not match and run is finished', () => {
+      mockUseActiveRun.mockReturnValue(
+        createMockRun({
+          state: 'success',
+          finished_at: new Date().toISOString(),
+        })
+      );
       mockUseActiveRunLoading.mockReturnValue(false);
       mockUseActiveRunError.mockReturnValue(null);
       mockUseJobMatchesRun.mockReturnValue(false);

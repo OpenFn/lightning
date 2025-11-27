@@ -1,4 +1,4 @@
-import { createContext, useContext } from "react";
+import { createContext, useContext } from 'react';
 
 interface LiveViewActions {
   pushEvent: (name: string, payload: Record<string, unknown>) => void;
@@ -36,7 +36,7 @@ export function useLiveViewActions(): LiveViewActions {
   const context = useContext(LiveViewActionsContext);
   if (!context) {
     throw new Error(
-      "useLiveViewActions must be used within a LiveViewActionsProvider"
+      'useLiveViewActions must be used within a LiveViewActionsProvider'
     );
   }
   return context;

@@ -4,12 +4,10 @@ import {
   DialogPanel,
   DialogTitle,
 } from '@headlessui/react';
-import { useEffect, useState } from 'react';
-import { useHotkeysContext } from 'react-hotkeys-hook';
+import { useState } from 'react';
 
 import { cn } from '#/utils/cn';
 
-import { HOTKEY_SCOPES } from '../../constants/hotkeys';
 import { useLiveViewActions } from '../../contexts/LiveViewActionsContext';
 import type { WebhookAuthMethod } from '../../types/sessionContext';
 import type { Workflow } from '../../types/workflow';
@@ -42,20 +40,7 @@ export function WebhookAuthMethodModal({
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Keyboard scope management
-  const { enableScope, disableScope } = useHotkeysContext();
   const { pushEvent } = useLiveViewActions();
-
-  useEffect(() => {
-    enableScope(HOTKEY_SCOPES.MODAL);
-    disableScope(HOTKEY_SCOPES.PANEL);
-    disableScope(HOTKEY_SCOPES.RUN_PANEL);
-
-    return () => {
-      disableScope(HOTKEY_SCOPES.MODAL);
-      enableScope(HOTKEY_SCOPES.PANEL);
-    };
-  }, [enableScope, disableScope]);
 
   const handleToggle = (methodId: string) => {
     setSelections(prev => ({

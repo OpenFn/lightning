@@ -113,6 +113,7 @@ export const DataclipViewer = ({ dataclipId }: { dataclipId: string }) => {
           fontFamily: 'Fira Code VF',
           fontSize: 14,
           fontLigatures: true,
+          fixedOverflowWidgets: true,
           minimap: {
             enabled: false,
           },

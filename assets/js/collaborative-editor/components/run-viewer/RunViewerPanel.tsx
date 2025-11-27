@@ -10,6 +10,7 @@ import {
   useJobMatchesRun,
 } from '../../hooks/useHistory';
 import { useCurrentJob } from '../../hooks/useWorkflow';
+import { isFinalState } from '../../types/history';
 
 import { InputTabPanel } from './InputTabPanel';
 import { LogTabPanel } from './LogTabPanel';
@@ -37,6 +38,7 @@ export function RunViewerPanel({
   const { clearActiveRunError } = useHistoryCommands();
   const { job: currentJob } = useCurrentJob();
   const jobMatchesRun = useJobMatchesRun(currentJob?.id || null);
+  const shouldShowMismatch = !jobMatchesRun && run && isFinalState(run.state);
 
   // Note: Connection to run channel is managed by parent component (FullScreenIDE)
   // This component only reads the current run state from HistoryStore
@@ -89,7 +91,7 @@ export function RunViewerPanel({
   return (
     <PanelGroup
       direction="vertical"
-      className={cn('h-full', !jobMatchesRun && 'opacity-50')}
+      className={cn('h-full', shouldShowMismatch && 'opacity-50')}
       autoSaveId="lightning.run-viewer-layout"
     >
       {/* Shared Run metadata + Steps panel */}

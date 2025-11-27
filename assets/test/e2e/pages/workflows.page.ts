@@ -1,6 +1,6 @@
-import { expect } from "@playwright/test";
-import type { Page } from "@playwright/test";
-import { LiveViewPage } from "./base";
+import { expect } from '@playwright/test';
+import type { Page } from '@playwright/test';
+import { LiveViewPage } from './base';
 
 /**
  * Page Object Model for the Workflows listing page
@@ -28,7 +28,7 @@ export class WorkflowsPage extends LiveViewPage {
     await expect(createButton).toBeVisible();
 
     // Wait for Phoenix event handlers to be attached to the button
-    await this.waitForEventAttached(createButton, "click");
+    await this.waitForEventAttached(createButton, 'click');
 
     // Click the button to navigate to workflow creation page
     await createButton.click();
@@ -45,19 +45,19 @@ export class WorkflowsPage extends LiveViewPage {
 
     // Find the <tr> element that contains the workflow label
     // The <tr> has phx-click and contains an element with aria-label matching the workflow name
-    const workflowRow = this.page.locator("tr").filter({
+    const workflowRow = this.page.locator('tr').filter({
       has: this.page.getByLabel(workflowName),
     });
 
     await expect(workflowRow).toBeVisible();
 
     // Wait for Phoenix event handlers to be attached to the row
-    await this.waitForEventAttached(workflowRow, "click");
+    await this.waitForEventAttached(workflowRow, 'click');
 
     // Click the row to navigate to workflow edit page
     await workflowRow.click();
 
     // Wait for navigation to complete
-    await this.page.waitForLoadState("networkidle");
+    await this.page.waitForLoadState('networkidle');
   }
 }

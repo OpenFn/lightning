@@ -1,4 +1,4 @@
-import { describe as e2eDescribe } from "./e2e-helper";
+import { describe as e2eDescribe } from './e2e-helper';
 
 // Raw database structure from describe command
 interface DatabaseState {
@@ -67,41 +67,41 @@ function shapeDatabaseState(dbState: DatabaseState): TestData {
   }
 
   // Find users by email patterns
-  const adminUser = dbState.users.find(u => u.email === "demo@openfn.org");
-  const editorUser = dbState.users.find(u => u.email === "editor@openfn.org");
-  const viewerUser = dbState.users.find(u => u.email === "viewer@openfn.org");
-  const superUser = dbState.users.find(u => u.email === "super@openfn.org");
+  const adminUser = dbState.users.find(u => u.email === 'demo@openfn.org');
+  const editorUser = dbState.users.find(u => u.email === 'editor@openfn.org');
+  const viewerUser = dbState.users.find(u => u.email === 'viewer@openfn.org');
+  const superUser = dbState.users.find(u => u.email === 'super@openfn.org');
 
   if (!adminUser) {
     throw new Error(
-      "Admin user (demo@openfn.org) not found in database. Check demo data setup."
+      'Admin user (demo@openfn.org) not found in database. Check demo data setup.'
     );
   }
   if (!editorUser) {
     throw new Error(
-      "Editor user (editor@openfn.org) not found in database. Check demo data setup."
+      'Editor user (editor@openfn.org) not found in database. Check demo data setup.'
     );
   }
   if (!viewerUser) {
     throw new Error(
-      "Viewer user (viewer@openfn.org) not found in database. Check demo data setup."
+      'Viewer user (viewer@openfn.org) not found in database. Check demo data setup.'
     );
   }
 
   // Find projects by name patterns
   const openhieProject = dbState.projects.find(
-    p => p.name === "openhie-project"
+    p => p.name === 'openhie-project'
   );
-  const dhis2Project = dbState.projects.find(p => p.name === "dhis2-project");
+  const dhis2Project = dbState.projects.find(p => p.name === 'dhis2-project');
 
   if (!openhieProject) {
     throw new Error(
-      "OpenHIE project not found in database. Check demo data setup."
+      'OpenHIE project not found in database. Check demo data setup.'
     );
   }
   if (!dhis2Project) {
     throw new Error(
-      "DHIS2 project not found in database. Check demo data setup."
+      'DHIS2 project not found in database. Check demo data setup.'
     );
   }
 
@@ -115,12 +115,12 @@ function shapeDatabaseState(dbState: DatabaseState): TestData {
 
   if (!openhieWorkflow) {
     throw new Error(
-      "OpenHIE workflow not found in database. Check demo data setup."
+      'OpenHIE workflow not found in database. Check demo data setup.'
     );
   }
   if (!dhis2Workflow) {
     throw new Error(
-      "DHIS2 workflow not found in database. Check demo data setup."
+      'DHIS2 workflow not found in database. Check demo data setup.'
     );
   }
 
@@ -128,23 +128,23 @@ function shapeDatabaseState(dbState: DatabaseState): TestData {
     users: {
       admin: {
         email: adminUser.email,
-        password: "welcome12345",
+        password: 'welcome12345',
         id: adminUser.id,
       },
       editor: {
         email: editorUser.email,
-        password: "welcome12345",
+        password: 'welcome12345',
         id: editorUser.id,
       },
       viewer: {
         email: viewerUser.email,
-        password: "welcome12345",
+        password: 'welcome12345',
         id: viewerUser.id,
       },
       ...(superUser && {
         super: {
           email: superUser.email,
-          password: "welcome12345",
+          password: 'welcome12345',
           id: superUser.id,
         },
       }),
@@ -201,8 +201,8 @@ export function getTestData(): Promise<TestData> {
  */
 export function getTestDataSync(): TestData {
   throw new Error(
-    "getTestDataSync() is no longer supported since fetchDatabaseState() is now async. " +
-      "Use await getTestData() instead."
+    'getTestDataSync() is no longer supported since fetchDatabaseState() is now async. ' +
+      'Use await getTestData() instead.'
   );
 }
 

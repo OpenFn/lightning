@@ -90,7 +90,9 @@ import {
   type SessionContextState,
   type SessionContextStore,
   SessionContextResponseSchema,
+  VersionSchema,
   WebhookAuthMethodSchema,
+  WorkflowTemplateSchema,
 } from '../types/sessionContext';
 
 import { createWithSelector } from './common';
@@ -114,6 +116,10 @@ export const createSessionContextStore = (
       latestSnapshotLockVersion: null,
       projectRepoConnection: null,
       webhookAuthMethods: [],
+      versions: [],
+      versionsLoading: false,
+      versionsError: null,
+      workflow_template: null,
       isNewWorkflow,
       isLoading: false,
       error: null,
@@ -176,6 +182,7 @@ export const createSessionContextStore = (
           sessionContext.latest_snapshot_lock_version;
         draft.projectRepoConnection = sessionContext.project_repo_connection;
         draft.webhookAuthMethods = sessionContext.webhook_auth_methods;
+        draft.workflow_template = sessionContext.workflow_template;
         draft.isLoading = false;
         draft.error = null;
         draft.lastUpdated = Date.now();
@@ -265,9 +272,17 @@ export const createSessionContextStore = (
   /**
    * Update latest snapshot lock version
    * Called when workflow is saved and backend returns new lock version
+   * Clears versions cache when lock version changes (not on initial set)
    */
   const setLatestSnapshotLockVersion = (lockVersion: number) => {
     state = produce(state, draft => {
+      const previousLockVersion = draft.latestSnapshotLockVersion;
+
+      // Clear versions if lock version changed (not on initial set)
+      if (previousLockVersion !== null && previousLockVersion !== lockVersion) {
+        draft.versions = [];
+      }
+
       draft.latestSnapshotLockVersion = lockVersion;
       draft.lastUpdated = Date.now();
     });
@@ -283,6 +298,75 @@ export const createSessionContextStore = (
       draft.isNewWorkflow = false;
     });
     notify('clearIsNewWorkflow');
+  };
+
+  /**
+   * Request workflow versions from server via channel
+   */
+  const requestVersions = async (): Promise<void> => {
+    // Early return if already loading or no channel
+    if (state.versionsLoading || !_channelProvider?.channel) {
+      if (!_channelProvider?.channel) {
+        logger.warn('Cannot request versions - no channel connected');
+      }
+      return;
+    }
+
+    state = produce(state, draft => {
+      draft.versionsLoading = true;
+      draft.versionsError = null;
+    });
+    notify('requestVersions:start');
+
+    try {
+      logger.debug('Requesting workflow versions');
+      const response = await channelRequest<{ versions: unknown[] }>(
+        _channelProvider.channel,
+        'request_versions',
+        {}
+      );
+
+      // Validate versions array with Zod
+      const result = z.array(VersionSchema).safeParse(response.versions);
+
+      if (result.success) {
+        state = produce(state, draft => {
+          draft.versions = result.data;
+          draft.versionsLoading = false;
+          draft.versionsError = null;
+        });
+        notify('requestVersions:success');
+      } else {
+        const errorMessage = `Invalid versions data: ${result.error.message}`;
+        logger.error('Failed to parse versions data', {
+          error: result.error,
+          response,
+        });
+
+        state = produce(state, draft => {
+          draft.versionsError = errorMessage;
+          draft.versionsLoading = false;
+        });
+        notify('requestVersions:error');
+      }
+    } catch (error) {
+      logger.error('Versions request failed', error);
+      state = produce(state, draft => {
+        draft.versionsError = 'Failed to load versions';
+        draft.versionsLoading = false;
+      });
+      notify('requestVersions:error');
+    }
+  };
+
+  /**
+   * Clear versions cache
+   */
+  const clearVersions = () => {
+    state = produce(state, draft => {
+      draft.versions = [];
+    });
+    notify('clearVersions');
   };
 
   // =============================================================================
@@ -332,6 +416,29 @@ export const createSessionContextStore = (
       handleWebhookAuthMethodsUpdated(message);
     };
 
+    const templateUpdatedHandler = (message: unknown) => {
+      logger.debug('Received template_updated message', message);
+
+      const result = z
+        .object({
+          workflow_template: WorkflowTemplateSchema.nullable(),
+        })
+        .safeParse(message);
+
+      if (result.success) {
+        state = produce(state, draft => {
+          draft.workflow_template = result.data.workflow_template;
+          draft.lastUpdated = Date.now();
+        });
+        notify('templateUpdated');
+      } else {
+        logger.error('Failed to parse template_updated message', {
+          error: result.error,
+          message,
+        });
+      }
+    };
+
     // Set up channel listeners
     if (channel) {
       channel.on('session_context', sessionContextHandler);
@@ -341,6 +448,7 @@ export const createSessionContextStore = (
         'webhook_auth_methods_updated',
         webhookAuthMethodsUpdatedHandler
       );
+      channel.on('template_updated', templateUpdatedHandler);
     }
 
     devtools.connect();
@@ -357,6 +465,7 @@ export const createSessionContextStore = (
           'webhook_auth_methods_updated',
           webhookAuthMethodsUpdatedHandler
         );
+        channel.off('template_updated', templateUpdatedHandler);
       }
       _channelProvider = null;
     };
@@ -405,6 +514,8 @@ export const createSessionContextStore = (
 
     // Commands (CQS pattern)
     requestSessionContext,
+    requestVersions,
+    clearVersions,
     setLoading,
     setError,
     clearError,

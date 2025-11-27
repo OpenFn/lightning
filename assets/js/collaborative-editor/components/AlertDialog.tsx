@@ -4,10 +4,6 @@ import {
   DialogPanel,
   DialogTitle,
 } from '@headlessui/react';
-import { useEffect } from 'react';
-import { useHotkeysContext } from 'react-hotkeys-hook';
-
-import { HOTKEY_SCOPES } from '#/collaborative-editor/constants/hotkeys';
 
 interface AlertDialogProps {
   isOpen: boolean;
@@ -51,24 +47,6 @@ export function AlertDialog({
     variant === 'danger'
       ? 'bg-red-600 hover:bg-red-500 focus-visible:outline-red-600'
       : 'bg-primary-600 hover:bg-primary-500 focus-visible:outline-primary-600';
-
-  // Use HotkeysContext to control keyboard scope precedence
-  const { enableScope, disableScope } = useHotkeysContext();
-
-  useEffect(() => {
-    if (isOpen) {
-      enableScope(HOTKEY_SCOPES.MODAL);
-      disableScope(HOTKEY_SCOPES.PANEL);
-      disableScope(HOTKEY_SCOPES.RUN_PANEL);
-    } else {
-      disableScope(HOTKEY_SCOPES.MODAL);
-      enableScope(HOTKEY_SCOPES.PANEL);
-    }
-
-    return () => {
-      disableScope(HOTKEY_SCOPES.MODAL);
-    };
-  }, [isOpen, enableScope, disableScope]);
 
   return (
     <Dialog open={isOpen} onClose={onClose} className="relative z-50">

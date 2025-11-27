@@ -140,8 +140,9 @@ export function CronFieldBuilder({
 
     // Specific months: "30 9 15 1,6 *" (Jan 15 and Jun 15)
     const specificMonthsMatch = expr.match(
-      /^(\d{1,2}) (\d{1,2}) (\d{1,2}) ([\d,]+) \*$/
+      /^(\d{1,2}) (\d{1,2}) (\d{1,2}) (\d+(?:-\d+)?(?:,\d+(?:-\d+)?)*) \*$/
     );
+
     if (specificMonthsMatch) {
       return {
         frequency: 'specific_months',
@@ -149,7 +150,19 @@ export function CronFieldBuilder({
         hour: specificMonthsMatch[2].padStart(2, '0'),
         weekday: '01',
         monthday: specificMonthsMatch[3].padStart(2, '0'),
-        months: specificMonthsMatch[4].split(','),
+        months: specificMonthsMatch[4]
+          .split(',')
+          .map(v => {
+            const out = [];
+            if (Number.isFinite(Number(v))) out.push(v);
+            else if (v.indexOf('-') > -1) {
+              const [from, to] = v.split('-').map(Number);
+              for (let i = from; i <= to; i++) out.push(i);
+            }
+            return out;
+          })
+          .flat()
+          .map(String),
       };
     }
 
@@ -201,7 +214,9 @@ export function CronFieldBuilder({
       case 'weekly': {
         const days = Array.isArray(data.weekday)
           ? data.weekday.join(',')
-          : data.weekday;
+          : Number.isFinite(Number(data.weekday))
+            ? data.weekday
+            : '01';
         return `${data.minute} ${data.hour} * * ${days}`;
       }
       case 'monthly':
@@ -301,6 +316,15 @@ export function CronFieldBuilder({
             disabled={disabled}
             className={selectClassName}
           >
+            {cronData.interval &&
+            [5, 10, 15, 20, 30].includes(parseInt(cronData.interval)) ? null : (
+              <option value={cronData.interval}>
+                {cronData.interval} minute
+                {cronData.interval && parseInt(cronData.interval) !== 1
+                  ? 's'
+                  : ''}
+              </option>
+            )}
             <option value="5">5 minutes</option>
             <option value="10">10 minutes</option>
             <option value="15">15 minutes</option>
@@ -325,6 +349,15 @@ export function CronFieldBuilder({
             disabled={disabled}
             className={selectClassName}
           >
+            {cronData.interval &&
+            [2, 3, 4, 6, 8, 12].includes(parseInt(cronData.interval)) ? null : (
+              <option value={cronData.interval}>
+                {cronData.interval} hour
+                {cronData.interval && parseInt(cronData.interval) !== 1
+                  ? 's'
+                  : ''}
+              </option>
+            )}
             <option value="2">2 hours</option>
             <option value="3">3 hours</option>
             <option value="4">4 hours</option>

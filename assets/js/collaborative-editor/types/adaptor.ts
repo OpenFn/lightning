@@ -5,8 +5,8 @@
  * and provides runtime validation with Zod schemas.
  */
 
-import type { PhoenixChannelProvider } from "y-phoenix-channel";
-import { z } from "zod";
+import type { PhoenixChannelProvider } from 'y-phoenix-channel';
+import { z } from 'zod';
 
 // =============================================================================
 // ZOD SCHEMAS (Runtime Validation)

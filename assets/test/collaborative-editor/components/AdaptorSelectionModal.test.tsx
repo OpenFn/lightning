@@ -5,47 +5,47 @@
  * when creating new job nodes in the workflow canvas.
  */
 
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { HotkeysProvider } from "react-hotkeys-hook";
-import { beforeEach, describe, expect, it, vi } from "vitest";
-import { AdaptorSelectionModal } from "../../../js/collaborative-editor/components/AdaptorSelectionModal";
-import { StoreContext } from "../../../js/collaborative-editor/contexts/StoreProvider";
-import type { Adaptor } from "../../../js/collaborative-editor/types/adaptor";
+import { KeyboardProvider } from '#/collaborative-editor/keyboard';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { AdaptorSelectionModal } from '../../../js/collaborative-editor/components/AdaptorSelectionModal';
+import { StoreContext } from '../../../js/collaborative-editor/contexts/StoreProvider';
+import type { Adaptor } from '../../../js/collaborative-editor/types/adaptor';
 
 // Mock useAdaptorIcons to avoid fetching icon manifest
-vi.mock("#/workflow-diagram/useAdaptorIcons", () => ({
+vi.mock('#/workflow-diagram/useAdaptorIcons', () => ({
   default: () => null,
 }));
 
 // Mock adaptor data
 const mockProjectAdaptors: Adaptor[] = [
   {
-    name: "@openfn/language-http",
-    latest: "1.0.0",
-    versions: [{ version: "1.0.0" }, { version: "0.9.0" }],
-    repo: "git+https://github.com/openfn/adaptors.git",
+    name: '@openfn/language-http',
+    latest: '1.0.0',
+    versions: [{ version: '1.0.0' }, { version: '0.9.0' }],
+    repo: 'git+https://github.com/openfn/adaptors.git',
   },
   {
-    name: "@openfn/language-salesforce",
-    latest: "2.1.0",
-    versions: [{ version: "2.1.0" }, { version: "2.0.0" }],
-    repo: "git+https://github.com/openfn/adaptors.git",
+    name: '@openfn/language-salesforce',
+    latest: '2.1.0',
+    versions: [{ version: '2.1.0' }, { version: '2.0.0' }],
+    repo: 'git+https://github.com/openfn/adaptors.git',
   },
 ];
 
 const mockAllAdaptors: Adaptor[] = [
   ...mockProjectAdaptors,
   {
-    name: "@openfn/language-dhis2",
-    latest: "3.2.1",
-    versions: [{ version: "3.2.1" }, { version: "3.2.0" }],
-    repo: "git+https://github.com/openfn/adaptors.git",
+    name: '@openfn/language-dhis2',
+    latest: '3.2.1',
+    versions: [{ version: '3.2.1' }, { version: '3.2.0' }],
+    repo: 'git+https://github.com/openfn/adaptors.git',
   },
   {
-    name: "@openfn/language-common",
-    latest: "2.0.0",
-    versions: [{ version: "2.0.0" }, { version: "1.9.0" }],
-    repo: "git+https://github.com/openfn/adaptors.git",
+    name: '@openfn/language-common',
+    latest: '2.0.0',
+    versions: [{ version: '2.0.0' }, { version: '1.9.0' }],
+    repo: 'git+https://github.com/openfn/adaptors.git',
   },
 ];
 
@@ -102,15 +102,15 @@ function renderWithProviders(
   mockStoreContext = createMockStoreContext()
 ) {
   return render(
-    <HotkeysProvider>
+    <KeyboardProvider>
       <StoreContext.Provider value={mockStoreContext as any}>
         {ui}
       </StoreContext.Provider>
-    </HotkeysProvider>
+    </KeyboardProvider>
   );
 }
 
-describe("AdaptorSelectionModal", () => {
+describe('AdaptorSelectionModal', () => {
   const onClose = vi.fn();
   const onSelect = vi.fn();
 
@@ -118,8 +118,8 @@ describe("AdaptorSelectionModal", () => {
     vi.clearAllMocks();
   });
 
-  describe("modal visibility", () => {
-    it("renders when open", () => {
+  describe('modal visibility', () => {
+    it('renders when open', () => {
       renderWithProviders(
         <AdaptorSelectionModal
           isOpen={true}
@@ -130,11 +130,11 @@ describe("AdaptorSelectionModal", () => {
       );
 
       expect(
-        screen.getByPlaceholderText("Search for an adaptor to connect...")
+        screen.getByPlaceholderText('Search for an adaptor to connect...')
       ).toBeInTheDocument();
     });
 
-    it("does not render when closed", () => {
+    it('does not render when closed', () => {
       renderWithProviders(
         <AdaptorSelectionModal
           isOpen={false}
@@ -144,13 +144,13 @@ describe("AdaptorSelectionModal", () => {
       );
 
       expect(
-        screen.queryByPlaceholderText("Search for an adaptor to connect...")
+        screen.queryByPlaceholderText('Search for an adaptor to connect...')
       ).not.toBeInTheDocument();
     });
   });
 
-  describe("adaptor display", () => {
-    it("displays project adaptors section with adaptors", () => {
+  describe('adaptor display', () => {
+    it('displays project adaptors section with adaptors', () => {
       renderWithProviders(
         <AdaptorSelectionModal
           isOpen={true}
@@ -160,13 +160,13 @@ describe("AdaptorSelectionModal", () => {
         />
       );
 
-      expect(screen.getByText("Adaptors in this project")).toBeInTheDocument();
+      expect(screen.getByText('Adaptors in this project')).toBeInTheDocument();
       // Use getAllByText since adaptors appear in both sections
-      expect(screen.getAllByText("Http").length).toBeGreaterThan(0);
-      expect(screen.getAllByText("Salesforce").length).toBeGreaterThan(0);
+      expect(screen.getAllByText('Http').length).toBeGreaterThan(0);
+      expect(screen.getAllByText('Salesforce').length).toBeGreaterThan(0);
     });
 
-    it("displays all adaptors section", () => {
+    it('displays all adaptors section', () => {
       renderWithProviders(
         <AdaptorSelectionModal
           isOpen={true}
@@ -176,9 +176,9 @@ describe("AdaptorSelectionModal", () => {
         />
       );
 
-      expect(screen.getByText("All adaptors")).toBeInTheDocument();
-      expect(screen.getByText("Dhis2")).toBeInTheDocument();
-      expect(screen.getByText("Common")).toBeInTheDocument();
+      expect(screen.getByText('All adaptors')).toBeInTheDocument();
+      expect(screen.getByText('Dhis2')).toBeInTheDocument();
+      expect(screen.getByText('Common')).toBeInTheDocument();
     });
 
     it("shows 'Available adaptors' when no project adaptors", () => {
@@ -192,12 +192,12 @@ describe("AdaptorSelectionModal", () => {
       );
 
       expect(
-        screen.queryByText("Adaptors in this project")
+        screen.queryByText('Adaptors in this project')
       ).not.toBeInTheDocument();
-      expect(screen.getByText("Available adaptors")).toBeInTheDocument();
+      expect(screen.getByText('Available adaptors')).toBeInTheDocument();
     });
 
-    it("displays adaptor version in description", () => {
+    it('displays adaptor version in description', () => {
       renderWithProviders(
         <AdaptorSelectionModal
           isOpen={true}
@@ -208,13 +208,13 @@ describe("AdaptorSelectionModal", () => {
       );
 
       // Use getAllByText since adaptors may appear in both project and all sections
-      expect(screen.getAllByText("Latest: 1.0.0").length).toBeGreaterThan(0);
-      expect(screen.getAllByText("Latest: 2.1.0").length).toBeGreaterThan(0);
+      expect(screen.getAllByText('Latest: 1.0.0').length).toBeGreaterThan(0);
+      expect(screen.getAllByText('Latest: 2.1.0').length).toBeGreaterThan(0);
     });
   });
 
-  describe("search functionality", () => {
-    it("filters adaptors based on search query", async () => {
+  describe('search functionality', () => {
+    it('filters adaptors based on search query', async () => {
       renderWithProviders(
         <AdaptorSelectionModal
           isOpen={true}
@@ -225,19 +225,19 @@ describe("AdaptorSelectionModal", () => {
       );
 
       const searchInput = screen.getByPlaceholderText(
-        "Search for an adaptor to connect..."
+        'Search for an adaptor to connect...'
       );
-      fireEvent.change(searchInput, { target: { value: "dhis" } });
+      fireEvent.change(searchInput, { target: { value: 'dhis' } });
 
       await waitFor(() => {
-        expect(screen.getByText("Dhis2")).toBeInTheDocument();
-        expect(screen.queryByText("Http")).not.toBeInTheDocument();
-        expect(screen.queryByText("Salesforce")).not.toBeInTheDocument();
-        expect(screen.queryByText("Common")).not.toBeInTheDocument();
+        expect(screen.getByText('Dhis2')).toBeInTheDocument();
+        expect(screen.queryByText('Http')).not.toBeInTheDocument();
+        expect(screen.queryByText('Salesforce')).not.toBeInTheDocument();
+        expect(screen.queryByText('Common')).not.toBeInTheDocument();
       });
     });
 
-    it("filters case-insensitively", async () => {
+    it('filters case-insensitively', async () => {
       renderWithProviders(
         <AdaptorSelectionModal
           isOpen={true}
@@ -248,16 +248,16 @@ describe("AdaptorSelectionModal", () => {
       );
 
       const searchInput = screen.getByPlaceholderText(
-        "Search for an adaptor to connect..."
+        'Search for an adaptor to connect...'
       );
-      fireEvent.change(searchInput, { target: { value: "DHIS" } });
+      fireEvent.change(searchInput, { target: { value: 'DHIS' } });
 
       await waitFor(() => {
-        expect(screen.getByText("Dhis2")).toBeInTheDocument();
+        expect(screen.getByText('Dhis2')).toBeInTheDocument();
       });
     });
 
-    it("shows empty state when no results match", async () => {
+    it('shows empty state when no results match', async () => {
       renderWithProviders(
         <AdaptorSelectionModal
           isOpen={true}
@@ -268,20 +268,20 @@ describe("AdaptorSelectionModal", () => {
       );
 
       const searchInput = screen.getByPlaceholderText(
-        "Search for an adaptor to connect..."
+        'Search for an adaptor to connect...'
       );
-      fireEvent.change(searchInput, { target: { value: "nonexistent" } });
+      fireEvent.change(searchInput, { target: { value: 'nonexistent' } });
 
       await waitFor(() => {
-        expect(screen.getByText("No adaptor found")).toBeInTheDocument();
+        expect(screen.getByText('No adaptor found')).toBeInTheDocument();
       });
     });
 
-    it("resets search when modal closes and reopens", async () => {
+    it('resets search when modal closes and reopens', async () => {
       const mockContext = createMockStoreContext();
 
       const TestWrapper = ({ isOpen }: { isOpen: boolean }) => (
-        <HotkeysProvider>
+        <KeyboardProvider>
           <StoreContext.Provider value={mockContext as any}>
             <AdaptorSelectionModal
               isOpen={isOpen}
@@ -290,20 +290,20 @@ describe("AdaptorSelectionModal", () => {
               projectAdaptors={mockProjectAdaptors}
             />
           </StoreContext.Provider>
-        </HotkeysProvider>
+        </KeyboardProvider>
       );
 
       const { rerender } = render(<TestWrapper isOpen={true} />);
 
       // Search for something specific that filters out most adaptors
       const searchInput = screen.getByPlaceholderText(
-        "Search for an adaptor to connect..."
+        'Search for an adaptor to connect...'
       );
-      fireEvent.change(searchInput, { target: { value: "dhis" } });
+      fireEvent.change(searchInput, { target: { value: 'dhis' } });
 
       await waitFor(() => {
-        expect(screen.queryByText("Http")).not.toBeInTheDocument();
-        expect(screen.getByText("Dhis2")).toBeInTheDocument();
+        expect(screen.queryByText('Http')).not.toBeInTheDocument();
+        expect(screen.getByText('Dhis2')).toBeInTheDocument();
       });
 
       // Close modal
@@ -315,15 +315,15 @@ describe("AdaptorSelectionModal", () => {
       // Search should be cleared - all adaptors visible again
       await waitFor(() => {
         // Use getAllByText for duplicates
-        expect(screen.getAllByText("Http").length).toBeGreaterThan(0);
-        expect(screen.getByText("Dhis2")).toBeInTheDocument();
-        expect(screen.getByText("Common")).toBeInTheDocument();
+        expect(screen.getAllByText('Http').length).toBeGreaterThan(0);
+        expect(screen.getByText('Dhis2')).toBeInTheDocument();
+        expect(screen.getByText('Common')).toBeInTheDocument();
       });
     });
   });
 
-  describe("immediate selection", () => {
-    it("calls onSelect and onClose when adaptor clicked", () => {
+  describe('immediate selection', () => {
+    it('calls onSelect and onClose when adaptor clicked', () => {
       renderWithProviders(
         <AdaptorSelectionModal
           isOpen={true}
@@ -334,16 +334,16 @@ describe("AdaptorSelectionModal", () => {
       );
 
       // Use getAllByText and pick first occurrence
-      const httpRows = screen.getAllByText("Http");
-      const httpRow = httpRows[0].closest("button");
+      const httpRows = screen.getAllByText('Http');
+      const httpRow = httpRows[0].closest('button');
       fireEvent.click(httpRow!);
 
       // Should immediately call onSelect with full adaptor spec and onClose
-      expect(onSelect).toHaveBeenCalledWith("@openfn/language-http@1.0.0");
+      expect(onSelect).toHaveBeenCalledWith('@openfn/language-http@1.0.0');
       expect(onClose).toHaveBeenCalled();
     });
 
-    it("calls onSelect with correct adaptor name for different adaptors", () => {
+    it('calls onSelect with correct adaptor name for different adaptors', () => {
       renderWithProviders(
         <AdaptorSelectionModal
           isOpen={true}
@@ -354,12 +354,12 @@ describe("AdaptorSelectionModal", () => {
       );
 
       // Click salesforce adaptor
-      const salesforceRows = screen.getAllByText("Salesforce");
-      const salesforceRow = salesforceRows[0].closest("button");
+      const salesforceRows = screen.getAllByText('Salesforce');
+      const salesforceRow = salesforceRows[0].closest('button');
       fireEvent.click(salesforceRow!);
 
       expect(onSelect).toHaveBeenCalledWith(
-        "@openfn/language-salesforce@2.1.0"
+        '@openfn/language-salesforce@2.1.0'
       );
       expect(onClose).toHaveBeenCalled();
     });

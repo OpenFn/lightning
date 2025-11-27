@@ -11,16 +11,17 @@
  *   cleanup();
  */
 
-import { createAdaptorStore } from "../../../js/collaborative-editor/stores/createAdaptorStore";
-import { createSessionStore } from "../../../js/collaborative-editor/stores/createSessionStore";
-import { createSessionContextStore } from "../../../js/collaborative-editor/stores/createSessionContextStore";
+import { createAdaptorStore } from '../../../js/collaborative-editor/stores/createAdaptorStore';
+import { createSessionContextStore } from '../../../js/collaborative-editor/stores/createSessionContextStore';
+import { createSessionStore } from '../../../js/collaborative-editor/stores/createSessionStore';
+import { createUIStore } from '../../../js/collaborative-editor/stores/createUIStore';
 
 import {
   createMockPhoenixChannel,
   createMockPhoenixChannelProvider,
   type MockPhoenixChannel,
   type MockPhoenixChannelProvider,
-} from "./channelMocks";
+} from './channelMocks';
 
 /**
  * Result of setting up an adaptor store test
@@ -60,7 +61,7 @@ export interface AdaptorStoreTestSetup {
  * });
  */
 export function setupAdaptorStoreTest(
-  topic: string = "test:channel"
+  topic: string = 'test:channel'
 ): AdaptorStoreTestSetup {
   const store = createAdaptorStore();
   const mockChannel = createMockPhoenixChannel(topic);
@@ -116,7 +117,7 @@ export interface SessionContextStoreTestSetup {
  * });
  */
 export function setupSessionContextStoreTest(
-  topic: string = "test:channel"
+  topic: string = 'test:channel'
 ): SessionContextStoreTestSetup {
   const store = createSessionContextStore();
   const mockChannel = createMockPhoenixChannel(topic);
@@ -148,6 +149,16 @@ export interface SessionStoreTestSetup {
 }
 
 /**
+ * Result of setting up a UI store test
+ */
+export interface UIStoreTestSetup {
+  /** The UI store instance */
+  store: ReturnType<typeof createUIStore>;
+  /** Cleanup function to call after test */
+  cleanup: () => void;
+}
+
+/**
  * Sets up a session store test with initialized YDoc and provider
  *
  * This is more complex than other store setups because it involves
@@ -172,13 +183,13 @@ export interface SessionStoreTestSetup {
  * });
  */
 export function setupSessionStoreTest(
-  roomTopic: string = "test:room",
+  roomTopic: string = 'test:room',
   userData?: { id: string; name: string; color: string }
 ): SessionStoreTestSetup {
   const store = createSessionStore();
 
   // Import createMockSocket dynamically to avoid circular dependencies
-  const { createMockSocket } = require("../mocks/phoenixSocket");
+  const { createMockSocket } = require('../mocks/phoenixSocket');
   const mockSocket = createMockSocket();
 
   // Initialize session if userData provided
@@ -191,6 +202,43 @@ export function setupSessionStoreTest(
     mockSocket,
     cleanup: () => {
       store.destroy();
+    },
+  };
+}
+
+/**
+ * Sets up a UI store test with minimal configuration
+ *
+ * The UI store manages transient, local-only UI state like panel
+ * visibility and context. It requires no channel or Y.Doc connections,
+ * making it the simplest store to set up for testing.
+ *
+ * This helper provides a consistent starting point for UI store tests.
+ *
+ * @returns Test setup with store and cleanup function
+ *
+ * @example
+ * test("UI store panel management", () => {
+ *   const { store, cleanup } = setupUIStoreTest();
+ *
+ *   // Test panel opening
+ *   store.openRunPanel({ jobId: "job-1" });
+ *   const state = store.getSnapshot();
+ *   expect(state.runPanelOpen).toBe(true);
+ *   expect(state.runPanelContext?.jobId).toBe("job-1");
+ *
+ *   // Cleanup
+ *   cleanup();
+ * });
+ */
+export function setupUIStoreTest(): UIStoreTestSetup {
+  const store = createUIStore();
+
+  return {
+    store,
+    cleanup: () => {
+      // UI store has no external connections to clean up
+      // Just ensure no lingering listeners
     },
   };
 }
@@ -229,13 +277,13 @@ export function setupMultipleStores(connectToSession: boolean = false): {
   const cleanupFunctions: Array<() => void> = [];
 
   if (connectToSession) {
-    const { createMockSocket } = require("../mocks/phoenixSocket");
+    const { createMockSocket } = require('../mocks/phoenixSocket');
     const mockSocket = createMockSocket();
 
-    sessionStore.initializeSession(mockSocket, "test:room", {
-      id: "user-1",
-      name: "Test User",
-      color: "#ff0000",
+    sessionStore.initializeSession(mockSocket, 'test:room', {
+      id: 'user-1',
+      name: 'Test User',
+      color: '#ff0000',
     });
 
     const session = sessionStore.getSnapshot();

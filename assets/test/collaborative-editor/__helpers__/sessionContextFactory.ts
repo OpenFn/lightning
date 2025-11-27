@@ -21,6 +21,7 @@ import type {
   ProjectRepoConnection,
   UserContext,
   WebhookAuthMethod,
+  WorkflowTemplate,
 } from '../../../js/collaborative-editor/types/sessionContext';
 
 // =============================================================================
@@ -36,6 +37,7 @@ export const mockUserContext: UserContext = {
   last_name: 'User',
   email: 'test@example.com',
   email_confirmed: true,
+  support_user: false,
   inserted_at: '2024-01-15T10:30:00Z',
 };
 
@@ -64,6 +66,19 @@ export const mockPermissions: Permissions = {
 };
 
 /**
+ * Sample workflow template for testing
+ */
+export const mockWorkflowTemplate: WorkflowTemplate = {
+  id: '990e8400-e29b-41d4-a716-446655440000',
+  name: 'Existing Template',
+  description: 'An existing template description',
+  tags: ['tag1', 'tag2'],
+  workflow_id: '660e8400-e29b-41d4-a716-446655440000',
+  code: 'name: Test Workflow\njobs:\n  test-job:\n    adaptor: "@openfn/language-common@latest"',
+  positions: { 'job-1': { x: 100, y: 100 } },
+};
+
+/**
  * Alternative user for testing updates
  */
 export const mockAlternativeUserContext: UserContext = {
@@ -72,6 +87,7 @@ export const mockAlternativeUserContext: UserContext = {
   last_name: 'Smith',
   email: 'jane@example.com',
   email_confirmed: false,
+  support_user: false,
   inserted_at: '2024-01-20T15:45:00Z',
 };
 
@@ -98,6 +114,7 @@ export interface SessionContextResponse {
   latest_snapshot_lock_version: number;
   project_repo_connection: ProjectRepoConnection | null;
   webhook_auth_methods: WebhookAuthMethod[];
+  workflow_template: any | null;
 }
 
 /**
@@ -111,6 +128,7 @@ export const mockSessionContextResponse: SessionContextResponse = {
   latest_snapshot_lock_version: 1,
   project_repo_connection: null,
   webhook_auth_methods: [],
+  workflow_template: null,
 };
 
 /**
@@ -124,6 +142,7 @@ export const mockUnauthenticatedSessionContext: SessionContextResponse = {
   latest_snapshot_lock_version: 1,
   project_repo_connection: null,
   webhook_auth_methods: [],
+  workflow_template: null,
 };
 
 /**
@@ -137,6 +156,7 @@ export const mockUpdatedSessionContext: SessionContextResponse = {
   latest_snapshot_lock_version: 2,
   project_repo_connection: null,
   webhook_auth_methods: [],
+  workflow_template: null,
 };
 
 // =============================================================================
@@ -248,6 +268,7 @@ export interface CreateSessionContextOptions {
   latest_snapshot_lock_version?: number;
   project_repo_connection?: Partial<ProjectRepoConnection> | null;
   webhook_auth_methods?: WebhookAuthMethod[];
+  workflow_template?: WorkflowTemplate | null;
 }
 
 /**
@@ -294,6 +315,7 @@ export function createSessionContext(
           last_name: 'User',
           email: 'test@example.com',
           email_confirmed: true,
+          support_user: false,
           inserted_at: '2025-01-13T10:30:00Z',
           ...options.user,
         };
@@ -345,6 +367,7 @@ export function createSessionContext(
     latest_snapshot_lock_version: options.latest_snapshot_lock_version ?? 1,
     project_repo_connection,
     webhook_auth_methods: options.webhook_auth_methods ?? [],
+    workflow_template: options.workflow_template ?? null,
   };
 }
 
@@ -459,6 +482,7 @@ export function createMockUser(
     first_name: 'Test',
     last_name: 'User',
     email_confirmed: true,
+    support_user: false,
     inserted_at: '2025-01-13T10:30:00Z',
     ...overrides,
   };
@@ -502,6 +526,34 @@ export function createMockProject(
   return {
     id: '660e8400-e29b-41d4-a716-446655440000',
     name: 'Test Project',
+    ...overrides,
+  };
+}
+
+/**
+ * Helper to create a mock WorkflowTemplate with custom properties
+ *
+ * Creates a workflow template object with sensible defaults that can be
+ * overridden for specific test scenarios.
+ *
+ * @param overrides - Partial WorkflowTemplate to override defaults
+ * @returns Complete WorkflowTemplate object
+ *
+ * @example
+ * const template = createMockWorkflowTemplate({ name: "My Template" });
+ * expect(template.name).toBe("My Template");
+ *
+ * @example
+ * // Use with session context
+ * const context = createSessionContext({
+ *   workflow_template: createMockWorkflowTemplate({ name: "Test Template" })
+ * });
+ */
+export function createMockWorkflowTemplate(
+  overrides: Partial<WorkflowTemplate> = {}
+): WorkflowTemplate {
+  return {
+    ...mockWorkflowTemplate,
     ...overrides,
   };
 }

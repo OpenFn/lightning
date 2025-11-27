@@ -3,10 +3,8 @@
  * Shows details for jobs, triggers, and edges when selected
  */
 
-import { useHotkeys } from 'react-hotkeys-hook';
-
 import { useURLState } from '../../../react/lib/use-url-state';
-import { HOTKEY_SCOPES } from '../../constants/hotkeys';
+import { useKeyboardShortcut } from '../../keyboard';
 import type { Workflow } from '../../types/workflow';
 
 import { CodeViewPanel } from './CodeViewPanel';
@@ -15,6 +13,8 @@ import { InspectorLayout } from './InspectorLayout';
 import { JobInspector } from './JobInspector';
 import { TriggerInspector } from './TriggerInspector';
 import { WorkflowSettings } from './WorkflowSettings';
+import { TemplatePublishPanel } from './TemplatePublishPanel';
+import { useWorkflowTemplate } from '../../hooks/useSessionContext';
 
 export { InspectorLayout } from './InspectorLayout';
 
@@ -29,16 +29,15 @@ interface InspectorProps {
   };
   onClose: () => void;
   onOpenRunPanel: (context: { jobId?: string; triggerId?: string }) => void;
-  respondToHotKey: boolean;
 }
 
 export function Inspector({
   currentNode,
   onClose,
   onOpenRunPanel,
-  respondToHotKey,
 }: InspectorProps) {
   const { searchParams, updateSearchParams } = useURLState();
+  const workflowTemplate = useWorkflowTemplate();
 
   const hasSelectedNode = currentNode.node && currentNode.type;
 
@@ -48,14 +47,18 @@ export function Inspector({
       ? 'settings'
       : searchParams.get('panel') === 'code'
         ? 'code'
-        : hasSelectedNode
-          ? 'node'
-          : null;
+        : searchParams.get('panel') === 'publish-template'
+          ? 'publish-template'
+          : hasSelectedNode
+            ? 'node'
+            : null;
 
   const handleClose = () => {
     if (mode === 'code') {
       // When closing code view, go back to settings
       updateSearchParams({ panel: 'settings' });
+    } else if (mode === 'publish-template') {
+      updateSearchParams({ panel: 'code' });
     } else if (mode === 'settings') {
       updateSearchParams({ panel: null });
     } else {
@@ -63,17 +66,12 @@ export function Inspector({
     }
   };
 
-  useHotkeys(
-    'escape',
+  useKeyboardShortcut(
+    'Escape',
     () => {
       handleClose();
     },
-    {
-      enabled: respondToHotKey,
-      scopes: [HOTKEY_SCOPES.PANEL],
-      enableOnFormTags: true, // Allow Escape even in form fields
-    },
-    [handleClose]
+    10 // PANEL priority
   );
 
   // Don't render if no mode selected
@@ -101,6 +99,19 @@ export function Inspector({
         fullHeight
       >
         <CodeViewPanel />
+      </InspectorLayout>
+    );
+  }
+
+  // Publish template mode
+  if (mode === 'publish-template') {
+    const title = workflowTemplate
+      ? 'Update Template'
+      : 'Publish Workflow as Template';
+
+    return (
+      <InspectorLayout title={title} onClose={handleClose}>
+        <TemplatePublishPanel />
       </InspectorLayout>
     );
   }

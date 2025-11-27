@@ -11,19 +11,18 @@
  * - IDE opening with Ctrl+E when job is selected
  */
 
-import { render, screen, waitFor } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
-import { HotkeysProvider } from "react-hotkeys-hook";
-import { beforeEach, describe, expect, test, vi } from "vitest";
-import { WorkflowEditor } from "../../../js/collaborative-editor/components/WorkflowEditor";
-import type { Workflow } from "../../../js/collaborative-editor/types/workflow";
-import * as dataclipApi from "../../../js/collaborative-editor/api/dataclips";
+import { render, screen, waitFor } from '@testing-library/react';
+import { beforeEach, describe, expect, test, vi } from 'vitest';
+import * as dataclipApi from '../../../js/collaborative-editor/api/dataclips';
+import { WorkflowEditor } from '../../../js/collaborative-editor/components/WorkflowEditor';
+import { KeyboardProvider } from '../../../js/collaborative-editor/keyboard';
+import type { Workflow } from '../../../js/collaborative-editor/types/workflow';
 
 // Mock dependencies
-vi.mock("../../../js/collaborative-editor/api/dataclips");
+vi.mock('../../../js/collaborative-editor/api/dataclips');
 
 // Mock MonacoEditor
-vi.mock("@monaco-editor/react", () => ({
+vi.mock('@monaco-editor/react', () => ({
   default: ({ value }: { value: string }) => (
     <div data-testid="monaco-editor">{value}</div>
   ),
@@ -31,7 +30,7 @@ vi.mock("@monaco-editor/react", () => ({
 
 // Mock CollaborativeWorkflowDiagram
 vi.mock(
-  "../../../js/collaborative-editor/components/diagram/CollaborativeWorkflowDiagram",
+  '../../../js/collaborative-editor/components/diagram/CollaborativeWorkflowDiagram',
   () => ({
     CollaborativeWorkflowDiagram: () => (
       <div data-testid="workflow-diagram">Workflow Diagram</div>
@@ -40,20 +39,20 @@ vi.mock(
 );
 
 // Mock Inspector
-vi.mock("../../../js/collaborative-editor/components/inspector", () => ({
+vi.mock('../../../js/collaborative-editor/components/inspector', () => ({
   Inspector: ({ onOpenRunPanel }: { onOpenRunPanel: (ctx: any) => void }) => (
     <div data-testid="inspector">Inspector</div>
   ),
 }));
 
 // Mock LeftPanel
-vi.mock("../../../js/collaborative-editor/components/left-panel", () => ({
+vi.mock('../../../js/collaborative-editor/components/left-panel', () => ({
   LeftPanel: () => <div data-testid="left-panel">Left Panel</div>,
 }));
 
 // Mock FullScreenIDE
 vi.mock(
-  "../../../js/collaborative-editor/components/ide/FullScreenIDE",
+  '../../../js/collaborative-editor/components/ide/FullScreenIDE',
   () => ({
     FullScreenIDE: () => (
       <div data-testid="fullscreen-ide">Full Screen IDE</div>
@@ -74,7 +73,7 @@ let mockOnRunStateChange:
 const mockRunHandler = vi.fn();
 const mockRetryHandler = vi.fn();
 
-vi.mock("../../../js/collaborative-editor/components/ManualRunPanel", () => ({
+vi.mock('../../../js/collaborative-editor/components/ManualRunPanel', () => ({
   ManualRunPanel: ({
     jobId,
     triggerId,
@@ -119,43 +118,47 @@ vi.mock("../../../js/collaborative-editor/components/ManualRunPanel", () => ({
 const mockUpdateSearchParams = vi.fn();
 const mockSearchParams = new URLSearchParams();
 
-vi.mock("../../../js/react/lib/use-url-state", () => ({
+vi.mock('../../../js/react/lib/use-url-state', () => ({
   useURLState: () => ({
     searchParams: mockSearchParams,
     updateSearchParams: mockUpdateSearchParams,
-    hash: "",
+    hash: '',
   }),
 }));
 
 // Mock session context hooks
-vi.mock("../../../js/collaborative-editor/hooks/useSessionContext", () => ({
+vi.mock('../../../js/collaborative-editor/hooks/useSessionContext', () => ({
   useIsNewWorkflow: () => false,
   useProjectRepoConnection: () => undefined,
   useProject: () => ({
-    id: "project-1",
-    name: "Test Project",
+    id: 'project-1',
+    name: 'Test Project',
   }),
+  useVersions: () => [],
+  useVersionsLoading: () => false,
+  useVersionsError: () => null,
+  useRequestVersions: () => vi.fn(),
 }));
 
 // Create mock workflow
 const mockWorkflow: Workflow = {
-  id: "workflow-1",
-  name: "Test Workflow",
+  id: 'workflow-1',
+  name: 'Test Workflow',
   jobs: [
     {
-      id: "job-1",
-      name: "Job 1",
-      adaptor: "@openfn/language-http@latest",
-      body: "fn(state => state)",
+      id: 'job-1',
+      name: 'Job 1',
+      adaptor: '@openfn/language-http@latest',
+      body: 'fn(state => state)',
       enabled: true,
       project_credential_id: null,
       keychain_credential_id: null,
     },
     {
-      id: "job-2",
-      name: "Job 2",
-      adaptor: "@openfn/language-http@latest",
-      body: "fn(state => state)",
+      id: 'job-2',
+      name: 'Job 2',
+      adaptor: '@openfn/language-http@latest',
+      body: 'fn(state => state)',
       enabled: true,
       project_credential_id: null,
       keychain_credential_id: null,
@@ -163,13 +166,13 @@ const mockWorkflow: Workflow = {
   ],
   triggers: [
     {
-      id: "trigger-1",
-      type: "webhook",
+      id: 'trigger-1',
+      type: 'webhook',
       enabled: true,
     },
     {
-      id: "trigger-2",
-      type: "cron",
+      id: 'trigger-2',
+      type: 'cron',
       enabled: true,
     },
   ],
@@ -183,7 +186,7 @@ const mockRunPanelContext = vi.fn(() => null);
 const mockOpenRunPanel = vi.fn();
 const mockCloseRunPanel = vi.fn();
 
-vi.mock("../../../js/collaborative-editor/hooks/useUI", () => ({
+vi.mock('../../../js/collaborative-editor/hooks/useUI', () => ({
   useIsRunPanelOpen: () => mockIsRunPanelOpen(),
   useRunPanelContext: () => mockRunPanelContext(),
   useUICommands: () => ({
@@ -194,7 +197,7 @@ vi.mock("../../../js/collaborative-editor/hooks/useUI", () => ({
 
 // Mock workflow hooks with controllable node selection
 let currentNode: {
-  type: "job" | "trigger" | "edge" | null;
+  type: 'job' | 'trigger' | 'edge' | null;
   node: any;
 } = {
   type: null,
@@ -209,9 +212,9 @@ const mockSelectNode = vi.fn((node: any) => {
 
 // Mock canRun state
 let mockCanRun = true;
-let mockTooltipMessage = "";
+let mockTooltipMessage = '';
 
-vi.mock("../../../js/collaborative-editor/hooks/useWorkflow", () => ({
+vi.mock('../../../js/collaborative-editor/hooks/useWorkflow', () => ({
   useNodeSelection: () => ({
     currentNode,
     selectNode: mockSelectNode,
@@ -231,7 +234,7 @@ vi.mock("../../../js/collaborative-editor/hooks/useWorkflow", () => ({
       edges: mockWorkflow.edges,
       positions: {},
     };
-    return typeof selector === "function" ? selector(state) : state;
+    return typeof selector === 'function' ? selector(state) : state;
   },
   useCanRun: () => ({
     canRun: mockCanRun,
@@ -239,16 +242,16 @@ vi.mock("../../../js/collaborative-editor/hooks/useWorkflow", () => ({
   }),
 }));
 
-// Helper function to render WorkflowEditor with HotkeysProvider
+// Helper function to render WorkflowEditor with providers
 function renderWorkflowEditor() {
   return render(
-    <HotkeysProvider>
+    <KeyboardProvider>
       <WorkflowEditor />
-    </HotkeysProvider>
+    </KeyboardProvider>
   );
 }
 
-describe("WorkflowEditor", () => {
+describe('WorkflowEditor', () => {
   beforeEach(() => {
     vi.clearAllMocks();
 
@@ -258,7 +261,7 @@ describe("WorkflowEditor", () => {
     currentNode = { type: null, node: null };
     mockRunHandler.mockClear();
     mockCanRun = true;
-    mockTooltipMessage = "";
+    mockTooltipMessage = '';
 
     // Default mock for searchDataclips
     vi.mocked(dataclipApi.searchDataclips).mockResolvedValue({
@@ -268,225 +271,229 @@ describe("WorkflowEditor", () => {
     });
   });
 
-  describe("basic rendering", () => {
-    test("renders workflow diagram", async () => {
+  describe('basic rendering', () => {
+    test('renders workflow diagram', async () => {
       renderWorkflowEditor();
 
       await waitFor(() => {
-        expect(screen.getByTestId("workflow-diagram")).toBeInTheDocument();
+        expect(screen.getByTestId('workflow-diagram')).toBeInTheDocument();
       });
     });
 
-    test("renders inspector in DOM", async () => {
+    test('renders inspector in DOM', async () => {
       renderWorkflowEditor();
 
       await waitFor(() => {
-        expect(screen.getByTestId("workflow-diagram")).toBeInTheDocument();
+        expect(screen.getByTestId('workflow-diagram')).toBeInTheDocument();
       });
 
       // Inspector is always rendered (visibility controlled by CSS translate classes)
-      const inspector = screen.getByTestId("inspector");
+      const inspector = screen.getByTestId('inspector');
       expect(inspector).toBeInTheDocument();
     });
 
-    test("does not show run panel by default", async () => {
+    test('does not show run panel by default', async () => {
       renderWorkflowEditor();
 
       await waitFor(() => {
-        expect(screen.getByTestId("workflow-diagram")).toBeInTheDocument();
+        expect(screen.getByTestId('workflow-diagram')).toBeInTheDocument();
       });
 
       // Run panel should not be visible
-      const runPanel = screen.queryByTestId("manual-run-panel");
+      const runPanel = screen.queryByTestId('manual-run-panel');
       expect(runPanel).not.toBeInTheDocument();
     });
   });
 
-  describe("Cmd+Enter keyboard shortcut - triggering run", () => {
-    test("shows run panel when open", async () => {
+  describe('Cmd+Enter keyboard shortcut - triggering run', () => {
+    test('shows run panel when open', async () => {
       // Open run panel first
       mockIsRunPanelOpen.mockReturnValue(true);
-      mockRunPanelContext.mockReturnValue({ jobId: "job-1" });
+      mockRunPanelContext.mockReturnValue({ jobId: 'job-1' });
 
       renderWorkflowEditor();
 
       // Wait for ManualRunPanel to mount
       await waitFor(() => {
-        expect(screen.getByTestId("manual-run-panel")).toBeInTheDocument();
+        expect(screen.getByTestId('manual-run-panel')).toBeInTheDocument();
       });
 
       // Verify panel is visible with correct context
-      const panel = screen.getByTestId("manual-run-panel");
-      expect(panel.getAttribute("data-job-id")).toBe("job-1");
+      const panel = screen.getByTestId('manual-run-panel');
+      expect(panel.getAttribute('data-job-id')).toBe('job-1');
     });
   });
 
-  describe("run panel rendering", () => {
-    test("shows ManualRunPanel with job context when open", async () => {
+  describe('run panel rendering', () => {
+    test('shows ManualRunPanel with job context when open', async () => {
       mockIsRunPanelOpen.mockReturnValue(true);
-      mockRunPanelContext.mockReturnValue({ jobId: "job-1" });
+      mockRunPanelContext.mockReturnValue({ jobId: 'job-1' });
 
       renderWorkflowEditor();
 
       await waitFor(() => {
-        expect(screen.getByTestId("manual-run-panel")).toBeInTheDocument();
+        expect(screen.getByTestId('manual-run-panel')).toBeInTheDocument();
       });
 
-      const panel = screen.getByTestId("manual-run-panel");
-      expect(panel.getAttribute("data-job-id")).toBe("job-1");
+      const panel = screen.getByTestId('manual-run-panel');
+      expect(panel.getAttribute('data-job-id')).toBe('job-1');
     });
 
-    test("shows ManualRunPanel with trigger context when open", async () => {
+    test('shows ManualRunPanel with trigger context when open', async () => {
       mockIsRunPanelOpen.mockReturnValue(true);
-      mockRunPanelContext.mockReturnValue({ triggerId: "trigger-1" });
+      mockRunPanelContext.mockReturnValue({ triggerId: 'trigger-1' });
 
       renderWorkflowEditor();
 
       await waitFor(() => {
-        expect(screen.getByTestId("manual-run-panel")).toBeInTheDocument();
+        expect(screen.getByTestId('manual-run-panel')).toBeInTheDocument();
       });
 
-      const panel = screen.getByTestId("manual-run-panel");
-      expect(panel.getAttribute("data-trigger-id")).toBe("trigger-1");
+      const panel = screen.getByTestId('manual-run-panel');
+      expect(panel.getAttribute('data-trigger-id')).toBe('trigger-1');
     });
   });
 
-  describe("inspector integration", () => {
-    test("shows inspector when node is selected", async () => {
+  describe('inspector integration', () => {
+    test('shows inspector when node is selected', async () => {
       // Select a job
       currentNode = {
-        type: "job",
+        type: 'job',
         node: mockWorkflow.jobs[0],
       };
 
       renderWorkflowEditor();
 
       await waitFor(() => {
-        expect(screen.getByTestId("inspector")).toBeInTheDocument();
+        expect(screen.getByTestId('inspector')).toBeInTheDocument();
       });
     });
 
-    test("inspector renders in the DOM regardless of selection (visibility controlled by CSS)", async () => {
+    test('inspector renders in the DOM regardless of selection (visibility controlled by CSS)', async () => {
       // No node selected
       currentNode = { type: null, node: null };
 
       renderWorkflowEditor();
 
       await waitFor(() => {
-        expect(screen.getByTestId("workflow-diagram")).toBeInTheDocument();
+        expect(screen.getByTestId('workflow-diagram')).toBeInTheDocument();
       });
 
       // Inspector is in DOM but has translate-x-full class (off-screen)
       // The component itself mounts regardless of selection
-      const inspector = screen.queryByTestId("inspector");
+      const inspector = screen.queryByTestId('inspector');
       // We can't easily test CSS classes with JSDOM, so we just verify the structure exists
       expect(inspector).toBeInTheDocument();
     });
   });
 
-  describe("Ctrl+E keyboard shortcut - open IDE", () => {
-    test("opens IDE when Ctrl+E pressed with job selected", async () => {
-      const user = userEvent.setup();
-
+  describe('Ctrl+E keyboard shortcut - open IDE', () => {
+    test('opens IDE when Ctrl+E pressed with job selected', async () => {
       // Select a job
       currentNode = {
-        type: "job",
+        type: 'job',
         node: mockWorkflow.jobs[0],
       };
 
-      const { container } = renderWorkflowEditor();
+      renderWorkflowEditor();
 
       await waitFor(() => {
-        expect(screen.getByTestId("workflow-diagram")).toBeInTheDocument();
+        expect(screen.getByTestId('workflow-diagram')).toBeInTheDocument();
       });
 
-      container.focus();
-
-      // Press Ctrl+E
-      await user.keyboard("{Control>}e{/Control}");
+      // Press Ctrl+E - dispatch to window (KeyboardProvider listens on window)
+      const event = new KeyboardEvent('keydown', {
+        key: 'e',
+        ctrlKey: true,
+        bubbles: true,
+      });
+      window.dispatchEvent(event);
 
       // Should open IDE by setting editor=open in URL
       await waitFor(() => {
         expect(mockUpdateSearchParams).toHaveBeenCalledWith({
-          panel: "editor",
+          panel: 'editor',
         });
       });
     });
 
-    test("does NOT open IDE when Ctrl+E pressed with trigger selected", async () => {
-      const user = userEvent.setup();
-
+    test('does NOT open IDE when Ctrl+E pressed with trigger selected', async () => {
       // Select a trigger (not a job)
       currentNode = {
-        type: "trigger",
+        type: 'trigger',
         node: mockWorkflow.triggers[0],
       };
 
-      const { container } = renderWorkflowEditor();
+      renderWorkflowEditor();
 
       await waitFor(() => {
-        expect(screen.getByTestId("workflow-diagram")).toBeInTheDocument();
+        expect(screen.getByTestId('workflow-diagram')).toBeInTheDocument();
       });
 
-      container.focus();
-
-      // Press Ctrl+E
-      await user.keyboard("{Control>}e{/Control}");
+      // Press Ctrl+E - dispatch to window (KeyboardProvider listens on window)
+      const event = new KeyboardEvent('keydown', {
+        key: 'e',
+        ctrlKey: true,
+        bubbles: true,
+      });
+      window.dispatchEvent(event);
 
       // Should NOT open IDE - silent no-op
       await new Promise(resolve => setTimeout(resolve, 100));
       expect(mockUpdateSearchParams).not.toHaveBeenCalledWith({
-        editor: "open",
+        editor: 'open',
       });
     });
 
-    test("does NOT open IDE when Ctrl+E pressed with nothing selected", async () => {
-      const user = userEvent.setup();
-
+    test('does NOT open IDE when Ctrl+E pressed with nothing selected', async () => {
       // Nothing selected
       currentNode = { type: null, node: null };
 
-      const { container } = renderWorkflowEditor();
+      renderWorkflowEditor();
 
       await waitFor(() => {
-        expect(screen.getByTestId("workflow-diagram")).toBeInTheDocument();
+        expect(screen.getByTestId('workflow-diagram')).toBeInTheDocument();
       });
 
-      container.focus();
-
-      // Press Ctrl+E
-      await user.keyboard("{Control>}e{/Control}");
+      // Press Ctrl+E - dispatch to window (KeyboardProvider listens on window)
+      const event = new KeyboardEvent('keydown', {
+        key: 'e',
+        ctrlKey: true,
+        bubbles: true,
+      });
+      window.dispatchEvent(event);
 
       // Should NOT open IDE - silent no-op
       await new Promise(resolve => setTimeout(resolve, 100));
       expect(mockUpdateSearchParams).not.toHaveBeenCalledWith({
-        editor: "open",
+        editor: 'open',
       });
     });
 
-    test("does NOT trigger when IDE is already open", async () => {
-      const user = userEvent.setup();
-
+    test('does NOT trigger when IDE is already open', async () => {
       // Select a job
       currentNode = {
-        type: "job",
+        type: 'job',
         node: mockWorkflow.jobs[0],
       };
 
       // IDE is already open
-      mockSearchParams.set("panel", "editor");
-      mockSearchParams.set("job", "job-1");
+      mockSearchParams.set('panel', 'editor');
+      mockSearchParams.set('job', 'job-1');
 
-      const { container } = renderWorkflowEditor();
+      renderWorkflowEditor();
 
       await waitFor(() => {
-        expect(screen.getByTestId("fullscreen-ide")).toBeInTheDocument();
+        expect(screen.getByTestId('fullscreen-ide')).toBeInTheDocument();
       });
 
-      container.focus();
-
-      // Press Ctrl+E
-      await user.keyboard("{Control>}e{/Control}");
+      // Press Ctrl+E - dispatch to window (KeyboardProvider listens on window)
+      const event = new KeyboardEvent('keydown', {
+        key: 'e',
+        ctrlKey: true,
+        bubbles: true,
+      });
+      window.dispatchEvent(event);
 
       // Handler should be disabled - no call to updateSearchParams
       await new Promise(resolve => setTimeout(resolve, 100));

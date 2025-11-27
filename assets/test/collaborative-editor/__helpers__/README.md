@@ -23,7 +23,7 @@ patterns.
 **Usage Example:**
 
 ```typescript
-import { createMockChannelWithResponses } from "./__helpers__";
+import { createMockChannelWithResponses } from './__helpers__';
 
 const channel = createMockChannelWithResponses({
   request_adaptors: { adaptors: mockAdaptorsList },
@@ -45,13 +45,13 @@ Factory functions for setting up store instances with common configurations.
 **Usage Example:**
 
 ```typescript
-import { setupAdaptorStoreTest } from "./__helpers__";
+import { setupAdaptorStoreTest } from './__helpers__';
 
-test("adaptor store functionality", async () => {
+test('adaptor store functionality', async () => {
   const { store, mockChannel, cleanup } = setupAdaptorStoreTest();
 
   // Configure and test
-  mockChannel.push = () => createMockPushWithResponse("ok", { adaptors: [] });
+  mockChannel.push = () => createMockPushWithResponse('ok', { adaptors: [] });
   await store.requestAdaptors();
 
   cleanup();
@@ -79,10 +79,10 @@ import {
   setupSessionStoreTest,
   waitForSessionReady,
   triggerProviderSync,
-} from "./__helpers__";
+} from './__helpers__';
 
-test("session synchronization", async () => {
-  const { store, cleanup } = setupSessionStoreTest("room:123", userData);
+test('session synchronization', async () => {
+  const { store, cleanup } = setupSessionStoreTest('room:123', userData);
 
   await waitForSessionReady(store);
   triggerProviderSync(store, true);
@@ -111,9 +111,9 @@ Utilities for testing session context store, including channel event simulation.
 import {
   setupSessionContextStoreTest,
   emitSessionContextUpdatedEvent,
-} from "./__helpers__";
+} from './__helpers__';
 
-test("context updates", async () => {
+test('context updates', async () => {
   const { store, mockChannel, cleanup } = setupSessionContextStoreTest();
 
   emitSessionContextUpdatedEvent(mockChannel, {
@@ -147,9 +147,9 @@ Utilities for testing StoreProvider context and store integration patterns.
 **Usage Example:**
 
 ```typescript
-import { simulateStoreProviderWithConnection } from "./__helpers__";
+import { simulateStoreProviderWithConnection } from './__helpers__';
 
-test("store integration", async () => {
+test('store integration', async () => {
   const { stores, channelCleanup, cleanup } =
     await simulateStoreProviderWithConnection();
 
@@ -181,23 +181,23 @@ import {
   createMockProject,
   selectBreadcrumbProjectData,
   generateBreadcrumbStructure,
-} from "./__helpers__";
+} from './__helpers__';
 
-test("breadcrumb rendering", () => {
-  const project = createMockProject({ name: "My Project" });
+test('breadcrumb rendering', () => {
+  const project = createMockProject({ name: 'My Project' });
   const { projectId, projectName } = selectBreadcrumbProjectData(
     project,
-    "fallback-id",
-    "Fallback Name"
+    'fallback-id',
+    'Fallback Name'
   );
 
   const breadcrumbs = generateBreadcrumbStructure(
     projectId,
     projectName,
-    "My Workflow"
+    'My Workflow'
   );
 
-  expect(breadcrumbs[2].text).toBe("My Project");
+  expect(breadcrumbs[2].text).toBe('My Project');
 });
 ```
 
@@ -216,7 +216,7 @@ These helpers follow key testing principles:
 You can import helpers individually:
 
 ```typescript
-import { setupAdaptorStoreTest } from "./__helpers__/storeHelpers";
+import { setupAdaptorStoreTest } from './__helpers__/storeHelpers';
 ```
 
 Or use the index for multiple imports:
@@ -226,7 +226,7 @@ import {
   setupAdaptorStoreTest,
   createMockPhoenixChannel,
   waitForAsync,
-} from "./__helpers__";
+} from './__helpers__';
 ```
 
 ## Adding New Helpers

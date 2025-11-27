@@ -5,9 +5,11 @@ import { useFieldContext } from '.';
 export function TextField({
   label,
   disabled = false,
+  placeholder,
 }: {
   label: string;
   disabled?: boolean;
+  placeholder?: string;
 }) {
   const field = useFieldContext<string>();
   return (
@@ -18,6 +20,7 @@ export function TextField({
         value={field.state.value || ''}
         onChange={e => field.handleChange(e.target.value)}
         disabled={disabled}
+        placeholder={placeholder}
         className={INPUT_CLASSES}
       />
     </FormField>

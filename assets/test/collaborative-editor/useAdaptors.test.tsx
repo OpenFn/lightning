@@ -5,9 +5,9 @@
  * to adaptor functionality from React components using the StoreProvider context.
  */
 
-import { act, renderHook, waitFor } from "@testing-library/react";
-import type React from "react";
-import { describe, expect, test } from "vitest";
+import { act, renderHook, waitFor } from '@testing-library/react';
+import type React from 'react';
+import { describe, expect, test } from 'vitest';
 
 import {
   useAdaptor,
@@ -15,18 +15,18 @@ import {
   useAdaptors,
   useAdaptorsError,
   useAdaptorsLoading,
-} from "../../js/collaborative-editor/hooks/useAdaptors";
-import { createSessionStore } from "../../js/collaborative-editor/stores/createSessionStore";
+} from '../../js/collaborative-editor/hooks/useAdaptors';
+import { createSessionStore } from '../../js/collaborative-editor/stores/createSessionStore';
 
-import { SessionContext } from "../../js/collaborative-editor/contexts/SessionProvider";
-import { StoreContext } from "../../js/collaborative-editor/contexts/StoreProvider";
-import { createAdaptorStore } from "../../js/collaborative-editor/stores/createAdaptorStore";
-import { createAwarenessStore } from "../../js/collaborative-editor/stores/createAwarenessStore";
-import { createCredentialStore } from "../../js/collaborative-editor/stores/createCredentialStore";
-import { createSessionContextStore } from "../../js/collaborative-editor/stores/createSessionContextStore";
-import { createWorkflowStore } from "../../js/collaborative-editor/stores/createWorkflowStore";
-import { mockAdaptorsList } from "./fixtures/adaptorData";
-import { createMockSocket } from "./mocks/phoenixSocket";
+import { SessionContext } from '../../js/collaborative-editor/contexts/SessionProvider';
+import { StoreContext } from '../../js/collaborative-editor/contexts/StoreProvider';
+import { createAdaptorStore } from '../../js/collaborative-editor/stores/createAdaptorStore';
+import { createAwarenessStore } from '../../js/collaborative-editor/stores/createAwarenessStore';
+import { createCredentialStore } from '../../js/collaborative-editor/stores/createCredentialStore';
+import { createSessionContextStore } from '../../js/collaborative-editor/stores/createSessionContextStore';
+import { createWorkflowStore } from '../../js/collaborative-editor/stores/createWorkflowStore';
+import { mockAdaptorsList } from './fixtures/adaptorData';
+import { createMockSocket } from './mocks/phoenixSocket';
 
 // =============================================================================
 // TEST HELPERS
@@ -42,10 +42,10 @@ function createWrapper() {
 
   const mockSocket = createMockSocket();
 
-  sessionStore.initializeSession(mockSocket, "test:room", {
-    id: "user-1",
-    name: "Test User",
-    color: "#ff0000",
+  sessionStore.initializeSession(mockSocket, 'test:room', {
+    id: 'user-1',
+    name: 'Test User',
+    color: '#ff0000',
   });
 
   const stores = {
@@ -65,29 +65,29 @@ function createWrapper() {
   return { wrapper, stores, sessionStore };
 }
 
-describe("useAdaptors hooks", () => {
-  describe("context validation", () => {
-    test("all hooks require StoreProvider context", () => {
+describe('useAdaptors hooks', () => {
+  describe('context validation', () => {
+    test('all hooks require StoreProvider context', () => {
       expect(() => renderHook(() => useAdaptors())).toThrow(
-        "useAdaptorStore must be used within a StoreProvider"
+        'useAdaptorStore must be used within a StoreProvider'
       );
       expect(() => renderHook(() => useAdaptorsLoading())).toThrow(
-        "useAdaptorStore must be used within a StoreProvider"
+        'useAdaptorStore must be used within a StoreProvider'
       );
       expect(() => renderHook(() => useAdaptorsError())).toThrow(
-        "useAdaptorStore must be used within a StoreProvider"
+        'useAdaptorStore must be used within a StoreProvider'
       );
       expect(() => renderHook(() => useAdaptorCommands())).toThrow(
-        "useAdaptorStore must be used within a StoreProvider"
+        'useAdaptorStore must be used within a StoreProvider'
       );
       expect(() =>
-        renderHook(() => useAdaptor("@openfn/language-http"))
-      ).toThrow("useAdaptorStore must be used within a StoreProvider");
+        renderHook(() => useAdaptor('@openfn/language-http'))
+      ).toThrow('useAdaptorStore must be used within a StoreProvider');
     });
   });
 
-  describe("useAdaptors", () => {
-    test("returns adaptors and updates when store changes", async () => {
+  describe('useAdaptors', () => {
+    test('returns adaptors and updates when store changes', async () => {
       const { wrapper, stores } = createWrapper();
       const { result } = renderHook(() => useAdaptors(), { wrapper });
 
@@ -103,7 +103,7 @@ describe("useAdaptors hooks", () => {
       });
     });
 
-    test("only re-renders when adaptors change, not other state", async () => {
+    test('only re-renders when adaptors change, not other state', async () => {
       const { wrapper, stores } = createWrapper();
       let renderCount = 0;
 
@@ -119,7 +119,7 @@ describe("useAdaptors hooks", () => {
 
       act(() => {
         stores.adaptorStore.setLoading(true);
-        stores.adaptorStore.setError("Test error");
+        stores.adaptorStore.setError('Test error');
       });
 
       expect(renderCount).toBe(initialRenderCount);
@@ -135,13 +135,13 @@ describe("useAdaptors hooks", () => {
     });
   });
 
-  describe("useAdaptorsLoading", () => {
-    test("returns loading state and updates", async () => {
+  describe('useAdaptorsLoading', () => {
+    test('returns loading state and updates', async () => {
       const { wrapper, stores } = createWrapper();
       const { result } = renderHook(() => useAdaptorsLoading(), { wrapper });
 
       expect(result.current).toBe(false);
-      expect(typeof result.current).toBe("boolean");
+      expect(typeof result.current).toBe('boolean');
 
       act(() => {
         stores.adaptorStore.setLoading(true);
@@ -161,27 +161,27 @@ describe("useAdaptors hooks", () => {
     });
   });
 
-  describe("useAdaptorsError", () => {
-    test("tracks error state lifecycle", async () => {
+  describe('useAdaptorsError', () => {
+    test('tracks error state lifecycle', async () => {
       const { wrapper, stores } = createWrapper();
       const { result } = renderHook(() => useAdaptorsError(), { wrapper });
 
       expect(result.current).toBe(null);
 
       act(() => {
-        stores.adaptorStore.setError("Error 1");
+        stores.adaptorStore.setError('Error 1');
       });
 
       await waitFor(() => {
-        expect(result.current).toBe("Error 1");
+        expect(result.current).toBe('Error 1');
       });
 
       act(() => {
-        stores.adaptorStore.setError("Error 2");
+        stores.adaptorStore.setError('Error 2');
       });
 
       await waitFor(() => {
-        expect(result.current).toBe("Error 2");
+        expect(result.current).toBe('Error 2');
       });
 
       act(() => {
@@ -194,16 +194,16 @@ describe("useAdaptors hooks", () => {
     });
   });
 
-  describe("useAdaptorCommands", () => {
-    test("provides stable command functions", () => {
+  describe('useAdaptorCommands', () => {
+    test('provides stable command functions', () => {
       const { wrapper } = createWrapper();
       const { result, rerender } = renderHook(() => useAdaptorCommands(), {
         wrapper,
       });
 
-      expect(result.current).toHaveProperty("requestAdaptors");
-      expect(result.current).toHaveProperty("setAdaptors");
-      expect(result.current).toHaveProperty("clearError");
+      expect(result.current).toHaveProperty('requestAdaptors');
+      expect(result.current).toHaveProperty('setAdaptors');
+      expect(result.current).toHaveProperty('clearError');
 
       const commands1 = result.current;
       rerender();
@@ -245,11 +245,11 @@ describe("useAdaptors hooks", () => {
       });
 
       act(() => {
-        stores.adaptorStore.setError("Test error");
+        stores.adaptorStore.setError('Test error');
       });
 
       await waitFor(() => {
-        expect(error.current).toBe("Test error");
+        expect(error.current).toBe('Test error');
       });
 
       act(() => {
@@ -264,8 +264,8 @@ describe("useAdaptors hooks", () => {
     });
   });
 
-  describe("useAdaptor", () => {
-    test("finds adaptor by name and returns null for non-existent", async () => {
+  describe('useAdaptor', () => {
+    test('finds adaptor by name and returns null for non-existent', async () => {
       const { wrapper, stores } = createWrapper();
 
       act(() => {
@@ -273,27 +273,27 @@ describe("useAdaptors hooks", () => {
       });
 
       const { result: httpAdaptor } = renderHook(
-        () => useAdaptor("@openfn/language-http"),
+        () => useAdaptor('@openfn/language-http'),
         { wrapper }
       );
 
       const { result: nonExistent } = renderHook(
-        () => useAdaptor("@openfn/nonexistent"),
+        () => useAdaptor('@openfn/nonexistent'),
         { wrapper }
       );
 
       await waitFor(() => {
         expect(httpAdaptor.current).not.toBe(null);
-        expect(httpAdaptor.current?.name).toBe("@openfn/language-http");
-        expect(httpAdaptor.current?.latest).toBe("2.1.0");
+        expect(httpAdaptor.current?.name).toBe('@openfn/language-http');
+        expect(httpAdaptor.current?.latest).toBe('2.1.0');
       });
 
       expect(nonExistent.current).toBe(null);
     });
 
-    test("updates when adaptors change or search name changes", async () => {
+    test('updates when adaptors change or search name changes', async () => {
       const { wrapper, stores } = createWrapper();
-      const { result } = renderHook(() => useAdaptor("@openfn/language-http"), {
+      const { result } = renderHook(() => useAdaptor('@openfn/language-http'), {
         wrapper,
       });
 
@@ -304,11 +304,11 @@ describe("useAdaptors hooks", () => {
       });
 
       await waitFor(() => {
-        expect(result.current?.name).toBe("@openfn/language-http");
+        expect(result.current?.name).toBe('@openfn/language-http');
       });
     });
 
-    test("supports searching for different adaptors", async () => {
+    test('supports searching for different adaptors', async () => {
       const { wrapper, stores } = createWrapper();
 
       act(() => {
@@ -317,23 +317,23 @@ describe("useAdaptors hooks", () => {
 
       const { result, rerender } = renderHook(({ name }) => useAdaptor(name), {
         wrapper,
-        initialProps: { name: "@openfn/language-http" },
+        initialProps: { name: '@openfn/language-http' },
       });
 
       await waitFor(() => {
-        expect(result.current?.name).toBe("@openfn/language-http");
+        expect(result.current?.name).toBe('@openfn/language-http');
       });
 
-      rerender({ name: "@openfn/language-dhis2" });
+      rerender({ name: '@openfn/language-dhis2' });
 
       await waitFor(() => {
-        expect(result.current?.name).toBe("@openfn/language-dhis2");
+        expect(result.current?.name).toBe('@openfn/language-dhis2');
       });
     });
   });
 
-  describe("selective subscriptions", () => {
-    test("hooks with different selectors update independently", async () => {
+  describe('selective subscriptions', () => {
+    test('hooks with different selectors update independently', async () => {
       const { wrapper, stores } = createWrapper();
 
       let adaptorsRenderCount = 0;

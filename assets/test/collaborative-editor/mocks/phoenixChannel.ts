@@ -5,7 +5,7 @@
  * across different test files for consistent testing of channel-dependent features.
  */
 
-import { type Channel } from "phoenix";
+import { type Channel } from 'phoenix';
 
 export interface MockPhoenixChannel extends Channel {
   on: (event: string, handler: (message: unknown) => void) => number;
@@ -15,10 +15,17 @@ export interface MockPhoenixChannel extends Channel {
   leave: (timeout?: number) => MockPush;
   onClose: (callback: () => void) => void;
   onError: (callback: (error: unknown) => void) => void;
-  state: "closed" | "errored" | "joined" | "joining" | "leaving";
+  state: 'closed' | 'errored' | 'joined' | 'joining' | 'leaving';
   topic: string;
   joinPush: MockPush;
   socket: unknown;
+  _test: {
+    emit: (event: string, message: unknown) => void;
+    triggerClose: () => void;
+    triggerError: (error: unknown) => void;
+    getHandlers: (event: string) => Set<(message: unknown) => void> | undefined;
+    setState: (state: MockPhoenixChannel['state']) => void;
+  };
 }
 
 export interface MockPush {
@@ -33,10 +40,10 @@ export interface MockPhoenixChannelProvider {
  * Creates a mock Phoenix channel for testing
  */
 export function createMockPhoenixChannel(
-  topic: string = "test:channel"
+  topic: string = 'test:channel'
 ): MockPhoenixChannel {
   const eventHandlers = new Map<string, Set<(message: unknown) => void>>();
-  let channelState: MockPhoenixChannel["state"] = "closed";
+  let channelState: MockPhoenixChannel['state'] = 'closed';
   const closeCallbacks: (() => void)[] = [];
   const errorCallbacks: ((error: unknown) => void)[] = [];
   let nextRef = 1;
@@ -53,9 +60,9 @@ export function createMockPhoenixChannel(
     };
 
     // For join events, automatically trigger success after a microtask
-    if (event === "join" || event === undefined) {
+    if (event === 'join' || event === undefined) {
       setTimeout(() => {
-        const okHandler = receiveHandlers.get("ok");
+        const okHandler = receiveHandlers.get('ok');
         if (okHandler) {
           okHandler({});
         }
@@ -91,20 +98,20 @@ export function createMockPhoenixChannel(
     },
 
     join(_timeout?: number): MockPush {
-      channelState = "joining";
-      const joinPush = createMockPush("join");
+      channelState = 'joining';
+      const joinPush = createMockPush('join');
       setTimeout(() => {
-        channelState = "joined";
+        channelState = 'joined';
         mockChannel.state = channelState;
       }, 0);
       return joinPush;
     },
 
     leave(_timeout?: number): MockPush {
-      channelState = "leaving";
+      channelState = 'leaving';
       const leavePush = createMockPush();
       setTimeout(() => {
-        channelState = "closed";
+        channelState = 'closed';
         mockChannel.state = channelState;
       }, 0);
       return leavePush;
@@ -117,6 +124,9 @@ export function createMockPhoenixChannel(
     onError(callback: (error: unknown) => void) {
       errorCallbacks.push(callback);
     },
+
+    // Test helper methods (defined below but included in type for proper typing)
+    _test: {} as any,
   };
 
   // Add helper methods for testing
@@ -128,7 +138,7 @@ export function createMockPhoenixChannel(
       getHandlers: (
         event: string
       ) => Set<(message: unknown) => void> | undefined;
-      setState: (state: MockPhoenixChannel["state"]) => void;
+      setState: (state: MockPhoenixChannel['state']) => void;
     };
   };
 
@@ -148,12 +158,12 @@ export function createMockPhoenixChannel(
     },
 
     triggerClose() {
-      channelState = "closed";
+      channelState = 'closed';
       closeCallbacks.forEach(callback => callback());
     },
 
     triggerError(error: unknown) {
-      channelState = "errored";
+      channelState = 'errored';
       errorCallbacks.forEach(callback => callback(error));
     },
 
@@ -161,7 +171,7 @@ export function createMockPhoenixChannel(
       return eventHandlers.get(event);
     },
 
-    setState(state: MockPhoenixChannel["state"]) {
+    setState(state: MockPhoenixChannel['state']) {
       channelState = state;
       mockChannel.state = state;
     },

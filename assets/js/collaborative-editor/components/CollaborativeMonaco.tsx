@@ -7,6 +7,7 @@ import type * as Y from 'yjs';
 import _logger from '#/utils/logger';
 
 import { type Monaco, MonacoEditor, setTheme } from '../../monaco';
+import { addKeyboardShortcutOverrides } from '../../monaco/keyboard-overrides';
 
 import { Cursors } from './Cursors';
 
@@ -51,35 +52,8 @@ export function CollaborativeMonaco({
       const language = getLanguageFromAdaptor(adaptor);
       monaco.editor.setModelLanguage(editor.getModel()!, language);
 
-      // Override Monaco's CMD+Enter to allow react-hotkeys-hook to handle it
-      editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter, () => {
-        const event = new KeyboardEvent('keydown', {
-          key: 'Enter',
-          code: 'Enter',
-          metaKey: true,
-          ctrlKey: true,
-          bubbles: true,
-          cancelable: true,
-        });
-        document.dispatchEvent(event);
-      });
-
-      // Override Monaco's CMD+Shift+Enter to allow react-hotkeys-hook to handle it
-      editor.addCommand(
-        monaco.KeyMod.CtrlCmd | monaco.KeyMod.Shift | monaco.KeyCode.Enter,
-        () => {
-          const event = new KeyboardEvent('keydown', {
-            key: 'Enter',
-            code: 'Enter',
-            metaKey: true,
-            ctrlKey: true,
-            shiftKey: true,
-            bubbles: true,
-            cancelable: true,
-          });
-          document.dispatchEvent(event);
-        }
-      );
+      // Override Monaco shortcuts to allow KeyboardProvider to handle them
+      addKeyboardShortcutOverrides(editor, monaco);
 
       // Create initial binding if ytext and awareness are available
       if (ytext && awareness) {
@@ -269,6 +243,7 @@ export function CollaborativeMonaco({
     insertSpaces: true,
     automaticLayout: true,
     readOnly: disabled,
+    fixedOverflowWidgets: true,
     ...options,
   };
 

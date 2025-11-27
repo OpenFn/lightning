@@ -1,6 +1,6 @@
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo } from 'react';
 
-import { useUserCursors, useRemoteUsers } from "../hooks/useAwareness";
+import { useAwareness } from '../hooks/useAwareness';
 
 function BaseStyles() {
   const baseStyles = `
@@ -46,20 +46,18 @@ function BaseStyles() {
  * Cursors component using awareness hooks for better performance and maintainability
  *
  * Key improvements:
- * - Uses useUserCursors() hook with memoized Map for efficient lookups
- * - Uses useRemoteUsers() for selection data (referentially stable)
+ * - Uses useAwareness() hook with Map format for efficient clientId lookups
+ * - Returns referentially stable data that only changes when users change
  * - Eliminates manual awareness state management and reduces re-renders
  */
 export function Cursors() {
   // Get cursor data as a Map for efficient clientId lookups
-  const cursorsMap = useUserCursors();
-
-  // Get remote users for selection data
-  const remoteUsers = useRemoteUsers();
+  // Note: Uses live users only (not cached), always excludes local user
+  const cursorsMap = useAwareness({ format: 'map' });
 
   // Dynamic user-specific cursor styles - now using Map entries
   const userStyles = useMemo(() => {
-    let cursorStyles = "";
+    let cursorStyles = '';
 
     // Only iterate over users who actually have cursor/selection data
     for (const [clientId, user] of cursorsMap) {
@@ -87,7 +85,7 @@ export function Cursors() {
     }
 
     return { __html: cursorStyles };
-  }, [cursorsMap.size, ...Array.from(cursorsMap.keys())]);
+  }, [cursorsMap]);
 
   // Detect when a users cursor is near the top of the editor and flip the
   // position of the label to below their position.
@@ -99,7 +97,7 @@ export function Cursors() {
       cursors.forEach(cursor => {
         const rect = cursor.getBoundingClientRect();
         const editorContainer =
-          cursor.closest(".monaco-editor") ||
+          cursor.closest('.monaco-editor') ||
           cursor.closest('[data-mode-id="javascript"]');
 
         if (editorContainer) {
@@ -108,9 +106,9 @@ export function Cursors() {
 
           // If cursor is within 30px of the top of the editor, add the class
           if (relativeTop < 30) {
-            cursor.classList.add("cursor-at-top");
+            cursor.classList.add('cursor-at-top');
           } else {
-            cursor.classList.remove("cursor-at-top");
+            cursor.classList.remove('cursor-at-top');
           }
         }
       });
@@ -119,15 +117,15 @@ export function Cursors() {
     // Also check on scroll events
     // FIXME: This references the first editor anywhere on the page.
     // We need to pass in the editor element to the component.
-    const editorElement = document.querySelector(".monaco-editor");
-    editorElement?.addEventListener("scroll", checkCursorPositions);
+    const editorElement = document.querySelector('.monaco-editor');
+    editorElement?.addEventListener('scroll', checkCursorPositions);
 
     checkCursorPositions();
 
     return () => {
-      editorElement?.removeEventListener("scroll", checkCursorPositions);
+      editorElement?.removeEventListener('scroll', checkCursorPositions);
     };
-  }, [remoteUsers.length]); // Only re-run when remote users change
+  }, [cursorsMap.size]); // Only re-run when live users change
 
   return (
     <>

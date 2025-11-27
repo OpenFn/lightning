@@ -19,6 +19,7 @@ describe.concurrent('UserContextSchema', () => {
       last_name: 'Doe',
       email: 'john.doe@example.com',
       email_confirmed: true,
+      support_user: false,
       inserted_at: '2024-01-15T10:30:00.000Z',
     };
 
@@ -37,6 +38,7 @@ describe.concurrent('UserContextSchema', () => {
       last_name: 'Smith',
       email: 'jane.smith@test.com',
       email_confirmed: false,
+      support_user: false,
       inserted_at: '2024-01-15T10:30:00.000Z',
     };
 
@@ -52,6 +54,7 @@ describe.concurrent('UserContextSchema', () => {
       last_name: 'Doe',
       email: 'john.doe@example.com',
       email_confirmed: true,
+      support_user: false,
       inserted_at: '2024-01-15T10:30:00.000Z',
     };
 
@@ -70,6 +73,7 @@ describe.concurrent('UserContextSchema', () => {
       last_name: 'Doe',
       email: 'not-an-email',
       email_confirmed: true,
+      support_user: false,
       inserted_at: '2024-01-15T10:30:00.000Z',
     };
 
@@ -87,6 +91,7 @@ describe.concurrent('UserContextSchema', () => {
       last_name: 'Doe',
       email: 'john.doe@example.com',
       email_confirmed: true,
+      support_user: false,
       inserted_at: '2024-01-15T10:30:00.000Z',
     };
 
@@ -104,6 +109,7 @@ describe.concurrent('UserContextSchema', () => {
       first_name: 'John',
       email: 'john.doe@example.com',
       email_confirmed: true,
+      support_user: false,
       inserted_at: '2024-01-15T10:30:00.000Z',
     };
 
@@ -140,6 +146,7 @@ describe.concurrent('UserContextSchema', () => {
       last_name: 'Doe',
       email: 'john.doe@example.com',
       email_confirmed: true,
+      support_user: false,
       inserted_at: '2024-01-15',
     };
 
@@ -158,6 +165,7 @@ describe.concurrent('UserContextSchema', () => {
       last_name: 'Doe',
       email: 'john.doe@example.com',
       email_confirmed: true,
+      support_user: false,
       inserted_at: '2024-01-15T10:30:00.000Z',
     };
 
@@ -173,6 +181,7 @@ describe.concurrent('UserContextSchema', () => {
       last_name: 'Doe',
       email: 'john.doe@example.com',
       email_confirmed: true,
+      support_user: false,
       inserted_at: '2024-01-15T10:30:00.000Z',
     };
 
@@ -326,6 +335,7 @@ describe.concurrent('SessionContextResponseSchema', () => {
         last_name: 'Doe',
         email: 'john.doe@example.com',
         email_confirmed: true,
+        support_user: false,
         inserted_at: '2024-01-15T10:30:00.000Z',
       },
       project: {
@@ -343,6 +353,7 @@ describe.concurrent('SessionContextResponseSchema', () => {
       latest_snapshot_lock_version: 1,
       project_repo_connection: null,
       webhook_auth_methods: [],
+      workflow_template: null,
     };
 
     const result = SessionContextResponseSchema.safeParse(validResponse);
@@ -371,6 +382,7 @@ describe.concurrent('SessionContextResponseSchema', () => {
       latest_snapshot_lock_version: 1,
       project_repo_connection: null,
       webhook_auth_methods: [],
+      workflow_template: null,
     };
 
     const result = SessionContextResponseSchema.safeParse(validResponse);
@@ -389,6 +401,7 @@ describe.concurrent('SessionContextResponseSchema', () => {
         last_name: 'Doe',
         email: 'john.doe@example.com',
         email_confirmed: false,
+        support_user: false,
         inserted_at: '2024-01-15T10:30:00.000Z',
       },
       project: null,
@@ -403,6 +416,7 @@ describe.concurrent('SessionContextResponseSchema', () => {
       latest_snapshot_lock_version: 1,
       project_repo_connection: null,
       webhook_auth_methods: [],
+      workflow_template: null,
     };
 
     const result = SessionContextResponseSchema.safeParse(validResponse);
@@ -428,6 +442,7 @@ describe.concurrent('SessionContextResponseSchema', () => {
       latest_snapshot_lock_version: 1,
       project_repo_connection: null,
       webhook_auth_methods: [],
+      workflow_template: null,
     };
 
     const result = SessionContextResponseSchema.safeParse(validResponse);
@@ -452,6 +467,7 @@ describe.concurrent('SessionContextResponseSchema', () => {
       latest_snapshot_lock_version: 1,
       project_repo_connection: null,
       webhook_auth_methods: [],
+      workflow_template: null,
     };
 
     const result = SessionContextResponseSchema.safeParse(invalidResponse);
@@ -470,6 +486,7 @@ describe.concurrent('SessionContextResponseSchema', () => {
         last_name: 'Doe',
         email: 'john.doe@example.com',
         email_confirmed: true,
+        support_user: false,
         inserted_at: '2024-01-15T10:30:00.000Z',
       },
       project: null,
@@ -484,6 +501,7 @@ describe.concurrent('SessionContextResponseSchema', () => {
       latest_snapshot_lock_version: 1,
       project_repo_connection: null,
       webhook_auth_methods: [],
+      workflow_template: null,
     };
 
     const result = SessionContextResponseSchema.safeParse(invalidResponse);
@@ -512,6 +530,7 @@ describe.concurrent('SessionContextResponseSchema', () => {
       latest_snapshot_lock_version: 1,
       project_repo_connection: null,
       webhook_auth_methods: [],
+      workflow_template: null,
     };
 
     const result = SessionContextResponseSchema.safeParse(invalidResponse);
@@ -537,6 +556,7 @@ describe.concurrent('SessionContextResponseSchema', () => {
       latest_snapshot_lock_version: 1,
       project_repo_connection: null,
       webhook_auth_methods: [],
+      workflow_template: null,
     };
 
     const result = SessionContextResponseSchema.safeParse(invalidResponse);
@@ -557,6 +577,7 @@ describe.concurrent('SessionContextResponseSchema', () => {
       latest_snapshot_lock_version: 1,
       project_repo_connection: null,
       webhook_auth_methods: [],
+      workflow_template: null,
     };
 
     const result = SessionContextResponseSchema.safeParse(invalidResponse);
@@ -579,6 +600,7 @@ describe.concurrent('SessionContextResponseSchema', () => {
       latest_snapshot_lock_version: 1,
       project_repo_connection: null,
       webhook_auth_methods: [],
+      workflow_template: null,
     };
 
     const result = SessionContextResponseSchema.safeParse(invalidResponse);
@@ -599,6 +621,7 @@ describe.concurrent('SessionContext edge cases', () => {
       last_name: "O'Brien-Smith",
       email: 'jean.francois@example.com',
       email_confirmed: true,
+      support_user: false,
       inserted_at: '2024-01-15T10:30:00.000Z',
     };
 
@@ -625,6 +648,7 @@ describe.concurrent('SessionContext edge cases', () => {
       last_name: 'User',
       email: 'test+tag@example.com',
       email_confirmed: true,
+      support_user: false,
       inserted_at: '2024-01-15T10:30:00.000Z',
     };
 
@@ -640,6 +664,7 @@ describe.concurrent('SessionContext edge cases', () => {
       last_name: 'Doe',
       email: 'john@example.com',
       email_confirmed: true,
+      support_user: false,
       inserted_at: '2024-01-15T10:30:00.123Z',
     };
 
@@ -655,6 +680,7 @@ describe.concurrent('SessionContext edge cases', () => {
       last_name: 'Doe',
       email: 'john@example.com',
       email_confirmed: true,
+      support_user: false,
       inserted_at: '2024-01-15T10:30:00.000Z',
       unexpected_field: 'should be stripped',
     };

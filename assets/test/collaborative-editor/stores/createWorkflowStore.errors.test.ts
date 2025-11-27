@@ -278,4 +278,172 @@ describe('WorkflowStore - Errors Observer (Phase 3: Denormalized)', () => {
       });
     });
   });
+
+  describe('Error state preservation during Y.Doc updates', () => {
+    beforeEach(() => {
+      // Add a job and edge to test with
+      const jobsArray = ydoc.getArray('jobs');
+      const jobMap = new Y.Map();
+
+      ydoc.transact(() => {
+        jobMap.set('id', 'job-123');
+        jobMap.set('name', 'Test Job');
+        jobMap.set('body', new Y.Text('fn(state => state)'));
+        jobMap.set('adaptor', '@openfn/language-common@latest');
+        jobMap.set('enabled', true);
+        jobMap.set('project_credential_id', null);
+        jobMap.set('keychain_credential_id', null);
+        jobsArray.push([jobMap]);
+      });
+
+      const edgesArray = ydoc.getArray('edges');
+      const edgeMap = new Y.Map();
+
+      ydoc.transact(() => {
+        edgeMap.set('id', 'edge-abc');
+        edgeMap.set('source_job_id', 'job-1');
+        edgeMap.set('source_trigger_id', null);
+        edgeMap.set('target_job_id', 'job-2');
+        edgeMap.set('condition_type', 'on_job_success');
+        edgeMap.set('condition_label', null);
+        edgeMap.set('condition_expression', null);
+        edgeMap.set('enabled', true);
+        edgesArray.push([edgeMap]);
+      });
+
+      const triggersArray = ydoc.getArray('triggers');
+      const triggerMap = new Y.Map();
+
+      ydoc.transact(() => {
+        triggerMap.set('id', 'trigger-789');
+        triggerMap.set('cron_expression', '0 * * * *');
+        triggerMap.set('enabled', true);
+        triggersArray.push([triggerMap]);
+      });
+    });
+
+    it('should preserve job errors when jobs array is updated', () => {
+      const errorsMap = ydoc.getMap('errors');
+
+      // Set job errors
+      ydoc.transact(() => {
+        errorsMap.set('jobs', {
+          'job-123': { name: ['Job name is too long'] },
+        });
+      });
+
+      // Verify errors are present
+      let state = store.getSnapshot();
+      let job = state.jobs.find(j => j.id === 'job-123');
+      expect(job?.errors).toEqual({ name: ['Job name is too long'] });
+
+      // Update the job name in Y.Doc (simulating collaborative edit)
+      const jobsArray = ydoc.getArray('jobs');
+      const jobMap = jobsArray.get(0) as Y.Map<unknown>;
+
+      ydoc.transact(() => {
+        jobMap.set('name', 'Updated Job Name');
+      });
+
+      // Verify errors are still preserved after Y.Doc update
+      state = store.getSnapshot();
+      job = state.jobs.find(j => j.id === 'job-123');
+      expect(job?.name).toBe('Updated Job Name');
+      expect(job?.errors).toEqual({ name: ['Job name is too long'] });
+    });
+
+    it('should preserve edge errors when edges array is updated', () => {
+      const errorsMap = ydoc.getMap('errors');
+
+      // Set edge errors
+      ydoc.transact(() => {
+        errorsMap.set('edges', {
+          'edge-abc': { condition_expression: ["can't be blank"] },
+        });
+      });
+
+      // Verify errors are present
+      let state = store.getSnapshot();
+      let edge = state.edges.find(e => e.id === 'edge-abc');
+      expect(edge?.errors).toEqual({
+        condition_expression: ["can't be blank"],
+      });
+
+      // Update the edge condition_type in Y.Doc (simulating collaborative edit)
+      const edgesArray = ydoc.getArray('edges');
+      const edgeMap = edgesArray.get(0) as Y.Map<unknown>;
+
+      ydoc.transact(() => {
+        edgeMap.set('condition_type', 'always');
+      });
+
+      // Verify errors are still preserved after Y.Doc update
+      state = store.getSnapshot();
+      edge = state.edges.find(e => e.id === 'edge-abc');
+      expect(edge?.condition_type).toBe('always');
+      expect(edge?.errors).toEqual({
+        condition_expression: ["can't be blank"],
+      });
+    });
+
+    it('should preserve trigger errors when triggers array is updated', () => {
+      const errorsMap = ydoc.getMap('errors');
+
+      // Set trigger errors
+      ydoc.transact(() => {
+        errorsMap.set('triggers', {
+          'trigger-789': { cron_expression: ['Invalid cron expression'] },
+        });
+      });
+
+      // Verify errors are present
+      let state = store.getSnapshot();
+      let trigger = state.triggers.find(t => t.id === 'trigger-789');
+      expect(trigger?.errors).toEqual({
+        cron_expression: ['Invalid cron expression'],
+      });
+
+      // Update the trigger cron_expression in Y.Doc (simulating collaborative edit)
+      const triggersArray = ydoc.getArray('triggers');
+      const triggerMap = triggersArray.get(0) as Y.Map<unknown>;
+
+      ydoc.transact(() => {
+        triggerMap.set('cron_expression', '0 0 * * *');
+      });
+
+      // Verify errors are still preserved after Y.Doc update
+      state = store.getSnapshot();
+      trigger = state.triggers.find(t => t.id === 'trigger-789');
+      expect(trigger?.cron_expression).toBe('0 0 * * *');
+      expect(trigger?.errors).toEqual({
+        cron_expression: ['Invalid cron expression'],
+      });
+    });
+
+    it('should clear preserved errors when errors are removed from Y.Doc', () => {
+      const errorsMap = ydoc.getMap('errors');
+
+      // Set job errors
+      ydoc.transact(() => {
+        errorsMap.set('jobs', {
+          'job-123': { name: ['Job name is too long'] },
+        });
+      });
+
+      // Verify errors are present
+      let state = store.getSnapshot();
+      let job = state.jobs.find(j => j.id === 'job-123');
+      expect(job?.errors).toEqual({ name: ['Job name is too long'] });
+
+      // Clear errors
+      ydoc.transact(() => {
+        errorsMap.set('jobs', {});
+      });
+
+      // Verify errors are cleared
+      state = store.getSnapshot();
+      job = state.jobs.find(j => j.id === 'job-123');
+      expect(job?.errors).toEqual({});
+    });
+  });
 });

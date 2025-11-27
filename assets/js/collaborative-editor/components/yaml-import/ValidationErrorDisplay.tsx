@@ -5,12 +5,12 @@
  * matching the LiveView implementation
  */
 
-import { useState, useEffect } from "react";
+import { useState, useEffect } from 'react';
 
 import {
   WorkflowError,
   formatWorkflowError,
-} from "../../../yaml/workflow-errors";
+} from '../../../yaml/workflow-errors';
 
 interface ValidationErrorDisplayProps {
   errors: WorkflowError[];
@@ -38,12 +38,12 @@ export function ValidationErrorDisplay({
   return (
     <div
       className={`absolute top-0 left-0 right-0 z-10 bg-danger-100/80 border border-danger-200 text-danger-800 px-4 py-3 rounded-lg flex items-start gap-3 shadow-sm
-        ${shouldShake ? "error-shake" : ""}
+        ${shouldShake ? 'error-shake' : ''}
         error-slide-in`}
     >
       <div className="flex-grow">
         <h3 className="text-sm font-semibold text-danger-800 mb-1">
-          Validation Error{errors.length > 1 ? "s" : ""}
+          Validation Error{errors.length > 1 ? 's' : ''}
         </h3>
         {errors.map((error, idx) => (
           <div key={idx} className="text-sm text-danger-800 mb-1">

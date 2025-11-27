@@ -42,6 +42,7 @@ import type {
   ProjectContext,
   ProjectRepoConnection,
   UserContext,
+  WorkflowTemplate,
 } from '../types/sessionContext';
 
 /**
@@ -195,4 +196,79 @@ export const useSessionContext = () => {
   const selectState = sessionContextStore.withSelector(state => state);
 
   return useSyncExternalStore(sessionContextStore.subscribe, selectState);
+};
+
+/**
+ * Hook to get workflow versions list from session context
+ * Returns array of versions, empty array if not loaded yet
+ */
+export const useVersions = () => {
+  const sessionContextStore = useSessionContextStore();
+
+  const selectVersions = sessionContextStore.withSelector(
+    state => state.versions
+  );
+
+  return useSyncExternalStore(sessionContextStore.subscribe, selectVersions);
+};
+
+/**
+ * Hook to get versions loading state
+ * Returns true when versions are being loaded
+ */
+export const useVersionsLoading = (): boolean => {
+  const sessionContextStore = useSessionContextStore();
+
+  const selectVersionsLoading = sessionContextStore.withSelector(
+    state => state.versionsLoading
+  );
+
+  return useSyncExternalStore(
+    sessionContextStore.subscribe,
+    selectVersionsLoading
+  );
+};
+
+/**
+ * Hook to get versions error state
+ * Returns error message if loading failed, null otherwise
+ */
+export const useVersionsError = (): string | null => {
+  const sessionContextStore = useSessionContextStore();
+
+  const selectVersionsError = sessionContextStore.withSelector(
+    state => state.versionsError
+  );
+
+  return useSyncExternalStore(
+    sessionContextStore.subscribe,
+    selectVersionsError
+  );
+};
+
+/**
+ * Hook to get requestVersions action
+ * Returns function to request versions from server
+ */
+export const useRequestVersions = () => {
+  const sessionContextStore = useSessionContextStore();
+
+  return sessionContextStore.requestVersions;
+};
+
+/**
+ * Hook to get workflow template data
+ * Returns null if no template is published for this workflow
+ */
+export const useWorkflowTemplate = (): WorkflowTemplate | null => {
+  const sessionContextStore = useSessionContextStore();
+
+  const selectWorkflowTemplate = sessionContextStore.withSelector(
+    state => state.workflow_template
+  );
+
+  return useSyncExternalStore(
+    sessionContextStore.subscribe,
+    selectWorkflowTemplate
+  );
 };

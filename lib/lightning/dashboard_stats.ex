@@ -162,63 +162,62 @@ defmodule Lightning.DashboardStats do
   end
 
   defp count_workorders(%Workflow{id: workflow_id}) do
+    days_ago = DateTime.utc_now() |> DateTime.add(-30, :day)
+
     from(wo in WorkOrder,
-      where: wo.workflow_id == ^workflow_id,
-      select: wo.state
+      where: wo.workflow_id == ^workflow_id and wo.inserted_at > ^days_ago,
+      group_by: wo.state,
+      select: {wo.state, count(wo.id)}
     )
-    |> filter_days_ago(30)
     |> Repo.all()
-    |> Enum.group_by(fn state ->
-      cond do
-        state in [:pending, :running] -> :pending
-        state == :success -> :success
-        true -> :failed
-      end
-    end)
-    |> Enum.into(%{success: 0, failed: 0, pending: 0}, fn {state, list} ->
-      {state, length(list)}
+    |> Enum.reduce(%{success: 0, failed: 0, pending: 0}, fn
+      {:success, cnt}, acc ->
+        %{acc | success: cnt}
+
+      {state, cnt}, acc when state in [:pending, :running] ->
+        Map.update!(acc, :pending, &(&1 + cnt))
+
+      {_other, cnt}, acc ->
+        Map.update!(acc, :failed, &(&1 + cnt))
     end)
   end
 
   defp count_runs(%Workflow{id: workflow_id}) do
-    from(a in Run,
-      join: wo in assoc(a, :work_order),
-      join: wf in assoc(wo, :workflow),
-      where: wf.id == ^workflow_id,
-      select: a.state
+    days_ago = DateTime.utc_now() |> DateTime.add(-30, :day)
+
+    from(r in Run,
+      join: wo in assoc(r, :work_order),
+      where: wo.workflow_id == ^workflow_id and r.inserted_at > ^days_ago,
+      group_by: r.state,
+      select: {r.state, count(r.id)}
     )
-    |> filter_days_ago(30)
     |> Repo.all()
-    |> Enum.group_by(fn state ->
-      cond do
-        state == :success -> :success
-        state in [:available, :claimed, :started] -> :pending
-        true -> :failed
-      end
-    end)
-    |> Enum.into(%{success: 0, failed: 0, pending: 0}, fn {state, list} ->
-      {state, length(list)}
+    |> Enum.reduce(%{success: 0, failed: 0, pending: 0}, fn
+      {:success, cnt}, acc ->
+        %{acc | success: cnt}
+
+      {state, cnt}, acc when state in [:available, :claimed, :started] ->
+        Map.update!(acc, :pending, &(&1 + cnt))
+
+      {_other, cnt}, acc ->
+        Map.update!(acc, :failed, &(&1 + cnt))
     end)
   end
 
   defp count_steps(%Workflow{id: workflow_id}) do
+    days_ago = DateTime.utc_now() |> DateTime.add(-30, :day)
+
     from(s in Step,
       join: j in assoc(s, :job),
-      join: wf in assoc(j, :workflow),
-      where: wf.id == ^workflow_id,
-      select: s.exit_reason
+      where: j.workflow_id == ^workflow_id and s.inserted_at > ^days_ago,
+      group_by: s.exit_reason,
+      select: {s.exit_reason, count(s.id)}
     )
-    |> filter_days_ago(30)
     |> Repo.all()
-    |> Enum.group_by(fn exit_reason ->
-      cond do
-        exit_reason == "success" -> :success
-        exit_reason == nil -> :pending
-        true -> :failed
-      end
-    end)
-    |> Enum.into(%{success: 0, failed: 0, pending: 0}, fn {state, list} ->
-      {state, length(list)}
+    |> Enum.reduce(%{success: 0, failed: 0, pending: 0}, fn
+      {"success", cnt}, acc -> %{acc | success: cnt}
+      {nil, cnt}, acc -> %{acc | pending: cnt}
+      {_other, cnt}, acc -> Map.update!(acc, :failed, &(&1 + cnt))
     end)
   end
 

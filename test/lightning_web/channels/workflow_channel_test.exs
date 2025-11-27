@@ -2386,4 +2386,323 @@ defmodule LightningWeb.WorkflowChannelTest do
       }
     end
   end
+
+  describe "publish_template" do
+    test "successfully publishes new template as superuser", %{
+      workflow: workflow,
+      project: project
+    } do
+      # Create a superuser
+      superuser = insert(:user, support_user: true)
+      insert(:project_user, project: project, user: superuser, role: :editor)
+
+      {:ok, _, socket} =
+        LightningWeb.UserSocket
+        |> socket("user_#{superuser.id}", %{current_user: superuser})
+        |> subscribe_and_join(
+          LightningWeb.WorkflowChannel,
+          "workflow:collaborate:#{workflow.id}",
+          %{"project_id" => project.id, "action" => "edit"}
+        )
+
+      ref =
+        push(socket, "publish_template", %{
+          "name" => "Test Template",
+          "description" => "A test template description",
+          "tags" => ["test", "demo"],
+          "code" => "workflow:\n  name: Test",
+          "positions" => %{"job1" => %{"x" => 100, "y" => 200}}
+        })
+
+      assert_reply ref, :ok, %{
+        template: template
+      }
+
+      assert %{
+               name: "Test Template",
+               description: "A test template description",
+               tags: ["test", "demo"],
+               workflow_id: workflow_id
+             } = template
+
+      assert workflow_id == workflow.id
+
+      # Verify template was saved to database
+      saved_template =
+        Lightning.WorkflowTemplates.get_template_by_workflow_id(workflow.id)
+
+      assert saved_template.name == "Test Template"
+      assert saved_template.code == "workflow:\n  name: Test"
+
+      # Verify broadcast was sent
+      assert_broadcast "template_updated", %{
+        workflow_template: broadcast_template
+      }
+
+      assert broadcast_template.name == "Test Template"
+    end
+
+    test "successfully updates existing template as support user", %{
+      workflow: workflow,
+      project: project
+    } do
+      # Create a support user
+      superuser = insert(:user, support_user: true)
+      insert(:project_user, project: project, user: superuser, role: :editor)
+
+      {:ok, _, socket} =
+        LightningWeb.UserSocket
+        |> socket("user_#{superuser.id}", %{current_user: superuser})
+        |> subscribe_and_join(
+          LightningWeb.WorkflowChannel,
+          "workflow:collaborate:#{workflow.id}",
+          %{"project_id" => project.id, "action" => "edit"}
+        )
+
+      # Create initial template
+      {:ok, _initial_template} =
+        Lightning.WorkflowTemplates.create_template(%{
+          "name" => "Initial Name",
+          "description" => "Initial description",
+          "tags" => ["initial"],
+          "code" => "initial code",
+          "positions" => %{},
+          "workflow_id" => workflow.id
+        })
+
+      # Update the template
+      ref =
+        push(socket, "publish_template", %{
+          "name" => "Updated Template",
+          "description" => "Updated description",
+          "tags" => ["updated"],
+          "code" => "updated code",
+          "positions" => %{"job1" => %{"x" => 100, "y" => 200}}
+        })
+
+      assert_reply ref, :ok, %{
+        template: template
+      }
+
+      assert template.name == "Updated Template"
+
+      # Verify only one template exists for the workflow
+      templates =
+        Lightning.WorkflowTemplates.list_workflow_templates(workflow)
+
+      assert length(templates) == 1
+      assert hd(templates).name == "Updated Template"
+    end
+
+    test "rejects unauthorized user (non-superuser)", %{socket: socket} do
+      # Default test user is not a superuser
+      ref =
+        push(socket, "publish_template", %{
+          "name" => "Test Template",
+          "tags" => ["test"],
+          "code" => "workflow code",
+          "positions" => %{}
+        })
+
+      assert_reply ref, :error, %{
+        errors: %{base: ["You don't have permission to publish templates"]},
+        type: "unauthorized"
+      }
+
+      # Verify no template was created
+      template =
+        Lightning.WorkflowTemplates.get_template_by_workflow_id(
+          socket.assigns.workflow.id
+        )
+
+      assert is_nil(template)
+    end
+
+    test "returns validation error for missing name", %{
+      workflow: workflow,
+      project: project
+    } do
+      # Create a superuser
+      superuser = insert(:user, support_user: true)
+      insert(:project_user, project: project, user: superuser, role: :editor)
+
+      {:ok, _, socket} =
+        LightningWeb.UserSocket
+        |> socket("user_#{superuser.id}", %{current_user: superuser})
+        |> subscribe_and_join(
+          LightningWeb.WorkflowChannel,
+          "workflow:collaborate:#{workflow.id}",
+          %{"project_id" => project.id, "action" => "edit"}
+        )
+
+      ref =
+        push(socket, "publish_template", %{
+          "name" => "",
+          "tags" => ["test"],
+          "code" => "workflow code",
+          "positions" => %{}
+        })
+
+      assert_reply ref, :error, %{
+        errors: errors,
+        type: "validation_error"
+      }
+
+      assert is_map(errors)
+      assert Map.has_key?(errors, :name)
+    end
+
+    test "allows empty tags array", %{
+      workflow: workflow,
+      project: project
+    } do
+      # Create a superuser
+      superuser = insert(:user, support_user: true)
+      insert(:project_user, project: project, user: superuser, role: :editor)
+
+      {:ok, _, socket} =
+        LightningWeb.UserSocket
+        |> socket("user_#{superuser.id}", %{current_user: superuser})
+        |> subscribe_and_join(
+          LightningWeb.WorkflowChannel,
+          "workflow:collaborate:#{workflow.id}",
+          %{"project_id" => project.id, "action" => "edit"}
+        )
+
+      ref =
+        push(socket, "publish_template", %{
+          "name" => "Test Template",
+          "code" => "workflow code",
+          "positions" => %{},
+          "tags" => []
+        })
+
+      assert_reply ref, :ok, %{
+        template: template
+      }
+
+      assert template.name == "Test Template"
+      assert template.tags == []
+    end
+
+    test "returns validation error for name exceeding max length", %{
+      workflow: workflow,
+      project: project
+    } do
+      # Create a superuser
+      superuser = insert(:user, support_user: true)
+      insert(:project_user, project: project, user: superuser, role: :editor)
+
+      {:ok, _, socket} =
+        LightningWeb.UserSocket
+        |> socket("user_#{superuser.id}", %{current_user: superuser})
+        |> subscribe_and_join(
+          LightningWeb.WorkflowChannel,
+          "workflow:collaborate:#{workflow.id}",
+          %{"project_id" => project.id, "action" => "edit"}
+        )
+
+      long_name = String.duplicate("a", 256)
+
+      ref =
+        push(socket, "publish_template", %{
+          "name" => long_name,
+          "tags" => ["test"],
+          "code" => "workflow code",
+          "positions" => %{}
+        })
+
+      assert_reply ref, :error, %{
+        errors: errors,
+        type: "validation_error"
+      }
+
+      assert is_map(errors)
+      assert Map.has_key?(errors, :name)
+    end
+
+    test "broadcasts template update to all connected clients", %{
+      workflow: workflow,
+      project: project
+    } do
+      # Create a superuser
+      superuser = insert(:user, support_user: true)
+      insert(:project_user, project: project, user: superuser, role: :editor)
+
+      # Create a second socket for another collaborator
+      {:ok, _, socket1} =
+        LightningWeb.UserSocket
+        |> socket("user_#{superuser.id}_1", %{current_user: superuser})
+        |> subscribe_and_join(
+          LightningWeb.WorkflowChannel,
+          "workflow:collaborate:#{workflow.id}",
+          %{"project_id" => project.id, "action" => "edit"}
+        )
+
+      {:ok, _, _socket2} =
+        LightningWeb.UserSocket
+        |> socket("user_#{superuser.id}_2", %{current_user: superuser})
+        |> subscribe_and_join(
+          LightningWeb.WorkflowChannel,
+          "workflow:collaborate:#{workflow.id}",
+          %{"project_id" => project.id, "action" => "edit"}
+        )
+
+      # User 1 publishes template
+      push(socket1, "publish_template", %{
+        "name" => "Collaborative Template",
+        "description" => "Published by user 1",
+        "tags" => ["collab"],
+        "code" => "workflow code",
+        "positions" => %{}
+      })
+
+      # Both sockets should receive the broadcast
+      assert_broadcast "template_updated", %{workflow_template: template}
+      assert template.name == "Collaborative Template"
+    end
+  end
+
+  describe "get_context with workflow_template" do
+    test "includes null workflow_template when none exists", %{socket: socket} do
+      ref = push(socket, "get_context", %{})
+
+      assert_reply ref, :ok, response
+
+      assert %{workflow_template: nil} = response
+    end
+
+    test "includes workflow_template when one exists", %{
+      socket: socket,
+      workflow: workflow
+    } do
+      # Create a template for this workflow
+      {:ok, template} =
+        Lightning.WorkflowTemplates.create_template(%{
+          "name" => "Existing Template",
+          "description" => "Template description",
+          "tags" => ["existing"],
+          "code" => "workflow code",
+          "positions" => %{},
+          "workflow_id" => workflow.id
+        })
+
+      ref = push(socket, "get_context", %{})
+
+      assert_reply ref, :ok, response
+
+      assert %{
+               workflow_template: %{
+                 id: template_id,
+                 name: "Existing Template",
+                 description: "Template description",
+                 tags: ["existing"],
+                 workflow_id: workflow_id
+               }
+             } = response
+
+      assert template_id == template.id
+      assert workflow_id == workflow.id
+    end
+  end
 end

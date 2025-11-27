@@ -9,6 +9,7 @@ export const UserContextSchema = z.object({
   last_name: z.string(),
   email: z.string().email(),
   email_confirmed: z.boolean(),
+  support_user: z.boolean(),
   inserted_at: isoDateTimeSchema,
 });
 
@@ -45,6 +46,32 @@ export const WebhookAuthMethodSchema = z.object({
 
 export type WebhookAuthMethod = z.infer<typeof WebhookAuthMethodSchema>;
 
+export const VersionSchema = z.object({
+  lock_version: z.number().int(),
+  inserted_at: z.string(),
+  is_latest: z.boolean(),
+});
+
+export type Version = z.infer<typeof VersionSchema>;
+
+export const WorkflowTemplateSchema = z.object({
+  id: uuidSchema,
+  name: z.string(),
+  description: z.string().nullable(),
+  tags: z.array(z.string()),
+  workflow_id: uuidSchema,
+  code: z.string(),
+  positions: z.record(
+    z.string(),
+    z.object({
+      x: z.number(),
+      y: z.number(),
+    })
+  ),
+});
+
+export type WorkflowTemplate = z.infer<typeof WorkflowTemplateSchema>;
+
 export const SessionContextResponseSchema = z.object({
   user: UserContextSchema.nullable(),
   project: ProjectContextSchema.nullable(),
@@ -53,6 +80,7 @@ export const SessionContextResponseSchema = z.object({
   latest_snapshot_lock_version: z.number().int(),
   project_repo_connection: ProjectRepoConnectionSchema.nullable(),
   webhook_auth_methods: z.array(WebhookAuthMethodSchema),
+  workflow_template: WorkflowTemplateSchema.nullable(),
 });
 
 export type UserContext = z.infer<typeof UserContextSchema>;
@@ -68,6 +96,10 @@ export interface SessionContextState {
   latestSnapshotLockVersion: number | null;
   projectRepoConnection: ProjectRepoConnection | null;
   webhookAuthMethods: WebhookAuthMethod[];
+  versions: Version[];
+  versionsLoading: boolean;
+  versionsError: string | null;
+  workflow_template: WorkflowTemplate | null;
   isNewWorkflow: boolean;
   isLoading: boolean;
   error: string | null;
@@ -76,6 +108,8 @@ export interface SessionContextState {
 
 interface SessionContextCommands {
   requestSessionContext: () => Promise<void>;
+  requestVersions: () => Promise<void>;
+  clearVersions: () => void;
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
   clearError: () => void;

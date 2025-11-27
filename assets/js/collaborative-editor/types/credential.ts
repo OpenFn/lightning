@@ -1,7 +1,7 @@
-import type { PhoenixChannelProvider } from "y-phoenix-channel";
-import * as z from "zod";
+import type { PhoenixChannelProvider } from 'y-phoenix-channel';
+import * as z from 'zod';
 
-import { isoDateTimeSchema, uuidSchema } from "./common";
+import { isoDateTimeSchema, uuidSchema } from './common';
 
 export const CredentialOwnerSchema = z.object({
   id: uuidSchema,
@@ -40,11 +40,11 @@ export type KeychainCredential = z.infer<typeof KeychainCredentialSchema>;
 
 // Discriminated union types for credentials with type metadata
 export type ProjectCredentialWithType = ProjectCredential & {
-  type: "project";
+  type: 'project';
 };
 
 export type KeychainCredentialWithType = KeychainCredential & {
-  type: "keychain";
+  type: 'keychain';
 };
 
 export type CredentialWithType =

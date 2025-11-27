@@ -1,4 +1,4 @@
-import type { AnyFieldMeta } from "@tanstack/react-form";
+import type { AnyFieldMeta } from '@tanstack/react-form';
 
 export function ErrorMessage({ meta }: { meta: AnyFieldMeta }) {
   const firstError = meta.errors[0];

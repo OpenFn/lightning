@@ -6,38 +6,29 @@
  * proper integration within the Header component.
  */
 
-import {
-  act,
-  render,
-  screen,
-  waitFor,
-  fireEvent,
-} from '@testing-library/react';
+import { act, render, screen, waitFor } from '@testing-library/react';
 import type React from 'react';
 import { describe, expect, test, vi } from 'vitest';
 import * as Y from 'yjs';
 
 import { Header } from '../../../js/collaborative-editor/components/Header';
 import { SessionContext } from '../../../js/collaborative-editor/contexts/SessionProvider';
-import { LiveViewActionsProvider } from '../../../js/collaborative-editor/contexts/LiveViewActionsContext';
-import type { StoreContextValue } from '../../../js/collaborative-editor/contexts/StoreProvider';
 import { StoreContext } from '../../../js/collaborative-editor/contexts/StoreProvider';
-import { createAdaptorStore } from '../../../js/collaborative-editor/stores/createAdaptorStore';
-import { createAwarenessStore } from '../../../js/collaborative-editor/stores/createAwarenessStore';
-import { createCredentialStore } from '../../../js/collaborative-editor/stores/createCredentialStore';
+import { KeyboardProvider } from '../../../js/collaborative-editor/keyboard';
+
+import { simulateStoreProviderWithConnection } from '../__helpers__/storeProviderHelpers';
+import { createMinimalWorkflowYDoc } from '../__helpers__/workflowStoreHelpers';
+import type { CreateSessionContextOptions } from '../__helpers__/sessionContextFactory';
 import { createSessionContextStore } from '../../../js/collaborative-editor/stores/createSessionContextStore';
-import { createSessionStore } from '../../../js/collaborative-editor/stores/createSessionStore';
-import { createUIStore } from '../../../js/collaborative-editor/stores/createUIStore';
-import { createWorkflowStore } from '../../../js/collaborative-editor/stores/createWorkflowStore';
-import type { Session } from '../../../js/collaborative-editor/types/session';
-import { createSessionContext } from '../__helpers__/sessionContextFactory';
-import {
-  createMockPhoenixChannel,
-  createMockPhoenixChannelProvider,
-} from '../mocks/phoenixChannel';
-import { createMockSocket } from '../mocks/phoenixSocket';
-import { vi } from 'vitest';
-import { HotkeysProvider } from 'react-hotkeys-hook';
+
+// =============================================================================
+// TEST MOCKS
+// =============================================================================
+
+// Mock useAdaptorIcons to prevent async fetch warnings
+vi.mock('../../../js/workflow-diagram/useAdaptorIcons', () => ({
+  default: () => ({}),
+}));
 
 // =============================================================================
 // TEST HELPERS
@@ -54,7 +45,11 @@ interface WrapperOptions {
   branchName?: string;
 }
 
-function createTestSetup(options: WrapperOptions = {}) {
+/**
+ * Creates a test setup for Header component tests using enhanced helpers.
+ * This dramatically simplifies the setup compared to manual store creation.
+ */
+async function createTestSetup(options: WrapperOptions = {}) {
   const {
     permissions = { can_edit_workflow: true, can_run_workflow: true },
     latestSnapshotLockVersion = 1,
@@ -66,92 +61,86 @@ function createTestSetup(options: WrapperOptions = {}) {
     branchName = 'main',
   } = options;
 
-  // Create all stores
-  const sessionStore = createSessionStore();
-  const sessionContextStore = createSessionContextStore(isNewWorkflow);
-  const workflowStore = createWorkflowStore();
-  const adaptorStore = createAdaptorStore();
-  const awarenessStore = createAwarenessStore();
-  const credentialStore = createCredentialStore();
-  const uiStore = createUIStore();
-
-  // Initialize session store
-  const mockSocket = createMockSocket();
-  sessionStore.initializeSession(mockSocket, 'test:room', {
-    id: 'user-1',
-    name: 'Test User',
-    color: '#ff0000',
-  });
-
-  // Set up Y.Doc and workflow
-  const ydoc = new Y.Doc() as Session.WorkflowDoc;
-  const workflowMap = ydoc.getMap('workflow');
-
-  if (!isNewWorkflow) {
-    workflowMap.set('id', 'test-workflow-123');
-  }
-  workflowMap.set('name', 'Test Workflow');
-  workflowMap.set('lock_version', workflowLockVersion);
-  workflowMap.set('deleted_at', workflowDeletedAt);
-
-  ydoc.getArray('jobs');
-  ydoc.getArray('triggers');
-  ydoc.getArray('edges');
-  ydoc.getMap('positions');
-
-  // Connect stores
-  const mockChannel = createMockPhoenixChannel('test:room');
-  const mockProvider = createMockPhoenixChannelProvider(mockChannel);
-  (mockProvider as any).doc = ydoc;
-
-  workflowStore.connect(ydoc, mockProvider as any);
-  sessionContextStore._connectChannel(mockProvider as any);
-
-  const emitSessionContext = () => {
-    const context = hasGithubConnection
-      ? createSessionContext({
-          permissions,
-          latest_snapshot_lock_version: latestSnapshotLockVersion,
-          project_repo_connection: {
-            repo: repoName,
-            branch: branchName,
-          },
-        })
-      : createSessionContext({
-          permissions,
-          latest_snapshot_lock_version: latestSnapshotLockVersion,
-        });
-
-    (mockChannel as any)._test.emit('session_context', context);
-  };
-
-  const mockStoreValue: StoreContextValue = {
-    sessionContextStore,
-    workflowStore,
-    adaptorStore,
-    credentialStore,
-    awarenessStore,
-    uiStore,
-  };
-
-  const mockLiveViewActions = {
-    pushEvent: vi.fn(),
-    pushEventTo: vi.fn(),
-    handleEvent: vi.fn(() => vi.fn()),
-    navigate: vi.fn(),
-  };
-
-  const wrapper = ({ children }: { children: React.ReactNode }) => (
-    <HotkeysProvider>
-      <SessionContext.Provider value={{ sessionStore, isNewWorkflow }}>
-        <StoreContext.Provider value={mockStoreValue}>
-          {children}
-        </StoreContext.Provider>
-      </SessionContext.Provider>
-    </HotkeysProvider>
+  // Create Y.Doc with workflow metadata
+  const ydoc = createMinimalWorkflowYDoc(
+    'test-workflow-123',
+    'Test Workflow',
+    workflowLockVersion
   );
 
-  return { wrapper, emitSessionContext, ydoc, mockChannel };
+  // For new workflows, remove the id
+  const workflowMap = ydoc.getMap('workflow');
+  if (isNewWorkflow) {
+    workflowMap.delete('id');
+  }
+
+  // Set deleted_at if specified
+  if (workflowDeletedAt !== null) {
+    workflowMap.set('deleted_at', workflowDeletedAt);
+  }
+
+  // Build session context options
+  const sessionContextOptions: CreateSessionContextOptions = {
+    permissions,
+    latest_snapshot_lock_version: latestSnapshotLockVersion,
+  };
+
+  if (hasGithubConnection) {
+    sessionContextOptions.project_repo_connection = {
+      repo: repoName,
+      branch: branchName,
+    };
+  }
+
+  // Use the enhanced helper to set up stores and connections
+  const {
+    stores,
+    sessionStore,
+    ydoc: returnedYDoc,
+    emitSessionContext,
+    cleanup,
+  } = await simulateStoreProviderWithConnection(
+    'test:room',
+    {
+      id: 'user-1',
+      name: 'Test User',
+      color: '#ff0000',
+    },
+    {
+      workflowYDoc: ydoc,
+      sessionContext: sessionContextOptions,
+      emitSessionContext: true,
+    }
+  );
+
+  // For new workflows, replace sessionContextStore with one that has isNewWorkflow=true
+  // This is a limitation of the current helper design.
+  if (isNewWorkflow) {
+    stores.sessionContextStore = createSessionContextStore(true);
+    // Reconnect to provider
+    const session = sessionStore.getSnapshot();
+    if (session.provider) {
+      stores.sessionContextStore._connectChannel(session.provider);
+      // Re-emit session context to the new store
+      emitSessionContext?.();
+    }
+  }
+
+  // Create wrapper (still needed for React context)
+  const wrapper = ({ children }: { children: React.ReactNode }) => (
+    <KeyboardProvider>
+      <SessionContext.Provider value={{ sessionStore, isNewWorkflow }}>
+        <StoreContext.Provider value={stores}>{children}</StoreContext.Provider>
+      </SessionContext.Provider>
+    </KeyboardProvider>
+  );
+
+  return {
+    wrapper,
+    emitSessionContext,
+    ydoc: returnedYDoc,
+    cleanup,
+  };
 }
 
 // =============================================================================
@@ -160,7 +149,7 @@ function createTestSetup(options: WrapperOptions = {}) {
 
 describe('Header - ReadOnlyWarning Integration', () => {
   test('renders ReadOnlyWarning in correct position (after Breadcrumbs, inside header)', async () => {
-    const { wrapper, emitSessionContext } = createTestSetup({
+    const { wrapper, emitSessionContext } = await createTestSetup({
       permissions: { can_edit_workflow: false },
     });
 
@@ -171,8 +160,10 @@ describe('Header - ReadOnlyWarning Integration', () => {
       { wrapper }
     );
 
-    act(() => {
+    // Emit session context and wait for updates
+    await act(async () => {
       emitSessionContext();
+      await new Promise(resolve => setTimeout(resolve, 150));
     });
 
     await waitFor(() => {
@@ -200,7 +191,7 @@ describe('Header - ReadOnlyWarning Integration', () => {
   });
 
   test('shows ReadOnlyWarning when workflow is read-only', async () => {
-    const { wrapper, emitSessionContext } = createTestSetup({
+    const { wrapper, emitSessionContext } = await createTestSetup({
       permissions: { can_edit_workflow: false },
     });
 
@@ -211,8 +202,10 @@ describe('Header - ReadOnlyWarning Integration', () => {
       { wrapper }
     );
 
-    act(() => {
+    // Emit session context and wait for updates
+    await act(async () => {
       emitSessionContext();
+      await new Promise(resolve => setTimeout(resolve, 150));
     });
 
     await waitFor(() => {
@@ -221,7 +214,7 @@ describe('Header - ReadOnlyWarning Integration', () => {
   });
 
   test('does not show ReadOnlyWarning when workflow is editable', async () => {
-    const { wrapper, emitSessionContext } = createTestSetup({
+    const { wrapper, emitSessionContext } = await createTestSetup({
       permissions: { can_edit_workflow: true, can_run_workflow: true },
     });
 
@@ -232,15 +225,17 @@ describe('Header - ReadOnlyWarning Integration', () => {
       { wrapper }
     );
 
-    act(() => {
+    // Emit session context and wait for updates
+    await act(async () => {
       emitSessionContext();
+      await new Promise(resolve => setTimeout(resolve, 150));
     });
 
     expect(screen.queryByText('Read-only')).not.toBeInTheDocument();
   });
 
   test('hides ReadOnlyWarning during new workflow creation', async () => {
-    const { wrapper, emitSessionContext } = createTestSetup({
+    const { wrapper, emitSessionContext } = await createTestSetup({
       permissions: { can_edit_workflow: false },
       isNewWorkflow: true,
     });
@@ -252,8 +247,10 @@ describe('Header - ReadOnlyWarning Integration', () => {
       { wrapper }
     );
 
-    act(() => {
+    // Emit session context and wait for updates
+    await act(async () => {
       emitSessionContext();
+      await new Promise(resolve => setTimeout(resolve, 150));
     });
 
     // Should not show warning even with no permission when creating new workflow
@@ -267,7 +264,7 @@ describe('Header - ReadOnlyWarning Integration', () => {
 
 describe('Header - Basic Rendering', () => {
   test('renders breadcrumbs', async () => {
-    const { wrapper, emitSessionContext } = createTestSetup();
+    const { wrapper, emitSessionContext } = await createTestSetup();
 
     render(
       <Header projectId="project-1" workflowId="workflow-1">
@@ -276,15 +273,16 @@ describe('Header - Basic Rendering', () => {
       { wrapper }
     );
 
-    act(() => {
+    await act(async () => {
       emitSessionContext();
+      await new Promise(resolve => setTimeout(resolve, 150));
     });
 
     expect(screen.getByText('Test Breadcrumb')).toBeInTheDocument();
   });
 
   test('renders save button', async () => {
-    const { wrapper, emitSessionContext } = createTestSetup();
+    const { wrapper, emitSessionContext } = await createTestSetup();
 
     render(
       <Header projectId="project-1" workflowId="workflow-1">
@@ -293,17 +291,18 @@ describe('Header - Basic Rendering', () => {
       { wrapper }
     );
 
-    act(() => {
+    await act(async () => {
       emitSessionContext();
+      await new Promise(resolve => setTimeout(resolve, 150));
     });
 
     expect(screen.getByRole('button', { name: /save/i })).toBeInTheDocument();
   });
 
   test('renders run button when projectId and workflowId and triggers provided', async () => {
-    const { wrapper, emitSessionContext, ydoc } = createTestSetup();
+    const { wrapper, emitSessionContext, ydoc } = await createTestSetup();
 
-    // Add a trigger so the Run button appears (must be a Y.Map, not plain object)
+    // Add a trigger so the Start button appears (must be a Y.Map, not plain object)
     const triggersArray = ydoc.getArray('triggers');
     const triggerMap = new Y.Map();
     triggerMap.set('id', 'trigger-123');
@@ -320,8 +319,9 @@ describe('Header - Basic Rendering', () => {
       { wrapper }
     );
 
-    act(() => {
+    await act(async () => {
       emitSessionContext();
+      await new Promise(resolve => setTimeout(resolve, 150));
     });
 
     await waitFor(() => {
@@ -330,7 +330,7 @@ describe('Header - Basic Rendering', () => {
   });
 
   test('renders AI button', async () => {
-    const { wrapper, emitSessionContext } = createTestSetup();
+    const { wrapper, emitSessionContext } = await createTestSetup();
 
     render(
       <Header projectId="project-1" workflowId="workflow-1">
@@ -339,8 +339,9 @@ describe('Header - Basic Rendering', () => {
       { wrapper }
     );
 
-    act(() => {
+    await act(async () => {
       emitSessionContext();
+      await new Promise(resolve => setTimeout(resolve, 150));
     });
 
     // AI button is rendered
@@ -352,7 +353,7 @@ describe('Header - Basic Rendering', () => {
   });
 
   test('settings button shows error styling when workflow has validation errors', async () => {
-    const { wrapper, emitSessionContext, ydoc } = createTestSetup();
+    const { wrapper, emitSessionContext, ydoc } = await createTestSetup();
 
     const { container } = render(
       <Header projectId="project-1" workflowId="workflow-1">
@@ -361,8 +362,9 @@ describe('Header - Basic Rendering', () => {
       { wrapper }
     );
 
-    act(() => {
+    await act(async () => {
       emitSessionContext();
+      await new Promise(resolve => setTimeout(resolve, 150));
     });
 
     // Initially, settings button should have gray styling
@@ -373,7 +375,7 @@ describe('Header - Basic Rendering', () => {
     expect(settingsButton).toHaveClass('hover:text-slate-400');
 
     // Set workflow name to empty string (invalid)
-    act(() => {
+    await act(async () => {
       const workflowMap = ydoc.getMap('workflow');
       workflowMap.set('name', '');
     });
@@ -385,7 +387,7 @@ describe('Header - Basic Rendering', () => {
     });
 
     // Fix the validation error
-    act(() => {
+    await act(async () => {
       const workflowMap = ydoc.getMap('workflow');
       workflowMap.set('name', 'Valid Workflow Name');
     });
@@ -398,7 +400,7 @@ describe('Header - Basic Rendering', () => {
   });
 
   test('settings button shows error styling when concurrency is invalid', async () => {
-    const { wrapper, emitSessionContext, ydoc } = createTestSetup();
+    const { wrapper, emitSessionContext, ydoc } = await createTestSetup();
 
     const { container } = render(
       <Header projectId="project-1" workflowId="workflow-1">
@@ -407,12 +409,13 @@ describe('Header - Basic Rendering', () => {
       { wrapper }
     );
 
-    act(() => {
+    await act(async () => {
       emitSessionContext();
+      await new Promise(resolve => setTimeout(resolve, 150));
     });
 
     // Set concurrency to 0 (invalid)
-    act(() => {
+    await act(async () => {
       const workflowMap = ydoc.getMap('workflow');
       workflowMap.set('concurrency', 0);
     });
@@ -428,7 +431,7 @@ describe('Header - Basic Rendering', () => {
   });
 
   test('settings button remains clickable when validation errors exist', async () => {
-    const { wrapper, emitSessionContext, ydoc } = createTestSetup();
+    const { wrapper, emitSessionContext, ydoc } = await createTestSetup();
 
     const { container } = render(
       <Header projectId="project-1" workflowId="workflow-1">
@@ -437,12 +440,13 @@ describe('Header - Basic Rendering', () => {
       { wrapper }
     );
 
-    act(() => {
+    await act(async () => {
       emitSessionContext();
+      await new Promise(resolve => setTimeout(resolve, 150));
     });
 
     // Set workflow name to empty string (invalid)
-    act(() => {
+    await act(async () => {
       const workflowMap = ydoc.getMap('workflow');
       workflowMap.set('name', '');
     });
@@ -469,7 +473,7 @@ describe('Header - Basic Rendering', () => {
 
 describe('Header - Read-Only State Changes', () => {
   test('ReadOnlyWarning appears when workflow becomes read-only', async () => {
-    const { wrapper, emitSessionContext, ydoc } = createTestSetup({
+    const { wrapper, emitSessionContext, ydoc } = await createTestSetup({
       permissions: { can_edit_workflow: true, can_run_workflow: true },
     });
 
@@ -480,14 +484,15 @@ describe('Header - Read-Only State Changes', () => {
       { wrapper }
     );
 
-    act(() => {
+    await act(async () => {
       emitSessionContext();
+      await new Promise(resolve => setTimeout(resolve, 150));
     });
 
     expect(screen.queryByText('Read-only')).not.toBeInTheDocument();
 
     // Make workflow deleted
-    act(() => {
+    await act(async () => {
       const workflowMap = ydoc.getMap('workflow');
       workflowMap.set('deleted_at', new Date().toISOString());
     });
@@ -504,7 +509,7 @@ describe('Header - Read-Only State Changes', () => {
   });
 
   test('ReadOnlyWarning disappears when workflow becomes editable', async () => {
-    const { wrapper, emitSessionContext, ydoc } = createTestSetup({
+    const { wrapper, emitSessionContext, ydoc } = await createTestSetup({
       permissions: { can_edit_workflow: true, can_run_workflow: true },
       workflowDeletedAt: new Date().toISOString(),
     });
@@ -516,8 +521,9 @@ describe('Header - Read-Only State Changes', () => {
       { wrapper }
     );
 
-    act(() => {
+    await act(async () => {
       emitSessionContext();
+      await new Promise(resolve => setTimeout(resolve, 150));
     });
 
     await waitFor(() => {
@@ -525,7 +531,7 @@ describe('Header - Read-Only State Changes', () => {
     });
 
     // Make workflow not deleted
-    act(() => {
+    await act(async () => {
       const workflowMap = ydoc.getMap('workflow');
       workflowMap.set('deleted_at', null);
     });
@@ -548,7 +554,7 @@ describe('Header - Read-Only State Changes', () => {
 
 describe('Header - Split Button Behavior', () => {
   test('renders simple save button when no GitHub connection', async () => {
-    const { wrapper, emitSessionContext } = createTestSetup();
+    const { wrapper, emitSessionContext } = await createTestSetup();
 
     render(
       <Header projectId="project-1" workflowId="workflow-1">
@@ -557,8 +563,9 @@ describe('Header - Split Button Behavior', () => {
       { wrapper }
     );
 
-    act(() => {
+    await act(async () => {
       emitSessionContext();
+      await new Promise(resolve => setTimeout(resolve, 150));
     });
 
     // Should have save button
@@ -570,7 +577,7 @@ describe('Header - Split Button Behavior', () => {
   });
 
   test('renders split button when GitHub connection exists', async () => {
-    const { wrapper, emitSessionContext } = createTestSetup({
+    const { wrapper, emitSessionContext } = await createTestSetup({
       hasGithubConnection: true,
     });
 
@@ -581,8 +588,9 @@ describe('Header - Split Button Behavior', () => {
       { wrapper }
     );
 
-    act(() => {
+    await act(async () => {
       emitSessionContext();
+      await new Promise(resolve => setTimeout(resolve, 150));
     });
 
     // Should have save button
@@ -597,7 +605,7 @@ describe('Header - Split Button Behavior', () => {
   });
 
   test('split button dropdown shows dropdown trigger button', async () => {
-    const { wrapper, emitSessionContext } = createTestSetup({
+    const { wrapper, emitSessionContext } = await createTestSetup({
       hasGithubConnection: true,
     });
 
@@ -608,8 +616,9 @@ describe('Header - Split Button Behavior', () => {
       { wrapper }
     );
 
-    act(() => {
+    await act(async () => {
       emitSessionContext();
+      await new Promise(resolve => setTimeout(resolve, 150));
     });
 
     // Verify dropdown button is present
@@ -624,7 +633,7 @@ describe('Header - Split Button Behavior', () => {
   });
 
   test('split button has correct structure with two buttons', async () => {
-    const { wrapper, emitSessionContext } = createTestSetup({
+    const { wrapper, emitSessionContext } = await createTestSetup({
       hasGithubConnection: true,
     });
 
@@ -635,8 +644,9 @@ describe('Header - Split Button Behavior', () => {
       { wrapper }
     );
 
-    act(() => {
+    await act(async () => {
       emitSessionContext();
+      await new Promise(resolve => setTimeout(resolve, 150));
     });
 
     // Find the split button container
@@ -663,9 +673,9 @@ describe('Header - Split Button Behavior', () => {
 
 describe('Header - Run Button Tooltip with Panel State', () => {
   test('shows shortcut tooltip when panel is closed (isRunPanelOpen=false)', async () => {
-    const { wrapper, emitSessionContext, ydoc } = createTestSetup();
+    const { wrapper, emitSessionContext, ydoc } = await createTestSetup();
 
-    // Add a trigger so the Run button appears
+    // Add a trigger so the Start button appears
     const triggersArray = ydoc.getArray('triggers');
     const triggerMap = new Y.Map();
     triggerMap.set('id', 'trigger-123');
@@ -692,8 +702,8 @@ describe('Header - Run Button Tooltip with Panel State', () => {
     });
 
     await waitFor(() => {
-      const runButton = screen.getByRole('button', { name: /run/i });
-      expect(runButton).toBeInTheDocument();
+      const startButton = screen.getByRole('button', { name: /run/i });
+      expect(startButton).toBeInTheDocument();
     });
 
     // Tooltip should be shown when panel is closed
@@ -702,9 +712,9 @@ describe('Header - Run Button Tooltip with Panel State', () => {
   });
 
   test('hides shortcut tooltip when panel is open (isRunPanelOpen=true)', async () => {
-    const { wrapper, emitSessionContext, ydoc } = createTestSetup();
+    const { wrapper, emitSessionContext, ydoc } = await createTestSetup();
 
-    // Add a trigger so the Run button appears
+    // Add a trigger so the Start button appears
     const triggersArray = ydoc.getArray('triggers');
     const triggerMap = new Y.Map();
     triggerMap.set('id', 'trigger-123');
@@ -731,19 +741,19 @@ describe('Header - Run Button Tooltip with Panel State', () => {
     });
 
     await waitFor(() => {
-      const runButton = screen.getByRole('button', { name: /run/i });
-      expect(runButton).toBeInTheDocument();
+      const startButton = screen.getByRole('button', { name: /run/i });
+      expect(startButton).toBeInTheDocument();
     });
 
     // Tooltip should be hidden when panel is open
     // We're testing tooltip visibility, not button enabled state
     // The button may be disabled for workflow validation reasons
-    const runButton = screen.getByRole('button', { name: /run/i });
-    expect(runButton).toBeInTheDocument();
+    const startButton = screen.getByRole('button', { name: /run/i });
+    expect(startButton).toBeInTheDocument();
   });
 
   test('always shows error tooltip when disabled, regardless of panel state', async () => {
-    const { wrapper, emitSessionContext, ydoc } = createTestSetup();
+    const { wrapper, emitSessionContext, ydoc } = await createTestSetup();
 
     // Add a trigger
     const triggersArray = ydoc.getArray('triggers');
@@ -782,8 +792,8 @@ describe('Header - Run Button Tooltip with Panel State', () => {
     });
 
     await waitFor(() => {
-      const runButton = screen.getByRole('button', { name: /run/i });
-      expect(runButton).toBeDisabled();
+      const startButton = screen.getByRole('button', { name: /run/i });
+      expect(startButton).toBeDisabled();
     });
 
     // Rerender with panel open
@@ -799,13 +809,13 @@ describe('Header - Run Button Tooltip with Panel State', () => {
 
     // Error tooltip should still be shown even when panel is open
     await waitFor(() => {
-      const runButton = screen.getByRole('button', { name: /run/i });
-      expect(runButton).toBeDisabled();
+      const startButton = screen.getByRole('button', { name: /run/i });
+      expect(startButton).toBeDisabled();
     });
   });
 
   test('tooltip state changes when panel opens and closes', async () => {
-    const { wrapper, emitSessionContext, ydoc } = createTestSetup();
+    const { wrapper, emitSessionContext, ydoc } = await createTestSetup();
 
     // Add a trigger
     const triggersArray = ydoc.getArray('triggers');
@@ -837,8 +847,8 @@ describe('Header - Run Button Tooltip with Panel State', () => {
       expect(screen.getByRole('button', { name: /run/i })).toBeInTheDocument();
     });
 
-    let runButton = screen.getByRole('button', { name: /run/i });
-    expect(runButton).toBeInTheDocument();
+    let startButton = screen.getByRole('button', { name: /run/i });
+    expect(startButton).toBeInTheDocument();
     // Tooltip should be present when closed
 
     // Open panel
@@ -852,8 +862,8 @@ describe('Header - Run Button Tooltip with Panel State', () => {
       </Header>
     );
 
-    runButton = screen.getByRole('button', { name: /run/i });
-    expect(runButton).toBeInTheDocument();
+    startButton = screen.getByRole('button', { name: /run/i });
+    expect(startButton).toBeInTheDocument();
     // Tooltip should be hidden when open
 
     // Close panel again
@@ -867,13 +877,13 @@ describe('Header - Run Button Tooltip with Panel State', () => {
       </Header>
     );
 
-    runButton = screen.getByRole('button', { name: /run/i });
-    expect(runButton).toBeInTheDocument();
+    startButton = screen.getByRole('button', { name: /run/i });
+    expect(startButton).toBeInTheDocument();
     // Tooltip should reappear when closed
   });
 
   test('defaults to isRunPanelOpen=false when prop not provided', async () => {
-    const { wrapper, emitSessionContext, ydoc } = createTestSetup();
+    const { wrapper, emitSessionContext, ydoc } = await createTestSetup();
 
     // Add a trigger
     const triggersArray = ydoc.getArray('triggers');
@@ -898,14 +908,14 @@ describe('Header - Run Button Tooltip with Panel State', () => {
     });
 
     await waitFor(() => {
-      const runButton = screen.getByRole('button', { name: /run/i });
-      expect(runButton).toBeInTheDocument();
+      const startButton = screen.getByRole('button', { name: /run/i });
+      expect(startButton).toBeInTheDocument();
     });
 
     // Default should show tooltip (panel closed by default)
     // We're testing that the prop defaults correctly, not button state
-    const runButton = screen.getByRole('button', { name: /run/i });
-    expect(runButton).toBeInTheDocument();
+    const startButton = screen.getByRole('button', { name: /run/i });
+    expect(startButton).toBeInTheDocument();
   });
 });
 
@@ -915,7 +925,7 @@ describe('Header - Run Button Tooltip with Panel State', () => {
 
 describe('Header - Keyboard Shortcuts', () => {
   test('Header registers Ctrl+S keyboard shortcut handler', async () => {
-    const { wrapper, emitSessionContext } = createTestSetup();
+    const { wrapper, emitSessionContext } = await createTestSetup();
 
     render(
       <Header projectId="project-1" workflowId="workflow-1">
@@ -924,18 +934,19 @@ describe('Header - Keyboard Shortcuts', () => {
       { wrapper }
     );
 
-    act(() => {
+    await act(async () => {
       emitSessionContext();
+      await new Promise(resolve => setTimeout(resolve, 150));
     });
 
     // The Header component should render without errors and register hotkeys
-    // Testing actual keyboard events with react-hotkeys-hook is difficult in test environment
+    // Testing actual keyboard events with KeyboardProvider is difficult in test environment
     // This test verifies the component renders correctly with hotkey setup
     expect(screen.getByRole('button', { name: /save/i })).toBeInTheDocument();
   });
 
   test('Header registers Cmd+S keyboard shortcut handler (Mac)', async () => {
-    const { wrapper, emitSessionContext } = createTestSetup();
+    const { wrapper, emitSessionContext } = await createTestSetup();
 
     render(
       <Header projectId="project-1" workflowId="workflow-1">
@@ -944,18 +955,19 @@ describe('Header - Keyboard Shortcuts', () => {
       { wrapper }
     );
 
-    act(() => {
+    await act(async () => {
       emitSessionContext();
+      await new Promise(resolve => setTimeout(resolve, 150));
     });
 
     // The Header component should render without errors and register hotkeys
-    // Testing actual keyboard events with react-hotkeys-hook is difficult in test environment
+    // Testing actual keyboard events with KeyboardProvider is difficult in test environment
     // This test verifies the component renders correctly with hotkey setup
     expect(screen.getByRole('button', { name: /save/i })).toBeInTheDocument();
   });
 
   test('save button is disabled when user lacks permissions', async () => {
-    const { wrapper, emitSessionContext } = createTestSetup({
+    const { wrapper, emitSessionContext } = await createTestSetup({
       permissions: { can_edit_workflow: false },
     });
 
@@ -966,8 +978,9 @@ describe('Header - Keyboard Shortcuts', () => {
       { wrapper }
     );
 
-    act(() => {
+    await act(async () => {
       emitSessionContext();
+      await new Promise(resolve => setTimeout(resolve, 150));
     });
 
     // Save button should be disabled
@@ -976,7 +989,7 @@ describe('Header - Keyboard Shortcuts', () => {
   });
 
   test('Header renders with GitHub connection and sync options available', async () => {
-    const { wrapper, emitSessionContext } = createTestSetup({
+    const { wrapper, emitSessionContext } = await createTestSetup({
       hasGithubConnection: true,
     });
 
@@ -987,8 +1000,9 @@ describe('Header - Keyboard Shortcuts', () => {
       { wrapper }
     );
 
-    act(() => {
+    await act(async () => {
       emitSessionContext();
+      await new Promise(resolve => setTimeout(resolve, 150));
     });
 
     // Should have split button with dropdown for sync options
@@ -999,7 +1013,7 @@ describe('Header - Keyboard Shortcuts', () => {
   });
 
   test('Header renders without GitHub connection and no sync options', async () => {
-    const { wrapper, emitSessionContext } = createTestSetup({
+    const { wrapper, emitSessionContext } = await createTestSetup({
       hasGithubConnection: false,
     });
 
@@ -1010,8 +1024,9 @@ describe('Header - Keyboard Shortcuts', () => {
       { wrapper }
     );
 
-    act(() => {
+    await act(async () => {
       emitSessionContext();
+      await new Promise(resolve => setTimeout(resolve, 150));
     });
 
     // Should NOT have split button dropdown
@@ -1022,7 +1037,7 @@ describe('Header - Keyboard Shortcuts', () => {
   });
 
   test('split button dropdown is disabled when user lacks permissions', async () => {
-    const { wrapper, emitSessionContext } = createTestSetup({
+    const { wrapper, emitSessionContext } = await createTestSetup({
       hasGithubConnection: true,
       permissions: { can_edit_workflow: false },
     });
@@ -1034,8 +1049,9 @@ describe('Header - Keyboard Shortcuts', () => {
       { wrapper }
     );
 
-    act(() => {
+    await act(async () => {
       emitSessionContext();
+      await new Promise(resolve => setTimeout(resolve, 150));
     });
 
     // Both save and dropdown buttons should be disabled
@@ -1049,7 +1065,7 @@ describe('Header - Keyboard Shortcuts', () => {
   });
 
   test('Header renders correctly with all navigation elements', async () => {
-    const { wrapper, emitSessionContext } = createTestSetup();
+    const { wrapper, emitSessionContext } = await createTestSetup();
 
     render(
       <Header projectId="project-1" workflowId="workflow-1">
@@ -1058,8 +1074,9 @@ describe('Header - Keyboard Shortcuts', () => {
       { wrapper }
     );
 
-    act(() => {
+    await act(async () => {
       emitSessionContext();
+      await new Promise(resolve => setTimeout(resolve, 150));
     });
 
     // Should have breadcrumbs
@@ -1076,357 +1093,5 @@ describe('Header - Keyboard Shortcuts', () => {
       button.querySelector('.hero-chat-bubble-left-right')
     );
     expect(aiButton).toBeInTheDocument();
-  });
-});
-
-// =============================================================================
-// IDE MODE TESTS (Run/Retry Button)
-// =============================================================================
-
-describe('Header - IDE Mode Run/Retry Button', () => {
-  test('renders simple Run button in IDE mode when not retryable', async () => {
-    const { wrapper, emitSessionContext, ydoc } = createTestSetup();
-
-    render(
-      <Header
-        projectId="project-1"
-        workflowId="workflow-1"
-        onRunClick={vi.fn()}
-        onRetryClick={vi.fn()}
-        canRun={true}
-        isRetryable={false}
-        isRunning={false}
-      >
-        {[<span key="breadcrumb-1">Breadcrumb</span>]}
-      </Header>,
-      { wrapper }
-    );
-
-    act(() => {
-      emitSessionContext();
-    });
-
-    await waitFor(() => {
-      const runButton = screen.getByRole('button', { name: /^run$/i });
-      expect(runButton).toBeInTheDocument();
-      expect(runButton).not.toBeDisabled();
-    });
-  });
-
-  test('renders split button with "Run (retry)" in IDE mode when retryable', async () => {
-    const { wrapper, emitSessionContext } = createTestSetup();
-
-    render(
-      <Header
-        projectId="project-1"
-        workflowId="workflow-1"
-        onRunClick={vi.fn()}
-        onRetryClick={vi.fn()}
-        canRun={true}
-        isRetryable={true}
-        isRunning={false}
-      >
-        {[<span key="breadcrumb-1">Breadcrumb</span>]}
-      </Header>,
-      { wrapper }
-    );
-
-    act(() => {
-      emitSessionContext();
-    });
-
-    await waitFor(() => {
-      const retryButton = screen.getByRole('button', {
-        name: /run \(retry\)/i,
-      });
-      expect(retryButton).toBeInTheDocument();
-      expect(retryButton).not.toBeDisabled();
-    });
-  });
-
-  test('calls onRunClick when simple Run button is clicked', async () => {
-    const { wrapper, emitSessionContext } = createTestSetup();
-    const mockOnRunClick = vi.fn();
-
-    render(
-      <Header
-        projectId="project-1"
-        workflowId="workflow-1"
-        onRunClick={mockOnRunClick}
-        onRetryClick={vi.fn()}
-        canRun={true}
-        isRetryable={false}
-        isRunning={false}
-      >
-        {[<span key="breadcrumb-1">Breadcrumb</span>]}
-      </Header>,
-      { wrapper }
-    );
-
-    act(() => {
-      emitSessionContext();
-    });
-
-    await waitFor(() => {
-      const runButton = screen.getByRole('button', { name: /^run$/i });
-      expect(runButton).toBeInTheDocument();
-    });
-
-    const runButton = screen.getByRole('button', { name: /^run$/i });
-    fireEvent.click(runButton);
-
-    expect(mockOnRunClick).toHaveBeenCalledTimes(1);
-  });
-
-  test('calls onRetryClick when "Run (retry)" button is clicked', async () => {
-    const { wrapper, emitSessionContext } = createTestSetup();
-    const mockOnRetryClick = vi.fn();
-
-    render(
-      <Header
-        projectId="project-1"
-        workflowId="workflow-1"
-        onRunClick={vi.fn()}
-        onRetryClick={mockOnRetryClick}
-        canRun={true}
-        isRetryable={true}
-        isRunning={false}
-      >
-        {[<span key="breadcrumb-1">Breadcrumb</span>]}
-      </Header>,
-      { wrapper }
-    );
-
-    act(() => {
-      emitSessionContext();
-    });
-
-    await waitFor(() => {
-      const retryButton = screen.getByRole('button', {
-        name: /run \(retry\)/i,
-      });
-      expect(retryButton).toBeInTheDocument();
-    });
-
-    const retryButton = screen.getByRole('button', { name: /run \(retry\)/i });
-    fireEvent.click(retryButton);
-
-    expect(mockOnRetryClick).toHaveBeenCalledTimes(1);
-  });
-
-  test('disables run button in IDE mode when canRun is false', async () => {
-    const { wrapper, emitSessionContext } = createTestSetup();
-
-    render(
-      <Header
-        projectId="project-1"
-        workflowId="workflow-1"
-        onRunClick={vi.fn()}
-        onRetryClick={vi.fn()}
-        canRun={false}
-        runTooltipMessage="Cannot run: validation errors"
-        isRetryable={false}
-        isRunning={false}
-      >
-        {[<span key="breadcrumb-1">Breadcrumb</span>]}
-      </Header>,
-      { wrapper }
-    );
-
-    act(() => {
-      emitSessionContext();
-    });
-
-    await waitFor(() => {
-      const runButton = screen.getByRole('button', { name: /^run$/i });
-      expect(runButton).toBeInTheDocument();
-      expect(runButton).toBeDisabled();
-    });
-  });
-
-  test('shows "Processing" when isRunning is true', async () => {
-    const { wrapper, emitSessionContext } = createTestSetup();
-
-    render(
-      <Header
-        projectId="project-1"
-        workflowId="workflow-1"
-        onRunClick={vi.fn()}
-        onRetryClick={vi.fn()}
-        canRun={true}
-        isRetryable={false}
-        isRunning={true}
-      >
-        {[<span key="breadcrumb-1">Breadcrumb</span>]}
-      </Header>,
-      { wrapper }
-    );
-
-    act(() => {
-      emitSessionContext();
-    });
-
-    await waitFor(() => {
-      const processingButton = screen.getByRole('button', {
-        name: /processing/i,
-      });
-      expect(processingButton).toBeInTheDocument();
-      expect(processingButton).toBeDisabled();
-    });
-  });
-
-  test('renders Canvas mode Run button when onRunClick provided but onRetryClick missing', async () => {
-    const { wrapper, emitSessionContext, ydoc } = createTestSetup();
-
-    // Add a trigger for Canvas mode
-    const triggersArray = ydoc.getArray('triggers');
-    const triggerMap = new Y.Map();
-    triggerMap.set('id', 'trigger-123');
-    triggerMap.set('type', 'webhook');
-    triggerMap.set('enabled', true);
-    triggerMap.set('has_auth_method', true);
-    triggersArray.push([triggerMap]);
-
-    render(
-      <Header
-        projectId="project-1"
-        workflowId="workflow-1"
-        onRunClick={vi.fn()}
-        // No onRetryClick - should render Canvas mode
-      >
-        {[<span key="breadcrumb-1">Breadcrumb</span>]}
-      </Header>,
-      { wrapper }
-    );
-
-    act(() => {
-      emitSessionContext();
-    });
-
-    await waitFor(() => {
-      const runButton = screen.getByRole('button', { name: /run/i });
-      expect(runButton).toBeInTheDocument();
-    });
-
-    // Should be simple button, not split button
-    expect(
-      screen.queryByRole('button', { name: /run \(retry\)/i })
-    ).not.toBeInTheDocument();
-  });
-
-  test('renders adaptorDisplay prop in IDE mode', async () => {
-    const { wrapper, emitSessionContext } = createTestSetup();
-    const adaptorDisplay = (
-      <div data-testid="adaptor-display">Adaptor Display</div>
-    );
-
-    render(
-      <Header
-        projectId="project-1"
-        workflowId="workflow-1"
-        onRunClick={vi.fn()}
-        onRetryClick={vi.fn()}
-        canRun={true}
-        isRetryable={false}
-        isRunning={false}
-        adaptorDisplay={adaptorDisplay}
-      >
-        {[<span key="breadcrumb-1">Breadcrumb</span>]}
-      </Header>,
-      { wrapper }
-    );
-
-    act(() => {
-      emitSessionContext();
-    });
-
-    await waitFor(() => {
-      expect(screen.getByTestId('adaptor-display')).toBeInTheDocument();
-      expect(screen.getByText('Adaptor Display')).toBeInTheDocument();
-    });
-  });
-
-  test('renders close IDE button when onCloseIDE prop is provided', async () => {
-    const { wrapper, emitSessionContext } = createTestSetup();
-    const mockOnCloseIDE = vi.fn();
-
-    render(
-      <Header
-        projectId="project-1"
-        workflowId="workflow-1"
-        onRunClick={vi.fn()}
-        onRetryClick={vi.fn()}
-        canRun={true}
-        isRetryable={false}
-        isRunning={false}
-        onCloseIDE={mockOnCloseIDE}
-      >
-        {[<span key="breadcrumb-1">Breadcrumb</span>]}
-      </Header>,
-      { wrapper }
-    );
-
-    act(() => {
-      emitSessionContext();
-    });
-
-    await waitFor(() => {
-      const closeButton = screen.getByRole('button', { name: /close ide/i });
-      expect(closeButton).toBeInTheDocument();
-    });
-  });
-
-  test('calls onCloseIDE when close IDE button is clicked', async () => {
-    const { wrapper, emitSessionContext } = createTestSetup();
-    const mockOnCloseIDE = vi.fn();
-
-    render(
-      <Header
-        projectId="project-1"
-        workflowId="workflow-1"
-        onRunClick={vi.fn()}
-        onRetryClick={vi.fn()}
-        canRun={true}
-        isRetryable={false}
-        isRunning={false}
-        onCloseIDE={mockOnCloseIDE}
-      >
-        {[<span key="breadcrumb-1">Breadcrumb</span>]}
-      </Header>,
-      { wrapper }
-    );
-
-    act(() => {
-      emitSessionContext();
-    });
-
-    await waitFor(() => {
-      const closeButton = screen.getByRole('button', { name: /close ide/i });
-      expect(closeButton).toBeInTheDocument();
-    });
-
-    const closeButton = screen.getByRole('button', { name: /close ide/i });
-    fireEvent.click(closeButton);
-
-    expect(mockOnCloseIDE).toHaveBeenCalledTimes(1);
-  });
-
-  test('does not render close IDE button when onCloseIDE prop is not provided', async () => {
-    const { wrapper, emitSessionContext } = createTestSetup();
-
-    render(
-      <Header projectId="project-1" workflowId="workflow-1">
-        {[<span key="breadcrumb-1">Breadcrumb</span>]}
-      </Header>,
-      { wrapper }
-    );
-
-    act(() => {
-      emitSessionContext();
-    });
-
-    expect(
-      screen.queryByRole('button', { name: /close ide/i })
-    ).not.toBeInTheDocument();
   });
 });

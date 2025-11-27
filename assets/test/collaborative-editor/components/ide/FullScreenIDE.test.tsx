@@ -12,15 +12,15 @@
  * - Panel collapse/expand functionality
  */
 
+import { StoreProvider } from '#/collaborative-editor/contexts/StoreProvider';
+import { KeyboardProvider } from '#/collaborative-editor/keyboard';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { HotkeysProvider } from 'react-hotkeys-hook';
-import * as Y from 'yjs';
 import { beforeEach, describe, expect, test, vi } from 'vitest';
-import { FullScreenIDE } from '../../../../js/collaborative-editor/components/ide/FullScreenIDE';
+import * as Y from 'yjs';
 import * as dataclipApi from '../../../../js/collaborative-editor/api/dataclips';
+import { FullScreenIDE } from '../../../../js/collaborative-editor/components/ide/FullScreenIDE';
 import type { Workflow } from '../../../../js/collaborative-editor/types/workflow';
-import { StoreProvider } from '#/collaborative-editor/contexts/StoreProvider';
 
 // Mock dependencies
 vi.mock('../../../../js/collaborative-editor/api/dataclips');
@@ -153,6 +153,10 @@ vi.mock('../../../../js/collaborative-editor/hooks/useSessionContext', () => ({
   useAppConfig: () => ({
     ai_enabled: false,
   }),
+  useVersions: () => [],
+  useVersionsLoading: () => false,
+  useVersionsError: () => null,
+  useRequestVersions: () => vi.fn(),
 }));
 
 // Mock workflow hooks
@@ -405,6 +409,8 @@ vi.mock('../../../../js/collaborative-editor/hooks/useRunRetry', () => ({
     isRetryable: false,
     runIsProcessing: false,
     runTooltipMessage: '',
+    isSubmitting: false,
+    canRun: true,
   }),
 }));
 
@@ -462,16 +468,16 @@ vi.mock('react-resizable-panels', () => ({
   PanelResizeHandle: () => <div data-testid="resize-handle" />,
 }));
 
-// Helper function to render FullScreenIDE with HotkeysProvider
+// Helper function to render FullScreenIDE with providers
 function renderFullScreenIDE(
   props: React.ComponentProps<typeof FullScreenIDE>
 ) {
   return render(
-    <HotkeysProvider>
+    <KeyboardProvider>
       <StoreProvider>
         <FullScreenIDE {...props} />
       </StoreProvider>
-    </HotkeysProvider>
+    </KeyboardProvider>
   );
 }
 
@@ -584,7 +590,7 @@ describe('FullScreenIDE', () => {
       });
     });
 
-    test('displays Save button in header', async () => {
+    test('displays Run button in header', async () => {
       const onClose = vi.fn();
 
       renderFullScreenIDE({
@@ -593,12 +599,12 @@ describe('FullScreenIDE', () => {
 
       await waitFor(() => {
         expect(
-          screen.getByRole('button', { name: /save/i })
+          screen.getByRole('button', { name: /run/i })
         ).toBeInTheDocument();
       });
     });
 
-    test('displays workflow name breadcrumb for closing IDE', async () => {
+    test('displays job name in code panel heading', async () => {
       const onClose = vi.fn();
 
       renderFullScreenIDE({
@@ -606,7 +612,7 @@ describe('FullScreenIDE', () => {
       });
 
       await waitFor(() => {
-        expect(screen.getByText('Test Workflow')).toBeInTheDocument();
+        expect(screen.getByText(/Code -/i)).toBeInTheDocument();
       });
     });
   });
@@ -700,7 +706,7 @@ describe('FullScreenIDE', () => {
       });
 
       await waitFor(() => {
-        expect(screen.getByText(/Code/i)).toBeInTheDocument();
+        expect(screen.getByText(/Code -/i)).toBeInTheDocument();
       });
 
       // Find all collapse buttons
@@ -715,7 +721,7 @@ describe('FullScreenIDE', () => {
   });
 
   describe('button functionality', () => {
-    test('Save button is present', async () => {
+    test('Run button is present', async () => {
       const onClose = vi.fn();
 
       renderFullScreenIDE({
@@ -724,14 +730,14 @@ describe('FullScreenIDE', () => {
 
       await waitFor(() => {
         expect(
-          screen.getByRole('button', { name: /save/i })
+          screen.getByRole('button', { name: /run/i })
         ).toBeInTheDocument();
       });
     });
   });
 
   describe('Close IDE functionality', () => {
-    test('clicking workflow name breadcrumb calls onClose', async () => {
+    test('clicking close button calls onClose', async () => {
       const user = userEvent.setup();
       const onClose = vi.fn();
 
@@ -740,11 +746,11 @@ describe('FullScreenIDE', () => {
       });
 
       await waitFor(() => {
-        expect(screen.getByText('Test Workflow')).toBeInTheDocument();
+        expect(screen.getByLabelText('Close IDE')).toBeInTheDocument();
       });
 
-      const workflowBreadcrumb = screen.getByText('Test Workflow');
-      await user.click(workflowBreadcrumb);
+      const closeButton = screen.getByLabelText('Close IDE');
+      await user.click(closeButton);
 
       expect(onClose).toHaveBeenCalledOnce();
     });

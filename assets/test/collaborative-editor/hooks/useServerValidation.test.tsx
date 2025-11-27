@@ -1,27 +1,27 @@
-import { renderHook, waitFor } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
-import { useAppForm } from "#/collaborative-editor/components/form";
-import * as useWorkflowModule from "#/collaborative-editor/hooks/useWorkflow";
+import { renderHook, waitFor } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { useAppForm } from '#/collaborative-editor/components/form';
+import * as useWorkflowModule from '#/collaborative-editor/hooks/useWorkflow';
 
 // Mock useWorkflowState and useWorkflowActions
-vi.mock("#/collaborative-editor/hooks/useWorkflow", () => ({
+vi.mock('#/collaborative-editor/hooks/useWorkflow', () => ({
   useWorkflowState: vi.fn(),
   useWorkflowActions: vi.fn(() => ({ setClientErrors: vi.fn() })),
 }));
 
-describe("useValidation (via useAppForm)", () => {
+describe('useValidation (via useAppForm)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it("should inject collaborative errors into form field meta", async () => {
+  it('should inject collaborative errors into form field meta', async () => {
     // Mock collaborative errors from Y.Doc
     const mockFn = vi.fn(selector => {
       const state = {
         workflow: {
-          id: "w-1",
-          name: "Workflow",
-          errors: { name: ["Name is required"] },
+          id: 'w-1',
+          name: 'Workflow',
+          errors: { name: ['Name is required'] },
         },
         jobs: [],
         triggers: [],
@@ -36,25 +36,25 @@ describe("useValidation (via useAppForm)", () => {
     // Create form using useAppForm (which includes useValidation)
     const { result } = renderHook(() =>
       useAppForm({
-        defaultValues: { name: "", concurrency: null },
+        defaultValues: { name: '', concurrency: null },
       })
     );
 
     // Wait for validation effect to run
     await waitFor(() => {
-      const fieldMeta = result.current.getFieldMeta("name");
-      expect(fieldMeta?.errorMap?.collaborative).toBe("Name is required");
+      const fieldMeta = result.current.getFieldMeta('name');
+      expect(fieldMeta?.errorMap?.collaborative).toBe('Name is required');
     });
   });
 
-  it("should clear collaborative errors when errors removed from Y.Doc", async () => {
+  it('should clear collaborative errors when errors removed from Y.Doc', async () => {
     // Start with errors
-    let mockErrors = { name: ["Name is required"] };
+    let mockErrors = { name: ['Name is required'] };
     const mockFn = vi.fn(selector => {
       const state = {
         workflow: {
-          id: "w-1",
-          name: "Workflow",
+          id: 'w-1',
+          name: 'Workflow',
           errors: mockErrors,
         },
         jobs: [],
@@ -69,14 +69,14 @@ describe("useValidation (via useAppForm)", () => {
 
     const { result, rerender } = renderHook(() =>
       useAppForm({
-        defaultValues: { name: "", concurrency: null },
+        defaultValues: { name: '', concurrency: null },
       })
     );
 
     // Verify error is present
     await waitFor(() => {
-      expect(result.current.getFieldMeta("name")?.errorMap?.collaborative).toBe(
-        "Name is required"
+      expect(result.current.getFieldMeta('name')?.errorMap?.collaborative).toBe(
+        'Name is required'
       );
     });
 
@@ -89,25 +89,25 @@ describe("useValidation (via useAppForm)", () => {
     // Verify error was cleared
     await waitFor(() => {
       expect(
-        result.current.getFieldMeta("name")?.errorMap?.collaborative
+        result.current.getFieldMeta('name')?.errorMap?.collaborative
       ).toBeUndefined();
     });
   });
 
-  it("should filter errors for specific entity using errorPath", async () => {
+  it('should filter errors for specific entity using errorPath', async () => {
     const mockFn = vi.fn(selector => {
       const state = {
-        workflow: { id: "w-1", errors: {} },
+        workflow: { id: 'w-1', errors: {} },
         jobs: [
           {
-            id: "abc-123",
-            name: "Job 1",
-            errors: { name: ["Job name is required"] },
+            id: 'abc-123',
+            name: 'Job 1',
+            errors: { name: ['Job name is required'] },
           },
           {
-            id: "def-456",
-            name: "Job 2",
-            errors: { name: ["Other job name is required"] },
+            id: 'def-456',
+            name: 'Job 2',
+            errors: { name: ['Other job name is required'] },
           },
         ],
         triggers: [],
@@ -123,32 +123,32 @@ describe("useValidation (via useAppForm)", () => {
     const { result } = renderHook(() =>
       useAppForm(
         {
-          defaultValues: { name: "", body: "" },
+          defaultValues: { name: '', body: '' },
         },
-        "jobs.abc-123" // Dot-separated path to entity
+        'jobs.abc-123' // Dot-separated path to entity
       )
     );
 
     // Wait for validation effect to run
     await waitFor(() => {
-      const fieldMeta = result.current.getFieldMeta("name");
-      expect(fieldMeta?.errorMap?.collaborative).toBe("Job name is required");
+      const fieldMeta = result.current.getFieldMeta('name');
+      expect(fieldMeta?.errorMap?.collaborative).toBe('Job name is required');
     });
 
     // def-456 job error should NOT be injected
-    const bodyMeta = result.current.getFieldMeta("body");
+    const bodyMeta = result.current.getFieldMeta('body');
     expect(bodyMeta?.errorMap?.collaborative).toBeUndefined();
   });
 
-  it("should handle multiple fields with errors", async () => {
+  it('should handle multiple fields with errors', async () => {
     const mockFn = vi.fn(selector => {
       const state = {
         workflow: {
-          id: "w-1",
-          name: "Workflow",
+          id: 'w-1',
+          name: 'Workflow',
           errors: {
-            name: ["Name is required"],
-            concurrency: ["Must be positive"],
+            name: ['Name is required'],
+            concurrency: ['Must be positive'],
           },
         },
         jobs: [],
@@ -163,16 +163,16 @@ describe("useValidation (via useAppForm)", () => {
 
     const { result } = renderHook(() =>
       useAppForm({
-        defaultValues: { name: "", concurrency: null },
+        defaultValues: { name: '', concurrency: null },
       })
     );
 
     // Wait for validation effect to run
     await waitFor(() => {
-      const nameMeta = result.current.getFieldMeta("name");
-      const concurrencyMeta = result.current.getFieldMeta("concurrency");
-      expect(nameMeta?.errorMap?.collaborative).toBe("Name is required");
-      expect(concurrencyMeta?.errorMap?.collaborative).toBe("Must be positive");
+      const nameMeta = result.current.getFieldMeta('name');
+      const concurrencyMeta = result.current.getFieldMeta('concurrency');
+      expect(nameMeta?.errorMap?.collaborative).toBe('Name is required');
+      expect(concurrencyMeta?.errorMap?.collaborative).toBe('Must be positive');
     });
   });
 });

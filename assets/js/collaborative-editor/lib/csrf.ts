@@ -5,5 +5,5 @@ export function getCsrfToken(): string | null {
   const meta = document.querySelector<HTMLMetaElement>(
     'meta[name="csrf-token"]'
   );
-  return meta?.getAttribute("content") || null;
+  return meta?.getAttribute('content') || null;
 }

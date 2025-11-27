@@ -1,6 +1,6 @@
-import { expect, type Locator, type Page } from "@playwright/test";
-import { LiveViewPage } from "./base/liveview.page";
-import { JobInspectorPage } from "./components/job-inspector.page";
+import { expect, type Locator, type Page } from '@playwright/test';
+import { LiveViewPage } from './base/liveview.page';
+import { JobInspectorPage } from './components/job-inspector.page';
 
 /**
  * Page Object Model for the Collaborative Workflow Editor
@@ -15,13 +15,13 @@ export class WorkflowCollaborativePage extends LiveViewPage {
     collaborativeEditor: '[data-testid="collaborative-editor"]',
 
     // Connection status (via CollaborationWidget)
-    syncStatus: "text=Synced",
-    connectedStatus: "text=Connected",
+    syncStatus: 'text=Synced',
+    connectedStatus: 'text=Connected',
 
     // Error indicators - use specific error UI components, not generic text
     // Note: We look for actual error/alert components, not workflow content
     errorAlert: '[role="alert"] >> text=/error/i',
-    socketError: "text=/socket (error|disconnected)/i",
+    socketError: 'text=/socket (error|disconnected)/i',
   };
 
   /**
@@ -49,7 +49,7 @@ export class WorkflowCollaborativePage extends LiveViewPage {
     await expect(container).toBeVisible({ timeout: 10000 });
 
     // Wait for React hydration to complete
-    await this.page.waitForLoadState("networkidle");
+    await this.page.waitForLoadState('networkidle');
   }
 
   /**

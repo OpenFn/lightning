@@ -17,11 +17,66 @@ and this project adheres to
 
 ### Added
 
+### Changed
+
+### Fixed
+
+## [2.15.0-pre1] - 2025-11-27
+
+### Added
+
+- Add workflow template publishing to collaborative editor
+  [#3921](https://github.com/OpenFn/lightning/issues/3921)
+
+### Changed
+
+- Optimize dashboard stats queries with database aggregation
+  [#4070](https://github.com/OpenFn/lightning/issues/4070)
+- Add composite indexes on steps and runs for dashboard queries
+  [#4070](https://github.com/OpenFn/lightning/issues/4070)
+- Enable usage limit checks across the whole application
+  [#PR4050](https://github.com/OpenFn/lightning/pull/4050)
+- Make IDE heading separate from top menu
+  [#4077](https://github.com/OpenFn/lightning/issues/4077)
+
+### Fixed
+
+- Version dropdown now updates correctly for all users after workflow save
+  [#3985](https://github.com/OpenFn/lightning/issues/3985)
+  [#4024](https://github.com/OpenFn/lightning/issues/4024)
+- Put close button in top right
+  [PR#4037](https://github.com/OpenFn/lightning/pull/4037)
+- Don't grey out in-progress runs
+  [PR#4037](https://github.com/OpenFn/lightning/pull/4037)
+- Explain why run panel is grey for edge-case when the workflow step selected
+  not in the list of run steps
+  [PR#4037](https://github.com/OpenFn/lightning/pull/4037)
+- Fix history panel unable to close after selecting/deselecting run
+  [#4027](https://github.com/OpenFn/lightning/issues/4027)
+- Fix version chip (and sidebar scroll) when line breaks needed
+  [PR#4047](https://github.com/OpenFn/lightning/pull/4047)
+- Fix error validation for nodes/edges & show better error messages on save
+  [PR#4061](https://github.com/OpenFn/lightning/pull/4061)
+- Fix custom cron expressions getting overwritten & additional cron support
+  [#4011](https://github.com/OpenFn/lightning/issues/4011)
+- Fix monaco popups and tooltips getting cut off
+  [PR#4072](https://github.com/OpenFn/lightning/pull/4072)
+- Fix metadata/docs panel reopening when resizing adjacent panel
+  [#4073](https://github.com/OpenFn/lightning/issues/4073)
+
+## [2.15.0-pre] - 2025-11-20
+
+### Added
+
 - Show collaborators mouse pointers on the workflow canvas
   [#3810](https://github.com/OpenFn/lightning/issues/3810)
 
 ### Changed
 
+- Always keep the Diagram mounted even when the IDE is present
+  [#3981](https://github.com/OpenFn/lightning/issues/3981)
+- Dropped react-hotkeys-hook for custom priority based key handler hook
+  [#3981](https://github.com/OpenFn/lightning/issues/3981)
 - Simplified IDE by only letting users see the "Create a New Manual Run Panel"
   when an existing Run isn't already loaded. Cleaned up the Run panel.
   [#4006](https://github.com/OpenFn/lightning/issues/4006)
@@ -38,6 +93,8 @@ and this project adheres to
 
 ### Fixed
 
+- Fix flickering of active collaborator icons between states(active, inactive,
+  unavailable) [#3931](https://github.com/OpenFn/lightning/issues/3931)
 - Restored footers to inspectors on the canvas while in read only mode
   [#4018](https://github.com/OpenFn/lightning/issues/4018)
 - Fix vertical scrolling in workflow panels

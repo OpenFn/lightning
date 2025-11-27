@@ -1,4 +1,8 @@
-import { useStore } from '@tanstack/react-form';
+import {
+  useStore,
+  type AnyFieldMetaBase,
+  type Updater,
+} from '@tanstack/react-form';
 import { useMemo } from 'react';
 
 import {
@@ -6,7 +10,7 @@ import {
   useWorkflowReadOnly,
 } from '../../hooks/useWorkflow';
 import { useWatchFields } from '../../stores/common';
-import { EdgeSchema } from '../../types/edge';
+import { EdgeSchema, ExprEdgeSchema } from '../../types/edge';
 import type { Workflow } from '../../types/workflow';
 import { isEdgeFromTrigger } from '../../utils/workflowGraph';
 import { useAppForm } from '../form';
@@ -30,16 +34,33 @@ export function EdgeForm({ edge }: EdgeFormProps) {
   // Initialize form
   const form = useAppForm(
     {
-      defaultValues: edge,
+      defaultValues: {
+        ...edge,
+        condition_expression: edge.condition_expression || '',
+      },
       listeners: {
-        onChange: ({ formApi }) => {
+        onChange: ({ formApi, fieldApi }) => {
+          if (fieldApi.name === 'condition_type') {
+            // mark condition_expr as dirty to cause revalidation when select changes
+            formApi.setFieldMeta('condition_expression', {
+              isDirty: true,
+              isTouched: true,
+            } as Updater<AnyFieldMetaBase>);
+          }
           if (edge.id) {
             updateEdge(edge.id, formApi.state.values);
           }
         },
       },
       validators: {
-        onChange: createZodValidator(EdgeSchema),
+        onChange: ({ value, formApi }) => {
+          // conditionally picking edge schema. zod.refine doesn't seem to work
+          const edgeSchema =
+            formApi.state.values['condition_type'] === 'js_expression'
+              ? ExprEdgeSchema
+              : EdgeSchema;
+          return createZodValidator(edgeSchema)({ value });
+        },
       },
     },
     `edges.${edge.id}` // Server validation automatically filtered to this edge

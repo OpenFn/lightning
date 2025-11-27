@@ -7,6 +7,7 @@ defmodule LightningWeb.DataclipLive.Show do
   alias Lightning.Invocation
 
   on_mount {LightningWeb.Hooks, :project_scope}
+  on_mount {LightningWeb.Hooks, :check_limits}
 
   @impl true
   def mount(_params, _session, socket) do
@@ -28,6 +29,13 @@ defmodule LightningWeb.DataclipLive.Show do
   def render(assigns) do
     ~H"""
     <LayoutComponents.page_content>
+      <:banner>
+        <Common.dynamic_component
+          :if={assigns[:banner]}
+          function={@banner.function}
+          args={@banner.attrs}
+        />
+      </:banner>
       <:header>
         <LayoutComponents.header current_user={@current_user} project={@project}>
           <:title>{@page_title}</:title>

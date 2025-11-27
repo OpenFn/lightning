@@ -6,44 +6,48 @@
       style={"width: 192px; #{if(@theme_style, do: @theme_style, else: "")}"}
     >
       <div class="flex flex-col h-full">
-        <div class="app-logo-container w-full h-20 flex items-center justify-center px-3">
-          <%= if assigns[:current_user] do %>
-            <LayoutComponents.user_menu_dropdown current_user={@current_user} />
-          <% end %>
-        </div>
-        <%= unless assigns[:is_first_setup] do %>
-          <LayoutComponents.menu_items {assigns} />
-          <div class="grow"></div>
-          <%= if @current_user.role == :superuser do %>
-            <Menu.menu_item to={Routes.project_index_path(@socket, :index)}>
-              <Heroicons.cog class="h-5 w-5 inline-block mr-2" />
-              <span class="inline-block align-middle">Admin Menu</span>
-            </Menu.menu_item>
-            <%= if function_exported?(Routes, :live_dashboard_path, 2) do %>
-              <Menu.menu_item to={~p"/dashboard"}>
-                <Heroicons.exclamation_triangle class="h-5 w-5 inline-block mr-2" />
-                <span class="inline-block align-middle">Sys Info</span>
+        <div class="flex-1 overflow-y-auto min-h-0 flex flex-col">
+          <div class="app-logo-container w-full h-20 flex items-center justify-center px-3">
+            <%= if assigns[:current_user] do %>
+              <LayoutComponents.user_menu_dropdown current_user={@current_user} />
+            <% end %>
+          </div>
+          <%= unless assigns[:is_first_setup] do %>
+            <LayoutComponents.menu_items {assigns} />
+            <div class="grow"></div>
+            <%= if @current_user.role == :superuser do %>
+              <Menu.menu_item to={Routes.project_index_path(@socket, :index)}>
+                <Heroicons.cog class="h-5 w-5 inline-block mr-2" />
+                <span class="inline-block align-middle">Admin Menu</span>
+              </Menu.menu_item>
+              <%= if function_exported?(Routes, :live_dashboard_path, 2) do %>
+                <Menu.menu_item to={~p"/dashboard"}>
+                  <Heroicons.exclamation_triangle class="h-5 w-5 inline-block mr-2" />
+                  <span class="inline-block align-middle">Sys Info</span>
+                </Menu.menu_item>
+              <% end %>
+            <% else %>
+              <Menu.menu_item href="https://docs.openfn.org">
+                <Heroicons.book_open mini class="h-5 w-5 inline-block mr-2" />
+                <span class="inline-block align-middle">Documentation</span>
+              </Menu.menu_item>
+              <Menu.menu_item href="https://community.openfn.org">
+                <Heroicons.user_group mini class="h-5 w-5 inline-block mr-2" />
+                <span class="inline-block align-middle">Community</span>
+              </Menu.menu_item>
+              <Menu.menu_item href={"mailto:" <> Lightning.Config.instance_admin_email()}>
+                <Heroicons.lifebuoy mini class="h-5 w-5 inline-block mr-2" />
+                <span class="inline-block align-middle">Support</span>
               </Menu.menu_item>
             <% end %>
-          <% else %>
-            <Menu.menu_item href="https://docs.openfn.org">
-              <Heroicons.book_open mini class="h-5 w-5 inline-block mr-2" />
-              <span class="inline-block align-middle">Documentation</span>
-            </Menu.menu_item>
-            <Menu.menu_item href="https://community.openfn.org">
-              <Heroicons.user_group mini class="h-5 w-5 inline-block mr-2" />
-              <span class="inline-block align-middle">Community</span>
-            </Menu.menu_item>
-            <Menu.menu_item href={"mailto:" <> Lightning.Config.instance_admin_email()}>
-              <Heroicons.lifebuoy mini class="h-5 w-5 inline-block mr-2" />
-              <span class="inline-block align-middle">Support</span>
-            </Menu.menu_item>
           <% end %>
-        <% end %>
-        <div class="px-3 py-1 flex justify-center">
-          <Common.openfn_logo class="h-6 primary-light" />
         </div>
-        <LightningWeb.Components.Common.version_chip />
+        <div class="flex-shrink-0">
+          <div class="px-3 py-1 flex justify-center">
+            <Common.openfn_logo class="h-6 primary-light" />
+          </div>
+          <LightningWeb.Components.Common.version_chip />
+        </div>
       </div>
     </nav>
     <div class="flex-auto">
