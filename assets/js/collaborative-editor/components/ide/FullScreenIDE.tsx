@@ -36,11 +36,7 @@ import { isFinalState } from '../../types/history';
 import { useRunRetry } from '../../hooks/useRunRetry';
 import { useRunRetryShortcuts } from '../../hooks/useRunRetryShortcuts';
 import { useSession } from '../../hooks/useSession';
-import {
-  useLatestSnapshotLockVersion,
-  useProject,
-} from '../../hooks/useSessionContext';
-import { useVersionSelect } from '../../hooks/useVersionSelect';
+import { useProject } from '../../hooks/useSessionContext';
 import {
   useCanRun,
   useCanSave,
@@ -51,10 +47,8 @@ import {
 } from '../../hooks/useWorkflow';
 import { AdaptorDisplay } from '../AdaptorDisplay';
 import { AdaptorSelectionModal } from '../AdaptorSelectionModal';
-import { BreadcrumbLink } from '../Breadcrumbs';
 import { CollaborativeMonaco } from '../CollaborativeMonaco';
 import { ConfigureAdaptorModal } from '../ConfigureAdaptorModal';
-import { Header } from '../Header';
 import { JobSelector } from '../JobSelector';
 import { ManualRunPanel } from '../ManualRunPanel';
 import { ManualRunPanelErrorBoundary } from '../ManualRunPanelErrorBoundary';
@@ -65,7 +59,6 @@ import { SandboxIndicatorBanner } from '../SandboxIndicatorBanner';
 import { ShortcutKeys } from '../ShortcutKeys';
 import { Tabs } from '../Tabs';
 import { Tooltip } from '../Tooltip';
-import { VersionDropdown } from '../VersionDropdown';
 
 import { PanelToggleButton } from './PanelToggleButton';
 
@@ -348,9 +341,6 @@ export function FullScreenIDE({
     priority: 50, // IDE priority
   });
 
-  // Get data for Header and VersionDropdown
-  const latestSnapshotLockVersion = useLatestSnapshotLockVersion();
-
   // Handle job selection from JobSelector
   const allJobs = workflow?.jobs || [];
   const handleJobSelect = useCallback(
@@ -572,7 +562,6 @@ export function FullScreenIDE({
 
   // IMPORTANT: All hooks must be called before any early returns
   const { isReadOnly } = useWorkflowReadOnly();
-  const handleVersionSelect = useVersionSelect();
 
   // Check loading state but don't use early return (violates rules of hooks)
   const isLoading = !currentJob || !currentJobYText || !awareness;
