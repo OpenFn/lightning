@@ -3,12 +3,14 @@
  *
  * Tests for WorkflowEditor component that manages the main workflow editing
  * interface with canvas, inspector, and run panel. Tests cover:
- * - Keyboard shortcuts (Cmd+Enter to open run panel and trigger runs, Ctrl+E to open IDE)
+ * - Keyboard shortcuts (Cmd+Enter to open run panel and trigger runs)
  * - Run panel opening with correct context (job, trigger, or first trigger)
  * - Run panel context updates when node selection changes
  * - Integration with ManualRunPanel run state
  * - Inspector panel behavior
- * - IDE opening with Ctrl+E when job is selected
+ *
+ * Note: IDE functionality and Ctrl+E keyboard shortcut moved to
+ * CollaborativeEditor (IDEWrapper component).
  */
 
 import { render, screen, waitFor } from '@testing-library/react';
@@ -384,120 +386,6 @@ describe('WorkflowEditor', () => {
       const inspector = screen.queryByTestId('inspector');
       // We can't easily test CSS classes with JSDOM, so we just verify the structure exists
       expect(inspector).toBeInTheDocument();
-    });
-  });
-
-  describe('Ctrl+E keyboard shortcut - open IDE', () => {
-    test('opens IDE when Ctrl+E pressed with job selected', async () => {
-      // Select a job
-      currentNode = {
-        type: 'job',
-        node: mockWorkflow.jobs[0],
-      };
-
-      renderWorkflowEditor();
-
-      await waitFor(() => {
-        expect(screen.getByTestId('workflow-diagram')).toBeInTheDocument();
-      });
-
-      // Press Ctrl+E - dispatch to window (KeyboardProvider listens on window)
-      const event = new KeyboardEvent('keydown', {
-        key: 'e',
-        ctrlKey: true,
-        bubbles: true,
-      });
-      window.dispatchEvent(event);
-
-      // Should open IDE by setting editor=open in URL
-      await waitFor(() => {
-        expect(mockUpdateSearchParams).toHaveBeenCalledWith({
-          panel: 'editor',
-        });
-      });
-    });
-
-    test('does NOT open IDE when Ctrl+E pressed with trigger selected', async () => {
-      // Select a trigger (not a job)
-      currentNode = {
-        type: 'trigger',
-        node: mockWorkflow.triggers[0],
-      };
-
-      renderWorkflowEditor();
-
-      await waitFor(() => {
-        expect(screen.getByTestId('workflow-diagram')).toBeInTheDocument();
-      });
-
-      // Press Ctrl+E - dispatch to window (KeyboardProvider listens on window)
-      const event = new KeyboardEvent('keydown', {
-        key: 'e',
-        ctrlKey: true,
-        bubbles: true,
-      });
-      window.dispatchEvent(event);
-
-      // Should NOT open IDE - silent no-op
-      await new Promise(resolve => setTimeout(resolve, 100));
-      expect(mockUpdateSearchParams).not.toHaveBeenCalledWith({
-        editor: 'open',
-      });
-    });
-
-    test('does NOT open IDE when Ctrl+E pressed with nothing selected', async () => {
-      // Nothing selected
-      currentNode = { type: null, node: null };
-
-      renderWorkflowEditor();
-
-      await waitFor(() => {
-        expect(screen.getByTestId('workflow-diagram')).toBeInTheDocument();
-      });
-
-      // Press Ctrl+E - dispatch to window (KeyboardProvider listens on window)
-      const event = new KeyboardEvent('keydown', {
-        key: 'e',
-        ctrlKey: true,
-        bubbles: true,
-      });
-      window.dispatchEvent(event);
-
-      // Should NOT open IDE - silent no-op
-      await new Promise(resolve => setTimeout(resolve, 100));
-      expect(mockUpdateSearchParams).not.toHaveBeenCalledWith({
-        editor: 'open',
-      });
-    });
-
-    test('does NOT trigger when IDE is already open', async () => {
-      // Select a job
-      currentNode = {
-        type: 'job',
-        node: mockWorkflow.jobs[0],
-      };
-
-      // IDE is already open
-      mockSearchParams.set('panel', 'editor');
-      mockSearchParams.set('job', 'job-1');
-
-      renderWorkflowEditor();
-
-      await waitFor(() => {
-        expect(screen.getByTestId('fullscreen-ide')).toBeInTheDocument();
-      });
-
-      // Press Ctrl+E - dispatch to window (KeyboardProvider listens on window)
-      const event = new KeyboardEvent('keydown', {
-        key: 'e',
-        ctrlKey: true,
-        bubbles: true,
-      });
-      window.dispatchEvent(event);
-
-      // Handler should be disabled - no call to updateSearchParams
-      await new Promise(resolve => setTimeout(resolve, 100));
-      expect(mockUpdateSearchParams).not.toHaveBeenCalled();
     });
   });
 });
