@@ -24,11 +24,13 @@ import { LiveViewActionsProvider } from './contexts/LiveViewActionsContext';
 import { SessionProvider } from './contexts/SessionProvider';
 import { StoreProvider } from './contexts/StoreProvider';
 import {
+  useAIConnectionState,
   useAIIsLoading,
   useAIMessages,
   useAISessionId,
   useAISessionType,
   useAIStore,
+  useAIWorkflowTemplateContext,
 } from './hooks/useAIAssistant';
 import { useAIMode } from './hooks/useAIMode';
 import { useAIAssistantChannel } from './hooks/useAIAssistantChannel';
@@ -85,6 +87,8 @@ function AIAssistantPanelWrapper() {
   const isLoading = useAIIsLoading();
   const sessionId = useAISessionId();
   const sessionType = useAISessionType();
+  const connectionState = useAIConnectionState();
+  const workflowTemplateContext = useAIWorkflowTemplateContext();
   const project = useProject();
   const workflow = useWorkflowState(state => state.workflow);
 
@@ -170,6 +174,37 @@ function AIAssistantPanelWrapper() {
     return sessionId;
   }, [aiMode, searchParams]);
 
+  // Clear session URL param when job/mode changes
+  // This is separate from the main effect to avoid circular dependencies
+  useEffect(() => {
+    if (!isAIAssistantPanelOpen || !aiMode) return;
+
+    const state = aiStore.getSnapshot();
+    const { mode, context } = aiMode;
+
+    // Check if we're switching modes or jobs
+    const isModeSwitch = state.sessionType && state.sessionType !== mode;
+    const jobIdChanged =
+      mode === 'job_code' &&
+      state.jobCodeContext &&
+      (context as import('./types/ai-assistant').JobCodeContext).job_id !==
+        state.jobCodeContext.job_id;
+
+    if (isModeSwitch || jobIdChanged) {
+      console.log('[AI Assistant] Clearing session URL on context change', {
+        isModeSwitch,
+        jobIdChanged,
+        mode,
+      });
+
+      // Clear BOTH params to ensure we start fresh
+      updateSearchParams({
+        'w-chat': null,
+        'j-chat': null,
+      });
+    }
+  }, [isAIAssistantPanelOpen, aiMode, updateSearchParams, aiStore]);
+
   // Single unified effect for context initialization and session loading
   // This runs ONCE when panel opens or mode changes
   useEffect(() => {
@@ -202,27 +237,51 @@ function AIAssistantPanelWrapper() {
       }
       aiStore._clearSession();
       aiStore._clearSessionList(); // Clear sessions and show loading
-
-      // Clear URL params from both modes
-      updateSearchParams({
-        'w-chat': null,
-        'j-chat': null,
-      });
     }
 
     // STEP 2: Initialize context for current mode
     // This MUST happen before any session loading
+    // Also check if the context has changed (e.g., switching between jobs)
+    const jobIdChanged =
+      mode === 'job_code' &&
+      state.jobCodeContext &&
+      (context as import('./types/ai-assistant').JobCodeContext).job_id !==
+        state.jobCodeContext.job_id;
+
     const needsContextInit =
       !state.sessionType ||
       (mode === 'job_code' && !state.jobCodeContext) ||
-      (mode === 'workflow_template' && !state.workflowTemplateContext);
+      (mode === 'workflow_template' && !state.workflowTemplateContext) ||
+      jobIdChanged;
 
     if (needsContextInit || isModeSwitch) {
       console.log('[AI Assistant] Initializing context', {
         mode,
         needsInit: needsContextInit,
         isModeSwitch,
+        jobIdChanged,
       });
+
+      // If job changed OR mode switched, clear session and session list
+      if (jobIdChanged || isModeSwitch) {
+        console.log('[AI Assistant] Context changed, clearing sessions', {
+          jobIdChanged,
+          isModeSwitch,
+          oldJobId: state.jobCodeContext?.job_id,
+          newJobId:
+            mode === 'job_code'
+              ? (context as import('./types/ai-assistant').JobCodeContext)
+                  .job_id
+              : undefined,
+        });
+
+        // Disconnect and clear session data
+        if (state.connectionState !== 'disconnected') {
+          aiStore.disconnect();
+        }
+        aiStore._clearSession();
+        aiStore._clearSessionList();
+      }
 
       // Set context immediately and synchronously
       aiStore.connect(mode, context, undefined);
@@ -322,8 +381,6 @@ function AIAssistantPanelWrapper() {
     // Get parameter name for current mode
     const currentParamName =
       aiMode.mode === 'workflow_template' ? 'w-chat' : 'j-chat';
-    const otherParamName =
-      aiMode.mode === 'workflow_template' ? 'j-chat' : 'w-chat';
     const currentValue = searchParams.get(currentParamName);
 
     // Only update if session ID changed
@@ -336,7 +393,8 @@ function AIAssistantPanelWrapper() {
 
       updateSearchParams({
         [currentParamName]: sessionId,
-        [otherParamName]: null, // Clear other mode's param
+        // NOTE: We do NOT clear the other mode's param anymore
+        // Both params can coexist in the URL
       });
     }
   }, [sessionId, aiMode, searchParams, updateSearchParams, aiStore]);
@@ -396,6 +454,9 @@ function AIAssistantPanelWrapper() {
   // Handler for starting a new conversation
   const handleNewConversation = useCallback(() => {
     if (!project) return;
+
+    // Reset auto-apply tracking for new session
+    hasCompletedInitialAutoApplyRef.current = null;
 
     // Clear the current session
     aiStore.clearSession();
@@ -468,66 +529,106 @@ function AIAssistantPanelWrapper() {
     (selectedSessionId: string) => {
       if (!project) return;
 
-      // Load the selected session by triggering reconnection
-      aiStore.loadSession(selectedSessionId);
+      console.log('[AI Assistant] handleSessionSelect called', {
+        selectedSessionId,
+      });
 
-      // Disconnect and reconnect with the selected session ID
+      // Reset auto-apply tracking for new session
+      hasCompletedInitialAutoApplyRef.current = null;
+
+      // Clear messages immediately to prevent flash of old session's messages
+      // The new session's messages will load when the channel reconnects
+      aiStore._clearSession();
+
+      // Disconnect current session
       aiStore.disconnect();
 
+      // Wait for clean disconnect, then reconnect with selected session
       setTimeout(() => {
         const state = aiStore.getSnapshot();
         if (state.connectionState === 'disconnected') {
-          // Build context for reconnection
-          let workflowYAML: string | undefined = undefined;
-          if (workflow && jobs.length > 0) {
-            try {
-              const workflowSpec = convertWorkflowStateToSpec(
-                {
-                  id: workflow.id,
-                  name: workflow.name,
-                  jobs: jobs.map(job => ({
-                    id: job.id,
-                    name: job.name,
-                    adaptor: job.adaptor,
-                    body: job.body,
-                  })),
-                  triggers: triggers,
-                  edges: edges.map(edge => ({
-                    id: edge.id,
-                    condition_type: edge.condition_type || 'always',
-                    enabled: edge.enabled !== false,
-                    target_job_id: edge.target_job_id,
-                    ...(edge.source_job_id && {
-                      source_job_id: edge.source_job_id,
-                    }),
-                    ...(edge.source_trigger_id && {
-                      source_trigger_id: edge.source_trigger_id,
-                    }),
-                    ...(edge.condition_label && {
-                      condition_label: edge.condition_label,
-                    }),
-                    ...(edge.condition_expression && {
-                      condition_expression: edge.condition_expression,
-                    }),
-                  })),
-                  positions: positions,
-                },
-                false
+          // Use the CURRENT session type from store (not hardcoded)
+          // The session type was set during mode initialization
+          const currentSessionType = state.sessionType;
+
+          if (!currentSessionType) {
+            console.error(
+              '[AI Assistant] No session type in store, cannot reconnect'
+            );
+            return;
+          }
+
+          // Build context based on session type
+          let context: any;
+
+          if (currentSessionType === 'workflow_template') {
+            // Build workflow context
+            let workflowYAML: string | undefined = undefined;
+            if (workflow && jobs.length > 0) {
+              try {
+                const workflowSpec = convertWorkflowStateToSpec(
+                  {
+                    id: workflow.id,
+                    name: workflow.name,
+                    jobs: jobs.map(job => ({
+                      id: job.id,
+                      name: job.name,
+                      adaptor: job.adaptor,
+                      body: job.body,
+                    })),
+                    triggers: triggers,
+                    edges: edges.map(edge => ({
+                      id: edge.id,
+                      condition_type: edge.condition_type || 'always',
+                      enabled: edge.enabled !== false,
+                      target_job_id: edge.target_job_id,
+                      ...(edge.source_job_id && {
+                        source_job_id: edge.source_job_id,
+                      }),
+                      ...(edge.source_trigger_id && {
+                        source_trigger_id: edge.source_trigger_id,
+                      }),
+                      ...(edge.condition_label && {
+                        condition_label: edge.condition_label,
+                      }),
+                      ...(edge.condition_expression && {
+                        condition_expression: edge.condition_expression,
+                      }),
+                    })),
+                    positions: positions,
+                  },
+                  false
+                );
+                workflowYAML = YAML.stringify(workflowSpec);
+              } catch (error) {
+                console.error('Failed to serialize workflow to YAML:', error);
+              }
+            }
+
+            context = {
+              project_id: project.id,
+              ...(workflow?.id && { workflow_id: workflow.id }),
+              ...(workflowYAML && { code: workflowYAML }),
+            };
+          } else {
+            // Use existing job context from store
+            context = state.jobCodeContext;
+            if (!context) {
+              console.error(
+                '[AI Assistant] No job context in store, cannot reconnect'
               );
-              workflowYAML = YAML.stringify(workflowSpec);
-            } catch (error) {
-              console.error('Failed to serialize workflow to YAML:', error);
+              return;
             }
           }
 
-          const context = {
-            project_id: project.id,
-            ...(workflow?.id && { workflow_id: workflow.id }),
-            ...(workflowYAML && { code: workflowYAML }),
-          };
+          console.log('[AI Assistant] Reconnecting with session', {
+            selectedSessionId,
+            sessionType: currentSessionType,
+            context,
+          });
 
-          // Reconnect with the selected session ID
-          aiStore.connect('workflow_template', context, selectedSessionId);
+          // Reconnect with the selected session ID using the CURRENT session type
+          aiStore.connect(currentSessionType, context, selectedSessionId);
         }
       }, 100);
     },
@@ -698,8 +799,10 @@ function AIAssistantPanelWrapper() {
     null
   );
 
-  // Track which messages have been auto-applied to avoid duplicate applications
-  const appliedMessageIdsRef = useRef<Set<string>>(new Set());
+  // Track if we've completed initial auto-apply for the current session
+  // This prevents the effect from running multiple times during reconnections
+  // We track the session ID to know when we've already applied for this session
+  const hasCompletedInitialAutoApplyRef = useRef<string | null>(null);
 
   // Get workflow actions for importing
   const { importWorkflow } = useWorkflowActions();
@@ -812,33 +915,73 @@ function AIAssistantPanelWrapper() {
   );
 
   // Auto-apply workflow YAML when AI generates it in workflow_template mode
+  // This effect runs once per session when first loaded
   useEffect(() => {
     if (sessionType !== 'workflow_template' || !messages.length) return;
 
-    // Find the latest assistant message with code that hasn't been applied yet
-    const latestMessage = messages
-      .filter(
-        msg =>
-          msg.role === 'assistant' &&
-          msg.code &&
-          msg.status === 'success' &&
-          !appliedMessageIdsRef.current.has(msg.id)
-      )
-      .pop(); // Get the most recent one
+    // Check if we've already completed initial auto-apply for this session
+    // This prevents re-applying during reconnections or message updates
+    if (
+      sessionId &&
+      hasCompletedInitialAutoApplyRef.current === sessionId &&
+      connectionState === 'connected'
+    ) {
+      console.log(
+        '[AI Assistant] Skipping auto-apply - already completed for session:',
+        sessionId
+      );
+      return;
+    }
 
-    if (latestMessage?.code) {
+    // Find the latest assistant message with code (most recent successful response)
+    const messagesWithCode = messages.filter(
+      msg => msg.role === 'assistant' && msg.code && msg.status === 'success'
+    );
+
+    console.log('[AI Assistant] Auto-apply check:', {
+      sessionId,
+      connectionState,
+      hasCompletedForSession: hasCompletedInitialAutoApplyRef.current,
+      sessionWorkflowId: workflowTemplateContext?.workflow_id,
+      currentWorkflowId: workflow?.id,
+      totalMessages: messages.length,
+      messagesWithCode: messagesWithCode.length,
+      messageIds: messagesWithCode.map(m => ({
+        id: m.id,
+        hasCode: !!m.code,
+        codeLength: m.code?.length,
+      })),
+    });
+
+    const latestMessage = messagesWithCode.pop(); // Get the most recent one
+
+    if (latestMessage?.code && connectionState === 'connected') {
       console.log(
         '[AI Assistant] Auto-applying workflow from message:',
-        latestMessage.id
+        latestMessage.id,
+        '(newest of',
+        messagesWithCode.length + 1,
+        'messages with code)'
       );
 
-      // Mark as applied to prevent duplicate applications
-      appliedMessageIdsRef.current.add(latestMessage.id);
+      // Mark that we've completed initial auto-apply for this session
+      // This prevents duplicate applications during reconnections
+      if (sessionId) {
+        hasCompletedInitialAutoApplyRef.current = sessionId;
+      }
 
       // Apply the workflow
       void handleApplyWorkflow(latestMessage.code, latestMessage.id);
     }
-  }, [messages, sessionType, handleApplyWorkflow]);
+  }, [
+    messages,
+    sessionType,
+    sessionId,
+    connectionState,
+    workflowTemplateContext,
+    workflow,
+    handleApplyWorkflow,
+  ]);
 
   return (
     <div

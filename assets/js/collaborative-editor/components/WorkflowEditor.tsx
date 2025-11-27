@@ -190,6 +190,13 @@ export function WorkflowEditor({
 
   const [showLeftPanel, setShowLeftPanel] = useState(isNewWorkflow);
 
+  // Close left panel when workflow transitions from new to existing
+  useEffect(() => {
+    if (!isNewWorkflow && showLeftPanel) {
+      setShowLeftPanel(false);
+    }
+  }, [isNewWorkflow, showLeftPanel]);
+
   const { canRun: canOpenRunPanel, tooltipMessage: runDisabledReason } =
     useCanRun();
 

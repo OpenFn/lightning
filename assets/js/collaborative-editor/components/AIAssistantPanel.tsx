@@ -144,6 +144,12 @@ export function AIAssistantPanel({
     () => store?.getSnapshot().sessionType ?? null
   );
 
+  // Subscribe to job context to detect job changes
+  const jobContextId = useSyncExternalStore(
+    store?.subscribe ?? (() => () => {}),
+    () => store?.getSnapshot().jobCodeContext?.job_id ?? null
+  );
+
   // Load session list when view is 'sessions' AND context is ready
   useEffect(() => {
     if (view !== 'sessions' || !store || !storeSessionType) return;
@@ -165,22 +171,14 @@ export function AIAssistantPanel({
 
     console.log(
       '[AIAssistantPanel] Loading sessions for mode:',
-      storeSessionType
+      storeSessionType,
+      jobContextId ? `job_id: ${jobContextId}` : ''
     );
 
-    // Prefer Phoenix Channel when available, fallback to HTTP
-    if (loadSessions) {
-      void loadSessions().catch(error => {
-        console.warn(
-          '[AIAssistantPanel] Channel load failed, using HTTP:',
-          error
-        );
-        void store.loadSessionList();
-      });
-    } else {
-      void store.loadSessionList();
-    }
-  }, [view, store, storeSessionType, loadSessions]);
+    // Always use HTTP API for loading sessions to avoid stale channel references
+    // The channel loadSessions can use stale context during mode switches
+    void store.loadSessionList();
+  }, [view, store, storeSessionType, jobContextId]);
 
   const handleShowSessions = () => {
     // Set view to sessions without clearing session

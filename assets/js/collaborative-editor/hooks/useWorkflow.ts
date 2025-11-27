@@ -389,8 +389,12 @@ export const useWorkflowActions = () => {
             const projectId = currentState.project?.id;
 
             if (workflowId && projectId) {
-              // Update URL to include project_id
-              const newUrl = `/projects/${projectId}/w/${workflowId}/collaborate`;
+              // Update URL to include project_id and remove method param (closes left panel)
+              const url = new URL(window.location.href);
+              const searchParams = new URLSearchParams(url.search);
+              searchParams.delete('method'); // Close left panel
+              const queryString = searchParams.toString();
+              const newUrl = `/projects/${projectId}/w/${workflowId}/collaborate${queryString ? `?${queryString}` : ''}`;
               window.history.replaceState(null, '', newUrl);
 
               // Clear isNewWorkflow flag after successful save
@@ -507,8 +511,12 @@ export const useWorkflowActions = () => {
             const projectId = currentState.project?.id;
 
             if (workflowId && projectId) {
-              // Update URL to include project_id
-              const newUrl = `/projects/${projectId}/w/${workflowId}/collaborate`;
+              // Update URL to include project_id and remove method param (closes left panel)
+              const url = new URL(window.location.href);
+              const searchParams = new URLSearchParams(url.search);
+              searchParams.delete('method'); // Close left panel
+              const queryString = searchParams.toString();
+              const newUrl = `/projects/${projectId}/w/${workflowId}/collaborate${queryString ? `?${queryString}` : ''}`;
               window.history.pushState({}, '', newUrl);
               // Mark workflow as no longer new after first save
               sessionContextStore.clearIsNewWorkflow();

@@ -371,6 +371,10 @@ export const createAIAssistantStore = (): AIAssistantStore => {
         params.append('job_id', jobContext.job_id);
       } else if (sessionType === 'workflow_template' && workflowContext) {
         params.append('project_id', workflowContext.project_id);
+        // Include workflow_id to filter sessions by workflow (matching legacy editor)
+        if (workflowContext.workflow_id) {
+          params.append('workflow_id', workflowContext.workflow_id);
+        }
       }
 
       const response = await fetch(
@@ -621,8 +625,8 @@ export const createAIAssistantStore = (): AIAssistantStore => {
   };
 
   /**
-   * Clear session list and set to loading state
-   * Used when switching modes to prevent showing stale sessions
+   * Clear session list
+   * Used when switching modes or jobs to prevent showing stale sessions
    * @internal
    */
   const _clearSessionList = () => {
@@ -631,7 +635,9 @@ export const createAIAssistantStore = (): AIAssistantStore => {
     state = produce(state, draft => {
       draft.sessionList = [];
       draft.sessionListPagination = null;
-      draft.sessionListLoading = true;
+      // Don't set sessionListLoading here - it should only be managed by loadSessionList()
+      // Setting it to true here can cause infinite loading if loadSessionList() never gets called
+      draft.sessionListLoading = false;
     });
 
     notify('_clearSessionList');
