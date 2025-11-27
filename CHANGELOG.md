@@ -24,6 +24,9 @@ and this project adheres to
 - Improved version mismatch banner UX: made compact, dismissible, and
   repositioned to top-center; auto-deselect runs when collapsing history panel
   [#4044](https://github.com/OpenFn/lightning/issues/4044)
+- Settings panel now opens correctly when Run Panel is visible; also improved
+  Run Panel to stay open and update context when switching between nodes
+  [#4008](https://github.com/OpenFn/lightning/issues/4008)
 - Version dropdown now updates correctly for all users after workflow save
   [#3985](https://github.com/OpenFn/lightning/issues/3985)
   [#4024](https://github.com/OpenFn/lightning/issues/4024)
@@ -44,6 +47,8 @@ and this project adheres to
   [#4011](https://github.com/OpenFn/lightning/issues/4011)
 - Fix monaco popups and tooltips getting cut off
   [PR#4072](https://github.com/OpenFn/lightning/pull/4072)
+- Fix metadata/docs panel reopening when resizing adjacent panel
+  [#4073](https://github.com/OpenFn/lightning/issues/4073)
 
 ## [2.15.0-pre] - 2025-11-20
 
