@@ -65,25 +65,9 @@ export function CollaborativeWorkflowDiagram({
     window.history.pushState({}, '', url.toString());
   }, []);
 
-  // Auto-expand history panel when a run is selected
-  useEffect(() => {
-    if (selectedRunId && historyCollapsed) {
-      setHistoryPanelCollapsed(false);
-    }
-  }, [selectedRunId, historyCollapsed, setHistoryPanelCollapsed]);
-
   const handleToggleHistory = useCallback(() => {
-    // If collapsing the panel and a run is selected, deselect it
-    if (!historyCollapsed && selectedRunId) {
-      handleDeselectRun();
-    }
     setHistoryPanelCollapsed(!historyCollapsed);
-  }, [
-    historyCollapsed,
-    setHistoryPanelCollapsed,
-    selectedRunId,
-    handleDeselectRun,
-  ]);
+  }, [historyCollapsed, setHistoryPanelCollapsed]);
 
   // Use hook to get run steps with automatic subscription management
   const currentRunSteps = useRunSteps(selectedRunId);
@@ -137,6 +121,18 @@ export function CollaborativeWorkflowDiagram({
     selectedRunId,
   ]);
 
+  // Find the selected run object in history
+  const selectedRun = useMemo(() => {
+    if (!selectedRunId) return null;
+
+    // Search through work orders to find the run
+    for (const workorder of history) {
+      const run = workorder.runs.find(r => r.id === selectedRunId);
+      if (run) return run;
+    }
+    return null;
+  }, [selectedRunId, history]);
+
   // Transform history to mark selected run
   const historyWithSelection = useMemo(() => {
     if (!selectedRunId) return history;
@@ -183,6 +179,7 @@ export function CollaborativeWorkflowDiagram({
             onCollapseHistory={handleToggleHistory}
             selectRunHandler={handleRunSelect}
             onDeselectRun={handleDeselectRun}
+            selectedRun={selectedRun}
             loading={historyLoading}
             error={historyError}
             onRetry={() => {

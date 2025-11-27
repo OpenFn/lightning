@@ -37,6 +37,7 @@ import {
   navigateToWorkOrderHistory,
   navigateToWorkflowHistory,
 } from '../../utils/navigation';
+import { RunChip } from '../common/RunChip';
 
 // Extended types with selection state for UI
 type RunWithSelection = RunSummary & { selected?: boolean };
@@ -91,6 +92,7 @@ interface MiniHistoryProps {
   onCollapseHistory: () => void;
   selectRunHandler: (run: RunSummary) => void;
   onDeselectRun?: () => void;
+  selectedRun?: RunSummary | null;
   loading?: boolean;
   error?: string | null;
   onRetry?: () => void;
@@ -102,6 +104,7 @@ export default function MiniHistory({
   collapsed = true,
   onCollapseHistory,
   onDeselectRun,
+  selectedRun,
   loading = false,
   error = null,
   onRetry,
@@ -221,6 +224,13 @@ export default function MiniHistory({
           )}
         </div>
       </div>
+
+      {/* Show run chip when collapsed and run selected */}
+      {collapsed && selectedRun && (
+        <div className="px-3 py-2 border-t border-gray-200">
+          <RunChip runId={selectedRun.id} onClose={() => onDeselectRun?.()} />
+        </div>
+      )}
 
       <div
         className={`overflow-y-auto no-scrollbar max-h-82
