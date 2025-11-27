@@ -94,6 +94,40 @@ export {
   type ConnectedStoreProviderSimulation,
 } from './storeProviderHelpers';
 
+// AI Assistant helpers
+export {
+  setupAIAssistantStoreTest,
+  createMockAIMessage,
+  createMockAISession,
+  createMockJobCodeContext,
+  createMockWorkflowTemplateContext,
+  populateAIStoreWithMessages,
+  expectAIMessageInStore,
+  expectAIStoreConnected,
+  expectAIStoreSessionType,
+  createMockConversation,
+  createMockWorkflowYAML,
+  waitForConnectionState,
+  waitForMessages,
+  type AIAssistantStoreTestSetup,
+} from './aiAssistantHelpers';
+
+// AI Channel mocks
+export {
+  createAIAssistantChannelMock,
+  mockSessionJoinResponse,
+  mockNewMessageResponse,
+  mockListSessionsResponse,
+  mockContextUpdateResponse,
+  emitNewMessageEvent,
+  emitMessageUpdatedEvent,
+  emitSessionCreatedEvent,
+  emitErrorEvent,
+  createMockChannelForScenario,
+  simulateMessageExchange,
+  type PaginationMeta,
+} from './aiChannelMocks';
+
 // Breadcrumb helpers
 export {
   createMockProject,
