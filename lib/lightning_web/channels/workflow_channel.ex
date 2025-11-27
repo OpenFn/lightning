@@ -837,32 +837,39 @@ defmodule LightningWeb.WorkflowChannel do
   # Converts %{triggers: [%{type: ["error"]}]} to %{"triggers[0].type" => ["error"]}
   defp flatten_association_errors(errors) do
     Enum.reduce(errors, %{}, fn {key, value}, acc ->
-      case value do
-        # List of error maps (nested associations)
-        list when is_list(list) ->
-          if Enum.any?(list, &is_map/1) do
-            list
-            |> Enum.with_index()
-            |> Enum.reduce(acc, fn {item_errors, index}, inner_acc ->
-              Enum.reduce(item_errors, inner_acc, fn {field, messages},
-                                                     nested_acc ->
-                flattened_key = "#{key}[#{index}].#{field}"
-                Map.put(nested_acc, flattened_key, messages)
-              end)
-            end)
-          else
-            # List of error messages (not nested objects)
-            Map.put(acc, to_string(key), list)
-          end
+      flatten_error_value(key, value, acc)
+    end)
+  end
 
-        # Direct error messages
-        messages when is_list(messages) ->
-          Map.put(acc, to_string(key), messages)
+  defp flatten_error_value(key, list, acc) when is_list(list) do
+    if Enum.any?(list, &is_map/1) do
+      flatten_nested_list_errors(key, list, acc)
+    else
+      # List of error messages (not nested objects)
+      Map.put(acc, to_string(key), list)
+    end
+  end
 
-        # Shouldn't happen, but handle nested maps just in case
-        _ ->
-          Map.put(acc, to_string(key), value)
-      end
+  defp flatten_error_value(key, messages, acc) when is_list(messages) do
+    Map.put(acc, to_string(key), messages)
+  end
+
+  defp flatten_error_value(key, value, acc) do
+    Map.put(acc, to_string(key), value)
+  end
+
+  defp flatten_nested_list_errors(key, list, acc) do
+    list
+    |> Enum.with_index()
+    |> Enum.reduce(acc, fn {item_errors, index}, inner_acc ->
+      flatten_item_errors(key, item_errors, index, inner_acc)
+    end)
+  end
+
+  defp flatten_item_errors(key, item_errors, index, acc) do
+    Enum.reduce(item_errors, acc, fn {field, messages}, nested_acc ->
+      flattened_key = "#{key}[#{index}].#{field}"
+      Map.put(nested_acc, flattened_key, messages)
     end)
   end
 

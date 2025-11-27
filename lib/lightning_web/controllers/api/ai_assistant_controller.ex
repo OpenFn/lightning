@@ -133,26 +133,11 @@ defmodule LightningWeb.API.AiAssistantController do
     # Try to load job from database - if it exists, check via workflow
     case Jobs.get_job(job_id) do
       {:ok, job} ->
-        # Job exists - job already has workflow preloaded from Jobs.get_job/1
-        # Use a single query to load workflow with project and project_user
-        workflow =
-          job.workflow
-          |> Repo.preload(project: [:project_users])
-
-        project_user =
-          Enum.find(workflow.project.project_users, fn pu ->
-            pu.user_id == user.id
-          end)
-
-        case Permissions.can(:workflows, :access_read, user, project_user) do
-          :ok -> :ok
-          {:error, _reason} -> {:error, :forbidden}
-        end
+        check_job_access(job, user)
 
       {:error, :not_found} ->
         # Job doesn't exist yet (unsaved)
         # Try to find any session with this job_id to get workflow_id
-        # Use a more efficient query that preloads what we need
         session =
           from(s in ChatSession,
             where: s.session_type == "job_code",
@@ -163,64 +148,63 @@ defmodule LightningWeb.API.AiAssistantController do
           )
           |> Repo.one()
 
-        case session do
-          nil ->
-            # No sessions for this job - allow it (user might be creating first session)
-            :ok
-
-          %{meta: %{"unsaved_job" => %{"workflow_id" => workflow_id}}} ->
-            # Unsaved job - load workflow with project and project_users in one query
-            workflow =
-              Workflows.get_workflow(workflow_id)
-              |> Repo.preload(project: [:project_users])
-
-            project_user =
-              Enum.find(workflow.project.project_users, fn pu ->
-                pu.user_id == user.id
-              end)
-
-            case Permissions.can(:workflows, :access_read, user, project_user) do
-              :ok -> :ok
-              {:error, _reason} -> {:error, :forbidden}
-            end
-
-          %{job_id: saved_job_id} when not is_nil(saved_job_id) ->
-            # Session was for a saved job that might have been deleted
-            case Jobs.get_job(saved_job_id) do
-              {:ok, job} ->
-                # Use preloaded workflow and load project with project_users
-                workflow =
-                  job.workflow
-                  |> Repo.preload(project: [:project_users])
-
-                project_user =
-                  Enum.find(workflow.project.project_users, fn pu ->
-                    pu.user_id == user.id
-                  end)
-
-                case Permissions.can(
-                       :workflows,
-                       :access_read,
-                       user,
-                       project_user
-                     ) do
-                  :ok -> :ok
-                  {:error, _reason} -> {:error, :forbidden}
-                end
-
-              {:error, :not_found} ->
-                # Job was deleted - allow access to sessions
-                :ok
-            end
-
-          _ ->
-            :ok
-        end
+        check_unsaved_job_access(session, user)
     end
   end
 
   defp authorize_access("workflow_template", project, user) do
     project_user = Projects.get_project_user(project, user)
+
+    case Permissions.can(:workflows, :access_read, user, project_user) do
+      :ok -> :ok
+      {:error, _reason} -> {:error, :forbidden}
+    end
+  end
+
+  defp check_job_access(job, user) do
+    alias Lightning.Repo
+
+    workflow =
+      job.workflow
+      |> Repo.preload(project: [:project_users])
+
+    check_workflow_access(workflow, user)
+  end
+
+  defp check_unsaved_job_access(nil, _user) do
+    # No sessions for this job - allow it (user might be creating first session)
+    :ok
+  end
+
+  defp check_unsaved_job_access(
+         %{meta: %{"unsaved_job" => %{"workflow_id" => workflow_id}}},
+         user
+       ) do
+    alias Lightning.Repo
+
+    workflow =
+      Workflows.get_workflow(workflow_id)
+      |> Repo.preload(project: [:project_users])
+
+    check_workflow_access(workflow, user)
+  end
+
+  defp check_unsaved_job_access(%{job_id: saved_job_id}, user)
+       when not is_nil(saved_job_id) do
+    # Session was for a saved job that might have been deleted
+    case Jobs.get_job(saved_job_id) do
+      {:ok, job} -> check_job_access(job, user)
+      {:error, :not_found} -> :ok
+    end
+  end
+
+  defp check_unsaved_job_access(_, _user), do: :ok
+
+  defp check_workflow_access(workflow, user) do
+    project_user =
+      Enum.find(workflow.project.project_users, fn pu ->
+        pu.user_id == user.id
+      end)
 
     case Permissions.can(:workflows, :access_read, user, project_user) do
       :ok -> :ok

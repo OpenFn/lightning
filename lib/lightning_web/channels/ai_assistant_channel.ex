@@ -508,61 +508,79 @@ defmodule LightningWeb.AiAssistantChannel do
     end
   end
 
-  defp authorize_session_access(session, user) do
-    case session.session_type do
-      "job_code" ->
-        # Check if this is an unsaved job session
-        unsaved_job = session.meta["unsaved_job"]
+  defp authorize_session_access(%{session_type: "job_code"} = session, user) do
+    authorize_job_code_session(session, user)
+  end
 
-        cond do
-          # Unsaved job - verify access through workflow_id in meta
-          unsaved_job && unsaved_job["workflow_id"] ->
-            workflow = Workflows.get_workflow(unsaved_job["workflow_id"])
-            project = Projects.get_project(workflow.project_id)
-            project_user = Projects.get_project_user(project, user)
-            Permissions.can(:workflows, :access_read, user, project_user)
+  defp authorize_session_access(
+         %{session_type: "workflow_template"} = session,
+         user
+       ) do
+    authorize_workflow_template_session(session, user)
+  end
 
-          # Saved job - verify access through job
-          session.job_id ->
-            case Jobs.get_job(session.job_id) do
-              {:ok, job} ->
-                workflow = Workflows.get_workflow(job.workflow_id)
-                project = Projects.get_project(workflow.project_id)
-                project_user = Projects.get_project_user(project, user)
-                Permissions.can(:workflows, :access_read, user, project_user)
+  defp authorize_job_code_session(session, user) do
+    unsaved_job = session.meta["unsaved_job"]
 
-              {:error, :not_found} ->
-                # Job was deleted
-                :ok
-            end
+    cond do
+      # Unsaved job - verify access through workflow_id in meta
+      unsaved_job && unsaved_job["workflow_id"] ->
+        check_workflow_access_by_id(
+          unsaved_job["workflow_id"],
+          user,
+          :access_read
+        )
 
-          # Fallback - shouldn't happen
-          true ->
-            :ok
-        end
+      # Saved job - verify access through job
+      session.job_id ->
+        authorize_saved_job_session(session.job_id, user)
 
-      "workflow_template" ->
-        # Check if this is an unsaved workflow session
-        unsaved_workflow = session.meta["unsaved_workflow"]
-
-        cond do
-          # Unsaved workflow - verify access through project_id
-          unsaved_workflow && unsaved_workflow["id"] ->
-            project = Projects.get_project(session.project_id)
-            project_user = Projects.get_project_user(project, user)
-            Permissions.can(:workflows, :access_write, user, project_user)
-
-          # Saved workflow or project-level session - verify through project_id
-          session.project_id ->
-            project = Projects.get_project(session.project_id)
-            project_user = Projects.get_project_user(project, user)
-            Permissions.can(:workflows, :access_write, user, project_user)
-
-          # Fallback for older sessions
-          true ->
-            :ok
-        end
+      # Fallback - shouldn't happen
+      true ->
+        :ok
     end
+  end
+
+  defp authorize_workflow_template_session(session, user) do
+    unsaved_workflow = session.meta["unsaved_workflow"]
+
+    cond do
+      # Unsaved workflow - verify access through project_id
+      unsaved_workflow && unsaved_workflow["id"] ->
+        check_project_access(session.project_id, user, :access_write)
+
+      # Saved workflow or project-level session - verify through project_id
+      session.project_id ->
+        check_project_access(session.project_id, user, :access_write)
+
+      # Fallback for older sessions
+      true ->
+        :ok
+    end
+  end
+
+  defp authorize_saved_job_session(job_id, user) do
+    case Jobs.get_job(job_id) do
+      {:ok, job} ->
+        check_workflow_access_by_id(job.workflow_id, user, :access_read)
+
+      {:error, :not_found} ->
+        # Job was deleted
+        :ok
+    end
+  end
+
+  defp check_workflow_access_by_id(workflow_id, user, permission) do
+    workflow = Workflows.get_workflow(workflow_id)
+    project = Projects.get_project(workflow.project_id)
+    project_user = Projects.get_project_user(project, user)
+    Permissions.can(:workflows, permission, user, project_user)
+  end
+
+  defp check_project_access(project_id, user, permission) do
+    project = Projects.get_project(project_id)
+    project_user = Projects.get_project_user(project, user)
+    Permissions.can(:workflows, permission, user, project_user)
   end
 
   defp extract_session_options("job_code", params) do
@@ -652,32 +670,39 @@ defmodule LightningWeb.AiAssistantChannel do
   # Converts %{triggers: [%{type: ["error"]}]} to %{"triggers[0].type" => ["error"]}
   defp flatten_association_errors(errors) do
     Enum.reduce(errors, %{}, fn {key, value}, acc ->
-      case value do
-        # List of error maps (nested associations)
-        list when is_list(list) ->
-          if Enum.any?(list, &is_map/1) do
-            list
-            |> Enum.with_index()
-            |> Enum.reduce(acc, fn {item_errors, index}, inner_acc ->
-              Enum.reduce(item_errors, inner_acc, fn {field, messages},
-                                                     nested_acc ->
-                flattened_key = "#{key}[#{index}].#{field}"
-                Map.put(nested_acc, flattened_key, messages)
-              end)
-            end)
-          else
-            # List of error messages (not nested objects)
-            Map.put(acc, to_string(key), list)
-          end
+      flatten_error_value(key, value, acc)
+    end)
+  end
 
-        # Direct error messages
-        messages when is_list(messages) ->
-          Map.put(acc, to_string(key), messages)
+  defp flatten_error_value(key, list, acc) when is_list(list) do
+    if Enum.any?(list, &is_map/1) do
+      flatten_nested_list_errors(key, list, acc)
+    else
+      # List of error messages (not nested objects)
+      Map.put(acc, to_string(key), list)
+    end
+  end
 
-        # Shouldn't happen, but handle nested maps just in case
-        _ ->
-          Map.put(acc, to_string(key), value)
-      end
+  defp flatten_error_value(key, messages, acc) when is_list(messages) do
+    Map.put(acc, to_string(key), messages)
+  end
+
+  defp flatten_error_value(key, value, acc) do
+    Map.put(acc, to_string(key), value)
+  end
+
+  defp flatten_nested_list_errors(key, list, acc) do
+    list
+    |> Enum.with_index()
+    |> Enum.reduce(acc, fn {item_errors, index}, inner_acc ->
+      flatten_item_errors(key, item_errors, index, inner_acc)
+    end)
+  end
+
+  defp flatten_item_errors(key, item_errors, index, acc) do
+    Enum.reduce(item_errors, acc, fn {field, messages}, nested_acc ->
+      flattened_key = "#{key}[#{index}].#{field}"
+      Map.put(nested_acc, flattened_key, messages)
     end)
   end
 

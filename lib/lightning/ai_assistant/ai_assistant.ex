@@ -344,38 +344,42 @@ defmodule Lightning.AiAssistant do
       # Update each session if its job now exists in the database
       updated_count =
         Enum.reduce(sessions, 0, fn session, count ->
-          unsaved_job = session.meta["unsaved_job"]
-          unsaved_job_id = unsaved_job["id"]
-
-          # Check if this unsaved job now exists in the database
-          if MapSet.member?(job_ids, unsaved_job_id) do
-            # Update session to use real job_id and remove unsaved_job
-            case session
-                 |> Changeset.change(%{
-                   job_id: unsaved_job_id,
-                   meta: Map.delete(session.meta, "unsaved_job")
-                 })
-                 |> Repo.update() do
-              {:ok, _} ->
-                Logger.info(
-                  "Cleaned up unsaved_job for session #{session.id}, set job_id to #{unsaved_job_id}"
-                )
-
-                count + 1
-
-              {:error, changeset} ->
-                Logger.error(
-                  "Failed to cleanup unsaved_job for session #{session.id}: #{inspect(changeset.errors)}"
-                )
-
-                count
-            end
-          else
-            count
-          end
+          update_session_if_job_exists(session, job_ids, count)
         end)
 
       {:ok, updated_count}
+    end
+  end
+
+  defp update_session_if_job_exists(session, job_ids, count) do
+    unsaved_job = session.meta["unsaved_job"]
+    unsaved_job_id = unsaved_job["id"]
+
+    # Check if this unsaved job now exists in the database
+    if MapSet.member?(job_ids, unsaved_job_id) do
+      # Update session to use real job_id and remove unsaved_job
+      case session
+           |> Changeset.change(%{
+             job_id: unsaved_job_id,
+             meta: Map.delete(session.meta, "unsaved_job")
+           })
+           |> Repo.update() do
+        {:ok, _} ->
+          Logger.info(
+            "Cleaned up unsaved_job for session #{session.id}, set job_id to #{unsaved_job_id}"
+          )
+
+          count + 1
+
+        {:error, changeset} ->
+          Logger.error(
+            "Failed to cleanup unsaved_job for session #{session.id}: #{inspect(changeset.errors)}"
+          )
+
+          count
+      end
+    else
+      count
     end
   end
 
@@ -733,6 +737,26 @@ defmodule Lightning.AiAssistant do
     meta = Keyword.get(opts, :meta)
     code = Keyword.get(opts, :code)
 
+    log_save_message(session, message_attrs, code)
+
+    message_attrs = prepare_message_attrs(message_attrs, session.id, code)
+
+    Multi.new()
+    |> Multi.put(:usage, usage)
+    |> Multi.insert(
+      :message,
+      ChatMessage.changeset(%ChatMessage{}, message_attrs)
+    )
+    |> Multi.update(:session, fn %{message: _message} ->
+      update_session_meta(session, meta)
+    end)
+    |> Multi.merge(&maybe_increment_ai_usage/1)
+    |> Multi.run(:enqueue_if_user_message, &enqueue_user_message/2)
+    |> Repo.transaction()
+    |> handle_save_message_result()
+  end
+
+  defp log_save_message(session, message_attrs, code) do
     require Logger
 
     Logger.debug("""
@@ -744,50 +768,44 @@ defmodule Lightning.AiAssistant do
     Code length: #{if code, do: byte_size(code), else: 0}
     Code preview: #{if code, do: String.slice(code, 0, 100), else: "nil"}
     """)
+  end
 
-    message_attrs =
-      message_attrs
-      |> Enum.into(%{}, fn {k, v} -> {to_string(k), v} end)
-      |> Map.put("chat_session_id", session.id)
-      |> Map.put("code", code)
+  defp prepare_message_attrs(message_attrs, session_id, code) do
+    message_attrs
+    |> Enum.into(%{}, fn {k, v} -> {to_string(k), v} end)
+    |> Map.put("chat_session_id", session_id)
+    |> Map.put("code", code)
+  end
 
-    Multi.new()
-    |> Multi.put(:usage, usage)
-    |> Multi.insert(
-      :message,
-      ChatMessage.changeset(%ChatMessage{}, message_attrs)
-    )
-    |> Multi.update(:session, fn %{message: _message} ->
-      # Use meta_changeset to avoid triggering session type validations
-      # when only updating metadata (e.g., RAG data from Apollo)
-      # Merge new meta with existing meta to preserve fields like unsaved_job
-      merged_meta =
-        if meta, do: Map.merge(session.meta || %{}, meta), else: session.meta
+  defp update_session_meta(session, nil),
+    do: ChatSession.meta_changeset(session, %{meta: session.meta})
 
-      ChatSession.meta_changeset(session, %{meta: merged_meta})
-    end)
-    |> Multi.merge(&maybe_increment_ai_usage/1)
-    |> Multi.run(:enqueue_if_user_message, fn _repo, %{message: message} ->
-      if message.role == :user && message.status == :pending do
-        Oban.insert(
-          Lightning.Oban,
-          MessageProcessor.new(%{message_id: message.id})
-        )
-      else
-        {:ok, nil}
-      end
-    end)
-    |> Repo.transaction()
-    |> case do
-      {:ok, %{session: session}} ->
-        {:ok, Repo.preload(session, [messages: :user], force: true)}
+  defp update_session_meta(session, meta) do
+    merged_meta = Map.merge(session.meta || %{}, meta)
+    ChatSession.meta_changeset(session, %{meta: merged_meta})
+  end
 
-      {:error, :message, changeset, _changes} ->
-        {:error, changeset}
-
-      {:error, :session, changeset, _changes} ->
-        {:error, changeset}
+  defp enqueue_user_message(_repo, %{message: message}) do
+    if message.role == :user && message.status == :pending do
+      Oban.insert(
+        Lightning.Oban,
+        MessageProcessor.new(%{message_id: message.id})
+      )
+    else
+      {:ok, nil}
     end
+  end
+
+  defp handle_save_message_result({:ok, %{session: session}}) do
+    {:ok, Repo.preload(session, [messages: :user], force: true)}
+  end
+
+  defp handle_save_message_result({:error, :message, changeset, _changes}) do
+    {:error, changeset}
+  end
+
+  defp handle_save_message_result({:error, :session, changeset, _changes}) do
+    {:error, changeset}
   end
 
   @doc """
@@ -996,18 +1014,16 @@ defmodule Lightning.AiAssistant do
       )
 
     query =
-      cond do
+      if Keyword.has_key?(opts, :workflow) do
         # If workflow option was explicitly passed (even if nil), filter by it
-        Keyword.has_key?(opts, :workflow) ->
-          if workflow do
-            where(base_query, [s], s.workflow_id == ^workflow.id)
-          else
-            where(base_query, [s], is_nil(s.workflow_id))
-          end
-
+        if workflow do
+          where(base_query, [s], s.workflow_id == ^workflow.id)
+        else
+          where(base_query, [s], is_nil(s.workflow_id))
+        end
+      else
         # If workflow option was not passed, return all sessions for the project
-        true ->
-          base_query
+        base_query
       end
 
     total_count =
