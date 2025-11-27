@@ -13,6 +13,7 @@ import {
   useUICommands,
 } from '../hooks/useUI';
 import {
+  useCanRun,
   useNodeSelection,
   useWorkflowActions,
   useWorkflowState,
