@@ -1,5 +1,6 @@
 defmodule LightningWeb.AiAssistantChannelTest do
   use LightningWeb.ChannelCase, async: true
+  import Mox
 
   import Lightning.{
     AccountsFixtures,
@@ -12,7 +13,33 @@ defmodule LightningWeb.AiAssistantChannelTest do
   alias Lightning.AiAssistant.ChatSession
   alias LightningWeb.AiAssistantChannel
 
+  setup :verify_on_exit!
+
   setup do
+    # Mock Apollo configuration
+    Mox.stub(Lightning.MockConfig, :apollo, fn key ->
+      case key do
+        :endpoint -> "http://localhost:3000"
+        :ai_assistant_api_key -> "test_api_key"
+        :timeout -> 5_000
+      end
+    end)
+
+    # Mock Tesla HTTP client to prevent real HTTP calls
+    Mox.stub(Lightning.Tesla.Mock, :call, fn %{method: :post}, _opts ->
+      {:ok,
+       %Tesla.Env{
+         status: 200,
+         body: %{
+           "response" => "This is a test AI response.",
+           "history" => [
+             %{"role" => "user", "content" => "test message"},
+             %{"role" => "assistant", "content" => "This is a test AI response."}
+           ]
+         }
+       }}
+    end)
+
     user = user_fixture()
     project = project_fixture(project_users: [%{user_id: user.id}])
 
@@ -146,7 +173,8 @@ defmodule LightningWeb.AiAssistantChannelTest do
              } = response
 
       assert session_id == session.id
-      assert length(messages) == 1
+      # Expect 2 messages: user message + AI response (due to mocked HTTP client)
+      assert length(messages) == 2
     end
   end
 
@@ -176,7 +204,8 @@ defmodule LightningWeb.AiAssistantChannelTest do
              } = response
 
       assert is_binary(session_id)
-      assert length(messages) == 1
+      # Expect 2 messages: user message + AI response (due to mocked HTTP client)
+      assert length(messages) == 2
     end
   end
 
@@ -210,7 +239,8 @@ defmodule LightningWeb.AiAssistantChannelTest do
              } = response
 
       assert is_binary(session_id)
-      assert length(messages) == 1
+      # Expect 2 messages: user message + AI response (due to mocked HTTP client)
+      assert length(messages) == 2
 
       # Verify the session was created with unsaved_workflow in meta
       session = Repo.get!(ChatSession, session_id)
