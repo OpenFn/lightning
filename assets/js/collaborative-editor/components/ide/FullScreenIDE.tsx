@@ -564,7 +564,9 @@ export function FullScreenIDE({
   const { isReadOnly } = useWorkflowReadOnly();
 
   // Check loading state but don't use early return (violates rules of hooks)
-  const isLoading = !currentJob || !currentJobYText || !awareness;
+  // Only check for job existence, not ytext/awareness
+  // ytext and awareness persist during disconnection for offline editing
+  const isLoading = !currentJob;
 
   // If loading, render loading state at the end instead of early return
   if (isLoading) {

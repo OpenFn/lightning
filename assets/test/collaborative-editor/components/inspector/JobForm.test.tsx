@@ -19,6 +19,7 @@ import type * as Y from 'yjs';
 import { KeyboardProvider } from '#/collaborative-editor/keyboard';
 import { JobForm } from '../../../../js/collaborative-editor/components/inspector/JobForm';
 import { LiveViewActionsProvider } from '../../../../js/collaborative-editor/contexts/LiveViewActionsContext';
+import { SessionContext } from '../../../../js/collaborative-editor/contexts/SessionProvider';
 import type { StoreContextValue } from '../../../../js/collaborative-editor/contexts/StoreProvider';
 import { StoreContext } from '../../../../js/collaborative-editor/contexts/StoreProvider';
 import type { AdaptorStoreInstance } from '../../../../js/collaborative-editor/stores/createAdaptorStore';
@@ -29,6 +30,7 @@ import type { CredentialStoreInstance } from '../../../../js/collaborative-edito
 import { createCredentialStore } from '../../../../js/collaborative-editor/stores/createCredentialStore';
 import type { SessionContextStoreInstance } from '../../../../js/collaborative-editor/stores/createSessionContextStore';
 import { createSessionContextStore } from '../../../../js/collaborative-editor/stores/createSessionContextStore';
+import { createSessionStore } from '../../../../js/collaborative-editor/stores/createSessionStore';
 import type { WorkflowStoreInstance } from '../../../../js/collaborative-editor/stores/createWorkflowStore';
 import { createWorkflowStore } from '../../../../js/collaborative-editor/stores/createWorkflowStore';
 import {
@@ -64,6 +66,8 @@ function createWrapper(
   adaptorStore: AdaptorStoreInstance,
   awarenessStore: AwarenessStoreInstance
 ): React.ComponentType<{ children: React.ReactNode }> {
+  const sessionStore = createSessionStore();
+
   const mockStoreValue: StoreContextValue = {
     workflowStore,
     credentialStore,
@@ -79,14 +83,21 @@ function createWrapper(
     navigate: vi.fn(),
   };
 
+  const mockSessionValue = {
+    sessionStore,
+    isNewWorkflow: false,
+  };
+
   return ({ children }: { children: React.ReactNode }) => (
-    <LiveViewActionsProvider actions={mockLiveViewActions}>
-      <KeyboardProvider>
-        <StoreContext.Provider value={mockStoreValue}>
-          {children}
-        </StoreContext.Provider>
-      </KeyboardProvider>
-    </LiveViewActionsProvider>
+    <SessionContext.Provider value={mockSessionValue}>
+      <LiveViewActionsProvider actions={mockLiveViewActions}>
+        <KeyboardProvider>
+          <StoreContext.Provider value={mockStoreValue}>
+            {children}
+          </StoreContext.Provider>
+        </KeyboardProvider>
+      </LiveViewActionsProvider>
+    </SessionContext.Provider>
   );
 }
 

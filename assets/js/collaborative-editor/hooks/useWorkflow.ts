@@ -743,12 +743,16 @@ export const useCanRun = (): { canRun: boolean; tooltipMessage: string } => {
  * 1. Workflow deletion state (deleted_at)
  * 2. User permissions (can_edit_workflow)
  * 3. Snapshot version (viewing old snapshot)
+ *
+ * Note: Connection state does not affect read-only status. Offline editing
+ * is fully supported - Y.Doc buffers transactions locally and syncs when
+ * reconnected.
  */
 export const useWorkflowReadOnly = (): {
   isReadOnly: boolean;
   tooltipMessage: string;
 } => {
-  // Get session state and permissions (same pattern as useCanSave)
+  // Get permissions and workflow state
   const permissions = usePermissions();
   const latestSnapshotLockVersion = useLatestSnapshotLockVersion();
   const workflow = useWorkflowState(state => state.workflow);

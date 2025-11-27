@@ -231,7 +231,9 @@ describe('Header - ReadOnlyWarning Integration', () => {
       await new Promise(resolve => setTimeout(resolve, 150));
     });
 
-    expect(screen.queryByText('Read-only')).not.toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.queryByText('Read-only')).not.toBeInTheDocument();
+    });
   });
 
   test('hides ReadOnlyWarning during new workflow creation', async () => {
@@ -490,7 +492,9 @@ describe('Header - Read-Only State Changes', () => {
       await new Promise(resolve => setTimeout(resolve, 150));
     });
 
-    expect(screen.queryByText('Read-only')).not.toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.queryByText('Read-only')).not.toBeInTheDocument();
+    });
 
     // Make workflow deleted
     await act(async () => {
