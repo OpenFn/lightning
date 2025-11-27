@@ -17,6 +17,7 @@ defmodule LightningWeb.WorkflowLive.Collaborate do
   alias LightningWeb.Channels.WorkflowJSON
 
   on_mount({LightningWeb.Hooks, :project_scope})
+  on_mount {LightningWeb.Hooks, :check_limits}
 
   @impl true
   def mount(params, _session, %{assigns: %{project: project}} = socket) do
@@ -76,6 +77,11 @@ defmodule LightningWeb.WorkflowLive.Collaborate do
   @impl true
   def render(assigns) do
     ~H"""
+    <Common.dynamic_component
+      :if={assigns[:banner]}
+      function={@banner.function}
+      args={@banner.attrs}
+    />
     <div
       id="collaborative-editor-react"
       class="h-full"
