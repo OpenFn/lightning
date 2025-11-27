@@ -22,7 +22,8 @@ and this project adheres to
 ### Fixed
 
 - Improved version mismatch banner UX: made compact, dismissible, and
-  repositioned to top-center; auto-deselect runs when collapsing history panel
+  repositioned to top-center; improved history panel collapse behavior to
+  maintain run selection with visual run chip indicator
   [#4044](https://github.com/OpenFn/lightning/issues/4044)
 - Settings panel now opens correctly when Run Panel is visible; also improved
   Run Panel to stay open and update context when switching between nodes
