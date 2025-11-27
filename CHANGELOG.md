@@ -21,6 +21,9 @@ and this project adheres to
 
 ### Fixed
 
+- Loading workflow screen appears when disconnected from server
+  [#3972](https://github.com/OpenFn/lightning/issues/3972)
+
 ## [2.15.0-pre1] - 2025-11-27
 
 ### Added

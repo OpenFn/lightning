@@ -183,18 +183,42 @@ export const createSessionStore = (): SessionStore => {
       joinParams?: Record<string, unknown>;
     } = {}
   ) => {
+    logger.debug('Initializing session', {
+      roomname,
+      hasExistingYDoc: !!state.ydoc,
+    });
+
     // Atomic initialization to prevent partial states
     if (!socket) {
       throw new Error('Socket must be connected before initializing session');
     }
 
+    // Step 0: Clean up existing provider if reinitializing
+    if (state.provider) {
+      logger.debug('Cleaning up existing provider');
+      cleanupProviderHandlers?.();
+      cleanupProviderHandlers = null;
+      state.provider.destroy();
+    }
+
     // Step 1: Use existing YDoc or create new one
+    // IMPORTANT: Reuse existing ydoc during reconnection to preserve offline edits
+    // Y.Doc buffers transactions locally during disconnection and syncs on reconnect
+    const isReusingYDoc = !!state.ydoc;
     const ydoc = state.ydoc || new YDoc();
 
+    if (isReusingYDoc) {
+      logger.log('Reusing Y.Doc (preserving offline edits)');
+    } else {
+      logger.log('Creating new Y.Doc');
+    }
+
     // Step 2: Create clean awareness instance if userData is provided
+    // Otherwise reuse existing awareness to maintain local user state
     let awarenessToUse = state.awareness;
     if (userData) {
       awarenessToUse = new Awareness(ydoc);
+      logger.debug('Created new Awareness instance');
     }
 
     // Step 3: Create provider with YDoc and awareness
@@ -215,7 +239,6 @@ export const createSessionStore = (): SessionStore => {
     }, 'initializeSession');
 
     // Step 5: Attach provider event handlers and store cleanup function
-    cleanupProviderHandlers?.(); // Clean up any existing handlers
     cleanupProviderHandlers = attachProvider(provider, updateState);
 
     // Step 6: Initialize settling subscription if not already active
@@ -227,6 +250,8 @@ export const createSessionStore = (): SessionStore => {
     );
 
     devtools.connect();
+
+    logger.debug('Session initialized successfully');
 
     return { ydoc, provider, awareness: awarenessToUse };
   };
@@ -326,6 +351,8 @@ function attachProvider(
   const statusHandler = (event: { status: string }) => {
     const next = event.status;
 
+    logger.debug('Provider status change', { status: next });
+
     if (next) {
       const nowConnected = next === 'connected';
 
@@ -337,6 +364,8 @@ function attachProvider(
   };
 
   const syncHandler = (synced: boolean) => {
+    logger.debug('Provider sync change', { synced });
+
     updateState(draft => {
       draft.isSynced = synced;
     }, 'syncStatusChange');
@@ -345,9 +374,21 @@ function attachProvider(
   provider.on('status', statusHandler);
   provider.on('sync', syncHandler);
 
+  // Add logging for Y.Doc updates
+  const ydoc = provider.doc;
+  const updateHandler = (update: Uint8Array, origin: unknown) => {
+    logger.debug('Y.Doc update', {
+      updateSize: update.length,
+      originIsProvider: origin === provider,
+    });
+  };
+
+  ydoc.on('update', updateHandler);
+
   return () => {
     provider.off('status', statusHandler);
     provider.off('sync', syncHandler);
+    ydoc.off('update', updateHandler);
   };
 }
 

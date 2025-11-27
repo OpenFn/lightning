@@ -566,6 +566,33 @@ export function FullScreenIDE({
     );
   }, [isDocsCollapsed]);
 
+  // IMPORTANT: All hooks must be called before any early returns
+  const { isReadOnly } = useWorkflowReadOnly();
+
+  // Check loading state but don't use early return (violates rules of hooks)
+  // Only check for job existence, not ytext/awareness
+  // ytext and awareness persist during disconnection for offline editing
+  const isLoading = !currentJob;
+
+  // If loading, render loading state at the end instead of early return
+  if (isLoading) {
+    return (
+      <div
+        className="absolute inset-0 z-50 bg-white flex
+          items-center justify-center"
+      >
+        <div className="text-center">
+          <div
+            className="hero-arrow-path size-8 animate-spin
+            text-blue-500 mx-auto"
+            aria-hidden="true"
+          />
+          <p className="text-gray-500 mt-2">Loading editor...</p>
+        </div>
+      </div>
+    );
+  }
+
   const openPanelCount =
     (!isCenterCollapsed ? 1 : 0) + (!isRightCollapsed ? 1 : 0);
 
@@ -608,31 +635,6 @@ export function FullScreenIDE({
       docsPanelRef.current?.expand();
     }
   };
-
-  // IMPORTANT: All hooks must be called before any early returns
-  const { isReadOnly } = useWorkflowReadOnly();
-
-  // Check loading state but don't use early return (violates rules of hooks)
-  const isLoading = !currentJob || !currentJobYText || !awareness;
-
-  // If loading, render loading state (this is after all hooks are called)
-  if (isLoading) {
-    return (
-      <div
-        className="absolute inset-0 z-50 bg-white flex
-          items-center justify-center"
-      >
-        <div className="text-center">
-          <div
-            className="hero-arrow-path size-8 animate-spin
-            text-blue-500 mx-auto"
-            aria-hidden="true"
-          />
-          <p className="text-gray-500 mt-2">Loading editor...</p>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="absolute inset-0 z-49 bg-white flex flex-col">
