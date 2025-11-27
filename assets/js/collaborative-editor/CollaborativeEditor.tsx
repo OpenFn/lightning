@@ -14,6 +14,7 @@ import { AIAssistantPanel } from './components/AIAssistantPanel';
 import { MessageList } from './components/MessageList';
 import { BreadcrumbLink, BreadcrumbText } from './components/Breadcrumbs';
 import { Header } from './components/Header';
+import { FullScreenIDE } from './components/ide/FullScreenIDE';
 import { LoadingBoundary } from './components/LoadingBoundary';
 import { Toaster } from './components/ui/Toaster';
 import { VersionDebugLogger } from './components/VersionDebugLogger';
@@ -42,10 +43,11 @@ import {
   useIsRunPanelOpen,
   useUICommands,
 } from './hooks/useUI';
+import { useNodeSelection } from './hooks/useWorkflow';
 import { useVersionSelect } from './hooks/useVersionSelect';
 import { useWorkflowState, useWorkflowActions } from './hooks/useWorkflow';
+import { useKeyboardShortcut, KeyboardProvider } from './keyboard';
 import { notifications } from './lib/notifications';
-import { KeyboardProvider } from './keyboard';
 
 export interface CollaborativeEditorDataProps {
   'data-workflow-id': string;
@@ -985,7 +987,7 @@ function AIAssistantPanelWrapper() {
 
   return (
     <div
-      className="flex h-full flex-shrink-0"
+      className="flex h-full flex-shrink-0 z-[60]"
       style={{
         width: isAIAssistantPanelOpen ? `${width}px` : '0px',
         transition: isResizing
@@ -1071,7 +1073,7 @@ function BreadcrumbContent({
   // Get run panel state for Header tooltip logic
   const isRunPanelOpen = useIsRunPanelOpen();
 
-  // Detect IDE mode
+  // Detect IDE mode from URL
   const { searchParams } = useURLState();
   const isIDEOpen = searchParams.get('panel') === 'editor';
 
@@ -1150,6 +1152,61 @@ function BreadcrumbContent({
   );
 }
 
+/**
+ * IDEWrapper Component
+ *
+ * Manages the Full Screen IDE rendering and keyboard shortcuts.
+ * Must be inside StoreProvider to access workflow and UI state.
+ */
+/**
+ * IDEWrapper Props Interface
+ */
+interface IDEWrapperProps {
+  parentProjectId?: string | null;
+  parentProjectName?: string | null;
+}
+
+function IDEWrapper({ parentProjectId, parentProjectName }: IDEWrapperProps) {
+  const { searchParams, updateSearchParams } = useURLState();
+  const { currentNode } = useNodeSelection();
+
+  const isIDEOpen = searchParams.get('panel') === 'editor';
+  const selectedJobId = searchParams.get('job');
+
+  const handleCloseIDE = useCallback(() => {
+    updateSearchParams({ panel: null, job: null });
+  }, [updateSearchParams]);
+
+  // Open Code Editor with Cmd+E / Ctrl+E
+  useKeyboardShortcut(
+    'Control+e, Meta+e',
+    () => {
+      if (currentNode.type !== 'job' || !currentNode.node) {
+        return;
+      }
+
+      updateSearchParams({ panel: 'editor' });
+    },
+    0, // GLOBAL priority
+    {
+      enabled: !isIDEOpen,
+    }
+  );
+
+  if (!isIDEOpen || !selectedJobId) {
+    return null;
+  }
+
+  return (
+    <FullScreenIDE
+      jobId={selectedJobId}
+      onClose={handleCloseIDE}
+      parentProjectId={parentProjectId ?? null}
+      parentProjectName={parentProjectName ?? null}
+    />
+  );
+}
+
 export const CollaborativeEditor: WithActionProps<
   CollaborativeEditorDataProps
 > = props => {
@@ -1175,7 +1232,7 @@ export const CollaborativeEditor: WithActionProps<
   return (
     <KeyboardProvider>
       <div
-        className="collaborative-editor h-full flex flex-col relative"
+        className="collaborative-editor h-full flex relative"
         data-testid="collaborative-editor"
       >
         <SocketProvider>
@@ -1188,8 +1245,8 @@ export const CollaborativeEditor: WithActionProps<
               <LiveViewActionsProvider actions={liveViewActions}>
                 <VersionDebugLogger />
                 <Toaster />
-                {/* Main content area - pushed by AI panel */}
-                <div className="flex-1 min-h-0 h-full overflow-hidden flex flex-col">
+                {/* Main content area - will be pushed left by AI panel */}
+                <div className="flex-1 min-h-0 overflow-hidden flex flex-col relative">
                   {/* Breadcrumb bar at top */}
                   <BreadcrumbContent
                     workflowId={workflowId}
@@ -1210,23 +1267,21 @@ export const CollaborativeEditor: WithActionProps<
                       rootProjectNameFallback: rootProjectName,
                     })}
                   />
-                  {/* Content area below breadcrumbs */}
-                  <div className="flex-1 min-h-0 h-full overflow-hidden">
+                  {/* Content area below breadcrumbs - this is the positioning context for IDE */}
+                  <div className="flex-1 min-h-0 overflow-hidden relative">
                     <LoadingBoundary>
                       <div className="h-full w-full">
-                        <WorkflowEditor
-                          {...(rootProjectId !== null && {
-                            parentProjectId: rootProjectId,
-                          })}
-                          {...(rootProjectName !== null && {
-                            parentProjectName: rootProjectName,
-                          })}
-                        />
+                        <WorkflowEditor />
                       </div>
                     </LoadingBoundary>
+                    {/* Full Screen IDE - positioned relative to content area, below header */}
+                    <IDEWrapper
+                      parentProjectId={rootProjectId}
+                      parentProjectName={rootProjectName}
+                    />
                   </div>
                 </div>
-                {/* AI Assistant Panel - at root level, pushes everything */}
+                {/* AI Assistant Panel - at root level, pushes everything left */}
                 <AIAssistantPanelWrapper />
               </LiveViewActionsProvider>
             </StoreProvider>

@@ -13,7 +13,6 @@ import {
   useUICommands,
 } from '../hooks/useUI';
 import {
-  useCanRun,
   useNodeSelection,
   useWorkflowActions,
   useWorkflowState,
@@ -22,21 +21,12 @@ import {
 import { useKeyboardShortcut } from '../keyboard';
 
 import { CollaborativeWorkflowDiagram } from './diagram/CollaborativeWorkflowDiagram';
-import { FullScreenIDE } from './ide/FullScreenIDE';
 import { Inspector } from './inspector';
 import { LeftPanel } from './left-panel';
 import { ManualRunPanel } from './ManualRunPanel';
 import { ManualRunPanelErrorBoundary } from './ManualRunPanelErrorBoundary';
 
-interface WorkflowEditorProps {
-  parentProjectId?: string | null;
-  parentProjectName?: string | null;
-}
-
-export function WorkflowEditor({
-  parentProjectId,
-  parentProjectName,
-}: WorkflowEditorProps = {}) {
+export function WorkflowEditor() {
   const { searchParams, updateSearchParams } = useURLState();
   const { currentNode, selectNode } = useNodeSelection();
   const workflowStore = useWorkflowStoreContext();
@@ -185,9 +175,6 @@ export function WorkflowEditor({
     }
   }, [isNewWorkflow, showLeftPanel]);
 
-  const { canRun: canOpenRunPanel, tooltipMessage: runDisabledReason } =
-    useCanRun();
-
   const workflow = useWorkflowState(state => ({
     ...state.workflow!,
     jobs: state.jobs,
@@ -203,9 +190,6 @@ export function WorkflowEditor({
     | null;
 
   const leftPanelMethod = showLeftPanel ? currentMethod || 'template' : null;
-
-  const isIDEOpen = searchParams.get('panel') === 'editor';
-  const selectedJobId = searchParams.get('job');
 
   const handleCloseInspector = () => {
     selectNode(null);
@@ -243,26 +227,6 @@ export function WorkflowEditor({
     handleCloseLeftPanel();
   };
 
-  const handleCloseIDE = () => {
-    updateSearchParams({ panel: null });
-  };
-
-  // Open Code Editor with Cmd+E / Ctrl+E
-  useKeyboardShortcut(
-    'Control+e, Meta+e',
-    () => {
-      if (currentNode.type !== 'job' || !currentNode.node) {
-        return;
-      }
-
-      updateSearchParams({ panel: 'editor' });
-    },
-    0, // GLOBAL priority
-    {
-      enabled: !isIDEOpen,
-    }
-  );
-
   // CMD+Enter: Open run panel or run workflow
   useKeyboardShortcut(
     'Control+Enter, Meta+Enter',
@@ -287,7 +251,7 @@ export function WorkflowEditor({
     },
     0, // GLOBAL priority
     {
-      enabled: !isIDEOpen && !isRunPanelOpen,
+      enabled: !isRunPanelOpen,
     }
   );
 
@@ -342,15 +306,6 @@ export function WorkflowEditor({
         onClosePanel={handleCloseLeftPanel}
         onSave={handleSaveAndClose}
       />
-
-      {isIDEOpen && selectedJobId && (
-        <FullScreenIDE
-          jobId={selectedJobId}
-          onClose={handleCloseIDE}
-          parentProjectId={parentProjectId}
-          parentProjectName={parentProjectName}
-        />
-      )}
     </div>
   );
 }

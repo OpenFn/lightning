@@ -193,8 +193,14 @@ export function FullScreenIDE({
     [updateSearchParams]
   );
 
+  // Only follow run when session is connected and settled
+  // This prevents "No connection available" errors on initial load
+  const { isConnected, settled } = useSession();
+  const isSessionReady = isConnected && settled;
+
   // Declaratively connect to run channel when runIdFromURL changes
-  const currentRun = useFollowRun(runIdFromURL);
+  // Only attempt connection once session is fully ready
+  const currentRun = useFollowRun(isSessionReady ? runIdFromURL : null);
 
   // Check if the currently selected job matches the loaded run
   const jobMatchesRun = useJobMatchesRun(currentJob?.id || null);
@@ -560,31 +566,6 @@ export function FullScreenIDE({
     );
   }, [isDocsCollapsed]);
 
-  // IMPORTANT: All hooks must be called before any early returns
-  const { isReadOnly } = useWorkflowReadOnly();
-
-  // Check loading state but don't use early return (violates rules of hooks)
-  const isLoading = !currentJob || !currentJobYText || !awareness;
-
-  // If loading, render loading state at the end instead of early return
-  if (isLoading) {
-    return (
-      <div
-        className="absolute inset-0 z-50 bg-white flex
-          items-center justify-center"
-      >
-        <div className="text-center">
-          <div
-            className="hero-arrow-path size-8 animate-spin
-            text-blue-500 mx-auto"
-            aria-hidden="true"
-          />
-          <p className="text-gray-500 mt-2">Loading editor...</p>
-        </div>
-      </div>
-    );
-  }
-
   const openPanelCount =
     (!isCenterCollapsed ? 1 : 0) + (!isRightCollapsed ? 1 : 0);
 
@@ -628,8 +609,33 @@ export function FullScreenIDE({
     }
   };
 
+  // IMPORTANT: All hooks must be called before any early returns
+  const { isReadOnly } = useWorkflowReadOnly();
+
+  // Check loading state but don't use early return (violates rules of hooks)
+  const isLoading = !currentJob || !currentJobYText || !awareness;
+
+  // If loading, render loading state (this is after all hooks are called)
+  if (isLoading) {
+    return (
+      <div
+        className="absolute inset-0 z-50 bg-white flex
+          items-center justify-center"
+      >
+        <div className="text-center">
+          <div
+            className="hero-arrow-path size-8 animate-spin
+            text-blue-500 mx-auto"
+            aria-hidden="true"
+          />
+          <p className="text-gray-500 mt-2">Loading editor...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="absolute inset-0 top-20 bottom-0 z-49 bg-white flex flex-col">
+    <div className="absolute inset-0 z-49 bg-white flex flex-col">
       <SandboxIndicatorBanner
         parentProjectId={parentProjectId}
         parentProjectName={parentProjectName}
