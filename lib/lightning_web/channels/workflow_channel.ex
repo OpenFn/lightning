@@ -169,7 +169,8 @@ defmodule LightningWeb.WorkflowChannel do
       # socket.assigns.workflow could be an old snapshot (e.g., v22)
       # but we need to send the actual latest lock_version (e.g., v28)
       # so the frontend knows the difference between viewing v22 vs latest
-      fresh_workflow = Lightning.Workflows.get_workflow(workflow.id)
+      # For create mode (new workflows), the workflow doesn't exist in DB yet, so use socket workflow
+      fresh_workflow = Lightning.Workflows.get_workflow(workflow.id) || workflow
 
       project_repo_connection =
         VersionControl.get_repo_connection_for_project(project.id)
@@ -823,10 +824,45 @@ defmodule LightningWeb.WorkflowChannel do
   end
 
   defp format_changeset_errors(changeset) do
-    Ecto.Changeset.traverse_errors(changeset, fn {msg, opts} ->
+    changeset
+    |> Ecto.Changeset.traverse_errors(fn {msg, opts} ->
       Enum.reduce(opts, msg, fn {key, value}, acc ->
         String.replace(acc, "%{#{key}}", to_string(value))
       end)
+    end)
+    |> flatten_association_errors()
+  end
+
+  # Flattens nested association errors into a flat structure for frontend.
+  # Converts %{triggers: [%{type: ["error"]}]} to %{"triggers[0].type" => ["error"]}
+  defp flatten_association_errors(errors) do
+    Enum.reduce(errors, %{}, fn {key, value}, acc ->
+      case value do
+        # List of error maps (nested associations)
+        list when is_list(list) ->
+          if Enum.any?(list, &is_map/1) do
+            list
+            |> Enum.with_index()
+            |> Enum.reduce(acc, fn {item_errors, index}, inner_acc ->
+              Enum.reduce(item_errors, inner_acc, fn {field, messages},
+                                                     nested_acc ->
+                flattened_key = "#{key}[#{index}].#{field}"
+                Map.put(nested_acc, flattened_key, messages)
+              end)
+            end)
+          else
+            # List of error messages (not nested objects)
+            Map.put(acc, to_string(key), list)
+          end
+
+        # Direct error messages
+        messages when is_list(messages) ->
+          Map.put(acc, to_string(key), messages)
+
+        # Shouldn't happen, but handle nested maps just in case
+        _ ->
+          Map.put(acc, to_string(key), value)
+      end
     end)
   end
 

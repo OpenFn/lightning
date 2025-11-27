@@ -28,7 +28,8 @@ defmodule LightningWeb.AiAssistantChannel do
       ) do
     with {:user, user} when not is_nil(user) <-
            {:user, socket.assigns[:current_user]},
-         {:ok, session_type, session_id} <- parse_topic(rest),
+         {:parse_topic, {:ok, session_type, session_id}} <-
+           {:parse_topic, parse_topic(rest)},
          {:session, {:ok, session}} <-
            {:session,
             load_or_create_session(session_type, session_id, params, user)},
@@ -60,7 +61,7 @@ defmodule LightningWeb.AiAssistantChannel do
       {:user, nil} ->
         {:error, %{reason: "unauthorized"}}
 
-      {:session_type, nil} ->
+      {:parse_topic, {:error, :invalid_topic}} ->
         {:error, %{reason: "invalid topic format"}}
 
       {:session, {:error, reason}} ->
@@ -147,13 +148,8 @@ defmodule LightningWeb.AiAssistantChannel do
   def handle_in("mark_disclaimer_read", _params, socket) do
     user = socket.assigns.current_user
 
-    case AiAssistant.mark_disclaimer_read(user) do
-      {:ok, _user} ->
-        {:reply, {:ok, %{success: true}}, socket}
-
-      {:error, reason} ->
-        {:reply, {:error, %{reason: reason}}, socket}
-    end
+    {:ok, _user} = AiAssistant.mark_disclaimer_read(user)
+    {:reply, {:ok, %{success: true}}, socket}
   end
 
   @impl true
@@ -251,12 +247,30 @@ defmodule LightningWeb.AiAssistantChannel do
     offset = Map.get(params, "offset", 0)
     limit = Map.get(params, "limit", 20)
 
+    # Build options with workflow filter for workflow_template sessions
+    # This matches the legacy editor behavior where sessions are scoped by workflow
+    opts = [offset: offset, limit: limit]
+
+    opts =
+      if session_type == "workflow_template" do
+        # Extract workflow from session or unsaved_workflow meta
+        workflow = get_workflow_for_session(session)
+
+        Logger.debug("""
+        [AiAssistantChannel] Filtering sessions by workflow
+        Session workflow_id: #{inspect(session.workflow_id)}
+        Session unsaved_workflow: #{inspect(session.meta["unsaved_workflow"])}
+        Extracted workflow: #{inspect(workflow && workflow.id)}
+        """)
+
+        Keyword.put(opts, :workflow, workflow)
+      else
+        opts
+      end
+
     with {:ok, resource} <- get_resource_for_session_type(session_type, session),
          %{sessions: sessions, pagination: pagination} <-
-           AiAssistant.list_sessions(resource, :desc,
-             offset: offset,
-             limit: limit
-           ) do
+           AiAssistant.list_sessions(resource, :desc, opts) do
       Logger.debug("""
       [AiAssistantChannel] list_sessions result
       Resource: #{inspect(resource)}
@@ -407,12 +421,35 @@ defmodule LightningWeb.AiAssistantChannel do
                {:project, Projects.get_project(project_id)},
              {:content, content} when not is_nil(content) <-
                {:content, params["content"]} do
+          # Try to load workflow from database if workflow_id provided
           workflow =
             if params["workflow_id"],
               do: Workflows.get_workflow(params["workflow_id"]),
               else: nil
 
-          opts = extract_session_options("workflow_template", params)
+          # If workflow_id provided but workflow not found in DB,
+          # this is a create mode workflow (temporary ID)
+          is_new_workflow = params["workflow_id"] && is_nil(workflow)
+
+          # Extract base options
+          base_opts = extract_session_options("workflow_template", params)
+          base_meta = Keyword.get(base_opts, :meta, %{})
+
+          # If this is a new workflow (create mode), store temporary workflow_id in meta
+          opts =
+            if is_new_workflow do
+              meta =
+                Map.merge(base_meta, %{
+                  "unsaved_workflow" => %{
+                    "id" => params["workflow_id"],
+                    "is_new" => true
+                  }
+                })
+
+              Keyword.put(base_opts, :meta, meta)
+            else
+              base_opts
+            end
 
           AiAssistant.create_workflow_session(
             project,
@@ -505,11 +542,26 @@ defmodule LightningWeb.AiAssistantChannel do
         end
 
       "workflow_template" ->
-        # User must have access to the project
-        project = Projects.get_project(session.project_id)
-        project_user = Projects.get_project_user(project, user)
+        # Check if this is an unsaved workflow session
+        unsaved_workflow = session.meta["unsaved_workflow"]
 
-        Permissions.can(:workflows, :access_read, user, project_user)
+        cond do
+          # Unsaved workflow - verify access through project_id
+          unsaved_workflow && unsaved_workflow["id"] ->
+            project = Projects.get_project(session.project_id)
+            project_user = Projects.get_project_user(project, user)
+            Permissions.can(:workflows, :access_write, user, project_user)
+
+          # Saved workflow or project-level session - verify through project_id
+          session.project_id ->
+            project = Projects.get_project(session.project_id)
+            project_user = Projects.get_project_user(project, user)
+            Permissions.can(:workflows, :access_write, user, project_user)
+
+          # Fallback for older sessions
+          true ->
+            :ok
+        end
     end
   end
 
@@ -587,11 +639,65 @@ defmodule LightningWeb.AiAssistantChannel do
   end
 
   defp format_changeset_errors(changeset) do
-    Ecto.Changeset.traverse_errors(changeset, fn {msg, opts} ->
+    changeset
+    |> Ecto.Changeset.traverse_errors(fn {msg, opts} ->
       Enum.reduce(opts, msg, fn {key, value}, acc ->
         String.replace(acc, "%{#{key}}", to_string(value))
       end)
     end)
+    |> flatten_association_errors()
+  end
+
+  # Flattens nested association errors into a flat structure for frontend.
+  # Converts %{triggers: [%{type: ["error"]}]} to %{"triggers[0].type" => ["error"]}
+  defp flatten_association_errors(errors) do
+    Enum.reduce(errors, %{}, fn {key, value}, acc ->
+      case value do
+        # List of error maps (nested associations)
+        list when is_list(list) ->
+          if Enum.any?(list, &is_map/1) do
+            list
+            |> Enum.with_index()
+            |> Enum.reduce(acc, fn {item_errors, index}, inner_acc ->
+              Enum.reduce(item_errors, inner_acc, fn {field, messages},
+                                                     nested_acc ->
+                flattened_key = "#{key}[#{index}].#{field}"
+                Map.put(nested_acc, flattened_key, messages)
+              end)
+            end)
+          else
+            # List of error messages (not nested objects)
+            Map.put(acc, to_string(key), list)
+          end
+
+        # Direct error messages
+        messages when is_list(messages) ->
+          Map.put(acc, to_string(key), messages)
+
+        # Shouldn't happen, but handle nested maps just in case
+        _ ->
+          Map.put(acc, to_string(key), value)
+      end
+    end)
+  end
+
+  # Extracts the workflow for a workflow_template session
+  # Returns nil for unsaved workflows (matching legacy editor behavior)
+  defp get_workflow_for_session(session) do
+    cond do
+      # Check if this is an unsaved workflow (no workflow_id, or has unsaved_workflow meta)
+      session.meta["unsaved_workflow"] ->
+        # Unsaved workflow - return nil to match sessions without workflow_id
+        nil
+
+      # Session has a workflow_id - load it from database
+      session.workflow_id ->
+        Workflows.get_workflow(session.workflow_id)
+
+      # No workflow associated
+      true ->
+        nil
+    end
   end
 
   defp get_resource_for_session_type("job_code", session) do

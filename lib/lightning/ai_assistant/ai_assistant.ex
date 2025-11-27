@@ -380,6 +380,74 @@ defmodule Lightning.AiAssistant do
   end
 
   @doc """
+  Cleans up unsaved workflow data in AI sessions after workflow is saved.
+
+  When a workflow in create mode is saved for the first time, this function:
+  1. Finds all sessions with matching temporary workflow IDs in meta["unsaved_workflow"]
+  2. Updates those sessions to set workflow_id to the real database ID
+  3. Removes the meta["unsaved_workflow"] data
+
+  ## Parameters
+
+  - `workflow` - The saved `%Workflow{}` with a database ID
+
+  ## Returns
+
+  - `{:ok, updated_count}` - Number of sessions updated
+  - `{:error, reason}` - If update fails
+
+  ## Example
+
+      iex> cleanup_unsaved_workflow_sessions(workflow)
+      {:ok, 2}  # Updated 2 sessions
+  """
+  @spec cleanup_unsaved_workflow_sessions(Workflow.t()) ::
+          {:ok, non_neg_integer()} | {:error, term()}
+  def cleanup_unsaved_workflow_sessions(%Workflow{} = workflow) do
+    # Find all workflow_template sessions with unsaved_workflow data matching this workflow
+    query =
+      from s in ChatSession,
+        where: s.session_type == "workflow_template",
+        where: s.project_id == ^workflow.project_id,
+        where: is_nil(s.workflow_id),
+        where:
+          fragment(
+            "? -> 'unsaved_workflow' ->> 'id' = ?",
+            s.meta,
+            ^workflow.id
+          )
+
+    sessions = Repo.all(query)
+
+    # Update each session to use real workflow_id and remove unsaved_workflow
+    updated_count =
+      Enum.reduce(sessions, 0, fn session, count ->
+        case session
+             |> Changeset.change(%{
+               workflow_id: workflow.id,
+               meta: Map.delete(session.meta, "unsaved_workflow")
+             })
+             |> Repo.update() do
+          {:ok, _} ->
+            Logger.info(
+              "Cleaned up unsaved_workflow for session #{session.id}, set workflow_id to #{workflow.id}"
+            )
+
+            count + 1
+
+          {:error, changeset} ->
+            Logger.error(
+              "Failed to cleanup unsaved_workflow for session #{session.id}: #{inspect(changeset.errors)}"
+            )
+
+            count
+        end
+      end)
+
+    {:ok, updated_count}
+  end
+
+  @doc """
   Retrieves a chat session by ID with all related data preloaded.
 
   Fetches a complete chat session including:

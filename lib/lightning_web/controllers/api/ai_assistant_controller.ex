@@ -6,9 +6,9 @@ defmodule LightningWeb.API.AiAssistantController do
 
   alias Lightning.AiAssistant
   alias Lightning.Jobs
+  alias Lightning.Policies.Permissions
   alias Lightning.Projects
   alias Lightning.Workflows
-  alias Lightning.Policies.Permissions
 
   action_fallback LightningWeb.FallbackController
 
@@ -43,18 +43,37 @@ defmodule LightningWeb.API.AiAssistantController do
 
       resource_id = if is_binary(resource), do: resource, else: resource.id
 
+      # Build options with workflow filter for workflow_template sessions
+      # This matches the legacy editor and collaborative editor channel behavior
+      opts = [offset: offset, limit: limit]
+
+      opts =
+        if session_type == "workflow_template" do
+          # Extract workflow_id from params if provided
+          workflow =
+            case params["workflow_id"] do
+              nil -> nil
+              workflow_id -> Workflows.get_workflow(workflow_id)
+            end
+
+          Logger.debug("[AI Assistant API] Filtering by workflow", %{
+            workflow_id: params["workflow_id"],
+            workflow: workflow && workflow.id
+          })
+
+          Keyword.put(opts, :workflow, workflow)
+        else
+          opts
+        end
+
       Logger.debug("[AI Assistant API] Fetching sessions", %{
         session_type: session_type,
         resource_id: resource_id,
-        offset: offset,
-        limit: limit
+        opts: opts
       })
 
       %{sessions: sessions, pagination: pagination} =
-        AiAssistant.list_sessions(resource, :desc,
-          offset: offset,
-          limit: limit
-        )
+        AiAssistant.list_sessions(resource, :desc, opts)
 
       Logger.debug("[AI Assistant API] Sessions fetched", %{
         count: length(sessions),
@@ -114,9 +133,16 @@ defmodule LightningWeb.API.AiAssistantController do
     # Try to load job from database - if it exists, check via workflow
     case Jobs.get_job(job_id) do
       {:ok, job} ->
-        workflow = Workflows.get_workflow(job.workflow_id)
-        project = Projects.get_project(workflow.project_id)
-        project_user = Projects.get_project_user(project, user)
+        # Job exists - job already has workflow preloaded from Jobs.get_job/1
+        # Use a single query to load workflow with project and project_user
+        workflow =
+          job.workflow
+          |> Repo.preload(project: [:project_users])
+
+        project_user =
+          Enum.find(workflow.project.project_users, fn pu ->
+            pu.user_id == user.id
+          end)
 
         case Permissions.can(:workflows, :access_read, user, project_user) do
           :ok -> :ok
@@ -126,6 +152,7 @@ defmodule LightningWeb.API.AiAssistantController do
       {:error, :not_found} ->
         # Job doesn't exist yet (unsaved)
         # Try to find any session with this job_id to get workflow_id
+        # Use a more efficient query that preloads what we need
         session =
           from(s in ChatSession,
             where: s.session_type == "job_code",
@@ -142,10 +169,15 @@ defmodule LightningWeb.API.AiAssistantController do
             :ok
 
           %{meta: %{"unsaved_job" => %{"workflow_id" => workflow_id}}} ->
-            # Unsaved job - check via workflow from meta
-            workflow = Workflows.get_workflow(workflow_id)
-            project = Projects.get_project(workflow.project_id)
-            project_user = Projects.get_project_user(project, user)
+            # Unsaved job - load workflow with project and project_users in one query
+            workflow =
+              Workflows.get_workflow(workflow_id)
+              |> Repo.preload(project: [:project_users])
+
+            project_user =
+              Enum.find(workflow.project.project_users, fn pu ->
+                pu.user_id == user.id
+              end)
 
             case Permissions.can(:workflows, :access_read, user, project_user) do
               :ok -> :ok
@@ -154,12 +186,17 @@ defmodule LightningWeb.API.AiAssistantController do
 
           %{job_id: saved_job_id} when not is_nil(saved_job_id) ->
             # Session was for a saved job that might have been deleted
-            # Try to get workflow through the job
             case Jobs.get_job(saved_job_id) do
               {:ok, job} ->
-                workflow = Workflows.get_workflow(job.workflow_id)
-                project = Projects.get_project(workflow.project_id)
-                project_user = Projects.get_project_user(project, user)
+                # Use preloaded workflow and load project with project_users
+                workflow =
+                  job.workflow
+                  |> Repo.preload(project: [:project_users])
+
+                project_user =
+                  Enum.find(workflow.project.project_users, fn pu ->
+                    pu.user_id == user.id
+                  end)
 
                 case Permissions.can(
                        :workflows,

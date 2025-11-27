@@ -386,7 +386,7 @@ defmodule LightningWeb.WorkflowChannelTest do
       }
 
       assert is_map(errors)
-      assert errors[:name]
+      assert errors["name"]
     end
 
     test "handles optimistic lock conflicts", %{
@@ -578,8 +578,8 @@ defmodule LightningWeb.WorkflowChannelTest do
         type: "validation_error"
       }
 
-      assert errors[:name]
-      assert errors[:name] |> List.first() =~ "can't be blank"
+      assert errors["name"]
+      assert errors["name"] |> List.first() =~ "can't be blank"
 
       # Verify error was written to Y.Doc
       errors_map = Yex.Doc.get_map(doc, "errors")
@@ -659,6 +659,139 @@ defmodule LightningWeb.WorkflowChannelTest do
              )
     end
 
+    test "flattens trigger validation errors for channel response",
+         %{socket: socket, doc: doc} do
+      # Add invalid trigger to Y.Doc
+      triggers_array = Yex.Doc.get_array(doc, "triggers")
+
+      trigger_map =
+        Yex.MapPrelim.from(%{
+          "id" => Ecto.UUID.generate(),
+          # Invalid - type is required
+          "type" => nil
+        })
+
+      Yex.Doc.transaction(doc, "test_add_invalid_trigger", fn ->
+        Yex.Array.push(triggers_array, trigger_map)
+      end)
+
+      # Attempt save
+      ref = push(socket, "save_workflow", %{})
+
+      assert_reply ref, :error, %{
+        errors: errors,
+        type: "validation_error"
+      }
+
+      # Verify errors are flattened for channel response
+      assert Map.has_key?(errors, "triggers[0].type")
+      assert errors["triggers[0].type"] == ["can't be blank"]
+    end
+
+    test "flattens multiple trigger validation errors",
+         %{socket: socket, doc: doc} do
+      triggers_array = Yex.Doc.get_array(doc, "triggers")
+
+      # Add two invalid triggers
+      Yex.Doc.transaction(doc, "test_add_invalid_triggers", fn ->
+        Yex.Array.push(
+          triggers_array,
+          Yex.MapPrelim.from(%{
+            "id" => Ecto.UUID.generate(),
+            "type" => nil
+          })
+        )
+
+        Yex.Array.push(
+          triggers_array,
+          Yex.MapPrelim.from(%{
+            "id" => Ecto.UUID.generate(),
+            "type" => "cron",
+            "cron_expression" => "invalid"
+          })
+        )
+      end)
+
+      # Attempt save
+      ref = push(socket, "save_workflow", %{})
+
+      assert_reply ref, :error, %{
+        errors: errors,
+        type: "validation_error"
+      }
+
+      # Verify both errors are flattened with correct indices
+      assert Map.has_key?(errors, "triggers[0].type")
+      assert errors["triggers[0].type"] == ["can't be blank"]
+
+      assert Map.has_key?(errors, "triggers[1].cron_expression")
+      assert List.first(errors["triggers[1].cron_expression"]) =~ "Can't parse"
+    end
+
+    test "flattens job validation errors for channel response",
+         %{socket: socket, doc: doc} do
+      # Add job with missing required fields
+      jobs_array = Yex.Doc.get_array(doc, "jobs")
+
+      Yex.Doc.transaction(doc, "add_invalid_job", fn ->
+        job_map =
+          Yex.MapPrelim.from(%{
+            "id" => Ecto.UUID.generate(),
+            "name" => "",
+            # Missing required: body, adaptor
+            "body" => Yex.TextPrelim.from(""),
+            "adaptor" => nil
+          })
+
+        Yex.Array.push(jobs_array, job_map)
+      end)
+
+      # Attempt save
+      ref = push(socket, "save_workflow", %{})
+
+      assert_reply ref, :error, %{
+        errors: errors,
+        type: "validation_error"
+      }
+
+      # Verify job errors are flattened with index notation
+      assert Map.has_key?(errors, "jobs[0].name")
+      assert Map.has_key?(errors, "jobs[0].body")
+      assert Map.has_key?(errors, "jobs[0].adaptor")
+    end
+
+    test "flattens edge validation errors for channel response",
+         %{socket: socket, doc: doc} do
+      # Add edge with missing required fields
+      edges_array = Yex.Doc.get_array(doc, "edges")
+
+      Yex.Doc.transaction(doc, "add_invalid_edge", fn ->
+        edge_map =
+          Yex.MapPrelim.from(%{
+            "id" => Ecto.UUID.generate(),
+            # Missing required: condition_type
+            "source_trigger_id" => nil,
+            "source_job_id" => nil,
+            "target_job_id" => Ecto.UUID.generate(),
+            "enabled" => true
+          })
+
+        Yex.Array.push(edges_array, edge_map)
+      end)
+
+      # Attempt save
+      ref = push(socket, "save_workflow", %{})
+
+      assert_reply ref, :error, %{
+        errors: errors,
+        type: "validation_error"
+      }
+
+      # Verify edge errors are flattened with index notation
+      assert Map.has_key?(errors, "edges[0].condition_type")
+      assert errors["edges[0].condition_type"] == ["can't be blank"]
+    end
+
     test "handles duplicate workflow name validation",
          %{socket: socket, doc: doc, project: project} do
       # Create another workflow with a specific name
@@ -679,8 +812,8 @@ defmodule LightningWeb.WorkflowChannelTest do
         type: "validation_error"
       }
 
-      assert errors[:name]
-      assert errors[:name] |> List.first() =~ "already exists"
+      assert errors["name"]
+      assert errors["name"] |> List.first() =~ "already exists"
 
       # Verify error in Y.Doc
       errors_map = Yex.Doc.get_map(doc, "errors")
@@ -825,7 +958,7 @@ defmodule LightningWeb.WorkflowChannelTest do
       }
 
       assert is_map(errors)
-      assert errors[:name]
+      assert errors["name"]
     end
 
     test "requires GitHub repo connection to be configured", %{socket: socket} do
