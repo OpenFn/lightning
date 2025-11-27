@@ -21,6 +21,9 @@ and this project adheres to
 
 ### Fixed
 
+- Loading workflow screen appears when disconnected from server
+  [#3972](https://github.com/OpenFn/lightning/issues/3972)
+
 ## [2.15.0-pre1] - 2025-11-27
 
 ### Added
@@ -57,8 +60,6 @@ and this project adheres to
   [PR#4047](https://github.com/OpenFn/lightning/pull/4047)
 - Fix error validation for nodes/edges & show better error messages on save
   [PR#4061](https://github.com/OpenFn/lightning/pull/4061)
-- Loading workflow screen appears when disconnected from server
-  [#3972](https://github.com/OpenFn/lightning/issues/3972)
 - Fix custom cron expressions getting overwritten & additional cron support
   [#4011](https://github.com/OpenFn/lightning/issues/4011)
 - Fix monaco popups and tooltips getting cut off
