@@ -17,6 +17,14 @@ and this project adheres to
 
 ### Added
 
+### Changed
+
+### Fixed
+
+## [2.15.0-pre1] - 2025-11-27
+
+### Added
+
 - Add workflow template publishing to collaborative editor
   [#3921](https://github.com/OpenFn/lightning/issues/3921)
 
