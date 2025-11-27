@@ -1,10 +1,15 @@
 import { useMemo } from 'react';
 import YAML from 'yaml';
 
-import { useWorkflowState } from '#/collaborative-editor/hooks/useWorkflow';
+import {
+  useWorkflowState,
+  useCanPublishTemplate,
+} from '#/collaborative-editor/hooks/useWorkflow';
 import { notifications } from '#/collaborative-editor/lib/notifications';
 import type { WorkflowState as YAMLWorkflowState } from '#/yaml/types';
 import { convertWorkflowStateToSpec } from '#/yaml/util';
+import { useURLState } from '#/react/lib/use-url-state';
+import { cn } from '#/utils/cn';
 
 export function CodeViewPanel() {
   // Read workflow data from store - LoadingBoundary guarantees non-null
@@ -78,6 +83,15 @@ export function CodeViewPanel() {
     }
   };
 
+  // Template publishing state and handlers
+  const { canPublish, buttonDisabled, tooltipMessage, buttonText } =
+    useCanPublishTemplate();
+  const { updateSearchParams } = useURLState();
+
+  const handlePublishTemplate = () => {
+    updateSearchParams({ panel: 'publish-template' });
+  };
+
   if (!workflow) {
     return <div className="px-4 py-5 text-gray-500">Loading...</div>;
   }
@@ -125,6 +139,23 @@ export function CodeViewPanel() {
           >
             Copy Code
           </button>
+          {canPublish && (
+            <button
+              id="publish-template-btn"
+              type="button"
+              onClick={handlePublishTemplate}
+              disabled={buttonDisabled}
+              {...(tooltipMessage && { title: tooltipMessage })}
+              className={cn(
+                'rounded-md px-3 py-2 text-sm font-semibold shadow-xs min-w-[8rem]',
+                buttonDisabled
+                  ? 'bg-primary-300 text-white cursor-not-allowed'
+                  : 'bg-primary-600 text-white hover:bg-primary-700 cursor-pointer'
+              )}
+            >
+              {buttonText}
+            </button>
+          )}
         </div>
       </div>
     </>

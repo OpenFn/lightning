@@ -42,6 +42,7 @@ import type {
   ProjectContext,
   ProjectRepoConnection,
   UserContext,
+  WorkflowTemplate,
 } from '../types/sessionContext';
 
 /**
@@ -253,4 +254,21 @@ export const useRequestVersions = () => {
   const sessionContextStore = useSessionContextStore();
 
   return sessionContextStore.requestVersions;
+};
+
+/**
+ * Hook to get workflow template data
+ * Returns null if no template is published for this workflow
+ */
+export const useWorkflowTemplate = (): WorkflowTemplate | null => {
+  const sessionContextStore = useSessionContextStore();
+
+  const selectWorkflowTemplate = sessionContextStore.withSelector(
+    state => state.workflow_template
+  );
+
+  return useSyncExternalStore(
+    sessionContextStore.subscribe,
+    selectWorkflowTemplate
+  );
 };

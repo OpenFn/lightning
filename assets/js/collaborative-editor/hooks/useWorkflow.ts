@@ -47,6 +47,8 @@ import { useSession } from './useSession';
 import {
   useLatestSnapshotLockVersion,
   usePermissions,
+  useUser,
+  useWorkflowTemplate,
 } from './useSessionContext';
 
 // import _logger from "#/utils/logger";
@@ -815,4 +817,53 @@ export const useWorkflowSettingsErrors = (): {
       validationErrors.concurrency !== undefined);
 
   return { hasErrors, errors: validationErrors };
+};
+
+/**
+ * Hook to determine if user can publish workflow as template
+ *
+ * Returns object with:
+ * - canPublish: boolean - whether publish action is available
+ *   (based on support_user)
+ * - buttonDisabled: boolean - whether button should be disabled
+ *   (based on unsaved changes)
+ * - tooltipMessage: string - message explaining button state
+ * - buttonText: string - "Publish Template" or "Update Template"
+ *
+ * Template publishing is only available to support users (superusers).
+ * The button is disabled when there are unsaved changes (workflow
+ * lock_version differs from latestSnapshotLockVersion).
+ */
+export const useCanPublishTemplate = (): {
+  canPublish: boolean;
+  buttonDisabled: boolean;
+  tooltipMessage: string;
+  buttonText: string;
+} => {
+  const user = useUser();
+  const workflowTemplate = useWorkflowTemplate();
+  const latestSnapshotLockVersion = useLatestSnapshotLockVersion();
+  const workflow = useWorkflowState(state => state.workflow);
+
+  // Only support users can publish templates
+  const canPublish = user?.support_user ?? false;
+
+  // Check if workflow has unsaved changes by comparing lock versions
+  const hasUnsavedChanges =
+    workflow?.lock_version !== latestSnapshotLockVersion;
+
+  const buttonText = workflowTemplate ? 'Update Template' : 'Publish Template';
+
+  const buttonDisabled = hasUnsavedChanges;
+
+  const tooltipMessage = hasUnsavedChanges
+    ? `You must save your workflow first before ${workflowTemplate ? 'updating' : 'publishing'} a template.`
+    : '';
+
+  return {
+    canPublish,
+    buttonDisabled,
+    tooltipMessage,
+    buttonText,
+  };
 };
