@@ -2549,7 +2549,7 @@ defmodule LightningWeb.WorkflowChannelTest do
       }
 
       assert is_map(errors)
-      assert Map.has_key?(errors, :name)
+      assert Map.has_key?(errors, "name")
     end
 
     test "allows empty tags array", %{
@@ -2618,7 +2618,7 @@ defmodule LightningWeb.WorkflowChannelTest do
       }
 
       assert is_map(errors)
-      assert Map.has_key?(errors, :name)
+      assert Map.has_key?(errors, "name")
     end
 
     test "broadcasts template update to all connected clients", %{
