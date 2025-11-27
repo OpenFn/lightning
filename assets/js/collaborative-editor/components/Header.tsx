@@ -167,8 +167,6 @@ export function Header({
   workflowId?: string;
   isRunPanelOpen?: boolean;
   isIDEOpen?: boolean;
-  canRun?: boolean;
-  runTooltipMessage?: string;
 }) {
   // IMPORTANT: All hooks must be called unconditionally before any early returns or conditional logic
   const { updateSearchParams } = useURLState();
