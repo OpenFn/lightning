@@ -1,5 +1,5 @@
 import type { editor } from 'monaco-editor';
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { MonacoBinding } from 'y-monaco';
 import type { Awareness } from 'y-protocols/awareness';
 import type * as Y from 'yjs';
@@ -33,6 +33,7 @@ export function CollaborativeMonaco({
   const editorRef = useRef<editor.IStandaloneCodeEditor>();
   const monacoRef = useRef<Monaco>();
   const bindingRef = useRef<MonacoBinding>();
+  const [editorReady, setEditorReady] = useState(false);
 
   const handleOnMount = useCallback(
     (editor: editor.IStandaloneCodeEditor, monaco: Monaco) => {
@@ -44,6 +45,7 @@ export function CollaborativeMonaco({
       );
       editorRef.current = editor;
       monacoRef.current = monaco;
+      setEditorReady(true);
 
       // Set theme
       setTheme(monaco);
@@ -55,20 +57,10 @@ export function CollaborativeMonaco({
       // Override Monaco shortcuts to allow KeyboardProvider to handle them
       addKeyboardShortcutOverrides(editor, monaco);
 
-      // Create initial binding if ytext and awareness are available
-      if (ytext && awareness) {
-        logger.log('🔄 Creating initial Monaco binding on mount');
-        const binding = new MonacoBinding(
-          ytext,
-          editor.getModel()!,
-          new Set([editor]),
-          awareness
-        );
-        bindingRef.current = binding;
-        logger.log('✅ Initial Monaco binding created successfully');
-      }
+      // Don't create binding here - let the useEffect handle it
+      // This ensures binding is created/updated whenever ytext changes
     },
-    [adaptor, ytext, awareness]
+    [adaptor]
   );
 
   // Effect to handle Y.Text binding changes after mount
@@ -126,7 +118,7 @@ export function CollaborativeMonaco({
         bindingRef.current = undefined;
       }
     };
-  }, [ytext, awareness]);
+  }, [ytext, awareness, editorReady]);
 
   useEffect(() => {
     // Clean up binding on unmount
