@@ -302,12 +302,13 @@ export const useNodeSelection = () => {
       const foundTrigger = state.triggers.find(trigger => trigger.id === id);
       const foundEdge = state.edges.find(edge => edge.id === id);
 
-      // If Run Panel is open, preserve it; otherwise clear panel to show node inspector
+      // Preserve special panels (run, editor, settings, code); otherwise clear panel to show node inspector
+      const specialPanels = ['run', 'editor', 'settings', 'code'];
       const updates: Record<string, string | null> = {
         job: null,
         trigger: null,
         edge: null,
-        panel: currentPanel === 'run' ? 'run' : null,
+        panel: specialPanels.includes(currentPanel || '') ? currentPanel : null,
       };
 
       if (foundJob) {
