@@ -647,7 +647,7 @@ export function FullScreenIDE({
 
       {/* IDE Heading Bar */}
       <div className="flex-none bg-white border-b border-gray-200">
-        <div className="flex items-center justify-between px-6 py-2">
+        <div className="flex items-center justify-between px-4 py-2">
           <div className="flex items-center gap-3 flex-1 min-w-0">
             {/* Job Selector */}
             <div className="shrink-0">
@@ -752,7 +752,7 @@ export function FullScreenIDE({
                   isCenterCollapsed ? 'rotate-90' : ''
                 }`}
               >
-                <div className="flex items-center justify-between px-3 py-1">
+                <div className="flex items-center justify-between px-4 py-1">
                   {!isCenterCollapsed ? (
                     <>
                       <div
@@ -972,7 +972,7 @@ export function FullScreenIDE({
                   isRightCollapsed ? 'rotate-90' : ''
                 }`}
               >
-                <div className="flex items-center justify-between px-3 py-1">
+                <div className="flex items-center justify-between px-4 py-1">
                   {!isRightCollapsed ? (
                     <>
                       {followRunId ? (
