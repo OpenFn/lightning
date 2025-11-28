@@ -17,6 +17,9 @@ and this project adheres to
 
 ### Added
 
+- AI Assistant integration in collaborative workflow editor
+  [#4042](https://github.com/OpenFn/lightning/pull/4042)
+
 ### Changed
 
 ### Fixed
