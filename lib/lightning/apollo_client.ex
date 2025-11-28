@@ -83,24 +83,6 @@ defmodule Lightning.ApolloClient do
     history = Keyword.get(opts, :history, [])
     meta = Keyword.get(opts, :meta, %{})
 
-    require Logger
-
-    Logger.info("""
-    [ApolloClient.job_chat] Sending request to Apollo
-    Content length: #{byte_size(content)}
-    Context keys: #{inspect(Map.keys(context))}
-    Has expression in context: #{Map.has_key?(context, :expression)}
-    Has adaptor in context: #{Map.has_key?(context, :adaptor)}
-    Has log in context: #{Map.has_key?(context, :log)}
-    History length: #{length(history)}
-    Meta keys: #{inspect(Map.keys(meta))}
-    """)
-
-    Logger.debug("""
-    [ApolloClient.job_chat] Full context payload
-    Context: #{inspect(context, pretty: true, limit: :infinity)}
-    """)
-
     payload = %{
       "api_key" => Lightning.Config.apollo(:ai_assistant_api_key),
       "content" => content,
@@ -142,18 +124,6 @@ defmodule Lightning.ApolloClient do
     errors = Keyword.get(opts, :errors)
     history = Keyword.get(opts, :history, [])
     meta = Keyword.get(opts, :meta, %{})
-
-    require Logger
-
-    Logger.debug("""
-    [ApolloClient] Sending workflow_chat request
-    Content length: #{byte_size(content)}
-    Has code: #{!is_nil(code)}
-    Code length: #{if code, do: byte_size(code), else: 0}
-    Code preview: #{if code, do: String.slice(code, 0, 100), else: "nil"}
-    Has errors: #{!is_nil(errors)}
-    History length: #{length(history)}
-    """)
 
     payload =
       %{

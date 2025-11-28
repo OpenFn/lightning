@@ -165,11 +165,6 @@ defmodule LightningWeb.WorkflowChannel do
     project_user = socket.assigns.project_user
 
     async_task(socket, "get_context", fn ->
-      # CRITICAL: Always fetch the actual latest workflow from DB
-      # socket.assigns.workflow could be an old snapshot (e.g., v22)
-      # but we need to send the actual latest lock_version (e.g., v28)
-      # so the frontend knows the difference between viewing v22 vs latest
-      # For create mode (new workflows), the workflow doesn't exist in DB yet, so use socket workflow
       fresh_workflow = Lightning.Workflows.get_workflow(workflow.id) || workflow
 
       project_repo_connection =
@@ -672,11 +667,7 @@ defmodule LightningWeb.WorkflowChannel do
     {:noreply, socket}
   end
 
-  # Handles async replies for different event types
-  # Extracts event handling logic to reduce cyclomatic complexity
   defp handle_async_event("request_run_steps", socket_ref, reply) do
-    # Unwrap the result from async_task - it wraps everything in {:ok, ...}
-    # but we may have {:error, ...} tuples from the handler logic
     unwrapped_reply = unwrap_run_steps_reply(reply)
     reply(socket_ref, unwrapped_reply)
   end
@@ -876,8 +867,6 @@ defmodule LightningWeb.WorkflowChannel do
     |> flatten_association_errors()
   end
 
-  # Flattens nested association errors into a flat structure for frontend.
-  # Converts %{triggers: [%{type: ["error"]}]} to %{"triggers[0].type" => ["error"]}
   defp flatten_association_errors(errors) do
     Enum.reduce(errors, %{}, fn {key, value}, acc ->
       flatten_error_value(key, value, acc)
@@ -888,7 +877,6 @@ defmodule LightningWeb.WorkflowChannel do
     if Enum.any?(list, &is_map/1) do
       flatten_nested_list_errors(key, list, acc)
     else
-      # List of error messages (not nested objects)
       Map.put(acc, to_string(key), list)
     end
   end

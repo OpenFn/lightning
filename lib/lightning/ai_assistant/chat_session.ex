@@ -77,13 +77,7 @@ defmodule Lightning.AiAssistant.ChatSession do
     |> cast_assoc(:messages)
   end
 
-  @doc """
-  Changeset for updating only the meta field without triggering
-  session type validations.
-
-  This is used when updating metadata (like RAG data) on existing
-  sessions without needing to re-validate job_id requirements.
-  """
+  @doc false
   def meta_changeset(chat_session, attrs) do
     chat_session
     |> cast(attrs, [:meta])
@@ -114,15 +108,12 @@ defmodule Lightning.AiAssistant.ChatSession do
     has_unsaved_job_data = Map.has_key?(meta, "unsaved_job")
 
     cond do
-      # If job_id is present, we're good
       not is_nil(job_id) ->
         changeset
 
-      # If job_id is nil but we have unsaved job data in meta, that's fine too
       has_unsaved_job_data ->
         changeset
 
-      # Otherwise, require job_id
       true ->
         validate_required(changeset, [:job_id])
     end

@@ -122,15 +122,6 @@ defmodule Lightning.Jobs do
   Gets a single job.
 
   Returns `{:ok, job}` if found, `{:error, :not_found}` otherwise.
-
-  ## Examples
-
-      iex> get_job(valid_id)
-      {:ok, %Job{}}
-
-      iex> get_job(invalid_id)
-      {:error, :not_found}
-
   """
   def get_job(id) do
     case Repo.get(Job, id) |> Repo.preload([:workflow]) do
