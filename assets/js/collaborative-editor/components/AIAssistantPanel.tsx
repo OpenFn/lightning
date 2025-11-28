@@ -55,7 +55,7 @@ interface MessageOptions {
  * - Resizable in IDE mode, fixed 400px width in Canvas mode
  * - Smooth slide-in/out transitions
  * - No backdrop overlay (content pushes instead of overlaying)
- * - Escape key to close
+ * - Close via X button or clicking outside (ESC key intentionally does not close)
  */
 export function AIAssistantPanel({
   isOpen,
@@ -71,16 +71,14 @@ export function AIAssistantPanel({
   isResizable = false,
   store,
   sessionType = null,
-  loadSessions,
+  loadSessions: _loadSessions,
 }: AIAssistantPanelProps) {
-  // Start with sessions list if no active session
   const [view, setView] = useState<'chat' | 'sessions'>(
     sessionId ? 'chat' : 'sessions'
   );
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isAboutOpen, setIsAboutOpen] = useState(false);
 
-  // Subscribe to store context changes to compute storage key reactively
   const storageKey: string | undefined = useSyncExternalStore(
     store?.subscribe ?? (() => () => {}),
     () => {
@@ -103,46 +101,27 @@ export function AIAssistantPanel({
     }
   );
 
-  // Switch view based on sessionId changes
   useEffect(() => {
     if (sessionId && view === 'sessions') {
-      // Session created/loaded -> show chat
       setView('chat');
     } else if (!sessionId && view === 'chat') {
-      // Session cleared -> show sessions list
       setView('sessions');
     }
   }, [sessionId, view]);
 
-  // Handle escape key to close panel
-  useEffect(() => {
-    const handleEscape = (event: KeyboardEvent) => {
-      if (event.key === 'Escape' && isOpen) {
-        onClose();
-      }
-    };
-
-    document.addEventListener('keydown', handleEscape);
-    return () => document.removeEventListener('keydown', handleEscape);
-  }, [isOpen, onClose]);
-
-  // Subscribe to store context to detect when it's initialized
   const storeSessionType = useSyncExternalStore(
     store?.subscribe ?? (() => () => {}),
     () => store?.getSnapshot().sessionType ?? null
   );
 
-  // Subscribe to job context to detect job changes
   const jobContextId = useSyncExternalStore(
     store?.subscribe ?? (() => () => {}),
     () => store?.getSnapshot().jobCodeContext?.job_id ?? null
   );
 
-  // Load session list when view is 'sessions' AND context is ready
   useEffect(() => {
     if (view !== 'sessions' || !store || !storeSessionType) return;
 
-    // Double-check context is actually set
     const state = store.getSnapshot();
     const hasContext = !!(
       state.jobCodeContext || state.workflowTemplateContext
@@ -152,18 +131,13 @@ export function AIAssistantPanel({
       return;
     }
 
-    // Always use HTTP API for loading sessions to avoid stale channel references
-    // The channel loadSessions can use stale context during mode switches
     void store.loadSessionList();
   }, [view, store, storeSessionType, jobContextId]);
 
   const handleShowSessions = () => {
-    // Set view to sessions without clearing session
-    // This keeps the connection alive for fetching sessions
     setView('sessions');
     setIsMenuOpen(false);
 
-    // Clear URL params only (don't disconnect)
     if (onShowSessions) {
       onShowSessions();
     }
@@ -187,18 +161,14 @@ export function AIAssistantPanel({
 
   const handleClose = () => {
     if (sessionId) {
-      // If viewing a session, close it and return to sessions list
-      // View will automatically switch to 'sessions' via the effect when sessionId becomes null
       if (onShowSessions) {
         onShowSessions();
       }
     } else {
-      // If in sessions list (no session), close entire panel
       onClose();
     }
   };
 
-  // Close menu when clicking outside
   useEffect(() => {
     if (!isMenuOpen) return;
 
@@ -230,7 +200,6 @@ export function AIAssistantPanel({
       aria-modal="false"
       aria-label="AI Assistant"
     >
-      {/* Panel Header */}
       <div className="flex-none bg-white shadow-xs border-b border-gray-200">
         <div className="mx-auto px-6 py-6 flex items-center justify-between h-20 text-sm">
           <div className="flex items-center gap-2 min-w-0 flex-1">
@@ -240,7 +209,6 @@ export function AIAssistantPanel({
                 <h2 className="text-base font-semibold text-gray-900">
                   Assistant
                 </h2>
-                {/* Mode indicator badge */}
                 {sessionType && (
                   <span
                     className={cn(

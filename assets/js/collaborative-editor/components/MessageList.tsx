@@ -278,6 +278,31 @@ const CodeActionButtons = ({
 };
 
 /**
+ * Format timestamp for display
+ * Shows relative time (e.g., "2 minutes ago") or date if older than 24h
+ */
+const formatTimestamp = (isoTimestamp: string): string => {
+  const date = new Date(isoTimestamp);
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMs / 3600000);
+  const diffDays = Math.floor(diffMs / 86400000);
+
+  if (diffMins < 1) return 'Just now';
+  if (diffMins < 60) return `${diffMins}m ago`;
+  if (diffHours < 24) return `${diffHours}h ago`;
+  if (diffDays < 7) return `${diffDays}d ago`;
+
+  // Format as date if older than a week
+  return date.toLocaleDateString(undefined, {
+    month: 'short',
+    day: 'numeric',
+    year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined,
+  });
+};
+
+/**
  * MessageList Component
  *
  * Displays the list of messages in the AI Assistant chat.
@@ -306,6 +331,7 @@ interface MessageListProps {
   onApplyWorkflow?: ((yaml: string, messageId: string) => void) | undefined;
   applyingMessageId?: string | null | undefined;
   showAddButtons?: boolean; // Show ADD buttons for code snippets (job_code mode)
+  onRetryMessage?: (messageId: string) => void; // Retry failed messages
 }
 
 export function MessageList({
@@ -314,6 +340,7 @@ export function MessageList({
   onApplyWorkflow,
   applyingMessageId,
   showAddButtons = false,
+  onRetryMessage,
 }: MessageListProps) {
   const loadingRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -435,9 +462,25 @@ export function MessageList({
                   {message.status === 'error' && (
                     <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-red-50 border border-red-200">
                       <span className="hero-exclamation-circle h-4 w-4 text-red-600 flex-shrink-0" />
-                      <span className="text-sm text-red-700">
+                      <span className="text-sm text-red-700 flex-1">
                         Failed to send message. Please try again.
                       </span>
+                      {onRetryMessage && (
+                        <button
+                          type="button"
+                          onClick={() => onRetryMessage(message.id)}
+                          className={cn(
+                            'inline-flex items-center gap-1.5 px-3 py-1.5',
+                            'text-xs font-medium rounded-md',
+                            'bg-red-100 text-red-700 hover:bg-red-200',
+                            'transition-colors duration-150',
+                            'focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-1'
+                          )}
+                        >
+                          <span className="hero-arrow-path h-3.5 w-3.5" />
+                          Retry
+                        </button>
+                      )}
                     </div>
                   )}
 
@@ -451,6 +494,13 @@ export function MessageList({
                       </div>
                     </div>
                   )}
+
+                  {/* Timestamp */}
+                  <div className="mt-2">
+                    <span className="text-xs text-gray-400">
+                      {formatTimestamp(message.inserted_at)}
+                    </span>
+                  </div>
                 </div>
               </div>
             ) : (
@@ -469,11 +519,32 @@ export function MessageList({
                   {message.status === 'error' && (
                     <div className="flex items-center gap-2 mt-2 px-3 py-1.5 rounded-lg bg-red-50 border border-red-200">
                       <span className="hero-exclamation-circle h-3.5 w-3.5 text-red-600" />
-                      <span className="text-xs text-red-700">
+                      <span className="text-xs text-red-700 flex-1">
                         Failed to send
                       </span>
+                      {onRetryMessage && (
+                        <button
+                          type="button"
+                          onClick={() => onRetryMessage(message.id)}
+                          className={cn(
+                            'inline-flex items-center gap-1 px-2 py-1',
+                            'text-xs font-medium rounded-md',
+                            'bg-red-100 text-red-700 hover:bg-red-200',
+                            'transition-colors duration-150',
+                            'focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-1'
+                          )}
+                        >
+                          <span className="hero-arrow-path h-3 w-3" />
+                          Retry
+                        </button>
+                      )}
                     </div>
                   )}
+
+                  {/* Timestamp */}
+                  <span className="text-xs text-gray-400 mt-1">
+                    {formatTimestamp(message.inserted_at)}
+                  </span>
                 </div>
               </div>
             )}
