@@ -193,13 +193,9 @@ export function FullScreenIDE({
     [updateSearchParams]
   );
 
-  // Only follow run when session is connected and settled
-  // This prevents "No connection available" errors on initial load
   const { isConnected, settled } = useSession();
   const isSessionReady = isConnected && settled;
 
-  // Declaratively connect to run channel when runIdFromURL changes
-  // Only attempt connection once session is fully ready
   const currentRun = useFollowRun(isSessionReady ? runIdFromURL : null);
 
   // Check if the currently selected job matches the loaded run
