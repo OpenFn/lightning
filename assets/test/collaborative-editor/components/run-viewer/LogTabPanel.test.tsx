@@ -295,7 +295,11 @@ describe('LogTabPanel', () => {
       // Check for log viewer container
       const logViewerContainer = container.querySelector('.bg-slate-700');
       expect(logViewerContainer).toBeInTheDocument();
-      expect(logViewerContainer).toHaveClass('flex', 'h-full', 'flex-col');
+      expect(logViewerContainer).toHaveClass(
+        'grid',
+        'h-full',
+        'grid-rows-[auto_1fr]'
+      );
 
       // Check for log level filter header
       const filterHeader = container.querySelector(
