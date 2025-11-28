@@ -5,8 +5,6 @@
 import { ReactFlowProvider } from '@xyflow/react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
-import { cn } from '#/utils/cn';
-
 import {
   useEditorPreferencesCommands,
   useHistoryPanelCollapsed,
@@ -58,12 +56,14 @@ export function CollaborativeWorkflowDiagram({
     return params.get('run');
   });
 
-  // Auto-expand history panel when a run is selected
-  useEffect(() => {
-    if (selectedRunId && historyCollapsed) {
-      setHistoryPanelCollapsed(false);
-    }
-  }, [selectedRunId, historyCollapsed, setHistoryPanelCollapsed]);
+  // Clear URL parameter when deselecting run
+  const handleDeselectRun = useCallback(() => {
+    setSelectedRunId(null);
+
+    const url = new URL(window.location.href);
+    url.searchParams.delete('run');
+    window.history.pushState({}, '', url.toString());
+  }, []);
 
   const handleToggleHistory = useCallback(() => {
     setHistoryPanelCollapsed(!historyCollapsed);
@@ -98,15 +98,6 @@ export function CollaborativeWorkflowDiagram({
     [history, handleVersionSelect]
   );
 
-  // Clear URL parameter when deselecting run
-  const handleDeselectRun = useCallback(() => {
-    setSelectedRunId(null);
-
-    const url = new URL(window.location.href);
-    url.searchParams.delete('run');
-    window.history.pushState({}, '', url.toString());
-  }, []);
-
   // Request history when panel is first expanded OR when there's a run ID selected
   // Wait for channel to be connected before making request
   const hasRequestedHistory = useRef(false);
@@ -130,6 +121,18 @@ export function CollaborativeWorkflowDiagram({
     selectedRunId,
   ]);
 
+  // Find the selected run object in history
+  const selectedRun = useMemo(() => {
+    if (!selectedRunId) return null;
+
+    // Search through work orders to find the run
+    for (const workorder of history) {
+      const run = workorder.runs.find(r => r.id === selectedRunId);
+      if (run) return run;
+    }
+    return null;
+  }, [selectedRunId, history]);
+
   // Transform history to mark selected run
   const historyWithSelection = useMemo(() => {
     if (!selectedRunId) return history;
@@ -150,12 +153,11 @@ export function CollaborativeWorkflowDiagram({
   return (
     <div ref={containerRef} className={className}>
       <ReactFlowProvider>
-        {/* Version mismatch warning when viewing latest but run used older version */}
         {versionMismatch && (
           <VersionMismatchBanner
             runVersion={versionMismatch.runVersion}
             currentVersion={versionMismatch.currentVersion}
-            className="absolute top-6 left-6 right-4 z-10 max-w-2xl mx-auto"
+            className="absolute top-4 left-1/2 -translate-x-1/2 z-50 max-w-md"
           />
         )}
 
@@ -177,6 +179,7 @@ export function CollaborativeWorkflowDiagram({
             onCollapseHistory={handleToggleHistory}
             selectRunHandler={handleRunSelect}
             onDeselectRun={handleDeselectRun}
+            selectedRun={selectedRun}
             loading={historyLoading}
             error={historyError}
             onRetry={() => {

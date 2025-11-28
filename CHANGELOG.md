@@ -21,6 +21,13 @@ and this project adheres to
 
 ### Fixed
 
+- Improved version mismatch banner UX: made compact, dismissible, and
+  repositioned to top-center; improved history panel collapse behavior to
+  maintain run selection with visual run chip indicator
+  [#4044](https://github.com/OpenFn/lightning/issues/4044)
+- Settings panel now opens correctly when Run Panel is visible; also improved
+  Run Panel to stay open and update context when switching between nodes
+  [#4008](https://github.com/OpenFn/lightning/issues/4008)
 - Fix collaborative cursors disappearing after switching workflow versions
   [#4066](https://github.com/OpenFn/lightning/issues/4066)
 - Throttle cursor awareness updates to reduce server load
