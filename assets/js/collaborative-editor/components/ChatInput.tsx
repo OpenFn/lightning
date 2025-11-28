@@ -44,51 +44,27 @@ export function ChatInput({
   // Default: attach_code = true, attach_logs = false
   const [attachCode, setAttachCode] = useState(() => {
     if (!storageKey) {
-      console.log(
-        '[ChatInput] No storageKey, using default attach_code = true'
-      );
       return true;
     }
     try {
       const key = `${storageKey}:attach-code`;
       const saved = localStorage.getItem(key);
-      console.log('[ChatInput] Loading attach_code from localStorage', {
-        key,
-        saved,
-        willUse: saved === null ? true : saved === 'true',
-      });
       // If not set yet, default to true
       return saved === null ? true : saved === 'true';
-    } catch (error) {
-      console.error(
-        '[ChatInput] Error loading attach_code from localStorage',
-        error
-      );
+    } catch {
       return true;
     }
   });
 
   const [attachLogs, setAttachLogs] = useState(() => {
     if (!storageKey) {
-      console.log(
-        '[ChatInput] No storageKey, using default attach_logs = false'
-      );
       return false;
     }
     try {
       const key = `${storageKey}:attach-logs`;
       const saved = localStorage.getItem(key);
-      console.log('[ChatInput] Loading attach_logs from localStorage', {
-        key,
-        saved,
-        willUse: saved === 'true',
-      });
       return saved === 'true';
-    } catch (error) {
-      console.error(
-        '[ChatInput] Error loading attach_logs from localStorage',
-        error
-      );
+    } catch {
       return false;
     }
   });
@@ -111,37 +87,24 @@ export function ChatInput({
   useEffect(() => {
     if (!storageKey) return;
 
-    console.log('[ChatInput] storageKey changed, loading preferences', {
-      storageKey,
-    });
     isLoadingFromStorageRef.current = true;
 
     try {
       const codeKey = `${storageKey}:attach-code`;
       const savedCode = localStorage.getItem(codeKey);
       const codeValue = savedCode === null ? true : savedCode === 'true';
-      console.log('[ChatInput] Loaded attach_code from localStorage', {
-        key: codeKey,
-        saved: savedCode,
-        value: codeValue,
-      });
       setAttachCode(codeValue);
-    } catch (error) {
-      console.error('[ChatInput] Error loading attach_code', error);
+    } catch {
+      // Ignore localStorage errors
     }
 
     try {
       const logsKey = `${storageKey}:attach-logs`;
       const savedLogs = localStorage.getItem(logsKey);
       const logsValue = savedLogs === 'true';
-      console.log('[ChatInput] Loaded attach_logs from localStorage', {
-        key: logsKey,
-        saved: savedLogs,
-        value: logsValue,
-      });
       setAttachLogs(logsValue);
-    } catch (error) {
-      console.error('[ChatInput] Error loading attach_logs', error);
+    } catch {
+      // Ignore localStorage errors
     }
 
     // Reset flag after state updates have been applied
@@ -155,13 +118,9 @@ export function ChatInput({
     if (!storageKey) return;
     if (isLoadingFromStorageRef.current) return; // Skip during load
     try {
-      console.log('[ChatInput] Saving attach_code to localStorage', {
-        key: `${storageKey}:attach-code`,
-        value: attachCode,
-      });
       localStorage.setItem(`${storageKey}:attach-code`, String(attachCode));
-    } catch (error) {
-      console.error('Failed to save attach-code preference', error);
+    } catch {
+      // Ignore localStorage errors
     }
   }, [attachCode, storageKey]);
 
@@ -170,13 +129,9 @@ export function ChatInput({
     if (!storageKey) return;
     if (isLoadingFromStorageRef.current) return; // Skip during load
     try {
-      console.log('[ChatInput] Saving attach_logs to localStorage', {
-        key: `${storageKey}:attach-logs`,
-        value: attachLogs,
-      });
       localStorage.setItem(`${storageKey}:attach-logs`, String(attachLogs));
-    } catch (error) {
-      console.error('Failed to save attach-logs preference', error);
+    } catch {
+      // Ignore localStorage errors
     }
   }, [attachLogs, storageKey]);
 

@@ -471,16 +471,6 @@ export const createAIAssistantStore = (): AIAssistantStore => {
         m => m.status === 'processing' || m.status === 'pending'
       );
 
-      console.log('[AI Store] _setSession - checking for processing messages', {
-        messagesCount: session.messages.length,
-        hasProcessingMessages,
-        messages: session.messages.map(m => ({
-          id: m.id,
-          role: m.role,
-          status: m.status,
-        })),
-      });
-
       draft.isLoading = hasProcessingMessages;
       draft.isSending = false;
     });
@@ -522,38 +512,13 @@ export const createAIAssistantStore = (): AIAssistantStore => {
       if (message.role === 'user') {
         // User message added - keep isLoading true to show waiting state
         // The assistant hasn't responded yet, so we should keep showing loading
-        console.log('[AI Store] User message added, keeping isLoading true', {
-          messageId: message.id,
-          currentLoading: draft.isLoading,
-        });
         // Don't modify draft.isLoading here - let it stay true
       } else if (message.role === 'assistant') {
         // Only stop loading if assistant message is in a final state
         if (message.status === 'success' || message.status === 'error') {
-          console.log(
-            '[AI Store] Assistant message arrived with final status, stopping loading',
-            {
-              messageId: message.id,
-              status: message.status,
-              wasLoading: draft.isLoading,
-            }
-          );
           draft.isLoading = false;
         } else if (message.status === 'processing') {
-          console.log(
-            '[AI Store] Assistant message is processing, setting loading',
-            {
-              messageId: message.id,
-              status: message.status,
-            }
-          );
           draft.isLoading = true;
-        } else {
-          console.log('[AI Store] Assistant message with non-final status', {
-            messageId: message.id,
-            status: message.status,
-            currentLoading: draft.isLoading,
-          });
         }
       }
     });

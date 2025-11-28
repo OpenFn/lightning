@@ -85,32 +85,20 @@ export function AIAssistantPanel({
     store?.subscribe ?? (() => () => {}),
     () => {
       if (!store) {
-        console.log('[AIAssistantPanel] No store available for storageKey');
         return undefined;
       }
       const state = store.getSnapshot();
       if (state.sessionType === 'job_code' && state.jobCodeContext?.job_id) {
-        const key = `ai-job-${state.jobCodeContext.job_id}`;
-        console.log('[AIAssistantPanel] Computed storageKey:', key);
-        return key;
+        return `ai-job-${state.jobCodeContext.job_id}`;
       }
       if (state.sessionType === 'workflow_template') {
         if (state.workflowTemplateContext?.workflow_id) {
-          const key = `ai-workflow-${state.workflowTemplateContext.workflow_id}`;
-          console.log('[AIAssistantPanel] Computed storageKey:', key);
-          return key;
+          return `ai-workflow-${state.workflowTemplateContext.workflow_id}`;
         }
         if (state.workflowTemplateContext?.project_id) {
-          const key = `ai-project-${state.workflowTemplateContext.project_id}`;
-          console.log('[AIAssistantPanel] Computed storageKey:', key);
-          return key;
+          return `ai-project-${state.workflowTemplateContext.project_id}`;
         }
       }
-      console.log('[AIAssistantPanel] No valid context for storageKey', {
-        sessionType: state.sessionType,
-        hasJobContext: !!state.jobCodeContext,
-        hasWorkflowContext: !!state.workflowTemplateContext,
-      });
       return undefined;
     }
   );
@@ -161,19 +149,8 @@ export function AIAssistantPanel({
     );
 
     if (!hasContext) {
-      console.warn('[AIAssistantPanel] Context not ready yet', {
-        sessionType: storeSessionType,
-        hasJobContext: !!state.jobCodeContext,
-        hasWorkflowContext: !!state.workflowTemplateContext,
-      });
       return;
     }
-
-    console.log(
-      '[AIAssistantPanel] Loading sessions for mode:',
-      storeSessionType,
-      jobContextId ? `job_id: ${jobContextId}` : ''
-    );
 
     // Always use HTTP API for loading sessions to avoid stale channel references
     // The channel loadSessions can use stale context during mode switches
