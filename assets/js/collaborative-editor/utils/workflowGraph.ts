@@ -518,3 +518,49 @@ export function findFirstJobFromTrigger(
   const edge = edges.find(e => e.source_trigger_id === triggerId);
   return edge?.target_job_id || undefined;
 }
+
+// gets job ordinals relative to start(trigger-node)
+export function getJobOrdinals(adj: Record<string, string[]>, start: string) {
+  const ordinals: Record<string, number> = { [start]: 1 };
+  const visited = new Set();
+  const queue = [start];
+
+  visited.add(start);
+
+  while (queue.length > 0) {
+    const node = queue.shift(); // pop from front
+    if (!node) continue;
+
+    const neighbors = adj[node] || [];
+    for (const next of neighbors) {
+      if (!visited.has(next)) {
+        const curr = ordinals[next] || Infinity;
+        ordinals[next] = Math.min(ordinals[node], curr) + 1;
+        visited.add(next);
+        queue.push(next);
+      }
+    }
+  }
+  return ordinals;
+}
+
+interface EdgesToAdjListResult {
+  list: Record<string, string[]>;
+  trigger_id: string;
+}
+
+// create an adjacency list from edges
+export function edgesToAdjList(edges: Workflow.Edge[]): EdgesToAdjListResult {
+  const list: Record<string, string[]> = {};
+  let trigger_id: string = '';
+  for (let i = 0; i < edges.length; i++) {
+    const edge = edges[i];
+    const from_id = edge.source_job_id || edge.source_trigger_id;
+    if (edge.source_trigger_id) trigger_id = edge.source_trigger_id;
+    if (!from_id || !edge.target_job_id) continue;
+    if (Array.isArray(list[from_id])) {
+      list[from_id].push(edge.target_job_id);
+    } else list[from_id] = [edge.target_job_id];
+  }
+  return { list, trigger_id };
+}
