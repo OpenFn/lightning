@@ -24,6 +24,10 @@ and this project adheres to
 - Settings panel now opens correctly when Run Panel is visible; also improved
   Run Panel to stay open and update context when switching between nodes
   [#4008](https://github.com/OpenFn/lightning/issues/4008)
+- Fix collaborative cursors disappearing after switching workflow versions
+  [#4066](https://github.com/OpenFn/lightning/issues/4066)
+- Throttle cursor awareness updates to reduce server load
+  [#4066](https://github.com/OpenFn/lightning/issues/4066)
 - Loading workflow screen appears when disconnected from server
   [#3972](https://github.com/OpenFn/lightning/issues/3972)
 
