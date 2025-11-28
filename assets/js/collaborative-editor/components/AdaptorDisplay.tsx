@@ -1,5 +1,7 @@
 import { useMemo } from 'react';
 
+import { cn } from '#/utils/cn';
+
 import { extractAdaptorDisplayName } from '../utils/adaptorUtils';
 
 import { AdaptorIcon } from './AdaptorIcon';
@@ -74,6 +76,12 @@ export function AdaptorDisplay({
 
   // Check if credential is connected
   const hasCredential = !!credentialId;
+
+  // Check if adaptor is language-common (shouldn't pulse for common)
+  const isLanguageCommon = adaptorPackage === '@openfn/language-common';
+
+  // Should pulse when: no credential AND not language-common
+  const shouldPulse = !hasCredential && !isLanguageCommon;
 
   // World-class size system with perfect proportions
   // Each size variant maintains visual harmony with consistent spacing ratios
@@ -202,12 +210,23 @@ export function AdaptorDisplay({
         <button
           type="button"
           onClick={onEdit}
-          className={`${config.editButton} border border-gray-300 bg-white rounded-md
-          ${config.textSize} font-medium text-gray-700 hover:bg-gray-50
-          focus:outline-none flex-shrink-0 transition-colors`}
-          aria-label="Edit adaptor"
+          className={cn(
+            config.editButton,
+            'rounded-md font-medium focus:outline-none flex-shrink-0 transition-colors relative',
+            config.textSize,
+            hasCredential
+              ? 'border border-gray-300 bg-white text-gray-700 hover:bg-gray-50'
+              : 'bg-primary-600 hover:bg-primary-500 text-white shadow-xs focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600'
+          )}
+          aria-label={hasCredential ? 'Edit adaptor' : 'Connect credential'}
         >
-          Edit
+          {hasCredential ? 'Edit' : 'Connect'}
+          {shouldPulse && (
+            <span className="absolute -top-1 -right-1 flex h-3 w-3">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
+            </span>
+          )}
         </button>
       )}
     </div>
