@@ -450,4 +450,180 @@ describe('LoadingBoundary', () => {
       expect(selector(mockState)).toBe(mockState.workflow);
     });
   });
+
+  describe('disconnection scenarios (offline editing)', () => {
+    test('renders cached workflow when disconnected', () => {
+      // Simulates: User was connected, then lost connection
+      // but cached workflow data still exists in Y.Doc
+      mockUseSession.mockReturnValue(
+        createMockSessionState({
+          isConnected: false, // Lost connection
+          isSynced: false,
+          settled: false, // No longer settled
+        })
+      );
+
+      // Cached workflow still available from Y.Doc
+      mockUseWorkflowState.mockReturnValue(createMockWorkflow());
+
+      render(
+        <LoadingBoundary>
+          <div data-testid="child-content">Child Content</div>
+        </LoadingBoundary>
+      );
+
+      // Should render children with cached data
+      expect(screen.getByTestId('child-content')).toBeInTheDocument();
+      expect(screen.queryByText('Loading workflow')).not.toBeInTheDocument();
+    });
+
+    test('shows loading on initial load when disconnected', () => {
+      // Simulates: User navigates to page while offline
+      // No cached workflow data available
+      mockUseSession.mockReturnValue(
+        createMockSessionState({
+          isConnected: false,
+          isSynced: false,
+          settled: false,
+        })
+      );
+
+      // No workflow data available (initial load)
+      mockUseWorkflowState.mockReturnValue(null);
+
+      render(
+        <LoadingBoundary>
+          <div data-testid="child-content">Child Content</div>
+        </LoadingBoundary>
+      );
+
+      // Should show loading screen (can't render without data)
+      expect(screen.queryByTestId('child-content')).not.toBeInTheDocument();
+      expect(screen.getByText('Loading workflow')).toBeInTheDocument();
+    });
+
+    test('transitions from connected to disconnected gracefully', () => {
+      // Start: Connected and synced
+      mockUseSession.mockReturnValue(
+        createMockSessionState({
+          isConnected: true,
+          isSynced: true,
+          settled: true,
+        })
+      );
+      mockUseWorkflowState.mockReturnValue(createMockWorkflow());
+
+      const { rerender } = render(
+        <LoadingBoundary>
+          <div data-testid="content">Content</div>
+        </LoadingBoundary>
+      );
+
+      // Should render content
+      expect(screen.getByTestId('content')).toBeInTheDocument();
+
+      // Disconnect: Connection lost but workflow cached
+      mockUseSession.mockReturnValue(
+        createMockSessionState({
+          isConnected: false, // Disconnected
+          isSynced: false,
+          settled: false,
+        })
+      );
+      mockUseWorkflowState.mockReturnValue(createMockWorkflow()); // Cached
+
+      rerender(
+        <LoadingBoundary>
+          <div data-testid="content">Content</div>
+        </LoadingBoundary>
+      );
+
+      // Should STILL render content (graceful degradation)
+      expect(screen.getByTestId('content')).toBeInTheDocument();
+      expect(screen.queryByText('Loading workflow')).not.toBeInTheDocument();
+    });
+
+    test('transitions from disconnected to reconnected', () => {
+      // Start: Disconnected with cached workflow
+      mockUseSession.mockReturnValue(
+        createMockSessionState({
+          isConnected: false,
+          isSynced: false,
+          settled: false,
+        })
+      );
+      mockUseWorkflowState.mockReturnValue(createMockWorkflow());
+
+      const { rerender } = render(
+        <LoadingBoundary>
+          <div data-testid="content">Content</div>
+        </LoadingBoundary>
+      );
+
+      // Should render with cached data
+      expect(screen.getByTestId('content')).toBeInTheDocument();
+
+      // Reconnect: Connection restored and syncing
+      mockUseSession.mockReturnValue(
+        createMockSessionState({
+          isConnected: true,
+          isSynced: false, // Syncing in progress
+          settled: false,
+        })
+      );
+      mockUseWorkflowState.mockReturnValue(createMockWorkflow());
+
+      rerender(
+        <LoadingBoundary>
+          <div data-testid="content">Content</div>
+        </LoadingBoundary>
+      );
+
+      // Should STILL render (not initial load anymore)
+      expect(screen.getByTestId('content')).toBeInTheDocument();
+
+      // Finally: Reconnected and synced
+      mockUseSession.mockReturnValue(
+        createMockSessionState({
+          isConnected: true,
+          isSynced: true,
+          settled: true,
+        })
+      );
+      mockUseWorkflowState.mockReturnValue(createMockWorkflow());
+
+      rerender(
+        <LoadingBoundary>
+          <div data-testid="content">Content</div>
+        </LoadingBoundary>
+      );
+
+      // Should continue rendering
+      expect(screen.getByTestId('content')).toBeInTheDocument();
+    });
+
+    test('prevents rendering during initial load even when connected', () => {
+      // Simulates: Page just loaded, connection established but no data yet
+      mockUseSession.mockReturnValue(
+        createMockSessionState({
+          isConnected: true,
+          isSynced: false,
+          settled: false,
+        })
+      );
+
+      // No workflow data yet (initial load)
+      mockUseWorkflowState.mockReturnValue(null);
+
+      render(
+        <LoadingBoundary>
+          <div data-testid="content">Content</div>
+        </LoadingBoundary>
+      );
+
+      // Should show loading (must wait for initial sync)
+      expect(screen.queryByTestId('content')).not.toBeInTheDocument();
+      expect(screen.getByText('Loading workflow')).toBeInTheDocument();
+    });
+  });
 });

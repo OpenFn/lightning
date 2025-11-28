@@ -293,11 +293,31 @@ export const createWorkflowStore = () => {
   const ensureConnected = () => {
     if (!ydoc || !provider) {
       throw new Error(
-        'Cannot modify workflow: Y.Doc not connected. ' +
-          'This is likely a bug - mutations should not be called before sync.'
+        'Cannot save workflow: Connection lost. Please wait for reconnection.'
       );
     }
     return { ydoc, provider };
+  };
+
+  /**
+   * Ensures Y.Doc exists before mutation operations.
+   *
+   * Simplified check for offline editing - only verifies ydoc exists,
+   * not provider. Y.Doc can accept transactions without provider
+   * (offline editing), with changes automatically syncing on reconnection.
+   *
+   * @throws {Error} If Y.Doc is not initialized
+   * @returns Y.Doc instance
+   */
+  const ensureYDoc = (): Y.Doc => {
+    if (!ydoc) {
+      throw new Error(
+        'Cannot modify workflow: Y.Doc not initialized. ' +
+          'This is likely a bug - mutations should not be called ' +
+          'before connection.'
+      );
+    }
+    return ydoc;
   };
 
   const notify = (actionName: string = 'stateChange') => {
@@ -396,16 +416,113 @@ export const createWorkflowStore = () => {
     });
   }
 
+  // Helper to create trigger auth methods handler
+  // Extracted for reuse in connect() and reconnection path
+  const createTriggerAuthMethodsHandler = (triggersArray: Y.Array<unknown>) => {
+    return (payload: unknown) => {
+      logger.debug('Received trigger_auth_methods_updated broadcast', payload);
+
+      // Type guard and validation
+      if (
+        typeof payload === 'object' &&
+        payload !== null &&
+        'trigger_id' in payload &&
+        'webhook_auth_methods' in payload
+      ) {
+        const { trigger_id, webhook_auth_methods } = payload as {
+          trigger_id: string;
+          webhook_auth_methods: Array<{
+            id: string;
+            name: string;
+            auth_type: string;
+          }>;
+        };
+
+        // Update has_auth_method flag in Y.Doc (outside updateState to avoid side effects)
+        const triggers = triggersArray.toArray() as Y.Map<unknown>[];
+        const triggerIndex = triggers.findIndex(
+          t => t.get('id') === trigger_id
+        );
+
+        if (triggerIndex >= 0 && ydoc) {
+          const yjsTrigger = triggers[triggerIndex];
+          const hasAuthMethod = webhook_auth_methods.length > 0;
+          ydoc.transact(() => {
+            yjsTrigger.set('has_auth_method', hasAuthMethod);
+          });
+        }
+
+        // Update activeTriggerAuthMethods if this broadcast matches the active trigger
+        updateState(draft => {
+          if (
+            draft.activeTriggerAuthMethods?.trigger_id === trigger_id &&
+            Array.isArray(webhook_auth_methods)
+          ) {
+            draft.activeTriggerAuthMethods = {
+              trigger_id,
+              webhook_auth_methods,
+            };
+          }
+        }, 'trigger_auth_methods_updated');
+      }
+    };
+  };
+
   // Connect Y.Doc and set up observers
   const connect = (d: Session.WorkflowDoc, p: PhoenixChannelProvider) => {
-    // Clean up previous connection
+    // Clean up previous connection's channel observers
     disconnect();
     if (p.channel === undefined) {
       throw new Error('Provider must have a channel');
     }
 
     provider = p as PhoenixChannelProvider & { channel: Channel };
+
+    // Check if this is a reconnection (same ydoc) or new connection
+    const isReconnection = ydoc === d;
     ydoc = d;
+
+    // Skip observer setup if reconnecting with same ydoc
+    // Observers are still attached from previous connection
+    if (isReconnection && observerCleanups.length > 0) {
+      logger.debug('Reconnecting - Y.Doc observers still active', {
+        observerCount: observerCleanups.length,
+      });
+
+      // Re-attach channel observer only
+      const triggersArray = ydoc.getArray('triggers');
+      const triggerAuthMethodsHandler =
+        createTriggerAuthMethodsHandler(triggersArray);
+
+      provider.channel.on(
+        'trigger_auth_methods_updated',
+        triggerAuthMethodsHandler
+      );
+
+      // Update channelCleanups reference
+      const channelCleanups = [
+        () => {
+          if (provider?.channel) {
+            provider.channel.off(
+              'trigger_auth_methods_updated',
+              triggerAuthMethodsHandler
+            );
+          }
+        },
+      ];
+
+      // Update channel cleanups reference
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (observerCleanups as any).channelCleanups = channelCleanups;
+
+      // Initialize DevTools connection
+      devtools.connect();
+
+      // Send reconnection notification
+      notify('reconnected');
+
+      return;
+    }
 
     // Get Y.js maps and arrays
     const workflowMap = ydoc.getMap('workflow');
@@ -546,54 +663,11 @@ export const createWorkflowStore = () => {
     triggersArray.observeDeep(triggersObserver);
     edgesArray.observeDeep(edgesObserver);
     positionsMap.observeDeep(positionsObserver);
-    errorsMap.observeDeep(errorsObserver); // NEW: Attach errors observer
+    errorsMap.observeDeep(errorsObserver);
 
     // Set up channel listener for trigger auth methods updates
-    const triggerAuthMethodsHandler = (payload: unknown) => {
-      logger.debug('Received trigger_auth_methods_updated broadcast', payload);
-
-      // Type guard and validation
-      if (
-        typeof payload === 'object' &&
-        payload !== null &&
-        'trigger_id' in payload &&
-        'webhook_auth_methods' in payload
-      ) {
-        const { trigger_id, webhook_auth_methods } = payload as {
-          trigger_id: string;
-          webhook_auth_methods: Array<{
-            id: string;
-            name: string;
-            auth_type: string;
-          }>;
-        };
-
-        // Update has_auth_method flag in Y.Doc (outside updateState to avoid side effects)
-        const triggers = triggersArray.toArray() as Y.Map<unknown>[];
-        const triggerIndex = triggers.findIndex(
-          t => t.get('id') === trigger_id
-        );
-
-        if (triggerIndex >= 0) {
-          const yjsTrigger = triggers[triggerIndex];
-          const hasAuthMethod = webhook_auth_methods.length > 0;
-          yjsTrigger.set('has_auth_method', hasAuthMethod);
-        }
-
-        // Update activeTriggerAuthMethods if this broadcast matches the active trigger
-        updateState(draft => {
-          if (
-            draft.activeTriggerAuthMethods?.trigger_id === trigger_id &&
-            Array.isArray(webhook_auth_methods)
-          ) {
-            draft.activeTriggerAuthMethods = {
-              trigger_id,
-              webhook_auth_methods,
-            };
-          }
-        }, 'trigger_auth_methods_updated');
-      }
-    };
+    const triggerAuthMethodsHandler =
+      createTriggerAuthMethodsHandler(triggersArray);
 
     provider.channel.on(
       'trigger_auth_methods_updated',
@@ -601,13 +675,20 @@ export const createWorkflowStore = () => {
     );
 
     // Store cleanup functions
+    // CRITICAL: Separate Y.Doc observer cleanups from channel cleanups
+    // Y.Doc observers must persist during disconnection for offline editing
+    // Channel observers only need cleanup when fully destroying the store
     logger.debug('Attaching observers');
-    observerCleanups = [
+    const ydocObserverCleanups = [
       () => workflowMap.unobserveDeep(workflowObserver),
       () => jobsArray.unobserveDeep(jobsObserver),
       () => triggersArray.unobserveDeep(triggersObserver),
       () => edgesArray.unobserveDeep(edgesObserver),
       () => positionsMap.unobserveDeep(positionsObserver),
+      () => errorsMap.unobserveDeep(errorsObserver),
+    ];
+
+    const channelObserverCleanups = [
       () => {
         if (provider?.channel) {
           provider.channel.off(
@@ -616,13 +697,21 @@ export const createWorkflowStore = () => {
           );
         }
       },
-      () => errorsMap.unobserveDeep(errorsObserver), // NEW: Cleanup function
-      () => {
-        // UndoManager cleanup
-        undoManager.clear();
-        undoManager.destroy();
-      },
     ];
+
+    // Y.Doc observers persist across disconnection for offline editing
+    // Channel observers only cleaned up on disconnect
+    observerCleanups = [...ydocObserverCleanups, ...channelObserverCleanups];
+
+    // Store references for disconnect() to selectively clean up
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (observerCleanups as any).ydocCleanups = ydocObserverCleanups;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (observerCleanups as any).channelCleanups = channelObserverCleanups;
+
+    // NOTE: UndoManager cleanup intentionally omitted
+    // UndoManager persists during disconnection for offline undo/redo
+    // It will be cleaned up only when the entire store is destroyed
 
     state = produce(state, draft => {
       updateDerivedState(draft);
@@ -651,23 +740,33 @@ export const createWorkflowStore = () => {
     notify('connected');
   };
 
-  // Disconnect Y.Doc and clean up observers
+  // Disconnect and clean up channel observers only
+  // Y.Doc observers persist for offline editing
   const disconnect = () => {
-    logger.debug('Cleaning up observers', observerCleanups.length);
-    observerCleanups.forEach(cleanup => {
+    // Only clean up channel observers (not Y.Doc observers!)
+    // Y.Doc observers must remain active for offline editing to work
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const channelCleanups = (observerCleanups as any).channelCleanups || [];
+    logger.debug('Cleaning up channel observers only', {
+      channelCleanups: channelCleanups.length,
+      totalObservers: observerCleanups.length,
+    });
+
+    channelCleanups.forEach((cleanup: () => void) => {
       cleanup();
     });
-    observerCleanups = [];
-    ydoc = null;
+
+    // Keep ydoc reference alive for offline editing
+    // Keep Y.Doc observers alive for offline editing
+    // Only null out provider since it's network-dependent
     provider = null;
 
     // Disconnect DevTools
     devtools.disconnect();
 
-    // Update collaboration status and reset undoManager
-    updateState(draft => {
-      draft.undoManager = null;
-    }, 'disconnected');
+    // Keep undoManager alive - it works offline too
+    // Note: undoManager tracks Y.Doc transactions, which work offline
+    // We don't reset it here so undo/redo remains functional during disconnection
   };
 
   // =============================================================================
@@ -676,7 +775,7 @@ export const createWorkflowStore = () => {
   // These methods update Y.Doc, which triggers observers that update Immer state
 
   const updateJob = (id: string, updates: Partial<Session.Job>) => {
-    const { ydoc } = ensureConnected();
+    const ydoc = ensureYDoc();
 
     // TODO: parse through zod to throw out extra fields
     // if (!ydoc) {
@@ -738,7 +837,7 @@ export const createWorkflowStore = () => {
       Omit<Session.Workflow, 'id' | 'lock_version' | 'deleted_at'>
     >
   ) => {
-    const { ydoc } = ensureConnected();
+    const ydoc = ensureYDoc();
 
     const workflowMap = ydoc.getMap('workflow');
 
@@ -759,7 +858,7 @@ export const createWorkflowStore = () => {
   };
 
   const addJob = (job: Partial<Session.Job>) => {
-    const { ydoc } = ensureConnected();
+    const ydoc = ensureYDoc();
     if (!job.id || !job.name) return;
 
     const jobsArray = ydoc.getArray('jobs');
@@ -786,7 +885,7 @@ export const createWorkflowStore = () => {
   };
 
   const removeJob = (id: string) => {
-    const { ydoc } = ensureConnected();
+    const ydoc = ensureYDoc();
 
     const jobsArray = ydoc.getArray('jobs');
     const jobs = jobsArray.toArray() as Y.Map<unknown>[];
@@ -813,7 +912,7 @@ export const createWorkflowStore = () => {
   };
 
   const addEdge = (edge: Partial<Session.Edge>) => {
-    const { ydoc } = ensureConnected();
+    const ydoc = ensureYDoc();
     if (!edge.id || !edge.target_job_id) return;
 
     const edgesArray = ydoc.getArray('edges');
@@ -833,7 +932,7 @@ export const createWorkflowStore = () => {
   };
 
   const updateEdge = (id: string, updates: Partial<Session.Edge>) => {
-    const { ydoc } = ensureConnected();
+    const ydoc = ensureYDoc();
 
     const edgesArray = ydoc.getArray('edges');
     const edges = edgesArray.toArray() as Y.Map<unknown>[];
@@ -855,7 +954,7 @@ export const createWorkflowStore = () => {
   };
 
   const removeEdge = (id: string) => {
-    const { ydoc } = ensureConnected();
+    const ydoc = ensureYDoc();
 
     const edgesArray = ydoc.getArray('edges');
     const edges = edgesArray.toArray() as Y.Map<unknown>[];
@@ -870,7 +969,7 @@ export const createWorkflowStore = () => {
   };
 
   const updateTrigger = (id: string, updates: Partial<Session.Trigger>) => {
-    const { ydoc } = ensureConnected();
+    const ydoc = ensureYDoc();
 
     const triggersArray = ydoc.getArray('triggers');
     const triggers = triggersArray.toArray() as Y.Map<unknown>[];
@@ -889,7 +988,7 @@ export const createWorkflowStore = () => {
   };
 
   const setEnabled = (enabled: boolean) => {
-    const { ydoc } = ensureConnected();
+    const ydoc = ensureYDoc();
 
     const triggersArray = ydoc.getArray('triggers');
     const triggers = triggersArray.toArray() as Y.Map<unknown>[];
@@ -912,7 +1011,7 @@ export const createWorkflowStore = () => {
   };
 
   const updatePositions = (positions: Workflow.Positions | null) => {
-    const { ydoc } = ensureConnected();
+    const ydoc = ensureYDoc();
 
     const positionsMap = ydoc.getMap('positions');
 
@@ -930,7 +1029,7 @@ export const createWorkflowStore = () => {
   };
 
   const updatePosition = (id: string, position: { x: number; y: number }) => {
-    const { ydoc } = ensureConnected();
+    const ydoc = ensureYDoc();
 
     const positionsMap = ydoc.getMap('positions');
     ydoc.transact(() => {
@@ -1379,7 +1478,7 @@ export const createWorkflowStore = () => {
    * @param workflowState - Parsed YAML workflow state
    */
   const importWorkflow = (workflowState: YAMLWorkflowState) => {
-    const { ydoc } = ensureConnected();
+    const ydoc = ensureYDoc();
 
     try {
       // Use adapter to apply transformations and update Y.Doc

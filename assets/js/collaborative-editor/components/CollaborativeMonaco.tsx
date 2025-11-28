@@ -220,6 +220,7 @@ export function CollaborativeMonaco({
     insertSpaces: true,
     automaticLayout: true,
     readOnly: disabled,
+    fixedOverflowWidgets: true,
     ...options,
   };
 

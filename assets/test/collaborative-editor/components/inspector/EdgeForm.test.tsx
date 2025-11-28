@@ -13,6 +13,7 @@ import { act } from 'react';
 import { beforeEach, describe, expect, test } from 'vitest';
 
 import { EdgeForm } from '../../../../js/collaborative-editor/components/inspector/EdgeForm';
+import { SessionContext } from '../../../../js/collaborative-editor/contexts/SessionProvider';
 import type { StoreContextValue } from '../../../../js/collaborative-editor/contexts/StoreProvider';
 import { StoreContext } from '../../../../js/collaborative-editor/contexts/StoreProvider';
 import type { AdaptorStoreInstance } from '../../../../js/collaborative-editor/stores/createAdaptorStore';
@@ -23,6 +24,7 @@ import type { CredentialStoreInstance } from '../../../../js/collaborative-edito
 import { createCredentialStore } from '../../../../js/collaborative-editor/stores/createCredentialStore';
 import type { SessionContextStoreInstance } from '../../../../js/collaborative-editor/stores/createSessionContextStore';
 import { createSessionContextStore } from '../../../../js/collaborative-editor/stores/createSessionContextStore';
+import { createSessionStore } from '../../../../js/collaborative-editor/stores/createSessionStore';
 import type { WorkflowStoreInstance } from '../../../../js/collaborative-editor/stores/createWorkflowStore';
 import { createWorkflowStore } from '../../../../js/collaborative-editor/stores/createWorkflowStore';
 import type { Session } from '../../../../js/collaborative-editor/types/session';
@@ -30,6 +32,7 @@ import {
   createMockPhoenixChannel,
   createMockPhoenixChannelProvider,
 } from '../../__helpers__/channelMocks';
+import { createMockSocket } from '../../mocks/phoenixSocket';
 import { createWorkflowYDoc } from '../../__helpers__/workflowFactory';
 
 /**
@@ -56,6 +59,13 @@ function createWrapper(
   adaptorStore: AdaptorStoreInstance,
   awarenessStore: AwarenessStoreInstance
 ): React.ComponentType<{ children: React.ReactNode }> {
+  // Create session store and initialize with mock socket
+  const sessionStore = createSessionStore();
+  const mockSocket = createMockSocket();
+  sessionStore.initializeSession(mockSocket as any, 'test:room', null, {
+    connect: true, // Ensure connected state
+  });
+
   const mockStoreValue: StoreContextValue = {
     workflowStore,
     credentialStore,
@@ -67,10 +77,17 @@ function createWrapper(
     editorPreferencesStore: {} as any,
   };
 
+  const mockSessionValue = {
+    sessionStore,
+    isNewWorkflow: false,
+  };
+
   return ({ children }: { children: React.ReactNode }) => (
-    <StoreContext.Provider value={mockStoreValue}>
-      {children}
-    </StoreContext.Provider>
+    <SessionContext.Provider value={mockSessionValue}>
+      <StoreContext.Provider value={mockStoreValue}>
+        {children}
+      </StoreContext.Provider>
+    </SessionContext.Provider>
   );
 }
 

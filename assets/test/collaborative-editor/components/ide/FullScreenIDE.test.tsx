@@ -407,6 +407,8 @@ vi.mock('../../../../js/collaborative-editor/hooks/useRunRetry', () => ({
     isRetryable: false,
     runIsProcessing: false,
     runTooltipMessage: '',
+    isSubmitting: false,
+    canRun: true,
   }),
 }));
 
@@ -586,7 +588,7 @@ describe('FullScreenIDE', () => {
       });
     });
 
-    test('displays Save button in header', async () => {
+    test('displays Run button in header', async () => {
       const onClose = vi.fn();
 
       renderFullScreenIDE({
@@ -595,12 +597,12 @@ describe('FullScreenIDE', () => {
 
       await waitFor(() => {
         expect(
-          screen.getByRole('button', { name: /save/i })
+          screen.getByRole('button', { name: /run/i })
         ).toBeInTheDocument();
       });
     });
 
-    test('displays workflow name breadcrumb for closing IDE', async () => {
+    test('displays job name in code panel heading', async () => {
       const onClose = vi.fn();
 
       renderFullScreenIDE({
@@ -608,7 +610,7 @@ describe('FullScreenIDE', () => {
       });
 
       await waitFor(() => {
-        expect(screen.getByText('Test Workflow')).toBeInTheDocument();
+        expect(screen.getByText(/Code -/i)).toBeInTheDocument();
       });
     });
   });
@@ -702,7 +704,7 @@ describe('FullScreenIDE', () => {
       });
 
       await waitFor(() => {
-        expect(screen.getByText(/Code/i)).toBeInTheDocument();
+        expect(screen.getByText(/Code -/i)).toBeInTheDocument();
       });
 
       // Find all collapse buttons
@@ -717,7 +719,7 @@ describe('FullScreenIDE', () => {
   });
 
   describe('button functionality', () => {
-    test('Save button is present', async () => {
+    test('Run button is present', async () => {
       const onClose = vi.fn();
 
       renderFullScreenIDE({
@@ -726,14 +728,14 @@ describe('FullScreenIDE', () => {
 
       await waitFor(() => {
         expect(
-          screen.getByRole('button', { name: /save/i })
+          screen.getByRole('button', { name: /run/i })
         ).toBeInTheDocument();
       });
     });
   });
 
   describe('Close IDE functionality', () => {
-    test('clicking workflow name breadcrumb calls onClose', async () => {
+    test('clicking close button calls onClose', async () => {
       const user = userEvent.setup();
       const onClose = vi.fn();
 
@@ -742,11 +744,11 @@ describe('FullScreenIDE', () => {
       });
 
       await waitFor(() => {
-        expect(screen.getByText('Test Workflow')).toBeInTheDocument();
+        expect(screen.getByLabelText('Close IDE')).toBeInTheDocument();
       });
 
-      const workflowBreadcrumb = screen.getByText('Test Workflow');
-      await user.click(workflowBreadcrumb);
+      const closeButton = screen.getByLabelText('Close IDE');
+      await user.click(closeButton);
 
       expect(onClose).toHaveBeenCalledOnce();
     });

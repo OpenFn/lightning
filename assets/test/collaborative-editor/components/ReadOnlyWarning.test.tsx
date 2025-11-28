@@ -15,9 +15,11 @@ import { describe, expect, test } from 'vitest';
 import * as Y from 'yjs';
 
 import { ReadOnlyWarning } from '../../../js/collaborative-editor/components/ReadOnlyWarning';
+import { SessionContext } from '../../../js/collaborative-editor/contexts/SessionProvider';
 import type { StoreContextValue } from '../../../js/collaborative-editor/contexts/StoreProvider';
 import { StoreContext } from '../../../js/collaborative-editor/contexts/StoreProvider';
 import { createSessionContextStore } from '../../../js/collaborative-editor/stores/createSessionContextStore';
+import { createSessionStore } from '../../../js/collaborative-editor/stores/createSessionStore';
 import { createWorkflowStore } from '../../../js/collaborative-editor/stores/createWorkflowStore';
 import type { Session } from '../../../js/collaborative-editor/types/session';
 import { createSessionContext } from '../__helpers__/sessionContextFactory';
@@ -25,6 +27,7 @@ import {
   createMockPhoenixChannel,
   createMockPhoenixChannelProvider,
 } from '../mocks/phoenixChannel';
+import { createMockSocket } from '../mocks/phoenixSocket';
 
 // =============================================================================
 // TEST HELPERS
@@ -47,6 +50,7 @@ function createTestSetup(options: WrapperOptions = {}) {
     isNewWorkflow = false,
   } = options;
 
+  const sessionStore = createSessionStore();
   const sessionContextStore = createSessionContextStore(isNewWorkflow);
   const workflowStore = createWorkflowStore();
 
@@ -73,6 +77,12 @@ function createTestSetup(options: WrapperOptions = {}) {
   workflowStore.connect(ydoc, mockProvider as any);
   sessionContextStore._connectChannel(mockProvider as any);
 
+  // Initialize session store with mock socket - it starts connected
+  const mockSocket = createMockSocket();
+  sessionStore.initializeSession(mockSocket as any, 'test:room', null, {
+    connect: true, // Ensure connected state
+  });
+
   const emitSessionContext = () => {
     (mockChannel as any)._test.emit(
       'session_context',
@@ -92,10 +102,17 @@ function createTestSetup(options: WrapperOptions = {}) {
     uiStore: {} as any,
   };
 
+  const mockSessionValue = {
+    sessionStore,
+    isNewWorkflow,
+  };
+
   const wrapper = ({ children }: { children: React.ReactNode }) => (
-    <StoreContext.Provider value={mockStoreValue}>
-      {children}
-    </StoreContext.Provider>
+    <SessionContext.Provider value={mockSessionValue}>
+      <StoreContext.Provider value={mockStoreValue}>
+        {children}
+      </StoreContext.Provider>
+    </SessionContext.Provider>
   );
 
   return { wrapper, emitSessionContext, ydoc };
@@ -133,7 +150,9 @@ describe('ReadOnlyWarning - Core Rendering', () => {
       emitSessionContext();
     });
 
-    expect(screen.queryByText('Read-only')).not.toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.queryByText('Read-only')).not.toBeInTheDocument();
+    });
   });
 
   test('does not render during new workflow creation', async () => {
@@ -345,7 +364,9 @@ describe('ReadOnlyWarning - Dynamic Changes', () => {
       emitSessionContext();
     });
 
-    expect(screen.queryByText('Read-only')).not.toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.queryByText('Read-only')).not.toBeInTheDocument();
+    });
 
     // Make workflow deleted
     act(() => {
