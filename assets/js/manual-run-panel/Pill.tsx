@@ -1,26 +1,40 @@
-import { XMarkIcon } from '@heroicons/react/24/outline';
+import { cn } from '#/utils/cn';
 
 interface PillProps {
   onClose: () => void;
   className?: string;
+  variant?: 'default' | 'warning';
 }
+
 const Pill: React.FC<React.PropsWithChildren<PillProps>> = ({
   children,
   onClose,
-  className = '',
+  className,
+  variant = 'default',
 }) => {
   return (
     <div
-      className={`inline-flex justify-between items-center gap-x-0.5 rounded-md bg-blue-100 px-2 py-1 text-xs font-medium text-blue-700 ${className}`.trim()}
+      className={cn(
+        'inline-flex items-center gap-x-1',
+        'rounded-md px-2 py-1 text-xs font-medium',
+        variant === 'default' && 'bg-blue-100 text-blue-700',
+        variant === 'warning' && 'bg-yellow-100 text-yellow-800',
+        className
+      )}
     >
-      {children}
+      <span className="flex items-center">{children}</span>
       <button
         onClick={onClose}
-        className="group relative -mr-1 h-3.5 w-3.5 rounded-sm hover:bg-blue-600/20"
+        className={cn(
+          'group relative -mr-1 flex items-center justify-center h-3.5 w-3.5 rounded-sm',
+          variant === 'default' && 'hover:bg-blue-600/20',
+          variant === 'warning' && 'hover:bg-yellow-700/20'
+        )}
+        aria-label="Remove"
+        title="Remove"
       >
         <span className="sr-only">Remove</span>
-        <XMarkIcon className="h-3.5 w-3.5" />
-        <span className="absolute -inset-1"></span>
+        <span className="hero-x-mark h-3.5 w-3.5" />
       </button>
     </div>
   );

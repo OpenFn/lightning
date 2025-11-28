@@ -282,193 +282,61 @@
 
         <div class="mt-2">
           <%= if workflow_id = get_change(@filters_changeset, :workflow_id) do %>
-            <span class="inline-flex items-center gap-x-0.5 rounded-md bg-blue-100 px-2 py-1 text-xs font-medium text-blue-700">
+            <.filter_chip
+              form={@filters_changeset}
+              fields={[{:workflow_id, nil}]}
+              id={"workflow_chip_#{workflow_id}"}
+            >
               Workflow: {find_workflow_name(@workflows, workflow_id)}
-              <.form
-                :let={f}
-                for={@filters_changeset}
-                as={:filters}
-                class="inline"
-                phx-submit="apply_filters"
-              >
-                <.input
-                  id={"workflow_chip_#{workflow_id}"}
-                  type="hidden"
-                  field={f[:workflow_id]}
-                  value={nil}
-                />
-
-                <button
-                  type="submit"
-                  class="group relative -mr-1 h-3.5 w-3.5 rounded-sm hover:bg-blue-600/20"
-                >
-                  <span class="sr-only">Remove</span>
-                  <svg
-                    viewBox="0 0 14 14"
-                    class="h-3.5 w-3.5 stroke-blue-800/50 group-hover:stroke-blue-800/75"
-                  >
-                    <path d="M4 4l6 6m0-6l-6 6" />
-                  </svg>
-                  <span class="absolute -inset-1"></span>
-                </button>
-              </.form>
-            </span>
+            </.filter_chip>
           <% end %>
 
           <%= if workorder_id = get_change(@filters_changeset, :workorder_id) do %>
-            <span class="inline-flex items-center gap-x-0.5 rounded-md bg-blue-100 px-2 py-1 text-xs font-medium text-blue-700">
+            <.filter_chip
+              form={@filters_changeset}
+              fields={[{:workorder_id, nil}]}
+              id={"workorder_chip_#{workorder_id}"}
+            >
               Work order: {display_short_uuid(workorder_id)}
-              <.form
-                :let={f}
-                for={@filters_changeset}
-                as={:filters}
-                class="inline"
-                phx-submit="apply_filters"
-              >
-                <.input
-                  id={"workorder_chip_#{workorder_id}"}
-                  type="hidden"
-                  field={f[:workorder_id]}
-                  value={nil}
-                />
-
-                <button
-                  type="submit"
-                  class="group relative -mr-1 h-3.5 w-3.5 rounded-sm hover:bg-blue-600/20"
-                >
-                  <span class="sr-only">Remove</span>
-                  <svg
-                    viewBox="0 0 14 14"
-                    class="h-3.5 w-3.5 stroke-blue-800/50 group-hover:stroke-blue-800/75"
-                  >
-                    <path d="M4 4l6 6m0-6l-6 6" />
-                  </svg>
-                  <span class="absolute -inset-1"></span>
-                </button>
-              </.form>
-            </span>
+            </.filter_chip>
           <% end %>
 
           <%= for status <- Enum.filter(@statuses, fn status -> checked?(@filters_changeset, status.id) end)  do %>
-            <span class="inline-flex items-center gap-x-0.5 rounded-md bg-blue-100 px-2 py-1 text-xs font-medium text-blue-700">
+            <.filter_chip
+              form={@filters_changeset}
+              fields={[{status.id, false}]}
+              id={"workorder_status_chip_#{status.id}"}
+            >
               Work order status: {status.label}
-              <.form
-                :let={f}
-                for={@filters_changeset}
-                as={:filters}
-                class="inline"
-                phx-submit="apply_filters"
-              >
-                <.input
-                  id={"workorder_status_chip_#{status.id}"}
-                  type="hidden"
-                  field={f[status.id]}
-                  value={false}
-                />
-                <button
-                  type="submit"
-                  class="group relative -mr-1 h-3.5 w-3.5 rounded-sm hover:bg-blue-600/20"
-                >
-                  <span class="sr-only">Remove</span>
-                  <svg
-                    viewBox="0 0 14 14"
-                    class="h-3.5 w-3.5 stroke-blue-800/50 group-hover:stroke-blue-800/75"
-                  >
-                    <path d="M4 4l6 6m0-6l-6 6" />
-                  </svg>
-                  <span class="absolute -inset-1"></span>
-                </button>
-              </.form>
-            </span>
+            </.filter_chip>
           <% end %>
 
           <%= if get_change(@filters_changeset, :wo_date_after) || get_change(@filters_changeset, :wo_date_before) do %>
-            <span class="inline-flex items-center gap-x-0.5 rounded-md bg-blue-100 px-2 py-1 text-xs font-medium text-blue-700">
+            <.filter_chip
+              form={@filters_changeset}
+              fields={[{:wo_date_after, nil}, {:wo_date_before, nil}]}
+              id="workorder_date_received_chip"
+            >
               {@filters_changeset
               |> get_change(:wo_date_after)
               |> maybe_humanize_date() || "*"} - {@filters_changeset
               |> get_change(:wo_date_before)
               |> maybe_humanize_date() || "*"}
-              <.form
-                :let={f}
-                for={@filters_changeset}
-                as={:filters}
-                class="inline"
-                phx-submit="apply_filters"
-              >
-                <.input
-                  id="workorder_after_date_received_chip"
-                  type="hidden"
-                  field={f[:wo_date_after]}
-                  value={nil}
-                />
-
-                <.input
-                  id="workorder_before_date_received_chip"
-                  type="hidden"
-                  field={f[:wo_date_before]}
-                  value={nil}
-                />
-                <button
-                  type="submit"
-                  class="group relative -mr-1 h-3.5 w-3.5 rounded-sm hover:bg-blue-600/20"
-                >
-                  <span class="sr-only">Remove</span>
-                  <svg
-                    viewBox="0 0 14 14"
-                    class="h-3.5 w-3.5 stroke-blue-800/50 group-hover:stroke-blue-800/75"
-                  >
-                    <path d="M4 4l6 6m0-6l-6 6" />
-                  </svg>
-                  <span class="absolute -inset-1"></span>
-                </button>
-              </.form>
-            </span>
+            </.filter_chip>
           <% end %>
 
           <%= if get_change(@filters_changeset, :date_after) || get_change(@filters_changeset, :date_before) do %>
-            <span class="inline-flex items-center gap-x-0.5 rounded-md bg-blue-100 px-2 py-1 text-xs font-medium text-blue-700">
+            <.filter_chip
+              form={@filters_changeset}
+              fields={[{:date_after, nil}, {:date_before, nil}]}
+              id="workorder_last_activity_chip"
+            >
               Last Activity: {@filters_changeset
               |> get_change(:date_after)
               |> maybe_humanize_date() || "*"} - {@filters_changeset
               |> get_change(:date_before)
               |> maybe_humanize_date() || "*"}
-              <.form
-                :let={f}
-                for={@filters_changeset}
-                as={:filters}
-                class="inline"
-                phx-submit="apply_filters"
-              >
-                <.input
-                  id="workorder_after_last_activity_chip"
-                  type="hidden"
-                  field={f[:date_after]}
-                  value={nil}
-                />
-
-                <.input
-                  id="workorder_before_last_activity_chip"
-                  type="hidden"
-                  field={f[:date_before]}
-                  value={nil}
-                />
-
-                <button
-                  type="submit"
-                  class="group relative -mr-1 h-3.5 w-3.5 rounded-sm hover:bg-blue-600/20"
-                >
-                  <span class="sr-only">Remove</span>
-                  <svg
-                    viewBox="0 0 14 14"
-                    class="h-3.5 w-3.5 stroke-blue-800/50 group-hover:stroke-blue-800/75"
-                  >
-                    <path d="M4 4l6 6m0-6l-6 6" />
-                  </svg>
-                  <span class="absolute -inset-1"></span>
-                </button>
-              </.form>
-            </span>
+            </.filter_chip>
           <% end %>
         </div>
 
