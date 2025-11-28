@@ -34,6 +34,8 @@ and this project adheres to
   [#4066](https://github.com/OpenFn/lightning/issues/4066)
 - Loading workflow screen appears when disconnected from server
   [#3972](https://github.com/OpenFn/lightning/issues/3972)
+- Fix save & run buttons disabled after new workflow save
+  [#4084](https://github.com/OpenFn/lightning/issues/4084)
 
 ## [2.15.0-pre1] - 2025-11-27
 

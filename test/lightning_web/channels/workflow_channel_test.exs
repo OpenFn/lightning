@@ -334,6 +334,37 @@ defmodule LightningWeb.WorkflowChannelTest do
       assert snapshot_socket.assigns.workflow.lock_version == 0
       assert snapshot_socket.assigns.workflow.name == workflow.name
     end
+
+    test "returns workflow lock_version when fresh_workflow is nil (new unsaved workflow)",
+         %{
+           project: project,
+           user: user
+         } do
+      # Create a new workflow ID that doesn't exist in DB yet (simulating new workflow)
+      new_workflow_id = Ecto.UUID.generate()
+
+      # Join with action "new" to simulate creating a new workflow
+      {:ok, _, new_socket} =
+        LightningWeb.UserSocket
+        |> socket("user_#{user.id}", %{current_user: user})
+        |> subscribe_and_join(
+          LightningWeb.WorkflowChannel,
+          "workflow:collaborate:#{new_workflow_id}",
+          %{"project_id" => project.id, "action" => "new"}
+        )
+
+      ref = push(new_socket, "get_context", %{})
+
+      assert_reply ref, :ok, response
+
+      # CRITICAL: For new unsaved workflows, fresh_workflow will be nil
+      # so latest_snapshot_lock_version should fall back to workflow.lock_version
+      assert %{latest_snapshot_lock_version: latest_lock_version} = response
+      # New workflows start at lock_version 0 (or nil, which should be handled)
+      assert latest_lock_version == 0 || is_nil(latest_lock_version)
+      # Verify we're in a new workflow context
+      assert new_socket.assigns.workflow.name == "Untitled workflow"
+    end
   end
 
   describe "save_workflow" do
