@@ -3,9 +3,9 @@
  */
 
 import { ReactFlowProvider } from '@xyflow/react';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 
-import { cn } from '#/utils/cn';
+import { useURLState } from '#/react/lib/use-url-state';
 
 import {
   useEditorPreferencesCommands,
@@ -41,6 +41,7 @@ export function CollaborativeWorkflowDiagram({
   const { currentNode, selectNode } = useNodeSelection();
   const isNewWorkflow = useIsNewWorkflow();
   const isHistoryChannelConnected = useHistoryChannelConnected();
+  const { searchParams, updateSearchParams } = useURLState();
 
   // Get history data and commands
   const history = useHistory();
@@ -52,11 +53,9 @@ export function CollaborativeWorkflowDiagram({
   const historyCollapsed = useHistoryPanelCollapsed();
   const { setHistoryPanelCollapsed } = useEditorPreferencesCommands();
 
-  // Track selected run for visual feedback (stored in URL)
-  const [selectedRunId, setSelectedRunId] = useState<string | null>(() => {
-    const params = new URLSearchParams(window.location.search);
-    return params.get('run');
-  });
+  // Read selected run ID from URL - single source of truth
+  // useURLState is reactive, so component re-renders when URL changes
+  const selectedRunId = searchParams.get('run');
 
   // Auto-expand history panel when a run is selected
   useEffect(() => {
@@ -79,10 +78,9 @@ export function CollaborativeWorkflowDiagram({
   const handleVersionSelect = useVersionSelect();
 
   // Update URL when run selection changes
+  // URLStore notifies subscribers synchronously, triggering immediate re-render
   const handleRunSelect = useCallback(
     (run: RunSummary) => {
-      setSelectedRunId(run.id);
-
       // Find the workorder that contains this run
       const workorder = history.find(wo => wo.runs.some(r => r.id === run.id));
 
@@ -91,21 +89,15 @@ export function CollaborativeWorkflowDiagram({
         handleVersionSelect(workorder.version);
       }
 
-      const url = new URL(window.location.href);
-      url.searchParams.set('run', run.id);
-      window.history.pushState({}, '', url.toString());
+      updateSearchParams({ run: run.id });
     },
-    [history, handleVersionSelect]
+    [history, handleVersionSelect, updateSearchParams]
   );
 
   // Clear URL parameter when deselecting run
   const handleDeselectRun = useCallback(() => {
-    setSelectedRunId(null);
-
-    const url = new URL(window.location.href);
-    url.searchParams.delete('run');
-    window.history.pushState({}, '', url.toString());
-  }, []);
+    updateSearchParams({ run: null });
+  }, [updateSearchParams]);
 
   // Request history when panel is first expanded OR when there's a run ID selected
   // Wait for channel to be connected before making request
