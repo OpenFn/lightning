@@ -35,7 +35,9 @@ export function useAIMode(): AIModeResult | null {
   const jobs = useWorkflowState(state => state.jobs);
 
   return useMemo(() => {
-    if (!project) return null;
+    if (!project) {
+      return null;
+    }
 
     // Check if IDE is open for a specific job
     const isIDEOpen = searchParams.get('panel') === 'editor';

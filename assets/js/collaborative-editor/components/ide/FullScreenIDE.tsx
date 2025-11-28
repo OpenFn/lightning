@@ -109,6 +109,10 @@ export function FullScreenIDE({
   parentProjectId,
   parentProjectName,
 }: FullScreenIDEProps) {
+  useEffect(() => {
+    return () => {};
+  }, []);
+
   const { searchParams, updateSearchParams } = useURLState();
   const jobIdFromURL = searchParams.get('job');
   // Support both 'run' (collaborative) and 'a' (classical) parameter for run ID

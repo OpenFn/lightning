@@ -95,6 +95,14 @@ export const useAIAssistantChannel = (store: AIAssistantStore) => {
       return;
     }
 
+    // IMPORTANT: Leave any existing channel before joining a new one
+    // This prevents duplicate connections when switching sessions/modes
+    if (channelRef.current) {
+      logger.debug('Leaving existing channel before joining new one');
+      channelRef.current.leave();
+      channelRef.current = null;
+    }
+
     // Cast socket to our interface (Phoenix types are incomplete)
     const phoenixSocket = socket as unknown as PhoenixSocket;
 

@@ -159,6 +159,10 @@ function AIAssistantPanelWrapper() {
   // Detect current AI mode (job_code or workflow_template)
   const aiMode = useAIMode();
 
+  // Refs to stabilize mode and sessionId - prevent effect re-runs on every workflow change
+  const prevModeRef = useRef<string | null>(null);
+  const prevSessionIdRef = useRef<string | null>(null);
+
   // Get session ID from URL params - ONLY read param that matches current mode
   // w-chat for workflow_template mode, j-chat for job_code mode
   const sessionIdFromURL = useMemo(() => {
@@ -167,12 +171,6 @@ function AIAssistantPanelWrapper() {
     // Get the parameter name for current mode
     const paramName = aiMode.mode === 'workflow_template' ? 'w-chat' : 'j-chat';
     const sessionId = searchParams.get(paramName);
-
-    console.log('[AI Assistant] Session from URL', {
-      mode: aiMode.mode,
-      paramName,
-      sessionId,
-    });
 
     return sessionId;
   }, [aiMode, searchParams]);
@@ -194,12 +192,6 @@ function AIAssistantPanelWrapper() {
         state.jobCodeContext.job_id;
 
     if (isModeSwitch || jobIdChanged) {
-      console.log('[AI Assistant] Clearing session URL on context change', {
-        isModeSwitch,
-        jobIdChanged,
-        mode,
-      });
-
       // Clear BOTH params to ensure we start fresh
       updateSearchParams({
         'w-chat': null,
@@ -211,29 +203,31 @@ function AIAssistantPanelWrapper() {
   // Single unified effect for context initialization and session loading
   // This runs ONCE when panel opens or mode changes
   useEffect(() => {
-    if (!isAIAssistantPanelOpen || !aiMode) return;
+    if (!isAIAssistantPanelOpen || !aiMode) {
+      prevModeRef.current = null;
+      prevSessionIdRef.current = null;
+      return;
+    }
 
     const state = aiStore.getSnapshot();
     const { mode, context } = aiMode;
 
-    console.log('[AI Assistant] Panel opened/mode changed', {
-      mode,
-      storeSessionType: state.sessionType,
-      hasJobContext: !!state.jobCodeContext,
-      hasWorkflowContext: !!state.workflowTemplateContext,
-      sessionIdFromURL,
-      connectionState: state.connectionState,
-    });
+    // Only run if mode or sessionId actually changed
+    const modeChanged = prevModeRef.current !== mode;
+    const sessionIdChanged = prevSessionIdRef.current !== sessionIdFromURL;
+
+    if (!modeChanged && !sessionIdChanged && prevModeRef.current !== null) {
+      // Mode and session unchanged - skip this run
+      return;
+    }
+
+    prevModeRef.current = mode;
+    prevSessionIdRef.current = sessionIdFromURL;
 
     // STEP 1: Check if we're switching modes (job ↔ workflow)
     const isModeSwitch = state.sessionType && state.sessionType !== mode;
 
     if (isModeSwitch) {
-      console.log('[AI Assistant] Mode switch detected:', {
-        from: state.sessionType,
-        to: mode,
-      });
-
       // Disconnect and clear everything from the old mode
       if (state.connectionState !== 'disconnected') {
         aiStore.disconnect();
@@ -258,26 +252,8 @@ function AIAssistantPanelWrapper() {
       jobIdChanged;
 
     if (needsContextInit || isModeSwitch) {
-      console.log('[AI Assistant] Initializing context', {
-        mode,
-        needsInit: needsContextInit,
-        isModeSwitch,
-        jobIdChanged,
-      });
-
       // If job changed OR mode switched, clear session and session list
       if (jobIdChanged || isModeSwitch) {
-        console.log('[AI Assistant] Context changed, clearing sessions', {
-          jobIdChanged,
-          isModeSwitch,
-          oldJobId: state.jobCodeContext?.job_id,
-          newJobId:
-            mode === 'job_code'
-              ? (context as import('./types/ai-assistant').JobCodeContext)
-                  .job_id
-              : undefined,
-        });
-
         // Disconnect and clear session data
         if (state.connectionState !== 'disconnected') {
           aiStore.disconnect();
@@ -300,9 +276,6 @@ function AIAssistantPanelWrapper() {
     }
 
     // STEP 4: Connect to the session from URL
-    console.log('[AI Assistant] Loading session from URL', {
-      sessionId: sessionIdFromURL,
-    });
 
     // Add workflow YAML for workflow_template mode
     let finalContext = context;
@@ -350,17 +323,15 @@ function AIAssistantPanelWrapper() {
 
     // Connect with session ID from URL
     aiStore.connect(mode, finalContext, sessionIdFromURL);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     isAIAssistantPanelOpen,
     aiMode,
-    workflow,
-    jobs,
-    triggers,
-    edges,
-    positions,
     aiStore,
     sessionIdFromURL,
-    updateSearchParams,
+    // NOTE: Intentionally NOT including workflow, jobs, triggers, edges, positions
+    // We use refs (prevModeRef, prevSessionIdRef) to track actual changes
+    // Including these would cause reconnections on every Y.js edit
   ]);
 
   // Sync session ID to URL params - matches legacy editor behavior
@@ -374,10 +345,6 @@ function AIAssistantPanelWrapper() {
     // CRITICAL: Only sync to URL if session type matches current mode
     // This prevents syncing a workflow session ID to job mode URL (or vice versa)
     if (sessionType !== aiMode.mode) {
-      console.log('[AI Assistant] Skipping URL sync - session type mismatch', {
-        sessionType,
-        currentMode: aiMode.mode,
-      });
       return;
     }
 
@@ -388,12 +355,6 @@ function AIAssistantPanelWrapper() {
 
     // Only update if session ID changed
     if (currentValue !== sessionId) {
-      console.log('[AI Assistant] Syncing session to URL', {
-        mode: aiMode.mode,
-        paramName: currentParamName,
-        sessionId,
-      });
-
       updateSearchParams({
         [currentParamName]: sessionId,
         // NOTE: We do NOT clear the other mode's param anymore
@@ -431,12 +392,6 @@ function AIAssistantPanelWrapper() {
 
     const context =
       aiMode.context as import('./types/ai-assistant').JobCodeContext;
-
-    console.log('[AI Assistant] Job context changed, updating backend', {
-      job_adaptor: context.job_adaptor,
-      job_body_length: context.job_body?.length,
-      job_name: context.job_name,
-    });
 
     // Notify backend of context changes
     const contextUpdate: {
@@ -532,10 +487,6 @@ function AIAssistantPanelWrapper() {
     (selectedSessionId: string) => {
       if (!project) return;
 
-      console.log('[AI Assistant] handleSessionSelect called', {
-        selectedSessionId,
-      });
-
       // Clear all applied message IDs for new session
       appliedMessageIdsRef.current.clear();
 
@@ -624,12 +575,6 @@ function AIAssistantPanelWrapper() {
             }
           }
 
-          console.log('[AI Assistant] Reconnecting with session', {
-            selectedSessionId,
-            sessionType: currentSessionType,
-            context,
-          });
-
           // Reconnect with the selected session ID using the CURRENT session type
           aiStore.connect(currentSessionType, context, selectedSessionId);
         }
@@ -640,8 +585,6 @@ function AIAssistantPanelWrapper() {
 
   // Handler for showing sessions list
   const handleShowSessions = useCallback(() => {
-    console.log('[AI Assistant] handleShowSessions called');
-
     // Clear session ID from URL (both w-chat and j-chat)
     updateSearchParams({
       'w-chat': null,
@@ -662,13 +605,6 @@ function AIAssistantPanelWrapper() {
       messageOptions?: { attach_code?: boolean; attach_logs?: boolean }
     ) => {
       const currentState = aiStore.getSnapshot();
-
-      console.log('[AI Assistant] sendMessage called', {
-        content: content.substring(0, 50) + '...',
-        hasSession: !!currentState.sessionId,
-        sessionType: currentState.sessionType,
-        connectionState: currentState.connectionState,
-      });
 
       // If no session, connect first with initial message
       if (!currentState.sessionId && aiMode) {
@@ -800,8 +736,6 @@ function AIAssistantPanelWrapper() {
   // Handler for retrying failed messages
   const handleRetryMessage = useCallback(
     (messageId: string) => {
-      console.log('[AI Assistant] Retrying message', { messageId });
-
       // Update store to mark message as pending
       aiStore.retryMessage(messageId);
 
@@ -826,11 +760,6 @@ function AIAssistantPanelWrapper() {
   // Handler for applying AI-generated workflow YAML to canvas
   const handleApplyWorkflow = useCallback(
     async (yaml: string, messageId: string) => {
-      console.log('[AI Assistant] Applying workflow YAML to canvas', {
-        messageId,
-        yamlLength: yaml.length,
-      });
-
       setApplyingMessageId(messageId);
 
       try {
@@ -913,8 +842,6 @@ function AIAssistantPanelWrapper() {
         // Apply to canvas using existing import functionality
         // This will replace all jobs/triggers/edges with new IDs
         importWorkflow(workflowState);
-
-        console.log('[AI Assistant] Workflow applied successfully');
       } catch (error) {
         console.error('[AI Assistant] Failed to apply workflow:', error);
 
@@ -940,21 +867,6 @@ function AIAssistantPanelWrapper() {
     const messagesWithCode = messages.filter(
       msg => msg.role === 'assistant' && msg.code && msg.status === 'success'
     );
-
-    console.log('[AI Assistant] Auto-apply check:', {
-      sessionId,
-      connectionState,
-      sessionWorkflowId: workflowTemplateContext?.workflow_id,
-      currentWorkflowId: workflow?.id,
-      totalMessages: messages.length,
-      messagesWithCode: messagesWithCode.length,
-      appliedMessageIds: Array.from(appliedMessageIdsRef.current),
-      messageIds: messagesWithCode.map(m => ({
-        id: m.id,
-        hasCode: !!m.code,
-        codeLength: m.code?.length,
-      })),
-    });
 
     const latestMessage = messagesWithCode.pop(); // Get the most recent one
 
@@ -1180,6 +1092,8 @@ function IDEWrapper({ parentProjectId, parentProjectName }: IDEWrapperProps) {
 
   const isIDEOpen = searchParams.get('panel') === 'editor';
   const selectedJobId = searchParams.get('job');
+
+  useEffect(() => {}, [isIDEOpen, selectedJobId, searchParams]);
 
   const handleCloseIDE = useCallback(() => {
     updateSearchParams({ panel: null, job: null });
