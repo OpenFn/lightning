@@ -84,6 +84,7 @@ function AIAssistantPanelWrapper() {
     sendMessage: sendMessageToChannel,
     loadSessions,
     updateContext,
+    retryMessage: retryMessageViaChannel,
   } = useAIAssistantChannel(aiStore);
   const messages = useAIMessages();
   const isLoading = useAIIsLoading();
@@ -457,8 +458,8 @@ function AIAssistantPanelWrapper() {
   const handleNewConversation = useCallback(() => {
     if (!project) return;
 
-    // Reset auto-apply tracking for new session
-    hasCompletedInitialAutoApplyRef.current = null;
+    // Clear all applied message IDs for new session
+    appliedMessageIdsRef.current.clear();
 
     // Clear the current session
     aiStore.clearSession();
@@ -535,8 +536,8 @@ function AIAssistantPanelWrapper() {
         selectedSessionId,
       });
 
-      // Reset auto-apply tracking for new session
-      hasCompletedInitialAutoApplyRef.current = null;
+      // Clear all applied message IDs for new session
+      appliedMessageIdsRef.current.clear();
 
       // Clear messages immediately to prevent flash of old session's messages
       // The new session's messages will load when the channel reconnects
@@ -796,15 +797,28 @@ function AIAssistantPanelWrapper() {
     ]
   );
 
+  // Handler for retrying failed messages
+  const handleRetryMessage = useCallback(
+    (messageId: string) => {
+      console.log('[AI Assistant] Retrying message', { messageId });
+
+      // Update store to mark message as pending
+      aiStore.retryMessage(messageId);
+
+      // Send retry request via channel
+      retryMessageViaChannel(messageId);
+    },
+    [aiStore, retryMessageViaChannel]
+  );
+
   // State for tracking which message is being applied
   const [applyingMessageId, setApplyingMessageId] = useState<string | null>(
     null
   );
 
-  // Track if we've completed initial auto-apply for the current session
-  // This prevents the effect from running multiple times during reconnections
-  // We track the session ID to know when we've already applied for this session
-  const hasCompletedInitialAutoApplyRef = useRef<string | null>(null);
+  // Track which message IDs have been auto-applied
+  // This prevents re-applying the same message multiple times during reconnections
+  const appliedMessageIdsRef = useRef<Set<string>>(new Set());
 
   // Get workflow actions for importing
   const { importWorkflow } = useWorkflowActions();
@@ -917,23 +931,10 @@ function AIAssistantPanelWrapper() {
   );
 
   // Auto-apply workflow YAML when AI generates it in workflow_template mode
-  // This effect runs once per session when first loaded
+  // This effect runs whenever a new message with code arrives
   useEffect(() => {
     if (sessionType !== 'workflow_template' || !messages.length) return;
-
-    // Check if we've already completed initial auto-apply for this session
-    // This prevents re-applying during reconnections or message updates
-    if (
-      sessionId &&
-      hasCompletedInitialAutoApplyRef.current === sessionId &&
-      connectionState === 'connected'
-    ) {
-      console.log(
-        '[AI Assistant] Skipping auto-apply - already completed for session:',
-        sessionId
-      );
-      return;
-    }
+    if (connectionState !== 'connected') return;
 
     // Find the latest assistant message with code (most recent successful response)
     const messagesWithCode = messages.filter(
@@ -943,11 +944,11 @@ function AIAssistantPanelWrapper() {
     console.log('[AI Assistant] Auto-apply check:', {
       sessionId,
       connectionState,
-      hasCompletedForSession: hasCompletedInitialAutoApplyRef.current,
       sessionWorkflowId: workflowTemplateContext?.workflow_id,
       currentWorkflowId: workflow?.id,
       totalMessages: messages.length,
       messagesWithCode: messagesWithCode.length,
+      appliedMessageIds: Array.from(appliedMessageIdsRef.current),
       messageIds: messagesWithCode.map(m => ({
         id: m.id,
         hasCode: !!m.code,
@@ -957,7 +958,11 @@ function AIAssistantPanelWrapper() {
 
     const latestMessage = messagesWithCode.pop(); // Get the most recent one
 
-    if (latestMessage?.code && connectionState === 'connected') {
+    // Only auto-apply if we haven't applied this specific message before
+    if (
+      latestMessage?.code &&
+      !appliedMessageIdsRef.current.has(latestMessage.id)
+    ) {
       console.log(
         '[AI Assistant] Auto-applying workflow from message:',
         latestMessage.id,
@@ -966,14 +971,16 @@ function AIAssistantPanelWrapper() {
         'messages with code)'
       );
 
-      // Mark that we've completed initial auto-apply for this session
-      // This prevents duplicate applications during reconnections
-      if (sessionId) {
-        hasCompletedInitialAutoApplyRef.current = sessionId;
-      }
+      // Mark this message as applied to prevent duplicate applications
+      appliedMessageIdsRef.current.add(latestMessage.id);
 
       // Apply the workflow
       void handleApplyWorkflow(latestMessage.code, latestMessage.id);
+    } else if (latestMessage?.code) {
+      console.log(
+        '[AI Assistant] Skipping auto-apply - message already applied:',
+        latestMessage.id
+      );
     }
   }, [
     messages,
@@ -1027,6 +1034,7 @@ function AIAssistantPanelWrapper() {
                 }
                 applyingMessageId={applyingMessageId}
                 showAddButtons={sessionType === 'job_code'}
+                onRetryMessage={handleRetryMessage}
               />
             </AIAssistantPanel>
           </div>

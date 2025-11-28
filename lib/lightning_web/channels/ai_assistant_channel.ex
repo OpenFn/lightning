@@ -96,7 +96,7 @@ defmodule LightningWeb.AiAssistantChannel do
 
   @impl true
   def handle_in("retry_message", %{"message_id" => message_id}, socket) do
-    message = Lightning.Repo.get(ChatMessage, message_id)
+    message = Lightning.Repo.get(Lightning.AiAssistant.ChatMessage, message_id)
 
     if message && message.chat_session_id == socket.assigns.session_id do
       case AiAssistant.retry_message(message) do
