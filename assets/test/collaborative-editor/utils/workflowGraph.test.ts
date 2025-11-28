@@ -11,10 +11,12 @@ import * as Y from 'yjs';
 
 import type { Workflow } from '../../../js/collaborative-editor/types/workflow';
 import {
+  edgesToAdjList,
   findFirstJobFromTrigger,
   findGhostEdges,
   getIncomingEdgeIndices,
   getIncomingJobEdges,
+  getJobOrdinals,
   getOutgoingJobEdges,
   getOutgoingTriggerEdges,
   isEdgeFromJob,
@@ -1002,5 +1004,419 @@ describe.concurrent('findFirstJobFromTrigger', () => {
 
     const result = findFirstJobFromTrigger(edges, 'trigger-1');
     expect(result).toBe('job-2');
+  });
+});
+
+// =============================================================================
+// EDGES TO ADJACENCY LIST
+// =============================================================================
+
+describe.concurrent('edgesToAdjList', () => {
+  test('returns empty list and empty trigger_id when edges array is empty', () => {
+    const result = edgesToAdjList([]);
+    expect(result).toEqual({ list: {}, trigger_id: '' });
+  });
+
+  test('creates adjacency list from single edge between jobs', () => {
+    const edges = [
+      createMockEdge({
+        source_job_id: 'job-1',
+        target_job_id: 'job-2',
+      }),
+    ];
+
+    const result = edgesToAdjList(edges);
+    expect(result.list).toEqual({ 'job-1': ['job-2'] });
+    expect(result.trigger_id).toBe('');
+  });
+
+  test('creates adjacency list from edge starting at trigger', () => {
+    const edges = [
+      createMockEdge({
+        source_trigger_id: 'trigger-1',
+        target_job_id: 'job-1',
+      }),
+    ];
+
+    const result = edgesToAdjList(edges);
+    expect(result.list).toEqual({ 'trigger-1': ['job-1'] });
+    expect(result.trigger_id).toBe('trigger-1');
+  });
+
+  test('handles linear workflow: trigger -> job-1 -> job-2', () => {
+    const edges = [
+      createMockEdge({
+        source_trigger_id: 'trigger-1',
+        target_job_id: 'job-1',
+      }),
+      createMockEdge({
+        source_job_id: 'job-1',
+        target_job_id: 'job-2',
+      }),
+    ];
+
+    const result = edgesToAdjList(edges);
+    expect(result.list).toEqual({
+      'trigger-1': ['job-1'],
+      'job-1': ['job-2'],
+    });
+    expect(result.trigger_id).toBe('trigger-1');
+  });
+
+  test('handles branching workflow: one source, multiple targets', () => {
+    const edges = [
+      createMockEdge({
+        source_job_id: 'job-1',
+        target_job_id: 'job-2',
+      }),
+      createMockEdge({
+        source_job_id: 'job-1',
+        target_job_id: 'job-3',
+      }),
+      createMockEdge({
+        source_job_id: 'job-1',
+        target_job_id: 'job-4',
+      }),
+    ];
+
+    const result = edgesToAdjList(edges);
+    expect(result.list).toEqual({
+      'job-1': ['job-2', 'job-3', 'job-4'],
+    });
+  });
+
+  test('handles converging workflow: multiple sources, one target', () => {
+    const edges = [
+      createMockEdge({
+        source_job_id: 'job-1',
+        target_job_id: 'job-4',
+      }),
+      createMockEdge({
+        source_job_id: 'job-2',
+        target_job_id: 'job-4',
+      }),
+      createMockEdge({
+        source_job_id: 'job-3',
+        target_job_id: 'job-4',
+      }),
+    ];
+
+    const result = edgesToAdjList(edges);
+    expect(result.list).toEqual({
+      'job-1': ['job-4'],
+      'job-2': ['job-4'],
+      'job-3': ['job-4'],
+    });
+  });
+
+  test('handles complex DAG with multiple branches and convergence', () => {
+    const edges = [
+      createMockEdge({
+        source_trigger_id: 'trigger-1',
+        target_job_id: 'job-1',
+      }),
+      createMockEdge({
+        source_job_id: 'job-1',
+        target_job_id: 'job-2',
+      }),
+      createMockEdge({
+        source_job_id: 'job-1',
+        target_job_id: 'job-3',
+      }),
+      createMockEdge({
+        source_job_id: 'job-2',
+        target_job_id: 'job-4',
+      }),
+      createMockEdge({
+        source_job_id: 'job-3',
+        target_job_id: 'job-4',
+      }),
+    ];
+
+    const result = edgesToAdjList(edges);
+    expect(result.list).toEqual({
+      'trigger-1': ['job-1'],
+      'job-1': ['job-2', 'job-3'],
+      'job-2': ['job-4'],
+      'job-3': ['job-4'],
+    });
+    expect(result.trigger_id).toBe('trigger-1');
+  });
+
+  test('ignores edges with null source_job_id and no source_trigger_id', () => {
+    const edges = [
+      createMockEdge({
+        source_job_id: null,
+        target_job_id: 'job-2',
+      }),
+      createMockEdge({
+        source_job_id: 'job-1',
+        target_job_id: 'job-3',
+      }),
+    ];
+
+    const result = edgesToAdjList(edges);
+    expect(result.list).toEqual({
+      'job-1': ['job-3'],
+    });
+  });
+
+  test('ignores edges with undefined source_job_id and no source_trigger_id', () => {
+    const edges = [
+      createMockEdge({
+        source_job_id: undefined,
+        target_job_id: 'job-2',
+      }),
+      createMockEdge({
+        source_job_id: 'job-1',
+        target_job_id: 'job-3',
+      }),
+    ];
+
+    const result = edgesToAdjList(edges);
+    expect(result.list).toEqual({
+      'job-1': ['job-3'],
+    });
+  });
+
+  test('ignores edges with null target_job_id', () => {
+    const edges = [
+      createMockEdge({
+        source_job_id: 'job-1',
+        target_job_id: null as unknown as string,
+      }),
+      createMockEdge({
+        source_job_id: 'job-2',
+        target_job_id: 'job-3',
+      }),
+    ];
+
+    const result = edgesToAdjList(edges);
+    expect(result.list).toEqual({
+      'job-2': ['job-3'],
+    });
+  });
+
+  test('ignores edges with undefined target_job_id', () => {
+    const edges = [
+      createMockEdge({
+        source_job_id: 'job-1',
+        target_job_id: undefined as unknown as string,
+      }),
+      createMockEdge({
+        source_job_id: 'job-2',
+        target_job_id: 'job-3',
+      }),
+    ];
+
+    const result = edgesToAdjList(edges);
+    expect(result.list).toEqual({
+      'job-2': ['job-3'],
+    });
+  });
+
+  test('uses last trigger_id when multiple triggers exist', () => {
+    const edges = [
+      createMockEdge({
+        source_trigger_id: 'trigger-1',
+        target_job_id: 'job-1',
+      }),
+      createMockEdge({
+        source_trigger_id: 'trigger-2',
+        target_job_id: 'job-2',
+      }),
+    ];
+
+    const result = edgesToAdjList(edges);
+    expect(result.trigger_id).toBe('trigger-2');
+  });
+});
+
+// =============================================================================
+// GET JOB ORDINALS
+// =============================================================================
+
+describe.concurrent('getJobOrdinals', () => {
+  test('returns ordinal 1 for start node only when no neighbors', () => {
+    const adj = {};
+    const result = getJobOrdinals(adj, 'trigger-1');
+    expect(result).toEqual({ 'trigger-1': 1 });
+  });
+
+  test('assigns ordinal 2 to direct child of start node', () => {
+    const adj = { 'trigger-1': ['job-1'] };
+    const result = getJobOrdinals(adj, 'trigger-1');
+    expect(result).toEqual({
+      'trigger-1': 1,
+      'job-1': 2,
+    });
+  });
+
+  test('assigns ordinals for linear chain: trigger -> job-1 -> job-2 -> job-3', () => {
+    const adj = {
+      'trigger-1': ['job-1'],
+      'job-1': ['job-2'],
+      'job-2': ['job-3'],
+    };
+    const result = getJobOrdinals(adj, 'trigger-1');
+    expect(result).toEqual({
+      'trigger-1': 1,
+      'job-1': 2,
+      'job-2': 3,
+      'job-3': 4,
+    });
+  });
+
+  test('assigns same ordinal to jobs at same depth (branching)', () => {
+    const adj = {
+      'trigger-1': ['job-1', 'job-2', 'job-3'],
+    };
+    const result = getJobOrdinals(adj, 'trigger-1');
+    expect(result).toEqual({
+      'trigger-1': 1,
+      'job-1': 2,
+      'job-2': 2,
+      'job-3': 2,
+    });
+  });
+
+  test('handles diamond pattern: start -> {a, b} -> end', () => {
+    const adj = {
+      'trigger-1': ['job-a', 'job-b'],
+      'job-a': ['job-end'],
+      'job-b': ['job-end'],
+    };
+    const result = getJobOrdinals(adj, 'trigger-1');
+    expect(result).toEqual({
+      'trigger-1': 1,
+      'job-a': 2,
+      'job-b': 2,
+      'job-end': 3,
+    });
+  });
+
+  test('handles complex branching with different path lengths', () => {
+    // trigger -> job-1 -> job-2 -> job-4
+    //         -> job-3 -> job-4
+    const adj = {
+      'trigger-1': ['job-1', 'job-3'],
+      'job-1': ['job-2'],
+      'job-2': ['job-4'],
+      'job-3': ['job-4'],
+    };
+    const result = getJobOrdinals(adj, 'trigger-1');
+    expect(result).toEqual({
+      'trigger-1': 1,
+      'job-1': 2,
+      'job-3': 2,
+      'job-2': 3,
+      'job-4': 3, // min(4, 3) + 1 = 3 (shortest path wins)
+    });
+  });
+
+  test('assigns minimum ordinal when node has multiple parents at different depths', () => {
+    // trigger -> job-1 -> job-3
+    //         -> job-2 -> job-3
+    // job-3 should get ordinal from shortest path
+    const adj = {
+      'trigger-1': ['job-1'],
+      'job-1': ['job-2', 'job-3'],
+      'job-2': ['job-3'],
+    };
+    const result = getJobOrdinals(adj, 'trigger-1');
+    expect(result).toEqual({
+      'trigger-1': 1,
+      'job-1': 2,
+      'job-2': 3,
+      'job-3': 3, // min from job-1 path (3) vs job-2 path (4)
+    });
+  });
+
+  test('handles disconnected nodes not reachable from start', () => {
+    const adj = {
+      'trigger-1': ['job-1'],
+      'job-2': ['job-3'], // Disconnected from trigger-1
+    };
+    const result = getJobOrdinals(adj, 'trigger-1');
+    expect(result).toEqual({
+      'trigger-1': 1,
+      'job-1': 2,
+      // job-2 and job-3 are not included as they're unreachable
+    });
+  });
+
+  test('handles empty adjacency list', () => {
+    const adj = {};
+    const result = getJobOrdinals(adj, 'start');
+    expect(result).toEqual({ start: 1 });
+  });
+
+  test('handles self-referencing node (cycle prevention)', () => {
+    // Note: DAGs shouldn't have cycles, but function should handle gracefully
+    const adj = {
+      'trigger-1': ['job-1'],
+      'job-1': ['job-1'], // Self-loop
+    };
+    const result = getJobOrdinals(adj, 'trigger-1');
+    expect(result).toEqual({
+      'trigger-1': 1,
+      'job-1': 2,
+      // Self-loop is ignored due to visited set
+    });
+  });
+
+  test('handles wide branching with many children', () => {
+    const adj = {
+      'trigger-1': ['job-1', 'job-2', 'job-3', 'job-4', 'job-5'],
+    };
+    const result = getJobOrdinals(adj, 'trigger-1');
+    expect(result).toEqual({
+      'trigger-1': 1,
+      'job-1': 2,
+      'job-2': 2,
+      'job-3': 2,
+      'job-4': 2,
+      'job-5': 2,
+    });
+  });
+
+  test('handles deep linear chain', () => {
+    const adj = {
+      node1: ['node2'],
+      node2: ['node3'],
+      node3: ['node4'],
+      node4: ['node5'],
+      node5: ['node6'],
+    };
+    const result = getJobOrdinals(adj, 'node1');
+    expect(result).toEqual({
+      node1: 1,
+      node2: 2,
+      node3: 3,
+      node4: 4,
+      node5: 5,
+      node6: 6,
+    });
+  });
+
+  test('handles multiple convergence points', () => {
+    // trigger -> {job-1, job-2} -> job-3 -> job-5
+    //         -> job-4 -> job-5
+    const adj = {
+      'trigger-1': ['job-1', 'job-2', 'job-4'],
+      'job-1': ['job-3'],
+      'job-2': ['job-3'],
+      'job-3': ['job-5'],
+      'job-4': ['job-5'],
+    };
+    const result = getJobOrdinals(adj, 'trigger-1');
+    expect(result).toEqual({
+      'trigger-1': 1,
+      'job-1': 2,
+      'job-2': 2,
+      'job-4': 2,
+      'job-3': 3,
+      'job-5': 3, // min(4 from job-3, 3 from job-4) + 1 = 3
+    });
   });
 });
