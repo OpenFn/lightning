@@ -365,10 +365,6 @@ defmodule Lightning.AiAssistant do
            })
            |> Repo.update() do
         {:ok, _} ->
-          Logger.info(
-            "Cleaned up unsaved_job for session #{session.id}, set job_id to #{unsaved_job_id}"
-          )
-
           count + 1
 
         {:error, changeset} ->
@@ -433,10 +429,6 @@ defmodule Lightning.AiAssistant do
              })
              |> Repo.update() do
           {:ok, _} ->
-            Logger.info(
-              "Cleaned up unsaved_workflow for session #{session.id}, set workflow_id to #{workflow.id}"
-            )
-
             count + 1
 
           {:error, changeset} ->
@@ -757,17 +749,6 @@ defmodule Lightning.AiAssistant do
   end
 
   defp log_save_message(session, message_attrs, code) do
-    require Logger
-
-    Logger.debug("""
-    [AiAssistant.save_message] Saving message
-    Session ID: #{session.id}
-    Session type: #{session.session_type}
-    Role: #{message_attrs[:role] || message_attrs["role"]}
-    Has code in opts: #{!is_nil(code)}
-    Code length: #{if code, do: byte_size(code), else: 0}
-    Code preview: #{if code, do: String.slice(code, 0, 100), else: "nil"}
-    """)
   end
 
   defp prepare_message_attrs(message_attrs, session_id, code) do
@@ -889,23 +870,7 @@ defmodule Lightning.AiAssistant do
       log: session.logs
     }
 
-    Logger.info("""
-    [AiAssistant.query] Building context
-    Session ID: #{session.id}
-    Has session.expression: #{!is_nil(session.expression)}
-    Expression length: #{if session.expression, do: byte_size(session.expression), else: 0}
-    Has session.adaptor: #{!is_nil(session.adaptor)}
-    Has session.logs: #{!is_nil(session.logs)}
-    Opts: #{inspect(opts)}
-    Initial context keys: #{inspect(Map.keys(initial_context))}
-    """)
-
     context = build_context(initial_context, opts)
-
-    Logger.info("""
-    [AiAssistant.query] After build_context
-    Final context keys: #{inspect(Map.keys(context))}
-    """)
 
     history = build_history(session)
     meta = session.meta || %{}

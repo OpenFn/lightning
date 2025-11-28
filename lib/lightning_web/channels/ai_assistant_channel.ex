@@ -38,13 +38,6 @@ defmodule LightningWeb.AiAssistantChannel do
       # Subscribe to session-specific PubSub topic for message updates
       Lightning.subscribe("ai_session:#{session.id}")
 
-      Logger.info("""
-      Joining AI Assistant channel:
-        session_type: #{session_type}
-        session_id: #{session.id}
-        user_id: #{user.id}
-      """)
-
       # Messages are already preloaded with the session
       {:ok,
        %{
@@ -80,28 +73,12 @@ defmodule LightningWeb.AiAssistantChannel do
     session = socket.assigns.session
     user = socket.assigns.current_user
 
-    require Logger
-
-    Logger.debug("""
-    [AiAssistantChannel] Received new_message
-    Session type: #{socket.assigns.session_type}
-    Session ID: #{session.id}
-    Has 'code' in params: #{Map.has_key?(params, "code")}
-    Code length in params: #{if params["code"], do: byte_size(params["code"]), else: 0}
-    """)
-
     # Validate message content
     if String.trim(content) == "" do
       {:reply, {:error, %{reason: "Message cannot be empty"}}, socket}
     else
       # Extract options based on session type
       opts = extract_message_options(socket.assigns.session_type, params)
-
-      Logger.debug("""
-      [AiAssistantChannel] Extracted options
-      Opts: #{inspect(opts)}
-      Code in opts: #{inspect(Keyword.get(opts, :code))}
-      """)
 
       case AiAssistant.save_message(
              session,
@@ -157,15 +134,6 @@ defmodule LightningWeb.AiAssistantChannel do
     session = socket.assigns.session
     session_type = socket.assigns.session_type
 
-    require Logger
-
-    Logger.debug("""
-    [AiAssistantChannel] update_context request
-    Session type: #{session_type}
-    Session ID: #{session.id}
-    Params: #{inspect(params)}
-    """)
-
     # Only job_code sessions can update context
     if session_type == "job_code" do
       # Extract updated job context
@@ -200,14 +168,6 @@ defmodule LightningWeb.AiAssistantChannel do
           # Update socket assigns with new context
           socket = assign(socket, session: updated_session)
 
-          Logger.info("""
-          [AiAssistantChannel] Context updated successfully
-          Session ID: #{session.id}
-          Job name: #{job_name}
-          Job adaptor: #{job_adaptor}
-          Job body length: #{if job_body, do: byte_size(job_body), else: 0}
-          """)
-
           {:reply, {:ok, %{success: true}}, socket}
 
         {:error, changeset} ->
@@ -235,15 +195,6 @@ defmodule LightningWeb.AiAssistantChannel do
     session = socket.assigns.session
     session_type = socket.assigns.session_type
 
-    require Logger
-
-    Logger.debug("""
-    [AiAssistantChannel] list_sessions request
-    Session type: #{session_type}
-    Session ID: #{session.id}
-    Params: #{inspect(params)}
-    """)
-
     offset = Map.get(params, "offset", 0)
     limit = Map.get(params, "limit", 20)
 
@@ -256,13 +207,6 @@ defmodule LightningWeb.AiAssistantChannel do
         # Extract workflow from session or unsaved_workflow meta
         workflow = get_workflow_for_session(session)
 
-        Logger.debug("""
-        [AiAssistantChannel] Filtering sessions by workflow
-        Session workflow_id: #{inspect(session.workflow_id)}
-        Session unsaved_workflow: #{inspect(session.meta["unsaved_workflow"])}
-        Extracted workflow: #{inspect(workflow && workflow.id)}
-        """)
-
         Keyword.put(opts, :workflow, workflow)
       else
         opts
@@ -271,13 +215,6 @@ defmodule LightningWeb.AiAssistantChannel do
     with {:ok, resource} <- get_resource_for_session_type(session_type, session),
          %{sessions: sessions, pagination: pagination} <-
            AiAssistant.list_sessions(resource, :desc, opts) do
-      Logger.debug("""
-      [AiAssistantChannel] list_sessions result
-      Resource: #{inspect(resource)}
-      Session count: #{length(sessions)}
-      Total count: #{pagination.total_count}
-      """)
-
       formatted_sessions = Enum.map(sessions, &format_session/1)
 
       {:reply,

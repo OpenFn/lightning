@@ -132,14 +132,6 @@ defmodule Lightning.AiAssistant.MessageProcessor do
   defp process_workflow_message(session, message) do
     code = message.code || workflow_code_from_session(session)
 
-    Logger.debug("""
-    [MessageProcessor] Processing workflow message
-    Message ID: #{message.id}
-    Has code from message: #{!is_nil(message.code)}
-    Code length: #{if code, do: byte_size(code), else: 0}
-    Code preview: #{if code, do: String.slice(code, 0, 100), else: "nil"}
-    """)
-
     AiAssistant.query_workflow(session, message.content, code: code)
   end
 

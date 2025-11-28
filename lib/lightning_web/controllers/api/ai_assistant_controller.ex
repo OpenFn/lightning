@@ -27,13 +27,7 @@ defmodule LightningWeb.API.AiAssistantController do
   - GET /api/ai_assistant/sessions?session_type=workflow_template&project_id=456
   """
   def list_sessions(conn, params) do
-    require Logger
     user = conn.assigns[:current_user]
-
-    Logger.debug("[AI Assistant API] list_sessions called", %{
-      params: params,
-      user_id: user.id
-    })
 
     with {:ok, session_type} <- validate_session_type(params),
          {:ok, resource} <- get_resource(session_type, params),
@@ -56,29 +50,13 @@ defmodule LightningWeb.API.AiAssistantController do
               workflow_id -> Workflows.get_workflow(workflow_id)
             end
 
-          Logger.debug("[AI Assistant API] Filtering by workflow", %{
-            workflow_id: params["workflow_id"],
-            workflow: workflow && workflow.id
-          })
-
           Keyword.put(opts, :workflow, workflow)
         else
           opts
         end
 
-      Logger.debug("[AI Assistant API] Fetching sessions", %{
-        session_type: session_type,
-        resource_id: resource_id,
-        opts: opts
-      })
-
       %{sessions: sessions, pagination: pagination} =
         AiAssistant.list_sessions(resource, :desc, opts)
-
-      Logger.debug("[AI Assistant API] Sessions fetched", %{
-        count: length(sessions),
-        total_count: pagination.total_count
-      })
 
       formatted_sessions = Enum.map(sessions, &format_session/1)
 
