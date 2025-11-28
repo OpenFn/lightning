@@ -689,7 +689,7 @@ defmodule Lightning.AiAssistant do
          %{meta: %{"follow_run_id" => run_id}, job_id: job_id} = session,
          nil
        )
-       when not is_nil(run_id) do
+       when not is_nil(run_id) and not is_nil(job_id) do
     logs =
       Lightning.Invocation.assemble_logs_for_job_and_run(job_id, run_id)
 
