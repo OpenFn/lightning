@@ -29,6 +29,7 @@ defmodule LightningWeb.WorkflowLive.Collaborate do
        project: project,
        show_credential_modal: false,
        credential_schema: nil,
+       credential_to_edit: nil,
        show_webhook_auth_modal: false,
        webhook_auth_method: nil
      )}
@@ -40,14 +41,41 @@ defmodule LightningWeb.WorkflowLive.Collaborate do
   end
 
   @impl true
+  def handle_event(
+        "open_credential_modal",
+        %{"schema" => schema, "credential_id" => credential_id},
+        socket
+      )
+      when is_binary(credential_id) do
+    # Load the credential for editing with necessary associations
+    credential =
+      Lightning.Credentials.get_credential!(credential_id)
+      |> Lightning.Repo.preload([:oauth_client, :project_credentials])
+
+    {:noreply,
+     assign(socket,
+       show_credential_modal: true,
+       credential_schema: schema,
+       credential_to_edit: credential
+     )}
+  end
+
   def handle_event("open_credential_modal", %{"schema" => schema}, socket) do
     {:noreply,
-     assign(socket, show_credential_modal: true, credential_schema: schema)}
+     assign(socket,
+       show_credential_modal: true,
+       credential_schema: schema,
+       credential_to_edit: nil
+     )}
   end
 
   def handle_event("close_credential_modal", _params, socket) do
     {:noreply,
-     assign(socket, show_credential_modal: false, credential_schema: nil)}
+     assign(socket,
+       show_credential_modal: false,
+       credential_schema: nil,
+       credential_to_edit: nil
+     )}
   end
 
   def handle_event("open_webhook_auth_modal", %{}, socket) do
@@ -108,20 +136,21 @@ defmodule LightningWeb.WorkflowLive.Collaborate do
       :if={@show_credential_modal}
       module={LightningWeb.CredentialLive.CredentialFormComponent}
       id="new-credential-modal"
-      action={:new}
+      action={if @credential_to_edit, do: :edit, else: :new}
       current_user={@current_user}
       project={@project}
       projects={[@project]}
       credential={
-        %Lightning.Credentials.Credential{
-          schema: @credential_schema,
-          user_id: @current_user.id,
-          project_credentials: [
-            %Lightning.Projects.ProjectCredential{
-              project_id: @project.id
-            }
-          ]
-        }
+        @credential_to_edit ||
+          %Lightning.Credentials.Credential{
+            schema: @credential_schema,
+            user_id: @current_user.id,
+            project_credentials: [
+              %Lightning.Projects.ProjectCredential{
+                project_id: @project.id
+              }
+            ]
+          }
       }
       on_save={
         fn credential ->
@@ -209,17 +238,34 @@ defmodule LightningWeb.WorkflowLive.Collaborate do
 
   @impl true
   def handle_info({:credential_saved, credential}, socket) do
+    require Logger
+    Logger.info("[Collaborate] Credential saved: #{credential.id}")
+
     project = socket.assigns.project
-    credential_payload = build_credential_payload(credential)
+
+    # Reload credential with associations to ensure payload is built correctly
+    credential_with_assocs =
+      Lightning.Repo.preload(credential, [:project_credentials], force: true)
+
+    credential_payload = build_credential_payload(credential_with_assocs)
+
+    Logger.info(
+      "[Collaborate] Pushing credential_saved event with payload: #{inspect(credential_payload)}"
+    )
 
     {:noreply,
      socket
      |> push_event("credential_saved", credential_payload)
+     |> push_event("close_credential_modal", %{})
      |> then(fn socket ->
        broadcast_credential_update(socket, project)
        socket
      end)
-     |> assign(show_credential_modal: false, credential_schema: nil)}
+     |> assign(
+       show_credential_modal: false,
+       credential_schema: nil,
+       credential_to_edit: nil
+     )}
   end
 
   def handle_info(:webhook_auth_method_saved, socket) do
