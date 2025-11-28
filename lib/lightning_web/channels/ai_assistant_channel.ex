@@ -303,6 +303,23 @@ defmodule LightningWeb.AiAssistantChannel do
       _existing_id ->
         case AiAssistant.get_session(session_id) do
           {:ok, session} ->
+            # Update follow_run_id in meta if provided in params
+            session =
+              if params["follow_run_id"] do
+                updated_meta =
+                  Map.put(
+                    session.meta || %{},
+                    "follow_run_id",
+                    params["follow_run_id"]
+                  )
+
+                session
+                |> Ecto.Changeset.change(%{meta: updated_meta})
+                |> Lightning.Repo.update!()
+              else
+                session
+              end
+
             enriched_session =
               AiAssistant.enrich_session_with_job_context(session)
 

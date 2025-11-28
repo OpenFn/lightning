@@ -1080,6 +1080,83 @@ defmodule Lightning.AiAssistantTest do
 
       assert enriched == session
     end
+
+    test "adds run logs for unsaved jobs when follow_run_id is in meta", %{
+      user: user,
+      workflow: %{jobs: [job | _]} = workflow
+    } do
+      # Generate a job_id that doesn't exist in the database (unsaved job)
+      unsaved_job_id = Ecto.UUID.generate()
+
+      # Create work_order first
+      work_order = insert(:workorder, workflow: workflow)
+
+      run =
+        insert(:run,
+          work_order: work_order,
+          dataclip: build(:dataclip),
+          starting_job: job
+        )
+
+      # Create a step with the unsaved job_id (not in Jobs table)
+      # We use build(:step) and manually set the job_id, then insert it
+      step =
+        build(:step, job: nil)
+        |> Ecto.Changeset.change(%{job_id: unsaved_job_id})
+        |> Lightning.Repo.insert!()
+
+      # Link the run and step
+      insert(:run_step, run: run, step: step)
+
+      # Create log lines
+      insert(:log_line,
+        step: step,
+        run: run,
+        message: "Unsaved job log 1",
+        timestamp: ~U[2024-01-01 10:00:00Z]
+      )
+
+      insert(:log_line,
+        step: step,
+        run: run,
+        message: "Unsaved job log 2",
+        timestamp: ~U[2024-01-01 10:00:01Z]
+      )
+
+      # Create session with unsaved_job data
+      session =
+        insert(:chat_session,
+          user: user,
+          job_id: nil,
+          meta: %{
+            "unsaved_job" => %{
+              "id" => unsaved_job_id,
+              "name" => "Unsaved Test Job",
+              "body" => "console.log('test');",
+              "adaptor" => "@openfn/language-http@latest",
+              "workflow_id" => workflow.id
+            },
+            "follow_run_id" => run.id
+          }
+        )
+
+      enriched = AiAssistant.enrich_session_with_job_context(session)
+
+      # Assert that logs contain our messages
+      assert enriched.logs =~ "Unsaved job log 1"
+      assert enriched.logs =~ "Unsaved job log 2"
+
+      # Also verify the order is preserved
+      assert enriched.logs == "Unsaved job log 1\nUnsaved job log 2"
+
+      # Verify the job body and adaptor are set correctly
+      assert enriched.expression == "console.log('test');"
+
+      assert enriched.adaptor ==
+               Lightning.AdaptorRegistry.resolve_adaptor(
+                 "@openfn/language-http@latest"
+               )
+    end
   end
 
   describe "retry_message/1" do

@@ -647,6 +647,7 @@ defmodule Lightning.AiAssistant do
           unsaved_job["body"],
           unsaved_job["adaptor"]
         )
+        |> maybe_add_run_logs(unsaved_job["id"])
 
       # If job_id exists, load from database
       session.job_id ->
@@ -668,15 +669,34 @@ defmodule Lightning.AiAssistant do
   end
 
   @doc false
-  defp maybe_add_run_logs(%{meta: %{"follow_run_id" => run_id}} = session)
-       when not is_nil(run_id) do
+  # Header clause for default value
+  defp maybe_add_run_logs(session, job_id \\ nil)
+
+  # For unsaved jobs, explicit job_id is passed
+  defp maybe_add_run_logs(
+         %{meta: %{"follow_run_id" => run_id}} = session,
+         job_id
+       )
+       when not is_nil(run_id) and not is_nil(job_id) do
     logs =
-      Lightning.Invocation.assemble_logs_for_job_and_run(session.job_id, run_id)
+      Lightning.Invocation.assemble_logs_for_job_and_run(job_id, run_id)
 
     %{session | logs: logs}
   end
 
-  defp maybe_add_run_logs(session), do: session
+  # For saved jobs, use session.job_id
+  defp maybe_add_run_logs(
+         %{meta: %{"follow_run_id" => run_id}, job_id: job_id} = session,
+         nil
+       )
+       when not is_nil(run_id) do
+    logs =
+      Lightning.Invocation.assemble_logs_for_job_and_run(job_id, run_id)
+
+    %{session | logs: logs}
+  end
+
+  defp maybe_add_run_logs(session, _job_id), do: session
 
   @doc """
   Associates a workflow with a chat session.
@@ -885,19 +905,21 @@ defmodule Lightning.AiAssistant do
   end
 
   defp build_context(context, opts) do
-    Enum.reduce(opts, context, fn
-      {:code, false}, acc ->
-        Map.drop(acc, [:expression])
+    Enum.reduce(opts, context, fn opt, acc ->
+      case opt do
+        {:code, false} ->
+          Map.drop(acc, [:expression])
 
-      # Support both :log and :logs for backwards compatibility
-      {:log, false}, acc ->
-        Map.drop(acc, [:log])
+        # Support both :log and :logs for backwards compatibility
+        {:log, false} ->
+          Map.drop(acc, [:log])
 
-      {:logs, false}, acc ->
-        Map.drop(acc, [:log])
+        {:logs, false} ->
+          Map.drop(acc, [:log])
 
-      _opt, acc ->
-        acc
+        _ ->
+          acc
+      end
     end)
   end
 
