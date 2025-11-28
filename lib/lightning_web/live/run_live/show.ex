@@ -13,6 +13,7 @@ defmodule LightningWeb.RunLive.Show do
   alias Phoenix.LiveView.AsyncResult
 
   on_mount {LightningWeb.Hooks, :project_scope}
+  on_mount {LightningWeb.Hooks, :check_limits}
 
   attr :run, :map, required: true
   attr :workflow, :map, required: true
@@ -51,6 +52,13 @@ defmodule LightningWeb.RunLive.Show do
 
     ~H"""
     <LayoutComponents.page_content>
+      <:banner>
+        <Common.dynamic_component
+          :if={assigns[:banner]}
+          function={@banner.function}
+          args={@banner.attrs}
+        />
+      </:banner>
       <:header>
         <LayoutComponents.header
           current_user={@current_user}

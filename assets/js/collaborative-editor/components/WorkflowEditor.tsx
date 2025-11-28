@@ -57,11 +57,7 @@ export function WorkflowEditor({
     if (isRunPanelOpen) {
       const contextJobId = runPanelContext?.jobId;
       const contextTriggerId = runPanelContext?.triggerId;
-      // Don't override settings, code, or editor panels when user explicitly opens them
-      const isSpecialPanel = ['settings', 'code', 'editor'].includes(
-        panelParam || ''
-      );
-      const needsUpdate = panelParam !== 'run' && !isSpecialPanel;
+      const needsUpdate = panelParam !== 'run';
 
       if (needsUpdate) {
         isSyncingRef.current = true;
@@ -207,6 +203,7 @@ export function WorkflowEditor({
   const showInspector =
     searchParams.get('panel') === 'settings' ||
     searchParams.get('panel') === 'code' ||
+    searchParams.get('panel') === 'publish-template' ||
     Boolean(currentNode.node);
 
   const handleMethodChange = (method: 'template' | 'import' | 'ai' | null) => {
@@ -313,11 +310,6 @@ export function WorkflowEditor({
           <div className="absolute inset-y-0 right-0 flex pointer-events-none z-20">
             <ManualRunPanelErrorBoundary onClose={closeRunPanel}>
               <ManualRunPanel
-                key={
-                  runPanelContext.jobId ||
-                  runPanelContext.triggerId ||
-                  runPanelContext.edgeId
-                }
                 workflow={workflow}
                 projectId={projectId}
                 workflowId={workflowId}

@@ -248,6 +248,42 @@ defmodule Lightning.Policies.ProjectUserPermissionsTest do
         initiate_github_sync
       )a |> (&refute_can(ProjectUsers, &1, regular_user, nil)).()
     end
+
+    test "can publish template when project member", %{project: project} do
+      support_user = insert(:user, support_user: true)
+      insert(:project_user, project: project, user: support_user, role: :editor)
+
+      assert ProjectUsers
+             |> Permissions.can?(:publish_template, support_user, project)
+    end
+
+    test "can publish template with support access enabled", %{
+      project: project
+    } do
+      support_user = insert(:user, support_user: true)
+      project = %{project | allow_support_access: true}
+
+      assert ProjectUsers
+             |> Permissions.can?(:publish_template, support_user, project)
+    end
+
+    test "cannot publish template without project membership and support access disabled",
+         %{project: project} do
+      support_user = insert(:user, support_user: true)
+      project = %{project | allow_support_access: false}
+
+      refute ProjectUsers
+             |> Permissions.can?(:publish_template, support_user, project)
+    end
+
+    test "non-support user cannot publish template even if project member",
+         %{project: project} do
+      regular_user = insert(:user, support_user: false)
+      insert(:project_user, project: project, user: regular_user, role: :editor)
+
+      refute ProjectUsers
+             |> Permissions.can?(:publish_template, regular_user, project)
+    end
   end
 
   defp assert_can(module, actions, user, subject) when is_list(actions) do

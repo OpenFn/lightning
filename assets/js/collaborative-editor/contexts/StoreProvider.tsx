@@ -130,6 +130,15 @@ export const StoreProvider = ({ children }: StoreProviderProps) => {
       isReady: stores.awarenessStore.isAwarenessReady(),
     });
 
+    // If awareness changed (version switch), destroy old awareness first
+    if (session.awareness && stores.awarenessStore.isAwarenessReady()) {
+      const currentRaw = stores.awarenessStore.getRawAwareness();
+      if (currentRaw !== session.awareness) {
+        logger.debug('Awareness instance changed, reinitializing');
+        stores.awarenessStore.destroyAwareness();
+      }
+    }
+
     if (
       session.awareness &&
       user &&

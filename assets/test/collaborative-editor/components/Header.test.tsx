@@ -6,13 +6,7 @@
  * proper integration within the Header component.
  */
 
-import {
-  act,
-  render,
-  screen,
-  waitFor,
-  fireEvent,
-} from '@testing-library/react';
+import { act, render, screen, waitFor } from '@testing-library/react';
 import type React from 'react';
 import { describe, expect, test, vi } from 'vitest';
 import * as Y from 'yjs';
@@ -237,7 +231,9 @@ describe('Header - ReadOnlyWarning Integration', () => {
       await new Promise(resolve => setTimeout(resolve, 150));
     });
 
-    expect(screen.queryByText('Read-only')).not.toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.queryByText('Read-only')).not.toBeInTheDocument();
+    });
   });
 
   test('hides ReadOnlyWarning during new workflow creation', async () => {
@@ -308,7 +304,7 @@ describe('Header - Basic Rendering', () => {
   test('renders run button when projectId and workflowId and triggers provided', async () => {
     const { wrapper, emitSessionContext, ydoc } = await createTestSetup();
 
-    // Add a trigger so the Run button appears (must be a Y.Map, not plain object)
+    // Add a trigger so the Start button appears (must be a Y.Map, not plain object)
     const triggersArray = ydoc.getArray('triggers');
     const triggerMap = new Y.Map();
     triggerMap.set('id', 'trigger-123');
@@ -496,7 +492,9 @@ describe('Header - Read-Only State Changes', () => {
       await new Promise(resolve => setTimeout(resolve, 150));
     });
 
-    expect(screen.queryByText('Read-only')).not.toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.queryByText('Read-only')).not.toBeInTheDocument();
+    });
 
     // Make workflow deleted
     await act(async () => {
@@ -682,7 +680,7 @@ describe('Header - Run Button Tooltip with Panel State', () => {
   test('shows shortcut tooltip when panel is closed (isRunPanelOpen=false)', async () => {
     const { wrapper, emitSessionContext, ydoc } = await createTestSetup();
 
-    // Add a trigger so the Run button appears
+    // Add a trigger so the Start button appears
     const triggersArray = ydoc.getArray('triggers');
     const triggerMap = new Y.Map();
     triggerMap.set('id', 'trigger-123');
@@ -709,8 +707,8 @@ describe('Header - Run Button Tooltip with Panel State', () => {
     });
 
     await waitFor(() => {
-      const runButton = screen.getByRole('button', { name: /run/i });
-      expect(runButton).toBeInTheDocument();
+      const startButton = screen.getByRole('button', { name: /run/i });
+      expect(startButton).toBeInTheDocument();
     });
 
     // Tooltip should be shown when panel is closed
@@ -721,7 +719,7 @@ describe('Header - Run Button Tooltip with Panel State', () => {
   test('hides shortcut tooltip when panel is open (isRunPanelOpen=true)', async () => {
     const { wrapper, emitSessionContext, ydoc } = await createTestSetup();
 
-    // Add a trigger so the Run button appears
+    // Add a trigger so the Start button appears
     const triggersArray = ydoc.getArray('triggers');
     const triggerMap = new Y.Map();
     triggerMap.set('id', 'trigger-123');
@@ -748,15 +746,15 @@ describe('Header - Run Button Tooltip with Panel State', () => {
     });
 
     await waitFor(() => {
-      const runButton = screen.getByRole('button', { name: /run/i });
-      expect(runButton).toBeInTheDocument();
+      const startButton = screen.getByRole('button', { name: /run/i });
+      expect(startButton).toBeInTheDocument();
     });
 
     // Tooltip should be hidden when panel is open
     // We're testing tooltip visibility, not button enabled state
     // The button may be disabled for workflow validation reasons
-    const runButton = screen.getByRole('button', { name: /run/i });
-    expect(runButton).toBeInTheDocument();
+    const startButton = screen.getByRole('button', { name: /run/i });
+    expect(startButton).toBeInTheDocument();
   });
 
   test('always shows error tooltip when disabled, regardless of panel state', async () => {
@@ -799,8 +797,8 @@ describe('Header - Run Button Tooltip with Panel State', () => {
     });
 
     await waitFor(() => {
-      const runButton = screen.getByRole('button', { name: /run/i });
-      expect(runButton).toBeDisabled();
+      const startButton = screen.getByRole('button', { name: /run/i });
+      expect(startButton).toBeDisabled();
     });
 
     // Rerender with panel open
@@ -816,8 +814,8 @@ describe('Header - Run Button Tooltip with Panel State', () => {
 
     // Error tooltip should still be shown even when panel is open
     await waitFor(() => {
-      const runButton = screen.getByRole('button', { name: /run/i });
-      expect(runButton).toBeDisabled();
+      const startButton = screen.getByRole('button', { name: /run/i });
+      expect(startButton).toBeDisabled();
     });
   });
 
@@ -854,8 +852,8 @@ describe('Header - Run Button Tooltip with Panel State', () => {
       expect(screen.getByRole('button', { name: /run/i })).toBeInTheDocument();
     });
 
-    let runButton = screen.getByRole('button', { name: /run/i });
-    expect(runButton).toBeInTheDocument();
+    let startButton = screen.getByRole('button', { name: /run/i });
+    expect(startButton).toBeInTheDocument();
     // Tooltip should be present when closed
 
     // Open panel
@@ -869,8 +867,8 @@ describe('Header - Run Button Tooltip with Panel State', () => {
       </Header>
     );
 
-    runButton = screen.getByRole('button', { name: /run/i });
-    expect(runButton).toBeInTheDocument();
+    startButton = screen.getByRole('button', { name: /run/i });
+    expect(startButton).toBeInTheDocument();
     // Tooltip should be hidden when open
 
     // Close panel again
@@ -884,8 +882,8 @@ describe('Header - Run Button Tooltip with Panel State', () => {
       </Header>
     );
 
-    runButton = screen.getByRole('button', { name: /run/i });
-    expect(runButton).toBeInTheDocument();
+    startButton = screen.getByRole('button', { name: /run/i });
+    expect(startButton).toBeInTheDocument();
     // Tooltip should reappear when closed
   });
 
@@ -915,14 +913,14 @@ describe('Header - Run Button Tooltip with Panel State', () => {
     });
 
     await waitFor(() => {
-      const runButton = screen.getByRole('button', { name: /run/i });
-      expect(runButton).toBeInTheDocument();
+      const startButton = screen.getByRole('button', { name: /run/i });
+      expect(startButton).toBeInTheDocument();
     });
 
     // Default should show tooltip (panel closed by default)
     // We're testing that the prop defaults correctly, not button state
-    const runButton = screen.getByRole('button', { name: /run/i });
-    expect(runButton).toBeInTheDocument();
+    const startButton = screen.getByRole('button', { name: /run/i });
+    expect(startButton).toBeInTheDocument();
   });
 });
 
@@ -1101,357 +1099,5 @@ describe('Header - Keyboard Shortcuts', () => {
     );
     expect(aiButton).toBeInTheDocument();
     expect(aiButton).toBeDisabled();
-  });
-});
-
-// =============================================================================
-// IDE MODE TESTS (Run/Retry Button)
-// =============================================================================
-
-describe('Header - IDE Mode Run/Retry Button', () => {
-  test('renders simple Run button in IDE mode when not retryable', async () => {
-    const { wrapper, emitSessionContext, ydoc } = await createTestSetup();
-
-    render(
-      <Header
-        projectId="project-1"
-        workflowId="workflow-1"
-        onRunClick={vi.fn()}
-        onRetryClick={vi.fn()}
-        canRun={true}
-        isRetryable={false}
-        isRunning={false}
-      >
-        {[<span key="breadcrumb-1">Breadcrumb</span>]}
-      </Header>,
-      { wrapper }
-    );
-
-    act(() => {
-      emitSessionContext();
-    });
-
-    await waitFor(() => {
-      const runButton = screen.getByRole('button', { name: /^run$/i });
-      expect(runButton).toBeInTheDocument();
-      expect(runButton).not.toBeDisabled();
-    });
-  });
-
-  test('renders split button with "Run (retry)" in IDE mode when retryable', async () => {
-    const { wrapper, emitSessionContext } = await createTestSetup();
-
-    render(
-      <Header
-        projectId="project-1"
-        workflowId="workflow-1"
-        onRunClick={vi.fn()}
-        onRetryClick={vi.fn()}
-        canRun={true}
-        isRetryable={true}
-        isRunning={false}
-      >
-        {[<span key="breadcrumb-1">Breadcrumb</span>]}
-      </Header>,
-      { wrapper }
-    );
-
-    act(() => {
-      emitSessionContext();
-    });
-
-    await waitFor(() => {
-      const retryButton = screen.getByRole('button', {
-        name: /run \(retry\)/i,
-      });
-      expect(retryButton).toBeInTheDocument();
-      expect(retryButton).not.toBeDisabled();
-    });
-  });
-
-  test('calls onRunClick when simple Run button is clicked', async () => {
-    const { wrapper, emitSessionContext } = await createTestSetup();
-    const mockOnRunClick = vi.fn();
-
-    render(
-      <Header
-        projectId="project-1"
-        workflowId="workflow-1"
-        onRunClick={mockOnRunClick}
-        onRetryClick={vi.fn()}
-        canRun={true}
-        isRetryable={false}
-        isRunning={false}
-      >
-        {[<span key="breadcrumb-1">Breadcrumb</span>]}
-      </Header>,
-      { wrapper }
-    );
-
-    act(() => {
-      emitSessionContext();
-    });
-
-    await waitFor(() => {
-      const runButton = screen.getByRole('button', { name: /^run$/i });
-      expect(runButton).toBeInTheDocument();
-    });
-
-    const runButton = screen.getByRole('button', { name: /^run$/i });
-    fireEvent.click(runButton);
-
-    expect(mockOnRunClick).toHaveBeenCalledTimes(1);
-  });
-
-  test('calls onRetryClick when "Run (retry)" button is clicked', async () => {
-    const { wrapper, emitSessionContext } = await createTestSetup();
-    const mockOnRetryClick = vi.fn();
-
-    render(
-      <Header
-        projectId="project-1"
-        workflowId="workflow-1"
-        onRunClick={vi.fn()}
-        onRetryClick={mockOnRetryClick}
-        canRun={true}
-        isRetryable={true}
-        isRunning={false}
-      >
-        {[<span key="breadcrumb-1">Breadcrumb</span>]}
-      </Header>,
-      { wrapper }
-    );
-
-    act(() => {
-      emitSessionContext();
-    });
-
-    await waitFor(() => {
-      const retryButton = screen.getByRole('button', {
-        name: /run \(retry\)/i,
-      });
-      expect(retryButton).toBeInTheDocument();
-    });
-
-    const retryButton = screen.getByRole('button', { name: /run \(retry\)/i });
-    fireEvent.click(retryButton);
-
-    expect(mockOnRetryClick).toHaveBeenCalledTimes(1);
-  });
-
-  test('disables run button in IDE mode when canRun is false', async () => {
-    const { wrapper, emitSessionContext } = await createTestSetup();
-
-    render(
-      <Header
-        projectId="project-1"
-        workflowId="workflow-1"
-        onRunClick={vi.fn()}
-        onRetryClick={vi.fn()}
-        canRun={false}
-        runTooltipMessage="Cannot run: validation errors"
-        isRetryable={false}
-        isRunning={false}
-      >
-        {[<span key="breadcrumb-1">Breadcrumb</span>]}
-      </Header>,
-      { wrapper }
-    );
-
-    act(() => {
-      emitSessionContext();
-    });
-
-    await waitFor(() => {
-      const runButton = screen.getByRole('button', { name: /^run$/i });
-      expect(runButton).toBeInTheDocument();
-      expect(runButton).toBeDisabled();
-    });
-  });
-
-  test('shows "Processing" when isRunning is true', async () => {
-    const { wrapper, emitSessionContext } = await createTestSetup();
-
-    render(
-      <Header
-        projectId="project-1"
-        workflowId="workflow-1"
-        onRunClick={vi.fn()}
-        onRetryClick={vi.fn()}
-        canRun={true}
-        isRetryable={false}
-        isRunning={true}
-      >
-        {[<span key="breadcrumb-1">Breadcrumb</span>]}
-      </Header>,
-      { wrapper }
-    );
-
-    act(() => {
-      emitSessionContext();
-    });
-
-    await waitFor(() => {
-      const processingButton = screen.getByRole('button', {
-        name: /processing/i,
-      });
-      expect(processingButton).toBeInTheDocument();
-      expect(processingButton).toBeDisabled();
-    });
-  });
-
-  test('renders Canvas mode Run button when onRunClick provided but onRetryClick missing', async () => {
-    const { wrapper, emitSessionContext, ydoc } = await createTestSetup();
-
-    // Add a trigger for Canvas mode
-    const triggersArray = ydoc.getArray('triggers');
-    const triggerMap = new Y.Map();
-    triggerMap.set('id', 'trigger-123');
-    triggerMap.set('type', 'webhook');
-    triggerMap.set('enabled', true);
-    triggerMap.set('has_auth_method', true);
-    triggersArray.push([triggerMap]);
-
-    render(
-      <Header
-        projectId="project-1"
-        workflowId="workflow-1"
-        onRunClick={vi.fn()}
-        // No onRetryClick - should render Canvas mode
-      >
-        {[<span key="breadcrumb-1">Breadcrumb</span>]}
-      </Header>,
-      { wrapper }
-    );
-
-    act(() => {
-      emitSessionContext();
-    });
-
-    await waitFor(() => {
-      const runButton = screen.getByRole('button', { name: /run/i });
-      expect(runButton).toBeInTheDocument();
-    });
-
-    // Should be simple button, not split button
-    expect(
-      screen.queryByRole('button', { name: /run \(retry\)/i })
-    ).not.toBeInTheDocument();
-  });
-
-  test('renders adaptorDisplay prop in IDE mode', async () => {
-    const { wrapper, emitSessionContext } = await createTestSetup();
-    const adaptorDisplay = (
-      <div data-testid="adaptor-display">Adaptor Display</div>
-    );
-
-    render(
-      <Header
-        projectId="project-1"
-        workflowId="workflow-1"
-        onRunClick={vi.fn()}
-        onRetryClick={vi.fn()}
-        canRun={true}
-        isRetryable={false}
-        isRunning={false}
-        adaptorDisplay={adaptorDisplay}
-      >
-        {[<span key="breadcrumb-1">Breadcrumb</span>]}
-      </Header>,
-      { wrapper }
-    );
-
-    act(() => {
-      emitSessionContext();
-    });
-
-    await waitFor(() => {
-      expect(screen.getByTestId('adaptor-display')).toBeInTheDocument();
-      expect(screen.getByText('Adaptor Display')).toBeInTheDocument();
-    });
-  });
-
-  test('renders close IDE button when onCloseIDE prop is provided', async () => {
-    const { wrapper, emitSessionContext } = await createTestSetup();
-    const mockOnCloseIDE = vi.fn();
-
-    render(
-      <Header
-        projectId="project-1"
-        workflowId="workflow-1"
-        onRunClick={vi.fn()}
-        onRetryClick={vi.fn()}
-        canRun={true}
-        isRetryable={false}
-        isRunning={false}
-        onCloseIDE={mockOnCloseIDE}
-      >
-        {[<span key="breadcrumb-1">Breadcrumb</span>]}
-      </Header>,
-      { wrapper }
-    );
-
-    act(() => {
-      emitSessionContext();
-    });
-
-    await waitFor(() => {
-      const closeButton = screen.getByRole('button', { name: /close ide/i });
-      expect(closeButton).toBeInTheDocument();
-    });
-  });
-
-  test('calls onCloseIDE when close IDE button is clicked', async () => {
-    const { wrapper, emitSessionContext } = await createTestSetup();
-    const mockOnCloseIDE = vi.fn();
-
-    render(
-      <Header
-        projectId="project-1"
-        workflowId="workflow-1"
-        onRunClick={vi.fn()}
-        onRetryClick={vi.fn()}
-        canRun={true}
-        isRetryable={false}
-        isRunning={false}
-        onCloseIDE={mockOnCloseIDE}
-      >
-        {[<span key="breadcrumb-1">Breadcrumb</span>]}
-      </Header>,
-      { wrapper }
-    );
-
-    act(() => {
-      emitSessionContext();
-    });
-
-    await waitFor(() => {
-      const closeButton = screen.getByRole('button', { name: /close ide/i });
-      expect(closeButton).toBeInTheDocument();
-    });
-
-    const closeButton = screen.getByRole('button', { name: /close ide/i });
-    fireEvent.click(closeButton);
-
-    expect(mockOnCloseIDE).toHaveBeenCalledTimes(1);
-  });
-
-  test('does not render close IDE button when onCloseIDE prop is not provided', async () => {
-    const { wrapper, emitSessionContext } = await createTestSetup();
-
-    render(
-      <Header projectId="project-1" workflowId="workflow-1">
-        {[<span key="breadcrumb-1">Breadcrumb</span>]}
-      </Header>,
-      { wrapper }
-    );
-
-    act(() => {
-      emitSessionContext();
-    });
-
-    expect(
-      screen.queryByRole('button', { name: /close ide/i })
-    ).not.toBeInTheDocument();
   });
 });

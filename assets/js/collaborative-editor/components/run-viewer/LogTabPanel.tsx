@@ -110,9 +110,9 @@ export function LogTabPanel() {
   }, [run, provider]);
 
   return (
-    <div className="flex h-full flex-col bg-slate-700 font-mono text-gray-200">
+    <div className="grid h-full grid-rows-[auto_1fr] bg-slate-700 font-mono text-gray-200">
       {/* Log level filter header */}
-      <div className="flex-none border-b border-slate-500">
+      <div className="border-b border-slate-500">
         <div className="mx-auto px-2">
           <div className="flex h-6 flex-row-reverse items-center">
             <LogLevelFilter
@@ -124,7 +124,7 @@ export function LogTabPanel() {
       </div>
 
       {/* Log viewer */}
-      <div ref={containerRef} className="flex-1" />
+      <div ref={containerRef} className="min-h-0" />
     </div>
   );
 }

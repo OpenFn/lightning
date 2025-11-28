@@ -28,6 +28,33 @@ and this project adheres to
 - Settings panel now opens correctly when Run Panel is visible; also improved
   Run Panel to stay open and update context when switching between nodes
   [#4008](https://github.com/OpenFn/lightning/issues/4008)
+- Fix collaborative cursors disappearing after switching workflow versions
+  [#4066](https://github.com/OpenFn/lightning/issues/4066)
+- Throttle cursor awareness updates to reduce server load
+  [#4066](https://github.com/OpenFn/lightning/issues/4066)
+- Loading workflow screen appears when disconnected from server
+  [#3972](https://github.com/OpenFn/lightning/issues/3972)
+
+## [2.15.0-pre1] - 2025-11-27
+
+### Added
+
+- Add workflow template publishing to collaborative editor
+  [#3921](https://github.com/OpenFn/lightning/issues/3921)
+
+### Changed
+
+- Optimize dashboard stats queries with database aggregation
+  [#4070](https://github.com/OpenFn/lightning/issues/4070)
+- Add composite indexes on steps and runs for dashboard queries
+  [#4070](https://github.com/OpenFn/lightning/issues/4070)
+- Enable usage limit checks across the whole application
+  [#PR4050](https://github.com/OpenFn/lightning/pull/4050)
+- Make IDE heading separate from top menu
+  [#4077](https://github.com/OpenFn/lightning/issues/4077)
+
+### Fixed
+
 - Version dropdown now updates correctly for all users after workflow save
   [#3985](https://github.com/OpenFn/lightning/issues/3985)
   [#4024](https://github.com/OpenFn/lightning/issues/4024)
@@ -50,6 +77,8 @@ and this project adheres to
   [PR#4072](https://github.com/OpenFn/lightning/pull/4072)
 - Fix metadata/docs panel reopening when resizing adjacent panel
   [#4073](https://github.com/OpenFn/lightning/issues/4073)
+- Fix logs panel not allowing scroll after being resized to minimum height
+  [PR#4067](https://github.com/OpenFn/lightning/pull/4067)
 
 ## [2.15.0-pre] - 2025-11-20
 

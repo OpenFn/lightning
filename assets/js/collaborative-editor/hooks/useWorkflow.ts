@@ -47,6 +47,8 @@ import { useSession } from './useSession';
 import {
   useLatestSnapshotLockVersion,
   usePermissions,
+  useUser,
+  useWorkflowTemplate,
 } from './useSessionContext';
 
 // import _logger from "#/utils/logger";
@@ -286,8 +288,6 @@ export const useNodeSelection = () => {
   const store = useWorkflowStoreContext();
   const selectNode = useCallback(
     (id: string | null) => {
-      const currentPanel = searchParams.get('panel');
-
       if (!id) {
         updateSearchParams({ job: null, trigger: null, edge: null });
         return;
@@ -300,25 +300,15 @@ export const useNodeSelection = () => {
       const foundTrigger = state.triggers.find(trigger => trigger.id === id);
       const foundEdge = state.edges.find(edge => edge.id === id);
 
-      // If Run Panel is open, preserve it; otherwise clear panel to show node inspector
-      const updates: Record<string, string | null> = {
-        job: null,
-        trigger: null,
-        edge: null,
-        panel: currentPanel === 'run' ? 'run' : null,
-      };
-
       if (foundJob) {
-        updates.job = id;
+        updateSearchParams({ job: id, trigger: null, edge: null });
       } else if (foundTrigger) {
-        updates.trigger = id;
+        updateSearchParams({ trigger: id, job: null, edge: null });
       } else if (foundEdge) {
-        updates.edge = id;
+        updateSearchParams({ edge: id, job: null, trigger: null });
       }
-
-      updateSearchParams(updates);
     },
-    [updateSearchParams, store, searchParams]
+    [updateSearchParams, store]
   );
 
   return {
@@ -753,12 +743,16 @@ export const useCanRun = (): { canRun: boolean; tooltipMessage: string } => {
  * 1. Workflow deletion state (deleted_at)
  * 2. User permissions (can_edit_workflow)
  * 3. Snapshot version (viewing old snapshot)
+ *
+ * Note: Connection state does not affect read-only status. Offline editing
+ * is fully supported - Y.Doc buffers transactions locally and syncs when
+ * reconnected.
  */
 export const useWorkflowReadOnly = (): {
   isReadOnly: boolean;
   tooltipMessage: string;
 } => {
-  // Get session state and permissions (same pattern as useCanSave)
+  // Get permissions and workflow state
   const permissions = usePermissions();
   const latestSnapshotLockVersion = useLatestSnapshotLockVersion();
   const workflow = useWorkflowState(state => state.workflow);
@@ -823,4 +817,53 @@ export const useWorkflowSettingsErrors = (): {
       validationErrors.concurrency !== undefined);
 
   return { hasErrors, errors: validationErrors };
+};
+
+/**
+ * Hook to determine if user can publish workflow as template
+ *
+ * Returns object with:
+ * - canPublish: boolean - whether publish action is available
+ *   (based on support_user)
+ * - buttonDisabled: boolean - whether button should be disabled
+ *   (based on unsaved changes)
+ * - tooltipMessage: string - message explaining button state
+ * - buttonText: string - "Publish Template" or "Update Template"
+ *
+ * Template publishing is only available to support users (superusers).
+ * The button is disabled when there are unsaved changes (workflow
+ * lock_version differs from latestSnapshotLockVersion).
+ */
+export const useCanPublishTemplate = (): {
+  canPublish: boolean;
+  buttonDisabled: boolean;
+  tooltipMessage: string;
+  buttonText: string;
+} => {
+  const user = useUser();
+  const workflowTemplate = useWorkflowTemplate();
+  const latestSnapshotLockVersion = useLatestSnapshotLockVersion();
+  const workflow = useWorkflowState(state => state.workflow);
+
+  // Only support users can publish templates
+  const canPublish = user?.support_user ?? false;
+
+  // Check if workflow has unsaved changes by comparing lock versions
+  const hasUnsavedChanges =
+    workflow?.lock_version !== latestSnapshotLockVersion;
+
+  const buttonText = workflowTemplate ? 'Update Template' : 'Publish Template';
+
+  const buttonDisabled = hasUnsavedChanges;
+
+  const tooltipMessage = hasUnsavedChanges
+    ? `You must save your workflow first before ${workflowTemplate ? 'updating' : 'publishing'} a template.`
+    : '';
+
+  return {
+    canPublish,
+    buttonDisabled,
+    tooltipMessage,
+    buttonText,
+  };
 };

@@ -33,6 +33,9 @@ vi.mock('@xyflow/react', async () => {
   };
 });
 
+// Throttle interval used in PointerTrackerViewer
+const CURSOR_THROTTLE_MS = 50;
+
 describe('PointerTrackerViewer', () => {
   let awarenessStore: AwarenessStoreInstance;
   let mockAwareness: Awareness;
@@ -41,6 +44,7 @@ describe('PointerTrackerViewer', () => {
   let updateLocalCursorSpy: ReturnType<typeof vi.spyOn>;
 
   beforeEach(() => {
+    vi.useFakeTimers();
     awarenessStore = createAwarenessStore();
     ydoc = new Y.Doc();
     mockAwareness = new Awareness(ydoc);
@@ -79,6 +83,7 @@ describe('PointerTrackerViewer', () => {
   afterEach(() => {
     document.body.removeChild(containerEl);
     vi.restoreAllMocks();
+    vi.useRealTimers();
   });
 
   const renderWithProviders = (component: React.ReactElement) => {
@@ -106,13 +111,16 @@ describe('PointerTrackerViewer', () => {
     test('tracks multiple mouse movements', () => {
       renderWithProviders(<PointerTrackerViewer containerEl={containerEl} />);
 
-      // First movement
+      // First movement (fires immediately - leading edge of throttle)
       fireEvent.mouseMove(containerEl, {
         clientX: 200,
         clientY: 150,
       });
 
       expect(updateLocalCursorSpy).toHaveBeenCalledWith({ x: 100, y: 100 });
+
+      // Advance past throttle window
+      vi.advanceTimersByTime(CURSOR_THROTTLE_MS + 1);
 
       // Second movement
       fireEvent.mouseMove(containerEl, {
@@ -216,8 +224,11 @@ describe('PointerTrackerViewer', () => {
         clientY: 150,
       });
 
-      // Leave
+      // Leave (not throttled)
       fireEvent.mouseLeave(containerEl);
+
+      // Advance past throttle window before moving again
+      vi.advanceTimersByTime(CURSOR_THROTTLE_MS + 1);
 
       // Move again
       fireEvent.mouseMove(containerEl, {
@@ -301,6 +312,9 @@ describe('PointerTrackerViewer', () => {
       });
 
       expect(updateLocalCursorSpy).toHaveBeenCalledWith({ x: 100, y: 100 });
+
+      // Advance past throttle window
+      vi.advanceTimersByTime(CURSOR_THROTTLE_MS + 1);
 
       // Change viewport
       vi.mocked(useViewport).mockReturnValue({ x: 50, y: 50, zoom: 2 });
@@ -581,10 +595,10 @@ describe('PointerTrackerViewer', () => {
       document.body.removeChild(offScreenContainer);
     });
 
-    test('handles rapid mouse movements', () => {
+    test('handles rapid mouse movements with throttling', () => {
       renderWithProviders(<PointerTrackerViewer containerEl={containerEl} />);
 
-      // Simulate 100 rapid movements
+      // Simulate 100 rapid movements (all within throttle window)
       for (let i = 0; i < 100; i++) {
         fireEvent.mouseMove(containerEl, {
           clientX: 100 + i,
@@ -592,7 +606,16 @@ describe('PointerTrackerViewer', () => {
         });
       }
 
-      expect(updateLocalCursorSpy).toHaveBeenCalledTimes(100);
+      // First call happens immediately (leading edge)
+      expect(updateLocalCursorSpy).toHaveBeenCalledTimes(1);
+      expect(updateLocalCursorSpy).toHaveBeenCalledWith({ x: 0, y: 0 });
+
+      // Advance timer to trigger trailing edge with last position
+      vi.advanceTimersByTime(CURSOR_THROTTLE_MS);
+
+      // Trailing edge fires with the final position
+      expect(updateLocalCursorSpy).toHaveBeenCalledTimes(2);
+      expect(updateLocalCursorSpy).toHaveBeenLastCalledWith({ x: 99, y: 99 });
     });
 
     test('handles mouse events with no clientX/clientY (edge case)', () => {

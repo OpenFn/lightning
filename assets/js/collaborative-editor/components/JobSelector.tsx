@@ -30,14 +30,14 @@ export function JobSelector({ currentJob, jobs, onChange }: JobSelectorProps) {
   return (
     <Listbox value={currentJob} onChange={onChange}>
       <div className="relative">
-        <ListboxButton className="flex items-center font-medium text-gray-500 hover:text-gray-700 cursor-pointer">
+        <ListboxButton className="flex items-center font-medium text-sm text-gray-500 hover:text-gray-700 cursor-pointer">
           <span>{currentJob.name}</span>
           <span className="hero-chevron-up-down w-4 h-4 ml-1 flex-shrink-0" />
         </ListboxButton>
         <ListboxOptions
           transition
           anchor="bottom start"
-          className="z-[100] mt-1 max-h-60 w-56 overflow-auto rounded-md bg-white py-1 shadow-lg outline-1 outline-black/5 data-leave:transition data-leave:duration-100 data-leave:ease-in data-closed:data-leave:opacity-0"
+          className="z-[100] mt-1 max-h-60 w-56 overflow-auto rounded-md bg-white py-1 text-sm shadow-lg outline-1 outline-black/5 data-leave:transition data-leave:duration-100 data-leave:ease-in data-closed:data-leave:opacity-0"
         >
           {sortedJobs.map(job => (
             <ListboxOption

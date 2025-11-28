@@ -36,13 +36,7 @@ import { isFinalState } from '../../types/history';
 import { useRunRetry } from '../../hooks/useRunRetry';
 import { useRunRetryShortcuts } from '../../hooks/useRunRetryShortcuts';
 import { useSession } from '../../hooks/useSession';
-import {
-  useLatestSnapshotLockVersion,
-  useProject,
-  useProjectRepoConnection,
-} from '../../hooks/useSessionContext';
-import { useUICommands } from '../../hooks/useUI';
-import { useVersionSelect } from '../../hooks/useVersionSelect';
+import { useProject } from '../../hooks/useSessionContext';
 import {
   useCanRun,
   useCanSave,
@@ -53,20 +47,19 @@ import {
 } from '../../hooks/useWorkflow';
 import { AdaptorDisplay } from '../AdaptorDisplay';
 import { AdaptorSelectionModal } from '../AdaptorSelectionModal';
-import { BreadcrumbLink } from '../Breadcrumbs';
 import { CollaborativeMonaco } from '../CollaborativeMonaco';
 import { RunBadge } from '../common/RunBadge';
 import { ConfigureAdaptorModal } from '../ConfigureAdaptorModal';
-import { Header } from '../Header';
 import { JobSelector } from '../JobSelector';
 import { ManualRunPanel } from '../ManualRunPanel';
 import { ManualRunPanelErrorBoundary } from '../ManualRunPanelErrorBoundary';
 import { RunViewerErrorBoundary } from '../run-viewer/RunViewerErrorBoundary';
 import { RunViewerPanel } from '../run-viewer/RunViewerPanel';
+import { RunRetryButton } from '../RunRetryButton';
 import { SandboxIndicatorBanner } from '../SandboxIndicatorBanner';
+import { ShortcutKeys } from '../ShortcutKeys';
 import { Tabs } from '../Tabs';
 import { Tooltip } from '../Tooltip';
-import { VersionDropdown } from '../VersionDropdown';
 
 import { PanelToggleButton } from './PanelToggleButton';
 
@@ -332,8 +325,12 @@ export function FullScreenIDE({
 
   // Enable run/retry keyboard shortcuts in IDE
   useRunRetryShortcuts({
-    onRun: handleRun,
-    onRetry: handleRetry,
+    onRun: () => {
+      void handleRun();
+    },
+    onRetry: () => {
+      void handleRetry();
+    },
     canRun:
       canRunSnapshot &&
       canRunFromHook &&
@@ -344,11 +341,6 @@ export function FullScreenIDE({
     isRetryable,
     priority: 50, // IDE priority
   });
-
-  // Get data for Header
-  const latestSnapshotLockVersion = useLatestSnapshotLockVersion();
-  const repoConnection = useProjectRepoConnection();
-  const { openGitHubSyncModal } = useUICommands();
 
   // Handle job selection from JobSelector
   const allJobs = workflow?.jobs || [];
@@ -391,10 +383,6 @@ export function FullScreenIDE({
       selectStep(stepIdFromURL);
     }
   }, [stepIdFromURL, runIdFromURL, selectStep]);
-
-  const handleCollapseLeftPanel = () => {
-    leftPanelRef.current?.collapse();
-  };
 
   const handleOpenAdaptorPicker = useCallback(() => {
     setIsConfigureModalOpen(false);
@@ -547,7 +535,7 @@ export function FullScreenIDE({
   }, [handleEvent, currentJob, updateJob, requestCredentials]);
 
   useKeyboardShortcut(
-    'Escape',
+    'Escape, Control+e, Meta+e',
     () => {
       const activeElement = document.activeElement;
       const isMonacoFocused = activeElement?.closest('.monaco-editor');
@@ -575,10 +563,11 @@ export function FullScreenIDE({
 
   // IMPORTANT: All hooks must be called before any early returns
   const { isReadOnly } = useWorkflowReadOnly();
-  const handleVersionSelect = useVersionSelect();
 
   // Check loading state but don't use early return (violates rules of hooks)
-  const isLoading = !currentJob || !currentJobYText || !awareness;
+  // Only check for job existence, not ytext/awareness
+  // ytext and awareness persist during disconnection for offline editing
+  const isLoading = !currentJob;
 
   // If loading, render loading state at the end instead of early return
   if (isLoading) {
@@ -642,85 +631,97 @@ export function FullScreenIDE({
     }
   };
 
-  // Build adaptor display with version dropdown for IDE Header
-  const adaptorDisplay = currentJob ? (
-    <div className="flex items-center gap-3">
-      <AdaptorDisplay
-        adaptor={currentJob.adaptor || '@openfn/language-common@latest'}
-        credentialId={
-          currentJob.project_credential_id ||
-          currentJob.keychain_credential_id ||
-          null
-        }
-        size="sm"
-        onEdit={() => setIsConfigureModalOpen(true)}
-        onChangeAdaptor={handleOpenAdaptorPicker}
-        isReadOnly={isReadOnly}
-      />
-      <VersionDropdown
-        currentVersion={workflow?.lock_version ?? null}
-        latestVersion={latestSnapshotLockVersion ?? null}
-        onVersionSelect={handleVersionSelect}
-      />
-    </div>
-  ) : null;
-
   return (
-    <div className="absolute inset-0 z-60 bg-white flex flex-col">
-      <Header
-        key="ide-header"
-        projectId={projectId}
-        workflowId={workflowId}
-        onRunClick={handleRun}
-        onRetryClick={handleRetry}
-        canRun={
-          canRunSnapshot &&
-          canRunFromHook &&
-          !isSubmitting &&
-          !runIsProcessing &&
-          jobMatchesRun
-        }
-        runTooltipMessage={
-          !jobMatchesRun
-            ? 'Selected job was not part of this run'
-            : runTooltipMessage
-        }
-        isRetryable={isRetryable}
-        isRunning={isSubmitting || runIsProcessing}
-        adaptorDisplay={adaptorDisplay}
-        onCloseIDE={handleCloseIDE}
-      >
-        {/* IDE Breadcrumbs: Projects > Project > Workflows > Workflow > JobSelector */}
-        {currentJob
-          ? [
-              <BreadcrumbLink href="/projects" key="projects">
-                Projects
-              </BreadcrumbLink>,
-              <BreadcrumbLink href={`/projects/${projectId}/w`} key="project">
-                {project?.name}
-              </BreadcrumbLink>,
-              <BreadcrumbLink href={`/projects/${projectId}/w`} key="workflows">
-                Workflows
-              </BreadcrumbLink>,
-              <BreadcrumbLink onClick={handleCloseIDE} key="workflow-name">
-                {workflow?.name}
-              </BreadcrumbLink>,
-              <JobSelector
-                key="job-selector"
-                currentJob={currentJob}
-                jobs={allJobs}
-                onChange={handleJobSelect}
-              />,
-            ]
-          : []}
-      </Header>
-
+    <div className="absolute inset-0 top-20 bottom-0 z-49 bg-white flex flex-col">
       <SandboxIndicatorBanner
         parentProjectId={parentProjectId}
         parentProjectName={parentProjectName}
         projectName={project?.name}
         position="relative"
       />
+
+      {/* IDE Heading Bar */}
+      <div className="flex-none bg-white border-b border-gray-200">
+        <div className="flex items-center justify-between px-6 py-2">
+          <div className="flex items-center gap-3 flex-1 min-w-0">
+            {/* Job Selector */}
+            <div className="shrink-0">
+              <JobSelector
+                currentJob={currentJob}
+                jobs={allJobs}
+                onChange={handleJobSelect}
+              />
+            </div>
+
+            {/* Adaptor Display with Version Dropdown */}
+            {currentJob && (
+              <div className="flex items-center gap-3 shrink-0">
+                <AdaptorDisplay
+                  adaptor={
+                    currentJob.adaptor || '@openfn/language-common@latest'
+                  }
+                  credentialId={
+                    currentJob.project_credential_id ||
+                    currentJob.keychain_credential_id ||
+                    null
+                  }
+                  size="sm"
+                  onEdit={() => setIsConfigureModalOpen(true)}
+                  onChangeAdaptor={handleOpenAdaptorPicker}
+                  isReadOnly={isReadOnly}
+                />
+              </div>
+            )}
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0">
+            {/* Run/Retry button */}
+            <RunRetryButton
+              isRetryable={isRetryable}
+              isDisabled={
+                !(
+                  canRunSnapshot &&
+                  canRunFromHook &&
+                  !isSubmitting &&
+                  !runIsProcessing &&
+                  jobMatchesRun
+                )
+              }
+              isSubmitting={isSubmitting || runIsProcessing}
+              onRun={() => {
+                void handleRun();
+              }}
+              onRetry={() => {
+                void handleRetry();
+              }}
+              buttonText={{
+                run: 'Run',
+                retry: 'Run (retry)',
+                processing: 'Processing',
+              }}
+              variant="primary"
+              dropdownPosition="down"
+              showKeyboardShortcuts={true}
+              disabledTooltip={
+                !jobMatchesRun
+                  ? 'Selected job was not part of this run'
+                  : runTooltipMessage
+              }
+            />
+
+            {/* Close button */}
+            <Tooltip content={<ShortcutKeys keys={['esc']} />} side="bottom">
+              <button
+                onClick={handleCloseIDE}
+                className="p-1 hover:bg-gray-100 rounded transition-colors"
+                aria-label="Close IDE"
+              >
+                <XMarkIcon className="h-5 w-5 text-gray-500" />
+              </button>
+            </Tooltip>
+          </div>
+        </div>
+      </div>
 
       <div className="flex-1 overflow-hidden">
         <PanelGroup
@@ -835,17 +836,14 @@ export function FullScreenIDE({
                     </Panel>
 
                     {/* Resize Handle */}
-                    {docsOrientation === 'horizontal' ? (
-                      isDocsCollapsed ? null : (
-                        <PanelResizeHandle
-                          className="w-1 bg-gray-200 hover:bg-blue-400
-                        transition-colors cursor-col-resize"
-                        />
-                      )
-                    ) : (
+                    {!isDocsCollapsed && (
                       <PanelResizeHandle
-                        className="h-1 bg-gray-200 hover:bg-blue-400
-                        transition-colors cursor-row-resize"
+                        className={cn(
+                          'bg-gray-200 hover:bg-blue-400 transition-colors',
+                          docsOrientation === 'horizontal'
+                            ? 'w-1 cursor-col-resize'
+                            : 'h-1 cursor-row-resize'
+                        )}
                       />
                     )}
 

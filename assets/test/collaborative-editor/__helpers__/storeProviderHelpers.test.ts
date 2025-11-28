@@ -424,8 +424,10 @@ describe('simulateStoreProviderWithConnection - Enhanced Options', () => {
       // Call cleanup
       channelCleanup();
 
-      // Verify disconnected
-      expect(stores.workflowStore.isConnected).toBe(false);
+      // After cleanup, isConnected remains true because ydoc is kept alive for offline editing
+      // Only the provider is nulled out, but the store can still function offline
+      expect(stores.workflowStore.isConnected).toBe(true);
+      expect(stores.workflowStore.ydoc).not.toBeNull();
 
       cleanup();
     });
