@@ -342,7 +342,7 @@ export function MessageList({
     }
   }, [isLoading]);
 
-  if (messages.length === 0) {
+  if (messages.length === 0 && !isLoading) {
     return (
       <div className="flex flex-col items-center justify-center h-full text-center px-4">
         <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary-50 to-primary-100 flex items-center justify-center mb-6">
@@ -385,22 +385,22 @@ export function MessageList({
                   {/* Code Block - Only show for assistant messages */}
                   {message.code && (
                     <div className="rounded-lg overflow-hidden border border-gray-200 bg-white">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setExpandedYaml(prev => {
-                            const next = new Set(prev);
-                            if (next.has(message.id)) {
-                              next.delete(message.id);
-                            } else {
-                              next.add(message.id);
-                            }
-                            return next;
-                          });
-                        }}
-                        className="w-full px-4 py-2 bg-gray-50 border-b border-gray-200 flex items-center justify-between hover:bg-gray-100 transition-colors"
-                      >
-                        <div className="flex items-center gap-2">
+                      <div className="w-full px-4 py-2 bg-gray-50 border-b border-gray-200 flex items-center justify-between">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setExpandedYaml(prev => {
+                              const next = new Set(prev);
+                              if (next.has(message.id)) {
+                                next.delete(message.id);
+                              } else {
+                                next.add(message.id);
+                              }
+                              return next;
+                            });
+                          }}
+                          className="flex items-center gap-2 hover:opacity-75 transition-opacity"
+                        >
                           <span
                             className={cn(
                               'transition-transform duration-200',
@@ -412,7 +412,7 @@ export function MessageList({
                           <span className="text-xs font-medium text-gray-700">
                             Generated Workflow
                           </span>
-                        </div>
+                        </button>
                         <CodeActionButtons
                           code={message.code}
                           showAdd={showAddButtons}
@@ -422,7 +422,7 @@ export function MessageList({
                           }
                           isApplying={applyingMessageId === message.id}
                         />
-                      </button>
+                      </div>
                       {expandedYaml.has(message.id) && (
                         <pre className="bg-slate-100 text-slate-800 p-3 overflow-x-auto text-xs font-mono">
                           <code>{message.code}</code>
