@@ -294,9 +294,6 @@ function AIAssistantPanelWrapper() {
     // STEP 3: Load session if there's one in URL, otherwise we're done
     // IMPORTANT: Don't load session from URL if job just changed - that session belongs to the old job
     if (!sessionIdFromURL || jobIdChanged) {
-      console.log(
-        '[AI Assistant] No session in URL - ready for new conversation'
-      );
       return;
     }
 
@@ -900,24 +897,11 @@ function AIAssistantPanelWrapper() {
       latestMessage?.code &&
       !appliedMessageIdsRef.current.has(latestMessage.id)
     ) {
-      console.log(
-        '[AI Assistant] Auto-applying workflow from message:',
-        latestMessage.id,
-        '(newest of',
-        messagesWithCode.length + 1,
-        'messages with code)'
-      );
-
       // Mark this message as applied to prevent duplicate applications
       appliedMessageIdsRef.current.add(latestMessage.id);
 
       // Apply the workflow
       void handleApplyWorkflow(latestMessage.code, latestMessage.id);
-    } else if (latestMessage?.code) {
-      console.log(
-        '[AI Assistant] Skipping auto-apply - message already applied:',
-        latestMessage.id
-      );
     }
   }, [
     messages,

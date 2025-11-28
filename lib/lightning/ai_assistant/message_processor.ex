@@ -38,14 +38,8 @@ defmodule Lightning.AiAssistant.MessageProcessor do
   @impl Oban.Worker
   @spec perform(Oban.Job.t()) :: :ok
   def perform(%Oban.Job{args: %{"message_id" => message_id}}) do
-    Logger.info("[MessageProcessor] Processing message: #{message_id}")
-
     case process_message(message_id) do
       {:ok, _updated_session} ->
-        Logger.info(
-          "[MessageProcessor] Successfully processed message: #{message_id}"
-        )
-
         :ok
 
       {:error, reason} ->

@@ -165,7 +165,7 @@ defmodule LightningWeb.AiAssistantChannel do
            socket}
       end
     else
-      Logger.warning(
+      Logger.debug(
         "[AiAssistantChannel] update_context called on non-job_code session: #{session_type}"
       )
 

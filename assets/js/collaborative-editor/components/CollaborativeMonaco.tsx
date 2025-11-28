@@ -147,10 +147,6 @@ export function CollaborativeMonaco({
   // Effect to handle insert-snippet events from docs panel
   useEffect(() => {
     const handleInsertSnippet = (e: Event) => {
-      console.log('[CollaborativeMonaco] Received insert-snippet event', {
-        event: e,
-      });
-
       const editor = editorRef.current;
       const monaco = monacoRef.current;
       if (!editor || !monaco) {
@@ -175,10 +171,6 @@ export function CollaborativeMonaco({
         return;
       }
 
-      console.log('[CollaborativeMonaco] ✨ Inserting snippet', {
-        textLength: snippetText.length,
-        textPreview: snippetText.substring(0, 100),
-      });
       logger.log('✨ Inserting snippet at cursor position:', snippetText);
 
       const model = editor.getModel();
@@ -217,16 +209,11 @@ export function CollaborativeMonaco({
       editor.focus();
 
       logger.log('✅ Snippet inserted successfully');
-      console.log('[CollaborativeMonaco] ✅ Snippet inserted successfully');
     };
 
-    console.log('[CollaborativeMonaco] Adding insert-snippet event listener');
     document.addEventListener('insert-snippet', handleInsertSnippet);
 
     return () => {
-      console.log(
-        '[CollaborativeMonaco] Removing insert-snippet event listener'
-      );
       document.removeEventListener('insert-snippet', handleInsertSnippet);
     };
   }, []);

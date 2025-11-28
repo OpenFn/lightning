@@ -101,8 +101,6 @@ export const useAIIsLoading = () => {
     store.withSelector(state => state.isLoading)
   );
 
-  console.log('[useAIIsLoading] Current loading state:', isLoading);
-
   return isLoading;
 };
 

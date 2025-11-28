@@ -160,21 +160,11 @@ const doCopy = async (text: string) => {
  * Insert code snippet into the editor using custom event
  */
 const doInsert = (text: string) => {
-  console.log('[MessageList] Dispatching insert-snippet event', {
-    textLength: text.length,
-    textPreview: text.substring(0, 100),
-  });
-
   const e = new Event('insert-snippet');
   // @ts-expect-error - custom event property
   e.snippet = text;
 
-  // Check if there are any listeners for this event
-  const hasListeners = document.addEventListener.length > 0;
-  console.log('[MessageList] Has event listeners:', hasListeners);
-
   document.dispatchEvent(e);
-  console.log('[MessageList] Event dispatched successfully');
 };
 
 /**
@@ -345,12 +335,6 @@ export function MessageList({
   const loadingRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [expandedYaml, setExpandedYaml] = useState<Set<string>>(new Set());
-
-  console.log('[MessageList] Render:', {
-    messagesCount: messages.length,
-    isLoading,
-    hasLoadingRef: !!loadingRef.current,
-  });
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
