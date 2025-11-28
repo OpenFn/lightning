@@ -273,20 +273,20 @@ export function emitErrorEvent(
 }
 
 /**
- * Creates a mock channel with pre-configured responses for common scenarios
+ * Creates a mock AI assistant channel with pre-configured responses for common scenarios
  *
  * @param scenario - Scenario name
  * @returns Configured mock channel
  *
  * @example
  * // Successful message flow
- * const channel = createMockChannelForScenario('successful_message');
+ * const channel = createMockAIChannelForScenario('successful_message');
  *
  * @example
  * // Error scenario
- * const channel = createMockChannelForScenario('message_error');
+ * const channel = createMockAIChannelForScenario('message_error');
  */
-export function createMockChannelForScenario(
+export function createMockAIChannelForScenario(
   scenario:
     | 'successful_message'
     | 'message_error'

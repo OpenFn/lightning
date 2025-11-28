@@ -123,7 +123,7 @@ export {
   emitMessageUpdatedEvent,
   emitSessionCreatedEvent,
   emitErrorEvent,
-  createMockChannelForScenario,
+  createMockAIChannelForScenario,
   simulateMessageExchange,
   type PaginationMeta,
 } from './aiChannelMocks';
