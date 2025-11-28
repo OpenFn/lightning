@@ -35,10 +35,8 @@ defmodule LightningWeb.AiAssistantChannel do
             load_or_create_session(session_type, session_id, params, user)},
          :ok <- validate_session_type(session, session_type),
          :ok <- authorize_session_access(session, user) do
-      # Subscribe to session-specific PubSub topic for message updates
       Lightning.subscribe("ai_session:#{session.id}")
 
-      # Messages are already preloaded with the session
       {:ok,
        %{
          session_id: session.id,
@@ -73,11 +71,9 @@ defmodule LightningWeb.AiAssistantChannel do
     session = socket.assigns.session
     user = socket.assigns.current_user
 
-    # Validate message content
     if String.trim(content) == "" do
       {:reply, {:error, %{reason: "Message cannot be empty"}}, socket}
     else
-      # Extract options based on session type
       opts = extract_message_options(socket.assigns.session_type, params)
 
       case AiAssistant.save_message(
@@ -86,8 +82,6 @@ defmodule LightningWeb.AiAssistantChannel do
              opts
            ) do
         {:ok, updated_session} ->
-          # Message saved successfully, processing will happen async via Oban
-          # Get the last message from the updated session
           message = List.last(updated_session.messages)
           {:reply, {:ok, %{message: format_message(message)}}, socket}
 
@@ -102,7 +96,6 @@ defmodule LightningWeb.AiAssistantChannel do
 
   @impl true
   def handle_in("retry_message", %{"message_id" => message_id}, socket) do
-    # First get the message to verify it belongs to this session
     message = Lightning.Repo.get(ChatMessage, message_id)
 
     if message && message.chat_session_id == socket.assigns.session_id do
@@ -134,15 +127,11 @@ defmodule LightningWeb.AiAssistantChannel do
     session = socket.assigns.session
     session_type = socket.assigns.session_type
 
-    # Only job_code sessions can update context
     if session_type == "job_code" do
-      # Extract updated job context
       job_body = params["job_body"]
       job_adaptor = params["job_adaptor"]
       job_name = params["job_name"]
 
-      # Build updated context for meta
-      # Preserve existing meta and update runtime_context
       updated_meta =
         (session.meta || %{})
         |> Map.put("runtime_context", %{
@@ -152,12 +141,10 @@ defmodule LightningWeb.AiAssistantChannel do
           "updated_at" => DateTime.utc_now() |> DateTime.to_iso8601()
         })
 
-      # Update session in database with new meta
       case session
            |> Ecto.Changeset.change(%{meta: updated_meta})
            |> Lightning.Repo.update() do
         {:ok, updated_session} ->
-          # Update session's virtual fields with new context
           updated_session =
             updated_session
             |> AiAssistant.put_expression_and_adaptor(
@@ -165,7 +152,6 @@ defmodule LightningWeb.AiAssistantChannel do
               job_adaptor || "@openfn/language-common@latest"
             )
 
-          # Update socket assigns with new context
           socket = assign(socket, session: updated_session)
 
           {:reply, {:ok, %{success: true}}, socket}
@@ -198,15 +184,11 @@ defmodule LightningWeb.AiAssistantChannel do
     offset = Map.get(params, "offset", 0)
     limit = Map.get(params, "limit", 20)
 
-    # Build options with workflow filter for workflow_template sessions
-    # This matches the legacy editor behavior where sessions are scoped by workflow
     opts = [offset: offset, limit: limit]
 
     opts =
       if session_type == "workflow_template" do
-        # Extract workflow from session or unsaved_workflow meta
         workflow = get_workflow_for_session(session)
-
         Keyword.put(opts, :workflow, workflow)
       else
         opts
@@ -233,7 +215,6 @@ defmodule LightningWeb.AiAssistantChannel do
     end
   end
 
-  # Handle PubSub broadcasts for message status updates
   @impl true
   def handle_info(
         {:ai_assistant, :message_status_changed,
@@ -241,11 +222,8 @@ defmodule LightningWeb.AiAssistantChannel do
         socket
       ) do
     if socket.assigns.session_id == session_id do
-      # When status changes to :success, the updated_session will have the new assistant message
-      # Push the status update and, if it's success, also push the new message
       case status do
         :success ->
-          # Find the latest assistant message (the AI response)
           assistant_message =
             updated_session.messages
             |> Enum.reverse()
@@ -258,8 +236,6 @@ defmodule LightningWeb.AiAssistantChannel do
           end
 
         _ ->
-          # For other status changes, just notify about the status
-          # The frontend can use this to show loading states
           :ok
       end
     end
@@ -267,7 +243,6 @@ defmodule LightningWeb.AiAssistantChannel do
     {:noreply, socket}
   end
 
-  # Fallback for status updates without session data (shouldn't happen with current MessageProcessor)
   @impl true
   def handle_info(
         {:ai_assistant, :message_status_changed,
@@ -281,8 +256,6 @@ defmodule LightningWeb.AiAssistantChannel do
   def handle_info(_msg, socket) do
     {:noreply, socket}
   end
-
-  # Private helpers
 
   defp parse_topic(topic) do
     case String.split(topic, ":", parts: 2) do
@@ -310,21 +283,16 @@ defmodule LightningWeb.AiAssistantChannel do
   defp load_or_create_session("job_code", session_id, params, user) do
     case session_id do
       "new" ->
-        # Create new job code session
         with {:job_id, job_id} when not is_nil(job_id) <-
                {:job_id, params["job_id"]},
              {:content, content} when not is_nil(content) <-
                {:content, params["content"]} do
-          # Check if job exists in database
           case Jobs.get_job(job_id) do
             {:ok, job} ->
-              # Job exists in database - use normal flow
               opts = extract_session_options("job_code", params)
               AiAssistant.create_session(job, user, content, opts)
 
             {:error, :not_found} ->
-              # Job doesn't exist in DB yet (unsaved in Y.Doc)
-              # Create session with unsaved job data from params
               create_session_with_unsaved_job(params, user, content)
           end
         else
@@ -333,10 +301,8 @@ defmodule LightningWeb.AiAssistantChannel do
         end
 
       _existing_id ->
-        # Load existing session
         case AiAssistant.get_session(session_id) do
           {:ok, session} ->
-            # Enrich with job context (expression and adaptor)
             enriched_session =
               AiAssistant.enrich_session_with_job_context(session)
 
@@ -351,28 +317,22 @@ defmodule LightningWeb.AiAssistantChannel do
   defp load_or_create_session("workflow_template", session_id, params, user) do
     case session_id do
       "new" ->
-        # Create new workflow template session
         with {:project_id, project_id} when not is_nil(project_id) <-
                {:project_id, params["project_id"]},
              {:project, project} when not is_nil(project) <-
                {:project, Projects.get_project(project_id)},
              {:content, content} when not is_nil(content) <-
                {:content, params["content"]} do
-          # Try to load workflow from database if workflow_id provided
           workflow =
             if params["workflow_id"],
               do: Workflows.get_workflow(params["workflow_id"]),
               else: nil
 
-          # If workflow_id provided but workflow not found in DB,
-          # this is a create mode workflow (temporary ID)
           is_new_workflow = params["workflow_id"] && is_nil(workflow)
 
-          # Extract base options
           base_opts = extract_session_options("workflow_template", params)
           base_meta = Keyword.get(base_opts, :meta, %{})
 
-          # If this is a new workflow (create mode), store temporary workflow_id in meta
           opts =
             if is_new_workflow do
               meta =
@@ -402,7 +362,6 @@ defmodule LightningWeb.AiAssistantChannel do
         end
 
       _existing_id ->
-        # Load existing session
         case AiAssistant.get_session(session_id) do
           {:ok, session} -> {:ok, session}
           {:error, :not_found} -> {:error, "session not found"}
@@ -411,18 +370,15 @@ defmodule LightningWeb.AiAssistantChannel do
   end
 
   defp create_session_with_unsaved_job(params, user, content) do
-    # Extract unsaved job data from params
     job_id = params["job_id"]
     job_name = params["job_name"]
     job_body = params["job_body"] || ""
     job_adaptor = params["job_adaptor"] || "@openfn/language-common@latest"
     workflow_id = params["workflow_id"]
 
-    # Validate required unsaved job fields
     if is_nil(job_name) or is_nil(workflow_id) do
       {:error, "Please save the workflow before using AI Assistant for this job"}
     else
-      # Store unsaved job data in meta
       unsaved_job_data = %{
         "id" => job_id,
         "name" => job_name,
@@ -436,7 +392,6 @@ defmodule LightningWeb.AiAssistantChannel do
 
       meta = Map.merge(base_meta, %{"unsaved_job" => unsaved_job_data})
 
-      # Create session without job_id (it's nil in DB until job is saved)
       AiAssistant.create_session_for_unsaved_job(
         user,
         content,
@@ -460,7 +415,6 @@ defmodule LightningWeb.AiAssistantChannel do
     unsaved_job = session.meta["unsaved_job"]
 
     cond do
-      # Unsaved job - verify access through workflow_id in meta
       unsaved_job && unsaved_job["workflow_id"] ->
         check_workflow_access_by_id(
           unsaved_job["workflow_id"],
@@ -468,11 +422,9 @@ defmodule LightningWeb.AiAssistantChannel do
           :access_read
         )
 
-      # Saved job - verify access through job
       session.job_id ->
         authorize_saved_job_session(session.job_id, user)
 
-      # Fallback - shouldn't happen
       true ->
         :ok
     end
@@ -482,15 +434,12 @@ defmodule LightningWeb.AiAssistantChannel do
     unsaved_workflow = session.meta["unsaved_workflow"]
 
     cond do
-      # Unsaved workflow - verify access through project_id
       unsaved_workflow && unsaved_workflow["id"] ->
         check_project_access(session.project_id, user, :access_write)
 
-      # Saved workflow or project-level session - verify through project_id
       session.project_id ->
         check_project_access(session.project_id, user, :access_write)
 
-      # Fallback for older sessions
       true ->
         :ok
     end
@@ -502,7 +451,6 @@ defmodule LightningWeb.AiAssistantChannel do
         check_workflow_access_by_id(job.workflow_id, user, :access_read)
 
       {:error, :not_found} ->
-        # Job was deleted
         :ok
     end
   end
@@ -547,8 +495,6 @@ defmodule LightningWeb.AiAssistantChannel do
   end
 
   defp extract_message_options("job_code", params) do
-    # Build message options with explicit true/false values
-    # This ensures the AI query respects checkbox states
     message_options = %{
       "code" => params["attach_code"] == true,
       "log" => params["attach_logs"] == true
@@ -603,8 +549,6 @@ defmodule LightningWeb.AiAssistantChannel do
     |> flatten_association_errors()
   end
 
-  # Flattens nested association errors into a flat structure for frontend.
-  # Converts %{triggers: [%{type: ["error"]}]} to %{"triggers[0].type" => ["error"]}
   defp flatten_association_errors(errors) do
     Enum.reduce(errors, %{}, fn {key, value}, acc ->
       flatten_error_value(key, value, acc)
@@ -615,7 +559,6 @@ defmodule LightningWeb.AiAssistantChannel do
     if Enum.any?(list, &is_map/1) do
       flatten_nested_list_errors(key, list, acc)
     else
-      # List of error messages (not nested objects)
       Map.put(acc, to_string(key), list)
     end
   end
@@ -643,27 +586,20 @@ defmodule LightningWeb.AiAssistantChannel do
     end)
   end
 
-  # Extracts the workflow for a workflow_template session
-  # Returns nil for unsaved workflows (matching legacy editor behavior)
   defp get_workflow_for_session(session) do
     cond do
-      # Check if this is an unsaved workflow (no workflow_id, or has unsaved_workflow meta)
       session.meta["unsaved_workflow"] ->
-        # Unsaved workflow - return nil to match sessions without workflow_id
         nil
 
-      # Session has a workflow_id - load it from database
       session.workflow_id ->
         Workflows.get_workflow(session.workflow_id)
 
-      # No workflow associated
       true ->
         nil
     end
   end
 
   defp get_resource_for_session_type("job_code", session) do
-    # Extract job_id from either the session or unsaved_job meta
     job_id =
       cond do
         session.job_id -> session.job_id
@@ -672,8 +608,6 @@ defmodule LightningWeb.AiAssistantChannel do
       end
 
     if job_id do
-      # Return the job_id for querying sessions
-      # We'll query sessions by job_id directly, not by loading the Job struct
       {:ok, job_id}
     else
       {:error, "Job not found"}
@@ -710,7 +644,6 @@ defmodule LightningWeb.AiAssistantChannel do
 
   defp format_job_code_session(base, session) do
     cond do
-      # Check for unsaved job data first
       session.meta["unsaved_job"] ->
         unsaved_job = session.meta["unsaved_job"]
         workflow = Workflows.get_workflow(unsaved_job["workflow_id"])
@@ -721,7 +654,6 @@ defmodule LightningWeb.AiAssistantChannel do
           is_unsaved: true
         })
 
-      # Try to load job from database
       session.job_id ->
         case Jobs.get_job(session.job_id) do
           {:ok, job} ->
@@ -733,14 +665,12 @@ defmodule LightningWeb.AiAssistantChannel do
             })
 
           {:error, :not_found} ->
-            # Job was deleted
             Map.merge(base, %{
               job_name: "[Deleted Job]",
               workflow_name: nil
             })
         end
 
-      # No job data
       true ->
         Map.merge(base, %{
           job_name: "[Unknown Job]",
