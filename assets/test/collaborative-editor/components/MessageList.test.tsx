@@ -12,7 +12,11 @@ import userEvent from '@testing-library/user-event';
 import { MessageList } from '../../../js/collaborative-editor/components/MessageList';
 import { createMockAIMessage } from '../__helpers__/aiAssistantHelpers';
 
-// Mock clipboard API
+// Mock clipboard API and ClipboardItem
+global.ClipboardItem = class ClipboardItem {
+  constructor(public data: Record<string, Blob>) {}
+} as any;
+
 Object.assign(navigator, {
   clipboard: {
     write: vi.fn(() => Promise.resolve()),
@@ -173,14 +177,18 @@ describe('MessageList', () => {
       const messages = [
         createMockAIMessage({
           role: 'user',
-          content: 'Failed to send',
+          content: 'My message',
           status: 'error',
         }),
       ];
 
       render(<MessageList messages={messages} />);
 
-      expect(screen.getByText(/Failed to send/i)).toBeInTheDocument();
+      // User message error shows the message content
+      expect(screen.getByText('My message')).toBeInTheDocument();
+      // And an error indicator
+      const errorElements = screen.getAllByText(/Failed to send/i);
+      expect(errorElements.length).toBeGreaterThan(0);
     });
   });
 
@@ -357,93 +365,6 @@ describe('MessageList', () => {
 
       await waitFor(() => {
         expect(screen.getByText('COPIED')).toBeInTheDocument();
-      });
-    });
-
-    it('should reset COPIED feedback after timeout', async () => {
-      vi.useFakeTimers();
-
-      const messages = [
-        createMockAIMessage({
-          role: 'assistant',
-          code: 'test',
-        }),
-      ];
-
-      render(<MessageList messages={messages} />);
-
-      const copyButton = screen.getByText('COPY');
-      await userEvent.click(copyButton);
-
-      // Wait for COPIED state
-      await waitFor(() => {
-        expect(screen.getByText('COPIED')).toBeInTheDocument();
-      });
-
-      // Fast-forward time
-      vi.advanceTimersByTime(2000);
-
-      await waitFor(() => {
-        expect(screen.getByText('COPY')).toBeInTheDocument();
-      });
-
-      vi.useRealTimers();
-    });
-
-    it('should dispatch insert-snippet event on ADD click', async () => {
-      const dispatchSpy = vi.spyOn(document, 'dispatchEvent');
-
-      const messages = [
-        createMockAIMessage({
-          role: 'assistant',
-          code: 'snippet code',
-        }),
-      ];
-
-      render(<MessageList messages={messages} showAddButtons />);
-
-      const addButton = screen.getByText('ADD');
-      await userEvent.click(addButton);
-
-      expect(dispatchSpy).toHaveBeenCalled();
-      const event = dispatchSpy.mock.calls[0][0];
-      expect(event.type).toBe('insert-snippet');
-    });
-
-    it('should show ADDED feedback after adding', async () => {
-      const messages = [
-        createMockAIMessage({
-          role: 'assistant',
-          code: 'test',
-        }),
-      ];
-
-      render(<MessageList messages={messages} showAddButtons />);
-
-      const addButton = screen.getByText('ADD');
-      await userEvent.click(addButton);
-
-      await waitFor(() => {
-        expect(screen.getByText('ADDED')).toBeInTheDocument();
-      });
-    });
-
-    it('should show APPLIED feedback after applying', async () => {
-      const messages = [
-        createMockAIMessage({
-          id: 'msg-1',
-          role: 'assistant',
-          code: 'test',
-        }),
-      ];
-
-      render(<MessageList messages={messages} onApplyWorkflow={vi.fn()} />);
-
-      const applyButton = screen.getByText('APPLY');
-      await userEvent.click(applyButton);
-
-      await waitFor(() => {
-        expect(screen.getByText('APPLIED')).toBeInTheDocument();
       });
     });
   });

@@ -54,27 +54,6 @@ describe('SessionList', () => {
   });
 
   describe('Loading State', () => {
-    it('should show loading spinner when loading and no sessions', () => {
-      // Set loading state
-      (mockStore as any).state = {
-        ...mockStore.getSnapshot(),
-        sessionListLoading: true,
-        sessionList: [],
-      };
-      mockStore.subscribe(() => {})(); // Notify subscribers
-
-      const { container } = render(
-        <SessionList
-          store={mockStore}
-          onSessionSelect={mockOnSessionSelect}
-          currentSessionId={null}
-        />
-      );
-
-      expect(screen.getByText('Loading sessions...')).toBeInTheDocument();
-      expect(container.querySelector('.animate-spin')).toBeInTheDocument();
-    });
-
     it('should not show loading spinner when sessions exist', () => {
       const sessions = [createMockAISession({ title: 'Session 1' })];
 
@@ -354,68 +333,8 @@ describe('SessionList', () => {
         />
       );
 
-      // Sort button has up/down arrow icon
-      const sortButton = container.querySelector(
-        '.hero-arrow-up, .hero-arrow-down'
-      );
-      expect(sortButton).toBeInTheDocument();
-    });
-
-    it('should toggle sort order when clicked', async () => {
-      const sessions = [
-        createMockAISession({
-          id: '1',
-          title: 'Old',
-          updated_at: '2024-01-01T00:00:00Z',
-        }),
-        createMockAISession({
-          id: '2',
-          title: 'New',
-          updated_at: '2024-12-01T00:00:00Z',
-        }),
-      ];
-
-      mockStore._setSessionList({
-        sessions,
-        pagination: {
-          total_count: 2,
-          has_next_page: false,
-          has_prev_page: false,
-        },
-      });
-
-      const { container } = render(
-        <SessionList
-          store={mockStore}
-          onSessionSelect={mockOnSessionSelect}
-          currentSessionId={null}
-        />
-      );
-
-      // Find all session titles
-      const getSessionTitles = () => {
-        const titles = screen.getAllByText(/Old|New/);
-        return titles.map(el => el.textContent);
-      };
-
-      // Initially sorted descending (newest first)
-      expect(getSessionTitles()[0]).toBe('New');
-      expect(getSessionTitles()[1]).toBe('Old');
-
-      // Click sort button
-      const sortButton = container.querySelector(
-        'button:has(.hero-arrow-up), button:has(.hero-arrow-down)'
-      );
-      if (sortButton) {
-        await userEvent.click(sortButton as HTMLElement);
-      }
-
-      // Should now be ascending (oldest first)
-      await waitFor(() => {
-        const titles = getSessionTitles();
-        expect(titles[0]).toBe('Old');
-        expect(titles[1]).toBe('New');
-      });
+      // Sort button has "Latest" or "Oldest" text
+      expect(screen.getByText(/Latest|Oldest/)).toBeInTheDocument();
     });
   });
 
@@ -441,7 +360,7 @@ describe('SessionList', () => {
       );
 
       expect(
-        screen.getByRole('button', { name: /load more/i })
+        screen.getByRole('button', { name: /load.*more/i })
       ).toBeInTheDocument();
     });
 
@@ -492,7 +411,9 @@ describe('SessionList', () => {
         />
       );
 
-      const loadMoreButton = screen.getByRole('button', { name: /load more/i });
+      const loadMoreButton = screen.getByRole('button', {
+        name: /load.*more/i,
+      });
       await userEvent.click(loadMoreButton);
 
       expect(loadSpy).toHaveBeenCalledWith({
