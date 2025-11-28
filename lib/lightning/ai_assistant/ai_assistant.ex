@@ -748,7 +748,7 @@ defmodule Lightning.AiAssistant do
     |> handle_save_message_result()
   end
 
-  defp log_save_message(session, message_attrs, code) do
+  defp log_save_message(_session, _message_attrs, _code) do
   end
 
   defp prepare_message_attrs(message_attrs, session_id, code) do

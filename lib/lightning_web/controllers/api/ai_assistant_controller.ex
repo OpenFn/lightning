@@ -35,8 +35,6 @@ defmodule LightningWeb.API.AiAssistantController do
       offset = Map.get(params, "offset", "0") |> String.to_integer()
       limit = Map.get(params, "limit", "20") |> String.to_integer()
 
-      resource_id = if is_binary(resource), do: resource, else: resource.id
-
       # Build options with workflow filter for workflow_template sessions
       # This matches the legacy editor and collaborative editor channel behavior
       opts = [offset: offset, limit: limit]

@@ -448,4 +448,331 @@ defmodule LightningWeb.AiAssistantChannelTest do
       assert pagination2.has_next_page == false
     end
   end
+
+  describe "handle_in new_message" do
+    @tag :capture_log
+    test "successfully saves and processes user message", %{
+      socket: socket,
+      job: job,
+      user: user
+    } do
+      {:ok, session} =
+        AiAssistant.create_session(job, user, "Initial message", [])
+
+      {:ok, _, socket} =
+        subscribe_and_join(
+          socket,
+          AiAssistantChannel,
+          "ai_assistant:job_code:#{session.id}",
+          %{}
+        )
+
+      ref = push(socket, "new_message", %{"content" => "Help me debug this"})
+
+      assert_reply ref, :ok, %{message: message}
+      assert message.content == "Help me debug this"
+      assert message.role == "user"
+      # Status is "success" due to mocked HTTP client processing immediately
+      assert message.status in ["pending", "success"]
+    end
+
+    test "rejects empty message", %{socket: socket, job: job, user: user} do
+      {:ok, session} =
+        AiAssistant.create_session(job, user, "Initial message", [])
+
+      {:ok, _, socket} =
+        subscribe_and_join(
+          socket,
+          AiAssistantChannel,
+          "ai_assistant:job_code:#{session.id}",
+          %{}
+        )
+
+      ref = push(socket, "new_message", %{"content" => "   "})
+
+      assert_reply ref, :error, %{reason: "Message cannot be empty"}
+    end
+
+    test "includes code when attach_code is true", %{
+      socket: socket,
+      job: job,
+      user: user
+    } do
+      {:ok, session} =
+        AiAssistant.create_session(job, user, "Initial message", [])
+
+      {:ok, _, socket} =
+        subscribe_and_join(
+          socket,
+          AiAssistantChannel,
+          "ai_assistant:job_code:#{session.id}",
+          %{}
+        )
+
+      ref =
+        push(socket, "new_message", %{
+          "content" => "Explain this code",
+          "attach_code" => true
+        })
+
+      assert_reply ref, :ok, %{message: message}
+      assert message.content == "Explain this code"
+    end
+  end
+
+  describe "handle_in mark_disclaimer_read" do
+    test "successfully marks disclaimer as read", %{
+      socket: socket,
+      job: job,
+      user: user
+    } do
+      {:ok, session} =
+        AiAssistant.create_session(job, user, "Initial message", [])
+
+      {:ok, _, socket} =
+        subscribe_and_join(
+          socket,
+          AiAssistantChannel,
+          "ai_assistant:job_code:#{session.id}",
+          %{}
+        )
+
+      ref = push(socket, "mark_disclaimer_read", %{})
+
+      assert_reply ref, :ok, %{success: true}
+
+      # Verify user preferences were updated
+      updated_user = Lightning.Accounts.get_user!(user.id)
+      assert updated_user.preferences["ai_assistant.disclaimer_read_at"] != nil
+    end
+  end
+
+  describe "handle_in update_context" do
+    test "updates job context for job_code session", %{
+      socket: socket,
+      job: job,
+      user: user
+    } do
+      {:ok, session} =
+        AiAssistant.create_session(job, user, "Initial message", [])
+
+      {:ok, _, socket} =
+        subscribe_and_join(
+          socket,
+          AiAssistantChannel,
+          "ai_assistant:job_code:#{session.id}",
+          %{}
+        )
+
+      ref =
+        push(socket, "update_context", %{
+          "job_body" => "console.log('updated');",
+          "job_adaptor" => "@openfn/language-common@2.0.0",
+          "job_name" => "Updated Job"
+        })
+
+      assert_reply ref, :ok, %{success: true}
+
+      # Verify session meta was updated
+      updated_session = AiAssistant.get_session!(session.id)
+      runtime_context = updated_session.meta["runtime_context"]
+      assert runtime_context["job_body"] == "console.log('updated');"
+      assert runtime_context["job_adaptor"] == "@openfn/language-common@2.0.0"
+      assert runtime_context["job_name"] == "Updated Job"
+      assert runtime_context["updated_at"] != nil
+    end
+
+    test "rejects update_context for workflow_template session", %{
+      socket: socket,
+      project: project,
+      user: user
+    } do
+      {:ok, session} =
+        AiAssistant.create_workflow_session(
+          project,
+          nil,
+          user,
+          "Create workflow"
+        )
+
+      {:ok, _, socket} =
+        subscribe_and_join(
+          socket,
+          AiAssistantChannel,
+          "ai_assistant:workflow_template:#{session.id}",
+          %{}
+        )
+
+      ref =
+        push(socket, "update_context", %{
+          "job_body" => "console.log('test');"
+        })
+
+      assert_reply ref, :error, %{
+        reason: "Context updates only supported for job_code sessions"
+      }
+    end
+  end
+
+  describe "authorization" do
+    test "rejects join without authenticated user", %{job: job} do
+      socket = socket(LightningWeb.UserSocket, "unauthenticated", %{})
+
+      params = %{
+        "job_id" => job.id,
+        "content" => "Help me"
+      }
+
+      assert {:error, %{reason: "unauthorized"}} =
+               subscribe_and_join(
+                 socket,
+                 AiAssistantChannel,
+                 "ai_assistant:job_code:new",
+                 params
+               )
+    end
+
+    test "rejects join with invalid topic format", %{socket: socket} do
+      assert {:error, %{reason: "invalid topic format"}} =
+               subscribe_and_join(
+                 socket,
+                 AiAssistantChannel,
+                 "ai_assistant:invalid_type:123",
+                 %{}
+               )
+    end
+
+    test "rejects join when session type doesn't match", %{
+      socket: socket,
+      job: job,
+      user: user
+    } do
+      # Create a job_code session
+      {:ok, session} =
+        AiAssistant.create_session(job, user, "Initial message", [])
+
+      # Try to join it as workflow_template
+      assert {:error, %{reason: "session type mismatch"}} =
+               subscribe_and_join(
+                 socket,
+                 AiAssistantChannel,
+                 "ai_assistant:workflow_template:#{session.id}",
+                 %{}
+               )
+    end
+  end
+
+  describe "handle_in unsaved job with proper metadata" do
+    @tag :capture_log
+    test "creates session for unsaved job with all metadata", %{
+      socket: socket,
+      workflow: workflow
+    } do
+      unsaved_job_id = Ecto.UUID.generate()
+
+      params = %{
+        "job_id" => unsaved_job_id,
+        "job_name" => "Unsaved Job",
+        "job_body" => "console.log('unsaved');",
+        "job_adaptor" => "@openfn/language-common@1.0.0",
+        "workflow_id" => workflow.id,
+        "content" => "Help me with this unsaved job"
+      }
+
+      assert {:ok, response, _socket} =
+               subscribe_and_join(
+                 socket,
+                 AiAssistantChannel,
+                 "ai_assistant:job_code:new",
+                 params
+               )
+
+      assert %{session_id: session_id, session_type: "job_code"} = response
+
+      # Verify session has unsaved_job metadata
+      session = AiAssistant.get_session!(session_id)
+      assert session.job_id == nil
+      unsaved_job = session.meta["unsaved_job"]
+      assert unsaved_job["id"] == unsaved_job_id
+      assert unsaved_job["name"] == "Unsaved Job"
+      assert unsaved_job["body"] == "console.log('unsaved');"
+      assert unsaved_job["adaptor"] == "@openfn/language-common@1.0.0"
+      assert unsaved_job["workflow_id"] == workflow.id
+    end
+  end
+
+  describe "workflow_template error cases" do
+    test "requires project_id parameter", %{socket: socket} do
+      params = %{"content" => "Create workflow"}
+
+      assert {:error, %{reason: "project_id required"}} =
+               subscribe_and_join(
+                 socket,
+                 AiAssistantChannel,
+                 "ai_assistant:workflow_template:new",
+                 params
+               )
+    end
+
+    test "requires content parameter", %{socket: socket, project: project} do
+      params = %{"project_id" => project.id}
+
+      assert {:error, %{reason: "initial content required"}} =
+               subscribe_and_join(
+                 socket,
+                 AiAssistantChannel,
+                 "ai_assistant:workflow_template:new",
+                 params
+               )
+    end
+
+    test "returns error for non-existent project", %{socket: socket} do
+      fake_project_id = Ecto.UUID.generate()
+
+      params = %{
+        "project_id" => fake_project_id,
+        "content" => "Create workflow"
+      }
+
+      assert {:error, %{reason: "project not found"}} =
+               subscribe_and_join(
+                 socket,
+                 AiAssistantChannel,
+                 "ai_assistant:workflow_template:new",
+                 params
+               )
+    end
+  end
+
+  describe "list_sessions for job_code" do
+    test "lists sessions for a job", %{
+      socket: socket,
+      user: user,
+      job: job
+    } do
+      # Create multiple sessions for the job
+      {:ok, session1} =
+        AiAssistant.create_session(job, user, "First session", [])
+
+      {:ok, _session2} =
+        AiAssistant.create_session(job, user, "Second session", [])
+
+      # Join with first session
+      {:ok, _, socket} =
+        subscribe_and_join(
+          socket,
+          AiAssistantChannel,
+          "ai_assistant:job_code:#{session1.id}",
+          %{}
+        )
+
+      ref = push(socket, "list_sessions", %{"offset" => 0, "limit" => 20})
+
+      assert_reply ref, :ok, %{sessions: sessions, pagination: pagination}
+
+      assert length(sessions) == 2
+      assert pagination.total_count == 2
+      assert Enum.all?(sessions, &(&1.job_name == job.name))
+    end
+  end
 end
