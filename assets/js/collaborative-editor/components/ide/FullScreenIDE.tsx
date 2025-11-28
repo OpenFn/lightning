@@ -32,7 +32,6 @@ import {
   useHistoryCommands,
   useJobMatchesRun,
 } from '../../hooks/useHistory';
-import { isFinalState } from '../../types/history';
 import { useRunRetry } from '../../hooks/useRunRetry';
 import { useRunRetryShortcuts } from '../../hooks/useRunRetryShortcuts';
 import { useSession } from '../../hooks/useSession';
@@ -45,6 +44,8 @@ import {
   useWorkflowReadOnly,
   useWorkflowState,
 } from '../../hooks/useWorkflow';
+import { isFinalState } from '../../types/history';
+import { edgesToAdjList, getJobOrdinals } from '../../utils/workflowGraph';
 import { AdaptorDisplay } from '../AdaptorDisplay';
 import { AdaptorSelectionModal } from '../AdaptorSelectionModal';
 import { CollaborativeMonaco } from '../CollaborativeMonaco';
@@ -343,6 +344,12 @@ export function FullScreenIDE({
 
   // Handle job selection from JobSelector
   const allJobs = workflow?.jobs || [];
+  const adjList = edgesToAdjList(workflow?.edges || []);
+  const ordinals = getJobOrdinals(adjList.list, adjList.trigger_id);
+  const sortedJobs = [...allJobs].sort((a, b) => {
+    return (ordinals[a.id] || Infinity) - ordinals[b.id] || Infinity;
+  });
+
   const handleJobSelect = useCallback(
     (job: any) => {
       updateSearchParams({ job: job.id });
@@ -647,7 +654,7 @@ export function FullScreenIDE({
             <div className="shrink-0">
               <JobSelector
                 currentJob={currentJob}
-                jobs={allJobs}
+                jobs={sortedJobs}
                 onChange={handleJobSelect}
               />
             </div>
