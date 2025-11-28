@@ -21,6 +21,10 @@ and this project adheres to
 
 ### Fixed
 
+- Fix collaborative cursors disappearing after switching workflow versions
+  [#4066](https://github.com/OpenFn/lightning/issues/4066)
+- Throttle cursor awareness updates to reduce server load
+  [#4066](https://github.com/OpenFn/lightning/issues/4066)
 - Loading workflow screen appears when disconnected from server
   [#3972](https://github.com/OpenFn/lightning/issues/3972)
 
