@@ -371,7 +371,7 @@ describe('AIAssistantPanel', () => {
 
       expect(
         screen.getByText(
-          'The OpenFn AI Assistant provides a chat interface with an AI Model to help you build workflows. It can:'
+          'The OpenFn AI Assistant helps you build workflows and write job code. It can:'
         )
       ).toBeInTheDocument();
     });
@@ -391,11 +391,13 @@ describe('AIAssistantPanel', () => {
       await userEvent.click(aboutButton);
 
       expect(
-        screen.getByText('Create a workflow template for you')
+        screen.getByText('Generate complete workflow templates')
       ).toBeInTheDocument();
-      expect(screen.getByText('Draft job code for you')).toBeInTheDocument();
       expect(
-        screen.getByText('Explain adaptor functions and how they are used')
+        screen.getByText('Write and explain job code for any adaptor')
+      ).toBeInTheDocument();
+      expect(
+        screen.getByText('Debug errors and explain what went wrong')
       ).toBeInTheDocument();
     });
 

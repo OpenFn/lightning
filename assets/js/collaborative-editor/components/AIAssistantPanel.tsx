@@ -188,7 +188,7 @@ export function AIAssistantPanel({
   return (
     <div
       className={cn(
-        'h-full flex flex-col overflow-hidden bg-white',
+        'h-full flex flex-col overflow-hidden bg-white relative',
         !isResizable && [
           'flex-none border-l border-gray-200',
           'transition-all duration-300 ease-in-out',
@@ -276,7 +276,7 @@ export function AIAssistantPanel({
                               : 'text-gray-400 group-hover:text-gray-500'
                           )}
                         />
-                        <span className="flex-1 text-left">Chat History</span>
+                        <span className="flex-1 text-left">Conversations</span>
                         {view === 'sessions' && (
                           <span className="hero-check h-4 w-4 text-primary-600 ml-2" />
                         )}
@@ -308,9 +308,7 @@ export function AIAssistantPanel({
                         )}
                       >
                         <span className="hero-document-text h-5 w-5 mr-3 text-gray-400 group-hover:text-gray-500" />
-                        <span className="flex-1">
-                          OpenFn Responsible AI Policy
-                        </span>
+                        <span className="flex-1">Responsible AI Policy</span>
                         <span className="hero-arrow-top-right-on-square h-4 w-4 ml-2 text-gray-400 group-hover:text-gray-500" />
                       </a>
                     </div>
@@ -368,39 +366,42 @@ export function AIAssistantPanel({
       {isAboutOpen && (
         <div className="absolute inset-0 z-50 bg-white flex flex-col">
           {/* Modal Header */}
-          <div className="flex-none bg-gray-50 px-4 py-3 flex items-center justify-between border-b border-gray-200">
-            <h3 className="font-medium text-gray-900">
-              About the AI Assistant
-            </h3>
-            <button
-              type="button"
-              onClick={() => setIsAboutOpen(false)}
-              className={cn(
-                'rounded-md text-gray-400 hover:text-gray-600',
-                'hover:bg-gray-100 transition-colors',
-                'focus:outline-none focus:ring-2 focus:ring-primary-500',
-                'p-1'
-              )}
-              aria-label="Close"
-            >
-              <span className="hero-x-mark h-5 w-5" />
-            </button>
+          <div className="flex-none bg-white shadow-xs border-b border-gray-200">
+            <div className="mx-auto px-6 py-6 flex items-center justify-between h-20 text-sm">
+              <h3 className="text-base font-semibold text-gray-900">
+                About the AI Assistant
+              </h3>
+              <button
+                type="button"
+                onClick={() => setIsAboutOpen(false)}
+                className={cn(
+                  'inline-flex items-center justify-center',
+                  'h-8 w-8 rounded-md',
+                  'text-gray-400 hover:text-gray-600 hover:bg-gray-100',
+                  'focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500',
+                  'transition-all duration-150'
+                )}
+                aria-label="Close"
+              >
+                <span className="hero-x-mark h-5 w-5" />
+              </button>
+            </div>
           </div>
 
           {/* Modal Content */}
-          <div className="flex-1 overflow-y-auto p-4 text-sm space-y-4">
+          <div className="flex-1 overflow-y-auto px-6 py-4 text-sm space-y-4">
             <p>
-              The OpenFn AI Assistant provides a chat interface with an AI Model
-              to help you build workflows. It can:
+              The OpenFn AI Assistant helps you build workflows and write job
+              code. It can:
             </p>
             <ul className="list-disc list-inside pl-4 space-y-1">
-              <li>Create a workflow template for you</li>
-              <li>Draft job code for you</li>
-              <li>Explain adaptor functions and how they are used</li>
-              <li>Proofread and debug your job code</li>
-              <li>Help understand why you are seeing an error</li>
+              <li>Generate complete workflow templates</li>
+              <li>Write and explain job code for any adaptor</li>
+              <li>Debug errors and explain what went wrong</li>
+              <li>Answer questions about OpenFn and adaptors</li>
+              <li>Suggest improvements to your code</li>
             </ul>
-            <p>
+            <p className="text-gray-600">
               Messages are saved unencrypted to the OpenFn database and may be
               monitored for quality control.
             </p>
@@ -408,18 +409,35 @@ export function AIAssistantPanel({
             <h4 className="font-semibold text-gray-900 pt-2">Usage Tips</h4>
             <ul className="list-disc list-inside pl-4 space-y-1">
               <li>
-                All chats are saved to the Project and can be viewed at any time
+                Chat sessions are saved to your project and can be revisited
+                anytime
+              </li>
+              <li>
+                Sessions are separated by context - job sessions and workflow
+                sessions are kept separate
               </li>
               <li>
                 Press{' '}
-                <code className="px-1 py-0.5 bg-gray-100 rounded text-xs">
-                  CTRL + ENTER
+                <code className="px-1 py-0.5 bg-gray-100 rounded text-xs font-mono">
+                  Enter
                 </code>{' '}
-                to send a message
+                to send,{' '}
+                <code className="px-1 py-0.5 bg-gray-100 rounded text-xs font-mono">
+                  Shift + Enter
+                </code>{' '}
+                for a new line
               </li>
               <li>
-                The Assistant can see your code and knows about OpenFn - just
-                ask a question and don't worry too much about giving it context
+                For jobs, you can choose to include your code and run logs with
+                each message
+              </li>
+              <li>
+                Generated workflows appear as artifacts with Apply and Copy
+                buttons
+              </li>
+              <li>
+                Generated job code appears as artifacts with Add and Copy
+                buttons
               </li>
             </ul>
 
@@ -427,56 +445,56 @@ export function AIAssistantPanel({
               Using The Assistant Safely
             </h4>
             <p>
-              The AI assistant uses a third-party model to process chat
-              messages. Messages may be saved on OpenFn and Anthropic servers.
+              The AI assistant uses Claude by Anthropic, a third-party AI model.
+              Messages are saved on OpenFn and Anthropic servers.
             </p>
             <p>
-              Although we are constantly monitoring and improving the
-              performance of the model, the Assistant can sometimes provide
-              incorrect or misleading responses. You should consider the
-              responses critically and verify the output where possible.
+              Although we continuously monitor and improve the model, the
+              Assistant can sometimes provide incorrect or misleading responses.
+              Always review and verify the output.
             </p>
             <p>
-              Remember that all responses are generated by an algorithm, and you
-              are responsible for how its output is used.
+              Remember that all responses are generated by an algorithm. You are
+              responsible for how its output is used.
             </p>
             <p>
-              Do not deploy autogenerated code in production environments
-              without thorough testing.
-            </p>
-            <p>
-              Do not include real user data, personally identifiable
-              information, or sensitive business data in your queries.
+              <strong>Important:</strong> Do not deploy auto-generated code in
+              production without thorough testing. Do not include real user
+              data, personally identifiable information, or sensitive business
+              data in your queries.
             </p>
 
             <h4 className="font-semibold text-gray-900 pt-2">How it works</h4>
             <p>
-              The Assistant uses Claude Sonnet 3.7, by{' '}
+              The Assistant uses{' '}
               <a
                 href="https://www.anthropic.com/"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-primary-600 hover:text-primary-700"
               >
-                Anthropic
+                Claude by Anthropic
               </a>
-              , a Large Language Model (LLM) designed with a commitment to
-              safety and privacy.
+              , a large language model designed with a commitment to safety and
+              privacy.
             </p>
             <p>
-              Chat is saved with the Step and shared with all users with access
-              to the Workflow. All collaborators within a project can see
-              questions asked by other users.
+              <strong>For workflow sessions:</strong> Your project context is
+              automatically included. Generated workflows can be applied
+              directly to the canvas with one click.
             </p>
             <p>
-              We include your step code in all queries sent to Claude, including
-              some basic documentation, ensuring the model is well informed and
-              can see what you can see. We do not send your input data, output
-              data or logs to Anthropic.
+              <strong>For job sessions:</strong> You control what the Assistant
+              sees. Use the checkboxes to optionally include your job code and
+              run logs. By default, job code is included but logs are not.
             </p>
             <p>
-              The Assistant uses a mixture of hand-written prompts and
-              information from{' '}
+              All chat sessions are shared with project collaborators. Everyone
+              with access to the workflow or job can see the conversation
+              history.
+            </p>
+            <p>
+              The Assistant combines hand-written prompts with information from{' '}
               <a
                 href="https://docs.openfn.org"
                 target="_blank"
@@ -485,12 +503,10 @@ export function AIAssistantPanel({
               >
                 docs.openfn.org
               </a>{' '}
-              to inform its responses.
+              to provide accurate, context-aware responses.
             </p>
 
-            <h4 className="font-semibold text-gray-900 pt-2">
-              Responsible AI Policy
-            </h4>
+            <h4 className="font-semibold text-gray-900 pt-2">Learn More</h4>
             <p>
               Read about our approach to AI in the{' '}
               <a
@@ -501,6 +517,7 @@ export function AIAssistantPanel({
               >
                 OpenFn Responsible AI Policy
               </a>
+              .
             </p>
           </div>
         </div>
