@@ -75,8 +75,17 @@ export interface CollaborativeEditorDataProps {
  */
 function AIAssistantPanelWrapper() {
   const isAIAssistantPanelOpen = useIsAIAssistantPanelOpen();
-  const { closeAIAssistantPanel } = useUICommands();
+  const { closeAIAssistantPanel, toggleAIAssistantPanel } = useUICommands();
   const { updateSearchParams, searchParams } = useURLState();
+
+  // Keyboard shortcut: Ctrl/Cmd + K to toggle AI Assistant
+  useKeyboardShortcut(
+    '$mod+k',
+    () => {
+      toggleAIAssistantPanel();
+    },
+    0 // Default priority
+  );
 
   // AI Assistant integration
   const aiStore = useAIStore();
