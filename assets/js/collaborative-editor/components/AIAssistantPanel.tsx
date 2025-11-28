@@ -55,7 +55,6 @@ interface MessageOptions {
  * - Resizable in IDE mode, fixed 400px width in Canvas mode
  * - Smooth slide-in/out transitions
  * - No backdrop overlay (content pushes instead of overlaying)
- * - Close via X button or clicking outside (ESC key intentionally does not close)
  */
 export function AIAssistantPanel({
   isOpen,
@@ -71,7 +70,7 @@ export function AIAssistantPanel({
   isResizable = false,
   store,
   sessionType = null,
-  loadSessions: _loadSessions,
+  loadSessions,
 }: AIAssistantPanelProps) {
   const [view, setView] = useState<'chat' | 'sessions'>(
     sessionId ? 'chat' : 'sessions'
@@ -225,7 +224,6 @@ export function AIAssistantPanel({
             </div>
           </div>
           <div className="flex items-center gap-2">
-            {/* 3-dot vertical menu */}
             {store && (
               <div className="relative">
                 <button
@@ -245,7 +243,6 @@ export function AIAssistantPanel({
                 >
                   <span className="hero-ellipsis-vertical h-5 w-5" />
                 </button>
-                {/* Dropdown Menu */}
                 {isMenuOpen && (
                   <div
                     data-menu-content

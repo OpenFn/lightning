@@ -150,8 +150,15 @@ export function ChatInput({
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    // Submit on Enter (without Shift)
-    if (e.key === 'Enter' && !e.shiftKey) {
+    // Submit on Enter (without any modifiers)
+    // Shift+Enter creates new line, Ctrl+Enter and other combos do nothing
+    if (
+      e.key === 'Enter' &&
+      !e.shiftKey &&
+      !e.ctrlKey &&
+      !e.metaKey &&
+      !e.altKey
+    ) {
       e.preventDefault();
       handleSubmit(e);
     }
@@ -166,9 +173,9 @@ export function ChatInput({
             <div
               className={cn(
                 'rounded-xl border-2 transition-all duration-200',
-                'bg-white shadow-sm',
+                'bg-white',
                 input.trim()
-                  ? 'border-primary-300 shadow-primary-100'
+                  ? 'border-primary-300'
                   : 'border-gray-200 hover:border-gray-300'
               )}
             >
@@ -249,7 +256,7 @@ export function ChatInput({
                     'transition-all duration-200',
                     'focus:outline-none focus:ring-2 focus:ring-offset-2',
                     input.trim() && !isLoading
-                      ? 'bg-primary-600 hover:bg-primary-700 text-white shadow-sm hover:shadow focus:ring-primary-500'
+                      ? 'bg-primary-600 hover:bg-primary-700 text-white focus:ring-primary-500'
                       : 'bg-gray-100 text-gray-400 cursor-not-allowed'
                   )}
                   aria-label={isLoading ? 'Sending...' : 'Send message'}

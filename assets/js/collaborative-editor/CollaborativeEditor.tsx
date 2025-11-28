@@ -159,9 +159,10 @@ function AIAssistantPanelWrapper() {
   // Detect current AI mode (job_code or workflow_template)
   const aiMode = useAIMode();
 
-  // Refs to stabilize mode and sessionId - prevent effect re-runs on every workflow change
+  // Refs to stabilize mode, sessionId, and jobId - prevent effect re-runs on every workflow change
   const prevModeRef = useRef<string | null>(null);
   const prevSessionIdRef = useRef<string | null>(null);
+  const prevJobIdRef = useRef<string | null>(null);
 
   // Get session ID from URL params - ONLY read param that matches current mode
   // w-chat for workflow_template mode, j-chat for job_code mode
@@ -206,23 +207,37 @@ function AIAssistantPanelWrapper() {
     if (!isAIAssistantPanelOpen || !aiMode) {
       prevModeRef.current = null;
       prevSessionIdRef.current = null;
+      prevJobIdRef.current = null;
       return;
     }
 
     const state = aiStore.getSnapshot();
     const { mode, context } = aiMode;
 
-    // Only run if mode or sessionId actually changed
+    // Extract current job ID (if in job_code mode)
+    const currentJobId =
+      mode === 'job_code'
+        ? (context as import('./types/ai-assistant').JobCodeContext).job_id
+        : null;
+
+    // Only run if mode, sessionId, or jobId actually changed
     const modeChanged = prevModeRef.current !== mode;
     const sessionIdChanged = prevSessionIdRef.current !== sessionIdFromURL;
+    const jobIdChangedFromPrev = prevJobIdRef.current !== currentJobId;
 
-    if (!modeChanged && !sessionIdChanged && prevModeRef.current !== null) {
-      // Mode and session unchanged - skip this run
+    if (
+      !modeChanged &&
+      !sessionIdChanged &&
+      !jobIdChangedFromPrev &&
+      prevModeRef.current !== null
+    ) {
+      // Mode, session, and job unchanged - skip this run
       return;
     }
 
     prevModeRef.current = mode;
     prevSessionIdRef.current = sessionIdFromURL;
+    prevJobIdRef.current = currentJobId;
 
     // STEP 1: Check if we're switching modes (job ↔ workflow)
     const isModeSwitch = state.sessionType && state.sessionType !== mode;
@@ -268,7 +283,8 @@ function AIAssistantPanelWrapper() {
     }
 
     // STEP 3: Load session if there's one in URL, otherwise we're done
-    if (!sessionIdFromURL) {
+    // IMPORTANT: Don't load session from URL if job just changed - that session belongs to the old job
+    if (!sessionIdFromURL || jobIdChanged) {
       console.log(
         '[AI Assistant] No session in URL - ready for new conversation'
       );
