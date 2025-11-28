@@ -19,6 +19,12 @@ and this project adheres to
 
 ### Changed
 
+- Show "Connect" button when no credential is selected for non-language-common
+  steps.
+- Show credential name (and full name and owner on hover) when a credential is
+  selected.
+- Allow owners to edit credentials from the adaptor picker.
+
 ### Fixed
 
 - Improved version mismatch banner UX: made compact, dismissible, and

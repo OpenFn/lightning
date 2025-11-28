@@ -2,9 +2,11 @@ import { useMemo } from 'react';
 
 import { cn } from '#/utils/cn';
 
+import { useCredentialQueries } from '../hooks/useCredentials';
 import { extractAdaptorDisplayName } from '../utils/adaptorUtils';
 
 import { AdaptorIcon } from './AdaptorIcon';
+import { Tooltip } from './Tooltip';
 
 type AdaptorDisplaySize = 'xs' | 'sm' | 'md' | 'lg' | 'xl';
 
@@ -60,6 +62,8 @@ export function AdaptorDisplay({
   size = 'md',
   isReadOnly = false,
 }: AdaptorDisplayProps) {
+  const { findCredentialById } = useCredentialQueries();
+
   // Parse adaptor package and version
   const { package: adaptorPackage, version: adaptorVersion } = useMemo(
     () => resolveAdaptor(adaptor),
@@ -74,14 +78,18 @@ export function AdaptorDisplay({
   // Safe package name for icon (fallback to empty string)
   const safeAdaptorPackage = adaptorPackage || '';
 
+  // Get credential from store if we have an ID
+  const credential = credentialId ? findCredentialById(credentialId) : null;
+
   // Check if credential is connected
   const hasCredential = !!credentialId;
 
-  // Check if adaptor is language-common (shouldn't pulse for common)
-  const isLanguageCommon = adaptorPackage === '@openfn/language-common';
+  // TODO - come back to pulse concept later
+  // // Check if adaptor is language-common (shouldn't pulse for common)
+  // const isLanguageCommon = adaptorPackage === '@openfn/language-common';
 
-  // Should pulse when: no credential AND not language-common
-  const shouldPulse = !hasCredential && !isLanguageCommon;
+  // // Should pulse when: no credential AND not language-common
+  // const shouldPulse = !hasCredential && !isLanguageCommon;
 
   // World-class size system with perfect proportions
   // Each size variant maintains visual harmony with consistent spacing ratios
@@ -196,14 +204,32 @@ export function AdaptorDisplay({
               ? `v${adaptorVersion}`
               : ''}
         </span>
-        {hasCredential && (
-          <span
-            className={`inline-flex items-center justify-center ${config.badgeSize} rounded-full bg-green-100 text-green-800 flex-shrink-0`}
-            title="Credential connected"
-            aria-label="Credential connected"
+        {hasCredential && credential && (
+          <Tooltip
+            content={
+              <>
+                {credential.name}
+                {credential.type === 'project' && credential.owner?.email && (
+                  <> ({credential.owner.email})</>
+                )}
+              </>
+            }
+            side="top"
           >
-            <span className={`hero-key ${config.badgeIconSize}`} />
-          </span>
+            <span
+              className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-green-100 text-green-800 flex-shrink-0 max-w-[150px]`}
+              aria-label={`Credential connected: ${credential.name}`}
+            >
+              <span
+                className={`hero-key ${config.badgeIconSize} flex-shrink-0`}
+              />
+              <span
+                className={`${config.versionTextSize} font-medium truncate`}
+              >
+                {credential.name}
+              </span>
+            </span>
+          </Tooltip>
         )}
       </div>
       {onEdit && !isReadOnly && (
@@ -221,12 +247,13 @@ export function AdaptorDisplay({
           aria-label={hasCredential ? 'Edit adaptor' : 'Connect credential'}
         >
           {hasCredential ? 'Edit' : 'Connect'}
+          {/* TODO - come back to pulse concept later
           {shouldPulse && (
             <span className="absolute -top-1 -right-1 flex h-3 w-3">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-200 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-3 w-3 bg-indigo-300"></span>
             </span>
-          )}
+          )} */}
         </button>
       )}
     </div>
