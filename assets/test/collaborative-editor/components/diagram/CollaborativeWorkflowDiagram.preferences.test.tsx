@@ -37,6 +37,18 @@ function createWithSelectorMock(getSnapshot: () => any) {
   };
 }
 
+// Mock useURLState
+const mockUpdateSearchParams = vi.fn();
+let mockSearchParams = new URLSearchParams();
+
+vi.mock('../../../../js/react/lib/use-url-state', () => ({
+  useURLState: () => ({
+    searchParams: mockSearchParams,
+    updateSearchParams: mockUpdateSearchParams,
+    hash: '',
+  }),
+}));
+
 // Mock dependencies
 vi.mock('@xyflow/react', () => ({
   ReactFlow: () => <div data-testid="react-flow">Workflow Diagram</div>,
@@ -248,12 +260,8 @@ describe('CollaborativeWorkflowDiagram - EditorPreferences Integration', () => {
         'true'
       );
 
-      // Use jsdom to set search params
-      Object.defineProperty(window, 'location', {
-        value: { search: '?run=test-run-id' },
-        writable: true,
-        configurable: true,
-      });
+      // Set URL with run parameter
+      mockSearchParams = new URLSearchParams('?run=test-run-id');
 
       render(<CollaborativeWorkflowDiagram />, { wrapper });
 
@@ -282,11 +290,7 @@ describe('CollaborativeWorkflowDiagram - EditorPreferences Integration', () => {
       wrapper = createWrapper(store);
 
       // Ensure URL has no run ID
-      Object.defineProperty(window, 'location', {
-        value: { search: '' },
-        writable: true,
-        configurable: true,
-      });
+      mockSearchParams = new URLSearchParams();
 
       render(<CollaborativeWorkflowDiagram />, { wrapper });
 

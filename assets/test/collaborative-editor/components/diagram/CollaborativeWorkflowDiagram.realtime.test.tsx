@@ -37,6 +37,20 @@ function createWithSelectorMock(getSnapshot: () => any) {
   };
 }
 
+// Mock useURLState
+const mockUpdateSearchParams = vi.fn();
+let mockSearchParams = new URLSearchParams('?run=run-1');
+
+vi.mock('../../../../js/react/lib/use-url-state', () => ({
+  useURLState: () => ({
+    get searchParams() {
+      return mockSearchParams;
+    },
+    updateSearchParams: mockUpdateSearchParams,
+    hash: '',
+  }),
+}));
+
 // Mock dependencies
 vi.mock('@xyflow/react', () => ({
   ReactFlow: () => <div data-testid="react-flow">Workflow Diagram</div>,
@@ -291,16 +305,8 @@ describe('CollaborativeWorkflowDiagram - Real-time Run Updates', () => {
       runStepsLoading: new Set(historyState.runStepsLoading),
     };
 
-    // Mock URL with run ID
-    Object.defineProperty(window, 'location', {
-      value: {
-        search: '?run=run-1',
-        href: 'http://localhost?run=run-1',
-      },
-      writable: true,
-      configurable: true,
-    });
-    window.history.pushState = vi.fn();
+    // Reset URL mock to have run-1 selected (default for most tests)
+    mockSearchParams = new URLSearchParams('?run=run-1');
   });
 
   test('re-fetches run steps when history updates for selected run', async () => {
@@ -401,14 +407,7 @@ describe('CollaborativeWorkflowDiagram - Real-time Run Updates', () => {
 
   test('does not re-fetch when no run is selected', async () => {
     // Remove run ID from URL
-    Object.defineProperty(window, 'location', {
-      value: {
-        search: '',
-        href: 'http://localhost',
-      },
-      writable: true,
-      configurable: true,
-    });
+    mockSearchParams = new URLSearchParams();
 
     const wrapper = createWrapper();
     render(<CollaborativeWorkflowDiagram />, { wrapper });
