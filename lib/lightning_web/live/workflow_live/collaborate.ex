@@ -244,8 +244,15 @@ defmodule LightningWeb.WorkflowLive.Collaborate do
     project = socket.assigns.project
 
     # Reload credential with associations to ensure payload is built correctly
+    # Only preload project_credentials for Credential structs, not KeychainCredential
     credential_with_assocs =
-      Lightning.Repo.preload(credential, [:project_credentials], force: true)
+      case credential do
+        %Lightning.Credentials.KeychainCredential{} ->
+          credential
+
+        %Lightning.Credentials.Credential{} ->
+          Lightning.Repo.preload(credential, [:project_credentials], force: true)
+      end
 
     credential_payload = build_credential_payload(credential_with_assocs)
 
