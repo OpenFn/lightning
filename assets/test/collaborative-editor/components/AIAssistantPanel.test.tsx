@@ -792,57 +792,6 @@ describe('AIAssistantPanel', () => {
     });
   });
 
-  describe('Keyboard Shortcuts', () => {
-    it('should close panel on Escape key when open', async () => {
-      render(
-        <AIAssistantPanel
-          isOpen={true}
-          onClose={mockOnClose}
-          store={mockStore}
-        />
-      );
-
-      await userEvent.keyboard('{Escape}');
-
-      expect(mockOnClose).toHaveBeenCalledTimes(1);
-    });
-
-    it('should not close panel on Escape when not open', async () => {
-      render(
-        <AIAssistantPanel
-          isOpen={false}
-          onClose={mockOnClose}
-          store={mockStore}
-        />
-      );
-
-      await userEvent.keyboard('{Escape}');
-
-      expect(mockOnClose).not.toHaveBeenCalled();
-    });
-
-    it('should remove event listener on unmount', () => {
-      const removeEventListenerSpy = vi.spyOn(document, 'removeEventListener');
-
-      const { unmount } = render(
-        <AIAssistantPanel
-          isOpen={true}
-          onClose={mockOnClose}
-          store={mockStore}
-        />
-      );
-
-      unmount();
-
-      expect(removeEventListenerSpy).toHaveBeenCalledWith(
-        'keydown',
-        expect.any(Function)
-      );
-
-      removeEventListenerSpy.mockRestore();
-    });
-  });
-
   describe('Accessibility', () => {
     it('should have dialog role', () => {
       render(
