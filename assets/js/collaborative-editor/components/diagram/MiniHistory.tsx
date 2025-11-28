@@ -37,7 +37,7 @@ import {
   navigateToWorkOrderHistory,
   navigateToWorkflowHistory,
 } from '../../utils/navigation';
-import { RunChip } from '../common/RunChip';
+import { RunBadge } from '../common/RunBadge';
 
 // Extended types with selection state for UI
 type RunWithSelection = RunSummary & { selected?: boolean };
@@ -228,7 +228,7 @@ export default function MiniHistory({
       {/* Show run chip when collapsed and run selected */}
       {collapsed && selectedRun && (
         <div className="px-3 py-2 border-t border-gray-200">
-          <RunChip runId={selectedRun.id} onClose={() => onDeselectRun?.()} />
+          <RunBadge runId={selectedRun.id} onClose={() => onDeselectRun?.()} />
         </div>
       )}
 

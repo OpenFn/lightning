@@ -1,12 +1,12 @@
 import { cn } from '#/utils/cn';
 
-interface PillProps {
+interface BadgeProps {
   onClose: () => void;
   className?: string;
   variant?: 'default' | 'warning';
 }
 
-const Pill: React.FC<React.PropsWithChildren<PillProps>> = ({
+const Badge: React.FC<React.PropsWithChildren<BadgeProps>> = ({
   children,
   onClose,
   className,
@@ -40,4 +40,4 @@ const Pill: React.FC<React.PropsWithChildren<PillProps>> = ({
   );
 };
 
-export default Pill;
+export default Badge;

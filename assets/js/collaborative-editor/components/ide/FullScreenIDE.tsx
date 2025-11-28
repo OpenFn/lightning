@@ -55,7 +55,7 @@ import { AdaptorDisplay } from '../AdaptorDisplay';
 import { AdaptorSelectionModal } from '../AdaptorSelectionModal';
 import { BreadcrumbLink } from '../Breadcrumbs';
 import { CollaborativeMonaco } from '../CollaborativeMonaco';
-import { RunChip } from '../common/RunChip';
+import { RunBadge } from '../common/RunBadge';
 import { ConfigureAdaptorModal } from '../ConfigureAdaptorModal';
 import { Header } from '../Header';
 import { JobSelector } from '../JobSelector';
@@ -983,7 +983,7 @@ export function FullScreenIDE({
                             }
                             side="bottom"
                           >
-                            <RunChip
+                            <RunBadge
                               runId={followRunId}
                               onClose={() => {
                                 setFollowRunId(null);

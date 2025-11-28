@@ -12,7 +12,7 @@ import formatDate from '#/utils/formatDate';
 import truncateUid from '#/utils/truncateUID';
 
 import DataclipTypePill from '../DataclipTypePill';
-import Pill from '../Pill';
+import Pill from '../Badge';
 import {
   DataclipTypeNames,
   DataclipTypes,

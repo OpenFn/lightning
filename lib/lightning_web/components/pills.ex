@@ -73,26 +73,26 @@ defmodule LightningWeb.Components.Pills do
   end
 
   @doc """
-  Renders a filter chip with a close button.
+  Renders a filter badge with a close button.
 
   ## Example
 
   ```
-  <.filter_chip
+  <.filter_badge
     form={@filters_changeset}
     fields={[{:workflow_id, nil}]}
-    id="workflow_chip_123"
+    id="workflow_badge_123"
   >
     Workflow: My Workflow
-  </.filter_chip>
+  </.filter_badge>
 
-  <.filter_chip
+  <.filter_badge
     form={@filters_changeset}
     fields={[{:wo_date_after, nil}, {:wo_date_before, nil}]}
-    id="workorder_date_chip"
+    id="workorder_date_badge"
   >
     Date range: * - *
-  </.filter_chip>
+  </.filter_badge>
   ```
   """
   attr :form, :any, required: true, doc: "The form changeset"
@@ -102,10 +102,10 @@ defmodule LightningWeb.Components.Pills do
     doc:
       "List of {field_name, field_value} tuples representing the fields to reset"
 
-  attr :id, :string, required: true, doc: "Unique ID for the chip"
+  attr :id, :string, required: true, doc: "Unique ID for the badge"
   slot :inner_block, required: true
 
-  def filter_chip(assigns) do
+  def filter_badge(assigns) do
     ~H"""
     <span class="inline-flex items-center gap-x-1 rounded-md bg-blue-100 px-2 py-1 text-xs font-medium text-blue-700">
       <span class="flex items-center">{render_slot(@inner_block)}</span>

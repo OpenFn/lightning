@@ -5,7 +5,7 @@ import React from 'react';
 import { DataclipViewer } from '../../react/components/DataclipViewer';
 import formatDate from '../../utils/formatDate';
 import DataclipTypePill from '../DataclipTypePill';
-import Pill from '../Pill';
+import Pill from '../Badge';
 import type { Dataclip } from '../types';
 
 interface SelectedClipViewProps {

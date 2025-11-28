@@ -398,8 +398,8 @@ describe('CollaborativeWorkflowDiagram - EditorPreferences Integration', () => {
         expect(screen.getByText(/View History/i)).toBeInTheDocument();
       });
 
-      // Run chip should be visible in collapsed state
-      // Note: RunChip renders "Run {truncated-id}", look for this pattern
+      // Run badge should be visible in collapsed state
+      // Note: RunBadge renders "Run {truncated-id}", look for this pattern
       expect(screen.getByText(/Run/i)).toBeInTheDocument();
 
       // Restore original pushState
@@ -475,7 +475,7 @@ describe('CollaborativeWorkflowDiagram - EditorPreferences Integration', () => {
       });
 
       // Click the X button on the chip to deselect
-      const closeButton = screen.getByLabelText(/Close run/i);
+      const closeButton = screen.getByLabelText(/Remove/i);
       fireEvent.click(closeButton);
 
       // Should clear URL parameter and hide chip

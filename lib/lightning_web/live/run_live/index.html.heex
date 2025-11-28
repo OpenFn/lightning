@@ -282,61 +282,61 @@
 
         <div class="mt-2">
           <%= if workflow_id = get_change(@filters_changeset, :workflow_id) do %>
-            <.filter_chip
+            <.filter_badge
               form={@filters_changeset}
               fields={[{:workflow_id, nil}]}
-              id={"workflow_chip_#{workflow_id}"}
+              id={"workflow_badge_#{workflow_id}"}
             >
               Workflow: {find_workflow_name(@workflows, workflow_id)}
-            </.filter_chip>
+            </.filter_badge>
           <% end %>
 
           <%= if workorder_id = get_change(@filters_changeset, :workorder_id) do %>
-            <.filter_chip
+            <.filter_badge
               form={@filters_changeset}
               fields={[{:workorder_id, nil}]}
-              id={"workorder_chip_#{workorder_id}"}
+              id={"workorder_badge_#{workorder_id}"}
             >
               Work order: {display_short_uuid(workorder_id)}
-            </.filter_chip>
+            </.filter_badge>
           <% end %>
 
           <%= for status <- Enum.filter(@statuses, fn status -> checked?(@filters_changeset, status.id) end)  do %>
-            <.filter_chip
+            <.filter_badge
               form={@filters_changeset}
               fields={[{status.id, false}]}
-              id={"workorder_status_chip_#{status.id}"}
+              id={"workorder_status_badge_#{status.id}"}
             >
               Work order status: {status.label}
-            </.filter_chip>
+            </.filter_badge>
           <% end %>
 
           <%= if get_change(@filters_changeset, :wo_date_after) || get_change(@filters_changeset, :wo_date_before) do %>
-            <.filter_chip
+            <.filter_badge
               form={@filters_changeset}
               fields={[{:wo_date_after, nil}, {:wo_date_before, nil}]}
-              id="workorder_date_received_chip"
+              id="workorder_date_received_badge"
             >
               {@filters_changeset
               |> get_change(:wo_date_after)
               |> maybe_humanize_date() || "*"} - {@filters_changeset
               |> get_change(:wo_date_before)
               |> maybe_humanize_date() || "*"}
-            </.filter_chip>
+            </.filter_badge>
           <% end %>
 
           <%= if get_change(@filters_changeset, :date_after) || get_change(@filters_changeset, :date_before) do %>
-            <.filter_chip
+            <.filter_badge
               form={@filters_changeset}
               fields={[{:date_after, nil}, {:date_before, nil}]}
-              id="workorder_last_activity_chip"
+              id="workorder_last_activity_badge"
             >
               Last Activity: {@filters_changeset
               |> get_change(:date_after)
               |> maybe_humanize_date() || "*"} - {@filters_changeset
               |> get_change(:date_before)
               |> maybe_humanize_date() || "*"}
-            </.filter_chip>
+            </.filter_badge>
           <% end %>
         </div>
 
