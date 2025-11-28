@@ -20,10 +20,11 @@ and this project adheres to
 ### Changed
 
 - Show "Connect" button when no credential is selected for non-language-common
-  steps.
+  steps [#4085](https://github.com/OpenFn/lightning/issues/4085)
 - Show credential name (and full name and owner on hover) when a credential is
-  selected.
-- Allow owners to edit credentials from the adaptor picker.
+  selected [#4085](https://github.com/OpenFn/lightning/issues/4085)
+- Allow owners to edit credentials from the adaptor picker
+  [#4085](https://github.com/OpenFn/lightning/issues/4085)
 
 ### Fixed
 
