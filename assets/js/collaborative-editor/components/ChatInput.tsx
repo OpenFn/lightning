@@ -32,6 +32,10 @@ interface MessageOptions {
   attach_logs?: boolean;
 }
 
+// Minimum height for the textarea (matches minHeight in inline styles)
+const MIN_TEXTAREA_HEIGHT = 52;
+const MAX_TEXTAREA_HEIGHT = 200;
+
 export function ChatInput({
   onSendMessage,
   isLoading = false,
@@ -77,10 +81,15 @@ export function ChatInput({
     const textarea = textareaRef.current;
     if (!textarea) return;
 
-    // Reset height to auto to get the correct scrollHeight
-    textarea.style.height = 'auto';
-    // Set height to scrollHeight (content height)
-    textarea.style.height = `${textarea.scrollHeight}px`;
+    // Reset height to minimum to get accurate scrollHeight measurement
+    textarea.style.height = `${MIN_TEXTAREA_HEIGHT}px`;
+
+    // If content exceeds minimum height, grow the textarea
+    // Clamp to max-height
+    if (textarea.scrollHeight > MIN_TEXTAREA_HEIGHT) {
+      const newHeight = Math.min(textarea.scrollHeight, MAX_TEXTAREA_HEIGHT);
+      textarea.style.height = `${newHeight}px`;
+    }
   }, [input]);
 
   // Load checkbox preferences from localStorage when storageKey becomes available
@@ -194,8 +203,8 @@ export function ChatInput({
                   'disabled:text-gray-400 disabled:cursor-not-allowed'
                 )}
                 style={{
-                  minHeight: '52px',
-                  maxHeight: '200px',
+                  minHeight: `${MIN_TEXTAREA_HEIGHT}px`,
+                  maxHeight: `${MAX_TEXTAREA_HEIGHT}px`,
                   overflow: 'hidden',
                   overflowY: 'auto',
                 }}
