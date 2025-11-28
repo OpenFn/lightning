@@ -335,6 +335,11 @@ vi.mock('../../../../js/collaborative-editor/hooks/useCredentials', () => ({
   useCredentialsCommands: () => ({
     requestCredentials: vi.fn(),
   }),
+  useCredentialQueries: () => ({
+    findCredentialById: vi.fn(),
+    credentialExists: vi.fn(),
+    getCredentialId: vi.fn(),
+  }),
 }));
 
 // Mock adaptor hooks
