@@ -105,7 +105,7 @@ export function ChatInterface({
 
                     {/* Code Block - Only show for assistant messages */}
                     {message.code && (
-                      <div className="rounded-lg overflow-hidden border border-gray-200 bg-white shadow-sm">
+                      <div className="rounded-lg overflow-hidden border border-gray-200 bg-white">
                         <div className="px-4 py-2 bg-gray-50 border-b border-gray-200 flex items-center justify-between">
                           <span className="text-xs font-medium text-gray-700">
                             Workflow YAML
@@ -181,9 +181,9 @@ export function ChatInterface({
               <div
                 className={cn(
                   'rounded-xl border-2 transition-all duration-200',
-                  'bg-white shadow-sm',
+                  'bg-white',
                   input.trim()
-                    ? 'border-primary-300 shadow-primary-100'
+                    ? 'border-primary-300'
                     : 'border-gray-200 hover:border-gray-300'
                 )}
               >
@@ -229,7 +229,7 @@ export function ChatInterface({
                       'transition-all duration-200',
                       'focus:outline-none focus:ring-2 focus:ring-offset-2',
                       input.trim() && !isLoading
-                        ? 'bg-primary-600 hover:bg-primary-700 text-white shadow-sm hover:shadow focus:ring-primary-500'
+                        ? 'bg-primary-600 hover:bg-primary-700 text-white focus:ring-primary-500'
                         : 'bg-gray-100 text-gray-400 cursor-not-allowed'
                     )}
                     aria-label={isLoading ? 'Sending...' : 'Send message'}

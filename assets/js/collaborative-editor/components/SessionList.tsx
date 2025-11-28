@@ -189,7 +189,7 @@ export function SessionList({
                   'focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-1',
                   'group relative',
                   session.id === currentSessionId
-                    ? 'bg-primary-50 shadow-sm ring-1 ring-primary-200'
+                    ? 'bg-primary-50 ring-1 ring-primary-200'
                     : 'hover:bg-gray-50 active:bg-gray-100'
                 )}
               >

@@ -412,7 +412,13 @@ export function MessageList({
                   {/* Code Block - Only show for assistant messages */}
                   {message.code && (
                     <div className="rounded-lg overflow-hidden border border-gray-200 bg-white">
-                      <div className="w-full px-4 py-2 bg-gray-50 border-b border-gray-200 flex items-center justify-between">
+                      <div
+                        className={cn(
+                          'w-full px-4 py-2 bg-gray-50 flex items-center justify-between',
+                          expandedYaml.has(message.id) &&
+                            'border-b border-gray-200'
+                        )}
+                      >
                         <button
                           type="button"
                           onClick={() => {

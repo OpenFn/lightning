@@ -36,7 +36,7 @@ export function AIButton({
         onClick={handleClick}
         disabled={disabled}
         className={cn(
-          'rounded-full p-2 shadow-xs',
+          'rounded-full p-2',
           'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600',
           'disabled:opacity-50 disabled:cursor-not-allowed',
           isOpen
