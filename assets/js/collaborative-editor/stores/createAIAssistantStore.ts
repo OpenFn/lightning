@@ -387,10 +387,6 @@ export const createAIAssistantStore = (): AIAssistantStore => {
     notify('_clearSession');
   };
 
-  // ===========================================================================
-  // INTERNAL STATE UPDATES (Called by channel hook)
-  // ===========================================================================
-
   /**
    * Update connection state
    * @internal Called by useAIAssistantChannel hook
@@ -456,8 +452,7 @@ export const createAIAssistantStore = (): AIAssistantStore => {
 
       draft.isSending = false;
 
-      if (message.role === 'user') {
-      } else if (message.role === 'assistant') {
+      if (message.role === 'assistant') {
         if (message.status === 'success' || message.status === 'error') {
           draft.isLoading = false;
         } else if (message.status === 'processing') {
@@ -540,10 +535,6 @@ export const createAIAssistantStore = (): AIAssistantStore => {
   };
 
   devtools.connect();
-
-  // ===========================================================================
-  // PUBLIC INTERFACE
-  // ===========================================================================
 
   return {
     // Core store interface
