@@ -109,16 +109,6 @@ export const createAIAssistantStore = (): AIAssistantStore => {
   };
 
   /**
-   * Helper to extract workflow ID from current context
-   */
-  const getWorkflowIdFromContext = (): string | null => {
-    if (state.workflowTemplateContext?.workflow_id) {
-      return state.workflowTemplateContext.workflow_id;
-    }
-    return null;
-  };
-
-  /**
    * Helper to generate storage key based on current mode and context
    * Returns the localStorage key to use for persisting the session ID
    */
@@ -137,10 +127,6 @@ export const createAIAssistantStore = (): AIAssistantStore => {
     return null;
   };
 
-  // ===========================================================================
-  // CORE STORE INTERFACE
-  // ===========================================================================
-
   const subscribe = (listener: () => void) => {
     listeners.add(listener);
     return () => listeners.delete(listener);
@@ -149,10 +135,6 @@ export const createAIAssistantStore = (): AIAssistantStore => {
   const getSnapshot = (): AIAssistantState => state;
 
   const withSelector = createWithSelector(getSnapshot);
-
-  // ===========================================================================
-  // COMMANDS (CQS pattern - State mutations)
-  // ===========================================================================
 
   /**
    * Connect to AI Assistant session
