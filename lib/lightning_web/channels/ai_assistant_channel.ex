@@ -127,48 +127,18 @@ defmodule LightningWeb.AiAssistantChannel do
     session = socket.assigns.session
     session_type = socket.assigns.session_type
 
-    if session_type == "job_code" do
-      job_body = params["job_body"]
-      job_adaptor = params["job_adaptor"]
-      job_name = params["job_name"]
+    cond do
+      session_type == "job_code" ->
+        update_job_code_context(session, params, socket)
 
-      updated_meta =
-        (session.meta || %{})
-        |> Map.put("runtime_context", %{
-          "job_body" => job_body,
-          "job_adaptor" => job_adaptor,
-          "job_name" => job_name,
-          "updated_at" => DateTime.utc_now() |> DateTime.to_iso8601()
-        })
+      session_type == "workflow_template" ->
+        update_workflow_template_context(session, params, socket)
 
-      case session
-           |> Ecto.Changeset.change(%{meta: updated_meta})
-           |> Lightning.Repo.update() do
-        {:ok, updated_session} ->
-          updated_session =
-            updated_session
-            |> AiAssistant.put_expression_and_adaptor(
-              job_body || session.expression || "",
-              job_adaptor || "@openfn/language-common@latest"
-            )
-
-          socket = assign(socket, session: updated_session)
-
-          {:reply, {:ok, %{success: true}}, socket}
-
-        {:error, changeset} ->
-          Logger.error(
-            "[AiAssistantChannel] Failed to update context: #{inspect(changeset.errors)}"
-          )
-
-          {:reply, {:error, %{reason: "Failed to persist context update"}},
-           socket}
-      end
-    else
-      {:reply,
-       {:error,
-        %{reason: "Context updates only supported for job_code sessions"}},
-       socket}
+      true ->
+        {:reply,
+         {:error,
+          %{reason: "Context updates not supported for this session type"}},
+         socket}
     end
   end
 
@@ -208,6 +178,76 @@ defmodule LightningWeb.AiAssistantChannel do
     else
       {:error, reason} ->
         {:reply, {:error, %{reason: reason}}, socket}
+    end
+  end
+
+  defp update_job_code_context(session, params, socket) do
+    job_body = params["job_body"]
+    job_adaptor = params["job_adaptor"]
+    job_name = params["job_name"]
+
+    updated_meta =
+      (session.meta || %{})
+      |> Map.put("runtime_context", %{
+        "job_body" => job_body,
+        "job_adaptor" => job_adaptor,
+        "job_name" => job_name,
+        "updated_at" => DateTime.utc_now() |> DateTime.to_iso8601()
+      })
+
+    case session
+         |> Ecto.Changeset.change(%{meta: updated_meta})
+         |> Lightning.Repo.update() do
+      {:ok, updated_session} ->
+        updated_session =
+          updated_session
+          |> AiAssistant.put_expression_and_adaptor(
+            job_body || session.expression || "",
+            job_adaptor || "@openfn/language-common@latest"
+          )
+
+        socket = assign(socket, session: updated_session)
+
+        {:reply, {:ok, %{success: true}}, socket}
+
+      {:error, changeset} ->
+        Logger.error(
+          "[AiAssistantChannel] Failed to update job context: #{inspect(changeset.errors)}"
+        )
+
+        {:reply, {:error, %{reason: "Failed to persist context update"}}, socket}
+    end
+  end
+
+  defp update_workflow_template_context(session, params, socket) do
+    workflow_id = params["workflow_id"]
+
+    if workflow_id do
+      updated_meta =
+        (session.meta || %{})
+        |> Map.delete("unsaved_workflow")
+
+      session
+      |> Ecto.Changeset.change(%{
+        workflow_id: workflow_id,
+        meta: updated_meta
+      })
+      |> Lightning.Repo.update()
+      |> case do
+        {:ok, updated_session} ->
+          {:reply, {:ok, %{success: true}},
+           assign(socket, session: updated_session)}
+
+        {:error, changeset} ->
+          Logger.error(
+            "[AiAssistantChannel] Failed to update workflow context: #{inspect(changeset.errors)}"
+          )
+
+          {:reply, {:error, %{reason: "Failed to persist context update"}},
+           socket}
+      end
+    else
+      {:reply, {:ok, %{success: true}}, socket}
     end
   end
 
