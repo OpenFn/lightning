@@ -76,23 +76,18 @@ export function ChatInput({
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const isLoadingFromStorageRef = useRef(false);
 
-  // Auto-resize textarea as content changes
   useEffect(() => {
     const textarea = textareaRef.current;
     if (!textarea) return;
 
-    // Reset height to minimum to get accurate scrollHeight measurement
     textarea.style.height = `${MIN_TEXTAREA_HEIGHT}px`;
 
-    // If content exceeds minimum height, grow the textarea
-    // Clamp to max-height
     if (textarea.scrollHeight > MIN_TEXTAREA_HEIGHT) {
       const newHeight = Math.min(textarea.scrollHeight, MAX_TEXTAREA_HEIGHT);
       textarea.style.height = `${newHeight}px`;
     }
   }, [input]);
 
-  // Load checkbox preferences from localStorage when storageKey becomes available
   useEffect(() => {
     if (!storageKey) return;
 
@@ -116,16 +111,14 @@ export function ChatInput({
       // Ignore localStorage errors
     }
 
-    // Reset flag after state updates have been applied
     setTimeout(() => {
       isLoadingFromStorageRef.current = false;
     }, 0);
   }, [storageKey]);
 
-  // Persist attachCode to localStorage when it changes
   useEffect(() => {
     if (!storageKey) return;
-    if (isLoadingFromStorageRef.current) return; // Skip during load
+    if (isLoadingFromStorageRef.current) return;
     try {
       localStorage.setItem(`${storageKey}:attach-code`, String(attachCode));
     } catch {
@@ -133,10 +126,9 @@ export function ChatInput({
     }
   }, [attachCode, storageKey]);
 
-  // Persist attachLogs to localStorage when it changes
   useEffect(() => {
     if (!storageKey) return;
-    if (isLoadingFromStorageRef.current) return; // Skip during load
+    if (isLoadingFromStorageRef.current) return;
     try {
       localStorage.setItem(`${storageKey}:attach-logs`, String(attachLogs));
     } catch {
@@ -178,7 +170,6 @@ export function ChatInput({
       <div className="py-4 px-4">
         <form onSubmit={handleSubmit}>
           <div className="relative">
-            {/* Textarea Container */}
             <div
               className={cn(
                 'rounded-xl border-2 transition-all duration-200',
@@ -210,13 +201,10 @@ export function ChatInput({
                 }}
               />
 
-              {/* Actions Bar */}
               <div className="flex items-center justify-between px-3 py-2 border-t border-gray-100">
-                {/* Left side - Job controls or Warning */}
                 <div className="flex items-center gap-3">
                   {showJobControls ? (
                     <>
-                      {/* Attach Code Checkbox */}
                       <label className="flex items-center gap-1.5 cursor-pointer group">
                         <input
                           type="checkbox"
@@ -230,7 +218,6 @@ export function ChatInput({
                         </span>
                       </label>
 
-                      {/* Attach Logs Checkbox */}
                       <label className="flex items-center gap-1.5 cursor-pointer group">
                         <input
                           type="checkbox"
@@ -245,7 +232,6 @@ export function ChatInput({
                       </label>
                     </>
                   ) : (
-                    /* Warning */
                     <div className="flex items-center gap-1.5">
                       <span className="hero-shield-exclamation h-3.5 w-3.5 text-amber-500" />
                       <span className="text-[11px] font-medium text-gray-600">
@@ -255,7 +241,6 @@ export function ChatInput({
                   )}
                 </div>
 
-                {/* Send Button */}
                 <button
                   type="submit"
                   disabled={!input.trim() || isLoading}
@@ -279,7 +264,6 @@ export function ChatInput({
               </div>
             </div>
 
-            {/* Keyboard Hint */}
             <div className="mt-2 text-center">
               <span className="text-[11px] text-gray-500">
                 Press{' '}

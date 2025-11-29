@@ -87,7 +87,6 @@ function AIAssistantPanelWrapper() {
     0 // Default priority
   );
 
-  // AI Assistant integration
   const aiStore = useAIStore();
   const {
     sendMessage: sendMessageToChannel,
@@ -389,7 +388,6 @@ function AIAssistantPanelWrapper() {
   useEffect(() => {
     if (!isAIAssistantPanelOpen) {
       aiStore.disconnect();
-      // Clear chat params from URL
       updateSearchParams({
         'w-chat': null,
         'j-chat': null,
@@ -415,7 +413,6 @@ function AIAssistantPanelWrapper() {
     const context =
       aiMode.context as import('./types/ai-assistant').JobCodeContext;
 
-    // Notify backend of context changes
     const contextUpdate: {
       job_adaptor?: string;
       job_body?: string;
@@ -435,13 +432,8 @@ function AIAssistantPanelWrapper() {
   const handleNewConversation = useCallback(() => {
     if (!project) return;
 
-    // Clear all applied message IDs for new session
     appliedMessageIdsRef.current.clear();
-
-    // Clear the current session
     aiStore.clearSession();
-
-    // Disconnect and reconnect to create a new session
     aiStore.disconnect();
 
     // The useEffect above will reconnect automatically when panel reopens
@@ -449,7 +441,6 @@ function AIAssistantPanelWrapper() {
     setTimeout(() => {
       const state = aiStore.getSnapshot();
       if (state.connectionState === 'disconnected') {
-        // Build fresh context
         let workflowYAML: string | undefined = undefined;
         if (workflow && jobs.length > 0) {
           try {
@@ -509,14 +500,12 @@ function AIAssistantPanelWrapper() {
     (selectedSessionId: string) => {
       if (!project) return;
 
-      // Clear all applied message IDs for new session
       appliedMessageIdsRef.current.clear();
 
       // Clear messages immediately to prevent flash of old session's messages
       // The new session's messages will load when the channel reconnects
       aiStore._clearSession();
 
-      // Disconnect current session
       aiStore.disconnect();
 
       // Wait for clean disconnect, then reconnect with selected session
@@ -534,11 +523,9 @@ function AIAssistantPanelWrapper() {
             return;
           }
 
-          // Build context based on session type
           let context: any;
 
           if (currentSessionType === 'workflow_template') {
-            // Build workflow context
             let workflowYAML: string | undefined = undefined;
             if (workflow && jobs.length > 0) {
               try {
@@ -628,11 +615,9 @@ function AIAssistantPanelWrapper() {
     ) => {
       const currentState = aiStore.getSnapshot();
 
-      // If no session, connect first with initial message
       if (!currentState.sessionId && aiMode) {
         const { mode, context } = aiMode;
 
-        // Build context based on mode
         let finalContext = context;
         if (mode === 'workflow_template' && workflow && jobs.length > 0) {
           try {
@@ -726,19 +711,12 @@ function AIAssistantPanelWrapper() {
         }
 
         const options = workflowYAML ? { code: workflowYAML } : undefined;
-        // Set loading state BEFORE sending the message
         aiStore.sendMessage(content);
         sendMessageToChannel(content, options);
-      }
-      // For job_code mode: pass attach_code and attach_logs options
-      else if (currentState.sessionType === 'job_code' && messageOptions) {
-        // Set loading state BEFORE sending the message
+      } else if (currentState.sessionType === 'job_code' && messageOptions) {
         aiStore.sendMessage(content);
         sendMessageToChannel(content, messageOptions);
-      }
-      // Fallback
-      else {
-        // Set loading state BEFORE sending the message
+      } else {
         aiStore.sendMessage(content);
         sendMessageToChannel(content);
       }
@@ -755,19 +733,14 @@ function AIAssistantPanelWrapper() {
     ]
   );
 
-  // Handler for retrying failed messages
   const handleRetryMessage = useCallback(
     (messageId: string) => {
-      // Update store to mark message as pending
       aiStore.retryMessage(messageId);
-
-      // Send retry request via channel
       retryMessageViaChannel(messageId);
     },
     [aiStore, retryMessageViaChannel]
   );
 
-  // State for tracking which message is being applied
   const [applyingMessageId, setApplyingMessageId] = useState<string | null>(
     null
   );
@@ -776,22 +749,18 @@ function AIAssistantPanelWrapper() {
   // This prevents re-applying the same message multiple times during reconnections
   const appliedMessageIdsRef = useRef<Set<string>>(new Set());
 
-  // Get workflow actions for importing
   const { importWorkflow } = useWorkflowActions();
 
-  // Handler for applying AI-generated workflow YAML to canvas
   const handleApplyWorkflow = useCallback(
     async (yaml: string, messageId: string) => {
       setApplyingMessageId(messageId);
 
       try {
-        // Parse YAML to workflow spec
         const workflowSpec = parseWorkflowYAML(yaml);
 
         // Validate that IDs are strings or null, not objects
         // The AI sometimes generates nested ID objects which are invalid
         const validateIds = (spec: any) => {
-          // Check jobs
           if (spec.jobs) {
             for (const [jobKey, job] of Object.entries(spec.jobs)) {
               const jobItem = job as any;
@@ -807,7 +776,6 @@ function AIAssistantPanelWrapper() {
               }
             }
           }
-          // Check triggers
           if (spec.triggers) {
             for (const [triggerKey, trigger] of Object.entries(spec.triggers)) {
               const triggerItem = trigger as any;
@@ -823,7 +791,6 @@ function AIAssistantPanelWrapper() {
               }
             }
           }
-          // Check edges
           if (spec.edges) {
             for (const [edgeKey, edge] of Object.entries(spec.edges)) {
               const edgeItem = edge as any;
@@ -858,7 +825,6 @@ function AIAssistantPanelWrapper() {
           closeAIAssistantPanel();
         }
 
-        // Convert spec to state
         const workflowState = convertWorkflowSpecToState(workflowSpec);
 
         // Apply to canvas using existing import functionality

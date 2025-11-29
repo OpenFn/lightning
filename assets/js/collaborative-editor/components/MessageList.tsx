@@ -336,7 +336,6 @@ export function MessageList({
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [expandedYaml, setExpandedYaml] = useState<Set<string>>(new Set());
 
-  // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
     if (messagesEndRef.current) {
       messagesEndRef.current.scrollIntoView({
@@ -346,7 +345,6 @@ export function MessageList({
     }
   }, [messages.length]);
 
-  // Auto-scroll to loading indicator when it appears
   useEffect(() => {
     if (isLoading && loadingRef.current) {
       loadingRef.current.scrollIntoView({ behavior: 'smooth', block: 'end' });

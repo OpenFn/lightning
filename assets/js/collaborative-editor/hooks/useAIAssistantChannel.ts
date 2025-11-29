@@ -112,10 +112,8 @@ export const useAIAssistantChannel = (store: AIAssistantStore) => {
 
     logger.debug('Joining AI Assistant channel', { topic });
 
-    // Create channel
     const channel = phoenixSocket.channel(topic, buildJoinParams(state));
 
-    // Set up event listeners before joining
     channel.on('new_message', (payload: unknown) => {
       const typedPayload = payload as { message: Message };
       logger.debug('Received new message', typedPayload);
@@ -139,7 +137,6 @@ export const useAIAssistantChannel = (store: AIAssistantStore) => {
         logger.info('Successfully joined AI Assistant channel', typedResponse);
         store._setConnectionState('connected');
 
-        // Set session data from response
         if (typedResponse.session_id) {
           store._setSession({
             id: typedResponse.session_id,
@@ -244,7 +241,6 @@ export const useAIAssistantChannel = (store: AIAssistantStore) => {
         .receive('ok', (response: unknown) => {
           const typedResponse = response as MessageResponse;
           logger.debug('Message sent successfully', typedResponse);
-          // Add the user message to the store
           store._addMessage(typedResponse.message);
         })
         .receive('error', (response: unknown) => {
@@ -406,10 +402,8 @@ export const useAIAssistantChannel = (store: AIAssistantStore) => {
 
       logger.debug('Updating context via channel', context);
 
-      // Update store immediately (optimistic update)
       store.updateContext(context);
 
-      // Notify backend
       channel
         .push('update_context', context)
         .receive('ok', () => {
