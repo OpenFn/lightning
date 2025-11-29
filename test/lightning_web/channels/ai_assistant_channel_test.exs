@@ -469,9 +469,10 @@ defmodule LightningWeb.AiAssistantChannelTest do
       ref = push(socket, "new_message", %{"content" => "Help me debug this"})
 
       assert_reply ref, :ok, %{message: message}
-      assert message.content == "Help me debug this"
+      # The returned message is the newly created user message
       assert message.role == "user"
-      # Status is "success" due to mocked HTTP client processing immediately
+      assert message.content == "Help me debug this"
+      # Status should be pending initially
       assert message.status in ["pending", "success"]
     end
 
@@ -772,6 +773,720 @@ defmodule LightningWeb.AiAssistantChannelTest do
       assert length(sessions) == 2
       assert pagination.total_count == 2
       assert Enum.all?(sessions, &(&1.job_name == job.name))
+    end
+
+    test "supports pagination with offset and limit", %{
+      socket: socket,
+      user: user,
+      job: job
+    } do
+      # Create 5 sessions
+      sessions =
+        for i <- 1..5 do
+          {:ok, session} =
+            AiAssistant.create_session(job, user, "Session #{i}", [])
+
+          session
+        end
+
+      # Join with first session
+      {:ok, _, socket} =
+        subscribe_and_join(
+          socket,
+          AiAssistantChannel,
+          "ai_assistant:job_code:#{hd(sessions).id}",
+          %{}
+        )
+
+      # Request first page (limit 3)
+      ref1 = push(socket, "list_sessions", %{"offset" => 0, "limit" => 3})
+      assert_reply ref1, :ok, %{sessions: page1, pagination: pagination1}
+
+      assert length(page1) == 3
+      assert pagination1.total_count == 5
+      assert pagination1.has_next_page == true
+
+      # Request second page
+      ref2 = push(socket, "list_sessions", %{"offset" => 3, "limit" => 3})
+      assert_reply ref2, :ok, %{sessions: page2, pagination: pagination2}
+
+      assert length(page2) == 2
+      assert pagination2.total_count == 5
+      assert pagination2.has_next_page == false
+    end
+
+    test "lists sessions for unsaved job", %{
+      socket: socket,
+      workflow: workflow
+    } do
+      unsaved_job_id = Ecto.UUID.generate()
+
+      params = %{
+        "job_id" => unsaved_job_id,
+        "job_name" => "Unsaved Job",
+        "job_body" => "console.log('test');",
+        "job_adaptor" => "@openfn/language-common@1.0.0",
+        "workflow_id" => workflow.id,
+        "content" => "Help me"
+      }
+
+      {:ok, _, socket} =
+        subscribe_and_join(
+          socket,
+          AiAssistantChannel,
+          "ai_assistant:job_code:new",
+          params
+        )
+
+      ref = push(socket, "list_sessions", %{"offset" => 0, "limit" => 20})
+
+      assert_reply ref, :ok, %{sessions: sessions, pagination: _pagination}
+
+      assert length(sessions) == 1
+      session_data = hd(sessions)
+      assert session_data.job_name == "Unsaved Job"
+      assert session_data.workflow_name == workflow.name
+      assert session_data.is_unsaved == true
+    end
+  end
+
+  describe "handle_in retry_message" do
+    @tag :capture_log
+    test "successfully retries a failed message", %{
+      socket: socket,
+      job: job,
+      user: user
+    } do
+      {:ok, session} =
+        AiAssistant.create_session(job, user, "Initial message", [])
+
+      {:ok, _, socket} =
+        subscribe_and_join(
+          socket,
+          AiAssistantChannel,
+          "ai_assistant:job_code:#{session.id}",
+          %{}
+        )
+
+      # Create a failed message
+      {:ok, updated_session} =
+        AiAssistant.save_message(
+          session,
+          %{role: :assistant, content: "Failed response", user: user},
+          []
+        )
+
+      message = List.last(updated_session.messages)
+
+      message =
+        message
+        |> Ecto.Changeset.change(%{status: :error})
+        |> Lightning.Repo.update!()
+
+      ref = push(socket, "retry_message", %{"message_id" => message.id})
+
+      assert_reply ref, :ok, %{message: retried_message}
+      assert retried_message.id == message.id
+    end
+
+    test "rejects retry for non-existent message", %{
+      socket: socket,
+      job: job,
+      user: user
+    } do
+      {:ok, session} =
+        AiAssistant.create_session(job, user, "Initial message", [])
+
+      {:ok, _, socket} =
+        subscribe_and_join(
+          socket,
+          AiAssistantChannel,
+          "ai_assistant:job_code:#{session.id}",
+          %{}
+        )
+
+      fake_message_id = Ecto.UUID.generate()
+      ref = push(socket, "retry_message", %{"message_id" => fake_message_id})
+
+      assert_reply ref, :error, %{reason: "message not found or unauthorized"}
+    end
+
+    test "rejects retry for message from different session", %{
+      socket: socket,
+      job: job,
+      user: user
+    } do
+      # Create two separate sessions
+      {:ok, session1} =
+        AiAssistant.create_session(job, user, "Session 1", [])
+
+      {:ok, session2} =
+        AiAssistant.create_session(job, user, "Session 2", [])
+
+      # Get message from session2
+      session2 = Lightning.Repo.preload(session2, :messages)
+      message = List.last(session2.messages)
+
+      # Join session1
+      {:ok, _, socket} =
+        subscribe_and_join(
+          socket,
+          AiAssistantChannel,
+          "ai_assistant:job_code:#{session1.id}",
+          %{}
+        )
+
+      # Try to retry message from session2
+      ref = push(socket, "retry_message", %{"message_id" => message.id})
+
+      assert_reply ref, :error, %{reason: "message not found or unauthorized"}
+    end
+  end
+
+  describe "handle_info message broadcasts" do
+    @tag :capture_log
+    test "broadcasts new assistant message on success", %{
+      socket: socket,
+      job: job,
+      user: user
+    } do
+      {:ok, session} =
+        AiAssistant.create_session(job, user, "Initial message", [])
+
+      {:ok, _, socket} =
+        subscribe_and_join(
+          socket,
+          AiAssistantChannel,
+          "ai_assistant:job_code:#{session.id}",
+          %{}
+        )
+
+      # Simulate message status changed event
+      updated_session = Lightning.Repo.preload(session, :messages, force: true)
+
+      send(
+        socket.channel_pid,
+        {:ai_assistant, :message_status_changed,
+         %{
+           status: {:success, updated_session},
+           session_id: session.id
+         }}
+      )
+
+      assert_push "new_message", %{message: message}
+      assert message.role == "assistant"
+    end
+
+    test "ignores message status change for different session", %{
+      socket: socket,
+      job: job,
+      user: user
+    } do
+      {:ok, session} =
+        AiAssistant.create_session(job, user, "Initial message", [])
+
+      {:ok, _, socket} =
+        subscribe_and_join(
+          socket,
+          AiAssistantChannel,
+          "ai_assistant:job_code:#{session.id}",
+          %{}
+        )
+
+      other_session_id = Ecto.UUID.generate()
+
+      send(
+        socket.channel_pid,
+        {:ai_assistant, :message_status_changed,
+         %{
+           status: {:success, session},
+           session_id: other_session_id
+         }}
+      )
+
+      refute_push "new_message", _
+    end
+
+    test "handles non-success status without pushing", %{
+      socket: socket,
+      job: job,
+      user: user
+    } do
+      {:ok, session} =
+        AiAssistant.create_session(job, user, "Initial message", [])
+
+      {:ok, _, socket} =
+        subscribe_and_join(
+          socket,
+          AiAssistantChannel,
+          "ai_assistant:job_code:#{session.id}",
+          %{}
+        )
+
+      send(
+        socket.channel_pid,
+        {:ai_assistant, :message_status_changed,
+         %{
+           status: {:failed, session},
+           session_id: session.id
+         }}
+      )
+
+      refute_push "new_message", _
+    end
+
+    test "handles malformed message status change", %{
+      socket: socket,
+      job: job,
+      user: user
+    } do
+      {:ok, session} =
+        AiAssistant.create_session(job, user, "Initial message", [])
+
+      {:ok, _, socket} =
+        subscribe_and_join(
+          socket,
+          AiAssistantChannel,
+          "ai_assistant:job_code:#{session.id}",
+          %{}
+        )
+
+      send(
+        socket.channel_pid,
+        {:ai_assistant, :message_status_changed,
+         %{
+           status: :unknown_format,
+           session_id: session.id
+         }}
+      )
+
+      refute_push "new_message", _
+    end
+
+    test "ignores unrelated messages", %{
+      socket: socket,
+      job: job,
+      user: user
+    } do
+      {:ok, session} =
+        AiAssistant.create_session(job, user, "Initial message", [])
+
+      {:ok, _, socket} =
+        subscribe_and_join(
+          socket,
+          AiAssistantChannel,
+          "ai_assistant:job_code:#{session.id}",
+          %{}
+        )
+
+      send(socket.channel_pid, {:some_other_message, "data"})
+
+      refute_push "new_message", _
+    end
+  end
+
+  describe "follow_run_id parameter" do
+    @tag :capture_log
+    test "sets follow_run_id when joining existing session", %{
+      socket: socket,
+      job: job,
+      user: user
+    } do
+      {:ok, session} =
+        AiAssistant.create_session(job, user, "Initial message", [])
+
+      run_id = Ecto.UUID.generate()
+
+      {:ok, _, _socket} =
+        subscribe_and_join(
+          socket,
+          AiAssistantChannel,
+          "ai_assistant:job_code:#{session.id}",
+          %{"follow_run_id" => run_id}
+        )
+
+      updated_session = AiAssistant.get_session!(session.id)
+      assert updated_session.meta["follow_run_id"] == run_id
+    end
+
+    @tag :capture_log
+    test "includes follow_run_id in meta when creating new session", %{
+      socket: socket,
+      job: job
+    } do
+      run_id = Ecto.UUID.generate()
+
+      params = %{
+        "job_id" => job.id,
+        "content" => "Help me debug",
+        "follow_run_id" => run_id
+      }
+
+      {:ok, response, _socket} =
+        subscribe_and_join(
+          socket,
+          AiAssistantChannel,
+          "ai_assistant:job_code:new",
+          params
+        )
+
+      session = AiAssistant.get_session!(response.session_id)
+      assert session.meta["follow_run_id"] == run_id
+    end
+  end
+
+  describe "workflow_template with code parameter" do
+    @tag :capture_log
+    test "includes code parameter when creating session", %{
+      socket: socket,
+      project: project
+    } do
+      code = ~s({"jobs": [], "triggers": []})
+
+      params = %{
+        "project_id" => project.id,
+        "content" => "Create workflow",
+        "code" => code
+      }
+
+      {:ok, response, _socket} =
+        subscribe_and_join(
+          socket,
+          AiAssistantChannel,
+          "ai_assistant:workflow_template:new",
+          params
+        )
+
+      session =
+        AiAssistant.get_session!(response.session_id)
+        |> Lightning.Repo.preload(:messages)
+
+      # Code is stored in the user message (not the assistant response)
+      user_message =
+        Enum.find(session.messages, fn msg -> msg.role == :user end)
+
+      assert user_message.code == code
+    end
+
+    @tag :capture_log
+    test "includes code and errors in new_message for workflow_template", %{
+      socket: socket,
+      project: project,
+      user: user
+    } do
+      {:ok, session} =
+        AiAssistant.create_workflow_session(
+          project,
+          nil,
+          user,
+          "Create workflow"
+        )
+
+      {:ok, _, socket} =
+        subscribe_and_join(
+          socket,
+          AiAssistantChannel,
+          "ai_assistant:workflow_template:#{session.id}",
+          %{}
+        )
+
+      code = ~s({"jobs": []})
+      errors = [%{"message" => "Invalid workflow"}]
+
+      ref =
+        push(socket, "new_message", %{
+          "content" => "Fix this workflow",
+          "code" => code,
+          "errors" => errors
+        })
+
+      assert_reply ref, :ok, %{message: _message}
+    end
+  end
+
+  describe "update_context with partial updates" do
+    test "handles partial context updates", %{
+      socket: socket,
+      job: job,
+      user: user
+    } do
+      {:ok, session} =
+        AiAssistant.create_session(job, user, "Initial message", [])
+
+      {:ok, _, socket} =
+        subscribe_and_join(
+          socket,
+          AiAssistantChannel,
+          "ai_assistant:job_code:#{session.id}",
+          %{}
+        )
+
+      # Update only job_body (partial update)
+      ref =
+        push(socket, "update_context", %{
+          "job_body" => "console.log('updated');"
+        })
+
+      assert_reply ref, :ok, %{success: true}
+
+      # Verify partial update worked
+      updated_session = AiAssistant.get_session!(session.id)
+      runtime_context = updated_session.meta["runtime_context"]
+      assert runtime_context["job_body"] == "console.log('updated');"
+      assert runtime_context["job_adaptor"] == nil
+      assert runtime_context["job_name"] == nil
+    end
+  end
+
+  describe "authorization for unsaved jobs" do
+    test "authorizes access to unsaved job via workflow", %{
+      socket: socket,
+      workflow: workflow
+    } do
+      unsaved_job_id = Ecto.UUID.generate()
+
+      params = %{
+        "job_id" => unsaved_job_id,
+        "job_name" => "Unsaved Job",
+        "workflow_id" => workflow.id,
+        "content" => "Help me"
+      }
+
+      assert {:ok, _response, _socket} =
+               subscribe_and_join(
+                 socket,
+                 AiAssistantChannel,
+                 "ai_assistant:job_code:new",
+                 params
+               )
+    end
+
+    test "denies access to unsaved job when user not in workflow project", %{
+      workflow: workflow
+    } do
+      other_user = user_fixture()
+
+      socket =
+        LightningWeb.UserSocket
+        |> socket("user_#{other_user.id}", %{current_user: other_user})
+
+      unsaved_job_id = Ecto.UUID.generate()
+
+      params = %{
+        "job_id" => unsaved_job_id,
+        "job_name" => "Unsaved Job",
+        "workflow_id" => workflow.id,
+        "content" => "Help me"
+      }
+
+      assert {:error, %{reason: "unauthorized"}} =
+               subscribe_and_join(
+                 socket,
+                 AiAssistantChannel,
+                 "ai_assistant:job_code:new",
+                 params
+               )
+    end
+  end
+
+  describe "authorization for workflow templates" do
+    test "denies access when user not in project", %{
+      project: project
+    } do
+      other_user = user_fixture()
+
+      socket =
+        LightningWeb.UserSocket
+        |> socket("user_#{other_user.id}", %{current_user: other_user})
+
+      params = %{
+        "project_id" => project.id,
+        "content" => "Create workflow"
+      }
+
+      assert {:error, %{reason: "unauthorized"}} =
+               subscribe_and_join(
+                 socket,
+                 AiAssistantChannel,
+                 "ai_assistant:workflow_template:new",
+                 params
+               )
+    end
+
+    test "denies access to existing workflow session for non-member", %{
+      project: project,
+      user: user
+    } do
+      # Create session as authorized user
+      {:ok, session} =
+        AiAssistant.create_workflow_session(
+          project,
+          nil,
+          user,
+          "Create workflow"
+        )
+
+      # Try to join as different user
+      other_user = user_fixture()
+
+      socket =
+        LightningWeb.UserSocket
+        |> socket("user_#{other_user.id}", %{current_user: other_user})
+
+      assert {:error, %{reason: "unauthorized"}} =
+               subscribe_and_join(
+                 socket,
+                 AiAssistantChannel,
+                 "ai_assistant:workflow_template:#{session.id}",
+                 %{}
+               )
+    end
+
+    test "authorizes unsaved workflow when user has project access", %{
+      socket: socket,
+      project: project
+    } do
+      temp_workflow_id = Ecto.UUID.generate()
+
+      params = %{
+        "project_id" => project.id,
+        "workflow_id" => temp_workflow_id,
+        "content" => "Help me create a workflow"
+      }
+
+      assert {:ok, _response, _socket} =
+               subscribe_and_join(
+                 socket,
+                 AiAssistantChannel,
+                 "ai_assistant:workflow_template:new",
+                 params
+               )
+    end
+  end
+
+  describe "authorization for existing job sessions" do
+    test "denies access to job session for non-member", %{
+      job: job,
+      user: user
+    } do
+      # Create session as authorized user
+      {:ok, session} =
+        AiAssistant.create_session(job, user, "Initial message", [])
+
+      # Try to join as different user
+      other_user = user_fixture()
+
+      socket =
+        LightningWeb.UserSocket
+        |> socket("user_#{other_user.id}", %{current_user: other_user})
+
+      assert {:error, %{reason: "unauthorized"}} =
+               subscribe_and_join(
+                 socket,
+                 AiAssistantChannel,
+                 "ai_assistant:job_code:#{session.id}",
+                 %{}
+               )
+    end
+  end
+
+  describe "list_sessions error cases" do
+    test "returns error when job not found for unsaved job", %{
+      socket: socket,
+      user: user
+    } do
+      # Create session with unsaved job but without proper metadata
+      session =
+        %Lightning.AiAssistant.ChatSession{
+          user_id: user.id,
+          session_type: "job_code",
+          title: "Test",
+          meta: %{}
+        }
+        |> Lightning.Repo.insert!()
+
+      {:ok, _, socket} =
+        subscribe_and_join(
+          socket,
+          AiAssistantChannel,
+          "ai_assistant:job_code:#{session.id}",
+          %{}
+        )
+
+      ref = push(socket, "list_sessions", %{"offset" => 0, "limit" => 20})
+
+      assert_reply ref, :error, %{reason: "Job not found"}
+    end
+
+    test "returns error when project not found for workflow_template", %{
+      socket: socket,
+      user: user
+    } do
+      # Create session without project
+      session =
+        %Lightning.AiAssistant.ChatSession{
+          user_id: user.id,
+          session_type: "workflow_template",
+          title: "Test",
+          meta: %{}
+        }
+        |> Lightning.Repo.insert!()
+
+      {:ok, _, socket} =
+        subscribe_and_join(
+          socket,
+          AiAssistantChannel,
+          "ai_assistant:workflow_template:#{session.id}",
+          %{}
+        )
+
+      ref = push(socket, "list_sessions", %{"offset" => 0, "limit" => 20})
+
+      assert_reply ref, :error, %{reason: "Project not found"}
+    end
+  end
+
+  describe "message status without assistant message" do
+    @tag :capture_log
+    test "handles success status when no assistant message exists", %{
+      socket: socket,
+      job: job,
+      user: user
+    } do
+      {:ok, session} =
+        AiAssistant.create_session(job, user, "Initial message", [])
+
+      {:ok, _, socket} =
+        subscribe_and_join(
+          socket,
+          AiAssistantChannel,
+          "ai_assistant:job_code:#{session.id}",
+          %{}
+        )
+
+      # Create a session with only user messages (no assistant message)
+      session_with_no_assistant =
+        Lightning.Repo.preload(session, :messages, force: true)
+
+      # Delete any assistant messages
+      session_with_no_assistant.messages
+      |> Enum.filter(&(&1.role == :assistant))
+      |> Enum.each(&Lightning.Repo.delete!/1)
+
+      session_with_no_assistant =
+        Lightning.Repo.preload(session, :messages, force: true)
+
+      send(
+        socket.channel_pid,
+        {:ai_assistant, :message_status_changed,
+         %{
+           status: {:success, session_with_no_assistant},
+           session_id: session.id
+         }}
+      )
+
+      # Should not push anything since there's no assistant message
+      refute_push "new_message", _
     end
   end
 end
