@@ -701,12 +701,6 @@ defmodule LightningWeb.AiAssistantChannel do
               workflow_name: nil
             })
         end
-
-      true ->
-        Map.merge(base, %{
-          job_name: "[Unknown Job]",
-          workflow_name: nil
-        })
     end
   end
 
