@@ -154,14 +154,6 @@ defmodule LightningWeb.API.AiAssistantController do
     check_workflow_access(workflow, user)
   end
 
-  defp check_unsaved_job_access(%{job_id: saved_job_id}, user)
-       when not is_nil(saved_job_id) do
-    case Jobs.get_job(saved_job_id) do
-      {:ok, job} -> check_job_access(job, user)
-      {:error, :not_found} -> :ok
-    end
-  end
-
   defp check_unsaved_job_access(_, _user), do: :ok
 
   defp check_workflow_access(workflow, user) do
