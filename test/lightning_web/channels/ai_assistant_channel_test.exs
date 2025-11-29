@@ -2049,6 +2049,63 @@ defmodule LightningWeb.AiAssistantChannelTest do
       assert "must be unique" in errors["content"]
       assert "is already taken" in errors["content"]
     end
+
+    test "flatten_error_value handles non-list values" do
+      # Test the catch-all clause that handles non-list error values
+      # This is defensive code since Ecto.Changeset.traverse_errors always returns lists
+      acc = %{}
+
+      # Test with a raw string
+      result1 =
+        AiAssistantChannel.flatten_error_value(:field, "error string", acc)
+
+      assert result1["field"] == "error string"
+
+      # Test with an atom
+      result2 =
+        AiAssistantChannel.flatten_error_value(:status, :invalid, result1)
+
+      assert result2["status"] == :invalid
+
+      # Test with a number
+      result3 =
+        AiAssistantChannel.flatten_error_value(:code, 404, result2)
+
+      assert result3["code"] == 404
+    end
+
+    test "flatten_error_value handles list without maps" do
+      # Test the first clause when list doesn't contain maps
+      acc = %{}
+
+      result =
+        AiAssistantChannel.flatten_error_value(
+          :errors,
+          ["error1", "error2"],
+          acc
+        )
+
+      assert result["errors"] == ["error1", "error2"]
+    end
+
+    test "flatten_error_value handles list with maps" do
+      # Test the first clause when list contains maps (nested errors)
+      acc = %{}
+
+      result =
+        AiAssistantChannel.flatten_error_value(
+          :items,
+          [
+            %{name: ["can't be blank"]},
+            %{value: ["is invalid"]}
+          ],
+          acc
+        )
+
+      # Should flatten with bracket notation
+      assert result["items[0].name"] == ["can't be blank"]
+      assert result["items[1].value"] == ["is invalid"]
+    end
   end
 
   describe "error formatting in new_message" do

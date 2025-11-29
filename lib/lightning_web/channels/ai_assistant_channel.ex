@@ -591,7 +591,8 @@ defmodule LightningWeb.AiAssistantChannel do
     end)
   end
 
-  defp flatten_error_value(key, list, acc) when is_list(list) do
+  @doc false
+  def flatten_error_value(key, list, acc) when is_list(list) do
     if Enum.any?(list, &is_map/1) do
       flatten_nested_list_errors(key, list, acc)
     else
@@ -599,11 +600,8 @@ defmodule LightningWeb.AiAssistantChannel do
     end
   end
 
-  defp flatten_error_value(key, messages, acc) when is_list(messages) do
-    Map.put(acc, to_string(key), messages)
-  end
-
-  defp flatten_error_value(key, value, acc) do
+  @doc false
+  def flatten_error_value(key, value, acc) do
     Map.put(acc, to_string(key), value)
   end
 
