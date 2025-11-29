@@ -254,7 +254,7 @@ describe('AIAssistantPanel', () => {
       const menuButton = screen.getByLabelText('More options');
       await userEvent.click(menuButton);
 
-      expect(screen.getByText('Chat History')).toBeInTheDocument();
+      expect(screen.getByText('Conversations')).toBeInTheDocument();
       expect(screen.getByText('About the AI Assistant')).toBeInTheDocument();
       expect(
         screen.getByText('OpenFn Responsible AI Policy')
@@ -272,11 +272,11 @@ describe('AIAssistantPanel', () => {
 
       const menuButton = screen.getByLabelText('More options');
       await userEvent.click(menuButton);
-      expect(screen.getByText('Chat History')).toBeInTheDocument();
+      expect(screen.getByText('Conversations')).toBeInTheDocument();
 
       await userEvent.click(menuButton);
       await waitFor(() => {
-        expect(screen.queryByText('Chat History')).not.toBeInTheDocument();
+        expect(screen.queryByText('Conversations')).not.toBeInTheDocument();
       });
     });
 
@@ -293,7 +293,7 @@ describe('AIAssistantPanel', () => {
       await userEvent.click(menuButton);
 
       await waitFor(() => {
-        expect(screen.getByText('Chat History')).toBeInTheDocument();
+        expect(screen.getByText('Conversations')).toBeInTheDocument();
       });
 
       // Click outside menu - use mousedown event which the component listens for
@@ -309,7 +309,7 @@ describe('AIAssistantPanel', () => {
       document.dispatchEvent(mouseDownEvent);
 
       await waitFor(() => {
-        expect(screen.queryByText('Chat History')).not.toBeInTheDocument();
+        expect(screen.queryByText('Conversations')).not.toBeInTheDocument();
       });
     });
 
@@ -447,14 +447,14 @@ describe('AIAssistantPanel', () => {
       await userEvent.click(menuButton);
 
       // Menu should be open
-      expect(screen.getByText('Chat History')).toBeInTheDocument();
+      expect(screen.getByText('Conversations')).toBeInTheDocument();
 
       const aboutButton = screen.getByText('About the AI Assistant');
       await userEvent.click(aboutButton);
 
       // Menu should be closed, About modal open
       await waitFor(() => {
-        expect(screen.queryByText('Chat History')).not.toBeInTheDocument();
+        expect(screen.queryByText('Conversations')).not.toBeInTheDocument();
       });
     });
   });
