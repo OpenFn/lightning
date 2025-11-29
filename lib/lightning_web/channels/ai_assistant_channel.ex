@@ -648,9 +648,6 @@ defmodule LightningWeb.AiAssistantChannel do
 
       "workflow_template" ->
         format_workflow_template_session(base, session)
-
-      _ ->
-        base
     end
   end
 
