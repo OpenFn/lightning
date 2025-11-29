@@ -25,9 +25,6 @@ import type {
 } from '../../../js/collaborative-editor/types/ai-assistant';
 import { createMockAIMessage, createMockAISession } from './aiAssistantHelpers';
 
-/**
- * Pagination metadata for session lists
- */
 export interface PaginationMeta {
   total_count: number;
   has_next_page: boolean;
@@ -338,7 +335,6 @@ export function createMockAIChannelForScenario(
       break;
 
     case 'streaming_message':
-      // For streaming, we'll emit multiple updates
       channel.push = vi.fn(() => ({
         receive: vi.fn((status, callback) => {
           if (status === 'ok') {
@@ -350,7 +346,6 @@ export function createMockAIChannelForScenario(
               },
             });
 
-            // Simulate streaming chunks
             setTimeout(() => {
               emitMessageUpdatedEvent(channel, {
                 id: 'msg-stream',
@@ -403,13 +398,11 @@ export async function simulateMessageExchange(
   assistantResponse: string,
   delay: number = 100
 ): Promise<void> {
-  // First, configure push to accept the user message
   mockNewMessageResponse(channel, {
     role: 'user',
     content: userMessage,
   });
 
-  // After a delay, emit the assistant response
   return new Promise(resolve => {
     setTimeout(() => {
       emitNewMessageEvent(channel, {
