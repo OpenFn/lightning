@@ -168,7 +168,6 @@ export function WorkflowEditor() {
 
   const [showLeftPanel, setShowLeftPanel] = useState(isNewWorkflow);
 
-  // Close left panel when workflow transitions from new to existing
   useEffect(() => {
     if (!isNewWorkflow && showLeftPanel) {
       setShowLeftPanel(false);
@@ -227,29 +226,25 @@ export function WorkflowEditor() {
     handleCloseLeftPanel();
   };
 
-  // CMD+Enter: Open run panel or run workflow
   useKeyboardShortcut(
     'Control+Enter, Meta+Enter',
     () => {
-      // If run panel is already open, let the ManualRunPanel handle it
       if (isRunPanelOpen) {
         return;
       }
 
-      // Open run panel based on current selection
       if (currentNode.type === 'job' && currentNode.node) {
         openRunPanel({ jobId: currentNode.node.id });
       } else if (currentNode.type === 'trigger' && currentNode.node) {
         openRunPanel({ triggerId: currentNode.node.id });
       } else {
-        // No selection - open from first trigger
         const firstTrigger = workflow.triggers[0];
         if (firstTrigger?.id) {
           openRunPanel({ triggerId: firstTrigger.id });
         }
       }
     },
-    0, // GLOBAL priority
+    0,
     {
       enabled: !isRunPanelOpen,
     }
