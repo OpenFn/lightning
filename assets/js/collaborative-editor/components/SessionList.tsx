@@ -48,11 +48,9 @@ export function SessionList({
     store.withSelector(state => state.sessionListPagination)
   );
 
-  // Filter and sort sessions
   const filteredSessions = useMemo(() => {
     let filtered = sessionList;
 
-    // Apply search filter
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
       filtered = filtered.filter(session =>
@@ -60,15 +58,14 @@ export function SessionList({
       );
     }
 
-    // Apply sorting by time
     const sorted = [...filtered].sort((a, b) => {
       const timeA = new Date(a.updated_at).getTime();
       const timeB = new Date(b.updated_at).getTime();
 
       if (sortOrder === 'desc') {
-        return timeB - timeA; // Most recent first
+        return timeB - timeA;
       } else {
-        return timeA - timeB; // Oldest first
+        return timeA - timeB;
       }
     });
 
@@ -77,7 +74,6 @@ export function SessionList({
 
   const handleLoadMore = () => {
     if (pagination && pagination.has_next_page) {
-      // Load more sessions starting from current list length
       void store.loadSessionList({
         offset: sessionList.length,
         limit: 20,
@@ -109,10 +105,8 @@ export function SessionList({
 
   return (
     <div className="flex flex-col h-full overflow-hidden bg-white">
-      {/* Search and Sort Controls */}
       <div className="flex-none px-6 pt-3 pb-2">
         <div className="flex items-center gap-2">
-          {/* Search Input */}
           <div className="relative flex-1">
             <span className="absolute left-3 top-1/2 -translate-y-1/2 hero-magnifying-glass h-4 w-4 text-gray-400" />
             <input
@@ -140,7 +134,6 @@ export function SessionList({
             )}
           </div>
 
-          {/* Sort Toggle */}
           <button
             type="button"
             onClick={() => setSortOrder(sortOrder === 'desc' ? 'asc' : 'desc')}
@@ -193,13 +186,11 @@ export function SessionList({
                     : 'hover:bg-gray-50 active:bg-gray-100'
                 )}
               >
-                {/* Active indicator dot */}
                 {session.id === currentSessionId && (
                   <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-primary-500 rounded-r-full" />
                 )}
 
                 <div className="min-w-0 flex-1 pr-0">
-                  {/* Title */}
                   <h4
                     className={cn(
                       'text-sm font-medium truncate mb-1.5 leading-snug',
@@ -211,7 +202,6 @@ export function SessionList({
                     {session.title}
                   </h4>
 
-                  {/* Metadata row */}
                   <div className="flex items-center justify-between gap-3">
                     <span
                       className={cn(
@@ -242,7 +232,6 @@ export function SessionList({
               </button>
             ))}
 
-            {/* Load More Button */}
             {pagination && pagination.has_next_page && (
               <button
                 onClick={handleLoadMore}
@@ -276,9 +265,6 @@ export function SessionList({
   );
 }
 
-/**
- * Format timestamp as relative time (e.g., "2 hours ago")
- */
 function formatRelativeTime(timestamp: string): string {
   const date = new Date(timestamp);
   const now = new Date();
@@ -297,7 +283,6 @@ function formatRelativeTime(timestamp: string): string {
   } else if (diffDay < 7) {
     return `${diffDay} ${diffDay === 1 ? 'day' : 'days'} ago`;
   } else {
-    // Format as date for older sessions
     return date.toLocaleDateString('en-US', {
       month: 'short',
       day: 'numeric',
