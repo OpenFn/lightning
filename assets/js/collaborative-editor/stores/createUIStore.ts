@@ -127,7 +127,6 @@ export const createUIStore = (): UIStore => {
   // ===========================================================================
 
   const openRunPanel = (context: { jobId?: string; triggerId?: string }) => {
-    logger.debug('Opening run panel', { context });
     state = produce(state, draft => {
       draft.runPanelContext = context;
       draft.runPanelOpen = true;
@@ -136,7 +135,6 @@ export const createUIStore = (): UIStore => {
   };
 
   const closeRunPanel = () => {
-    logger.debug('Closing run panel');
     state = produce(state, draft => {
       draft.runPanelContext = null;
       draft.runPanelOpen = false;
@@ -145,7 +143,6 @@ export const createUIStore = (): UIStore => {
   };
 
   const openGitHubSyncModal = () => {
-    logger.debug('Opening GitHub sync modal');
     state = produce(state, draft => {
       draft.githubSyncModalOpen = true;
     });
@@ -153,7 +150,6 @@ export const createUIStore = (): UIStore => {
   };
 
   const closeGitHubSyncModal = () => {
-    logger.debug('Closing GitHub sync modal');
     state = produce(state, draft => {
       draft.githubSyncModalOpen = false;
     });
@@ -161,7 +157,6 @@ export const createUIStore = (): UIStore => {
   };
 
   const openAIAssistantPanel = () => {
-    logger.debug('Opening AI Assistant panel');
     state = produce(state, draft => {
       draft.aiAssistantPanelOpen = true;
     });
@@ -169,7 +164,6 @@ export const createUIStore = (): UIStore => {
   };
 
   const closeAIAssistantPanel = () => {
-    logger.debug('Closing AI Assistant panel');
     state = produce(state, draft => {
       draft.aiAssistantPanelOpen = false;
     });
@@ -178,7 +172,6 @@ export const createUIStore = (): UIStore => {
 
   const toggleAIAssistantPanel = () => {
     const isOpen = !state.aiAssistantPanelOpen;
-    logger.debug(`Toggling AI Assistant panel: ${isOpen ? 'open' : 'closed'}`);
     state = produce(state, draft => {
       draft.aiAssistantPanelOpen = isOpen;
     });
