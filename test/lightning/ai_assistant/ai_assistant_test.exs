@@ -1699,6 +1699,125 @@ defmodule Lightning.AiAssistantTest do
     end
   end
 
+  describe "enrich_session_with_job_context/1 edge cases" do
+    test "enriches session with unsaved_job metadata", %{user: user} do
+      session =
+        insert(:chat_session,
+          user: user,
+          session_type: "job_code",
+          job_id: nil,
+          meta: %{
+            "unsaved_job" => %{
+              "id" => Ecto.UUID.generate(),
+              "body" => "console.log('test');",
+              "adaptor" => "@openfn/language-common@1.0.0"
+            }
+          }
+        )
+
+      enriched = AiAssistant.enrich_session_with_job_context(session)
+
+      assert enriched.expression == "console.log('test');"
+      assert enriched.adaptor == "@openfn/language-common@1.0.0"
+    end
+
+    test "returns session unchanged when no context available", %{user: user} do
+      session =
+        insert(:chat_session,
+          user: user,
+          session_type: "job_code",
+          job_id: nil,
+          meta: %{}
+        )
+
+      enriched = AiAssistant.enrich_session_with_job_context(session)
+
+      assert enriched == session
+      assert enriched.expression == nil
+      assert enriched.adaptor == nil
+    end
+  end
+
+  describe "list_sessions/3 with Project resource" do
+    test "lists workflow template sessions for project", %{
+      user: user,
+      project: project
+    } do
+      workflow = insert(:workflow, project: project)
+
+      _session1 =
+        insert(:chat_session,
+          user: user,
+          project: project,
+          session_type: "workflow_template",
+          workflow_id: workflow.id
+        )
+
+      _session2 =
+        insert(:chat_session,
+          user: user,
+          project: project,
+          session_type: "workflow_template",
+          workflow_id: nil
+        )
+
+      # List sessions using Project struct
+      {sessions, _meta} = AiAssistant.list_sessions(project, user, [])
+
+      assert length(sessions) == 2
+    end
+
+    test "filters workflow template sessions by workflow", %{
+      user: user,
+      project: project
+    } do
+      workflow1 = insert(:workflow, project: project)
+      workflow2 = insert(:workflow, project: project)
+
+      _session1 =
+        insert(:chat_session,
+          user: user,
+          project: project,
+          session_type: "workflow_template",
+          workflow_id: workflow1.id
+        )
+
+      _session2 =
+        insert(:chat_session,
+          user: user,
+          project: project,
+          session_type: "workflow_template",
+          workflow_id: workflow2.id
+        )
+
+      # Filter by specific workflow
+      {sessions, _meta} =
+        AiAssistant.list_sessions(project, user, workflow: workflow1)
+
+      assert length(sessions) == 1
+      assert hd(sessions).workflow_id == workflow1.id
+    end
+  end
+
+  describe "associate_workflow/2" do
+    test "associates workflow with session", %{user: user, project: project} do
+      workflow = insert(:workflow, project: project)
+
+      session =
+        insert(:chat_session,
+          user: user,
+          project: project,
+          session_type: "workflow_template",
+          workflow_id: nil
+        )
+
+      assert {:ok, updated_session} =
+               AiAssistant.associate_workflow(session, workflow)
+
+      assert updated_session.workflow_id == workflow.id
+    end
+  end
+
   describe "query_workflow/3" do
     test "queries workflow chat service", %{user: user, project: project} do
       session =

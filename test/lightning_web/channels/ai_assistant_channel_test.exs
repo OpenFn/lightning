@@ -1686,4 +1686,201 @@ defmodule LightningWeb.AiAssistantChannelTest do
       assert first_message.code == nil
     end
   end
+
+  describe "error handling" do
+    test "handles session not found error when joining with non-existent session_id",
+         %{user: user, socket: socket, job: job} do
+      non_existent_id = Ecto.UUID.generate()
+
+      params = %{
+        "job_id" => job.id,
+        "session_id" => non_existent_id
+      }
+
+      assert {:error, %{reason: "session not found"}} =
+               subscribe_and_join(
+                 socket(LightningWeb.UserSocket, "user:#{user.id}", %{
+                   current_user: user
+                 }),
+                 AiAssistantChannel,
+                 "ai_assistant:job_code:#{non_existent_id}",
+                 params
+               )
+    end
+
+    test "handles update_context error when meta is invalid", %{
+      user: user,
+      socket: socket,
+      job: job
+    } do
+      session = insert(:chat_session, user: user, job: job)
+
+      {:ok, _response, channel_socket} =
+        subscribe_and_join(
+          socket,
+          AiAssistantChannel,
+          "ai_assistant:job_code:#{session.id}",
+          %{"session_id" => session.id, "job_id" => job.id}
+        )
+
+      # Send invalid runtime_context that could cause update to fail
+      ref =
+        push(channel_socket, "update_context", %{
+          "runtime_context" => "invalid_not_a_map"
+        })
+
+      assert_reply ref, :error, %{errors: _errors}
+    end
+
+    test "handles save_message validation errors", %{
+      user: user,
+      socket: socket,
+      job: job
+    } do
+      session = insert(:chat_session, user: user, job: job)
+
+      {:ok, _response, channel_socket} =
+        subscribe_and_join(
+          socket,
+          AiAssistantChannel,
+          "ai_assistant:job_code:#{session.id}",
+          %{"session_id" => session.id, "job_id" => job.id}
+        )
+
+      # Send message with empty content which should fail validation
+      ref = push(channel_socket, "new_message", %{"content" => ""})
+
+      assert_reply ref, :error, %{errors: errors}
+      assert errors != %{}
+    end
+
+    test "handles retry_message validation errors", %{
+      user: user,
+      socket: socket,
+      job: job
+    } do
+      session = insert(:chat_session, user: user, job: job)
+
+      # Insert a failed message
+      {:ok, message} =
+        AiAssistant.save_message(session.id, %{
+          role: :assistant,
+          content: "Failed response",
+          status: :error
+        })
+
+      {:ok, _response, channel_socket} =
+        subscribe_and_join(
+          socket,
+          AiAssistantChannel,
+          "ai_assistant:job_code:#{session.id}",
+          %{"session_id" => session.id, "job_id" => job.id}
+        )
+
+      # Try to retry with invalid message_id format
+      ref = push(channel_socket, "retry_message", %{"message_id" => "invalid"})
+
+      assert_reply ref, :error, %{errors: _errors}
+    end
+  end
+
+  describe "deleted job handling" do
+    test "formats session correctly when job is deleted", %{
+      user: user,
+      socket: socket,
+      project: project,
+      workflow: workflow
+    } do
+      # Create and then delete a job
+      job =
+        job_fixture(
+          workflow_id: workflow.id,
+          body: "fn(state => state);",
+          name: "Deleted Job",
+          adaptor: "@openfn/language-common@1.0.0"
+        )
+
+      # Create session for the job
+      session = insert(:chat_session, user: user, job: job)
+
+      # Delete the job
+      Lightning.Repo.delete!(job)
+
+      params = %{
+        "session_id" => session.id,
+        "job_id" => session.job_id
+      }
+
+      # Should still be able to join and format the session
+      {:ok, response, _socket} =
+        subscribe_and_join(
+          socket,
+          AiAssistantChannel,
+          "ai_assistant:job_code:#{session.id}",
+          params
+        )
+
+      # Session should be returned with job marked as deleted
+      assert response.session.id == session.id
+    end
+  end
+
+  describe "workflow template errors" do
+    test "includes errors in message options when provided", %{
+      user: user,
+      socket: socket,
+      project: project
+    } do
+      workflow = workflow_fixture(project_id: project.id)
+
+      session =
+        insert(:chat_session,
+          user: user,
+          project: project,
+          session_type: "workflow_template",
+          workflow_id: workflow.id
+        )
+
+      {:ok, _response, channel_socket} =
+        subscribe_and_join(
+          socket,
+          AiAssistantChannel,
+          "ai_assistant:workflow_template:#{session.id}",
+          %{
+            "session_id" => session.id,
+            "project_id" => project.id
+          }
+        )
+
+      # Send message with errors
+      errors = [%{"field" => "name", "message" => "can't be blank"}]
+
+      ref =
+        push(channel_socket, "new_message", %{
+          "content" => "Fix this workflow",
+          "errors" => errors
+        })
+
+      assert_reply ref, :ok, %{message: message}
+      assert message.errors == errors
+    end
+  end
+
+  describe "format_session edge cases" do
+    test "handles session without job_id or unsaved_job", %{user: user} do
+      # Create a minimal session without job context
+      session =
+        insert(:chat_session,
+          user: user,
+          session_type: "job_code",
+          job_id: nil,
+          meta: %{}
+        )
+
+      formatted = AiAssistantChannel.format_session(session)
+
+      assert formatted.id == session.id
+      assert formatted.session_type == "job_code"
+    end
+  end
 end

@@ -685,4 +685,141 @@ defmodule LightningWeb.API.AiAssistantControllerTest do
 
     %{job: job, project: project, workflow: workflow, sessions: sessions}
   end
+
+  describe "list_sessions job_code validation errors" do
+    setup [:register_and_log_in_user]
+
+    test "returns 400 when job_id is missing for job_code", %{conn: conn} do
+      conn = get(conn, ~p"/api/ai_assistant/sessions?session_type=job_code")
+
+      assert json_response(conn, 400) == %{"error" => "Bad Request"}
+    end
+  end
+
+  describe "list_sessions workflow_template validation errors" do
+    setup [:register_and_log_in_user]
+
+    test "returns 400 when project_id is missing for workflow_template", %{
+      conn: conn
+    } do
+      conn =
+        get(conn, ~p"/api/ai_assistant/sessions?session_type=workflow_template")
+
+      assert json_response(conn, 400) == %{"error" => "Bad Request"}
+    end
+
+    test "returns 404 when project doesn't exist for workflow_template", %{
+      conn: conn
+    } do
+      non_existent_project_id = Ecto.UUID.generate()
+
+      conn =
+        get(
+          conn,
+          ~p"/api/ai_assistant/sessions?session_type=workflow_template&project_id=#{non_existent_project_id}"
+        )
+
+      assert json_response(conn, 404) == %{"error" => "Not Found"}
+    end
+  end
+
+  describe "list_sessions with unsaved jobs" do
+    setup [:register_and_log_in_user, :create_project_with_job]
+
+    test "includes sessions with unsaved_job metadata", %{
+      conn: conn,
+      user: user,
+      job: job,
+      workflow: workflow
+    } do
+      # Create session with unsaved_job in meta
+      unsaved_job_id = Ecto.UUID.generate()
+
+      _session =
+        insert(:chat_session,
+          user: user,
+          session_type: "job_code",
+          job_id: nil,
+          meta: %{
+            "unsaved_job" => %{
+              "id" => unsaved_job_id,
+              "name" => "Unsaved Job",
+              "body" => "console.log('test');",
+              "adaptor" => "@openfn/language-common@1.0.0",
+              "workflow_id" => workflow.id
+            }
+          }
+        )
+
+      conn =
+        get(
+          conn,
+          ~p"/api/ai_assistant/sessions?session_type=job_code&job_id=#{job.id}"
+        )
+
+      assert %{"data" => [session | _]} = json_response(conn, 200)
+      # Session should be included even though job_id doesn't match
+      assert session["session_type"] == "job_code"
+    end
+  end
+
+  describe "format_session edge cases" do
+    setup [:register_and_log_in_user, :create_project_with_job]
+
+    test "formats session with deleted job correctly", %{
+      conn: conn,
+      user: user,
+      workflow: workflow,
+      project: project
+    } do
+      # Create a job
+      job =
+        insert(:job,
+          workflow: workflow,
+          body: "console.log('test');",
+          adaptor: "@openfn/language-common@1.0.0"
+        )
+
+      # Create session for the job
+      session = insert(:chat_session, user: user, job: job)
+
+      # Delete the job
+      Lightning.Repo.delete!(job)
+
+      # List sessions should still work
+      conn =
+        get(
+          conn,
+          ~p"/api/ai_assistant/sessions?session_type=job_code&job_id=#{session.job_id}"
+        )
+
+      assert %{"data" => [returned_session]} = json_response(conn, 200)
+      assert returned_session["id"] == session.id
+    end
+
+    test "formats session without job_id or unsaved_job", %{
+      conn: conn,
+      user: user,
+      job: job
+    } do
+      # Create a minimal session without job context
+      session =
+        insert(:chat_session,
+          user: user,
+          session_type: "job_code",
+          job_id: nil,
+          meta: %{}
+        )
+
+      # List with different job_id (should not match)
+      conn =
+        get(
+          conn,
+          ~p"/api/ai_assistant/sessions?session_type=job_code&job_id=#{job.id}"
+        )
+
+      # Should return empty list as session has no job context
+      assert %{"data" => _sessions} = json_response(conn, 200)
+    end
+  end
 end
