@@ -9,13 +9,11 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { cn } from '#/utils/cn';
 
-// Register languages we want to support
 hljs.registerLanguage('javascript', javascript);
 hljs.registerLanguage('json', json);
 hljs.registerLanguage('yaml', yaml);
 hljs.registerLanguage('elixir', elixir);
 
-// Configure marked
 marked.setOptions({
   gfm: true,
   breaks: true,
@@ -55,7 +53,6 @@ const MarkdownContent = ({
     }
   }, [content]);
 
-  // Add copy/add buttons to code blocks after render
   useEffect(() => {
     if (!containerRef.current) return;
 
@@ -63,16 +60,14 @@ const MarkdownContent = ({
 
     codeBlocks.forEach(codeElement => {
       const preElement = codeElement.parentElement;
-      if (!preElement || preElement.querySelector('.code-actions')) return; // Already has buttons
+      if (!preElement || preElement.querySelector('.code-actions')) return;
 
       const code = codeElement.textContent || '';
 
-      // Create button container
       const buttonContainer = document.createElement('div');
       buttonContainer.className =
         'code-actions absolute top-2 right-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity';
 
-      // Create copy button
       const copyButton = document.createElement('button');
       copyButton.type = 'button';
       copyButton.className =
@@ -97,7 +92,6 @@ const MarkdownContent = ({
 
       buttonContainer.appendChild(copyButton);
 
-      // Create add button if in job mode
       if (showAddButtons) {
         const addButton = document.createElement('button');
         addButton.type = 'button';
@@ -124,7 +118,6 @@ const MarkdownContent = ({
         buttonContainer.appendChild(addButton);
       }
 
-      // Make pre element relative for absolute positioning
       preElement.style.position = 'relative';
       preElement.classList.add('group');
       preElement.appendChild(buttonContainer);
@@ -267,10 +260,6 @@ const CodeActionButtons = ({
   );
 };
 
-/**
- * Format timestamp for display
- * Shows relative time (e.g., "2 minutes ago") or date if older than 24h
- */
 const formatTimestamp = (isoTimestamp: string): string => {
   const date = new Date(isoTimestamp);
   const now = new Date();
@@ -284,7 +273,6 @@ const formatTimestamp = (isoTimestamp: string): string => {
   if (diffHours < 24) return `${diffHours}h ago`;
   if (diffDays < 7) return `${diffDays}d ago`;
 
-  // Format as date if older than a week
   return date.toLocaleDateString(undefined, {
     month: 'short',
     day: 'numeric',
@@ -320,8 +308,8 @@ interface MessageListProps {
   isLoading?: boolean;
   onApplyWorkflow?: ((yaml: string, messageId: string) => void) | undefined;
   applyingMessageId?: string | null | undefined;
-  showAddButtons?: boolean; // Show ADD buttons for code snippets (job_code mode)
-  onRetryMessage?: (messageId: string) => void; // Retry failed messages
+  showAddButtons?: boolean;
+  onRetryMessage?: (messageId: string) => void;
 }
 
 export function MessageList({
@@ -380,18 +368,14 @@ export function MessageList({
         >
           <div className="max-w-3xl mx-auto">
             {message.role === 'assistant' ? (
-              // Assistant Message - Full Width
               <div>
-                {/* Message Content */}
                 <div className="space-y-3">
-                  {/* Message Text */}
                   <MarkdownContent
                     content={message.content}
                     showAddButtons={showAddButtons}
                     className="text-sm text-gray-700 leading-relaxed prose prose-sm max-w-none prose-headings:font-medium prose-h1:text-lg prose-h1:text-gray-900 prose-h1:mb-3 prose-h2:text-base prose-h2:text-gray-900 prose-h2:mb-2 prose-h2:mt-5 prose-h3:text-sm prose-h3:text-gray-900 prose-h3:mb-2 prose-h3:font-semibold prose-p:mb-3 prose-p:last:mb-0 prose-p:text-gray-700 prose-ul:list-disc prose-ul:pl-5 prose-ul:mb-3 prose-ul:space-y-1 prose-ol:list-decimal prose-ol:pl-5 prose-ol:mb-3 prose-ol:space-y-1 prose-li:text-gray-700 prose-strong:font-medium prose-strong:text-gray-900 prose-em:italic prose-a:text-primary-600 prose-a:hover:text-primary-700 prose-a:underline prose-a:font-normal prose-code:px-1.5 prose-code:py-0.5 prose-code:bg-gray-100 prose-code:text-gray-800 prose-code:rounded prose-code:text-xs prose-code:font-mono prose-code:font-normal prose-pre:rounded-md prose-pre:bg-slate-100 prose-pre:border-2 prose-pre:border-slate-200 prose-pre:text-slate-800 prose-pre:p-4 prose-pre:overflow-x-auto prose-pre:text-xs prose-pre:font-mono prose-pre:mb-4"
                   />
 
-                  {/* Code Block - Only show for assistant messages */}
                   {message.code && (
                     <div className="rounded-lg overflow-hidden border border-gray-200 bg-white">
                       <div
@@ -446,7 +430,6 @@ export function MessageList({
                     </div>
                   )}
 
-                  {/* Error State */}
                   {message.status === 'error' && (
                     <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-red-50 border border-red-200">
                       <span className="hero-exclamation-circle h-4 w-4 text-red-600 flex-shrink-0" />
@@ -472,7 +455,6 @@ export function MessageList({
                     </div>
                   )}
 
-                  {/* Processing State */}
                   {message.status === 'processing' && (
                     <div className="flex items-center gap-2 text-gray-600">
                       <div className="flex items-center gap-1">
@@ -483,7 +465,6 @@ export function MessageList({
                     </div>
                   )}
 
-                  {/* Timestamp */}
                   <div className="mt-2">
                     <span className="text-xs text-gray-400">
                       {formatTimestamp(message.inserted_at)}
@@ -492,7 +473,6 @@ export function MessageList({
                 </div>
               </div>
             ) : (
-              // User Message - Bubble Style
               <div className="flex justify-end">
                 <div className="flex flex-col items-end max-w-[85%]">
                   <div className="rounded-2xl bg-gray-100 border border-gray-200 px-4 py-3">
@@ -503,7 +483,6 @@ export function MessageList({
                     />
                   </div>
 
-                  {/* Error State for User Messages */}
                   {message.status === 'error' && (
                     <div className="flex items-center gap-2 mt-2 px-3 py-1.5 rounded-lg bg-red-50 border border-red-200">
                       <span className="hero-exclamation-circle h-3.5 w-3.5 text-red-600" />
@@ -529,7 +508,6 @@ export function MessageList({
                     </div>
                   )}
 
-                  {/* Timestamp */}
                   <span className="text-xs text-gray-400 mt-1">
                     {formatTimestamp(message.inserted_at)}
                   </span>
@@ -540,7 +518,6 @@ export function MessageList({
         </div>
       ))}
 
-      {/* Loading Indicator - Shows while waiting for assistant response */}
       {isLoading && (
         <div ref={loadingRef} className="group px-6 py-4 bg-gray-50/50">
           <div className="max-w-3xl mx-auto">
@@ -553,7 +530,6 @@ export function MessageList({
         </div>
       )}
 
-      {/* Scroll anchor - invisible element at the bottom */}
       <div ref={messagesEndRef} />
     </div>
   );
