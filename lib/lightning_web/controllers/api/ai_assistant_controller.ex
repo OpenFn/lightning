@@ -226,9 +226,6 @@ defmodule LightningWeb.API.AiAssistantController do
               workflow_name: nil
             })
         end
-
-      true ->
-        base
     end
   end
 
