@@ -78,13 +78,12 @@ function AIAssistantPanelWrapper() {
   const { closeAIAssistantPanel, toggleAIAssistantPanel } = useUICommands();
   const { updateSearchParams, searchParams } = useURLState();
 
-  // Keyboard shortcut: Ctrl/Cmd + K to toggle AI Assistant
   useKeyboardShortcut(
     '$mod+k',
     () => {
       toggleAIAssistantPanel();
     },
-    0 // Default priority
+    0
   );
 
   const aiStore = useAIStore();
@@ -103,7 +102,6 @@ function AIAssistantPanelWrapper() {
   const project = useProject();
   const workflow = useWorkflowState(state => state.workflow);
 
-  // Get workflow data for YAML serialization
   const jobs = useWorkflowState(state => state.jobs);
   const triggers = useWorkflowState(state => state.triggers);
   const edges = useWorkflowState(state => state.edges);
@@ -118,7 +116,6 @@ function AIAssistantPanelWrapper() {
   const startWidthRef = useRef<number>(0);
   const isSyncingRef = useRef(false);
 
-  // Sync store state to URL
   useEffect(() => {
     if (isSyncingRef.current) return;
 
@@ -164,35 +161,27 @@ function AIAssistantPanelWrapper() {
     startWidthRef.current = width;
   };
 
-  // Detect current AI mode (job_code or workflow_template)
   const aiMode = useAIMode();
 
-  // Refs to stabilize mode, sessionId, and jobId - prevent effect re-runs on every workflow change
   const prevModeRef = useRef<string | null>(null);
   const prevSessionIdRef = useRef<string | null>(null);
   const prevJobIdRef = useRef<string | null>(null);
 
-  // Get session ID from URL params - ONLY read param that matches current mode
-  // w-chat for workflow_template mode, j-chat for job_code mode
   const sessionIdFromURL = useMemo(() => {
     if (!aiMode) return null;
 
-    // Get the parameter name for current mode
     const paramName = aiMode.mode === 'workflow_template' ? 'w-chat' : 'j-chat';
     const sessionId = searchParams.get(paramName);
 
     return sessionId;
   }, [aiMode, searchParams]);
 
-  // Clear session URL param when job/mode changes
-  // This is separate from the main effect to avoid circular dependencies
   useEffect(() => {
     if (!isAIAssistantPanelOpen || !aiMode) return;
 
     const state = aiStore.getSnapshot();
     const { mode, context } = aiMode;
 
-    // Check if we're switching modes or jobs
     const isModeSwitch = state.sessionType && state.sessionType !== mode;
     const jobIdChanged =
       mode === 'job_code' &&
@@ -201,7 +190,6 @@ function AIAssistantPanelWrapper() {
         state.jobCodeContext.job_id;
 
     if (isModeSwitch || jobIdChanged) {
-      // Clear BOTH params to ensure we start fresh
       updateSearchParams({
         'w-chat': null,
         'j-chat': null,
@@ -209,8 +197,6 @@ function AIAssistantPanelWrapper() {
     }
   }, [isAIAssistantPanelOpen, aiMode, updateSearchParams, aiStore]);
 
-  // Single unified effect for context initialization and session loading
-  // This runs ONCE when panel opens or mode changes
   useEffect(() => {
     if (!isAIAssistantPanelOpen || !aiMode) {
       prevModeRef.current = null;
@@ -222,13 +208,11 @@ function AIAssistantPanelWrapper() {
     const state = aiStore.getSnapshot();
     const { mode, context } = aiMode;
 
-    // Extract current job ID (if in job_code mode)
     const currentJobId =
       mode === 'job_code'
         ? (context as import('./types/ai-assistant').JobCodeContext).job_id
         : null;
 
-    // Only run if mode, sessionId, or jobId actually changed
     const modeChanged = prevModeRef.current !== mode;
     const sessionIdChanged = prevSessionIdRef.current !== sessionIdFromURL;
     const jobIdChangedFromPrev = prevJobIdRef.current !== currentJobId;
@@ -239,7 +223,6 @@ function AIAssistantPanelWrapper() {
       !jobIdChangedFromPrev &&
       prevModeRef.current !== null
     ) {
-      // Mode, session, and job unchanged - skip this run
       return;
     }
 
@@ -251,17 +234,15 @@ function AIAssistantPanelWrapper() {
     const isModeSwitch = state.sessionType && state.sessionType !== mode;
 
     if (isModeSwitch) {
-      // Disconnect and clear everything from the old mode
       if (state.connectionState !== 'disconnected') {
         aiStore.disconnect();
       }
       aiStore._clearSession();
-      aiStore._clearSessionList(); // Clear sessions and show loading
+      aiStore._clearSessionList();
     }
 
     // STEP 2: Initialize context for current mode
     // This MUST happen before any session loading
-    // Also check if the context has changed (e.g., switching between jobs)
     const jobIdChanged =
       mode === 'job_code' &&
       state.jobCodeContext &&
@@ -275,9 +256,7 @@ function AIAssistantPanelWrapper() {
       jobIdChanged;
 
     if (needsContextInit || isModeSwitch) {
-      // If job changed OR mode switched, clear session and session list
       if (jobIdChanged || isModeSwitch) {
-        // Disconnect and clear session data
         if (state.connectionState !== 'disconnected') {
           aiStore.disconnect();
         }
@@ -285,9 +264,8 @@ function AIAssistantPanelWrapper() {
         aiStore._clearSessionList();
       }
 
-      // Set context immediately and synchronously
       aiStore.connect(mode, context, undefined);
-      aiStore.disconnect(); // Just set context, don't actually connect
+      aiStore.disconnect();
     }
 
     // STEP 3: Load session if there's one in URL, otherwise we're done
@@ -297,8 +275,6 @@ function AIAssistantPanelWrapper() {
     }
 
     // STEP 4: Connect to the session from URL
-
-    // Add workflow YAML for workflow_template mode
     let finalContext = context;
     if (mode === 'workflow_template' && workflow && jobs.length > 0) {
       try {
@@ -342,7 +318,6 @@ function AIAssistantPanelWrapper() {
       }
     }
 
-    // Connect with session ID from URL
     aiStore.connect(mode, finalContext, sessionIdFromURL);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
@@ -355,11 +330,9 @@ function AIAssistantPanelWrapper() {
     // Including these would cause reconnections on every Y.js edit
   ]);
 
-  // Sync session ID to URL params - matches legacy editor behavior
   useEffect(() => {
     if (!sessionId || !aiMode) return;
 
-    // Get the session type from store to verify it matches current mode
     const state = aiStore.getSnapshot();
     const sessionType = state.sessionType;
 
@@ -369,22 +342,17 @@ function AIAssistantPanelWrapper() {
       return;
     }
 
-    // Get parameter name for current mode
     const currentParamName =
       aiMode.mode === 'workflow_template' ? 'w-chat' : 'j-chat';
     const currentValue = searchParams.get(currentParamName);
 
-    // Only update if session ID changed
     if (currentValue !== sessionId) {
       updateSearchParams({
         [currentParamName]: sessionId,
-        // NOTE: We do NOT clear the other mode's param anymore
-        // Both params can coexist in the URL
       });
     }
   }, [sessionId, aiMode, searchParams, updateSearchParams, aiStore]);
 
-  // Disconnect when panel closes and clear URL params
   useEffect(() => {
     if (!isAIAssistantPanelOpen) {
       aiStore.disconnect();
@@ -395,12 +363,7 @@ function AIAssistantPanelWrapper() {
     }
   }, [isAIAssistantPanelOpen, aiStore, updateSearchParams]);
 
-  // Watch for job context changes (adaptor, body, name) and update AI Assistant
   useEffect(() => {
-    // Only track changes when:
-    // 1. Panel is open
-    // 2. In job_code mode
-    // 3. Connected to a session
     if (
       !isAIAssistantPanelOpen ||
       !aiMode ||
@@ -428,7 +391,6 @@ function AIAssistantPanelWrapper() {
     updateContext(contextUpdate);
   }, [isAIAssistantPanelOpen, aiMode, sessionId, updateContext]);
 
-  // Handler for starting a new conversation
   const handleNewConversation = useCallback(() => {
     if (!project) return;
 
@@ -436,8 +398,6 @@ function AIAssistantPanelWrapper() {
     aiStore.clearSession();
     aiStore.disconnect();
 
-    // The useEffect above will reconnect automatically when panel reopens
-    // For now, just manually trigger reconnect after a brief delay
     setTimeout(() => {
       const state = aiStore.getSnapshot();
       if (state.connectionState === 'disconnected') {
@@ -489,31 +449,24 @@ function AIAssistantPanelWrapper() {
           ...(workflowYAML && { code: workflowYAML }),
         };
 
-        // Connect with NO session ID to force creation of new session
         aiStore.connect('workflow_template', context);
       }
     }, 100);
   }, [aiStore, workflow, jobs, triggers, edges, positions, project]);
 
-  // Handler for loading an existing session
   const handleSessionSelect = useCallback(
     (selectedSessionId: string) => {
       if (!project) return;
 
       appliedMessageIdsRef.current.clear();
 
-      // Clear messages immediately to prevent flash of old session's messages
-      // The new session's messages will load when the channel reconnects
       aiStore._clearSession();
 
       aiStore.disconnect();
 
-      // Wait for clean disconnect, then reconnect with selected session
       setTimeout(() => {
         const state = aiStore.getSnapshot();
         if (state.connectionState === 'disconnected') {
-          // Use the CURRENT session type from store (not hardcoded)
-          // The session type was set during mode initialization
           const currentSessionType = state.sessionType;
 
           if (!currentSessionType) {
@@ -574,7 +527,6 @@ function AIAssistantPanelWrapper() {
               ...(workflowYAML && { code: workflowYAML }),
             };
           } else {
-            // Use existing job context from store
             context = state.jobCodeContext;
             if (!context) {
               console.error(
@@ -584,7 +536,6 @@ function AIAssistantPanelWrapper() {
             }
           }
 
-          // Reconnect with the selected session ID using the CURRENT session type
           aiStore.connect(currentSessionType, context, selectedSessionId);
         }
       }, 100);
@@ -592,22 +543,16 @@ function AIAssistantPanelWrapper() {
     [aiStore, project, workflow, jobs, triggers, edges, positions]
   );
 
-  // Handler for showing sessions list
   const handleShowSessions = useCallback(() => {
-    // Clear session ID from URL (both w-chat and j-chat)
     updateSearchParams({
       'w-chat': null,
       'j-chat': null,
     });
 
-    // Clear the current session from store and disconnect from channel
-    // This clears sessionId and messages, but keeps the context
-    // so sessions list can still be loaded
     aiStore.clearSession();
     aiStore.disconnect();
   }, [updateSearchParams, aiStore]);
 
-  // Wrapper function to send messages with context (workflow code or job options)
   const sendMessage = useCallback(
     (
       content: string,
@@ -661,12 +606,10 @@ function AIAssistantPanelWrapper() {
           }
         }
 
-        // Connect with initial message as content
         aiStore.connect(mode, { ...finalContext, content }, undefined);
         return;
       }
 
-      // For workflow_template mode: include workflow YAML
       if (currentState.sessionType === 'workflow_template') {
         let workflowYAML: string | undefined = undefined;
         if (workflow && jobs.length > 0) {
@@ -745,8 +688,6 @@ function AIAssistantPanelWrapper() {
     null
   );
 
-  // Track which message IDs have been auto-applied
-  // This prevents re-applying the same message multiple times during reconnections
   const appliedMessageIdsRef = useRef<Set<string>>(new Set());
 
   const { importWorkflow } = useWorkflowActions();
@@ -758,8 +699,6 @@ function AIAssistantPanelWrapper() {
       try {
         const workflowSpec = parseWorkflowYAML(yaml);
 
-        // Validate that IDs are strings or null, not objects
-        // The AI sometimes generates nested ID objects which are invalid
         const validateIds = (spec: any) => {
           if (spec.jobs) {
             for (const [jobKey, job] of Object.entries(spec.jobs)) {
@@ -816,19 +755,15 @@ function AIAssistantPanelWrapper() {
         updateSearchParams({
           job: null,
           panel: null,
-          'j-chat': null, // Also clear any job-mode AI sessions
+          'j-chat': null,
         });
 
-        // If AI Assistant panel is open in job mode, close it BEFORE import
-        // since the job no longer exists
         if (sessionType === 'job_code') {
           closeAIAssistantPanel();
         }
 
         const workflowState = convertWorkflowSpecToState(workflowSpec);
 
-        // Apply to canvas using existing import functionality
-        // This will replace all jobs/triggers/edges with new IDs
         importWorkflow(workflowState);
       } catch (error) {
         console.error('[AI Assistant] Failed to apply workflow:', error);
@@ -845,28 +780,22 @@ function AIAssistantPanelWrapper() {
     [importWorkflow, updateSearchParams, sessionType, closeAIAssistantPanel]
   );
 
-  // Auto-apply workflow YAML when AI generates it in workflow_template mode
-  // This effect runs whenever a new message with code arrives
   useEffect(() => {
     if (sessionType !== 'workflow_template' || !messages.length) return;
     if (connectionState !== 'connected') return;
 
-    // Find the latest assistant message with code (most recent successful response)
     const messagesWithCode = messages.filter(
       msg => msg.role === 'assistant' && msg.code && msg.status === 'success'
     );
 
-    const latestMessage = messagesWithCode.pop(); // Get the most recent one
+    const latestMessage = messagesWithCode.pop();
 
-    // Only auto-apply if we haven't applied this specific message before
     if (
       latestMessage?.code &&
       !appliedMessageIdsRef.current.has(latestMessage.id)
     ) {
-      // Mark this message as applied to prevent duplicate applications
       appliedMessageIdsRef.current.add(latestMessage.id);
 
-      // Apply the workflow
       void handleApplyWorkflow(latestMessage.code, latestMessage.id);
     }
   }, [
@@ -958,36 +887,24 @@ function BreadcrumbContent({
   projectNameFallback,
   projectEnvFallback,
 }: BreadcrumbContentProps) {
-  // Get project from store (may be null if not yet loaded)
   const projectFromStore = useProject();
 
-  // Get workflow from store to read the current name
   const workflowFromStore = useWorkflowState(state => state.workflow);
   const latestSnapshotLockVersion = useLatestSnapshotLockVersion();
 
-  // Get run panel state for Header tooltip logic
   const isRunPanelOpen = useIsRunPanelOpen();
 
-  // Detect IDE mode from URL
   const { searchParams } = useURLState();
   const isIDEOpen = searchParams.get('panel') === 'editor';
 
-  // Store-first with props-fallback pattern
-  // This ensures breadcrumbs work during:
-  // 1. Initial server-side render (uses props)
-  // 2. Store hydration period (uses props)
-  // 3. Full collaborative mode (uses store)
   const projectId = projectFromStore?.id ?? projectIdFallback;
   const projectName = projectFromStore?.name ?? projectNameFallback;
   const projectEnv = projectFromStore?.env ?? projectEnvFallback;
   const currentWorkflowName = workflowFromStore?.name ?? workflowName;
 
-  // Use shared version selection handler (destroys Y.Doc before switching)
   const handleVersionSelect = useVersionSelect();
 
-  // Build breadcrumbs for Canvas mode only (IDE has its own breadcrumbs in FullScreenIDE)
   const breadcrumbElements = useMemo(() => {
-    // Canvas mode: Projects > Project > Workflows > Workflow (with version dropdown)
     return [
       <BreadcrumbLink href="/projects" key="projects">
         Projects
@@ -1053,9 +970,6 @@ function BreadcrumbContent({
  * Manages the Full Screen IDE rendering and keyboard shortcuts.
  * Must be inside StoreProvider to access workflow and UI state.
  */
-/**
- * IDEWrapper Props Interface
- */
 interface IDEWrapperProps {
   parentProjectId?: string | null;
   parentProjectName?: string | null;
@@ -1074,7 +988,6 @@ function IDEWrapper({ parentProjectId, parentProjectName }: IDEWrapperProps) {
     updateSearchParams({ panel: null, job: null });
   }, [updateSearchParams]);
 
-  // Open Code Editor with Cmd+E / Ctrl+E
   useKeyboardShortcut(
     'Control+e, Meta+e',
     () => {
@@ -1084,7 +997,7 @@ function IDEWrapper({ parentProjectId, parentProjectName }: IDEWrapperProps) {
 
       updateSearchParams({ panel: 'editor' });
     },
-    0, // GLOBAL priority
+    0,
     {
       enabled: !isIDEOpen,
     }
@@ -1107,10 +1020,8 @@ function IDEWrapper({ parentProjectId, parentProjectName }: IDEWrapperProps) {
 export const CollaborativeEditor: WithActionProps<
   CollaborativeEditorDataProps
 > = props => {
-  // Extract data from props (ReactComponent hook passes data attributes as props)
   const workflowId = props['data-workflow-id'];
   const workflowName = props['data-workflow-name'];
-  // Migration: Props are now fallbacks, sessionContextStore is primary source
   const projectId = props['data-project-id'];
   const projectName = props['data-project-name'];
   const projectEnv = props['data-project-env'];
@@ -1118,7 +1029,6 @@ export const CollaborativeEditor: WithActionProps<
   const rootProjectName = props['data-root-project-name'] ?? null;
   const isNewWorkflow = props['data-is-new-workflow'] === 'true';
 
-  // Extract LiveView actions from props
   const liveViewActions = {
     pushEvent: props.pushEvent,
     pushEventTo: props.pushEventTo,
@@ -1142,9 +1052,7 @@ export const CollaborativeEditor: WithActionProps<
               <LiveViewActionsProvider actions={liveViewActions}>
                 <VersionDebugLogger />
                 <Toaster />
-                {/* Main content area - will be pushed left by AI panel */}
                 <div className="flex-1 min-h-0 overflow-hidden flex flex-col relative">
-                  {/* Breadcrumb bar at top */}
                   <BreadcrumbContent
                     workflowId={workflowId}
                     workflowName={workflowName}
@@ -1164,21 +1072,18 @@ export const CollaborativeEditor: WithActionProps<
                       rootProjectNameFallback: rootProjectName,
                     })}
                   />
-                  {/* Content area below breadcrumbs - this is the positioning context for IDE */}
                   <div className="flex-1 min-h-0 overflow-hidden relative">
                     <LoadingBoundary>
                       <div className="h-full w-full">
                         <WorkflowEditor />
                       </div>
                     </LoadingBoundary>
-                    {/* Full Screen IDE - positioned relative to content area, below header */}
                     <IDEWrapper
                       parentProjectId={rootProjectId}
                       parentProjectName={rootProjectName}
                     />
                   </div>
                 </div>
-                {/* AI Assistant Panel - at root level, pushes everything left */}
                 <AIAssistantPanelWrapper />
               </LiveViewActionsProvider>
             </StoreProvider>
