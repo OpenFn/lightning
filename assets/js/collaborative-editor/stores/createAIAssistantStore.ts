@@ -163,12 +163,6 @@ export const createAIAssistantStore = (): AIAssistantStore => {
     context: JobCodeContext | WorkflowTemplateContext,
     sessionId?: string
   ) => {
-    logger.debug('Connecting to AI Assistant', {
-      sessionType,
-      sessionId,
-      context,
-    });
-
     state = produce(state, draft => {
       draft.connectionState = 'connecting';
       draft.sessionType = sessionType;
@@ -192,8 +186,6 @@ export const createAIAssistantStore = (): AIAssistantStore => {
    * Note: Preserves session data (sessionId, messages) so they persist across reconnects
    */
   const disconnect = () => {
-    logger.debug('Disconnecting from AI Assistant');
-
     state = produce(state, draft => {
       draft.connectionState = 'disconnected';
       draft.isLoading = false;
@@ -207,8 +199,6 @@ export const createAIAssistantStore = (): AIAssistantStore => {
    * Send a message to the AI
    */
   const sendMessage = (content: string, options?: MessageOptions) => {
-    logger.debug('Sending message to AI', { content, options });
-
     state = produce(state, draft => {
       draft.isSending = true;
       draft.isLoading = true;
@@ -221,8 +211,6 @@ export const createAIAssistantStore = (): AIAssistantStore => {
    * Retry a failed message
    */
   const retryMessage = (messageId: string) => {
-    logger.debug('Retrying message', { messageId });
-
     state = produce(state, draft => {
       const message = draft.messages.find(m => m.id === messageId);
       if (message) {
@@ -238,8 +226,6 @@ export const createAIAssistantStore = (): AIAssistantStore => {
    * Mark AI disclaimer as read
    */
   const markDisclaimerRead = () => {
-    logger.debug('Marking AI disclaimer as read');
-
     state = produce(state, draft => {
       draft.hasReadDisclaimer = true;
     });
@@ -252,8 +238,6 @@ export const createAIAssistantStore = (): AIAssistantStore => {
    * Forces creation of a new session by clearing sessionId and messages
    */
   const clearSession = () => {
-    logger.debug('Clearing session to start new conversation');
-
     state = produce(state, draft => {
       draft.sessionId = null;
       draft.messages = [];
@@ -269,8 +253,6 @@ export const createAIAssistantStore = (): AIAssistantStore => {
    * Switches to the specified session
    */
   const loadSession = (sessionId: string) => {
-    logger.debug('Loading session', { sessionId });
-
     state = produce(state, draft => {
       draft.connectionState = 'connecting';
       draft.sessionId = sessionId;
@@ -286,8 +268,6 @@ export const createAIAssistantStore = (): AIAssistantStore => {
    * This notifies the AI of changes to the job being edited
    */
   const updateContext = (context: Partial<JobCodeContext>) => {
-    logger.debug('Updating job context', { context });
-
     state = produce(state, draft => {
       if (draft.jobCodeContext) {
         if (context.job_adaptor !== undefined) {
@@ -317,12 +297,6 @@ export const createAIAssistantStore = (): AIAssistantStore => {
     options: { offset?: number; limit?: number; append?: boolean } = {}
   ) => {
     const { offset = 0, limit = 20, append = false } = options;
-
-    logger.debug('Loading session list via HTTP API', {
-      offset,
-      limit,
-      append,
-    });
 
     state = produce(state, draft => {
       draft.sessionListLoading = true;
@@ -377,7 +351,6 @@ export const createAIAssistantStore = (): AIAssistantStore => {
 
       const data =
         (await response.json()) as import('../types/ai-assistant').SessionListResponse;
-      logger.debug('Sessions loaded via HTTP', { data, append });
 
       if (append) {
         _appendSessionList(data);
@@ -406,8 +379,6 @@ export const createAIAssistantStore = (): AIAssistantStore => {
    * @internal Called by useAIAssistantChannel hook
    */
   const _clearSession = () => {
-    logger.debug('Clearing invalid session');
-
     state = produce(state, draft => {
       draft.sessionId = null;
       draft.messages = [];
@@ -428,8 +399,6 @@ export const createAIAssistantStore = (): AIAssistantStore => {
     connectionState: ConnectionState,
     error?: string
   ) => {
-    logger.debug('Connection state changed', { connectionState, error });
-
     state = produce(state, draft => {
       draft.connectionState = connectionState;
       draft.connectionError = error;
@@ -447,8 +416,6 @@ export const createAIAssistantStore = (): AIAssistantStore => {
    * @internal Called by useAIAssistantChannel hook
    */
   const _setSession = (session: Session) => {
-    logger.debug('Session loaded', { session });
-
     state = produce(state, draft => {
       draft.sessionId = session.id;
       draft.sessionType = session.session_type;
@@ -468,10 +435,6 @@ export const createAIAssistantStore = (): AIAssistantStore => {
     if (storageKey) {
       try {
         localStorage.setItem(storageKey, session.id);
-        logger.debug('Saved session to storage', {
-          storageKey,
-          sessionId: session.id,
-        });
       } catch (error) {
         logger.error('Failed to save session to localStorage', error);
       }
@@ -485,8 +448,6 @@ export const createAIAssistantStore = (): AIAssistantStore => {
    * @internal Called by useAIAssistantChannel hook
    */
   const _addMessage = (message: Message) => {
-    logger.debug('Adding message', { message });
-
     state = produce(state, draft => {
       const exists = draft.messages.some(m => m.id === message.id);
       if (!exists) {
@@ -513,8 +474,6 @@ export const createAIAssistantStore = (): AIAssistantStore => {
    * @internal Called by useAIAssistantChannel hook
    */
   const _updateMessageStatus = (messageId: string, status: string) => {
-    logger.debug('Updating message status', { messageId, status });
-
     state = produce(state, draft => {
       const message = draft.messages.find(m => m.id === messageId);
       if (message) {
@@ -538,8 +497,6 @@ export const createAIAssistantStore = (): AIAssistantStore => {
   const _setSessionList = (
     response: import('../types/ai-assistant').SessionListResponse
   ) => {
-    logger.debug('Session list loaded', { response });
-
     state = produce(state, draft => {
       draft.sessionList = response.sessions;
       draft.sessionListPagination = response.pagination;
@@ -556,8 +513,6 @@ export const createAIAssistantStore = (): AIAssistantStore => {
   const _appendSessionList = (
     response: import('../types/ai-assistant').SessionListResponse
   ) => {
-    logger.debug('Appending sessions to list', { response });
-
     state = produce(state, draft => {
       const existingIds = new Set(draft.sessionList.map(s => s.id));
       const newSessions = response.sessions.filter(s => !existingIds.has(s.id));
@@ -575,8 +530,6 @@ export const createAIAssistantStore = (): AIAssistantStore => {
    * @internal
    */
   const _clearSessionList = () => {
-    logger.debug('Clearing session list');
-
     state = produce(state, draft => {
       draft.sessionList = [];
       draft.sessionListPagination = null;
