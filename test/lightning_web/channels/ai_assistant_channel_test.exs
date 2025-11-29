@@ -93,7 +93,6 @@ defmodule LightningWeb.AiAssistantChannelTest do
 
       assert is_binary(session_id)
 
-      # Verify the session was created
       session = AiAssistant.get_session!(session_id)
       assert session.job_id == job.id
       assert session.session_type == "job_code"

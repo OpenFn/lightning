@@ -132,7 +132,6 @@ defmodule LightningWeb.API.AiAssistantControllerTest do
 
       assert length(returned_sessions) == 3
 
-      # Check pagination metadata
       assert pagination["total_count"] == 3
       assert pagination["has_next_page"] == false
       assert pagination["has_prev_page"] == false
@@ -142,7 +141,6 @@ defmodule LightningWeb.API.AiAssistantControllerTest do
       created_ids = Enum.map(sessions, & &1.id) |> MapSet.new()
       assert MapSet.equal?(returned_ids, created_ids)
 
-      # Verify first session has correct structure
       [session1 | _] = returned_sessions
       assert session1["session_type"] == "job_code"
       assert session1["job_name"] == job.name
@@ -152,7 +150,6 @@ defmodule LightningWeb.API.AiAssistantControllerTest do
     end
 
     test "respects pagination offset and limit", %{conn: conn, job: job} do
-      # Request with offset=1, limit=1
       conn =
         get(
           conn,

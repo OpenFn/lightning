@@ -165,10 +165,6 @@ defmodule LightningWeb.AiAssistantChannel do
            socket}
       end
     else
-      Logger.debug(
-        "[AiAssistantChannel] update_context called on non-job_code session: #{session_type}"
-      )
-
       {:reply,
        {:error,
         %{reason: "Context updates only supported for job_code sessions"}},
@@ -303,7 +299,6 @@ defmodule LightningWeb.AiAssistantChannel do
       _existing_id ->
         case AiAssistant.get_session(session_id) do
           {:ok, session} ->
-            # Update follow_run_id in meta if provided in params
             session =
               if params["follow_run_id"] do
                 updated_meta =

@@ -44,7 +44,6 @@ defmodule Lightning.AiAssistant.UnsavedWorkflowTest do
         assert session.meta["unsaved_workflow"]["is_new"] == true
         assert session.title == "Help me create a workflow"
 
-        # Should have one user message
         assert length(session.messages) == 1
         message = hd(session.messages)
         assert message.role == :user
@@ -76,7 +75,6 @@ defmodule Lightning.AiAssistant.UnsavedWorkflowTest do
         assert session.session_type == "workflow_template"
         refute Map.has_key?(session.meta, "unsaved_workflow")
 
-        # Should have one user message
         assert length(session.messages) == 1
       end)
     end
@@ -91,7 +89,6 @@ defmodule Lightning.AiAssistant.UnsavedWorkflowTest do
       # Create a temporary workflow ID (as in create mode)
       temp_workflow_id = Ecto.UUID.generate()
 
-      # Create sessions with unsaved workflow data
       with_testing_mode(:manual, fn ->
         {:ok, session1} =
           AiAssistant.create_workflow_session(
@@ -121,7 +118,6 @@ defmodule Lightning.AiAssistant.UnsavedWorkflowTest do
             }
           )
 
-        # Verify sessions are created correctly
         assert session1.workflow_id == nil
         assert session2.workflow_id == nil
         assert session1.meta["unsaved_workflow"]["id"] == temp_workflow_id
@@ -135,14 +131,11 @@ defmodule Lightning.AiAssistant.UnsavedWorkflowTest do
             name: "My Workflow"
           )
 
-        # Cleanup unsaved workflow sessions
         assert {:ok, 2} = AiAssistant.cleanup_unsaved_workflow_sessions(workflow)
 
-        # Reload sessions from database
         session1_updated = Repo.get!(ChatSession, session1.id)
         session2_updated = Repo.get!(ChatSession, session2.id)
 
-        # Verify sessions now have workflow_id and no unsaved_workflow meta
         assert session1_updated.workflow_id == workflow.id
         assert session2_updated.workflow_id == workflow.id
         refute Map.has_key?(session1_updated.meta, "unsaved_workflow")
@@ -163,12 +156,10 @@ defmodule Lightning.AiAssistant.UnsavedWorkflowTest do
       user = insert(:user)
       project = insert(:project)
 
-      # Create two temporary workflow IDs
       temp_workflow_id_1 = Ecto.UUID.generate()
       temp_workflow_id_2 = Ecto.UUID.generate()
 
       with_testing_mode(:manual, fn ->
-        # Create session for first workflow
         {:ok, session1} =
           AiAssistant.create_workflow_session(
             project,
@@ -183,7 +174,6 @@ defmodule Lightning.AiAssistant.UnsavedWorkflowTest do
             }
           )
 
-        # Create session for second workflow
         {:ok, session2} =
           AiAssistant.create_workflow_session(
             project,
@@ -206,16 +196,13 @@ defmodule Lightning.AiAssistant.UnsavedWorkflowTest do
             name: "First Workflow"
           )
 
-        # Cleanup should only update session1
         assert {:ok, 1} =
                  AiAssistant.cleanup_unsaved_workflow_sessions(workflow1)
 
-        # Check session1 is updated
         session1_updated = Repo.get!(ChatSession, session1.id)
         assert session1_updated.workflow_id == workflow1.id
         refute Map.has_key?(session1_updated.meta, "unsaved_workflow")
 
-        # Check session2 is unchanged
         session2_unchanged = Repo.get!(ChatSession, session2.id)
         assert session2_unchanged.workflow_id == nil
 
@@ -231,7 +218,6 @@ defmodule Lightning.AiAssistant.UnsavedWorkflowTest do
       workflow = insert(:workflow, project: project)
 
       with_testing_mode(:manual, fn ->
-        # Create session with existing workflow
         {:ok, session} =
           AiAssistant.create_workflow_session(
             project,
@@ -242,10 +228,8 @@ defmodule Lightning.AiAssistant.UnsavedWorkflowTest do
 
         assert session.workflow_id == workflow.id
 
-        # Cleanup should not affect this session
         assert {:ok, 0} = AiAssistant.cleanup_unsaved_workflow_sessions(workflow)
 
-        # Session should remain unchanged
         session_unchanged = Repo.get!(ChatSession, session.id)
         assert session_unchanged.workflow_id == workflow.id
       end)

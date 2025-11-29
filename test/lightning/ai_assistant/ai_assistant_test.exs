@@ -711,7 +711,6 @@ defmodule Lightning.AiAssistantTest do
             code: workflow_yaml
           )
 
-        # Get the saved message
         saved_message = List.last(updated_session.messages)
         assert saved_message.code == workflow_yaml
         assert saved_message.role == :user
@@ -1026,13 +1025,11 @@ defmodule Lightning.AiAssistantTest do
       # Create a step for the job
       step = insert(:step, job: job)
 
-      # Link the run and step
       insert(:run_step, run: run, step: step)
 
-      # Create log lines with run_id set
+      # Important: set the run_id for log lines
       insert(:log_line,
         step: step,
-        # Important: set the run_id
         run: run,
         message: "Starting job execution",
         timestamp: ~U[2024-01-01 10:00:00Z]
@@ -1040,7 +1037,6 @@ defmodule Lightning.AiAssistantTest do
 
       insert(:log_line,
         step: step,
-        # Important: set the run_id
         run: run,
         message: "Processing data...",
         timestamp: ~U[2024-01-01 10:00:01Z]
@@ -1048,7 +1044,6 @@ defmodule Lightning.AiAssistantTest do
 
       insert(:log_line,
         step: step,
-        # Important: set the run_id
         run: run,
         message: "Job completed successfully",
         timestamp: ~U[2024-01-01 10:00:02Z]
@@ -1088,7 +1083,6 @@ defmodule Lightning.AiAssistantTest do
       # Generate a job_id that doesn't exist in the database (unsaved job)
       unsaved_job_id = Ecto.UUID.generate()
 
-      # Create work_order first
       work_order = insert(:workorder, workflow: workflow)
 
       run =
@@ -1105,10 +1099,8 @@ defmodule Lightning.AiAssistantTest do
         |> Ecto.Changeset.change(%{job_id: unsaved_job_id})
         |> Lightning.Repo.insert!()
 
-      # Link the run and step
       insert(:run_step, run: run, step: step)
 
-      # Create log lines
       insert(:log_line,
         step: step,
         run: run,

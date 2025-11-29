@@ -34,7 +34,6 @@ defmodule Lightning.AiAssistant.UnsavedJobTest do
         assert session.meta["unsaved_job"] == unsaved_job_data
         assert session.title == "Help me with this job"
 
-        # Should have one user message
         assert length(session.messages) == 1
         message = hd(session.messages)
         assert message.role == :user
@@ -97,7 +96,7 @@ defmodule Lightning.AiAssistant.UnsavedJobTest do
             meta
           )
 
-        # Add another message (won't trigger AI call with manual mode)
+        # Won't trigger AI call with manual mode
         {:ok, updated_session} =
           AiAssistant.save_message(
             session,
@@ -241,7 +240,6 @@ defmodule Lightning.AiAssistant.UnsavedJobTest do
         "workflow_id" => workflow.id
       }
 
-      # Create session with job_id AND unsaved_job data
       session_attrs = %{
         job_id: job.id,
         user_id: user.id,
@@ -275,7 +273,6 @@ defmodule Lightning.AiAssistant.UnsavedJobTest do
       job2_id = Ecto.UUID.generate()
       job3_id = Ecto.UUID.generate()
 
-      # Create sessions with unsaved_job data for these jobs
       unsaved_job1_data = %{
         "id" => job1_id,
         "name" => "Job 1",
@@ -303,7 +300,6 @@ defmodule Lightning.AiAssistant.UnsavedJobTest do
         "workflow_id" => other_workflow.id
       }
 
-      # Create sessions
       {:ok, session1} =
         %ChatSession{}
         |> ChatSession.changeset(%{
@@ -341,13 +337,10 @@ defmodule Lightning.AiAssistant.UnsavedJobTest do
       job1 = insert(:job, id: job1_id, workflow: workflow, name: "Job 1")
       job2 = insert(:job, id: job2_id, workflow: workflow, name: "Job 2")
 
-      # Reload workflow with jobs
       workflow = Repo.preload(workflow, :jobs, force: true)
 
-      # Run cleanup
       assert {:ok, 2} = AiAssistant.cleanup_unsaved_job_sessions(workflow)
 
-      # Check that session1 and session2 were updated
       updated_session1 = Repo.reload(session1)
       assert updated_session1.job_id == job1.id
       assert updated_session1.meta["unsaved_job"] == nil
@@ -373,7 +366,6 @@ defmodule Lightning.AiAssistant.UnsavedJobTest do
 
       workflow = Repo.preload(workflow, :jobs, force: true)
 
-      # No sessions exist, so nothing to clean up
       assert {:ok, 0} = AiAssistant.cleanup_unsaved_job_sessions(workflow)
     end
 
@@ -391,7 +383,6 @@ defmodule Lightning.AiAssistant.UnsavedJobTest do
         "workflow_id" => workflow.id
       }
 
-      # Create session that already has a job_id
       existing_job = insert(:job, workflow: workflow)
 
       {:ok, session_with_job_id} =
@@ -405,14 +396,11 @@ defmodule Lightning.AiAssistant.UnsavedJobTest do
         })
         |> Repo.insert()
 
-      # Create the job
       _job = insert(:job, id: job_id, workflow: workflow)
       workflow = Repo.preload(workflow, :jobs, force: true)
 
-      # Run cleanup - should not update session that already has job_id
       assert {:ok, 0} = AiAssistant.cleanup_unsaved_job_sessions(workflow)
 
-      # Session should be unchanged
       updated = Repo.reload(session_with_job_id)
       assert updated.job_id == existing_job.id
       assert updated.meta["unsaved_job"] == unsaved_job_data

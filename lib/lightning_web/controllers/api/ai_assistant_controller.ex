@@ -41,7 +41,6 @@ defmodule LightningWeb.API.AiAssistantController do
 
       opts =
         if session_type == "workflow_template" do
-          # Extract workflow_id from params if provided
           workflow =
             case params["workflow_id"] do
               nil -> nil
@@ -106,7 +105,6 @@ defmodule LightningWeb.API.AiAssistantController do
     alias Lightning.Repo
     import Ecto.Query
 
-    # Try to load job from database - if it exists, check via workflow
     case Jobs.get_job(job_id) do
       {:ok, job} ->
         check_job_access(job, user)
@@ -214,7 +212,6 @@ defmodule LightningWeb.API.AiAssistantController do
     unsaved_job = session.meta["unsaved_job"]
 
     cond do
-      # Unsaved job - get data from meta
       unsaved_job ->
         workflow = Workflows.get_workflow(unsaved_job["workflow_id"])
 
@@ -224,7 +221,6 @@ defmodule LightningWeb.API.AiAssistantController do
           is_unsaved: true
         })
 
-      # Saved job - get from database
       session.job_id ->
         case Jobs.get_job(session.job_id) do
           {:ok, job} ->
@@ -243,7 +239,6 @@ defmodule LightningWeb.API.AiAssistantController do
             })
         end
 
-      # No job data
       true ->
         base
     end

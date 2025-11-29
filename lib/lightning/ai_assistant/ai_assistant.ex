@@ -749,8 +749,6 @@ defmodule Lightning.AiAssistant do
     meta = Keyword.get(opts, :meta)
     code = Keyword.get(opts, :code)
 
-    log_save_message(session, message_attrs, code)
-
     message_attrs = prepare_message_attrs(message_attrs, session.id, code)
 
     Multi.new()
@@ -766,9 +764,6 @@ defmodule Lightning.AiAssistant do
     |> Multi.run(:enqueue_if_user_message, &enqueue_user_message/2)
     |> Repo.transaction()
     |> handle_save_message_result()
-  end
-
-  defp log_save_message(_session, _message_attrs, _code) do
   end
 
   defp prepare_message_attrs(message_attrs, session_id, code) do
@@ -1034,7 +1029,6 @@ defmodule Lightning.AiAssistant do
 
   defp get_job_sessions_with_count(job, sort_direction, offset, limit)
        when is_map(job) do
-    # Extract job_id from Job struct
     get_job_sessions_with_count(job.id, sort_direction, offset, limit)
   end
 
@@ -1060,7 +1054,6 @@ defmodule Lightning.AiAssistant do
         select: %{s | message_count: count(m.id)}
       )
 
-    # Union both queries to get all sessions for this job
     combined_query =
       saved_sessions_query
       |> union_all(^unsaved_sessions_query)
