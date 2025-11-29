@@ -1,32 +1,11 @@
-import hljs from 'highlight.js/lib/core';
-import elixir from 'highlight.js/lib/languages/elixir';
-import javascript from 'highlight.js/lib/languages/javascript';
-import json from 'highlight.js/lib/languages/json';
-import yaml from 'highlight.js/lib/languages/yaml';
-import 'highlight.js/styles/github.css';
 import { marked } from 'marked';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { cn } from '#/utils/cn';
 
-hljs.registerLanguage('javascript', javascript);
-hljs.registerLanguage('json', json);
-hljs.registerLanguage('yaml', yaml);
-hljs.registerLanguage('elixir', elixir);
-
 marked.setOptions({
   gfm: true,
   breaks: true,
-  highlight: (code, lang) => {
-    if (lang && hljs.getLanguage(lang)) {
-      try {
-        return hljs.highlight(code, { language: lang }).value;
-      } catch (err) {
-        console.error('Highlight error:', err);
-      }
-    }
-    return code;
-  },
 });
 
 /**
