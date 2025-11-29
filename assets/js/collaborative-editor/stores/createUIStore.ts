@@ -74,7 +74,6 @@ const logger = _logger.ns('UIStore').seal();
  * Creates a UI store instance with useSyncExternalStore + Immer pattern
  */
 export const createUIStore = (): UIStore => {
-  // Load AI Assistant panel state from URL search params
   const loadAIAssistantPanelState = (): boolean => {
     try {
       const params = new URLSearchParams(window.location.search);
@@ -85,7 +84,6 @@ export const createUIStore = (): UIStore => {
     }
   };
 
-  // Single Immer-managed state object (referentially stable)
   let state: UIState = produce(
     {
       runPanelOpen: false,
@@ -93,17 +91,15 @@ export const createUIStore = (): UIStore => {
       githubSyncModalOpen: false,
       aiAssistantPanelOpen: loadAIAssistantPanelState(),
     } as UIState,
-    // No initial transformations needed
     draft => draft
   );
 
   const listeners = new Set<() => void>();
 
-  // Redux DevTools integration
   const devtools = wrapStoreWithDevTools({
     name: 'UIStore',
-    excludeKeys: [], // All state is serializable
-    maxAge: 50, // Keep fewer actions for UI state
+    excludeKeys: [],
+    maxAge: 50,
   });
 
   const notify = (actionName: string = 'stateChange') => {
@@ -124,7 +120,6 @@ export const createUIStore = (): UIStore => {
 
   const getSnapshot = (): UIState => state;
 
-  // withSelector utility - creates memoized selectors for referential stability
   const withSelector = createWithSelector(getSnapshot);
 
   // ===========================================================================
