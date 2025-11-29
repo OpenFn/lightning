@@ -181,6 +181,7 @@ export function ChatInput({
             >
               <textarea
                 ref={textareaRef}
+                data-testid="chat-input"
                 value={input}
                 onChange={e => setInput(e.target.value)}
                 onKeyDown={handleKeyDown}
@@ -243,6 +244,7 @@ export function ChatInput({
 
                 <button
                   type="submit"
+                  data-testid="send-message-button"
                   disabled={!input.trim() || isLoading}
                   className={cn(
                     'inline-flex items-center justify-center',
@@ -256,7 +258,10 @@ export function ChatInput({
                   aria-label={isLoading ? 'Sending...' : 'Send message'}
                 >
                   {isLoading ? (
-                    <span className="hero-arrow-path h-4 w-4 animate-spin" />
+                    <span
+                      className="hero-arrow-path h-4 w-4 animate-spin"
+                      data-testid="ai-loading"
+                    />
                   ) : (
                     <span className="hero-paper-airplane-solid h-4 w-4" />
                   )}

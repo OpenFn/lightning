@@ -187,6 +187,8 @@ export function AIAssistantPanel({
 
   return (
     <div
+      data-testid="ai-assistant-panel"
+      data-session-type={sessionType || undefined}
       className={cn(
         'h-full flex flex-col overflow-hidden bg-white relative',
         !isResizable && [
@@ -258,6 +260,7 @@ export function AIAssistantPanel({
                     <div className="py-1.5">
                       <button
                         type="button"
+                        data-testid="sessions-button"
                         onClick={handleShowSessions}
                         className={cn(
                           'group flex items-center w-full',

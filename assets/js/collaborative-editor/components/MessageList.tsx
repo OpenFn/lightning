@@ -191,6 +191,7 @@ const CodeActionButtons = ({
       {showApply && (
         <button
           type="button"
+          data-testid="apply-workflow-button"
           onClick={handleApply}
           disabled={isApplying || applied}
           className={cn(
@@ -336,10 +337,11 @@ export function MessageList({
   }
 
   return (
-    <div className="h-full overflow-y-auto">
+    <div className="h-full overflow-y-auto" data-testid="message-list">
       {messages.map(message => (
         <div
           key={message.id}
+          data-role={`${message.role}-message`}
           className={cn(
             'group px-6 py-4',
             message.role === 'assistant' ? 'bg-gray-50/50' : 'bg-white'
@@ -366,6 +368,7 @@ export function MessageList({
                       >
                         <button
                           type="button"
+                          data-testid="expand-workflow-button"
                           onClick={() => {
                             setExpandedYaml(prev => {
                               const next = new Set(prev);
@@ -402,7 +405,10 @@ export function MessageList({
                         />
                       </div>
                       {expandedYaml.has(message.id) && (
-                        <pre className="bg-slate-100 text-slate-800 p-3 overflow-x-auto text-xs font-mono">
+                        <pre
+                          className="bg-slate-100 text-slate-800 p-3 overflow-x-auto text-xs font-mono"
+                          data-testid="workflow-code"
+                        >
                           <code>{message.code}</code>
                         </pre>
                       )}
@@ -410,7 +416,10 @@ export function MessageList({
                   )}
 
                   {message.status === 'error' && (
-                    <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-red-50 border border-red-200">
+                    <div
+                      className="flex items-center gap-2 px-3 py-2 rounded-lg bg-red-50 border border-red-200"
+                      data-testid="ai-error-message"
+                    >
                       <span className="hero-exclamation-circle h-4 w-4 text-red-600 flex-shrink-0" />
                       <span className="text-sm text-red-700 flex-1">
                         Failed to send message. Please try again.
@@ -463,7 +472,10 @@ export function MessageList({
                   </div>
 
                   {message.status === 'error' && (
-                    <div className="flex items-center gap-2 mt-2 px-3 py-1.5 rounded-lg bg-red-50 border border-red-200">
+                    <div
+                      className="flex items-center gap-2 mt-2 px-3 py-1.5 rounded-lg bg-red-50 border border-red-200"
+                      data-testid="ai-error-message"
+                    >
                       <span className="hero-exclamation-circle h-3.5 w-3.5 text-red-600" />
                       <span className="text-xs text-red-700 flex-1">
                         Failed to send

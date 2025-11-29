@@ -176,6 +176,7 @@ export function SessionList({
             {filteredSessions.map(session => (
               <button
                 key={session.id}
+                data-testid="session-list-item"
                 onClick={() => onSessionSelect(session.id)}
                 className={cn(
                   'w-full text-left px-3 py-3 rounded-lg transition-all duration-200',
