@@ -1,6 +1,7 @@
 defmodule LightningWeb.AiAssistantChannelTest do
   use LightningWeb.ChannelCase, async: true
   import Mox
+  import Lightning.Factories
 
   import Lightning.{
     AccountsFixtures,
@@ -1689,7 +1690,7 @@ defmodule LightningWeb.AiAssistantChannelTest do
 
   describe "error handling" do
     test "handles session not found error when joining with non-existent session_id",
-         %{user: user, socket: socket, job: job} do
+         %{user: user, job: job} do
       non_existent_id = Ecto.UUID.generate()
 
       params = %{
@@ -1762,7 +1763,7 @@ defmodule LightningWeb.AiAssistantChannelTest do
       session = insert(:chat_session, user: user, job: job)
 
       # Insert a failed message
-      {:ok, message} =
+      {:ok, _message} =
         AiAssistant.save_message(session.id, %{
           role: :assistant,
           content: "Failed response",
@@ -1788,7 +1789,6 @@ defmodule LightningWeb.AiAssistantChannelTest do
     test "formats session correctly when job is deleted", %{
       user: user,
       socket: socket,
-      project: project,
       workflow: workflow
     } do
       # Create and then delete a job
