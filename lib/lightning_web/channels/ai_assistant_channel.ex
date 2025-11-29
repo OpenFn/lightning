@@ -516,23 +516,11 @@ defmodule LightningWeb.AiAssistantChannel do
   end
 
   defp extract_message_options("workflow_template", params) do
-    opts = []
-
-    opts =
-      if code = params["code"] do
-        Keyword.put(opts, :code, code)
-      else
-        opts
-      end
-
-    opts =
-      if errors = params["errors"] do
-        Keyword.put(opts, :errors, errors)
-      else
-        opts
-      end
-
-    opts
+    if code = params["code"] do
+      [code: code]
+    else
+      []
+    end
   end
 
   defp format_messages(messages) do
