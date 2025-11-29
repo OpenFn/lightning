@@ -1801,6 +1801,7 @@ defmodule LightningWeb.AiAssistantChannelTest do
         )
 
       # Session should be returned successfully even with deleted job
+      # After deletion, job_id becomes nil, so it hits the "Unknown Job" case
       assert response.session_id == session.id
       assert response.session_type == "job_code"
     end

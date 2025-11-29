@@ -35,8 +35,6 @@ defmodule LightningWeb.API.AiAssistantController do
       offset = Map.get(params, "offset", "0") |> String.to_integer()
       limit = Map.get(params, "limit", "20") |> String.to_integer()
 
-      # Build options with workflow filter for workflow_template sessions
-      # This matches the legacy editor and collaborative editor channel behavior
       opts = [offset: offset, limit: limit]
 
       opts =
@@ -68,8 +66,6 @@ defmodule LightningWeb.API.AiAssistantController do
     end
   end
 
-  # Private helpers
-
   defp validate_session_type(%{"session_type" => session_type})
        when session_type in ["job_code", "workflow_template"] do
     {:ok, session_type}
@@ -80,8 +76,6 @@ defmodule LightningWeb.API.AiAssistantController do
   end
 
   defp get_resource("job_code", %{"job_id" => job_id}) do
-    # Don't require job to exist in DB - just pass the ID
-    # The list_sessions logic will handle both saved and unsaved jobs
     {:ok, job_id}
   end
 
@@ -110,8 +104,6 @@ defmodule LightningWeb.API.AiAssistantController do
         check_job_access(job, user)
 
       {:error, :not_found} ->
-        # Job doesn't exist yet (unsaved)
-        # Try to find any session with this job_id to get workflow_id
         session =
           from(s in ChatSession,
             where: s.session_type == "job_code",
@@ -146,7 +138,6 @@ defmodule LightningWeb.API.AiAssistantController do
   end
 
   defp check_unsaved_job_access(nil, _user) do
-    # No sessions for this job - allow it (user might be creating first session)
     :ok
   end
 
@@ -165,7 +156,6 @@ defmodule LightningWeb.API.AiAssistantController do
 
   defp check_unsaved_job_access(%{job_id: saved_job_id}, user)
        when not is_nil(saved_job_id) do
-    # Session was for a saved job that might have been deleted
     case Jobs.get_job(saved_job_id) do
       {:ok, job} -> check_job_access(job, user)
       {:error, :not_found} -> :ok
@@ -208,7 +198,6 @@ defmodule LightningWeb.API.AiAssistantController do
   end
 
   defp format_job_code_session(base, session) do
-    # Check for unsaved job data first
     unsaved_job = session.meta["unsaved_job"]
 
     cond do
@@ -232,7 +221,6 @@ defmodule LightningWeb.API.AiAssistantController do
             })
 
           {:error, :not_found} ->
-            # Job was deleted
             Map.merge(base, %{
               job_name: "(deleted job)",
               workflow_name: nil
