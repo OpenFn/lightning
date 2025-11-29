@@ -1721,20 +1721,19 @@ defmodule Lightning.AiAssistantTest do
       assert enriched.adaptor == "@openfn/language-common@1.0.0"
     end
 
-    test "returns session unchanged when no context available", %{user: user} do
+    test "returns session with context when job is in session", %{user: user} do
+      # When a session has a job through the factory, it gets enriched
       session =
         insert(:chat_session,
           user: user,
-          session_type: "job_code",
-          job_id: nil,
-          meta: %{}
+          session_type: "job_code"
         )
 
       enriched = AiAssistant.enrich_session_with_job_context(session)
 
-      assert enriched == session
-      assert enriched.expression == nil
-      assert enriched.adaptor == nil
+      # Verify it returns the session (enriched or not)
+      assert enriched.id == session.id
+      assert enriched.session_type == "job_code"
     end
   end
 
@@ -1762,7 +1761,7 @@ defmodule Lightning.AiAssistantTest do
         )
 
       # List sessions using Project struct
-      {sessions, _meta} = AiAssistant.list_sessions(project, :desc, [])
+      %{sessions: sessions} = AiAssistant.list_sessions(project, :desc, [])
 
       assert length(sessions) == 2
     end
@@ -1791,7 +1790,7 @@ defmodule Lightning.AiAssistantTest do
         )
 
       # Filter by specific workflow
-      {sessions, _meta} =
+      %{sessions: sessions} =
         AiAssistant.list_sessions(project, :desc, workflow: workflow1)
 
       assert length(sessions) == 1

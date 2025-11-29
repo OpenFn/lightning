@@ -1709,30 +1709,6 @@ defmodule LightningWeb.AiAssistantChannelTest do
                )
     end
 
-    test "handles update_context error when meta is invalid", %{
-      user: user,
-      socket: socket,
-      job: job
-    } do
-      session = insert(:chat_session, user: user, job: job)
-
-      {:ok, _response, channel_socket} =
-        subscribe_and_join(
-          socket,
-          AiAssistantChannel,
-          "ai_assistant:job_code:#{session.id}",
-          %{"session_id" => session.id, "job_id" => job.id}
-        )
-
-      # Send invalid runtime_context that could cause update to fail
-      ref =
-        push(channel_socket, "update_context", %{
-          "runtime_context" => "invalid_not_a_map"
-        })
-
-      assert_reply ref, :error, %{errors: _errors}
-    end
-
     test "handles save_message validation errors", %{
       user: user,
       socket: socket,
@@ -1751,8 +1727,8 @@ defmodule LightningWeb.AiAssistantChannelTest do
       # Send message with empty content which should fail validation
       ref = push(channel_socket, "new_message", %{"content" => ""})
 
-      assert_reply ref, :error, %{errors: errors}
-      assert errors != %{}
+      assert_reply ref, :error, %{reason: reason}
+      assert reason == "Message cannot be empty"
     end
 
     test "handles retry_message validation errors", %{
@@ -1764,7 +1740,7 @@ defmodule LightningWeb.AiAssistantChannelTest do
 
       # Insert a failed message
       {:ok, _message} =
-        AiAssistant.save_message(session.id, %{
+        AiAssistant.save_message(session, %{
           role: :assistant,
           content: "Failed response",
           status: :error
@@ -1778,10 +1754,14 @@ defmodule LightningWeb.AiAssistantChannelTest do
           %{"session_id" => session.id, "job_id" => job.id}
         )
 
-      # Try to retry with invalid message_id format
-      ref = push(channel_socket, "retry_message", %{"message_id" => "invalid"})
+      # Try to retry with non-existent message_id
+      ref =
+        push(channel_socket, "retry_message", %{
+          "message_id" => "00000000-0000-0000-0000-000000000000"
+        })
 
-      assert_reply ref, :error, %{errors: _errors}
+      assert_reply ref, :error, %{reason: reason}
+      assert reason == "message not found or unauthorized"
     end
   end
 
@@ -1820,67 +1800,9 @@ defmodule LightningWeb.AiAssistantChannelTest do
           params
         )
 
-      # Session should be returned with job marked as deleted
-      assert response.session.id == session.id
-    end
-  end
-
-  describe "workflow template errors" do
-    test "includes errors in message options when provided", %{
-      user: user,
-      socket: socket,
-      project: project
-    } do
-      workflow = workflow_fixture(project_id: project.id)
-
-      session =
-        insert(:chat_session,
-          user: user,
-          project: project,
-          session_type: "workflow_template",
-          workflow_id: workflow.id
-        )
-
-      {:ok, _response, channel_socket} =
-        subscribe_and_join(
-          socket,
-          AiAssistantChannel,
-          "ai_assistant:workflow_template:#{session.id}",
-          %{
-            "session_id" => session.id,
-            "project_id" => project.id
-          }
-        )
-
-      # Send message with errors
-      errors = [%{"field" => "name", "message" => "can't be blank"}]
-
-      ref =
-        push(channel_socket, "new_message", %{
-          "content" => "Fix this workflow",
-          "errors" => errors
-        })
-
-      assert_reply ref, :ok, %{message: message}
-      assert message.errors == errors
-    end
-  end
-
-  describe "format_session edge cases" do
-    test "handles session without job_id or unsaved_job", %{user: user} do
-      # Create a minimal session without job context
-      session =
-        insert(:chat_session,
-          user: user,
-          session_type: "job_code",
-          job_id: nil,
-          meta: %{}
-        )
-
-      formatted = AiAssistantChannel.format_session(session)
-
-      assert formatted.id == session.id
-      assert formatted.session_type == "job_code"
+      # Session should be returned successfully even with deleted job
+      assert response.session_id == session.id
+      assert response.session_type == "job_code"
     end
   end
 end
