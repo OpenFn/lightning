@@ -92,7 +92,7 @@ export const useAIMessages = () => {
 };
 
 /**
- * Get loading state (when AI is processing)
+ * Get loading state
  */
 export const useAIIsLoading = () => {
   const store = useAIStore();
@@ -105,7 +105,7 @@ export const useAIIsLoading = () => {
 };
 
 /**
- * Get sending state (when user message is being sent)
+ * Get sending state
  */
 export const useAIIsSending = () => {
   const store = useAIStore();
