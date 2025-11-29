@@ -78,7 +78,6 @@ export const useAIAssistantChannel = (store: AIAssistantStore) => {
   const { socket } = useSocket();
   const channelRef = useRef<PhoenixChannel | null>(null);
 
-  // Subscribe to connection state changes
   const connectionState = useSyncExternalStore(
     store.subscribe,
     store.withSelector(state => state.connectionState)
@@ -88,7 +87,7 @@ export const useAIAssistantChannel = (store: AIAssistantStore) => {
    * Join AI Assistant channel
    */
   const joinChannel = useCallback(() => {
-    const state = store.getSnapshot(); // Get fresh state
+    const state = store.getSnapshot();
 
     if (!socket || !state.sessionType) {
       logger.warn('Cannot join channel: socket or session type missing');
@@ -103,10 +102,8 @@ export const useAIAssistantChannel = (store: AIAssistantStore) => {
       channelRef.current = null;
     }
 
-    // Cast socket to our interface (Phoenix types are incomplete)
     const phoenixSocket = socket as unknown as PhoenixSocket;
 
-    // Determine topic based on session type and ID
     const sessionId = state.sessionId || 'new';
     const topic = `ai_assistant:${state.sessionType}:${sessionId}`;
 
@@ -129,7 +126,6 @@ export const useAIAssistantChannel = (store: AIAssistantStore) => {
       store._updateMessageStatus(typedPayload.message_id, typedPayload.status);
     });
 
-    // Join channel
     channel
       .join()
       .receive('ok', (response: unknown) => {
@@ -149,7 +145,6 @@ export const useAIAssistantChannel = (store: AIAssistantStore) => {
         const typedResponse = response as ErrorResponse;
         logger.error('Failed to join AI Assistant channel', typedResponse);
 
-        // If session not found or type mismatch, clear it from store
         if (
           typedResponse.reason === 'session not found' ||
           typedResponse.reason === 'session type mismatch'
@@ -161,8 +156,6 @@ export const useAIAssistantChannel = (store: AIAssistantStore) => {
           store._clearSession();
         }
 
-        // If job not found (Ecto.NoResultsError), the job hasn't been saved yet
-        // or was deleted when the workflow was replaced/updated
         if (
           typedResponse.reason &&
           (typedResponse.reason.includes('Ecto.NoResultsError') ||
@@ -175,10 +168,7 @@ export const useAIAssistantChannel = (store: AIAssistantStore) => {
           );
           store._clearSession();
 
-          // Show user-friendly error message
-          // Note: Using setTimeout to ensure the toast doesn't get lost during state transitions
           setTimeout(() => {
-            // Import notifications dynamically to avoid circular dependencies
             import('../lib/notifications')
               .then(({ notifications }) => {
                 notifications.alert({
@@ -230,7 +220,6 @@ export const useAIAssistantChannel = (store: AIAssistantStore) => {
 
       logger.debug('Sending message', { content, options });
 
-      // Build payload based on session type and options
       const payload: Record<string, unknown> = {
         content,
         ...options,
@@ -250,13 +239,11 @@ export const useAIAssistantChannel = (store: AIAssistantStore) => {
             errors: typedResponse.errors,
             payload,
           });
-          store._setConnectionState('connected'); // Reset sending state
-          // TODO: Show error toast with details
+          store._setConnectionState('connected');
         })
         .receive('timeout', () => {
           logger.error('Message send timeout');
-          store._setConnectionState('connected'); // Reset sending state
-          // TODO: Show error toast
+          store._setConnectionState('connected');
         });
     },
     [store]
@@ -288,7 +275,6 @@ export const useAIAssistantChannel = (store: AIAssistantStore) => {
         .receive('error', (response: unknown) => {
           const typedResponse = response as ErrorResponse;
           logger.error('Failed to retry message', typedResponse);
-          // TODO: Show error toast
         });
     },
     [store]
@@ -318,22 +304,19 @@ export const useAIAssistantChannel = (store: AIAssistantStore) => {
       });
   }, [store]);
 
-  // Effect: Connect/disconnect based on store state
   useEffect(() => {
     if (connectionState === 'connecting' && socket) {
       joinChannel();
     } else if (connectionState === 'disconnected') {
       leaveChannel();
     }
-    // If connected, stay connected (do nothing)
   }, [connectionState, socket, joinChannel, leaveChannel]);
 
-  // Separate effect for cleanup on unmount only
   useEffect(() => {
     return () => {
       leaveChannel();
     };
-  }, []); // Empty deps - only run on mount/unmount
+  }, []);
 
   /**
    * Load sessions list via channel
@@ -364,7 +347,6 @@ export const useAIAssistantChannel = (store: AIAssistantStore) => {
               'Sessions loaded successfully via channel',
               typedResponse
             );
-            // Update store with session list
             store._setSessionList(typedResponse);
             resolve();
           })
@@ -386,7 +368,6 @@ export const useAIAssistantChannel = (store: AIAssistantStore) => {
 
   /**
    * Update job context (adaptor, body, name) for the active session
-   * Notifies the backend that the job's code or adaptor has changed
    */
   const updateContext = useCallback(
     (context: {
@@ -412,8 +393,6 @@ export const useAIAssistantChannel = (store: AIAssistantStore) => {
         .receive('error', (response: unknown) => {
           const typedResponse = response as ErrorResponse;
           logger.error('Failed to update context', typedResponse);
-          // Context is already updated in store, so we don't revert
-          // The AI will use the old context until next channel join
         })
         .receive('timeout', () => {
           logger.error('Context update timeout');
@@ -446,7 +425,6 @@ function buildJoinParams(
       params['follow_run_id'] = state.jobCodeContext.follow_run_id;
     }
 
-    // Include unsaved job data from Y.Doc (for jobs not yet saved to DB)
     if (state.jobCodeContext.job_name) {
       params['job_name'] = state.jobCodeContext.job_name;
     }
@@ -460,8 +438,6 @@ function buildJoinParams(
       params['workflow_id'] = state.jobCodeContext.workflow_id;
     }
 
-    // If this is a new session and context has content, include it
-    // This content comes from the user's first message
     if (!state.sessionId && state.jobCodeContext.content) {
       params['content'] = state.jobCodeContext.content;
     }
@@ -479,8 +455,6 @@ function buildJoinParams(
       params['code'] = state.workflowTemplateContext.code;
     }
 
-    // If this is a new session and context has content, include it
-    // This content comes from the user's first message
     if (!state.sessionId && state.workflowTemplateContext.content) {
       params['content'] = state.workflowTemplateContext.content;
     }
