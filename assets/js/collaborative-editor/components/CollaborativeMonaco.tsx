@@ -20,8 +20,6 @@ interface CollaborativeMonacoProps {
   options?: editor.IStandaloneEditorConstructionOptions;
 }
 
-const logger = _logger.ns('CollaborativeMonaco').seal();
-
 export function CollaborativeMonaco({
   ytext,
   awareness,

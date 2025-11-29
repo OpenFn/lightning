@@ -226,6 +226,8 @@ export function WorkflowEditor() {
     handleCloseLeftPanel();
   };
 
+  const isIDEOpen = searchParams.get('panel') === 'editor';
+
   useKeyboardShortcut(
     'Control+Enter, Meta+Enter',
     () => {
@@ -246,7 +248,7 @@ export function WorkflowEditor() {
     },
     0,
     {
-      enabled: !isRunPanelOpen,
+      enabled: !isIDEOpen && !isRunPanelOpen,
     }
   );
 

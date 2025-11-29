@@ -109,10 +109,6 @@ export const createUIStore = (): UIStore => {
     });
   };
 
-  // ===========================================================================
-  // CORE STORE INTERFACE
-  // ===========================================================================
-
   const subscribe = (listener: () => void) => {
     listeners.add(listener);
     return () => listeners.delete(listener);
@@ -121,10 +117,6 @@ export const createUIStore = (): UIStore => {
   const getSnapshot = (): UIState => state;
 
   const withSelector = createWithSelector(getSnapshot);
-
-  // ===========================================================================
-  // COMMANDS (CQS pattern - State mutations)
-  // ===========================================================================
 
   const openRunPanel = (context: { jobId?: string; triggerId?: string }) => {
     state = produce(state, draft => {
