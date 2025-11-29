@@ -129,6 +129,14 @@ export const StoreProvider = ({ children }: StoreProviderProps) => {
   // Initialize awareness when both awareness instance and user data are available
   // User data comes from SessionContextStore, not from props
   useEffect(() => {
+    // If awareness changed (version switch), destroy old awareness first
+    if (session.awareness && stores.awarenessStore.isAwarenessReady()) {
+      const currentRaw = stores.awarenessStore.getRawAwareness();
+      if (currentRaw !== session.awareness) {
+        stores.awarenessStore.destroyAwareness();
+      }
+    }
+
     if (
       session.awareness &&
       user &&

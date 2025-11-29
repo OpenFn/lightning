@@ -377,6 +377,43 @@ export const createAwarenessStore = (): AwarenessStore => {
   };
 
   /**
+   * Handle external awareness destruction
+   * This is called when awareness.destroy() is called externally
+   */
+  const handleAwarenessDestroy = () => {
+    logger.debug('Awareness destroyed externally');
+
+    // Clear our reference since it's already destroyed
+    awarenessInstance = null;
+
+    // Clean up timers
+    if (lastSeenTimer) {
+      clearInterval(lastSeenTimer);
+      lastSeenTimer = null;
+    }
+
+    if (cacheCleanupTimer) {
+      clearInterval(cacheCleanupTimer);
+      cacheCleanupTimer = null;
+    }
+
+    devtools.disconnect();
+
+    // Update state to reflect destruction
+    state = produce(state, draft => {
+      draft.users = [];
+      draft.cursorsMap.clear();
+      draft.localUser = null;
+      draft.rawAwareness = null;
+      draft.isInitialized = false;
+      draft.isConnected = false;
+      draft.lastUpdated = Date.now();
+      draft.userCache = new Map();
+    });
+    notify('awarenessDestroyedExternally');
+  };
+
+  /**
    * Initialize awareness instance and set up observers
    */
   const initializeAwareness = (
@@ -393,6 +430,9 @@ export const createAwarenessStore = (): AwarenessStore => {
 
     // Set up awareness observer for Pattern 1 updates
     awareness.on('change', handleAwarenessChange);
+
+    // Set up observer for external destruction
+    awareness.on('destroy', handleAwarenessDestroy);
 
     // Set up cache cleanup
     setupCacheCleanup();
@@ -421,6 +461,7 @@ export const createAwarenessStore = (): AwarenessStore => {
 
     if (awarenessInstance) {
       awarenessInstance.off('change', handleAwarenessChange);
+      awarenessInstance.off('destroy', handleAwarenessDestroy);
       awarenessInstance = null;
     }
 

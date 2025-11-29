@@ -1,10 +1,13 @@
 import { useViewport } from '@xyflow/react';
-import { useCallback, useEffect } from 'react';
+import { useCallback, useEffect, useMemo } from 'react';
 
 import { useAwarenessCommands } from '#/collaborative-editor/hooks/useAwareness';
+import throttle from '#/collaborative-editor/utils/throttle';
 
 import { normalizePointerPosition } from './normalizePointer';
 import { RemoteCursors } from './RemoteCursor';
+
+const CURSOR_THROTTLE_MS = 50;
 
 export function PointerTrackerViewer({
   containerEl: container,
@@ -13,6 +16,12 @@ export function PointerTrackerViewer({
 }) {
   const { updateLocalCursor } = useAwarenessCommands();
   const { x: tx, y: ty, zoom: tzoom } = useViewport();
+
+  // Throttle cursor updates to reduce server load (~20 updates/sec)
+  const throttledUpdateCursor = useMemo(
+    () => throttle(updateLocalCursor, CURSOR_THROTTLE_MS),
+    [updateLocalCursor]
+  );
 
   const handleMouseMove = useCallback(
     (e: MouseEvent) => {
@@ -30,9 +39,9 @@ export function PointerTrackerViewer({
         [tx, ty, tzoom]
       );
 
-      updateLocalCursor({ x: normPosition.x, y: normPosition.y });
+      throttledUpdateCursor({ x: normPosition.x, y: normPosition.y });
     },
-    [updateLocalCursor, container, tx, ty, tzoom]
+    [throttledUpdateCursor, container, tx, ty, tzoom]
   );
 
   const handleMouseLeave = useCallback(() => {

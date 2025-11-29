@@ -48,6 +48,7 @@ import {
 import { AdaptorDisplay } from '../AdaptorDisplay';
 import { AdaptorSelectionModal } from '../AdaptorSelectionModal';
 import { CollaborativeMonaco } from '../CollaborativeMonaco';
+import { RunBadge } from '../common/RunBadge';
 import { ConfigureAdaptorModal } from '../ConfigureAdaptorModal';
 import { JobSelector } from '../JobSelector';
 import { ManualRunPanel } from '../ManualRunPanel';
@@ -986,34 +987,17 @@ export function FullScreenIDE({
                             }
                             side="bottom"
                           >
-                            <div
-                              className={cn(
-                                'inline-flex justify-between items-center gap-x-1 rounded-md px-2 py-1 text-xs font-medium mr-3',
-                                shouldShowMismatch
-                                  ? 'bg-yellow-100 text-yellow-700'
-                                  : 'bg-blue-100 text-blue-700'
-                              )}
-                            >
-                              <span>Run {followRunId?.slice(0, 7)}</span>
-                              <button
-                                onClick={() => {
-                                  setFollowRunId(null);
-                                  updateSearchParams({ run: null });
-                                }}
-                                className={cn(
-                                  'group relative -mr-1 h-3.5 w-3.5 rounded-sm',
-                                  shouldShowMismatch
-                                    ? 'hover:bg-yellow-600/20'
-                                    : 'hover:bg-blue-600/20'
-                                )}
-                                aria-label="Close run"
-                                title="Close run"
-                              >
-                                <span className="sr-only">Remove</span>
-                                <XMarkIcon className="h-3.5 w-3.5" />
-                                <span className="absolute -inset-1"></span>
-                              </button>
-                            </div>
+                            <RunBadge
+                              runId={followRunId}
+                              onClose={() => {
+                                setFollowRunId(null);
+                                updateSearchParams({ run: null });
+                              }}
+                              variant={
+                                shouldShowMismatch ? 'warning' : 'default'
+                              }
+                              className="mr-3"
+                            />
                           </Tooltip>
                           {/* Tabs as header content when showing run */}
                           <div className="flex-1">
