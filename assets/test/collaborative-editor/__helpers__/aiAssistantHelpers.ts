@@ -28,15 +28,9 @@ import type { MockPhoenixChannel } from '../mocks/phoenixChannel';
 
 import { createMockPhoenixChannel } from './channelMocks';
 
-/**
- * Setup result for AI Assistant store tests
- */
 export interface AIAssistantStoreTestSetup {
-  /** The created store instance */
   store: AIAssistantStore;
-  /** Mock Phoenix channel for testing */
   mockChannel: MockPhoenixChannel;
-  /** Cleanup function to call in afterEach */
   cleanup: () => void;
 }
 
@@ -197,8 +191,6 @@ export function populateAIStoreWithMessages(
   store: AIAssistantStore,
   messages: Message[]
 ): void {
-  // Directly set messages via store's internal state
-  // This simulates messages received from the server
   messages.forEach(message => {
     store._addMessage(message);
   });
