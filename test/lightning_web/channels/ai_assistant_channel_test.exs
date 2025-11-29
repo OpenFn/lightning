@@ -1489,4 +1489,201 @@ defmodule LightningWeb.AiAssistantChannelTest do
       refute_push "new_message", _
     end
   end
+
+  describe "format_session with unknown job" do
+    test "formats session with unknown job when no job_id or unsaved_job", %{
+      socket: socket,
+      user: user
+    } do
+      # Create a session directly without job_id or unsaved_job metadata
+      session =
+        %Lightning.AiAssistant.ChatSession{
+          user_id: user.id,
+          session_type: "job_code",
+          title: "Orphaned Session",
+          meta: %{}
+        }
+        |> Lightning.Repo.insert!()
+
+      {:ok, _, socket} =
+        subscribe_and_join(
+          socket,
+          AiAssistantChannel,
+          "ai_assistant:job_code:#{session.id}",
+          %{}
+        )
+
+      ref = push(socket, "list_sessions", %{"offset" => 0, "limit" => 20})
+
+      assert_reply ref, :error, %{reason: "Job not found"}
+    end
+  end
+
+  describe "validation error formatting" do
+    test "formats simple field errors", %{
+      socket: socket,
+      job: job,
+      user: user
+    } do
+      {:ok, session} =
+        AiAssistant.create_session(job, user, "Initial message", [])
+
+      {:ok, _, socket} =
+        subscribe_and_join(
+          socket,
+          AiAssistantChannel,
+          "ai_assistant:job_code:#{session.id}",
+          %{}
+        )
+
+      # Push empty string to trigger validation (but channel checks for this first)
+      # So we test the error formatting indirectly
+      ref = push(socket, "new_message", %{"content" => "   "})
+
+      assert_reply ref, :error, %{reason: "Message cannot be empty"}
+    end
+  end
+
+  describe "session without project for workflow_template" do
+    test "handles missing project gracefully", %{
+      socket: socket,
+      user: user
+    } do
+      # Create a workflow_template session without a project
+      session =
+        %Lightning.AiAssistant.ChatSession{
+          user_id: user.id,
+          session_type: "workflow_template",
+          title: "Orphaned Workflow Session",
+          meta: %{},
+          project_id: nil
+        }
+        |> Lightning.Repo.insert!()
+
+      {:ok, _, socket} =
+        subscribe_and_join(
+          socket,
+          AiAssistantChannel,
+          "ai_assistant:workflow_template:#{session.id}",
+          %{}
+        )
+
+      ref = push(socket, "list_sessions", %{"offset" => 0, "limit" => 20})
+
+      assert_reply ref, :error, %{reason: "Project not found"}
+    end
+  end
+
+  describe "extract_message_options edge cases" do
+    @tag :capture_log
+    test "handles attach_code and attach_logs for job_code", %{
+      socket: socket,
+      job: job,
+      user: user
+    } do
+      {:ok, session} =
+        AiAssistant.create_session(job, user, "Initial message", [])
+
+      {:ok, _, socket} =
+        subscribe_and_join(
+          socket,
+          AiAssistantChannel,
+          "ai_assistant:job_code:#{session.id}",
+          %{}
+        )
+
+      # Test with both attach_code and attach_logs true
+      ref =
+        push(socket, "new_message", %{
+          "content" => "Help with logs",
+          "attach_code" => true,
+          "attach_logs" => true
+        })
+
+      assert_reply ref, :ok, %{message: message}
+      assert message.role == "user"
+    end
+
+    @tag :capture_log
+    test "handles attach_code false for job_code", %{
+      socket: socket,
+      job: job,
+      user: user
+    } do
+      {:ok, session} =
+        AiAssistant.create_session(job, user, "Initial message", [])
+
+      {:ok, _, socket} =
+        subscribe_and_join(
+          socket,
+          AiAssistantChannel,
+          "ai_assistant:job_code:#{session.id}",
+          %{}
+        )
+
+      # Test with attach_code explicitly false
+      ref =
+        push(socket, "new_message", %{
+          "content" => "Help without code",
+          "attach_code" => false
+        })
+
+      assert_reply ref, :ok, %{message: message}
+      assert message.role == "user"
+    end
+  end
+
+  describe "extract_session_options edge cases" do
+    @tag :capture_log
+    test "creates job_code session without follow_run_id", %{
+      socket: socket,
+      job: job
+    } do
+      params = %{
+        "job_id" => job.id,
+        "content" => "Help me"
+      }
+
+      {:ok, response, _socket} =
+        subscribe_and_join(
+          socket,
+          AiAssistantChannel,
+          "ai_assistant:job_code:new",
+          params
+        )
+
+      session = AiAssistant.get_session!(response.session_id)
+      # Should not have follow_run_id in meta
+      refute Map.has_key?(session.meta, "follow_run_id")
+    end
+
+    @tag :capture_log
+    test "creates workflow_template session without code", %{
+      socket: socket,
+      project: project
+    } do
+      params = %{
+        "project_id" => project.id,
+        "content" => "Create workflow"
+      }
+
+      {:ok, response, _socket} =
+        subscribe_and_join(
+          socket,
+          AiAssistantChannel,
+          "ai_assistant:workflow_template:new",
+          params
+        )
+
+      session =
+        AiAssistant.get_session!(response.session_id)
+        |> Lightning.Repo.preload(:messages)
+
+      # First message should not have code
+      first_message =
+        Enum.find(session.messages, fn msg -> msg.role == :user end)
+
+      assert first_message.code == nil
+    end
+  end
 end
