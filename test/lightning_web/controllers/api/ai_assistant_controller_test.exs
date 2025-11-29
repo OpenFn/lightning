@@ -724,14 +724,15 @@ defmodule LightningWeb.API.AiAssistantControllerTest do
   end
 
   describe "list_sessions with unsaved jobs" do
-    setup [:register_and_log_in_user, :create_project_with_job]
+    setup [:register_and_log_in_user]
 
     test "includes sessions with unsaved_job metadata", %{
       conn: conn,
-      user: user,
-      job: job,
-      workflow: workflow
+      user: user
     } do
+      project = insert(:project, project_users: [%{user_id: user.id}])
+      workflow = insert(:workflow, project: project)
+      job = insert(:job, workflow: workflow)
       # Create session with unsaved_job in meta
       unsaved_job_id = Ecto.UUID.generate()
 
@@ -764,14 +765,14 @@ defmodule LightningWeb.API.AiAssistantControllerTest do
   end
 
   describe "format_session edge cases" do
-    setup [:register_and_log_in_user, :create_project_with_job]
+    setup [:register_and_log_in_user]
 
     test "formats session with deleted job correctly", %{
       conn: conn,
-      user: user,
-      workflow: workflow,
-      project: project
+      user: user
     } do
+      project = insert(:project, project_users: [%{user_id: user.id}])
+      workflow = insert(:workflow, project: project)
       # Create a job
       job =
         insert(:job,
@@ -799,11 +800,14 @@ defmodule LightningWeb.API.AiAssistantControllerTest do
 
     test "formats session without job_id or unsaved_job", %{
       conn: conn,
-      user: user,
-      job: job
+      user: user
     } do
+      project = insert(:project, project_users: [%{user_id: user.id}])
+      workflow = insert(:workflow, project: project)
+      job = insert(:job, workflow: workflow)
+
       # Create a minimal session without job context
-      session =
+      _session =
         insert(:chat_session,
           user: user,
           session_type: "job_code",

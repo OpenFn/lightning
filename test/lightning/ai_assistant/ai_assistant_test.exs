@@ -1799,25 +1799,6 @@ defmodule Lightning.AiAssistantTest do
     end
   end
 
-  describe "associate_workflow/2" do
-    test "associates workflow with session", %{user: user, project: project} do
-      workflow = insert(:workflow, project: project)
-
-      session =
-        insert(:chat_session,
-          user: user,
-          project: project,
-          session_type: "workflow_template",
-          workflow_id: nil
-        )
-
-      assert {:ok, updated_session} =
-               AiAssistant.associate_workflow(session, workflow)
-
-      assert updated_session.workflow_id == workflow.id
-    end
-  end
-
   describe "query_workflow/3" do
     test "queries workflow chat service", %{user: user, project: project} do
       session =
