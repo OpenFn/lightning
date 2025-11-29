@@ -97,7 +97,6 @@ export const useAIAssistantChannel = (store: AIAssistantStore) => {
     // IMPORTANT: Leave any existing channel before joining a new one
     // This prevents duplicate connections when switching sessions/modes
     if (channelRef.current) {
-      logger.debug('Leaving existing channel before joining new one');
       channelRef.current.leave();
       channelRef.current = null;
     }
@@ -107,13 +106,10 @@ export const useAIAssistantChannel = (store: AIAssistantStore) => {
     const sessionId = state.sessionId || 'new';
     const topic = `ai_assistant:${state.sessionType}:${sessionId}`;
 
-    logger.debug('Joining AI Assistant channel', { topic });
-
     const channel = phoenixSocket.channel(topic, buildJoinParams(state));
 
     channel.on('new_message', (payload: unknown) => {
       const typedPayload = payload as { message: Message };
-      logger.debug('Received new message', typedPayload);
       store._addMessage(typedPayload.message);
     });
 
@@ -122,7 +118,6 @@ export const useAIAssistantChannel = (store: AIAssistantStore) => {
         message_id: string;
         status: MessageStatus;
       };
-      logger.debug('Message status changed', typedPayload);
       store._updateMessageStatus(typedPayload.message_id, typedPayload.status);
     });
 
@@ -130,7 +125,6 @@ export const useAIAssistantChannel = (store: AIAssistantStore) => {
       .join()
       .receive('ok', (response: unknown) => {
         const typedResponse = response as JoinResponse;
-        logger.info('Successfully joined AI Assistant channel', typedResponse);
         store._setConnectionState('connected');
 
         if (typedResponse.session_id) {
@@ -201,7 +195,6 @@ export const useAIAssistantChannel = (store: AIAssistantStore) => {
    */
   const leaveChannel = useCallback(() => {
     if (channelRef.current) {
-      logger.debug('Leaving AI Assistant channel');
       channelRef.current.leave();
       channelRef.current = null;
     }
@@ -218,8 +211,6 @@ export const useAIAssistantChannel = (store: AIAssistantStore) => {
         return;
       }
 
-      logger.debug('Sending message', { content, options });
-
       const payload: Record<string, unknown> = {
         content,
         ...options,
@@ -229,7 +220,6 @@ export const useAIAssistantChannel = (store: AIAssistantStore) => {
         .push('new_message', payload)
         .receive('ok', (response: unknown) => {
           const typedResponse = response as MessageResponse;
-          logger.debug('Message sent successfully', typedResponse);
           store._addMessage(typedResponse.message);
         })
         .receive('error', (response: unknown) => {
@@ -260,13 +250,10 @@ export const useAIAssistantChannel = (store: AIAssistantStore) => {
         return;
       }
 
-      logger.debug('Retrying message', { messageId });
-
       channel
         .push('retry_message', { message_id: messageId })
         .receive('ok', (response: unknown) => {
           const typedResponse = response as MessageResponse;
-          logger.debug('Message retry successful', typedResponse);
           store._updateMessageStatus(
             typedResponse.message.id,
             typedResponse.message.status
@@ -290,12 +277,9 @@ export const useAIAssistantChannel = (store: AIAssistantStore) => {
       return;
     }
 
-    logger.debug('Marking disclaimer as read');
-
     channel
       .push('mark_disclaimer_read', {})
       .receive('ok', () => {
-        logger.debug('Disclaimer marked as read');
         store.markDisclaimerRead();
       })
       .receive('error', (response: unknown) => {
@@ -329,8 +313,6 @@ export const useAIAssistantChannel = (store: AIAssistantStore) => {
         return Promise.reject(new Error('Channel not connected'));
       }
 
-      logger.debug('Loading sessions via channel', { offset, limit });
-
       return new Promise<void>((resolve, reject) => {
         channel
           .push('list_sessions', { offset, limit })
@@ -343,10 +325,6 @@ export const useAIAssistantChannel = (store: AIAssistantStore) => {
                 has_prev_page: boolean;
               };
             };
-            logger.debug(
-              'Sessions loaded successfully via channel',
-              typedResponse
-            );
             store._setSessionList(typedResponse);
             resolve();
           })
@@ -381,15 +359,11 @@ export const useAIAssistantChannel = (store: AIAssistantStore) => {
         return;
       }
 
-      logger.debug('Updating context via channel', context);
-
       store.updateContext(context);
 
       channel
         .push('update_context', context)
-        .receive('ok', () => {
-          logger.debug('Context updated successfully on backend');
-        })
+        .receive('ok', () => {})
         .receive('error', (response: unknown) => {
           const typedResponse = response as ErrorResponse;
           logger.error('Failed to update context', typedResponse);
@@ -459,11 +433,6 @@ function buildJoinParams(
       params['content'] = state.workflowTemplateContext.content;
     }
   }
-
-  logger.debug('Built join params', {
-    params,
-    context: state.jobCodeContext || state.workflowTemplateContext,
-  });
 
   return params;
 }
