@@ -38,10 +38,10 @@ export type MessageStatus =
 export interface Message {
   id: string;
   content: string;
-  code?: string; // Optional workflow YAML for workflow_template mode
+  code?: string;
   role: MessageRole;
   status: MessageStatus;
-  inserted_at: string; // ISO 8601 timestamp
+  inserted_at: string;
   user_id?: string;
 }
 
@@ -50,16 +50,15 @@ export interface Message {
  */
 export interface JobCodeContext {
   job_id: string;
-  attach_code?: boolean; // Include job code in AI context
-  attach_logs?: boolean; // Include run logs in AI context
-  follow_run_id?: string; // Optional run ID to follow for logs
-  content?: string; // Initial message content when creating new session
+  attach_code?: boolean;
+  attach_logs?: boolean;
+  follow_run_id?: string;
+  content?: string;
 
-  // For unsaved jobs (exist in Y.Doc but not in DB yet)
-  job_name?: string; // Job name from Y.Doc
-  job_body?: string; // Job code from Y.Doc
-  job_adaptor?: string; // Job adaptor from Y.Doc
-  workflow_id?: string; // Workflow ID for authorization
+  job_name?: string;
+  job_body?: string;
+  job_adaptor?: string;
+  workflow_id?: string;
 }
 
 /**
@@ -67,10 +66,10 @@ export interface JobCodeContext {
  */
 export interface WorkflowTemplateContext {
   project_id: string;
-  workflow_id?: string; // Optional for editing existing workflows
-  code?: string; // Current workflow YAML
-  errors?: string; // Validation errors to fix
-  content?: string; // Initial message content when creating new session
+  workflow_id?: string;
+  code?: string;
+  errors?: string;
+  content?: string;
 }
 
 /**
@@ -95,22 +94,17 @@ export type ConnectionState =
  * AI Assistant state managed by the store
  */
 export interface AIAssistantState {
-  // Connection state
   connectionState: ConnectionState;
   connectionError?: string;
 
-  // Session management
   sessionId: string | null;
   sessionType: SessionType | null;
 
-  // Messages
   messages: Message[];
 
-  // UI state
-  isLoading: boolean; // True when sending a message
-  isSending: boolean; // True when actively sending (for button state)
+  isLoading: boolean;
+  isSending: boolean;
 
-  // Session list / history
   sessionList: SessionSummary[];
   sessionListLoading: boolean;
   sessionListPagination: {
@@ -119,11 +113,9 @@ export interface AIAssistantState {
     has_prev_page: boolean;
   } | null;
 
-  // Context for session creation
   jobCodeContext: JobCodeContext | null;
   workflowTemplateContext: WorkflowTemplateContext | null;
 
-  // Disclaimer
   hasReadDisclaimer: boolean;
 }
 
@@ -131,14 +123,10 @@ export interface AIAssistantState {
  * AI Assistant store interface following CQS pattern
  */
 export interface AIAssistantStore {
-  // Core store interface (useSyncExternalStore)
   subscribe: (listener: () => void) => () => void;
   getSnapshot: () => AIAssistantState;
   withSelector: <T>(selector: (state: AIAssistantState) => T) => () => T;
 
-  // Commands - State mutations
-
-  // Connection management
   connect: (
     sessionType: SessionType,
     context: JobCodeContext | WorkflowTemplateContext,
@@ -146,26 +134,21 @@ export interface AIAssistantStore {
   ) => void;
   disconnect: () => void;
 
-  // Message operations
   sendMessage: (content: string, options?: MessageOptions) => void;
   retryMessage: (messageId: string) => void;
 
-  // Session management
   clearSession: () => void;
   loadSession: (sessionId: string) => void;
   updateContext: (context: Partial<JobCodeContext>) => void;
 
-  // Session list (HTTP-based, used when no channel connection)
   loadSessionList: (options?: {
     offset?: number;
     limit?: number;
     append?: boolean;
   }) => Promise<void>;
 
-  // Disclaimer
   markDisclaimerRead: () => void;
 
-  // Internal state updates (called by channel hook)
   _setConnectionState: (state: ConnectionState, error?: string) => void;
   _setSession: (session: Session) => void;
   _clearSession: () => void;
@@ -179,11 +162,9 @@ export interface AIAssistantStore {
  * Options for sending a message
  */
 export interface MessageOptions {
-  // For job_code mode
   attach_code?: boolean;
   attach_logs?: boolean;
 
-  // For workflow_template mode
   code?: string;
   errors?: string;
 }
