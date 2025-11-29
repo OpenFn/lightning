@@ -256,9 +256,7 @@ describe('AIAssistantPanel', () => {
 
       expect(screen.getByText('Conversations')).toBeInTheDocument();
       expect(screen.getByText('About the AI Assistant')).toBeInTheDocument();
-      expect(
-        screen.getByText('OpenFn Responsible AI Policy')
-      ).toBeInTheDocument();
+      expect(screen.getByText('Responsible AI Policy')).toBeInTheDocument();
     });
 
     it('should close menu when menu button clicked again', async () => {
@@ -313,7 +311,7 @@ describe('AIAssistantPanel', () => {
       });
     });
 
-    it('should call onShowSessions when Chat History clicked', async () => {
+    it('should call onShowSessions when Conversations clicked', async () => {
       render(
         <AIAssistantPanel
           isOpen={true}
@@ -326,7 +324,7 @@ describe('AIAssistantPanel', () => {
       const menuButton = screen.getByLabelText('More options');
       await userEvent.click(menuButton);
 
-      const historyButton = screen.getByText('Chat History');
+      const historyButton = screen.getByText('Conversations');
       await userEvent.click(historyButton);
 
       expect(mockOnShowSessions).toHaveBeenCalledTimes(1);
@@ -344,7 +342,7 @@ describe('AIAssistantPanel', () => {
       const menuButton = screen.getByLabelText('More options');
       await userEvent.click(menuButton);
 
-      const policyLink = screen.getByText('OpenFn Responsible AI Policy');
+      const policyLink = screen.getByText('Responsible AI Policy');
       expect(policyLink.closest('a')).toHaveAttribute(
         'href',
         'https://www.openfn.org/ai'
@@ -554,7 +552,7 @@ describe('AIAssistantPanel', () => {
       expect(screen.queryByText('Chat Content')).not.toBeInTheDocument();
     });
 
-    it('should switch to sessions view when Chat History clicked', async () => {
+    it('should switch to sessions view when Conversations clicked', async () => {
       render(
         <AIAssistantPanel
           isOpen={true}
@@ -573,7 +571,7 @@ describe('AIAssistantPanel', () => {
       const menuButton = screen.getByLabelText('More options');
       await userEvent.click(menuButton);
 
-      const historyButton = screen.getByText('Chat History');
+      const historyButton = screen.getByText('Conversations');
       await userEvent.click(historyButton);
 
       // Should call onShowSessions
