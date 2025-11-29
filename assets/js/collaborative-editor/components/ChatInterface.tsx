@@ -38,14 +38,11 @@ export function ChatInterface({
   const [input, setInput] = useState('');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  // Auto-resize textarea as content changes
   useEffect(() => {
     const textarea = textareaRef.current;
     if (!textarea) return;
 
-    // Reset height to auto to get the correct scrollHeight
     textarea.style.height = 'auto';
-    // Set height to scrollHeight (content height)
     textarea.style.height = `${textarea.scrollHeight}px`;
   }, [input]);
 
@@ -58,7 +55,6 @@ export function ChatInterface({
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    // Submit on Enter (without Shift)
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSubmit(e);
@@ -67,7 +63,6 @@ export function ChatInterface({
 
   return (
     <div className="flex flex-col h-full">
-      {/* Messages List */}
       <div className="flex-1 overflow-y-auto">
         {messages.length === 0 && (
           <div className="flex flex-col items-center justify-center h-full text-center px-4">
@@ -94,16 +89,12 @@ export function ChatInterface({
           >
             <div className="max-w-3xl mx-auto">
               {message.role === 'assistant' ? (
-                // Assistant Message - Full Width
                 <div>
-                  {/* Message Content */}
                   <div className="space-y-3">
-                    {/* Message Text */}
                     <div className="text-[15px] text-gray-900 leading-7 whitespace-pre-wrap">
                       {message.content}
                     </div>
 
-                    {/* Code Block - Only show for assistant messages */}
                     {message.code && (
                       <div className="rounded-lg overflow-hidden border border-gray-200 bg-white">
                         <div className="px-4 py-2 bg-gray-50 border-b border-gray-200 flex items-center justify-between">
@@ -123,7 +114,6 @@ export function ChatInterface({
                       </div>
                     )}
 
-                    {/* Error State */}
                     {message.status === 'error' && (
                       <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-red-50 border border-red-200">
                         <span className="hero-exclamation-circle h-4 w-4 text-red-600 flex-shrink-0" />
@@ -133,7 +123,6 @@ export function ChatInterface({
                       </div>
                     )}
 
-                    {/* Processing State */}
                     {message.status === 'processing' && (
                       <div className="flex items-center gap-2 text-gray-600">
                         <div className="flex items-center gap-1">
@@ -146,7 +135,6 @@ export function ChatInterface({
                   </div>
                 </div>
               ) : (
-                // User Message - Bubble Style
                 <div className="flex justify-end">
                   <div className="flex flex-col items-end max-w-[85%]">
                     <div className="rounded-2xl bg-gray-100 border border-gray-200 px-4 py-3">
@@ -155,7 +143,6 @@ export function ChatInterface({
                       </div>
                     </div>
 
-                    {/* Error State for User Messages */}
                     {message.status === 'error' && (
                       <div className="flex items-center gap-2 mt-2 px-3 py-1.5 rounded-lg bg-red-50 border border-red-200">
                         <span className="hero-exclamation-circle h-3.5 w-3.5 text-red-600" />
@@ -172,12 +159,10 @@ export function ChatInterface({
         ))}
       </div>
 
-      {/* Input Area */}
       <div className="flex-none border-t border-gray-200 bg-white">
         <div className="py-4 px-4">
           <form onSubmit={handleSubmit}>
             <div className="relative">
-              {/* Textarea Container */}
               <div
                 className={cn(
                   'rounded-xl border-2 transition-all duration-200',
@@ -209,9 +194,7 @@ export function ChatInterface({
                   }}
                 />
 
-                {/* Actions Bar */}
                 <div className="flex items-center justify-between px-3 py-2 border-t border-gray-100">
-                  {/* Warning */}
                   <div className="flex items-center gap-1.5">
                     <span className="hero-shield-exclamation h-3.5 w-3.5 text-amber-500" />
                     <span className="text-[11px] font-medium text-gray-600">
@@ -219,7 +202,6 @@ export function ChatInterface({
                     </span>
                   </div>
 
-                  {/* Send Button */}
                   <button
                     type="submit"
                     disabled={!input.trim() || isLoading}
@@ -243,7 +225,6 @@ export function ChatInterface({
                 </div>
               </div>
 
-              {/* Keyboard Hint */}
               <div className="mt-2 text-center">
                 <span className="text-[11px] text-gray-500">
                   Press{' '}
