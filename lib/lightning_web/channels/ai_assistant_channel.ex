@@ -539,7 +539,43 @@ defmodule LightningWeb.AiAssistantChannel do
     }
   end
 
-  defp format_changeset_errors(changeset) do
+  @doc """
+  Formats Ecto changeset errors into a flat map structure for API responses.
+
+  Converts nested changeset errors into a user-friendly format with interpolated
+  values and flattened keys for nested associations.
+
+  ## Examples
+
+      iex> changeset = %Ecto.Changeset{errors: [content: {"can't be blank", []}]}
+      iex> format_changeset_errors(changeset)
+      %{"content" => ["can't be blank"]}
+
+      iex> changeset = %Ecto.Changeset{
+      ...>   errors: [
+      ...>     content: {"should be at least %{count} character(s)", [count: 5]}
+      ...>   ]
+      ...> }
+      iex> format_changeset_errors(changeset)
+      %{"content" => ["should be at least 5 character(s)"]}
+
+  ## Nested Association Errors
+
+  For nested associations (e.g., has_many relationships), errors are flattened
+  using bracket notation:
+
+      %{"jobs[0].name" => ["can't be blank"], "jobs[1].adaptor" => ["is invalid"]}
+
+  ## Parameters
+
+    * `changeset` - An Ecto.Changeset with validation errors
+
+  ## Returns
+
+  A map with string keys (field names) and list values (error messages).
+  Returns an empty map if the changeset has no errors.
+  """
+  def format_changeset_errors(changeset) do
     changeset
     |> Ecto.Changeset.traverse_errors(fn {msg, opts} ->
       Enum.reduce(opts, msg, fn {key, value}, acc ->

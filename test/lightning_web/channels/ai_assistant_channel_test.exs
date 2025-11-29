@@ -1806,4 +1806,286 @@ defmodule LightningWeb.AiAssistantChannelTest do
       assert response.session_type == "job_code"
     end
   end
+
+  describe "format_changeset_errors/1" do
+    # Define test schemas for testing nested association errors
+    defmodule TestItem do
+      use Ecto.Schema
+      import Ecto.Changeset
+
+      embedded_schema do
+        field :name, :string
+        field :value, :string
+      end
+
+      def changeset(item, attrs) do
+        item
+        |> cast(attrs, [:name, :value])
+        |> validate_required([:name])
+        |> validate_length(:name, min: 2)
+      end
+    end
+
+    defmodule TestParent do
+      use Ecto.Schema
+      import Ecto.Changeset
+
+      embedded_schema do
+        field :title, :string
+        embeds_many :items, TestItem
+      end
+
+      def changeset(parent, attrs) do
+        parent
+        |> cast(attrs, [:title])
+        |> cast_embed(:items, required: true)
+        |> validate_required([:title])
+      end
+    end
+
+    test "formats simple field errors" do
+      changeset =
+        %Lightning.AiAssistant.ChatMessage{}
+        |> Ecto.Changeset.cast(%{}, [:content, :role])
+        |> Ecto.Changeset.validate_required([:content, :role])
+        |> Ecto.Changeset.validate_length(:content, min: 1, max: 10_000)
+
+      errors = AiAssistantChannel.format_changeset_errors(changeset)
+
+      assert errors["content"] == ["can't be blank"]
+      assert errors["role"] == ["can't be blank"]
+    end
+
+    test "formats length validation errors with min constraint" do
+      changeset =
+        %Lightning.AiAssistant.ChatMessage{}
+        |> Ecto.Changeset.cast(%{content: "ab", role: :user}, [
+          :content,
+          :role
+        ])
+        |> Ecto.Changeset.validate_length(:content, min: 5)
+
+      errors = AiAssistantChannel.format_changeset_errors(changeset)
+
+      assert errors["content"] == [
+               "should be at least 5 character(s)"
+             ]
+    end
+
+    test "formats length validation errors with max constraint" do
+      long_content = String.duplicate("a", 10_001)
+
+      changeset =
+        %Lightning.AiAssistant.ChatMessage{}
+        |> Ecto.Changeset.cast(%{content: long_content, role: :user}, [
+          :content,
+          :role
+        ])
+        |> Ecto.Changeset.validate_length(:content, min: 1, max: 10_000)
+
+      errors = AiAssistantChannel.format_changeset_errors(changeset)
+
+      assert errors["content"] == [
+               "should be at most 10000 character(s)"
+             ]
+    end
+
+    test "interpolates multiple placeholders in error messages" do
+      changeset =
+        %Lightning.AiAssistant.ChatMessage{}
+        |> Ecto.Changeset.cast(%{content: "ab", role: :user}, [
+          :content,
+          :role
+        ])
+        |> Ecto.Changeset.validate_length(:content, is: 10)
+
+      errors = AiAssistantChannel.format_changeset_errors(changeset)
+
+      assert errors["content"] == ["should be 10 character(s)"]
+    end
+
+    test "handles multiple errors for the same field" do
+      changeset =
+        %Lightning.AiAssistant.ChatMessage{}
+        |> Ecto.Changeset.cast(%{content: "", role: :user}, [:content, :role])
+        |> Ecto.Changeset.validate_required([:content])
+        |> Ecto.Changeset.validate_length(:content, min: 1, max: 10_000)
+
+      errors = AiAssistantChannel.format_changeset_errors(changeset)
+
+      assert "can't be blank" in errors["content"]
+    end
+
+    test "handles errors on multiple fields" do
+      changeset =
+        %Lightning.AiAssistant.ChatMessage{}
+        |> Ecto.Changeset.cast(%{}, [:content, :role, :code])
+        |> Ecto.Changeset.validate_required([:content, :role])
+        |> Ecto.Changeset.validate_length(:code, max: 100)
+
+      errors = AiAssistantChannel.format_changeset_errors(changeset)
+
+      assert Map.keys(errors) |> Enum.sort() == ["content", "role"]
+      assert errors["content"] == ["can't be blank"]
+      assert errors["role"] == ["can't be blank"]
+    end
+
+    test "converts atom keys to string keys" do
+      changeset =
+        %Lightning.AiAssistant.ChatMessage{}
+        |> Ecto.Changeset.cast(%{}, [:content])
+        |> Ecto.Changeset.validate_required([:content])
+
+      errors = AiAssistantChannel.format_changeset_errors(changeset)
+
+      # Should be string key, not atom
+      assert is_binary(Map.keys(errors) |> List.first())
+      assert errors["content"] == ["can't be blank"]
+    end
+
+    test "returns empty map for valid changeset" do
+      changeset =
+        %Lightning.AiAssistant.ChatMessage{}
+        |> Ecto.Changeset.cast(%{content: "valid", role: :user}, [
+          :content,
+          :role
+        ])
+        |> Ecto.Changeset.validate_required([:content, :role])
+
+      errors = AiAssistantChannel.format_changeset_errors(changeset)
+
+      assert errors == %{}
+    end
+
+    test "flattens nested embedded schema errors with bracket notation" do
+      # Create a changeset with embedded items that have validation errors
+      changeset =
+        %TestParent{}
+        |> TestParent.changeset(%{
+          title: "Parent",
+          items: [
+            %{name: "", value: "test"},
+            # Empty name - will fail required validation
+            %{name: "a", value: "test"}
+            # Too short - will fail min length validation
+          ]
+        })
+
+      errors = AiAssistantChannel.format_changeset_errors(changeset)
+
+      # Should flatten to items[0].name, items[1].name format
+      assert errors["items[0].name"] == ["can't be blank"]
+
+      assert errors["items[1].name"] == [
+               "should be at least 2 character(s)"
+             ]
+    end
+
+    test "handles multiple errors on nested items" do
+      changeset =
+        %TestParent{}
+        |> TestParent.changeset(%{
+          title: "Parent",
+          items: [
+            %{name: "", value: ""},
+            # Both fields have issues
+            %{}
+            # Missing both fields
+          ]
+        })
+
+      errors = AiAssistantChannel.format_changeset_errors(changeset)
+
+      assert errors["items[0].name"] == ["can't be blank"]
+      assert errors["items[1].name"] == ["can't be blank"]
+    end
+
+    test "handles mix of top-level and nested errors" do
+      changeset =
+        %TestParent{}
+        |> TestParent.changeset(%{
+          # Missing title (top-level error)
+          items: [
+            %{name: ""}
+            # Missing name (nested error)
+          ]
+        })
+
+      errors = AiAssistantChannel.format_changeset_errors(changeset)
+
+      assert errors["title"] == ["can't be blank"]
+      assert errors["items[0].name"] == ["can't be blank"]
+    end
+
+    test "handles empty embedded list error" do
+      changeset =
+        %TestParent{}
+        |> TestParent.changeset(%{
+          title: "Parent",
+          items: []
+          # Empty items list - should fail required: true
+        })
+
+      errors = AiAssistantChannel.format_changeset_errors(changeset)
+
+      # cast_embed with required: true generates this error
+      assert errors["items"] == ["can't be blank"]
+    end
+
+    test "preserves list format for non-nested errors" do
+      # Test that simple list errors (not maps) are kept as-is
+      changeset =
+        %Lightning.AiAssistant.ChatMessage{}
+        |> Ecto.Changeset.cast(%{content: "test", role: :user}, [
+          :content,
+          :role
+        ])
+        |> Ecto.Changeset.add_error(:content, "must be unique")
+        |> Ecto.Changeset.add_error(:content, "is already taken")
+
+      errors = AiAssistantChannel.format_changeset_errors(changeset)
+
+      assert length(errors["content"]) == 2
+      assert "must be unique" in errors["content"]
+      assert "is already taken" in errors["content"]
+    end
+  end
+
+  describe "error formatting in new_message" do
+    test "returns formatted errors when message validation fails", %{
+      user: user,
+      project: project
+    } do
+      session =
+        insert(:chat_session,
+          user: user,
+          project: project,
+          session_type: "workflow_template"
+        )
+
+      socket = socket(LightningWeb.UserSocket, "user_id", %{current_user: user})
+
+      {:ok, _, socket} =
+        subscribe_and_join(
+          socket,
+          AiAssistantChannel,
+          "ai_assistant:workflow_template:#{session.id}",
+          %{"project_id" => project.id, "session_id" => session.id}
+        )
+
+      # Send a message with content that's too long
+      long_content = String.duplicate("a", 10_001)
+
+      {:reply, {:error, %{reason: "validation_error", errors: errors}}, _socket} =
+        AiAssistantChannel.handle_in(
+          "new_message",
+          %{"content" => long_content},
+          socket
+        )
+
+      assert errors["content"] == [
+               "should be at most 10000 character(s)"
+             ]
+    end
+  end
 end
