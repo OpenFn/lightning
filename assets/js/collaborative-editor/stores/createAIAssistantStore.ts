@@ -74,7 +74,6 @@ const logger = _logger.ns('AIAssistantStore').seal();
  * Creates an AI Assistant store instance
  */
 export const createAIAssistantStore = (): AIAssistantStore => {
-  // Single Immer-managed state object
   let state: AIAssistantState = produce(
     {
       connectionState: 'disconnected' as ConnectionState,
@@ -96,11 +95,10 @@ export const createAIAssistantStore = (): AIAssistantStore => {
 
   const listeners = new Set<() => void>();
 
-  // Redux DevTools integration
   const devtools = wrapStoreWithDevTools({
     name: 'AIAssistantStore',
-    excludeKeys: [], // All state is serializable
-    maxAge: 100, // Keep more actions for AI conversations
+    excludeKeys: [],
+    maxAge: 100,
   });
 
   const notify = (actionName: string = 'stateChange') => {
@@ -177,7 +175,6 @@ export const createAIAssistantStore = (): AIAssistantStore => {
       draft.sessionId = sessionId ?? null;
       draft.connectionError = undefined;
 
-      // Store context based on session type
       if (sessionType === 'job_code') {
         draft.jobCodeContext = context as JobCodeContext;
         draft.workflowTemplateContext = null;
@@ -201,7 +198,6 @@ export const createAIAssistantStore = (): AIAssistantStore => {
       draft.connectionState = 'disconnected';
       draft.isLoading = false;
       draft.isSending = false;
-      // Keep: sessionId, sessionType, messages, context - these persist
     });
 
     notify('disconnect');
@@ -219,9 +215,6 @@ export const createAIAssistantStore = (): AIAssistantStore => {
     });
 
     notify('sendMessage');
-
-    // Note: Actual sending happens in the channel hook
-    // This just updates the UI state optimistically
   };
 
   /**
@@ -278,7 +271,6 @@ export const createAIAssistantStore = (): AIAssistantStore => {
   const loadSession = (sessionId: string) => {
     logger.debug('Loading session', { sessionId });
 
-    // Disconnect current session and reconnect to the new one
     state = produce(state, draft => {
       draft.connectionState = 'connecting';
       draft.sessionId = sessionId;
@@ -298,7 +290,6 @@ export const createAIAssistantStore = (): AIAssistantStore => {
 
     state = produce(state, draft => {
       if (draft.jobCodeContext) {
-        // Update only the provided fields
         if (context.job_adaptor !== undefined) {
           draft.jobCodeContext.job_adaptor = context.job_adaptor;
         }
@@ -371,7 +362,6 @@ export const createAIAssistantStore = (): AIAssistantStore => {
         params.append('job_id', jobContext.job_id);
       } else if (sessionType === 'workflow_template' && workflowContext) {
         params.append('project_id', workflowContext.project_id);
-        // Include workflow_id to filter sessions by workflow (matching legacy editor)
         if (workflowContext.workflow_id) {
           params.append('workflow_id', workflowContext.workflow_id);
         }
@@ -390,10 +380,8 @@ export const createAIAssistantStore = (): AIAssistantStore => {
       logger.debug('Sessions loaded via HTTP', { data, append });
 
       if (append) {
-        // Append new sessions to existing list
         _appendSessionList(data);
       } else {
-        // Replace session list
         _setSessionList(data);
       }
     } catch (error) {
@@ -500,7 +488,6 @@ export const createAIAssistantStore = (): AIAssistantStore => {
     logger.debug('Adding message', { message });
 
     state = produce(state, draft => {
-      // Check if message already exists (avoid duplicates)
       const exists = draft.messages.some(m => m.id === message.id);
       if (!exists) {
         draft.messages.push(message);
@@ -508,13 +495,8 @@ export const createAIAssistantStore = (): AIAssistantStore => {
 
       draft.isSending = false;
 
-      // Handle loading state based on message role and status
       if (message.role === 'user') {
-        // User message added - keep isLoading true to show waiting state
-        // The assistant hasn't responded yet, so we should keep showing loading
-        // Don't modify draft.isLoading here - let it stay true
       } else if (message.role === 'assistant') {
-        // Only stop loading if assistant message is in a final state
         if (message.status === 'success' || message.status === 'error') {
           draft.isLoading = false;
         } else if (message.status === 'processing') {
@@ -538,7 +520,6 @@ export const createAIAssistantStore = (): AIAssistantStore => {
       if (message) {
         message.status = status as Message['status'];
 
-        // Update loading state based on status
         if (status === 'success' || status === 'error') {
           draft.isLoading = false;
         } else if (status === 'processing') {
@@ -578,7 +559,6 @@ export const createAIAssistantStore = (): AIAssistantStore => {
     logger.debug('Appending sessions to list', { response });
 
     state = produce(state, draft => {
-      // Append new sessions, avoiding duplicates
       const existingIds = new Set(draft.sessionList.map(s => s.id));
       const newSessions = response.sessions.filter(s => !existingIds.has(s.id));
       draft.sessionList.push(...newSessions);
@@ -600,8 +580,6 @@ export const createAIAssistantStore = (): AIAssistantStore => {
     state = produce(state, draft => {
       draft.sessionList = [];
       draft.sessionListPagination = null;
-      // Don't set sessionListLoading here - it should only be managed by loadSessionList()
-      // Setting it to true here can cause infinite loading if loadSessionList() never gets called
       draft.sessionListLoading = false;
     });
 
