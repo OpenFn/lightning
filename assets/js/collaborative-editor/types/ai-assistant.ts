@@ -156,6 +156,7 @@ export interface AIAssistantStore {
   _addMessage: (message: Message) => void;
   _updateMessageStatus: (messageId: string, status: MessageStatus) => void;
   _setSessionList: (response: SessionListResponse) => void;
+  _appendSessionList: (response: SessionListResponse) => void;
 }
 
 /**
