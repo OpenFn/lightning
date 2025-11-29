@@ -363,7 +363,6 @@ export const useAIAssistantChannel = (store: AIAssistantStore) => {
 
       channel
         .push('update_context', context)
-        .receive('ok', () => {})
         .receive('error', (response: unknown) => {
           const typedResponse = response as ErrorResponse;
           logger.error('Failed to update context', typedResponse);
