@@ -1762,7 +1762,7 @@ defmodule Lightning.AiAssistantTest do
         )
 
       # List sessions using Project struct
-      {sessions, _meta} = AiAssistant.list_sessions(project, user, [])
+      {sessions, _meta} = AiAssistant.list_sessions(project, :desc, [])
 
       assert length(sessions) == 2
     end
@@ -1792,7 +1792,7 @@ defmodule Lightning.AiAssistantTest do
 
       # Filter by specific workflow
       {sessions, _meta} =
-        AiAssistant.list_sessions(project, user, workflow: workflow1)
+        AiAssistant.list_sessions(project, :desc, workflow: workflow1)
 
       assert length(sessions) == 1
       assert hd(sessions).workflow_id == workflow1.id
