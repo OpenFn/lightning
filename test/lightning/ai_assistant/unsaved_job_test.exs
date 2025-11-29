@@ -405,5 +405,48 @@ defmodule Lightning.AiAssistant.UnsavedJobTest do
       assert updated.job_id == existing_job.id
       assert updated.meta["unsaved_job"] == unsaved_job_data
     end
+
+    test "skips sessions when unsaved job was not saved to workflow" do
+      user = insert(:user)
+      workflow = insert(:workflow)
+
+      # Job that WAS saved
+      saved_job_id = Ecto.UUID.generate()
+
+      # Job that was NOT saved (deleted before saving workflow)
+      unsaved_job_id = Ecto.UUID.generate()
+
+      unsaved_job_data = %{
+        "id" => unsaved_job_id,
+        "name" => "Deleted Job",
+        "body" => "console.log('deleted');",
+        "adaptor" => "@openfn/language-common@latest",
+        "workflow_id" => workflow.id
+      }
+
+      # Create session for job that was deleted before saving
+      {:ok, session} =
+        %ChatSession{}
+        |> ChatSession.changeset(%{
+          user_id: user.id,
+          title: "Session for deleted job",
+          session_type: "job_code",
+          job_id: nil,
+          meta: %{"unsaved_job" => unsaved_job_data}
+        })
+        |> Repo.insert()
+
+      # Save workflow with only one job (the unsaved_job_id was NOT saved)
+      _job = insert(:job, id: saved_job_id, workflow: workflow)
+      workflow = Repo.preload(workflow, :jobs, force: true)
+
+      # Cleanup should skip the session since its job_id is not in the workflow
+      assert {:ok, 0} = AiAssistant.cleanup_unsaved_job_sessions(workflow)
+
+      # Session should remain unchanged
+      updated = Repo.reload(session)
+      assert updated.job_id == nil
+      assert updated.meta["unsaved_job"] == unsaved_job_data
+    end
   end
 end
