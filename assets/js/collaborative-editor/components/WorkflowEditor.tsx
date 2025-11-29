@@ -20,7 +20,6 @@ import {
 } from '../hooks/useWorkflow';
 import { useKeyboardShortcut } from '../keyboard';
 
-import { CollaborationWidget } from './CollaborationWidget';
 import { CollaborativeWorkflowDiagram } from './diagram/CollaborativeWorkflowDiagram';
 import { Inspector } from './inspector';
 import { LeftPanel } from './left-panel';
@@ -304,9 +303,6 @@ export function WorkflowEditor() {
         onClosePanel={handleCloseLeftPanel}
         onSave={handleSaveAndClose}
       />
-
-      {/* Connection status widget */}
-      <CollaborationWidget />
     </div>
   );
 }

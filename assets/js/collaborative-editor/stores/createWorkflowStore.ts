@@ -186,7 +186,7 @@ function validateWorkflowSettings(
           if (!errors[field]) {
             errors[field] = [];
           }
-          errors[field]!.push(err.message);
+          errors[field].push(err.message);
         }
       });
 

@@ -19,8 +19,8 @@ import type { Workflow } from '#/collaborative-editor/types/workflow';
 import { AdaptorDisplay } from '../AdaptorDisplay';
 import { AdaptorSelectionModal } from '../AdaptorSelectionModal';
 import { ConfigureAdaptorModal } from '../ConfigureAdaptorModal';
-import { Tooltip } from '../Tooltip';
 import { createZodValidator } from '../form/createZodValidator';
+import { Tooltip } from '../Tooltip';
 
 interface JobFormProps {
   job: Workflow.Job;

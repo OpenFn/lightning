@@ -32,7 +32,6 @@ import {
   useHistoryCommands,
   useJobMatchesRun,
 } from '../../hooks/useHistory';
-import { isFinalState } from '../../types/history';
 import { useRunRetry } from '../../hooks/useRunRetry';
 import { useRunRetryShortcuts } from '../../hooks/useRunRetryShortcuts';
 import { useSession } from '../../hooks/useSession';
@@ -45,6 +44,7 @@ import {
   useWorkflowReadOnly,
   useWorkflowState,
 } from '../../hooks/useWorkflow';
+import { isFinalState } from '../../types/history';
 import { AdaptorDisplay } from '../AdaptorDisplay';
 import { AdaptorSelectionModal } from '../AdaptorSelectionModal';
 import { CollaborativeMonaco } from '../CollaborativeMonaco';
@@ -872,11 +872,7 @@ export function FullScreenIDE({
                               <div className="flex-1">
                                 <Tabs
                                   value={selectedDocsTab}
-                                  onChange={tab =>
-                                    setSelectedDocsTab(
-                                      tab as 'docs' | 'metadata'
-                                    )
-                                  }
+                                  onChange={tab => setSelectedDocsTab(tab)}
                                   variant="pills"
                                   options={[
                                     {

@@ -21,13 +21,14 @@ import _logger from '#/utils/logger';
 
 import { useSocket } from '../../react/contexts/SocketProvider';
 import { useURLState } from '../../react/lib/use-url-state';
+import { useProviderLifecycle } from '../hooks/useProviderLifecycle';
+import { useYDocPersistence } from '../hooks/useYDocPersistence';
 import {
   createSessionStore,
   type SessionStoreInstance,
 } from '../stores/createSessionStore';
+
 import { ConnectionStatusProvider } from './ConnectionStatusContext';
-import { useProviderLifecycle } from '../hooks/useProviderLifecycle';
-import { useYDocPersistence } from '../hooks/useYDocPersistence';
 
 const logger = _logger.ns('SessionProvider').seal();
 
