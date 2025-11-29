@@ -1076,6 +1076,32 @@ defmodule Lightning.AiAssistantTest do
       assert enriched == session
     end
 
+    test "handles missing job gracefully when enriching", %{
+      user: user
+    } do
+      # Create session with a non-existent job_id
+      fake_job_id = Ecto.UUID.generate()
+
+      session = %Lightning.AiAssistant.ChatSession{
+        id: Ecto.UUID.generate(),
+        user_id: user.id,
+        session_type: "job_code",
+        title: "Test Session",
+        job_id: fake_job_id,
+        meta: %{},
+        inserted_at: DateTime.utc_now(),
+        updated_at: DateTime.utc_now()
+      }
+
+      # Enrich should handle gracefully when job doesn't exist in database
+      enriched = AiAssistant.enrich_session_with_job_context(session)
+
+      # Session should be returned as-is without enrichment (nil values)
+      assert enriched.job_id == fake_job_id
+      assert enriched.expression == nil
+      assert enriched.adaptor == nil
+    end
+
     test "adds run logs for unsaved jobs when follow_run_id is in meta", %{
       user: user,
       workflow: %{jobs: [job | _]} = workflow
@@ -1573,6 +1599,103 @@ defmodule Lightning.AiAssistantTest do
                AiAssistant.associate_workflow(session, workflow)
 
       assert updated_session.workflow_id == workflow.id
+    end
+  end
+
+  describe "cleanup_unsaved_job_sessions/1" do
+    test "updates sessions with unsaved job data to use real job_id", %{
+      user: user,
+      project: project
+    } do
+      # Create workflow
+      workflow = insert(:workflow, project: project)
+
+      # Generate unsaved job ID
+      unsaved_job_id = Ecto.UUID.generate()
+
+      # Create session with unsaved job metadata
+      session =
+        insert(:chat_session,
+          user: user,
+          session_type: "job_code",
+          job_id: nil,
+          meta: %{
+            "unsaved_job" => %{
+              "id" => unsaved_job_id,
+              "name" => "Unsaved Job",
+              "body" => "console.log('test');",
+              "adaptor" => "@openfn/language-common@1.0.0",
+              "workflow_id" => workflow.id
+            }
+          }
+        )
+
+      # Now "save" the workflow which creates a real job with the unsaved_job_id
+      _job =
+        insert(:job,
+          id: unsaved_job_id,
+          workflow: workflow,
+          name: "Now Saved Job",
+          body: "console.log('saved');",
+          adaptor: "@openfn/language-common@1.0.0"
+        )
+
+      # Reload workflow with jobs
+      workflow = Lightning.Repo.preload(workflow, :jobs, force: true)
+
+      # Run cleanup
+      assert {:ok, 1} = AiAssistant.cleanup_unsaved_job_sessions(workflow)
+
+      # Verify session was updated
+      updated_session =
+        Lightning.Repo.get!(Lightning.AiAssistant.ChatSession, session.id)
+
+      assert updated_session.job_id == unsaved_job_id
+      refute Map.has_key?(updated_session.meta, "unsaved_job")
+    end
+
+    test "returns count of 0 when no sessions match", %{workflow: workflow} do
+      assert {:ok, 0} = AiAssistant.cleanup_unsaved_job_sessions(workflow)
+    end
+  end
+
+  describe "cleanup_unsaved_workflow_sessions/1" do
+    test "updates sessions with unsaved workflow data to use real workflow_id",
+         %{
+           user: user,
+           project: project
+         } do
+      # Create a workflow that we'll treat as "newly saved"
+      workflow = insert(:workflow, project: project)
+
+      # Create session with unsaved workflow metadata referencing this workflow's ID
+      session =
+        insert(:chat_session,
+          user: user,
+          project: project,
+          session_type: "workflow_template",
+          workflow_id: nil,
+          meta: %{
+            "unsaved_workflow" => %{
+              "id" => workflow.id,
+              "name" => "Unsaved Workflow"
+            }
+          }
+        )
+
+      # Run cleanup
+      assert {:ok, 1} = AiAssistant.cleanup_unsaved_workflow_sessions(workflow)
+
+      # Verify session was updated
+      updated_session =
+        Lightning.Repo.get!(Lightning.AiAssistant.ChatSession, session.id)
+
+      assert updated_session.workflow_id == workflow.id
+      refute Map.has_key?(updated_session.meta, "unsaved_workflow")
+    end
+
+    test "returns count of 0 when no sessions match", %{workflow: workflow} do
+      assert {:ok, 0} = AiAssistant.cleanup_unsaved_workflow_sessions(workflow)
     end
   end
 

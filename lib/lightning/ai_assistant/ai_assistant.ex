@@ -215,7 +215,6 @@ defmodule Lightning.AiAssistant do
       title: create_title(content),
       session_type: "job_code",
       meta: meta
-      # job_id is intentionally nil - will be set when job is saved
     }
 
     Multi.new()
@@ -327,7 +326,6 @@ defmodule Lightning.AiAssistant do
     if MapSet.size(job_ids) == 0 do
       {:ok, 0}
     else
-      # Find all job_code sessions with unsaved_job data for this workflow
       query =
         from s in ChatSession,
           where: s.session_type == "job_code",
@@ -341,7 +339,6 @@ defmodule Lightning.AiAssistant do
 
       sessions = Repo.all(query)
 
-      # Update each session if its job now exists in the database
       updated_count =
         Enum.reduce(sessions, 0, fn session, count ->
           update_session_if_job_exists(session, job_ids, count)
@@ -355,9 +352,7 @@ defmodule Lightning.AiAssistant do
     unsaved_job = session.meta["unsaved_job"]
     unsaved_job_id = unsaved_job["id"]
 
-    # Check if this unsaved job now exists in the database
     if MapSet.member?(job_ids, unsaved_job_id) do
-      # Update session to use real job_id and remove unsaved_job
       case session
            |> Changeset.change(%{
              job_id: unsaved_job_id,
@@ -547,7 +542,6 @@ defmodule Lightning.AiAssistant do
              ] ->
           get_job_sessions_with_count(job, sort_direction, offset, limit)
 
-        # Handle job_id string (for unsaved jobs from channel)
         job_id when is_binary(job_id) ->
           get_job_sessions_with_count(job_id, sort_direction, offset, limit)
       end
@@ -626,8 +620,6 @@ defmodule Lightning.AiAssistant do
   @spec enrich_session_with_job_context(ChatSession.t()) :: ChatSession.t()
   def enrich_session_with_job_context(session) do
     cond do
-      # Check for runtime context first (from update_context channel event)
-      # This takes precedence over all other sources
       session.meta["runtime_context"] ->
         runtime_context = session.meta["runtime_context"]
 
@@ -638,7 +630,6 @@ defmodule Lightning.AiAssistant do
         )
         |> maybe_add_run_logs()
 
-      # Check for unsaved job data in meta
       session.meta["unsaved_job"] ->
         unsaved_job = session.meta["unsaved_job"]
 
@@ -649,11 +640,9 @@ defmodule Lightning.AiAssistant do
         )
         |> maybe_add_run_logs(unsaved_job["id"])
 
-      # If job_id exists, load from database
       session.job_id ->
         case Repo.get(Lightning.Workflows.Job, session.job_id) do
           nil ->
-            # Job was deleted - return session as-is
             session
 
           job ->
@@ -662,7 +651,6 @@ defmodule Lightning.AiAssistant do
             |> maybe_add_run_logs()
         end
 
-      # No job data available
       true ->
         session
     end
@@ -672,7 +660,6 @@ defmodule Lightning.AiAssistant do
   # Header clause for default value
   defp maybe_add_run_logs(session, job_id \\ nil)
 
-  # For unsaved jobs, explicit job_id is passed
   defp maybe_add_run_logs(
          %{meta: %{"follow_run_id" => run_id}} = session,
          job_id
@@ -684,7 +671,6 @@ defmodule Lightning.AiAssistant do
     %{session | logs: logs}
   end
 
-  # For saved jobs, use session.job_id
   defp maybe_add_run_logs(
          %{meta: %{"follow_run_id" => run_id}, job_id: job_id} = session,
          nil
@@ -905,7 +891,6 @@ defmodule Lightning.AiAssistant do
         {:code, false} ->
           Map.drop(acc, [:expression])
 
-        # Support both :log and :logs for backwards compatibility
         {:log, false} ->
           Map.drop(acc, [:log])
 
@@ -997,14 +982,12 @@ defmodule Lightning.AiAssistant do
 
     query =
       if Keyword.has_key?(opts, :workflow) do
-        # If workflow option was explicitly passed (even if nil), filter by it
         if workflow do
           where(base_query, [s], s.workflow_id == ^workflow.id)
         else
           where(base_query, [s], is_nil(s.workflow_id))
         end
       else
-        # If workflow option was not passed, return all sessions for the project
         base_query
       end
 
@@ -1034,7 +1017,6 @@ defmodule Lightning.AiAssistant do
 
   defp get_job_sessions_with_count(job_id, sort_direction, offset, limit)
        when is_binary(job_id) do
-    # Query sessions by job_id (saved jobs)
     saved_sessions_query =
       from(s in ChatSession,
         where: s.job_id == ^job_id,
@@ -1043,7 +1025,6 @@ defmodule Lightning.AiAssistant do
         select: %{s | message_count: count(m.id)}
       )
 
-    # Query sessions with unsaved job data matching this job_id
     unsaved_sessions_query =
       from(s in ChatSession,
         where: s.session_type == "job_code",
