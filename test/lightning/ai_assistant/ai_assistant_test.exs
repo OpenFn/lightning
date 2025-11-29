@@ -1700,6 +1700,28 @@ defmodule Lightning.AiAssistantTest do
   end
 
   describe "enrich_session_with_job_context/1 edge cases" do
+    test "enriches session with runtime_context metadata", %{user: user} do
+      session =
+        insert(:chat_session,
+          user: user,
+          session_type: "job_code",
+          job_id: nil,
+          meta: %{
+            "runtime_context" => %{
+              "job_body" => "fn(state => state);",
+              "job_adaptor" => "@openfn/language-http@1.0.0",
+              "job_name" => "Runtime Job",
+              "updated_at" => DateTime.utc_now() |> DateTime.to_iso8601()
+            }
+          }
+        )
+
+      enriched = AiAssistant.enrich_session_with_job_context(session)
+
+      assert enriched.expression == "fn(state => state);"
+      assert enriched.adaptor == "@openfn/language-http@1.0.0"
+    end
+
     test "enriches session with unsaved_job metadata", %{user: user} do
       session =
         insert(:chat_session,
