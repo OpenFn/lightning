@@ -881,10 +881,6 @@ defmodule LightningWeb.WorkflowChannel do
     end
   end
 
-  defp flatten_error_value(key, messages, acc) when is_list(messages) do
-    Map.put(acc, to_string(key), messages)
-  end
-
   defp flatten_error_value(key, value, acc) do
     Map.put(acc, to_string(key), value)
   end
