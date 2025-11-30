@@ -25,6 +25,10 @@ interface ChatInputProps {
   showJobControls?: boolean | undefined;
   /** Storage key for persisting checkbox preferences */
   storageKey?: string | undefined;
+  /** Enable automatic focus management for the input */
+  enableAutoFocus?: boolean | undefined;
+  /** Trigger value that when changed, re-focuses the input (e.g., timestamp) */
+  focusTrigger?: number | undefined;
 }
 
 interface MessageOptions {
@@ -41,6 +45,8 @@ export function ChatInput({
   isLoading = false,
   showJobControls = false,
   storageKey,
+  enableAutoFocus = false,
+  focusTrigger,
 }: ChatInputProps) {
   const [input, setInput] = useState('');
 
@@ -80,9 +86,11 @@ export function ChatInput({
     const textarea = textareaRef.current;
     if (!textarea) return;
 
+    // Reset to minimum height
     textarea.style.height = `${MIN_TEXTAREA_HEIGHT}px`;
 
-    if (textarea.scrollHeight > MIN_TEXTAREA_HEIGHT) {
+    // Only grow if there's actual content
+    if (input && textarea.scrollHeight > MIN_TEXTAREA_HEIGHT) {
       const newHeight = Math.min(textarea.scrollHeight, MAX_TEXTAREA_HEIGHT);
       textarea.style.height = `${newHeight}px`;
     }
@@ -135,6 +143,27 @@ export function ChatInput({
       // Ignore localStorage errors
     }
   }, [attachLogs, storageKey]);
+
+  // Auto-focus the textarea when enableAutoFocus is enabled or focusTrigger changes
+  useEffect(() => {
+    if (enableAutoFocus && textareaRef.current) {
+      // Small delay to ensure button click handlers complete first
+      const timeoutId = setTimeout(() => {
+        textareaRef.current?.focus();
+      }, 50);
+      return () => clearTimeout(timeoutId);
+    }
+  }, [enableAutoFocus, focusTrigger]);
+
+  // Re-focus after AI finishes responding
+  const prevIsLoadingRef = useRef(isLoading);
+  useEffect(() => {
+    // Only focus if loading just finished (was true, now false)
+    if (prevIsLoadingRef.current && !isLoading && enableAutoFocus) {
+      textareaRef.current?.focus();
+    }
+    prevIsLoadingRef.current = isLoading;
+  }, [isLoading, enableAutoFocus]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -195,6 +224,7 @@ export function ChatInput({
                   'disabled:text-gray-400 disabled:cursor-not-allowed'
                 )}
                 style={{
+                  height: `${MIN_TEXTAREA_HEIGHT}px`,
                   minHeight: `${MIN_TEXTAREA_HEIGHT}px`,
                   maxHeight: `${MAX_TEXTAREA_HEIGHT}px`,
                   overflow: 'hidden',

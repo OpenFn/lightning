@@ -93,6 +93,19 @@ export function AIAssistantPanelWrapper() {
   const { closeAIAssistantPanel, toggleAIAssistantPanel } = useUICommands();
   const { updateSearchParams, searchParams } = useURLState();
 
+  // Track IDE state changes to re-focus chat input when IDE closes
+  const isIDEOpen = searchParams.get('panel') === 'editor';
+  const [focusTrigger, setFocusTrigger] = useState(0);
+  const prevIDEOpenRef = useRef(isIDEOpen);
+
+  useEffect(() => {
+    // When IDE closes (was true, now false), increment focus trigger
+    if (prevIDEOpenRef.current && !isIDEOpen) {
+      setFocusTrigger(prev => prev + 1);
+    }
+    prevIDEOpenRef.current = isIDEOpen;
+  }, [isIDEOpen]);
+
   useKeyboardShortcut(
     '$mod+k',
     () => {
@@ -776,6 +789,7 @@ export function AIAssistantPanelWrapper() {
               store={aiStore}
               sessionType={sessionType}
               loadSessions={loadSessions}
+              focusTrigger={focusTrigger}
             >
               <MessageList
                 messages={messages}

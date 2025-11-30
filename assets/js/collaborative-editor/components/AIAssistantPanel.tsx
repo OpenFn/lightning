@@ -1,4 +1,4 @@
-import { useEffect, useState, useSyncExternalStore } from 'react';
+import { useEffect, useState, useSyncExternalStore, useRef } from 'react';
 
 import { cn } from '#/utils/cn';
 
@@ -36,6 +36,10 @@ interface AIAssistantPanelProps {
    * Load sessions via Phoenix Channel (preferred over HTTP)
    */
   loadSessions?: (offset?: number, limit?: number) => Promise<void>;
+  /**
+   * Trigger value that when changed, re-focuses the chat input
+   */
+  focusTrigger?: number;
 }
 
 interface MessageOptions {
@@ -70,13 +74,26 @@ export function AIAssistantPanel({
   isResizable = false,
   store,
   sessionType = null,
-  loadSessions,
+  loadSessions: _loadSessions,
+  focusTrigger,
 }: AIAssistantPanelProps) {
   const [view, setView] = useState<'chat' | 'sessions'>(
     sessionId ? 'chat' : 'sessions'
   );
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isAboutOpen, setIsAboutOpen] = useState(false);
+
+  // Track view changes to trigger focus when switching views
+  const [internalFocusTrigger, setInternalFocusTrigger] = useState(0);
+  const prevViewRef = useRef(view);
+
+  useEffect(() => {
+    // Trigger focus whenever view changes (chat->sessions or sessions->chat)
+    if (prevViewRef.current !== view) {
+      setInternalFocusTrigger(prev => prev + 1);
+    }
+    prevViewRef.current = view;
+  }, [view]);
 
   const storageKey: string | undefined = useSyncExternalStore(
     store?.subscribe ?? (() => () => {}),
@@ -363,6 +380,8 @@ export function AIAssistantPanel({
         isLoading={isLoading}
         showJobControls={sessionType === 'job_code'}
         storageKey={storageKey}
+        enableAutoFocus={isOpen && !isAboutOpen}
+        focusTrigger={(focusTrigger ?? 0) + internalFocusTrigger}
       />
 
       {/* About AI Assistant Modal */}
