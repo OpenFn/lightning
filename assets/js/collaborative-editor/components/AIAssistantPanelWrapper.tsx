@@ -622,6 +622,12 @@ export function AIAssistantPanelWrapper() {
    * as the AI generates it, without requiring manual "Apply" button clicks.
    */
   const appliedMessageIdsRef = useRef<Set<string>>(new Set());
+  const hasLoadedSessionRef = useRef(false);
+
+  // Reset hasLoadedSessionRef when session changes
+  useEffect(() => {
+    hasLoadedSessionRef.current = false;
+  }, [sessionId]);
 
   const { importWorkflow } = useWorkflowActions();
 
@@ -736,6 +742,16 @@ export function AIAssistantPanelWrapper() {
     const messagesWithCode = messages.filter(
       msg => msg.role === 'assistant' && msg.code && msg.status === 'success'
     );
+
+    // On initial session load, mark all existing messages as already applied
+    // to prevent re-applying workflows when opening existing sessions
+    if (!hasLoadedSessionRef.current) {
+      hasLoadedSessionRef.current = true;
+      messagesWithCode.forEach(msg => {
+        appliedMessageIdsRef.current.add(msg.id);
+      });
+      return;
+    }
 
     const latestMessage = messagesWithCode.pop();
 
