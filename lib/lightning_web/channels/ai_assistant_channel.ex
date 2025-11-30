@@ -82,7 +82,11 @@ defmodule LightningWeb.AiAssistantChannel do
              opts
            ) do
         {:ok, updated_session} ->
-          message = List.last(updated_session.messages)
+          message =
+            Enum.find(updated_session.messages, fn msg ->
+              msg.role == :user && msg.content == content
+            end)
+
           {:reply, {:ok, %{message: format_message(message)}}, socket}
 
         {:error, changeset} ->
