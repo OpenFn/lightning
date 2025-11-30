@@ -35,7 +35,7 @@ export function AIButton({
           <ShortcutKeys keys={['mod', 'k']} />)
         </>
       }
-      side="left"
+      side="bottom"
     >
       <button
         type="button"
