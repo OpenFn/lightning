@@ -2,6 +2,7 @@ import { cn } from '#/utils/cn';
 
 import { useIsAIAssistantPanelOpen, useUICommands } from '../hooks/useUI';
 
+import { ShortcutKeys } from './ShortcutKeys';
 import { Tooltip } from './Tooltip';
 
 interface AIButtonProps {
@@ -28,7 +29,12 @@ export function AIButton({
 
   return (
     <Tooltip
-      content={isOpen ? 'Close AI Assistant' : 'Open AI Assistant'}
+      content={
+        <>
+          {isOpen ? 'Close AI Assistant' : 'Open AI Assistant'} (
+          <ShortcutKeys keys={['mod', 'k']} />)
+        </>
+      }
       side="bottom"
     >
       <button
