@@ -210,7 +210,7 @@ export function AIAssistantPanel({
         'h-full flex flex-col overflow-hidden bg-white relative',
         !isResizable && [
           'flex-none border-l border-gray-200',
-          'transition-all duration-300 ease-in-out',
+          'transition-[width,border] duration-300 ease-in-out',
           isOpen ? 'w-[400px]' : 'w-0 border-l-0',
         ]
       )}

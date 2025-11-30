@@ -762,6 +762,7 @@ export function AIAssistantPanelWrapper() {
       className="flex h-full flex-shrink-0 z-[60]"
       style={{
         width: isAIAssistantPanelOpen ? `${width}px` : '0px',
+        overflow: 'hidden',
         transition: isResizing
           ? 'none'
           : 'width 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
