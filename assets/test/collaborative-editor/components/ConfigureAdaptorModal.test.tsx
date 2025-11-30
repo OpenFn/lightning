@@ -175,7 +175,10 @@ function createMockStoreContext() {
 
   const awarenessSnapshot = { users: [] };
   const workflowSnapshot = { jobs: [] };
-  const sessionSnapshot = { context: null };
+  const sessionSnapshot = {
+    context: null,
+    user: { id: 'user-1', name: 'John Doe', email: 'john@example.com' },
+  };
 
   return {
     credentialStore: {
@@ -1125,6 +1128,128 @@ describe('ConfigureAdaptorModal', () => {
       await user.click(newCredLink);
 
       expect(mockOnOpenCredentialModal).toHaveBeenCalledWith('salesforce');
+    });
+  });
+
+  describe('Credential Edit Authorization', () => {
+    it('shows edit button for credentials owned by current user', () => {
+      // Current user is user-1 (John Doe) per sessionSnapshot mock
+      // cred-1 is owned by user-1
+      renderWithProviders(<ConfigureAdaptorModal {...defaultProps} />);
+
+      const credentialItems = screen.getAllByRole('radio');
+
+      // Find the credential owned by user-1 (Salesforce Production)
+      const ownedCred = credentialItems.find(
+        item => item.getAttribute('value') === 'proj-cred-1'
+      );
+      expect(ownedCred).toBeDefined();
+
+      // Should have an edit button with pencil icon
+      const editButton = within(ownedCred!.closest('label')!).getByRole(
+        'button',
+        { name: /edit credential/i }
+      );
+      expect(editButton).toBeInTheDocument();
+      expect(editButton).toBeEnabled();
+    });
+
+    it('disables edit button for credentials owned by other users', () => {
+      // Mock a credential with a different owner
+      const credWithOtherOwner: ProjectCredential = {
+        id: 'cred-other',
+        project_credential_id: 'proj-cred-other',
+        name: 'Other User Credential',
+        schema: 'salesforce',
+        external_id: 'ext-other',
+        inserted_at: '2024-01-01T00:00:00Z',
+        updated_at: '2024-01-01T00:00:00Z',
+        owner: {
+          id: 'user-999',
+          name: 'Other User',
+          email: 'other@example.com',
+        },
+        oauth_client_name: null,
+      };
+
+      const customStoreContext = createMockStoreContext();
+      const customCredentialSnapshot = {
+        projectCredentials: [credWithOtherOwner],
+        keychainCredentials: [],
+        isLoading: false,
+        error: null,
+      };
+
+      customStoreContext.credentialStore.getSnapshot = () =>
+        customCredentialSnapshot;
+      customStoreContext.credentialStore.withSelector = (selector: any) => {
+        const result = selector(customCredentialSnapshot);
+        return () => result;
+      };
+      Object.assign(
+        customStoreContext.credentialStore,
+        createCredentialQueryMethods(customCredentialSnapshot)
+      );
+
+      renderWithProviders(
+        <ConfigureAdaptorModal {...defaultProps} />,
+        customStoreContext
+      );
+
+      // Should have a disabled edit button with appropriate aria-label
+      const editButton = screen.getByRole('button', {
+        name: /cannot edit credential owned by other@example.com/i,
+      });
+      expect(editButton).toBeInTheDocument();
+      expect(editButton).toBeDisabled();
+    });
+
+    it('does not show edit button for credentials without owners', () => {
+      renderWithProviders(<ConfigureAdaptorModal {...defaultProps} />);
+
+      const credentialItems = screen.getAllByRole('radio');
+
+      // Find credential without owner (cred-2: Salesforce Testing)
+      const noOwnerCred = credentialItems.find(
+        item => item.getAttribute('value') === 'proj-cred-2'
+      );
+      expect(noOwnerCred).toBeDefined();
+
+      // Should not have an edit button
+      const editButtons = within(noOwnerCred!.closest('label')!).queryAllByRole(
+        'button'
+      );
+      const editButton = editButtons.find(btn =>
+        btn.getAttribute('aria-label')?.includes('edit')
+      );
+      expect(editButton).toBeUndefined();
+    });
+
+    it('calls onOpenCredentialModal with correct credential when edit button clicked', async () => {
+      const user = userEvent.setup();
+
+      renderWithProviders(<ConfigureAdaptorModal {...defaultProps} />);
+
+      const credentialItems = screen.getAllByRole('radio');
+
+      // Find the credential owned by user-1 (Salesforce Production)
+      const ownedCred = credentialItems.find(
+        item => item.getAttribute('value') === 'proj-cred-1'
+      );
+      expect(ownedCred).toBeDefined();
+
+      // Click edit button for this specific credential
+      const editButton = within(ownedCred!.closest('label')!).getByRole(
+        'button',
+        { name: /edit credential/i }
+      );
+      await user.click(editButton);
+
+      // Should call onOpenCredentialModal with the credential ID
+      expect(mockOnOpenCredentialModal).toHaveBeenCalledWith(
+        'salesforce',
+        'cred-1'
+      );
     });
   });
 });

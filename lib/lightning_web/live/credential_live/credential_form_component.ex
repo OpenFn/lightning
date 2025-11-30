@@ -1114,8 +1114,13 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
     with {:same_user, true} <-
            {:same_user,
             socket.assigns.current_user.id == socket.assigns.credential.user_id},
-         {:ok, _credential} <-
+         {:ok, credential} <-
            Credentials.update_credential(form_credential, credential_params) do
+      # Call on_save callback if it exists (for collaborative editor)
+      if socket.assigns[:on_save] do
+        socket.assigns[:on_save].(credential)
+      end
+
       socket =
         socket
         |> put_flash(:info, "Credential updated successfully")

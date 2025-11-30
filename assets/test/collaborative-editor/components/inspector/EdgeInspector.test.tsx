@@ -162,6 +162,9 @@ describe('EdgeInspector - Footer Button States', () => {
         project_repo_connection: null,
         webhook_auth_methods: [],
         workflow_template: null,
+        project_repo_connection: null,
+        webhook_auth_methods: [],
+        workflow_template: null,
       });
     });
   });
@@ -254,6 +257,9 @@ describe('EdgeInspector - Footer Button States', () => {
           can_write_webhook_auth_method: true,
         },
         latest_snapshot_lock_version: 1,
+        project_repo_connection: null,
+        webhook_auth_methods: [],
+        workflow_template: null,
         project_repo_connection: null,
         webhook_auth_methods: [],
         workflow_template: null,
