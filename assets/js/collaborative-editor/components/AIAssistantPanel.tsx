@@ -5,6 +5,7 @@ import { cn } from '#/utils/cn';
 import type { AIAssistantStore } from '../types/ai-assistant';
 
 import { ChatInput } from './ChatInput';
+import { DisclaimerScreen } from './DisclaimerScreen';
 import { SessionList } from './SessionList';
 
 interface AIAssistantPanelProps {
@@ -40,6 +41,18 @@ interface AIAssistantPanelProps {
    * Trigger value that when changed, re-focuses the chat input
    */
   focusTrigger?: number;
+  /**
+   * Whether to show the disclaimer screen overlay
+   */
+  showDisclaimer?: boolean;
+  /**
+   * Handler for when user accepts the disclaimer
+   */
+  onAcceptDisclaimer?: () => void;
+  /**
+   * Connection state for showing loading screen
+   */
+  connectionState?: 'disconnected' | 'connecting' | 'connected';
 }
 
 interface MessageOptions {
@@ -76,6 +89,9 @@ export function AIAssistantPanel({
   sessionType = null,
   loadSessions: _loadSessions,
   focusTrigger,
+  showDisclaimer = false,
+  onAcceptDisclaimer,
+  connectionState = 'connected',
 }: AIAssistantPanelProps) {
   const [view, setView] = useState<'chat' | 'sessions'>(
     sessionId ? 'chat' : 'sessions'
@@ -83,12 +99,10 @@ export function AIAssistantPanel({
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isAboutOpen, setIsAboutOpen] = useState(false);
 
-  // Track view changes to trigger focus when switching views
   const [internalFocusTrigger, setInternalFocusTrigger] = useState(0);
   const prevViewRef = useRef(view);
 
   useEffect(() => {
-    // Trigger focus whenever view changes (chat->sessions or sessions->chat)
     if (prevViewRef.current !== view) {
       setInternalFocusTrigger(prev => prev + 1);
     }
@@ -134,6 +148,38 @@ export function AIAssistantPanel({
     store?.subscribe ?? (() => () => {}),
     () => store?.getSnapshot().jobCodeContext?.job_id ?? null
   );
+
+  const hasSessionContext = useSyncExternalStore(
+    store?.subscribe ?? (() => () => {}),
+    () => {
+      if (!store) return false;
+      const state = store.getSnapshot();
+      return !!(state.jobCodeContext || state.workflowTemplateContext);
+    }
+  );
+
+  const hasCompletedSessionLoad = useSyncExternalStore(
+    store?.subscribe ?? (() => () => {}),
+    () => {
+      if (!store) return true;
+      const state = store.getSnapshot();
+      return state.sessionListPagination !== null;
+    }
+  );
+
+  const placeholderText =
+    sessionType === 'job_code'
+      ? 'Ask me anything about this job...'
+      : sessionType === 'workflow_template'
+        ? 'Ask me anything about this workflow...'
+        : 'Ask me anything...';
+
+  const disabledMessage =
+    view === 'sessions' && (!hasSessionContext || !hasCompletedSessionLoad)
+      ? 'Loading conversations...'
+      : view === 'chat' && connectionState !== 'connected'
+        ? 'Connecting...'
+        : undefined;
 
   useEffect(() => {
     if (view !== 'sessions' || !store || !storeSessionType) return;
@@ -374,14 +420,24 @@ export function AIAssistantPanel({
         )}
       </div>
 
-      {/* Chat Input - Always visible at bottom */}
       <ChatInput
         onSendMessage={onSendMessage}
-        isLoading={isLoading}
+        isLoading={
+          isLoading ||
+          (view === 'chat' && connectionState !== 'connected') ||
+          (view === 'sessions' &&
+            (!hasSessionContext || !hasCompletedSessionLoad))
+        }
         showJobControls={sessionType === 'job_code'}
         storageKey={storageKey}
-        enableAutoFocus={isOpen && !isAboutOpen}
+        enableAutoFocus={
+          isOpen &&
+          !isAboutOpen &&
+          (view === 'sessions' || connectionState === 'connected')
+        }
         focusTrigger={(focusTrigger ?? 0) + internalFocusTrigger}
+        placeholder={placeholderText}
+        disabledMessage={disabledMessage}
       />
 
       {/* About AI Assistant Modal */}
@@ -542,6 +598,26 @@ export function AIAssistantPanel({
               .
             </p>
           </div>
+        </div>
+      )}
+
+      {connectionState === 'connecting' && (
+        <div className="absolute inset-0 z-50 bg-white flex items-center justify-center">
+          <div className="flex items-center gap-2 text-gray-600">
+            <span className="hero-arrow-path h-5 w-5 animate-spin" />
+            <span className="text-sm">
+              {sessionId ? 'Loading messages...' : 'Loading conversations...'}
+            </span>
+          </div>
+        </div>
+      )}
+
+      {showDisclaimer && (
+        <div className="absolute inset-0 z-50 bg-white">
+          <DisclaimerScreen
+            onAccept={onAcceptDisclaimer || (() => {})}
+            disabled={!onAcceptDisclaimer}
+          />
         </div>
       )}
     </div>

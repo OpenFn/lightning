@@ -303,6 +303,7 @@ export function MessageList({
   const loadingRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [expandedYaml, setExpandedYaml] = useState<Set<string>>(new Set());
+  const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null);
 
   useEffect(() => {
     if (messagesEndRef.current) {
@@ -447,10 +448,44 @@ export function MessageList({
                     </div>
                   )}
 
-                  <div className="mt-2">
-                    <span className="text-xs text-gray-400">
-                      {formatTimestamp(message.inserted_at)}
-                    </span>
+                  <div className="mt-2 flex items-center gap-2 text-xs text-gray-400">
+                    <span>{formatTimestamp(message.inserted_at)}</span>
+                    <span>•</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        void (async () => {
+                          const success = await doCopy(message.content);
+                          if (success) {
+                            setCopiedMessageId(message.id);
+                            setTimeout(() => setCopiedMessageId(null), 2000);
+                          }
+                        })();
+                      }}
+                      className={cn(
+                        'flex items-center gap-1 transition-colors duration-200',
+                        copiedMessageId === message.id
+                          ? 'text-green-600'
+                          : 'text-gray-400 hover:text-gray-600'
+                      )}
+                      title={
+                        copiedMessageId === message.id
+                          ? 'Copied!'
+                          : 'Copy message'
+                      }
+                    >
+                      <span
+                        className={cn(
+                          'h-3 w-3',
+                          copiedMessageId === message.id
+                            ? 'hero-check'
+                            : 'hero-clipboard-document'
+                        )}
+                      />
+                      <span>
+                        {copiedMessageId === message.id ? 'Copied' : 'Copy'}
+                      </span>
+                    </button>
                   </div>
                 </div>
               </div>

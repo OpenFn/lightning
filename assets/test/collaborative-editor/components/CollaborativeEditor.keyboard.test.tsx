@@ -304,6 +304,7 @@ vi.mock('../../../js/collaborative-editor/hooks/useAIAssistant', () => ({
   useAISessionId: () => null,
   useAISessionType: () => null,
   useAIConnectionState: () => 'disconnected',
+  useAIHasReadDisclaimer: () => true,
   useAIWorkflowTemplateContext: () => null,
 }));
 
@@ -320,6 +321,7 @@ vi.mock('../../../js/collaborative-editor/hooks/useAIAssistantChannel', () => ({
     loadSessions: vi.fn(),
     updateContext: vi.fn(),
     retryMessage: vi.fn(),
+    markDisclaimerRead: vi.fn(),
   }),
 }));
 

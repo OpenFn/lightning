@@ -63,6 +63,7 @@ interface JoinResponse {
   session_id: string;
   session_type: SessionType;
   messages: Message[];
+  has_read_disclaimer: boolean;
 }
 
 interface MessageResponse {
@@ -134,6 +135,11 @@ export const useAIAssistantChannel = (store: AIAssistantStore) => {
             session_type: typedResponse.session_type,
             messages: typedResponse.messages || [],
           });
+        }
+
+        // Set disclaimer state from backend
+        if (typedResponse.has_read_disclaimer) {
+          store.markDisclaimerRead();
         }
       })
       .receive('error', (response: unknown) => {

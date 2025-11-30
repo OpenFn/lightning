@@ -48,6 +48,16 @@ export function SessionList({
     store.withSelector(state => state.sessionListPagination)
   );
 
+  const jobCodeContext = useSyncExternalStore(
+    store.subscribe,
+    store.withSelector(state => state.jobCodeContext)
+  );
+
+  const workflowTemplateContext = useSyncExternalStore(
+    store.subscribe,
+    store.withSelector(state => state.workflowTemplateContext)
+  );
+
   const filteredSessions = useMemo(() => {
     let filtered = sessionList;
 
@@ -82,22 +92,36 @@ export function SessionList({
     }
   };
 
-  if (isLoading && sessionList.length === 0) {
-    return (
-      <div className="flex flex-col items-center justify-center py-12 px-4">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600 mb-3"></div>
-        <p className="text-sm text-gray-500">Loading sessions...</p>
-      </div>
-    );
-  }
+  const hasContext = !!(jobCodeContext || workflowTemplateContext);
+  const hasCompletedLoad = pagination !== null;
 
   if (sessionList.length === 0) {
+    if (!hasContext || !hasCompletedLoad) {
+      return (
+        <div className="flex flex-col items-center justify-center h-full px-4">
+          <div className="flex items-center gap-2 text-gray-600">
+            <span className="hero-arrow-path h-5 w-5 animate-spin" />
+            <span className="text-sm">Loading conversations...</span>
+          </div>
+        </div>
+      );
+    }
+
     return (
-      <div className="flex flex-col items-center justify-center py-12 px-4">
-        <div className="hero-chat-bubble-left-right h-12 w-12 text-gray-300 mb-3" />
-        <p className="text-sm text-gray-500 text-center">No sessions yet</p>
-        <p className="text-xs text-gray-400 text-center mt-1">
-          Start a conversation to see it here
+      <div className="flex flex-col items-center justify-center h-full px-6">
+        <div className="relative mb-4">
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="w-20 h-20 rounded-full bg-gray-100 opacity-30 animate-pulse" />
+          </div>
+          <div className="relative flex items-center justify-center w-20 h-20 rounded-full bg-gradient-to-br from-gray-50 to-gray-100">
+            <span className="hero-chat-bubble-left-right h-10 w-10 text-gray-400" />
+          </div>
+        </div>
+        <h3 className="text-lg font-medium text-gray-900 text-center mb-2">
+          No conversations yet
+        </h3>
+        <p className="text-sm text-gray-600 text-center max-w-[280px] leading-relaxed">
+          Start chatting below to create your first conversation
         </p>
       </div>
     );

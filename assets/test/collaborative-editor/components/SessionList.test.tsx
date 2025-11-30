@@ -18,12 +18,23 @@ describe('SessionList', () => {
 
   beforeEach(() => {
     mockStore = createAIAssistantStore();
+    mockStore._setConnectionState('connected');
     mockOnSessionSelect = vi.fn();
     vi.clearAllMocks();
   });
 
   describe('Empty State', () => {
     it('should show empty state when no sessions', () => {
+      mockStore.connect('workflow_template', { project_id: 'project-1' });
+      mockStore._setSessionList({
+        sessions: [],
+        pagination: {
+          total_count: 0,
+          has_next_page: false,
+          has_prev_page: false,
+        },
+      });
+
       render(
         <SessionList
           store={mockStore}
@@ -32,13 +43,25 @@ describe('SessionList', () => {
         />
       );
 
-      expect(screen.getByText('No sessions yet')).toBeInTheDocument();
+      expect(screen.getByText('No conversations yet')).toBeInTheDocument();
       expect(
-        screen.getByText(/Start a conversation to see it here/)
+        screen.getByText(
+          /Start chatting below to create your first conversation/
+        )
       ).toBeInTheDocument();
     });
 
     it('should show chat bubble icon in empty state', () => {
+      mockStore.connect('workflow_template', { project_id: 'project-1' });
+      mockStore._setSessionList({
+        sessions: [],
+        pagination: {
+          total_count: 0,
+          has_next_page: false,
+          has_prev_page: false,
+        },
+      });
+
       const { container } = render(
         <SessionList
           store={mockStore}
@@ -163,7 +186,6 @@ describe('SessionList', () => {
         />
       );
 
-      // Active session should have special styling (bg-primary or border-primary)
       const activeSession = screen
         .getByText('Active Session')
         .closest('button');
@@ -333,7 +355,6 @@ describe('SessionList', () => {
         />
       );
 
-      // Sort button has "Latest" or "Oldest" text
       expect(screen.getByText(/Latest|Oldest/)).toBeInTheDocument();
     });
   });

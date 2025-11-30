@@ -633,6 +633,7 @@ describe('AIAssistantPanel', () => {
           isOpen={true}
           onClose={mockOnClose}
           store={mockStore}
+          sessionId="session-1"
         />
       );
 
@@ -648,6 +649,7 @@ describe('AIAssistantPanel', () => {
           onClose={mockOnClose}
           onSendMessage={mockOnSendMessage}
           store={mockStore}
+          sessionId="session-1"
         />
       );
 
@@ -662,6 +664,7 @@ describe('AIAssistantPanel', () => {
           onClose={mockOnClose}
           isLoading={true}
           store={mockStore}
+          sessionId="session-1"
         />
       );
 
@@ -676,6 +679,7 @@ describe('AIAssistantPanel', () => {
           onClose={mockOnClose}
           sessionType="job_code"
           store={mockStore}
+          sessionId="session-1"
         />
       );
 
@@ -877,6 +881,7 @@ describe('AIAssistantPanel', () => {
           isOpen={true}
           onClose={mockOnClose}
           store={mockStore}
+          sessionId="session-1"
         />
       );
 

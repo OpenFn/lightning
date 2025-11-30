@@ -41,12 +41,14 @@ defmodule LightningWeb.AiAssistantChannel do
        %{
          session_id: session.id,
          session_type: session_type,
-         messages: format_messages(session.messages)
+         messages: format_messages(session.messages),
+         has_read_disclaimer: AiAssistant.user_has_read_disclaimer?(user)
        },
        assign(socket,
          session_id: session.id,
          session_type: session_type,
-         session: session
+         session: session,
+         current_user: user
        )}
     else
       {:user, nil} ->
