@@ -25,6 +25,54 @@ import { AIAssistantPanel } from './AIAssistantPanel';
 import { MessageList } from './MessageList';
 
 /**
+ * Helper function to extract job ID from AI mode context.
+ * Returns null if mode is not job_code.
+ */
+function getJobIdFromContext(
+  mode: string,
+  context:
+    | import('../types/ai-assistant').JobCodeContext
+    | import('../types/ai-assistant').WorkflowTemplateContext
+): string | null {
+  if (mode !== 'job_code') {
+    return null;
+  }
+  return (context as import('../types/ai-assistant').JobCodeContext).job_id;
+}
+
+/**
+ * Helper function to extract job context from AI mode.
+ * Returns null if mode is not job_code.
+ */
+function getJobCodeContext(
+  mode: string,
+  context:
+    | import('../types/ai-assistant').JobCodeContext
+    | import('../types/ai-assistant').WorkflowTemplateContext
+): import('../types/ai-assistant').JobCodeContext | null {
+  if (mode !== 'job_code') {
+    return null;
+  }
+  return context as import('../types/ai-assistant').JobCodeContext;
+}
+
+/**
+ * Helper function to extract workflow template context from AI mode.
+ * Returns null if mode is not workflow_template.
+ */
+function getWorkflowTemplateContext(
+  mode: string,
+  context:
+    | import('../types/ai-assistant').JobCodeContext
+    | import('../types/ai-assistant').WorkflowTemplateContext
+): import('../types/ai-assistant').WorkflowTemplateContext | null {
+  if (mode !== 'workflow_template') {
+    return null;
+  }
+  return context as import('../types/ai-assistant').WorkflowTemplateContext;
+}
+
+/**
  * Helper function to prepare workflow data for serialization.
  * Transforms workflow store state into the format expected by serializeWorkflowToYAML.
  */
@@ -231,11 +279,11 @@ export function AIAssistantPanelWrapper() {
     const { mode, context } = aiMode;
 
     const isModeSwitch = state.sessionType && state.sessionType !== mode;
+    const currentJobId = getJobIdFromContext(mode, context);
     const jobIdChanged =
       mode === 'job_code' &&
       state.jobCodeContext &&
-      (context as import('../types/ai-assistant').JobCodeContext).job_id !==
-        state.jobCodeContext.job_id;
+      currentJobId !== state.jobCodeContext.job_id;
 
     if (isModeSwitch || jobIdChanged) {
       updateSearchParams({
@@ -256,10 +304,7 @@ export function AIAssistantPanelWrapper() {
     const state = aiStore.getSnapshot();
     const { mode, context } = aiMode;
 
-    const currentJobId =
-      mode === 'job_code'
-        ? (context as import('../types/ai-assistant').JobCodeContext).job_id
-        : null;
+    const currentJobId = getJobIdFromContext(mode, context);
 
     const modeChanged = prevModeRef.current !== mode;
     const sessionIdChanged = prevSessionIdRef.current !== sessionIdFromURL;
@@ -291,11 +336,11 @@ export function AIAssistantPanelWrapper() {
 
     // STEP 2: Initialize context for current mode
     // This MUST happen before any session loading
+    const currentJobIdForCheck = getJobIdFromContext(mode, context);
     const jobIdChanged =
       mode === 'job_code' &&
       state.jobCodeContext &&
-      (context as import('../types/ai-assistant').JobCodeContext).job_id !==
-        state.jobCodeContext.job_id;
+      currentJobIdForCheck !== state.jobCodeContext.job_id;
 
     const needsContextInit =
       !state.sessionType ||
@@ -395,8 +440,8 @@ export function AIAssistantPanelWrapper() {
       return;
     }
 
-    const context =
-      aiMode.context as import('../types/ai-assistant').JobCodeContext;
+    const context = getJobCodeContext(aiMode.mode, aiMode.context);
+    if (!context) return;
 
     const contextUpdate: {
       job_adaptor?: string;
@@ -426,8 +471,8 @@ export function AIAssistantPanelWrapper() {
       return;
     }
 
-    const context =
-      aiMode.context as import('../types/ai-assistant').WorkflowTemplateContext;
+    const context = getWorkflowTemplateContext(aiMode.mode, aiMode.context);
+    if (!context) return;
 
     // Only update if workflow ID changed from what's in the context
     // This handles the case where a workflow is saved for the first time
@@ -702,17 +747,6 @@ export function AIAssistantPanelWrapper() {
 
         validateIds(workflowSpec);
 
-        // Clear AI Assistant chat param to prevent race conditions where React
-        // tries to reconnect to AI Assistant with stale job IDs during import.
-        // Keep job/panel params so inspector panels remain open after import.
-        updateSearchParams({
-          'j-chat': null,
-        });
-
-        if (sessionType === 'job_code') {
-          closeAIAssistantPanel();
-        }
-
         const workflowState = convertWorkflowSpecToState(workflowSpec);
 
         importWorkflow(workflowState);
@@ -728,7 +762,7 @@ export function AIAssistantPanelWrapper() {
         setApplyingMessageId(null);
       }
     },
-    [importWorkflow, updateSearchParams, sessionType, closeAIAssistantPanel]
+    [importWorkflow]
   );
 
   /**
