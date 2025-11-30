@@ -513,9 +513,6 @@ export function FullScreenIDE({
 
   useEffect(() => {
     const cleanup = handleEvent('credential_saved', (payload: any) => {
-      console.log('[FullScreenIDE] credential_saved event received:', payload);
-      console.log('[FullScreenIDE] currentJob:', currentJob);
-
       setIsCredentialModalOpen(false);
 
       // If we have a current job, update its credential assignment
@@ -526,11 +523,6 @@ export function FullScreenIDE({
           ? credential.project_credential_id
           : credential.id;
 
-        console.log(
-          '[FullScreenIDE] Updating job credential to:',
-          credentialId
-        );
-
         updateJob(currentJob.id, {
           project_credential_id: is_project_credential ? credentialId : null,
           keychain_credential_id: is_project_credential ? null : credentialId,
@@ -538,11 +530,9 @@ export function FullScreenIDE({
       }
 
       // Always refresh credentials and reopen configure modal
-      console.log('[FullScreenIDE] Requesting credentials refresh');
       void requestCredentials();
 
       setTimeout(() => {
-        console.log('[FullScreenIDE] Reopening configure modal');
         setIsConfigureModalOpen(true);
       }, 200);
     });
