@@ -180,7 +180,7 @@ export const createAIAssistantStore = (): AIAssistantStore => {
   /**
    * Send a message to the AI
    */
-  const sendMessage = (content: string, options?: MessageOptions) => {
+  const sendMessage = (_content: string, _options?: MessageOptions) => {
     state = produce(state, draft => {
       draft.isSending = true;
       draft.isLoading = true;

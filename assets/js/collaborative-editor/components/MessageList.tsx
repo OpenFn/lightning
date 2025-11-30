@@ -319,19 +319,13 @@ export function MessageList({
     }
   }, [isLoading]);
 
-  if (messages.length === 0 && !isLoading) {
+  if (messages.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center h-full text-center px-4">
-        <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary-50 to-primary-100 flex items-center justify-center mb-6">
-          <img src="/images/logo.svg" alt="OpenFn" className="w-9 h-9" />
+      <div className="flex items-center justify-center h-full">
+        <div className="flex items-center gap-2 text-gray-600">
+          <span className="hero-arrow-path h-5 w-5 animate-spin" />
+          <span className="text-sm">Loading session...</span>
         </div>
-        <h3 className="text-xl font-semibold text-gray-900 mb-2">
-          How can I help you today?
-        </h3>
-        <p className="text-sm text-gray-600 max-w-md leading-relaxed">
-          I can help you build workflows, write job code, debug errors, and
-          answer questions about OpenFn adaptors.
-        </p>
       </div>
     );
   }

@@ -21,26 +21,17 @@ describe('ChatInterface', () => {
   });
 
   describe('Empty State', () => {
-    it('should render empty state when no messages', () => {
+    it('should render loading state when no messages', () => {
       render(<ChatInterface messages={[]} />);
 
-      expect(screen.getByText(/How can I help you today?/)).toBeInTheDocument();
+      expect(screen.getByText(/Loading session/)).toBeInTheDocument();
     });
 
-    it('should show logo in empty state', () => {
+    it('should show spinner in loading state', () => {
       render(<ChatInterface messages={[]} />);
 
-      const logo = screen.getByAltText('OpenFn');
-      expect(logo).toBeInTheDocument();
-      expect(logo).toHaveAttribute('src', '/images/logo.svg');
-    });
-
-    it('should show helpful description', () => {
-      render(<ChatInterface messages={[]} />);
-
-      expect(
-        screen.getByText(/I can help you build workflows/)
-      ).toBeInTheDocument();
+      const spinner = document.querySelector('.hero-arrow-path.animate-spin');
+      expect(spinner).toBeInTheDocument();
     });
   });
 
@@ -336,7 +327,7 @@ describe('ChatInterface', () => {
     it('should handle undefined messages', () => {
       render(<ChatInterface />);
 
-      expect(screen.getByText(/How can I help you today?/)).toBeInTheDocument();
+      expect(screen.getByText(/Loading session/)).toBeInTheDocument();
     });
 
     it('should handle missing onSendMessage', async () => {

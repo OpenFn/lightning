@@ -622,6 +622,37 @@ defmodule LightningWeb.AiAssistantChannelTest do
       assert updated_session.workflow_id == workflow.id
       assert is_nil(updated_session.meta["unsaved_workflow"])
     end
+
+    test "handles update_context for workflow_template session with no workflow_id",
+         %{
+           socket: socket,
+           project: project,
+           user: user
+         } do
+      {:ok, session} =
+        AiAssistant.create_workflow_session(
+          project,
+          nil,
+          user,
+          "Create workflow"
+        )
+
+      {:ok, _, socket} =
+        subscribe_and_join(
+          socket,
+          AiAssistantChannel,
+          "ai_assistant:workflow_template:#{session.id}",
+          %{}
+        )
+
+      ref = push(socket, "update_context", %{})
+
+      assert_reply ref, :ok, %{success: true}
+
+      # Verify the session was not modified
+      updated_session = Repo.reload(session)
+      assert is_nil(updated_session.workflow_id)
+    end
   end
 
   describe "authorization" do

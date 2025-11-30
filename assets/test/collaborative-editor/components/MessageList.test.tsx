@@ -32,21 +32,17 @@ describe('MessageList', () => {
   });
 
   describe('Empty State', () => {
-    it('should render empty state when no messages', () => {
+    it('should render loading state when no messages', () => {
       render(<MessageList messages={[]} />);
 
-      expect(screen.getByText(/How can I help you today?/)).toBeInTheDocument();
-      expect(
-        screen.getByText(/I can help you build workflows/)
-      ).toBeInTheDocument();
+      expect(screen.getByText(/Loading session/)).toBeInTheDocument();
     });
 
-    it('should show logo in empty state', () => {
+    it('should show spinner in loading state', () => {
       render(<MessageList messages={[]} />);
 
-      const logo = screen.getByAltText('OpenFn');
-      expect(logo).toBeInTheDocument();
-      expect(logo).toHaveAttribute('src', '/images/logo.svg');
+      const spinner = document.querySelector('.hero-arrow-path.animate-spin');
+      expect(spinner).toBeInTheDocument();
     });
   });
 
@@ -112,19 +108,20 @@ describe('MessageList', () => {
   });
 
   describe('Loading State', () => {
-    it('should show loading indicator when isLoading is true', () => {
+    it('should show loading session spinner when no messages', () => {
       render(<MessageList messages={[]} isLoading />);
 
-      // Check for bouncing dots (multiple elements with animate-bounce)
-      const bouncingDots = document.querySelectorAll('.animate-bounce');
-      expect(bouncingDots.length).toBeGreaterThanOrEqual(3);
+      // When no messages, shows "Loading session..." regardless of isLoading
+      expect(screen.getByText(/Loading session/)).toBeInTheDocument();
+      const spinner = document.querySelector('.hero-arrow-path.animate-spin');
+      expect(spinner).toBeInTheDocument();
     });
 
-    it('should not show loading indicator when isLoading is false', () => {
+    it('should show loading session spinner even when isLoading is false and no messages', () => {
       render(<MessageList messages={[]} isLoading={false} />);
 
-      const bouncingDots = document.querySelectorAll('.animate-bounce');
-      expect(bouncingDots.length).toBe(0);
+      // When no messages, shows "Loading session..." state
+      expect(screen.getByText(/Loading session/)).toBeInTheDocument();
     });
 
     it('should show loading indicator below messages', () => {
@@ -458,13 +455,13 @@ describe('MessageList', () => {
     it('should handle undefined messages prop', () => {
       render(<MessageList />);
 
-      expect(screen.getByText(/How can I help you today?/)).toBeInTheDocument();
+      expect(screen.getByText(/Loading session/)).toBeInTheDocument();
     });
 
     it('should handle empty messages array', () => {
       render(<MessageList messages={[]} />);
 
-      expect(screen.getByText(/How can I help you today?/)).toBeInTheDocument();
+      expect(screen.getByText(/Loading session/)).toBeInTheDocument();
     });
 
     it('should handle missing onApplyWorkflow', () => {

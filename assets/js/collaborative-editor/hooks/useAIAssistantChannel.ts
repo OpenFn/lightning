@@ -164,13 +164,14 @@ export const useAIAssistantChannel = (store: AIAssistantStore) => {
           store._clearSession();
 
           setTimeout(() => {
-            import('../lib/notifications')
+            void import('../lib/notifications')
               .then(({ notifications }) => {
                 notifications.alert({
                   title: 'Job not available',
                   description:
                     "This job hasn't been saved to the database yet, or was deleted. Please save the workflow first.",
                 });
+                return;
               })
               .catch(err => {
                 logger.error('Failed to show notification', err);
