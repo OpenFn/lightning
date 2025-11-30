@@ -2,6 +2,7 @@ defmodule LightningWeb.AiAssistantChannelTest do
   use LightningWeb.ChannelCase, async: true
   import Mox
   import Lightning.Factories
+  import Oban.Testing, only: [with_testing_mode: 2]
 
   import Lightning.{
     AccountsFixtures,
@@ -456,25 +457,28 @@ defmodule LightningWeb.AiAssistantChannelTest do
       job: job,
       user: user
     } do
-      {:ok, session} =
-        AiAssistant.create_session(job, user, "Initial message", [])
+      # Use manual mode to prevent AI response from being generated inline
+      with_testing_mode(:manual, fn ->
+        {:ok, session} =
+          AiAssistant.create_session(job, user, "Initial message", [])
 
-      {:ok, _, socket} =
-        subscribe_and_join(
-          socket,
-          AiAssistantChannel,
-          "ai_assistant:job_code:#{session.id}",
-          %{}
-        )
+        {:ok, _, socket} =
+          subscribe_and_join(
+            socket,
+            AiAssistantChannel,
+            "ai_assistant:job_code:#{session.id}",
+            %{}
+          )
 
-      ref = push(socket, "new_message", %{"content" => "Help me debug this"})
+        ref = push(socket, "new_message", %{"content" => "Help me debug this"})
 
-      assert_reply ref, :ok, %{message: message}
-      # The returned message is the newly created user message
-      assert message.role == "user"
-      assert message.content == "Help me debug this"
-      # Status should be pending initially
-      assert message.status in ["pending", "success"]
+        assert_reply ref, :ok, %{message: message}
+        # The returned message is the newly created user message
+        assert message.role == "user"
+        assert message.content == "Help me debug this"
+        # Status should be pending initially
+        assert message.status in ["pending", "success"]
+      end)
     end
 
     test "rejects empty message", %{socket: socket, job: job, user: user} do
@@ -583,11 +587,13 @@ defmodule LightningWeb.AiAssistantChannelTest do
       assert runtime_context["updated_at"] != nil
     end
 
-    test "rejects update_context for workflow_template session", %{
-      socket: socket,
-      project: project,
-      user: user
-    } do
+    test "allows update_context for workflow_template session with workflow_id",
+         %{
+           socket: socket,
+           project: project,
+           user: user,
+           workflow: workflow
+         } do
       {:ok, session} =
         AiAssistant.create_workflow_session(
           project,
@@ -606,12 +612,15 @@ defmodule LightningWeb.AiAssistantChannelTest do
 
       ref =
         push(socket, "update_context", %{
-          "job_body" => "console.log('test');"
+          "workflow_id" => workflow.id
         })
 
-      assert_reply ref, :error, %{
-        reason: "Context updates only supported for job_code sessions"
-      }
+      assert_reply ref, :ok, %{success: true}
+
+      # Verify the session was updated
+      updated_session = Repo.reload(session)
+      assert updated_session.workflow_id == workflow.id
+      assert is_nil(updated_session.meta["unsaved_workflow"])
     end
   end
 
@@ -1582,27 +1591,30 @@ defmodule LightningWeb.AiAssistantChannelTest do
       job: job,
       user: user
     } do
-      {:ok, session} =
-        AiAssistant.create_session(job, user, "Initial message", [])
+      # Use manual mode to prevent AI response from being generated inline
+      with_testing_mode(:manual, fn ->
+        {:ok, session} =
+          AiAssistant.create_session(job, user, "Initial message", [])
 
-      {:ok, _, socket} =
-        subscribe_and_join(
-          socket,
-          AiAssistantChannel,
-          "ai_assistant:job_code:#{session.id}",
-          %{}
-        )
+        {:ok, _, socket} =
+          subscribe_and_join(
+            socket,
+            AiAssistantChannel,
+            "ai_assistant:job_code:#{session.id}",
+            %{}
+          )
 
-      # Test with both attach_code and attach_logs true
-      ref =
-        push(socket, "new_message", %{
-          "content" => "Help with logs",
-          "attach_code" => true,
-          "attach_logs" => true
-        })
+        # Test with both attach_code and attach_logs true
+        ref =
+          push(socket, "new_message", %{
+            "content" => "Help with logs",
+            "attach_code" => true,
+            "attach_logs" => true
+          })
 
-      assert_reply ref, :ok, %{message: message}
-      assert message.role == "user"
+        assert_reply ref, :ok, %{message: message}
+        assert message.role == "user"
+      end)
     end
 
     @tag :capture_log
@@ -1611,26 +1623,29 @@ defmodule LightningWeb.AiAssistantChannelTest do
       job: job,
       user: user
     } do
-      {:ok, session} =
-        AiAssistant.create_session(job, user, "Initial message", [])
+      # Use manual mode to prevent AI response from being generated inline
+      with_testing_mode(:manual, fn ->
+        {:ok, session} =
+          AiAssistant.create_session(job, user, "Initial message", [])
 
-      {:ok, _, socket} =
-        subscribe_and_join(
-          socket,
-          AiAssistantChannel,
-          "ai_assistant:job_code:#{session.id}",
-          %{}
-        )
+        {:ok, _, socket} =
+          subscribe_and_join(
+            socket,
+            AiAssistantChannel,
+            "ai_assistant:job_code:#{session.id}",
+            %{}
+          )
 
-      # Test with attach_code explicitly false
-      ref =
-        push(socket, "new_message", %{
-          "content" => "Help without code",
-          "attach_code" => false
-        })
+        # Test with attach_code explicitly false
+        ref =
+          push(socket, "new_message", %{
+            "content" => "Help without code",
+            "attach_code" => false
+          })
 
-      assert_reply ref, :ok, %{message: message}
-      assert message.role == "user"
+        assert_reply ref, :ok, %{message: message}
+        assert message.role == "user"
+      end)
     end
   end
 
