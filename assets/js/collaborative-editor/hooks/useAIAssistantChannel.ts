@@ -125,6 +125,7 @@ export const useAIAssistantChannel = (store: AIAssistantStore) => {
       .join()
       .receive('ok', (response: unknown) => {
         const typedResponse = response as JoinResponse;
+
         store._setConnectionState('connected');
 
         if (typedResponse.session_id) {
@@ -363,6 +364,7 @@ export const useAIAssistantChannel = (store: AIAssistantStore) => {
 
       channel
         .push('update_context', context)
+        .receive('ok', () => {})
         .receive('error', (response: unknown) => {
           const typedResponse = response as ErrorResponse;
           logger.error('Failed to update context', typedResponse);

@@ -426,11 +426,13 @@ export const createAIAssistantStore = (): AIAssistantStore => {
    * @internal Called by useAIAssistantChannel hook
    */
   const _addMessage = (message: Message) => {
+    const exists = state.messages.some(m => m.id === message.id);
+    if (exists) {
+      return;
+    }
+
     state = produce(state, draft => {
-      const exists = draft.messages.some(m => m.id === message.id);
-      if (!exists) {
-        draft.messages.push(message);
-      }
+      draft.messages.push(message);
 
       draft.isSending = false;
 
