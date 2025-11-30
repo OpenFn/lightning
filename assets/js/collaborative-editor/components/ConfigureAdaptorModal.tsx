@@ -324,7 +324,7 @@ export function ConfigureAdaptorModal({
                 'focus:outline-none',
                 canEdit
                   ? 'text-gray-400 hover:text-gray-600 cursor-pointer'
-                  : 'text-gray-300 cursor-not-allowed'
+                  : 'text-gray-300 cursor-not-allowed opacity-50'
               )}
               aria-label={
                 canEdit

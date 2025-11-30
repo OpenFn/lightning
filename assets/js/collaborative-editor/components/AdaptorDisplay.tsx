@@ -81,8 +81,9 @@ export function AdaptorDisplay({
   // Get credential from store if we have an ID
   const credential = credentialId ? findCredentialById(credentialId) : null;
 
-  // Check if credential is connected
+  // Check if credential is connected and found
   const hasCredential = !!credentialId;
+  const credentialNotFound = hasCredential && !credential;
 
   // TODO - come back to pulse concept later
   // // Check if adaptor is language-common (shouldn't pulse for common)
@@ -227,6 +228,26 @@ export function AdaptorDisplay({
                 className={`${config.versionTextSize} font-medium truncate`}
               >
                 {credential.name}
+              </span>
+            </span>
+          </Tooltip>
+        )}
+        {credentialNotFound && (
+          <Tooltip
+            content="Credential not found. It may have been deleted or you no longer have access."
+            side="top"
+          >
+            <span
+              className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 flex-shrink-0 max-w-[150px]`}
+              aria-label="Credential not found"
+            >
+              <span
+                className={`hero-exclamation-triangle ${config.badgeIconSize} flex-shrink-0`}
+              />
+              <span
+                className={`${config.versionTextSize} font-medium truncate`}
+              >
+                Not found
               </span>
             </span>
           </Tooltip>
