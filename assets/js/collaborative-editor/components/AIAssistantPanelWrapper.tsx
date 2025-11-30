@@ -688,12 +688,10 @@ export function AIAssistantPanelWrapper() {
 
         validateIds(workflowSpec);
 
-        // CRITICAL: Clear job editor URL params BEFORE importing workflow
-        // This must happen FIRST to prevent race conditions where React tries
-        // to reconnect to AI Assistant with stale job IDs during the import
+        // Clear AI Assistant chat param to prevent race conditions where React
+        // tries to reconnect to AI Assistant with stale job IDs during import.
+        // Keep job/panel params so inspector panels remain open after import.
         updateSearchParams({
-          job: null,
-          panel: null,
           'j-chat': null,
         });
 
