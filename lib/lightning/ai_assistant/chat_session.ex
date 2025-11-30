@@ -77,12 +77,18 @@ defmodule Lightning.AiAssistant.ChatSession do
     |> cast_assoc(:messages)
   end
 
+  @doc false
+  def meta_changeset(chat_session, attrs) do
+    chat_session
+    |> cast(attrs, [:meta])
+  end
+
   defp validate_session_type_requirements(changeset) do
     session_type = get_field(changeset, :session_type)
 
     case session_type do
       "job_code" ->
-        validate_required(changeset, [:job_id])
+        validate_job_code_requirements(changeset)
 
       "workflow_template" ->
         validate_required(changeset, [:project_id])
@@ -93,6 +99,23 @@ defmodule Lightning.AiAssistant.ChatSession do
           :session_type,
           "must be either 'job_code' or 'workflow_template'"
         )
+    end
+  end
+
+  defp validate_job_code_requirements(changeset) do
+    job_id = get_field(changeset, :job_id)
+    meta = get_field(changeset, :meta) || %{}
+    has_unsaved_job_data = Map.has_key?(meta, "unsaved_job")
+
+    cond do
+      not is_nil(job_id) ->
+        changeset
+
+      has_unsaved_job_data ->
+        changeset
+
+      true ->
+        validate_required(changeset, [:job_id])
     end
   end
 end

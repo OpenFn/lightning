@@ -24,6 +24,9 @@ export interface UIState {
 
   /** GitHub sync modal open state */
   githubSyncModalOpen: boolean;
+
+  /** AI Assistant panel open state */
+  aiAssistantPanelOpen: boolean;
 }
 
 /**
@@ -45,6 +48,15 @@ export interface UICommands {
 
   /** Close GitHub sync modal */
   closeGitHubSyncModal: () => void;
+
+  /** Open AI Assistant panel */
+  openAIAssistantPanel: () => void;
+
+  /** Close AI Assistant panel */
+  closeAIAssistantPanel: () => void;
+
+  /** Toggle AI Assistant panel */
+  toggleAIAssistantPanel: () => void;
 }
 
 /**

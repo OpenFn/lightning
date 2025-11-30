@@ -346,13 +346,12 @@ describe('Header - Basic Rendering', () => {
       await new Promise(resolve => setTimeout(resolve, 150));
     });
 
-    // AI button is rendered (disabled by default)
+    // AI button is rendered
     const aiButtons = screen.getAllByRole('button');
     const aiButton = aiButtons.find(button =>
       button.querySelector('.hero-chat-bubble-left-right')
     );
     expect(aiButton).toBeInTheDocument();
-    expect(aiButton).toBeDisabled();
   });
 
   test('settings button shows error styling when workflow has validation errors', async () => {
@@ -1098,6 +1097,5 @@ describe('Header - Keyboard Shortcuts', () => {
       button.querySelector('.hero-chat-bubble-left-right')
     );
     expect(aiButton).toBeInTheDocument();
-    expect(aiButton).toBeDisabled();
   });
 });

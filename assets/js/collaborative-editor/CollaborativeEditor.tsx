@@ -1,11 +1,13 @@
-import { useMemo } from 'react';
+import { useMemo, useCallback, useEffect } from 'react';
 
 import { SocketProvider } from '../react/contexts/SocketProvider';
 import { useURLState } from '../react/lib/use-url-state';
 import type { WithActionProps } from '../react/lib/with-props';
 
+import { AIAssistantPanelWrapper } from './components/AIAssistantPanelWrapper';
 import { BreadcrumbLink, BreadcrumbText } from './components/Breadcrumbs';
 import { Header } from './components/Header';
+import { FullScreenIDE } from './components/ide/FullScreenIDE';
 import { LoadingBoundary } from './components/LoadingBoundary';
 import { Toaster } from './components/ui/Toaster';
 import { VersionDebugLogger } from './components/VersionDebugLogger';
@@ -20,8 +22,8 @@ import {
 } from './hooks/useSessionContext';
 import { useIsRunPanelOpen } from './hooks/useUI';
 import { useVersionSelect } from './hooks/useVersionSelect';
-import { useWorkflowState } from './hooks/useWorkflow';
-import { KeyboardProvider } from './keyboard';
+import { useNodeSelection, useWorkflowState } from './hooks/useWorkflow';
+import { useKeyboardShortcut, KeyboardProvider } from './keyboard';
 
 export interface CollaborativeEditorDataProps {
   'data-workflow-id': string;
@@ -62,36 +64,24 @@ function BreadcrumbContent({
   projectNameFallback,
   projectEnvFallback,
 }: BreadcrumbContentProps) {
-  // Get project from store (may be null if not yet loaded)
   const projectFromStore = useProject();
 
-  // Get workflow from store to read the current name
   const workflowFromStore = useWorkflowState(state => state.workflow);
   const latestSnapshotLockVersion = useLatestSnapshotLockVersion();
 
-  // Get run panel state for Header tooltip logic
   const isRunPanelOpen = useIsRunPanelOpen();
 
-  // Detect IDE mode
   const { searchParams } = useURLState();
   const isIDEOpen = searchParams.get('panel') === 'editor';
 
-  // Store-first with props-fallback pattern
-  // This ensures breadcrumbs work during:
-  // 1. Initial server-side render (uses props)
-  // 2. Store hydration period (uses props)
-  // 3. Full collaborative mode (uses store)
   const projectId = projectFromStore?.id ?? projectIdFallback;
   const projectName = projectFromStore?.name ?? projectNameFallback;
   const projectEnv = projectFromStore?.env ?? projectEnvFallback;
   const currentWorkflowName = workflowFromStore?.name ?? workflowName;
 
-  // Use shared version selection handler (destroys Y.Doc before switching)
   const handleVersionSelect = useVersionSelect();
 
-  // Build breadcrumbs for Canvas mode only (IDE has its own breadcrumbs in FullScreenIDE)
   const breadcrumbElements = useMemo(() => {
-    // Canvas mode: Projects > Project > Workflows > Workflow (with version dropdown)
     return [
       <BreadcrumbLink href="/projects" key="projects">
         Projects
@@ -151,13 +141,64 @@ function BreadcrumbContent({
   );
 }
 
+/**
+ * IDEWrapper Component
+ *
+ * Manages the Full Screen IDE rendering and keyboard shortcuts.
+ * Must be inside StoreProvider to access workflow and UI state.
+ */
+interface IDEWrapperProps {
+  parentProjectId?: string | null;
+  parentProjectName?: string | null;
+}
+
+function IDEWrapper({ parentProjectId, parentProjectName }: IDEWrapperProps) {
+  const { searchParams, updateSearchParams } = useURLState();
+  const { currentNode } = useNodeSelection();
+
+  const isIDEOpen = searchParams.get('panel') === 'editor';
+  const selectedJobId = searchParams.get('job');
+
+  useEffect(() => {}, [isIDEOpen, selectedJobId, searchParams]);
+
+  const handleCloseIDE = useCallback(() => {
+    updateSearchParams({ panel: null, job: null });
+  }, [updateSearchParams]);
+
+  useKeyboardShortcut(
+    'Control+e, Meta+e',
+    () => {
+      if (currentNode.type !== 'job' || !currentNode.node) {
+        return;
+      }
+
+      updateSearchParams({ panel: 'editor' });
+    },
+    0,
+    {
+      enabled: !isIDEOpen,
+    }
+  );
+
+  if (!isIDEOpen || !selectedJobId) {
+    return null;
+  }
+
+  return (
+    <FullScreenIDE
+      jobId={selectedJobId}
+      onClose={handleCloseIDE}
+      parentProjectId={parentProjectId ?? null}
+      parentProjectName={parentProjectName ?? null}
+    />
+  );
+}
+
 export const CollaborativeEditor: WithActionProps<
   CollaborativeEditorDataProps
 > = props => {
-  // Extract data from props (ReactComponent hook passes data attributes as props)
   const workflowId = props['data-workflow-id'];
   const workflowName = props['data-workflow-name'];
-  // Migration: Props are now fallbacks, sessionContextStore is primary source
   const projectId = props['data-project-id'];
   const projectName = props['data-project-name'];
   const projectEnv = props['data-project-env'];
@@ -165,7 +206,6 @@ export const CollaborativeEditor: WithActionProps<
   const rootProjectName = props['data-root-project-name'] ?? null;
   const isNewWorkflow = props['data-is-new-workflow'] === 'true';
 
-  // Extract LiveView actions from props
   const liveViewActions = {
     pushEvent: props.pushEvent,
     pushEventTo: props.pushEventTo,
@@ -176,7 +216,7 @@ export const CollaborativeEditor: WithActionProps<
   return (
     <KeyboardProvider>
       <div
-        className="collaborative-editor h-full flex flex-col relative"
+        className="collaborative-editor h-full flex relative"
         data-testid="collaborative-editor"
       >
         <SocketProvider>
@@ -189,37 +229,39 @@ export const CollaborativeEditor: WithActionProps<
               <LiveViewActionsProvider actions={liveViewActions}>
                 <VersionDebugLogger />
                 <Toaster />
-                <BreadcrumbContent
-                  workflowId={workflowId}
-                  workflowName={workflowName}
-                  {...(projectId !== undefined && {
-                    projectIdFallback: projectId,
-                  })}
-                  {...(projectName !== undefined && {
-                    projectNameFallback: projectName,
-                  })}
-                  {...(projectEnv !== undefined && {
-                    projectEnvFallback: projectEnv,
-                  })}
-                  {...(rootProjectId !== null && {
-                    rootProjectIdFallback: rootProjectId,
-                  })}
-                  {...(rootProjectName !== null && {
-                    rootProjectNameFallback: rootProjectName,
-                  })}
-                />
-                <LoadingBoundary>
-                  <div className="flex-1 min-h-0 overflow-hidden">
-                    <WorkflowEditor
-                      {...(rootProjectId !== null && {
-                        parentProjectId: rootProjectId,
-                      })}
-                      {...(rootProjectName !== null && {
-                        parentProjectName: rootProjectName,
-                      })}
+                <div className="flex-1 min-h-0 overflow-hidden flex flex-col relative">
+                  <BreadcrumbContent
+                    workflowId={workflowId}
+                    workflowName={workflowName}
+                    {...(projectId !== undefined && {
+                      projectIdFallback: projectId,
+                    })}
+                    {...(projectName !== undefined && {
+                      projectNameFallback: projectName,
+                    })}
+                    {...(projectEnv !== undefined && {
+                      projectEnvFallback: projectEnv,
+                    })}
+                    {...(rootProjectId !== null && {
+                      rootProjectIdFallback: rootProjectId,
+                    })}
+                    {...(rootProjectName !== null && {
+                      rootProjectNameFallback: rootProjectName,
+                    })}
+                  />
+                  <div className="flex-1 min-h-0 overflow-hidden relative">
+                    <LoadingBoundary>
+                      <div className="h-full w-full">
+                        <WorkflowEditor />
+                      </div>
+                    </LoadingBoundary>
+                    <IDEWrapper
+                      parentProjectId={rootProjectId}
+                      parentProjectName={rootProjectName}
                     />
                   </div>
-                </LoadingBoundary>
+                </div>
+                <AIAssistantPanelWrapper />
               </LiveViewActionsProvider>
             </StoreProvider>
           </SessionProvider>

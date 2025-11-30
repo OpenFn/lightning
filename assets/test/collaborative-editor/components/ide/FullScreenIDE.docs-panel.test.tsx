@@ -315,10 +315,12 @@ vi.mock('../../../../js/collaborative-editor/hooks/useUI', () => ({
     openGitHubSyncModal: vi.fn(),
     openRunPanel: vi.fn(),
     closeRunPanel: vi.fn(),
+    toggleAIAssistantPanel: vi.fn(),
   }),
   useIsRunPanelOpen: () => false,
   useIsGitHubSyncModalOpen: () => false,
   useRunPanelContext: () => null,
+  useIsAIAssistantPanelOpen: () => false,
 }));
 
 // Mock GitHubSyncModal

@@ -32,7 +32,6 @@ import {
   useHistoryCommands,
   useJobMatchesRun,
 } from '../../hooks/useHistory';
-import { isFinalState } from '../../types/history';
 import { useRunRetry } from '../../hooks/useRunRetry';
 import { useRunRetryShortcuts } from '../../hooks/useRunRetryShortcuts';
 import { useSession } from '../../hooks/useSession';
@@ -45,6 +44,7 @@ import {
   useWorkflowReadOnly,
   useWorkflowState,
 } from '../../hooks/useWorkflow';
+import { isFinalState } from '../../types/history';
 import { AdaptorDisplay } from '../AdaptorDisplay';
 import { AdaptorSelectionModal } from '../AdaptorSelectionModal';
 import { CollaborativeMonaco } from '../CollaborativeMonaco';
@@ -110,6 +110,10 @@ export function FullScreenIDE({
   parentProjectId,
   parentProjectName,
 }: FullScreenIDEProps) {
+  useEffect(() => {
+    return () => {};
+  }, []);
+
   const { searchParams, updateSearchParams } = useURLState();
   const jobIdFromURL = searchParams.get('job');
   // Support both 'run' (collaborative) and 'a' (classical) parameter for run ID
@@ -194,8 +198,10 @@ export function FullScreenIDE({
     [updateSearchParams]
   );
 
-  // Declaratively connect to run channel when runIdFromURL changes
-  const currentRun = useFollowRun(runIdFromURL);
+  const { isConnected, settled } = useSession();
+  const isSessionReady = isConnected && settled;
+
+  const currentRun = useFollowRun(isSessionReady ? runIdFromURL : null);
 
   // Check if the currently selected job matches the loaded run
   const jobMatchesRun = useJobMatchesRun(currentJob?.id || null);
@@ -632,7 +638,7 @@ export function FullScreenIDE({
   };
 
   return (
-    <div className="absolute inset-0 top-20 bottom-0 z-49 bg-white flex flex-col">
+    <div className="absolute inset-0 z-49 bg-white flex flex-col">
       <SandboxIndicatorBanner
         parentProjectId={parentProjectId}
         parentProjectName={parentProjectName}
@@ -642,7 +648,7 @@ export function FullScreenIDE({
 
       {/* IDE Heading Bar */}
       <div className="flex-none bg-white border-b border-gray-200">
-        <div className="flex items-center justify-between px-6 py-2">
+        <div className="flex items-center justify-between px-4 py-2">
           <div className="flex items-center gap-3 flex-1 min-w-0">
             {/* Job Selector */}
             <div className="shrink-0">
@@ -747,7 +753,7 @@ export function FullScreenIDE({
                   isCenterCollapsed ? 'rotate-90' : ''
                 }`}
               >
-                <div className="flex items-center justify-between px-3 py-1">
+                <div className="flex items-center justify-between px-4 py-1">
                   {!isCenterCollapsed ? (
                     <>
                       <div
@@ -866,11 +872,7 @@ export function FullScreenIDE({
                               <div className="flex-1">
                                 <Tabs
                                   value={selectedDocsTab}
-                                  onChange={tab =>
-                                    setSelectedDocsTab(
-                                      tab as 'docs' | 'metadata'
-                                    )
-                                  }
+                                  onChange={tab => setSelectedDocsTab(tab)}
                                   variant="pills"
                                   options={[
                                     {
@@ -967,7 +969,7 @@ export function FullScreenIDE({
                   isRightCollapsed ? 'rotate-90' : ''
                 }`}
               >
-                <div className="flex items-center justify-between px-3 py-1">
+                <div className="flex items-center justify-between px-4 py-1">
                   {!isRightCollapsed ? (
                     <>
                       {followRunId ? (

@@ -543,6 +543,77 @@ defmodule Lightning.AiAssistant.ChatSessionTest do
     end
   end
 
+  describe "meta_changeset/2" do
+    test "updates only meta field without triggering validations" do
+      user = insert(:user)
+      session = insert(:chat_session, user: user, job_id: nil, meta: %{})
+
+      # This should succeed even though job_id is nil and no unsaved_job data
+      changeset =
+        ChatSession.meta_changeset(session, %{
+          meta: %{"rag" => %{"test" => "data"}}
+        })
+
+      assert changeset.valid?
+      assert changeset.changes.meta == %{"rag" => %{"test" => "data"}}
+    end
+
+    test "preserves existing job_id when updating meta" do
+      user = insert(:user)
+      job = insert(:job)
+
+      session =
+        insert(:chat_session,
+          user: user,
+          job_id: job.id,
+          meta: %{"foo" => "bar"}
+        )
+
+      changeset =
+        ChatSession.meta_changeset(session, %{meta: %{"new" => "value"}})
+
+      assert changeset.valid?
+      assert changeset.changes.meta == %{"new" => "value"}
+      # job_id should remain unchanged
+      refute Map.has_key?(changeset.changes, :job_id)
+    end
+
+    test "allows updating meta on unsaved job session" do
+      user = insert(:user)
+
+      unsaved_job_meta = %{
+        "unsaved_job" => %{
+          "id" => "temp-123",
+          "body" => "console.log('test')",
+          "adaptor" => "@openfn/language-common@latest"
+        }
+      }
+
+      session =
+        insert(:chat_session, user: user, job_id: nil, meta: unsaved_job_meta)
+
+      # Update with RAG data that doesn't include unsaved_job
+      new_meta = %{"rag" => %{"sources" => ["doc1", "doc2"]}}
+      changeset = ChatSession.meta_changeset(session, %{meta: new_meta})
+
+      assert changeset.valid?
+      assert changeset.changes.meta == new_meta
+    end
+
+    test "does not validate other fields" do
+      user = insert(:user)
+      session = insert(:chat_session, user: user, job_id: nil, meta: %{})
+
+      # This would fail with regular changeset but succeeds with meta_changeset
+      changeset =
+        ChatSession.meta_changeset(session, %{meta: %{"key" => "value"}})
+
+      assert changeset.valid?
+      # Should only cast meta field
+      assert Map.keys(changeset.changes) == [:meta]
+    end
+  end
+
   describe "boundary conditions" do
     test "empty meta map is valid" do
       user = insert(:user)

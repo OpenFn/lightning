@@ -1,7 +1,6 @@
 defmodule LightningWeb.BookDemoBannerTest do
   use LightningWeb.ConnCase, async: true
 
-  import Lightning.Factories
   import Mox
   import Phoenix.LiveViewTest
 

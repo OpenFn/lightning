@@ -9,8 +9,8 @@
  * Key principle: Provider can be recreated, but Y.Doc must persist.
  */
 
-import { useEffect, useRef, useState } from 'react';
 import type { Socket } from 'phoenix';
+import { useEffect, useRef, useState } from 'react';
 
 import _logger from '#/utils/logger';
 

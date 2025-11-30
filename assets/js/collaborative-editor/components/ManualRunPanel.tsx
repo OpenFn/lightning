@@ -8,8 +8,6 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { cn } from '#/utils/cn';
 import _logger from '#/utils/logger';
 
-import { findFirstJobFromTrigger } from '../utils/workflowGraph';
-
 import { FilterTypes } from '../../manual-run-panel/types';
 import CustomView from '../../manual-run-panel/views/CustomView';
 import EmptyView from '../../manual-run-panel/views/EmptyView';
@@ -24,6 +22,7 @@ import { useRunRetryShortcuts } from '../hooks/useRunRetryShortcuts';
 import { useCanRun } from '../hooks/useWorkflow';
 import { useKeyboardShortcut } from '../keyboard';
 import type { Workflow } from '../types/workflow';
+import { findFirstJobFromTrigger } from '../utils/workflowGraph';
 
 import { InspectorFooter } from './inspector/InspectorFooter';
 import { InspectorLayout } from './inspector/InspectorLayout';

@@ -50,6 +50,9 @@ export const useUICommands = () => {
     closeRunPanel: uiStore.closeRunPanel,
     openGitHubSyncModal: uiStore.openGitHubSyncModal,
     closeGitHubSyncModal: uiStore.closeGitHubSyncModal,
+    openAIAssistantPanel: uiStore.openAIAssistantPanel,
+    closeAIAssistantPanel: uiStore.closeAIAssistantPanel,
+    toggleAIAssistantPanel: uiStore.toggleAIAssistantPanel,
   };
 };
 
@@ -73,6 +76,20 @@ export const useIsGitHubSyncModalOpen = (): boolean => {
   const uiStore = useUIStore();
 
   const selectIsOpen = uiStore.withSelector(state => state.githubSyncModalOpen);
+
+  return useSyncExternalStore(uiStore.subscribe, selectIsOpen);
+};
+
+/**
+ * Hook to check if AI Assistant panel is open
+ * Convenience helper that returns boolean
+ */
+export const useIsAIAssistantPanelOpen = (): boolean => {
+  const uiStore = useUIStore();
+
+  const selectIsOpen = uiStore.withSelector(
+    state => state.aiAssistantPanelOpen
+  );
 
   return useSyncExternalStore(uiStore.subscribe, selectIsOpen);
 };

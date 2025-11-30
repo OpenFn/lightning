@@ -74,24 +74,32 @@ const logger = _logger.ns('UIStore').seal();
  * Creates a UI store instance with useSyncExternalStore + Immer pattern
  */
 export const createUIStore = (): UIStore => {
-  // Single Immer-managed state object (referentially stable)
+  const loadAIAssistantPanelState = (): boolean => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      return params.get('chat') === 'true';
+    } catch (error) {
+      logger.warn('Failed to load AI Assistant panel state from URL', error);
+      return false;
+    }
+  };
+
   let state: UIState = produce(
     {
       runPanelOpen: false,
       runPanelContext: null,
       githubSyncModalOpen: false,
+      aiAssistantPanelOpen: loadAIAssistantPanelState(),
     } as UIState,
-    // No initial transformations needed
     draft => draft
   );
 
   const listeners = new Set<() => void>();
 
-  // Redux DevTools integration
   const devtools = wrapStoreWithDevTools({
     name: 'UIStore',
-    excludeKeys: [], // All state is serializable
-    maxAge: 50, // Keep fewer actions for UI state
+    excludeKeys: [],
+    maxAge: 50,
   });
 
   const notify = (actionName: string = 'stateChange') => {
@@ -101,10 +109,6 @@ export const createUIStore = (): UIStore => {
     });
   };
 
-  // ===========================================================================
-  // CORE STORE INTERFACE
-  // ===========================================================================
-
   const subscribe = (listener: () => void) => {
     listeners.add(listener);
     return () => listeners.delete(listener);
@@ -112,15 +116,9 @@ export const createUIStore = (): UIStore => {
 
   const getSnapshot = (): UIState => state;
 
-  // withSelector utility - creates memoized selectors for referential stability
   const withSelector = createWithSelector(getSnapshot);
 
-  // ===========================================================================
-  // COMMANDS (CQS pattern - State mutations)
-  // ===========================================================================
-
   const openRunPanel = (context: { jobId?: string; triggerId?: string }) => {
-    logger.debug('Opening run panel', { context });
     state = produce(state, draft => {
       draft.runPanelContext = context;
       draft.runPanelOpen = true;
@@ -129,7 +127,6 @@ export const createUIStore = (): UIStore => {
   };
 
   const closeRunPanel = () => {
-    logger.debug('Closing run panel');
     state = produce(state, draft => {
       draft.runPanelContext = null;
       draft.runPanelOpen = false;
@@ -138,7 +135,6 @@ export const createUIStore = (): UIStore => {
   };
 
   const openGitHubSyncModal = () => {
-    logger.debug('Opening GitHub sync modal');
     state = produce(state, draft => {
       draft.githubSyncModalOpen = true;
     });
@@ -146,11 +142,32 @@ export const createUIStore = (): UIStore => {
   };
 
   const closeGitHubSyncModal = () => {
-    logger.debug('Closing GitHub sync modal');
     state = produce(state, draft => {
       draft.githubSyncModalOpen = false;
     });
     notify('closeGitHubSyncModal');
+  };
+
+  const openAIAssistantPanel = () => {
+    state = produce(state, draft => {
+      draft.aiAssistantPanelOpen = true;
+    });
+    notify('openAIAssistantPanel');
+  };
+
+  const closeAIAssistantPanel = () => {
+    state = produce(state, draft => {
+      draft.aiAssistantPanelOpen = false;
+    });
+    notify('closeAIAssistantPanel');
+  };
+
+  const toggleAIAssistantPanel = () => {
+    const isOpen = !state.aiAssistantPanelOpen;
+    state = produce(state, draft => {
+      draft.aiAssistantPanelOpen = isOpen;
+    });
+    notify('toggleAIAssistantPanel');
   };
 
   devtools.connect();
@@ -170,6 +187,9 @@ export const createUIStore = (): UIStore => {
     closeRunPanel,
     openGitHubSyncModal,
     closeGitHubSyncModal,
+    openAIAssistantPanel,
+    closeAIAssistantPanel,
+    toggleAIAssistantPanel,
   };
 };
 

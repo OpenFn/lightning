@@ -20,8 +20,6 @@ interface CollaborativeMonacoProps {
   options?: editor.IStandaloneEditorConstructionOptions;
 }
 
-const logger = _logger.ns('CollaborativeMonaco').seal();
-
 export function CollaborativeMonaco({
   ytext,
   awareness,
@@ -36,28 +34,17 @@ export function CollaborativeMonaco({
 
   const handleOnMount = useCallback(
     (editor: editor.IStandaloneCodeEditor, monaco: Monaco) => {
-      logger.log(
-        '🚀 Monaco editor mounted, ytext available:',
-        !!ytext,
-        'awareness available:',
-        !!awareness
-      );
       editorRef.current = editor;
       monacoRef.current = monaco;
 
-      // Set theme
       setTheme(monaco);
 
-      // Set language based on adaptor
       const language = getLanguageFromAdaptor(adaptor);
       monaco.editor.setModelLanguage(editor.getModel()!, language);
 
-      // Override Monaco shortcuts to allow KeyboardProvider to handle them
       addKeyboardShortcutOverrides(editor, monaco);
 
-      // Create initial binding if ytext and awareness are available
       if (ytext && awareness) {
-        logger.log('🔄 Creating initial Monaco binding on mount');
         const binding = new MonacoBinding(
           ytext,
           editor.getModel()!,
@@ -65,28 +52,13 @@ export function CollaborativeMonaco({
           awareness
         );
         bindingRef.current = binding;
-        logger.log('✅ Initial Monaco binding created successfully');
       }
     },
     [adaptor, ytext, awareness]
   );
 
-  // Effect to handle Y.Text binding changes after mount
   useEffect(() => {
-    logger.log(
-      '🔄 Monaco binding effect running - editor ready:',
-      !!editorRef.current,
-      'ytext:',
-      !!ytext,
-      'awareness:',
-      !!awareness,
-      'existing binding:',
-      !!bindingRef.current
-    );
-
     if (!editorRef.current || !ytext || !awareness) {
-      logger.log('❌ Monaco binding effect - missing requirements');
-      // If editor is ready but ytext is not, clear any existing binding
       if (bindingRef.current && !ytext) {
         bindingRef.current.destroy();
         bindingRef.current = undefined;
@@ -94,20 +66,11 @@ export function CollaborativeMonaco({
       return;
     }
 
-    logger.log(
-      '🔄 Creating Monaco binding for Y.Text in effect:',
-      ytext,
-      ytext.toString()
-    );
-
-    // Destroy existing binding if it exists (for job switching)
     if (bindingRef.current) {
-      logger.log('🗑️ Destroying existing Monaco binding for job switch');
       bindingRef.current.destroy();
       bindingRef.current = undefined;
     }
 
-    // Create new binding for the current Y.Text
     const binding = new MonacoBinding(
       ytext,
       editorRef.current.getModel()!,
@@ -116,11 +79,7 @@ export function CollaborativeMonaco({
     );
     bindingRef.current = binding;
 
-    logger.log('✅ Monaco binding created successfully in effect');
-
-    // Clean up binding when ytext or awareness changes
     return () => {
-      logger.log('🧹 Cleaning up Monaco binding from effect');
       if (bindingRef.current) {
         bindingRef.current.destroy();
         bindingRef.current = undefined;
@@ -129,7 +88,6 @@ export function CollaborativeMonaco({
   }, [ytext, awareness]);
 
   useEffect(() => {
-    // Clean up binding on unmount
     return () => {
       if (bindingRef.current) {
         bindingRef.current.destroy();
@@ -138,41 +96,43 @@ export function CollaborativeMonaco({
   }, []);
 
   useEffect(() => {
-    // Update editor readonly state when disabled changes
     if (editorRef.current) {
       editorRef.current.updateOptions({ readOnly: disabled });
     }
   }, [disabled]);
 
-  // Effect to handle insert-snippet events from docs panel
   useEffect(() => {
     const handleInsertSnippet = (e: Event) => {
       const editor = editorRef.current;
       const monaco = monacoRef.current;
       if (!editor || !monaco) {
-        logger.log('❌ Insert snippet: editor or monaco not ready');
+        console.error(
+          '[CollaborativeMonaco] ❌ Insert snippet: editor or monaco not ready',
+          {
+            hasEditor: !!editor,
+            hasMonaco: !!monaco,
+          }
+        );
         return;
       }
 
       // @ts-ignore - custom event property
       const snippetText = e.snippet;
       if (!snippetText) {
-        logger.log('❌ Insert snippet: no snippet text in event');
+        console.error(
+          '[CollaborativeMonaco] ❌ Insert snippet: no snippet text in event'
+        );
         return;
       }
-
-      logger.log('✨ Inserting snippet at cursor position:', snippetText);
 
       const model = editor.getModel();
       if (!model) return;
 
-      // Get current cursor position
       const selection = editor.getSelection();
       if (!selection) return;
 
       const position = selection.getStartPosition();
 
-      // Insert at current cursor position
       const op = {
         range: new monaco.Range(
           position.lineNumber,
@@ -184,21 +144,15 @@ export function CollaborativeMonaco({
         forceMoveMarkers: true,
       };
 
-      // Execute the edit
       editor.executeEdits('insert-snippet', [op]);
 
-      // Move cursor to after the inserted snippet
       const lines = snippetText.split('\n');
       const newLineNumber = position.lineNumber + lines.length + 1;
       editor.setPosition({ lineNumber: newLineNumber, column: 1 });
 
-      // Reveal the inserted snippet
       editor.revealLineInCenter(newLineNumber);
 
-      // Focus the editor
       editor.focus();
-
-      logger.log('✅ Snippet inserted successfully');
     };
 
     document.addEventListener('insert-snippet', handleInsertSnippet);
@@ -232,14 +186,12 @@ export function CollaborativeMonaco({
         options={editorOptions}
         theme="default"
         language={getLanguageFromAdaptor(adaptor)}
-        // Don't set value prop - Y.Text will control the content
       />
     </div>
   );
 }
 
 function getLanguageFromAdaptor(adaptor: string): string {
-  // Map adaptor types to Monaco languages
   switch (adaptor) {
     case 'javascript':
     case 'js':
@@ -254,6 +206,6 @@ function getLanguageFromAdaptor(adaptor: string): string {
     case 'css':
       return 'css';
     default:
-      return 'javascript'; // Default to JavaScript
+      return 'javascript';
   }
 }
