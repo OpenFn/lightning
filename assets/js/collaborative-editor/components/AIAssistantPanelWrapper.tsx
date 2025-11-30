@@ -4,6 +4,7 @@ import { useURLState } from '../../react/lib/use-url-state';
 import { parseWorkflowYAML, convertWorkflowSpecToState } from '../../yaml/util';
 import {
   useAIConnectionState,
+  useAIHasReadDisclaimer,
   useAIIsLoading,
   useAIMessages,
   useAISessionId,
@@ -33,7 +34,7 @@ function prepareWorkflowForSerialization(
   triggers: unknown[],
   edges: unknown[],
   positions: unknown
-) {
+): Record<string, unknown> | null {
   if (!workflow || jobs.length === 0) {
     return null;
   }
@@ -53,24 +54,27 @@ function prepareWorkflowForSerialization(
     triggers: triggers,
     edges: edges.map((edge: unknown) => {
       const e = edge as Record<string, unknown>;
-      return {
+      const result: Record<string, unknown> = {
         id: e.id,
         condition_type: e.condition_type || 'always',
         enabled: e.enabled !== false,
         target_job_id: e.target_job_id,
-        ...(e.source_job_id && {
-          source_job_id: e.source_job_id,
-        }),
-        ...(e.source_trigger_id && {
-          source_trigger_id: e.source_trigger_id,
-        }),
-        ...(e.condition_label && {
-          condition_label: e.condition_label,
-        }),
-        ...(e.condition_expression && {
-          condition_expression: e.condition_expression,
-        }),
       };
+
+      if (e.source_job_id) {
+        result.source_job_id = e.source_job_id;
+      }
+      if (e.source_trigger_id) {
+        result.source_trigger_id = e.source_trigger_id;
+      }
+      if (e.condition_label) {
+        result.condition_label = e.condition_label;
+      }
+      if (e.condition_expression) {
+        result.condition_expression = e.condition_expression;
+      }
+
+      return result;
     }),
     positions: positions,
   };
@@ -88,6 +92,7 @@ function prepareWorkflowForSerialization(
  * - Persists width in localStorage
  * - Syncs open/closed state with URL query param (?chat=true)
  */
+/* eslint-disable react-compiler/react-compiler */
 export function AIAssistantPanelWrapper() {
   const isAIAssistantPanelOpen = useIsAIAssistantPanelOpen();
   const { closeAIAssistantPanel, toggleAIAssistantPanel } = useUICommands();
@@ -120,12 +125,14 @@ export function AIAssistantPanelWrapper() {
     loadSessions,
     updateContext,
     retryMessage: retryMessageViaChannel,
+    markDisclaimerRead: markDisclaimerReadViaChannel,
   } = useAIAssistantChannel(aiStore);
   const messages = useAIMessages();
   const isLoading = useAIIsLoading();
   const sessionId = useAISessionId();
   const sessionType = useAISessionType();
   const connectionState = useAIConnectionState();
+  const hasReadDisclaimer = useAIHasReadDisclaimer();
   const workflowTemplateContext = useAIWorkflowTemplateContext();
   const project = useProject();
   const workflow = useWorkflowState(state => state.workflow);
@@ -483,7 +490,7 @@ export function AIAssistantPanelWrapper() {
             return;
           }
 
-          let context: any;
+          let context: Record<string, unknown> | undefined;
 
           if (currentSessionType === 'workflow_template') {
             const workflowData = prepareWorkflowForSerialization(
@@ -503,7 +510,7 @@ export function AIAssistantPanelWrapper() {
               ...(workflowYAML && { code: workflowYAML }),
             };
           } else {
-            context = state.jobCodeContext;
+            context = state.jobCodeContext ?? undefined;
             if (!context) {
               console.error(
                 '[AI Assistant] No job context in store, cannot reconnect'
@@ -512,7 +519,9 @@ export function AIAssistantPanelWrapper() {
             }
           }
 
-          aiStore.connect(currentSessionType, context, selectedSessionId);
+          if (context) {
+            aiStore.connect(currentSessionType, context, selectedSessionId);
+          }
         }
       }, 100);
     },
@@ -603,6 +612,11 @@ export function AIAssistantPanelWrapper() {
     [aiStore, retryMessageViaChannel]
   );
 
+  const handleMarkDisclaimerRead = useCallback(() => {
+    aiStore.markDisclaimerRead();
+    markDisclaimerReadViaChannel();
+  }, [aiStore, markDisclaimerReadViaChannel]);
+
   const [applyingMessageId, setApplyingMessageId] = useState<string | null>(
     null
   );
@@ -632,16 +646,16 @@ export function AIAssistantPanelWrapper() {
   const { importWorkflow } = useWorkflowActions();
 
   const handleApplyWorkflow = useCallback(
-    async (yaml: string, messageId: string) => {
+    (yaml: string, messageId: string) => {
       setApplyingMessageId(messageId);
 
       try {
         const workflowSpec = parseWorkflowYAML(yaml);
 
-        const validateIds = (spec: any) => {
+        const validateIds = (spec: Record<string, unknown>) => {
           if (spec.jobs) {
             for (const [jobKey, job] of Object.entries(spec.jobs)) {
-              const jobItem = job as any;
+              const jobItem = job as Record<string, unknown>;
               if (
                 jobItem.id &&
                 typeof jobItem.id === 'object' &&
@@ -656,7 +670,7 @@ export function AIAssistantPanelWrapper() {
           }
           if (spec.triggers) {
             for (const [triggerKey, trigger] of Object.entries(spec.triggers)) {
-              const triggerItem = trigger as any;
+              const triggerItem = trigger as Record<string, unknown>;
               if (
                 triggerItem.id &&
                 typeof triggerItem.id === 'object' &&
@@ -671,7 +685,7 @@ export function AIAssistantPanelWrapper() {
           }
           if (spec.edges) {
             for (const [edgeKey, edge] of Object.entries(spec.edges)) {
-              const edgeItem = edge as any;
+              const edgeItem = edge as Record<string, unknown>;
               if (
                 edgeItem.id &&
                 typeof edgeItem.id === 'object' &&
@@ -784,10 +798,17 @@ export function AIAssistantPanelWrapper() {
     >
       {isAIAssistantPanelOpen && (
         <>
-          <div
+          <button
+            type="button"
             data-testid="ai-panel-resize-handle"
             className="w-1 bg-gray-200 hover:bg-blue-400 transition-colors cursor-col-resize flex-shrink-0"
             onMouseDown={handleMouseDown}
+            aria-label="Resize AI Assistant panel"
+            onKeyDown={e => {
+              if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+                e.preventDefault();
+              }
+            }}
           />
           <div className="flex-1 overflow-hidden">
             <AIAssistantPanel
@@ -805,13 +826,20 @@ export function AIAssistantPanelWrapper() {
               sessionType={sessionType}
               loadSessions={loadSessions}
               focusTrigger={focusTrigger}
+              connectionState={connectionState}
+              showDisclaimer={
+                connectionState === 'connected' && !hasReadDisclaimer
+              }
+              onAcceptDisclaimer={handleMarkDisclaimerRead}
             >
               <MessageList
                 messages={messages}
                 isLoading={isLoading}
                 onApplyWorkflow={
                   sessionType === 'workflow_template'
-                    ? handleApplyWorkflow
+                    ? (yaml, messageId) => {
+                        void handleApplyWorkflow(yaml, messageId);
+                      }
                     : undefined
                 }
                 applyingMessageId={applyingMessageId}
@@ -825,3 +853,4 @@ export function AIAssistantPanelWrapper() {
     </div>
   );
 }
+/* eslint-enable react-compiler/react-compiler */
