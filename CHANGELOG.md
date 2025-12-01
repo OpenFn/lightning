@@ -28,6 +28,8 @@ and this project adheres to
 
 ### Fixed
 
+- User menu dropdown no longer clips or causes horizontal scroll in side
+  navigation [#4092](https://github.com/OpenFn/lightning/issues/4092)
 - Improved version mismatch banner UX: made compact, dismissible, and
   repositioned to top-center; improved history panel collapse behavior to
   maintain run selection with visual run chip indicator
