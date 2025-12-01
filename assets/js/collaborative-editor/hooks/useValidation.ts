@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 
 import { useWorkflowActions, useWorkflowState } from './useWorkflow';
+import type { useAppBaseFormType } from '../components/form';
 
 /**
  * Simple type for TanStack Form instance
@@ -44,7 +45,10 @@ const NO_ERRORS = {};
  *     - "jobs.abc-123" → job-specific errors
  *     - "triggers.xyz-789" → trigger-specific errors
  */
-export function useValidation(form: FormInstance, errorPath?: string) {
+export function useValidation(
+  form: ReturnType<useAppBaseFormType>,
+  errorPath?: string
+) {
   const { setClientErrors } = useWorkflowActions();
 
   // Read stable errors from store (Immer provides referential stability)
@@ -107,12 +111,14 @@ export function useValidation(form: FormInstance, errorPath?: string) {
         }
       });
 
+      const isDirty = checkIfFormDirty(form);
+
       // Write to store (debounced, with merge+dedupe)
-      setClientErrors(errorPath || 'workflow', clientErrors);
+      setClientErrors(errorPath || 'workflow', clientErrors, isDirty);
     });
 
     return () => unsubscribe();
-  }, [form, setClientErrors, errorPath]);
+  }, [form.state.isDirty, setClientErrors, errorPath]);
 
   // Inject collaborative errors into TanStack Form
   useEffect(() => {
@@ -177,4 +183,19 @@ export function useValidation(form: FormInstance, errorPath?: string) {
       }
     });
   }, [collaborativeErrors, form]);
+}
+
+// why do we need this function instead of form.state.isDirty?
+// form.state.isDirty doesn't work. it doesn't fallback to false after server changes have been merged into local
+function checkIfFormDirty(form: ReturnType<useAppBaseFormType>) {
+  const values = form.state.values as Record<string, unknown>;
+  const defaultValues = form.options.defaultValues as Record<string, unknown>;
+  return Object.entries(values).some(([name, value]) => {
+    // If defaultValues exist, compare the current value to the default value
+    if (defaultValues) {
+      return defaultValues[name] !== value;
+    }
+    // If no default values were defined, consider a field dirty if its value is not falsy
+    return !!value;
+  });
 }

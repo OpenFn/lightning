@@ -1179,7 +1179,13 @@ export const createWorkflowStore = () => {
    * @param errors - Field errors { fieldName: ["error1", "error2"] }
    *                 Empty array [] clears that field
    */
-  const setClientErrors = (path: string, errors: Record<string, string[]>) => {
+  const setClientErrors = (
+    path: string,
+    errors: Record<string, string[]>,
+    isEditing: boolean
+  ) => {
+    // Capture isEditing value at call time for the debounced execution
+
     logger.debug('setClientErrors called (before debounce)', {
       path,
       errors,
@@ -1187,106 +1193,93 @@ export const createWorkflowStore = () => {
       stack: new Error(),
     });
 
-    // Clear any existing timeout for this path
-    const existingTimeout = debounceTimeouts.get(path);
-    if (existingTimeout) {
-      clearTimeout(existingTimeout);
-      logger.debug('setClientErrors cleared existing timeout', { path });
+    // Set new debounced timeout
+    logger.debug('setClientErrors executing (after debounce)', {
+      path,
+      errors,
+    });
+
+    if (!ydoc) {
+      logger.warn('Cannot set client errors: Y.Doc not connected');
+      return;
     }
 
-    // Set new debounced timeout
-    const timeoutId = setTimeout(() => {
-      logger.debug('setClientErrors executing (after debounce)', {
-        path,
-        errors,
-      });
+    const errorsMap = ydoc.getMap('errors');
+    const parts = path.split('.');
 
-      if (!ydoc) {
-        logger.warn('Cannot set client errors: Y.Doc not connected');
-        return;
-      }
+    // 1. Read current errors from Y.Doc (outside transaction)
+    const currentErrors = (() => {
+      if (parts.length === 1 || !path) {
+        // Top-level: "workflow"
+        const entityKey = path || 'workflow';
+        const errors = errorsMap.get(
+          entityKey as 'workflow' | 'jobs' | 'triggers' | 'edges'
+        ) as Record<string, string[]> | undefined;
+        return errors ?? {};
+      } else if (parts.length === 2) {
+        // Entity-level: "jobs.abc-123"
+        const entityType = parts[0];
+        const entityId = parts[1];
 
-      const errorsMap = ydoc.getMap('errors');
-      const parts = path.split('.');
+        if (!entityId || !entityType) return {};
 
-      // 1. Read current errors from Y.Doc (outside transaction)
-      const currentErrors = (() => {
-        if (parts.length === 1 || !path) {
-          // Top-level: "workflow"
-          const entityKey = path || 'workflow';
-          const errors = errorsMap.get(
-            entityKey as 'workflow' | 'jobs' | 'triggers' | 'edges'
-          ) as Record<string, string[]> | undefined;
-          return errors ?? {};
-        } else if (parts.length === 2) {
-          // Entity-level: "jobs.abc-123"
-          const entityType = parts[0];
-          const entityId = parts[1];
-
-          if (!entityId || !entityType) return {};
-
-          // Validate entity type (runtime check for path parsing)
-          if (
-            entityType !== 'jobs' &&
-            entityType !== 'triggers' &&
-            entityType !== 'edges'
-          ) {
-            return {};
-          }
-
-          const entityErrors = errorsMap.get(entityType);
-          // Type assertion needed because Y.Map.get returns unknown
-          // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
-          const typedEntityErrors = entityErrors as
-            | Record<string, Record<string, string[]>>
-            | undefined;
-
-          return typedEntityErrors?.[entityId] ?? {};
+        // Validate entity type (runtime check for path parsing)
+        if (
+          entityType !== 'jobs' &&
+          entityType !== 'triggers' &&
+          entityType !== 'edges'
+        ) {
+          return {};
         }
-        return {};
-      })();
 
-      logger.debug('setClientErrors before merge', {
-        path,
-        currentErrors,
-        incomingErrors: errors,
-      });
+        const entityErrors = errorsMap.get(entityType);
+        // Type assertion needed because Y.Map.get returns unknown
+        // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
+        const typedEntityErrors = entityErrors as
+          | Record<string, Record<string, string[]>>
+          | undefined;
 
-      // 2. Use Immer to replace client errors (or clear if empty)
-      // Client errors REPLACE server errors for that field, not merge with them
-      // This ensures that when a user edits a field with server errors,
-      // their client validation takes precedence
-      const mergedErrors = produce(currentErrors, draft => {
-        Object.entries(errors).forEach(([fieldName, newMessages]) => {
-          if (newMessages.length === 0) {
-            // Empty array clears the field
-
-            delete draft[fieldName];
-          } else {
-            // Replace with client errors (deduplicate within client errors)
-            draft[fieldName] = Array.from(new Set(newMessages));
-          }
-        });
-      });
-
-      logger.debug('setClientErrors after merge', {
-        path,
-        mergedErrors,
-        mergedCount: Object.keys(mergedErrors).length,
-      });
-
-      // 3. Write to Y.Doc using setError (which checks if different before transacting)
-      try {
-        setError(path || 'workflow', mergedErrors);
-      } catch (error) {
-        logger.error('Failed to set client errors', { path, error });
+        return typedEntityErrors?.[entityId] ?? {};
       }
+      return {};
+    })();
 
-      // Clean up timeout
-      debounceTimeouts.delete(path);
-    }, 500);
+    logger.debug('setClientErrors before merge', {
+      path,
+      currentErrors,
+      incomingErrors: errors,
+    });
 
-    debounceTimeouts.set(path, timeoutId);
+    // 2. Use Immer to replace client errors (or clear if empty)
+    // Client errors REPLACE server errors for that field, not merge with them
+    // This ensures that when a user edits a field with server errors,
+    // their client validation takes precedence
+    const mergedErrors = isEditing
+      ? produce(currentErrors, draft => {
+          Object.entries(errors).forEach(([fieldName, newMessages]) => {
+            if (newMessages.length === 0) {
+              // Empty array clears the field
+              delete draft[fieldName];
+            } else {
+              // Replace with client errors (deduplicate within client errors)
+              draft[fieldName] = Array.from(new Set(newMessages));
+            }
+          });
+        })
+      : currentErrors;
+
+    logger.debug('setClientErrors after merge', {
+      path,
+      mergedErrors,
+      mergedCount: Object.keys(mergedErrors).length,
+    });
+
+    // 3. Write to Y.Doc using setError (which checks if different before transacting)
+    try {
+      setError(path || 'workflow', mergedErrors);
+    } catch (error) {
+      logger.error('Failed to set client errors', { path, error });
+    }
   };
 
   // =============================================================================
