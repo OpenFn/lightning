@@ -15,7 +15,7 @@ export function TemplateDetailsCard({ template }: TemplateDetailsCardProps) {
   }
 
   return (
-    <div className="absolute top-4 left-4 right-4 z-40 bg-white/50 border border-gray-200 rounded-lg p-4 shadow-xs">
+    <div className="absolute top-4 left-4 right-4 z-5 bg-white/50 border border-gray-200 rounded-lg p-4 shadow-xs">
       <h3 className="text-sm font-medium text-gray-900 mb-1">
         {template.name}
       </h3>
