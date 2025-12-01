@@ -175,6 +175,7 @@ export function Header({
   const { saveWorkflow } = useWorkflowActions();
   const { canSave, tooltipMessage } = useCanSave();
   const triggers = useWorkflowState(state => state.triggers);
+  const jobs = useWorkflowState(state => state.jobs);
   const { canRun, tooltipMessage: runTooltipMessage } = useCanRun();
   const { openRunPanel, openGitHubSyncModal } = useUICommands();
   const repoConnection = useProjectRepoConnection();
@@ -185,6 +186,7 @@ export function Header({
 
   // Derived values after all hooks are called
   const firstTriggerId = triggers[0]?.id;
+  const isWorkflowEmpty = jobs.length === 0 && triggers.length === 0;
 
   const isOldSnapshot =
     workflow !== null &&
@@ -258,21 +260,47 @@ export function Header({
           <div className="flex flex-row gap-2 items-center">
             <div className="flex flex-row gap-2 items-center">
               {!isOldSnapshot && (
-                <Switch checked={enabled ?? false} onChange={setEnabled} />
+                <Tooltip
+                  content={isWorkflowEmpty ? 'Add a workflow to enable' : null}
+                  side="bottom"
+                >
+                  <span className="inline-block">
+                    <Switch
+                      checked={enabled ?? false}
+                      onChange={setEnabled}
+                      disabled={isWorkflowEmpty}
+                    />
+                  </span>
+                </Tooltip>
               )}
 
               <div>
-                <button
-                  type="button"
-                  onClick={() => updateSearchParams({ panel: 'settings' })}
-                  className={`w-5 h-5 place-self-center cursor-pointer ${
-                    hasSettingsErrors
-                      ? 'text-danger-500 hover:text-danger-400'
-                      : 'text-slate-500 hover:text-slate-400'
-                  }`}
+                <Tooltip
+                  content={
+                    isWorkflowEmpty
+                      ? 'Add a workflow to configure settings'
+                      : null
+                  }
+                  side="bottom"
                 >
-                  <span className="hero-adjustments-vertical"></span>
-                </button>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      !isWorkflowEmpty &&
+                      updateSearchParams({ panel: 'settings' })
+                    }
+                    disabled={isWorkflowEmpty}
+                    className={`w-5 h-5 place-self-center ${
+                      isWorkflowEmpty
+                        ? 'cursor-not-allowed opacity-50'
+                        : hasSettingsErrors
+                          ? 'text-danger-500 hover:text-danger-400 cursor-pointer'
+                          : 'text-slate-500 hover:text-slate-400 cursor-pointer'
+                    }`}
+                  >
+                    <span className="hero-adjustments-vertical"></span>
+                  </button>
+                </Tooltip>
               </div>
               <div
                 className="hidden"
@@ -283,7 +311,7 @@ export function Header({
               </div>
             </div>
             <div className="relative flex gap-2">
-              {projectId && workflowId && firstTriggerId && (
+              {projectId && workflowId && firstTriggerId && !isNewWorkflow && (
                 <Tooltip content={runButtonTooltip} side="bottom">
                   <span className="inline-block">
                     <Button
@@ -297,8 +325,12 @@ export function Header({
                 </Tooltip>
               )}
               <SaveButton
-                canSave={canSave && !hasSettingsErrors}
-                tooltipMessage={tooltipMessage}
+                canSave={canSave && !hasSettingsErrors && !isWorkflowEmpty}
+                tooltipMessage={
+                  isWorkflowEmpty
+                    ? 'Cannot save an empty workflow'
+                    : tooltipMessage
+                }
                 onClick={() => void saveWorkflow()}
                 repoConnection={repoConnection}
                 onSyncClick={openGitHubSyncModal}
