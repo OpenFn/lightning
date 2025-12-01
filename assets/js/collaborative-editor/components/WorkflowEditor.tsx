@@ -2,10 +2,18 @@
  * WorkflowEditor - Main workflow editing component
  */
 
-import { useEffect, useRef, useState } from 'react';
+import {
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from 'react';
+import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
 
 import { useURLState } from '../../react/lib/use-url-state';
 import type { WorkflowState as YAMLWorkflowState } from '../../yaml/types';
+import { StoreContext } from '../contexts/StoreProvider';
 import { useIsNewWorkflow, useProject } from '../hooks/useSessionContext';
 import {
   useIsRunPanelOpen,
@@ -25,6 +33,7 @@ import { Inspector } from './inspector';
 import { LeftPanel } from './left-panel';
 import { ManualRunPanel } from './ManualRunPanel';
 import { ManualRunPanelErrorBoundary } from './ManualRunPanelErrorBoundary';
+import { TemplateDetailsCard } from './TemplateDetailsCard';
 
 export function WorkflowEditor() {
   const { searchParams, updateSearchParams } = useURLState();
@@ -36,6 +45,17 @@ export function WorkflowEditor() {
   const isRunPanelOpen = useIsRunPanelOpen();
   const runPanelContext = useRunPanelContext();
   const { closeRunPanel, openRunPanel } = useUICommands();
+
+  // Get selected template from UI store
+  const context = useContext(StoreContext);
+  const selectedTemplate = context
+    ? useSyncExternalStore(
+        context.uiStore.subscribe,
+        context.uiStore.withSelector(
+          state => state.templatePanel.selectedTemplate
+        )
+      )
+    : null;
 
   const isSyncingRef = useRef(false);
   const isInitialMountRef = useRef(true);
@@ -258,60 +278,74 @@ export function WorkflowEditor() {
 
   return (
     <div className="flex h-full w-full">
-      <div
-        className={`flex-1 relative transition-all duration-300 ease-in-out ${
-          showLeftPanel ? 'ml-[33.333333%]' : 'ml-0'
-        }`}
-      >
-        <CollaborativeWorkflowDiagram inspectorId="inspector" />
-
-        {!isRunPanelOpen && (
-          <div
-            id="inspector"
-            className={`absolute top-0 right-0 transition-transform duration-300 ease-in-out z-10 ${
-              showInspector
-                ? 'translate-x-0'
-                : 'translate-x-full pointer-events-none'
-            }`}
-          >
-            <Inspector
-              currentNode={currentNode}
-              onClose={handleCloseInspector}
-              onOpenRunPanel={openRunPanel}
-            />
-          </div>
-        )}
-
-        {isRunPanelOpen && runPanelContext && projectId && workflowId && (
-          <div className="absolute inset-y-0 right-0 flex pointer-events-none z-20">
-            <ManualRunPanelErrorBoundary onClose={closeRunPanel}>
-              <ManualRunPanel
-                key={
-                  runPanelContext.jobId ||
-                  runPanelContext.triggerId ||
-                  runPanelContext.edgeId
-                }
-                workflow={workflow}
-                projectId={projectId}
-                workflowId={workflowId}
-                jobId={runPanelContext.jobId ?? null}
-                triggerId={runPanelContext.triggerId ?? null}
-                edgeId={runPanelContext.edgeId ?? null}
-                onClose={closeRunPanel}
-                saveWorkflow={saveWorkflow}
+      <PanelGroup direction="horizontal">
+        {showLeftPanel && (
+          <>
+            <Panel
+              id="left-panel"
+              order={1}
+              defaultSize={33}
+              minSize={20}
+              maxSize={50}
+              className="relative"
+            >
+              <LeftPanel
+                method={leftPanelMethod}
+                onMethodChange={handleMethodChange}
+                onImport={handleImport}
+                onClosePanel={handleCloseLeftPanel}
+                onSave={handleSaveAndClose}
               />
-            </ManualRunPanelErrorBoundary>
-          </div>
+            </Panel>
+            <PanelResizeHandle className="w-1 bg-gray-200 hover:bg-blue-500 transition-colors cursor-col-resize" />
+          </>
         )}
-      </div>
 
-      <LeftPanel
-        method={leftPanelMethod}
-        onMethodChange={handleMethodChange}
-        onImport={handleImport}
-        onClosePanel={handleCloseLeftPanel}
-        onSave={handleSaveAndClose}
-      />
+        <Panel id="main-content" order={2} className="relative">
+          <CollaborativeWorkflowDiagram inspectorId="inspector" />
+
+          {/* Show template details card when a template is selected */}
+          {showLeftPanel &&
+            leftPanelMethod === 'template' &&
+            selectedTemplate && (
+              <TemplateDetailsCard template={selectedTemplate} />
+            )}
+
+          {!isRunPanelOpen && (
+            <div
+              id="inspector"
+              className={`absolute top-0 right-0 transition-transform duration-300 ease-in-out z-10 ${
+                showInspector
+                  ? 'translate-x-0'
+                  : 'translate-x-full pointer-events-none'
+              }`}
+            >
+              <Inspector
+                currentNode={currentNode}
+                onClose={handleCloseInspector}
+                onOpenRunPanel={openRunPanel}
+              />
+            </div>
+          )}
+
+          {isRunPanelOpen && runPanelContext && projectId && workflowId && (
+            <div className="absolute inset-y-0 right-0 flex pointer-events-none z-20">
+              <ManualRunPanelErrorBoundary onClose={closeRunPanel}>
+                <ManualRunPanel
+                  workflow={workflow}
+                  projectId={projectId}
+                  workflowId={workflowId}
+                  jobId={runPanelContext.jobId ?? null}
+                  triggerId={runPanelContext.triggerId ?? null}
+                  edgeId={runPanelContext.edgeId ?? null}
+                  onClose={closeRunPanel}
+                  saveWorkflow={saveWorkflow}
+                />
+              </ManualRunPanelErrorBoundary>
+            </div>
+          )}
+        </Panel>
+      </PanelGroup>
     </div>
   );
 }

@@ -135,13 +135,15 @@ export function YAMLImportPanel({
         </div>
       )}
 
-      {/* Content Area - Scrollable */}
-      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
+      {/* Content Area - Flex column */}
+      <div className="flex-1 flex flex-col px-4 py-4 space-y-4 overflow-hidden">
         {/* File Dropzone */}
-        <YAMLFileDropzone onUpload={handleFileUpload} />
+        <div className="shrink-0">
+          <YAMLFileDropzone onUpload={handleFileUpload} />
+        </div>
 
         {/* OR Divider */}
-        <div className="relative">
+        <div className="relative shrink-0">
           <div className="absolute inset-0 flex items-center">
             <div className="w-full border-t border-gray-300" />
           </div>
@@ -150,12 +152,14 @@ export function YAMLImportPanel({
           </div>
         </div>
 
-        {/* YAML Editor */}
-        <YAMLCodeEditor
-          value={yamlContent}
-          onChange={handleYAMLChange}
-          isValidating={importState === 'parsing'}
-        />
+        {/* YAML Editor - Takes remaining space */}
+        <div className="flex-1 min-h-0">
+          <YAMLCodeEditor
+            value={yamlContent}
+            onChange={handleYAMLChange}
+            isValidating={importState === 'parsing'}
+          />
+        </div>
       </div>
 
       {/* Footer - Fixed */}

@@ -527,6 +527,14 @@ defmodule LightningWeb.WorkflowChannel do
   end
 
   @impl true
+  def handle_in("list_templates", _params, socket) do
+    templates = Lightning.WorkflowTemplates.list_templates()
+    rendered_templates = Enum.map(templates, &render_workflow_template/1)
+
+    {:reply, {:ok, %{templates: rendered_templates}}, socket}
+  end
+
+  @impl true
   def handle_info({:yjs, chunk}, socket) do
     push(socket, "yjs", {:binary, chunk})
     {:noreply, socket}

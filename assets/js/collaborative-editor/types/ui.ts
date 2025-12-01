@@ -5,6 +5,8 @@
  * and context for the collaborative editor.
  */
 
+import type { Template, WorkflowTemplate } from './template';
+
 // =============================================================================
 // TYPESCRIPT TYPES
 // =============================================================================
@@ -27,6 +29,15 @@ export interface UIState {
 
   /** AI Assistant panel open state */
   aiAssistantPanelOpen: boolean;
+
+  /** Template panel state */
+  templatePanel: {
+    templates: WorkflowTemplate[];
+    loading: boolean;
+    error: string | null;
+    searchQuery: string;
+    selectedTemplate: Template | null;
+  };
 }
 
 /**
@@ -57,6 +68,24 @@ export interface UICommands {
 
   /** Toggle AI Assistant panel */
   toggleAIAssistantPanel: () => void;
+
+  /** Set templates list */
+  setTemplates: (templates: WorkflowTemplate[]) => void;
+
+  /** Set templates loading state */
+  setTemplatesLoading: (loading: boolean) => void;
+
+  /** Set templates error */
+  setTemplatesError: (error: string | null) => void;
+
+  /** Set template search query */
+  setTemplateSearchQuery: (query: string) => void;
+
+  /** Select a template */
+  selectTemplate: (template: Template | null) => void;
+
+  /** Clear template panel state */
+  clearTemplatePanel: () => void;
 }
 
 /**

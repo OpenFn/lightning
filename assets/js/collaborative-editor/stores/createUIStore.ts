@@ -90,6 +90,13 @@ export const createUIStore = (): UIStore => {
       runPanelContext: null,
       githubSyncModalOpen: false,
       aiAssistantPanelOpen: loadAIAssistantPanelState(),
+      templatePanel: {
+        templates: [],
+        loading: false,
+        error: null,
+        searchQuery: '',
+        selectedTemplate: null,
+      },
     } as UIState,
     draft => draft
   );
@@ -170,6 +177,58 @@ export const createUIStore = (): UIStore => {
     notify('toggleAIAssistantPanel');
   };
 
+  const setTemplates = (templates: UIState['templatePanel']['templates']) => {
+    state = produce(state, draft => {
+      draft.templatePanel.templates = templates;
+      draft.templatePanel.loading = false;
+    });
+    notify('setTemplates');
+  };
+
+  const setTemplatesLoading = (loading: boolean) => {
+    state = produce(state, draft => {
+      draft.templatePanel.loading = loading;
+    });
+    notify('setTemplatesLoading');
+  };
+
+  const setTemplatesError = (error: string | null) => {
+    state = produce(state, draft => {
+      draft.templatePanel.error = error;
+      draft.templatePanel.loading = false;
+    });
+    notify('setTemplatesError');
+  };
+
+  const setTemplateSearchQuery = (query: string) => {
+    state = produce(state, draft => {
+      draft.templatePanel.searchQuery = query;
+    });
+    notify('setTemplateSearchQuery');
+  };
+
+  const selectTemplate = (
+    template: UIState['templatePanel']['selectedTemplate']
+  ) => {
+    state = produce(state, draft => {
+      draft.templatePanel.selectedTemplate = template;
+    });
+    notify('selectTemplate');
+  };
+
+  const clearTemplatePanel = () => {
+    state = produce(state, draft => {
+      draft.templatePanel = {
+        templates: [],
+        loading: false,
+        error: null,
+        searchQuery: '',
+        selectedTemplate: null,
+      };
+    });
+    notify('clearTemplatePanel');
+  };
+
   devtools.connect();
 
   // ===========================================================================
@@ -190,6 +249,12 @@ export const createUIStore = (): UIStore => {
     openAIAssistantPanel,
     closeAIAssistantPanel,
     toggleAIAssistantPanel,
+    setTemplates,
+    setTemplatesLoading,
+    setTemplatesError,
+    setTemplateSearchQuery,
+    selectTemplate,
+    clearTemplatePanel,
   };
 };
 
