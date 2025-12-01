@@ -203,10 +203,13 @@ export function JobForm({ job }: JobFormProps) {
 
   // Handle opening credential modal from ConfigureAdaptorModal
   const handleOpenCredentialModal = useCallback(
-    (adaptorName: string) => {
+    (adaptorName: string, credentialId?: string) => {
       setIsConfigureModalOpen(false);
       setIsCredentialModalOpen(true);
-      pushEvent('open_credential_modal', { schema: adaptorName });
+      pushEvent('open_credential_modal', {
+        schema: adaptorName,
+        credential_id: credentialId,
+      });
     },
     [pushEvent]
   );

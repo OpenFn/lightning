@@ -19,6 +19,13 @@ and this project adheres to
 
 ### Changed
 
+- Show "Connect" button when no credential is selected for non-language-common
+  steps [#4085](https://github.com/OpenFn/lightning/issues/4085)
+- Show credential name (and full name and owner on hover) when a credential is
+  selected [#4085](https://github.com/OpenFn/lightning/issues/4085)
+- Allow owners to edit credentials from the adaptor picker
+  [#4085](https://github.com/OpenFn/lightning/issues/4085)
+
 ### Fixed
 
 - Improved version mismatch banner UX: made compact, dismissible, and
@@ -34,6 +41,8 @@ and this project adheres to
   [#4066](https://github.com/OpenFn/lightning/issues/4066)
 - Loading workflow screen appears when disconnected from server
   [#3972](https://github.com/OpenFn/lightning/issues/3972)
+- IDE shows job expresion of previously selected job
+  [#4022](https://github.com/OpenFn/lightning/issues/4022)
 - Fix save & run buttons disabled after new workflow save
   [#4084](https://github.com/OpenFn/lightning/issues/4084)
 
@@ -54,6 +63,8 @@ and this project adheres to
   [#PR4050](https://github.com/OpenFn/lightning/pull/4050)
 - Make IDE heading separate from top menu
   [#4077](https://github.com/OpenFn/lightning/issues/4077)
+- Update IDE workflow step selector (order by proximity to trigger)
+  [#4048](https://github.com/OpenFn/lightning/issues/4048)
 
 ### Fixed
 
