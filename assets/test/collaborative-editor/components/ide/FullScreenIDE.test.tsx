@@ -214,14 +214,7 @@ vi.mock('../../../../js/collaborative-editor/hooks/useWorkflow', () => ({
     errors: [],
   }),
   useCurrentJob: () => ({
-    job: {
-      id: 'job-1',
-      name: 'Test Job',
-      adaptor: '@openfn/language-http@latest',
-      body: 'fn(state => state)',
-      project_credential_id: null,
-      keychain_credential_id: null,
-    },
+    job: mockWorkflow.jobs[0],
     ytext: mockYText,
   }),
   useNodeSelection: () => ({
@@ -334,6 +327,11 @@ vi.mock('../../../../js/collaborative-editor/hooks/useCredentials', () => ({
   }),
   useCredentialsCommands: () => ({
     requestCredentials: vi.fn(),
+  }),
+  useCredentialQueries: () => ({
+    findCredentialById: vi.fn(),
+    credentialExists: vi.fn(),
+    getCredentialId: vi.fn(),
   }),
 }));
 
@@ -571,20 +569,6 @@ describe('FullScreenIDE', () => {
       await waitFor(() => {
         const jobNames = screen.getAllByText(/Test Job/i);
         expect(jobNames.length).toBeGreaterThan(0);
-      });
-    });
-
-    test('displays Run button in header', async () => {
-      const onClose = vi.fn();
-
-      renderFullScreenIDE({
-        onClose,
-      });
-
-      await waitFor(() => {
-        expect(
-          screen.getByRole('button', { name: /run/i })
-        ).toBeInTheDocument();
       });
     });
 

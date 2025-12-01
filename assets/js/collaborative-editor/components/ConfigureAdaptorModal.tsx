@@ -10,6 +10,7 @@ import {
   useCredentialQueries,
   useCredentials,
 } from '#/collaborative-editor/hooks/useCredentials';
+import { useUser } from '#/collaborative-editor/hooks/useSessionContext';
 import type { Adaptor } from '#/collaborative-editor/types/adaptor';
 import type { CredentialWithType } from '#/collaborative-editor/types/credential';
 import {
@@ -17,6 +18,7 @@ import {
   extractAdaptorName,
   extractPackageName,
 } from '#/collaborative-editor/utils/adaptorUtils';
+import { cn } from '#/utils/cn';
 
 import { AdaptorIcon } from './AdaptorIcon';
 import { Tooltip } from './Tooltip';
@@ -29,7 +31,7 @@ interface ConfigureAdaptorModalProps {
   onVersionChange: (version: string) => void; // Immediately sync version to Y.Doc
   onCredentialChange: (credentialId: string | null) => void; // Immediately sync credential to Y.Doc
   onOpenAdaptorPicker: () => void; // Notify parent to manage modal switching to adaptor picker
-  onOpenCredentialModal: (adaptorName: string) => void; // Notify parent to manage modal switching to credential modal
+  onOpenCredentialModal: (adaptorName: string, credentialId?: string) => void; // Notify parent to manage modal switching to credential modal (for create or edit)
   currentAdaptor: string;
   currentVersion: string;
   currentCredentialId: string | null;
@@ -46,7 +48,7 @@ interface ConfigureAdaptorModalProps {
 export function ConfigureAdaptorModal({
   isOpen,
   onClose,
-  onAdaptorChange,
+  onAdaptorChange: _onAdaptorChange,
   onVersionChange,
   onCredentialChange,
   onOpenAdaptorPicker,
@@ -59,7 +61,8 @@ export function ConfigureAdaptorModal({
   // UI state (not synced to Y.Doc)
   const [showOtherCredentials, setShowOtherCredentials] = useState(false);
 
-  // Get credentials from store
+  // Get current user and credentials from store
+  const currentUser = useUser();
   const { projectCredentials, keychainCredentials } = useCredentials();
   const { credentialExists, getCredentialId } = useCredentialQueries();
 
@@ -273,6 +276,92 @@ export function ConfigureAdaptorModal({
     if (adaptorName) {
       onOpenCredentialModal(adaptorName);
     }
+  };
+
+  // Open LiveView credential modal for editing (notifies parent)
+  const handleEditCredential = (cred: CredentialWithType) => {
+    const adaptorName = extractAdaptorName(currentAdaptor);
+    if (adaptorName && cred.type === 'project') {
+      // For editing, we need the actual credential.id, not project_credential_id
+      onOpenCredentialModal(adaptorName, cred.id);
+    }
+  };
+
+  // Render action buttons for a credential (edit and clear)
+  const renderCredentialActions = (
+    cred: CredentialWithType,
+    isSelected: boolean
+  ) => {
+    const isOwner =
+      cred.type === 'project' &&
+      cred.owner &&
+      currentUser &&
+      cred.owner.id === currentUser.id;
+    const canEdit = cred.type === 'project' && isOwner;
+
+    return (
+      <div className="flex items-center gap-2 flex-shrink-0 ml-2">
+        {/* Edit button - only for project credentials owned by current user */}
+        {cred.type === 'project' && cred.owner && (
+          <Tooltip
+            content={
+              canEdit
+                ? 'Edit credential'
+                : `This credential can only be edited by the owner: ${cred.owner.email}`
+            }
+            side="top"
+          >
+            <button
+              type="button"
+              onClick={e => {
+                e.preventDefault();
+                if (canEdit) {
+                  handleEditCredential(cred);
+                }
+              }}
+              disabled={!canEdit}
+              className={cn(
+                'focus:outline-none',
+                canEdit
+                  ? 'text-gray-400 hover:text-gray-600 cursor-pointer'
+                  : 'text-gray-300 cursor-not-allowed opacity-50'
+              )}
+              aria-label={
+                canEdit
+                  ? 'Edit credential'
+                  : `Cannot edit credential owned by ${cred.owner.email}`
+              }
+            >
+              <span
+                className="hero-pencil-square h-5 w-5"
+                aria-hidden="true"
+                role="img"
+              />
+            </button>
+          </Tooltip>
+        )}
+
+        {/* Clear selection button - only shown when selected */}
+        {isSelected && (
+          <button
+            type="button"
+            onClick={e => {
+              e.preventDefault();
+              onCredentialChange(null);
+            }}
+            className="text-gray-400 hover:text-gray-600
+              focus:outline-none"
+            aria-label="Clear credential selection"
+          >
+            <span
+              className="hero-x-mark h-5 w-5"
+              aria-hidden="true"
+              role="img"
+            />
+          </button>
+        )}
+      </div>
+    );
   };
 
   return (
@@ -495,23 +584,7 @@ export function ConfigureAdaptorModal({
                                   </div>
                                 )}
                               </div>
-                              {isSelected && (
-                                <button
-                                  type="button"
-                                  onClick={e => {
-                                    e.preventDefault();
-                                    onCredentialChange(null);
-                                  }}
-                                  className="text-gray-400 hover:text-gray-600
-                                    focus:outline-none flex-shrink-0 ml-2"
-                                  aria-label="Clear credential selection"
-                                >
-                                  <span
-                                    className="hero-x-mark h-5 w-5"
-                                    aria-hidden="true"
-                                  />
-                                </button>
-                              )}
+                              {renderCredentialActions(cred, isSelected)}
                             </label>
                           );
                         })}
@@ -593,23 +666,7 @@ export function ConfigureAdaptorModal({
                                           </div>
                                         )}
                                     </div>
-                                    {isSelected && (
-                                      <button
-                                        type="button"
-                                        onClick={e => {
-                                          e.preventDefault();
-                                          onCredentialChange(null);
-                                        }}
-                                        className="text-gray-400 hover:text-gray-600
-                                        focus:outline-none flex-shrink-0 ml-2"
-                                        aria-label="Clear credential selection"
-                                      >
-                                        <span
-                                          className="hero-x-mark h-5 w-5"
-                                          aria-hidden="true"
-                                        />
-                                      </button>
-                                    )}
+                                    {renderCredentialActions(cred, isSelected)}
                                   </label>
                                 );
                               })}
@@ -663,23 +720,7 @@ export function ConfigureAdaptorModal({
                                         </span>
                                       </div>
                                     </div>
-                                    {isSelected && (
-                                      <button
-                                        type="button"
-                                        onClick={e => {
-                                          e.preventDefault();
-                                          onCredentialChange(null);
-                                        }}
-                                        className="text-gray-400 hover:text-gray-600
-                                        focus:outline-none flex-shrink-0 ml-2"
-                                        aria-label="Clear credential selection"
-                                      >
-                                        <span
-                                          className="hero-x-mark h-5 w-5"
-                                          aria-hidden="true"
-                                        />
-                                      </button>
-                                    )}
+                                    {renderCredentialActions(cred, isSelected)}
                                   </label>
                                 );
                               })}
