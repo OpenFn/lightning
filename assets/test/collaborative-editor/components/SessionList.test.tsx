@@ -4,29 +4,49 @@
  * Tests the session list with search, sorting, and selection functionality.
  */
 
-import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import type React from 'react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { SessionList } from '../../../js/collaborative-editor/components/SessionList';
-import { createAIAssistantStore } from '../../../js/collaborative-editor/stores/createAIAssistantStore';
+import type { StoreContextValue } from '../../../js/collaborative-editor/contexts/StoreProvider';
+import { StoreContext } from '../../../js/collaborative-editor/contexts/StoreProvider';
 import { createMockAISession } from '../__helpers__/aiAssistantHelpers';
+import { createStores } from '../__helpers__/storeProviderHelpers';
 
 describe('SessionList', () => {
-  let mockStore: ReturnType<typeof createAIAssistantStore>;
+  let stores: StoreContextValue;
   let mockOnSessionSelect: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
-    mockStore = createAIAssistantStore();
-    mockStore._setConnectionState('connected');
+    stores = createStores();
+    stores.aiAssistantStore._setConnectionState('connected');
     mockOnSessionSelect = vi.fn();
     vi.clearAllMocks();
   });
 
+  afterEach(() => {
+    // Clean up any store connections
+    stores.aiAssistantStore.disconnect();
+  });
+
+  const renderWithStores = (
+    ui: React.ReactElement,
+    customStores?: StoreContextValue
+  ) => {
+    const storesToUse = customStores || stores;
+    return render(
+      <StoreContext.Provider value={storesToUse}>{ui}</StoreContext.Provider>
+    );
+  };
+
   describe('Empty State', () => {
     it('should show empty state when no sessions', () => {
-      mockStore.connect('workflow_template', { project_id: 'project-1' });
-      mockStore._setSessionList({
+      stores.aiAssistantStore.connect('workflow_template', {
+        project_id: 'project-1',
+      });
+      stores.aiAssistantStore._setSessionList({
         sessions: [],
         pagination: {
           total_count: 0,
@@ -35,9 +55,8 @@ describe('SessionList', () => {
         },
       });
 
-      render(
+      renderWithStores(
         <SessionList
-          store={mockStore}
           onSessionSelect={mockOnSessionSelect}
           currentSessionId={null}
         />
@@ -52,8 +71,10 @@ describe('SessionList', () => {
     });
 
     it('should show chat bubble icon in empty state', () => {
-      mockStore.connect('workflow_template', { project_id: 'project-1' });
-      mockStore._setSessionList({
+      stores.aiAssistantStore.connect('workflow_template', {
+        project_id: 'project-1',
+      });
+      stores.aiAssistantStore._setSessionList({
         sessions: [],
         pagination: {
           total_count: 0,
@@ -62,9 +83,8 @@ describe('SessionList', () => {
         },
       });
 
-      const { container } = render(
+      const { container } = renderWithStores(
         <SessionList
-          store={mockStore}
           onSessionSelect={mockOnSessionSelect}
           currentSessionId={null}
         />
@@ -80,7 +100,7 @@ describe('SessionList', () => {
     it('should not show loading spinner when sessions exist', () => {
       const sessions = [createMockAISession({ title: 'Session 1' })];
 
-      mockStore._setSessionList({
+      stores.aiAssistantStore._setSessionList({
         sessions,
         pagination: {
           total_count: 1,
@@ -89,14 +109,13 @@ describe('SessionList', () => {
         },
       });
 
-      (mockStore as any).state = {
-        ...mockStore.getSnapshot(),
+      (stores.aiAssistantStore as any).state = {
+        ...stores.aiAssistantStore.getSnapshot(),
         sessionListLoading: true,
       };
 
-      render(
+      renderWithStores(
         <SessionList
-          store={mockStore}
           onSessionSelect={mockOnSessionSelect}
           currentSessionId={null}
         />
@@ -114,7 +133,7 @@ describe('SessionList', () => {
         createMockAISession({ id: '2', title: 'Session 2' }),
       ];
 
-      mockStore._setSessionList({
+      stores.aiAssistantStore._setSessionList({
         sessions,
         pagination: {
           total_count: 2,
@@ -123,9 +142,8 @@ describe('SessionList', () => {
         },
       });
 
-      render(
+      renderWithStores(
         <SessionList
-          store={mockStore}
           onSessionSelect={mockOnSessionSelect}
           currentSessionId={null}
         />
@@ -140,7 +158,7 @@ describe('SessionList', () => {
         createMockAISession({ id: 'session-1', title: 'Test Session' }),
       ];
 
-      mockStore._setSessionList({
+      stores.aiAssistantStore._setSessionList({
         sessions,
         pagination: {
           total_count: 1,
@@ -149,9 +167,8 @@ describe('SessionList', () => {
         },
       });
 
-      render(
+      renderWithStores(
         <SessionList
-          store={mockStore}
           onSessionSelect={mockOnSessionSelect}
           currentSessionId={null}
         />
@@ -169,7 +186,7 @@ describe('SessionList', () => {
         createMockAISession({ id: 'session-2', title: 'Other Session' }),
       ];
 
-      mockStore._setSessionList({
+      stores.aiAssistantStore._setSessionList({
         sessions,
         pagination: {
           total_count: 2,
@@ -178,9 +195,8 @@ describe('SessionList', () => {
         },
       });
 
-      const { container } = render(
+      const { container } = renderWithStores(
         <SessionList
-          store={mockStore}
           onSessionSelect={mockOnSessionSelect}
           currentSessionId="session-1"
         />
@@ -201,7 +217,7 @@ describe('SessionList', () => {
         createMockAISession({ id: '3', title: 'Debugging Error' }),
       ];
 
-      mockStore._setSessionList({
+      stores.aiAssistantStore._setSessionList({
         sessions,
         pagination: {
           total_count: 3,
@@ -212,9 +228,8 @@ describe('SessionList', () => {
     });
 
     it('should render search input', () => {
-      render(
+      renderWithStores(
         <SessionList
-          store={mockStore}
           onSessionSelect={mockOnSessionSelect}
           currentSessionId={null}
         />
@@ -226,9 +241,8 @@ describe('SessionList', () => {
     });
 
     it('should filter sessions by search query', async () => {
-      render(
+      renderWithStores(
         <SessionList
-          store={mockStore}
           onSessionSelect={mockOnSessionSelect}
           currentSessionId={null}
         />
@@ -247,9 +261,8 @@ describe('SessionList', () => {
     });
 
     it('should be case insensitive', async () => {
-      render(
+      renderWithStores(
         <SessionList
-          store={mockStore}
           onSessionSelect={mockOnSessionSelect}
           currentSessionId={null}
         />
@@ -266,9 +279,8 @@ describe('SessionList', () => {
     });
 
     it('should show clear button when search has text', async () => {
-      render(
+      renderWithStores(
         <SessionList
-          store={mockStore}
           onSessionSelect={mockOnSessionSelect}
           currentSessionId={null}
         />
@@ -279,14 +291,15 @@ describe('SessionList', () => {
       );
       await userEvent.type(searchInput, 'test');
 
-      const clearButton = screen.getByRole('button', { name: /clear search/i });
+      const clearButton = screen.getByRole('button', {
+        name: /clear search/i,
+      });
       expect(clearButton).toBeInTheDocument();
     });
 
     it('should clear search when clear button clicked', async () => {
-      render(
+      renderWithStores(
         <SessionList
-          store={mockStore}
           onSessionSelect={mockOnSessionSelect}
           currentSessionId={null}
         />
@@ -299,16 +312,17 @@ describe('SessionList', () => {
 
       expect(searchInput.value).toBe('test');
 
-      const clearButton = screen.getByRole('button', { name: /clear search/i });
+      const clearButton = screen.getByRole('button', {
+        name: /clear search/i,
+      });
       await userEvent.click(clearButton);
 
       expect(searchInput.value).toBe('');
     });
 
     it('should show all sessions when search is cleared', async () => {
-      render(
+      renderWithStores(
         <SessionList
-          store={mockStore}
           onSessionSelect={mockOnSessionSelect}
           currentSessionId={null}
         />
@@ -323,7 +337,9 @@ describe('SessionList', () => {
         expect(screen.queryByText('Job Code Help')).not.toBeInTheDocument();
       });
 
-      const clearButton = screen.getByRole('button', { name: /clear search/i });
+      const clearButton = screen.getByRole('button', {
+        name: /clear search/i,
+      });
       await userEvent.click(clearButton);
 
       await waitFor(() => {
@@ -338,7 +354,7 @@ describe('SessionList', () => {
     it('should render sort button', () => {
       const sessions = [createMockAISession({ title: 'Session' })];
 
-      mockStore._setSessionList({
+      stores.aiAssistantStore._setSessionList({
         sessions,
         pagination: {
           total_count: 1,
@@ -347,9 +363,8 @@ describe('SessionList', () => {
         },
       });
 
-      const { container } = render(
+      const { container } = renderWithStores(
         <SessionList
-          store={mockStore}
           onSessionSelect={mockOnSessionSelect}
           currentSessionId={null}
         />
@@ -363,7 +378,7 @@ describe('SessionList', () => {
     it('should show load more button when has_next_page is true', () => {
       const sessions = [createMockAISession({ title: 'Session' })];
 
-      mockStore._setSessionList({
+      stores.aiAssistantStore._setSessionList({
         sessions,
         pagination: {
           total_count: 25,
@@ -372,9 +387,8 @@ describe('SessionList', () => {
         },
       });
 
-      render(
+      renderWithStores(
         <SessionList
-          store={mockStore}
           onSessionSelect={mockOnSessionSelect}
           currentSessionId={null}
         />
@@ -388,7 +402,7 @@ describe('SessionList', () => {
     it('should not show load more button when has_next_page is false', () => {
       const sessions = [createMockAISession({ title: 'Session' })];
 
-      mockStore._setSessionList({
+      stores.aiAssistantStore._setSessionList({
         sessions,
         pagination: {
           total_count: 1,
@@ -397,9 +411,8 @@ describe('SessionList', () => {
         },
       });
 
-      render(
+      renderWithStores(
         <SessionList
-          store={mockStore}
           onSessionSelect={mockOnSessionSelect}
           currentSessionId={null}
         />
@@ -411,11 +424,11 @@ describe('SessionList', () => {
     });
 
     it('should call loadSessionList when load more clicked', async () => {
-      const loadSpy = vi.spyOn(mockStore, 'loadSessionList');
+      const loadSpy = vi.spyOn(stores.aiAssistantStore, 'loadSessionList');
 
       const sessions = [createMockAISession({ title: 'Session' })];
 
-      mockStore._setSessionList({
+      stores.aiAssistantStore._setSessionList({
         sessions,
         pagination: {
           total_count: 25,
@@ -424,9 +437,8 @@ describe('SessionList', () => {
         },
       });
 
-      render(
+      renderWithStores(
         <SessionList
-          store={mockStore}
           onSessionSelect={mockOnSessionSelect}
           currentSessionId={null}
         />
@@ -451,7 +463,7 @@ describe('SessionList', () => {
         createMockAISession({ title: 'Session', message_count: 5 }),
       ];
 
-      mockStore._setSessionList({
+      stores.aiAssistantStore._setSessionList({
         sessions,
         pagination: {
           total_count: 1,
@@ -460,9 +472,8 @@ describe('SessionList', () => {
         },
       });
 
-      render(
+      renderWithStores(
         <SessionList
-          store={mockStore}
           onSessionSelect={mockOnSessionSelect}
           currentSessionId={null}
         />

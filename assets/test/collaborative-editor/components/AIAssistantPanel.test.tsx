@@ -12,17 +12,16 @@
  * - Mode badge display
  */
 
-import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { produce } from 'immer';
+import type { ReactNode } from 'react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { AIAssistantPanel } from '../../../js/collaborative-editor/components/AIAssistantPanel';
+import { StoreContext } from '../../../js/collaborative-editor/contexts/StoreProvider';
 import { createAIAssistantStore } from '../../../js/collaborative-editor/stores/createAIAssistantStore';
-import {
-  createMockJobCodeContext,
-  createMockWorkflowTemplateContext,
-} from '../__helpers__/aiAssistantHelpers';
+import { createMockJobCodeContext } from '../__helpers__/aiAssistantHelpers';
 
 describe('AIAssistantPanel', () => {
   let mockStore: ReturnType<typeof createAIAssistantStore>;
@@ -31,6 +30,21 @@ describe('AIAssistantPanel', () => {
   let mockOnSessionSelect: ReturnType<typeof vi.fn>;
   let mockOnShowSessions: ReturnType<typeof vi.fn>;
   let mockOnSendMessage: ReturnType<typeof vi.fn>;
+
+  // Helper to wrap component with StoreProvider
+  const renderWithStore = (ui: ReactNode) => {
+    return render(
+      <StoreContext.Provider
+        value={
+          {
+            aiAssistantStore: mockStore,
+          } as any
+        }
+      >
+        {ui}
+      </StoreContext.Provider>
+    );
+  };
 
   beforeEach(() => {
     mockStore = createAIAssistantStore();
@@ -44,12 +58,8 @@ describe('AIAssistantPanel', () => {
 
   describe('Panel Visibility', () => {
     it('should be visible when isOpen is true', () => {
-      const { container } = render(
-        <AIAssistantPanel
-          isOpen={true}
-          onClose={mockOnClose}
-          store={mockStore}
-        />
+      const { container } = renderWithStore(
+        <AIAssistantPanel isOpen={true} onClose={mockOnClose} />
       );
 
       const panel = container.querySelector('[role="dialog"]');
@@ -58,11 +68,10 @@ describe('AIAssistantPanel', () => {
     });
 
     it('should have zero width when isOpen is false (not resizable)', () => {
-      const { container } = render(
+      const { container } = renderWithStore(
         <AIAssistantPanel
           isOpen={false}
           onClose={mockOnClose}
-          store={mockStore}
           isResizable={false}
         />
       );
@@ -72,11 +81,10 @@ describe('AIAssistantPanel', () => {
     });
 
     it('should show fixed 400px width in non-resizable mode', () => {
-      const { container } = render(
+      const { container } = renderWithStore(
         <AIAssistantPanel
           isOpen={true}
           onClose={mockOnClose}
-          store={mockStore}
           isResizable={false}
         />
       );
@@ -86,11 +94,10 @@ describe('AIAssistantPanel', () => {
     });
 
     it('should not apply width classes in resizable mode', () => {
-      const { container } = render(
+      const { container } = renderWithStore(
         <AIAssistantPanel
           isOpen={true}
           onClose={mockOnClose}
-          store={mockStore}
           isResizable={true}
         />
       );
@@ -103,13 +110,7 @@ describe('AIAssistantPanel', () => {
 
   describe('Header', () => {
     it('should render logo', () => {
-      render(
-        <AIAssistantPanel
-          isOpen={true}
-          onClose={mockOnClose}
-          store={mockStore}
-        />
-      );
+      renderWithStore(<AIAssistantPanel isOpen={true} onClose={mockOnClose} />);
 
       const logo = screen.getByAltText('OpenFn');
       expect(logo).toBeInTheDocument();
@@ -117,23 +118,16 @@ describe('AIAssistantPanel', () => {
     });
 
     it('should render "Assistant" title', () => {
-      render(
-        <AIAssistantPanel
-          isOpen={true}
-          onClose={mockOnClose}
-          store={mockStore}
-        />
-      );
+      renderWithStore(<AIAssistantPanel isOpen={true} onClose={mockOnClose} />);
 
       expect(screen.getByText('Assistant')).toBeInTheDocument();
     });
 
     it('should show Job mode badge when sessionType is job_code', () => {
-      render(
+      renderWithStore(
         <AIAssistantPanel
           isOpen={true}
           onClose={mockOnClose}
-          store={mockStore}
           sessionType="job_code"
         />
       );
@@ -144,11 +138,10 @@ describe('AIAssistantPanel', () => {
     });
 
     it('should show Workflow mode badge when sessionType is workflow_template', () => {
-      render(
+      renderWithStore(
         <AIAssistantPanel
           isOpen={true}
           onClose={mockOnClose}
-          store={mockStore}
           sessionType="workflow_template"
         />
       );
@@ -159,11 +152,10 @@ describe('AIAssistantPanel', () => {
     });
 
     it('should not show mode badge when sessionType is null', () => {
-      render(
+      renderWithStore(
         <AIAssistantPanel
           isOpen={true}
           onClose={mockOnClose}
-          store={mockStore}
           sessionType={null}
         />
       );
@@ -173,24 +165,17 @@ describe('AIAssistantPanel', () => {
     });
 
     it('should render close button', () => {
-      render(
-        <AIAssistantPanel
-          isOpen={true}
-          onClose={mockOnClose}
-          store={mockStore}
-        />
-      );
+      renderWithStore(<AIAssistantPanel isOpen={true} onClose={mockOnClose} />);
 
       const closeButton = screen.getByLabelText('Close AI Assistant');
       expect(closeButton).toBeInTheDocument();
     });
 
     it('should call onClose when close button clicked (no session)', async () => {
-      render(
+      renderWithStore(
         <AIAssistantPanel
           isOpen={true}
           onClose={mockOnClose}
-          store={mockStore}
           sessionId={null}
         />
       );
@@ -202,12 +187,11 @@ describe('AIAssistantPanel', () => {
     });
 
     it('should call onShowSessions when close button clicked (with session)', async () => {
-      render(
+      renderWithStore(
         <AIAssistantPanel
           isOpen={true}
           onClose={mockOnClose}
           onShowSessions={mockOnShowSessions}
-          store={mockStore}
           sessionId="session-123"
         />
       );
@@ -224,32 +208,20 @@ describe('AIAssistantPanel', () => {
 
   describe('Menu Dropdown', () => {
     it('should render menu button when store provided', () => {
-      render(
-        <AIAssistantPanel
-          isOpen={true}
-          onClose={mockOnClose}
-          store={mockStore}
-        />
-      );
+      renderWithStore(<AIAssistantPanel isOpen={true} onClose={mockOnClose} />);
 
       const menuButton = screen.getByLabelText('More options');
       expect(menuButton).toBeInTheDocument();
     });
 
-    it('should not render menu button when store not provided', () => {
-      render(<AIAssistantPanel isOpen={true} onClose={mockOnClose} />);
+    it('should always render menu button with StoreProvider', () => {
+      renderWithStore(<AIAssistantPanel isOpen={true} onClose={mockOnClose} />);
 
-      expect(screen.queryByLabelText('More options')).not.toBeInTheDocument();
+      expect(screen.getByLabelText('More options')).toBeInTheDocument();
     });
 
     it('should open menu when menu button clicked', async () => {
-      render(
-        <AIAssistantPanel
-          isOpen={true}
-          onClose={mockOnClose}
-          store={mockStore}
-        />
-      );
+      renderWithStore(<AIAssistantPanel isOpen={true} onClose={mockOnClose} />);
 
       const menuButton = screen.getByLabelText('More options');
       await userEvent.click(menuButton);
@@ -260,13 +232,7 @@ describe('AIAssistantPanel', () => {
     });
 
     it('should close menu when menu button clicked again', async () => {
-      render(
-        <AIAssistantPanel
-          isOpen={true}
-          onClose={mockOnClose}
-          store={mockStore}
-        />
-      );
+      renderWithStore(<AIAssistantPanel isOpen={true} onClose={mockOnClose} />);
 
       const menuButton = screen.getByLabelText('More options');
       await userEvent.click(menuButton);
@@ -279,13 +245,7 @@ describe('AIAssistantPanel', () => {
     });
 
     it('should close menu when clicking outside', async () => {
-      const { container } = render(
-        <AIAssistantPanel
-          isOpen={true}
-          onClose={mockOnClose}
-          store={mockStore}
-        />
-      );
+      renderWithStore(<AIAssistantPanel isOpen={true} onClose={mockOnClose} />);
 
       const menuButton = screen.getByLabelText('More options');
       await userEvent.click(menuButton);
@@ -304,7 +264,9 @@ describe('AIAssistantPanel', () => {
         value: header,
         enumerable: true,
       });
-      document.dispatchEvent(mouseDownEvent);
+      act(() => {
+        document.dispatchEvent(mouseDownEvent);
+      });
 
       await waitFor(() => {
         expect(screen.queryByText('Conversations')).not.toBeInTheDocument();
@@ -312,12 +274,11 @@ describe('AIAssistantPanel', () => {
     });
 
     it('should call onShowSessions when Conversations clicked', async () => {
-      render(
+      renderWithStore(
         <AIAssistantPanel
           isOpen={true}
           onClose={mockOnClose}
           onShowSessions={mockOnShowSessions}
-          store={mockStore}
         />
       );
 
@@ -331,13 +292,7 @@ describe('AIAssistantPanel', () => {
     });
 
     it('should show Responsible AI Policy link', async () => {
-      render(
-        <AIAssistantPanel
-          isOpen={true}
-          onClose={mockOnClose}
-          store={mockStore}
-        />
-      );
+      renderWithStore(<AIAssistantPanel isOpen={true} onClose={mockOnClose} />);
 
       const menuButton = screen.getByLabelText('More options');
       await userEvent.click(menuButton);
@@ -353,13 +308,7 @@ describe('AIAssistantPanel', () => {
 
   describe('About Modal', () => {
     it('should open About modal when menu item clicked', async () => {
-      render(
-        <AIAssistantPanel
-          isOpen={true}
-          onClose={mockOnClose}
-          store={mockStore}
-        />
-      );
+      renderWithStore(<AIAssistantPanel isOpen={true} onClose={mockOnClose} />);
 
       const menuButton = screen.getByLabelText('More options');
       await userEvent.click(menuButton);
@@ -375,13 +324,7 @@ describe('AIAssistantPanel', () => {
     });
 
     it('should show About modal content', async () => {
-      render(
-        <AIAssistantPanel
-          isOpen={true}
-          onClose={mockOnClose}
-          store={mockStore}
-        />
-      );
+      renderWithStore(<AIAssistantPanel isOpen={true} onClose={mockOnClose} />);
 
       const menuButton = screen.getByLabelText('More options');
       await userEvent.click(menuButton);
@@ -400,13 +343,7 @@ describe('AIAssistantPanel', () => {
     });
 
     it('should close About modal when close button clicked', async () => {
-      render(
-        <AIAssistantPanel
-          isOpen={true}
-          onClose={mockOnClose}
-          store={mockStore}
-        />
-      );
+      renderWithStore(<AIAssistantPanel isOpen={true} onClose={mockOnClose} />);
 
       const menuButton = screen.getByLabelText('More options');
       await userEvent.click(menuButton);
@@ -433,13 +370,7 @@ describe('AIAssistantPanel', () => {
     });
 
     it('should close menu when About modal opens', async () => {
-      render(
-        <AIAssistantPanel
-          isOpen={true}
-          onClose={mockOnClose}
-          store={mockStore}
-        />
-      );
+      renderWithStore(<AIAssistantPanel isOpen={true} onClose={mockOnClose} />);
 
       const menuButton = screen.getByLabelText('More options');
       await userEvent.click(menuButton);
@@ -459,11 +390,10 @@ describe('AIAssistantPanel', () => {
 
   describe('View Switching', () => {
     it('should start with sessions view when no sessionId', () => {
-      render(
+      renderWithStore(
         <AIAssistantPanel
           isOpen={true}
           onClose={mockOnClose}
-          store={mockStore}
           sessionId={null}
         />
       );
@@ -476,11 +406,10 @@ describe('AIAssistantPanel', () => {
     });
 
     it('should start with chat view when sessionId provided', () => {
-      render(
+      renderWithStore(
         <AIAssistantPanel
           isOpen={true}
           onClose={mockOnClose}
-          store={mockStore}
           sessionId="session-123"
         >
           <div>Chat Content</div>
@@ -491,13 +420,8 @@ describe('AIAssistantPanel', () => {
     });
 
     it('should switch to chat view when sessionId changes from null', () => {
-      const { rerender } = render(
-        <AIAssistantPanel
-          isOpen={true}
-          onClose={mockOnClose}
-          store={mockStore}
-          sessionId={null}
-        >
+      const { rerender } = renderWithStore(
+        <AIAssistantPanel isOpen={true} onClose={mockOnClose} sessionId={null}>
           <div>Chat Content</div>
         </AIAssistantPanel>
       );
@@ -507,14 +431,21 @@ describe('AIAssistantPanel', () => {
 
       // Update with sessionId
       rerender(
-        <AIAssistantPanel
-          isOpen={true}
-          onClose={mockOnClose}
-          store={mockStore}
-          sessionId="session-123"
+        <StoreContext.Provider
+          value={
+            {
+              aiAssistantStore: mockStore,
+            } as any
+          }
         >
-          <div>Chat Content</div>
-        </AIAssistantPanel>
+          <AIAssistantPanel
+            isOpen={true}
+            onClose={mockOnClose}
+            sessionId="session-123"
+          >
+            <div>Chat Content</div>
+          </AIAssistantPanel>
+        </StoreContext.Provider>
       );
 
       // Should switch to chat view
@@ -522,11 +453,10 @@ describe('AIAssistantPanel', () => {
     });
 
     it('should switch to sessions view when sessionId becomes null', () => {
-      const { rerender } = render(
+      const { rerender } = renderWithStore(
         <AIAssistantPanel
           isOpen={true}
           onClose={mockOnClose}
-          store={mockStore}
           sessionId="session-123"
         >
           <div>Chat Content</div>
@@ -538,14 +468,21 @@ describe('AIAssistantPanel', () => {
 
       // Clear sessionId
       rerender(
-        <AIAssistantPanel
-          isOpen={true}
-          onClose={mockOnClose}
-          store={mockStore}
-          sessionId={null}
+        <StoreContext.Provider
+          value={
+            {
+              aiAssistantStore: mockStore,
+            } as any
+          }
         >
-          <div>Chat Content</div>
-        </AIAssistantPanel>
+          <AIAssistantPanel
+            isOpen={true}
+            onClose={mockOnClose}
+            sessionId={null}
+          >
+            <div>Chat Content</div>
+          </AIAssistantPanel>
+        </StoreContext.Provider>
       );
 
       // Should switch to sessions view
@@ -553,12 +490,11 @@ describe('AIAssistantPanel', () => {
     });
 
     it('should switch to sessions view when Conversations clicked', async () => {
-      render(
+      renderWithStore(
         <AIAssistantPanel
           isOpen={true}
           onClose={mockOnClose}
           onShowSessions={mockOnShowSessions}
-          store={mockStore}
           sessionId="session-123"
         >
           <div>Chat Content</div>
@@ -581,11 +517,10 @@ describe('AIAssistantPanel', () => {
 
   describe('Session Selection', () => {
     it('should render SessionList component in sessions view', () => {
-      render(
+      renderWithStore(
         <AIAssistantPanel
           isOpen={true}
           onClose={mockOnClose}
-          store={mockStore}
           sessionId={null}
         />
       );
@@ -596,12 +531,11 @@ describe('AIAssistantPanel', () => {
     });
 
     it('should provide onSessionSelect callback', async () => {
-      render(
+      renderWithStore(
         <AIAssistantPanel
           isOpen={true}
           onClose={mockOnClose}
           onSessionSelect={mockOnSessionSelect}
-          store={mockStore}
           sessionId={null}
         />
       );
@@ -611,11 +545,10 @@ describe('AIAssistantPanel', () => {
     });
 
     it('should pass currentSessionId to SessionList', () => {
-      render(
+      renderWithStore(
         <AIAssistantPanel
           isOpen={true}
           onClose={mockOnClose}
-          store={mockStore}
           sessionId="session-123"
         />
       );
@@ -628,11 +561,10 @@ describe('AIAssistantPanel', () => {
 
   describe('ChatInput Integration', () => {
     it('should render ChatInput component', () => {
-      render(
+      renderWithStore(
         <AIAssistantPanel
           isOpen={true}
           onClose={mockOnClose}
-          store={mockStore}
           sessionId="session-1"
         />
       );
@@ -643,12 +575,11 @@ describe('AIAssistantPanel', () => {
     });
 
     it('should pass onSendMessage to ChatInput', () => {
-      render(
+      renderWithStore(
         <AIAssistantPanel
           isOpen={true}
           onClose={mockOnClose}
           onSendMessage={mockOnSendMessage}
-          store={mockStore}
           sessionId="session-1"
         />
       );
@@ -658,12 +589,11 @@ describe('AIAssistantPanel', () => {
     });
 
     it('should pass isLoading to ChatInput', () => {
-      render(
+      renderWithStore(
         <AIAssistantPanel
           isOpen={true}
           onClose={mockOnClose}
           isLoading={true}
-          store={mockStore}
           sessionId="session-1"
         />
       );
@@ -673,12 +603,11 @@ describe('AIAssistantPanel', () => {
     });
 
     it('should show job controls when sessionType is job_code', () => {
-      render(
+      renderWithStore(
         <AIAssistantPanel
           isOpen={true}
           onClose={mockOnClose}
           sessionType="job_code"
-          store={mockStore}
           sessionId="session-1"
         />
       );
@@ -687,12 +616,11 @@ describe('AIAssistantPanel', () => {
     });
 
     it('should not show job controls when sessionType is workflow_template', () => {
-      render(
+      renderWithStore(
         <AIAssistantPanel
           isOpen={true}
           onClose={mockOnClose}
           sessionType="workflow_template"
-          store={mockStore}
         />
       );
 
@@ -711,11 +639,10 @@ describe('AIAssistantPanel', () => {
 
       // Replace state via the store's internal mechanism
       // In real usage, this happens via connectJobCodeMode
-      render(
+      renderWithStore(
         <AIAssistantPanel
           isOpen={true}
           onClose={mockOnClose}
-          store={mockStore}
           sessionType="job_code"
         />
       );
@@ -726,11 +653,10 @@ describe('AIAssistantPanel', () => {
     });
 
     it('should compute storageKey from workflow context via store state', () => {
-      render(
+      renderWithStore(
         <AIAssistantPanel
           isOpen={true}
           onClose={mockOnClose}
-          store={mockStore}
           sessionType="workflow_template"
         />
       );
@@ -741,13 +667,7 @@ describe('AIAssistantPanel', () => {
     });
 
     it('should handle undefined storageKey when no context', () => {
-      render(
-        <AIAssistantPanel
-          isOpen={true}
-          onClose={mockOnClose}
-          store={mockStore}
-        />
-      );
+      renderWithStore(<AIAssistantPanel isOpen={true} onClose={mockOnClose} />);
 
       // storageKey should be undefined when no context
       const state = mockStore.getSnapshot();
@@ -761,11 +681,10 @@ describe('AIAssistantPanel', () => {
       const loadSpy = vi.spyOn(mockStore, 'loadSessionList');
       // Don't set context - initial state has no context
 
-      render(
+      renderWithStore(
         <AIAssistantPanel
           isOpen={true}
           onClose={mockOnClose}
-          store={mockStore}
           sessionId={null}
         />
       );
@@ -779,11 +698,10 @@ describe('AIAssistantPanel', () => {
     it('should not load sessions when view is chat', async () => {
       const loadSpy = vi.spyOn(mockStore, 'loadSessionList');
 
-      render(
+      renderWithStore(
         <AIAssistantPanel
           isOpen={true}
           onClose={mockOnClose}
-          store={mockStore}
           sessionId="session-123"
         >
           <div>Chat</div>
@@ -798,52 +716,28 @@ describe('AIAssistantPanel', () => {
 
   describe('Accessibility', () => {
     it('should have dialog role', () => {
-      render(
-        <AIAssistantPanel
-          isOpen={true}
-          onClose={mockOnClose}
-          store={mockStore}
-        />
-      );
+      renderWithStore(<AIAssistantPanel isOpen={true} onClose={mockOnClose} />);
 
       const panel = screen.getByRole('dialog');
       expect(panel).toBeInTheDocument();
     });
 
     it('should have aria-label', () => {
-      render(
-        <AIAssistantPanel
-          isOpen={true}
-          onClose={mockOnClose}
-          store={mockStore}
-        />
-      );
+      renderWithStore(<AIAssistantPanel isOpen={true} onClose={mockOnClose} />);
 
       const panel = screen.getByRole('dialog');
       expect(panel).toHaveAttribute('aria-label', 'AI Assistant');
     });
 
     it('should not be modal', () => {
-      render(
-        <AIAssistantPanel
-          isOpen={true}
-          onClose={mockOnClose}
-          store={mockStore}
-        />
-      );
+      renderWithStore(<AIAssistantPanel isOpen={true} onClose={mockOnClose} />);
 
       const panel = screen.getByRole('dialog');
       expect(panel).toHaveAttribute('aria-modal', 'false');
     });
 
     it('should have expanded state on menu button', async () => {
-      render(
-        <AIAssistantPanel
-          isOpen={true}
-          onClose={mockOnClose}
-          store={mockStore}
-        />
-      );
+      renderWithStore(<AIAssistantPanel isOpen={true} onClose={mockOnClose} />);
 
       const menuButton = screen.getByLabelText('More options');
       expect(menuButton).toHaveAttribute('aria-expanded', 'false');
@@ -857,12 +751,14 @@ describe('AIAssistantPanel', () => {
   describe('Props Handling', () => {
     it('should handle missing optional props', () => {
       expect(() => {
-        render(<AIAssistantPanel isOpen={true} onClose={mockOnClose} />);
+        renderWithStore(
+          <AIAssistantPanel isOpen={true} onClose={mockOnClose} />
+        );
       }).not.toThrow();
     });
 
     it('should render children in chat view', () => {
-      render(
+      renderWithStore(
         <AIAssistantPanel
           isOpen={true}
           onClose={mockOnClose}
@@ -876,11 +772,10 @@ describe('AIAssistantPanel', () => {
     });
 
     it('should default isLoading to false', () => {
-      render(
+      renderWithStore(
         <AIAssistantPanel
           isOpen={true}
           onClose={mockOnClose}
-          store={mockStore}
           sessionId="session-1"
         />
       );
@@ -890,12 +785,8 @@ describe('AIAssistantPanel', () => {
     });
 
     it('should default isResizable to false', () => {
-      const { container } = render(
-        <AIAssistantPanel
-          isOpen={true}
-          onClose={mockOnClose}
-          store={mockStore}
-        />
+      const { container } = renderWithStore(
+        <AIAssistantPanel isOpen={true} onClose={mockOnClose} />
       );
 
       const panel = container.querySelector('[role="dialog"]');

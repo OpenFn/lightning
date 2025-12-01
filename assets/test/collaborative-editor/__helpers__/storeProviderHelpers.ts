@@ -15,6 +15,7 @@ import * as Y from 'yjs';
 
 import type { StoreContextValue } from '../../../js/collaborative-editor/contexts/StoreProvider';
 import { createAdaptorStore } from '../../../js/collaborative-editor/stores/createAdaptorStore';
+import { createAIAssistantStore } from '../../../js/collaborative-editor/stores/createAIAssistantStore';
 import { createAwarenessStore } from '../../../js/collaborative-editor/stores/createAwarenessStore';
 import { createCredentialStore } from '../../../js/collaborative-editor/stores/createCredentialStore';
 import { createEditorPreferencesStore } from '../../../js/collaborative-editor/stores/createEditorPreferencesStore';
@@ -99,6 +100,7 @@ export function createStores(): StoreContextValue {
     historyStore: createHistoryStore(),
     uiStore: createUIStore(),
     editorPreferencesStore: createEditorPreferencesStore(),
+    aiAssistantStore: createAIAssistantStore(),
   };
 }
 
@@ -312,6 +314,7 @@ export function verifyAllStoresPresent(stores: StoreContextValue): void {
   expect(stores.historyStore).toBeDefined();
   expect(stores.uiStore).toBeDefined();
   expect(stores.editorPreferencesStore).toBeDefined();
+  expect(stores.aiAssistantStore).toBeDefined();
 
   // Verify each store has the expected interface
   [
@@ -321,6 +324,7 @@ export function verifyAllStoresPresent(stores: StoreContextValue): void {
     stores.historyStore,
     stores.uiStore,
     stores.editorPreferencesStore,
+    stores.aiAssistantStore,
   ].forEach(store => {
     expect(typeof store.subscribe).toBe('function');
     expect(typeof store.getSnapshot).toBe('function');

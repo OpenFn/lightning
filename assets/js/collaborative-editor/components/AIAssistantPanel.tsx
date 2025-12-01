@@ -1,8 +1,15 @@
-import { useEffect, useState, useSyncExternalStore, useRef } from 'react';
+import { useEffect, useState, useRef } from 'react';
 
 import { cn } from '#/utils/cn';
 
-import type { AIAssistantStore } from '../types/ai-assistant';
+import {
+  useAIStorageKey,
+  useAISessionType,
+  useAIJobCodeContext,
+  useAIHasSessionContext,
+  useAIHasCompletedSessionLoad,
+  useAISessionListCommands,
+} from '../hooks/useAIAssistant';
 
 import { ChatInput } from './ChatInput';
 import { DisclaimerScreen } from './DisclaimerScreen';
@@ -24,10 +31,6 @@ interface AIAssistantPanelProps {
    * or standalone with fixed width (Canvas mode)
    */
   isResizable?: boolean;
-  /**
-   * AI Assistant store for session list
-   */
-  store?: AIAssistantStore;
   /**
    * Current session type (job_code or workflow_template)
    * Used to show mode-specific UI
@@ -52,7 +55,7 @@ interface AIAssistantPanelProps {
   /**
    * Connection state for showing loading screen
    */
-  connectionState?: 'disconnected' | 'connecting' | 'connected';
+  connectionState?: 'disconnected' | 'connecting' | 'connected' | 'error';
 }
 
 interface MessageOptions {
@@ -85,7 +88,6 @@ export function AIAssistantPanel({
   messageCount: _messageCount = 0,
   isLoading = false,
   isResizable = false,
-  store,
   sessionType = null,
   loadSessions: _loadSessions,
   focusTrigger,
@@ -102,34 +104,20 @@ export function AIAssistantPanel({
   const [internalFocusTrigger, setInternalFocusTrigger] = useState(0);
   const prevViewRef = useRef(view);
 
+  // Use hooks to get state from AI Assistant store
+  const storageKey = useAIStorageKey();
+  const storeSessionType = useAISessionType();
+  const jobCodeContext = useAIJobCodeContext();
+  const hasSessionContext = useAIHasSessionContext();
+  const hasCompletedSessionLoad = useAIHasCompletedSessionLoad();
+  const { loadSessionList } = useAISessionListCommands();
+
   useEffect(() => {
     if (prevViewRef.current !== view) {
       setInternalFocusTrigger(prev => prev + 1);
     }
     prevViewRef.current = view;
   }, [view]);
-
-  const storageKey: string | undefined = useSyncExternalStore(
-    store?.subscribe ?? (() => () => {}),
-    () => {
-      if (!store) {
-        return undefined;
-      }
-      const state = store.getSnapshot();
-      if (state.sessionType === 'job_code' && state.jobCodeContext?.job_id) {
-        return `ai-job-${state.jobCodeContext.job_id}`;
-      }
-      if (state.sessionType === 'workflow_template') {
-        if (state.workflowTemplateContext?.workflow_id) {
-          return `ai-workflow-${state.workflowTemplateContext.workflow_id}`;
-        }
-        if (state.workflowTemplateContext?.project_id) {
-          return `ai-project-${state.workflowTemplateContext.project_id}`;
-        }
-      }
-      return undefined;
-    }
-  );
 
   useEffect(() => {
     if (sessionId && view === 'sessions') {
@@ -138,34 +126,6 @@ export function AIAssistantPanel({
       setView('sessions');
     }
   }, [sessionId, view]);
-
-  const storeSessionType = useSyncExternalStore(
-    store?.subscribe ?? (() => () => {}),
-    () => store?.getSnapshot().sessionType ?? null
-  );
-
-  const jobContextId = useSyncExternalStore(
-    store?.subscribe ?? (() => () => {}),
-    () => store?.getSnapshot().jobCodeContext?.job_id ?? null
-  );
-
-  const hasSessionContext = useSyncExternalStore(
-    store?.subscribe ?? (() => () => {}),
-    () => {
-      if (!store) return false;
-      const state = store.getSnapshot();
-      return !!(state.jobCodeContext || state.workflowTemplateContext);
-    }
-  );
-
-  const hasCompletedSessionLoad = useSyncExternalStore(
-    store?.subscribe ?? (() => () => {}),
-    () => {
-      if (!store) return true;
-      const state = store.getSnapshot();
-      return state.sessionListPagination !== null;
-    }
-  );
 
   const placeholderText =
     sessionType === 'job_code'
@@ -182,19 +142,20 @@ export function AIAssistantPanel({
         : undefined;
 
   useEffect(() => {
-    if (view !== 'sessions' || !store || !storeSessionType) return;
+    if (view !== 'sessions' || !storeSessionType) return;
 
-    const state = store.getSnapshot();
-    const hasContext = !!(
-      state.jobCodeContext || state.workflowTemplateContext
-    );
-
-    if (!hasContext) {
+    if (!hasSessionContext) {
       return;
     }
 
-    void store.loadSessionList();
-  }, [view, store, storeSessionType, jobContextId]);
+    void loadSessionList();
+  }, [
+    view,
+    storeSessionType,
+    jobCodeContext?.job_id,
+    hasSessionContext,
+    loadSessionList,
+  ]);
 
   const handleShowSessions = () => {
     setView('sessions');
@@ -289,99 +250,96 @@ export function AIAssistantPanel({
             </div>
           </div>
           <div className="flex items-center gap-2">
-            {store && (
-              <div className="relative">
-                <button
-                  type="button"
-                  onClick={handleToggleMenu}
-                  data-menu-trigger
-                  className={cn(
-                    'inline-flex items-center justify-center',
-                    'h-8 w-8 rounded-md',
-                    'text-gray-500 hover:text-gray-700 hover:bg-gray-100',
-                    'focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500',
-                    'transition-all duration-150',
-                    isMenuOpen && 'bg-gray-100 text-gray-700'
-                  )}
-                  aria-label="More options"
-                  aria-expanded={isMenuOpen}
-                >
-                  <span className="hero-ellipsis-vertical h-5 w-5" />
-                </button>
-                {isMenuOpen && (
-                  <div
-                    data-menu-content
-                    className={cn(
-                      'absolute right-0 mt-2 w-64 origin-top-right',
-                      'rounded-lg shadow-xl',
-                      'bg-white ring-1 ring-gray-900/10',
-                      'divide-y divide-gray-100',
-                      'z-50',
-                      'animate-in fade-in-0 zoom-in-95 duration-100'
-                    )}
-                  >
-                    <div className="py-1.5">
-                      <button
-                        type="button"
-                        data-testid="sessions-button"
-                        onClick={handleShowSessions}
-                        className={cn(
-                          'group flex items-center w-full',
-                          'px-4 py-2.5 text-sm font-medium',
-                          'text-gray-700 hover:bg-gray-50',
-                          'transition-colors duration-150',
-                          view === 'sessions' &&
-                            'bg-primary-50 text-primary-700'
-                        )}
-                      >
-                        <span
-                          className={cn(
-                            'hero-chat-bubble-left-right h-5 w-5 mr-3',
-                            view === 'sessions'
-                              ? 'text-primary-600'
-                              : 'text-gray-400 group-hover:text-gray-500'
-                          )}
-                        />
-                        <span className="flex-1 text-left">Conversations</span>
-                        {view === 'sessions' && (
-                          <span className="hero-check h-4 w-4 text-primary-600 ml-2" />
-                        )}
-                      </button>
-                    </div>
-                    <div className="py-1.5">
-                      <button
-                        type="button"
-                        onClick={handleOpenAbout}
-                        className={cn(
-                          'group flex items-center w-full',
-                          'px-4 py-2.5 text-sm',
-                          'text-gray-700 hover:bg-gray-50',
-                          'transition-colors duration-150'
-                        )}
-                      >
-                        <span className="hero-information-circle h-5 w-5 mr-3 text-gray-400 group-hover:text-gray-500" />
-                        <span>About the AI Assistant</span>
-                      </button>
-                      <a
-                        href="https://www.openfn.org/ai"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className={cn(
-                          'group flex items-center w-full',
-                          'px-4 py-2.5 text-sm',
-                          'text-gray-700 hover:bg-gray-50',
-                          'transition-colors duration-150'
-                        )}
-                      >
-                        <span className="hero-document-text h-5 w-5 mr-3 text-gray-400 group-hover:text-gray-500" />
-                        <span className="flex-1">Responsible AI Policy</span>
-                        <span className="hero-arrow-top-right-on-square h-4 w-4 ml-2 text-gray-400 group-hover:text-gray-500" />
-                      </a>
-                    </div>
-                  </div>
+            <div className="relative">
+              <button
+                type="button"
+                onClick={handleToggleMenu}
+                data-menu-trigger
+                className={cn(
+                  'inline-flex items-center justify-center',
+                  'h-8 w-8 rounded-md',
+                  'text-gray-500 hover:text-gray-700 hover:bg-gray-100',
+                  'focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500',
+                  'transition-all duration-150',
+                  isMenuOpen && 'bg-gray-100 text-gray-700'
                 )}
-              </div>
-            )}
+                aria-label="More options"
+                aria-expanded={isMenuOpen}
+              >
+                <span className="hero-ellipsis-vertical h-5 w-5" />
+              </button>
+              {isMenuOpen && (
+                <div
+                  data-menu-content
+                  className={cn(
+                    'absolute right-0 mt-2 w-64 origin-top-right',
+                    'rounded-lg shadow-xl',
+                    'bg-white ring-1 ring-gray-900/10',
+                    'divide-y divide-gray-100',
+                    'z-50',
+                    'animate-in fade-in-0 zoom-in-95 duration-100'
+                  )}
+                >
+                  <div className="py-1.5">
+                    <button
+                      type="button"
+                      data-testid="sessions-button"
+                      onClick={handleShowSessions}
+                      className={cn(
+                        'group flex items-center w-full',
+                        'px-4 py-2.5 text-sm font-medium',
+                        'text-gray-700 hover:bg-gray-50',
+                        'transition-colors duration-150',
+                        view === 'sessions' && 'bg-primary-50 text-primary-700'
+                      )}
+                    >
+                      <span
+                        className={cn(
+                          'hero-chat-bubble-left-right h-5 w-5 mr-3',
+                          view === 'sessions'
+                            ? 'text-primary-600'
+                            : 'text-gray-400 group-hover:text-gray-500'
+                        )}
+                      />
+                      <span className="flex-1 text-left">Conversations</span>
+                      {view === 'sessions' && (
+                        <span className="hero-check h-4 w-4 text-primary-600 ml-2" />
+                      )}
+                    </button>
+                  </div>
+                  <div className="py-1.5">
+                    <button
+                      type="button"
+                      onClick={handleOpenAbout}
+                      className={cn(
+                        'group flex items-center w-full',
+                        'px-4 py-2.5 text-sm',
+                        'text-gray-700 hover:bg-gray-50',
+                        'transition-colors duration-150'
+                      )}
+                    >
+                      <span className="hero-information-circle h-5 w-5 mr-3 text-gray-400 group-hover:text-gray-500" />
+                      <span>About the AI Assistant</span>
+                    </button>
+                    <a
+                      href="https://www.openfn.org/ai"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className={cn(
+                        'group flex items-center w-full',
+                        'px-4 py-2.5 text-sm',
+                        'text-gray-700 hover:bg-gray-50',
+                        'transition-colors duration-150'
+                      )}
+                    >
+                      <span className="hero-document-text h-5 w-5 mr-3 text-gray-400 group-hover:text-gray-500" />
+                      <span className="flex-1">Responsible AI Policy</span>
+                      <span className="hero-arrow-top-right-on-square h-4 w-4 ml-2 text-gray-400 group-hover:text-gray-500" />
+                    </a>
+                  </div>
+                </div>
+              )}
+            </div>
             <button
               type="button"
               onClick={handleClose}
@@ -410,13 +368,10 @@ export function AIAssistantPanel({
         {view === 'chat' ? (
           <div className="h-full overflow-y-auto">{children}</div>
         ) : (
-          store && (
-            <SessionList
-              store={store}
-              onSessionSelect={handleSessionSelect}
-              currentSessionId={sessionId}
-            />
-          )
+          <SessionList
+            onSessionSelect={handleSessionSelect}
+            currentSessionId={sessionId}
+          />
         )}
       </div>
 

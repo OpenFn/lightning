@@ -1,11 +1,17 @@
-import { useSyncExternalStore, useState, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 
 import { cn } from '#/utils/cn';
 
-import type { AIAssistantStore } from '../types/ai-assistant';
+import {
+  useAISessionList,
+  useAISessionListLoading,
+  useAISessionListPagination,
+  useAIJobCodeContext,
+  useAIWorkflowTemplateContext,
+  useAISessionListCommands,
+} from '../hooks/useAIAssistant';
 
 interface SessionListProps {
-  store: AIAssistantStore;
   onSessionSelect: (sessionId: string) => void;
   currentSessionId: string | null | undefined;
 }
@@ -26,37 +32,18 @@ interface SessionListProps {
  * - Search/filter sessions by title
  */
 export function SessionList({
-  store,
   onSessionSelect,
   currentSessionId,
 }: SessionListProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [sortOrder, setSortOrder] = useState<'desc' | 'asc'>('desc');
 
-  const sessionList = useSyncExternalStore(
-    store.subscribe,
-    store.withSelector(state => state.sessionList)
-  );
-
-  const isLoading = useSyncExternalStore(
-    store.subscribe,
-    store.withSelector(state => state.sessionListLoading)
-  );
-
-  const pagination = useSyncExternalStore(
-    store.subscribe,
-    store.withSelector(state => state.sessionListPagination)
-  );
-
-  const jobCodeContext = useSyncExternalStore(
-    store.subscribe,
-    store.withSelector(state => state.jobCodeContext)
-  );
-
-  const workflowTemplateContext = useSyncExternalStore(
-    store.subscribe,
-    store.withSelector(state => state.workflowTemplateContext)
-  );
+  const sessionList = useAISessionList();
+  const isLoading = useAISessionListLoading();
+  const pagination = useAISessionListPagination();
+  const jobCodeContext = useAIJobCodeContext();
+  const workflowTemplateContext = useAIWorkflowTemplateContext();
+  const { loadSessionList } = useAISessionListCommands();
 
   const filteredSessions = useMemo(() => {
     let filtered = sessionList;
@@ -84,7 +71,7 @@ export function SessionList({
 
   const handleLoadMore = () => {
     if (pagination && pagination.has_next_page) {
-      void store.loadSessionList({
+      void loadSessionList({
         offset: sessionList.length,
         limit: 20,
         append: true,

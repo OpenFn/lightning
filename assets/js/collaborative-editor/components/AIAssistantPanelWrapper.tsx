@@ -856,7 +856,6 @@ export function AIAssistantPanelWrapper() {
               messageCount={messages.length}
               isLoading={isLoading}
               isResizable={true}
-              store={aiStore}
               sessionType={sessionType}
               loadSessions={loadSessions}
               focusTrigger={focusTrigger}
