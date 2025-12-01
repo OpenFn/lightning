@@ -59,6 +59,8 @@ and this project adheres to
   [#PR4050](https://github.com/OpenFn/lightning/pull/4050)
 - Make IDE heading separate from top menu
   [#4077](https://github.com/OpenFn/lightning/issues/4077)
+- Update IDE workflow step selector (order by proximity to trigger)
+  [#4048](https://github.com/OpenFn/lightning/issues/4048)
 
 ### Fixed
 
