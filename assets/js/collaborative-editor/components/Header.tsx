@@ -169,7 +169,7 @@ export function Header({
   isIDEOpen?: boolean;
 }) {
   // IMPORTANT: All hooks must be called unconditionally before any early returns or conditional logic
-  const { updateSearchParams } = useURLState();
+  const { updateSearchParams, searchParams } = useURLState();
   const { selectNode } = useNodeSelection();
   const { enabled, setEnabled } = useWorkflowEnabled();
   const { saveWorkflow } = useWorkflowActions();
@@ -289,10 +289,13 @@ export function Header({
                 >
                   <button
                     type="button"
-                    onClick={() =>
-                      !(isNewWorkflow && isWorkflowEmpty) &&
-                      updateSearchParams({ panel: 'settings' })
-                    }
+                    onClick={() => {
+                      if (isNewWorkflow && isWorkflowEmpty) return;
+                      const currentPanel = searchParams.get('panel');
+                      updateSearchParams({
+                        panel: currentPanel === 'settings' ? null : 'settings',
+                      });
+                    }}
                     disabled={isNewWorkflow && isWorkflowEmpty}
                     className={`w-5 h-5 place-self-center ${
                       hasSettingsErrors
