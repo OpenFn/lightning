@@ -53,6 +53,7 @@ export const useUICommands = () => {
     openAIAssistantPanel: uiStore.openAIAssistantPanel,
     closeAIAssistantPanel: uiStore.closeAIAssistantPanel,
     toggleAIAssistantPanel: uiStore.toggleAIAssistantPanel,
+    clearAIAssistantInitialMessage: uiStore.clearAIAssistantInitialMessage,
   };
 };
 
@@ -92,4 +93,18 @@ export const useIsAIAssistantPanelOpen = (): boolean => {
   );
 
   return useSyncExternalStore(uiStore.subscribe, selectIsOpen);
+};
+
+/**
+ * Hook to get AI Assistant initial message
+ * Returns the message to send when panel opens, or null
+ */
+export const useAIAssistantInitialMessage = (): string | null => {
+  const uiStore = useUIStore();
+
+  const selectInitialMessage = uiStore.withSelector(
+    state => state.aiAssistantInitialMessage
+  );
+
+  return useSyncExternalStore(uiStore.subscribe, selectInitialMessage);
 };

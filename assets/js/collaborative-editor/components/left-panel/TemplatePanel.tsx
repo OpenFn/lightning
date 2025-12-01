@@ -8,8 +8,15 @@
  * - Footer has Import button to switch to YAML import mode
  */
 
-import { useContext, useEffect, useMemo, useSyncExternalStore } from 'react';
+import {
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useSyncExternalStore,
+} from 'react';
 
+import { useURLState } from '../../../react/lib/use-url-state';
 import type { WorkflowState as YAMLWorkflowState } from '../../../yaml/types';
 import {
   parseWorkflowYAML,
@@ -22,6 +29,7 @@ import { useSession } from '../../hooks/useSession';
 import { useUICommands } from '../../hooks/useUI';
 import type { Template } from '../../types/template';
 
+import { Tooltip } from '../Tooltip';
 import { TemplateCard } from './TemplateCard';
 import { TemplateSearchInput } from './TemplateSearchInput';
 
@@ -41,6 +49,8 @@ export function TemplatePanel({
     throw new Error('TemplatePanel must be used within a StoreProvider');
   }
   const uiStore = context.uiStore;
+  const aiStore = context.aiAssistantStore;
+  const workflowStore = context.workflowStore;
   const { provider } = useSession();
   const channel = provider?.channel;
   const { openAIAssistantPanel } = useUICommands();
@@ -66,6 +76,9 @@ export function TemplatePanel({
     uiStore.withSelector(state => state.templatePanel.selectedTemplate)
   );
 
+  // Remember the last selected template before search
+  const previousTemplateRef = useRef<Template | null>(null);
+
   useEffect(() => {
     if (!channel) return;
 
@@ -74,16 +87,6 @@ export function TemplatePanel({
         uiStore.setTemplatesLoading(true);
         const userTemplates = await fetchTemplates(channel);
         uiStore.setTemplates(userTemplates);
-
-        // Select event-based template by default if no template is selected
-        if (!selectedTemplate) {
-          const eventBasedTemplate = BASE_TEMPLATES.find(
-            t => t.id === 'base-webhook-template'
-          );
-          if (eventBasedTemplate) {
-            handleSelectTemplate(eventBasedTemplate);
-          }
-        }
       } catch (err) {
         console.error('Failed to fetch templates:', err);
         uiStore.setTemplatesError('Failed to load templates');
@@ -97,13 +100,15 @@ export function TemplatePanel({
     };
   }, [channel]);
 
-  const filteredTemplates = useMemo(() => {
+  const allTemplates: Template[] = useMemo(() => {
+    const combined = [...BASE_TEMPLATES, ...templates];
+
     if (!searchQuery.trim()) {
-      return templates;
+      return combined;
     }
 
     const query = searchQuery.toLowerCase();
-    return templates.filter(template => {
+    return combined.filter(template => {
       const matchName = template.name.toLowerCase().includes(query);
       const matchDesc = template.description?.toLowerCase().includes(query);
       const matchTags = template.tags.some(tag =>
@@ -112,11 +117,6 @@ export function TemplatePanel({
       return matchName || matchDesc || matchTags;
     });
   }, [templates, searchQuery]);
-
-  const allTemplates: Template[] = useMemo(
-    () => [...BASE_TEMPLATES, ...filteredTemplates],
-    [filteredTemplates]
-  );
 
   const handleSelectTemplate = (template: Template) => {
     uiStore.selectTemplate(template);
@@ -146,7 +146,29 @@ export function TemplatePanel({
   };
 
   const handleSearchChange = (query: string) => {
+    const previousQuery = searchQuery;
     uiStore.setTemplateSearchQuery(query);
+
+    // Starting a search - save current selection and clear canvas
+    if (query && !previousQuery && selectedTemplate && onImport) {
+      previousTemplateRef.current = selectedTemplate;
+      uiStore.selectTemplate(null);
+      // Import empty workflow to clear canvas
+      onImport({
+        id: '',
+        name: '',
+        jobs: [],
+        triggers: [],
+        edges: [],
+        positions: null,
+      });
+    }
+    // Clearing search - restore previous selection
+    else if (!query && previousQuery && previousTemplateRef.current) {
+      const templateToRestore = previousTemplateRef.current;
+      previousTemplateRef.current = null;
+      handleSelectTemplate(templateToRestore);
+    }
   };
 
   return (
@@ -183,18 +205,37 @@ export function TemplatePanel({
               />
             ))}
 
-            {filteredTemplates.length === 0 && searchQuery && (
+            {allTemplates.length === 0 && searchQuery && (
               <div className="col-span-full flex items-center justify-center h-64">
-                <div className="text-center text-gray-500">
-                  <p className="text-base mb-3">
-                    No user templates found matching your search
+                <div className="text-center max-w-md">
+                  <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-gray-100 mb-5">
+                    <span className="hero-magnifying-glass h-7 w-7 text-gray-400" />
+                  </div>
+                  <h3 className="text-base font-medium text-gray-900 mb-2">
+                    No matching templates
+                  </h3>
+                  <p className="text-sm text-gray-600 mb-6">
+                    We couldn't find any templates for "
+                    <span className="font-medium text-gray-900">
+                      {searchQuery}
+                    </span>
+                    "
                   </p>
                   <button
                     type="button"
-                    onClick={openAIAssistantPanel}
-                    className="text-sm text-primary-600 hover:text-primary-700 font-medium underline"
+                    onClick={() => {
+                      // Clear any existing AI session
+                      aiStore.disconnect();
+                      aiStore._clearSession();
+
+                      const message = `Create a workflow template for: ${searchQuery}`;
+                      openAIAssistantPanel(message);
+                    }}
+                    className="group relative inline-flex items-center gap-2 rounded-lg bg-gradient-to-br from-primary-600 via-primary-500 to-primary-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-all duration-200 hover:shadow-md hover:scale-[1.02] active:scale-[0.98]"
                   >
-                    Build your own template using the AI Assistant
+                    <span className="hero-sparkles h-4 w-4 group-hover:rotate-12 transition-transform duration-200" />
+                    Build your workflow using AI
+                    <span className="hero-arrow-right h-4 w-4 group-hover:translate-x-0.5 transition-transform duration-200" />
                   </button>
                 </div>
               </div>
@@ -212,14 +253,23 @@ export function TemplatePanel({
           <span className="hero-document-arrow-up size-5" />
           Import
         </button>
-        <button
-          type="button"
-          onClick={handleCreateWorkflow}
-          disabled={!selectedTemplate || !onSave}
-          className="rounded-md bg-primary-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-primary-500 disabled:bg-gray-300 disabled:cursor-not-allowed"
+        <Tooltip
+          content={
+            !selectedTemplate ? 'Select a template to create workflow' : null
+          }
+          side="bottom"
         >
-          Create
-        </button>
+          <span className="inline-block">
+            <button
+              type="button"
+              onClick={handleCreateWorkflow}
+              disabled={!selectedTemplate || !onSave}
+              className="rounded-md bg-primary-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-primary-500 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-primary-600"
+            >
+              Create
+            </button>
+          </span>
+        </Tooltip>
       </div>
     </div>
   );

@@ -90,6 +90,7 @@ export const createUIStore = (): UIStore => {
       runPanelContext: null,
       githubSyncModalOpen: false,
       aiAssistantPanelOpen: loadAIAssistantPanelState(),
+      aiAssistantInitialMessage: null,
       templatePanel: {
         templates: [],
         loading: false,
@@ -155,9 +156,10 @@ export const createUIStore = (): UIStore => {
     notify('closeGitHubSyncModal');
   };
 
-  const openAIAssistantPanel = () => {
+  const openAIAssistantPanel = (initialMessage?: string) => {
     state = produce(state, draft => {
       draft.aiAssistantPanelOpen = true;
+      draft.aiAssistantInitialMessage = initialMessage ?? null;
     });
     notify('openAIAssistantPanel');
   };
@@ -165,6 +167,7 @@ export const createUIStore = (): UIStore => {
   const closeAIAssistantPanel = () => {
     state = produce(state, draft => {
       draft.aiAssistantPanelOpen = false;
+      draft.aiAssistantInitialMessage = null;
     });
     notify('closeAIAssistantPanel');
   };
@@ -175,6 +178,13 @@ export const createUIStore = (): UIStore => {
       draft.aiAssistantPanelOpen = isOpen;
     });
     notify('toggleAIAssistantPanel');
+  };
+
+  const clearAIAssistantInitialMessage = () => {
+    state = produce(state, draft => {
+      draft.aiAssistantInitialMessage = null;
+    });
+    notify('clearAIAssistantInitialMessage');
   };
 
   const setTemplates = (templates: UIState['templatePanel']['templates']) => {
@@ -249,6 +259,7 @@ export const createUIStore = (): UIStore => {
     openAIAssistantPanel,
     closeAIAssistantPanel,
     toggleAIAssistantPanel,
+    clearAIAssistantInitialMessage,
     setTemplates,
     setTemplatesLoading,
     setTemplatesError,

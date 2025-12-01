@@ -30,6 +30,9 @@ export interface UIState {
   /** AI Assistant panel open state */
   aiAssistantPanelOpen: boolean;
 
+  /** Initial message to send when AI Assistant panel opens */
+  aiAssistantInitialMessage: string | null;
+
   /** Template panel state */
   templatePanel: {
     templates: WorkflowTemplate[];
@@ -60,8 +63,8 @@ export interface UICommands {
   /** Close GitHub sync modal */
   closeGitHubSyncModal: () => void;
 
-  /** Open AI Assistant panel */
-  openAIAssistantPanel: () => void;
+  /** Open AI Assistant panel with optional initial message */
+  openAIAssistantPanel: (initialMessage?: string) => void;
 
   /** Close AI Assistant panel */
   closeAIAssistantPanel: () => void;

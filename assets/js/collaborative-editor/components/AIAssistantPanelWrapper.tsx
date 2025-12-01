@@ -16,7 +16,11 @@ import { useAISessionCommands } from '../hooks/useAIChannelRegistry';
 import { useAIMode } from '../hooks/useAIMode';
 import { useAISession } from '../hooks/useAISession';
 import { useProject } from '../hooks/useSessionContext';
-import { useIsAIAssistantPanelOpen, useUICommands } from '../hooks/useUI';
+import {
+  useIsAIAssistantPanelOpen,
+  useUICommands,
+  useAIAssistantInitialMessage,
+} from '../hooks/useUI';
 import { useWorkflowState, useWorkflowActions } from '../hooks/useWorkflow';
 import { useKeyboardShortcut } from '../keyboard';
 import { notifications } from '../lib/notifications';
@@ -106,7 +110,12 @@ function prepareWorkflowForSerialization(
  */
 export function AIAssistantPanelWrapper() {
   const isAIAssistantPanelOpen = useIsAIAssistantPanelOpen();
-  const { closeAIAssistantPanel, toggleAIAssistantPanel } = useUICommands();
+  const initialMessage = useAIAssistantInitialMessage();
+  const {
+    closeAIAssistantPanel,
+    toggleAIAssistantPanel,
+    clearAIAssistantInitialMessage,
+  } = useUICommands();
   const { updateSearchParams, searchParams } = useURLState();
 
   // Track IDE state changes to re-focus chat input when IDE closes
@@ -199,9 +208,12 @@ export function AIAssistantPanelWrapper() {
 
     const handleMouseMove = (e: MouseEvent) => {
       const deltaX = startXRef.current - e.clientX;
+      const viewportWidth = window.innerWidth;
+      const minWidth = Math.max(300, viewportWidth * 0.2); // 20% or 300px, whichever is larger
+      const maxWidth = Math.min(600, viewportWidth * 0.4); // 40% or 600px, whichever is smaller
       const newWidth = Math.max(
-        300,
-        Math.min(800, startWidthRef.current + deltaX)
+        minWidth,
+        Math.min(maxWidth, startWidthRef.current + deltaX)
       );
       setWidth(newWidth);
       widthRef.current = newWidth;
@@ -342,6 +354,22 @@ export function AIAssistantPanelWrapper() {
     updateContextViaChannel,
   ]);
 
+  /**
+   * appliedMessageIdsRef tracks which AI-generated workflows have been automatically applied.
+   *
+   * Auto-apply behavior:
+   * - When the AI responds with YAML code in workflow_template mode, we automatically
+   *   apply it to the canvas (see useEffect below)
+   * - This ref prevents applying the same message multiple times if the component re-renders
+   * - The ref is cleared when:
+   *   1. Starting a new conversation (handleNewConversation)
+   *   2. Switching to a different session (handleSessionSelect)
+   *
+   * This provides a smooth UX where users see their workflow update in real-time
+   * as the AI generates it, without requiring manual "Apply" button clicks.
+   */
+  const appliedMessageIdsRef = useRef<Set<string>>(new Set());
+
   const handleNewConversation = useCallback(() => {
     if (!project) return;
 
@@ -377,6 +405,78 @@ export function AIAssistantPanelWrapper() {
     },
     [aiStore, project, aiMode, updateSearchParams]
   );
+
+  // Handle initial message from template selection
+  // When user clicks "AI workflow from description" from LeftPanel,
+  // the initial message is stored in UI state and we auto-send it
+  const initialMessageSentRef = useRef(false);
+  useEffect(() => {
+    if (
+      initialMessage &&
+      aiMode &&
+      !sessionId &&
+      connectionState === 'disconnected' &&
+      !initialMessageSentRef.current &&
+      isAIAssistantPanelOpen
+    ) {
+      initialMessageSentRef.current = true;
+
+      // Prepare context with initial message
+      const { mode, context } = aiMode;
+
+      let finalContext = { ...context, content: initialMessage };
+      if (mode === 'workflow_template') {
+        const workflowData = prepareWorkflowForSerialization(
+          workflow,
+          jobs,
+          triggers,
+          edges,
+          positions
+        );
+        if (workflowData) {
+          const workflowYAML = serializeWorkflowToYAML(workflowData);
+          if (workflowYAML) {
+            finalContext = { ...finalContext, code: workflowYAML };
+          }
+        }
+      }
+
+      // Initialize store with context including content
+      aiStore.connect(mode, finalContext, undefined);
+
+      // Update URL to trigger subscription to "new" channel
+      if (mode === 'workflow_template') {
+        updateSearchParams({ 'w-chat': 'new', 'j-chat': null });
+      } else {
+        updateSearchParams({ 'j-chat': 'new', 'w-chat': null });
+      }
+
+      // Mark message as sending
+      aiStore.setMessageSending();
+
+      // Clear the initial message from UI state
+      clearAIAssistantInitialMessage();
+    }
+
+    // Reset flag when initial message is cleared or panel closes
+    if (!initialMessage || !isAIAssistantPanelOpen) {
+      initialMessageSentRef.current = false;
+    }
+  }, [
+    initialMessage,
+    aiMode,
+    sessionId,
+    connectionState,
+    isAIAssistantPanelOpen,
+    aiStore,
+    workflow,
+    jobs,
+    triggers,
+    edges,
+    positions,
+    updateSearchParams,
+    clearAIAssistantInitialMessage,
+  ]);
 
   const handleShowSessions = useCallback(() => {
     aiStore.clearSession();
@@ -507,21 +607,6 @@ export function AIAssistantPanelWrapper() {
     null
   );
 
-  /**
-   * appliedMessageIdsRef tracks which AI-generated workflows have been automatically applied.
-   *
-   * Auto-apply behavior:
-   * - When the AI responds with YAML code in workflow_template mode, we automatically
-   *   apply it to the canvas (see useEffect below)
-   * - This ref prevents applying the same message multiple times if the component re-renders
-   * - The ref is cleared when:
-   *   1. Starting a new conversation (handleNewConversation)
-   *   2. Switching to a different session (handleSessionSelect)
-   *
-   * This provides a smooth UX where users see their workflow update in real-time
-   * as the AI generates it, without requiring manual "Apply" button clicks.
-   */
-  const appliedMessageIdsRef = useRef<Set<string>>(new Set());
   const hasLoadedSessionRef = useRef(false);
 
   // Reset hasLoadedSessionRef when session changes
@@ -682,7 +767,7 @@ export function AIAssistantPanelWrapper() {
           <button
             type="button"
             data-testid="ai-panel-resize-handle"
-            className="w-1 bg-gray-200 hover:bg-blue-400 transition-colors cursor-col-resize flex-shrink-0"
+            className="w-1 bg-gray-200 hover:bg-primary-500 transition-colors cursor-col-resize flex-shrink-0"
             onMouseDown={handleMouseDown}
             aria-label="Resize AI Assistant panel"
             onKeyDown={e => {
