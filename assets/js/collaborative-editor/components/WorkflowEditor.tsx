@@ -349,9 +349,9 @@ export function WorkflowEditor() {
       <div className="flex-1 relative">
         <CollaborativeWorkflowDiagram inspectorId="inspector" />
 
-        {/* Show template placeholder when panel is open but no template selected and workflow is empty */}
+        {/* Show placeholder when panel is open and workflow is empty */}
         {showLeftPanel &&
-          leftPanelMethod === 'template' &&
+          (leftPanelMethod === 'template' || leftPanelMethod === 'import') &&
           !selectedTemplate &&
           workflow.jobs.length === 0 &&
           workflow.triggers.length === 0 && (

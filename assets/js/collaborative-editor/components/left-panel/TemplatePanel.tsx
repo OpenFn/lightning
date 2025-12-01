@@ -102,22 +102,14 @@ export function TemplatePanel({
     };
   }, [channel]);
 
-  // Restore template selection from URL
+  // Restore search query from URL on mount
   useEffect(() => {
-    const templateId = searchParams.get('template');
-    if (!templateId || templates.length === 0) return;
-
-    // Check if already selected
-    if (selectedTemplate?.id === templateId) return;
-
-    // Find template in combined list
-    const allTemplatesList = [...BASE_TEMPLATES, ...templates];
-    const template = allTemplatesList.find(t => t.id === templateId);
-
-    if (template) {
-      handleSelectTemplate(template);
+    const urlSearchQuery = searchParams.get('search');
+    if (urlSearchQuery && urlSearchQuery !== searchQuery) {
+      uiStore.setTemplateSearchQuery(urlSearchQuery);
     }
-  }, [searchParams, templates, selectedTemplate]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Only run on mount
 
   const allTemplates: Template[] = useMemo(() => {
     const combined = [...BASE_TEMPLATES, ...templates];
@@ -155,6 +147,23 @@ export function TemplatePanel({
     [uiStore, updateSearchParams, onImport]
   );
 
+  // Restore template selection from URL
+  useEffect(() => {
+    const templateId = searchParams.get('template');
+    if (!templateId || templates.length === 0) return;
+
+    // Check if already selected
+    if (selectedTemplate?.id === templateId) return;
+
+    // Find template in combined list
+    const allTemplatesList = [...BASE_TEMPLATES, ...templates];
+    const template = allTemplatesList.find(t => t.id === templateId);
+
+    if (template) {
+      handleSelectTemplate(template);
+    }
+  }, [searchParams, templates, selectedTemplate, handleSelectTemplate]);
+
   const handleCreateWorkflow = async () => {
     if (!selectedTemplate || !onImport || !onSave) return;
 
@@ -171,12 +180,13 @@ export function TemplatePanel({
   const handleSearchChange = (query: string) => {
     const previousQuery = searchQuery;
     uiStore.setTemplateSearchQuery(query);
+    updateSearchParams({ search: query || null });
 
     // Starting a search - save current selection and clear canvas
     if (query && !previousQuery && selectedTemplate && onImport) {
       previousTemplateRef.current = selectedTemplate;
       uiStore.selectTemplate(null);
-      updateSearchParams({ template: null });
+      updateSearchParams({ template: null, search: query });
       // Import empty workflow to clear canvas
       onImport({
         id: '',
@@ -272,7 +282,19 @@ export function TemplatePanel({
         <button
           type="button"
           onClick={() => {
-            updateSearchParams({ template: null });
+            // Clear template selection and canvas when switching to import
+            if (selectedTemplate && onImport) {
+              uiStore.selectTemplate(null);
+              updateSearchParams({ template: null });
+              onImport({
+                id: '',
+                name: '',
+                jobs: [],
+                triggers: [],
+                edges: [],
+                positions: null,
+              });
+            }
             onImportClick();
           }}
           className="rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 inline-flex items-center gap-x-2"
