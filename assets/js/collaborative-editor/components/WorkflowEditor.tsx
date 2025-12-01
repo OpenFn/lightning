@@ -13,6 +13,7 @@ import {
 import { useURLState } from '../../react/lib/use-url-state';
 import type { WorkflowState as YAMLWorkflowState } from '../../yaml/types';
 import { StoreContext } from '../contexts/StoreProvider';
+import { useResizablePanel } from '../hooks/useResizablePanel';
 import { useIsNewWorkflow, useProject } from '../hooks/useSessionContext';
 import {
   useIsRunPanelOpen,
@@ -190,55 +191,21 @@ export function WorkflowEditor() {
   const workflowId = workflowState.id;
 
   const [showLeftPanel, setShowLeftPanel] = useState(isNewWorkflow);
-  const [leftPanelWidth, setLeftPanelWidth] = useState(() => {
-    const saved = localStorage.getItem('left-panel-width');
-    return saved ? parseInt(saved, 10) : 400;
+  const {
+    width: leftPanelWidth,
+    isResizing: isResizingLeft,
+    handleMouseDown: handleMouseDownLeft,
+  } = useResizablePanel({
+    storageKey: 'left-panel-width',
+    defaultWidth: 400,
+    direction: 'right',
   });
-  const [isResizingLeft, setIsResizingLeft] = useState(false);
-  const startXLeftRef = useRef<number>(0);
-  const startWidthLeftRef = useRef<number>(0);
 
   useEffect(() => {
     if (!isNewWorkflow && showLeftPanel) {
       setShowLeftPanel(false);
     }
   }, [isNewWorkflow, showLeftPanel]);
-
-  useEffect(() => {
-    if (!isResizingLeft) return;
-
-    const handleMouseMove = (e: MouseEvent) => {
-      const deltaX = e.clientX - startXLeftRef.current;
-      const viewportWidth = window.innerWidth;
-      const minWidth = Math.max(300, viewportWidth * 0.2); // 20% or 300px, whichever is larger
-      const maxWidth = Math.min(600, viewportWidth * 0.4); // 40% or 600px, whichever is smaller
-      const newWidth = Math.max(
-        minWidth,
-        Math.min(maxWidth, startWidthLeftRef.current + deltaX)
-      );
-      setLeftPanelWidth(newWidth);
-    };
-
-    const handleMouseUp = () => {
-      setIsResizingLeft(false);
-      localStorage.setItem('left-panel-width', leftPanelWidth.toString());
-    };
-
-    document.addEventListener('mousemove', handleMouseMove);
-    document.addEventListener('mouseup', handleMouseUp);
-
-    return () => {
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
-    };
-  }, [isResizingLeft, leftPanelWidth]);
-
-  const handleMouseDownLeft = (e: React.MouseEvent) => {
-    e.preventDefault();
-    startXLeftRef.current = e.clientX;
-    startWidthLeftRef.current = leftPanelWidth;
-    setIsResizingLeft(true);
-  };
 
   const workflow = useWorkflowState(state => ({
     ...state.workflow!,

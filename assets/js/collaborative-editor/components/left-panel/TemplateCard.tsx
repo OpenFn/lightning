@@ -17,16 +17,28 @@ export function TemplateCard({
     onClick(template);
   };
 
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      handleClick();
+    }
+  };
+
   return (
     <div
+      role="button"
+      tabIndex={0}
+      aria-pressed={isSelected}
+      aria-label={`${template.name} template`}
       className={cn(
         'relative rounded-lg border p-4 cursor-pointer transition-all',
-        'hover:border-primary-400',
+        'hover:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2',
         isSelected
           ? 'border-primary-500 bg-primary-50'
           : 'border-gray-200 bg-white'
       )}
       onClick={handleClick}
+      onKeyDown={handleKeyDown}
     >
       <div className="absolute top-4 right-4">
         <div

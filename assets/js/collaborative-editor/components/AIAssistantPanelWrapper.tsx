@@ -15,6 +15,7 @@ import {
 import { useAISessionCommands } from '../hooks/useAIChannelRegistry';
 import { useAIMode } from '../hooks/useAIMode';
 import { useAISession } from '../hooks/useAISession';
+import { useResizablePanel } from '../hooks/useResizablePanel';
 import { useProject } from '../hooks/useSessionContext';
 import {
   useIsAIAssistantPanelOpen,
@@ -156,14 +157,15 @@ export function AIAssistantPanelWrapper() {
   const edges = useWorkflowState(state => state.edges);
   const positions = useWorkflowState(state => state.positions);
 
-  const [width, setWidth] = useState(() => {
-    const saved = localStorage.getItem('ai-assistant-panel-width');
-    return saved ? parseInt(saved, 10) : 400;
+  const {
+    width,
+    isResizing,
+    handleMouseDown: handleResizeMouseDown,
+  } = useResizablePanel({
+    storageKey: 'ai-assistant-panel-width',
+    defaultWidth: 400,
+    direction: 'left',
   });
-  const [isResizing, setIsResizing] = useState(false);
-  const startXRef = useRef<number>(0);
-  const startWidthRef = useRef<number>(0);
-  const widthRef = useRef<number>(width);
 
   /**
    * isSyncingRef prevents re-entrant URL updates during panel state changes.
@@ -197,52 +199,6 @@ export function AIAssistantPanelWrapper() {
       isSyncingRef.current = false;
     }, 0);
   }, [isAIAssistantPanelOpen, updateSearchParams]);
-
-  // Keep widthRef in sync with width state for use in event handlers
-  useEffect(() => {
-    widthRef.current = width;
-  }, [width]);
-
-  useEffect(() => {
-    if (!isResizing) return;
-
-    const handleMouseMove = (e: MouseEvent) => {
-      const deltaX = startXRef.current - e.clientX;
-      const viewportWidth = window.innerWidth;
-      const minWidth = Math.max(300, viewportWidth * 0.2); // 20% or 300px, whichever is larger
-      const maxWidth = Math.min(600, viewportWidth * 0.4); // 40% or 600px, whichever is smaller
-      const newWidth = Math.max(
-        minWidth,
-        Math.min(maxWidth, startWidthRef.current + deltaX)
-      );
-      setWidth(newWidth);
-      widthRef.current = newWidth;
-    };
-
-    const handleMouseUp = () => {
-      setIsResizing(false);
-      // Use ref to get current width, avoiding stale closure
-      localStorage.setItem(
-        'ai-assistant-panel-width',
-        widthRef.current.toString()
-      );
-    };
-
-    document.addEventListener('mousemove', handleMouseMove);
-    document.addEventListener('mouseup', handleMouseUp);
-
-    return () => {
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
-    };
-  }, [isResizing]);
-
-  const handleMouseDown = (e: React.MouseEvent) => {
-    e.preventDefault();
-    setIsResizing(true);
-    startXRef.current = e.clientX;
-    startWidthRef.current = width;
-  };
 
   const aiMode = useAIMode();
 
@@ -768,7 +724,7 @@ export function AIAssistantPanelWrapper() {
             type="button"
             data-testid="ai-panel-resize-handle"
             className="w-1 bg-gray-200 hover:bg-primary-500 transition-colors cursor-col-resize flex-shrink-0"
-            onMouseDown={handleMouseDown}
+            onMouseDown={handleResizeMouseDown}
             aria-label="Resize AI Assistant panel"
             onKeyDown={e => {
               if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
