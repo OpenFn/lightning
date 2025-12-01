@@ -9,6 +9,7 @@
  */
 
 import {
+  useCallback,
   useContext,
   useEffect,
   useMemo,
@@ -54,6 +55,7 @@ export function TemplatePanel({
   const { provider } = useSession();
   const channel = provider?.channel;
   const { openAIAssistantPanel } = useUICommands();
+  const { searchParams, updateSearchParams } = useURLState();
 
   const templates = useSyncExternalStore(
     uiStore.subscribe,
@@ -100,6 +102,23 @@ export function TemplatePanel({
     };
   }, [channel]);
 
+  // Restore template selection from URL
+  useEffect(() => {
+    const templateId = searchParams.get('template');
+    if (!templateId || templates.length === 0) return;
+
+    // Check if already selected
+    if (selectedTemplate?.id === templateId) return;
+
+    // Find template in combined list
+    const allTemplatesList = [...BASE_TEMPLATES, ...templates];
+    const template = allTemplatesList.find(t => t.id === templateId);
+
+    if (template) {
+      handleSelectTemplate(template);
+    }
+  }, [searchParams, templates, selectedTemplate]);
+
   const allTemplates: Template[] = useMemo(() => {
     const combined = [...BASE_TEMPLATES, ...templates];
 
@@ -118,19 +137,23 @@ export function TemplatePanel({
     });
   }, [templates, searchQuery]);
 
-  const handleSelectTemplate = (template: Template) => {
-    uiStore.selectTemplate(template);
+  const handleSelectTemplate = useCallback(
+    (template: Template) => {
+      uiStore.selectTemplate(template);
+      updateSearchParams({ template: template.id });
 
-    if (onImport) {
-      try {
-        const spec = parseWorkflowYAML(template.code);
-        const state = convertWorkflowSpecToState(spec);
-        onImport(state);
-      } catch (err) {
-        console.error('Failed to parse template:', err);
+      if (onImport) {
+        try {
+          const spec = parseWorkflowYAML(template.code);
+          const state = convertWorkflowSpecToState(spec);
+          onImport(state);
+        } catch (err) {
+          console.error('Failed to parse template:', err);
+        }
       }
-    }
-  };
+    },
+    [uiStore, updateSearchParams, onImport]
+  );
 
   const handleCreateWorkflow = async () => {
     if (!selectedTemplate || !onImport || !onSave) return;
@@ -153,6 +176,7 @@ export function TemplatePanel({
     if (query && !previousQuery && selectedTemplate && onImport) {
       previousTemplateRef.current = selectedTemplate;
       uiStore.selectTemplate(null);
+      updateSearchParams({ template: null });
       // Import empty workflow to clear canvas
       onImport({
         id: '',
