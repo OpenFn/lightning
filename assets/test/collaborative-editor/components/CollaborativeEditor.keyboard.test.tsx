@@ -286,6 +286,7 @@ vi.mock('../../../js/collaborative-editor/hooks/useUI', () => ({
   useIsRunPanelOpen: () => mockIsRunPanelOpen(),
   useRunPanelContext: () => mockRunPanelContext(),
   useIsAIAssistantPanelOpen: () => mockIsAIAssistantPanelOpen(),
+  useAIAssistantInitialMessage: () => null,
   useIsGitHubSyncModalOpen: () => false,
   useUICommands: () => ({
     openRunPanel: vi.fn(),

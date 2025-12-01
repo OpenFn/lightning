@@ -261,14 +261,18 @@ export function Header({
             <div className="flex flex-row gap-2 items-center">
               {!isOldSnapshot && (
                 <Tooltip
-                  content={isWorkflowEmpty ? 'Add a workflow to enable' : null}
+                  content={
+                    isNewWorkflow && isWorkflowEmpty
+                      ? 'Add a workflow to enable'
+                      : null
+                  }
                   side="bottom"
                 >
                   <span className="inline-block">
                     <Switch
                       checked={enabled ?? false}
                       onChange={setEnabled}
-                      disabled={isWorkflowEmpty}
+                      disabled={isNewWorkflow && isWorkflowEmpty}
                     />
                   </span>
                 </Tooltip>
@@ -277,7 +281,7 @@ export function Header({
               <div>
                 <Tooltip
                   content={
-                    isWorkflowEmpty
+                    isNewWorkflow && isWorkflowEmpty
                       ? 'Add a workflow to configure settings'
                       : null
                   }
@@ -286,15 +290,15 @@ export function Header({
                   <button
                     type="button"
                     onClick={() =>
-                      !isWorkflowEmpty &&
+                      !(isNewWorkflow && isWorkflowEmpty) &&
                       updateSearchParams({ panel: 'settings' })
                     }
-                    disabled={isWorkflowEmpty}
+                    disabled={isNewWorkflow && isWorkflowEmpty}
                     className={`w-5 h-5 place-self-center ${
-                      isWorkflowEmpty
-                        ? 'cursor-not-allowed opacity-50'
-                        : hasSettingsErrors
-                          ? 'text-danger-500 hover:text-danger-400 cursor-pointer'
+                      hasSettingsErrors
+                        ? 'text-danger-500 hover:text-danger-400 cursor-pointer'
+                        : isNewWorkflow && isWorkflowEmpty
+                          ? 'cursor-not-allowed opacity-50'
                           : 'text-slate-500 hover:text-slate-400 cursor-pointer'
                     }`}
                   >
@@ -325,9 +329,13 @@ export function Header({
                 </Tooltip>
               )}
               <SaveButton
-                canSave={canSave && !hasSettingsErrors && !isWorkflowEmpty}
+                canSave={
+                  canSave &&
+                  !hasSettingsErrors &&
+                  !(isNewWorkflow && isWorkflowEmpty)
+                }
                 tooltipMessage={
-                  isWorkflowEmpty
+                  isNewWorkflow && isWorkflowEmpty
                     ? 'Cannot save an empty workflow'
                     : tooltipMessage
                 }
