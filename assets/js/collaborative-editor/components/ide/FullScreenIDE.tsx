@@ -343,12 +343,14 @@ export function FullScreenIDE({
   });
 
   // Handle job selection from JobSelector
-  const allJobs = workflow?.jobs || [];
-  const adjList = edgesToAdjList(workflow?.edges || []);
-  const ordinals = getJobOrdinals(adjList.list, adjList.trigger_id);
-  const sortedJobs = [...allJobs].sort((a, b) => {
-    return (ordinals[a.id] || Infinity) - ordinals[b.id] || Infinity;
-  });
+  const sortedJobs = useMemo(() => {
+    const allJobs = workflow?.jobs || [];
+    const adjList = edgesToAdjList(workflow?.edges || []);
+    const ordinals = getJobOrdinals(adjList.list, adjList.trigger_id);
+    return [...allJobs].sort((a, b) => {
+      return (ordinals[a.id] || Infinity) - (ordinals[b.id] || Infinity);
+    });
+  }, [workflow?.edges, workflow?.jobs]);
 
   const handleJobSelect = useCallback(
     (job: any) => {
