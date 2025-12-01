@@ -9,7 +9,6 @@ import {
   useState,
   useSyncExternalStore,
 } from 'react';
-import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
 
 import { useURLState } from '../../react/lib/use-url-state';
 import type { WorkflowState as YAMLWorkflowState } from '../../yaml/types';
@@ -191,12 +190,55 @@ export function WorkflowEditor() {
   const workflowId = workflowState.id;
 
   const [showLeftPanel, setShowLeftPanel] = useState(isNewWorkflow);
+  const [leftPanelWidth, setLeftPanelWidth] = useState(() => {
+    const saved = localStorage.getItem('left-panel-width');
+    return saved ? parseInt(saved, 10) : 400;
+  });
+  const [isResizingLeft, setIsResizingLeft] = useState(false);
+  const startXLeftRef = useRef<number>(0);
+  const startWidthLeftRef = useRef<number>(0);
 
   useEffect(() => {
     if (!isNewWorkflow && showLeftPanel) {
       setShowLeftPanel(false);
     }
   }, [isNewWorkflow, showLeftPanel]);
+
+  useEffect(() => {
+    if (!isResizingLeft) return;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      const deltaX = e.clientX - startXLeftRef.current;
+      const viewportWidth = window.innerWidth;
+      const minWidth = Math.max(300, viewportWidth * 0.2); // 20% or 300px, whichever is larger
+      const maxWidth = Math.min(600, viewportWidth * 0.4); // 40% or 600px, whichever is smaller
+      const newWidth = Math.max(
+        minWidth,
+        Math.min(maxWidth, startWidthLeftRef.current + deltaX)
+      );
+      setLeftPanelWidth(newWidth);
+    };
+
+    const handleMouseUp = () => {
+      setIsResizingLeft(false);
+      localStorage.setItem('left-panel-width', leftPanelWidth.toString());
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isResizingLeft, leftPanelWidth]);
+
+  const handleMouseDownLeft = (e: React.MouseEvent) => {
+    e.preventDefault();
+    startXLeftRef.current = e.clientX;
+    startWidthLeftRef.current = leftPanelWidth;
+    setIsResizingLeft(true);
+  };
 
   const workflow = useWorkflowState(state => ({
     ...state.workflow!,
@@ -278,74 +320,139 @@ export function WorkflowEditor() {
 
   return (
     <div className="flex h-full w-full">
-      <PanelGroup direction="horizontal">
-        {showLeftPanel && (
-          <>
-            <Panel
-              id="left-panel"
-              order={1}
-              defaultSize={33}
-              minSize={20}
-              maxSize={50}
-              className="relative"
-            >
-              <LeftPanel
-                method={leftPanelMethod}
-                onMethodChange={handleMethodChange}
-                onImport={handleImport}
-                onClosePanel={handleCloseLeftPanel}
-                onSave={handleSaveAndClose}
-              />
-            </Panel>
-            <PanelResizeHandle className="w-1 bg-gray-200 hover:bg-blue-500 transition-colors cursor-col-resize" />
-          </>
+      {showLeftPanel && (
+        <>
+          <div
+            className="flex-shrink-0"
+            style={{
+              width: `${leftPanelWidth}px`,
+              transition: isResizingLeft ? 'none' : 'width 0.2s ease',
+            }}
+          >
+            <LeftPanel
+              method={leftPanelMethod}
+              onMethodChange={handleMethodChange}
+              onImport={handleImport}
+              onClosePanel={handleCloseLeftPanel}
+              onSave={handleSaveAndClose}
+            />
+          </div>
+          <button
+            type="button"
+            className="w-1 bg-gray-200 hover:bg-primary-500 transition-colors cursor-col-resize flex-shrink-0"
+            onMouseDown={handleMouseDownLeft}
+            aria-label="Resize left panel"
+          />
+        </>
+      )}
+
+      <div className="flex-1 relative">
+        <CollaborativeWorkflowDiagram inspectorId="inspector" />
+
+        {/* Show template placeholder when panel is open but no template selected and workflow is empty */}
+        {showLeftPanel &&
+          leftPanelMethod === 'template' &&
+          !selectedTemplate &&
+          workflow.jobs.length === 0 &&
+          workflow.triggers.length === 0 && (
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+              <div className="text-center max-w-lg px-6">
+                <div className="inline-flex items-center justify-center mb-6">
+                  <img
+                    src="/images/logo.svg"
+                    alt="OpenFn"
+                    className="w-20 h-20 opacity-20"
+                  />
+                </div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-3">
+                  Create your workflow
+                </h3>
+                <p className="text-sm text-gray-600 mb-6">
+                  Choose how you'd like to get started with your new workflow
+                </p>
+
+                <div className="grid grid-cols-3 gap-6">
+                  <div className="text-center">
+                    <div className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-primary-100 mb-3">
+                      <span className="hero-document-text h-5 w-5 text-primary-600" />
+                    </div>
+                    <h4 className="text-sm font-medium text-gray-900 mb-2">
+                      Browse templates
+                    </h4>
+                    <p className="text-xs text-gray-500">
+                      Browse pre-built templates and search by name or tags
+                    </p>
+                  </div>
+
+                  <div className="text-center">
+                    <div className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-primary-100 mb-3">
+                      <span className="hero-sparkles h-5 w-5 text-primary-600" />
+                    </div>
+                    <h4 className="text-sm font-medium text-gray-900 mb-2">
+                      Generate with AI
+                    </h4>
+                    <p className="text-xs text-gray-500">
+                      Use AI to generate custom workflows based on your needs
+                    </p>
+                  </div>
+
+                  <div className="text-center">
+                    <div className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-primary-100 mb-3">
+                      <span className="hero-document-arrow-up h-5 w-5 text-primary-600" />
+                    </div>
+                    <h4 className="text-sm font-medium text-gray-900 mb-2">
+                      Import YAML
+                    </h4>
+                    <p className="text-xs text-gray-500">
+                      Import existing workflows from YAML files or text
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+        {/* Show template details card when a template is selected */}
+        {showLeftPanel &&
+          leftPanelMethod === 'template' &&
+          selectedTemplate && (
+            <TemplateDetailsCard template={selectedTemplate} />
+          )}
+
+        {!isRunPanelOpen && (
+          <div
+            id="inspector"
+            className={`absolute top-0 right-0 transition-transform duration-300 ease-in-out z-10 ${
+              showInspector
+                ? 'translate-x-0'
+                : 'translate-x-full pointer-events-none'
+            }`}
+          >
+            <Inspector
+              currentNode={currentNode}
+              onClose={handleCloseInspector}
+              onOpenRunPanel={openRunPanel}
+            />
+          </div>
         )}
 
-        <Panel id="main-content" order={2} className="relative">
-          <CollaborativeWorkflowDiagram inspectorId="inspector" />
-
-          {/* Show template details card when a template is selected */}
-          {showLeftPanel &&
-            leftPanelMethod === 'template' &&
-            selectedTemplate && (
-              <TemplateDetailsCard template={selectedTemplate} />
-            )}
-
-          {!isRunPanelOpen && (
-            <div
-              id="inspector"
-              className={`absolute top-0 right-0 transition-transform duration-300 ease-in-out z-10 ${
-                showInspector
-                  ? 'translate-x-0'
-                  : 'translate-x-full pointer-events-none'
-              }`}
-            >
-              <Inspector
-                currentNode={currentNode}
-                onClose={handleCloseInspector}
-                onOpenRunPanel={openRunPanel}
+        {isRunPanelOpen && runPanelContext && projectId && workflowId && (
+          <div className="absolute inset-y-0 right-0 flex pointer-events-none z-20">
+            <ManualRunPanelErrorBoundary onClose={closeRunPanel}>
+              <ManualRunPanel
+                workflow={workflow}
+                projectId={projectId}
+                workflowId={workflowId}
+                jobId={runPanelContext.jobId ?? null}
+                triggerId={runPanelContext.triggerId ?? null}
+                edgeId={runPanelContext.edgeId ?? null}
+                onClose={closeRunPanel}
+                saveWorkflow={saveWorkflow}
               />
-            </div>
-          )}
-
-          {isRunPanelOpen && runPanelContext && projectId && workflowId && (
-            <div className="absolute inset-y-0 right-0 flex pointer-events-none z-20">
-              <ManualRunPanelErrorBoundary onClose={closeRunPanel}>
-                <ManualRunPanel
-                  workflow={workflow}
-                  projectId={projectId}
-                  workflowId={workflowId}
-                  jobId={runPanelContext.jobId ?? null}
-                  triggerId={runPanelContext.triggerId ?? null}
-                  edgeId={runPanelContext.edgeId ?? null}
-                  onClose={closeRunPanel}
-                  saveWorkflow={saveWorkflow}
-                />
-              </ManualRunPanelErrorBoundary>
-            </div>
-          )}
-        </Panel>
-      </PanelGroup>
+            </ManualRunPanelErrorBoundary>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
