@@ -38,6 +38,11 @@ export function LoadingBoundary({ children }: LoadingBoundaryProps) {
     hasWorkflowData &&
     (session.settled || !isInitialLoad);
 
+  // most of the states we depend on don't need to show the loading workflow screen I guess.
+  const subReady = hasWorkflowData && !isInitialLoad;
+
+  if (subReady) return <>{children}</>;
+
   if (!isReady) {
     return (
       <div className="flex items-center justify-center h-full w-full">
