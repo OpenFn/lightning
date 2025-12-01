@@ -61,7 +61,7 @@ defmodule LightningWeb.LayoutComponents do
       </button>
       <div
         id={@menu_id}
-        class="hidden absolute left-0 z-[9999] mt-2 w-56 origin-top-left divide-y divide-gray-100 rounded-md bg-white shadow-lg outline-1 outline-black/5"
+        class="hidden fixed z-9999 mt-2 w-56 origin-top-left divide-y divide-gray-100 rounded-md bg-white shadow-lg outline-1 outline-black/5"
         role="menu"
         aria-orientation="vertical"
       >
