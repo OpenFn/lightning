@@ -361,7 +361,8 @@ defmodule LightningWeb.WorkflowChannelTest do
       # so latest_snapshot_lock_version should fall back to workflow.lock_version
       assert %{latest_snapshot_lock_version: latest_lock_version} = response
       # New workflows start at lock_version 0 (or nil, which should be handled)
-      assert latest_lock_version == 0 || is_nil(latest_lock_version)
+      assert latest_lock_version == 0
+      assert new_socket.assigns.workflow.lock_version == 0
       # Verify we're in a new workflow context
       assert new_socket.assigns.workflow.name == "Untitled workflow"
     end
