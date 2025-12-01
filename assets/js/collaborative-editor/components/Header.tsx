@@ -255,60 +255,63 @@ export function Header({
           <ActiveCollaborators className="ml-2" />
           <div className="grow ml-2"></div>
 
-          <div className="flex flex-row gap-2 items-center">
-            <div className="flex flex-row gap-2 items-center">
-              {!isOldSnapshot && (
-                <Switch checked={enabled ?? false} onChange={setEnabled} />
-              )}
+          {!isNewWorkflow ? (
+            <>
+              <div className="flex flex-row gap-2 items-center">
+                <div className="flex flex-row gap-2 items-center">
+                  {!isOldSnapshot && (
+                    <Switch checked={enabled ?? false} onChange={setEnabled} />
+                  )}
 
-              <div>
-                <button
-                  type="button"
-                  onClick={() => updateSearchParams({ panel: 'settings' })}
-                  className={`w-5 h-5 place-self-center cursor-pointer ${
-                    hasSettingsErrors
-                      ? 'text-danger-500 hover:text-danger-400'
-                      : 'text-slate-500 hover:text-slate-400'
-                  }`}
-                >
-                  <span className="hero-adjustments-vertical"></span>
-                </button>
-              </div>
-              <div
-                className="hidden"
-                phx-disconnected='[["show",{"transition":[["fade-in"],[],[]]}]]'
-                phx-connected='[["hide",{"transition":[["fade-out"],[],[]]}]]'
-              >
-                <span className="hero-signal-slash w-6 h-6 place-self-center mr-2 text-red-500"></span>
-              </div>
-            </div>
-            <div className="relative flex gap-2">
-              {projectId && workflowId && firstTriggerId && (
-                <Tooltip content={runButtonTooltip} side="bottom">
-                  <span className="inline-block">
-                    <Button
-                      variant="primary"
-                      onClick={handleRunClick}
-                      disabled={!canRun || isRunPanelOpen || isIDEOpen}
+                  <div>
+                    <button
+                      type="button"
+                      onClick={() => updateSearchParams({ panel: 'settings' })}
+                      className={`w-5 h-5 place-self-center cursor-pointer ${
+                        hasSettingsErrors
+                          ? 'text-danger-500 hover:text-danger-400'
+                          : 'text-slate-500 hover:text-slate-400'
+                      }`}
                     >
-                      Run
-                    </Button>
-                  </span>
-                </Tooltip>
-              )}
-              <SaveButton
-                canSave={canSave && !hasSettingsErrors}
-                tooltipMessage={tooltipMessage}
-                onClick={() => void saveWorkflow()}
-                repoConnection={repoConnection}
-                onSyncClick={openGitHubSyncModal}
-              />
-            </div>
-          </div>
+                      <span className="hero-adjustments-vertical"></span>
+                    </button>
+                  </div>
+                  <div
+                    className="hidden"
+                    phx-disconnected='[["show",{"transition":[["fade-in"],[],[]]}]]'
+                    phx-connected='[["hide",{"transition":[["fade-out"],[],[]]}]]'
+                  >
+                    <span className="hero-signal-slash w-6 h-6 place-self-center mr-2 text-red-500"></span>
+                  </div>
+                </div>
+                <div className="relative flex gap-2">
+                  {projectId && workflowId && firstTriggerId && (
+                    <Tooltip content={runButtonTooltip} side="bottom">
+                      <span className="inline-block">
+                        <Button
+                          variant="primary"
+                          onClick={handleRunClick}
+                          disabled={!canRun || isRunPanelOpen || isIDEOpen}
+                        >
+                          Run
+                        </Button>
+                      </span>
+                    </Tooltip>
+                  )}
+                  <SaveButton
+                    canSave={canSave && !hasSettingsErrors}
+                    tooltipMessage={tooltipMessage}
+                    onClick={() => void saveWorkflow()}
+                    repoConnection={repoConnection}
+                    onSyncClick={openGitHubSyncModal}
+                  />
+                </div>
+              </div>
 
-          <AIButton className="ml-2" />
-
-          <GitHubSyncModal />
+              <AIButton className="ml-2" />
+              <GitHubSyncModal />
+            </>
+          ) : null}
         </div>
       </div>
     </>
