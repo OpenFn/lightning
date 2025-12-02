@@ -915,6 +915,46 @@ export const createHistoryStore = (): HistoryStore => {
   };
 
   /**
+   * Clear version-specific workflow state during migration
+   * Called when switching between workflow versions
+   *
+   * This ensures that:
+   * - History cache is cleared (version-specific)
+   * - Active run subscription channel is closed (version-specific)
+   * - Run steps cache is cleared (version-specific)
+   */
+  const _clearWorkflowState = (): void => {
+    logger.debug('Clearing version-specific workflow state');
+
+    // Close any active run viewer channel
+    if (state.activeRunChannel) {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any
+      (state.activeRunChannel as any).leave();
+    }
+
+    state = produce(state, draft => {
+      // Clear history cache (version-specific)
+      draft.history = [];
+
+      // Clear run steps cache (version-specific)
+      draft.runStepsCache = {};
+      draft.runStepsSubscribers = {};
+      draft.runStepsLoading = new Set();
+
+      // Clear active run viewer state
+      draft.activeRunChannel = null;
+      draft.activeRunId = null;
+      draft.activeRun = null;
+      draft.activeRunError = null;
+      draft.selectedStepId = null;
+
+      // Don't clear channel connection state - it persists across migrations
+      // Don't clear error/loading states - they're UI state, not version data
+    });
+    notify('_clearWorkflowState');
+  };
+
+  /**
    * TEST-ONLY helper to directly set active run without channel requests
    * This bypasses the normal _viewRun flow which requires Phoenix channels
    * and is intended ONLY for use in test environments
@@ -970,6 +1010,7 @@ export const createHistoryStore = (): HistoryStore => {
     _viewRun,
     _closeRunViewer,
     _switchingFromRun,
+    _clearWorkflowState,
     _setActiveRunForTesting,
   };
 };

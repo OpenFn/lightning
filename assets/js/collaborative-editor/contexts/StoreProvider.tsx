@@ -41,6 +41,7 @@ import {
 
 import _logger from '#/utils/logger';
 
+import { useConnectionStatus } from './ConnectionStatusContext';
 import { SessionContext } from '../contexts/SessionProvider';
 import { useSession } from '../hooks/useSession';
 import type { AdaptorStoreInstance } from '../stores/createAdaptorStore';
@@ -99,6 +100,7 @@ const logger = _logger.ns('StoreProvider').seal();
 
 export const StoreProvider = ({ children }: StoreProviderProps) => {
   const session = useSession();
+  const { isTransitioning } = useConnectionStatus();
 
   // Get isNewWorkflow from SessionContext
   const sessionContext = useContext(SessionContext);
@@ -165,15 +167,27 @@ export const StoreProvider = ({ children }: StoreProviderProps) => {
     return undefined;
   }, [session.awareness, user, stores.awarenessStore]);
 
-  // Connect stores when provider is ready
+  // Connect stores when provider is ready (migration-aware)
   useEffect(() => {
     if (session.provider && session.isConnected) {
+      logger.debug('Connecting stores to channel', {
+        isTransitioning,
+      });
+
       const cleanup1 = stores.adaptorStore._connectChannel(session.provider);
       const cleanup2 = stores.credentialStore._connectChannel(session.provider);
       const cleanup3 = stores.sessionContextStore._connectChannel(
         session.provider
       );
       const cleanup4 = stores.historyStore._connectChannel(session.provider);
+
+      // Clear version-specific state in HistoryStore during migration
+      if (isTransitioning) {
+        logger.debug(
+          'Migration detected - clearing version-specific history state'
+        );
+        stores.historyStore._clearWorkflowState();
+      }
 
       return () => {
         cleanup1();
@@ -183,7 +197,7 @@ export const StoreProvider = ({ children }: StoreProviderProps) => {
       };
     }
     return undefined;
-  }, [session.provider, session.isConnected, stores]);
+  }, [session.provider, session.isConnected, stores, isTransitioning]);
 
   // Connect/disconnect workflowStore Y.Doc when session changes
   // IMPORTANT: Wait for isSynced, not just isConnected

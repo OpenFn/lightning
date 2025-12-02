@@ -248,6 +248,7 @@ interface HistoryStoreInternals {
   _viewRun: (runId: string) => void;
   _closeRunViewer: () => void;
   _switchingFromRun: () => void;
+  _clearWorkflowState: () => void;
   _setActiveRunForTesting: (run: RunDetail) => void;
 }
 
