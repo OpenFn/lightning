@@ -600,7 +600,7 @@ export function WorkflowEditor() {
                         }
                       }
                     }}
-                    className={`group flex flex-col items-center text-center bg-white border rounded-xl p-5 transition-all duration-200 cursor-pointer h-44 ${
+                    className={`group flex flex-col items-center text-center bg-white border rounded-xl p-5 transition-all duration-200 cursor-pointer ${
                       leftPanelMethod === 'template' &&
                       !isCreateWorkflowPanelCollapsed
                         ? 'border-primary-500 ring-2 ring-primary-100 shadow-sm'
@@ -632,7 +632,7 @@ export function WorkflowEditor() {
                         openAIAssistantPanel();
                       }
                     }}
-                    className={`group flex flex-col items-center text-center bg-white border rounded-xl p-5 transition-all duration-200 cursor-pointer h-44 ${
+                    className={`group flex flex-col items-center text-center bg-white border rounded-xl p-5 transition-all duration-200 cursor-pointer ${
                       isAIAssistantPanelOpen
                         ? 'border-primary-500 ring-2 ring-primary-100 shadow-sm'
                         : 'border-gray-200 hover:border-primary-300 hover:shadow-sm'
@@ -671,7 +671,7 @@ export function WorkflowEditor() {
                         }
                       }
                     }}
-                    className={`group flex flex-col items-center text-center bg-white border rounded-xl p-5 transition-all duration-200 cursor-pointer h-44 ${
+                    className={`group flex flex-col items-center text-center bg-white border rounded-xl p-5 transition-all duration-200 cursor-pointer ${
                       leftPanelMethod === 'import' &&
                       !isCreateWorkflowPanelCollapsed
                         ? 'border-primary-500 ring-2 ring-primary-100 shadow-sm'

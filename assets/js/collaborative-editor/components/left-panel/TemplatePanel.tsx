@@ -249,6 +249,9 @@ export function TemplatePanel({
                       aiStore.disconnect();
                       aiStore._clearSession();
 
+                      // Close the template panel before opening AI Assistant
+                      collapseCreateWorkflowPanel();
+
                       const message = `Create a workflow template for: ${searchQuery}`;
                       openAIAssistantPanel(message);
                     }}
