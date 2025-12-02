@@ -38,6 +38,7 @@ import { Doc as YDoc } from 'yjs';
 
 import _logger from '#/utils/logger';
 
+import { createChannelRegistry } from '../registry/createChannelRegistry';
 import type { LocalUserData } from '../types/awareness';
 
 import { createWithSelector, type WithSelector } from './common';
@@ -54,6 +55,9 @@ export interface SessionState {
   isSynced: boolean;
   settled: boolean;
   lastStatus: string | null;
+  isTransitioning: boolean;
+  previousYDoc: YDoc | null;
+  previousProvider: PhoenixChannelProvider | null;
 }
 
 export interface SessionStore {
@@ -72,6 +76,11 @@ export interface SessionStore {
     provider: PhoenixChannelProvider;
     awareness: awarenessProtocol.Awareness | null;
   };
+  migrateToRoom: (
+    socket: PhoenixSocket,
+    roomname: string,
+    joinParams: object
+  ) => Promise<void>;
   destroy: () => void;
   isReady: () => boolean;
   getProvider: () => PhoenixChannelProvider | null;
@@ -79,6 +88,8 @@ export interface SessionStore {
   getConnectionState: () => boolean;
   getSyncState: () => boolean;
   getSettled: () => boolean;
+  isTransitioning: () => boolean;
+  getPreviousYDoc: () => YDoc | null;
   get isConnected(): boolean;
   get isSynced(): boolean;
   get settled(): boolean;
@@ -100,6 +111,9 @@ export const createSessionStore = (): SessionStore => {
       isSynced: false,
       settled: false,
       lastStatus: null,
+      isTransitioning: false,
+      previousYDoc: null,
+      previousProvider: null,
     } as SessionState,
     draft => draft
   );
@@ -107,6 +121,7 @@ export const createSessionStore = (): SessionStore => {
   const listeners = new Set<() => void>();
   let cleanupProviderHandlers: (() => void) | null = null;
   let settlingSubscriptionCleanup: (() => void) | null = null;
+  const registry = createChannelRegistry();
 
   // Redux DevTools integration
   const devtools = wrapStoreWithDevTools({
@@ -257,6 +272,91 @@ export const createSessionStore = (): SessionStore => {
   };
 
   /**
+   * migrateToRoom
+   * - Migrates to a new room using the Channel Registry
+   * - Preserves previous Y.Doc during transition
+   * - Updates store state when new channel becomes active
+   */
+  const migrateToRoom = async (
+    socket: PhoenixSocket,
+    roomname: string,
+    joinParams: object
+  ): Promise<void> => {
+    logger.debug('Migrating to new room', { roomname });
+
+    // Store references to current instances as previous
+    updateState(draft => {
+      draft.isTransitioning = true;
+      draft.previousYDoc = draft.ydoc;
+      draft.previousProvider = draft.provider;
+    }, 'migrationStarted');
+
+    // Subscribe to registry state changes
+    const unsubscribeRegistry = registry.subscribe(() => {
+      const currentEntry = registry.getCurrentEntry();
+      if (!currentEntry) return;
+
+      // Update store state when new entry becomes active
+      if (currentEntry.state === 'active') {
+        logger.debug('New channel active, updating store', {
+          roomname: currentEntry.roomname,
+        });
+
+        // Clean up old provider handlers
+        cleanupProviderHandlers?.();
+        cleanupProviderHandlers = null;
+
+        updateState(draft => {
+          draft.ydoc = currentEntry.ydoc;
+          draft.provider = currentEntry.provider;
+          draft.awareness = currentEntry.awareness;
+          draft.isSynced = currentEntry.provider.synced;
+        }, 'migrationActiveChannelUpdate');
+
+        // Attach handlers to new provider
+        cleanupProviderHandlers = attachProvider(
+          currentEntry.provider,
+          updateState
+        );
+
+        // Reinitialize settling subscription
+        settlingSubscriptionCleanup?.();
+        settlingSubscriptionCleanup = createSettlingSubscription(
+          subscribe,
+          getSnapshot,
+          updateState
+        );
+      }
+
+      // Clear transitioning state when drain completes
+      if (!registry.isTransitioning()) {
+        logger.debug('Migration complete, drain finished');
+        updateState(draft => {
+          draft.isTransitioning = false;
+          draft.previousYDoc = null;
+          draft.previousProvider = null;
+        }, 'migrationCompleted');
+        unsubscribeRegistry();
+      }
+    });
+
+    try {
+      // Start migration through registry
+      await registry.migrate(socket, roomname, joinParams);
+      logger.debug('Migration successful');
+    } catch (error) {
+      logger.error('Migration failed', { error });
+      updateState(draft => {
+        draft.isTransitioning = false;
+        draft.previousYDoc = null;
+        draft.previousProvider = null;
+      }, 'migrationFailed');
+      unsubscribeRegistry();
+      throw error;
+    }
+  };
+
+  /**
    * destroy
    * - Calls settlingController.abort() which rejects the hanging promises
    * - Calls provider.destroy() which cleans up the PhoenixChannelProvider
@@ -272,6 +372,9 @@ export const createSessionStore = (): SessionStore => {
     // Clean up settling subscription
     settlingSubscriptionCleanup?.();
     settlingSubscriptionCleanup = null;
+
+    // Destroy registry (will clean up all managed channels)
+    registry.destroy();
 
     state.provider?.destroy();
     state.awareness?.destroy();
@@ -289,6 +392,9 @@ export const createSessionStore = (): SessionStore => {
       draft.isSynced = false;
       draft.settled = false;
       draft.lastStatus = null;
+      draft.isTransitioning = false;
+      draft.previousYDoc = null;
+      draft.previousProvider = null;
     }, 'destroy');
   };
 
@@ -299,6 +405,8 @@ export const createSessionStore = (): SessionStore => {
   const getConnectionState = (): boolean => state.isConnected;
   const getSyncState = (): boolean => state.isSynced;
   const getSettled = (): boolean => state.settled;
+  const isTransitioning = (): boolean => state.isTransitioning;
+  const getPreviousYDoc = (): YDoc | null => state.previousYDoc;
 
   return {
     // Core store interface
@@ -310,6 +418,7 @@ export const createSessionStore = (): SessionStore => {
     initializeYDoc,
     destroyYDoc,
     initializeSession,
+    migrateToRoom,
     destroy,
 
     // Queries
@@ -319,6 +428,8 @@ export const createSessionStore = (): SessionStore => {
     getConnectionState,
     getSyncState,
     getSettled,
+    isTransitioning,
+    getPreviousYDoc,
 
     // Raw state accessors for convenience
     get isConnected() {
