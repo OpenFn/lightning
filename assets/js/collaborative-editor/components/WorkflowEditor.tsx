@@ -249,6 +249,19 @@ export function WorkflowEditor() {
 
   const leftPanelMethod = currentMethod || 'template';
 
+  // Clear template params when in import/ai mode (handles page refresh)
+  useEffect(() => {
+    const templateParam = searchParams.get('template');
+    const searchParam = searchParams.get('search');
+
+    if (
+      (leftPanelMethod === 'import' || leftPanelMethod === 'ai') &&
+      (templateParam || searchParam)
+    ) {
+      updateSearchParams({ template: null, search: null });
+    }
+  }, [leftPanelMethod, searchParams, updateSearchParams]);
+
   // Helper function to clear workflow from canvas
   const clearCanvas = useCallback(() => {
     if (
@@ -377,7 +390,12 @@ export function WorkflowEditor() {
     Boolean(currentNode.node);
 
   const handleMethodChange = (method: 'template' | 'import' | 'ai' | null) => {
-    updateSearchParams({ method });
+    // When switching to import/ai mode, clear template params
+    if (method === 'import' || method === 'ai') {
+      updateSearchParams({ method, template: null, search: null });
+    } else {
+      updateSearchParams({ method });
+    }
   };
 
   const handleImport = async (workflowState: YAMLWorkflowState) => {
