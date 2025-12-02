@@ -36,18 +36,18 @@ export function Inspector({
   onClose,
   onOpenRunPanel,
 }: InspectorProps) {
-  const { searchParams, updateSearchParams } = useURLState();
+  const { params, updateSearchParams } = useURLState();
   const workflowTemplate = useWorkflowTemplate();
 
   const hasSelectedNode = currentNode.node && currentNode.type;
 
   // Settings and code panels take precedence, then node inspector
   const mode =
-    searchParams.get('panel') === 'settings'
+    params.panel === 'settings'
       ? 'settings'
-      : searchParams.get('panel') === 'code'
+      : params.panel === 'code'
         ? 'code'
-        : searchParams.get('panel') === 'publish-template'
+        : params.panel === 'publish-template'
           ? 'publish-template'
           : hasSelectedNode
             ? 'node'

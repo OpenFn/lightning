@@ -2,7 +2,7 @@ import { produce } from 'immer';
 import { useSyncExternalStore } from 'react';
 
 interface URLState {
-  searchParams: URLSearchParams;
+  params: Record<string, string>;
   hash: string;
 }
 
@@ -10,7 +10,7 @@ interface URLState {
 class URLStore {
   private listeners = new Set<() => void>();
   private state: URLState = {
-    searchParams: new URLSearchParams(window.location.search),
+    params: Object.fromEntries(new URLSearchParams(window.location.search)),
     hash: window.location.hash.slice(1),
   };
 
@@ -20,12 +20,23 @@ class URLStore {
 
   private setupListeners() {
     const updateParams = () => {
-      const newSearchParams = new URLSearchParams(window.location.search);
-      const newHash = window.location.hash.slice(1);
+      const currentParams = Object.fromEntries(
+        new URLSearchParams(window.location.search)
+      );
+      const currentHash = window.location.hash.slice(1);
 
       const newState = produce(this.state, draft => {
-        draft.searchParams = newSearchParams;
-        draft.hash = newHash;
+        // Remove params that no longer exist
+        for (const key of Object.keys(draft.params)) {
+          if (!(key in currentParams)) {
+            delete draft.params[key];
+          }
+        }
+        // Add/update params - Immer tracks if values actually changed
+        for (const [key, value] of Object.entries(currentParams)) {
+          draft.params[key] = value;
+        }
+        draft.hash = currentHash;
       });
 
       if (newState !== this.state) {
@@ -34,17 +45,17 @@ class URLStore {
       }
     };
 
-    // Monkey-patch history methods
-    const originalPushState = history.pushState;
-    const originalReplaceState = history.replaceState;
+    // Monkey-patch history methods (bind to preserve `this` context)
+    const originalPushState = history.pushState.bind(history);
+    const originalReplaceState = history.replaceState.bind(history);
 
     history.pushState = (...args) => {
-      originalPushState.apply(history, args);
+      originalPushState(...args);
       updateParams();
     };
 
     history.replaceState = (...args) => {
-      originalReplaceState.apply(history, args);
+      originalReplaceState(...args);
       updateParams();
     };
 
@@ -101,7 +112,7 @@ export function useURLState() {
   );
 
   return {
-    searchParams: snapshot.searchParams,
+    params: snapshot.params,
     hash: snapshot.hash,
     updateSearchParams: urlStore.updateSearchParams,
     updateHash: urlStore.updateHash,

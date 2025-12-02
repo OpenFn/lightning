@@ -111,8 +111,8 @@ export function useRunRetry({
   // Retry state tracking via HistoryStore (WebSocket updates)
   // Note: Connection management is handled by the parent component (FullScreenIDE or ManualRunPanel)
   // This hook only reads the current run state from HistoryStore
-  const { searchParams } = useURLState();
-  const followedRunId = searchParams.get('run'); // 'run' param is run ID
+  const { params } = useURLState();
+  const followedRunId = params.run ?? null; // 'run' param is run ID
   const currentRun = useActiveRun(); // Real-time from WebSocket
 
   // Get step for current context from followed run (from real-time RunStore)

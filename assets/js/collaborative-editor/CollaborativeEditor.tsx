@@ -73,8 +73,8 @@ function BreadcrumbContent({
   const isRunPanelOpen = useIsRunPanelOpen();
 
   // Detect IDE mode
-  const { searchParams } = useURLState();
-  const isIDEOpen = searchParams.get('panel') === 'editor';
+  const { params } = useURLState();
+  const isIDEOpen = params['panel'] === 'editor';
 
   // Store-first with props-fallback pattern
   // This ensures breadcrumbs work during:

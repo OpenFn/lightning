@@ -40,7 +40,7 @@ import { createMockSocket } from '../../__helpers__/sessionStoreHelpers';
 // Mock useURLState hook
 vi.mock('../../../../js/react/lib/use-url-state', () => ({
   useURLState: () => ({
-    searchParams: new URLSearchParams(),
+    params: {} as Record<string, string>,
     updateSearchParams: vi.fn(),
     hash: '',
   }),

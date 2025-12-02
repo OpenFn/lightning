@@ -92,12 +92,12 @@ const mockUpdateSearchParams = vi.fn();
 const mockOpenRunPanel = vi.fn();
 const mockCloseRunPanel = vi.fn();
 const mockSelectNode = vi.fn();
-const mockSearchParams = new URLSearchParams();
+const mockParams: Record<string, string> = {};
 
 // Mock useURLState
 vi.mock('../../../js/react/lib/use-url-state', () => ({
   useURLState: () => ({
-    searchParams: mockSearchParams,
+    params: mockParams,
     updateSearchParams: mockUpdateSearchParams,
     hash: '',
   }),
@@ -211,8 +211,8 @@ describe('WorkflowEditor keyboard shortcuts', () => {
     vi.clearAllMocks();
 
     // Reset state
-    mockSearchParams.delete('panel');
-    mockSearchParams.delete('job');
+    delete mockParams.panel;
+    delete mockParams.job;
     mockIsRunPanelOpen.mockReturnValue(false);
     mockRunPanelContext.mockReturnValue(null);
     currentNode = { type: null, node: null };
@@ -311,8 +311,8 @@ describe('WorkflowEditor keyboard shortcuts', () => {
       };
 
       // IDE is already open
-      mockSearchParams.set('panel', 'editor');
-      mockSearchParams.set('job', 'job-1');
+      mockParams.panel = 'editor';
+      mockParams.job = 'job-1';
 
       const { container, user } = renderWithKeyboard(<WorkflowEditor />);
 
@@ -472,8 +472,8 @@ describe('WorkflowEditor keyboard shortcuts', () => {
       };
 
       // IDE is open
-      mockSearchParams.set('panel', 'editor');
-      mockSearchParams.set('job', 'job-1');
+      mockParams.panel = 'editor';
+      mockParams.job = 'job-1';
 
       const { container, user } = renderWithKeyboard(<WorkflowEditor />);
 
@@ -542,8 +542,8 @@ describe('WorkflowEditor keyboard shortcuts', () => {
         node: mockWorkflow.jobs[0],
       };
 
-      mockSearchParams.set('panel', 'editor');
-      mockSearchParams.set('job', 'job-1');
+      mockParams.panel = 'editor';
+      mockParams.job = 'job-1';
 
       const { container, user } = renderWithKeyboard(<WorkflowEditor />);
 

@@ -14,7 +14,7 @@ interface StepItemProps {
 }
 
 export function StepItem({ step, selected, runInsertedAt }: StepItemProps) {
-  const { searchParams, updateSearchParams } = useURLState();
+  const { params, updateSearchParams } = useURLState();
 
   // Look up job name from workflow state if not included in step
   const jobName = useWorkflowState(
@@ -32,8 +32,8 @@ export function StepItem({ step, selected, runInsertedAt }: StepItemProps) {
     e.stopPropagation();
 
     // Get current run ID and panel from URL to preserve context
-    const currentRunId = searchParams.get('run');
-    const currentPanel = searchParams.get('panel');
+    const currentRunId = params.run ?? null;
+    const currentPanel = params.panel ?? null;
 
     // Build updates object, only including panel if it exists
     const updates: Record<string, string | null> = {

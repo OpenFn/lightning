@@ -54,8 +54,8 @@ export const SessionProvider = ({
   const { socket, isConnected } = useSocket();
 
   // Get version from URL reactively
-  const { searchParams } = useURLState();
-  const version = searchParams.get('v');
+  const { params } = useURLState();
+  const version = params.v ?? null;
 
   // Create store instance once - stable reference
   const [sessionStore] = useState(() => createSessionStore());

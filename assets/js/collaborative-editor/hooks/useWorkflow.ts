@@ -244,12 +244,12 @@ export const useCurrentJob = () => {
  * Demonstrates complex selector with external dependencies (URL state).
  */
 export const useNodeSelection = () => {
-  const { searchParams, updateSearchParams } = useURLState();
+  const { params, updateSearchParams } = useURLState();
 
   // Get current node ID from URL
-  const jobId = searchParams.get('job');
-  const triggerId = searchParams.get('trigger');
-  const edgeId = searchParams.get('edge');
+  const jobId = params.job ?? null;
+  const triggerId = params.trigger ?? null;
+  const edgeId = params.edge ?? null;
   const currentNodeId = jobId || triggerId || edgeId;
 
   // Use useWorkflowState for simple state selection (no store methods needed)

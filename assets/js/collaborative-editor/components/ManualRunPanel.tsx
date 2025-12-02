@@ -129,8 +129,8 @@ export function ManualRunPanel({
   const { canRun: canRunWorkflow, tooltipMessage: workflowRunTooltipMessage } =
     useCanRun();
 
-  const { searchParams } = useURLState();
-  const followedRunId = searchParams.get('run');
+  const { params } = useURLState();
+  const followedRunId = params.run ?? null;
 
   // Connect to run channel when following a run in standalone mode
   // In embedded mode (FullScreenIDE), parent handles the connection
