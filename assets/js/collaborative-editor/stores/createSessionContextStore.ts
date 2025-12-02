@@ -120,6 +120,7 @@ export const createSessionContextStore = (
       versionsLoading: false,
       versionsError: null,
       workflow_template: null,
+      limits: {},
       isNewWorkflow,
       isLoading: false,
       error: null,
@@ -183,6 +184,7 @@ export const createSessionContextStore = (
         draft.projectRepoConnection = sessionContext.project_repo_connection;
         draft.webhookAuthMethods = sessionContext.webhook_auth_methods;
         draft.workflow_template = sessionContext.workflow_template;
+        draft.limits = sessionContext.limits;
         draft.isLoading = false;
         draft.error = null;
         draft.lastUpdated = Date.now();
@@ -439,6 +441,39 @@ export const createSessionContextStore = (
       }
     };
 
+    const getLimitsHandler = (message: unknown) => {
+      logger.debug('Received get_limits message', message);
+
+      // Validate get_limits response
+      const result = z
+        .object({
+          action_type: z.string(),
+          limit: z.object({
+            allowed: z.boolean(),
+            message: z.string().nullable(),
+          }),
+        })
+        .safeParse(message);
+
+      if (result.success) {
+        const { action_type, limit } = result.data;
+
+        // Update the specific limit type
+        if (action_type === 'new_run') {
+          state = produce(state, draft => {
+            draft.limits.runs = limit;
+            draft.lastUpdated = Date.now();
+          });
+          notify('getLimits');
+        }
+      } else {
+        logger.error('Failed to parse get_limits message', {
+          error: result.error,
+          message,
+        });
+      }
+    };
+
     // Set up channel listeners
     if (channel) {
       channel.on('session_context', sessionContextHandler);
@@ -449,6 +484,7 @@ export const createSessionContextStore = (
         webhookAuthMethodsUpdatedHandler
       );
       channel.on('template_updated', templateUpdatedHandler);
+      channel.on('get_limits', getLimitsHandler);
     }
 
     devtools.connect();
@@ -466,6 +502,7 @@ export const createSessionContextStore = (
           webhookAuthMethodsUpdatedHandler
         );
         channel.off('template_updated', templateUpdatedHandler);
+        channel.off('get_limits', getLimitsHandler);
       }
       _channelProvider = null;
     };
@@ -502,6 +539,26 @@ export const createSessionContextStore = (
     }
   };
 
+  /**
+   * Get limits for a specific action type
+   * Sends request to server and updates limits state via channel handler
+   */
+  const getLimits = async (actionType: 'new_run'): Promise<void> => {
+    if (!_channelProvider?.channel) {
+      logger.warn('Cannot get limits - no channel connected');
+      return;
+    }
+
+    try {
+      logger.debug('Getting limits for action', actionType);
+      await _channelProvider.channel.push('get_limits', {
+        action_type: actionType,
+      });
+    } catch (error) {
+      logger.error('Failed to get limits', error);
+    }
+  };
+
   // =============================================================================
   // PUBLIC INTERFACE
   // =============================================================================
@@ -521,6 +578,7 @@ export const createSessionContextStore = (
     clearError,
     setLatestSnapshotLockVersion,
     clearIsNewWorkflow,
+    getLimits,
 
     // Internal methods (not part of public SessionContextStore interface)
     _connectChannel,

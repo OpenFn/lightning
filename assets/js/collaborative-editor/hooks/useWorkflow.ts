@@ -707,10 +707,11 @@ export const useCanSave = (): { canSave: boolean; tooltipMessage: string } => {
  * - tooltipMessage: string - message explaining button state
  *
  * Checks:
- * 1. User permissions (can_edit_workflow)
+ * 1. User permissions (can_edit_workflow or can_run_workflow)
  * 2. Connection state (isSynced)
  * 3. Lock version (viewing latest snapshot)
  * 4. Workflow deletion state (deleted_at)
+ * 5. Run limits (from session context)
  */
 export const useCanRun = (): { canRun: boolean; tooltipMessage: string } => {
   const {
@@ -720,6 +721,17 @@ export const useCanRun = (): { canRun: boolean; tooltipMessage: string } => {
     isDeleted,
     isOldSnapshot,
   } = useWorkflowConditions();
+
+  // Get run limits from session context (defaults to allowed if missing)
+  const sessionContextStore = useContext(StoreContext)?.sessionContextStore;
+  const runLimits = sessionContextStore
+    ? useSyncExternalStore(
+        sessionContextStore.subscribe,
+        sessionContextStore.withSelector(
+          state => state.limits?.runs ?? { allowed: true, message: null }
+        )
+      )
+    : { allowed: true, message: null };
 
   // User can run if they have EITHER edit OR run permission (matches WorkflowEdit)
   const hasPermission = hasEditPermission || hasRunPermission;
@@ -740,6 +752,9 @@ export const useCanRun = (): { canRun: boolean; tooltipMessage: string } => {
   } else if (isOldSnapshot) {
     canRun = false;
     tooltipMessage = 'You cannot run an old snapshot of a workflow';
+  } else if (!runLimits.allowed && runLimits.message) {
+    canRun = false;
+    tooltipMessage = runLimits.message;
   }
 
   return { canRun, tooltipMessage };

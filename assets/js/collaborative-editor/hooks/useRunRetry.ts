@@ -1,10 +1,11 @@
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useContext, useMemo, useRef, useState } from 'react';
 
 import _logger from '#/utils/logger';
 
 import { useURLState } from '#/react/lib/use-url-state';
 import * as dataclipApi from '../api/dataclips';
 import type { Dataclip } from '../api/dataclips';
+import { StoreContext } from '../contexts/StoreProvider';
 import { getCsrfToken } from '../lib/csrf';
 import { notifications } from '../lib/notifications';
 import type { Workflow } from '../types/workflow';
@@ -107,6 +108,10 @@ export function useRunRetry({
 }: UseRunRetryOptions): UseRunRetryReturn {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const isRetryingRef = useRef(false);
+
+  // Get getLimits action from session context store
+  const storeContext = useContext(StoreContext);
+  const getLimits = storeContext?.sessionContextStore.getLimits;
 
   // Retry state tracking via HistoryStore (WebSocket updates)
   // Note: Connection management is handled by the parent component (FullScreenIDE or ManualRunPanel)
@@ -220,6 +225,11 @@ export function useRunRetry({
         description: 'Saved latest changes and created new work order',
       });
 
+      // Refresh limits after creating run
+      if (getLimits) {
+        void getLimits('new_run');
+      }
+
       // Invoke callback with run_id and dataclip (if created from custom body)
       if (onRunSubmitted) {
         onRunSubmitted(response.data.run_id, response.data.dataclip);
@@ -249,6 +259,7 @@ export function useRunRetry({
     canRunWorkflow,
     workflowRunTooltipMessage,
     onRunSubmitted,
+    getLimits,
   ]);
 
   /**
@@ -310,6 +321,11 @@ export function useRunRetry({
         description: 'Saved latest changes and re-running with previous input',
       });
 
+      // Refresh limits after retry
+      if (getLimits) {
+        void getLimits('new_run');
+      }
+
       // Invoke callback with new run_id
       if (onRunSubmitted) {
         onRunSubmitted(result.data.run_id);
@@ -338,6 +354,7 @@ export function useRunRetry({
     saveWorkflow,
     projectId,
     onRunSubmitted,
+    getLimits,
   ]);
 
   return {
