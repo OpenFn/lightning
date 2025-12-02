@@ -84,6 +84,18 @@ export const createUIStore = (): UIStore => {
     }
   };
 
+  const loadCreateWorkflowPanelState = (): boolean => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const method = params.get('method');
+      // Panel should be expanded only if there's a method param
+      return !method; // collapsed if no method
+    } catch (error) {
+      logger.warn('Failed to load create workflow panel state from URL', error);
+      return true; // default to collapsed
+    }
+  };
+
   let state: UIState = produce(
     {
       runPanelOpen: false,
@@ -91,6 +103,7 @@ export const createUIStore = (): UIStore => {
       githubSyncModalOpen: false,
       aiAssistantPanelOpen: loadAIAssistantPanelState(),
       aiAssistantInitialMessage: null,
+      createWorkflowPanelCollapsed: loadCreateWorkflowPanelState(),
       templatePanel: {
         templates: [],
         loading: false,
@@ -187,6 +200,28 @@ export const createUIStore = (): UIStore => {
     notify('clearAIAssistantInitialMessage');
   };
 
+  const collapseCreateWorkflowPanel = () => {
+    state = produce(state, draft => {
+      draft.createWorkflowPanelCollapsed = true;
+    });
+    notify('collapseCreateWorkflowPanel');
+  };
+
+  const expandCreateWorkflowPanel = () => {
+    state = produce(state, draft => {
+      draft.createWorkflowPanelCollapsed = false;
+    });
+    notify('expandCreateWorkflowPanel');
+  };
+
+  const toggleCreateWorkflowPanel = () => {
+    const isCollapsed = !state.createWorkflowPanelCollapsed;
+    state = produce(state, draft => {
+      draft.createWorkflowPanelCollapsed = isCollapsed;
+    });
+    notify('toggleCreateWorkflowPanel');
+  };
+
   const setTemplates = (templates: UIState['templatePanel']['templates']) => {
     state = produce(state, draft => {
       draft.templatePanel.templates = templates;
@@ -260,6 +295,9 @@ export const createUIStore = (): UIStore => {
     closeAIAssistantPanel,
     toggleAIAssistantPanel,
     clearAIAssistantInitialMessage,
+    collapseCreateWorkflowPanel,
+    expandCreateWorkflowPanel,
+    toggleCreateWorkflowPanel,
     setTemplates,
     setTemplatesLoading,
     setTemplatesError,

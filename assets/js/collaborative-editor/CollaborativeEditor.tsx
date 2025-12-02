@@ -55,6 +55,7 @@ interface BreadcrumbContentProps {
   projectIdFallback?: string;
   projectNameFallback?: string;
   projectEnvFallback?: string;
+  isNewWorkflow?: boolean;
 }
 
 function BreadcrumbContent({
@@ -63,6 +64,7 @@ function BreadcrumbContent({
   projectIdFallback,
   projectNameFallback,
   projectEnvFallback,
+  isNewWorkflow = false,
 }: BreadcrumbContentProps) {
   const projectFromStore = useProject();
 
@@ -95,11 +97,13 @@ function BreadcrumbContent({
       <div key="workflow" className="flex items-center gap-2">
         <BreadcrumbText>{currentWorkflowName}</BreadcrumbText>
         <div className="flex items-center gap-1.5">
-          <VersionDropdown
-            currentVersion={workflowFromStore?.lock_version ?? null}
-            latestVersion={latestSnapshotLockVersion}
-            onVersionSelect={handleVersionSelect}
-          />
+          {!isNewWorkflow && (
+            <VersionDropdown
+              currentVersion={workflowFromStore?.lock_version ?? null}
+              latestVersion={latestSnapshotLockVersion}
+              onVersionSelect={handleVersionSelect}
+            />
+          )}
           {projectEnv && (
             <div
               id="canvas-project-env-container"
@@ -231,6 +235,7 @@ export const CollaborativeEditor: WithActionProps<
                   <BreadcrumbContent
                     workflowId={workflowId}
                     workflowName={workflowName}
+                    isNewWorkflow={isNewWorkflow}
                     {...(projectId !== undefined && {
                       projectIdFallback: projectId,
                     })}

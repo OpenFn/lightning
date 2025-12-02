@@ -15,6 +15,7 @@ import {
   convertWorkflowSpecToState,
 } from '../../../yaml/util';
 import { WorkflowError } from '../../../yaml/workflow-errors';
+import { useUICommands } from '../../hooks/useUI';
 import { Tooltip } from '../Tooltip';
 import { ValidationErrorDisplay } from '../yaml-import/ValidationErrorDisplay';
 import { YAMLCodeEditor } from '../yaml-import/YAMLCodeEditor';
@@ -41,6 +42,7 @@ export function YAMLImportPanel({
   onSave,
   onBack,
 }: YAMLImportPanelProps) {
+  const { collapseCreateWorkflowPanel } = useUICommands();
   const [yamlContent, setYamlContent] = useState('');
   const [errors, setErrors] = useState<WorkflowError[]>([]);
   const [importState, setImportState] = useState<ImportState>('initial');
@@ -136,6 +138,23 @@ export function YAMLImportPanel({
 
   return (
     <div className="w-full h-full flex flex-col bg-white border-r border-gray-200 shadow-xl">
+      {/* Header */}
+      <div className="shrink-0 px-4 py-4 border-b border-gray-200">
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-semibold text-gray-900">
+            Import workflow
+          </h2>
+          <button
+            type="button"
+            onClick={collapseCreateWorkflowPanel}
+            className="p-1 rounded hover:bg-gray-100 transition-colors"
+            aria-label="Collapse panel"
+          >
+            <span className="hero-chevron-left h-5 w-5 text-gray-600" />
+          </button>
+        </div>
+      </div>
+
       {/* Error Banner */}
       {errors.length > 0 && (
         <div className="shrink-0">

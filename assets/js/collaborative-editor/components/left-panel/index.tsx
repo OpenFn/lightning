@@ -14,7 +14,6 @@ interface LeftPanelProps {
   method: CreationMethod;
   onMethodChange: (method: CreationMethod) => void;
   onImport: (workflowState: YAMLWorkflowState) => void;
-  onClosePanel: () => void;
   onSave: () => Promise<unknown>;
 }
 

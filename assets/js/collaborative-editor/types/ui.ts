@@ -33,6 +33,9 @@ export interface UIState {
   /** Initial message to send when AI Assistant panel opens */
   aiAssistantInitialMessage: string | null;
 
+  /** Create workflow panel collapsed state */
+  createWorkflowPanelCollapsed: boolean;
+
   /** Template panel state */
   templatePanel: {
     templates: WorkflowTemplate[];
@@ -71,6 +74,15 @@ export interface UICommands {
 
   /** Toggle AI Assistant panel */
   toggleAIAssistantPanel: () => void;
+
+  /** Collapse create workflow panel */
+  collapseCreateWorkflowPanel: () => void;
+
+  /** Expand create workflow panel */
+  expandCreateWorkflowPanel: () => void;
+
+  /** Toggle create workflow panel collapsed state */
+  toggleCreateWorkflowPanel: () => void;
 
   /** Set templates list */
   setTemplates: (templates: WorkflowTemplate[]) => void;

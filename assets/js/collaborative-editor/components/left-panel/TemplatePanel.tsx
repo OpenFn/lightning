@@ -46,7 +46,7 @@ export function TemplatePanel({
   const aiStore = context.aiAssistantStore;
   const { provider } = useSession();
   const channel = provider?.channel;
-  const { openAIAssistantPanel } = useUICommands();
+  const { openAIAssistantPanel, collapseCreateWorkflowPanel } = useUICommands();
   const { searchParams, updateSearchParams } = useURLState();
 
   const { templates, loading, error, searchQuery, selectedTemplate } =
@@ -182,6 +182,19 @@ export function TemplatePanel({
   return (
     <div className="w-full h-full flex flex-col bg-white border-r border-gray-200">
       <div className="shrink-0 px-4 py-4 border-b border-gray-200">
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-lg font-semibold text-gray-900">
+            Browse templates
+          </h2>
+          <button
+            type="button"
+            onClick={collapseCreateWorkflowPanel}
+            className="p-1 rounded hover:bg-gray-100 transition-colors"
+            aria-label="Collapse panel"
+          >
+            <span className="hero-chevron-left h-5 w-5 text-gray-600" />
+          </button>
+        </div>
         <TemplateSearchInput
           value={searchQuery}
           onChange={handleSearchChange}

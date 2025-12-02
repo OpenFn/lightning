@@ -54,6 +54,9 @@ export const useUICommands = () => {
     closeAIAssistantPanel: uiStore.closeAIAssistantPanel,
     toggleAIAssistantPanel: uiStore.toggleAIAssistantPanel,
     clearAIAssistantInitialMessage: uiStore.clearAIAssistantInitialMessage,
+    collapseCreateWorkflowPanel: uiStore.collapseCreateWorkflowPanel,
+    expandCreateWorkflowPanel: uiStore.expandCreateWorkflowPanel,
+    toggleCreateWorkflowPanel: uiStore.toggleCreateWorkflowPanel,
   };
 };
 
@@ -107,6 +110,20 @@ export const useAIAssistantInitialMessage = (): string | null => {
   );
 
   return useSyncExternalStore(uiStore.subscribe, selectInitialMessage);
+};
+
+/**
+ * Hook to check if create workflow panel is collapsed
+ * Convenience helper that returns boolean
+ */
+export const useIsCreateWorkflowPanelCollapsed = (): boolean => {
+  const uiStore = useUIStore();
+
+  const selectIsCollapsed = uiStore.withSelector(
+    state => state.createWorkflowPanelCollapsed
+  );
+
+  return useSyncExternalStore(uiStore.subscribe, selectIsCollapsed);
 };
 
 /**

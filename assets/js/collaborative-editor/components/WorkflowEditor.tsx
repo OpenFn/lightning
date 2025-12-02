@@ -12,6 +12,7 @@ import {
 
 import { useURLState } from '../../react/lib/use-url-state';
 import type { WorkflowState as YAMLWorkflowState } from '../../yaml/types';
+import { StoreContext } from '../contexts/StoreProvider';
 import { useResizablePanel } from '../hooks/useResizablePanel';
 import { useIsNewWorkflow, useProject } from '../hooks/useSessionContext';
 import {
@@ -59,7 +60,11 @@ export function WorkflowEditor() {
   const isCreateWorkflowPanelCollapsed = useIsCreateWorkflowPanelCollapsed();
   const isAIAssistantPanelOpen = useIsAIAssistantPanelOpen();
 
+  // Get selected template from UI store using Stuart's refactored hook
   const { selectedTemplate } = useTemplatePanel();
+
+  // Keep context for other UI store operations
+  const context = useContext(StoreContext);
 
   // Save/restore selected template using localStorage
   useEffect(() => {
