@@ -23,10 +23,6 @@ interface JobSelectorProps {
  * Uses Headless UI Listbox with Tailwind "simple custom" styling.
  */
 export function JobSelector({ currentJob, jobs, onChange }: JobSelectorProps) {
-  const sortedJobs = useMemo(() => {
-    return [...jobs].sort((a, b) => a.name.localeCompare(b.name));
-  }, [jobs]);
-
   return (
     <Listbox value={currentJob} onChange={onChange}>
       <div className="relative">
@@ -39,7 +35,7 @@ export function JobSelector({ currentJob, jobs, onChange }: JobSelectorProps) {
           anchor="bottom start"
           className="z-[100] mt-1 max-h-60 w-56 overflow-auto rounded-md bg-white py-1 text-sm shadow-lg outline-1 outline-black/5 data-leave:transition data-leave:duration-100 data-leave:ease-in data-closed:data-leave:opacity-0"
         >
-          {sortedJobs.map(job => (
+          {jobs.map(job => (
             <ListboxOption
               key={job.id}
               value={job}

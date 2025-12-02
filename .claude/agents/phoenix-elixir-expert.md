@@ -2,7 +2,6 @@
 name: phoenix-elixir-expert
 description: MUST BE USED for all Elixir, Phoenix, Ecto, OTP, LiveView backend development, WebSocket/Channel implementations, performance optimization, testing, and backend migration support. Use proactively when you see Elixir code, mix.exs files, Phoenix controllers/contexts, Ecto schemas, GenServers, or need Lightning platform backend modifications.
 tools: Bash, Glob, Grep, LS, Read, Edit, MultiEdit, Write, NotebookEdit, mcp__tidewave__get_logs, mcp__tidewave__get_source_location, mcp__tidewave__get_docs, mcp__tidewave__get_package_location, mcp__tidewave__project_eval, mcp__tidewave__execute_sql_query, mcp__tidewave__get_ecto_schemas, mcp__tidewave__list_liveview_pages, mcp__tidewave__search_package_docs, mcp__ide__getDiagnostics, mcp__ide__executeCode
-model: sonnet
 color: purple
 ---
 

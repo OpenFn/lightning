@@ -3,9 +3,9 @@
  */
 
 import { ReactFlowProvider } from '@xyflow/react';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 
-import { cn } from '#/utils/cn';
+import { useURLState } from '#/react/lib/use-url-state';
 
 import {
   useEditorPreferencesCommands,
@@ -41,6 +41,7 @@ export function CollaborativeWorkflowDiagram({
   const { currentNode, selectNode } = useNodeSelection();
   const isNewWorkflow = useIsNewWorkflow();
   const isHistoryChannelConnected = useHistoryChannelConnected();
+  const { searchParams, updateSearchParams } = useURLState();
 
   // Get history data and commands
   const history = useHistory();
@@ -52,18 +53,9 @@ export function CollaborativeWorkflowDiagram({
   const historyCollapsed = useHistoryPanelCollapsed();
   const { setHistoryPanelCollapsed } = useEditorPreferencesCommands();
 
-  // Track selected run for visual feedback (stored in URL)
-  const [selectedRunId, setSelectedRunId] = useState<string | null>(() => {
-    const params = new URLSearchParams(window.location.search);
-    return params.get('run');
-  });
-
-  // Auto-expand history panel when a run is selected
-  useEffect(() => {
-    if (selectedRunId && historyCollapsed) {
-      setHistoryPanelCollapsed(false);
-    }
-  }, [selectedRunId, historyCollapsed, setHistoryPanelCollapsed]);
+  // Read selected run ID from URL - single source of truth
+  // useURLState is reactive, so component re-renders when URL changes
+  const selectedRunId = searchParams.get('run');
 
   const handleToggleHistory = useCallback(() => {
     setHistoryPanelCollapsed(!historyCollapsed);
@@ -79,10 +71,9 @@ export function CollaborativeWorkflowDiagram({
   const handleVersionSelect = useVersionSelect();
 
   // Update URL when run selection changes
+  // URLStore notifies subscribers synchronously, triggering immediate re-render
   const handleRunSelect = useCallback(
     (run: RunSummary) => {
-      setSelectedRunId(run.id);
-
       // Find the workorder that contains this run
       const workorder = history.find(wo => wo.runs.some(r => r.id === run.id));
 
@@ -91,21 +82,15 @@ export function CollaborativeWorkflowDiagram({
         handleVersionSelect(workorder.version);
       }
 
-      const url = new URL(window.location.href);
-      url.searchParams.set('run', run.id);
-      window.history.pushState({}, '', url.toString());
+      updateSearchParams({ run: run.id });
     },
-    [history, handleVersionSelect]
+    [history, handleVersionSelect, updateSearchParams]
   );
 
   // Clear URL parameter when deselecting run
   const handleDeselectRun = useCallback(() => {
-    setSelectedRunId(null);
-
-    const url = new URL(window.location.href);
-    url.searchParams.delete('run');
-    window.history.pushState({}, '', url.toString());
-  }, []);
+    updateSearchParams({ run: null });
+  }, [updateSearchParams]);
 
   // Request history when panel is first expanded OR when there's a run ID selected
   // Wait for channel to be connected before making request
@@ -130,6 +115,18 @@ export function CollaborativeWorkflowDiagram({
     selectedRunId,
   ]);
 
+  // Find the selected run object in history
+  const selectedRun = useMemo(() => {
+    if (!selectedRunId) return null;
+
+    // Search through work orders to find the run
+    for (const workorder of history) {
+      const run = workorder.runs.find(r => r.id === selectedRunId);
+      if (run) return run;
+    }
+    return null;
+  }, [selectedRunId, history]);
+
   // Transform history to mark selected run
   const historyWithSelection = useMemo(() => {
     if (!selectedRunId) return history;
@@ -150,12 +147,11 @@ export function CollaborativeWorkflowDiagram({
   return (
     <div ref={containerRef} className={className}>
       <ReactFlowProvider>
-        {/* Version mismatch warning when viewing latest but run used older version */}
         {versionMismatch && (
           <VersionMismatchBanner
             runVersion={versionMismatch.runVersion}
             currentVersion={versionMismatch.currentVersion}
-            className="absolute top-6 left-6 right-4 z-10 max-w-2xl mx-auto"
+            className="absolute top-4 left-1/2 -translate-x-1/2 z-50 max-w-md"
           />
         )}
 
@@ -177,6 +173,7 @@ export function CollaborativeWorkflowDiagram({
             onCollapseHistory={handleToggleHistory}
             selectRunHandler={handleRunSelect}
             onDeselectRun={handleDeselectRun}
+            selectedRun={selectedRun}
             loading={historyLoading}
             error={historyError}
             onRetry={() => {

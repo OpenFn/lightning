@@ -19,8 +19,21 @@ and this project adheres to
 
 ### Changed
 
+- Show "Connect" button when no credential is selected for non-language-common
+  steps [#4085](https://github.com/OpenFn/lightning/issues/4085)
+- Show credential name (and full name and owner on hover) when a credential is
+  selected [#4085](https://github.com/OpenFn/lightning/issues/4085)
+- Allow owners to edit credentials from the adaptor picker
+  [#4085](https://github.com/OpenFn/lightning/issues/4085)
+
 ### Fixed
 
+- User menu dropdown no longer clips or causes horizontal scroll in side
+  navigation [#4092](https://github.com/OpenFn/lightning/issues/4092)
+- Improved version mismatch banner UX: made compact, dismissible, and
+  repositioned to top-center; improved history panel collapse behavior to
+  maintain run selection with visual run chip indicator
+  [#4044](https://github.com/OpenFn/lightning/issues/4044)
 - Settings panel now opens correctly when Run Panel is visible; also improved
   Run Panel to stay open and update context when switching between nodes
   [#4008](https://github.com/OpenFn/lightning/issues/4008)
@@ -30,6 +43,8 @@ and this project adheres to
   [#4066](https://github.com/OpenFn/lightning/issues/4066)
 - Loading workflow screen appears when disconnected from server
   [#3972](https://github.com/OpenFn/lightning/issues/3972)
+- IDE shows job expresion of previously selected job
+  [#4022](https://github.com/OpenFn/lightning/issues/4022)
 
 ## [2.15.0-pre1] - 2025-11-27
 
@@ -48,6 +63,8 @@ and this project adheres to
   [#PR4050](https://github.com/OpenFn/lightning/pull/4050)
 - Make IDE heading separate from top menu
   [#4077](https://github.com/OpenFn/lightning/issues/4077)
+- Update IDE workflow step selector (order by proximity to trigger)
+  [#4048](https://github.com/OpenFn/lightning/issues/4048)
 
 ### Fixed
 
@@ -73,6 +90,8 @@ and this project adheres to
   [PR#4072](https://github.com/OpenFn/lightning/pull/4072)
 - Fix metadata/docs panel reopening when resizing adjacent panel
   [#4073](https://github.com/OpenFn/lightning/issues/4073)
+- Fix logs panel not allowing scroll after being resized to minimum height
+  [PR#4067](https://github.com/OpenFn/lightning/pull/4067)
 
 ## [2.15.0-pre] - 2025-11-20
 

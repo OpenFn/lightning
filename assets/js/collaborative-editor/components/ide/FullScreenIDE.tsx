@@ -32,7 +32,6 @@ import {
   useHistoryCommands,
   useJobMatchesRun,
 } from '../../hooks/useHistory';
-import { isFinalState } from '../../types/history';
 import { useRunRetry } from '../../hooks/useRunRetry';
 import { useRunRetryShortcuts } from '../../hooks/useRunRetryShortcuts';
 import { useSession } from '../../hooks/useSession';
@@ -45,9 +44,12 @@ import {
   useWorkflowReadOnly,
   useWorkflowState,
 } from '../../hooks/useWorkflow';
+import { isFinalState } from '../../types/history';
+import { edgesToAdjList, getJobOrdinals } from '../../utils/workflowGraph';
 import { AdaptorDisplay } from '../AdaptorDisplay';
 import { AdaptorSelectionModal } from '../AdaptorSelectionModal';
 import { CollaborativeMonaco } from '../CollaborativeMonaco';
+import { RunBadge } from '../common/RunBadge';
 import { ConfigureAdaptorModal } from '../ConfigureAdaptorModal';
 import { JobSelector } from '../JobSelector';
 import { ManualRunPanel } from '../ManualRunPanel';
@@ -342,7 +344,15 @@ export function FullScreenIDE({
   });
 
   // Handle job selection from JobSelector
-  const allJobs = workflow?.jobs || [];
+  const sortedJobs = useMemo(() => {
+    const allJobs = workflow?.jobs || [];
+    const adjList = edgesToAdjList(workflow?.edges || []);
+    const ordinals = getJobOrdinals(adjList.list, adjList.trigger_id);
+    return [...allJobs].sort((a, b) => {
+      return (ordinals[a.id] || Infinity) - (ordinals[b.id] || Infinity);
+    });
+  }, [workflow?.edges, workflow?.jobs]);
+
   const handleJobSelect = useCallback(
     (job: any) => {
       updateSearchParams({ job: job.id });
@@ -389,10 +399,13 @@ export function FullScreenIDE({
   }, []);
 
   const handleOpenCredentialModal = useCallback(
-    (adaptorName: string) => {
+    (adaptorName: string, credentialId?: string) => {
       setIsConfigureModalOpen(false);
       setIsCredentialModalOpen(true);
-      pushEvent('open_credential_modal', { schema: adaptorName });
+      pushEvent('open_credential_modal', {
+        schema: adaptorName,
+        credential_id: credentialId,
+      });
     },
     [pushEvent]
   );
@@ -509,20 +522,23 @@ export function FullScreenIDE({
 
   useEffect(() => {
     const cleanup = handleEvent('credential_saved', (payload: any) => {
-      if (!currentJob) return;
-
       setIsCredentialModalOpen(false);
 
-      const { credential, is_project_credential } = payload;
-      const credentialId = is_project_credential
-        ? credential.project_credential_id
-        : credential.id;
+      // If we have a current job, update its credential assignment
+      // (this happens when creating a new credential and selecting it)
+      if (currentJob) {
+        const { credential, is_project_credential } = payload;
+        const credentialId = is_project_credential
+          ? credential.project_credential_id
+          : credential.id;
 
-      updateJob(currentJob.id, {
-        project_credential_id: is_project_credential ? credentialId : null,
-        keychain_credential_id: is_project_credential ? null : credentialId,
-      });
+        updateJob(currentJob.id, {
+          project_credential_id: is_project_credential ? credentialId : null,
+          keychain_credential_id: is_project_credential ? null : credentialId,
+        });
+      }
 
+      // Always refresh credentials and reopen configure modal
       void requestCredentials();
 
       setTimeout(() => {
@@ -647,7 +663,7 @@ export function FullScreenIDE({
             <div className="shrink-0">
               <JobSelector
                 currentJob={currentJob}
-                jobs={allJobs}
+                jobs={sortedJobs}
                 onChange={handleJobSelect}
               />
             </div>
@@ -980,34 +996,17 @@ export function FullScreenIDE({
                             }
                             side="bottom"
                           >
-                            <div
-                              className={cn(
-                                'inline-flex justify-between items-center gap-x-1 rounded-md px-2 py-1 text-xs font-medium mr-3',
-                                shouldShowMismatch
-                                  ? 'bg-yellow-100 text-yellow-700'
-                                  : 'bg-blue-100 text-blue-700'
-                              )}
-                            >
-                              <span>Run {followRunId?.slice(0, 7)}</span>
-                              <button
-                                onClick={() => {
-                                  setFollowRunId(null);
-                                  updateSearchParams({ run: null });
-                                }}
-                                className={cn(
-                                  'group relative -mr-1 h-3.5 w-3.5 rounded-sm',
-                                  shouldShowMismatch
-                                    ? 'hover:bg-yellow-600/20'
-                                    : 'hover:bg-blue-600/20'
-                                )}
-                                aria-label="Close run"
-                                title="Close run"
-                              >
-                                <span className="sr-only">Remove</span>
-                                <XMarkIcon className="h-3.5 w-3.5" />
-                                <span className="absolute -inset-1"></span>
-                              </button>
-                            </div>
+                            <RunBadge
+                              runId={followRunId}
+                              onClose={() => {
+                                setFollowRunId(null);
+                                updateSearchParams({ run: null });
+                              }}
+                              variant={
+                                shouldShowMismatch ? 'warning' : 'default'
+                              }
+                              className="mr-3"
+                            />
                           </Tooltip>
                           {/* Tabs as header content when showing run */}
                           <div className="flex-1">

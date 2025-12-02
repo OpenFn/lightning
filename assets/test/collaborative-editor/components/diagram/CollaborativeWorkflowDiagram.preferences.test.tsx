@@ -37,6 +37,48 @@ function createWithSelectorMock(getSnapshot: () => any) {
   };
 }
 
+// Mock useURLState with reactive behavior
+const mockUpdateSearchParams = vi.fn();
+let mockSearchParams = new URLSearchParams();
+const urlListeners = new Set<() => void>();
+
+// Cache the snapshot to avoid infinite loops
+let cachedSnapshot = {
+  searchParams: mockSearchParams,
+  hash: '',
+};
+
+// Helper to trigger URL state updates
+function updateMockURL(params: URLSearchParams) {
+  mockSearchParams = params;
+  cachedSnapshot = {
+    searchParams: params,
+    hash: '',
+  };
+  urlListeners.forEach(listener => listener());
+}
+
+vi.mock('../../../../js/react/lib/use-url-state', () => {
+  const { useSyncExternalStore } = require('react');
+  return {
+    useURLState: () => {
+      const state = useSyncExternalStore(
+        (listener: () => void) => {
+          urlListeners.add(listener);
+          return () => urlListeners.delete(listener);
+        },
+        () => cachedSnapshot
+      );
+
+      return {
+        searchParams: state.searchParams,
+        hash: state.hash,
+        updateSearchParams: mockUpdateSearchParams,
+      };
+    },
+  };
+});
+
 // Mock dependencies
 vi.mock('@xyflow/react', () => ({
   ReactFlow: () => <div data-testid="react-flow">Workflow Diagram</div>,
@@ -74,7 +116,8 @@ vi.mock('date-fns', async () => {
 });
 
 function createWrapper(
-  editorPreferencesStore: EditorPreferencesStore
+  editorPreferencesStore: EditorPreferencesStore,
+  historyStateOverride?: any
 ): React.ComponentType<{ children: React.ReactNode }> {
   // Create mock stores with proper getSnapshot functions
   const workflowState = {
@@ -90,7 +133,7 @@ function createWrapper(
     config: {},
     permissions: {},
   };
-  const historyState = {
+  const historyState = historyStateOverride || {
     history: [],
     loading: false,
     error: null,
@@ -151,6 +194,14 @@ describe('CollaborativeWorkflowDiagram - EditorPreferences Integration', () => {
       Object.keys(storage.varStorage).forEach(key =>
         storage.varStorage.removeItem(key)
       );
+
+    // Reset URL mock
+    mockSearchParams = new URLSearchParams();
+    cachedSnapshot = {
+      searchParams: mockSearchParams,
+      hash: '',
+    };
+    mockUpdateSearchParams.mockClear();
 
     // Create fresh store and wrapper for each test
     store = createEditorPreferencesStore();
@@ -240,32 +291,29 @@ describe('CollaborativeWorkflowDiagram - EditorPreferences Integration', () => {
   // ========================================================================
 
   describe('URL override behavior', () => {
-    test('auto-expands history panel when URL contains run ID', async () => {
+    test('respects stored collapsed state even with run ID in URL', async () => {
       // Set collapsed state in storage
       storage.varStorage.setItem(
         'lightning.editor.historyPanelCollapsed',
         'true'
       );
 
-      // Use jsdom to set search params
-      Object.defineProperty(window, 'location', {
-        value: { search: '?run=test-run-id' },
-        writable: true,
-        configurable: true,
-      });
+      // Set URL with run parameter
+      mockSearchParams = new URLSearchParams('?run=test-run-id');
 
       render(<CollaborativeWorkflowDiagram />, { wrapper });
 
-      // Should auto-expand despite stored collapsed state
+      // Panel should stay collapsed (no auto-expand)
       await waitFor(() => {
-        expect(screen.getByText(/Recent History/i)).toBeInTheDocument();
+        expect(screen.queryByText(/Recent History/i)).not.toBeInTheDocument();
+        expect(screen.getByText(/View History/i)).toBeInTheDocument();
       });
 
-      // Storage should be updated
+      // Storage should remain unchanged
       const stored = storage.varStorage.getItem(
         'lightning.editor.historyPanelCollapsed'
       );
-      expect(stored).toBe('false');
+      expect(stored).toBe('true');
     });
 
     test('respects stored state when no run ID in URL', () => {
@@ -280,11 +328,7 @@ describe('CollaborativeWorkflowDiagram - EditorPreferences Integration', () => {
       wrapper = createWrapper(store);
 
       // Ensure URL has no run ID
-      Object.defineProperty(window, 'location', {
-        value: { search: '' },
-        writable: true,
-        configurable: true,
-      });
+      mockSearchParams = new URLSearchParams();
 
       render(<CollaborativeWorkflowDiagram />, { wrapper });
 
@@ -315,6 +359,154 @@ describe('CollaborativeWorkflowDiagram - EditorPreferences Integration', () => {
         'lightning.editor.historyPanelCollapsed'
       );
       expect(newKey).toBeNull();
+    });
+  });
+
+  // ========================================================================
+  // RUN SELECTION AND PANEL COLLAPSE
+  // ========================================================================
+
+  describe('run selection and panel collapse', () => {
+    test('collapsing panel keeps run selected', async () => {
+      // Set URL to have a run parameter (simulating user selected a run)
+      const runId = '7d5e0711-e2fd-44a4-91cc-fa0c335f88e4';
+      mockSearchParams = new URLSearchParams(`?run=${runId}`);
+      cachedSnapshot = {
+        searchParams: mockSearchParams,
+        hash: '',
+      };
+
+      // Pre-expand the history panel (simulating auto-expand when run selected)
+      storage.varStorage.setItem(
+        'lightning.editor.historyPanelCollapsed',
+        'false'
+      );
+      store = createEditorPreferencesStore();
+
+      // Create a wrapper with mock history data
+      const mockHistoryState = {
+        history: [
+          {
+            id: 'e2107d46-cf29-4930-b11b-cbcfcf83549d',
+            version: 29,
+            state: 'success' as const,
+            runs: [
+              {
+                id: runId,
+                state: 'success' as const,
+                started_at: '2025-10-23T21:00:01.106711Z',
+                finished_at: '2025-10-23T21:00:02.098356Z',
+                error_type: null,
+              },
+            ],
+            last_activity: '2025-10-23T21:00:02.293382Z',
+          },
+        ],
+        loading: false,
+        error: null,
+        channelConnected: false,
+        runStepsCache: {},
+        runStepsSubscribers: {},
+        runStepsLoading: new Set(),
+      };
+
+      // Create wrapper with mock history
+      wrapper = createWrapper(store, mockHistoryState);
+
+      render(<CollaborativeWorkflowDiagram />, { wrapper });
+
+      // Panel should be expanded
+      await waitFor(() => {
+        expect(screen.getByText(/Recent History/i)).toBeInTheDocument();
+      });
+
+      // Click to collapse the panel
+      const collapseButton = screen.getByText(/Recent History/i).closest('div');
+      fireEvent.click(collapseButton!);
+
+      // Panel should collapse but run should stay selected (no pushState to clear URL)
+      await waitFor(() => {
+        expect(screen.getByText(/View History/i)).toBeInTheDocument();
+      });
+
+      // Run badge should be visible in collapsed state
+      // Note: RunBadge renders "Run {truncated-id}", look for this pattern
+      expect(screen.getByText(/Run/i)).toBeInTheDocument();
+    });
+
+    test('run chip appears in collapsed state and can deselect run', async () => {
+      const runId = '7d5e0711-e2fd-44a4-91cc-fa0c335f88e4';
+      mockSearchParams = new URLSearchParams(`?run=${runId}`);
+      cachedSnapshot = {
+        searchParams: mockSearchParams,
+        hash: '',
+      };
+
+      // Start with panel expanded and run selected
+      storage.varStorage.setItem(
+        'lightning.editor.historyPanelCollapsed',
+        'false'
+      );
+      store = createEditorPreferencesStore();
+
+      // Create a wrapper with mock history data
+      const mockHistoryState = {
+        history: [
+          {
+            id: 'e2107d46-cf29-4930-b11b-cbcfcf83549d',
+            version: 29,
+            state: 'success' as const,
+            runs: [
+              {
+                id: runId,
+                state: 'success' as const,
+                started_at: '2025-10-23T21:00:01.106711Z',
+                finished_at: '2025-10-23T21:00:02.098356Z',
+                error_type: null,
+              },
+            ],
+            last_activity: '2025-10-23T21:00:02.293382Z',
+          },
+        ],
+        loading: false,
+        error: null,
+        channelConnected: false,
+        runStepsCache: {},
+        runStepsSubscribers: {},
+        runStepsLoading: new Set(),
+      };
+
+      // Create wrapper with mock history
+      wrapper = createWrapper(store, mockHistoryState);
+
+      render(<CollaborativeWorkflowDiagram />, { wrapper });
+
+      // Collapse the panel
+      const collapseButton = screen.getByText(/Recent History/i).closest('div');
+      fireEvent.click(collapseButton!);
+
+      // Run chip should appear in collapsed state
+      await waitFor(() => {
+        expect(screen.getByText(/View History/i)).toBeInTheDocument();
+        expect(screen.getByText(/Run/i)).toBeInTheDocument();
+      });
+
+      // Click the X button on the chip to deselect
+      const closeButton = screen.getByLabelText(/Remove/i);
+      fireEvent.click(closeButton);
+
+      // Should call updateSearchParams to clear the run parameter
+      await waitFor(() => {
+        expect(mockUpdateSearchParams).toHaveBeenCalledWith({ run: null });
+      });
+
+      // Simulate URL change by updating the mock and triggering listeners
+      updateMockURL(new URLSearchParams());
+
+      // Chip should be gone after URL update
+      await waitFor(() => {
+        expect(screen.queryByText(/Run/i)).not.toBeInTheDocument();
+      });
     });
   });
 });
