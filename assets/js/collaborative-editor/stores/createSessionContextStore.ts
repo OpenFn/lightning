@@ -126,6 +126,7 @@ export const createSessionContextStore = (
       isLoading: false,
       error: null,
       lastUpdated: null,
+      saveInProgress: false,
     } as SessionContextState,
     // No initial transformations needed
     draft => draft
@@ -313,6 +314,18 @@ export const createSessionContextStore = (
       draft.hasReadAIDisclaimer = hasRead;
     });
     notify('setHasReadAIDisclaimer');
+  };
+
+   /*
+   * Set save in progress flag
+   * Called before save operation starts and after save completes
+   * Used to prevent old snapshot detection during save race condition
+   */
+  const setSaveInProgress = (inProgress: boolean) => {
+    state = produce(state, draft => {
+      draft.saveInProgress = inProgress;
+    });
+    notify('setSaveInProgress');
   };
 
   /**
@@ -593,6 +606,7 @@ export const createSessionContextStore = (
     clearIsNewWorkflow,
     setHasReadAIDisclaimer,
     getLimits,
+    setSaveInProgress,
 
     // Internal methods (not part of public SessionContextStore interface)
     _connectChannel,

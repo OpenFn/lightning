@@ -475,18 +475,27 @@ export const useWorkflowActions = () => {
 
         // Main wrapped saveWorkflow function
         const wrappedSaveWorkflow = async (options?: { silent?: boolean }) => {
+          // Set save in progress before starting
+          sessionContextStore.setSaveInProgress(true);
+
           try {
             const response = await store.saveWorkflow();
 
             if (!response) {
               // saveWorkflow returns null when not connected
               // Connection status is already shown in UI, no toast needed
+              // Clear save in progress flag
+              sessionContextStore.setSaveInProgress(false);
               return null;
             }
 
             handleSaveSuccess(response, options?.silent);
+            // Clear save in progress flag after successful save
+            sessionContextStore.setSaveInProgress(false);
             return response;
           } catch (error) {
+            // Clear save in progress flag on error
+            sessionContextStore.setSaveInProgress(false);
             handleSaveError(error, wrappedSaveWorkflow);
             // Re-throw error for any upstream error handling
             throw error;
@@ -590,18 +599,27 @@ export const useWorkflowActions = () => {
 
         // Main wrapped saveAndSyncWorkflow function
         const wrappedSaveAndSyncWorkflow = async () => {
+          // Set save in progress before starting
+          sessionContextStore.setSaveInProgress(true);
+
           try {
             const response = await store.saveAndSyncWorkflow(commitMessage);
 
             if (!response) {
               // saveAndSyncWorkflow returns null when not connected
               // Connection status is already shown in UI, no toast needed
+              // Clear save in progress flag
+              sessionContextStore.setSaveInProgress(false);
               return null;
             }
 
             handleSaveAndSyncSuccess(response);
+            // Clear save in progress flag after successful save
+            sessionContextStore.setSaveInProgress(false);
             return response;
           } catch (error) {
+            // Clear save in progress flag on error
+            sessionContextStore.setSaveInProgress(false);
             handleSaveAndSyncError(error, wrappedSaveAndSyncWorkflow);
             // Re-throw error for any upstream error handling
             throw error;
@@ -637,10 +655,21 @@ export const useWorkflowActions = () => {
  * @internal This is shared logic between useCanSave and useCanRun
  */
 const useWorkflowConditions = () => {
-  const { isSynced } = useSession();
+  const { isSynced, isTransitioning } = useSession();
   const permissions = usePermissions();
   const latestSnapshotLockVersion = useLatestSnapshotLockVersion();
   const workflow = useWorkflowState(state => state.workflow);
+  const context = useContext(StoreContext);
+
+  if (!context) {
+    throw new Error('useWorkflowConditions must be used within StoreProvider');
+  }
+
+  const sessionContextStore = context.sessionContextStore;
+  const saveInProgress = useSyncExternalStore(
+    sessionContextStore.subscribe,
+    sessionContextStore.withSelector(state => state.saveInProgress)
+  );
 
   const hasEditPermission = permissions?.can_edit_workflow ?? false;
   const hasRunPermission = permissions?.can_run_workflow ?? false;
@@ -649,11 +678,14 @@ const useWorkflowConditions = () => {
 
   // Only consider it an old snapshot if workflow is loaded, latest
   // snapshot lock version is available AND different from workflow
-  // lock version
+  // lock version. Ignore during save (to prevent race condition between
+  // save response and Y.Doc update) and during room transitions.
   const isOldSnapshot =
     workflow !== null &&
     latestSnapshotLockVersion !== null &&
-    workflow.lock_version !== latestSnapshotLockVersion;
+    workflow.lock_version !== latestSnapshotLockVersion &&
+    !saveInProgress &&
+    !isTransitioning;
 
   return {
     hasEditPermission,

@@ -121,6 +121,7 @@ export interface SessionContextState {
   isLoading: boolean;
   error: string | null;
   lastUpdated: number | null;
+  saveInProgress: boolean;
 }
 
 interface SessionContextCommands {
@@ -134,6 +135,7 @@ interface SessionContextCommands {
   clearIsNewWorkflow: () => void;
   setHasReadAIDisclaimer: (hasRead: boolean) => void;
   getLimits: (actionType: 'new_run') => Promise<void>;
+  setSaveInProgress: (inProgress: boolean) => void;
 }
 
 interface SessionContextQueries {
