@@ -185,8 +185,11 @@ export function AIAssistantPanelWrapper() {
     if (isSyncingRef.current) return;
 
     isSyncingRef.current = true;
+
     if (isAIAssistantPanelOpen) {
-      updateSearchParams({ chat: 'true' });
+      updateSearchParams({
+        chat: 'true',
+      });
     } else {
       // When closing, clear chat param and session params
       updateSearchParams({
@@ -195,6 +198,7 @@ export function AIAssistantPanelWrapper() {
         'j-chat': null,
       });
     }
+
     setTimeout(() => {
       isSyncingRef.current = false;
     }, 0);
@@ -242,7 +246,7 @@ export function AIAssistantPanelWrapper() {
   });
 
   useEffect(() => {
-    // Don't sync session to URL if panel is closed
+    // Don't sync session ID to URL when panel is closed
     if (!isAIAssistantPanelOpen) return;
     if (!sessionId || !aiMode) return;
 
@@ -268,12 +272,12 @@ export function AIAssistantPanelWrapper() {
       });
     }
   }, [
-    isAIAssistantPanelOpen,
     sessionId,
     aiMode,
     searchParams,
     updateSearchParams,
     aiStore,
+    isAIAssistantPanelOpen,
   ]);
 
   // Close handler - URL cleanup happens automatically via the effect above
