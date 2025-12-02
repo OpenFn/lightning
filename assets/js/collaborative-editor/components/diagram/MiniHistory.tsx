@@ -211,11 +211,7 @@ export default function MiniHistory({
             <span className="hero-rectangle-stack w-4 h-4"></span>
           </button>
           {loading && history.length ? (
-            <div className="text-xs">
-              {' '}
-              <span className="hero-arrow-path size-4 animate-spin"></span>{' '}
-              loading
-            </div>
+            <span className="hero-arrow-path size-4 animate-spin"></span>
           ) : null}
         </div>
 
