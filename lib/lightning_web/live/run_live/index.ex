@@ -7,13 +7,10 @@ defmodule LightningWeb.RunLive.Index do
   import Ecto.Changeset, only: [get_change: 2]
   import LightningWeb.Components.Icons
 
-  alias Lightning.Extensions.UsageLimiting.Action
-  alias Lightning.Extensions.UsageLimiting.Context
   alias Lightning.Invocation
   alias Lightning.Invocation.Step
   alias Lightning.Policies.Permissions
   alias Lightning.Policies.ProjectUsers
-  alias Lightning.Services.UsageLimiter
   alias Lightning.WorkOrders
   alias Lightning.WorkOrders.Events
   alias Lightning.WorkOrders.SearchParams
@@ -338,10 +335,7 @@ defmodule LightningWeb.RunLive.Index do
       socket.assigns
 
     if can_run_workflow? do
-      with :ok <-
-             UsageLimiter.limit_action(%Action{type: :new_run}, %Context{
-               project_id: project_id
-             }),
+      with :ok <- WorkOrders.limit_run_creation(project_id),
            {:ok, _run} <-
              WorkOrders.retry(run_id, step_id, created_by: current_user) do
         {:noreply, socket}
@@ -694,11 +688,9 @@ defmodule LightningWeb.RunLive.Index do
 
   def validate_bulk_rerun(selected_work_orders, %{id: project_id}) do
     with {:error, _reason, %{text: error_message}} <-
-           UsageLimiter.limit_action(
-             %Action{type: :new_run, amount: length(selected_work_orders)},
-             %Context{
-               project_id: project_id
-             }
+           WorkOrders.limit_run_creation(
+             project_id,
+             length(selected_work_orders)
            ) do
       "invalid-rerun:#{error_message}"
     end

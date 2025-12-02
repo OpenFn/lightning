@@ -5,10 +5,7 @@ defmodule LightningWeb.WorkflowLive.Helpers do
 
   alias Lightning.Accounts
   alias Lightning.Extensions.UsageLimiting
-  alias Lightning.Extensions.UsageLimiting.Action
-  alias Lightning.Extensions.UsageLimiting.Context
   alias Lightning.Repo
-  alias Lightning.Services.UsageLimiter
 
   alias Lightning.Workflows
   alias Lightning.Workflows.Workflow
@@ -60,9 +57,7 @@ defmodule LightningWeb.WorkflowLive.Helpers do
       %{id: project_id} = Keyword.fetch!(opts, :project)
       actor = Keyword.fetch!(opts, :created_by)
 
-      case UsageLimiter.limit_action(%Action{type: :new_run}, %Context{
-             project_id: project_id
-           }) do
+      case WorkOrders.limit_run_creation(project_id) do
         {:error, _reason, message} ->
           {:error, message}
 

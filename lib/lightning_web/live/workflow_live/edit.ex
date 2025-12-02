@@ -8,8 +8,6 @@ defmodule LightningWeb.WorkflowLive.Edit do
   import React
 
   alias Lightning.AiAssistant
-  alias Lightning.Extensions.UsageLimiting.Action
-  alias Lightning.Extensions.UsageLimiting.Context
   alias Lightning.Invocation
   alias Lightning.OauthClients
   alias Lightning.Policies.Permissions
@@ -19,7 +17,6 @@ defmodule LightningWeb.WorkflowLive.Edit do
   alias Lightning.Runs.Events.DataclipUpdated
   alias Lightning.Runs.Events.RunUpdated
   alias Lightning.Runs.Events.StepCompleted
-  alias Lightning.Services.UsageLimiter
   alias Lightning.VersionControl
   alias Lightning.Workflows
   alias Lightning.Workflows.Events.WorkflowUpdated
@@ -3559,10 +3556,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
     with true <- can_run_workflow? || :not_authorized,
          true <- tag == "latest" || :view_only,
-         :ok <-
-           UsageLimiter.limit_action(%Action{type: :new_run}, %Context{
-             project_id: project_id
-           }),
+         :ok <- WorkOrders.limit_run_creation(project_id),
          {:ok, workflow} <- save_or_get_workflow,
          {:ok, run} <-
            WorkOrders.retry(run_id, step_id, created_by: current_user) do

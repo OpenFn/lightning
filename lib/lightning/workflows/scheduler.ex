@@ -10,11 +10,8 @@ defmodule Lightning.Workflows.Scheduler do
     # This unique period ensures that cron jobs are only enqueued once across a cluster
     unique: [period: 59]
 
-  alias Lightning.Extensions.UsageLimiting.Action
-  alias Lightning.Extensions.UsageLimiting.Context
   alias Lightning.Invocation
   alias Lightning.Repo
-  alias Lightning.Services.UsageLimiter
   alias Lightning.Workflows
   alias Lightning.Workflows.Edge
   alias Lightning.WorkOrders
@@ -40,10 +37,7 @@ defmodule Lightning.Workflows.Scheduler do
   @spec invoke_cronjob(Edge.t()) :: {:ok, map()} | {:error, map()}
   defp invoke_cronjob(%Edge{target_job: job, source_trigger: trigger}) do
     with %{project_id: project_id} <- job.workflow,
-         :ok <-
-           UsageLimiter.limit_action(%Action{type: :new_run}, %Context{
-             project_id: project_id
-           }) do
+         :ok <- WorkOrders.limit_run_creation(project_id) do
       case last_state_for_job(job.id) do
         nil ->
           Logger.debug(fn ->
