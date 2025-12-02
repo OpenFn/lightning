@@ -10,6 +10,8 @@
  * and is fully synchronized, eliminating the need for defensive null checks.
  */
 
+import React from 'react';
+
 import { useSession } from '../hooks/useSession';
 import { useSessionContextLoading } from '../hooks/useSessionContext';
 import { useWorkflowState } from '../hooks/useWorkflow';
@@ -30,18 +32,25 @@ export function LoadingBoundary({ children }: LoadingBoundaryProps) {
   //
   // Allow rendering if workflow data exists, even when not settled
   // This enables viewing cached data during disconnection
-  const hasWorkflowData = workflow !== null;
-  const isInitialLoad = !hasWorkflowData;
 
-  const isReady =
-    !sessionContextLoading &&
-    hasWorkflowData &&
-    (session.settled || !isInitialLoad);
+  const hasWorkflow = workflow !== null;
+  const fullReady = hasWorkflow && session.settled && !sessionContextLoading;
 
-  // most of the states we depend on don't need to show the loading workflow screen I guess.
-  const subReady = hasWorkflowData && !isInitialLoad;
+  // hydrated - have all conditions been met? (fullReady)
+  const [hydrated, setHydrated] = React.useState(false);
 
-  if (subReady) return <>{children}</>;
+  // - When fullReady becomes true -> we mark hydration complete
+  // - When workflow disappears -> we reset hydration (wait for a fullReady once again)
+  React.useEffect(() => {
+    if (fullReady && !hydrated) {
+      setHydrated(true);
+    } else if (!hasWorkflow && hydrated) {
+      setHydrated(false);
+    }
+  }, [fullReady, hasWorkflow, hydrated]);
+
+  // after hydration require just the presence of a workflow
+  const isReady = hydrated ? hasWorkflow : fullReady;
 
   if (!isReady) {
     return (
