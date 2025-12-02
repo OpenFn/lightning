@@ -13,7 +13,11 @@
 import { useEffect, useRef } from 'react';
 import type * as Y from 'yjs';
 
+import _logger from '#/utils/logger';
+
 import type { SessionStoreInstance } from '../stores/createSessionStore';
+
+const logger = _logger.ns('useYDocPersistence').seal();
 
 export interface YDocPersistenceOptions {
   /** The session store that manages Y.Doc */
@@ -56,15 +60,26 @@ export function useYDocPersistence({
   const hasInitialized = useRef(false);
   const prevVersionRef = useRef(version);
 
-  // Handle version changes - reset Y.Doc completely
+  // Handle version changes
   useEffect(() => {
     if (prevVersionRef.current !== version && hasInitialized.current) {
-      // Version changed, need to reset
+      // Version changed during migration - Y.Doc will be handled by migration
+      // Just update the version ref so we don't trigger this again
+      if (sessionStore.isTransitioning()) {
+        logger.debug(
+          'Version changed during migration - Y.Doc handled by registry'
+        );
+        prevVersionRef.current = version;
+        return;
+      }
+
+      // Version changed outside of migration (edge case) - reset Y.Doc
+      logger.debug('Version changed outside migration - resetting Y.Doc');
       onDestroyed?.();
       hasInitialized.current = false;
       prevVersionRef.current = version;
     }
-  }, [version, onDestroyed]);
+  }, [version, onDestroyed, sessionStore]);
 
   // Track Y.Doc initialization
   useEffect(() => {

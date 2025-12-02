@@ -20,6 +20,9 @@ export interface ConnectionStatus {
 
   /** Current error if any */
   error: Error | null;
+
+  /** Whether the session is transitioning to a new version */
+  isTransitioning: boolean;
 }
 
 const ConnectionStatusContext = createContext<ConnectionStatus | null>(null);
@@ -30,6 +33,7 @@ export interface ConnectionStatusProviderProps {
   isSynced: boolean;
   lastSyncTime: Date | null;
   error: Error | null;
+  isTransitioning: boolean;
 }
 
 /**
@@ -41,6 +45,7 @@ export function ConnectionStatusProvider({
   isSynced,
   lastSyncTime,
   error,
+  isTransitioning,
 }: ConnectionStatusProviderProps) {
   const value = useMemo(
     () => ({
@@ -48,8 +53,9 @@ export function ConnectionStatusProvider({
       isSynced,
       lastSyncTime,
       error,
+      isTransitioning,
     }),
-    [isConnected, isSynced, lastSyncTime, error]
+    [isConnected, isSynced, lastSyncTime, error, isTransitioning]
   );
 
   return (

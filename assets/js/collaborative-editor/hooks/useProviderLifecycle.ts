@@ -94,6 +94,12 @@ export function useProviderLifecycle({
       return;
     }
 
+    // Skip initialization if store is transitioning (migration in progress)
+    if (sessionStore.isTransitioning()) {
+      logger.log('Skipping provider initialization during migration');
+      return;
+    }
+
     // Initial connection: create provider if not initialized
     // Note: This will create Y.Doc as part of initialization
     if (!hasProviderInitialized.current && !sessionStore.provider) {
@@ -130,6 +136,13 @@ export function useProviderLifecycle({
   useEffect(() => {
     const hadProvider = prevProviderRef.current !== null;
     const hasProvider = sessionStore.provider !== null;
+
+    // Skip reconnection if store is transitioning (migration in progress)
+    if (sessionStore.isTransitioning()) {
+      logger.log('Skipping reconnection during migration');
+      prevProviderRef.current = sessionStore.provider;
+      return;
+    }
 
     // Detect provider loss: had provider but now don't
     if (

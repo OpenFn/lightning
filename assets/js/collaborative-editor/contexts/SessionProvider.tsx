@@ -64,6 +64,7 @@ export const SessionProvider = ({
   const [isSynced, setIsSynced] = useState(false);
   const [lastSyncTime, setLastSyncTime] = useState<Date | null>(null);
   const [connectionError, setConnectionError] = useState<Error | null>(null);
+  const [isTransitioning, setIsTransitioning] = useState(false);
 
   // Room naming strategy for snapshots vs collaborative editing:
   // - NO version param → `workflow:collaborate:${workflowId}` (latest/collaborative)
@@ -84,16 +85,34 @@ export const SessionProvider = ({
     [projectId, isNewWorkflow]
   );
 
+  // Track previous roomname to detect changes
+  const prevRoomnameRef = useRef(roomname);
+
   // Handle roomname changes (version switching)
-  // When roomname changes, destroy session in cleanup to allow reinitialization
+  // When roomname changes, migrate to the new room instead of destroying
+  useEffect(() => {
+    if (
+      prevRoomnameRef.current !== roomname &&
+      socket &&
+      isConnected &&
+      sessionStore.provider
+    ) {
+      logger.log('Room changing - migrating to new version', {
+        from: prevRoomnameRef.current,
+        to: roomname,
+      });
+      void sessionStore.migrateToRoom(socket, roomname, joinParams);
+      prevRoomnameRef.current = roomname;
+    }
+  }, [roomname, socket, isConnected, sessionStore, joinParams]);
+
+  // Cleanup on unmount - still destroy session when component unmounts
   useEffect(() => {
     return () => {
-      logger.log('Room changing - destroying session for reinitialization', {
-        roomname,
-      });
+      logger.log('SessionProvider unmounting - destroying session');
       sessionStore.destroy();
     };
-  }, [roomname, sessionStore]);
+  }, [sessionStore]);
 
   // Use Y.Doc persistence hook to manage Y.Doc lifecycle
   const handleYDocInitialized = useCallback(() => {
@@ -168,6 +187,21 @@ export const SessionProvider = ({
     };
   }, [sessionStore.provider]);
 
+  // Track transitioning state from SessionStore
+  useEffect(() => {
+    const updateTransitioningState = () => {
+      setIsTransitioning(sessionStore.isTransitioning());
+    };
+
+    // Initial state
+    updateTransitioningState();
+
+    // Subscribe to changes
+    const unsubscribe = sessionStore.subscribe(updateTransitioningState);
+
+    return unsubscribe;
+  }, [sessionStore]);
+
   // Testing and debug helpers
   useEffect(() => {
     // Testing helper to simulate a reconnect
@@ -203,6 +237,7 @@ export const SessionProvider = ({
       isSynced={isSynced}
       lastSyncTime={lastSyncTime}
       error={connectionError}
+      isTransitioning={isTransitioning}
     >
       <SessionContext.Provider value={contextValue}>
         {children}
