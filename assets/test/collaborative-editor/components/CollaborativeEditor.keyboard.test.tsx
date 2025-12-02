@@ -297,6 +297,13 @@ vi.mock('../../../js/collaborative-editor/hooks/useUI', () => ({
     openGitHubSyncModal: vi.fn(),
     closeGitHubSyncModal: vi.fn(),
   }),
+  useTemplatePanel: () => ({
+    templates: [],
+    loading: false,
+    error: null,
+    searchQuery: '',
+    selectedTemplate: null,
+  }),
 }));
 
 // Mock AI Assistant hooks

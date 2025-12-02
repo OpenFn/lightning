@@ -7,17 +7,17 @@ import {
   useContext,
   useEffect,
   useRef,
-  useSyncExternalStore,
+  useState,
 } from 'react';
 
 import { useURLState } from '../../react/lib/use-url-state';
 import type { WorkflowState as YAMLWorkflowState } from '../../yaml/types';
-import { StoreContext } from '../contexts/StoreProvider';
 import { useResizablePanel } from '../hooks/useResizablePanel';
 import { useIsNewWorkflow, useProject } from '../hooks/useSessionContext';
 import {
   useIsRunPanelOpen,
   useRunPanelContext,
+  useTemplatePanel,
   useUICommands,
   useIsCreateWorkflowPanelCollapsed,
   useIsAIAssistantPanelOpen,
@@ -59,16 +59,7 @@ export function WorkflowEditor() {
   const isCreateWorkflowPanelCollapsed = useIsCreateWorkflowPanelCollapsed();
   const isAIAssistantPanelOpen = useIsAIAssistantPanelOpen();
 
-  // Get selected template from UI store
-  const context = useContext(StoreContext);
-  const selectedTemplate = context
-    ? useSyncExternalStore(
-        context.uiStore.subscribe,
-        context.uiStore.withSelector(
-          state => state.templatePanel.selectedTemplate
-        )
-      )
-    : null;
+  const { selectedTemplate } = useTemplatePanel();
 
   // Save/restore selected template using localStorage
   useEffect(() => {

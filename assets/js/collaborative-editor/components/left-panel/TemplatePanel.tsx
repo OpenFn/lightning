@@ -8,14 +8,7 @@
  * - Footer has Import button to switch to YAML import mode
  */
 
-import {
-  useCallback,
-  useContext,
-  useEffect,
-  useMemo,
-  useRef,
-  useSyncExternalStore,
-} from 'react';
+import { useCallback, useContext, useEffect, useMemo, useRef } from 'react';
 
 import { useURLState } from '../../../react/lib/use-url-state';
 import type { WorkflowState as YAMLWorkflowState } from '../../../yaml/types';
@@ -27,8 +20,8 @@ import { fetchTemplates } from '../../api/templates';
 import { BASE_TEMPLATES } from '../../constants/baseTemplates';
 import { StoreContext } from '../../contexts/StoreProvider';
 import { useSession } from '../../hooks/useSession';
-import { useUICommands } from '../../hooks/useUI';
-import type { Template, WorkflowTemplate } from '../../types/template';
+import { useTemplatePanel, useUICommands } from '../../hooks/useUI';
+import type { Template } from '../../types/template';
 import { Tooltip } from '../Tooltip';
 
 import { TemplateCard } from './TemplateCard';
@@ -40,11 +33,6 @@ interface TemplatePanelProps {
   onSave?: () => Promise<unknown>;
 }
 
-/* eslint-disable @typescript-eslint/no-unsafe-call */
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
-/* eslint-disable @typescript-eslint/no-unsafe-return */
-// The above disables are needed due to store type inference limitations
-// All store operations are type-safe at runtime but TypeScript can't infer through withSelector
 export function TemplatePanel({
   onImportClick,
   onImport,
@@ -61,28 +49,8 @@ export function TemplatePanel({
   const { openAIAssistantPanel } = useUICommands();
   const { searchParams, updateSearchParams } = useURLState();
 
-  // Type assertions needed due to withSelector generic type inference limitations
-  // The store returns the correct types at runtime but TypeScript can't infer them through the selector
-  const templates = useSyncExternalStore(
-    uiStore.subscribe,
-    uiStore.withSelector(state => state.templatePanel.templates)
-  ) as WorkflowTemplate[];
-  const loading = useSyncExternalStore(
-    uiStore.subscribe,
-    uiStore.withSelector(state => state.templatePanel.loading)
-  ) as boolean;
-  const error = useSyncExternalStore(
-    uiStore.subscribe,
-    uiStore.withSelector(state => state.templatePanel.error)
-  ) as string | null;
-  const searchQuery = useSyncExternalStore(
-    uiStore.subscribe,
-    uiStore.withSelector(state => state.templatePanel.searchQuery)
-  ) as string;
-  const selectedTemplate = useSyncExternalStore(
-    uiStore.subscribe,
-    uiStore.withSelector(state => state.templatePanel.selectedTemplate)
-  ) as Template | null;
+  const { templates, loading, error, searchQuery, selectedTemplate } =
+    useTemplatePanel();
 
   // Remember the last selected template before search
   const previousTemplateRef = useRef<Template | null>(null);
@@ -329,6 +297,3 @@ export function TemplatePanel({
     </div>
   );
 }
-/* eslint-enable @typescript-eslint/no-unsafe-call */
-/* eslint-enable @typescript-eslint/no-unsafe-member-access */
-/* eslint-enable @typescript-eslint/no-unsafe-return */

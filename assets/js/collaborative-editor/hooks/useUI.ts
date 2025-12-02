@@ -108,3 +108,17 @@ export const useAIAssistantInitialMessage = (): string | null => {
 
   return useSyncExternalStore(uiStore.subscribe, selectInitialMessage);
 };
+
+/**
+ * Hook to get the entire template panel state
+ * Returns properly typed state - no type assertions needed
+ */
+export const useTemplatePanel = (): UIState['templatePanel'] => {
+  const uiStore = useUIStore();
+
+  const selectTemplatePanel = uiStore.withSelector(
+    state => state.templatePanel
+  );
+
+  return useSyncExternalStore(uiStore.subscribe, selectTemplatePanel);
+};
