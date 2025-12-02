@@ -2,17 +2,10 @@
  * WorkflowEditor - Main workflow editing component
  */
 
-import {
-  useCallback,
-  useContext,
-  useEffect,
-  useRef,
-  useState,
-} from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { useURLState } from '../../react/lib/use-url-state';
 import type { WorkflowState as YAMLWorkflowState } from '../../yaml/types';
-import { StoreContext } from '../contexts/StoreProvider';
 import { useResizablePanel } from '../hooks/useResizablePanel';
 import { useIsNewWorkflow, useProject } from '../hooks/useSessionContext';
 import {
@@ -56,15 +49,14 @@ export function WorkflowEditor() {
     closeAIAssistantPanel,
     collapseCreateWorkflowPanel,
     expandCreateWorkflowPanel,
+    selectTemplate,
+    setTemplateSearchQuery,
   } = useUICommands();
   const isCreateWorkflowPanelCollapsed = useIsCreateWorkflowPanelCollapsed();
   const isAIAssistantPanelOpen = useIsAIAssistantPanelOpen();
 
   // Get selected template from UI store using Stuart's refactored hook
   const { selectedTemplate } = useTemplatePanel();
-
-  // Keep context for other UI store operations
-  const context = useContext(StoreContext);
 
   // Save/restore selected template using localStorage
   useEffect(() => {
@@ -79,12 +71,10 @@ export function WorkflowEditor() {
         console.warn('Failed to save template to localStorage:', error);
       }
 
-      // Clear from store and URL
-      if (context) {
-        context.uiStore.selectTemplate(null);
-      }
+      // Clear from store
+      selectTemplate(null);
     }
-  }, [isCreateWorkflowPanelCollapsed, selectedTemplate, context]);
+  }, [isCreateWorkflowPanelCollapsed, selectedTemplate, selectTemplate]);
 
   // Clear template-related URL params when panel collapses
   const prevPanelCollapsedRef = useRef(isCreateWorkflowPanelCollapsed);
@@ -322,8 +312,7 @@ export function WorkflowEditor() {
     if (
       isCreateWorkflowPanelCollapsed &&
       !isAIAssistantPanelOpen &&
-      isNewWorkflow &&
-      context
+      isNewWorkflow
     ) {
       clearCanvas();
     }
@@ -331,7 +320,6 @@ export function WorkflowEditor() {
     isCreateWorkflowPanelCollapsed,
     isAIAssistantPanelOpen,
     isNewWorkflow,
-    context,
     clearCanvas,
   ]);
 
@@ -340,8 +328,7 @@ export function WorkflowEditor() {
     if (
       !isCreateWorkflowPanelCollapsed &&
       leftPanelMethod === 'template' &&
-      !selectedTemplate &&
-      context
+      !selectedTemplate
     ) {
       try {
         const saved = localStorage.getItem('lastSelectedTemplate');
@@ -350,7 +337,7 @@ export function WorkflowEditor() {
             saved
           ) as typeof selectedTemplate;
           localStorage.removeItem('lastSelectedTemplate'); // Clear after restoring
-          context.uiStore.selectTemplate(templateToRestore);
+          selectTemplate(templateToRestore);
           updateSearchParams({ template: templateToRestore?.id ?? null });
         }
       } catch (error) {
@@ -361,7 +348,7 @@ export function WorkflowEditor() {
     isCreateWorkflowPanelCollapsed,
     leftPanelMethod,
     selectedTemplate,
-    context,
+    selectTemplate,
     updateSearchParams,
   ]);
 
@@ -588,10 +575,8 @@ export function WorkflowEditor() {
                         // Open in template mode
                         handleMethodChange('template');
                         // Clear search
-                        if (context) {
-                          context.uiStore.setTemplateSearchQuery('');
-                          updateSearchParams({ search: null });
-                        }
+                        setTemplateSearchQuery('');
+                        updateSearchParams({ search: null });
                         if (isCreateWorkflowPanelCollapsed) {
                           expandCreateWorkflowPanel();
                         }

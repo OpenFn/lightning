@@ -57,6 +57,9 @@ export const useUICommands = () => {
     collapseCreateWorkflowPanel: uiStore.collapseCreateWorkflowPanel,
     expandCreateWorkflowPanel: uiStore.expandCreateWorkflowPanel,
     toggleCreateWorkflowPanel: uiStore.toggleCreateWorkflowPanel,
+    // Template panel commands
+    selectTemplate: uiStore.selectTemplate,
+    setTemplateSearchQuery: uiStore.setTemplateSearchQuery,
   };
 };
 
