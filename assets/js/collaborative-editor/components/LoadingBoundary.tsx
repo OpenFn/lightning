@@ -25,14 +25,14 @@ export function LoadingBoundary({ children }: LoadingBoundaryProps) {
   const workflow = useWorkflowState(state => state.workflow);
   const sessionContextLoading = useSessionContextLoading();
 
-  // Wait for ALL sync conditions before rendering
+  // Wait for ALL sync conditions before rendering (initial load only)
   // - session.settled: Y.Doc has synced AND received first update from provider
   // - workflow !== null: WorkflowStore observers have populated state
   // - !sessionContextLoading: SessionContext (including latestSnapshotLockVersion) is loaded
   //
-  // Allow rendering if workflow data exists, even when not settled
-  // This enables viewing cached data during disconnection
-
+  // After initial hydration: only require workflow to exist
+  // - This prevents flickering during transitions (room migrations, reconnects)
+  // - Previous workflow data remains valid and visible during brief disconnects
   const hasWorkflow = workflow !== null;
   const fullReady = hasWorkflow && session.settled && !sessionContextLoading;
 
