@@ -2,11 +2,8 @@ defmodule LightningWeb.WebhooksController do
   use LightningWeb, :controller
 
   alias Lightning.Extensions.RateLimiting
-  alias Lightning.Extensions.UsageLimiting.Action
-  alias Lightning.Extensions.UsageLimiting.Context
   alias Lightning.Retry
   alias Lightning.Services.RateLimiter
-  alias Lightning.Services.UsageLimiter
   alias Lightning.Workflows
   alias Lightning.WorkOrders
 
@@ -156,10 +153,7 @@ defmodule LightningWeb.WebhooksController do
   end
 
   defp check_skip_run_creation(project_id) do
-    case UsageLimiter.limit_action(
-           %Action{type: :new_run},
-           %Context{project_id: project_id}
-         ) do
+    case WorkOrders.limit_run_creation(project_id) do
       :ok ->
         {:ok, false}
 
