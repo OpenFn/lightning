@@ -686,4 +686,198 @@ describe('useRunRetry - handleRetry', () => {
     );
     expect(onRunSubmitted).toHaveBeenCalledWith('run-456');
   });
+
+  describe('getLimits integration', () => {
+    test('calls getLimits after successful run', async () => {
+      const getLimitsMock = vi.fn();
+      const saveWorkflow = vi.fn().mockResolvedValue(undefined);
+
+      vi.mocked(dataclipApi.submitManualRun).mockResolvedValue({
+        data: {
+          workorder_id: 'wo-123',
+          run_id: 'run-123',
+          dataclip: null,
+        },
+      } as any);
+
+      const options: UseRunRetryOptions = {
+        workflowId: 'workflow-123',
+        projectId: 'project-123',
+        runContext: { type: 'job', id: 'job-123' },
+        selectedTab: 'empty',
+        saveWorkflow,
+        canRunWorkflow: true,
+        workflowRunTooltipMessage: '',
+        onRunSubmitted: vi.fn(),
+      };
+
+      // Create wrapper with getLimits mock
+      function createWrapperWithGetLimits(): React.ComponentType<{
+        children: React.ReactNode;
+      }> {
+        const sessionStore = createSessionStore();
+        const mockSocket = createMockSocket();
+        sessionStore.initializeSession(mockSocket, 'test:room', {
+          id: 'user-1',
+          name: 'Test User',
+          email: 'test@example.com',
+          color: '#ff0000',
+        });
+
+        const mockHistoryStore = {
+          subscribe: vi.fn(() => vi.fn()),
+          withSelector: vi.fn(
+            selector => () => selector({ activeRun: mockActiveRun })
+          ),
+        };
+
+        const mockSessionContextStore = {
+          getLimits: getLimitsMock,
+        };
+
+        const mockStoreValue: StoreContextValue = {
+          workflowStore: {} as any,
+          sessionContextStore: mockSessionContextStore as any,
+          adaptorStore: {} as any,
+          credentialStore: {} as any,
+          awarenessStore: {} as any,
+          historyStore: mockHistoryStore as any,
+          uiStore: {} as any,
+          editorPreferencesStore: {} as any,
+        };
+
+        return ({ children }: { children: React.ReactNode }) => (
+          <SessionContext.Provider
+            value={{
+              sessionId: 'test-session',
+              awareness: { clientId: 1 } as any,
+              sessionStore,
+            }}
+          >
+            <StoreContext.Provider value={mockStoreValue}>
+              {children}
+            </StoreContext.Provider>
+          </SessionContext.Provider>
+        );
+      }
+
+      const { result } = renderHook(() => useRunRetry(options), {
+        wrapper: createWrapperWithGetLimits(),
+      });
+
+      await act(async () => {
+        await result.current.handleRun();
+      });
+
+      // Verify getLimits was called after successful run
+      await waitFor(() => {
+        expect(getLimitsMock).toHaveBeenCalledWith('new_run');
+      });
+    });
+
+    test('calls getLimits after successful retry', async () => {
+      const getLimitsMock = vi.fn();
+      const saveWorkflow = vi.fn().mockResolvedValue(undefined);
+      const onRunSubmitted = vi.fn();
+
+      // Mock the fetch for retry
+      global.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({ data: { run_id: 'run-456' } }),
+      } as Response);
+
+      const run: RunDetail = {
+        id: 'run-123',
+        state: 'success',
+        steps: [
+          {
+            id: 'step-123',
+            job_id: 'job-123',
+            input_dataclip_id: 'dataclip-123',
+            started_at: '2024-01-01T00:00:00Z',
+            finished_at: '2024-01-01T00:01:00Z',
+            exit_reason: 'success',
+          } as StepDetail,
+        ],
+      } as RunDetail;
+
+      const options: UseRunRetryOptions = {
+        workflowId: 'workflow-123',
+        projectId: 'project-123',
+        runContext: { type: 'job', id: 'job-123' },
+        selectedTab: 'empty',
+        saveWorkflow,
+        canRunWorkflow: true,
+        workflowRunTooltipMessage: '',
+        onRunSubmitted,
+      };
+
+      // Create wrapper with getLimits mock
+      function createWrapperWithGetLimits(): React.ComponentType<{
+        children: React.ReactNode;
+      }> {
+        const sessionStore = createSessionStore();
+        const mockSocket = createMockSocket();
+        sessionStore.initializeSession(mockSocket, 'test:room', {
+          id: 'user-1',
+          name: 'Test User',
+          email: 'test@example.com',
+          color: '#ff0000',
+        });
+
+        const mockHistoryStore = {
+          subscribe: vi.fn(() => vi.fn()),
+          withSelector: vi.fn(
+            selector => () => selector({ activeRun: mockActiveRun })
+          ),
+        };
+
+        const mockSessionContextStore = {
+          getLimits: getLimitsMock,
+        };
+
+        const mockStoreValue: StoreContextValue = {
+          workflowStore: {} as any,
+          sessionContextStore: mockSessionContextStore as any,
+          adaptorStore: {} as any,
+          credentialStore: {} as any,
+          awarenessStore: {} as any,
+          historyStore: mockHistoryStore as any,
+          uiStore: {} as any,
+          editorPreferencesStore: {} as any,
+        };
+
+        return ({ children }: { children: React.ReactNode }) => (
+          <SessionContext.Provider
+            value={{
+              sessionId: 'test-session',
+              awareness: { clientId: 1 } as any,
+              sessionStore,
+            }}
+          >
+            <StoreContext.Provider value={mockStoreValue}>
+              {children}
+            </StoreContext.Provider>
+          </SessionContext.Provider>
+        );
+      }
+
+      act(() => {
+        setMockActiveRun(run);
+      });
+
+      const { result } = renderHook(() => useRunRetry(options), {
+        wrapper: createWrapperWithGetLimits(),
+      });
+
+      await act(async () => {
+        await result.current.handleRetry();
+      });
+
+      // Verify getLimits was called after successful retry
+      await waitFor(() => {
+        expect(getLimitsMock).toHaveBeenCalledWith('new_run');
+      });
+    });
+  });
 });

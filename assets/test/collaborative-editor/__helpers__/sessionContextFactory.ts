@@ -16,6 +16,7 @@
 
 import type {
   AppConfig,
+  Limits,
   Permissions,
   ProjectContext,
   ProjectRepoConnection,
@@ -63,6 +64,13 @@ export const mockPermissions: Permissions = {
   can_edit_workflow: true,
   can_run_workflow: true,
   can_write_webhook_auth_method: true,
+};
+
+/**
+ * Sample limits for testing
+ */
+export const mockLimits: Limits = {
+  runs: { allowed: true, message: null },
 };
 
 /**
@@ -115,10 +123,12 @@ export interface SessionContextResponse {
   project_repo_connection: ProjectRepoConnection | null;
   webhook_auth_methods: WebhookAuthMethod[];
   workflow_template: any | null;
+  limits?: Limits;
 }
 
 /**
  * Complete session context response for testing
+ * (limits omitted - defaults to allowed)
  */
 export const mockSessionContextResponse: SessionContextResponse = {
   user: mockUserContext,
@@ -133,6 +143,7 @@ export const mockSessionContextResponse: SessionContextResponse = {
 
 /**
  * Session context with null user (unauthenticated state)
+ * (limits omitted - defaults to allowed)
  */
 export const mockUnauthenticatedSessionContext: SessionContextResponse = {
   user: null,
@@ -147,6 +158,7 @@ export const mockUnauthenticatedSessionContext: SessionContextResponse = {
 
 /**
  * Updated session context for testing real-time updates
+ * (limits omitted - defaults to allowed)
  */
 export const mockUpdatedSessionContext: SessionContextResponse = {
   user: mockAlternativeUserContext,
@@ -269,6 +281,7 @@ export interface CreateSessionContextOptions {
   project_repo_connection?: Partial<ProjectRepoConnection> | null;
   webhook_auth_methods?: WebhookAuthMethod[];
   workflow_template?: WorkflowTemplate | null;
+  limits?: Partial<Limits>;
 }
 
 /**
@@ -344,6 +357,14 @@ export function createSessionContext(
     ...options.permissions,
   };
 
+  // Handle limits - optional, only include if explicitly provided
+  const limits: Limits | undefined = options.limits
+    ? {
+        runs: { allowed: true, message: null },
+        ...options.limits,
+      }
+    : undefined;
+
   // Handle project_repo_connection - null by default, merge if provided
   let project_repo_connection: ProjectRepoConnection | null = null;
   if (
@@ -359,7 +380,7 @@ export function createSessionContext(
     };
   }
 
-  return {
+  const response: any = {
     user,
     project,
     config,
@@ -369,6 +390,13 @@ export function createSessionContext(
     webhook_auth_methods: options.webhook_auth_methods ?? [],
     workflow_template: options.workflow_template ?? null,
   };
+
+  // Only add limits if provided
+  if (limits !== undefined) {
+    response.limits = limits;
+  }
+
+  return response;
 }
 
 /**
