@@ -773,7 +773,7 @@ export const createHistoryStore = (): HistoryStore => {
 
     // GUARD 2: Disconnect only if switching to DIFFERENT run
     if (state.activeRunChannel && state.activeRunId !== runId) {
-      _closeRunViewer();
+      _switchingFromRun();
     }
 
     if (!_channelProvider?.socket) {
@@ -874,6 +874,22 @@ export const createHistoryStore = (): HistoryStore => {
     });
   };
 
+  const _switchingFromRun = () => {
+    // Leave the curren run channel before switch happens
+    if (state.activeRunChannel) {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any
+      (state.activeRunChannel as any).leave();
+    }
+
+    state = produce(state, draft => {
+      // only clear the necessary run stuff before switching
+      draft.activeRunChannel = null;
+      draft.activeRunId = null;
+      draft.activeRunError = null;
+    });
+    notify('_switchingFromRun');
+  };
+
   /**
    * Disconnect from active run and clean up channel
    */
@@ -952,6 +968,7 @@ export const createHistoryStore = (): HistoryStore => {
     _connectChannel,
     _viewRun,
     _closeRunViewer,
+    _switchingFromRun,
     _setActiveRunForTesting,
   };
 };
