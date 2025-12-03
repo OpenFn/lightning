@@ -11,6 +11,7 @@ import {
   useMemo,
   useEffect,
   useId,
+  useCallback,
 } from 'react';
 
 import _logger from '#/utils/logger';
@@ -131,7 +132,7 @@ export const useHistoryCommands = () => {
  * const runId = useRunIdFromURL(); // string | null
  * const run = useFollowRun(runId); // Automatic connect/disconnect
  */
-export const useFollowRun = (runId: string | null): RunDetail | null => {
+export const useFollowRun = (runId: string | null) => {
   const historyStore: HistoryStore = useHistoryStore();
   const run = useActiveRun();
 
@@ -140,16 +141,15 @@ export const useFollowRun = (runId: string | null): RunDetail | null => {
       // Connect to run when runId provided
       historyStore._viewRun(runId);
     }
+  }, [runId]);
 
-    return () => {
-      // Disconnect on unmount or when runId changes
-      if (runId) {
-        historyStore._closeRunViewer();
-      }
-    };
-  }, [runId, historyStore]);
+  // whether a run should be cleared can't be handled well in this useEffect. the user
+  // of the useEffect should determine that.
+  const clearRun = useCallback(() => {
+    historyStore._closeRunViewer();
+  }, []);
 
-  return run;
+  return { run, clearRun };
 };
 
 /**

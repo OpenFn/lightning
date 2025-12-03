@@ -175,9 +175,22 @@ export function FullScreenIDE({
     setManuallyUnselectedDataclip(dataclip === null);
   }, []);
 
+  // Declaratively connect to run channel when runIdFromURL changes
+  const { run: currentRun, clearRun } = useFollowRun(runIdFromURL);
+
+  const setFollowRunIdHandler = useCallback(
+    (runId: string | null) => {
+      if (!runId) {
+        clearRun();
+      }
+      setFollowRunId(runId);
+    },
+    [clearRun]
+  );
+
   const handleRunSubmitted = useCallback(
     (runId: string, dataclip?: Dataclip) => {
-      setFollowRunId(runId);
+      setFollowRunIdHandler(runId);
       updateSearchParams({ run: runId });
       setManuallyUnselectedDataclip(false);
 
@@ -192,11 +205,8 @@ export function FullScreenIDE({
         rightPanelRef.current.expand();
       }
     },
-    [updateSearchParams]
+    [updateSearchParams, setFollowRunIdHandler]
   );
-
-  // Declaratively connect to run channel when runIdFromURL changes
-  const currentRun = useFollowRun(runIdFromURL);
 
   // Check if the currently selected job matches the loaded run
   const jobMatchesRun = useJobMatchesRun(currentJob?.id || null);
@@ -379,7 +389,7 @@ export function FullScreenIDE({
 
   useEffect(() => {
     if (runIdFromURL && runIdFromURL !== followRunId) {
-      setFollowRunId(runIdFromURL);
+      setFollowRunIdHandler(runIdFromURL);
 
       if (rightPanelRef.current?.isCollapsed()) {
         rightPanelRef.current.expand();
@@ -999,7 +1009,7 @@ export function FullScreenIDE({
                             <RunBadge
                               runId={followRunId}
                               onClose={() => {
-                                setFollowRunId(null);
+                                setFollowRunIdHandler(null);
                                 updateSearchParams({ run: null });
                               }}
                               variant={
@@ -1063,7 +1073,7 @@ export function FullScreenIDE({
                     <RunViewerErrorBoundary>
                       <RunViewerPanel
                         followRunId={followRunId}
-                        onClearFollowRun={() => setFollowRunId(null)}
+                        onClearFollowRun={() => setFollowRunIdHandler(null)}
                         activeTab={activeRightTab}
                         onTabChange={setActiveRightTab}
                       />
