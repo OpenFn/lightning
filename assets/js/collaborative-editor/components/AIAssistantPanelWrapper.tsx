@@ -154,6 +154,7 @@ export function AIAssistantPanelWrapper() {
   const [isResizing, setIsResizing] = useState(false);
   const startXRef = useRef<number>(0);
   const startWidthRef = useRef<number>(0);
+  const widthRef = useRef<number>(width);
 
   /**
    * isSyncingRef prevents re-entrant URL updates during panel state changes.
@@ -188,6 +189,11 @@ export function AIAssistantPanelWrapper() {
     }, 0);
   }, [isAIAssistantPanelOpen, updateSearchParams]);
 
+  // Keep widthRef in sync with width state for use in event handlers
+  useEffect(() => {
+    widthRef.current = width;
+  }, [width]);
+
   useEffect(() => {
     if (!isResizing) return;
 
@@ -198,11 +204,16 @@ export function AIAssistantPanelWrapper() {
         Math.min(800, startWidthRef.current + deltaX)
       );
       setWidth(newWidth);
+      widthRef.current = newWidth;
     };
 
     const handleMouseUp = () => {
       setIsResizing(false);
-      localStorage.setItem('ai-assistant-panel-width', width.toString());
+      // Use ref to get current width, avoiding stale closure
+      localStorage.setItem(
+        'ai-assistant-panel-width',
+        widthRef.current.toString()
+      );
     };
 
     document.addEventListener('mousemove', handleMouseMove);
@@ -212,7 +223,7 @@ export function AIAssistantPanelWrapper() {
       document.removeEventListener('mousemove', handleMouseMove);
       document.removeEventListener('mouseup', handleMouseUp);
     };
-  }, [isResizing, width]);
+  }, [isResizing]);
 
   const handleMouseDown = (e: React.MouseEvent) => {
     e.preventDefault();
