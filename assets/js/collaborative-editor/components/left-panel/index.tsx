@@ -30,7 +30,7 @@ export function LeftPanel({
     onMethodChange('import');
   };
 
-  const handleSwicthToTemplate = () => {
+  const handleSwitchToTemplate = () => {
     onMethodChange('template');
   };
 
@@ -50,7 +50,7 @@ export function LeftPanel({
         <YAMLImportPanel
           onImport={onImport}
           onSave={onSave}
-          onBack={handleSwicthToTemplate}
+          onBack={handleSwitchToTemplate}
         />
       )}
       {currentMethod === 'ai' && (

@@ -6,14 +6,15 @@ interface TemplateSearchInputProps {
   value: string;
   onChange: (value: string) => void;
   placeholder?: string;
-  autoFocus?: boolean;
+  /** Focus the input when the component mounts (uses programmatic focus for accessibility) */
+  focusOnMount?: boolean;
 }
 
 export function TemplateSearchInput({
   value,
   onChange,
   placeholder = 'Search templates...',
-  autoFocus = false,
+  focusOnMount = false,
 }: TemplateSearchInputProps) {
   const [localValue, setLocalValue] = useState(value);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -23,16 +24,16 @@ export function TemplateSearchInput({
     setLocalValue(value);
   }, [value]);
 
-  // Auto-focus the input when autoFocus is true
+  // Programmatically focus the input when focusOnMount is true
   useEffect(() => {
-    if (autoFocus && inputRef.current) {
+    if (focusOnMount && inputRef.current) {
       // Small delay to ensure the panel animation has started
       const timer = setTimeout(() => {
         inputRef.current?.focus();
       }, 100);
       return () => clearTimeout(timer);
     }
-  }, [autoFocus]);
+  }, [focusOnMount]);
 
   const debouncedOnChange = useCallback(
     (newValue: string) => {

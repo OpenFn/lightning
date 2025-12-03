@@ -2,7 +2,7 @@
  * WorkflowEditor - Main workflow editing component
  */
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 
 import { useURLState } from '../../react/lib/use-url-state';
 import type { WorkflowState as YAMLWorkflowState } from '../../yaml/types';
@@ -54,22 +54,8 @@ export function WorkflowEditor() {
   const isCreateWorkflowPanelCollapsed = useIsCreateWorkflowPanelCollapsed();
   const isAIAssistantPanelOpen = useIsAIAssistantPanelOpen();
 
-  // Get selected template from UI store
-  const { selectedTemplate } = useTemplatePanel();
-
-  // Clear template-related URL params when panel collapses (but keep values in store)
-  const prevPanelCollapsedRef = useRef(isCreateWorkflowPanelCollapsed);
-  useEffect(() => {
-    const wasExpanded = !prevPanelCollapsedRef.current;
-    const isNowCollapsed = isCreateWorkflowPanelCollapsed;
-
-    if (wasExpanded && isNowCollapsed) {
-      // Panel just collapsed - clear template URL params
-      updateSearchParams({ template: null, search: null });
-    }
-
-    prevPanelCollapsedRef.current = isCreateWorkflowPanelCollapsed;
-  }, [isCreateWorkflowPanelCollapsed, updateSearchParams]);
+  // Get selected template and search query from UI store
+  const { selectedTemplate, searchQuery } = useTemplatePanel();
 
   const isSyncingRef = useRef(false);
   const isInitialMountRef = useRef(true);
@@ -230,6 +216,38 @@ export function WorkflowEditor() {
 
   const leftPanelMethod = currentMethod || 'template';
 
+  // Sync URL params when panel collapses/expands (but keep values in store)
+  const prevPanelCollapsedRef = useRef(isCreateWorkflowPanelCollapsed);
+  useEffect(() => {
+    const wasExpanded = !prevPanelCollapsedRef.current;
+    const isNowCollapsed = isCreateWorkflowPanelCollapsed;
+    const wasCollapsed = prevPanelCollapsedRef.current;
+    const isNowExpanded = !isCreateWorkflowPanelCollapsed;
+
+    if (wasExpanded && isNowCollapsed) {
+      // Panel just collapsed - clear template URL params
+      updateSearchParams({ template: null, search: null });
+    } else if (
+      wasCollapsed &&
+      isNowExpanded &&
+      leftPanelMethod === 'template'
+    ) {
+      // Panel just expanded - restore URL params from store values
+      updateSearchParams({
+        template: selectedTemplate?.id ?? null,
+        search: searchQuery || null,
+      });
+    }
+
+    prevPanelCollapsedRef.current = isCreateWorkflowPanelCollapsed;
+  }, [
+    isCreateWorkflowPanelCollapsed,
+    updateSearchParams,
+    leftPanelMethod,
+    selectedTemplate,
+    searchQuery,
+  ]);
+
   // Clear template params when in import/ai mode (handles page refresh)
   useEffect(() => {
     const templateParam = searchParams.get('template');
@@ -260,60 +278,50 @@ export function WorkflowEditor() {
         workflowStore.removeJob(job.id);
       });
 
-      // Remove all triggers by clearing the array directly
-      // Access ydoc through the store's internal structure
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const storeWithYdoc = workflowStore as any;
-      if (storeWithYdoc.ydoc) {
-        const triggersArray = storeWithYdoc.ydoc.getArray('triggers');
-        storeWithYdoc.ydoc.transact(() => {
-          triggersArray.delete(0, triggersArray.length);
-        });
-      }
+      // Remove all triggers using the store method
+      workflowStore.clearAllTriggers();
     }
   }, [workflow.jobs, workflow.triggers, workflow.edges, workflowStore]);
 
-  // Clear canvas when AI Assistant opens (only on the transition from closed to open)
+  /**
+   * Consolidated canvas clearing effect for new workflows.
+   *
+   * Clears the canvas when:
+   * 1. AI Assistant panel opens (to prepare for AI-generated workflow)
+   * 2. User switches between template/import methods while panel is open
+   * 3. Both create panel and AI panel are closed (reset to empty state)
+   */
   const prevAIPanelOpenRef = useRef(isAIAssistantPanelOpen);
-  useEffect(() => {
-    const wasJustOpened = !prevAIPanelOpenRef.current && isAIAssistantPanelOpen;
-    if (wasJustOpened && isNewWorkflow) {
-      clearCanvas();
-    }
-    prevAIPanelOpenRef.current = isAIAssistantPanelOpen;
-  }, [isAIAssistantPanelOpen, isNewWorkflow, clearCanvas]);
-
-  // Clear canvas when switching between template and import methods
   const prevMethodRef = useRef(leftPanelMethod);
   useEffect(() => {
-    if (
+    if (!isNewWorkflow) {
+      // Update refs but don't clear for existing workflows
+      prevAIPanelOpenRef.current = isAIAssistantPanelOpen;
+      prevMethodRef.current = leftPanelMethod;
+      return;
+    }
+
+    const aiPanelJustOpened =
+      !prevAIPanelOpenRef.current && isAIAssistantPanelOpen;
+    const methodChanged =
       !isCreateWorkflowPanelCollapsed &&
-      isNewWorkflow &&
-      prevMethodRef.current !== leftPanelMethod
-    ) {
+      prevMethodRef.current !== leftPanelMethod;
+    const bothPanelsClosed =
+      isCreateWorkflowPanelCollapsed && !isAIAssistantPanelOpen;
+
+    // Clear canvas on any of these transitions
+    if (aiPanelJustOpened || methodChanged || bothPanelsClosed) {
       clearCanvas();
     }
+
+    // Update refs for next comparison
+    prevAIPanelOpenRef.current = isAIAssistantPanelOpen;
     prevMethodRef.current = leftPanelMethod;
   }, [
-    leftPanelMethod,
-    isCreateWorkflowPanelCollapsed,
-    isNewWorkflow,
-    clearCanvas,
-  ]);
-
-  // Clear canvas when both create panel and AI panel are closed
-  useEffect(() => {
-    if (
-      isCreateWorkflowPanelCollapsed &&
-      !isAIAssistantPanelOpen &&
-      isNewWorkflow
-    ) {
-      clearCanvas();
-    }
-  }, [
-    isCreateWorkflowPanelCollapsed,
     isAIAssistantPanelOpen,
     isNewWorkflow,
+    leftPanelMethod,
+    isCreateWorkflowPanelCollapsed,
     clearCanvas,
   ]);
 
@@ -350,17 +358,22 @@ export function WorkflowEditor() {
     }
   };
 
-  const handleImport = async (workflowState: YAMLWorkflowState) => {
-    try {
-      const validatedState =
-        await workflowStore.validateWorkflowName(workflowState);
-
-      workflowStore.importWorkflow(validatedState);
-    } catch (error) {
-      console.error('Failed to validate workflow name:', error);
-      workflowStore.importWorkflow(workflowState);
-    }
-  };
+  const handleImport = useCallback(
+    (workflowState: YAMLWorkflowState) => {
+      // Fire-and-forget async validation - import happens synchronously after validation
+      void (async () => {
+        try {
+          const validatedState =
+            await workflowStore.validateWorkflowName(workflowState);
+          workflowStore.importWorkflow(validatedState);
+        } catch (error) {
+          console.error('Failed to validate workflow name:', error);
+          workflowStore.importWorkflow(workflowState);
+        }
+      })();
+    },
+    [workflowStore]
+  );
 
   const handleSaveAndClose = async () => {
     await saveWorkflow();

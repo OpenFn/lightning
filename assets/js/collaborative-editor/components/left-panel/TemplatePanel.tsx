@@ -76,14 +76,17 @@ export function TemplatePanel({
     };
   }, [channel, uiStore]);
 
-  // Restore search query from URL on mount
+  // Restore search query from URL on initial mount only
+  const hasRestoredSearchRef = useRef(false);
   useEffect(() => {
+    if (hasRestoredSearchRef.current) return;
+
     const urlSearchQuery = searchParams.get('search');
     if (urlSearchQuery && urlSearchQuery !== searchQuery) {
       uiStore.setTemplateSearchQuery(urlSearchQuery);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Only run on mount
+    hasRestoredSearchRef.current = true;
+  }, [searchParams, searchQuery, uiStore]);
 
   const allTemplates: Template[] = useMemo(() => {
     const combined = [...BASE_TEMPLATES, ...templates];
@@ -199,7 +202,7 @@ export function TemplatePanel({
           value={searchQuery}
           onChange={handleSearchChange}
           placeholder="Search templates by name, description, or tags..."
-          autoFocus
+          focusOnMount
         />
       </div>
 
@@ -246,9 +249,9 @@ export function TemplatePanel({
                   <button
                     type="button"
                     onClick={() => {
-                      // Clear any existing AI session
+                      // Clear any existing AI session and disconnect
                       aiStore.disconnect();
-                      aiStore._clearSession();
+                      aiStore.clearSession();
 
                       // Close the template panel before opening AI Assistant
                       collapseCreateWorkflowPanel();

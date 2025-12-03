@@ -51,6 +51,13 @@ export function useResizablePanel({
   const [isResizing, setIsResizing] = useState(false);
   const startXRef = useRef<number>(0);
   const startWidthRef = useRef<number>(0);
+  // Track current width in a ref to avoid stale closure in mouseup handler
+  const widthRef = useRef<number>(width);
+
+  // Keep widthRef in sync with width state
+  useEffect(() => {
+    widthRef.current = width;
+  }, [width]);
 
   useEffect(() => {
     if (!isResizing) return;
@@ -70,11 +77,13 @@ export function useResizablePanel({
         Math.min(maxWidth, startWidthRef.current + deltaX)
       );
       setWidth(newWidth);
+      widthRef.current = newWidth;
     };
 
     const handleMouseUp = () => {
       setIsResizing(false);
-      localStorage.setItem(storageKey, width.toString());
+      // Use ref to get current width, avoiding stale closure
+      localStorage.setItem(storageKey, widthRef.current.toString());
     };
 
     document.addEventListener('mousemove', handleMouseMove);
@@ -86,7 +95,6 @@ export function useResizablePanel({
     };
   }, [
     isResizing,
-    width,
     storageKey,
     minPercent,
     maxPercent,
