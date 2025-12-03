@@ -161,9 +161,12 @@ export const useAISession = ({
 
     // If no session to subscribe to, initialize context for session list loading
     if (!sessionIdFromURL) {
-      // Initialize context to ensure sessionType is correct after mode changes
-      // Only update if mode actually changed to avoid unnecessary store notifications
-      if (state.sessionType !== mode) {
+      // Initialize context when mode changes OR when job changes within job_code mode
+      // The jobChanged check ensures context is updated when switching between jobs
+      const needsContextUpdate =
+        state.sessionType !== mode || modeChanged || jobChanged;
+
+      if (needsContextUpdate) {
         aiStore._initializeContext(mode, context);
       }
       return;

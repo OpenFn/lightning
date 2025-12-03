@@ -80,14 +80,14 @@ describe('useAIAssistant Hooks', () => {
 
       expect(result.current).toHaveProperty('connect');
       expect(result.current).toHaveProperty('disconnect');
-      expect(result.current).toHaveProperty('sendMessage');
+      expect(result.current).toHaveProperty('setMessageSending');
       expect(result.current).toHaveProperty('retryMessage');
       expect(result.current).toHaveProperty('markDisclaimerRead');
       expect(result.current).toHaveProperty('clearSession');
 
       expect(typeof result.current.connect).toBe('function');
       expect(typeof result.current.disconnect).toBe('function');
-      expect(typeof result.current.sendMessage).toBe('function');
+      expect(typeof result.current.setMessageSending).toBe('function');
       expect(typeof result.current.retryMessage).toBe('function');
       expect(typeof result.current.markDisclaimerRead).toBe('function');
       expect(typeof result.current.clearSession).toBe('function');

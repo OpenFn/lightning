@@ -29,7 +29,7 @@ export const useAICommands = () => {
   return {
     connect: store.connect,
     disconnect: store.disconnect,
-    sendMessage: store.sendMessage,
+    setMessageSending: store.setMessageSending,
     retryMessage: store.retryMessage,
     markDisclaimerRead: store.markDisclaimerRead,
     clearSession: store.clearSession,

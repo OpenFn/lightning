@@ -14,6 +14,7 @@ import {
 import { ChatInput } from './ChatInput';
 import { DisclaimerScreen } from './DisclaimerScreen';
 import { SessionList } from './SessionList';
+import { Tooltip } from './Tooltip';
 
 interface AIAssistantPanelProps {
   isOpen: boolean;
@@ -340,25 +341,27 @@ export function AIAssistantPanel({
                 </div>
               )}
             </div>
-            <button
-              type="button"
-              onClick={handleClose}
-              className={cn(
-                'inline-flex items-center justify-center',
-                'h-8 w-8 rounded-md',
-                'text-gray-400 hover:text-gray-600 hover:bg-gray-100',
-                'focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500',
-                'transition-all duration-150',
-                'flex-shrink-0'
-              )}
-              aria-label={
-                sessionId
-                  ? 'Close session and return to sessions list'
-                  : 'Close AI Assistant'
-              }
+            <Tooltip
+              content={sessionId ? 'Close current session' : 'Close assistant'}
             >
-              <span className="hero-x-mark h-5 w-5" />
-            </button>
+              <button
+                type="button"
+                onClick={handleClose}
+                className={cn(
+                  'inline-flex items-center justify-center',
+                  'h-8 w-8 rounded-md',
+                  'text-gray-400 hover:text-gray-600 hover:bg-gray-100',
+                  'focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500',
+                  'transition-all duration-150',
+                  'flex-shrink-0'
+                )}
+                aria-label={
+                  sessionId ? 'Close current session' : 'Close assistant'
+                }
+              >
+                <span className="hero-x-mark h-5 w-5" />
+              </button>
+            </Tooltip>
           </div>
         </div>
       </div>

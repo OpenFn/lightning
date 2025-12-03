@@ -122,13 +122,7 @@ export function AIAssistantPanelWrapper() {
     prevIDEOpenRef.current = isIDEOpen;
   }, [isIDEOpen]);
 
-  useKeyboardShortcut(
-    '$mod+k',
-    () => {
-      toggleAIAssistantPanel();
-    },
-    0
-  );
+  useKeyboardShortcut('$mod+k', toggleAIAssistantPanel, 0);
 
   const aiStore = useAIStore();
   const {
@@ -179,9 +173,16 @@ export function AIAssistantPanelWrapper() {
     if (isSyncingRef.current) return;
 
     isSyncingRef.current = true;
-    updateSearchParams({
-      chat: isAIAssistantPanelOpen ? 'true' : null,
-    });
+    if (isAIAssistantPanelOpen) {
+      updateSearchParams({ chat: 'true' });
+    } else {
+      // When closing, clear chat param and session params
+      updateSearchParams({
+        chat: null,
+        'w-chat': null,
+        'j-chat': null,
+      });
+    }
     setTimeout(() => {
       isSyncingRef.current = false;
     }, 0);
@@ -262,6 +263,8 @@ export function AIAssistantPanelWrapper() {
   });
 
   useEffect(() => {
+    // Don't sync session to URL if panel is closed
+    if (!isAIAssistantPanelOpen) return;
     if (!sessionId || !aiMode) return;
 
     const state = aiStore.getSnapshot();
@@ -285,13 +288,18 @@ export function AIAssistantPanelWrapper() {
         [otherParamName]: null, // Clear the other mode's session
       });
     }
-  }, [sessionId, aiMode, searchParams, updateSearchParams, aiStore]);
+  }, [
+    isAIAssistantPanelOpen,
+    sessionId,
+    aiMode,
+    searchParams,
+    updateSearchParams,
+    aiStore,
+  ]);
 
-  // NOTE: We intentionally DO NOT clear URL params when panel closes.
-  // The session ID in the URL serves as "memory" so reopening the panel
-  // resumes the previous session. The registry handles channel cleanup
-  // via useAISession's cleanup effect, and will recreate the channel
-  // when the panel reopens with the same session ID in the URL.
+  // Close handler - URL cleanup happens automatically via the effect above
+  // when isAIAssistantPanelOpen becomes false
+  const handleClosePanel = closeAIAssistantPanel;
 
   // Push job context updates to backend when job body/adaptor/name changes
   // This ensures the AI has access to the current code when "Attach code" is checked
@@ -418,7 +426,7 @@ export function AIAssistantPanelWrapper() {
         }
 
         // Mark message as sending in store
-        aiStore.sendMessage(content);
+        aiStore.setMessageSending();
         return;
       }
 
@@ -447,7 +455,7 @@ export function AIAssistantPanelWrapper() {
       }
 
       // Update store state and send through registry
-      aiStore.sendMessage(content);
+      aiStore.setMessageSending();
       sendMessageToChannel(content, options);
     },
     [
@@ -667,7 +675,7 @@ export function AIAssistantPanelWrapper() {
           <div className="flex-1 overflow-hidden">
             <AIAssistantPanel
               isOpen={isAIAssistantPanelOpen}
-              onClose={closeAIAssistantPanel}
+              onClose={handleClosePanel}
               onNewConversation={handleNewConversation}
               onSessionSelect={handleSessionSelect}
               onShowSessions={handleShowSessions}

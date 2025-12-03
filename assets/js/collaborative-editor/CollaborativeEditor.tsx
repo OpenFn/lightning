@@ -1,4 +1,4 @@
-import { useMemo, useCallback, useEffect } from 'react';
+import { useMemo, useCallback } from 'react';
 
 import { SocketProvider } from '../react/contexts/SocketProvider';
 import { useURLState } from '../react/lib/use-url-state';
@@ -158,8 +158,6 @@ function IDEWrapper({ parentProjectId, parentProjectName }: IDEWrapperProps) {
 
   const isIDEOpen = searchParams.get('panel') === 'editor';
   const selectedJobId = searchParams.get('job');
-
-  useEffect(() => {}, [isIDEOpen, selectedJobId, searchParams]);
 
   const handleCloseIDE = useCallback(() => {
     updateSearchParams({ panel: null, job: null });

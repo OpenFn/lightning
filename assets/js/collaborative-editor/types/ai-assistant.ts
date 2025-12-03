@@ -134,7 +134,7 @@ export interface AIAssistantStore {
   ) => void;
   disconnect: () => void;
 
-  sendMessage: (content: string, options?: MessageOptions) => void;
+  setMessageSending: () => void;
   retryMessage: (messageId: string) => void;
 
   clearSession: () => void;

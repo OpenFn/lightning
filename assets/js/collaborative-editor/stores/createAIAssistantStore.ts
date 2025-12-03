@@ -59,7 +59,6 @@ import type {
   ConnectionState,
   JobCodeContext,
   Message,
-  MessageOptions,
   Session,
   SessionType,
   WorkflowTemplateContext,
@@ -178,15 +177,17 @@ export const createAIAssistantStore = (): AIAssistantStore => {
   };
 
   /**
-   * Send a message to the AI
+   * Mark the store as currently sending a message.
+   * Updates UI state (isSending, isLoading) to show loading indicators.
+   * The actual message sending is handled by the channel registry.
    */
-  const sendMessage = (_content: string, _options?: MessageOptions) => {
+  const setMessageSending = () => {
     state = produce(state, draft => {
       draft.isSending = true;
       draft.isLoading = true;
     });
 
-    notify('sendMessage');
+    notify('setMessageSending');
   };
 
   /**
@@ -554,7 +555,7 @@ export const createAIAssistantStore = (): AIAssistantStore => {
     // Commands
     connect,
     disconnect,
-    sendMessage,
+    setMessageSending,
     retryMessage,
     markDisclaimerRead,
     clearSession,
