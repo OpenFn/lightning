@@ -49,34 +49,15 @@ export function WorkflowEditor() {
     closeAIAssistantPanel,
     collapseCreateWorkflowPanel,
     expandCreateWorkflowPanel,
-    selectTemplate,
     setTemplateSearchQuery,
   } = useUICommands();
   const isCreateWorkflowPanelCollapsed = useIsCreateWorkflowPanelCollapsed();
   const isAIAssistantPanelOpen = useIsAIAssistantPanelOpen();
 
-  // Get selected template from UI store using Stuart's refactored hook
+  // Get selected template from UI store
   const { selectedTemplate } = useTemplatePanel();
 
-  // Save/restore selected template using localStorage
-  useEffect(() => {
-    if (isCreateWorkflowPanelCollapsed && selectedTemplate) {
-      // Save template to localStorage when panel closes
-      try {
-        localStorage.setItem(
-          'lastSelectedTemplate',
-          JSON.stringify(selectedTemplate)
-        );
-      } catch (error) {
-        console.warn('Failed to save template to localStorage:', error);
-      }
-
-      // Clear from store
-      selectTemplate(null);
-    }
-  }, [isCreateWorkflowPanelCollapsed, selectedTemplate, selectTemplate]);
-
-  // Clear template-related URL params when panel collapses
+  // Clear template-related URL params when panel collapses (but keep values in store)
   const prevPanelCollapsedRef = useRef(isCreateWorkflowPanelCollapsed);
   useEffect(() => {
     const wasExpanded = !prevPanelCollapsedRef.current;
@@ -334,35 +315,6 @@ export function WorkflowEditor() {
     isAIAssistantPanelOpen,
     isNewWorkflow,
     clearCanvas,
-  ]);
-
-  // Restore selected template when reopening in template mode
-  useEffect(() => {
-    if (
-      !isCreateWorkflowPanelCollapsed &&
-      leftPanelMethod === 'template' &&
-      !selectedTemplate
-    ) {
-      try {
-        const saved = localStorage.getItem('lastSelectedTemplate');
-        if (saved) {
-          const templateToRestore = JSON.parse(
-            saved
-          ) as typeof selectedTemplate;
-          localStorage.removeItem('lastSelectedTemplate'); // Clear after restoring
-          selectTemplate(templateToRestore);
-          updateSearchParams({ template: templateToRestore?.id ?? null });
-        }
-      } catch (error) {
-        console.warn('Failed to restore template from localStorage:', error);
-      }
-    }
-  }, [
-    isCreateWorkflowPanelCollapsed,
-    leftPanelMethod,
-    selectedTemplate,
-    selectTemplate,
-    updateSearchParams,
   ]);
 
   // Sync method to URL (similar to AI panel's chat param sync)

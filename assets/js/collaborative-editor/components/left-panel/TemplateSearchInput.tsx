@@ -6,19 +6,33 @@ interface TemplateSearchInputProps {
   value: string;
   onChange: (value: string) => void;
   placeholder?: string;
+  autoFocus?: boolean;
 }
 
 export function TemplateSearchInput({
   value,
   onChange,
   placeholder = 'Search templates...',
+  autoFocus = false,
 }: TemplateSearchInputProps) {
   const [localValue, setLocalValue] = useState(value);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     setLocalValue(value);
   }, [value]);
+
+  // Auto-focus the input when autoFocus is true
+  useEffect(() => {
+    if (autoFocus && inputRef.current) {
+      // Small delay to ensure the panel animation has started
+      const timer = setTimeout(() => {
+        inputRef.current?.focus();
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [autoFocus]);
 
   const debouncedOnChange = useCallback(
     (newValue: string) => {
@@ -57,6 +71,7 @@ export function TemplateSearchInput({
         <span className="hero-magnifying-glass h-5 w-5 text-gray-400" />
       </div>
       <input
+        ref={inputRef}
         type="text"
         value={localValue}
         onChange={handleChange}

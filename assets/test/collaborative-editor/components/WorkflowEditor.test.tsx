@@ -194,6 +194,13 @@ vi.mock('../../../js/collaborative-editor/hooks/useUI', () => ({
   useUICommands: () => ({
     openRunPanel: mockOpenRunPanel,
     closeRunPanel: mockCloseRunPanel,
+    toggleCreateWorkflowPanel: vi.fn(),
+    openAIAssistantPanel: vi.fn(),
+    closeAIAssistantPanel: vi.fn(),
+    collapseCreateWorkflowPanel: vi.fn(),
+    expandCreateWorkflowPanel: vi.fn(),
+    selectTemplate: vi.fn(),
+    setTemplateSearchQuery: vi.fn(),
   }),
   useTemplatePanel: () => ({
     templates: [],
@@ -202,6 +209,8 @@ vi.mock('../../../js/collaborative-editor/hooks/useUI', () => ({
     searchQuery: '',
     selectedTemplate: null,
   }),
+  useIsCreateWorkflowPanelCollapsed: () => true,
+  useIsAIAssistantPanelOpen: () => false,
 }));
 
 // Mock workflow hooks with controllable node selection

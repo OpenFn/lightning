@@ -199,6 +199,7 @@ export function TemplatePanel({
           value={searchQuery}
           onChange={handleSearchChange}
           placeholder="Search templates by name, description, or tags..."
+          autoFocus
         />
       </div>
 

@@ -15,6 +15,24 @@ vi.mock('../../../../js/collaborative-editor/hooks/useAwareness', () => ({
   useAwareness: () => [],
 }));
 
+// Mock UI hooks
+vi.mock('../../../../js/collaborative-editor/hooks/useUI', () => ({
+  useUICommands: () => ({
+    collapseCreateWorkflowPanel: vi.fn(),
+    expandCreateWorkflowPanel: vi.fn(),
+    toggleCreateWorkflowPanel: vi.fn(),
+    openRunPanel: vi.fn(),
+    closeRunPanel: vi.fn(),
+    openAIAssistantPanel: vi.fn(),
+    closeAIAssistantPanel: vi.fn(),
+    toggleAIAssistantPanel: vi.fn(),
+    openGitHubSyncModal: vi.fn(),
+    closeGitHubSyncModal: vi.fn(),
+    selectTemplate: vi.fn(),
+    setTemplateSearchQuery: vi.fn(),
+  }),
+}));
+
 const validYAML = `
 name: Test Workflow
 jobs:

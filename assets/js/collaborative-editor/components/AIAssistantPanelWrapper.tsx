@@ -116,6 +116,7 @@ export function AIAssistantPanelWrapper() {
     closeAIAssistantPanel,
     toggleAIAssistantPanel,
     clearAIAssistantInitialMessage,
+    collapseCreateWorkflowPanel,
   } = useUICommands();
   const { updateSearchParams, searchParams } = useURLState();
 
@@ -132,7 +133,18 @@ export function AIAssistantPanelWrapper() {
     prevIDEOpenRef.current = isIDEOpen;
   }, [isIDEOpen]);
 
-  useKeyboardShortcut('$mod+k', toggleAIAssistantPanel, 0);
+  // Cmd+K toggles AI Assistant with mutual exclusivity
+  useKeyboardShortcut(
+    '$mod+k',
+    () => {
+      // Close create workflow panel when opening AI Assistant
+      if (!isAIAssistantPanelOpen) {
+        collapseCreateWorkflowPanel();
+      }
+      toggleAIAssistantPanel();
+    },
+    0
+  );
 
   const aiStore = useAIStore();
   const {

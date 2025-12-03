@@ -74,36 +74,50 @@ const logger = _logger.ns('UIStore').seal();
  * Creates a UI store instance with useSyncExternalStore + Immer pattern
  */
 export const createUIStore = (): UIStore => {
-  const loadAIAssistantPanelState = (): boolean => {
+  // Load initial panel states from URL params with mutual exclusivity
+  // AI Assistant panel and Create Workflow panel cannot both be open
+  const loadInitialPanelStates = (): {
+    aiAssistantPanelOpen: boolean;
+    createWorkflowPanelCollapsed: boolean;
+  } => {
     try {
       const params = new URLSearchParams(window.location.search);
-      return params.get('chat') === 'true';
+      const chatOpen = params.get('chat') === 'true';
+      const method = params.get('method');
+      const hasMethod = !!method;
+
+      // AI Assistant takes priority when both are present
+      if (chatOpen) {
+        return {
+          aiAssistantPanelOpen: true,
+          createWorkflowPanelCollapsed: true, // Force collapsed when AI panel is open
+        };
+      }
+
+      return {
+        aiAssistantPanelOpen: false,
+        createWorkflowPanelCollapsed: !hasMethod, // Expanded if method param present
+      };
     } catch (error) {
-      logger.warn('Failed to load AI Assistant panel state from URL', error);
-      return false;
+      logger.warn('Failed to load panel states from URL', error);
+      return {
+        aiAssistantPanelOpen: false,
+        createWorkflowPanelCollapsed: true,
+      };
     }
   };
 
-  const loadCreateWorkflowPanelState = (): boolean => {
-    try {
-      const params = new URLSearchParams(window.location.search);
-      const method = params.get('method');
-      // Panel should be expanded only if there's a method param
-      return !method; // collapsed if no method
-    } catch (error) {
-      logger.warn('Failed to load create workflow panel state from URL', error);
-      return true; // default to collapsed
-    }
-  };
+  const { aiAssistantPanelOpen, createWorkflowPanelCollapsed } =
+    loadInitialPanelStates();
 
   let state: UIState = produce(
     {
       runPanelOpen: false,
       runPanelContext: null,
       githubSyncModalOpen: false,
-      aiAssistantPanelOpen: loadAIAssistantPanelState(),
+      aiAssistantPanelOpen,
       aiAssistantInitialMessage: null,
-      createWorkflowPanelCollapsed: loadCreateWorkflowPanelState(),
+      createWorkflowPanelCollapsed,
       templatePanel: {
         templates: [],
         loading: false,
