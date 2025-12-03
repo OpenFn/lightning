@@ -190,7 +190,9 @@ defmodule LightningWeb.WorkflowChannel do
         project: render_project_context(project),
         config: render_config_context(),
         permissions: render_permissions(user, project_user),
-        latest_snapshot_lock_version: fresh_workflow.lock_version,
+        latest_snapshot_lock_version:
+          (fresh_workflow && fresh_workflow.lock_version) ||
+            workflow.lock_version,
         project_repo_connection: render_repo_connection(project_repo_connection),
         webhook_auth_methods: render_webhook_auth_methods(webhook_auth_methods),
         workflow_template: render_workflow_template(workflow_template),

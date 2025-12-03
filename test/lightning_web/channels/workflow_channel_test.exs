@@ -335,32 +335,40 @@ defmodule LightningWeb.WorkflowChannelTest do
       assert snapshot_socket.assigns.workflow.name == workflow.name
     end
 
-    test "returns nil latest_snapshot_lock_version for unsaved workflow", %{
-      user: user,
-      project: project
-    } do
-      # Join with action="new" to simulate unsaved workflow
-      workflow_id = Ecto.UUID.generate()
+    test "returns workflow lock_version when fresh_workflow is nil (new unsaved workflow)",
+         %{
+           project: project,
+           user: user
+         } do
+      # Create a new workflow ID that doesn't exist in DB yet (simulating new workflow)
+      new_workflow_id = Ecto.UUID.generate()
 
-      {:ok, _, socket} =
+      # Join with action "new" to simulate creating a new workflow
+      {:ok, _, new_socket} =
         LightningWeb.UserSocket
         |> socket("user_#{user.id}", %{current_user: user})
         |> subscribe_and_join(
           LightningWeb.WorkflowChannel,
-          "workflow:collaborate:#{workflow_id}",
+          "workflow:collaborate:#{new_workflow_id}",
           %{"project_id" => project.id, "action" => "new"}
         )
 
       on_exit(fn ->
-        ensure_doc_supervisor_stopped(workflow_id)
+        ensure_doc_supervisor_stopped(new_workflow_id)
       end)
 
-      ref = push(socket, "get_context", %{})
+      ref = push(new_socket, "get_context", %{})
 
       assert_reply ref, :ok, response
 
-      # For unsaved workflows, latest_snapshot_lock_version should be nil
-      assert %{latest_snapshot_lock_version: nil} = response
+      # CRITICAL: For new unsaved workflows, fresh_workflow will be nil
+      # so latest_snapshot_lock_version should fall back to workflow.lock_version
+      assert %{latest_snapshot_lock_version: latest_lock_version} = response
+      # New workflows start at lock_version 0 (or nil, which should be handled)
+      assert latest_lock_version == 0
+      assert new_socket.assigns.workflow.lock_version == 0
+      # Verify we're in a new workflow context
+      assert new_socket.assigns.workflow.name == "Untitled workflow"
     end
   end
 
