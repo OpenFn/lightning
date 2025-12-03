@@ -42,12 +42,14 @@ export function SaveButton({
   onClick,
   repoConnection,
   onSyncClick,
+  label = 'Save',
 }: {
   canSave: boolean;
   tooltipMessage: string;
   onClick: () => void;
   repoConnection: ReturnType<typeof useProjectRepoConnection>;
   onSyncClick: () => void;
+  label?: string;
 }) {
   const hasGitHubIntegration = repoConnection !== null;
 
@@ -73,7 +75,7 @@ export function SaveButton({
             onClick={onClick}
             disabled={!canSave}
           >
-            Save
+            {label}
           </button>
         </Tooltip>
       </div>
@@ -101,7 +103,7 @@ export function SaveButton({
           onClick={onClick}
           disabled={!canSave}
         >
-          Save
+          {label}
         </button>
       </Tooltip>
       <Menu as="div" className="relative -ml-px block">
@@ -345,6 +347,7 @@ export function Header({
                 onClick={() => void saveWorkflow()}
                 repoConnection={repoConnection}
                 onSyncClick={openGitHubSyncModal}
+                label={isNewWorkflow ? 'Create' : 'Save'}
               />
             </div>
           </div>

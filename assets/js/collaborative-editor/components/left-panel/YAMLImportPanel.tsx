@@ -139,7 +139,6 @@ export function YAMLImportPanel({
     setImportState('importing');
 
     try {
-      // Save the workflow (this also closes the panel)
       await onSave();
 
       // Reset state after successful save
@@ -147,6 +146,9 @@ export function YAMLImportPanel({
       setValidatedState(null);
       setImportState('initial');
       uiStore.clearImportPanel();
+
+      // Collapse panel after successful save
+      collapseCreateWorkflowPanel();
     } catch (error) {
       // On error, reset to valid state so user can retry
       setImportState('valid');

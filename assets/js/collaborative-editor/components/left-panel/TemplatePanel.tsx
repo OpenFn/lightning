@@ -206,6 +206,12 @@ export function TemplatePanel({
       const state = convertWorkflowSpecToState(spec);
       onImport(state);
       await onSave();
+
+      // After successful save, collapse panel and clear template params
+      collapseCreateWorkflowPanel();
+      uiStore.selectTemplate(null);
+      uiStore.setTemplateSearchQuery('');
+      updateSearchParams({ template: null, search: null });
     } catch (err) {
       console.error('Failed to create workflow from template:', err);
       notifications.alert({
