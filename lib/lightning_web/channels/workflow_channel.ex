@@ -165,7 +165,16 @@ defmodule LightningWeb.WorkflowChannel do
     project_user = socket.assigns.project_user
 
     async_task(socket, "get_context", fn ->
-      fresh_workflow = Lightning.Workflows.get_workflow(workflow.id) || workflow
+      # For unsaved workflows (action="new"), lock_version is nil and the workflow
+      # doesn't exist in the database yet. Use the in-memory workflow in that case.
+      # For saved workflows, always fetch fresh from DB to get the actual latest
+      # lock_version (socket.assigns.workflow could be stale).
+      fresh_workflow =
+        if is_nil(workflow.lock_version) do
+          workflow
+        else
+          Lightning.Workflows.get_workflow(workflow.id)
+        end
 
       project_repo_connection =
         VersionControl.get_repo_connection_for_project(project.id)
@@ -378,32 +387,39 @@ defmodule LightningWeb.WorkflowChannel do
     async_task(socket, "request_versions", fn ->
       Logger.info("Inside async_task for request_versions")
 
-      fresh_workflow = Lightning.Workflows.get_workflow(workflow.id)
-      latest_lock_version = fresh_workflow.lock_version
+      # For unsaved workflows (action="new"), there are no versions to show.
+      # Return empty list instead of crashing.
+      if is_nil(workflow.lock_version) do
+        Logger.info("Workflow is unsaved, returning empty versions list")
+        %{versions: []}
+      else
+        fresh_workflow = Lightning.Workflows.get_workflow(workflow.id)
+        latest_lock_version = fresh_workflow.lock_version
 
-      snapshots = Lightning.Workflows.Snapshot.get_all_for(workflow)
+        snapshots = Lightning.Workflows.Snapshot.get_all_for(workflow)
 
-      Logger.info("Fetching versions for workflow #{workflow.id}")
-      Logger.info("Found #{length(snapshots)} snapshots")
-      Logger.info("Socket workflow lock_version: #{workflow.lock_version}")
-      Logger.info("Fresh workflow lock_version: #{latest_lock_version}")
+        Logger.info("Fetching versions for workflow #{workflow.id}")
+        Logger.info("Found #{length(snapshots)} snapshots")
+        Logger.info("Socket workflow lock_version: #{workflow.lock_version}")
+        Logger.info("Fresh workflow lock_version: #{latest_lock_version}")
 
-      versions =
-        snapshots
-        |> Enum.map(fn snapshot ->
-          %{
-            lock_version: snapshot.lock_version,
-            inserted_at: snapshot.inserted_at,
-            is_latest: snapshot.lock_version == latest_lock_version
-          }
-        end)
-        |> Enum.sort_by(fn v ->
-          {if(v.is_latest, do: 0, else: 1), -v.lock_version}
-        end)
+        versions =
+          snapshots
+          |> Enum.map(fn snapshot ->
+            %{
+              lock_version: snapshot.lock_version,
+              inserted_at: snapshot.inserted_at,
+              is_latest: snapshot.lock_version == latest_lock_version
+            }
+          end)
+          |> Enum.sort_by(fn v ->
+            {if(v.is_latest, do: 0, else: 1), -v.lock_version}
+          end)
 
-      Logger.info("Mapped versions: #{inspect(versions)}")
+        Logger.info("Mapped versions: #{inspect(versions)}")
 
-      %{versions: versions}
+        %{versions: versions}
+      end
     end)
   end
 
