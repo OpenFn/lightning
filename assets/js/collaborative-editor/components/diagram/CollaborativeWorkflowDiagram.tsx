@@ -157,7 +157,7 @@ export function CollaborativeWorkflowDiagram({
           <VersionMismatchBanner
             runVersion={versionMismatch.runVersion}
             currentVersion={versionMismatch.currentVersion}
-            className="absolute top-4 left-1/2 -translate-x-1/2 z-50 max-w-md"
+            className="absolute top-6 left-1/2 -translate-x-1/2 z-50 max-w-md"
           />
         )}
 

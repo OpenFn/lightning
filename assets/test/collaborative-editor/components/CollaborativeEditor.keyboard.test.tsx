@@ -118,12 +118,17 @@ vi.mock('../../../js/collaborative-editor/components/ManualRunPanel', () => ({
   ),
 }));
 
-// Mock AIAssistantPanel
-vi.mock('../../../js/collaborative-editor/components/AIAssistantPanel', () => ({
-  AIAssistantPanel: () => (
-    <div data-testid="ai-assistant-panel">AI Assistant Panel</div>
-  ),
-}));
+// Mock AIAssistantPanelWrapper (this is what CollaborativeEditor imports)
+vi.mock(
+  '../../../js/collaborative-editor/components/AIAssistantPanelWrapper',
+  () => ({
+    AIAssistantPanelWrapper: () => (
+      <div data-testid="ai-assistant-panel-wrapper">
+        AI Assistant Panel Wrapper
+      </div>
+    ),
+  })
+);
 
 // Mock Toaster
 vi.mock('../../../js/collaborative-editor/components/ui/Toaster', () => ({

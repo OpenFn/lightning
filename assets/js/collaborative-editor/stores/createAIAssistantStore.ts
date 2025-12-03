@@ -518,6 +518,31 @@ export const createAIAssistantStore = (): AIAssistantStore => {
     notify('_clearSessionList');
   };
 
+  /**
+   * Initialize context without changing connection state
+   * Used by registry pattern to set context before channel connection
+   * Unlike connect(), this does NOT set connectionState to 'connecting'
+   * @internal
+   */
+  const _initializeContext = (
+    sessionType: SessionType,
+    context: JobCodeContext | WorkflowTemplateContext
+  ) => {
+    state = produce(state, draft => {
+      draft.sessionType = sessionType;
+
+      if (sessionType === 'job_code') {
+        draft.jobCodeContext = context as JobCodeContext;
+        draft.workflowTemplateContext = null;
+      } else {
+        draft.workflowTemplateContext = context as WorkflowTemplateContext;
+        draft.jobCodeContext = null;
+      }
+    });
+
+    notify('_initializeContext');
+  };
+
   devtools.connect();
 
   return {
@@ -546,6 +571,7 @@ export const createAIAssistantStore = (): AIAssistantStore => {
     _updateMessageStatus,
     _setSessionList,
     _appendSessionList,
+    _initializeContext,
   };
 };
 

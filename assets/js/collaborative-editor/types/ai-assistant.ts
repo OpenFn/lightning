@@ -95,7 +95,7 @@ export type ConnectionState =
  */
 export interface AIAssistantState {
   connectionState: ConnectionState;
-  connectionError?: string;
+  connectionError: string | undefined;
 
   sessionId: string | null;
   sessionType: SessionType | null;
@@ -157,6 +157,10 @@ export interface AIAssistantStore {
   _updateMessageStatus: (messageId: string, status: MessageStatus) => void;
   _setSessionList: (response: SessionListResponse) => void;
   _appendSessionList: (response: SessionListResponse) => void;
+  _initializeContext: (
+    sessionType: SessionType,
+    context: JobCodeContext | WorkflowTemplateContext
+  ) => void;
 }
 
 /**

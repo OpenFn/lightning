@@ -12,65 +12,21 @@ import {
   useAIStore,
   useAIWorkflowTemplateContext,
 } from '../hooks/useAIAssistant';
-import { useAIAssistantChannel } from '../hooks/useAIAssistantChannel';
+import { useAISessionCommands } from '../hooks/useAIChannelRegistry';
 import { useAIMode } from '../hooks/useAIMode';
+import { useAISession } from '../hooks/useAISession';
 import { useProject } from '../hooks/useSessionContext';
 import { useIsAIAssistantPanelOpen, useUICommands } from '../hooks/useUI';
 import { useWorkflowState, useWorkflowActions } from '../hooks/useWorkflow';
 import { useKeyboardShortcut } from '../keyboard';
 import { notifications } from '../lib/notifications';
+import type { JobCodeContext } from '../types/ai-assistant';
 import { serializeWorkflowToYAML } from '../utils/workflowSerialization';
 
 import { AIAssistantPanel } from './AIAssistantPanel';
 import { MessageList } from './MessageList';
 
-/**
- * Helper function to extract job ID from AI mode context.
- * Returns null if mode is not job_code.
- */
-function getJobIdFromContext(
-  mode: string,
-  context:
-    | import('../types/ai-assistant').JobCodeContext
-    | import('../types/ai-assistant').WorkflowTemplateContext
-): string | null {
-  if (mode !== 'job_code') {
-    return null;
-  }
-  return (context as import('../types/ai-assistant').JobCodeContext).job_id;
-}
-
-/**
- * Helper function to extract job context from AI mode.
- * Returns null if mode is not job_code.
- */
-function getJobCodeContext(
-  mode: string,
-  context:
-    | import('../types/ai-assistant').JobCodeContext
-    | import('../types/ai-assistant').WorkflowTemplateContext
-): import('../types/ai-assistant').JobCodeContext | null {
-  if (mode !== 'job_code') {
-    return null;
-  }
-  return context as import('../types/ai-assistant').JobCodeContext;
-}
-
-/**
- * Helper function to extract workflow template context from AI mode.
- * Returns null if mode is not workflow_template.
- */
-function getWorkflowTemplateContext(
-  mode: string,
-  context:
-    | import('../types/ai-assistant').JobCodeContext
-    | import('../types/ai-assistant').WorkflowTemplateContext
-): import('../types/ai-assistant').WorkflowTemplateContext | null {
-  if (mode !== 'workflow_template') {
-    return null;
-  }
-  return context as import('../types/ai-assistant').WorkflowTemplateContext;
-}
+// Helper functions removed - no longer needed with registry-based approach
 
 /**
  * Helper function to prepare workflow data for serialization.
@@ -82,7 +38,7 @@ function prepareWorkflowForSerialization(
   triggers: unknown[],
   edges: unknown[],
   positions: unknown
-): Record<string, unknown> | null {
+): import('../utils/workflowSerialization').SerializableWorkflow | null {
   if (!workflow || jobs.length === 0) {
     return null;
   }
@@ -93,39 +49,47 @@ function prepareWorkflowForSerialization(
     jobs: jobs.map((job: unknown) => {
       const j = job as Record<string, unknown>;
       return {
-        id: j.id,
-        name: j.name,
-        adaptor: j.adaptor,
-        body: j.body,
+        id: String(j['id']),
+        name: String(j['name']),
+        adaptor: String(j['adaptor']),
+        body: String(j['body']),
       };
     }),
-    triggers: triggers,
+    triggers,
     edges: edges.map((edge: unknown) => {
       const e = edge as Record<string, unknown>;
+      const conditionType = e['condition_type'];
       const result: Record<string, unknown> = {
-        id: e.id,
-        condition_type: e.condition_type || 'always',
-        enabled: e.enabled !== false,
-        target_job_id: e.target_job_id,
+        id: String(e['id']),
+        condition_type:
+          conditionType && typeof conditionType === 'string'
+            ? conditionType
+            : 'always',
+        enabled: e['enabled'] !== false,
+        target_job_id: String(e['target_job_id']),
       };
 
-      if (e.source_job_id) {
-        result.source_job_id = e.source_job_id;
+      const sourceJobId = e['source_job_id'];
+      if (sourceJobId && typeof sourceJobId === 'string') {
+        result['source_job_id'] = sourceJobId;
       }
-      if (e.source_trigger_id) {
-        result.source_trigger_id = e.source_trigger_id;
+      const sourceTriggerId = e['source_trigger_id'];
+      if (sourceTriggerId && typeof sourceTriggerId === 'string') {
+        result['source_trigger_id'] = sourceTriggerId;
       }
-      if (e.condition_label) {
-        result.condition_label = e.condition_label;
+      const conditionLabel = e['condition_label'];
+      if (conditionLabel && typeof conditionLabel === 'string') {
+        result['condition_label'] = conditionLabel;
       }
-      if (e.condition_expression) {
-        result.condition_expression = e.condition_expression;
+      const conditionExpression = e['condition_expression'];
+      if (conditionExpression && typeof conditionExpression === 'string') {
+        result['condition_expression'] = conditionExpression;
       }
 
       return result;
     }),
-    positions: positions,
-  };
+    positions,
+  } as import('../utils/workflowSerialization').SerializableWorkflow;
 }
 
 /**
@@ -140,7 +104,6 @@ function prepareWorkflowForSerialization(
  * - Persists width in localStorage
  * - Syncs open/closed state with URL query param (?chat=true)
  */
-/* eslint-disable react-compiler/react-compiler */
 export function AIAssistantPanelWrapper() {
   const isAIAssistantPanelOpen = useIsAIAssistantPanelOpen();
   const { closeAIAssistantPanel, toggleAIAssistantPanel } = useUICommands();
@@ -171,10 +134,10 @@ export function AIAssistantPanelWrapper() {
   const {
     sendMessage: sendMessageToChannel,
     loadSessions,
-    updateContext,
     retryMessage: retryMessageViaChannel,
     markDisclaimerRead: markDisclaimerReadViaChannel,
-  } = useAIAssistantChannel(aiStore);
+    updateContext: updateContextViaChannel,
+  } = useAISessionCommands();
   const messages = useAIMessages();
   const isLoading = useAIIsLoading();
   const sessionId = useAISessionId();
@@ -259,10 +222,6 @@ export function AIAssistantPanelWrapper() {
 
   const aiMode = useAIMode();
 
-  const prevModeRef = useRef<string | null>(null);
-  const prevSessionIdRef = useRef<string | null>(null);
-  const prevJobIdRef = useRef<string | null>(null);
-
   const sessionIdFromURL = useMemo(() => {
     if (!aiMode) return null;
 
@@ -272,130 +231,35 @@ export function AIAssistantPanelWrapper() {
     return sessionId;
   }, [aiMode, searchParams]);
 
-  useEffect(() => {
-    if (!isAIAssistantPanelOpen || !aiMode) return;
-
-    const state = aiStore.getSnapshot();
-    const { mode, context } = aiMode;
-
-    const isModeSwitch = state.sessionType && state.sessionType !== mode;
-    const currentJobId = getJobIdFromContext(mode, context);
-    const jobIdChanged =
-      mode === 'job_code' &&
-      state.jobCodeContext &&
-      currentJobId !== state.jobCodeContext.job_id;
-
-    if (isModeSwitch || jobIdChanged) {
-      updateSearchParams({
-        'w-chat': null,
-        'j-chat': null,
-      });
-    }
-  }, [isAIAssistantPanelOpen, aiMode, updateSearchParams, aiStore]);
-
-  useEffect(() => {
-    if (!isAIAssistantPanelOpen || !aiMode) {
-      prevModeRef.current = null;
-      prevSessionIdRef.current = null;
-      prevJobIdRef.current = null;
-      return;
-    }
-
-    const state = aiStore.getSnapshot();
-    const { mode, context } = aiMode;
-
-    const currentJobId = getJobIdFromContext(mode, context);
-
-    const modeChanged = prevModeRef.current !== mode;
-    const sessionIdChanged = prevSessionIdRef.current !== sessionIdFromURL;
-    const jobIdChangedFromPrev = prevJobIdRef.current !== currentJobId;
-
-    if (
-      !modeChanged &&
-      !sessionIdChanged &&
-      !jobIdChangedFromPrev &&
-      prevModeRef.current !== null
-    ) {
-      return;
-    }
-
-    prevModeRef.current = mode;
-    prevSessionIdRef.current = sessionIdFromURL;
-    prevJobIdRef.current = currentJobId;
-
-    // STEP 1: Check if we're switching modes (job ↔ workflow)
-    const isModeSwitch = state.sessionType && state.sessionType !== mode;
-
-    if (isModeSwitch) {
-      if (state.connectionState !== 'disconnected') {
-        aiStore.disconnect();
-      }
-      aiStore._clearSession();
-      aiStore._clearSessionList();
-    }
-
-    // STEP 2: Initialize context for current mode
-    // This MUST happen before any session loading
-    const currentJobIdForCheck = getJobIdFromContext(mode, context);
-    const jobIdChanged =
-      mode === 'job_code' &&
-      state.jobCodeContext &&
-      currentJobIdForCheck !== state.jobCodeContext.job_id;
-
-    const needsContextInit =
-      !state.sessionType ||
-      (mode === 'job_code' && !state.jobCodeContext) ||
-      (mode === 'workflow_template' && !state.workflowTemplateContext) ||
-      jobIdChanged;
-
-    if (needsContextInit || isModeSwitch) {
-      if (jobIdChanged || isModeSwitch) {
-        if (state.connectionState !== 'disconnected') {
-          aiStore.disconnect();
-        }
-        aiStore._clearSession();
-        aiStore._clearSessionList();
-      }
-
-      aiStore.connect(mode, context, undefined);
-      aiStore.disconnect();
-    }
-
-    // STEP 3: Load session if there's one in URL, otherwise we're done
-    // IMPORTANT: Don't load session from URL if job just changed - that session belongs to the old job
-    if (!sessionIdFromURL || jobIdChanged) {
-      return;
-    }
-
-    // STEP 4: Connect to the session from URL
-    let finalContext = context;
-    if (mode === 'workflow_template') {
-      const workflowData = prepareWorkflowForSerialization(
-        workflow,
-        jobs,
-        triggers,
-        edges,
-        positions
-      );
-      if (workflowData) {
-        const workflowYAML = serializeWorkflowToYAML(workflowData);
-        if (workflowYAML) {
-          finalContext = { ...context, code: workflowYAML };
-        }
-      }
-    }
-
-    aiStore.connect(mode, finalContext, sessionIdFromURL);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [
-    isAIAssistantPanelOpen,
+  // Use registry-based session management
+  useAISession({
+    isOpen: isAIAssistantPanelOpen,
     aiMode,
-    aiStore,
     sessionIdFromURL,
-    // NOTE: Intentionally NOT including workflow, jobs, triggers, edges, positions
-    // We use refs (prevModeRef, prevSessionIdRef) to track actual changes
-    // Including these would cause reconnections on every Y.js edit
-  ]);
+    workflowData: {
+      workflow,
+      jobs,
+      triggers,
+      edges,
+      positions,
+    },
+    onSessionIdChange: newSessionId => {
+      if (!aiMode) return;
+
+      // When mode changes, clear the other mode's session param
+      if (aiMode.mode === 'workflow_template') {
+        updateSearchParams({
+          'w-chat': newSessionId,
+          'j-chat': null, // Clear job session when in workflow mode
+        });
+      } else {
+        updateSearchParams({
+          'j-chat': newSessionId,
+          'w-chat': null, // Clear workflow session when in job mode
+        });
+      }
+    },
+  });
 
   useEffect(() => {
     if (!sessionId || !aiMode) return;
@@ -411,176 +275,98 @@ export function AIAssistantPanelWrapper() {
 
     const currentParamName =
       aiMode.mode === 'workflow_template' ? 'w-chat' : 'j-chat';
+    const otherParamName =
+      aiMode.mode === 'workflow_template' ? 'j-chat' : 'w-chat';
     const currentValue = searchParams.get(currentParamName);
 
     if (currentValue !== sessionId) {
       updateSearchParams({
         [currentParamName]: sessionId,
+        [otherParamName]: null, // Clear the other mode's session
       });
     }
   }, [sessionId, aiMode, searchParams, updateSearchParams, aiStore]);
 
+  // NOTE: We intentionally DO NOT clear URL params when panel closes.
+  // The session ID in the URL serves as "memory" so reopening the panel
+  // resumes the previous session. The registry handles channel cleanup
+  // via useAISession's cleanup effect, and will recreate the channel
+  // when the panel reopens with the same session ID in the URL.
+
+  // Push job context updates to backend when job body/adaptor/name changes
+  // This ensures the AI has access to the current code when "Attach code" is checked
   useEffect(() => {
-    if (!isAIAssistantPanelOpen) {
-      aiStore.disconnect();
-      updateSearchParams({
-        'w-chat': null,
-        'j-chat': null,
+    // Only update context for active job_code sessions
+    if (
+      !isAIAssistantPanelOpen ||
+      !sessionId ||
+      sessionType !== 'job_code' ||
+      !aiMode ||
+      aiMode.mode !== 'job_code'
+    ) {
+      return;
+    }
+
+    const context = aiMode.context as JobCodeContext;
+    if (context.job_body !== undefined || context.job_adaptor !== undefined) {
+      updateContextViaChannel({
+        job_body: context.job_body,
+        job_adaptor: context.job_adaptor,
+        job_name: context.job_name,
       });
     }
-  }, [isAIAssistantPanelOpen, aiStore, updateSearchParams]);
-
-  useEffect(() => {
-    if (
-      !isAIAssistantPanelOpen ||
-      !aiMode ||
-      aiMode.mode !== 'job_code' ||
-      !sessionId
-    ) {
-      return;
-    }
-
-    const context = getJobCodeContext(aiMode.mode, aiMode.context);
-    if (!context) return;
-
-    const contextUpdate: {
-      job_adaptor?: string;
-      job_body?: string;
-      job_name?: string;
-    } = {};
-    if (context.job_adaptor !== undefined)
-      contextUpdate.job_adaptor = context.job_adaptor;
-    if (context.job_body !== undefined)
-      contextUpdate.job_body = context.job_body;
-    if (context.job_name !== undefined)
-      contextUpdate.job_name = context.job_name;
-
-    updateContext(contextUpdate);
-  }, [isAIAssistantPanelOpen, aiMode, sessionId, updateContext]);
-
-  // Update workflow context when workflow ID changes (e.g., after saving a new workflow)
-  // This migrates the session from "unsaved" to "saved" state
-  useEffect(() => {
-    if (
-      !isAIAssistantPanelOpen ||
-      !aiMode ||
-      aiMode.mode !== 'workflow_template' ||
-      !sessionId ||
-      !workflow?.id
-    ) {
-      return;
-    }
-
-    const context = getWorkflowTemplateContext(aiMode.mode, aiMode.context);
-    if (!context) return;
-
-    // Only update if workflow ID changed from what's in the context
-    // This handles the case where a workflow is saved for the first time
-    if (context.workflow_id !== workflow.id) {
-      updateContext({ workflow_id: workflow.id });
-    }
-  }, [isAIAssistantPanelOpen, aiMode, sessionId, workflow?.id, updateContext]);
+  }, [
+    isAIAssistantPanelOpen,
+    sessionId,
+    sessionType,
+    aiMode,
+    updateContextViaChannel,
+  ]);
 
   const handleNewConversation = useCallback(() => {
     if (!project) return;
 
     appliedMessageIdsRef.current.clear();
     aiStore.clearSession();
-    aiStore.disconnect();
 
-    setTimeout(() => {
-      const state = aiStore.getSnapshot();
-      if (state.connectionState === 'disconnected') {
-        const workflowData = prepareWorkflowForSerialization(
-          workflow,
-          jobs,
-          triggers,
-          edges,
-          positions
-        );
-        const workflowYAML = workflowData
-          ? serializeWorkflowToYAML(workflowData)
-          : undefined;
-
-        const context = {
-          project_id: project.id,
-          ...(workflow?.id && { workflow_id: workflow.id }),
-          ...(workflowYAML && { code: workflowYAML }),
-        };
-
-        aiStore.connect('workflow_template', context);
-      }
-    }, 100);
-  }, [aiStore, workflow, jobs, triggers, edges, positions, project]);
-
-  const handleSessionSelect = useCallback(
-    (selectedSessionId: string) => {
-      if (!project) return;
-
-      appliedMessageIdsRef.current.clear();
-
-      aiStore._clearSession();
-
-      aiStore.disconnect();
-
-      setTimeout(() => {
-        const state = aiStore.getSnapshot();
-        if (state.connectionState === 'disconnected') {
-          const currentSessionType = state.sessionType;
-
-          if (!currentSessionType) {
-            console.error(
-              '[AI Assistant] No session type in store, cannot reconnect'
-            );
-            return;
-          }
-
-          let context: Record<string, unknown> | undefined;
-
-          if (currentSessionType === 'workflow_template') {
-            const workflowData = prepareWorkflowForSerialization(
-              workflow,
-              jobs,
-              triggers,
-              edges,
-              positions
-            );
-            const workflowYAML = workflowData
-              ? serializeWorkflowToYAML(workflowData)
-              : undefined;
-
-            context = {
-              project_id: project.id,
-              ...(workflow?.id && { workflow_id: workflow.id }),
-              ...(workflowYAML && { code: workflowYAML }),
-            };
-          } else {
-            context = state.jobCodeContext ?? undefined;
-            if (!context) {
-              console.error(
-                '[AI Assistant] No job context in store, cannot reconnect'
-              );
-              return;
-            }
-          }
-
-          if (context) {
-            aiStore.connect(currentSessionType, context, selectedSessionId);
-          }
-        }
-      }, 100);
-    },
-    [aiStore, project, workflow, jobs, triggers, edges, positions]
-  );
-
-  const handleShowSessions = useCallback(() => {
+    // Clear session ID from URL - useAISession will handle creating new session
     updateSearchParams({
       'w-chat': null,
       'j-chat': null,
     });
+  }, [aiStore, project, updateSearchParams]);
 
+  const handleSessionSelect = useCallback(
+    (selectedSessionId: string) => {
+      if (!project || !aiMode) return;
+
+      appliedMessageIdsRef.current.clear();
+      aiStore._clearSession();
+
+      // Update URL with selected session ID - useAISession will handle loading it
+      if (aiMode.mode === 'workflow_template') {
+        updateSearchParams({
+          'w-chat': selectedSessionId,
+          'j-chat': null,
+        });
+      } else {
+        updateSearchParams({
+          'j-chat': selectedSessionId,
+          'w-chat': null,
+        });
+      }
+    },
+    [aiStore, project, aiMode, updateSearchParams]
+  );
+
+  const handleShowSessions = useCallback(() => {
     aiStore.clearSession();
-    aiStore.disconnect();
+
+    // Clear session ID from URL - shows session list
+    updateSearchParams({
+      'w-chat': null,
+      'j-chat': null,
+    });
   }, [updateSearchParams, aiStore]);
 
   const sendMessage = useCallback(
@@ -590,10 +376,20 @@ export function AIAssistantPanelWrapper() {
     ) => {
       const currentState = aiStore.getSnapshot();
 
+      // If no session exists, we need to include content in context for first message
       if (!currentState.sessionId && aiMode) {
         const { mode, context } = aiMode;
 
-        let finalContext = context;
+        // Prepare context with content and message options for channel join
+        let finalContext = {
+          ...context,
+          content,
+          // Include attach_code/attach_logs so backend knows to include them in first message
+          ...(messageOptions?.attach_code && { attach_code: true }),
+          ...(messageOptions?.attach_logs && { attach_logs: true }),
+        };
+
+        // Add workflow YAML if in workflow mode
         if (mode === 'workflow_template') {
           const workflowData = prepareWorkflowForSerialization(
             workflow,
@@ -605,14 +401,33 @@ export function AIAssistantPanelWrapper() {
           if (workflowData) {
             const workflowYAML = serializeWorkflowToYAML(workflowData);
             if (workflowYAML) {
-              finalContext = { ...context, code: workflowYAML };
+              finalContext = { ...finalContext, code: workflowYAML };
             }
           }
         }
 
-        aiStore.connect(mode, { ...finalContext, content }, undefined);
+        // Initialize store with context including content
+        aiStore.connect(mode, finalContext, undefined);
+
+        // Update URL to trigger subscription to "new" channel
+        // useAISession will see the URL change and subscribe with the context (including content)
+        if (mode === 'workflow_template') {
+          updateSearchParams({ 'w-chat': 'new', 'j-chat': null });
+        } else {
+          updateSearchParams({ 'j-chat': 'new', 'w-chat': null });
+        }
+
+        // Mark message as sending in store
+        aiStore.sendMessage(content);
         return;
       }
+
+      // For existing sessions, prepare options and send
+      let options:
+        | { attach_code?: boolean; attach_logs?: boolean; code?: string }
+        | undefined = {
+        ...messageOptions, // Include attach_code and attach_logs
+      };
 
       if (currentState.sessionType === 'workflow_template') {
         const workflowData = prepareWorkflowForSerialization(
@@ -626,16 +441,14 @@ export function AIAssistantPanelWrapper() {
           ? serializeWorkflowToYAML(workflowData)
           : undefined;
 
-        const options = workflowYAML ? { code: workflowYAML } : undefined;
-        aiStore.sendMessage(content);
-        sendMessageToChannel(content, options);
-      } else if (currentState.sessionType === 'job_code' && messageOptions) {
-        aiStore.sendMessage(content);
-        sendMessageToChannel(content, messageOptions);
-      } else {
-        aiStore.sendMessage(content);
-        sendMessageToChannel(content);
+        if (workflowYAML) {
+          options = { ...options, code: workflowYAML };
+        }
       }
+
+      // Update store state and send through registry
+      aiStore.sendMessage(content);
+      sendMessageToChannel(content, options);
     },
     [
       workflow,
@@ -646,6 +459,7 @@ export function AIAssistantPanelWrapper() {
       sendMessageToChannel,
       aiStore,
       aiMode,
+      updateSearchParams,
     ]
   );
 
@@ -698,13 +512,15 @@ export function AIAssistantPanelWrapper() {
         const workflowSpec = parseWorkflowYAML(yaml);
 
         const validateIds = (spec: Record<string, unknown>) => {
-          if (spec.jobs) {
-            for (const [jobKey, job] of Object.entries(spec.jobs)) {
+          if (spec['jobs']) {
+            for (const [jobKey, job] of Object.entries(
+              spec['jobs'] as object
+            )) {
               const jobItem = job as Record<string, unknown>;
               if (
-                jobItem.id &&
-                typeof jobItem.id === 'object' &&
-                jobItem.id !== null
+                jobItem['id'] &&
+                typeof jobItem['id'] === 'object' &&
+                jobItem['id'] !== null
               ) {
                 throw new Error(
                   `Invalid ID format for job "${jobKey}". IDs must be strings or null, not objects. ` +
@@ -713,13 +529,15 @@ export function AIAssistantPanelWrapper() {
               }
             }
           }
-          if (spec.triggers) {
-            for (const [triggerKey, trigger] of Object.entries(spec.triggers)) {
+          if (spec['triggers']) {
+            for (const [triggerKey, trigger] of Object.entries(
+              spec['triggers'] as object
+            )) {
               const triggerItem = trigger as Record<string, unknown>;
               if (
-                triggerItem.id &&
-                typeof triggerItem.id === 'object' &&
-                triggerItem.id !== null
+                triggerItem['id'] &&
+                typeof triggerItem['id'] === 'object' &&
+                triggerItem['id'] !== null
               ) {
                 throw new Error(
                   `Invalid ID format for trigger "${triggerKey}". IDs must be strings or null, not objects. ` +
@@ -728,13 +546,15 @@ export function AIAssistantPanelWrapper() {
               }
             }
           }
-          if (spec.edges) {
-            for (const [edgeKey, edge] of Object.entries(spec.edges)) {
+          if (spec['edges']) {
+            for (const [edgeKey, edge] of Object.entries(
+              spec['edges'] as object
+            )) {
               const edgeItem = edge as Record<string, unknown>;
               if (
-                edgeItem.id &&
-                typeof edgeItem.id === 'object' &&
-                edgeItem.id !== null
+                edgeItem['id'] &&
+                typeof edgeItem['id'] === 'object' &&
+                edgeItem['id'] !== null
               ) {
                 throw new Error(
                   `Invalid ID format for edge "${edgeKey}". IDs must be strings or null, not objects. ` +
@@ -859,7 +679,7 @@ export function AIAssistantPanelWrapper() {
               sessionType={sessionType}
               loadSessions={loadSessions}
               focusTrigger={focusTrigger}
-              connectionState={connectionState}
+              connectionState={sessionId ? connectionState : 'connected'}
               showDisclaimer={
                 connectionState === 'connected' && !hasReadDisclaimer
               }
@@ -886,4 +706,3 @@ export function AIAssistantPanelWrapper() {
     </div>
   );
 }
-/* eslint-enable react-compiler/react-compiler */

@@ -192,8 +192,14 @@ defmodule LightningWeb.AiAssistantChannel do
     job_adaptor = params["job_adaptor"]
     job_name = params["job_name"]
 
+    # Fetch fresh session from DB to get current meta (including message_options)
+    # This prevents race conditions where update_context overwrites message_options
+    # set by a concurrent new_message call
+    fresh_session =
+      Lightning.Repo.get!(Lightning.AiAssistant.ChatSession, session.id)
+
     updated_meta =
-      (session.meta || %{})
+      (fresh_session.meta || %{})
       |> Map.put("runtime_context", %{
         "job_body" => job_body,
         "job_adaptor" => job_adaptor,
@@ -201,7 +207,7 @@ defmodule LightningWeb.AiAssistantChannel do
         "updated_at" => DateTime.utc_now() |> DateTime.to_iso8601()
       })
 
-    case session
+    case fresh_session
          |> Ecto.Changeset.change(%{meta: updated_meta})
          |> Lightning.Repo.update() do
       {:ok, updated_session} ->
