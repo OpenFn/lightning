@@ -4,6 +4,7 @@ import { createRoot } from 'react-dom/client';
 import { useStore } from 'zustand';
 import { useShallow } from 'zustand/react/shallow';
 
+import { useMonacoSync } from '../hooks/useMonacoSync';
 import { type Monaco, MonacoEditor } from '../monaco';
 
 import { createLogStore } from './store';
@@ -37,11 +38,15 @@ const LogViewer = ({
     logStore,
     useShallow(state => state.formattedLogLines)
   );
-
   const [monaco, setMonaco] = useState<Monaco>();
   const [editor, setEditor] = useState<e.IStandaloneCodeEditor>();
 
   const decorationsCollection = useRef<e.IEditorDecorationsCollection>();
+
+  // Use custom hook to handle Monaco value synchronization
+  // Implements the isEditorReady pattern recommended by @monaco-editor/react maintainer
+  // to handle race conditions where content arrives before editor is fully initialized
+  useMonacoSync(editor, monaco, formattedLogLines);
 
   useEffect(() => {
     if (stepId && highlightedRanges.length > 0) {
