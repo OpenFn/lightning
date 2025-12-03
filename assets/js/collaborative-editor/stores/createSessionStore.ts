@@ -38,7 +38,19 @@ import { Doc as YDoc } from 'yjs';
 
 import _logger from '#/utils/logger';
 
-import { createChannelRegistry } from '../registry/createChannelRegistry';
+import type { ChannelEntry } from '../lib/channel-registry';
+import {
+  createChannelEntry,
+  destroyEntry,
+  joinChannel,
+  scheduleCleanup,
+  startSettling,
+  transitionState,
+} from '../lib/channel-registry';
+import {
+  createYjsResourceManager,
+  type YjsResources,
+} from '../lib/channel-registry/resourceManagers';
 import type { LocalUserData } from '../types/awareness';
 
 import { createWithSelector, type WithSelector } from './common';
@@ -121,7 +133,14 @@ export const createSessionStore = (): SessionStore => {
   const listeners = new Set<() => void>();
   let cleanupProviderHandlers: (() => void) | null = null;
   let settlingSubscriptionCleanup: (() => void) | null = null;
-  const registry = createChannelRegistry();
+
+  // Channel registry for managing version transitions
+  let currentEntry: ChannelEntry<YjsResources> | null = null;
+  let drainingEntry: ChannelEntry<YjsResources> | null = null;
+  let drainTimer: ReturnType<typeof setTimeout> | null = null;
+
+  const DRAIN_GRACE_PERIOD_MS = 2000;
+  const SETTLING_TIMEOUT_MS = 10000;
 
   // Redux DevTools integration
   const devtools = wrapStoreWithDevTools({
@@ -273,7 +292,7 @@ export const createSessionStore = (): SessionStore => {
 
   /**
    * migrateToRoom
-   * - Migrates to a new room using the Channel Registry
+   * - Migrates to a new room using the Channel Registry helpers
    * - Preserves previous Y.Doc during transition
    * - Updates store state when new channel becomes active
    */
@@ -291,69 +310,161 @@ export const createSessionStore = (): SessionStore => {
       draft.previousProvider = draft.provider;
     }, 'migrationStarted');
 
-    // Subscribe to registry state changes
-    const unsubscribeRegistry = registry.subscribe(() => {
-      const currentEntry = registry.getCurrentEntry();
-      if (!currentEntry) return;
+    // Mark current entry as draining if it exists
+    if (currentEntry && currentEntry.state === 'active') {
+      logger.debug('Marking current entry as draining', {
+        topic: currentEntry.topic,
+      });
+      transitionState(currentEntry, 'draining');
+      drainingEntry = currentEntry;
+    }
 
-      // Update store state when new entry becomes active
-      if (currentEntry.state === 'active') {
-        logger.debug('New channel active, updating store', {
-          roomname: currentEntry.roomname,
-        });
+    // Create new channel entry
+    // Type assertion: Phoenix Socket has channel() method at runtime
+    const socketWithChannel = socket as PhoenixSocket & {
+      channel(topic: string, params: object): import('phoenix').Channel;
+    };
+    const channel = socketWithChannel.channel(roomname, joinParams);
+    const resourceManager = createYjsResourceManager(
+      socket,
+      roomname,
+      state.userData
+    );
+    const resources = resourceManager.create(channel);
 
-        // Clean up old provider handlers
-        cleanupProviderHandlers?.();
-        cleanupProviderHandlers = null;
+    const newEntry = createChannelEntry(
+      roomname,
+      channel,
+      'session-store', // Single subscriber ID for SessionStore
+      resources
+    );
 
-        updateState(draft => {
-          draft.ydoc = currentEntry.ydoc;
-          draft.provider = currentEntry.provider;
-          draft.awareness = currentEntry.awareness;
-          draft.isSynced = currentEntry.provider.synced;
-        }, 'migrationActiveChannelUpdate');
+    currentEntry = newEntry;
 
-        // Attach handlers to new provider
-        cleanupProviderHandlers = attachProvider(
-          currentEntry.provider,
-          updateState
-        );
+    // Join the new channel
+    return new Promise<void>((resolve, reject) => {
+      joinChannel(
+        newEntry,
+        () => {
+          // Join successful - handle settling or activate immediately
+          if (resourceManager.waitForSettled && newEntry.resources) {
+            transitionState(newEntry, 'settling');
 
-        // Reinitialize settling subscription
-        settlingSubscriptionCleanup?.();
-        settlingSubscriptionCleanup = createSettlingSubscription(
-          subscribe,
-          getSnapshot,
-          updateState
-        );
-      }
+            startSettling(
+              newEntry,
+              resourceManager,
+              SETTLING_TIMEOUT_MS,
+              () => {
+                // Settling complete - activate
+                transitionState(newEntry, 'active');
+                handleNewEntryActive(newEntry, resourceManager);
+                resolve();
+              }
+            );
+          } else {
+            // No settling needed - activate immediately
+            transitionState(newEntry, 'active');
+            handleNewEntryActive(newEntry, resourceManager);
+            resolve();
+          }
+        },
+        error => {
+          // Join failed
+          logger.error('Migration failed during join', { error });
+          transitionState(newEntry, 'destroyed');
 
-      // Clear transitioning state when drain completes
-      if (!registry.isTransitioning()) {
-        logger.debug('Migration complete, drain finished');
-        updateState(draft => {
-          draft.isTransitioning = false;
-          draft.previousYDoc = null;
-          draft.previousProvider = null;
-        }, 'migrationCompleted');
-        unsubscribeRegistry();
-      }
+          // Cleanup failed entry
+          if (newEntry.resources) {
+            resourceManager.destroy(newEntry.resources);
+          }
+
+          updateState(draft => {
+            draft.isTransitioning = false;
+            draft.previousYDoc = null;
+            draft.previousProvider = null;
+          }, 'migrationFailed');
+
+          reject(error);
+        }
+      );
+    });
+  };
+
+  /**
+   * Handle new entry becoming active during migration
+   */
+  const handleNewEntryActive = (
+    entry: ChannelEntry<YjsResources>,
+    resourceManager: ReturnType<typeof createYjsResourceManager>
+  ): void => {
+    logger.debug('New channel active, updating store', {
+      topic: entry.topic,
     });
 
-    try {
-      // Start migration through registry
-      await registry.migrate(socket, roomname, joinParams);
-      logger.debug('Migration successful');
-    } catch (error) {
-      logger.error('Migration failed', { error });
+    // Clean up old provider handlers
+    cleanupProviderHandlers?.();
+    cleanupProviderHandlers = null;
+
+    // Update store state with new resources
+    if (entry.resources) {
       updateState(draft => {
-        draft.isTransitioning = false;
-        draft.previousYDoc = null;
-        draft.previousProvider = null;
-      }, 'migrationFailed');
-      unsubscribeRegistry();
-      throw error;
+        draft.ydoc = entry.resources!.ydoc;
+        draft.provider = entry.resources!.provider;
+        draft.awareness = entry.resources!.awareness;
+        draft.isSynced = entry.resources!.provider.synced;
+      }, 'migrationActiveChannelUpdate');
+
+      // Attach handlers to new provider
+      cleanupProviderHandlers = attachProvider(
+        entry.resources.provider,
+        updateState
+      );
+
+      // Reinitialize settling subscription
+      settlingSubscriptionCleanup?.();
+      settlingSubscriptionCleanup = createSettlingSubscription(
+        subscribe,
+        getSnapshot,
+        updateState
+      );
     }
+
+    // Start draining old entry if it exists
+    if (drainingEntry) {
+      scheduleDrainCleanup(drainingEntry, resourceManager);
+    }
+
+    // Clear transitioning flag after drain starts
+    // The drain will complete asynchronously
+    updateState(draft => {
+      draft.isTransitioning = false;
+      draft.previousYDoc = null;
+      draft.previousProvider = null;
+    }, 'migrationCompleted');
+  };
+
+  /**
+   * Schedule cleanup for draining entry
+   */
+  const scheduleDrainCleanup = (
+    entry: ChannelEntry<YjsResources>,
+    resourceManager: ReturnType<typeof createYjsResourceManager>
+  ): void => {
+    scheduleCleanup(entry, DRAIN_GRACE_PERIOD_MS, () => {
+      logger.debug('Drain timer elapsed, destroying entry', {
+        topic: entry.topic,
+      });
+
+      destroyEntry(entry, resourceManager);
+
+      if (drainingEntry === entry) {
+        drainingEntry = null;
+      }
+
+      if (drainTimer) {
+        drainTimer = null;
+      }
+    });
   };
 
   /**
@@ -373,8 +484,32 @@ export const createSessionStore = (): SessionStore => {
     settlingSubscriptionCleanup?.();
     settlingSubscriptionCleanup = null;
 
-    // Destroy registry (will clean up all managed channels)
-    registry.destroy();
+    // Cancel drain timer
+    if (drainTimer) {
+      clearTimeout(drainTimer);
+      drainTimer = null;
+    }
+
+    // Destroy all channel entries
+    if (currentEntry) {
+      const resourceManager = createYjsResourceManager(
+        null as any,
+        currentEntry.topic,
+        state.userData
+      );
+      destroyEntry(currentEntry, resourceManager);
+      currentEntry = null;
+    }
+
+    if (drainingEntry) {
+      const resourceManager = createYjsResourceManager(
+        null as any,
+        drainingEntry.topic,
+        state.userData
+      );
+      destroyEntry(drainingEntry, resourceManager);
+      drainingEntry = null;
+    }
 
     state.provider?.destroy();
     state.awareness?.destroy();
@@ -405,7 +540,8 @@ export const createSessionStore = (): SessionStore => {
   const getConnectionState = (): boolean => state.isConnected;
   const getSyncState = (): boolean => state.isSynced;
   const getSettled = (): boolean => state.settled;
-  const isTransitioning = (): boolean => state.isTransitioning;
+  const isTransitioning = (): boolean =>
+    state.isTransitioning || drainingEntry !== null;
   const getPreviousYDoc = (): YDoc | null => state.previousYDoc;
 
   return {
