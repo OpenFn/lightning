@@ -142,8 +142,9 @@ export function AIAssistantPanel({
         ? 'Connecting...'
         : undefined;
 
+  // Load session list when viewing sessions
   useEffect(() => {
-    if (view !== 'sessions' || !storeSessionType) return;
+    if (!isOpen || view !== 'sessions' || !storeSessionType) return;
 
     if (!hasSessionContext) {
       return;
@@ -151,12 +152,29 @@ export function AIAssistantPanel({
 
     void loadSessionList();
   }, [
+    isOpen,
     view,
     storeSessionType,
     jobCodeContext?.job_id,
     hasSessionContext,
     loadSessionList,
   ]);
+
+  // Re-fetch session list when tab becomes visible (handles browser tab sleep)
+  useEffect(() => {
+    if (!isOpen || view !== 'sessions' || !hasSessionContext) return;
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        void loadSessionList();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [isOpen, view, hasSessionContext, loadSessionList]);
 
   const handleShowSessions = () => {
     setView('sessions');
