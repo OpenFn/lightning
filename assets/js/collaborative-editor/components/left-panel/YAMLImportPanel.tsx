@@ -22,15 +22,7 @@ import { ValidationErrorDisplay } from '../yaml-import/ValidationErrorDisplay';
 import { YAMLCodeEditor } from '../yaml-import/YAMLCodeEditor';
 import { YAMLFileDropzone } from '../yaml-import/YAMLFileDropzone';
 
-/**
- * Import state machine:
- * - initial: No content, button disabled
- * - parsing: Validating YAML, button shows spinner
- * - valid: Valid YAML, button enabled
- * - invalid: Invalid YAML, button disabled
- * - importing: Import in progress, button shows spinner
- */
-type ImportState = 'initial' | 'parsing' | 'valid' | 'invalid' | 'importing';
+// Import state is managed in UI store - see UIState['importPanel']['importState']
 
 interface YAMLImportPanelProps {
   onImport: (workflowState: YAMLWorkflowState) => void;
@@ -51,16 +43,17 @@ export function YAMLImportPanel({
 
   const { collapseCreateWorkflowPanel } = useUICommands();
 
-  // Get persisted YAML content from store
+  // Get persisted state from store
   const storedYamlContent = uiStore.withSelector(
     state => state.importPanel.yamlContent
   )();
+  const importState = uiStore.withSelector(
+    state => state.importPanel.importState
+  )();
+  const setImportState = uiStore.setImportState;
 
   const [yamlContent, setYamlContent] = useState(storedYamlContent);
   const [errors, setErrors] = useState<WorkflowError[]>([]);
-  const [importState, setImportState] = useState<ImportState>(
-    storedYamlContent ? 'parsing' : 'initial'
-  );
   const [validatedState, setValidatedState] =
     useState<YAMLWorkflowState | null>(null);
 
@@ -102,6 +95,15 @@ export function YAMLImportPanel({
         }
         setImportState('invalid');
         setValidatedState(null);
+        // Clear canvas when YAML is invalid
+        onImport({
+          id: '',
+          name: '',
+          jobs: [],
+          triggers: [],
+          edges: [],
+          positions: null,
+        });
       }
     }, 300),
     [onImport]
@@ -197,7 +199,7 @@ export function YAMLImportPanel({
 
       {/* Error Banner */}
       {errors.length > 0 && (
-        <div className="shrink-0">
+        <div className="shrink-0 px-4 pt-4">
           <ValidationErrorDisplay errors={errors} />
         </div>
       )}

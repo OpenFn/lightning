@@ -127,6 +127,7 @@ export const createUIStore = (): UIStore => {
       },
       importPanel: {
         yamlContent: '',
+        importState: 'initial',
       },
     } as UIState,
     draft => draft
@@ -302,10 +303,20 @@ export const createUIStore = (): UIStore => {
     notify('setImportYamlContent');
   };
 
+  const setImportState = (
+    importState: 'initial' | 'parsing' | 'valid' | 'invalid' | 'importing'
+  ) => {
+    state = produce(state, draft => {
+      draft.importPanel.importState = importState;
+    });
+    notify('setImportState');
+  };
+
   const clearImportPanel = () => {
     state = produce(state, draft => {
       draft.importPanel = {
         yamlContent: '',
+        importState: 'initial',
       };
     });
     notify('clearImportPanel');
@@ -342,6 +353,7 @@ export const createUIStore = (): UIStore => {
     selectTemplate,
     clearTemplatePanel,
     setImportYamlContent,
+    setImportState,
     clearImportPanel,
   };
 };

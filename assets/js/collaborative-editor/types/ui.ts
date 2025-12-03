@@ -48,6 +48,8 @@ export interface UIState {
   /** Import panel state */
   importPanel: {
     yamlContent: string;
+    /** Import state machine: initial -> parsing -> valid/invalid -> importing */
+    importState: 'initial' | 'parsing' | 'valid' | 'invalid' | 'importing';
   };
 }
 
@@ -109,6 +111,11 @@ export interface UICommands {
 
   /** Set import panel YAML content */
   setImportYamlContent: (content: string) => void;
+
+  /** Set import panel state */
+  setImportState: (
+    state: 'initial' | 'parsing' | 'valid' | 'invalid' | 'importing'
+  ) => void;
 
   /** Clear import panel state */
   clearImportPanel: () => void;

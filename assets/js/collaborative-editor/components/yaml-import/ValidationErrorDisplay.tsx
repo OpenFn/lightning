@@ -1,8 +1,8 @@
 /**
  * ValidationErrorDisplay - Error banner component
  *
- * Displays validation errors with slide-in and shake animations
- * matching the LiveView implementation
+ * Displays validation errors with shake animations.
+ * Uses normal flow positioning - parent is responsible for placement.
  */
 
 import { useState, useEffect } from 'react';
@@ -37,7 +37,7 @@ export function ValidationErrorDisplay({
 
   return (
     <div
-      className={`absolute top-0 left-0 right-0 z-10 bg-danger-100/80 border border-danger-200 text-danger-800 px-4 py-3 rounded-lg flex items-start gap-3 shadow-sm
+      className={`bg-danger-100/80 border border-danger-200 text-danger-800 px-4 py-3 rounded-lg flex items-start gap-3 shadow-sm
         ${shouldShake ? 'error-shake' : ''}
         error-slide-in`}
     >

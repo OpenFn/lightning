@@ -142,3 +142,17 @@ export const useTemplatePanel = (): UIState['templatePanel'] => {
 
   return useSyncExternalStore(uiStore.subscribe, selectTemplatePanel);
 };
+
+/**
+ * Hook to get the import panel state
+ */
+export const useImportPanelState =
+  (): UIState['importPanel']['importState'] => {
+    const uiStore = useUIStore();
+
+    const selectImportState = uiStore.withSelector(
+      state => state.importPanel.importState
+    );
+
+    return useSyncExternalStore(uiStore.subscribe, selectImportState);
+  };

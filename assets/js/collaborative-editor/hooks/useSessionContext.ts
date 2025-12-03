@@ -274,6 +274,20 @@ export const useWorkflowTemplate = (): WorkflowTemplate | null => {
 };
 
 /**
+ * Hook to check if session context has been loaded from server
+ * Returns true once lastUpdated is set (session context received)
+ */
+export const useSessionContextLoaded = (): boolean => {
+  const sessionContextStore = useSessionContextStore();
+
+  const selectLoaded = sessionContextStore.withSelector(
+    state => state.lastUpdated !== null
+  );
+
+  return useSyncExternalStore(sessionContextStore.subscribe, selectLoaded);
+};
+
+/**
  * Hook to check if user has read AI assistant disclaimer
  * Returns false until session context loads, then reflects actual status
  */

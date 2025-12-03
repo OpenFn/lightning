@@ -8,7 +8,11 @@ import {
   useLatestSnapshotLockVersion,
   useProjectRepoConnection,
 } from '../hooks/useSessionContext';
-import { useUICommands } from '../hooks/useUI';
+import {
+  useImportPanelState,
+  useIsCreateWorkflowPanelCollapsed,
+  useUICommands,
+} from '../hooks/useUI';
 import {
   useCanRun,
   useCanSave,
@@ -185,6 +189,8 @@ export function Header({
   const workflow = useWorkflowState(state => state.workflow);
   const latestSnapshotLockVersion = useLatestSnapshotLockVersion();
   const isNewWorkflow = useIsNewWorkflow();
+  const isCreateWorkflowPanelCollapsed = useIsCreateWorkflowPanelCollapsed();
+  const importPanelState = useImportPanelState();
 
   // Derived values after all hooks are called
   const firstTriggerId = triggers[0]?.id;
@@ -337,12 +343,22 @@ export function Header({
                 canSave={
                   canSave &&
                   !hasSettingsErrors &&
-                  !(isNewWorkflow && isWorkflowEmpty)
+                  !(isNewWorkflow && isWorkflowEmpty) &&
+                  // When import panel is open, sync with its validation state
+                  !(
+                    isNewWorkflow &&
+                    !isCreateWorkflowPanelCollapsed &&
+                    importPanelState !== 'valid'
+                  )
                 }
                 tooltipMessage={
-                  isNewWorkflow && isWorkflowEmpty
-                    ? 'Cannot save an empty workflow'
-                    : tooltipMessage
+                  isNewWorkflow &&
+                  !isCreateWorkflowPanelCollapsed &&
+                  importPanelState === 'invalid'
+                    ? 'Fix validation errors to continue'
+                    : isNewWorkflow && isWorkflowEmpty
+                      ? 'Cannot save an empty workflow'
+                      : tooltipMessage
                 }
                 onClick={() => void saveWorkflow()}
                 repoConnection={repoConnection}

@@ -337,10 +337,7 @@ export function MessageList({
         <div
           key={message.id}
           data-role={`${message.role}-message`}
-          className={cn(
-            'group px-6 py-4',
-            message.role === 'assistant' ? 'bg-gray-50/50' : 'bg-white'
-          )}
+          className={cn('group px-6 py-4')}
         >
           <div className="max-w-3xl mx-auto">
             {message.role === 'assistant' ? (
@@ -492,7 +489,7 @@ export function MessageList({
             ) : (
               <div className="flex justify-end">
                 <div className="flex flex-col items-end max-w-[85%]">
-                  <div className="rounded-2xl bg-gray-100 border border-gray-200 px-4 py-3">
+                  <div className="rounded-2xl bg-gray-100 px-4 py-2">
                     <MarkdownContent
                       content={message.content}
                       showAddButtons={false}
@@ -539,7 +536,7 @@ export function MessageList({
       ))}
 
       {isLoading && (
-        <div ref={loadingRef} className="group px-6 py-4 bg-gray-50/50">
+        <div ref={loadingRef} className="group px-6 py-4">
           <div className="max-w-3xl mx-auto">
             <div className="flex items-center gap-1.5">
               <span className="inline-block w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" />

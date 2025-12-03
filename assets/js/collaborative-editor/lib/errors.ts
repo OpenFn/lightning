@@ -39,6 +39,7 @@ export function isChannelRequestError(
 /**
  * Format channel error into user-friendly message.
  * Tries "base" first, then formats field-specific errors with field names.
+ * Handles both flat error structures and nested arrays from Phoenix changeset errors.
  */
 export function formatChannelErrorMessage(channelError: ChannelError): string {
   // First try the base errors
@@ -46,20 +47,24 @@ export function formatChannelErrorMessage(channelError: ChannelError): string {
     return channelError.errors.base[0];
   }
 
-  // Format field-specific errors
-  const errorMessages: string[] = [];
-  for (const [field, messages] of Object.entries(channelError.errors)) {
-    if (field === 'base' || !messages) continue;
+  // Handle nested error structures from Phoenix changeset errors
+  // Structure can be: { field: [[{ nested_field: ['messages'] }]] }
+  const fError = Object.values(channelError.errors)
+    .flat(2)
+    .find(v => v && typeof v === 'object' && Object.keys(v).length > 0) as
+    | Record<string, unknown>
+    | undefined;
 
-    // Handle both string arrays and single strings
-    const msgArray = Array.isArray(messages) ? messages : [String(messages)];
-    const fieldName = toTitleCase(
-      field.replace(/\[\d+\]\./g, ' ').replace(/_/g, ' ')
-    );
-    errorMessages.push(`${fieldName}: ${msgArray.join(', ')}`);
-  }
+  if (!fError) return 'An error occurred';
 
-  return errorMessages.length > 0
-    ? errorMessages.join('\n')
-    : 'An error occurred';
+  const msg = Object.entries(fError)
+    .map(([key, val]) => {
+      // Handle both string arrays and single strings safely
+      const messages = Array.isArray(val) ? val : [String(val)];
+      // toTitleCase splits on underscores and capitalizes each word
+      return `${toTitleCase(key)}: ${messages.join(', ')}`;
+    })
+    .join('\n');
+
+  return msg || 'An error occurred';
 }

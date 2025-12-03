@@ -20,6 +20,7 @@ import {
   useProject,
   useHasReadAIDisclaimer,
   useSetHasReadAIDisclaimer,
+  useSessionContextLoaded,
 } from '../hooks/useSessionContext';
 import {
   useIsAIAssistantPanelOpen,
@@ -101,6 +102,7 @@ export function AIAssistantPanelWrapper() {
   const sessionId = useAISessionId();
   const sessionType = useAISessionType();
   const connectionState = useAIConnectionState();
+  const sessionContextLoaded = useSessionContextLoaded();
   const hasReadDisclaimer = useHasReadAIDisclaimer();
   const setHasReadAIDisclaimer = useSetHasReadAIDisclaimer();
   const workflowTemplateContext = useAIWorkflowTemplateContext();
@@ -654,7 +656,7 @@ export function AIAssistantPanelWrapper() {
               loadSessions={loadSessions}
               focusTrigger={focusTrigger}
               connectionState={sessionId ? connectionState : 'connected'}
-              showDisclaimer={!hasReadDisclaimer}
+              showDisclaimer={sessionContextLoaded && !hasReadDisclaimer}
               onAcceptDisclaimer={handleMarkDisclaimerRead}
             >
               <MessageList
