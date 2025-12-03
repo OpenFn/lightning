@@ -193,7 +193,9 @@ defmodule LightningWeb.WorkflowChannel do
         latest_snapshot_lock_version: fresh_workflow.lock_version,
         project_repo_connection: render_repo_connection(project_repo_connection),
         webhook_auth_methods: render_webhook_auth_methods(webhook_auth_methods),
-        workflow_template: render_workflow_template(workflow_template)
+        workflow_template: render_workflow_template(workflow_template),
+        has_read_ai_disclaimer:
+          Lightning.AiAssistant.user_has_read_disclaimer?(user)
       }
     end)
   end

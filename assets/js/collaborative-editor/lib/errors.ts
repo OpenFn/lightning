@@ -41,18 +41,25 @@ export function isChannelRequestError(
  * Tries "base" first, then formats field-specific errors with field names.
  */
 export function formatChannelErrorMessage(channelError: ChannelError): string {
+  // First try the base errors
   if (channelError.errors.base?.[0]) {
     return channelError.errors.base[0];
   }
 
-  const fError = Object.values(channelError.errors)
-    .flat(2)
-    .find(v => Object.keys(v).length) as unknown as Record<string, string[]>;
-  if (!fError) return 'An error occurred';
-  const msg = Object.entries(fError)
-    .map(([key, val]) => {
-      return `${toTitleCase(key)}: ${val.join(', ')}`;
-    })
-    .join('\n');
-  return msg;
+  // Format field-specific errors
+  const errorMessages: string[] = [];
+  for (const [field, messages] of Object.entries(channelError.errors)) {
+    if (field === 'base' || !messages) continue;
+
+    // Handle both string arrays and single strings
+    const msgArray = Array.isArray(messages) ? messages : [String(messages)];
+    const fieldName = toTitleCase(
+      field.replace(/\[\d+\]\./g, ' ').replace(/_/g, ' ')
+    );
+    errorMessages.push(`${fieldName}: ${msgArray.join(', ')}`);
+  }
+
+  return errorMessages.length > 0
+    ? errorMessages.join('\n')
+    : 'An error occurred';
 }

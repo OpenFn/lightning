@@ -81,6 +81,7 @@ export const SessionContextResponseSchema = z.object({
   project_repo_connection: ProjectRepoConnectionSchema.nullable(),
   webhook_auth_methods: z.array(WebhookAuthMethodSchema),
   workflow_template: WorkflowTemplateSchema.nullable(),
+  has_read_ai_disclaimer: z.boolean(),
 });
 
 export type UserContext = z.infer<typeof UserContextSchema>;
@@ -100,6 +101,7 @@ export interface SessionContextState {
   versionsLoading: boolean;
   versionsError: string | null;
   workflow_template: WorkflowTemplate | null;
+  hasReadAIDisclaimer: boolean;
   isNewWorkflow: boolean;
   isLoading: boolean;
   error: string | null;
@@ -115,6 +117,7 @@ interface SessionContextCommands {
   clearError: () => void;
   setLatestSnapshotLockVersion: (lockVersion: number) => void;
   clearIsNewWorkflow: () => void;
+  setHasReadAIDisclaimer: (hasRead: boolean) => void;
 }
 
 interface SessionContextQueries {

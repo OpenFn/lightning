@@ -4,7 +4,6 @@ import { useURLState } from '../../react/lib/use-url-state';
 import { parseWorkflowYAML, convertWorkflowSpecToState } from '../../yaml/util';
 import {
   useAIConnectionState,
-  useAIHasReadDisclaimer,
   useAIIsLoading,
   useAIMessages,
   useAISessionId,
@@ -17,7 +16,11 @@ import { useAIInitialMessage } from '../hooks/useAIInitialMessage';
 import { useAIMode } from '../hooks/useAIMode';
 import { useAISession } from '../hooks/useAISession';
 import { useResizablePanel } from '../hooks/useResizablePanel';
-import { useProject } from '../hooks/useSessionContext';
+import {
+  useProject,
+  useHasReadAIDisclaimer,
+  useSetHasReadAIDisclaimer,
+} from '../hooks/useSessionContext';
 import {
   useIsAIAssistantPanelOpen,
   useUICommands,
@@ -98,7 +101,8 @@ export function AIAssistantPanelWrapper() {
   const sessionId = useAISessionId();
   const sessionType = useAISessionType();
   const connectionState = useAIConnectionState();
-  const hasReadDisclaimer = useAIHasReadDisclaimer();
+  const hasReadDisclaimer = useHasReadAIDisclaimer();
+  const setHasReadAIDisclaimer = useSetHasReadAIDisclaimer();
   const workflowTemplateContext = useAIWorkflowTemplateContext();
   const project = useProject();
   const workflow = useWorkflowState(state => state.workflow);
@@ -453,9 +457,12 @@ export function AIAssistantPanelWrapper() {
   );
 
   const handleMarkDisclaimerRead = useCallback(() => {
+    // Update session context immediately for UI responsiveness
+    setHasReadAIDisclaimer(true);
+    // Also update AI store and persist to backend via channel
     aiStore.markDisclaimerRead();
     markDisclaimerReadViaChannel();
-  }, [aiStore, markDisclaimerReadViaChannel]);
+  }, [aiStore, markDisclaimerReadViaChannel, setHasReadAIDisclaimer]);
 
   const [applyingMessageId, setApplyingMessageId] = useState<string | null>(
     null
@@ -647,9 +654,7 @@ export function AIAssistantPanelWrapper() {
               loadSessions={loadSessions}
               focusTrigger={focusTrigger}
               connectionState={sessionId ? connectionState : 'connected'}
-              showDisclaimer={
-                connectionState === 'connected' && !hasReadDisclaimer
-              }
+              showDisclaimer={!hasReadDisclaimer}
               onAcceptDisclaimer={handleMarkDisclaimerRead}
             >
               <MessageList
