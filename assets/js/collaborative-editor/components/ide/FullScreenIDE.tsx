@@ -188,6 +188,9 @@ export function FullScreenIDE({
     setManuallyUnselectedDataclip(dataclip === null);
   }, []);
 
+  // Declaratively connect to run channel when runIdFromURL changes
+  const { run: currentRun, clearRun } = useFollowRun(runIdFromURL);
+
   const handleRunSubmitted = useCallback(
     (runId: string, dataclip?: Dataclip) => {
       setFollowRunId(runId);
@@ -210,6 +213,7 @@ export function FullScreenIDE({
 
   const handleClearFollowRun = useCallback(() => {
     setFollowRunId(null);
+    clearRun(); // call clear run for the history store
     updateSearchParams({ run: null });
     // Reset input state when unloading a run
     setSelectedDataclipState(null);
@@ -217,7 +221,7 @@ export function FullScreenIDE({
     setCustomBody('');
     setManuallyUnselectedDataclip(false);
     setRightPanelSubState('landing');
-  }, [updateSearchParams]);
+  }, [updateSearchParams, clearRun]);
 
   const handleNavigateToHistory = useCallback(() => {
     setRightPanelSubState('history');
@@ -280,9 +284,6 @@ export function FullScreenIDE({
     }
     return null;
   }, [selectedRunId, history]);
-
-  // Declaratively connect to run channel when runIdFromURL changes
-  const currentRun = useFollowRun(runIdFromURL);
 
   // Check if the currently selected job matches the loaded run
   const jobMatchesRun = useJobMatchesRun(currentJob?.id || null);
