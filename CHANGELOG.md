@@ -45,6 +45,8 @@ and this project adheres to
   [#3972](https://github.com/OpenFn/lightning/issues/3972)
 - IDE shows job expresion of previously selected job
   [#4022](https://github.com/OpenFn/lightning/issues/4022)
+- Fix flickering of canvas and job editor
+  [#4095](https://github.com/OpenFn/lightning/issues/4095)
 
 ## [2.15.0-pre1] - 2025-11-27
 

@@ -455,6 +455,27 @@ describe('LoadingBoundary', () => {
     test('renders cached workflow when disconnected', () => {
       // Simulates: User was connected, then lost connection
       // but cached workflow data still exists in Y.Doc
+
+      // First, render in a connected/hydrated state
+      mockUseSession.mockReturnValue(
+        createMockSessionState({
+          isConnected: true,
+          isSynced: true,
+          settled: true,
+        })
+      );
+      mockUseWorkflowState.mockReturnValue(createMockWorkflow());
+
+      const { rerender } = render(
+        <LoadingBoundary>
+          <div data-testid="child-content">Child Content</div>
+        </LoadingBoundary>
+      );
+
+      // Should render children when hydrated
+      expect(screen.getByTestId('child-content')).toBeInTheDocument();
+
+      // Now disconnect - workflow cache still available
       mockUseSession.mockReturnValue(
         createMockSessionState({
           isConnected: false, // Lost connection
@@ -463,16 +484,13 @@ describe('LoadingBoundary', () => {
         })
       );
 
-      // Cached workflow still available from Y.Doc
-      mockUseWorkflowState.mockReturnValue(createMockWorkflow());
-
-      render(
+      rerender(
         <LoadingBoundary>
           <div data-testid="child-content">Child Content</div>
         </LoadingBoundary>
       );
 
-      // Should render children with cached data
+      // Should still render children with cached data (after hydration)
       expect(screen.getByTestId('child-content')).toBeInTheDocument();
       expect(screen.queryByText('Loading workflow')).not.toBeInTheDocument();
     });
@@ -544,12 +562,12 @@ describe('LoadingBoundary', () => {
     });
 
     test('transitions from disconnected to reconnected', () => {
-      // Start: Disconnected with cached workflow
+      // Start: Connected and hydrated first
       mockUseSession.mockReturnValue(
         createMockSessionState({
-          isConnected: false,
-          isSynced: false,
-          settled: false,
+          isConnected: true,
+          isSynced: true,
+          settled: true,
         })
       );
       mockUseWorkflowState.mockReturnValue(createMockWorkflow());
@@ -560,7 +578,25 @@ describe('LoadingBoundary', () => {
         </LoadingBoundary>
       );
 
-      // Should render with cached data
+      // Should render when hydrated
+      expect(screen.getByTestId('content')).toBeInTheDocument();
+
+      // Disconnect: Connection lost but cached workflow available
+      mockUseSession.mockReturnValue(
+        createMockSessionState({
+          isConnected: false,
+          isSynced: false,
+          settled: false,
+        })
+      );
+
+      rerender(
+        <LoadingBoundary>
+          <div data-testid="content">Content</div>
+        </LoadingBoundary>
+      );
+
+      // Should still render with cached data (after hydration)
       expect(screen.getByTestId('content')).toBeInTheDocument();
 
       // Reconnect: Connection restored and syncing
@@ -571,7 +607,6 @@ describe('LoadingBoundary', () => {
           settled: false,
         })
       );
-      mockUseWorkflowState.mockReturnValue(createMockWorkflow());
 
       rerender(
         <LoadingBoundary>
@@ -590,7 +625,6 @@ describe('LoadingBoundary', () => {
           settled: true,
         })
       );
-      mockUseWorkflowState.mockReturnValue(createMockWorkflow());
 
       rerender(
         <LoadingBoundary>
