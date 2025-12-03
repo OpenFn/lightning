@@ -17,7 +17,10 @@ import type {
   JobCodeContext,
   WorkflowTemplateContext,
 } from '../types/ai-assistant';
-import { serializeWorkflowToYAML } from '../utils/workflowSerialization';
+import {
+  prepareWorkflowForSerialization,
+  serializeWorkflowToYAML,
+} from '../utils/workflowSerialization';
 
 import type { AIModeResult } from './useAIMode';
 
@@ -39,70 +42,6 @@ interface UseAIInitialMessageOptions {
   workflowData: WorkflowData;
   updateSearchParams: (params: Record<string, string | null>) => void;
   clearAIAssistantInitialMessage: () => void;
-}
-
-/**
- * Helper function to prepare workflow data for serialization.
- * Transforms workflow store state into the format expected by serializeWorkflowToYAML.
- */
-function prepareWorkflowForSerialization(
-  workflow: { id: string; name: string } | null,
-  jobs: unknown[],
-  triggers: unknown[],
-  edges: unknown[],
-  positions: unknown
-): import('../utils/workflowSerialization').SerializableWorkflow | null {
-  if (!workflow || jobs.length === 0) {
-    return null;
-  }
-
-  return {
-    id: workflow.id,
-    name: workflow.name,
-    jobs: jobs.map((job: unknown) => {
-      const j = job as Record<string, unknown>;
-      return {
-        id: String(j['id']),
-        name: String(j['name']),
-        adaptor: String(j['adaptor']),
-        body: String(j['body']),
-      };
-    }),
-    triggers,
-    edges: edges.map((edge: unknown) => {
-      const e = edge as Record<string, unknown>;
-      const conditionType = e['condition_type'];
-      const result: Record<string, unknown> = {
-        id: String(e['id']),
-        condition_type:
-          conditionType && typeof conditionType === 'string'
-            ? conditionType
-            : 'always',
-        enabled: e['enabled'] !== false,
-        target_job_id: String(e['target_job_id']),
-      };
-
-      const sourceJobId = e['source_job_id'];
-      if (sourceJobId && typeof sourceJobId === 'string') {
-        result['source_job_id'] = sourceJobId;
-      }
-      const sourceTriggerId = e['source_trigger_id'];
-      if (sourceTriggerId && typeof sourceTriggerId === 'string') {
-        result['source_trigger_id'] = sourceTriggerId;
-      }
-      const conditionLabel = e['condition_label'];
-      if (conditionLabel && typeof conditionLabel === 'string') {
-        result['condition_label'] = conditionLabel;
-      }
-      const conditionExpression = e['condition_expression'];
-      if (conditionExpression && typeof conditionExpression === 'string') {
-        result['condition_expression'] = conditionExpression;
-      }
-
-      return result;
-    }),
-    positions,
-  } as import('../utils/workflowSerialization').SerializableWorkflow;
 }
 
 /**
@@ -131,6 +70,14 @@ export function useAIInitialMessage({
   updateSearchParams,
   clearAIAssistantInitialMessage,
 }: UseAIInitialMessageOptions): void {
+  /**
+   * Race condition prevention:
+   * - initialMessageSentRef ensures we only send once per initial message
+   * - The flag is set to true immediately when we decide to send (line 86)
+   * - The flag resets when initialMessage is cleared OR panel closes (line 135-137)
+   * - This handles rapid state changes safely since React batches updates
+   *   and the ref check happens synchronously before any async operations
+   */
   const initialMessageSentRef = useRef(false);
 
   useEffect(() => {

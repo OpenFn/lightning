@@ -76,7 +76,8 @@ describe('TemplateDetailsCard', () => {
     );
 
     const card = container.firstChild as HTMLElement;
-    expect(card).toHaveClass('z-[5]');
+    // z-index is now set via style attribute using Z_INDEX constant
+    expect(card).toHaveStyle({ zIndex: '5' });
   });
 
   it('has semi-transparent background', () => {

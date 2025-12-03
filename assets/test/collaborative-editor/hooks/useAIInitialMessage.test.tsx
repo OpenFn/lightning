@@ -15,6 +15,21 @@ import type { AIAssistantStoreInstance } from '../../../js/collaborative-editor/
 // Mock the workflow serialization utility
 vi.mock('../../../js/collaborative-editor/utils/workflowSerialization', () => ({
   serializeWorkflowToYAML: vi.fn(() => 'name: Test Workflow\njobs: []'),
+  prepareWorkflowForSerialization: vi.fn(
+    (workflow, jobs, _triggers, _edges, _positions) => {
+      if (!workflow || jobs.length === 0) {
+        return null;
+      }
+      return {
+        id: workflow.id,
+        name: workflow.name,
+        jobs,
+        triggers: [],
+        edges: [],
+        positions: {},
+      };
+    }
+  ),
 }));
 
 describe('useAIInitialMessage', () => {

@@ -21,6 +21,7 @@ import { BASE_TEMPLATES } from '../../constants/baseTemplates';
 import { StoreContext } from '../../contexts/StoreProvider';
 import { useSession } from '../../hooks/useSession';
 import { useTemplatePanel, useUICommands } from '../../hooks/useUI';
+import { notifications } from '../../lib/notifications';
 import type { Template } from '../../types/template';
 import { Tooltip } from '../Tooltip';
 
@@ -52,7 +53,16 @@ export function TemplatePanel({
   const { templates, loading, error, searchQuery, selectedTemplate } =
     useTemplatePanel();
 
-  // Remember the last selected template before search
+  /**
+   * previousTemplateRef tracks the selected template before user starts searching.
+   * When search is cleared (query becomes empty), we restore this selection.
+   * This provides a better UX than losing the selection during search exploration.
+   *
+   * Why a ref instead of store state:
+   * - This is local to the search behavior within this component
+   * - Moving to store would add complexity without benefit (clearing on unmount, etc.)
+   * - The ref pattern keeps the restore logic self-contained
+   */
   const previousTemplateRef = useRef<Template | null>(null);
 
   useEffect(() => {
@@ -115,6 +125,11 @@ export function TemplatePanel({
           onImport(state);
         } catch (err) {
           console.error('Failed to parse template:', err);
+          notifications.alert({
+            title: 'Failed to load template',
+            description:
+              'The template YAML could not be parsed. Please try another template.',
+          });
         }
       }
     },
@@ -162,6 +177,11 @@ export function TemplatePanel({
             onImport(state);
           } catch (err) {
             console.error('Failed to parse template:', err);
+            notifications.alert({
+              title: 'Failed to load template',
+              description:
+                'The template YAML could not be parsed. Please try another template.',
+            });
           }
         }
       } else if (selectedTemplate?.id !== templateId) {
@@ -188,6 +208,11 @@ export function TemplatePanel({
       await onSave();
     } catch (err) {
       console.error('Failed to create workflow from template:', err);
+      notifications.alert({
+        title: 'Failed to create workflow',
+        description:
+          'The template could not be processed. Please try again or select another template.',
+      });
     }
   };
 
@@ -273,7 +298,36 @@ export function TemplatePanel({
 
         {error && (
           <div className="flex items-center justify-center h-64">
-            <div className="text-red-600">{error}</div>
+            <div className="text-center max-w-md">
+              <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-red-100 mb-5">
+                <span className="hero-exclamation-triangle h-7 w-7 text-red-600" />
+              </div>
+              <h3 className="text-base font-medium text-gray-900 mb-2">
+                Failed to load templates
+              </h3>
+              <p className="text-sm text-gray-600 mb-4">{error}</p>
+              <button
+                type="button"
+                onClick={() => {
+                  if (!channel) return;
+                  uiStore.setTemplatesError(null);
+                  void (async () => {
+                    try {
+                      uiStore.setTemplatesLoading(true);
+                      const userTemplates = await fetchTemplates(channel);
+                      uiStore.setTemplates(userTemplates);
+                    } catch (err) {
+                      console.error('Failed to fetch templates:', err);
+                      uiStore.setTemplatesError('Failed to load templates');
+                    }
+                  })();
+                }}
+                className="inline-flex items-center gap-2 rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
+              >
+                <span className="hero-arrow-path h-4 w-4" />
+                Try again
+              </button>
+            </div>
           </div>
         )}
 

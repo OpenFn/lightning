@@ -24,6 +24,8 @@ import {
 } from '../hooks/useWorkflow';
 import { useKeyboardShortcut } from '../keyboard';
 
+import { Z_INDEX } from '../utils/constants';
+
 import { CollaborativeWorkflowDiagram } from './diagram/CollaborativeWorkflowDiagram';
 import { Inspector } from './inspector';
 import { LeftPanel } from './left-panel';
@@ -289,15 +291,31 @@ export function WorkflowEditor() {
    * Clears the canvas when:
    * 1. AI Assistant panel opens (to prepare for AI-generated workflow)
    * 2. User switches between template/import methods while panel is open
-   * 3. Both create panel and AI panel are closed (reset to empty state)
+   * 3. Both panels transition to closed (user collapses the last open panel)
+   *
+   * Note: Uses refs to track previous state and only clear on actual transitions,
+   * not on initial mount or when both panels are already closed.
    */
   const prevAIPanelOpenRef = useRef(isAIAssistantPanelOpen);
   const prevMethodRef = useRef(leftPanelMethod);
+  const prevCreatePanelCollapsedRef = useRef(isCreateWorkflowPanelCollapsed);
+  const hasInitializedRef = useRef(false);
+
   useEffect(() => {
+    // Skip clearing on initial mount - let URL state restoration handle it
+    if (!hasInitializedRef.current) {
+      hasInitializedRef.current = true;
+      prevAIPanelOpenRef.current = isAIAssistantPanelOpen;
+      prevMethodRef.current = leftPanelMethod;
+      prevCreatePanelCollapsedRef.current = isCreateWorkflowPanelCollapsed;
+      return;
+    }
+
     if (!isNewWorkflow) {
       // Update refs but don't clear for existing workflows
       prevAIPanelOpenRef.current = isAIAssistantPanelOpen;
       prevMethodRef.current = leftPanelMethod;
+      prevCreatePanelCollapsedRef.current = isCreateWorkflowPanelCollapsed;
       return;
     }
 
@@ -306,17 +324,23 @@ export function WorkflowEditor() {
     const methodChanged =
       !isCreateWorkflowPanelCollapsed &&
       prevMethodRef.current !== leftPanelMethod;
-    const bothPanelsClosed =
+
+    // Only clear when TRANSITIONING to both-closed state, not when already closed
+    const wasAnyPanelOpen =
+      prevAIPanelOpenRef.current || !prevCreatePanelCollapsedRef.current;
+    const bothNowClosed =
       isCreateWorkflowPanelCollapsed && !isAIAssistantPanelOpen;
+    const bothPanelsJustClosed = wasAnyPanelOpen && bothNowClosed;
 
     // Clear canvas on any of these transitions
-    if (aiPanelJustOpened || methodChanged || bothPanelsClosed) {
+    if (aiPanelJustOpened || methodChanged || bothPanelsJustClosed) {
       clearCanvas();
     }
 
     // Update refs for next comparison
     prevAIPanelOpenRef.current = isAIAssistantPanelOpen;
     prevMethodRef.current = leftPanelMethod;
+    prevCreatePanelCollapsedRef.current = isCreateWorkflowPanelCollapsed;
   }, [
     isAIAssistantPanelOpen,
     isNewWorkflow,
@@ -365,19 +389,31 @@ export function WorkflowEditor() {
     }
   };
 
+  /**
+   * Imports a workflow state into the canvas.
+   *
+   * This function validates the workflow name to ensure uniqueness, then imports
+   * the workflow. If validation fails, it still imports the workflow (the server
+   * will handle name conflicts on save).
+   *
+   * Note: This is intentionally synchronous from the caller's perspective.
+   * The async validation happens in the background, but import proceeds
+   * immediately after validation completes or fails.
+   */
   const handleImport = useCallback(
     (workflowState: YAMLWorkflowState) => {
-      // Fire-and-forget async validation - import happens synchronously after validation
-      void (async () => {
-        try {
-          const validatedState =
-            await workflowStore.validateWorkflowName(workflowState);
+      // Validate workflow name asynchronously, but proceed with import regardless
+      workflowStore
+        .validateWorkflowName(workflowState)
+        .then(validatedState => {
           workflowStore.importWorkflow(validatedState);
-        } catch (error) {
-          console.error('Failed to validate workflow name:', error);
+        })
+        .catch((error: unknown) => {
+          // If validation fails, import with original state
+          // Server will handle any name conflicts on save
+          console.warn('Workflow name validation failed, proceeding:', error);
           workflowStore.importWorkflow(workflowState);
-        }
-      })();
+        });
     },
     [workflowStore]
   );
@@ -413,7 +449,18 @@ export function WorkflowEditor() {
     }
   );
 
-  // Cmd/Ctrl+/ to toggle create workflow panel in template mode (only for new workflows)
+  /**
+   * Keyboard shortcuts for new workflow creation panels.
+   *
+   * These shortcuts only work when creating a new workflow (isNewWorkflow=true):
+   * - Cmd/Ctrl + / : Toggle template panel (template browsing mode)
+   * - Cmd/Ctrl + \ : Toggle import panel (YAML import mode)
+   * - Cmd/Ctrl + K : Toggle AI Assistant (handled in AIAssistantPanelWrapper)
+   *
+   * Note: Using comma-separated combos for cross-platform support.
+   * "Control+/" handles Windows/Linux, "Meta+/" handles macOS.
+   * The tinykeys library parses these and binds to the appropriate key.
+   */
   useKeyboardShortcut(
     'Control+/, Meta+/',
     () => {
@@ -440,7 +487,7 @@ export function WorkflowEditor() {
     }
   );
 
-  // Cmd/Ctrl+\ to open import panel (only for new workflows)
+  // Cmd/Ctrl+\ to toggle import panel (see JSDoc above for full shortcut docs)
   useKeyboardShortcut(
     'Control+\\, Meta+\\',
     () => {
@@ -472,8 +519,9 @@ export function WorkflowEditor() {
       {/* Create Workflow Panel - Always rendered for smooth animations */}
       {isNewWorkflow && (
         <div
-          className="flex h-full flex-shrink-0 z-[60]"
+          className="flex h-full flex-shrink-0"
           style={{
+            zIndex: Z_INDEX.SIDE_PANEL,
             width: !isCreateWorkflowPanelCollapsed
               ? `${leftPanelWidth}px`
               : '0px',
@@ -515,7 +563,8 @@ export function WorkflowEditor() {
               }
               toggleCreateWorkflowPanel();
             }}
-            className="absolute left-0 top-6 z-[61] bg-white border border-gray-200 rounded-r-md p-1 shadow-sm hover:bg-gray-50 transition-colors"
+            style={{ zIndex: Z_INDEX.SIDE_PANEL_TOGGLE }}
+            className="absolute left-0 top-6 bg-white border border-gray-200 rounded-r-md p-1 shadow-sm hover:bg-gray-50 transition-colors"
             aria-label="Expand create workflow panel"
           >
             <span className="hero-chevron-right h-4 w-4 text-gray-600" />
@@ -675,7 +724,8 @@ export function WorkflowEditor() {
         {!isRunPanelOpen && (
           <div
             id="inspector"
-            className={`absolute top-0 right-0 transition-transform duration-300 ease-in-out z-10 ${
+            style={{ zIndex: Z_INDEX.INSPECTOR }}
+            className={`absolute top-0 right-0 transition-transform duration-300 ease-in-out ${
               showInspector
                 ? 'translate-x-0'
                 : 'translate-x-full pointer-events-none'
@@ -690,7 +740,10 @@ export function WorkflowEditor() {
         )}
 
         {isRunPanelOpen && runPanelContext && projectId && workflowId && (
-          <div className="absolute inset-y-0 right-0 flex pointer-events-none z-20">
+          <div
+            style={{ zIndex: Z_INDEX.RUN_PANEL }}
+            className="absolute inset-y-0 right-0 flex pointer-events-none"
+          >
             <ManualRunPanelErrorBoundary onClose={closeRunPanel}>
               <ManualRunPanel
                 workflow={workflow}

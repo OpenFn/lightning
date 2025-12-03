@@ -9,6 +9,8 @@
 
 import { useEffect, useRef, useState } from 'react';
 
+import { PANEL_CONSTRAINTS } from '../utils/constants';
+
 interface UseResizablePanelOptions {
   /** localStorage key for persisting panel width */
   storageKey: string;
@@ -38,10 +40,10 @@ interface UseResizablePanelReturn {
 export function useResizablePanel({
   storageKey,
   defaultWidth,
-  minPercent = 0.2,
-  maxPercent = 0.4,
-  minPixels = 300,
-  maxPixels = 600,
+  minPercent = PANEL_CONSTRAINTS.MIN_WIDTH_PERCENT,
+  maxPercent = PANEL_CONSTRAINTS.MAX_WIDTH_PERCENT,
+  minPixels = PANEL_CONSTRAINTS.MIN_WIDTH_PIXELS,
+  maxPixels = PANEL_CONSTRAINTS.MAX_WIDTH_PIXELS,
   direction = 'right',
 }: UseResizablePanelOptions): UseResizablePanelReturn {
   const [width, setWidth] = useState(() => {

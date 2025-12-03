@@ -27,76 +27,14 @@ import { useWorkflowState, useWorkflowActions } from '../hooks/useWorkflow';
 import { useKeyboardShortcut } from '../keyboard';
 import { notifications } from '../lib/notifications';
 import type { JobCodeContext } from '../types/ai-assistant';
-import { serializeWorkflowToYAML } from '../utils/workflowSerialization';
+import { Z_INDEX } from '../utils/constants';
+import {
+  prepareWorkflowForSerialization,
+  serializeWorkflowToYAML,
+} from '../utils/workflowSerialization';
 
 import { AIAssistantPanel } from './AIAssistantPanel';
 import { MessageList } from './MessageList';
-
-// Helper functions removed - no longer needed with registry-based approach
-
-/**
- * Helper function to prepare workflow data for serialization.
- * Transforms workflow store state into the format expected by serializeWorkflowToYAML.
- */
-function prepareWorkflowForSerialization(
-  workflow: { id: string; name: string } | null,
-  jobs: unknown[],
-  triggers: unknown[],
-  edges: unknown[],
-  positions: unknown
-): import('../utils/workflowSerialization').SerializableWorkflow | null {
-  if (!workflow || jobs.length === 0) {
-    return null;
-  }
-
-  return {
-    id: workflow.id,
-    name: workflow.name,
-    jobs: jobs.map((job: unknown) => {
-      const j = job as Record<string, unknown>;
-      return {
-        id: String(j['id']),
-        name: String(j['name']),
-        adaptor: String(j['adaptor']),
-        body: String(j['body']),
-      };
-    }),
-    triggers,
-    edges: edges.map((edge: unknown) => {
-      const e = edge as Record<string, unknown>;
-      const conditionType = e['condition_type'];
-      const result: Record<string, unknown> = {
-        id: String(e['id']),
-        condition_type:
-          conditionType && typeof conditionType === 'string'
-            ? conditionType
-            : 'always',
-        enabled: e['enabled'] !== false,
-        target_job_id: String(e['target_job_id']),
-      };
-
-      const sourceJobId = e['source_job_id'];
-      if (sourceJobId && typeof sourceJobId === 'string') {
-        result['source_job_id'] = sourceJobId;
-      }
-      const sourceTriggerId = e['source_trigger_id'];
-      if (sourceTriggerId && typeof sourceTriggerId === 'string') {
-        result['source_trigger_id'] = sourceTriggerId;
-      }
-      const conditionLabel = e['condition_label'];
-      if (conditionLabel && typeof conditionLabel === 'string') {
-        result['condition_label'] = conditionLabel;
-      }
-      const conditionExpression = e['condition_expression'];
-      if (conditionExpression && typeof conditionExpression === 'string') {
-        result['condition_expression'] = conditionExpression;
-      }
-
-      return result;
-    }),
-    positions,
-  } as import('../utils/workflowSerialization').SerializableWorkflow;
-}
 
 /**
  * AIAssistantPanelWrapper Component
@@ -669,8 +607,9 @@ export function AIAssistantPanelWrapper() {
 
   return (
     <div
-      className="flex h-full flex-shrink-0 z-[60]"
+      className="flex h-full flex-shrink-0"
       style={{
+        zIndex: Z_INDEX.SIDE_PANEL,
         width: isAIAssistantPanelOpen ? `${width}px` : '0px',
         overflow: 'hidden',
         transition: isResizing
