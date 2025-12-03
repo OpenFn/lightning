@@ -48,7 +48,11 @@ export function WorkflowEditor() {
     if (isRunPanelOpen) {
       const contextJobId = runPanelContext?.jobId;
       const contextTriggerId = runPanelContext?.triggerId;
-      const needsUpdate = panelParam !== 'run';
+      // Don't override settings, code, or editor panels when user explicitly opens them
+      const isSpecialPanel = ['settings', 'code', 'editor'].includes(
+        panelParam || ''
+      );
+      const needsUpdate = panelParam !== 'run' && !isSpecialPanel;
 
       if (needsUpdate) {
         isSyncingRef.current = true;
@@ -282,6 +286,11 @@ export function WorkflowEditor() {
           <div className="absolute inset-y-0 right-0 flex pointer-events-none z-20">
             <ManualRunPanelErrorBoundary onClose={closeRunPanel}>
               <ManualRunPanel
+                key={
+                  runPanelContext.jobId ||
+                  runPanelContext.triggerId ||
+                  runPanelContext.edgeId
+                }
                 workflow={workflow}
                 projectId={projectId}
                 workflowId={workflowId}

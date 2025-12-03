@@ -1,5 +1,5 @@
 import type { editor } from 'monaco-editor';
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { MonacoBinding } from 'y-monaco';
 import type { Awareness } from 'y-protocols/awareness';
 import type * as Y from 'yjs';
@@ -31,11 +31,13 @@ export function CollaborativeMonaco({
   const editorRef = useRef<editor.IStandaloneCodeEditor>();
   const monacoRef = useRef<Monaco>();
   const bindingRef = useRef<MonacoBinding>();
+  const [editorReady, setEditorReady] = useState(false);
 
   const handleOnMount = useCallback(
     (editor: editor.IStandaloneCodeEditor, monaco: Monaco) => {
       editorRef.current = editor;
       monacoRef.current = monaco;
+      setEditorReady(true);
 
       setTheme(monaco);
 
@@ -44,17 +46,10 @@ export function CollaborativeMonaco({
 
       addKeyboardShortcutOverrides(editor, monaco);
 
-      if (ytext && awareness) {
-        const binding = new MonacoBinding(
-          ytext,
-          editor.getModel()!,
-          new Set([editor]),
-          awareness
-        );
-        bindingRef.current = binding;
-      }
+      // Don't create binding here - let the useEffect handle it
+      // This ensures binding is created/updated whenever ytext changes
     },
-    [adaptor, ytext, awareness]
+    [adaptor]
   );
 
   useEffect(() => {
@@ -85,7 +80,7 @@ export function CollaborativeMonaco({
         bindingRef.current = undefined;
       }
     };
-  }, [ytext, awareness]);
+  }, [ytext, awareness, editorReady]);
 
   useEffect(() => {
     return () => {

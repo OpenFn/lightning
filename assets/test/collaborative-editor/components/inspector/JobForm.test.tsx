@@ -177,6 +177,9 @@ describe('JobForm - Adaptor Display Section', () => {
         config: { require_email_verification: false },
         permissions: { can_edit_workflow: true, can_run_workflow: true },
         latest_snapshot_lock_version: 1,
+        project_repo_connection: null,
+        webhook_auth_methods: [],
+        workflow_template: null,
       });
     });
   });
@@ -205,13 +208,15 @@ describe('JobForm - Adaptor Display Section', () => {
     // Phase 2R: Version is NO LONGER displayed in inspector
     // Version selection moved to ConfigureAdaptorModal (Phase 3R)
 
-    // Check "Edit" button exists (changed from "Connect")
-    const editButton = screen.getByRole('button', { name: /edit adaptor/i });
-    expect(editButton).toBeInTheDocument();
-    expect(editButton).toHaveTextContent('Edit');
+    // Check "Connect" button exists (no credential set yet)
+    const connectButton = screen.getByRole('button', {
+      name: /connect credential/i,
+    });
+    expect(connectButton).toBeInTheDocument();
+    expect(connectButton).toHaveTextContent('Connect');
   });
 
-  test("opens ConfigureAdaptorModal when 'Edit' clicked (Phase 3R)", async () => {
+  test("opens ConfigureAdaptorModal when 'Connect' clicked (Phase 3R)", async () => {
     const user = userEvent.setup();
     const job = workflowStore.getSnapshot().jobs[0];
 
@@ -225,9 +230,11 @@ describe('JobForm - Adaptor Display Section', () => {
       ),
     });
 
-    // Click "Edit" button to open ConfigureAdaptorModal
-    const editButton = screen.getByRole('button', { name: /edit adaptor/i });
-    await user.click(editButton);
+    // Click "Connect" button to open ConfigureAdaptorModal
+    const connectButton = screen.getByRole('button', {
+      name: /connect credential/i,
+    });
+    await user.click(connectButton);
 
     // Phase 3R: ConfigureAdaptorModal should open (not AdaptorSelectionModal)
     await waitFor(
@@ -255,9 +262,11 @@ describe('JobForm - Adaptor Display Section', () => {
     // Verify initial adaptor
     expect(screen.getByText('Http')).toBeInTheDocument();
 
-    // Open modal with "Edit" button
-    const editButton = screen.getByRole('button', { name: /edit adaptor/i });
-    await user.click(editButton);
+    // Open modal with "Connect" button
+    const connectButton = screen.getByRole('button', {
+      name: /connect credential/i,
+    });
+    await user.click(connectButton);
 
     // ConfigureAdaptorModal should open
     await waitFor(
@@ -381,6 +390,9 @@ describe("JobForm - Credential Display", () => {
         config: { require_email_verification: false },
         permissions: { can_edit_workflow: true, can_run_workflow: true },
         latest_snapshot_lock_version: 1,
+        project_repo_connection: null,
+        webhook_auth_methods: [],
+        workflow_template: null,
       });
     });
   });
@@ -580,6 +592,9 @@ describe('JobForm - Complete Integration (Phase 2R: Simplified)', () => {
         config: { require_email_verification: false },
         permissions: { can_edit_workflow: true, can_run_workflow: true },
         latest_snapshot_lock_version: 1,
+        project_repo_connection: null,
+        webhook_auth_methods: [],
+        workflow_template: null,
       });
     });
   });
@@ -623,9 +638,11 @@ describe('JobForm - Complete Integration (Phase 2R: Simplified)', () => {
       expect(updatedJob.name).toBe('Updated Name');
     });
 
-    // 3. Verify "Edit" button opens ConfigureAdaptorModal (Phase 3R)
-    const editButton = screen.getByRole('button', { name: /edit adaptor/i });
-    await user.click(editButton);
+    // 3. Verify "Connect" button opens ConfigureAdaptorModal (Phase 3R)
+    const connectButton = screen.getByRole('button', {
+      name: /connect credential/i,
+    });
+    await user.click(connectButton);
 
     // Wait for ConfigureAdaptorModal to open
     await waitFor(
@@ -728,6 +745,9 @@ describe('JobForm - Collaborative Validation (Phase 5)', () => {
         config: { require_email_verification: false },
         permissions: { can_edit_workflow: true, can_run_workflow: true },
         latest_snapshot_lock_version: 1,
+        project_repo_connection: null,
+        webhook_auth_methods: [],
+        workflow_template: null,
       });
     });
   });

@@ -31,15 +31,23 @@ export function StepItem({ step, selected, runInsertedAt }: StepItemProps) {
   const handleInspect = (e: React.MouseEvent) => {
     e.stopPropagation();
 
-    // Get current run ID from URL to preserve context
+    // Get current run ID and panel from URL to preserve context
     const currentRunId = searchParams.get('run');
+    const currentPanel = searchParams.get('panel');
 
-    // Update URL to switch job but preserve run/step context
-    updateSearchParams({
+    // Build updates object, only including panel if it exists
+    const updates: Record<string, string | null> = {
       job: step.job_id,
       run: currentRunId, // Preserve run context
       step: step.id, // Update to this step
-    });
+    };
+
+    // Only include panel in updates if it exists (avoids deleting it)
+    if (currentPanel) {
+      updates.panel = currentPanel;
+    }
+
+    updateSearchParams(updates);
   };
 
   // Determine if this step is from a previous run (cloned)

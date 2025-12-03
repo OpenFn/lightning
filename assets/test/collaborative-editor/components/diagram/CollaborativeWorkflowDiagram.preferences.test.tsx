@@ -37,6 +37,48 @@ function createWithSelectorMock(getSnapshot: () => any) {
   };
 }
 
+// Mock useURLState with reactive behavior
+const mockUpdateSearchParams = vi.fn();
+let mockSearchParams = new URLSearchParams();
+const urlListeners = new Set<() => void>();
+
+// Cache the snapshot to avoid infinite loops
+let cachedSnapshot = {
+  searchParams: mockSearchParams,
+  hash: '',
+};
+
+// Helper to trigger URL state updates
+function updateMockURL(params: URLSearchParams) {
+  mockSearchParams = params;
+  cachedSnapshot = {
+    searchParams: params,
+    hash: '',
+  };
+  urlListeners.forEach(listener => listener());
+}
+
+vi.mock('../../../../js/react/lib/use-url-state', () => {
+  const { useSyncExternalStore } = require('react');
+  return {
+    useURLState: () => {
+      const state = useSyncExternalStore(
+        (listener: () => void) => {
+          urlListeners.add(listener);
+          return () => urlListeners.delete(listener);
+        },
+        () => cachedSnapshot
+      );
+
+      return {
+        searchParams: state.searchParams,
+        hash: state.hash,
+        updateSearchParams: mockUpdateSearchParams,
+      };
+    },
+  };
+});
+
 // Mock dependencies
 vi.mock('@xyflow/react', () => ({
   ReactFlow: () => <div data-testid="react-flow">Workflow Diagram</div>,
@@ -153,6 +195,14 @@ describe('CollaborativeWorkflowDiagram - EditorPreferences Integration', () => {
         storage.varStorage.removeItem(key)
       );
 
+    // Reset URL mock
+    mockSearchParams = new URLSearchParams();
+    cachedSnapshot = {
+      searchParams: mockSearchParams,
+      hash: '',
+    };
+    mockUpdateSearchParams.mockClear();
+
     // Create fresh store and wrapper for each test
     store = createEditorPreferencesStore();
     wrapper = createWrapper(store);
@@ -248,12 +298,8 @@ describe('CollaborativeWorkflowDiagram - EditorPreferences Integration', () => {
         'true'
       );
 
-      // Use jsdom to set search params
-      Object.defineProperty(window, 'location', {
-        value: { search: '?run=test-run-id' },
-        writable: true,
-        configurable: true,
-      });
+      // Set URL with run parameter
+      mockSearchParams = new URLSearchParams('?run=test-run-id');
 
       render(<CollaborativeWorkflowDiagram />, { wrapper });
 
@@ -282,11 +328,7 @@ describe('CollaborativeWorkflowDiagram - EditorPreferences Integration', () => {
       wrapper = createWrapper(store);
 
       // Ensure URL has no run ID
-      Object.defineProperty(window, 'location', {
-        value: { search: '' },
-        writable: true,
-        configurable: true,
-      });
+      mockSearchParams = new URLSearchParams();
 
       render(<CollaborativeWorkflowDiagram />, { wrapper });
 
@@ -326,24 +368,13 @@ describe('CollaborativeWorkflowDiagram - EditorPreferences Integration', () => {
 
   describe('run selection and panel collapse', () => {
     test('collapsing panel keeps run selected', async () => {
-      // Mock URL with run parameter
-      const originalPushState = window.history.pushState;
-      const pushStateMock = vi.fn();
-      window.history.pushState = pushStateMock;
-
       // Set URL to have a run parameter (simulating user selected a run)
       const runId = '7d5e0711-e2fd-44a4-91cc-fa0c335f88e4';
-      const mockUrl = new URL(`http://localhost/?run=${runId}`);
-      Object.defineProperty(window, 'location', {
-        value: {
-          href: mockUrl.toString(),
-          search: mockUrl.search,
-          pathname: '/',
-          origin: 'http://localhost',
-        },
-        writable: true,
-        configurable: true,
-      });
+      mockSearchParams = new URLSearchParams(`?run=${runId}`);
+      cachedSnapshot = {
+        searchParams: mockSearchParams,
+        hash: '',
+      };
 
       // Pre-expand the history panel (simulating auto-expand when run selected)
       storage.varStorage.setItem(
@@ -401,29 +432,15 @@ describe('CollaborativeWorkflowDiagram - EditorPreferences Integration', () => {
       // Run badge should be visible in collapsed state
       // Note: RunBadge renders "Run {truncated-id}", look for this pattern
       expect(screen.getByText(/Run/i)).toBeInTheDocument();
-
-      // Restore original pushState
-      window.history.pushState = originalPushState;
     });
 
     test('run chip appears in collapsed state and can deselect run', async () => {
-      // Mock URL with run parameter
-      const originalPushState = window.history.pushState;
-      const pushStateMock = vi.fn();
-      window.history.pushState = pushStateMock;
-
       const runId = '7d5e0711-e2fd-44a4-91cc-fa0c335f88e4';
-      const mockUrl = new URL(`http://localhost/?run=${runId}`);
-      Object.defineProperty(window, 'location', {
-        value: {
-          href: mockUrl.toString(),
-          search: mockUrl.search,
-          pathname: '/',
-          origin: 'http://localhost',
-        },
-        writable: true,
-        configurable: true,
-      });
+      mockSearchParams = new URLSearchParams(`?run=${runId}`);
+      cachedSnapshot = {
+        searchParams: mockSearchParams,
+        hash: '',
+      };
 
       // Start with panel expanded and run selected
       storage.varStorage.setItem(
@@ -478,20 +495,18 @@ describe('CollaborativeWorkflowDiagram - EditorPreferences Integration', () => {
       const closeButton = screen.getByLabelText(/Remove/i);
       fireEvent.click(closeButton);
 
-      // Should clear URL parameter and hide chip
+      // Should call updateSearchParams to clear the run parameter
       await waitFor(() => {
-        expect(pushStateMock).toHaveBeenCalled();
-        const lastCall =
-          pushStateMock.mock.calls[pushStateMock.mock.calls.length - 1];
-        const urlArg = lastCall[2] as string;
-        expect(urlArg).not.toContain('run=');
+        expect(mockUpdateSearchParams).toHaveBeenCalledWith({ run: null });
       });
 
-      // Chip should be gone
-      expect(screen.queryByText(/Run/i)).not.toBeInTheDocument();
+      // Simulate URL change by updating the mock and triggering listeners
+      updateMockURL(new URLSearchParams());
 
-      // Restore
-      window.history.pushState = originalPushState;
+      // Chip should be gone after URL update
+      await waitFor(() => {
+        expect(screen.queryByText(/Run/i)).not.toBeInTheDocument();
+      });
     });
   });
 });

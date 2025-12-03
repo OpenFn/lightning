@@ -159,6 +159,9 @@ describe('EdgeForm - Basic Rendering', () => {
         config: { require_email_verification: false },
         permissions: { can_edit_workflow: true, can_run_workflow: true },
         latest_snapshot_lock_version: 1,
+        project_repo_connection: null,
+        webhook_auth_methods: [],
+        workflow_template: null,
       });
     });
   });
@@ -306,6 +309,9 @@ describe('EdgeForm - Form Value Reset', () => {
         config: { require_email_verification: false },
         permissions: { can_edit_workflow: true, can_run_workflow: true },
         latest_snapshot_lock_version: 1,
+        project_repo_connection: null,
+        webhook_auth_methods: [],
+        workflow_template: null,
       });
     });
   });
@@ -455,6 +461,9 @@ describe('EdgeForm - Collaborative Validation', () => {
         config: { require_email_verification: false },
         permissions: { can_edit_workflow: true, can_run_workflow: true },
         latest_snapshot_lock_version: 1,
+        project_repo_connection: null,
+        webhook_auth_methods: [],
+        workflow_template: null,
       });
     });
   });
@@ -671,6 +680,9 @@ describe('EdgeForm - Conditional Expression Validation', () => {
         config: { require_email_verification: false },
         permissions: { can_edit_workflow: true, can_run_workflow: true },
         latest_snapshot_lock_version: 1,
+        project_repo_connection: null,
+        webhook_auth_methods: [],
+        workflow_template: null,
       });
     });
   });

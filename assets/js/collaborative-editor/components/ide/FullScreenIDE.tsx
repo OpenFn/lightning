@@ -45,6 +45,7 @@ import {
   useWorkflowState,
 } from '../../hooks/useWorkflow';
 import { isFinalState } from '../../types/history';
+import { edgesToAdjList, getJobOrdinals } from '../../utils/workflowGraph';
 import { AdaptorDisplay } from '../AdaptorDisplay';
 import { AdaptorSelectionModal } from '../AdaptorSelectionModal';
 import { CollaborativeMonaco } from '../CollaborativeMonaco';
@@ -349,7 +350,15 @@ export function FullScreenIDE({
   });
 
   // Handle job selection from JobSelector
-  const allJobs = workflow?.jobs || [];
+  const sortedJobs = useMemo(() => {
+    const allJobs = workflow?.jobs || [];
+    const adjList = edgesToAdjList(workflow?.edges || []);
+    const ordinals = getJobOrdinals(adjList.list, adjList.trigger_id);
+    return [...allJobs].sort((a, b) => {
+      return (ordinals[a.id] || Infinity) - (ordinals[b.id] || Infinity);
+    });
+  }, [workflow?.edges, workflow?.jobs]);
+
   const handleJobSelect = useCallback(
     (job: any) => {
       updateSearchParams({ job: job.id });
@@ -396,10 +405,13 @@ export function FullScreenIDE({
   }, []);
 
   const handleOpenCredentialModal = useCallback(
-    (adaptorName: string) => {
+    (adaptorName: string, credentialId?: string) => {
       setIsConfigureModalOpen(false);
       setIsCredentialModalOpen(true);
-      pushEvent('open_credential_modal', { schema: adaptorName });
+      pushEvent('open_credential_modal', {
+        schema: adaptorName,
+        credential_id: credentialId,
+      });
     },
     [pushEvent]
   );
@@ -516,20 +528,23 @@ export function FullScreenIDE({
 
   useEffect(() => {
     const cleanup = handleEvent('credential_saved', (payload: any) => {
-      if (!currentJob) return;
-
       setIsCredentialModalOpen(false);
 
-      const { credential, is_project_credential } = payload;
-      const credentialId = is_project_credential
-        ? credential.project_credential_id
-        : credential.id;
+      // If we have a current job, update its credential assignment
+      // (this happens when creating a new credential and selecting it)
+      if (currentJob) {
+        const { credential, is_project_credential } = payload;
+        const credentialId = is_project_credential
+          ? credential.project_credential_id
+          : credential.id;
 
-      updateJob(currentJob.id, {
-        project_credential_id: is_project_credential ? credentialId : null,
-        keychain_credential_id: is_project_credential ? null : credentialId,
-      });
+        updateJob(currentJob.id, {
+          project_credential_id: is_project_credential ? credentialId : null,
+          keychain_credential_id: is_project_credential ? null : credentialId,
+        });
+      }
 
+      // Always refresh credentials and reopen configure modal
       void requestCredentials();
 
       setTimeout(() => {
@@ -654,7 +669,7 @@ export function FullScreenIDE({
             <div className="shrink-0">
               <JobSelector
                 currentJob={currentJob}
-                jobs={allJobs}
+                jobs={sortedJobs}
                 onChange={handleJobSelect}
               />
             </div>
