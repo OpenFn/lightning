@@ -2,7 +2,6 @@
 name: idea-machine
 description: Takes a problem statement and generates creative solution approaches. Used when planning large features to explore implementation options. Searches both the codebase for existing patterns and the web for proven solutions. Gets the creative juices flowing!
 tools: Task, Grep, Glob, Read, LS, TodoWrite, WebSearch, WebFetch
-model: sonnet
 color: cyan
 ---
 

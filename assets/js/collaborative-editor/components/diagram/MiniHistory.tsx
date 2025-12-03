@@ -210,6 +210,9 @@ export default function MiniHistory({
           >
             <span className="hero-rectangle-stack w-4 h-4"></span>
           </button>
+          {loading && history.length ? (
+            <span className="hero-arrow-path size-4 animate-spin"></span>
+          ) : null}
         </div>
 
         <div
@@ -238,7 +241,7 @@ export default function MiniHistory({
             collapsed ? 'opacity-0 h-0 hidden' : 'opacity-100'
           }`}
       >
-        {loading ? (
+        {loading && !history.length ? (
           <div
             className="flex flex-col items-center justify-center
             p-8 text-gray-500"

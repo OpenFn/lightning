@@ -28,6 +28,8 @@ and this project adheres to
 
 ### Fixed
 
+- User menu dropdown no longer clips or causes horizontal scroll in side
+  navigation [#4092](https://github.com/OpenFn/lightning/issues/4092)
 - Improved version mismatch banner UX: made compact, dismissible, and
   repositioned to top-center; improved history panel collapse behavior to
   maintain run selection with visual run chip indicator
@@ -45,6 +47,8 @@ and this project adheres to
   [#4022](https://github.com/OpenFn/lightning/issues/4022)
 - Fix save & run buttons disabled after new workflow save
   [#4084](https://github.com/OpenFn/lightning/issues/4084)
+- Fix flickering of canvas and job editor
+  [#4095](https://github.com/OpenFn/lightning/issues/4095)
 
 ## [2.15.0-pre1] - 2025-11-27
 
