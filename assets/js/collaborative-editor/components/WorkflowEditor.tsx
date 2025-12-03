@@ -257,11 +257,9 @@ export function WorkflowEditor() {
   );
 
   return (
-    <div className="flex h-full w-full">
+    <div className="flex h-full w-full flex-row-reverse">
       <div
-        className={`flex-1 relative transition-all duration-300 ease-in-out ${
-          showLeftPanel ? 'ml-[33.333333%]' : 'ml-0'
-        }`}
+        className={`flex-1 relative transition-all duration-300 ease-in-out`}
       >
         <CollaborativeWorkflowDiagram inspectorId="inspector" />
 

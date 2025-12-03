@@ -890,7 +890,8 @@ export const createHistoryStore = (): HistoryStore => {
 
       // Clear active run state
       draft.activeRunId = null;
-      draft.activeRun = null;
+      // don't clear the run. it's going to be replaced by the way
+      // draft.activeRun = null;
       draft.activeRunError = null;
       draft.selectedStepId = null;
     });
