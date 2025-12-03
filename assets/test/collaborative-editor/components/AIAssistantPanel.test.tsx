@@ -167,7 +167,7 @@ describe('AIAssistantPanel', () => {
     it('should render close button', () => {
       renderWithStore(<AIAssistantPanel isOpen={true} onClose={mockOnClose} />);
 
-      const closeButton = screen.getByLabelText('Close AI Assistant');
+      const closeButton = screen.getByLabelText('Close assistant');
       expect(closeButton).toBeInTheDocument();
     });
 
@@ -180,7 +180,7 @@ describe('AIAssistantPanel', () => {
         />
       );
 
-      const closeButton = screen.getByLabelText('Close AI Assistant');
+      const closeButton = screen.getByLabelText('Close assistant');
       await userEvent.click(closeButton);
 
       expect(mockOnClose).toHaveBeenCalledTimes(1);
@@ -196,9 +196,7 @@ describe('AIAssistantPanel', () => {
         />
       );
 
-      const closeButton = screen.getByLabelText(
-        'Close session and return to sessions list'
-      );
+      const closeButton = screen.getByLabelText('Close current session');
       await userEvent.click(closeButton);
 
       expect(mockOnShowSessions).toHaveBeenCalledTimes(1);
