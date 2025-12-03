@@ -17,6 +17,12 @@ and this project adheres to
 
 ### Added
 
+- Added mini history to the IDE as a state machine that provides the same
+  experience that's available on the canvas
+  [#4054](https://github.com/OpenFn/lightning/issues/4054)
+  - **No run chosen?** You can browse from history or create a new one.
+  - **Run chosen?** You can view the details or deselect to start over.
+
 ### Changed
 
 - Show "Connect" button when no credential is selected for non-language-common
