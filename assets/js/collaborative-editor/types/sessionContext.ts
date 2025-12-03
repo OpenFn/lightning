@@ -77,7 +77,7 @@ export const SessionContextResponseSchema = z.object({
   project: ProjectContextSchema.nullable(),
   config: AppConfigSchema,
   permissions: PermissionsSchema,
-  latest_snapshot_lock_version: z.number().int(),
+  latest_snapshot_lock_version: z.number().int().nullable(),
   project_repo_connection: ProjectRepoConnectionSchema.nullable(),
   webhook_auth_methods: z.array(WebhookAuthMethodSchema),
   workflow_template: WorkflowTemplateSchema.nullable(),
