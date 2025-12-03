@@ -53,6 +53,8 @@ interface ManualRunPanelProps {
   selectedTab?: TabValue;
   selectedDataclip?: Dataclip | null;
   customBody?: string;
+  /** When true, prevents automatic dataclip selection (e.g., cron dataclip) */
+  disableAutoSelection?: boolean;
 }
 
 type TabValue = 'empty' | 'custom' | 'existing';
@@ -74,6 +76,7 @@ export function ManualRunPanel({
   selectedTab: selectedTabProp,
   selectedDataclip: selectedDataclipProp,
   customBody: customBodyProp,
+  disableAutoSelection = false,
 }: ManualRunPanelProps) {
   const [selectedTabInternal, setSelectedTabInternal] =
     useState<TabValue>('empty');
@@ -82,8 +85,12 @@ export function ManualRunPanel({
   const [customBodyInternal, setCustomBodyInternal] = useState('');
 
   // Use prop if provided (controlled), otherwise use internal state (uncontrolled)
+  // Note: undefined means uncontrolled, null means controlled but empty
   const selectedTab = selectedTabProp ?? selectedTabInternal;
-  const selectedDataclip = selectedDataclipProp ?? selectedDataclipInternal;
+  const isDataclipControlled = selectedDataclipProp !== undefined;
+  const selectedDataclip = isDataclipControlled
+    ? selectedDataclipProp
+    : selectedDataclipInternal;
   const customBody = customBodyProp ?? customBodyInternal;
   const [dataclips, setDataclips] = useState<Dataclip[]>([]);
   const [manuallyUnselected, setManuallyUnselected] = useState(false);
@@ -229,6 +236,7 @@ export function ManualRunPanel({
 
   useEffect(() => {
     if (
+      disableAutoSelection ||
       !followedRunStep?.input_dataclip_id ||
       !dataclips.length ||
       manuallyUnselected
@@ -251,6 +259,7 @@ export function ManualRunPanel({
       setSelectedTab('existing');
     }
   }, [
+    disableAutoSelection,
     followedRunStep,
     dataclips,
     manuallyUnselected,
@@ -273,8 +282,20 @@ export function ManualRunPanel({
         setNextCronRunDataclipId(response.next_cron_run_dataclip_id);
         setCanEditDataclip(response.can_edit_dataclip);
 
-        // Auto-select next cron run dataclip (unless following a run)
-        if (response.next_cron_run_dataclip_id && !followedRunId) {
+        // Auto-select next cron run dataclip only if:
+        // - Auto-selection is not disabled by parent
+        // - Not following a run
+        // - Not in controlled mode (parent controls selection)
+        // - No dataclip already selected
+        // - User hasn't manually unselected
+        if (
+          response.next_cron_run_dataclip_id &&
+          !disableAutoSelection &&
+          !followedRunId &&
+          !isDataclipControlled &&
+          !selectedDataclip &&
+          !manuallyUnselected
+        ) {
           const nextCronDataclip = response.data.find(
             d => d.id === response.next_cron_run_dataclip_id
           );

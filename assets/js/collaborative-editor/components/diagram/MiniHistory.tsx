@@ -96,6 +96,9 @@ interface MiniHistoryProps {
   loading?: boolean;
   error?: string | null;
   onRetry?: () => void;
+  // New props for panel variant
+  variant?: 'floating' | 'panel';
+  onBack?: () => void;
 }
 
 export default function MiniHistory({
@@ -108,6 +111,8 @@ export default function MiniHistory({
   loading = false,
   error = null,
   onRetry,
+  variant = 'floating',
+  onBack,
 }: MiniHistoryProps) {
   const [expandedWorder, setExpandedWorder] = useState('');
   const now = new Date();
@@ -172,6 +177,270 @@ export default function MiniHistory({
     }
   };
 
+  // Panel variant header with back button
+  const PanelHeader = () => (
+    <div
+      className="flex items-center px-3 py-2 border-b
+        border-gray-200 bg-gray-50"
+    >
+      <button
+        type="button"
+        onClick={onBack}
+        className="p-1 mr-2 text-gray-400 hover:text-gray-600
+          hover:bg-gray-100 rounded transition-colors"
+        aria-label="Back to landing"
+      >
+        <span className="hero-arrow-left w-4 h-4" />
+      </button>
+      <h3 className="text-sm font-medium text-gray-700">Run History</h3>
+      <div className="flex-1" />
+      <button
+        type="button"
+        onClick={gotoHistory}
+        className="text-gray-400 hover:text-gray-600 transition-colors"
+        aria-label="View full history for this workflow"
+      >
+        <span className="hero-rectangle-stack w-4 h-4" />
+      </button>
+    </div>
+  );
+
+  // Panel variant - no absolute positioning, no collapse, uses back button
+  if (variant === 'panel') {
+    return (
+      <div className="flex flex-col h-full bg-white">
+        <PanelHeader />
+        <div className="flex-1 overflow-y-auto">
+          {loading && !history.length ? (
+            <div
+              className="flex flex-col items-center justify-center
+                p-8 text-gray-500"
+            >
+              <div
+                className="animate-spin rounded-full h-8 w-8
+                  border-b-2 border-gray-900 mb-2"
+              />
+              <p className="text-sm font-medium">Loading history...</p>
+            </div>
+          ) : error ? (
+            <div
+              className="flex flex-col items-center justify-center
+                p-8 text-gray-500"
+            >
+              <span
+                className="hero-exclamation-triangle w-8 h-8
+                  mb-2 text-red-500"
+              />
+              <p className="text-sm font-medium text-red-600">
+                Failed to load history
+              </p>
+              <p className="text-xs text-gray-400 mt-1">{error}</p>
+              {onRetry && (
+                <button
+                  type="button"
+                  onClick={onRetry}
+                  className="mt-3 px-3 py-1 text-xs bg-blue-500
+                    text-white rounded hover:bg-blue-600"
+                >
+                  Retry
+                </button>
+              )}
+            </div>
+          ) : history.length === 0 ? (
+            <div
+              className="flex flex-col items-center justify-center
+                p-8 text-gray-500"
+            >
+              <span
+                className="hero-rectangle-stack w-8 h-8
+                  mb-2 opacity-50"
+              />
+              <p className="text-sm font-medium">No related history</p>
+              <p className="text-xs text-gray-400 mt-1">
+                Why not run it a few times to see some history?
+              </p>
+            </div>
+          ) : (
+            <div className="divide-y divide-gray-100">
+              {history.map(workorder => (
+                <div key={workorder.id}>
+                  <div
+                    className={`px-3 py-2 hover:bg-gray-50
+                      transition-colors`}
+                  >
+                    {/*
+                      Mouse-only clickable area for convenience - keyboard users
+                      can use the chevron button and UUID link below for full accessibility.
+                      This matches the LiveView implementation's keyboard navigation pattern.
+                    */}
+                    {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions */}
+                    <div
+                      className="flex items-center justify-between
+                        cursor-pointer w-full text-left"
+                      onClick={e => {
+                        e.stopPropagation();
+                        expandWorkorderHandler(workorder);
+                      }}
+                    >
+                      <div
+                        className="flex items-center gap-2 min-w-0
+                          flex-1 mr-2"
+                      >
+                        <button
+                          type="button"
+                          onClick={e => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            expandWorkorderHandler(workorder);
+                          }}
+                          className="flex items-center text-gray-400
+                            hover:text-gray-600 transition-colors"
+                          aria-label={`${expandedWorder === workorder.id ? 'Collapse' : 'Expand'} work order details`}
+                        >
+                          {workorder.selected ? (
+                            <span
+                              className="hero-chevron-down w-4 h-4
+                                font-bold text-indigo-600"
+                            />
+                          ) : expandedWorder === workorder.id ? (
+                            <span className="hero-chevron-down w-4 h-4" />
+                          ) : (
+                            <span className="hero-chevron-right w-4 h-4" />
+                          )}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={e =>
+                            handleNavigateToWorkorderHistory(e, workorder.id)
+                          }
+                          className="link-uuid"
+                          title={workorder.id}
+                          aria-label={`View full details for work order ${truncateUid(workorder.id)}`}
+                        >
+                          {truncateUid(workorder.id)}
+                        </button>
+                        <span className="text-xs text-gray-800">&bull;</span>
+                        <span className="text-xs text-gray-500">
+                          {formatRelative(
+                            new Date(workorder.last_activity),
+                            now,
+                            { locale: relativeLocale }
+                          )}
+                        </span>
+                      </div>
+                      <StatePill
+                        key={workorder.id}
+                        state={workorder.state}
+                        mini={true}
+                      />
+                    </div>
+                  </div>
+
+                  {(expandedWorder === workorder.id || workorder.selected) &&
+                    workorder.runs.map(run => (
+                      /*
+                        Mouse-only clickable area - keyboard users can navigate to
+                        the run detail page using the UUID link button below.
+                      */
+                      // eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions
+                      <div
+                        key={run.id}
+                        className={[
+                          'px-3 py-1.5 text-xs hover:bg-gray-50 ' +
+                            'transition-colors cursor-pointer border-l-2 ' +
+                            'w-full text-left',
+                          run.selected
+                            ? 'bg-indigo-50 border-l-indigo-500'
+                            : ' border-l-transparent',
+                        ].join(' ')}
+                        onClick={e => {
+                          e.stopPropagation();
+                          if (run.selected) {
+                            onDeselectRun?.();
+                          } else {
+                            selectRunHandler(run);
+                          }
+                        }}
+                      >
+                        <div
+                          className="flex items-center justify-between
+                            w-full mr-2"
+                        >
+                          <div
+                            className="flex items-center gap-2 min-w-0
+                              flex-1"
+                          >
+                            {run.selected && (
+                              <button
+                                type="button"
+                                onClick={e => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  onDeselectRun?.();
+                                }}
+                                className="flex items-center text-gray-400
+                                  hover:text-gray-600 transition-colors"
+                                aria-label="Deselect run"
+                              >
+                                <span className="hero-x-mark w-4 h-4" />
+                              </button>
+                            )}
+                            {!run.selected && (
+                              <span className="w-4 h-4 invisible" />
+                            )}
+                            <button
+                              type="button"
+                              onClick={e => handleNavigateToRunView(e, run.id)}
+                              className="link-uuid"
+                              title={run.id}
+                              aria-label={`View full details for run ${truncateUid(run.id)}`}
+                            >
+                              {truncateUid(run.id)}
+                            </button>
+                            {(run.started_at || run.finished_at) && (
+                              <>
+                                <span className="text-xs text-gray-800">
+                                  &bull;
+                                </span>
+                                {formatRelative(
+                                  new Date(
+                                    (run.started_at ||
+                                      run.finished_at) as string
+                                  ),
+                                  now,
+                                  {
+                                    locale: relativeLocale,
+                                  }
+                                )}
+                              </>
+                            )}
+                            {run.started_at && run.finished_at && (
+                              <>
+                                <span className="text-xs text-gray-800">
+                                  &bull;
+                                </span>
+                                <span className="text-gray-400 text-xs">
+                                  {duration(run.started_at, run.finished_at)}
+                                </span>
+                              </>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <StatePill state={run.state} mini={true} />
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // Floating variant - existing implementation
   return (
     <div
       className={`absolute left-6 top-6 bg-white border

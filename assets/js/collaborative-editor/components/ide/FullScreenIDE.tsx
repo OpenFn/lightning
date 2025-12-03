@@ -29,7 +29,10 @@ import {
 } from '../../hooks/useCredentials';
 import {
   useFollowRun,
+  useHistory,
   useHistoryCommands,
+  useHistoryError,
+  useHistoryLoading,
   useJobMatchesRun,
 } from '../../hooks/useHistory';
 import { useRunRetry } from '../../hooks/useRunRetry';
@@ -51,6 +54,7 @@ import { AdaptorSelectionModal } from '../AdaptorSelectionModal';
 import { CollaborativeMonaco } from '../CollaborativeMonaco';
 import { RunBadge } from '../common/RunBadge';
 import { ConfigureAdaptorModal } from '../ConfigureAdaptorModal';
+import MiniHistory from '../diagram/MiniHistory';
 import { JobSelector } from '../JobSelector';
 import { ManualRunPanel } from '../ManualRunPanel';
 import { ManualRunPanelErrorBoundary } from '../ManualRunPanelErrorBoundary';
@@ -63,6 +67,7 @@ import { Tabs } from '../Tabs';
 import { Tooltip } from '../Tooltip';
 
 import { PanelToggleButton } from './PanelToggleButton';
+import { RightPanelLanding } from './RightPanelLanding';
 
 /**
  * Resolves an adaptor specifier into its package name and version
@@ -170,6 +175,14 @@ export function FullScreenIDE({
   const [manuallyUnselectedDataclip, setManuallyUnselectedDataclip] =
     useState(false);
 
+  // Right panel sub-state for when no run is loaded
+  type RightPanelSubState = 'landing' | 'history' | 'create-run';
+  const [rightPanelSubState, setRightPanelSubState] =
+    useState<RightPanelSubState>('landing');
+
+  // Derived panel state - run viewer takes precedence
+  const panelState = followRunId ? 'run-viewer' : rightPanelSubState;
+
   const handleDataclipChange = useCallback((dataclip: Dataclip | null) => {
     setSelectedDataclipState(dataclip);
     setManuallyUnselectedDataclip(dataclip === null);
@@ -194,6 +207,79 @@ export function FullScreenIDE({
     },
     [updateSearchParams]
   );
+
+  const handleClearFollowRun = useCallback(() => {
+    setFollowRunId(null);
+    updateSearchParams({ run: null });
+    // Reset input state when unloading a run
+    setSelectedDataclipState(null);
+    setSelectedTab('empty');
+    setCustomBody('');
+    setManuallyUnselectedDataclip(false);
+    setRightPanelSubState('landing');
+  }, [updateSearchParams]);
+
+  const handleNavigateToHistory = useCallback(() => {
+    setRightPanelSubState('history');
+  }, []);
+
+  const handleNavigateToCreateRun = useCallback(() => {
+    // Reset to fresh state when entering create-run from landing
+    setSelectedDataclipState(null);
+    setSelectedTab('empty');
+    setCustomBody('');
+    // Set to true to prevent ManualRunPanel from auto-selecting a dataclip
+    setManuallyUnselectedDataclip(true);
+    setRightPanelSubState('create-run');
+  }, []);
+
+  const handleBackToLanding = useCallback(() => {
+    // Reset input state when going back to landing
+    setSelectedDataclipState(null);
+    setSelectedTab('empty');
+    setCustomBody('');
+    setManuallyUnselectedDataclip(false);
+    setRightPanelSubState('landing');
+  }, []);
+
+  const handleHistoryRunSelect = useCallback(
+    (run: { id: string }) => {
+      setFollowRunId(run.id);
+      updateSearchParams({ run: run.id });
+      // Panel will automatically switch to run-viewer due to derived state
+    },
+    [updateSearchParams]
+  );
+
+  // History data for panel variant
+  const history = useHistory();
+  const historyLoading = useHistoryLoading();
+  const historyError = useHistoryError();
+  const { requestHistory, clearError } = useHistoryCommands();
+
+  // Transform history with selection markers
+  const selectedRunId = searchParams.get('run');
+  const historyWithSelection = useMemo(() => {
+    if (!selectedRunId) return history;
+    return history.map(workorder => ({
+      ...workorder,
+      runs: workorder.runs.map(run => ({
+        ...run,
+        selected: run.id === selectedRunId,
+      })),
+      selected: workorder.runs.some(run => run.id === selectedRunId),
+    }));
+  }, [selectedRunId, history]);
+
+  // Find selected run object
+  const selectedRun = useMemo(() => {
+    if (!selectedRunId) return null;
+    for (const workorder of history) {
+      const run = workorder.runs.find(r => r.id === selectedRunId);
+      if (run) return run;
+    }
+    return null;
+  }, [selectedRunId, history]);
 
   // Declaratively connect to run channel when runIdFromURL changes
   const currentRun = useFollowRun(runIdFromURL);
@@ -337,7 +423,9 @@ export function FullScreenIDE({
       canRunFromHook &&
       !isSubmitting &&
       !runIsProcessing &&
-      jobMatchesRun,
+      jobMatchesRun &&
+      // Only allow run when in run-viewer (retry) or create-run state
+      (panelState === 'run-viewer' || panelState === 'create-run'),
     isRunning: isSubmitting || runIsProcessing,
     isRetryable,
     priority: 50, // IDE priority
@@ -377,6 +465,28 @@ export function FullScreenIDE({
     }
   }, [jobIdFromURL, selectJob]);
 
+  // Reset input selection state when switching to a different job
+  // This ensures the run button state is always valid for the current job
+  const prevJobIdRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (
+      jobIdFromURL &&
+      prevJobIdRef.current &&
+      jobIdFromURL !== prevJobIdRef.current
+    ) {
+      // Job changed - reset input state to defaults
+      setSelectedDataclipState(null);
+      setSelectedTab('empty');
+      setCustomBody('');
+      setManuallyUnselectedDataclip(false);
+      // Return to landing if we were in create-run state
+      if (rightPanelSubState === 'create-run') {
+        setRightPanelSubState('landing');
+      }
+    }
+    prevJobIdRef.current = jobIdFromURL;
+  }, [jobIdFromURL, rightPanelSubState]);
+
   useEffect(() => {
     if (runIdFromURL && runIdFromURL !== followRunId) {
       setFollowRunId(runIdFromURL);
@@ -392,6 +502,13 @@ export function FullScreenIDE({
       selectStep(stepIdFromURL);
     }
   }, [stepIdFromURL, runIdFromURL, selectStep]);
+
+  // Request history when entering history state
+  useEffect(() => {
+    if (rightPanelSubState === 'history') {
+      void requestHistory();
+    }
+  }, [rightPanelSubState, requestHistory]);
 
   const handleOpenAdaptorPicker = useCallback(() => {
     setIsConfigureModalOpen(false);
@@ -699,7 +816,10 @@ export function FullScreenIDE({
                   canRunFromHook &&
                   !isSubmitting &&
                   !runIsProcessing &&
-                  jobMatchesRun
+                  jobMatchesRun &&
+                  // Only allow run when in run-viewer (retry) or create-run state
+                  // Not in landing or history states
+                  (panelState === 'run-viewer' || panelState === 'create-run')
                 )
               }
               isSubmitting={isSubmitting || runIsProcessing}
@@ -718,9 +838,11 @@ export function FullScreenIDE({
               dropdownPosition="down"
               showKeyboardShortcuts={true}
               disabledTooltip={
-                !jobMatchesRun
-                  ? 'Selected job was not part of this run'
-                  : runTooltipMessage
+                panelState === 'landing' || panelState === 'history'
+                  ? 'Select an input method first'
+                  : !jobMatchesRun
+                    ? 'Selected job was not part of this run'
+                    : runTooltipMessage
               }
             />
 
@@ -968,7 +1090,7 @@ export function FullScreenIDE({
           <Panel
             ref={rightPanelRef}
             defaultSize={30}
-            minSize={30}
+            minSize={panelState === 'landing' ? 10 : 30}
             collapsible
             collapsedSize={2}
             onCollapse={() => setIsRightCollapsed(true)}
@@ -985,7 +1107,7 @@ export function FullScreenIDE({
                 <div className="flex items-center justify-between px-3 py-1">
                   {!isRightCollapsed ? (
                     <>
-                      {followRunId ? (
+                      {panelState === 'run-viewer' ? (
                         <>
                           {/* Close run chip */}
                           <Tooltip
@@ -998,10 +1120,7 @@ export function FullScreenIDE({
                           >
                             <RunBadge
                               runId={followRunId}
-                              onClose={() => {
-                                setFollowRunId(null);
-                                updateSearchParams({ run: null });
-                              }}
+                              onClose={handleClearFollowRun}
                               variant={
                                 shouldShowMismatch ? 'warning' : 'default'
                               }
@@ -1022,16 +1141,27 @@ export function FullScreenIDE({
                             />
                           </div>
                         </>
+                      ) : panelState === 'history' ? (
+                        <div
+                          className="text-xs font-medium text-gray-400
+                          uppercase tracking-wide"
+                        >
+                          Run History
+                        </div>
+                      ) : panelState === 'create-run' ? (
+                        <div
+                          className="text-xs font-medium text-gray-400
+                          uppercase tracking-wide"
+                        >
+                          New Run (Select Input)
+                        </div>
                       ) : (
-                        <>
-                          {/* Simple title when showing manual run panel */}
-                          <div
-                            className="text-xs font-medium text-gray-400
-                            uppercase tracking-wide"
-                          >
-                            New Run (Select Input)
-                          </div>
-                        </>
+                        <div
+                          className="text-xs font-medium text-gray-400
+                          uppercase tracking-wide"
+                        >
+                          Runs
+                        </div>
                       )}
                       {/* Collapse button */}
                       <PanelToggleButton
@@ -1048,9 +1178,9 @@ export function FullScreenIDE({
                         uppercase tracking-wide hover:text-gray-600
                         transition-colors cursor-pointer whitespace-nowrap"
                     >
-                      {followRunId
-                        ? `Run - ${followRunId.slice(0, 7)}`
-                        : 'New Run (Select Input)'}
+                      {panelState === 'run-viewer'
+                        ? `Run - ${followRunId?.slice(0, 7)}`
+                        : 'Runs'}
                     </button>
                   )}
                 </div>
@@ -1059,41 +1189,81 @@ export function FullScreenIDE({
               {/* Panel content */}
               {!isRightCollapsed && (
                 <div className="flex-1 overflow-hidden bg-white">
-                  {followRunId ? (
+                  {panelState === 'run-viewer' && followRunId ? (
                     <RunViewerErrorBoundary>
                       <RunViewerPanel
                         followRunId={followRunId}
-                        onClearFollowRun={() => setFollowRunId(null)}
+                        onClearFollowRun={handleClearFollowRun}
                         activeTab={activeRightTab}
                         onTabChange={setActiveRightTab}
                       />
                     </RunViewerErrorBoundary>
-                  ) : (
+                  ) : panelState === 'history' ? (
+                    <MiniHistory
+                      variant="panel"
+                      collapsed={false}
+                      history={historyWithSelection}
+                      onCollapseHistory={() => {}} // Not used in panel variant
+                      selectRunHandler={handleHistoryRunSelect}
+                      onDeselectRun={handleClearFollowRun}
+                      selectedRun={selectedRun}
+                      loading={historyLoading}
+                      error={historyError}
+                      onRetry={() => {
+                        clearError();
+                        void requestHistory();
+                      }}
+                      onBack={handleBackToLanding}
+                    />
+                  ) : panelState === 'create-run' &&
                     workflow &&
                     projectId &&
-                    workflowId && (
-                      <ManualRunPanelErrorBoundary
-                        onClose={() => rightPanelRef.current?.collapse()}
-                      >
-                        <ManualRunPanel
-                          workflow={workflow}
-                          projectId={projectId}
-                          workflowId={workflowId}
-                          jobId={jobIdFromURL ?? null}
-                          triggerId={null}
+                    workflowId ? (
+                    <div className="flex flex-col h-full">
+                      <div className="flex items-center px-3 py-2 border-b border-gray-200">
+                        <button
+                          type="button"
+                          onClick={handleBackToLanding}
+                          className="p-1 mr-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded transition-colors"
+                          aria-label="Back to landing"
+                        >
+                          <span className="hero-arrow-left w-4 h-4" />
+                        </button>
+                        <span className="text-sm font-medium text-gray-700">
+                          Create Run
+                        </span>
+                      </div>
+                      <div className="flex-1 overflow-hidden">
+                        <ManualRunPanelErrorBoundary
                           onClose={() => rightPanelRef.current?.collapse()}
-                          renderMode={RENDER_MODES.EMBEDDED}
-                          saveWorkflow={saveWorkflow}
-                          onRunSubmitted={handleRunSubmitted}
-                          onTabChange={setSelectedTab}
-                          onDataclipChange={handleDataclipChange}
-                          onCustomBodyChange={setCustomBody}
-                          selectedTab={selectedTab}
-                          selectedDataclip={selectedDataclipState}
-                          customBody={customBody}
-                        />
-                      </ManualRunPanelErrorBoundary>
-                    )
+                        >
+                          <ManualRunPanel
+                            workflow={workflow}
+                            projectId={projectId}
+                            workflowId={workflowId}
+                            jobId={jobIdFromURL ?? null}
+                            triggerId={null}
+                            onClose={() => rightPanelRef.current?.collapse()}
+                            renderMode={RENDER_MODES.EMBEDDED}
+                            saveWorkflow={saveWorkflow}
+                            onRunSubmitted={handleRunSubmitted}
+                            onTabChange={setSelectedTab}
+                            onDataclipChange={handleDataclipChange}
+                            onCustomBodyChange={setCustomBody}
+                            selectedTab={selectedTab}
+                            selectedDataclip={selectedDataclipState}
+                            customBody={customBody}
+                            disableAutoSelection
+                          />
+                        </ManualRunPanelErrorBoundary>
+                      </div>
+                    </div>
+                  ) : (
+                    /* Landing state */
+                    <RightPanelLanding
+                      onSelectHistory={handleNavigateToHistory}
+                      onCreateRun={handleNavigateToCreateRun}
+                    />
                   )}
                 </div>
               )}
