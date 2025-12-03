@@ -380,13 +380,21 @@ export function AIAssistantPanelWrapper() {
 
   const handleShowSessions = useCallback(() => {
     aiStore.clearSession();
+    // Clear session list to force reload - ensures fresh data after tab sleep
+    aiStore._clearSessionList();
+
+    // Ensure context is initialized for session list loading
+    // This handles cases where context might have been lost (e.g., after tab sleep)
+    if (aiMode) {
+      aiStore._initializeContext(aiMode.mode, aiMode.context);
+    }
 
     // Clear session ID from URL - shows session list
     updateSearchParams({
       'w-chat': null,
       'j-chat': null,
     });
-  }, [updateSearchParams, aiStore]);
+  }, [updateSearchParams, aiStore, aiMode]);
 
   const sendMessage = useCallback(
     (
