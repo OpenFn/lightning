@@ -334,6 +334,34 @@ defmodule LightningWeb.WorkflowChannelTest do
       assert snapshot_socket.assigns.workflow.lock_version == 0
       assert snapshot_socket.assigns.workflow.name == workflow.name
     end
+
+    test "returns nil latest_snapshot_lock_version for unsaved workflow", %{
+      user: user,
+      project: project
+    } do
+      # Join with action="new" to simulate unsaved workflow
+      workflow_id = Ecto.UUID.generate()
+
+      {:ok, _, socket} =
+        LightningWeb.UserSocket
+        |> socket("user_#{user.id}", %{current_user: user})
+        |> subscribe_and_join(
+          LightningWeb.WorkflowChannel,
+          "workflow:collaborate:#{workflow_id}",
+          %{"project_id" => project.id, "action" => "new"}
+        )
+
+      on_exit(fn ->
+        ensure_doc_supervisor_stopped(workflow_id)
+      end)
+
+      ref = push(socket, "get_context", %{})
+
+      assert_reply ref, :ok, response
+
+      # For unsaved workflows, latest_snapshot_lock_version should be nil
+      assert %{latest_snapshot_lock_version: nil} = response
+    end
   end
 
   describe "save_workflow" do
@@ -2703,6 +2731,108 @@ defmodule LightningWeb.WorkflowChannelTest do
 
       assert template_id == template.id
       assert workflow_id == workflow.id
+    end
+  end
+
+  describe "request_versions" do
+    test "returns versions for saved workflow", %{
+      socket: socket,
+      workflow: workflow,
+      user: user
+    } do
+      # Create some snapshots
+      {:ok, _snapshot_v0} = Lightning.Workflows.Snapshot.create(workflow)
+
+      # Update workflow to create v1
+      workflow_changeset =
+        workflow
+        |> Lightning.Repo.preload([:jobs, :edges, :triggers])
+        |> Lightning.Workflows.Workflow.changeset(%{name: "Version 1"})
+
+      {:ok, _updated_workflow_v1} =
+        Lightning.Workflows.save_workflow(workflow_changeset, user)
+
+      ref = push(socket, "request_versions", %{})
+
+      assert_reply ref, :ok, %{versions: versions}
+
+      assert is_list(versions)
+      assert length(versions) >= 1
+
+      # Verify version structure
+      [first_version | _] = versions
+      assert Map.has_key?(first_version, :lock_version)
+      assert Map.has_key?(first_version, :inserted_at)
+      assert Map.has_key?(first_version, :is_latest)
+    end
+
+    test "returns empty versions list for unsaved workflow", %{
+      user: user,
+      project: project
+    } do
+      # Join with action="new" to simulate unsaved workflow
+      # First create a workflow struct but don't persist it (use temporary ID)
+      workflow_id = Ecto.UUID.generate()
+
+      {:ok, _, socket} =
+        LightningWeb.UserSocket
+        |> socket("user_#{user.id}", %{current_user: user})
+        |> subscribe_and_join(
+          LightningWeb.WorkflowChannel,
+          "workflow:collaborate:#{workflow_id}",
+          %{"project_id" => project.id, "action" => "new"}
+        )
+
+      on_exit(fn ->
+        ensure_doc_supervisor_stopped(workflow_id)
+      end)
+
+      # Verify the workflow in socket has nil lock_version
+      assert is_nil(socket.assigns.workflow.lock_version)
+
+      ref = push(socket, "request_versions", %{})
+
+      assert_reply ref, :ok, %{versions: versions}
+
+      assert versions == []
+    end
+
+    test "marks latest version correctly", %{
+      socket: socket,
+      workflow: workflow,
+      user: user
+    } do
+      # Create initial snapshot
+      {:ok, _snapshot_v0} = Lightning.Workflows.Snapshot.create(workflow)
+
+      # Update workflow multiple times to create more snapshots
+      workflow_v1 =
+        workflow
+        |> Lightning.Repo.preload([:jobs, :edges, :triggers])
+        |> Lightning.Workflows.Workflow.changeset(%{name: "Version 1"})
+
+      {:ok, updated_v1} = Lightning.Workflows.save_workflow(workflow_v1, user)
+
+      workflow_v2 =
+        updated_v1
+        |> Lightning.Repo.reload!()
+        |> Lightning.Repo.preload([:jobs, :edges, :triggers])
+        |> Lightning.Workflows.Workflow.changeset(%{name: "Version 2"})
+
+      {:ok, _updated_v2} = Lightning.Workflows.save_workflow(workflow_v2, user)
+
+      ref = push(socket, "request_versions", %{})
+
+      assert_reply ref, :ok, %{versions: versions}
+
+      # Find the version marked as latest
+      latest_versions = Enum.filter(versions, & &1.is_latest)
+      assert length(latest_versions) == 1
+
+      # The latest should have the highest lock_version
+      latest = hd(latest_versions)
+      max_lock_version = versions |> Enum.map(& &1.lock_version) |> Enum.max()
+      assert latest.lock_version == max_lock_version
     end
   end
 end

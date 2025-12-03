@@ -1157,6 +1157,7 @@ defmodule LightningWeb.WorkflowChannel do
           id: workflow_id,
           project_id: project.id,
           name: "Untitled workflow",
+          lock_version: nil,
           jobs: [],
           edges: [],
           triggers: []
