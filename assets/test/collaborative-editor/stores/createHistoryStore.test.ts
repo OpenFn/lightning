@@ -918,4 +918,50 @@ describe('createHistoryStore', () => {
       expect(state.runStepsSubscribers['run-444'].size).toBe(2);
     });
   });
+
+  describe('active run management', () => {
+    test('_closeRunViewer clears activeRun state', () => {
+      // Manually set up some active run state using internal test helper
+      store._setActiveRunForTesting({
+        id: 'run-to-clear',
+        state: 'success',
+        steps: [{ id: 'step-1', job_id: 'job-1' }],
+      } as any);
+
+      // Verify activeRun is set
+      let state = store.getSnapshot();
+      expect(state.activeRun).not.toBeNull();
+      expect(state.activeRun?.id).toBe('run-to-clear');
+
+      // Close the run viewer
+      store._closeRunViewer();
+
+      // Verify activeRun is cleared
+      state = store.getSnapshot();
+      expect(state.activeRun).toBeNull();
+      expect(state.activeRunId).toBeNull();
+      expect(state.selectedStepId).toBeNull();
+    });
+
+    test('_closeRunViewer clears activeRunError', () => {
+      // Set up active run with an error
+      store._setActiveRunForTesting({
+        id: 'run-with-error',
+        state: 'failed',
+        steps: [],
+      } as any);
+
+      // Verify activeRun is set
+      let state = store.getSnapshot();
+      expect(state.activeRun).not.toBeNull();
+
+      // Close the run viewer
+      store._closeRunViewer();
+
+      // Verify all active run state is cleared
+      state = store.getSnapshot();
+      expect(state.activeRun).toBeNull();
+      expect(state.activeRunError).toBeNull();
+    });
+  });
 });

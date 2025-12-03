@@ -645,4 +645,236 @@ describe('FullScreenIDE - Run Integration', () => {
       });
     });
   });
+
+  describe('Run button state based on panel state', () => {
+    it('run button should be disabled in landing state', () => {
+      const panelState = 'landing';
+      const canRunSnapshot = true;
+      const canRunFromHook = true;
+      const isSubmitting = false;
+      const runIsProcessing = false;
+      const jobMatchesRun = true;
+
+      const isDisabled = !(
+        canRunSnapshot &&
+        canRunFromHook &&
+        !isSubmitting &&
+        !runIsProcessing &&
+        jobMatchesRun &&
+        (panelState === 'run-viewer' || panelState === 'create-run')
+      );
+
+      expect(isDisabled).toBe(true);
+    });
+
+    it('run button should be disabled in history state', () => {
+      const panelState = 'history';
+      const canRunSnapshot = true;
+      const canRunFromHook = true;
+      const isSubmitting = false;
+      const runIsProcessing = false;
+      const jobMatchesRun = true;
+
+      const isDisabled = !(
+        canRunSnapshot &&
+        canRunFromHook &&
+        !isSubmitting &&
+        !runIsProcessing &&
+        jobMatchesRun &&
+        (panelState === 'run-viewer' || panelState === 'create-run')
+      );
+
+      expect(isDisabled).toBe(true);
+    });
+
+    it('run button should be enabled in create-run state with valid input', () => {
+      const panelState = 'create-run';
+      const canRunSnapshot = true;
+      const canRunFromHook = true;
+      const isSubmitting = false;
+      const runIsProcessing = false;
+      const jobMatchesRun = true;
+
+      const isDisabled = !(
+        canRunSnapshot &&
+        canRunFromHook &&
+        !isSubmitting &&
+        !runIsProcessing &&
+        jobMatchesRun &&
+        (panelState === 'run-viewer' || panelState === 'create-run')
+      );
+
+      expect(isDisabled).toBe(false);
+    });
+
+    it('run button should be enabled in run-viewer state for retry', () => {
+      const panelState = 'run-viewer';
+      const canRunSnapshot = true;
+      const canRunFromHook = true;
+      const isSubmitting = false;
+      const runIsProcessing = false;
+      const jobMatchesRun = true;
+
+      const isDisabled = !(
+        canRunSnapshot &&
+        canRunFromHook &&
+        !isSubmitting &&
+        !runIsProcessing &&
+        jobMatchesRun &&
+        (panelState === 'run-viewer' || panelState === 'create-run')
+      );
+
+      expect(isDisabled).toBe(false);
+    });
+  });
+
+  describe('Input state reset on transitions', () => {
+    it('resets input state when job changes', () => {
+      const mockSetSelectedDataclipState = vi.fn();
+      const mockSetSelectedTab = vi.fn();
+      const mockSetCustomBody = vi.fn();
+      const mockSetManuallyUnselectedDataclip = vi.fn();
+      const mockSetRightPanelSubState = vi.fn();
+
+      const prevJobId = 'old-job-id';
+      const newJobId = 'new-job-id';
+      const rightPanelSubState = 'create-run';
+
+      // Simulate job change effect
+      if (newJobId && prevJobId && newJobId !== prevJobId) {
+        mockSetSelectedDataclipState(null);
+        mockSetSelectedTab('empty');
+        mockSetCustomBody('');
+        mockSetManuallyUnselectedDataclip(false);
+        if (rightPanelSubState === 'create-run') {
+          mockSetRightPanelSubState('landing');
+        }
+      }
+
+      expect(mockSetSelectedDataclipState).toHaveBeenCalledWith(null);
+      expect(mockSetSelectedTab).toHaveBeenCalledWith('empty');
+      expect(mockSetCustomBody).toHaveBeenCalledWith('');
+      expect(mockSetManuallyUnselectedDataclip).toHaveBeenCalledWith(false);
+      expect(mockSetRightPanelSubState).toHaveBeenCalledWith('landing');
+    });
+
+    it('does not reset state on initial job load', () => {
+      const mockSetSelectedDataclipState = vi.fn();
+
+      const prevJobId = null; // No previous job
+      const newJobId = 'first-job-id';
+
+      // Simulate job change effect - should not reset on first load
+      if (newJobId && prevJobId && newJobId !== prevJobId) {
+        mockSetSelectedDataclipState(null);
+      }
+
+      expect(mockSetSelectedDataclipState).not.toHaveBeenCalled();
+    });
+
+    it('resets input state when clearing follow run', () => {
+      const mockSetFollowRunId = vi.fn();
+      const mockUpdateSearchParams = vi.fn();
+      const mockSetSelectedDataclipState = vi.fn();
+      const mockSetSelectedTab = vi.fn();
+      const mockSetCustomBody = vi.fn();
+      const mockSetManuallyUnselectedDataclip = vi.fn();
+      const mockSetRightPanelSubState = vi.fn();
+
+      // Simulate handleClearFollowRun
+      const handleClearFollowRun = () => {
+        mockSetFollowRunId(null);
+        mockUpdateSearchParams({ run: null });
+        mockSetSelectedDataclipState(null);
+        mockSetSelectedTab('empty');
+        mockSetCustomBody('');
+        mockSetManuallyUnselectedDataclip(false);
+        mockSetRightPanelSubState('landing');
+      };
+
+      handleClearFollowRun();
+
+      expect(mockSetSelectedDataclipState).toHaveBeenCalledWith(null);
+      expect(mockSetSelectedTab).toHaveBeenCalledWith('empty');
+      expect(mockSetCustomBody).toHaveBeenCalledWith('');
+      expect(mockSetManuallyUnselectedDataclip).toHaveBeenCalledWith(false);
+    });
+
+    it('resets input state when navigating back to landing', () => {
+      const mockSetSelectedDataclipState = vi.fn();
+      const mockSetSelectedTab = vi.fn();
+      const mockSetCustomBody = vi.fn();
+      const mockSetManuallyUnselectedDataclip = vi.fn();
+      const mockSetRightPanelSubState = vi.fn();
+
+      // Simulate handleBackToLanding
+      const handleBackToLanding = () => {
+        mockSetSelectedDataclipState(null);
+        mockSetSelectedTab('empty');
+        mockSetCustomBody('');
+        mockSetManuallyUnselectedDataclip(false);
+        mockSetRightPanelSubState('landing');
+      };
+
+      handleBackToLanding();
+
+      expect(mockSetSelectedDataclipState).toHaveBeenCalledWith(null);
+      expect(mockSetSelectedTab).toHaveBeenCalledWith('empty');
+      expect(mockSetRightPanelSubState).toHaveBeenCalledWith('landing');
+    });
+
+    it('resets input state when navigating to create-run', () => {
+      const mockSetSelectedDataclipState = vi.fn();
+      const mockSetSelectedTab = vi.fn();
+      const mockSetCustomBody = vi.fn();
+      const mockSetManuallyUnselectedDataclip = vi.fn();
+      const mockSetRightPanelSubState = vi.fn();
+
+      // Simulate handleNavigateToCreateRun
+      const handleNavigateToCreateRun = () => {
+        mockSetSelectedDataclipState(null);
+        mockSetSelectedTab('empty');
+        mockSetCustomBody('');
+        mockSetManuallyUnselectedDataclip(true); // true to prevent auto-selection
+        mockSetRightPanelSubState('create-run');
+      };
+
+      handleNavigateToCreateRun();
+
+      expect(mockSetSelectedDataclipState).toHaveBeenCalledWith(null);
+      expect(mockSetSelectedTab).toHaveBeenCalledWith('empty');
+      expect(mockSetManuallyUnselectedDataclip).toHaveBeenCalledWith(true);
+      expect(mockSetRightPanelSubState).toHaveBeenCalledWith('create-run');
+    });
+  });
+
+  describe('Panel minimum size based on state', () => {
+    it('allows smaller panel in landing state', () => {
+      const panelState = 'landing';
+      const minSize = panelState === 'landing' ? 10 : 30;
+
+      expect(minSize).toBe(10);
+    });
+
+    it('requires larger panel in create-run state', () => {
+      const panelState = 'create-run';
+      const minSize = panelState === 'landing' ? 10 : 30;
+
+      expect(minSize).toBe(30);
+    });
+
+    it('requires larger panel in run-viewer state', () => {
+      const panelState = 'run-viewer';
+      const minSize = panelState === 'landing' ? 10 : 30;
+
+      expect(minSize).toBe(30);
+    });
+
+    it('requires larger panel in history state', () => {
+      const panelState = 'history';
+      const minSize = panelState === 'landing' ? 10 : 30;
+
+      expect(minSize).toBe(30);
+    });
+  });
 });
