@@ -45,7 +45,8 @@ class URLStore {
       }
     };
 
-    // Monkey-patch history methods (bind to preserve `this` context)
+    // Monkey-patch history methods to detect URL changes from any source.
+    // Note: If other libraries also patch these methods, execution order matters.
     const originalPushState = history.pushState.bind(history);
     const originalReplaceState = history.replaceState.bind(history);
 
