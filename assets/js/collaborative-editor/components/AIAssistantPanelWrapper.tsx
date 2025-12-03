@@ -13,6 +13,7 @@ import {
   useAIWorkflowTemplateContext,
 } from '../hooks/useAIAssistant';
 import { useAISessionCommands } from '../hooks/useAIChannelRegistry';
+import { useAIInitialMessage } from '../hooks/useAIInitialMessage';
 import { useAIMode } from '../hooks/useAIMode';
 import { useAISession } from '../hooks/useAISession';
 import { useResizablePanel } from '../hooks/useResizablePanel';
@@ -381,74 +382,17 @@ export function AIAssistantPanelWrapper() {
   // Handle initial message from template selection
   // When user clicks "AI workflow from description" from LeftPanel,
   // the initial message is stored in UI state and we auto-send it
-  const initialMessageSentRef = useRef(false);
-  useEffect(() => {
-    if (
-      initialMessage &&
-      aiMode &&
-      !sessionId &&
-      connectionState === 'disconnected' &&
-      !initialMessageSentRef.current &&
-      isAIAssistantPanelOpen
-    ) {
-      initialMessageSentRef.current = true;
-
-      // Prepare context with initial message
-      const { mode, context } = aiMode;
-
-      let finalContext = { ...context, content: initialMessage };
-      if (mode === 'workflow_template') {
-        const workflowData = prepareWorkflowForSerialization(
-          workflow,
-          jobs,
-          triggers,
-          edges,
-          positions
-        );
-        if (workflowData) {
-          const workflowYAML = serializeWorkflowToYAML(workflowData);
-          if (workflowYAML) {
-            finalContext = { ...finalContext, code: workflowYAML };
-          }
-        }
-      }
-
-      // Initialize store with context including content
-      aiStore.connect(mode, finalContext, undefined);
-
-      // Update URL to trigger subscription to "new" channel
-      if (mode === 'workflow_template') {
-        updateSearchParams({ 'w-chat': 'new', 'j-chat': null });
-      } else {
-        updateSearchParams({ 'j-chat': 'new', 'w-chat': null });
-      }
-
-      // Mark message as sending
-      aiStore.setMessageSending();
-
-      // Clear the initial message from UI state
-      clearAIAssistantInitialMessage();
-    }
-
-    // Reset flag when initial message is cleared or panel closes
-    if (!initialMessage || !isAIAssistantPanelOpen) {
-      initialMessageSentRef.current = false;
-    }
-  }, [
+  useAIInitialMessage({
     initialMessage,
     aiMode,
     sessionId,
     connectionState,
     isAIAssistantPanelOpen,
     aiStore,
-    workflow,
-    jobs,
-    triggers,
-    edges,
-    positions,
+    workflowData: { workflow, jobs, triggers, edges, positions },
     updateSearchParams,
     clearAIAssistantInitialMessage,
-  ]);
+  });
 
   const handleShowSessions = useCallback(() => {
     aiStore.clearSession();

@@ -219,6 +219,26 @@ export function TemplatePanel({
     }
   };
 
+  const handleBuildWithAI = useCallback(() => {
+    // Only trigger if there are no matching templates and there's a search query
+    if (allTemplates.length === 0 && searchQuery) {
+      // Clear any existing AI session and disconnect
+      aiStore.disconnect();
+      aiStore.clearSession();
+
+      // Close the template panel before opening AI Assistant
+      collapseCreateWorkflowPanel();
+
+      openAIAssistantPanel(searchQuery);
+    }
+  }, [
+    allTemplates.length,
+    searchQuery,
+    aiStore,
+    collapseCreateWorkflowPanel,
+    openAIAssistantPanel,
+  ]);
+
   return (
     <div className="w-full h-full flex flex-col bg-white border-r border-gray-200">
       <div className="shrink-0 px-4 py-4 border-b border-gray-200">
@@ -238,6 +258,7 @@ export function TemplatePanel({
         <TemplateSearchInput
           value={searchQuery}
           onChange={handleSearchChange}
+          onEnter={handleBuildWithAI}
           placeholder="Search templates by name, description, or tags..."
           focusOnMount
         />
@@ -285,17 +306,7 @@ export function TemplatePanel({
                   </p>
                   <button
                     type="button"
-                    onClick={() => {
-                      // Clear any existing AI session and disconnect
-                      aiStore.disconnect();
-                      aiStore.clearSession();
-
-                      // Close the template panel before opening AI Assistant
-                      collapseCreateWorkflowPanel();
-
-                      const message = `Create a workflow template for: ${searchQuery}`;
-                      openAIAssistantPanel(message);
-                    }}
+                    onClick={handleBuildWithAI}
                     className="group relative inline-flex items-center gap-2 rounded-lg bg-gradient-to-br from-primary-600 via-primary-500 to-primary-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-all duration-200 hover:shadow-md hover:scale-[1.02] active:scale-[0.98]"
                   >
                     <span className="hero-sparkles h-4 w-4 group-hover:rotate-12 transition-transform duration-200" />

@@ -8,6 +8,8 @@ interface TemplateSearchInputProps {
   placeholder?: string;
   /** Focus the input when the component mounts (uses programmatic focus for accessibility) */
   focusOnMount?: boolean;
+  /** Called when Enter key is pressed */
+  onEnter?: () => void;
 }
 
 export function TemplateSearchInput({
@@ -15,6 +17,7 @@ export function TemplateSearchInput({
   onChange,
   placeholder = 'Search templates...',
   focusOnMount = false,
+  onEnter,
 }: TemplateSearchInputProps) {
   const [localValue, setLocalValue] = useState(value);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -66,6 +69,13 @@ export function TemplateSearchInput({
     onChange('');
   };
 
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' && onEnter) {
+      e.preventDefault();
+      onEnter();
+    }
+  };
+
   return (
     <div className="relative">
       <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -76,6 +86,7 @@ export function TemplateSearchInput({
         type="text"
         value={localValue}
         onChange={handleChange}
+        onKeyDown={handleKeyDown}
         placeholder={placeholder}
         className={cn(
           'block w-full pl-10 pr-10 py-2 border border-gray-300 rounded-lg',
