@@ -28,6 +28,8 @@ and this project adheres to
 
 ### Fixed
 
+- Run logs no longer disappear after browser refresh in IDE
+  [#4079](https://github.com/OpenFn/lightning/issues/4079)
 - User menu dropdown no longer clips or causes horizontal scroll in side
   navigation [#4092](https://github.com/OpenFn/lightning/issues/4092)
 - Improved version mismatch banner UX: made compact, dismissible, and
