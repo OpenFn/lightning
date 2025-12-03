@@ -247,9 +247,9 @@ export const useNodeSelection = () => {
   const { params, updateSearchParams } = useURLState();
 
   // Get current node ID from URL
-  const jobId = params.job ?? null;
-  const triggerId = params.trigger ?? null;
-  const edgeId = params.edge ?? null;
+  const jobId = params['job'] ?? null;
+  const triggerId = params['trigger'] ?? null;
+  const edgeId = params['edge'] ?? null;
   const currentNodeId = jobId || triggerId || edgeId;
 
   // Use useWorkflowState for simple state selection (no store methods needed)
@@ -288,7 +288,7 @@ export const useNodeSelection = () => {
   const store = useWorkflowStoreContext();
   const selectNode = useCallback(
     (id: string | null) => {
-      const currentPanel = searchParams.get('panel');
+      const currentPanel = params['panel'] ?? null;
 
       if (!id) {
         updateSearchParams({ job: null, trigger: null, edge: null });
@@ -312,16 +312,16 @@ export const useNodeSelection = () => {
       };
 
       if (foundJob) {
-        updates.job = id;
+        updates['job'] = id;
       } else if (foundTrigger) {
-        updates.trigger = id;
+        updates['trigger'] = id;
       } else if (foundEdge) {
-        updates.edge = id;
+        updates['edge'] = id;
       }
 
       updateSearchParams(updates);
     },
-    [updateSearchParams, store, searchParams]
+    [updateSearchParams, store, params]
   );
 
   return {

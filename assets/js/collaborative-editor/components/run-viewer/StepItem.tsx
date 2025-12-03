@@ -2,8 +2,8 @@ import { useURLState } from '../../../react/lib/use-url-state';
 import { cn } from '../../../utils/cn';
 import { useWorkflowState } from '../../hooks/useWorkflow';
 import type { StepDetail } from '../../types/history';
-
 import { Tooltip } from '../Tooltip';
+
 import { ElapsedIndicator } from './ElapsedIndicator';
 import { StepIcon } from './StepIcon';
 
@@ -32,8 +32,8 @@ export function StepItem({ step, selected, runInsertedAt }: StepItemProps) {
     e.stopPropagation();
 
     // Get current run ID and panel from URL to preserve context
-    const currentRunId = params.run ?? null;
-    const currentPanel = params.panel ?? null;
+    const currentRunId = params['run'] ?? null;
+    const currentPanel = params['panel'] ?? null;
 
     // Build updates object, only including panel if it exists
     const updates: Record<string, string | null> = {
@@ -44,7 +44,7 @@ export function StepItem({ step, selected, runInsertedAt }: StepItemProps) {
 
     // Only include panel in updates if it exists (avoids deleting it)
     if (currentPanel) {
-      updates.panel = currentPanel;
+      updates['panel'] = currentPanel;
     }
 
     updateSearchParams(updates);

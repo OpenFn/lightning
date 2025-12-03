@@ -3,7 +3,7 @@
  * Shows details for jobs, triggers, and edges when selected
  */
 
-import { useURLState } from '../../../react/lib/use-url-state';
+import { useURLState, urlStore } from '../../../react/lib/use-url-state';
 import { useKeyboardShortcut } from '../../keyboard';
 import type { Workflow } from '../../types/workflow';
 
@@ -154,8 +154,5 @@ export function Inspector({
 
 // Helper function to open workflow settings from external components
 export const openWorkflowSettings = () => {
-  const params = new URLSearchParams(window.location.search);
-  params.set('panel', 'settings');
-  const newURL = `${window.location.pathname}?${params.toString()}`;
-  history.pushState({}, '', newURL);
+  urlStore.updateSearchParams({ panel: 'settings' });
 };

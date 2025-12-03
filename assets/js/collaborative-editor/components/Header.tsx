@@ -169,7 +169,7 @@ export function Header({
   isIDEOpen?: boolean;
 }) {
   // IMPORTANT: All hooks must be called unconditionally before any early returns or conditional logic
-  const { updateSearchParams } = useURLState();
+  const { params, updateSearchParams } = useURLState();
   const { selectNode } = useNodeSelection();
   const { enabled, setEnabled } = useWorkflowEnabled();
   const { saveWorkflow } = useWorkflowActions();
@@ -237,7 +237,7 @@ export function Header({
               href={buildClassicalEditorUrl({
                 projectId,
                 workflowId,
-                searchParams: new URLSearchParams(window.location.search),
+                searchParams: new URLSearchParams(params),
                 isNewWorkflow,
               })}
               className="inline-flex items-center justify-center
