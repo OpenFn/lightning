@@ -7,7 +7,7 @@
  */
 
 import pDebounce from 'p-debounce';
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useContext, useEffect, useRef } from 'react';
 
 import type { WorkflowState as YAMLWorkflowState } from '../../../yaml/types';
 import {
@@ -15,6 +15,7 @@ import {
   convertWorkflowSpecToState,
 } from '../../../yaml/util';
 import { WorkflowError } from '../../../yaml/workflow-errors';
+import { StoreContext } from '../../contexts/StoreProvider';
 import { useUICommands } from '../../hooks/useUI';
 import { Tooltip } from '../Tooltip';
 import { ValidationErrorDisplay } from '../yaml-import/ValidationErrorDisplay';
@@ -42,10 +43,24 @@ export function YAMLImportPanel({
   onSave,
   onBack,
 }: YAMLImportPanelProps) {
+  const context = useContext(StoreContext);
+  if (!context) {
+    throw new Error('YAMLImportPanel must be used within StoreContext');
+  }
+  const uiStore = context.uiStore;
+
   const { collapseCreateWorkflowPanel } = useUICommands();
-  const [yamlContent, setYamlContent] = useState('');
+
+  // Get persisted YAML content from store
+  const storedYamlContent = uiStore.withSelector(
+    state => state.importPanel.yamlContent
+  )();
+
+  const [yamlContent, setYamlContent] = useState(storedYamlContent);
   const [errors, setErrors] = useState<WorkflowError[]>([]);
-  const [importState, setImportState] = useState<ImportState>('initial');
+  const [importState, setImportState] = useState<ImportState>(
+    storedYamlContent ? 'parsing' : 'initial'
+  );
   const [validatedState, setValidatedState] =
     useState<YAMLWorkflowState | null>(null);
 
@@ -56,6 +71,15 @@ export function YAMLImportPanel({
         setImportState('initial');
         setErrors([]);
         setValidatedState(null);
+        // Clear canvas when YAML is cleared
+        onImport({
+          id: '',
+          name: '',
+          jobs: [],
+          triggers: [],
+          edges: [],
+          positions: null,
+        });
         return;
       }
 
@@ -85,13 +109,26 @@ export function YAMLImportPanel({
 
   const handleYAMLChange = (content: string) => {
     setYamlContent(content);
-    validateYAML(content);
+    uiStore.setImportYamlContent(content);
+    void validateYAML(content);
   };
 
   const handleFileUpload = (content: string) => {
     setYamlContent(content);
-    validateYAML(content);
+    uiStore.setImportYamlContent(content);
+    void validateYAML(content);
   };
+
+  // Restore and validate stored YAML on mount
+  const hasRestoredRef = useRef(false);
+  useEffect(() => {
+    if (hasRestoredRef.current) return;
+    hasRestoredRef.current = true;
+
+    if (storedYamlContent) {
+      void validateYAML(storedYamlContent);
+    }
+  }, [storedYamlContent, validateYAML]);
 
   const handleSave = async () => {
     if (!validatedState) {
@@ -109,6 +146,7 @@ export function YAMLImportPanel({
       setYamlContent('');
       setValidatedState(null);
       setImportState('initial');
+      uiStore.clearImportPanel();
     } catch (error) {
       // On error, reset to valid state so user can retry
       setImportState('valid');
@@ -147,7 +185,7 @@ export function YAMLImportPanel({
           <button
             type="button"
             onClick={collapseCreateWorkflowPanel}
-            className="p-1 rounded hover:bg-gray-100 transition-colors"
+            className="rounded hover:bg-gray-100 transition-colors"
             aria-label="Collapse panel"
           >
             <span className="hero-chevron-left h-5 w-5 text-gray-600" />

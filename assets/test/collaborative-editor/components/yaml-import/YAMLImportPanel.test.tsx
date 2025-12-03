@@ -64,6 +64,12 @@ function createMockStoreContext(): StoreContextValue {
     credentialStore: {} as any,
     awarenessStore: {} as any,
     workflowStore: {} as any,
+    uiStore: {
+      withSelector: (selector: any) => () =>
+        selector({ importPanel: { yamlContent: '' } }),
+      setImportYamlContent: vi.fn(),
+      clearImportPanel: vi.fn(),
+    } as any,
   };
 }
 

@@ -44,6 +44,11 @@ export interface UIState {
     searchQuery: string;
     selectedTemplate: Template | null;
   };
+
+  /** Import panel state */
+  importPanel: {
+    yamlContent: string;
+  };
 }
 
 /**
@@ -101,6 +106,12 @@ export interface UICommands {
 
   /** Clear template panel state */
   clearTemplatePanel: () => void;
+
+  /** Set import panel YAML content */
+  setImportYamlContent: (content: string) => void;
+
+  /** Clear import panel state */
+  clearImportPanel: () => void;
 }
 
 /**

@@ -125,6 +125,9 @@ export const createUIStore = (): UIStore => {
         searchQuery: '',
         selectedTemplate: null,
       },
+      importPanel: {
+        yamlContent: '',
+      },
     } as UIState,
     draft => draft
   );
@@ -288,6 +291,26 @@ export const createUIStore = (): UIStore => {
     notify('clearTemplatePanel');
   };
 
+  // ===========================================================================
+  // IMPORT PANEL COMMANDS
+  // ===========================================================================
+
+  const setImportYamlContent = (content: string) => {
+    state = produce(state, draft => {
+      draft.importPanel.yamlContent = content;
+    });
+    notify('setImportYamlContent');
+  };
+
+  const clearImportPanel = () => {
+    state = produce(state, draft => {
+      draft.importPanel = {
+        yamlContent: '',
+      };
+    });
+    notify('clearImportPanel');
+  };
+
   devtools.connect();
 
   // ===========================================================================
@@ -318,6 +341,8 @@ export const createUIStore = (): UIStore => {
     setTemplateSearchQuery,
     selectTemplate,
     clearTemplatePanel,
+    setImportYamlContent,
+    clearImportPanel,
   };
 };
 

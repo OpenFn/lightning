@@ -70,10 +70,7 @@ export function TemplatePanel({
     };
 
     void loadTemplates();
-
-    return () => {
-      uiStore.clearTemplatePanel();
-    };
+    // Note: No cleanup - we preserve template selection when switching between panels
   }, [channel, uiStore]);
 
   // Restore search query from URL on initial mount only
@@ -124,22 +121,62 @@ export function TemplatePanel({
     [uiStore, updateSearchParams, onImport]
   );
 
-  // Restore template selection from URL
+  // Restore template selection from URL and render on canvas
+  const hasRenderedTemplateRef = useRef(false);
   useEffect(() => {
     const templateId = searchParams.get('template');
-    if (!templateId || templates.length === 0) return;
 
-    // Check if already selected
-    if (selectedTemplate?.id === templateId) return;
+    // No template selected - clear canvas on mount
+    if (!templateId && !hasRenderedTemplateRef.current) {
+      hasRenderedTemplateRef.current = true;
+      if (onImport) {
+        onImport({
+          id: '',
+          name: '',
+          jobs: [],
+          triggers: [],
+          edges: [],
+          positions: null,
+        });
+      }
+      return;
+    }
+
+    if (!templateId || templates.length === 0) return;
 
     // Find template in combined list
     const allTemplatesList = [...BASE_TEMPLATES, ...templates];
     const template = allTemplatesList.find(t => t.id === templateId);
 
     if (template) {
-      handleSelectTemplate(template);
+      // If already selected in store but not rendered yet, just render on canvas
+      if (
+        selectedTemplate?.id === templateId &&
+        !hasRenderedTemplateRef.current
+      ) {
+        hasRenderedTemplateRef.current = true;
+        if (onImport) {
+          try {
+            const spec = parseWorkflowYAML(template.code);
+            const state = convertWorkflowSpecToState(spec);
+            onImport(state);
+          } catch (err) {
+            console.error('Failed to parse template:', err);
+          }
+        }
+      } else if (selectedTemplate?.id !== templateId) {
+        // Different template - select and render
+        hasRenderedTemplateRef.current = true;
+        handleSelectTemplate(template);
+      }
     }
-  }, [searchParams, templates, selectedTemplate, handleSelectTemplate]);
+  }, [
+    searchParams,
+    templates,
+    selectedTemplate,
+    handleSelectTemplate,
+    onImport,
+  ]);
 
   const handleCreateWorkflow = async () => {
     if (!selectedTemplate || !onImport || !onSave) return;
@@ -192,7 +229,7 @@ export function TemplatePanel({
           <button
             type="button"
             onClick={collapseCreateWorkflowPanel}
-            className="p-1 rounded hover:bg-gray-100 transition-colors"
+            className="rounded hover:bg-gray-100 transition-colors"
             aria-label="Collapse panel"
           >
             <span className="hero-chevron-left h-5 w-5 text-gray-600" />
@@ -276,19 +313,8 @@ export function TemplatePanel({
         <button
           type="button"
           onClick={() => {
-            // Clear template selection and canvas when switching to import
-            if (selectedTemplate && onImport) {
-              uiStore.selectTemplate(null);
-              updateSearchParams({ template: null });
-              onImport({
-                id: '',
-                name: '',
-                jobs: [],
-                triggers: [],
-                edges: [],
-                positions: null,
-              });
-            }
+            // Clear URL params but keep template selection in store for when user returns
+            updateSearchParams({ template: null, search: null });
             onImportClick();
           }}
           className="rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 inline-flex items-center gap-x-2"

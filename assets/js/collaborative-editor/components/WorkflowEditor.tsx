@@ -350,9 +350,16 @@ export function WorkflowEditor() {
     Boolean(currentNode.node);
 
   const handleMethodChange = (method: 'template' | 'import' | 'ai' | null) => {
-    // When switching to import/ai mode, clear template params
     if (method === 'import' || method === 'ai') {
+      // When switching to import/ai mode, clear template URL params (but keep in store)
       updateSearchParams({ method, template: null, search: null });
+    } else if (method === 'template') {
+      // When switching back to template mode, restore URL params from store
+      updateSearchParams({
+        method,
+        template: selectedTemplate?.id ?? null,
+        search: searchQuery || null,
+      });
     } else {
       updateSearchParams({ method });
     }
