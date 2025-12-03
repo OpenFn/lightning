@@ -58,6 +58,17 @@ invalid: [syntax
 `;
 
 function createMockStoreContext(): StoreContextValue {
+  // Track import panel state for realistic mock behavior
+  let importPanelState = {
+    yamlContent: '',
+    importState: 'initial' as
+      | 'initial'
+      | 'parsing'
+      | 'valid'
+      | 'invalid'
+      | 'importing',
+  };
+
   return {
     sessionContextStore: {} as any,
     adaptorStore: {} as any,
@@ -66,9 +77,17 @@ function createMockStoreContext(): StoreContextValue {
     workflowStore: {} as any,
     uiStore: {
       withSelector: (selector: any) => () =>
-        selector({ importPanel: { yamlContent: '' } }),
-      setImportYamlContent: vi.fn(),
-      clearImportPanel: vi.fn(),
+        selector({ importPanel: importPanelState }),
+      setImportYamlContent: vi.fn((content: string) => {
+        importPanelState = { ...importPanelState, yamlContent: content };
+      }),
+      setImportState: vi.fn((state: typeof importPanelState.importState) => {
+        importPanelState = { ...importPanelState, importState: state };
+      }),
+      clearImportPanel: vi.fn(() => {
+        importPanelState = { yamlContent: '', importState: 'initial' };
+      }),
+      collapseCreateWorkflowPanel: vi.fn(),
     } as any,
   };
 }
