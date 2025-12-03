@@ -10,22 +10,13 @@
  *   to ensure only changed params create new references
  */
 
-import { describe, test, expect, beforeEach, afterEach, vi } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
+import { describe, test, expect, beforeEach } from 'vitest';
+
 import { useURLState } from '../../../js/react/lib/use-url-state';
 
 describe('useURLState', () => {
-  // Store original values to restore after tests
-  let originalLocation: Location;
-  let originalPushState: typeof history.pushState;
-  let originalReplaceState: typeof history.replaceState;
-
   beforeEach(() => {
-    // Store originals
-    originalLocation = window.location;
-    originalPushState = history.pushState;
-    originalReplaceState = history.replaceState;
-
     // Reset URL to clean state for each test
     // Use replaceState to avoid polluting browser history during tests
     history.replaceState({}, '', '/');
@@ -33,11 +24,6 @@ describe('useURLState', () => {
     // Note: The URLStore singleton is created at module load time, so it will
     // already have monkey-patched history methods. We're testing the actual
     // implementation as-is, including the monkey-patching behavior.
-  });
-
-  afterEach(() => {
-    // Clean up: restore original URL
-    history.replaceState({}, '', '/');
   });
 
   // ==========================================================================
@@ -160,6 +146,221 @@ describe('useURLState', () => {
       expect(result.current.params.job).toBe('abc');
       expect(result.current.hash).toBe('step-2');
       expect(window.location.hash).toBe('#step-2');
+    });
+
+    test('coerces number values to strings', () => {
+      history.replaceState({}, '', '/workflow');
+
+      const { result } = renderHook(() => useURLState());
+
+      act(() => {
+        result.current.updateSearchParams({ page: 42, limit: 100 });
+      });
+
+      expect(result.current.params.page).toBe('42');
+      expect(result.current.params.limit).toBe('100');
+      expect(window.location.search).toBe('?page=42&limit=100');
+    });
+
+    test('coerces boolean values to strings', () => {
+      history.replaceState({}, '', '/workflow');
+
+      const { result } = renderHook(() => useURLState());
+
+      act(() => {
+        result.current.updateSearchParams({
+          active: true,
+          archived: false,
+        });
+      });
+
+      expect(result.current.params.active).toBe('true');
+      expect(result.current.params.archived).toBe('false');
+      expect(window.location.search).toBe('?active=true&archived=false');
+    });
+
+    test('handles mixed types (string, number, boolean, null)', () => {
+      history.replaceState({}, '', '/workflow?old=value&remove=me');
+
+      const { result } = renderHook(() => useURLState());
+
+      act(() => {
+        result.current.updateSearchParams({
+          panel: 'run',
+          page: 5,
+          active: true,
+          remove: null,
+        });
+      });
+
+      expect(result.current.params.panel).toBe('run');
+      expect(result.current.params.page).toBe('5');
+      expect(result.current.params.active).toBe('true');
+      expect(result.current.params.old).toBe('value');
+      expect(result.current.params.remove).toBeUndefined();
+    });
+  });
+
+  describe('replaceSearchParams', () => {
+    test('replaces all params with new ones (clears unspecified params)', () => {
+      history.replaceState({}, '', '/workflow?panel=run&job=abc&step=5');
+
+      const { result } = renderHook(() => useURLState());
+
+      expect(result.current.params.panel).toBe('run');
+      expect(result.current.params.job).toBe('abc');
+      expect(result.current.params.step).toBe('5');
+
+      act(() => {
+        result.current.replaceSearchParams({ panel: 'inspector' });
+      });
+
+      // Only panel remains, job and step are cleared
+      expect(result.current.params.panel).toBe('inspector');
+      expect(result.current.params.job).toBeUndefined();
+      expect(result.current.params.step).toBeUndefined();
+      expect(window.location.search).toBe('?panel=inspector');
+    });
+
+    test('clears all params when given empty object', () => {
+      history.replaceState({}, '', '/workflow?panel=run&job=abc');
+
+      const { result } = renderHook(() => useURLState());
+
+      expect(result.current.params.panel).toBe('run');
+      expect(result.current.params.job).toBe('abc');
+
+      act(() => {
+        result.current.replaceSearchParams({});
+      });
+
+      expect(result.current.params).toEqual({});
+      expect(window.location.search).toBe('');
+    });
+
+    test('does not set params with null values', () => {
+      history.replaceState({}, '', '/workflow?panel=run');
+
+      const { result } = renderHook(() => useURLState());
+
+      act(() => {
+        result.current.replaceSearchParams({
+          job: 'abc',
+          step: null,
+        });
+      });
+
+      expect(result.current.params.job).toBe('abc');
+      expect(result.current.params.step).toBeUndefined();
+      expect(window.location.search).toBe('?job=abc');
+    });
+
+    test('preserves hash when replacing params', () => {
+      history.replaceState({}, '', '/workflow?panel=run&job=abc#step-2');
+
+      const { result } = renderHook(() => useURLState());
+
+      expect(result.current.hash).toBe('step-2');
+
+      act(() => {
+        result.current.replaceSearchParams({ panel: 'inspector' });
+      });
+
+      expect(result.current.params.panel).toBe('inspector');
+      expect(result.current.params.job).toBeUndefined();
+      expect(result.current.hash).toBe('step-2');
+      expect(window.location.hash).toBe('#step-2');
+    });
+
+    test('sets multiple params at once (replacing all existing)', () => {
+      history.replaceState({}, '', '/workflow?old=value');
+
+      const { result } = renderHook(() => useURLState());
+
+      act(() => {
+        result.current.replaceSearchParams({
+          panel: 'run',
+          job: 'xyz',
+          step: '3',
+        });
+      });
+
+      expect(result.current.params.old).toBeUndefined();
+      expect(result.current.params.panel).toBe('run');
+      expect(result.current.params.job).toBe('xyz');
+      expect(result.current.params.step).toBe('3');
+    });
+
+    test('handles special characters in param values', () => {
+      history.replaceState({}, '', '/workflow?old=value');
+
+      const { result } = renderHook(() => useURLState());
+
+      act(() => {
+        result.current.replaceSearchParams({
+          query: 'hello world & stuff',
+        });
+      });
+
+      expect(result.current.params.old).toBeUndefined();
+      expect(result.current.params.query).toBe('hello world & stuff');
+    });
+
+    test('coerces number values to strings', () => {
+      history.replaceState({}, '', '/workflow?old=value');
+
+      const { result } = renderHook(() => useURLState());
+
+      act(() => {
+        result.current.replaceSearchParams({
+          page: 1,
+          limit: 50,
+        });
+      });
+
+      expect(result.current.params.old).toBeUndefined();
+      expect(result.current.params.page).toBe('1');
+      expect(result.current.params.limit).toBe('50');
+      expect(window.location.search).toBe('?page=1&limit=50');
+    });
+
+    test('coerces boolean values to strings', () => {
+      history.replaceState({}, '', '/workflow?old=value');
+
+      const { result } = renderHook(() => useURLState());
+
+      act(() => {
+        result.current.replaceSearchParams({
+          enabled: true,
+          disabled: false,
+        });
+      });
+
+      expect(result.current.params.old).toBeUndefined();
+      expect(result.current.params.enabled).toBe('true');
+      expect(result.current.params.disabled).toBe('false');
+      expect(window.location.search).toBe('?enabled=true&disabled=false');
+    });
+
+    test('handles mixed types with replaceSearchParams', () => {
+      history.replaceState({}, '', '/workflow?old=value');
+
+      const { result } = renderHook(() => useURLState());
+
+      act(() => {
+        result.current.replaceSearchParams({
+          panel: 'inspector',
+          page: 3,
+          active: true,
+          skip: null,
+        });
+      });
+
+      expect(result.current.params.old).toBeUndefined();
+      expect(result.current.params.panel).toBe('inspector');
+      expect(result.current.params.page).toBe('3');
+      expect(result.current.params.active).toBe('true');
+      expect(result.current.params.skip).toBeUndefined();
     });
   });
 
