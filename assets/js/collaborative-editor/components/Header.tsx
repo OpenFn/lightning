@@ -1,7 +1,7 @@
 import { Menu, MenuButton, MenuItem, MenuItems } from '@headlessui/react';
 import { useCallback, useMemo } from 'react';
 
-import { useURLState } from '../../react/lib/use-url-state';
+import { useURLState } from '#/react/lib/use-url-state';
 import { buildClassicalEditorUrl } from '../../utils/editorUrlConversion';
 import {
   useIsNewWorkflow,

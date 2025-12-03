@@ -14,7 +14,7 @@ import { FilterTypes } from '../../manual-run-panel/types';
 import CustomView from '../../manual-run-panel/views/CustomView';
 import EmptyView from '../../manual-run-panel/views/EmptyView';
 import ExistingView from '../../manual-run-panel/views/ExistingView';
-import { useURLState } from '../../react/lib/use-url-state';
+import { useURLState } from '#/react/lib/use-url-state';
 import type { Dataclip } from '../api/dataclips';
 import * as dataclipApi from '../api/dataclips';
 import { RENDER_MODES, type RenderMode } from '../constants/panel';

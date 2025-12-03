@@ -1,5 +1,6 @@
-import { useURLState } from '../../../react/lib/use-url-state';
-import { cn } from '../../../utils/cn';
+import { useURLState } from '#/react/lib/use-url-state';
+import { cn } from '#/utils/cn';
+
 import { useWorkflowState } from '../../hooks/useWorkflow';
 import type { StepDetail } from '../../types/history';
 import { Tooltip } from '../Tooltip';

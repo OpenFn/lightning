@@ -20,7 +20,7 @@ import {
 import _logger from '#/utils/logger';
 
 import { useSocket } from '../../react/contexts/SocketProvider';
-import { useURLState } from '../../react/lib/use-url-state';
+import { useURLState } from '#/react/lib/use-url-state';
 import {
   createSessionStore,
   type SessionStoreInstance,

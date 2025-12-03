@@ -3,7 +3,9 @@
  * Shows details for jobs, triggers, and edges when selected
  */
 
-import { useURLState, urlStore } from '../../../react/lib/use-url-state';
+import { useURLState, urlStore } from '#/react/lib/use-url-state';
+
+import { useWorkflowTemplate } from '../../hooks/useSessionContext';
 import { useKeyboardShortcut } from '../../keyboard';
 import type { Workflow } from '../../types/workflow';
 
@@ -11,10 +13,9 @@ import { CodeViewPanel } from './CodeViewPanel';
 import { EdgeInspector } from './EdgeInspector';
 import { InspectorLayout } from './InspectorLayout';
 import { JobInspector } from './JobInspector';
+import { TemplatePublishPanel } from './TemplatePublishPanel';
 import { TriggerInspector } from './TriggerInspector';
 import { WorkflowSettings } from './WorkflowSettings';
-import { TemplatePublishPanel } from './TemplatePublishPanel';
-import { useWorkflowTemplate } from '../../hooks/useSessionContext';
 
 export { InspectorLayout } from './InspectorLayout';
 

@@ -13,11 +13,11 @@ import {
 } from 'react-resizable-panels';
 
 import { useKeyboardShortcut } from '#/collaborative-editor/keyboard';
+import { useURLState } from '#/react/lib/use-url-state';
 import { cn } from '#/utils/cn';
 
 import Docs from '../../../adaptor-docs/Docs';
 import Metadata from '../../../metadata-explorer/Explorer';
-import { useURLState } from '../../../react/lib/use-url-state';
 import type { Dataclip } from '../../api/dataclips';
 import * as dataclipApi from '../../api/dataclips';
 import { RENDER_MODES } from '../../constants/panel';

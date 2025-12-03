@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 
 import { SocketProvider } from '../react/contexts/SocketProvider';
-import { useURLState } from '../react/lib/use-url-state';
+import { useURLState } from '#/react/lib/use-url-state';
 import type { WithActionProps } from '../react/lib/with-props';
 
 import { BreadcrumbLink, BreadcrumbText } from './components/Breadcrumbs';
