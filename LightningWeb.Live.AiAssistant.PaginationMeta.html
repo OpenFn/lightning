@@ -5,14 +5,14 @@
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="generator" content="ExDoc v0.38.4">
-    <meta name="project" content="Lightning v2.15.0-pre1">
+    <meta name="project" content="Lightning v2.15.0-pre2">
 
 
-    <title>LightningWeb.Live.AiAssistant.PaginationMeta — Lightning v2.15.0-pre1</title>
+    <title>LightningWeb.Live.AiAssistant.PaginationMeta — Lightning v2.15.0-pre2</title>
 
     <link rel="stylesheet" href="dist/html-elixir-RLZO5U2C.css" />
 
-    <script defer src="dist/sidebar_items-2A04252D.js"></script>
+    <script defer src="dist/sidebar_items-DC11E3D7.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-Y223O6DN.js"></script>
 
@@ -41,7 +41,7 @@
 Lightning
         </a>
         <div class="sidebar-projectVersion" translate="no">
-          v2.15.0-pre1
+          v2.15.0-pre2
         </div>
       </div>
     </div>
@@ -80,7 +80,7 @@ Lightning
   <div class="heading-with-actions top-heading">
     <h1>
       <span translate="no">LightningWeb.Live.AiAssistant.PaginationMeta</span> 
-      <small class="app-vsn" translate="no">(Lightning v2.15.0-pre1)</small>
+      <small class="app-vsn" translate="no">(Lightning v2.15.0-pre2)</small>
 
     </h1>
 
@@ -402,8 +402,8 @@ Lightning
 
       </div>
 
-<p>Creates pagination metadata from current state.</p><h2 id="new/3-examples" class="section-heading"><a href="#new/3-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">new</span><span class="p" data-group-id="7913630307-1">(</span><span class="mi">25</span><span class="p">,</span><span class="w"> </span><span class="mi">20</span><span class="p">,</span><span class="w"> </span><span class="mi">100</span><span class="p" data-group-id="7913630307-1">)</span><span class="w">
-</span><span class="p" data-group-id="7913630307-2">%</span><span class="nc" data-group-id="7913630307-2">PaginationMeta</span><span class="p" data-group-id="7913630307-2">{</span><span class="ss">current_page</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span><span class="w"> </span><span class="ss">page_size</span><span class="p">:</span><span class="w"> </span><span class="mi">20</span><span class="p">,</span><span class="w"> </span><span class="ss">total_count</span><span class="p">:</span><span class="w"> </span><span class="mi">100</span><span class="p">,</span><span class="w"> </span><span class="ss">has_next_page</span><span class="p">:</span><span class="w"> </span><span class="no">true</span><span class="p">,</span><span class="w"> </span><span class="ss">has_prev_page</span><span class="p">:</span><span class="w"> </span><span class="no">true</span><span class="p" data-group-id="7913630307-2">}</span></code></pre>
+<p>Creates pagination metadata from current state.</p><h2 id="new/3-examples" class="section-heading"><a href="#new/3-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">new</span><span class="p" data-group-id="0355077556-1">(</span><span class="mi">25</span><span class="p">,</span><span class="w"> </span><span class="mi">20</span><span class="p">,</span><span class="w"> </span><span class="mi">100</span><span class="p" data-group-id="0355077556-1">)</span><span class="w">
+</span><span class="p" data-group-id="0355077556-2">%</span><span class="nc" data-group-id="0355077556-2">PaginationMeta</span><span class="p" data-group-id="0355077556-2">{</span><span class="ss">current_page</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span><span class="w"> </span><span class="ss">page_size</span><span class="p">:</span><span class="w"> </span><span class="mi">20</span><span class="p">,</span><span class="w"> </span><span class="ss">total_count</span><span class="p">:</span><span class="w"> </span><span class="mi">100</span><span class="p">,</span><span class="w"> </span><span class="ss">has_next_page</span><span class="p">:</span><span class="w"> </span><span class="no">true</span><span class="p">,</span><span class="w"> </span><span class="ss">has_prev_page</span><span class="p">:</span><span class="w"> </span><span class="no">true</span><span class="p" data-group-id="0355077556-2">}</span></code></pre>
   </section>
 </section>
 <section class="detail" id="page_range/2">
@@ -461,7 +461,7 @@ Lightning
 
       </div>
 
-<p>Generates human-readable pagination summary.</p><h2 id="summary/1-examples" class="section-heading"><a href="#summary/1-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">summary</span><span class="p" data-group-id="9309142141-1">(</span><span class="p" data-group-id="9309142141-2">%</span><span class="nc" data-group-id="9309142141-2">PaginationMeta</span><span class="p" data-group-id="9309142141-2">{</span><span class="ss">current_page</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span><span class="w"> </span><span class="ss">page_size</span><span class="p">:</span><span class="w"> </span><span class="mi">20</span><span class="p">,</span><span class="w"> </span><span class="ss">total_count</span><span class="p">:</span><span class="w"> </span><span class="mi">45</span><span class="p" data-group-id="9309142141-2">}</span><span class="p" data-group-id="9309142141-1">)</span><span class="w">
+<p>Generates human-readable pagination summary.</p><h2 id="summary/1-examples" class="section-heading"><a href="#summary/1-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">summary</span><span class="p" data-group-id="3344039365-1">(</span><span class="p" data-group-id="3344039365-2">%</span><span class="nc" data-group-id="3344039365-2">PaginationMeta</span><span class="p" data-group-id="3344039365-2">{</span><span class="ss">current_page</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span><span class="w"> </span><span class="ss">page_size</span><span class="p">:</span><span class="w"> </span><span class="mi">20</span><span class="p">,</span><span class="w"> </span><span class="ss">total_count</span><span class="p">:</span><span class="w"> </span><span class="mi">45</span><span class="p" data-group-id="3344039365-2">}</span><span class="p" data-group-id="3344039365-1">)</span><span class="w">
 </span><span class="s">&quot;Showing 21-40 of 45&quot;</span></code></pre>
   </section>
 </section>
