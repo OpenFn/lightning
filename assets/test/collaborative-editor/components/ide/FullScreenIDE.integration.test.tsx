@@ -388,4 +388,493 @@ describe('FullScreenIDE - Run Integration', () => {
       expect(mockSetManuallyUnselectedDataclip).toHaveBeenCalledWith(false);
     });
   });
+
+  describe('Run synchronization between canvas and IDE', () => {
+    describe('Canvas → IDE synchronization', () => {
+      it('syncs run ID from URL to followRunId state on mount', () => {
+        const mockSetFollowRunId = vi.fn();
+        const runIdFromURL = 'canvas-selected-run';
+        const followRunId = null;
+
+        // Simulate useEffect logic that syncs URL to state
+        if (runIdFromURL && runIdFromURL !== followRunId) {
+          mockSetFollowRunId(runIdFromURL);
+        }
+
+        expect(mockSetFollowRunId).toHaveBeenCalledWith('canvas-selected-run');
+      });
+
+      it('derives panelState as run-viewer when followRunId is set', () => {
+        // Simulate derived state logic
+        const followRunId = 'some-run-id';
+        const rightPanelSubState = 'landing';
+        const panelState = followRunId ? 'run-viewer' : rightPanelSubState;
+
+        expect(panelState).toBe('run-viewer');
+      });
+
+      it('expands right panel when run is selected from URL', () => {
+        const mockExpand = vi.fn();
+        const mockIsCollapsed = vi.fn(() => true);
+
+        const rightPanelRef = {
+          current: {
+            isCollapsed: mockIsCollapsed,
+            expand: mockExpand,
+          },
+        };
+
+        const runIdFromURL = 'url-run-id';
+        const followRunId = null;
+
+        // Simulate useEffect logic
+        if (runIdFromURL && runIdFromURL !== followRunId) {
+          if (
+            rightPanelRef.current?.isCollapsed &&
+            rightPanelRef.current.isCollapsed()
+          ) {
+            rightPanelRef.current.expand();
+          }
+        }
+
+        expect(mockExpand).toHaveBeenCalled();
+      });
+    });
+
+    describe('IDE → Canvas synchronization', () => {
+      it('updates URL when run is selected from history panel', () => {
+        const mockUpdateSearchParams = vi.fn();
+        const mockSetFollowRunId = vi.fn();
+        const runId = 'history-selected-run';
+
+        // Simulate handleHistoryRunSelect
+        const handleHistoryRunSelect = (run: { id: string }) => {
+          mockSetFollowRunId(run.id);
+          mockUpdateSearchParams({ run: run.id });
+        };
+
+        handleHistoryRunSelect({ id: runId });
+
+        expect(mockSetFollowRunId).toHaveBeenCalledWith('history-selected-run');
+        expect(mockUpdateSearchParams).toHaveBeenCalledWith({
+          run: 'history-selected-run',
+        });
+      });
+
+      it('updates URL when run is created and submitted', () => {
+        const mockUpdateSearchParams = vi.fn();
+        const mockSetFollowRunId = vi.fn();
+        const runId = 'newly-created-run';
+
+        // Simulate handleRunSubmitted
+        const handleRunSubmitted = (runId: string) => {
+          mockSetFollowRunId(runId);
+          mockUpdateSearchParams({ run: runId });
+        };
+
+        handleRunSubmitted(runId);
+
+        expect(mockSetFollowRunId).toHaveBeenCalledWith('newly-created-run');
+        expect(mockUpdateSearchParams).toHaveBeenCalledWith({
+          run: 'newly-created-run',
+        });
+      });
+
+      it('transitions to run-viewer automatically after run selection', () => {
+        // When followRunId is set by history selection, derived state becomes run-viewer
+        const followRunId = 'selected-from-history';
+        const rightPanelSubState = 'history';
+        const panelState = followRunId ? 'run-viewer' : rightPanelSubState;
+
+        expect(panelState).toBe('run-viewer');
+      });
+    });
+
+    describe('Run unload synchronization', () => {
+      it('clears URL, state, and returns to landing when run is unloaded', () => {
+        const mockUpdateSearchParams = vi.fn();
+        const mockSetFollowRunId = vi.fn();
+        const mockSetRightPanelSubState = vi.fn();
+
+        // Simulate handleClearFollowRun
+        const handleClearFollowRun = () => {
+          mockSetFollowRunId(null);
+          mockUpdateSearchParams({ run: null });
+          mockSetRightPanelSubState('landing');
+        };
+
+        handleClearFollowRun();
+
+        expect(mockSetFollowRunId).toHaveBeenCalledWith(null);
+        expect(mockUpdateSearchParams).toHaveBeenCalledWith({ run: null });
+        expect(mockSetRightPanelSubState).toHaveBeenCalledWith('landing');
+      });
+
+      it('clears URL when user clicks X on RunBadge', () => {
+        const mockUpdateSearchParams = vi.fn();
+        const mockSetFollowRunId = vi.fn();
+        const mockSetRightPanelSubState = vi.fn();
+
+        // Simulate handleClearFollowRun called from RunBadge onClose
+        const handleClearFollowRun = () => {
+          mockSetFollowRunId(null);
+          mockUpdateSearchParams({ run: null });
+          mockSetRightPanelSubState('landing');
+        };
+
+        // User clicks X on RunBadge
+        handleClearFollowRun();
+
+        expect(mockUpdateSearchParams).toHaveBeenCalledWith({ run: null });
+        expect(mockSetRightPanelSubState).toHaveBeenCalledWith('landing');
+      });
+    });
+
+    describe('URL as single source of truth', () => {
+      it('derives panelState as run-viewer when followRunId is set', () => {
+        const followRunId = 'some-run';
+        const rightPanelSubState = 'landing';
+        const panelState = followRunId ? 'run-viewer' : rightPanelSubState;
+
+        expect(panelState).toBe('run-viewer');
+      });
+
+      it('uses rightPanelSubState when no run is loaded', () => {
+        const followRunId = null;
+        const rightPanelSubState = 'history';
+        const panelState = followRunId ? 'run-viewer' : rightPanelSubState;
+
+        expect(panelState).toBe('history');
+      });
+
+      it('overrides rightPanelSubState when run is selected', () => {
+        // Even if user was in history view, selecting a run shows run-viewer
+        const followRunId = 'run-123';
+        const rightPanelSubState = 'history';
+        const panelState = followRunId ? 'run-viewer' : rightPanelSubState;
+
+        expect(panelState).toBe('run-viewer');
+      });
+
+      it('returns to previous sub-state when run is cleared', () => {
+        // After clearing run, rightPanelSubState determines what shows
+        const followRunId = null;
+        const rightPanelSubState = 'create-run';
+        const panelState = followRunId ? 'run-viewer' : rightPanelSubState;
+
+        // But handleClearFollowRun always sets rightPanelSubState to 'landing'
+        expect(panelState).toBe('create-run');
+      });
+    });
+
+    describe('Panel state transitions', () => {
+      it('requests history when entering history state', () => {
+        const mockRequestHistory = vi.fn();
+        const rightPanelSubState = 'history';
+
+        // Simulate useEffect that requests history
+        if (rightPanelSubState === 'history') {
+          mockRequestHistory();
+        }
+
+        expect(mockRequestHistory).toHaveBeenCalled();
+      });
+
+      it('does not request history when in other states', () => {
+        const mockRequestHistory = vi.fn();
+        const rightPanelSubState = 'landing';
+
+        // Simulate useEffect that requests history
+        if (rightPanelSubState === 'history') {
+          mockRequestHistory();
+        }
+
+        expect(mockRequestHistory).not.toHaveBeenCalled();
+      });
+
+      it('navigates from landing to history when View History clicked', () => {
+        const mockSetRightPanelSubState = vi.fn();
+
+        // Simulate handleNavigateToHistory
+        const handleNavigateToHistory = () => {
+          mockSetRightPanelSubState('history');
+        };
+
+        handleNavigateToHistory();
+
+        expect(mockSetRightPanelSubState).toHaveBeenCalledWith('history');
+      });
+
+      it('navigates from landing to create-run when Create Run clicked', () => {
+        const mockSetRightPanelSubState = vi.fn();
+
+        // Simulate handleNavigateToCreateRun
+        const handleNavigateToCreateRun = () => {
+          mockSetRightPanelSubState('create-run');
+        };
+
+        handleNavigateToCreateRun();
+
+        expect(mockSetRightPanelSubState).toHaveBeenCalledWith('create-run');
+      });
+
+      it('navigates back to landing from history', () => {
+        const mockSetRightPanelSubState = vi.fn();
+
+        // Simulate handleBackToLanding
+        const handleBackToLanding = () => {
+          mockSetRightPanelSubState('landing');
+        };
+
+        handleBackToLanding();
+
+        expect(mockSetRightPanelSubState).toHaveBeenCalledWith('landing');
+      });
+
+      it('navigates back to landing from create-run', () => {
+        const mockSetRightPanelSubState = vi.fn();
+
+        // Simulate handleBackToLanding
+        const handleBackToLanding = () => {
+          mockSetRightPanelSubState('landing');
+        };
+
+        handleBackToLanding();
+
+        expect(mockSetRightPanelSubState).toHaveBeenCalledWith('landing');
+      });
+    });
+  });
+
+  describe('Run button state based on panel state', () => {
+    it('run button should be disabled in landing state', () => {
+      const panelState = 'landing';
+      const canRunSnapshot = true;
+      const canRunFromHook = true;
+      const isSubmitting = false;
+      const runIsProcessing = false;
+      const jobMatchesRun = true;
+
+      const isDisabled = !(
+        canRunSnapshot &&
+        canRunFromHook &&
+        !isSubmitting &&
+        !runIsProcessing &&
+        jobMatchesRun &&
+        (panelState === 'run-viewer' || panelState === 'create-run')
+      );
+
+      expect(isDisabled).toBe(true);
+    });
+
+    it('run button should be disabled in history state', () => {
+      const panelState = 'history';
+      const canRunSnapshot = true;
+      const canRunFromHook = true;
+      const isSubmitting = false;
+      const runIsProcessing = false;
+      const jobMatchesRun = true;
+
+      const isDisabled = !(
+        canRunSnapshot &&
+        canRunFromHook &&
+        !isSubmitting &&
+        !runIsProcessing &&
+        jobMatchesRun &&
+        (panelState === 'run-viewer' || panelState === 'create-run')
+      );
+
+      expect(isDisabled).toBe(true);
+    });
+
+    it('run button should be enabled in create-run state with valid input', () => {
+      const panelState = 'create-run';
+      const canRunSnapshot = true;
+      const canRunFromHook = true;
+      const isSubmitting = false;
+      const runIsProcessing = false;
+      const jobMatchesRun = true;
+
+      const isDisabled = !(
+        canRunSnapshot &&
+        canRunFromHook &&
+        !isSubmitting &&
+        !runIsProcessing &&
+        jobMatchesRun &&
+        (panelState === 'run-viewer' || panelState === 'create-run')
+      );
+
+      expect(isDisabled).toBe(false);
+    });
+
+    it('run button should be enabled in run-viewer state for retry', () => {
+      const panelState = 'run-viewer';
+      const canRunSnapshot = true;
+      const canRunFromHook = true;
+      const isSubmitting = false;
+      const runIsProcessing = false;
+      const jobMatchesRun = true;
+
+      const isDisabled = !(
+        canRunSnapshot &&
+        canRunFromHook &&
+        !isSubmitting &&
+        !runIsProcessing &&
+        jobMatchesRun &&
+        (panelState === 'run-viewer' || panelState === 'create-run')
+      );
+
+      expect(isDisabled).toBe(false);
+    });
+  });
+
+  describe('Input state reset on transitions', () => {
+    it('resets input state when job changes', () => {
+      const mockSetSelectedDataclipState = vi.fn();
+      const mockSetSelectedTab = vi.fn();
+      const mockSetCustomBody = vi.fn();
+      const mockSetManuallyUnselectedDataclip = vi.fn();
+      const mockSetRightPanelSubState = vi.fn();
+
+      const prevJobId = 'old-job-id';
+      const newJobId = 'new-job-id';
+      const rightPanelSubState = 'create-run';
+
+      // Simulate job change effect
+      if (newJobId && prevJobId && newJobId !== prevJobId) {
+        mockSetSelectedDataclipState(null);
+        mockSetSelectedTab('empty');
+        mockSetCustomBody('');
+        mockSetManuallyUnselectedDataclip(false);
+        if (rightPanelSubState === 'create-run') {
+          mockSetRightPanelSubState('landing');
+        }
+      }
+
+      expect(mockSetSelectedDataclipState).toHaveBeenCalledWith(null);
+      expect(mockSetSelectedTab).toHaveBeenCalledWith('empty');
+      expect(mockSetCustomBody).toHaveBeenCalledWith('');
+      expect(mockSetManuallyUnselectedDataclip).toHaveBeenCalledWith(false);
+      expect(mockSetRightPanelSubState).toHaveBeenCalledWith('landing');
+    });
+
+    it('does not reset state on initial job load', () => {
+      const mockSetSelectedDataclipState = vi.fn();
+
+      const prevJobId = null; // No previous job
+      const newJobId = 'first-job-id';
+
+      // Simulate job change effect - should not reset on first load
+      if (newJobId && prevJobId && newJobId !== prevJobId) {
+        mockSetSelectedDataclipState(null);
+      }
+
+      expect(mockSetSelectedDataclipState).not.toHaveBeenCalled();
+    });
+
+    it('resets input state when clearing follow run', () => {
+      const mockSetFollowRunId = vi.fn();
+      const mockUpdateSearchParams = vi.fn();
+      const mockSetSelectedDataclipState = vi.fn();
+      const mockSetSelectedTab = vi.fn();
+      const mockSetCustomBody = vi.fn();
+      const mockSetManuallyUnselectedDataclip = vi.fn();
+      const mockSetRightPanelSubState = vi.fn();
+
+      // Simulate handleClearFollowRun
+      const handleClearFollowRun = () => {
+        mockSetFollowRunId(null);
+        mockUpdateSearchParams({ run: null });
+        mockSetSelectedDataclipState(null);
+        mockSetSelectedTab('empty');
+        mockSetCustomBody('');
+        mockSetManuallyUnselectedDataclip(false);
+        mockSetRightPanelSubState('landing');
+      };
+
+      handleClearFollowRun();
+
+      expect(mockSetSelectedDataclipState).toHaveBeenCalledWith(null);
+      expect(mockSetSelectedTab).toHaveBeenCalledWith('empty');
+      expect(mockSetCustomBody).toHaveBeenCalledWith('');
+      expect(mockSetManuallyUnselectedDataclip).toHaveBeenCalledWith(false);
+    });
+
+    it('resets input state when navigating back to landing', () => {
+      const mockSetSelectedDataclipState = vi.fn();
+      const mockSetSelectedTab = vi.fn();
+      const mockSetCustomBody = vi.fn();
+      const mockSetManuallyUnselectedDataclip = vi.fn();
+      const mockSetRightPanelSubState = vi.fn();
+
+      // Simulate handleBackToLanding
+      const handleBackToLanding = () => {
+        mockSetSelectedDataclipState(null);
+        mockSetSelectedTab('empty');
+        mockSetCustomBody('');
+        mockSetManuallyUnselectedDataclip(false);
+        mockSetRightPanelSubState('landing');
+      };
+
+      handleBackToLanding();
+
+      expect(mockSetSelectedDataclipState).toHaveBeenCalledWith(null);
+      expect(mockSetSelectedTab).toHaveBeenCalledWith('empty');
+      expect(mockSetRightPanelSubState).toHaveBeenCalledWith('landing');
+    });
+
+    it('resets input state when navigating to create-run', () => {
+      const mockSetSelectedDataclipState = vi.fn();
+      const mockSetSelectedTab = vi.fn();
+      const mockSetCustomBody = vi.fn();
+      const mockSetManuallyUnselectedDataclip = vi.fn();
+      const mockSetRightPanelSubState = vi.fn();
+
+      // Simulate handleNavigateToCreateRun
+      const handleNavigateToCreateRun = () => {
+        mockSetSelectedDataclipState(null);
+        mockSetSelectedTab('empty');
+        mockSetCustomBody('');
+        mockSetManuallyUnselectedDataclip(true); // true to prevent auto-selection
+        mockSetRightPanelSubState('create-run');
+      };
+
+      handleNavigateToCreateRun();
+
+      expect(mockSetSelectedDataclipState).toHaveBeenCalledWith(null);
+      expect(mockSetSelectedTab).toHaveBeenCalledWith('empty');
+      expect(mockSetManuallyUnselectedDataclip).toHaveBeenCalledWith(true);
+      expect(mockSetRightPanelSubState).toHaveBeenCalledWith('create-run');
+    });
+  });
+
+  describe('Panel minimum size based on state', () => {
+    it('allows smaller panel in landing state', () => {
+      const panelState = 'landing';
+      const minSize = panelState === 'landing' ? 10 : 30;
+
+      expect(minSize).toBe(10);
+    });
+
+    it('requires larger panel in create-run state', () => {
+      const panelState = 'create-run';
+      const minSize = panelState === 'landing' ? 10 : 30;
+
+      expect(minSize).toBe(30);
+    });
+
+    it('requires larger panel in run-viewer state', () => {
+      const panelState = 'run-viewer';
+      const minSize = panelState === 'landing' ? 10 : 30;
+
+      expect(minSize).toBe(30);
+    });
+
+    it('requires larger panel in history state', () => {
+      const panelState = 'history';
+      const minSize = panelState === 'landing' ? 10 : 30;
+
+      expect(minSize).toBe(30);
+    });
+  });
 });

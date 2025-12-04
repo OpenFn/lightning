@@ -1009,4 +1009,268 @@ describe('MiniHistory', () => {
       ).not.toBeInTheDocument();
     });
   });
+
+  // ==========================================================================
+  // PANEL VARIANT
+  // ==========================================================================
+
+  describe('panel variant', () => {
+    const mockWorkOrder = createMockWorkOrder({
+      id: 'panel-test-wo',
+      runs: [
+        {
+          id: 'panel-test-run',
+          state: 'success',
+          started_at: '2025-10-23T20:00:00Z',
+          finished_at: '2025-10-23T20:00:01Z',
+          error_type: null,
+          selected: false,
+        },
+      ],
+    });
+
+    test('renders without absolute positioning', () => {
+      const onBack = vi.fn();
+
+      render(
+        <MiniHistory
+          variant="panel"
+          collapsed={false}
+          history={[mockWorkOrder]}
+          onCollapseHistory={vi.fn()}
+          selectRunHandler={vi.fn()}
+          onBack={onBack}
+        />
+      );
+
+      // Find the outermost container
+      const container = screen
+        .getByText('Run History')
+        .closest('div.flex.flex-col.h-full');
+      expect(container).toBeInTheDocument();
+
+      // Should not have absolute positioning
+      expect(container?.className).not.toContain('absolute');
+
+      // Should have panel-specific classes
+      expect(container?.className).toContain('flex-col');
+      expect(container?.className).toContain('h-full');
+      expect(container?.className).toContain('bg-white');
+    });
+
+    test('shows back button that calls onBack', () => {
+      const onBack = vi.fn();
+
+      render(
+        <MiniHistory
+          variant="panel"
+          collapsed={false}
+          history={[mockWorkOrder]}
+          onCollapseHistory={vi.fn()}
+          selectRunHandler={vi.fn()}
+          onBack={onBack}
+        />
+      );
+
+      const backButton = screen.getByRole('button', {
+        name: /Back to landing/i,
+      });
+      expect(backButton).toBeInTheDocument();
+
+      fireEvent.click(backButton);
+
+      expect(onBack).toHaveBeenCalledOnce();
+    });
+
+    test('does not show collapse/expand controls', () => {
+      const onBack = vi.fn();
+
+      render(
+        <MiniHistory
+          variant="panel"
+          collapsed={false}
+          history={[mockWorkOrder]}
+          onCollapseHistory={vi.fn()}
+          selectRunHandler={vi.fn()}
+          onBack={onBack}
+        />
+      );
+
+      // Panel variant should not have the collapsible header
+      expect(screen.queryByText('Recent History')).not.toBeInTheDocument();
+      expect(screen.queryByText('View History')).not.toBeInTheDocument();
+
+      // Should not have chevron collapse indicators in the header
+      const header = screen.getByText('Run History').closest('div.px-3.py-2');
+      expect(header?.querySelector('span.hero-chevron-left')).toBeNull();
+      expect(header?.querySelector('span.hero-chevron-right')).toBeNull();
+    });
+
+    test('displays panel header with title and full history button', () => {
+      const onBack = vi.fn();
+
+      render(
+        <MiniHistory
+          variant="panel"
+          collapsed={false}
+          history={[mockWorkOrder]}
+          onCollapseHistory={vi.fn()}
+          selectRunHandler={vi.fn()}
+          onBack={onBack}
+        />
+      );
+
+      // Panel header should show "Run History" title
+      expect(screen.getByText('Run History')).toBeInTheDocument();
+
+      // Should have the "View full history" button
+      const viewHistoryButton = screen.getByRole('button', {
+        name: /View full history for this workflow/i,
+      });
+      expect(viewHistoryButton).toBeInTheDocument();
+    });
+
+    test('displays work orders and runs in panel variant', () => {
+      const onBack = vi.fn();
+      const selectRunHandler = vi.fn();
+
+      render(
+        <MiniHistory
+          variant="panel"
+          collapsed={false}
+          history={[mockWorkOrder]}
+          onCollapseHistory={vi.fn()}
+          selectRunHandler={selectRunHandler}
+          onBack={onBack}
+        />
+      );
+
+      // Work order ID is truncated (first 8 characters)
+      // panel-test-wo is only 13 chars, so just check for 'panel-te'
+      expect(screen.getByText(/panel-te/)).toBeInTheDocument();
+
+      // Status pill should be visible
+      expect(screen.getByText('Success')).toBeInTheDocument();
+    });
+
+    test('allows run selection in panel variant', () => {
+      const onBack = vi.fn();
+      const selectRunHandler = vi.fn();
+
+      render(
+        <MiniHistory
+          variant="panel"
+          collapsed={false}
+          history={[mockWorkOrder]}
+          onCollapseHistory={vi.fn()}
+          selectRunHandler={selectRunHandler}
+          onBack={onBack}
+        />
+      );
+
+      // Click work order chevron to expand (or auto-select single run)
+      const expandButton = screen.getByRole('button', {
+        name: /Expand work order details/i,
+      });
+      fireEvent.click(expandButton);
+
+      // Should call selectRunHandler (auto-selects single run)
+      expect(selectRunHandler).toHaveBeenCalledWith(
+        expect.objectContaining({
+          id: 'panel-test-run',
+          state: 'success',
+        })
+      );
+    });
+
+    test('shows loading state in panel variant', () => {
+      const onBack = vi.fn();
+
+      render(
+        <MiniHistory
+          variant="panel"
+          collapsed={false}
+          history={[]}
+          onCollapseHistory={vi.fn()}
+          selectRunHandler={vi.fn()}
+          onBack={onBack}
+          loading={true}
+        />
+      );
+
+      expect(screen.getByText('Loading history...')).toBeInTheDocument();
+
+      // Spinner should be present
+      const spinner = screen
+        .getByText('Loading history...')
+        .parentElement?.querySelector('.animate-spin');
+      expect(spinner).toBeInTheDocument();
+    });
+
+    test('shows error state in panel variant with retry button', () => {
+      const onBack = vi.fn();
+      const onRetry = vi.fn();
+
+      render(
+        <MiniHistory
+          variant="panel"
+          collapsed={false}
+          history={[]}
+          onCollapseHistory={vi.fn()}
+          selectRunHandler={vi.fn()}
+          onBack={onBack}
+          error="Failed to fetch history"
+          onRetry={onRetry}
+        />
+      );
+
+      expect(screen.getByText('Failed to load history')).toBeInTheDocument();
+      expect(screen.getByText('Failed to fetch history')).toBeInTheDocument();
+
+      const retryButton = screen.getByRole('button', { name: /Retry/i });
+      fireEvent.click(retryButton);
+
+      expect(onRetry).toHaveBeenCalledOnce();
+    });
+
+    test('shows empty state in panel variant', () => {
+      const onBack = vi.fn();
+
+      render(
+        <MiniHistory
+          variant="panel"
+          collapsed={false}
+          history={[]}
+          onCollapseHistory={vi.fn()}
+          selectRunHandler={vi.fn()}
+          onBack={onBack}
+        />
+      );
+
+      expect(screen.getByText('No related history')).toBeInTheDocument();
+      expect(
+        screen.getByText(/Why not run it a few times to see some history?/i)
+      ).toBeInTheDocument();
+    });
+
+    test('defaults to floating variant when variant prop is omitted', () => {
+      render(
+        <MiniHistory
+          collapsed={false}
+          history={[mockWorkOrder]}
+          onCollapseHistory={vi.fn()}
+          selectRunHandler={vi.fn()}
+        />
+      );
+
+      // Floating variant should show "Recent History" header
+      expect(screen.getByText('Recent History')).toBeInTheDocument();
+
+      // Should have absolute positioning
+      const container = screen
+        .getByText('Recent History')
+        .closest('div.absolute');
+      expect(container).toBeInTheDocument();
+    });
+  });
 });
