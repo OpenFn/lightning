@@ -17,10 +17,13 @@ and this project adheres to
 
 ### Added
 
-- Display collab editor promo in the legacy editor
+- Display collab editor promotion in the legacy editor
   [#4091](https://github.com/OpenFn/lightning/issues/4091)
 
 ### Changed
+
+- Make collab editor available to everyone (not just experimental feature users)
+  [#4091](https://github.com/OpenFn/lightning/issues/4091)
 
 ### Fixed
 
