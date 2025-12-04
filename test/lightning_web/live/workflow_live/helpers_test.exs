@@ -225,36 +225,6 @@ defmodule LightningWeb.WorkflowLive.HelpersTest do
     end
   end
 
-  describe "show_collaborative_editor_toggle?/2" do
-    test "returns true when user has experimental features and viewing latest" do
-      user = insert(:user, preferences: %{"experimental_features" => true})
-
-      result = Helpers.show_collaborative_editor_toggle?(user, "latest")
-      assert result == true
-    end
-
-    test "returns false when user doesn't have experimental features" do
-      user = insert(:user, preferences: %{"experimental_features" => false})
-
-      result = Helpers.show_collaborative_editor_toggle?(user, "latest")
-      assert result == false
-    end
-
-    test "returns false when viewing a snapshot (not latest)" do
-      user = insert(:user, preferences: %{"experimental_features" => true})
-
-      result = Helpers.show_collaborative_editor_toggle?(user, "snapshot-123")
-      assert result == false
-    end
-
-    test "returns false when both conditions fail" do
-      user = insert(:user, preferences: %{"experimental_features" => false})
-
-      result = Helpers.show_collaborative_editor_toggle?(user, "snapshot-123")
-      assert result == false
-    end
-  end
-
   describe "workflow_enabled?/1" do
     test "returns true when all triggers are enabled (Workflow struct)" do
       workflow = %Lightning.Workflows.Workflow{

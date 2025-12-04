@@ -3,7 +3,6 @@ defmodule LightningWeb.WorkflowLive.Helpers do
   Helper functions for the Workflow LiveViews.
   """
 
-  alias Lightning.Accounts
   alias Lightning.Extensions.UsageLimiting
   alias Lightning.Extensions.UsageLimiting.Action
   alias Lightning.Extensions.UsageLimiting.Context
@@ -467,17 +466,5 @@ defmodule LightningWeb.WorkflowLive.Helpers do
   defp build_url_with_params(base_url, params) do
     query_string = URI.encode_query(params)
     "#{base_url}?#{query_string}"
-  end
-
-  @doc """
-  Determines whether to show the collaborative editor toggle (beaker icon).
-
-  Returns `true` only if:
-  - User has experimental features enabled
-  - Currently viewing the latest version (not a snapshot)
-  """
-  def show_collaborative_editor_toggle?(user, snapshot_version_tag) do
-    Accounts.experimental_features_enabled?(user) &&
-      snapshot_version_tag == "latest"
   end
 end
