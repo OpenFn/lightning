@@ -214,6 +214,7 @@ defmodule Lightning.AiAssistant do
       user_id: user.id,
       title: create_title(content),
       session_type: "job_code",
+      workflow_id: unsaved_job["workflow_id"],
       meta: meta
     }
 
@@ -1002,7 +1003,7 @@ defmodule Lightning.AiAssistant do
       |> group_by([s, m], [s.id, s.title, s.updated_at, s.inserted_at])
       |> select([s, m], %{s | message_count: count(m.id)})
       |> order_by([s, m], [{^sort_direction, s.updated_at}])
-      |> preload([:user, :project])
+      |> preload([:user, :project, :workflow])
       |> limit(^limit)
       |> offset(^offset)
       |> Repo.all()
@@ -1047,7 +1048,7 @@ defmodule Lightning.AiAssistant do
       combined_query
       |> limit(^limit)
       |> offset(^offset)
-      |> preload([:user])
+      |> preload([:user, :workflow, job: :workflow])
       |> Repo.all()
 
     {sessions, total_count}

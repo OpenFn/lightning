@@ -729,46 +729,50 @@ defmodule LightningWeb.AiAssistantChannel do
     cond do
       session.meta["unsaved_job"] ->
         unsaved_job = session.meta["unsaved_job"]
-        workflow = Workflows.get_workflow(unsaved_job["workflow_id"])
-
+        # Use preloaded workflow association (workflow_id is set on session)
         Map.merge(base, %{
           job_name: unsaved_job["name"],
-          workflow_name: workflow.name,
+          workflow_name: session.workflow && session.workflow.name,
           is_unsaved: true
         })
 
-      session.job_id ->
-        case Jobs.get_job(session.job_id) do
-          {:ok, job} ->
-            workflow = Workflows.get_workflow(job.workflow_id)
+      session.job && session.job.workflow ->
+        # Use preloaded job and workflow associations
+        Map.merge(base, %{
+          job_name: session.job.name,
+          workflow_name: session.job.workflow.name
+        })
 
-            Map.merge(base, %{
-              job_name: job.name,
-              workflow_name: workflow.name
-            })
+      session.job ->
+        # Job exists but workflow may have been deleted
+        Map.merge(base, %{
+          job_name: session.job.name,
+          workflow_name: nil
+        })
 
-          {:error, :not_found} ->
-            Map.merge(base, %{
-              job_name: "[Deleted Job]",
-              workflow_name: nil
-            })
-        end
+      true ->
+        # Job was deleted
+        Map.merge(base, %{
+          job_name: "[Deleted Job]",
+          workflow_name: nil
+        })
     end
   end
 
   defp format_workflow_template_session(base, session) do
-    project = session.project || Projects.get_project(session.project_id)
-
-    workflow_name =
-      if session.workflow_id do
-        workflow = Workflows.get_workflow(session.workflow_id)
-        workflow.name
-      else
-        nil
+    # Use preloaded project association
+    project_name =
+      cond do
+        session.project -> session.project.name
+        session.project_id -> Projects.get_project(session.project_id).name
+        true -> nil
       end
 
+    # Use preloaded workflow association
+    workflow_name = session.workflow && session.workflow.name
+
     Map.merge(base, %{
-      project_name: project.name,
+      project_name: project_name,
       workflow_name: workflow_name
     })
   end
