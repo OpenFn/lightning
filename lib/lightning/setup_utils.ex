@@ -39,6 +39,157 @@ defmodule Lightning.SetupUtils do
     end
   end
 
+  @doc """
+  Creates demo OAuth clients for an existing user.
+
+  This function can be called independently without resetting the database.
+  It will skip creating OAuth clients that already exist (by name).
+
+  ## Parameters
+  - opts: Keyword list with options
+    - `:user_email` - Email of the user who will own the OAuth clients.
+      If not provided, uses the first superuser found, or falls back to
+      the first user in the system.
+
+  ## Returns
+  - `{:ok, map}` with created OAuth clients keyed by provider name
+  - `{:error, reason}` if no user is found
+
+  ## Examples
+
+      # Use default user (first superuser or first user)
+      Lightning.SetupUtils.setup_demo_oauth_clients()
+
+      # Specify a user by email
+      Lightning.SetupUtils.setup_demo_oauth_clients(user_email: "admin@example.com")
+  """
+  def setup_demo_oauth_clients(opts \\ []) do
+    case find_oauth_client_owner(opts[:user_email]) do
+      {:ok, user} ->
+        oauth_clients = create_demo_oauth_clients_if_not_exists(user)
+        {:ok, oauth_clients}
+
+      {:error, reason} ->
+        {:error, reason}
+    end
+  end
+
+  defp create_demo_oauth_clients_if_not_exists(%Accounts.User{id: user_id}) do
+    existing_names = get_existing_oauth_client_names()
+
+    oauth_client_attrs = [
+      # Google services
+      google_oauth_client(
+        "Google Drive",
+        :google_drive,
+        "openid,https://www.googleapis.com/auth/userinfo.email,https://www.googleapis.com/auth/userinfo.profile,https://www.googleapis.com/auth/drive",
+        user_id
+      ),
+      google_oauth_client(
+        "Google Sheets",
+        :google_sheets,
+        "openid,https://www.googleapis.com/auth/userinfo.email,https://www.googleapis.com/auth/userinfo.profile,https://www.googleapis.com/auth/spreadsheets",
+        user_id
+      ),
+      google_oauth_client(
+        "Gmail",
+        :gmail,
+        "openid,https://www.googleapis.com/auth/userinfo.email,https://www.googleapis.com/auth/userinfo.profile,https://www.googleapis.com/auth/gmail.readonly,https://www.googleapis.com/auth/gmail.send",
+        user_id
+      ),
+      # Salesforce
+      salesforce_oauth_client(
+        "Salesforce",
+        :salesforce,
+        "login.salesforce.com",
+        user_id
+      ),
+      salesforce_oauth_client(
+        "Salesforce Sandbox",
+        :salesforce_sandbox,
+        "test.salesforce.com",
+        user_id
+      ),
+      # Microsoft services
+      microsoft_oauth_client(
+        "Microsoft SharePoint",
+        :microsoft_sharepoint,
+        "openid,email,profile,offline_access,Sites.Read.All,Sites.ReadWrite.All",
+        user_id
+      ),
+      microsoft_oauth_client(
+        "Microsoft Outlook",
+        :microsoft_outlook,
+        "openid,email,profile,offline_access,Mail.Read,Mail.Send",
+        user_id
+      ),
+      microsoft_oauth_client(
+        "Microsoft Calendar",
+        :microsoft_calendar,
+        "openid,email,profile,offline_access,Calendars.Read,Calendars.ReadWrite",
+        user_id
+      ),
+      microsoft_oauth_client(
+        "Microsoft OneDrive",
+        :microsoft_onedrive,
+        "openid,email,profile,offline_access,Files.Read,Files.ReadWrite",
+        user_id
+      ),
+      microsoft_oauth_client(
+        "Microsoft Teams",
+        :microsoft_teams,
+        "openid,email,profile,offline_access,Team.ReadBasic.All,Channel.ReadBasic.All,Chat.Read",
+        user_id
+      )
+    ]
+
+    oauth_client_attrs
+    |> Enum.reduce(%{}, fn client_attrs, acc ->
+      key =
+        client_attrs.name
+        |> String.downcase()
+        |> String.replace(" ", "_")
+        |> String.to_atom()
+
+      if MapSet.member?(existing_names, client_attrs.name) do
+        # Skip existing client
+        Map.put(acc, key, :skipped)
+      else
+        {:ok, client} = OauthClients.create_client(client_attrs)
+        Map.put(acc, key, client)
+      end
+    end)
+  end
+
+  defp get_existing_oauth_client_names do
+    alias Lightning.Credentials.OauthClient
+
+    from(c in OauthClient, select: c.name)
+    |> Repo.all()
+    |> MapSet.new()
+  end
+
+  defp find_oauth_client_owner(nil) do
+    # Try to find a superuser first, then fall back to any user
+    case Repo.one(from u in User, where: u.role == :superuser, limit: 1) do
+      nil ->
+        case Repo.one(from u in User, limit: 1) do
+          nil -> {:error, :no_users_found}
+          user -> {:ok, user}
+        end
+
+      user ->
+        {:ok, user}
+    end
+  end
+
+  defp find_oauth_client_owner(email) when is_binary(email) do
+    case Accounts.get_user_by_email(email) do
+      nil -> {:error, :user_not_found}
+      user -> {:ok, user}
+    end
+  end
+
   @spec setup_demo(nil | maybe_improper_list | map) :: %{
           jobs: [...],
           oauth_clients: map(),
