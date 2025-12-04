@@ -1,4 +1,5 @@
 import {
+  ChevronRightIcon,
   ClockIcon,
   DocumentTextIcon,
   PlayIcon,
@@ -174,6 +175,9 @@ export function FullScreenIDE({
   const [rightPanelSubState, setRightPanelSubState] = useState<
     'history' | 'create-run' | undefined
   >(undefined);
+
+  // Run panel collapsed state (only applies when viewing a run)
+  const [isRunPanelCollapsed, setIsRunPanelCollapsed] = useState(false);
 
   // Derived panel state - run viewer takes precedence, undefined means panel is hidden
   const panelState: 'run-viewer' | 'history' | 'create-run' | undefined =
@@ -1047,103 +1051,183 @@ export function FullScreenIDE({
           {panelState && (
             <Panel
               ref={rightPanelRef}
-              defaultSize={30}
-              minSize={30}
+              defaultSize={
+                panelState === 'run-viewer' && isRunPanelCollapsed ? 3 : 30
+              }
+              minSize={25}
+              collapsible={panelState === 'run-viewer'}
+              collapsedSize={3}
+              onCollapse={() => setIsRunPanelCollapsed(true)}
+              onExpand={() => setIsRunPanelCollapsed(false)}
               className="bg-gray-50 border-l border-gray-200"
             >
-              <div className="h-full flex flex-col">
-                {/* Panel heading - only for run-viewer */}
-                {panelState === 'run-viewer' && (
-                  <div className="shrink-0">
-                    <div className="flex items-center justify-between px-3 py-1">
-                      {/* Close run chip */}
-                      <Tooltip
-                        content={
-                          shouldShowMismatch
-                            ? `${selectedStepName} was not part of this run. Pick another step or deselect the run.`
-                            : undefined
-                        }
-                        side="bottom"
+              {/* Collapsed run panel - vertical header */}
+              {panelState === 'run-viewer' &&
+              isRunPanelCollapsed &&
+              followRunId ? (
+                <div className="h-full flex flex-col items-center pt-3 bg-gray-50 overflow-hidden">
+                  {/* Rotated Run badge - using actual RunBadge component */}
+                  <button
+                    type="button"
+                    className="cursor-pointer bg-transparent border-none p-0"
+                    style={{
+                      writingMode: 'vertical-rl',
+                      textOrientation: 'mixed',
+                    }}
+                    onClick={() => {
+                      setIsRunPanelCollapsed(false);
+                      rightPanelRef.current?.expand();
+                    }}
+                    title="Expand run panel"
+                    aria-label="Expand run panel"
+                  >
+                    <RunBadge
+                      runId={followRunId}
+                      onClose={handleClearFollowRun}
+                      variant={shouldShowMismatch ? 'warning' : 'default'}
+                    />
+                  </button>
+                  {/* Vertical tab labels */}
+                  <div className="flex flex-col items-center gap-1 mt-3">
+                    {(
+                      [
+                        { value: 'log', label: 'Logs' },
+                        { value: 'input', label: 'Input' },
+                        { value: 'output', label: 'Output' },
+                      ] as const
+                    ).map(tab => (
+                      <button
+                        key={tab.value}
+                        type="button"
+                        className={cn(
+                          'text-xs px-1 py-1 rounded whitespace-nowrap hover:bg-gray-200 transition-colors',
+                          activeRightTab === tab.value
+                            ? 'text-primary-600 font-medium'
+                            : 'text-gray-500'
+                        )}
+                        style={{
+                          writingMode: 'vertical-rl',
+                          textOrientation: 'mixed',
+                        }}
+                        onClick={() => {
+                          setActiveRightTab(tab.value);
+                          setIsRunPanelCollapsed(false);
+                          rightPanelRef.current?.expand();
+                        }}
+                        title={`View ${tab.label}`}
                       >
-                        <RunBadge
-                          runId={followRunId}
-                          onClose={handleClearFollowRun}
-                          variant={shouldShowMismatch ? 'warning' : 'default'}
-                          className="mr-3"
-                        />
-                      </Tooltip>
-                      {/* Tabs as header content when showing run */}
-                      <div className="flex-1">
-                        <Tabs
-                          value={activeRightTab}
-                          onChange={setActiveRightTab}
-                          variant="underline"
-                          options={[
-                            { value: 'log', label: 'Logs' },
-                            { value: 'input', label: 'Input' },
-                            { value: 'output', label: 'Output' },
-                          ]}
-                        />
+                        {tab.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <div className="h-full flex flex-col">
+                  {/* Panel heading - only for run-viewer */}
+                  {panelState === 'run-viewer' && (
+                    <div className="shrink-0">
+                      <div className="flex items-center justify-between px-3 py-1">
+                        {/* Close run chip */}
+                        <Tooltip
+                          content={
+                            shouldShowMismatch
+                              ? `${selectedStepName} was not part of this run. Pick another step or deselect the run.`
+                              : undefined
+                          }
+                          side="bottom"
+                        >
+                          <RunBadge
+                            runId={followRunId}
+                            onClose={handleClearFollowRun}
+                            variant={shouldShowMismatch ? 'warning' : 'default'}
+                            className="mr-3"
+                          />
+                        </Tooltip>
+                        {/* Tabs as header content when showing run */}
+                        <div className="flex-1">
+                          <Tabs
+                            value={activeRightTab}
+                            onChange={setActiveRightTab}
+                            variant="underline"
+                            options={[
+                              { value: 'log', label: 'Logs' },
+                              { value: 'input', label: 'Input' },
+                              { value: 'output', label: 'Output' },
+                            ]}
+                          />
+                        </div>
+                        {/* Collapse button */}
+                        <button
+                          onClick={() => {
+                            setIsRunPanelCollapsed(true);
+                            rightPanelRef.current?.collapse();
+                          }}
+                          className="p-1 hover:bg-gray-100 rounded transition-colors ml-2"
+                          aria-label="Collapse panel"
+                          title="Collapse panel"
+                        >
+                          <ChevronRightIcon className="h-4 w-4 text-gray-500" />
+                        </button>
                       </div>
                     </div>
-                  </div>
-                )}
+                  )}
 
-                {/* Panel content */}
-                <div className="flex-1 overflow-hidden bg-white">
-                  {panelState === 'run-viewer' && followRunId ? (
-                    <RunViewerErrorBoundary>
-                      <RunViewerPanel
-                        followRunId={followRunId}
-                        onClearFollowRun={handleClearFollowRun}
-                        activeTab={activeRightTab}
-                        onTabChange={setActiveRightTab}
+                  {/* Panel content */}
+                  <div className="flex-1 overflow-hidden bg-white">
+                    {panelState === 'run-viewer' && followRunId ? (
+                      <RunViewerErrorBoundary>
+                        <RunViewerPanel
+                          followRunId={followRunId}
+                          onClearFollowRun={handleClearFollowRun}
+                          activeTab={activeRightTab}
+                          onTabChange={setActiveRightTab}
+                        />
+                      </RunViewerErrorBoundary>
+                    ) : panelState === 'history' ? (
+                      <MiniHistory
+                        variant="panel"
+                        collapsed={false}
+                        history={historyWithSelection}
+                        onCollapseHistory={() => {}} // Not used in panel variant
+                        selectRunHandler={handleHistoryRunSelect}
+                        onDeselectRun={handleClearFollowRun}
+                        selectedRun={selectedRun}
+                        loading={historyLoading}
+                        error={historyError}
+                        onRetry={() => {
+                          clearError();
+                          void requestHistory();
+                        }}
+                        onBack={handleClosePanel}
                       />
-                    </RunViewerErrorBoundary>
-                  ) : panelState === 'history' ? (
-                    <MiniHistory
-                      variant="panel"
-                      collapsed={false}
-                      history={historyWithSelection}
-                      onCollapseHistory={() => {}} // Not used in panel variant
-                      selectRunHandler={handleHistoryRunSelect}
-                      onDeselectRun={handleClearFollowRun}
-                      selectedRun={selectedRun}
-                      loading={historyLoading}
-                      error={historyError}
-                      onRetry={() => {
-                        clearError();
-                        void requestHistory();
-                      }}
-                      onBack={handleClosePanel}
-                    />
-                  ) : workflow && projectId && workflowId ? (
-                    <ManualRunPanelErrorBoundary
-                      onClose={() => rightPanelRef.current?.collapse()}
-                    >
-                      <ManualRunPanel
-                        workflow={workflow}
-                        projectId={projectId}
-                        workflowId={workflowId}
-                        jobId={jobIdFromURL ?? null}
-                        triggerId={null}
+                    ) : workflow && projectId && workflowId ? (
+                      <ManualRunPanelErrorBoundary
                         onClose={() => rightPanelRef.current?.collapse()}
-                        onClosePanel={handleClosePanel}
-                        renderMode={RENDER_MODES.EMBEDDED}
-                        saveWorkflow={saveWorkflow}
-                        onRunSubmitted={handleRunSubmitted}
-                        onTabChange={setSelectedTab}
-                        onDataclipChange={handleDataclipChange}
-                        onCustomBodyChange={setCustomBody}
-                        selectedTab={selectedTab}
-                        selectedDataclip={selectedDataclipState}
-                        customBody={customBody}
-                        disableAutoSelection
-                      />
-                    </ManualRunPanelErrorBoundary>
-                  ) : null}
+                      >
+                        <ManualRunPanel
+                          workflow={workflow}
+                          projectId={projectId}
+                          workflowId={workflowId}
+                          jobId={jobIdFromURL ?? null}
+                          triggerId={null}
+                          onClose={() => rightPanelRef.current?.collapse()}
+                          onClosePanel={handleClosePanel}
+                          renderMode={RENDER_MODES.EMBEDDED}
+                          saveWorkflow={saveWorkflow}
+                          onRunSubmitted={handleRunSubmitted}
+                          onTabChange={setSelectedTab}
+                          onDataclipChange={handleDataclipChange}
+                          onCustomBodyChange={setCustomBody}
+                          selectedTab={selectedTab}
+                          selectedDataclip={selectedDataclipState}
+                          customBody={customBody}
+                          disableAutoSelection
+                        />
+                      </ManualRunPanelErrorBoundary>
+                    ) : null}
+                  </div>
                 </div>
-              </div>
+              )}
             </Panel>
           )}
         </PanelGroup>
