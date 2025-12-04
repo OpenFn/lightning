@@ -2,13 +2,13 @@
  * FullScreenIDE Component Tests
  *
  * Tests the FullScreenIDE component state machine for the right panel:
- * - Landing state (initial): Two buttons - "View History" and "Create Run"
+ * - No panel state (initial): Panel hidden, History and Run buttons in header
  * - Create-run state: ManualRunPanel with input selection
  * - History state: MiniHistory with run list
  * - Run-viewer state: RunViewerPanel with loaded run
  *
  * Also tests:
- * - Run button disabled states based on panel state
+ * - Header buttons for History and Run
  * - Job switching behavior
  * - Keyboard shortcuts
  */
@@ -83,9 +83,20 @@ vi.mock(
 vi.mock(
   '../../../../js/collaborative-editor/components/ManualRunPanel',
   () => ({
-    ManualRunPanel: ({ renderMode }: { renderMode?: string }) => (
+    ManualRunPanel: ({
+      renderMode,
+      onClosePanel,
+    }: {
+      renderMode?: string;
+      onClosePanel?: () => void;
+    }) => (
       <div data-testid="manual-run-panel" data-render-mode={renderMode}>
         ManualRunPanel (renderMode: {renderMode || 'standalone'})
+        {onClosePanel && (
+          <button data-testid="close-panel-btn" onClick={onClosePanel}>
+            Close Panel
+          </button>
+        )}
       </div>
     ),
   })
@@ -247,72 +258,73 @@ vi.mock('../../../../js/collaborative-editor/hooks/useWorkflow', () => ({
   }),
   useNodeSelection: () => ({
     currentNode: { node: null, type: null, id: null },
+    setCurrentNode: vi.fn(),
+    setURLfromSelection: vi.fn(),
     selectNode: vi.fn(),
+    selectTrigger: vi.fn(),
+    selectEdge: vi.fn(),
   }),
-  useWorkflowEnabled: () => ({
-    enabled: true,
-    setEnabled: vi.fn(),
+  useWorkflowState: (selector: (state: any) => any) =>
+    selector({ workflow: mockWorkflow }),
+  useSaveWorkflow: () => ({
+    saveWorkflow: vi.fn().mockResolvedValue(null),
+    isSaving: false,
+    error: null,
   }),
   useWorkflowActions: () => ({
+    updateWorkflow: vi.fn(),
     selectJob: vi.fn(),
-    saveWorkflow: vi.fn(),
     updateJob: vi.fn(),
   }),
-  useWorkflowState: (selector: any) => {
-    const state = {
-      workflow: mockWorkflow,
-      jobs: mockWorkflow.jobs,
-      triggers: mockWorkflow.triggers,
-      edges: mockWorkflow.edges,
-      positions: {},
-    };
-    return typeof selector === 'function' ? selector(state) : state;
-  },
 }));
 
-// Mock useRun hooks
-vi.mock('../../../../js/collaborative-editor/hooks/useRun', () => ({
-  useRunStoreInstance: () => ({
-    getState: vi.fn(() => ({
-      run: null,
-      loading: false,
-      error: null,
-    })),
-    subscribe: vi.fn(),
-    setState: vi.fn(),
-    _connectToRun: vi.fn(() => vi.fn()),
-    _disconnectFromRun: vi.fn(),
-  }),
-  useRunActions: () => ({
-    selectStep: vi.fn(),
-  }),
-  useCurrentRun: () => null,
-}));
-
-// Mock useHistory hooks
-const mockSelectStep = vi.fn();
+// Mock history hooks
 const mockRequestHistory = vi.fn();
 const mockClearError = vi.fn();
 
 vi.mock('../../../../js/collaborative-editor/hooks/useHistory', () => ({
-  useFollowRun: vi.fn(() => ({ run: null, clearRun: vi.fn() })),
   useHistory: () => [],
   useHistoryLoading: () => false,
   useHistoryError: () => null,
+  useHistoryChannelConnected: () => true,
   useHistoryCommands: () => ({
-    selectStep: mockSelectStep,
     requestHistory: mockRequestHistory,
-    requestRunSteps: vi.fn(),
-    getRunSteps: vi.fn(),
     clearError: mockClearError,
-    clearActiveRunError: vi.fn(),
+    selectStep: vi.fn(),
   }),
-  useJobMatchesRun: () => true,
+  useFollowRun: () => ({
+    run: null,
+    clearRun: vi.fn(),
+  }),
   useActiveRun: () => null,
+  useActiveRunLoading: () => false,
+  useActiveRunError: () => null,
   useSelectedStepId: () => null,
+  useSelectedStep: () => null,
+  useJobMatchesRun: () => true,
+  useRunSteps: () => null,
 }));
 
-// Mock credential hooks
+// Mock adaptor hooks
+vi.mock('../../../../js/collaborative-editor/hooks/useAdaptors', () => ({
+  useFetchAdaptorDocs: () => ({
+    data: null,
+    loading: false,
+    error: null,
+  }),
+  useFetchAdaptorList: () => ({
+    data: [],
+    loading: false,
+    error: null,
+  }),
+  useProjectAdaptors: () => ({
+    projectAdaptors: [],
+    allAdaptors: [],
+  }),
+  useAdaptors: () => [],
+}));
+
+// Mock credentials hooks
 vi.mock('../../../../js/collaborative-editor/hooks/useCredentials', () => ({
   useCredentials: () => ({
     projectCredentials: [],
@@ -323,80 +335,26 @@ vi.mock('../../../../js/collaborative-editor/hooks/useCredentials', () => ({
   }),
   useCredentialQueries: () => ({
     findCredentialById: vi.fn(),
-    credentialExists: vi.fn(),
-    getCredentialId: vi.fn(),
   }),
 }));
 
-// Mock adaptor hooks
-vi.mock('../../../../js/collaborative-editor/hooks/useAdaptors', () => ({
-  useProjectAdaptors: () => ({
-    projectAdaptors: [],
-    allAdaptors: [],
-  }),
-}));
-
-// Mock LiveView actions
+// Mock LiveView actions context
 vi.mock(
   '../../../../js/collaborative-editor/contexts/LiveViewActionsContext',
   () => ({
     useLiveViewActions: () => ({
       pushEvent: vi.fn(),
-      handleEvent: vi.fn(() => () => {}),
+      handleEvent: vi.fn(),
     }),
   })
 );
 
-// Mock adaptor modals
-vi.mock(
-  '../../../../js/collaborative-editor/components/ConfigureAdaptorModal',
-  () => ({
-    ConfigureAdaptorModal: () => <div data-testid="configure-adaptor-modal" />,
-  })
-);
-
-vi.mock(
-  '../../../../js/collaborative-editor/components/AdaptorSelectionModal',
-  () => ({
-    AdaptorSelectionModal: () => <div data-testid="adaptor-selection-modal" />,
-  })
-);
-
-// Mock UI commands
-vi.mock('../../../../js/collaborative-editor/hooks/useUI', () => ({
-  useUICommands: () => ({
-    openGitHubSyncModal: vi.fn(),
-    openRunPanel: vi.fn(),
-    closeRunPanel: vi.fn(),
-  }),
-  useIsRunPanelOpen: () => false,
-  useIsGitHubSyncModalOpen: () => false,
-  useRunPanelContext: () => null,
-}));
-
-// Mock GitHubSyncModal
-vi.mock(
-  '../../../../js/collaborative-editor/components/GitHubSyncModal',
-  () => ({
-    GitHubSyncModal: () => null,
-  })
-);
-
-// Mock ActiveCollaborators
-vi.mock(
-  '../../../../js/collaborative-editor/components/ActiveCollaborators',
-  () => ({
-    ActiveCollaborators: () => <div data-testid="active-collaborators" />,
-  })
-);
-
-// Mock run retry hooks
+// Mock Run hooks
 vi.mock('../../../../js/collaborative-editor/hooks/useRunRetry', () => ({
   useRunRetry: () => ({
     handleRun: vi.fn(),
     handleRetry: vi.fn(),
     isRetryable: false,
-    runIsProcessing: false,
     runTooltipMessage: '',
     isSubmitting: false,
     canRun: true,
@@ -486,57 +444,46 @@ describe('FullScreenIDE', () => {
     mockSearchParams.set('job', 'job-1');
   });
 
-  describe('Initial Landing State', () => {
-    test('displays landing panel with View History and Create Run buttons', async () => {
+  describe('Initial State', () => {
+    test('displays History and Run buttons in header', async () => {
       const onClose = vi.fn();
 
       renderFullScreenIDE({ onClose });
 
       await waitFor(() => {
-        expect(screen.getByText('View History')).toBeInTheDocument();
-        expect(screen.getByText('Create Run')).toBeInTheDocument();
+        expect(screen.getByText('History')).toBeInTheDocument();
+        expect(screen.getByText('Run')).toBeInTheDocument();
       });
     });
 
-    test('Run button is disabled in landing state', async () => {
+    test('right panel is not shown initially', async () => {
       const onClose = vi.fn();
 
       renderFullScreenIDE({ onClose });
 
       await waitFor(() => {
-        expect(screen.getByText('View History')).toBeInTheDocument();
+        expect(screen.getByText('History')).toBeInTheDocument();
       });
 
-      // Run button should be disabled in landing state
-      // Use exact match to avoid matching "Create Run" button
-      const runButton = screen.getByRole('button', { name: 'Run' });
-      expect(runButton).toBeDisabled();
-    });
-
-    test('shows "Runs" label in right panel header when in landing state', async () => {
-      const onClose = vi.fn();
-
-      renderFullScreenIDE({ onClose });
-
-      await waitFor(() => {
-        expect(screen.getByText('Runs')).toBeInTheDocument();
-      });
+      // ManualRunPanel and MiniHistory should not be visible initially
+      expect(screen.queryByTestId('manual-run-panel')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('mini-history')).not.toBeInTheDocument();
     });
   });
 
-  describe('Landing → Create Run Flow', () => {
-    test('clicking Create Run shows ManualRunPanel', async () => {
+  describe('Run Button Flow', () => {
+    test('clicking Run shows ManualRunPanel', async () => {
       const user = userEvent.setup();
       const onClose = vi.fn();
 
       renderFullScreenIDE({ onClose });
 
       await waitFor(() => {
-        expect(screen.getByText('Create Run')).toBeInTheDocument();
+        expect(screen.getByText('Run')).toBeInTheDocument();
       });
 
-      // Click Create Run
-      await user.click(screen.getByText('Create Run'));
+      // Click Run
+      await user.click(screen.getByText('Run'));
 
       // Should now show ManualRunPanel
       await waitFor(() => {
@@ -544,74 +491,49 @@ describe('FullScreenIDE', () => {
       });
     });
 
-    test('Run button is enabled in create-run state', async () => {
+    test('closing ManualRunPanel hides the panel', async () => {
       const user = userEvent.setup();
       const onClose = vi.fn();
 
       renderFullScreenIDE({ onClose });
 
       await waitFor(() => {
-        expect(screen.getByText('Create Run')).toBeInTheDocument();
+        expect(screen.getByText('Run')).toBeInTheDocument();
       });
 
-      // Click Create Run
-      await user.click(screen.getByText('Create Run'));
+      // Click Run to open panel
+      await user.click(screen.getByText('Run'));
 
       await waitFor(() => {
         expect(screen.getByTestId('manual-run-panel')).toBeInTheDocument();
       });
 
-      // Run button should be enabled
-      const runButton = screen.getByRole('button', { name: 'Run' });
-      expect(runButton).not.toBeDisabled();
-    });
+      // Click close panel button
+      const closeButton = screen.getByTestId('close-panel-btn');
+      await user.click(closeButton);
 
-    test('shows back button that returns to landing state', async () => {
-      const user = userEvent.setup();
-      const onClose = vi.fn();
-
-      renderFullScreenIDE({ onClose });
-
+      // Panel should be hidden
       await waitFor(() => {
-        expect(screen.getByText('Create Run')).toBeInTheDocument();
+        expect(
+          screen.queryByTestId('manual-run-panel')
+        ).not.toBeInTheDocument();
       });
-
-      // Click Create Run
-      await user.click(screen.getByText('Create Run'));
-
-      await waitFor(() => {
-        expect(screen.getByTestId('manual-run-panel')).toBeInTheDocument();
-      });
-
-      // Click back button
-      const backButton = screen.getByLabelText('Back to landing');
-      await user.click(backButton);
-
-      // Should be back at landing
-      await waitFor(() => {
-        expect(screen.getByText('View History')).toBeInTheDocument();
-        expect(screen.getByText('Create Run')).toBeInTheDocument();
-      });
-
-      // Run button should be disabled again
-      const runButton = screen.getByRole('button', { name: 'Run' });
-      expect(runButton).toBeDisabled();
     });
   });
 
-  describe('Landing → History Flow', () => {
-    test('clicking View History shows MiniHistory', async () => {
+  describe('History Button Flow', () => {
+    test('clicking History shows MiniHistory', async () => {
       const user = userEvent.setup();
       const onClose = vi.fn();
 
       renderFullScreenIDE({ onClose });
 
       await waitFor(() => {
-        expect(screen.getByText('View History')).toBeInTheDocument();
+        expect(screen.getByText('History')).toBeInTheDocument();
       });
 
-      // Click View History
-      await user.click(screen.getByText('View History'));
+      // Click History
+      await user.click(screen.getByText('History'));
 
       // Should now show MiniHistory
       await waitFor(() => {
@@ -622,53 +544,30 @@ describe('FullScreenIDE', () => {
       expect(mockRequestHistory).toHaveBeenCalled();
     });
 
-    test('Run button stays disabled in history state', async () => {
+    test('closing MiniHistory hides the panel', async () => {
       const user = userEvent.setup();
       const onClose = vi.fn();
 
       renderFullScreenIDE({ onClose });
 
       await waitFor(() => {
-        expect(screen.getByText('View History')).toBeInTheDocument();
+        expect(screen.getByText('History')).toBeInTheDocument();
       });
 
-      // Click View History
-      await user.click(screen.getByText('View History'));
+      // Click History to open panel
+      await user.click(screen.getByText('History'));
 
       await waitFor(() => {
         expect(screen.getByTestId('mini-history')).toBeInTheDocument();
       });
 
-      // Run button should still be disabled
-      const runButton = screen.getByRole('button', { name: 'Run' });
-      expect(runButton).toBeDisabled();
-    });
-
-    test('back button returns to landing from history', async () => {
-      const user = userEvent.setup();
-      const onClose = vi.fn();
-
-      renderFullScreenIDE({ onClose });
-
-      await waitFor(() => {
-        expect(screen.getByText('View History')).toBeInTheDocument();
-      });
-
-      // Click View History
-      await user.click(screen.getByText('View History'));
-
-      await waitFor(() => {
-        expect(screen.getByTestId('mini-history')).toBeInTheDocument();
-      });
-
-      // Click back button
+      // Click back button in MiniHistory
       const backButton = screen.getByTestId('mini-history-back');
       await user.click(backButton);
 
-      // Should be back at landing
+      // Panel should be hidden
       await waitFor(() => {
-        expect(screen.getByText('View History')).toBeInTheDocument();
-        expect(screen.getByText('Create Run')).toBeInTheDocument();
+        expect(screen.queryByTestId('mini-history')).not.toBeInTheDocument();
       });
     });
   });
@@ -682,16 +581,6 @@ describe('FullScreenIDE', () => {
       await waitFor(() => {
         const jobNames = screen.getAllByText(/Test Job/i);
         expect(jobNames.length).toBeGreaterThan(0);
-      });
-    });
-
-    test('displays Code panel with job name', async () => {
-      const onClose = vi.fn();
-
-      renderFullScreenIDE({ onClose });
-
-      await waitFor(() => {
-        expect(screen.getByText(/Code -/i)).toBeInTheDocument();
       });
     });
 
@@ -762,19 +651,17 @@ describe('FullScreenIDE', () => {
       });
     });
 
-    test('has collapse buttons for panels', async () => {
+    test('displays Docs and Metadata buttons in header', async () => {
       const onClose = vi.fn();
 
       renderFullScreenIDE({ onClose });
 
       await waitFor(() => {
-        expect(screen.getByText('View History')).toBeInTheDocument();
+        expect(
+          screen.getByTitle('Show adaptor documentation')
+        ).toBeInTheDocument();
+        expect(screen.getByTitle('Show metadata explorer')).toBeInTheDocument();
       });
-
-      const collapseButtons = screen.getAllByRole('button', {
-        name: /collapse/i,
-      });
-      expect(collapseButtons.length).toBeGreaterThan(0);
     });
   });
 });

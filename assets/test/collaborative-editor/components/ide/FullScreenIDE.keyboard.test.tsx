@@ -104,24 +104,7 @@ vi.mock(
   })
 );
 
-// Mock RightPanelLanding
-vi.mock(
-  '../../../../js/collaborative-editor/components/ide/RightPanelLanding',
-  () => ({
-    RightPanelLanding: ({
-      onCreateRun,
-    }: {
-      onSelectHistory: () => void;
-      onCreateRun: () => void;
-    }) => (
-      <div data-testid="right-panel-landing">
-        <button data-testid="create-run-btn" onClick={onCreateRun}>
-          Create Run
-        </button>
-      </div>
-    ),
-  })
-);
+// Note: RightPanelLanding no longer exists - Run button is now in the IDE header
 
 // Mock MiniHistory
 vi.mock(
@@ -438,12 +421,13 @@ function renderFullScreenIDE(props = {}) {
 async function navigateToCreateRunState(
   user: ReturnType<typeof userEvent.setup>
 ) {
-  // Wait for landing page
+  // Wait for IDE to be fully rendered
   await waitFor(() =>
-    expect(screen.getByTestId('create-run-btn')).toBeInTheDocument()
+    expect(screen.getByTestId('collaborative-monaco')).toBeInTheDocument()
   );
-  // Click Create Run to enter create-run state
-  await user.click(screen.getByTestId('create-run-btn'));
+  // Click the "Run" button in the header to enter create-run state
+  const runButton = screen.getByRole('button', { name: /^Run$/i });
+  await user.click(runButton);
   // Wait for ManualRunPanel to appear
   await waitFor(() =>
     expect(screen.getByTestId('manual-run-panel')).toBeInTheDocument()
