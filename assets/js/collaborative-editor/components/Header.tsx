@@ -13,6 +13,7 @@ import {
 import {
   useImportPanelState,
   useIsCreateWorkflowPanelCollapsed,
+  useTemplatePanel,
   useUICommands,
 } from '../hooks/useUI';
 import {
@@ -193,6 +194,7 @@ export function Header({
   const isNewWorkflow = useIsNewWorkflow();
   const isCreateWorkflowPanelCollapsed = useIsCreateWorkflowPanelCollapsed();
   const importPanelState = useImportPanelState();
+  const { selectedTemplate } = useTemplatePanel();
   const { provider } = useSession();
 
   // Derived values after all hooks are called
@@ -362,13 +364,23 @@ export function Header({
                 canSave={
                   canSave &&
                   !hasSettingsErrors &&
-                  !(isNewWorkflow && isWorkflowEmpty) &&
-                  // When import panel is open and using import method, sync with its validation state
+                  // For new workflows, check based on creation method
                   !(
                     isNewWorkflow &&
                     !isCreateWorkflowPanelCollapsed &&
-                    currentMethod === 'import' &&
-                    importPanelState !== 'valid'
+                    // Template method: need a selected template OR workflow on canvas
+                    ((currentMethod === 'template' &&
+                      !selectedTemplate &&
+                      isWorkflowEmpty) ||
+                      // Import method: need valid YAML
+                      (currentMethod === 'import' &&
+                        importPanelState !== 'valid'))
+                  ) &&
+                  // When panel is collapsed, just check workflow isn't empty
+                  !(
+                    isNewWorkflow &&
+                    isCreateWorkflowPanelCollapsed &&
+                    isWorkflowEmpty
                   )
                 }
                 tooltipMessage={
@@ -377,9 +389,14 @@ export function Header({
                   currentMethod === 'import' &&
                   importPanelState === 'invalid'
                     ? 'Fix validation errors to continue'
-                    : isNewWorkflow && isWorkflowEmpty
-                      ? 'Cannot save an empty workflow'
-                      : tooltipMessage
+                    : isNewWorkflow &&
+                        !isCreateWorkflowPanelCollapsed &&
+                        currentMethod === 'template' &&
+                        !selectedTemplate
+                      ? 'Select a template to continue'
+                      : isNewWorkflow && isWorkflowEmpty
+                        ? 'Cannot save an empty workflow'
+                        : tooltipMessage
                 }
                 onClick={() => void saveWorkflow()}
                 repoConnection={repoConnection}
