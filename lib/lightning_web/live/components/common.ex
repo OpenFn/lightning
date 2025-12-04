@@ -278,7 +278,7 @@ defmodule LightningWeb.Components.Common do
       >
         <%= for {part, index} <- Enum.with_index(String.split(@display, " ")) do %>
           <%= if index > 0 do %>
-            <br /><span class="text-[0.4rem]">{part}</span>
+            <br /><span class="text-[0.45rem]">{part}</span>
           <% else %>
             {part}
           <% end %>
