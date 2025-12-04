@@ -29,7 +29,7 @@ export interface AIModeResult {
  * - Which session to load from storage
  */
 export function useAIMode(): AIModeResult | null {
-  const { searchParams } = useURLState();
+  const { params } = useURLState();
   const project = useProject();
   const workflow = useWorkflowState(state => state.workflow);
   const jobs = useWorkflowState(state => state.jobs);
@@ -39,8 +39,8 @@ export function useAIMode(): AIModeResult | null {
       return null;
     }
 
-    const isIDEOpen = searchParams.get('panel') === 'editor';
-    const selectedJobId = searchParams.get('job');
+    const isIDEOpen = params.panel === 'editor';
+    const selectedJobId = params.job;
 
     if (isIDEOpen && selectedJobId) {
       const job = jobs.find(j => j.id === selectedJobId);
@@ -61,7 +61,7 @@ export function useAIMode(): AIModeResult | null {
         context.job_adaptor = job.adaptor;
       }
 
-      const runId = searchParams.get('run');
+      const runId = params.run;
       if (runId) {
         context.follow_run_id = runId;
       }
@@ -83,5 +83,5 @@ export function useAIMode(): AIModeResult | null {
         ? `ai-workflow-${workflow.id}`
         : `ai-project-${project.id}`,
     };
-  }, [searchParams, project, workflow, jobs]);
+  }, [params, project, workflow, jobs]);
 }

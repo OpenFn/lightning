@@ -23,6 +23,10 @@ import {
   keys,
   renderWithKeyboard,
 } from '../../keyboard-test-utils';
+import {
+  createMockURLState,
+  getURLStateMockValue,
+} from '../__helpers__/urlStateMocks';
 
 // Mock Socket
 vi.mock('phoenix', () => ({
@@ -154,17 +158,12 @@ vi.mock('../../../js/collaborative-editor/components/LoadingBoundary', () => ({
 }));
 
 // Create controllable mocks
-const mockUpdateSearchParams = vi.fn();
 const mockSelectNode = vi.fn();
-const mockSearchParams = new URLSearchParams();
+const urlState = createMockURLState();
 
 // Mock useURLState
 vi.mock('../../../js/react/lib/use-url-state', () => ({
-  useURLState: () => ({
-    searchParams: mockSearchParams,
-    updateSearchParams: mockUpdateSearchParams,
-    hash: '',
-  }),
+  useURLState: () => getURLStateMockValue(urlState),
 }));
 
 // Mock session context hooks
@@ -352,10 +351,9 @@ vi.mock('../../../js/collaborative-editor/hooks/useVersionSelect', () => ({
 describe('CollaborativeEditor IDE keyboard shortcuts', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    urlState.reset();
 
     // Reset state
-    mockSearchParams.delete('panel');
-    mockSearchParams.delete('job');
     mockIsRunPanelOpen.mockReturnValue(false);
     mockRunPanelContext.mockReturnValue(null);
     mockIsAIAssistantPanelOpen.mockReturnValue(false);
@@ -369,8 +367,8 @@ describe('CollaborativeEditor IDE keyboard shortcuts', () => {
         node: mockWorkflow.jobs[0],
       };
 
-      // Update mockSearchParams to select the job
-      mockSearchParams.set('job', 'job-1');
+      // Update URL params to select the job
+      urlState.setParams({ job: 'job-1' });
 
       const { container, shortcuts } = renderWithKeyboard(
         <CollaborativeEditor
@@ -390,7 +388,7 @@ describe('CollaborativeEditor IDE keyboard shortcuts', () => {
       await shortcuts.openIDE('cmd');
 
       await waitFor(() => {
-        expect(mockUpdateSearchParams).toHaveBeenCalledWith({
+        expect(urlState.mockFns.updateSearchParams).toHaveBeenCalledWith({
           panel: 'editor',
         });
       });
@@ -402,7 +400,7 @@ describe('CollaborativeEditor IDE keyboard shortcuts', () => {
         node: mockWorkflow.jobs[0],
       };
 
-      mockSearchParams.set('job', 'job-1');
+      urlState.setParams({ job: 'job-1' });
 
       const { container, shortcuts } = renderWithKeyboard(
         <CollaborativeEditor
@@ -422,7 +420,7 @@ describe('CollaborativeEditor IDE keyboard shortcuts', () => {
       await shortcuts.openIDE('ctrl');
 
       await waitFor(() => {
-        expect(mockUpdateSearchParams).toHaveBeenCalledWith({
+        expect(urlState.mockFns.updateSearchParams).toHaveBeenCalledWith({
           panel: 'editor',
         });
       });
@@ -451,7 +449,7 @@ describe('CollaborativeEditor IDE keyboard shortcuts', () => {
 
       await expectShortcutNotToFire(
         keys.ctrl('e'),
-        mockUpdateSearchParams,
+        urlState.mockFns.updateSearchParams,
         user
       );
     });
@@ -476,7 +474,7 @@ describe('CollaborativeEditor IDE keyboard shortcuts', () => {
 
       await expectShortcutNotToFire(
         keys.ctrl('e'),
-        mockUpdateSearchParams,
+        urlState.mockFns.updateSearchParams,
         user
       );
     });
@@ -488,8 +486,7 @@ describe('CollaborativeEditor IDE keyboard shortcuts', () => {
       };
 
       // IDE is already open
-      mockSearchParams.set('panel', 'editor');
-      mockSearchParams.set('job', 'job-1');
+      urlState.setParams({ panel: 'editor', job: 'job-1' });
 
       const { container, user } = renderWithKeyboard(
         <CollaborativeEditor
@@ -508,7 +505,7 @@ describe('CollaborativeEditor IDE keyboard shortcuts', () => {
 
       await expectShortcutNotToFire(
         keys.ctrl('e'),
-        mockUpdateSearchParams,
+        urlState.mockFns.updateSearchParams,
         user
       );
     });
@@ -519,7 +516,7 @@ describe('CollaborativeEditor IDE keyboard shortcuts', () => {
         node: mockWorkflow.jobs[0],
       };
 
-      mockSearchParams.set('job', 'job-1');
+      urlState.setParams({ job: 'job-1' });
 
       const { container, shortcuts } = renderWithKeyboard(
         <CollaborativeEditor
@@ -542,7 +539,7 @@ describe('CollaborativeEditor IDE keyboard shortcuts', () => {
       await shortcuts.openIDE('cmd');
 
       await waitFor(() => {
-        expect(mockUpdateSearchParams).toHaveBeenCalledWith({
+        expect(urlState.mockFns.updateSearchParams).toHaveBeenCalledWith({
           panel: 'editor',
         });
       });
@@ -574,7 +571,7 @@ describe('CollaborativeEditor IDE keyboard shortcuts', () => {
 
       await expectShortcutNotToFire(
         keys.ctrl('e'),
-        mockUpdateSearchParams,
+        urlState.mockFns.updateSearchParams,
         user
       );
     });
@@ -585,8 +582,7 @@ describe('CollaborativeEditor IDE keyboard shortcuts', () => {
         node: mockWorkflow.jobs[0],
       };
 
-      mockSearchParams.set('panel', 'editor');
-      mockSearchParams.set('job', 'job-1');
+      urlState.setParams({ panel: 'editor', job: 'job-1' });
 
       const { container, user } = renderWithKeyboard(
         <CollaborativeEditor
@@ -605,7 +601,7 @@ describe('CollaborativeEditor IDE keyboard shortcuts', () => {
 
       await expectShortcutNotToFire(
         keys.cmd('e'),
-        mockUpdateSearchParams,
+        urlState.mockFns.updateSearchParams,
         user
       );
     });

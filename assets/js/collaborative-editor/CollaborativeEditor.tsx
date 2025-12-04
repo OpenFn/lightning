@@ -1,7 +1,7 @@
 import { useMemo, useCallback } from 'react';
 
 import { SocketProvider } from '../react/contexts/SocketProvider';
-import { useURLState } from '../react/lib/use-url-state';
+import { useURLState } from '#/react/lib/use-url-state';
 import type { WithActionProps } from '../react/lib/with-props';
 
 import { AIAssistantPanelWrapper } from './components/AIAssistantPanelWrapper';
@@ -73,8 +73,8 @@ function BreadcrumbContent({
 
   const isRunPanelOpen = useIsRunPanelOpen();
 
-  const { searchParams } = useURLState();
-  const isIDEOpen = searchParams.get('panel') === 'editor';
+  const { params } = useURLState();
+  const isIDEOpen = params['panel'] === 'editor';
 
   const projectId = projectFromStore?.id ?? projectIdFallback;
   const projectName = projectFromStore?.name ?? projectNameFallback;
@@ -157,11 +157,12 @@ interface IDEWrapperProps {
 }
 
 function IDEWrapper({ parentProjectId, parentProjectName }: IDEWrapperProps) {
-  const { searchParams, updateSearchParams } = useURLState();
+  const { params, updateSearchParams } = useURLState();
   const { currentNode } = useNodeSelection();
 
-  const isIDEOpen = searchParams.get('panel') === 'editor';
-  const selectedJobId = searchParams.get('job');
+  const { panel, job } = params;
+  const isIDEOpen = panel === 'editor';
+  const selectedJobId = job;
 
   const handleCloseIDE = useCallback(() => {
     updateSearchParams({ panel: null, job: null });

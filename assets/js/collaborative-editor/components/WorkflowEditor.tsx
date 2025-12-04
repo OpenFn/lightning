@@ -4,7 +4,8 @@
 
 import { useCallback, useEffect, useRef } from 'react';
 
-import { useURLState } from '../../react/lib/use-url-state';
+import { useURLState } from '#/react/lib/use-url-state';
+
 import type { WorkflowState as YAMLWorkflowState } from '../../yaml/types';
 import { useResizablePanel } from '../hooks/useResizablePanel';
 import { useIsNewWorkflow, useProject } from '../hooks/useSessionContext';
@@ -23,7 +24,6 @@ import {
   useWorkflowStoreContext,
 } from '../hooks/useWorkflow';
 import { useKeyboardShortcut } from '../keyboard';
-
 import { Z_INDEX } from '../utils/constants';
 
 import { CollaborativeWorkflowDiagram } from './diagram/CollaborativeWorkflowDiagram';
@@ -34,8 +34,13 @@ import { ManualRunPanelErrorBoundary } from './ManualRunPanelErrorBoundary';
 import { TemplateDetailsCard } from './TemplateDetailsCard';
 import { Tooltip } from './Tooltip';
 
-export function WorkflowEditor() {
-  const { searchParams, updateSearchParams } = useURLState();
+interface WorkflowEditorProps {
+  parentProjectId?: string | null;
+  parentProjectName?: string | null;
+}
+
+export function WorkflowEditor(_props: WorkflowEditorProps = {}) {
+  const { params, updateSearchParams } = useURLState();
   const { currentNode, selectNode } = useNodeSelection();
   const workflowStore = useWorkflowStoreContext();
   const isNewWorkflow = useIsNewWorkflow();
@@ -65,7 +70,7 @@ export function WorkflowEditor() {
   useEffect(() => {
     if (isSyncingRef.current) return;
 
-    const panelParam = searchParams.get('panel');
+    const panelParam = params['panel'] ?? null;
 
     if (isRunPanelOpen) {
       const contextJobId = runPanelContext?.jobId;
@@ -109,16 +114,16 @@ export function WorkflowEditor() {
         isSyncingRef.current = false;
       }, 0);
     }
-  }, [isRunPanelOpen, runPanelContext, searchParams, updateSearchParams]);
+  }, [isRunPanelOpen, runPanelContext, params, updateSearchParams]);
 
   useEffect(() => {
-    const panelParam = searchParams.get('panel');
+    const panelParam = params['panel'] ?? null;
 
     if (panelParam === 'run' && !isRunPanelOpen) {
       isSyncingRef.current = true;
 
-      const jobParam = searchParams.get('job');
-      const triggerParam = searchParams.get('trigger');
+      const jobParam = params['job'] ?? null;
+      const triggerParam = params['trigger'] ?? null;
 
       if (jobParam) {
         openRunPanel({ jobId: jobParam });
@@ -153,7 +158,7 @@ export function WorkflowEditor() {
       }, 0);
     }
   }, [
-    searchParams,
+    params,
     isRunPanelOpen,
     currentNode.type,
     currentNode.node,
@@ -210,7 +215,7 @@ export function WorkflowEditor() {
     positions: state.positions,
   }));
 
-  const currentMethod = searchParams.get('method') as
+  const currentMethod = (params['method'] ?? null) as
     | 'template'
     | 'import'
     | 'ai'
@@ -252,8 +257,8 @@ export function WorkflowEditor() {
 
   // Clear template params when in import/ai mode (handles page refresh)
   useEffect(() => {
-    const templateParam = searchParams.get('template');
-    const searchParam = searchParams.get('search');
+    const templateParam = params['template'];
+    const searchParam = params['search'];
 
     if (
       (leftPanelMethod === 'import' || leftPanelMethod === 'ai') &&
@@ -261,7 +266,7 @@ export function WorkflowEditor() {
     ) {
       updateSearchParams({ template: null, search: null });
     }
-  }, [leftPanelMethod, searchParams, updateSearchParams]);
+  }, [leftPanelMethod, params, updateSearchParams]);
 
   // Helper function to clear workflow from canvas
   const clearCanvas = useCallback(() => {
@@ -363,14 +368,16 @@ export function WorkflowEditor() {
     }, 0);
   }, [isCreateWorkflowPanelCollapsed, leftPanelMethod, updateSearchParams]);
 
+  const isIDEOpen = params['panel'] === 'editor';
+
   const handleCloseInspector = () => {
     selectNode(null);
   };
 
   const showInspector =
-    searchParams.get('panel') === 'settings' ||
-    searchParams.get('panel') === 'code' ||
-    searchParams.get('panel') === 'publish-template' ||
+    params['panel'] === 'settings' ||
+    params['panel'] === 'code' ||
+    params['panel'] === 'publish-template' ||
     Boolean(currentNode.node);
 
   const handleMethodChange = (method: 'template' | 'import' | 'ai' | null) => {
@@ -422,8 +429,6 @@ export function WorkflowEditor() {
     await saveWorkflow();
     collapseCreateWorkflowPanel();
   };
-
-  const isIDEOpen = searchParams.get('panel') === 'editor';
 
   useKeyboardShortcut(
     'Control+Enter, Meta+Enter',

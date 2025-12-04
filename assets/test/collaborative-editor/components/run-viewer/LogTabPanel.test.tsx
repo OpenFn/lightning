@@ -20,6 +20,7 @@ import { LogTabPanel } from '../../../../js/collaborative-editor/components/run-
 import * as useHistoryModule from '../../../../js/collaborative-editor/hooks/useHistory';
 import * as useSessionModule from '../../../../js/collaborative-editor/hooks/useSession';
 import type { RunDetail } from '../../../../js/collaborative-editor/types/history';
+import { createMockURLState, getURLStateMockValue } from '../../__helpers__';
 
 // Mock log viewer - Define mocks before vi.mock calls
 const mockUnmount = vi.fn();
@@ -59,11 +60,10 @@ vi.mock('../../../../js/collaborative-editor/hooks/useChannel', () => ({
 }));
 
 // Mock useURLState
+const urlState = createMockURLState();
+
 vi.mock('../../../../js/react/lib/use-url-state', () => ({
-  useURLState: () => ({
-    searchParams: new URLSearchParams(),
-    updateSearchParams: vi.fn(),
-  }),
+  useURLState: () => getURLStateMockValue(urlState),
 }));
 
 // Mock useWorkflowState hook for StepItem
@@ -128,6 +128,7 @@ describe('LogTabPanel', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    urlState.reset();
 
     // Reset mock store state to defaults
     mockLogStoreState.desiredLogLevel = 'info';

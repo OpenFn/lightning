@@ -21,6 +21,10 @@ import * as Y from 'yjs';
 import * as dataclipApi from '../../../../js/collaborative-editor/api/dataclips';
 import { FullScreenIDE } from '../../../../js/collaborative-editor/components/ide/FullScreenIDE';
 import type { Workflow } from '../../../../js/collaborative-editor/types/workflow';
+import {
+  createMockURLState,
+  getURLStateMockValue,
+} from '../../__helpers__/urlStateMocks';
 
 // Mock dependencies
 vi.mock('../../../../js/collaborative-editor/api/dataclips');
@@ -115,15 +119,10 @@ vi.mock(
 );
 
 // Mock useURLState hook
-const mockSearchParams = new URLSearchParams();
-mockSearchParams.set('job', 'job-1');
+const urlState = createMockURLState();
 
 vi.mock('../../../../js/react/lib/use-url-state', () => ({
-  useURLState: () => ({
-    searchParams: mockSearchParams,
-    updateSearchParams: vi.fn(),
-    hash: '',
-  }),
+  useURLState: () => getURLStateMockValue(urlState),
 }));
 
 // Mock session hooks
@@ -497,9 +496,9 @@ describe('FullScreenIDE', () => {
       can_edit_dataclip: true,
     });
 
-    // Reset search params
-    mockSearchParams.delete('job');
-    mockSearchParams.set('job', 'job-1');
+    // Reset URL state
+    urlState.reset();
+    urlState.setParam('job', 'job-1');
   });
 
   describe('panel layout', () => {

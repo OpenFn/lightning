@@ -1,7 +1,7 @@
 import { Menu, MenuButton, MenuItem, MenuItems } from '@headlessui/react';
 import { useCallback, useMemo } from 'react';
 
-import { useURLState } from '../../react/lib/use-url-state';
+import { useURLState } from '#/react/lib/use-url-state';
 import { buildClassicalEditorUrl } from '../../utils/editorUrlConversion';
 import {
   useIsNewWorkflow,
@@ -175,7 +175,7 @@ export function Header({
   isIDEOpen?: boolean;
 }) {
   // IMPORTANT: All hooks must be called unconditionally before any early returns or conditional logic
-  const { updateSearchParams, searchParams } = useURLState();
+  const { params, updateSearchParams } = useURLState();
   const { selectNode } = useNodeSelection();
   const { enabled, setEnabled } = useWorkflowEnabled();
   const { saveWorkflow } = useWorkflowActions();
@@ -247,7 +247,7 @@ export function Header({
               href={buildClassicalEditorUrl({
                 projectId,
                 workflowId,
-                searchParams: new URLSearchParams(window.location.search),
+                searchParams: new URLSearchParams(params),
                 isNewWorkflow,
               })}
               className="inline-flex items-center justify-center
@@ -299,7 +299,7 @@ export function Header({
                     type="button"
                     onClick={() => {
                       if (isNewWorkflow && isWorkflowEmpty) return;
-                      const currentPanel = searchParams.get('panel');
+                      const currentPanel = params.panel;
                       updateSearchParams({
                         panel: currentPanel === 'settings' ? null : 'settings',
                       });

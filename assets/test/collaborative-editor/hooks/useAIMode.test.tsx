@@ -9,10 +9,14 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { renderHook } from '@testing-library/react';
 
 import { useAIMode } from '../../../js/collaborative-editor/hooks/useAIMode';
+import { createMockURLState, getURLStateMockValue } from '../__helpers__';
+
+// Create centralized URL state mock
+const urlState = createMockURLState();
 
 // Mock dependencies
 vi.mock('../../../js/react/lib/use-url-state', () => ({
-  useURLState: vi.fn(),
+  useURLState: () => getURLStateMockValue(urlState),
 }));
 
 vi.mock('../../../js/collaborative-editor/hooks/useSessionContext', () => ({
@@ -23,24 +27,18 @@ vi.mock('../../../js/collaborative-editor/hooks/useWorkflow', () => ({
   useWorkflowState: vi.fn(),
 }));
 
-import { useURLState } from '../../../js/react/lib/use-url-state';
 import { useProject } from '../../../js/collaborative-editor/hooks/useSessionContext';
 import { useWorkflowState } from '../../../js/collaborative-editor/hooks/useWorkflow';
 
 describe('useAIMode', () => {
   const mockProject = { id: 'project-123', name: 'Test Project' };
   const mockWorkflow = { id: 'workflow-123', name: 'Test Workflow' };
-  const mockSearchParams = new URLSearchParams();
 
   beforeEach(() => {
     vi.clearAllMocks();
+    urlState.reset();
 
     // Default mocks
-    vi.mocked(useURLState).mockReturnValue({
-      searchParams: mockSearchParams,
-      setSearchParams: vi.fn(),
-    } as any);
-
     vi.mocked(useProject).mockReturnValue(mockProject as any);
 
     // Mock useWorkflowState to handle selector function
@@ -51,10 +49,6 @@ describe('useAIMode', () => {
       };
       return selector ? selector(state) : state;
     });
-
-    mockSearchParams.delete('panel');
-    mockSearchParams.delete('job');
-    mockSearchParams.delete('run');
   });
 
   describe('Workflow Template Mode', () => {
@@ -99,8 +93,7 @@ describe('useAIMode', () => {
 
   describe('Job Code Mode', () => {
     beforeEach(() => {
-      mockSearchParams.set('panel', 'editor');
-      mockSearchParams.set('job', 'job-456');
+      urlState.setParams({ panel: 'editor', job: 'job-456' });
     });
 
     it('should return job_code mode when IDE is open', () => {
@@ -168,7 +161,7 @@ describe('useAIMode', () => {
     });
 
     it('should include follow_run_id when run parameter exists', () => {
-      mockSearchParams.set('run', 'run-789');
+      urlState.setParam('run', 'run-789');
 
       const { result } = renderHook(() => useAIMode());
 
@@ -193,8 +186,8 @@ describe('useAIMode', () => {
     });
 
     it('should only activate when panel=editor', () => {
-      mockSearchParams.set('panel', 'inspector');
-      mockSearchParams.set('job', 'job-456');
+      urlState.clearParams();
+      urlState.setParams({ panel: 'inspector', job: 'job-456' });
 
       const { result } = renderHook(() => useAIMode());
 
@@ -203,8 +196,8 @@ describe('useAIMode', () => {
     });
 
     it('should only activate when job parameter exists', () => {
-      mockSearchParams.set('panel', 'editor');
-      mockSearchParams.delete('job');
+      urlState.clearParams();
+      urlState.setParam('panel', 'editor');
 
       const { result } = renderHook(() => useAIMode());
 
@@ -221,8 +214,7 @@ describe('useAIMode', () => {
       expect(firstResult?.mode).toBe('workflow_template');
 
       // Change URL params to trigger job code mode
-      mockSearchParams.set('panel', 'editor');
-      mockSearchParams.set('job', 'job-456');
+      urlState.setParams({ panel: 'editor', job: 'job-456' });
 
       rerender();
       const secondResult = result.current;
@@ -234,8 +226,7 @@ describe('useAIMode', () => {
 
   describe('Storage Keys', () => {
     it('should generate correct storage key for job mode', () => {
-      mockSearchParams.set('panel', 'editor');
-      mockSearchParams.set('job', 'job-unique-id');
+      urlState.setParams({ panel: 'editor', job: 'job-unique-id' });
 
       const { result } = renderHook(() => useAIMode());
 

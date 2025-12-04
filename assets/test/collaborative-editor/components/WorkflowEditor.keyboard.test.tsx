@@ -21,6 +21,10 @@ import {
   keys,
   renderWithKeyboard,
 } from '../../keyboard-test-utils';
+import {
+  createMockURLState,
+  getURLStateMockValue,
+} from '../__helpers__/urlStateMocks';
 
 // Mock dependencies
 vi.mock('../../../js/collaborative-editor/api/dataclips', () => ({
@@ -90,19 +94,14 @@ vi.mock('../../../js/collaborative-editor/components/ManualRunPanel', () => ({
 }));
 
 // Create controllable mocks
-const mockUpdateSearchParams = vi.fn();
 const mockOpenRunPanel = vi.fn();
 const mockCloseRunPanel = vi.fn();
 const mockSelectNode = vi.fn();
-const mockSearchParams = new URLSearchParams();
+const urlState = createMockURLState();
 
 // Mock useURLState
 vi.mock('../../../js/react/lib/use-url-state', () => ({
-  useURLState: () => ({
-    searchParams: mockSearchParams,
-    updateSearchParams: mockUpdateSearchParams,
-    hash: '',
-  }),
+  useURLState: () => getURLStateMockValue(urlState),
 }));
 
 // Mock session context hooks
@@ -227,10 +226,9 @@ vi.mock('../../../js/collaborative-editor/hooks/useWorkflow', () => ({
 describe('WorkflowEditor keyboard shortcuts', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    urlState.reset();
 
     // Reset state
-    mockSearchParams.delete('panel');
-    mockSearchParams.delete('job');
     mockIsRunPanelOpen.mockReturnValue(false);
     mockRunPanelContext.mockReturnValue(null);
     currentNode = { type: null, node: null };
@@ -351,9 +349,8 @@ describe('WorkflowEditor keyboard shortcuts', () => {
         node: mockWorkflow.jobs[0],
       };
 
-      // IDE is open (indicated by panel=editor in URL params)
-      mockSearchParams.set('panel', 'editor');
-      mockSearchParams.set('job', 'job-1');
+      // IDE is open
+      urlState.setParams({ panel: 'editor', job: 'job-1' });
 
       const { container, user } = renderWithKeyboard(<WorkflowEditor />);
 
@@ -398,9 +395,7 @@ describe('WorkflowEditor keyboard shortcuts', () => {
         node: mockWorkflow.jobs[0],
       };
 
-      // IDE is open (indicated by panel=editor in URL params)
-      mockSearchParams.set('panel', 'editor');
-      mockSearchParams.set('job', 'job-1');
+      urlState.setParams({ panel: 'editor', job: 'job-1' });
 
       const { container, user } = renderWithKeyboard(<WorkflowEditor />);
 

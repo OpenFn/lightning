@@ -157,3 +157,12 @@ export {
   type SessionContextResponse,
   type CreateSessionContextOptions,
 } from './sessionContextFactory';
+
+// URL state mocks
+export {
+  createMockURLState,
+  getURLStateMockValue,
+  type URLStateMock,
+  type URLStateMockFns,
+  type UseURLStateReturn,
+} from './urlStateMocks';

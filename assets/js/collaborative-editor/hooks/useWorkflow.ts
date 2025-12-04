@@ -241,11 +241,10 @@ export const useCurrentJob = () => {
  * Demonstrates complex selector with external dependencies (URL state).
  */
 export const useNodeSelection = () => {
-  const { searchParams, updateSearchParams } = useURLState();
+  const { params, updateSearchParams } = useURLState();
 
-  const jobId = searchParams.get('job');
-  const triggerId = searchParams.get('trigger');
-  const edgeId = searchParams.get('edge');
+  // Get current node ID from URL
+  const { job: jobId, trigger: triggerId, edge: edgeId } = params;
   const currentNodeId = jobId || triggerId || edgeId;
 
   const stableData = useWorkflowState(
@@ -280,7 +279,7 @@ export const useNodeSelection = () => {
   const store = useWorkflowStoreContext();
   const selectNode = useCallback(
     (id: string | null) => {
-      const currentPanel = searchParams.get('panel');
+      const currentPanel = params['panel'] ?? null;
 
       if (!id) {
         updateSearchParams({ job: null, trigger: null, edge: null });
@@ -303,16 +302,16 @@ export const useNodeSelection = () => {
       };
 
       if (foundJob) {
-        updates.job = id;
+        updates['job'] = id;
       } else if (foundTrigger) {
-        updates.trigger = id;
+        updates['trigger'] = id;
       } else if (foundEdge) {
-        updates.edge = id;
+        updates['edge'] = id;
       }
 
       updateSearchParams(updates);
     },
-    [updateSearchParams, store, searchParams]
+    [updateSearchParams, store, params]
   );
 
   return {
@@ -426,7 +425,10 @@ export const useWorkflowActions = () => {
           // Format channel errors into user-friendly messages
           if (isChannelRequestError(error)) {
             error.message = formatChannelErrorMessage({
-              errors: error.errors,
+              errors: error.errors as { base?: string[] } & Record<
+                string,
+                string[]
+              >,
               type: error.type,
             });
 
@@ -546,7 +548,10 @@ export const useWorkflowActions = () => {
           // Format channel errors into user-friendly messages
           if (isChannelRequestError(error)) {
             error.message = formatChannelErrorMessage({
-              errors: error.errors,
+              errors: error.errors as { base?: string[] } & Record<
+                string,
+                string[]
+              >,
               type: error.type,
             });
 

@@ -26,6 +26,9 @@ and this project adheres to
 
 ### Changed
 
+- Refactor URLStore to use Record with Immer for proper structural sharing,
+  reducing unnecessary re-renders when unrelated URL params change
+  [#4097](https://github.com/OpenFn/lightning/issues/4097)
 - Show "Connect" button when no credential is selected for non-language-common
   steps [#4085](https://github.com/OpenFn/lightning/issues/4085)
 - Show credential name (and full name and owner on hover) when a credential is
@@ -35,6 +38,8 @@ and this project adheres to
 
 ### Fixed
 
+- Fix version not switching when selecting a run from history panel
+  [#4097](https://github.com/OpenFn/lightning/issues/4097)
 - User menu dropdown no longer clips or causes horizontal scroll in side
   navigation [#4092](https://github.com/OpenFn/lightning/issues/4092)
 - Improved version mismatch banner UX: made compact, dismissible, and
@@ -56,6 +61,10 @@ and this project adheres to
   [#4084](https://github.com/OpenFn/lightning/issues/4084)
 - Fix flickering of canvas and job editor
   [#4095](https://github.com/OpenFn/lightning/issues/4095)
+- Run channel crashes when sending `run:updated` event
+  [#4093](https://github.com/OpenFn/lightning/issues/4093)
+- Fix Version mismatch modal appears on top of IDE
+  [#4096](https://github.com/OpenFn/lightning/issues/4096)
 
 ## [2.15.0-pre1] - 2025-11-27
 

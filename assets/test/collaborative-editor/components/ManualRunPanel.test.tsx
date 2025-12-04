@@ -33,6 +33,8 @@ import type { Workflow } from '../../../js/collaborative-editor/types/workflow';
 import {
   createMockPhoenixChannel,
   createMockPhoenixChannelProvider,
+  createMockURLState,
+  getURLStateMockValue,
 } from '../__helpers__';
 
 // Mock the API module
@@ -93,13 +95,11 @@ vi.mock('../../../js/collaborative-editor/hooks/useSession', () => ({
   }),
 }));
 
-// Mock useURLState hook
+// Mock useURLState hook with centralized helper
+const urlState = createMockURLState();
+
 vi.mock('../../../js/react/lib/use-url-state', () => ({
-  useURLState: () => ({
-    searchParams: new URLSearchParams(),
-    updateSearchParams: vi.fn(),
-    hash: '',
-  }),
+  useURLState: () => getURLStateMockValue(urlState),
 }));
 
 const mockWorkflow: Workflow = {
@@ -173,6 +173,7 @@ function renderManualRunPanel(
 describe('ManualRunPanel', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    urlState.reset();
 
     // Reset mock to default state
     setMockCanRun(true, 'Run workflow');

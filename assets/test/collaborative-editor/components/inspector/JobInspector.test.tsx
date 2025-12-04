@@ -33,17 +33,17 @@ import { createWorkflowStore } from '../../../../js/collaborative-editor/stores/
 import {
   createMockPhoenixChannel,
   createMockPhoenixChannelProvider,
-} from '../../__helpers__/channelMocks';
+  createMockURLState,
+  getURLStateMockValue,
+} from '../../__helpers__';
 import { createWorkflowYDoc } from '../../__helpers__/workflowFactory';
 import { createMockSocket } from '../../__helpers__/sessionStoreHelpers';
 
 // Mock useURLState hook
+const urlState = createMockURLState();
+
 vi.mock('../../../../js/react/lib/use-url-state', () => ({
-  useURLState: () => ({
-    searchParams: new URLSearchParams(),
-    updateSearchParams: vi.fn(),
-    hash: '',
-  }),
+  useURLState: () => getURLStateMockValue(urlState),
 }));
 
 // Mock the useCanRun hook from useWorkflow
@@ -134,6 +134,8 @@ describe('JobInspector - Footer Button States', () => {
   let mockChannel: any;
 
   beforeEach(() => {
+    urlState.reset();
+
     // Create Y.Doc with a job
     ydoc = createWorkflowYDoc({
       jobs: {
@@ -554,6 +556,8 @@ describe('JobInspector - Credential Selection', () => {
   let mockChannel: any;
 
   beforeEach(() => {
+    urlState.reset();
+
     // Create Y.Doc with a job (credentials explicitly null)
     ydoc = createWorkflowYDoc({
       jobs: {

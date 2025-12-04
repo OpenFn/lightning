@@ -61,10 +61,10 @@ export function AIAssistantPanelWrapper() {
     clearAIAssistantInitialMessage,
     collapseCreateWorkflowPanel,
   } = useUICommands();
-  const { updateSearchParams, searchParams } = useURLState();
+  const { updateSearchParams, params } = useURLState();
 
   // Track IDE state changes to re-focus chat input when IDE closes
-  const isIDEOpen = searchParams.get('panel') === 'editor';
+  const isIDEOpen = params.panel === 'editor';
   const [focusTrigger, setFocusTrigger] = useState(0);
   const prevIDEOpenRef = useRef(isIDEOpen);
 
@@ -167,10 +167,10 @@ export function AIAssistantPanelWrapper() {
     if (!aiMode) return null;
 
     const paramName = aiMode.mode === 'workflow_template' ? 'w-chat' : 'j-chat';
-    const sessionId = searchParams.get(paramName);
+    const sessionId = params[paramName];
 
     return sessionId;
-  }, [aiMode, searchParams]);
+  }, [aiMode, params]);
 
   // Use registry-based session management
   useAISession({
@@ -220,7 +220,7 @@ export function AIAssistantPanelWrapper() {
       aiMode.mode === 'workflow_template' ? 'w-chat' : 'j-chat';
     const otherParamName =
       aiMode.mode === 'workflow_template' ? 'j-chat' : 'w-chat';
-    const currentValue = searchParams.get(currentParamName);
+    const currentValue = params[currentParamName];
 
     if (currentValue !== sessionId) {
       updateSearchParams({
@@ -231,7 +231,7 @@ export function AIAssistantPanelWrapper() {
   }, [
     sessionId,
     aiMode,
-    searchParams,
+    params,
     updateSearchParams,
     aiStore,
     isAIAssistantPanelOpen,

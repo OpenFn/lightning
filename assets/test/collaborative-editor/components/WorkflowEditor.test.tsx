@@ -19,6 +19,10 @@ import * as dataclipApi from '../../../js/collaborative-editor/api/dataclips';
 import { WorkflowEditor } from '../../../js/collaborative-editor/components/WorkflowEditor';
 import { KeyboardProvider } from '../../../js/collaborative-editor/keyboard';
 import type { Workflow } from '../../../js/collaborative-editor/types/workflow';
+import {
+  createMockURLState,
+  getURLStateMockValue,
+} from '../__helpers__/urlStateMocks';
 
 // Mock dependencies
 vi.mock('../../../js/collaborative-editor/api/dataclips');
@@ -117,15 +121,10 @@ vi.mock('../../../js/collaborative-editor/components/ManualRunPanel', () => ({
 }));
 
 // Mock useURLState
-const mockUpdateSearchParams = vi.fn();
-const mockSearchParams = new URLSearchParams();
+const urlState = createMockURLState();
 
 vi.mock('../../../js/react/lib/use-url-state', () => ({
-  useURLState: () => ({
-    searchParams: mockSearchParams,
-    updateSearchParams: mockUpdateSearchParams,
-    hash: '',
-  }),
+  useURLState: () => getURLStateMockValue(urlState),
 }));
 
 // Mock session context hooks
@@ -272,6 +271,7 @@ function renderWorkflowEditor() {
 describe('WorkflowEditor', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    urlState.reset();
 
     // Reset state
     mockIsRunPanelOpen.mockReturnValue(false);
