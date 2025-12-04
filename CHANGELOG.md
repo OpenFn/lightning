@@ -21,6 +21,8 @@ and this project adheres to
 
 ### Fixed
 
+- Fix version chip [#4120](https://github.com/OpenFn/lightning/issues/4120)
+
 ## [2.15.0-pre2] - 2025-12-04
 
 ### Added
