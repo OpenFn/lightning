@@ -1,7 +1,6 @@
 import type { FunctionDescription } from '@openfn/describe-package';
-import { marked } from 'marked';
-
-import { sanitizeHtml } from '#/utils/sanitizeHtml';
+import Markdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 type RenderFunctionProps = {
   fn: FunctionDescription;
@@ -101,12 +100,9 @@ const RenderFunction = ({ fn, onInsert }: RenderFunctionProps) => {
         {getSignature(fn)}
       </summary>
       <div className="block mb-4 pl-4">
-        <p
-          className="block text-sm"
-          dangerouslySetInnerHTML={{
-            __html: sanitizeHtml(String(marked.parse(fn.description))),
-          }}
-        ></p>
+        <div className="block text-sm">
+          <Markdown remarkPlugins={[remarkGfm]}>{fn.description}</Markdown>
+        </div>
         {fn.examples.map((eg, idx) => (
           <Example eg={eg} onInsert={onInsert} key={`${fn.name}-eg-${idx}`} />
         ))}

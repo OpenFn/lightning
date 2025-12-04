@@ -596,7 +596,7 @@ export function FullScreenIDE({
         <div className="text-center">
           <div
             className="hero-arrow-path size-8 animate-spin
-            text-blue-500 mx-auto"
+            text-primary-500 mx-auto"
             aria-hidden="true"
           />
           <p className="text-gray-500 mt-2">Loading editor...</p>
