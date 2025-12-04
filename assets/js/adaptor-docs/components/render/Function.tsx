@@ -1,6 +1,8 @@
 import type { FunctionDescription } from '@openfn/describe-package';
 import { marked } from 'marked';
 
+import { sanitizeHtml } from '#/utils/sanitizeHtml';
+
 type RenderFunctionProps = {
   fn: FunctionDescription;
   onInsert?: (text: string) => void;
@@ -101,7 +103,9 @@ const RenderFunction = ({ fn, onInsert }: RenderFunctionProps) => {
       <div className="block mb-4 pl-4">
         <p
           className="block text-sm"
-          dangerouslySetInnerHTML={{ __html: marked.parse(fn.description) }}
+          dangerouslySetInnerHTML={{
+            __html: sanitizeHtml(String(marked.parse(fn.description))),
+          }}
         ></p>
         {fn.examples.map((eg, idx) => (
           <Example eg={eg} onInsert={onInsert} key={`${fn.name}-eg-${idx}`} />
