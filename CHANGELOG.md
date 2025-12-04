@@ -21,6 +21,8 @@ and this project adheres to
 
 ### Fixed
 
+- Run logs no longer disappear after browser refresh in IDE
+  [#4079](https://github.com/OpenFn/lightning/issues/4079)
 - Fix version chip [#4120](https://github.com/OpenFn/lightning/issues/4120)
 
 ## [2.15.0-pre2] - 2025-12-04
