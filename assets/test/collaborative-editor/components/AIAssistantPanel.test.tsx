@@ -62,13 +62,13 @@ describe('AIAssistantPanel', () => {
         <AIAssistantPanel isOpen={true} onClose={mockOnClose} />
       );
 
-      const panel = container.querySelector('[role="dialog"]');
+      const panel = screen.getByRole('complementary');
       expect(panel).toBeInTheDocument();
       expect(panel).not.toHaveClass('w-0');
     });
 
     it('should have zero width when isOpen is false (not resizable)', () => {
-      const { container } = renderWithStore(
+      renderWithStore(
         <AIAssistantPanel
           isOpen={false}
           onClose={mockOnClose}
@@ -76,12 +76,12 @@ describe('AIAssistantPanel', () => {
         />
       );
 
-      const panel = container.querySelector('[role="dialog"]');
+      const panel = screen.getByRole('complementary');
       expect(panel).toHaveClass('w-0');
     });
 
     it('should show fixed 400px width in non-resizable mode', () => {
-      const { container } = renderWithStore(
+      renderWithStore(
         <AIAssistantPanel
           isOpen={true}
           onClose={mockOnClose}
@@ -89,12 +89,12 @@ describe('AIAssistantPanel', () => {
         />
       );
 
-      const panel = container.querySelector('[role="dialog"]');
+      const panel = screen.getByRole('complementary');
       expect(panel).toHaveClass('w-[400px]');
     });
 
     it('should not apply width classes in resizable mode', () => {
-      const { container } = renderWithStore(
+      renderWithStore(
         <AIAssistantPanel
           isOpen={true}
           onClose={mockOnClose}
@@ -102,7 +102,7 @@ describe('AIAssistantPanel', () => {
         />
       );
 
-      const panel = container.querySelector('[role="dialog"]');
+      const panel = screen.getByRole('complementary');
       expect(panel).not.toHaveClass('w-[400px]');
       expect(panel).not.toHaveClass('w-0');
     });
@@ -713,25 +713,19 @@ describe('AIAssistantPanel', () => {
   });
 
   describe('Accessibility', () => {
-    it('should have dialog role', () => {
+    it('should have complementary role (aside element)', () => {
       renderWithStore(<AIAssistantPanel isOpen={true} onClose={mockOnClose} />);
 
-      const panel = screen.getByRole('dialog');
+      const panel = screen.getByRole('complementary');
       expect(panel).toBeInTheDocument();
+      expect(panel.tagName).toBe('ASIDE');
     });
 
     it('should have aria-label', () => {
       renderWithStore(<AIAssistantPanel isOpen={true} onClose={mockOnClose} />);
 
-      const panel = screen.getByRole('dialog');
+      const panel = screen.getByRole('complementary');
       expect(panel).toHaveAttribute('aria-label', 'AI Assistant');
-    });
-
-    it('should not be modal', () => {
-      renderWithStore(<AIAssistantPanel isOpen={true} onClose={mockOnClose} />);
-
-      const panel = screen.getByRole('dialog');
-      expect(panel).toHaveAttribute('aria-modal', 'false');
     });
 
     it('should have expanded state on menu button', async () => {
@@ -783,11 +777,9 @@ describe('AIAssistantPanel', () => {
     });
 
     it('should default isResizable to false', () => {
-      const { container } = renderWithStore(
-        <AIAssistantPanel isOpen={true} onClose={mockOnClose} />
-      );
+      renderWithStore(<AIAssistantPanel isOpen={true} onClose={mockOnClose} />);
 
-      const panel = container.querySelector('[role="dialog"]');
+      const panel = screen.getByRole('complementary');
       expect(panel).toHaveClass('w-[400px]');
     });
   });

@@ -229,7 +229,7 @@ export function AIAssistantPanel({
   }, [isMenuOpen]);
 
   return (
-    <div
+    <aside
       data-testid="ai-assistant-panel"
       data-session-type={sessionType || undefined}
       className={cn(
@@ -240,8 +240,6 @@ export function AIAssistantPanel({
           isOpen ? 'w-[400px]' : 'w-0 border-l-0',
         ]
       )}
-      role="dialog"
-      aria-modal="false"
       aria-label="AI Assistant"
     >
       <div className="flex-none bg-white shadow-xs border-b border-gray-200">
@@ -418,11 +416,19 @@ export function AIAssistantPanel({
 
       {/* About AI Assistant Modal */}
       {isAboutOpen && (
-        <div className="absolute inset-0 z-50 bg-white flex flex-col">
+        <div
+          className="absolute inset-0 z-50 bg-white flex flex-col"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="about-modal-title"
+        >
           {/* Modal Header */}
           <div className="flex-none bg-white shadow-xs border-b border-gray-200">
             <div className="mx-auto px-6 py-6 flex items-center justify-between h-20 text-sm">
-              <h3 className="text-base font-semibold text-gray-900">
+              <h3
+                id="about-modal-title"
+                className="text-base font-semibold text-gray-900"
+              >
                 About the AI Assistant
               </h3>
               <button
@@ -589,13 +595,18 @@ export function AIAssistantPanel({
       )}
 
       {showDisclaimer && (
-        <div className="absolute inset-0 z-50 bg-white">
+        <div
+          className="absolute inset-0 z-50 bg-white"
+          role="dialog"
+          aria-modal="true"
+          aria-label="AI Assistant Terms"
+        >
           <DisclaimerScreen
             onAccept={onAcceptDisclaimer || (() => {})}
             disabled={!onAcceptDisclaimer}
           />
         </div>
       )}
-    </div>
+    </aside>
   );
 }
