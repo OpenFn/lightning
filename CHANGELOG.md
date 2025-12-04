@@ -17,6 +17,14 @@ and this project adheres to
 
 ### Added
 
+### Changed
+
+### Fixed
+
+## [2.15.0-pre2] - 2025-12-04
+
+### Added
+
 - User preference persistence for collaborative editor - users can now toggle
   between legacy and collaborative editors, and their choice is remembered
   across sessions with automatic redirect
