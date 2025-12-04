@@ -1,5 +1,8 @@
 import {
+  ChevronRightIcon,
+  ClockIcon,
   DocumentTextIcon,
+  PlayIcon,
   SparklesIcon,
   ViewColumnsIcon,
   XMarkIcon,
@@ -13,11 +16,11 @@ import {
 } from 'react-resizable-panels';
 
 import { useKeyboardShortcut } from '#/collaborative-editor/keyboard';
+import { useURLState } from '#/react/lib/use-url-state';
 import { cn } from '#/utils/cn';
 
 import Docs from '../../../adaptor-docs/Docs';
 import Metadata from '../../../metadata-explorer/Explorer';
-import { useURLState } from '../../../react/lib/use-url-state';
 import type { Dataclip } from '../../api/dataclips';
 import * as dataclipApi from '../../api/dataclips';
 import { RENDER_MODES } from '../../constants/panel';
@@ -29,7 +32,10 @@ import {
 } from '../../hooks/useCredentials';
 import {
   useFollowRun,
+  useHistory,
   useHistoryCommands,
+  useHistoryError,
+  useHistoryLoading,
   useJobMatchesRun,
 } from '../../hooks/useHistory';
 import { useRunRetry } from '../../hooks/useRunRetry';
@@ -51,6 +57,7 @@ import { AdaptorSelectionModal } from '../AdaptorSelectionModal';
 import { CollaborativeMonaco } from '../CollaborativeMonaco';
 import { RunBadge } from '../common/RunBadge';
 import { ConfigureAdaptorModal } from '../ConfigureAdaptorModal';
+import MiniHistory from '../diagram/MiniHistory';
 import { JobSelector } from '../JobSelector';
 import { ManualRunPanel } from '../ManualRunPanel';
 import { ManualRunPanelErrorBoundary } from '../ManualRunPanelErrorBoundary';
@@ -61,8 +68,6 @@ import { SandboxIndicatorBanner } from '../SandboxIndicatorBanner';
 import { ShortcutKeys } from '../ShortcutKeys';
 import { Tabs } from '../Tabs';
 import { Tooltip } from '../Tooltip';
-
-import { PanelToggleButton } from './PanelToggleButton';
 
 /**
  * Resolves an adaptor specifier into its package name and version
@@ -111,11 +116,11 @@ export function FullScreenIDE({
   parentProjectId,
   parentProjectName,
 }: FullScreenIDEProps) {
-  const { searchParams, updateSearchParams } = useURLState();
-  const jobIdFromURL = searchParams.get('job');
+  const { params, updateSearchParams } = useURLState();
+  const jobIdFromURL = params.job ?? null;
   // Support both 'run' (collaborative) and 'a' (classical) parameter for run ID
-  const runIdFromURL = searchParams.get('run') || searchParams.get('a');
-  const stepIdFromURL = searchParams.get('step');
+  const runIdFromURL = params.run ?? params.a ?? null;
+  const stepIdFromURL = params.step ?? null;
   const { selectJob, saveWorkflow } = useWorkflowActions();
   const { selectStep } = useHistoryCommands();
   const { job: currentJob, ytext: currentJobYText } = useCurrentJob();
@@ -138,11 +143,7 @@ export function FullScreenIDE({
   const projectId = project?.id;
   const workflowId = useWorkflowState(state => state.workflow?.id);
 
-  const centerPanelRef = useRef<ImperativePanelHandle>(null);
   const rightPanelRef = useRef<ImperativePanelHandle>(null);
-
-  const [isCenterCollapsed, setIsCenterCollapsed] = useState(false);
-  const [isRightCollapsed, setIsRightCollapsed] = useState(false);
 
   // Docs/Metadata panel state
   const [isDocsCollapsed, setIsDocsCollapsed] = useState<boolean>(() => {
@@ -170,10 +171,25 @@ export function FullScreenIDE({
   const [manuallyUnselectedDataclip, setManuallyUnselectedDataclip] =
     useState(false);
 
+  // Right panel sub-state for when no run is loaded (undefined = panel hidden)
+  const [rightPanelSubState, setRightPanelSubState] = useState<
+    'history' | 'create-run' | undefined
+  >(undefined);
+
+  // Run panel collapsed state (only applies when viewing a run)
+  const [isRunPanelCollapsed, setIsRunPanelCollapsed] = useState(false);
+
+  // Derived panel state - run viewer takes precedence, undefined means panel is hidden
+  const panelState: 'run-viewer' | 'history' | 'create-run' | undefined =
+    followRunId ? 'run-viewer' : rightPanelSubState;
+
   const handleDataclipChange = useCallback((dataclip: Dataclip | null) => {
     setSelectedDataclipState(dataclip);
     setManuallyUnselectedDataclip(dataclip === null);
   }, []);
+
+  // Declaratively connect to run channel when runIdFromURL changes
+  const { run: currentRun, clearRun } = useFollowRun(runIdFromURL);
 
   const handleRunSubmitted = useCallback(
     (runId: string, dataclip?: Dataclip) => {
@@ -195,8 +211,79 @@ export function FullScreenIDE({
     [updateSearchParams]
   );
 
-  // Declaratively connect to run channel when runIdFromURL changes
-  const currentRun = useFollowRun(runIdFromURL);
+  const handleClearFollowRun = useCallback(() => {
+    setFollowRunId(null);
+    clearRun(); // call clear run for the history store
+    updateSearchParams({ run: null });
+    // Reset input state when unloading a run
+    setSelectedDataclipState(null);
+    setSelectedTab('empty');
+    setCustomBody('');
+    setManuallyUnselectedDataclip(false);
+    setRightPanelSubState(undefined);
+  }, [updateSearchParams, clearRun]);
+
+  const handleNavigateToHistory = useCallback(() => {
+    setRightPanelSubState('history');
+  }, []);
+
+  const handleNavigateToCreateRun = useCallback(() => {
+    // Reset to fresh state when entering create-run
+    setSelectedDataclipState(null);
+    setSelectedTab('empty');
+    setCustomBody('');
+    // Set to true to prevent ManualRunPanel from auto-selecting a dataclip
+    setManuallyUnselectedDataclip(true);
+    setRightPanelSubState('create-run');
+  }, []);
+
+  const handleClosePanel = useCallback(() => {
+    // Reset input state when closing panel
+    setSelectedDataclipState(null);
+    setSelectedTab('empty');
+    setCustomBody('');
+    setManuallyUnselectedDataclip(false);
+    setRightPanelSubState(undefined);
+  }, []);
+
+  const handleHistoryRunSelect = useCallback(
+    (run: { id: string }) => {
+      setFollowRunId(run.id);
+      updateSearchParams({ run: run.id });
+      // Panel will automatically switch to run-viewer due to derived state
+    },
+    [updateSearchParams]
+  );
+
+  // History data for panel variant
+  const history = useHistory();
+  const historyLoading = useHistoryLoading();
+  const historyError = useHistoryError();
+  const { requestHistory, clearError } = useHistoryCommands();
+
+  // Transform history with selection markers
+  const selectedRunId = params.run ?? null;
+  const historyWithSelection = useMemo(() => {
+    if (!selectedRunId) return history;
+    return history.map(workorder => ({
+      ...workorder,
+      runs: workorder.runs.map(run => ({
+        ...run,
+        selected: run.id === selectedRunId,
+      })),
+      selected: workorder.runs.some(run => run.id === selectedRunId),
+    }));
+  }, [selectedRunId, history]);
+
+  // Find selected run object
+  const selectedRun = useMemo(() => {
+    if (!selectedRunId) return null;
+    for (const workorder of history) {
+      const run = workorder.runs.find(r => r.id === selectedRunId);
+      if (run) return run;
+    }
+    return null;
+  }, [selectedRunId, history]);
 
   // Check if the currently selected job matches the loaded run
   const jobMatchesRun = useJobMatchesRun(currentJob?.id || null);
@@ -210,11 +297,11 @@ export function FullScreenIDE({
   }, [currentRun, jobIdFromURL]);
 
   useEffect(() => {
-    const runId = searchParams.get('run');
+    const runId = params.run ?? null;
     if (runId && runId !== followRunId) {
       setManuallyUnselectedDataclip(false);
     }
-  }, [searchParams, followRunId]);
+  }, [params, followRunId]);
 
   useEffect(() => {
     const inputDataclipId = followedRunStep?.input_dataclip_id;
@@ -237,7 +324,7 @@ export function FullScreenIDE({
       return;
     }
 
-    const runId = searchParams.get('run') || searchParams.get('a');
+    const runId = params.run ?? params.a ?? null;
     if (!runId) {
       return;
     }
@@ -264,7 +351,7 @@ export function FullScreenIDE({
     followedRunStep?.input_dataclip_id,
     jobIdFromURL,
     projectId,
-    searchParams,
+    params,
     manuallyUnselectedDataclip,
     selectedDataclipState,
   ]);
@@ -337,7 +424,9 @@ export function FullScreenIDE({
       canRunFromHook &&
       !isSubmitting &&
       !runIsProcessing &&
-      jobMatchesRun,
+      jobMatchesRun &&
+      // Only allow run when in run-viewer (retry) or create-run state
+      (panelState === 'run-viewer' || panelState === 'create-run'),
     isRunning: isSubmitting || runIsProcessing,
     isRetryable,
     priority: 50, // IDE priority
@@ -377,6 +466,28 @@ export function FullScreenIDE({
     }
   }, [jobIdFromURL, selectJob]);
 
+  // Reset input selection state when switching to a different job
+  // This ensures the run button state is always valid for the current job
+  const prevJobIdRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (
+      jobIdFromURL &&
+      prevJobIdRef.current &&
+      jobIdFromURL !== prevJobIdRef.current
+    ) {
+      // Job changed - reset input state to defaults
+      setSelectedDataclipState(null);
+      setSelectedTab('empty');
+      setCustomBody('');
+      setManuallyUnselectedDataclip(false);
+      // Close panel if we were in create-run state
+      if (rightPanelSubState === 'create-run') {
+        setRightPanelSubState(undefined);
+      }
+    }
+    prevJobIdRef.current = jobIdFromURL;
+  }, [jobIdFromURL, rightPanelSubState]);
+
   useEffect(() => {
     if (runIdFromURL && runIdFromURL !== followRunId) {
       setFollowRunId(runIdFromURL);
@@ -392,6 +503,13 @@ export function FullScreenIDE({
       selectStep(stepIdFromURL);
     }
   }, [stepIdFromURL, runIdFromURL, selectStep]);
+
+  // Request history when entering history state
+  useEffect(() => {
+    if (rightPanelSubState === 'history') {
+      void requestHistory();
+    }
+  }, [rightPanelSubState, requestHistory]);
 
   const handleOpenAdaptorPicker = useCallback(() => {
     setIsConfigureModalOpen(false);
@@ -603,27 +721,6 @@ export function FullScreenIDE({
     );
   }
 
-  const openPanelCount =
-    (!isCenterCollapsed ? 1 : 0) + (!isRightCollapsed ? 1 : 0);
-
-  const toggleCenterPanel = () => {
-    if (!isCenterCollapsed && openPanelCount === 1) return;
-    if (isCenterCollapsed) {
-      centerPanelRef.current?.expand();
-    } else {
-      centerPanelRef.current?.collapse();
-    }
-  };
-
-  const toggleRightPanel = () => {
-    if (!isRightCollapsed && openPanelCount === 1) return;
-    if (isRightCollapsed) {
-      rightPanelRef.current?.expand();
-    } else {
-      rightPanelRef.current?.collapse();
-    }
-  };
-
   const toggleDocsPanel = () => {
     if (isDocsCollapsed) {
       docsPanelRef.current?.expand();
@@ -687,42 +784,103 @@ export function FullScreenIDE({
                 />
               </div>
             )}
+
+            {/* Docs/Metadata toggle buttons */}
+            <div className="flex items-center gap-1 shrink-0">
+              <button
+                onClick={() => handleDocsTabChange('docs')}
+                className={cn(
+                  'flex items-center gap-1 px-2 py-1 text-xs rounded transition-colors',
+                  selectedDocsTab === 'docs' && !isDocsCollapsed
+                    ? 'bg-primary-100 text-primary-800'
+                    : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'
+                )}
+                title="Show adaptor documentation"
+              >
+                <DocumentTextIcon className="h-3.5 w-3.5" />
+                Docs
+              </button>
+              <button
+                onClick={() => handleDocsTabChange('metadata')}
+                className={cn(
+                  'flex items-center gap-1 px-2 py-1 text-xs rounded transition-colors',
+                  selectedDocsTab === 'metadata' && !isDocsCollapsed
+                    ? 'bg-primary-100 text-primary-800'
+                    : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'
+                )}
+                title="Show metadata explorer"
+              >
+                <SparklesIcon className="h-3.5 w-3.5" />
+                Metadata
+              </button>
+            </div>
           </div>
 
           <div className="flex items-center gap-2 shrink-0">
-            {/* Run/Retry button */}
-            <RunRetryButton
-              isRetryable={isRetryable}
-              isDisabled={
-                !(
-                  canRunSnapshot &&
-                  canRunFromHook &&
-                  !isSubmitting &&
-                  !runIsProcessing &&
-                  jobMatchesRun
-                )
-              }
-              isSubmitting={isSubmitting || runIsProcessing}
-              onRun={() => {
-                void handleRun();
-              }}
-              onRetry={() => {
-                void handleRetry();
-              }}
-              buttonText={{
-                run: 'Run',
-                retry: 'Run (retry)',
-                processing: 'Processing',
-              }}
-              variant="primary"
-              dropdownPosition="down"
-              showKeyboardShortcuts={true}
-              disabledTooltip={
-                !jobMatchesRun
-                  ? 'Selected job was not part of this run'
-                  : runTooltipMessage
-              }
-            />
+            {/* History button - shown when no panel, viewing history, or creating new run */}
+            {panelState !== 'run-viewer' && (
+              <button
+                type="button"
+                onClick={handleNavigateToHistory}
+                className={cn(
+                  'inline-flex items-center gap-1.5 rounded-md px-3 py-2 text-sm font-semibold shadow-xs transition-colors',
+                  panelState === 'history'
+                    ? 'bg-primary-600 text-white hover:bg-primary-500'
+                    : 'bg-white text-gray-900 ring-1 ring-inset ring-gray-300 hover:bg-gray-50'
+                )}
+              >
+                <ClockIcon className="h-4 w-4" />
+                History
+              </button>
+            )}
+
+            {/* Run button - shown when no panel or viewing history */}
+            {(panelState === undefined || panelState === 'history') && (
+              <button
+                type="button"
+                onClick={handleNavigateToCreateRun}
+                className="inline-flex items-center gap-1.5 rounded-md px-3 py-2 text-sm font-semibold shadow-xs bg-white text-gray-900 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 transition-colors"
+              >
+                <PlayIcon className="h-4 w-4" />
+                Run
+              </button>
+            )}
+
+            {/* Run/Retry button - shown when creating new run or viewing existing run */}
+            {(panelState === 'run-viewer' || panelState === 'create-run') && (
+              <RunRetryButton
+                isRetryable={isRetryable}
+                isDisabled={
+                  !(
+                    canRunSnapshot &&
+                    canRunFromHook &&
+                    !isSubmitting &&
+                    !runIsProcessing &&
+                    jobMatchesRun
+                  )
+                }
+                isSubmitting={isSubmitting || runIsProcessing}
+                onRun={() => {
+                  void handleRun();
+                }}
+                onRetry={() => {
+                  void handleRetry();
+                }}
+                buttonText={{
+                  run: 'Run',
+                  retry: 'Run (retry)',
+                  processing: 'Processing',
+                }}
+                variant="primary"
+                dropdownPosition="down"
+                showKeyboardShortcuts={true}
+                disabledTooltip={
+                  !jobMatchesRun
+                    ? 'Selected job was not part of this run'
+                    : runTooltipMessage
+                }
+              />
+            )}
 
             {/* Close button */}
             <Tooltip content={<ShortcutKeys keys={['esc']} />} side="bottom">
@@ -745,333 +903,304 @@ export function FullScreenIDE({
           className="h-full"
         >
           {/* Center Panel - CollaborativeMonaco Editor with nested Docs/Metadata */}
-          <Panel
-            ref={centerPanelRef}
-            defaultSize={100}
-            minSize={25}
-            collapsible
-            collapsedSize={2}
-            onCollapse={() => setIsCenterCollapsed(true)}
-            onExpand={() => setIsCenterCollapsed(false)}
-            className="bg-slate-100"
-          >
+          <Panel defaultSize={100} minSize={25} className="bg-slate-100">
             <div className="h-full flex flex-col">
-              {/* Panel heading */}
-              <div
-                className={`shrink-0 border-b border-gray-100 transition-transform ${
-                  isCenterCollapsed ? 'rotate-90' : ''
-                }`}
-              >
-                <div className="flex items-center justify-between px-3 py-1">
-                  {!isCenterCollapsed ? (
-                    <>
-                      <div
-                        className="text-xs font-medium text-gray-400
-                        uppercase tracking-wide"
-                      >
-                        Code - {currentJob?.name || 'Untitled'}
-                      </div>
-                      <div className="flex items-center gap-1">
-                        {/* Docs/Metadata toggle buttons */}
-                        <button
-                          onClick={() => handleDocsTabChange('docs')}
-                          className={cn(
-                            'flex items-center gap-1 px-2 py-1 text-xs rounded transition-colors',
-                            selectedDocsTab === 'docs' && !isDocsCollapsed
-                              ? 'bg-primary-100 text-primary-800'
-                              : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'
-                          )}
-                          title="Show adaptor documentation"
-                        >
-                          <DocumentTextIcon className="h-3.5 w-3.5" />
-                          Docs
-                        </button>
-                        <button
-                          onClick={() => handleDocsTabChange('metadata')}
-                          className={cn(
-                            'flex items-center gap-1 px-2 py-1 text-xs rounded transition-colors',
-                            selectedDocsTab === 'metadata' && !isDocsCollapsed
-                              ? 'bg-primary-100 text-primary-800'
-                              : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'
-                          )}
-                          title="Show metadata explorer"
-                        >
-                          <SparklesIcon className="h-3.5 w-3.5" />
-                          Metadata
-                        </button>
-                        <PanelToggleButton
-                          onClick={toggleCenterPanel}
-                          disabled={openPanelCount === 1}
-                          isCollapsed={isCenterCollapsed}
-                          ariaLabel="Collapse code panel"
+              {/* Editor + Docs/Metadata panels */}
+              <div className="flex-1 overflow-hidden">
+                <PanelGroup
+                  key={docsOrientation}
+                  direction={docsOrientation}
+                  autoSaveId="lightning.ide-docs-layout"
+                  className="h-full"
+                >
+                  {/* Monaco Editor Panel */}
+                  <Panel defaultSize={60} minSize={25}>
+                    <div className="h-full flex flex-col">
+                      <div className="flex-1 overflow-hidden">
+                        <CollaborativeMonaco
+                          ytext={currentJobYText}
+                          awareness={awareness}
+                          adaptor={currentJob.adaptor || 'common'}
+                          disabled={!canSave}
+                          className="h-full w-full"
+                          options={{
+                            automaticLayout: true,
+                            minimap: { enabled: true },
+                            lineNumbers: 'on',
+                            wordWrap: 'on',
+                          }}
                         />
                       </div>
-                    </>
-                  ) : (
-                    <button
-                      onClick={toggleCenterPanel}
-                      className="ml-2 text-xs font-medium text-gray-400
-                        uppercase tracking-wide hover:text-gray-600
-                        transition-colors cursor-pointer whitespace-nowrap"
-                    >
-                      Code - {currentJob?.name || 'Untitled'}
-                    </button>
+                    </div>
+                  </Panel>
+
+                  {/* Resize Handle */}
+                  {!isDocsCollapsed && (
+                    <PanelResizeHandle
+                      className={cn(
+                        'bg-gray-200 hover:bg-blue-400 transition-colors',
+                        docsOrientation === 'horizontal'
+                          ? 'w-1 cursor-col-resize'
+                          : 'h-1 cursor-row-resize'
+                      )}
+                    />
                   )}
-                </div>
-              </div>
 
-              {/* Nested PanelGroup for Editor + Docs/Metadata */}
-              {!isCenterCollapsed && (
-                <div className="flex-1 overflow-hidden">
-                  <PanelGroup
-                    key={docsOrientation}
-                    direction={docsOrientation}
-                    autoSaveId="lightning.ide-docs-layout"
-                    className="h-full"
+                  {/* Docs/Metadata Panel */}
+                  <Panel
+                    ref={docsPanelRef}
+                    defaultSize={40}
+                    minSize={20}
+                    collapsible
+                    collapsedSize={0}
+                    onCollapse={() => setIsDocsCollapsed(true)}
+                    onExpand={() => setIsDocsCollapsed(false)}
+                    className="bg-white"
                   >
-                    {/* Monaco Editor Panel */}
-                    <Panel defaultSize={60} minSize={25}>
-                      <div className="h-full flex flex-col">
-                        <div className="flex-1 overflow-hidden">
-                          <CollaborativeMonaco
-                            ytext={currentJobYText}
-                            awareness={awareness}
-                            adaptor={currentJob.adaptor || 'common'}
-                            disabled={!canSave}
-                            className="h-full w-full"
-                            options={{
-                              automaticLayout: true,
-                              minimap: { enabled: true },
-                              lineNumbers: 'on',
-                              wordWrap: 'on',
-                            }}
-                          />
-                        </div>
-                      </div>
-                    </Panel>
-
-                    {/* Resize Handle */}
-                    {!isDocsCollapsed && (
-                      <PanelResizeHandle
-                        className={cn(
-                          'bg-gray-200 hover:bg-blue-400 transition-colors',
-                          docsOrientation === 'horizontal'
-                            ? 'w-1 cursor-col-resize'
-                            : 'h-1 cursor-row-resize'
-                        )}
-                      />
-                    )}
-
-                    {/* Docs/Metadata Panel */}
-                    <Panel
-                      ref={docsPanelRef}
-                      defaultSize={40}
-                      minSize={20}
-                      collapsible
-                      collapsedSize={0}
-                      onCollapse={() => setIsDocsCollapsed(true)}
-                      onExpand={() => setIsDocsCollapsed(false)}
-                      className="bg-white"
-                    >
-                      <div className="h-full flex flex-col">
-                        {/* Docs panel header with controls */}
-                        {!isDocsCollapsed && (
-                          <div className="shrink-0">
-                            <div className="flex items-center justify-between px-3 pt-2 pb-1">
-                              <div className="flex-1">
-                                <Tabs
-                                  value={selectedDocsTab}
-                                  onChange={tab =>
-                                    setSelectedDocsTab(
-                                      tab as 'docs' | 'metadata'
-                                    )
-                                  }
-                                  variant="pills"
-                                  options={[
-                                    {
-                                      value: 'docs',
-                                      label: 'Docs',
-                                      icon: DocumentTextIcon,
-                                    },
-                                    {
-                                      value: 'metadata',
-                                      label: 'Metadata',
-                                      icon: SparklesIcon,
-                                    },
-                                  ]}
+                    <div className="h-full flex flex-col">
+                      {/* Docs panel header with controls */}
+                      {!isDocsCollapsed && (
+                        <div className="shrink-0">
+                          <div className="flex items-center justify-between px-3 pt-2 pb-1">
+                            <div className="flex-1">
+                              <Tabs
+                                value={selectedDocsTab}
+                                onChange={tab =>
+                                  setSelectedDocsTab(tab as 'docs' | 'metadata')
+                                }
+                                variant="pills"
+                                options={[
+                                  {
+                                    value: 'docs',
+                                    label: 'Docs',
+                                    icon: DocumentTextIcon,
+                                  },
+                                  {
+                                    value: 'metadata',
+                                    label: 'Metadata',
+                                    icon: SparklesIcon,
+                                  },
+                                ]}
+                              />
+                            </div>
+                            <div className="flex items-center gap-1 pl-2">
+                              <button
+                                onClick={toggleDocsOrientation}
+                                className="p-1 hover:bg-gray-100 rounded transition-colors"
+                                title="Toggle panel orientation"
+                              >
+                                <ViewColumnsIcon
+                                  className={cn(
+                                    'h-4 w-4 text-gray-500',
+                                    docsOrientation === 'vertical' &&
+                                      'rotate-90'
+                                  )}
                                 />
-                              </div>
-                              <div className="flex items-center gap-1 pl-2">
-                                <button
-                                  onClick={toggleDocsOrientation}
-                                  className="p-1 hover:bg-gray-100 rounded transition-colors"
-                                  title="Toggle panel orientation"
-                                >
-                                  <ViewColumnsIcon
-                                    className={cn(
-                                      'h-4 w-4 text-gray-500',
-                                      docsOrientation === 'vertical' &&
-                                        'rotate-90'
-                                    )}
-                                  />
-                                </button>
-                                <button
-                                  onClick={toggleDocsPanel}
-                                  className="p-1 hover:bg-gray-100 rounded transition-colors"
-                                  aria-label="Close docs panel"
-                                  title="Close docs panel"
-                                >
-                                  <XMarkIcon className="h-4 w-4 text-gray-500" />
-                                </button>
-                              </div>
+                              </button>
+                              <button
+                                onClick={toggleDocsPanel}
+                                className="p-1 hover:bg-gray-100 rounded transition-colors"
+                                aria-label="Close docs panel"
+                                title="Close docs panel"
+                              >
+                                <XMarkIcon className="h-4 w-4 text-gray-500" />
+                              </button>
                             </div>
                           </div>
-                        )}
+                        </div>
+                      )}
 
-                        {/* Docs/Metadata content */}
-                        {!isDocsCollapsed && (
-                          <div className="flex-1 overflow-auto p-2">
-                            {selectedDocsTab === 'docs' && (
-                              <Docs
-                                adaptor={
-                                  currentJob.adaptor ||
-                                  '@openfn/language-common@latest'
-                                }
-                              />
-                            )}
-                            {selectedDocsTab === 'metadata' && (
-                              <Metadata
-                                adaptor={
-                                  currentJob.adaptor ||
-                                  '@openfn/language-common@latest'
-                                }
-                                metadata={null}
-                              />
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    </Panel>
-                  </PanelGroup>
-                </div>
-              )}
+                      {/* Docs/Metadata content */}
+                      {!isDocsCollapsed && (
+                        <div className="flex-1 overflow-auto p-2">
+                          {selectedDocsTab === 'docs' && (
+                            <Docs
+                              adaptor={
+                                currentJob.adaptor ||
+                                '@openfn/language-common@latest'
+                              }
+                            />
+                          )}
+                          {selectedDocsTab === 'metadata' && (
+                            <Metadata
+                              adaptor={
+                                currentJob.adaptor ||
+                                '@openfn/language-common@latest'
+                              }
+                              metadata={null}
+                            />
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </Panel>
+                </PanelGroup>
+              </div>
             </div>
           </Panel>
 
-          {/* Resize Handle */}
-          <PanelResizeHandle
-            className="w-1 bg-gray-200 hover:bg-blue-400
-            transition-colors cursor-col-resize"
-          />
+          {/* Resize Handle - only show when right panel is visible */}
+          {panelState && (
+            <PanelResizeHandle
+              className="w-1 bg-gray-200 hover:bg-blue-400
+              transition-colors cursor-col-resize"
+            />
+          )}
 
-          {/* Right Panel - ManualRunPanel or RunViewerPanel */}
-          <Panel
-            ref={rightPanelRef}
-            defaultSize={30}
-            minSize={30}
-            collapsible
-            collapsedSize={2}
-            onCollapse={() => setIsRightCollapsed(true)}
-            onExpand={() => setIsRightCollapsed(false)}
-            className="bg-slate-100 bg-gray-50 border-l border-gray-200"
-          >
-            <div className="h-full flex flex-col">
-              {/* Panel heading with tabs or title */}
-              <div
-                className={`shrink-0 transition-transform ${
-                  isRightCollapsed ? 'rotate-90' : ''
-                }`}
-              >
-                <div className="flex items-center justify-between px-3 py-1">
-                  {!isRightCollapsed ? (
-                    <>
-                      {followRunId ? (
-                        <>
-                          {/* Close run chip */}
-                          <Tooltip
-                            content={
-                              shouldShowMismatch
-                                ? `${selectedStepName} was not part of this run. Pick another step or deselect the run.`
-                                : undefined
-                            }
-                            side="bottom"
-                          >
-                            <RunBadge
-                              runId={followRunId}
-                              onClose={() => {
-                                setFollowRunId(null);
-                                updateSearchParams({ run: null });
-                              }}
-                              variant={
-                                shouldShowMismatch ? 'warning' : 'default'
-                              }
-                              className="mr-3"
-                            />
-                          </Tooltip>
-                          {/* Tabs as header content when showing run */}
-                          <div className="flex-1">
-                            <Tabs
-                              value={activeRightTab}
-                              onChange={setActiveRightTab}
-                              variant="underline"
-                              options={[
-                                { value: 'log', label: 'Logs' },
-                                { value: 'input', label: 'Input' },
-                                { value: 'output', label: 'Output' },
-                              ]}
-                            />
-                          </div>
-                        </>
-                      ) : (
-                        <>
-                          {/* Simple title when showing manual run panel */}
-                          <div
-                            className="text-xs font-medium text-gray-400
-                            uppercase tracking-wide"
-                          >
-                            New Run (Select Input)
-                          </div>
-                        </>
-                      )}
-                      {/* Collapse button */}
-                      <PanelToggleButton
-                        onClick={toggleRightPanel}
-                        disabled={openPanelCount === 1}
-                        isCollapsed={isRightCollapsed}
-                        ariaLabel="Collapse right panel"
-                      />
-                    </>
-                  ) : (
-                    <button
-                      onClick={toggleRightPanel}
-                      className="ml-2 text-xs font-medium text-gray-400
-                        uppercase tracking-wide hover:text-gray-600
-                        transition-colors cursor-pointer whitespace-nowrap"
-                    >
-                      {followRunId
-                        ? `Run - ${followRunId.slice(0, 7)}`
-                        : 'New Run (Select Input)'}
-                    </button>
-                  )}
+          {/* Right Panel - ManualRunPanel or RunViewerPanel (only rendered when panelState exists) */}
+          {panelState && (
+            <Panel
+              ref={rightPanelRef}
+              defaultSize={
+                panelState === 'run-viewer' && isRunPanelCollapsed ? 3 : 30
+              }
+              minSize={25}
+              collapsible={panelState === 'run-viewer'}
+              collapsedSize={3}
+              onCollapse={() => setIsRunPanelCollapsed(true)}
+              onExpand={() => setIsRunPanelCollapsed(false)}
+              className="bg-gray-50 border-l border-gray-200"
+            >
+              {/* Collapsed run panel - vertical header */}
+              {panelState === 'run-viewer' &&
+              isRunPanelCollapsed &&
+              followRunId ? (
+                <div className="h-full flex flex-col items-center pt-3 bg-gray-50 overflow-hidden">
+                  {/* Rotated Run badge - using actual RunBadge component */}
+                  <button
+                    type="button"
+                    className="cursor-pointer bg-transparent border-none p-0"
+                    style={{
+                      writingMode: 'vertical-rl',
+                      textOrientation: 'mixed',
+                    }}
+                    onClick={() => {
+                      setIsRunPanelCollapsed(false);
+                      rightPanelRef.current?.expand();
+                    }}
+                    title="Expand run panel"
+                    aria-label="Expand run panel"
+                  >
+                    <RunBadge
+                      runId={followRunId}
+                      onClose={handleClearFollowRun}
+                      variant={shouldShowMismatch ? 'warning' : 'default'}
+                    />
+                  </button>
+                  {/* Vertical tab labels */}
+                  <div className="flex flex-col items-center gap-1 mt-3">
+                    {(
+                      [
+                        { value: 'log', label: 'Logs' },
+                        { value: 'input', label: 'Input' },
+                        { value: 'output', label: 'Output' },
+                      ] as const
+                    ).map(tab => (
+                      <button
+                        key={tab.value}
+                        type="button"
+                        className={cn(
+                          'text-xs px-1 py-1 rounded whitespace-nowrap hover:bg-gray-200 transition-colors',
+                          activeRightTab === tab.value
+                            ? 'text-primary-600 font-medium'
+                            : 'text-gray-500'
+                        )}
+                        style={{
+                          writingMode: 'vertical-rl',
+                          textOrientation: 'mixed',
+                        }}
+                        onClick={() => {
+                          setActiveRightTab(tab.value);
+                          setIsRunPanelCollapsed(false);
+                          rightPanelRef.current?.expand();
+                        }}
+                        title={`View ${tab.label}`}
+                      >
+                        {tab.label}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              </div>
+              ) : (
+                <div className="h-full flex flex-col">
+                  {/* Panel heading - only for run-viewer */}
+                  {panelState === 'run-viewer' && (
+                    <div className="shrink-0">
+                      <div className="flex items-center justify-between px-3 py-1">
+                        {/* Close run chip */}
+                        <Tooltip
+                          content={
+                            shouldShowMismatch
+                              ? `${selectedStepName} was not part of this run. Pick another step or deselect the run.`
+                              : undefined
+                          }
+                          side="bottom"
+                        >
+                          <RunBadge
+                            runId={followRunId}
+                            onClose={handleClearFollowRun}
+                            variant={shouldShowMismatch ? 'warning' : 'default'}
+                            className="mr-3"
+                          />
+                        </Tooltip>
+                        {/* Tabs as header content when showing run */}
+                        <div className="flex-1">
+                          <Tabs
+                            value={activeRightTab}
+                            onChange={setActiveRightTab}
+                            variant="underline"
+                            options={[
+                              { value: 'log', label: 'Logs' },
+                              { value: 'input', label: 'Input' },
+                              { value: 'output', label: 'Output' },
+                            ]}
+                          />
+                        </div>
+                        {/* Collapse button */}
+                        <button
+                          onClick={() => {
+                            setIsRunPanelCollapsed(true);
+                            rightPanelRef.current?.collapse();
+                          }}
+                          className="p-1 hover:bg-gray-100 rounded transition-colors ml-2"
+                          aria-label="Collapse panel"
+                          title="Collapse panel"
+                        >
+                          <ChevronRightIcon className="h-4 w-4 text-gray-500" />
+                        </button>
+                      </div>
+                    </div>
+                  )}
 
-              {/* Panel content */}
-              {!isRightCollapsed && (
-                <div className="flex-1 overflow-hidden bg-white">
-                  {followRunId ? (
-                    <RunViewerErrorBoundary>
-                      <RunViewerPanel
-                        followRunId={followRunId}
-                        onClearFollowRun={() => setFollowRunId(null)}
-                        activeTab={activeRightTab}
-                        onTabChange={setActiveRightTab}
+                  {/* Panel content */}
+                  <div className="flex-1 overflow-hidden bg-white">
+                    {panelState === 'run-viewer' && followRunId ? (
+                      <RunViewerErrorBoundary>
+                        <RunViewerPanel
+                          followRunId={followRunId}
+                          onClearFollowRun={handleClearFollowRun}
+                          activeTab={activeRightTab}
+                          onTabChange={setActiveRightTab}
+                        />
+                      </RunViewerErrorBoundary>
+                    ) : panelState === 'history' ? (
+                      <MiniHistory
+                        variant="panel"
+                        collapsed={false}
+                        history={historyWithSelection}
+                        onCollapseHistory={() => {}} // Not used in panel variant
+                        selectRunHandler={handleHistoryRunSelect}
+                        onDeselectRun={handleClearFollowRun}
+                        selectedRun={selectedRun}
+                        loading={historyLoading}
+                        error={historyError}
+                        onRetry={() => {
+                          clearError();
+                          void requestHistory();
+                        }}
+                        onBack={handleClosePanel}
                       />
-                    </RunViewerErrorBoundary>
-                  ) : (
-                    workflow &&
-                    projectId &&
-                    workflowId && (
+                    ) : workflow && projectId && workflowId ? (
                       <ManualRunPanelErrorBoundary
                         onClose={() => rightPanelRef.current?.collapse()}
                       >
@@ -1082,6 +1211,7 @@ export function FullScreenIDE({
                           jobId={jobIdFromURL ?? null}
                           triggerId={null}
                           onClose={() => rightPanelRef.current?.collapse()}
+                          onClosePanel={handleClosePanel}
                           renderMode={RENDER_MODES.EMBEDDED}
                           saveWorkflow={saveWorkflow}
                           onRunSubmitted={handleRunSubmitted}
@@ -1091,14 +1221,15 @@ export function FullScreenIDE({
                           selectedTab={selectedTab}
                           selectedDataclip={selectedDataclipState}
                           customBody={customBody}
+                          disableAutoSelection
                         />
                       </ManualRunPanelErrorBoundary>
-                    )
-                  )}
+                    ) : null}
+                  </div>
                 </div>
               )}
-            </div>
-          </Panel>
+            </Panel>
+          )}
         </PanelGroup>
       </div>
 

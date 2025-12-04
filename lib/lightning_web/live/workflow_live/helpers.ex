@@ -361,42 +361,55 @@ defmodule LightningWeb.WorkflowLive.Helpers do
 
   ## Parameters
 
-  - `assigns` - Socket assigns containing:
-    - `query_params` - Current URL query parameters
-    - `selected_job` - Currently selected job (optional, for context)
-    - `selected_trigger` - Currently selected trigger (optional, for context)
-    - `selected_edge` - Currently selected edge (optional, for context)
-    - `project` - Project struct with `id`
-    - `workflow` - Workflow struct with `id` (if not new workflow)
-    - `live_action` - Current LiveView action (`:new` or `:edit`)
+  - `params` - Route parameters map containing:
+    - `"project_id"` - Project UUID (required)
+    - `"id"` - Workflow UUID (required for `:edit`, absent for `:new`)
+    - Additional query parameters to preserve (e.g., `"s"`, `"m"`, `"v"`)
+  - `live_action` - Current LiveView action (`:new` or `:edit`)
 
   ## Returns
 
-  A complete URL string for the collaborative editor
+  A complete URL string for the collaborative editor with transformed query parameters
 
   ## Examples
 
+      # Edit existing workflow with query params
       iex> collaborative_editor_url(%{
-      ...>   query_params: %{"a" => "run-123", "s" => "job-abc", "m" => "expand"},
-      ...>   selected_job: %{id: "job-abc"},
-      ...>   project: %{id: "proj-1"},
-      ...>   workflow: %{id: "wf-1"},
-      ...>   live_action: :edit
-      ...> })
-      "/projects/proj-1/w/wf-1/collaborate?run=run-123&job=job-abc&panel=editor"
+      ...>   "project_id" => "proj-1",
+      ...>   "id" => "wf-1",
+      ...>   "s" => "job-abc",
+      ...>   "m" => "expand"
+      ...> }, :edit)
+      "/projects/proj-1/w/wf-1/collaborate?job=job-abc&panel=editor"
+
+      # New workflow
+      iex> collaborative_editor_url(%{
+      ...>   "project_id" => "proj-1"
+      ...> }, :new)
+      "/projects/proj-1/w/new/collaborate"
+
+      # With multiple query params
+      iex> collaborative_editor_url(%{
+      ...>   "project_id" => "proj-1",
+      ...>   "id" => "wf-1",
+      ...>   "s" => "job-123",
+      ...>   "v" => "42",
+      ...>   "custom" => "value"
+      ...> }, :edit)
+      "/projects/proj-1/w/wf-1/collaborate?custom=value&job=job-123&v=42"
 
   """
-  def collaborative_editor_url(assigns) do
+  def collaborative_editor_url(params, live_action) do
     collaborative_params =
-      assigns.query_params
+      params
+      |> Map.drop(["id", "project_id"])
       |> Enum.reduce(%{}, fn {key, value}, acc ->
-        convert_param(key, value, acc, assigns)
+        convert_param(key, value, acc, params)
       end)
 
-    build_url_with_params(
-      collaborative_base_url(assigns),
-      collaborative_params
-    )
+    base_url = collaborative_base_url(params, live_action)
+
+    build_url_with_params(base_url, collaborative_params)
   end
 
   defp convert_param(_key, nil, acc, _assigns), do: acc
@@ -439,12 +452,12 @@ defmodule LightningWeb.WorkflowLive.Helpers do
     end
   end
 
-  defp collaborative_base_url(%{live_action: :new, project: project}) do
-    "/projects/#{project.id}/w/new/collaborate"
+  defp collaborative_base_url(%{"project_id" => project_id}, :new) do
+    "/projects/#{project_id}/w/new/collaborate"
   end
 
-  defp collaborative_base_url(%{project: project, workflow: workflow}) do
-    "/projects/#{project.id}/w/#{workflow.id}/collaborate"
+  defp collaborative_base_url(%{"id" => id, "project_id" => project_id}, :edit) do
+    "/projects/#{project_id}/w/#{id}/collaborate"
   end
 
   defp build_url_with_params(base_url, params) when map_size(params) == 0 do

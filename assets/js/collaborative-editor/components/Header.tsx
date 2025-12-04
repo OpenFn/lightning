@@ -1,8 +1,10 @@
 import { Menu, MenuButton, MenuItem, MenuItems } from '@headlessui/react';
 import { useCallback, useMemo } from 'react';
 
-import { useURLState } from '../../react/lib/use-url-state';
+import { useURLState } from '#/react/lib/use-url-state';
 import { buildClassicalEditorUrl } from '../../utils/editorUrlConversion';
+import { channelRequest } from '../hooks/useChannel';
+import { useSession } from '../hooks/useSession';
 import {
   useIsNewWorkflow,
   useLatestSnapshotLockVersion,
@@ -169,7 +171,7 @@ export function Header({
   isIDEOpen?: boolean;
 }) {
   // IMPORTANT: All hooks must be called unconditionally before any early returns or conditional logic
-  const { updateSearchParams } = useURLState();
+  const { params, updateSearchParams } = useURLState();
   const { selectNode } = useNodeSelection();
   const { enabled, setEnabled } = useWorkflowEnabled();
   const { saveWorkflow } = useWorkflowActions();
@@ -182,6 +184,7 @@ export function Header({
   const workflow = useWorkflowState(state => state.workflow);
   const latestSnapshotLockVersion = useLatestSnapshotLockVersion();
   const isNewWorkflow = useIsNewWorkflow();
+  const { provider } = useSession();
 
   // Derived values after all hooks are called
   const firstTriggerId = triggers[0]?.id;
@@ -198,6 +201,25 @@ export function Header({
       openRunPanel({ triggerId: firstTriggerId });
     }
   }, [firstTriggerId, openRunPanel, selectNode]);
+
+  const handleSwitchToLegacyEditor = useCallback(async () => {
+    if (!provider?.channel || !projectId || !workflowId) return;
+
+    try {
+      await channelRequest(provider.channel, 'switch_to_legacy_editor', {});
+
+      // Build legacy editor URL and navigate
+      const legacyUrl = buildClassicalEditorUrl({
+        projectId,
+        workflowId,
+        searchParams: new URLSearchParams(window.location.search),
+        isNewWorkflow,
+      });
+      window.location.href = legacyUrl;
+    } catch (error) {
+      console.error('Failed to switch to legacy editor:', error);
+    }
+  }, [provider, projectId, workflowId, isNewWorkflow]);
 
   // Compute Run button tooltip content
   const runButtonTooltip = useMemo(() => {
@@ -233,13 +255,9 @@ export function Header({
           <Breadcrumbs>{children}</Breadcrumbs>
           <ReadOnlyWarning className="ml-3" />
           {projectId && workflowId && (
-            <a
-              href={buildClassicalEditorUrl({
-                projectId,
-                workflowId,
-                searchParams: new URLSearchParams(window.location.search),
-                isNewWorkflow,
-              })}
+            <button
+              type="button"
+              onClick={handleSwitchToLegacyEditor}
               className="inline-flex items-center justify-center
               w-6 h-6 text-primary-600 hover:text-primary-700
               hover:bg-primary-50 rounded transition-colors ml-2"
@@ -250,65 +268,68 @@ export function Header({
               >
                 <span className="hero-beaker-solid h-4 w-4" />
               </Tooltip>
-            </a>
+            </button>
           )}
           <ActiveCollaborators className="ml-2" />
           <div className="grow ml-2"></div>
 
-          <div className="flex flex-row gap-2 items-center">
-            <div className="flex flex-row gap-2 items-center">
-              {!isOldSnapshot && (
-                <Switch checked={enabled ?? false} onChange={setEnabled} />
-              )}
+          {!isNewWorkflow ? (
+            <>
+              <div className="flex flex-row gap-2 items-center">
+                <div className="flex flex-row gap-2 items-center">
+                  {!isOldSnapshot && (
+                    <Switch checked={enabled ?? false} onChange={setEnabled} />
+                  )}
 
-              <div>
-                <button
-                  type="button"
-                  onClick={() => updateSearchParams({ panel: 'settings' })}
-                  className={`w-5 h-5 place-self-center cursor-pointer ${
-                    hasSettingsErrors
-                      ? 'text-danger-500 hover:text-danger-400'
-                      : 'text-slate-500 hover:text-slate-400'
-                  }`}
-                >
-                  <span className="hero-adjustments-vertical"></span>
-                </button>
-              </div>
-              <div
-                className="hidden"
-                phx-disconnected='[["show",{"transition":[["fade-in"],[],[]]}]]'
-                phx-connected='[["hide",{"transition":[["fade-out"],[],[]]}]]'
-              >
-                <span className="hero-signal-slash w-6 h-6 place-self-center mr-2 text-red-500"></span>
-              </div>
-            </div>
-            <div className="relative flex gap-2">
-              {projectId && workflowId && firstTriggerId && (
-                <Tooltip content={runButtonTooltip} side="bottom">
-                  <span className="inline-block">
-                    <Button
-                      variant="primary"
-                      onClick={handleRunClick}
-                      disabled={!canRun || isRunPanelOpen || isIDEOpen}
+                  <div>
+                    <button
+                      type="button"
+                      onClick={() => updateSearchParams({ panel: 'settings' })}
+                      className={`w-5 h-5 place-self-center cursor-pointer ${
+                        hasSettingsErrors
+                          ? 'text-danger-500 hover:text-danger-400'
+                          : 'text-slate-500 hover:text-slate-400'
+                      }`}
                     >
-                      Run
-                    </Button>
-                  </span>
-                </Tooltip>
-              )}
-              <SaveButton
-                canSave={canSave && !hasSettingsErrors}
-                tooltipMessage={tooltipMessage}
-                onClick={() => void saveWorkflow()}
-                repoConnection={repoConnection}
-                onSyncClick={openGitHubSyncModal}
-              />
-            </div>
-          </div>
+                      <span className="hero-adjustments-vertical"></span>
+                    </button>
+                  </div>
+                  <div
+                    className="hidden"
+                    phx-disconnected='[["show",{"transition":[["fade-in"],[],[]]}]]'
+                    phx-connected='[["hide",{"transition":[["fade-out"],[],[]]}]]'
+                  >
+                    <span className="hero-signal-slash w-6 h-6 place-self-center mr-2 text-red-500"></span>
+                  </div>
+                </div>
+                <div className="relative flex gap-2">
+                  {projectId && workflowId && firstTriggerId && (
+                    <Tooltip content={runButtonTooltip} side="bottom">
+                      <span className="inline-block">
+                        <Button
+                          variant="primary"
+                          onClick={handleRunClick}
+                          disabled={!canRun || isRunPanelOpen || isIDEOpen}
+                        >
+                          Run
+                        </Button>
+                      </span>
+                    </Tooltip>
+                  )}
+                  <SaveButton
+                    canSave={canSave && !hasSettingsErrors}
+                    tooltipMessage={tooltipMessage}
+                    onClick={() => void saveWorkflow()}
+                    repoConnection={repoConnection}
+                    onSyncClick={openGitHubSyncModal}
+                  />
+                </div>
+              </div>
 
-          <AIButton className="ml-2" />
-
-          <GitHubSyncModal />
+              <AIButton className="ml-2" />
+              <GitHubSyncModal />
+            </>
+          ) : null}
         </div>
       </div>
     </>

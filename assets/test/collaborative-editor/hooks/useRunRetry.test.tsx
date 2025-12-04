@@ -44,12 +44,12 @@ vi.mock('../../../js/collaborative-editor/lib/csrf', () => ({
 }));
 
 // Create a global variable to control URL state mocking
-let mockSearchParams = new URLSearchParams();
+let mockParams: Record<string, string> = {};
 
 // Mock URL state hook
 vi.mock('../../../js/react/lib/use-url-state', () => ({
   useURLState: () => ({
-    searchParams: mockSearchParams,
+    params: mockParams,
     updateSearchParams: vi.fn(),
   }),
 }));
@@ -358,7 +358,7 @@ describe('useRunRetry - Retry Detection', () => {
     mockActiveRun = null;
 
     // Set URL state to include run parameter
-    mockSearchParams = new URLSearchParams('run=run-123');
+    mockParams = { run: 'run-123' };
   });
 
   test('isRetryable is false when no run is followed', () => {
@@ -630,7 +630,7 @@ describe('useRunRetry - handleRetry', () => {
     mockActiveRun = null;
 
     // Set URL state to include run parameter
-    mockSearchParams = new URLSearchParams('run=run-123');
+    mockParams = { run: 'run-123' };
 
     // Mock global fetch for retry endpoint
     global.fetch = vi.fn();

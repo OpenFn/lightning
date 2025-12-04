@@ -146,11 +146,11 @@ vi.mock('../../../js/collaborative-editor/hooks/useSession', () => ({
 }));
 
 // Configurable mock for useURLState
-let mockSearchParams = new URLSearchParams();
+let mockParams: Record<string, string> = {};
 
 vi.mock('../../../js/react/lib/use-url-state', () => ({
   useURLState: () => ({
-    searchParams: mockSearchParams,
+    params: mockParams,
     updateSearchParams: vi.fn(),
     hash: '',
   }),
@@ -183,9 +183,9 @@ function setFollowedRun(
   dataclipId: string
 ) {
   // Set URL param
-  mockSearchParams = new URLSearchParams();
+  mockParams = {};
   if (runId) {
-    mockSearchParams.set('run', runId);
+    mockParams['run'] = runId;
   }
 
   // Set activeRun in HistoryStore with matching step
@@ -235,7 +235,7 @@ function setFollowedRun(
  * Helper to clear followed run state
  */
 function clearFollowedRun() {
-  mockSearchParams = new URLSearchParams();
+  mockParams = {};
   if (stores) {
     act(() => {
       stores.historyStore._closeRunViewer();

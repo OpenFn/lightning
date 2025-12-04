@@ -5,230 +5,203 @@ defmodule LightningWeb.WorkflowLive.HelpersTest do
 
   alias LightningWeb.WorkflowLive.Helpers
 
-  describe "collaborative_editor_url/1" do
+  describe "collaborative_editor_url/2" do
     test "converts classical editor URL to collaborative for new workflow" do
-      assigns = %{
-        query_params: %{},
-        project: %{id: "proj-1"},
-        workflow: nil,
-        live_action: :new
+      params = %{
+        "project_id" => "proj-1"
       }
 
-      result = Helpers.collaborative_editor_url(assigns)
+      result = Helpers.collaborative_editor_url(params, :new)
       assert result == "/projects/proj-1/w/new/collaborate"
     end
 
     test "converts classical editor URL to collaborative for existing workflow" do
-      assigns = %{
-        query_params: %{},
-        project: %{id: "proj-1"},
-        workflow: %{id: "wf-1"},
-        live_action: :edit
+      params = %{
+        "project_id" => "proj-1",
+        "id" => "wf-1"
       }
 
-      result = Helpers.collaborative_editor_url(assigns)
+      result = Helpers.collaborative_editor_url(params, :edit)
       assert result == "/projects/proj-1/w/wf-1/collaborate"
     end
 
     test "converts 'a' parameter (followed run) to 'run'" do
-      assigns = %{
-        query_params: %{"a" => "run-123"},
-        project: %{id: "proj-1"},
-        workflow: %{id: "wf-1"},
-        live_action: :edit
+      params = %{
+        "project_id" => "proj-1",
+        "id" => "wf-1",
+        "a" => "run-123"
       }
 
-      result = Helpers.collaborative_editor_url(assigns)
+      result = Helpers.collaborative_editor_url(params, :edit)
       assert result == "/projects/proj-1/w/wf-1/collaborate?run=run-123"
     end
 
-    test "converts 's' parameter to 'job' when selected_job exists" do
-      assigns = %{
-        query_params: %{"s" => "job-abc"},
-        selected_job: %{id: "job-abc"},
-        project: %{id: "proj-1"},
-        workflow: %{id: "wf-1"},
-        live_action: :edit
+    test "defaults 's' parameter to 'job' when no context" do
+      params = %{
+        "s" => "job-abc",
+        "project_id" => "proj-1",
+        "id" => "wf-1"
       }
 
-      result = Helpers.collaborative_editor_url(assigns)
+      result = Helpers.collaborative_editor_url(params, :edit)
       assert result == "/projects/proj-1/w/wf-1/collaborate?job=job-abc"
     end
 
-    test "converts 's' parameter to 'trigger' when selected_trigger exists" do
-      assigns = %{
-        query_params: %{"s" => "trigger-xyz"},
-        selected_trigger: %{id: "trigger-xyz"},
-        project: %{id: "proj-1"},
-        workflow: %{id: "wf-1"},
-        live_action: :edit
+    test "defaults 's' parameter to 'job' when no context (trigger case)" do
+      params = %{
+        "s" => "trigger-xyz",
+        "project_id" => "proj-1",
+        "id" => "wf-1"
       }
 
-      result = Helpers.collaborative_editor_url(assigns)
-      assert result == "/projects/proj-1/w/wf-1/collaborate?trigger=trigger-xyz"
+      result = Helpers.collaborative_editor_url(params, :edit)
+      assert result == "/projects/proj-1/w/wf-1/collaborate?job=trigger-xyz"
     end
 
-    test "converts 's' parameter to 'edge' when selected_edge exists" do
-      assigns = %{
-        query_params: %{"s" => "edge-123"},
-        selected_edge: %{id: "edge-123"},
-        project: %{id: "proj-1"},
-        workflow: %{id: "wf-1"},
-        live_action: :edit
+    test "defaults 's' parameter to 'job' when no context (edge case)" do
+      params = %{
+        "s" => "edge-123",
+        "project_id" => "proj-1",
+        "id" => "wf-1"
       }
 
-      result = Helpers.collaborative_editor_url(assigns)
-      assert result == "/projects/proj-1/w/wf-1/collaborate?edge=edge-123"
+      result = Helpers.collaborative_editor_url(params, :edit)
+      assert result == "/projects/proj-1/w/wf-1/collaborate?job=edge-123"
     end
 
     test "defaults 's' parameter to 'job' when no selection context" do
-      assigns = %{
-        query_params: %{"s" => "unknown-id"},
-        project: %{id: "proj-1"},
-        workflow: %{id: "wf-1"},
-        live_action: :edit
+      params = %{
+        "s" => "unknown-id",
+        "project_id" => "proj-1",
+        "id" => "wf-1"
       }
 
-      result = Helpers.collaborative_editor_url(assigns)
+      result = Helpers.collaborative_editor_url(params, :edit)
       assert result == "/projects/proj-1/w/wf-1/collaborate?job=unknown-id"
     end
 
     test "converts 'm=expand' to 'panel=editor'" do
-      assigns = %{
-        query_params: %{"m" => "expand"},
-        project: %{id: "proj-1"},
-        workflow: %{id: "wf-1"},
-        live_action: :edit
+      params = %{
+        "m" => "expand",
+        "project_id" => "proj-1",
+        "id" => "wf-1"
       }
 
-      result = Helpers.collaborative_editor_url(assigns)
+      result = Helpers.collaborative_editor_url(params, :edit)
       assert result == "/projects/proj-1/w/wf-1/collaborate?panel=editor"
     end
 
     test "converts 'm=workflow_input' to 'panel=run'" do
-      assigns = %{
-        query_params: %{"m" => "workflow_input"},
-        project: %{id: "proj-1"},
-        workflow: %{id: "wf-1"},
-        live_action: :edit
+      params = %{
+        "m" => "workflow_input",
+        "project_id" => "proj-1",
+        "id" => "wf-1"
       }
 
-      result = Helpers.collaborative_editor_url(assigns)
+      result = Helpers.collaborative_editor_url(params, :edit)
       assert result == "/projects/proj-1/w/wf-1/collaborate?panel=run"
     end
 
     test "converts 'm=settings' to 'panel=settings'" do
-      assigns = %{
-        query_params: %{"m" => "settings"},
-        project: %{id: "proj-1"},
-        workflow: %{id: "wf-1"},
-        live_action: :edit
+      params = %{
+        "m" => "settings",
+        "project_id" => "proj-1",
+        "id" => "wf-1"
       }
 
-      result = Helpers.collaborative_editor_url(assigns)
+      result = Helpers.collaborative_editor_url(params, :edit)
       assert result == "/projects/proj-1/w/wf-1/collaborate?panel=settings"
     end
 
     test "preserves 'v' parameter (version tag)" do
-      assigns = %{
-        query_params: %{"v" => "snapshot-123"},
-        project: %{id: "proj-1"},
-        workflow: %{id: "wf-1"},
-        live_action: :edit
+      params = %{
+        "v" => "snapshot-123",
+        "project_id" => "proj-1",
+        "id" => "wf-1"
       }
 
-      result = Helpers.collaborative_editor_url(assigns)
+      result = Helpers.collaborative_editor_url(params, :edit)
       assert result == "/projects/proj-1/w/wf-1/collaborate?v=snapshot-123"
     end
 
     test "preserves 'method' parameter" do
-      assigns = %{
-        query_params: %{"method" => "some-method"},
-        project: %{id: "proj-1"},
-        workflow: %{id: "wf-1"},
-        live_action: :edit
+      params = %{
+        "method" => "some-method",
+        "project_id" => "proj-1",
+        "id" => "wf-1"
       }
 
-      result = Helpers.collaborative_editor_url(assigns)
+      result = Helpers.collaborative_editor_url(params, :edit)
       assert result == "/projects/proj-1/w/wf-1/collaborate?method=some-method"
     end
 
     test "preserves 'w-chat' parameter" do
-      assigns = %{
-        query_params: %{"w-chat" => "chat-123"},
-        project: %{id: "proj-1"},
-        workflow: %{id: "wf-1"},
-        live_action: :edit
+      params = %{
+        "w-chat" => "chat-123",
+        "project_id" => "proj-1",
+        "id" => "wf-1"
       }
 
-      result = Helpers.collaborative_editor_url(assigns)
+      result = Helpers.collaborative_editor_url(params, :edit)
       assert result == "/projects/proj-1/w/wf-1/collaborate?w-chat=chat-123"
     end
 
     test "preserves 'j-chat' parameter" do
-      assigns = %{
-        query_params: %{"j-chat" => "chat-456"},
-        project: %{id: "proj-1"},
-        workflow: %{id: "wf-1"},
-        live_action: :edit
+      params = %{
+        "j-chat" => "chat-456",
+        "project_id" => "proj-1",
+        "id" => "wf-1"
       }
 
-      result = Helpers.collaborative_editor_url(assigns)
+      result = Helpers.collaborative_editor_url(params, :edit)
       assert result == "/projects/proj-1/w/wf-1/collaborate?j-chat=chat-456"
     end
 
     test "preserves 'code' parameter" do
-      assigns = %{
-        query_params: %{"code" => "some-code"},
-        project: %{id: "proj-1"},
-        workflow: %{id: "wf-1"},
-        live_action: :edit
+      params = %{
+        "code" => "some-code",
+        "project_id" => "proj-1",
+        "id" => "wf-1"
       }
 
-      result = Helpers.collaborative_editor_url(assigns)
+      result = Helpers.collaborative_editor_url(params, :edit)
       assert result == "/projects/proj-1/w/wf-1/collaborate?code=some-code"
     end
 
     test "skips 'panel' parameter (collaborative-only)" do
-      assigns = %{
-        query_params: %{"panel" => "run"},
-        project: %{id: "proj-1"},
-        workflow: %{id: "wf-1"},
-        live_action: :edit
+      params = %{
+        "panel" => "run",
+        "project_id" => "proj-1",
+        "id" => "wf-1"
       }
 
-      result = Helpers.collaborative_editor_url(assigns)
+      result = Helpers.collaborative_editor_url(params, :edit)
       assert result == "/projects/proj-1/w/wf-1/collaborate"
     end
 
     test "preserves unknown parameters for future compatibility" do
-      assigns = %{
-        query_params: %{"unknown" => "value"},
-        project: %{id: "proj-1"},
-        workflow: %{id: "wf-1"},
-        live_action: :edit
+      params = %{
+        "unknown" => "value",
+        "project_id" => "proj-1",
+        "id" => "wf-1"
       }
 
-      result = Helpers.collaborative_editor_url(assigns)
+      result = Helpers.collaborative_editor_url(params, :edit)
       assert result == "/projects/proj-1/w/wf-1/collaborate?unknown=value"
     end
 
     test "handles multiple parameters with complex conversion" do
-      assigns = %{
-        query_params: %{
-          "a" => "run-123",
-          "s" => "job-abc",
-          "m" => "expand",
-          "v" => "latest",
-          "w-chat" => "chat-123"
-        },
-        selected_job: %{id: "job-abc"},
-        project: %{id: "proj-1"},
-        workflow: %{id: "wf-1"},
-        live_action: :edit
+      params = %{
+        "a" => "run-123",
+        "s" => "job-abc",
+        "m" => "expand",
+        "v" => "latest",
+        "w-chat" => "chat-123",
+        "project_id" => "proj-1",
+        "id" => "wf-1"
       }
 
-      result = Helpers.collaborative_editor_url(assigns)
+      result = Helpers.collaborative_editor_url(params, :edit)
 
       # Check that all expected parameters are present
       assert result =~ "/projects/proj-1/w/wf-1/collaborate?"
@@ -240,14 +213,14 @@ defmodule LightningWeb.WorkflowLive.HelpersTest do
     end
 
     test "handles nil parameter values gracefully" do
-      assigns = %{
-        query_params: %{"a" => nil, "s" => nil},
-        project: %{id: "proj-1"},
-        workflow: %{id: "wf-1"},
-        live_action: :edit
+      params = %{
+        "a" => nil,
+        "s" => nil,
+        "project_id" => "proj-1",
+        "id" => "wf-1"
       }
 
-      result = Helpers.collaborative_editor_url(assigns)
+      result = Helpers.collaborative_editor_url(params, :edit)
       assert result == "/projects/proj-1/w/wf-1/collaborate"
     end
   end

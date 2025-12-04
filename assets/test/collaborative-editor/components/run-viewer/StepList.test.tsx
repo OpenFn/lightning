@@ -20,9 +20,10 @@ import type { StepDetail } from '../../../../js/collaborative-editor/types/histo
 
 // Mock useURLState hook
 const mockUpdateSearchParams = vi.fn();
+const mockParams: Record<string, string> = {};
 vi.mock('../../../../js/react/lib/use-url-state', () => ({
   useURLState: () => ({
-    searchParams: new URLSearchParams(),
+    params: mockParams,
     updateSearchParams: mockUpdateSearchParams,
   }),
 }));

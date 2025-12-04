@@ -158,6 +158,20 @@ defmodule LightningWeb.WorkflowChannel do
   end
 
   @impl true
+  def handle_in("switch_to_legacy_editor", _payload, socket) do
+    user = socket.assigns[:current_user]
+
+    # Clear the collaborative editor preference
+    Lightning.Accounts.update_user_preference(
+      user,
+      "prefer_collaborative_editor",
+      false
+    )
+
+    {:reply, {:ok, %{}}, socket}
+  end
+
+  @impl true
   def handle_in("get_context", _payload, socket) do
     user = socket.assigns[:current_user]
     workflow = socket.assigns.workflow
@@ -185,7 +199,9 @@ defmodule LightningWeb.WorkflowChannel do
         project: render_project_context(project),
         config: render_config_context(),
         permissions: render_permissions(user, project_user),
-        latest_snapshot_lock_version: fresh_workflow.lock_version,
+        latest_snapshot_lock_version:
+          (fresh_workflow && fresh_workflow.lock_version) ||
+            workflow.lock_version,
         project_repo_connection: render_repo_connection(project_repo_connection),
         webhook_auth_methods: render_webhook_auth_methods(webhook_auth_methods),
         workflow_template: render_workflow_template(workflow_template)

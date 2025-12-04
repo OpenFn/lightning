@@ -247,6 +247,7 @@ interface HistoryStoreInternals {
   _connectChannel: (provider: PhoenixChannelProvider) => () => void;
   _viewRun: (runId: string) => void;
   _closeRunViewer: () => void;
+  _switchingFromRun: () => void;
   _setActiveRunForTesting: (run: RunDetail) => void;
 }
 

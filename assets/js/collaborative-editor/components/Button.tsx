@@ -36,7 +36,7 @@ export function Button({
   const baseClasses = `
     rounded-md px-3 py-2 text-sm font-semibold shadow-xs
     focus-visible:outline-2 focus-visible:outline-offset-2
-    disabled:opacity-50 disabled:cursor-not-allowed
+    disabled:cursor-not-allowed
   `;
 
   // nakedClose button has different base classes (no padding/shadow)
@@ -52,20 +52,22 @@ export function Button({
     primary: `
       bg-primary-600 hover:bg-primary-500 text-white
       focus-visible:outline-primary-600
-      disabled:hover:bg-primary-600
+      disabled:bg-primary-300 disabled:hover:bg-primary-300
     `,
     danger: `
       bg-red-600 hover:bg-red-500 text-white
       focus-visible:outline-red-600
-      disabled:hover:bg-red-600
+      disabled:bg-red-300 disabled:hover:bg-red-300
     `,
     secondary: `
       bg-white text-gray-900 shadow-xs
       inset-ring inset-ring-gray-300
       hover:inset-ring-gray-400
+      disabled:bg-gray-50 disabled:text-gray-400
     `,
     nakedClose: `
       text-gray-400 hover:text-gray-500
+      disabled:opacity-50
     `,
   };
 

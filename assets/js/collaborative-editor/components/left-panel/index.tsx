@@ -40,7 +40,7 @@ export function LeftPanel({
 
   return (
     <div
-      className={`absolute inset-y-0 left-0 w-1/3 transition-transform duration-300 ease-in-out z-10 ${
+      className={`inset-y-0 left-0 w-1/3 transition-transform duration-300 ease-in-out z-10 ${
         method ? 'translate-x-0' : '-translate-x-full pointer-events-none'
       }`}
     >

@@ -34,6 +34,9 @@ export default defineConfig({
     alias: {
       // Ensure path aliases are resolved correctly
       '#': path.resolve(__dirname, './js'),
+      // morphdom is needed by phoenix_live_view internals (dom_patch.js)
+      // but the deps/ folder can't resolve from our node_modules
+      morphdom: path.resolve(__dirname, './node_modules/morphdom'),
     },
   },
 });

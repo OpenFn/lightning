@@ -20,7 +20,7 @@ import {
 import _logger from '#/utils/logger';
 
 import { useSocket } from '../../react/contexts/SocketProvider';
-import { useURLState } from '../../react/lib/use-url-state';
+import { useURLState } from '#/react/lib/use-url-state';
 import {
   createSessionStore,
   type SessionStoreInstance,
@@ -54,8 +54,8 @@ export const SessionProvider = ({
   const { socket, isConnected } = useSocket();
 
   // Get version from URL reactively
-  const { searchParams } = useURLState();
-  const version = searchParams.get('v');
+  const { params } = useURLState();
+  const version = params.v ?? null;
 
   // Create store instance once - stable reference
   const [sessionStore] = useState(() => createSessionStore());

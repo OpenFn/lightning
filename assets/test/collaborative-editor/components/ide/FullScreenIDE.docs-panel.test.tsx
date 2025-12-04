@@ -108,12 +108,11 @@ vi.mock('../../../../js/metadata-explorer/Explorer', () => ({
 }));
 
 // Mock useURLState hook
-const mockSearchParams = new URLSearchParams();
-mockSearchParams.set('job', 'job-1');
+const mockParams: Record<string, string> = { job: 'job-1' };
 
 vi.mock('../../../../js/react/lib/use-url-state', () => ({
   useURLState: () => ({
-    searchParams: mockSearchParams,
+    params: mockParams,
     updateSearchParams: vi.fn(),
     hash: '',
   }),
@@ -412,8 +411,8 @@ describe('FullScreenIDE - Docs/Metadata Panel', () => {
     });
 
     // Reset search params
-    mockSearchParams.delete('job');
-    mockSearchParams.set('job', 'job-1');
+    Object.keys(mockParams).forEach(key => delete mockParams[key]);
+    mockParams.job = 'job-1';
   });
 
   describe('panel state management', () => {

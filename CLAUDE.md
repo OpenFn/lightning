@@ -34,8 +34,8 @@ mix test --only focus                  # Run tests tagged with @tag :focus
 
 ```bash
 cd assets
-npm test                     # Run unit tests in watch mode
-npm run test:run             # Run tests once
+npm test                     # Run unit tests once
+npm run test:watch           # Run tests in watch mode
 npm run test:e2e             # Run E2E tests
 npm run test:e2e:ui          # E2E with interactive UI
 npm run lint                 # Lint TypeScript

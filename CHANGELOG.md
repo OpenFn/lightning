@@ -19,6 +19,31 @@ and this project adheres to
 
 ### Changed
 
+### Fixed
+
+- Run logs no longer disappear after browser refresh in IDE
+  [#4079](https://github.com/OpenFn/lightning/issues/4079)
+- Fix version chip [#4120](https://github.com/OpenFn/lightning/issues/4120)
+
+## [2.15.0-pre2] - 2025-12-04
+
+### Added
+
+- User preference persistence for collaborative editor - users can now toggle
+  between legacy and collaborative editors, and their choice is remembered
+  across sessions with automatic redirect
+  [#4091](https://github.com/OpenFn/lightning/issues/4091)
+- Added mini history to the IDE as a state machine that provides the same
+  experience that's available on the canvas
+  [#4054](https://github.com/OpenFn/lightning/issues/4054)
+  - **If no run chosen?** You can browse from history or create a new one.
+  - **If run chosen?** You can view the details or deselect to start over.
+
+### Changed
+
+- Refactor URLStore to use Record with Immer for proper structural sharing,
+  reducing unnecessary re-renders when unrelated URL params change
+  [#4097](https://github.com/OpenFn/lightning/issues/4097)
 - Show "Connect" button when no credential is selected for non-language-common
   steps [#4085](https://github.com/OpenFn/lightning/issues/4085)
 - Show credential name (and full name and owner on hover) when a credential is
@@ -28,8 +53,8 @@ and this project adheres to
 
 ### Fixed
 
-- Run logs no longer disappear after browser refresh in IDE
-  [#4079](https://github.com/OpenFn/lightning/issues/4079)
+- Fix version not switching when selecting a run from history panel
+  [#4097](https://github.com/OpenFn/lightning/issues/4097)
 - User menu dropdown no longer clips or causes horizontal scroll in side
   navigation [#4092](https://github.com/OpenFn/lightning/issues/4092)
 - Improved version mismatch banner UX: made compact, dismissible, and
@@ -47,6 +72,14 @@ and this project adheres to
   [#3972](https://github.com/OpenFn/lightning/issues/3972)
 - IDE shows job expresion of previously selected job
   [#4022](https://github.com/OpenFn/lightning/issues/4022)
+- Fix save & run buttons disabled after new workflow save
+  [#4084](https://github.com/OpenFn/lightning/issues/4084)
+- Fix flickering of canvas and job editor
+  [#4095](https://github.com/OpenFn/lightning/issues/4095)
+- Run channel crashes when sending `run:updated` event
+  [#4093](https://github.com/OpenFn/lightning/issues/4093)
+- Fix Version mismatch modal appears on top of IDE
+  [#4096](https://github.com/OpenFn/lightning/issues/4096)
 
 ## [2.15.0-pre1] - 2025-11-27
 

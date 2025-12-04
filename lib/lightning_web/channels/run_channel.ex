@@ -262,6 +262,7 @@ defmodule LightningWeb.RunChannel do
   # Forward PubSub events to browser clients
   @impl true
   def handle_info(%Runs.Events.RunUpdated{run: run}, socket) do
+    run = Repo.preload(run, :steps)
     push(socket, "run:updated", %{run: run})
     {:noreply, socket}
   end

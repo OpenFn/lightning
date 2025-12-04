@@ -4,7 +4,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 
-import { useURLState } from '../../react/lib/use-url-state';
+import { useURLState } from '#/react/lib/use-url-state';
 import type { WorkflowState as YAMLWorkflowState } from '../../yaml/types';
 import { useIsNewWorkflow, useProject } from '../hooks/useSessionContext';
 import {
@@ -36,7 +36,7 @@ export function WorkflowEditor({
   parentProjectId,
   parentProjectName,
 }: WorkflowEditorProps = {}) {
-  const { searchParams, updateSearchParams } = useURLState();
+  const { params, updateSearchParams } = useURLState();
   const { currentNode, selectNode } = useNodeSelection();
   const workflowStore = useWorkflowStoreContext();
   const isNewWorkflow = useIsNewWorkflow();
@@ -52,7 +52,7 @@ export function WorkflowEditor({
   useEffect(() => {
     if (isSyncingRef.current) return;
 
-    const panelParam = searchParams.get('panel');
+    const panelParam = params.panel ?? null;
 
     if (isRunPanelOpen) {
       const contextJobId = runPanelContext?.jobId;
@@ -96,16 +96,16 @@ export function WorkflowEditor({
         isSyncingRef.current = false;
       }, 0);
     }
-  }, [isRunPanelOpen, runPanelContext, searchParams, updateSearchParams]);
+  }, [isRunPanelOpen, runPanelContext, params, updateSearchParams]);
 
   useEffect(() => {
-    const panelParam = searchParams.get('panel');
+    const panelParam = params.panel ?? null;
 
     if (panelParam === 'run' && !isRunPanelOpen) {
       isSyncingRef.current = true;
 
-      const jobParam = searchParams.get('job');
-      const triggerParam = searchParams.get('trigger');
+      const jobParam = params.job ?? null;
+      const triggerParam = params.trigger ?? null;
 
       if (jobParam) {
         openRunPanel({ jobId: jobParam });
@@ -140,7 +140,7 @@ export function WorkflowEditor({
       }, 0);
     }
   }, [
-    searchParams,
+    params,
     isRunPanelOpen,
     currentNode.type,
     currentNode.node,
@@ -189,7 +189,7 @@ export function WorkflowEditor({
     positions: state.positions,
   }));
 
-  const currentMethod = searchParams.get('method') as
+  const currentMethod = (params.method ?? null) as
     | 'template'
     | 'import'
     | 'ai'
@@ -197,17 +197,17 @@ export function WorkflowEditor({
 
   const leftPanelMethod = showLeftPanel ? currentMethod || 'template' : null;
 
-  const isIDEOpen = searchParams.get('panel') === 'editor';
-  const selectedJobId = searchParams.get('job');
+  const isIDEOpen = params.panel === 'editor';
+  const selectedJobId = params.job ?? null;
 
   const handleCloseInspector = () => {
     selectNode(null);
   };
 
   const showInspector =
-    searchParams.get('panel') === 'settings' ||
-    searchParams.get('panel') === 'code' ||
-    searchParams.get('panel') === 'publish-template' ||
+    params.panel === 'settings' ||
+    params.panel === 'code' ||
+    params.panel === 'publish-template' ||
     Boolean(currentNode.node);
 
   const handleMethodChange = (method: 'template' | 'import' | 'ai' | null) => {
@@ -285,11 +285,9 @@ export function WorkflowEditor({
   );
 
   return (
-    <div className="flex h-full w-full">
+    <div className="flex h-full w-full flex-row-reverse">
       <div
-        className={`flex-1 relative transition-all duration-300 ease-in-out ${
-          showLeftPanel ? 'ml-[33.333333%]' : 'ml-0'
-        }`}
+        className={`flex-1 relative transition-all duration-300 ease-in-out`}
       >
         <CollaborativeWorkflowDiagram inspectorId="inspector" />
 
