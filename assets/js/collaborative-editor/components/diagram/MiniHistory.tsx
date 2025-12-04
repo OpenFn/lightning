@@ -366,17 +366,7 @@ export default function MiniHistory({
       className="flex items-center px-3 py-2 border-b
         border-gray-200 bg-gray-50"
     >
-      <button
-        type="button"
-        onClick={onBack}
-        className="p-1 mr-2 text-gray-400 hover:text-gray-600
-          hover:bg-gray-100 rounded transition-colors"
-        aria-label="Back to landing"
-      >
-        <span className="hero-arrow-left w-4 h-4" />
-      </button>
-      <h3 className="text-sm font-medium text-gray-700">Run History</h3>
-      <div className="flex-1" />
+      <h3 className="text-sm font-medium text-gray-700 mr-1">Run History</h3>
       <button
         type="button"
         onClick={gotoHistory}
@@ -384,6 +374,16 @@ export default function MiniHistory({
         aria-label="View full history for this workflow"
       >
         <span className="hero-rectangle-stack w-4 h-4" />
+      </button>
+      <div className="flex-1" />
+      <button
+        type="button"
+        onClick={onBack}
+        className="p-1 mr-2 text-gray-400 hover:text-gray-600
+          hover:bg-gray-100 rounded transition-colors"
+        aria-label="Back to landing"
+      >
+        <span className="hero-x-mark w-4 h-4" />
       </button>
     </div>
   );

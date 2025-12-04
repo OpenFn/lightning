@@ -1,5 +1,7 @@
 import {
+  ClockIcon,
   DocumentTextIcon,
+  PlayIcon,
   SparklesIcon,
   ViewColumnsIcon,
   XMarkIcon,
@@ -65,9 +67,6 @@ import { SandboxIndicatorBanner } from '../SandboxIndicatorBanner';
 import { ShortcutKeys } from '../ShortcutKeys';
 import { Tabs } from '../Tabs';
 import { Tooltip } from '../Tooltip';
-
-import { PanelToggleButton } from './PanelToggleButton';
-import { RightPanelLanding } from './RightPanelLanding';
 
 /**
  * Resolves an adaptor specifier into its package name and version
@@ -143,11 +142,7 @@ export function FullScreenIDE({
   const projectId = project?.id;
   const workflowId = useWorkflowState(state => state.workflow?.id);
 
-  const centerPanelRef = useRef<ImperativePanelHandle>(null);
   const rightPanelRef = useRef<ImperativePanelHandle>(null);
-
-  const [isCenterCollapsed, setIsCenterCollapsed] = useState(false);
-  const [isRightCollapsed, setIsRightCollapsed] = useState(false);
 
   // Docs/Metadata panel state
   const [isDocsCollapsed, setIsDocsCollapsed] = useState<boolean>(() => {
@@ -175,13 +170,14 @@ export function FullScreenIDE({
   const [manuallyUnselectedDataclip, setManuallyUnselectedDataclip] =
     useState(false);
 
-  // Right panel sub-state for when no run is loaded
-  type RightPanelSubState = 'landing' | 'history' | 'create-run';
-  const [rightPanelSubState, setRightPanelSubState] =
-    useState<RightPanelSubState>('landing');
+  // Right panel sub-state for when no run is loaded (undefined = panel hidden)
+  const [rightPanelSubState, setRightPanelSubState] = useState<
+    'history' | 'create-run' | undefined
+  >(undefined);
 
-  // Derived panel state - run viewer takes precedence
-  const panelState = followRunId ? 'run-viewer' : rightPanelSubState;
+  // Derived panel state - run viewer takes precedence, undefined means panel is hidden
+  const panelState: 'run-viewer' | 'history' | 'create-run' | undefined =
+    followRunId ? 'run-viewer' : rightPanelSubState;
 
   const handleDataclipChange = useCallback((dataclip: Dataclip | null) => {
     setSelectedDataclipState(dataclip);
@@ -220,7 +216,7 @@ export function FullScreenIDE({
     setSelectedTab('empty');
     setCustomBody('');
     setManuallyUnselectedDataclip(false);
-    setRightPanelSubState('landing');
+    setRightPanelSubState(undefined);
   }, [updateSearchParams, clearRun]);
 
   const handleNavigateToHistory = useCallback(() => {
@@ -228,7 +224,7 @@ export function FullScreenIDE({
   }, []);
 
   const handleNavigateToCreateRun = useCallback(() => {
-    // Reset to fresh state when entering create-run from landing
+    // Reset to fresh state when entering create-run
     setSelectedDataclipState(null);
     setSelectedTab('empty');
     setCustomBody('');
@@ -237,13 +233,13 @@ export function FullScreenIDE({
     setRightPanelSubState('create-run');
   }, []);
 
-  const handleBackToLanding = useCallback(() => {
-    // Reset input state when going back to landing
+  const handleClosePanel = useCallback(() => {
+    // Reset input state when closing panel
     setSelectedDataclipState(null);
     setSelectedTab('empty');
     setCustomBody('');
     setManuallyUnselectedDataclip(false);
-    setRightPanelSubState('landing');
+    setRightPanelSubState(undefined);
   }, []);
 
   const handleHistoryRunSelect = useCallback(
@@ -480,9 +476,9 @@ export function FullScreenIDE({
       setSelectedTab('empty');
       setCustomBody('');
       setManuallyUnselectedDataclip(false);
-      // Return to landing if we were in create-run state
+      // Close panel if we were in create-run state
       if (rightPanelSubState === 'create-run') {
-        setRightPanelSubState('landing');
+        setRightPanelSubState(undefined);
       }
     }
     prevJobIdRef.current = jobIdFromURL;
@@ -721,27 +717,6 @@ export function FullScreenIDE({
     );
   }
 
-  const openPanelCount =
-    (!isCenterCollapsed ? 1 : 0) + (!isRightCollapsed ? 1 : 0);
-
-  const toggleCenterPanel = () => {
-    if (!isCenterCollapsed && openPanelCount === 1) return;
-    if (isCenterCollapsed) {
-      centerPanelRef.current?.expand();
-    } else {
-      centerPanelRef.current?.collapse();
-    }
-  };
-
-  const toggleRightPanel = () => {
-    if (!isRightCollapsed && openPanelCount === 1) return;
-    if (isRightCollapsed) {
-      rightPanelRef.current?.expand();
-    } else {
-      rightPanelRef.current?.collapse();
-    }
-  };
-
   const toggleDocsPanel = () => {
     if (isDocsCollapsed) {
       docsPanelRef.current?.expand();
@@ -805,47 +780,103 @@ export function FullScreenIDE({
                 />
               </div>
             )}
+
+            {/* Docs/Metadata toggle buttons */}
+            <div className="flex items-center gap-1 shrink-0">
+              <button
+                onClick={() => handleDocsTabChange('docs')}
+                className={cn(
+                  'flex items-center gap-1 px-2 py-1 text-xs rounded transition-colors',
+                  selectedDocsTab === 'docs' && !isDocsCollapsed
+                    ? 'bg-primary-100 text-primary-800'
+                    : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'
+                )}
+                title="Show adaptor documentation"
+              >
+                <DocumentTextIcon className="h-3.5 w-3.5" />
+                Docs
+              </button>
+              <button
+                onClick={() => handleDocsTabChange('metadata')}
+                className={cn(
+                  'flex items-center gap-1 px-2 py-1 text-xs rounded transition-colors',
+                  selectedDocsTab === 'metadata' && !isDocsCollapsed
+                    ? 'bg-primary-100 text-primary-800'
+                    : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'
+                )}
+                title="Show metadata explorer"
+              >
+                <SparklesIcon className="h-3.5 w-3.5" />
+                Metadata
+              </button>
+            </div>
           </div>
 
           <div className="flex items-center gap-2 shrink-0">
-            {/* Run/Retry button */}
-            <RunRetryButton
-              isRetryable={isRetryable}
-              isDisabled={
-                !(
-                  canRunSnapshot &&
-                  canRunFromHook &&
-                  !isSubmitting &&
-                  !runIsProcessing &&
-                  jobMatchesRun &&
-                  // Only allow run when in run-viewer (retry) or create-run state
-                  // Not in landing or history states
-                  (panelState === 'run-viewer' || panelState === 'create-run')
-                )
-              }
-              isSubmitting={isSubmitting || runIsProcessing}
-              onRun={() => {
-                void handleRun();
-              }}
-              onRetry={() => {
-                void handleRetry();
-              }}
-              buttonText={{
-                run: 'Run',
-                retry: 'Run (retry)',
-                processing: 'Processing',
-              }}
-              variant="primary"
-              dropdownPosition="down"
-              showKeyboardShortcuts={true}
-              disabledTooltip={
-                panelState === 'landing' || panelState === 'history'
-                  ? 'Select an input method first'
-                  : !jobMatchesRun
+            {/* History button - shown when no panel, viewing history, or creating new run */}
+            {panelState !== 'run-viewer' && (
+              <button
+                type="button"
+                onClick={handleNavigateToHistory}
+                className={cn(
+                  'inline-flex items-center gap-1.5 rounded-md px-3 py-2 text-sm font-semibold shadow-xs transition-colors',
+                  panelState === 'history'
+                    ? 'bg-primary-600 text-white hover:bg-primary-500'
+                    : 'bg-white text-gray-900 ring-1 ring-inset ring-gray-300 hover:bg-gray-50'
+                )}
+              >
+                <ClockIcon className="h-4 w-4" />
+                History
+              </button>
+            )}
+
+            {/* Run button - shown when no panel or viewing history */}
+            {(panelState === undefined || panelState === 'history') && (
+              <button
+                type="button"
+                onClick={handleNavigateToCreateRun}
+                className="inline-flex items-center gap-1.5 rounded-md px-3 py-2 text-sm font-semibold shadow-xs bg-white text-gray-900 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 transition-colors"
+              >
+                <PlayIcon className="h-4 w-4" />
+                Run
+              </button>
+            )}
+
+            {/* Run/Retry button - shown when creating new run or viewing existing run */}
+            {(panelState === 'run-viewer' || panelState === 'create-run') && (
+              <RunRetryButton
+                isRetryable={isRetryable}
+                isDisabled={
+                  !(
+                    canRunSnapshot &&
+                    canRunFromHook &&
+                    !isSubmitting &&
+                    !runIsProcessing &&
+                    jobMatchesRun
+                  )
+                }
+                isSubmitting={isSubmitting || runIsProcessing}
+                onRun={() => {
+                  void handleRun();
+                }}
+                onRetry={() => {
+                  void handleRetry();
+                }}
+                buttonText={{
+                  run: 'Run',
+                  retry: 'Run (retry)',
+                  processing: 'Processing',
+                }}
+                variant="primary"
+                dropdownPosition="down"
+                showKeyboardShortcuts={true}
+                disabledTooltip={
+                  !jobMatchesRun
                     ? 'Selected job was not part of this run'
                     : runTooltipMessage
-              }
-            />
+                }
+              />
+            )}
 
             {/* Close button */}
             <Tooltip content={<ShortcutKeys keys={['esc']} />} side="bottom">
@@ -868,327 +899,197 @@ export function FullScreenIDE({
           className="h-full"
         >
           {/* Center Panel - CollaborativeMonaco Editor with nested Docs/Metadata */}
-          <Panel
-            ref={centerPanelRef}
-            defaultSize={100}
-            minSize={25}
-            collapsible
-            collapsedSize={2}
-            onCollapse={() => setIsCenterCollapsed(true)}
-            onExpand={() => setIsCenterCollapsed(false)}
-            className="bg-slate-100"
-          >
+          <Panel defaultSize={100} minSize={25} className="bg-slate-100">
             <div className="h-full flex flex-col">
-              {/* Panel heading */}
-              <div
-                className={`shrink-0 border-b border-gray-100 transition-transform ${
-                  isCenterCollapsed ? 'rotate-90' : ''
-                }`}
-              >
-                <div className="flex items-center justify-between px-3 py-1">
-                  {!isCenterCollapsed ? (
-                    <>
-                      <div
-                        className="text-xs font-medium text-gray-400
-                        uppercase tracking-wide"
-                      >
-                        Code - {currentJob?.name || 'Untitled'}
-                      </div>
-                      <div className="flex items-center gap-1">
-                        {/* Docs/Metadata toggle buttons */}
-                        <button
-                          onClick={() => handleDocsTabChange('docs')}
-                          className={cn(
-                            'flex items-center gap-1 px-2 py-1 text-xs rounded transition-colors',
-                            selectedDocsTab === 'docs' && !isDocsCollapsed
-                              ? 'bg-primary-100 text-primary-800'
-                              : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'
-                          )}
-                          title="Show adaptor documentation"
-                        >
-                          <DocumentTextIcon className="h-3.5 w-3.5" />
-                          Docs
-                        </button>
-                        <button
-                          onClick={() => handleDocsTabChange('metadata')}
-                          className={cn(
-                            'flex items-center gap-1 px-2 py-1 text-xs rounded transition-colors',
-                            selectedDocsTab === 'metadata' && !isDocsCollapsed
-                              ? 'bg-primary-100 text-primary-800'
-                              : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'
-                          )}
-                          title="Show metadata explorer"
-                        >
-                          <SparklesIcon className="h-3.5 w-3.5" />
-                          Metadata
-                        </button>
-                        <PanelToggleButton
-                          onClick={toggleCenterPanel}
-                          disabled={openPanelCount === 1}
-                          isCollapsed={isCenterCollapsed}
-                          ariaLabel="Collapse code panel"
+              {/* Editor + Docs/Metadata panels */}
+              <div className="flex-1 overflow-hidden">
+                <PanelGroup
+                  key={docsOrientation}
+                  direction={docsOrientation}
+                  autoSaveId="lightning.ide-docs-layout"
+                  className="h-full"
+                >
+                  {/* Monaco Editor Panel */}
+                  <Panel defaultSize={60} minSize={25}>
+                    <div className="h-full flex flex-col">
+                      <div className="flex-1 overflow-hidden">
+                        <CollaborativeMonaco
+                          ytext={currentJobYText}
+                          awareness={awareness}
+                          adaptor={currentJob.adaptor || 'common'}
+                          disabled={!canSave}
+                          className="h-full w-full"
+                          options={{
+                            automaticLayout: true,
+                            minimap: { enabled: true },
+                            lineNumbers: 'on',
+                            wordWrap: 'on',
+                          }}
                         />
                       </div>
-                    </>
-                  ) : (
-                    <button
-                      onClick={toggleCenterPanel}
-                      className="ml-2 text-xs font-medium text-gray-400
-                        uppercase tracking-wide hover:text-gray-600
-                        transition-colors cursor-pointer whitespace-nowrap"
-                    >
-                      Code - {currentJob?.name || 'Untitled'}
-                    </button>
+                    </div>
+                  </Panel>
+
+                  {/* Resize Handle */}
+                  {!isDocsCollapsed && (
+                    <PanelResizeHandle
+                      className={cn(
+                        'bg-gray-200 hover:bg-blue-400 transition-colors',
+                        docsOrientation === 'horizontal'
+                          ? 'w-1 cursor-col-resize'
+                          : 'h-1 cursor-row-resize'
+                      )}
+                    />
                   )}
-                </div>
-              </div>
 
-              {/* Nested PanelGroup for Editor + Docs/Metadata */}
-              {!isCenterCollapsed && (
-                <div className="flex-1 overflow-hidden">
-                  <PanelGroup
-                    key={docsOrientation}
-                    direction={docsOrientation}
-                    autoSaveId="lightning.ide-docs-layout"
-                    className="h-full"
+                  {/* Docs/Metadata Panel */}
+                  <Panel
+                    ref={docsPanelRef}
+                    defaultSize={40}
+                    minSize={20}
+                    collapsible
+                    collapsedSize={0}
+                    onCollapse={() => setIsDocsCollapsed(true)}
+                    onExpand={() => setIsDocsCollapsed(false)}
+                    className="bg-white"
                   >
-                    {/* Monaco Editor Panel */}
-                    <Panel defaultSize={60} minSize={25}>
-                      <div className="h-full flex flex-col">
-                        <div className="flex-1 overflow-hidden">
-                          <CollaborativeMonaco
-                            ytext={currentJobYText}
-                            awareness={awareness}
-                            adaptor={currentJob.adaptor || 'common'}
-                            disabled={!canSave}
-                            className="h-full w-full"
-                            options={{
-                              automaticLayout: true,
-                              minimap: { enabled: true },
-                              lineNumbers: 'on',
-                              wordWrap: 'on',
-                            }}
-                          />
-                        </div>
-                      </div>
-                    </Panel>
-
-                    {/* Resize Handle */}
-                    {!isDocsCollapsed && (
-                      <PanelResizeHandle
-                        className={cn(
-                          'bg-gray-200 hover:bg-blue-400 transition-colors',
-                          docsOrientation === 'horizontal'
-                            ? 'w-1 cursor-col-resize'
-                            : 'h-1 cursor-row-resize'
-                        )}
-                      />
-                    )}
-
-                    {/* Docs/Metadata Panel */}
-                    <Panel
-                      ref={docsPanelRef}
-                      defaultSize={40}
-                      minSize={20}
-                      collapsible
-                      collapsedSize={0}
-                      onCollapse={() => setIsDocsCollapsed(true)}
-                      onExpand={() => setIsDocsCollapsed(false)}
-                      className="bg-white"
-                    >
-                      <div className="h-full flex flex-col">
-                        {/* Docs panel header with controls */}
-                        {!isDocsCollapsed && (
-                          <div className="shrink-0">
-                            <div className="flex items-center justify-between px-3 pt-2 pb-1">
-                              <div className="flex-1">
-                                <Tabs
-                                  value={selectedDocsTab}
-                                  onChange={tab =>
-                                    setSelectedDocsTab(
-                                      tab as 'docs' | 'metadata'
-                                    )
-                                  }
-                                  variant="pills"
-                                  options={[
-                                    {
-                                      value: 'docs',
-                                      label: 'Docs',
-                                      icon: DocumentTextIcon,
-                                    },
-                                    {
-                                      value: 'metadata',
-                                      label: 'Metadata',
-                                      icon: SparklesIcon,
-                                    },
-                                  ]}
+                    <div className="h-full flex flex-col">
+                      {/* Docs panel header with controls */}
+                      {!isDocsCollapsed && (
+                        <div className="shrink-0">
+                          <div className="flex items-center justify-between px-3 pt-2 pb-1">
+                            <div className="flex-1">
+                              <Tabs
+                                value={selectedDocsTab}
+                                onChange={tab =>
+                                  setSelectedDocsTab(tab as 'docs' | 'metadata')
+                                }
+                                variant="pills"
+                                options={[
+                                  {
+                                    value: 'docs',
+                                    label: 'Docs',
+                                    icon: DocumentTextIcon,
+                                  },
+                                  {
+                                    value: 'metadata',
+                                    label: 'Metadata',
+                                    icon: SparklesIcon,
+                                  },
+                                ]}
+                              />
+                            </div>
+                            <div className="flex items-center gap-1 pl-2">
+                              <button
+                                onClick={toggleDocsOrientation}
+                                className="p-1 hover:bg-gray-100 rounded transition-colors"
+                                title="Toggle panel orientation"
+                              >
+                                <ViewColumnsIcon
+                                  className={cn(
+                                    'h-4 w-4 text-gray-500',
+                                    docsOrientation === 'vertical' &&
+                                      'rotate-90'
+                                  )}
                                 />
-                              </div>
-                              <div className="flex items-center gap-1 pl-2">
-                                <button
-                                  onClick={toggleDocsOrientation}
-                                  className="p-1 hover:bg-gray-100 rounded transition-colors"
-                                  title="Toggle panel orientation"
-                                >
-                                  <ViewColumnsIcon
-                                    className={cn(
-                                      'h-4 w-4 text-gray-500',
-                                      docsOrientation === 'vertical' &&
-                                        'rotate-90'
-                                    )}
-                                  />
-                                </button>
-                                <button
-                                  onClick={toggleDocsPanel}
-                                  className="p-1 hover:bg-gray-100 rounded transition-colors"
-                                  aria-label="Close docs panel"
-                                  title="Close docs panel"
-                                >
-                                  <XMarkIcon className="h-4 w-4 text-gray-500" />
-                                </button>
-                              </div>
+                              </button>
+                              <button
+                                onClick={toggleDocsPanel}
+                                className="p-1 hover:bg-gray-100 rounded transition-colors"
+                                aria-label="Close docs panel"
+                                title="Close docs panel"
+                              >
+                                <XMarkIcon className="h-4 w-4 text-gray-500" />
+                              </button>
                             </div>
                           </div>
-                        )}
+                        </div>
+                      )}
 
-                        {/* Docs/Metadata content */}
-                        {!isDocsCollapsed && (
-                          <div className="flex-1 overflow-auto p-2">
-                            {selectedDocsTab === 'docs' && (
-                              <Docs
-                                adaptor={
-                                  currentJob.adaptor ||
-                                  '@openfn/language-common@latest'
-                                }
-                              />
-                            )}
-                            {selectedDocsTab === 'metadata' && (
-                              <Metadata
-                                adaptor={
-                                  currentJob.adaptor ||
-                                  '@openfn/language-common@latest'
-                                }
-                                metadata={null}
-                              />
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    </Panel>
-                  </PanelGroup>
-                </div>
-              )}
+                      {/* Docs/Metadata content */}
+                      {!isDocsCollapsed && (
+                        <div className="flex-1 overflow-auto p-2">
+                          {selectedDocsTab === 'docs' && (
+                            <Docs
+                              adaptor={
+                                currentJob.adaptor ||
+                                '@openfn/language-common@latest'
+                              }
+                            />
+                          )}
+                          {selectedDocsTab === 'metadata' && (
+                            <Metadata
+                              adaptor={
+                                currentJob.adaptor ||
+                                '@openfn/language-common@latest'
+                              }
+                              metadata={null}
+                            />
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </Panel>
+                </PanelGroup>
+              </div>
             </div>
           </Panel>
 
-          {/* Resize Handle */}
-          <PanelResizeHandle
-            className="w-1 bg-gray-200 hover:bg-blue-400
-            transition-colors cursor-col-resize"
-          />
+          {/* Resize Handle - only show when right panel is visible */}
+          {panelState && (
+            <PanelResizeHandle
+              className="w-1 bg-gray-200 hover:bg-blue-400
+              transition-colors cursor-col-resize"
+            />
+          )}
 
-          {/* Right Panel - ManualRunPanel or RunViewerPanel */}
-          <Panel
-            ref={rightPanelRef}
-            defaultSize={30}
-            minSize={panelState === 'landing' ? 10 : 30}
-            collapsible
-            collapsedSize={2}
-            onCollapse={() => setIsRightCollapsed(true)}
-            onExpand={() => setIsRightCollapsed(false)}
-            className="bg-slate-100 bg-gray-50 border-l border-gray-200"
-          >
-            <div className="h-full flex flex-col">
-              {/* Panel heading with tabs or title */}
-              <div
-                className={`shrink-0 transition-transform ${
-                  isRightCollapsed ? 'rotate-90' : ''
-                }`}
-              >
-                <div className="flex items-center justify-between px-3 py-1">
-                  {!isRightCollapsed ? (
-                    <>
-                      {panelState === 'run-viewer' ? (
-                        <>
-                          {/* Close run chip */}
-                          <Tooltip
-                            content={
-                              shouldShowMismatch
-                                ? `${selectedStepName} was not part of this run. Pick another step or deselect the run.`
-                                : undefined
-                            }
-                            side="bottom"
-                          >
-                            <RunBadge
-                              runId={followRunId}
-                              onClose={handleClearFollowRun}
-                              variant={
-                                shouldShowMismatch ? 'warning' : 'default'
-                              }
-                              className="mr-3"
-                            />
-                          </Tooltip>
-                          {/* Tabs as header content when showing run */}
-                          <div className="flex-1">
-                            <Tabs
-                              value={activeRightTab}
-                              onChange={setActiveRightTab}
-                              variant="underline"
-                              options={[
-                                { value: 'log', label: 'Logs' },
-                                { value: 'input', label: 'Input' },
-                                { value: 'output', label: 'Output' },
-                              ]}
-                            />
-                          </div>
-                        </>
-                      ) : panelState === 'history' ? (
-                        <div
-                          className="text-xs font-medium text-gray-400
-                          uppercase tracking-wide"
-                        >
-                          Run History
-                        </div>
-                      ) : panelState === 'create-run' ? (
-                        <div
-                          className="text-xs font-medium text-gray-400
-                          uppercase tracking-wide"
-                        >
-                          New Run (Select Input)
-                        </div>
-                      ) : (
-                        <div
-                          className="text-xs font-medium text-gray-400
-                          uppercase tracking-wide"
-                        >
-                          Runs
-                        </div>
-                      )}
-                      {/* Collapse button */}
-                      <PanelToggleButton
-                        onClick={toggleRightPanel}
-                        disabled={openPanelCount === 1}
-                        isCollapsed={isRightCollapsed}
-                        ariaLabel="Collapse right panel"
-                      />
-                    </>
-                  ) : (
-                    <button
-                      onClick={toggleRightPanel}
-                      className="ml-2 text-xs font-medium text-gray-400
-                        uppercase tracking-wide hover:text-gray-600
-                        transition-colors cursor-pointer whitespace-nowrap"
-                    >
-                      {panelState === 'run-viewer'
-                        ? `Run - ${followRunId?.slice(0, 7)}`
-                        : 'Runs'}
-                    </button>
-                  )}
-                </div>
-              </div>
+          {/* Right Panel - ManualRunPanel or RunViewerPanel (only rendered when panelState exists) */}
+          {panelState && (
+            <Panel
+              ref={rightPanelRef}
+              defaultSize={30}
+              minSize={30}
+              className="bg-gray-50 border-l border-gray-200"
+            >
+              <div className="h-full flex flex-col">
+                {/* Panel heading - only for run-viewer */}
+                {panelState === 'run-viewer' && (
+                  <div className="shrink-0">
+                    <div className="flex items-center justify-between px-3 py-1">
+                      {/* Close run chip */}
+                      <Tooltip
+                        content={
+                          shouldShowMismatch
+                            ? `${selectedStepName} was not part of this run. Pick another step or deselect the run.`
+                            : undefined
+                        }
+                        side="bottom"
+                      >
+                        <RunBadge
+                          runId={followRunId}
+                          onClose={handleClearFollowRun}
+                          variant={shouldShowMismatch ? 'warning' : 'default'}
+                          className="mr-3"
+                        />
+                      </Tooltip>
+                      {/* Tabs as header content when showing run */}
+                      <div className="flex-1">
+                        <Tabs
+                          value={activeRightTab}
+                          onChange={setActiveRightTab}
+                          variant="underline"
+                          options={[
+                            { value: 'log', label: 'Logs' },
+                            { value: 'input', label: 'Input' },
+                            { value: 'output', label: 'Output' },
+                          ]}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
 
-              {/* Panel content */}
-              {!isRightCollapsed && (
+                {/* Panel content */}
                 <div className="flex-1 overflow-hidden bg-white">
                   {panelState === 'run-viewer' && followRunId ? (
                     <RunViewerErrorBoundary>
@@ -1214,21 +1115,18 @@ export function FullScreenIDE({
                         clearError();
                         void requestHistory();
                       }}
-                      onBack={handleBackToLanding}
+                      onBack={handleClosePanel}
                     />
-                  ) : panelState === 'create-run' &&
-                    workflow &&
-                    projectId &&
-                    workflowId ? (
+                  ) : workflow && projectId && workflowId ? (
                     <div className="flex flex-col h-full">
                       <div className="flex items-center px-3 py-2 border-b border-gray-200">
                         <button
                           type="button"
-                          onClick={handleBackToLanding}
+                          onClick={handleClosePanel}
                           className="p-1 mr-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded transition-colors"
-                          aria-label="Back to landing"
+                          aria-label="Close panel"
                         >
-                          <span className="hero-arrow-left w-4 h-4" />
+                          <span className="hero-x-mark w-4 h-4" />
                         </button>
                         <span className="text-sm font-medium text-gray-700">
                           Create Run
@@ -1259,17 +1157,11 @@ export function FullScreenIDE({
                         </ManualRunPanelErrorBoundary>
                       </div>
                     </div>
-                  ) : (
-                    /* Landing state */
-                    <RightPanelLanding
-                      onSelectHistory={handleNavigateToHistory}
-                      onCreateRun={handleNavigateToCreateRun}
-                    />
-                  )}
+                  ) : null}
                 </div>
-              )}
-            </div>
-          </Panel>
+              </div>
+            </Panel>
+          )}
         </PanelGroup>
       </div>
 
