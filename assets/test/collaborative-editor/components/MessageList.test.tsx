@@ -432,6 +432,173 @@ describe('MessageList', () => {
       expect(link).toBeInTheDocument();
       expect(link?.getAttribute('href')).toBe('https://openfn.org');
     });
+
+    it('should render GFM tables with alignment', () => {
+      const messages = [
+        createMockAIMessage({
+          role: 'assistant',
+          content:
+            '| Left | Center | Right |\n|:-----|:------:|------:|\n| L | C | R |',
+        }),
+      ];
+
+      const { container } = render(<MessageList messages={messages} />);
+
+      const table = container.querySelector('table');
+      expect(table).toBeInTheDocument();
+      expect(container.querySelector('thead')).toBeInTheDocument();
+      expect(container.querySelector('tbody')).toBeInTheDocument();
+
+      // Check alignment attributes are preserved
+      const leftTh = container.querySelector('th[align="left"]');
+      const centerTh = container.querySelector('th[align="center"]');
+      const rightTh = container.querySelector('th[align="right"]');
+      expect(leftTh).toBeInTheDocument();
+      expect(centerTh).toBeInTheDocument();
+      expect(rightTh).toBeInTheDocument();
+    });
+
+    it('should render strikethrough text', () => {
+      const messages = [
+        createMockAIMessage({
+          role: 'assistant',
+          content: 'This is ~~deleted~~ text.',
+        }),
+      ];
+
+      const { container } = render(<MessageList messages={messages} />);
+
+      const del = container.querySelector('del');
+      expect(del).toBeInTheDocument();
+      expect(del?.textContent).toBe('deleted');
+    });
+
+    it('should render horizontal rules', () => {
+      const messages = [
+        createMockAIMessage({
+          role: 'assistant',
+          content: 'Above\n\n---\n\nBelow',
+        }),
+      ];
+
+      const { container } = render(<MessageList messages={messages} />);
+
+      expect(container.querySelector('hr')).toBeInTheDocument();
+    });
+  });
+
+  describe('XSS Sanitization', () => {
+    it('should strip script tags from content', () => {
+      const messages = [
+        createMockAIMessage({
+          role: 'assistant',
+          content: 'Hello <script>alert("xss")</script> world',
+        }),
+      ];
+
+      const { container } = render(<MessageList messages={messages} />);
+
+      expect(container.querySelector('script')).not.toBeInTheDocument();
+      expect(container.textContent).toContain('Hello');
+      expect(container.textContent).toContain('world');
+      expect(container.textContent).not.toContain('alert');
+    });
+
+    it('should strip onerror handlers from img tags', () => {
+      const messages = [
+        createMockAIMessage({
+          role: 'assistant',
+          content: '<img src="x" onerror="alert(\'xss\')">',
+        }),
+      ];
+
+      const { container } = render(<MessageList messages={messages} />);
+
+      // img tag itself should be stripped (not in allowed tags)
+      expect(container.querySelector('img')).not.toBeInTheDocument();
+    });
+
+    it('should strip onclick handlers', () => {
+      const messages = [
+        createMockAIMessage({
+          role: 'assistant',
+          content: '<a href="#" onclick="alert(\'xss\')">Click me</a>',
+        }),
+      ];
+
+      const { container } = render(<MessageList messages={messages} />);
+
+      const link = container.querySelector('a');
+      expect(link).toBeInTheDocument();
+      expect(link?.getAttribute('onclick')).toBeNull();
+    });
+
+    it('should strip iframe tags', () => {
+      const messages = [
+        createMockAIMessage({
+          role: 'assistant',
+          content: '<iframe src="https://evil.com"></iframe>',
+        }),
+      ];
+
+      const { container } = render(<MessageList messages={messages} />);
+
+      expect(container.querySelector('iframe')).not.toBeInTheDocument();
+    });
+
+    it('should strip javascript: URLs from links', () => {
+      const messages = [
+        createMockAIMessage({
+          role: 'assistant',
+          content: '<a href="javascript:alert(\'xss\')">Click</a>',
+        }),
+      ];
+
+      const { container } = render(<MessageList messages={messages} />);
+
+      const link = container.querySelector('a');
+      expect(link).toBeInTheDocument();
+      // DOMPurify removes javascript: URLs entirely (href becomes null)
+      expect(link?.getAttribute('href')).toBeNull();
+    });
+
+    it('should strip style attributes', () => {
+      const messages = [
+        createMockAIMessage({
+          role: 'assistant',
+          content:
+            '<p style="background:url(javascript:alert(\'xss\'))">Styled</p>',
+        }),
+      ];
+
+      const { container } = render(<MessageList messages={messages} />);
+
+      const p = container.querySelector('p');
+      expect(p).toBeInTheDocument();
+      expect(p?.getAttribute('style')).toBeNull();
+    });
+
+    it('should preserve safe markdown while stripping dangerous HTML', () => {
+      const messages = [
+        createMockAIMessage({
+          role: 'assistant',
+          content:
+            '# Safe Heading\n\n<script>bad()</script>\n\n**Bold** and [link](https://safe.com)',
+        }),
+      ];
+
+      const { container } = render(<MessageList messages={messages} />);
+
+      // Safe content preserved
+      expect(container.querySelector('h1')).toBeInTheDocument();
+      expect(container.querySelector('strong')).toBeInTheDocument();
+      expect(container.querySelector('a')?.getAttribute('href')).toBe(
+        'https://safe.com'
+      );
+
+      // Dangerous content removed
+      expect(container.querySelector('script')).not.toBeInTheDocument();
+    });
   });
 
   describe('Auto-scroll Behavior', () => {

@@ -1,3 +1,4 @@
+import DOMPurify, { Config as DOMPurifyConfig } from 'dompurify';
 import { marked } from 'marked';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
@@ -7,6 +8,50 @@ marked.setOptions({
   gfm: true,
   breaks: true,
 });
+
+/**
+ * DOMPurify configuration for sanitizing markdown HTML output.
+ * Only allows safe tags/attributes that marked.js produces from standard markdown.
+ */
+const SANITIZE_CONFIG: DOMPurifyConfig = {
+  ALLOWED_TAGS: [
+    // Block elements
+    'p',
+    'br',
+    'hr',
+    'blockquote',
+    'pre',
+    // Headings
+    'h1',
+    'h2',
+    'h3',
+    'h4',
+    'h5',
+    'h6',
+    // Lists
+    'ul',
+    'ol',
+    'li',
+    // Inline formatting
+    'strong',
+    'b',
+    'em',
+    'i',
+    'code',
+    'del',
+    's',
+    // Links
+    'a',
+    // Tables (GFM)
+    'table',
+    'thead',
+    'tbody',
+    'tr',
+    'th',
+    'td',
+  ],
+  ALLOWED_ATTR: ['href', 'class', 'align'],
+};
 
 /**
  * Markdown renderer component using marked
@@ -25,10 +70,11 @@ const MarkdownContent = ({
   const html = useMemo(() => {
     try {
       const result = marked.parse(content, { async: false });
-      return typeof result === 'string' ? result : content;
+      const rawHtml = typeof result === 'string' ? result : content;
+      return DOMPurify.sanitize(rawHtml, SANITIZE_CONFIG);
     } catch (err) {
       console.error('Markdown parse error:', err);
-      return content;
+      return DOMPurify.sanitize(content, SANITIZE_CONFIG);
     }
   }, [content]);
 
