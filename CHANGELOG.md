@@ -17,6 +17,11 @@ and this project adheres to
 
 ### Added
 
+- Demo OAuth clients for Google (Drive, Sheets, Gmail), Salesforce (production
+  and sandbox), and Microsoft (SharePoint, Outlook, Calendar, OneDrive, Teams)
+  are now created during demo setup with configurable credentials via
+  environment variables
+
 ### Changed
 
 ### Fixed
