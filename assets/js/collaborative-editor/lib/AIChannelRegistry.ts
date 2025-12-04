@@ -59,9 +59,12 @@ import type {
 const logger = _logger.ns('AIChannelRegistry').seal();
 
 // Phoenix Channel types (incomplete in library)
+type ChannelCallback = (payload: unknown) => void;
+
 interface PhoenixChannel {
   join: () => PhoenixPush;
-  on: (event: string, callback: (payload: unknown) => void) => void;
+  on: (event: string, callback: ChannelCallback) => void;
+  off: (event: string, callback: ChannelCallback) => void;
   push: (event: string, payload: unknown) => PhoenixPush;
   leave: () => PhoenixPush;
 }
@@ -104,6 +107,11 @@ interface ChannelEntry {
   status: 'connecting' | 'connected' | 'error';
   context: JobCodeContext | WorkflowTemplateContext;
   cleanupTimer: NodeJS.Timeout | null;
+  // Store handler references for cleanup
+  handlers: {
+    newMessage: ChannelCallback;
+    messageStatusChanged: ChannelCallback;
+  };
 }
 
 /**
@@ -194,6 +202,9 @@ export class AIChannelRegistry {
 
     const channel = this.socket.channel(topic, this.buildJoinParams(context));
 
+    // Set up event handlers and get references for cleanup
+    const handlers = this.setupEventHandlers(channel);
+
     const newEntry: ChannelEntry = {
       topic,
       channel,
@@ -201,12 +212,10 @@ export class AIChannelRegistry {
       status: 'connecting',
       context,
       cleanupTimer: null,
+      handlers,
     };
 
     this.channels.set(topic, newEntry);
-
-    // Set up event handlers
-    this.setupEventHandlers(channel);
 
     // Join channel
     this.joinChannel(newEntry);
@@ -490,6 +499,12 @@ export class AIChannelRegistry {
       if (entry.cleanupTimer) {
         clearTimeout(entry.cleanupTimer);
       }
+      // Remove event handlers to prevent memory leaks
+      entry.channel.off('new_message', entry.handlers.newMessage);
+      entry.channel.off(
+        'message_status_changed',
+        entry.handlers.messageStatusChanged
+      );
       entry.channel.leave();
     }
 
@@ -498,14 +513,17 @@ export class AIChannelRegistry {
 
   /**
    * Set up event handlers for a channel
+   * Returns handler references for cleanup
    */
-  private setupEventHandlers(channel: PhoenixChannel): void {
-    channel.on('new_message', (payload: unknown) => {
+  private setupEventHandlers(
+    channel: PhoenixChannel
+  ): ChannelEntry['handlers'] {
+    const newMessageHandler: ChannelCallback = (payload: unknown) => {
       const typedPayload = payload as { message: Message };
       this.store._addMessage(typedPayload.message);
-    });
+    };
 
-    channel.on('message_status_changed', (payload: unknown) => {
+    const messageStatusChangedHandler: ChannelCallback = (payload: unknown) => {
       const typedPayload = payload as {
         message_id: string;
         status: MessageStatus;
@@ -514,7 +532,15 @@ export class AIChannelRegistry {
         typedPayload.message_id,
         typedPayload.status
       );
-    });
+    };
+
+    channel.on('new_message', newMessageHandler);
+    channel.on('message_status_changed', messageStatusChangedHandler);
+
+    return {
+      newMessage: newMessageHandler,
+      messageStatusChanged: messageStatusChangedHandler,
+    };
   }
 
   /**
@@ -619,6 +645,14 @@ export class AIChannelRegistry {
     }
 
     logger.debug('Cleaning up channel', { topic });
+
+    // Remove event handlers to prevent memory leaks
+    entry.channel.off('new_message', entry.handlers.newMessage);
+    entry.channel.off(
+      'message_status_changed',
+      entry.handlers.messageStatusChanged
+    );
+
     entry.channel.leave();
     this.channels.delete(topic);
 
