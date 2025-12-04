@@ -116,11 +116,11 @@ vi.mock('../../../js/collaborative-editor/components/ManualRunPanel', () => ({
 
 // Mock useURLState
 const mockUpdateSearchParams = vi.fn();
-const mockSearchParams = new URLSearchParams();
+const mockParams: Record<string, string> = {};
 
 vi.mock('../../../js/react/lib/use-url-state', () => ({
   useURLState: () => ({
-    searchParams: mockSearchParams,
+    params: mockParams,
     updateSearchParams: mockUpdateSearchParams,
     hash: '',
   }),
@@ -478,8 +478,8 @@ describe('WorkflowEditor', () => {
       };
 
       // IDE is already open
-      mockSearchParams.set('panel', 'editor');
-      mockSearchParams.set('job', 'job-1');
+      mockParams.panel = 'editor';
+      mockParams.job = 'job-1';
 
       renderWorkflowEditor();
 

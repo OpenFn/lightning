@@ -45,8 +45,8 @@ export function JobInspector({
   const [isDeleting, setIsDeleting] = useState(false);
 
   // URL state for Edit button
-  const { searchParams, updateSearchParams } = useURLState();
-  const isIDEOpen = searchParams.get('panel') === 'editor';
+  const { params, updateSearchParams } = useURLState();
+  const isIDEOpen = params.panel === 'editor';
 
   const handleDelete = useCallback(async () => {
     setIsDeleting(true);

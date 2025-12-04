@@ -13,11 +13,11 @@ import {
 } from 'react-resizable-panels';
 
 import { useKeyboardShortcut } from '#/collaborative-editor/keyboard';
+import { useURLState } from '#/react/lib/use-url-state';
 import { cn } from '#/utils/cn';
 
 import Docs from '../../../adaptor-docs/Docs';
 import Metadata from '../../../metadata-explorer/Explorer';
-import { useURLState } from '../../../react/lib/use-url-state';
 import type { Dataclip } from '../../api/dataclips';
 import * as dataclipApi from '../../api/dataclips';
 import { RENDER_MODES } from '../../constants/panel';
@@ -111,11 +111,11 @@ export function FullScreenIDE({
   parentProjectId,
   parentProjectName,
 }: FullScreenIDEProps) {
-  const { searchParams, updateSearchParams } = useURLState();
-  const jobIdFromURL = searchParams.get('job');
+  const { params, updateSearchParams } = useURLState();
+  const jobIdFromURL = params.job ?? null;
   // Support both 'run' (collaborative) and 'a' (classical) parameter for run ID
-  const runIdFromURL = searchParams.get('run') || searchParams.get('a');
-  const stepIdFromURL = searchParams.get('step');
+  const runIdFromURL = params.run ?? params.a ?? null;
+  const stepIdFromURL = params.step ?? null;
   const { selectJob, saveWorkflow } = useWorkflowActions();
   const { selectStep } = useHistoryCommands();
   const { job: currentJob, ytext: currentJobYText } = useCurrentJob();
@@ -210,11 +210,11 @@ export function FullScreenIDE({
   }, [currentRun, jobIdFromURL]);
 
   useEffect(() => {
-    const runId = searchParams.get('run');
+    const runId = params.run ?? null;
     if (runId && runId !== followRunId) {
       setManuallyUnselectedDataclip(false);
     }
-  }, [searchParams, followRunId]);
+  }, [params, followRunId]);
 
   useEffect(() => {
     const inputDataclipId = followedRunStep?.input_dataclip_id;
@@ -237,7 +237,7 @@ export function FullScreenIDE({
       return;
     }
 
-    const runId = searchParams.get('run') || searchParams.get('a');
+    const runId = params.run ?? params.a ?? null;
     if (!runId) {
       return;
     }
@@ -264,7 +264,7 @@ export function FullScreenIDE({
     followedRunStep?.input_dataclip_id,
     jobIdFromURL,
     projectId,
-    searchParams,
+    params,
     manuallyUnselectedDataclip,
     selectedDataclipState,
   ]);

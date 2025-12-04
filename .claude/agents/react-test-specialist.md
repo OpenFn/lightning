@@ -98,8 +98,8 @@ You are working on Lightning, a workflow platform built with:
 Key testing commands:
 ```bash
 cd assets
-npm test              # Run tests in watch mode
-npm run test:run      # Run tests once
+npm test              # Run tests once
+npm run test:watch    # Run tests in watch mode
 npm run test:coverage # Generate coverage report
 ```
 

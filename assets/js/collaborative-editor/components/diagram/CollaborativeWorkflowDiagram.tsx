@@ -21,7 +21,6 @@ import {
 } from '../../hooks/useHistory';
 import { useIsNewWorkflow } from '../../hooks/useSessionContext';
 import { useVersionMismatch } from '../../hooks/useVersionMismatch';
-import { useVersionSelect } from '../../hooks/useVersionSelect';
 import { useNodeSelection } from '../../hooks/useWorkflow';
 import type { RunSummary } from '../../types/history';
 
@@ -41,7 +40,7 @@ export function CollaborativeWorkflowDiagram({
   const { currentNode, selectNode } = useNodeSelection();
   const isNewWorkflow = useIsNewWorkflow();
   const isHistoryChannelConnected = useHistoryChannelConnected();
-  const { searchParams, updateSearchParams } = useURLState();
+  const { params, updateSearchParams } = useURLState();
 
   // Get history data and commands
   const history = useHistory();
@@ -55,7 +54,7 @@ export function CollaborativeWorkflowDiagram({
 
   // Read selected run ID from URL - single source of truth
   // useURLState is reactive, so component re-renders when URL changes
-  const selectedRunId = searchParams.get('run');
+  const selectedRunId = params['run'] ?? null;
 
   const handleToggleHistory = useCallback(() => {
     setHistoryPanelCollapsed(!historyCollapsed);
@@ -67,9 +66,6 @@ export function CollaborativeWorkflowDiagram({
   // Detect version mismatch for warning banner
   const versionMismatch = useVersionMismatch(selectedRunId);
 
-  // Get version selection handler
-  const handleVersionSelect = useVersionSelect();
-
   // Update URL when run selection changes
   // URLStore notifies subscribers synchronously, triggering immediate re-render
   const handleRunSelect = useCallback(
@@ -77,14 +73,14 @@ export function CollaborativeWorkflowDiagram({
       // Find the workorder that contains this run
       const workorder = history.find(wo => wo.runs.some(r => r.id === run.id));
 
-      // Switch to the version this run was executed on
-      if (workorder) {
-        handleVersionSelect(workorder.version);
-      }
-
-      updateSearchParams({ run: run.id });
+      // Single atomic update - both version and run in one call
+      // This prevents race conditions between two separate updateSearchParams calls
+      updateSearchParams({
+        v: workorder ? String(workorder.version) : null,
+        run: run.id,
+      });
     },
-    [history, handleVersionSelect, updateSearchParams]
+    [history, updateSearchParams]
   );
 
   // Clear URL parameter when deselecting run
