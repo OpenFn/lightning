@@ -236,6 +236,11 @@ defmodule LightningWeb.WorkflowLive.Collaborate do
      )}
   end
 
+  def handle_info({:forward, mod, opts}, socket) do
+    send_update(mod, opts)
+    {:noreply, socket}
+  end
+
   @impl true
   def handle_info({:credential_saved, credential}, socket) do
     require Logger
