@@ -86,6 +86,189 @@ const StatePill: React.FC<{ state: string; mini?: boolean }> = ({
   );
 };
 
+// Extracted RunItem component for displaying individual runs
+interface RunItemProps {
+  run: RunWithSelection;
+  now: Date;
+  onSelect: (run: RunSummary) => void;
+  onDeselect: (() => void) | undefined;
+  onNavigateToRun: (e: React.MouseEvent, runId: string) => void;
+}
+
+const RunItem: React.FC<RunItemProps> = ({
+  run,
+  now,
+  onSelect,
+  onDeselect,
+  onNavigateToRun,
+}) => (
+  /*
+    Mouse-only clickable area - keyboard users can navigate to
+    the run detail page using the UUID link button below.
+  */
+  // eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions
+  <div
+    className={[
+      'px-3 py-1.5 text-xs hover:bg-gray-50 ' +
+        'transition-colors cursor-pointer border-l-2 ' +
+        'w-full text-left',
+      run.selected
+        ? 'bg-indigo-50 border-l-indigo-500'
+        : ' border-l-transparent',
+    ].join(' ')}
+    onClick={e => {
+      e.stopPropagation();
+      if (run.selected) {
+        onDeselect?.();
+      } else {
+        onSelect(run);
+      }
+    }}
+  >
+    <div className="flex items-center justify-between w-full mr-2">
+      <div className="flex items-center gap-2 min-w-0 flex-1">
+        {run.selected && (
+          <button
+            type="button"
+            onClick={e => {
+              e.preventDefault();
+              e.stopPropagation();
+              onDeselect?.();
+            }}
+            className="flex items-center text-gray-400
+              hover:text-gray-600 transition-colors"
+            aria-label="Deselect run"
+          >
+            <span className="hero-x-mark w-4 h-4" />
+          </button>
+        )}
+        {!run.selected && <span className="w-4 h-4 invisible" />}
+        <button
+          type="button"
+          onClick={e => onNavigateToRun(e, run.id)}
+          className="link-uuid"
+          title={run.id}
+          aria-label={`View full details for run ${truncateUid(run.id)}`}
+        >
+          {truncateUid(run.id)}
+        </button>
+        {(run.started_at || run.finished_at) && (
+          <>
+            <span className="text-xs text-gray-800">&bull;</span>
+            {formatRelative(
+              new Date((run.started_at || run.finished_at) as string),
+              now,
+              { locale: relativeLocale }
+            )}
+          </>
+        )}
+        {run.started_at && run.finished_at && (
+          <>
+            <span className="text-xs text-gray-800">&bull;</span>
+            <span className="text-gray-400 text-xs">
+              {duration(run.started_at, run.finished_at)}
+            </span>
+          </>
+        )}
+      </div>
+      <div className="flex items-center gap-1">
+        <StatePill state={run.state} mini={true} />
+      </div>
+    </div>
+  </div>
+);
+
+// Extracted WorkOrderItem component for displaying work orders with their runs
+interface WorkOrderItemProps {
+  workorder: WorkOrderWithSelection;
+  isExpanded: boolean;
+  now: Date;
+  onExpand: (workorder: WorkOrderWithSelection) => void;
+  onSelectRun: (run: RunSummary) => void;
+  onDeselectRun: (() => void) | undefined;
+  onNavigateToWorkorder: (e: React.MouseEvent, workorderId: string) => void;
+  onNavigateToRun: (e: React.MouseEvent, runId: string) => void;
+}
+
+const WorkOrderItem: React.FC<WorkOrderItemProps> = ({
+  workorder,
+  isExpanded,
+  now,
+  onExpand,
+  onSelectRun,
+  onDeselectRun,
+  onNavigateToWorkorder,
+  onNavigateToRun,
+}) => (
+  <div>
+    <div className="px-3 py-2 hover:bg-gray-50 transition-colors">
+      {/*
+        Mouse-only clickable area for convenience - keyboard users
+        can use the chevron button and UUID link below for full accessibility.
+        This matches the LiveView implementation's keyboard navigation pattern.
+      */}
+      {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions */}
+      <div
+        className="flex items-center justify-between cursor-pointer w-full text-left"
+        onClick={e => {
+          e.stopPropagation();
+          onExpand(workorder);
+        }}
+      >
+        <div className="flex items-center gap-2 min-w-0 flex-1 mr-2">
+          <button
+            type="button"
+            onClick={e => {
+              e.preventDefault();
+              e.stopPropagation();
+              onExpand(workorder);
+            }}
+            className="flex items-center text-gray-400
+              hover:text-gray-600 transition-colors"
+            aria-label={`${isExpanded ? 'Collapse' : 'Expand'} work order details`}
+          >
+            {workorder.selected ? (
+              <span className="hero-chevron-down w-4 h-4 font-bold text-indigo-600" />
+            ) : isExpanded ? (
+              <span className="hero-chevron-down w-4 h-4" />
+            ) : (
+              <span className="hero-chevron-right w-4 h-4" />
+            )}
+          </button>
+          <button
+            type="button"
+            onClick={e => onNavigateToWorkorder(e, workorder.id)}
+            className="link-uuid"
+            title={workorder.id}
+            aria-label={`View full details for work order ${truncateUid(workorder.id)}`}
+          >
+            {truncateUid(workorder.id)}
+          </button>
+          <span className="text-xs text-gray-800">&bull;</span>
+          <span className="text-xs text-gray-500">
+            {formatRelative(new Date(workorder.last_activity), now, {
+              locale: relativeLocale,
+            })}
+          </span>
+        </div>
+        <StatePill state={workorder.state} mini={true} />
+      </div>
+    </div>
+
+    {(isExpanded || workorder.selected) &&
+      workorder.runs.map(run => (
+        <RunItem
+          key={run.id}
+          run={run}
+          now={now}
+          onSelect={onSelectRun}
+          onDeselect={onDeselectRun}
+          onNavigateToRun={onNavigateToRun}
+        />
+      ))}
+  </div>
+);
+
 interface MiniHistoryProps {
   collapsed: boolean;
   history: WorkOrderWithSelection[];
@@ -263,175 +446,17 @@ export default function MiniHistory({
           ) : (
             <div className="divide-y divide-gray-100">
               {history.map(workorder => (
-                <div key={workorder.id}>
-                  <div
-                    className={`px-3 py-2 hover:bg-gray-50
-                      transition-colors`}
-                  >
-                    {/*
-                      Mouse-only clickable area for convenience - keyboard users
-                      can use the chevron button and UUID link below for full accessibility.
-                      This matches the LiveView implementation's keyboard navigation pattern.
-                    */}
-                    {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions */}
-                    <div
-                      className="flex items-center justify-between
-                        cursor-pointer w-full text-left"
-                      onClick={e => {
-                        e.stopPropagation();
-                        expandWorkorderHandler(workorder);
-                      }}
-                    >
-                      <div
-                        className="flex items-center gap-2 min-w-0
-                          flex-1 mr-2"
-                      >
-                        <button
-                          type="button"
-                          onClick={e => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            expandWorkorderHandler(workorder);
-                          }}
-                          className="flex items-center text-gray-400
-                            hover:text-gray-600 transition-colors"
-                          aria-label={`${expandedWorder === workorder.id ? 'Collapse' : 'Expand'} work order details`}
-                        >
-                          {workorder.selected ? (
-                            <span
-                              className="hero-chevron-down w-4 h-4
-                                font-bold text-indigo-600"
-                            />
-                          ) : expandedWorder === workorder.id ? (
-                            <span className="hero-chevron-down w-4 h-4" />
-                          ) : (
-                            <span className="hero-chevron-right w-4 h-4" />
-                          )}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={e =>
-                            handleNavigateToWorkorderHistory(e, workorder.id)
-                          }
-                          className="link-uuid"
-                          title={workorder.id}
-                          aria-label={`View full details for work order ${truncateUid(workorder.id)}`}
-                        >
-                          {truncateUid(workorder.id)}
-                        </button>
-                        <span className="text-xs text-gray-800">&bull;</span>
-                        <span className="text-xs text-gray-500">
-                          {formatRelative(
-                            new Date(workorder.last_activity),
-                            now,
-                            { locale: relativeLocale }
-                          )}
-                        </span>
-                      </div>
-                      <StatePill
-                        key={workorder.id}
-                        state={workorder.state}
-                        mini={true}
-                      />
-                    </div>
-                  </div>
-
-                  {(expandedWorder === workorder.id || workorder.selected) &&
-                    workorder.runs.map(run => (
-                      /*
-                        Mouse-only clickable area - keyboard users can navigate to
-                        the run detail page using the UUID link button below.
-                      */
-                      // eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions
-                      <div
-                        key={run.id}
-                        className={[
-                          'px-3 py-1.5 text-xs hover:bg-gray-50 ' +
-                            'transition-colors cursor-pointer border-l-2 ' +
-                            'w-full text-left',
-                          run.selected
-                            ? 'bg-indigo-50 border-l-indigo-500'
-                            : ' border-l-transparent',
-                        ].join(' ')}
-                        onClick={e => {
-                          e.stopPropagation();
-                          if (run.selected) {
-                            onDeselectRun?.();
-                          } else {
-                            selectRunHandler(run);
-                          }
-                        }}
-                      >
-                        <div
-                          className="flex items-center justify-between
-                            w-full mr-2"
-                        >
-                          <div
-                            className="flex items-center gap-2 min-w-0
-                              flex-1"
-                          >
-                            {run.selected && (
-                              <button
-                                type="button"
-                                onClick={e => {
-                                  e.preventDefault();
-                                  e.stopPropagation();
-                                  onDeselectRun?.();
-                                }}
-                                className="flex items-center text-gray-400
-                                  hover:text-gray-600 transition-colors"
-                                aria-label="Deselect run"
-                              >
-                                <span className="hero-x-mark w-4 h-4" />
-                              </button>
-                            )}
-                            {!run.selected && (
-                              <span className="w-4 h-4 invisible" />
-                            )}
-                            <button
-                              type="button"
-                              onClick={e => handleNavigateToRunView(e, run.id)}
-                              className="link-uuid"
-                              title={run.id}
-                              aria-label={`View full details for run ${truncateUid(run.id)}`}
-                            >
-                              {truncateUid(run.id)}
-                            </button>
-                            {(run.started_at || run.finished_at) && (
-                              <>
-                                <span className="text-xs text-gray-800">
-                                  &bull;
-                                </span>
-                                {formatRelative(
-                                  new Date(
-                                    (run.started_at ||
-                                      run.finished_at) as string
-                                  ),
-                                  now,
-                                  {
-                                    locale: relativeLocale,
-                                  }
-                                )}
-                              </>
-                            )}
-                            {run.started_at && run.finished_at && (
-                              <>
-                                <span className="text-xs text-gray-800">
-                                  &bull;
-                                </span>
-                                <span className="text-gray-400 text-xs">
-                                  {duration(run.started_at, run.finished_at)}
-                                </span>
-                              </>
-                            )}
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <StatePill state={run.state} mini={true} />
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                </div>
+                <WorkOrderItem
+                  key={workorder.id}
+                  workorder={workorder}
+                  isExpanded={expandedWorder === workorder.id}
+                  now={now}
+                  onExpand={expandWorkorderHandler}
+                  onSelectRun={selectRunHandler}
+                  onDeselectRun={onDeselectRun}
+                  onNavigateToWorkorder={handleNavigateToWorkorderHistory}
+                  onNavigateToRun={handleNavigateToRunView}
+                />
               ))}
             </div>
           )}
@@ -562,179 +587,17 @@ export default function MiniHistory({
         ) : (
           <div className="divide-y divide-gray-100">
             {history.map(workorder => (
-              <div key={workorder.id}>
-                <div
-                  className={`px-3 py-2 hover:bg-gray-50
-                  transition-colors`}
-                >
-                  {/*
-                    Mouse-only clickable area for convenience - keyboard users
-                    can use the chevron button and UUID link below for full accessibility.
-                    This matches the LiveView implementation's keyboard navigation pattern.
-                  */}
-                  {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions */}
-                  <div
-                    className="flex items-center justify-between
-                      cursor-pointer w-full text-left"
-                    onClick={e => {
-                      e.stopPropagation();
-                      expandWorkorderHandler(workorder);
-                    }}
-                  >
-                    <div
-                      className="flex items-center gap-2 min-w-0
-                      flex-1 mr-2"
-                    >
-                      <button
-                        type="button"
-                        onClick={e => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          expandWorkorderHandler(workorder);
-                        }}
-                        className="flex items-center text-gray-400
-                          hover:text-gray-600 transition-colors"
-                        aria-label={`${expandedWorder === workorder.id ? 'Collapse' : 'Expand'} work order details`}
-                      >
-                        {workorder.selected ? (
-                          <span
-                            className="hero-chevron-down w-4 h-4
-                            font-bold text-indigo-600"
-                          ></span>
-                        ) : expandedWorder === workorder.id ? (
-                          <span
-                            className="hero-chevron-down
-                            w-4 h-4"
-                          ></span>
-                        ) : (
-                          <span
-                            className="hero-chevron-right
-                            w-4 h-4"
-                          ></span>
-                        )}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={e =>
-                          handleNavigateToWorkorderHistory(e, workorder.id)
-                        }
-                        className="link-uuid"
-                        title={workorder.id}
-                        aria-label={`View full details for work order ${truncateUid(workorder.id)}`}
-                      >
-                        {truncateUid(workorder.id)}
-                      </button>
-                      <span className="text-xs text-gray-800">&bull;</span>
-                      <span className="text-xs text-gray-500">
-                        {formatRelative(
-                          new Date(workorder.last_activity),
-                          now,
-                          { locale: relativeLocale }
-                        )}
-                      </span>
-                    </div>
-                    <StatePill
-                      key={workorder.id}
-                      state={workorder.state}
-                      mini={true}
-                    />
-                  </div>
-                </div>
-
-                {(expandedWorder === workorder.id || workorder.selected) &&
-                  workorder.runs.map(run => (
-                    /*
-                      Mouse-only clickable area - keyboard users can navigate to
-                      the run detail page using the UUID link button below.
-                    */
-                    // eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions
-                    <div
-                      key={run.id}
-                      className={[
-                        'px-3 py-1.5 text-xs hover:bg-gray-50 ' +
-                          'transition-colors cursor-pointer border-l-2 ' +
-                          'w-full text-left',
-                        run.selected
-                          ? 'bg-indigo-50 border-l-indigo-500'
-                          : ' border-l-transparent',
-                      ].join(' ')}
-                      onClick={e => {
-                        e.stopPropagation();
-                        if (run.selected) {
-                          onDeselectRun?.();
-                        } else {
-                          selectRunHandler(run);
-                        }
-                      }}
-                    >
-                      <div
-                        className="flex items-center justify-between
-                        w-full mr-2"
-                      >
-                        <div
-                          className="flex items-center gap-2 min-w-0
-                          flex-1"
-                        >
-                          {run.selected && (
-                            <button
-                              type="button"
-                              onClick={e => {
-                                e.preventDefault();
-                                e.stopPropagation();
-                                onDeselectRun?.();
-                              }}
-                              className="flex items-center text-gray-400 hover:text-gray-600 transition-colors"
-                              aria-label="Deselect run"
-                            >
-                              <span className="hero-x-mark w-4 h-4"></span>
-                            </button>
-                          )}
-                          {!run.selected && (
-                            <span className="w-4 h-4 invisible"></span>
-                          )}
-                          <button
-                            type="button"
-                            onClick={e => handleNavigateToRunView(e, run.id)}
-                            className="link-uuid"
-                            title={run.id}
-                            aria-label={`View full details for run ${truncateUid(run.id)}`}
-                          >
-                            {truncateUid(run.id)}
-                          </button>
-                          {(run.started_at || run.finished_at) && (
-                            <>
-                              <span className="text-xs text-gray-800">
-                                &bull;
-                              </span>
-                              {formatRelative(
-                                new Date(
-                                  (run.started_at || run.finished_at) as string
-                                ),
-                                now,
-                                {
-                                  locale: relativeLocale,
-                                }
-                              )}
-                            </>
-                          )}
-                          {run.started_at && run.finished_at && (
-                            <>
-                              <span className="text-xs text-gray-800">
-                                &bull;
-                              </span>
-                              <span className="text-gray-400 text-xs">
-                                {duration(run.started_at, run.finished_at)}
-                              </span>
-                            </>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <StatePill state={run.state} mini={true} />
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-              </div>
+              <WorkOrderItem
+                key={workorder.id}
+                workorder={workorder}
+                isExpanded={expandedWorder === workorder.id}
+                now={now}
+                onExpand={expandWorkorderHandler}
+                onSelectRun={selectRunHandler}
+                onDeselectRun={onDeselectRun}
+                onNavigateToWorkorder={handleNavigateToWorkorderHistory}
+                onNavigateToRun={handleNavigateToRunView}
+              />
             ))}
           </div>
         )}

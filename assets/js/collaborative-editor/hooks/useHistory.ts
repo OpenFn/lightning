@@ -143,8 +143,8 @@ export const useFollowRun = (runId: string | null) => {
     }
   }, [runId]);
 
-  // whether a run should be cleared can't be handled well in this useEffect. the user
-  // of the useEffect should determine that.
+  // There are no dependencies here - stable function reference from store and
+  // clearRun is triggered by a user action.
   const clearRun = useCallback(() => {
     historyStore._closeRunViewer();
   }, []);
