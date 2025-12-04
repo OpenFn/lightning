@@ -39,14 +39,16 @@ function createWithSelectorMock(getSnapshot: () => any) {
 
 // Mock useURLState
 const mockUpdateSearchParams = vi.fn();
-let mockSearchParams = new URLSearchParams('?run=run-1');
+const mockReplaceSearchParams = vi.fn();
+let mockParams: Record<string, string> = { run: 'run-1' };
 
 vi.mock('../../../../js/react/lib/use-url-state', () => ({
   useURLState: () => ({
-    get searchParams() {
-      return mockSearchParams;
+    get params() {
+      return mockParams;
     },
     updateSearchParams: mockUpdateSearchParams,
+    replaceSearchParams: mockReplaceSearchParams,
     hash: '',
   }),
 }));
@@ -306,7 +308,7 @@ describe('CollaborativeWorkflowDiagram - Real-time Run Updates', () => {
     };
 
     // Reset URL mock to have run-1 selected (default for most tests)
-    mockSearchParams = new URLSearchParams('?run=run-1');
+    mockParams = { run: 'run-1' };
   });
 
   test('re-fetches run steps when history updates for selected run', async () => {
@@ -407,7 +409,7 @@ describe('CollaborativeWorkflowDiagram - Real-time Run Updates', () => {
 
   test('does not re-fetch when no run is selected', async () => {
     // Remove run ID from URL
-    mockSearchParams = new URLSearchParams();
+    mockParams = {};
 
     const wrapper = createWrapper();
     render(<CollaborativeWorkflowDiagram />, { wrapper });

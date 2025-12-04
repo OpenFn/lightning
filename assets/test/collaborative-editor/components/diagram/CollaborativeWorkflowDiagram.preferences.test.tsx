@@ -39,20 +39,21 @@ function createWithSelectorMock(getSnapshot: () => any) {
 
 // Mock useURLState with reactive behavior
 const mockUpdateSearchParams = vi.fn();
-let mockSearchParams = new URLSearchParams();
+const mockReplaceSearchParams = vi.fn();
+let mockParams: Record<string, string> = {};
 const urlListeners = new Set<() => void>();
 
 // Cache the snapshot to avoid infinite loops
 let cachedSnapshot = {
-  searchParams: mockSearchParams,
+  params: mockParams,
   hash: '',
 };
 
 // Helper to trigger URL state updates
-function updateMockURL(params: URLSearchParams) {
-  mockSearchParams = params;
+function updateMockURL(params: Record<string, string>) {
+  mockParams = params;
   cachedSnapshot = {
-    searchParams: params,
+    params: params,
     hash: '',
   };
   urlListeners.forEach(listener => listener());
@@ -71,9 +72,10 @@ vi.mock('../../../../js/react/lib/use-url-state', () => {
       );
 
       return {
-        searchParams: state.searchParams,
+        params: state.params,
         hash: state.hash,
         updateSearchParams: mockUpdateSearchParams,
+        replaceSearchParams: mockReplaceSearchParams,
       };
     },
   };
@@ -196,12 +198,13 @@ describe('CollaborativeWorkflowDiagram - EditorPreferences Integration', () => {
       );
 
     // Reset URL mock
-    mockSearchParams = new URLSearchParams();
+    mockParams = {};
     cachedSnapshot = {
-      searchParams: mockSearchParams,
+      params: mockParams,
       hash: '',
     };
     mockUpdateSearchParams.mockClear();
+    mockReplaceSearchParams.mockClear();
 
     // Create fresh store and wrapper for each test
     store = createEditorPreferencesStore();
@@ -299,7 +302,8 @@ describe('CollaborativeWorkflowDiagram - EditorPreferences Integration', () => {
       );
 
       // Set URL with run parameter
-      mockSearchParams = new URLSearchParams('?run=test-run-id');
+      mockParams = { run: 'test-run-id' };
+      cachedSnapshot = { params: mockParams, hash: '' };
 
       render(<CollaborativeWorkflowDiagram />, { wrapper });
 
@@ -328,7 +332,8 @@ describe('CollaborativeWorkflowDiagram - EditorPreferences Integration', () => {
       wrapper = createWrapper(store);
 
       // Ensure URL has no run ID
-      mockSearchParams = new URLSearchParams();
+      mockParams = {};
+      cachedSnapshot = { params: mockParams, hash: '' };
 
       render(<CollaborativeWorkflowDiagram />, { wrapper });
 
@@ -370,9 +375,9 @@ describe('CollaborativeWorkflowDiagram - EditorPreferences Integration', () => {
     test('collapsing panel keeps run selected', async () => {
       // Set URL to have a run parameter (simulating user selected a run)
       const runId = '7d5e0711-e2fd-44a4-91cc-fa0c335f88e4';
-      mockSearchParams = new URLSearchParams(`?run=${runId}`);
+      mockParams = { run: runId };
       cachedSnapshot = {
-        searchParams: mockSearchParams,
+        params: mockParams,
         hash: '',
       };
 
@@ -436,9 +441,9 @@ describe('CollaborativeWorkflowDiagram - EditorPreferences Integration', () => {
 
     test('run chip appears in collapsed state and can deselect run', async () => {
       const runId = '7d5e0711-e2fd-44a4-91cc-fa0c335f88e4';
-      mockSearchParams = new URLSearchParams(`?run=${runId}`);
+      mockParams = { run: runId };
       cachedSnapshot = {
-        searchParams: mockSearchParams,
+        params: mockParams,
         hash: '',
       };
 
@@ -501,7 +506,7 @@ describe('CollaborativeWorkflowDiagram - EditorPreferences Integration', () => {
       });
 
       // Simulate URL change by updating the mock and triggering listeners
-      updateMockURL(new URLSearchParams());
+      updateMockURL({});
 
       // Chip should be gone after URL update
       await waitFor(() => {

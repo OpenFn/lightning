@@ -12,7 +12,7 @@ import { FilterTypes } from '../../manual-run-panel/types';
 import CustomView from '../../manual-run-panel/views/CustomView';
 import EmptyView from '../../manual-run-panel/views/EmptyView';
 import ExistingView from '../../manual-run-panel/views/ExistingView';
-import { useURLState } from '../../react/lib/use-url-state';
+import { useURLState } from '#/react/lib/use-url-state';
 import type { Dataclip } from '../api/dataclips';
 import * as dataclipApi from '../api/dataclips';
 import { RENDER_MODES, type RenderMode } from '../constants/panel';
@@ -138,8 +138,8 @@ export function ManualRunPanel({
   const { canRun: canRunWorkflow, tooltipMessage: workflowRunTooltipMessage } =
     useCanRun();
 
-  const { searchParams } = useURLState();
-  const followedRunId = searchParams.get('run');
+  const { params } = useURLState();
+  const followedRunId = params.run ?? null;
 
   // Connect to run channel when following a run in standalone mode
   // In embedded mode (FullScreenIDE), parent handles the connection

@@ -153,12 +153,11 @@ vi.mock('../../../../js/collaborative-editor/hooks/useRunRetry', () => ({
 }));
 
 // Mock URL state
-const mockSearchParams = new URLSearchParams();
-mockSearchParams.set('job', 'test-job-id');
+const mockParams: Record<string, string> = { job: 'test-job-id' };
 
 vi.mock('../../../../js/react/lib/use-url-state', () => ({
   useURLState: () => ({
-    searchParams: mockSearchParams,
+    params: mockParams,
     updateSearchParams: vi.fn(),
     hash: '',
   }),

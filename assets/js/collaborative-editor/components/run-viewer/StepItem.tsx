@@ -1,9 +1,10 @@
-import { useURLState } from '../../../react/lib/use-url-state';
-import { cn } from '../../../utils/cn';
+import { useURLState } from '#/react/lib/use-url-state';
+import { cn } from '#/utils/cn';
+
 import { useWorkflowState } from '../../hooks/useWorkflow';
 import type { StepDetail } from '../../types/history';
-
 import { Tooltip } from '../Tooltip';
+
 import { ElapsedIndicator } from './ElapsedIndicator';
 import { StepIcon } from './StepIcon';
 
@@ -14,7 +15,7 @@ interface StepItemProps {
 }
 
 export function StepItem({ step, selected, runInsertedAt }: StepItemProps) {
-  const { searchParams, updateSearchParams } = useURLState();
+  const { params, updateSearchParams } = useURLState();
 
   // Look up job name from workflow state if not included in step
   const jobName = useWorkflowState(
@@ -32,8 +33,8 @@ export function StepItem({ step, selected, runInsertedAt }: StepItemProps) {
     e.stopPropagation();
 
     // Get current run ID and panel from URL to preserve context
-    const currentRunId = searchParams.get('run');
-    const currentPanel = searchParams.get('panel');
+    const currentRunId = params['run'] ?? null;
+    const currentPanel = params['panel'] ?? null;
 
     // Build updates object, only including panel if it exists
     const updates: Record<string, string | null> = {
@@ -44,7 +45,7 @@ export function StepItem({ step, selected, runInsertedAt }: StepItemProps) {
 
     // Only include panel in updates if it exists (avoids deleting it)
     if (currentPanel) {
-      updates.panel = currentPanel;
+      updates['panel'] = currentPanel;
     }
 
     updateSearchParams(updates);

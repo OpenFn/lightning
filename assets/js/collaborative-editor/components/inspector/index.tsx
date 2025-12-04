@@ -3,7 +3,9 @@
  * Shows details for jobs, triggers, and edges when selected
  */
 
-import { useURLState } from '../../../react/lib/use-url-state';
+import { useURLState, urlStore } from '#/react/lib/use-url-state';
+
+import { useWorkflowTemplate } from '../../hooks/useSessionContext';
 import { useKeyboardShortcut } from '../../keyboard';
 import type { Workflow } from '../../types/workflow';
 
@@ -11,10 +13,9 @@ import { CodeViewPanel } from './CodeViewPanel';
 import { EdgeInspector } from './EdgeInspector';
 import { InspectorLayout } from './InspectorLayout';
 import { JobInspector } from './JobInspector';
+import { TemplatePublishPanel } from './TemplatePublishPanel';
 import { TriggerInspector } from './TriggerInspector';
 import { WorkflowSettings } from './WorkflowSettings';
-import { TemplatePublishPanel } from './TemplatePublishPanel';
-import { useWorkflowTemplate } from '../../hooks/useSessionContext';
 
 export { InspectorLayout } from './InspectorLayout';
 
@@ -36,18 +37,18 @@ export function Inspector({
   onClose,
   onOpenRunPanel,
 }: InspectorProps) {
-  const { searchParams, updateSearchParams } = useURLState();
+  const { params, updateSearchParams } = useURLState();
   const workflowTemplate = useWorkflowTemplate();
 
   const hasSelectedNode = currentNode.node && currentNode.type;
 
   // Settings and code panels take precedence, then node inspector
   const mode =
-    searchParams.get('panel') === 'settings'
+    params.panel === 'settings'
       ? 'settings'
-      : searchParams.get('panel') === 'code'
+      : params.panel === 'code'
         ? 'code'
-        : searchParams.get('panel') === 'publish-template'
+        : params.panel === 'publish-template'
           ? 'publish-template'
           : hasSelectedNode
             ? 'node'
@@ -154,8 +155,5 @@ export function Inspector({
 
 // Helper function to open workflow settings from external components
 export const openWorkflowSettings = () => {
-  const params = new URLSearchParams(window.location.search);
-  params.set('panel', 'settings');
-  const newURL = `${window.location.pathname}?${params.toString()}`;
-  history.pushState({}, '', newURL);
+  urlStore.updateSearchParams({ panel: 'settings' });
 };

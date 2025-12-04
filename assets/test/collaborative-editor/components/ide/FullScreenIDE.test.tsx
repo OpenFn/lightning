@@ -144,14 +144,14 @@ vi.mock(
 );
 
 // Mock useURLState hook
-let mockSearchParams = new URLSearchParams();
+let mockParams: Record<string, string> = { job: 'job-1' };
 const mockUpdateSearchParams = vi.fn(
   (params: Record<string, string | null>) => {
     Object.entries(params).forEach(([key, value]) => {
       if (value === null) {
-        mockSearchParams.delete(key);
+        delete mockParams[key];
       } else {
-        mockSearchParams.set(key, value);
+        mockParams[key] = value;
       }
     });
   }
@@ -159,7 +159,7 @@ const mockUpdateSearchParams = vi.fn(
 
 vi.mock('../../../../js/react/lib/use-url-state', () => ({
   useURLState: () => ({
-    searchParams: mockSearchParams,
+    params: mockParams,
     updateSearchParams: mockUpdateSearchParams,
     hash: '',
   }),
@@ -440,8 +440,8 @@ describe('FullScreenIDE', () => {
     });
 
     // Reset search params to default state
-    mockSearchParams = new URLSearchParams();
-    mockSearchParams.set('job', 'job-1');
+    Object.keys(mockParams).forEach(key => delete mockParams[key]);
+    mockParams.job = 'job-1';
   });
 
   describe('Initial State', () => {
