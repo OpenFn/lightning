@@ -4669,13 +4669,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       # Should show the beaker icon toggle
       assert has_element?(
                view,
-               "a[aria-label*='collaborative editor (experimental)']"
-             )
-
-      # Should have correct navigation link
-      assert has_element?(
-               view,
-               "a[href='/projects/#{project.id}/w/#{workflow.id}/collaborate']"
+               "button[aria-label*='collaborative editor (experimental)']"
              )
 
       # Should have beaker icon
@@ -4694,7 +4688,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       # Should not show the toggle
       refute has_element?(
                view,
-               "a[aria-label*='collaborative editor (experimental)']"
+               "button[aria-label*='collaborative editor (experimental)']"
              )
     end
 
@@ -4731,7 +4725,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       # Should not show the toggle for non-latest snapshots
       refute has_element?(
                view,
-               "a[aria-label*='collaborative editor (experimental)']"
+               "button[aria-label*='collaborative editor (experimental)']"
              )
     end
 
@@ -4758,16 +4752,17 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       # Should show toggle on latest version
       assert has_element?(
                view,
-               "a[aria-label*='collaborative editor (experimental)']"
+               "button[aria-label*='collaborative editor (experimental)']"
              )
     end
 
-    test "navigates to collaborative editor when toggle clicked", %{
-      conn: conn,
-      user: user,
-      project: project,
-      workflow: workflow
-    } do
+    test "navigates to collaborative editor when toggle clicked and saves preference",
+         %{
+           conn: conn,
+           user: user,
+           project: project,
+           workflow: workflow
+         } do
       # Enable experimental features
       user_with_experimental =
         user
@@ -4783,7 +4778,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       # Click the collaborative editor toggle
       view
-      |> element("a[aria-label*='collaborative editor (experimental)']")
+      |> element("button[aria-label*='collaborative editor (experimental)']")
       |> render_click()
 
       # Should navigate to collaborative editor route
@@ -4791,6 +4786,10 @@ defmodule LightningWeb.WorkflowLive.EditTest do
         view,
         ~p"/projects/#{project.id}/w/#{workflow.id}/collaborate"
       )
+
+      # Verify preference was saved
+      updated_user = Lightning.Repo.reload(user_with_experimental)
+      assert updated_user.preferences["prefer_collaborative_editor"] == true
     end
 
     test "toggle has correct styling and accessibility", %{
@@ -4814,7 +4813,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       toggle_element =
         view
-        |> element("a[aria-label*='collaborative editor (experimental)']")
+        |> element("button[aria-label*='collaborative editor (experimental)']")
 
       toggle_html = render(toggle_element)
 
@@ -4858,7 +4857,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       # Should show toggle
       assert has_element?(
                view,
-               "a[aria-label*='collaborative editor (experimental)']"
+               "button[aria-label*='collaborative editor (experimental)']"
              )
 
       # Verify all preferences are preserved
@@ -4866,6 +4865,68 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       assert updated_user.preferences["experimental_features"] == true
       assert updated_user.preferences["existing_pref"] == "value"
       assert updated_user.preferences["another_setting"] == false
+    end
+
+    test "automatically redirects to collaborative editor when preference is set",
+         %{
+           conn: conn,
+           user: user,
+           project: project,
+           workflow: workflow
+         } do
+      # Set up user with both experimental features and collaborative preference
+      user_with_prefs =
+        user
+        |> Ecto.Changeset.change(%{
+          preferences: %{
+            "experimental_features" => true,
+            "prefer_collaborative_editor" => true
+          }
+        })
+        |> Repo.update!()
+
+      # Navigate to regular workflow editor
+      {:error, {:live_redirect, %{to: redirect_path}}} =
+        conn
+        |> log_in_user(user_with_prefs)
+        |> live(~p"/projects/#{project.id}/w/#{workflow.id}")
+
+      # Should redirect to collaborative editor
+      assert redirect_path ==
+               "/projects/#{project.id}/w/#{workflow.id}/collaborate"
+    end
+
+    test "redirects to collaborative editor with query params when preference is set",
+         %{
+           conn: conn,
+           user: user,
+           project: project,
+           workflow: workflow
+         } do
+      job = insert(:job, workflow: workflow)
+
+      # Set up user with both experimental features and collaborative preference
+      user_with_prefs =
+        user
+        |> Ecto.Changeset.change(%{
+          preferences: %{
+            "experimental_features" => true,
+            "prefer_collaborative_editor" => true
+          }
+        })
+        |> Repo.update!()
+
+      # Navigate to regular workflow editor with query params
+      {:error, {:live_redirect, %{to: redirect_path}}} =
+        conn
+        |> log_in_user(user_with_prefs)
+        |> live(
+          ~p"/projects/#{project.id}/w/#{workflow.id}?s=#{job.id}&m=expand"
+        )
+
+      # Should redirect to collaborative editor with same params
+      assert redirect_path ==
+               ~p"/projects/#{project.id}/w/#{workflow.id}/collaborate?#{%{job: job.id, panel: "editor"}}"
     end
 
     test "shows collaborative editor toggle when creating new workflow with experimental features",
@@ -4890,13 +4951,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       # Should show the beaker icon toggle even on new workflow page
       assert has_element?(
                view,
-               "a[aria-label*='collaborative editor (experimental)']"
-             )
-
-      # Should have correct navigation link to new workflow collaborative editor
-      assert has_element?(
-               view,
-               "a[href='/projects/#{project.id}/w/new/collaborate']"
+               "button[aria-label*='collaborative editor (experimental)']"
              )
 
       # Should have beaker icon
@@ -4914,7 +4969,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       # Should not show the toggle without experimental features
       refute has_element?(
                view,
-               "a[aria-label*='collaborative editor (experimental)']"
+               "button[aria-label*='collaborative editor (experimental)']"
              )
     end
 

@@ -42,6 +42,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
   on_mount({LightningWeb.Hooks, :project_scope})
   on_mount {LightningWeb.Hooks, :check_limits}
+  on_mount {LightningWeb.Hooks, :check_collaborative_preference}
 
   attr :selection, :string, required: false
   attr :aiAssistantId, :string, required: false
@@ -132,7 +133,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
               <% end %>
               
     <!-- Add collaborative editor toggle (beaker icon only) -->
-              <a
+              <button
                 :if={
                   Helpers.show_collaborative_editor_toggle?(
                     @current_user,
@@ -140,13 +141,14 @@ defmodule LightningWeb.WorkflowLive.Edit do
                   )
                 }
                 id="collaborative-editor-toggle"
-                href={Helpers.collaborative_editor_url(assigns)}
+                phx-click="toggle_collaborative_editor"
                 class="inline-flex items-center justify-center p-1 text-primary-600 hover:text-primary-700 hover:bg-primary-50 rounded transition-colors"
                 data-placement="bottom"
                 aria-label="Switch to collaborative editor (experimental)"
+                type="button"
               >
                 <.icon name="hero-beaker" class="h-4 w-4" />
-              </a>
+              </button>
 
               <LightningWeb.WorkflowLive.Components.online_users
                 id="canvas-online-users"
@@ -1642,6 +1644,25 @@ defmodule LightningWeb.WorkflowLive.Edit do
     )
 
     {:noreply, socket}
+  end
+
+  def handle_event("toggle_collaborative_editor", _params, socket) do
+    Lightning.Accounts.update_user_preference(
+      socket.assigns.current_user,
+      "prefer_collaborative_editor",
+      true
+    )
+
+    params =
+      Map.merge(socket.assigns.query_params, %{
+        "id" => socket.assigns.workflow.id,
+        "project_id" => socket.assigns.project.id
+      })
+
+    collaborative_url =
+      Helpers.collaborative_editor_url(params, socket.assigns.live_action)
+
+    {:noreply, push_navigate(socket, to: collaborative_url)}
   end
 
   def handle_event("get-current-state", _params, socket) do

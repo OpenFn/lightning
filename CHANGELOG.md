@@ -17,6 +17,11 @@ and this project adheres to
 
 ### Added
 
+- User preference persistence for collaborative editor - users can now toggle
+  between legacy and collaborative editors, and their choice is remembered
+  across sessions with automatic redirect
+  [#4091](https://github.com/OpenFn/lightning/issues/4091)
+
 ### Changed
 
 - Refactor URLStore to use Record with Immer for proper structural sharing,
