@@ -59,6 +59,7 @@ import type {
   ConnectionState,
   JobCodeContext,
   Message,
+  MessageStatus,
   Session,
   SessionType,
   WorkflowTemplateContext,
@@ -453,11 +454,11 @@ export const createAIAssistantStore = (): AIAssistantStore => {
    * Update message status
    * @internal Called by useAIAssistantChannel hook
    */
-  const _updateMessageStatus = (messageId: string, status: string) => {
+  const _updateMessageStatus = (messageId: string, status: MessageStatus) => {
     state = produce(state, draft => {
       const message = draft.messages.find(m => m.id === messageId);
       if (message) {
-        message.status = status as Message['status'];
+        message.status = status;
 
         if (status === 'success' || status === 'error') {
           draft.isLoading = false;
