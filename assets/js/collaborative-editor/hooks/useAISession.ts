@@ -40,6 +40,10 @@ import type {
   SessionType,
   WorkflowTemplateContext,
 } from '../types/ai-assistant';
+import {
+  serializeWorkflowToYAML,
+  type SerializableWorkflow,
+} from '../utils/workflowSerialization';
 
 import { useAIStore } from './useAIAssistant';
 import {
@@ -202,58 +206,33 @@ export const useAISession = ({
     ) {
       const { workflow, jobs, triggers, edges, positions } = workflowData;
 
-      // Async workflow serialization - use IIFE to handle async properly
-      void (async () => {
-        try {
-          const { serializeWorkflowToYAML } = await import(
-            '../utils/workflowSerialization'
-          );
-
-          // Guard against stale async callbacks - if we've already moved to a different session,
-          // don't subscribe to this one
-          if (currentSubscriptionRef.current !== topic) {
-            logger.debug('Skipping stale subscription', {
-              expected: currentSubscriptionRef.current,
-              got: topic,
-            });
-            return;
-          }
-
-          const workflowForSerialization = {
-            id: workflow.id,
-            name: workflow.name,
-            jobs: jobs.map((job: unknown) => {
-              const j = job as Record<string, unknown>;
-              return {
-                id: String(j['id']),
-                name: String(j['name']),
-                adaptor: String(j['adaptor']),
-                body: String(j['body']),
-              };
-            }),
-            triggers,
-            edges,
-            positions,
+      // Synchronous workflow serialization - static import eliminates race conditions
+      // that occurred with dynamic imports during rapid session switching
+      const workflowForSerialization: SerializableWorkflow = {
+        id: workflow.id,
+        name: workflow.name,
+        jobs: jobs.map((job: unknown) => {
+          const j = job as Record<string, unknown>;
+          return {
+            id: String(j['id']),
+            name: String(j['name']),
+            adaptor: String(j['adaptor']),
+            body: String(j['body']),
           };
+        }),
+        triggers,
+        edges,
+        positions,
+      };
 
-          const workflowYAML = serializeWorkflowToYAML(
-            workflowForSerialization as import('../utils/workflowSerialization').SerializableWorkflow
-          );
+      const workflowYAML = serializeWorkflowToYAML(workflowForSerialization);
 
-          const finalContext = workflowYAML
-            ? ({ ...context, code: workflowYAML } as WorkflowTemplateContext)
-            : context;
+      const finalContext = workflowYAML
+        ? ({ ...context, code: workflowYAML } as WorkflowTemplateContext)
+        : context;
 
-          // Registry handles connection and sets session when join succeeds
-          registry.subscribe(topic, subscriberId, finalContext);
-        } catch (err) {
-          logger.error('Failed to serialize workflow:', err);
-          // On error, still subscribe but without workflow YAML
-          if (currentSubscriptionRef.current === topic) {
-            registry.subscribe(topic, subscriberId, context);
-          }
-        }
-      })();
+      // Registry handles connection and sets session when join succeeds
+      registry.subscribe(topic, subscriberId, finalContext);
     } else {
       // No workflow serialization needed - registry handles connection
       registry.subscribe(topic, subscriberId, context);
