@@ -1,16 +1,79 @@
-import { marked } from 'marked';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import Markdown from 'react-markdown';
+import { useEffect, useRef, useState } from 'react';
+import remarkGfm from 'remark-gfm';
 
 import { cn } from '#/utils/cn';
-import { sanitizeHtml } from '#/utils/sanitizeHtml';
-
-marked.setOptions({
-  gfm: true,
-  breaks: true,
-});
 
 /**
- * Markdown renderer component using marked
+ * Custom code block component for react-markdown
+ * Renders code with COPY/ADD action buttons
+ */
+const CodeBlock = ({
+  children,
+  showAddButtons,
+}: {
+  children: string;
+  showAddButtons?: boolean;
+}) => {
+  const [copied, setCopied] = useState(false);
+  const [added, setAdded] = useState(false);
+
+  const handleCopy = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const success = await doCopy(children);
+    if (success) {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
+
+  const handleAdd = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    doInsert(children);
+    setAdded(true);
+    setTimeout(() => setAdded(false), 2000);
+  };
+
+  return (
+    <pre className="relative group">
+      <code>{children}</code>
+      <div className="code-actions absolute top-2 right-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+        <button
+          type="button"
+          onClick={handleCopy}
+          className={cn(
+            'rounded-md px-2 py-1 text-xs font-medium transition-all duration-300 ease-in-out',
+            copied
+              ? 'bg-green-100 text-green-700 scale-105'
+              : 'bg-slate-300 text-white hover:bg-primary-600 hover:scale-105'
+          )}
+          title={copied ? 'Copied!' : 'Copy to clipboard'}
+        >
+          {copied ? 'COPIED' : 'COPY'}
+        </button>
+        {showAddButtons && (
+          <button
+            type="button"
+            onClick={handleAdd}
+            disabled={added}
+            className={cn(
+              'rounded-md px-2 py-1 text-xs font-medium transition-all duration-300 ease-in-out',
+              added
+                ? 'bg-green-100 text-green-700 scale-105'
+                : 'bg-slate-300 text-white hover:bg-primary-600 hover:scale-105'
+            )}
+            title={added ? 'Added!' : 'Add this snippet to the end of the code'}
+          >
+            {added ? 'ADDED' : 'ADD'}
+          </button>
+        )}
+      </div>
+    </pre>
+  );
+};
+
+/**
+ * Markdown renderer component using react-markdown
  */
 const MarkdownContent = ({
   content,
@@ -21,96 +84,34 @@ const MarkdownContent = ({
   className?: string;
   showAddButtons?: boolean;
 }) => {
-  const containerRef = useRef<HTMLDivElement>(null);
-
-  const html = useMemo(() => {
-    try {
-      const result = marked.parse(content, { async: false });
-      const rawHtml = typeof result === 'string' ? result : content;
-      return sanitizeHtml(rawHtml);
-    } catch (err) {
-      console.error('Markdown parse error:', err);
-      return sanitizeHtml(content);
-    }
-  }, [content]);
-
-  useEffect(() => {
-    if (!containerRef.current) return;
-
-    const codeBlocks = containerRef.current.querySelectorAll('pre > code');
-
-    codeBlocks.forEach(codeElement => {
-      const preElement = codeElement.parentElement;
-      if (!preElement || preElement.querySelector('.code-actions')) return;
-
-      const code = codeElement.textContent || '';
-
-      const buttonContainer = document.createElement('div');
-      buttonContainer.className =
-        'code-actions absolute top-2 right-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity';
-
-      const copyButton = document.createElement('button');
-      copyButton.type = 'button';
-      copyButton.className =
-        'rounded-md px-2 py-1 text-xs font-medium bg-slate-300 text-white hover:bg-primary-600 hover:scale-105 transition-all duration-300 ease-in-out';
-      copyButton.textContent = 'COPY';
-      copyButton.title = 'Copy to clipboard';
-
-      copyButton.onclick = async e => {
-        e.stopPropagation();
-        const success = await doCopy(code);
-        if (success) {
-          copyButton.textContent = 'COPIED';
-          copyButton.className =
-            'rounded-md px-2 py-1 text-xs font-medium bg-green-100 text-green-700 scale-105 transition-all duration-300 ease-in-out';
-          setTimeout(() => {
-            copyButton.textContent = 'COPY';
-            copyButton.className =
-              'rounded-md px-2 py-1 text-xs font-medium bg-slate-300 text-white hover:bg-primary-600 hover:scale-105 transition-all duration-300 ease-in-out';
-          }, 2000);
-        }
-      };
-
-      buttonContainer.appendChild(copyButton);
-
-      if (showAddButtons) {
-        const addButton = document.createElement('button');
-        addButton.type = 'button';
-        addButton.className =
-          'rounded-md px-2 py-1 text-xs font-medium bg-slate-300 text-white hover:bg-primary-600 hover:scale-105 transition-all duration-300 ease-in-out';
-        addButton.textContent = 'ADD';
-        addButton.title = 'Add this snippet to the end of the code';
-
-        addButton.onclick = e => {
-          e.stopPropagation();
-          doInsert(code);
-          addButton.textContent = 'ADDED';
-          addButton.className =
-            'rounded-md px-2 py-1 text-xs font-medium bg-green-100 text-green-700 scale-105 transition-all duration-300 ease-in-out';
-          addButton.disabled = true;
-          setTimeout(() => {
-            addButton.textContent = 'ADD';
-            addButton.className =
-              'rounded-md px-2 py-1 text-xs font-medium bg-slate-300 text-white hover:bg-primary-600 hover:scale-105 transition-all duration-300 ease-in-out';
-            addButton.disabled = false;
-          }, 2000);
-        };
-
-        buttonContainer.appendChild(addButton);
-      }
-
-      preElement.style.position = 'relative';
-      preElement.classList.add('group');
-      preElement.appendChild(buttonContainer);
-    });
-  }, [html, showAddButtons]);
-
   return (
-    <div
-      ref={containerRef}
-      className={className}
-      dangerouslySetInnerHTML={{ __html: html }}
-    />
+    <div className={className}>
+      <Markdown
+        remarkPlugins={[remarkGfm]}
+        components={{
+          // Custom renderer for code blocks (fenced code)
+          pre: ({ children }) => <>{children}</>,
+          code: ({ className: codeClassName, children }) => {
+            // Check if this is a code block (has language class) or inline code
+            const isCodeBlock = codeClassName?.startsWith('language-');
+            const codeContent = String(children).replace(/\n$/, '');
+
+            if (isCodeBlock || (children && String(children).includes('\n'))) {
+              return (
+                <CodeBlock showAddButtons={showAddButtons}>
+                  {codeContent}
+                </CodeBlock>
+              );
+            }
+
+            // Inline code
+            return <code className={codeClassName}>{children}</code>;
+          },
+        }}
+      >
+        {content}
+      </Markdown>
+    </div>
   );
 };
 

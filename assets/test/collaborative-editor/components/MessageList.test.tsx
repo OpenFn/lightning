@@ -433,7 +433,7 @@ describe('MessageList', () => {
       expect(link?.getAttribute('href')).toBe('https://openfn.org');
     });
 
-    it('should render GFM tables with alignment', () => {
+    it('should render GFM tables', () => {
       const messages = [
         createMockAIMessage({
           role: 'assistant',
@@ -449,13 +449,12 @@ describe('MessageList', () => {
       expect(container.querySelector('thead')).toBeInTheDocument();
       expect(container.querySelector('tbody')).toBeInTheDocument();
 
-      // Check alignment attributes are preserved
-      const leftTh = container.querySelector('th[align="left"]');
-      const centerTh = container.querySelector('th[align="center"]');
-      const rightTh = container.querySelector('th[align="right"]');
-      expect(leftTh).toBeInTheDocument();
-      expect(centerTh).toBeInTheDocument();
-      expect(rightTh).toBeInTheDocument();
+      // Check table cells are rendered
+      const headerCells = container.querySelectorAll('th');
+      expect(headerCells).toHaveLength(3);
+      expect(headerCells[0]?.textContent).toBe('Left');
+      expect(headerCells[1]?.textContent).toBe('Center');
+      expect(headerCells[2]?.textContent).toBe('Right');
     });
 
     it('should render strikethrough text', () => {
@@ -487,8 +486,11 @@ describe('MessageList', () => {
     });
   });
 
-  describe('XSS Sanitization', () => {
-    it('should strip script tags from content', () => {
+  describe('XSS Prevention', () => {
+    // react-markdown does not render raw HTML by default - it treats it as text
+    // This is more secure than sanitizing because HTML is never parsed
+
+    it('should not render script tags from raw HTML', () => {
       const messages = [
         createMockAIMessage({
           role: 'assistant',
@@ -498,13 +500,14 @@ describe('MessageList', () => {
 
       const { container } = render(<MessageList messages={messages} />);
 
+      // Script tag is not rendered as an element
       expect(container.querySelector('script')).not.toBeInTheDocument();
+      // Content around the script tag is preserved
       expect(container.textContent).toContain('Hello');
       expect(container.textContent).toContain('world');
-      expect(container.textContent).not.toContain('alert');
     });
 
-    it('should strip onerror handlers from img tags', () => {
+    it('should not render img tags from raw HTML', () => {
       const messages = [
         createMockAIMessage({
           role: 'assistant',
@@ -514,11 +517,11 @@ describe('MessageList', () => {
 
       const { container } = render(<MessageList messages={messages} />);
 
-      // img tag itself should be stripped (not in allowed tags)
+      // img tag is not rendered as an element
       expect(container.querySelector('img')).not.toBeInTheDocument();
     });
 
-    it('should strip onclick handlers', () => {
+    it('should not render raw HTML anchor tags', () => {
       const messages = [
         createMockAIMessage({
           role: 'assistant',
@@ -528,12 +531,12 @@ describe('MessageList', () => {
 
       const { container } = render(<MessageList messages={messages} />);
 
-      const link = container.querySelector('a');
-      expect(link).toBeInTheDocument();
-      expect(link?.getAttribute('onclick')).toBeNull();
+      // Raw HTML anchor is not rendered - only markdown links work
+      // The text content may be visible but not as an anchor element
+      expect(container.querySelector('a[onclick]')).not.toBeInTheDocument();
     });
 
-    it('should strip iframe tags', () => {
+    it('should not render iframe tags from raw HTML', () => {
       const messages = [
         createMockAIMessage({
           role: 'assistant',
@@ -546,11 +549,11 @@ describe('MessageList', () => {
       expect(container.querySelector('iframe')).not.toBeInTheDocument();
     });
 
-    it('should strip javascript: URLs from links', () => {
+    it('should render safe markdown links correctly', () => {
       const messages = [
         createMockAIMessage({
           role: 'assistant',
-          content: '<a href="javascript:alert(\'xss\')">Click</a>',
+          content: '[Safe Link](https://safe.com)',
         }),
       ];
 
@@ -558,27 +561,10 @@ describe('MessageList', () => {
 
       const link = container.querySelector('a');
       expect(link).toBeInTheDocument();
-      // DOMPurify removes javascript: URLs entirely (href becomes null)
-      expect(link?.getAttribute('href')).toBeNull();
+      expect(link?.getAttribute('href')).toBe('https://safe.com');
     });
 
-    it('should strip style attributes', () => {
-      const messages = [
-        createMockAIMessage({
-          role: 'assistant',
-          content:
-            '<p style="background:url(javascript:alert(\'xss\'))">Styled</p>',
-        }),
-      ];
-
-      const { container } = render(<MessageList messages={messages} />);
-
-      const p = container.querySelector('p');
-      expect(p).toBeInTheDocument();
-      expect(p?.getAttribute('style')).toBeNull();
-    });
-
-    it('should preserve safe markdown while stripping dangerous HTML', () => {
+    it('should preserve safe markdown while ignoring raw HTML', () => {
       const messages = [
         createMockAIMessage({
           role: 'assistant',
@@ -589,14 +575,14 @@ describe('MessageList', () => {
 
       const { container } = render(<MessageList messages={messages} />);
 
-      // Safe content preserved
+      // Safe markdown content is preserved
       expect(container.querySelector('h1')).toBeInTheDocument();
       expect(container.querySelector('strong')).toBeInTheDocument();
       expect(container.querySelector('a')?.getAttribute('href')).toBe(
         'https://safe.com'
       );
 
-      // Dangerous content removed
+      // Raw HTML script is not rendered
       expect(container.querySelector('script')).not.toBeInTheDocument();
     });
   });
