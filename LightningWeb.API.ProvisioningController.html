@@ -184,18 +184,18 @@ deployments via the CLI. Supports both JSON and YAML formats.</p><h2 id="module-
 resources. If a project ID is provided and exists, the project will be
 updated; otherwise, a new project is created.</p><h2 id="create/2-parameters" class="section-heading"><a href="#create/2-parameters" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Parameters</span></h2><ul><li><code class="inline">conn</code> - The Plug connection struct with the current resource assigned</li><li><code class="inline">params</code> - Map containing project configuration (workflows, jobs, triggers, etc.)</li></ul><h2 id="create/2-returns" class="section-heading"><a href="#create/2-returns" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Returns</span></h2><ul><li><code class="inline">201 Created</code> with project JSON on success</li><li><code class="inline">422 Unprocessable Entity</code> with changeset errors on validation failure</li><li><code class="inline">403 Forbidden</code> if user lacks provisioning permissions</li></ul><h2 id="create/2-examples" class="section-heading"><a href="#create/2-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="c1"># Create new project</span><span class="w">
 </span><span class="nc">POST</span><span class="w"> </span><span class="o">/</span><span class="n">api</span><span class="o">/</span><span class="n">provision</span><span class="w">
-</span><span class="p" data-group-id="8188417870-1">{</span><span class="w">
+</span><span class="p" data-group-id="5323630822-1">{</span><span class="w">
   </span><span class="ss">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;My Project&quot;</span><span class="p">,</span><span class="w">
-  </span><span class="ss">&quot;workflows&quot;</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="8188417870-2">[</span><span class="n">...</span><span class="p" data-group-id="8188417870-2">]</span><span class="w">
-</span><span class="p" data-group-id="8188417870-1">}</span><span class="w">
+  </span><span class="ss">&quot;workflows&quot;</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="5323630822-2">[</span><span class="n">...</span><span class="p" data-group-id="5323630822-2">]</span><span class="w">
+</span><span class="p" data-group-id="5323630822-1">}</span><span class="w">
 
 </span><span class="c1"># Update existing project</span><span class="w">
 </span><span class="nc">POST</span><span class="w"> </span><span class="o">/</span><span class="n">api</span><span class="o">/</span><span class="n">provision</span><span class="w">
-</span><span class="p" data-group-id="8188417870-3">{</span><span class="w">
+</span><span class="p" data-group-id="5323630822-3">{</span><span class="w">
   </span><span class="ss">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;a1b2c3d4-...&quot;</span><span class="p">,</span><span class="w">
   </span><span class="ss">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Updated Project&quot;</span><span class="p">,</span><span class="w">
-  </span><span class="ss">&quot;workflows&quot;</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="8188417870-4">[</span><span class="n">...</span><span class="p" data-group-id="8188417870-4">]</span><span class="w">
-</span><span class="p" data-group-id="8188417870-3">}</span></code></pre>
+  </span><span class="ss">&quot;workflows&quot;</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="5323630822-4">[</span><span class="n">...</span><span class="p" data-group-id="5323630822-4">]</span><span class="w">
+</span><span class="p" data-group-id="5323630822-3">}</span></code></pre>
   </section>
 </section>
 <section class="detail" id="show/2">
