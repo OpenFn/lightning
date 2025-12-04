@@ -104,6 +104,16 @@ vi.mock(
   })
 );
 
+// Note: RightPanelLanding no longer exists - Run button is now in the IDE header
+
+// Mock MiniHistory
+vi.mock(
+  '../../../../js/collaborative-editor/components/diagram/MiniHistory',
+  () => ({
+    default: () => <div data-testid="mini-history">MiniHistory</div>,
+  })
+);
+
 // Mock AdaptorSelectionModal
 vi.mock(
   '../../../../js/collaborative-editor/components/AdaptorSelectionModal',
@@ -299,6 +309,25 @@ vi.mock('../../../../js/collaborative-editor/hooks/useRun', () => ({
   useCurrentRun: () => null,
 }));
 
+// Mock useHistory hooks
+vi.mock('../../../../js/collaborative-editor/hooks/useHistory', () => ({
+  useFollowRun: vi.fn(() => ({ run: null, clearRun: vi.fn() })),
+  useHistory: () => [],
+  useHistoryLoading: () => false,
+  useHistoryError: () => null,
+  useHistoryCommands: () => ({
+    selectStep: vi.fn(),
+    requestHistory: vi.fn(),
+    requestRunSteps: vi.fn(),
+    getRunSteps: vi.fn(),
+    clearError: vi.fn(),
+    clearActiveRunError: vi.fn(),
+  }),
+  useJobMatchesRun: () => true,
+  useActiveRun: () => null,
+  useSelectedStepId: () => null,
+}));
+
 // Mock credential hooks
 vi.mock('../../../../js/collaborative-editor/hooks/useCredentials', () => ({
   useCredentials: () => ({
@@ -384,6 +413,23 @@ function renderFullScreenIDE(props = {}) {
         <FullScreenIDE {...defaultProps} />
       </KeyboardProvider>
     </StoreContext.Provider>
+  );
+}
+
+// Helper to navigate to create-run state (required for run shortcuts to work)
+async function navigateToCreateRunState(
+  user: ReturnType<typeof userEvent.setup>
+) {
+  // Wait for IDE to be fully rendered
+  await waitFor(() =>
+    expect(screen.getByTestId('collaborative-monaco')).toBeInTheDocument()
+  );
+  // Click the "Run" button in the header to enter create-run state
+  const runButton = screen.getByRole('button', { name: /^Run$/i });
+  await user.click(runButton);
+  // Wait for ManualRunPanel to appear
+  await waitFor(() =>
+    expect(screen.getByTestId('manual-run-panel')).toBeInTheDocument()
   );
 }
 
@@ -528,15 +574,15 @@ describe('FullScreenIDE Keyboard Shortcuts', () => {
   });
 
   describe('Mod+Enter - Run or Retry', () => {
-    test('calls handleRun when retry is not available (Mac)', async () => {
+    // Note: Run shortcuts only work in create-run or run-viewer states
+    test('calls handleRun when in create-run state (Mac)', async () => {
       const user = userEvent.setup();
       const { handleRun } = setupMockUseRunRetry();
 
       const { container } = renderFullScreenIDE();
 
-      await waitFor(() =>
-        expect(screen.getByTestId('collaborative-monaco')).toBeInTheDocument()
-      );
+      // Navigate to create-run state (shortcuts only work there)
+      await navigateToCreateRunState(user);
 
       container.focus();
 
@@ -546,15 +592,14 @@ describe('FullScreenIDE Keyboard Shortcuts', () => {
       await waitFor(() => expect(handleRun).toHaveBeenCalled());
     });
 
-    test('calls handleRun when retry is not available (Windows)', async () => {
+    test('calls handleRun when in create-run state (Windows)', async () => {
       const user = userEvent.setup();
       const { handleRun } = setupMockUseRunRetry();
 
       const { container } = renderFullScreenIDE();
 
-      await waitFor(() =>
-        expect(screen.getByTestId('collaborative-monaco')).toBeInTheDocument()
-      );
+      // Navigate to create-run state
+      await navigateToCreateRunState(user);
 
       container.focus();
 
@@ -572,9 +617,8 @@ describe('FullScreenIDE Keyboard Shortcuts', () => {
 
       const { container } = renderFullScreenIDE();
 
-      await waitFor(() =>
-        expect(screen.getByTestId('collaborative-monaco')).toBeInTheDocument()
-      );
+      // Navigate to create-run state
+      await navigateToCreateRunState(user);
 
       container.focus();
 
@@ -591,9 +635,8 @@ describe('FullScreenIDE Keyboard Shortcuts', () => {
 
       renderFullScreenIDE();
 
-      await waitFor(() =>
-        expect(screen.getByTestId('collaborative-monaco')).toBeInTheDocument()
-      );
+      // Navigate to create-run state
+      await navigateToCreateRunState(user);
 
       // Focus Monaco editor
       const monacoContent = screen.getByTestId('monaco-contenteditable');
@@ -610,9 +653,8 @@ describe('FullScreenIDE Keyboard Shortcuts', () => {
 
       renderFullScreenIDE();
 
-      await waitFor(() =>
-        expect(screen.getByTestId('collaborative-monaco')).toBeInTheDocument()
-      );
+      // Navigate to create-run state
+      await navigateToCreateRunState(user);
 
       // Create and focus an input element
       const input = document.createElement('input');
@@ -636,9 +678,8 @@ describe('FullScreenIDE Keyboard Shortcuts', () => {
 
       renderFullScreenIDE();
 
-      await waitFor(() =>
-        expect(screen.getByTestId('collaborative-monaco')).toBeInTheDocument()
-      );
+      // Navigate to create-run state
+      await navigateToCreateRunState(user);
 
       // Focus Monaco editor
       const monacoContent = screen.getByTestId('monaco-contenteditable');
@@ -657,9 +698,8 @@ describe('FullScreenIDE Keyboard Shortcuts', () => {
 
       renderFullScreenIDE();
 
-      await waitFor(() =>
-        expect(screen.getByTestId('collaborative-monaco')).toBeInTheDocument()
-      );
+      // Navigate to create-run state
+      await navigateToCreateRunState(user);
 
       // Create and focus an input element
       const input = document.createElement('input');
@@ -711,9 +751,8 @@ describe('FullScreenIDE Keyboard Shortcuts', () => {
 
       renderFullScreenIDE({ onClose });
 
-      await waitFor(() =>
-        expect(screen.getByTestId('collaborative-monaco')).toBeInTheDocument()
-      );
+      // Navigate to create-run state (required for run shortcuts)
+      await navigateToCreateRunState(user);
 
       // Focus Monaco
       const monacoContent = screen.getByTestId('monaco-contenteditable');
@@ -745,9 +784,8 @@ describe('FullScreenIDE Keyboard Shortcuts', () => {
 
       const { container } = renderFullScreenIDE();
 
-      await waitFor(() =>
-        expect(screen.getByTestId('collaborative-monaco')).toBeInTheDocument()
-      );
+      // Navigate to create-run state
+      await navigateToCreateRunState(user);
 
       container.focus();
 

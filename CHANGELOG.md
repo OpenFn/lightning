@@ -17,6 +17,12 @@ and this project adheres to
 
 ### Added
 
+- Added mini history to the IDE as a state machine that provides the same
+  experience that's available on the canvas
+  [#4054](https://github.com/OpenFn/lightning/issues/4054)
+  - **If no run chosen?** You can browse from history or create a new one.
+  - **If run chosen?** You can view the details or deselect to start over.
+
 ### Changed
 
 - Refactor URLStore to use Record with Immer for proper structural sharing,
