@@ -17,6 +17,9 @@ and this project adheres to
 
 ### Added
 
+- Display collab editor promo in the legacy editor
+  [#4091](https://github.com/OpenFn/lightning/issues/4091)
+
 ### Changed
 
 ### Fixed

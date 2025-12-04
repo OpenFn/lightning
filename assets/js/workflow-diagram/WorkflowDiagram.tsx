@@ -15,6 +15,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useWorkflowStore } from '../workflow-store/store';
 
 import { AiAssistantToggle } from './AiAssistantToggle';
+import { CollaborativeEditorPromoBanner } from './CollaborativeEditorPromoBanner';
 import MiniMapNode from './components/MiniMapNode';
 import { FIT_DURATION, FIT_PADDING } from './constants';
 import edgeTypes from './edges';
@@ -622,6 +623,7 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
         liveAction={props.liveAction}
         drawerWidth={drawerWidth}
       />
+      <CollaborativeEditorPromoBanner className="absolute top-4 left-1/2 -translate-x-1/2 w-96 z-10" />
       {props.liveAction === 'edit' ? (
         <MiniHistory
           collapsed={!runSteps.start_from}
