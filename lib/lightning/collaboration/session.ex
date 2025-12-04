@@ -457,7 +457,7 @@ defmodule Lightning.Collaboration.Session do
   defp fetch_workflow(
          %{__meta__: %{state: :built}, lock_version: lock_version} = workflow
        )
-       when lock_version > 0 do
+       when is_integer(lock_version) and lock_version > 0 do
     case Lightning.Workflows.get_workflow(workflow.id,
            include: [:jobs, :edges, :triggers]
          ) do

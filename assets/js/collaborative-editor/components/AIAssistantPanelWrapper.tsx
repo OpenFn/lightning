@@ -4,7 +4,6 @@ import { useURLState } from '../../react/lib/use-url-state';
 import { parseWorkflowYAML, convertWorkflowSpecToState } from '../../yaml/util';
 import {
   useAIConnectionState,
-  useAIHasReadDisclaimer,
   useAIIsLoading,
   useAIMessages,
   useAISessionId,
@@ -13,84 +12,33 @@ import {
   useAIWorkflowTemplateContext,
 } from '../hooks/useAIAssistant';
 import { useAISessionCommands } from '../hooks/useAIChannelRegistry';
+import { useAIInitialMessage } from '../hooks/useAIInitialMessage';
 import { useAIMode } from '../hooks/useAIMode';
 import { useAISession } from '../hooks/useAISession';
-import { useProject } from '../hooks/useSessionContext';
-import { useIsAIAssistantPanelOpen, useUICommands } from '../hooks/useUI';
+import { useResizablePanel } from '../hooks/useResizablePanel';
+import {
+  useProject,
+  useHasReadAIDisclaimer,
+  useSetHasReadAIDisclaimer,
+  useSessionContextLoaded,
+} from '../hooks/useSessionContext';
+import {
+  useIsAIAssistantPanelOpen,
+  useUICommands,
+  useAIAssistantInitialMessage,
+} from '../hooks/useUI';
 import { useWorkflowState, useWorkflowActions } from '../hooks/useWorkflow';
 import { useKeyboardShortcut } from '../keyboard';
 import { notifications } from '../lib/notifications';
 import type { JobCodeContext } from '../types/ai-assistant';
-import { serializeWorkflowToYAML } from '../utils/workflowSerialization';
+import { Z_INDEX } from '../utils/constants';
+import {
+  prepareWorkflowForSerialization,
+  serializeWorkflowToYAML,
+} from '../utils/workflowSerialization';
 
 import { AIAssistantPanel } from './AIAssistantPanel';
 import { MessageList } from './MessageList';
-
-// Helper functions removed - no longer needed with registry-based approach
-
-/**
- * Helper function to prepare workflow data for serialization.
- * Transforms workflow store state into the format expected by serializeWorkflowToYAML.
- */
-function prepareWorkflowForSerialization(
-  workflow: { id: string; name: string } | null,
-  jobs: unknown[],
-  triggers: unknown[],
-  edges: unknown[],
-  positions: unknown
-): import('../utils/workflowSerialization').SerializableWorkflow | null {
-  if (!workflow || jobs.length === 0) {
-    return null;
-  }
-
-  return {
-    id: workflow.id,
-    name: workflow.name,
-    jobs: jobs.map((job: unknown) => {
-      const j = job as Record<string, unknown>;
-      return {
-        id: String(j['id']),
-        name: String(j['name']),
-        adaptor: String(j['adaptor']),
-        body: String(j['body']),
-      };
-    }),
-    triggers,
-    edges: edges.map((edge: unknown) => {
-      const e = edge as Record<string, unknown>;
-      const conditionType = e['condition_type'];
-      const result: Record<string, unknown> = {
-        id: String(e['id']),
-        condition_type:
-          conditionType && typeof conditionType === 'string'
-            ? conditionType
-            : 'always',
-        enabled: e['enabled'] !== false,
-        target_job_id: String(e['target_job_id']),
-      };
-
-      const sourceJobId = e['source_job_id'];
-      if (sourceJobId && typeof sourceJobId === 'string') {
-        result['source_job_id'] = sourceJobId;
-      }
-      const sourceTriggerId = e['source_trigger_id'];
-      if (sourceTriggerId && typeof sourceTriggerId === 'string') {
-        result['source_trigger_id'] = sourceTriggerId;
-      }
-      const conditionLabel = e['condition_label'];
-      if (conditionLabel && typeof conditionLabel === 'string') {
-        result['condition_label'] = conditionLabel;
-      }
-      const conditionExpression = e['condition_expression'];
-      if (conditionExpression && typeof conditionExpression === 'string') {
-        result['condition_expression'] = conditionExpression;
-      }
-
-      return result;
-    }),
-    positions,
-  } as import('../utils/workflowSerialization').SerializableWorkflow;
-}
 
 /**
  * AIAssistantPanelWrapper Component
@@ -106,7 +54,13 @@ function prepareWorkflowForSerialization(
  */
 export function AIAssistantPanelWrapper() {
   const isAIAssistantPanelOpen = useIsAIAssistantPanelOpen();
-  const { closeAIAssistantPanel, toggleAIAssistantPanel } = useUICommands();
+  const initialMessage = useAIAssistantInitialMessage();
+  const {
+    closeAIAssistantPanel,
+    toggleAIAssistantPanel,
+    clearAIAssistantInitialMessage,
+    collapseCreateWorkflowPanel,
+  } = useUICommands();
   const { updateSearchParams, searchParams } = useURLState();
 
   // Track IDE state changes to re-focus chat input when IDE closes
@@ -122,7 +76,18 @@ export function AIAssistantPanelWrapper() {
     prevIDEOpenRef.current = isIDEOpen;
   }, [isIDEOpen]);
 
-  useKeyboardShortcut('$mod+k', toggleAIAssistantPanel, 0);
+  // Cmd+K toggles AI Assistant with mutual exclusivity
+  useKeyboardShortcut(
+    '$mod+k',
+    () => {
+      // Close create workflow panel when opening AI Assistant
+      if (!isAIAssistantPanelOpen) {
+        collapseCreateWorkflowPanel();
+      }
+      toggleAIAssistantPanel();
+    },
+    0
+  );
 
   const aiStore = useAIStore();
   const {
@@ -137,7 +102,9 @@ export function AIAssistantPanelWrapper() {
   const sessionId = useAISessionId();
   const sessionType = useAISessionType();
   const connectionState = useAIConnectionState();
-  const hasReadDisclaimer = useAIHasReadDisclaimer();
+  const sessionContextLoaded = useSessionContextLoaded();
+  const hasReadDisclaimer = useHasReadAIDisclaimer();
+  const setHasReadAIDisclaimer = useSetHasReadAIDisclaimer();
   const workflowTemplateContext = useAIWorkflowTemplateContext();
   const project = useProject();
   const workflow = useWorkflowState(state => state.workflow);
@@ -147,14 +114,15 @@ export function AIAssistantPanelWrapper() {
   const edges = useWorkflowState(state => state.edges);
   const positions = useWorkflowState(state => state.positions);
 
-  const [width, setWidth] = useState(() => {
-    const saved = localStorage.getItem('ai-assistant-panel-width');
-    return saved ? parseInt(saved, 10) : 400;
+  const {
+    width,
+    isResizing,
+    handleMouseDown: handleResizeMouseDown,
+  } = useResizablePanel({
+    storageKey: 'ai-assistant-panel-width',
+    defaultWidth: 400,
+    direction: 'left',
   });
-  const [isResizing, setIsResizing] = useState(false);
-  const startXRef = useRef<number>(0);
-  const startWidthRef = useRef<number>(0);
-  const widthRef = useRef<number>(width);
 
   /**
    * isSyncingRef prevents re-entrant URL updates during panel state changes.
@@ -174,8 +142,11 @@ export function AIAssistantPanelWrapper() {
     if (isSyncingRef.current) return;
 
     isSyncingRef.current = true;
+
     if (isAIAssistantPanelOpen) {
-      updateSearchParams({ chat: 'true' });
+      updateSearchParams({
+        chat: 'true',
+      });
     } else {
       // When closing, clear chat param and session params
       updateSearchParams({
@@ -184,53 +155,11 @@ export function AIAssistantPanelWrapper() {
         'j-chat': null,
       });
     }
+
     setTimeout(() => {
       isSyncingRef.current = false;
     }, 0);
   }, [isAIAssistantPanelOpen, updateSearchParams]);
-
-  // Keep widthRef in sync with width state for use in event handlers
-  useEffect(() => {
-    widthRef.current = width;
-  }, [width]);
-
-  useEffect(() => {
-    if (!isResizing) return;
-
-    const handleMouseMove = (e: MouseEvent) => {
-      const deltaX = startXRef.current - e.clientX;
-      const newWidth = Math.max(
-        300,
-        Math.min(800, startWidthRef.current + deltaX)
-      );
-      setWidth(newWidth);
-      widthRef.current = newWidth;
-    };
-
-    const handleMouseUp = () => {
-      setIsResizing(false);
-      // Use ref to get current width, avoiding stale closure
-      localStorage.setItem(
-        'ai-assistant-panel-width',
-        widthRef.current.toString()
-      );
-    };
-
-    document.addEventListener('mousemove', handleMouseMove);
-    document.addEventListener('mouseup', handleMouseUp);
-
-    return () => {
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
-    };
-  }, [isResizing]);
-
-  const handleMouseDown = (e: React.MouseEvent) => {
-    e.preventDefault();
-    setIsResizing(true);
-    startXRef.current = e.clientX;
-    startWidthRef.current = width;
-  };
 
   const aiMode = useAIMode();
 
@@ -274,7 +203,7 @@ export function AIAssistantPanelWrapper() {
   });
 
   useEffect(() => {
-    // Don't sync session to URL if panel is closed
+    // Don't sync session ID to URL when panel is closed
     if (!isAIAssistantPanelOpen) return;
     if (!sessionId || !aiMode) return;
 
@@ -300,12 +229,12 @@ export function AIAssistantPanelWrapper() {
       });
     }
   }, [
-    isAIAssistantPanelOpen,
     sessionId,
     aiMode,
     searchParams,
     updateSearchParams,
     aiStore,
+    isAIAssistantPanelOpen,
   ]);
 
   // Close handler - URL cleanup happens automatically via the effect above
@@ -342,6 +271,22 @@ export function AIAssistantPanelWrapper() {
     updateContextViaChannel,
   ]);
 
+  /**
+   * appliedMessageIdsRef tracks which AI-generated workflows have been automatically applied.
+   *
+   * Auto-apply behavior:
+   * - When the AI responds with YAML code in workflow_template mode, we automatically
+   *   apply it to the canvas (see useEffect below)
+   * - This ref prevents applying the same message multiple times if the component re-renders
+   * - The ref is cleared when:
+   *   1. Starting a new conversation (handleNewConversation)
+   *   2. Switching to a different session (handleSessionSelect)
+   *
+   * This provides a smooth UX where users see their workflow update in real-time
+   * as the AI generates it, without requiring manual "Apply" button clicks.
+   */
+  const appliedMessageIdsRef = useRef<Set<string>>(new Set());
+
   const handleNewConversation = useCallback(() => {
     if (!project) return;
 
@@ -377,6 +322,21 @@ export function AIAssistantPanelWrapper() {
     },
     [aiStore, project, aiMode, updateSearchParams]
   );
+
+  // Handle initial message from template selection
+  // When user clicks "AI workflow from description" from LeftPanel,
+  // the initial message is stored in UI state and we auto-send it
+  useAIInitialMessage({
+    initialMessage,
+    aiMode,
+    sessionId,
+    connectionState,
+    isAIAssistantPanelOpen,
+    aiStore,
+    workflowData: { workflow, jobs, triggers, edges, positions },
+    updateSearchParams,
+    clearAIAssistantInitialMessage,
+  });
 
   const handleShowSessions = useCallback(() => {
     aiStore.clearSession();
@@ -499,29 +459,17 @@ export function AIAssistantPanelWrapper() {
   );
 
   const handleMarkDisclaimerRead = useCallback(() => {
+    // Update session context immediately for UI responsiveness
+    setHasReadAIDisclaimer(true);
+    // Also update AI store and persist to backend via channel
     aiStore.markDisclaimerRead();
     markDisclaimerReadViaChannel();
-  }, [aiStore, markDisclaimerReadViaChannel]);
+  }, [aiStore, markDisclaimerReadViaChannel, setHasReadAIDisclaimer]);
 
   const [applyingMessageId, setApplyingMessageId] = useState<string | null>(
     null
   );
 
-  /**
-   * appliedMessageIdsRef tracks which AI-generated workflows have been automatically applied.
-   *
-   * Auto-apply behavior:
-   * - When the AI responds with YAML code in workflow_template mode, we automatically
-   *   apply it to the canvas (see useEffect below)
-   * - This ref prevents applying the same message multiple times if the component re-renders
-   * - The ref is cleared when:
-   *   1. Starting a new conversation (handleNewConversation)
-   *   2. Switching to a different session (handleSessionSelect)
-   *
-   * This provides a smooth UX where users see their workflow update in real-time
-   * as the AI generates it, without requiring manual "Apply" button clicks.
-   */
-  const appliedMessageIdsRef = useRef<Set<string>>(new Set());
   const hasLoadedSessionRef = useRef(false);
 
   // Reset hasLoadedSessionRef when session changes
@@ -668,8 +616,9 @@ export function AIAssistantPanelWrapper() {
 
   return (
     <div
-      className="flex h-full flex-shrink-0 z-[60]"
+      className="flex h-full flex-shrink-0"
       style={{
+        zIndex: Z_INDEX.SIDE_PANEL,
         width: isAIAssistantPanelOpen ? `${width}px` : '0px',
         overflow: 'hidden',
         transition: isResizing
@@ -682,8 +631,8 @@ export function AIAssistantPanelWrapper() {
           <button
             type="button"
             data-testid="ai-panel-resize-handle"
-            className="w-1 bg-gray-200 hover:bg-blue-400 transition-colors cursor-col-resize flex-shrink-0"
-            onMouseDown={handleMouseDown}
+            className="w-1 bg-gray-200 hover:bg-primary-500 transition-colors cursor-col-resize flex-shrink-0"
+            onMouseDown={handleResizeMouseDown}
             aria-label="Resize AI Assistant panel"
             onKeyDown={e => {
               if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
@@ -707,9 +656,7 @@ export function AIAssistantPanelWrapper() {
               loadSessions={loadSessions}
               focusTrigger={focusTrigger}
               connectionState={sessionId ? connectionState : 'connected'}
-              showDisclaimer={
-                connectionState === 'connected' && !hasReadDisclaimer
-              }
+              showDisclaimer={sessionContextLoaded && !hasReadDisclaimer}
               onAcceptDisclaimer={handleMarkDisclaimerRead}
             >
               <MessageList

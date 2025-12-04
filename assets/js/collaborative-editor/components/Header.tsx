@@ -8,7 +8,11 @@ import {
   useLatestSnapshotLockVersion,
   useProjectRepoConnection,
 } from '../hooks/useSessionContext';
-import { useUICommands } from '../hooks/useUI';
+import {
+  useImportPanelState,
+  useIsCreateWorkflowPanelCollapsed,
+  useUICommands,
+} from '../hooks/useUI';
 import {
   useCanRun,
   useCanSave,
@@ -42,12 +46,14 @@ export function SaveButton({
   onClick,
   repoConnection,
   onSyncClick,
+  label = 'Save',
 }: {
   canSave: boolean;
   tooltipMessage: string;
   onClick: () => void;
   repoConnection: ReturnType<typeof useProjectRepoConnection>;
   onSyncClick: () => void;
+  label?: string;
 }) {
   const hasGitHubIntegration = repoConnection !== null;
 
@@ -73,7 +79,7 @@ export function SaveButton({
             onClick={onClick}
             disabled={!canSave}
           >
-            Save
+            {label}
           </button>
         </Tooltip>
       </div>
@@ -101,7 +107,7 @@ export function SaveButton({
           onClick={onClick}
           disabled={!canSave}
         >
-          Save
+          {label}
         </button>
       </Tooltip>
       <Menu as="div" className="relative -ml-px block">
@@ -169,12 +175,13 @@ export function Header({
   isIDEOpen?: boolean;
 }) {
   // IMPORTANT: All hooks must be called unconditionally before any early returns or conditional logic
-  const { updateSearchParams } = useURLState();
+  const { updateSearchParams, searchParams } = useURLState();
   const { selectNode } = useNodeSelection();
   const { enabled, setEnabled } = useWorkflowEnabled();
   const { saveWorkflow } = useWorkflowActions();
   const { canSave, tooltipMessage } = useCanSave();
   const triggers = useWorkflowState(state => state.triggers);
+  const jobs = useWorkflowState(state => state.jobs);
   const { canRun, tooltipMessage: runTooltipMessage } = useCanRun();
   const { openRunPanel, openGitHubSyncModal } = useUICommands();
   const repoConnection = useProjectRepoConnection();
@@ -182,9 +189,12 @@ export function Header({
   const workflow = useWorkflowState(state => state.workflow);
   const latestSnapshotLockVersion = useLatestSnapshotLockVersion();
   const isNewWorkflow = useIsNewWorkflow();
+  const isCreateWorkflowPanelCollapsed = useIsCreateWorkflowPanelCollapsed();
+  const importPanelState = useImportPanelState();
 
   // Derived values after all hooks are called
   const firstTriggerId = triggers[0]?.id;
+  const isWorkflowEmpty = jobs.length === 0 && triggers.length === 0;
 
   const isOldSnapshot =
     workflow !== null &&
@@ -255,63 +265,112 @@ export function Header({
           <ActiveCollaborators className="ml-2" />
           <div className="grow ml-2"></div>
 
-          {!isNewWorkflow ? (
-            <>
-              <div className="flex flex-row gap-2 items-center">
-                <div className="flex flex-row gap-2 items-center">
-                  {!isOldSnapshot && (
-                    <Switch checked={enabled ?? false} onChange={setEnabled} />
-                  )}
+          <div className="flex flex-row gap-2 items-center">
+            <div className="flex flex-row gap-2 items-center">
+              {!isOldSnapshot && (
+                <Tooltip
+                  content={
+                    isNewWorkflow && isWorkflowEmpty
+                      ? 'Add a workflow to enable'
+                      : null
+                  }
+                  side="bottom"
+                >
+                  <span className="inline-block">
+                    <Switch
+                      checked={enabled ?? false}
+                      onChange={setEnabled}
+                      disabled={isNewWorkflow && isWorkflowEmpty}
+                    />
+                  </span>
+                </Tooltip>
+              )}
 
-                  <div>
-                    <button
-                      type="button"
-                      onClick={() => updateSearchParams({ panel: 'settings' })}
-                      className={`w-5 h-5 place-self-center cursor-pointer ${
-                        hasSettingsErrors
-                          ? 'text-danger-500 hover:text-danger-400'
-                          : 'text-slate-500 hover:text-slate-400'
-                      }`}
-                    >
-                      <span className="hero-adjustments-vertical"></span>
-                    </button>
-                  </div>
-                  <div
-                    className="hidden"
-                    phx-disconnected='[["show",{"transition":[["fade-in"],[],[]]}]]'
-                    phx-connected='[["hide",{"transition":[["fade-out"],[],[]]}]]'
+              <div>
+                <Tooltip
+                  content={
+                    isNewWorkflow && isWorkflowEmpty
+                      ? 'Add a workflow to configure settings'
+                      : null
+                  }
+                  side="bottom"
+                >
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (isNewWorkflow && isWorkflowEmpty) return;
+                      const currentPanel = searchParams.get('panel');
+                      updateSearchParams({
+                        panel: currentPanel === 'settings' ? null : 'settings',
+                      });
+                    }}
+                    disabled={isNewWorkflow && isWorkflowEmpty}
+                    className={`w-5 h-5 place-self-center ${
+                      hasSettingsErrors
+                        ? 'text-danger-500 hover:text-danger-400 cursor-pointer'
+                        : isNewWorkflow && isWorkflowEmpty
+                          ? 'cursor-not-allowed opacity-50'
+                          : 'text-slate-500 hover:text-slate-400 cursor-pointer'
+                    }`}
                   >
-                    <span className="hero-signal-slash w-6 h-6 place-self-center mr-2 text-red-500"></span>
-                  </div>
-                </div>
-                <div className="relative flex gap-2">
-                  {projectId && workflowId && firstTriggerId && (
-                    <Tooltip content={runButtonTooltip} side="bottom">
-                      <span className="inline-block">
-                        <Button
-                          variant="primary"
-                          onClick={handleRunClick}
-                          disabled={!canRun || isRunPanelOpen || isIDEOpen}
-                        >
-                          Run
-                        </Button>
-                      </span>
-                    </Tooltip>
-                  )}
-                  <SaveButton
-                    canSave={canSave && !hasSettingsErrors}
-                    tooltipMessage={tooltipMessage}
-                    onClick={() => void saveWorkflow()}
-                    repoConnection={repoConnection}
-                    onSyncClick={openGitHubSyncModal}
-                  />
-                </div>
+                    <span className="hero-adjustments-vertical"></span>
+                  </button>
+                </Tooltip>
               </div>
+              <div
+                className="hidden"
+                phx-disconnected='[["show",{"transition":[["fade-in"],[],[]]}]]'
+                phx-connected='[["hide",{"transition":[["fade-out"],[],[]]}]]'
+              >
+                <span className="hero-signal-slash w-6 h-6 place-self-center mr-2 text-red-500"></span>
+              </div>
+            </div>
+            <div className="relative flex gap-2">
+              {projectId && workflowId && firstTriggerId && !isNewWorkflow && (
+                <Tooltip content={runButtonTooltip} side="bottom">
+                  <span className="inline-block">
+                    <Button
+                      variant="primary"
+                      onClick={handleRunClick}
+                      disabled={!canRun || isRunPanelOpen || isIDEOpen}
+                    >
+                      Run
+                    </Button>
+                  </span>
+                </Tooltip>
+              )}
+              <SaveButton
+                canSave={
+                  canSave &&
+                  !hasSettingsErrors &&
+                  !(isNewWorkflow && isWorkflowEmpty) &&
+                  // When import panel is open, sync with its validation state
+                  !(
+                    isNewWorkflow &&
+                    !isCreateWorkflowPanelCollapsed &&
+                    importPanelState !== 'valid'
+                  )
+                }
+                tooltipMessage={
+                  isNewWorkflow &&
+                  !isCreateWorkflowPanelCollapsed &&
+                  importPanelState === 'invalid'
+                    ? 'Fix validation errors to continue'
+                    : isNewWorkflow && isWorkflowEmpty
+                      ? 'Cannot save an empty workflow'
+                      : tooltipMessage
+                }
+                onClick={() => void saveWorkflow()}
+                repoConnection={repoConnection}
+                onSyncClick={openGitHubSyncModal}
+                label={isNewWorkflow ? 'Create' : 'Save'}
+              />
+            </div>
+          </div>
 
-              <AIButton className="ml-2" />
-              <GitHubSyncModal />
-            </>
-          ) : null}
+          <AIButton className="ml-2" />
+
+          <GitHubSyncModal />
         </div>
       </div>
     </>

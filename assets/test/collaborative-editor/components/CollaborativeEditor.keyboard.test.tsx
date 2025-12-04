@@ -286,7 +286,10 @@ vi.mock('../../../js/collaborative-editor/hooks/useUI', () => ({
   useIsRunPanelOpen: () => mockIsRunPanelOpen(),
   useRunPanelContext: () => mockRunPanelContext(),
   useIsAIAssistantPanelOpen: () => mockIsAIAssistantPanelOpen(),
+  useAIAssistantInitialMessage: () => null,
   useIsGitHubSyncModalOpen: () => false,
+  useIsCreateWorkflowPanelCollapsed: () => true,
+  useImportPanelState: () => 'initial',
   useUICommands: () => ({
     openRunPanel: vi.fn(),
     closeRunPanel: vi.fn(),
@@ -295,6 +298,18 @@ vi.mock('../../../js/collaborative-editor/hooks/useUI', () => ({
     toggleAIAssistantPanel: vi.fn(),
     openGitHubSyncModal: vi.fn(),
     closeGitHubSyncModal: vi.fn(),
+    toggleCreateWorkflowPanel: vi.fn(),
+    collapseCreateWorkflowPanel: vi.fn(),
+    expandCreateWorkflowPanel: vi.fn(),
+    selectTemplate: vi.fn(),
+    setTemplateSearchQuery: vi.fn(),
+  }),
+  useTemplatePanel: () => ({
+    templates: [],
+    loading: false,
+    error: null,
+    searchQuery: '',
+    selectedTemplate: null,
   }),
 }));
 

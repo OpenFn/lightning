@@ -2835,4 +2835,65 @@ defmodule LightningWeb.WorkflowChannelTest do
       assert latest.lock_version == max_lock_version
     end
   end
+
+  describe "list_templates" do
+    test "returns all templates", %{socket: socket} do
+      _template1 =
+        insert(:workflow_template,
+          name: "Template 1",
+          description: "First template"
+        )
+
+      _template2 =
+        insert(:workflow_template,
+          name: "Template 2",
+          description: "Second template"
+        )
+
+      ref = push(socket, "list_templates", %{})
+
+      assert_reply ref, :ok, %{templates: templates}
+
+      assert length(templates) == 2
+
+      template_names = Enum.map(templates, & &1.name)
+      assert "Template 1" in template_names
+      assert "Template 2" in template_names
+
+      # Verify template structure
+      assert Enum.all?(templates, fn t ->
+               Map.has_key?(t, :id) and
+                 Map.has_key?(t, :name) and
+                 Map.has_key?(t, :description) and
+                 Map.has_key?(t, :code) and
+                 Map.has_key?(t, :positions) and
+                 Map.has_key?(t, :tags) and
+                 Map.has_key?(t, :workflow_id)
+             end)
+    end
+
+    test "returns empty list when no templates exist", %{socket: socket} do
+      ref = push(socket, "list_templates", %{})
+
+      assert_reply ref, :ok, %{templates: []}
+    end
+
+    test "returns templates sorted by name", %{socket: socket} do
+      insert(:workflow_template, name: "Zebra Template")
+      insert(:workflow_template, name: "Alpha Template")
+      insert(:workflow_template, name: "Middle Template")
+
+      ref = push(socket, "list_templates", %{})
+
+      assert_reply ref, :ok, %{templates: templates}
+
+      template_names = Enum.map(templates, & &1.name)
+
+      assert template_names == [
+               "Alpha Template",
+               "Middle Template",
+               "Zebra Template"
+             ]
+    end
+  end
 end

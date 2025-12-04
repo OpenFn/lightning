@@ -74,22 +74,61 @@ const logger = _logger.ns('UIStore').seal();
  * Creates a UI store instance with useSyncExternalStore + Immer pattern
  */
 export const createUIStore = (): UIStore => {
-  const loadAIAssistantPanelState = (): boolean => {
+  // Load initial panel states from URL params with mutual exclusivity
+  // AI Assistant panel and Create Workflow panel cannot both be open
+  const loadInitialPanelStates = (): {
+    aiAssistantPanelOpen: boolean;
+    createWorkflowPanelCollapsed: boolean;
+  } => {
     try {
       const params = new URLSearchParams(window.location.search);
-      return params.get('chat') === 'true';
+      const chatOpen = params.get('chat') === 'true';
+      const method = params.get('method');
+      const hasMethod = !!method;
+
+      // AI Assistant takes priority when both are present
+      if (chatOpen) {
+        return {
+          aiAssistantPanelOpen: true,
+          createWorkflowPanelCollapsed: true, // Force collapsed when AI panel is open
+        };
+      }
+
+      return {
+        aiAssistantPanelOpen: false,
+        createWorkflowPanelCollapsed: !hasMethod, // Expanded if method param present
+      };
     } catch (error) {
-      logger.warn('Failed to load AI Assistant panel state from URL', error);
-      return false;
+      logger.warn('Failed to load panel states from URL', error);
+      return {
+        aiAssistantPanelOpen: false,
+        createWorkflowPanelCollapsed: true,
+      };
     }
   };
+
+  const { aiAssistantPanelOpen, createWorkflowPanelCollapsed } =
+    loadInitialPanelStates();
 
   let state: UIState = produce(
     {
       runPanelOpen: false,
       runPanelContext: null,
       githubSyncModalOpen: false,
-      aiAssistantPanelOpen: loadAIAssistantPanelState(),
+      aiAssistantPanelOpen,
+      aiAssistantInitialMessage: null,
+      createWorkflowPanelCollapsed,
+      templatePanel: {
+        templates: [],
+        loading: false,
+        error: null,
+        searchQuery: '',
+        selectedTemplate: null,
+      },
+      importPanel: {
+        yamlContent: '',
+        importState: 'initial',
+      },
     } as UIState,
     draft => draft
   );
@@ -148,9 +187,10 @@ export const createUIStore = (): UIStore => {
     notify('closeGitHubSyncModal');
   };
 
-  const openAIAssistantPanel = () => {
+  const openAIAssistantPanel = (initialMessage?: string) => {
     state = produce(state, draft => {
       draft.aiAssistantPanelOpen = true;
+      draft.aiAssistantInitialMessage = initialMessage ?? null;
     });
     notify('openAIAssistantPanel');
   };
@@ -158,6 +198,7 @@ export const createUIStore = (): UIStore => {
   const closeAIAssistantPanel = () => {
     state = produce(state, draft => {
       draft.aiAssistantPanelOpen = false;
+      draft.aiAssistantInitialMessage = null;
     });
     notify('closeAIAssistantPanel');
   };
@@ -168,6 +209,117 @@ export const createUIStore = (): UIStore => {
       draft.aiAssistantPanelOpen = isOpen;
     });
     notify('toggleAIAssistantPanel');
+  };
+
+  const clearAIAssistantInitialMessage = () => {
+    state = produce(state, draft => {
+      draft.aiAssistantInitialMessage = null;
+    });
+    notify('clearAIAssistantInitialMessage');
+  };
+
+  const collapseCreateWorkflowPanel = () => {
+    state = produce(state, draft => {
+      draft.createWorkflowPanelCollapsed = true;
+    });
+    notify('collapseCreateWorkflowPanel');
+  };
+
+  const expandCreateWorkflowPanel = () => {
+    state = produce(state, draft => {
+      draft.createWorkflowPanelCollapsed = false;
+    });
+    notify('expandCreateWorkflowPanel');
+  };
+
+  const toggleCreateWorkflowPanel = () => {
+    const isCollapsed = !state.createWorkflowPanelCollapsed;
+    state = produce(state, draft => {
+      draft.createWorkflowPanelCollapsed = isCollapsed;
+    });
+    notify('toggleCreateWorkflowPanel');
+  };
+
+  const setTemplates = (templates: UIState['templatePanel']['templates']) => {
+    state = produce(state, draft => {
+      draft.templatePanel.templates = templates;
+      draft.templatePanel.loading = false;
+    });
+    notify('setTemplates');
+  };
+
+  const setTemplatesLoading = (loading: boolean) => {
+    state = produce(state, draft => {
+      draft.templatePanel.loading = loading;
+    });
+    notify('setTemplatesLoading');
+  };
+
+  const setTemplatesError = (error: string | null) => {
+    state = produce(state, draft => {
+      draft.templatePanel.error = error;
+      draft.templatePanel.loading = false;
+    });
+    notify('setTemplatesError');
+  };
+
+  const setTemplateSearchQuery = (query: string) => {
+    state = produce(state, draft => {
+      draft.templatePanel.searchQuery = query;
+    });
+    notify('setTemplateSearchQuery');
+  };
+
+  const selectTemplate = (
+    template: UIState['templatePanel']['selectedTemplate']
+  ) => {
+    state = produce(state, draft => {
+      draft.templatePanel.selectedTemplate = template;
+    });
+    notify('selectTemplate');
+  };
+
+  const clearTemplatePanel = () => {
+    state = produce(state, draft => {
+      draft.templatePanel = {
+        templates: [],
+        loading: false,
+        error: null,
+        searchQuery: '',
+        selectedTemplate: null,
+      };
+    });
+    notify('clearTemplatePanel');
+  };
+
+  // ===========================================================================
+  // IMPORT PANEL COMMANDS
+  // ===========================================================================
+
+  const setImportYamlContent = (content: string) => {
+    state = produce(state, draft => {
+      draft.importPanel.yamlContent = content;
+    });
+    notify('setImportYamlContent');
+  };
+
+  const setImportState = (
+    importState: 'initial' | 'parsing' | 'valid' | 'invalid' | 'importing'
+  ) => {
+    state = produce(state, draft => {
+      draft.importPanel.importState = importState;
+    });
+    notify('setImportState');
+  };
+
+  const clearImportPanel = () => {
+    state = produce(state, draft => {
+      draft.importPanel = {
+        yamlContent: '',
+        importState: 'initial',
+      };
+    });
+    notify('clearImportPanel');
   };
 
   devtools.connect();
@@ -190,6 +342,19 @@ export const createUIStore = (): UIStore => {
     openAIAssistantPanel,
     closeAIAssistantPanel,
     toggleAIAssistantPanel,
+    clearAIAssistantInitialMessage,
+    collapseCreateWorkflowPanel,
+    expandCreateWorkflowPanel,
+    toggleCreateWorkflowPanel,
+    setTemplates,
+    setTemplatesLoading,
+    setTemplatesError,
+    setTemplateSearchQuery,
+    selectTemplate,
+    clearTemplatePanel,
+    setImportYamlContent,
+    setImportState,
+    clearImportPanel,
   };
 };
 

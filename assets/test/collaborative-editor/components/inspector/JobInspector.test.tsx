@@ -196,8 +196,6 @@ describe('JobInspector - Footer Button States', () => {
         project_repo_connection: null,
         webhook_auth_methods: [],
         workflow_template: null,
-        project_repo_connection: null,
-        webhook_auth_methods: [],
       });
     });
 
@@ -244,8 +242,6 @@ describe('JobInspector - Footer Button States', () => {
         project_repo_connection: null,
         webhook_auth_methods: [],
         workflow_template: null,
-        project_repo_connection: null,
-        webhook_auth_methods: [],
       });
     });
 
@@ -290,8 +286,6 @@ describe('JobInspector - Footer Button States', () => {
         project_repo_connection: null,
         webhook_auth_methods: [],
         workflow_template: null,
-        project_repo_connection: null,
-        webhook_auth_methods: [],
       });
     });
 
@@ -341,8 +335,6 @@ describe('JobInspector - Footer Button States', () => {
         project_repo_connection: null,
         webhook_auth_methods: [],
         workflow_template: null,
-        project_repo_connection: null,
-        webhook_auth_methods: [],
       });
     });
 
@@ -424,8 +416,6 @@ describe('JobInspector - Footer Button States', () => {
         project_repo_connection: null,
         webhook_auth_methods: [],
         workflow_template: null,
-        project_repo_connection: null,
-        webhook_auth_methods: [],
       });
     });
 
@@ -472,8 +462,6 @@ describe('JobInspector - Footer Button States', () => {
         project_repo_connection: null,
         webhook_auth_methods: [],
         workflow_template: null,
-        project_repo_connection: null,
-        webhook_auth_methods: [],
       });
     });
 
@@ -524,8 +512,6 @@ describe('JobInspector - Footer Button States', () => {
         project_repo_connection: null,
         webhook_auth_methods: [],
         workflow_template: null,
-        project_repo_connection: null,
-        webhook_auth_methods: [],
       });
     });
 
@@ -663,8 +649,6 @@ describe('JobInspector - Credential Selection', () => {
         project_repo_connection: null,
         webhook_auth_methods: [],
         workflow_template: null,
-        project_repo_connection: null,
-        webhook_auth_methods: [],
       });
     });
   });

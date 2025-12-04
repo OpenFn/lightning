@@ -15,6 +15,24 @@ vi.mock('../../../../js/collaborative-editor/hooks/useAwareness', () => ({
   useAwareness: () => [],
 }));
 
+// Mock UI hooks
+vi.mock('../../../../js/collaborative-editor/hooks/useUI', () => ({
+  useUICommands: () => ({
+    collapseCreateWorkflowPanel: vi.fn(),
+    expandCreateWorkflowPanel: vi.fn(),
+    toggleCreateWorkflowPanel: vi.fn(),
+    openRunPanel: vi.fn(),
+    closeRunPanel: vi.fn(),
+    openAIAssistantPanel: vi.fn(),
+    closeAIAssistantPanel: vi.fn(),
+    toggleAIAssistantPanel: vi.fn(),
+    openGitHubSyncModal: vi.fn(),
+    closeGitHubSyncModal: vi.fn(),
+    selectTemplate: vi.fn(),
+    setTemplateSearchQuery: vi.fn(),
+  }),
+}));
+
 const validYAML = `
 name: Test Workflow
 jobs:
@@ -40,12 +58,37 @@ invalid: [syntax
 `;
 
 function createMockStoreContext(): StoreContextValue {
+  // Track import panel state for realistic mock behavior
+  let importPanelState = {
+    yamlContent: '',
+    importState: 'initial' as
+      | 'initial'
+      | 'parsing'
+      | 'valid'
+      | 'invalid'
+      | 'importing',
+  };
+
   return {
     sessionContextStore: {} as any,
     adaptorStore: {} as any,
     credentialStore: {} as any,
     awarenessStore: {} as any,
     workflowStore: {} as any,
+    uiStore: {
+      withSelector: (selector: any) => () =>
+        selector({ importPanel: importPanelState }),
+      setImportYamlContent: vi.fn((content: string) => {
+        importPanelState = { ...importPanelState, yamlContent: content };
+      }),
+      setImportState: vi.fn((state: typeof importPanelState.importState) => {
+        importPanelState = { ...importPanelState, importState: state };
+      }),
+      clearImportPanel: vi.fn(() => {
+        importPanelState = { yamlContent: '', importState: 'initial' };
+      }),
+      collapseCreateWorkflowPanel: vi.fn(),
+    } as any,
   };
 }
 

@@ -53,6 +53,13 @@ export const useUICommands = () => {
     openAIAssistantPanel: uiStore.openAIAssistantPanel,
     closeAIAssistantPanel: uiStore.closeAIAssistantPanel,
     toggleAIAssistantPanel: uiStore.toggleAIAssistantPanel,
+    clearAIAssistantInitialMessage: uiStore.clearAIAssistantInitialMessage,
+    collapseCreateWorkflowPanel: uiStore.collapseCreateWorkflowPanel,
+    expandCreateWorkflowPanel: uiStore.expandCreateWorkflowPanel,
+    toggleCreateWorkflowPanel: uiStore.toggleCreateWorkflowPanel,
+    // Template panel commands
+    selectTemplate: uiStore.selectTemplate,
+    setTemplateSearchQuery: uiStore.setTemplateSearchQuery,
   };
 };
 
@@ -93,3 +100,59 @@ export const useIsAIAssistantPanelOpen = (): boolean => {
 
   return useSyncExternalStore(uiStore.subscribe, selectIsOpen);
 };
+
+/**
+ * Hook to get AI Assistant initial message
+ * Returns the message to send when panel opens, or null
+ */
+export const useAIAssistantInitialMessage = (): string | null => {
+  const uiStore = useUIStore();
+
+  const selectInitialMessage = uiStore.withSelector(
+    state => state.aiAssistantInitialMessage
+  );
+
+  return useSyncExternalStore(uiStore.subscribe, selectInitialMessage);
+};
+
+/**
+ * Hook to check if create workflow panel is collapsed
+ * Convenience helper that returns boolean
+ */
+export const useIsCreateWorkflowPanelCollapsed = (): boolean => {
+  const uiStore = useUIStore();
+
+  const selectIsCollapsed = uiStore.withSelector(
+    state => state.createWorkflowPanelCollapsed
+  );
+
+  return useSyncExternalStore(uiStore.subscribe, selectIsCollapsed);
+};
+
+/**
+ * Hook to get the entire template panel state
+ * Returns properly typed state - no type assertions needed
+ */
+export const useTemplatePanel = (): UIState['templatePanel'] => {
+  const uiStore = useUIStore();
+
+  const selectTemplatePanel = uiStore.withSelector(
+    state => state.templatePanel
+  );
+
+  return useSyncExternalStore(uiStore.subscribe, selectTemplatePanel);
+};
+
+/**
+ * Hook to get the import panel state
+ */
+export const useImportPanelState =
+  (): UIState['importPanel']['importState'] => {
+    const uiStore = useUIStore();
+
+    const selectImportState = uiStore.withSelector(
+      state => state.importPanel.importState
+    );
+
+    return useSyncExternalStore(uiStore.subscribe, selectImportState);
+  };

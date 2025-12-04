@@ -195,7 +195,9 @@ defmodule LightningWeb.WorkflowChannel do
             workflow.lock_version,
         project_repo_connection: render_repo_connection(project_repo_connection),
         webhook_auth_methods: render_webhook_auth_methods(webhook_auth_methods),
-        workflow_template: render_workflow_template(workflow_template)
+        workflow_template: render_workflow_template(workflow_template),
+        has_read_ai_disclaimer:
+          Lightning.AiAssistant.user_has_read_disclaimer?(user)
       }
     end)
   end
@@ -526,6 +528,14 @@ defmodule LightningWeb.WorkflowChannel do
     else
       error -> workflow_error_reply(socket, error)
     end
+  end
+
+  @impl true
+  def handle_in("list_templates", _params, socket) do
+    templates = Lightning.WorkflowTemplates.list_templates()
+    rendered_templates = Enum.map(templates, &render_workflow_template/1)
+
+    {:reply, {:ok, %{templates: rendered_templates}}, socket}
   end
 
   @impl true

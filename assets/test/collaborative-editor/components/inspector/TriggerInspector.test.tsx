@@ -160,8 +160,6 @@ describe('TriggerInspector - Footer Button States', () => {
         project_repo_connection: null,
         webhook_auth_methods: [],
         workflow_template: null,
-        project_repo_connection: null,
-        webhook_auth_methods: [],
       });
     });
   });
@@ -263,8 +261,6 @@ describe('TriggerInspector - Footer Button States', () => {
         project_repo_connection: null,
         webhook_auth_methods: [],
         workflow_template: null,
-        project_repo_connection: null,
-        webhook_auth_methods: [],
       });
     });
 

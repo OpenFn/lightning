@@ -1000,6 +1000,25 @@ export const createWorkflowStore = () => {
     });
   };
 
+  /**
+   * Clear all triggers from the workflow
+   *
+   * Used when clearing the canvas for new workflow creation.
+   * Removes all triggers in a single transaction.
+   *
+   * Pattern 1: Y.Doc → Observer → Immer → Notify
+   */
+  const clearAllTriggers = () => {
+    const ydoc = ensureYDoc();
+
+    const triggersArray = ydoc.getArray('triggers');
+
+    ydoc.transact(() => {
+      triggersArray.delete(0, triggersArray.length);
+    });
+    // Observer handles: Y.Doc → Immer → notify
+  };
+
   const getJobBodyYText = (id: string): Y.Text | null => {
     if (!ydoc) return null;
 
@@ -1627,6 +1646,7 @@ export const createWorkflowStore = () => {
     removeEdge,
     updateTrigger,
     setEnabled,
+    clearAllTriggers,
     getJobBodyYText,
     updatePositions,
     updatePosition,

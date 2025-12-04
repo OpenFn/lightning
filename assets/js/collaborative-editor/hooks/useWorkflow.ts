@@ -334,6 +334,7 @@ export const useWorkflowActions = () => {
   }
 
   const sessionContextStore = context.sessionContextStore;
+  const uiStore = context.uiStore;
 
   return useMemo(
     () => ({
@@ -386,13 +387,20 @@ export const useWorkflowActions = () => {
             const projectId = currentState.project?.id;
 
             if (workflowId && projectId) {
-              // Update URL to include project_id and remove method param (closes left panel)
+              // Update URL to include project_id and remove template-related params
               const url = new URL(window.location.href);
               const searchParams = new URLSearchParams(url.search);
               searchParams.delete('method'); // Close left panel
+              searchParams.delete('template'); // Clear template selection
+              searchParams.delete('search'); // Clear template search
               const queryString = searchParams.toString();
               const newUrl = `/projects/${projectId}/w/${workflowId}/collaborate${queryString ? `?${queryString}` : ''}`;
               window.history.replaceState(null, '', newUrl);
+
+              // Clear template state in UI store
+              uiStore.selectTemplate(null);
+              uiStore.setTemplateSearchQuery('');
+              uiStore.collapseCreateWorkflowPanel();
 
               // Clear isNewWorkflow flag after successful save
               sessionContextStore.clearIsNewWorkflow();
@@ -602,7 +610,7 @@ export const useWorkflowActions = () => {
 
       requestTriggerAuthMethods: store.requestTriggerAuthMethods,
     }),
-    [store, sessionContextStore]
+    [store, sessionContextStore, uiStore]
   );
 };
 
