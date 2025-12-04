@@ -89,18 +89,37 @@ vi.mock('../../../js/collaborative-editor/components/left-panel', () => ({
 }));
 
 // Mock FullScreenIDE
+// Note: The real FullScreenIDE has Escape key handler that calls onClose
+// We need to import useKeyboardShortcut here to simulate that behavior
 vi.mock(
   '../../../js/collaborative-editor/components/ide/FullScreenIDE',
-  () => ({
-    FullScreenIDE: ({ onClose }: { onClose: () => void }) => (
-      <div data-testid="fullscreen-ide">
-        Full Screen IDE
-        <button data-testid="close-ide" onClick={onClose}>
-          Close
-        </button>
-      </div>
-    ),
-  })
+  async () => {
+    const { useKeyboardShortcut } = await import(
+      '../../../js/collaborative-editor/keyboard'
+    );
+
+    return {
+      FullScreenIDE: ({ onClose }: { onClose: () => void }) => {
+        // Simulate Escape key handler from real FullScreenIDE (line 563)
+        useKeyboardShortcut(
+          'Escape',
+          () => {
+            onClose();
+          },
+          50
+        );
+
+        return (
+          <div data-testid="fullscreen-ide">
+            Full Screen IDE
+            <button data-testid="close-ide" onClick={onClose}>
+              Close
+            </button>
+          </div>
+        );
+      },
+    };
+  }
 );
 
 // Mock ManualRunPanel
@@ -604,6 +623,90 @@ describe('CollaborativeEditor IDE keyboard shortcuts', () => {
         urlState.mockFns.updateSearchParams,
         user
       );
+    });
+  });
+
+  describe('IDE open/close cycle', () => {
+    test('preserves job selection when closing IDE with Escape', async () => {
+      // REGRESSION TEST for IDE close behavior
+      // This test verifies that closing the IDE preserves job selection
+      //
+      // Expected behavior:
+      // - Closing IDE should only clear 'panel' param
+      // - Job selection ('job' param) should be preserved
+      // - User can reopen IDE to same job with Cmd+E
+
+      // 1. Start with a selected job
+      currentNode = {
+        type: 'job',
+        node: mockWorkflow.jobs[0],
+      };
+
+      // Simulate URL state with job selected but IDE closed
+      urlState.setParams({ job: 'job-1' });
+
+      const { container, shortcuts, rerender } = renderWithKeyboard(
+        <CollaborativeEditor
+          data-workflow-id="workflow-1"
+          data-workflow-name="Test Workflow"
+          data-project-id="project-1"
+          data-project-name="Test Project"
+        />
+      );
+
+      await waitFor(() => {
+        expect(screen.getByTestId('workflow-diagram')).toBeInTheDocument();
+      });
+
+      container.focus();
+
+      // 2. Open IDE with Cmd+E - should set panel=editor
+      await shortcuts.openIDE('cmd');
+
+      await waitFor(() => {
+        expect(urlState.mockFns.updateSearchParams).toHaveBeenCalledWith({
+          panel: 'editor',
+        });
+      });
+
+      // Simulate URL state change to open IDE
+      urlState.setParam('panel', 'editor');
+
+      // Force re-render with updated params
+      rerender(
+        <CollaborativeEditor
+          data-workflow-id="workflow-1"
+          data-workflow-name="Test Workflow"
+          data-project-id="project-1"
+          data-project-name="Test Project"
+        />
+      );
+
+      // Wait for IDE to render
+      await waitFor(() => {
+        expect(screen.getByTestId('fullscreen-ide')).toBeInTheDocument();
+      });
+
+      vi.clearAllMocks();
+
+      // 3. Close IDE with Escape
+      await shortcuts.escape();
+
+      await waitFor(() => {
+        expect(urlState.mockFns.updateSearchParams).toHaveBeenCalled();
+      });
+
+      // CORRECT BEHAVIOR: Closing IDE should only clear the panel parameter,
+      // preserving the job selection so user can reopen IDE with Cmd+E
+      expect(urlState.mockFns.updateSearchParams).toHaveBeenCalledWith({
+        panel: null,
+      });
+
+      // Verify we're NOT clearing the job parameter
+      expect(urlState.mockFns.updateSearchParams).not.toHaveBeenCalledWith({
+        panel: null,
+        job: null,
+      });
     });
   });
 });

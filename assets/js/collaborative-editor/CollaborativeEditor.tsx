@@ -1,4 +1,4 @@
-import { useMemo, useCallback } from 'react';
+import { useMemo } from 'react';
 
 import { SocketProvider } from '../react/contexts/SocketProvider';
 import { useURLState } from '#/react/lib/use-url-state';
@@ -7,7 +7,6 @@ import type { WithActionProps } from '../react/lib/with-props';
 import { AIAssistantPanelWrapper } from './components/AIAssistantPanelWrapper';
 import { BreadcrumbLink, BreadcrumbText } from './components/Breadcrumbs';
 import { Header } from './components/Header';
-import { FullScreenIDE } from './components/ide/FullScreenIDE';
 import { LoadingBoundary } from './components/LoadingBoundary';
 import { Toaster } from './components/ui/Toaster';
 import { VersionDebugLogger } from './components/VersionDebugLogger';
@@ -22,8 +21,8 @@ import {
 } from './hooks/useSessionContext';
 import { useIsRunPanelOpen } from './hooks/useUI';
 import { useVersionSelect } from './hooks/useVersionSelect';
-import { useNodeSelection, useWorkflowState } from './hooks/useWorkflow';
-import { useKeyboardShortcut, KeyboardProvider } from './keyboard';
+import { useWorkflowState } from './hooks/useWorkflow';
+import { KeyboardProvider } from './keyboard';
 
 export interface CollaborativeEditorDataProps {
   'data-workflow-id': string;
@@ -145,58 +144,6 @@ function BreadcrumbContent({
   );
 }
 
-/**
- * IDEWrapper Component
- *
- * Manages the Full Screen IDE rendering and keyboard shortcuts.
- * Must be inside StoreProvider to access workflow and UI state.
- */
-interface IDEWrapperProps {
-  parentProjectId?: string | null;
-  parentProjectName?: string | null;
-}
-
-function IDEWrapper({ parentProjectId, parentProjectName }: IDEWrapperProps) {
-  const { params, updateSearchParams } = useURLState();
-  const { currentNode } = useNodeSelection();
-
-  const { panel, job } = params;
-  const isIDEOpen = panel === 'editor';
-  const selectedJobId = job;
-
-  const handleCloseIDE = useCallback(() => {
-    updateSearchParams({ panel: null, job: null });
-  }, [updateSearchParams]);
-
-  useKeyboardShortcut(
-    'Control+e, Meta+e',
-    () => {
-      if (currentNode.type !== 'job' || !currentNode.node) {
-        return;
-      }
-
-      updateSearchParams({ panel: 'editor' });
-    },
-    0,
-    {
-      enabled: !isIDEOpen,
-    }
-  );
-
-  if (!isIDEOpen || !selectedJobId) {
-    return null;
-  }
-
-  return (
-    <FullScreenIDE
-      jobId={selectedJobId}
-      onClose={handleCloseIDE}
-      parentProjectId={parentProjectId ?? null}
-      parentProjectName={parentProjectName ?? null}
-    />
-  );
-}
-
 export const CollaborativeEditor: WithActionProps<
   CollaborativeEditorDataProps
 > = props => {
@@ -256,13 +203,12 @@ export const CollaborativeEditor: WithActionProps<
                   <div className="flex-1 min-h-0 overflow-hidden relative">
                     <LoadingBoundary>
                       <div className="h-full w-full">
-                        <WorkflowEditor />
+                        <WorkflowEditor
+                          parentProjectId={rootProjectId}
+                          parentProjectName={rootProjectName}
+                        />
                       </div>
                     </LoadingBoundary>
-                    <IDEWrapper
-                      parentProjectId={rootProjectId}
-                      parentProjectName={rootProjectName}
-                    />
                   </div>
                 </div>
                 <AIAssistantPanelWrapper />

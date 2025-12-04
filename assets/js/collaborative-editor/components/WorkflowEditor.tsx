@@ -27,6 +27,7 @@ import { useKeyboardShortcut } from '../keyboard';
 import { Z_INDEX } from '../utils/constants';
 
 import { CollaborativeWorkflowDiagram } from './diagram/CollaborativeWorkflowDiagram';
+import { FullScreenIDE } from './ide/FullScreenIDE';
 import { Inspector } from './inspector';
 import { LeftPanel } from './left-panel';
 import { ManualRunPanel } from './ManualRunPanel';
@@ -39,7 +40,10 @@ interface WorkflowEditorProps {
   parentProjectName?: string | null;
 }
 
-export function WorkflowEditor(_props: WorkflowEditorProps = {}) {
+export function WorkflowEditor({
+  parentProjectId = null,
+  parentProjectName = null,
+}: WorkflowEditorProps = {}) {
   const { params, updateSearchParams } = useURLState();
   const { currentNode, selectNode } = useNodeSelection();
   const workflowStore = useWorkflowStoreContext();
@@ -369,6 +373,11 @@ export function WorkflowEditor(_props: WorkflowEditorProps = {}) {
   }, [isCreateWorkflowPanelCollapsed, leftPanelMethod, updateSearchParams]);
 
   const isIDEOpen = params['panel'] === 'editor';
+  const selectedJobId = params['job'] ?? null;
+
+  const handleCloseIDE = useCallback(() => {
+    updateSearchParams({ panel: null });
+  }, [updateSearchParams]);
 
   const handleCloseInspector = () => {
     selectNode(null);
@@ -517,6 +526,16 @@ export function WorkflowEditor(_props: WorkflowEditorProps = {}) {
     {
       enabled: isNewWorkflow,
     }
+  );
+
+  useKeyboardShortcut(
+    'Control+e, Meta+e',
+    () => {
+      if (currentNode.type !== 'job' || !currentNode.node) return;
+      updateSearchParams({ panel: 'editor' });
+    },
+    0,
+    { enabled: !isIDEOpen }
   );
 
   return (
@@ -764,6 +783,15 @@ export function WorkflowEditor(_props: WorkflowEditorProps = {}) {
           </div>
         )}
       </div>
+
+      {isIDEOpen && selectedJobId && (
+        <FullScreenIDE
+          jobId={selectedJobId}
+          onClose={handleCloseIDE}
+          parentProjectId={parentProjectId}
+          parentProjectName={parentProjectName}
+        />
+      )}
     </div>
   );
 }
