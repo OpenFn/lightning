@@ -48,7 +48,7 @@ export function TemplatePanel({
   const { provider } = useSession();
   const channel = provider?.channel;
   const { openAIAssistantPanel, collapseCreateWorkflowPanel } = useUICommands();
-  const { searchParams, updateSearchParams } = useURLState();
+  const { params, updateSearchParams } = useURLState();
 
   const { templates, loading, error, searchQuery, selectedTemplate } =
     useTemplatePanel();
@@ -88,12 +88,12 @@ export function TemplatePanel({
   useEffect(() => {
     if (hasRestoredSearchRef.current) return;
 
-    const urlSearchQuery = searchParams.get('search');
+    const urlSearchQuery = params['search'];
     if (urlSearchQuery && urlSearchQuery !== searchQuery) {
       uiStore.setTemplateSearchQuery(urlSearchQuery);
     }
     hasRestoredSearchRef.current = true;
-  }, [searchParams, searchQuery, uiStore]);
+  }, [params, searchQuery, uiStore]);
 
   const allTemplates: Template[] = useMemo(() => {
     const combined = [...BASE_TEMPLATES, ...templates];
@@ -139,7 +139,7 @@ export function TemplatePanel({
   // Restore template selection from URL and render on canvas
   const hasRenderedTemplateRef = useRef(false);
   useEffect(() => {
-    const templateId = searchParams.get('template');
+    const templateId = params['template'];
 
     // No template selected - clear canvas on mount
     if (!templateId && !hasRenderedTemplateRef.current) {
@@ -190,13 +190,7 @@ export function TemplatePanel({
         handleSelectTemplate(template);
       }
     }
-  }, [
-    searchParams,
-    templates,
-    selectedTemplate,
-    handleSelectTemplate,
-    onImport,
-  ]);
+  }, [params, templates, selectedTemplate, handleSelectTemplate, onImport]);
 
   const handleCreateWorkflow = async () => {
     if (!selectedTemplate || !onImport || !onSave) return;
