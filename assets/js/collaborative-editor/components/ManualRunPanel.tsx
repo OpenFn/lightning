@@ -2,10 +2,10 @@ import {
   DocumentIcon,
   PencilSquareIcon,
   QueueListIcon,
+  XMarkIcon,
 } from '@heroicons/react/24/outline';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
-import { cn } from '#/utils/cn';
 import _logger from '#/utils/logger';
 
 import { FilterTypes } from '../../manual-run-panel/types';
@@ -40,6 +40,8 @@ interface ManualRunPanelProps {
   triggerId?: string | null;
   edgeId?: string | null;
   onClose: () => void;
+  /** Called when close button is clicked in embedded mode */
+  onClosePanel?: () => void;
   renderMode?: RenderMode;
   saveWorkflow: (options?: { silent?: boolean }) => Promise<{
     saved_at?: string;
@@ -52,6 +54,8 @@ interface ManualRunPanelProps {
   selectedTab?: TabValue;
   selectedDataclip?: Dataclip | null;
   customBody?: string;
+  /** When true, prevents automatic dataclip selection (e.g., cron dataclip) */
+  disableAutoSelection?: boolean;
 }
 
 type TabValue = 'empty' | 'custom' | 'existing';
@@ -64,6 +68,7 @@ export function ManualRunPanel({
   triggerId,
   edgeId,
   onClose,
+  onClosePanel,
   renderMode = RENDER_MODES.STANDALONE,
   saveWorkflow,
   onRunSubmitted,
@@ -73,6 +78,7 @@ export function ManualRunPanel({
   selectedTab: selectedTabProp,
   selectedDataclip: selectedDataclipProp,
   customBody: customBodyProp,
+  disableAutoSelection = false,
 }: ManualRunPanelProps) {
   const [selectedTabInternal, setSelectedTabInternal] =
     useState<TabValue>('empty');
@@ -81,8 +87,12 @@ export function ManualRunPanel({
   const [customBodyInternal, setCustomBodyInternal] = useState('');
 
   // Use prop if provided (controlled), otherwise use internal state (uncontrolled)
+  // Note: undefined means uncontrolled, null means controlled but empty
   const selectedTab = selectedTabProp ?? selectedTabInternal;
-  const selectedDataclip = selectedDataclipProp ?? selectedDataclipInternal;
+  const isDataclipControlled = selectedDataclipProp !== undefined;
+  const selectedDataclip = isDataclipControlled
+    ? selectedDataclipProp
+    : selectedDataclipInternal;
   const customBody = customBodyProp ?? customBodyInternal;
   const [dataclips, setDataclips] = useState<Dataclip[]>([]);
   const [manuallyUnselected, setManuallyUnselected] = useState(false);
@@ -228,6 +238,7 @@ export function ManualRunPanel({
 
   useEffect(() => {
     if (
+      disableAutoSelection ||
       !followedRunStep?.input_dataclip_id ||
       !dataclips.length ||
       manuallyUnselected
@@ -250,6 +261,7 @@ export function ManualRunPanel({
       setSelectedTab('existing');
     }
   }, [
+    disableAutoSelection,
     followedRunStep,
     dataclips,
     manuallyUnselected,
@@ -272,8 +284,20 @@ export function ManualRunPanel({
         setNextCronRunDataclipId(response.next_cron_run_dataclip_id);
         setCanEditDataclip(response.can_edit_dataclip);
 
-        // Auto-select next cron run dataclip (unless following a run)
-        if (response.next_cron_run_dataclip_id && !followedRunId) {
+        // Auto-select next cron run dataclip only if:
+        // - Auto-selection is not disabled by parent
+        // - Not following a run
+        // - Not in controlled mode (parent controls selection)
+        // - No dataclip already selected
+        // - User hasn't manually unselected
+        if (
+          response.next_cron_run_dataclip_id &&
+          !disableAutoSelection &&
+          !followedRunId &&
+          !isDataclipControlled &&
+          !selectedDataclip &&
+          !manuallyUnselected
+        ) {
           const nextCronDataclip = response.data.find(
             d => d.id === response.next_cron_run_dataclip_id
           );
@@ -425,48 +449,9 @@ export function ManualRunPanel({
     enabled: renderMode === RENDER_MODES.STANDALONE,
   });
 
-  const content = edgeId ? (
-    <div className="flex justify-center flex-col items-center self-center h-full">
-      <div className="text-gray-600">
-        Select a Step or Trigger to start a Run from
-      </div>
-    </div>
-  ) : selectedDataclip ? (
-    <SelectedDataclipView
-      dataclip={selectedDataclip}
-      onUnselect={handleUnselectDataclip}
-      onNameChange={handleDataclipNameChange}
-      canEdit={canEditDataclip}
-      isNextCronRun={nextCronRunDataclipId === selectedDataclip.id}
-      renderMode={renderMode}
-    />
-  ) : (
-    <div
-      className={cn(
-        'flex flex-col h-full min-h-0',
-        renderMode === RENDER_MODES.EMBEDDED ? 'h-full mt-2' : 'flex-1 mt-4'
-      )}
-    >
-      <Tabs
-        className="mx-3"
-        variant="pills"
-        value={selectedTab}
-        onChange={value => setSelectedTab(value)}
-        options={[
-          { value: 'empty', label: 'Empty', icon: DocumentIcon },
-          {
-            value: 'custom',
-            label: 'Custom',
-            icon: PencilSquareIcon,
-          },
-          {
-            value: 'existing',
-            label: 'Existing',
-            icon: QueueListIcon,
-          },
-        ]}
-      />
-
+  // Tab content views (used in both embedded and standalone modes)
+  const tabContent = (
+    <>
       {selectedTab === 'empty' && <EmptyView />}
       {selectedTab === 'custom' && (
         <CustomView
@@ -510,11 +495,107 @@ export function ManualRunPanel({
           renderMode={renderMode}
         />
       )}
+    </>
+  );
+
+  // Content for embedded mode (tabs are rendered separately in header)
+  const embeddedContent = edgeId ? (
+    <div className="flex justify-center flex-col items-center self-center h-full">
+      <div className="text-gray-600">
+        Select a Step or Trigger to start a Run from
+      </div>
+    </div>
+  ) : selectedDataclip ? (
+    <SelectedDataclipView
+      dataclip={selectedDataclip}
+      onUnselect={handleUnselectDataclip}
+      onNameChange={handleDataclipNameChange}
+      canEdit={canEditDataclip}
+      isNextCronRun={nextCronRunDataclipId === selectedDataclip.id}
+      renderMode={renderMode}
+    />
+  ) : (
+    <div className="flex flex-col h-full min-h-0">{tabContent}</div>
+  );
+
+  // Content for standalone mode (includes tabs)
+  const content = edgeId ? (
+    <div className="flex justify-center flex-col items-center self-center h-full">
+      <div className="text-gray-600">
+        Select a Step or Trigger to start a Run from
+      </div>
+    </div>
+  ) : selectedDataclip ? (
+    <SelectedDataclipView
+      dataclip={selectedDataclip}
+      onUnselect={handleUnselectDataclip}
+      onNameChange={handleDataclipNameChange}
+      canEdit={canEditDataclip}
+      isNextCronRun={nextCronRunDataclipId === selectedDataclip.id}
+      renderMode={renderMode}
+    />
+  ) : (
+    <div className="flex flex-col h-full min-h-0 flex-1 mt-4">
+      <Tabs
+        className="mx-3"
+        variant="pills"
+        value={selectedTab}
+        onChange={value => setSelectedTab(value)}
+        options={[
+          { value: 'empty', label: 'Empty', icon: DocumentIcon },
+          {
+            value: 'custom',
+            label: 'Custom',
+            icon: PencilSquareIcon,
+          },
+          {
+            value: 'existing',
+            label: 'Existing',
+            icon: QueueListIcon,
+          },
+        ]}
+      />
+
+      {tabContent}
     </div>
   );
 
   if (renderMode === RENDER_MODES.EMBEDDED) {
-    return content;
+    return (
+      <div className="flex flex-col h-full">
+        {/* Header with tabs and close button */}
+        <div className="shrink-0">
+          <div className="flex items-center justify-between px-3 pt-2 pb-1">
+            <div className="flex-1">
+              <Tabs
+                variant="pills"
+                value={selectedTab}
+                onChange={value => setSelectedTab(value)}
+                options={[
+                  { value: 'empty', label: 'Empty', icon: DocumentIcon },
+                  { value: 'custom', label: 'Custom', icon: PencilSquareIcon },
+                  { value: 'existing', label: 'Existing', icon: QueueListIcon },
+                ]}
+              />
+            </div>
+            {onClosePanel && (
+              <div className="flex items-center pl-2">
+                <button
+                  type="button"
+                  onClick={onClosePanel}
+                  className="p-1 hover:bg-gray-100 rounded transition-colors"
+                  aria-label="Close panel"
+                  title="Close panel"
+                >
+                  <XMarkIcon className="h-4 w-4 text-gray-500" />
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+        <div className="flex-1 overflow-hidden">{embeddedContent}</div>
+      </div>
+    );
   }
 
   return (

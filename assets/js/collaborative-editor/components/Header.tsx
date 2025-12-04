@@ -3,6 +3,8 @@ import { useCallback, useMemo } from 'react';
 
 import { useURLState } from '#/react/lib/use-url-state';
 import { buildClassicalEditorUrl } from '../../utils/editorUrlConversion';
+import { channelRequest } from '../hooks/useChannel';
+import { useSession } from '../hooks/useSession';
 import {
   useIsNewWorkflow,
   useLatestSnapshotLockVersion,
@@ -191,6 +193,7 @@ export function Header({
   const isNewWorkflow = useIsNewWorkflow();
   const isCreateWorkflowPanelCollapsed = useIsCreateWorkflowPanelCollapsed();
   const importPanelState = useImportPanelState();
+  const { provider } = useSession();
 
   // Derived values after all hooks are called
   const firstTriggerId = triggers[0]?.id;
@@ -208,6 +211,25 @@ export function Header({
       openRunPanel({ triggerId: firstTriggerId });
     }
   }, [firstTriggerId, openRunPanel, selectNode]);
+
+  const handleSwitchToLegacyEditor = useCallback(async () => {
+    if (!provider?.channel || !projectId || !workflowId) return;
+
+    try {
+      await channelRequest(provider.channel, 'switch_to_legacy_editor', {});
+
+      // Build legacy editor URL and navigate
+      const legacyUrl = buildClassicalEditorUrl({
+        projectId,
+        workflowId,
+        searchParams: new URLSearchParams(window.location.search),
+        isNewWorkflow,
+      });
+      window.location.href = legacyUrl;
+    } catch (error) {
+      console.error('Failed to switch to legacy editor:', error);
+    }
+  }, [provider, projectId, workflowId, isNewWorkflow]);
 
   // Compute Run button tooltip content
   const runButtonTooltip = useMemo(() => {
@@ -243,13 +265,9 @@ export function Header({
           <Breadcrumbs>{children}</Breadcrumbs>
           <ReadOnlyWarning className="ml-3" />
           {projectId && workflowId && (
-            <a
-              href={buildClassicalEditorUrl({
-                projectId,
-                workflowId,
-                searchParams: new URLSearchParams(params),
-                isNewWorkflow,
-              })}
+            <button
+              type="button"
+              onClick={handleSwitchToLegacyEditor}
               className="inline-flex items-center justify-center
               w-6 h-6 text-primary-600 hover:text-primary-700
               hover:bg-primary-50 rounded transition-colors ml-2"
@@ -260,7 +278,7 @@ export function Header({
               >
                 <span className="hero-beaker-solid h-4 w-4" />
               </Tooltip>
-            </a>
+            </button>
           )}
           <ActiveCollaborators className="ml-2" />
           <div className="grow ml-2"></div>

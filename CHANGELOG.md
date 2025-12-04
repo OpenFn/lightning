@@ -26,6 +26,26 @@ and this project adheres to
 
 ### Changed
 
+### Fixed
+
+- Fix version chip [#4120](https://github.com/OpenFn/lightning/issues/4120)
+
+## [2.15.0-pre2] - 2025-12-04
+
+### Added
+
+- User preference persistence for collaborative editor - users can now toggle
+  between legacy and collaborative editors, and their choice is remembered
+  across sessions with automatic redirect
+  [#4091](https://github.com/OpenFn/lightning/issues/4091)
+- Added mini history to the IDE as a state machine that provides the same
+  experience that's available on the canvas
+  [#4054](https://github.com/OpenFn/lightning/issues/4054)
+  - **If no run chosen?** You can browse from history or create a new one.
+  - **If run chosen?** You can view the details or deselect to start over.
+
+### Changed
+
 - Refactor URLStore to use Record with Immer for proper structural sharing,
   reducing unnecessary re-renders when unrelated URL params change
   [#4097](https://github.com/OpenFn/lightning/issues/4097)

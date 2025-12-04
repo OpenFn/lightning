@@ -1,15 +1,16 @@
 /**
  * FullScreenIDE Component Tests
  *
- * Tests for FullScreenIDE component that provides a full-screen workspace
- * with three panels: ManualRunPanel (left), Monaco editor (center), and
- * output panel (right). Tests cover:
- * - Panel layout and default state (left panel open by default)
- * - ManualRunPanel integration with renderMode="embedded"
- * - Run button in header functionality
- * - Run state management (canRun, isRunning, handler)
- * - Keyboard shortcuts (Escape to close, Cmd+Enter to run)
- * - Panel collapse/expand functionality
+ * Tests the FullScreenIDE component state machine for the right panel:
+ * - No panel state (initial): Panel hidden, History and Run buttons in header
+ * - Create-run state: ManualRunPanel with input selection
+ * - History state: MiniHistory with run list
+ * - Run-viewer state: RunViewerPanel with loaded run
+ *
+ * Also tests:
+ * - Header buttons for History and Run
+ * - Job switching behavior
+ * - Keyboard shortcuts
  */
 
 import { StoreProvider } from '#/collaborative-editor/contexts/StoreProvider';
@@ -21,10 +22,6 @@ import * as Y from 'yjs';
 import * as dataclipApi from '../../../../js/collaborative-editor/api/dataclips';
 import { FullScreenIDE } from '../../../../js/collaborative-editor/components/ide/FullScreenIDE';
 import type { Workflow } from '../../../../js/collaborative-editor/types/workflow';
-import {
-  createMockURLState,
-  getURLStateMockValue,
-} from '../../__helpers__/urlStateMocks';
 
 // Mock dependencies
 vi.mock('../../../../js/collaborative-editor/api/dataclips');
@@ -36,7 +33,6 @@ vi.mock('@monaco-editor/react', () => ({
   ),
 }));
 
-// Mock the monaco module to avoid monaco-editor package resolution issues
 vi.mock('../../../../js/monaco', () => ({
   MonacoEditor: ({ value }: { value?: string }) => (
     <div data-testid="monaco-editor">{value}</div>
@@ -44,7 +40,7 @@ vi.mock('../../../../js/monaco', () => ({
   setTheme: vi.fn(),
 }));
 
-// Mock tab panel components to avoid monaco-editor dependency in log-viewer
+// Mock tab panel components
 vi.mock(
   '../../../../js/collaborative-editor/components/run-viewer/RunTabPanel',
   () => ({
@@ -89,40 +85,84 @@ vi.mock(
   () => ({
     ManualRunPanel: ({
       renderMode,
-      onRunStateChange,
-      saveWorkflow,
+      onClosePanel,
     }: {
       renderMode?: string;
-      onRunStateChange?: (
-        canRun: boolean,
-        isSubmitting: boolean,
-        handler: () => void
-      ) => void;
-      saveWorkflow?: () => Promise<void>;
-    }) => {
-      // Simulate ManualRunPanel calling onRunStateChange after mount
-      if (onRunStateChange) {
-        setTimeout(() => {
-          onRunStateChange(true, false, () => {
-            console.log('Mock run triggered');
-          });
-        }, 0);
-      }
+      onClosePanel?: () => void;
+    }) => (
+      <div data-testid="manual-run-panel" data-render-mode={renderMode}>
+        ManualRunPanel (renderMode: {renderMode || 'standalone'})
+        {onClosePanel && (
+          <button data-testid="close-panel-btn" onClick={onClosePanel}>
+            Close Panel
+          </button>
+        )}
+      </div>
+    ),
+  })
+);
 
-      return (
-        <div data-testid="manual-run-panel" data-render-mode={renderMode}>
-          ManualRunPanel (renderMode: {renderMode || 'standalone'})
-        </div>
-      );
-    },
+// Mock MiniHistory
+vi.mock(
+  '../../../../js/collaborative-editor/components/diagram/MiniHistory',
+  () => ({
+    default: ({
+      onBack,
+      selectRunHandler,
+    }: {
+      onBack?: () => void;
+      selectRunHandler?: (run: { id: string }) => void;
+    }) => (
+      <div data-testid="mini-history">
+        MiniHistory
+        {onBack && (
+          <button data-testid="mini-history-back" onClick={onBack}>
+            Back
+          </button>
+        )}
+        {selectRunHandler && (
+          <button
+            data-testid="select-run-btn"
+            onClick={() => selectRunHandler({ id: 'run-1' })}
+          >
+            Select Run
+          </button>
+        )}
+      </div>
+    ),
+  })
+);
+
+// Mock RunViewerPanel
+vi.mock(
+  '../../../../js/collaborative-editor/components/run-viewer/RunViewerPanel',
+  () => ({
+    RunViewerPanel: ({ followRunId }: { followRunId: string }) => (
+      <div data-testid="run-viewer-panel">RunViewerPanel - {followRunId}</div>
+    ),
   })
 );
 
 // Mock useURLState hook
-const urlState = createMockURLState();
+let mockParams: Record<string, string> = { job: 'job-1' };
+const mockUpdateSearchParams = vi.fn(
+  (params: Record<string, string | null>) => {
+    Object.entries(params).forEach(([key, value]) => {
+      if (value === null) {
+        delete mockParams[key];
+      } else {
+        mockParams[key] = value;
+      }
+    });
+  }
+);
 
 vi.mock('../../../../js/react/lib/use-url-state', () => ({
-  useURLState: () => getURLStateMockValue(urlState),
+  useURLState: () => ({
+    params: mockParams,
+    updateSearchParams: mockUpdateSearchParams,
+    hash: '',
+  }),
 }));
 
 // Mock session hooks
@@ -218,107 +258,73 @@ vi.mock('../../../../js/collaborative-editor/hooks/useWorkflow', () => ({
   }),
   useNodeSelection: () => ({
     currentNode: { node: null, type: null, id: null },
+    setCurrentNode: vi.fn(),
+    setURLfromSelection: vi.fn(),
     selectNode: vi.fn(),
+    selectTrigger: vi.fn(),
+    selectEdge: vi.fn(),
   }),
-  useWorkflowEnabled: () => ({
-    enabled: true,
-    setEnabled: vi.fn(),
+  useWorkflowState: (selector: (state: any) => any) =>
+    selector({ workflow: mockWorkflow }),
+  useSaveWorkflow: () => ({
+    saveWorkflow: vi.fn().mockResolvedValue(null),
+    isSaving: false,
+    error: null,
   }),
   useWorkflowActions: () => ({
+    updateWorkflow: vi.fn(),
     selectJob: vi.fn(),
-    saveWorkflow: vi.fn(),
     updateJob: vi.fn(),
   }),
-  useWorkflowState: (selector: any) => {
-    const state = {
-      workflow: mockWorkflow,
-      jobs: mockWorkflow.jobs,
-      triggers: mockWorkflow.triggers,
-      edges: mockWorkflow.edges,
-      positions: {},
-    };
-    return typeof selector === 'function' ? selector(state) : state;
-  },
 }));
 
-// Mock useRun hooks
-vi.mock('../../../../js/collaborative-editor/hooks/useRun', () => ({
-  useRunStoreInstance: () => ({
-    getState: vi.fn(() => ({
-      run: null,
-      loading: false,
-      error: null,
-    })),
-    subscribe: vi.fn(),
-    setState: vi.fn(),
-    _connectToRun: vi.fn(() => vi.fn()),
-    _disconnectFromRun: vi.fn(),
-  }),
-  useRunActions: () => ({
-    selectStep: vi.fn(),
-  }),
-  useCurrentRun: () => null,
-}));
-
-// Mock useHistory hooks
-const mockSelectStep = vi.fn();
-const mockCurrentRun = {
-  id: 'run-1',
-  work_order_id: 'wo-1',
-  work_order: {
-    id: 'wo-1',
-    workflow_id: 'workflow-1',
-  },
-  state: 'success' as const,
-  created_by: null,
-  starting_trigger: null,
-  started_at: '2024-01-01T00:00:00Z',
-  finished_at: '2024-01-01T00:01:00Z',
-  inserted_at: '2024-01-01T00:00:00Z',
-  steps: [
-    {
-      id: 'step-1',
-      job_id: 'job-1',
-      job: { name: 'Test Job' },
-      exit_reason: null,
-      error_type: null,
-      started_at: '2024-01-01T00:00:00Z',
-      finished_at: '2024-01-01T00:00:30Z',
-      input_dataclip_id: 'input-1',
-      output_dataclip_id: 'output-1',
-      inserted_at: '2024-01-01T00:00:00Z',
-    },
-    {
-      id: 'step-2',
-      job_id: 'job-2',
-      job: { name: 'Second Job' },
-      exit_reason: null,
-      error_type: null,
-      started_at: '2024-01-01T00:00:30Z',
-      finished_at: '2024-01-01T00:01:00Z',
-      input_dataclip_id: 'output-1',
-      output_dataclip_id: 'output-2',
-      inserted_at: '2024-01-01T00:00:30Z',
-    },
-  ],
-};
+// Mock history hooks
+const mockRequestHistory = vi.fn();
+const mockClearError = vi.fn();
 
 vi.mock('../../../../js/collaborative-editor/hooks/useHistory', () => ({
-  useFollowRun: vi.fn(() => mockCurrentRun),
+  useHistory: () => [],
+  useHistoryLoading: () => false,
+  useHistoryError: () => null,
+  useHistoryChannelConnected: () => true,
   useHistoryCommands: () => ({
-    selectStep: mockSelectStep,
-    requestHistory: vi.fn(),
-    requestRunSteps: vi.fn(),
-    getRunSteps: vi.fn(),
-    clearError: vi.fn(),
-    clearActiveRunError: vi.fn(),
+    requestHistory: mockRequestHistory,
+    clearError: mockClearError,
+    selectStep: vi.fn(),
   }),
-  useJobMatchesRun: () => true,
+  useFollowRun: () => ({
+    run: null,
+    clearRun: vi.fn(),
+  }),
   useActiveRun: () => null,
+  useActiveRunLoading: () => false,
+  useActiveRunError: () => null,
   useSelectedStepId: () => null,
+  useSelectedStep: () => null,
+  useJobMatchesRun: () => true,
+  useRunSteps: () => null,
 }));
 
-// Mock credential hooks
+// Mock adaptor hooks
+vi.mock('../../../../js/collaborative-editor/hooks/useAdaptors', () => ({
+  useFetchAdaptorDocs: () => ({
+    data: null,
+    loading: false,
+    error: null,
+  }),
+  useFetchAdaptorList: () => ({
+    data: [],
+    loading: false,
+    error: null,
+  }),
+  useProjectAdaptors: () => ({
+    projectAdaptors: [],
+    allAdaptors: [],
+  }),
+  useAdaptors: () => [],
+}));
+
+// Mock credentials hooks
 vi.mock('../../../../js/collaborative-editor/hooks/useCredentials', () => ({
   useCredentials: () => ({
     projectCredentials: [],
@@ -329,89 +335,26 @@ vi.mock('../../../../js/collaborative-editor/hooks/useCredentials', () => ({
   }),
   useCredentialQueries: () => ({
     findCredentialById: vi.fn(),
-    credentialExists: vi.fn(),
-    getCredentialId: vi.fn(),
   }),
 }));
 
-// Mock adaptor hooks
-vi.mock('../../../../js/collaborative-editor/hooks/useAdaptors', () => ({
-  useProjectAdaptors: () => ({
-    projectAdaptors: [],
-    allAdaptors: [],
-  }),
-}));
-
-// Mock LiveView actions
+// Mock LiveView actions context
 vi.mock(
   '../../../../js/collaborative-editor/contexts/LiveViewActionsContext',
   () => ({
     useLiveViewActions: () => ({
       pushEvent: vi.fn(),
-      handleEvent: vi.fn(() => () => {}),
+      handleEvent: vi.fn(),
     }),
   })
 );
 
-// Mock adaptor modals
-vi.mock(
-  '../../../../js/collaborative-editor/components/ConfigureAdaptorModal',
-  () => ({
-    ConfigureAdaptorModal: () => <div data-testid="configure-adaptor-modal" />,
-  })
-);
-
-vi.mock(
-  '../../../../js/collaborative-editor/components/AdaptorSelectionModal',
-  () => ({
-    AdaptorSelectionModal: () => <div data-testid="adaptor-selection-modal" />,
-  })
-);
-
-// Mock UI commands
-vi.mock('../../../../js/collaborative-editor/hooks/useUI', () => ({
-  useUICommands: () => ({
-    openGitHubSyncModal: vi.fn(),
-    openRunPanel: vi.fn(),
-    closeRunPanel: vi.fn(),
-    toggleAIAssistantPanel: vi.fn(),
-  }),
-  useIsRunPanelOpen: () => false,
-  useIsGitHubSyncModalOpen: () => false,
-  useRunPanelContext: () => null,
-  useIsAIAssistantPanelOpen: () => false,
-  useTemplatePanel: () => ({
-    templates: [],
-    loading: false,
-    error: null,
-    searchQuery: '',
-    selectedTemplate: null,
-  }),
-}));
-
-// Mock GitHubSyncModal
-vi.mock(
-  '../../../../js/collaborative-editor/components/GitHubSyncModal',
-  () => ({
-    GitHubSyncModal: () => null,
-  })
-);
-
-// Mock ActiveCollaborators
-vi.mock(
-  '../../../../js/collaborative-editor/components/ActiveCollaborators',
-  () => ({
-    ActiveCollaborators: () => <div data-testid="active-collaborators" />,
-  })
-);
-
-// Mock run retry hooks
+// Mock Run hooks
 vi.mock('../../../../js/collaborative-editor/hooks/useRunRetry', () => ({
   useRunRetry: () => ({
     handleRun: vi.fn(),
     handleRetry: vi.fn(),
     isRetryable: false,
-    runIsProcessing: false,
     runTooltipMessage: '',
     isSubmitting: false,
     canRun: true,
@@ -496,83 +439,144 @@ describe('FullScreenIDE', () => {
       can_edit_dataclip: true,
     });
 
-    // Reset URL state
-    urlState.reset();
-    urlState.setParam('job', 'job-1');
+    // Reset search params to default state
+    Object.keys(mockParams).forEach(key => delete mockParams[key]);
+    mockParams.job = 'job-1';
   });
 
-  describe('panel layout', () => {
-    test('renders with three-panel layout', async () => {
+  describe('Initial State', () => {
+    test('displays History and Run buttons in header', async () => {
       const onClose = vi.fn();
 
-      renderFullScreenIDE({
-        onClose,
-      });
+      renderFullScreenIDE({ onClose });
 
-      // Wait for component to render - note: there are now 2 PanelGroups (main + nested docs panel)
       await waitFor(() => {
-        const panelGroups = screen.getAllByTestId('panel-group');
-        expect(panelGroups.length).toBeGreaterThanOrEqual(1);
+        expect(screen.getByText('History')).toBeInTheDocument();
+        expect(screen.getByText('Run')).toBeInTheDocument();
       });
-
-      // Should have at least three main panels (left, center, right)
-      // Note: there may be additional nested panels from the docs/metadata section
-      const panels = screen.getAllByTestId('panel');
-      expect(panels.length).toBeGreaterThanOrEqual(3);
     });
 
-    test('left panel contains ManualRunPanel with embedded mode', async () => {
+    test('right panel is not shown initially', async () => {
       const onClose = vi.fn();
 
-      renderFullScreenIDE({
-        onClose,
+      renderFullScreenIDE({ onClose });
+
+      await waitFor(() => {
+        expect(screen.getByText('History')).toBeInTheDocument();
       });
 
-      // Wait for ManualRunPanel to render
+      // ManualRunPanel and MiniHistory should not be visible initially
+      expect(screen.queryByTestId('manual-run-panel')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('mini-history')).not.toBeInTheDocument();
+    });
+  });
+
+  describe('Run Button Flow', () => {
+    test('clicking Run shows ManualRunPanel', async () => {
+      const user = userEvent.setup();
+      const onClose = vi.fn();
+
+      renderFullScreenIDE({ onClose });
+
+      await waitFor(() => {
+        expect(screen.getByText('Run')).toBeInTheDocument();
+      });
+
+      // Click Run
+      await user.click(screen.getByText('Run'));
+
+      // Should now show ManualRunPanel
+      await waitFor(() => {
+        expect(screen.getByTestId('manual-run-panel')).toBeInTheDocument();
+      });
+    });
+
+    test('closing ManualRunPanel hides the panel', async () => {
+      const user = userEvent.setup();
+      const onClose = vi.fn();
+
+      renderFullScreenIDE({ onClose });
+
+      await waitFor(() => {
+        expect(screen.getByText('Run')).toBeInTheDocument();
+      });
+
+      // Click Run to open panel
+      await user.click(screen.getByText('Run'));
+
       await waitFor(() => {
         expect(screen.getByTestId('manual-run-panel')).toBeInTheDocument();
       });
 
-      // Should use embedded mode
-      const manualRunPanel = screen.getByTestId('manual-run-panel');
-      expect(manualRunPanel.getAttribute('data-render-mode')).toBe('embedded');
-    });
+      // Click close panel button
+      const closeButton = screen.getByTestId('close-panel-btn');
+      await user.click(closeButton);
 
-    test('center panel contains CollaborativeMonaco editor', async () => {
-      const onClose = vi.fn();
-
-      renderFullScreenIDE({
-        onClose,
-      });
-
-      // Wait for Monaco editor to render
+      // Panel should be hidden
       await waitFor(() => {
-        expect(screen.getByTestId('collaborative-monaco')).toBeInTheDocument();
+        expect(
+          screen.queryByTestId('manual-run-panel')
+        ).not.toBeInTheDocument();
       });
-    });
-
-    test('shows Input, Code, and Output panel labels', async () => {
-      const onClose = vi.fn();
-
-      renderFullScreenIDE({
-        onClose,
-      });
-
-      await waitFor(() => {
-        expect(screen.getByText(/Code/i)).toBeInTheDocument();
-      });
-
-      expect(screen.getByText('New Run (Select Input)')).toBeInTheDocument();
     });
   });
 
-  describe('header integration', () => {
+  describe('History Button Flow', () => {
+    test('clicking History shows MiniHistory', async () => {
+      const user = userEvent.setup();
+      const onClose = vi.fn();
+
+      renderFullScreenIDE({ onClose });
+
+      await waitFor(() => {
+        expect(screen.getByText('History')).toBeInTheDocument();
+      });
+
+      // Click History
+      await user.click(screen.getByText('History'));
+
+      // Should now show MiniHistory
+      await waitFor(() => {
+        expect(screen.getByTestId('mini-history')).toBeInTheDocument();
+      });
+
+      // Should have requested history
+      expect(mockRequestHistory).toHaveBeenCalled();
+    });
+
+    test('closing MiniHistory hides the panel', async () => {
+      const user = userEvent.setup();
+      const onClose = vi.fn();
+
+      renderFullScreenIDE({ onClose });
+
+      await waitFor(() => {
+        expect(screen.getByText('History')).toBeInTheDocument();
+      });
+
+      // Click History to open panel
+      await user.click(screen.getByText('History'));
+
+      await waitFor(() => {
+        expect(screen.getByTestId('mini-history')).toBeInTheDocument();
+      });
+
+      // Click back button in MiniHistory
+      const backButton = screen.getByTestId('mini-history-back');
+      await user.click(backButton);
+
+      // Panel should be hidden
+      await waitFor(() => {
+        expect(screen.queryByTestId('mini-history')).not.toBeInTheDocument();
+      });
+    });
+  });
+
+  describe('Header and Layout', () => {
     test('displays job name in header', async () => {
       const onClose = vi.fn();
 
-      renderFullScreenIDE({
-        onClose,
-      });
+      renderFullScreenIDE({ onClose });
 
       await waitFor(() => {
         const jobNames = screen.getAllByText(/Test Job/i);
@@ -580,238 +584,83 @@ describe('FullScreenIDE', () => {
       });
     });
 
-    test('displays Run button in header', async () => {
+    test('displays Close IDE button', async () => {
       const onClose = vi.fn();
 
-      renderFullScreenIDE({
-        onClose,
-      });
+      renderFullScreenIDE({ onClose });
 
       await waitFor(() => {
-        expect(
-          screen.getByRole('button', { name: /run/i })
-        ).toBeInTheDocument();
+        expect(screen.getByLabelText('Close IDE')).toBeInTheDocument();
       });
     });
 
-    test('displays job name in code panel heading', async () => {
-      const onClose = vi.fn();
-
-      renderFullScreenIDE({
-        onClose,
-      });
-
-      await waitFor(() => {
-        expect(screen.getByText(/Code -/i)).toBeInTheDocument();
-      });
-    });
-  });
-
-  describe('run state management', () => {
-    test('Run button is enabled when canRunWorkflow is true', async () => {
-      const onClose = vi.fn();
-
-      renderFullScreenIDE({
-        onClose,
-      });
-
-      // Wait for onRunStateChange to be called and run button to be enabled
-      await waitFor(() => {
-        const runButton = screen.getByRole('button', { name: /run/i });
-        expect(runButton).not.toBeDisabled();
-      });
-    });
-
-    test('receives run state from ManualRunPanel via onRunStateChange', async () => {
-      const onClose = vi.fn();
-
-      renderFullScreenIDE({
-        onClose,
-      });
-
-      // Wait for ManualRunPanel to mount and call onRunStateChange
-      await waitFor(() => {
-        expect(screen.getByTestId('manual-run-panel')).toBeInTheDocument();
-      });
-
-      // Run button should be enabled (from mocked ManualRunPanel)
-      await waitFor(() => {
-        const runButton = screen.getByRole('button', { name: /run/i });
-        expect(runButton).not.toBeDisabled();
-      });
-    });
-  });
-
-  describe('keyboard shortcuts', () => {
-    test('Escape key eventually calls onClose', async () => {
-      const user = userEvent.setup();
-      const onClose = vi.fn();
-
-      renderFullScreenIDE({
-        onClose,
-      });
-
-      await waitFor(() => {
-        expect(screen.getByTestId('collaborative-monaco')).toBeInTheDocument();
-      });
-
-      // First Escape - should blur Monaco (but we can't test focus in this mock)
-      await user.keyboard('{Escape}');
-
-      // Second Escape - should close IDE
-      await user.keyboard('{Escape}');
-      expect(onClose).toHaveBeenCalled();
-    });
-  });
-
-  describe('panel collapse/expand', () => {
-    test('left panel can be collapsed via collapse button', async () => {
-      const onClose = vi.fn();
-
-      renderFullScreenIDE({
-        onClose,
-      });
-
-      await waitFor(() => {
-        expect(screen.getByTestId('manual-run-panel')).toBeInTheDocument();
-      });
-
-      // Find collapse button for left panel
-      const collapseButtons = screen.getAllByRole('button', {
-        name: /collapse/i,
-      });
-
-      // Should have collapse buttons for each panel
-      expect(collapseButtons.length).toBeGreaterThan(0);
-
-      // Clicking collapse button would trigger panel collapse
-      // (Full behavior requires ImperativePanelHandle which we can't test in JSDOM)
-    });
-
-    test('prevents closing last open panel', async () => {
-      const onClose = vi.fn();
-
-      renderFullScreenIDE({
-        onClose,
-      });
-
-      await waitFor(() => {
-        expect(screen.getByText(/Code -/i)).toBeInTheDocument();
-      });
-
-      // Find all collapse buttons
-      const collapseButtons = screen.getAllByRole('button', {
-        name: /collapse/i,
-      });
-
-      // All collapse buttons should be enabled initially
-      // (In real app, last open panel's collapse button would be disabled)
-      expect(collapseButtons.length).toBeGreaterThan(0);
-    });
-  });
-
-  describe('button functionality', () => {
-    test('Run button is present', async () => {
-      const onClose = vi.fn();
-
-      renderFullScreenIDE({
-        onClose,
-      });
-
-      await waitFor(() => {
-        expect(
-          screen.getByRole('button', { name: /run/i })
-        ).toBeInTheDocument();
-      });
-    });
-  });
-
-  describe('Close IDE functionality', () => {
     test('clicking close button calls onClose', async () => {
       const user = userEvent.setup();
       const onClose = vi.fn();
 
-      renderFullScreenIDE({
-        onClose,
-      });
+      renderFullScreenIDE({ onClose });
 
       await waitFor(() => {
         expect(screen.getByLabelText('Close IDE')).toBeInTheDocument();
       });
 
-      const closeButton = screen.getByLabelText('Close IDE');
-      await user.click(closeButton);
+      await user.click(screen.getByLabelText('Close IDE'));
 
       expect(onClose).toHaveBeenCalledOnce();
     });
+
+    test('displays CollaborativeMonaco editor', async () => {
+      const onClose = vi.fn();
+
+      renderFullScreenIDE({ onClose });
+
+      await waitFor(() => {
+        expect(screen.getByTestId('collaborative-monaco')).toBeInTheDocument();
+      });
+    });
   });
 
-  describe('Job selection and run step selection', () => {
-    test('changing job in JobSelector selects the related run step', async () => {
+  describe('Keyboard Shortcuts', () => {
+    test('Escape key eventually calls onClose', async () => {
       const user = userEvent.setup();
       const onClose = vi.fn();
 
-      // Clear any previous calls to mockSelectStep
-      mockSelectStep.mockClear();
+      renderFullScreenIDE({ onClose });
 
-      renderFullScreenIDE({
-        onClose,
+      await waitFor(() => {
+        expect(screen.getByTestId('collaborative-monaco')).toBeInTheDocument();
       });
 
-      // Wait for JobSelector to render
+      // Press Escape twice (first may blur Monaco, second closes)
+      await user.keyboard('{Escape}');
+      await user.keyboard('{Escape}');
+
+      expect(onClose).toHaveBeenCalled();
+    });
+  });
+
+  describe('Panel Layout', () => {
+    test('renders panel groups', async () => {
+      const onClose = vi.fn();
+
+      renderFullScreenIDE({ onClose });
+
       await waitFor(() => {
-        expect(screen.getByTestId('job-selector')).toBeInTheDocument();
-      });
-
-      // Verify initial job is displayed
-      expect(screen.getByTestId('current-job-name')).toHaveTextContent(
-        'Test Job'
-      );
-
-      // Select the second job
-      const jobSelect = screen.getByTestId('job-select');
-      await user.selectOptions(jobSelect, 'job-2');
-
-      // Verify selectStep was called with the corresponding step ID
-      await waitFor(() => {
-        expect(mockSelectStep).toHaveBeenCalledWith('step-2');
+        const panelGroups = screen.getAllByTestId('panel-group');
+        expect(panelGroups.length).toBeGreaterThanOrEqual(1);
       });
     });
 
-    test('changing job when run has no steps for that job calls selectStep with null', async () => {
-      const user = userEvent.setup();
+    test('displays Docs and Metadata buttons in header', async () => {
       const onClose = vi.fn();
 
-      // Clear any previous calls to mockSelectStep
-      mockSelectStep.mockClear();
+      renderFullScreenIDE({ onClose });
 
-      renderFullScreenIDE({
-        onClose,
-      });
-
-      // Wait for JobSelector to render
       await waitFor(() => {
-        expect(screen.getByTestId('job-selector')).toBeInTheDocument();
-      });
-
-      // First select job-2 to ensure we have a clean state
-      const jobSelect = screen.getByTestId('job-select');
-      await user.selectOptions(jobSelect, 'job-2');
-
-      // Wait for that selection to complete
-      await waitFor(() => {
-        expect(mockSelectStep).toHaveBeenCalledWith('step-2');
-      });
-
-      // Clear the mock again
-      mockSelectStep.mockClear();
-
-      // Now select job-1 again
-      await user.selectOptions(jobSelect, 'job-1');
-
-      // Verify selectStep was called with step-1 this time
-      await waitFor(() => {
-        expect(mockSelectStep).toHaveBeenCalledWith('step-1');
+        expect(
+          screen.getByTitle('Show adaptor documentation')
+        ).toBeInTheDocument();
+        expect(screen.getByTitle('Show metadata explorer')).toBeInTheDocument();
       });
     });
   });

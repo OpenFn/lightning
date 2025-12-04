@@ -250,56 +250,35 @@ defmodule LightningWeb.Components.Common do
   attr :icon_classes, :string, default: "size-4 flex-none my-auto align-middle"
 
   def version_chip(assigns) do
-    {display, message, type} =
+    {display, message} =
       Lightning.release()
       |> case do
         %{image_tag: "edge"} = info ->
           {info.commit,
-           "Docker image tag found: '#{info.image_tag}' unreleased build from #{info.commit} on #{info.branch}",
-           :edge}
+           "Unreleased build '#{info.image_tag}' from #{info.commit} on #{info.branch}"}
 
         %{image_tag: image} = info when not is_nil(image) ->
-          {info.label,
-           "Docker image tag found: '#{info.image_tag}' tagged release build from #{info.commit}",
-           :release}
+          {info.label, "Build '#{info.image_tag}' from #{info.commit}"}
 
         info ->
-          {info.label, "Lightning #{info.vsn}", :no_docker}
+          {info.label, "No image tag found."}
       end
 
-    assigns =
-      assign(assigns,
-        display: display,
-        message: message,
-        type: type
-      )
+    assigns = assign(assigns, display: display, message: message)
 
     ~H"""
     <div class="px-3 pb-2 text-xs flex gap-1 justify-center">
-      <%= case @type do %>
-        <% :release -> %>
-          <.icon name="hero-check-badge" class={@icon_classes} title={@message} />
-        <% :edge -> %>
-          <.icon name="hero-cube" class={@icon_classes} title={@message} />
-        <% :warn -> %>
-          <.icon
-            name="hero-exclamation-triangle"
-            class={@icon_classes}
-            title={@message}
-          />
-        <% :no_docker -> %>
-      <% end %>
       <code
         class={[
           "py-1 rounded-md",
           "break-keep primary-light",
           "inline-block align-middle text-center"
         ]}
-        title={"OpenFn/Lightning #{@display}"}
+        title={@message}
       >
         <%= for {part, index} <- Enum.with_index(String.split(@display, " ")) do %>
           <%= if index > 0 do %>
-            <br /><span class="text-[0.5rem] italic">{part}</span>
+            <br /><span class="text-[0.45rem]">{part}</span>
           <% else %>
             {part}
           <% end %>
