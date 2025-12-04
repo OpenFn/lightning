@@ -90,6 +90,7 @@ import { channelRequest } from '../hooks/useChannel';
 import {
   type HistoryState,
   type HistoryStore,
+  type RunDetail,
   type RunStepsData,
   type RunSummary,
   type StepDetail,

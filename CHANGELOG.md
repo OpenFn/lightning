@@ -55,6 +55,10 @@ and this project adheres to
   [#4084](https://github.com/OpenFn/lightning/issues/4084)
 - Fix flickering of canvas and job editor
   [#4095](https://github.com/OpenFn/lightning/issues/4095)
+- Run channel crashes when sending `run:updated` event
+  [#4093](https://github.com/OpenFn/lightning/issues/4093)
+- Fix Version mismatch modal appears on top of IDE
+  [#4096](https://github.com/OpenFn/lightning/issues/4096)
 
 ## [2.15.0-pre1] - 2025-11-27
 
