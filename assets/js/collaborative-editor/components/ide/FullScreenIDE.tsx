@@ -1118,45 +1118,29 @@ export function FullScreenIDE({
                       onBack={handleClosePanel}
                     />
                   ) : workflow && projectId && workflowId ? (
-                    <div className="flex flex-col h-full">
-                      <div className="flex items-center px-3 py-2 border-b border-gray-200">
-                        <button
-                          type="button"
-                          onClick={handleClosePanel}
-                          className="p-1 mr-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded transition-colors"
-                          aria-label="Close panel"
-                        >
-                          <span className="hero-x-mark w-4 h-4" />
-                        </button>
-                        <span className="text-sm font-medium text-gray-700">
-                          Create Run
-                        </span>
-                      </div>
-                      <div className="flex-1 overflow-hidden">
-                        <ManualRunPanelErrorBoundary
-                          onClose={() => rightPanelRef.current?.collapse()}
-                        >
-                          <ManualRunPanel
-                            workflow={workflow}
-                            projectId={projectId}
-                            workflowId={workflowId}
-                            jobId={jobIdFromURL ?? null}
-                            triggerId={null}
-                            onClose={() => rightPanelRef.current?.collapse()}
-                            renderMode={RENDER_MODES.EMBEDDED}
-                            saveWorkflow={saveWorkflow}
-                            onRunSubmitted={handleRunSubmitted}
-                            onTabChange={setSelectedTab}
-                            onDataclipChange={handleDataclipChange}
-                            onCustomBodyChange={setCustomBody}
-                            selectedTab={selectedTab}
-                            selectedDataclip={selectedDataclipState}
-                            customBody={customBody}
-                            disableAutoSelection
-                          />
-                        </ManualRunPanelErrorBoundary>
-                      </div>
-                    </div>
+                    <ManualRunPanelErrorBoundary
+                      onClose={() => rightPanelRef.current?.collapse()}
+                    >
+                      <ManualRunPanel
+                        workflow={workflow}
+                        projectId={projectId}
+                        workflowId={workflowId}
+                        jobId={jobIdFromURL ?? null}
+                        triggerId={null}
+                        onClose={() => rightPanelRef.current?.collapse()}
+                        onClosePanel={handleClosePanel}
+                        renderMode={RENDER_MODES.EMBEDDED}
+                        saveWorkflow={saveWorkflow}
+                        onRunSubmitted={handleRunSubmitted}
+                        onTabChange={setSelectedTab}
+                        onDataclipChange={handleDataclipChange}
+                        onCustomBodyChange={setCustomBody}
+                        selectedTab={selectedTab}
+                        selectedDataclip={selectedDataclipState}
+                        customBody={customBody}
+                        disableAutoSelection
+                      />
+                    </ManualRunPanelErrorBoundary>
                   ) : null}
                 </div>
               </div>
