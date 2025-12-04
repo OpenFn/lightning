@@ -17,6 +17,10 @@ and this project adheres to
 
 ### Added
 
+- User preference persistence for collaborative editor - users can now toggle
+  between legacy and collaborative editors, and their choice is remembered
+  across sessions with automatic redirect
+  [#4091](https://github.com/OpenFn/lightning/issues/4091)
 - Added mini history to the IDE as a state machine that provides the same
   experience that's available on the canvas
   [#4054](https://github.com/OpenFn/lightning/issues/4054)

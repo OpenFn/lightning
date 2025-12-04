@@ -133,7 +133,7 @@ defmodule LightningWeb.WorkflowLive.JobView do
               current_user={@current_user}
               prior_user={@prior_user_presence.user}
             />
-            <.link
+            <button
               :if={
                 LightningWeb.WorkflowLive.Helpers.show_collaborative_editor_toggle?(
                   @current_user,
@@ -141,24 +141,17 @@ defmodule LightningWeb.WorkflowLive.JobView do
                 )
               }
               id={"inspector-collaborative-editor-toggle-#{@job.id}"}
-              navigate={
-                LightningWeb.WorkflowLive.Helpers.collaborative_editor_url(%{
-                  query_params: @query_params,
-                  selected_job: @job,
-                  live_action: :edit,
-                  project: @project,
-                  workflow: %{id: @job.workflow_id}
-                })
-              }
+              phx-click="toggle_collaborative_editor"
               class="inline-flex items-center justify-center
               w-6 h-6 text-primary-600 hover:text-primary-700
               hover:bg-primary-50 rounded transition-colors"
               phx-hook="Tooltip"
               data-placement="bottom"
               aria-label="Switch to collaborative editor (experimental)"
+              type="button"
             >
               <Heroicons.beaker class="h-4 w-4" />
-            </.link>
+            </button>
           </div>
           <div class="flex grow items-center justify-end">
             <.offline_indicator />
