@@ -198,6 +198,7 @@ export function Header({
   // Derived values after all hooks are called
   const firstTriggerId = triggers[0]?.id;
   const isWorkflowEmpty = jobs.length === 0 && triggers.length === 0;
+  const currentMethod = params['method'] as 'template' | 'import' | 'ai' | null;
 
   const isOldSnapshot =
     workflow !== null &&
@@ -362,16 +363,18 @@ export function Header({
                   canSave &&
                   !hasSettingsErrors &&
                   !(isNewWorkflow && isWorkflowEmpty) &&
-                  // When import panel is open, sync with its validation state
+                  // When import panel is open and using import method, sync with its validation state
                   !(
                     isNewWorkflow &&
                     !isCreateWorkflowPanelCollapsed &&
+                    currentMethod === 'import' &&
                     importPanelState !== 'valid'
                   )
                 }
                 tooltipMessage={
                   isNewWorkflow &&
                   !isCreateWorkflowPanelCollapsed &&
+                  currentMethod === 'import' &&
                   importPanelState === 'invalid'
                     ? 'Fix validation errors to continue'
                     : isNewWorkflow && isWorkflowEmpty
