@@ -244,6 +244,7 @@ Lightning.Workflows.WorkflowTemplate.html
 Lightning.Workflows.WorkflowVersion.html
 Lightning.Workflows.html
 Lightning.html
+LightningWeb.API.AiAssistantController.html
 LightningWeb.API.CredentialController.html
 LightningWeb.API.CredentialJSON.html
 LightningWeb.API.Helpers.html
@@ -258,6 +259,7 @@ LightningWeb.API.WorkflowsController.html
 LightningWeb.AccountConfirmationModal.html
 LightningWeb.AiAssistant.Component.html
 LightningWeb.AiAssistant.Quotes.html
+LightningWeb.AiAssistantChannel.html
 LightningWeb.AuditLive.Index.html
 LightningWeb.AuthProvidersLive.FormComponent.html
 LightningWeb.AuthProvidersLive.Index.html
@@ -266,6 +268,7 @@ LightningWeb.BackupCodesLive.Index.html
 LightningWeb.ChangesetJSON.html
 LightningWeb.ChangesetView.html
 LightningWeb.ChannelHelpers.html
+LightningWeb.Channels.AiAssistantJSON.html
 LightningWeb.Channels.WorkflowJSON.html
 LightningWeb.CollectionLive.CollectionCreationModal.html
 LightningWeb.CollectionLive.Components.html
@@ -424,8 +427,8 @@ dist/lato-latin-700-normal-2XVSBPG4.woff2
 dist/lato-latin-ext-400-normal-N27NCBWW.woff2
 dist/lato-latin-ext-700-normal-Q2L5DVMW.woff2
 dist/remixicon-QPNJX265.woff2
-dist/search_data-A98E1200.js
-dist/sidebar_items-C610FB6A.js
+dist/search_data-BA225922.js
+dist/sidebar_items-973A154C.js
 index.html
 provisioning.html
 readme.html
