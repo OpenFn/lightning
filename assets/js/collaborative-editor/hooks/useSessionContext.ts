@@ -38,6 +38,7 @@ import { StoreContext } from '../contexts/StoreProvider';
 import type { SessionContextStoreInstance } from '../stores/createSessionContextStore';
 import type {
   AppConfig,
+  Limits,
   Permissions,
   ProjectContext,
   ProjectRepoConnection,
@@ -271,4 +272,18 @@ export const useWorkflowTemplate = (): WorkflowTemplate | null => {
     sessionContextStore.subscribe,
     selectWorkflowTemplate
   );
+};
+
+/**
+ * Hook to access run limits from session context
+ * Returns limits object (empty object if not set)
+ */
+export const useLimits = (): Limits => {
+  const sessionContextStore = useSessionContextStore();
+
+  const selectLimits = sessionContextStore.withSelector(
+    state => state.limits ?? {}
+  );
+
+  return useSyncExternalStore(sessionContextStore.subscribe, selectLimits);
 };

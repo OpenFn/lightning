@@ -46,6 +46,7 @@ import type { Workflow } from '../types/workflow';
 import { useSession } from './useSession';
 import {
   useLatestSnapshotLockVersion,
+  useLimits,
   usePermissions,
   useUser,
   useWorkflowTemplate,
@@ -723,15 +724,8 @@ export const useCanRun = (): { canRun: boolean; tooltipMessage: string } => {
   } = useWorkflowConditions();
 
   // Get run limits from session context (defaults to allowed if missing)
-  const sessionContextStore = useContext(StoreContext)?.sessionContextStore;
-  const runLimits = sessionContextStore
-    ? useSyncExternalStore(
-        sessionContextStore.subscribe,
-        sessionContextStore.withSelector(
-          state => state.limits?.runs ?? { allowed: true, message: null }
-        )
-      )
-    : { allowed: true, message: null };
+  const limits = useLimits();
+  const runLimits = limits.runs ?? { allowed: true, message: null };
 
   // User can run if they have EITHER edit OR run permission (matches WorkflowEdit)
   const hasPermission = hasEditPermission || hasRunPermission;
