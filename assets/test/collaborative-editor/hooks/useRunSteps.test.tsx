@@ -95,6 +95,11 @@ describe('useRunSteps', () => {
     const subscribeSpy = vi.spyOn(historyStore, 'subscribeToRunSteps');
     const unsubscribeSpy = vi.spyOn(historyStore, 'unsubscribeFromRunSteps');
 
+    // Connect history channel so isHistoryChannelConnected returns true
+    const mockChannel = createMockPhoenixChannel('workflow:test');
+    const mockProvider = createMockPhoenixChannelProvider(mockChannel);
+    historyStore._connectChannel(mockProvider as any);
+
     const wrapper = createWrapper(historyStore);
 
     const { unmount } = renderHook(() => useRunSteps('run-test'), { wrapper });

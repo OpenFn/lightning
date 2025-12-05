@@ -24,6 +24,8 @@ and this project adheres to
 
 ### Fixed
 
+- Selected run sometimes fails to highlight step in the collab editor
+  [#4127](https://github.com/OpenFn/lightning/issues/4127)
 - Run logs no longer disappear after browser refresh in IDE
   [#4079](https://github.com/OpenFn/lightning/issues/4079)
 - Fix version chip [#4120](https://github.com/OpenFn/lightning/issues/4120)
