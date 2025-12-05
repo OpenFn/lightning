@@ -6,7 +6,6 @@ import {
   MiniMap,
   type NodeChange,
   ReactFlow,
-  ReactFlowProvider,
   useReactFlow,
 } from '@xyflow/react';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
@@ -110,8 +109,7 @@ const logger = _logger.ns('WorkflowDiagram').seal();
 const flowhandlers = flowHandlers({ dragThreshold: DRAG_THRESHOLD });
 
 export default function WorkflowDiagram(props: WorkflowDiagramProps) {
-  const flowInstance = useReactFlow();
-  const [flow, setFlow] = useState<typeof flowInstance | null>(null);
+  const flow = useReactFlow();
   // value of select in props seems same as select in store.
   // one in props is always set on initial render. (helps with refresh)
   const { selection, onSelectionChange, containerEl: el, runSteps } = props;
@@ -891,7 +889,7 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
       cancelPlaceholder();
       updateSelection(null);
     },
-    flowInstance,
+    flow,
     workflowStore
   );
   // Set up tooltips for control buttons
@@ -922,94 +920,91 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
 
   return (
     <>
-      <ReactFlowProvider>
-        <ReactFlow
-          ref={workflowDiagramRef}
-          maxZoom={1}
-          proOptions={{ account: 'paid-pro', hideAttribution: true }}
-          nodes={model.nodes}
-          edges={model.edges}
-          onNodesChange={onNodesChange}
-          onNodeDragStart={flowhandlers.ondragstart()}
-          onNodeDragStop={flowhandlers.ondragstop(onNodeDragStop)}
-          nodesDraggable={isManualLayout}
-          nodeTypes={nodeTypes}
-          edgeTypes={edgeTypes}
-          onNodeClick={handleNodeClick}
-          onEdgeClick={handleEdgeClick}
-          onInit={setFlow}
-          deleteKeyCode={null}
-          fitView
-          fitViewOptions={{ padding: FIT_PADDING }}
-          minZoom={0.2}
-          {...connectHandlers}
-        >
-          {(jobs.length > 0 || triggers.length > 0) && (
-            <Controls
-              position="bottom-left"
-              showInteractive={false}
-              showFitView={false}
-              style={{
-                transform: `translateX(${drawerWidth.toString()}px)`,
-                transition: 'transform 500ms ease-in-out',
-              }}
-            >
-              <ControlButton onClick={handleFitView} data-tooltip="Fit view">
-                <span className="text-black hero-viewfinder-circle w-4 h-4" />
-              </ControlButton>
+      <ReactFlow
+        ref={workflowDiagramRef}
+        maxZoom={1}
+        proOptions={{ account: 'paid-pro', hideAttribution: true }}
+        nodes={model.nodes}
+        edges={model.edges}
+        onNodesChange={onNodesChange}
+        onNodeDragStart={flowhandlers.ondragstart()}
+        onNodeDragStop={flowhandlers.ondragstop(onNodeDragStop)}
+        nodesDraggable={isManualLayout}
+        nodeTypes={nodeTypes}
+        edgeTypes={edgeTypes}
+        onNodeClick={handleNodeClick}
+        onEdgeClick={handleEdgeClick}
+        deleteKeyCode={null}
+        fitView
+        fitViewOptions={{ padding: FIT_PADDING }}
+        minZoom={0.2}
+        {...connectHandlers}
+      >
+        {(jobs.length > 0 || triggers.length > 0) && (
+          <Controls
+            position="bottom-left"
+            showInteractive={false}
+            showFitView={false}
+            style={{
+              transform: `translateX(${drawerWidth.toString()}px)`,
+              transition: 'transform 500ms ease-in-out',
+            }}
+          >
+            <ControlButton onClick={handleFitView} data-tooltip="Fit view">
+              <span className="text-black hero-viewfinder-circle w-4 h-4" />
+            </ControlButton>
 
-              <ControlButton
-                onClick={() => switchLayout()}
-                data-tooltip={
-                  isManualLayout
-                    ? 'Switch to auto layout mode'
-                    : 'Switch to manual layout mode'
-                }
-              >
-                {isManualLayout ? (
-                  <span className="text-black hero-cursor-arrow-rays w-4 h-4" />
-                ) : (
-                  <span className="text-black hero-cursor-arrow-ripple w-4 h-4" />
-                )}
-              </ControlButton>
-              <ControlButton
-                onClick={() => void forceLayout()}
-                data-tooltip="Run auto layout (override manual positions)"
-              >
-                <span className="text-black hero-squares-2x2 w-4 h-4" />
-              </ControlButton>
-              <ControlButton
-                onClick={() => undo()}
-                data-tooltip={canUndo ? 'Undo' : 'Nothing to undo'}
-                data-testid="undo-button"
-                disabled={!canUndo}
-              >
-                <span className="text-black hero-arrow-uturn-left w-4 h-4" />
-              </ControlButton>
-              <ControlButton
-                onClick={() => redo()}
-                data-tooltip={canRedo ? 'Redo' : 'Nothing to redo'}
-                data-testid="redo-button"
-                disabled={!canRedo}
-              >
-                <span className="text-black hero-arrow-uturn-right w-4 h-4" />
-              </ControlButton>
-            </Controls>
-          )}
-          <Background />
-          {(jobs.length > 0 || triggers.length > 0) && (
-            <MiniMap
-              zoomable
-              pannable
-              className="border-2 border-gray-200"
-              nodeComponent={props => (
-                <MiniMapNode {...props} jobs={jobs} triggers={triggers} />
+            <ControlButton
+              onClick={() => switchLayout()}
+              data-tooltip={
+                isManualLayout
+                  ? 'Switch to auto layout mode'
+                  : 'Switch to manual layout mode'
+              }
+            >
+              {isManualLayout ? (
+                <span className="text-black hero-cursor-arrow-rays w-4 h-4" />
+              ) : (
+                <span className="text-black hero-cursor-arrow-ripple w-4 h-4" />
               )}
-            />
-          )}
-          <PointerTrackerViewer containerEl={props.containerEl} />
-        </ReactFlow>
-      </ReactFlowProvider>
+            </ControlButton>
+            <ControlButton
+              onClick={() => void forceLayout()}
+              data-tooltip="Run auto layout (override manual positions)"
+            >
+              <span className="text-black hero-squares-2x2 w-4 h-4" />
+            </ControlButton>
+            <ControlButton
+              onClick={() => undo()}
+              data-tooltip={canUndo ? 'Undo' : 'Nothing to undo'}
+              data-testid="undo-button"
+              disabled={!canUndo}
+            >
+              <span className="text-black hero-arrow-uturn-left w-4 h-4" />
+            </ControlButton>
+            <ControlButton
+              onClick={() => redo()}
+              data-tooltip={canRedo ? 'Redo' : 'Nothing to redo'}
+              data-testid="redo-button"
+              disabled={!canRedo}
+            >
+              <span className="text-black hero-arrow-uturn-right w-4 h-4" />
+            </ControlButton>
+          </Controls>
+        )}
+        <Background />
+        {(jobs.length > 0 || triggers.length > 0) && (
+          <MiniMap
+            zoomable
+            pannable
+            className="border-2 border-gray-200"
+            nodeComponent={props => (
+              <MiniMapNode {...props} jobs={jobs} triggers={triggers} />
+            )}
+          />
+        )}
+        <PointerTrackerViewer containerEl={props.containerEl} />
+      </ReactFlow>
 
       <AdaptorSelectionModal
         isOpen={pendingPlaceholder !== null}

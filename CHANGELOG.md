@@ -45,6 +45,8 @@ and this project adheres to
 - Fix OAuth credential creation crash in Collaborate view when returning from
   provider authorization
   [#4131](https://github.com/OpenFn/lightning/issues/4131)
+- Fix new jobs are misplaced on the canvas in manual layout
+  [#4118](https://github.com/OpenFn/lightning/issues/4118)
 
 ## [2.15.0-pre2] - 2025-12-04
 
