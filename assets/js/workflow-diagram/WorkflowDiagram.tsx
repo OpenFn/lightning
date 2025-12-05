@@ -623,7 +623,7 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
         liveAction={props.liveAction}
         drawerWidth={drawerWidth}
       />
-      <CollaborativeEditorPromoBanner className="absolute top-4 left-1/2 -translate-x-1/2 w-96 z-10" />
+      <CollaborativeEditorPromoBanner />
       {props.liveAction === 'edit' ? (
         <MiniHistory
           collapsed={!runSteps.start_from}

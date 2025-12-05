@@ -6,10 +6,10 @@
  * - Banner hasn't been previously dismissed
  *
  * Features:
- * - Compact design with call-to-action
+ * - Fixed position at bottom-center of viewport
+ * - Dark themed design matching Tailwind sticky banner pattern
  * - Dismissible via X button
  * - Persists dismissal in cookies for 90 days
- * - Positioned at top-center of canvas
  * - Extracts projectId and workflowId from window.location.pathname
  * - Preserves 'a' (run) and 'v' (version) query params when navigating
  */
@@ -96,36 +96,37 @@ export function CollaborativeEditorPromoBanner({
 
   return (
     <div
-      className={cn('bg-blue-50 rounded-md shadow-sm', className)}
+      className={cn(
+        'pointer-events-none absolute inset-x-0 bottom-0 flex justify-center px-6 pb-5 z-10',
+        className
+      )}
       role="alert"
       aria-live="polite"
     >
-      <div className="flex items-start gap-2 p-3">
-        <span
-          className="hero-information-circle h-5 w-5 text-blue-800 shrink-0"
-          aria-hidden="true"
-        />
-        <div className="flex-1 min-w-0">
-          <div className="text-xs text-blue-800 font-medium">
-            Try the new collaborative editor!
-          </div>
-          <div className="text-xs text-blue-700 mt-0.5">
-            Real-time editing with your team.{' '}
-            <a
-              href={buildCollaborativeUrl()}
-              className="font-semibold hover:text-blue-900 underline"
+      <div className="pointer-events-auto flex items-center gap-x-4 bg-primary-700 px-6 py-2.5 rounded-xl sm:py-3 sm:pr-3.5 sm:pl-4">
+        <p className="text-sm/6 text-white">
+          <a href={buildCollaborativeUrl()}>
+            <strong className="font-semibold">
+              Try the new collaborative editor
+            </strong>
+            <svg
+              viewBox="0 0 2 2"
+              aria-hidden="true"
+              className="mx-2 inline size-0.5 fill-current"
             >
-              Try it now →
-            </a>
-          </div>
-        </div>
+              <circle r={1} cx={1} cy={1} />
+            </svg>
+            Real-time editing with your team&nbsp;
+            <span aria-hidden="true">&rarr;</span>
+          </a>
+        </p>
         <button
           type="button"
           onClick={handleDismiss}
-          className="shrink-0 text-blue-700 cursor-pointer hover:text-blue-800 transition-colors"
+          className="-m-1.5 flex-none p-1.5 cursor-pointer"
           aria-label="Dismiss collaborative editor promotion"
         >
-          <span className="hero-x-mark h-4 w-4" />
+          <span className="hero-x-mark size-5 text-white" />
         </button>
       </div>
     </div>
