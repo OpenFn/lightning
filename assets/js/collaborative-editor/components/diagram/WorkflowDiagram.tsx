@@ -940,80 +940,70 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
         minZoom={0.2}
         {...connectHandlers}
       >
-        <Controls
-          position="bottom-left"
-          showInteractive={false}
-          showFitView={false}
-          style={{
-            transform: `translateX(${drawerWidth.toString()}px)`,
-            transition: 'transform 500ms ease-in-out',
-          }}
-        >
-          {(jobs.length > 0 || triggers.length > 0) && (
-            <Controls
-              position="bottom-left"
-              showInteractive={false}
-              showFitView={false}
-              style={{
-                transform: `translateX(${drawerWidth.toString()}px)`,
-                transition: 'transform 500ms ease-in-out',
-              }}
-            >
-              <ControlButton onClick={handleFitView} data-tooltip="Fit view">
-                <span className="text-black hero-viewfinder-circle w-4 h-4" />
-              </ControlButton>
+        {(jobs.length > 0 || triggers.length > 0) && (
+          <Controls
+            position="bottom-left"
+            showInteractive={false}
+            showFitView={false}
+            style={{
+              transform: `translateX(${drawerWidth.toString()}px)`,
+              transition: 'transform 500ms ease-in-out',
+            }}
+          >
+            <ControlButton onClick={handleFitView} data-tooltip="Fit view">
+              <span className="text-black hero-viewfinder-circle w-4 h-4" />
+            </ControlButton>
 
-              <ControlButton
-                onClick={() => switchLayout()}
-                data-tooltip={
-                  isManualLayout
-                    ? 'Switch to auto layout mode'
-                    : 'Switch to manual layout mode'
-                }
-              >
-                {isManualLayout ? (
-                  <span className="text-black hero-cursor-arrow-rays w-4 h-4" />
-                ) : (
-                  <span className="text-black hero-cursor-arrow-ripple w-4 h-4" />
-                )}
-              </ControlButton>
-              <ControlButton
-                onClick={() => void forceLayout()}
-                data-tooltip="Run auto layout (override manual positions)"
-              >
-                <span className="text-black hero-squares-2x2 w-4 h-4" />
-              </ControlButton>
-              <ControlButton
-                onClick={() => undo()}
-                data-tooltip={canUndo ? 'Undo' : 'Nothing to undo'}
-                data-testid="undo-button"
-                disabled={!canUndo}
-              >
-                <span className="text-black hero-arrow-uturn-left w-4 h-4" />
-              </ControlButton>
-              <ControlButton
-                onClick={() => redo()}
-                data-tooltip={canRedo ? 'Redo' : 'Nothing to redo'}
-                data-testid="redo-button"
-                disabled={!canRedo}
-              >
-                <span className="text-black hero-arrow-uturn-right w-4 h-4" />
-              </ControlButton>
-            </Controls>
-          )}
-          <Background />
-          {(jobs.length > 0 || triggers.length > 0) && (
-            <MiniMap
-              zoomable
-              pannable
-              className="border-2 border-gray-200"
-              nodeComponent={props => (
-                <MiniMapNode {...props} jobs={jobs} triggers={triggers} />
+            <ControlButton
+              onClick={() => switchLayout()}
+              data-tooltip={
+                isManualLayout
+                  ? 'Switch to auto layout mode'
+                  : 'Switch to manual layout mode'
+              }
+            >
+              {isManualLayout ? (
+                <span className="text-black hero-cursor-arrow-rays w-4 h-4" />
+              ) : (
+                <span className="text-black hero-cursor-arrow-ripple w-4 h-4" />
               )}
-            />
-          )}
-          <PointerTrackerViewer containerEl={props.containerEl} />
-        </Controls>
+            </ControlButton>
+            <ControlButton
+              onClick={() => void forceLayout()}
+              data-tooltip="Run auto layout (override manual positions)"
+            >
+              <span className="text-black hero-squares-2x2 w-4 h-4" />
+            </ControlButton>
+            <ControlButton
+              onClick={() => undo()}
+              data-tooltip={canUndo ? 'Undo' : 'Nothing to undo'}
+              data-testid="undo-button"
+              disabled={!canUndo}
+            >
+              <span className="text-black hero-arrow-uturn-left w-4 h-4" />
+            </ControlButton>
+            <ControlButton
+              onClick={() => redo()}
+              data-tooltip={canRedo ? 'Redo' : 'Nothing to redo'}
+              data-testid="redo-button"
+              disabled={!canRedo}
+            >
+              <span className="text-black hero-arrow-uturn-right w-4 h-4" />
+            </ControlButton>
+          </Controls>
+        )}
+        <Background />
+        {(jobs.length > 0 || triggers.length > 0) && (
+          <MiniMap
+            zoomable
+            pannable
+            className="border-2 border-gray-200"
+            nodeComponent={props => (
+              <MiniMapNode {...props} jobs={jobs} triggers={triggers} />
+            )}
+          />
+        )}
+        <PointerTrackerViewer containerEl={props.containerEl} />
       </ReactFlow>
 
       <AdaptorSelectionModal
