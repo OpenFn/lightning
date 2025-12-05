@@ -46,6 +46,10 @@ import { useSession } from '../hooks/useSession';
 import type { AdaptorStoreInstance } from '../stores/createAdaptorStore';
 import { createAdaptorStore } from '../stores/createAdaptorStore';
 import {
+  createAIAssistantStore,
+  type AIAssistantStoreInstance,
+} from '../stores/createAIAssistantStore';
+import {
   type AwarenessStoreInstance,
   createAwarenessStore,
 } from '../stores/createAwarenessStore';
@@ -82,6 +86,7 @@ export interface StoreContextValue {
   historyStore: HistoryStoreInstance;
   uiStore: UIStoreInstance;
   editorPreferencesStore: EditorPreferencesStoreInstance;
+  aiAssistantStore: AIAssistantStoreInstance;
 }
 
 export const StoreContext = createContext<StoreContextValue | null>(null);
@@ -109,6 +114,7 @@ export const StoreProvider = ({ children }: StoreProviderProps) => {
     historyStore: createHistoryStore(),
     uiStore: createUIStore(),
     editorPreferencesStore: createEditorPreferencesStore(),
+    aiAssistantStore: createAIAssistantStore(),
   }));
 
   // Subscribe to sessionContextStore user changes
@@ -123,18 +129,10 @@ export const StoreProvider = ({ children }: StoreProviderProps) => {
   // Initialize awareness when both awareness instance and user data are available
   // User data comes from SessionContextStore, not from props
   useEffect(() => {
-    logger.debug('Awareness initialization check', {
-      hasAwareness: !!session.awareness,
-      hasUser: !!user,
-      user: user,
-      isReady: stores.awarenessStore.isAwarenessReady(),
-    });
-
     // If awareness changed (version switch), destroy old awareness first
     if (session.awareness && stores.awarenessStore.isAwarenessReady()) {
       const currentRaw = stores.awarenessStore.getRawAwareness();
       if (currentRaw !== session.awareness) {
-        logger.debug('Awareness instance changed, reinitializing');
         stores.awarenessStore.destroyAwareness();
       }
     }
@@ -156,8 +154,6 @@ export const StoreProvider = ({ children }: StoreProviderProps) => {
         color: generateUserColor(user.id),
       };
 
-      logger.debug('Initializing awareness', { userData });
-
       // AwarenessStore is the ONLY place that sets awareness local state
       stores.awarenessStore.initializeAwareness(session.awareness, userData);
 
@@ -172,8 +168,6 @@ export const StoreProvider = ({ children }: StoreProviderProps) => {
   // Connect stores when provider is ready
   useEffect(() => {
     if (session.provider && session.isConnected) {
-      logger.debug('Connecting stores to channel');
-
       const cleanup1 = stores.adaptorStore._connectChannel(session.provider);
       const cleanup2 = stores.credentialStore._connectChannel(session.provider);
       const cleanup3 = stores.sessionContextStore._connectChannel(
@@ -182,7 +176,6 @@ export const StoreProvider = ({ children }: StoreProviderProps) => {
       const cleanup4 = stores.historyStore._connectChannel(session.provider);
 
       return () => {
-        logger.debug('Disconnecting stores from channel');
         cleanup1();
         cleanup2();
         cleanup3();
@@ -200,14 +193,12 @@ export const StoreProvider = ({ children }: StoreProviderProps) => {
   // otherwise observers will read empty/partial Y.Doc state (race condition)
   useEffect(() => {
     if (session.ydoc && session.provider && session.isSynced) {
-      logger.debug('Connecting workflowStore (Y.Doc synced)');
       stores.workflowStore.connect(
         session.ydoc as Session.WorkflowDoc,
         session.provider
       );
 
       return () => {
-        logger.debug('Disconnecting workflowStore from Y.Doc');
         stores.workflowStore.disconnect();
       };
     } else {
@@ -217,7 +208,6 @@ export const StoreProvider = ({ children }: StoreProviderProps) => {
 
   useEffect(() => {
     return () => {
-      logger.debug('Cleaning up awareness on unmount');
       stores.awarenessStore.destroyAwareness();
     };
   }, [stores.awarenessStore]);

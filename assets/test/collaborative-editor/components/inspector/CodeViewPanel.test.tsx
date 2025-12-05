@@ -24,7 +24,7 @@ import { beforeEach, describe, expect, test, vi } from 'vitest';
 import YAML from 'yaml';
 
 import { CodeViewPanel } from '../../../../js/collaborative-editor/components/inspector/CodeViewPanel';
-import { useURLState } from '../../../../js/react/lib/use-url-state';
+import { createMockURLState, getURLStateMockValue } from '../../__helpers__';
 import * as yamlUtil from '../../../../js/yaml/util';
 
 // Mock yaml/util with simple pass-through
@@ -139,20 +139,17 @@ vi.mock('../../../../js/collaborative-editor/hooks/useSessionContext', () => ({
 }));
 
 // Mock useURLState hook
-const mockUpdateSearchParams = vi.fn();
-const mockGetSearchParam = vi.fn();
+const urlState = createMockURLState();
 
 vi.mock('../../../../js/react/lib/use-url-state', () => ({
-  useURLState: vi.fn(() => ({
-    updateSearchParams: mockUpdateSearchParams,
-    getSearchParam: mockGetSearchParam,
-  })),
+  useURLState: () => getURLStateMockValue(urlState),
 }));
 
 describe('CodeViewPanel', () => {
   beforeEach(() => {
     // Reset all mocks
     vi.clearAllMocks();
+    urlState.reset();
 
     // Reset workflow state
     resetMockWorkflowState();
@@ -335,7 +332,7 @@ describe('CodeViewPanel', () => {
       const button = screen.getByRole('button', { name: /publish template/i });
       await user.click(button);
 
-      expect(mockUpdateSearchParams).toHaveBeenCalledWith({
+      expect(urlState.mockFns.updateSearchParams).toHaveBeenCalledWith({
         panel: 'publish-template',
       });
     });
@@ -349,7 +346,7 @@ describe('CodeViewPanel', () => {
       // Button is disabled, click should not trigger handler
       await user.click(button);
 
-      expect(mockUpdateSearchParams).not.toHaveBeenCalled();
+      expect(urlState.mockFns.updateSearchParams).not.toHaveBeenCalled();
     });
 
     test('button has correct styling when enabled', () => {

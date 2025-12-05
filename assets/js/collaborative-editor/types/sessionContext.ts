@@ -90,10 +90,11 @@ export const SessionContextResponseSchema = z.object({
   project: ProjectContextSchema.nullable(),
   config: AppConfigSchema,
   permissions: PermissionsSchema,
-  latest_snapshot_lock_version: z.number().int(),
+  latest_snapshot_lock_version: z.number().int().nullable(),
   project_repo_connection: ProjectRepoConnectionSchema.nullable(),
   webhook_auth_methods: z.array(WebhookAuthMethodSchema),
   workflow_template: WorkflowTemplateSchema.nullable(),
+  has_read_ai_disclaimer: z.boolean(),
   limits: LimitsSchema.optional(),
 });
 
@@ -114,7 +115,8 @@ export interface SessionContextState {
   versionsLoading: boolean;
   versionsError: string | null;
   workflow_template: WorkflowTemplate | null;
-  limits?: Limits;
+  hasReadAIDisclaimer: boolean;
+  limits: Limits;
   isNewWorkflow: boolean;
   isLoading: boolean;
   error: string | null;
@@ -130,6 +132,7 @@ interface SessionContextCommands {
   clearError: () => void;
   setLatestSnapshotLockVersion: (lockVersion: number) => void;
   clearIsNewWorkflow: () => void;
+  setHasReadAIDisclaimer: (hasRead: boolean) => void;
   getLimits: (actionType: 'new_run') => Promise<void>;
 }
 

@@ -23,6 +23,10 @@ import * as dataclipApi from '../../../../js/collaborative-editor/api/dataclips'
 import { FullScreenIDE } from '../../../../js/collaborative-editor/components/ide/FullScreenIDE';
 import { KeyboardProvider } from '../../../../js/collaborative-editor/keyboard';
 import type { Workflow } from '../../../../js/collaborative-editor/types/workflow';
+import {
+  createMockURLState,
+  getURLStateMockValue,
+} from '../../__helpers__/urlStateMocks';
 
 // Mock dependencies
 vi.mock('../../../../js/collaborative-editor/api/dataclips');
@@ -108,14 +112,10 @@ vi.mock('../../../../js/metadata-explorer/Explorer', () => ({
 }));
 
 // Mock useURLState hook
-const mockParams: Record<string, string> = { job: 'job-1' };
+const urlState = createMockURLState();
 
 vi.mock('../../../../js/react/lib/use-url-state', () => ({
-  useURLState: () => ({
-    params: mockParams,
-    updateSearchParams: vi.fn(),
-    hash: '',
-  }),
+  useURLState: () => getURLStateMockValue(urlState),
 }));
 
 // Mock session hooks
@@ -319,10 +319,19 @@ vi.mock('../../../../js/collaborative-editor/hooks/useUI', () => ({
     openGitHubSyncModal: vi.fn(),
     openRunPanel: vi.fn(),
     closeRunPanel: vi.fn(),
+    toggleAIAssistantPanel: vi.fn(),
   }),
   useIsRunPanelOpen: () => false,
   useIsGitHubSyncModalOpen: () => false,
   useRunPanelContext: () => null,
+  useIsAIAssistantPanelOpen: () => false,
+  useTemplatePanel: () => ({
+    templates: [],
+    loading: false,
+    error: null,
+    searchQuery: '',
+    selectedTemplate: null,
+  }),
 }));
 
 // Mock GitHubSyncModal
@@ -410,9 +419,9 @@ describe('FullScreenIDE - Docs/Metadata Panel', () => {
       can_edit_dataclip: true,
     });
 
-    // Reset search params
-    Object.keys(mockParams).forEach(key => delete mockParams[key]);
-    mockParams.job = 'job-1';
+    // Reset URL state
+    urlState.reset();
+    urlState.setParam('job', 'job-1');
   });
 
   describe('panel state management', () => {

@@ -27,6 +27,10 @@ import {
   expectShortcutNotToFire,
   focusElement,
 } from '../../../keyboard-test-utils';
+import {
+  createMockURLState,
+  getURLStateMockValue,
+} from '../../__helpers__/urlStateMocks';
 import { simulateStoreProvider } from '../../__helpers__/storeProviderHelpers';
 
 // Mock dependencies
@@ -153,14 +157,10 @@ vi.mock('../../../../js/collaborative-editor/hooks/useRunRetry', () => ({
 }));
 
 // Mock URL state
-const mockParams: Record<string, string> = { job: 'test-job-id' };
+const urlState = createMockURLState();
 
 vi.mock('../../../../js/react/lib/use-url-state', () => ({
-  useURLState: () => ({
-    params: mockParams,
-    updateSearchParams: vi.fn(),
-    hash: '',
-  }),
+  useURLState: () => getURLStateMockValue(urlState),
 }));
 
 // Mock LiveView actions
@@ -216,6 +216,13 @@ vi.mock('../../../../js/collaborative-editor/hooks/useUI', () => ({
     closeGitHubSyncModal: vi.fn(),
   }),
   useIsGitHubSyncModalOpen: () => false,
+  useTemplatePanel: () => ({
+    templates: [],
+    loading: false,
+    error: null,
+    searchQuery: '',
+    selectedTemplate: null,
+  }),
 }));
 
 // Mock workflow hooks
@@ -445,6 +452,10 @@ describe('FullScreenIDE Keyboard Shortcuts', () => {
       dataclip: null,
       run_step: null,
     });
+
+    // Reset URL state
+    urlState.reset();
+    urlState.setParam('job', 'test-job-id');
 
     // Note: Each test calls setupMockUseRunRetry() to create fresh stable refs
   });

@@ -47,6 +47,12 @@ defmodule LightningWeb.Router do
     plug LightningWeb.Plugs.ApiAuth
   end
 
+  pipeline :authenticated_json do
+    plug :accepts, ["json"]
+    plug :fetch_session
+    plug :fetch_current_user
+  end
+
   scope "/", LightningWeb do
     pipe_through [:browser]
 
@@ -97,6 +103,13 @@ defmodule LightningWeb.Router do
     resources "/work_orders", API.WorkOrdersController, only: [:index, :show]
     resources "/runs", API.RunController, only: [:index, :show]
     resources "/log_lines", API.LogLinesController, only: [:index]
+  end
+
+  ## AI Assistant JSON API (cookie-authenticated)
+  scope "/api", LightningWeb, as: :api do
+    pipe_through [:authenticated_json, :require_authenticated_user]
+
+    get "/ai_assistant/sessions", API.AiAssistantController, :list_sessions
   end
 
   ## Collections

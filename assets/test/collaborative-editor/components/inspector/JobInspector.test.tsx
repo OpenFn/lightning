@@ -33,17 +33,17 @@ import { createWorkflowStore } from '../../../../js/collaborative-editor/stores/
 import {
   createMockPhoenixChannel,
   createMockPhoenixChannelProvider,
-} from '../../__helpers__/channelMocks';
+  createMockURLState,
+  getURLStateMockValue,
+} from '../../__helpers__';
 import { createWorkflowYDoc } from '../../__helpers__/workflowFactory';
 import { createMockSocket } from '../../__helpers__/sessionStoreHelpers';
 
 // Mock useURLState hook
+const urlState = createMockURLState();
+
 vi.mock('../../../../js/react/lib/use-url-state', () => ({
-  useURLState: () => ({
-    params: {} as Record<string, string>,
-    updateSearchParams: vi.fn(),
-    hash: '',
-  }),
+  useURLState: () => getURLStateMockValue(urlState),
 }));
 
 /**
@@ -120,6 +120,8 @@ describe('JobInspector - Footer Button States', () => {
   let mockChannel: any;
 
   beforeEach(() => {
+    urlState.reset();
+
     // Create Y.Doc with a job
     ydoc = createWorkflowYDoc({
       jobs: {
@@ -182,8 +184,6 @@ describe('JobInspector - Footer Button States', () => {
         project_repo_connection: null,
         webhook_auth_methods: [],
         workflow_template: null,
-        project_repo_connection: null,
-        webhook_auth_methods: [],
       });
     });
 
@@ -230,8 +230,6 @@ describe('JobInspector - Footer Button States', () => {
         project_repo_connection: null,
         webhook_auth_methods: [],
         workflow_template: null,
-        project_repo_connection: null,
-        webhook_auth_methods: [],
       });
     });
 
@@ -276,8 +274,6 @@ describe('JobInspector - Footer Button States', () => {
         project_repo_connection: null,
         webhook_auth_methods: [],
         workflow_template: null,
-        project_repo_connection: null,
-        webhook_auth_methods: [],
       });
     });
 
@@ -327,8 +323,6 @@ describe('JobInspector - Footer Button States', () => {
         project_repo_connection: null,
         webhook_auth_methods: [],
         workflow_template: null,
-        project_repo_connection: null,
-        webhook_auth_methods: [],
       });
     });
 
@@ -410,8 +404,6 @@ describe('JobInspector - Footer Button States', () => {
         project_repo_connection: null,
         webhook_auth_methods: [],
         workflow_template: null,
-        project_repo_connection: null,
-        webhook_auth_methods: [],
       });
     });
 
@@ -458,8 +450,6 @@ describe('JobInspector - Footer Button States', () => {
         project_repo_connection: null,
         webhook_auth_methods: [],
         workflow_template: null,
-        project_repo_connection: null,
-        webhook_auth_methods: [],
       });
     });
 
@@ -510,8 +500,6 @@ describe('JobInspector - Footer Button States', () => {
         project_repo_connection: null,
         webhook_auth_methods: [],
         workflow_template: null,
-        project_repo_connection: null,
-        webhook_auth_methods: [],
       });
     });
 
@@ -554,6 +542,8 @@ describe('JobInspector - Credential Selection', () => {
   let mockChannel: any;
 
   beforeEach(() => {
+    urlState.reset();
+
     // Create Y.Doc with a job (credentials explicitly null)
     ydoc = createWorkflowYDoc({
       jobs: {
@@ -649,8 +639,6 @@ describe('JobInspector - Credential Selection', () => {
         project_repo_connection: null,
         webhook_auth_methods: [],
         workflow_template: null,
-        project_repo_connection: null,
-        webhook_auth_methods: [],
       });
     });
   });

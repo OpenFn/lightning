@@ -45,6 +45,8 @@ import type { Workflow } from '../../../js/collaborative-editor/types/workflow';
 import {
   createMockPhoenixChannel,
   createMockPhoenixChannelProvider,
+  createMockURLState,
+  getURLStateMockValue,
   type MockPhoenixChannel,
 } from '../__helpers__';
 import { createStores } from '../__helpers__/storeProviderHelpers';
@@ -145,15 +147,11 @@ vi.mock('../../../js/collaborative-editor/hooks/useSession', () => ({
   }),
 }));
 
-// Configurable mock for useURLState
-let mockParams: Record<string, string> = {};
+// Mock useURLState hook with centralized helper
+const urlState = createMockURLState();
 
 vi.mock('../../../js/react/lib/use-url-state', () => ({
-  useURLState: () => ({
-    params: mockParams,
-    updateSearchParams: vi.fn(),
-    hash: '',
-  }),
+  useURLState: () => getURLStateMockValue(urlState),
 }));
 
 /**
@@ -183,9 +181,9 @@ function setFollowedRun(
   dataclipId: string
 ) {
   // Set URL param
-  mockParams = {};
+  urlState.clearParams();
   if (runId) {
-    mockParams['run'] = runId;
+    urlState.setParam('run', runId);
   }
 
   // Set activeRun in HistoryStore with matching step
@@ -235,7 +233,7 @@ function setFollowedRun(
  * Helper to clear followed run state
  */
 function clearFollowedRun() {
-  mockParams = {};
+  urlState.clearParams();
   if (stores) {
     act(() => {
       stores.historyStore._closeRunViewer();
@@ -306,6 +304,7 @@ function renderManualRunPanel(
 describe('ManualRunPanel Keyboard Shortcuts', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    urlState.reset();
 
     // Reset mock to default state
     setMockCanRun(true, 'Run workflow');

@@ -17,6 +17,13 @@ and this project adheres to
 
 ### Added
 
+- Template search and selection in collaborative workflow editor with AI-powered
+  workflow generation for missing templates
+  [#4081](https://github.com/OpenFn/lightning/issues/4081)
+  [#4052](https://github.com/OpenFn/lightning/issues/4052)
+- AI Assistant integration in collaborative workflow editor
+  [#4042](https://github.com/OpenFn/lightning/pull/4042)
+  
 ### Changed
 
 ### Fixed

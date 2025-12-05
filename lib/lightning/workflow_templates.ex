@@ -144,7 +144,9 @@ defmodule Lightning.WorkflowTemplates do
 
   """
   def list_templates do
-    Repo.all(WorkflowTemplate)
+    WorkflowTemplate
+    |> order_by([t], t.name)
+    |> Repo.all()
   end
 
   @doc """

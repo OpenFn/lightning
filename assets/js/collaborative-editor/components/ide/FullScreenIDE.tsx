@@ -744,7 +744,7 @@ export function FullScreenIDE({
   };
 
   return (
-    <div className="absolute inset-0 top-20 bottom-0 z-49 bg-white flex flex-col">
+    <div className="absolute inset-0 z-49 bg-white flex flex-col">
       <SandboxIndicatorBanner
         parentProjectId={parentProjectId}
         parentProjectName={parentProjectName}

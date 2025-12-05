@@ -113,13 +113,11 @@ export const useWorkflowSelector = <T>(
 ): T => {
   const store = useWorkflowStoreContext();
 
-  // Create stable selector function using useCallback
   const stableSelector = useCallback(
     (state: Workflow.State) => selector(state, store),
     [store, selector, ...deps]
   );
 
-  // Use store's optimized withSelector method
   const getSnapshot = useMemo(() => {
     return store.withSelector(stableSelector);
   }, [store, stableSelector]);
@@ -186,7 +184,6 @@ export const useWorkflowState = <T>(
 ): T => {
   const store = useWorkflowStoreContext();
 
-  // Use store's optimized withSelector method combined with useMemo
   const getSnapshot = useMemo(() => {
     return store.withSelector(selector);
   }, [store, selector, ...deps]);
@@ -248,15 +245,11 @@ export const useNodeSelection = () => {
   const { params, updateSearchParams } = useURLState();
 
   // Get current node ID from URL
-  const jobId = params['job'] ?? null;
-  const triggerId = params['trigger'] ?? null;
-  const edgeId = params['edge'] ?? null;
+  const { job: jobId, trigger: triggerId, edge: edgeId } = params;
   const currentNodeId = jobId || triggerId || edgeId;
 
-  // Use useWorkflowState for simple state selection (no store methods needed)
   const stableData = useWorkflowState(
     state => {
-      // Resolve current selection with proper typing
       let currentNode: {
         node: Workflow.Job | Workflow.Trigger | Workflow.Edge | null;
         type: 'job' | 'trigger' | 'edge' | null;
@@ -281,11 +274,9 @@ export const useNodeSelection = () => {
 
       return { currentNode };
     },
-    // Dependencies: URL parameters that affect selection
     [currentNodeId, jobId, triggerId, edgeId]
   );
 
-  // Selection function with stable reference and store access
   const store = useWorkflowStoreContext();
   const selectNode = useCallback(
     (id: string | null) => {
@@ -296,7 +287,6 @@ export const useNodeSelection = () => {
         return;
       }
 
-      // Use current state to determine node type
       const state = store.getSnapshot();
 
       const foundJob = state.jobs.find(job => job.id === id);
@@ -344,46 +334,38 @@ export const useWorkflowActions = () => {
   }
 
   const sessionContextStore = context.sessionContextStore;
+  const uiStore = context.uiStore;
 
   return useMemo(
     () => ({
-      // Job actions
       updateJob: store.updateJob,
       updateJobName: store.updateJobName,
       updateJobBody: store.updateJobBody,
       addJob: store.addJob,
       removeJob: store.removeJob,
 
-      // Workflow actions (Pattern 1: Y.Doc sync)
       updateWorkflow: store.updateWorkflow,
 
-      // Edge actions
       addEdge: store.addEdge,
       updateEdge: store.updateEdge,
       removeEdge: store.removeEdge,
 
-      // Trigger actions
       updateTrigger: store.updateTrigger,
       setEnabled: store.setEnabled,
 
-      // Position actions
       updatePositions: store.updatePositions,
       updatePosition: store.updatePosition,
 
-      // Selection actions (local UI state)
       selectJob: store.selectJob,
       selectTrigger: store.selectTrigger,
       selectEdge: store.selectEdge,
       clearSelection: store.clearSelection,
       removeJobAndClearSelection: store.removeJobAndClearSelection,
 
-      // Error management actions
       setError: store.setError,
       setClientErrors: store.setClientErrors,
 
-      // Workflow actions - wrapped to handle lock version updates
       saveWorkflow: (() => {
-        // Helper: Handle successful save operations
         const handleSaveSuccess = (
           response: Awaited<ReturnType<typeof store.saveWorkflow>>,
           silent = false
@@ -405,9 +387,20 @@ export const useWorkflowActions = () => {
             const projectId = currentState.project?.id;
 
             if (workflowId && projectId) {
-              // Update URL to include project_id
-              const newUrl = `/projects/${projectId}/w/${workflowId}/collaborate`;
+              // Update URL to include project_id and remove template-related params
+              const url = new URL(window.location.href);
+              const searchParams = new URLSearchParams(url.search);
+              searchParams.delete('method'); // Close left panel
+              searchParams.delete('template'); // Clear template selection
+              searchParams.delete('search'); // Clear template search
+              const queryString = searchParams.toString();
+              const newUrl = `/projects/${projectId}/w/${workflowId}/collaborate${queryString ? `?${queryString}` : ''}`;
               window.history.replaceState(null, '', newUrl);
+
+              // Clear template state in UI store
+              uiStore.selectTemplate(null);
+              uiStore.setTemplateSearchQuery('');
+              uiStore.collapseCreateWorkflowPanel();
 
               // Clear isNewWorkflow flag after successful save
               sessionContextStore.clearIsNewWorkflow();
@@ -433,7 +426,10 @@ export const useWorkflowActions = () => {
           // Format channel errors into user-friendly messages
           if (isChannelRequestError(error)) {
             error.message = formatChannelErrorMessage({
-              errors: error.errors,
+              errors: error.errors as { base?: string[] } & Record<
+                string,
+                string[]
+              >,
               type: error.type,
             });
 
@@ -523,8 +519,12 @@ export const useWorkflowActions = () => {
             const projectId = currentState.project?.id;
 
             if (workflowId && projectId) {
-              // Update URL to include project_id
-              const newUrl = `/projects/${projectId}/w/${workflowId}/collaborate`;
+              // Update URL to include project_id and remove method param (closes left panel)
+              const url = new URL(window.location.href);
+              const searchParams = new URLSearchParams(url.search);
+              searchParams.delete('method'); // Close left panel
+              const queryString = searchParams.toString();
+              const newUrl = `/projects/${projectId}/w/${workflowId}/collaborate${queryString ? `?${queryString}` : ''}`;
               window.history.pushState({}, '', newUrl);
               // Mark workflow as no longer new after first save
               sessionContextStore.clearIsNewWorkflow();
@@ -549,7 +549,10 @@ export const useWorkflowActions = () => {
           // Format channel errors into user-friendly messages
           if (isChannelRequestError(error)) {
             error.message = formatChannelErrorMessage({
-              errors: error.errors,
+              errors: error.errors as { base?: string[] } & Record<
+                string,
+                string[]
+              >,
               type: error.type,
             });
 
@@ -611,10 +614,9 @@ export const useWorkflowActions = () => {
       resetWorkflow: store.resetWorkflow,
       importWorkflow: store.importWorkflow,
 
-      // Trigger auth methods
       requestTriggerAuthMethods: store.requestTriggerAuthMethods,
     }),
-    [store, sessionContextStore]
+    [store, sessionContextStore, uiStore]
   );
 };
 

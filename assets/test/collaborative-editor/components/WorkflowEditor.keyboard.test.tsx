@@ -6,8 +6,10 @@
  * Tests survive library migrations and document expected user behavior.
  *
  * Shortcuts tested:
- * - Cmd+E / Ctrl+E: Open job editor (IDE) for selected job [MIGRATED to KeyboardProvider]
- * - Mod+Enter: Open run panel for selected node or first trigger [PENDING MIGRATION]
+ * - Mod+Enter: Open run panel for selected node or first trigger
+ *
+ * Note: Cmd+E / Ctrl+E IDE shortcut tests are in CollaborativeEditor.keyboard.test.tsx
+ * since the IDE is rendered by CollaborativeEditor, not WorkflowEditor.
  */
 
 import { screen, waitFor } from '@testing-library/react';
@@ -19,6 +21,10 @@ import {
   keys,
   renderWithKeyboard,
 } from '../../keyboard-test-utils';
+import {
+  createMockURLState,
+  getURLStateMockValue,
+} from '../__helpers__/urlStateMocks';
 
 // Mock dependencies
 vi.mock('../../../js/collaborative-editor/api/dataclips', () => ({
@@ -88,19 +94,14 @@ vi.mock('../../../js/collaborative-editor/components/ManualRunPanel', () => ({
 }));
 
 // Create controllable mocks
-const mockUpdateSearchParams = vi.fn();
 const mockOpenRunPanel = vi.fn();
 const mockCloseRunPanel = vi.fn();
 const mockSelectNode = vi.fn();
-const mockParams: Record<string, string> = {};
+const urlState = createMockURLState();
 
 // Mock useURLState
 vi.mock('../../../js/react/lib/use-url-state', () => ({
-  useURLState: () => ({
-    params: mockParams,
-    updateSearchParams: mockUpdateSearchParams,
-    hash: '',
-  }),
+  useURLState: () => getURLStateMockValue(urlState),
 }));
 
 // Mock session context hooks
@@ -166,7 +167,23 @@ vi.mock('../../../js/collaborative-editor/hooks/useUI', () => ({
   useUICommands: () => ({
     openRunPanel: mockOpenRunPanel,
     closeRunPanel: mockCloseRunPanel,
+    toggleCreateWorkflowPanel: vi.fn(),
+    openAIAssistantPanel: vi.fn(),
+    closeAIAssistantPanel: vi.fn(),
+    collapseCreateWorkflowPanel: vi.fn(),
+    expandCreateWorkflowPanel: vi.fn(),
+    selectTemplate: vi.fn(),
+    setTemplateSearchQuery: vi.fn(),
   }),
+  useTemplatePanel: () => ({
+    templates: [],
+    loading: false,
+    error: null,
+    searchQuery: '',
+    selectedTemplate: null,
+  }),
+  useIsCreateWorkflowPanelCollapsed: () => true,
+  useIsAIAssistantPanelOpen: () => false,
 }));
 
 // Mock workflow hooks with controllable node selection
@@ -209,151 +226,12 @@ vi.mock('../../../js/collaborative-editor/hooks/useWorkflow', () => ({
 describe('WorkflowEditor keyboard shortcuts', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    urlState.reset();
 
     // Reset state
-    delete mockParams.panel;
-    delete mockParams.job;
     mockIsRunPanelOpen.mockReturnValue(false);
     mockRunPanelContext.mockReturnValue(null);
     currentNode = { type: null, node: null };
-  });
-
-  describe('Cmd+E - Open Job Editor (IDE)', () => {
-    test('opens IDE for selected job with Cmd+E on Mac', async () => {
-      currentNode = {
-        type: 'job',
-        node: mockWorkflow.jobs[0],
-      };
-
-      const { container, shortcuts } = renderWithKeyboard(<WorkflowEditor />);
-
-      await waitFor(() => {
-        expect(screen.getByTestId('workflow-diagram')).toBeInTheDocument();
-      });
-
-      container.focus();
-
-      await shortcuts.openIDE('cmd');
-
-      await waitFor(() => {
-        expect(mockUpdateSearchParams).toHaveBeenCalledWith({
-          panel: 'editor',
-        });
-      });
-    });
-
-    test('opens IDE for selected job with Ctrl+E on Windows/Linux', async () => {
-      currentNode = {
-        type: 'job',
-        node: mockWorkflow.jobs[0],
-      };
-
-      const { container, shortcuts } = renderWithKeyboard(<WorkflowEditor />);
-
-      await waitFor(() => {
-        expect(screen.getByTestId('workflow-diagram')).toBeInTheDocument();
-      });
-
-      container.focus();
-
-      await shortcuts.openIDE('ctrl');
-
-      await waitFor(() => {
-        expect(mockUpdateSearchParams).toHaveBeenCalledWith({
-          panel: 'editor',
-        });
-      });
-    });
-
-    test('does not open IDE when trigger is selected', async () => {
-      currentNode = {
-        type: 'trigger',
-        node: mockWorkflow.triggers[0],
-      };
-
-      const { container, user } = renderWithKeyboard(<WorkflowEditor />);
-
-      await waitFor(() => {
-        expect(screen.getByTestId('workflow-diagram')).toBeInTheDocument();
-      });
-
-      container.focus();
-
-      await expectShortcutNotToFire(
-        keys.ctrl('e'),
-        mockUpdateSearchParams,
-        user
-      );
-    });
-
-    test('does not open IDE when nothing is selected', async () => {
-      currentNode = { type: null, node: null };
-
-      const { container, user } = renderWithKeyboard(<WorkflowEditor />);
-
-      await waitFor(() => {
-        expect(screen.getByTestId('workflow-diagram')).toBeInTheDocument();
-      });
-
-      container.focus();
-
-      await expectShortcutNotToFire(
-        keys.ctrl('e'),
-        mockUpdateSearchParams,
-        user
-      );
-    });
-
-    test('does not trigger when IDE is already open', async () => {
-      currentNode = {
-        type: 'job',
-        node: mockWorkflow.jobs[0],
-      };
-
-      // IDE is already open
-      mockParams.panel = 'editor';
-      mockParams.job = 'job-1';
-
-      const { container, user } = renderWithKeyboard(<WorkflowEditor />);
-
-      await waitFor(() => {
-        expect(screen.getByTestId('fullscreen-ide')).toBeInTheDocument();
-      });
-
-      container.focus();
-
-      await expectShortcutNotToFire(
-        keys.ctrl('e'),
-        mockUpdateSearchParams,
-        user
-      );
-    });
-
-    test('works in form fields (enableOnFormTags)', async () => {
-      currentNode = {
-        type: 'job',
-        node: mockWorkflow.jobs[0],
-      };
-
-      const { container, shortcuts } = renderWithKeyboard(<WorkflowEditor />);
-
-      await waitFor(() => {
-        expect(screen.getByTestId('workflow-diagram')).toBeInTheDocument();
-      });
-
-      // Create and focus an input field
-      const input = document.createElement('input');
-      container.appendChild(input);
-      input.focus();
-
-      await shortcuts.openIDE('cmd');
-
-      await waitFor(() => {
-        expect(mockUpdateSearchParams).toHaveBeenCalledWith({
-          panel: 'editor',
-        });
-      });
-    });
   });
 
   describe('Mod+Enter - Open Run Panel', () => {
@@ -472,13 +350,12 @@ describe('WorkflowEditor keyboard shortcuts', () => {
       };
 
       // IDE is open
-      mockParams.panel = 'editor';
-      mockParams.job = 'job-1';
+      urlState.setParams({ panel: 'editor', job: 'job-1' });
 
       const { container, user } = renderWithKeyboard(<WorkflowEditor />);
 
       await waitFor(() => {
-        expect(screen.getByTestId('fullscreen-ide')).toBeInTheDocument();
+        expect(screen.getByTestId('workflow-diagram')).toBeInTheDocument();
       });
 
       container.focus();
@@ -512,43 +389,18 @@ describe('WorkflowEditor keyboard shortcuts', () => {
   });
 
   describe('guard conditions', () => {
-    test('Cmd+E only works for job nodes', async () => {
-      // Test with job - should work
-      currentNode = {
-        type: 'job',
-        node: mockWorkflow.jobs[0],
-      };
-
-      const { container, shortcuts } = renderWithKeyboard(<WorkflowEditor />);
-
-      await waitFor(() => {
-        expect(screen.getByTestId('workflow-diagram')).toBeInTheDocument();
-      });
-
-      container.focus();
-
-      await shortcuts.openIDE('ctrl');
-
-      await waitFor(() => {
-        expect(mockUpdateSearchParams).toHaveBeenCalledWith({
-          panel: 'editor',
-        });
-      });
-    });
-
     test('Mod+Enter disabled when IDE open', async () => {
       currentNode = {
         type: 'job',
         node: mockWorkflow.jobs[0],
       };
 
-      mockParams.panel = 'editor';
-      mockParams.job = 'job-1';
+      urlState.setParams({ panel: 'editor', job: 'job-1' });
 
       const { container, user } = renderWithKeyboard(<WorkflowEditor />);
 
       await waitFor(() => {
-        expect(screen.getByTestId('fullscreen-ide')).toBeInTheDocument();
+        expect(screen.getByTestId('workflow-diagram')).toBeInTheDocument();
       });
 
       container.focus();

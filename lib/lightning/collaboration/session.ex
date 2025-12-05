@@ -314,7 +314,13 @@ defmodule Lightning.Collaboration.Session do
            Lightning.Workflows.save_workflow(changeset, user,
              skip_reconcile: true
            ),
-         :ok <- merge_saved_workflow_into_ydoc(state, saved_workflow) do
+         :ok <- merge_saved_workflow_into_ydoc(state, saved_workflow),
+         {:ok, _job_cleanup_count} <-
+           Lightning.AiAssistant.cleanup_unsaved_job_sessions(saved_workflow),
+         {:ok, _workflow_cleanup_count} <-
+           Lightning.AiAssistant.cleanup_unsaved_workflow_sessions(
+             saved_workflow
+           ) do
       Logger.info("Successfully saved workflow #{state.workflow.id}")
       {:reply, {:ok, saved_workflow}, %{state | workflow: saved_workflow}}
     else
@@ -451,7 +457,7 @@ defmodule Lightning.Collaboration.Session do
   defp fetch_workflow(
          %{__meta__: %{state: :built}, lock_version: lock_version} = workflow
        )
-       when lock_version > 0 do
+       when is_integer(lock_version) and lock_version > 0 do
     case Lightning.Workflows.get_workflow(workflow.id,
            include: [:jobs, :edges, :triggers]
          ) do

@@ -118,6 +118,18 @@ defmodule Lightning.Jobs do
   """
   def get_job!(id), do: Repo.get!(Job |> preload([:workflow]), id)
 
+  @doc """
+  Gets a single job.
+
+  Returns `{:ok, job}` if found, `{:error, :not_found}` otherwise.
+  """
+  def get_job(id) do
+    case Repo.get(Job, id) |> Repo.preload([:workflow]) do
+      nil -> {:error, :not_found}
+      job -> {:ok, job}
+    end
+  end
+
   def get_job_with_credential(id) do
     Repo.get(Job, id)
     |> Repo.preload(:credential)

@@ -22,7 +22,11 @@ import * as useChannelModule from '../../../../js/collaborative-editor/hooks/use
 import * as useSessionModule from '../../../../js/collaborative-editor/hooks/useSession';
 import * as useSessionContextModule from '../../../../js/collaborative-editor/hooks/useSessionContext';
 import * as useWorkflowModule from '../../../../js/collaborative-editor/hooks/useWorkflow';
-import { createMockWorkflowTemplate } from '../../__helpers__';
+import {
+  createMockWorkflowTemplate,
+  createMockURLState,
+  getURLStateMockValue,
+} from '../../__helpers__';
 
 // Mock Sonner (used by notifications)
 vi.mock('sonner', () => ({
@@ -36,12 +40,10 @@ vi.mock('sonner', () => ({
 }));
 
 // Mock useURLState
-const mockUpdateSearchParams = vi.fn();
+const urlState = createMockURLState();
+
 vi.mock('../../../../js/react/lib/use-url-state', () => ({
-  useURLState: () => ({
-    params: {} as Record<string, string>,
-    updateSearchParams: mockUpdateSearchParams,
-  }),
+  useURLState: () => getURLStateMockValue(urlState),
 }));
 
 // Mock channelRequest
@@ -100,6 +102,7 @@ describe('TemplatePublishPanel', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    urlState.reset();
 
     mockChannel = createMockChannel();
     mockWorkflowState = createMockWorkflowState();
@@ -363,7 +366,9 @@ describe('TemplatePublishPanel', () => {
         );
       });
 
-      expect(mockUpdateSearchParams).toHaveBeenCalledWith({ panel: 'code' });
+      expect(urlState.mockFns.updateSearchParams).toHaveBeenCalledWith({
+        panel: 'code',
+      });
     });
 
     test('shows update success notification in update mode', async () => {
@@ -560,7 +565,9 @@ describe('TemplatePublishPanel', () => {
       const backButton = screen.getByRole('button', { name: 'Back' });
       await user.click(backButton);
 
-      expect(mockUpdateSearchParams).toHaveBeenCalledWith({ panel: 'code' });
+      expect(urlState.mockFns.updateSearchParams).toHaveBeenCalledWith({
+        panel: 'code',
+      });
     });
   });
 });

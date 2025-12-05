@@ -14,7 +14,6 @@ interface LeftPanelProps {
   method: CreationMethod;
   onMethodChange: (method: CreationMethod) => void;
   onImport: (workflowState: YAMLWorkflowState) => void;
-  onClosePanel: () => void;
   onSave: () => Promise<unknown>;
 }
 
@@ -31,7 +30,7 @@ export function LeftPanel({
     onMethodChange('import');
   };
 
-  const handleSwicthToTemplate = () => {
+  const handleSwitchToTemplate = () => {
     onMethodChange('template');
   };
 
@@ -39,28 +38,26 @@ export function LeftPanel({
   if (!method) return null;
 
   return (
-    <div
-      className={`inset-y-0 left-0 w-1/3 transition-transform duration-300 ease-in-out z-10 ${
-        method ? 'translate-x-0' : '-translate-x-full pointer-events-none'
-      }`}
-    >
-      <div className="pointer-events-auto w-full h-full">
-        {currentMethod === 'template' && (
-          <TemplatePanel onImportClick={handleSwitchToImport} />
-        )}
-        {currentMethod === 'import' && (
-          <YAMLImportPanel
-            onImport={onImport}
-            onSave={onSave}
-            onBack={handleSwicthToTemplate}
-          />
-        )}
-        {currentMethod === 'ai' && (
-          <div className="w-full h-full flex items-center justify-center bg-white border-r border-gray-200">
-            <p className="text-gray-500">AI workflow creation coming soon...</p>
-          </div>
-        )}
-      </div>
+    <div className="w-full h-full">
+      {currentMethod === 'template' && (
+        <TemplatePanel
+          onImportClick={handleSwitchToImport}
+          onImport={onImport}
+          onSave={onSave}
+        />
+      )}
+      {currentMethod === 'import' && (
+        <YAMLImportPanel
+          onImport={onImport}
+          onSave={onSave}
+          onBack={handleSwitchToTemplate}
+        />
+      )}
+      {currentMethod === 'ai' && (
+        <div className="w-full h-full flex items-center justify-center bg-white border-r border-gray-200">
+          <p className="text-gray-500">AI workflow creation coming soon...</p>
+        </div>
+      )}
     </div>
   );
 }

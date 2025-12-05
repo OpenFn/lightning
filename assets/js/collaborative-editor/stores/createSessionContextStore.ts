@@ -120,6 +120,7 @@ export const createSessionContextStore = (
       versionsLoading: false,
       versionsError: null,
       workflow_template: null,
+      hasReadAIDisclaimer: false,
       limits: {},
       isNewWorkflow,
       isLoading: false,
@@ -184,6 +185,7 @@ export const createSessionContextStore = (
         draft.projectRepoConnection = sessionContext.project_repo_connection;
         draft.webhookAuthMethods = sessionContext.webhook_auth_methods;
         draft.workflow_template = sessionContext.workflow_template;
+        draft.hasReadAIDisclaimer = sessionContext.has_read_ai_disclaimer;
         draft.limits = sessionContext.limits;
         draft.isLoading = false;
         draft.error = null;
@@ -300,6 +302,17 @@ export const createSessionContextStore = (
       draft.isNewWorkflow = false;
     });
     notify('clearIsNewWorkflow');
+  };
+
+  /**
+   * Set AI disclaimer read status
+   * Called when user accepts the AI assistant disclaimer
+   */
+  const setHasReadAIDisclaimer = (hasRead: boolean) => {
+    state = produce(state, draft => {
+      draft.hasReadAIDisclaimer = hasRead;
+    });
+    notify('setHasReadAIDisclaimer');
   };
 
   /**
@@ -578,6 +591,7 @@ export const createSessionContextStore = (
     clearError,
     setLatestSnapshotLockVersion,
     clearIsNewWorkflow,
+    setHasReadAIDisclaimer,
     getLimits,
 
     // Internal methods (not part of public SessionContextStore interface)

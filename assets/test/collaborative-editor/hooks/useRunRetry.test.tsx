@@ -19,7 +19,9 @@ import type {
 import {
   createMockPhoenixChannel,
   createMockPhoenixChannelProvider,
-} from '../mocks/phoenixChannel';
+  createMockURLState,
+  getURLStateMockValue,
+} from '../__helpers__';
 import { createMockSocket } from '../mocks/phoenixSocket';
 import {
   createMockSessionContextStore,
@@ -48,15 +50,11 @@ vi.mock('../../../js/collaborative-editor/lib/csrf', () => ({
   getCsrfToken: () => 'mock-csrf-token',
 }));
 
-// Create a global variable to control URL state mocking
-let mockParams: Record<string, string> = {};
+// Mock URL state hook with centralized helper
+const urlState = createMockURLState();
 
-// Mock URL state hook
 vi.mock('../../../js/react/lib/use-url-state', () => ({
-  useURLState: () => ({
-    params: mockParams,
-    updateSearchParams: vi.fn(),
-  }),
+  useURLState: () => getURLStateMockValue(urlState),
 }));
 
 // Global variable to control active run in tests
@@ -194,6 +192,7 @@ function createMockStep(overrides?: Partial<StepDetail>): StepDetail {
 describe('useRunRetry - Basic Functionality', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    urlState.reset();
     mockActiveRun = null;
   });
 
@@ -360,10 +359,11 @@ describe('useRunRetry - Basic Functionality', () => {
 describe('useRunRetry - Retry Detection', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    urlState.reset();
     mockActiveRun = null;
 
     // Set URL state to include run parameter
-    mockParams = { run: 'run-123' };
+    urlState.setParam('run', 'run-123');
   });
 
   test('isRetryable is false when no run is followed', () => {
@@ -492,6 +492,7 @@ describe('useRunRetry - Retry Detection', () => {
 describe('useRunRetry - handleRun', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    urlState.reset();
     mockActiveRun = null;
   });
 
@@ -632,10 +633,11 @@ describe('useRunRetry - handleRun', () => {
 describe('useRunRetry - handleRetry', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    urlState.reset();
     mockActiveRun = null;
 
     // Set URL state to include run parameter
-    mockParams = { run: 'run-123' };
+    urlState.setParam('run', 'run-123');
 
     // Mock global fetch for retry endpoint
     global.fetch = vi.fn();
