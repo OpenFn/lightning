@@ -403,6 +403,13 @@ export const createAdaptorStore = (): AdaptorStore => {
 
     // Internal methods (not part of public AdaptorStore interface)
     _connectChannel: connectChannel,
+    // Test helper to set project adaptors directly
+    _setProjectAdaptors: (adaptors: Adaptor[]) => {
+      state = produce(state, draft => {
+        draft.projectAdaptors = sortAdaptors(adaptors);
+      });
+      notify('_setProjectAdaptors');
+    },
   };
 };
 
