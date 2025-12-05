@@ -1681,6 +1681,16 @@ export const createWorkflowStore = () => {
     canUndo,
     canRedo,
     clearHistory,
+
+    // =============================================================================
+    // Test Helpers (not part of public interface)
+    // =============================================================================
+    _setJobsForTesting: (jobs: Workflow.Job[]) => {
+      state = produce(state, draft => {
+        draft.jobs = jobs;
+      });
+      notify('_setJobsForTesting');
+    },
   };
 };
 
