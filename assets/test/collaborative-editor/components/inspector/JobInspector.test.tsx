@@ -46,20 +46,6 @@ vi.mock('../../../../js/react/lib/use-url-state', () => ({
   useURLState: () => getURLStateMockValue(urlState),
 }));
 
-// Mock the useCanRun hook from useWorkflow
-vi.mock('../../../../js/collaborative-editor/hooks/useWorkflow', async () => {
-  const actual = await vi.importActual(
-    '../../../../js/collaborative-editor/hooks/useWorkflow'
-  );
-  return {
-    ...actual,
-    useCanRun: () => ({
-      canRun: true,
-      tooltipMessage: 'Run workflow',
-    }),
-  };
-});
-
 /**
  * Helper to create and connect a workflow store with Y.Doc
  */

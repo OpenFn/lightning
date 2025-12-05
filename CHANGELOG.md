@@ -23,12 +23,21 @@ and this project adheres to
   [#4052](https://github.com/OpenFn/lightning/issues/4052)
 - AI Assistant integration in collaborative workflow editor
   [#4042](https://github.com/OpenFn/lightning/pull/4042)
+- Collab Editor: Respect limits when creating runs and retries
+  [#4102](https://github.com/OpenFn/lightning/issues/4102)
 
 ### Changed
 
 ### Fixed
 
+- Selected run sometimes fails to highlight step in the collab editor
+  [#4127](https://github.com/OpenFn/lightning/issues/4127)
+- Run logs no longer disappear after browser refresh in IDE
+  [#4079](https://github.com/OpenFn/lightning/issues/4079)
 - Fix version chip [#4120](https://github.com/OpenFn/lightning/issues/4120)
+- Fix OAuth credential creation crash in Collaborate view when returning from
+  provider authorization
+  [#4131](https://github.com/OpenFn/lightning/issues/4131)
 
 ## [2.15.0-pre2] - 2025-12-04
 

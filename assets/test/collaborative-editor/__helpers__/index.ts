@@ -166,3 +166,11 @@ export {
   type URLStateMockFns,
   type UseURLStateReturn,
 } from './urlStateMocks';
+
+// Store mocks
+export {
+  createMockSessionContextStore,
+  createMockHistoryStore,
+  createMockStoreContextValue,
+  defaultSessionContextState,
+} from './storeMocks';
