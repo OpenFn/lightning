@@ -99,11 +99,16 @@ const logger = _logger.ns('AdaptorStore').seal();
 // sorts adaptors coming into the adaptor store
 // 1. sorts the versions for every adaptor
 // 2. sorts the adaptors themselves by name
-function sortAdaptors(adaptors: AdaptorsList) {
+export function sortAdaptors(adaptors: AdaptorsList = []) {
+  const sortedAdaptors: AdaptorsList = [];
   for (const adaptor of adaptors) {
-    adaptor.versions.sort((a, b) => b.version.localeCompare(a.version));
+    // spreading because it could be read-only.
+    const versions = [...(adaptor.versions || [])].sort((a, b) =>
+      b.version.localeCompare(a.version)
+    );
+    sortedAdaptors.push({ ...adaptor, versions });
   }
-  return adaptors.sort((a, b) => a.name.localeCompare(b.name));
+  return sortedAdaptors.sort((a, b) => a.name.localeCompare(b.name));
 }
 
 /**

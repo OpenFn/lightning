@@ -5,6 +5,8 @@
  * for testing adaptor store functionality.
  */
 
+import { sortAdaptors } from '#/collaborative-editor/stores/createAdaptorStore';
+
 import type {
   Adaptor,
   AdaptorVersion,
@@ -56,11 +58,11 @@ export const mockAdaptorSalesforce: Adaptor = {
 /**
  * Complete adaptors list for testing
  */
-export const mockAdaptorsList: AdaptorsList = [
+export const mockAdaptorsList: AdaptorsList = sortAdaptors([
   mockAdaptor,
   mockAdaptorDhis2,
   mockAdaptorSalesforce,
-];
+]);
 
 /**
  * Empty adaptors list for testing initial state
