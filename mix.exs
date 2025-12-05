@@ -14,7 +14,7 @@ defmodule Lightning.MixProject do
       aliases: aliases(),
       deps: deps(),
       dialyzer: [
-        plt_add_apps: [:mix],
+        plt_add_apps: [:mix, :docout],
         plt_local_path: "priv/plts/",
         plt_core_path: "priv/plts/core.plt"
       ],
