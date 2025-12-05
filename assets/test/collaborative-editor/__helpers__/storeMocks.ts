@@ -37,10 +37,17 @@
 import { vi } from 'vitest';
 
 import type { SessionContextStore } from '../../../js/collaborative-editor/stores/createSessionContextStore';
-import type { HistoryStore } from '../../../js/collaborative-editor/types/history';
+import type {
+  HistoryStore,
+  HistoryState,
+  RunDetail,
+} from '../../../js/collaborative-editor/types/history';
 import type { SessionContextState } from '../../../js/collaborative-editor/types/sessionContext';
 import type { StoreContextValue } from '../../../js/collaborative-editor/contexts/StoreProvider';
-import type { RunDetail } from '../../../js/collaborative-editor/types/history';
+import type {
+  UIStore,
+  UIState,
+} from '../../../js/collaborative-editor/types/ui';
 
 // =============================================================================
 // Default State Objects
@@ -68,6 +75,30 @@ export const defaultSessionContextState: SessionContextState = {
   isLoading: false,
   error: null,
   lastUpdated: null,
+};
+
+/**
+ * Default empty UI state
+ * Used as the baseline for all UI store mocks
+ */
+export const defaultUIState: UIState = {
+  runPanelOpen: false,
+  runPanelContext: null,
+  githubSyncModalOpen: false,
+  aiAssistantPanelOpen: false,
+  aiAssistantInitialMessage: null,
+  createWorkflowPanelCollapsed: true,
+  templatePanel: {
+    templates: [],
+    loading: false,
+    error: null,
+    searchQuery: '',
+    selectedTemplate: null,
+  },
+  importPanel: {
+    yamlContent: '',
+    importState: 'initial',
+  },
 };
 
 // =============================================================================
@@ -110,7 +141,7 @@ export function createMockSessionContextStore(
   const defaultStore: SessionContextStore = {
     // Queries
     getSnapshot: vi.fn(() => defaultSessionContextState),
-    subscribe: vi.fn((listener: () => void) => {
+    subscribe: vi.fn((_listener: () => void) => {
       // Return unsubscribe function
       return () => {};
     }),
@@ -198,11 +229,11 @@ export function createMockHistoryStore(
   const defaultStore: HistoryStore = {
     // Queries
     getSnapshot: vi.fn(() => defaultState),
-    subscribe: vi.fn((listener: () => void) => {
+    subscribe: vi.fn((_listener: () => void) => {
       return () => {};
     }),
-    withSelector: vi.fn(<T>(selector: (state: any) => T) => {
-      return () => selector(defaultState);
+    withSelector: vi.fn(<T>(selector: (state: HistoryState) => T) => {
+      return () => selector(defaultState as HistoryState);
     }),
     getRunSteps: vi.fn(() => null),
     getActiveRun: vi.fn(() => activeRun),
@@ -240,6 +271,102 @@ export function createMockHistoryStore(
 }
 
 // =============================================================================
+// UIStore Mock Factory
+// =============================================================================
+
+/**
+ * Creates a mock UIStore with all required methods
+ *
+ * All methods are vi.fn() mocks that can be inspected and configured.
+ * State queries return sensible defaults that can be overridden.
+ *
+ * **State Tracking:**
+ * By default, the mock tracks state changes made via setImportState,
+ * setImportYamlContent, and clearImportPanel. This allows tests to
+ * verify component behavior that depends on state updates.
+ *
+ * @param overrides - Partial UIStore to override defaults
+ * @param initialState - Optional initial state to start with
+ * @returns Complete UIStore mock
+ *
+ * @example
+ * // Basic usage with default state
+ * const store = createMockUIStore();
+ * expect(store.getSnapshot().runPanelOpen).toBe(false);
+ *
+ * @example
+ * // Override state
+ * const store = createMockUIStore({}, {
+ *   ...defaultUIState,
+ *   runPanelOpen: true,
+ * });
+ */
+export function createMockUIStore(
+  overrides: Partial<UIStore> = {},
+  initialState: UIState = defaultUIState
+): UIStore {
+  // Mutable state that tracks changes
+  let currentState = { ...initialState };
+
+  const defaultStore: UIStore = {
+    // Queries
+    getSnapshot: vi.fn(() => currentState),
+    subscribe: vi.fn((_listener: () => void) => {
+      return () => {};
+    }),
+    withSelector: vi.fn(<T>(selector: (state: UIState) => T) => {
+      return () => selector(currentState);
+    }),
+
+    // Commands
+    openRunPanel: vi.fn(),
+    closeRunPanel: vi.fn(),
+    openGitHubSyncModal: vi.fn(),
+    closeGitHubSyncModal: vi.fn(),
+    openAIAssistantPanel: vi.fn(),
+    closeAIAssistantPanel: vi.fn(),
+    toggleAIAssistantPanel: vi.fn(),
+    collapseCreateWorkflowPanel: vi.fn(),
+    expandCreateWorkflowPanel: vi.fn(),
+    toggleCreateWorkflowPanel: vi.fn(),
+    setTemplates: vi.fn(),
+    setTemplatesLoading: vi.fn(),
+    setTemplatesError: vi.fn(),
+    setTemplateSearchQuery: vi.fn(),
+    selectTemplate: vi.fn(),
+    clearTemplatePanel: vi.fn(),
+    // Import panel commands that track state
+    setImportYamlContent: vi.fn((content: string) => {
+      currentState = {
+        ...currentState,
+        importPanel: { ...currentState.importPanel, yamlContent: content },
+      };
+    }),
+    setImportState: vi.fn(
+      (
+        importState: 'initial' | 'parsing' | 'valid' | 'invalid' | 'importing'
+      ) => {
+        currentState = {
+          ...currentState,
+          importPanel: { ...currentState.importPanel, importState },
+        };
+      }
+    ),
+    clearImportPanel: vi.fn(() => {
+      currentState = {
+        ...currentState,
+        importPanel: { yamlContent: '', importState: 'initial' },
+      };
+    }),
+  };
+
+  return {
+    ...defaultStore,
+    ...overrides,
+  };
+}
+
+// =============================================================================
 // Full StoreContextValue Mock Factory
 // =============================================================================
 
@@ -248,8 +375,8 @@ export function createMockHistoryStore(
  *
  * Provides a full StoreContextValue suitable for StoreProvider tests.
  * By default, most stores are minimal `{} as any` placeholders except
- * for sessionContextStore and historyStore which use their dedicated
- * mock factories.
+ * for sessionContextStore, historyStore, and uiStore which use their
+ * dedicated mock factories.
  *
  * @param overrides - Partial StoreContextValue to override defaults
  * @returns Complete StoreContextValue mock
@@ -286,7 +413,7 @@ export function createMockStoreContextValue(
     workflowStore: {} as any,
     sessionContextStore: createMockSessionContextStore(),
     historyStore: createMockHistoryStore(),
-    uiStore: {} as any,
+    uiStore: createMockUIStore(),
     editorPreferencesStore: {} as any,
     aiAssistantStore: {} as any,
   };

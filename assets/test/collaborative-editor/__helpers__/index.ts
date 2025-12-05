@@ -171,6 +171,8 @@ export {
 export {
   createMockSessionContextStore,
   createMockHistoryStore,
+  createMockUIStore,
   createMockStoreContextValue,
   defaultSessionContextState,
+  defaultUIState,
 } from './storeMocks';
