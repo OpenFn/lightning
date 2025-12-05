@@ -591,7 +591,7 @@ describe('ManualRunPanel Keyboard Shortcuts', () => {
       });
 
       // Verify Run button is available (shortcuts configured in lines 439-447)
-      const runButton = screen.getByText('Run Workflow Now');
+      const runButton = screen.getByText('Run');
       expect(runButton).not.toBeDisabled();
     });
 
@@ -617,7 +617,7 @@ describe('ManualRunPanel Keyboard Shortcuts', () => {
 
       // Verify Run button is NOT shown in embedded mode
       // (shortcuts disabled via enabled: renderMode === RENDER_MODES.STANDALONE)
-      expect(screen.queryByText('Run Workflow Now')).not.toBeInTheDocument();
+      expect(screen.queryByText('Run')).not.toBeInTheDocument();
     });
 
     test('run button respects canRun guard', async () => {
@@ -643,7 +643,7 @@ describe('ManualRunPanel Keyboard Shortcuts', () => {
       });
 
       // Verify Run button is disabled when canRun is false
-      const runButton = screen.getByText('Run Workflow Now');
+      const runButton = screen.getByText('Run');
       expect(runButton).toBeDisabled();
     });
 
@@ -669,7 +669,7 @@ describe('ManualRunPanel Keyboard Shortcuts', () => {
       });
 
       // Click Run button
-      const runButton = screen.getByText('Run Workflow Now');
+      const runButton = screen.getByText('Run');
       act(() => {
         runButton.click();
       });
@@ -706,7 +706,7 @@ describe('ManualRunPanel Keyboard Shortcuts', () => {
       // In embedded mode, shortcuts are disabled (enabled: renderMode === STANDALONE)
       // This prevents conflicts with IDE shortcuts
       expect(screen.queryByText('Run from Test Job')).not.toBeInTheDocument();
-      expect(screen.queryByText('Run Workflow Now')).not.toBeInTheDocument();
+      expect(screen.queryByText('Run')).not.toBeInTheDocument();
     });
 
     test('standalone mode provides full UI with shortcuts', async () => {
@@ -730,7 +730,7 @@ describe('ManualRunPanel Keyboard Shortcuts', () => {
       });
 
       // In standalone mode, full UI is rendered with shortcuts enabled
-      expect(screen.getByText('Run Workflow Now')).toBeInTheDocument();
+      expect(screen.getByText('Run')).toBeInTheDocument();
       expect(
         screen.getByRole('button', { name: /close panel/i })
       ).toBeInTheDocument();
@@ -759,7 +759,7 @@ describe('ManualRunPanel Keyboard Shortcuts', () => {
 
       // useRunRetryShortcuts configured with enabled: renderMode === RENDER_MODES.STANDALONE
       // This ensures shortcuts only work in standalone mode, preventing conflicts with IDE
-      expect(screen.getByText('Run Workflow Now')).toBeInTheDocument();
+      expect(screen.getByText('Run')).toBeInTheDocument();
     });
   });
 
@@ -1276,7 +1276,7 @@ describe('ManualRunPanel Keyboard Shortcuts', () => {
         await new Promise(resolve => setTimeout(resolve, 200));
 
         // Click run button to start running
-        const runButton = screen.getByText('Run Workflow Now');
+        const runButton = screen.getByText('Run');
         act(() => {
           runButton.click();
         });

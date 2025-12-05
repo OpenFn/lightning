@@ -131,8 +131,8 @@ test.describe('Run/Retry Keyboard Shortcuts @collaborative @critical', () => {
     });
 
     await test.step('Verify button shows retry mode', async () => {
-      // Button should now show "Run (retry)"
-      await expect(page.locator('button:has-text("Run (retry)")')).toBeVisible({
+      // Button should now show "Run (Retry)"
+      await expect(page.locator('button:has-text("Run (Retry)")')).toBeVisible({
         timeout: 10000,
       });
     });
@@ -177,7 +177,7 @@ test.describe('Run/Retry Keyboard Shortcuts @collaborative @critical', () => {
       });
 
       // Wait for retry mode
-      await expect(page.locator('button:has-text("Run (retry)")')).toBeVisible({
+      await expect(page.locator('button:has-text("Run (Retry)")')).toBeVisible({
         timeout: 10000,
       });
     });
@@ -285,13 +285,13 @@ test.describe('Run/Retry Keyboard Shortcuts @collaborative @critical', () => {
       });
 
       // Wait for split button to appear
-      await expect(page.locator('button:has-text("Run (retry)")')).toBeVisible({
+      await expect(page.locator('button:has-text("Run (Retry)")')).toBeVisible({
         timeout: 10000,
       });
     });
 
     await test.step('Click main button to retry', async () => {
-      const retryButton = page.locator('button:has-text("Run (retry)")');
+      const retryButton = page.locator('button:has-text("Run (Retry)")');
       await retryButton.click();
 
       await expect(page.locator('text="Retry started"')).toBeVisible({
@@ -319,7 +319,7 @@ test.describe('Run/Retry Keyboard Shortcuts @collaborative @critical', () => {
         timeout: 5000,
       });
 
-      await expect(page.locator('button:has-text("Run (retry)")')).toBeVisible({
+      await expect(page.locator('button:has-text("Run (Retry)")')).toBeVisible({
         timeout: 10000,
       });
     });
@@ -373,7 +373,7 @@ test.describe('Run/Retry Keyboard Shortcuts @collaborative @critical', () => {
 
     await test.step('Verify button changes to Retry when complete', async () => {
       // Wait for run to complete and button to change to retry
-      await expect(page.locator('button:has-text("Run (retry)")')).toBeVisible({
+      await expect(page.locator('button:has-text("Run (Retry)")')).toBeVisible({
         timeout: 30000,
       });
     });
