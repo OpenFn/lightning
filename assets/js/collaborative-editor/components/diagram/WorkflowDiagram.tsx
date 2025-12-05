@@ -6,8 +6,7 @@ import {
   MiniMap,
   type NodeChange,
   ReactFlow,
-  type ReactFlowInstance,
-  ReactFlowProvider,
+  useReactFlow,
 } from '@xyflow/react';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import tippy from 'tippy.js';
@@ -110,7 +109,7 @@ const logger = _logger.ns('WorkflowDiagram').seal();
 const flowhandlers = flowHandlers({ dragThreshold: DRAG_THRESHOLD });
 
 export default function WorkflowDiagram(props: WorkflowDiagramProps) {
-  const [flow, setFlow] = useState<ReactFlowInstance | null>(null);
+  const flow = useReactFlow();
   // value of select in props seems same as select in store.
   // one in props is always set on initial render. (helps with refresh)
   const { selection, onSelectionChange, containerEl: el, runSteps } = props;
@@ -921,27 +920,34 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
 
   return (
     <>
-      <ReactFlowProvider>
-        <ReactFlow
-          ref={workflowDiagramRef}
-          maxZoom={1}
-          proOptions={{ account: 'paid-pro', hideAttribution: true }}
-          nodes={model.nodes}
-          edges={model.edges}
-          onNodesChange={onNodesChange}
-          onNodeDragStart={flowhandlers.ondragstart()}
-          onNodeDragStop={flowhandlers.ondragstop(onNodeDragStop)}
-          nodesDraggable={isManualLayout}
-          nodeTypes={nodeTypes}
-          edgeTypes={edgeTypes}
-          onNodeClick={handleNodeClick}
-          onEdgeClick={handleEdgeClick}
-          onInit={setFlow}
-          deleteKeyCode={null}
-          fitView
-          fitViewOptions={{ padding: FIT_PADDING }}
-          minZoom={0.2}
-          {...connectHandlers}
+      <ReactFlow
+        ref={workflowDiagramRef}
+        maxZoom={1}
+        proOptions={{ account: 'paid-pro', hideAttribution: true }}
+        nodes={model.nodes}
+        edges={model.edges}
+        onNodesChange={onNodesChange}
+        onNodeDragStart={flowhandlers.ondragstart()}
+        onNodeDragStop={flowhandlers.ondragstop(onNodeDragStop)}
+        nodesDraggable={isManualLayout}
+        nodeTypes={nodeTypes}
+        edgeTypes={edgeTypes}
+        onNodeClick={handleNodeClick}
+        onEdgeClick={handleEdgeClick}
+        deleteKeyCode={null}
+        fitView
+        fitViewOptions={{ padding: FIT_PADDING }}
+        minZoom={0.2}
+        {...connectHandlers}
+      >
+        <Controls
+          position="bottom-left"
+          showInteractive={false}
+          showFitView={false}
+          style={{
+            transform: `translateX(${drawerWidth.toString()}px)`,
+            transition: 'transform 500ms ease-in-out',
+          }}
         >
           {(jobs.length > 0 || triggers.length > 0) && (
             <Controls
@@ -1007,8 +1013,8 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
             />
           )}
           <PointerTrackerViewer containerEl={props.containerEl} />
-        </ReactFlow>
-      </ReactFlowProvider>
+        </Controls>
+      </ReactFlow>
 
       <AdaptorSelectionModal
         isOpen={pendingPlaceholder !== null}
