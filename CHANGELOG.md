@@ -23,10 +23,13 @@ and this project adheres to
   [#4052](https://github.com/OpenFn/lightning/issues/4052)
 - AI Assistant integration in collaborative workflow editor
   [#4042](https://github.com/OpenFn/lightning/pull/4042)
-  
+
 ### Changed
 
 ### Fixed
+
+- Fix new jobs are misplaced on the canvas in manual layout
+  [#4118](https://github.com/OpenFn/lightning/issues/4118)
 
 ## [2.15.0-pre3] - 2025-12-05
 
@@ -45,8 +48,6 @@ and this project adheres to
 - Fix OAuth credential creation crash in Collaborate view when returning from
   provider authorization
   [#4131](https://github.com/OpenFn/lightning/issues/4131)
-- Fix new jobs are misplaced on the canvas in manual layout
-  [#4118](https://github.com/OpenFn/lightning/issues/4118)
 
 ## [2.15.0-pre2] - 2025-12-04
 
