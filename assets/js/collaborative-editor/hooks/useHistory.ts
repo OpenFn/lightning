@@ -271,13 +271,20 @@ export const useRunSteps = (runId: string | null): RunInfo | null => {
   const workflow = useWorkflowState(state => state.workflow);
   const workflowId = workflow?.id || '';
 
+  const isHistoryChannelConnected = useHistoryChannelConnected();
+
   // Generate stable component ID for subscription tracking
   // React's useId provides a stable identifier per component instance
   const componentId = useId();
 
   // Subscribe to run steps with automatic cleanup
+  // IMPORTANT: Wait for channel to be connected before subscribing
+  // This prevents race conditions when switching workflow versions
   useEffect(() => {
-    if (!runId) return;
+    // Wait for both runId and channel connection
+    if (!runId || !isHistoryChannelConnected) {
+      return;
+    }
 
     logger.debug('useRunSteps: Subscribing', { runId, componentId });
     historyStore.subscribeToRunSteps(runId, componentId);
@@ -286,7 +293,7 @@ export const useRunSteps = (runId: string | null): RunInfo | null => {
       logger.debug('useRunSteps: Unsubscribing', { runId, componentId });
       historyStore.unsubscribeFromRunSteps(runId, componentId);
     };
-  }, [runId, componentId, historyStore]);
+  }, [runId, componentId, historyStore, workflowId, isHistoryChannelConnected]);
 
   // Get raw data from store with subscription
   const selectRunSteps = useMemo(
