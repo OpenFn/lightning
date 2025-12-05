@@ -4,11 +4,7 @@ defmodule Lightning.KafkaTriggers.MessageHandling do
   Dataclip.
   """
 
-  alias Lightning.Extensions.Message
-  alias Lightning.Extensions.UsageLimiting.Action
-  alias Lightning.Extensions.UsageLimiting.Context
   alias Lightning.Repo
-  alias Lightning.Services.UsageLimiter
   alias Lightning.Workflows.Trigger
   alias Lightning.WorkOrders
 
@@ -60,17 +56,14 @@ defmodule Lightning.KafkaTriggers.MessageHandling do
   end
 
   defp assess_workorder_creation(project_id) do
-    case UsageLimiter.limit_action(
-           %Action{type: :new_run},
-           %Context{project_id: project_id}
-         ) do
+    case WorkOrders.limit_run_creation(project_id) do
       :ok ->
         {:ok, false}
 
       {:error, :too_many_runs, _message} ->
         {:ok, true}
 
-      {:error, :runs_hard_limit, %Message{text: message}} ->
+      {:error, :runs_hard_limit, %Lightning.Extensions.Message{text: message}} ->
         {:error, message}
     end
   end

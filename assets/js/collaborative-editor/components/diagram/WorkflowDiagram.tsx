@@ -6,7 +6,6 @@ import {
   MiniMap,
   type NodeChange,
   ReactFlow,
-  ReactFlowProvider,
   useReactFlow,
 } from '@xyflow/react';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
@@ -47,6 +46,7 @@ import { createEmptyRunInfo } from '../../utils/runStepsTransformer';
 import { AdaptorSelectionModal } from '../AdaptorSelectionModal';
 
 import { PointerTrackerViewer } from './PointerTrackerViewer';
+import flowHandlers from './react-flow-handlers';
 
 type WorkflowDiagramProps = {
   el?: HTMLElement | null;
@@ -102,11 +102,14 @@ const useTippyForControls = (
   }, [isManualLayout, canUndo, canRedo]);
 };
 
+// increase this value to determine the amount of movement we allow during a click
+const DRAG_THRESHOLD = 2;
+
 const logger = _logger.ns('WorkflowDiagram').seal();
+const flowhandlers = flowHandlers({ dragThreshold: DRAG_THRESHOLD });
 
 export default function WorkflowDiagram(props: WorkflowDiagramProps) {
-  const flowInstance = useReactFlow();
-  const [flow, setFlow] = useState<typeof flowInstance | null>(null);
+  const flow = useReactFlow();
   // value of select in props seems same as select in store.
   // one in props is always set on initial render. (helps with refresh)
   const { selection, onSelectionChange, containerEl: el, runSteps } = props;
@@ -653,18 +656,6 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
     [setModel, model]
   );
 
-  // update node position data only on dragstop.
-  const onNodeDragStop = useCallback(
-    (_e: React.MouseEvent, node: Flow.Node) => {
-      if (node.type === 'placeholder') {
-        updatePlaceholderPosition(node.id, node.position);
-      } else {
-        updatePosition(node.id, node.position);
-      }
-    },
-    [updatePosition, updatePlaceholderPosition]
-  );
-
   const handleEdgeClick = useCallback(
     (_event: React.MouseEvent, edge: Flow.Edge) => {
       cancelPlaceholder();
@@ -868,6 +859,28 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
     [updateSelection, cancelPlaceholder, showModalThenAnimate]
   );
 
+  // update node position data only on dragstop.
+  const onNodeDragStop = useCallback(
+    (
+      _e: React.MouseEvent,
+      node: Flow.Node,
+      _nodes: Flow.Node[],
+      isClick: boolean
+    ) => {
+      // a click was registered as a drag
+      if (isClick) {
+        handleNodeClick(_e, node);
+        return;
+      }
+      if (node.type === 'placeholder') {
+        updatePlaceholderPosition(node.id, node.position);
+      } else {
+        updatePosition(node.id, node.position);
+      }
+    },
+    [updatePosition, updatePlaceholderPosition, handleNodeClick]
+  );
+
   const connectHandlers = useConnect(
     model,
     setModel,
@@ -876,7 +889,7 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
       cancelPlaceholder();
       updateSelection(null);
     },
-    flowInstance,
+    flow,
     workflowStore
   );
   // Set up tooltips for control buttons
@@ -907,27 +920,27 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
 
   return (
     <>
-      <ReactFlowProvider>
-        <ReactFlow
-          ref={workflowDiagramRef}
-          maxZoom={1}
-          proOptions={{ account: 'paid-pro', hideAttribution: true }}
-          nodes={model.nodes}
-          edges={model.edges}
-          onNodesChange={onNodesChange}
-          onNodeDragStop={onNodeDragStop}
-          nodesDraggable={isManualLayout}
-          nodeTypes={nodeTypes}
-          edgeTypes={edgeTypes}
-          onNodeClick={handleNodeClick}
-          onEdgeClick={handleEdgeClick}
-          onInit={setFlow}
-          deleteKeyCode={null}
-          fitView
-          fitViewOptions={{ padding: FIT_PADDING }}
-          minZoom={0.2}
-          {...connectHandlers}
-        >
+      <ReactFlow
+        ref={workflowDiagramRef}
+        maxZoom={1}
+        proOptions={{ account: 'paid-pro', hideAttribution: true }}
+        nodes={model.nodes}
+        edges={model.edges}
+        onNodesChange={onNodesChange}
+        onNodeDragStart={flowhandlers.ondragstart()}
+        onNodeDragStop={flowhandlers.ondragstop(onNodeDragStop)}
+        nodesDraggable={isManualLayout}
+        nodeTypes={nodeTypes}
+        edgeTypes={edgeTypes}
+        onNodeClick={handleNodeClick}
+        onEdgeClick={handleEdgeClick}
+        deleteKeyCode={null}
+        fitView
+        fitViewOptions={{ padding: FIT_PADDING }}
+        minZoom={0.2}
+        {...connectHandlers}
+      >
+        {(jobs.length > 0 || triggers.length > 0) && (
           <Controls
             position="bottom-left"
             showInteractive={false}
@@ -978,7 +991,9 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
               <span className="text-black hero-arrow-uturn-right w-4 h-4" />
             </ControlButton>
           </Controls>
-          <Background />
+        )}
+        <Background />
+        {(jobs.length > 0 || triggers.length > 0) && (
           <MiniMap
             zoomable
             pannable
@@ -987,9 +1002,9 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
               <MiniMapNode {...props} jobs={jobs} triggers={triggers} />
             )}
           />
-          <PointerTrackerViewer containerEl={props.containerEl} />
-        </ReactFlow>
-      </ReactFlowProvider>
+        )}
+        <PointerTrackerViewer containerEl={props.containerEl} />
+      </ReactFlow>
 
       <AdaptorSelectionModal
         isOpen={pendingPlaceholder !== null}

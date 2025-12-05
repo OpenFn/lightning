@@ -33,32 +33,18 @@ import { createWorkflowStore } from '../../../../js/collaborative-editor/stores/
 import {
   createMockPhoenixChannel,
   createMockPhoenixChannelProvider,
-} from '../../__helpers__/channelMocks';
+  createMockURLState,
+  getURLStateMockValue,
+} from '../../__helpers__';
 import { createWorkflowYDoc } from '../../__helpers__/workflowFactory';
 import { createMockSocket } from '../../__helpers__/sessionStoreHelpers';
 
 // Mock useURLState hook
-vi.mock('../../../../js/react/lib/use-url-state', () => ({
-  useURLState: () => ({
-    params: {} as Record<string, string>,
-    updateSearchParams: vi.fn(),
-    hash: '',
-  }),
-}));
+const urlState = createMockURLState();
 
-// Mock the useCanRun hook from useWorkflow
-vi.mock('../../../../js/collaborative-editor/hooks/useWorkflow', async () => {
-  const actual = await vi.importActual(
-    '../../../../js/collaborative-editor/hooks/useWorkflow'
-  );
-  return {
-    ...actual,
-    useCanRun: () => ({
-      canRun: true,
-      tooltipMessage: 'Run workflow',
-    }),
-  };
-});
+vi.mock('../../../../js/react/lib/use-url-state', () => ({
+  useURLState: () => getURLStateMockValue(urlState),
+}));
 
 /**
  * Helper to create and connect a workflow store with Y.Doc
@@ -134,6 +120,8 @@ describe('JobInspector - Footer Button States', () => {
   let mockChannel: any;
 
   beforeEach(() => {
+    urlState.reset();
+
     // Create Y.Doc with a job
     ydoc = createWorkflowYDoc({
       jobs: {
@@ -196,8 +184,6 @@ describe('JobInspector - Footer Button States', () => {
         project_repo_connection: null,
         webhook_auth_methods: [],
         workflow_template: null,
-        project_repo_connection: null,
-        webhook_auth_methods: [],
       });
     });
 
@@ -244,8 +230,6 @@ describe('JobInspector - Footer Button States', () => {
         project_repo_connection: null,
         webhook_auth_methods: [],
         workflow_template: null,
-        project_repo_connection: null,
-        webhook_auth_methods: [],
       });
     });
 
@@ -290,8 +274,6 @@ describe('JobInspector - Footer Button States', () => {
         project_repo_connection: null,
         webhook_auth_methods: [],
         workflow_template: null,
-        project_repo_connection: null,
-        webhook_auth_methods: [],
       });
     });
 
@@ -341,8 +323,6 @@ describe('JobInspector - Footer Button States', () => {
         project_repo_connection: null,
         webhook_auth_methods: [],
         workflow_template: null,
-        project_repo_connection: null,
-        webhook_auth_methods: [],
       });
     });
 
@@ -424,8 +404,6 @@ describe('JobInspector - Footer Button States', () => {
         project_repo_connection: null,
         webhook_auth_methods: [],
         workflow_template: null,
-        project_repo_connection: null,
-        webhook_auth_methods: [],
       });
     });
 
@@ -472,8 +450,6 @@ describe('JobInspector - Footer Button States', () => {
         project_repo_connection: null,
         webhook_auth_methods: [],
         workflow_template: null,
-        project_repo_connection: null,
-        webhook_auth_methods: [],
       });
     });
 
@@ -524,8 +500,6 @@ describe('JobInspector - Footer Button States', () => {
         project_repo_connection: null,
         webhook_auth_methods: [],
         workflow_template: null,
-        project_repo_connection: null,
-        webhook_auth_methods: [],
       });
     });
 
@@ -568,6 +542,8 @@ describe('JobInspector - Credential Selection', () => {
   let mockChannel: any;
 
   beforeEach(() => {
+    urlState.reset();
+
     // Create Y.Doc with a job (credentials explicitly null)
     ydoc = createWorkflowYDoc({
       jobs: {
@@ -663,8 +639,6 @@ describe('JobInspector - Credential Selection', () => {
         project_repo_connection: null,
         webhook_auth_methods: [],
         workflow_template: null,
-        project_repo_connection: null,
-        webhook_auth_methods: [],
       });
     });
   });

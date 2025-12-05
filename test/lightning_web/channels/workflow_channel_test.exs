@@ -335,36 +335,32 @@ defmodule LightningWeb.WorkflowChannelTest do
       assert snapshot_socket.assigns.workflow.name == workflow.name
     end
 
-    test "returns workflow lock_version when fresh_workflow is nil (new unsaved workflow)",
-         %{
-           project: project,
-           user: user
-         } do
-      # Create a new workflow ID that doesn't exist in DB yet (simulating new workflow)
-      new_workflow_id = Ecto.UUID.generate()
+    test "returns nil latest_snapshot_lock_version for unsaved workflow", %{
+      user: user,
+      project: project
+    } do
+      # Join with action="new" to simulate unsaved workflow
+      workflow_id = Ecto.UUID.generate()
 
-      # Join with action "new" to simulate creating a new workflow
-      {:ok, _, new_socket} =
+      {:ok, _, socket} =
         LightningWeb.UserSocket
         |> socket("user_#{user.id}", %{current_user: user})
         |> subscribe_and_join(
           LightningWeb.WorkflowChannel,
-          "workflow:collaborate:#{new_workflow_id}",
+          "workflow:collaborate:#{workflow_id}",
           %{"project_id" => project.id, "action" => "new"}
         )
 
-      ref = push(new_socket, "get_context", %{})
+      on_exit(fn ->
+        ensure_doc_supervisor_stopped(workflow_id)
+      end)
+
+      ref = push(socket, "get_context", %{})
 
       assert_reply ref, :ok, response
 
-      # CRITICAL: For new unsaved workflows, fresh_workflow will be nil
-      # so latest_snapshot_lock_version should fall back to workflow.lock_version
-      assert %{latest_snapshot_lock_version: latest_lock_version} = response
-      # New workflows start at lock_version 0 (or nil, which should be handled)
-      assert latest_lock_version == 0
-      assert new_socket.assigns.workflow.lock_version == 0
-      # Verify we're in a new workflow context
-      assert new_socket.assigns.workflow.name == "Untitled workflow"
+      # For unsaved workflows, latest_snapshot_lock_version should be nil
+      assert %{latest_snapshot_lock_version: nil} = response
     end
   end
 
@@ -418,7 +414,7 @@ defmodule LightningWeb.WorkflowChannelTest do
       }
 
       assert is_map(errors)
-      assert errors[:name]
+      assert errors["name"]
     end
 
     test "handles optimistic lock conflicts", %{
@@ -610,8 +606,8 @@ defmodule LightningWeb.WorkflowChannelTest do
         type: "validation_error"
       }
 
-      assert errors[:name]
-      assert errors[:name] |> List.first() =~ "can't be blank"
+      assert errors["name"]
+      assert errors["name"] |> List.first() =~ "can't be blank"
 
       # Verify error was written to Y.Doc
       errors_map = Yex.Doc.get_map(doc, "errors")
@@ -691,6 +687,139 @@ defmodule LightningWeb.WorkflowChannelTest do
              )
     end
 
+    test "flattens trigger validation errors for channel response",
+         %{socket: socket, doc: doc} do
+      # Add invalid trigger to Y.Doc
+      triggers_array = Yex.Doc.get_array(doc, "triggers")
+
+      trigger_map =
+        Yex.MapPrelim.from(%{
+          "id" => Ecto.UUID.generate(),
+          # Invalid - type is required
+          "type" => nil
+        })
+
+      Yex.Doc.transaction(doc, "test_add_invalid_trigger", fn ->
+        Yex.Array.push(triggers_array, trigger_map)
+      end)
+
+      # Attempt save
+      ref = push(socket, "save_workflow", %{})
+
+      assert_reply ref, :error, %{
+        errors: errors,
+        type: "validation_error"
+      }
+
+      # Verify errors are flattened for channel response
+      assert Map.has_key?(errors, "triggers[0].type")
+      assert errors["triggers[0].type"] == ["can't be blank"]
+    end
+
+    test "flattens multiple trigger validation errors",
+         %{socket: socket, doc: doc} do
+      triggers_array = Yex.Doc.get_array(doc, "triggers")
+
+      # Add two invalid triggers
+      Yex.Doc.transaction(doc, "test_add_invalid_triggers", fn ->
+        Yex.Array.push(
+          triggers_array,
+          Yex.MapPrelim.from(%{
+            "id" => Ecto.UUID.generate(),
+            "type" => nil
+          })
+        )
+
+        Yex.Array.push(
+          triggers_array,
+          Yex.MapPrelim.from(%{
+            "id" => Ecto.UUID.generate(),
+            "type" => "cron",
+            "cron_expression" => "invalid"
+          })
+        )
+      end)
+
+      # Attempt save
+      ref = push(socket, "save_workflow", %{})
+
+      assert_reply ref, :error, %{
+        errors: errors,
+        type: "validation_error"
+      }
+
+      # Verify both errors are flattened with correct indices
+      assert Map.has_key?(errors, "triggers[0].type")
+      assert errors["triggers[0].type"] == ["can't be blank"]
+
+      assert Map.has_key?(errors, "triggers[1].cron_expression")
+      assert List.first(errors["triggers[1].cron_expression"]) =~ "Can't parse"
+    end
+
+    test "flattens job validation errors for channel response",
+         %{socket: socket, doc: doc} do
+      # Add job with missing required fields
+      jobs_array = Yex.Doc.get_array(doc, "jobs")
+
+      Yex.Doc.transaction(doc, "add_invalid_job", fn ->
+        job_map =
+          Yex.MapPrelim.from(%{
+            "id" => Ecto.UUID.generate(),
+            "name" => "",
+            # Missing required: body, adaptor
+            "body" => Yex.TextPrelim.from(""),
+            "adaptor" => nil
+          })
+
+        Yex.Array.push(jobs_array, job_map)
+      end)
+
+      # Attempt save
+      ref = push(socket, "save_workflow", %{})
+
+      assert_reply ref, :error, %{
+        errors: errors,
+        type: "validation_error"
+      }
+
+      # Verify job errors are flattened with index notation
+      assert Map.has_key?(errors, "jobs[0].name")
+      assert Map.has_key?(errors, "jobs[0].body")
+      assert Map.has_key?(errors, "jobs[0].adaptor")
+    end
+
+    test "flattens edge validation errors for channel response",
+         %{socket: socket, doc: doc} do
+      # Add edge with missing required fields
+      edges_array = Yex.Doc.get_array(doc, "edges")
+
+      Yex.Doc.transaction(doc, "add_invalid_edge", fn ->
+        edge_map =
+          Yex.MapPrelim.from(%{
+            "id" => Ecto.UUID.generate(),
+            # Missing required: condition_type
+            "source_trigger_id" => nil,
+            "source_job_id" => nil,
+            "target_job_id" => Ecto.UUID.generate(),
+            "enabled" => true
+          })
+
+        Yex.Array.push(edges_array, edge_map)
+      end)
+
+      # Attempt save
+      ref = push(socket, "save_workflow", %{})
+
+      assert_reply ref, :error, %{
+        errors: errors,
+        type: "validation_error"
+      }
+
+      # Verify edge errors are flattened with index notation
+      assert Map.has_key?(errors, "edges[0].condition_type")
+      assert errors["edges[0].condition_type"] == ["can't be blank"]
+    end
+
     test "handles duplicate workflow name validation",
          %{socket: socket, doc: doc, project: project} do
       # Create another workflow with a specific name
@@ -711,8 +840,8 @@ defmodule LightningWeb.WorkflowChannelTest do
         type: "validation_error"
       }
 
-      assert errors[:name]
-      assert errors[:name] |> List.first() =~ "already exists"
+      assert errors["name"]
+      assert errors["name"] |> List.first() =~ "already exists"
 
       # Verify error in Y.Doc
       errors_map = Yex.Doc.get_map(doc, "errors")
@@ -857,7 +986,7 @@ defmodule LightningWeb.WorkflowChannelTest do
       }
 
       assert is_map(errors)
-      assert errors[:name]
+      assert errors["name"]
     end
 
     test "requires GitHub repo connection to be configured", %{socket: socket} do
@@ -2448,7 +2577,7 @@ defmodule LightningWeb.WorkflowChannelTest do
       }
 
       assert is_map(errors)
-      assert Map.has_key?(errors, :name)
+      assert Map.has_key?(errors, "name")
     end
 
     test "allows empty tags array", %{
@@ -2517,7 +2646,7 @@ defmodule LightningWeb.WorkflowChannelTest do
       }
 
       assert is_map(errors)
-      assert Map.has_key?(errors, :name)
+      assert Map.has_key?(errors, "name")
     end
 
     test "broadcasts template update to all connected clients", %{
@@ -2602,6 +2731,238 @@ defmodule LightningWeb.WorkflowChannelTest do
 
       assert template_id == template.id
       assert workflow_id == workflow.id
+    end
+
+    test "includes limits in response", %{socket: socket} do
+      ref = push(socket, "get_context", %{})
+
+      assert_reply ref, :ok, response
+
+      assert %{limits: %{runs: %{allowed: true, message: nil}}} = response
+    end
+
+    test "includes limit error when run limit exceeded", %{
+      socket: socket,
+      project: %{id: project_id}
+    } do
+      error_msg = "Run limit exceeded for this project"
+
+      Mox.stub(
+        Lightning.Extensions.MockUsageLimiter,
+        :limit_action,
+        fn %{type: :new_run}, %{project_id: ^project_id} ->
+          {:error, :too_many_runs,
+           %Lightning.Extensions.Message{text: error_msg}}
+        end
+      )
+
+      ref = push(socket, "get_context", %{})
+
+      assert_reply ref, :ok, response
+
+      assert %{limits: %{runs: %{allowed: false, message: ^error_msg}}} =
+               response
+    end
+  end
+
+  describe "get_limits" do
+    test "returns current limit status for new_run", %{socket: socket} do
+      ref = push(socket, "get_limits", %{"action_type" => "new_run"})
+
+      assert_reply ref, :ok, response
+
+      assert %{
+               action_type: "new_run",
+               limit: %{allowed: true, message: nil}
+             } = response
+    end
+
+    test "returns allowed: false when run limit exceeded", %{
+      socket: socket,
+      project: %{id: project_id}
+    } do
+      error_msg = "Run limit exceeded for this project"
+
+      Mox.stub(
+        Lightning.Extensions.MockUsageLimiter,
+        :limit_action,
+        fn %{type: :new_run}, %{project_id: ^project_id} ->
+          {:error, :too_many_runs,
+           %Lightning.Extensions.Message{text: error_msg}}
+        end
+      )
+
+      ref = push(socket, "get_limits", %{"action_type" => "new_run"})
+
+      assert_reply ref, :ok, response
+
+      assert %{
+               action_type: "new_run",
+               limit: %{allowed: false, message: ^error_msg}
+             } = response
+    end
+  end
+
+  describe "request_versions" do
+    test "returns versions for saved workflow", %{
+      socket: socket,
+      workflow: workflow,
+      user: user
+    } do
+      # Create some snapshots
+      {:ok, _snapshot_v0} = Lightning.Workflows.Snapshot.create(workflow)
+
+      # Update workflow to create v1
+      workflow_changeset =
+        workflow
+        |> Lightning.Repo.preload([:jobs, :edges, :triggers])
+        |> Lightning.Workflows.Workflow.changeset(%{name: "Version 1"})
+
+      {:ok, _updated_workflow_v1} =
+        Lightning.Workflows.save_workflow(workflow_changeset, user)
+
+      ref = push(socket, "request_versions", %{})
+
+      assert_reply ref, :ok, %{versions: versions}
+
+      assert is_list(versions)
+      assert length(versions) >= 1
+
+      # Verify version structure
+      [first_version | _] = versions
+      assert Map.has_key?(first_version, :lock_version)
+      assert Map.has_key?(first_version, :inserted_at)
+      assert Map.has_key?(first_version, :is_latest)
+    end
+
+    test "returns empty versions list for unsaved workflow", %{
+      user: user,
+      project: project
+    } do
+      # Join with action="new" to simulate unsaved workflow
+      # First create a workflow struct but don't persist it (use temporary ID)
+      workflow_id = Ecto.UUID.generate()
+
+      {:ok, _, socket} =
+        LightningWeb.UserSocket
+        |> socket("user_#{user.id}", %{current_user: user})
+        |> subscribe_and_join(
+          LightningWeb.WorkflowChannel,
+          "workflow:collaborate:#{workflow_id}",
+          %{"project_id" => project.id, "action" => "new"}
+        )
+
+      on_exit(fn ->
+        ensure_doc_supervisor_stopped(workflow_id)
+      end)
+
+      # Verify the workflow in socket has nil lock_version
+      assert is_nil(socket.assigns.workflow.lock_version)
+
+      ref = push(socket, "request_versions", %{})
+
+      assert_reply ref, :ok, %{versions: versions}
+
+      assert versions == []
+    end
+
+    test "marks latest version correctly", %{
+      socket: socket,
+      workflow: workflow,
+      user: user
+    } do
+      # Create initial snapshot
+      {:ok, _snapshot_v0} = Lightning.Workflows.Snapshot.create(workflow)
+
+      # Update workflow multiple times to create more snapshots
+      workflow_v1 =
+        workflow
+        |> Lightning.Repo.preload([:jobs, :edges, :triggers])
+        |> Lightning.Workflows.Workflow.changeset(%{name: "Version 1"})
+
+      {:ok, updated_v1} = Lightning.Workflows.save_workflow(workflow_v1, user)
+
+      workflow_v2 =
+        updated_v1
+        |> Lightning.Repo.reload!()
+        |> Lightning.Repo.preload([:jobs, :edges, :triggers])
+        |> Lightning.Workflows.Workflow.changeset(%{name: "Version 2"})
+
+      {:ok, _updated_v2} = Lightning.Workflows.save_workflow(workflow_v2, user)
+
+      ref = push(socket, "request_versions", %{})
+
+      assert_reply ref, :ok, %{versions: versions}
+
+      # Find the version marked as latest
+      latest_versions = Enum.filter(versions, & &1.is_latest)
+      assert length(latest_versions) == 1
+
+      # The latest should have the highest lock_version
+      latest = hd(latest_versions)
+      max_lock_version = versions |> Enum.map(& &1.lock_version) |> Enum.max()
+      assert latest.lock_version == max_lock_version
+    end
+  end
+
+  describe "list_templates" do
+    test "returns all templates", %{socket: socket} do
+      _template1 =
+        insert(:workflow_template,
+          name: "Template 1",
+          description: "First template"
+        )
+
+      _template2 =
+        insert(:workflow_template,
+          name: "Template 2",
+          description: "Second template"
+        )
+
+      ref = push(socket, "list_templates", %{})
+
+      assert_reply ref, :ok, %{templates: templates}
+
+      assert length(templates) == 2
+
+      template_names = Enum.map(templates, & &1.name)
+      assert "Template 1" in template_names
+      assert "Template 2" in template_names
+
+      # Verify template structure
+      assert Enum.all?(templates, fn t ->
+               Map.has_key?(t, :id) and
+                 Map.has_key?(t, :name) and
+                 Map.has_key?(t, :description) and
+                 Map.has_key?(t, :code) and
+                 Map.has_key?(t, :positions) and
+                 Map.has_key?(t, :tags) and
+                 Map.has_key?(t, :workflow_id)
+             end)
+    end
+
+    test "returns empty list when no templates exist", %{socket: socket} do
+      ref = push(socket, "list_templates", %{})
+
+      assert_reply ref, :ok, %{templates: []}
+    end
+
+    test "returns templates sorted by name", %{socket: socket} do
+      insert(:workflow_template, name: "Zebra Template")
+      insert(:workflow_template, name: "Alpha Template")
+      insert(:workflow_template, name: "Middle Template")
+
+      ref = push(socket, "list_templates", %{})
+
+      assert_reply ref, :ok, %{templates: templates}
+
+      template_names = Enum.map(templates, & &1.name)
+
+      assert template_names == [
+               "Alpha Template",
+               "Middle Template",
+               "Zebra Template"
+             ]
     end
   end
 end

@@ -94,6 +94,40 @@ export {
   type ConnectedStoreProviderSimulation,
 } from './storeProviderHelpers';
 
+// AI Assistant helpers
+export {
+  setupAIAssistantStoreTest,
+  createMockAIMessage,
+  createMockAISession,
+  createMockJobCodeContext,
+  createMockWorkflowTemplateContext,
+  populateAIStoreWithMessages,
+  expectAIMessageInStore,
+  expectAIStoreConnected,
+  expectAIStoreSessionType,
+  createMockConversation,
+  createMockWorkflowYAML,
+  waitForConnectionState,
+  waitForMessages,
+  type AIAssistantStoreTestSetup,
+} from './aiAssistantHelpers';
+
+// AI Channel mocks
+export {
+  createAIAssistantChannelMock,
+  mockSessionJoinResponse,
+  mockNewMessageResponse,
+  mockListSessionsResponse,
+  mockContextUpdateResponse,
+  emitNewMessageEvent,
+  emitMessageUpdatedEvent,
+  emitSessionCreatedEvent,
+  emitErrorEvent,
+  createMockAIChannelForScenario,
+  simulateMessageExchange,
+  type PaginationMeta,
+} from './aiChannelMocks';
+
 // Breadcrumb helpers
 export {
   createMockProject,
@@ -123,3 +157,22 @@ export {
   type SessionContextResponse,
   type CreateSessionContextOptions,
 } from './sessionContextFactory';
+
+// URL state mocks
+export {
+  createMockURLState,
+  getURLStateMockValue,
+  type URLStateMock,
+  type URLStateMockFns,
+  type UseURLStateReturn,
+} from './urlStateMocks';
+
+// Store mocks
+export {
+  createMockSessionContextStore,
+  createMockHistoryStore,
+  createMockUIStore,
+  createMockStoreContextValue,
+  defaultSessionContextState,
+  defaultUIState,
+} from './storeMocks';

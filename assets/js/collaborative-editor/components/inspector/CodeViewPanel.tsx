@@ -6,10 +6,10 @@ import {
   useCanPublishTemplate,
 } from '#/collaborative-editor/hooks/useWorkflow';
 import { notifications } from '#/collaborative-editor/lib/notifications';
-import type { WorkflowState as YAMLWorkflowState } from '#/yaml/types';
-import { convertWorkflowStateToSpec } from '#/yaml/util';
 import { useURLState } from '#/react/lib/use-url-state';
 import { cn } from '#/utils/cn';
+import type { WorkflowState as YAMLWorkflowState } from '#/yaml/types';
+import { convertWorkflowStateToSpec } from '#/yaml/util';
 
 export function CodeViewPanel() {
   // Read workflow data from store - LoadingBoundary guarantees non-null

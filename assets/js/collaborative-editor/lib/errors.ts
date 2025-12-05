@@ -39,20 +39,32 @@ export function isChannelRequestError(
 /**
  * Format channel error into user-friendly message.
  * Tries "base" first, then formats field-specific errors with field names.
+ * Handles both flat error structures and nested arrays from Phoenix changeset errors.
  */
 export function formatChannelErrorMessage(channelError: ChannelError): string {
+  // First try the base errors
   if (channelError.errors.base?.[0]) {
     return channelError.errors.base[0];
   }
 
+  // Handle nested error structures from Phoenix changeset errors
+  // Structure can be: { field: [[{ nested_field: ['messages'] }]] }
   const fError = Object.values(channelError.errors)
     .flat(2)
-    .find(v => Object.keys(v).length) as unknown as Record<string, string[]>;
+    .find(v => v && typeof v === 'object' && Object.keys(v).length > 0) as
+    | Record<string, unknown>
+    | undefined;
+
   if (!fError) return 'An error occurred';
+
   const msg = Object.entries(fError)
     .map(([key, val]) => {
-      return `${toTitleCase(key)}: ${val.join(', ')}`;
+      // Handle both string arrays and single strings safely
+      const messages = Array.isArray(val) ? val : [String(val)];
+      // toTitleCase splits on underscores and capitalizes each word
+      return `${toTitleCase(key)}: ${messages.join(', ')}`;
     })
     .join('\n');
-  return msg;
+
+  return msg || 'An error occurred';
 }

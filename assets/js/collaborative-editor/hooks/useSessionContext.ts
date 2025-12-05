@@ -38,6 +38,7 @@ import { StoreContext } from '../contexts/StoreProvider';
 import type { SessionContextStoreInstance } from '../stores/createSessionContextStore';
 import type {
   AppConfig,
+  Limits,
   Permissions,
   ProjectContext,
   ProjectRepoConnection,
@@ -271,4 +272,59 @@ export const useWorkflowTemplate = (): WorkflowTemplate | null => {
     sessionContextStore.subscribe,
     selectWorkflowTemplate
   );
+};
+
+/**
+ * Hook to check if session context has been loaded from server
+ * Returns true once lastUpdated is set (session context received)
+ */
+export const useSessionContextLoaded = (): boolean => {
+  const sessionContextStore = useSessionContextStore();
+
+  const selectLoaded = sessionContextStore.withSelector(
+    state => state.lastUpdated !== null
+  );
+
+  return useSyncExternalStore(sessionContextStore.subscribe, selectLoaded);
+};
+
+/**
+ * Hook to check if user has read AI assistant disclaimer
+ * Returns false until session context loads, then reflects actual status
+ */
+export const useHasReadAIDisclaimer = (): boolean => {
+  const sessionContextStore = useSessionContextStore();
+
+  const selectHasReadAIDisclaimer = sessionContextStore.withSelector(
+    state => state.hasReadAIDisclaimer
+  );
+
+  return useSyncExternalStore(
+    sessionContextStore.subscribe,
+    selectHasReadAIDisclaimer
+  );
+};
+
+/**
+ * Hook to get setHasReadAIDisclaimer action
+ * Returns function to update AI disclaimer read status
+ */
+export const useSetHasReadAIDisclaimer = () => {
+  const sessionContextStore = useSessionContextStore();
+
+  return sessionContextStore.setHasReadAIDisclaimer;
+};
+
+/**
+ * Hook to access run limits from session context
+ * Returns limits object (empty object if not set)
+ */
+export const useLimits = (): Limits => {
+  const sessionContextStore = useSessionContextStore();
+
+  const selectLimits = sessionContextStore.withSelector(
+    state => state.limits ?? {}
+  );
+
+  return useSyncExternalStore(sessionContextStore.subscribe, selectLimits);
 };

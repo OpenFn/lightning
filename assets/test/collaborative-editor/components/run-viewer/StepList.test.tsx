@@ -17,15 +17,13 @@ import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, test, vi } from 'vitest';
 import { StepList } from '../../../../js/collaborative-editor/components/run-viewer/StepList';
 import type { StepDetail } from '../../../../js/collaborative-editor/types/history';
+import { createMockURLState, getURLStateMockValue } from '../../__helpers__';
 
 // Mock useURLState hook
-const mockUpdateSearchParams = vi.fn();
-const mockParams: Record<string, string> = {};
+const urlState = createMockURLState();
+
 vi.mock('../../../../js/react/lib/use-url-state', () => ({
-  useURLState: () => ({
-    params: mockParams,
-    updateSearchParams: mockUpdateSearchParams,
-  }),
+  useURLState: () => getURLStateMockValue(urlState),
 }));
 
 // Mock useWorkflowState hook
@@ -72,6 +70,7 @@ describe('StepList', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    urlState.reset();
   });
 
   describe('empty state', () => {
@@ -177,7 +176,7 @@ describe('StepList', () => {
 
       await user.click(screen.getByText('My Job'));
 
-      expect(mockUpdateSearchParams).toHaveBeenCalledWith({
+      expect(urlState.mockFns.updateSearchParams).toHaveBeenCalledWith({
         job: 'job-1',
         run: null,
         step: 'step-1',

@@ -468,7 +468,7 @@ export default function MiniHistory({
   // Floating variant - existing implementation
   return (
     <div
-      className={`absolute left-6 top-6 bg-white border
+      className={`absolute left-4 top-6 bg-white border
         border-gray-200 rounded-lg shadow-sm overflow-hidden z-40
         transition-all duration-300 ease-in-out`}
     >

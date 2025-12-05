@@ -4,7 +4,6 @@
  */
 
 import { useURLState, urlStore } from '#/react/lib/use-url-state';
-
 import { useWorkflowTemplate } from '../../hooks/useSessionContext';
 import { useKeyboardShortcut } from '../../keyboard';
 import type { Workflow } from '../../types/workflow';
@@ -44,11 +43,11 @@ export function Inspector({
 
   // Settings and code panels take precedence, then node inspector
   const mode =
-    params.panel === 'settings'
+    params['panel'] === 'settings'
       ? 'settings'
-      : params.panel === 'code'
+      : params['panel'] === 'code'
         ? 'code'
-        : params.panel === 'publish-template'
+        : params['panel'] === 'publish-template'
           ? 'publish-template'
           : hasSelectedNode
             ? 'node'

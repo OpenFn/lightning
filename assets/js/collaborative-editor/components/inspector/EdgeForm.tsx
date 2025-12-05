@@ -89,15 +89,15 @@ export function EdgeForm({ edge }: EdgeFormProps) {
     if (isSourceTrigger) {
       return [
         { value: 'always', label: 'Always' },
-        { value: 'js_expression', label: 'Matches a Javascript Expression' },
+        { value: 'js_expression', label: 'On Match' },
       ];
     }
 
     return [
+      { value: 'always', label: 'Always' },
       { value: 'on_job_success', label: 'On Success' },
       { value: 'on_job_failure', label: 'On Failure' },
-      { value: 'always', label: 'Always' },
-      { value: 'js_expression', label: 'Matches a Javascript Expression' },
+      { value: 'js_expression', label: 'On Match' },
     ];
   }, [edge]);
 
@@ -147,7 +147,7 @@ export function EdgeForm({ edge }: EdgeFormProps) {
                     htmlFor={field.name}
                     className="text-sm font-medium text-slate-800"
                   >
-                    JS Expression
+                    Javascript Expression
                   </label>
                   {isExpressionUnsafe && (
                     <Tooltip

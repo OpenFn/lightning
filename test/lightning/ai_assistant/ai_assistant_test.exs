@@ -626,7 +626,12 @@ defmodule Lightning.AiAssistantTest do
             usage: %{}
           )
 
-        assert updated_session.meta == new_meta
+        # Meta should be merged with existing meta, preserving "existing" key
+        assert updated_session.meta == %{
+                 "existing" => "data",
+                 "new" => "metadata",
+                 "updated" => true
+               }
       end)
     end
 
@@ -668,6 +673,47 @@ defmodule Lightning.AiAssistantTest do
           })
 
         assert %Ecto.Changeset{} = changeset
+      end)
+    end
+
+    test "saves workflow code to message when provided" do
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        user = insert(:user)
+        project = insert(:project)
+        workflow = insert(:workflow, project: project)
+
+        session =
+          insert(:chat_session,
+            project: project,
+            workflow: workflow,
+            user: user,
+            session_type: "workflow_template"
+          )
+
+        workflow_yaml = """
+        workflow:
+          name: Test Workflow
+          jobs:
+            - id: job1
+              name: Fetch Data
+              adaptor: "@openfn/language-http@latest"
+              body: "fn(state => state)"
+        """
+
+        {:ok, updated_session} =
+          AiAssistant.save_message(
+            session,
+            %{
+              role: :user,
+              content: "Please improve this workflow",
+              user: user
+            },
+            code: workflow_yaml
+          )
+
+        saved_message = List.last(updated_session.messages)
+        assert saved_message.code == workflow_yaml
+        assert saved_message.role == :user
       end)
     end
 
@@ -979,13 +1025,11 @@ defmodule Lightning.AiAssistantTest do
       # Create a step for the job
       step = insert(:step, job: job)
 
-      # Link the run and step
       insert(:run_step, run: run, step: step)
 
-      # Create log lines with run_id set
+      # Important: set the run_id for log lines
       insert(:log_line,
         step: step,
-        # Important: set the run_id
         run: run,
         message: "Starting job execution",
         timestamp: ~U[2024-01-01 10:00:00Z]
@@ -993,7 +1037,6 @@ defmodule Lightning.AiAssistantTest do
 
       insert(:log_line,
         step: step,
-        # Important: set the run_id
         run: run,
         message: "Processing data...",
         timestamp: ~U[2024-01-01 10:00:01Z]
@@ -1001,7 +1044,6 @@ defmodule Lightning.AiAssistantTest do
 
       insert(:log_line,
         step: step,
-        # Important: set the run_id
         run: run,
         message: "Job completed successfully",
         timestamp: ~U[2024-01-01 10:00:02Z]
@@ -1032,6 +1074,106 @@ defmodule Lightning.AiAssistantTest do
       enriched = AiAssistant.enrich_session_with_job_context(session)
 
       assert enriched == session
+    end
+
+    test "handles missing job gracefully when enriching", %{
+      user: user
+    } do
+      # Create session with a non-existent job_id
+      fake_job_id = Ecto.UUID.generate()
+
+      session = %Lightning.AiAssistant.ChatSession{
+        id: Ecto.UUID.generate(),
+        user_id: user.id,
+        session_type: "job_code",
+        title: "Test Session",
+        job_id: fake_job_id,
+        meta: %{},
+        inserted_at: DateTime.utc_now(),
+        updated_at: DateTime.utc_now()
+      }
+
+      # Enrich should handle gracefully when job doesn't exist in database
+      enriched = AiAssistant.enrich_session_with_job_context(session)
+
+      # Session should be returned as-is without enrichment (nil values)
+      assert enriched.job_id == fake_job_id
+      assert enriched.expression == nil
+      assert enriched.adaptor == nil
+    end
+
+    test "adds run logs for unsaved jobs when follow_run_id is in meta", %{
+      user: user,
+      workflow: %{jobs: [job | _]} = workflow
+    } do
+      # Generate a job_id that doesn't exist in the database (unsaved job)
+      unsaved_job_id = Ecto.UUID.generate()
+
+      work_order = insert(:workorder, workflow: workflow)
+
+      run =
+        insert(:run,
+          work_order: work_order,
+          dataclip: build(:dataclip),
+          starting_job: job
+        )
+
+      # Create a step with the unsaved job_id (not in Jobs table)
+      # We use build(:step) and manually set the job_id, then insert it
+      step =
+        build(:step, job: nil)
+        |> Ecto.Changeset.change(%{job_id: unsaved_job_id})
+        |> Lightning.Repo.insert!()
+
+      insert(:run_step, run: run, step: step)
+
+      insert(:log_line,
+        step: step,
+        run: run,
+        message: "Unsaved job log 1",
+        timestamp: ~U[2024-01-01 10:00:00Z]
+      )
+
+      insert(:log_line,
+        step: step,
+        run: run,
+        message: "Unsaved job log 2",
+        timestamp: ~U[2024-01-01 10:00:01Z]
+      )
+
+      # Create session with unsaved_job data
+      session =
+        insert(:chat_session,
+          user: user,
+          job_id: nil,
+          meta: %{
+            "unsaved_job" => %{
+              "id" => unsaved_job_id,
+              "name" => "Unsaved Test Job",
+              "body" => "console.log('test');",
+              "adaptor" => "@openfn/language-http@latest",
+              "workflow_id" => workflow.id
+            },
+            "follow_run_id" => run.id
+          }
+        )
+
+      enriched = AiAssistant.enrich_session_with_job_context(session)
+
+      # Assert that logs contain our messages
+      assert enriched.logs =~ "Unsaved job log 1"
+      assert enriched.logs =~ "Unsaved job log 2"
+
+      # Also verify the order is preserved
+      assert enriched.logs == "Unsaved job log 1\nUnsaved job log 2"
+
+      # Verify the job body and adaptor are set correctly
+      assert enriched.expression == "console.log('test');"
+
+      assert enriched.adaptor ==
+               Lightning.AdaptorRegistry.resolve_adaptor(
+                 "@openfn/language-http@latest"
+               )
     end
   end
 
@@ -1457,6 +1599,224 @@ defmodule Lightning.AiAssistantTest do
                AiAssistant.associate_workflow(session, workflow)
 
       assert updated_session.workflow_id == workflow.id
+    end
+  end
+
+  describe "cleanup_unsaved_job_sessions/1" do
+    test "updates sessions with unsaved job data to use real job_id", %{
+      user: user,
+      project: project
+    } do
+      # Create workflow
+      workflow = insert(:workflow, project: project)
+
+      # Generate unsaved job ID
+      unsaved_job_id = Ecto.UUID.generate()
+
+      # Create session with unsaved job metadata
+      session =
+        insert(:chat_session,
+          user: user,
+          session_type: "job_code",
+          job_id: nil,
+          meta: %{
+            "unsaved_job" => %{
+              "id" => unsaved_job_id,
+              "name" => "Unsaved Job",
+              "body" => "console.log('test');",
+              "adaptor" => "@openfn/language-common@1.0.0",
+              "workflow_id" => workflow.id
+            }
+          }
+        )
+
+      # Now "save" the workflow which creates a real job with the unsaved_job_id
+      _job =
+        insert(:job,
+          id: unsaved_job_id,
+          workflow: workflow,
+          name: "Now Saved Job",
+          body: "console.log('saved');",
+          adaptor: "@openfn/language-common@1.0.0"
+        )
+
+      # Reload workflow with jobs
+      workflow = Lightning.Repo.preload(workflow, :jobs, force: true)
+
+      # Run cleanup
+      assert {:ok, 1} = AiAssistant.cleanup_unsaved_job_sessions(workflow)
+
+      # Verify session was updated
+      updated_session =
+        Lightning.Repo.get!(Lightning.AiAssistant.ChatSession, session.id)
+
+      assert updated_session.job_id == unsaved_job_id
+      refute Map.has_key?(updated_session.meta, "unsaved_job")
+    end
+
+    test "returns count of 0 when no sessions match", %{workflow: workflow} do
+      assert {:ok, 0} = AiAssistant.cleanup_unsaved_job_sessions(workflow)
+    end
+  end
+
+  describe "cleanup_unsaved_workflow_sessions/1" do
+    test "updates sessions with unsaved workflow data to use real workflow_id",
+         %{
+           user: user,
+           project: project
+         } do
+      # Create a workflow that we'll treat as "newly saved"
+      workflow = insert(:workflow, project: project)
+
+      # Create session with unsaved workflow metadata referencing this workflow's ID
+      session =
+        insert(:chat_session,
+          user: user,
+          project: project,
+          session_type: "workflow_template",
+          workflow_id: nil,
+          meta: %{
+            "unsaved_workflow" => %{
+              "id" => workflow.id,
+              "name" => "Unsaved Workflow"
+            }
+          }
+        )
+
+      # Run cleanup
+      assert {:ok, 1} = AiAssistant.cleanup_unsaved_workflow_sessions(workflow)
+
+      # Verify session was updated
+      updated_session =
+        Lightning.Repo.get!(Lightning.AiAssistant.ChatSession, session.id)
+
+      assert updated_session.workflow_id == workflow.id
+      refute Map.has_key?(updated_session.meta, "unsaved_workflow")
+    end
+
+    test "returns count of 0 when no sessions match", %{workflow: workflow} do
+      assert {:ok, 0} = AiAssistant.cleanup_unsaved_workflow_sessions(workflow)
+    end
+  end
+
+  describe "enrich_session_with_job_context/1 edge cases" do
+    test "enriches session with runtime_context metadata", %{user: user} do
+      session =
+        insert(:chat_session,
+          user: user,
+          session_type: "job_code",
+          job_id: nil,
+          meta: %{
+            "runtime_context" => %{
+              "job_body" => "fn(state => state);",
+              "job_adaptor" => "@openfn/language-http@1.0.0",
+              "job_name" => "Runtime Job",
+              "updated_at" => DateTime.utc_now() |> DateTime.to_iso8601()
+            }
+          }
+        )
+
+      enriched = AiAssistant.enrich_session_with_job_context(session)
+
+      assert enriched.expression == "fn(state => state);"
+      assert enriched.adaptor == "@openfn/language-http@1.0.0"
+    end
+
+    test "enriches session with unsaved_job metadata", %{user: user} do
+      session =
+        insert(:chat_session,
+          user: user,
+          session_type: "job_code",
+          job_id: nil,
+          meta: %{
+            "unsaved_job" => %{
+              "id" => Ecto.UUID.generate(),
+              "body" => "console.log('test');",
+              "adaptor" => "@openfn/language-common@1.0.0"
+            }
+          }
+        )
+
+      enriched = AiAssistant.enrich_session_with_job_context(session)
+
+      assert enriched.expression == "console.log('test');"
+      assert enriched.adaptor == "@openfn/language-common@1.0.0"
+    end
+
+    test "returns session with context when job is in session", %{user: user} do
+      # When a session has a job through the factory, it gets enriched
+      session =
+        insert(:chat_session,
+          user: user,
+          session_type: "job_code"
+        )
+
+      enriched = AiAssistant.enrich_session_with_job_context(session)
+
+      # Verify it returns the session (enriched or not)
+      assert enriched.id == session.id
+      assert enriched.session_type == "job_code"
+    end
+  end
+
+  describe "list_sessions/3 with Project resource" do
+    test "lists workflow template sessions for project", %{
+      user: user,
+      project: project
+    } do
+      workflow = insert(:workflow, project: project)
+
+      _session1 =
+        insert(:chat_session,
+          user: user,
+          project: project,
+          session_type: "workflow_template",
+          workflow_id: workflow.id
+        )
+
+      _session2 =
+        insert(:chat_session,
+          user: user,
+          project: project,
+          session_type: "workflow_template",
+          workflow_id: nil
+        )
+
+      # List sessions using Project struct
+      %{sessions: sessions} = AiAssistant.list_sessions(project, :desc, [])
+
+      assert length(sessions) == 2
+    end
+
+    test "filters workflow template sessions by workflow", %{
+      user: user,
+      project: project
+    } do
+      workflow1 = insert(:workflow, project: project)
+      workflow2 = insert(:workflow, project: project)
+
+      _session1 =
+        insert(:chat_session,
+          user: user,
+          project: project,
+          session_type: "workflow_template",
+          workflow_id: workflow1.id
+        )
+
+      _session2 =
+        insert(:chat_session,
+          user: user,
+          project: project,
+          session_type: "workflow_template",
+          workflow_id: workflow2.id
+        )
+
+      # Filter by specific workflow
+      %{sessions: sessions} =
+        AiAssistant.list_sessions(project, :desc, workflow: workflow1)
+
+      assert length(sessions) == 1
+      assert hd(sessions).workflow_id == workflow1.id
     end
   end
 

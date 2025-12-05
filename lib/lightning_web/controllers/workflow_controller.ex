@@ -230,6 +230,7 @@ defmodule LightningWeb.WorkflowController do
              current_user,
              project
            ),
+         :ok <- WorkOrders.limit_run_creation(project_id),
          {:ok, new_run} <-
            WorkOrders.retry(run_id, step_id, created_by: current_user) do
       conn
@@ -240,6 +241,11 @@ defmodule LightningWeb.WorkflowController do
         }
       })
     else
+      {:error, _reason, %Lightning.Extensions.Message{} = message} ->
+        conn
+        |> put_status(:bad_request)
+        |> json(%{error: message.text})
+
       {:error, %Ecto.Changeset{} = changeset} ->
         conn
         |> put_status(:unprocessable_entity)

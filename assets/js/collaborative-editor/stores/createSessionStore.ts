@@ -208,9 +208,9 @@ export const createSessionStore = (): SessionStore => {
     const ydoc = state.ydoc || new YDoc();
 
     if (isReusingYDoc) {
-      logger.log('Reusing Y.Doc (preserving offline edits)');
+      logger.debug('Reusing Y.Doc (preserving offline edits)');
     } else {
-      logger.log('Creating new Y.Doc');
+      logger.debug('Creating new Y.Doc');
     }
 
     // Step 2: Create clean awareness instance if userData is provided

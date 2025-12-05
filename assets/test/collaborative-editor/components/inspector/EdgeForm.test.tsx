@@ -202,7 +202,7 @@ describe('EdgeForm - Basic Rendering', () => {
       ),
     });
 
-    // Trigger edges should only have "Always" and "Matches a Javascript Expression"
+    // Trigger edges should only have "Always" and "On Match"
     const select = screen.getByLabelText('Condition');
     expect(select).toBeInTheDocument();
 
@@ -348,7 +348,9 @@ describe('EdgeForm - Form Value Reset', () => {
     });
 
     // Verify expression editor is NOT shown for edge-1
-    expect(screen.queryByLabelText('JS Expression')).not.toBeInTheDocument();
+    expect(
+      screen.queryByLabelText('Javascript Expression')
+    ).not.toBeInTheDocument();
 
     // Now switch to edge-2 (this simulates user clicking on a different edge in the canvas)
     rerender(<EdgeForm edge={edge2!} />);
@@ -365,16 +367,16 @@ describe('EdgeForm - Form Value Reset', () => {
 
     // Verify condition type changed
     await waitFor(() => {
-      expect(
-        screen.getByDisplayValue('Matches a Javascript Expression')
-      ).toBeInTheDocument();
+      expect(screen.getByDisplayValue('On Match')).toBeInTheDocument();
       // Verify edge-1's condition type is NOT shown
       expect(screen.queryByDisplayValue('On Success')).not.toBeInTheDocument();
     });
 
     // Verify expression editor is NOW shown for edge-2
     await waitFor(() => {
-      expect(screen.getByLabelText('JS Expression')).toBeInTheDocument();
+      expect(
+        screen.getByLabelText('Javascript Expression')
+      ).toBeInTheDocument();
       expect(
         screen.getByDisplayValue('state.data.success === true')
       ).toBeInTheDocument();
@@ -391,13 +393,13 @@ describe('EdgeForm - Form Value Reset', () => {
       expect(
         screen.queryByDisplayValue('Second Edge Label')
       ).not.toBeInTheDocument();
-      expect(
-        screen.queryByDisplayValue('Matches a Javascript Expression')
-      ).not.toBeInTheDocument();
+      expect(screen.queryByDisplayValue('On Match')).not.toBeInTheDocument();
     });
 
     // Verify expression editor is hidden again
-    expect(screen.queryByLabelText('JS Expression')).not.toBeInTheDocument();
+    expect(
+      screen.queryByLabelText('Javascript Expression')
+    ).not.toBeInTheDocument();
   });
 });
 
@@ -700,7 +702,9 @@ describe('EdgeForm - Conditional Expression Validation', () => {
 
     // Expression field should be visible for js_expression type
     await waitFor(() => {
-      expect(screen.getByLabelText('JS Expression')).toBeInTheDocument();
+      expect(
+        screen.getByLabelText('Javascript Expression')
+      ).toBeInTheDocument();
       expect(
         screen.getByDisplayValue('state.data.success === true')
       ).toBeInTheDocument();
@@ -753,9 +757,11 @@ describe('EdgeForm - Conditional Expression Validation', () => {
 
     // Expression field should be visible but empty
     await waitFor(() => {
-      expect(screen.getByLabelText('JS Expression')).toBeInTheDocument();
+      expect(
+        screen.getByLabelText('Javascript Expression')
+      ).toBeInTheDocument();
       const textarea = screen.getByLabelText(
-        'JS Expression'
+        'Javascript Expression'
       ) as HTMLTextAreaElement;
       expect(textarea.value).toBe('');
     });
@@ -775,9 +781,11 @@ describe('EdgeForm - Conditional Expression Validation', () => {
     });
 
     await waitFor(() => {
-      expect(screen.getByLabelText('JS Expression')).toBeInTheDocument();
+      expect(
+        screen.getByLabelText('Javascript Expression')
+      ).toBeInTheDocument();
       const textarea = screen.getByLabelText(
-        'JS Expression'
+        'Javascript Expression'
       ) as HTMLTextAreaElement;
       // Verify it contains the expected expression
       expect(textarea.value).toBe('state.data.success === true');
@@ -833,7 +841,9 @@ describe('EdgeForm - Conditional Expression Validation', () => {
     });
 
     // Expression field should not be visible
-    expect(screen.queryByLabelText('JS Expression')).not.toBeInTheDocument();
+    expect(
+      screen.queryByLabelText('Javascript Expression')
+    ).not.toBeInTheDocument();
 
     // Should not show any validation errors
     expect(screen.queryByText(/can't be blank/i)).not.toBeInTheDocument();
@@ -888,6 +898,8 @@ describe('EdgeForm - Conditional Expression Validation', () => {
     });
 
     // Expression field should not be visible for non-js_expression types
-    expect(screen.queryByLabelText('JS Expression')).not.toBeInTheDocument();
+    expect(
+      screen.queryByLabelText('Javascript Expression')
+    ).not.toBeInTheDocument();
   });
 });

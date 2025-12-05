@@ -13,7 +13,6 @@ import {
   useCallback,
   useEffect,
   useMemo,
-  useRef,
   useState,
 } from 'react';
 
@@ -21,13 +20,14 @@ import _logger from '#/utils/logger';
 
 import { useSocket } from '../../react/contexts/SocketProvider';
 import { useURLState } from '#/react/lib/use-url-state';
+import { useProviderLifecycle } from '../hooks/useProviderLifecycle';
+import { useYDocPersistence } from '../hooks/useYDocPersistence';
 import {
   createSessionStore,
   type SessionStoreInstance,
 } from '../stores/createSessionStore';
+
 import { ConnectionStatusProvider } from './ConnectionStatusContext';
-import { useProviderLifecycle } from '../hooks/useProviderLifecycle';
-import { useYDocPersistence } from '../hooks/useYDocPersistence';
 
 const logger = _logger.ns('SessionProvider').seal();
 
@@ -55,7 +55,7 @@ export const SessionProvider = ({
 
   // Get version from URL reactively
   const { params } = useURLState();
-  const version = params.v ?? null;
+  const version = params['v'] ?? null;
 
   // Create store instance once - stable reference
   const [sessionStore] = useState(() => createSessionStore());

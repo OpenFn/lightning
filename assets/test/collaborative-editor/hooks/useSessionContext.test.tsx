@@ -123,6 +123,7 @@ describe('useUser()', () => {
         project_repo_connection: null,
         webhook_auth_methods: [],
         workflow_template: null,
+        has_read_ai_disclaimer: true,
       });
     });
 
@@ -139,6 +140,7 @@ describe('useUser()', () => {
         project_repo_connection: null,
         webhook_auth_methods: [],
         workflow_template: null,
+        has_read_ai_disclaimer: true,
       });
     });
 
@@ -173,6 +175,7 @@ describe('useProject()', () => {
         project_repo_connection: null,
         webhook_auth_methods: [],
         workflow_template: null,
+        has_read_ai_disclaimer: true,
       });
     });
 
@@ -189,6 +192,7 @@ describe('useProject()', () => {
         project_repo_connection: null,
         webhook_auth_methods: [],
         workflow_template: null,
+        has_read_ai_disclaimer: true,
       });
     });
 
@@ -223,6 +227,7 @@ describe('useAppConfig()', () => {
         project_repo_connection: null,
         webhook_auth_methods: [],
         workflow_template: null,
+        has_read_ai_disclaimer: true,
       });
     });
 
@@ -239,6 +244,7 @@ describe('useAppConfig()', () => {
         project_repo_connection: null,
         webhook_auth_methods: [],
         workflow_template: null,
+        has_read_ai_disclaimer: true,
       });
     });
 
@@ -325,6 +331,7 @@ describe('Hook Integration', () => {
         project_repo_connection: null,
         webhook_auth_methods: [],
         workflow_template: null,
+        has_read_ai_disclaimer: true,
       });
     });
 

@@ -179,11 +179,16 @@ defmodule LightningWeb.WorkflowChannel do
     project_user = socket.assigns.project_user
 
     async_task(socket, "get_context", fn ->
-      # CRITICAL: Always fetch the actual latest workflow from DB
-      # socket.assigns.workflow could be an old snapshot (e.g., v22)
-      # but we need to send the actual latest lock_version (e.g., v28)
-      # so the frontend knows the difference between viewing v22 vs latest
-      fresh_workflow = Lightning.Workflows.get_workflow(workflow.id)
+      # For unsaved workflows (action="new"), lock_version is nil and the workflow
+      # doesn't exist in the database yet. Use the in-memory workflow in that case.
+      # For saved workflows, always fetch fresh from DB to get the actual latest
+      # lock_version (socket.assigns.workflow could be stale).
+      fresh_workflow =
+        if is_nil(workflow.lock_version) do
+          workflow
+        else
+          Lightning.Workflows.get_workflow(workflow.id)
+        end
 
       project_repo_connection =
         VersionControl.get_repo_connection_for_project(project.id)
@@ -204,7 +209,24 @@ defmodule LightningWeb.WorkflowChannel do
             workflow.lock_version,
         project_repo_connection: render_repo_connection(project_repo_connection),
         webhook_auth_methods: render_webhook_auth_methods(webhook_auth_methods),
-        workflow_template: render_workflow_template(workflow_template)
+        workflow_template: render_workflow_template(workflow_template),
+        has_read_ai_disclaimer:
+          Lightning.AiAssistant.user_has_read_disclaimer?(user),
+        limits: render_limits(project.id)
+      }
+    end)
+  end
+
+  @impl true
+  def handle_in("get_limits", %{"action_type" => action_type}, socket) do
+    project = socket.assigns.project
+
+    async_task(socket, "get_limits", fn ->
+      limit_result = check_action_limit(action_type, project.id)
+
+      %{
+        action_type: action_type,
+        limit: render_limit_result(limit_result)
       }
     end)
   end
@@ -398,32 +420,39 @@ defmodule LightningWeb.WorkflowChannel do
     async_task(socket, "request_versions", fn ->
       Logger.info("Inside async_task for request_versions")
 
-      fresh_workflow = Lightning.Workflows.get_workflow(workflow.id)
-      latest_lock_version = fresh_workflow.lock_version
+      # For unsaved workflows (action="new"), there are no versions to show.
+      # Return empty list instead of crashing.
+      if is_nil(workflow.lock_version) do
+        Logger.info("Workflow is unsaved, returning empty versions list")
+        %{versions: []}
+      else
+        fresh_workflow = Lightning.Workflows.get_workflow(workflow.id)
+        latest_lock_version = fresh_workflow.lock_version
 
-      snapshots = Lightning.Workflows.Snapshot.get_all_for(workflow)
+        snapshots = Lightning.Workflows.Snapshot.get_all_for(workflow)
 
-      Logger.info("Fetching versions for workflow #{workflow.id}")
-      Logger.info("Found #{length(snapshots)} snapshots")
-      Logger.info("Socket workflow lock_version: #{workflow.lock_version}")
-      Logger.info("Fresh workflow lock_version: #{latest_lock_version}")
+        Logger.info("Fetching versions for workflow #{workflow.id}")
+        Logger.info("Found #{length(snapshots)} snapshots")
+        Logger.info("Socket workflow lock_version: #{workflow.lock_version}")
+        Logger.info("Fresh workflow lock_version: #{latest_lock_version}")
 
-      versions =
-        snapshots
-        |> Enum.map(fn snapshot ->
-          %{
-            lock_version: snapshot.lock_version,
-            inserted_at: snapshot.inserted_at,
-            is_latest: snapshot.lock_version == latest_lock_version
-          }
-        end)
-        |> Enum.sort_by(fn v ->
-          {if(v.is_latest, do: 0, else: 1), -v.lock_version}
-        end)
+        versions =
+          snapshots
+          |> Enum.map(fn snapshot ->
+            %{
+              lock_version: snapshot.lock_version,
+              inserted_at: snapshot.inserted_at,
+              is_latest: snapshot.lock_version == latest_lock_version
+            }
+          end)
+          |> Enum.sort_by(fn v ->
+            {if(v.is_latest, do: 0, else: 1), -v.lock_version}
+          end)
 
-      Logger.info("Mapped versions: #{inspect(versions)}")
+        Logger.info("Mapped versions: #{inspect(versions)}")
 
-      %{versions: versions}
+        %{versions: versions}
+      end
     end)
   end
 
@@ -528,6 +557,14 @@ defmodule LightningWeb.WorkflowChannel do
     else
       error -> workflow_error_reply(socket, error)
     end
+  end
+
+  @impl true
+  def handle_in("list_templates", _params, socket) do
+    templates = Lightning.WorkflowTemplates.list_templates()
+    rendered_templates = Enum.map(templates, &render_workflow_template/1)
+
+    {:reply, {:ok, %{templates: rendered_templates}}, socket}
   end
 
   @impl true
@@ -687,11 +724,7 @@ defmodule LightningWeb.WorkflowChannel do
     {:noreply, socket}
   end
 
-  # Handles async replies for different event types
-  # Extracts event handling logic to reduce cyclomatic complexity
   defp handle_async_event("request_run_steps", socket_ref, reply) do
-    # Unwrap the result from async_task - it wraps everything in {:ok, ...}
-    # but we may have {:error, ...} tuples from the handler logic
     unwrapped_reply = unwrap_run_steps_reply(reply)
     reply(socket_ref, unwrapped_reply)
   end
@@ -705,7 +738,8 @@ defmodule LightningWeb.WorkflowChannel do
               "get_context",
               "request_history",
               "request_versions",
-              "request_trigger_auth_methods"
+              "request_trigger_auth_methods",
+              "get_limits"
             ] do
     reply(socket_ref, reply)
   end
@@ -882,10 +916,45 @@ defmodule LightningWeb.WorkflowChannel do
   end
 
   defp format_changeset_errors(changeset) do
-    Ecto.Changeset.traverse_errors(changeset, fn {msg, opts} ->
+    changeset
+    |> Ecto.Changeset.traverse_errors(fn {msg, opts} ->
       Enum.reduce(opts, msg, fn {key, value}, acc ->
         String.replace(acc, "%{#{key}}", to_string(value))
       end)
+    end)
+    |> flatten_association_errors()
+  end
+
+  defp flatten_association_errors(errors) do
+    Enum.reduce(errors, %{}, fn {key, value}, acc ->
+      flatten_error_value(key, value, acc)
+    end)
+  end
+
+  defp flatten_error_value(key, list, acc) when is_list(list) do
+    if Enum.any?(list, &is_map/1) do
+      flatten_nested_list_errors(key, list, acc)
+    else
+      Map.put(acc, to_string(key), list)
+    end
+  end
+
+  defp flatten_error_value(key, value, acc) do
+    Map.put(acc, to_string(key), value)
+  end
+
+  defp flatten_nested_list_errors(key, list, acc) do
+    list
+    |> Enum.with_index()
+    |> Enum.reduce(acc, fn {item_errors, index}, inner_acc ->
+      flatten_item_errors(key, item_errors, index, inner_acc)
+    end)
+  end
+
+  defp flatten_item_errors(key, item_errors, index, acc) do
+    Enum.reduce(item_errors, acc, fn {field, messages}, nested_acc ->
+      flattened_key = "#{key}[#{index}].#{field}"
+      Map.put(nested_acc, flattened_key, messages)
     end)
   end
 
@@ -1130,6 +1199,7 @@ defmodule LightningWeb.WorkflowChannel do
           id: workflow_id,
           project_id: project.id,
           name: "Untitled workflow",
+          lock_version: nil,
           jobs: [],
           edges: [],
           triggers: []
@@ -1216,6 +1286,33 @@ defmodule LightningWeb.WorkflowChannel do
         created_by_id: run.created_by_id,
         created_by_email: run.created_by && run.created_by.email
       }
+    }
+  end
+
+  defp check_action_limit("new_run", project_id) do
+    WorkOrders.limit_run_creation(project_id)
+  end
+
+  defp render_limits(project_id) do
+    # Check run limit for initial context
+    run_limit_result = check_action_limit("new_run", project_id)
+
+    %{
+      runs: render_limit_result(run_limit_result)
+    }
+  end
+
+  defp render_limit_result(:ok) do
+    %{
+      allowed: true,
+      message: nil
+    }
+  end
+
+  defp render_limit_result({:error, _reason, message}) do
+    %{
+      allowed: false,
+      message: message.text
     }
   end
 end

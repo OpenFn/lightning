@@ -11,8 +11,8 @@ import { cn } from '#/utils/cn';
 import formatDate from '#/utils/formatDate';
 import truncateUid from '#/utils/truncateUID';
 
-import DataclipTypePill from '../DataclipTypePill';
 import Pill from '../Badge';
+import DataclipTypePill from '../DataclipTypePill';
 import {
   DataclipTypeNames,
   DataclipTypes,
