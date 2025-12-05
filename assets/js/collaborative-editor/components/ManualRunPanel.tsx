@@ -619,7 +619,7 @@ export function ManualRunPanel({
               }}
               buttonText={{
                 run: 'Run',
-                retry: 'Run (retry)',
+                retry: 'Run (Retry)',
                 processing: 'Processing',
               }}
               showKeyboardShortcuts={true}

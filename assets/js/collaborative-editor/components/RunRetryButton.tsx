@@ -27,7 +27,7 @@ interface RunRetryButtonProps {
  * RunRetryButton - Split button for Run/Retry operations
  *
  * Displays a single "Run" button when retry is not available,
- * or a split button with "Run (retry)" main action and
+ * or a split button with "Run (Retry)" main action and
  * "Run (New Work Order)" dropdown option when retry is available.
  *
  * @example
@@ -54,7 +54,7 @@ export function RunRetryButton({
 }: RunRetryButtonProps) {
   const {
     run = 'Run Workflow',
-    retry = 'Run (retry)',
+    retry = 'Run (Retry)',
     processing = 'Processing',
   } = buttonText;
 

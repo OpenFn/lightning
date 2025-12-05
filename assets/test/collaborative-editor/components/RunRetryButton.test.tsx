@@ -63,7 +63,7 @@ describe('RunRetryButton', () => {
       );
 
       // Should show retry button
-      expect(screen.getByText('Run (retry)')).toBeInTheDocument();
+      expect(screen.getByText('Run (Retry)')).toBeInTheDocument();
 
       // Should show dropdown toggle
       expect(
@@ -139,7 +139,7 @@ describe('RunRetryButton', () => {
         />
       );
 
-      await user.click(screen.getByText('Run (retry)'));
+      await user.click(screen.getByText('Run (Retry)'));
 
       expect(onRetry).toHaveBeenCalledTimes(1);
       expect(onRun).not.toHaveBeenCalled();
@@ -275,7 +275,7 @@ describe('RunRetryButton', () => {
         />
       );
 
-      expect(screen.getByText('Run (retry)')).toBeDisabled();
+      expect(screen.getByText('Run (Retry)')).toBeDisabled();
       expect(
         screen.getByRole('button', { name: /open options/i })
       ).toBeDisabled();
@@ -693,7 +693,7 @@ describe('RunRetryButton', () => {
         />
       );
 
-      const retryButton = screen.getByText('Run (retry)');
+      const retryButton = screen.getByText('Run (Retry)');
       expect(retryButton).toBeInTheDocument();
       // Main retry button should be wrapped in Tooltip with shortcut
     });
@@ -714,7 +714,7 @@ describe('RunRetryButton', () => {
         />
       );
 
-      const retryButton = screen.getByText('Run (retry)');
+      const retryButton = screen.getByText('Run (Retry)');
       expect(retryButton).toBeDisabled();
       // Disabled tooltip should show instead of keyboard shortcut tooltip
     });
@@ -761,7 +761,7 @@ describe('RunRetryButton', () => {
       );
 
       // 1. Main button works (retry)
-      await user.click(screen.getByText('Run (retry)'));
+      await user.click(screen.getByText('Run (Retry)'));
       expect(onRetry).toHaveBeenCalledTimes(1);
 
       // 2. Open dropdown
@@ -811,7 +811,7 @@ describe('RunRetryButton', () => {
         />
       );
 
-      expect(screen.getByText('Run (retry)')).toBeInTheDocument();
+      expect(screen.getByText('Run (Retry)')).toBeInTheDocument();
       expect(
         screen.getByRole('button', { name: /open options/i })
       ).toBeInTheDocument();
@@ -829,7 +829,7 @@ describe('RunRetryButton', () => {
 
       expect(screen.getByText('Processing')).toBeInTheDocument();
       expect(screen.queryByText('Run Workflow')).not.toBeInTheDocument();
-      expect(screen.queryByText('Run (retry)')).not.toBeInTheDocument();
+      expect(screen.queryByText('Run (Retry)')).not.toBeInTheDocument();
     });
 
     test('handles rapid clicks without duplicate calls', async () => {

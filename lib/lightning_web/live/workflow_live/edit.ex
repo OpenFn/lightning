@@ -1019,7 +1019,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
         <.icon name="hero-arrow-path" class="w-4 h-4 animate-spin mr-1" /> Processing
       <% else %>
         <%= if step_retryable?(@step, @manual_run_form, @selectable_dataclips) do %>
-          <.icon name="hero-play-mini" class="w-4 h-4 mr-1" /> Run (retry)
+          <.icon name="hero-play-mini" class="w-4 h-4 mr-1" /> Run (Retry)
         <% else %>
           <.icon name="hero-play-mini" class="w-4 h-4 mr-1" /> Run
         <% end %>
