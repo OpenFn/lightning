@@ -12,7 +12,7 @@
 
     <link rel="stylesheet" href="dist/html-elixir-RLZO5U2C.css" />
 
-    <script defer src="dist/sidebar_items-973A154C.js"></script>
+    <script defer src="dist/sidebar_items-548152C6.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-Y223O6DN.js"></script>
 
@@ -216,16 +216,6 @@ Lightning
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#show_collaborative_editor_toggle?/2" data-no-tooltip="" translate="no">show_collaborative_editor_toggle?(user, snapshot_version_tag)</a>
-
-      </div>
-
-        <div class="summary-synopsis"><p>Determines whether to show the collaborative editor toggle (beaker icon).</p></div>
-
-    </div>
-
-    <div class="summary-row">
-      <div class="summary-signature">
         <a href="#standard_params/0" data-no-tooltip="" translate="no">standard_params()</a>
 
       </div>
@@ -318,7 +308,7 @@ Accepts either a Workflow struct or an Ecto.Changeset.</p></div>
       <h1 class="signature" translate="no">broadcast_updated_params(socket, params)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/workflow_live/helpers.ex#L20" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/workflow_live/helpers.ex#L19" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -340,7 +330,7 @@ Accepts either a Workflow struct or an Ecto.Changeset.</p></div>
       <h1 class="signature" translate="no">build_url(assigns, params)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/workflow_live/helpers.ex#L147" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/workflow_live/helpers.ex#L146" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -362,7 +352,7 @@ Accepts either a Workflow struct or an Ecto.Changeset.</p></div>
       <h1 class="signature" translate="no">chat_params()</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/workflow_live/helpers.ex#L226" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/workflow_live/helpers.ex#L225" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -384,7 +374,7 @@ Accepts either a Workflow struct or an Ecto.Changeset.</p></div>
       <h1 class="signature" translate="no">code_view_params()</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/workflow_live/helpers.ex#L282" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/workflow_live/helpers.ex#L281" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -406,7 +396,7 @@ Accepts either a Workflow struct or an Ecto.Changeset.</p></div>
       <h1 class="signature" translate="no">collaborative_editor_url(params, live_action)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/workflow_live/helpers.ex#L397" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/workflow_live/helpers.ex#L396" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -417,28 +407,28 @@ Accepts either a Workflow struct or an Ecto.Changeset.</p></div>
 
 <p>Builds a URL to the collaborative editor with converted query parameters.</p><p>This function uses a data-driven approach with the <code class="inline">@param_mappings</code> configuration
 to convert classical editor parameters to collaborative editor equivalents.</p><h2 id="collaborative_editor_url/2-conversion-rules" class="section-heading"><a href="#collaborative_editor_url/2-conversion-rules" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Conversion Rules</span></h2><ul><li><code class="inline">a</code> (followed run) → <code class="inline">run</code></li><li><code class="inline">s</code> (selected step) → <code class="inline">job</code>/<code class="inline">trigger</code>/<code class="inline">edge</code> (context-aware based on selection)</li><li><code class="inline">m=expand</code> → <code class="inline">panel=editor</code></li><li><code class="inline">m=workflow_input</code> → <code class="inline">panel=run</code></li><li><code class="inline">m=settings</code> → <code class="inline">panel=settings</code></li><li>Preserves: <code class="inline">v</code>, <code class="inline">method</code>, <code class="inline">w-chat</code>, <code class="inline">j-chat</code>, <code class="inline">code</code></li><li>Skips: <code class="inline">panel</code> (collaborative-only)</li></ul><h2 id="collaborative_editor_url/2-parameters" class="section-heading"><a href="#collaborative_editor_url/2-parameters" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Parameters</span></h2><ul><li><code class="inline">params</code> - Route parameters map containing:<ul><li><code class="inline">&quot;project_id&quot;</code> - Project UUID (required)</li><li><code class="inline">&quot;id&quot;</code> - Workflow UUID (required for <code class="inline">:edit</code>, absent for <code class="inline">:new</code>)</li><li>Additional query parameters to preserve (e.g., <code class="inline">&quot;s&quot;</code>, <code class="inline">&quot;m&quot;</code>, <code class="inline">&quot;v&quot;</code>)</li></ul></li><li><code class="inline">live_action</code> - Current LiveView action (<code class="inline">:new</code> or <code class="inline">:edit</code>)</li></ul><h2 id="collaborative_editor_url/2-returns" class="section-heading"><a href="#collaborative_editor_url/2-returns" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Returns</span></h2><p>A complete URL string for the collaborative editor with transformed query parameters</p><h2 id="collaborative_editor_url/2-examples" class="section-heading"><a href="#collaborative_editor_url/2-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="c1"># Edit existing workflow with query params</span><span class="w">
-</span><span class="gp unselectable">iex&gt; </span><span class="n">collaborative_editor_url</span><span class="p" data-group-id="4379386275-1">(</span><span class="p" data-group-id="4379386275-2">%{</span><span class="w">
+</span><span class="gp unselectable">iex&gt; </span><span class="n">collaborative_editor_url</span><span class="p" data-group-id="8615587754-1">(</span><span class="p" data-group-id="8615587754-2">%{</span><span class="w">
 </span><span class="gp unselectable">...&gt; </span><span class="w">  </span><span class="s">&quot;project_id&quot;</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="s">&quot;proj-1&quot;</span><span class="p">,</span><span class="w">
 </span><span class="gp unselectable">...&gt; </span><span class="w">  </span><span class="s">&quot;id&quot;</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="s">&quot;wf-1&quot;</span><span class="p">,</span><span class="w">
 </span><span class="gp unselectable">...&gt; </span><span class="w">  </span><span class="s">&quot;s&quot;</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="s">&quot;job-abc&quot;</span><span class="p">,</span><span class="w">
 </span><span class="gp unselectable">...&gt; </span><span class="w">  </span><span class="s">&quot;m&quot;</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="s">&quot;expand&quot;</span><span class="w">
-</span><span class="gp unselectable">...&gt; </span><span class="p" data-group-id="4379386275-2">}</span><span class="p">,</span><span class="w"> </span><span class="ss">:edit</span><span class="p" data-group-id="4379386275-1">)</span><span class="w">
+</span><span class="gp unselectable">...&gt; </span><span class="p" data-group-id="8615587754-2">}</span><span class="p">,</span><span class="w"> </span><span class="ss">:edit</span><span class="p" data-group-id="8615587754-1">)</span><span class="w">
 </span><span class="s">&quot;/projects/proj-1/w/wf-1/collaborate?job=job-abc&amp;panel=editor&quot;</span><span class="w">
 
 </span><span class="c1"># New workflow</span><span class="w">
-</span><span class="gp unselectable">iex&gt; </span><span class="n">collaborative_editor_url</span><span class="p" data-group-id="4379386275-3">(</span><span class="p" data-group-id="4379386275-4">%{</span><span class="w">
+</span><span class="gp unselectable">iex&gt; </span><span class="n">collaborative_editor_url</span><span class="p" data-group-id="8615587754-3">(</span><span class="p" data-group-id="8615587754-4">%{</span><span class="w">
 </span><span class="gp unselectable">...&gt; </span><span class="w">  </span><span class="s">&quot;project_id&quot;</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="s">&quot;proj-1&quot;</span><span class="w">
-</span><span class="gp unselectable">...&gt; </span><span class="p" data-group-id="4379386275-4">}</span><span class="p">,</span><span class="w"> </span><span class="ss">:new</span><span class="p" data-group-id="4379386275-3">)</span><span class="w">
+</span><span class="gp unselectable">...&gt; </span><span class="p" data-group-id="8615587754-4">}</span><span class="p">,</span><span class="w"> </span><span class="ss">:new</span><span class="p" data-group-id="8615587754-3">)</span><span class="w">
 </span><span class="s">&quot;/projects/proj-1/w/new/collaborate&quot;</span><span class="w">
 
 </span><span class="c1"># With multiple query params</span><span class="w">
-</span><span class="gp unselectable">iex&gt; </span><span class="n">collaborative_editor_url</span><span class="p" data-group-id="4379386275-5">(</span><span class="p" data-group-id="4379386275-6">%{</span><span class="w">
+</span><span class="gp unselectable">iex&gt; </span><span class="n">collaborative_editor_url</span><span class="p" data-group-id="8615587754-5">(</span><span class="p" data-group-id="8615587754-6">%{</span><span class="w">
 </span><span class="gp unselectable">...&gt; </span><span class="w">  </span><span class="s">&quot;project_id&quot;</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="s">&quot;proj-1&quot;</span><span class="p">,</span><span class="w">
 </span><span class="gp unselectable">...&gt; </span><span class="w">  </span><span class="s">&quot;id&quot;</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="s">&quot;wf-1&quot;</span><span class="p">,</span><span class="w">
 </span><span class="gp unselectable">...&gt; </span><span class="w">  </span><span class="s">&quot;s&quot;</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="s">&quot;job-123&quot;</span><span class="p">,</span><span class="w">
 </span><span class="gp unselectable">...&gt; </span><span class="w">  </span><span class="s">&quot;v&quot;</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="s">&quot;42&quot;</span><span class="p">,</span><span class="w">
 </span><span class="gp unselectable">...&gt; </span><span class="w">  </span><span class="s">&quot;custom&quot;</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="s">&quot;value&quot;</span><span class="w">
-</span><span class="gp unselectable">...&gt; </span><span class="p" data-group-id="4379386275-6">}</span><span class="p">,</span><span class="w"> </span><span class="ss">:edit</span><span class="p" data-group-id="4379386275-5">)</span><span class="w">
+</span><span class="gp unselectable">...&gt; </span><span class="p" data-group-id="8615587754-6">}</span><span class="p">,</span><span class="w"> </span><span class="ss">:edit</span><span class="p" data-group-id="8615587754-5">)</span><span class="w">
 </span><span class="s">&quot;/projects/proj-1/w/wf-1/collaborate?custom=value&amp;job=job-123&amp;v=42&quot;</span></code></pre>
   </section>
 </section>
@@ -452,7 +442,7 @@ to convert classical editor parameters to collaborative editor equivalents.</p><
       <h1 class="signature" translate="no">orthogonal_params()</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/workflow_live/helpers.ex#L261" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/workflow_live/helpers.ex#L260" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -476,7 +466,7 @@ to convert classical editor parameters to collaborative editor equivalents.</p><
       <h1 class="signature" translate="no">param(name, value, opts \\ [])</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/workflow_live/helpers.ex#L214" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/workflow_live/helpers.ex#L213" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -498,7 +488,7 @@ to convert classical editor parameters to collaborative editor equivalents.</p><
       <h1 class="signature" translate="no">params_without_mode_selection()</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/workflow_live/helpers.ex#L289" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/workflow_live/helpers.ex#L288" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -520,7 +510,7 @@ to convert classical editor parameters to collaborative editor equivalents.</p><
       <h1 class="signature" translate="no">query_param(name)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/workflow_live/helpers.ex#L221" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/workflow_live/helpers.ex#L220" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -542,7 +532,7 @@ to convert classical editor parameters to collaborative editor equivalents.</p><
       <h1 class="signature" translate="no">run_workflow(workflow_or_changeset, params, opts)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/workflow_live/helpers.ex#L55" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/workflow_live/helpers.ex#L54" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -587,7 +577,7 @@ to convert classical editor parameters to collaborative editor equivalents.</p><
       <h1 class="signature" translate="no">save_workflow(changeset, actor)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/workflow_live/helpers.ex#L28" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/workflow_live/helpers.ex#L27" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -613,28 +603,6 @@ to convert classical editor parameters to collaborative editor equivalents.</p><
 
   </section>
 </section>
-<section class="detail" id="show_collaborative_editor_toggle?/2">
-
-  <div class="detail-header">
-    <a href="#show_collaborative_editor_toggle?/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
-      <i class="ri-link-m" aria-hidden="true"></i>
-    </a>
-    <div class="heading-with-actions">
-      <h1 class="signature" translate="no">show_collaborative_editor_toggle?(user, snapshot_version_tag)</h1>
-
-
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/workflow_live/helpers.ex#L474" class="icon-action" rel="help" aria-label="View Source">
-          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-        </a>
-
-    </div>
-  </div>
-
-  <section class="docstring">
-
-<p>Determines whether to show the collaborative editor toggle (beaker icon).</p><p>Returns <code class="inline">true</code> only if:</p><ul><li>User has experimental features enabled</li><li>Currently viewing the latest version (not a snapshot)</li></ul>
-  </section>
-</section>
 <section class="detail" id="standard_params/0">
 
   <div class="detail-header">
@@ -645,7 +613,7 @@ to convert classical editor parameters to collaborative editor equivalents.</p><
       <h1 class="signature" translate="no">standard_params()</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/workflow_live/helpers.ex#L248" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/workflow_live/helpers.ex#L247" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -667,7 +635,7 @@ to convert classical editor parameters to collaborative editor equivalents.</p><
       <h1 class="signature" translate="no">subscribe_to_params_update(socket_id)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/workflow_live/helpers.ex#L16" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/workflow_live/helpers.ex#L15" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -689,7 +657,7 @@ to convert classical editor parameters to collaborative editor equivalents.</p><
       <h1 class="signature" translate="no">to_latest_params()</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/workflow_live/helpers.ex#L236" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/workflow_live/helpers.ex#L235" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -713,7 +681,7 @@ to convert classical editor parameters to collaborative editor equivalents.</p><
       <h1 class="signature" translate="no">with_params(overrides \\ [])</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/workflow_live/helpers.ex#L296" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/workflow_live/helpers.ex#L295" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -735,7 +703,7 @@ to convert classical editor parameters to collaborative editor equivalents.</p><
       <h1 class="signature" translate="no">workflow_enabled?(workflow)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/workflow_live/helpers.ex#L98" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/workflow_live/helpers.ex#L97" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -758,7 +726,7 @@ Accepts either a Workflow struct or an Ecto.Changeset.</p>
       <h1 class="signature" translate="no">workflow_input_params(selection_id)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/workflow_live/helpers.ex#L272" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/workflow_live/helpers.ex#L271" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -780,7 +748,7 @@ Accepts either a Workflow struct or an Ecto.Changeset.</p>
       <h1 class="signature" translate="no">workflow_state_tooltip(changeset)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/workflow_live/helpers.ex#L111" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/workflow_live/helpers.ex#L110" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
