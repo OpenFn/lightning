@@ -17,10 +17,16 @@ and this project adheres to
 
 ### Added
 
+### Changed
+
+### Fixed
+
+## [2.15.0-pre3] - 2025-12-05
+
+### Added
+
 - Collab Editor: Respect limits when creating runs and retries
   [#4102](https://github.com/OpenFn/lightning/issues/4102)
-
-### Changed
 
 ### Fixed
 
