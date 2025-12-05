@@ -4676,7 +4676,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       assert html =~ "hero-beaker"
     end
 
-    test "hides collaborative editor toggle when experimental features disabled",
+    test "shows collaborative editor toggle without experimental features",
          %{
            conn: conn,
            project: project,
@@ -4685,28 +4685,20 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       {:ok, view, _html} =
         live(conn, ~p"/projects/#{project.id}/w/#{workflow.id}")
 
-      # Should not show the toggle
-      refute has_element?(
+      # Should show the toggle (no longer gated by experimental features)
+      assert has_element?(
                view,
                "button[aria-label*='collaborative editor (experimental)']"
              )
     end
 
-    test "hides collaborative editor toggle on non-latest snapshots", %{
+    test "shows collaborative editor toggle on non-latest snapshots", %{
       conn: conn,
       user: user,
       project: project,
       workflow: workflow,
       snapshot: snapshot
     } do
-      # Enable experimental features for the user
-      user_with_experimental =
-        user
-        |> Ecto.Changeset.change(%{
-          preferences: %{"experimental_features" => true}
-        })
-        |> Repo.update!()
-
       # Create a new snapshot to make the original non-latest
       job_attrs =
         workflow.jobs |> Enum.map(&%{id: &1.id, name: &1.name <> " updated"})
@@ -4717,13 +4709,12 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       {:ok, view, _html} =
         conn
-        |> log_in_user(user_with_experimental)
         |> live(
           ~p"/projects/#{project.id}/w/#{workflow.id}?v=#{snapshot.lock_version}"
         )
 
-      # Should not show the toggle for non-latest snapshots
-      refute has_element?(
+      # Toggle is shown even on non-latest snapshots (no longer conditionally hidden)
+      assert has_element?(
                view,
                "button[aria-label*='collaborative editor (experimental)']"
              )
@@ -4958,7 +4949,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       assert html =~ "hero-beaker"
     end
 
-    test "hides collaborative editor toggle when creating new workflow without experimental features",
+    test "shows collaborative editor toggle when creating new workflow",
          %{
            conn: conn,
            project: project
@@ -4966,8 +4957,8 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       {:ok, view, _html} =
         live(conn, ~p"/projects/#{project.id}/w/new")
 
-      # Should not show the toggle without experimental features
-      refute has_element?(
+      # Should show the toggle (no longer gated by experimental features)
+      assert has_element?(
                view,
                "button[aria-label*='collaborative editor (experimental)']"
              )
@@ -5001,7 +4992,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       assert html =~ "collaborative editor (experimental)"
     end
 
-    test "hides collaborative editor toggle in job inspector without experimental features",
+    test "shows collaborative editor toggle in job inspector without experimental features",
          %{
            conn: conn,
            project: project,
@@ -5016,8 +5007,8 @@ defmodule LightningWeb.WorkflowLive.EditTest do
           ~p"/projects/#{project.id}/w/#{workflow.id}?s=#{job.id}&m=expand&v=#{workflow.lock_version}"
         )
 
-      # Should not show beaker icon in job inspector
-      refute html =~ "inspector-collaborative-editor-toggle"
+      # Should show beaker icon in job inspector (no longer gated by experimental features)
+      assert html =~ "inspector-collaborative-editor-toggle"
     end
   end
 
@@ -5047,8 +5038,8 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       # Banner only shows in inspector, not on canvas
       assert html =~ "You are currently working in the sandbox"
       assert html =~ sandbox.name
-      # No "Switch to" link per Joe's feedback
-      refute html =~ "Switch to"
+      # No "Switch to parent project" link per Joe's feedback
+      refute html =~ "Switch to Production Project"
     end
 
     test "does not show banner when viewing workflow in root project", %{
@@ -5073,7 +5064,8 @@ defmodule LightningWeb.WorkflowLive.EditTest do
         )
 
       refute html =~ "You are currently working in the sandbox"
-      refute html =~ "Switch to"
+      # Root projects should not show sandbox-related switch links
+      refute html =~ "working in the sandbox"
     end
 
     test "shows correct root project in deeply nested sandbox", %{conn: conn} do
@@ -5108,8 +5100,8 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       # Banner shows in inspector with current sandbox name
       assert html =~ "You are currently working in the sandbox"
       assert html =~ sandbox_b.name
-      # No "Switch to" link per Joe's feedback
-      refute html =~ "Switch to"
+      # No "Switch to parent project" link per Joe's feedback
+      refute html =~ "Switch to Root Project"
     end
 
     test "shows banner in job inspector when editing job in sandbox", %{
@@ -5138,8 +5130,8 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       assert html =~ "You are currently working in the sandbox"
       assert html =~ sandbox.name
-      # No "Switch to" link per Joe's feedback
-      refute html =~ "Switch to"
+      # No "Switch to parent project" link per Joe's feedback
+      refute html =~ "Switch to Production Project"
     end
 
     test "does not show banner in job inspector when editing job in root project",
@@ -5164,7 +5156,8 @@ defmodule LightningWeb.WorkflowLive.EditTest do
         )
 
       refute html =~ "You are currently working in the sandbox"
-      refute html =~ "Switch to"
+      # No sandbox banner should appear in root project
+      refute html =~ "working in the sandbox"
     end
 
     test "shows env chip on canvas when project has env", %{conn: conn} do

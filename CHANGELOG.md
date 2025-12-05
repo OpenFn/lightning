@@ -17,6 +17,8 @@ and this project adheres to
 
 ### Added
 
+- Display collab editor promotion in the legacy editor
+  [#4091](https://github.com/OpenFn/lightning/issues/4091)
 - Template search and selection in collaborative workflow editor with AI-powered
   workflow generation for missing templates
   [#4081](https://github.com/OpenFn/lightning/issues/4081)
@@ -25,6 +27,9 @@ and this project adheres to
   [#4042](https://github.com/OpenFn/lightning/pull/4042)
 
 ### Changed
+
+- Make collab editor available to everyone (not just experimental feature users)
+  [#4091](https://github.com/OpenFn/lightning/issues/4091)
 
 ### Fixed
 
