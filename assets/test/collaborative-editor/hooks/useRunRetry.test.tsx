@@ -21,6 +21,11 @@ import {
   createMockPhoenixChannelProvider,
 } from '../mocks/phoenixChannel';
 import { createMockSocket } from '../mocks/phoenixSocket';
+import {
+  createMockSessionContextStore,
+  createMockHistoryStore,
+  createMockStoreContextValue,
+} from '../__helpers__/storeMocks';
 
 // Mock the dataclip API module
 vi.mock('../../../js/collaborative-editor/api/dataclips', () => ({
@@ -711,58 +716,39 @@ describe('useRunRetry - handleRetry', () => {
         onRunSubmitted: vi.fn(),
       };
 
-      // Create wrapper with getLimits mock
-      function createWrapperWithGetLimits(): React.ComponentType<{
-        children: React.ReactNode;
-      }> {
-        const sessionStore = createSessionStore();
-        const mockSocket = createMockSocket();
-        sessionStore.initializeSession(mockSocket, 'test:room', {
-          id: 'user-1',
-          name: 'Test User',
-          email: 'test@example.com',
-          color: '#ff0000',
-        });
+      // Create wrapper with getLimits mock using standardized factories
+      const sessionStore = createSessionStore();
+      const mockSocket = createMockSocket();
+      sessionStore.initializeSession(mockSocket, 'test:room', {
+        id: 'user-1',
+        name: 'Test User',
+        email: 'test@example.com',
+        color: '#ff0000',
+      });
 
-        const mockHistoryStore = {
-          subscribe: vi.fn(() => vi.fn()),
-          withSelector: vi.fn(
-            selector => () => selector({ activeRun: mockActiveRun })
-          ),
-        };
-
-        const mockSessionContextStore = {
+      const mockStoreValue = createMockStoreContextValue({
+        sessionContextStore: createMockSessionContextStore({
           getLimits: getLimitsMock,
-        };
+        }),
+        historyStore: createMockHistoryStore({}, mockActiveRun),
+      });
 
-        const mockStoreValue: StoreContextValue = {
-          workflowStore: {} as any,
-          sessionContextStore: mockSessionContextStore as any,
-          adaptorStore: {} as any,
-          credentialStore: {} as any,
-          awarenessStore: {} as any,
-          historyStore: mockHistoryStore as any,
-          uiStore: {} as any,
-          editorPreferencesStore: {} as any,
-        };
-
-        return ({ children }: { children: React.ReactNode }) => (
-          <SessionContext.Provider
-            value={{
-              sessionId: 'test-session',
-              awareness: { clientId: 1 } as any,
-              sessionStore,
-            }}
-          >
-            <StoreContext.Provider value={mockStoreValue}>
-              {children}
-            </StoreContext.Provider>
-          </SessionContext.Provider>
-        );
-      }
+      const wrapper = ({ children }: { children: React.ReactNode }) => (
+        <SessionContext.Provider
+          value={{
+            sessionId: 'test-session',
+            awareness: { clientId: 1 } as any,
+            sessionStore,
+          }}
+        >
+          <StoreContext.Provider value={mockStoreValue}>
+            {children}
+          </StoreContext.Provider>
+        </SessionContext.Provider>
+      );
 
       const { result } = renderHook(() => useRunRetry(options), {
-        wrapper: createWrapperWithGetLimits(),
+        wrapper,
       });
 
       await act(async () => {
@@ -812,62 +798,43 @@ describe('useRunRetry - handleRetry', () => {
         onRunSubmitted,
       };
 
-      // Create wrapper with getLimits mock
-      function createWrapperWithGetLimits(): React.ComponentType<{
-        children: React.ReactNode;
-      }> {
-        const sessionStore = createSessionStore();
-        const mockSocket = createMockSocket();
-        sessionStore.initializeSession(mockSocket, 'test:room', {
-          id: 'user-1',
-          name: 'Test User',
-          email: 'test@example.com',
-          color: '#ff0000',
-        });
-
-        const mockHistoryStore = {
-          subscribe: vi.fn(() => vi.fn()),
-          withSelector: vi.fn(
-            selector => () => selector({ activeRun: mockActiveRun })
-          ),
-        };
-
-        const mockSessionContextStore = {
-          getLimits: getLimitsMock,
-        };
-
-        const mockStoreValue: StoreContextValue = {
-          workflowStore: {} as any,
-          sessionContextStore: mockSessionContextStore as any,
-          adaptorStore: {} as any,
-          credentialStore: {} as any,
-          awarenessStore: {} as any,
-          historyStore: mockHistoryStore as any,
-          uiStore: {} as any,
-          editorPreferencesStore: {} as any,
-        };
-
-        return ({ children }: { children: React.ReactNode }) => (
-          <SessionContext.Provider
-            value={{
-              sessionId: 'test-session',
-              awareness: { clientId: 1 } as any,
-              sessionStore,
-            }}
-          >
-            <StoreContext.Provider value={mockStoreValue}>
-              {children}
-            </StoreContext.Provider>
-          </SessionContext.Provider>
-        );
-      }
+      // Create wrapper with getLimits mock using standardized factories
+      const sessionStore = createSessionStore();
+      const mockSocket = createMockSocket();
+      sessionStore.initializeSession(mockSocket, 'test:room', {
+        id: 'user-1',
+        name: 'Test User',
+        email: 'test@example.com',
+        color: '#ff0000',
+      });
 
       act(() => {
         setMockActiveRun(run);
       });
 
+      const mockStoreValue = createMockStoreContextValue({
+        sessionContextStore: createMockSessionContextStore({
+          getLimits: getLimitsMock,
+        }),
+        historyStore: createMockHistoryStore({}, mockActiveRun),
+      });
+
+      const wrapper = ({ children }: { children: React.ReactNode }) => (
+        <SessionContext.Provider
+          value={{
+            sessionId: 'test-session',
+            awareness: { clientId: 1 } as any,
+            sessionStore,
+          }}
+        >
+          <StoreContext.Provider value={mockStoreValue}>
+            {children}
+          </StoreContext.Provider>
+        </SessionContext.Provider>
+      );
+
       const { result } = renderHook(() => useRunRetry(options), {
-        wrapper: createWrapperWithGetLimits(),
+        wrapper,
       });
 
       await act(async () => {
