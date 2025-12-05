@@ -2,11 +2,10 @@
  * CollaborativeEditorPromoBanner - Promotional banner encouraging users to try the collaborative editor
  *
  * Displays when:
- * - User has experimental features enabled
- * - Banner hasn't been previously dismissed
+ * - Banner hasn't been previously dismissed (checked via cookie)
  *
  * Features:
- * - Fixed position at bottom-center of viewport
+ * - Absolute position at bottom-center of workflow canvas
  * - Dark themed design matching Tailwind sticky banner pattern
  * - Dismissible via X button
  * - Persists dismissal in cookies for 90 days
