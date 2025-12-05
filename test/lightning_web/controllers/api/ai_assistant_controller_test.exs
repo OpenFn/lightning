@@ -244,11 +244,14 @@ defmodule LightningWeb.API.AiAssistantControllerTest do
       unsaved_job_id = Ecto.UUID.generate()
 
       # Create session with unsaved job metadata
+      # Note: workflow_id is set on the session (as create_session_for_unsaved_job does)
+      # to enable preloading and avoid N+1 queries
       session =
         insert(:chat_session,
           user: user,
           session_type: "job_code",
           title: "Unsaved Job Session",
+          workflow_id: workflow.id,
           meta: %{
             "unsaved_job" => %{
               "id" => unsaved_job_id,

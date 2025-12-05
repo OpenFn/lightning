@@ -9,6 +9,7 @@ defmodule LightningWeb.API.AiAssistantController do
   alias Lightning.Policies.Permissions
   alias Lightning.Projects
   alias Lightning.Workflows
+  alias LightningWeb.Channels.AiAssistantJSON
 
   action_fallback LightningWeb.FallbackController
 
@@ -53,10 +54,8 @@ defmodule LightningWeb.API.AiAssistantController do
       %{sessions: sessions, pagination: pagination} =
         AiAssistant.list_sessions(resource, :desc, opts)
 
-      formatted_sessions = Enum.map(sessions, &format_session/1)
-
       json(conn, %{
-        sessions: formatted_sessions,
+        sessions: AiAssistantJSON.format_sessions(sessions),
         pagination: %{
           total_count: pagination.total_count,
           has_next_page: pagination.has_next_page,
@@ -166,72 +165,5 @@ defmodule LightningWeb.API.AiAssistantController do
       :ok -> :ok
       {:error, _reason} -> {:error, :forbidden}
     end
-  end
-
-  defp format_session(session) do
-    base = %{
-      id: session.id,
-      title: session.title,
-      session_type: session.session_type,
-      message_count: session.message_count || 0,
-      updated_at: session.updated_at
-    }
-
-    case session.session_type do
-      "job_code" ->
-        format_job_code_session(base, session)
-
-      "workflow_template" ->
-        format_workflow_template_session(base, session)
-    end
-  end
-
-  defp format_job_code_session(base, session) do
-    unsaved_job = session.meta["unsaved_job"]
-
-    cond do
-      unsaved_job ->
-        workflow = Workflows.get_workflow(unsaved_job["workflow_id"])
-
-        Map.merge(base, %{
-          job_name: unsaved_job["name"],
-          workflow_name: workflow.name,
-          is_unsaved: true
-        })
-
-      session.job_id ->
-        case Jobs.get_job(session.job_id) do
-          {:ok, job} ->
-            workflow = Workflows.get_workflow(job.workflow_id)
-
-            Map.merge(base, %{
-              job_name: job.name,
-              workflow_name: workflow.name
-            })
-
-          {:error, :not_found} ->
-            Map.merge(base, %{
-              job_name: "(deleted job)",
-              workflow_name: nil
-            })
-        end
-    end
-  end
-
-  defp format_workflow_template_session(base, session) do
-    project = session.project || Projects.get_project(session.project_id)
-
-    workflow_name =
-      if session.workflow_id do
-        workflow = Workflows.get_workflow(session.workflow_id)
-        workflow.name
-      else
-        nil
-      end
-
-    Map.merge(base, %{
-      project_name: project.name,
-      workflow_name: workflow_name
-    })
   end
 end
