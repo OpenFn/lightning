@@ -94,7 +94,7 @@ describe('CollaborativeWorkflowDiagram - Real-time Run Updates', () => {
     history: WorkOrder[];
     loading: boolean;
     error: null;
-    channelConnected: boolean;
+    isChannelConnected: boolean;
     runStepsCache: Record<string, RunStepsData>;
     runStepsSubscribers: Record<string, Set<string>>;
     runStepsLoading: Set<string>;
@@ -292,7 +292,7 @@ describe('CollaborativeWorkflowDiagram - Real-time Run Updates', () => {
       ],
       loading: false,
       error: null,
-      channelConnected: true,
+      isChannelConnected: true,
       runStepsCache: {},
       runStepsSubscribers: {},
       runStepsLoading: new Set(),
