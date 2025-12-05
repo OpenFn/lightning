@@ -618,7 +618,7 @@ export function ManualRunPanel({
                 void handleRetry();
               }}
               buttonText={{
-                run: 'Run Workflow Now',
+                run: 'Run',
                 retry: 'Run (retry)',
                 processing: 'Processing',
               }}

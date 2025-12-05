@@ -2,7 +2,6 @@ import {
   ChevronRightIcon,
   ClockIcon,
   DocumentTextIcon,
-  PlayIcon,
   SparklesIcon,
   ViewColumnsIcon,
   XMarkIcon,
@@ -61,6 +60,7 @@ import MiniHistory from '../diagram/MiniHistory';
 import { JobSelector } from '../JobSelector';
 import { ManualRunPanel } from '../ManualRunPanel';
 import { ManualRunPanelErrorBoundary } from '../ManualRunPanelErrorBoundary';
+import { NewRunButton } from '../NewRunButton';
 import { RunViewerErrorBoundary } from '../run-viewer/RunViewerErrorBoundary';
 import { RunViewerPanel } from '../run-viewer/RunViewerPanel';
 import { RunRetryButton } from '../RunRetryButton';
@@ -834,16 +834,9 @@ export function FullScreenIDE({
               </button>
             )}
 
-            {/* Run button - shown when no panel or viewing history */}
+            {/* New Run button - shown when no panel or viewing history */}
             {(panelState === undefined || panelState === 'history') && (
-              <button
-                type="button"
-                onClick={handleNavigateToCreateRun}
-                className="inline-flex items-center gap-1.5 rounded-md px-3 py-2 text-sm font-semibold shadow-xs bg-white text-gray-900 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 transition-colors"
-              >
-                <PlayIcon className="h-4 w-4" />
-                Run
-              </button>
+              <NewRunButton onClick={handleNavigateToCreateRun} />
             )}
 
             {/* Run/Retry button - shown when creating new run or viewing existing run */}
