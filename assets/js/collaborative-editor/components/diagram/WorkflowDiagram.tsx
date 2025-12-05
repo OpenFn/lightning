@@ -6,8 +6,8 @@ import {
   MiniMap,
   type NodeChange,
   ReactFlow,
+  type ReactFlowInstance,
   ReactFlowProvider,
-  useReactFlow,
 } from '@xyflow/react';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import tippy from 'tippy.js';
@@ -110,8 +110,7 @@ const logger = _logger.ns('WorkflowDiagram').seal();
 const flowhandlers = flowHandlers({ dragThreshold: DRAG_THRESHOLD });
 
 export default function WorkflowDiagram(props: WorkflowDiagramProps) {
-  const flowInstance = useReactFlow();
-  const [flow, setFlow] = useState<typeof flowInstance | null>(null);
+  const [flow, setFlow] = useState<ReactFlowInstance | null>(null);
   // value of select in props seems same as select in store.
   // one in props is always set on initial render. (helps with refresh)
   const { selection, onSelectionChange, containerEl: el, runSteps } = props;
@@ -891,7 +890,7 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
       cancelPlaceholder();
       updateSelection(null);
     },
-    flowInstance,
+    flow,
     workflowStore
   );
   // Set up tooltips for control buttons
