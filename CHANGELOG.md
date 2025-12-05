@@ -30,6 +30,8 @@ and this project adheres to
 
 - Fix new jobs are misplaced on the canvas in manual layout
   [#4118](https://github.com/OpenFn/lightning/issues/4118)
+- Fix docs not working for latest version of adaptors in IDE
+  [#4136](https://github.com/OpenFn/lightning/issues/4136)
 
 ## [2.15.0-pre3] - 2025-12-05
 
