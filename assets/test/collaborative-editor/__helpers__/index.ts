@@ -123,3 +123,11 @@ export {
   type SessionContextResponse,
   type CreateSessionContextOptions,
 } from './sessionContextFactory';
+
+// Store mocks
+export {
+  createMockSessionContextStore,
+  createMockHistoryStore,
+  createMockStoreContextValue,
+  defaultSessionContextState,
+} from './storeMocks';

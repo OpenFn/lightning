@@ -8,7 +8,7 @@ import { describe, expect, test, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { YAMLImportPanel } from '../../../../js/collaborative-editor/components/left-panel/YAMLImportPanel';
 import { StoreContext } from '../../../../js/collaborative-editor/contexts/StoreProvider';
-import type { StoreContextValue } from '../../../../js/collaborative-editor/contexts/StoreProvider';
+import { createMockStoreContextValue } from '../../__helpers__';
 
 // Mock the awareness hook
 vi.mock('../../../../js/collaborative-editor/hooks/useAwareness', () => ({
@@ -39,16 +39,6 @@ const invalidYAML = `
 invalid: [syntax
 `;
 
-function createMockStoreContext(): StoreContextValue {
-  return {
-    sessionContextStore: {} as any,
-    adaptorStore: {} as any,
-    credentialStore: {} as any,
-    awarenessStore: {} as any,
-    workflowStore: {} as any,
-  };
-}
-
 describe('YAMLImportPanel', () => {
   let mockOnBack: ReturnType<typeof vi.fn>;
   let mockOnImport: ReturnType<typeof vi.fn>;
@@ -63,7 +53,7 @@ describe('YAMLImportPanel', () => {
 
   describe('Panel visibility', () => {
     test('shows panel content', () => {
-      const mockStore = createMockStoreContext();
+      const mockStore = createMockStoreContextValue();
       render(
         <StoreContext.Provider value={mockStore}>
           <YAMLImportPanel
@@ -80,7 +70,7 @@ describe('YAMLImportPanel', () => {
 
   describe('State machine', () => {
     test('starts in initial state with disabled button', () => {
-      const mockStore = createMockStoreContext();
+      const mockStore = createMockStoreContextValue();
       render(
         <StoreContext.Provider value={mockStore}>
           <YAMLImportPanel
@@ -96,7 +86,7 @@ describe('YAMLImportPanel', () => {
     });
 
     test('transitions to parsing state when YAML entered', async () => {
-      const mockStore = createMockStoreContext();
+      const mockStore = createMockStoreContextValue();
       render(
         <StoreContext.Provider value={mockStore}>
           <YAMLImportPanel
@@ -120,7 +110,7 @@ describe('YAMLImportPanel', () => {
     });
 
     test('transitions to valid state after successful validation', async () => {
-      const mockStore = createMockStoreContext();
+      const mockStore = createMockStoreContextValue();
       render(
         <StoreContext.Provider value={mockStore}>
           <YAMLImportPanel
@@ -147,7 +137,7 @@ describe('YAMLImportPanel', () => {
     });
 
     test('transitions to invalid state with validation errors', async () => {
-      const mockStore = createMockStoreContext();
+      const mockStore = createMockStoreContextValue();
       render(
         <StoreContext.Provider value={mockStore}>
           <YAMLImportPanel
@@ -174,7 +164,7 @@ describe('YAMLImportPanel', () => {
     });
 
     test('transitions to importing state when Create clicked', async () => {
-      const mockStore = createMockStoreContext();
+      const mockStore = createMockStoreContextValue();
       render(
         <StoreContext.Provider value={mockStore}>
           <YAMLImportPanel
@@ -211,7 +201,7 @@ describe('YAMLImportPanel', () => {
 
   describe('Debounced validation', () => {
     test('does not validate immediately on input', async () => {
-      const mockStore = createMockStoreContext();
+      const mockStore = createMockStoreContextValue();
       render(
         <StoreContext.Provider value={mockStore}>
           <YAMLImportPanel
@@ -239,7 +229,7 @@ describe('YAMLImportPanel', () => {
     });
 
     test('validates after 300ms delay', async () => {
-      const mockStore = createMockStoreContext();
+      const mockStore = createMockStoreContextValue();
       render(
         <StoreContext.Provider value={mockStore}>
           <YAMLImportPanel
@@ -272,7 +262,7 @@ describe('YAMLImportPanel', () => {
 
   describe('User actions', () => {
     test('navigates back when Back button clicked', () => {
-      const mockStore = createMockStoreContext();
+      const mockStore = createMockStoreContextValue();
       render(
         <StoreContext.Provider value={mockStore}>
           <YAMLImportPanel
@@ -292,7 +282,7 @@ describe('YAMLImportPanel', () => {
 
   describe('UI elements', () => {
     test('shows button states during validation', async () => {
-      const mockStore = createMockStoreContext();
+      const mockStore = createMockStoreContextValue();
       render(
         <StoreContext.Provider value={mockStore}>
           <YAMLImportPanel

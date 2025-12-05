@@ -204,7 +204,22 @@ defmodule LightningWeb.WorkflowChannel do
             workflow.lock_version,
         project_repo_connection: render_repo_connection(project_repo_connection),
         webhook_auth_methods: render_webhook_auth_methods(webhook_auth_methods),
-        workflow_template: render_workflow_template(workflow_template)
+        workflow_template: render_workflow_template(workflow_template),
+        limits: render_limits(project.id)
+      }
+    end)
+  end
+
+  @impl true
+  def handle_in("get_limits", %{"action_type" => action_type}, socket) do
+    project = socket.assigns.project
+
+    async_task(socket, "get_limits", fn ->
+      limit_result = check_action_limit(action_type, project.id)
+
+      %{
+        action_type: action_type,
+        limit: render_limit_result(limit_result)
       }
     end)
   end
@@ -705,7 +720,8 @@ defmodule LightningWeb.WorkflowChannel do
               "get_context",
               "request_history",
               "request_versions",
-              "request_trigger_auth_methods"
+              "request_trigger_auth_methods",
+              "get_limits"
             ] do
     reply(socket_ref, reply)
   end
@@ -1216,6 +1232,33 @@ defmodule LightningWeb.WorkflowChannel do
         created_by_id: run.created_by_id,
         created_by_email: run.created_by && run.created_by.email
       }
+    }
+  end
+
+  defp check_action_limit("new_run", project_id) do
+    WorkOrders.limit_run_creation(project_id)
+  end
+
+  defp render_limits(project_id) do
+    # Check run limit for initial context
+    run_limit_result = check_action_limit("new_run", project_id)
+
+    %{
+      runs: render_limit_result(run_limit_result)
+    }
+  end
+
+  defp render_limit_result(:ok) do
+    %{
+      allowed: true,
+      message: nil
+    }
+  end
+
+  defp render_limit_result({:error, _reason, message}) do
+    %{
+      allowed: false,
+      message: message.text
     }
   end
 end

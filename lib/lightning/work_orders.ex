@@ -74,6 +74,17 @@ defmodule Lightning.WorkOrders do
   defdelegate subscribe, to: Events
   defdelegate subscribe(project_id), to: Events
 
+  @spec limit_run_creation(Ecto.UUID.t(), non_neg_integer()) ::
+          :ok | UsageLimiting.error()
+  def limit_run_creation(project_id, runs_count \\ 1) do
+    UsageLimiter.limit_action(
+      %Action{type: :new_run, amount: runs_count},
+      %Context{
+        project_id: project_id
+      }
+    )
+  end
+
   @doc """
   Create a new Work Order.
 
@@ -428,13 +439,7 @@ defmodule Lightning.WorkOrders do
       workorders |> Enum.map(& &1.id) |> fetch_retriable_workorders()
 
     with project_id <- Keyword.fetch!(opts, :project_id),
-         :ok <-
-           UsageLimiter.limit_action(
-             %Action{type: :new_run, amount: length(retriable_workorders)},
-             %Context{
-               project_id: project_id
-             }
-           ) do
+         :ok <- limit_run_creation(project_id, length(retriable_workorders)) do
       creating_user = Keyword.fetch!(opts, :created_by)
 
       retriable_workorders
@@ -466,13 +471,7 @@ defmodule Lightning.WorkOrders do
   def retry_many([%RunStep{} | _rest] = run_steps, opts) do
     with project_id <- Keyword.fetch!(opts, :project_id),
          runs <- Enum.uniq_by(run_steps, & &1.run_id),
-         :ok <-
-           UsageLimiter.limit_action(
-             %Action{type: :new_run, amount: length(runs)},
-             %Context{
-               project_id: project_id
-             }
-           ) do
+         :ok <- limit_run_creation(project_id, length(runs)) do
       results =
         Enum.map(run_steps, fn run_step ->
           retry(run_step.run_id, run_step.step_id, opts)

@@ -2603,5 +2603,74 @@ defmodule LightningWeb.WorkflowChannelTest do
       assert template_id == template.id
       assert workflow_id == workflow.id
     end
+
+    test "includes limits in response", %{socket: socket} do
+      ref = push(socket, "get_context", %{})
+
+      assert_reply ref, :ok, response
+
+      assert %{limits: %{runs: %{allowed: true, message: nil}}} = response
+    end
+
+    test "includes limit error when run limit exceeded", %{
+      socket: socket,
+      project: %{id: project_id}
+    } do
+      error_msg = "Run limit exceeded for this project"
+
+      Mox.stub(
+        Lightning.Extensions.MockUsageLimiter,
+        :limit_action,
+        fn %{type: :new_run}, %{project_id: ^project_id} ->
+          {:error, :too_many_runs,
+           %Lightning.Extensions.Message{text: error_msg}}
+        end
+      )
+
+      ref = push(socket, "get_context", %{})
+
+      assert_reply ref, :ok, response
+
+      assert %{limits: %{runs: %{allowed: false, message: ^error_msg}}} =
+               response
+    end
+  end
+
+  describe "get_limits" do
+    test "returns current limit status for new_run", %{socket: socket} do
+      ref = push(socket, "get_limits", %{"action_type" => "new_run"})
+
+      assert_reply ref, :ok, response
+
+      assert %{
+               action_type: "new_run",
+               limit: %{allowed: true, message: nil}
+             } = response
+    end
+
+    test "returns allowed: false when run limit exceeded", %{
+      socket: socket,
+      project: %{id: project_id}
+    } do
+      error_msg = "Run limit exceeded for this project"
+
+      Mox.stub(
+        Lightning.Extensions.MockUsageLimiter,
+        :limit_action,
+        fn %{type: :new_run}, %{project_id: ^project_id} ->
+          {:error, :too_many_runs,
+           %Lightning.Extensions.Message{text: error_msg}}
+        end
+      )
+
+      ref = push(socket, "get_limits", %{"action_type" => "new_run"})
+
+      assert_reply ref, :ok, response
+
+      assert %{
+               action_type: "new_run",
+               limit: %{allowed: false, message: ^error_msg}
+             } = response
+    end
   end
 end

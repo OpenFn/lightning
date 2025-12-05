@@ -42,6 +42,16 @@ defmodule LightningWeb.FallbackController do
     |> render("error.json", changeset: changeset)
   end
 
+  def call(conn, {:error, _reason, %Lightning.Extensions.Message{} = message}) do
+    call(conn, {:error, message})
+  end
+
+  def call(conn, {:error, %Lightning.Extensions.Message{} = message}) do
+    conn
+    |> put_status(:bad_request)
+    |> json(%{error: message.text})
+  end
+
   def call(conn, {:error, error}) when is_binary(error) do
     conn
     |> put_status(:bad_request)

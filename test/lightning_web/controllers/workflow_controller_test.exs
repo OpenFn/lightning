@@ -202,6 +202,33 @@ defmodule LightningWeb.WorkflowControllerTest do
       # Returns 400 HTML error
       assert html_response(conn, 400) =~ "Bad Request"
     end
+
+    test "returns 400 when run limit exceeded", %{
+      conn: conn,
+      project: project,
+      workflow: workflow,
+      job: job
+    } do
+      error_msg = "Run limit exceeded for this project"
+      # Mock the UsageLimiter to return a limit error
+      Mox.stub(
+        Lightning.Extensions.MockUsageLimiter,
+        :limit_action,
+        fn %{type: :new_run}, %{project_id: _project_id} ->
+          {:error, :too_many_runs,
+           %Lightning.Extensions.Message{
+             text: error_msg
+           }}
+        end
+      )
+
+      conn =
+        post(conn, ~p"/projects/#{project}/workflows/#{workflow}/runs", %{
+          job_id: job.id
+        })
+
+      assert %{"error" => ^error_msg} = json_response(conn, 400)
+    end
   end
 
   describe "GET /projects/:project_id/runs/:run_id/steps" do
@@ -364,6 +391,33 @@ defmodule LightningWeb.WorkflowControllerTest do
       assert %{"data" => %{"run_id" => new_run_id}} = json_response(conn, 201)
       assert is_binary(new_run_id)
       assert new_run_id != run.id
+    end
+
+    test "returns 400 when run limit exceeded", %{
+      conn: conn,
+      project: project,
+      run: run,
+      step: step
+    } do
+      error_msg = "Run limit exceeded for this project"
+      # Mock the UsageLimiter to return a limit error
+      Mox.stub(
+        Lightning.Extensions.MockUsageLimiter,
+        :limit_action,
+        fn %{type: :new_run}, %{project_id: _project_id} ->
+          {:error, :too_many_runs,
+           %Lightning.Extensions.Message{
+             text: error_msg
+           }}
+        end
+      )
+
+      conn =
+        post(conn, ~p"/projects/#{project}/runs/#{run}/retry", %{
+          step_id: step.id
+        })
+
+      assert %{"error" => ^error_msg} = json_response(conn, 400)
     end
 
     test "returns 400 when step_id missing", %{
