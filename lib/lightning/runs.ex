@@ -262,28 +262,44 @@ defmodule Lightning.Runs do
   end
 
   def append_run_log(run, params, scrubber \\ nil) do
-    LogLine.new(run, params, scrubber)
-    |> Ecto.Changeset.validate_change(:step_id, fn _field, step_id ->
-      if is_nil(step_id) do
-        []
-      else
-        where(Lightning.RunStep, step_id: ^step_id, run_id: ^run.id)
-        |> Repo.exists?()
-        |> if do
-          []
-        else
-          [{:step_id, "must be associated with the run"}]
-        end
+    log_entries =
+      case Map.get(params, :logs) || Map.get(params, "logs") do
+        logs when is_list(logs) -> logs
+        nil -> [params]
       end
-    end)
-    |> Repo.insert()
-    |> case do
-      {:ok, log_line} ->
-        Events.log_appended(log_line)
-        {:ok, log_line}
 
-      {:error, changeset} ->
-        {:error, changeset}
+    results =
+      Enum.map(log_entries, fn log_entry ->
+        IO.inspect(log_entry, label: "log object in append_run_log")
+
+        LogLine.new(run, log_entry, scrubber)
+        |> Ecto.Changeset.validate_change(:step_id, fn _field, step_id ->
+          if is_nil(step_id) do
+            []
+          else
+            where(Lightning.RunStep, step_id: ^step_id, run_id: ^run.id)
+            |> Repo.exists?()
+            |> if do
+              []
+            else
+              [{:step_id, "must be associated with the run"}]
+            end
+          end
+        end)
+        |> Repo.insert()
+        |> case do
+          {:ok, log_line} ->
+            Events.log_appended(log_line)
+            {:ok, log_line}
+
+          {:error, changeset} ->
+            {:error, changeset}
+        end
+      end)
+
+    case Enum.find(results, fn result -> match?({:error, _}, result) end) do
+      nil -> :ok
+      error -> error
     end
   end
 
