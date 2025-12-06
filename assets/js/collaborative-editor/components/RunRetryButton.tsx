@@ -26,9 +26,9 @@ interface RunRetryButtonProps {
 /**
  * RunRetryButton - Split button for Run/Retry operations
  *
- * Displays a single "Run" button when retry is not available,
- * or a split button with "Run (Retry)" main action and
- * "Run (New Work Order)" dropdown option when retry is available.
+ * Always renders as a split button with main action and dropdown chevron.
+ * The dropdown option is only shown when retry is available.
+ * This consistent structure prevents layout shift during state transitions.
  *
  * @example
  * <RunRetryButton
@@ -81,12 +81,18 @@ export function RunRetryButton({
       disabled: 'disabled:bg-primary-300',
       submitting: 'bg-primary-300 text-white',
       focus: 'focus-visible:outline-primary-600',
+      chevronBase: 'bg-primary-600 hover:bg-primary-500 text-white',
+      chevronDisabled: 'bg-primary-300 text-white',
     },
     secondary: {
       base: 'bg-white hover:bg-gray-50 text-gray-900 inset-ring inset-ring-gray-300 hover:inset-ring-gray-400',
       disabled: 'disabled:bg-gray-50 disabled:text-gray-400',
       submitting: 'bg-gray-50 text-gray-400 inset-ring inset-ring-gray-300',
       focus: 'focus-visible:outline-gray-600',
+      chevronBase:
+        'bg-white hover:bg-gray-50 text-gray-900 inset-ring inset-ring-gray-300 hover:inset-ring-gray-400',
+      chevronDisabled:
+        'bg-gray-50 text-gray-400 inset-ring inset-ring-gray-300',
     },
   };
 
@@ -121,96 +127,84 @@ export function RunRetryButton({
     onRun();
   };
 
-  if (isSubmitting) {
-    return (
-      <button
-        type="button"
-        disabled
-        className={cn(
-          'rounded-md text-sm font-semibold shadow-xs px-3 py-2',
-          styles.submitting,
-          'cursor-not-allowed',
-          'flex items-center gap-1',
-          className
-        )}
-      >
-        <span className="hero-arrow-path w-4 h-4 animate-spin"></span>
-        {processing}
-      </button>
-    );
-  }
+  // Determine button text and icon based on state
+  const buttonContent = isSubmitting ? (
+    <>
+      <span className="hero-arrow-path w-4 h-4 animate-spin"></span>
+      {processing}
+    </>
+  ) : (
+    <>
+      <span className="hero-play-mini w-4 h-4"></span>
+      {isRetryable ? retry : run}
+    </>
+  );
 
-  if (!isRetryable) {
-    return (
-      <Tooltip content={mainButtonTooltip} side="bottom">
-        <button
-          type="button"
-          onClick={handleMainClick}
-          disabled={isDisabled}
-          className={cn(
-            'rounded-md text-sm font-semibold shadow-xs px-3 py-2',
-            styles.base,
-            styles.disabled,
-            'disabled:cursor-not-allowed',
-            'focus-visible:outline-2 focus-visible:outline-offset-2',
-            styles.focus,
-            'flex items-center gap-1',
-            className
-          )}
-        >
-          <span className="hero-play-mini w-4 h-4"></span>
-          {run}
-        </button>
-      </Tooltip>
-    );
-  }
+  // Determine if chevron should be interactive
+  const chevronDisabled = isDisabled || isSubmitting || !isRetryable;
 
   return (
     <div
       className={cn('inline-flex rounded-md shadow-xs', className)}
       ref={dropdownRef}
     >
-      <Tooltip content={mainButtonTooltip} side="bottom">
+      {/* Main button - min-width ensures no layout shift between text states */}
+      <Tooltip content={isSubmitting ? null : mainButtonTooltip} side="bottom">
         <button
           type="button"
           onClick={handleMainClick}
-          disabled={isDisabled}
+          disabled={isDisabled || isSubmitting}
           className={cn(
             'rounded-md text-sm font-semibold shadow-xs px-3 py-2',
-            styles.base,
-            styles.disabled,
-            'disabled:cursor-not-allowed',
+            'relative inline-flex items-center justify-center gap-1 rounded-r-none',
             'focus-visible:outline-2 focus-visible:outline-offset-2',
-            styles.focus,
-            'relative inline-flex items-center rounded-r-none'
+            'min-w-[6.5rem]',
+            isSubmitting
+              ? [styles.submitting, 'cursor-not-allowed']
+              : [
+                  styles.base,
+                  styles.disabled,
+                  'disabled:cursor-not-allowed',
+                  styles.focus,
+                ]
           )}
         >
-          <span className="hero-play-mini w-4 h-4 mr-1"></span>
-          {retry}
+          {buttonContent}
         </button>
       </Tooltip>
 
+      {/* Chevron dropdown button - always rendered for consistent width */}
       <div className="relative -ml-px">
-        <button
-          type="button"
-          onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-          disabled={isDisabled}
-          className={cn(
-            'rounded-md text-sm font-semibold shadow-xs px-1 py-2',
-            styles.base,
-            styles.disabled,
-            'disabled:cursor-not-allowed',
-            'focus-visible:outline-2 focus-visible:outline-offset-2',
-            styles.focus,
-            'h-full rounded-l-none'
-          )}
-          aria-expanded={isDropdownOpen}
-          aria-haspopup="true"
+        <Tooltip
+          content={!chevronDisabled ? dropdownTooltip : null}
+          side="bottom"
         >
-          <span className="sr-only">Open options</span>
-          <span className="hero-chevron-down w-4 h-4"></span>
-        </button>
+          <button
+            type="button"
+            onClick={() =>
+              !chevronDisabled && setIsDropdownOpen(!isDropdownOpen)
+            }
+            disabled={chevronDisabled}
+            className={cn(
+              'rounded-md text-sm font-semibold shadow-xs px-1 py-2',
+              'h-full rounded-l-none',
+              'focus-visible:outline-2 focus-visible:outline-offset-2',
+              chevronDisabled
+                ? [
+                    isSubmitting ? styles.submitting : styles.chevronDisabled,
+                    'cursor-not-allowed',
+                  ]
+                : [styles.chevronBase, styles.focus]
+            )}
+            aria-expanded={isDropdownOpen}
+            aria-haspopup="true"
+          >
+            <span className="sr-only">Open options</span>
+            <span className="hero-chevron-down w-4 h-4"></span>
+          </button>
+        </Tooltip>
 
+        {/* Dropdown menu */}
         {isDropdownOpen && (
           <div
             role="menu"

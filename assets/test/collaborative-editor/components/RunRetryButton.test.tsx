@@ -41,11 +41,15 @@ describe('RunRetryButton', () => {
       // Should show Run Workflow button
       expect(screen.getByText('Run Workflow')).toBeInTheDocument();
 
-      // Should NOT show retry text or dropdown
+      // Should NOT show retry text
       expect(screen.queryByText(/retry/i)).not.toBeInTheDocument();
-      expect(
-        screen.queryByRole('button', { name: /open options/i })
-      ).not.toBeInTheDocument();
+
+      // Chevron is always present but disabled when not retryable
+      const chevronButton = screen.getByRole('button', {
+        name: /open options/i,
+      });
+      expect(chevronButton).toBeInTheDocument();
+      expect(chevronButton).toBeDisabled();
     });
 
     test('renders split button with retry text when retryable', () => {
@@ -794,13 +798,14 @@ describe('RunRetryButton', () => {
         />
       );
 
-      // Initially single button
+      // Initially shows Run Workflow with disabled chevron
       expect(screen.getByText('Run Workflow')).toBeInTheDocument();
-      expect(
-        screen.queryByRole('button', { name: /open options/i })
-      ).not.toBeInTheDocument();
+      const chevronButton = screen.getByRole('button', {
+        name: /open options/i,
+      });
+      expect(chevronButton).toBeDisabled();
 
-      // Switch to split button
+      // Switch to retryable mode - chevron becomes enabled
       rerender(
         <RunRetryButton
           isRetryable={true}
