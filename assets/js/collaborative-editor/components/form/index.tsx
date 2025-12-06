@@ -26,6 +26,10 @@ const { useAppForm: useBaseAppForm } = createFormHook({
   formComponents: {},
 });
 
+export type useAppBaseFormType = ReturnType<
+  typeof createFormHook
+>['useAppForm'];
+
 /**
  * Enhanced useAppForm that automatically integrates collaborative
  * validation from Y.Doc
@@ -52,7 +56,7 @@ const { useAppForm: useBaseAppForm } = createFormHook({
  * const form = useAppForm({ defaultValues: { name: "" } }, `jobs.${jobId}`);
  */
 export function useAppForm(
-  formOptions: Parameters<typeof useBaseAppForm>[0],
+  formOptions: Parameters<useAppBaseFormType>[0],
   errorPath?: string
 ) {
   const form = useBaseAppForm(formOptions);
