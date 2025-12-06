@@ -13,6 +13,8 @@ defmodule Lightning.AiAssistant.MessageProcessor do
   alias Lightning.AiAssistant
   alias Lightning.AiAssistant.ChatMessage
   alias Lightning.AiAssistant.ChatSession
+  alias Lightning.AiAssistant.Scrubber
+  alias Lightning.Invocation
   alias Lightning.Repo
 
   require Logger
@@ -117,7 +119,47 @@ defmodule Lightning.AiAssistant.MessageProcessor do
           []
       end
 
+    # Add I/O data if requested
+    options =
+      case session.meta do
+        %{"message_options" => %{"attach_io_data" => true, "step_id" => step_id}}
+        when is_binary(step_id) ->
+          {input, output} = fetch_and_scrub_io_data(step_id)
+
+          options
+          |> Keyword.put(:input, input)
+          |> Keyword.put(:output, output)
+
+        _ ->
+          options
+      end
+
     AiAssistant.query(enriched_session, message.content, options)
+  end
+
+  @spec fetch_and_scrub_io_data(String.t() | nil) :: {map() | nil, map() | nil}
+  defp fetch_and_scrub_io_data(nil), do: {nil, nil}
+
+  defp fetch_and_scrub_io_data(step_id) do
+    case Invocation.get_step_with_dataclips(step_id) do
+      nil ->
+        {nil, nil}
+
+      step ->
+        input =
+          case step.input_dataclip do
+            %{body: body} when not is_nil(body) -> Scrubber.scrub_values(body)
+            _ -> nil
+          end
+
+        output =
+          case step.output_dataclip do
+            %{body: body} when not is_nil(body) -> Scrubber.scrub_values(body)
+            _ -> nil
+          end
+
+        {input, output}
+    end
   end
 
   @doc false

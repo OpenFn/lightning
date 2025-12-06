@@ -560,7 +560,9 @@ defmodule LightningWeb.AiAssistantChannel do
   defp extract_message_options("job_code", params) do
     message_options = %{
       "code" => params["attach_code"] == true,
-      "log" => params["attach_logs"] == true
+      "log" => params["attach_logs"] == true,
+      "attach_io_data" => params["attach_io_data"] == true,
+      "step_id" => params["step_id"]
     }
 
     [meta: %{"message_options" => message_options}]

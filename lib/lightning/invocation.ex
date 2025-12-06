@@ -418,6 +418,18 @@ defmodule Lightning.Invocation do
   def get_step!(id), do: Repo.get!(Step, id)
 
   @doc """
+  Gets a step by ID with its input and output dataclips preloaded.
+  Returns nil if step not found.
+  """
+  @spec get_step_with_dataclips(Ecto.UUID.t()) :: Step.t() | nil
+  def get_step_with_dataclips(step_id) do
+    Step
+    |> where([s], s.id == ^step_id)
+    |> preload([:input_dataclip, :output_dataclip])
+    |> Repo.one()
+  end
+
+  @doc """
   Fetches a step and preloads the job via the step's event.
   """
   def get_step_with_job!(id),

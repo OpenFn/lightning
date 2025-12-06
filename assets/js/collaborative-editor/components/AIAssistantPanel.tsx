@@ -10,6 +10,7 @@ import {
   useAIHasCompletedSessionLoad,
   useAISessionListCommands,
 } from '../hooks/useAIAssistant';
+import { useSelectedStepId } from '../hooks/useHistory';
 
 import { ChatInput } from './ChatInput';
 import { DisclaimerScreen } from './DisclaimerScreen';
@@ -112,6 +113,7 @@ export function AIAssistantPanel({
   const hasSessionContext = useAIHasSessionContext();
   const hasCompletedSessionLoad = useAIHasCompletedSessionLoad();
   const { loadSessionList } = useAISessionListCommands();
+  const selectedStepId = useSelectedStepId();
 
   useEffect(() => {
     if (prevViewRef.current !== view) {
@@ -412,6 +414,7 @@ export function AIAssistantPanel({
         focusTrigger={(focusTrigger ?? 0) + internalFocusTrigger}
         placeholder={placeholderText}
         disabledMessage={disabledMessage}
+        selectedStepId={selectedStepId}
       />
 
       {/* About AI Assistant Modal */}

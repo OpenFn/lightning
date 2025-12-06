@@ -169,6 +169,8 @@ export interface AIAssistantStore {
 export interface MessageOptions {
   attach_code?: boolean;
   attach_logs?: boolean;
+  attach_io_data?: boolean;
+  step_id?: string;
 
   code?: string;
   errors?: string;

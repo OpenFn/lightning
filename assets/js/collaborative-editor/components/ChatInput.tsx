@@ -21,11 +21,15 @@ interface ChatInputProps {
   placeholder?: string | undefined;
   /** Message to show in tooltip when input is disabled */
   disabledMessage?: string | undefined;
+  /** Selected step ID for attaching I/O data */
+  selectedStepId?: string | null;
 }
 
 interface MessageOptions {
   attach_code?: boolean;
   attach_logs?: boolean;
+  attach_io_data?: boolean;
+  step_id?: string;
 }
 
 const MIN_TEXTAREA_HEIGHT = 52;
@@ -40,6 +44,7 @@ export function ChatInput({
   focusTrigger,
   placeholder = 'Ask me anything...',
   disabledMessage,
+  selectedStepId,
 }: ChatInputProps) {
   const [input, setInput] = useState('');
 
@@ -62,6 +67,19 @@ export function ChatInput({
     }
     try {
       const key = `${storageKey}:attach-logs`;
+      const saved = localStorage.getItem(key);
+      return saved === 'true';
+    } catch {
+      return false;
+    }
+  });
+
+  const [attachIoData, setAttachIoData] = useState(() => {
+    if (!storageKey) {
+      return false;
+    }
+    try {
+      const key = `${storageKey}:attach-io-data`;
       const saved = localStorage.getItem(key);
       return saved === 'true';
     } catch {
@@ -107,6 +125,15 @@ export function ChatInput({
       // Ignore localStorage errors
     }
 
+    try {
+      const ioDataKey = `${storageKey}:attach-io-data`;
+      const savedIoData = localStorage.getItem(ioDataKey);
+      const ioDataValue = savedIoData === 'true';
+      setAttachIoData(ioDataValue);
+    } catch {
+      // Ignore localStorage errors
+    }
+
     setTimeout(() => {
       isLoadingFromStorageRef.current = false;
     }, 0);
@@ -133,6 +160,19 @@ export function ChatInput({
   }, [attachLogs, storageKey]);
 
   useEffect(() => {
+    if (!storageKey) return;
+    if (isLoadingFromStorageRef.current) return;
+    try {
+      localStorage.setItem(
+        `${storageKey}:attach-io-data`,
+        String(attachIoData)
+      );
+    } catch {
+      // Ignore localStorage errors
+    }
+  }, [attachIoData, storageKey]);
+
+  useEffect(() => {
     if (enableAutoFocus && textareaRef.current) {
       const timeoutId = setTimeout(() => {
         textareaRef.current?.focus();
@@ -157,6 +197,10 @@ export function ChatInput({
     if (showJobControls) {
       options.attach_code = attachCode;
       options.attach_logs = attachLogs;
+      if (attachIoData && selectedStepId) {
+        options.attach_io_data = true;
+        options.step_id = selectedStepId;
+      }
     }
 
     onSendMessage?.(input.trim(), options);
@@ -228,7 +272,7 @@ export function ChatInput({
                             focus:ring-primary-500 focus:ring-offset-0 cursor-pointer"
                           />
                           <span className="text-[11px] font-medium text-gray-600 group-hover:text-gray-900">
-                            Include job code
+                            Send code
                           </span>
                         </label>
 
@@ -241,9 +285,51 @@ export function ChatInput({
                             focus:ring-primary-500 focus:ring-offset-0 cursor-pointer"
                           />
                           <span className="text-[11px] font-medium text-gray-600 group-hover:text-gray-900">
-                            Include run logs
+                            Send logs
                           </span>
                         </label>
+
+                        <Tooltip
+                          content={
+                            selectedStepId
+                              ? 'Include scrubbed I/O data structure (values removed)'
+                              : 'Select a step to include I/O data'
+                          }
+                          side="top"
+                        >
+                          <label
+                            className={cn(
+                              'flex items-center gap-1.5 group',
+                              selectedStepId
+                                ? 'cursor-pointer'
+                                : 'cursor-not-allowed opacity-50'
+                            )}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={attachIoData}
+                              onChange={e => setAttachIoData(e.target.checked)}
+                              disabled={!selectedStepId}
+                              className={cn(
+                                'w-3.5 h-3.5 rounded border-gray-300 text-primary-600',
+                                'focus:ring-primary-500 focus:ring-offset-0',
+                                selectedStepId
+                                  ? 'cursor-pointer'
+                                  : 'cursor-not-allowed'
+                              )}
+                            />
+                            <span
+                              className={cn(
+                                'text-[11px] font-medium',
+                                selectedStepId
+                                  ? 'text-gray-600 group-hover:text-gray-900'
+                                  : 'text-gray-400'
+                              )}
+                            >
+                              Send scrubbed I/O
+                            </span>
+                          </label>
+                        </Tooltip>
                       </>
                     ) : (
                       <div className="flex items-center gap-1.5">

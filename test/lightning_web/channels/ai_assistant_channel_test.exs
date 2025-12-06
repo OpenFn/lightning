@@ -1615,6 +1615,82 @@ defmodule LightningWeb.AiAssistantChannelTest do
     end
   end
 
+  describe "new_message with attach_io_data" do
+    @tag :capture_log
+    test "extracts attach_io_data and step_id from params", %{
+      socket: socket,
+      job: job,
+      user: user
+    } do
+      # Create a step to reference
+      step = insert(:step, job: job)
+
+      # Use manual mode to prevent AI response from being generated inline
+      with_testing_mode(:manual, fn ->
+        {:ok, session} =
+          AiAssistant.create_session(job, user, "Initial message", [])
+
+        {:ok, _, socket} =
+          subscribe_and_join(
+            socket,
+            AiAssistantChannel,
+            "ai_assistant:job_code:#{session.id}",
+            %{}
+          )
+
+        # Push message with attach_io_data and step_id
+        ref =
+          push(socket, "new_message", %{
+            "content" => "Help me analyze this run",
+            "attach_io_data" => true,
+            "step_id" => step.id
+          })
+
+        assert_reply ref, :ok, %{message: message}
+        assert message.role == "user"
+        assert message.content == "Help me analyze this run"
+
+        # Verify the session meta contains the message_options
+        updated_session = AiAssistant.get_session!(session.id)
+        message_options = updated_session.meta["message_options"]
+        assert message_options["attach_io_data"] == true
+        assert message_options["step_id"] == step.id
+      end)
+    end
+
+    @tag :capture_log
+    test "stores attach_io_data false when not provided", %{
+      socket: socket,
+      job: job,
+      user: user
+    } do
+      with_testing_mode(:manual, fn ->
+        {:ok, session} =
+          AiAssistant.create_session(job, user, "Initial message", [])
+
+        {:ok, _, socket} =
+          subscribe_and_join(
+            socket,
+            AiAssistantChannel,
+            "ai_assistant:job_code:#{session.id}",
+            %{}
+          )
+
+        ref =
+          push(socket, "new_message", %{
+            "content" => "Help me"
+          })
+
+        assert_reply ref, :ok, %{message: _message}
+
+        # Verify attach_io_data is false by default
+        updated_session = AiAssistant.get_session!(session.id)
+        message_options = updated_session.meta["message_options"]
+        assert message_options["attach_io_data"] == false
+      end)
+    end
+  end
+
   describe "extract_message_options edge cases" do
     @tag :capture_log
     test "handles attach_code and attach_logs for job_code", %{
