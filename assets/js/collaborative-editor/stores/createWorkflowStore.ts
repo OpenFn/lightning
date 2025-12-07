@@ -1229,7 +1229,7 @@ export const createWorkflowStore = () => {
       const parts = path.split('.');
 
       // 1. Read current errors from Y.Doc (outside transaction)
-      const currentErrors = (() => {
+      const currentErrorsRaw = (() => {
         if (parts.length === 1 || !path) {
           // Top-level: "workflow"
           const entityKey = path || 'workflow';
@@ -1265,6 +1265,12 @@ export const createWorkflowStore = () => {
         return {};
       })();
 
+      // Convert Y.Doc object to plain object for Immer compatibility
+      // Y.Doc objects are not draftable by Immer
+      const currentErrors = JSON.parse(
+        JSON.stringify(currentErrorsRaw)
+      ) as Record<string, string[]>;
+
       logger.debug('setClientErrors before merge', {
         path,
         currentErrors,
@@ -1278,8 +1284,8 @@ export const createWorkflowStore = () => {
       const mergedErrors = produce(currentErrors, draft => {
         Object.entries(errors).forEach(([fieldName, newMessages]) => {
           if (newMessages.length === 0) {
-            // Empty array clears the field
-
+            // Empty array clears the field - this clears BOTH client AND backend errors
+            // When user fixes a field, the error should disappear immediately
             delete draft[fieldName];
           } else {
             // Replace with client errors (deduplicate within client errors)
