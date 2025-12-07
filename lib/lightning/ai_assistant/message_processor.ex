@@ -13,9 +13,9 @@ defmodule Lightning.AiAssistant.MessageProcessor do
   alias Lightning.AiAssistant
   alias Lightning.AiAssistant.ChatMessage
   alias Lightning.AiAssistant.ChatSession
-  alias Lightning.Scrubber
   alias Lightning.Invocation
   alias Lightning.Repo
+  alias Lightning.Scrubber
 
   require Logger
 
