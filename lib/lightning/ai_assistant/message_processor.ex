@@ -137,9 +137,7 @@ defmodule Lightning.AiAssistant.MessageProcessor do
     AiAssistant.query(enriched_session, message.content, options)
   end
 
-  @spec fetch_and_scrub_io_data(String.t() | nil) :: {map() | nil, map() | nil}
-  defp fetch_and_scrub_io_data(nil), do: {nil, nil}
-
+  @spec fetch_and_scrub_io_data(String.t()) :: {map() | nil, map() | nil}
   defp fetch_and_scrub_io_data(step_id) do
     case Invocation.get_step_with_dataclips(step_id) do
       nil ->
@@ -148,20 +146,14 @@ defmodule Lightning.AiAssistant.MessageProcessor do
       step ->
         input =
           case step.input_dataclip do
-            %{body: body} when not is_nil(body) ->
-              Scrubber.scrub_values(body) |> IO.inspect(label: "input")
-
-            _ ->
-              nil
+            %{body: body} when not is_nil(body) -> Scrubber.scrub_values(body)
+            _ -> nil
           end
 
         output =
           case step.output_dataclip do
-            %{body: body} when not is_nil(body) ->
-              Scrubber.scrub_values(body) |> IO.inspect(label: "input")
-
-            _ ->
-              nil
+            %{body: body} when not is_nil(body) -> Scrubber.scrub_values(body)
+            _ -> nil
           end
 
         {input, output}
