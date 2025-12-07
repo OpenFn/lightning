@@ -23,6 +23,10 @@ interface ChatInputProps {
   disabledMessage?: string | undefined;
   /** Selected step ID for attaching I/O data */
   selectedStepId?: string | null;
+  /** Selected run ID for attaching logs */
+  selectedRunId?: string | null;
+  /** Selected job ID for attaching code */
+  selectedJobId?: string | null;
 }
 
 interface MessageOptions {
@@ -45,6 +49,8 @@ export function ChatInput({
   placeholder = 'Ask me anything...',
   disabledMessage,
   selectedStepId,
+  selectedRunId,
+  selectedJobId,
 }: ChatInputProps) {
   const [input, setInput] = useState('');
 
@@ -195,10 +201,14 @@ export function ChatInput({
 
     const options: MessageOptions = {};
     if (showJobControls) {
-      options.attach_code = attachCode;
-      options.attach_logs = attachLogs;
-      if (attachIoData && selectedStepId) {
-        options.attach_io_data = true;
+      if (selectedRunId) {
+        options.attach_logs = attachLogs;
+      }
+      if (selectedJobId) {
+        options.attach_code = attachCode;
+      }
+      if (selectedStepId) {
+        options.attach_io_data = attachIoData;
         options.step_id = selectedStepId;
       }
     }
@@ -263,31 +273,95 @@ export function ChatInput({
                   <div className="flex items-center gap-3">
                     {showJobControls ? (
                       <>
-                        <label className="flex items-center gap-1.5 cursor-pointer group">
-                          <input
-                            type="checkbox"
-                            checked={attachCode}
-                            onChange={e => setAttachCode(e.target.checked)}
-                            className="w-3.5 h-3.5 rounded border-gray-300 text-primary-600
-                            focus:ring-primary-500 focus:ring-offset-0 cursor-pointer"
-                          />
-                          <span className="text-[11px] font-medium text-gray-600 group-hover:text-gray-900">
-                            Send code
-                          </span>
-                        </label>
+                        <Tooltip
+                          content={
+                            selectedJobId
+                              ? undefined
+                              : 'Select a job to include code'
+                          }
+                          side="top"
+                        >
+                          <label
+                            className={cn(
+                              'flex items-center gap-1.5 group',
+                              selectedJobId
+                                ? 'cursor-pointer'
+                                : 'cursor-not-allowed opacity-50'
+                            )}
+                          >
+                            <input
+                              type="checkbox"
+                              // NOTE: Regardless of preferences, we show it
+                              // unchecked if no job is selected because code
+                              // can't be sent without a job
+                              checked={attachCode && !!selectedJobId}
+                              onChange={e => setAttachCode(e.target.checked)}
+                              disabled={!selectedJobId}
+                              className={cn(
+                                'w-3.5 h-3.5 rounded border-gray-300 text-primary-600',
+                                'focus:ring-primary-500 focus:ring-offset-0',
+                                selectedJobId
+                                  ? 'cursor-pointer'
+                                  : 'cursor-not-allowed'
+                              )}
+                            />
+                            <span
+                              className={cn(
+                                'text-[11px] font-medium',
+                                selectedJobId
+                                  ? 'text-gray-600 group-hover:text-gray-900'
+                                  : 'text-gray-400'
+                              )}
+                            >
+                              Send code
+                            </span>
+                          </label>
+                        </Tooltip>
 
-                        <label className="flex items-center gap-1.5 cursor-pointer group">
-                          <input
-                            type="checkbox"
-                            checked={attachLogs}
-                            onChange={e => setAttachLogs(e.target.checked)}
-                            className="w-3.5 h-3.5 rounded border-gray-300 text-primary-600
-                            focus:ring-primary-500 focus:ring-offset-0 cursor-pointer"
-                          />
-                          <span className="text-[11px] font-medium text-gray-600 group-hover:text-gray-900">
-                            Send logs
-                          </span>
-                        </label>
+                        <Tooltip
+                          content={
+                            selectedRunId
+                              ? undefined
+                              : 'Select a run to include logs'
+                          }
+                          side="top"
+                        >
+                          <label
+                            className={cn(
+                              'flex items-center gap-1.5 group',
+                              selectedRunId
+                                ? 'cursor-pointer'
+                                : 'cursor-not-allowed opacity-50'
+                            )}
+                          >
+                            <input
+                              type="checkbox"
+                              // NOTE: Regardless of preferences, we show it
+                              // unchecked if no run is selected because logs
+                              // can't be sent without a run
+                              checked={attachLogs && !!selectedRunId}
+                              onChange={e => setAttachLogs(e.target.checked)}
+                              disabled={!selectedRunId}
+                              className={cn(
+                                'w-3.5 h-3.5 rounded border-gray-300 text-primary-600',
+                                'focus:ring-primary-500 focus:ring-offset-0',
+                                selectedRunId
+                                  ? 'cursor-pointer'
+                                  : 'cursor-not-allowed'
+                              )}
+                            />
+                            <span
+                              className={cn(
+                                'text-[11px] font-medium',
+                                selectedRunId
+                                  ? 'text-gray-600 group-hover:text-gray-900'
+                                  : 'text-gray-400'
+                              )}
+                            >
+                              Send logs
+                            </span>
+                          </label>
+                        </Tooltip>
 
                         <Tooltip
                           content={
@@ -307,7 +381,10 @@ export function ChatInput({
                           >
                             <input
                               type="checkbox"
-                              checked={attachIoData}
+                              // NOTE: Regardless of preferences, we show it
+                              // unchecked if no step is selected because I/O
+                              // can't be sent without a step
+                              checked={attachIoData && !!selectedStepId}
                               onChange={e => setAttachIoData(e.target.checked)}
                               disabled={!selectedStepId}
                               className={cn(
