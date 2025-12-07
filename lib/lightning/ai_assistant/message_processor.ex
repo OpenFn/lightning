@@ -13,7 +13,7 @@ defmodule Lightning.AiAssistant.MessageProcessor do
   alias Lightning.AiAssistant
   alias Lightning.AiAssistant.ChatMessage
   alias Lightning.AiAssistant.ChatSession
-  alias Lightning.AiAssistant.Scrubber
+  alias Lightning.Scrubber
   alias Lightning.Invocation
   alias Lightning.Repo
 
@@ -148,14 +148,20 @@ defmodule Lightning.AiAssistant.MessageProcessor do
       step ->
         input =
           case step.input_dataclip do
-            %{body: body} when not is_nil(body) -> Scrubber.scrub_values(body)
-            _ -> nil
+            %{body: body} when not is_nil(body) ->
+              Scrubber.scrub_values(body) |> IO.inspect(label: "input")
+
+            _ ->
+              nil
           end
 
         output =
           case step.output_dataclip do
-            %{body: body} when not is_nil(body) -> Scrubber.scrub_values(body)
-            _ -> nil
+            %{body: body} when not is_nil(body) ->
+              Scrubber.scrub_values(body) |> IO.inspect(label: "input")
+
+            _ ->
+              nil
           end
 
         {input, output}

@@ -532,16 +532,36 @@ defmodule LightningWeb.AiAssistantChannel do
   end
 
   defp extract_session_options("job_code", params) do
-    opts = []
+    meta = %{}
 
-    opts =
+    meta =
       if params["follow_run_id"] do
-        Keyword.put(opts, :meta, %{"follow_run_id" => params["follow_run_id"]})
+        Map.put(meta, "follow_run_id", params["follow_run_id"])
       else
-        opts
+        meta
       end
 
-    opts
+    # Include message_options for the initial message (attach_io_data, step_id, etc.)
+    meta =
+      if params["attach_io_data"] || params["step_id"] || params["attach_code"] ||
+           params["attach_logs"] do
+        message_options = %{
+          "code" => params["attach_code"] == true,
+          "log" => params["attach_logs"] == true,
+          "attach_io_data" => params["attach_io_data"] == true,
+          "step_id" => params["step_id"]
+        }
+
+        Map.put(meta, "message_options", message_options)
+      else
+        meta
+      end
+
+    if map_size(meta) > 0 do
+      [meta: meta]
+    else
+      []
+    end
   end
 
   defp extract_session_options("workflow_template", params) do

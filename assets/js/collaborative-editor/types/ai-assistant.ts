@@ -52,6 +52,8 @@ export interface JobCodeContext {
   job_id: string;
   attach_code?: boolean;
   attach_logs?: boolean;
+  attach_io_data?: boolean;
+  step_id?: string;
   follow_run_id?: string;
   content?: string;
 

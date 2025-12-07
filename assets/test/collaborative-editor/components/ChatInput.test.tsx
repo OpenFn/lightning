@@ -59,8 +59,8 @@ describe('ChatInput', () => {
     it('should show job controls when showJobControls is true', () => {
       render(<ChatInput showJobControls />);
 
-      expect(screen.getByText(/Include job code/)).toBeInTheDocument();
-      expect(screen.getByText(/Include run logs/)).toBeInTheDocument();
+      expect(screen.getByText(/Send code/)).toBeInTheDocument();
+      expect(screen.getByText(/Send logs/)).toBeInTheDocument();
       expect(screen.queryByText(/Do not include PII/)).not.toBeInTheDocument();
     });
   });
@@ -273,7 +273,7 @@ describe('ChatInput', () => {
       render(<ChatInput onSendMessage={mockSendMessage} showJobControls />);
 
       const codeCheckbox = screen.getByRole('checkbox', {
-        name: /include job code/i,
+        name: /send code/i,
       });
 
       // Default should be checked
@@ -297,7 +297,7 @@ describe('ChatInput', () => {
       render(<ChatInput onSendMessage={mockSendMessage} showJobControls />);
 
       const logsCheckbox = screen.getByRole('checkbox', {
-        name: /include run logs/i,
+        name: /send logs/i,
       });
 
       // Default should be unchecked
@@ -336,7 +336,7 @@ describe('ChatInput', () => {
       render(<ChatInput showJobControls storageKey="test-key" />);
 
       const codeCheckbox = screen.getByRole('checkbox', {
-        name: /include job code/i,
+        name: /send code/i,
       });
       expect(codeCheckbox).not.toBeChecked();
     });
@@ -347,7 +347,7 @@ describe('ChatInput', () => {
       render(<ChatInput showJobControls storageKey="test-key" />);
 
       const logsCheckbox = screen.getByRole('checkbox', {
-        name: /include run logs/i,
+        name: /send logs/i,
       });
       expect(logsCheckbox).toBeChecked();
     });
@@ -356,7 +356,7 @@ describe('ChatInput', () => {
       render(<ChatInput showJobControls storageKey="test-key" />);
 
       const codeCheckbox = screen.getByRole('checkbox', {
-        name: /include job code/i,
+        name: /send code/i,
       });
       expect(codeCheckbox).toBeChecked();
     });
@@ -365,7 +365,7 @@ describe('ChatInput', () => {
       render(<ChatInput showJobControls storageKey="test-key" />);
 
       const logsCheckbox = screen.getByRole('checkbox', {
-        name: /include run logs/i,
+        name: /send logs/i,
       });
       expect(logsCheckbox).not.toBeChecked();
     });
@@ -374,7 +374,7 @@ describe('ChatInput', () => {
       render(<ChatInput showJobControls storageKey="test-key" />);
 
       const codeCheckbox = screen.getByRole('checkbox', {
-        name: /include job code/i,
+        name: /send code/i,
       });
 
       await userEvent.click(codeCheckbox);
@@ -388,7 +388,7 @@ describe('ChatInput', () => {
       render(<ChatInput showJobControls storageKey="test-key" />);
 
       const logsCheckbox = screen.getByRole('checkbox', {
-        name: /include run logs/i,
+        name: /send logs/i,
       });
 
       await userEvent.click(logsCheckbox);
@@ -407,7 +407,7 @@ describe('ChatInput', () => {
       );
 
       const codeCheckbox = screen.getByRole('checkbox', {
-        name: /include job code/i,
+        name: /send code/i,
       });
       expect(codeCheckbox).not.toBeChecked();
 

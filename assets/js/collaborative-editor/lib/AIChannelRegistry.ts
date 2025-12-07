@@ -700,6 +700,12 @@ export class AIChannelRegistry {
       if (context.attach_logs) {
         params['attach_logs'] = true;
       }
+      if (context.attach_io_data) {
+        params['attach_io_data'] = true;
+      }
+      if (context.step_id) {
+        params['step_id'] = context.step_id;
+      }
     } else {
       // WorkflowTemplateContext
       params['project_id'] = context.project_id;

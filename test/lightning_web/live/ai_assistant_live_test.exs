@@ -1085,6 +1085,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
              ]
 
       view |> element("button[phx-click='toggle_sort']") |> render_click()
+      render_async(view)
       html = render(view)
 
       links =
@@ -1105,6 +1106,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
              ]
 
       view |> element("button[phx-click='toggle_sort']") |> render_click()
+      render_async(view)
       html = render(view)
 
       links =

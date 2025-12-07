@@ -420,12 +420,20 @@ defmodule Lightning.Invocation do
   @doc """
   Gets a step by ID with its input and output dataclips preloaded.
   Returns nil if step not found.
+
+  Note: Dataclip body fields have `load_in_query: false` for performance,
+  so we use a custom preload query to explicitly select the body field.
   """
   @spec get_step_with_dataclips(Ecto.UUID.t()) :: Step.t() | nil
   def get_step_with_dataclips(step_id) do
+    # Dataclip.body has load_in_query: false, so we need to explicitly select it
+    dataclip_with_body_query =
+      from(d in Dataclip, select: %{d | body: d.body})
+
     Step
     |> where([s], s.id == ^step_id)
-    |> preload([:input_dataclip, :output_dataclip])
+    |> preload(input_dataclip: ^dataclip_with_body_query)
+    |> preload(output_dataclip: ^dataclip_with_body_query)
     |> Repo.one()
   end
 
