@@ -44,12 +44,10 @@ describe('RunRetryButton', () => {
       // Should NOT show retry text
       expect(screen.queryByText(/retry/i)).not.toBeInTheDocument();
 
-      // Chevron is always present but disabled when not retryable
-      const chevronButton = screen.getByRole('button', {
-        name: /open options/i,
-      });
-      expect(chevronButton).toBeInTheDocument();
-      expect(chevronButton).toBeDisabled();
+      // Chevron should NOT be present when not retryable (no dropdown options)
+      expect(
+        screen.queryByRole('button', { name: /open options/i })
+      ).not.toBeInTheDocument();
     });
 
     test('renders split button with retry text when retryable', () => {
@@ -798,14 +796,13 @@ describe('RunRetryButton', () => {
         />
       );
 
-      // Initially shows Run Workflow with disabled chevron
+      // Initially shows Run Workflow button (no chevron when not retryable)
       expect(screen.getByText('Run Workflow')).toBeInTheDocument();
-      const chevronButton = screen.getByRole('button', {
-        name: /open options/i,
-      });
-      expect(chevronButton).toBeDisabled();
+      expect(
+        screen.queryByRole('button', { name: /open options/i })
+      ).not.toBeInTheDocument();
 
-      // Switch to retryable mode - chevron becomes enabled
+      // Switch to retryable mode - chevron appears
       rerender(
         <RunRetryButton
           isRetryable={true}
@@ -821,7 +818,42 @@ describe('RunRetryButton', () => {
         screen.getByRole('button', { name: /open options/i })
       ).toBeInTheDocument();
 
-      // Switch to processing
+      // Switch to processing while retryable - chevron stays but disabled
+      rerender(
+        <RunRetryButton
+          isRetryable={true}
+          isDisabled={false}
+          isSubmitting={true}
+          onRun={onRun}
+          onRetry={onRetry}
+        />
+      );
+
+      expect(screen.getByText('Processing')).toBeInTheDocument();
+      expect(screen.queryByText('Run (Retry)')).not.toBeInTheDocument();
+      // Chevron stays visible but disabled during processing for visual consistency
+      const chevronDuringProcessing = screen.getByRole('button', {
+        name: /open options/i,
+      });
+      expect(chevronDuringProcessing).toBeDisabled();
+
+      // Reset to not retryable, not submitting
+      rerender(
+        <RunRetryButton
+          isRetryable={false}
+          isDisabled={false}
+          isSubmitting={false}
+          onRun={onRun}
+          onRetry={onRetry}
+        />
+      );
+
+      expect(screen.getByText('Run Workflow')).toBeInTheDocument();
+      expect(
+        screen.queryByRole('button', { name: /open options/i })
+      ).not.toBeInTheDocument();
+
+      // Processing always shows chevron (even when not retryable)
       rerender(
         <RunRetryButton
           isRetryable={false}
@@ -833,8 +865,11 @@ describe('RunRetryButton', () => {
       );
 
       expect(screen.getByText('Processing')).toBeInTheDocument();
-      expect(screen.queryByText('Run Workflow')).not.toBeInTheDocument();
-      expect(screen.queryByText('Run (Retry)')).not.toBeInTheDocument();
+      // Chevron is always shown during processing
+      const chevronWhileProcessing = screen.getByRole('button', {
+        name: /open options/i,
+      });
+      expect(chevronWhileProcessing).toBeDisabled();
     });
 
     test('handles rapid clicks without duplicate calls', async () => {

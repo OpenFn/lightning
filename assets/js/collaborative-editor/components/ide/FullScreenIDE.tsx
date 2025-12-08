@@ -817,22 +817,24 @@ export function FullScreenIDE({
           </div>
 
           <div className="flex items-center gap-2 shrink-0">
-            {/* History button - shown when no panel, viewing history, or creating new run */}
-            {panelState !== 'run-viewer' && (
-              <button
-                type="button"
-                onClick={handleNavigateToHistory}
-                className={cn(
-                  'inline-flex items-center gap-1.5 rounded-md px-3 py-2 text-sm font-semibold shadow-xs transition-colors',
-                  panelState === 'history'
-                    ? 'bg-primary-600 text-white hover:bg-primary-500'
-                    : 'bg-white text-gray-900 ring-1 ring-inset ring-gray-300 hover:bg-gray-50'
-                )}
-              >
-                <ClockIcon className="h-4 w-4" />
-                History
-              </button>
-            )}
+            {/* History button - hidden when viewing/processing a run */}
+            {panelState !== 'run-viewer' &&
+              !isSubmitting &&
+              !runIsProcessing && (
+                <button
+                  type="button"
+                  onClick={handleNavigateToHistory}
+                  className={cn(
+                    'inline-flex items-center gap-1.5 rounded-md px-3 py-2 text-sm font-semibold shadow-xs transition-colors',
+                    panelState === 'history'
+                      ? 'bg-primary-600 text-white hover:bg-primary-500'
+                      : 'bg-white text-gray-900 ring-1 ring-inset ring-gray-300 hover:bg-gray-50'
+                  )}
+                >
+                  <ClockIcon className="h-4 w-4" />
+                  History
+                </button>
+              )}
 
             {/* New Run button - shown when no panel or viewing history */}
             {(panelState === undefined || panelState === 'history') && (

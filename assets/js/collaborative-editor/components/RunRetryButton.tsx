@@ -24,11 +24,18 @@ interface RunRetryButtonProps {
 }
 
 /**
- * RunRetryButton - Split button for Run/Retry operations
+ * RunRetryButton - Button for Run/Retry operations
  *
- * Always renders as a split button with main action and dropdown chevron.
- * The dropdown option is only shown when retry is available.
- * This consistent structure prevents layout shift during state transitions.
+ * Renders as:
+ * - Single button when not retryable:
+ *   - "Run" when idle
+ *   - "Processing" when submitting
+ * - Split button when retryable:
+ *   - "Run (Retry)" + chevron when idle
+ *   - "Processing" + disabled chevron when submitting (chevron stays for visual consistency)
+ *
+ * The chevron opens a dropdown with "Run (New Work Order)" option.
+ * Uses min-width to prevent layout shift during text changes.
  *
  * @example
  * <RunRetryButton
@@ -58,6 +65,9 @@ export function RunRetryButton({
     processing = 'Processing',
   } = buttonText;
 
+  // Always show chevron during processing, otherwise based on isRetryable
+  const showChevron = isSubmitting || isRetryable;
+
   // Compute tooltip content based on props and state
   const mainButtonTooltip =
     isDisabled && disabledTooltip ? (
@@ -67,7 +77,7 @@ export function RunRetryButton({
     ) : null;
 
   const dropdownTooltip =
-    showKeyboardShortcuts && isRetryable ? (
+    showKeyboardShortcuts && showChevron ? (
       <ShortcutKeys keys={['mod', 'shift', 'enter']} />
     ) : null;
 
@@ -114,20 +124,55 @@ export function RunRetryButton({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [isDropdownOpen]);
 
-  const handleMainClick = () => {
-    if (isRetryable) {
-      onRetry();
-    } else {
-      onRun();
-    }
-  };
-
   const handleDropdownClick = () => {
     setIsDropdownOpen(false);
     onRun();
   };
 
-  // Determine button text and icon based on state
+  // Single button when not showing chevron (no dropdown options available)
+  if (!showChevron) {
+    const buttonContent = isSubmitting ? (
+      <>
+        <span className="hero-arrow-path w-4 h-4 animate-spin"></span>
+        {processing}
+      </>
+    ) : (
+      <>
+        <span className="hero-play-mini w-4 h-4"></span>
+        {run}
+      </>
+    );
+
+    return (
+      <Tooltip content={isSubmitting ? null : mainButtonTooltip} side="bottom">
+        <button
+          type="button"
+          onClick={onRun}
+          disabled={isDisabled || isSubmitting}
+          className={cn(
+            'rounded-md text-sm font-semibold shadow-xs px-3 py-2',
+            'inline-flex items-center justify-center gap-1',
+            'focus-visible:outline-2 focus-visible:outline-offset-2',
+            isSubmitting
+              ? [styles.submitting, 'cursor-not-allowed']
+              : [
+                  styles.base,
+                  styles.disabled,
+                  'disabled:cursor-not-allowed',
+                  styles.focus,
+                ],
+            className
+          )}
+        >
+          {buttonContent}
+        </button>
+      </Tooltip>
+    );
+  }
+
+  // Split button when showing chevron (chevron stays during processing for visual consistency)
+  const chevronDisabled = isDisabled || isSubmitting;
+
   const buttonContent = isSubmitting ? (
     <>
       <span className="hero-arrow-path w-4 h-4 animate-spin"></span>
@@ -136,29 +181,26 @@ export function RunRetryButton({
   ) : (
     <>
       <span className="hero-play-mini w-4 h-4"></span>
-      {isRetryable ? retry : run}
+      {retry}
     </>
   );
-
-  // Determine if chevron should be interactive
-  const chevronDisabled = isDisabled || isSubmitting || !isRetryable;
 
   return (
     <div
       className={cn('inline-flex rounded-md shadow-xs', className)}
       ref={dropdownRef}
     >
-      {/* Main button - min-width ensures no layout shift between text states */}
+      {/* Main button - shows "Run (Retry)" or "Processing" */}
       <Tooltip content={isSubmitting ? null : mainButtonTooltip} side="bottom">
         <button
           type="button"
-          onClick={handleMainClick}
+          onClick={onRetry}
           disabled={isDisabled || isSubmitting}
           className={cn(
             'rounded-md text-sm font-semibold shadow-xs px-3 py-2',
             'relative inline-flex items-center justify-center gap-1 rounded-r-none',
             'focus-visible:outline-2 focus-visible:outline-offset-2',
-            'min-w-[6.5rem]',
+            'min-w-[8rem]', // Consistent width between "Processing" and "Run (Retry)"
             isSubmitting
               ? [styles.submitting, 'cursor-not-allowed']
               : [
@@ -173,7 +215,7 @@ export function RunRetryButton({
         </button>
       </Tooltip>
 
-      {/* Chevron dropdown button - always rendered for consistent width */}
+      {/* Chevron dropdown button - stays visible during processing for consistency */}
       <div className="relative -ml-px">
         <Tooltip
           content={!chevronDisabled ? dropdownTooltip : null}
@@ -190,10 +232,7 @@ export function RunRetryButton({
               'h-full rounded-l-none',
               'focus-visible:outline-2 focus-visible:outline-offset-2',
               chevronDisabled
-                ? [
-                    isSubmitting ? styles.submitting : styles.chevronDisabled,
-                    'cursor-not-allowed',
-                  ]
+                ? [styles.submitting, 'cursor-not-allowed']
                 : [styles.chevronBase, styles.focus]
             )}
             aria-expanded={isDropdownOpen}
