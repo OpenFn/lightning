@@ -10,8 +10,8 @@ defmodule Lightning.DataclipScrubber do
   alias Lightning.Repo
   alias Lightning.RunStep
   alias Lightning.Scrubber
-  alias Lightning.WorkOrder
   alias Lightning.Workflows.WebhookAuthMethod
+  alias Lightning.WorkOrder
 
   @spec scrub_dataclip_body!(%{
           body: String.t() | nil,
