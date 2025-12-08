@@ -440,7 +440,6 @@ export function FullScreenIDE({
     priority: 50, // IDE priority
   });
 
-  // Cmd/Ctrl+H: Open history panel
   useKeyboardShortcut(
     'Control+h, Meta+h',
     () => {

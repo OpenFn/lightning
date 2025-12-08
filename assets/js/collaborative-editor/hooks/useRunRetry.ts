@@ -7,9 +7,9 @@ import {
   useState,
 } from 'react';
 
+import { useURLState } from '#/react/lib/use-url-state';
 import _logger from '#/utils/logger';
 
-import { useURLState } from '#/react/lib/use-url-state';
 import * as dataclipApi from '../api/dataclips';
 import type { Dataclip } from '../api/dataclips';
 import { StoreContext } from '../contexts/StoreProvider';
@@ -21,6 +21,13 @@ import { findFirstJobFromTrigger } from '../utils/workflowGraph';
 import { useActiveRun } from './useHistory';
 
 const logger = _logger.ns('useRunRetry').seal();
+
+/**
+ * Timeout (in ms) for WebSocket to confirm the run connection.
+ * If the run isn't confirmed within this time, we reset the submitting state
+ * to prevent the UI from being stuck forever.
+ */
+const WEBSOCKET_CONFIRMATION_TIMEOUT_MS = 30000;
 
 /**
  * Final states for a run (matches Lightning.Run.final_states/0)
@@ -117,7 +124,8 @@ export function useRunRetry({
   const isRetryingRef = useRef(false);
   // Track the run ID we're waiting for WebSocket to connect to
   // This bridges the gap between API success and WebSocket connection
-  const pendingRunIdRef = useRef<string | null>(null);
+  // Using state (not ref) so the timeout effect re-runs when this changes
+  const [pendingRunId, setPendingRunId] = useState<string | null>(null);
 
   // Get getLimits action from session context store
   const storeContext = useContext(StoreContext);
@@ -156,39 +164,30 @@ export function useRunRetry({
   // This prevents the "flash" where the button briefly shows "Run (Retry)" between
   // API success and WebSocket connection
   useEffect(() => {
-    if (pendingRunIdRef.current && currentRun?.id === pendingRunIdRef.current) {
+    if (pendingRunId && currentRun?.id === pendingRunId) {
       // The run we're waiting for is now connected - safe to reset submitting state
-      pendingRunIdRef.current = null;
+      setPendingRunId(null);
       setIsSubmitting(false);
       isRetryingRef.current = false;
     }
-  }, [currentRun?.id]);
+  }, [currentRun?.id, pendingRunId]);
 
   // Timeout fallback: if WebSocket never confirms the run within 30 seconds,
   // reset the submitting state to prevent the UI from being stuck forever
   useEffect(() => {
-    if (!pendingRunIdRef.current) return;
+    if (!pendingRunId) return;
 
     const timeoutId = setTimeout(() => {
-      if (pendingRunIdRef.current) {
-        logger.warn(
-          'WebSocket confirmation timeout - resetting submitting state'
-        );
-        pendingRunIdRef.current = null;
-        setIsSubmitting(false);
-        isRetryingRef.current = false;
-      }
-    }, 30000);
+      logger.warn(
+        'WebSocket confirmation timeout - resetting submitting state'
+      );
+      setPendingRunId(null);
+      setIsSubmitting(false);
+      isRetryingRef.current = false;
+    }, WEBSOCKET_CONFIRMATION_TIMEOUT_MS);
 
     return () => clearTimeout(timeoutId);
-  }, [currentRun?.id]);
-
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      pendingRunIdRef.current = null;
-    };
-  }, []);
+  }, [pendingRunId]);
 
   const isRetryable = useMemo(() => {
     if (!followedRunId || !followedRunStep || !selectedDataclip) {
@@ -281,7 +280,7 @@ export function useRunRetry({
       // Invoke callback with run_id and dataclip (if created from custom body)
       if (onRunSubmitted) {
         // Set pending run ID - the effect will reset isSubmitting when the run is connected
-        pendingRunIdRef.current = response.data.run_id;
+        setPendingRunId(response.data.run_id);
         onRunSubmitted(response.data.run_id, response.data.dataclip);
         // Don't reset isSubmitting here - the effect will do it when WebSocket connects
       } else {
@@ -379,7 +378,7 @@ export function useRunRetry({
       // Invoke callback with new run_id
       if (onRunSubmitted) {
         // Set pending run ID - the effect will reset isSubmitting when the run is connected
-        pendingRunIdRef.current = result.data.run_id;
+        setPendingRunId(result.data.run_id);
         onRunSubmitted(result.data.run_id);
         // Don't reset isSubmitting here - the effect will do it when WebSocket connects
       } else {

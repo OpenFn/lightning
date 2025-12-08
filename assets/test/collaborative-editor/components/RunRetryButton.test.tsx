@@ -17,29 +17,7 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, test, vi } from 'vitest';
 
 import { RunRetryButton } from '../../../js/collaborative-editor/components/RunRetryButton';
-
-/**
- * Helper to get visible text in the split button.
- * The CSS Grid approach renders invisible copies of text for sizing,
- * so we need to filter to the visible (non-aria-hidden) element.
- */
-function getVisibleButtonText(text: string | RegExp) {
-  const elements = screen.getAllByText(text);
-  // Find the element that is NOT inside an aria-hidden container
-  const visible = elements.find(el => !el.closest('[aria-hidden="true"]'));
-  if (!visible) {
-    throw new Error(`Could not find visible element with text: ${text}`);
-  }
-  return visible;
-}
-
-/**
- * Helper to query for visible text (returns null if not found)
- */
-function queryVisibleButtonText(text: string | RegExp) {
-  const elements = screen.queryAllByText(text);
-  return elements.find(el => !el.closest('[aria-hidden="true"]')) ?? null;
-}
+import { getVisibleButtonText, queryVisibleButtonText } from '../__helpers__';
 
 describe('RunRetryButton', () => {
   // ===========================================================================

@@ -47,26 +47,13 @@ import {
   createMockPhoenixChannelProvider,
   createMockURLState,
   getURLStateMockValue,
+  getVisibleButtonText,
   type MockPhoenixChannel,
 } from '../__helpers__';
 import { createStores } from '../__helpers__/storeProviderHelpers';
 
 // Mock the API module
 vi.mock('../../../js/collaborative-editor/api/dataclips');
-
-/**
- * Helper to get visible text in the RunRetryButton.
- * The CSS Grid approach renders invisible copies of text for sizing,
- * so we need to filter to the visible (non-aria-hidden) element.
- */
-function getVisibleButtonText(text: string | RegExp) {
-  const elements = screen.getAllByText(text);
-  const visible = elements.find(el => !el.closest('[aria-hidden="true"]'));
-  if (!visible) {
-    throw new Error(`Could not find visible element with text: ${text}`);
-  }
-  return visible;
-}
 
 // Mock the notifications module
 vi.mock('../../../js/collaborative-editor/lib/notifications', () => ({
