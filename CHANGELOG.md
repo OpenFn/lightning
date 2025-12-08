@@ -21,6 +21,9 @@ and this project adheres to
 
 ### Fixed
 
+- Fix AI Assistant disclaimer not persisting after acceptance
+  [#4158](https://github.com/OpenFn/lightning/issues/4158)
+
 ## [2.15.0-pre4] - 2025-12-08
 
 ### Added

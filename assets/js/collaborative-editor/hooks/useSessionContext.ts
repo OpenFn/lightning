@@ -307,12 +307,22 @@ export const useHasReadAIDisclaimer = (): boolean => {
 
 /**
  * Hook to get setHasReadAIDisclaimer action
- * Returns function to update AI disclaimer read status
+ * Returns function to update AI disclaimer read status (local state only)
  */
 export const useSetHasReadAIDisclaimer = () => {
   const sessionContextStore = useSessionContextStore();
 
   return sessionContextStore.setHasReadAIDisclaimer;
+};
+
+/**
+ * Hook to get markAIDisclaimerRead action
+ * Returns function to mark AI disclaimer as read and persist to backend
+ */
+export const useMarkAIDisclaimerRead = () => {
+  const sessionContextStore = useSessionContextStore();
+
+  return sessionContextStore.markAIDisclaimerRead;
 };
 
 /**
