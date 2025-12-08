@@ -440,6 +440,18 @@ export function FullScreenIDE({
     priority: 50, // IDE priority
   });
 
+  // Cmd/Ctrl+H: Open history panel
+  useKeyboardShortcut(
+    'Control+h, Meta+h',
+    () => {
+      if (!isSubmitting && !runIsProcessing) {
+        handleNavigateToHistory();
+      }
+    },
+    50, // IDE priority
+    { enabled: true }
+  );
+
   // Handle job selection from JobSelector
   const sortedJobs = useMemo(() => {
     const allJobs = workflow?.jobs || [];
@@ -826,24 +838,29 @@ export function FullScreenIDE({
 
           <div className="flex items-center gap-2 shrink-0">
             {/* History button - always visible, disabled during submitting/processing */}
-            <button
-              type="button"
-              onClick={handleNavigateToHistory}
-              disabled={isSubmitting || runIsProcessing}
-              className={cn(
-                'inline-flex items-center gap-1.5 rounded-md px-3 py-2 text-sm font-semibold shadow-xs transition-colors',
-                isSubmitting || runIsProcessing
-                  ? 'bg-primary-300 text-white cursor-not-allowed'
-                  : 'bg-primary-600 text-white hover:bg-primary-500'
-              )}
+            <Tooltip
+              content={<ShortcutKeys keys={['mod', 'h']} />}
+              side="bottom"
             >
-              {panelState === 'history' ? (
-                <ClockIconSolid className="h-4 w-4" />
-              ) : (
-                <ClockIcon className="h-4 w-4" />
-              )}
-              History
-            </button>
+              <button
+                type="button"
+                onClick={handleNavigateToHistory}
+                disabled={isSubmitting || runIsProcessing}
+                className={cn(
+                  'inline-flex items-center gap-1.5 rounded-md px-3 py-2 text-sm font-semibold shadow-xs transition-colors',
+                  isSubmitting || runIsProcessing
+                    ? 'bg-primary-300 text-white cursor-not-allowed'
+                    : 'bg-primary-600 text-white hover:bg-primary-500'
+                )}
+              >
+                {panelState === 'history' ? (
+                  <ClockIconSolid className="h-4 w-4" />
+                ) : (
+                  <ClockIcon className="h-4 w-4" />
+                )}
+                History
+              </button>
+            </Tooltip>
 
             {/* New Run button - shown when no panel or viewing history */}
             {(panelState === undefined || panelState === 'history') && (
