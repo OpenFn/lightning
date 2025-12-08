@@ -164,6 +164,32 @@ export function useRunRetry({
     }
   }, [currentRun?.id]);
 
+  // Timeout fallback: if WebSocket never confirms the run within 30 seconds,
+  // reset the submitting state to prevent the UI from being stuck forever
+  useEffect(() => {
+    if (!pendingRunIdRef.current) return;
+
+    const timeoutId = setTimeout(() => {
+      if (pendingRunIdRef.current) {
+        logger.warn(
+          'WebSocket confirmation timeout - resetting submitting state'
+        );
+        pendingRunIdRef.current = null;
+        setIsSubmitting(false);
+        isRetryingRef.current = false;
+      }
+    }, 30000);
+
+    return () => clearTimeout(timeoutId);
+  }, [currentRun?.id]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      pendingRunIdRef.current = null;
+    };
+  }, []);
+
   const isRetryable = useMemo(() => {
     if (!followedRunId || !followedRunStep || !selectedDataclip) {
       return false;

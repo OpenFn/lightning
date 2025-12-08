@@ -35,7 +35,8 @@ interface RunRetryButtonProps {
  *   - "Processing" + disabled chevron when submitting (chevron stays for visual consistency)
  *
  * The chevron opens a dropdown with "Run (New Work Order)" option.
- * Uses min-width to prevent layout shift during text changes.
+ * Uses CSS Grid to auto-size the button to fit the longest text variant,
+ * preventing layout shift during state transitions.
  *
  * @example
  * <RunRetryButton
@@ -173,18 +174,6 @@ export function RunRetryButton({
   // Split button when showing chevron (chevron stays during processing for visual consistency)
   const chevronDisabled = isDisabled || isSubmitting;
 
-  const buttonContent = isSubmitting ? (
-    <>
-      <span className="hero-arrow-path w-4 h-4 animate-spin"></span>
-      {processing}
-    </>
-  ) : (
-    <>
-      <span className="hero-play-mini w-4 h-4"></span>
-      {retry}
-    </>
-  );
-
   return (
     <div
       className={cn('inline-flex rounded-md shadow-xs', className)}
@@ -198,9 +187,11 @@ export function RunRetryButton({
           disabled={isDisabled || isSubmitting}
           className={cn(
             'rounded-md text-sm font-semibold shadow-xs px-3 py-2',
-            'relative inline-flex items-center justify-center gap-1 rounded-r-none',
+            'relative rounded-r-none',
             'focus-visible:outline-2 focus-visible:outline-offset-2',
-            'min-w-[7.75rem]', // Consistent width between "Processing" and "Run (Retry)"
+            // Use CSS Grid to auto-size button to fit the longest text variant
+            // Both texts are rendered in the same cell; the invisible one sets the min size
+            'grid',
             isSubmitting
               ? [styles.submitting, 'cursor-not-allowed']
               : [
@@ -211,7 +202,35 @@ export function RunRetryButton({
                 ]
           )}
         >
-          {buttonContent}
+          {/* Invisible text to reserve space for the longer variant */}
+          <span
+            className="col-start-1 row-start-1 invisible flex items-center justify-center gap-1"
+            aria-hidden="true"
+          >
+            <span className="hero-play-mini w-4 h-4"></span>
+            {retry}
+          </span>
+          <span
+            className="col-start-1 row-start-1 invisible flex items-center justify-center gap-1"
+            aria-hidden="true"
+          >
+            <span className="hero-arrow-path w-4 h-4"></span>
+            {processing}
+          </span>
+          {/* Visible text - the actual button content */}
+          <span className="col-start-1 row-start-1 flex items-center justify-center gap-1">
+            {isSubmitting ? (
+              <>
+                <span className="hero-arrow-path w-4 h-4 animate-spin"></span>
+                {processing}
+              </>
+            ) : (
+              <>
+                <span className="hero-play-mini w-4 h-4"></span>
+                {retry}
+              </>
+            )}
+          </span>
         </button>
       </Tooltip>
 
