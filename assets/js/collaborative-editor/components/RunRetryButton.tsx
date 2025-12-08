@@ -200,7 +200,7 @@ export function RunRetryButton({
             'rounded-md text-sm font-semibold shadow-xs px-3 py-2',
             'relative inline-flex items-center justify-center gap-1 rounded-r-none',
             'focus-visible:outline-2 focus-visible:outline-offset-2',
-            'min-w-[8rem]', // Consistent width between "Processing" and "Run (Retry)"
+            'min-w-[7.75rem]', // Consistent width between "Processing" and "Run (Retry)"
             isSubmitting
               ? [styles.submitting, 'cursor-not-allowed']
               : [
