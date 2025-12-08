@@ -123,7 +123,7 @@ defmodule Lightning.Workflows.WebhookAuthMethod do
   def sensitive_values_for(nil), do: []
 
   def sensitive_values_for(%__MODULE__{auth_type: :basic} = auth_method) do
-    [auth_method.username, auth_method.password]
+    [auth_method.password]
     |> Enum.reject(&is_nil/1)
   end
 

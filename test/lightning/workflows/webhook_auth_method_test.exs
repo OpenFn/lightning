@@ -108,7 +108,7 @@ defmodule Lightning.Workflows.WebhookAuthMethodTest do
   end
 
   describe "sensitive_values_for/1" do
-    test "returns username and password for basic auth" do
+    test "returns password but not username for basic auth" do
       auth_method = %WebhookAuthMethod{
         auth_type: :basic,
         username: "myuser",
@@ -116,7 +116,6 @@ defmodule Lightning.Workflows.WebhookAuthMethodTest do
       }
 
       assert WebhookAuthMethod.sensitive_values_for(auth_method) == [
-               "myuser",
                "secret123"
              ]
     end
@@ -139,11 +138,13 @@ defmodule Lightning.Workflows.WebhookAuthMethodTest do
     test "handles nil values in basic auth" do
       auth_method = %WebhookAuthMethod{
         auth_type: :basic,
-        username: "myuser",
-        password: nil
+        username: nil,
+        password: "super-secret"
       }
 
-      assert WebhookAuthMethod.sensitive_values_for(auth_method) == ["myuser"]
+      assert WebhookAuthMethod.sensitive_values_for(auth_method) == [
+               "super-secret"
+             ]
     end
 
     test "handles nil api_key" do
@@ -181,10 +182,10 @@ defmodule Lightning.Workflows.WebhookAuthMethodTest do
       assert WebhookAuthMethod.basic_auth_for(nil) == []
     end
 
-    test "returns empty list when username or password is nil" do
+    test "returns empty list when password is nil" do
       auth_method = %WebhookAuthMethod{
         auth_type: :basic,
-        username: "myuser",
+        username: "something",
         password: nil
       }
 
