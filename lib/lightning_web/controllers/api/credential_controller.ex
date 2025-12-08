@@ -19,6 +19,7 @@ defmodule LightningWeb.API.CredentialController do
       POST /api/credentials
       DELETE /api/credentials/a1b2c3d4-...
   """
+  @moduledoc docout: true
   use LightningWeb, :controller
 
   alias Lightning.Credentials
