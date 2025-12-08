@@ -40,6 +40,20 @@ import {
 // Mock the API module
 vi.mock('../../../js/collaborative-editor/api/dataclips');
 
+/**
+ * Helper to get visible text in the RunRetryButton.
+ * The CSS Grid approach renders invisible copies of text for sizing,
+ * so we need to filter to the visible (non-aria-hidden) element.
+ */
+function getVisibleButtonText(text: string | RegExp) {
+  const elements = screen.getAllByText(text);
+  const visible = elements.find(el => !el.closest('[aria-hidden="true"]'));
+  if (!visible) {
+    throw new Error(`Could not find visible element with text: ${text}`);
+  }
+  return visible;
+}
+
 // Mock the notifications module
 vi.mock('../../../js/collaborative-editor/lib/notifications', () => ({
   notifications: {
@@ -1000,12 +1014,13 @@ describe('ManualRunPanel', () => {
       await user.click(screen.getByText('Run'));
 
       // Button should show "Processing" while submitting
+      // Use helper for CSS Grid layout (invisible spacers render same text)
       await waitFor(() => {
-        expect(screen.getByText('Processing')).toBeInTheDocument();
+        expect(getVisibleButtonText('Processing')).toBeInTheDocument();
       });
 
       // Button should be disabled
-      const runButton = screen.getByText('Processing');
+      const runButton = getVisibleButtonText('Processing').closest('button')!;
       expect(runButton).toBeDisabled();
 
       // Try to click again - should not trigger another save

@@ -54,6 +54,20 @@ import { createStores } from '../__helpers__/storeProviderHelpers';
 // Mock the API module
 vi.mock('../../../js/collaborative-editor/api/dataclips');
 
+/**
+ * Helper to get visible text in the RunRetryButton.
+ * The CSS Grid approach renders invisible copies of text for sizing,
+ * so we need to filter to the visible (non-aria-hidden) element.
+ */
+function getVisibleButtonText(text: string | RegExp) {
+  const elements = screen.getAllByText(text);
+  const visible = elements.find(el => !el.closest('[aria-hidden="true"]'));
+  if (!visible) {
+    throw new Error(`Could not find visible element with text: ${text}`);
+  }
+  return visible;
+}
+
 // Mock the notifications module
 vi.mock('../../../js/collaborative-editor/lib/notifications', () => ({
   notifications: {
@@ -675,9 +689,11 @@ describe('ManualRunPanel Keyboard Shortcuts', () => {
       });
 
       // Verify button shows processing state
+      // Use helper for CSS Grid layout (invisible spacers render same text)
       await waitFor(() => {
-        expect(screen.getByText('Processing')).toBeInTheDocument();
-        expect(screen.getByText('Processing')).toBeDisabled();
+        const processingText = getVisibleButtonText('Processing');
+        expect(processingText).toBeInTheDocument();
+        expect(processingText.closest('button')).toBeDisabled();
       });
     });
   });
@@ -1282,8 +1298,9 @@ describe('ManualRunPanel Keyboard Shortcuts', () => {
         });
 
         // Verify it's in running state
+        // Use helper for CSS Grid layout (invisible spacers render same text)
         await waitFor(() => {
-          expect(screen.getByText('Processing')).toBeInTheDocument();
+          expect(getVisibleButtonText('Processing')).toBeInTheDocument();
         });
 
         // Try to press Cmd+Enter while running
