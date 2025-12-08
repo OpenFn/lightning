@@ -57,8 +57,18 @@ export function DisclaimerScreen({
             or sensitive credentials in your messages.
           </p>
           <p className="text-xs text-gray-500">
-            This Assistant uses Claude by Anthropic. Conversations may be stored
-            on OpenFn and Anthropic servers for service improvement.
+            This Assistant uses Claude by Anthropic. Messages are stored on
+            OpenFn servers and temporarily on Anthropic servers (up to 30 days)
+            but are not used to train AI models.{' '}
+            <a
+              href="https://privacy.claude.com/en/collections/10672411-data-handling-retention"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-indigo-600 hover:text-indigo-700 underline"
+            >
+              Read more about this here
+            </a>
+            .
           </p>
         </div>
       </div>

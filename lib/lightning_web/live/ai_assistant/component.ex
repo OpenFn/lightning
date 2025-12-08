@@ -1056,7 +1056,14 @@ defmodule LightningWeb.AiAssistant.Component do
             Using The Assistant Safely
           </h2>
           <p>
-            The AI assistant uses a third-party model to process chat messages. Messages may be saved on OpenFn and Anthropic servers.
+            The AI assistant uses Claude by Anthropic, a third-party AI model.
+            Messages are stored on OpenFn servers and temporarily on Anthropic servers (up to 30 days) but are not used to train AI models. <a
+              href="https://privacy.claude.com/en/collections/10672411-data-handling-retention"
+              target="_blank"
+              class="text-primary-600 hover:text-primary-700"
+            >
+              Read more about this here
+            </a>.
           </p>
           <p>
             Although we are constantly monitoring and improving the performance of the model, the Assistant can

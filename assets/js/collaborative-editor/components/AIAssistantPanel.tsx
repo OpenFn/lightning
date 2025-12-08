@@ -506,7 +506,17 @@ export function AIAssistantPanel({
             </h4>
             <p>
               The AI assistant uses Claude by Anthropic, a third-party AI model.
-              Messages are saved on OpenFn and Anthropic servers.
+              Messages are stored on OpenFn servers and temporarily on Anthropic
+              servers (up to 30 days) but are not used to train AI models.{' '}
+              <a
+                href="https://privacy.claude.com/en/collections/10672411-data-handling-retention"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-primary-600 hover:text-primary-700"
+              >
+                Read more about this here
+              </a>
+              .
             </p>
             <p>
               Although we continuously monitor and improve the model, the

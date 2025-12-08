@@ -54,7 +54,7 @@ describe('DisclaimerScreen', () => {
         screen.getByText(/Do not include real user data/)
       ).toBeInTheDocument();
       expect(
-        screen.getByText(/Conversations may be stored/)
+        screen.getByText(/Messages are stored on OpenFn servers/)
       ).toBeInTheDocument();
     });
 
