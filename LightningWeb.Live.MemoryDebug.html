@@ -5,14 +5,14 @@
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="generator" content="ExDoc v0.38.4">
-    <meta name="project" content="Lightning v2.15.0-pre3">
+    <meta name="project" content="Lightning v2.15.0-pre4">
 
 
-    <title>LightningWeb.Live.MemoryDebug — Lightning v2.15.0-pre3</title>
+    <title>LightningWeb.Live.MemoryDebug — Lightning v2.15.0-pre4</title>
 
     <link rel="stylesheet" href="dist/html-elixir-RLZO5U2C.css" />
 
-    <script defer src="dist/sidebar_items-548152C6.js"></script>
+    <script defer src="dist/sidebar_items-B94BAB63.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-Y223O6DN.js"></script>
 
@@ -41,7 +41,7 @@
 Lightning
         </a>
         <div class="sidebar-projectVersion" translate="no">
-          v2.15.0-pre3
+          v2.15.0-pre4
         </div>
       </div>
     </div>
@@ -80,7 +80,7 @@ Lightning
   <div class="heading-with-actions top-heading">
     <h1>
       <span translate="no">LightningWeb.Live.MemoryDebug</span> 
-      <small class="app-vsn" translate="no">(Lightning v2.15.0-pre3)</small>
+      <small class="app-vsn" translate="no">(Lightning v2.15.0-pre4)</small>
 
     </h1>
 
@@ -96,16 +96,16 @@ Lightning
 <p>Memory debugging utilities for LiveViews to track memory usage and help
 diagnose OOM issues.</p><p>Usage in a LiveView:</p><pre><code class="makeup elixir" translate="no"><span class="kn">import</span><span class="w"> </span><span class="nc">LightningWeb.Live.MemoryDebug</span><span class="w">
 
-</span><span class="kd">def</span><span class="w"> </span><span class="nf">mount</span><span class="p" data-group-id="0865946787-1">(</span><span class="n">params</span><span class="p">,</span><span class="w"> </span><span class="n">session</span><span class="p">,</span><span class="w"> </span><span class="n">socket</span><span class="p" data-group-id="0865946787-1">)</span><span class="w"> </span><span class="k" data-group-id="0865946787-2">do</span><span class="w">
-  </span><span class="n">log_memory</span><span class="p" data-group-id="0865946787-3">(</span><span class="s">&quot;mount start&quot;</span><span class="p" data-group-id="0865946787-3">)</span><span class="w">
+</span><span class="kd">def</span><span class="w"> </span><span class="nf">mount</span><span class="p" data-group-id="9077028509-1">(</span><span class="n">params</span><span class="p">,</span><span class="w"> </span><span class="n">session</span><span class="p">,</span><span class="w"> </span><span class="n">socket</span><span class="p" data-group-id="9077028509-1">)</span><span class="w"> </span><span class="k" data-group-id="9077028509-2">do</span><span class="w">
+  </span><span class="n">log_memory</span><span class="p" data-group-id="9077028509-3">(</span><span class="s">&quot;mount start&quot;</span><span class="p" data-group-id="9077028509-3">)</span><span class="w">
 
   </span><span class="c1"># ... your code ...</span><span class="w">
 
-  </span><span class="n">socket</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">assign</span><span class="p" data-group-id="0865946787-4">(</span><span class="n">socket</span><span class="p">,</span><span class="w"> </span><span class="ss">:data</span><span class="p">,</span><span class="w"> </span><span class="n">large_data</span><span class="p" data-group-id="0865946787-4">)</span><span class="w">
-  </span><span class="n">log_memory</span><span class="p" data-group-id="0865946787-5">(</span><span class="s">&quot;after loading large data&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">socket</span><span class="p">:</span><span class="w"> </span><span class="n">socket</span><span class="p" data-group-id="0865946787-5">)</span><span class="w">
+  </span><span class="n">socket</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">assign</span><span class="p" data-group-id="9077028509-4">(</span><span class="n">socket</span><span class="p">,</span><span class="w"> </span><span class="ss">:data</span><span class="p">,</span><span class="w"> </span><span class="n">large_data</span><span class="p" data-group-id="9077028509-4">)</span><span class="w">
+  </span><span class="n">log_memory</span><span class="p" data-group-id="9077028509-5">(</span><span class="s">&quot;after loading large data&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">socket</span><span class="p">:</span><span class="w"> </span><span class="n">socket</span><span class="p" data-group-id="9077028509-5">)</span><span class="w">
 
-  </span><span class="p" data-group-id="0865946787-6">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="n">socket</span><span class="p" data-group-id="0865946787-6">}</span><span class="w">
-</span><span class="k" data-group-id="0865946787-2">end</span></code></pre>
+  </span><span class="p" data-group-id="9077028509-6">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="n">socket</span><span class="p" data-group-id="9077028509-6">}</span><span class="w">
+</span><span class="k" data-group-id="9077028509-2">end</span></code></pre>
     </section>
 
 </div>
@@ -251,9 +251,9 @@ diagnose OOM issues.</p><p>Usage in a LiveView:</p><pre><code class="makeup elix
 
   <section class="docstring">
 
-<p>Wraps a function call with before/after memory logging.</p><h2 id="measure/2-examples" class="section-heading"><a href="#measure/2-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="n">measure</span><span class="p" data-group-id="3886053529-1">(</span><span class="s">&quot;load dataclip&quot;</span><span class="p">,</span><span class="w"> </span><span class="k" data-group-id="3886053529-2">fn</span><span class="w"> </span><span class="o">-&gt;</span><span class="w">
-  </span><span class="nc">Invocation</span><span class="o">.</span><span class="n">get_dataclip!</span><span class="p" data-group-id="3886053529-3">(</span><span class="n">id</span><span class="p" data-group-id="3886053529-3">)</span><span class="w">
-</span><span class="k" data-group-id="3886053529-2">end</span><span class="p" data-group-id="3886053529-1">)</span></code></pre>
+<p>Wraps a function call with before/after memory logging.</p><h2 id="measure/2-examples" class="section-heading"><a href="#measure/2-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="n">measure</span><span class="p" data-group-id="2165679810-1">(</span><span class="s">&quot;load dataclip&quot;</span><span class="p">,</span><span class="w"> </span><span class="k" data-group-id="2165679810-2">fn</span><span class="w"> </span><span class="o">-&gt;</span><span class="w">
+  </span><span class="nc">Invocation</span><span class="o">.</span><span class="n">get_dataclip!</span><span class="p" data-group-id="2165679810-3">(</span><span class="n">id</span><span class="p" data-group-id="2165679810-3">)</span><span class="w">
+</span><span class="k" data-group-id="2165679810-2">end</span><span class="p" data-group-id="2165679810-1">)</span></code></pre>
   </section>
 </section>
 <section class="detail" id="measure_assigns/2">
