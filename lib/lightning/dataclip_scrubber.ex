@@ -63,13 +63,7 @@ defmodule Lightning.DataclipScrubber do
           scrubber
         end)
 
-      scrubber =
-        Enum.reduce(webhook_auth_methods, scrubber, fn auth_method, scrubber ->
-          samples = WebhookAuthMethod.sensitive_values_for(auth_method)
-          basic_auth = WebhookAuthMethod.basic_auth_for(auth_method)
-          :ok = Scrubber.add_samples(scrubber, samples, basic_auth)
-          scrubber
-        end)
+      scrubber = add_webhook_auth_samples(scrubber, webhook_auth_methods)
 
       Scrubber.scrub(scrubber, body_str)
     end
@@ -85,16 +79,19 @@ defmodule Lightning.DataclipScrubber do
     else
       {:ok, scrubber} = Scrubber.start_link([])
 
-      scrubber =
-        Enum.reduce(webhook_auth_methods, scrubber, fn auth_method, scrubber ->
-          samples = WebhookAuthMethod.sensitive_values_for(auth_method)
-          basic_auth = WebhookAuthMethod.basic_auth_for(auth_method)
-          :ok = Scrubber.add_samples(scrubber, samples, basic_auth)
-          scrubber
-        end)
+      scrubber = add_webhook_auth_samples(scrubber, webhook_auth_methods)
 
       Scrubber.scrub(scrubber, body_str)
     end
+  end
+
+  defp add_webhook_auth_samples(scrubber, webhook_auth_methods) do
+    Enum.reduce(webhook_auth_methods, scrubber, fn auth_method, scrubber ->
+      samples = WebhookAuthMethod.sensitive_values_for(auth_method)
+      basic_auth = WebhookAuthMethod.basic_auth_for(auth_method)
+      :ok = Scrubber.add_samples(scrubber, samples, basic_auth)
+      scrubber
+    end)
   end
 
   @doc """
