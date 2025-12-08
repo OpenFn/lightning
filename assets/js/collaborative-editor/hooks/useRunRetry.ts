@@ -286,8 +286,7 @@ export function useRunRetry({
         // Don't reset isSubmitting here - the effect will do it when WebSocket connects
       } else {
         // Fallback: navigate away if no callback (for standalone mode)
-        // Reset before navigation since component will unmount
-        setIsSubmitting(false);
+        // Don't reset isSubmitting - the page is redirecting and resetting would cause a flash
         window.location.href = `/projects/${projectId}/runs/${response.data.run_id}`;
       }
     } catch (error) {
@@ -385,9 +384,7 @@ export function useRunRetry({
         // Don't reset isSubmitting here - the effect will do it when WebSocket connects
       } else {
         // Fallback: navigate to new run (component will unmount)
-        // Reset before navigation since component will unmount
-        setIsSubmitting(false);
-        isRetryingRef.current = false;
+        // Don't reset isSubmitting - the page is redirecting and resetting would cause a flash
         window.location.href = `/projects/${projectId}/runs/${result.data.run_id}`;
       }
     } catch (error) {
