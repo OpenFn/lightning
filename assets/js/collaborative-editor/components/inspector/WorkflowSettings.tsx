@@ -75,7 +75,10 @@ export function WorkflowSettings() {
     changedFields => {
       Object.entries(changedFields).forEach(([key, value]) => {
         if (key in form.state.values) {
-          form.setFieldValue(key as keyof typeof form.state.values, value);
+          const fieldName = key as keyof typeof form.state.values;
+          form.setFieldValue(fieldName, value);
+          // Revalidate if field previously had errors (fixes Ctrl+Z clearing)
+          void form.validateField(fieldName, 'change');
         }
       });
     },
