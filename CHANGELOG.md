@@ -17,6 +17,14 @@ and this project adheres to
 
 ### Added
 
+### Changed
+
+### Fixed
+
+## [2.15.0-pre4] - 2025-12-08
+
+### Added
+
 - Display collab editor promotion in the legacy editor
   [#4091](https://github.com/OpenFn/lightning/issues/4091)
 - Template search and selection in collaborative workflow editor with AI-powered
