@@ -15,6 +15,7 @@ import {
   useAdaptors,
   useAdaptorsError,
   useAdaptorsLoading,
+  useProjectAdaptors,
 } from '../../js/collaborative-editor/hooks/useAdaptors';
 import { createSessionStore } from '../../js/collaborative-editor/stores/createSessionStore';
 
@@ -25,7 +26,12 @@ import { createAwarenessStore } from '../../js/collaborative-editor/stores/creat
 import { createCredentialStore } from '../../js/collaborative-editor/stores/createCredentialStore';
 import { createSessionContextStore } from '../../js/collaborative-editor/stores/createSessionContextStore';
 import { createWorkflowStore } from '../../js/collaborative-editor/stores/createWorkflowStore';
-import { mockAdaptorsList } from './fixtures/adaptorData';
+import {
+  mockAdaptorsList,
+  mockAdaptor,
+  mockAdaptorGmail,
+  mockAdaptorCommon,
+} from './fixtures/adaptorData';
 import { createMockSocket } from './mocks/phoenixSocket';
 
 // =============================================================================
@@ -367,6 +373,168 @@ describe('useAdaptors hooks', () => {
       });
 
       expect(adaptorsRenderCount).toBe(initialAdaptorsCount);
+    });
+  });
+
+  describe('useProjectAdaptors', () => {
+    test('requires StoreProvider context', () => {
+      expect(() => renderHook(() => useProjectAdaptors())).toThrow(
+        'useProjectAdaptors must be used within a StoreProvider'
+      );
+    });
+
+    test('returns projectAdaptors, allAdaptors, and isLoading', async () => {
+      const { wrapper, stores } = createWrapper();
+      const { result } = renderHook(() => useProjectAdaptors(), { wrapper });
+
+      // Initially empty
+      expect(result.current.projectAdaptors).toEqual([]);
+      expect(result.current.allAdaptors).toEqual([]);
+      expect(result.current.isLoading).toBe(false);
+
+      // Set all adaptors (simulates backend response)
+      const allAdaptors = [mockAdaptor, mockAdaptorGmail, mockAdaptorCommon];
+      act(() => {
+        stores.adaptorStore.setAdaptors(allAdaptors);
+      });
+
+      await waitFor(() => {
+        expect(result.current.allAdaptors).toHaveLength(3);
+      });
+    });
+
+    test('merges Y.Doc job adaptors into projectAdaptors', async () => {
+      const { wrapper, stores } = createWrapper();
+      const { result } = renderHook(() => useProjectAdaptors(), { wrapper });
+
+      // Set all available adaptors
+      const allAdaptors = [mockAdaptor, mockAdaptorGmail, mockAdaptorCommon];
+      act(() => {
+        stores.adaptorStore.setAdaptors(allAdaptors);
+      });
+
+      // Add a job to the workflow store that uses Gmail adaptor
+      act(() => {
+        stores.workflowStore._setJobsForTesting([
+          {
+            id: 'job-1',
+            name: 'Test Job',
+            adaptor: '@openfn/language-gmail@latest',
+            body: 'fn(state => state)',
+          },
+        ]);
+      });
+
+      // projectAdaptors should now include Gmail from Y.Doc
+      await waitFor(() => {
+        const projectAdaptorNames = result.current.projectAdaptors.map(
+          a => a.name
+        );
+        expect(projectAdaptorNames).toContain('@openfn/language-gmail');
+      });
+    });
+
+    test('does not duplicate adaptors already in backend projectAdaptors', async () => {
+      const { wrapper, stores } = createWrapper();
+      const { result } = renderHook(() => useProjectAdaptors(), { wrapper });
+
+      // Set all available adaptors and project adaptors (simulates backend where HTTP is already saved)
+      const allAdaptors = [mockAdaptor, mockAdaptorGmail, mockAdaptorCommon];
+      act(() => {
+        stores.adaptorStore.setAdaptors(allAdaptors);
+        // Directly set projectAdaptors via internal state modification
+        stores.adaptorStore._setProjectAdaptors([mockAdaptor]);
+      });
+
+      // Add a job that uses HTTP (already in projectAdaptors from backend)
+      act(() => {
+        stores.workflowStore._setJobsForTesting([
+          {
+            id: 'job-1',
+            name: 'Test Job',
+            adaptor: '@openfn/language-http@2.1.0',
+            body: 'fn(state => state)',
+          },
+        ]);
+      });
+
+      await waitFor(() => {
+        // Should only have HTTP once, not duplicated
+        const httpCount = result.current.projectAdaptors.filter(
+          a => a.name === '@openfn/language-http'
+        ).length;
+        expect(httpCount).toBe(1);
+      });
+    });
+
+    test('handles jobs without adaptor field', async () => {
+      const { wrapper, stores } = createWrapper();
+      const { result } = renderHook(() => useProjectAdaptors(), { wrapper });
+
+      // Set all available adaptors
+      const allAdaptors = [mockAdaptor, mockAdaptorGmail];
+      act(() => {
+        stores.adaptorStore.setAdaptors(allAdaptors);
+      });
+
+      // Add a job without an adaptor field (should not crash)
+      act(() => {
+        stores.workflowStore._setJobsForTesting([
+          {
+            id: 'job-1',
+            name: 'Test Job',
+            adaptor: undefined as any,
+            body: 'fn(state => state)',
+          },
+        ]);
+      });
+
+      // Should not throw and projectAdaptors should be empty (no backend project adaptors set)
+      await waitFor(() => {
+        expect(result.current.projectAdaptors).toEqual([]);
+      });
+    });
+
+    test('sorts merged projectAdaptors alphabetically', async () => {
+      const { wrapper, stores } = createWrapper();
+      const { result } = renderHook(() => useProjectAdaptors(), { wrapper });
+
+      // Set all available adaptors
+      const allAdaptors = [mockAdaptor, mockAdaptorGmail, mockAdaptorCommon];
+      act(() => {
+        stores.adaptorStore.setAdaptors(allAdaptors);
+        // Set HTTP as already in project from backend
+        stores.adaptorStore._setProjectAdaptors([mockAdaptor]);
+      });
+
+      // Add jobs using Gmail and Common (not in backend projectAdaptors)
+      act(() => {
+        stores.workflowStore._setJobsForTesting([
+          {
+            id: 'job-1',
+            name: 'Gmail Job',
+            adaptor: '@openfn/language-gmail@latest',
+            body: '',
+          },
+          {
+            id: 'job-2',
+            name: 'Common Job',
+            adaptor: '@openfn/language-common@2.0.0',
+            body: '',
+          },
+        ]);
+      });
+
+      await waitFor(() => {
+        expect(result.current.projectAdaptors).toHaveLength(3);
+        const names = result.current.projectAdaptors.map(a => a.name);
+        // Should be sorted: common, gmail, http
+        expect(names).toEqual([
+          '@openfn/language-common',
+          '@openfn/language-gmail',
+          '@openfn/language-http',
+        ]);
+      });
     });
   });
 });

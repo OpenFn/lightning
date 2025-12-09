@@ -87,6 +87,7 @@ import {
   type Adaptor,
   type AdaptorState,
   type AdaptorStore,
+  type AdaptorsList,
   AdaptorsListSchema,
 } from '../types/adaptor';
 
@@ -94,6 +95,21 @@ import { createWithSelector } from './common';
 import { wrapStoreWithDevTools } from './devtools';
 
 const logger = _logger.ns('AdaptorStore').seal();
+
+// sorts adaptors coming into the adaptor store
+// 1. sorts the versions for every adaptor
+// 2. sorts the adaptors themselves by name
+export function sortAdaptors(adaptors: AdaptorsList = []) {
+  const sortedAdaptors: AdaptorsList = [];
+  for (const adaptor of adaptors) {
+    // spreading because it could be read-only.
+    const versions = [...(adaptor.versions || [])].sort((a, b) =>
+      b.version.localeCompare(a.version)
+    );
+    sortedAdaptors.push({ ...adaptor, versions });
+  }
+  return sortedAdaptors.sort((a, b) => a.name.localeCompare(b.name));
+}
 
 /**
  * Creates an adaptor store instance with useSyncExternalStore + Immer pattern
@@ -154,11 +170,7 @@ export const createAdaptorStore = (): AdaptorStore => {
     const result = AdaptorsListSchema.safeParse(rawData);
 
     if (result.success) {
-      const adaptors = result.data;
-      for (const adaptor of adaptors) {
-        adaptor.versions.sort((a, b) => b.version.localeCompare(a.version));
-      }
-      adaptors.sort((a, b) => a.name.localeCompare(b.name));
+      const adaptors = sortAdaptors(result.data);
 
       state = produce(state, draft => {
         draft.adaptors = adaptors;
@@ -218,7 +230,7 @@ export const createAdaptorStore = (): AdaptorStore => {
 
   const setAdaptors = (adaptors: Adaptor[]) => {
     state = produce(state, draft => {
-      draft.adaptors = adaptors;
+      draft.adaptors = sortAdaptors(adaptors);
       draft.lastUpdated = Date.now();
       draft.error = null;
     });
@@ -330,8 +342,8 @@ export const createAdaptorStore = (): AdaptorStore => {
 
         if (projectResult.success && allResult.success) {
           state = produce(state, draft => {
-            draft.projectAdaptors = projectResult.data;
-            draft.adaptors = allResult.data;
+            draft.projectAdaptors = sortAdaptors(projectResult.data);
+            draft.adaptors = sortAdaptors(allResult.data);
             draft.isLoading = false;
             draft.error = null;
           });
@@ -391,6 +403,13 @@ export const createAdaptorStore = (): AdaptorStore => {
 
     // Internal methods (not part of public AdaptorStore interface)
     _connectChannel: connectChannel,
+    // Test helper to set project adaptors directly
+    _setProjectAdaptors: (adaptors: Adaptor[]) => {
+      state = produce(state, draft => {
+        draft.projectAdaptors = sortAdaptors(adaptors);
+      });
+      notify('_setProjectAdaptors');
+    },
   };
 };
 

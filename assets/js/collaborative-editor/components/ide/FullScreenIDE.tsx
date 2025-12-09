@@ -382,6 +382,24 @@ export function FullScreenIDE({
   const { pushEvent, handleEvent } = useLiveViewActions();
   const { updateJob } = useWorkflowActions();
 
+  // converting 'latest' on an adaptor string to the actual version number
+  // to be used by components that can't make use of 'latest'
+  const currJobAdaptor = useMemo(() => {
+    if (!currentJob?.adaptor) {
+      const latestCommon = projectAdaptors.find(
+        a => a.name === '@openfn/language-common'
+      )?.versions?.[0]?.version;
+      return `@openfn/language-common@${latestCommon || 'latest'}`;
+    }
+    const resolved = resolveAdaptor(currentJob.adaptor);
+    if (resolved.version !== 'latest') return currentJob?.adaptor;
+    const latestVersion = projectAdaptors.find(a => a.name === resolved.package)
+      ?.versions?.[0]?.version;
+    // If version not found, return original adaptor string
+    if (!latestVersion) return currentJob.adaptor;
+    return `${resolved.package}@${latestVersion}`;
+  }, [projectAdaptors, currentJob?.adaptor]);
+
   // Run/Retry functionality for IDE Header
   const { canRun: canRunSnapshot, tooltipMessage: runTooltipMessage } =
     useCanRun();
@@ -1014,19 +1032,11 @@ export function FullScreenIDE({
                       {!isDocsCollapsed && (
                         <div className="flex-1 overflow-auto p-2">
                           {selectedDocsTab === 'docs' && (
-                            <Docs
-                              adaptor={
-                                currentJob.adaptor ||
-                                '@openfn/language-common@latest'
-                              }
-                            />
+                            <Docs adaptor={currJobAdaptor} />
                           )}
                           {selectedDocsTab === 'metadata' && (
                             <Metadata
-                              adaptor={
-                                currentJob.adaptor ||
-                                '@openfn/language-common@latest'
-                              }
+                              adaptor={currJobAdaptor}
                               metadata={null}
                             />
                           )}
