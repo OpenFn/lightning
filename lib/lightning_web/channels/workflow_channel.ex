@@ -233,10 +233,13 @@ defmodule LightningWeb.WorkflowChannel do
 
   @impl true
   def handle_in("mark_ai_disclaimer_read", _params, socket) do
-    user = socket.assigns.current_user
+    case Lightning.AiAssistant.mark_disclaimer_read(socket.assigns.current_user) do
+      {:ok, _user} ->
+        {:reply, {:ok, %{success: true}}, socket}
 
-    {:ok, _user} = Lightning.AiAssistant.mark_disclaimer_read(user)
-    {:reply, {:ok, %{success: true}}, socket}
+      {:error, _changeset} ->
+        {:reply, {:error, %{reason: "failed_to_update"}}, socket}
+    end
   end
 
   @impl true

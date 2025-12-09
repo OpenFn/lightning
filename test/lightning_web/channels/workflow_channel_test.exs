@@ -2983,5 +2983,27 @@ defmodule LightningWeb.WorkflowChannelTest do
       updated_user = Lightning.Accounts.get_user!(user.id)
       assert updated_user.preferences["ai_assistant.disclaimer_read_at"] != nil
     end
+
+    test "is idempotent - can be called multiple times", %{
+      socket: socket,
+      user: user
+    } do
+      # Mark as read the first time
+      ref1 = push(socket, "mark_ai_disclaimer_read", %{})
+      assert_reply ref1, :ok, %{success: true}
+
+      user = Lightning.Accounts.get_user!(user.id)
+      first_read_at = user.preferences["ai_assistant.disclaimer_read_at"]
+      assert first_read_at != nil
+
+      # Mark as read again - should succeed without error
+      ref2 = push(socket, "mark_ai_disclaimer_read", %{})
+      assert_reply ref2, :ok, %{success: true}
+
+      # Timestamp may or may not be updated depending on implementation,
+      # but the call should succeed
+      updated_user = Lightning.Accounts.get_user!(user.id)
+      assert updated_user.preferences["ai_assistant.disclaimer_read_at"] != nil
+    end
   end
 end
