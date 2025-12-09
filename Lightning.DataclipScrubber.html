@@ -12,7 +12,7 @@
 
     <link rel="stylesheet" href="dist/html-elixir-RLZO5U2C.css" />
 
-    <script defer src="dist/sidebar_items-8A146146.js"></script>
+    <script defer src="dist/sidebar_items-C7732D4C.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-Y223O6DN.js"></script>
 
@@ -129,6 +129,28 @@ run or earlier steps.</p></div>
 
     </div>
 
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#webhook_auth_methods_for_dataclip/1" data-no-tooltip="" translate="no">webhook_auth_methods_for_dataclip(dataclip_id)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Returns webhook auth methods for an http_request dataclip by traversing:
+dataclip -&gt; work_order -&gt; trigger -&gt; webhook_auth_methods</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#webhook_auth_methods_for_step/1" data-no-tooltip="" translate="no">webhook_auth_methods_for_step(step_id)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Returns webhook auth methods for a step by traversing:
+step -&gt; run_step -&gt; run -&gt; work_order -&gt; trigger -&gt; webhook_auth_methods</p></div>
+
+    </div>
+
 </div>
 
   </section>
@@ -153,7 +175,7 @@ run or earlier steps.</p></div>
       <h1 class="signature" translate="no">credentials_for_step(step_id, started_at)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/dataclip_scrubber.ex#L70" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/dataclip_scrubber.ex#L103" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -176,7 +198,7 @@ run or earlier steps.</p><p>Uses a self-join on RunStep to leverage existing ind
       <h1 class="signature" translate="no">scrub_dataclip_body!(dataclip)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/dataclip_scrubber.ex#L19" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/dataclip_scrubber.ex#L21" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -193,6 +215,52 @@ run or earlier steps.</p><p>Uses a self-join on RunStep to leverage existing ind
       </div>
 
 
+  </section>
+</section>
+<section class="detail" id="webhook_auth_methods_for_dataclip/1">
+
+  <div class="detail-header">
+    <a href="#webhook_auth_methods_for_dataclip/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">webhook_auth_methods_for_dataclip(dataclip_id)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/dataclip_scrubber.ex#L142" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>Returns webhook auth methods for an http_request dataclip by traversing:
+dataclip -&gt; work_order -&gt; trigger -&gt; webhook_auth_methods</p>
+  </section>
+</section>
+<section class="detail" id="webhook_auth_methods_for_step/1">
+
+  <div class="detail-header">
+    <a href="#webhook_auth_methods_for_step/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">webhook_auth_methods_for_step(step_id)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/dataclip_scrubber.ex#L125" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>Returns webhook auth methods for a step by traversing:
+step -&gt; run_step -&gt; run -&gt; work_order -&gt; trigger -&gt; webhook_auth_methods</p>
   </section>
 </section>
 
