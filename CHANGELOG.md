@@ -21,6 +21,9 @@ and this project adheres to
 
 ### Fixed
 
+- Fix saving workflow with same name as deleted workflow
+  [#4165](https://github.com/OpenFn/lightning/pull/4165)
+
 ## [2.15.0-pre4] - 2025-12-08
 
 ### Added
