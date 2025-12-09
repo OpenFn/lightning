@@ -833,6 +833,76 @@ defmodule Lightning.WorkflowsTest do
       assert_received %KafkaTriggerUpdated{trigger_id: ^kafka_trigger_2_id}
       assert_received %KafkaTriggerUpdated{trigger_id: ^kafka_trigger_1_id}
     end
+
+    test "mark_for_deletion/3 renames workflow with _del suffix" do
+      # Use a separate project to avoid pollution from setup
+      project = insert(:project)
+      user = insert(:user)
+      w1 = insert(:workflow, project: project, name: "Test Workflow")
+
+      assert {:ok, %{workflow: workflow}} = Workflows.mark_for_deletion(w1, user)
+      assert workflow.name == "Test Workflow_del0001"
+
+      # Test incrementing when deleting another workflow with the same name
+      w2 = insert(:workflow, project: project, name: "Test Workflow")
+
+      assert {:ok, %{workflow: workflow2}} =
+               Workflows.mark_for_deletion(w2, user)
+
+      assert workflow2.name == "Test Workflow_del0002"
+
+      # Test incrementing again
+      w3 = insert(:workflow, project: project, name: "Test Workflow")
+
+      assert {:ok, %{workflow: workflow3}} =
+               Workflows.mark_for_deletion(w3, user)
+
+      assert workflow3.name == "Test Workflow_del0003"
+    end
+
+    test "change_workflow/2 rejects names ending with _del followed by digits" do
+      project = insert(:project)
+      workflow = insert(:workflow, project: project, name: "Original Name")
+
+      # Should reject _del with any digits
+      changeset =
+        Workflows.change_workflow(workflow, %{name: "My Workflow_del0001"})
+
+      refute changeset.valid?
+
+      assert %{name: [error]} = errors_on(changeset)
+
+      assert error =~
+               "cannot end with _del followed by digits"
+
+      # Should also reject _del with no digits
+      changeset = Workflows.change_workflow(workflow, %{name: "My Workflow_del"})
+      refute changeset.valid?
+
+      assert %{name: [error]} = errors_on(changeset)
+      assert error =~ "cannot end with _del followed by digits"
+
+      # Should also reject _del with 3 digits
+      changeset =
+        Workflows.change_workflow(workflow, %{name: "My Workflow_del123"})
+
+      refute changeset.valid?
+
+      assert %{name: [error]} = errors_on(changeset)
+      assert error =~ "cannot end with _del followed by digits"
+
+      # Valid names should work (not ending with _del)
+      changeset = Workflows.change_workflow(workflow, %{name: "My Workflow"})
+      errors = errors_on(changeset)
+      assert Map.get(errors, :name) == nil
+
+      # Valid name with _del in the middle
+      changeset =
+        Workflows.change_workflow(workflow, %{name: "My_del_Workflow"})
+
+      errors = errors_on(changeset)
+      assert Map.get(errors, :name) == nil
+    end
   end
 
   describe "get_workflows_for/2" do

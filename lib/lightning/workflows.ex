@@ -462,12 +462,16 @@ defmodule Lightning.Workflows do
         where: t.workflow_id == ^workflow.id
       )
 
+    new_name = generate_deleted_workflow_name(workflow)
+
     Multi.new()
     |> Multi.update(
       :workflow,
-      Workflow.request_deletion_changeset(workflow, %{
+      workflow
+      |> Workflow.request_deletion_changeset(%{
         "deleted_at" => DateTime.utc_now()
       })
+      |> Ecto.Changeset.put_change(:name, new_name)
     )
     |> Multi.insert(:audit, Audit.marked_for_deletion(workflow.id, actor))
     |> Multi.update_all(
@@ -484,6 +488,44 @@ defmodule Lightning.Workflows do
         |> Events.workflow_updated()
       end
     end)
+  end
+
+  defp generate_deleted_workflow_name(%Workflow{
+         name: name,
+         project_id: project_id
+       }) do
+    # Escape special regex characters in the workflow name
+    escaped_name = Regex.escape(name)
+    pattern = "^#{escaped_name}_del[0-9]+$"
+
+    # Find the workflow with the highest suffix by sorting names lexicographically
+    # This works because we zero-pad numbers: _del0001, _del0002, ..., _del0009, _del0010
+    highest_suffix_name =
+      from(w in Workflow,
+        where:
+          w.project_id == ^project_id and
+            not is_nil(w.deleted_at) and
+            fragment("? ~ ?", w.name, ^pattern),
+        order_by: [desc: w.name],
+        limit: 1,
+        select: w.name
+      )
+      |> Repo.one()
+
+    next_number =
+      case highest_suffix_name do
+        nil ->
+          1
+
+        name_with_suffix ->
+          case Regex.run(~r/_del(\d+)$/, name_with_suffix) do
+            [_, num] -> String.to_integer(num) + 1
+            _ -> 1
+          end
+      end
+
+    # Zero-pad to 4 digits to ensure proper lexicographic sorting
+    "#{name}_del#{String.pad_leading(Integer.to_string(next_number), 4, "0")}"
   end
 
   defp notify_of_affected_kafka_triggers(%{triggers: triggers}) do

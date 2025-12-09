@@ -17,14 +17,18 @@ import type { Trigger as TriggerType } from './trigger';
 /**
  * Zod schema for workflow validation
  *
- * Mirrors backend validation from lib/lightning/workflows/workflow.ex:81-89
+ * Mirrors backend validation from lib/lightning/workflows/workflow.ex:81-103
  */
 export const WorkflowSchema = z.object({
   id: z.string().uuid(),
   name: z
     .string()
     .min(1, "can't be blank")
-    .max(255, 'should be at most 255 character(s)'),
+    .max(255, 'should be at most 255 character(s)')
+    .refine(
+      name => !/_del\d*$/.test(name),
+      'cannot end with _del followed by digits'
+    ),
   lock_version: z.number().int(),
   deleted_at: z.string().nullable(),
 

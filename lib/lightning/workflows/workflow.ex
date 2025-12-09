@@ -83,9 +83,22 @@ defmodule Lightning.Workflows.Workflow do
     |> assoc_constraint(:project)
     |> validate_number(:concurrency, greater_than_or_equal_to: 1)
     |> validate_required([:name])
+    |> validate_name_not_deleted_format()
     |> unique_constraint([:name, :project_id],
       message: "a workflow with this name already exists in this project."
     )
+  end
+
+  defp validate_name_not_deleted_format(changeset) do
+    validate_change(changeset, :name, fn :name, name ->
+      if Regex.match?(~r/_del\d*$/, name) do
+        [
+          name: "cannot end with _del followed by digits"
+        ]
+      else
+        []
+      end
+    end)
   end
 
   def request_deletion_changeset(workflow, attrs) do
