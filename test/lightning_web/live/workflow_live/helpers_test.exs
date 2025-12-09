@@ -1,8 +1,6 @@
 defmodule LightningWeb.WorkflowLive.HelpersTest do
   use Lightning.DataCase, async: true
 
-  import Lightning.Factories
-
   alias LightningWeb.WorkflowLive.Helpers
 
   describe "collaborative_editor_url/2" do
