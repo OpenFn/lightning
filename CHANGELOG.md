@@ -17,6 +17,16 @@ and this project adheres to
 
 ### Added
 
+### Changed
+
+### Fixed
+
+## [2.15.0-pre4] - 2025-12-08
+
+### Added
+
+- Display collab editor promotion in the legacy editor
+  [#4091](https://github.com/OpenFn/lightning/issues/4091)
 - Template search and selection in collaborative workflow editor with AI-powered
   workflow generation for missing templates
   [#4081](https://github.com/OpenFn/lightning/issues/4081)
@@ -28,6 +38,8 @@ and this project adheres to
 
 - Standardize run buttons so they all behave predictably
   [#4129](https://github.com/OpenFn/lightning/issues/4129)
+- Make collab editor available to everyone (not just experimental feature users)
+  [#4091](https://github.com/OpenFn/lightning/issues/4091)
 
 ### Fixed
 

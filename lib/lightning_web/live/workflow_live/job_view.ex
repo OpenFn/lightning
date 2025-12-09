@@ -134,12 +134,6 @@ defmodule LightningWeb.WorkflowLive.JobView do
               prior_user={@prior_user_presence.user}
             />
             <button
-              :if={
-                LightningWeb.WorkflowLive.Helpers.show_collaborative_editor_toggle?(
-                  @current_user,
-                  @snapshot_version
-                )
-              }
               id={"inspector-collaborative-editor-toggle-#{@job.id}"}
               phx-click="toggle_collaborative_editor"
               class="inline-flex items-center justify-center
