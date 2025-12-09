@@ -47,6 +47,7 @@ import {
   createMockPhoenixChannelProvider,
   createMockURLState,
   getURLStateMockValue,
+  getVisibleButtonText,
   type MockPhoenixChannel,
 } from '../__helpers__';
 import { createStores } from '../__helpers__/storeProviderHelpers';
@@ -675,9 +676,11 @@ describe('ManualRunPanel Keyboard Shortcuts', () => {
       });
 
       // Verify button shows processing state
+      // Use helper for CSS Grid layout (invisible spacers render same text)
       await waitFor(() => {
-        expect(screen.getByText('Processing')).toBeInTheDocument();
-        expect(screen.getByText('Processing')).toBeDisabled();
+        const processingText = getVisibleButtonText('Processing');
+        expect(processingText).toBeInTheDocument();
+        expect(processingText.closest('button')).toBeDisabled();
       });
     });
   });
@@ -1282,8 +1285,9 @@ describe('ManualRunPanel Keyboard Shortcuts', () => {
         });
 
         // Verify it's in running state
+        // Use helper for CSS Grid layout (invisible spacers render same text)
         await waitFor(() => {
-          expect(screen.getByText('Processing')).toBeInTheDocument();
+          expect(getVisibleButtonText('Processing')).toBeInTheDocument();
         });
 
         // Try to press Cmd+Enter while running

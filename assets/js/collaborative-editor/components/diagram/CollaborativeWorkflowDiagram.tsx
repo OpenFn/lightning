@@ -22,6 +22,7 @@ import {
 import { useIsNewWorkflow } from '../../hooks/useSessionContext';
 import { useVersionMismatch } from '../../hooks/useVersionMismatch';
 import { useNodeSelection } from '../../hooks/useWorkflow';
+import { useKeyboardShortcut } from '../../keyboard';
 import type { RunSummary } from '../../types/history';
 
 import MiniHistory from './MiniHistory';
@@ -59,6 +60,17 @@ export function CollaborativeWorkflowDiagram({
   const handleToggleHistory = useCallback(() => {
     setHistoryPanelCollapsed(!historyCollapsed);
   }, [historyCollapsed, setHistoryPanelCollapsed]);
+
+  useKeyboardShortcut(
+    'Control+h, Meta+h',
+    () => {
+      if (!isNewWorkflow) {
+        handleToggleHistory();
+      }
+    },
+    25, // Canvas priority (lower than IDE's 50)
+    { enabled: !isNewWorkflow }
+  );
 
   // Use hook to get run steps with automatic subscription management
   const currentRunSteps = useRunSteps(selectedRunId);

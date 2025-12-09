@@ -28,6 +28,8 @@ and this project adheres to
 
 ### Fixed
 
+- Fix Run/Retry button flash and improve History button UX in collaborative
+  editor [#4108](https://github.com/OpenFn/lightning/issues/4108)
 - Fix new jobs are misplaced on the canvas in manual layout
   [#4118](https://github.com/OpenFn/lightning/issues/4118)
 

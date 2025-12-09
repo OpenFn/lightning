@@ -35,6 +35,7 @@ import {
   createMockPhoenixChannelProvider,
   createMockURLState,
   getURLStateMockValue,
+  getVisibleButtonText,
 } from '../__helpers__';
 
 // Mock the API module
@@ -1000,12 +1001,13 @@ describe('ManualRunPanel', () => {
       await user.click(screen.getByText('Run'));
 
       // Button should show "Processing" while submitting
+      // Use helper for CSS Grid layout (invisible spacers render same text)
       await waitFor(() => {
-        expect(screen.getByText('Processing')).toBeInTheDocument();
+        expect(getVisibleButtonText('Processing')).toBeInTheDocument();
       });
 
       // Button should be disabled
-      const runButton = screen.getByText('Processing');
+      const runButton = getVisibleButtonText('Processing').closest('button')!;
       expect(runButton).toBeDisabled();
 
       // Try to click again - should not trigger another save
