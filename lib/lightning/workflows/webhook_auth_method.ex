@@ -111,7 +111,7 @@ defmodule Lightning.Workflows.WebhookAuthMethod do
   ## Examples
 
       iex> sensitive_values_for(%WebhookAuthMethod{auth_type: :basic, username: "user", password: "pass"})
-      ["user", "pass"]
+      ["pass"]
 
       iex> sensitive_values_for(%WebhookAuthMethod{auth_type: :api, api_key: "secret123"})
       ["secret123"]
