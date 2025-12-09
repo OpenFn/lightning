@@ -36,11 +36,15 @@ and this project adheres to
 
 ### Changed
 
+- Standardize run buttons so they all behave predictably
+  [#4129](https://github.com/OpenFn/lightning/issues/4129)
 - Make collab editor available to everyone (not just experimental feature users)
   [#4091](https://github.com/OpenFn/lightning/issues/4091)
 
 ### Fixed
 
+- Fix Run/Retry button flash and improve History button UX in collaborative
+  editor [#4108](https://github.com/OpenFn/lightning/issues/4108)
 - Fix new jobs are misplaced on the canvas in manual layout
   [#4118](https://github.com/OpenFn/lightning/issues/4118)
 - Fix docs not working for latest version of adaptors in IDE

@@ -2,11 +2,11 @@ import {
   ChevronRightIcon,
   ClockIcon,
   DocumentTextIcon,
-  PlayIcon,
   SparklesIcon,
   ViewColumnsIcon,
   XMarkIcon,
 } from '@heroicons/react/24/outline';
+import { ClockIcon as ClockIconSolid } from '@heroicons/react/24/solid';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   type ImperativePanelHandle,
@@ -61,6 +61,7 @@ import MiniHistory from '../diagram/MiniHistory';
 import { JobSelector } from '../JobSelector';
 import { ManualRunPanel } from '../ManualRunPanel';
 import { ManualRunPanelErrorBoundary } from '../ManualRunPanelErrorBoundary';
+import { NewRunButton } from '../NewRunButton';
 import { RunViewerErrorBoundary } from '../run-viewer/RunViewerErrorBoundary';
 import { RunViewerPanel } from '../run-viewer/RunViewerPanel';
 import { RunRetryButton } from '../RunRetryButton';
@@ -224,8 +225,12 @@ export function FullScreenIDE({
   }, [updateSearchParams, clearRun]);
 
   const handleNavigateToHistory = useCallback(() => {
+    // Clear any active run to show history
+    setFollowRunId(null);
+    clearRun();
+    updateSearchParams({ run: null });
     setRightPanelSubState('history');
-  }, []);
+  }, [updateSearchParams, clearRun]);
 
   const handleNavigateToCreateRun = useCallback(() => {
     // Reset to fresh state when entering create-run
@@ -432,7 +437,12 @@ export function FullScreenIDE({
   // Enable run/retry keyboard shortcuts in IDE
   useRunRetryShortcuts({
     onRun: () => {
-      void handleRun();
+      // If panel is not open or showing history, open create-run panel (same as New Run button)
+      if (panelState === undefined || panelState === 'history') {
+        handleNavigateToCreateRun();
+      } else {
+        void handleRun();
+      }
     },
     onRetry: () => {
       void handleRetry();
@@ -442,13 +452,22 @@ export function FullScreenIDE({
       canRunFromHook &&
       !isSubmitting &&
       !runIsProcessing &&
-      jobMatchesRun &&
-      // Only allow run when in run-viewer (retry) or create-run state
-      (panelState === 'run-viewer' || panelState === 'create-run'),
+      jobMatchesRun,
     isRunning: isSubmitting || runIsProcessing,
     isRetryable,
     priority: 50, // IDE priority
   });
+
+  useKeyboardShortcut(
+    'Control+h, Meta+h',
+    () => {
+      if (!isSubmitting && !runIsProcessing) {
+        handleNavigateToHistory();
+      }
+    },
+    50, // IDE priority
+    { enabled: true }
+  );
 
   // Handle job selection from JobSelector
   const sortedJobs = useMemo(() => {
@@ -835,33 +854,34 @@ export function FullScreenIDE({
           </div>
 
           <div className="flex items-center gap-2 shrink-0">
-            {/* History button - shown when no panel, viewing history, or creating new run */}
-            {panelState !== 'run-viewer' && (
+            {/* History button - always visible, disabled during submitting/processing */}
+            <Tooltip
+              content={<ShortcutKeys keys={['mod', 'h']} />}
+              side="bottom"
+            >
               <button
                 type="button"
                 onClick={handleNavigateToHistory}
+                disabled={isSubmitting || runIsProcessing}
                 className={cn(
                   'inline-flex items-center gap-1.5 rounded-md px-3 py-2 text-sm font-semibold shadow-xs transition-colors',
-                  panelState === 'history'
-                    ? 'bg-primary-600 text-white hover:bg-primary-500'
-                    : 'bg-white text-gray-900 ring-1 ring-inset ring-gray-300 hover:bg-gray-50'
+                  isSubmitting || runIsProcessing
+                    ? 'bg-primary-300 text-white cursor-not-allowed'
+                    : 'bg-primary-600 text-white hover:bg-primary-500'
                 )}
               >
-                <ClockIcon className="h-4 w-4" />
+                {panelState === 'history' ? (
+                  <ClockIconSolid className="h-4 w-4" />
+                ) : (
+                  <ClockIcon className="h-4 w-4" />
+                )}
                 History
               </button>
-            )}
+            </Tooltip>
 
-            {/* Run button - shown when no panel or viewing history */}
+            {/* New Run button - shown when no panel or viewing history */}
             {(panelState === undefined || panelState === 'history') && (
-              <button
-                type="button"
-                onClick={handleNavigateToCreateRun}
-                className="inline-flex items-center gap-1.5 rounded-md px-3 py-2 text-sm font-semibold shadow-xs bg-white text-gray-900 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 transition-colors"
-              >
-                <PlayIcon className="h-4 w-4" />
-                Run
-              </button>
+              <NewRunButton onClick={handleNavigateToCreateRun} />
             )}
 
             {/* Run/Retry button - shown when creating new run or viewing existing run */}
@@ -886,7 +906,7 @@ export function FullScreenIDE({
                 }}
                 buttonText={{
                   run: 'Run',
-                  retry: 'Run (retry)',
+                  retry: 'Run (Retry)',
                   processing: 'Processing',
                 }}
                 variant="primary"
