@@ -2965,4 +2965,23 @@ defmodule LightningWeb.WorkflowChannelTest do
              ]
     end
   end
+
+  describe "mark_ai_disclaimer_read" do
+    test "successfully marks AI disclaimer as read", %{
+      socket: socket,
+      user: user
+    } do
+      # Verify user hasn't read the disclaimer yet
+      user = Lightning.Accounts.get_user!(user.id)
+      assert user.preferences["ai_assistant.disclaimer_read_at"] == nil
+
+      ref = push(socket, "mark_ai_disclaimer_read", %{})
+
+      assert_reply ref, :ok, %{success: true}
+
+      # Verify user preferences were updated
+      updated_user = Lightning.Accounts.get_user!(user.id)
+      assert updated_user.preferences["ai_assistant.disclaimer_read_at"] != nil
+    end
+  end
 end
