@@ -898,6 +898,12 @@ defmodule Lightning.AiAssistant do
         {:logs, false} ->
           Map.drop(acc, [:log])
 
+        {:input, input} when not is_nil(input) ->
+          Map.put(acc, :input, input)
+
+        {:output, output} when not is_nil(output) ->
+          Map.put(acc, :output, output)
+
         _ ->
           acc
       end

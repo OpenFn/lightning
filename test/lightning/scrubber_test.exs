@@ -243,4 +243,89 @@ defmodule Lightning.ScrubberTest do
              ) == MapSet.new()
     end
   end
+
+  describe "scrub_values/1" do
+    test "scrubs primitive values" do
+      assert Scrubber.scrub_values("hello") == "string"
+      assert Scrubber.scrub_values(42) == "number"
+      assert Scrubber.scrub_values(3.14) == "number"
+      assert Scrubber.scrub_values(true) == "boolean"
+      assert Scrubber.scrub_values(false) == "boolean"
+      assert Scrubber.scrub_values(nil) == "null"
+    end
+
+    test "preserves map keys while scrubbing values" do
+      input = %{"name" => "John", "age" => 30}
+      expected = %{"name" => "string", "age" => "number"}
+      assert Scrubber.scrub_values(input) == expected
+    end
+
+    test "handles nested maps" do
+      input = %{"user" => %{"name" => "John", "address" => %{"city" => "NYC"}}}
+
+      expected = %{
+        "user" => %{"name" => "string", "address" => %{"city" => "string"}}
+      }
+
+      assert Scrubber.scrub_values(input) == expected
+    end
+
+    test "scrubs arrays with sampling" do
+      assert Scrubber.scrub_values([1, 2, 3]) == [
+               "number",
+               "number",
+               "...1 more"
+             ]
+
+      assert Scrubber.scrub_values([1, 2]) == ["number", "number"]
+      assert Scrubber.scrub_values([1]) == ["number"]
+    end
+
+    test "handles empty arrays" do
+      assert Scrubber.scrub_values([]) == []
+    end
+
+    test "respects custom array_limit" do
+      input = [1, 2, 3, 4, 5]
+
+      assert Scrubber.scrub_values(input, 3) == [
+               "number",
+               "number",
+               "number",
+               "...2 more"
+             ]
+
+      assert Scrubber.scrub_values(input, 1) == ["number", "...4 more"]
+
+      assert Scrubber.scrub_values(input, 5) == [
+               "number",
+               "number",
+               "number",
+               "number",
+               "number"
+             ]
+    end
+
+    test "handles complex nested structures with users and metadata" do
+      input = %{
+        "users" => [
+          %{"name" => "John Doe", "age" => 34, "active" => true},
+          %{"name" => "Jane Smith", "age" => 28, "active" => false},
+          %{"name" => "Bob Wilson", "age" => 45, "active" => true}
+        ],
+        "metadata" => %{"total" => 3, "page" => 1}
+      }
+
+      expected = %{
+        "users" => [
+          %{"name" => "string", "age" => "number", "active" => "boolean"},
+          %{"name" => "string", "age" => "number", "active" => "boolean"},
+          "...1 more"
+        ],
+        "metadata" => %{"total" => "number", "page" => "number"}
+      }
+
+      assert Scrubber.scrub_values(input) == expected
+    end
+  end
 end

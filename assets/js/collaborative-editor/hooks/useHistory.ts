@@ -192,6 +192,17 @@ export const useSelectedStepId = (): string | null => {
 };
 
 /**
+ * Hook to get the ID of the currently active run
+ */
+export const useSelectedRunId = (): string | null => {
+  const historyStore = useHistoryStore();
+  const selectRunId = historyStore.withSelector(
+    state => state.activeRun?.id ?? null
+  );
+  return useSyncExternalStore(historyStore.subscribe, selectRunId);
+};
+
+/**
  * Hook to get currently selected step (with lookup)
  */
 export const useSelectedStep = (): StepDetail | null => {
