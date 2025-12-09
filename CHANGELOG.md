@@ -26,6 +26,9 @@ and this project adheres to
 
 ### Changed
 
+- Standardize run buttons so they all behave predictably
+  [#4129](https://github.com/OpenFn/lightning/issues/4129)
+
 ### Fixed
 
 - Fix Run/Retry button flash and improve History button UX in collaborative
