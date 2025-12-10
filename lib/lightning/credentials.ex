@@ -203,7 +203,9 @@ defmodule Lightning.Credentials do
     credential_bodies = get_credential_bodies(attrs)
 
     with :ok <- validate_credential_bodies(credential_bodies, attrs),
-         changeset <- change_credential(%Credential{}, attrs) do
+         changeset <- change_credential(%Credential{}, attrs),
+         changeset <- validate_external_id_uniqueness(changeset),
+         true <- changeset.valid? || {:error, %{changeset | action: :insert}} do
       build_create_multi(changeset, credential_bodies)
       |> derive_events(changeset)
       |> Repo.transaction()
@@ -266,7 +268,9 @@ defmodule Lightning.Credentials do
              attrs,
              credential.schema
            ),
-         changeset <- change_credential(credential, attrs) do
+         changeset <- change_credential(credential, attrs),
+         changeset <- validate_external_id_uniqueness(changeset),
+         true <- changeset.valid? || {:error, %{changeset | action: :update}} do
       build_update_multi(credential, changeset, credential_bodies)
       |> derive_events(changeset)
       |> Repo.transaction()
@@ -890,6 +894,94 @@ defmodule Lightning.Credentials do
   """
   def change_credential(%Credential{} = credential, attrs \\ %{}) do
     Credential.changeset(credential, attrs |> normalize_keys())
+  end
+
+  @doc """
+  Validates that a credential's external_id is unique within each project
+  it's associated with.
+
+  This validation ensures that no two credentials in the same project share
+  the same external_id, which is required for keychain credential matching.
+
+  ## Parameters
+    * `changeset` - A credential changeset with project_credentials already cast
+
+  ## Returns
+    * The changeset, potentially with an error added to :external_id
+  """
+  @spec validate_external_id_uniqueness(Ecto.Changeset.t()) :: Ecto.Changeset.t()
+  def validate_external_id_uniqueness(changeset) do
+    external_id = Ecto.Changeset.get_field(changeset, :external_id)
+    credential_id = Ecto.Changeset.get_field(changeset, :id)
+
+    # Get project_ids from the changeset
+    # If project_credentials is being changed, use that; otherwise query existing
+    project_ids = get_project_ids_for_validation(changeset, credential_id)
+
+    if is_nil(external_id) or external_id == "" or project_ids == [] do
+      changeset
+    else
+      if external_id_conflict_exists?(external_id, project_ids, credential_id) do
+        Ecto.Changeset.add_error(
+          changeset,
+          :external_id,
+          "There is already a credential in the same project that uses this External ID for keychain matching, please choose another."
+        )
+      else
+        changeset
+      end
+    end
+  end
+
+  defp get_project_ids_for_validation(changeset, credential_id) do
+    # Check if project_credentials is being changed in this update
+    case Ecto.Changeset.get_change(changeset, :project_credentials) do
+      nil ->
+        # No change to project associations - query existing ones from DB
+        if credential_id do
+          from(pc in Lightning.Projects.ProjectCredential,
+            where: pc.credential_id == ^credential_id,
+            select: pc.project_id
+          )
+          |> Repo.all()
+        else
+          []
+        end
+
+      project_credential_changesets ->
+        # Project associations are being changed - use the changeset data
+        project_credential_changesets
+        |> Enum.reject(fn pc_changeset ->
+          # Reject entries marked for deletion
+          Ecto.Changeset.get_field(pc_changeset, :delete, false)
+        end)
+        |> Enum.map(fn pc_changeset ->
+          Ecto.Changeset.get_field(pc_changeset, :project_id)
+        end)
+        |> Enum.reject(&is_nil/1)
+    end
+  end
+
+  defp external_id_conflict_exists?(
+         external_id,
+         project_ids,
+         exclude_credential_id
+       ) do
+    query =
+      from c in Credential,
+        join: pc in assoc(c, :project_credentials),
+        where: c.external_id == ^external_id,
+        where: pc.project_id in ^project_ids,
+        select: c.id
+
+    query =
+      if exclude_credential_id do
+        from [c, _pc] in query, where: c.id != ^exclude_credential_id
+      else
+        query
+      end
+
+    Repo.exists?(query)
   end
 
   @doc """
