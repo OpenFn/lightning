@@ -1388,7 +1388,7 @@ defmodule Lightning.CredentialsTest do
   end
 
   describe "transaction error handling" do
-    test "handle_transaction_result/1 properly handles transaction errors" do
+    test "handle_transaction_result/2 properly handles credential validation errors" do
       user = insert(:user)
 
       credential = insert(:credential, user: user, name: "Original Name")

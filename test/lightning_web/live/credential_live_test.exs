@@ -582,6 +582,44 @@ defmodule LightningWeb.CredentialLiveTest do
              )
     end
 
+    test "validates raw credential body and shows errors after interaction", %{
+      conn: conn
+    } do
+      {:ok, view, _html} = live(conn, ~p"/credentials", on_error: :raise)
+
+      open_create_credential_modal(view)
+      select_credential_type(view, "raw")
+      click_continue(view)
+
+      # Touch the body field by clearing it
+      view
+      |> form("#credential-form-new", credential: %{body: ""})
+      |> render_change()
+
+      # Now body error should show (use specific error message for body)
+      assert render(view) =~ "This field can&#39;t be blank"
+
+      # Save button should be disabled
+      assert submit_disabled(view, "#save-credential-button-new")
+
+      # Enter invalid JSON
+      view
+      |> form("#credential-form-new", credential: %{body: "not valid json"})
+      |> render_change()
+
+      assert render(view) =~ "Invalid JSON format"
+
+      # Enter valid JSON and name
+      view
+      |> form("#credential-form-new",
+        credential: %{name: "Test Cred", body: ~s({"key": "value"})}
+      )
+      |> render_change()
+
+      refute render(view) =~ "Invalid JSON format"
+      refute render(view) =~ "This field can&#39;t be blank"
+    end
+
     test "allows a support user to define and save a new raw credential", %{
       conn: conn,
       user: user,
