@@ -21,6 +21,10 @@ and this project adheres to
 
 ### Fixed
 
+- Fix infinite loading when reopening workflow in collaborative editor due to
+  delta updates not being merged with persisted state
+  [#4164](https://github.com/OpenFn/lightning/issues/4164)
+
 ## [2.15.0-pre4] - 2025-12-08
 
 ### Added

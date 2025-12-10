@@ -333,8 +333,10 @@ defmodule Lightning.Collaboration.PersistenceWriter do
       "Saving #{length(state.pending_updates)} pending updates for document: #{state.document_name}"
     )
 
-    # Merge multiple updates if we have more than one
-    merged_update = merge_updates(state.pending_updates)
+    # Merge multiple updates if we have more than one.
+    # Pass document_name so merge_updates can load existing persisted state
+    # before applying deltas (Yjs deltas require the base state to merge correctly).
+    merged_update = merge_updates(state.pending_updates, state.document_name)
 
     document_state = %DocumentState{
       document_name: state.document_name,
@@ -343,7 +345,7 @@ defmodule Lightning.Collaboration.PersistenceWriter do
     }
 
     case Repo.insert(document_state) do
-      {:ok, _} ->
+      {:ok, _inserted} ->
         {:ok, length(state.pending_updates)}
 
       {:error, reason} ->
@@ -355,16 +357,22 @@ defmodule Lightning.Collaboration.PersistenceWriter do
       {:error, exception}
   end
 
-  defp merge_updates([update]), do: update
+  defp merge_updates([update], _document_name), do: update
 
-  defp merge_updates(updates) when length(updates) > 1 do
-    # Create a temporary document and apply all updates in reverse order
-    # (since we store them in reverse chronological order)
+  defp merge_updates(updates, document_name) when length(updates) > 1 do
+    # Load the current persisted state first, then apply the new deltas.
+    # This is necessary because Yjs delta updates only contain changes,
+    # not the full state. Without the base state, applying deltas to an
+    # empty document produces an empty result.
     temp_doc = Yex.Doc.new()
 
-    updates
-    |> Enum.reverse()
-    |> Enum.each(fn update ->
+    # Load existing persisted state (checkpoint + any previously saved updates)
+    load_persisted_state_into_doc(temp_doc, document_name)
+
+    # Apply new updates in chronological order (oldest first)
+    reversed = Enum.reverse(updates)
+
+    Enum.each(reversed, fn update ->
       Yex.apply_update(temp_doc, update)
     end)
 
@@ -374,6 +382,44 @@ defmodule Lightning.Collaboration.PersistenceWriter do
       Logger.error("Failed to merge updates: #{inspect(exception)}")
       # Fallback to the most recent update
       hd(updates)
+  end
+
+  defp load_persisted_state_into_doc(doc, document_name) do
+    # Get the latest checkpoint (if any)
+    latest_checkpoint =
+      Repo.one(
+        from d in DocumentState,
+          where:
+            d.document_name == ^document_name and d.version == ^"checkpoint",
+          order_by: [desc: d.inserted_at],
+          limit: 1
+      )
+
+    checkpoint_time =
+      if latest_checkpoint,
+        do: latest_checkpoint.inserted_at,
+        else: ~U[1970-01-01 00:00:00Z]
+
+    # Get all updates since the checkpoint
+    updates =
+      Repo.all(
+        from d in DocumentState,
+          where:
+            d.document_name == ^document_name and
+              d.version == ^"update" and
+              d.inserted_at > ^checkpoint_time,
+          order_by: [asc: d.inserted_at]
+      )
+
+    # Apply checkpoint first if it exists
+    if latest_checkpoint do
+      Yex.apply_update(doc, latest_checkpoint.state_data)
+    end
+
+    # Apply all updates in chronological order
+    Enum.each(updates, fn update ->
+      Yex.apply_update(doc, update.state_data)
+    end)
   end
 
   defp create_checkpoint(document_name) do

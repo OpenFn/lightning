@@ -46,7 +46,6 @@ defmodule Lightning.Collaboration.Persistence do
 
   @impl true
   def update_v1(state, update, doc_name, _doc) do
-    # Send to PersistenceWriter via state
     case PersistenceWriter.add_update(doc_name, update) do
       :ok ->
         state
@@ -157,13 +156,15 @@ defmodule Lightning.Collaboration.Persistence do
     case Yex.Map.fetch(workflow_map, "lock_version") do
       {:ok, version} when is_float(version) -> trunc(version)
       {:ok, version} when is_integer(version) -> version
+      {:ok, nil} -> nil
       :error -> nil
     end
   end
 
-  defp stale?(persisted_version, current_version) do
-    persisted_version != current_version and not is_nil(persisted_version)
-  end
+  defp stale?(nil, current_version), do: not is_nil(current_version)
+
+  defp stale?(persisted_version, current_version),
+    do: persisted_version != current_version
 
   defp clear_and_reset_workflow(doc, workflow) do
     # Same pattern as Session.clear_and_reset_doc
