@@ -367,12 +367,12 @@ defmodule Lightning.Collaboration.PersistenceWriter do
     temp_doc = Yex.Doc.new()
 
     # Load existing persisted state (checkpoint + any previously saved updates)
-    load_persisted_state_into_doc(temp_doc, document_name)
+    DocumentState.load_into_doc(temp_doc, document_name)
 
     # Apply new updates in chronological order (oldest first)
-    reversed = Enum.reverse(updates)
-
-    Enum.each(reversed, fn update ->
+    updates
+    |> Enum.reverse()
+    |> Enum.each(fn update ->
       Yex.apply_update(temp_doc, update)
     end)
 
@@ -382,44 +382,6 @@ defmodule Lightning.Collaboration.PersistenceWriter do
       Logger.error("Failed to merge updates: #{inspect(exception)}")
       # Fallback to the most recent update
       hd(updates)
-  end
-
-  defp load_persisted_state_into_doc(doc, document_name) do
-    # Get the latest checkpoint (if any)
-    latest_checkpoint =
-      Repo.one(
-        from d in DocumentState,
-          where:
-            d.document_name == ^document_name and d.version == ^"checkpoint",
-          order_by: [desc: d.inserted_at],
-          limit: 1
-      )
-
-    checkpoint_time =
-      if latest_checkpoint,
-        do: latest_checkpoint.inserted_at,
-        else: ~U[1970-01-01 00:00:00Z]
-
-    # Get all updates since the checkpoint
-    updates =
-      Repo.all(
-        from d in DocumentState,
-          where:
-            d.document_name == ^document_name and
-              d.version == ^"update" and
-              d.inserted_at > ^checkpoint_time,
-          order_by: [asc: d.inserted_at]
-      )
-
-    # Apply checkpoint first if it exists
-    if latest_checkpoint do
-      Yex.apply_update(doc, latest_checkpoint.state_data)
-    end
-
-    # Apply all updates in chronological order
-    Enum.each(updates, fn update ->
-      Yex.apply_update(doc, update.state_data)
-    end)
   end
 
   defp create_checkpoint(document_name) do
