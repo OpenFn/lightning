@@ -399,9 +399,9 @@ defmodule Lightning.Credentials.SchemaTest do
              "Should be able to find existing keys via atoms"
 
       errors = errors_on(changeset)
-      assert {"username", ["can't be blank"]} in errors
-      assert {"hostUrl", ["can't be blank"]} in errors
-      assert {"number", ["can't be blank"]} in errors
+      assert %{username: ["can't be blank"]} = errors
+      assert %{hostUrl: ["can't be blank"]} = errors
+      assert %{number: ["can't be blank"]} = errors
 
       changeset =
         SchemaDocument.changeset(
