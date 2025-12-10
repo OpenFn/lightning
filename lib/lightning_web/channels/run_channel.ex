@@ -219,8 +219,8 @@ defmodule LightningWeb.RunChannel do
       {:error, changeset} ->
         reply_with(socket, {:error, changeset})
 
-      {:ok, log_line} ->
-        reply_with(socket, {:ok, %{log_line_id: log_line.id}})
+      :ok ->
+        reply_with(socket, :ok)
     end
   end
 
