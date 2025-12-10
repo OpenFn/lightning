@@ -11,7 +11,7 @@ import { describe, expect, test, vi } from 'vitest';
 import { VersionMismatchBanner } from '../../../../js/collaborative-editor/components/diagram/VersionMismatchBanner';
 
 describe('VersionMismatchBanner', () => {
-  test('displays version information and action button', () => {
+  test('displays version information and action button when not compact', () => {
     const onGoToVersion = vi.fn();
     render(
       <VersionMismatchBanner
@@ -23,11 +23,13 @@ describe('VersionMismatchBanner', () => {
 
     // Check version info is displayed
     expect(
-      screen.getByText(/You're viewing a run from v15 on workflow v19/)
+      screen.getByText(/This run took place on version 15/)
     ).toBeInTheDocument();
 
     // Check action button is present
-    const actionButton = screen.getByRole('button', { name: /Go to v15/ });
+    const actionButton = screen.getByRole('button', {
+      name: /View as executed/,
+    });
     expect(actionButton).toBeInTheDocument();
   });
 
@@ -42,7 +44,9 @@ describe('VersionMismatchBanner', () => {
     );
 
     // Click action button
-    const actionButton = screen.getByRole('button', { name: /Go to v15/ });
+    const actionButton = screen.getByRole('button', {
+      name: /View as executed/,
+    });
     fireEvent.click(actionButton);
 
     // Handler should be called
@@ -79,9 +83,9 @@ describe('VersionMismatchBanner', () => {
     expect(banner).toHaveClass('custom-class');
   });
 
-  test('applies max-width constraint when compact', () => {
+  test('hides version text when compact', () => {
     const onGoToVersion = vi.fn();
-    const { container } = render(
+    render(
       <VersionMismatchBanner
         runVersion={15}
         currentVersion={19}
@@ -90,14 +94,21 @@ describe('VersionMismatchBanner', () => {
       />
     );
 
-    // Check that the text container has the max-w class
-    const textContainer = container.querySelector('.max-w-\\[150px\\]');
-    expect(textContainer).toBeInTheDocument();
+    // Version text should not be present in compact mode
+    expect(
+      screen.queryByText(/This run took place on version 15/)
+    ).not.toBeInTheDocument();
+
+    // But button should still be present
+    const actionButton = screen.getByRole('button', {
+      name: /View as executed/,
+    });
+    expect(actionButton).toBeInTheDocument();
   });
 
-  test('does not apply max-width constraint when not compact', () => {
+  test('shows version text when not compact', () => {
     const onGoToVersion = vi.fn();
-    const { container } = render(
+    render(
       <VersionMismatchBanner
         runVersion={15}
         currentVersion={19}
@@ -106,8 +117,9 @@ describe('VersionMismatchBanner', () => {
       />
     );
 
-    // Check that the text container does not have the max-w class
-    const textContainer = container.querySelector('.max-w-\\[150px\\]');
-    expect(textContainer).not.toBeInTheDocument();
+    // Version text should be visible
+    expect(
+      screen.getByText(/This run took place on version 15/)
+    ).toBeInTheDocument();
   });
 });
