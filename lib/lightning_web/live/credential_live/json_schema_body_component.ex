@@ -84,15 +84,8 @@ defmodule LightningWeb.CredentialLive.JsonSchemaBodyComponent do
     """
   end
 
+  # current_body is always a map from credential_bodies or default %{}
   defp normalize_body(body) when is_map(body), do: body
-
-  defp normalize_body(body) when is_binary(body) do
-    case Jason.decode(body) do
-      {:ok, decoded} when is_map(decoded) -> decoded
-      _ -> %{}
-    end
-  end
-
   defp normalize_body(_), do: %{}
 
   defp create_changeset(schema, params) do
