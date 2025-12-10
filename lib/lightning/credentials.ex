@@ -441,7 +441,8 @@ defmodule Lightning.Credentials do
     end
   end
 
-  defp handle_transaction_result(transaction_result, credential_changeset) do
+  @doc false
+  def handle_transaction_result(transaction_result, credential_changeset) do
     case transaction_result do
       {:error, :credential, %Ecto.Changeset{} = changeset, _changes} ->
         {:error, changeset}

@@ -1401,6 +1401,65 @@ defmodule Lightning.CredentialsTest do
       assert Lightning.Credentials.get_credential!(credential.id)
              |> Map.get(:name) == credential.name
     end
+
+    test "handle_transaction_result/2 converts credential body errors to credential changeset" do
+      # Create a base credential changeset
+      credential_changeset =
+        %Credential{}
+        |> Ecto.Changeset.change(%{name: "Test"})
+
+      # Simulate a credential body error with operation name credential_body_0
+      body_changeset =
+        %Lightning.Credentials.CredentialBody{}
+        |> Ecto.Changeset.change(%{})
+        |> Ecto.Changeset.add_error(:body, "encryption failed")
+
+      transaction_result =
+        {:error, :credential_body_0, body_changeset,
+         %{credential: %Credential{}}}
+
+      assert {:error, result_changeset} =
+               Credentials.handle_transaction_result(
+                 transaction_result,
+                 credential_changeset
+               )
+
+      # Error should be on :credential_bodies with environment info
+      assert [credential_bodies: {"Environment 1: body encryption failed", []}] =
+               result_changeset.errors
+    end
+
+    test "handle_transaction_result/2 handles multiple body errors" do
+      credential_changeset =
+        %Credential{}
+        |> Ecto.Changeset.change(%{name: "Test"})
+
+      # Simulate errors on second environment (credential_body_1)
+      body_changeset =
+        %Lightning.Credentials.CredentialBody{}
+        |> Ecto.Changeset.change(%{})
+        |> Ecto.Changeset.add_error(:name, "can't be blank")
+        |> Ecto.Changeset.add_error(:body, "is invalid")
+
+      transaction_result =
+        {:error, :credential_body_1, body_changeset, %{}}
+
+      assert {:error, result_changeset} =
+               Credentials.handle_transaction_result(
+                 transaction_result,
+                 credential_changeset
+               )
+
+      # Should have two errors, both referencing Environment 2
+      errors = result_changeset.errors
+      assert length(errors) == 2
+
+      error_messages =
+        Enum.map(errors, fn {:credential_bodies, {msg, _}} -> msg end)
+
+      assert "Environment 2: name can't be blank" in error_messages
+      assert "Environment 2: body is invalid" in error_messages
+    end
   end
 
   describe "OAuth token management" do
