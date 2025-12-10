@@ -30,6 +30,7 @@ import { relativeLocale } from '../../../hooks';
 import { duration } from '../../../utils/duration';
 import truncateUid from '../../../utils/truncateUID';
 import { useProject } from '../../hooks/useSessionContext';
+import { useVersionSelect } from '../../hooks/useVersionSelect';
 import { useWorkflowState } from '../../hooks/useWorkflow';
 import type { RunSummary, WorkOrder } from '../../types/history';
 import {
@@ -40,6 +41,8 @@ import {
 import { RunBadge } from '../common/RunBadge';
 import { ShortcutKeys } from '../ShortcutKeys';
 import { Tooltip } from '../Tooltip';
+
+import { VersionMismatchBanner } from './VersionMismatchBanner';
 
 // Extended types with selection state for UI
 type RunWithSelection = RunSummary & { selected?: boolean };
@@ -284,6 +287,11 @@ interface MiniHistoryProps {
   // New props for panel variant
   variant?: 'floating' | 'panel';
   onBack?: () => void;
+  // Version mismatch detection
+  versionMismatch?: {
+    runVersion: number;
+    currentVersion: number;
+  } | null;
 }
 
 export default function MiniHistory({
@@ -298,6 +306,7 @@ export default function MiniHistory({
   onRetry,
   variant = 'floating',
   onBack,
+  versionMismatch,
 }: MiniHistoryProps) {
   const [expandedWorder, setExpandedWorder] = useState('');
   const now = new Date();
@@ -305,6 +314,14 @@ export default function MiniHistory({
   // Get project and workflow IDs from state for navigation
   const project = useProject();
   const workflow = useWorkflowState(state => state.workflow);
+  const handleVersionSelect = useVersionSelect();
+
+  // Handler to navigate to the run's version
+  const handleGoToVersion = () => {
+    if (versionMismatch) {
+      handleVersionSelect(versionMismatch.runVersion);
+    }
+  };
 
   // Clear expanded work order when panel collapses
   React.useEffect(() => {
@@ -532,6 +549,16 @@ export default function MiniHistory({
         </div>
       )}
 
+      {/* Version mismatch banner when collapsed */}
+      {collapsed && versionMismatch && (
+        <VersionMismatchBanner
+          runVersion={versionMismatch.runVersion}
+          currentVersion={versionMismatch.currentVersion}
+          onGoToVersion={handleGoToVersion}
+          compact={true}
+        />
+      )}
+
       <div
         className={`overflow-y-auto no-scrollbar max-h-82
           transition-opacity duration-200 ${
@@ -605,6 +632,15 @@ export default function MiniHistory({
           </div>
         )}
       </div>
+
+      {/* Version mismatch banner at bottom of panel */}
+      {!collapsed && versionMismatch && (
+        <VersionMismatchBanner
+          runVersion={versionMismatch.runVersion}
+          currentVersion={versionMismatch.currentVersion}
+          onGoToVersion={handleGoToVersion}
+        />
+      )}
     </div>
   );
 }

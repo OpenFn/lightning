@@ -29,7 +29,6 @@ import { useKeyboardShortcut } from '../../keyboard';
 import type { RunSummary } from '../../types/history';
 
 import MiniHistory from './MiniHistory';
-import { VersionMismatchBanner } from './VersionMismatchBanner';
 import CollaborativeWorkflowDiagramImpl from './WorkflowDiagram';
 
 interface CollaborativeWorkflowDiagramProps {
@@ -167,14 +166,6 @@ export function CollaborativeWorkflowDiagram({
   return (
     <div ref={containerRef} className={className}>
       <ReactFlowProvider>
-        {versionMismatch && (
-          <VersionMismatchBanner
-            runVersion={versionMismatch.runVersion}
-            currentVersion={versionMismatch.currentVersion}
-            className="absolute top-4 left-1/2 -translate-x-1/2 z-[45] max-w-md"
-          />
-        )}
-
         <CollaborativeWorkflowDiagramImpl
           selection={currentNode.id}
           onSelectionChange={selectNode}
@@ -200,6 +191,7 @@ export function CollaborativeWorkflowDiagram({
               historyCommands.clearError();
               void historyCommands.requestHistory();
             }}
+            versionMismatch={versionMismatch}
           />
         )}
       </ReactFlowProvider>
