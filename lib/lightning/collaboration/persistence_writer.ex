@@ -429,7 +429,7 @@ defmodule Lightning.Collaboration.PersistenceWriter do
 
       checkpoint = %DocumentState{
         document_name: document_name,
-        version: "checkpoint",
+        version: :checkpoint,
         state_data: checkpoint_data
       }
 
