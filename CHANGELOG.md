@@ -21,6 +21,9 @@ and this project adheres to
 
 ### Fixed
 
+- Fixed bug where two credentials could have the same external ID in the same
+  project [#4177](https://github.com/OpenFn/lightning/pull/4177)
+
 ## [2.15.0-pre4] - 2025-12-08
 
 ### Added
