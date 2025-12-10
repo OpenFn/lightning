@@ -124,7 +124,9 @@ defmodule Lightning.Credentials.Schema do
 
   defp handle_error(%{missing: fields}, changeset, _field) do
     Enum.reduce(fields, changeset, fn field, changeset ->
-      Changeset.add_error(changeset, field, "can't be blank")
+      # Convert string field name to atom to match schema.fields
+      field_atom = String.to_existing_atom(field)
+      Changeset.add_error(changeset, field_atom, "can't be blank")
     end)
   end
 
