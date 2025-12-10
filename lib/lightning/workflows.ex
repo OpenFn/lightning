@@ -499,7 +499,7 @@ defmodule Lightning.Workflows do
     pattern = "^#{escaped_name}_del[0-9]+$"
 
     # Find the workflow with the highest suffix by sorting names lexicographically
-    # This works because we zero-pad numbers: _del0001, _del0002, ..., _del0009, _del0010
+    # This works because we zero-pad numbers: _del01, _del02, ..., _del09, _del10
     highest_suffix_name =
       from(w in Workflow,
         where:
@@ -524,8 +524,7 @@ defmodule Lightning.Workflows do
           end
       end
 
-    # Zero-pad to 4 digits to ensure proper lexicographic sorting
-    "#{name}_del#{String.pad_leading(Integer.to_string(next_number), 4, "0")}"
+    "#{name}_del#{String.pad_leading(Integer.to_string(next_number), 2, "0")}"
   end
 
   defp notify_of_affected_kafka_triggers(%{triggers: triggers}) do

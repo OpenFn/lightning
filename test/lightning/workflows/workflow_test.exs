@@ -79,7 +79,7 @@ defmodule Lightning.Workflows.WorkflowTest do
         |> Workflow.changeset(%{name: "w1", project_id: p1.id})
         |> Repo.insert()
 
-      assert "a workflow with this name already exists in this project." in errors_on(
+      assert "a workflow with this name already exists(possibly pending deletion) in this project." in errors_on(
                cs
              ).name
 

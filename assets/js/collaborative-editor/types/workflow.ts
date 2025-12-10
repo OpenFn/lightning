@@ -24,11 +24,7 @@ export const WorkflowSchema = z.object({
   name: z
     .string()
     .min(1, "can't be blank")
-    .max(255, 'should be at most 255 character(s)')
-    .refine(
-      name => !/_del\d*$/.test(name),
-      'cannot end with _del followed by digits'
-    ),
+    .max(255, 'should be at most 255 character(s)'),
   lock_version: z.number().int(),
   deleted_at: z.string().nullable(),
 

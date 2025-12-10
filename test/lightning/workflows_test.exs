@@ -52,7 +52,7 @@ defmodule Lightning.WorkflowsTest do
 
       assert %{
                name: [
-                 "a workflow with this name already exists in this project."
+                 "a workflow with this name already exists(possibly pending deletion) in this project."
                ]
              } = errors_on(changeset)
 
@@ -841,7 +841,7 @@ defmodule Lightning.WorkflowsTest do
       w1 = insert(:workflow, project: project, name: "Test Workflow")
 
       assert {:ok, %{workflow: workflow}} = Workflows.mark_for_deletion(w1, user)
-      assert workflow.name == "Test Workflow_del0001"
+      assert workflow.name == "Test Workflow_del01"
 
       # Test incrementing when deleting another workflow with the same name
       w2 = insert(:workflow, project: project, name: "Test Workflow")
@@ -849,7 +849,7 @@ defmodule Lightning.WorkflowsTest do
       assert {:ok, %{workflow: workflow2}} =
                Workflows.mark_for_deletion(w2, user)
 
-      assert workflow2.name == "Test Workflow_del0002"
+      assert workflow2.name == "Test Workflow_del02"
 
       # Test incrementing again
       w3 = insert(:workflow, project: project, name: "Test Workflow")
@@ -857,51 +857,42 @@ defmodule Lightning.WorkflowsTest do
       assert {:ok, %{workflow: workflow3}} =
                Workflows.mark_for_deletion(w3, user)
 
-      assert workflow3.name == "Test Workflow_del0003"
+      assert workflow3.name == "Test Workflow_del03"
     end
 
-    test "change_workflow/2 rejects names ending with _del followed by digits" do
+    test "allows reusing workflow name after marking for deletion, then validates error when using deleted workflow name" do
       project = insert(:project)
-      workflow = insert(:workflow, project: project, name: "Original Name")
+      user = insert(:user)
+      w1 = insert(:workflow, project: project, name: "My Workflow")
 
-      # Should reject _del with any digits
-      changeset =
-        Workflows.change_workflow(workflow, %{name: "My Workflow_del0001"})
+      # Mark workflow for deletion
+      assert {:ok, %{workflow: deleted_workflow}} =
+               Workflows.mark_for_deletion(w1, user)
 
-      refute changeset.valid?
+      assert deleted_workflow.name == "My Workflow_del01"
 
-      assert %{name: [error]} = errors_on(changeset)
+      # Should be able to create a new workflow with the original name
+      assert {:ok, new_workflow} =
+               Workflows.save_workflow(
+                 %{name: "My Workflow", project_id: project.id},
+                 user
+               )
 
-      assert error =~
-               "cannot end with _del followed by digits"
+      assert new_workflow.name == "My Workflow"
+      assert new_workflow.deleted_at == nil
 
-      # Should also reject _del with no digits
-      changeset = Workflows.change_workflow(workflow, %{name: "My Workflow_del"})
-      refute changeset.valid?
+      # Should NOT be able to create another workflow with the deleted workflow's name
+      assert {:error, changeset} =
+               Workflows.save_workflow(
+                 %{name: "My Workflow_del01", project_id: project.id},
+                 user
+               )
 
-      assert %{name: [error]} = errors_on(changeset)
-      assert error =~ "cannot end with _del followed by digits"
-
-      # Should also reject _del with 3 digits
-      changeset =
-        Workflows.change_workflow(workflow, %{name: "My Workflow_del123"})
-
-      refute changeset.valid?
-
-      assert %{name: [error]} = errors_on(changeset)
-      assert error =~ "cannot end with _del followed by digits"
-
-      # Valid names should work (not ending with _del)
-      changeset = Workflows.change_workflow(workflow, %{name: "My Workflow"})
-      errors = errors_on(changeset)
-      assert Map.get(errors, :name) == nil
-
-      # Valid name with _del in the middle
-      changeset =
-        Workflows.change_workflow(workflow, %{name: "My_del_Workflow"})
-
-      errors = errors_on(changeset)
-      assert Map.get(errors, :name) == nil
+      assert errors_on(changeset) == %{
+               name: [
+                 "a workflow with this name already exists(possibly pending deletion) in this project."
+               ]
+             }
     end
   end
 
