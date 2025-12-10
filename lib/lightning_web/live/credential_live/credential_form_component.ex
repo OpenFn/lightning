@@ -639,16 +639,12 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
     display_changeset = filter_errors_to_touched(full_changeset, touched_fields)
 
     {full_changeset.valid?, display_changeset}
-  rescue
-    # Schema file doesn't exist or field atom doesn't exist
-    RuntimeError -> {true, nil}
-    ArgumentError -> {true, nil}
   end
 
   defp filter_errors_to_touched(changeset, touched_fields) do
     touched_atoms =
       touched_fields
-      |> Enum.map(&to_existing_atom/1)
+      |> Enum.map(&String.to_existing_atom/1)
       |> MapSet.new()
 
     filtered_errors =
@@ -661,19 +657,13 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
     |> Map.put(:action, if(filtered_errors != [], do: :validate))
   end
 
-  defp to_existing_atom(key) when is_binary(key),
-    do: String.to_existing_atom(key)
-
-  defp to_existing_atom(key), do: key
-
-  # Validates raw JSON body - must be non-empty valid JSON
-  defp raw_body_valid?(body) when is_binary(body) do
-    trimmed = String.trim(body)
-    trimmed != "" and match?({:ok, _}, Jason.decode(trimmed))
+  # Validates raw JSON body - must be non-empty valid JSON string
+  defp raw_body_valid?(body) do
+    is_binary(body) and body |> String.trim() |> valid_json?()
   end
 
-  defp raw_body_valid?(body) when is_map(body) and body != %{}, do: true
-  defp raw_body_valid?(_), do: false
+  defp valid_json?(""), do: false
+  defp valid_json?(str), do: match?({:ok, _}, Jason.decode(str))
 
   @impl true
   def render(%{page: :first} = assigns) do
