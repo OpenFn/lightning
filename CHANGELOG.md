@@ -26,6 +26,10 @@ and this project adheres to
 
 ### Changed
 
+- Support a batch of logs submitted to the `run:log` channel by the worker
+  [#4123](https://github.com/OpenFn/lightning/issues/4123) (backwards
+  compatible)
+
 ### Fixed
 
 - Fix new jobs are misplaced on the canvas in manual layout
