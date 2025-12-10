@@ -85,7 +85,7 @@ defmodule Lightning.Workflows.Workflow do
     |> validate_required([:name])
     |> unique_constraint([:name, :project_id],
       message:
-        "a workflow with this name already exists(possibly pending deletion) in this project."
+        "A workflow with this name already exists (possibly pending deletion) in this project."
     )
   end
 
