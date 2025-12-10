@@ -21,6 +21,10 @@ and this project adheres to
 
 ### Fixed
 
+- Credential form now shows inline validation errors for JSON schema and raw
+  body fields after field interaction
+  [#4168](https://github.com/OpenFn/lightning/issues/4168)
+
 ## [2.15.0-pre4] - 2025-12-08
 
 ### Added
