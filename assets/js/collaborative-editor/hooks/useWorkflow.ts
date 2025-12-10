@@ -632,35 +632,30 @@ export const useWorkflowActions = () => {
  * - hasPermission: User has can_edit_workflow permission
  * - isConnected: Session is synced with backend
  * - isDeleted: Workflow has been deleted
- * - isOldSnapshot: Viewing an old snapshot (not latest version)
+ * - isPinnedVersion: Viewing a pinned version (any ?v parameter in URL)
  *
  * @internal This is shared logic between useCanSave and useCanRun
  */
 const useWorkflowConditions = () => {
   const { isSynced } = useSession();
   const permissions = usePermissions();
-  const latestSnapshotLockVersion = useLatestSnapshotLockVersion();
   const workflow = useWorkflowState(state => state.workflow);
+  const { params } = useURLState();
 
   const hasEditPermission = permissions?.can_edit_workflow ?? false;
   const hasRunPermission = permissions?.can_run_workflow ?? false;
   const isConnected = isSynced;
   const isDeleted = workflow !== null && workflow.deleted_at !== null;
 
-  // Only consider it an old snapshot if workflow is loaded, latest
-  // snapshot lock version is available AND different from workflow
-  // lock version
-  const isOldSnapshot =
-    workflow !== null &&
-    latestSnapshotLockVersion !== null &&
-    workflow.lock_version !== latestSnapshotLockVersion;
+  // Check if version is pinned via URL parameter
+  const isPinnedVersion = params['v'] !== undefined && params['v'] !== null;
 
   return {
     hasEditPermission,
     hasRunPermission,
     isConnected,
     isDeleted,
-    isOldSnapshot,
+    isPinnedVersion,
   };
 };
 
@@ -674,11 +669,11 @@ const useWorkflowConditions = () => {
  * Checks:
  * 1. User permissions (can_edit_workflow)
  * 2. Connection state (isSynced)
- * 3. Lock version (viewing latest snapshot)
+ * 3. Version pinning (any ?v parameter in URL)
  * 4. Workflow deletion state (deleted_at)
  */
 export const useCanSave = (): { canSave: boolean; tooltipMessage: string } => {
-  const { hasEditPermission, isConnected, isDeleted, isOldSnapshot } =
+  const { hasEditPermission, isConnected, isDeleted, isPinnedVersion } =
     useWorkflowConditions();
 
   // Determine tooltip message (check in priority order)
@@ -694,9 +689,9 @@ export const useCanSave = (): { canSave: boolean; tooltipMessage: string } => {
   } else if (isDeleted) {
     canSave = false;
     tooltipMessage = 'Workflow has been deleted';
-  } else if (isOldSnapshot) {
+  } else if (isPinnedVersion) {
     canSave = false;
-    tooltipMessage = 'You cannot edit an old snapshot of a workflow';
+    tooltipMessage = 'You are viewing a pinned version of this workflow';
   }
 
   return { canSave, tooltipMessage };
@@ -712,7 +707,7 @@ export const useCanSave = (): { canSave: boolean; tooltipMessage: string } => {
  * Checks:
  * 1. User permissions (can_edit_workflow or can_run_workflow)
  * 2. Connection state (isSynced)
- * 3. Lock version (viewing latest snapshot)
+ * 3. Version pinning (any ?v parameter in URL)
  * 4. Workflow deletion state (deleted_at)
  * 5. Run limits (from session context)
  */
@@ -722,7 +717,7 @@ export const useCanRun = (): { canRun: boolean; tooltipMessage: string } => {
     hasRunPermission,
     isConnected,
     isDeleted,
-    isOldSnapshot,
+    isPinnedVersion,
   } = useWorkflowConditions();
 
   // Get run limits from session context (defaults to allowed if missing)
@@ -745,9 +740,9 @@ export const useCanRun = (): { canRun: boolean; tooltipMessage: string } => {
   } else if (isDeleted) {
     canRun = false;
     tooltipMessage = 'Workflow has been deleted';
-  } else if (isOldSnapshot) {
+  } else if (isPinnedVersion) {
     canRun = false;
-    tooltipMessage = 'You cannot run an old snapshot of a workflow';
+    tooltipMessage = 'You are viewing a pinned version of this workflow';
   } else if (!runLimits.allowed && runLimits.message) {
     canRun = false;
     tooltipMessage = runLimits.message;
@@ -766,7 +761,7 @@ export const useCanRun = (): { canRun: boolean; tooltipMessage: string } => {
  * Checks (in priority order):
  * 1. Workflow deletion state (deleted_at)
  * 2. User permissions (can_edit_workflow)
- * 3. Snapshot version (viewing old snapshot)
+ * 3. Version pinning (any ?v parameter in URL)
  *
  * Note: Connection state does not affect read-only status. Offline editing
  * is fully supported - Y.Doc buffers transactions locally and syncs when
@@ -778,8 +773,11 @@ export const useWorkflowReadOnly = (): {
 } => {
   // Get permissions and workflow state
   const permissions = usePermissions();
-  const latestSnapshotLockVersion = useLatestSnapshotLockVersion();
   const workflow = useWorkflowState(state => state.workflow);
+  const { params } = useURLState();
+
+  // Check if version is pinned via URL parameter
+  const isPinnedVersion = params['v'] !== undefined && params['v'] !== null;
 
   // Don't show read-only state until permissions are loaded
   // This prevents flickering during initial load
@@ -790,12 +788,8 @@ export const useWorkflowReadOnly = (): {
   // Compute read-only conditions
   const hasPermission = permissions.can_edit_workflow;
   const isDeleted = workflow !== null && workflow.deleted_at !== null;
-  const isOldSnapshot =
-    workflow !== null &&
-    latestSnapshotLockVersion !== null &&
-    workflow.lock_version !== latestSnapshotLockVersion;
 
-  // Priority order: deleted > permissions > snapshot
+  // Priority order: deleted > permissions > pinned version
   if (isDeleted) {
     return {
       isReadOnly: true,
@@ -808,10 +802,10 @@ export const useWorkflowReadOnly = (): {
       tooltipMessage: 'You do not have permission to edit this workflow',
     };
   }
-  if (isOldSnapshot) {
+  if (isPinnedVersion) {
     return {
       isReadOnly: true,
-      tooltipMessage: 'You cannot edit or run an old snapshot of a workflow',
+      tooltipMessage: 'You are viewing a pinned version of this workflow',
     };
   }
 

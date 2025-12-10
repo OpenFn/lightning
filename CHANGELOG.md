@@ -19,6 +19,9 @@ and this project adheres to
 
 ### Changed
 
+- Improve version pinning behavior in collaborative editor
+  [#4121](https://github.com/OpenFn/lightning/issues/4121)
+
 ### Fixed
 
 ## [2.15.0-pre4] - 2025-12-08

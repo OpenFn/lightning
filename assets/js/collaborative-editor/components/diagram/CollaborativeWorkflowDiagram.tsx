@@ -19,7 +19,10 @@ import {
   useHistoryLoading,
   useRunSteps,
 } from '../../hooks/useHistory';
-import { useIsNewWorkflow } from '../../hooks/useSessionContext';
+import {
+  useIsNewWorkflow,
+  useLatestSnapshotLockVersion,
+} from '../../hooks/useSessionContext';
 import { useVersionMismatch } from '../../hooks/useVersionMismatch';
 import { useNodeSelection } from '../../hooks/useWorkflow';
 import { useKeyboardShortcut } from '../../keyboard';
@@ -42,6 +45,7 @@ export function CollaborativeWorkflowDiagram({
   const isNewWorkflow = useIsNewWorkflow();
   const isHistoryChannelConnected = useHistoryChannelConnected();
   const { params, updateSearchParams } = useURLState();
+  const latestSnapshotLockVersion = useLatestSnapshotLockVersion();
 
   // Get history data and commands
   const history = useHistory();
@@ -85,14 +89,22 @@ export function CollaborativeWorkflowDiagram({
       // Find the workorder that contains this run
       const workorder = history.find(wo => wo.runs.some(r => r.id === run.id));
 
+      // Only include version parameter if the run's version differs from latest
+      // This prevents pinning to read-only mode when viewing latest version runs
+      const runVersion = workorder?.version;
+      const shouldPinVersion =
+        runVersion !== null &&
+        runVersion !== undefined &&
+        runVersion !== latestSnapshotLockVersion;
+
       // Single atomic update - both version and run in one call
       // This prevents race conditions between two separate updateSearchParams calls
       updateSearchParams({
-        v: workorder ? String(workorder.version) : null,
+        v: shouldPinVersion ? String(runVersion) : null,
         run: run.id,
       });
     },
-    [history, updateSearchParams]
+    [history, latestSnapshotLockVersion, updateSearchParams]
   );
 
   // Clear URL parameter when deselecting run

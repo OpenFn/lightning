@@ -23,11 +23,22 @@ import { StoreContext } from '../../../js/collaborative-editor/contexts/StorePro
 import { KeyboardProvider } from '../../../js/collaborative-editor/keyboard';
 import type { CreateSessionContextOptions } from '../__helpers__/sessionContextFactory';
 import { simulateStoreProviderWithConnection } from '../__helpers__/storeProviderHelpers';
+import {
+  createMockURLState,
+  getURLStateMockValue,
+} from '../__helpers__/urlStateMocks';
 import { createMinimalWorkflowYDoc } from '../__helpers__/workflowStoreHelpers';
 
 // =============================================================================
 // TEST MOCKS
 // =============================================================================
+
+// Mock useURLState
+const urlState = createMockURLState();
+
+vi.mock('../../../js/react/lib/use-url-state', () => ({
+  useURLState: () => getURLStateMockValue(urlState),
+}));
 
 // Mock useAdaptorIcons to prevent async fetch warnings
 vi.mock('../../../js/workflow-diagram/useAdaptorIcons', () => ({
@@ -177,6 +188,9 @@ async function renderAndWaitForReady(
 // =============================================================================
 
 describe('Header - Save Workflow (Cmd+S / Ctrl+S)', () => {
+  beforeEach(() => {
+    urlState.reset();
+  });
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -328,13 +342,15 @@ describe('Header - Save Workflow (Cmd+S / Ctrl+S)', () => {
     cleanup();
   });
 
-  test('Cmd+S does NOT call saveWorkflow when viewing old snapshot', async () => {
+  test('Cmd+S does NOT call saveWorkflow when viewing pinned version', async () => {
     const user = userEvent.setup();
+
+    // Set pinned version in URL
+    urlState.setParam('v', '1');
+
     const { wrapper, emitSessionContext, saveWorkflowSpy, cleanup } =
       await createTestSetup({
         permissions: { can_edit_workflow: true, can_run_workflow: true },
-        workflowLockVersion: 1,
-        latestSnapshotLockVersion: 2,
       });
 
     const { unmount } = await renderAndWaitForReady(
@@ -516,6 +532,10 @@ describe('Header - Save Workflow (Cmd+S / Ctrl+S)', () => {
 
 describe('Header - Save & Sync to GitHub (Cmd+Shift+S / Ctrl+Shift+S)', () => {
   beforeEach(() => {
+    urlState.reset();
+  });
+
+  beforeEach(() => {
     vi.clearAllMocks();
   });
 
@@ -645,14 +665,16 @@ describe('Header - Save & Sync to GitHub (Cmd+Shift+S / Ctrl+Shift+S)', () => {
     cleanup();
   });
 
-  test('Cmd+Shift+S does NOT open modal when viewing old snapshot', async () => {
+  test('Cmd+Shift+S does NOT open modal when viewing pinned version', async () => {
     const user = userEvent.setup();
+
+    // Set pinned version in URL
+    urlState.setParam('v', '1');
+
     const { wrapper, emitSessionContext, openGitHubSyncModalSpy, cleanup } =
       await createTestSetup({
         permissions: { can_edit_workflow: true, can_run_workflow: true },
         hasGithubConnection: true,
-        workflowLockVersion: 1,
-        latestSnapshotLockVersion: 2,
       });
 
     const { unmount } = await renderAndWaitForReady(
