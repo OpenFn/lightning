@@ -33,7 +33,7 @@ export function VersionMismatchBanner({
   className,
   compact = false,
 }: VersionMismatchBannerProps) {
-  const tootlTipText = `This run was executed on v${runVersion}, but you're visualizing it on v${currentVersion} of the workflow. Big things may have changed.`;
+  const tooltipText = `This run was executed on v${runVersion}, but you're visualizing it on v${currentVersion} of the workflow. Big things may have changed.`;
 
   return (
     <div
@@ -42,7 +42,7 @@ export function VersionMismatchBanner({
       aria-live="polite"
     >
       <div className="flex items-center gap-2 px-3 py-2">
-        <Tooltip content={tootlTipText} side="top">
+        <Tooltip content={tooltipText} side="top">
           <span
             className="hero-information-circle h-4 w-4 text-yellow-800 shrink-0"
             aria-hidden="true"
