@@ -19,7 +19,7 @@ import { useResizablePanel } from '../hooks/useResizablePanel';
 import {
   useProject,
   useHasReadAIDisclaimer,
-  useSetHasReadAIDisclaimer,
+  useMarkAIDisclaimerRead,
   useSessionContextLoaded,
 } from '../hooks/useSessionContext';
 import {
@@ -94,7 +94,6 @@ export function AIAssistantPanelWrapper() {
     sendMessage: sendMessageToChannel,
     loadSessions,
     retryMessage: retryMessageViaChannel,
-    markDisclaimerRead: markDisclaimerReadViaChannel,
     updateContext: updateContextViaChannel,
   } = useAISessionCommands();
   const messages = useAIMessages();
@@ -104,7 +103,7 @@ export function AIAssistantPanelWrapper() {
   const connectionState = useAIConnectionState();
   const sessionContextLoaded = useSessionContextLoaded();
   const hasReadDisclaimer = useHasReadAIDisclaimer();
-  const setHasReadAIDisclaimer = useSetHasReadAIDisclaimer();
+  const markAIDisclaimerRead = useMarkAIDisclaimerRead();
   const workflowTemplateContext = useAIWorkflowTemplateContext();
   const project = useProject();
   const workflow = useWorkflowState(state => state.workflow);
@@ -472,12 +471,11 @@ export function AIAssistantPanelWrapper() {
   );
 
   const handleMarkDisclaimerRead = useCallback(() => {
-    // Update session context immediately for UI responsiveness
-    setHasReadAIDisclaimer(true);
-    // Also update AI store and persist to backend via channel
+    // Persist to backend via workflow channel and update local state
+    markAIDisclaimerRead();
+    // Also update AI store for consistency
     aiStore.markDisclaimerRead();
-    markDisclaimerReadViaChannel();
-  }, [aiStore, markDisclaimerReadViaChannel, setHasReadAIDisclaimer]);
+  }, [aiStore, markAIDisclaimerRead]);
 
   const [applyingMessageId, setApplyingMessageId] = useState<string | null>(
     null

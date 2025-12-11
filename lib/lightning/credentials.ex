@@ -209,7 +209,7 @@ defmodule Lightning.Credentials do
       build_create_multi(changeset, credential_bodies)
       |> derive_events(changeset)
       |> Repo.transaction()
-      |> handle_transaction_result()
+      |> handle_transaction_result(changeset)
     end
   end
 
@@ -274,7 +274,7 @@ defmodule Lightning.Credentials do
       build_update_multi(credential, changeset, credential_bodies)
       |> derive_events(changeset)
       |> Repo.transaction()
-      |> handle_transaction_result()
+      |> handle_transaction_result(changeset)
     end
   end
 
@@ -445,8 +445,37 @@ defmodule Lightning.Credentials do
     end
   end
 
-  defp handle_transaction_result(transaction_result) do
+  @doc false
+  def handle_transaction_result(transaction_result, credential_changeset) do
     case transaction_result do
+      {:error, :credential, %Ecto.Changeset{} = changeset, _changes} ->
+        {:error, changeset}
+
+      {:error, op, %Ecto.Changeset{} = body_changeset, _changes} ->
+        # When a credential_body operation fails, we need to return
+        # a Credential changeset with the error, not a CredentialBody changeset.
+        # Extract which environment failed from the operation name.
+        env_index =
+          op
+          |> Atom.to_string()
+          |> String.replace("credential_body_", "")
+          |> String.to_integer()
+
+        errors = body_changeset.errors
+
+        changeset_with_errors =
+          Enum.reduce(errors, credential_changeset, fn {field, {msg, opts}},
+                                                       acc ->
+            Ecto.Changeset.add_error(
+              acc,
+              :credential_bodies,
+              "Environment #{env_index + 1}: #{field} #{msg}",
+              opts
+            )
+          end)
+
+        {:error, changeset_with_errors}
+
       {:error, _op, error, _changes} ->
         {:error, error}
 

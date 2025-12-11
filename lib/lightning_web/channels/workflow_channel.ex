@@ -232,6 +232,14 @@ defmodule LightningWeb.WorkflowChannel do
   end
 
   @impl true
+  def handle_in("mark_ai_disclaimer_read", _params, socket) do
+    {:ok, _user} =
+      Lightning.AiAssistant.mark_disclaimer_read(socket.assigns.current_user)
+
+    {:reply, {:ok, %{success: true}}, socket}
+  end
+
+  @impl true
   def handle_in("yjs_sync", {:binary, chunk}, socket) do
     Logger.debug("""
     WorkflowChannel: handle_in, yjs_sync

@@ -41,7 +41,11 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
       environment_name_error: nil,
       from_collab_editor: false,
       came_from_advanced_picker: false,
-      show_modal: true
+      show_modal: true,
+      body_valid?: true,
+      schema_changeset: nil,
+      touched_body_fields: MapSet.new(),
+      touched_raw_bodies: MapSet.new()
     }
 
     {:ok,
@@ -95,6 +99,29 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
       )
       |> Map.put(:action, :validate)
 
+    touched_body_fields =
+      update_touched_fields(body, socket.assigns.touched_body_fields)
+
+    # Track if raw body field has been touched (per environment tab)
+    current_tab = socket.assigns.current_tab
+
+    touched_raw_bodies =
+      if socket.assigns.schema == "raw" and credential_params["body"] != nil do
+        MapSet.put(socket.assigns.touched_raw_bodies, current_tab)
+      else
+        socket.assigns.touched_raw_bodies
+      end
+
+    raw_body_touched = MapSet.member?(touched_raw_bodies, current_tab)
+
+    {body_valid?, schema_changeset} =
+      validate_body_against_schema(
+        body,
+        socket.assigns.schema,
+        touched_body_fields,
+        raw_body_touched
+      )
+
     available_projects =
       Helpers.filter_available_projects(
         socket.assigns.projects,
@@ -105,6 +132,10 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
      socket
      |> assign(changeset: changeset)
      |> assign(credential_bodies: updated_bodies)
+     |> assign(body_valid?: body_valid?)
+     |> assign(schema_changeset: schema_changeset)
+     |> assign(touched_body_fields: touched_body_fields)
+     |> assign(touched_raw_bodies: touched_raw_bodies)
      |> assign(:available_projects, available_projects)
      |> assign(selected_project: nil)}
   end
@@ -148,7 +179,10 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
   end
 
   def handle_event("change_tab", %{"tab" => tab}, socket) do
-    {:noreply, assign(socket, :current_tab, tab)}
+    {:noreply,
+     socket
+     |> assign(:current_tab, tab)
+     |> assign(:schema_changeset, nil)}
   end
 
   def handle_event("add_environment", _, socket) do
@@ -175,7 +209,8 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
        socket
        |> assign(credential_environments: new_environments)
        |> assign(credential_bodies: new_bodies)
-       |> assign(current_tab: tab_name)}
+       |> assign(current_tab: tab_name)
+       |> assign(schema_changeset: nil)}
     end
   end
 
@@ -572,6 +607,63 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
 
   defp get_environments_to_delete(_socket), do: []
 
+  # Track which body fields have been interacted with.
+  # Only map bodies (JSON schema credentials) have trackable fields.
+  defp update_touched_fields(body, existing) when is_map(body) do
+    body
+    |> Map.keys()
+    |> MapSet.new()
+    |> MapSet.union(existing)
+  end
+
+  defp update_touched_fields(_body, existing), do: existing
+
+  # Validates the credential body against the JSON schema.
+  # Returns {valid?, changeset} - changeset only contains errors for touched fields.
+  defp validate_body_against_schema(_body, schema, _touched_fields, _raw_touched)
+       when schema in [nil, false, "oauth", "keychain"] do
+    {true, nil}
+  end
+
+  defp validate_body_against_schema(body, "raw", _touched_fields, _raw_touched) do
+    # Raw body validation - must be non-empty valid JSON
+    # The RawBodyComponent handles displaying errors, we just track validity
+    valid? = raw_body_valid?(body)
+    {valid?, nil}
+  end
+
+  defp validate_body_against_schema(
+         body,
+         schema_name,
+         touched_fields,
+         _raw_touched
+       ) do
+    schema = Credentials.get_schema(schema_name)
+    full_changeset = Credentials.SchemaDocument.changeset(body, schema: schema)
+    display_changeset = filter_errors_to_touched(full_changeset, touched_fields)
+
+    {full_changeset.valid?, display_changeset}
+  end
+
+  defp filter_errors_to_touched(changeset, touched_fields) do
+    filtered_errors =
+      Enum.filter(changeset.errors, fn {field, _} ->
+        MapSet.member?(touched_fields, Atom.to_string(field))
+      end)
+
+    changeset
+    |> Map.put(:errors, filtered_errors)
+    |> Map.put(:action, if(filtered_errors != [], do: :validate))
+  end
+
+  # Validates raw JSON body - must be non-empty valid JSON string
+  defp raw_body_valid?(body) do
+    is_binary(body) and body |> String.trim() |> valid_json?()
+  end
+
+  defp valid_json?(""), do: false
+  defp valid_json?(str), do: match?({:ok, _}, Jason.decode(str))
+
   @impl true
   def render(%{page: :first} = assigns) do
     assigns =
@@ -650,7 +742,14 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
 
   def render(%{page: :second} = assigns) do
     current_body = Map.get(assigns.credential_bodies, assigns.current_tab, %{})
-    assigns = assign(assigns, :current_body, current_body)
+
+    raw_body_touched =
+      MapSet.member?(assigns.touched_raw_bodies, assigns.current_tab)
+
+    assigns =
+      assigns
+      |> assign(:current_body, current_body)
+      |> assign(:raw_body_touched, raw_body_touched)
 
     ~H"""
     <div class="text-left mt-10 sm:mt-0">
@@ -696,6 +795,7 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
                   type="text"
                   field={f[:name]}
                   label="Credential Name"
+                  required={true}
                 />
               </div>
               <div>
@@ -823,6 +923,8 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
                     form={f}
                     type={@schema}
                     current_body={@current_body}
+                    schema_changeset={@schema_changeset}
+                    raw_body_touched={@raw_body_touched}
                   >
                     {fieldset}
                   </Components.Credentials.form_component>
@@ -917,7 +1019,10 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
                 id={"save-credential-button-#{@credential.id || "new"}"}
                 type="submit"
                 theme="primary"
-                disabled={!@changeset.valid? or @scopes_changed or @sandbox_changed}
+                disabled={
+                  !@changeset.valid? or !@body_valid? or @scopes_changed or
+                    @sandbox_changed
+                }
               >
                 Save Credential
               </.button>

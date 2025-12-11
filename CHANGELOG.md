@@ -19,10 +19,22 @@ and this project adheres to
 
 ### Changed
 
+- Unify disabled button states across collaborative editor for consistent
+  styling and behaviour [#4179](https://github.com/OpenFn/lightning/issues/4179)
+
 ### Fixed
 
 - Fixed bug where two credentials could have the same external ID in the same
   project [#4177](https://github.com/OpenFn/lightning/pull/4177)
+- Fix AI Assistant disclaimer not persisting after acceptance
+  [#4158](https://github.com/OpenFn/lightning/issues/4158)
+- Credential form now shows inline validation errors for JSON schema and raw
+  body fields after field interaction
+  [#4168](https://github.com/OpenFn/lightning/issues/4168)
+- Fix saving workflow with same name as deleted workflow
+  [#4165](https://github.com/OpenFn/lightning/pull/4165)
+- Fix validation error states not changing after undo (Ctrl+Z) on Workflow
+  Settings [#4182](https://github.com/OpenFn/lightning/issues/4182))
 
 ## [2.15.0-pre4] - 2025-12-08
 
