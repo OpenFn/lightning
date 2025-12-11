@@ -21,8 +21,8 @@ and this project adheres to
 
 ### Fixed
 
-- Fix validation errors persisting after undo (Ctrl+Z) in collaborative editor
-  (partial fix for [#4138](https://github.com/OpenFn/lightning/issues/4138))
+- Fix validation error states not changing after undo (Ctrl+Z) on Workflow
+  Settings [#4182](https://github.com/OpenFn/lightning/issues/4182))
 
 ## [2.15.0-pre4] - 2025-12-08
 
