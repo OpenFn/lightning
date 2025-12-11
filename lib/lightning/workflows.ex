@@ -462,7 +462,7 @@ defmodule Lightning.Workflows do
         where: t.workflow_id == ^workflow.id
       )
 
-    new_name = append_del_to_name(workflow)
+    new_name = resolve_name_for_pending_deletion(workflow)
 
     Multi.new()
     |> Multi.update(
@@ -490,7 +490,10 @@ defmodule Lightning.Workflows do
     end)
   end
 
-  defp append_del_to_name(%Workflow{name: name, project_id: project_id}) do
+  defp resolve_name_for_pending_deletion(%Workflow{
+         name: name,
+         project_id: project_id
+       }) do
     base_name = "#{name}_del"
 
     existing_names =
