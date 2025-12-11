@@ -462,7 +462,7 @@ defmodule Lightning.Workflows do
         where: t.workflow_id == ^workflow.id
       )
 
-    new_name = generate_deleted_workflow_name(workflow)
+    new_name = append_del_to_name(workflow)
 
     Multi.new()
     |> Multi.update(
@@ -490,41 +490,28 @@ defmodule Lightning.Workflows do
     end)
   end
 
-  defp generate_deleted_workflow_name(%Workflow{
-         name: name,
-         project_id: project_id
-       }) do
-    # Escape special regex characters in the workflow name
-    escaped_name = Regex.escape(name)
-    pattern = "^#{escaped_name}_del[0-9]+$"
+  defp append_del_to_name(%Workflow{name: name, project_id: project_id}) do
+    base_name = "#{name}_del"
 
-    # Find the workflow with the highest suffix by sorting names lexicographically
-    # This works because we zero-pad numbers: _del01, _del02, ..., _del09, _del10
-    highest_suffix_name =
+    existing_names =
       from(w in Workflow,
         where:
           w.project_id == ^project_id and
-            not is_nil(w.deleted_at) and
-            fragment("? ~ ?", w.name, ^pattern),
-        order_by: [desc: w.name],
-        limit: 1,
+            (w.name == ^base_name or like(w.name, ^"#{base_name}%")),
         select: w.name
       )
-      |> Repo.one()
+      |> Repo.all()
+      |> MapSet.new()
 
-    next_number =
-      case highest_suffix_name do
-        nil ->
-          1
+    find_available_name(base_name, existing_names)
+  end
 
-        name_with_suffix ->
-          case Regex.run(~r/_del(\d+)$/, name_with_suffix) do
-            [_, num] -> String.to_integer(num) + 1
-            _ -> 1
-          end
-      end
+  defp find_available_name(base_name, existing_names, n \\ 0) do
+    candidate = if n == 0, do: base_name, else: "#{base_name}#{n}"
 
-    "#{name}_del#{String.pad_leading(Integer.to_string(next_number), 2, "0")}"
+    if MapSet.member?(existing_names, candidate),
+      do: find_available_name(base_name, existing_names, n + 1),
+      else: candidate
   end
 
   defp notify_of_affected_kafka_triggers(%{triggers: triggers}) do
