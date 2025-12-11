@@ -1402,63 +1402,45 @@ defmodule Lightning.CredentialsTest do
              |> Map.get(:name) == credential.name
     end
 
-    test "handle_transaction_result/2 converts credential body errors to credential changeset" do
-      # Create a base credential changeset
-      credential_changeset =
-        %Credential{}
-        |> Ecto.Changeset.change(%{name: "Test"})
+    test "returns credential changeset error when credential body name is invalid" do
+      user = insert(:user)
 
-      # Simulate a credential body error with operation name credential_body_0
-      body_changeset =
-        %Lightning.Credentials.CredentialBody{}
-        |> Ecto.Changeset.change(%{})
-        |> Ecto.Changeset.add_error(:body, "encryption failed")
+      attrs = %{
+        "name" => "Valid Credential",
+        "schema" => "raw",
+        "user_id" => user.id,
+        "credential_bodies" => [
+          %{"name" => "INVALID!", "body" => %{"key" => "value"}}
+        ]
+      }
 
-      transaction_result =
-        {:error, :credential_body_0, body_changeset,
-         %{credential: %Credential{}}}
-
-      assert {:error, result_changeset} =
-               Credentials.handle_transaction_result(
-                 transaction_result,
-                 credential_changeset
-               )
+      assert {:error, changeset} = Credentials.create_credential(attrs)
 
       # Error should be on :credential_bodies with environment info
-      assert [credential_bodies: {"Environment 1: body encryption failed", []}] =
-               result_changeset.errors
+      assert [credential_bodies: {msg, _}] = changeset.errors
+      assert msg =~ "Environment 1"
+      assert msg =~ "must be a short slug"
     end
 
-    test "handle_transaction_result/2 handles multiple body errors" do
-      credential_changeset =
-        %Credential{}
-        |> Ecto.Changeset.change(%{name: "Test"})
+    test "returns credential changeset error when second credential body fails" do
+      user = insert(:user)
 
-      # Simulate errors on second environment (credential_body_1)
-      body_changeset =
-        %Lightning.Credentials.CredentialBody{}
-        |> Ecto.Changeset.change(%{})
-        |> Ecto.Changeset.add_error(:name, "can't be blank")
-        |> Ecto.Changeset.add_error(:body, "is invalid")
+      attrs = %{
+        "name" => "Valid Credential",
+        "schema" => "raw",
+        "user_id" => user.id,
+        "credential_bodies" => [
+          %{"name" => "main", "body" => %{"key" => "value"}},
+          %{"name" => "STAGING!", "body" => %{"key" => "value"}}
+        ]
+      }
 
-      transaction_result =
-        {:error, :credential_body_1, body_changeset, %{}}
+      assert {:error, changeset} = Credentials.create_credential(attrs)
 
-      assert {:error, result_changeset} =
-               Credentials.handle_transaction_result(
-                 transaction_result,
-                 credential_changeset
-               )
-
-      # Should have two errors, both referencing Environment 2
-      errors = result_changeset.errors
-      assert length(errors) == 2
-
-      error_messages =
-        Enum.map(errors, fn {:credential_bodies, {msg, _}} -> msg end)
-
-      assert "Environment 2: name can't be blank" in error_messages
-      assert "Environment 2: body is invalid" in error_messages
+      # Error should reference Environment 2 (second body at index 1)
+      assert [credential_bodies: {msg, _}] = changeset.errors
+      assert msg =~ "Environment 2"
+      assert msg =~ "must be a short slug"
     end
   end
 
