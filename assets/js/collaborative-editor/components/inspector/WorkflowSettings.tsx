@@ -182,7 +182,8 @@ export function WorkflowSettings() {
             font-semibold text-white shadow-xs hover:bg-red-500
             focus-visible:outline-2 focus-visible:outline-offset-2
             focus-visible:outline-red-600
-            disabled:opacity-50 disabled:cursor-not-allowed"
+            disabled:bg-red-300 disabled:hover:bg-red-300
+            disabled:cursor-not-allowed"
           >
             {isResetting ? 'Resetting...' : 'Reset to Latest Snapshot'}
           </button>

@@ -19,6 +19,9 @@ and this project adheres to
 
 ### Changed
 
+- Unify disabled button states across collaborative editor for consistent
+  styling and behaviour [#4179](https://github.com/OpenFn/lightning/issues/4179)
+
 ### Fixed
 
 - Fix saving workflow with same name as deleted workflow
