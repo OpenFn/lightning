@@ -1,56 +1,67 @@
 /**
  * VersionMismatchBanner Component Tests
  *
- * Tests the dismissible version mismatch banner that appears when
+ * Tests the version mismatch banner that appears when
  * the canvas version differs from the selected run's version.
  */
 
 import { fireEvent, render, screen } from '@testing-library/react';
-import { describe, expect, test } from 'vitest';
+import { describe, expect, test, vi } from 'vitest';
 
 import { VersionMismatchBanner } from '../../../../js/collaborative-editor/components/diagram/VersionMismatchBanner';
 
 describe('VersionMismatchBanner', () => {
-  test('displays version information and dismiss button', () => {
-    render(<VersionMismatchBanner runVersion={159} currentVersion={155} />);
+  test('displays version information and action button when not compact', () => {
+    const onGoToVersion = vi.fn();
+    render(
+      <VersionMismatchBanner
+        runVersion={15}
+        currentVersion={19}
+        onGoToVersion={onGoToVersion}
+      />
+    );
 
     // Check version info is displayed
     expect(
-      screen.getByText(/Canvas shows v155 \(Selected run: v159\)/)
-    ).toBeInTheDocument();
-    expect(
-      screen.getByText(/Canvas layout may differ from actual run/)
+      screen.getByText(/This run took place on version 15/)
     ).toBeInTheDocument();
 
-    // Check dismiss button is present
-    const dismissButton = screen.getByLabelText(
-      'Dismiss version mismatch warning'
-    );
-    expect(dismissButton).toBeInTheDocument();
+    // Check action button is present
+    const actionButton = screen.getByRole('button', {
+      name: /View as executed/,
+    });
+    expect(actionButton).toBeInTheDocument();
   });
 
-  test('dismisses banner when X button is clicked', () => {
-    const { container } = render(
-      <VersionMismatchBanner runVersion={159} currentVersion={155} />
+  test('calls onGoToVersion when action button is clicked', () => {
+    const onGoToVersion = vi.fn();
+    render(
+      <VersionMismatchBanner
+        runVersion={15}
+        currentVersion={19}
+        onGoToVersion={onGoToVersion}
+      />
     );
 
-    // Banner should be visible initially
-    expect(
-      screen.getByText(/Canvas shows v155 \(Selected run: v159\)/)
-    ).toBeInTheDocument();
+    // Click action button
+    const actionButton = screen.getByRole('button', {
+      name: /View as executed/,
+    });
+    fireEvent.click(actionButton);
 
-    // Click dismiss button
-    const dismissButton = screen.getByLabelText(
-      'Dismiss version mismatch warning'
-    );
-    fireEvent.click(dismissButton);
-
-    // Banner should be removed from DOM
-    expect(container.firstChild).toBeNull();
+    // Handler should be called
+    expect(onGoToVersion).toHaveBeenCalledTimes(1);
   });
 
-  test('shows information icon instead of warning icon', () => {
-    render(<VersionMismatchBanner runVersion={159} currentVersion={155} />);
+  test('shows information icon', () => {
+    const onGoToVersion = vi.fn();
+    render(
+      <VersionMismatchBanner
+        runVersion={15}
+        currentVersion={19}
+        onGoToVersion={onGoToVersion}
+      />
+    );
 
     // Check for info icon (hero-information-circle)
     const icon = document.querySelector('.hero-information-circle');
@@ -58,15 +69,57 @@ describe('VersionMismatchBanner', () => {
   });
 
   test('applies custom className', () => {
+    const onGoToVersion = vi.fn();
     const { container } = render(
       <VersionMismatchBanner
-        runVersion={159}
-        currentVersion={155}
+        runVersion={15}
+        currentVersion={19}
+        onGoToVersion={onGoToVersion}
         className="custom-class"
       />
     );
 
     const banner = container.firstChild as HTMLElement;
     expect(banner).toHaveClass('custom-class');
+  });
+
+  test('hides version text when compact', () => {
+    const onGoToVersion = vi.fn();
+    render(
+      <VersionMismatchBanner
+        runVersion={15}
+        currentVersion={19}
+        onGoToVersion={onGoToVersion}
+        compact={true}
+      />
+    );
+
+    // Version text should not be present in compact mode
+    expect(
+      screen.queryByText(/This run took place on version 15/)
+    ).not.toBeInTheDocument();
+
+    // But button should still be present
+    const actionButton = screen.getByRole('button', {
+      name: /View as executed/,
+    });
+    expect(actionButton).toBeInTheDocument();
+  });
+
+  test('shows version text when not compact', () => {
+    const onGoToVersion = vi.fn();
+    render(
+      <VersionMismatchBanner
+        runVersion={15}
+        currentVersion={19}
+        onGoToVersion={onGoToVersion}
+        compact={false}
+      />
+    );
+
+    // Version text should be visible
+    expect(
+      screen.getByText(/This run took place on version 15/)
+    ).toBeInTheDocument();
   });
 });

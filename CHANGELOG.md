@@ -19,6 +19,8 @@ and this project adheres to
 
 ### Changed
 
+- Improve version pinning behavior in collaborative editor
+  [#4121](https://github.com/OpenFn/lightning/issues/4121)
 - Unify disabled button states across collaborative editor for consistent
   styling and behaviour [#4179](https://github.com/OpenFn/lightning/issues/4179)
 

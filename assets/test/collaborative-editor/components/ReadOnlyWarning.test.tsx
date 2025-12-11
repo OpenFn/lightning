@@ -11,7 +11,7 @@
 
 import { act, render, screen, waitFor } from '@testing-library/react';
 import type React from 'react';
-import { describe, expect, test } from 'vitest';
+import { beforeEach, describe, expect, test, vi } from 'vitest';
 import * as Y from 'yjs';
 
 import { ReadOnlyWarning } from '../../../js/collaborative-editor/components/ReadOnlyWarning';
@@ -24,10 +24,21 @@ import { createWorkflowStore } from '../../../js/collaborative-editor/stores/cre
 import type { Session } from '../../../js/collaborative-editor/types/session';
 import { createSessionContext } from '../__helpers__/sessionContextFactory';
 import {
+  createMockURLState,
+  getURLStateMockValue,
+} from '../__helpers__/urlStateMocks';
+import {
   createMockPhoenixChannel,
   createMockPhoenixChannelProvider,
 } from '../mocks/phoenixChannel';
 import { createMockSocket } from '../mocks/phoenixSocket';
+
+// Mock useURLState
+const urlState = createMockURLState();
+
+vi.mock('../../../js/react/lib/use-url-state', () => ({
+  useURLState: () => getURLStateMockValue(urlState),
+}));
 
 // =============================================================================
 // TEST HELPERS
@@ -298,6 +309,10 @@ describe('ReadOnlyWarning - Styling', () => {
 // =============================================================================
 
 describe('ReadOnlyWarning - Read-Only States', () => {
+  beforeEach(() => {
+    urlState.reset();
+  });
+
   test('renders for deleted workflow', async () => {
     const { wrapper, emitSessionContext } = createTestSetup({
       workflowDeletedAt: new Date().toISOString(),
@@ -330,11 +345,11 @@ describe('ReadOnlyWarning - Read-Only States', () => {
     });
   });
 
-  test('renders for old snapshots', async () => {
-    const { wrapper, emitSessionContext } = createTestSetup({
-      latestSnapshotLockVersion: 2,
-      workflowLockVersion: 1,
-    });
+  test('renders for pinned versions', async () => {
+    // Set pinned version in URL
+    urlState.setParam('v', '1');
+
+    const { wrapper, emitSessionContext } = createTestSetup({});
 
     render(<ReadOnlyWarning />, { wrapper });
 
@@ -353,6 +368,10 @@ describe('ReadOnlyWarning - Read-Only States', () => {
 // =============================================================================
 
 describe('ReadOnlyWarning - Dynamic Changes', () => {
+  beforeEach(() => {
+    urlState.reset();
+  });
+
   test('appears when workflow becomes deleted', async () => {
     const { wrapper, emitSessionContext, ydoc } = createTestSetup({
       permissions: { can_edit_workflow: true, can_run_workflow: true },
