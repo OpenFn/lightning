@@ -232,6 +232,70 @@ defmodule LightningWeb.RunLive.ShowTest do
     |> render_async()
   end
 
+  describe "workflow link" do
+    setup :register_and_log_in_user
+    setup :create_project_for_current_user
+
+    test "excludes version param when run snapshot matches current workflow", %{
+      conn: conn,
+      project: project
+    } do
+      workflow = insert(:simple_workflow, project: project) |> with_snapshot()
+      %{triggers: [%{id: webhook_trigger_id}]} = workflow
+
+      # Post to webhook to create a run
+      assert %{"work_order_id" => wo_id} =
+               post(conn, "/i/#{webhook_trigger_id}", %{"x" => 1})
+               |> json_response(200)
+
+      %{runs: [%{id: run_id}]} = WorkOrders.get(wo_id, include: [:runs])
+
+      {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/runs/#{run_id}")
+
+      html = view |> element("#run-detail-#{run_id}") |> render_async()
+
+      # Find the workflow link - should NOT include version param
+      assert html =~
+               ~r/href="\/projects\/#{project.id}\/w\/#{workflow.id}\?a=#{run_id}"/
+
+      refute html =~ ~r/&v=/
+    end
+
+    test "includes version param when run snapshot differs from current workflow",
+         %{
+           conn: conn,
+           project: project
+         } do
+      # Create workflow with initial snapshot
+      workflow =
+        insert(:simple_workflow, project: project, lock_version: 1)
+        |> with_snapshot()
+
+      %{triggers: [%{id: webhook_trigger_id}]} = workflow
+
+      # Post to webhook to create a run on v1
+      assert %{"work_order_id" => wo_id} =
+               post(conn, "/i/#{webhook_trigger_id}", %{"x" => 1})
+               |> json_response(200)
+
+      %{runs: [%{id: run_id}], snapshot: snapshot} =
+        WorkOrders.get(wo_id, include: [:runs, :snapshot])
+
+      # Update workflow to v2 (simulating a change after the run was created)
+      workflow =
+        Lightning.Repo.update!(Ecto.Changeset.change(workflow, lock_version: 2))
+
+      {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/runs/#{run_id}")
+
+      html = view |> element("#run-detail-#{run_id}") |> render_async()
+
+      # Find the workflow link - should include version param
+      # Note: & is HTML-escaped as &amp; in rendered output
+      assert html =~
+               ~r/href="\/projects\/#{project.id}\/w\/#{workflow.id}\?a=#{run_id}&amp;v=#{snapshot.lock_version}"/
+    end
+  end
+
   defp select_step(view, run, job_name) do
     view
     |> element("#step-list-#{run.id} a[data-phx-link]", job_name)
