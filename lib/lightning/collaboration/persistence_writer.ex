@@ -416,12 +416,12 @@ defmodule Lightning.Collaboration.PersistenceWriter do
 
       # Apply checkpoint first if it exists
       if latest_checkpoint do
-        Yex.apply_update(temp_doc, latest_checkpoint.data)
+        Yex.apply_update(temp_doc, latest_checkpoint.state_data)
       end
 
       # Apply all updates in order
       Enum.each(updates, fn update_record ->
-        Yex.apply_update(temp_doc, update_record.data)
+        Yex.apply_update(temp_doc, update_record.state_data)
       end)
 
       # Create new checkpoint
@@ -429,7 +429,7 @@ defmodule Lightning.Collaboration.PersistenceWriter do
 
       checkpoint = %DocumentState{
         document_name: document_name,
-        version: "checkpoint",
+        version: :checkpoint,
         state_data: checkpoint_data
       }
 
