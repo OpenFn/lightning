@@ -101,4 +101,7 @@ defmodule LightningWeb.CredentialLive.JsonSchemaBodyComponent do
 
   defp input_type(%{"anyOf" => [%{"type" => "string"}, %{"type" => "null"}]}),
     do: "text"
+
+  # Fallback for unhandled schema patterns
+  defp input_type(_), do: "text"
 end

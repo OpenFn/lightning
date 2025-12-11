@@ -642,14 +642,9 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
   end
 
   defp filter_errors_to_touched(changeset, touched_fields) do
-    touched_atoms =
-      touched_fields
-      |> Enum.map(&String.to_existing_atom/1)
-      |> MapSet.new()
-
     filtered_errors =
       Enum.filter(changeset.errors, fn {field, _} ->
-        MapSet.member?(touched_atoms, field)
+        MapSet.member?(touched_fields, Atom.to_string(field))
       end)
 
     changeset
