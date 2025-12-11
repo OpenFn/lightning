@@ -13,6 +13,7 @@ import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import { CollaborativeWorkflowDiagram } from '../../../../js/collaborative-editor/components/diagram/CollaborativeWorkflowDiagram';
 import type { StoreContextValue } from '../../../../js/collaborative-editor/contexts/StoreProvider';
 import { StoreContext } from '../../../../js/collaborative-editor/contexts/StoreProvider';
+import { KeyboardProvider } from '../../../../js/collaborative-editor/keyboard';
 import { createEditorPreferencesStore } from '../../../../js/collaborative-editor/stores/createEditorPreferencesStore';
 import type { EditorPreferencesStore } from '../../../../js/collaborative-editor/types/editorPreferences';
 import {
@@ -147,9 +148,11 @@ function createWrapper(
   };
 
   return ({ children }: { children: React.ReactNode }) => (
-    <StoreContext.Provider value={mockStoreValue}>
-      {children}
-    </StoreContext.Provider>
+    <KeyboardProvider>
+      <StoreContext.Provider value={mockStoreValue}>
+        {children}
+      </StoreContext.Provider>
+    </KeyboardProvider>
   );
 }
 

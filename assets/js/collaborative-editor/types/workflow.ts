@@ -17,7 +17,7 @@ import type { Trigger as TriggerType } from './trigger';
 /**
  * Zod schema for workflow validation
  *
- * Mirrors backend validation from lib/lightning/workflows/workflow.ex:81-89
+ * Mirrors backend validation from lib/lightning/workflows/workflow.ex:81-103
  */
 export const WorkflowSchema = z.object({
   id: z.string().uuid(),

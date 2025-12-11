@@ -1,5 +1,5 @@
 import { Menu, MenuButton, MenuItem, MenuItems } from '@headlessui/react';
-import { useCallback, useMemo } from 'react';
+import { useCallback } from 'react';
 
 import { useURLState } from '#/react/lib/use-url-state';
 import { buildClassicalEditorUrl } from '../../utils/editorUrlConversion';
@@ -30,10 +30,10 @@ import { useKeyboardShortcut } from '../keyboard';
 import { ActiveCollaborators } from './ActiveCollaborators';
 import { AIButton } from './AIButton';
 import { Breadcrumbs } from './Breadcrumbs';
-import { Button } from './Button';
 import { EmailVerificationBanner } from './EmailVerificationBanner';
 import { GitHubSyncModal } from './GitHubSyncModal';
 import { Switch } from './inputs/Switch';
+import { NewRunButton } from './NewRunButton';
 import { ReadOnlyWarning } from './ReadOnlyWarning';
 import { ShortcutKeys } from './ShortcutKeys';
 import { Tooltip } from './Tooltip';
@@ -74,9 +74,9 @@ export function SaveButton({
             data-testid="save-workflow-button"
             className="rounded-md text-sm font-semibold shadow-xs
             phx-submit-loading:opacity-75 cursor-pointer
-            disabled:cursor-not-allowed disabled:opacity-50 px-3 py-2
+            disabled:cursor-not-allowed disabled:bg-primary-300 px-3 py-2
             bg-primary-600 hover:bg-primary-500
-            disabled:hover:bg-primary-600 text-white
+            disabled:hover:bg-primary-300 text-white
             focus-visible:outline-2 focus-visible:outline-offset-2
             focus-visible:outline-primary-600 focus:ring-transparent"
             onClick={onClick}
@@ -102,9 +102,9 @@ export function SaveButton({
           data-testid="save-workflow-button"
           className="rounded-l-md text-sm font-semibold shadow-xs
           phx-submit-loading:opacity-75 cursor-pointer
-          disabled:cursor-not-allowed disabled:opacity-50 px-3 py-2
+          disabled:cursor-not-allowed disabled:bg-primary-300 px-3 py-2
           bg-primary-600 hover:bg-primary-500
-          disabled:hover:bg-primary-600 text-white
+          disabled:hover:bg-primary-300 text-white
           focus-visible:outline-2 focus-visible:outline-offset-2
           focus-visible:outline-primary-600 focus:ring-transparent"
           onClick={onClick}
@@ -118,8 +118,8 @@ export function SaveButton({
           disabled={!canSave}
           className="h-full rounded-r-md pr-2 pl-2 text-sm font-semibold
             shadow-xs cursor-pointer disabled:cursor-not-allowed
-            disabled:opacity-50 bg-primary-600 hover:bg-primary-500
-            disabled:hover:bg-primary-600 text-white
+            bg-primary-600 hover:bg-primary-500
+            disabled:bg-primary-300 disabled:hover:bg-primary-300 text-white
             focus-visible:outline-2 focus-visible:outline-offset-2
             focus-visible:outline-primary-600 focus:ring-transparent"
         >
@@ -185,7 +185,7 @@ export function Header({
   const { canSave, tooltipMessage } = useCanSave();
   const triggers = useWorkflowState(state => state.triggers);
   const jobs = useWorkflowState(state => state.jobs);
-  const { canRun, tooltipMessage: runTooltipMessage } = useCanRun();
+  const { canRun } = useCanRun();
   const { openRunPanel, openGitHubSyncModal } = useUICommands();
   const repoConnection = useProjectRepoConnection();
   const { hasErrors: hasSettingsErrors } = useWorkflowSettingsErrors();
@@ -233,13 +233,6 @@ export function Header({
       console.error('Failed to switch to legacy editor:', error);
     }
   }, [provider, projectId, workflowId, isNewWorkflow]);
-
-  // Compute Run button tooltip content
-  const runButtonTooltip = useMemo(() => {
-    if (!canRun) return runTooltipMessage; // Error message
-    if (isRunPanelOpen || isIDEOpen) return null; // Shortcut captured by panel
-    return <ShortcutKeys keys={['mod', 'enter']} />; // Shortcut applies
-  }, [canRun, runTooltipMessage, isRunPanelOpen, isIDEOpen]);
 
   useKeyboardShortcut(
     'Control+s, Meta+s',
@@ -348,17 +341,10 @@ export function Header({
             </div>
             <div className="relative flex gap-2">
               {projectId && workflowId && firstTriggerId && !isNewWorkflow && (
-                <Tooltip content={runButtonTooltip} side="bottom">
-                  <span className="inline-block">
-                    <Button
-                      variant="primary"
-                      onClick={handleRunClick}
-                      disabled={!canRun || isRunPanelOpen || isIDEOpen}
-                    >
-                      Run
-                    </Button>
-                  </span>
-                </Tooltip>
+                <NewRunButton
+                  onClick={handleRunClick}
+                  disabled={!canRun || isRunPanelOpen || isIDEOpen}
+                />
               )}
               <SaveButton
                 canSave={

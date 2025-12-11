@@ -101,4 +101,62 @@ defmodule Lightning.Workflows.WebhookAuthMethod do
   def generate_api_key(length \\ 32) do
     length |> :crypto.strong_rand_bytes() |> Base.encode16(case: :lower)
   end
+
+  @doc """
+  Retrieves sensitive values from a WebhookAuthMethod for use in log scrubbing.
+
+  For `:basic` auth, returns the username and password.
+  For `:api` auth, returns the api_key.
+
+  ## Examples
+
+      iex> sensitive_values_for(%WebhookAuthMethod{auth_type: :basic, username: "user", password: "pass"})
+      ["pass"]
+
+      iex> sensitive_values_for(%WebhookAuthMethod{auth_type: :api, api_key: "secret123"})
+      ["secret123"]
+
+      iex> sensitive_values_for(nil)
+      []
+  """
+  @spec sensitive_values_for(t() | nil) :: [String.t()]
+  def sensitive_values_for(nil), do: []
+
+  def sensitive_values_for(%__MODULE__{auth_type: :basic} = auth_method) do
+    [auth_method.password]
+    |> Enum.reject(&is_nil/1)
+  end
+
+  def sensitive_values_for(%__MODULE__{auth_type: :api} = auth_method) do
+    if auth_method.api_key, do: [auth_method.api_key], else: []
+  end
+
+  def sensitive_values_for(%__MODULE__{}), do: []
+
+  @doc """
+  Retrieves basic auth strings from a WebhookAuthMethod for use in log scrubbing.
+
+  Returns a list of base64-encoded "username:password" strings that might appear
+  in Authorization headers.
+
+  ## Examples
+
+      iex> basic_auth_for(%WebhookAuthMethod{auth_type: :basic, username: "user", password: "pass"})
+      ["dXNlcjpwYXNz"]
+
+      iex> basic_auth_for(%WebhookAuthMethod{auth_type: :api, api_key: "secret"})
+      []
+  """
+  @spec basic_auth_for(t() | nil) :: [String.t()]
+  def basic_auth_for(nil), do: []
+
+  def basic_auth_for(%__MODULE__{auth_type: :basic} = auth_method) do
+    if auth_method.username && auth_method.password do
+      ["#{auth_method.username}:#{auth_method.password}" |> Base.encode64()]
+    else
+      []
+    end
+  end
+
+  def basic_auth_for(%__MODULE__{}), do: []
 end

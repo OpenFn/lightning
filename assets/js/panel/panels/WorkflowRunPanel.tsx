@@ -133,7 +133,7 @@ export const WorkflowRunPanel: WithActionProps<WorkflowRunPanel> = props => {
                   onClick={startRetry}
                 >
                   <span className="hero-play-mini w-4 h-4 mr-1"></span> Run
-                  (retry)
+                  (Retry)
                 </button>
                 <div className="relative -ml-px block">
                   <button

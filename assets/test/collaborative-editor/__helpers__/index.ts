@@ -176,3 +176,6 @@ export {
   defaultSessionContextState,
   defaultUIState,
 } from './storeMocks';
+
+// DOM test helpers
+export { getVisibleButtonText, queryVisibleButtonText } from './domTestHelpers';

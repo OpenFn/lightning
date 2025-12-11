@@ -355,6 +355,112 @@ defmodule Lightning.AiAssistantTest do
       {:ok, _updated_session} =
         AiAssistant.query(session, "Query", logs: false)
     end
+
+    test "input and output options are included in context", %{
+      user: user,
+      workflow: %{jobs: [job_1 | _]} = _workflow
+    } do
+      session =
+        insert(:chat_session,
+          user: user,
+          job: job_1,
+          expression: "fn(state => state)",
+          adaptor: "@openfn/language-http",
+          messages: []
+        )
+
+      Mox.stub(Lightning.MockConfig, :apollo, fn key ->
+        case key do
+          :endpoint -> "http://localhost:3000"
+          :ai_assistant_api_key -> "api_key"
+          :timeout -> 5_000
+        end
+      end)
+
+      input_data = %{"user" => "john", "age" => 30}
+      output_data = %{"status" => "success", "id" => "123"}
+
+      expect(
+        Lightning.Tesla.Mock,
+        :call,
+        fn %{method: :post, body: json_body}, _opts ->
+          body = Jason.decode!(json_body)
+
+          # Verify input and output are in context
+          assert body["context"]["input"] == input_data
+          assert body["context"]["output"] == output_data
+
+          # Verify other context is still present
+          assert body["context"]["expression"] == "fn(state => state)"
+          assert body["context"]["adaptor"] == "@openfn/language-http"
+
+          {:ok,
+           %Tesla.Env{
+             status: 200,
+             body: %{
+               "history" => [
+                 %{"role" => "user", "content" => "Query"},
+                 %{"role" => "assistant", "content" => "Response"}
+               ]
+             }
+           }}
+        end
+      )
+
+      {:ok, _updated_session} =
+        AiAssistant.query(session, "Query",
+          input: input_data,
+          output: output_data
+        )
+    end
+
+    test "nil input and output options are not included in context", %{
+      user: user,
+      workflow: %{jobs: [job_1 | _]} = _workflow
+    } do
+      session =
+        insert(:chat_session,
+          user: user,
+          job: job_1,
+          expression: "fn(state => state)",
+          adaptor: "@openfn/language-http",
+          messages: []
+        )
+
+      Mox.stub(Lightning.MockConfig, :apollo, fn key ->
+        case key do
+          :endpoint -> "http://localhost:3000"
+          :ai_assistant_api_key -> "api_key"
+          :timeout -> 5_000
+        end
+      end)
+
+      expect(
+        Lightning.Tesla.Mock,
+        :call,
+        fn %{method: :post, body: json_body}, _opts ->
+          body = Jason.decode!(json_body)
+
+          # Verify input and output are not present when nil
+          refute Map.has_key?(body["context"], "input")
+          refute Map.has_key?(body["context"], "output")
+
+          {:ok,
+           %Tesla.Env{
+             status: 200,
+             body: %{
+               "history" => [
+                 %{"role" => "user", "content" => "Query"},
+                 %{"role" => "assistant", "content" => "Response"}
+               ]
+             }
+           }}
+        end
+      )
+
+      {:ok, _updated_session} =
+        AiAssistant.query(session, "Query", input: nil, output: nil)
+    end
   end
 
   describe "create_session/4" do

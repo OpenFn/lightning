@@ -1615,6 +1615,82 @@ defmodule LightningWeb.AiAssistantChannelTest do
     end
   end
 
+  describe "new_message with attach_io_data" do
+    @tag :capture_log
+    test "extracts attach_io_data and step_id from params", %{
+      socket: socket,
+      job: job,
+      user: user
+    } do
+      # Create a step to reference
+      step = insert(:step, job: job)
+
+      # Use manual mode to prevent AI response from being generated inline
+      with_testing_mode(:manual, fn ->
+        {:ok, session} =
+          AiAssistant.create_session(job, user, "Initial message", [])
+
+        {:ok, _, socket} =
+          subscribe_and_join(
+            socket,
+            AiAssistantChannel,
+            "ai_assistant:job_code:#{session.id}",
+            %{}
+          )
+
+        # Push message with attach_io_data and step_id
+        ref =
+          push(socket, "new_message", %{
+            "content" => "Help me analyze this run",
+            "attach_io_data" => true,
+            "step_id" => step.id
+          })
+
+        assert_reply ref, :ok, %{message: message}
+        assert message.role == "user"
+        assert message.content == "Help me analyze this run"
+
+        # Verify the session meta contains the message_options
+        updated_session = AiAssistant.get_session!(session.id)
+        message_options = updated_session.meta["message_options"]
+        assert message_options["attach_io_data"] == true
+        assert message_options["step_id"] == step.id
+      end)
+    end
+
+    @tag :capture_log
+    test "stores attach_io_data false when not provided", %{
+      socket: socket,
+      job: job,
+      user: user
+    } do
+      with_testing_mode(:manual, fn ->
+        {:ok, session} =
+          AiAssistant.create_session(job, user, "Initial message", [])
+
+        {:ok, _, socket} =
+          subscribe_and_join(
+            socket,
+            AiAssistantChannel,
+            "ai_assistant:job_code:#{session.id}",
+            %{}
+          )
+
+        ref =
+          push(socket, "new_message", %{
+            "content" => "Help me"
+          })
+
+        assert_reply ref, :ok, %{message: _message}
+
+        # Verify attach_io_data is false by default
+        updated_session = AiAssistant.get_session!(session.id)
+        message_options = updated_session.meta["message_options"]
+        assert message_options["attach_io_data"] == false
+      end)
+    end
+  end
+
   describe "extract_message_options edge cases" do
     @tag :capture_log
     test "handles attach_code and attach_logs for job_code", %{
@@ -1731,6 +1807,120 @@ defmodule LightningWeb.AiAssistantChannelTest do
         Enum.find(session.messages, fn msg -> msg.role == :user end)
 
       assert first_message.code == nil
+    end
+  end
+
+  describe "attach_io_data in new session (first message)" do
+    @tag :capture_log
+    test "includes attach_io_data and step_id when creating new session", %{
+      socket: socket,
+      job: job
+    } do
+      # Create a step to reference
+      step = insert(:step, job: job)
+
+      params = %{
+        "job_id" => job.id,
+        "content" => "Help me analyze this run",
+        "attach_io_data" => true,
+        "step_id" => step.id
+      }
+
+      {:ok, response, _socket} =
+        subscribe_and_join(
+          socket,
+          AiAssistantChannel,
+          "ai_assistant:job_code:new",
+          params
+        )
+
+      # Verify the session meta contains message_options from the first message
+      session = AiAssistant.get_session!(response.session_id)
+      message_options = session.meta["message_options"]
+
+      assert message_options["attach_io_data"] == true
+      assert message_options["step_id"] == step.id
+    end
+
+    @tag :capture_log
+    test "includes attach_code and attach_logs when creating new session", %{
+      socket: socket,
+      job: job
+    } do
+      params = %{
+        "job_id" => job.id,
+        "content" => "Help me with logs",
+        "attach_code" => true,
+        "attach_logs" => true
+      }
+
+      {:ok, response, _socket} =
+        subscribe_and_join(
+          socket,
+          AiAssistantChannel,
+          "ai_assistant:job_code:new",
+          params
+        )
+
+      session = AiAssistant.get_session!(response.session_id)
+      message_options = session.meta["message_options"]
+
+      assert message_options["code"] == true
+      assert message_options["log"] == true
+    end
+
+    @tag :capture_log
+    test "excludes message_options when not opted in", %{
+      socket: socket,
+      job: job
+    } do
+      params = %{
+        "job_id" => job.id,
+        "content" => "Help me"
+      }
+
+      {:ok, response, _socket} =
+        subscribe_and_join(
+          socket,
+          AiAssistantChannel,
+          "ai_assistant:job_code:new",
+          params
+        )
+
+      session = AiAssistant.get_session!(response.session_id)
+
+      # message_options should not be present when none of the options are set
+      refute Map.has_key?(session.meta, "message_options")
+    end
+
+    @tag :capture_log
+    test "attach_io_data defaults to false when step_id provided without attach_io_data",
+         %{
+           socket: socket,
+           job: job
+         } do
+      step = insert(:step, job: job)
+
+      params = %{
+        "job_id" => job.id,
+        "content" => "Help me",
+        "step_id" => step.id
+      }
+
+      {:ok, response, _socket} =
+        subscribe_and_join(
+          socket,
+          AiAssistantChannel,
+          "ai_assistant:job_code:new",
+          params
+        )
+
+      session = AiAssistant.get_session!(response.session_id)
+      message_options = session.meta["message_options"]
+
+      # step_id is present but attach_io_data should be false
+      assert message_options["step_id"] == step.id
+      assert message_options["attach_io_data"] == false
     end
   end
 

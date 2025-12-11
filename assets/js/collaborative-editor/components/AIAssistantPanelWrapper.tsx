@@ -358,7 +358,12 @@ export function AIAssistantPanelWrapper() {
   const sendMessage = useCallback(
     (
       content: string,
-      messageOptions?: { attach_code?: boolean; attach_logs?: boolean }
+      messageOptions?: {
+        attach_code?: boolean;
+        attach_logs?: boolean;
+        attach_io_data?: boolean;
+        step_id?: string;
+      }
     ) => {
       const currentState = aiStore.getSnapshot();
 
@@ -373,6 +378,8 @@ export function AIAssistantPanelWrapper() {
           // Include attach_code/attach_logs so backend knows to include them in first message
           ...(messageOptions?.attach_code && { attach_code: true }),
           ...(messageOptions?.attach_logs && { attach_logs: true }),
+          ...(messageOptions?.attach_io_data && { attach_io_data: true }),
+          ...(messageOptions?.step_id && { step_id: messageOptions.step_id }),
         };
 
         // Add workflow YAML if in workflow mode
@@ -410,9 +417,15 @@ export function AIAssistantPanelWrapper() {
 
       // For existing sessions, prepare options and send
       let options:
-        | { attach_code?: boolean; attach_logs?: boolean; code?: string }
+        | {
+            attach_code?: boolean;
+            attach_logs?: boolean;
+            attach_io_data?: boolean;
+            step_id?: string;
+            code?: string;
+          }
         | undefined = {
-        ...messageOptions, // Include attach_code and attach_logs
+        ...messageOptions, // Include attach_code, attach_logs, attach_io_data, step_id
       };
 
       if (currentState.sessionType === 'workflow_template') {

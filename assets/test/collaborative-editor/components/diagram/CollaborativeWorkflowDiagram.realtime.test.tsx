@@ -11,6 +11,7 @@ import { beforeEach, describe, expect, test, vi } from 'vitest';
 import { CollaborativeWorkflowDiagram } from '../../../../js/collaborative-editor/components/diagram/CollaborativeWorkflowDiagram';
 import type { StoreContextValue } from '../../../../js/collaborative-editor/contexts/StoreProvider';
 import { StoreContext } from '../../../../js/collaborative-editor/contexts/StoreProvider';
+import { KeyboardProvider } from '../../../../js/collaborative-editor/keyboard';
 import type {
   Run,
   RunStepsData,
@@ -231,9 +232,11 @@ describe('CollaborativeWorkflowDiagram - Real-time Run Updates', () => {
     };
 
     return ({ children }: { children: React.ReactNode }) => (
-      <StoreContext.Provider value={mockStoreValue}>
-        {children}
-      </StoreContext.Provider>
+      <KeyboardProvider>
+        <StoreContext.Provider value={mockStoreValue}>
+          {children}
+        </StoreContext.Provider>
+      </KeyboardProvider>
     );
   }
 

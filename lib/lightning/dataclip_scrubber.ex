@@ -10,6 +10,8 @@ defmodule Lightning.DataclipScrubber do
   alias Lightning.Repo
   alias Lightning.RunStep
   alias Lightning.Scrubber
+  alias Lightning.Workflows.WebhookAuthMethod
+  alias Lightning.WorkOrder
 
   @spec scrub_dataclip_body!(%{
           body: String.t() | nil,
@@ -19,47 +21,78 @@ defmodule Lightning.DataclipScrubber do
   def scrub_dataclip_body!(%{body: nil}), do: nil
 
   def scrub_dataclip_body!(%{body: body} = dataclip) when is_binary(body) do
-    if dataclip.type == :step_result do
-      step_query = from s in Step, where: s.output_dataclip_id == ^dataclip.id
-      scrub_body(body, Repo.one(step_query))
-    else
-      body
+    case dataclip.type do
+      :step_result ->
+        step_query = from s in Step, where: s.output_dataclip_id == ^dataclip.id
+        scrub_body(body, Repo.one(step_query))
+
+      :http_request ->
+        scrub_http_request(body, dataclip.id)
+
+      _ ->
+        body
     end
   end
 
-  defp scrub_body(body_str, %Step{
-         id: step_id,
-         started_at: started_at
-       }) do
-    step_id
-    |> credentials_for_step(started_at)
-    |> Repo.all()
-    |> case do
-      [] ->
-        body_str
+  defp scrub_body(body_str, %Step{id: step_id, started_at: started_at}) do
+    credentials_with_env =
+      step_id
+      |> credentials_for_step(started_at)
+      |> Repo.all()
 
-      credentials_with_env ->
-        {_first_cred, project_env} = List.first(credentials_with_env)
-        project_env = project_env || "main"
+    webhook_auth_methods = webhook_auth_methods_for_step(step_id)
 
-        credentials = Enum.map(credentials_with_env, fn {c, _env} -> c end)
+    if Enum.empty?(credentials_with_env) and Enum.empty?(webhook_auth_methods) do
+      body_str
+    else
+      project_env =
+        case credentials_with_env do
+          [{_cred, env} | _] -> env || "main"
+          [] -> "main"
+        end
 
-        {:ok, scrubber} = Scrubber.start_link([])
+      credentials = Enum.map(credentials_with_env, fn {c, _env} -> c end)
 
-        scrubber =
-          credentials
-          |> Enum.reduce(scrubber, fn credential, scrubber ->
-            samples = Credentials.sensitive_values_for(credential, project_env)
-            basic_auth = Credentials.basic_auth_for(credential, project_env)
-            :ok = Scrubber.add_samples(scrubber, samples, basic_auth)
-            scrubber
-          end)
+      {:ok, scrubber} = Scrubber.start_link([])
 
-        Scrubber.scrub(scrubber, body_str)
+      scrubber =
+        Enum.reduce(credentials, scrubber, fn credential, scrubber ->
+          samples = Credentials.sensitive_values_for(credential, project_env)
+          basic_auth = Credentials.basic_auth_for(credential, project_env)
+          :ok = Scrubber.add_samples(scrubber, samples, basic_auth)
+          scrubber
+        end)
+
+      scrubber = add_webhook_auth_samples(scrubber, webhook_auth_methods)
+
+      Scrubber.scrub(scrubber, body_str)
     end
   end
 
   defp scrub_body(body_str, _step), do: body_str
+
+  defp scrub_http_request(body_str, dataclip_id) do
+    webhook_auth_methods = webhook_auth_methods_for_dataclip(dataclip_id)
+
+    if Enum.empty?(webhook_auth_methods) do
+      body_str
+    else
+      {:ok, scrubber} = Scrubber.start_link([])
+
+      scrubber = add_webhook_auth_samples(scrubber, webhook_auth_methods)
+
+      Scrubber.scrub(scrubber, body_str)
+    end
+  end
+
+  defp add_webhook_auth_samples(scrubber, webhook_auth_methods) do
+    Enum.reduce(webhook_auth_methods, scrubber, fn auth_method, scrubber ->
+      samples = WebhookAuthMethod.sensitive_values_for(auth_method)
+      basic_auth = WebhookAuthMethod.basic_auth_for(auth_method)
+      :ok = Scrubber.add_samples(scrubber, samples, basic_auth)
+      scrubber
+    end)
+  end
 
   @doc """
   Returns an Ecto query for credentials (with project env) used in the same
@@ -83,5 +116,37 @@ defmodule Lightning.DataclipScrubber do
       select: {c, p.env},
       distinct: c.id
     )
+  end
+
+  @doc """
+  Returns webhook auth methods for a step by traversing:
+  step -> run_step -> run -> work_order -> trigger -> webhook_auth_methods
+  """
+  def webhook_auth_methods_for_step(step_id) do
+    from(rs in RunStep,
+      where: rs.step_id == ^step_id,
+      join: r in assoc(rs, :run),
+      join: wo in assoc(r, :work_order),
+      join: t in assoc(wo, :trigger),
+      join: wam in assoc(t, :webhook_auth_methods),
+      select: wam,
+      distinct: wam.id
+    )
+    |> Repo.all()
+  end
+
+  @doc """
+  Returns webhook auth methods for an http_request dataclip by traversing:
+  dataclip -> work_order -> trigger -> webhook_auth_methods
+  """
+  def webhook_auth_methods_for_dataclip(dataclip_id) do
+    from(wo in WorkOrder,
+      where: wo.dataclip_id == ^dataclip_id,
+      join: t in assoc(wo, :trigger),
+      join: wam in assoc(t, :webhook_auth_methods),
+      select: wam,
+      distinct: wam.id
+    )
+    |> Repo.all()
   end
 end

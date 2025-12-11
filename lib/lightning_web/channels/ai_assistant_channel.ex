@@ -532,16 +532,29 @@ defmodule LightningWeb.AiAssistantChannel do
   end
 
   defp extract_session_options("job_code", params) do
-    opts = []
+    meta = %{}
 
-    opts =
+    meta =
       if params["follow_run_id"] do
-        Keyword.put(opts, :meta, %{"follow_run_id" => params["follow_run_id"]})
+        Map.put(meta, "follow_run_id", params["follow_run_id"])
       else
-        opts
+        meta
       end
 
-    opts
+    # Include message_options for the initial message (attach_io_data, step_id, etc.)
+    meta =
+      if params["attach_io_data"] || params["step_id"] || params["attach_code"] ||
+           params["attach_logs"] do
+        Map.put(meta, "message_options", build_message_options(params))
+      else
+        meta
+      end
+
+    if map_size(meta) > 0 do
+      [meta: meta]
+    else
+      []
+    end
   end
 
   defp extract_session_options("workflow_template", params) do
@@ -558,12 +571,7 @@ defmodule LightningWeb.AiAssistantChannel do
   end
 
   defp extract_message_options("job_code", params) do
-    message_options = %{
-      "code" => params["attach_code"] == true,
-      "log" => params["attach_logs"] == true
-    }
-
-    [meta: %{"message_options" => message_options}]
+    [meta: %{"message_options" => build_message_options(params)}]
   end
 
   defp extract_message_options("workflow_template", params) do
@@ -572,6 +580,15 @@ defmodule LightningWeb.AiAssistantChannel do
     else
       []
     end
+  end
+
+  defp build_message_options(params) do
+    %{
+      "code" => params["attach_code"] == true,
+      "log" => params["attach_logs"] == true,
+      "attach_io_data" => params["attach_io_data"] == true,
+      "step_id" => params["step_id"]
+    }
   end
 
   defp format_messages(messages) do

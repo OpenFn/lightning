@@ -19,10 +19,17 @@ and this project adheres to
 
 ### Changed
 
+- Unify disabled button states across collaborative editor for consistent
+  styling and behaviour [#4179](https://github.com/OpenFn/lightning/issues/4179)
+
 ### Fixed
 
 - Fix AI Assistant disclaimer not persisting after acceptance
   [#4158](https://github.com/OpenFn/lightning/issues/4158)
+- Fix saving workflow with same name as deleted workflow
+  [#4165](https://github.com/OpenFn/lightning/pull/4165)
+- Fix validation error states not changing after undo (Ctrl+Z) on Workflow
+  Settings [#4182](https://github.com/OpenFn/lightning/issues/4182))
 
 ## [2.15.0-pre4] - 2025-12-08
 
@@ -39,13 +46,19 @@ and this project adheres to
 
 ### Changed
 
+- Standardize run buttons so they all behave predictably
+  [#4129](https://github.com/OpenFn/lightning/issues/4129)
 - Make collab editor available to everyone (not just experimental feature users)
   [#4091](https://github.com/OpenFn/lightning/issues/4091)
 
 ### Fixed
 
+- Fix Run/Retry button flash and improve History button UX in collaborative
+  editor [#4108](https://github.com/OpenFn/lightning/issues/4108)
 - Fix new jobs are misplaced on the canvas in manual layout
   [#4118](https://github.com/OpenFn/lightning/issues/4118)
+- Fix docs not working for latest version of adaptors in IDE
+  [#4136](https://github.com/OpenFn/lightning/issues/4136)
 
 ## [2.15.0-pre3] - 2025-12-05
 

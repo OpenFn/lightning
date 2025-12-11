@@ -122,6 +122,59 @@ defmodule LightningWeb.DataclipControllerTest do
       %{conn: log_in_user(conn, user)}
     end
 
+    test "scrubs http_request dataclip with webhook auth credentials", %{
+      conn: conn,
+      user: user
+    } do
+      project = insert(:project, project_users: [%{user: user}])
+      workflow = insert(:workflow, project: project)
+      trigger = insert(:trigger, workflow: workflow, type: :webhook)
+
+      webhook_auth =
+        insert(:webhook_auth_method,
+          project: project,
+          auth_type: :basic,
+          username: "webhook_user",
+          password: "webhook_secret_pass"
+        )
+
+      trigger
+      |> Lightning.Repo.preload(:webhook_auth_methods)
+      |> Ecto.Changeset.change()
+      |> Ecto.Changeset.put_assoc(:webhook_auth_methods, [webhook_auth])
+      |> Lightning.Repo.update!()
+
+      dataclip =
+        insert(:dataclip,
+          project: project,
+          type: :http_request,
+          body: %{
+            "headers" => %{
+              "authorization" =>
+                "Basic #{Base.encode64("webhook_user:webhook_secret_pass")}"
+            },
+            "data" => "test payload"
+          }
+        )
+
+      insert(:workorder,
+        workflow: workflow,
+        trigger: trigger,
+        dataclip: dataclip
+      )
+
+      conn = get(conn, ~p"/dataclip/body/#{dataclip.id}")
+      body = response(conn, 200)
+
+      # The password and base64-encoded basic auth should be scrubbed
+      refute body =~ "webhook_secret_pass"
+      refute body =~ Base.encode64("webhook_user:webhook_secret_pass")
+      # The scrubbed placeholder should be present
+      assert body =~ "***"
+      # Non-sensitive data should still be present
+      assert body =~ "test payload"
+    end
+
     test "scrubbs lines from step_result dataclip", %{
       conn: conn,
       step2: selected_step
