@@ -74,9 +74,9 @@ export function SaveButton({
             data-testid="save-workflow-button"
             className="rounded-md text-sm font-semibold shadow-xs
             phx-submit-loading:opacity-75 cursor-pointer
-            disabled:cursor-not-allowed disabled:opacity-50 px-3 py-2
+            disabled:cursor-not-allowed disabled:bg-primary-300 px-3 py-2
             bg-primary-600 hover:bg-primary-500
-            disabled:hover:bg-primary-600 text-white
+            disabled:hover:bg-primary-300 text-white
             focus-visible:outline-2 focus-visible:outline-offset-2
             focus-visible:outline-primary-600 focus:ring-transparent"
             onClick={onClick}
@@ -102,9 +102,9 @@ export function SaveButton({
           data-testid="save-workflow-button"
           className="rounded-l-md text-sm font-semibold shadow-xs
           phx-submit-loading:opacity-75 cursor-pointer
-          disabled:cursor-not-allowed disabled:opacity-50 px-3 py-2
+          disabled:cursor-not-allowed disabled:bg-primary-300 px-3 py-2
           bg-primary-600 hover:bg-primary-500
-          disabled:hover:bg-primary-600 text-white
+          disabled:hover:bg-primary-300 text-white
           focus-visible:outline-2 focus-visible:outline-offset-2
           focus-visible:outline-primary-600 focus:ring-transparent"
           onClick={onClick}
@@ -118,8 +118,8 @@ export function SaveButton({
           disabled={!canSave}
           className="h-full rounded-r-md pr-2 pl-2 text-sm font-semibold
             shadow-xs cursor-pointer disabled:cursor-not-allowed
-            disabled:opacity-50 bg-primary-600 hover:bg-primary-500
-            disabled:hover:bg-primary-600 text-white
+            bg-primary-600 hover:bg-primary-500
+            disabled:bg-primary-300 disabled:hover:bg-primary-300 text-white
             focus-visible:outline-2 focus-visible:outline-offset-2
             focus-visible:outline-primary-600 focus:ring-transparent"
         >
