@@ -85,11 +85,18 @@ defmodule LightningWeb.Components.Credentials do
   attr :type, :string, required: true
   attr :form, :map, required: true
   attr :current_body, :map, default: %{}
+  attr :schema_changeset, :any, default: nil
+  attr :raw_body_touched, :boolean, default: false
   slot :inner_block
 
   def form_component(%{type: "raw"} = assigns) do
     ~H"""
-    <RawBodyComponent.fieldset :let={l} form={@form} current_body={@current_body}>
+    <RawBodyComponent.fieldset
+      :let={l}
+      form={@form}
+      current_body={@current_body}
+      touched={@raw_body_touched}
+    >
       {render_slot(@inner_block, l)}
     </RawBodyComponent.fieldset>
     """
@@ -101,6 +108,7 @@ defmodule LightningWeb.Components.Credentials do
       :let={l}
       form={@form}
       current_body={@current_body}
+      schema_changeset={@schema_changeset}
     >
       {render_slot(@inner_block, l)}
     </JsonSchemaBodyComponent.fieldset>
