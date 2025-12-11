@@ -24,6 +24,8 @@ and this project adheres to
 
 ### Fixed
 
+- Fix AI Assistant disclaimer not persisting after acceptance
+  [#4158](https://github.com/OpenFn/lightning/issues/4158)
 - Credential form now shows inline validation errors for JSON schema and raw
   body fields after field interaction
   [#4168](https://github.com/OpenFn/lightning/issues/4168)

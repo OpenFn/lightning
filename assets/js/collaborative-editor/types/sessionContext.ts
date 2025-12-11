@@ -133,6 +133,7 @@ interface SessionContextCommands {
   setLatestSnapshotLockVersion: (lockVersion: number) => void;
   clearIsNewWorkflow: () => void;
   setHasReadAIDisclaimer: (hasRead: boolean) => void;
+  markAIDisclaimerRead: () => Promise<void>;
   getLimits: (actionType: 'new_run') => Promise<void>;
 }
 
