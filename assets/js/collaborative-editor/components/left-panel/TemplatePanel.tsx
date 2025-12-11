@@ -398,7 +398,7 @@ export function TemplatePanel({
               type="button"
               onClick={() => void handleCreateWorkflow()}
               disabled={!selectedTemplate || !onSave}
-              className="rounded-md bg-primary-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-primary-500 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-primary-600"
+              className="rounded-md bg-primary-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-primary-500 disabled:bg-primary-300 disabled:hover:bg-primary-300 disabled:cursor-not-allowed"
             >
               Create
             </button>
