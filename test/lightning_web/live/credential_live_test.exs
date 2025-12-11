@@ -3429,4 +3429,79 @@ defmodule LightningWeb.CredentialLiveTest do
       assert sandbox_credential_count == 1
     end
   end
+
+  describe "credential environment tabs" do
+    test "each environment tab maintains independent form values", %{
+      conn: conn
+    } do
+      {:ok, view, _html} = live(conn, ~p"/credentials", on_error: :raise)
+
+      open_create_credential_modal(view)
+      select_credential_type(view, "dhis2")
+      click_continue(view)
+
+      # Fill in values for the main environment
+      view
+      |> form("#credential-form-new",
+        credential: %{
+          name: "Multi-env credential",
+          body: %{
+            username: "main_user",
+            password: "main_pass",
+            hostUrl: "http://main.example.com"
+          }
+        }
+      )
+      |> render_change()
+
+      # Verify main tab has the values
+      html = render(view)
+      assert html =~ "main_user"
+
+      # Add a new environment
+      view
+      |> element("#add-environment-button")
+      |> render_click()
+
+      # The new tab should be selected and have empty values
+      html = render(view)
+      refute html =~ ~s(value="main_user")
+
+      # Fill in different values for the new environment
+      view
+      |> form("#credential-form-new",
+        credential: %{
+          body: %{
+            username: "staging_user",
+            password: "staging_pass",
+            hostUrl: "http://staging.example.com"
+          }
+        }
+      )
+      |> render_change()
+
+      html = render(view)
+      assert html =~ "staging_user"
+
+      # Switch back to main tab
+      view
+      |> element("button", "main")
+      |> render_click()
+
+      # Main tab should still have its original values
+      html = render(view)
+      assert html =~ ~s(value="main_user")
+      refute html =~ ~s(value="staging_user")
+
+      # Switch to the untitled tab again
+      view
+      |> element("button", "untitled")
+      |> render_click()
+
+      # Untitled tab should have staging values
+      html = render(view)
+      assert html =~ ~s(value="staging_user")
+      refute html =~ ~s(value="main_user")
+    end
+  end
 end

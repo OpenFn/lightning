@@ -179,7 +179,10 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
   end
 
   def handle_event("change_tab", %{"tab" => tab}, socket) do
-    {:noreply, assign(socket, :current_tab, tab)}
+    {:noreply,
+     socket
+     |> assign(:current_tab, tab)
+     |> assign(:schema_changeset, nil)}
   end
 
   def handle_event("add_environment", _, socket) do
@@ -206,7 +209,8 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
        socket
        |> assign(credential_environments: new_environments)
        |> assign(credential_bodies: new_bodies)
-       |> assign(current_tab: tab_name)}
+       |> assign(current_tab: tab_name)
+       |> assign(schema_changeset: nil)}
     end
   end
 
