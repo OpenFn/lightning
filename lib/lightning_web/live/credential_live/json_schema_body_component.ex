@@ -48,7 +48,7 @@ defmodule LightningWeb.CredentialLive.JsonSchemaBodyComponent do
     assigns = assign(assigns, :body_form, body_form)
 
     ~H"""
-    <div>
+    <div class="space-y-4">
       <div :for={field <- @schema.fields} class="grid grid-cols-2">
         <.schema_input form={@body_form} schema={@schema} field={field} />
       </div>
