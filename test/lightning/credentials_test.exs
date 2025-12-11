@@ -1388,7 +1388,7 @@ defmodule Lightning.CredentialsTest do
   end
 
   describe "transaction error handling" do
-    test "handle_transaction_result/1 properly handles transaction errors" do
+    test "handle_transaction_result/2 properly handles credential validation errors" do
       user = insert(:user)
 
       credential = insert(:credential, user: user, name: "Original Name")
@@ -1400,6 +1400,47 @@ defmodule Lightning.CredentialsTest do
 
       assert Lightning.Credentials.get_credential!(credential.id)
              |> Map.get(:name) == credential.name
+    end
+
+    test "returns credential changeset error when credential body name is invalid" do
+      user = insert(:user)
+
+      attrs = %{
+        "name" => "Valid Credential",
+        "schema" => "raw",
+        "user_id" => user.id,
+        "credential_bodies" => [
+          %{"name" => "INVALID!", "body" => %{"key" => "value"}}
+        ]
+      }
+
+      assert {:error, changeset} = Credentials.create_credential(attrs)
+
+      # Error should be on :credential_bodies with environment info
+      assert [credential_bodies: {msg, _}] = changeset.errors
+      assert msg =~ "Environment 1"
+      assert msg =~ "must be a short slug"
+    end
+
+    test "returns credential changeset error when second credential body fails" do
+      user = insert(:user)
+
+      attrs = %{
+        "name" => "Valid Credential",
+        "schema" => "raw",
+        "user_id" => user.id,
+        "credential_bodies" => [
+          %{"name" => "main", "body" => %{"key" => "value"}},
+          %{"name" => "STAGING!", "body" => %{"key" => "value"}}
+        ]
+      }
+
+      assert {:error, changeset} = Credentials.create_credential(attrs)
+
+      # Error should reference Environment 2 (second body at index 1)
+      assert [credential_bodies: {msg, _}] = changeset.errors
+      assert msg =~ "Environment 2"
+      assert msg =~ "must be a short slug"
     end
   end
 
