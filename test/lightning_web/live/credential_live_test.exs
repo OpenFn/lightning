@@ -582,6 +582,44 @@ defmodule LightningWeb.CredentialLiveTest do
              )
     end
 
+    test "validates raw credential body and shows errors after interaction", %{
+      conn: conn
+    } do
+      {:ok, view, _html} = live(conn, ~p"/credentials", on_error: :raise)
+
+      open_create_credential_modal(view)
+      select_credential_type(view, "raw")
+      click_continue(view)
+
+      # Touch the body field by clearing it
+      view
+      |> form("#credential-form-new", credential: %{body: ""})
+      |> render_change()
+
+      # Now body error should show (use specific error message for body)
+      assert render(view) =~ "This field can&#39;t be blank"
+
+      # Save button should be disabled
+      assert submit_disabled(view, "#save-credential-button-new")
+
+      # Enter invalid JSON
+      view
+      |> form("#credential-form-new", credential: %{body: "not valid json"})
+      |> render_change()
+
+      assert render(view) =~ "Invalid JSON format"
+
+      # Enter valid JSON and name
+      view
+      |> form("#credential-form-new",
+        credential: %{name: "Test Cred", body: ~s({"key": "value"})}
+      )
+      |> render_change()
+
+      refute render(view) =~ "Invalid JSON format"
+      refute render(view) =~ "This field can&#39;t be blank"
+    end
+
     test "allows a support user to define and save a new raw credential", %{
       conn: conn,
       user: user,
@@ -3389,6 +3427,81 @@ defmodule LightningWeb.CredentialLiveTest do
         )
 
       assert sandbox_credential_count == 1
+    end
+  end
+
+  describe "credential environment tabs" do
+    test "each environment tab maintains independent form values", %{
+      conn: conn
+    } do
+      {:ok, view, _html} = live(conn, ~p"/credentials", on_error: :raise)
+
+      open_create_credential_modal(view)
+      select_credential_type(view, "dhis2")
+      click_continue(view)
+
+      # Fill in values for the main environment
+      view
+      |> form("#credential-form-new",
+        credential: %{
+          name: "Multi-env credential",
+          body: %{
+            username: "main_user",
+            password: "main_pass",
+            hostUrl: "http://main.example.com"
+          }
+        }
+      )
+      |> render_change()
+
+      # Verify main tab has the values
+      html = render(view)
+      assert html =~ "main_user"
+
+      # Add a new environment
+      view
+      |> element("#add-environment-button")
+      |> render_click()
+
+      # The new tab should be selected and have empty values
+      html = render(view)
+      refute html =~ ~s(value="main_user")
+
+      # Fill in different values for the new environment
+      view
+      |> form("#credential-form-new",
+        credential: %{
+          body: %{
+            username: "staging_user",
+            password: "staging_pass",
+            hostUrl: "http://staging.example.com"
+          }
+        }
+      )
+      |> render_change()
+
+      html = render(view)
+      assert html =~ "staging_user"
+
+      # Switch back to main tab
+      view
+      |> element("button", "main")
+      |> render_click()
+
+      # Main tab should still have its original values
+      html = render(view)
+      assert html =~ ~s(value="main_user")
+      refute html =~ ~s(value="staging_user")
+
+      # Switch to the untitled tab again
+      view
+      |> element("button", "untitled")
+      |> render_click()
+
+      # Untitled tab should have staging values
+      html = render(view)
+      assert html =~ ~s(value="staging_user")
+      refute html =~ ~s(value="main_user")
     end
   end
 end

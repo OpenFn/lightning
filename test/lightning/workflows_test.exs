@@ -52,7 +52,7 @@ defmodule Lightning.WorkflowsTest do
 
       assert %{
                name: [
-                 "a workflow with this name already exists in this project."
+                 "A workflow with this name already exists (possibly pending deletion) in this project."
                ]
              } = errors_on(changeset)
 
@@ -832,6 +832,88 @@ defmodule Lightning.WorkflowsTest do
       refute_received %KafkaTriggerUpdated{trigger_id: ^webhook_trigger_id}
       assert_received %KafkaTriggerUpdated{trigger_id: ^kafka_trigger_2_id}
       assert_received %KafkaTriggerUpdated{trigger_id: ^kafka_trigger_1_id}
+    end
+
+    test "mark_for_deletion/3 renames workflow with _del suffix" do
+      # Use a separate project to avoid pollution from setup
+      project = insert(:project)
+      user = insert(:user)
+      w1 = insert(:workflow, project: project, name: "Test Workflow")
+
+      assert {:ok, %{workflow: workflow}} = Workflows.mark_for_deletion(w1, user)
+      assert workflow.name == "Test Workflow_del"
+
+      # Test incrementing when deleting another workflow with the same name
+      w2 = insert(:workflow, project: project, name: "Test Workflow")
+
+      assert {:ok, %{workflow: workflow2}} =
+               Workflows.mark_for_deletion(w2, user)
+
+      assert workflow2.name == "Test Workflow_del1"
+
+      # Test incrementing again
+      w3 = insert(:workflow, project: project, name: "Test Workflow")
+
+      assert {:ok, %{workflow: workflow3}} =
+               Workflows.mark_for_deletion(w3, user)
+
+      assert workflow3.name == "Test Workflow_del2"
+    end
+
+    test "mark_for_deletion/3 does not conflict with active workflows ending in _del" do
+      # An active workflow named "water_gap_analysis_del" (where _del is Delaware)
+      # should not interfere with deleting "water_gap_analysis"
+      project = insert(:project)
+      user = insert(:user)
+
+      # Active workflow with name ending in _del (not deleted)
+      _delaware_workflow =
+        insert(:workflow, project: project, name: "water_gap_analysis_del")
+
+      # Workflow to be deleted
+      w1 = insert(:workflow, project: project, name: "water_gap_analysis")
+
+      # Should still get _del suffix since the existing _del workflow is not deleted
+      assert {:ok, %{workflow: deleted}} = Workflows.mark_for_deletion(w1, user)
+      assert deleted.name == "water_gap_analysis_del1"
+
+      assert {:ok, %{workflow: deleted}} = Workflows.mark_for_deletion(w1, user)
+      assert deleted.name == "water_gap_analysis_del2"
+    end
+
+    test "allows reusing workflow name after marking for deletion, then validates error when using deleted workflow name" do
+      project = insert(:project)
+      user = insert(:user)
+      w1 = insert(:workflow, project: project, name: "My Workflow")
+
+      # Mark workflow for deletion
+      assert {:ok, %{workflow: deleted_workflow}} =
+               Workflows.mark_for_deletion(w1, user)
+
+      assert deleted_workflow.name == "My Workflow_del"
+
+      # Should be able to create a new workflow with the original name
+      assert {:ok, new_workflow} =
+               Workflows.save_workflow(
+                 %{name: "My Workflow", project_id: project.id},
+                 user
+               )
+
+      assert new_workflow.name == "My Workflow"
+      assert new_workflow.deleted_at == nil
+
+      # Should NOT be able to create another workflow with the deleted workflow's name
+      assert {:error, changeset} =
+               Workflows.save_workflow(
+                 %{name: "My Workflow_del", project_id: project.id},
+                 user
+               )
+
+      assert errors_on(changeset) == %{
+               name: [
+                 "A workflow with this name already exists (possibly pending deletion) in this project."
+               ]
+             }
     end
   end
 

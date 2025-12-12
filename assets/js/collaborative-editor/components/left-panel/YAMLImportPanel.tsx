@@ -246,7 +246,7 @@ export function YAMLImportPanel({
               type="button"
               onClick={handleSave}
               disabled={isButtonDisabled}
-              className="rounded-md bg-primary-600 px-4 py-2 text-sm font-semibold text-white shadow-xs hover:bg-primary-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600 inline-flex items-center gap-x-1.5 transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-primary-600"
+              className="rounded-md bg-primary-600 px-4 py-2 text-sm font-semibold text-white shadow-xs hover:bg-primary-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600 inline-flex items-center gap-x-1.5 transition-colors disabled:bg-primary-300 disabled:cursor-not-allowed disabled:hover:bg-primary-300"
             >
               {(importState === 'parsing' || importState === 'importing') && (
                 <svg

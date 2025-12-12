@@ -43,24 +43,29 @@ defmodule LightningWeb.DataclipController do
     end
   end
 
+  defp scrubbed_body(dataclip) do
+    dataclip_for_scrubbing = %{
+      body: dataclip.body_json,
+      type: dataclip.type,
+      id: dataclip.id
+    }
+
+    DataclipScrubber.scrub_dataclip_body!(dataclip_for_scrubbing)
+  end
+
   defp respond_with_body(conn, dataclip_id) do
     dataclip = Invocation.get_dataclip_with_body!(dataclip_id)
 
     # Only scrub step_result dataclips (most don't need scrubbing)
+    # :http_request | :global | :step_result | :saved_input | :kafka
     body =
-      if dataclip.type == :step_result do
-        # For step_result, we need to scrub credentials
+      case dataclip.type do
+        # For some dataclips, we need to scrub credentials
         # Pass a minimal struct with just what scrubber needs
-        dataclip_for_scrubbing = %{
-          body: dataclip.body_json,
-          type: dataclip.type,
-          id: dataclip.id
-        }
-
-        DataclipScrubber.scrub_dataclip_body!(dataclip_for_scrubbing)
-      else
-        # No scrubbing needed - return pretty-printed JSON text directly
-        dataclip.body_json
+        :step_result -> scrubbed_body(dataclip)
+        :http_request -> scrubbed_body(dataclip)
+        # Else, no scrubbing needed
+        _else -> dataclip.body_json
       end
 
     conn

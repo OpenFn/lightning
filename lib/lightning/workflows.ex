@@ -462,12 +462,16 @@ defmodule Lightning.Workflows do
         where: t.workflow_id == ^workflow.id
       )
 
+    new_name = resolve_name_for_pending_deletion(workflow)
+
     Multi.new()
     |> Multi.update(
       :workflow,
-      Workflow.request_deletion_changeset(workflow, %{
+      workflow
+      |> Workflow.request_deletion_changeset(%{
         "deleted_at" => DateTime.utc_now()
       })
+      |> Ecto.Changeset.put_change(:name, new_name)
     )
     |> Multi.insert(:audit, Audit.marked_for_deletion(workflow.id, actor))
     |> Multi.update_all(
@@ -484,6 +488,33 @@ defmodule Lightning.Workflows do
         |> Events.workflow_updated()
       end
     end)
+  end
+
+  defp resolve_name_for_pending_deletion(%Workflow{
+         name: name,
+         project_id: project_id
+       }) do
+    base_name = "#{name}_del"
+
+    existing_names =
+      from(w in Workflow,
+        where:
+          w.project_id == ^project_id and
+            (w.name == ^base_name or like(w.name, ^"#{base_name}%")),
+        select: w.name
+      )
+      |> Repo.all()
+      |> MapSet.new()
+
+    find_available_name(base_name, existing_names)
+  end
+
+  defp find_available_name(base_name, existing_names, n \\ 0) do
+    candidate = if n == 0, do: base_name, else: "#{base_name}#{n}"
+
+    if MapSet.member?(existing_names, candidate),
+      do: find_available_name(base_name, existing_names, n + 1),
+      else: candidate
   end
 
   defp notify_of_affected_kafka_triggers(%{triggers: triggers}) do

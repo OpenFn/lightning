@@ -2,12 +2,12 @@
  * useWorkflowReadOnly Hook Tests
  *
  * Tests for the read-only state hook that determines if a workflow
- * should be editable based on deletion state, permissions, and snapshot version.
+ * should be editable based on deletion state, permissions, and version pinning.
  */
 
 import { act, renderHook, waitFor } from '@testing-library/react';
 import type React from 'react';
-import { describe, expect, test } from 'vitest';
+import { beforeEach, describe, expect, test, vi } from 'vitest';
 import * as Y from 'yjs';
 
 import { SessionContext } from '../../../js/collaborative-editor/contexts/SessionProvider';
@@ -25,10 +25,21 @@ import {
   mockPermissions,
 } from '../__helpers__/sessionContextFactory';
 import {
+  createMockURLState,
+  getURLStateMockValue,
+} from '../__helpers__/urlStateMocks';
+import {
   createMockPhoenixChannel,
   createMockPhoenixChannelProvider,
 } from '../mocks/phoenixChannel';
 import { createMockSocket } from '../mocks/phoenixSocket';
+
+// Mock useURLState
+const urlState = createMockURLState();
+
+vi.mock('../../../js/react/lib/use-url-state', () => ({
+  useURLState: () => getURLStateMockValue(urlState),
+}));
 
 // =============================================================================
 // TEST HELPERS
@@ -145,6 +156,14 @@ function createWrapper(options: WrapperOptions = {}): [
 }
 
 // =============================================================================
+// SETUP
+// =============================================================================
+
+beforeEach(() => {
+  urlState.reset();
+});
+
+// =============================================================================
 // DELETED WORKFLOW TESTS
 // =============================================================================
 
@@ -189,11 +208,12 @@ describe('useWorkflowReadOnly - Deleted Workflow', () => {
     });
   });
 
-  test('deleted state takes priority over old snapshot', async () => {
+  test('deleted state takes priority over pinned version', async () => {
+    // Set pinned version in URL
+    urlState.setParam('v', '1');
+
     const [wrapper, { emitSessionContext }] = createWrapper({
       permissions: { can_edit_workflow: true, can_run_workflow: true },
-      latestSnapshotLockVersion: 2,
-      workflowLockVersion: 1,
       workflowDeletedAt: new Date().toISOString(),
     });
 
@@ -237,11 +257,12 @@ describe('useWorkflowReadOnly - Permissions', () => {
     });
   });
 
-  test('permission restriction takes priority over old snapshot', async () => {
+  test('permission restriction takes priority over pinned version', async () => {
+    // Set pinned version in URL
+    urlState.setParam('v', '1');
+
     const [wrapper, { emitSessionContext }] = createWrapper({
       permissions: { can_edit_workflow: false, can_run_workflow: false },
-      latestSnapshotLockVersion: 2,
-      workflowLockVersion: 1,
       workflowDeletedAt: null,
     });
 
@@ -261,15 +282,16 @@ describe('useWorkflowReadOnly - Permissions', () => {
 });
 
 // =============================================================================
-// SNAPSHOT VERSION TESTS
+// VERSION PINNING TESTS
 // =============================================================================
 
-describe('useWorkflowReadOnly - Snapshot Version', () => {
-  test('returns read-only true with snapshot message for old snapshot', async () => {
+describe('useWorkflowReadOnly - Version Pinning', () => {
+  test('returns read-only true with pinned version message when ?v parameter is present', async () => {
+    // Set pinned version in URL
+    urlState.setParam('v', '1');
+
     const [wrapper, { emitSessionContext }] = createWrapper({
       permissions: { can_edit_workflow: true, can_run_workflow: true },
-      latestSnapshotLockVersion: 2,
-      workflowLockVersion: 1,
       workflowDeletedAt: null,
     });
 
@@ -282,16 +304,15 @@ describe('useWorkflowReadOnly - Snapshot Version', () => {
     await waitFor(() => {
       expect(result.current.isReadOnly).toBe(true);
       expect(result.current.tooltipMessage).toBe(
-        'You cannot edit or run an old snapshot of a workflow'
+        'You are viewing a pinned version of this workflow'
       );
     });
   });
 
-  test('returns not read-only when viewing latest snapshot', async () => {
+  test('returns not read-only when no ?v parameter is present', async () => {
+    // No version parameter in URL (editing latest)
     const [wrapper, { emitSessionContext }] = createWrapper({
       permissions: { can_edit_workflow: true, can_run_workflow: true },
-      latestSnapshotLockVersion: 1,
-      workflowLockVersion: 1,
       workflowDeletedAt: null,
     });
 
@@ -485,12 +506,12 @@ describe('useWorkflowReadOnly - Edge Cases', () => {
 // =============================================================================
 
 describe('useWorkflowReadOnly - Priority Order', () => {
-  test('verifies complete priority order: deleted > permissions > snapshot', async () => {
+  test('verifies complete priority order: deleted > permissions > pinned version', async () => {
     // Test 1: All three conditions apply - deleted takes priority
+    urlState.setParam('v', '1');
+
     const [wrapper1, { emitSessionContext: emit1 }] = createWrapper({
       permissions: { can_edit_workflow: false, can_run_workflow: false },
-      latestSnapshotLockVersion: 2,
-      workflowLockVersion: 1,
       workflowDeletedAt: new Date().toISOString(),
     });
 
@@ -508,11 +529,12 @@ describe('useWorkflowReadOnly - Priority Order', () => {
       );
     });
 
-    // Test 2: Permission and snapshot conditions apply - permission takes priority
+    // Test 2: Permission and pinned version conditions apply - permission takes priority
+    urlState.reset();
+    urlState.setParam('v', '1');
+
     const [wrapper2, { emitSessionContext: emit2 }] = createWrapper({
       permissions: { can_edit_workflow: false, can_run_workflow: false },
-      latestSnapshotLockVersion: 2,
-      workflowLockVersion: 1,
       workflowDeletedAt: null,
     });
 
@@ -530,11 +552,12 @@ describe('useWorkflowReadOnly - Priority Order', () => {
       );
     });
 
-    // Test 3: Only snapshot condition applies
+    // Test 3: Only pinned version condition applies
+    urlState.reset();
+    urlState.setParam('v', '1');
+
     const [wrapper3, { emitSessionContext: emit3 }] = createWrapper({
       permissions: { can_edit_workflow: true, can_run_workflow: true },
-      latestSnapshotLockVersion: 2,
-      workflowLockVersion: 1,
       workflowDeletedAt: null,
     });
 
@@ -548,7 +571,7 @@ describe('useWorkflowReadOnly - Priority Order', () => {
 
     await waitFor(() => {
       expect(result3.current.tooltipMessage).toBe(
-        'You cannot edit or run an old snapshot of a workflow'
+        'You are viewing a pinned version of this workflow'
       );
     });
   });

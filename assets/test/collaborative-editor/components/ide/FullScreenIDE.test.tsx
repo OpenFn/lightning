@@ -570,6 +570,33 @@ describe('FullScreenIDE', () => {
         expect(screen.queryByTestId('mini-history')).not.toBeInTheDocument();
       });
     });
+
+    test('clicking History clears run parameter from URL', async () => {
+      const user = userEvent.setup();
+      const onClose = vi.fn();
+
+      // Start with a run loaded
+      mockParams.run = 'run-123';
+
+      renderFullScreenIDE({ onClose });
+
+      await waitFor(() => {
+        expect(screen.getByText('History')).toBeInTheDocument();
+      });
+
+      // Click History
+      await user.click(screen.getByText('History'));
+
+      // Should clear the run parameter
+      await waitFor(() => {
+        expect(mockUpdateSearchParams).toHaveBeenCalledWith({ run: null });
+      });
+
+      // Should show MiniHistory
+      await waitFor(() => {
+        expect(screen.getByTestId('mini-history')).toBeInTheDocument();
+      });
+    });
   });
 
   describe('Header and Layout', () => {
@@ -636,6 +663,50 @@ describe('FullScreenIDE', () => {
       await user.keyboard('{Escape}');
 
       expect(onClose).toHaveBeenCalled();
+    });
+
+    test('Cmd+H opens history panel', async () => {
+      const user = userEvent.setup();
+      const onClose = vi.fn();
+
+      renderFullScreenIDE({ onClose });
+
+      await waitFor(() => {
+        expect(screen.getByText('History')).toBeInTheDocument();
+      });
+
+      // Initially no history panel
+      expect(screen.queryByTestId('mini-history')).not.toBeInTheDocument();
+
+      // Press Cmd+H (Meta+h)
+      await user.keyboard('{Meta>}h{/Meta}');
+
+      // Should show MiniHistory
+      await waitFor(() => {
+        expect(screen.getByTestId('mini-history')).toBeInTheDocument();
+      });
+    });
+
+    test('Cmd+H clears run when opening history', async () => {
+      const user = userEvent.setup();
+      const onClose = vi.fn();
+
+      // Start with a run loaded
+      mockParams.run = 'run-123';
+
+      renderFullScreenIDE({ onClose });
+
+      await waitFor(() => {
+        expect(screen.getByText('History')).toBeInTheDocument();
+      });
+
+      // Press Cmd+H
+      await user.keyboard('{Meta>}h{/Meta}');
+
+      // Should clear the run parameter
+      await waitFor(() => {
+        expect(mockUpdateSearchParams).toHaveBeenCalledWith({ run: null });
+      });
     });
   });
 
