@@ -9,7 +9,6 @@ import {
   useWorkflowState,
 } from '#/collaborative-editor/hooks/useWorkflow';
 import { notifications } from '#/collaborative-editor/lib/notifications';
-import { useWatchFields } from '#/collaborative-editor/stores/common';
 import { WorkflowSchema } from '#/collaborative-editor/types/workflow';
 import { useURLState } from '#/react/lib/use-url-state';
 
@@ -68,22 +67,6 @@ export function WorkflowSettings() {
       onChange: createZodValidator(WorkflowSchema),
     },
   });
-
-  // Yjs → Form: Watch for external changes
-  useWatchFields(
-    workflow,
-    changedFields => {
-      Object.entries(changedFields).forEach(([key, value]) => {
-        if (key in form.state.values) {
-          const fieldName = key as keyof typeof form.state.values;
-          form.setFieldValue(fieldName, value);
-          // Revalidate if field previously had errors (fixes Ctrl+Z clearing)
-          void form.validateField(fieldName, 'change');
-        }
-      });
-    },
-    ['name', 'concurrency', 'enable_job_logs']
-  );
 
   const handleReset = async () => {
     setIsResetting(true);
