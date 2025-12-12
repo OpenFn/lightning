@@ -3,13 +3,12 @@ import {
   type AnyFieldMetaBase,
   type Updater,
 } from '@tanstack/react-form';
-import { useMemo } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 
 import {
   useWorkflowActions,
   useWorkflowReadOnly,
 } from '../../hooks/useWorkflow';
-import { useWatchFields } from '../../stores/common';
 import { EdgeSchema, ExprEdgeSchema } from '../../types/edge';
 import type { Workflow } from '../../types/workflow';
 import { isEdgeFromTrigger } from '../../utils/workflowGraph';
@@ -63,24 +62,18 @@ export function EdgeForm({ edge }: EdgeFormProps) {
         },
       },
     },
-    `edges.${edge.id}` // Server validation automatically filtered to this edge
-  );
-
-  // Sync Y.js changes
-  useWatchFields(
-    edge as unknown as Record<string, unknown>,
-    changedFields => {
-      Object.entries(changedFields).forEach(([key, value]) => {
-        if (key in form.state.values) {
-          form.setFieldValue(
-            key as keyof typeof form.state.values,
-            value as never
-          );
-        }
-      });
-    },
+    `edges.${edge.id}`, // Server validation automatically filtered to this edge
     ['condition_label', 'condition_type', 'condition_expression', 'enabled']
   );
+
+  // Reset form when edge changes to prevent stale values
+  const prevEdgeId = useRef(edge.id);
+  useEffect(() => {
+    if (prevEdgeId.current !== edge.id) {
+      form.reset();
+      prevEdgeId.current = edge.id;
+    }
+  }, [edge.id, form]);
 
   // Condition options based on source
   const conditionOptions = useMemo(() => {

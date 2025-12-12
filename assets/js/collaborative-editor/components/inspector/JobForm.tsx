@@ -1,5 +1,5 @@
 import { useStore } from '@tanstack/react-form';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { useAppForm } from '#/collaborative-editor/components/form';
 import { useLiveViewActions } from '#/collaborative-editor/contexts/LiveViewActionsContext';
@@ -12,7 +12,6 @@ import {
   useWorkflowActions,
   useWorkflowReadOnly,
 } from '#/collaborative-editor/hooks/useWorkflow';
-import { useWatchFields } from '#/collaborative-editor/stores/common';
 import { JobSchema } from '#/collaborative-editor/types/job';
 import type { Workflow } from '#/collaborative-editor/types/workflow';
 
@@ -105,24 +104,14 @@ export function JobForm({ job }: JobFormProps) {
     `jobs.${job.id}` // Server validation automatically filtered to this job
   );
 
-  // Y.Doc sync
-  useWatchFields(
-    job,
-    changedFields => {
-      Object.entries(changedFields).forEach(([key, value]) => {
-        if (key in form.state.values) {
-          if (key === 'adaptor' && value) {
-            const { package: adaptorPackage } = resolveAdaptor(value);
-            if (adaptorPackage) {
-              form.setFieldValue('adaptor_package', adaptorPackage);
-            }
-          }
-          form.setFieldValue(key as keyof typeof form.state.values, value);
-        }
-      });
-    },
-    ['name', 'adaptor', 'project_credential_id', 'keychain_credential_id']
-  );
+  // Reset form when job changes to prevent stale values
+  const prevJobId = useRef(job.id);
+  useEffect(() => {
+    if (prevJobId.current !== job.id) {
+      form.reset();
+      prevJobId.current = job.id;
+    }
+  }, [job.id, form]);
 
   // Listen for credential modal close event to reopen configure modal
   useEffect(() => {
