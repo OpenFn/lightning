@@ -293,6 +293,24 @@ export const useNodeSelection = () => {
       const foundTrigger = state.triggers.find(trigger => trigger.id === id);
       const foundEdge = state.edges.find(edge => edge.id === id);
 
+      // If node doesn't exist and we're already viewing it (e.g., viewing a run from different version),
+      // don't update URL - let the IDE show the "job missing" message instead of closing
+      const {
+        job: currentJobId,
+        trigger: currentTriggerId,
+        edge: currentEdgeId,
+      } = params;
+      if (!foundJob && !foundTrigger && !foundEdge) {
+        if (
+          id === currentJobId ||
+          id === currentTriggerId ||
+          id === currentEdgeId
+        ) {
+          // Already viewing this missing node - don't clear URL
+          return;
+        }
+      }
+
       // Preserve special panels (run, editor, settings, code); otherwise clear panel to show node inspector
       const specialPanels = ['run', 'editor', 'settings', 'code'];
       const updates: Record<string, string | null> = {

@@ -31,6 +31,7 @@ import {
   useCredentialsCommands,
 } from '../../hooks/useCredentials';
 import {
+  useActiveRun,
   useFollowRun,
   useHistory,
   useHistoryCommands,
@@ -42,6 +43,8 @@ import { useRunRetry } from '../../hooks/useRunRetry';
 import { useRunRetryShortcuts } from '../../hooks/useRunRetryShortcuts';
 import { useSession } from '../../hooks/useSession';
 import { useProject } from '../../hooks/useSessionContext';
+import { useVersionMismatch } from '../../hooks/useVersionMismatch';
+import { useVersionSelect } from '../../hooks/useVersionSelect';
 import {
   useCanRun,
   useCanSave,
@@ -58,6 +61,7 @@ import { CollaborativeMonaco } from '../CollaborativeMonaco';
 import { RunBadge } from '../common/RunBadge';
 import { ConfigureAdaptorModal } from '../ConfigureAdaptorModal';
 import MiniHistory from '../diagram/MiniHistory';
+import { VersionMismatchBanner } from '../diagram/VersionMismatchBanner';
 import { JobSelector } from '../JobSelector';
 import { ManualRunPanel } from '../ManualRunPanel';
 import { ManualRunPanelErrorBoundary } from '../ManualRunPanelErrorBoundary';
@@ -294,7 +298,7 @@ export function FullScreenIDE({
   const jobMatchesRun = useJobMatchesRun(currentJob?.id || null);
   const shouldShowMismatch =
     !jobMatchesRun && currentRun && isFinalState(currentRun.state);
-  const selectedStepName = currentJob?.name || 'This step';
+  const selectedJobName = currentJob?.name || 'This job';
 
   const followedRunStep = useMemo(() => {
     if (!currentRun || !currentRun.steps || !jobIdFromURL) return null;
@@ -739,10 +743,31 @@ export function FullScreenIDE({
   // IMPORTANT: All hooks must be called before any early returns
   const { isReadOnly } = useWorkflowReadOnly();
 
+  // Detect version mismatch between run and current workflow
+  const run = useActiveRun();
+  const versionMismatch = useVersionMismatch(run?.id ?? null);
+  const handleVersionSelect = useVersionSelect();
+
+  const handleGoToVersion = useCallback(() => {
+    if (versionMismatch) {
+      handleVersionSelect(versionMismatch.runVersion);
+    }
+  }, [versionMismatch, handleVersionSelect]);
+
   // Check loading state but don't use early return (violates rules of hooks)
   // Only check for job existence, not ytext/awareness
   // ytext and awareness persist during disconnection for offline editing
-  const isLoading = !currentJob;
+
+  // Detect if job is truly missing vs still loading
+  // Job is missing if: URL has job ID, workflow is loaded, but job doesn't exist in workflow
+  const isJobMissing =
+    jobIdFromURL &&
+    workflow &&
+    workflow.jobs &&
+    !workflow.jobs.some(j => j.id === jobIdFromURL);
+
+  // Show loading spinner if no current job and job is not confirmed missing
+  const isLoading = !currentJob && !isJobMissing;
 
   // If loading, render loading state at the end instead of early return
   if (isLoading) {
@@ -798,14 +823,16 @@ export function FullScreenIDE({
       <div className="flex-none bg-white border-b border-gray-200">
         <div className="flex items-center justify-between px-6 py-2">
           <div className="flex items-center gap-3 flex-1 min-w-0">
-            {/* Job Selector */}
-            <div className="shrink-0">
-              <JobSelector
-                currentJob={currentJob}
-                jobs={sortedJobs}
-                onChange={handleJobSelect}
-              />
-            </div>
+            {/* Job Selector - show when workflow loaded, even if no job selected */}
+            {workflow && (
+              <div className="shrink-0">
+                <JobSelector
+                  currentJob={currentJob}
+                  jobs={sortedJobs}
+                  onChange={handleJobSelect}
+                />
+              </div>
+            )}
 
             {/* Adaptor Display with Version Dropdown */}
             {currentJob && (
@@ -961,19 +988,34 @@ export function FullScreenIDE({
                   <Panel defaultSize={60} minSize={25}>
                     <div className="h-full flex flex-col">
                       <div className="flex-1 overflow-hidden">
-                        <CollaborativeMonaco
-                          ytext={currentJobYText}
-                          awareness={awareness}
-                          adaptor={currentJob.adaptor || 'common'}
-                          disabled={!canSave}
-                          className="h-full w-full"
-                          options={{
-                            automaticLayout: true,
-                            minimap: { enabled: true },
-                            lineNumbers: 'on',
-                            wordWrap: 'on',
-                          }}
-                        />
+                        {isJobMissing ? (
+                          // Show message when job doesn't exist in current version
+                          <div className="p-8">
+                            <div className="text-center max-w-md mx-auto">
+                              <p className="text-gray-600 text-sm">
+                                The job you're trying to view didn't exist in
+                                this version of the workflow.
+                              </p>
+                              <p className="text-gray-500 text-sm mt-2">
+                                You can change versions or select another job.
+                              </p>
+                            </div>
+                          </div>
+                        ) : currentJob && currentJobYText ? (
+                          <CollaborativeMonaco
+                            ytext={currentJobYText}
+                            awareness={awareness}
+                            adaptor={currentJob.adaptor || 'common'}
+                            disabled={!canSave}
+                            className="h-full w-full"
+                            options={{
+                              automaticLayout: true,
+                              minimap: { enabled: true },
+                              lineNumbers: 'on',
+                              wordWrap: 'on',
+                            }}
+                          />
+                        ) : null}
                       </div>
                     </div>
                   </Panel>
@@ -1159,6 +1201,16 @@ export function FullScreenIDE({
                 </div>
               ) : (
                 <div className="h-full flex flex-col">
+                  {/* Version mismatch banner - shown when viewing a run from different version */}
+                  {panelState === 'run-viewer' && versionMismatch && (
+                    <VersionMismatchBanner
+                      runVersion={versionMismatch.runVersion}
+                      currentVersion={versionMismatch.currentVersion}
+                      onGoToVersion={handleGoToVersion}
+                      className="py-1"
+                    />
+                  )}
+
                   {/* Panel heading - only for run-viewer */}
                   {panelState === 'run-viewer' && (
                     <div className="shrink-0">
@@ -1167,7 +1219,7 @@ export function FullScreenIDE({
                         <Tooltip
                           content={
                             shouldShowMismatch
-                              ? `${selectedStepName} was not part of this run. Pick another step or deselect the run.`
+                              ? `${selectedJobName} was not part of this run. Pick another job or deselect the run.`
                               : undefined
                           }
                           side="bottom"
