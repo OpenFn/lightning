@@ -1,5 +1,6 @@
-import type { FormOptions } from '@tanstack/react-form';
 import { createFormHook, createFormHookContexts } from '@tanstack/react-form';
+import { produce } from 'immer';
+import { useEffect, useMemo, useRef } from 'react';
 
 import { useValidation } from '#/collaborative-editor/hooks/useValidation';
 
@@ -53,11 +54,64 @@ const { useAppForm: useBaseAppForm } = createFormHook({
  */
 export function useAppForm(
   formOptions: Parameters<typeof useBaseAppForm>[0],
-  errorPath?: string
+  errorPath?: string,
+  depsArr?: string[]
 ) {
+  const prevStateRef = useRef<Record<string, unknown> | null>(null);
   const form = useBaseAppForm(formOptions);
 
-  useValidation(form, errorPath);
+  const isServerUpdate = useMemo(() => {
+    const storeState = formOptions.defaultValues as Record<string, unknown>;
+    const previousState = prevStateRef.current as Record<string, unknown>;
+    const currentState = form.state.values;
+
+    // isClientUpdate: storeState = currentState & currentState != previousState
+    // isServerUpdate: previousState = currentState & currentState != storeState
+    const isServerUpdate =
+      deepEqual(previousState, currentState) &&
+      !deepEqual(currentState, storeState);
+    return isServerUpdate;
+  }, [formOptions.defaultValues, form.state.values, prevStateRef]);
+
+  useEffect(() => {
+    const storeState = formOptions.defaultValues as Record<string, unknown>;
+    const previousState = prevStateRef.current as Record<string, unknown>;
+
+    if (!storeState || !previousState) {
+      if (storeState) {
+        // this mimics onMount without having an onMount validation
+        Object.keys(storeState).forEach(
+          key => void form.validateField(key, 'change')
+        );
+        prevStateRef.current = produce(storeState, () => {});
+      }
+      return;
+    }
+
+    // fire 'change' for all changed fields
+    const keys = Object.keys(formOptions.defaultValues || {});
+    for (let i = 0; i < keys.length; i++) {
+      const key = keys[i];
+      if (depsArr?.length && !depsArr.includes(key)) continue;
+      if (previousState[key] !== storeState[key]) {
+        // update our reference value for the key
+        prevStateRef.current = produce(previousState, draft => {
+          draft[key] = storeState[key];
+        });
+        // set field
+        form.setFieldValue(key, storeState[key]);
+        // call onchange on them!
+        void form.validateField(key, 'change');
+      }
+    }
+  }, [formOptions.defaultValues, form, depsArr]);
+
+  useValidation(form, errorPath, isServerUpdate);
 
   return form;
+}
+
+// we need a better deepEqual check
+function deepEqual(a: unknown, b: unknown) {
+  return JSON.stringify(a) === JSON.stringify(b);
 }

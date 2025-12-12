@@ -9,7 +9,6 @@ import {
   useWorkflowActions,
   useWorkflowReadOnly,
 } from '../../hooks/useWorkflow';
-import { useWatchFields } from '../../stores/common';
 import { EdgeSchema, ExprEdgeSchema } from '../../types/edge';
 import type { Workflow } from '../../types/workflow';
 import { isEdgeFromTrigger } from '../../utils/workflowGraph';
@@ -63,22 +62,7 @@ export function EdgeForm({ edge }: EdgeFormProps) {
         },
       },
     },
-    `edges.${edge.id}` // Server validation automatically filtered to this edge
-  );
-
-  // Sync Y.js changes
-  useWatchFields(
-    edge as unknown as Record<string, unknown>,
-    changedFields => {
-      Object.entries(changedFields).forEach(([key, value]) => {
-        if (key in form.state.values) {
-          form.setFieldValue(
-            key as keyof typeof form.state.values,
-            value as never
-          );
-        }
-      });
-    },
+    `edges.${edge.id}`, // Server validation automatically filtered to this edge
     ['condition_label', 'condition_type', 'condition_expression', 'enabled']
   );
 

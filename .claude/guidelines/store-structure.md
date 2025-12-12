@@ -37,8 +37,7 @@ SessionStore (Infrastructure Layer)
          └── Manages: Project & keychain credentials
 
 common.ts (Shared Utilities)
-    ├── createWithSelector: Memoized selectors
-    └── useWatchFields: Field change observation
+    └── createWithSelector: Memoized selectors
 
 devtools.ts (Development Utilities)
     └── Redux DevTools integration for all stores
@@ -245,18 +244,12 @@ devtools.ts (Development Utilities)
    - Enables fine-grained subscriptions to state slices
    - Core performance optimization utility
 
-2. **`useWatchFields<T, K>(currentObject, callback, watchedKeys)`**
-   - Monitors specific fields on objects
-   - Triggers callback when watched fields change
-   - Bridges external state (Yjs) to internal form state
-
 3. **`WithSelector<TState>`** type
    - TypeScript type for selector factory functions
    - Ensures type safety across stores
 
 **When to use:**
 - Every store MUST use `createWithSelector` for performance
-- Use `useWatchFields` in components that need to sync external state to forms
 - Import `WithSelector` type for store type definitions
 
 ---
