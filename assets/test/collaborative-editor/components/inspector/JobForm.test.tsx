@@ -18,6 +18,7 @@ import type * as Y from 'yjs';
 
 import { KeyboardProvider } from '#/collaborative-editor/keyboard';
 import { JobForm } from '../../../../js/collaborative-editor/components/inspector/JobForm';
+import { CredentialModalProvider } from '../../../../js/collaborative-editor/contexts/CredentialModalContext';
 import { LiveViewActionsProvider } from '../../../../js/collaborative-editor/contexts/LiveViewActionsContext';
 import { SessionContext } from '../../../../js/collaborative-editor/contexts/SessionProvider';
 import type { StoreContextValue } from '../../../../js/collaborative-editor/contexts/StoreProvider';
@@ -91,11 +92,13 @@ function createWrapper(
   return ({ children }: { children: React.ReactNode }) => (
     <SessionContext.Provider value={mockSessionValue}>
       <LiveViewActionsProvider actions={mockLiveViewActions}>
-        <KeyboardProvider>
-          <StoreContext.Provider value={mockStoreValue}>
-            {children}
-          </StoreContext.Provider>
-        </KeyboardProvider>
+        <CredentialModalProvider>
+          <KeyboardProvider>
+            <StoreContext.Provider value={mockStoreValue}>
+              {children}
+            </StoreContext.Provider>
+          </KeyboardProvider>
+        </CredentialModalProvider>
       </LiveViewActionsProvider>
     </SessionContext.Provider>
   );

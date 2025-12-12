@@ -15,8 +15,9 @@ import { beforeEach, describe, expect, test } from 'vitest';
 import type * as Y from 'yjs';
 
 import { JobInspector } from '../../../../js/collaborative-editor/components/inspector/JobInspector';
-import { SessionContext } from '../../../../js/collaborative-editor/contexts/SessionProvider';
+import { CredentialModalProvider } from '../../../../js/collaborative-editor/contexts/CredentialModalContext';
 import { LiveViewActionsProvider } from '../../../../js/collaborative-editor/contexts/LiveViewActionsContext';
+import { SessionContext } from '../../../../js/collaborative-editor/contexts/SessionProvider';
 import type { StoreContextValue } from '../../../../js/collaborative-editor/contexts/StoreProvider';
 import { StoreContext } from '../../../../js/collaborative-editor/contexts/StoreProvider';
 import { createSessionStore } from '../../../../js/collaborative-editor/stores/createSessionStore';
@@ -102,9 +103,11 @@ function createWrapper(
   return ({ children }: { children: React.ReactNode }) => (
     <SessionContext.Provider value={{ sessionStore, isNewWorkflow: false }}>
       <LiveViewActionsProvider actions={mockLiveViewActions}>
-        <StoreContext.Provider value={mockStoreValue}>
-          {children}
-        </StoreContext.Provider>
+        <CredentialModalProvider>
+          <StoreContext.Provider value={mockStoreValue}>
+            {children}
+          </StoreContext.Provider>
+        </CredentialModalProvider>
       </LiveViewActionsProvider>
     </SessionContext.Provider>
   );

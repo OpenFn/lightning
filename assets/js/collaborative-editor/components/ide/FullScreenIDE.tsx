@@ -24,7 +24,7 @@ import Metadata from '../../../metadata-explorer/Explorer';
 import type { Dataclip } from '../../api/dataclips';
 import * as dataclipApi from '../../api/dataclips';
 import { RENDER_MODES } from '../../constants/panel';
-import { useLiveViewActions } from '../../contexts/LiveViewActionsContext';
+import { useCredentialModal } from '../../contexts/CredentialModalContext';
 import { useProjectAdaptors } from '../../hooks/useAdaptors';
 import {
   useCredentials,
@@ -379,13 +379,19 @@ export function FullScreenIDE({
 
   const [isConfigureModalOpen, setIsConfigureModalOpen] = useState(false);
   const [isAdaptorPickerOpen, setIsAdaptorPickerOpen] = useState(false);
-  const [isCredentialModalOpen, setIsCredentialModalOpen] = useState(false);
 
   const { projectCredentials, keychainCredentials } = useCredentials();
   const { requestCredentials } = useCredentialsCommands();
   const { projectAdaptors, allAdaptors } = useProjectAdaptors();
-  const { pushEvent, handleEvent } = useLiveViewActions();
   const { updateJob } = useWorkflowActions();
+
+  // Credential modal is managed by the context
+  const {
+    openCredentialModal,
+    isCredentialModalOpen,
+    onModalClose,
+    onCredentialSaved,
+  } = useCredentialModal();
 
   // converting 'latest' on an adaptor string to the actual version number
   // to be used by components that can't make use of 'latest'
@@ -556,13 +562,9 @@ export function FullScreenIDE({
   const handleOpenCredentialModal = useCallback(
     (adaptorName: string, credentialId?: string) => {
       setIsConfigureModalOpen(false);
-      setIsCredentialModalOpen(true);
-      pushEvent('open_credential_modal', {
-        schema: adaptorName,
-        credential_id: credentialId,
-      });
+      openCredentialModal(adaptorName, credentialId, 'ide');
     },
-    [pushEvent]
+    [openCredentialModal]
   );
 
   const handleAdaptorSelect = useCallback(
@@ -656,31 +658,17 @@ export function FullScreenIDE({
     [currentJob, projectCredentials, keychainCredentials, updateJob]
   );
 
+  // Register callback to reopen configure modal when credential modal closes (only when opened from IDE)
   useEffect(() => {
-    const handleModalClose = () => {
-      setIsCredentialModalOpen(false);
-      setTimeout(() => {
-        setIsConfigureModalOpen(true);
-      }, 200);
-      setTimeout(() => {
-        pushEvent('close_credential_modal', {});
-      }, 500);
-    };
+    return onModalClose('ide', () => {
+      setIsConfigureModalOpen(true);
+    });
+  }, [onModalClose]);
 
-    const element = document.getElementById('collaborative-editor-react');
-    element?.addEventListener('close_credential_modal', handleModalClose);
-
-    return () => {
-      element?.removeEventListener('close_credential_modal', handleModalClose);
-    };
-  }, [pushEvent]);
-
+  // Register callback to handle credential saved - update job and refresh credentials (only when opened from IDE)
   useEffect(() => {
-    const cleanup = handleEvent('credential_saved', (payload: any) => {
-      setIsCredentialModalOpen(false);
-
-      // If we have a current job, update its credential assignment
-      // (this happens when creating a new credential and selecting it)
+    return onCredentialSaved('ide', payload => {
+      // Update the job's credential assignment
       if (currentJob) {
         const { credential, is_project_credential } = payload;
         const credentialId = is_project_credential
@@ -693,16 +681,10 @@ export function FullScreenIDE({
         });
       }
 
-      // Always refresh credentials and reopen configure modal
+      // Refresh credentials list
       void requestCredentials();
-
-      setTimeout(() => {
-        setIsConfigureModalOpen(true);
-      }, 200);
     });
-
-    return cleanup;
-  }, [handleEvent, currentJob, updateJob, requestCredentials]);
+  }, [onCredentialSaved, currentJob, updateJob, requestCredentials]);
 
   useKeyboardShortcut(
     'Escape, Control+e, Meta+e',
