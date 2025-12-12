@@ -12,7 +12,7 @@
 
     <link rel="stylesheet" href="dist/html-elixir-RLZO5U2C.css" />
 
-    <script defer src="dist/sidebar_items-C7732D4C.js"></script>
+    <script defer src="dist/sidebar_items-CC020637.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-Y223O6DN.js"></script>
 
@@ -105,10 +105,34 @@ Lightning
       </a>
       <span class="text">Summary</span>
     </h1>
+<div class="summary-types summary">
+  <h2>
+    <a href="#types">Types</a>
+  </h2>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#t:t/0" data-no-tooltip="" translate="no">t()</a>
+
+      </div>
+
+    </div>
+
+</div>
 <div class="summary-functions summary">
   <h2>
     <a href="#functions">Functions</a>
   </h2>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#apply_to_doc/3" data-no-tooltip="" translate="no">apply_to_doc(doc, checkpoint, updates)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Applies persisted state (checkpoint + updates) to a Yex document.</p></div>
+
+    </div>
 
     <div class="summary-row">
       <div class="summary-signature">
@@ -118,10 +142,102 @@ Lightning
 
     </div>
 
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#get_checkpoint_and_updates/1" data-no-tooltip="" translate="no">get_checkpoint_and_updates(doc_name)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Retrieves the latest checkpoint and all updates since that checkpoint
+for a given document.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#get_latest_checkpoint/1" data-no-tooltip="" translate="no">get_latest_checkpoint(doc_name)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Retrieves the latest checkpoint for a document, or nil if none exists.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#get_updates_since/2" data-no-tooltip="" translate="no">get_updates_since(doc_name, since)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Retrieves all updates for a document inserted after the given timestamp,
+ordered chronologically (oldest first).</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#load_into_doc/2" data-no-tooltip="" translate="no">load_into_doc(doc, doc_name)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Loads all persisted state for a document and applies it to a Yex document.</p></div>
+
+    </div>
+
 </div>
 
   </section>
 
+
+  <section id="types" class="details-list">
+    <h1 class="section-heading">
+      <a class="hover-link" href="#types">
+        <i class="ri-link-m" aria-hidden="true"></i>
+      </a>
+      <span class="text">Types</span>
+    </h1>
+
+    <div class="types-list">
+<section class="detail" id="t:t/0">
+
+  <div class="detail-header">
+    <a href="#t:t/0" class="detail-link" data-no-tooltip="" aria-label="Link to this type">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">t()</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/collaboration/document_state.ex#L17" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@type</span> t() :: %Lightning.Collaboration.DocumentState{
+  __meta__: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
+  document_name: <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>() | nil,
+  id: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">integer</a>() | nil,
+  inserted_at: <a href="https://hexdocs.pm/elixir/DateTime.html#t:t/0">DateTime.t</a>() | nil,
+  state_data: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">binary</a>() | nil,
+  state_vector: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">binary</a>() | nil,
+  updated_at: <a href="https://hexdocs.pm/elixir/DateTime.html#t:t/0">DateTime.t</a>() | nil,
+  version: :update | :checkpoint | :state_vector | nil
+}</pre>
+
+      </div>
+
+
+  </section>
+</section>
+
+    </div>
+  </section>
 
   <section id="functions" class="details-list">
     <h1 class="section-heading">
@@ -132,6 +248,35 @@ Lightning
     </h1>
 
     <div class="functions-list">
+<section class="detail" id="apply_to_doc/3">
+
+  <div class="detail-header">
+    <a href="#apply_to_doc/3" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">apply_to_doc(doc, checkpoint, updates)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/collaboration/document_state.ex#L107" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> apply_to_doc(<a href="https://hexdocs.pm/y_ex/0.8.0/Yex.Doc.html#t:t/0">Yex.Doc.t</a>(), <a href="#t:t/0">t</a>() | nil, [<a href="#t:t/0">t</a>()]) :: :ok</pre>
+
+      </div>
+
+<p>Applies persisted state (checkpoint + updates) to a Yex document.</p><p>Applies the checkpoint first (if present), then all updates in
+chronological order.</p>
+  </section>
+</section>
 <section class="detail" id="changeset/2">
 
   <div class="detail-header">
@@ -142,7 +287,7 @@ Lightning
       <h1 class="signature" translate="no">changeset(document_state, attrs)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/collaboration/document_state.ex#L23" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/collaboration/document_state.ex#L36" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -152,6 +297,123 @@ Lightning
   <section class="docstring">
 
 
+  </section>
+</section>
+<section class="detail" id="get_checkpoint_and_updates/1">
+
+  <div class="detail-header">
+    <a href="#get_checkpoint_and_updates/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">get_checkpoint_and_updates(doc_name)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/collaboration/document_state.ex#L56" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> get_checkpoint_and_updates(<a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>()) ::
+  {:ok, <a href="#t:t/0">t</a>() | nil, [<a href="#t:t/0">t</a>()]} | {:error, :not_found}</pre>
+
+      </div>
+
+<p>Retrieves the latest checkpoint and all updates since that checkpoint
+for a given document.</p><p>Returns <code class="inline">{:ok, checkpoint, updates}</code> where checkpoint may be nil,
+or <code class="inline">{:error, :not_found}</code> if no persisted state exists.</p>
+  </section>
+</section>
+<section class="detail" id="get_latest_checkpoint/1">
+
+  <div class="detail-header">
+    <a href="#get_latest_checkpoint/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">get_latest_checkpoint(doc_name)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/collaboration/document_state.ex#L75" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> get_latest_checkpoint(<a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>()) :: <a href="#t:t/0">t</a>() | nil</pre>
+
+      </div>
+
+<p>Retrieves the latest checkpoint for a document, or nil if none exists.</p>
+  </section>
+</section>
+<section class="detail" id="get_updates_since/2">
+
+  <div class="detail-header">
+    <a href="#get_updates_since/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">get_updates_since(doc_name, since)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/collaboration/document_state.ex#L89" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> get_updates_since(<a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>(), <a href="https://hexdocs.pm/elixir/DateTime.html#t:t/0">DateTime.t</a>()) :: [<a href="#t:t/0">t</a>()]</pre>
+
+      </div>
+
+<p>Retrieves all updates for a document inserted after the given timestamp,
+ordered chronologically (oldest first).</p>
+  </section>
+</section>
+<section class="detail" id="load_into_doc/2">
+
+  <div class="detail-header">
+    <a href="#load_into_doc/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">load_into_doc(doc, doc_name)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/collaboration/document_state.ex#L126" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> load_into_doc(<a href="https://hexdocs.pm/y_ex/0.8.0/Yex.Doc.html#t:t/0">Yex.Doc.t</a>(), <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>()) :: :ok</pre>
+
+      </div>
+
+<p>Loads all persisted state for a document and applies it to a Yex document.</p><p>Convenience function that combines <a href="#get_checkpoint_and_updates/1"><code class="inline">get_checkpoint_and_updates/1</code></a> and
+<a href="#apply_to_doc/3"><code class="inline">apply_to_doc/3</code></a>.</p>
   </section>
 </section>
 
