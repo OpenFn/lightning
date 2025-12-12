@@ -47,7 +47,7 @@ const NO_ERRORS = {};
 export function useValidation(
   form: FormInstance,
   errorPath?: string,
-  isServerUpdate?: boolean
+  isServerUpdate: boolean = false
 ) {
   const { setClientErrors } = useWorkflowActions();
 
