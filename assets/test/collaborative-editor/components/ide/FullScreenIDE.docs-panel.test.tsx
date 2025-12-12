@@ -286,6 +286,19 @@ vi.mock(
   })
 );
 
+// Mock CredentialModalContext
+vi.mock(
+  '../../../../js/collaborative-editor/contexts/CredentialModalContext',
+  () => ({
+    useCredentialModal: () => ({
+      openCredentialModal: vi.fn(),
+      isCredentialModalOpen: false,
+      onModalClose: vi.fn(() => vi.fn()),
+      onCredentialSaved: vi.fn(() => vi.fn()),
+    }),
+  })
+);
+
 // Mock adaptor modals
 vi.mock(
   '../../../../js/collaborative-editor/components/ConfigureAdaptorModal',
