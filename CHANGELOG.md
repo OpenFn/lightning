@@ -26,6 +26,8 @@ and this project adheres to
 
 ### Fixed
 
+- Fix job updates not persisted after saving
+  [#4154](https://github.com/OpenFn/lightning/issues/4154)
 - Fix infinite loading when reopening workflow in collaborative editor due to
   delta updates not being merged with persisted state
   [#4164](https://github.com/OpenFn/lightning/issues/4164)
