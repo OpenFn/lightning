@@ -2180,4 +2180,202 @@ defmodule Lightning.CredentialsTest do
       end
     end
   end
+
+  describe "external_id uniqueness per project" do
+    test "creating two credentials with same external_id in same project fails" do
+      user = insert(:user)
+      project = insert(:project, project_users: [%{user: user}])
+
+      # Create first credential with external_id
+      {:ok, _credential1} =
+        Credentials.create_credential(%{
+          name: "Credential 1",
+          user_id: user.id,
+          external_id: "salesforce-prod",
+          schema: "raw",
+          project_credentials: [%{project_id: project.id}],
+          credential_bodies: [%{name: "production", body: %{}}]
+        })
+
+      # Try to create second credential with same external_id in same project
+      {:error, changeset} =
+        Credentials.create_credential(%{
+          name: "Credential 2",
+          user_id: user.id,
+          external_id: "salesforce-prod",
+          schema: "raw",
+          project_credentials: [%{project_id: project.id}],
+          credential_bodies: [%{name: "production", body: %{}}]
+        })
+
+      assert %{
+               external_id: [
+                 "There is already a credential in the same project that uses this External ID for keychain matching, please choose another."
+               ]
+             } = errors_on(changeset)
+    end
+
+    test "creating credentials with same external_id in different projects succeeds" do
+      user = insert(:user)
+      project1 = insert(:project, project_users: [%{user: user}])
+      project2 = insert(:project, project_users: [%{user: user}])
+
+      # Create first credential in project1
+      {:ok, _credential1} =
+        Credentials.create_credential(%{
+          name: "Credential 1",
+          user_id: user.id,
+          external_id: "salesforce-prod",
+          schema: "raw",
+          project_credentials: [%{project_id: project1.id}],
+          credential_bodies: [%{name: "production", body: %{}}]
+        })
+
+      # Create second credential with same external_id in different project
+      {:ok, credential2} =
+        Credentials.create_credential(%{
+          name: "Credential 2",
+          user_id: user.id,
+          external_id: "salesforce-prod",
+          schema: "raw",
+          project_credentials: [%{project_id: project2.id}],
+          credential_bodies: [%{name: "production", body: %{}}]
+        })
+
+      assert credential2.external_id == "salesforce-prod"
+    end
+
+    test "adding credential to project where another has same external_id fails" do
+      user = insert(:user)
+      project = insert(:project, project_users: [%{user: user}])
+
+      # Create first credential with external_id in project
+      {:ok, _credential1} =
+        Credentials.create_credential(%{
+          name: "Credential 1",
+          user_id: user.id,
+          external_id: "salesforce-prod",
+          schema: "raw",
+          project_credentials: [%{project_id: project.id}],
+          credential_bodies: [%{name: "production", body: %{}}]
+        })
+
+      # Create second credential without project association
+      {:ok, credential2} =
+        Credentials.create_credential(%{
+          name: "Credential 2",
+          user_id: user.id,
+          external_id: "salesforce-prod",
+          schema: "raw",
+          project_credentials: [],
+          credential_bodies: [%{name: "production", body: %{}}]
+        })
+
+      # Try to add second credential to same project
+      {:error, changeset} =
+        Credentials.update_credential(credential2, %{
+          project_credentials: [%{project_id: project.id}]
+        })
+
+      assert %{
+               external_id: [
+                 "There is already a credential in the same project that uses this External ID for keychain matching, please choose another."
+               ]
+             } = errors_on(changeset)
+    end
+
+    test "credential with nil external_id does not trigger validation error" do
+      user = insert(:user)
+      project = insert(:project, project_users: [%{user: user}])
+
+      # Create credential without external_id
+      {:ok, credential1} =
+        Credentials.create_credential(%{
+          name: "Credential 1",
+          user_id: user.id,
+          external_id: nil,
+          schema: "raw",
+          project_credentials: [%{project_id: project.id}],
+          credential_bodies: [%{name: "production", body: %{}}]
+        })
+
+      # Create another credential without external_id in same project
+      {:ok, credential2} =
+        Credentials.create_credential(%{
+          name: "Credential 2",
+          user_id: user.id,
+          external_id: nil,
+          schema: "raw",
+          project_credentials: [%{project_id: project.id}],
+          credential_bodies: [%{name: "production", body: %{}}]
+        })
+
+      assert is_nil(credential1.external_id)
+      assert is_nil(credential2.external_id)
+    end
+
+    test "updating a credential's own fields does not trigger false positive" do
+      user = insert(:user)
+      project = insert(:project, project_users: [%{user: user}])
+
+      # Create credential with external_id
+      {:ok, credential} =
+        Credentials.create_credential(%{
+          name: "Original Name",
+          user_id: user.id,
+          external_id: "salesforce-prod",
+          schema: "raw",
+          project_credentials: [%{project_id: project.id}],
+          credential_bodies: [%{name: "production", body: %{}}]
+        })
+
+      # Preload associations for update
+      credential = Repo.preload(credential, :project_credentials)
+
+      # Update the credential's name (should not conflict with itself)
+      {:ok, updated} =
+        Credentials.update_credential(credential, %{
+          name: "Updated Name",
+          project_credentials:
+            Enum.map(credential.project_credentials, fn pc ->
+              %{id: pc.id, project_id: pc.project_id}
+            end),
+          credential_bodies: [%{name: "production", body: %{}}]
+        })
+
+      assert updated.name == "Updated Name"
+      assert updated.external_id == "salesforce-prod"
+    end
+
+    test "different users can have same external_id in different projects" do
+      user1 = insert(:user)
+      user2 = insert(:user)
+      project1 = insert(:project, project_users: [%{user: user1}])
+      project2 = insert(:project, project_users: [%{user: user2}])
+
+      # User1 creates credential with external_id in project1
+      {:ok, _credential1} =
+        Credentials.create_credential(%{
+          name: "User1 Credential",
+          user_id: user1.id,
+          external_id: "salesforce-prod",
+          schema: "raw",
+          project_credentials: [%{project_id: project1.id}],
+          credential_bodies: [%{name: "production", body: %{}}]
+        })
+
+      # User2 creates credential with same external_id in project2
+      {:ok, credential2} =
+        Credentials.create_credential(%{
+          name: "User2 Credential",
+          user_id: user2.id,
+          external_id: "salesforce-prod",
+          schema: "raw",
+          project_credentials: [%{project_id: project2.id}],
+          credential_bodies: [%{name: "production", body: %{}}]
+        })
+
+      assert credential2.external_id == "salesforce-prod"
+    end
+  end
 end

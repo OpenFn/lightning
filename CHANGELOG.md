@@ -26,6 +26,8 @@ and this project adheres to
 
 ### Fixed
 
+- Fixed bug where two credentials could have the same external ID in the same
+  project [#4177](https://github.com/OpenFn/lightning/pull/4177)
 - Fix AI Assistant disclaimer not persisting after acceptance
   [#4158](https://github.com/OpenFn/lightning/issues/4158)
 - Credential form now shows inline validation errors for JSON schema and raw

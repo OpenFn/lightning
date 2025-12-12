@@ -411,4 +411,72 @@ defmodule Lightning.Credentials.KeychainCredentialTest do
       assert loaded_keychain.default_credential.id == credential.id
     end
   end
+
+  describe "external_id uniqueness validation" do
+    test "keychain resolver raises error when duplicate external_ids exist in same project" do
+      # This test documents the behavior when duplicate external_ids exist
+      # (which should be prevented by validation, but could occur from legacy data)
+      user = insert(:user)
+      project = insert(:project, project_users: [%{user: user}])
+
+      # Create credentials directly with insert to bypass validation
+      # (simulating legacy data or direct DB manipulation)
+      credential_a =
+        insert(:credential,
+          name: "Credential A",
+          schema: "raw",
+          external_id: "duplicate-id",
+          user: user
+        )
+        |> with_body(%{name: "main", body: %{"key" => "value_a"}})
+
+      credential_b =
+        insert(:credential,
+          name: "Credential B",
+          schema: "raw",
+          external_id: "duplicate-id",
+          user: user
+        )
+        |> with_body(%{name: "main", body: %{"key" => "value_b"}})
+
+      # Associate both credentials with the same project
+      insert(:project_credential, project: project, credential: credential_a)
+      insert(:project_credential, project: project, credential: credential_b)
+
+      # Create a keychain credential
+      keychain_credential =
+        insert(:keychain_credential,
+          name: "Test Keychain",
+          path: "$.user_id",
+          project: project,
+          created_by: user
+        )
+
+      # Create workflow with the keychain credential
+      %{jobs: [job]} =
+        workflow =
+        build(:workflow, project: project)
+        |> with_job(%{keychain_credential: keychain_credential})
+        |> insert()
+
+      # Create a run with dataclip that matches the duplicate external_id
+      %{runs: [run]} =
+        insert(:workorder, workflow: workflow)
+        |> with_run(%{
+          dataclip:
+            build(:dataclip, %{
+              body: %{"user_id" => "duplicate-id"}
+            }),
+          starting_job: job
+        })
+
+      # The resolver should raise an error because Repo.one() finds multiple results
+      assert_raise Ecto.MultipleResultsError, fn ->
+        Lightning.Credentials.Resolver.resolve_credential(
+          run,
+          keychain_credential.id
+        )
+      end
+    end
+  end
 end
