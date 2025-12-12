@@ -6,6 +6,8 @@ import {
   useState,
 } from 'react';
 
+import { useKeyboardShortcut } from '../keyboard';
+
 import { useLiveViewActions } from './LiveViewActionsContext';
 
 type ModalSource = 'ide' | 'inspector' | null;
@@ -80,6 +82,21 @@ export function CredentialModalProvider({
   const [savedCallbacks, setSavedCallbacks] = useState<
     Map<ModalSource, Set<(payload: CredentialSavedPayload) => void>>
   >(() => new Map());
+
+  // High-priority Escape handler to prevent closing parent IDE/inspector
+  // when the LiveView credential modal is open.
+  // Priority 100 (MODAL) ensures this runs before IDE handler (priority 50).
+  // This handler does nothing - it just blocks the event from reaching lower-priority handlers.
+  // LiveView handles the actual modal close via its own keyboard handling.
+  useKeyboardShortcut(
+    'Escape',
+    () => {
+      // Do nothing - just block the event from reaching IDE/inspector handlers
+      // LiveView will handle its own modal closing
+    },
+    100,
+    { enabled: modalState.isOpen }
+  );
 
   // Open the credential modal
   const openCredentialModal = useCallback(

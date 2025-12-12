@@ -90,17 +90,17 @@ function createWrapper(
   };
 
   return ({ children }: { children: React.ReactNode }) => (
-    <SessionContext.Provider value={mockSessionValue}>
-      <LiveViewActionsProvider actions={mockLiveViewActions}>
-        <CredentialModalProvider>
-          <KeyboardProvider>
+    <KeyboardProvider>
+      <SessionContext.Provider value={mockSessionValue}>
+        <LiveViewActionsProvider actions={mockLiveViewActions}>
+          <CredentialModalProvider>
             <StoreContext.Provider value={mockStoreValue}>
               {children}
             </StoreContext.Provider>
-          </KeyboardProvider>
-        </CredentialModalProvider>
-      </LiveViewActionsProvider>
-    </SessionContext.Provider>
+          </CredentialModalProvider>
+        </LiveViewActionsProvider>
+      </SessionContext.Provider>
+    </KeyboardProvider>
   );
 }
 
