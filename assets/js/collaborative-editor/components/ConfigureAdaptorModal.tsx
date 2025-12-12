@@ -10,6 +10,7 @@ import {
   useCredentialQueries,
   useCredentials,
 } from '#/collaborative-editor/hooks/useCredentials';
+import { useKeyboardShortcut } from '#/collaborative-editor/keyboard';
 import { useUser } from '#/collaborative-editor/hooks/useSessionContext';
 import type { Adaptor } from '#/collaborative-editor/types/adaptor';
 import type { CredentialWithType } from '#/collaborative-editor/types/credential';
@@ -65,6 +66,17 @@ export function ConfigureAdaptorModal({
   const currentUser = useUser();
   const { projectCredentials, keychainCredentials } = useCredentials();
   const { credentialExists, getCredentialId } = useCredentialQueries();
+
+  // High-priority Escape handler to prevent closing parent IDE/inspector
+  // Priority 100 (MODAL) ensures this runs before IDE handler (priority 50)
+  useKeyboardShortcut(
+    'Escape',
+    () => {
+      onClose();
+    },
+    100,
+    { enabled: isOpen }
+  );
 
   // When adaptor changes externally (from Y.Doc or adaptor picker),
   // automatically update to newest version and clear invalid credentials

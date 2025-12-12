@@ -12,6 +12,7 @@ import { Toaster } from './components/ui/Toaster';
 import { VersionDebugLogger } from './components/VersionDebugLogger';
 import { VersionDropdown } from './components/VersionDropdown';
 import { WorkflowEditor } from './components/WorkflowEditor';
+import { CredentialModalProvider } from './contexts/CredentialModalContext';
 import { LiveViewActionsProvider } from './contexts/LiveViewActionsContext';
 import { SessionProvider } from './contexts/SessionProvider';
 import { StoreProvider } from './contexts/StoreProvider';
@@ -177,41 +178,43 @@ export const CollaborativeEditor: WithActionProps<
           >
             <StoreProvider>
               <LiveViewActionsProvider actions={liveViewActions}>
-                <VersionDebugLogger />
-                <Toaster />
-                <div className="flex-1 min-h-0 overflow-hidden flex flex-col relative">
-                  <BreadcrumbContent
-                    workflowId={workflowId}
-                    workflowName={workflowName}
-                    isNewWorkflow={isNewWorkflow}
-                    {...(projectId !== undefined && {
-                      projectIdFallback: projectId,
-                    })}
-                    {...(projectName !== undefined && {
-                      projectNameFallback: projectName,
-                    })}
-                    {...(projectEnv !== undefined && {
-                      projectEnvFallback: projectEnv,
-                    })}
-                    {...(rootProjectId !== null && {
-                      rootProjectIdFallback: rootProjectId,
-                    })}
-                    {...(rootProjectName !== null && {
-                      rootProjectNameFallback: rootProjectName,
-                    })}
-                  />
-                  <div className="flex-1 min-h-0 overflow-hidden relative">
-                    <LoadingBoundary>
-                      <div className="h-full w-full">
-                        <WorkflowEditor
-                          parentProjectId={rootProjectId}
-                          parentProjectName={rootProjectName}
-                        />
-                      </div>
-                    </LoadingBoundary>
+                <CredentialModalProvider>
+                  <VersionDebugLogger />
+                  <Toaster />
+                  <div className="flex-1 min-h-0 overflow-hidden flex flex-col relative">
+                    <BreadcrumbContent
+                      workflowId={workflowId}
+                      workflowName={workflowName}
+                      isNewWorkflow={isNewWorkflow}
+                      {...(projectId !== undefined && {
+                        projectIdFallback: projectId,
+                      })}
+                      {...(projectName !== undefined && {
+                        projectNameFallback: projectName,
+                      })}
+                      {...(projectEnv !== undefined && {
+                        projectEnvFallback: projectEnv,
+                      })}
+                      {...(rootProjectId !== null && {
+                        rootProjectIdFallback: rootProjectId,
+                      })}
+                      {...(rootProjectName !== null && {
+                        rootProjectNameFallback: rootProjectName,
+                      })}
+                    />
+                    <div className="flex-1 min-h-0 overflow-hidden relative">
+                      <LoadingBoundary>
+                        <div className="h-full w-full">
+                          <WorkflowEditor
+                            parentProjectId={rootProjectId}
+                            parentProjectName={rootProjectName}
+                          />
+                        </div>
+                      </LoadingBoundary>
+                    </div>
                   </div>
-                </div>
-                <AIAssistantPanelWrapper />
+                  <AIAssistantPanelWrapper />
+                </CredentialModalProvider>
               </LiveViewActionsProvider>
             </StoreProvider>
           </SessionProvider>

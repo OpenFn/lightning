@@ -46,7 +46,11 @@ and this project adheres to
 - Fix saving workflow with same name as deleted workflow
   [#4165](https://github.com/OpenFn/lightning/pull/4165)
 - Fix validation error states not changing after undo (Ctrl+Z) on Workflow
-  Settings [#4182](https://github.com/OpenFn/lightning/issues/4182)
+  Settings [#4182](https://github.com/OpenFn/lightning/issues/4182))
+- Fix credential modal stacking issue in collaborative editor IDE
+  [#4171](https://github.com/OpenFn/lightning/issues/4171)
+- Fix adaptor picker Escape key returning to configure modal when opened
+  directly [#4183](https://github.com/OpenFn/lightning/issues/4183)
 
 ## [2.15.0-pre4] - 2025-12-08
 
