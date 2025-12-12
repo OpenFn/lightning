@@ -26,6 +26,9 @@ and this project adheres to
 
 ### Fixed
 
+- Fix IDE crash when viewing jobs that don't exist in workflow version - now
+  shows informative message with option to select another job or change versions
+  [#4173](https://github.com/OpenFn/lightning/issues/4173)
 - Fix issue where selected step wasn't synced with selected workflow job
   [#4189](https://github.com/OpenFn/lightning/issues/4189)
 - Fix job updates not persisted after saving
