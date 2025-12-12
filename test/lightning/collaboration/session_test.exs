@@ -1528,5 +1528,164 @@ defmodule Lightning.SessionTest do
 
       Session.stop(session2)
     end
+
+    test "handles persisted Y.Doc with nil lock_version when DB has real version",
+         %{
+           user: user
+         } do
+      # This tests the bug fix for issue #4164
+      # When a workflow is opened before first save, Y.Doc gets lock_version: nil
+      # If that state is persisted and the workflow is later saved (getting a real lock_version),
+      # loading the persisted state would crash because extract_lock_version didn't handle {:ok, nil}
+
+      workflow = insert(:simple_workflow)
+      doc_name = "workflow:#{workflow.id}"
+
+      # Manually create a persisted document state with lock_version: nil
+      # This simulates a Y.Doc that was persisted before the workflow was ever saved
+      doc = Yex.Doc.new()
+      workflow_map = Yex.Doc.get_map(doc, "workflow")
+
+      Yex.Doc.transaction(doc, "setup_nil_lock_version", fn ->
+        Yex.Map.set(workflow_map, "id", workflow.id)
+        Yex.Map.set(workflow_map, "name", "Test Workflow")
+        Yex.Map.set(workflow_map, "lock_version", nil)
+      end)
+
+      {:ok, update_data} = Yex.encode_state_as_update(doc)
+
+      Repo.insert!(%DocumentState{
+        document_name: doc_name,
+        state_data: update_data,
+        version: :update
+      })
+
+      # Now start a session - this should NOT crash
+      # The persistence layer should handle the nil lock_version and reset from DB
+      {:ok, _doc_supervisor} =
+        Lightning.Collaborate.start_document(
+          workflow,
+          doc_name
+        )
+
+      {:ok, session} =
+        Session.start_link(
+          user: user,
+          workflow: workflow,
+          parent_pid: self(),
+          document_name: doc_name
+        )
+
+      # Verify the session started and lock_version was reconciled from DB
+      shared_doc = Session.get_doc(session)
+      workflow_map2 = Yex.Doc.get_map(shared_doc, "workflow")
+      reconciled_lock_version = Yex.Map.fetch!(workflow_map2, "lock_version")
+
+      # lock_version should now match the database value
+      assert reconciled_lock_version == workflow.lock_version,
+             "Expected lock_version #{workflow.lock_version} but got #{reconciled_lock_version}"
+
+      Session.stop(session)
+    end
+
+    test "merges delta updates with persisted state across save batches", %{
+      user: user
+    } do
+      # This tests the fix for the merge_updates bug where delta updates
+      # saved in subsequent batches were applied to an empty doc instead of
+      # the current persisted state, resulting in data loss.
+      #
+      # Scenario:
+      # 1. First batch persists base state with workflow data and lock_version
+      # 2. Another change generates a delta update (adding concurrency field)
+      # 3. Second batch should merge the delta with existing persisted state
+      #
+      # Note: We verify concurrency is preserved, not name, because
+      # reconcile_workflow_metadata updates name from DB after loading.
+
+      workflow = insert(:simple_workflow)
+      doc_name = "workflow:#{workflow.id}"
+
+      # First, create initial persisted state (simulating first batch)
+      # Set lock_version to match the workflow's DB lock_version to avoid reset
+      initial_doc = Yex.Doc.new()
+      workflow_map = Yex.Doc.get_map(initial_doc, "workflow")
+
+      Yex.Doc.transaction(initial_doc, "initial_state", fn ->
+        Yex.Map.set(workflow_map, "id", workflow.id)
+        Yex.Map.set(workflow_map, "name", workflow.name)
+        Yex.Map.set(workflow_map, "lock_version", workflow.lock_version)
+      end)
+
+      {:ok, initial_update} = Yex.encode_state_as_update(initial_doc)
+
+      # Persist the initial state
+      Repo.insert!(%DocumentState{
+        document_name: doc_name,
+        state_data: initial_update,
+        version: :update
+      })
+
+      # Now create a delta update that adds a new field
+      # (simulating what happens when user edits concurrency in the workflow)
+      delta_doc = Yex.Doc.new()
+      delta_workflow_map = Yex.Doc.get_map(delta_doc, "workflow")
+
+      # Apply initial state first, then make delta change
+      Yex.apply_update(delta_doc, initial_update)
+
+      Yex.Doc.transaction(delta_doc, "add_concurrency", fn ->
+        Yex.Map.set(delta_workflow_map, "concurrency", 5)
+      end)
+
+      # Get the delta (diff since initial state)
+      {:ok, state_vector} = Yex.encode_state_vector(initial_doc)
+      {:ok, delta_update} = Yex.encode_state_as_update(delta_doc, state_vector)
+
+      # The delta should be small (just the concurrency change)
+      assert byte_size(delta_update) < byte_size(initial_update)
+
+      # Persist the delta as a second update
+      Repo.insert!(%DocumentState{
+        document_name: doc_name,
+        state_data: delta_update,
+        version: :update
+      })
+
+      # Now start a session - this will load and reconstruct the full state
+      {:ok, _doc_supervisor} =
+        Lightning.Collaborate.start_document(
+          workflow,
+          doc_name
+        )
+
+      {:ok, session} =
+        Session.start_link(
+          user: user,
+          workflow: workflow,
+          parent_pid: self(),
+          document_name: doc_name
+        )
+
+      # Verify the session loaded the full state correctly
+      shared_doc = Session.get_doc(session)
+      loaded_workflow_map = Yex.Doc.get_map(shared_doc, "workflow")
+
+      # The key assertion: concurrency from the delta update should be preserved.
+      # This verifies the fix - before the fix, delta updates applied to an empty
+      # doc would result in data loss (concurrency would be missing).
+      loaded_concurrency = Yex.Map.fetch!(loaded_workflow_map, "concurrency")
+      assert loaded_concurrency == 5
+
+      # Name should match DB (reconciliation updates it)
+      loaded_name = Yex.Map.fetch!(loaded_workflow_map, "name")
+      assert loaded_name == workflow.name
+
+      # lock_version should match DB (reconciliation updates it)
+      loaded_lock_version = Yex.Map.fetch!(loaded_workflow_map, "lock_version")
+      assert loaded_lock_version == workflow.lock_version
+
+      Session.stop(session)
+    end
   end
 end

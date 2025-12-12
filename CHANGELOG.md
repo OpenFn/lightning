@@ -26,6 +26,12 @@ and this project adheres to
 
 ### Fixed
 
+- Fix infinite loading when reopening workflow in collaborative editor due to
+  delta updates not being merged with persisted state
+  [#4164](https://github.com/OpenFn/lightning/issues/4164)
+- Fix incorrect field access and version type in checkpoint creation that would
+  crash after 500 document updates
+  [#4176](https://github.com/OpenFn/lightning/issues/4176)
 - Fix issue where users were not able to go to the latest versin of a workflow
   [#4149](https://github.com/OpenFn/lightning/issues/4149)
 - Fix AI Assistant disclaimer not persisting after acceptance
