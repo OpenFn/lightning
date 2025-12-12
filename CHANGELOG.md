@@ -26,6 +26,8 @@ and this project adheres to
 
 ### Fixed
 
+- Fix issue where users were not able to go to the latest versin of a workflow
+  [#4149](https://github.com/OpenFn/lightning/issues/4149)
 - Fix AI Assistant disclaimer not persisting after acceptance
   [#4158](https://github.com/OpenFn/lightning/issues/4158)
 - Credential form now shows inline validation errors for JSON schema and raw
