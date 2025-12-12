@@ -39,6 +39,8 @@ and this project adheres to
   Settings [#4182](https://github.com/OpenFn/lightning/issues/4182))
 - Fix credential modal stacking issue in collaborative editor IDE
   [#4171](https://github.com/OpenFn/lightning/issues/4171)
+- Fix adaptor picker Escape key returning to configure modal when opened
+  directly [#4183](https://github.com/OpenFn/lightning/issues/4183)
 
 ## [2.15.0-pre4] - 2025-12-08
 
