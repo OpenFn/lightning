@@ -392,7 +392,10 @@ export function JobForm({ job }: JobFormProps) {
       {/* Adaptor Selection Modal (opened from ConfigureAdaptorModal) */}
       <AdaptorSelectionModal
         isOpen={isAdaptorPickerOpen}
-        onClose={() => setIsAdaptorPickerOpen(false)}
+        onClose={() => {
+          setIsAdaptorPickerOpen(false);
+          setIsConfigureModalOpen(true);
+        }}
         onSelect={handleAdaptorSelect}
         projectAdaptors={projectAdaptors}
       />
