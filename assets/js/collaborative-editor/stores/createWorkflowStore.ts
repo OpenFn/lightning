@@ -1198,7 +1198,11 @@ export const createWorkflowStore = () => {
    * @param errors - Field errors { fieldName: ["error1", "error2"] }
    *                 Empty array [] clears that field
    */
-  const setClientErrors = (path: string, errors: Record<string, string[]>) => {
+  const setClientErrors = (
+    path: string,
+    errors: Record<string, string[]>,
+    isServerUpdates?: boolean
+  ) => {
     logger.debug('setClientErrors called (before debounce)', {
       path,
       errors,
@@ -1275,8 +1279,11 @@ export const createWorkflowStore = () => {
       // Client errors REPLACE server errors for that field, not merge with them
       // This ensures that when a user edits a field with server errors,
       // their client validation takes precedence
-      const mergedErrors = produce(currentErrors, draft => {
-        Object.entries(errors).forEach(([fieldName, newMessages]) => {
+      // if isServerUpdates give server errors priority
+      const baseErrors = isServerUpdates ? errors : currentErrors;
+      const priorityErrors = isServerUpdates ? currentErrors : errors;
+      const mergedErrors = produce(baseErrors, draft => {
+        Object.entries(priorityErrors).forEach(([fieldName, newMessages]) => {
           if (newMessages.length === 0) {
             // Empty array clears the field
 
