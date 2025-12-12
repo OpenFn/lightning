@@ -1,5 +1,5 @@
 import { useStore } from '@tanstack/react-form';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { useAppForm } from '#/collaborative-editor/components/form';
 import { useCredentialModal } from '#/collaborative-editor/contexts/CredentialModalContext';
@@ -108,6 +108,15 @@ export function JobForm({ job }: JobFormProps) {
     },
     `jobs.${job.id}` // Server validation automatically filtered to this job
   );
+
+  // Reset form when job changes to prevent stale values
+  const prevJobId = useRef(job.id);
+  useEffect(() => {
+    if (prevJobId.current !== job.id) {
+      form.reset();
+      prevJobId.current = job.id;
+    }
+  }, [job.id, form]);
 
   // Listen for credential modal close event to reopen configure modal
   useEffect(() => {
