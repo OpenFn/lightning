@@ -26,6 +26,8 @@ and this project adheres to
 
 ### Fixed
 
+- Fix issue where selected step wasn't synced with selected workflow job
+  [#4189](https://github.com/OpenFn/lightning/issues/4189)
 - Fix job updates not persisted after saving
   [#4154](https://github.com/OpenFn/lightning/issues/4154)
 - Fix infinite loading when reopening workflow in collaborative editor due to
@@ -44,7 +46,7 @@ and this project adheres to
 - Fix saving workflow with same name as deleted workflow
   [#4165](https://github.com/OpenFn/lightning/pull/4165)
 - Fix validation error states not changing after undo (Ctrl+Z) on Workflow
-  Settings [#4182](https://github.com/OpenFn/lightning/issues/4182))
+  Settings [#4182](https://github.com/OpenFn/lightning/issues/4182)
 
 ## [2.15.0-pre4] - 2025-12-08
 

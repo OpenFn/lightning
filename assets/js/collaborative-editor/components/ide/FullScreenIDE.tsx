@@ -541,6 +541,16 @@ export function FullScreenIDE({
     }
   }, [stepIdFromURL, runIdFromURL, selectStep]);
 
+  // Sync job selection to step URL param when viewing a run
+  useEffect(() => {
+    if (jobIdFromURL && currentRun?.steps && runIdFromURL) {
+      const matchingStep = currentRun.steps.find(
+        s => s.job_id === jobIdFromURL
+      );
+      updateSearchParams({ step: matchingStep?.id || null });
+    }
+  }, [jobIdFromURL, currentRun, runIdFromURL, updateSearchParams]);
+
   // Request history when entering history state
   useEffect(() => {
     if (rightPanelSubState === 'history') {
