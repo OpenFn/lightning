@@ -3,12 +3,27 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useRef,
   useState,
 } from 'react';
 
 import { useKeyboardShortcut } from '../keyboard';
 
 import { useLiveViewActions } from './LiveViewActionsContext';
+
+/**
+ * Timing constants for modal animations and LiveView coordination.
+ *
+ * MODAL_REOPEN_DELAY: Time to wait before reopening the configure modal after
+ * credential modal closes. This allows the close animation to complete smoothly.
+ * Phoenix.JS dispatches close events at ~250ms, so 200ms feels instant.
+ *
+ * LIVEVIEW_CLEANUP_DELAY: Time to wait before notifying LiveView to clean up
+ * server-side modal state. This accounts for: Phoenix.JS animation (250ms) +
+ * LiveView update time + buffer. Prevents race conditions if user quickly reopens.
+ */
+const MODAL_REOPEN_DELAY = 200;
+const LIVEVIEW_CLEANUP_DELAY = 500;
 
 type ModalSource = 'ide' | 'inspector' | null;
 
@@ -75,13 +90,20 @@ export function CredentialModalProvider({
     source: null,
   });
 
+  // Use ref to access current state in event handlers without stale closures
+  const modalStateRef = useRef(modalState);
+  modalStateRef.current = modalState;
+
   // Callback registries - keyed by source
-  const [closeCallbacks, setCloseCallbacks] = useState<
-    Map<ModalSource, Set<() => void>>
-  >(() => new Map());
-  const [savedCallbacks, setSavedCallbacks] = useState<
+  // Using refs instead of state to:
+  // 1. Avoid unnecessary re-renders when callbacks register/unregister
+  // 2. Always access current callbacks in setTimeout handlers (no stale closures)
+  const closeCallbacksRef = useRef<Map<ModalSource, Set<() => void>>>(
+    new Map()
+  );
+  const savedCallbacksRef = useRef<
     Map<ModalSource, Set<(payload: CredentialSavedPayload) => void>>
-  >(() => new Map());
+  >(new Map());
 
   // High-priority Escape handler to prevent closing parent IDE/inspector
   // when the LiveView credential modal is open.
@@ -119,25 +141,20 @@ export function CredentialModalProvider({
   // Register a callback for modal close (only called if source matches)
   const onModalClose = useCallback(
     (source: ModalSource, callback: () => void) => {
-      setCloseCallbacks(prev => {
-        const next = new Map(prev);
-        const sourceCallbacks = next.get(source) ?? new Set();
-        sourceCallbacks.add(callback);
-        next.set(source, sourceCallbacks);
-        return next;
-      });
+      const callbacks = closeCallbacksRef.current;
+      const sourceCallbacks = callbacks.get(source) ?? new Set();
+      sourceCallbacks.add(callback);
+      callbacks.set(source, sourceCallbacks);
+
+      // Return cleanup function
       return () => {
-        setCloseCallbacks(prev => {
-          const next = new Map(prev);
-          const sourceCallbacks = next.get(source);
-          if (sourceCallbacks) {
-            sourceCallbacks.delete(callback);
-            if (sourceCallbacks.size === 0) {
-              next.delete(source);
-            }
+        const currentCallbacks = closeCallbacksRef.current.get(source);
+        if (currentCallbacks) {
+          currentCallbacks.delete(callback);
+          if (currentCallbacks.size === 0) {
+            closeCallbacksRef.current.delete(source);
           }
-          return next;
-        });
+        }
       };
     },
     []
@@ -149,25 +166,20 @@ export function CredentialModalProvider({
       source: ModalSource,
       callback: (payload: CredentialSavedPayload) => void
     ) => {
-      setSavedCallbacks(prev => {
-        const next = new Map(prev);
-        const sourceCallbacks = next.get(source) ?? new Set();
-        sourceCallbacks.add(callback);
-        next.set(source, sourceCallbacks);
-        return next;
-      });
+      const callbacks = savedCallbacksRef.current;
+      const sourceCallbacks = callbacks.get(source) ?? new Set();
+      sourceCallbacks.add(callback);
+      callbacks.set(source, sourceCallbacks);
+
+      // Return cleanup function
       return () => {
-        setSavedCallbacks(prev => {
-          const next = new Map(prev);
-          const sourceCallbacks = next.get(source);
-          if (sourceCallbacks) {
-            sourceCallbacks.delete(callback);
-            if (sourceCallbacks.size === 0) {
-              next.delete(source);
-            }
+        const currentCallbacks = savedCallbacksRef.current.get(source);
+        if (currentCallbacks) {
+          currentCallbacks.delete(callback);
+          if (currentCallbacks.size === 0) {
+            savedCallbacksRef.current.delete(source);
           }
-          return next;
-        });
+        }
       };
     },
     []
@@ -176,9 +188,10 @@ export function CredentialModalProvider({
   // Listen for close_credential_modal DOM event from LiveView
   useEffect(() => {
     const handleModalClose = () => {
-      if (!modalState.isOpen) return;
+      // Use ref to get current state - avoids stale closure issues
+      if (!modalStateRef.current.isOpen) return;
 
-      const currentSource = modalState.source;
+      const currentSource = modalStateRef.current.source;
 
       setModalState({
         isOpen: false,
@@ -188,15 +201,16 @@ export function CredentialModalProvider({
       });
 
       // Notify only callbacks registered for the source that opened the modal
+      // Using ref ensures we call the current callbacks, not stale ones
       setTimeout(() => {
-        const sourceCallbacks = closeCallbacks.get(currentSource);
+        const sourceCallbacks = closeCallbacksRef.current.get(currentSource);
         sourceCallbacks?.forEach(callback => callback());
-      }, 200);
+      }, MODAL_REOPEN_DELAY);
 
       // Tell LiveView to close after animation completes
       setTimeout(() => {
         pushEvent('close_credential_modal', {});
-      }, 500);
+      }, LIVEVIEW_CLEANUP_DELAY);
     };
 
     const element = document.getElementById('collaborative-editor-react');
@@ -205,13 +219,14 @@ export function CredentialModalProvider({
     return () => {
       element?.removeEventListener('close_credential_modal', handleModalClose);
     };
-  }, [modalState.isOpen, modalState.source, closeCallbacks, pushEvent]);
+  }, [pushEvent]);
 
   // Listen for credential_saved event from LiveView
   useEffect(() => {
     const cleanup = handleEvent('credential_saved', (rawPayload: unknown) => {
       const payload = rawPayload as CredentialSavedPayload;
-      const currentSource = modalState.source;
+      // Use ref to get current state - avoids stale closure issues
+      const currentSource = modalStateRef.current.source;
 
       setModalState({
         isOpen: false,
@@ -221,17 +236,20 @@ export function CredentialModalProvider({
       });
 
       // Notify only callbacks registered for the source that opened the modal
+      // Using refs ensures we call the current callbacks, not stale ones
       setTimeout(() => {
-        const sourceSavedCallbacks = savedCallbacks.get(currentSource);
+        const sourceSavedCallbacks =
+          savedCallbacksRef.current.get(currentSource);
         sourceSavedCallbacks?.forEach(callback => callback(payload));
 
-        const sourceCloseCallbacks = closeCallbacks.get(currentSource);
+        const sourceCloseCallbacks =
+          closeCallbacksRef.current.get(currentSource);
         sourceCloseCallbacks?.forEach(callback => callback());
-      }, 200);
+      }, MODAL_REOPEN_DELAY);
     });
 
     return cleanup;
-  }, [handleEvent, modalState.source, savedCallbacks, closeCallbacks]);
+  }, [handleEvent]);
 
   const value: CredentialModalContextValue = {
     openCredentialModal,
