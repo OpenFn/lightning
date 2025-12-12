@@ -62,6 +62,9 @@ export function JobForm({ job }: JobFormProps) {
   // Modal state for adaptor configuration
   const [isConfigureModalOpen, setIsConfigureModalOpen] = useState(false);
   const [isAdaptorPickerOpen, setIsAdaptorPickerOpen] = useState(false);
+  // Track if adaptor picker was opened from configure modal (to return there on close)
+  const [adaptorPickerFromConfigure, setAdaptorPickerFromConfigure] =
+    useState(false);
 
   // Credential modal is managed by the context
   const { openCredentialModal, onModalClose, onCredentialSaved } =
@@ -184,10 +187,17 @@ export function JobForm({ job }: JobFormProps) {
     state => state.values.credential_id
   );
 
-  // Handle opening adaptor picker from ConfigureAdaptorModal
-  const handleOpenAdaptorPicker = useCallback(() => {
+  // Called from ConfigureAdaptorModal "Change" button
+  const handleOpenAdaptorPickerFromConfigure = useCallback(() => {
     setIsConfigureModalOpen(false);
     setIsAdaptorPickerOpen(true);
+    setAdaptorPickerFromConfigure(true);
+  }, []);
+
+  // Called from AdaptorDisplay (direct open)
+  const handleOpenAdaptorPickerDirect = useCallback(() => {
+    setIsAdaptorPickerOpen(true);
+    setAdaptorPickerFromConfigure(false);
   }, []);
 
   // Handle opening credential modal from ConfigureAdaptorModal
@@ -211,8 +221,9 @@ export function JobForm({ job }: JobFormProps) {
       const fullAdaptor = `${newPackage}@latest`;
       form.setFieldValue('adaptor', fullAdaptor);
 
-      // Close adaptor picker and reopen configure modal
+      // Close adaptor picker and always open configure modal
       setIsAdaptorPickerOpen(false);
+      setAdaptorPickerFromConfigure(false);
       setIsConfigureModalOpen(true);
     },
     [form]
@@ -360,7 +371,7 @@ export function JobForm({ job }: JobFormProps) {
           adaptor={currentAdaptor}
           credentialId={currentCredentialId}
           onEdit={() => setIsConfigureModalOpen(true)}
-          onChangeAdaptor={handleOpenAdaptorPicker}
+          onChangeAdaptor={handleOpenAdaptorPickerDirect}
           size="sm"
           isReadOnly={isReadOnly}
         />
@@ -379,7 +390,7 @@ export function JobForm({ job }: JobFormProps) {
         onAdaptorChange={handleAdaptorChange}
         onVersionChange={handleVersionChange}
         onCredentialChange={handleCredentialChange}
-        onOpenAdaptorPicker={handleOpenAdaptorPicker}
+        onOpenAdaptorPicker={handleOpenAdaptorPickerFromConfigure}
         onOpenCredentialModal={handleOpenCredentialModal}
         currentAdaptor={
           resolveAdaptor(currentAdaptor).package || '@openfn/language-common'
@@ -394,7 +405,11 @@ export function JobForm({ job }: JobFormProps) {
         isOpen={isAdaptorPickerOpen}
         onClose={() => {
           setIsAdaptorPickerOpen(false);
-          setIsConfigureModalOpen(true);
+          // Only return to configure modal if opened from there
+          if (adaptorPickerFromConfigure) {
+            setIsConfigureModalOpen(true);
+          }
+          setAdaptorPickerFromConfigure(false);
         }}
         onSelect={handleAdaptorSelect}
         projectAdaptors={projectAdaptors}

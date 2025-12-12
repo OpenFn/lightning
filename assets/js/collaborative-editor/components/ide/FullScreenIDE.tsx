@@ -379,6 +379,9 @@ export function FullScreenIDE({
 
   const [isConfigureModalOpen, setIsConfigureModalOpen] = useState(false);
   const [isAdaptorPickerOpen, setIsAdaptorPickerOpen] = useState(false);
+  // Track if adaptor picker was opened from configure modal (to return there on close)
+  const [adaptorPickerFromConfigure, setAdaptorPickerFromConfigure] =
+    useState(false);
 
   const { projectCredentials, keychainCredentials } = useCredentials();
   const { requestCredentials } = useCredentialsCommands();
@@ -554,9 +557,17 @@ export function FullScreenIDE({
     }
   }, [rightPanelSubState, requestHistory]);
 
-  const handleOpenAdaptorPicker = useCallback(() => {
+  // Called from ConfigureAdaptorModal "Change" button
+  const handleOpenAdaptorPickerFromConfigure = useCallback(() => {
     setIsConfigureModalOpen(false);
     setIsAdaptorPickerOpen(true);
+    setAdaptorPickerFromConfigure(true);
+  }, []);
+
+  // Called from AdaptorDisplay in header (direct open)
+  const handleOpenAdaptorPickerDirect = useCallback(() => {
+    setIsAdaptorPickerOpen(true);
+    setAdaptorPickerFromConfigure(false);
   }, []);
 
   const handleOpenCredentialModal = useCallback(
@@ -578,6 +589,8 @@ export function FullScreenIDE({
       updateJob(currentJob.id, { adaptor: fullAdaptor });
 
       setIsAdaptorPickerOpen(false);
+      setAdaptorPickerFromConfigure(false);
+      // Always open configure modal after selecting an adaptor
       setIsConfigureModalOpen(true);
     },
     [currentJob, updateJob]
@@ -798,7 +811,7 @@ export function FullScreenIDE({
                   }
                   size="sm"
                   onEdit={() => setIsConfigureModalOpen(true)}
-                  onChangeAdaptor={handleOpenAdaptorPicker}
+                  onChangeAdaptor={handleOpenAdaptorPickerDirect}
                   isReadOnly={isReadOnly}
                 />
               </div>
@@ -1255,7 +1268,7 @@ export function FullScreenIDE({
             onAdaptorChange={handleAdaptorChange}
             onVersionChange={handleVersionChange}
             onCredentialChange={handleCredentialChange}
-            onOpenAdaptorPicker={handleOpenAdaptorPicker}
+            onOpenAdaptorPicker={handleOpenAdaptorPickerFromConfigure}
             onOpenCredentialModal={handleOpenCredentialModal}
             currentAdaptor={
               resolveAdaptor(
@@ -1279,7 +1292,11 @@ export function FullScreenIDE({
             isOpen={isAdaptorPickerOpen}
             onClose={() => {
               setIsAdaptorPickerOpen(false);
-              setIsConfigureModalOpen(true);
+              // Only return to configure modal if opened from there
+              if (adaptorPickerFromConfigure) {
+                setIsConfigureModalOpen(true);
+              }
+              setAdaptorPickerFromConfigure(false);
             }}
             onSelect={handleAdaptorSelect}
             projectAdaptors={projectAdaptors}
