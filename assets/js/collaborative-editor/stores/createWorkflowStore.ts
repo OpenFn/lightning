@@ -1201,7 +1201,7 @@ export const createWorkflowStore = () => {
   const setClientErrors = (
     path: string,
     errors: Record<string, string[]>,
-    isServerUpdates?: boolean
+    isServerUpdates: boolean = false
   ) => {
     logger.debug('setClientErrors called (before debounce)', {
       path,
