@@ -19,6 +19,14 @@ and this project adheres to
 
 ### Changed
 
+### Fixed
+
+## [2.15.0-pre5] - 2025-12-13 🎂 ❤️ Happy Birthday, Mom!
+
+### Added
+
+### Changed
+
 - Improve version pinning behavior in collaborative editor
   [#4121](https://github.com/OpenFn/lightning/issues/4121)
 - Unify disabled button states across collaborative editor for consistent
