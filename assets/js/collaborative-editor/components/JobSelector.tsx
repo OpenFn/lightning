@@ -4,12 +4,11 @@ import {
   ListboxOption,
   ListboxOptions,
 } from '@headlessui/react';
-import { useMemo } from 'react';
 
 import type { Job } from '../types/job';
 
 interface JobSelectorProps {
-  currentJob: Job;
+  currentJob: Job | null;
   jobs: Job[];
   onChange: (job: Job) => void;
 }
@@ -27,7 +26,7 @@ export function JobSelector({ currentJob, jobs, onChange }: JobSelectorProps) {
     <Listbox value={currentJob} onChange={onChange}>
       <div className="relative">
         <ListboxButton className="flex items-center font-medium text-sm text-gray-500 hover:text-gray-700 cursor-pointer">
-          <span>{currentJob.name}</span>
+          <span>{currentJob?.name || 'Select a job'}</span>
           <span className="hero-chevron-up-down w-4 h-4 ml-1 flex-shrink-0" />
         </ListboxButton>
         <ListboxOptions

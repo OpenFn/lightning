@@ -42,6 +42,7 @@ export function RunViewerPanel({
 
   // Note: Connection to run channel is managed by parent component (FullScreenIDE)
   // This component only reads the current run state from HistoryStore
+  // Version mismatch banner is also handled by FullScreenIDE (above the tabs)
 
   // Empty state - no run to display
   if (!followRunId) {

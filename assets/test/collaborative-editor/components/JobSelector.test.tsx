@@ -211,4 +211,59 @@ describe('JobSelector', () => {
     const options = screen.getAllByRole('option');
     expect(options).toHaveLength(2);
   });
+
+  it('shows "Select a job" placeholder when currentJob is null', () => {
+    const jobs = [
+      createMockJob({ id: 'job-1', name: 'Job 1' }),
+      createMockJob({ id: 'job-2', name: 'Job 2' }),
+    ];
+    const onChange = vi.fn();
+
+    render(<JobSelector currentJob={null} jobs={jobs} onChange={onChange} />);
+
+    expect(screen.getByText('Select a job')).toBeInTheDocument();
+  });
+
+  it('allows selecting a job when currentJob is null', async () => {
+    const user = userEvent.setup();
+    const job1 = createMockJob({ id: 'job-1', name: 'Job 1' });
+    const job2 = createMockJob({ id: 'job-2', name: 'Job 2' });
+    const jobs = [job1, job2];
+    const onChange = vi.fn();
+
+    render(<JobSelector currentJob={null} jobs={jobs} onChange={onChange} />);
+
+    // Click to open dropdown
+    const button = screen.getByRole('button');
+    await user.click(button);
+
+    // Select a job
+    await user.click(screen.getByText('Job 1'));
+
+    expect(onChange).toHaveBeenCalledTimes(1);
+    expect(onChange).toHaveBeenCalledWith(job1);
+  });
+
+  it('shows all jobs in dropdown when currentJob is null', async () => {
+    const user = userEvent.setup();
+    const jobs = [
+      createMockJob({ id: 'job-1', name: 'Job 1' }),
+      createMockJob({ id: 'job-2', name: 'Job 2' }),
+      createMockJob({ id: 'job-3', name: 'Job 3' }),
+    ];
+    const onChange = vi.fn();
+
+    render(<JobSelector currentJob={null} jobs={jobs} onChange={onChange} />);
+
+    // Click to open dropdown
+    const button = screen.getByRole('button');
+    await user.click(button);
+
+    // All jobs should be visible
+    const options = screen.getAllByRole('option');
+    expect(options).toHaveLength(3);
+    expect(options[0]).toHaveTextContent('Job 1');
+    expect(options[1]).toHaveTextContent('Job 2');
+    expect(options[2]).toHaveTextContent('Job 3');
+  });
 });
