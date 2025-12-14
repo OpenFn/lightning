@@ -7,7 +7,12 @@ defmodule LightningWeb.InitAssigns do
   alias Lightning.Accounts
 
   def on_mount(:default, _params, session, socket) do
-    current_user = Accounts.get_user_by_session_token(session["user_token"])
+    current_user =
+      case session["user_token"] do
+        nil -> nil
+        token -> Accounts.get_user_by_session_token(token)
+      end
+
     confirmation_required? = Accounts.confirmation_required?(current_user)
 
     sidebar_collapsed =
@@ -40,24 +45,17 @@ defmodule LightningWeb.InitAssigns do
   end
 
   defp handle_sidebar_toggle("toggle_sidebar", _params, socket) do
-    user = socket.assigns[:current_user]
+    user = socket.assigns.current_user
     new_state = !socket.assigns.sidebar_collapsed
 
     socket =
-      if user do
-        case Accounts.update_user_preference(
-               user,
-               "sidebar_collapsed",
-               new_state
-             ) do
-          {:ok, updated_user} ->
-            assign(socket, :current_user, updated_user)
+      try do
+        {:ok, updated_user} =
+          Accounts.update_user_preference(user, "sidebar_collapsed", new_state)
 
-          {:error, _} ->
-            socket
-        end
-      else
-        socket
+        assign(socket, :current_user, updated_user)
+      rescue
+        Ecto.StaleEntryError -> socket
       end
 
     {:halt, assign(socket, :sidebar_collapsed, new_state)}
