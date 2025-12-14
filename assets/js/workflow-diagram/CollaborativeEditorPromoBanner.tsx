@@ -19,6 +19,9 @@ import { cn } from '#/utils/cn';
 
 interface CollaborativeEditorPromoBannerProps {
   className?: string;
+  pushEvent?:
+    | ((name: string, payload: Record<string, unknown>) => void)
+    | undefined;
 }
 
 const COOKIE_NAME = 'openfn_collaborative_editor_promo_dismissed';
@@ -41,6 +44,7 @@ function setCookie(name: string, value: string, days: number): void {
 
 export function CollaborativeEditorPromoBanner({
   className,
+  pushEvent,
 }: CollaborativeEditorPromoBannerProps) {
   const [dismissed, setDismissed] = useState(false);
 
@@ -104,7 +108,10 @@ export function CollaborativeEditorPromoBanner({
     >
       <div className="pointer-events-auto flex items-center gap-x-4 bg-primary-700 px-6 py-2.5 rounded-xl sm:py-3 sm:pr-3.5 sm:pl-4">
         <p className="text-sm/6 text-white">
-          <a href={buildCollaborativeUrl()}>
+          <a
+            href={buildCollaborativeUrl()}
+            onClick={() => pushEvent?.('toggle_collaborative_editor', {})}
+          >
             <strong className="font-semibold">
               Try the new collaborative editor
             </strong>

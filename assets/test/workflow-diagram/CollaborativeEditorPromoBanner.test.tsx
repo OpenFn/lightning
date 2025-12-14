@@ -141,6 +141,33 @@ describe('CollaborativeEditorPromoBanner', () => {
   });
 
   // ===========================================================================
+  // PREFERENCE PERSISTENCE TESTS
+  // ===========================================================================
+
+  describe('preference persistence', () => {
+    test('calls pushEvent to save preference when link is clicked', () => {
+      const mockPushEvent = vi.fn();
+      render(<CollaborativeEditorPromoBanner pushEvent={mockPushEvent} />);
+
+      const link = screen.getByRole('link');
+      fireEvent.click(link);
+
+      expect(mockPushEvent).toHaveBeenCalledWith(
+        'toggle_collaborative_editor',
+        {}
+      );
+    });
+
+    test('does not error when pushEvent is not provided', () => {
+      render(<CollaborativeEditorPromoBanner />);
+
+      const link = screen.getByRole('link');
+      // Should not throw
+      expect(() => fireEvent.click(link)).not.toThrow();
+    });
+  });
+
+  // ===========================================================================
   // URL BUILDING TESTS
   // ===========================================================================
 

@@ -57,6 +57,7 @@ type WorkflowDiagramProps = {
   snapshotVersionTag?: string;
   aiAssistantEnabled?: boolean;
   liveAction?: string;
+  pushEvent?: (name: string, payload: Record<string, unknown>) => void;
 };
 
 type ChartCache = {
@@ -623,7 +624,7 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
         liveAction={props.liveAction}
         drawerWidth={drawerWidth}
       />
-      <CollaborativeEditorPromoBanner />
+      <CollaborativeEditorPromoBanner pushEvent={props.pushEvent} />
       {props.liveAction === 'edit' ? (
         <MiniHistory
           collapsed={!runSteps.start_from}

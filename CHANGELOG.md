@@ -21,6 +21,9 @@ and this project adheres to
 
 ### Fixed
 
+- "Try the new editor" wasn't persisting properly to user preferences
+  [#4199](https://github.com/OpenFn/lightning/issues/4199)
+
 ## [2.15.0-pre5] - 2025-12-13 🎂 ❤️ Happy Birthday, Mom!
 
 ### Added
