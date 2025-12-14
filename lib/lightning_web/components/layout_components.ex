@@ -187,8 +187,7 @@ defmodule LightningWeb.LayoutComponents do
             name
             |> String.split(~r/[\s_-]+/)
             |> Enum.take(2)
-            |> Enum.map(&String.first/1)
-            |> Enum.join()
+            |> Enum.map_join(&String.first/1)
             |> String.upcase()
 
           {init, name}
@@ -313,7 +312,7 @@ defmodule LightningWeb.LayoutComponents do
               end %>
               <li
                 :for={item <- @items}
-                class="group relative cursor-pointer select-none px-4 py-3 flex items-center text-gray-900 hover:bg-indigo-600 hover:text-white data-[highlighted=true]:bg-indigo-600 data-[highlighted=true]:text-white"
+                class="group relative cursor-pointer select-none px-4 py-3 flex items-center text-gray-900 hover:bg-primary-600 hover:text-white data-[highlighted=true]:bg-primary-600 data-[highlighted=true]:text-white"
                 id={"project-picker-option-#{item.id}"}
                 role="option"
                 tabindex="0"
@@ -334,7 +333,7 @@ defmodule LightningWeb.LayoutComponents do
                 <.icon
                   :if={is_selected.(item)}
                   name="hero-check"
-                  class="shrink-0 ml-3 w-5 h-5 text-indigo-600 group-hover:text-white group-data-[highlighted=true]:text-white"
+                  class="shrink-0 ml-3 w-5 h-5 text-primary-600 group-hover:text-white group-data-[highlighted=true]:text-white"
                 />
               </li>
               <li :if={@items == []} class="px-4 py-8 text-center text-gray-500">
