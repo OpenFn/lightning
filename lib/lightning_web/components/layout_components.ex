@@ -7,6 +7,7 @@ defmodule LightningWeb.LayoutComponents do
   alias LightningWeb.Components.Menu
 
   attr :current_user, Lightning.Accounts.User, required: true
+  attr :collapsed, :boolean, default: false
 
   def user_menu_dropdown(assigns) do
     menu_id = "user-menu-#{:erlang.phash2(assigns.current_user.id)}"
@@ -21,13 +22,17 @@ defmodule LightningWeb.LayoutComponents do
 
     ~H"""
     <div
-      class="relative w-full"
+      class={["relative", !@collapsed && "w-full"]}
       phx-click-away={Phoenix.LiveView.JS.hide(to: "##{@menu_id}")}
       phx-window-keydown={Phoenix.LiveView.JS.hide(to: "##{@menu_id}")}
       phx-key="Escape"
     >
       <button
-        class="w-full bg-white/10 hover:bg-white/20 rounded-lg px-3 py-2.5 text-left transition-colors focus:outline-none focus:ring-2 focus:ring-white/30 max-w-full"
+        class={[
+          "bg-white/10 hover:bg-white/20 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-white/30",
+          !@collapsed && "w-full px-3 py-2.5 text-left max-w-full",
+          @collapsed && "p-2"
+        ]}
         phx-click={
           Phoenix.LiveView.JS.toggle(
             to: "##{@menu_id}",
@@ -37,8 +42,13 @@ defmodule LightningWeb.LayoutComponents do
         }
         type="button"
         aria-haspopup="true"
+        title={
+          if @collapsed,
+            do: "#{@current_user.first_name} #{@current_user.last_name || ""}",
+            else: nil
+        }
       >
-        <div class="flex items-center gap-2 min-w-0">
+        <div class={["flex items-center", !@collapsed && "gap-2 min-w-0"]}>
           <div class="shrink-0">
             <.avatar
               size="sm"
@@ -50,13 +60,20 @@ defmodule LightningWeb.LayoutComponents do
               }
             />
           </div>
-          <div class="min-w-0 overflow-hidden flex-1">
+          <div
+            :if={!@collapsed}
+            class="min-w-0 overflow-hidden flex-1 user-menu-text"
+          >
             <div class="text-sm font-medium text-white truncate">
               {@current_user.first_name}
               {if @current_user.last_name, do: " " <> @current_user.last_name}
             </div>
           </div>
-          <.icon name="hero-chevron-down" class="w-4 h-4 text-white/70 shrink-0" />
+          <.icon
+            :if={!@collapsed}
+            name="hero-chevron-down"
+            class="w-4 h-4 text-white/70 shrink-0"
+          />
         </div>
       </button>
       <div
@@ -126,9 +143,9 @@ defmodule LightningWeb.LayoutComponents do
 
   def menu_items(assigns) do
     assigns =
-      assign(assigns,
-        custom_menu_items: Application.get_env(:lightning, :menu_items)
-      )
+      assigns
+      |> assign(:custom_menu_items, Application.get_env(:lightning, :menu_items))
+      |> assign_new(:collapsed, fn -> false end)
 
     ~H"""
     <%= if @custom_menu_items do %>
@@ -138,23 +155,227 @@ defmodule LightningWeb.LayoutComponents do
         {__ENV__.module, __ENV__.function, __ENV__.file, __ENV__.line}
       )}
     <% else %>
-      <Common.combobox
-        items={assigns[:projects] || []}
+      <.project_picker_trigger
+        collapsed={@collapsed}
         selected_item={assigns[:project]}
-        placeholder="Go to project"
-        url_func={fn project -> ~p"/projects/#{project.id}/w" end}
       />
       <%= if assigns[:project] do %>
         <Menu.project_items
           project_id={@project.id}
           current_user={@current_user}
           active_menu_item={@active_menu_item}
+          collapsed={@collapsed}
         />
       <% else %>
-        <Menu.profile_items active_menu_item={@active_menu_item} />
+        <Menu.profile_items
+          active_menu_item={@active_menu_item}
+          collapsed={@collapsed}
+        />
       <% end %>
     <% end %>
     """
+  end
+
+  attr :collapsed, :boolean, default: false
+  attr :selected_item, :map, default: nil
+
+  defp project_picker_trigger(assigns) do
+    {initials, project_name} =
+      case assigns[:selected_item] do
+        %{name: name} when is_binary(name) ->
+          init =
+            name
+            |> String.split(~r/[\s_-]+/)
+            |> Enum.take(2)
+            |> Enum.map(&String.first/1)
+            |> Enum.join()
+            |> String.upcase()
+
+          {init, name}
+
+        _ ->
+          {nil, nil}
+      end
+
+    assigns = assign(assigns, initials: initials, project_name: project_name)
+
+    ~H"""
+    <div class={["my-4", @collapsed && "mx-2", !@collapsed && "mx-3"]}>
+      <button
+        id="project-picker-trigger"
+        type="button"
+        class={[
+          "w-full rounded-lg bg-white/10 hover:bg-white/20 transition-colors focus:outline-none focus:ring-2 focus:ring-white/30",
+          @collapsed && "p-2 flex justify-center",
+          !@collapsed && "px-3 py-2 flex items-center gap-2"
+        ]}
+        phx-click={show_project_picker()}
+        phx-hook={if @collapsed, do: "Tooltip", else: nil}
+        aria-label={if @collapsed, do: @project_name || "Select project", else: nil}
+        data-placement={if @collapsed, do: "right", else: nil}
+      >
+        <%= if @initials do %>
+          <span class={[
+            "flex items-center justify-center rounded-md bg-white/20 text-white font-semibold",
+            @collapsed && "h-8 w-8 text-sm",
+            !@collapsed && "h-7 w-7 text-xs"
+          ]}>
+            {@initials}
+          </span>
+          <span
+            :if={!@collapsed}
+            class="flex-1 text-left text-white/90 text-sm truncate"
+          >
+            {@project_name}
+          </span>
+          <.icon
+            :if={!@collapsed}
+            name="hero-chevron-up-down"
+            class="h-4 w-4 text-white/50"
+          />
+        <% else %>
+          <.icon name="hero-magnifying-glass" class="h-5 w-5 text-white/70" />
+          <span :if={!@collapsed} class="flex-1 text-left text-white/70 text-sm">
+            Select project
+          </span>
+          <.icon
+            :if={!@collapsed}
+            name="hero-chevron-up-down"
+            class="h-4 w-4 text-white/50"
+          />
+        <% end %>
+      </button>
+    </div>
+    """
+  end
+
+  @doc """
+  Global project picker modal - command palette style.
+  Opened via Cmd+Shift+P or clicking the magnifying glass when sidebar is collapsed.
+  """
+  attr :items, :list, default: []
+  attr :selected_item, :map, default: nil
+
+  def project_picker_modal(assigns) do
+    ~H"""
+    <div
+      id="project-picker-modal"
+      class="hidden fixed inset-0 z-[9999]"
+      phx-window-keydown={hide_project_picker()}
+      phx-key="Escape"
+    >
+      <!-- Backdrop -->
+      <div
+        id="project-picker-backdrop"
+        class="hidden fixed inset-0 bg-gray-900/60 backdrop-blur-sm transition-opacity duration-200"
+        phx-click={hide_project_picker()}
+      >
+      </div>
+      <!-- Modal content -->
+      <div class="fixed inset-0 flex items-start justify-center pt-[15vh]">
+        <div
+          id="project-picker-content"
+          class="hidden w-full max-w-xl bg-white rounded-xl shadow-2xl ring-1 ring-black/10 overflow-hidden"
+          phx-click-away={hide_project_picker()}
+        >
+          <div id="project-picker-combobox" phx-hook="Combobox" class="relative">
+            <!-- Search input -->
+            <div class="flex items-center px-4 border-b border-gray-200">
+              <.icon
+                name="hero-magnifying-glass"
+                class="h-5 w-5 text-gray-400 shrink-0"
+              />
+              <input
+                id="project-picker-input"
+                type="text"
+                spellcheck="false"
+                placeholder="Search projects..."
+                value=""
+                class="w-full border-0 py-4 pl-3 pr-4 text-gray-900 placeholder:text-gray-400 focus:ring-0 text-base"
+                role="combobox"
+                aria-controls="project-picker-options"
+                aria-expanded="false"
+                autocomplete="off"
+              />
+              <kbd class="hidden sm:inline-flex items-center gap-1 rounded px-2 py-1 text-xs text-gray-400 ring-1 ring-gray-300">
+                <span>⌘</span><span>⇧</span><span>P</span>
+              </kbd>
+            </div>
+            <!-- Options list -->
+            <ul
+              class="max-h-80 overflow-y-auto py-2"
+              id="project-picker-options"
+              role="listbox"
+              aria-labelledby="project-picker-input"
+            >
+              <% is_selected = fn item ->
+                @selected_item && @selected_item.id == item.id
+              end %>
+              <li
+                :for={item <- @items}
+                class="group relative cursor-pointer select-none px-4 py-3 flex items-center text-gray-900 hover:bg-indigo-600 hover:text-white data-[highlighted=true]:bg-indigo-600 data-[highlighted=true]:text-white"
+                id={"project-picker-option-#{item.id}"}
+                role="option"
+                tabindex="0"
+                data-item-id={item.id}
+                data-item-selected={is_selected.(item)}
+                data-url={~p"/projects/#{item.id}/w"}
+              >
+                <.icon
+                  name="hero-folder"
+                  class="h-5 w-5 mr-3 text-gray-400 group-hover:text-white/70 group-data-[highlighted=true]:text-white/70 shrink-0"
+                />
+                <span class={[
+                  "truncate flex-grow",
+                  is_selected.(item) && "font-semibold"
+                ]}>
+                  {item.name}
+                </span>
+                <.icon
+                  :if={is_selected.(item)}
+                  name="hero-check"
+                  class="shrink-0 ml-3 w-5 h-5 text-indigo-600 group-hover:text-white group-data-[highlighted=true]:text-white"
+                />
+              </li>
+              <li :if={@items == []} class="px-4 py-8 text-center text-gray-500">
+                No projects found
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+    """
+  end
+
+  defp show_project_picker do
+    Phoenix.LiveView.JS.show(to: "#project-picker-modal")
+    |> Phoenix.LiveView.JS.show(
+      to: "#project-picker-backdrop",
+      transition:
+        {"transition ease-out duration-200", "opacity-0", "opacity-100"}
+    )
+    |> Phoenix.LiveView.JS.show(
+      to: "#project-picker-content",
+      transition:
+        {"transition ease-out duration-200", "opacity-0 scale-95",
+         "opacity-100 scale-100"}
+    )
+    |> Phoenix.LiveView.JS.focus(to: "#project-picker-input")
+  end
+
+  defp hide_project_picker do
+    Phoenix.LiveView.JS.hide(
+      to: "#project-picker-backdrop",
+      transition: {"transition ease-in duration-150", "opacity-100", "opacity-0"}
+    )
+    |> Phoenix.LiveView.JS.hide(
+      to: "#project-picker-content",
+      transition:
+        {"transition ease-in duration-150", "opacity-100 scale-100",
+         "opacity-0 scale-95"}
+    )
+    |> Phoenix.LiveView.JS.hide(to: "#project-picker-modal", time: 150)
   end
 
   # https://play.tailwindcss.com/r7kBDT2cJY?layout=horizontal

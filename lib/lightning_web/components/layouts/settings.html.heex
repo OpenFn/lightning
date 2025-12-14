@@ -1,65 +1,167 @@
 <main class="h-screen">
+  <!-- Global keyboard shortcuts -->
+  <span
+    id="project-picker-shortcut"
+    phx-hook="OpenProjectPickerViaCtrlShiftP"
+    class="hidden"
+  >
+  </span>
+  <span
+    id="sidebar-toggle-shortcut"
+    phx-hook="ToggleSidebarViaCtrlM"
+    class="hidden"
+  >
+  </span>
+  <!-- Global project picker modal -->
+  <%= if assigns[:current_user] do %>
+    <LayoutComponents.project_picker_modal
+      items={assigns[:projects] || []}
+      selected_item={assigns[:project]}
+    />
+  <% end %>
   <div class="flex flex-row h-full">
-    <nav
-      class={"basis-48 #{@side_menu_theme}"}
-      id="side-menu"
-      style="width: 192px"
-    >
-      <div class="flex flex-col h-full">
-        <div class="flex-1 overflow-y-auto min-h-0 flex flex-col">
-          <div class="app-logo-container w-full h-20 flex items-center justify-center px-3">
-            <LayoutComponents.user_menu_dropdown current_user={@current_user} />
-          </div>
-          <div class="mt-4"></div>
-          <Menu.menu_item
-            to={~p"/settings/projects"}
-            active={@active_menu_item == :projects}
-          >
-            <Heroicons.building_library class="h-5 w-5 inline-block mr-2" />
-            <span class="inline-block align-middle">Projects</span>
-          </Menu.menu_item>
-          <Menu.menu_item
-            to={~p"/settings/users"}
-            active={@active_menu_item == :users}
-          >
-            <Heroicons.user_group class="h-5 w-5 inline-block mr-2" />
-            <span class="inline-block align-middle">Users</span>
-          </Menu.menu_item>
-          <Menu.menu_item
-            to={~p"/settings/authentication/new"}
-            active={@active_menu_item == :authentication}
-          >
-            <Heroicons.key class="h-5 w-5 inline-block mr-2" />
-            <span class="inline-block align-middle">Authentication</span>
-          </Menu.menu_item>
-          <Menu.menu_item
-            to={~p"/settings/audit"}
-            active={@active_menu_item == :audit}
-          >
-            <Heroicons.archive_box class="h-5 w-5 inline-block mr-2" />
-            <span class="inline-block align-middle">Audit</span>
-          </Menu.menu_item>
-          <Menu.menu_item
-            to={~p"/settings/collections"}
-            active={@active_menu_item == :collections}
-          >
-            <Heroicons.circle_stack class="h-5 w-5 inline-block mr-2" />
-            <span class="inline-block align-middle">Collections</span>
-          </Menu.menu_item>
-          <div class="grow"></div>
-          <Menu.menu_item to={~p"/projects"}>
-            <Icon.left class="h-5 w-5 inline-block mr-2" />
-            <span class="inline-block align-middle">Back</span>
-          </Menu.menu_item>
-        </div>
-        <div class="flex-shrink-0">
-          <div class="px-3 py-1 flex justify-center">
-            <Common.openfn_logo class="h-6 primary-light" />
-          </div>
-          <LightningWeb.Components.Common.version_chip />
-        </div>
+    <div class="flex-shrink-0 flex flex-col relative z-[100]">
+      <%!-- Header --%>
+      <div
+        class={[
+          "app-logo-container h-20 flex items-center justify-center transition-[width] duration-200 ease-in-out",
+          @side_menu_theme,
+          assigns[:sidebar_collapsed] && "px-2",
+          !assigns[:sidebar_collapsed] && "px-3"
+        ]}
+        style={
+          if assigns[:sidebar_collapsed],
+            do: "width: 64px;",
+            else: "width: 192px;"
+        }
+      >
+        <LayoutComponents.user_menu_dropdown
+          current_user={@current_user}
+          collapsed={assigns[:sidebar_collapsed] || false}
+        />
       </div>
-    </nav>
+      <%!-- Toggle button positioned absolutely --%>
+      <button
+        phx-click="toggle_sidebar"
+        class={[
+          "absolute top-6 -right-[20px] flex items-center sidebar-toggle-btn rounded-r-md pr-1 py-2",
+          @side_menu_theme
+        ]}
+        title={
+          if assigns[:sidebar_collapsed],
+            do: "Expand sidebar",
+            else: "Collapse sidebar"
+        }
+        aria-label={
+          if assigns[:sidebar_collapsed],
+            do: "Expand sidebar",
+            else: "Collapse sidebar"
+        }
+      >
+        <Heroicons.chevron_left class={[
+          "h-4 w-4 text-white transition-transform duration-200",
+          assigns[:sidebar_collapsed] && "rotate-180"
+        ]} />
+      </button>
+      <nav
+        id="side-menu"
+        class={[
+          "flex-1 overflow-hidden transition-[width] duration-200 ease-in-out",
+          @side_menu_theme
+        ]}
+        style={
+          if assigns[:sidebar_collapsed],
+            do: "width: 64px;",
+            else: "width: 192px;"
+        }
+      >
+        <div class="flex flex-col h-full">
+          <div class="flex-1 overflow-y-auto min-h-0 flex flex-col">
+            <div class="mt-4"></div>
+            <Menu.menu_item
+              to={~p"/settings/projects"}
+              active={@active_menu_item == :projects}
+              collapsed={assigns[:sidebar_collapsed] || false}
+              tooltip="Projects"
+            >
+              <Heroicons.building_library class="h-5 w-5 inline-block mr-2" />
+              <span class="inline-block align-middle menu-item-text">
+                Projects
+              </span>
+            </Menu.menu_item>
+            <Menu.menu_item
+              to={~p"/settings/users"}
+              active={@active_menu_item == :users}
+              collapsed={assigns[:sidebar_collapsed] || false}
+              tooltip="Users"
+            >
+              <Heroicons.user_group class="h-5 w-5 inline-block mr-2" />
+              <span class="inline-block align-middle menu-item-text">Users</span>
+            </Menu.menu_item>
+            <Menu.menu_item
+              to={~p"/settings/authentication/new"}
+              active={@active_menu_item == :authentication}
+              collapsed={assigns[:sidebar_collapsed] || false}
+              tooltip="Authentication"
+            >
+              <Heroicons.key class="h-5 w-5 inline-block mr-2" />
+              <span class="inline-block align-middle menu-item-text">
+                Authentication
+              </span>
+            </Menu.menu_item>
+            <Menu.menu_item
+              to={~p"/settings/audit"}
+              active={@active_menu_item == :audit}
+              collapsed={assigns[:sidebar_collapsed] || false}
+              tooltip="Audit"
+            >
+              <Heroicons.archive_box class="h-5 w-5 inline-block mr-2" />
+              <span class="inline-block align-middle menu-item-text">Audit</span>
+            </Menu.menu_item>
+            <Menu.menu_item
+              to={~p"/settings/collections"}
+              active={@active_menu_item == :collections}
+              collapsed={assigns[:sidebar_collapsed] || false}
+              tooltip="Collections"
+            >
+              <Heroicons.circle_stack class="h-5 w-5 inline-block mr-2" />
+              <span class="inline-block align-middle menu-item-text">
+                Collections
+              </span>
+            </Menu.menu_item>
+            <div class="grow"></div>
+            <Menu.menu_item
+              to={~p"/projects"}
+              collapsed={assigns[:sidebar_collapsed] || false}
+              tooltip="Back"
+            >
+              <Icon.left class="h-5 w-5 inline-block mr-2" />
+              <span class="inline-block align-middle menu-item-text">Back</span>
+            </Menu.menu_item>
+          </div>
+          <div class="flex-shrink-0">
+            <div class="px-3 py-1 flex justify-center">
+              <span
+                :if={assigns[:sidebar_collapsed]}
+                id="openfn-logo-settings-tooltip"
+                phx-hook="Tooltip"
+                aria-label={Lightning.release().label}
+                data-placement="right"
+              >
+                <Icon.openfn_fn class="h-6 primary-light" />
+              </span>
+              <Common.openfn_logo
+                :if={!assigns[:sidebar_collapsed]}
+                class="h-6 primary-light"
+              />
+            </div>
+            <LightningWeb.Components.Common.version_chip :if={
+              !assigns[:sidebar_collapsed]
+            } />
+          </div>
+        </div>
+      </nav>
+    </div>
     <div class="flex-auto">
       <.live_info_block flash={@flash} />
       <.live_error_block flash={@flash} />
