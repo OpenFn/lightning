@@ -300,6 +300,44 @@
         }
       }
     }
+
+    /* Collapsed sidebar styles */
+    .menu-item-collapsed .menu-item-text {
+      display: none;
+    }
+
+    .menu-item-collapsed svg {
+      margin-right: 0;
+    }
+
+    /* Hide scrollbar in sidebar to prevent flash during transition */
+    & ::-webkit-scrollbar {
+      display: none;
+    }
+
+    & {
+      scrollbar-width: none; /* Firefox */
+      -ms-overflow-style: none; /* IE and Edge */
+    }
+  }
+
+  /* Sidebar header (logo container + toggle) - can be inside or outside #side-menu */
+  .app-logo-container,
+  .sidebar-toggle-btn {
+    background-color: var(--primary-bg-dark);
+    color: var(--primary-text);
+
+    &.secondary-variant {
+      --primary-bg: var(--color-blue-700);
+      --primary-text: white;
+      --primary-bg-dark: var(--color-blue-900);
+    }
+
+    &.sudo-variant {
+      --primary-bg: var(--color-slate-700);
+      --primary-text: white;
+      --primary-bg-dark: var(--color-slate-900);
+    }
   }
 
   /* Alerts and form errors used by phx.new */

@@ -21,6 +21,8 @@ import {
   AltRunViaCtrlShiftEnter,
   CloseInspectorPanelViaEscape,
   CloseNodePanelViaEscape,
+  OpenProjectPickerViaCtrlShiftP,
+  ToggleSidebarViaCtrlM,
 } from './KeyHandlers';
 import LogLineHighlight from './LogLineHighlight';
 import type { PhoenixHook } from './PhoenixHook';
@@ -47,6 +49,8 @@ export {
   AltRunViaCtrlShiftEnter,
   CloseInspectorPanelViaEscape,
   CloseNodePanelViaEscape,
+  OpenProjectPickerViaCtrlShiftP,
+  ToggleSidebarViaCtrlM,
   FileDropzone,
   CredentialSelector,
 };
@@ -82,7 +86,7 @@ export const Combobox = {
     this.input = this.el.querySelector('input')!;
     this.dropdown = this.el.querySelector('ul')!;
     this.options = Array.from(this.el.querySelectorAll('li'));
-    this.toggleButton = this.el.querySelector('button')!;
+    this.toggleButton = this.el.querySelector('button');
     this.highlightedIndex = -1;
     this.navigatingWithKeys = false;
     this.navigatingWithMouse = false;
@@ -93,7 +97,7 @@ export const Combobox = {
       this.debounce(e => this.handleInput(e), 300)
     );
     this.input.addEventListener('keydown', e => this.handleKeydown(e));
-    this.toggleButton.addEventListener('click', () => this.toggleDropdown());
+    this.toggleButton?.addEventListener('click', () => this.toggleDropdown());
 
     this.options.forEach((option, index) => {
       option.addEventListener('click', () =>
@@ -185,7 +189,7 @@ export const Combobox = {
     this.options.forEach(option => {
       const text = (option.textContent ?? '').toLowerCase();
       if (text.includes(lowercaseSearchTerm)) {
-        option.style.display = 'block';
+        option.style.display = '';
         hasVisibleOptions = true;
       } else {
         option.style.display = 'none';
