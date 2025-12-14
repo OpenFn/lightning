@@ -5,6 +5,7 @@ defmodule LightningWeb.LayoutComponents do
   import PetalComponents.Avatar
 
   alias LightningWeb.Components.Menu
+  alias Phoenix.LiveView.JS
 
   attr :current_user, Lightning.Accounts.User, required: true
   attr :collapsed, :boolean, default: false
@@ -23,8 +24,8 @@ defmodule LightningWeb.LayoutComponents do
     ~H"""
     <div
       class={["relative", !@collapsed && "w-full"]}
-      phx-click-away={Phoenix.LiveView.JS.hide(to: "##{@menu_id}")}
-      phx-window-keydown={Phoenix.LiveView.JS.hide(to: "##{@menu_id}")}
+      phx-click-away={JS.hide(to: "##{@menu_id}")}
+      phx-window-keydown={JS.hide(to: "##{@menu_id}")}
       phx-key="Escape"
     >
       <button
@@ -34,7 +35,7 @@ defmodule LightningWeb.LayoutComponents do
           @collapsed && "p-2"
         ]}
         phx-click={
-          Phoenix.LiveView.JS.toggle(
+          JS.toggle(
             to: "##{@menu_id}",
             in: "transition ease-out duration-100",
             out: "transition ease-in duration-75"
@@ -348,33 +349,33 @@ defmodule LightningWeb.LayoutComponents do
   end
 
   defp show_project_picker do
-    Phoenix.LiveView.JS.show(to: "#project-picker-modal")
-    |> Phoenix.LiveView.JS.show(
+    JS.show(to: "#project-picker-modal")
+    |> JS.show(
       to: "#project-picker-backdrop",
       transition:
         {"transition ease-out duration-200", "opacity-0", "opacity-100"}
     )
-    |> Phoenix.LiveView.JS.show(
+    |> JS.show(
       to: "#project-picker-content",
       transition:
         {"transition ease-out duration-200", "opacity-0 scale-95",
          "opacity-100 scale-100"}
     )
-    |> Phoenix.LiveView.JS.focus(to: "#project-picker-input")
+    |> JS.focus(to: "#project-picker-input")
   end
 
   defp hide_project_picker do
-    Phoenix.LiveView.JS.hide(
+    JS.hide(
       to: "#project-picker-backdrop",
       transition: {"transition ease-in duration-150", "opacity-100", "opacity-0"}
     )
-    |> Phoenix.LiveView.JS.hide(
+    |> JS.hide(
       to: "#project-picker-content",
       transition:
         {"transition ease-in duration-150", "opacity-100 scale-100",
          "opacity-0 scale-95"}
     )
-    |> Phoenix.LiveView.JS.hide(to: "#project-picker-modal", time: 150)
+    |> JS.hide(to: "#project-picker-modal", time: 150)
   end
 
   # https://play.tailwindcss.com/r7kBDT2cJY?layout=horizontal
@@ -568,14 +569,14 @@ defmodule LightningWeb.LayoutComponents do
       <div class="flex items-center">
         <div
           class="relative"
-          phx-click-away={Phoenix.LiveView.JS.hide(to: "##{@dropdown_id}")}
-          phx-window-keydown={Phoenix.LiveView.JS.hide(to: "##{@dropdown_id}")}
+          phx-click-away={JS.hide(to: "##{@dropdown_id}")}
+          phx-window-keydown={JS.hide(to: "##{@dropdown_id}")}
           phx-key="Escape"
         >
           <button
             class="flex items-center text-sm font-medium text-gray-500 hover:text-gray-700"
             phx-click={
-              Phoenix.LiveView.JS.toggle(
+              JS.toggle(
                 to: "##{@dropdown_id}",
                 in: "transition ease-out duration-100",
                 out: "transition ease-in duration-75"
