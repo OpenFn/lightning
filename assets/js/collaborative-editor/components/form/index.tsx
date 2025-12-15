@@ -61,17 +61,13 @@ export function useAppForm(
   const form = useBaseAppForm(formOptions);
 
   const isServerUpdate = useMemo(() => {
-    const storeState = formOptions.defaultValues as Record<string, unknown>;
     const previousState = prevStateRef.current as Record<string, unknown>;
     const currentState = form.state.values;
 
-    // isClientUpdate: storeState = currentState & currentState != previousState
-    // isServerUpdate: previousState = currentState & currentState != storeState
     const isServerUpdate =
-      deepEqual(previousState, currentState) &&
-      !deepEqual(currentState, storeState);
+      previousState === null ? true : deepEqual(previousState, currentState);
     return isServerUpdate;
-  }, [formOptions.defaultValues, form.state.values, prevStateRef]);
+  }, [form.state.values, prevStateRef]);
 
   useEffect(() => {
     const storeState = formOptions.defaultValues as Record<string, unknown>;

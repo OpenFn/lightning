@@ -26,6 +26,10 @@ and this project adheres to
 
 ### Fixed
 
+- Fix duplicate job name error stuck even when updated
+  [#4169](https://github.com/OpenFn/lightning/issues/4169)
+- Fix credential errors shown when credentials aren't set
+  [#4162](https://github.com/OpenFn/lightning/issues/4162)
 - Fix vertical alignment on enable/disable switch
   [#4211](https://github.com/OpenFn/lightning/issues/4211)
 - Fix run selection not persisting across page reload in collaborative editor
