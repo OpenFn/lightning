@@ -135,13 +135,16 @@ export const useHistoryCommands = () => {
 export const useFollowRun = (runId: string | null) => {
   const historyStore: HistoryStore = useHistoryStore();
   const run = useActiveRun();
+  const isHistoryChannelConnected = useHistoryChannelConnected();
 
   useEffect(() => {
-    if (runId) {
-      // Connect to run when runId provided
+    // Wait for channel to be connected before attempting to view run
+    // This prevents race conditions on page reload where runId is read
+    // from URL before the channel provider is ready
+    if (runId && isHistoryChannelConnected) {
       historyStore._viewRun(runId);
     }
-  }, [runId]);
+  }, [runId, isHistoryChannelConnected]);
 
   // There are no dependencies here - stable function reference from store and
   // clearRun is triggered by a user action.
@@ -288,12 +291,30 @@ export const useRunSteps = (runId: string | null): RunInfo | null => {
   // React's useId provides a stable identifier per component instance
   const componentId = useId();
 
+  // Debug: Log the conditions on every render to diagnose race conditions
+  logger.debug('useRunSteps: render', {
+    runId,
+    isHistoryChannelConnected,
+    workflowId,
+    hasWorkflow: !!workflow,
+  });
+
   // Subscribe to run steps with automatic cleanup
   // IMPORTANT: Wait for channel to be connected before subscribing
-  // This prevents race conditions when switching workflow versions
+  // This prevents race conditions on page reload
+  //
+  // NOTE: workflowId is NOT in dependencies because:
+  // 1. It's not used inside the effect
+  // 2. Having it causes subscribe/unsubscribe cycles when WorkflowStore connects,
+  //    which clears the cache and causes the diagram to briefly render without run data
   useEffect(() => {
     // Wait for both runId and channel connection
     if (!runId || !isHistoryChannelConnected) {
+      logger.debug('useRunSteps: skipping subscribe', {
+        runId,
+        isHistoryChannelConnected,
+        reason: !runId ? 'no runId' : 'channel not connected',
+      });
       return;
     }
 
@@ -304,7 +325,7 @@ export const useRunSteps = (runId: string | null): RunInfo | null => {
       logger.debug('useRunSteps: Unsubscribing', { runId, componentId });
       historyStore.unsubscribeFromRunSteps(runId, componentId);
     };
-  }, [runId, componentId, historyStore, workflowId, isHistoryChannelConnected]);
+  }, [runId, componentId, historyStore, isHistoryChannelConnected]);
 
   // Get raw data from store with subscription
   const selectRunSteps = useMemo(
@@ -322,8 +343,11 @@ export const useRunSteps = (runId: string | null): RunInfo | null => {
   );
 
   // Transform to RunInfo format for visualization
+  // Note: workflowId is not actually used by transformToRunInfo currently,
+  // so we don't block on it - this avoids a race condition where workflow
+  // hasn't loaded yet but we have valid run data to display
   return useMemo(() => {
-    if (!rawRunSteps || !workflowId) return null;
+    if (!rawRunSteps) return null;
     return transformToRunInfo(rawRunSteps, workflowId);
   }, [rawRunSteps, workflowId]);
 };

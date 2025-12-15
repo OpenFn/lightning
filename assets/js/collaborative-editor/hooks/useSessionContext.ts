@@ -326,7 +326,7 @@ export const useMarkAIDisclaimerRead = () => {
 };
 
 /**
- * Hook to access run limits from session context
+ * Hook to access limits from session context
  * Returns limits object (empty object if not set)
  */
 export const useLimits = (): Limits => {

@@ -735,7 +735,7 @@ describe('createHistoryStore', () => {
       expect(state.runStepsCache['run-111']).toBeDefined();
     });
 
-    test('unsubscribeFromRunSteps cleans up cache when last subscriber leaves', async () => {
+    test('unsubscribeFromRunSteps removes subscriber but preserves cache', async () => {
       store._connectChannel(mockChannelProvider as any);
 
       // Mock channel response
@@ -769,14 +769,20 @@ describe('createHistoryStore', () => {
       // Wait for fetch to complete
       await waitForCondition(() => !store.getSnapshot().isLoading);
 
+      // Verify cache is populated before unsubscribe
+      expect(store.getSnapshot().runStepsCache['run-222']).toBeDefined();
+
       // Unsubscribe
       store.unsubscribeFromRunSteps('run-222', 'component-solo');
 
       const state = store.getSnapshot();
 
-      // Verify everything cleaned up
+      // Subscriber tracking should be cleaned up
       expect(state.runStepsSubscribers['run-222']).toBeUndefined();
-      expect(state.runStepsCache['run-222']).toBeUndefined();
+      // Cache should be preserved (not cleared on unsubscribe)
+      // This prevents bugs with React StrictMode's double-mount cycle
+      expect(state.runStepsCache['run-222']).toBeDefined();
+      expect(state.runStepsCache['run-222']?.run_id).toBe('run-222');
     });
 
     test('handleHistoryUpdated invalidates cache for subscribed runs', async () => {
@@ -962,6 +968,112 @@ describe('createHistoryStore', () => {
       state = store.getSnapshot();
       expect(state.activeRun).toBeNull();
       expect(state.activeRunError).toBeNull();
+    });
+  });
+
+  describe('initial run data pre-population', () => {
+    test('createHistoryStore with initial run data pre-populates cache', () => {
+      const initialRunData: RunStepsData = {
+        run_id: 'server-provided-run',
+        steps: [
+          {
+            id: 'step-1',
+            job_id: 'job-1',
+            exit_reason: 'success',
+            error_type: null,
+            started_at: '2025-01-08T10:00:00Z',
+            finished_at: '2025-01-08T10:00:05Z',
+            input_dataclip_id: 'dc-1',
+          },
+        ],
+        metadata: {
+          starting_job_id: 'job-1',
+          starting_trigger_id: null,
+          inserted_at: '2025-01-08T10:00:00Z',
+          created_by_id: 'user-1',
+          created_by_email: 'user@example.com',
+        },
+      };
+
+      // Create store with initial data
+      const storeWithInitialData = createHistoryStore({
+        initialRunData,
+      });
+
+      const state = storeWithInitialData.getSnapshot();
+
+      // Cache should be pre-populated
+      expect(state.runStepsCache['server-provided-run']).toBeDefined();
+      expect(state.runStepsCache['server-provided-run']).toEqual(
+        initialRunData
+      );
+    });
+
+    test('createHistoryStore without initial data has empty cache', () => {
+      const storeWithoutInitialData = createHistoryStore();
+
+      const state = storeWithoutInitialData.getSnapshot();
+
+      // Cache should be empty
+      expect(Object.keys(state.runStepsCache)).toHaveLength(0);
+    });
+
+    test('createHistoryStore with null initial data has empty cache', () => {
+      const storeWithNullData = createHistoryStore({ initialRunData: null });
+
+      const state = storeWithNullData.getSnapshot();
+
+      // Cache should be empty
+      expect(Object.keys(state.runStepsCache)).toHaveLength(0);
+    });
+
+    test('pre-populated cache survives React StrictMode double-mount', async () => {
+      // This test simulates React StrictMode's mount-unmount-mount cycle
+      const initialRunData: RunStepsData = {
+        run_id: 'strict-mode-run',
+        steps: [],
+        metadata: {
+          starting_job_id: 'job-1',
+          starting_trigger_id: null,
+          inserted_at: '2025-01-08T10:00:00Z',
+          created_by_id: 'user-1',
+          created_by_email: 'user@example.com',
+        },
+      };
+
+      const storeWithInitialData = createHistoryStore({ initialRunData });
+
+      // First mount: subscribe
+      storeWithInitialData.subscribeToRunSteps(
+        'strict-mode-run',
+        'component-react'
+      );
+      expect(
+        storeWithInitialData.getSnapshot().runStepsCache['strict-mode-run']
+      ).toBeDefined();
+
+      // StrictMode unmount: unsubscribe
+      storeWithInitialData.unsubscribeFromRunSteps(
+        'strict-mode-run',
+        'component-react'
+      );
+
+      // Cache should still exist (not cleared on unsubscribe)
+      expect(
+        storeWithInitialData.getSnapshot().runStepsCache['strict-mode-run']
+      ).toBeDefined();
+
+      // Second mount: subscribe again
+      storeWithInitialData.subscribeToRunSteps(
+        'strict-mode-run',
+        'component-react'
+      );
+
+      // Cache should still be available
+      const finalState = storeWithInitialData.getSnapshot();
+      expect(finalState.runStepsCache['strict-mode-run']).toEqual(
+        initialRunData
+      );
     });
   });
 });

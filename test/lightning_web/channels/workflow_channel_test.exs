@@ -1072,6 +1072,42 @@ defmodule LightningWeb.WorkflowChannelTest do
         type: "workflow_deleted"
       }
     end
+
+    test "handles github sync limit error", %{
+      socket: socket,
+      project: project
+    } do
+      error_msg = "Github Sync is not enabled for your plan."
+      project_id = project.id
+
+      # Set up GitHub repo connection
+      insert(:project_repo_connection,
+        project: project,
+        repo: "openfn/demo",
+        branch: "main"
+      )
+
+      # Mock the usage limiter to return an error for github_sync
+      Mox.stub(
+        Lightning.Extensions.MockUsageLimiter,
+        :limit_action,
+        fn
+          %{type: :github_sync}, %{project_id: ^project_id} ->
+            {:error, :disabled, %Lightning.Extensions.Message{text: error_msg}}
+
+          _action, _context ->
+            :ok
+        end
+      )
+
+      ref =
+        push(socket, "save_and_sync", %{"commit_message" => "Test commit"})
+
+      assert_reply ref, :error, %{
+        errors: %{base: [^error_msg]},
+        type: "limit_error"
+      }
+    end
   end
 
   describe "validate_workflow_name" do
@@ -2738,7 +2774,13 @@ defmodule LightningWeb.WorkflowChannelTest do
 
       assert_reply ref, :ok, response
 
-      assert %{limits: %{runs: %{allowed: true, message: nil}}} = response
+      assert %{
+               limits: %{
+                 runs: %{allowed: true, message: nil},
+                 workflow_activation: %{allowed: true, message: nil},
+                 github_sync: %{allowed: true, message: nil}
+               }
+             } = response
     end
 
     test "includes limit error when run limit exceeded", %{
@@ -2750,9 +2792,13 @@ defmodule LightningWeb.WorkflowChannelTest do
       Mox.stub(
         Lightning.Extensions.MockUsageLimiter,
         :limit_action,
-        fn %{type: :new_run}, %{project_id: ^project_id} ->
-          {:error, :too_many_runs,
-           %Lightning.Extensions.Message{text: error_msg}}
+        fn
+          %{type: :new_run}, %{project_id: ^project_id} ->
+            {:error, :too_many_runs,
+             %Lightning.Extensions.Message{text: error_msg}}
+
+          _action, _context ->
+            :ok
         end
       )
 
@@ -2798,6 +2844,88 @@ defmodule LightningWeb.WorkflowChannelTest do
 
       assert %{
                action_type: "new_run",
+               limit: %{allowed: false, message: ^error_msg}
+             } = response
+    end
+
+    test "returns current limit status for activate_workflow", %{
+      socket: socket
+    } do
+      ref = push(socket, "get_limits", %{"action_type" => "activate_workflow"})
+
+      assert_reply ref, :ok, response
+
+      assert %{
+               action_type: "activate_workflow",
+               limit: %{allowed: true, message: nil}
+             } = response
+    end
+
+    test "returns allowed: false when workflow activation limit exceeded", %{
+      socket: socket,
+      project: %{id: project_id}
+    } do
+      error_msg = "Workflow activation limit exceeded"
+
+      Mox.stub(
+        Lightning.Extensions.MockUsageLimiter,
+        :limit_action,
+        fn
+          %{type: :activate_workflow}, %{project_id: ^project_id} ->
+            {:error, :limit_exceeded,
+             %Lightning.Extensions.Message{text: error_msg}}
+
+          _action, _context ->
+            :ok
+        end
+      )
+
+      ref = push(socket, "get_limits", %{"action_type" => "activate_workflow"})
+
+      assert_reply ref, :ok, response
+
+      assert %{
+               action_type: "activate_workflow",
+               limit: %{allowed: false, message: ^error_msg}
+             } = response
+    end
+
+    test "returns current limit status for github_sync", %{socket: socket} do
+      ref = push(socket, "get_limits", %{"action_type" => "github_sync"})
+
+      assert_reply ref, :ok, response
+
+      assert %{
+               action_type: "github_sync",
+               limit: %{allowed: true, message: nil}
+             } = response
+    end
+
+    test "returns allowed: false when github sync limit exceeded", %{
+      socket: socket,
+      project: %{id: project_id}
+    } do
+      error_msg = "GitHub sync limit exceeded"
+
+      Mox.stub(
+        Lightning.Extensions.MockUsageLimiter,
+        :limit_action,
+        fn
+          %{type: :github_sync}, %{project_id: ^project_id} ->
+            {:error, :limit_exceeded,
+             %Lightning.Extensions.Message{text: error_msg}}
+
+          _action, _context ->
+            :ok
+        end
+      )
+
+      ref = push(socket, "get_limits", %{"action_type" => "github_sync"})
+
+      assert_reply ref, :ok, response
+
+      assert %{
+               action_type: "github_sync",
                limit: %{allowed: false, message: ^error_msg}
              } = response
     end

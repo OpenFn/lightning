@@ -71,6 +71,8 @@ export const mockPermissions: Permissions = {
  */
 export const mockLimits: Limits = {
   runs: { allowed: true, message: null },
+  workflow_activation: { allowed: true, message: null },
+  github_sync: { allowed: true, message: null },
 };
 
 /**

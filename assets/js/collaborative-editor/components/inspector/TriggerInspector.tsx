@@ -60,11 +60,13 @@ export function TriggerInspector({
     [trigger.id, updateTrigger]
   );
 
-  // Determine toggle tooltip based on disabled state
+  // Determine toggle disabled state and tooltip
   const isToggleDisabled = !permissions?.can_edit_workflow || isReadOnly;
-  const toggleTooltip = isToggleDisabled
-    ? tooltipMessage || 'You do not have permission to edit this workflow'
-    : 'Enable or disable this trigger';
+
+  const toggleTooltip =
+    isReadOnly || !permissions?.can_edit_workflow
+      ? tooltipMessage || 'You do not have permission to edit this workflow'
+      : 'Enable or disable this trigger';
 
   // Build footer with enabled toggle and run button
   const footer = (

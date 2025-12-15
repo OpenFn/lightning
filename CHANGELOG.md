@@ -17,6 +17,11 @@ and this project adheres to
 
 ### Added
 
+- Enforce github sync, workflow activation and concurrency limits in the collab
+  editor [#4104](https://github.com/OpenFn/lightning/pull/4104)
+  [#4105](https://github.com/OpenFn/lightning/pull/4105)
+  [#4106](https://github.com/OpenFn/lightning/pull/4106)
+
 ### Changed
 
 ### Fixed
@@ -25,6 +30,10 @@ and this project adheres to
   [#4169](https://github.com/OpenFn/lightning/issues/4169)
 - Fix credential errors shown when credentials aren't set
   [#4162](https://github.com/OpenFn/lightning/issues/4162)
+- Fix vertical alignment on enable/disable switch
+  [#4211](https://github.com/OpenFn/lightning/issues/4211)
+- Fix run selection not persisting across page reload in collaborative editor
+  [#4188](https://github.com/OpenFn/lightning/issues/4188)
 - Fix error propagation on collab editor
   [#4069](https://github.com/OpenFn/lightning/issues/4069)
 - "Try the new editor" wasn't persisting properly to user preferences
