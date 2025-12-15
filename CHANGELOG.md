@@ -21,6 +21,8 @@ and this project adheres to
 
 ### Fixed
 
+- Fix duplicate job name error stuck even when updated
+  [#4169](https://github.com/OpenFn/lightning/issues/4169)
 - Fix credential errors shown when credentials aren't set
   [#4162](https://github.com/OpenFn/lightning/issues/4162)
 - Fix error propagation on collab editor
