@@ -34,6 +34,7 @@ const logger = _logger.ns('SessionProvider').seal();
 interface SessionContextValue {
   sessionStore: SessionStoreInstance;
   isNewWorkflow: boolean;
+  initialRunData?: string; // JSON-encoded RunStepsData from server
 }
 
 export const SessionContext = createContext<SessionContextValue | null>(null);
@@ -42,6 +43,7 @@ interface SessionProviderProps {
   workflowId: string;
   projectId: string;
   isNewWorkflow: boolean;
+  initialRunData?: string; // JSON-encoded RunStepsData from server
   children: React.ReactNode;
 }
 
@@ -49,6 +51,7 @@ export const SessionProvider = ({
   workflowId,
   projectId,
   isNewWorkflow,
+  initialRunData,
   children,
 }: SessionProviderProps) => {
   const { socket, isConnected } = useSocket();
@@ -193,8 +196,12 @@ export const SessionProvider = ({
   // Memoize context value to prevent unnecessary re-renders
   // isNewWorkflow can change from true to false after user saves
   const contextValue = useMemo(
-    () => ({ sessionStore, isNewWorkflow }),
-    [sessionStore, isNewWorkflow]
+    () => ({
+      sessionStore,
+      isNewWorkflow,
+      ...(initialRunData !== undefined && { initialRunData }),
+    }),
+    [sessionStore, isNewWorkflow, initialRunData]
   );
 
   return (

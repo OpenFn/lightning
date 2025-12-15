@@ -51,8 +51,12 @@
  *
  * ### Subscription-Based Caching
  * Components declare interest via subscribeToRunSteps(runId, componentId).
- * Store tracks subscribers per run and only caches actively watched runs.
- * Multiple components can subscribe to the same run.
+ * Store tracks subscribers per run. Multiple components can subscribe to the same run.
+ *
+ * ### Server-Side Cache Pre-population
+ * On page load with a run selected (URL has `?run=xxx`), the server provides
+ * initial run data via data attributes. This is passed to createHistoryStore()
+ * to pre-populate the cache, enabling instant rendering without loading flash.
  *
  * ### Selective Cache Invalidation
  * When history_updated event arrives with run changes:
@@ -60,12 +64,10 @@
  * - If yes: invalidate cache and trigger refetch
  * - If no: ignore (no components need fresh data)
  *
- * ### Automatic Memory Cleanup
- * When last subscriber unsubscribes from a run:
- * - Remove cached run steps
- * - Remove subscriber tracking
- * - Clear loading state
- * Prevents memory leaks in long-lived sessions.
+ * ### Cache Persistence
+ * Cache entries are NOT cleared when subscribers unsubscribe. This prevents
+ * bugs with React StrictMode's double-mount cycle. Cache is small (~1KB per run)
+ * and is cleaned up when the store is recreated on navigation.
  *
  * ### Request Deduplication
  * Tracks in-flight requests in runStepsLoading Set to prevent
@@ -106,10 +108,43 @@ import { wrapStoreWithDevTools } from './devtools';
 const logger = _logger.ns('HistoryStore').seal();
 
 /**
+ * Options for creating a history store
+ */
+interface CreateHistoryStoreOptions {
+  /**
+   * Initial run data from server to pre-populate cache.
+   *
+   * This eliminates race conditions on page reload by making run data available
+   * BEFORE React mounts, rather than fetching after channel connection.
+   *
+   * Server-provided data is protected from cache cleanup during React StrictMode's
+   * double-mount cycle (mount → unmount → remount), which would otherwise clear
+   * the cache between mounts.
+   */
+  initialRunData?: RunStepsData | null;
+}
+
+/**
  * Creates a history store instance with useSyncExternalStore +
  * Immer pattern
+ *
+ * @param options - Optional configuration including initial run data from server
  */
-export const createHistoryStore = (): HistoryStore => {
+export const createHistoryStore = (
+  options?: CreateHistoryStoreOptions
+): HistoryStore => {
+  const initialRunData = options?.initialRunData;
+
+  // Pre-populate cache with server-provided data for instant rendering on page load
+  const initialCache: Record<string, RunStepsData> = {};
+  if (initialRunData) {
+    logger.log('Initializing cache with server-provided run data', {
+      runId: initialRunData.run_id,
+      stepCount: initialRunData.steps?.length,
+    });
+    initialCache[initialRunData.run_id] = initialRunData;
+  }
+
   // Single Immer-managed state object (referentially stable)
   let state: HistoryState = produce(
     {
@@ -119,7 +154,7 @@ export const createHistoryStore = (): HistoryStore => {
       error: null,
       lastUpdated: null,
       isChannelConnected: false,
-      runStepsCache: {},
+      runStepsCache: initialCache,
       runStepsSubscribers: {},
       runStepsLoading: new Set(),
 
@@ -701,10 +736,13 @@ export const createHistoryStore = (): HistoryStore => {
       // Remove this component from subscribers
       subscribers.delete(subscriberId);
 
-      // Clean up if no more subscribers
+      // Clean up subscriber tracking if no more subscribers.
+      // NOTE: We intentionally do NOT clear runStepsCache here.
+      // Clearing cache on unsubscribe causes bugs with React StrictMode's
+      // double-mount cycle (mount → unmount → remount), which would clear
+      // the cache between mounts. The cache is small (~1KB per run) and is
+      // cleaned up when the store is recreated on navigation.
       if (subscribers.size === 0) {
-        // Use Reflect.deleteProperty for dynamically computed keys
-        Reflect.deleteProperty(draft.runStepsCache, runId);
         Reflect.deleteProperty(draft.runStepsSubscribers, runId);
         draft.runStepsLoading.delete(runId);
       }
