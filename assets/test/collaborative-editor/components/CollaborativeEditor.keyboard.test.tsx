@@ -221,6 +221,11 @@ vi.mock('../../../js/collaborative-editor/hooks/useSessionContext', () => ({
   useAppConfig: () => ({
     email_verification_enabled: false,
   }),
+  useLimits: () => ({
+    runs: { allowed: true, message: null },
+    workflow_activation: { allowed: true, message: null },
+    github_sync: { allowed: true, message: null },
+  }),
 }));
 
 // Mock workflow hooks with controllable node selection

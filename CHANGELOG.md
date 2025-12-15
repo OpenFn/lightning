@@ -17,6 +17,11 @@ and this project adheres to
 
 ### Added
 
+- Enforce github sync, workflow activation and concurrency limits in the collab
+  editor [#4104](https://github.com/OpenFn/lightning/pull/4104)
+  [#4105](https://github.com/OpenFn/lightning/pull/4105)
+  [#4106](https://github.com/OpenFn/lightning/pull/4106)
+
 ### Changed
 
 ### Fixed

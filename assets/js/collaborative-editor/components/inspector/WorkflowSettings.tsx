@@ -2,14 +2,17 @@ import { useMemo, useState } from 'react';
 
 import { useAppForm } from '#/collaborative-editor/components/form';
 import { createZodValidator } from '#/collaborative-editor/components/form/createZodValidator';
-import { usePermissions } from '#/collaborative-editor/hooks/useSessionContext';
+import {
+  usePermissions,
+  useProject,
+} from '#/collaborative-editor/hooks/useSessionContext';
 import {
   useWorkflowActions,
   useWorkflowReadOnly,
   useWorkflowState,
 } from '#/collaborative-editor/hooks/useWorkflow';
 import { notifications } from '#/collaborative-editor/lib/notifications';
-import { WorkflowSchema } from '#/collaborative-editor/types/workflow';
+import { createWorkflowSchema } from '#/collaborative-editor/types/workflow';
 import { useURLState } from '#/react/lib/use-url-state';
 
 import { AlertDialog } from '../AlertDialog';
@@ -23,8 +26,14 @@ export function WorkflowSettings() {
   const { updateWorkflow, resetWorkflow } = useWorkflowActions();
   const { isReadOnly } = useWorkflowReadOnly();
   const permissions = usePermissions();
+  const project = useProject();
 
   const { updateSearchParams } = useURLState();
+
+  const projectConcurrency = project?.concurrency ?? null;
+
+  // Check if project has concurrency disabled (concurrency === 1)
+  const isProjectConcurrencyDisabled = projectConcurrency === 1;
 
   const handleViewAsYAML = () => {
     updateSearchParams({ panel: 'code' });
@@ -55,7 +64,8 @@ export function WorkflowSettings() {
     listeners: {
       onChange: ({ formApi }) => {
         // Form → Y.Doc: Update workflow immediately on change
-        const { name, concurrency, enable_job_logs } = formApi.state.values;
+        const { name, concurrency, enable_job_logs } = formApi.state
+          .values as typeof defaultValues;
         updateWorkflow({
           name,
           concurrency,
@@ -64,7 +74,7 @@ export function WorkflowSettings() {
       },
     },
     validators: {
-      onChange: createZodValidator(WorkflowSchema),
+      onChange: createZodValidator(createWorkflowSchema(projectConcurrency)),
     },
   });
 
@@ -132,17 +142,36 @@ export function WorkflowSettings() {
         </p>
         <form.AppField name="concurrency">
           {field => (
-            <field.NumberField
-              label="Max Concurrency"
-              placeholder="Unlimited (up to max available)"
-              helpText={
-                field.state.value === null
-                  ? 'Unlimited (up to max available)'
-                  : undefined
-              }
-              min={1}
-              disabled={isReadOnly}
-            />
+            <>
+              <field.NumberField
+                label="Max Concurrency"
+                placeholder="Unlimited (up to max available)"
+                helpText={
+                  field.state.value === null
+                    ? 'Unlimited (up to max available)'
+                    : undefined
+                }
+                min={1}
+                max={projectConcurrency ?? undefined}
+                disabled={isReadOnly || isProjectConcurrencyDisabled}
+              />
+              {isProjectConcurrencyDisabled && (
+                <div className="text-xs mt-2">
+                  <div className="italic text-gray-500">
+                    Parallel execution of runs is disabled for this project.
+                    This setting will have no effect. You can modify your
+                    Project Concurrency setting on the{' '}
+                    <a
+                      href={`/projects/${project?.id}/settings`}
+                      className="text-indigo-600 hover:text-indigo-500 underline"
+                    >
+                      project setup
+                    </a>{' '}
+                    page.
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </form.AppField>
       </div>

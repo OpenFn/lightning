@@ -23,6 +23,7 @@ defmodule Lightning.Collaboration.Session do
   alias Lightning.Accounts.User
   alias Lightning.Collaboration.WorkflowSerializer
   alias Lightning.Workflows.Presence
+  alias Lightning.Workflows.WorkflowUsageLimiter
   alias Yex.Sync.SharedDoc
 
   require Logger
@@ -310,6 +311,7 @@ defmodule Lightning.Collaboration.Session do
          {:ok, workflow} <- fetch_workflow(state.workflow),
          changeset <-
            Lightning.Workflows.change_workflow(workflow, workflow_data),
+         :ok <- WorkflowUsageLimiter.limit_workflow_activation(changeset),
          {:ok, saved_workflow} <-
            Lightning.Workflows.save_workflow(changeset, user,
              skip_reconcile: true
@@ -334,6 +336,9 @@ defmodule Lightning.Collaboration.Session do
         )
 
         {:reply, {:error, :deserialization_failed}, state}
+
+      {:error, _, %Lightning.Extensions.Message{} = message} ->
+        {:reply, {:error, message}, state}
 
       {:error, :workflow_deleted} ->
         Logger.warning(

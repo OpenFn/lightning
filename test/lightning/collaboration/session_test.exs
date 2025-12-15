@@ -10,6 +10,7 @@ defmodule Lightning.SessionTest do
   import Eventually
   import Lightning.Factories
   import Lightning.CollaborationHelpers
+  import Mox
 
   alias Lightning.Collaboration.DocumentState
   alias Lightning.Collaboration.DocumentSupervisor
@@ -25,6 +26,8 @@ defmodule Lightning.SessionTest do
     user = insert(:user)
     {:ok, user: user}
   end
+
+  setup :verify_on_exit!
 
   describe "start/1" do
     test "start_link/1 returns an error when the SharedDoc doesn't exist", %{
@@ -813,6 +816,51 @@ defmodule Lightning.SessionTest do
 
       # Save should fail
       assert {:error, :workflow_deleted} = Session.save_workflow(session, user)
+    end
+
+    test "handles workflow activation limit error", %{
+      session: session,
+      user: user,
+      project: project
+    } do
+      error_msg = "Workflow activation limit exceeded"
+      project_id = project.id
+
+      # Mock the usage limiter to return an error
+      stub(
+        Lightning.Extensions.MockUsageLimiter,
+        :limit_action,
+        fn
+          %{type: :activate_workflow}, %{project_id: ^project_id} ->
+            {:error, :limit_exceeded,
+             %Lightning.Extensions.Message{text: error_msg}}
+
+          _action, _context ->
+            :ok
+        end
+      )
+
+      # Get Y.Doc and modify workflow to enable it
+      doc = Session.get_doc(session)
+      triggers_array = Yex.Doc.get_array(doc, "triggers")
+
+      # Add a trigger and enable it
+      trigger_id = Ecto.UUID.generate()
+
+      trigger_data =
+        Yex.MapPrelim.from(%{
+          "id" => trigger_id,
+          "type" => "webhook",
+          "enabled" => true
+        })
+
+      Yex.Doc.transaction(doc, "test_enable_workflow", fn ->
+        Yex.Array.push(triggers_array, trigger_data)
+      end)
+
+      # Save should fail with limit error
+      assert {:error, %Lightning.Extensions.Message{text: ^error_msg}} =
+               Session.save_workflow(session, user)
     end
 
     test "saves all workflow components correctly", %{
