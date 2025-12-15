@@ -298,9 +298,13 @@ describe('useValidation', () => {
       // Wait for debounced write (500ms)
       await waitFor(
         () => {
-          expect(mockSetClientErrors).toHaveBeenCalledWith('workflow', {
-            name: ['Name is too short'],
-          });
+          expect(mockSetClientErrors).toHaveBeenCalledWith(
+            'workflow',
+            {
+              name: ['Name is too short'],
+            },
+            false
+          );
         },
         { timeout: 1000 }
       );
@@ -329,9 +333,13 @@ describe('useValidation', () => {
       // Wait for debounced write
       await waitFor(
         () => {
-          expect(mockSetClientErrors).toHaveBeenCalledWith('jobs.job-123', {
-            body: ['Body is required'],
-          });
+          expect(mockSetClientErrors).toHaveBeenCalledWith(
+            'jobs.job-123',
+            {
+              body: ['Body is required'],
+            },
+            false
+          );
         },
         { timeout: 1000 }
       );
@@ -363,9 +371,13 @@ describe('useValidation', () => {
       // Wait for debounced write
       await waitFor(
         () => {
-          expect(mockSetClientErrors).toHaveBeenCalledWith('workflow', {
-            name: ['[object Object]', '123', 'null'],
-          });
+          expect(mockSetClientErrors).toHaveBeenCalledWith(
+            'workflow',
+            {
+              name: ['[object Object]', '123', 'null'],
+            },
+            false
+          );
         },
         { timeout: 1000 }
       );
@@ -396,9 +408,13 @@ describe('useValidation', () => {
       // Should send empty array to clear the field
       await waitFor(
         () => {
-          expect(mockSetClientErrors).toHaveBeenCalledWith('workflow', {
-            name: [],
-          });
+          expect(mockSetClientErrors).toHaveBeenCalledWith(
+            'workflow',
+            {
+              name: [],
+            },
+            false
+          );
         },
         { timeout: 1000 }
       );
@@ -428,10 +444,14 @@ describe('useValidation', () => {
       // Should send empty arrays for both fields
       await waitFor(
         () => {
-          expect(mockSetClientErrors).toHaveBeenCalledWith('workflow', {
-            name: [],
-            body: [],
-          });
+          expect(mockSetClientErrors).toHaveBeenCalledWith(
+            'workflow',
+            {
+              name: [],
+              body: [],
+            },
+            false
+          );
         },
         { timeout: 1000 }
       );

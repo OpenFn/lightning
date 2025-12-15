@@ -5,8 +5,8 @@
  * - Renders when not dismissed
  * - Hides when dismissed (via cookie)
  * - Cookie read/write functionality
- * - URL building logic for different paths and query params
  * - Dismiss button functionality
+ * - pushEvent called for navigation
  */
 
 import { fireEvent, render, screen } from '@testing-library/react';
@@ -17,13 +17,6 @@ import { CollaborativeEditorPromoBanner } from '../../js/workflow-diagram/Collab
 // =============================================================================
 // TEST SETUP & FIXTURES
 // =============================================================================
-
-const mockLocation = (pathname: string, search: string = '') => {
-  Object.defineProperty(window, 'location', {
-    value: { pathname, search },
-    writable: true,
-  });
-};
 
 const getCookie = (name: string): string | null => {
   const value = `; ${document.cookie}`;
@@ -40,8 +33,6 @@ describe('CollaborativeEditorPromoBanner', () => {
   beforeEach(() => {
     // Clear cookies before each test
     document.cookie = `${COOKIE_NAME}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/`;
-    // Set default location
-    mockLocation('/projects/proj-123/w/workflow-456');
   });
 
   afterEach(() => {
@@ -141,92 +132,33 @@ describe('CollaborativeEditorPromoBanner', () => {
   });
 
   // ===========================================================================
-  // URL BUILDING TESTS
+  // NAVIGATION TESTS
   // ===========================================================================
 
-  describe('URL building', () => {
-    test('builds correct URL for existing workflow', () => {
-      mockLocation('/projects/proj-123/w/workflow-456');
+  describe('navigation', () => {
+    test('calls pushEvent when banner button is clicked', () => {
+      const mockPushEvent = vi.fn();
+      render(<CollaborativeEditorPromoBanner pushEvent={mockPushEvent} />);
 
-      render(<CollaborativeEditorPromoBanner />);
+      const bannerButton = screen.getByRole('button', {
+        name: /Try the new collaborative editor/,
+      });
+      fireEvent.click(bannerButton);
 
-      const link = screen.getByRole('link');
-      expect(link).toHaveAttribute(
-        'href',
-        '/projects/proj-123/w/workflow-456/collaborate'
+      expect(mockPushEvent).toHaveBeenCalledWith(
+        'toggle_collaborative_editor',
+        {}
       );
     });
 
-    test('builds correct URL for new workflow', () => {
-      mockLocation('/projects/proj-123/w/new');
-
+    test('does not error when pushEvent is not provided', () => {
       render(<CollaborativeEditorPromoBanner />);
 
-      const link = screen.getByRole('link');
-      expect(link).toHaveAttribute(
-        'href',
-        '/projects/proj-123/w/new/collaborate'
-      );
-    });
-
-    test('preserves "a" (run) query param', () => {
-      mockLocation('/projects/proj-123/w/workflow-456', '?a=run-789');
-
-      render(<CollaborativeEditorPromoBanner />);
-
-      const link = screen.getByRole('link');
-      expect(link).toHaveAttribute(
-        'href',
-        '/projects/proj-123/w/workflow-456/collaborate?a=run-789'
-      );
-    });
-
-    test('preserves "v" (version) query param', () => {
-      mockLocation('/projects/proj-123/w/workflow-456', '?v=5');
-
-      render(<CollaborativeEditorPromoBanner />);
-
-      const link = screen.getByRole('link');
-      expect(link).toHaveAttribute(
-        'href',
-        '/projects/proj-123/w/workflow-456/collaborate?v=5'
-      );
-    });
-
-    test('preserves both "a" and "v" query params', () => {
-      mockLocation('/projects/proj-123/w/workflow-456', '?a=run-789&v=5');
-
-      render(<CollaborativeEditorPromoBanner />);
-
-      const link = screen.getByRole('link');
-      expect(link).toHaveAttribute(
-        'href',
-        '/projects/proj-123/w/workflow-456/collaborate?a=run-789&v=5'
-      );
-    });
-
-    test('ignores other query params', () => {
-      mockLocation(
-        '/projects/proj-123/w/workflow-456',
-        '?a=run-789&other=value&v=5'
-      );
-
-      render(<CollaborativeEditorPromoBanner />);
-
-      const link = screen.getByRole('link');
-      expect(link).toHaveAttribute(
-        'href',
-        '/projects/proj-123/w/workflow-456/collaborate?a=run-789&v=5'
-      );
-    });
-
-    test('falls back to /projects for unrecognized paths', () => {
-      mockLocation('/some/other/path');
-
-      render(<CollaborativeEditorPromoBanner />);
-
-      const link = screen.getByRole('link');
-      expect(link).toHaveAttribute('href', '/projects');
+      const bannerButton = screen.getByRole('button', {
+        name: /Try the new collaborative editor/,
+      });
+      // Should not throw
+      expect(() => fireEvent.click(bannerButton)).not.toThrow();
     });
   });
 });

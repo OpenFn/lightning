@@ -23,6 +23,10 @@ and this project adheres to
 
 - Fix run selection not persisting across page reload in collaborative editor
   [#4188](https://github.com/OpenFn/lightning/issues/4188)
+- Fix error propagation on collab editor
+  [#4069](https://github.com/OpenFn/lightning/issues/4069)
+- "Try the new editor" wasn't persisting properly to user preferences
+  [#4199](https://github.com/OpenFn/lightning/issues/4199)
 
 ## [2.15.0-pre5] - 2025-12-13 🎂 ❤️ Happy Birthday, Mom!
 

@@ -9,8 +9,7 @@
  * - Dark themed design matching Tailwind sticky banner pattern
  * - Dismissible via X button
  * - Persists dismissal in cookies for 90 days
- * - Extracts projectId and workflowId from window.location.pathname
- * - Preserves 'a' (run) and 'v' (version) query params when navigating
+ * - Navigation handled by LiveView via toggle_collaborative_editor pushEvent
  */
 
 import { useState, useEffect } from 'react';
@@ -19,6 +18,9 @@ import { cn } from '#/utils/cn';
 
 interface CollaborativeEditorPromoBannerProps {
   className?: string;
+  pushEvent?:
+    | ((name: string, payload: Record<string, unknown>) => void)
+    | undefined;
 }
 
 const COOKIE_NAME = 'openfn_collaborative_editor_promo_dismissed';
@@ -41,6 +43,7 @@ function setCookie(name: string, value: string, days: number): void {
 
 export function CollaborativeEditorPromoBanner({
   className,
+  pushEvent,
 }: CollaborativeEditorPromoBannerProps) {
   const [dismissed, setDismissed] = useState(false);
 
@@ -53,40 +56,6 @@ export function CollaborativeEditorPromoBanner({
   const handleDismiss = () => {
     setCookie(COOKIE_NAME, 'true', COOKIE_EXPIRY_DAYS);
     setDismissed(true);
-  };
-
-  const buildCollaborativeUrl = (): string => {
-    // Extract projectId and workflowId from current URL
-    // URL pattern: /projects/{projectId}/w/{workflowId} or /projects/{projectId}/w/new
-    const pathname = window.location.pathname;
-    const match = pathname.match(/\/projects\/([^/]+)\/w\/([^/]+)/);
-
-    if (!match) {
-      // Fallback - shouldn't happen in practice
-      return '/projects';
-    }
-
-    const [, projectId, workflowId] = match;
-
-    // Build base URL
-    const basePath =
-      workflowId === 'new'
-        ? `/projects/${projectId}/w/new/collaborate`
-        : `/projects/${projectId}/w/${workflowId}/collaborate`;
-
-    // Preserve 'a' (run) and 'v' (version) query params
-    const searchParams = new URLSearchParams(window.location.search);
-    const preservedParams = new URLSearchParams();
-
-    if (searchParams.has('a')) {
-      preservedParams.set('a', searchParams.get('a')!);
-    }
-    if (searchParams.has('v')) {
-      preservedParams.set('v', searchParams.get('v')!);
-    }
-
-    const queryString = preservedParams.toString();
-    return queryString ? `${basePath}?${queryString}` : basePath;
   };
 
   if (dismissed) {
@@ -103,22 +72,24 @@ export function CollaborativeEditorPromoBanner({
       aria-live="polite"
     >
       <div className="pointer-events-auto flex items-center gap-x-4 bg-primary-700 px-6 py-2.5 rounded-xl sm:py-3 sm:pr-3.5 sm:pl-4">
-        <p className="text-sm/6 text-white">
-          <a href={buildCollaborativeUrl()}>
-            <strong className="font-semibold">
-              Try the new collaborative editor
-            </strong>
-            <svg
-              viewBox="0 0 2 2"
-              aria-hidden="true"
-              className="mx-2 inline size-0.5 fill-current"
-            >
-              <circle r={1} cx={1} cy={1} />
-            </svg>
-            Real-time editing with your team&nbsp;
-            <span aria-hidden="true">&rarr;</span>
-          </a>
-        </p>
+        <button
+          type="button"
+          onClick={() => pushEvent?.('toggle_collaborative_editor', {})}
+          className="text-sm/6 text-white cursor-pointer"
+        >
+          <strong className="font-semibold">
+            Try the new collaborative editor
+          </strong>
+          <svg
+            viewBox="0 0 2 2"
+            aria-hidden="true"
+            className="mx-2 inline size-0.5 fill-current"
+          >
+            <circle r={1} cx={1} cy={1} />
+          </svg>
+          Real-time editing with your team&nbsp;
+          <span aria-hidden="true">&rarr;</span>
+        </button>
         <button
           type="button"
           onClick={handleDismiss}
