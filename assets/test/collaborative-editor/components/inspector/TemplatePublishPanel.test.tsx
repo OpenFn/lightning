@@ -231,8 +231,9 @@ describe('TemplatePublishPanel', () => {
       const nameInput = screen.getByLabelText('Name');
       const longName = 'a'.repeat(256);
 
+      // Use paste instead of type to avoid timeout on CI (256 keystrokes is slow)
       await user.clear(nameInput);
-      await user.type(nameInput, longName);
+      await user.paste(longName);
 
       await waitFor(() => {
         expect(
@@ -266,8 +267,8 @@ describe('TemplatePublishPanel', () => {
       render(<TemplatePublishPanel />);
 
       const tagsInput = screen.getByLabelText('Tags');
-      // Use paste for faster execution on CI
-      await user.click(tagsInput);
+      // Use clear + paste to prevent state leak from previous tests
+      await user.clear(tagsInput);
       await user.paste('tag1, tag2 , tag3');
 
       // Tags should be displayed as chips
@@ -310,8 +311,8 @@ describe('TemplatePublishPanel', () => {
       render(<TemplatePublishPanel />);
 
       const tagsInput = screen.getByLabelText('Tags');
-      // Use paste for faster execution on CI
-      await user.click(tagsInput);
+      // Use clear + paste to prevent state leak from previous tests
+      await user.clear(tagsInput);
       await user.paste('tag1,,tag2, ,tag3');
 
       // Only non-empty tags should be displayed
