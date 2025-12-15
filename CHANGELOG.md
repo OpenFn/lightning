@@ -26,6 +26,8 @@ and this project adheres to
 
 ### Fixed
 
+- Fix run selection not persisting across page reload in collaborative editor
+  [#4188](https://github.com/OpenFn/lightning/issues/4188)
 - Fix issue where selected step wasn't synced with selected workflow job
   [#4189](https://github.com/OpenFn/lightning/issues/4189)
 - Fix job updates not persisted after saving
