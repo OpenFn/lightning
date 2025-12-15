@@ -1201,7 +1201,7 @@ export const createWorkflowStore = () => {
   const setClientErrors = (
     path: string,
     errors: Record<string, string[]>,
-    isServerUpdates: boolean = false
+    isServerUpdate: boolean = false
   ) => {
     logger.debug('setClientErrors called (before debounce)', {
       path,
@@ -1280,8 +1280,8 @@ export const createWorkflowStore = () => {
       // This ensures that when a user edits a field with server errors,
       // their client validation takes precedence
       // if isServerUpdates give server errors priority
-      const baseErrors = isServerUpdates ? errors : currentErrors;
-      const priorityErrors = isServerUpdates ? currentErrors : errors;
+      const baseErrors = isServerUpdate ? errors : currentErrors;
+      const priorityErrors = isServerUpdate ? currentErrors : errors;
       const mergedErrors = produce(baseErrors, draft => {
         Object.entries(priorityErrors).forEach(([fieldName, newMessages]) => {
           if (newMessages.length === 0) {
