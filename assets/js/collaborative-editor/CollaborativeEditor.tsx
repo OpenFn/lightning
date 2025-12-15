@@ -35,6 +35,8 @@ export interface CollaborativeEditorDataProps {
   'data-root-project-id'?: string;
   'data-root-project-name'?: string;
   'data-is-new-workflow'?: string;
+  // Initial run data from server to avoid client-side race conditions
+  'data-initial-run-data'?: string; // JSON-encoded RunStepsData
 }
 
 /**
@@ -156,6 +158,7 @@ export const CollaborativeEditor: WithActionProps<
   const rootProjectId = props['data-root-project-id'] ?? null;
   const rootProjectName = props['data-root-project-name'] ?? null;
   const isNewWorkflow = props['data-is-new-workflow'] === 'true';
+  const initialRunData = props['data-initial-run-data'];
 
   const liveViewActions = {
     pushEvent: props.pushEvent,
@@ -175,6 +178,7 @@ export const CollaborativeEditor: WithActionProps<
             workflowId={workflowId}
             projectId={projectId}
             isNewWorkflow={isNewWorkflow}
+            {...(initialRunData !== undefined && { initialRunData })}
           >
             <StoreProvider>
               <LiveViewActionsProvider actions={liveViewActions}>
