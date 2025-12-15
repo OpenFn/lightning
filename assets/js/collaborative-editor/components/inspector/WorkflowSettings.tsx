@@ -78,26 +78,6 @@ export function WorkflowSettings() {
     },
   });
 
-<<<<<<< HEAD
-=======
-  // Yjs → Form: Watch for external changes
-  useWatchFields(
-    workflow,
-    changedFields => {
-      const values = form.state.values as typeof defaultValues;
-      Object.entries(changedFields).forEach(([key, value]) => {
-        if (key in values) {
-          const fieldName = key as keyof typeof defaultValues;
-          form.setFieldValue(fieldName, value);
-          // Revalidate if field previously had errors (fixes Ctrl+Z clearing)
-          void form.validateField(fieldName, 'change');
-        }
-      });
-    },
-    ['name', 'concurrency', 'enable_job_logs']
-  );
-
->>>>>>> 43cfaa977b (feat: Add project concurrency validation to workflow settings)
   const handleReset = async () => {
     setIsResetting(true);
     try {
