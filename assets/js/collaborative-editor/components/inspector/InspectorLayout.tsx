@@ -36,17 +36,18 @@ export function InspectorLayout({
 }: InspectorLayoutProps) {
   return (
     <div
-      className="pointer-events-auto w-screen max-w-md h-full flex items-start justify-end p-6"
+      className="pointer-events-auto w-screen max-w-md flex items-start justify-end p-6"
+      style={{ height: '100%', maxHeight: 'calc(100vh - 5rem)' }}
       data-testid={dataTestId}
     >
       <div
         className={`relative flex flex-col bg-white shadow-sm rounded-lg w-full ${
-          fixedHeight
-            ? 'h-[600px] max-h-full'
-            : fullHeight
-              ? 'max-h-full min-h-0'
-              : 'max-h-full'
+          fixedHeight ? 'h-[600px]' : ''
         }`}
+        style={{
+          maxHeight: fixedHeight ? undefined : 'calc(100vh - 8rem)',
+          minHeight: 0,
+        }}
       >
         {/* Header */}
         <div className="px-6 py-4 border-b border-gray-200">

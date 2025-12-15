@@ -41,6 +41,39 @@ export const WorkflowSchema = z.object({
 
 export type WorkflowFormValues = z.infer<typeof WorkflowSchema>;
 
+/**
+ * Creates a workflow schema with dynamic project concurrency validation
+ *
+ * @param projectConcurrency - The project's max concurrency limit (null = unlimited)
+ * @returns Zod schema with appropriate concurrency validation
+ */
+export function createWorkflowSchema(projectConcurrency: number | null) {
+  return z.object({
+    id: z.string().uuid(),
+    name: z
+      .string()
+      .min(1, "can't be blank")
+      .max(255, 'should be at most 255 character(s)'),
+    lock_version: z.number().int(),
+    deleted_at: z.string().nullable(),
+
+    concurrency:
+      projectConcurrency !== null
+        ? z
+            .number()
+            .int()
+            .min(1, 'must be at least 1')
+            .max(
+              projectConcurrency,
+              `must not exceed project limit of ${projectConcurrency}`
+            )
+            .nullable()
+            .optional()
+        : z.number().int().min(1, 'must be at least 1').nullable().optional(),
+    enable_job_logs: z.boolean().optional(),
+  });
+}
+
 export interface Workflow extends Session.Workflow {
   jobs: Workflow.Job[];
   triggers: Workflow.Trigger[];

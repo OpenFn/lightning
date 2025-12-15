@@ -4,11 +4,11 @@ import { useFieldContext } from '.';
 
 interface NumberFieldProps {
   label: string;
-  placeholder?: string;
-  disabled?: boolean;
-  min?: number;
-  max?: number;
-  helpText?: string;
+  placeholder?: string | undefined;
+  disabled?: boolean | undefined;
+  min?: number | undefined;
+  max?: number | undefined;
+  helpText?: string | undefined;
 }
 
 /**

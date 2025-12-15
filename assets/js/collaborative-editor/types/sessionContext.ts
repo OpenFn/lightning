@@ -16,6 +16,7 @@ export const UserContextSchema = z.object({
 export const ProjectContextSchema = z.object({
   id: uuidSchema,
   name: z.string(),
+  concurrency: z.number().int().nullable().optional(),
   env: z.string().nullable().optional(),
 });
 
