@@ -113,6 +113,7 @@ export const WorkflowEditor: WithActionProps<{
       snapshotVersionTag={props.snapshotVersionTag}
       aiAssistantEnabled={props.aiAssistantEnabled}
       liveAction={props.liveAction}
+      pushEvent={props.pushEvent}
     />
   );
 };
