@@ -176,6 +176,21 @@ vi.mock('../../../js/collaborative-editor/components/LoadingBoundary', () => ({
   ),
 }));
 
+// Mock CredentialModalContext
+vi.mock(
+  '../../../js/collaborative-editor/contexts/CredentialModalContext',
+  () => ({
+    CredentialModalProvider: ({ children }: { children: React.ReactNode }) =>
+      children,
+    useCredentialModal: () => ({
+      openCredentialModal: vi.fn(),
+      isCredentialModalOpen: false,
+      onModalClose: vi.fn(() => vi.fn()),
+      onCredentialSaved: vi.fn(() => vi.fn()),
+    }),
+  })
+);
+
 // Create controllable mocks
 const mockSelectNode = vi.fn();
 const urlState = createMockURLState();

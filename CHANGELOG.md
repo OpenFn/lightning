@@ -19,6 +19,17 @@ and this project adheres to
 
 ### Changed
 
+### Fixed
+
+- Fix run selection not persisting across page reload in collaborative editor
+  [#4188](https://github.com/OpenFn/lightning/issues/4188)
+
+## [2.15.0-pre5] - 2025-12-13 🎂 ❤️ Happy Birthday, Mom!
+
+### Added
+
+### Changed
+
 - Improve version pinning behavior in collaborative editor
   [#4121](https://github.com/OpenFn/lightning/issues/4121)
 - Unify disabled button states across collaborative editor for consistent
@@ -26,8 +37,9 @@ and this project adheres to
 
 ### Fixed
 
-- Fix run selection not persisting across page reload in collaborative editor
-  [#4188](https://github.com/OpenFn/lightning/issues/4188)
+- Fix IDE crash when viewing jobs that don't exist in workflow version - now
+  shows informative message with option to select another job or change versions
+  [#4173](https://github.com/OpenFn/lightning/issues/4173)
 - Fix issue where selected step wasn't synced with selected workflow job
   [#4189](https://github.com/OpenFn/lightning/issues/4189)
 - Fix job updates not persisted after saving
@@ -48,7 +60,11 @@ and this project adheres to
 - Fix saving workflow with same name as deleted workflow
   [#4165](https://github.com/OpenFn/lightning/pull/4165)
 - Fix validation error states not changing after undo (Ctrl+Z) on Workflow
-  Settings [#4182](https://github.com/OpenFn/lightning/issues/4182)
+  Settings [#4182](https://github.com/OpenFn/lightning/issues/4182))
+- Fix credential modal stacking issue in collaborative editor IDE
+  [#4171](https://github.com/OpenFn/lightning/issues/4171)
+- Fix adaptor picker Escape key returning to configure modal when opened
+  directly [#4183](https://github.com/OpenFn/lightning/issues/4183)
 
 ## [2.15.0-pre4] - 2025-12-08
 
