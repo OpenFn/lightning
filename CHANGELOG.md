@@ -22,7 +22,7 @@ and this project adheres to
 ### Fixed
 
 - Fix error propagation on collab editor
-  [#4187](https://github.com/OpenFn/lightning/pull/4187)
+  [#4069](https://github.com/OpenFn/lightning/issues/4069)
 - "Try the new editor" wasn't persisting properly to user preferences
   [#4199](https://github.com/OpenFn/lightning/issues/4199)
 
