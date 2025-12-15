@@ -135,7 +135,6 @@ const jobs = useWorkflowSelector(selector);
 
 - Use TanStack Form for all forms
 - Integrate Zod for validation schemas
-- Use useWatchFields for bidirectional sync with Y.Doc
 - Handle form state separately from Y.Doc state
 - Debounce updates to Y.Doc to avoid excessive transactions
 

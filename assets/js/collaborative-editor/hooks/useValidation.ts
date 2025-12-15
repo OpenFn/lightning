@@ -44,7 +44,11 @@ const NO_ERRORS = {};
  *     - "jobs.abc-123" → job-specific errors
  *     - "triggers.xyz-789" → trigger-specific errors
  */
-export function useValidation(form: FormInstance, errorPath?: string) {
+export function useValidation(
+  form: FormInstance,
+  errorPath?: string,
+  isServerUpdate: boolean = false
+) {
   const { setClientErrors } = useWorkflowActions();
 
   // Read stable errors from store (Immer provides referential stability)
@@ -108,7 +112,7 @@ export function useValidation(form: FormInstance, errorPath?: string) {
       });
 
       // Write to store (debounced, with merge+dedupe)
-      setClientErrors(errorPath || 'workflow', clientErrors);
+      setClientErrors(errorPath || 'workflow', clientErrors, isServerUpdate);
     });
 
     return () => unsubscribe();
