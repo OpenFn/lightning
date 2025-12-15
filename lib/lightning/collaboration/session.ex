@@ -603,8 +603,7 @@ defmodule Lightning.Collaboration.Session do
 
         # Convert merged errors to Y.js compatible types before setting
         Enum.each(merged_errors, fn {field, value} ->
-          yjs_value = convert_to_yjs_value(value)
-          Yex.Map.set(errors_map, to_string(field), yjs_value)
+          Yex.Map.set(errors_map, to_string(field), value)
         end)
       end)
     end)
@@ -754,20 +753,4 @@ defmodule Lightning.Collaboration.Session do
       end
     end)
   end
-
-  # Recursively convert nested maps to Y.js compatible MapPrelim
-  defp convert_to_yjs_value(value) when is_map(value) do
-    Yex.MapPrelim.from(
-      Map.new(value, fn {key, val} ->
-        {to_string(key), convert_to_yjs_value(val)}
-      end)
-    )
-  end
-
-  # Convert lists to Y.js compatible ArrayPrelim
-  defp convert_to_yjs_value(value) when is_list(value) do
-    Yex.ArrayPrelim.from(Enum.map(value, &convert_to_yjs_value/1))
-  end
-
-  defp convert_to_yjs_value(value), do: value
 end
