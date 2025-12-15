@@ -26,6 +26,8 @@ and this project adheres to
 
 ### Fixed
 
+- Fix vertical alignment on enable/disable switch
+  [#4211](https://github.com/OpenFn/lightning/issues/4211)
 - Fix error propagation on collab editor
   [#4069](https://github.com/OpenFn/lightning/issues/4069)
 - "Try the new editor" wasn't persisting properly to user preferences
