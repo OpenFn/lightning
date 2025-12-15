@@ -21,6 +21,8 @@ and this project adheres to
 
 ### Fixed
 
+- Fix credential errors shown when credentials aren't set
+  [#4162](https://github.com/OpenFn/lightning/issues/4162)
 - Fix error propagation on collab editor
   [#4069](https://github.com/OpenFn/lightning/issues/4069)
 - "Try the new editor" wasn't persisting properly to user preferences
