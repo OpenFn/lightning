@@ -206,12 +206,6 @@ export function Header({
   const { provider } = useSession();
   const limits = useLimits();
 
-  // Check workflow activation limit
-  const workflowActivationLimit = limits.workflow_activation ?? {
-    allowed: true,
-    message: null,
-  };
-
   // Check GitHub sync limit
   const githubSyncLimit = limits.github_sync ?? {
     allowed: true,
@@ -305,13 +299,9 @@ export function Header({
               {!isOldSnapshot && (
                 <Tooltip
                   content={
-                    !enabled &&
-                    !workflowActivationLimit.allowed &&
-                    workflowActivationLimit.message
-                      ? workflowActivationLimit.message
-                      : isNewWorkflow && isWorkflowEmpty
-                        ? 'Add a workflow to enable'
-                        : null
+                    isNewWorkflow && isWorkflowEmpty
+                      ? 'Add a workflow to enable'
+                      : null
                   }
                   side="bottom"
                 >
@@ -319,10 +309,7 @@ export function Header({
                     <Switch
                       checked={enabled ?? false}
                       onChange={setEnabled}
-                      disabled={
-                        (isNewWorkflow && isWorkflowEmpty) ||
-                        (!enabled && !workflowActivationLimit.allowed)
-                      }
+                      disabled={isNewWorkflow && isWorkflowEmpty}
                     />
                   </span>
                 </Tooltip>
