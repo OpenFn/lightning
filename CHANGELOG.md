@@ -28,6 +28,8 @@ and this project adheres to
 
 - Fix vertical alignment on enable/disable switch
   [#4211](https://github.com/OpenFn/lightning/issues/4211)
+- Fix run selection not persisting across page reload in collaborative editor
+  [#4188](https://github.com/OpenFn/lightning/issues/4188)
 - Fix error propagation on collab editor
   [#4069](https://github.com/OpenFn/lightning/issues/4069)
 - "Try the new editor" wasn't persisting properly to user preferences

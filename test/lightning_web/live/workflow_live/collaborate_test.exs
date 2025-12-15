@@ -2002,4 +2002,156 @@ defmodule LightningWeb.WorkflowLive.CollaborateTest do
       refute html =~ "webhook-auth-method-modal"
     end
   end
+
+  describe "initial run data for page reload" do
+    test "sets initial-run-data attribute when run param is provided", %{
+      conn: conn
+    } do
+      user = insert(:user)
+
+      project =
+        insert(:project,
+          name: "Test Project",
+          project_users: [%{user_id: user.id, role: :owner}]
+        )
+
+      workflow = workflow_fixture(project_id: project.id)
+      job = insert(:job, workflow: workflow)
+
+      # Create a work order with a run and steps
+      dataclip = insert(:dataclip)
+      work_order = insert(:workorder, workflow: workflow, dataclip: dataclip)
+
+      run =
+        insert(:run,
+          work_order: work_order,
+          starting_job: job,
+          dataclip: dataclip
+        )
+
+      step =
+        insert(:step,
+          job: job,
+          runs: [run],
+          exit_reason: "success",
+          input_dataclip: dataclip
+        )
+
+      conn = log_in_user(conn, user)
+
+      {:ok, _view, html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/w/#{workflow.id}/collaborate?run=#{run.id}"
+        )
+
+      # Parse the HTML to extract the data attribute
+      assert html =~ "data-initial-run-data"
+
+      # Extract and parse the JSON data - HTML entities like &quot; need decoding
+      regex = ~r/data-initial-run-data="([^"]*)"/
+
+      case Regex.run(regex, html) do
+        [_, encoded_json] ->
+          # Decode HTML entities manually (main ones used in JSON)
+          json =
+            encoded_json
+            |> String.replace("&quot;", "\"")
+            |> String.replace("&amp;", "&")
+            |> String.replace("&lt;", "<")
+            |> String.replace("&gt;", ">")
+
+          data = Jason.decode!(json)
+
+          # Verify the structure matches RunStepsData interface
+          assert data["run_id"] == run.id
+          assert is_list(data["steps"])
+          assert length(data["steps"]) == 1
+
+          step_data = hd(data["steps"])
+          assert step_data["id"] == step.id
+          assert step_data["job_id"] == job.id
+          assert step_data["exit_reason"] == "success"
+
+          metadata = data["metadata"]
+          assert metadata["starting_job_id"] == job.id
+
+        nil ->
+          flunk("data-initial-run-data attribute not found or empty")
+      end
+    end
+
+    test "does not set initial-run-data attribute when no run param", %{
+      conn: conn
+    } do
+      user = insert(:user)
+
+      project =
+        insert(:project,
+          name: "Test Project",
+          project_users: [%{user_id: user.id, role: :owner}]
+        )
+
+      workflow = workflow_fixture(project_id: project.id)
+
+      conn = log_in_user(conn, user)
+
+      {:ok, _view, html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/w/#{workflow.id}/collaborate"
+        )
+
+      # No initial run data when no run param
+      refute html =~ "data-initial-run-data="
+    end
+
+    test "does not set initial-run-data attribute for non-existent run", %{
+      conn: conn
+    } do
+      user = insert(:user)
+
+      project =
+        insert(:project,
+          name: "Test Project",
+          project_users: [%{user_id: user.id, role: :owner}]
+        )
+
+      workflow = workflow_fixture(project_id: project.id)
+
+      conn = log_in_user(conn, user)
+
+      {:ok, _view, html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/w/#{workflow.id}/collaborate?run=#{Ecto.UUID.generate()}"
+        )
+
+      # No initial run data when run doesn't exist
+      refute html =~ "data-initial-run-data="
+    end
+
+    test "does not set initial-run-data attribute for new workflow", %{
+      conn: conn
+    } do
+      user = insert(:user)
+
+      project =
+        insert(:project,
+          name: "Test Project",
+          project_users: [%{user_id: user.id, role: :owner}]
+        )
+
+      conn = log_in_user(conn, user)
+
+      {:ok, _view, html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/w/new/collaborate"
+        )
+
+      # New workflows never have initial run data
+      refute html =~ "data-initial-run-data="
+    end
+  end
 end

@@ -484,10 +484,13 @@ function waitForChannelSynced(
 ) {
   const { provider } = state;
   return new Promise<void>(resolve => {
-    // if (provider.synced) {
-    //   resolve();
-    //   return;
-    // }
+    // Check if already synced - critical to avoid race condition where
+    // sync event fires before this listener is registered
+    if (provider.synced) {
+      logger.debug('waitForChannelSynced: already synced');
+      resolve();
+      return;
+    }
 
     const cleanup = () => {
       provider.off('sync', handler);

@@ -35,6 +35,7 @@ import {
   createContext,
   useContext,
   useEffect,
+  useMemo,
   useState,
   useSyncExternalStore,
 } from 'react';
@@ -65,6 +66,7 @@ import {
   createHistoryStore,
   type HistoryStoreInstance,
 } from '../stores/createHistoryStore';
+import type { RunStepsData } from '../types/history';
 import {
   createSessionContextStore,
   type SessionContextStoreInstance,
@@ -100,22 +102,41 @@ const logger = _logger.ns('StoreProvider').seal();
 export const StoreProvider = ({ children }: StoreProviderProps) => {
   const session = useSession();
 
-  // Get isNewWorkflow from SessionContext
+  // Get isNewWorkflow and initialRunData from SessionContext
   const sessionContext = useContext(SessionContext);
   const isNewWorkflow = sessionContext?.isNewWorkflow ?? false;
+  const initialRunData = sessionContext?.initialRunData;
+
+  // Parse initial run data once
+  const parsedInitialRunData = useMemo((): RunStepsData | null => {
+    if (!initialRunData) return null;
+    try {
+      return JSON.parse(initialRunData) as RunStepsData;
+    } catch (e) {
+      logger.warn('Failed to parse initial run data', e);
+      return null;
+    }
+  }, [initialRunData]);
 
   // Create store instances once and reuse them
-  const [stores] = useState(() => ({
-    adaptorStore: createAdaptorStore(),
-    credentialStore: createCredentialStore(),
-    awarenessStore: createAwarenessStore(),
-    workflowStore: createWorkflowStore(),
-    sessionContextStore: createSessionContextStore(isNewWorkflow),
-    historyStore: createHistoryStore(),
-    uiStore: createUIStore(),
-    editorPreferencesStore: createEditorPreferencesStore(),
-    aiAssistantStore: createAIAssistantStore(),
-  }));
+  // IMPORTANT: parsedInitialRunData is passed to historyStore during creation
+  // to pre-populate the cache SYNCHRONOUSLY before any child components render.
+  // This avoids race conditions where children try to use the cache before it's populated.
+  const [stores] = useState(() => {
+    return {
+      adaptorStore: createAdaptorStore(),
+      credentialStore: createCredentialStore(),
+      awarenessStore: createAwarenessStore(),
+      workflowStore: createWorkflowStore(),
+      sessionContextStore: createSessionContextStore(isNewWorkflow),
+      historyStore: createHistoryStore({
+        initialRunData: parsedInitialRunData,
+      }),
+      uiStore: createUIStore(),
+      editorPreferencesStore: createEditorPreferencesStore(),
+      aiAssistantStore: createAIAssistantStore(),
+    };
+  });
 
   // Subscribe to sessionContextStore user changes
   // Note: We use useSyncExternalStore directly here (not useUser hook) because
