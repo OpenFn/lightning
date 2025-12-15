@@ -26,8 +26,8 @@ export const JobSchema = z
     adaptor: adaptorSchema.default('@openfn/language-common@latest'),
 
     // Credential fields (mutually exclusive)
-    project_credential_id: uuidSchema.nullable(),
-    keychain_credential_id: uuidSchema.nullable(),
+    project_credential_id: uuidSchema.nullable().default(null),
+    keychain_credential_id: uuidSchema.nullable().default(null),
 
     // Association fields
     workflow_id: uuidSchema,

@@ -86,8 +86,8 @@ export function JobForm({ job }: JobFormProps) {
       adaptor_package: initialAdaptorPackage,
       credential_id: initialCredentialId,
       delete: job.delete || false,
-      project_credential_id: job.project_credential_id,
-      keychain_credential_id: job.keychain_credential_id,
+      project_credential_id: job.project_credential_id || null,
+      keychain_credential_id: job.keychain_credential_id || null,
     }),
     [job, initialAdaptor, initialAdaptorPackage, initialCredentialId]
   );
