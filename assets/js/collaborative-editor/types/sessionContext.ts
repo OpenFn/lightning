@@ -81,6 +81,8 @@ export type LimitInfo = z.infer<typeof LimitInfoSchema>;
 
 export const LimitsSchema = z.object({
   runs: LimitInfoSchema.optional(),
+  workflow_activation: LimitInfoSchema.optional(),
+  github_sync: LimitInfoSchema.optional(),
 });
 
 export type Limits = z.infer<typeof LimitsSchema>;
@@ -134,7 +136,9 @@ interface SessionContextCommands {
   clearIsNewWorkflow: () => void;
   setHasReadAIDisclaimer: (hasRead: boolean) => void;
   markAIDisclaimerRead: () => Promise<void>;
-  getLimits: (actionType: 'new_run') => Promise<void>;
+  getLimits: (
+    actionType: 'new_run' | 'activate_workflow' | 'github_sync'
+  ) => Promise<void>;
 }
 
 interface SessionContextQueries {

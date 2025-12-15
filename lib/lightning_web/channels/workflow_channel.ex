@@ -15,9 +15,11 @@ defmodule LightningWeb.WorkflowChannel do
   alias Lightning.Policies.Permissions
   alias Lightning.Repo
   alias Lightning.VersionControl
+  alias Lightning.VersionControl.VersionControlUsageLimiter
   alias Lightning.Workflows.Job
   alias Lightning.Workflows.Snapshot
   alias Lightning.Workflows.Workflow
+  alias Lightning.Workflows.WorkflowUsageLimiter
   alias Lightning.WorkOrders
   alias LightningWeb.Channels.WorkflowJSON
 
@@ -914,6 +916,18 @@ defmodule LightningWeb.WorkflowChannel do
       }}, socket}
   end
 
+  defp workflow_error_reply(
+         socket,
+         {:error, %Lightning.Extensions.Message{text: text}}
+       ) do
+    {:reply,
+     {:error,
+      %{
+        errors: %{base: [text]},
+        type: "limit_error"
+      }}, socket}
+  end
+
   defp workflow_error_reply(socket, {:error, %Ecto.Changeset{} = changeset}) do
     {:reply,
      {:error,
@@ -1301,12 +1315,24 @@ defmodule LightningWeb.WorkflowChannel do
     WorkOrders.limit_run_creation(project_id)
   end
 
+  defp check_action_limit("activate_workflow", project_id) do
+    WorkflowUsageLimiter.limit_workflow_activation(true, project_id)
+  end
+
+  defp check_action_limit("github_sync", project_id) do
+    VersionControlUsageLimiter.limit_github_sync(project_id)
+  end
+
   defp render_limits(project_id) do
     # Check run limit for initial context
     run_limit_result = check_action_limit("new_run", project_id)
+    workflow_activation = check_action_limit("activate_workflow", project_id)
+    github_sync = check_action_limit("github_sync", project_id)
 
     %{
-      runs: render_limit_result(run_limit_result)
+      runs: render_limit_result(run_limit_result),
+      workflow_activation: render_limit_result(workflow_activation),
+      github_sync: render_limit_result(github_sync)
     }
   end
 
@@ -1318,6 +1344,13 @@ defmodule LightningWeb.WorkflowChannel do
   end
 
   defp render_limit_result({:error, _reason, message}) do
+    %{
+      allowed: false,
+      message: message.text
+    }
+  end
+
+  defp render_limit_result({:error, message}) do
     %{
       allowed: false,
       message: message.text

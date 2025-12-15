@@ -2,12 +2,14 @@ import { Menu, MenuButton, MenuItem, MenuItems } from '@headlessui/react';
 import { useCallback } from 'react';
 
 import { useURLState } from '#/react/lib/use-url-state';
+
 import { buildClassicalEditorUrl } from '../../utils/editorUrlConversion';
 import { channelRequest } from '../hooks/useChannel';
 import { useSession } from '../hooks/useSession';
 import {
   useIsNewWorkflow,
   useLatestSnapshotLockVersion,
+  useLimits,
   useProjectRepoConnection,
 } from '../hooks/useSessionContext';
 import {
@@ -50,6 +52,8 @@ export function SaveButton({
   repoConnection,
   onSyncClick,
   label = 'Save',
+  canSync,
+  syncTooltipMessage,
 }: {
   canSave: boolean;
   tooltipMessage: string;
@@ -57,6 +61,8 @@ export function SaveButton({
   repoConnection: ReturnType<typeof useProjectRepoConnection>;
   onSyncClick: () => void;
   label?: string;
+  canSync: boolean;
+  syncTooltipMessage: string | null;
 }) {
   const hasGitHubIntegration = repoConnection !== null;
 
@@ -137,8 +143,10 @@ export function SaveButton({
           <MenuItem>
             <Tooltip
               content={
-                canSave ? (
+                canSave && canSync ? (
                   <ShortcutKeys keys={['mod', 'shift', 's']} />
+                ) : !canSync && syncTooltipMessage ? (
+                  syncTooltipMessage
                 ) : (
                   tooltipMessage
                 )
@@ -148,7 +156,7 @@ export function SaveButton({
               <button
                 type="button"
                 onClick={onSyncClick}
-                disabled={!canSave}
+                disabled={!canSave || !canSync}
                 className="block w-full text-left px-4 py-2 text-sm text-gray-700
               data-focus:bg-gray-100 data-focus:outline-hidden
               disabled:opacity-50 disabled:cursor-not-allowed"
@@ -196,6 +204,19 @@ export function Header({
   const importPanelState = useImportPanelState();
   const { selectedTemplate } = useTemplatePanel();
   const { provider } = useSession();
+  const limits = useLimits();
+
+  // Check workflow activation limit
+  const workflowActivationLimit = limits.workflow_activation ?? {
+    allowed: true,
+    message: null,
+  };
+
+  // Check GitHub sync limit
+  const githubSyncLimit = limits.github_sync ?? {
+    allowed: true,
+    message: null,
+  };
 
   // Derived values after all hooks are called
   const firstTriggerId = triggers[0]?.id;
@@ -249,7 +270,7 @@ export function Header({
       openGitHubSyncModal();
     },
     0,
-    { enabled: canSave && !!repoConnection }
+    { enabled: canSave && !!repoConnection && githubSyncLimit.allowed }
   );
 
   return (
@@ -263,7 +284,7 @@ export function Header({
           {projectId && workflowId && (
             <button
               type="button"
-              onClick={handleSwitchToLegacyEditor}
+              onClick={() => void handleSwitchToLegacyEditor()}
               className="inline-flex items-center justify-center
               w-6 h-6 text-primary-600 hover:text-primary-700
               hover:bg-primary-50 rounded transition-colors ml-2"
@@ -284,9 +305,13 @@ export function Header({
               {!isOldSnapshot && (
                 <Tooltip
                   content={
-                    isNewWorkflow && isWorkflowEmpty
-                      ? 'Add a workflow to enable'
-                      : null
+                    !enabled &&
+                    !workflowActivationLimit.allowed &&
+                    workflowActivationLimit.message
+                      ? workflowActivationLimit.message
+                      : isNewWorkflow && isWorkflowEmpty
+                        ? 'Add a workflow to enable'
+                        : null
                   }
                   side="bottom"
                 >
@@ -294,7 +319,10 @@ export function Header({
                     <Switch
                       checked={enabled ?? false}
                       onChange={setEnabled}
-                      disabled={isNewWorkflow && isWorkflowEmpty}
+                      disabled={
+                        (isNewWorkflow && isWorkflowEmpty) ||
+                        (!enabled && !workflowActivationLimit.allowed)
+                      }
                     />
                   </span>
                 </Tooltip>
@@ -388,6 +416,8 @@ export function Header({
                 repoConnection={repoConnection}
                 onSyncClick={openGitHubSyncModal}
                 label={isNewWorkflow ? 'Create' : 'Save'}
+                canSync={githubSyncLimit.allowed}
+                syncTooltipMessage={githubSyncLimit.message}
               />
             </div>
           </div>

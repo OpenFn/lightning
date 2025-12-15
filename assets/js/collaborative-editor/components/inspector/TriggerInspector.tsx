@@ -1,6 +1,6 @@
 import { useCallback } from 'react';
 
-import { usePermissions } from '../../hooks/useSessionContext';
+import { useLimits, usePermissions } from '../../hooks/useSessionContext';
 import {
   useWorkflowActions,
   useWorkflowReadOnly,
@@ -52,6 +52,7 @@ export function TriggerInspector({
   const permissions = usePermissions();
   const { updateTrigger } = useWorkflowActions();
   const { isReadOnly, tooltipMessage } = useWorkflowReadOnly();
+  const limits = useLimits();
 
   const handleEnabledChange = useCallback(
     (enabled: boolean) => {
@@ -60,11 +61,24 @@ export function TriggerInspector({
     [trigger.id, updateTrigger]
   );
 
-  // Determine toggle tooltip based on disabled state
-  const isToggleDisabled = !permissions?.can_edit_workflow || isReadOnly;
-  const toggleTooltip = isToggleDisabled
-    ? tooltipMessage || 'You do not have permission to edit this workflow'
-    : 'Enable or disable this trigger';
+  // Check workflow activation limit
+  const workflowActivationLimit = limits.workflow_activation ?? {
+    allowed: true,
+    message: null,
+  };
+
+  // Determine toggle disabled state and tooltip
+  const isToggleDisabled =
+    !permissions?.can_edit_workflow ||
+    isReadOnly ||
+    (!trigger.enabled && !workflowActivationLimit.allowed);
+
+  const toggleTooltip =
+    !trigger.enabled && !workflowActivationLimit.allowed
+      ? workflowActivationLimit.message
+      : isReadOnly || !permissions?.can_edit_workflow
+        ? tooltipMessage || 'You do not have permission to edit this workflow'
+        : 'Enable or disable this trigger';
 
   // Build footer with enabled toggle and run button
   const footer = (
