@@ -305,7 +305,7 @@ export function Header({
                   }
                   side="bottom"
                 >
-                  <span className="inline-block">
+                  <span className="flex items-center">
                     <Switch
                       checked={enabled ?? false}
                       onChange={setEnabled}
