@@ -26,6 +26,8 @@ and this project adheres to
 
 ### Fixed
 
+- Fix unable to open run panel when workflow settings panel is open
+  [#4207](https://github.com/OpenFn/lightning/issues/4207)
 - Fix workflow settings icon not red for server validation errros
   [#4155](https://github.com/OpenFn/lightning/issues/4155)
 - Fix duplicate job name error stuck even when updated
