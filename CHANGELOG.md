@@ -40,6 +40,8 @@ and this project adheres to
   [#4069](https://github.com/OpenFn/lightning/issues/4069)
 - "Try the new editor" wasn't persisting properly to user preferences
   [#4199](https://github.com/OpenFn/lightning/issues/4199)
+- Make template preview read-only in collaborative editor until workflow is
+  created [#4203](https://github.com/OpenFn/lightning/issues/4203)
 
 ## [2.15.0-pre5] - 2025-12-13 🎂 ❤️ Happy Birthday, Mom!
 
