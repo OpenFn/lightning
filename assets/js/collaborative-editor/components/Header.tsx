@@ -24,6 +24,7 @@ import {
   useNodeSelection,
   useWorkflowActions,
   useWorkflowEnabled,
+  useWorkflowReadOnly,
   useWorkflowSettingsErrors,
   useWorkflowState,
 } from '../hooks/useWorkflow';
@@ -205,6 +206,7 @@ export function Header({
   const { selectedTemplate } = useTemplatePanel();
   const { provider } = useSession();
   const limits = useLimits();
+  const { isReadOnly } = useWorkflowReadOnly();
 
   // Check GitHub sync limit
   const githubSyncLimit = limits.github_sync ?? {
@@ -305,11 +307,13 @@ export function Header({
                   }
                   side="bottom"
                 >
-                  <span className="flex items-center">
+                  <span className="inline-flex items-center">
                     <Switch
                       checked={enabled ?? false}
                       onChange={setEnabled}
-                      disabled={isNewWorkflow && isWorkflowEmpty}
+                      disabled={
+                        isReadOnly || (isNewWorkflow && isWorkflowEmpty)
+                      }
                     />
                   </span>
                 </Tooltip>

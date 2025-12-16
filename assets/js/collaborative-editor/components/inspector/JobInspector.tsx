@@ -83,8 +83,10 @@ export function JobInspector({
               <>
                 {isIDEOpen
                   ? 'IDE is already open'
-                  : 'Open full-screen code editor '}
-                {!isIDEOpen && (
+                  : isReadOnly
+                    ? 'Cannot edit in read-only mode'
+                    : 'Open full-screen code editor '}
+                {!isIDEOpen && !isReadOnly && (
                   <>
                     {' '}
                     {'( '}
@@ -100,7 +102,7 @@ export function JobInspector({
               <Button
                 variant="primary"
                 onClick={() => updateSearchParams({ panel: 'editor' })}
-                disabled={isIDEOpen}
+                disabled={isIDEOpen || isReadOnly}
               >
                 Code
               </Button>
@@ -109,6 +111,7 @@ export function JobInspector({
           <NewRunButton
             onClick={() => onOpenRunPanel({ jobId: job.id })}
             tooltipSide="top"
+            disabled={isReadOnly}
           />
         </>
       }

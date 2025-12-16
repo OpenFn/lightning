@@ -29,8 +29,8 @@ export function NewRunButton({
 }: NewRunButtonProps) {
   const { canRun, tooltipMessage } = useCanRun();
 
-  // Allow parent to add additional disabled conditions
-  const isDisabled = disabledProp ?? !canRun;
+  // Disable if parent requests OR if canRun is false
+  const isDisabled = disabledProp || !canRun;
 
   const tooltip = canRun ? (
     <ShortcutKeys keys={['mod', 'enter']} />

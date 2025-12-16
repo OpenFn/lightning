@@ -20,7 +20,7 @@ export function Switch({
       disabled={disabled ?? false}
       className={
         className ||
-        'group relative inline-flex h-6 w-11 items-center rounded-full bg-gray-200 transition-colors duration-200 ease-in-out border-2 border-transparent data-checked:bg-indigo-600 focus:outline-none cursor-pointer'
+        'group relative inline-flex h-6 w-11 items-center rounded-full bg-gray-200 transition-colors duration-200 ease-in-out border-2 border-transparent data-checked:bg-indigo-600 focus:outline-none cursor-pointer disabled:cursor-not-allowed disabled:opacity-50'
       }
     >
       <span className="pointer-events-none absolute h-5 w-5 inline-block transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out translate-x-0 group-data-checked:translate-x-5">

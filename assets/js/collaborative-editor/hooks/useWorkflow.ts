@@ -45,6 +45,7 @@ import type { Workflow } from '../types/workflow';
 
 import { useSession } from './useSession';
 import {
+  useIsNewWorkflow,
   useLatestSnapshotLockVersion,
   useLimits,
   usePermissions,
@@ -780,6 +781,7 @@ export const useCanRun = (): { canRun: boolean; tooltipMessage: string } => {
  * 1. Workflow deletion state (deleted_at)
  * 2. User permissions (can_edit_workflow)
  * 3. Version pinning (any ?v parameter in URL)
+ * 4. Template preview (new workflow with selected template)
  *
  * Note: Connection state does not affect read-only status. Offline editing
  * is fully supported - Y.Doc buffers transactions locally and syncs when
@@ -792,10 +794,18 @@ export const useWorkflowReadOnly = (): {
   // Get permissions and workflow state
   const permissions = usePermissions();
   const workflow = useWorkflowState(state => state.workflow);
+  const jobs = useWorkflowState(state => state.jobs);
+  const triggers = useWorkflowState(state => state.triggers);
   const { params } = useURLState();
 
   // Check if version is pinned via URL parameter
   const isPinnedVersion = params['v'] !== undefined && params['v'] !== null;
+
+  // Check if this is a new workflow with content (from template or AI)
+  // Users must click "Create" before they can edit
+  const isNewWorkflow = useIsNewWorkflow();
+  const hasWorkflowContent = jobs.length > 0 || triggers.length > 0;
+  const isUnsavedNewWorkflow = isNewWorkflow && hasWorkflowContent;
 
   // Don't show read-only state until permissions are loaded
   // This prevents flickering during initial load
@@ -807,7 +817,7 @@ export const useWorkflowReadOnly = (): {
   const hasPermission = permissions.can_edit_workflow;
   const isDeleted = workflow !== null && workflow.deleted_at !== null;
 
-  // Priority order: deleted > permissions > pinned version
+  // Priority order: deleted > permissions > pinned version > unsaved new workflow
   if (isDeleted) {
     return {
       isReadOnly: true,
@@ -824,6 +834,12 @@ export const useWorkflowReadOnly = (): {
     return {
       isReadOnly: true,
       tooltipMessage: 'You are viewing a pinned version of this workflow',
+    };
+  }
+  if (isUnsavedNewWorkflow) {
+    return {
+      isReadOnly: true,
+      tooltipMessage: 'Click "Create" to edit this workflow',
     };
   }
 

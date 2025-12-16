@@ -121,13 +121,28 @@ function createWrapper(options: WrapperOptions = {}): [
     );
   };
 
+  // Create a mock uiStore with the methods needed by useTemplatePanel
+  const templatePanelState = {
+    selectedTemplate: null,
+    templates: [],
+    loading: false,
+    error: null,
+    searchQuery: '',
+  };
+  // Create a stable selector function
+  const templatePanelSelector = () => templatePanelState;
+  const mockUIStore = {
+    subscribe: () => () => {},
+    withSelector: () => templatePanelSelector,
+  };
+
   const mockStoreValue: StoreContextValue = {
     sessionContextStore,
     workflowStore,
     adaptorStore: {} as any,
     credentialStore: {} as any,
     awarenessStore: {} as any,
-    uiStore: {} as any,
+    uiStore: mockUIStore as any,
   };
 
   const mockSessionValue = {
@@ -381,13 +396,27 @@ describe('useWorkflowReadOnly - Edge Cases', () => {
       }
     );
 
+    // Create a mock uiStore with the methods needed by useTemplatePanel
+    const templatePanelState1 = {
+      selectedTemplate: null,
+      templates: [],
+      loading: false,
+      error: null,
+      searchQuery: '',
+    };
+    const templatePanelSelector1 = () => templatePanelState1;
+    const mockUIStore1 = {
+      subscribe: () => () => {},
+      withSelector: () => templatePanelSelector1,
+    };
+
     const mockStoreValue: StoreContextValue = {
       sessionContextStore,
       workflowStore,
       adaptorStore: {} as any,
       credentialStore: {} as any,
       awarenessStore: {} as any,
-      uiStore: {} as any,
+      uiStore: mockUIStore1 as any,
     };
 
     const mockSessionValue = {
@@ -456,13 +485,27 @@ describe('useWorkflowReadOnly - Edge Cases', () => {
       }
     );
 
+    // Create a mock uiStore with the methods needed by useTemplatePanel
+    const templatePanelState2 = {
+      selectedTemplate: null,
+      templates: [],
+      loading: false,
+      error: null,
+      searchQuery: '',
+    };
+    const templatePanelSelector2 = () => templatePanelState2;
+    const mockUIStore2 = {
+      subscribe: () => () => {},
+      withSelector: () => templatePanelSelector2,
+    };
+
     const mockStoreValue: StoreContextValue = {
       sessionContextStore,
       workflowStore,
       adaptorStore: {} as any,
       credentialStore: {} as any,
       awarenessStore: {} as any,
-      uiStore: {} as any,
+      uiStore: mockUIStore2 as any,
     };
 
     const mockSessionValue = {
@@ -573,6 +616,161 @@ describe('useWorkflowReadOnly - Priority Order', () => {
       expect(result3.current.tooltipMessage).toBe(
         'You are viewing a pinned version of this workflow'
       );
+    });
+  });
+});
+
+// =============================================================================
+// TEMPLATE PREVIEW TESTS
+// =============================================================================
+
+describe('useWorkflowReadOnly - Unsaved New Workflow', () => {
+  test('returns read-only true for new workflow with content (from template or AI)', async () => {
+    const sessionStore = createSessionStore();
+    // Pass isNewWorkflow: true when creating the store
+    const sessionContextStore = createSessionContextStore(true);
+    const workflowStore = createWorkflowStore();
+
+    const ydoc = new Y.Doc() as Session.WorkflowDoc;
+    const workflowMap = ydoc.getMap('workflow');
+    workflowMap.set('id', 'test-workflow-123');
+    workflowMap.set('name', 'Test Workflow');
+    workflowMap.set('lock_version', 1);
+    workflowMap.set('deleted_at', null);
+
+    // Add a job to simulate template/AI content loaded into the workflow
+    const jobsArray = ydoc.getArray('jobs');
+    const jobMap = new Y.Map();
+    jobMap.set('id', 'job-1');
+    jobMap.set('name', 'Test Job');
+    jobMap.set('adaptor', '@openfn/language-common@latest');
+    jobsArray.push([jobMap]);
+
+    ydoc.getArray('triggers');
+    ydoc.getArray('edges');
+    ydoc.getMap('positions');
+
+    const mockChannel = createMockPhoenixChannel('test:room');
+    const mockProvider = createMockPhoenixChannelProvider(mockChannel);
+    (mockProvider as any).doc = ydoc;
+    workflowStore.connect(ydoc, mockProvider as any);
+    sessionContextStore._connectChannel(mockProvider as any);
+
+    const mockSocket = createMockSocket();
+    sessionStore.initializeSession(mockSocket as any, 'test:room', null, {
+      connect: true,
+    });
+
+    const mockStoreValue: StoreContextValue = {
+      sessionContextStore,
+      workflowStore,
+      adaptorStore: {} as any,
+      credentialStore: {} as any,
+      awarenessStore: {} as any,
+      uiStore: {} as any,
+    };
+
+    // Key: isNewWorkflow is TRUE
+    const mockSessionValue = {
+      sessionStore,
+      isNewWorkflow: true,
+    };
+
+    const wrapper = ({ children }: { children: React.ReactNode }) => (
+      <SessionContext.Provider value={mockSessionValue}>
+        <StoreContext.Provider value={mockStoreValue}>
+          {children}
+        </StoreContext.Provider>
+      </SessionContext.Provider>
+    );
+
+    const { result } = renderHook(() => useWorkflowReadOnly(), { wrapper });
+
+    act(() => {
+      (mockChannel as any)._test.emit(
+        'session_context',
+        createSessionContext({
+          permissions: mockPermissions,
+          is_new_workflow: true,
+        })
+      );
+    });
+
+    await waitFor(() => {
+      expect(result.current.isReadOnly).toBe(true);
+      expect(result.current.tooltipMessage).toBe(
+        'Click "Create" to edit this workflow'
+      );
+    });
+  });
+
+  test('returns not read-only for new workflow without content (empty canvas)', async () => {
+    const sessionStore = createSessionStore();
+    // Pass isNewWorkflow: true when creating the store
+    const sessionContextStore = createSessionContextStore(true);
+    const workflowStore = createWorkflowStore();
+
+    const ydoc = new Y.Doc() as Session.WorkflowDoc;
+    const workflowMap = ydoc.getMap('workflow');
+    workflowMap.set('id', 'test-workflow-123');
+    workflowMap.set('name', 'Test Workflow');
+    workflowMap.set('lock_version', 1);
+    workflowMap.set('deleted_at', null);
+
+    ydoc.getArray('jobs');
+    ydoc.getArray('triggers');
+    ydoc.getArray('edges');
+    ydoc.getMap('positions');
+
+    const mockChannel = createMockPhoenixChannel('test:room');
+    const mockProvider = createMockPhoenixChannelProvider(mockChannel);
+    (mockProvider as any).doc = ydoc;
+    workflowStore.connect(ydoc, mockProvider as any);
+    sessionContextStore._connectChannel(mockProvider as any);
+
+    const mockSocket = createMockSocket();
+    sessionStore.initializeSession(mockSocket as any, 'test:room', null, {
+      connect: true,
+    });
+
+    const mockStoreValue: StoreContextValue = {
+      sessionContextStore,
+      workflowStore,
+      adaptorStore: {} as any,
+      credentialStore: {} as any,
+      awarenessStore: {} as any,
+      uiStore: {} as any,
+    };
+
+    // Key: isNewWorkflow is TRUE but no content on canvas
+    const mockSessionValue = {
+      sessionStore,
+      isNewWorkflow: true,
+    };
+
+    const wrapper = ({ children }: { children: React.ReactNode }) => (
+      <SessionContext.Provider value={mockSessionValue}>
+        <StoreContext.Provider value={mockStoreValue}>
+          {children}
+        </StoreContext.Provider>
+      </SessionContext.Provider>
+    );
+
+    const { result } = renderHook(() => useWorkflowReadOnly(), { wrapper });
+
+    act(() => {
+      (mockChannel as any)._test.emit(
+        'session_context',
+        createSessionContext({
+          permissions: mockPermissions,
+          is_new_workflow: true,
+        })
+      );
+    });
+
+    await waitFor(() => {
+      expect(result.current.isReadOnly).toBe(false);
+      expect(result.current.tooltipMessage).toBe('');
     });
   });
 });
