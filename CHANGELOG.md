@@ -19,10 +19,17 @@ and this project adheres to
 
 ### Changed
 
+- Update wording of errors on the canvas
+  [#4224](https://github.com/OpenFn/lightning/issues/4224)
+
 ### Fixed
 
 - Fix AI Assistant having write privileges in readonly mode
   [#4227](https://github.com/OpenFn/lightning/issues/4227)
+- Remove template selection URL state persistence to fix race conditions during
+  workflow creation [#4221](https://github.com/OpenFn/lightning/issues/4221)
+- Alias `AiAssistant.Limiter` to satisfy credo:
+  [PR#4223](https://github.com/OpenFn/lightning/pull/4223)
 
 ## [2.15.0-pre6] - 2025-12-16
 
