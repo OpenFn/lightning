@@ -65,8 +65,8 @@ export function WorkflowEditor({
   const isCreateWorkflowPanelCollapsed = useIsCreateWorkflowPanelCollapsed();
   const isAIAssistantPanelOpen = useIsAIAssistantPanelOpen();
 
-  // Get selected template and search query from UI store
-  const { selectedTemplate, searchQuery } = useTemplatePanel();
+  // Get selected template from UI store (for template details card)
+  const { selectedTemplate } = useTemplatePanel();
 
   const isSyncingRef = useRef(false);
   const isInitialMountRef = useRef(true);
@@ -227,37 +227,19 @@ export function WorkflowEditor({
 
   const leftPanelMethod = currentMethod || 'template';
 
-  // Sync URL params when panel collapses/expands (but keep values in store)
+  // Clear template URL params when panel collapses
   const prevPanelCollapsedRef = useRef(isCreateWorkflowPanelCollapsed);
   useEffect(() => {
     const wasExpanded = !prevPanelCollapsedRef.current;
     const isNowCollapsed = isCreateWorkflowPanelCollapsed;
-    const wasCollapsed = prevPanelCollapsedRef.current;
-    const isNowExpanded = !isCreateWorkflowPanelCollapsed;
 
     if (wasExpanded && isNowCollapsed) {
       // Panel just collapsed - clear template URL params
       updateSearchParams({ template: null, search: null });
-    } else if (
-      wasCollapsed &&
-      isNowExpanded &&
-      leftPanelMethod === 'template'
-    ) {
-      // Panel just expanded - restore URL params from store values
-      updateSearchParams({
-        template: selectedTemplate?.id ?? null,
-        search: searchQuery || null,
-      });
     }
 
     prevPanelCollapsedRef.current = isCreateWorkflowPanelCollapsed;
-  }, [
-    isCreateWorkflowPanelCollapsed,
-    updateSearchParams,
-    leftPanelMethod,
-    selectedTemplate,
-    searchQuery,
-  ]);
+  }, [isCreateWorkflowPanelCollapsed, updateSearchParams]);
 
   // Clear template params when in import/ai mode (handles page refresh)
   useEffect(() => {
@@ -390,19 +372,8 @@ export function WorkflowEditor({
     Boolean(currentNode.node);
 
   const handleMethodChange = (method: 'template' | 'import' | 'ai' | null) => {
-    if (method === 'import' || method === 'ai') {
-      // When switching to import/ai mode, clear template URL params (but keep in store)
-      updateSearchParams({ method, template: null, search: null });
-    } else if (method === 'template') {
-      // When switching back to template mode, restore URL params from store
-      updateSearchParams({
-        method,
-        template: selectedTemplate?.id ?? null,
-        search: searchQuery || null,
-      });
-    } else {
-      updateSearchParams({ method });
-    }
+    // Always clear template URL params when switching methods - start fresh each time
+    updateSearchParams({ method, template: null, search: null });
   };
 
   /**
