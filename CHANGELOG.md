@@ -26,6 +26,8 @@ and this project adheres to
 
 ### Fixed
 
+- Fix workflow settings icon not red for server validation errros
+  [#4155](https://github.com/OpenFn/lightning/issues/4155)
 - Fix duplicate job name error stuck even when updated
   [#4169](https://github.com/OpenFn/lightning/issues/4169)
 - Fix credential errors shown when credentials aren't set

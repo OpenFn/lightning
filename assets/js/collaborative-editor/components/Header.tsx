@@ -334,7 +334,7 @@ export function Header({
                       });
                     }}
                     disabled={isNewWorkflow && isWorkflowEmpty}
-                    className={`w-5 h-5 place-self-center ${
+                    className={`w-6 h-6 place-self-center ${
                       hasSettingsErrors
                         ? 'text-danger-500 hover:text-danger-400 cursor-pointer'
                         : isNewWorkflow && isWorkflowEmpty

@@ -376,10 +376,16 @@ describe('Header - Basic Rendering', () => {
     expect(settingsButton).toHaveClass('text-slate-500');
     expect(settingsButton).toHaveClass('hover:text-slate-400');
 
-    // Set workflow name to empty string (invalid)
+    // Set workflow name to empty string (invalid) and add validation error
     await act(async () => {
-      const workflowMap = ydoc.getMap('workflow');
+      const workflowMap = ydoc!.getMap('workflow');
       workflowMap.set('name', '');
+
+      // Set validation errors in the errors map
+      const errorsMap = ydoc!.getMap('errors');
+      const workflowErrors = new Y.Map();
+      workflowErrors.set('name', ['Name cannot be blank']);
+      errorsMap.set('workflow', workflowErrors);
     });
 
     await waitFor(() => {
@@ -390,8 +396,12 @@ describe('Header - Basic Rendering', () => {
 
     // Fix the validation error
     await act(async () => {
-      const workflowMap = ydoc.getMap('workflow');
+      const workflowMap = ydoc!.getMap('workflow');
       workflowMap.set('name', 'Valid Workflow Name');
+
+      // Clear validation errors
+      const errorsMap = ydoc!.getMap('errors');
+      errorsMap.delete('workflow');
     });
 
     await waitFor(() => {
@@ -416,10 +426,16 @@ describe('Header - Basic Rendering', () => {
       await new Promise(resolve => setTimeout(resolve, 150));
     });
 
-    // Set concurrency to 0 (invalid)
+    // Set concurrency to 0 (invalid) and add validation error
     await act(async () => {
-      const workflowMap = ydoc.getMap('workflow');
+      const workflowMap = ydoc!.getMap('workflow');
       workflowMap.set('concurrency', 0);
+
+      // Set validation errors in the errors map
+      const errorsMap = ydoc!.getMap('errors');
+      const workflowErrors = new Y.Map();
+      workflowErrors.set('concurrency', ['Concurrency must be at least 1']);
+      errorsMap.set('workflow', workflowErrors);
     });
 
     await waitFor(() => {
@@ -447,10 +463,16 @@ describe('Header - Basic Rendering', () => {
       await new Promise(resolve => setTimeout(resolve, 150));
     });
 
-    // Set workflow name to empty string (invalid)
+    // Set workflow name to empty string (invalid) and add validation error
     await act(async () => {
-      const workflowMap = ydoc.getMap('workflow');
+      const workflowMap = ydoc!.getMap('workflow');
       workflowMap.set('name', '');
+
+      // Set validation errors in the errors map
+      const errorsMap = ydoc!.getMap('errors');
+      const workflowErrors = new Y.Map();
+      workflowErrors.set('name', ['Name cannot be blank']);
+      errorsMap.set('workflow', workflowErrors);
     });
 
     await waitFor(() => {
