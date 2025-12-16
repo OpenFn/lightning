@@ -773,16 +773,19 @@ export function FullScreenIDE({
   if (isLoading) {
     return (
       <div
-        className="absolute inset-0 z-50 bg-white flex
+        className="absolute inset-0 z-50 bg-gray-100 flex
           items-center justify-center"
       >
-        <div className="text-center">
-          <div
-            className="hero-arrow-path size-8 animate-spin
-            text-blue-500 mx-auto"
-            aria-hidden="true"
-          />
-          <p className="text-gray-500 mt-2">Loading editor...</p>
+        <div className="flex items-center justify-center h-full w-full">
+          <span className="relative inline-flex">
+            <div className="inline-flex">
+              <p className="text-gray-600">Loading IDE</p>
+            </div>
+            <span className="flex absolute h-3 w-3 right-0 -mr-5">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-3 w-3 bg-primary-500"></span>
+            </span>
+          </span>
         </div>
       </div>
     );
