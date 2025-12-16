@@ -19,6 +19,9 @@ and this project adheres to
 
 ### Changed
 
+- Update wording of errors on the canvas
+  [#4224](https://github.com/OpenFn/lightning/issues/4224)
+
 ### Fixed
 
 ## [2.15.0-pre6] - 2025-12-16
