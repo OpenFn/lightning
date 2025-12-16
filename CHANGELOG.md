@@ -21,6 +21,9 @@ and this project adheres to
 
 ### Fixed
 
+- Alias `AiAssistant.Limiter` to satisfy credo:
+  [PR#4223](https://github.com/OpenFn/lightning/pull/4223)
+
 ## [2.15.0-pre6] - 2025-12-16
 
 ### Added
