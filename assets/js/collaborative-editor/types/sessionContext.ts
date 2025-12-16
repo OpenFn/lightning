@@ -62,13 +62,15 @@ export const WorkflowTemplateSchema = z.object({
   tags: z.array(z.string()),
   workflow_id: uuidSchema,
   code: z.string(),
-  positions: z.record(
-    z.string(),
-    z.object({
-      x: z.number(),
-      y: z.number(),
-    })
-  ),
+  positions: z
+    .record(
+      z.string(),
+      z.object({
+        x: z.number(),
+        y: z.number(),
+      })
+    )
+    .nullable(),
 });
 
 export type WorkflowTemplate = z.infer<typeof WorkflowTemplateSchema>;
