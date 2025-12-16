@@ -1324,16 +1324,22 @@ defmodule LightningWeb.WorkflowChannel do
     VersionControlUsageLimiter.limit_github_sync(project_id)
   end
 
+  defp check_action_limit("ai_assistant", project_id) do
+    Lightning.AiAssistant.Limiter.validate_quota(project_id)
+  end
+
   defp render_limits(project_id) do
     # Check run limit for initial context
     run_limit_result = check_action_limit("new_run", project_id)
     workflow_activation = check_action_limit("activate_workflow", project_id)
     github_sync = check_action_limit("github_sync", project_id)
+    ai_assistant = check_action_limit("ai_assistant", project_id)
 
     %{
       runs: render_limit_result(run_limit_result),
       workflow_activation: render_limit_result(workflow_activation),
-      github_sync: render_limit_result(github_sync)
+      github_sync: render_limit_result(github_sync),
+      ai_assistant: render_limit_result(ai_assistant)
     }
   end
 

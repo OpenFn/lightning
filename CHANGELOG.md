@@ -21,6 +21,8 @@ and this project adheres to
   editor [#4104](https://github.com/OpenFn/lightning/pull/4104)
   [#4105](https://github.com/OpenFn/lightning/pull/4105)
   [#4106](https://github.com/OpenFn/lightning/pull/4106)
+- Enforce AI assistant limits in the collab editor
+  [#4107](https://github.com/OpenFn/lightning/pull/4107)
 
 ### Changed
 

@@ -415,6 +415,10 @@ export const createAIAssistantStore = (): AIAssistantStore => {
         } else if (message.status === 'processing') {
           draft.isLoading = true;
         }
+      } else if (message.role === 'user' && message.status === 'error') {
+        // Clear loading state for user messages with error status
+        // (e.g., when quota limit is exceeded)
+        draft.isLoading = false;
       }
     });
 

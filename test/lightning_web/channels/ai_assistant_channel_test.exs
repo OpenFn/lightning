@@ -42,6 +42,18 @@ defmodule LightningWeb.AiAssistantChannelTest do
        }}
     end)
 
+    # Mock usage limiter to allow by default
+    Mox.stub(Lightning.Extensions.MockUsageLimiter, :limit_action, fn %{
+                                                                        type:
+                                                                          :ai_usage
+                                                                      },
+                                                                      %{
+                                                                        project_id:
+                                                                          _
+                                                                      } ->
+      :ok
+    end)
+
     user = user_fixture()
     project = project_fixture(project_users: [%{user_id: user.id}])
 
@@ -495,7 +507,9 @@ defmodule LightningWeb.AiAssistantChannelTest do
 
       ref = push(socket, "new_message", %{"content" => "   "})
 
-      assert_reply ref, :error, %{reason: "Message cannot be empty"}
+      assert_reply ref, :error, %{type: type, errors: errors}
+      assert type == "validation_error"
+      assert errors.base == ["Message cannot be empty"]
     end
 
     test "includes code when attach_code is true", %{
@@ -522,6 +536,46 @@ defmodule LightningWeb.AiAssistantChannelTest do
 
       assert_reply ref, :ok, %{message: message}
       assert message.content == "Explain this code"
+    end
+
+    test "returns limit error when quota is exceeded", %{
+      socket: socket,
+      job: job,
+      user: user,
+      project: %{id: project_id}
+    } do
+      {:ok, session} =
+        AiAssistant.create_session(job, user, "Initial message", [])
+
+      {:ok, _, socket} =
+        subscribe_and_join(
+          socket,
+          AiAssistantChannel,
+          "ai_assistant:job_code:#{session.id}",
+          %{}
+        )
+
+      # Mock the limiter to return an error
+      limit_error_message =
+        "You've reached your AI tokens limit for this billing period."
+
+      Mox.stub(
+        Lightning.Extensions.MockUsageLimiter,
+        :limit_action,
+        fn %{type: :ai_usage}, %{project_id: ^project_id} ->
+          {:error, :exceeds_limit,
+           %Lightning.Extensions.Message{text: limit_error_message}}
+        end
+      )
+
+      ref = push(socket, "new_message", %{"content" => "Test message"})
+
+      # With the new behavior, the message is saved with error status
+      # and returned as :ok with an error field
+      assert_reply ref, :ok, %{message: message, error: error}
+      assert message.role == "user"
+      assert message.status == "error"
+      assert error == limit_error_message
     end
   end
 
@@ -949,7 +1003,9 @@ defmodule LightningWeb.AiAssistantChannelTest do
       fake_message_id = Ecto.UUID.generate()
       ref = push(socket, "retry_message", %{"message_id" => fake_message_id})
 
-      assert_reply ref, :error, %{reason: "message not found or unauthorized"}
+      assert_reply ref, :error, %{type: type, errors: errors}
+      assert type == "unauthorized"
+      assert errors.base == ["message not found or unauthorized"]
     end
 
     test "rejects retry for message from different session", %{
@@ -980,7 +1036,9 @@ defmodule LightningWeb.AiAssistantChannelTest do
       # Try to retry message from session2
       ref = push(socket, "retry_message", %{"message_id" => message.id})
 
-      assert_reply ref, :error, %{reason: "message not found or unauthorized"}
+      assert_reply ref, :error, %{type: type, errors: errors}
+      assert type == "unauthorized"
+      assert errors.base == ["message not found or unauthorized"]
     end
   end
 
@@ -1581,7 +1639,9 @@ defmodule LightningWeb.AiAssistantChannelTest do
       # So we test the error formatting indirectly
       ref = push(socket, "new_message", %{"content" => "   "})
 
-      assert_reply ref, :error, %{reason: "Message cannot be empty"}
+      assert_reply ref, :error, %{type: type, errors: errors}
+      assert type == "validation_error"
+      assert errors.base == ["Message cannot be empty"]
     end
   end
 
@@ -1963,8 +2023,9 @@ defmodule LightningWeb.AiAssistantChannelTest do
       # Send message with empty content which should fail validation
       ref = push(channel_socket, "new_message", %{"content" => ""})
 
-      assert_reply ref, :error, %{reason: reason}
-      assert reason == "Message cannot be empty"
+      assert_reply ref, :error, %{type: type, errors: errors}
+      assert type == "validation_error"
+      assert errors.base == ["Message cannot be empty"]
     end
 
     test "handles retry_message validation errors", %{
@@ -1996,8 +2057,9 @@ defmodule LightningWeb.AiAssistantChannelTest do
           "message_id" => "00000000-0000-0000-0000-000000000000"
         })
 
-      assert_reply ref, :error, %{reason: reason}
-      assert reason == "message not found or unauthorized"
+      assert_reply ref, :error, %{type: type, errors: errors}
+      assert type == "unauthorized"
+      assert errors.base == ["message not found or unauthorized"]
     end
   end
 
@@ -2369,7 +2431,7 @@ defmodule LightningWeb.AiAssistantChannelTest do
       # Send a message with content that's too long
       long_content = String.duplicate("a", 10_001)
 
-      {:reply, {:error, %{reason: "validation_error", errors: errors}}, _socket} =
+      {:reply, {:error, %{type: "validation_error", errors: errors}}, _socket} =
         AiAssistantChannel.handle_in(
           "new_message",
           %{"content" => long_content},

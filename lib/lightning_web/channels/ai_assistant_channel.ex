@@ -73,51 +73,39 @@ defmodule LightningWeb.AiAssistantChannel do
   def handle_in("new_message", %{"content" => content} = params, socket) do
     session = socket.assigns.session
     user = socket.assigns.current_user
+    project_id = get_project_id_from_session(session)
 
-    if String.trim(content) == "" do
-      {:reply, {:error, %{reason: "Message cannot be empty"}}, socket}
+    if String.trim(content) != "" do
+      limit_result = Lightning.AiAssistant.Limiter.validate_quota(project_id)
+
+      handle_new_message_with_quota(
+        session,
+        user,
+        content,
+        limit_result,
+        params,
+        socket
+      )
     else
-      opts = extract_message_options(socket.assigns.session_type, params)
-
-      case AiAssistant.save_message(
-             session,
-             %{role: :user, content: content, user: user},
-             opts
-           ) do
-        {:ok, updated_session} ->
-          message =
-            Enum.find(updated_session.messages, fn msg ->
-              msg.role == :user && msg.content == content
-            end)
-
-          {:reply, {:ok, %{message: format_message(message)}}, socket}
-
-        {:error, changeset} ->
-          errors = format_changeset_errors(changeset)
-
-          {:reply, {:error, %{reason: "validation_error", errors: errors}},
-           socket}
-      end
+      reply_validation_error("Message cannot be empty", socket)
     end
   end
 
   @impl true
   def handle_in("retry_message", %{"message_id" => message_id}, socket) do
     message = Lightning.Repo.get(Lightning.AiAssistant.ChatMessage, message_id)
+    project_id = get_project_id_from_session(socket.assigns.session)
 
     if message && message.chat_session_id == socket.assigns.session_id do
-      case AiAssistant.retry_message(message) do
-        {:ok, {updated_message, _oban_job}} ->
-          {:reply, {:ok, %{message: format_message(updated_message)}}, socket}
+      case Lightning.AiAssistant.Limiter.validate_quota(project_id) do
+        :ok ->
+          retry_message_with_quota(message, socket)
 
-        {:error, changeset} ->
-          errors = format_changeset_errors(changeset)
-
-          {:reply, {:error, %{reason: "validation_error", errors: errors}},
-           socket}
+        {:error, _, %Lightning.Extensions.Message{text: text}} ->
+          reply_limit_error(text, socket)
       end
     else
-      {:reply, {:error, %{reason: "message not found or unauthorized"}}, socket}
+      reply_unauthorized_error("message not found or unauthorized", socket)
     end
   end
 
@@ -721,5 +709,117 @@ defmodule LightningWeb.AiAssistantChannel do
       nil -> {:error, "Project not found"}
       project_id -> {:ok, Projects.get_project(project_id)}
     end
+  end
+
+  defp get_project_id_from_session(session) do
+    cond do
+      session.project_id ->
+        session.project_id
+
+      session.job_id ->
+        case Jobs.get_job(session.job_id) do
+          {:ok, job} ->
+            workflow = Workflows.get_workflow(job.workflow_id)
+            workflow.project_id
+
+          {:error, :not_found} ->
+            get_project_id_from_unsaved_job(session)
+        end
+
+      true ->
+        get_project_id_from_unsaved_job(session)
+    end
+  end
+
+  defp get_project_id_from_unsaved_job(session) do
+    if session.meta["unsaved_job"] do
+      workflow_id = session.meta["unsaved_job"]["workflow_id"]
+      workflow = Workflows.get_workflow(workflow_id)
+      workflow.project_id
+    else
+      nil
+    end
+  end
+
+  # Private helpers for handle_in("new_message")
+
+  defp handle_new_message_with_quota(
+         session,
+         user,
+         content,
+         limit_result,
+         params,
+         socket
+       ) do
+    message_attrs = build_message_attrs(user, content, limit_result)
+    opts = extract_message_options(socket.assigns.session_type, params)
+
+    case AiAssistant.save_message(session, message_attrs, opts) do
+      {:ok, updated_session} ->
+        message = find_user_message(updated_session.messages, content)
+        response = build_message_response(message, limit_result)
+        {:reply, {:ok, response}, socket}
+
+      {:error, changeset} ->
+        errors = format_changeset_errors(changeset)
+        {:reply, {:error, %{type: "validation_error", errors: errors}}, socket}
+    end
+  end
+
+  defp build_message_attrs(user, content, limit_result) do
+    base_attrs = %{role: :user, content: content, user: user}
+
+    case limit_result do
+      :ok -> base_attrs
+      {:error, _, _} -> Map.put(base_attrs, :status, :error)
+    end
+  end
+
+  defp find_user_message(messages, content) do
+    Enum.find(messages, fn msg ->
+      msg.role == :user && msg.content == content
+    end)
+  end
+
+  defp build_message_response(message, limit_result) do
+    base_response = %{message: format_message(message)}
+
+    case limit_result do
+      :ok ->
+        base_response
+
+      {:error, _, %Lightning.Extensions.Message{text: text}} ->
+        Map.put(base_response, :error, text)
+    end
+  end
+
+  # Private helpers for handle_in("retry_message")
+
+  defp retry_message_with_quota(message, socket) do
+    case AiAssistant.retry_message(message) do
+      {:ok, {updated_message, _oban_job}} ->
+        {:reply, {:ok, %{message: format_message(updated_message)}}, socket}
+
+      {:error, changeset} ->
+        errors = format_changeset_errors(changeset)
+        {:reply, {:error, %{type: "validation_error", errors: errors}}, socket}
+    end
+  end
+
+  # Private helpers for error replies
+
+  defp reply_validation_error(message, socket) do
+    {:reply, {:error, %{type: "validation_error", errors: %{base: [message]}}},
+     socket}
+  end
+
+  defp reply_limit_error(message, socket) do
+    {:reply, {:error, %{type: "limit_error", errors: %{base: [message]}}},
+     socket}
+  end
+
+  defp reply_unauthorized_error(message, socket) do
+    {:reply, {:error, %{type: "unauthorized", errors: %{base: [message]}}},
+     socket}
   end
 end

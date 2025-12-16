@@ -9,6 +9,8 @@ interface ChatInputProps {
     | ((content: string, options?: MessageOptions) => void)
     | undefined;
   isLoading?: boolean | undefined;
+  /** Disabled state (separate from loading, e.g., due to limits) */
+  isDisabled?: boolean | undefined;
   /** Show job-specific controls (attach code, attach logs) */
   showJobControls?: boolean | undefined;
   /** Storage key for persisting checkbox preferences */
@@ -42,6 +44,7 @@ const MAX_TEXTAREA_HEIGHT = 200;
 export function ChatInput({
   onSendMessage,
   isLoading = false,
+  isDisabled = false,
   showJobControls = false,
   storageKey,
   enableAutoFocus = false,
@@ -197,7 +200,7 @@ export function ChatInput({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!input.trim() || isLoading) return;
+    if (!input.trim() || isLoading || isDisabled) return;
 
     const options: MessageOptions = {};
     if (showJobControls) {
@@ -234,7 +237,10 @@ export function ChatInput({
     <div className="flex-none border-t border-gray-200 bg-white">
       <div className="py-4 px-4">
         <form onSubmit={handleSubmit}>
-          <Tooltip content={isLoading ? disabledMessage : undefined} side="top">
+          <Tooltip
+            content={isLoading || isDisabled ? disabledMessage : undefined}
+            side="top"
+          >
             <div className="relative">
               <div
                 className={cn(
@@ -252,7 +258,7 @@ export function ChatInput({
                   onChange={e => setInput(e.target.value)}
                   onKeyDown={handleKeyDown}
                   placeholder={placeholder}
-                  disabled={isLoading}
+                  disabled={isLoading || isDisabled}
                   rows={1}
                   className={cn(
                     'block w-full px-4 py-3 bg-transparent resize-none',
@@ -421,13 +427,13 @@ export function ChatInput({
                   <button
                     type="submit"
                     data-testid="send-message-button"
-                    disabled={!input.trim() || isLoading}
+                    disabled={!input.trim() || isLoading || isDisabled}
                     className={cn(
                       'inline-flex items-center justify-center',
                       'h-7 w-7 rounded-lg',
                       'transition-all duration-200',
                       'focus:outline-none focus:ring-2 focus:ring-offset-2',
-                      input.trim() && !isLoading
+                      input.trim() && !isLoading && !isDisabled
                         ? 'bg-primary-600 hover:bg-primary-700 text-white focus:ring-primary-500'
                         : 'bg-gray-100 text-gray-400 cursor-not-allowed'
                     )}

@@ -7,7 +7,7 @@ interface FormFieldProps {
   name: string;
   label: string;
   meta: any; // TanStack Form meta type
-  helpText?: string;
+  helpText?: string | undefined;
   children: React.ReactNode;
 }
 

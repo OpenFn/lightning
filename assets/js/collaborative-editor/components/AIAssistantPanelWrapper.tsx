@@ -21,6 +21,7 @@ import {
   useHasReadAIDisclaimer,
   useMarkAIDisclaimerRead,
   useSessionContextLoaded,
+  useLimits,
 } from '../hooks/useSessionContext';
 import {
   useIsAIAssistantPanelOpen,
@@ -107,6 +108,7 @@ export function AIAssistantPanelWrapper() {
   const workflowTemplateContext = useAIWorkflowTemplateContext();
   const project = useProject();
   const workflow = useWorkflowState(state => state.workflow);
+  const limits = useLimits();
 
   const jobs = useWorkflowState(state => state.jobs);
   const triggers = useWorkflowState(state => state.triggers);
@@ -669,6 +671,7 @@ export function AIAssistantPanelWrapper() {
               connectionState={sessionId ? connectionState : 'connected'}
               showDisclaimer={sessionContextLoaded && !hasReadDisclaimer}
               onAcceptDisclaimer={handleMarkDisclaimerRead}
+              aiLimit={limits.ai_assistant ?? null}
             >
               <MessageList
                 messages={messages}
