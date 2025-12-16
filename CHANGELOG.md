@@ -30,6 +30,8 @@ and this project adheres to
   [#4227](https://github.com/OpenFn/lightning/issues/4227)
 - Remove template selection URL state persistence to fix race conditions during
   workflow creation [#4221](https://github.com/OpenFn/lightning/issues/4221)
+- Allow null value for workflow positions in Zod types
+  [#4229](https://github.com/OpenFn/lightning/issues/4229)
 - Alias `AiAssistant.Limiter` to satisfy credo:
   [PR#4223](https://github.com/OpenFn/lightning/pull/4223)
 
