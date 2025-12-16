@@ -50,13 +50,13 @@ describe('notifications', () => {
       );
     });
 
-    it('sets 2 second duration for info messages', () => {
+    it('sets 3 second duration for info messages', () => {
       notifications.info({ title: 'Test' });
 
       expect(toast.info).toHaveBeenCalledWith(
         'Test',
         expect.objectContaining({
-          duration: 2000,
+          duration: 3000,
         })
       );
     });
@@ -123,13 +123,13 @@ describe('notifications', () => {
       );
     });
 
-    it('sets 4 second duration for alert messages', () => {
+    it('sets 6 second duration for alert messages', () => {
       notifications.alert({ title: 'Error' });
 
       expect(toast.error).toHaveBeenCalledWith(
         'Error',
         expect.objectContaining({
-          duration: 4000,
+          duration: 6000,
         })
       );
     });
@@ -152,13 +152,13 @@ describe('notifications', () => {
       );
     });
 
-    it('sets 2 second duration', () => {
+    it('sets 3 second duration', () => {
       notifications.success({ title: 'Success' });
 
       expect(toast.success).toHaveBeenCalledWith(
         'Success',
         expect.objectContaining({
-          duration: 2000,
+          duration: 3000,
         })
       );
     });
@@ -181,13 +181,13 @@ describe('notifications', () => {
       );
     });
 
-    it('sets 3 second duration', () => {
+    it('sets 6 second duration', () => {
       notifications.warning({ title: 'Warning' });
 
       expect(toast.warning).toHaveBeenCalledWith(
         'Warning',
         expect.objectContaining({
-          duration: 3000,
+          duration: 6000,
         })
       );
     });

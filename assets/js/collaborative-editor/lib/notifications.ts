@@ -58,7 +58,7 @@ export const notifications = {
   /**
    * Info notification - for general information and success feedback
    *
-   * Blue color scheme with 2 second duration.
+   * Blue color scheme with 3 second duration.
    * Auto-dismisses unless user hovers over toast.
    *
    * @param options - Notification configuration
@@ -67,7 +67,7 @@ export const notifications = {
   info: ({ title, description, ...options }: NotificationOptions) => {
     return toast.info(title, {
       description,
-      duration: 2000, // 2s for info messages
+      duration: 3000, // 3s for info messages
       classNames: {
         toast: '!bg-blue-50 !border-l-4 !border-l-blue-500',
         title: '!text-blue-900 !font-semibold',
@@ -81,7 +81,7 @@ export const notifications = {
   /**
    * Alert notification - for warnings and errors that need attention
    *
-   * Red color scheme with 4 second duration (longer than info for visibility).
+   * Red color scheme with 6 second duration (longer than info for visibility).
    * Auto-dismisses unless user hovers over toast.
    *
    * @param options - Notification configuration
@@ -90,7 +90,7 @@ export const notifications = {
   alert: ({ title, description, ...options }: NotificationOptions) => {
     return toast.error(title, {
       description,
-      duration: 4000, // 4s for alert messages (need more attention)
+      duration: 6000, // 6s for alert messages (need more attention)
       classNames: {
         toast: '!bg-red-50 !border-l-4 !border-l-red-500',
         title: '!text-red-900 !font-semibold',
@@ -104,7 +104,7 @@ export const notifications = {
   /**
    * Success notification - for completed operations
    *
-   * Green color scheme with 2 second duration.
+   * Green color scheme with 3 second duration.
    * Currently an alias for info() but can be customized independently.
    *
    * @param options - Notification configuration
@@ -113,7 +113,7 @@ export const notifications = {
   success: ({ title, description, ...options }: NotificationOptions) => {
     return toast.success(title, {
       description,
-      duration: 2000,
+      duration: 3000,
       classNames: {
         toast: '!bg-green-50 !border-l-4 !border-l-green-500',
         title: '!text-green-900 !font-semibold',
@@ -127,7 +127,7 @@ export const notifications = {
   /**
    * Warning notification - for non-critical warnings
    *
-   * Amber color scheme with 3 second duration.
+   * Amber color scheme with 6 second duration.
    *
    * @param options - Notification configuration
    * @returns Toast ID for programmatic dismissal
@@ -135,7 +135,7 @@ export const notifications = {
   warning: ({ title, description, ...options }: NotificationOptions) => {
     return toast.warning(title, {
       description,
-      duration: 3000,
+      duration: 6000,
       classNames: {
         toast: '!bg-amber-50 !border-l-4 !border-l-amber-500',
         title: '!text-amber-900 !font-semibold',
