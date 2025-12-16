@@ -17,11 +17,14 @@ config :logger, level: :info
 
 # Filter sensitive parameters from logs
 config :phoenix, :filter_parameters, [
-  "token",
-  "password",
-  "secret",
+  "authorization",
+  "body",
+  "credential",
   "key",
-  "api_key"
+  "password",
+  "pem",
+  "secret",
+  "token"
 ]
 
 config :lightning,
