@@ -21,6 +21,9 @@ and this project adheres to
 
 ### Fixed
 
+- Fix AI Assistant having write privileges in readonly mode
+  [#4227](https://github.com/OpenFn/lightning/issues/4227)
+
 ## [2.15.0-pre6] - 2025-12-16
 
 ### Added
