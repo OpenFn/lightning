@@ -312,11 +312,12 @@ export const useNodeSelection = () => {
         }
       }
 
+      const nodePanels = ['editor', 'run'];
       const updates: Record<string, string | null> = {
         job: null,
         trigger: null,
         edge: null,
-        panel: currentPanel === 'run' ? currentPanel : null,
+        panel: nodePanels.includes(currentPanel) ? currentPanel : null,
       };
 
       if (foundJob) {
