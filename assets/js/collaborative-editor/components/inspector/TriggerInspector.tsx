@@ -88,6 +88,7 @@ export function TriggerInspector({
         <NewRunButton
           onClick={() => onOpenRunPanel({ triggerId: trigger.id })}
           tooltipSide="top"
+          disabled={isReadOnly}
         />
       }
     />
