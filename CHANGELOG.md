@@ -24,6 +24,8 @@ and this project adheres to
 
 ### Fixed
 
+- Fix AI Assistant having write privileges in readonly mode
+  [#4227](https://github.com/OpenFn/lightning/issues/4227)
 - Remove template selection URL state persistence to fix race conditions during
   workflow creation [#4221](https://github.com/OpenFn/lightning/issues/4221)
 - Alias `AiAssistant.Limiter` to satisfy credo:

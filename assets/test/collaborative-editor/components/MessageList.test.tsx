@@ -250,7 +250,7 @@ describe('MessageList', () => {
       expect(screen.getByText('COPY')).toBeInTheDocument();
     });
 
-    it('should show APPLY button when onApplyWorkflow provided', () => {
+    it('should show APPLY button when showApplyButton is true', () => {
       const mockApply = vi.fn();
       const messages = [
         createMockAIMessage({
@@ -259,7 +259,13 @@ describe('MessageList', () => {
         }),
       ];
 
-      render(<MessageList messages={messages} onApplyWorkflow={mockApply} />);
+      render(
+        <MessageList
+          messages={messages}
+          onApplyWorkflow={mockApply}
+          showApplyButton
+        />
+      );
 
       expect(screen.getByText('APPLY')).toBeInTheDocument();
     });
@@ -274,7 +280,13 @@ describe('MessageList', () => {
         }),
       ];
 
-      render(<MessageList messages={messages} onApplyWorkflow={mockApply} />);
+      render(
+        <MessageList
+          messages={messages}
+          onApplyWorkflow={mockApply}
+          showApplyButton
+        />
+      );
 
       const applyButton = screen.getByText('APPLY');
       await userEvent.click(applyButton);
@@ -295,6 +307,7 @@ describe('MessageList', () => {
         <MessageList
           messages={messages}
           onApplyWorkflow={vi.fn()}
+          showApplyButton
           applyingMessageId="msg-1"
         />
       );
