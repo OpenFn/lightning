@@ -13,6 +13,7 @@ defmodule LightningWeb.AiAssistantChannel do
   use LightningWeb, :channel
 
   alias Lightning.AiAssistant
+  alias Lightning.AiAssistant.Limiter
   alias Lightning.Jobs
   alias Lightning.Policies.Permissions
   alias Lightning.Projects
@@ -76,7 +77,7 @@ defmodule LightningWeb.AiAssistantChannel do
     project_id = get_project_id_from_session(session)
 
     if String.trim(content) != "" do
-      limit_result = Lightning.AiAssistant.Limiter.validate_quota(project_id)
+      limit_result = Limiter.validate_quota(project_id)
 
       handle_new_message_with_quota(
         session,
@@ -97,7 +98,7 @@ defmodule LightningWeb.AiAssistantChannel do
     project_id = get_project_id_from_session(socket.assigns.session)
 
     if message && message.chat_session_id == socket.assigns.session_id do
-      case Lightning.AiAssistant.Limiter.validate_quota(project_id) do
+      case Limiter.validate_quota(project_id) do
         :ok ->
           retry_message_with_quota(message, socket)
 
