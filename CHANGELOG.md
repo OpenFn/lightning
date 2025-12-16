@@ -24,6 +24,8 @@ and this project adheres to
 
 ### Fixed
 
+- Remove template selection URL state persistence to fix race conditions during
+  workflow creation [#4221](https://github.com/OpenFn/lightning/issues/4221)
 - Alias `AiAssistant.Limiter` to satisfy credo:
   [PR#4223](https://github.com/OpenFn/lightning/pull/4223)
 
@@ -40,8 +42,6 @@ and this project adheres to
 
 ### Fixed
 
-- Remove template selection URL state persistence to fix race conditions during
-  workflow creation [#4221](https://github.com/OpenFn/lightning/issues/4221)
 - Fix unable to open run panel when workflow settings panel is open
   [#4207](https://github.com/OpenFn/lightning/issues/4207)
 - Fix workflow settings icon not red for server validation errros
