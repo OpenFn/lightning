@@ -17,14 +17,20 @@ and this project adheres to
 
 ### Added
 
+### Changed
+
+### Fixed
+
+## [2.15.0-pre6] - 2025-12-16
+
+### Added
+
 - Enforce github sync, workflow activation and concurrency limits in the collab
   editor [#4104](https://github.com/OpenFn/lightning/pull/4104)
   [#4105](https://github.com/OpenFn/lightning/pull/4105)
   [#4106](https://github.com/OpenFn/lightning/pull/4106)
 - Enforce AI assistant limits in the collab editor
   [#4107](https://github.com/OpenFn/lightning/pull/4107)
-
-### Changed
 
 ### Fixed
 
@@ -48,8 +54,6 @@ and this project adheres to
   created [#4203](https://github.com/OpenFn/lightning/issues/4203)
 
 ## [2.15.0-pre5] - 2025-12-13 🎂 ❤️ Happy Birthday, Mom!
-
-### Added
 
 ### Changed
 
