@@ -15,6 +15,15 @@ config :lightning, LightningWeb.Endpoint,
 # Do not print debug messages in production
 config :logger, level: :info
 
+# Filter sensitive parameters from logs
+config :phoenix, :filter_parameters, [
+  "token",
+  "password",
+  "secret",
+  "key",
+  "api_key"
+]
+
 config :lightning,
   schemas_path: "priv/schemas",
   adaptor_icons_path: "priv/static/images/adaptors"
