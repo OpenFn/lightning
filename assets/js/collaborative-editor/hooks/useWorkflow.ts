@@ -312,6 +312,7 @@ export const useNodeSelection = () => {
         }
       }
 
+      // nodePanels are panels, while open, we can switch from one node to another
       const nodePanels = ['editor', 'run'];
       const updates: Record<string, string | null> = {
         job: null,
