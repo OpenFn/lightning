@@ -58,6 +58,10 @@ interface AIAssistantPanelProps {
    * Connection state for showing loading screen
    */
   connectionState?: 'disconnected' | 'connecting' | 'connected' | 'error';
+  /**
+   * AI assistant limit information
+   */
+  aiLimit?: { allowed: boolean; message: string | null } | null;
 }
 
 interface MessageOptions {
@@ -98,6 +102,7 @@ export function AIAssistantPanel({
   showDisclaimer = false,
   onAcceptDisclaimer,
   connectionState = 'connected',
+  aiLimit = null,
 }: AIAssistantPanelProps) {
   const [view, setView] = useState<'chat' | 'sessions'>(
     sessionId ? 'chat' : 'sessions'
@@ -141,11 +146,13 @@ export function AIAssistantPanel({
         : 'Ask me anything...';
 
   const disabledMessage =
-    view === 'sessions' && (!hasSessionContext || !hasCompletedSessionLoad)
-      ? 'Loading conversations...'
-      : view === 'chat' && connectionState !== 'connected'
-        ? 'Connecting...'
-        : undefined;
+    aiLimit && !aiLimit.allowed && aiLimit.message
+      ? aiLimit.message
+      : view === 'sessions' && (!hasSessionContext || !hasCompletedSessionLoad)
+        ? 'Loading conversations...'
+        : view === 'chat' && connectionState !== 'connected'
+          ? 'Connecting...'
+          : undefined;
 
   // Load session list when viewing sessions
   useEffect(() => {
@@ -387,6 +394,23 @@ export function AIAssistantPanel({
         </div>
       </div>
 
+      {/* AI Limit Error Banner */}
+      {aiLimit && !aiLimit.allowed && aiLimit.message && (
+        <div
+          className="flex-none bg-red-50 border-b border-red-200 px-4 py-3"
+          role="alert"
+        >
+          <div className="flex items-start gap-3">
+            <span className="hero-exclamation-triangle h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
+            <div className="flex-1 min-w-0">
+              <p className="text-sm text-red-800 font-medium">
+                {aiLimit.message}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Panel Content - Messages or Sessions */}
       <div className="flex-1 overflow-hidden bg-white">
         {view === 'chat' ? (
@@ -401,8 +425,9 @@ export function AIAssistantPanel({
 
       <ChatInput
         onSendMessage={onSendMessage}
-        isLoading={
-          isLoading ||
+        isLoading={isLoading}
+        isDisabled={
+          (aiLimit && !aiLimit.allowed) ||
           (view === 'chat' && connectionState !== 'connected') ||
           (view === 'sessions' &&
             (!hasSessionContext || !hasCompletedSessionLoad))

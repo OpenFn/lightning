@@ -46,6 +46,9 @@
 
 import _logger from '#/utils/logger';
 
+import type { ChannelError } from '../hooks/useChannel';
+import { formatChannelErrorMessage } from '../lib/errors';
+import { notifications } from '../lib/notifications';
 import type {
   AIAssistantStore,
   JobCodeContext,
@@ -90,11 +93,6 @@ interface JoinResponse {
 
 interface MessageResponse {
   message: Message;
-}
-
-interface ErrorResponse {
-  reason: string;
-  errors?: Record<string, string[]>;
 }
 
 /**
@@ -326,12 +324,23 @@ export class AIChannelRegistry {
         this.store._addMessage(typedResponse.message);
       })
       .receive('error', (response: unknown) => {
-        const typedResponse = response as ErrorResponse;
+        const typedResponse = response as ChannelError;
         logger.error('Failed to send message', {
-          reason: typedResponse.reason,
+          type: typedResponse.type,
           errors: typedResponse.errors,
           payload,
         });
+
+        // Show notification for all errors
+        const message = formatChannelErrorMessage({
+          type: typedResponse.type,
+          errors: typedResponse.errors || {},
+        });
+        notifications.alert({
+          title: 'Failed to send message',
+          description: message,
+        });
+
         this.store._setConnectionState('connected');
       })
       .receive('timeout', () => {
@@ -364,8 +373,18 @@ export class AIChannelRegistry {
         );
       })
       .receive('error', (response: unknown) => {
-        const typedResponse = response as ErrorResponse;
+        const typedResponse = response as ChannelError;
         logger.error('Failed to retry message', typedResponse);
+
+        // Show notification for retry errors
+        const message = formatChannelErrorMessage({
+          type: typedResponse.type,
+          errors: typedResponse.errors || {},
+        });
+        notifications.alert({
+          title: 'Failed to retry message',
+          description: message,
+        });
       });
   }
 
@@ -388,7 +407,7 @@ export class AIChannelRegistry {
         this.store.markDisclaimerRead();
       })
       .receive('error', (response: unknown) => {
-        const typedResponse = response as ErrorResponse;
+        const typedResponse = response as ChannelError;
         logger.error('Failed to mark disclaimer', typedResponse);
       });
   }
@@ -419,9 +438,10 @@ export class AIChannelRegistry {
           resolve();
         })
         .receive('error', (response: unknown) => {
-          const typedResponse = response as ErrorResponse;
+          const typedResponse = response as ChannelError;
           logger.error('Failed to load sessions via channel', typedResponse);
-          reject(new Error(typedResponse.reason || 'Failed to load sessions'));
+          const message = formatChannelErrorMessage(typedResponse);
+          reject(new Error(message));
         })
         .receive('timeout', () => {
           logger.error('Load sessions timeout');
@@ -457,7 +477,7 @@ export class AIChannelRegistry {
       .push('update_context', context)
       .receive('ok', () => {})
       .receive('error', (response: unknown) => {
-        const typedResponse = response as ErrorResponse;
+        const typedResponse = response as ChannelError;
         logger.error('Failed to update context', typedResponse);
       })
       .receive('timeout', () => {
@@ -573,27 +593,28 @@ export class AIChannelRegistry {
         logger.debug('Channel joined successfully', { topic: entry.topic });
       })
       .receive('error', (response: unknown) => {
-        const typedResponse = response as ErrorResponse;
+        const typedResponse = response as ChannelError;
         logger.error('Failed to join channel', typedResponse);
 
         entry.status = 'error';
 
+        const errorMessage = formatChannelErrorMessage(typedResponse);
+
         if (
-          typedResponse.reason === 'session not found' ||
-          typedResponse.reason === 'session type mismatch'
+          errorMessage === 'session not found' ||
+          errorMessage === 'session type mismatch'
         ) {
           logger.warn(
             'Session issue detected, clearing session ID from store',
-            typedResponse.reason
+            errorMessage
           );
           this.store._clearSession();
         }
 
         if (
-          typedResponse.reason &&
-          (typedResponse.reason.includes('Ecto.NoResultsError') ||
-            typedResponse.reason.includes('expected at least one result') ||
-            typedResponse.reason.includes('join crashed'))
+          errorMessage.includes('Ecto.NoResultsError') ||
+          errorMessage.includes('expected at least one result') ||
+          errorMessage.includes('join crashed')
         ) {
           logger.error(
             'Job not found - either not saved yet or deleted during workflow update',
@@ -601,25 +622,15 @@ export class AIChannelRegistry {
           );
           this.store._clearSession();
 
-          // Show notification (async import to avoid circular dependency)
-          void import('../lib/notifications')
-            .then(({ notifications }) => {
-              notifications.alert({
-                title: 'Job not available',
-                description:
-                  "This job hasn't been saved to the database yet, or was deleted. Please save the workflow first.",
-              });
-              return;
-            })
-            .catch(err => {
-              logger.error('Failed to show notification', err);
-            });
+          // Show notification
+          notifications.alert({
+            title: 'Job not available',
+            description:
+              "This job hasn't been saved to the database yet, or was deleted. Please save the workflow first.",
+          });
         }
 
-        this.store._setConnectionState(
-          'error',
-          typedResponse.reason || 'Join failed'
-        );
+        this.store._setConnectionState('error', errorMessage || 'Join failed');
       })
       .receive('timeout', () => {
         logger.error('Channel join timeout');

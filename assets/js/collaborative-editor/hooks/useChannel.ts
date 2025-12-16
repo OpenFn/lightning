@@ -32,6 +32,7 @@ export interface ChannelError {
    * - internal_error: Unexpected server error
    * - validation_error: Ecto changeset validation failed
    * - optimistic_lock_error: Concurrent modification conflict (stale lock_version)
+   * - limit_error: Usage limit exceeded (AI assistant, runs, etc.)
    */
   type:
     | 'unauthorized'
@@ -39,7 +40,8 @@ export interface ChannelError {
     | 'deserialization_error'
     | 'internal_error'
     | 'validation_error'
-    | 'optimistic_lock_error';
+    | 'optimistic_lock_error'
+    | 'limit_error';
 }
 
 export async function channelRequest<T = unknown>(

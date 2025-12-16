@@ -73,10 +73,10 @@ defmodule LightningWeb.AiAssistantChannel do
   def handle_in("new_message", %{"content" => content} = params, socket) do
     session = socket.assigns.session
     user = socket.assigns.current_user
+    project_id = get_project_id_from_session(session)
 
-    if String.trim(content) == "" do
-      {:reply, {:error, %{reason: "Message cannot be empty"}}, socket}
-    else
+    with {:content_valid, true} <- {:content_valid, String.trim(content) != ""},
+         :ok <- Lightning.AiAssistant.Limiter.validate_quota(project_id) do
       opts = extract_message_options(socket.assigns.session_type, params)
 
       case AiAssistant.save_message(
@@ -95,9 +95,23 @@ defmodule LightningWeb.AiAssistantChannel do
         {:error, changeset} ->
           errors = format_changeset_errors(changeset)
 
-          {:reply, {:error, %{reason: "validation_error", errors: errors}},
-           socket}
+          {:reply, {:error, %{type: "validation_error", errors: errors}}, socket}
       end
+    else
+      {:content_valid, false} ->
+        {:reply,
+         {:error,
+          %{
+            type: "validation_error",
+            errors: %{base: ["Message cannot be empty"]}
+          }}, socket}
+
+      {:error, _,
+       %Lightning.Extensions.Message{
+         text: text
+       }} ->
+        {:reply, {:error, %{errors: %{base: [text]}, type: "limit_error"}},
+         socket}
     end
   end
 
@@ -113,11 +127,15 @@ defmodule LightningWeb.AiAssistantChannel do
         {:error, changeset} ->
           errors = format_changeset_errors(changeset)
 
-          {:reply, {:error, %{reason: "validation_error", errors: errors}},
-           socket}
+          {:reply, {:error, %{type: "validation_error", errors: errors}}, socket}
       end
     else
-      {:reply, {:error, %{reason: "message not found or unauthorized"}}, socket}
+      {:reply,
+       {:error,
+        %{
+          type: "unauthorized",
+          errors: %{base: ["message not found or unauthorized"]}
+        }}, socket}
     end
   end
 
@@ -720,6 +738,36 @@ defmodule LightningWeb.AiAssistantChannel do
     case session.project_id do
       nil -> {:error, "Project not found"}
       project_id -> {:ok, Projects.get_project(project_id)}
+    end
+  end
+
+  defp get_project_id_from_session(session) do
+    cond do
+      session.project_id ->
+        session.project_id
+
+      session.job_id ->
+        case Jobs.get_job(session.job_id) do
+          {:ok, job} ->
+            workflow = Workflows.get_workflow(job.workflow_id)
+            workflow.project_id
+
+          {:error, :not_found} ->
+            get_project_id_from_unsaved_job(session)
+        end
+
+      true ->
+        get_project_id_from_unsaved_job(session)
+    end
+  end
+
+  defp get_project_id_from_unsaved_job(session) do
+    if session.meta["unsaved_job"] do
+      workflow_id = session.meta["unsaved_job"]["workflow_id"]
+      workflow = Workflows.get_workflow(workflow_id)
+      workflow.project_id
+    else
+      nil
     end
   end
 end
