@@ -224,11 +224,16 @@ export function Header({
 
   const handleRunClick = useCallback(() => {
     if (firstTriggerId) {
-      // Canvas context: open run panel with first trigger
+      // select the first trigger
       selectNode(firstTriggerId);
+      // switch panel to run
+      updateSearchParams({
+        panel: 'run',
+      });
+      // Canvas context: open run panel with first trigger
       openRunPanel({ triggerId: firstTriggerId });
     }
-  }, [firstTriggerId, openRunPanel, selectNode]);
+  }, [firstTriggerId, openRunPanel, selectNode, updateSearchParams]);
 
   const handleSwitchToLegacyEditor = useCallback(async () => {
     if (!provider?.channel || !projectId || !workflowId) return;
