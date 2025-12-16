@@ -570,9 +570,12 @@ defmodule LightningWeb.AiAssistantChannelTest do
 
       ref = push(socket, "new_message", %{"content" => "Test message"})
 
-      assert_reply ref, :error, %{type: type, errors: errors}
-      assert type == "limit_error"
-      assert errors.base == [limit_error_message]
+      # With the new behavior, the message is saved with error status
+      # and returned as :ok with an error field
+      assert_reply ref, :ok, %{message: message, error: error}
+      assert message.role == "user"
+      assert message.status == "error"
+      assert error == limit_error_message
     end
   end
 

@@ -93,6 +93,7 @@ interface JoinResponse {
 
 interface MessageResponse {
   message: Message;
+  error?: string;
 }
 
 /**
@@ -322,6 +323,14 @@ export class AIChannelRegistry {
       .receive('ok', (response: unknown) => {
         const typedResponse = response as MessageResponse;
         this.store._addMessage(typedResponse.message);
+
+        // If there's an error in the response, show notification
+        if (typedResponse.error) {
+          notifications.alert({
+            title: 'Message limit exceeded',
+            description: typedResponse.error,
+          });
+        }
       })
       .receive('error', (response: unknown) => {
         const typedResponse = response as ChannelError;
@@ -385,6 +394,9 @@ export class AIChannelRegistry {
           title: 'Failed to retry message',
           description: message,
         });
+
+        // Keep the message status as 'error' and clear loading state
+        this.store._updateMessageStatus(messageId, 'error');
       });
   }
 
