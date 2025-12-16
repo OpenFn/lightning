@@ -96,18 +96,16 @@ defmodule LightningWeb.AiAssistantChannel do
     message = Lightning.Repo.get(Lightning.AiAssistant.ChatMessage, message_id)
     project_id = get_project_id_from_session(socket.assigns.session)
 
-    cond do
-      is_nil(message) or message.chat_session_id != socket.assigns.session_id ->
-        reply_unauthorized_error("message not found or unauthorized", socket)
+    if message && message.chat_session_id == socket.assigns.session_id do
+      case Lightning.AiAssistant.Limiter.validate_quota(project_id) do
+        :ok ->
+          retry_message_with_quota(message, socket)
 
-      true ->
-        case Lightning.AiAssistant.Limiter.validate_quota(project_id) do
-          :ok ->
-            retry_message_with_quota(message, socket)
-
-          {:error, _, %Lightning.Extensions.Message{text: text}} ->
-            reply_limit_error(text, socket)
-        end
+        {:error, _, %Lightning.Extensions.Message{text: text}} ->
+          reply_limit_error(text, socket)
+      end
+    else
+      reply_unauthorized_error("message not found or unauthorized", socket)
     end
   end
 
