@@ -21,6 +21,8 @@ and this project adheres to
 
 - Update wording of errors on the canvas
   [#4224](https://github.com/OpenFn/lightning/issues/4224)
+- Add default Logger param scrubbing for prod environments
+  [#4231](https://github.com/OpenFn/lightning/issues/4231)
 - Extend toast notification slightly
   [#4233](https://github.com/OpenFn/lightning/issues/4233)
 
