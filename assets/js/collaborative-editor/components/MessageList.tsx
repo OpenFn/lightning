@@ -4,6 +4,8 @@ import remarkGfm from 'remark-gfm';
 
 import { cn } from '#/utils/cn';
 
+import { Tooltip } from './Tooltip';
+
 /**
  * Custom code block component for react-markdown
  * Renders code with COPY/ADD action buttons
@@ -11,9 +13,12 @@ import { cn } from '#/utils/cn';
 const CodeBlock = ({
   children,
   showAddButtons,
+  isWriteDisabled = false,
 }: {
   children: string;
   showAddButtons?: boolean;
+  /** Whether Add button is disabled due to readonly mode */
+  isWriteDisabled?: boolean;
 }) => {
   const [copied, setCopied] = useState(false);
   const [added, setAdded] = useState(false);
@@ -29,10 +34,31 @@ const CodeBlock = ({
 
   const handleAdd = (e: React.MouseEvent) => {
     e.stopPropagation();
+    if (isWriteDisabled) return;
     doInsert(children);
     setAdded(true);
     setTimeout(() => setAdded(false), 2000);
   };
+
+  const isAddDisabled = added || isWriteDisabled;
+
+  const addButton = (
+    <button
+      type="button"
+      onClick={handleAdd}
+      disabled={isAddDisabled}
+      className={cn(
+        'rounded-md px-2 py-1 text-xs font-medium transition-all duration-300 ease-in-out',
+        added
+          ? 'bg-green-100 text-green-700 scale-105'
+          : isAddDisabled
+            ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+            : 'bg-slate-300 text-white hover:bg-primary-600 hover:scale-105'
+      )}
+    >
+      {added ? 'ADDED' : 'ADD'}
+    </button>
+  );
 
   return (
     <pre className="relative group">
@@ -47,25 +73,20 @@ const CodeBlock = ({
               ? 'bg-green-100 text-green-700 scale-105'
               : 'bg-slate-300 text-white hover:bg-primary-600 hover:scale-105'
           )}
-          title={copied ? 'Copied!' : 'Copy to clipboard'}
         >
           {copied ? 'COPIED' : 'COPY'}
         </button>
         {showAddButtons && (
-          <button
-            type="button"
-            onClick={handleAdd}
-            disabled={added}
-            className={cn(
-              'rounded-md px-2 py-1 text-xs font-medium transition-all duration-300 ease-in-out',
-              added
-                ? 'bg-green-100 text-green-700 scale-105'
-                : 'bg-slate-300 text-white hover:bg-primary-600 hover:scale-105'
-            )}
-            title={added ? 'Added!' : 'Add this snippet to the end of the code'}
+          <Tooltip
+            content={
+              isWriteDisabled
+                ? 'Cannot add code snippet in readonly mode'
+                : null
+            }
+            side="top"
           >
-            {added ? 'ADDED' : 'ADD'}
-          </button>
+            {addButton}
+          </Tooltip>
         )}
       </div>
     </pre>
@@ -79,10 +100,13 @@ const MarkdownContent = ({
   content,
   className,
   showAddButtons,
+  isWriteDisabled = false,
 }: {
   content: string;
   className?: string;
   showAddButtons?: boolean;
+  /** Whether Add button is disabled due to readonly mode */
+  isWriteDisabled?: boolean;
 }) => {
   return (
     <div className={className}>
@@ -98,7 +122,10 @@ const MarkdownContent = ({
 
             if (isCodeBlock || (children && String(children).includes('\n'))) {
               return (
-                <CodeBlock showAddButtons={showAddButtons}>
+                <CodeBlock
+                  showAddButtons={showAddButtons ?? false}
+                  isWriteDisabled={isWriteDisabled}
+                >
                   {codeContent}
                 </CodeBlock>
               );
@@ -151,12 +178,15 @@ const CodeActionButtons = ({
   showApply = false,
   onApply,
   isApplying = false,
+  isWriteDisabled = false,
 }: {
   code: string;
   showAdd?: boolean;
   showApply?: boolean;
   onApply?: () => void;
   isApplying?: boolean;
+  /** Whether Apply/Add buttons are disabled due to readonly mode */
+  isWriteDisabled?: boolean;
 }) => {
   const [copied, setCopied] = useState(false);
   const [applied, setApplied] = useState(false);
@@ -175,6 +205,7 @@ const CodeActionButtons = ({
 
   const handleAdd = (e: React.MouseEvent) => {
     e.stopPropagation();
+    if (isWriteDisabled) return;
     doInsert(code);
     setAdded(true);
     setTimeout(() => setAdded(false), 2000);
@@ -182,6 +213,7 @@ const CodeActionButtons = ({
 
   const handleApply = (e: React.MouseEvent) => {
     e.stopPropagation();
+    if (isWriteDisabled) return;
     if (onApply) {
       onApply();
       setApplied(true);
@@ -189,26 +221,57 @@ const CodeActionButtons = ({
     }
   };
 
+  const isApplyDisabled = isApplying || applied || isWriteDisabled;
+  const isAddDisabled = added || isWriteDisabled;
+
+  const applyButton = (
+    <button
+      type="button"
+      data-testid="apply-workflow-button"
+      onClick={handleApply}
+      disabled={isApplyDisabled}
+      className={cn(
+        'rounded-md px-2 py-1 text-xs font-medium transition-all duration-300 ease-in-out',
+        applied
+          ? 'bg-green-100 text-green-700 scale-105'
+          : isApplyDisabled
+            ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+            : 'bg-slate-300 text-white hover:bg-primary-600 hover:scale-105'
+      )}
+    >
+      {applied ? 'APPLIED' : isApplying ? 'APPLYING...' : 'APPLY'}
+    </button>
+  );
+
+  const addButton = (
+    <button
+      type="button"
+      onClick={handleAdd}
+      disabled={isAddDisabled}
+      className={cn(
+        'rounded-md px-2 py-1 text-xs font-medium transition-all duration-300 ease-in-out',
+        added
+          ? 'bg-green-100 text-green-700 scale-105'
+          : isAddDisabled
+            ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+            : 'bg-slate-300 text-white hover:bg-primary-600 hover:scale-105'
+      )}
+    >
+      {added ? 'ADDED' : 'ADD'}
+    </button>
+  );
+
   return (
     <div className="flex items-center gap-1">
       {showApply && (
-        <button
-          type="button"
-          data-testid="apply-workflow-button"
-          onClick={handleApply}
-          disabled={isApplying || applied}
-          className={cn(
-            'rounded-md px-2 py-1 text-xs font-medium transition-all duration-300 ease-in-out',
-            applied
-              ? 'bg-green-100 text-green-700 scale-105'
-              : isApplying
-                ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                : 'bg-slate-300 text-white hover:bg-primary-600 hover:scale-105'
-          )}
-          title={applied ? 'Applied!' : 'Apply workflow to canvas'}
+        <Tooltip
+          content={
+            isWriteDisabled ? 'Cannot apply workflow in readonly mode' : null
+          }
+          side="top"
         >
-          {applied ? 'APPLIED' : isApplying ? 'APPLYING...' : 'APPLY'}
-        </button>
+          {applyButton}
+        </Tooltip>
       )}
       <button
         type="button"
@@ -219,25 +282,18 @@ const CodeActionButtons = ({
             ? 'bg-green-100 text-green-700 scale-105'
             : 'bg-slate-300 text-white hover:bg-primary-600 hover:scale-105'
         )}
-        title={copied ? 'Copied!' : 'Copy to clipboard'}
       >
         {copied ? 'COPIED' : 'COPY'}
       </button>
       {showAdd && (
-        <button
-          type="button"
-          onClick={handleAdd}
-          disabled={added}
-          className={cn(
-            'rounded-md px-2 py-1 text-xs font-medium transition-all duration-300 ease-in-out',
-            added
-              ? 'bg-green-100 text-green-700 scale-105'
-              : 'bg-slate-300 text-white hover:bg-primary-600 hover:scale-105'
-          )}
-          title={added ? 'Added!' : 'Add this snippet to the end of the code'}
+        <Tooltip
+          content={
+            isWriteDisabled ? 'Cannot add code snippet in readonly mode' : null
+          }
+          side="top"
         >
-          {added ? 'ADDED' : 'ADD'}
-        </button>
+          {addButton}
+        </Tooltip>
       )}
     </div>
   );
@@ -292,7 +348,10 @@ interface MessageListProps {
   onApplyWorkflow?: ((yaml: string, messageId: string) => void) | undefined;
   applyingMessageId?: string | null | undefined;
   showAddButtons?: boolean;
+  showApplyButton?: boolean;
   onRetryMessage?: (messageId: string) => void;
+  /** Whether write actions (Apply/Add) are disabled due to readonly mode */
+  isWriteDisabled?: boolean;
 }
 
 export function MessageList({
@@ -301,7 +360,9 @@ export function MessageList({
   onApplyWorkflow,
   applyingMessageId,
   showAddButtons = false,
+  showApplyButton = false,
   onRetryMessage,
+  isWriteDisabled = false,
 }: MessageListProps) {
   const loadingRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -349,6 +410,7 @@ export function MessageList({
                   <MarkdownContent
                     content={message.content}
                     showAddButtons={showAddButtons}
+                    isWriteDisabled={isWriteDisabled}
                     className="text-sm text-gray-700 leading-relaxed prose prose-sm max-w-none prose-headings:font-medium prose-h1:text-lg prose-h1:text-gray-900 prose-h1:mb-3 prose-h2:text-base prose-h2:text-gray-900 prose-h2:mb-2 prose-h2:mt-5 prose-h3:text-sm prose-h3:text-gray-900 prose-h3:mb-2 prose-h3:font-semibold prose-p:mb-3 prose-p:last:mb-0 prose-p:text-gray-700 prose-ul:list-disc prose-ul:pl-5 prose-ul:mb-3 prose-ul:space-y-1 prose-ol:list-decimal prose-ol:pl-5 prose-ol:mb-3 prose-ol:space-y-1 prose-li:text-gray-700 prose-strong:font-medium prose-strong:text-gray-900 prose-em:italic prose-a:text-primary-600 prose-a:hover:text-primary-700 prose-a:underline prose-a:font-normal prose-code:px-1.5 prose-code:py-0.5 prose-code:bg-gray-100 prose-code:text-gray-800 prose-code:rounded prose-code:text-xs prose-code:font-mono prose-code:font-normal prose-pre:rounded-md prose-pre:bg-slate-100 prose-pre:border-2 prose-pre:border-slate-200 prose-pre:text-slate-800 prose-pre:p-4 prose-pre:overflow-x-auto prose-pre:text-xs prose-pre:font-mono prose-pre:mb-4"
                   />
 
@@ -392,11 +454,12 @@ export function MessageList({
                         <CodeActionButtons
                           code={message.code}
                           showAdd={showAddButtons}
-                          showApply={!!onApplyWorkflow}
+                          showApply={showApplyButton}
                           onApply={() =>
                             onApplyWorkflow?.(message.code!, message.id)
                           }
                           isApplying={applyingMessageId === message.id}
+                          isWriteDisabled={isWriteDisabled}
                         />
                       </div>
                       {expandedYaml.has(message.id) && (

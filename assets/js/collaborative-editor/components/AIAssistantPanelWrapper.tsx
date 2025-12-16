@@ -22,13 +22,18 @@ import {
   useMarkAIDisclaimerRead,
   useSessionContextLoaded,
   useLimits,
+  useIsNewWorkflow,
 } from '../hooks/useSessionContext';
 import {
   useIsAIAssistantPanelOpen,
   useUICommands,
   useAIAssistantInitialMessage,
 } from '../hooks/useUI';
-import { useWorkflowState, useWorkflowActions } from '../hooks/useWorkflow';
+import {
+  useWorkflowState,
+  useWorkflowActions,
+  useWorkflowReadOnly,
+} from '../hooks/useWorkflow';
 import { useKeyboardShortcut } from '../keyboard';
 import { notifications } from '../lib/notifications';
 import type { JobCodeContext } from '../types/ai-assistant';
@@ -109,6 +114,13 @@ export function AIAssistantPanelWrapper() {
   const project = useProject();
   const workflow = useWorkflowState(state => state.workflow);
   const limits = useLimits();
+
+  // Check readonly state and new workflow status
+  // AI can apply changes if: not readonly OR is a new workflow (being created)
+  const { isReadOnly } = useWorkflowReadOnly();
+  const isNewWorkflow = useIsNewWorkflow();
+  const canApplyChanges = !isReadOnly || isNewWorkflow;
+  const isWriteDisabled = !canApplyChanges;
 
   const jobs = useWorkflowState(state => state.jobs);
   const triggers = useWorkflowState(state => state.triggers);
@@ -592,6 +604,8 @@ export function AIAssistantPanelWrapper() {
   useEffect(() => {
     if (sessionType !== 'workflow_template' || !messages.length) return;
     if (connectionState !== 'connected') return;
+    // Don't auto-apply when readonly (except for new workflow creation)
+    if (!canApplyChanges) return;
 
     const messagesWithCode = messages.filter(
       msg => msg.role === 'assistant' && msg.code && msg.status === 'success'
@@ -625,6 +639,7 @@ export function AIAssistantPanelWrapper() {
     workflowTemplateContext,
     workflow,
     handleApplyWorkflow,
+    canApplyChanges,
   ]);
 
   return (
@@ -685,7 +700,9 @@ export function AIAssistantPanelWrapper() {
                 }
                 applyingMessageId={applyingMessageId}
                 showAddButtons={sessionType === 'job_code'}
+                showApplyButton={sessionType === 'workflow_template'}
                 onRetryMessage={handleRetryMessage}
+                isWriteDisabled={isWriteDisabled}
               />
             </AIAssistantPanel>
           </div>
