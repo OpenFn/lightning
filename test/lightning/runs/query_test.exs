@@ -134,6 +134,226 @@ defmodule Lightning.Runs.QueryTest do
 
       assert lost_runs == [should_be_lost.id]
     end
+
+    test "with run_timeout_ms=120s and grace_period, run is lost after 120s + grace_period" do
+      # A run is considered lost when:
+      # (started_at OR claimed_at) + run_timeout_ms + grace_period < now
+
+      dataclip = insert(:dataclip)
+      %{triggers: [trigger]} = workflow = insert(:simple_workflow)
+
+      work_order =
+        insert(:workorder,
+          workflow: workflow,
+          trigger: trigger,
+          dataclip: dataclip
+        )
+
+      now = Lightning.current_time()
+
+      # Config values
+      grace_period_seconds = Lightning.Config.grace_period()
+
+      # Set a custom run_timeout_ms of 120 seconds (120_000 ms)
+      custom_timeout_ms = 120_000
+      custom_timeout_seconds = div(custom_timeout_ms, 1000)
+      total_allowable_seconds = custom_timeout_seconds + grace_period_seconds
+
+      # Run claimed 1 second before the boundary should NOT be lost
+      not_lost =
+        insert(:run,
+          work_order: work_order,
+          starting_trigger: trigger,
+          dataclip: dataclip,
+          state: :claimed,
+          options: %Lightning.Runs.RunOptions{run_timeout_ms: custom_timeout_ms},
+          claimed_at: DateTime.add(now, -(total_allowable_seconds - 1))
+        )
+
+      # Run claimed 1 second past the boundary SHOULD be lost
+      past_boundary =
+        insert(:run,
+          work_order: work_order,
+          starting_trigger: trigger,
+          dataclip: dataclip,
+          state: :claimed,
+          options: %Lightning.Runs.RunOptions{run_timeout_ms: custom_timeout_ms},
+          claimed_at: DateTime.add(now, -(total_allowable_seconds + 1))
+        )
+
+      lost_runs =
+        Query.lost()
+        |> Repo.all()
+        |> Enum.map(fn run -> run.id end)
+
+      assert past_boundary.id in lost_runs,
+             "Run claimed #{total_allowable_seconds + 1}s ago (past 120s timeout + #{grace_period_seconds}s grace) should be lost"
+
+      refute not_lost.id in lost_runs,
+             "Run claimed #{total_allowable_seconds - 1}s ago (within 120s timeout + #{grace_period_seconds}s grace) should NOT be lost"
+    end
+
+    test "with options=nil, run is lost after default_max_run_duration + grace_period" do
+      # When options is nil, the system falls back to:
+      # default_max_run_duration (seconds) + grace_period (seconds)
+
+      dataclip = insert(:dataclip)
+      %{triggers: [trigger]} = workflow = insert(:simple_workflow)
+
+      work_order =
+        insert(:workorder,
+          workflow: workflow,
+          trigger: trigger,
+          dataclip: dataclip
+        )
+
+      now = Lightning.current_time()
+
+      # System defaults
+      default_max_seconds = Lightning.Config.default_max_run_duration()
+      grace_period_seconds = Lightning.Config.grace_period()
+      total_allowable_seconds = default_max_seconds + grace_period_seconds
+
+      # Run claimed 1 second before the boundary should NOT be lost
+      not_lost =
+        insert(:run,
+          work_order: work_order,
+          starting_trigger: trigger,
+          dataclip: dataclip,
+          state: :claimed,
+          options: nil,
+          claimed_at: DateTime.add(now, -(total_allowable_seconds - 1))
+        )
+
+      # Run claimed 1 second past the boundary SHOULD be lost
+      past_boundary =
+        insert(:run,
+          work_order: work_order,
+          starting_trigger: trigger,
+          dataclip: dataclip,
+          state: :claimed,
+          options: nil,
+          claimed_at: DateTime.add(now, -(total_allowable_seconds + 1))
+        )
+
+      lost_runs =
+        Query.lost()
+        |> Repo.all()
+        |> Enum.map(fn run -> run.id end)
+
+      assert past_boundary.id in lost_runs,
+             "Run claimed #{total_allowable_seconds + 1}s ago (past #{default_max_seconds}s default + #{grace_period_seconds}s grace) should be lost"
+
+      refute not_lost.id in lost_runs,
+             "Run claimed #{total_allowable_seconds - 1}s ago (within #{default_max_seconds}s default + #{grace_period_seconds}s grace) should NOT be lost"
+    end
+
+    test "timeout clock uses started_at when available, run lost after timeout from started_at" do
+      # The timeout clock starts at COALESCE(started_at, claimed_at)
+      # This means if a run has started_at, that takes precedence
+
+      dataclip = insert(:dataclip)
+      %{triggers: [trigger]} = workflow = insert(:simple_workflow)
+
+      work_order =
+        insert(:workorder,
+          workflow: workflow,
+          trigger: trigger,
+          dataclip: dataclip
+        )
+
+      now = Lightning.current_time()
+
+      custom_timeout_ms = 60_000
+      grace_period_seconds = Lightning.Config.grace_period()
+
+      total_allowable_seconds =
+        div(custom_timeout_ms, 1000) + grace_period_seconds
+
+      # Run was claimed long ago but started recently - should NOT be lost
+      # (started_at is used for timeout calculation)
+      _claimed_long_ago_started_recently =
+        insert(:run,
+          work_order: work_order,
+          starting_trigger: trigger,
+          dataclip: dataclip,
+          state: :started,
+          options: %Lightning.Runs.RunOptions{run_timeout_ms: custom_timeout_ms},
+          claimed_at: DateTime.add(now, -(total_allowable_seconds + 100)),
+          started_at: DateTime.add(now, -10)
+        )
+
+      # Run was claimed long ago, started long ago - SHOULD be lost
+      started_and_exceeded =
+        insert(:run,
+          work_order: work_order,
+          starting_trigger: trigger,
+          dataclip: dataclip,
+          state: :started,
+          options: %Lightning.Runs.RunOptions{run_timeout_ms: custom_timeout_ms},
+          claimed_at: DateTime.add(now, -(total_allowable_seconds + 100)),
+          started_at: DateTime.add(now, -(total_allowable_seconds + 1))
+        )
+
+      lost_runs =
+        Query.lost()
+        |> Repo.all()
+        |> Enum.map(fn run -> run.id end)
+
+      assert lost_runs == [started_and_exceeded.id],
+             "Run is lost 60s + #{grace_period_seconds}s after started_at, not claimed_at"
+    end
+
+    test "run with 30s timeout is lost after 30s+grace, but 300s timeout run is not" do
+      dataclip = insert(:dataclip)
+      %{triggers: [trigger]} = workflow = insert(:simple_workflow)
+
+      work_order =
+        insert(:workorder,
+          workflow: workflow,
+          trigger: trigger,
+          dataclip: dataclip
+        )
+
+      now = Lightning.current_time()
+
+      grace_period_seconds = Lightning.Config.grace_period()
+
+      # Short timeout run (30 seconds) - should be lost after 30s + grace
+      short_timeout_ms = 30_000
+      short_total = div(short_timeout_ms, 1000) + grace_period_seconds
+
+      short_timeout_lost =
+        insert(:run,
+          work_order: work_order,
+          starting_trigger: trigger,
+          dataclip: dataclip,
+          state: :claimed,
+          options: %Lightning.Runs.RunOptions{run_timeout_ms: short_timeout_ms},
+          claimed_at: DateTime.add(now, -(short_total + 1))
+        )
+
+      # Long timeout run (5 minutes = 300s) - should NOT be lost at same elapsed time
+      long_timeout_ms = 300_000
+
+      _long_timeout_still_running =
+        insert(:run,
+          work_order: work_order,
+          starting_trigger: trigger,
+          dataclip: dataclip,
+          state: :claimed,
+          options: %Lightning.Runs.RunOptions{run_timeout_ms: long_timeout_ms},
+          claimed_at: DateTime.add(now, -(short_total + 1))
+        )
+
+      lost_runs =
+        Query.lost()
+        |> Repo.all()
+        |> Enum.map(fn run -> run.id end)
+
+      assert lost_runs == [short_timeout_lost.id],
+             "30s run is lost at #{short_total + 1}s, but 300s run still has #{300 + grace_period_seconds - short_total - 1}s remaining"
+    end
   end
 
   describe "concurrency" do
