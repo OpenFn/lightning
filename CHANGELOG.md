@@ -19,6 +19,8 @@ and this project adheres to
 
 ### Changed
 
+## [2.15.1] - 2025-12-17
+
 ### Fixed
 
 - Fix run panel override all panels
