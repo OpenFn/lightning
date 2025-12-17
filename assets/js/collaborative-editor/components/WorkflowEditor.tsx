@@ -117,7 +117,7 @@ export function WorkflowEditor({
         isSyncingRef.current = false;
       }, 0);
     }
-  }, [isRunPanelOpen, runPanelContext, params?.['panel'], updateSearchParams]);
+  }, [isRunPanelOpen, runPanelContext, params, updateSearchParams]);
 
   useEffect(() => {
     const panelParam = params['panel'] ?? null;
