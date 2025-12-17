@@ -1246,7 +1246,6 @@ defmodule LightningWeb.WorkflowChannel do
         id: worder.id,
         state: worder.state,
         last_activity: worder.last_activity,
-        version: worder.snapshot.lock_version,
         runs:
           Enum.map(worder.runs, fn run ->
             %{
@@ -1254,7 +1253,9 @@ defmodule LightningWeb.WorkflowChannel do
               state: run.state,
               error_type: run.error_type,
               started_at: run.started_at,
-              finished_at: run.finished_at
+              finished_at: run.finished_at,
+              version: run.snapshot.lock_version,
+              work_order_id: run.work_order_id
             }
           end)
       }
@@ -1263,24 +1264,28 @@ defmodule LightningWeb.WorkflowChannel do
 
   defp format_work_order_for_history(wo) do
     # Preload if needed
-    wo = Repo.preload(wo, [:snapshot, :runs])
+    wo = Repo.preload(wo, runs: :snapshot)
 
     %{
       id: wo.id,
       state: wo.state,
       last_activity: wo.last_activity,
-      version: wo.snapshot.lock_version,
       runs: Enum.map(wo.runs, &format_run_for_history/1)
     }
   end
 
   defp format_run_for_history(run) do
+    # Preload snapshot if not already loaded
+    run = Repo.preload(run, :snapshot)
+
     %{
       id: run.id,
       state: run.state,
       error_type: run.error_type,
       started_at: run.started_at,
-      finished_at: run.finished_at
+      finished_at: run.finished_at,
+      version: if(run.snapshot, do: run.snapshot.lock_version, else: 0),
+      work_order_id: run.work_order_id
     }
   end
 

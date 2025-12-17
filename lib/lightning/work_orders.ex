@@ -532,7 +532,7 @@ defmodule Lightning.WorkOrders do
     from(wo in WorkOrder,
       where: wo.id in ^workorder_ids,
       order_by: [desc: wo.last_activity],
-      preload: [:snapshot, :runs]
+      preload: [:snapshot, runs: :snapshot]
     )
     |> Repo.all()
   end

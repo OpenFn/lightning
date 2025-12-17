@@ -1568,7 +1568,6 @@ defmodule LightningWeb.WorkflowChannelTest do
       assert Map.has_key?(first_wo, :id)
       assert Map.has_key?(first_wo, :state)
       assert Map.has_key?(first_wo, :last_activity)
-      assert Map.has_key?(first_wo, :version)
       assert Map.has_key?(first_wo, :runs)
       assert is_list(first_wo.runs)
 
@@ -1579,6 +1578,8 @@ defmodule LightningWeb.WorkflowChannelTest do
       assert Map.has_key?(first_run, :error_type)
       assert Map.has_key?(first_run, :started_at)
       assert Map.has_key?(first_run, :finished_at)
+      assert Map.has_key?(first_run, :version)
+      assert Map.has_key?(first_run, :work_order_id)
     end
 
     test "returns empty list when workflow has no work orders", %{socket: socket} do
