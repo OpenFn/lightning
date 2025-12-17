@@ -312,13 +312,13 @@ export const useNodeSelection = () => {
         }
       }
 
-      // Preserve special panels (run, editor, settings, code); otherwise clear panel to show node inspector
-      const specialPanels = ['run', 'editor', 'settings', 'code'];
+      // nodePanels are panels, while open, we can switch from one node to another
+      const nodePanels = ['editor', 'run'];
       const updates: Record<string, string | null> = {
         job: null,
         trigger: null,
         edge: null,
-        panel: specialPanels.includes(currentPanel || '') ? currentPanel : null,
+        panel: nodePanels.includes(currentPanel) ? currentPanel : null,
       };
 
       if (foundJob) {

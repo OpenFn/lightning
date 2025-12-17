@@ -79,13 +79,10 @@ export function WorkflowEditor({
     if (isRunPanelOpen) {
       const contextJobId = runPanelContext?.jobId;
       const contextTriggerId = runPanelContext?.triggerId;
-      // Don't override settings, code, or editor panels when user explicitly opens them
-      const isSpecialPanel = ['settings', 'code', 'editor'].includes(
-        panelParam || ''
-      );
-      const needsUpdate = panelParam !== 'run' && !isSpecialPanel;
 
-      if (needsUpdate) {
+      // nodePanels are panels, while open, we can switch from one node to another
+      const nodePanels = ['editor', 'run'].includes(panelParam);
+      if (!nodePanels) {
         isSyncingRef.current = true;
         if (contextJobId) {
           updateSearchParams({

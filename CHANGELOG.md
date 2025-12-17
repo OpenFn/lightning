@@ -28,6 +28,8 @@ and this project adheres to
 
 ### Fixed
 
+- Fix allow any panel to override the active panel
+  [#4237](https://github.com/OpenFn/lightning/issues/4237)
 - Fix AI Assistant having write privileges in readonly mode
   [#4227](https://github.com/OpenFn/lightning/issues/4227)
 - Remove template selection URL state persistence to fix race conditions during
