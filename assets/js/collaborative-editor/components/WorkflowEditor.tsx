@@ -80,8 +80,10 @@ export function WorkflowEditor({
       const contextJobId = runPanelContext?.jobId;
       const contextTriggerId = runPanelContext?.triggerId;
 
-      // nodePanels are panels, while open, we can switch from one node to another
-      const nodePanels = ['editor', 'run'].includes(panelParam);
+      // run panel can override all panels
+      const nodePanels = ['editor', 'run', 'code', 'settings'].includes(
+        panelParam
+      );
       if (!nodePanels) {
         isSyncingRef.current = true;
         if (contextJobId) {
@@ -115,7 +117,7 @@ export function WorkflowEditor({
         isSyncingRef.current = false;
       }, 0);
     }
-  }, [isRunPanelOpen, runPanelContext, params, updateSearchParams]);
+  }, [isRunPanelOpen, runPanelContext, params?.['panel'], updateSearchParams]);
 
   useEffect(() => {
     const panelParam = params['panel'] ?? null;

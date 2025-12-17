@@ -36,6 +36,8 @@ and this project adheres to
 
 ### Fixed
 
+- Fix run panel override all panels
+  [#4237](https://github.com/OpenFn/lightning/issues/4237)
 - Fix workflow settings panel blocking the active panel
   [#4237](https://github.com/OpenFn/lightning/issues/4237)
 - Fix AI Assistant having write privileges in readonly mode
