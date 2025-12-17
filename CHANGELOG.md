@@ -19,6 +19,12 @@ and this project adheres to
 
 ### Changed
 
+### Fixed
+
+## [2.15.0-pre7] - 2025-12-17
+
+### Changed
+
 - Update wording of errors on the canvas
   [#4224](https://github.com/OpenFn/lightning/issues/4224)
 - Add default Logger param scrubbing for prod environments
@@ -28,7 +34,7 @@ and this project adheres to
 
 ### Fixed
 
-- Fix allow any panel to override the active panel
+- Fix workflow settings panel blocking the active panel
   [#4237](https://github.com/OpenFn/lightning/issues/4237)
 - Fix AI Assistant having write privileges in readonly mode
   [#4227](https://github.com/OpenFn/lightning/issues/4227)
