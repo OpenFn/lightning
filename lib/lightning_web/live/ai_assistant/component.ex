@@ -157,8 +157,11 @@ defmodule LightningWeb.AiAssistant.Component do
     })
   end
 
-  defp handle_message_status({:processing, _session}, socket) do
-    assign(socket, :pending_message, AsyncResult.loading())
+  defp handle_message_status({:processing, session}, socket) do
+    assign(socket,
+      session: session,
+      pending_message: AsyncResult.loading()
+    )
   end
 
   defp handle_message_status({:success, session}, socket) do
@@ -833,7 +836,10 @@ defmodule LightningWeb.AiAssistant.Component do
                 <div class="flex items-start justify-between gap-3">
                   <div class="flex items-start space-x-3 min-w-0 flex-1">
                     <div class="flex-shrink-0 mt-0.5">
-                      <.user_avatar user={session.user} />
+                      <.user_avatar
+                        id={"session-#{session.id}-avatar"}
+                        user={session.user}
+                      />
                     </div>
                     <div class="min-w-0 flex-1">
                       <p class="text-sm font-medium text-gray-900 truncate group-hover:text-gray-700">
@@ -1261,7 +1267,7 @@ defmodule LightningWeb.AiAssistant.Component do
               "text-xs",
               message_timestamp_classes(@message.status)
             ]}>
-              {format_user_attribution(@message)}
+              {format_message_time(@message.inserted_at)}
             </span>
 
             <div class="flex items-center gap-1">
@@ -1275,7 +1281,11 @@ defmodule LightningWeb.AiAssistant.Component do
         </div>
 
         <div class="flex-shrink-0">
-          <.user_avatar user={@message.user} size_class="w-8 h-8" />
+          <.user_avatar
+            id={"message-#{@message.id}-avatar"}
+            user={@message.user}
+            size_class="w-8 h-8"
+          />
         </div>
       </div>
     </div>
@@ -1548,31 +1558,6 @@ defmodule LightningWeb.AiAssistant.Component do
     Calendar.strftime(datetime, "%I:%M %p")
   end
 
-  defp format_user_attribution(%{user: user} = message) when not is_nil(user) do
-    name = format_user_name(user)
-
-    if name do
-      "Sent by #{name} • #{format_message_time(message.inserted_at)}"
-    else
-      format_message_time(message.inserted_at)
-    end
-  end
-
-  defp format_user_attribution(message) do
-    format_message_time(message.inserted_at)
-  end
-
-  defp format_user_name(%{first_name: first_name, last_name: last_name})
-       when is_binary(first_name) and is_binary(last_name) do
-    "#{first_name} #{last_name}"
-  end
-
-  defp format_user_name(%{first_name: first_name}) when is_binary(first_name) do
-    first_name
-  end
-
-  defp format_user_name(_), do: nil
-
   attr :id, :string, required: true
   attr :content, :string, required: true
   attr :attributes, :map, default: %{}
@@ -1649,6 +1634,7 @@ defmodule LightningWeb.AiAssistant.Component do
 
   attr :user, Lightning.Accounts.User, default: nil
   attr :size_class, :string, default: "h-8 w-8"
+  attr :id, :string, default: nil
 
   defp user_avatar(%{user: nil} = assigns) do
     ~H"""
@@ -1663,21 +1649,23 @@ defmodule LightningWeb.AiAssistant.Component do
   defp user_avatar(assigns) do
     first_initial = get_initial(assigns.user.first_name)
     last_initial = get_initial(assigns.user.last_name)
-    title = build_user_title(assigns.user.first_name, assigns.user.last_name)
+    full_name = build_user_title(assigns.user.first_name, assigns.user.last_name)
 
     assigns =
       assign(assigns,
         first_initial: first_initial,
         last_initial: last_initial,
-        title: title
+        full_name: full_name
       )
 
     ~H"""
-    <span class={"inline-flex #{@size_class} items-center justify-center rounded-full bg-gray-100 "}>
-      <span
-        class="text-sm leading-none text-black uppercase select-none"
-        title={@title}
-      >
+    <span
+      id={@id}
+      class={"inline-flex #{@size_class} items-center justify-center rounded-full bg-gray-100 cursor-default"}
+      phx-hook="Tooltip"
+      aria-label={@full_name}
+    >
+      <span class="text-sm leading-none text-black uppercase select-none">
         {@first_initial}{@last_initial}
       </span>
     </span>
