@@ -5,14 +5,14 @@
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="generator" content="ExDoc v0.38.4">
-    <meta name="project" content="Lightning v2.15.0">
+    <meta name="project" content="Lightning v2.15.1">
 
 
-    <title>LightningWeb.Telemetry — Lightning v2.15.0</title>
+    <title>LightningWeb.Telemetry — Lightning v2.15.1</title>
 
     <link rel="stylesheet" href="dist/html-elixir-RLZO5U2C.css" />
 
-    <script defer src="dist/sidebar_items-9192F4BC.js"></script>
+    <script defer src="dist/sidebar_items-D81971C1.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-Y223O6DN.js"></script>
 
@@ -41,7 +41,7 @@
 Lightning
         </a>
         <div class="sidebar-projectVersion" translate="no">
-          v2.15.0
+          v2.15.1
         </div>
       </div>
     </div>
@@ -80,7 +80,7 @@ Lightning
   <div class="heading-with-actions top-heading">
     <h1>
       <span translate="no">LightningWeb.Telemetry</span> 
-      <small class="app-vsn" translate="no">(Lightning v2.15.0)</small>
+      <small class="app-vsn" translate="no">(Lightning v2.15.1)</small>
 
     </h1>
 
@@ -259,10 +259,10 @@ Lightning
 <p>Convenience function that wraps <a href="https://hexdocs.pm/telemetry/1.3.0/telemetry.html#span/3"><code class="inline">:telemetry.span/3</code></a>.</p><p>Given a function with an arity of zero, it passes the <code class="inline">metadata</code> argument
 out with the result of the function.</p><p>If you need to control the <code class="inline">metadata</code>, pass in a function with an arity of
 one. It will be called with the metadata provided and expects the result and
-the updated metadata to be returned in a tuple.</p><p>Example:</p><pre><code class="makeup elixir" translate="no"><span class="n">with_span</span><span class="p" data-group-id="8870248257-1">(</span><span class="p" data-group-id="8870248257-2">[</span><span class="ss">:my</span><span class="p">,</span><span class="w"> </span><span class="n">span</span><span class="p" data-group-id="8870248257-2">]</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="8870248257-3">%{</span><span class="ss">project_id</span><span class="p">:</span><span class="w"> </span><span class="mi">123</span><span class="p" data-group-id="8870248257-3">}</span><span class="p">,</span><span class="w"> </span><span class="k" data-group-id="8870248257-4">fn</span><span class="w"> </span><span class="o">-&gt;</span><span class="w"> </span><span class="n">get_project</span><span class="p" data-group-id="8870248257-5">(</span><span class="mi">456</span><span class="p" data-group-id="8870248257-5">)</span><span class="w"> </span><span class="k" data-group-id="8870248257-4">end</span><span class="p" data-group-id="8870248257-1">)</span></code></pre><p>Or when you want to extend the metadata:</p><pre><code class="makeup elixir" translate="no"><span class="n">with_span</span><span class="p" data-group-id="8305636990-1">(</span><span class="p" data-group-id="8305636990-2">[</span><span class="ss">:my</span><span class="p">,</span><span class="w"> </span><span class="ss">:span</span><span class="p" data-group-id="8305636990-2">]</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="8305636990-3">%{</span><span class="ss">user_id</span><span class="p">:</span><span class="w"> </span><span class="mi">123</span><span class="p" data-group-id="8305636990-3">}</span><span class="p">,</span><span class="w"> </span><span class="k" data-group-id="8305636990-4">fn</span><span class="w"> </span><span class="c">_metadata</span><span class="w"> </span><span class="o">-&gt;</span><span class="w">
-  </span><span class="n">project</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">get_project</span><span class="p" data-group-id="8305636990-5">(</span><span class="mi">456</span><span class="p" data-group-id="8305636990-5">)</span><span class="w">
-  </span><span class="p" data-group-id="8305636990-6">{</span><span class="n">project</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="8305636990-7">%{</span><span class="ss">project_id</span><span class="p">:</span><span class="w"> </span><span class="n">project</span><span class="o">.</span><span class="n">id</span><span class="p" data-group-id="8305636990-7">}</span><span class="p" data-group-id="8305636990-6">}</span><span class="w">
-</span><span class="k" data-group-id="8305636990-4">end</span><span class="p" data-group-id="8305636990-1">)</span></code></pre>
+the updated metadata to be returned in a tuple.</p><p>Example:</p><pre><code class="makeup elixir" translate="no"><span class="n">with_span</span><span class="p" data-group-id="5031534795-1">(</span><span class="p" data-group-id="5031534795-2">[</span><span class="ss">:my</span><span class="p">,</span><span class="w"> </span><span class="n">span</span><span class="p" data-group-id="5031534795-2">]</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="5031534795-3">%{</span><span class="ss">project_id</span><span class="p">:</span><span class="w"> </span><span class="mi">123</span><span class="p" data-group-id="5031534795-3">}</span><span class="p">,</span><span class="w"> </span><span class="k" data-group-id="5031534795-4">fn</span><span class="w"> </span><span class="o">-&gt;</span><span class="w"> </span><span class="n">get_project</span><span class="p" data-group-id="5031534795-5">(</span><span class="mi">456</span><span class="p" data-group-id="5031534795-5">)</span><span class="w"> </span><span class="k" data-group-id="5031534795-4">end</span><span class="p" data-group-id="5031534795-1">)</span></code></pre><p>Or when you want to extend the metadata:</p><pre><code class="makeup elixir" translate="no"><span class="n">with_span</span><span class="p" data-group-id="2684589041-1">(</span><span class="p" data-group-id="2684589041-2">[</span><span class="ss">:my</span><span class="p">,</span><span class="w"> </span><span class="ss">:span</span><span class="p" data-group-id="2684589041-2">]</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="2684589041-3">%{</span><span class="ss">user_id</span><span class="p">:</span><span class="w"> </span><span class="mi">123</span><span class="p" data-group-id="2684589041-3">}</span><span class="p">,</span><span class="w"> </span><span class="k" data-group-id="2684589041-4">fn</span><span class="w"> </span><span class="c">_metadata</span><span class="w"> </span><span class="o">-&gt;</span><span class="w">
+  </span><span class="n">project</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">get_project</span><span class="p" data-group-id="2684589041-5">(</span><span class="mi">456</span><span class="p" data-group-id="2684589041-5">)</span><span class="w">
+  </span><span class="p" data-group-id="2684589041-6">{</span><span class="n">project</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="2684589041-7">%{</span><span class="ss">project_id</span><span class="p">:</span><span class="w"> </span><span class="n">project</span><span class="o">.</span><span class="n">id</span><span class="p" data-group-id="2684589041-7">}</span><span class="p" data-group-id="2684589041-6">}</span><span class="w">
+</span><span class="k" data-group-id="2684589041-4">end</span><span class="p" data-group-id="2684589041-1">)</span></code></pre>
   </section>
 </section>
 

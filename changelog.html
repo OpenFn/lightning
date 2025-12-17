@@ -5,14 +5,14 @@
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="generator" content="ExDoc v0.38.4">
-    <meta name="project" content="Lightning v2.15.0">
+    <meta name="project" content="Lightning v2.15.1">
 
 
-    <title>Changelog — Lightning v2.15.0</title>
+    <title>Changelog — Lightning v2.15.1</title>
 
     <link rel="stylesheet" href="dist/html-elixir-RLZO5U2C.css" />
 
-    <script defer src="dist/sidebar_items-9192F4BC.js"></script>
+    <script defer src="dist/sidebar_items-D81971C1.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-Y223O6DN.js"></script>
 
@@ -41,7 +41,7 @@
 Lightning
         </a>
         <div class="sidebar-projectVersion" translate="no">
-          v2.15.0
+          v2.15.1
         </div>
       </div>
     </div>
@@ -91,7 +91,7 @@ Lightning
 
 <p>All notable changes to this project will be documented in this file.</p><ul><li><code class="inline">Added</code> for new features.</li><li><code class="inline">Changed</code> for changes in existing functionality.</li><li><code class="inline">Deprecated</code> for soon-to-be removed features.</li><li><code class="inline">Removed</code> for now removed features.</li><li><code class="inline">Fixed</code> for any bug fixes.</li><li><code class="inline">Security</code> in case of vulnerabilities.</li></ul><p>The format is based on <a href="https://keepachangelog.com/en/1.0.0/">Keep a Changelog</a>,
 and this project adheres to
-<a href="https://semver.org/spec/v2.0.0.html">Semantic Versioning</a>.</p><h2 id="unreleased" class="section-heading"><a href="#unreleased" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">[Unreleased]</span></h2><h3 id="added" class="section-heading"><a href="#added" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Added</span></h3><h3 id="changed" class="section-heading"><a href="#changed" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Changed</span></h3><h3 id="fixed" class="section-heading"><a href="#fixed" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Fixed</span></h3><ul><li>Fix run panel override all panels
+<a href="https://semver.org/spec/v2.0.0.html">Semantic Versioning</a>.</p><h2 id="unreleased" class="section-heading"><a href="#unreleased" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">[Unreleased]</span></h2><h3 id="added" class="section-heading"><a href="#added" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Added</span></h3><h3 id="changed" class="section-heading"><a href="#changed" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Changed</span></h3><h2 id="2-15-1-2025-12-17" class="section-heading"><a href="#2-15-1-2025-12-17" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">[2.15.1] - 2025-12-17</span></h2><h3 id="fixed" class="section-heading"><a href="#fixed" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Fixed</span></h3><ul><li>Fix run panel override all panels
 <a href="https://github.com/OpenFn/lightning/issues/4243">#4243</a></li></ul><h2 id="2-15-0-2025-12-17" class="section-heading"><a href="#2-15-0-2025-12-17" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">[2.15.0] - 2025-12-17</span></h2><h2 id="2-15-0-pre7-2025-12-17" class="section-heading"><a href="#2-15-0-pre7-2025-12-17" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">[2.15.0-pre7] - 2025-12-17</span></h2><h3 id="changed-1" class="section-heading"><a href="#changed-1" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Changed</span></h3><ul><li>Update wording of errors on the canvas
 <a href="https://github.com/OpenFn/lightning/issues/4224">#4224</a></li><li>Add default Logger param scrubbing for prod environments
 <a href="https://github.com/OpenFn/lightning/issues/4231">#4231</a></li><li>Extend toast notification slightly
@@ -772,20 +772,20 @@ existing snapshots could be incorrect (e.g. missing steps, missing edges).
 In order to fix this, you will need to manually create new snapshots for
 each of your workflows. This can be done either by modifying the workflow in
 the UI and saving it. Or running a command on the running instance:</p><pre><code class="makeup elixir" translate="no"><span class="kn">alias</span><span class="w"> </span><span class="nc">Lightning.Repo</span><span class="w">
-</span><span class="kn">alias</span><span class="w"> </span><span class="nc">Lightning.Workflows</span><span class="o">.</span><span class="p" data-group-id="0213584585-1">{</span><span class="nc">Workflow</span><span class="p">,</span><span class="w"> </span><span class="nc">Snapshot</span><span class="p" data-group-id="0213584585-1">}</span><span class="w">
+</span><span class="kn">alias</span><span class="w"> </span><span class="nc">Lightning.Workflows</span><span class="o">.</span><span class="p" data-group-id="9931774599-1">{</span><span class="nc">Workflow</span><span class="p">,</span><span class="w"> </span><span class="nc">Snapshot</span><span class="p" data-group-id="9931774599-1">}</span><span class="w">
 
-</span><span class="nc">Repo</span><span class="o">.</span><span class="n">transaction</span><span class="p" data-group-id="0213584585-2">(</span><span class="k" data-group-id="0213584585-3">fn</span><span class="w"> </span><span class="o">-&gt;</span><span class="w">
+</span><span class="nc">Repo</span><span class="o">.</span><span class="n">transaction</span><span class="p" data-group-id="9931774599-2">(</span><span class="k" data-group-id="9931774599-3">fn</span><span class="w"> </span><span class="o">-&gt;</span><span class="w">
   </span><span class="n">snapshots</span><span class="w"> </span><span class="o">=</span><span class="w">
-    </span><span class="nc">Repo</span><span class="o">.</span><span class="n">all</span><span class="p" data-group-id="0213584585-4">(</span><span class="nc">Workflow</span><span class="p" data-group-id="0213584585-4">)</span><span class="w">
-    </span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Enum</span><span class="o">.</span><span class="n">map</span><span class="p" data-group-id="0213584585-5">(</span><span class="o">&amp;</span><span class="nc">Workflow</span><span class="o">.</span><span class="n">touch</span><span class="o">/</span><span class="mi">1</span><span class="p" data-group-id="0213584585-5">)</span><span class="w">
-    </span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Enum</span><span class="o">.</span><span class="n">map</span><span class="p" data-group-id="0213584585-6">(</span><span class="o">&amp;</span><span class="nc">Repo</span><span class="o">.</span><span class="n">update!</span><span class="o">/</span><span class="mi">1</span><span class="p" data-group-id="0213584585-6">)</span><span class="w">
-    </span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Enum</span><span class="o">.</span><span class="n">map</span><span class="p" data-group-id="0213584585-7">(</span><span class="k" data-group-id="0213584585-8">fn</span><span class="w"> </span><span class="n">workflow</span><span class="w"> </span><span class="o">-&gt;</span><span class="w">
-      </span><span class="p" data-group-id="0213584585-9">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="n">snapshot</span><span class="p" data-group-id="0213584585-9">}</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">Snapshot</span><span class="o">.</span><span class="n">create</span><span class="p" data-group-id="0213584585-10">(</span><span class="n">workflow</span><span class="p" data-group-id="0213584585-10">)</span><span class="w">
+    </span><span class="nc">Repo</span><span class="o">.</span><span class="n">all</span><span class="p" data-group-id="9931774599-4">(</span><span class="nc">Workflow</span><span class="p" data-group-id="9931774599-4">)</span><span class="w">
+    </span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Enum</span><span class="o">.</span><span class="n">map</span><span class="p" data-group-id="9931774599-5">(</span><span class="o">&amp;</span><span class="nc">Workflow</span><span class="o">.</span><span class="n">touch</span><span class="o">/</span><span class="mi">1</span><span class="p" data-group-id="9931774599-5">)</span><span class="w">
+    </span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Enum</span><span class="o">.</span><span class="n">map</span><span class="p" data-group-id="9931774599-6">(</span><span class="o">&amp;</span><span class="nc">Repo</span><span class="o">.</span><span class="n">update!</span><span class="o">/</span><span class="mi">1</span><span class="p" data-group-id="9931774599-6">)</span><span class="w">
+    </span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Enum</span><span class="o">.</span><span class="n">map</span><span class="p" data-group-id="9931774599-7">(</span><span class="k" data-group-id="9931774599-8">fn</span><span class="w"> </span><span class="n">workflow</span><span class="w"> </span><span class="o">-&gt;</span><span class="w">
+      </span><span class="p" data-group-id="9931774599-9">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="n">snapshot</span><span class="p" data-group-id="9931774599-9">}</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">Snapshot</span><span class="o">.</span><span class="n">create</span><span class="p" data-group-id="9931774599-10">(</span><span class="n">workflow</span><span class="p" data-group-id="9931774599-10">)</span><span class="w">
       </span><span class="n">snapshot</span><span class="w">
-    </span><span class="k" data-group-id="0213584585-8">end</span><span class="p" data-group-id="0213584585-7">)</span><span class="w">
+    </span><span class="k" data-group-id="9931774599-8">end</span><span class="p" data-group-id="9931774599-7">)</span><span class="w">
 
- </span><span class="p" data-group-id="0213584585-11">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="n">snapshots</span><span class="p" data-group-id="0213584585-11">}</span><span class="w">
-</span><span class="k" data-group-id="0213584585-3">end</span><span class="p" data-group-id="0213584585-2">)</span></code></pre></blockquote></li></ul><h2 id="v2-9-0-2024-09-06" class="section-heading"><a href="#v2-9-0-2024-09-06" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">[v2.9.0] - 2024-09-06</span></h2><h3 id="added-62" class="section-heading"><a href="#added-62" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Added</span></h3><ul><li>Limit AI queries and hook the increment of AI queries to allow usage limiting.
+ </span><span class="p" data-group-id="9931774599-11">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="n">snapshots</span><span class="p" data-group-id="9931774599-11">}</span><span class="w">
+</span><span class="k" data-group-id="9931774599-3">end</span><span class="p" data-group-id="9931774599-2">)</span></code></pre></blockquote></li></ul><h2 id="v2-9-0-2024-09-06" class="section-heading"><a href="#v2-9-0-2024-09-06" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">[v2.9.0] - 2024-09-06</span></h2><h3 id="added-62" class="section-heading"><a href="#added-62" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Added</span></h3><ul><li>Limit AI queries and hook the increment of AI queries to allow usage limiting.
 <a href="https://github.com/OpenFn/lightning/pull/2438">#2438</a></li><li>Persist AI Assistant conversations and enable it for all users
 <a href="https://github.com/OpenFn/lightning/issues/2296">#2296</a></li></ul><h3 id="changed-68" class="section-heading"><a href="#changed-68" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Changed</span></h3><ul><li>Rename <code class="inline">new_table</code> component to <code class="inline">table</code>.
 <a href="https://github.com/OpenFn/lightning/pull/2448">#2448</a></li></ul><h3 id="fixed-80" class="section-heading"><a href="#fixed-80" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Fixed</span></h3><ul><li>Fix <code class="inline">workflow_id</code> presence in state.json during Github sync
@@ -1234,7 +1234,7 @@ work orders up to <code class="inline">v0.10.0</code>, though the granularity of
 will be less than <code class="inline">v0.10.0</code> and the final states are not guaranteed to be
 accurate for workflows with multiple branches and leaf nodes with varying exit
 reasons.</p><p>The migration scripts can be run with a single function call in SetupUtils from
-a connect <code class="inline">iex</code> session:</p><pre><code class="makeup elixir" translate="no"><span class="nc">Lightning.SetupUtils</span><span class="o">.</span><span class="n">approximate_state_for_attempts_and_workorders</span><span class="p" data-group-id="4532685956-1">(</span><span class="p" data-group-id="4532685956-1">)</span></code></pre><p>Note that (like lots of <em>other</em> functionality in <code class="inline">SetupUtils</code>, calling this
+a connect <code class="inline">iex</code> session:</p><pre><code class="makeup elixir" translate="no"><span class="nc">Lightning.SetupUtils</span><span class="o">.</span><span class="n">approximate_state_for_attempts_and_workorders</span><span class="p" data-group-id="8197304907-1">(</span><span class="p" data-group-id="8197304907-1">)</span></code></pre><p>Note that (like lots of <em>other</em> functionality in <code class="inline">SetupUtils</code>, calling this
 function is a destructive action and you should only do it if you've backed up
 your data and you know what you're doing.)</p><p>As always, we recommend backing up your data before migrating. (And thanks for
 bearing with us as we move towards our first stable Lightning release.)</p><h3 id="added-100" class="section-heading"><a href="#added-100" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Added</span></h3><ul><li>Fix flaky job name input behavior on error
