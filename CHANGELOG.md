@@ -19,6 +19,11 @@ and this project adheres to
 
 ### Changed
 
+### Fixed
+
+- Fix retried runs showing incorrect workflow version in history
+  [#4186](https://github.com/OpenFn/lightning/issues/4186)
+
 ## [2.15.1] - 2025-12-17
 
 ### Fixed
