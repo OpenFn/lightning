@@ -142,6 +142,7 @@ defmodule LightningWeb.AiAssistantChannel do
   def handle_in("list_sessions", params, socket) do
     session = socket.assigns.session
     session_type = socket.assigns.session_type
+    user = socket.assigns.current_user
 
     offset = Map.get(params, "offset", 0)
     limit = Map.get(params, "limit", 20)
@@ -158,7 +159,7 @@ defmodule LightningWeb.AiAssistantChannel do
 
     with {:ok, resource} <- get_resource_for_session_type(session_type, session),
          %{sessions: sessions, pagination: pagination} <-
-           AiAssistant.list_sessions(resource, :desc, opts) do
+           AiAssistant.list_sessions(resource, user, :desc, opts) do
       {:reply,
        {:ok,
         %{
@@ -452,11 +453,23 @@ defmodule LightningWeb.AiAssistantChannel do
     end
   end
 
-  defp authorize_session_access(%{session_type: "job_code"} = session, user) do
+  defp authorize_session_access(session, user) do
+    # First check session ownership - users can only access their own sessions
+    if session.user_id != user.id do
+      {:error, :unauthorized}
+    else
+      authorize_session_resource_access(session, user)
+    end
+  end
+
+  defp authorize_session_resource_access(
+         %{session_type: "job_code"} = session,
+         user
+       ) do
     authorize_job_code_session(session, user)
   end
 
-  defp authorize_session_access(
+  defp authorize_session_resource_access(
          %{session_type: "workflow_template"} = session,
          user
        ) do

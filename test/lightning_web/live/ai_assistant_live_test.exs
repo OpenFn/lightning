@@ -2001,7 +2001,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       assert html =~ "Here&#39;s your Salesforce sync workflow:"
 
       workflow_sessions =
-        Lightning.AiAssistant.list_sessions(project, :desc, limit: 5)
+        Lightning.AiAssistant.list_sessions(project, user, :desc, limit: 5)
 
       assert %{sessions: [session | _]} = workflow_sessions
       assert session.session_type == "workflow_template"
@@ -2394,7 +2394,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       assert has_element?(view, "#new-workflow-panel-assistant")
     end
 
-    test "workflow mode handles concurrent users correctly", %{
+    test "workflow mode isolates sessions per user", %{
       conn: conn,
       project: project
     } do
@@ -2459,11 +2459,12 @@ defmodule LightningWeb.AiAssistantLiveTest do
       html1 = render(view1)
       html2 = render(view2)
 
+      # Each user should only see their own sessions (privacy fix)
       assert html1 =~ "User 1 Workflow"
-      assert html1 =~ "User 2 Workflow"
+      refute html1 =~ "User 2 Workflow"
 
-      assert html2 =~ "User 1 Workflow"
       assert html2 =~ "User 2 Workflow"
+      refute html2 =~ "User 1 Workflow"
     end
   end
 

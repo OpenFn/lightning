@@ -52,7 +52,7 @@ defmodule LightningWeb.API.AiAssistantController do
         end
 
       %{sessions: sessions, pagination: pagination} =
-        AiAssistant.list_sessions(resource, :desc, opts)
+        AiAssistant.list_sessions(resource, user, :desc, opts)
 
       json(conn, %{
         sessions: AiAssistantJSON.format_sessions(sessions),

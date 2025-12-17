@@ -500,9 +500,13 @@ defmodule Lightning.AiAssistant do
   or a Job (job-specific sessions). Results are paginated and include total counts
   and navigation metadata.
 
+  Sessions are scoped to the specified user to ensure privacy in collaborative
+  editing scenarios where multiple users may work on the same workflow/job.
+
   ## Parameters
 
   - `resource` - A `%Project{}`, `%Job{}`, or `%Snapshot.Job{}` struct to filter sessions by
+  - `user` - The `%User{}` whose sessions to retrieve
   - `sort_direction` - Sort order, either `:asc` or `:desc` (default: `:desc`)
   - `opts` - Keyword list of options:
     - `:offset` - Number of records to skip (default: 0)
@@ -514,11 +518,12 @@ defmodule Lightning.AiAssistant do
   - `:sessions` - List of `ChatSession` structs with preloaded data
   - `:pagination` - `PaginationMeta` struct with navigation information
   """
-  @spec list_sessions(Project.t() | Job.t(), :asc | :desc, opts()) :: %{
-          sessions: [ChatSession.t()],
-          pagination: PaginationMeta.t()
-        }
-  def list_sessions(resource, sort_direction \\ :desc, opts \\ []) do
+  @spec list_sessions(Project.t() | Job.t(), User.t(), :asc | :desc, opts()) ::
+          %{
+            sessions: [ChatSession.t()],
+            pagination: PaginationMeta.t()
+          }
+  def list_sessions(resource, user, sort_direction \\ :desc, opts \\ []) do
     offset = Keyword.get(opts, :offset, 0)
     limit = Keyword.get(opts, :limit, 20)
 
@@ -529,6 +534,7 @@ defmodule Lightning.AiAssistant do
 
           get_workflow_sessions_with_count(
             project,
+            user,
             workflow,
             sort_direction,
             offset,
@@ -541,10 +547,16 @@ defmodule Lightning.AiAssistant do
                Lightning.Workflows.Job,
                Lightning.Workflows.Snapshot.Job
              ] ->
-          get_job_sessions_with_count(job, sort_direction, offset, limit)
+          get_job_sessions_with_count(job, user, sort_direction, offset, limit)
 
         job_id when is_binary(job_id) ->
-          get_job_sessions_with_count(job_id, sort_direction, offset, limit)
+          get_job_sessions_with_count(
+            job_id,
+            user,
+            sort_direction,
+            offset,
+            limit
+          )
       end
 
     pagination =
@@ -562,16 +574,18 @@ defmodule Lightning.AiAssistant do
   ## Parameters
 
   - `resource` - A `%Project{}` or `%Job{}` struct
+  - `user` - The `%User{}` whose sessions to check
   - `current_count` - Number of sessions already loaded
 
   ## Returns
 
   `true` if more sessions exist, `false` otherwise.
   """
-  @spec has_more_sessions?(Project.t() | Job.t(), integer()) :: boolean()
-  def has_more_sessions?(resource, current_count) do
+  @spec has_more_sessions?(Project.t() | Job.t(), User.t(), integer()) ::
+          boolean()
+  def has_more_sessions?(resource, user, current_count) do
     %{pagination: pagination} =
-      list_sessions(resource, :desc, offset: current_count, limit: 1)
+      list_sessions(resource, user, :desc, offset: current_count, limit: 1)
 
     pagination.has_next_page
   end
@@ -975,6 +989,7 @@ defmodule Lightning.AiAssistant do
 
   defp get_workflow_sessions_with_count(
          project,
+         user,
          workflow,
          sort_direction,
          offset,
@@ -984,7 +999,8 @@ defmodule Lightning.AiAssistant do
     base_query =
       from(s in ChatSession,
         where:
-          s.project_id == ^project.id and s.session_type == "workflow_template"
+          s.project_id == ^project.id and s.session_type == "workflow_template" and
+            s.user_id == ^user.id
       )
 
     query =
@@ -1017,16 +1033,16 @@ defmodule Lightning.AiAssistant do
     {sessions, total_count}
   end
 
-  defp get_job_sessions_with_count(job, sort_direction, offset, limit)
+  defp get_job_sessions_with_count(job, user, sort_direction, offset, limit)
        when is_map(job) do
-    get_job_sessions_with_count(job.id, sort_direction, offset, limit)
+    get_job_sessions_with_count(job.id, user, sort_direction, offset, limit)
   end
 
-  defp get_job_sessions_with_count(job_id, sort_direction, offset, limit)
+  defp get_job_sessions_with_count(job_id, user, sort_direction, offset, limit)
        when is_binary(job_id) do
     saved_sessions_query =
       from(s in ChatSession,
-        where: s.job_id == ^job_id,
+        where: s.job_id == ^job_id and s.user_id == ^user.id,
         left_join: m in assoc(s, :messages),
         group_by: [s.id, s.title, s.updated_at, s.inserted_at],
         select: %{s | message_count: count(m.id)}
@@ -1036,6 +1052,7 @@ defmodule Lightning.AiAssistant do
       from(s in ChatSession,
         where: s.session_type == "job_code",
         where: is_nil(s.job_id),
+        where: s.user_id == ^user.id,
         where: fragment("? -> 'unsaved_job' ->> 'id' = ?", s.meta, ^job_id),
         left_join: m in assoc(s, :messages),
         group_by: [s.id, s.title, s.updated_at, s.inserted_at],

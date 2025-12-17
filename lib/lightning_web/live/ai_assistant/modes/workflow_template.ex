@@ -49,16 +49,20 @@ defmodule LightningWeb.Live.AiAssistant.Modes.WorkflowTemplate do
           sessions: [session()],
           pagination: map()
         }
-  def list_sessions(%{project: project} = assigns, sort_direction, opts \\ []) do
+  def list_sessions(
+        %{project: project, user: user} = assigns,
+        sort_direction,
+        opts \\ []
+      ) do
     workflow = assigns[:workflow]
     opts_with_workflow = Keyword.put_new(opts, :workflow, workflow)
-    AiAssistant.list_sessions(project, sort_direction, opts_with_workflow)
+    AiAssistant.list_sessions(project, user, sort_direction, opts_with_workflow)
   end
 
   @impl true
   @spec more_sessions?(assigns(), integer()) :: boolean()
-  def more_sessions?(%{project: project}, current_count) do
-    AiAssistant.has_more_sessions?(project, current_count)
+  def more_sessions?(%{project: project, user: user}, current_count) do
+    AiAssistant.has_more_sessions?(project, user, current_count)
   end
 
   @impl true

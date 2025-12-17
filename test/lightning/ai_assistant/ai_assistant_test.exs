@@ -1865,7 +1865,7 @@ defmodule Lightning.AiAssistantTest do
     end
   end
 
-  describe "list_sessions/3 with Project resource" do
+  describe "list_sessions/4 with Project resource" do
     test "lists workflow template sessions for project", %{
       user: user,
       project: project
@@ -1889,7 +1889,7 @@ defmodule Lightning.AiAssistantTest do
         )
 
       # List sessions using Project struct
-      %{sessions: sessions} = AiAssistant.list_sessions(project, :desc, [])
+      %{sessions: sessions} = AiAssistant.list_sessions(project, user, :desc, [])
 
       assert length(sessions) == 2
     end
@@ -1919,7 +1919,7 @@ defmodule Lightning.AiAssistantTest do
 
       # Filter by specific workflow
       %{sessions: sessions} =
-        AiAssistant.list_sessions(project, :desc, workflow: workflow1)
+        AiAssistant.list_sessions(project, user, :desc, workflow: workflow1)
 
       assert length(sessions) == 1
       assert hd(sessions).workflow_id == workflow1.id
@@ -2171,7 +2171,82 @@ defmodule Lightning.AiAssistantTest do
     end
   end
 
-  describe "list_sessions/3" do
+  describe "list_sessions/4" do
+    test "only returns sessions for the specified user", %{
+      user: user,
+      project: project
+    } do
+      other_user = insert(:user)
+
+      # Create session for current user
+      _user_session =
+        insert(:chat_session,
+          user: user,
+          project: project,
+          session_type: "workflow_template",
+          title: "User Session"
+        )
+
+      # Create session for another user on the same project
+      _other_user_session =
+        insert(:chat_session,
+          user: other_user,
+          project: project,
+          session_type: "workflow_template",
+          title: "Other User Session"
+        )
+
+      # Current user should only see their own session
+      result =
+        AiAssistant.list_sessions(project, user, :desc, offset: 0, limit: 10)
+
+      assert length(result.sessions) == 1
+      assert hd(result.sessions).user_id == user.id
+      assert hd(result.sessions).title == "User Session"
+
+      # Other user should only see their own session
+      other_result =
+        AiAssistant.list_sessions(project, other_user, :desc,
+          offset: 0,
+          limit: 10
+        )
+
+      assert length(other_result.sessions) == 1
+      assert hd(other_result.sessions).user_id == other_user.id
+      assert hd(other_result.sessions).title == "Other User Session"
+    end
+
+    test "user scoping works for job sessions", %{
+      user: user,
+      workflow: %{jobs: [job | _]}
+    } do
+      other_user = insert(:user)
+
+      # Create session for current user
+      _user_session =
+        insert(:chat_session, user: user, job: job, title: "User Job Session")
+
+      # Create session for another user on the same job
+      _other_user_session =
+        insert(:chat_session,
+          user: other_user,
+          job: job,
+          title: "Other User Job Session"
+        )
+
+      # Current user should only see their own session
+      result = AiAssistant.list_sessions(job, user, :desc, offset: 0, limit: 10)
+      assert length(result.sessions) == 1
+      assert hd(result.sessions).user_id == user.id
+
+      # Other user should only see their own session
+      other_result =
+        AiAssistant.list_sessions(job, other_user, :desc, offset: 0, limit: 10)
+
+      assert length(other_result.sessions) == 1
+      assert hd(other_result.sessions).user_id == other_user.id
+    end
+
     test "lists project workflow sessions with pagination", %{
       user: user,
       project: project
@@ -2192,7 +2267,8 @@ defmodule Lightning.AiAssistantTest do
           title: "Session 2"
         )
 
-      result = AiAssistant.list_sessions(project, :desc, offset: 0, limit: 10)
+      result =
+        AiAssistant.list_sessions(project, user, :desc, offset: 0, limit: 10)
 
       assert %{sessions: sessions, pagination: pagination} = result
       assert length(sessions) == 2
@@ -2210,7 +2286,7 @@ defmodule Lightning.AiAssistantTest do
       _session2 =
         insert(:chat_session, user: user, job: job, title: "Job Session 2")
 
-      result = AiAssistant.list_sessions(job, :desc, offset: 0, limit: 10)
+      result = AiAssistant.list_sessions(job, user, :desc, offset: 0, limit: 10)
 
       assert %{sessions: sessions, pagination: pagination} = result
       assert length(sessions) == 2
@@ -2227,11 +2303,15 @@ defmodule Lightning.AiAssistantTest do
         )
       end
 
-      result1 = AiAssistant.list_sessions(project, :desc, offset: 0, limit: 2)
+      result1 =
+        AiAssistant.list_sessions(project, user, :desc, offset: 0, limit: 2)
+
       assert length(result1.sessions) == 2
       assert result1.pagination.has_next_page == true
 
-      result2 = AiAssistant.list_sessions(project, :desc, offset: 2, limit: 2)
+      result2 =
+        AiAssistant.list_sessions(project, user, :desc, offset: 2, limit: 2)
+
       assert length(result2.sessions) == 1
       assert result2.pagination.has_next_page == false
     end
@@ -2262,12 +2342,14 @@ defmodule Lightning.AiAssistantTest do
         )
 
       result_desc =
-        AiAssistant.list_sessions(project, :desc, offset: 0, limit: 10)
+        AiAssistant.list_sessions(project, user, :desc, offset: 0, limit: 10)
 
       [first, second] = result_desc.sessions
       assert DateTime.compare(first.updated_at, second.updated_at) in [:gt, :eq]
 
-      result_asc = AiAssistant.list_sessions(project, :asc, offset: 0, limit: 10)
+      result_asc =
+        AiAssistant.list_sessions(project, user, :asc, offset: 0, limit: 10)
+
       [first, second] = result_asc.sessions
       assert DateTime.compare(first.updated_at, second.updated_at) in [:lt, :eq]
     end
@@ -2292,7 +2374,8 @@ defmodule Lightning.AiAssistantTest do
         content: "Message 2"
       )
 
-      result = AiAssistant.list_sessions(project, :desc, offset: 0, limit: 10)
+      result =
+        AiAssistant.list_sessions(project, user, :desc, offset: 0, limit: 10)
 
       assert length(result.sessions) == 1
       session_with_count = hd(result.sessions)
@@ -2306,7 +2389,8 @@ defmodule Lightning.AiAssistantTest do
         session_type: "workflow_template"
       )
 
-      result = AiAssistant.list_sessions(project, :desc, offset: 0, limit: 10)
+      result =
+        AiAssistant.list_sessions(project, user, :desc, offset: 0, limit: 10)
 
       session = hd(result.sessions)
       assert %Lightning.Accounts.User{} = session.user
@@ -2338,7 +2422,7 @@ defmodule Lightning.AiAssistantTest do
 
       # List with workflow filter
       result_with_workflow =
-        AiAssistant.list_sessions(project, :desc,
+        AiAssistant.list_sessions(project, user, :desc,
           workflow: workflow,
           offset: 0,
           limit: 10
@@ -2349,7 +2433,7 @@ defmodule Lightning.AiAssistantTest do
 
       # List without workflow filter (nil workflow)
       result_without_workflow =
-        AiAssistant.list_sessions(project, :desc,
+        AiAssistant.list_sessions(project, user, :desc,
           workflow: nil,
           offset: 0,
           limit: 10
@@ -2359,8 +2443,12 @@ defmodule Lightning.AiAssistantTest do
       assert hd(result_without_workflow.sessions).workflow_id == nil
     end
 
-    test "returns empty results when no sessions exist", %{project: project} do
-      result = AiAssistant.list_sessions(project, :desc, offset: 0, limit: 10)
+    test "returns empty results when no sessions exist", %{
+      user: user,
+      project: project
+    } do
+      result =
+        AiAssistant.list_sessions(project, user, :desc, offset: 0, limit: 10)
 
       assert result.sessions == []
       assert result.pagination.total_count == 0
@@ -2382,14 +2470,14 @@ defmodule Lightning.AiAssistantTest do
       # Create a job session
       insert(:chat_session, user: user, job: job)
 
-      result = AiAssistant.list_sessions(job, :desc, offset: 0, limit: 10)
+      result = AiAssistant.list_sessions(job, user, :desc, offset: 0, limit: 10)
 
       assert length(result.sessions) == 1
       assert hd(result.sessions).job_id == job.id
     end
   end
 
-  describe "has_more_sessions?/2" do
+  describe "has_more_sessions?/3" do
     test "returns true when more sessions exist beyond current_count", %{
       user: user,
       project: project
@@ -2409,26 +2497,26 @@ defmodule Lightning.AiAssistantTest do
       # - has_next_page = (current_count + 1) < total_count
 
       # current_count = 0: (0 + 1) < 3 = true
-      assert AiAssistant.has_more_sessions?(project, 0) == true
+      assert AiAssistant.has_more_sessions?(project, user, 0) == true
 
       # current_count = 1: (1 + 1) < 3 = true
-      assert AiAssistant.has_more_sessions?(project, 1) == true
+      assert AiAssistant.has_more_sessions?(project, user, 1) == true
 
       # current_count = 2: (2 + 1) < 3 = false
-      assert AiAssistant.has_more_sessions?(project, 2) == false
+      assert AiAssistant.has_more_sessions?(project, user, 2) == false
 
       # current_count = 3: no session at offset 3, length(sessions) = 0
       # PaginationMeta.new(3 + 0, 1, 3) => (3 < 3) = false
-      assert AiAssistant.has_more_sessions?(project, 3) == false
+      assert AiAssistant.has_more_sessions?(project, user, 3) == false
     end
 
-    test "returns false when no sessions exist", %{user: _user, project: project} do
+    test "returns false when no sessions exist", %{user: user, project: project} do
       # No sessions created - total_count = 0
 
       # current_count = 0: no sessions at offset 0, length(sessions) = 0
       # PaginationMeta.new(0 + 0, 1, 0) => (0 < 0) = false
-      assert AiAssistant.has_more_sessions?(project, 0) == false
-      assert AiAssistant.has_more_sessions?(project, 1) == false
+      assert AiAssistant.has_more_sessions?(project, user, 0) == false
+      assert AiAssistant.has_more_sessions?(project, user, 1) == false
     end
 
     test "works with job sessions", %{user: user, workflow: %{jobs: [job | _]}} do
@@ -2439,13 +2527,13 @@ defmodule Lightning.AiAssistantTest do
 
       # total_count = 2
       # current_count = 0: (0 + 1) < 2 = true
-      assert AiAssistant.has_more_sessions?(job, 0) == true
+      assert AiAssistant.has_more_sessions?(job, user, 0) == true
 
       # current_count = 1: (1 + 1) < 2 = false
-      assert AiAssistant.has_more_sessions?(job, 1) == false
+      assert AiAssistant.has_more_sessions?(job, user, 1) == false
 
       # current_count = 2: no session at offset 2, (2 + 0) < 2 = false
-      assert AiAssistant.has_more_sessions?(job, 2) == false
+      assert AiAssistant.has_more_sessions?(job, user, 2) == false
     end
   end
 

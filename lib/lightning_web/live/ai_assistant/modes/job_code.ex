@@ -110,14 +110,14 @@ defmodule LightningWeb.Live.AiAssistant.Modes.JobCode do
           sessions: [session()],
           pagination: map()
         }
-  def list_sessions(%{selected_job: job}, sort_direction, opts \\ []) do
-    AiAssistant.list_sessions(job, sort_direction, opts)
+  def list_sessions(%{selected_job: job, user: user}, sort_direction, opts \\ []) do
+    AiAssistant.list_sessions(job, user, sort_direction, opts)
   end
 
   @impl true
   @spec more_sessions?(assigns(), integer()) :: boolean()
-  def more_sessions?(%{selected_job: job}, current_count) do
-    AiAssistant.has_more_sessions?(job, current_count)
+  def more_sessions?(%{selected_job: job, user: user}, current_count) do
+    AiAssistant.has_more_sessions?(job, user, current_count)
   end
 
   @impl true
