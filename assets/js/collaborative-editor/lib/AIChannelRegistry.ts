@@ -109,6 +109,9 @@ interface ChannelEntry {
   // Store handler references for cleanup
   handlers: {
     newMessage: ChannelCallback;
+    userMessage: ChannelCallback;
+    messageProcessing: ChannelCallback;
+    messageError: ChannelCallback;
     messageStatusChanged: ChannelCallback;
   };
 }
@@ -322,7 +325,10 @@ export class AIChannelRegistry {
       .push('new_message', payload)
       .receive('ok', (response: unknown) => {
         const typedResponse = response as MessageResponse;
-        this.store._addMessage(typedResponse.message);
+
+        if (typedResponse.message && typedResponse.message.id) {
+          this.store._addMessage(typedResponse.message);
+        }
 
         // If there's an error in the response, show notification
         if (typedResponse.error) {
@@ -533,6 +539,9 @@ export class AIChannelRegistry {
       }
       // Remove event handlers to prevent memory leaks
       entry.channel.off('new_message', entry.handlers.newMessage);
+      entry.channel.off('user_message', entry.handlers.userMessage);
+      entry.channel.off('message_processing', entry.handlers.messageProcessing);
+      entry.channel.off('message_error', entry.handlers.messageError);
       entry.channel.off(
         'message_status_changed',
         entry.handlers.messageStatusChanged
@@ -550,9 +559,35 @@ export class AIChannelRegistry {
   private setupEventHandlers(
     channel: PhoenixChannel
   ): ChannelEntry['handlers'] {
+    // Handler for assistant messages (broadcast to all users)
     const newMessageHandler: ChannelCallback = (payload: unknown) => {
       const typedPayload = payload as { message: Message };
-      this.store._addMessage(typedPayload.message);
+      if (typedPayload.message && typedPayload.message.id) {
+        this.store._addMessage(typedPayload.message);
+      }
+    };
+
+    // Handler for user messages from collaborators (including self via broadcast)
+    const userMessageHandler: ChannelCallback = (payload: unknown) => {
+      const typedPayload = payload as { message: Message };
+      if (typedPayload.message && typedPayload.message.id) {
+        this.store._addMessage(typedPayload.message);
+      }
+    };
+
+    // Handler for processing state (show loading, block input for all users)
+    const messageProcessingHandler: ChannelCallback = () => {
+      this.store._setProcessingState(true);
+    };
+
+    // Handler for message errors
+    const messageErrorHandler: ChannelCallback = (payload: unknown) => {
+      const typedPayload = payload as {
+        message_id: string;
+        status: MessageStatus;
+      };
+      this.store._updateMessageStatus(typedPayload.message_id, 'error');
+      this.store._setProcessingState(false);
     };
 
     const messageStatusChangedHandler: ChannelCallback = (payload: unknown) => {
@@ -567,10 +602,16 @@ export class AIChannelRegistry {
     };
 
     channel.on('new_message', newMessageHandler);
+    channel.on('user_message', userMessageHandler);
+    channel.on('message_processing', messageProcessingHandler);
+    channel.on('message_error', messageErrorHandler);
     channel.on('message_status_changed', messageStatusChangedHandler);
 
     return {
       newMessage: newMessageHandler,
+      userMessage: userMessageHandler,
+      messageProcessing: messageProcessingHandler,
+      messageError: messageErrorHandler,
       messageStatusChanged: messageStatusChangedHandler,
     };
   }
@@ -671,6 +712,9 @@ export class AIChannelRegistry {
 
     // Remove event handlers to prevent memory leaks
     entry.channel.off('new_message', entry.handlers.newMessage);
+    entry.channel.off('user_message', entry.handlers.userMessage);
+    entry.channel.off('message_processing', entry.handlers.messageProcessing);
+    entry.channel.off('message_error', entry.handlers.messageError);
     entry.channel.off(
       'message_status_changed',
       entry.handlers.messageStatusChanged

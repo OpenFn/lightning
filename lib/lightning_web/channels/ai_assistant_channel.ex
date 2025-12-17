@@ -259,6 +259,11 @@ defmodule LightningWeb.AiAssistantChannel do
       ) do
     if socket.assigns.session_id == session_id do
       case status do
+        :processing ->
+          # Broadcast processing state so all users see loading indicator
+          # and have their input blocked
+          broadcast(socket, "message_processing", %{session_id: session_id})
+
         :success ->
           assistant_message =
             updated_session.messages
@@ -266,13 +271,39 @@ defmodule LightningWeb.AiAssistantChannel do
             |> Enum.find(fn msg -> msg.role == :assistant end)
 
           if assistant_message do
-            push(socket, "new_message", %{
+            # Broadcast to all users so everyone sees the assistant response
+            broadcast(socket, "new_message", %{
               message: format_message(assistant_message)
             })
           end
 
-        _ ->
-          :ok
+        :error ->
+          # Broadcast error state so all users can see and retry
+          user_message =
+            updated_session.messages
+            |> Enum.reverse()
+            |> Enum.find(fn msg -> msg.role == :user end)
+
+          if user_message do
+            broadcast(socket, "message_error", %{
+              message_id: user_message.id,
+              status: "error"
+            })
+          end
+
+        :failed ->
+          # Handle failed status (similar to error)
+          user_message =
+            updated_session.messages
+            |> Enum.reverse()
+            |> Enum.find(fn msg -> msg.role == :user end)
+
+          if user_message do
+            broadcast(socket, "message_error", %{
+              message_id: user_message.id,
+              status: "failed"
+            })
+          end
       end
     end
 
@@ -592,7 +623,20 @@ defmodule LightningWeb.AiAssistantChannel do
       role: to_string(message.role),
       status: to_string(message.status),
       inserted_at: message.inserted_at,
-      user_id: message.user_id
+      user_id: message.user_id,
+      user: format_user(message.user)
+    }
+  end
+
+  defp format_user(nil), do: nil
+
+  defp format_user(%Ecto.Association.NotLoaded{}), do: nil
+
+  defp format_user(user) do
+    %{
+      id: user.id,
+      first_name: user.first_name,
+      last_name: user.last_name
     }
   end
 
@@ -758,6 +802,10 @@ defmodule LightningWeb.AiAssistantChannel do
     case AiAssistant.save_message(session, message_attrs, opts) do
       {:ok, updated_session} ->
         message = find_user_message(updated_session.messages, content)
+
+        # Broadcast the user message to all subscribers so other users see it
+        broadcast(socket, "user_message", %{message: format_message(message)})
+
         response = build_message_response(message, limit_result)
         {:reply, {:ok, response}, socket}
 
@@ -777,7 +825,12 @@ defmodule LightningWeb.AiAssistantChannel do
   end
 
   defp find_user_message(messages, content) do
-    Enum.find(messages, fn msg ->
+    # Find the LAST (most recently added) user message with this content
+    # This ensures we return the newly created message, not an older one
+    # with the same content
+    messages
+    |> Enum.reverse()
+    |> Enum.find(fn msg ->
       msg.role == :user && msg.content == content
     end)
   end

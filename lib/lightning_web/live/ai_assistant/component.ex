@@ -1261,7 +1261,7 @@ defmodule LightningWeb.AiAssistant.Component do
               "text-xs",
               message_timestamp_classes(@message.status)
             ]}>
-              {format_message_time(@message.inserted_at)}
+              {format_user_attribution(@message)}
             </span>
 
             <div class="flex items-center gap-1">
@@ -1548,6 +1548,31 @@ defmodule LightningWeb.AiAssistant.Component do
     Calendar.strftime(datetime, "%I:%M %p")
   end
 
+  defp format_user_attribution(%{user: user} = message) when not is_nil(user) do
+    name = format_user_name(user)
+
+    if name do
+      "Sent by #{name} • #{format_message_time(message.inserted_at)}"
+    else
+      format_message_time(message.inserted_at)
+    end
+  end
+
+  defp format_user_attribution(message) do
+    format_message_time(message.inserted_at)
+  end
+
+  defp format_user_name(%{first_name: first_name, last_name: last_name})
+       when is_binary(first_name) and is_binary(last_name) do
+    "#{first_name} #{last_name}"
+  end
+
+  defp format_user_name(%{first_name: first_name}) when is_binary(first_name) do
+    first_name
+  end
+
+  defp format_user_name(_), do: nil
+
   attr :id, :string, required: true
   attr :content, :string, required: true
   attr :attributes, :map, default: %{}
@@ -1622,20 +1647,52 @@ defmodule LightningWeb.AiAssistant.Component do
     Enum.find(attrs, fn {attr, _} -> attr == "class" end)
   end
 
-  attr :user, Lightning.Accounts.User, required: true
+  attr :user, Lightning.Accounts.User, default: nil
   attr :size_class, :string, default: "h-8 w-8"
 
+  defp user_avatar(%{user: nil} = assigns) do
+    ~H"""
+    <span class={"inline-flex #{@size_class} items-center justify-center rounded-full bg-gray-100 "}>
+      <span class="text-sm leading-none text-gray-400 uppercase select-none">
+        ?
+      </span>
+    </span>
+    """
+  end
+
   defp user_avatar(assigns) do
+    first_initial = get_initial(assigns.user.first_name)
+    last_initial = get_initial(assigns.user.last_name)
+    title = build_user_title(assigns.user.first_name, assigns.user.last_name)
+
+    assigns =
+      assign(assigns,
+        first_initial: first_initial,
+        last_initial: last_initial,
+        title: title
+      )
+
     ~H"""
     <span class={"inline-flex #{@size_class} items-center justify-center rounded-full bg-gray-100 "}>
       <span
         class="text-sm leading-none text-black uppercase select-none"
-        title={"#{@user.first_name} #{@user.last_name}"}
+        title={@title}
       >
-        {String.first(@user.first_name)}{String.first(@user.last_name)}
+        {@first_initial}{@last_initial}
       </span>
     </span>
     """
+  end
+
+  defp get_initial(nil), do: ""
+  defp get_initial(""), do: ""
+  defp get_initial(name) when is_binary(name), do: String.first(name)
+  defp get_initial(_), do: ""
+
+  defp build_user_title(first_name, last_name) do
+    [first_name, last_name]
+    |> Enum.reject(&is_nil/1)
+    |> Enum.join(" ")
   end
 
   defp time_ago(datetime) do

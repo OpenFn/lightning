@@ -399,6 +399,7 @@ export const createAIAssistantStore = (): AIAssistantStore => {
    * @internal Called by useAIAssistantChannel hook
    */
   const _addMessage = (message: Message) => {
+    // Deduplicate - don't add if message already exists
     const exists = state.messages.some(m => m.id === message.id);
     if (exists) {
       return;
@@ -520,6 +521,22 @@ export const createAIAssistantStore = (): AIAssistantStore => {
     notify('_initializeContext');
   };
 
+  /**
+   * Set the processing state for collaborative sessions
+   * When true, blocks input for all users viewing the session
+   * @internal Called by channel registry when receiving processing broadcasts
+   */
+  const _setProcessingState = (isProcessing: boolean) => {
+    state = produce(state, draft => {
+      draft.isLoading = isProcessing;
+      if (!isProcessing) {
+        draft.isSending = false;
+      }
+    });
+
+    notify('_setProcessingState');
+  };
+
   devtools.connect();
 
   return {
@@ -549,6 +566,7 @@ export const createAIAssistantStore = (): AIAssistantStore => {
     _setSessionList,
     _appendSessionList,
     _initializeContext,
+    _setProcessingState,
   };
 };
 

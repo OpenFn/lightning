@@ -33,6 +33,15 @@ export type MessageStatus =
   | 'cancelled';
 
 /**
+ * User info attached to a message for attribution in collaborative sessions
+ */
+export interface MessageUser {
+  id: string;
+  first_name: string | null;
+  last_name: string | null;
+}
+
+/**
  * Message represents a single chat message in the AI assistant
  */
 export interface Message {
@@ -43,6 +52,7 @@ export interface Message {
   status: MessageStatus;
   inserted_at: string;
   user_id?: string;
+  user?: MessageUser | null;
 }
 
 /**
@@ -163,6 +173,7 @@ export interface AIAssistantStore {
     sessionType: SessionType,
     context: JobCodeContext | WorkflowTemplateContext
   ) => void;
+  _setProcessingState: (isProcessing: boolean) => void;
 }
 
 /**
