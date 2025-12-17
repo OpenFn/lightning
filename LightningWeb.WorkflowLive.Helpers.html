@@ -5,14 +5,14 @@
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="generator" content="ExDoc v0.38.4">
-    <meta name="project" content="Lightning v2.15.0-pre6">
+    <meta name="project" content="Lightning v2.15.0-pre7">
 
 
-    <title>LightningWeb.WorkflowLive.Helpers — Lightning v2.15.0-pre6</title>
+    <title>LightningWeb.WorkflowLive.Helpers — Lightning v2.15.0-pre7</title>
 
     <link rel="stylesheet" href="dist/html-elixir-RLZO5U2C.css" />
 
-    <script defer src="dist/sidebar_items-284A4D92.js"></script>
+    <script defer src="dist/sidebar_items-900C9D95.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-Y223O6DN.js"></script>
 
@@ -41,7 +41,7 @@
 Lightning
         </a>
         <div class="sidebar-projectVersion" translate="no">
-          v2.15.0-pre6
+          v2.15.0-pre7
         </div>
       </div>
     </div>
@@ -80,7 +80,7 @@ Lightning
   <div class="heading-with-actions top-heading">
     <h1>
       <span translate="no">LightningWeb.WorkflowLive.Helpers</span> 
-      <small class="app-vsn" translate="no">(Lightning v2.15.0-pre6)</small>
+      <small class="app-vsn" translate="no">(Lightning v2.15.0-pre7)</small>
 
     </h1>
 
@@ -407,28 +407,28 @@ Accepts either a Workflow struct or an Ecto.Changeset.</p></div>
 
 <p>Builds a URL to the collaborative editor with converted query parameters.</p><p>This function uses a data-driven approach with the <code class="inline">@param_mappings</code> configuration
 to convert classical editor parameters to collaborative editor equivalents.</p><h2 id="collaborative_editor_url/2-conversion-rules" class="section-heading"><a href="#collaborative_editor_url/2-conversion-rules" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Conversion Rules</span></h2><ul><li><code class="inline">a</code> (followed run) → <code class="inline">run</code></li><li><code class="inline">s</code> (selected step) → <code class="inline">job</code>/<code class="inline">trigger</code>/<code class="inline">edge</code> (context-aware based on selection)</li><li><code class="inline">m=expand</code> → <code class="inline">panel=editor</code></li><li><code class="inline">m=workflow_input</code> → <code class="inline">panel=run</code></li><li><code class="inline">m=settings</code> → <code class="inline">panel=settings</code></li><li>Preserves: <code class="inline">v</code>, <code class="inline">method</code>, <code class="inline">w-chat</code>, <code class="inline">j-chat</code>, <code class="inline">code</code></li><li>Skips: <code class="inline">panel</code> (collaborative-only)</li></ul><h2 id="collaborative_editor_url/2-parameters" class="section-heading"><a href="#collaborative_editor_url/2-parameters" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Parameters</span></h2><ul><li><code class="inline">params</code> - Route parameters map containing:<ul><li><code class="inline">&quot;project_id&quot;</code> - Project UUID (required)</li><li><code class="inline">&quot;id&quot;</code> - Workflow UUID (required for <code class="inline">:edit</code>, absent for <code class="inline">:new</code>)</li><li>Additional query parameters to preserve (e.g., <code class="inline">&quot;s&quot;</code>, <code class="inline">&quot;m&quot;</code>, <code class="inline">&quot;v&quot;</code>)</li></ul></li><li><code class="inline">live_action</code> - Current LiveView action (<code class="inline">:new</code> or <code class="inline">:edit</code>)</li></ul><h2 id="collaborative_editor_url/2-returns" class="section-heading"><a href="#collaborative_editor_url/2-returns" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Returns</span></h2><p>A complete URL string for the collaborative editor with transformed query parameters</p><h2 id="collaborative_editor_url/2-examples" class="section-heading"><a href="#collaborative_editor_url/2-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="c1"># Edit existing workflow with query params</span><span class="w">
-</span><span class="gp unselectable">iex&gt; </span><span class="n">collaborative_editor_url</span><span class="p" data-group-id="7415956520-1">(</span><span class="p" data-group-id="7415956520-2">%{</span><span class="w">
+</span><span class="gp unselectable">iex&gt; </span><span class="n">collaborative_editor_url</span><span class="p" data-group-id="1110776381-1">(</span><span class="p" data-group-id="1110776381-2">%{</span><span class="w">
 </span><span class="gp unselectable">...&gt; </span><span class="w">  </span><span class="s">&quot;project_id&quot;</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="s">&quot;proj-1&quot;</span><span class="p">,</span><span class="w">
 </span><span class="gp unselectable">...&gt; </span><span class="w">  </span><span class="s">&quot;id&quot;</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="s">&quot;wf-1&quot;</span><span class="p">,</span><span class="w">
 </span><span class="gp unselectable">...&gt; </span><span class="w">  </span><span class="s">&quot;s&quot;</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="s">&quot;job-abc&quot;</span><span class="p">,</span><span class="w">
 </span><span class="gp unselectable">...&gt; </span><span class="w">  </span><span class="s">&quot;m&quot;</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="s">&quot;expand&quot;</span><span class="w">
-</span><span class="gp unselectable">...&gt; </span><span class="p" data-group-id="7415956520-2">}</span><span class="p">,</span><span class="w"> </span><span class="ss">:edit</span><span class="p" data-group-id="7415956520-1">)</span><span class="w">
+</span><span class="gp unselectable">...&gt; </span><span class="p" data-group-id="1110776381-2">}</span><span class="p">,</span><span class="w"> </span><span class="ss">:edit</span><span class="p" data-group-id="1110776381-1">)</span><span class="w">
 </span><span class="s">&quot;/projects/proj-1/w/wf-1/collaborate?job=job-abc&amp;panel=editor&quot;</span><span class="w">
 
 </span><span class="c1"># New workflow</span><span class="w">
-</span><span class="gp unselectable">iex&gt; </span><span class="n">collaborative_editor_url</span><span class="p" data-group-id="7415956520-3">(</span><span class="p" data-group-id="7415956520-4">%{</span><span class="w">
+</span><span class="gp unselectable">iex&gt; </span><span class="n">collaborative_editor_url</span><span class="p" data-group-id="1110776381-3">(</span><span class="p" data-group-id="1110776381-4">%{</span><span class="w">
 </span><span class="gp unselectable">...&gt; </span><span class="w">  </span><span class="s">&quot;project_id&quot;</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="s">&quot;proj-1&quot;</span><span class="w">
-</span><span class="gp unselectable">...&gt; </span><span class="p" data-group-id="7415956520-4">}</span><span class="p">,</span><span class="w"> </span><span class="ss">:new</span><span class="p" data-group-id="7415956520-3">)</span><span class="w">
+</span><span class="gp unselectable">...&gt; </span><span class="p" data-group-id="1110776381-4">}</span><span class="p">,</span><span class="w"> </span><span class="ss">:new</span><span class="p" data-group-id="1110776381-3">)</span><span class="w">
 </span><span class="s">&quot;/projects/proj-1/w/new/collaborate&quot;</span><span class="w">
 
 </span><span class="c1"># With multiple query params</span><span class="w">
-</span><span class="gp unselectable">iex&gt; </span><span class="n">collaborative_editor_url</span><span class="p" data-group-id="7415956520-5">(</span><span class="p" data-group-id="7415956520-6">%{</span><span class="w">
+</span><span class="gp unselectable">iex&gt; </span><span class="n">collaborative_editor_url</span><span class="p" data-group-id="1110776381-5">(</span><span class="p" data-group-id="1110776381-6">%{</span><span class="w">
 </span><span class="gp unselectable">...&gt; </span><span class="w">  </span><span class="s">&quot;project_id&quot;</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="s">&quot;proj-1&quot;</span><span class="p">,</span><span class="w">
 </span><span class="gp unselectable">...&gt; </span><span class="w">  </span><span class="s">&quot;id&quot;</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="s">&quot;wf-1&quot;</span><span class="p">,</span><span class="w">
 </span><span class="gp unselectable">...&gt; </span><span class="w">  </span><span class="s">&quot;s&quot;</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="s">&quot;job-123&quot;</span><span class="p">,</span><span class="w">
 </span><span class="gp unselectable">...&gt; </span><span class="w">  </span><span class="s">&quot;v&quot;</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="s">&quot;42&quot;</span><span class="p">,</span><span class="w">
 </span><span class="gp unselectable">...&gt; </span><span class="w">  </span><span class="s">&quot;custom&quot;</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="s">&quot;value&quot;</span><span class="w">
-</span><span class="gp unselectable">...&gt; </span><span class="p" data-group-id="7415956520-6">}</span><span class="p">,</span><span class="w"> </span><span class="ss">:edit</span><span class="p" data-group-id="7415956520-5">)</span><span class="w">
+</span><span class="gp unselectable">...&gt; </span><span class="p" data-group-id="1110776381-6">}</span><span class="p">,</span><span class="w"> </span><span class="ss">:edit</span><span class="p" data-group-id="1110776381-5">)</span><span class="w">
 </span><span class="s">&quot;/projects/proj-1/w/wf-1/collaborate?custom=value&amp;job=job-123&amp;v=42&quot;</span></code></pre>
   </section>
 </section>
