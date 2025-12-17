@@ -19,6 +19,11 @@ and this project adheres to
 
 ### Changed
 
+- Added `output_dataclip` to the default log exclusions if someone is running
+  OpenFn in `:prod` mode. (Note that this also excludes `output_dataclip_id`.)
+
+### Fixed
+
 ## [2.15.1] - 2025-12-17
 
 ### Fixed
