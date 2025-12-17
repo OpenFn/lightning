@@ -127,10 +127,6 @@ export const useAISession = ({
     const jobChanged =
       prevJobIdRef.current !== null && prevJobIdRef.current !== currentJobId;
 
-    // Update tracking refs
-    prevModeRef.current = mode;
-    prevJobIdRef.current = currentJobId;
-
     // Clear session/list when mode or job changes
     if (modeChanged || jobChanged) {
       aiStore._clearSession();
@@ -147,10 +143,19 @@ export const useAISession = ({
         currentSubscriptionRef.current = null;
       }
 
-      // Early return - let the URL update propagate before proceeding
-      // The next render will have the cleared sessionIdFromURL and can proceed normally
-      return;
+      // For mode changes, do early return to let URL update propagate
+      // For job changes within same mode, continue to re-initialize context
+      if (modeChanged) {
+        // Update tracking refs before early return
+        prevModeRef.current = mode;
+        prevJobIdRef.current = currentJobId;
+        return;
+      }
     }
+
+    // Update tracking refs (after potential early return for mode changes)
+    prevModeRef.current = mode;
+    prevJobIdRef.current = currentJobId;
 
     // Build the topic we want to subscribe to
     const desiredTopic = sessionIdFromURL
@@ -180,8 +185,16 @@ export const useAISession = ({
     if (!sessionIdFromURL) {
       // Initialize context when mode changes OR when job changes within job_code mode
       // The jobChanged check ensures context is updated when switching between jobs
+      // Also check if stored job_id doesn't match current job - this catches the case
+      // where refs were already updated but context still needs initialization
+      const storedJobId = state.jobCodeContext?.job_id;
+      const contextMismatch =
+        mode === 'job_code' && storedJobId !== currentJobId;
       const needsContextUpdate =
-        state.sessionType !== mode || modeChanged || jobChanged;
+        state.sessionType !== mode ||
+        modeChanged ||
+        jobChanged ||
+        contextMismatch;
 
       if (needsContextUpdate) {
         aiStore._initializeContext(mode, context);
