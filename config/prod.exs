@@ -21,6 +21,7 @@ config :phoenix, :filter_parameters, [
   "body",
   "credential",
   "key",
+  "output_dataclip",
   "password",
   "pem",
   "secret",
