@@ -23,6 +23,7 @@ import {
   useSessionContextLoaded,
   useLimits,
   useIsNewWorkflow,
+  useUser,
 } from '../hooks/useSessionContext';
 import {
   useIsAIAssistantPanelOpen,
@@ -112,6 +113,7 @@ export function AIAssistantPanelWrapper() {
   const markAIDisclaimerRead = useMarkAIDisclaimerRead();
   const workflowTemplateContext = useAIWorkflowTemplateContext();
   const project = useProject();
+  const user = useUser();
   const workflow = useWorkflowState(state => state.workflow);
   const limits = useLimits();
 
@@ -502,11 +504,20 @@ export function AIAssistantPanelWrapper() {
     hasLoadedSessionRef.current = false;
   }, [sessionId]);
 
-  const { importWorkflow } = useWorkflowActions();
+  const { importWorkflow, startApplyingWorkflow, doneApplyingWorkflow } =
+    useWorkflowActions();
+
+  // Get applying state from workflow store for disabling Apply button across all users
+  const isApplyingWorkflow = useWorkflowState(
+    state => state.isApplyingWorkflow
+  );
 
   const handleApplyWorkflow = useCallback(
-    (yaml: string, messageId: string) => {
+    async (yaml: string, messageId: string) => {
       setApplyingMessageId(messageId);
+
+      // Signal to all collaborators that we're starting to apply
+      await startApplyingWorkflow(messageId);
 
       try {
         const workflowSpec = parseWorkflowYAML(yaml);
@@ -580,9 +591,11 @@ export function AIAssistantPanelWrapper() {
         });
       } finally {
         setApplyingMessageId(null);
+        // Signal to all collaborators that apply is complete
+        await doneApplyingWorkflow(messageId);
       }
     },
-    [importWorkflow]
+    [importWorkflow, startApplyingWorkflow, doneApplyingWorkflow]
   );
 
   /**
@@ -597,6 +610,8 @@ export function AIAssistantPanelWrapper() {
    * - There are messages in the conversation
    * - Connection is established (prevents applying during reconnection)
    * - The message has code and hasn't been applied yet (tracked in appliedMessageIdsRef)
+   * - The current user is the one who sent the message that triggered the AI response
+   *   (prevents duplicate applies in collaborative sessions where multiple users view the same chat)
    *
    * Note: We only apply the LATEST message with code to avoid applying intermediate
    * drafts if the AI sends multiple responses quickly.
@@ -627,9 +642,29 @@ export function AIAssistantPanelWrapper() {
       latestMessage?.code &&
       !appliedMessageIdsRef.current.has(latestMessage.id)
     ) {
+      // Find the user message that triggered this AI response
+      // Look for the most recent user message before this assistant message
+      const latestMessageIndex = messages.findIndex(
+        m => m.id === latestMessage.id
+      );
+      const precedingUserMessage = messages
+        .slice(0, latestMessageIndex)
+        .reverse()
+        .find(m => m.role === 'user');
+
+      // Only auto-apply if the current user sent the triggering message
+      // This prevents duplicate applies in collaborative sessions where
+      // multiple users view the same chat and would otherwise all auto-apply
+      const isCurrentUserAuthor =
+        precedingUserMessage?.user_id === user?.id ||
+        // Fallback: if no user_id on message (legacy), allow apply
+        !precedingUserMessage?.user_id;
+
       appliedMessageIdsRef.current.add(latestMessage.id);
 
-      void handleApplyWorkflow(latestMessage.code, latestMessage.id);
+      if (isCurrentUserAuthor) {
+        void handleApplyWorkflow(latestMessage.code, latestMessage.id);
+      }
     }
   }, [
     messages,
@@ -640,6 +675,7 @@ export function AIAssistantPanelWrapper() {
     workflow,
     handleApplyWorkflow,
     canApplyChanges,
+    user?.id,
   ]);
 
   return (
@@ -692,7 +728,7 @@ export function AIAssistantPanelWrapper() {
                 messages={messages}
                 isLoading={isLoading}
                 onApplyWorkflow={
-                  sessionType === 'workflow_template'
+                  sessionType === 'workflow_template' && !isApplyingWorkflow
                     ? (yaml, messageId) => {
                         void handleApplyWorkflow(yaml, messageId);
                       }

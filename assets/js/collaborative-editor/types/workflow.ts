@@ -135,6 +135,11 @@ export namespace Workflow {
         auth_type: string;
       }>;
     } | null;
+
+    // AI workflow apply coordination state
+    // Tracks when someone is applying an AI-generated workflow to prevent concurrent applies
+    isApplyingWorkflow: boolean;
+    applyingUser: { id: string; name: string } | null;
   }
 
   export interface Actions {

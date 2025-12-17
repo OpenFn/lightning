@@ -202,6 +202,10 @@ function produceInitialState() {
 
       // Active trigger webhook auth methods (loaded on-demand)
       activeTriggerAuthMethods: null,
+
+      // AI workflow apply coordination state
+      isApplyingWorkflow: false,
+      applyingUser: null,
     } as Workflow.State,
     draft => {
       // Compute derived state on initialization
@@ -626,6 +630,30 @@ export const createWorkflowStore = () => {
       triggerAuthMethodsHandler
     );
 
+    // Set up channel listeners for AI workflow apply coordination
+    // These prevent concurrent applies that could cause duplicate nodes
+    const workflowApplyingHandler = (data: unknown) => {
+      const payload = data as {
+        user_id: string;
+        user_name: string;
+        message_id: string;
+      };
+      updateState(draft => {
+        draft.isApplyingWorkflow = true;
+        draft.applyingUser = { id: payload.user_id, name: payload.user_name };
+      }, 'workflow/applying');
+    };
+
+    const workflowAppliedHandler = () => {
+      updateState(draft => {
+        draft.isApplyingWorkflow = false;
+        draft.applyingUser = null;
+      }, 'workflow/applied');
+    };
+
+    provider.channel.on('workflow_applying', workflowApplyingHandler);
+    provider.channel.on('workflow_applied', workflowAppliedHandler);
+
     // Store cleanup functions
     // CRITICAL: Separate Y.Doc observer cleanups from channel cleanups
     // Y.Doc observers must persist during disconnection for offline editing
@@ -647,6 +675,8 @@ export const createWorkflowStore = () => {
             'trigger_auth_methods_updated',
             triggerAuthMethodsHandler
           );
+          provider.channel.off('workflow_applying', workflowApplyingHandler);
+          provider.channel.off('workflow_applied', workflowAppliedHandler);
         }
       },
     ];
@@ -1535,6 +1565,60 @@ export const createWorkflowStore = () => {
     }
   };
 
+  // =============================================================================
+  // AI Workflow Apply Coordination
+  // =============================================================================
+  // These methods coordinate concurrent applies across collaborators to prevent
+  // duplicate nodes in Y.Doc when multiple users click Apply simultaneously.
+
+  /**
+   * Signal that this user is starting to apply an AI-generated workflow.
+   * Broadcasts to all collaborators so they disable their Apply buttons.
+   *
+   * @param messageId - The AI message ID being applied (for tracking)
+   */
+  const startApplyingWorkflow = async (messageId: string) => {
+    if (!provider?.channel) {
+      logger.warn('Cannot start applying workflow - no channel available');
+      return;
+    }
+
+    try {
+      await channelRequest(provider.channel, 'start_applying_workflow', {
+        message_id: messageId,
+      });
+    } catch (error) {
+      logger.error('Failed to signal workflow apply start', error);
+      // Continue with apply even if signal fails - better than blocking
+    }
+  };
+
+  /**
+   * Signal that this user has finished applying an AI-generated workflow.
+   * Broadcasts to all collaborators so they can re-enable their Apply buttons.
+   *
+   * @param messageId - The AI message ID that was applied
+   */
+  const doneApplyingWorkflow = async (messageId: string) => {
+    if (!provider?.channel) {
+      logger.warn('Cannot complete applying workflow - no channel available');
+      return;
+    }
+
+    try {
+      await channelRequest(provider.channel, 'done_applying_workflow', {
+        message_id: messageId,
+      });
+    } catch (error) {
+      logger.error('Failed to signal workflow apply completion', error);
+      // Clear local state even if signal fails
+      updateState(draft => {
+        draft.isApplyingWorkflow = false;
+        draft.applyingUser = null;
+      }, 'workflow/applied/fallback');
+    }
+  };
+
   // Undo/Redo Commands
   // =============================================================================
   // These commands trigger Y.Doc changes via UndoManager, which then flow
@@ -1632,6 +1716,11 @@ export const createWorkflowStore = () => {
 
     // Trigger auth methods
     requestTriggerAuthMethods,
+
+    // AI workflow apply coordination
+    startApplyingWorkflow,
+    doneApplyingWorkflow,
+
     // =============================================================================
     // Undo/Redo Commands
     // =============================================================================

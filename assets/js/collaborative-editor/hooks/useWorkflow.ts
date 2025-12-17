@@ -636,6 +636,10 @@ export const useWorkflowActions = () => {
     importWorkflow: store.importWorkflow,
 
     requestTriggerAuthMethods: store.requestTriggerAuthMethods,
+
+    // AI workflow apply coordination
+    startApplyingWorkflow: store.startApplyingWorkflow,
+    doneApplyingWorkflow: store.doneApplyingWorkflow,
   };
 };
 
