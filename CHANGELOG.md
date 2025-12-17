@@ -21,6 +21,9 @@ and this project adheres to
 
 ### Fixed
 
+- Fix run panel override all panels
+  [#4243](https://github.com/OpenFn/lightning/issues/4243)
+
 ## [2.15.0] - 2025-12-17
 
 ## [2.15.0-pre7] - 2025-12-17
