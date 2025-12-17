@@ -17,6 +17,9 @@ and this project adheres to
 
 ### Added
 
+- Make AI chat sessions collaborative with real-time message sync and user
+  attribution [#4247](https://github.com/OpenFn/lightning/issues/4247)
+
 ### Changed
 
 - Added `output_dataclip` to the default log exclusions if someone is running
