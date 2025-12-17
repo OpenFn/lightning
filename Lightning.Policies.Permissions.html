@@ -5,14 +5,14 @@
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="generator" content="ExDoc v0.38.4">
-    <meta name="project" content="Lightning v2.15.0-pre7">
+    <meta name="project" content="Lightning v2.15.0">
 
 
-    <title>Lightning.Policies.Permissions — Lightning v2.15.0-pre7</title>
+    <title>Lightning.Policies.Permissions — Lightning v2.15.0</title>
 
     <link rel="stylesheet" href="dist/html-elixir-RLZO5U2C.css" />
 
-    <script defer src="dist/sidebar_items-900C9D95.js"></script>
+    <script defer src="dist/sidebar_items-9192F4BC.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-Y223O6DN.js"></script>
 
@@ -41,7 +41,7 @@
 Lightning
         </a>
         <div class="sidebar-projectVersion" translate="no">
-          v2.15.0-pre7
+          v2.15.0
         </div>
       </div>
     </div>
@@ -80,7 +80,7 @@ Lightning
   <div class="heading-with-actions top-heading">
     <h1>
       <span translate="no">Lightning.Policies.Permissions</span> 
-      <small class="app-vsn" translate="no">(Lightning v2.15.0-pre7)</small>
+      <small class="app-vsn" translate="no">(Lightning v2.15.0)</small>
 
     </h1>
 
@@ -97,8 +97,8 @@ Lightning
 their level of access to resources in the application. For more details see 
 the <a href="https://docs.openfn.org/documentation/about-lightning#roles-and-permissions">documentation</a>.</p><h2 id="module-policy-modules" class="section-heading"><a href="#module-policy-modules" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Policy Modules</span></h2><p>Authorization policies are implemented under <code class="inline">lib/lightning/policies/</code>:</p><ul><li><code class="inline">users.ex</code> - Instance-wide access levels</li><li><code class="inline">project_users.ex</code> - Project-wide access levels  </li><li><code class="inline">credentials.ex</code> - Credential management permissions</li><li><code class="inline">workflows.ex</code> - Workflow-related permissions</li><li><code class="inline">collections.ex</code> - Collection access permissions</li><li><code class="inline">dataclips.ex</code> - Dataclip permissions</li><li><code class="inline">exports.ex</code> - Export functionality permissions</li><li><code class="inline">provisioning.ex</code> - Resource provisioning permissions</li></ul><h2 id="module-interface" class="section-heading"><a href="#module-interface" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Interface</span></h2><p>This module provides the <a href="#can/4"><code class="inline">can/4</code></a> and <a href="#can?/4"><code class="inline">can?/4</code></a> interface, which wraps 
 <a href="https://hexdocs.pm/bodyguard/2.4.3/Bodyguard.html#permit/4"><code class="inline">Bodyguard.permit/4</code></a> to harmonize policy usage across the application.</p><p><strong>Policy Resolution</strong>: You can reference policy modules in two ways:</p><ul><li>Full module names: <a href="Lightning.Policies.Users.html"><code class="inline">Lightning.Policies.Users</code></a></li><li>Atom shortcuts for sub-modules: <code class="inline">:users</code>, <code class="inline">:project_users</code>, <code class="inline">:credentials</code></li></ul><h2 id="module-functions" class="section-heading"><a href="#module-functions" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Functions</span></h2><ul><li><code class="inline">can(policy, action, actor, resource)</code> - Returns <code class="inline">:ok</code> or <code class="inline">{:error, :unauthorized}</code></li><li><code class="inline">can?(policy, action, actor, resource)</code> - Returns <code class="inline">true</code> or <code class="inline">false</code></li></ul><h2 id="module-examples" class="section-heading"><a href="#module-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><p><strong>Using full module names:</strong></p><pre><code class="makeup elixir" translate="no"><span class="n">can_edit</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">Lightning.Policies.ProjectUsers</span><span class="w"> 
-           </span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Lightning.Policies.Permissions</span><span class="o">.</span><span class="n">can?</span><span class="p" data-group-id="7635079415-1">(</span><span class="ss">:edit_workflow</span><span class="p">,</span><span class="w"> </span><span class="n">user</span><span class="p">,</span><span class="w"> </span><span class="n">project</span><span class="p" data-group-id="7635079415-1">)</span></code></pre><p><strong>Using atom shortcuts:</strong></p><pre><code class="makeup elixir" translate="no"><span class="n">can_create</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">Permissions</span><span class="o">.</span><span class="n">can?</span><span class="p" data-group-id="6968353078-1">(</span><span class="ss">:credentials</span><span class="p">,</span><span class="w"> </span><span class="ss">:create_keychain_credential</span><span class="p">,</span><span class="w"> </span><span class="n">project_user</span><span class="p" data-group-id="6968353078-1">)</span><span class="w">
-</span><span class="n">can_delete</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">Permissions</span><span class="o">.</span><span class="n">can?</span><span class="p" data-group-id="6968353078-2">(</span><span class="ss">:project_users</span><span class="p">,</span><span class="w"> </span><span class="ss">:delete_project</span><span class="p">,</span><span class="w"> </span><span class="n">user</span><span class="p">,</span><span class="w"> </span><span class="n">project</span><span class="p" data-group-id="6968353078-2">)</span></code></pre><p>All policies are comprehensively tested in <code class="inline">test/lightning/policies/</code>.</p>
+           </span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Lightning.Policies.Permissions</span><span class="o">.</span><span class="n">can?</span><span class="p" data-group-id="3990448936-1">(</span><span class="ss">:edit_workflow</span><span class="p">,</span><span class="w"> </span><span class="n">user</span><span class="p">,</span><span class="w"> </span><span class="n">project</span><span class="p" data-group-id="3990448936-1">)</span></code></pre><p><strong>Using atom shortcuts:</strong></p><pre><code class="makeup elixir" translate="no"><span class="n">can_create</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">Permissions</span><span class="o">.</span><span class="n">can?</span><span class="p" data-group-id="9929881115-1">(</span><span class="ss">:credentials</span><span class="p">,</span><span class="w"> </span><span class="ss">:create_keychain_credential</span><span class="p">,</span><span class="w"> </span><span class="n">project_user</span><span class="p" data-group-id="9929881115-1">)</span><span class="w">
+</span><span class="n">can_delete</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">Permissions</span><span class="o">.</span><span class="n">can?</span><span class="p" data-group-id="9929881115-2">(</span><span class="ss">:project_users</span><span class="p">,</span><span class="w"> </span><span class="ss">:delete_project</span><span class="p">,</span><span class="w"> </span><span class="n">user</span><span class="p">,</span><span class="w"> </span><span class="n">project</span><span class="p" data-group-id="9929881115-2">)</span></code></pre><p>All policies are comprehensively tested in <code class="inline">test/lightning/policies/</code>.</p>
     </section>
 
 </div>
@@ -170,11 +170,11 @@ the <a href="https://docs.openfn.org/documentation/about-lightning#roles-and-per
 
   <section class="docstring">
 
-<p>checks if user has the permissions to apply action using some policy module</p><p>Returns <code class="inline">:ok</code> if user can apply action and <code class="inline">{:error, :unauthorized}</code> otherwise</p><h2 id="can/4-examples" class="section-heading"><a href="#can/4-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">can</span><span class="p" data-group-id="1288254106-1">(</span><span class="nc">Lightning.Policies.Users</span><span class="p">,</span><span class="w"> </span><span class="ss">:create_workflow</span><span class="p">,</span><span class="w"> </span><span class="n">user</span><span class="p">,</span><span class="w"> </span><span class="n">project</span><span class="p" data-group-id="1288254106-1">)</span><span class="w">
+<p>checks if user has the permissions to apply action using some policy module</p><p>Returns <code class="inline">:ok</code> if user can apply action and <code class="inline">{:error, :unauthorized}</code> otherwise</p><h2 id="can/4-examples" class="section-heading"><a href="#can/4-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">can</span><span class="p" data-group-id="3944684207-1">(</span><span class="nc">Lightning.Policies.Users</span><span class="p">,</span><span class="w"> </span><span class="ss">:create_workflow</span><span class="p">,</span><span class="w"> </span><span class="n">user</span><span class="p">,</span><span class="w"> </span><span class="n">project</span><span class="p" data-group-id="3944684207-1">)</span><span class="w">
 </span><span class="ss">:ok</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">can</span><span class="p" data-group-id="1288254106-2">(</span><span class="nc">Lightning.Policies.Users</span><span class="p">,</span><span class="w"> </span><span class="ss">:create_project</span><span class="p">,</span><span class="w"> </span><span class="n">user</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="1288254106-3">%{</span><span class="p" data-group-id="1288254106-3">}</span><span class="p" data-group-id="1288254106-2">)</span><span class="w">
-</span><span class="p" data-group-id="1288254106-4">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="ss">:unauthorized</span><span class="p" data-group-id="1288254106-4">}</span></code></pre>
+</span><span class="gp unselectable">iex&gt; </span><span class="n">can</span><span class="p" data-group-id="3944684207-2">(</span><span class="nc">Lightning.Policies.Users</span><span class="p">,</span><span class="w"> </span><span class="ss">:create_project</span><span class="p">,</span><span class="w"> </span><span class="n">user</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="3944684207-3">%{</span><span class="p" data-group-id="3944684207-3">}</span><span class="p" data-group-id="3944684207-2">)</span><span class="w">
+</span><span class="p" data-group-id="3944684207-4">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="ss">:unauthorized</span><span class="p" data-group-id="3944684207-4">}</span></code></pre>
   </section>
 </section>
 <section class="detail" id="can?/4">
@@ -198,10 +198,10 @@ the <a href="https://docs.openfn.org/documentation/about-lightning#roles-and-per
 
   <section class="docstring">
 
-<p>same as can/4 but returns <code class="inline">true</code> if user can apply action and <code class="inline">false</code> otherwise</p><h2 id="can?/4-examples" class="section-heading"><a href="#can?/4-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">can</span><span class="p" data-group-id="0060593473-1">(</span><span class="nc">Lightning.Policies.Users</span><span class="p">,</span><span class="w"> </span><span class="ss">:create_workflow</span><span class="p">,</span><span class="w"> </span><span class="n">user</span><span class="p">,</span><span class="w"> </span><span class="n">project</span><span class="p" data-group-id="0060593473-1">)</span><span class="w">
+<p>same as can/4 but returns <code class="inline">true</code> if user can apply action and <code class="inline">false</code> otherwise</p><h2 id="can?/4-examples" class="section-heading"><a href="#can?/4-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">can</span><span class="p" data-group-id="9932217052-1">(</span><span class="nc">Lightning.Policies.Users</span><span class="p">,</span><span class="w"> </span><span class="ss">:create_workflow</span><span class="p">,</span><span class="w"> </span><span class="n">user</span><span class="p">,</span><span class="w"> </span><span class="n">project</span><span class="p" data-group-id="9932217052-1">)</span><span class="w">
 </span><span class="no">true</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">can</span><span class="p" data-group-id="0060593473-2">(</span><span class="nc">Lightning.Policies.Users</span><span class="p">,</span><span class="w"> </span><span class="ss">:create_project</span><span class="p">,</span><span class="w"> </span><span class="n">user</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="0060593473-3">%{</span><span class="p" data-group-id="0060593473-3">}</span><span class="p" data-group-id="0060593473-2">)</span><span class="w">
+</span><span class="gp unselectable">iex&gt; </span><span class="n">can</span><span class="p" data-group-id="9932217052-2">(</span><span class="nc">Lightning.Policies.Users</span><span class="p">,</span><span class="w"> </span><span class="ss">:create_project</span><span class="p">,</span><span class="w"> </span><span class="n">user</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="9932217052-3">%{</span><span class="p" data-group-id="9932217052-3">}</span><span class="p" data-group-id="9932217052-2">)</span><span class="w">
 </span><span class="no">false</span></code></pre>
   </section>
 </section>

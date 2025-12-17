@@ -5,14 +5,14 @@
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="generator" content="ExDoc v0.38.4">
-    <meta name="project" content="Lightning v2.15.0-pre7">
+    <meta name="project" content="Lightning v2.15.0">
 
 
-    <title>Lightning.Validators.Hex — Lightning v2.15.0-pre7</title>
+    <title>Lightning.Validators.Hex — Lightning v2.15.0</title>
 
     <link rel="stylesheet" href="dist/html-elixir-RLZO5U2C.css" />
 
-    <script defer src="dist/sidebar_items-900C9D95.js"></script>
+    <script defer src="dist/sidebar_items-9192F4BC.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-Y223O6DN.js"></script>
 
@@ -41,7 +41,7 @@
 Lightning
         </a>
         <div class="sidebar-projectVersion" translate="no">
-          v2.15.0-pre7
+          v2.15.0
         </div>
       </div>
     </div>
@@ -80,7 +80,7 @@ Lightning
   <div class="heading-with-actions top-heading">
     <h1>
       <span translate="no">Lightning.Validators.Hex</span> 
-      <small class="app-vsn" translate="no">(Lightning v2.15.0-pre7)</small>
+      <small class="app-vsn" translate="no">(Lightning v2.15.0)</small>
 
     </h1>
 
@@ -95,30 +95,30 @@ Lightning
     <section id="moduledoc">
 <p>Flexible validator for <strong>hex strings</strong> with configurable length.</p><p>By default it expects <strong>12 lowercase</strong> hex characters (<code class="inline">0-9</code>, <code class="inline">a-f</code>), which
 matches our common “head hash” format. You can change both the <strong>length</strong>
-(fixed integer or inclusive range) and the <strong>letter case</strong> via options.</p><h2 id="module-length" class="section-heading"><a href="#module-length" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Length</span></h2><p>Pass either:</p><ul><li>a positive integer (exact length), or</li><li>an inclusive <a href="https://hexdocs.pm/elixir/Range.html"><code class="inline">Range</code></a> (min..max length).</li></ul><h2 id="module-case-handling" class="section-heading"><a href="#module-case-handling" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Case handling</span></h2><p>Use the <code class="inline">:case</code> option:</p><ul><li><code class="inline">:lower</code> (default) – allow only <code class="inline">a-f</code></li><li><code class="inline">:upper</code> – allow only <code class="inline">A-F</code></li><li><code class="inline">:any</code>   – allow <code class="inline">a-f</code> or <code class="inline">A-F</code></li></ul><h2 id="module-examples" class="section-heading"><a href="#module-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="nc">Lightning.Validators.Hex</span><span class="o">.</span><span class="n">valid?</span><span class="p" data-group-id="9229442838-1">(</span><span class="s">&quot;deadbeefcafe&quot;</span><span class="p" data-group-id="9229442838-1">)</span><span class="w">
+(fixed integer or inclusive range) and the <strong>letter case</strong> via options.</p><h2 id="module-length" class="section-heading"><a href="#module-length" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Length</span></h2><p>Pass either:</p><ul><li>a positive integer (exact length), or</li><li>an inclusive <a href="https://hexdocs.pm/elixir/Range.html"><code class="inline">Range</code></a> (min..max length).</li></ul><h2 id="module-case-handling" class="section-heading"><a href="#module-case-handling" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Case handling</span></h2><p>Use the <code class="inline">:case</code> option:</p><ul><li><code class="inline">:lower</code> (default) – allow only <code class="inline">a-f</code></li><li><code class="inline">:upper</code> – allow only <code class="inline">A-F</code></li><li><code class="inline">:any</code>   – allow <code class="inline">a-f</code> or <code class="inline">A-F</code></li></ul><h2 id="module-examples" class="section-heading"><a href="#module-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="nc">Lightning.Validators.Hex</span><span class="o">.</span><span class="n">valid?</span><span class="p" data-group-id="8889971616-1">(</span><span class="s">&quot;deadbeefcafe&quot;</span><span class="p" data-group-id="8889971616-1">)</span><span class="w">
 </span><span class="no">true</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="nc">Lightning.Validators.Hex</span><span class="o">.</span><span class="n">valid?</span><span class="p" data-group-id="9229442838-2">(</span><span class="s">&quot;DEADBEEFCAFE&quot;</span><span class="p" data-group-id="9229442838-2">)</span><span class="w">
+</span><span class="gp unselectable">iex&gt; </span><span class="nc">Lightning.Validators.Hex</span><span class="o">.</span><span class="n">valid?</span><span class="p" data-group-id="8889971616-2">(</span><span class="s">&quot;DEADBEEFCAFE&quot;</span><span class="p" data-group-id="8889971616-2">)</span><span class="w">
 </span><span class="no">false</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="nc">Lightning.Validators.Hex</span><span class="o">.</span><span class="n">valid?</span><span class="p" data-group-id="9229442838-3">(</span><span class="s">&quot;DEADBEEFCAFE&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">case</span><span class="p">:</span><span class="w"> </span><span class="ss">:upper</span><span class="p" data-group-id="9229442838-3">)</span><span class="w">
+</span><span class="gp unselectable">iex&gt; </span><span class="nc">Lightning.Validators.Hex</span><span class="o">.</span><span class="n">valid?</span><span class="p" data-group-id="8889971616-3">(</span><span class="s">&quot;DEADBEEFCAFE&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">case</span><span class="p">:</span><span class="w"> </span><span class="ss">:upper</span><span class="p" data-group-id="8889971616-3">)</span><span class="w">
 </span><span class="no">true</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="nc">Lightning.Validators.Hex</span><span class="o">.</span><span class="n">valid?</span><span class="p" data-group-id="9229442838-4">(</span><span class="s">&quot;a1&quot;</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span><span class="o">..</span><span class="mi">2</span><span class="p" data-group-id="9229442838-4">)</span><span class="w">
+</span><span class="gp unselectable">iex&gt; </span><span class="nc">Lightning.Validators.Hex</span><span class="o">.</span><span class="n">valid?</span><span class="p" data-group-id="8889971616-4">(</span><span class="s">&quot;a1&quot;</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span><span class="o">..</span><span class="mi">2</span><span class="p" data-group-id="8889971616-4">)</span><span class="w">
 </span><span class="no">true</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="nc">Lightning.Validators.Hex</span><span class="o">.</span><span class="n">valid?</span><span class="p" data-group-id="9229442838-5">(</span><span class="s">&quot;xyz&quot;</span><span class="p">,</span><span class="w"> </span><span class="mi">3</span><span class="p" data-group-id="9229442838-5">)</span><span class="w">
+</span><span class="gp unselectable">iex&gt; </span><span class="nc">Lightning.Validators.Hex</span><span class="o">.</span><span class="n">valid?</span><span class="p" data-group-id="8889971616-5">(</span><span class="s">&quot;xyz&quot;</span><span class="p">,</span><span class="w"> </span><span class="mi">3</span><span class="p" data-group-id="8889971616-5">)</span><span class="w">
 </span><span class="no">false</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="nc">Lightning.Validators.Hex</span><span class="o">.</span><span class="n">format</span><span class="p" data-group-id="9229442838-6">(</span><span class="p" data-group-id="9229442838-6">)</span><span class="w">
+</span><span class="gp unselectable">iex&gt; </span><span class="nc">Lightning.Validators.Hex</span><span class="o">.</span><span class="n">format</span><span class="p" data-group-id="8889971616-6">(</span><span class="p" data-group-id="8889971616-6">)</span><span class="w">
 </span><span class="sr">~r/^[0-9a-f]{12}$/</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="nc">Lightning.Validators.Hex</span><span class="o">.</span><span class="n">format</span><span class="p" data-group-id="9229442838-7">(</span><span class="mi">8</span><span class="p" data-group-id="9229442838-7">)</span><span class="w">
+</span><span class="gp unselectable">iex&gt; </span><span class="nc">Lightning.Validators.Hex</span><span class="o">.</span><span class="n">format</span><span class="p" data-group-id="8889971616-7">(</span><span class="mi">8</span><span class="p" data-group-id="8889971616-7">)</span><span class="w">
 </span><span class="sr">~r/^[0-9a-f]{8}$/</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="nc">Lightning.Validators.Hex</span><span class="o">.</span><span class="n">format</span><span class="p" data-group-id="9229442838-8">(</span><span class="mi">8</span><span class="o">..</span><span class="mi">64</span><span class="p">,</span><span class="w"> </span><span class="ss">case</span><span class="p">:</span><span class="w"> </span><span class="ss">:any</span><span class="p" data-group-id="9229442838-8">)</span><span class="w">
+</span><span class="gp unselectable">iex&gt; </span><span class="nc">Lightning.Validators.Hex</span><span class="o">.</span><span class="n">format</span><span class="p" data-group-id="8889971616-8">(</span><span class="mi">8</span><span class="o">..</span><span class="mi">64</span><span class="p">,</span><span class="w"> </span><span class="ss">case</span><span class="p">:</span><span class="w"> </span><span class="ss">:any</span><span class="p" data-group-id="8889971616-8">)</span><span class="w">
 </span><span class="sr">~r/^[0-9A-Fa-f]{8,64}$/</span></code></pre><h2 id="module-ecto-usage" class="section-heading"><a href="#module-ecto-usage" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Ecto usage</span></h2><pre><code class="makeup elixir" translate="no"><span class="n">changeset</span><span class="w">
-</span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Ecto.Changeset</span><span class="o">.</span><span class="n">validate_format</span><span class="p" data-group-id="8209793713-1">(</span><span class="ss">:hash</span><span class="p">,</span><span class="w"> </span><span class="nc">Lightning.Validators.Hex</span><span class="o">.</span><span class="n">format</span><span class="p" data-group-id="8209793713-2">(</span><span class="p" data-group-id="8209793713-2">)</span><span class="p" data-group-id="8209793713-1">)</span></code></pre>
+</span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Ecto.Changeset</span><span class="o">.</span><span class="n">validate_format</span><span class="p" data-group-id="4867695719-1">(</span><span class="ss">:hash</span><span class="p">,</span><span class="w"> </span><span class="nc">Lightning.Validators.Hex</span><span class="o">.</span><span class="n">format</span><span class="p" data-group-id="4867695719-2">(</span><span class="p" data-group-id="4867695719-2">)</span><span class="p" data-group-id="4867695719-1">)</span></code></pre>
     </section>
 
 </div>
