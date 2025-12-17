@@ -646,12 +646,18 @@ export class AIChannelRegistry {
         logger.debug('Channel joined successfully', { topic: entry.topic });
       })
       .receive('error', (response: unknown) => {
-        const typedResponse = response as ChannelError;
-        logger.error('Failed to join channel', typedResponse);
+        logger.error('Failed to join channel', response);
 
         entry.status = 'error';
 
-        const errorMessage = formatChannelErrorMessage(typedResponse);
+        // Channel join errors have format {reason: 'message'} not {errors: {base: ['message']}}
+        const errorMessage =
+          typeof response === 'object' &&
+          response !== null &&
+          'reason' in response &&
+          typeof (response as { reason: unknown }).reason === 'string'
+            ? (response as { reason: string }).reason
+            : formatChannelErrorMessage(response as ChannelError);
 
         if (
           errorMessage === 'session not found' ||
@@ -671,7 +677,7 @@ export class AIChannelRegistry {
         ) {
           logger.error(
             'Job not found - either not saved yet or deleted during workflow update',
-            typedResponse
+            response
           );
           this.store._clearSession();
 

@@ -137,6 +137,19 @@ export const useAISession = ({
       aiStore._clearSessionList();
       aiStore._setConnectionState('disconnected');
       onSessionIdChange?.(null);
+
+      // Unsubscribe from old channel immediately when mode changes
+      if (currentSubscriptionRef.current && registry) {
+        registry.unsubscribeImmediate(
+          currentSubscriptionRef.current,
+          subscriberId
+        );
+        currentSubscriptionRef.current = null;
+      }
+
+      // Early return - let the URL update propagate before proceeding
+      // The next render will have the cleared sessionIdFromURL and can proceed normally
+      return;
     }
 
     // Build the topic we want to subscribe to
