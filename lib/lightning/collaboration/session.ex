@@ -137,7 +137,10 @@ defmodule Lightning.Collaboration.Session do
       Process.demonitor(state.parent_ref)
     end
 
-    if shared_doc_pid && Process.alive?(shared_doc_pid) do
+    # Don't check Process.alive? - it only works for local PIDs
+    # and shared_doc_pid can be on another node in a distributed cluster.
+    # Sending to a dead process is safe (message is discarded).
+    if shared_doc_pid do
       SharedDoc.unobserve(shared_doc_pid)
     end
 
@@ -420,7 +423,9 @@ defmodule Lightning.Collaboration.Session do
     if ref == parent_ref do
       Process.demonitor(parent_ref)
 
-      if shared_doc_pid && Process.alive?(shared_doc_pid) do
+      # Don't check Process.alive? - it only works for local PIDs
+      # and shared_doc_pid can be on another node in a distributed cluster.
+      if shared_doc_pid do
         SharedDoc.unobserve(shared_doc_pid)
       end
 
