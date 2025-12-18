@@ -24,6 +24,9 @@ and this project adheres to
 
 ### Fixed
 
+- Fixed Argument Error on session Collaborative editor session termination
+  [#4251](https://github.com/OpenFn/lightning/issues/4251)
+
 ## [2.15.1] - 2025-12-17
 
 ### Fixed
