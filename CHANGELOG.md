@@ -17,6 +17,14 @@ and this project adheres to
 
 ### Added
 
+### Changed
+
+### Fixed
+
+## [2.15.2-pre] - 2025-12-18
+
+### Added
+
 - Make AI chat sessions collaborative with real-time message sync
   [#4247](https://github.com/OpenFn/lightning/issues/4247)
 
