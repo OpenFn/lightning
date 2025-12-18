@@ -16,6 +16,7 @@ interface LogStore {
   logLines: LogLine[];
   formattedLogLines: string;
   addLogLines: (newLogs: LogLine[]) => void;
+  clearLogs: () => void;
   highlightedRanges: { start: number; end: number }[];
   desiredLogLevel: string;
   setDesiredLogLevel: (desiredLogLevel: string | undefined) => void;
@@ -166,13 +167,16 @@ export const createLogStore = () => {
         logLines.sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
 
         const desiredLogLevel = get().desiredLogLevel;
-        const formatted = stringifyLogLines(logLines, desiredLogLevel);
+        const formattedLogLines = stringifyLogLines(logLines, desiredLogLevel);
 
-        set({
-          formattedLogLines: formatted,
-          logLines,
-        });
+        set({ formattedLogLines, logLines });
       },
+      clearLogs: () =>
+        set({
+          logLines: [],
+          formattedLogLines: '',
+          highlightedRanges: [],
+        }),
     }))
   );
 
