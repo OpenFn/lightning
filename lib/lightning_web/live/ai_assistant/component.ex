@@ -157,8 +157,11 @@ defmodule LightningWeb.AiAssistant.Component do
     })
   end
 
-  defp handle_message_status({:processing, _session}, socket) do
-    assign(socket, :pending_message, AsyncResult.loading())
+  defp handle_message_status({:processing, session}, socket) do
+    assign(socket,
+      session: session,
+      pending_message: AsyncResult.loading()
+    )
   end
 
   defp handle_message_status({:success, session}, socket) do
@@ -833,7 +836,10 @@ defmodule LightningWeb.AiAssistant.Component do
                 <div class="flex items-start justify-between gap-3">
                   <div class="flex items-start space-x-3 min-w-0 flex-1">
                     <div class="flex-shrink-0 mt-0.5">
-                      <.user_avatar user={session.user} />
+                      <.user_avatar
+                        id={"session-#{session.id}-avatar"}
+                        user={session.user}
+                      />
                     </div>
                     <div class="min-w-0 flex-1">
                       <p class="text-sm font-medium text-gray-900 truncate group-hover:text-gray-700">
@@ -1275,7 +1281,11 @@ defmodule LightningWeb.AiAssistant.Component do
         </div>
 
         <div class="flex-shrink-0">
-          <.user_avatar user={@message.user} size_class="w-8 h-8" />
+          <.user_avatar
+            id={"message-#{@message.id}-avatar"}
+            user={@message.user}
+            size_class="w-8 h-8"
+          />
         </div>
       </div>
     </div>
@@ -1622,20 +1632,55 @@ defmodule LightningWeb.AiAssistant.Component do
     Enum.find(attrs, fn {attr, _} -> attr == "class" end)
   end
 
-  attr :user, Lightning.Accounts.User, required: true
+  attr :user, Lightning.Accounts.User, default: nil
   attr :size_class, :string, default: "h-8 w-8"
+  attr :id, :string, default: nil
 
-  defp user_avatar(assigns) do
+  defp user_avatar(%{user: nil} = assigns) do
     ~H"""
     <span class={"inline-flex #{@size_class} items-center justify-center rounded-full bg-gray-100 "}>
-      <span
-        class="text-sm leading-none text-black uppercase select-none"
-        title={"#{@user.first_name} #{@user.last_name}"}
-      >
-        {String.first(@user.first_name)}{String.first(@user.last_name)}
+      <span class="text-sm leading-none text-gray-400 uppercase select-none">
+        ?
       </span>
     </span>
     """
+  end
+
+  defp user_avatar(assigns) do
+    first_initial = get_initial(assigns.user.first_name)
+    last_initial = get_initial(assigns.user.last_name)
+    full_name = build_user_title(assigns.user.first_name, assigns.user.last_name)
+
+    assigns =
+      assign(assigns,
+        first_initial: first_initial,
+        last_initial: last_initial,
+        full_name: full_name
+      )
+
+    ~H"""
+    <span
+      id={@id}
+      class={"inline-flex #{@size_class} items-center justify-center rounded-full bg-gray-100 cursor-default"}
+      phx-hook="Tooltip"
+      aria-label={@full_name}
+    >
+      <span class="text-sm leading-none text-black uppercase select-none">
+        {@first_initial}{@last_initial}
+      </span>
+    </span>
+    """
+  end
+
+  defp get_initial(nil), do: ""
+  defp get_initial(""), do: ""
+  defp get_initial(name) when is_binary(name), do: String.first(name)
+  defp get_initial(_), do: ""
+
+  defp build_user_title(first_name, last_name) do
+    [first_name, last_name]
+    |> Enum.reject(&is_nil/1)
+    |> Enum.join(" ")
   end
 
   defp time_ago(datetime) do

@@ -3448,6 +3448,196 @@ defmodule LightningWeb.AiAssistantLiveTest do
     end
   end
 
+  describe "user avatar rendering" do
+    setup :create_workflow
+    setup :stub_rate_limiter_ok
+    setup :stub_usage_limiter_ok
+
+    @tag :capture_log
+    @tag email: "user@openfn.org"
+    test "renders avatar with user initials for messages with users", %{
+      conn: conn,
+      project: project,
+      user: user,
+      workflow: %{jobs: [job | _]} = workflow
+    } do
+      stub_apollo_endpoint()
+
+      # Create a session with a message that has a user with full name
+      session =
+        insert(:job_chat_session,
+          user: user,
+          job: job,
+          messages: [
+            %{role: :user, content: "Test message", user: user},
+            %{role: :assistant, content: "Test response"}
+          ]
+        )
+
+      skip_disclaimer(user)
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version, s: job.id, m: "expand"]}&j-chat=#{session.id}"
+        )
+
+      render_async(view)
+      html = render(view)
+
+      # User avatar should show initials from first_name and last_name
+      first_initial = String.first(user.first_name)
+      assert html =~ first_initial
+    end
+
+    @tag :capture_log
+    @tag email: "user@openfn.org"
+    test "renders avatar with partial name when user has nil last_name", %{
+      conn: conn,
+      project: project,
+      user: user,
+      workflow: %{jobs: [job | _]} = workflow
+    } do
+      stub_apollo_endpoint()
+
+      # Create a user with nil last_name
+      user_with_partial_name =
+        insert(:user, first_name: "Alice", last_name: nil)
+
+      insert(:project_user, project: project, user: user_with_partial_name)
+
+      session =
+        insert(:job_chat_session,
+          user: user_with_partial_name,
+          job: job,
+          messages: [
+            %{
+              role: :user,
+              content: "Test message",
+              user: user_with_partial_name
+            },
+            %{role: :assistant, content: "Test response"}
+          ]
+        )
+
+      skip_disclaimer(user)
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version, s: job.id, m: "expand"]}&j-chat=#{session.id}"
+        )
+
+      render_async(view)
+      html = render(view)
+
+      # Avatar should render with just first initial
+      assert html =~ "A"
+      assert html =~ "Alice"
+    end
+
+    @tag :capture_log
+    @tag email: "user@openfn.org"
+    test "renders avatar with question mark when user has empty string first_name",
+         %{
+           conn: conn,
+           project: project,
+           user: user,
+           workflow: %{jobs: [job | _]} = workflow
+         } do
+      stub_apollo_endpoint()
+
+      # Create a user with empty string first_name and last_name
+      user_with_empty_name =
+        insert(:user, first_name: "", last_name: "")
+
+      insert(:project_user, project: project, user: user_with_empty_name)
+
+      session =
+        insert(:job_chat_session,
+          user: user_with_empty_name,
+          job: job,
+          messages: [
+            %{
+              role: :user,
+              content: "Test message",
+              user: user_with_empty_name
+            },
+            %{role: :assistant, content: "Test response"}
+          ]
+        )
+
+      skip_disclaimer(user)
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version, s: job.id, m: "expand"]}&j-chat=#{session.id}"
+        )
+
+      render_async(view)
+      html = render(view)
+
+      # Avatar should render with "?" when first_name is empty string
+      assert html =~ "?"
+    end
+
+    @tag :capture_log
+    @tag email: "user@openfn.org"
+    test "renders question mark avatar for messages without user association", %{
+      conn: conn,
+      project: project,
+      user: user,
+      workflow: %{jobs: [job | _]} = workflow
+    } do
+      stub_apollo_endpoint()
+
+      # Create a session with a message that has no user (nil)
+      session =
+        insert(:job_chat_session,
+          user: user,
+          job: job,
+          messages: [
+            %{role: :user, content: "Message without user", user: nil},
+            %{role: :assistant, content: "Test response"}
+          ]
+        )
+
+      skip_disclaimer(user)
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version, s: job.id, m: "expand"]}&j-chat=#{session.id}"
+        )
+
+      render_async(view)
+      html = render(view)
+
+      # Avatar for nil user should show "?"
+      assert html =~ "?"
+    end
+  end
+
+  defp stub_apollo_endpoint do
+    apollo_endpoint = "http://localhost:4001"
+
+    Mox.stub(Lightning.MockConfig, :apollo, fn
+      :endpoint -> apollo_endpoint
+      :ai_assistant_api_key -> "ai_assistant_api_key"
+      :timeout -> 5_000
+    end)
+
+    Mox.stub(
+      Lightning.Tesla.Mock,
+      :call,
+      fn
+        %{method: :get, url: ^apollo_endpoint <> "/"}, _opts ->
+          {:ok, %Tesla.Env{status: 200}}
+      end
+    )
+  end
+
   defp create_project_for_user(%{user: user}) do
     project = insert(:project, project_users: [%{user: user, role: :owner}])
     %{project: project}

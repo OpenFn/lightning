@@ -50,6 +50,7 @@
  */
 
 import { produce } from 'immer';
+import type { PhoenixChannelProvider } from 'y-phoenix-channel';
 
 import _logger from '#/utils/logger';
 
@@ -61,6 +62,8 @@ import type {
   Message,
   MessageStatus,
   Session,
+  SessionListResponse,
+  SessionSummary,
   SessionType,
   WorkflowTemplateContext,
 } from '../types/ai-assistant';
@@ -314,8 +317,7 @@ export const createAIAssistantStore = (): AIAssistantStore => {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
 
-      const data =
-        (await response.json()) as import('../types/ai-assistant').SessionListResponse;
+      const data = (await response.json()) as SessionListResponse;
 
       if (append) {
         _appendSessionList(data);
@@ -399,6 +401,7 @@ export const createAIAssistantStore = (): AIAssistantStore => {
    * @internal Called by useAIAssistantChannel hook
    */
   const _addMessage = (message: Message) => {
+    // Deduplicate - don't add if message already exists
     const exists = state.messages.some(m => m.id === message.id);
     if (exists) {
       return;
@@ -450,9 +453,7 @@ export const createAIAssistantStore = (): AIAssistantStore => {
    * Set session list from backend response
    * @internal Called by useAIAssistantChannel hook
    */
-  const _setSessionList = (
-    response: import('../types/ai-assistant').SessionListResponse
-  ) => {
+  const _setSessionList = (response: SessionListResponse) => {
     state = produce(state, draft => {
       draft.sessionList = response.sessions;
       draft.sessionListPagination = response.pagination;
@@ -466,9 +467,7 @@ export const createAIAssistantStore = (): AIAssistantStore => {
    * Append sessions to existing session list
    * @internal Used for pagination (load more)
    */
-  const _appendSessionList = (
-    response: import('../types/ai-assistant').SessionListResponse
-  ) => {
+  const _appendSessionList = (response: SessionListResponse) => {
     state = produce(state, draft => {
       const existingIds = new Set(draft.sessionList.map(s => s.id));
       const newSessions = response.sessions.filter(s => !existingIds.has(s.id));
@@ -496,6 +495,28 @@ export const createAIAssistantStore = (): AIAssistantStore => {
   };
 
   /**
+   * Prepend a new session to the session list
+   * Used when another user creates a new session (via workflow channel broadcast)
+   * @internal
+   */
+  const _prependSession = (session: SessionSummary) => {
+    state = produce(state, draft => {
+      // Only add if not already in the list and list has been loaded
+      // (sessionListPagination being set indicates the list was loaded)
+      const exists = draft.sessionList.some(s => s.id === session.id);
+      const listIsLoaded = draft.sessionListPagination !== null;
+
+      if (!exists && listIsLoaded) {
+        draft.sessionList.unshift(session);
+        // Update pagination count
+        draft.sessionListPagination!.total_count += 1;
+      }
+    });
+
+    notify('_prependSession');
+  };
+
+  /**
    * Initialize context without changing connection state
    * Used by registry pattern to set context before channel connection
    * Unlike connect(), this does NOT set connectionState to 'connecting'
@@ -518,6 +539,64 @@ export const createAIAssistantStore = (): AIAssistantStore => {
     });
 
     notify('_initializeContext');
+  };
+
+  /**
+   * Set the processing state for collaborative sessions
+   * When true, blocks input for all users viewing the session
+   * @internal Called by channel registry when receiving processing broadcasts
+   */
+  const _setProcessingState = (isProcessing: boolean) => {
+    state = produce(state, draft => {
+      draft.isLoading = isProcessing;
+      if (!isProcessing) {
+        draft.isSending = false;
+      }
+    });
+
+    notify('_setProcessingState');
+  };
+
+  /**
+   * Connect to workflow channel to listen for AI session creation events.
+   * When another user creates an AI session, we receive the event and update
+   * our session list if it matches the current context.
+   * @internal Called by StoreProvider when channel is connected
+   */
+  const _connectChannel = (channelProvider: PhoenixChannelProvider) => {
+    const channel = channelProvider.channel;
+
+    const aiSessionCreatedHandler = (data: unknown) => {
+      const payload = data as { session: SessionSummary };
+      logger.debug(
+        'Received ai_session_created from workflow channel',
+        payload
+      );
+
+      // Only add if we're viewing the session list (no active session)
+      // and the session matches the current context
+      const currentState = state;
+
+      if (!currentState.sessionId && payload.session) {
+        // Check if session matches current mode/context
+        const matchesContext =
+          (currentState.sessionType === 'job_code' &&
+            payload.session.session_type === 'job_code') ||
+          (currentState.sessionType === 'workflow_template' &&
+            payload.session.session_type === 'workflow_template');
+
+        if (matchesContext) {
+          _prependSession(payload.session);
+        }
+      }
+    };
+
+    channel.on('ai_session_created', aiSessionCreatedHandler);
+
+    // Return cleanup function
+    return () => {
+      channel.off('ai_session_created', aiSessionCreatedHandler);
+    };
   };
 
   devtools.connect();
@@ -544,11 +623,14 @@ export const createAIAssistantStore = (): AIAssistantStore => {
     _setSession,
     _clearSession,
     _clearSessionList,
+    _prependSession,
     _addMessage,
     _updateMessageStatus,
     _setSessionList,
     _appendSessionList,
     _initializeContext,
+    _setProcessingState,
+    _connectChannel,
   };
 };
 

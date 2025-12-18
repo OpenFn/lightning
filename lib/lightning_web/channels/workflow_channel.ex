@@ -577,6 +577,37 @@ defmodule LightningWeb.WorkflowChannel do
     {:reply, {:ok, %{templates: rendered_templates}}, socket}
   end
 
+  # Handles the start of an AI workflow apply operation.
+  # When a user clicks "Apply" on an AI-generated workflow, this broadcasts
+  # to all collaborators so they can disable their Apply buttons, preventing
+  # concurrent applies that could cause duplicate nodes in Y.Doc.
+  @impl true
+  def handle_in("start_applying_workflow", %{"message_id" => message_id}, socket) do
+    user = socket.assigns.current_user
+
+    # Broadcast to ALL clients (including sender) so everyone sees the applying state
+    broadcast!(socket, "workflow_applying", %{
+      user_id: user.id,
+      user_name: user.first_name || user.email,
+      message_id: message_id
+    })
+
+    {:reply, {:ok, %{}}, socket}
+  end
+
+  # Handles the completion of an AI workflow apply operation.
+  # Broadcasts to all collaborators that the apply is complete, allowing them
+  # to re-enable their Apply buttons.
+  @impl true
+  def handle_in("done_applying_workflow", %{"message_id" => message_id}, socket) do
+    # Broadcast to ALL clients (including sender) so everyone clears the applying state
+    broadcast!(socket, "workflow_applied", %{
+      message_id: message_id
+    })
+
+    {:reply, {:ok, %{}}, socket}
+  end
+
   @impl true
   def handle_info({:yjs, chunk}, socket) do
     push(socket, "yjs", {:binary, chunk})

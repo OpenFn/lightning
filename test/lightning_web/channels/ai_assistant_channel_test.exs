@@ -2443,4 +2443,307 @@ defmodule LightningWeb.AiAssistantChannelTest do
              ]
     end
   end
+
+  describe "collaborative session behavior" do
+    @tag :capture_log
+    test "broadcasts user_message when user sends a message", %{
+      socket: socket,
+      job: job,
+      user: user
+    } do
+      {:ok, session} =
+        AiAssistant.create_session(job, user, "Initial message", [])
+
+      {:ok, _, socket} =
+        subscribe_and_join(
+          socket,
+          AiAssistantChannel,
+          "ai_assistant:job_code:#{session.id}",
+          %{}
+        )
+
+      with_testing_mode(:manual, fn ->
+        ref = push(socket, "new_message", %{"content" => "Test collaborative"})
+
+        assert_reply ref, :ok, %{message: _message}
+
+        # The user_message should be broadcast to all subscribers
+        assert_broadcast "user_message", %{message: broadcast_message}
+        assert broadcast_message.content == "Test collaborative"
+        assert broadcast_message.role == "user"
+        # Message should include user info for attribution
+        assert broadcast_message.user.first_name != nil
+        assert broadcast_message.user.last_name != nil
+      end)
+    end
+
+    @tag :capture_log
+    test "broadcasts message_processing when AI is processing", %{
+      socket: socket,
+      job: job,
+      user: user
+    } do
+      {:ok, session} =
+        AiAssistant.create_session(job, user, "Initial message", [])
+
+      session_id = session.id
+
+      {:ok, _, socket} =
+        subscribe_and_join(
+          socket,
+          AiAssistantChannel,
+          "ai_assistant:job_code:#{session.id}",
+          %{}
+        )
+
+      # Simulate message status changed to processing
+      send(
+        socket.channel_pid,
+        {:ai_assistant, :message_status_changed,
+         %{
+           status: {:processing, session},
+           session_id: session.id
+         }}
+      )
+
+      # Should broadcast processing state to all subscribers
+      assert_broadcast "message_processing", %{session_id: ^session_id}
+    end
+
+    @tag :capture_log
+    test "broadcasts new_message to all subscribers on AI response", %{
+      socket: socket,
+      job: job,
+      user: user
+    } do
+      {:ok, session} =
+        AiAssistant.create_session(job, user, "Initial message", [])
+
+      {:ok, _, socket} =
+        subscribe_and_join(
+          socket,
+          AiAssistantChannel,
+          "ai_assistant:job_code:#{session.id}",
+          %{}
+        )
+
+      # Reload session with messages
+      updated_session = Lightning.Repo.preload(session, :messages, force: true)
+
+      # Simulate message status changed to success
+      send(
+        socket.channel_pid,
+        {:ai_assistant, :message_status_changed,
+         %{
+           status: {:success, updated_session},
+           session_id: session.id
+         }}
+      )
+
+      # Should broadcast new_message to all subscribers (not push)
+      assert_broadcast "new_message", %{message: message}
+      assert message.role == "assistant"
+    end
+
+    @tag :capture_log
+    test "broadcasts message_error on AI failure", %{
+      socket: socket,
+      job: job,
+      user: user
+    } do
+      {:ok, session} =
+        AiAssistant.create_session(job, user, "Initial message", [])
+
+      {:ok, _, socket} =
+        subscribe_and_join(
+          socket,
+          AiAssistantChannel,
+          "ai_assistant:job_code:#{session.id}",
+          %{}
+        )
+
+      # Create a user message to simulate error on
+      {:ok, updated_session} =
+        AiAssistant.save_message(
+          session,
+          %{role: :user, content: "Test message", user: user},
+          []
+        )
+
+      message = List.last(updated_session.messages)
+      message_id = message.id
+
+      # Simulate error status
+      send(
+        socket.channel_pid,
+        {:ai_assistant, :message_status_changed,
+         %{
+           status: {:error, updated_session},
+           session_id: session.id
+         }}
+      )
+
+      # Should broadcast error state
+      assert_broadcast "message_error", %{
+        message_id: ^message_id,
+        status: "error"
+      }
+    end
+
+    @tag :capture_log
+    test "broadcasts message_error on failed status", %{
+      socket: socket,
+      job: job,
+      user: user
+    } do
+      {:ok, session} =
+        AiAssistant.create_session(job, user, "Initial message", [])
+
+      {:ok, _, socket} =
+        subscribe_and_join(
+          socket,
+          AiAssistantChannel,
+          "ai_assistant:job_code:#{session.id}",
+          %{}
+        )
+
+      # Create a user message to simulate failed status on
+      {:ok, updated_session} =
+        AiAssistant.save_message(
+          session,
+          %{role: :user, content: "Test message", user: user},
+          []
+        )
+
+      message = List.last(updated_session.messages)
+      message_id = message.id
+
+      # Simulate failed status (distinct from :error)
+      send(
+        socket.channel_pid,
+        {:ai_assistant, :message_status_changed,
+         %{
+           status: {:failed, updated_session},
+           session_id: session.id
+         }}
+      )
+
+      # Should broadcast error state with "failed" status
+      assert_broadcast "message_error", %{
+        message_id: ^message_id,
+        status: "failed"
+      }
+    end
+
+    @tag :capture_log
+    test "messages include user info for attribution", %{
+      socket: socket,
+      job: job,
+      user: user
+    } do
+      {:ok, session} =
+        AiAssistant.create_session(job, user, "Initial message", [])
+
+      {:ok, response, _socket} =
+        subscribe_and_join(
+          socket,
+          AiAssistantChannel,
+          "ai_assistant:job_code:#{session.id}",
+          %{}
+        )
+
+      # Check that messages in join response include user info
+      messages = response.messages
+
+      user_messages = Enum.filter(messages, &(&1.role == "user"))
+
+      for message <- user_messages do
+        assert message.user != nil
+        assert message.user.id == user.id
+        assert message.user.first_name != nil
+      end
+    end
+
+    @tag :capture_log
+    test "any project member can access session", %{
+      project: project,
+      job: job,
+      user: user
+    } do
+      # Create a session as the first user
+      {:ok, session} =
+        AiAssistant.create_session(job, user, "Initial message", [])
+
+      # Create another user and add them to the project
+      other_user = user_fixture()
+      insert(:project_user, project: project, user: other_user, role: :editor)
+
+      # The other user should be able to join the same session
+      other_socket =
+        LightningWeb.UserSocket
+        |> socket("user_#{other_user.id}", %{current_user: other_user})
+
+      assert {:ok, response, _socket} =
+               subscribe_and_join(
+                 other_socket,
+                 AiAssistantChannel,
+                 "ai_assistant:job_code:#{session.id}",
+                 %{}
+               )
+
+      assert response.session_id == session.id
+      assert response.session_type == "job_code"
+      # Messages should be visible to other user
+      assert length(response.messages) > 0
+    end
+
+    @tag :capture_log
+    test "messages sent by different users show correct attribution", %{
+      project: project,
+      job: job,
+      user: user
+    } do
+      # Create a session as the first user
+      {:ok, session} =
+        AiAssistant.create_session(job, user, "First user message", [])
+
+      # Create another user and add them to the project
+      other_user = user_fixture()
+      insert(:project_user, project: project, user: other_user, role: :editor)
+
+      # Save a message as the second user
+      {:ok, _updated_session} =
+        AiAssistant.save_message(
+          session,
+          %{role: :user, content: "Second user message", user: other_user},
+          []
+        )
+
+      # Join as first user and check messages
+      {:ok, response, _socket} =
+        subscribe_and_join(
+          socket(LightningWeb.UserSocket, "user_#{user.id}", %{
+            current_user: user
+          }),
+          AiAssistantChannel,
+          "ai_assistant:job_code:#{session.id}",
+          %{}
+        )
+
+      messages = response.messages
+      user_messages = Enum.filter(messages, &(&1.role == "user"))
+
+      # Find messages by each user
+      first_user_msg = Enum.find(user_messages, &(&1.user.id == user.id))
+      second_user_msg = Enum.find(user_messages, &(&1.user.id == other_user.id))
+
+      assert first_user_msg != nil
+      assert first_user_msg.content == "First user message"
+      assert first_user_msg.user.first_name == user.first_name
+
+      assert second_user_msg != nil
+      assert second_user_msg.content == "Second user message"
+      assert second_user_msg.user.first_name == other_user.first_name
+    end
+  end
 end

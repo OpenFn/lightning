@@ -4,6 +4,7 @@ import remarkGfm from 'remark-gfm';
 
 import { cn } from '#/utils/cn';
 
+import type { Message } from '../types/ai-assistant';
 import { Tooltip } from './Tooltip';
 
 /**
@@ -320,6 +321,18 @@ const formatTimestamp = (isoTimestamp: string): string => {
 };
 
 /**
+ * Formats user name for attribution display
+ * Returns first name, or "first last" if both available, or null if no user
+ */
+const formatUserName = (user: Message['user']): string | null => {
+  if (!user) return null;
+  const { first_name, last_name } = user;
+  if (first_name && last_name) return `${first_name} ${last_name}`;
+  if (first_name) return first_name;
+  return null;
+};
+
+/**
  * MessageList Component
  *
  * Displays the list of messages in the AI Assistant chat.
@@ -331,16 +344,8 @@ const formatTimestamp = (isoTimestamp: string): string => {
  * - Assistant messages full-width with code blocks
  * - Loading and error states
  * - Copy functionality for code blocks
+ * - User attribution for collaborative sessions
  */
-
-interface Message {
-  id: string;
-  content: string;
-  role: 'user' | 'assistant';
-  status: 'pending' | 'processing' | 'success' | 'error' | 'cancelled';
-  code?: string;
-  inserted_at: string;
-}
 
 interface MessageListProps {
   messages?: Message[];
@@ -592,7 +597,14 @@ export function MessageList({
                   )}
 
                   <span className="text-xs text-gray-400 mt-1">
-                    {formatTimestamp(message.inserted_at)}
+                    {formatUserName(message.user) ? (
+                      <>
+                        Sent by {formatUserName(message.user)} •{' '}
+                        {formatTimestamp(message.inserted_at)}
+                      </>
+                    ) : (
+                      formatTimestamp(message.inserted_at)
+                    )}
                   </span>
                 </div>
               </div>

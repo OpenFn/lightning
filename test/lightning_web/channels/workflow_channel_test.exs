@@ -3134,4 +3134,63 @@ defmodule LightningWeb.WorkflowChannelTest do
       assert updated_user.preferences["ai_assistant.disclaimer_read_at"] != nil
     end
   end
+
+  describe "AI workflow apply coordination" do
+    test "start_applying_workflow broadcasts workflow_applying event", %{
+      socket: socket,
+      user: user
+    } do
+      message_id = Ecto.UUID.generate()
+
+      ref =
+        push(socket, "start_applying_workflow", %{"message_id" => message_id})
+
+      assert_reply ref, :ok, %{}
+
+      assert_broadcast "workflow_applying", %{
+        user_id: user_id,
+        user_name: user_name,
+        message_id: ^message_id
+      }
+
+      assert user_id == user.id
+      assert user_name == user.first_name || user.email
+    end
+
+    test "done_applying_workflow broadcasts workflow_applied event", %{
+      socket: socket
+    } do
+      message_id = Ecto.UUID.generate()
+
+      ref = push(socket, "done_applying_workflow", %{"message_id" => message_id})
+
+      assert_reply ref, :ok, %{}
+
+      assert_broadcast "workflow_applied", %{message_id: ^message_id}
+    end
+
+    test "apply coordination works end-to-end", %{socket: socket, user: user} do
+      message_id = Ecto.UUID.generate()
+      user_id = user.id
+
+      # Start applying
+      ref1 =
+        push(socket, "start_applying_workflow", %{"message_id" => message_id})
+
+      assert_reply ref1, :ok, %{}
+
+      assert_broadcast "workflow_applying", %{
+        user_id: ^user_id,
+        message_id: ^message_id
+      }
+
+      # Done applying
+      ref2 =
+        push(socket, "done_applying_workflow", %{"message_id" => message_id})
+
+      assert_reply ref2, :ok, %{}
+
+      assert_broadcast "workflow_applied", %{message_id: ^message_id}
+    end
+  end
 end

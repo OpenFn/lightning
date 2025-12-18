@@ -195,12 +195,16 @@ export const StoreProvider = ({ children }: StoreProviderProps) => {
         session.provider
       );
       const cleanup4 = stores.historyStore._connectChannel(session.provider);
+      const cleanup5 = stores.aiAssistantStore._connectChannel(
+        session.provider
+      );
 
       return () => {
         cleanup1();
         cleanup2();
         cleanup3();
         cleanup4();
+        cleanup5();
       };
     }
     return undefined;

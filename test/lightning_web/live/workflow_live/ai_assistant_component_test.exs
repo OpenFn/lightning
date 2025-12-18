@@ -171,6 +171,34 @@ defmodule LightningWeb.WorkflowLive.AiAssistant.ComponentTest do
                "custom-class text-green-700"
              ]
     end
+
+    test "renders code blocks with language class" do
+      content = """
+      Here's some code:
+
+      ```javascript
+      console.log("hello");
+      ```
+
+      And more text.
+      """
+
+      html =
+        render_component(&AiAssistant.Component.formatted_content/1,
+          id: "formatted-content",
+          content: content
+        )
+
+      parsed_html = Floki.parse_document!(html)
+
+      # Find the code element inside pre
+      code_elements = Floki.find(parsed_html, "code")
+      assert length(code_elements) > 0
+
+      # The code element should have the language as its class
+      code_element = hd(code_elements)
+      assert Floki.attribute(code_element, "class") == ["javascript"]
+    end
   end
 
   describe "error_message/1" do
