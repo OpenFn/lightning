@@ -654,6 +654,21 @@ export const createWorkflowStore = () => {
     provider.channel.on('workflow_applying', workflowApplyingHandler);
     provider.channel.on('workflow_applied', workflowAppliedHandler);
 
+    // Handler for AI session creation broadcasts
+    // Dispatches a custom event that the AI panel can listen for
+    const aiSessionCreatedHandler = (data: unknown) => {
+      const payload = data as { session: unknown };
+      logger.debug(
+        'Received ai_session_created from workflow channel',
+        payload
+      );
+      // Dispatch custom event so AI panel can update its session list
+      document.dispatchEvent(
+        new CustomEvent('ai_session_created', { detail: payload.session })
+      );
+    };
+    provider.channel.on('ai_session_created', aiSessionCreatedHandler);
+
     // Store cleanup functions
     // CRITICAL: Separate Y.Doc observer cleanups from channel cleanups
     // Y.Doc observers must persist during disconnection for offline editing
@@ -677,6 +692,7 @@ export const createWorkflowStore = () => {
           );
           provider.channel.off('workflow_applying', workflowApplyingHandler);
           provider.channel.off('workflow_applied', workflowAppliedHandler);
+          provider.channel.off('ai_session_created', aiSessionCreatedHandler);
         }
       },
     ];

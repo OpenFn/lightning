@@ -371,6 +371,43 @@ export function AIAssistantPanelWrapper() {
     });
   }, [updateSearchParams, aiStore, aiMode]);
 
+  // Listen for new AI sessions created by other users (via workflow channel broadcast)
+  useEffect(() => {
+    const handleAISessionCreated = (
+      event: CustomEvent<import('../types/ai-assistant').SessionSummary>
+    ) => {
+      const session = event.detail;
+
+      // Only add if we're viewing the session list (no active session)
+      // and the session matches the current context
+      const currentState = aiStore.getSnapshot();
+
+      if (!currentState.sessionId && session) {
+        // Check if session matches current mode/context
+        const matchesContext =
+          (currentState.sessionType === 'job_code' &&
+            session.session_type === 'job_code') ||
+          (currentState.sessionType === 'workflow_template' &&
+            session.session_type === 'workflow_template');
+
+        if (matchesContext) {
+          aiStore._prependSession(session);
+        }
+      }
+    };
+
+    document.addEventListener(
+      'ai_session_created',
+      handleAISessionCreated as EventListener
+    );
+    return () => {
+      document.removeEventListener(
+        'ai_session_created',
+        handleAISessionCreated as EventListener
+      );
+    };
+  }, [aiStore]);
+
   const sendMessage = useCallback(
     (
       content: string,

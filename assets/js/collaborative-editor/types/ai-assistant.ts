@@ -165,6 +165,7 @@ export interface AIAssistantStore {
   _setSession: (session: Session) => void;
   _clearSession: () => void;
   _clearSessionList: () => void;
+  _prependSession: (session: SessionSummary) => void;
   _addMessage: (message: Message) => void;
   _updateMessageStatus: (messageId: string, status: MessageStatus) => void;
   _setSessionList: (response: SessionListResponse) => void;

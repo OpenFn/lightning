@@ -497,6 +497,30 @@ export const createAIAssistantStore = (): AIAssistantStore => {
   };
 
   /**
+   * Prepend a new session to the session list
+   * Used when another user creates a new session (via workflow channel broadcast)
+   * @internal
+   */
+  const _prependSession = (
+    session: import('../types/ai-assistant').SessionSummary
+  ) => {
+    state = produce(state, draft => {
+      // Only add if not already in the list and list has been loaded
+      // (sessionListPagination being set indicates the list was loaded)
+      const exists = draft.sessionList.some(s => s.id === session.id);
+      const listIsLoaded = draft.sessionListPagination !== null;
+
+      if (!exists && listIsLoaded) {
+        draft.sessionList.unshift(session);
+        // Update pagination count
+        draft.sessionListPagination!.total_count += 1;
+      }
+    });
+
+    notify('_prependSession');
+  };
+
+  /**
    * Initialize context without changing connection state
    * Used by registry pattern to set context before channel connection
    * Unlike connect(), this does NOT set connectionState to 'connecting'
@@ -561,6 +585,7 @@ export const createAIAssistantStore = (): AIAssistantStore => {
     _setSession,
     _clearSession,
     _clearSessionList,
+    _prependSession,
     _addMessage,
     _updateMessageStatus,
     _setSessionList,
