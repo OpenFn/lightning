@@ -167,7 +167,12 @@ defmodule Lightning.Collaboration.Persistence do
       Yex.Map.set(workflow_map, "name", workflow.name)
 
       # Update deleted_at if present
-      Yex.Map.set(workflow_map, "deleted_at", workflow.deleted_at)
+      # Convert DateTime to string for Yex compatibility (Yex doesn't support DateTime structs)
+      Yex.Map.set(
+        workflow_map,
+        "deleted_at",
+        workflow.deleted_at && to_string(workflow.deleted_at)
+      )
     end)
 
     Logger.debug(
