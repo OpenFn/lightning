@@ -547,8 +547,10 @@ describe('LogTabPanel', () => {
       // Advance timers to let typewriter animate
       await vi.advanceTimersByTimeAsync(1000);
 
-      // Should show waiting message overlay
-      expect(screen.getByText(/Waiting for worker/)).toBeInTheDocument();
+      // Should show waiting message overlay (initial message types out first)
+      expect(
+        screen.getByText(/Waiting for a worker to establish/)
+      ).toBeInTheDocument();
     });
 
     test('shows "Creating runtime" message when run is claimed', async () => {
@@ -566,18 +568,28 @@ describe('LogTabPanel', () => {
       await vi.advanceTimersByTimeAsync(2000);
 
       expect(
-        screen.getByText(/Creating runtime & installing adaptors/)
+        screen.getByText(/Creating an isolated runtime/)
       ).toBeInTheDocument();
     });
 
     test('shows "Nothing yet" message when no run', async () => {
       mockUseActiveRun.mockReturnValue(null);
 
+      const { channelRequest } = await import(
+        '../../../../js/collaborative-editor/hooks/useChannel'
+      );
+      vi.mocked(channelRequest).mockResolvedValue({ logs: [] });
+
       render(<LogTabPanel />);
 
+      // Default state cycles through messages (no initial message for default)
       await vi.advanceTimersByTimeAsync(1000);
 
-      expect(screen.getByText(/Nothing yet/)).toBeInTheDocument();
+      // Should show one of the default cycling messages
+      const overlay = screen.getByText(
+        /Nothing yet|Hang tight|Any moment|Standing by/
+      );
+      expect(overlay).toBeInTheDocument();
     });
 
     test('hides waiting overlay when logs arrive', async () => {
@@ -594,8 +606,10 @@ describe('LogTabPanel', () => {
       render(<LogTabPanel />);
 
       // Let typewriter show waiting message
-      await vi.advanceTimersByTimeAsync(1000);
-      expect(screen.getByText(/Waiting for worker/)).toBeInTheDocument();
+      await vi.advanceTimersByTimeAsync(2000);
+      expect(
+        screen.getByText(/Waiting for a worker to establish/)
+      ).toBeInTheDocument();
 
       // Simulate logs arriving via channel event
       const logHandler = mockChannel.on.mock.calls.find(
@@ -610,10 +624,12 @@ describe('LogTabPanel', () => {
       await vi.advanceTimersByTimeAsync(100);
 
       // Waiting overlay should be hidden
-      expect(screen.queryByText(/Waiting for worker/)).not.toBeInTheDocument();
+      expect(
+        screen.queryByText(/Waiting for a worker to establish/)
+      ).not.toBeInTheDocument();
     });
 
-    test('displays pulsing cursor during typewriter animation', async () => {
+    test('displays blinking cursor during typewriter animation', async () => {
       mockUseActiveRun.mockReturnValue(
         createMockRun({ id: 'run-1', state: 'available' })
       );
@@ -627,8 +643,8 @@ describe('LogTabPanel', () => {
 
       await vi.advanceTimersByTimeAsync(500);
 
-      // Check for pulsing cursor
-      const cursor = container.querySelector('.animate-pulse');
+      // Check for blinking cursor (uses inline style animation, not animate-pulse class)
+      const cursor = container.querySelector('[style*="cursor-blink"]');
       expect(cursor).toBeInTheDocument();
       expect(cursor).toHaveTextContent('▌');
     });

@@ -22,11 +22,9 @@ const INITIAL_MESSAGES: Record<string, string> = {
 // Messages to cycle through for each waiting state (after initial message)
 const WAITING_MESSAGES: Record<string, string[]> = {
   available: [
-    'Workers claim runs in the order in which they were added to the queue...',
-    'A wake-up call is sent to the worker pool when new runs are added...',
-    'Waiting for an available worker...',
-    'Workers must establish encrypted connections before they can start work on a run...',
-    'You can adjust concurrency at both the project level and the workflow level...',
+    'Runs are claimed the order in which they were added to the queue...',
+    'A "wake-up call" is sent to the worker pool when new runs are added...',
+    'Concurrency (how many runs at the same time) can be set at project-level and workflow-level...',
     'Check the "History" page to see how many runs are enqueue for this project...',
     'If this is taking a really long time, talk to your instance admin about adding more workers...',
   ],
