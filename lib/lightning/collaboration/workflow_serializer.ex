@@ -153,6 +153,11 @@ defmodule Lightning.Collaboration.WorkflowSerializer do
     |> maybe_put_field("enable_job_logs", enable_job_logs)
   end
 
+  # Convert DateTime to ISO8601 string for Y.Doc storage
+  # Y.Doc can't store DateTime structs directly
+  def datetime_to_string(nil), do: nil
+  def datetime_to_string(%DateTime{} = dt), do: DateTime.to_iso8601(dt)
+
   # Private helper functions
 
   defp initialize_jobs(jobs_array, jobs) do
@@ -275,9 +280,4 @@ defmodule Lightning.Collaboration.WorkflowSerializer do
   # This allows schema defaults to apply for truly missing fields
   defp maybe_put_field(map, _key, :not_found), do: map
   defp maybe_put_field(map, key, value), do: Map.put(map, key, value)
-
-  # Convert DateTime to ISO8601 string for Y.Doc storage
-  # Y.Doc can't store DateTime structs directly
-  defp datetime_to_string(nil), do: nil
-  defp datetime_to_string(%DateTime{} = dt), do: DateTime.to_iso8601(dt)
 end
