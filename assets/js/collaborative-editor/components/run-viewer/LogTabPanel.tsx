@@ -10,6 +10,41 @@ import { isFinalState } from '../../types/history';
 import { LogLevelFilter } from './LogLevelFilter';
 
 const TYPING_SPEED = 30; // ms per character when typing
+const PAUSE_AT_END = 2000; // ms to pause when message fully typed
+const PAUSE_AT_BASE = 500; // ms to pause before typing next suffix
+
+// Messages to cycle through for each waiting state (mix of informative and playful)
+const WAITING_MESSAGES: Record<string, string[]> = {
+  available: [
+    'Workers claim runs in the order in which they were added to the queue...',
+    'A wake-up call is sent to the worker pool when new runs are added...',
+    'Hang tight. Still looking for an available worker...',
+    'Workers must establish encrypted connections before they can start work on a run...',
+    'You can adjust concurrency (how many runs can run at once) at both the project level and the workflow level...',
+    'You can see how many runs are enqueued for this project on the project dashboard, or by filtering to status "Enqueued" in the history page...',
+    'If this is taking a really long time, talk to your instance admin about adding more workers...',
+  ],
+  claimed: [
+    'Your runtime is spinning up...',
+    'Dependencies are being installed...',
+    'Adaptors are being loaded...',
+    'A secure sandbox is initializing...',
+    'Input data is being transferred securely...',
+    'The execution engine is warming up...',
+  ],
+  default: [
+    'Nothing yet...',
+    'Hang tight...',
+    'Any moment now...',
+    'Standing by...',
+  ],
+};
+
+const getRandomMessage = (state: string | undefined): string => {
+  const messages =
+    WAITING_MESSAGES[state ?? 'default'] ?? WAITING_MESSAGES.default;
+  return messages[Math.floor(Math.random() * messages.length)];
+};
 
 export function LogTabPanel() {
   const run = useActiveRun();
@@ -34,8 +69,13 @@ export function LogTabPanel() {
 
   // Typewriter animation state - rendered as React overlay, NOT in Monaco
   const [displayedText, setDisplayedText] = useState('');
-  const targetMessageRef = useRef<string | null>(null);
   const animationRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const currentMessageRef = useRef<string>('');
+  const displayedTextRef = useRef<string>(''); // Mirror of displayedText for animation loop
+  const animationPhaseRef = useRef<
+    'typing' | 'paused' | 'deleting' | 'waiting'
+  >('typing');
+  const runStateRef = useRef<string | undefined>(undefined);
 
   // Handle log level change
   const handleLogLevelChange = (
@@ -45,21 +85,26 @@ export function LogTabPanel() {
     setLogLevel(newLevel);
   };
 
-  // Determine waiting message based on run state
-  const getWaitingMessage = useCallback((): string | null => {
-    if (hasLogs) return null;
-    if (!run) return 'Nothing yet...';
-    if (run.state === 'available') return 'Waiting for worker...';
-    if (run.state === 'claimed')
-      return 'Creating runtime & installing adaptors...';
-    if (isFinalState(run.state)) return 'No logs were received for this run.';
-    return 'Nothing yet...';
+  // Determine if we should show the waiting animation
+  const shouldShowWaiting = useCallback((): boolean => {
+    if (hasLogs) return false;
+    if (!run) return true;
+    if (isFinalState(run.state)) return false; // Show static message instead
+    return true;
   }, [run, hasLogs]);
 
-  // Typewriter animation - only updates React state, never touches the store
+  // Get the waiting state key for message selection
+  const getWaitingState = useCallback((): string => {
+    if (!run) return 'default';
+    if (run.state === 'available') return 'available';
+    if (run.state === 'claimed') return 'claimed';
+    return 'default';
+  }, [run]);
+
+  // Typewriter animation with cycling messages
   useEffect(() => {
-    const target = getWaitingMessage();
-    targetMessageRef.current = target;
+    const showAnimation = shouldShowWaiting();
+    const waitingState = getWaitingState();
 
     // Clear any existing animation
     if (animationRef.current) {
@@ -67,35 +112,77 @@ export function LogTabPanel() {
       animationRef.current = null;
     }
 
-    // If no target (logs arrived), clear immediately
-    if (target === null) {
-      setDisplayedText('');
+    // If no animation needed, clear and show static message if needed
+    if (!showAnimation) {
+      // Show static message for final state with no logs
+      if (!hasLogs && run && isFinalState(run.state)) {
+        setDisplayedText('No logs were received for this run.');
+        displayedTextRef.current = 'No logs were received for this run.';
+      } else {
+        setDisplayedText('');
+        displayedTextRef.current = '';
+      }
       return;
     }
 
-    // Animate typing
+    // Handle state change - reset animation
+    if (runStateRef.current !== waitingState) {
+      runStateRef.current = waitingState;
+      animationPhaseRef.current = 'typing';
+      currentMessageRef.current = getRandomMessage(waitingState);
+      displayedTextRef.current = '';
+      setDisplayedText('');
+    }
+
+    // Initialize message if not set
+    if (!currentMessageRef.current) {
+      currentMessageRef.current = getRandomMessage(waitingState);
+    }
+
     const animate = () => {
-      const currentTarget = targetMessageRef.current;
-      if (currentTarget === null) {
-        setDisplayedText('');
-        return;
+      const currentMessage = currentMessageRef.current;
+      const phase = animationPhaseRef.current;
+      const prev = displayedTextRef.current;
+
+      let nextText = prev;
+      let nextDelay = TYPING_SPEED;
+
+      // Phase: typing - type out the message
+      if (phase === 'typing') {
+        if (prev.length < currentMessage.length) {
+          nextText = currentMessage.slice(0, prev.length + 1);
+        } else {
+          // Message complete, pause before deleting
+          animationPhaseRef.current = 'paused';
+          nextDelay = PAUSE_AT_END;
+        }
+      }
+      // Phase: paused - wait is done via delay, now start deleting
+      else if (phase === 'paused') {
+        animationPhaseRef.current = 'deleting';
+      }
+      // Phase: deleting - delete characters
+      else if (phase === 'deleting') {
+        if (prev.length > 0) {
+          nextText = prev.slice(0, -1);
+        } else {
+          // Fully deleted, wait before typing new message
+          animationPhaseRef.current = 'waiting';
+          nextDelay = PAUSE_AT_BASE;
+        }
+      }
+      // Phase: waiting - pick new message and start typing
+      else if (phase === 'waiting') {
+        currentMessageRef.current = getRandomMessage(runStateRef.current);
+        animationPhaseRef.current = 'typing';
       }
 
-      setDisplayedText(prev => {
-        // If target changed and doesn't start with current, reset
-        if (!currentTarget.startsWith(prev) && prev.length > 0) {
-          animationRef.current = setTimeout(animate, TYPING_SPEED);
-          return prev.slice(0, -1);
-        }
+      // Update displayed text (both ref and state)
+      displayedTextRef.current = nextText;
+      setDisplayedText(nextText);
 
-        // Type towards target
-        if (prev.length < currentTarget.length) {
-          animationRef.current = setTimeout(animate, TYPING_SPEED);
-          return currentTarget.slice(0, prev.length + 1);
-        }
-
-        return prev;
-      });
+      // Schedule next frame
+      animationRef.current = setTimeout(animate, nextDelay);
     };
 
     animationRef.current = setTimeout(animate, TYPING_SPEED);
@@ -106,7 +193,7 @@ export function LogTabPanel() {
         animationRef.current = null;
       }
     };
-  }, [getWaitingMessage]);
+  }, [shouldShowWaiting, getWaitingState, hasLogs, run]);
 
   // Mount log viewer on first render
   useEffect(() => {
@@ -199,7 +286,9 @@ export function LogTabPanel() {
   }, [run, provider]);
 
   // Show waiting overlay when no logs yet
-  const showWaitingOverlay = !hasLogs && displayedText.length > 0;
+  // Show overlay when waiting (even with empty text during animation) or showing static final message
+  const showWaitingOverlay =
+    !hasLogs && (shouldShowWaiting() || displayedText.length > 0);
 
   return (
     <div className="grid h-full grid-rows-[auto_1fr] bg-slate-700 font-mono text-gray-200">
@@ -224,9 +313,22 @@ export function LogTabPanel() {
         {showWaitingOverlay && (
           <div className="absolute inset-0 flex items-start bg-slate-700 p-4 font-mono text-sm text-gray-400">
             {displayedText}
-            <span className="animate-pulse">▌</span>
+            <span
+              className="inline-block"
+              style={{
+                animation: 'cursor-blink 1.8s ease-in-out infinite',
+              }}
+            >
+              ▌
+            </span>
           </div>
         )}
+        <style>{`
+          @keyframes cursor-blink {
+            0%, 100% { opacity: 0; }
+            50% { opacity: 1; }
+          }
+        `}</style>
       </div>
     </div>
   );
