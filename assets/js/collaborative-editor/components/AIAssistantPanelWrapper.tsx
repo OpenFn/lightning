@@ -37,7 +37,7 @@ import {
 } from '../hooks/useWorkflow';
 import { useKeyboardShortcut } from '../keyboard';
 import { notifications } from '../lib/notifications';
-import type { JobCodeContext } from '../types/ai-assistant';
+import type { JobCodeContext, SessionSummary } from '../types/ai-assistant';
 import { Z_INDEX } from '../utils/constants';
 import {
   prepareWorkflowForSerialization,
@@ -373,9 +373,7 @@ export function AIAssistantPanelWrapper() {
 
   // Listen for new AI sessions created by other users (via workflow channel broadcast)
   useEffect(() => {
-    const handleAISessionCreated = (
-      event: CustomEvent<import('../types/ai-assistant').SessionSummary>
-    ) => {
+    const handleAISessionCreated = (event: CustomEvent<SessionSummary>) => {
       const session = event.detail;
 
       // Only add if we're viewing the session list (no active session)

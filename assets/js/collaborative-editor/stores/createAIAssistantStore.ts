@@ -61,6 +61,8 @@ import type {
   Message,
   MessageStatus,
   Session,
+  SessionListResponse,
+  SessionSummary,
   SessionType,
   WorkflowTemplateContext,
 } from '../types/ai-assistant';
@@ -314,8 +316,7 @@ export const createAIAssistantStore = (): AIAssistantStore => {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
 
-      const data =
-        (await response.json()) as import('../types/ai-assistant').SessionListResponse;
+      const data = (await response.json()) as SessionListResponse;
 
       if (append) {
         _appendSessionList(data);
@@ -451,9 +452,7 @@ export const createAIAssistantStore = (): AIAssistantStore => {
    * Set session list from backend response
    * @internal Called by useAIAssistantChannel hook
    */
-  const _setSessionList = (
-    response: import('../types/ai-assistant').SessionListResponse
-  ) => {
+  const _setSessionList = (response: SessionListResponse) => {
     state = produce(state, draft => {
       draft.sessionList = response.sessions;
       draft.sessionListPagination = response.pagination;
@@ -467,9 +466,7 @@ export const createAIAssistantStore = (): AIAssistantStore => {
    * Append sessions to existing session list
    * @internal Used for pagination (load more)
    */
-  const _appendSessionList = (
-    response: import('../types/ai-assistant').SessionListResponse
-  ) => {
+  const _appendSessionList = (response: SessionListResponse) => {
     state = produce(state, draft => {
       const existingIds = new Set(draft.sessionList.map(s => s.id));
       const newSessions = response.sessions.filter(s => !existingIds.has(s.id));
@@ -501,9 +498,7 @@ export const createAIAssistantStore = (): AIAssistantStore => {
    * Used when another user creates a new session (via workflow channel broadcast)
    * @internal
    */
-  const _prependSession = (
-    session: import('../types/ai-assistant').SessionSummary
-  ) => {
+  const _prependSession = (session: SessionSummary) => {
     state = produce(state, draft => {
       // Only add if not already in the list and list has been loaded
       // (sessionListPagination being set indicates the list was loaded)
