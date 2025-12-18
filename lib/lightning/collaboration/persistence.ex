@@ -11,6 +11,7 @@ defmodule Lightning.Collaboration.Persistence do
   alias Lightning.Collaboration.DocumentState
   alias Lightning.Collaboration.PersistenceWriter
   alias Lightning.Collaboration.Session
+  alias Lightning.Collaboration.WorkflowSerializer
 
   require Logger
 
@@ -167,7 +168,11 @@ defmodule Lightning.Collaboration.Persistence do
       Yex.Map.set(workflow_map, "name", workflow.name)
 
       # Update deleted_at if present
-      Yex.Map.set(workflow_map, "deleted_at", workflow.deleted_at)
+      Yex.Map.set(
+        workflow_map,
+        "deleted_at",
+        WorkflowSerializer.datetime_to_string(workflow.deleted_at)
+      )
     end)
 
     Logger.debug(
