@@ -13,15 +13,21 @@ const TYPING_SPEED = 30; // ms per character when typing
 const PAUSE_AT_END = 2000; // ms to pause when message fully typed
 const PAUSE_AT_BASE = 500; // ms to pause before typing next suffix
 
-// Messages to cycle through for each waiting state (mix of informative and playful)
+// Initial messages shown first for each state (before cycling)
+const INITIAL_MESSAGES: Record<string, string> = {
+  available: 'Waiting for a worker to establish a secure claim...',
+  claimed: 'Creating an isolated runtime and installing adaptors...',
+};
+
+// Messages to cycle through for each waiting state (after initial message)
 const WAITING_MESSAGES: Record<string, string[]> = {
   available: [
     'Workers claim runs in the order in which they were added to the queue...',
     'A wake-up call is sent to the worker pool when new runs are added...',
-    'Hang tight. Still looking for an available worker...',
+    'Waiting for an available worker...',
     'Workers must establish encrypted connections before they can start work on a run...',
-    'You can adjust concurrency (how many runs can run at once) at both the project level and the workflow level...',
-    'You can see how many runs are enqueued for this project on the project dashboard, or by filtering to status "Enqueued" in the history page...',
+    'You can adjust concurrency at both the project level and the workflow level...',
+    'Check the "History" page to see how many runs are enqueue for this project...',
     'If this is taking a really long time, talk to your instance admin about adding more workers...',
   ],
   claimed: [
@@ -68,13 +74,16 @@ export function LogTabPanel() {
   const [hasLogs, setHasLogs] = useState(false);
 
   // Typewriter animation state - rendered as React overlay, NOT in Monaco
-  const [displayedText, setDisplayedText] = useState('');
+  // Initial message types out first, then stays visible while cycling messages animate below
+  const [initialText, setInitialText] = useState(''); // The typed-out initial message
+  const [cyclingText, setCyclingText] = useState('');
   const animationRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const currentMessageRef = useRef<string>('');
-  const displayedTextRef = useRef<string>(''); // Mirror of displayedText for animation loop
+  const initialTextRef = useRef<string>(''); // Mirror of initialText
+  const cyclingTextRef = useRef<string>(''); // Mirror of cyclingText
   const animationPhaseRef = useRef<
-    'typing' | 'paused' | 'deleting' | 'waiting'
-  >('typing');
+    'typing-initial' | 'typing' | 'paused' | 'deleting' | 'waiting'
+  >('typing-initial');
   const runStateRef = useRef<string | undefined>(undefined);
 
   // Handle log level change
@@ -101,10 +110,11 @@ export function LogTabPanel() {
     return 'default';
   }, [run]);
 
-  // Typewriter animation with cycling messages
+  // Typewriter animation: types initial message first, then cycles messages below
   useEffect(() => {
     const showAnimation = shouldShowWaiting();
     const waitingState = getWaitingState();
+    const initialMessage = INITIAL_MESSAGES[waitingState] ?? '';
 
     // Clear any existing animation
     if (animationRef.current) {
@@ -112,29 +122,27 @@ export function LogTabPanel() {
       animationRef.current = null;
     }
 
-    // If no animation needed, clear and show static message if needed
+    // If no animation needed, clear all text
     if (!showAnimation) {
-      // Show static message for final state with no logs
-      if (!hasLogs && run && isFinalState(run.state)) {
-        setDisplayedText('No logs were received for this run.');
-        displayedTextRef.current = 'No logs were received for this run.';
-      } else {
-        setDisplayedText('');
-        displayedTextRef.current = '';
-      }
+      setInitialText('');
+      initialTextRef.current = '';
+      setCyclingText('');
+      cyclingTextRef.current = '';
       return;
     }
 
-    // Handle state change - reset animation
+    // Handle state change - reset animation to start with initial message
     if (runStateRef.current !== waitingState) {
       runStateRef.current = waitingState;
-      animationPhaseRef.current = 'typing';
+      animationPhaseRef.current = 'typing-initial';
       currentMessageRef.current = getRandomMessage(waitingState);
-      displayedTextRef.current = '';
-      setDisplayedText('');
+      initialTextRef.current = '';
+      setInitialText('');
+      cyclingTextRef.current = '';
+      setCyclingText('');
     }
 
-    // Initialize message if not set
+    // Initialize cycling message if not set
     if (!currentMessageRef.current) {
       currentMessageRef.current = getRandomMessage(waitingState);
     }
@@ -142,15 +150,28 @@ export function LogTabPanel() {
     const animate = () => {
       const currentMessage = currentMessageRef.current;
       const phase = animationPhaseRef.current;
-      const prev = displayedTextRef.current;
 
-      let nextText = prev;
       let nextDelay = TYPING_SPEED;
 
-      // Phase: typing - type out the message
-      if (phase === 'typing') {
+      // Phase: typing-initial - type out the initial message first
+      if (phase === 'typing-initial') {
+        const prev = initialTextRef.current;
+        if (prev.length < initialMessage.length) {
+          const nextText = initialMessage.slice(0, prev.length + 1);
+          initialTextRef.current = nextText;
+          setInitialText(nextText);
+        } else {
+          // Initial message complete, start cycling messages
+          animationPhaseRef.current = 'typing';
+        }
+      }
+      // Phase: typing - type out the cycling message
+      else if (phase === 'typing') {
+        const prev = cyclingTextRef.current;
         if (prev.length < currentMessage.length) {
-          nextText = currentMessage.slice(0, prev.length + 1);
+          const nextText = currentMessage.slice(0, prev.length + 1);
+          cyclingTextRef.current = nextText;
+          setCyclingText(nextText);
         } else {
           // Message complete, pause before deleting
           animationPhaseRef.current = 'paused';
@@ -161,10 +182,13 @@ export function LogTabPanel() {
       else if (phase === 'paused') {
         animationPhaseRef.current = 'deleting';
       }
-      // Phase: deleting - delete characters
+      // Phase: deleting - delete cycling message characters
       else if (phase === 'deleting') {
+        const prev = cyclingTextRef.current;
         if (prev.length > 0) {
-          nextText = prev.slice(0, -1);
+          const nextText = prev.slice(0, -1);
+          cyclingTextRef.current = nextText;
+          setCyclingText(nextText);
         } else {
           // Fully deleted, wait before typing new message
           animationPhaseRef.current = 'waiting';
@@ -176,10 +200,6 @@ export function LogTabPanel() {
         currentMessageRef.current = getRandomMessage(runStateRef.current);
         animationPhaseRef.current = 'typing';
       }
-
-      // Update displayed text (both ref and state)
-      displayedTextRef.current = nextText;
-      setDisplayedText(nextText);
 
       // Schedule next frame
       animationRef.current = setTimeout(animate, nextDelay);
@@ -193,7 +213,7 @@ export function LogTabPanel() {
         animationRef.current = null;
       }
     };
-  }, [shouldShowWaiting, getWaitingState, hasLogs, run]);
+  }, [shouldShowWaiting, getWaitingState]);
 
   // Mount log viewer on first render
   useEffect(() => {
@@ -286,9 +306,12 @@ export function LogTabPanel() {
   }, [run, provider]);
 
   // Show waiting overlay when no logs yet
-  // Show overlay when waiting (even with empty text during animation) or showing static final message
-  const showWaitingOverlay =
-    !hasLogs && (shouldShowWaiting() || displayedText.length > 0);
+  const showWaitingOverlay = !hasLogs && shouldShowWaiting();
+  const showFinalMessage =
+    !hasLogs && run && isFinalState(run.state) && !shouldShowWaiting();
+
+  // Determine if we're still typing the initial message (cursor goes there)
+  const isTypingInitial = animationPhaseRef.current === 'typing-initial';
 
   return (
     <div className="grid h-full grid-rows-[auto_1fr] bg-slate-700 font-mono text-gray-200">
@@ -305,22 +328,45 @@ export function LogTabPanel() {
       </div>
 
       {/* Log viewer container */}
-      <div className="relative min-h-0">
+      <div className="relative min-h-0 overflow-hidden">
         {/* Monaco log viewer - only shows real logs */}
         <div ref={containerRef} className="h-full" />
 
         {/* Waiting message overlay - completely separate from Monaco */}
         {showWaitingOverlay && (
-          <div className="absolute inset-0 flex items-start bg-slate-700 p-4 font-mono text-sm text-gray-400">
-            {displayedText}
-            <span
-              className="inline-block"
-              style={{
-                animation: 'cursor-blink 1.8s ease-in-out infinite',
-              }}
-            >
-              ▌
-            </span>
+          <div className="absolute inset-0 overflow-hidden bg-slate-700 p-4 font-mono text-sm text-gray-400">
+            {/* Initial message (typed out first, then stays) */}
+            <div>
+              <span>{initialText}</span>
+              {isTypingInitial && (
+                <span
+                  style={{
+                    animation: 'cursor-blink 1.8s ease-in-out infinite',
+                  }}
+                >
+                  ▌
+                </span>
+              )}
+            </div>
+            {/* Cycling message with cursor (appears after initial is done) */}
+            {!isTypingInitial && (
+              <div>
+                <span>{cyclingText}</span>
+                <span
+                  style={{
+                    animation: 'cursor-blink 1.8s ease-in-out infinite',
+                  }}
+                >
+                  ▌
+                </span>
+              </div>
+            )}
+          </div>
+        )}
+        {/* Final state message */}
+        {showFinalMessage && (
+          <div className="absolute inset-0 overflow-hidden bg-slate-700 p-4 font-mono text-sm text-gray-400">
+            No logs were received for this run.
           </div>
         )}
         <style>{`
