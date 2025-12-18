@@ -5,14 +5,14 @@
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="generator" content="ExDoc v0.38.4">
-    <meta name="project" content="Lightning v2.15.2-pre">
+    <meta name="project" content="Lightning v2.15.2">
 
 
-    <title>Lightning.Workflows.Job — Lightning v2.15.2-pre</title>
+    <title>Lightning.Workflows.Job — Lightning v2.15.2</title>
 
     <link rel="stylesheet" href="dist/html-elixir-RLZO5U2C.css" />
 
-    <script defer src="dist/sidebar_items-B3922A38.js"></script>
+    <script defer src="dist/sidebar_items-420843F5.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-Y223O6DN.js"></script>
 
@@ -41,7 +41,7 @@
 Lightning
         </a>
         <div class="sidebar-projectVersion" translate="no">
-          v2.15.2-pre
+          v2.15.2
         </div>
       </div>
     </div>
@@ -80,7 +80,7 @@ Lightning
   <div class="heading-with-actions top-heading">
     <h1>
       <span translate="no">Lightning.Workflows.Job</span> 
-      <small class="app-vsn" translate="no">(Lightning v2.15.2-pre)</small>
+      <small class="app-vsn" translate="no">(Lightning v2.15.2)</small>
 
     </h1>
 
@@ -320,17 +320,17 @@ Workflow changeset - and want it to be created at the same time as a Job.</p></d
 
 <p>Attaches a workflow to a job, this is useful when you have an unpersisted
 Workflow changeset - and want it to be created at the same time as a Job.</p><p>Example:</p><pre><code class="makeup elixir" translate="no"><span class="n">workflow</span><span class="w"> </span><span class="o">=</span><span class="w">
-  </span><span class="nc">Ecto.Changeset</span><span class="o">.</span><span class="n">cast</span><span class="p" data-group-id="8418806344-1">(</span><span class="w">
-    </span><span class="p" data-group-id="8418806344-2">%</span><span class="nc" data-group-id="8418806344-2">Lightning.Workflows.Workflow</span><span class="p" data-group-id="8418806344-2">{</span><span class="p" data-group-id="8418806344-2">}</span><span class="p">,</span><span class="w">
-    </span><span class="p" data-group-id="8418806344-3">%{</span><span class="w"> </span><span class="s">&quot;project_id&quot;</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="n">attrs</span><span class="p" data-group-id="8418806344-4">[</span><span class="ss">:project_id</span><span class="p" data-group-id="8418806344-4">]</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;id&quot;</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="nc">Ecto.UUID</span><span class="o">.</span><span class="n">generate</span><span class="p" data-group-id="8418806344-5">(</span><span class="p" data-group-id="8418806344-5">)</span><span class="w"> </span><span class="p" data-group-id="8418806344-3">}</span><span class="p">,</span><span class="w">
-    </span><span class="p" data-group-id="8418806344-6">[</span><span class="ss">:project_id</span><span class="p">,</span><span class="w"> </span><span class="ss">:id</span><span class="p" data-group-id="8418806344-6">]</span><span class="w">
-  </span><span class="p" data-group-id="8418806344-1">)</span><span class="w">
+  </span><span class="nc">Ecto.Changeset</span><span class="o">.</span><span class="n">cast</span><span class="p" data-group-id="5935967768-1">(</span><span class="w">
+    </span><span class="p" data-group-id="5935967768-2">%</span><span class="nc" data-group-id="5935967768-2">Lightning.Workflows.Workflow</span><span class="p" data-group-id="5935967768-2">{</span><span class="p" data-group-id="5935967768-2">}</span><span class="p">,</span><span class="w">
+    </span><span class="p" data-group-id="5935967768-3">%{</span><span class="w"> </span><span class="s">&quot;project_id&quot;</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="n">attrs</span><span class="p" data-group-id="5935967768-4">[</span><span class="ss">:project_id</span><span class="p" data-group-id="5935967768-4">]</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;id&quot;</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="nc">Ecto.UUID</span><span class="o">.</span><span class="n">generate</span><span class="p" data-group-id="5935967768-5">(</span><span class="p" data-group-id="5935967768-5">)</span><span class="w"> </span><span class="p" data-group-id="5935967768-3">}</span><span class="p">,</span><span class="w">
+    </span><span class="p" data-group-id="5935967768-6">[</span><span class="ss">:project_id</span><span class="p">,</span><span class="w"> </span><span class="ss">:id</span><span class="p" data-group-id="5935967768-6">]</span><span class="w">
+  </span><span class="p" data-group-id="5935967768-1">)</span><span class="w">
 
 </span><span class="n">job</span><span class="w"> </span><span class="o">=</span><span class="w">
-  </span><span class="p" data-group-id="8418806344-7">%</span><span class="nc" data-group-id="8418806344-7">Job</span><span class="p" data-group-id="8418806344-7">{</span><span class="p" data-group-id="8418806344-7">}</span><span class="w">
-  </span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Ecto.Changeset</span><span class="o">.</span><span class="n">change</span><span class="p" data-group-id="8418806344-8">(</span><span class="p" data-group-id="8418806344-8">)</span><span class="w">
-  </span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Job</span><span class="o">.</span><span class="n">put_workflow</span><span class="p" data-group-id="8418806344-9">(</span><span class="n">workflow</span><span class="p" data-group-id="8418806344-9">)</span><span class="w">
-  </span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Job</span><span class="o">.</span><span class="n">changeset</span><span class="p" data-group-id="8418806344-10">(</span><span class="n">attrs</span><span class="p" data-group-id="8418806344-10">)</span></code></pre>
+  </span><span class="p" data-group-id="5935967768-7">%</span><span class="nc" data-group-id="5935967768-7">Job</span><span class="p" data-group-id="5935967768-7">{</span><span class="p" data-group-id="5935967768-7">}</span><span class="w">
+  </span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Ecto.Changeset</span><span class="o">.</span><span class="n">change</span><span class="p" data-group-id="5935967768-8">(</span><span class="p" data-group-id="5935967768-8">)</span><span class="w">
+  </span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Job</span><span class="o">.</span><span class="n">put_workflow</span><span class="p" data-group-id="5935967768-9">(</span><span class="n">workflow</span><span class="p" data-group-id="5935967768-9">)</span><span class="w">
+  </span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Job</span><span class="o">.</span><span class="n">changeset</span><span class="p" data-group-id="5935967768-10">(</span><span class="n">attrs</span><span class="p" data-group-id="5935967768-10">)</span></code></pre>
   </section>
 </section>
 <section class="detail" id="validate/1">
