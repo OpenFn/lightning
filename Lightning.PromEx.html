@@ -5,14 +5,14 @@
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="generator" content="ExDoc v0.38.4">
-    <meta name="project" content="Lightning v2.15.1">
+    <meta name="project" content="Lightning v2.15.2-pre">
 
 
-    <title>Lightning.PromEx — Lightning v2.15.1</title>
+    <title>Lightning.PromEx — Lightning v2.15.2-pre</title>
 
     <link rel="stylesheet" href="dist/html-elixir-RLZO5U2C.css" />
 
-    <script defer src="dist/sidebar_items-412AC2DC.js"></script>
+    <script defer src="dist/sidebar_items-B3922A38.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-Y223O6DN.js"></script>
 
@@ -41,7 +41,7 @@
 Lightning
         </a>
         <div class="sidebar-projectVersion" translate="no">
-          v2.15.1
+          v2.15.2-pre
         </div>
       </div>
     </div>
@@ -80,7 +80,7 @@ Lightning
   <div class="heading-with-actions top-heading">
     <h1>
       <span translate="no">Lightning.PromEx</span> 
-      <small class="app-vsn" translate="no">(Lightning v2.15.1)</small>
+      <small class="app-vsn" translate="no">(Lightning v2.15.2-pre)</small>
 
     </h1>
 
@@ -98,24 +98,24 @@ configure the necessary bit of PromEx. Be sure to check out <a href="https://hex
 more details regarding configuring PromEx:</p><pre><code class="makeup elixir" translate="no"><span class="n">config</span><span class="w"> </span><span class="ss">:lightning</span><span class="p">,</span><span class="w"> </span><span class="nc">Lightning.PromEx</span><span class="p">,</span><span class="w">
   </span><span class="ss">disabled</span><span class="p">:</span><span class="w"> </span><span class="no">false</span><span class="p">,</span><span class="w">
   </span><span class="ss">manual_metrics_start_delay</span><span class="p">:</span><span class="w"> </span><span class="ss">:no_delay</span><span class="p">,</span><span class="w">
-  </span><span class="ss">drop_metrics_groups</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="6444205882-1">[</span><span class="p" data-group-id="6444205882-1">]</span><span class="p">,</span><span class="w">
+  </span><span class="ss">drop_metrics_groups</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="0718617843-1">[</span><span class="p" data-group-id="0718617843-1">]</span><span class="p">,</span><span class="w">
   </span><span class="ss">grafana</span><span class="p">:</span><span class="w"> </span><span class="ss">:disabled</span><span class="p">,</span><span class="w">
   </span><span class="ss">metrics_server</span><span class="p">:</span><span class="w"> </span><span class="ss">:disabled</span></code></pre></li><li><p>Add this module to your application supervision tree. It should be one of the first
 things that is started so that no Telemetry events are missed. For example, if PromEx
 is started after your Repo module, you will miss Ecto's init events and the dashboards
-will be missing some data points:</p><pre><code class="makeup elixir" translate="no"><span class="kd">def</span><span class="w"> </span><span class="nf">start</span><span class="p" data-group-id="9608787439-1">(</span><span class="c">_type</span><span class="p">,</span><span class="w"> </span><span class="c">_args</span><span class="p" data-group-id="9608787439-1">)</span><span class="w"> </span><span class="k" data-group-id="9608787439-2">do</span><span class="w">
-  </span><span class="n">children</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p" data-group-id="9608787439-3">[</span><span class="w">
+will be missing some data points:</p><pre><code class="makeup elixir" translate="no"><span class="kd">def</span><span class="w"> </span><span class="nf">start</span><span class="p" data-group-id="6161231106-1">(</span><span class="c">_type</span><span class="p">,</span><span class="w"> </span><span class="c">_args</span><span class="p" data-group-id="6161231106-1">)</span><span class="w"> </span><span class="k" data-group-id="6161231106-2">do</span><span class="w">
+  </span><span class="n">children</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p" data-group-id="6161231106-3">[</span><span class="w">
     </span><span class="nc">Lightning.PromEx</span><span class="p">,</span><span class="w">
 
     </span><span class="n">...</span><span class="w">
-  </span><span class="p" data-group-id="9608787439-3">]</span><span class="w">
+  </span><span class="p" data-group-id="6161231106-3">]</span><span class="w">
 
   </span><span class="n">...</span><span class="w">
-</span><span class="k" data-group-id="9608787439-2">end</span></code></pre></li><li><p>Update your <code class="inline">endpoint.ex</code> file to expose your metrics (or configure a standalone
+</span><span class="k" data-group-id="6161231106-2">end</span></code></pre></li><li><p>Update your <code class="inline">endpoint.ex</code> file to expose your metrics (or configure a standalone
 server using the <code class="inline">:metrics_server</code> config options). Be sure to put this plug before
 your <a href="https://hexdocs.pm/plug/1.18.1/Plug.Telemetry.html"><code class="inline">Plug.Telemetry</code></a> entry so that you can avoid having calls to your <code class="inline">/metrics</code>
 endpoint create their own metrics and logs which can pollute your logs/metrics given
-that Prometheus will scrape at a regular interval and that can get noisy:</p><pre><code class="makeup elixir" translate="no"><span class="kd">defmodule</span><span class="w"> </span><span class="nc">LightningWeb.Endpoint</span><span class="w"> </span><span class="k" data-group-id="0216007672-1">do</span><span class="w">
+that Prometheus will scrape at a regular interval and that can get noisy:</p><pre><code class="makeup elixir" translate="no"><span class="kd">defmodule</span><span class="w"> </span><span class="nc">LightningWeb.Endpoint</span><span class="w"> </span><span class="k" data-group-id="7505000711-1">do</span><span class="w">
   </span><span class="kn">use</span><span class="w"> </span><span class="nc">Phoenix.Endpoint</span><span class="p">,</span><span class="w"> </span><span class="ss">otp_app</span><span class="p">:</span><span class="w"> </span><span class="ss">:lightning</span><span class="w">
 
   </span><span class="n">...</span><span class="w">
@@ -123,7 +123,7 @@ that Prometheus will scrape at a regular interval and that can get noisy:</p><pr
   </span><span class="n">plug</span><span class="w"> </span><span class="nc">PromEx.Plug</span><span class="p">,</span><span class="w"> </span><span class="ss">prom_ex_module</span><span class="p">:</span><span class="w"> </span><span class="nc">Lightning.PromEx</span><span class="w">
 
   </span><span class="n">...</span><span class="w">
-</span><span class="k" data-group-id="0216007672-1">end</span></code></pre></li><li><p>Update the list of plugins in the <code class="inline">plugins/0</code> function return list to reflect your
+</span><span class="k" data-group-id="7505000711-1">end</span></code></pre></li><li><p>Update the list of plugins in the <code class="inline">plugins/0</code> function return list to reflect your
 application's dependencies. Also update the list of dashboards that are to be uploaded
 to Grafana in the <code class="inline">dashboards/0</code> function.</p></li></ol>
     </section>
