@@ -22,19 +22,16 @@ const INITIAL_MESSAGES: Record<string, string> = {
 // Messages to cycle through for each waiting state (after initial message)
 const WAITING_MESSAGES: Record<string, string[]> = {
   available: [
-    'Runs are claimed the order in which they were added to the queue...',
-    'A "wake-up call" is sent to the worker pool when new runs are added...',
-    'Concurrency (how many runs at the same time) can be set at project-level and workflow-level...',
-    'Check the "History" page to see how many runs are enqueue for this project...',
-    'If this is taking a really long time, talk to your instance admin about adding more workers...',
+    'Runs are claimed the order in which they were added to the queue.',
+    'A "wake-up call" is sent to the worker pool when new runs are added.',
+    'Concurrency (how many runs can execute in parallel once) can be set at project-level and workflow-level.',
+    'Check the "History" page to see how many runs are enqueue for this project.',
+    "If you can't tell why this is taking so long, talk to your instance admin about adding more workers.",
   ],
   claimed: [
-    'Your runtime is spinning up...',
-    'Dependencies are being installed...',
-    'Adaptors are being loaded...',
-    'A secure sandbox is initializing...',
-    'Input data is being transferred securely...',
-    'The execution engine is warming up...',
+    'Sometimes dependency installation takes a while.',
+    'Once the environment is ready, input data and job code are securely transferred.',
+    'The run will start executing as soon as this setup is complete.',
   ],
   default: [
     'Nothing yet...',
