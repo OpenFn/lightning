@@ -2591,6 +2591,51 @@ defmodule LightningWeb.AiAssistantChannelTest do
     end
 
     @tag :capture_log
+    test "broadcasts message_error on failed status", %{
+      socket: socket,
+      job: job,
+      user: user
+    } do
+      {:ok, session} =
+        AiAssistant.create_session(job, user, "Initial message", [])
+
+      {:ok, _, socket} =
+        subscribe_and_join(
+          socket,
+          AiAssistantChannel,
+          "ai_assistant:job_code:#{session.id}",
+          %{}
+        )
+
+      # Create a user message to simulate failed status on
+      {:ok, updated_session} =
+        AiAssistant.save_message(
+          session,
+          %{role: :user, content: "Test message", user: user},
+          []
+        )
+
+      message = List.last(updated_session.messages)
+      message_id = message.id
+
+      # Simulate failed status (distinct from :error)
+      send(
+        socket.channel_pid,
+        {:ai_assistant, :message_status_changed,
+         %{
+           status: {:failed, updated_session},
+           session_id: session.id
+         }}
+      )
+
+      # Should broadcast error state with "failed" status
+      assert_broadcast "message_error", %{
+        message_id: ^message_id,
+        status: "failed"
+      }
+    end
+
+    @tag :capture_log
     test "messages include user info for attribution", %{
       socket: socket,
       job: job,
