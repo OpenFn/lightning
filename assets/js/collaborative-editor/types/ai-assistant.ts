@@ -175,6 +175,7 @@ export interface AIAssistantStore {
     context: JobCodeContext | WorkflowTemplateContext
   ) => void;
   _setProcessingState: (isProcessing: boolean) => void;
+  _connectChannel: (channelProvider: unknown) => () => void;
 }
 
 /**

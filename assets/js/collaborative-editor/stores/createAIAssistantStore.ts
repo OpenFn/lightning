@@ -50,6 +50,7 @@
  */
 
 import { produce } from 'immer';
+import type { PhoenixChannelProvider } from 'y-phoenix-channel';
 
 import _logger from '#/utils/logger';
 
@@ -556,6 +557,48 @@ export const createAIAssistantStore = (): AIAssistantStore => {
     notify('_setProcessingState');
   };
 
+  /**
+   * Connect to workflow channel to listen for AI session creation events.
+   * When another user creates an AI session, we receive the event and update
+   * our session list if it matches the current context.
+   * @internal Called by StoreProvider when channel is connected
+   */
+  const _connectChannel = (channelProvider: PhoenixChannelProvider) => {
+    const channel = channelProvider.channel;
+
+    const aiSessionCreatedHandler = (data: unknown) => {
+      const payload = data as { session: SessionSummary };
+      logger.debug(
+        'Received ai_session_created from workflow channel',
+        payload
+      );
+
+      // Only add if we're viewing the session list (no active session)
+      // and the session matches the current context
+      const currentState = state;
+
+      if (!currentState.sessionId && payload.session) {
+        // Check if session matches current mode/context
+        const matchesContext =
+          (currentState.sessionType === 'job_code' &&
+            payload.session.session_type === 'job_code') ||
+          (currentState.sessionType === 'workflow_template' &&
+            payload.session.session_type === 'workflow_template');
+
+        if (matchesContext) {
+          _prependSession(payload.session);
+        }
+      }
+    };
+
+    channel.on('ai_session_created', aiSessionCreatedHandler);
+
+    // Return cleanup function
+    return () => {
+      channel.off('ai_session_created', aiSessionCreatedHandler);
+    };
+  };
+
   devtools.connect();
 
   return {
@@ -587,6 +630,7 @@ export const createAIAssistantStore = (): AIAssistantStore => {
     _appendSessionList,
     _initializeContext,
     _setProcessingState,
+    _connectChannel,
   };
 };
 

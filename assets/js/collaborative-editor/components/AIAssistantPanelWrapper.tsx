@@ -37,7 +37,7 @@ import {
 } from '../hooks/useWorkflow';
 import { useKeyboardShortcut } from '../keyboard';
 import { notifications } from '../lib/notifications';
-import type { JobCodeContext, SessionSummary } from '../types/ai-assistant';
+import type { JobCodeContext } from '../types/ai-assistant';
 import { Z_INDEX } from '../utils/constants';
 import {
   prepareWorkflowForSerialization,
@@ -371,40 +371,8 @@ export function AIAssistantPanelWrapper() {
     });
   }, [updateSearchParams, aiStore, aiMode]);
 
-  // Listen for new AI sessions created by other users (via workflow channel broadcast)
-  useEffect(() => {
-    const handleAISessionCreated = (event: CustomEvent<SessionSummary>) => {
-      const session = event.detail;
-
-      // Only add if we're viewing the session list (no active session)
-      // and the session matches the current context
-      const currentState = aiStore.getSnapshot();
-
-      if (!currentState.sessionId && session) {
-        // Check if session matches current mode/context
-        const matchesContext =
-          (currentState.sessionType === 'job_code' &&
-            session.session_type === 'job_code') ||
-          (currentState.sessionType === 'workflow_template' &&
-            session.session_type === 'workflow_template');
-
-        if (matchesContext) {
-          aiStore._prependSession(session);
-        }
-      }
-    };
-
-    document.addEventListener(
-      'ai_session_created',
-      handleAISessionCreated as EventListener
-    );
-    return () => {
-      document.removeEventListener(
-        'ai_session_created',
-        handleAISessionCreated as EventListener
-      );
-    };
-  }, [aiStore]);
+  // Note: AI session creation events are now handled by AIAssistantStore._connectChannel
+  // which receives events directly from the workflow channel
 
   const sendMessage = useCallback(
     (
@@ -552,7 +520,8 @@ export function AIAssistantPanelWrapper() {
       setApplyingMessageId(messageId);
 
       // Signal to all collaborators that we're starting to apply
-      await startApplyingWorkflow(messageId);
+      // Returns false if coordination failed (other users won't be notified)
+      const coordinated = await startApplyingWorkflow(messageId);
 
       try {
         const workflowSpec = parseWorkflowYAML(yaml);
@@ -626,8 +595,11 @@ export function AIAssistantPanelWrapper() {
         });
       } finally {
         setApplyingMessageId(null);
-        // Signal to all collaborators that apply is complete
-        await doneApplyingWorkflow(messageId);
+        // Only signal completion if we successfully coordinated
+        // (otherwise other users weren't notified of the start)
+        if (coordinated) {
+          await doneApplyingWorkflow(messageId);
+        }
       }
     },
     [importWorkflow, startApplyingWorkflow, doneApplyingWorkflow]

@@ -139,6 +139,7 @@ import _logger from '#/utils/logger';
 import type { WorkflowState as YAMLWorkflowState } from '../../yaml/types';
 import { YAMLStateToYDoc } from '../adapters/YAMLStateToYDoc';
 import { channelRequest } from '../hooks/useChannel';
+import { notifications } from '../lib/notifications';
 import { EdgeSchema } from '../types/edge';
 import { JobSchema } from '../types/job';
 import type { Session } from '../types/session';
@@ -654,20 +655,8 @@ export const createWorkflowStore = () => {
     provider.channel.on('workflow_applying', workflowApplyingHandler);
     provider.channel.on('workflow_applied', workflowAppliedHandler);
 
-    // Handler for AI session creation broadcasts
-    // Dispatches a custom event that the AI panel can listen for
-    const aiSessionCreatedHandler = (data: unknown) => {
-      const payload = data as { session: unknown };
-      logger.debug(
-        'Received ai_session_created from workflow channel',
-        payload
-      );
-      // Dispatch custom event so AI panel can update its session list
-      document.dispatchEvent(
-        new CustomEvent('ai_session_created', { detail: payload.session })
-      );
-    };
-    provider.channel.on('ai_session_created', aiSessionCreatedHandler);
+    // Note: ai_session_created events are handled by AIAssistantStore._connectChannel
+    // which is connected via StoreProvider when the channel is ready
 
     // Store cleanup functions
     // CRITICAL: Separate Y.Doc observer cleanups from channel cleanups
@@ -692,7 +681,6 @@ export const createWorkflowStore = () => {
           );
           provider.channel.off('workflow_applying', workflowApplyingHandler);
           provider.channel.off('workflow_applied', workflowAppliedHandler);
-          provider.channel.off('ai_session_created', aiSessionCreatedHandler);
         }
       },
     ];
@@ -1592,20 +1580,32 @@ export const createWorkflowStore = () => {
    * Broadcasts to all collaborators so they disable their Apply buttons.
    *
    * @param messageId - The AI message ID being applied (for tracking)
+   * @returns true if coordination succeeded, false otherwise
    */
-  const startApplyingWorkflow = async (messageId: string) => {
+  const startApplyingWorkflow = async (messageId: string): Promise<boolean> => {
     if (!provider?.channel) {
       logger.warn('Cannot start applying workflow - no channel available');
-      return;
+      notifications.warning({
+        title: 'Apply coordination unavailable',
+        description:
+          'Other users may also apply changes simultaneously. Proceeding anyway.',
+      });
+      return false;
     }
 
     try {
       await channelRequest(provider.channel, 'start_applying_workflow', {
         message_id: messageId,
       });
+      return true;
     } catch (error) {
       logger.error('Failed to signal workflow apply start', error);
-      // Continue with apply even if signal fails - better than blocking
+      notifications.warning({
+        title: 'Apply coordination unavailable',
+        description:
+          'Other users may also apply changes simultaneously. Proceeding anyway.',
+      });
+      return false;
     }
   };
 
@@ -1618,6 +1618,11 @@ export const createWorkflowStore = () => {
   const doneApplyingWorkflow = async (messageId: string) => {
     if (!provider?.channel) {
       logger.warn('Cannot complete applying workflow - no channel available');
+      // Clear local state anyway
+      updateState(draft => {
+        draft.isApplyingWorkflow = false;
+        draft.applyingUser = null;
+      }, 'workflow/applied/fallback');
       return;
     }
 
@@ -1627,6 +1632,10 @@ export const createWorkflowStore = () => {
       });
     } catch (error) {
       logger.error('Failed to signal workflow apply completion', error);
+      notifications.warning({
+        title: 'Apply completion signal failed',
+        description: 'Other users may not see that the apply has completed.',
+      });
       // Clear local state even if signal fails
       updateState(draft => {
         draft.isApplyingWorkflow = false;
