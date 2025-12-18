@@ -24,6 +24,11 @@ and this project adheres to
 
 ### Fixed
 
+- Log lines were getting appended to previous run in the IDE
+  [#4255](https://github.com/OpenFn/lightning/issues/4255)
+- Waiting for worker (etc.) was missing from new IDE
+  [#4257](https://github.com/OpenFn/lightning/issues/4257)
+
 ## [2.15.1] - 2025-12-17
 
 ### Fixed
