@@ -28,12 +28,14 @@ const mockMount = vi.fn();
 const mockSetStepId = vi.fn();
 const mockAddLogLines = vi.fn();
 const mockSetDesiredLogLevel = vi.fn();
+const mockClearLogs = vi.fn();
 
 // Create a mock store that maintains state
 let mockLogStoreState = {
   desiredLogLevel: 'info',
   setStepId: mockSetStepId,
   addLogLines: mockAddLogLines,
+  clearLogs: mockClearLogs,
   setDesiredLogLevel: (level: string) => {
     mockSetDesiredLogLevel(level);
     mockLogStoreState.desiredLogLevel = level;
@@ -132,6 +134,7 @@ describe('LogTabPanel', () => {
 
     // Reset mock store state to defaults
     mockLogStoreState.desiredLogLevel = 'info';
+    mockClearLogs.mockClear();
 
     mockChannel = createMockChannel();
 
@@ -442,6 +445,192 @@ describe('LogTabPanel', () => {
       // The filter button should be within the header
       const filterButton = screen.getByRole('button');
       expect(header).toContainElement(filterButton);
+    });
+  });
+
+  describe('clearing logs on run change', () => {
+    test('clears logs when run changes', () => {
+      const run1 = createMockRun({ id: 'run-1' });
+      const run2 = createMockRun({ id: 'run-2' });
+
+      // Update mock channel to match run-2
+      const mockChannel2 = {
+        topic: 'run:run-2',
+        on: vi.fn(),
+        off: vi.fn(),
+      };
+
+      mockUseActiveRun.mockReturnValue(run1);
+      const { rerender } = render(<LogTabPanel />);
+
+      // First render should clear logs for initial run
+      expect(mockClearLogs).toHaveBeenCalledTimes(1);
+
+      // Update session to have channel for run-2
+      mockUseSession.mockReturnValue({
+        provider: {
+          socket: {
+            channels: [mockChannel2],
+          },
+        } as any,
+        ydoc: null,
+        awareness: null,
+        userData: null,
+        isConnected: true,
+        isSynced: true,
+        settled: true,
+        lastStatus: null,
+      });
+
+      // Change to a different run
+      mockUseActiveRun.mockReturnValue(run2);
+      rerender(<LogTabPanel />);
+
+      // Should clear logs again for new run
+      expect(mockClearLogs).toHaveBeenCalledTimes(2);
+    });
+
+    test('does not clear logs when provider changes but run stays same', () => {
+      const run = createMockRun({ id: 'run-1' });
+      mockUseActiveRun.mockReturnValue(run);
+
+      const { rerender } = render(<LogTabPanel />);
+
+      // First render clears logs
+      expect(mockClearLogs).toHaveBeenCalledTimes(1);
+
+      // Simulate provider reference change (same socket, new object)
+      mockUseSession.mockReturnValue({
+        provider: {
+          socket: {
+            channels: [mockChannel],
+          },
+        } as any,
+        ydoc: null,
+        awareness: null,
+        userData: null,
+        isConnected: true,
+        isSynced: true,
+        settled: true,
+        lastStatus: null,
+      });
+
+      rerender(<LogTabPanel />);
+
+      // Should NOT clear logs again - run ID hasn't changed
+      expect(mockClearLogs).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('waiting text overlay', () => {
+    beforeEach(() => {
+      vi.useFakeTimers();
+    });
+
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    test('shows waiting message when no logs and run is available', async () => {
+      mockUseActiveRun.mockReturnValue(
+        createMockRun({ id: 'run-1', state: 'available' })
+      );
+
+      // Mock channelRequest to return empty logs
+      const { channelRequest } = await import(
+        '../../../../js/collaborative-editor/hooks/useChannel'
+      );
+      vi.mocked(channelRequest).mockResolvedValue({ logs: [] });
+
+      render(<LogTabPanel />);
+
+      // Advance timers to let typewriter animate
+      await vi.advanceTimersByTimeAsync(1000);
+
+      // Should show waiting message overlay
+      expect(screen.getByText(/Waiting for worker/)).toBeInTheDocument();
+    });
+
+    test('shows "Creating runtime" message when run is claimed', async () => {
+      mockUseActiveRun.mockReturnValue(
+        createMockRun({ id: 'run-1', state: 'claimed' })
+      );
+
+      const { channelRequest } = await import(
+        '../../../../js/collaborative-editor/hooks/useChannel'
+      );
+      vi.mocked(channelRequest).mockResolvedValue({ logs: [] });
+
+      render(<LogTabPanel />);
+
+      await vi.advanceTimersByTimeAsync(2000);
+
+      expect(
+        screen.getByText(/Creating runtime & installing adaptors/)
+      ).toBeInTheDocument();
+    });
+
+    test('shows "Nothing yet" message when no run', async () => {
+      mockUseActiveRun.mockReturnValue(null);
+
+      render(<LogTabPanel />);
+
+      await vi.advanceTimersByTimeAsync(1000);
+
+      expect(screen.getByText(/Nothing yet/)).toBeInTheDocument();
+    });
+
+    test('hides waiting overlay when logs arrive', async () => {
+      mockUseActiveRun.mockReturnValue(
+        createMockRun({ id: 'run-1', state: 'available' })
+      );
+
+      const { channelRequest } = await import(
+        '../../../../js/collaborative-editor/hooks/useChannel'
+      );
+      // First return empty, simulating initial state
+      vi.mocked(channelRequest).mockResolvedValue({ logs: [] });
+
+      render(<LogTabPanel />);
+
+      // Let typewriter show waiting message
+      await vi.advanceTimersByTimeAsync(1000);
+      expect(screen.getByText(/Waiting for worker/)).toBeInTheDocument();
+
+      // Simulate logs arriving via channel event
+      const logHandler = mockChannel.on.mock.calls.find(
+        call => call[0] === 'logs'
+      )?.[1];
+      expect(logHandler).toBeDefined();
+
+      // Trigger log arrival
+      logHandler({ logs: [{ id: 'log-1', message: 'Test log' }] });
+
+      // Advance timers and wait for state update
+      await vi.advanceTimersByTimeAsync(100);
+
+      // Waiting overlay should be hidden
+      expect(screen.queryByText(/Waiting for worker/)).not.toBeInTheDocument();
+    });
+
+    test('displays pulsing cursor during typewriter animation', async () => {
+      mockUseActiveRun.mockReturnValue(
+        createMockRun({ id: 'run-1', state: 'available' })
+      );
+
+      const { channelRequest } = await import(
+        '../../../../js/collaborative-editor/hooks/useChannel'
+      );
+      vi.mocked(channelRequest).mockResolvedValue({ logs: [] });
+
+      const { container } = render(<LogTabPanel />);
+
+      await vi.advanceTimersByTimeAsync(500);
+
+      // Check for pulsing cursor
+      const cursor = container.querySelector('.animate-pulse');
+      expect(cursor).toBeInTheDocument();
+      expect(cursor).toHaveTextContent('▌');
     });
   });
 });
