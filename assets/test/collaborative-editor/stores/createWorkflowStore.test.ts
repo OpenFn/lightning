@@ -11,14 +11,14 @@
  * - Verifies Y.Doc state directly (not just response validation)
  */
 
-import { describe, test, expect, beforeEach, vi } from 'vitest';
-import * as Y from 'yjs';
 import type { Channel } from 'phoenix';
+import { describe, test, expect, beforeEach, vi } from 'vitest';
+import type { PhoenixChannelProvider } from 'y-phoenix-channel';
+import * as Y from 'yjs';
 
+import { ChannelRequestError } from '../../../js/collaborative-editor/lib/errors';
 import { createWorkflowStore } from '../../../js/collaborative-editor/stores/createWorkflowStore';
 import type { WorkflowStoreInstance } from '../../../js/collaborative-editor/stores/createWorkflowStore';
-import type { PhoenixChannelProvider } from 'y-phoenix-channel';
-import { ChannelRequestError } from '../../../js/collaborative-editor/lib/errors';
 import type { Session } from '../../../js/collaborative-editor/types/session';
 import {
   createMockChannelPushOk,
@@ -1137,5 +1137,146 @@ describe('WorkflowStore - removeJob with edge cleanup', () => {
     const snapshotAfter = store.getSnapshot();
     expect(snapshotAfter.jobs).toHaveLength(1);
     expect(snapshotAfter.jobs?.[0]?.id).toBe('job-a');
+  });
+});
+
+describe('WorkflowStore - AI Workflow Apply Coordination', () => {
+  let store: WorkflowStoreInstance;
+  let ydoc: Session.WorkflowDoc;
+  let mockChannel: MockPhoenixChannel;
+  let mockProvider: PhoenixChannelProvider & { channel: MockPhoenixChannel };
+
+  beforeEach(() => {
+    // Create fresh store and Y.Doc instances
+    store = createWorkflowStore();
+    ydoc = new Y.Doc() as Session.WorkflowDoc;
+
+    // Initialize Y.Doc structure
+    ydoc.getMap('workflow');
+    ydoc.getArray('jobs');
+    ydoc.getArray('triggers');
+    ydoc.getArray('edges');
+    ydoc.getMap('positions');
+    ydoc.getMap('errors');
+
+    // Create mock channel with full implementation
+    mockChannel = createMockPhoenixChannel('workflow:test');
+
+    // Create mock provider with channel
+    mockProvider = {
+      channel: mockChannel,
+      synced: true,
+      awareness: null,
+      doc: ydoc,
+    } as unknown as PhoenixChannelProvider & { channel: MockPhoenixChannel };
+
+    // Connect store to Y.Doc and provider
+    store.connect(ydoc, mockProvider);
+  });
+
+  test('initializes with isApplyingWorkflow=false and applyingUser=null', () => {
+    const snapshot = store.getSnapshot();
+    expect(snapshot.isApplyingWorkflow).toBe(false);
+    expect(snapshot.applyingUser).toBeNull();
+  });
+
+  test('startApplyingWorkflow sends message to channel', async () => {
+    // Override push to track calls and return ok
+    mockChannel.push = createMockChannelPushOk({});
+
+    await store.startApplyingWorkflow('msg-123');
+
+    expect(mockChannel.push).toHaveBeenCalledWith('start_applying_workflow', {
+      message_id: 'msg-123',
+    });
+  });
+
+  test('doneApplyingWorkflow sends message to channel', async () => {
+    // Override push to track calls and return ok
+    mockChannel.push = createMockChannelPushOk({});
+
+    await store.doneApplyingWorkflow('msg-456');
+
+    expect(mockChannel.push).toHaveBeenCalledWith('done_applying_workflow', {
+      message_id: 'msg-456',
+    });
+  });
+
+  test('workflow_applying event updates state', () => {
+    // Use _test.emit to trigger the event (simulates server broadcast)
+    mockChannel._test.emit('workflow_applying', {
+      user_id: 'user-abc',
+      user_name: 'Test User',
+      message_id: 'msg-789',
+    });
+
+    // Verify state updated
+    const snapshot = store.getSnapshot();
+    expect(snapshot.isApplyingWorkflow).toBe(true);
+    expect(snapshot.applyingUser).toEqual({
+      id: 'user-abc',
+      name: 'Test User',
+    });
+  });
+
+  test('workflow_applied event clears state', () => {
+    // First, set state as if applying
+    mockChannel._test.emit('workflow_applying', {
+      user_id: 'user-abc',
+      user_name: 'Test User',
+      message_id: 'msg-789',
+    });
+
+    // Verify state is set
+    let snapshot = store.getSnapshot();
+    expect(snapshot.isApplyingWorkflow).toBe(true);
+
+    // Now trigger workflow_applied
+    mockChannel._test.emit('workflow_applied', {});
+
+    // Verify state is cleared
+    snapshot = store.getSnapshot();
+    expect(snapshot.isApplyingWorkflow).toBe(false);
+    expect(snapshot.applyingUser).toBeNull();
+  });
+
+  test('doneApplyingWorkflow clears local state on channel error', async () => {
+    // First, set applying state via event
+    mockChannel._test.emit('workflow_applying', {
+      user_id: 'user-abc',
+      user_name: 'Test User',
+      message_id: 'msg-fail',
+    });
+
+    // Override push to return error
+    mockChannel.push = createMockChannelPushError('Channel error', 'error');
+
+    // Call doneApplyingWorkflow
+    await store.doneApplyingWorkflow('msg-fail');
+
+    // State should be cleared even on error (fallback path)
+    const snapshot = store.getSnapshot();
+    expect(snapshot.isApplyingWorkflow).toBe(false);
+    expect(snapshot.applyingUser).toBeNull();
+  });
+
+  test('startApplyingWorkflow handles missing provider gracefully', async () => {
+    // Disconnect store
+    store.disconnect();
+
+    // Should not throw
+    await expect(
+      store.startApplyingWorkflow('msg-no-provider')
+    ).resolves.not.toThrow();
+  });
+
+  test('doneApplyingWorkflow handles missing provider gracefully', async () => {
+    // Disconnect store
+    store.disconnect();
+
+    // Should not throw
+    await expect(
+      store.doneApplyingWorkflow('msg-no-provider')
+    ).resolves.not.toThrow();
   });
 });

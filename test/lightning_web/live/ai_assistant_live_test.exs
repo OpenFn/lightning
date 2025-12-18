@@ -3538,6 +3538,52 @@ defmodule LightningWeb.AiAssistantLiveTest do
 
     @tag :capture_log
     @tag email: "user@openfn.org"
+    test "renders avatar with question mark when user has empty string first_name",
+         %{
+           conn: conn,
+           project: project,
+           user: user,
+           workflow: %{jobs: [job | _]} = workflow
+         } do
+      stub_apollo_endpoint()
+
+      # Create a user with empty string first_name and last_name
+      user_with_empty_name =
+        insert(:user, first_name: "", last_name: "")
+
+      insert(:project_user, project: project, user: user_with_empty_name)
+
+      session =
+        insert(:job_chat_session,
+          user: user_with_empty_name,
+          job: job,
+          messages: [
+            %{
+              role: :user,
+              content: "Test message",
+              user: user_with_empty_name
+            },
+            %{role: :assistant, content: "Test response"}
+          ]
+        )
+
+      skip_disclaimer(user)
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version, s: job.id, m: "expand"]}&j-chat=#{session.id}"
+        )
+
+      render_async(view)
+      html = render(view)
+
+      # Avatar should render with "?" when first_name is empty string
+      assert html =~ "?"
+    end
+
+    @tag :capture_log
+    @tag email: "user@openfn.org"
     test "renders question mark avatar for messages without user association", %{
       conn: conn,
       project: project,
