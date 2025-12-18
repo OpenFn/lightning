@@ -27,6 +27,8 @@ and this project adheres to
 
 ### Fixed
 
+- Fix retried runs showing incorrect workflow version in history
+  [#4186](https://github.com/OpenFn/lightning/issues/4186)
 - Log lines were getting appended to previous run in the IDE
   [#4255](https://github.com/OpenFn/lightning/issues/4255)
 - Waiting for worker (etc.) was missing from new IDE

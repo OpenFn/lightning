@@ -214,7 +214,6 @@ describe('createHistoryStore', () => {
           id: 'e2107d46-cf29-4930-b11b-cbcfcf83549d',
           state: 'success',
           last_activity: '2025-10-23T21:00:02.293382Z',
-          version: 29,
           runs: [
             {
               id: 'f3218e57-df40-4a41-b22c-dcdfdf94650e',
@@ -222,6 +221,7 @@ describe('createHistoryStore', () => {
               error_type: null,
               started_at: '2025-10-23T20:59:58.293382Z',
               finished_at: '2025-10-23T21:00:02.293382Z',
+              version: 29,
             },
           ],
         },
@@ -259,7 +259,6 @@ describe('createHistoryStore', () => {
           id: 'e2107d46-cf29-4930-b11b-cbcfcf83549d',
           state: 'success',
           last_activity: '2025-10-23T21:00:02.293382Z',
-          version: 29,
           runs: [
             {
               id: runId,
@@ -267,6 +266,7 @@ describe('createHistoryStore', () => {
               error_type: null,
               started_at: '2025-10-23T20:59:58.293382Z',
               finished_at: '2025-10-23T21:00:02.293382Z',
+              version: 29,
             },
           ],
         },

@@ -85,12 +85,9 @@ export function CollaborativeWorkflowDiagram({
   // URLStore notifies subscribers synchronously, triggering immediate re-render
   const handleRunSelect = useCallback(
     (run: RunSummary) => {
-      // Find the workorder that contains this run
-      const workorder = history.find(wo => wo.runs.some(r => r.id === run.id));
-
       // Only include version parameter if the run's version differs from latest
       // This prevents pinning to read-only mode when viewing latest version runs
-      const runVersion = workorder?.version;
+      const runVersion = run.version;
       const shouldPinVersion =
         runVersion !== null &&
         runVersion !== undefined &&
@@ -103,7 +100,7 @@ export function CollaborativeWorkflowDiagram({
         run: run.id,
       });
     },
-    [history, latestSnapshotLockVersion, updateSearchParams]
+    [latestSnapshotLockVersion, updateSearchParams]
   );
 
   // Clear URL parameter when deselecting run
