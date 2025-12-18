@@ -26,7 +26,6 @@ export const RunSummarySchema = z.object({
   started_at: isoDateTimeSchema.nullable(),
   finished_at: isoDateTimeSchema.nullable(),
   version: z.number(),
-  work_order_id: uuidSchema,
 });
 
 /**

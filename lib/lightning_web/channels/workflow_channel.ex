@@ -1254,8 +1254,7 @@ defmodule LightningWeb.WorkflowChannel do
               error_type: run.error_type,
               started_at: run.started_at,
               finished_at: run.finished_at,
-              version: run.snapshot.lock_version,
-              work_order_id: run.work_order_id
+              version: run.snapshot.lock_version
             }
           end)
       }
