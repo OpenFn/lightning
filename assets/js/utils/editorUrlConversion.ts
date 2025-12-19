@@ -224,14 +224,17 @@ export function buildCollaborativeEditorUrl(options: {
   const collaborativeParams = classicalToCollaborativeParams(searchParams, {
     selectedType,
   });
-  const queryString =
-    collaborativeParams.toString().length > 0
-      ? `?${collaborativeParams.toString()}`
-      : '';
 
   const basePath = isNewWorkflow
-    ? `/projects/${projectId}/w/new/collaborate`
+    ? `/projects/${projectId}/w/new/collaborate?method=template`
     : `/projects/${projectId}/w/${workflowId}/collaborate`;
+
+  // If base URL already has query params, use & instead of ?
+  const hasExistingParams = basePath.includes('?');
+  const queryString =
+    collaborativeParams.toString().length > 0
+      ? `${hasExistingParams ? '&' : '?'}${collaborativeParams.toString()}`
+      : '';
 
   return `${basePath}${queryString}`;
 }

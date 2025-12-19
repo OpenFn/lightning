@@ -380,7 +380,7 @@ defmodule LightningWeb.WorkflowLive.Helpers do
       iex> collaborative_editor_url(%{
       ...>   "project_id" => "proj-1"
       ...> }, :new)
-      "/projects/proj-1/w/new/collaborate"
+      "/projects/proj-1/w/new/collaborate?method=template"
 
       # With multiple query params
       iex> collaborative_editor_url(%{
@@ -447,7 +447,7 @@ defmodule LightningWeb.WorkflowLive.Helpers do
   end
 
   defp collaborative_base_url(%{"project_id" => project_id}, :new) do
-    "/projects/#{project_id}/w/new/collaborate"
+    "/projects/#{project_id}/w/new/collaborate?method=template"
   end
 
   defp collaborative_base_url(%{"id" => id, "project_id" => project_id}, :edit) do
@@ -460,6 +460,8 @@ defmodule LightningWeb.WorkflowLive.Helpers do
 
   defp build_url_with_params(base_url, params) do
     query_string = URI.encode_query(params)
-    "#{base_url}?#{query_string}"
+    # Use & if base_url already has query params, otherwise use ?
+    separator = if String.contains?(base_url, "?"), do: "&", else: "?"
+    "#{base_url}#{separator}#{query_string}"
   end
 end

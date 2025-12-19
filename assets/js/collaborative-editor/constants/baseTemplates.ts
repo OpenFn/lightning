@@ -9,13 +9,13 @@ export const BASE_TEMPLATES: BaseTemplate[] = [
     isBase: true,
     code: `name: "Event-based workflow"
 jobs:
-  My-job:
-    name: My job
+  Transform-data:
+    name: Transform data
     adaptor: "@openfn/language-common@latest"
     body: |
-      // Start writing your job code here
+      // Validate and transform the data you've received...
       fn(state => {
-        console.log("Triggered by webhook");
+        console.log("Do some data transformation here");
         return state;
       })
 triggers:
@@ -23,9 +23,9 @@ triggers:
     type: webhook
     enabled: true
 edges:
-  webhook->My-job:
+  webhook->Transform-data:
     source_trigger: webhook
-    target_job: My-job
+    target_job: Transform-data
     condition_type: always
     enabled: true`,
   },
@@ -37,24 +37,21 @@ edges:
     isBase: true,
     code: `name: "Scheduled workflow"
 jobs:
-  My-job:
-    name: My job
-    adaptor: "@openfn/language-common@latest"
+  Get-data:
+    name: Get data
+    adaptor: "@openfn/language-http@latest"
     body: |
-      // Start writing your job code here
-      fn(state => {
-        console.log("Running on schedule");
-        return state;
-      })
+      // Get some data from an API...
+      get('https://www.example.com');
 triggers:
   cron:
     type: cron
     cron_expression: "0 0 * * *"
     enabled: true
 edges:
-  cron->My-job:
+  cron->Get-data:
     source_trigger: cron
-    target_job: My-job
+    target_job: Get-data
     condition_type: always
     enabled: true`,
   },

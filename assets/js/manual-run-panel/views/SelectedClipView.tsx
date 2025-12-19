@@ -4,7 +4,7 @@ import React from 'react';
 
 import { DataclipViewer } from '../../react/components/DataclipViewer';
 import formatDate from '../../utils/formatDate';
-import Pill from '../Badge';
+import Pill from '#/collaborative-editor/components/common/Badge';
 import DataclipTypePill from '../DataclipTypePill';
 import type { Dataclip } from '../types';
 

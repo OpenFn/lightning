@@ -1,7 +1,7 @@
 import { cn } from '#/utils/cn';
 
 interface BadgeProps {
-  onClose: () => void;
+  onClose?: () => void;
   className?: string;
   variant?: 'default' | 'warning';
 }
@@ -23,19 +23,21 @@ const Badge: React.FC<React.PropsWithChildren<BadgeProps>> = ({
       )}
     >
       <span className="flex items-center">{children}</span>
-      <button
-        onClick={onClose}
-        className={cn(
-          'group relative -mr-1 flex items-center justify-center h-3.5 w-3.5 rounded-sm',
-          variant === 'default' && 'hover:bg-blue-600/20',
-          variant === 'warning' && 'hover:bg-yellow-700/20'
-        )}
-        aria-label="Remove"
-        title="Remove"
-      >
-        <span className="sr-only">Remove</span>
-        <span className="hero-x-mark h-3.5 w-3.5" />
-      </button>
+      {onClose && (
+        <button
+          onClick={onClose}
+          className={cn(
+            'group relative -mr-1 flex items-center justify-center h-3.5 w-3.5 rounded-sm',
+            variant === 'default' && 'hover:bg-blue-600/20',
+            variant === 'warning' && 'hover:bg-yellow-700/20'
+          )}
+          aria-label="Remove"
+          title="Remove"
+        >
+          <span className="sr-only">Remove</span>
+          <span className="hero-x-mark h-3.5 w-3.5" />
+        </button>
+      )}
     </div>
   );
 };

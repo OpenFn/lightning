@@ -26,6 +26,8 @@ and this project adheres to
 
 ### Fixed
 
+- Restore "Create workflow" flow
+  [#4266](https://github.com/OpenFn/lightning/issues/4266)
 - Allow users to add collaborators with long email domains
   [#4185](https://github.com/OpenFn/lightning/issues/4185)
 
