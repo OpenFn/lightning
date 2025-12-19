@@ -381,7 +381,7 @@ export function ConfigureAdaptorModal({
       <Dialog open={isOpen} onClose={onClose} className="relative z-50">
         <DialogBackdrop
           transition
-          className="fixed inset-0 bg-black/30 transition-opacity
+          className="fixed inset-0 bg-gray-900/60 backdrop-blur-sm transition-opacity
           data-closed:opacity-0 data-enter:duration-300
           data-enter:ease-out data-leave:duration-200
           data-leave:ease-in"
