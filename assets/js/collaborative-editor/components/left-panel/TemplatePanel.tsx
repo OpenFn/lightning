@@ -20,6 +20,7 @@ import { BASE_TEMPLATES } from '../../constants/baseTemplates';
 import { StoreContext } from '../../contexts/StoreProvider';
 import { useSession } from '../../hooks/useSession';
 import { useTemplatePanel, useUICommands } from '../../hooks/useUI';
+import { useWorkflowActions } from '../../hooks/useWorkflow';
 import { notifications } from '../../lib/notifications';
 import type { Template } from '../../types/template';
 import { Tooltip } from '../Tooltip';
@@ -30,14 +31,9 @@ import { TemplateSearchInput } from './TemplateSearchInput';
 interface TemplatePanelProps {
   onImportClick: () => void;
   onImport?: (workflowState: YAMLWorkflowState) => void;
-  onSave?: () => Promise<unknown>;
 }
 
-export function TemplatePanel({
-  onImportClick,
-  onImport,
-  onSave,
-}: TemplatePanelProps) {
+export function TemplatePanel({ onImportClick, onImport }: TemplatePanelProps) {
   const context = useContext(StoreContext);
   if (!context) {
     throw new Error('TemplatePanel must be used within a StoreProvider');
@@ -47,6 +43,7 @@ export function TemplatePanel({
   const { provider } = useSession();
   const channel = provider?.channel;
   const { openAIAssistantPanel, collapseCreateWorkflowPanel } = useUICommands();
+  const { saveWorkflow } = useWorkflowActions();
 
   const { templates, loading, error, searchQuery, selectedTemplate } =
     useTemplatePanel();
@@ -114,30 +111,6 @@ export function TemplatePanel({
     },
     [uiStore, onImport]
   );
-
-  const handleCreateWorkflow = async () => {
-    if (!selectedTemplate || !onImport || !onSave) return;
-
-    try {
-      const spec = parseWorkflowYAML(selectedTemplate.code);
-      const state = convertWorkflowSpecToState(spec);
-
-      onImport(state);
-      await onSave();
-
-      // After successful save, collapse panel and clear template state
-      collapseCreateWorkflowPanel();
-      uiStore.selectTemplate(null);
-      uiStore.setTemplateSearchQuery('');
-    } catch (err) {
-      console.error('Failed to create workflow from template:', err);
-      notifications.alert({
-        title: 'Failed to create workflow',
-        description:
-          'The template could not be processed. Please try again or select another template.',
-      });
-    }
-  };
 
   const handleSearchChange = (query: string) => {
     uiStore.setTemplateSearchQuery(query);
@@ -291,8 +264,8 @@ export function TemplatePanel({
           <span className="inline-block">
             <button
               type="button"
-              onClick={() => void handleCreateWorkflow()}
-              disabled={!selectedTemplate || !onSave}
+              onClick={() => void saveWorkflow()}
+              disabled={!selectedTemplate}
               className="rounded-md bg-primary-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-primary-500 disabled:bg-primary-300 disabled:hover:bg-primary-300 disabled:cursor-not-allowed"
             >
               Create

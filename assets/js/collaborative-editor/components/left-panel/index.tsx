@@ -43,7 +43,6 @@ export function LeftPanel({
         <TemplatePanel
           onImportClick={handleSwitchToImport}
           onImport={onImport}
-          onSave={onSave}
         />
       )}
       {currentMethod === 'import' && (
