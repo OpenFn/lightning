@@ -19,13 +19,16 @@ and this project adheres to
 
 ### Changed
 
+### Fixed
+
+## [2.15.3-pre] - 2025-12-19
+
+### Fixed
+
 - Update workflow concurrency error message
   [#4216](https://github.com/OpenFn/lightning/issues/4216)
 - Ensure workflow created via templates are disabled
   [#4262](https://github.com/OpenFn/lightning/issues/4262)
-
-### Fixed
-
 - Restore "Create workflow" flow
   [#4266](https://github.com/OpenFn/lightning/issues/4266)
 - Allow users to add collaborators with long email domains
