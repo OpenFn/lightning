@@ -818,12 +818,6 @@ defmodule Lightning.SessionTest do
       assert {:error, :workflow_deleted} = Session.save_workflow(session, user)
     end
 
-    # Note: The auto-disable behavior for NEW workflows (with :built state) is
-    # implemented in maybe_disable_triggers_on_limit/1 which checks new_workflow?/1.
-    # NEW workflows have __meta__.state == :built.
-    # Testing this requires a complex setup with cross-process DB connections,
-    # so we test the EXISTING workflow case which covers the main code path.
-
     test "fails with error on EXISTING workflow when activation limit is reached",
          %{
            session: session,
@@ -1046,6 +1040,99 @@ defmodule Lightning.SessionTest do
       # Try to save again - should get workflow_deleted error (covering line 475)
       assert {:error, :workflow_deleted} =
                Session.save_workflow(session_pid, user)
+    end
+  end
+
+  # Separate describe block for NEW workflow tests.
+  # These tests use `build(:workflow)` instead of `insert(:workflow)` because
+  # we need workflows with :built state (not yet persisted to DB).
+  # The main save_workflow/2 tests use insert() which creates :loaded workflows.
+  describe "save_workflow/2 with NEW workflows" do
+    setup do
+      Mox.set_mox_global(LightningMock)
+      Mox.stub(LightningMock, :broadcast, fn _topic, _message -> :ok end)
+
+      user = insert(:user)
+      project = insert(:project)
+
+      # Build (not insert) a workflow - this has :built state
+      workflow_id = Ecto.UUID.generate()
+
+      workflow =
+        build(:workflow,
+          id: workflow_id,
+          name: "New Workflow",
+          project: project,
+          project_id: project.id
+        )
+
+      document_name = "workflow:new:#{workflow_id}"
+
+      start_supervised!(
+        {DocumentSupervisor, workflow: workflow, document_name: document_name}
+      )
+
+      session_pid =
+        start_supervised!(
+          {Session, workflow: workflow, user: user, document_name: document_name}
+        )
+
+      %{
+        session: session_pid,
+        user: user,
+        workflow: workflow,
+        project: project
+      }
+    end
+
+    test "auto-disables triggers when activation limit is reached", %{
+      session: session,
+      user: user,
+      project: project,
+      workflow: workflow
+    } do
+      # Verify workflow has :built state (new, not yet in DB)
+      assert workflow.__meta__.state == :built
+
+      project_id = project.id
+
+      stub(
+        Lightning.Extensions.MockUsageLimiter,
+        :limit_action,
+        fn
+          %{type: :activate_workflow}, %{project_id: ^project_id} ->
+            {:error, :limit_exceeded,
+             %Lightning.Extensions.Message{
+               text: "Workflow activation limit exceeded"
+             }}
+
+          _action, _context ->
+            :ok
+        end
+      )
+
+      # Add an enabled trigger via Y.Doc
+      doc = Session.get_doc(session)
+      triggers_array = Yex.Doc.get_array(doc, "triggers")
+      trigger_id = Ecto.UUID.generate()
+
+      trigger_data =
+        Yex.MapPrelim.from(%{
+          "id" => trigger_id,
+          "type" => "webhook",
+          "enabled" => true
+        })
+
+      Yex.Doc.transaction(doc, "add_trigger", fn ->
+        Yex.Array.push(triggers_array, trigger_data)
+      end)
+
+      # Save should SUCCEED with triggers auto-disabled
+      assert {:ok, saved_workflow} = Session.save_workflow(session, user)
+
+      # Verify trigger was disabled
+      saved_trigger = Enum.find(saved_workflow.triggers, &(&1.id == trigger_id))
+      assert saved_trigger.enabled == false
     end
   end
 
