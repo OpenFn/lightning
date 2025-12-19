@@ -764,25 +764,26 @@ defmodule Lightning.Collaboration.Session do
     end)
   end
 
-  # Checks if workflow activation would hit usage limits.
-  # For NEW workflows (:built state): auto-disables triggers to allow creation.
-  # For EXISTING workflows (:loaded state): returns error to prevent accidental changes.
+  # Checks if workflow activation would hit usage limits for NEW workflows.
+  # Only applies to new workflows (:built state) - existing workflows can always
+  # be edited since their triggers are already accounted for in the limit.
   defp maybe_disable_triggers_on_limit(changeset) do
-    case WorkflowUsageLimiter.limit_workflow_activation(changeset) do
-      :ok ->
-        {:ok, changeset}
+    if new_workflow?(changeset) do
+      case WorkflowUsageLimiter.limit_workflow_activation(changeset) do
+        :ok ->
+          {:ok, changeset}
 
-      {:error, _, _message} = error ->
-        if new_workflow?(changeset) do
+        {:error, _, _message} ->
           Logger.info(
             "Workflow activation limit reached on new workflow, auto-disabling triggers"
           )
 
           {:ok, disable_all_triggers(changeset)}
-        else
-          # For existing workflows, return the error to fail the save
-          error
-        end
+      end
+    else
+      # Existing workflows can always be saved - their triggers are already
+      # counted in the limit
+      {:ok, changeset}
     end
   end
 

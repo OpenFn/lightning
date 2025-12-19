@@ -818,54 +818,45 @@ defmodule Lightning.SessionTest do
       assert {:error, :workflow_deleted} = Session.save_workflow(session, user)
     end
 
-    test "fails with error on EXISTING workflow when activation limit is reached",
-         %{
-           session: session,
-           user: user,
-           project: project,
-           workflow: workflow
-         } do
+    test "allows saving EXISTING workflow even when at activation limit", %{
+      session: session,
+      user: user,
+      project: project,
+      workflow: workflow
+    } do
       # The workflow from setup was inserted via insert(), so it's :loaded (existing)
       assert workflow.__meta__.state == :loaded
 
       project_id = project.id
-      error_msg = "Workflow activation limit exceeded"
 
-      # Mock the usage limiter to return an error
+      # Mock the usage limiter to return an error (user is at limit)
       stub(
         Lightning.Extensions.MockUsageLimiter,
         :limit_action,
         fn
           %{type: :activate_workflow}, %{project_id: ^project_id} ->
             {:error, :limit_exceeded,
-             %Lightning.Extensions.Message{text: error_msg}}
+             %Lightning.Extensions.Message{
+               text: "Workflow activation limit exceeded"
+             }}
 
           _action, _context ->
             :ok
         end
       )
 
-      # Get Y.Doc and modify workflow to enable a trigger
+      # Modify the workflow name via Y.Doc
       doc = Session.get_doc(session)
-      triggers_array = Yex.Doc.get_array(doc, "triggers")
+      workflow_map = Yex.Doc.get_map(doc, "workflow")
 
-      # Add a trigger and enable it
-      trigger_id = Ecto.UUID.generate()
-
-      trigger_data =
-        Yex.MapPrelim.from(%{
-          "id" => trigger_id,
-          "type" => "webhook",
-          "enabled" => true
-        })
-
-      Yex.Doc.transaction(doc, "test_enable_workflow", fn ->
-        Yex.Array.push(triggers_array, trigger_data)
+      Yex.Doc.transaction(doc, "test_update_name", fn ->
+        Yex.Map.set(workflow_map, "name", "Updated Name")
       end)
 
-      # Save should FAIL for existing workflows when limit is hit
-      assert {:error, %Lightning.Extensions.Message{text: ^error_msg}} =
-               Session.save_workflow(session, user)
+      # Save should SUCCEED for existing workflows - limit check is skipped
+      # because their triggers are already counted in the limit
+      assert {:ok, saved_workflow} = Session.save_workflow(session, user)
+      assert saved_workflow.name == "Updated Name"
     end
 
     test "saves all workflow components correctly", %{
