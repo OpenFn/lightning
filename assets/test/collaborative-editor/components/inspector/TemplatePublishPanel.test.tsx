@@ -349,7 +349,7 @@ describe('TemplatePublishPanel', () => {
       });
     });
 
-    test('disables all triggers when publishing template', async () => {
+    test('preserves trigger state when publishing template', async () => {
       const user = userEvent.setup();
       // Mock a workflow with an enabled trigger
       mockWorkflowState.triggers = [
@@ -372,9 +372,8 @@ describe('TemplatePublishPanel', () => {
       const payload = call[2] as any;
       const yamlCode = payload.code;
 
-      // Verify the YAML contains enabled: false for the trigger
-      expect(yamlCode).toContain('enabled: false');
-      expect(yamlCode).not.toContain('enabled: true');
+      // Verify the YAML preserves the original trigger state
+      expect(yamlCode).toContain('enabled: true');
     });
 
     test('shows success notification and navigates on success', async () => {
