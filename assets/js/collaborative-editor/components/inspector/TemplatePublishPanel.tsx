@@ -98,11 +98,17 @@ export function TemplatePublishPanel() {
 
     try {
       // Generate YAML code from current workflow state
+      // Ensure all triggers are disabled in templates
+      const disabledTriggers = triggers.map(trigger => ({
+        ...trigger,
+        enabled: false,
+      }));
+
       const workflowState: YAMLWorkflowState = {
         id: workflow.id,
         name: workflow.name,
         jobs: jobs as YAMLWorkflowState['jobs'],
-        triggers: triggers as YAMLWorkflowState['triggers'],
+        triggers: disabledTriggers as YAMLWorkflowState['triggers'],
         edges: edges as YAMLWorkflowState['edges'],
         positions,
       };

@@ -584,7 +584,16 @@ export function AIAssistantPanelWrapper() {
 
         const workflowState = convertWorkflowSpecToState(workflowSpec);
 
-        importWorkflow(workflowState);
+        // Always disable triggers when applying AI-generated workflows for safety
+        const stateWithDisabledTriggers = {
+          ...workflowState,
+          triggers: workflowState.triggers.map(trigger => ({
+            ...trigger,
+            enabled: false,
+          })),
+        };
+
+        importWorkflow(stateWithDisabledTriggers);
       } catch (error) {
         console.error('[AI Assistant] Failed to apply workflow:', error);
 

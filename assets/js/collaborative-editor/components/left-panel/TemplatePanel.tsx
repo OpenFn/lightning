@@ -100,7 +100,17 @@ export function TemplatePanel({
         try {
           const spec = parseWorkflowYAML(template.code);
           const state = convertWorkflowSpecToState(spec);
-          onImport(state);
+
+          // Always disable triggers when applying templates to avoid hitting limits
+          const stateWithDisabledTriggers = {
+            ...state,
+            triggers: state.triggers.map(trigger => ({
+              ...trigger,
+              enabled: false,
+            })),
+          };
+
+          onImport(stateWithDisabledTriggers);
         } catch (err) {
           console.error('Failed to parse template:', err);
           notifications.alert({
@@ -120,7 +130,17 @@ export function TemplatePanel({
     try {
       const spec = parseWorkflowYAML(selectedTemplate.code);
       const state = convertWorkflowSpecToState(spec);
-      onImport(state);
+
+      // Always disable triggers when applying templates to avoid hitting limits
+      const stateWithDisabledTriggers = {
+        ...state,
+        triggers: state.triggers.map(trigger => ({
+          ...trigger,
+          enabled: false,
+        })),
+      };
+
+      onImport(stateWithDisabledTriggers);
       await onSave();
 
       // After successful save, collapse panel and clear template state
