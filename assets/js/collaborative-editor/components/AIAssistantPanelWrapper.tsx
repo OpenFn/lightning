@@ -42,6 +42,7 @@ import { Z_INDEX } from '../utils/constants';
 import {
   prepareWorkflowForSerialization,
   serializeWorkflowToYAML,
+  withDisabledTriggers,
 } from '../utils/workflowSerialization';
 
 import { AIAssistantPanel } from './AIAssistantPanel';
@@ -584,16 +585,7 @@ export function AIAssistantPanelWrapper() {
 
         const workflowState = convertWorkflowSpecToState(workflowSpec);
 
-        // Always disable triggers when applying AI-generated workflows for safety
-        const stateWithDisabledTriggers = {
-          ...workflowState,
-          triggers: workflowState.triggers.map(trigger => ({
-            ...trigger,
-            enabled: false,
-          })),
-        };
-
-        importWorkflow(stateWithDisabledTriggers);
+        importWorkflow(withDisabledTriggers(workflowState));
       } catch (error) {
         console.error('[AI Assistant] Failed to apply workflow:', error);
 
