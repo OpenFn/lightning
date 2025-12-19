@@ -1125,6 +1125,44 @@ defmodule Lightning.SessionTest do
       saved_trigger = Enum.find(saved_workflow.triggers, &(&1.id == trigger_id))
       assert saved_trigger.enabled == false
     end
+
+    test "keeps triggers enabled when under activation limit", %{
+      session: session,
+      user: user,
+      workflow: workflow
+    } do
+      assert workflow.__meta__.state == :built
+
+      # Mock the usage limiter to return :ok (user is under limit)
+      stub(
+        Lightning.Extensions.MockUsageLimiter,
+        :limit_action,
+        fn _action, _context -> :ok end
+      )
+
+      # Add an enabled trigger via Y.Doc
+      doc = Session.get_doc(session)
+      triggers_array = Yex.Doc.get_array(doc, "triggers")
+      trigger_id = Ecto.UUID.generate()
+
+      trigger_data =
+        Yex.MapPrelim.from(%{
+          "id" => trigger_id,
+          "type" => "webhook",
+          "enabled" => true
+        })
+
+      Yex.Doc.transaction(doc, "add_trigger", fn ->
+        Yex.Array.push(triggers_array, trigger_data)
+      end)
+
+      # Save should SUCCEED with triggers STILL ENABLED
+      assert {:ok, saved_workflow} = Session.save_workflow(session, user)
+
+      # Verify trigger remains enabled
+      saved_trigger = Enum.find(saved_workflow.triggers, &(&1.id == trigger_id))
+      assert saved_trigger.enabled == true
+    end
   end
 
   describe "save_workflow/2 validation errors" do
