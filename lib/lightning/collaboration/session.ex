@@ -309,26 +309,11 @@ defmodule Lightning.Collaboration.Session do
   def handle_call({:save_workflow, user}, _from, state) do
     Logger.info("Saving workflow #{state.workflow.id} for user #{user.id}")
 
-    # Debug: Log workflow state before fetch (temporarily info level for diagnosis)
-    Logger.info(
-      "SAVE_WORKFLOW [1] state.workflow.__meta__.state: #{inspect(state.workflow.__meta__.state)}, lock_version: #{inspect(state.workflow.lock_version)}"
-    )
-
     with {:ok, doc} <- get_document(state),
          {:ok, workflow_data} <- deserialize_workflow(doc, state.workflow.id),
          {:ok, workflow} <- fetch_workflow(state.workflow),
-         # Debug: Log workflow state after fetch
-         _ =
-           Logger.info(
-             "SAVE_WORKFLOW [2] workflow.__meta__.state after fetch: #{inspect(workflow.__meta__.state)}"
-           ),
          changeset <-
            Lightning.Workflows.change_workflow(workflow, workflow_data),
-         # Debug: Log changeset.data state after change_workflow
-         _ =
-           Logger.info(
-             "SAVE_WORKFLOW [3] changeset.data.__meta__.state: #{inspect(changeset.data.__meta__.state)}"
-           ),
          {:ok, changeset} <- maybe_disable_triggers_on_limit(changeset),
          {:ok, saved_workflow} <-
            Lightning.Workflows.save_workflow(changeset, user,
@@ -479,16 +464,11 @@ defmodule Lightning.Collaboration.Session do
       {:error, :deserialization_failed, Exception.message(e)}
   end
 
+  # :built state with positive lock_version means it was saved before - reload from DB
   defp fetch_workflow(
          %{__meta__: %{state: :built}, lock_version: lock_version} = workflow
        )
        when is_integer(lock_version) and lock_version > 0 do
-    # Built state but has a positive lock_version - this means it was saved before
-    # We need to reload from DB to get the latest version
-    Logger.info(
-      "FETCH_WORKFLOW: Pattern 1 (built + lock_version > 0) - reloading from DB"
-    )
-
     case Lightning.Workflows.get_workflow(workflow.id,
            include: [:jobs, :edges, :triggers]
          ) do
@@ -498,11 +478,6 @@ defmodule Lightning.Collaboration.Session do
   end
 
   defp fetch_workflow(%{__meta__: %{state: :built}} = workflow) do
-    # New workflow - never saved to DB
-    Logger.info(
-      "FETCH_WORKFLOW: Pattern 2 (built, new workflow) - preserving :built state"
-    )
-
     workflow =
       workflow
       |> Map.put(:edges, %Ecto.Association.NotLoaded{
@@ -525,11 +500,6 @@ defmodule Lightning.Collaboration.Session do
   end
 
   defp fetch_workflow(workflow) do
-    # Existing workflow loaded from DB (:loaded state)
-    Logger.info(
-      "FETCH_WORKFLOW: Pattern 3 (loaded from DB) - state=#{inspect(workflow.__meta__.state)}"
-    )
-
     case Lightning.Workflows.get_workflow(workflow.id,
            include: [:jobs, :edges, :triggers]
          ) do
@@ -548,29 +518,21 @@ defmodule Lightning.Collaboration.Session do
       triggers_array = Yex.Doc.get_array(doc, "triggers")
 
       Yex.Doc.transaction(doc, "merge_saved_workflow", fn ->
-        # Update lock version
         Yex.Map.set(workflow_map, "lock_version", workflow.lock_version)
-
-        # Sync trigger enabled states from saved workflow to Y.Doc
-        # This is important when triggers are auto-disabled due to limits
         sync_trigger_enabled_states(triggers_array, workflow.triggers)
-
-        # Clear all errors after successful save
         clear_map(errors_map)
       end)
     end)
   end
 
-  # Syncs the enabled state of triggers from the saved workflow back to Y.Doc
-  # This ensures the UI reflects any server-side changes (e.g., auto-disabled triggers)
+  # Syncs trigger enabled states from saved workflow back to Y.Doc so the UI
+  # reflects server-side changes (e.g., auto-disabled triggers due to limits)
   defp sync_trigger_enabled_states(triggers_array, saved_triggers) do
-    # Build a map of trigger_id -> enabled state from saved triggers
     saved_states =
       saved_triggers
       |> Enum.map(fn t -> {t.id, t.enabled} end)
       |> Map.new()
 
-    # Update each trigger in the Y.Doc array
     triggers_array
     |> Yex.Array.to_list()
     |> Enum.each(fn trigger_map ->
@@ -585,10 +547,6 @@ defmodule Lightning.Collaboration.Session do
           current_enabled = Yex.Map.fetch!(trigger_map, "enabled")
 
           if current_enabled != saved_enabled do
-            Logger.info(
-              "Syncing trigger #{trigger_id} enabled state: #{current_enabled} -> #{saved_enabled}"
-            )
-
             Yex.Map.set(trigger_map, "enabled", saved_enabled)
           end
       end
@@ -841,31 +799,18 @@ defmodule Lightning.Collaboration.Session do
   # - EXISTING workflows: return error if limit exceeded, preventing trigger
   #   activation (same behavior as non-collaborative editor)
   defp maybe_disable_triggers_on_limit(changeset) do
-    is_new = new_workflow?(changeset)
-
-    Logger.info(
-      "SAVE_WORKFLOW [4] maybe_disable_triggers_on_limit: new_workflow?=#{is_new}, state=#{inspect(changeset.data.__meta__.state)}"
-    )
-
     case WorkflowUsageLimiter.limit_workflow_activation(changeset) do
       :ok ->
-        Logger.info("SAVE_WORKFLOW [5] Limit check passed, keeping triggers")
         {:ok, changeset}
 
       {:error, _, message} ->
-        if is_new do
-          # NEW workflow at limit: auto-disable triggers so workflow can still be saved
+        if new_workflow?(changeset) do
           Logger.info(
-            "Workflow activation limit reached on new workflow, auto-disabling triggers"
+            "Auto-disabling triggers for new workflow at activation limit"
           )
 
           {:ok, disable_all_triggers(changeset)}
         else
-          # EXISTING workflow at limit: return error (don't auto-disable)
-          Logger.info(
-            "Workflow activation limit reached on existing workflow, blocking save"
-          )
-
           {:error, :limit_exceeded, message}
         end
     end
@@ -875,8 +820,6 @@ defmodule Lightning.Collaboration.Session do
     changeset.data.__meta__.state == :built
   end
 
-  # Disables all triggers in the workflow changeset by modifying
-  # the nested trigger changesets to set enabled: false
   defp disable_all_triggers(changeset) do
     triggers =
       changeset

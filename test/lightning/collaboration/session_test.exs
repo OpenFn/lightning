@@ -1121,9 +1121,15 @@ defmodule Lightning.SessionTest do
       # Save should SUCCEED with triggers auto-disabled
       assert {:ok, saved_workflow} = Session.save_workflow(session, user)
 
-      # Verify trigger was disabled
+      # Verify trigger was disabled in the saved workflow
       saved_trigger = Enum.find(saved_workflow.triggers, &(&1.id == trigger_id))
       assert saved_trigger.enabled == false
+
+      # Verify trigger state was synced back to Y.Doc
+      doc = Session.get_doc(session)
+      triggers_array = Yex.Doc.get_array(doc, "triggers")
+      [ydoc_trigger] = Yex.Array.to_list(triggers_array)
+      assert Yex.Map.fetch!(ydoc_trigger, "enabled") == false
     end
 
     test "keeps triggers enabled when under activation limit", %{
