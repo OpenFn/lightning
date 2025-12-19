@@ -4,8 +4,9 @@ export const BASE_TEMPLATES: BaseTemplate[] = [
   {
     id: 'base-webhook-template',
     name: 'Event-based workflow',
-    description: 'Trigger a workflow with a webhook or API call',
-    tags: ['webhook', 'api', 'event'],
+    description:
+      'A basic template for a workflow that does something on-demand, when a webhook notification is received.',
+    tags: ['webhook', 'api', 'event', 'real-time'],
     isBase: true,
     code: `name: "Event-based workflow"
 jobs:
@@ -32,8 +33,9 @@ edges:
   {
     id: 'base-cron-template',
     name: 'Scheduled workflow',
-    description: 'Run a workflow on a schedule using cron',
-    tags: ['cron', 'scheduled', 'timer'],
+    description:
+      'A basic template for a workflow that does something periodically, using a "cron" schedule.',
+    tags: ['cron', 'scheduled', 'timer', 'periodic'],
     isBase: true,
     code: `name: "Scheduled workflow"
 jobs:
