@@ -245,7 +245,7 @@ describe('editorUrlConversion', () => {
       });
 
       expect(url).toBe(
-        '/projects/proj-123/w/new/collaborate?method=template?job=job-abc'
+        '/projects/proj-123/w/new/collaborate?method=template&job=job-abc'
       );
     });
 
