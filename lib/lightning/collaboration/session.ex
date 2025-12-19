@@ -477,25 +477,37 @@ defmodule Lightning.Collaboration.Session do
   end
 
   defp fetch_workflow(%{__meta__: %{state: :built}} = workflow) do
-    workflow =
-      workflow
-      |> Map.put(:edges, %Ecto.Association.NotLoaded{
-        __cardinality__: :many,
-        __field__: :edges,
-        __owner__: Lightning.Workflows.Workflow
-      })
-      |> Map.put(:jobs, %Ecto.Association.NotLoaded{
-        __cardinality__: :many,
-        __field__: :jobs,
-        __owner__: Lightning.Workflows.Workflow
-      })
-      |> Map.put(:triggers, %Ecto.Association.NotLoaded{
-        __cardinality__: :many,
-        __field__: :triggers,
-        __owner__: Lightning.Workflows.Workflow
-      })
+    # :built state with nil/0 lock_version - check if it actually exists in DB
+    # This handles edge cases where the session has a stale/recreated struct
+    case Lightning.Workflows.get_workflow(workflow.id,
+           include: [:jobs, :edges, :triggers]
+         ) do
+      nil ->
+        # Truly new workflow - keep the :built struct with NotLoaded associations
+        workflow =
+          workflow
+          |> Map.put(:edges, %Ecto.Association.NotLoaded{
+            __cardinality__: :many,
+            __field__: :edges,
+            __owner__: Lightning.Workflows.Workflow
+          })
+          |> Map.put(:jobs, %Ecto.Association.NotLoaded{
+            __cardinality__: :many,
+            __field__: :jobs,
+            __owner__: Lightning.Workflows.Workflow
+          })
+          |> Map.put(:triggers, %Ecto.Association.NotLoaded{
+            __cardinality__: :many,
+            __field__: :triggers,
+            __owner__: Lightning.Workflows.Workflow
+          })
 
-    {:ok, workflow}
+        {:ok, workflow}
+
+      existing_workflow ->
+        # Actually exists in DB - use the loaded version for proper UPDATE behavior
+        {:ok, existing_workflow}
+    end
   end
 
   defp fetch_workflow(workflow) do
@@ -788,7 +800,16 @@ defmodule Lightning.Collaboration.Session do
   end
 
   defp new_workflow?(changeset) do
-    changeset.data.__meta__.state == :built
+    lock_version = Ecto.Changeset.get_field(changeset, :lock_version)
+
+    if is_integer(lock_version) and lock_version > 0 do
+      # Has been saved before - definitely existing
+      false
+    else
+      # lock_version is nil - check database to be sure
+      workflow_id = Ecto.Changeset.get_field(changeset, :id)
+      is_nil(Lightning.Workflows.get_workflow(workflow_id))
+    end
   end
 
   # Disables all triggers in the workflow changeset by modifying

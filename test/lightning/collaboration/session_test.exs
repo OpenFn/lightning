@@ -859,6 +859,89 @@ defmodule Lightning.SessionTest do
       assert saved_workflow.name == "Updated Name"
     end
 
+    test "correctly identifies existing workflow even with :built state struct",
+         %{
+           user: user,
+           project: project
+         } do
+      # This tests the edge case where the session's workflow struct has :built
+      # state (e.g., from a reconnection or stale session) but the workflow
+      # actually exists in the database. The new_workflow? check should correctly
+      # identify it as existing by checking the database.
+
+      # First, create a workflow in the database
+      db_workflow =
+        insert(:workflow,
+          name: "Existing Workflow",
+          project: project
+        )
+
+      # Verify it exists in the DB (lock_version starts at 0 for new workflows)
+      assert db_workflow.lock_version == 0
+
+      # Now create a :built state struct with the SAME ID but nil lock_version
+      # This simulates a scenario where the session has a stale/recreated struct
+      built_workflow =
+        build(:workflow,
+          id: db_workflow.id,
+          name: db_workflow.name,
+          project: project,
+          project_id: project.id,
+          lock_version: nil
+        )
+
+      # Verify it has :built state and nil lock_version
+      assert built_workflow.__meta__.state == :built
+      assert built_workflow.lock_version == nil
+
+      document_name = "workflow:edge_case:#{built_workflow.id}"
+
+      start_supervised!(
+        {DocumentSupervisor,
+         workflow: built_workflow, document_name: document_name},
+        id: :edge_case_doc
+      )
+
+      edge_session =
+        start_supervised!(
+          {Session,
+           workflow: built_workflow, user: user, document_name: document_name},
+          id: :edge_case_session
+        )
+
+      project_id = project.id
+
+      # Mock the usage limiter to return an error
+      stub(
+        Lightning.Extensions.MockUsageLimiter,
+        :limit_action,
+        fn
+          %{type: :activate_workflow}, %{project_id: ^project_id} ->
+            {:error, :limit_exceeded,
+             %Lightning.Extensions.Message{
+               text: "Workflow activation limit exceeded"
+             }}
+
+          _action, _context ->
+            :ok
+        end
+      )
+
+      # Update workflow name via Y.Doc
+      doc = Session.get_doc(edge_session)
+      workflow_map = Yex.Doc.get_map(doc, "workflow")
+
+      Yex.Doc.transaction(doc, "test_update_name", fn ->
+        Yex.Map.set(workflow_map, "name", "Updated Existing")
+      end)
+
+      # Save should SUCCEED because even though the session's workflow struct
+      # has :built state and nil lock_version, the database check in new_workflow?
+      # correctly identifies it as an existing workflow
+      assert {:ok, saved_workflow} = Session.save_workflow(edge_session, user)
+      assert saved_workflow.name == "Updated Existing"
+    end
+
     test "saves all workflow components correctly", %{
       session: session,
       user: user
