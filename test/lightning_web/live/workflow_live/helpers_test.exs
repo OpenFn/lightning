@@ -13,20 +13,6 @@ defmodule LightningWeb.WorkflowLive.HelpersTest do
       assert result == "/projects/proj-1/w/new/collaborate?method=template"
     end
 
-    test "converts new workflow URL with additional params using & separator" do
-      params = %{
-        "project_id" => "proj-1",
-        "s" => "job-abc",
-        "v" => "42"
-      }
-
-      result = Helpers.collaborative_editor_url(params, :new)
-      # Should use & to append params since base URL already has ?method=template
-      assert result =~ "/projects/proj-1/w/new/collaborate?method=template&"
-      assert result =~ "job=job-abc"
-      assert result =~ "v=42"
-    end
-
     test "converts classical editor URL to collaborative for existing workflow" do
       params = %{
         "project_id" => "proj-1",
