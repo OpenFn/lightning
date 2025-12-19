@@ -65,7 +65,7 @@ export function createWorkflowSchema(projectConcurrency: number | null) {
             .min(1, 'must be at least 1')
             .max(
               projectConcurrency,
-              `must not exceed project limit of ${projectConcurrency}`
+              `this exceeds the project-wide concurrency limit of ${projectConcurrency} and will have no effect`
             )
             .nullable()
             .optional()

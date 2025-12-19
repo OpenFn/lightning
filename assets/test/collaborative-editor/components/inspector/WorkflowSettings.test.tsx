@@ -259,7 +259,9 @@ describe('WorkflowSettings - Project Concurrency Validation', () => {
     // Wait for validation error to appear
     await waitFor(() => {
       expect(
-        screen.getByText('must not exceed project limit of 5')
+        screen.getByText(
+          'this exceeds the project-wide concurrency limit of 5 and will have no effect'
+        )
       ).toBeInTheDocument();
     });
   });
@@ -285,7 +287,9 @@ describe('WorkflowSettings - Project Concurrency Validation', () => {
     // Wait a bit to ensure no error appears
     await waitFor(() => {
       expect(
-        screen.queryByText(/must not exceed project limit/)
+        screen.queryByText(
+          /this exceeds the project-wide concurrency limit of \d+ and will have no effect/
+        )
       ).not.toBeInTheDocument();
     });
   });
@@ -311,7 +315,9 @@ describe('WorkflowSettings - Project Concurrency Validation', () => {
     // Should not show validation error
     await waitFor(() => {
       expect(
-        screen.queryByText(/must not exceed project limit/)
+        screen.queryByText(
+          /this exceeds the project-wide concurrency limit of \d+ and will have no effect/
+        )
       ).not.toBeInTheDocument();
     });
   });
@@ -337,7 +343,9 @@ describe('WorkflowSettings - Project Concurrency Validation', () => {
     // Wait for error
     await waitFor(() => {
       expect(
-        screen.getByText('must not exceed project limit of 5')
+        screen.getByText(
+          'this exceeds the project-wide concurrency limit of 5 and will have no effect'
+        )
       ).toBeInTheDocument();
     });
 
@@ -350,7 +358,9 @@ describe('WorkflowSettings - Project Concurrency Validation', () => {
     // Error should be cleared
     await waitFor(() => {
       expect(
-        screen.queryByText(/must not exceed project limit/)
+        screen.queryByText(
+          /this exceeds the project-wide concurrency limit of \d+ and will have no effect/
+        )
       ).not.toBeInTheDocument();
     });
   });
