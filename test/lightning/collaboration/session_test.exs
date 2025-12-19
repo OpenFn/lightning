@@ -1548,6 +1548,57 @@ defmodule Lightning.SessionTest do
                "condition_expression"
              ]
     end
+
+    test "returns error when existing workflow tries to activate trigger at limit",
+         %{
+           session: session,
+           user: user,
+           workflow: workflow,
+           project: project
+         } do
+      # Verify workflow has :loaded state (existing, from DB)
+      assert workflow.__meta__.state == :loaded
+
+      project_id = project.id
+
+      # Mock the usage limiter to return error (user is at limit)
+      stub(
+        Lightning.Extensions.MockUsageLimiter,
+        :limit_action,
+        fn
+          %{type: :activate_workflow}, %{project_id: ^project_id} ->
+            {:error, :limit_exceeded,
+             %Lightning.Extensions.Message{
+               text: "Workflow activation limit exceeded"
+             }}
+
+          _action, _context ->
+            :ok
+        end
+      )
+
+      # Add an enabled trigger via Y.Doc to simulate user enabling trigger
+      doc = Session.get_doc(session)
+      triggers_array = Yex.Doc.get_array(doc, "triggers")
+      trigger_id = Ecto.UUID.generate()
+
+      trigger_data =
+        Yex.MapPrelim.from(%{
+          "id" => trigger_id,
+          "type" => "webhook",
+          "enabled" => true
+        })
+
+      Yex.Doc.transaction(doc, "add_trigger", fn ->
+        Yex.Array.push(triggers_array, trigger_data)
+      end)
+
+      # Save should FAIL with limit exceeded error (NOT auto-disable)
+      assert {:error, %Lightning.Extensions.Message{text: text}} =
+               Session.save_workflow(session, user)
+
+      assert text =~ "limit"
+    end
   end
 
   describe "persistence reconciliation" do
