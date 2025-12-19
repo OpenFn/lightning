@@ -353,7 +353,7 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
         tooltip={@tooltip}
         phx-click={
           if !@disabled,
-            do: JS.navigate(~p"/projects/#{@project_id}/w/new?method=template")
+            do: JS.navigate(~p"/projects/#{@project_id}/w/new")
         }
         class="col-span-1 w-full"
         role="button"
