@@ -1,6 +1,7 @@
 import { cn } from '#/utils/cn';
 
 import type { Template } from '../../types/template';
+import Badge from '../common/Badge';
 
 interface TemplateCardProps {
   template: Template;
@@ -57,12 +58,22 @@ export function TemplateCard({
         </div>
       </div>
 
-      <h3 className="text-sm font-medium text-gray-900 mb-1 pr-6 truncate">
-        {template.name}
-      </h3>
-      <p className="text-sm text-gray-600 line-clamp-2">
-        {template.description || 'No description provided'}
-      </p>
+      <div
+        className={cn(
+          'flex items-center gap-2 pr-6',
+          !('isBase' in template && template.isBase) && 'mb-1'
+        )}
+      >
+        <h3 className="text-sm font-medium text-gray-900 truncate">
+          {template.name}
+        </h3>
+        {'isBase' in template && template.isBase && <Badge>base</Badge>}
+      </div>
+      {'isBase' in template && template.isBase ? null : (
+        <p className="text-sm text-gray-600 line-clamp-2">
+          {template.description || 'No description provided'}
+        </p>
+      )}
     </div>
   );
 }
