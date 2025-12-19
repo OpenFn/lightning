@@ -11,7 +11,7 @@ import { cn } from '#/utils/cn';
 import formatDate from '#/utils/formatDate';
 import truncateUid from '#/utils/truncateUID';
 
-import Pill from '../Badge';
+import Pill from '#/collaborative-editor/components/common/Badge';
 import DataclipTypePill from '../DataclipTypePill';
 import {
   DataclipTypeNames,
