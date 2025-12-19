@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest';
 
 import {
   buildClassicalEditorUrl,
-  buildCollaborativeEditorUrl,
   classicalToCollaborativeParams,
   collaborativeToClassicalParams,
   getMappingConfig,
@@ -218,46 +217,6 @@ describe('editorUrlConversion', () => {
       expect(url).toBe(
         '/projects/proj-1/w/wf-1?a=r-1&s=t-1&m=workflow_input&v=5&method=ai'
       );
-    });
-  });
-
-  describe('buildCollaborativeEditorUrl', () => {
-    it('builds URL for existing workflow', () => {
-      const url = buildCollaborativeEditorUrl({
-        projectId: 'proj-123',
-        workflowId: 'wf-456',
-        searchParams: new URLSearchParams('a=run-789&s=job-abc&m=expand'),
-        isNewWorkflow: false,
-        selectedType: 'job',
-      });
-
-      expect(url).toBe(
-        '/projects/proj-123/w/wf-456/collaborate?run=run-789&job=job-abc&panel=editor'
-      );
-    });
-
-    it('builds URL for new workflow', () => {
-      const url = buildCollaborativeEditorUrl({
-        projectId: 'proj-123',
-        workflowId: null,
-        searchParams: new URLSearchParams('s=job-abc'),
-        isNewWorkflow: true,
-      });
-
-      expect(url).toBe(
-        '/projects/proj-123/w/new/collaborate?method=template&job=job-abc'
-      );
-    });
-
-    it('builds URL without query params when empty', () => {
-      const url = buildCollaborativeEditorUrl({
-        projectId: 'proj-123',
-        workflowId: 'wf-456',
-        searchParams: new URLSearchParams(),
-        isNewWorkflow: false,
-      });
-
-      expect(url).toBe('/projects/proj-123/w/wf-456/collaborate');
     });
   });
 
