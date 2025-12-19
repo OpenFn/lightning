@@ -267,7 +267,7 @@ defmodule LightningWeb.Components.Common do
     assigns = assign(assigns, display: display, message: message)
 
     ~H"""
-    <div class="px-3 pb-2 text-xs flex gap-1 justify-center">
+    <div class="version-chip px-3 pb-2 text-xs flex gap-1 justify-center">
       <code
         class={[
           "py-1 rounded-md",

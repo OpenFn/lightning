@@ -2,8 +2,6 @@ defmodule LightningWeb.LayoutComponents do
   @moduledoc false
   use LightningWeb, :html
 
-  import PetalComponents.Avatar
-
   alias LightningWeb.Components.Menu
   alias Phoenix.LiveView.JS
 
@@ -23,60 +21,59 @@ defmodule LightningWeb.LayoutComponents do
 
     ~H"""
     <div
-      class={["relative", !@collapsed && "w-full"]}
-      phx-click-away={JS.hide(to: "##{@menu_id}")}
-      phx-window-keydown={JS.hide(to: "##{@menu_id}")}
+      id="user-menu-wrapper"
+      class="relative w-full"
+      phx-click-away={
+        JS.hide(to: "##{@menu_id}")
+        |> JS.remove_class("menu-open", to: "#sidebar-panel")
+      }
+      phx-window-keydown={
+        JS.hide(to: "##{@menu_id}")
+        |> JS.remove_class("menu-open", to: "#sidebar-panel")
+      }
       phx-key="Escape"
     >
-      <button
-        class={[
-          "bg-white/10 hover:bg-white/20 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-white/30",
-          !@collapsed && "w-full px-3 py-2.5 text-left max-w-full",
-          @collapsed && "p-2"
-        ]}
-        phx-click={
-          JS.toggle(
-            to: "##{@menu_id}",
-            in: "transition ease-out duration-100",
-            out: "transition ease-in duration-75"
-          )
-        }
-        type="button"
-        aria-haspopup="true"
-        title={
-          if @collapsed,
-            do: "#{@current_user.first_name} #{@current_user.last_name || ""}",
-            else: nil
-        }
+      <div
+        id="user-menu-trigger"
+        class="w-full px-3 py-2 flex items-center gap-2 rounded-lg bg-white/10 hover:bg-white/20 transition-colors group cursor-pointer"
       >
-        <div class={["flex items-center", !@collapsed && "gap-2 min-w-0"]}>
-          <div class="shrink-0">
-            <.avatar
-              size="sm"
-              name={
-                String.at(@current_user.first_name, 0) <>
-                  if is_nil(@current_user.last_name),
-                    do: "",
-                    else: String.at(@current_user.last_name, 0)
-              }
-            />
-          </div>
-          <div
-            :if={!@collapsed}
-            class="min-w-0 overflow-hidden flex-1 user-menu-text"
-          >
-            <div class="text-sm font-medium text-white truncate">
-              {@current_user.first_name}
-              {if @current_user.last_name, do: " " <> @current_user.last_name}
-            </div>
-          </div>
+        <%!-- Hamburger - toggles sidebar --%>
+        <button
+          type="button"
+          phx-click="toggle_sidebar"
+          class="shrink-0 focus:outline-none rounded hover:opacity-80 p-0.5 -m-0.5"
+          title={if @collapsed, do: "Expand sidebar", else: "Collapse sidebar"}
+        >
           <.icon
-            :if={!@collapsed}
-            name="hero-chevron-down"
-            class="w-4 h-4 text-white/70 shrink-0"
+            name={if @collapsed, do: "hero-bars-3", else: "hero-bars-3-bottom-left"}
+            class="w-7 h-7 text-white/70 group-hover:text-white"
           />
-        </div>
-      </button>
+        </button>
+        <%!-- User menu - opens dropdown --%>
+        <button
+          type="button"
+          phx-click={
+            JS.toggle(
+              to: "##{@menu_id}",
+              in: "transition ease-out duration-100",
+              out: "transition ease-in duration-75"
+            )
+            |> JS.toggle_class("menu-open", to: "#sidebar-panel")
+          }
+          class={[
+            "flex-1 flex items-center gap-2 min-w-0 focus:outline-none rounded hover:bg-white/10 px-1 -mx-1 user-menu-text",
+            @collapsed && "hidden"
+          ]}
+          aria-haspopup="true"
+          title="Menu"
+        >
+          <span class="flex-1 text-left text-white text-sm truncate">
+            {@current_user.first_name}{if @current_user.last_name,
+              do: " " <> @current_user.last_name}
+          </span>
+          <.icon name="hero-chevron-down" class="w-4 h-4 text-white/70 shrink-0" />
+        </button>
+      </div>
       <div
         id={@menu_id}
         class="hidden fixed z-9999 mt-2 w-56 origin-top-left divide-y divide-gray-100 rounded-md bg-white shadow-lg outline-1 outline-black/5"
@@ -200,50 +197,29 @@ defmodule LightningWeb.LayoutComponents do
     assigns = assign(assigns, initials: initials, project_name: project_name)
 
     ~H"""
-    <div class={["my-4", @collapsed && "mx-2", !@collapsed && "mx-3"]}>
+    <div id="project-picker-wrapper" class="my-4 mx-3">
       <button
         id="project-picker-trigger"
         type="button"
-        class={[
-          "w-full rounded-lg bg-white/10 hover:bg-white/20 transition-colors focus:outline-none focus:ring-2 focus:ring-white/30",
-          @collapsed && "p-2 flex justify-center",
-          !@collapsed && "px-3 py-2 flex items-center gap-2"
-        ]}
+        class="w-full px-3 py-2 flex items-center gap-2 rounded-lg bg-white/10 hover:bg-white/20 transition-colors focus:outline-none focus:ring-2 focus:ring-white/30"
         phx-click={show_project_picker()}
-        phx-hook={if @collapsed, do: "Tooltip", else: nil}
-        aria-label={if @collapsed, do: @project_name || "Select project", else: nil}
-        data-placement={if @collapsed, do: "right", else: nil}
       >
-        <%= if @initials do %>
-          <span class={[
-            "flex items-center justify-center rounded-md bg-white/20 text-white font-semibold",
-            @collapsed && "h-8 w-8 text-sm",
-            !@collapsed && "h-7 w-7 text-xs"
-          ]}>
-            {@initials}
-          </span>
-          <span
-            :if={!@collapsed}
-            class="flex-1 text-left text-white/90 text-sm truncate"
-          >
-            {@project_name}
-          </span>
-          <.icon
-            :if={!@collapsed}
-            name="hero-chevron-up-down"
-            class="h-4 w-4 text-white/50"
-          />
-        <% else %>
-          <.icon name="hero-magnifying-glass" class="h-5 w-5 text-white/70" />
-          <span :if={!@collapsed} class="flex-1 text-left text-white/70 text-sm">
-            Select project
-          </span>
-          <.icon
-            :if={!@collapsed}
-            name="hero-chevron-up-down"
-            class="h-4 w-4 text-white/50"
-          />
-        <% end %>
+        <.icon name="hero-magnifying-glass" class="h-5 w-5 text-white/70 shrink-0" />
+        <span class={[
+          "flex-1 text-left text-sm truncate project-picker-text",
+          @collapsed && "hidden",
+          @initials && "text-white/90",
+          !@initials && "text-white/70"
+        ]}>
+          {@project_name || "Select project"}
+        </span>
+        <.icon
+          name="hero-chevron-up-down"
+          class={[
+            "h-4 w-4 text-white/50 project-picker-chevron shrink-0",
+            @collapsed && "hidden"
+          ]}
+        />
       </button>
     </div>
     """
@@ -444,15 +420,22 @@ defmodule LightningWeb.LayoutComponents do
 
     all_crumbs = collect_breadcrumbs(assigns)
 
-    # We want max 2 items total (including the page title which is always shown)
-    # So we can show at most 1 breadcrumb. If there are more, hide the earlier ones
+    # Always show the project name if present (it's the second crumb after "Projects")
+    # Hide "Projects" link and any intermediate crumbs in the dropdown
+    # The page title is always shown separately at the end
     {hidden_crumbs, visible_crumbs} =
-      if length(all_crumbs) > 1 do
-        # Show only the last breadcrumb, hide all earlier ones
-        {Enum.take(all_crumbs, length(all_crumbs) - 1),
-         Enum.take(all_crumbs, -1)}
-      else
-        {[], all_crumbs}
+      case all_crumbs do
+        # No breadcrumbs
+        [] ->
+          {[], []}
+
+        # Single breadcrumb - show it
+        [single] ->
+          {[], [single]}
+
+        # Two or more: hide first ("Projects"), show project name (second)
+        [first | rest] ->
+          {[first], rest}
       end
 
     # description has the same title class except for height and font

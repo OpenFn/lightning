@@ -20,60 +20,44 @@
     />
   <% end %>
   <div class="flex flex-row h-full">
-    <div class="flex-shrink-0 flex flex-col relative z-[100]">
+    <%!-- Sidebar placeholder: maintains layout width --%>
+    <div
+      class="flex-shrink-0 transition-[width] duration-200"
+      style={
+        if assigns[:sidebar_collapsed], do: "width: 64px;", else: "width: 192px;"
+      }
+    >
+    </div>
+    <%!-- Sidebar panel: overlays when collapsed, inline when expanded --%>
+    <div
+      id="sidebar-panel"
+      class={[
+        "flex flex-col h-full z-[100] group transition-[width] duration-200",
+        assigns[:sidebar_collapsed] && "fixed sidebar-collapsed",
+        !assigns[:sidebar_collapsed] && "fixed"
+      ]}
+      style={
+        if assigns[:sidebar_collapsed],
+          do: "width: 64px;",
+          else: "width: 192px;"
+      }
+    >
       <%!-- Header --%>
-      <div
-        class={[
-          "app-logo-container h-20 flex items-center justify-center transition-[width] duration-200 ease-in-out",
-          @side_menu_theme,
-          assigns[:sidebar_collapsed] && "px-2",
-          !assigns[:sidebar_collapsed] && "px-3"
-        ]}
-        style={
-          if assigns[:sidebar_collapsed],
-            do: "width: 64px;",
-            else: "width: 192px;"
-        }
-      >
+      <div class={[
+        "app-logo-container h-20 flex items-center px-3",
+        @side_menu_theme
+      ]}>
         <LayoutComponents.user_menu_dropdown
           current_user={@current_user}
           collapsed={assigns[:sidebar_collapsed] || false}
         />
       </div>
-      <%!-- Toggle button positioned absolutely --%>
-      <button
-        phx-click="toggle_sidebar"
-        class={[
-          "absolute top-6 -right-[20px] flex items-center sidebar-toggle-btn rounded-r-md pr-1 py-2",
-          @side_menu_theme
-        ]}
-        title={
-          if assigns[:sidebar_collapsed],
-            do: "Expand sidebar",
-            else: "Collapse sidebar"
-        }
-        aria-label={
-          if assigns[:sidebar_collapsed],
-            do: "Expand sidebar",
-            else: "Collapse sidebar"
-        }
-      >
-        <Heroicons.chevron_left class={[
-          "h-4 w-4 text-white transition-transform duration-200",
-          assigns[:sidebar_collapsed] && "rotate-180"
-        ]} />
-      </button>
       <nav
         id="side-menu"
         class={[
-          "flex-1 overflow-hidden transition-[width] duration-200 ease-in-out",
+          "flex-1 overflow-hidden",
           @side_menu_theme
         ]}
-        style={
-          if assigns[:sidebar_collapsed],
-            do: "width: 64px;",
-            else: "width: 192px;"
-        }
       >
         <div class="flex flex-col h-full">
           <div class="flex-1 overflow-y-auto min-h-0 flex flex-col">
@@ -82,7 +66,6 @@
               to={~p"/settings/projects"}
               active={@active_menu_item == :projects}
               collapsed={assigns[:sidebar_collapsed] || false}
-              tooltip="Projects"
             >
               <Heroicons.building_library class="h-5 w-5 inline-block mr-2" />
               <span class="inline-block align-middle menu-item-text">
@@ -93,7 +76,6 @@
               to={~p"/settings/users"}
               active={@active_menu_item == :users}
               collapsed={assigns[:sidebar_collapsed] || false}
-              tooltip="Users"
             >
               <Heroicons.user_group class="h-5 w-5 inline-block mr-2" />
               <span class="inline-block align-middle menu-item-text">Users</span>
@@ -102,7 +84,6 @@
               to={~p"/settings/authentication/new"}
               active={@active_menu_item == :authentication}
               collapsed={assigns[:sidebar_collapsed] || false}
-              tooltip="Authentication"
             >
               <Heroicons.key class="h-5 w-5 inline-block mr-2" />
               <span class="inline-block align-middle menu-item-text">
@@ -113,7 +94,6 @@
               to={~p"/settings/audit"}
               active={@active_menu_item == :audit}
               collapsed={assigns[:sidebar_collapsed] || false}
-              tooltip="Audit"
             >
               <Heroicons.archive_box class="h-5 w-5 inline-block mr-2" />
               <span class="inline-block align-middle menu-item-text">Audit</span>
@@ -122,7 +102,6 @@
               to={~p"/settings/collections"}
               active={@active_menu_item == :collections}
               collapsed={assigns[:sidebar_collapsed] || false}
-              tooltip="Collections"
             >
               <Heroicons.circle_stack class="h-5 w-5 inline-block mr-2" />
               <span class="inline-block align-middle menu-item-text">
@@ -133,31 +112,26 @@
             <Menu.menu_item
               to={~p"/projects"}
               collapsed={assigns[:sidebar_collapsed] || false}
-              tooltip="Back"
             >
               <Icon.left class="h-5 w-5 inline-block mr-2" />
               <span class="inline-block align-middle menu-item-text">Back</span>
             </Menu.menu_item>
           </div>
-          <div class="flex-shrink-0">
-            <div class="px-3 py-1 flex justify-center">
-              <span
-                :if={assigns[:sidebar_collapsed]}
-                id="openfn-logo-settings-tooltip"
-                phx-hook="Tooltip"
-                aria-label={Lightning.release().label}
-                data-placement="right"
-              >
-                <Icon.openfn_fn class="h-6 primary-light" />
-              </span>
-              <Common.openfn_logo
-                :if={!assigns[:sidebar_collapsed]}
-                class="h-6 primary-light"
-              />
+          <div class="flex-shrink-0 sidebar-footer h-20 flex flex-col items-center justify-center relative">
+            <%!-- Subtle separator --%>
+            <div class="absolute top-3 left-3 right-3 border-t border-white/10">
             </div>
-            <LightningWeb.Components.Common.version_chip :if={
-              !assigns[:sidebar_collapsed]
-            } />
+            <%!-- Logo: "Open" text (animated) + square logo --%>
+            <div class="flex items-center h-6">
+              <span class="sidebar-logo-text text-white text-sm tracking-tight transition-all duration-200 overflow-hidden leading-6">
+                Open
+              </span>
+              <img src="/images/square-logo.png" alt="Fn" class="h-6 w-auto" />
+            </div>
+            <%!-- Version chip - absolutely positioned below logo --%>
+            <div class="sidebar-version-chip absolute -bottom-1 left-0 right-0 transition-opacity duration-150">
+              <LightningWeb.Components.Common.version_chip />
+            </div>
           </div>
         </div>
       </nav>

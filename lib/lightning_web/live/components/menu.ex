@@ -15,7 +15,6 @@ defmodule LightningWeb.Components.Menu do
       to={~p"/projects/#{@project_id}/w"}
       active={@active_menu_item == :overview}
       collapsed={@collapsed}
-      tooltip="Workflows"
     >
       <Icon.workflows class="h-5 w-5 inline-block mr-2 align-middle" />
       <span class="inline-block align-middle menu-item-text">Workflows</span>
@@ -26,7 +25,6 @@ defmodule LightningWeb.Components.Menu do
         to={~p"/projects/#{@project_id}/sandboxes"}
         active={@active_menu_item == :sandboxes}
         collapsed={@collapsed}
-        tooltip="Sandboxes"
       >
         <Icon.sandboxes class="h-5 w-5 inline-block mr-2 align-middle" />
         <span class="inline-block align-middle menu-item-text">Sandboxes</span>
@@ -37,7 +35,6 @@ defmodule LightningWeb.Components.Menu do
       to={~p"/projects/#{@project_id}/history"}
       active={@active_menu_item == :runs}
       collapsed={@collapsed}
-      tooltip="History"
     >
       <Icon.runs class="h-5 w-5 inline-block mr-2" />
       <span class="inline-block align-middle menu-item-text">History</span>
@@ -47,7 +44,6 @@ defmodule LightningWeb.Components.Menu do
       to={"/projects/#{@project_id}/settings"}
       active={@active_menu_item == :settings}
       collapsed={@collapsed}
-      tooltip="Settings"
     >
       <Icon.settings class="h-5 w-5 inline-block mr-2" />
       <span class="inline-block align-middle menu-item-text">Settings</span>
@@ -73,7 +69,6 @@ defmodule LightningWeb.Components.Menu do
       to={~p"/projects"}
       active={@active_menu_item == :projects}
       collapsed={@collapsed}
-      tooltip="Projects"
     >
       <Heroicons.folder class="h-5 w-5 inline-block mr-2" />
       <span class="menu-item-text">Projects</span>
@@ -82,7 +77,6 @@ defmodule LightningWeb.Components.Menu do
       to={~p"/profile"}
       active={@active_menu_item == :profile}
       collapsed={@collapsed}
-      tooltip="User Profile"
     >
       <Heroicons.user_circle class="h-5 w-5 inline-block mr-2" />
       <span class="menu-item-text">User Profile</span>
@@ -91,7 +85,6 @@ defmodule LightningWeb.Components.Menu do
       to={~p"/credentials"}
       active={@active_menu_item == :credentials}
       collapsed={@collapsed}
-      tooltip="Credentials"
     >
       <Heroicons.key class="h-5 w-5 inline-block mr-2" />
       <span class="menu-item-text">Credentials</span>
@@ -100,7 +93,6 @@ defmodule LightningWeb.Components.Menu do
       to={~p"/profile/tokens"}
       active={@active_menu_item == :tokens}
       collapsed={@collapsed}
-      tooltip="API Tokens"
     >
       <Heroicons.command_line class="h-5 w-5 inline-block mr-2" />
       <span class="menu-item-text">API Tokens</span>
@@ -112,48 +104,32 @@ defmodule LightningWeb.Components.Menu do
   attr :href, :string, default: nil
   attr :active, :boolean, default: false
   attr :collapsed, :boolean, default: false
-  attr :tooltip, :string, default: nil
   attr :target, :string, default: "_blank"
   attr :text, :string, default: nil
   slot :inner_block
 
   def menu_item(assigns) do
     base_classes =
-      ~w[menu-item px-3 py-2 rounded-md text-sm font-medium rounded-md block]
+      ~w[menu-item px-3 py-2 rounded-md text-sm font-medium rounded-md block flex items-center]
 
     active_classes = ~w[menu-item-active] ++ base_classes
 
     inactive_classes = ~w[menu-item-inactive] ++ base_classes
-
-    collapsed_classes = ~w[menu-item-collapsed flex justify-center items-center]
 
     assigns =
       assigns
       |> assign(
         class:
           if assigns[:active] do
-            if assigns[:collapsed],
-              do: active_classes ++ collapsed_classes,
-              else: active_classes
+            active_classes
           else
-            if assigns[:collapsed],
-              do: inactive_classes ++ collapsed_classes,
-              else: inactive_classes
+            inactive_classes
           end
       )
       |> assign_new(:target, fn -> "_blank" end)
-      |> assign_new(:id, fn ->
-        "menu-item-" <> Base.encode16(:crypto.strong_rand_bytes(4), case: :lower)
-      end)
 
     ~H"""
-    <div
-      id={if @collapsed && @tooltip, do: @id, else: nil}
-      class={["h-12", !@collapsed && "mx-3", @collapsed && "mx-2"]}
-      phx-hook={if @collapsed && @tooltip, do: "Tooltip", else: nil}
-      aria-label={if @collapsed && @tooltip, do: @tooltip, else: nil}
-      data-placement={if @collapsed && @tooltip, do: "right", else: nil}
-    >
+    <div class={["h-12 mx-3"]}>
       <%= if assigns[:href] do %>
         <.link href={@href} target={@target} class={@class}>
           <%= if assigns[:inner_block] do %>

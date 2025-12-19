@@ -301,13 +301,9 @@
       }
     }
 
-    /* Collapsed sidebar styles */
-    .menu-item-collapsed .menu-item-text {
-      display: none;
-    }
-
-    .menu-item-collapsed svg {
-      margin-right: 0;
+    /* Prevent icons from shrinking in flex containers */
+    .menu-item svg {
+      flex-shrink: 0;
     }
 
     /* Hide scrollbar in sidebar to prevent flash during transition */
@@ -337,6 +333,229 @@
       --primary-bg: var(--color-slate-700);
       --primary-text: white;
       --primary-bg-dark: var(--color-slate-900);
+    }
+  }
+
+  /* Material Design easing for sidebar transitions */
+  #sidebar-panel,
+  #sidebar-panel + div > div:first-child {
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  /* Menu item text - base styles with transition */
+  #sidebar-panel .menu-item-text {
+    transition: max-width 200ms cubic-bezier(0.4, 0, 0.2, 1), opacity 200ms cubic-bezier(0.4, 0, 0.2, 1);
+    overflow: hidden;
+    white-space: nowrap;
+  }
+
+  /* Logo text transition */
+  #sidebar-panel .sidebar-logo-text {
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  /* Sidebar footer - default state (expanded) */
+  #sidebar-panel .sidebar-footer {
+    .sidebar-logo-text {
+      max-width: 50px;
+      margin-right: 4px;
+      opacity: 1;
+    }
+
+    .sidebar-version-chip {
+      opacity: 0.5;
+      transition-delay: 200ms; /* Appear after menu animation */
+    }
+  }
+
+  /* Keep sidebar expanded when menu is open */
+  #sidebar-panel.sidebar-collapsed.menu-open {
+    width: 192px !important;
+    box-shadow: 8px 0 24px rgba(0, 0, 0, 0.3), 4px 0 8px rgba(0, 0, 0, 0.2);
+
+    &::after {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    .menu-item-text {
+      max-width: 150px !important;
+      opacity: 1 !important;
+    }
+
+    /* Reset menu item alignment when menu open */
+    .menu-item {
+      justify-content: flex-start !important;
+    }
+
+    .menu-item svg {
+      margin-right: 0.5rem !important;
+    }
+
+    .project-picker-text,
+    .project-picker-chevron,
+    .user-menu-chevron,
+    .sidebar-expanded-logo {
+      display: block !important;
+    }
+
+    .user-menu-text {
+      display: flex !important;
+    }
+
+    .sidebar-logo-text {
+      max-width: 50px !important;
+      margin-right: 4px !important;
+      opacity: 1 !important;
+    }
+
+    .sidebar-version-chip {
+      opacity: 0.5 !important;
+      transition-delay: 200ms !important;
+    }
+
+    #project-picker-wrapper,
+    #user-menu-wrapper {
+      display: block !important;
+    }
+
+    #project-picker-trigger,
+    #user-menu-trigger {
+      width: 100% !important;
+      gap: 0.5rem !important;
+    }
+  }
+
+  /* Sidebar collapsed state - hide text */
+  #sidebar-panel.sidebar-collapsed {
+    transition: width 200ms cubic-bezier(0.4, 0, 0.2, 1), box-shadow 200ms cubic-bezier(0.4, 0, 0.2, 1);
+
+    /* Hide text elements when collapsed - use opacity/width for smooth animation */
+    .menu-item-text {
+      max-width: 0 !important;
+      opacity: 0 !important;
+    }
+
+    /* Center icons when collapsed */
+    .menu-item {
+      justify-content: center;
+    }
+
+    .menu-item svg {
+      margin-right: 0 !important;
+    }
+
+    .project-picker-text,
+    .project-picker-chevron,
+    .user-menu-text,
+    .user-menu-chevron {
+      display: none !important;
+    }
+
+    /* Animate logo text to collapse */
+    .sidebar-logo-text {
+      max-width: 0 !important;
+      margin-right: 0 !important;
+      opacity: 0 !important;
+    }
+
+    /* Hide version chip when collapsed - keep space, just hide content */
+    .sidebar-version-chip {
+      opacity: 0 !important;
+      transition-delay: 0ms !important;
+    }
+
+    /* Center wrappers when collapsed */
+    #project-picker-wrapper,
+    #user-menu-wrapper {
+      display: flex !important;
+      justify-content: center !important;
+    }
+
+    /* Shrink to fit when collapsed */
+    #project-picker-trigger,
+    #user-menu-trigger {
+      width: auto !important;
+      gap: 0 !important;
+    }
+
+    /* Hover expansion - show everything, expand width */
+    /* Overlay when collapsed - matches standardized overlay style */
+    &::after {
+      content: "";
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgb(17 24 39 / 0.6); /* gray-900/60 */
+      backdrop-filter: blur(4px); /* backdrop-blur-sm */
+      pointer-events: none;
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 200ms cubic-bezier(0.4, 0, 0.2, 1), visibility 200ms cubic-bezier(0.4, 0, 0.2, 1);
+      z-index: -1;
+    }
+
+    &:hover {
+      width: 192px !important;
+      box-shadow: 8px 0 24px rgba(0, 0, 0, 0.3), 4px 0 8px rgba(0, 0, 0, 0.2);
+
+      &::after {
+        opacity: 1;
+        visibility: visible;
+      }
+
+      /* Show all text elements on hover */
+      .menu-item-text {
+        max-width: 150px !important;
+        opacity: 1 !important;
+      }
+
+      /* Reset menu item alignment on hover */
+      .menu-item {
+        justify-content: flex-start !important;
+      }
+
+      .menu-item svg {
+        margin-right: 0.5rem !important;
+      }
+
+      .project-picker-text,
+      .project-picker-chevron,
+      .user-menu-chevron {
+        display: block !important;
+      }
+
+      /* User menu button needs flex display */
+      .user-menu-text {
+        display: flex !important;
+      }
+
+      /* Animate logo text on hover */
+      .sidebar-logo-text {
+        max-width: 50px !important;
+        margin-right: 4px !important;
+        opacity: 1 !important;
+      }
+
+      /* Show version chip on hover - fades in after menu animation */
+      .sidebar-version-chip {
+        opacity: 0.5 !important;
+        transition-delay: 200ms !important;
+      }
+
+      /* Restore wrapper and button layout on hover */
+      #project-picker-wrapper,
+      #user-menu-wrapper {
+        display: block !important;
+      }
+
+      #project-picker-trigger,
+      #user-menu-trigger {
+        width: 100% !important;
+        gap: 0.5rem !important;
+      }
     }
   }
 
