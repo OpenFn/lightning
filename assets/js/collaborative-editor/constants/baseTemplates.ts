@@ -21,7 +21,7 @@ jobs:
 triggers:
   webhook:
     type: webhook
-    enabled: false
+    enabled: true
 edges:
   webhook->My-job:
     source_trigger: webhook
@@ -50,7 +50,7 @@ triggers:
   cron:
     type: cron
     cron_expression: "0 0 * * *"
-    enabled: false
+    enabled: true
 edges:
   cron->My-job:
     source_trigger: cron
