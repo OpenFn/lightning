@@ -19,6 +19,9 @@ and this project adheres to
 
 ### Changed
 
+- Update workflow concurrency error message
+  [#4216](https://github.com/OpenFn/lightning/issues/4216)
+
 ### Fixed
 
 ## [2.15.2] - 2025-12-18
