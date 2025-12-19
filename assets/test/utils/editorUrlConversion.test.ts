@@ -244,7 +244,9 @@ describe('editorUrlConversion', () => {
         isNewWorkflow: true,
       });
 
-      expect(url).toBe('/projects/proj-123/w/new/collaborate?job=job-abc');
+      expect(url).toBe(
+        '/projects/proj-123/w/new/collaborate?method=template?job=job-abc'
+      );
     });
 
     it('builds URL without query params when empty', () => {
