@@ -4,18 +4,19 @@ export const BASE_TEMPLATES: BaseTemplate[] = [
   {
     id: 'base-webhook-template',
     name: 'Event-based workflow',
-    description: 'Trigger a workflow with a webhook or API call',
-    tags: ['webhook', 'api', 'event'],
+    description:
+      'A basic template for a workflow that does something on-demand, when a webhook notification is received.',
+    tags: ['webhook', 'api', 'event', 'real-time'],
     isBase: true,
     code: `name: "Event-based workflow"
 jobs:
-  My-job:
-    name: My job
+  Transform-data:
+    name: Transform data
     adaptor: "@openfn/language-common@latest"
     body: |
-      // Start writing your job code here
+      // Validate and transform the data you've received...
       fn(state => {
-        console.log("Triggered by webhook");
+        console.log("Do some data transformation here");
         return state;
       })
 triggers:
@@ -23,38 +24,36 @@ triggers:
     type: webhook
     enabled: true
 edges:
-  webhook->My-job:
+  webhook->Transform-data:
     source_trigger: webhook
-    target_job: My-job
+    target_job: Transform-data
     condition_type: always
     enabled: true`,
   },
   {
     id: 'base-cron-template',
     name: 'Scheduled workflow',
-    description: 'Run a workflow on a schedule using cron',
-    tags: ['cron', 'scheduled', 'timer'],
+    description:
+      'A basic template for a workflow that does something periodically, using a "cron" schedule.',
+    tags: ['cron', 'scheduled', 'timer', 'periodic'],
     isBase: true,
     code: `name: "Scheduled workflow"
 jobs:
-  My-job:
-    name: My job
-    adaptor: "@openfn/language-common@latest"
+  Get-data:
+    name: Get data
+    adaptor: "@openfn/language-http@latest"
     body: |
-      // Start writing your job code here
-      fn(state => {
-        console.log("Running on schedule");
-        return state;
-      })
+      // Get some data from an API...
+      get('https://www.example.com');
 triggers:
   cron:
     type: cron
     cron_expression: "0 0 * * *"
     enabled: true
 edges:
-  cron->My-job:
+  cron->Get-data:
     source_trigger: cron
-    target_job: My-job
+    target_job: Get-data
     condition_type: always
     enabled: true`,
   },

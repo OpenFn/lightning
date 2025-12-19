@@ -72,14 +72,12 @@ export function TemplatePanel({ onImportClick, onImport }: TemplatePanelProps) {
   }, [channel, uiStore]);
 
   const allTemplates: Template[] = useMemo(() => {
-    const combined = [...BASE_TEMPLATES, ...templates];
-
     if (!searchQuery.trim()) {
-      return combined;
+      return [...BASE_TEMPLATES, ...templates];
     }
 
     const query = searchQuery.toLowerCase();
-    return combined.filter(template => {
+    const filteredUserTemplates = templates.filter(template => {
       const matchName = template.name.toLowerCase().includes(query);
       const matchDesc = template.description?.toLowerCase().includes(query);
       const matchTags = template.tags.some(tag =>
@@ -87,6 +85,9 @@ export function TemplatePanel({ onImportClick, onImport }: TemplatePanelProps) {
       );
       return matchName || matchDesc || matchTags;
     });
+
+    // Always show base templates, regardless of search query
+    return [...BASE_TEMPLATES, ...filteredUserTemplates];
   }, [templates, searchQuery]);
 
   const handleSelectTemplate = useCallback(
@@ -117,8 +118,8 @@ export function TemplatePanel({ onImportClick, onImport }: TemplatePanelProps) {
   };
 
   const handleBuildWithAI = useCallback(() => {
-    // Only trigger if there are no matching templates and there's a search query
-    if (allTemplates.length === 0 && searchQuery) {
+    // Only trigger if no user templates matched and there's a search query
+    if (allTemplates.length === BASE_TEMPLATES.length && searchQuery) {
       // Clear any existing AI session and disconnect
       aiStore.disconnect();
       aiStore.clearSession();
@@ -141,7 +142,7 @@ export function TemplatePanel({ onImportClick, onImport }: TemplatePanelProps) {
       <div className="shrink-0 px-4 py-4 border-b border-gray-200">
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-lg font-semibold text-gray-900">
-            Browse templates
+            Create a new workflow
           </h2>
           <button
             type="button"
@@ -156,7 +157,7 @@ export function TemplatePanel({ onImportClick, onImport }: TemplatePanelProps) {
           value={searchQuery}
           onChange={handleSearchChange}
           onEnter={handleBuildWithAI}
-          placeholder="Search templates by name, description, or tags..."
+          placeholder="Describe your workflow..."
           focusOnMount
         />
       </div>
@@ -214,21 +215,19 @@ export function TemplatePanel({ onImportClick, onImport }: TemplatePanelProps) {
               />
             ))}
 
-            {allTemplates.length === 0 && searchQuery && (
+            {allTemplates.length === BASE_TEMPLATES.length && searchQuery && (
               <div className="col-span-full flex items-center justify-center h-64">
                 <div className="text-center max-w-md">
                   <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-gray-100 mb-5">
-                    <span className="hero-magnifying-glass h-7 w-7 text-gray-400" />
+                    <span className="hero-question-mark-circle h-7 w-7 text-gray-400" />
                   </div>
-                  <h3 className="text-base font-medium text-gray-900 mb-2">
-                    No matching templates
-                  </h3>
                   <p className="text-sm text-gray-600 mb-6">
-                    We couldn't find any templates for "
+                    We couldn't find any matches for "
                     <span className="font-medium text-gray-900">
                       {searchQuery}
                     </span>
-                    "
+                    ". Start from scratch with one of these base templates or
+                    click below to generate this workflow with AI.
                   </p>
                   <button
                     type="button"
