@@ -818,7 +818,7 @@ defmodule Lightning.SessionTest do
       assert {:error, :workflow_deleted} = Session.save_workflow(session, user)
     end
 
-    test "allows saving EXISTING workflow even when at activation limit", %{
+    test "blocks saving EXISTING workflow when at activation limit", %{
       session: session,
       user: user,
       project: project,
@@ -845,18 +845,27 @@ defmodule Lightning.SessionTest do
         end
       )
 
-      # Modify the workflow name via Y.Doc
+      # Add an ENABLED trigger via Y.Doc - this triggers the activation limit check
       doc = Session.get_doc(session)
-      workflow_map = Yex.Doc.get_map(doc, "workflow")
+      triggers_array = Yex.Doc.get_array(doc, "triggers")
 
-      Yex.Doc.transaction(doc, "test_update_name", fn ->
-        Yex.Map.set(workflow_map, "name", "Updated Name")
+      trigger_data =
+        Yex.MapPrelim.from(%{
+          "id" => Ecto.UUID.generate(),
+          "type" => "webhook",
+          "enabled" => true
+        })
+
+      Yex.Doc.transaction(doc, "test_add_trigger", fn ->
+        Yex.Array.push(triggers_array, trigger_data)
       end)
 
-      # Save should SUCCEED for existing workflows - limit check is skipped
-      # because their triggers are already counted in the limit
-      assert {:ok, saved_workflow} = Session.save_workflow(session, user)
-      assert saved_workflow.name == "Updated Name"
+      # Save should FAIL for existing workflows at limit - they cannot enable
+      assert {:error,
+              %Lightning.Extensions.Message{
+                text: "Workflow activation limit exceeded"
+              }} =
+               Session.save_workflow(session, user)
     end
 
     test "correctly identifies existing workflow even with :built state struct",
@@ -927,19 +936,29 @@ defmodule Lightning.SessionTest do
         end
       )
 
-      # Update workflow name via Y.Doc
+      # Add an ENABLED trigger via Y.Doc - this triggers the activation limit check
       doc = Session.get_doc(edge_session)
-      workflow_map = Yex.Doc.get_map(doc, "workflow")
+      triggers_array = Yex.Doc.get_array(doc, "triggers")
 
-      Yex.Doc.transaction(doc, "test_update_name", fn ->
-        Yex.Map.set(workflow_map, "name", "Updated Existing")
+      trigger_data =
+        Yex.MapPrelim.from(%{
+          "id" => Ecto.UUID.generate(),
+          "type" => "webhook",
+          "enabled" => true
+        })
+
+      Yex.Doc.transaction(doc, "test_add_trigger", fn ->
+        Yex.Array.push(triggers_array, trigger_data)
       end)
 
-      # Save should SUCCEED because even though the session's workflow struct
+      # Save should FAIL because even though the session's workflow struct
       # has :built state and nil lock_version, the database check in new_workflow?
-      # correctly identifies it as an existing workflow
-      assert {:ok, saved_workflow} = Session.save_workflow(edge_session, user)
-      assert saved_workflow.name == "Updated Existing"
+      # correctly identifies it as an existing workflow (not new)
+      assert {:error,
+              %Lightning.Extensions.Message{
+                text: "Workflow activation limit exceeded"
+              }} =
+               Session.save_workflow(edge_session, user)
     end
 
     test "saves all workflow components correctly", %{
