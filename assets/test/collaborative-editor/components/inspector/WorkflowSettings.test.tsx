@@ -260,7 +260,7 @@ describe('WorkflowSettings - Project Concurrency Validation', () => {
     await waitFor(() => {
       expect(
         screen.getByText(
-          'this exceeds the project-wide concurrency limit of 5 and will have no effect'
+          'exceeds project concurrency limit (5) and has no effect'
         )
       ).toBeInTheDocument();
     });
@@ -288,7 +288,7 @@ describe('WorkflowSettings - Project Concurrency Validation', () => {
     await waitFor(() => {
       expect(
         screen.queryByText(
-          /this exceeds the project-wide concurrency limit of \d+ and will have no effect/
+          /exceeds project concurrency limit \(\d+\) and has no effect/
         )
       ).not.toBeInTheDocument();
     });
@@ -316,7 +316,7 @@ describe('WorkflowSettings - Project Concurrency Validation', () => {
     await waitFor(() => {
       expect(
         screen.queryByText(
-          /this exceeds the project-wide concurrency limit of \d+ and will have no effect/
+          /exceeds project concurrency limit \(\d+\) and has no effect/
         )
       ).not.toBeInTheDocument();
     });
@@ -344,7 +344,7 @@ describe('WorkflowSettings - Project Concurrency Validation', () => {
     await waitFor(() => {
       expect(
         screen.getByText(
-          'this exceeds the project-wide concurrency limit of 5 and will have no effect'
+          'exceeds project concurrency limit (5) and has no effect'
         )
       ).toBeInTheDocument();
     });
@@ -359,7 +359,7 @@ describe('WorkflowSettings - Project Concurrency Validation', () => {
     await waitFor(() => {
       expect(
         screen.queryByText(
-          /this exceeds the project-wide concurrency limit of \d+ and will have no effect/
+          /exceeds project concurrency limit \(\d+\) and has no effect/
         )
       ).not.toBeInTheDocument();
     });
