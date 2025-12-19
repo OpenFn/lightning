@@ -380,7 +380,7 @@ defmodule LightningWeb.WorkflowLive.Helpers do
       iex> collaborative_editor_url(%{
       ...>   "project_id" => "proj-1"
       ...> }, :new)
-      "/projects/proj-1/w/new/collaborate"
+      "/projects/proj-1/w/new/collaborate&method=template"
 
       # With multiple query params
       iex> collaborative_editor_url(%{

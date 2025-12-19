@@ -10,7 +10,7 @@ defmodule LightningWeb.WorkflowLive.HelpersTest do
       }
 
       result = Helpers.collaborative_editor_url(params, :new)
-      assert result == "/projects/proj-1/w/new/collaborate"
+      assert result == "/projects/proj-1/w/new/collaborate?method=template"
     end
 
     test "converts classical editor URL to collaborative for existing workflow" do
