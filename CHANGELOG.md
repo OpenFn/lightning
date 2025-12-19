@@ -24,6 +24,9 @@ and this project adheres to
 
 ### Fixed
 
+- Allow users to add collaborators with long email domains
+  [#4185](https://github.com/OpenFn/lightning/issues/4185)
+
 ## [2.15.2] - 2025-12-18
 
 ## [2.15.2-pre] - 2025-12-18
