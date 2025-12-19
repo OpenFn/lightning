@@ -144,22 +144,35 @@ export const convertWorkflowSpecToState = (
   const stateTriggers: Record<string, StateTrigger> = {};
   Object.entries(workflowSpec.triggers).forEach(([key, specTrigger]) => {
     const uId = specTrigger.id || randomUUID();
-    const trigger = {
-      id: uId,
-      type: specTrigger.type,
-      enabled: specTrigger.enabled !== undefined ? specTrigger.enabled : true,
-    };
+    const enabled =
+      specTrigger.enabled !== undefined ? specTrigger.enabled : true;
 
     if (specTrigger.type !== 'kafka' && specTrigger.pos) {
       positions[uId] = specTrigger.pos;
     }
 
-    if (specTrigger)
-      if (specTrigger.type === 'cron') {
-        trigger.cron_expression = specTrigger.cron_expression;
-      }
+    let trigger: StateTrigger;
+    if (specTrigger.type === 'cron') {
+      trigger = {
+        id: uId,
+        type: 'cron',
+        enabled,
+        cron_expression: specTrigger.cron_expression,
+      };
+    } else if (specTrigger.type === 'webhook') {
+      trigger = {
+        id: uId,
+        type: 'webhook',
+        enabled,
+      };
+    } else {
+      trigger = {
+        id: uId,
+        type: 'kafka',
+        enabled,
+      };
+    }
 
-    // TODO: handle kafka config
     stateTriggers[key] = trigger;
   });
 

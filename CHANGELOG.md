@@ -21,6 +21,8 @@ and this project adheres to
 
 - Update workflow concurrency error message
   [#4216](https://github.com/OpenFn/lightning/issues/4216)
+- Ensure workflow created via templates are disabled
+  [#4262](https://github.com/OpenFn/lightning/issues/4262)
 
 ### Fixed
 

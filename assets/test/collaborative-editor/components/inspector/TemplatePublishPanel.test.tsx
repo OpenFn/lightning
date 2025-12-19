@@ -349,6 +349,33 @@ describe('TemplatePublishPanel', () => {
       });
     });
 
+    test('preserves trigger state when publishing template', async () => {
+      const user = userEvent.setup();
+      // Mock a workflow with an enabled trigger
+      mockWorkflowState.triggers = [
+        { id: 'trigger-1', type: 'webhook', enabled: true },
+      ];
+
+      render(<TemplatePublishPanel />);
+
+      const publishButton = screen.getByRole('button', {
+        name: 'Publish Template',
+      });
+      await user.click(publishButton);
+
+      await waitFor(() => {
+        expect(useChannelModule.channelRequest).toHaveBeenCalled();
+      });
+
+      // Extract the code from the call
+      const call = vi.mocked(useChannelModule.channelRequest).mock.calls[0];
+      const payload = call[2] as any;
+      const yamlCode = payload.code;
+
+      // Verify the YAML preserves the original trigger state
+      expect(yamlCode).toContain('enabled: true');
+    });
+
     test('shows success notification and navigates on success', async () => {
       const user = userEvent.setup();
       render(<TemplatePublishPanel />);

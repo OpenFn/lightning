@@ -314,7 +314,7 @@ defmodule Lightning.Collaboration.Session do
          {:ok, workflow} <- fetch_workflow(state.workflow),
          changeset <-
            Lightning.Workflows.change_workflow(workflow, workflow_data),
-         :ok <- WorkflowUsageLimiter.limit_workflow_activation(changeset),
+         {:ok, changeset} <- maybe_disable_triggers_on_limit(changeset),
          {:ok, saved_workflow} <-
            Lightning.Workflows.save_workflow(changeset, user,
              skip_reconcile: true
@@ -464,6 +464,7 @@ defmodule Lightning.Collaboration.Session do
       {:error, :deserialization_failed, Exception.message(e)}
   end
 
+  # :built state with positive lock_version means it was saved before - reload from DB
   defp fetch_workflow(
          %{__meta__: %{state: :built}, lock_version: lock_version} = workflow
        )
@@ -514,14 +515,41 @@ defmodule Lightning.Collaboration.Session do
     SharedDoc.update_doc(shared_doc_pid, fn doc ->
       workflow_map = Yex.Doc.get_map(doc, "workflow")
       errors_map = Yex.Doc.get_map(doc, "errors")
+      triggers_array = Yex.Doc.get_array(doc, "triggers")
 
       Yex.Doc.transaction(doc, "merge_saved_workflow", fn ->
-        # Update lock version
         Yex.Map.set(workflow_map, "lock_version", workflow.lock_version)
-
-        # Clear all errors after successful save
+        sync_trigger_enabled_states(triggers_array, workflow.triggers)
         clear_map(errors_map)
       end)
+    end)
+  end
+
+  # Syncs trigger enabled states from saved workflow back to Y.Doc so the UI
+  # reflects server-side changes (e.g., auto-disabled triggers due to limits)
+  defp sync_trigger_enabled_states(triggers_array, saved_triggers) do
+    saved_states =
+      saved_triggers
+      |> Enum.map(fn t -> {t.id, t.enabled} end)
+      |> Map.new()
+
+    triggers_array
+    |> Yex.Array.to_list()
+    |> Enum.each(fn trigger_map ->
+      trigger_id = Yex.Map.fetch!(trigger_map, "id")
+
+      case Map.get(saved_states, trigger_id) do
+        nil ->
+          # Trigger not in saved workflow (shouldn't happen, but ignore)
+          :ok
+
+        saved_enabled ->
+          current_enabled = Yex.Map.fetch!(trigger_map, "enabled")
+
+          if current_enabled != saved_enabled do
+            Yex.Map.set(trigger_map, "enabled", saved_enabled)
+          end
+      end
     end)
   end
 
@@ -762,5 +790,44 @@ defmodule Lightning.Collaboration.Session do
         Map.put(acc, child_name, child)
       end
     end)
+  end
+
+  # Checks workflow activation against usage limits with different behavior for
+  # new vs existing workflows:
+  # - NEW workflows (:built state): auto-disable triggers if limit exceeded,
+  #   allowing the first save to succeed
+  # - EXISTING workflows: return error if limit exceeded, preventing trigger
+  #   activation (same behavior as non-collaborative editor)
+  defp maybe_disable_triggers_on_limit(changeset) do
+    case WorkflowUsageLimiter.limit_workflow_activation(changeset) do
+      :ok ->
+        {:ok, changeset}
+
+      {:error, _, message} ->
+        if new_workflow?(changeset) do
+          Logger.info(
+            "Auto-disabling triggers for new workflow at activation limit"
+          )
+
+          {:ok, disable_all_triggers(changeset)}
+        else
+          {:error, :limit_exceeded, message}
+        end
+    end
+  end
+
+  defp new_workflow?(changeset) do
+    changeset.data.__meta__.state == :built
+  end
+
+  defp disable_all_triggers(changeset) do
+    triggers =
+      changeset
+      |> Ecto.Changeset.get_assoc(:triggers)
+      |> Enum.map(fn trigger_changeset ->
+        Ecto.Changeset.put_change(trigger_changeset, :enabled, false)
+      end)
+
+    Ecto.Changeset.put_assoc(changeset, :triggers, triggers)
   end
 end
