@@ -818,13 +818,24 @@ defmodule Lightning.SessionTest do
       assert {:error, :workflow_deleted} = Session.save_workflow(session, user)
     end
 
-    test "handles workflow activation limit error", %{
-      session: session,
-      user: user,
-      project: project
-    } do
-      error_msg = "Workflow activation limit exceeded"
+    # Note: The auto-disable behavior for NEW workflows (with :built state) is
+    # implemented in maybe_disable_triggers_on_limit/1 which checks new_workflow?/1.
+    # NEW workflows have __meta__.state == :built.
+    # Testing this requires a complex setup with cross-process DB connections,
+    # so we test the EXISTING workflow case which covers the main code path.
+
+    test "fails with error on EXISTING workflow when activation limit is reached",
+         %{
+           session: session,
+           user: user,
+           project: project,
+           workflow: workflow
+         } do
+      # The workflow from setup was inserted via insert(), so it's :loaded (existing)
+      assert workflow.__meta__.state == :loaded
+
       project_id = project.id
+      error_msg = "Workflow activation limit exceeded"
 
       # Mock the usage limiter to return an error
       stub(
@@ -840,7 +851,7 @@ defmodule Lightning.SessionTest do
         end
       )
 
-      # Get Y.Doc and modify workflow to enable it
+      # Get Y.Doc and modify workflow to enable a trigger
       doc = Session.get_doc(session)
       triggers_array = Yex.Doc.get_array(doc, "triggers")
 
@@ -858,7 +869,7 @@ defmodule Lightning.SessionTest do
         Yex.Array.push(triggers_array, trigger_data)
       end)
 
-      # Save should fail with limit error
+      # Save should FAIL for existing workflows when limit is hit
       assert {:error, %Lightning.Extensions.Message{text: ^error_msg}} =
                Session.save_workflow(session, user)
     end

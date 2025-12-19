@@ -3,27 +3,6 @@ import YAML from 'yaml';
 import type { WorkflowState as YAMLWorkflowState } from '../../yaml/types';
 import { convertWorkflowStateToSpec } from '../../yaml/util';
 
-/**
- * Returns a new workflow state with all triggers disabled.
- *
- * Use this when importing templates or AI-generated workflows to ensure
- * triggers don't accidentally fire and consume resources or hit rate limits.
- *
- * @param state - The workflow state to modify
- * @returns A new workflow state with all triggers having enabled: false
- */
-export function withDisabledTriggers(
-  state: YAMLWorkflowState
-): YAMLWorkflowState {
-  return {
-    ...state,
-    triggers: state.triggers.map(trigger => ({
-      ...trigger,
-      enabled: false,
-    })),
-  };
-}
-
 interface WorkflowMetadata {
   id: string;
   name: string;

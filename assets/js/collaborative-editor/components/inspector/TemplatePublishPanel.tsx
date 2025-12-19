@@ -9,7 +9,6 @@ import { useSession } from '#/collaborative-editor/hooks/useSession';
 import { useWorkflowTemplate } from '#/collaborative-editor/hooks/useSessionContext';
 import { useWorkflowState } from '#/collaborative-editor/hooks/useWorkflow';
 import { notifications } from '#/collaborative-editor/lib/notifications';
-import { withDisabledTriggers } from '#/collaborative-editor/utils/workflowSerialization';
 import { useURLState } from '#/react/lib/use-url-state';
 import { cn } from '#/utils/cn';
 import logger from '#/utils/logger';
@@ -99,14 +98,14 @@ export function TemplatePublishPanel() {
 
     try {
       // Generate YAML code from current workflow state
-      const workflowState: YAMLWorkflowState = withDisabledTriggers({
+      const workflowState: YAMLWorkflowState = {
         id: workflow.id,
         name: workflow.name,
         jobs: jobs as YAMLWorkflowState['jobs'],
         triggers: triggers as YAMLWorkflowState['triggers'],
         edges: edges as YAMLWorkflowState['edges'],
         positions,
-      });
+      };
 
       const spec = convertWorkflowStateToSpec(workflowState, false);
       const workflowCode = YAML.stringify(spec);

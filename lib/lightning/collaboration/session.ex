@@ -314,7 +314,7 @@ defmodule Lightning.Collaboration.Session do
          {:ok, workflow} <- fetch_workflow(state.workflow),
          changeset <-
            Lightning.Workflows.change_workflow(workflow, workflow_data),
-         :ok <- WorkflowUsageLimiter.limit_workflow_activation(changeset),
+         {:ok, changeset} <- maybe_disable_triggers_on_limit(changeset),
          {:ok, saved_workflow} <-
            Lightning.Workflows.save_workflow(changeset, user,
              skip_reconcile: true
@@ -762,5 +762,44 @@ defmodule Lightning.Collaboration.Session do
         Map.put(acc, child_name, child)
       end
     end)
+  end
+
+  # Checks if workflow activation would hit usage limits.
+  # For NEW workflows (:built state): auto-disables triggers to allow creation.
+  # For EXISTING workflows (:loaded state): returns error to prevent accidental changes.
+  defp maybe_disable_triggers_on_limit(changeset) do
+    case WorkflowUsageLimiter.limit_workflow_activation(changeset) do
+      :ok ->
+        {:ok, changeset}
+
+      {:error, _, _message} = error ->
+        if new_workflow?(changeset) do
+          Logger.info(
+            "Workflow activation limit reached on new workflow, auto-disabling triggers"
+          )
+
+          {:ok, disable_all_triggers(changeset)}
+        else
+          # For existing workflows, return the error to fail the save
+          error
+        end
+    end
+  end
+
+  defp new_workflow?(changeset) do
+    changeset.data.__meta__.state == :built
+  end
+
+  # Disables all triggers in the workflow changeset by modifying
+  # the nested trigger changesets to set enabled: false
+  defp disable_all_triggers(changeset) do
+    triggers =
+      changeset
+      |> Ecto.Changeset.get_assoc(:triggers)
+      |> Enum.map(fn trigger_changeset ->
+        Ecto.Changeset.put_change(trigger_changeset, :enabled, false)
+      end)
+
+    Ecto.Changeset.put_assoc(changeset, :triggers, triggers)
   end
 end

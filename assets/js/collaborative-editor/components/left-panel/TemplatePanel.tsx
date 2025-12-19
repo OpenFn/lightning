@@ -22,7 +22,6 @@ import { useSession } from '../../hooks/useSession';
 import { useTemplatePanel, useUICommands } from '../../hooks/useUI';
 import { notifications } from '../../lib/notifications';
 import type { Template } from '../../types/template';
-import { withDisabledTriggers } from '../../utils/workflowSerialization';
 import { Tooltip } from '../Tooltip';
 
 import { TemplateCard } from './TemplateCard';
@@ -102,7 +101,7 @@ export function TemplatePanel({
           const spec = parseWorkflowYAML(template.code);
           const state = convertWorkflowSpecToState(spec);
 
-          onImport(withDisabledTriggers(state));
+          onImport(state);
         } catch (err) {
           console.error('Failed to parse template:', err);
           notifications.alert({
@@ -123,7 +122,7 @@ export function TemplatePanel({
       const spec = parseWorkflowYAML(selectedTemplate.code);
       const state = convertWorkflowSpecToState(spec);
 
-      onImport(withDisabledTriggers(state));
+      onImport(state);
       await onSave();
 
       // After successful save, collapse panel and clear template state

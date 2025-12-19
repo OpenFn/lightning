@@ -42,7 +42,6 @@ import { Z_INDEX } from '../utils/constants';
 import {
   prepareWorkflowForSerialization,
   serializeWorkflowToYAML,
-  withDisabledTriggers,
 } from '../utils/workflowSerialization';
 
 import { AIAssistantPanel } from './AIAssistantPanel';
@@ -585,7 +584,7 @@ export function AIAssistantPanelWrapper() {
 
         const workflowState = convertWorkflowSpecToState(workflowSpec);
 
-        importWorkflow(withDisabledTriggers(workflowState));
+        importWorkflow(workflowState);
       } catch (error) {
         console.error('[AI Assistant] Failed to apply workflow:', error);
 
