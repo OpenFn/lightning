@@ -30,7 +30,41 @@ defmodule LightningWeb.WorkflowLive.Helpers do
         Workflows.save_workflow(changeset, actor)
 
       {:error, _reason, message} ->
-        {:error, message}
+        if new_workflow?(changeset) do
+          # NEW workflow at limit - auto-disable triggers, allow save
+          changeset
+          |> disable_all_triggers()
+          |> Workflows.save_workflow(actor)
+        else
+          # EXISTING workflow at limit - return error
+          {:error, message}
+        end
+    end
+  end
+
+  defp new_workflow?(changeset) do
+    lock_version = Ecto.Changeset.get_field(changeset, :lock_version)
+
+    if is_integer(lock_version) and lock_version > 0 do
+      false
+    else
+      workflow_id = Ecto.Changeset.get_field(changeset, :id)
+      is_nil(Workflows.get_workflow(workflow_id))
+    end
+  end
+
+  defp disable_all_triggers(changeset) do
+    case Ecto.Changeset.get_change(changeset, :triggers) do
+      nil ->
+        changeset
+
+      trigger_changesets when is_list(trigger_changesets) ->
+        disabled_triggers =
+          Enum.map(trigger_changesets, fn trigger_changeset ->
+            Ecto.Changeset.put_change(trigger_changeset, :enabled, false)
+          end)
+
+        Ecto.Changeset.put_change(changeset, :triggers, disabled_triggers)
     end
   end
 
