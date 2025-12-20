@@ -160,7 +160,7 @@ export function serializeWorkflowToYAML(
         })),
         positions: workflow.positions,
       },
-      false
+      true // Include IDs so AI responses preserve them (matches legacy behavior)
     );
 
     return YAML.stringify(workflowSpec);
