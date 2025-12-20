@@ -582,6 +582,7 @@ export function AIAssistantPanelWrapper() {
 
         validateIds(workflowSpec);
 
+        // IDs are already in the YAML from AI (sent with IDs, like legacy editor)
         const workflowState = convertWorkflowSpecToState(workflowSpec);
 
         importWorkflow(workflowState);
