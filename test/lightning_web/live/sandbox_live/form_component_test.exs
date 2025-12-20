@@ -199,7 +199,7 @@ defmodule LightningWeb.SandboxLive.FormComponentTest do
           assert user_arg.id == user.id
 
           name = attrs[:name] || attrs["name"]
-          env = attrs[:env] || attrs["env"]
+          env = attrs[:env] || attrs["env"] || current_sb.env
           color = attrs[:color] || attrs["color"]
 
           if name in [nil, ""] do
