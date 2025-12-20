@@ -21,6 +21,9 @@ and this project adheres to
 
 ### Fixed
 
+- Fixed bug where previous run steps would not be associated with jobs after
+  using AI chat [#4271](https://github.com/OpenFn/lightning/issues/4271)
+
 ## [2.15.3] - 2025-12-19
 
 ## [2.15.3-pre] - 2025-12-19
