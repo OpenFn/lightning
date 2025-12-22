@@ -60,7 +60,12 @@ describe('SelectedDataclipView', () => {
 
       expect(screen.getByText('Test Dataclip')).toBeInTheDocument();
       expect(screen.getByText('http request')).toBeInTheDocument();
-      expect(screen.getByText('1/15/2024')).toBeInTheDocument();
+
+      // Calculate expected date string for the current locale
+      const expectedDate = new Date(
+        '2024-01-15T10:30:00Z'
+      ).toLocaleDateString();
+      expect(screen.getByText(expectedDate)).toBeInTheDocument();
     });
 
     test("renders 'Unnamed' when dataclip has no name", () => {
