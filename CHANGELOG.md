@@ -21,6 +21,9 @@ and this project adheres to
 
 ### Fixed
 
+- Fixed Empty/Custom/Existing tabs being unresponsive when dataclip selected in
+  FullScreenIDE run panel [#4275]
+
 ## [2.15.4] - 2025-12-20
 
 ### Fixed
