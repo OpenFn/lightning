@@ -37,6 +37,11 @@ export default defineConfig({
       // morphdom is needed by phoenix_live_view internals (dom_patch.js)
       // but the deps/ folder can't resolve from our node_modules
       morphdom: path.resolve(__dirname, './node_modules/morphdom'),
+      // Mock monaco-editor for tests
+      'monaco-editor': path.resolve(
+        __dirname,
+        './test/__mocks__/monaco-editor.ts'
+      ),
     },
   },
 });
