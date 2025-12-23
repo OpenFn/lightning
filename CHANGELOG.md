@@ -21,8 +21,13 @@ and this project adheres to
 
 ### Fixed
 
+## [2.15.5] - 2025-12-23
+
+### Fixed
+
 - Fixed Empty/Custom/Existing tabs being unresponsive when dataclip selected in
-  FullScreenIDE run panel [#4275]
+  FullScreenIDE run panel
+  [#4275](https://github.com/OpenFn/lightning/issues/4275)
 
 ## [2.15.4] - 2025-12-20
 
