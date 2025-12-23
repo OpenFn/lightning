@@ -362,6 +362,56 @@ describe('JobInspector - Footer Button States', () => {
     expect(codeButton).not.toBeDisabled();
   });
 
+  test('Code button is enabled when viewing pinned version', () => {
+    // Set URL with version parameter to simulate viewing historical work order
+    urlState.setParams({ v: '5' });
+
+    // Set edit permissions
+    act(() => {
+      (mockChannel as any)._test.emit('session_context', {
+        user: null,
+        project: null,
+        config: { require_email_verification: false },
+        permissions: {
+          can_edit_workflow: true,
+          can_run_workflow: true,
+          can_write_webhook_auth_method: true,
+        },
+        latest_snapshot_lock_version: 6,
+        project_repo_connection: null,
+        webhook_auth_methods: [],
+        workflow_template: null,
+        has_read_ai_disclaimer: false,
+      });
+    });
+
+    const job = workflowStore.getSnapshot().jobs[0];
+    const mockOnClose = vi.fn();
+    const mockOnOpenRunPanel = vi.fn();
+
+    render(
+      <JobInspector
+        job={job}
+        onClose={mockOnClose}
+        onOpenRunPanel={mockOnOpenRunPanel}
+      />,
+      {
+        wrapper: createWrapper(
+          workflowStore,
+          credentialStore,
+          sessionContextStore,
+          adaptorStore,
+          awarenessStore
+        ),
+      }
+    );
+
+    const codeButton = screen.getByRole('button', { name: /code/i });
+
+    // Code button should be enabled even when viewing pinned version
+    expect(codeButton).not.toBeDisabled();
+  });
+
   test('Delete button is disabled when job has downstream dependencies', () => {
     // Create a workflow with two jobs where job-2 depends on job-1
     const ydocWithDeps = createWorkflowYDoc({
