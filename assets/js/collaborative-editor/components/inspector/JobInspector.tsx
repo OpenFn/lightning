@@ -81,7 +81,7 @@ export function JobInspector({
           <Tooltip
             content={
               <>
-                Open full-screen code editor {'( '}
+                Open code editor {'( '}
                 <ShortcutKeys keys={['mod', 'e']} />
                 {' )'}
               </>
