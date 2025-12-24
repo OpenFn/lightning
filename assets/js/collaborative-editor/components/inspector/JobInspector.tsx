@@ -81,19 +81,9 @@ export function JobInspector({
           <Tooltip
             content={
               <>
-                {isIDEOpen
-                  ? 'IDE is already open'
-                  : isReadOnly
-                    ? 'View read-only code and logs'
-                    : 'Open full-screen code editor'}
-                {!isIDEOpen && (
-                  <>
-                    {' '}
-                    {'( '}
-                    <ShortcutKeys keys={['mod', 'e']} />
-                    {' )'}
-                  </>
-                )}
+                Open full-screen code editor {'( '}
+                <ShortcutKeys keys={['mod', 'e']} />
+                {' )'}
               </>
             }
             side="top"
