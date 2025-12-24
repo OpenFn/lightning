@@ -81,19 +81,9 @@ export function JobInspector({
           <Tooltip
             content={
               <>
-                {isIDEOpen
-                  ? 'IDE is already open'
-                  : isReadOnly
-                    ? 'Cannot edit in read-only mode'
-                    : 'Open full-screen code editor '}
-                {!isIDEOpen && !isReadOnly && (
-                  <>
-                    {' '}
-                    {'( '}
-                    <ShortcutKeys keys={['mod', 'e']} />
-                    {' )'}
-                  </>
-                )}
+                Open code editor {'( '}
+                <ShortcutKeys keys={['mod', 'e']} />
+                {' )'}
               </>
             }
             side="top"
@@ -102,7 +92,7 @@ export function JobInspector({
               <Button
                 variant="primary"
                 onClick={() => updateSearchParams({ panel: 'editor' })}
-                disabled={isIDEOpen || isReadOnly}
+                disabled={isIDEOpen}
               >
                 Code
               </Button>
