@@ -21,7 +21,11 @@ and this project adheres to
 
 ### Fixed
 
-- Fixed Code button being disabled when viewing historical work orders
+## [2.15.6] - 2025-12-24
+
+### Fixed
+
+- Fixed Code button being disabled when viewing old workflow versions
   [#4279](https://github.com/OpenFn/lightning/issues/4279)
 
 ## [2.15.5] - 2025-12-23
