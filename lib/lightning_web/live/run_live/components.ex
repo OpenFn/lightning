@@ -577,7 +577,10 @@ defmodule LightningWeb.RunLive.Components do
       phx-mounted={@show && show_modal(@id)}
       phx-remove={hide_modal(@id)}
     >
-      <div id={"#{@id}-bg"} class="fixed inset-0 bg-gray-500/75 transition-opacity">
+      <div
+        id={"#{@id}-bg"}
+        class="fixed inset-0 bg-gray-900/60 backdrop-blur-sm transition-opacity"
+      >
       </div>
 
       <div
