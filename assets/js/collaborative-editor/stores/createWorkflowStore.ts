@@ -207,6 +207,10 @@ function produceInitialState() {
       // AI workflow apply coordination state
       isApplyingWorkflow: false,
       applyingUser: null,
+
+      // AI job code apply coordination state
+      isApplyingJobCode: false,
+      applyingJobUser: null,
     } as Workflow.State,
     draft => {
       // Compute derived state on initialization
@@ -654,6 +658,32 @@ export const createWorkflowStore = () => {
 
     provider.channel.on('workflow_applying', workflowApplyingHandler);
     provider.channel.on('workflow_applied', workflowAppliedHandler);
+
+    // AI job code apply coordination events
+    const jobCodeApplyingHandler = (data: unknown) => {
+      const payload = data as {
+        user_id: string;
+        user_name: string;
+        message_id: string;
+      };
+      updateState(draft => {
+        draft.isApplyingJobCode = true;
+        draft.applyingJobUser = {
+          id: payload.user_id,
+          name: payload.user_name,
+        };
+      }, 'job_code/applying');
+    };
+
+    const jobCodeAppliedHandler = () => {
+      updateState(draft => {
+        draft.isApplyingJobCode = false;
+        draft.applyingJobUser = null;
+      }, 'job_code/applied');
+    };
+
+    provider.channel.on('job_code_applying', jobCodeApplyingHandler);
+    provider.channel.on('job_code_applied', jobCodeAppliedHandler);
 
     // Note: ai_session_created events are handled by AIAssistantStore._connectChannel
     // which is connected via StoreProvider when the channel is ready
@@ -1644,6 +1674,77 @@ export const createWorkflowStore = () => {
     }
   };
 
+  /**
+   * Signal that this user is starting to apply an AI-generated job code.
+   * Broadcasts to all collaborators so they can disable their Apply buttons,
+   * preventing concurrent applies that could cause Y.Doc conflicts.
+   *
+   * Returns true if coordination succeeded, false if unavailable (non-blocking).
+   *
+   * @param messageId - The AI message ID being applied
+   */
+  const startApplyingJobCode = async (messageId: string): Promise<boolean> => {
+    if (!provider?.channel) {
+      logger.warn('Cannot start applying job code - no channel available');
+      notifications.warning({
+        title: 'Apply coordination unavailable',
+        description:
+          'Other users may also apply changes simultaneously. Proceeding anyway.',
+      });
+      return false;
+    }
+
+    try {
+      await channelRequest(provider.channel, 'start_applying_job_code', {
+        message_id: messageId,
+      });
+      return true;
+    } catch (error) {
+      logger.error('Failed to signal job code apply start', error);
+      notifications.warning({
+        title: 'Apply coordination unavailable',
+        description:
+          'Other users may also apply changes simultaneously. Proceeding anyway.',
+      });
+      return false;
+    }
+  };
+
+  /**
+   * Signal that this user has finished applying an AI-generated job code.
+   * Broadcasts to all collaborators so they can re-enable their Apply buttons.
+   *
+   * @param messageId - The AI message ID that was applied
+   */
+  const doneApplyingJobCode = async (messageId: string) => {
+    if (!provider?.channel) {
+      logger.warn('Cannot complete applying job code - no channel available');
+      // Clear local state anyway
+      updateState(draft => {
+        draft.isApplyingJobCode = false;
+        draft.applyingJobUser = null;
+      }, 'job_code/applied/fallback');
+      return;
+    }
+
+    try {
+      await channelRequest(provider.channel, 'done_applying_job_code', {
+        message_id: messageId,
+      });
+    } catch (error) {
+      logger.error('Failed to signal job code apply completion', error);
+      notifications.warning({
+        title: 'Apply completion signal failed',
+        description: 'Other users may not see that the apply has completed.',
+      });
+      // Clear local state even if signal fails
+      updateState(draft => {
+        draft.isApplyingJobCode = false;
+        draft.applyingJobUser = null;
+      }, 'job_code/applied/fallback');
+    }
+  };
+
   // Undo/Redo Commands
   // =============================================================================
   // These commands trigger Y.Doc changes via UndoManager, which then flow
@@ -1745,6 +1846,10 @@ export const createWorkflowStore = () => {
     // AI workflow apply coordination
     startApplyingWorkflow,
     doneApplyingWorkflow,
+
+    // AI job code apply coordination
+    startApplyingJobCode,
+    doneApplyingJobCode,
 
     // =============================================================================
     // Undo/Redo Commands

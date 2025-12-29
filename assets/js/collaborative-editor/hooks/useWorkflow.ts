@@ -640,6 +640,10 @@ export const useWorkflowActions = () => {
     // AI workflow apply coordination
     startApplyingWorkflow: store.startApplyingWorkflow,
     doneApplyingWorkflow: store.doneApplyingWorkflow,
+
+    // AI job code apply coordination
+    startApplyingJobCode: store.startApplyingJobCode,
+    doneApplyingJobCode: store.doneApplyingJobCode,
   };
 };
 
@@ -699,6 +703,12 @@ export const useCanSave = (): { canSave: boolean; tooltipMessage: string } => {
   const { hasEditPermission, isConnected, isDeleted, isPinnedVersion } =
     useWorkflowConditions();
 
+  // Check if any apply operation in progress
+  const isApplyingJobCode = useWorkflowState(state => state.isApplyingJobCode);
+  const isApplyingWorkflow = useWorkflowState(
+    state => state.isApplyingWorkflow
+  );
+
   // Determine tooltip message (check in priority order)
   let tooltipMessage = '';
   let canSave = true;
@@ -715,6 +725,12 @@ export const useCanSave = (): { canSave: boolean; tooltipMessage: string } => {
   } else if (isPinnedVersion) {
     canSave = false;
     tooltipMessage = 'You are viewing a pinned version of this workflow';
+  } else if (isApplyingJobCode) {
+    canSave = false;
+    tooltipMessage = 'Applying AI-generated code...';
+  } else if (isApplyingWorkflow) {
+    canSave = false;
+    tooltipMessage = 'Applying AI-generated workflow...';
   }
 
   return { canSave, tooltipMessage };

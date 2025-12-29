@@ -350,7 +350,9 @@ const formatUserName = (user: Message['user']): string | null => {
 interface MessageListProps {
   messages?: Message[];
   isLoading?: boolean;
+  sessionType?: 'job_code' | 'workflow_template';
   onApplyWorkflow?: ((yaml: string, messageId: string) => void) | undefined;
+  onApplyJobCode?: ((code: string, messageId: string) => void) | undefined;
   applyingMessageId?: string | null | undefined;
   showAddButtons?: boolean;
   showApplyButton?: boolean;
@@ -362,7 +364,9 @@ interface MessageListProps {
 export function MessageList({
   messages = [],
   isLoading = false,
+  sessionType,
   onApplyWorkflow,
+  onApplyJobCode,
   applyingMessageId,
   showAddButtons = false,
   showApplyButton = false,
@@ -414,7 +418,7 @@ export function MessageList({
                 <div className="space-y-3">
                   <MarkdownContent
                     content={message.content}
-                    showAddButtons={showAddButtons}
+                    showAddButtons={showAddButtons && !message.code}
                     isWriteDisabled={isWriteDisabled}
                     className="text-sm text-gray-700 leading-relaxed prose prose-sm max-w-none prose-headings:font-medium prose-h1:text-lg prose-h1:text-gray-900 prose-h1:mb-3 prose-h2:text-base prose-h2:text-gray-900 prose-h2:mb-2 prose-h2:mt-5 prose-h3:text-sm prose-h3:text-gray-900 prose-h3:mb-2 prose-h3:font-semibold prose-p:mb-3 prose-p:last:mb-0 prose-p:text-gray-700 prose-ul:list-disc prose-ul:pl-5 prose-ul:mb-3 prose-ul:space-y-1 prose-ol:list-decimal prose-ol:pl-5 prose-ol:mb-3 prose-ol:space-y-1 prose-li:text-gray-700 prose-strong:font-medium prose-strong:text-gray-900 prose-em:italic prose-a:text-primary-600 prose-a:hover:text-primary-700 prose-a:underline prose-a:font-normal prose-code:px-1.5 prose-code:py-0.5 prose-code:bg-gray-100 prose-code:text-gray-800 prose-code:rounded prose-code:text-xs prose-code:font-mono prose-code:font-normal prose-pre:rounded-md prose-pre:bg-slate-100 prose-pre:border-2 prose-pre:border-slate-200 prose-pre:text-slate-800 prose-pre:p-4 prose-pre:overflow-x-auto prose-pre:text-xs prose-pre:font-mono prose-pre:mb-4"
                   />
@@ -430,7 +434,7 @@ export function MessageList({
                       >
                         <button
                           type="button"
-                          data-testid="expand-workflow-button"
+                          data-testid="expand-code-button"
                           onClick={() => {
                             setExpandedYaml(prev => {
                               const next = new Set(prev);
@@ -453,24 +457,30 @@ export function MessageList({
                             <span className="hero-chevron-right h-4 w-4 text-gray-500" />
                           </span>
                           <span className="text-xs font-medium text-gray-700">
-                            Generated Workflow
+                            {sessionType === 'job_code'
+                              ? 'Generated Job Code'
+                              : 'Generated Workflow'}
                           </span>
                         </button>
                         <CodeActionButtons
                           code={message.code}
                           showAdd={showAddButtons}
                           showApply={showApplyButton}
-                          onApply={() =>
-                            onApplyWorkflow?.(message.code!, message.id)
-                          }
-                          isApplying={applyingMessageId === message.id}
+                          onApply={() => {
+                            if (sessionType === 'job_code') {
+                              onApplyJobCode?.(message.code!, message.id);
+                            } else {
+                              onApplyWorkflow?.(message.code!, message.id);
+                            }
+                          }}
+                          isApplying={!!applyingMessageId}
                           isWriteDisabled={isWriteDisabled}
                         />
                       </div>
                       {expandedYaml.has(message.id) && (
                         <pre
                           className="bg-slate-100 text-slate-800 p-3 overflow-x-auto text-xs font-mono"
-                          data-testid="workflow-code"
+                          data-testid="generated-code"
                         >
                           <code>{message.code}</code>
                         </pre>

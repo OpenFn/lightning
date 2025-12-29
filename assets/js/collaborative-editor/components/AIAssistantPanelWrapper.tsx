@@ -386,6 +386,27 @@ export function AIAssistantPanelWrapper() {
     ) => {
       const currentState = aiStore.getSnapshot();
 
+      // For job_code with attach_code, get CURRENT code from Y.Doc
+      if (
+        messageOptions?.attach_code &&
+        aiMode?.mode === 'job_code' &&
+        currentState.sessionType === 'job_code'
+      ) {
+        const context = aiMode.context as JobCodeContext;
+        const jobId = context.job_id;
+
+        if (jobId) {
+          // Get fresh code from jobs array (backed by Y.Doc)
+          const currentJob = jobs.find(j => j.id === jobId);
+          if (currentJob) {
+            // Update context with current code
+            context.job_body = currentJob.body;
+          }
+          // If job not found, fall back to existing context.job_body
+          // (job could be unsaved or deleted)
+        }
+      }
+
       // If no session exists, we need to include content in context for first message
       if (!currentState.sessionId && aiMode) {
         const { mode, context } = aiMode;
@@ -507,13 +528,20 @@ export function AIAssistantPanelWrapper() {
     hasLoadedSessionRef.current = false;
   }, [sessionId]);
 
-  const { importWorkflow, startApplyingWorkflow, doneApplyingWorkflow } =
-    useWorkflowActions();
+  const {
+    importWorkflow,
+    startApplyingWorkflow,
+    doneApplyingWorkflow,
+    startApplyingJobCode,
+    doneApplyingJobCode,
+    updateJob,
+  } = useWorkflowActions();
 
   // Get applying state from workflow store for disabling Apply button across all users
   const isApplyingWorkflow = useWorkflowState(
     state => state.isApplyingWorkflow
   );
+  const isApplyingJobCode = useWorkflowState(state => state.isApplyingJobCode);
 
   const handleApplyWorkflow = useCallback(
     async (yaml: string, messageId: string) => {
@@ -604,6 +632,56 @@ export function AIAssistantPanelWrapper() {
       }
     },
     [importWorkflow, startApplyingWorkflow, doneApplyingWorkflow]
+  );
+
+  const handleApplyJobCode = useCallback(
+    async (code: string, messageId: string) => {
+      if (!aiMode || aiMode.mode !== 'job_code') {
+        console.error('[AI Assistant] Cannot apply job code - not in job mode');
+        return;
+      }
+
+      const context = aiMode.context as JobCodeContext;
+      const jobId = context.job_id;
+
+      if (!jobId) {
+        notifications.alert({
+          title: 'Cannot apply code',
+          description: 'No job selected',
+        });
+        return;
+      }
+
+      setApplyingMessageId(messageId);
+
+      // Coordinate with collaborators (non-blocking)
+      const coordinated = await startApplyingJobCode(messageId);
+
+      try {
+        // Update job body in Y.Doc (syncs to all collaborators)
+        updateJob(jobId, { body: code });
+
+        notifications.success({
+          title: 'Code applied',
+          description: 'Job code has been updated',
+        });
+      } catch (error) {
+        console.error('[AI Assistant] Failed to apply job code:', error);
+
+        notifications.alert({
+          title: 'Failed to apply code',
+          description:
+            error instanceof Error ? error.message : 'Unknown error occurred',
+        });
+      } finally {
+        setApplyingMessageId(null);
+        // Only signal completion if we successfully coordinated
+        if (coordinated) {
+          await doneApplyingJobCode(messageId);
+        }
+      }
+    },
+    [aiMode, updateJob, startApplyingJobCode, doneApplyingJobCode]
   );
 
   /**
@@ -735,6 +813,7 @@ export function AIAssistantPanelWrapper() {
               <MessageList
                 messages={messages}
                 isLoading={isLoading}
+                {...(sessionType && { sessionType })}
                 onApplyWorkflow={
                   sessionType === 'workflow_template' && !isApplyingWorkflow
                     ? (yaml, messageId) => {
@@ -742,9 +821,30 @@ export function AIAssistantPanelWrapper() {
                       }
                     : undefined
                 }
-                applyingMessageId={applyingMessageId}
-                showAddButtons={sessionType === 'job_code'}
-                showApplyButton={sessionType === 'workflow_template'}
+                onApplyJobCode={
+                  sessionType === 'job_code' && !isApplyingJobCode
+                    ? (code, messageId) => {
+                        void handleApplyJobCode(code, messageId);
+                      }
+                    : undefined
+                }
+                applyingMessageId={
+                  // If anyone is applying (including other users), pass the message ID
+                  // to show "APPLYING..." state. If it's just the local user, use local state.
+                  isApplyingJobCode
+                    ? (applyingMessageId ?? 'applying')
+                    : undefined
+                }
+                showAddButtons={
+                  sessionType === 'job_code'
+                    ? // For job_code: hide ADD buttons when message has code field
+                      !messages.some(m => m.role === 'assistant' && m.code)
+                    : false
+                }
+                showApplyButton={
+                  sessionType === 'workflow_template' ||
+                  (sessionType === 'job_code' && messages.some(m => m.code))
+                }
                 onRetryMessage={handleRetryMessage}
                 isWriteDisabled={isWriteDisabled}
               />
