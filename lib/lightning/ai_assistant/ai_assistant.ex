@@ -1127,9 +1127,34 @@ defmodule Lightning.AiAssistant do
   defp build_job_message(body) do
     message = body["history"] |> Enum.reverse() |> hd()
     message_attrs = Map.take(message, ["role", "content"])
-    opts = [usage: body["usage"] || %{}, meta: body["meta"]]
+
+    # Extract code field - try Apollo PR #259 fields, fallback to markdown extraction
+    code =
+      message["suggested_code"] || message["code"] ||
+        extract_code_from_markdown(message["content"])
+
+    opts = [
+      usage: body["usage"] || %{},
+      meta: body["meta"],
+      code: code
+    ]
 
     {message_attrs, opts}
+  end
+
+  # Temporary workaround: Extract first complete code block from markdown content
+  # until Apollo PR #259 is deployed and returns code in separate field
+  defp extract_code_from_markdown(nil), do: nil
+
+  defp extract_code_from_markdown(content) when is_binary(content) do
+    # Match markdown code blocks: ```js or ```javascript followed by code
+    case Regex.run(~r/```(?:js|javascript)\n(.+?)```/s, content) do
+      [_, code] ->
+        String.trim(code)
+
+      _ ->
+        nil
+    end
   end
 
   defp build_workflow_message(body) do
