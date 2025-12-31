@@ -1,7 +1,15 @@
-import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
+import {
+  useState,
+  useRef,
+  useEffect,
+  useCallback,
+  useMemo,
+  useContext,
+} from 'react';
 
 import { useURLState } from '../../react/lib/use-url-state';
 import { parseWorkflowYAML, convertWorkflowSpecToState } from '../../yaml/util';
+import { useMonacoRef, MonacoRefContext } from '../contexts/MonacoRefContext';
 import {
   useAIConnectionState,
   useAIIsLoading,
@@ -15,6 +23,7 @@ import { useAISessionCommands } from '../hooks/useAIChannelRegistry';
 import { useAIInitialMessage } from '../hooks/useAIInitialMessage';
 import { useAIMode } from '../hooks/useAIMode';
 import { useAISession } from '../hooks/useAISession';
+import { useAutoPreview } from '../hooks/useAutoPreview';
 import { useResizablePanel } from '../hooks/useResizablePanel';
 import {
   useProject,
@@ -69,6 +78,10 @@ export function AIAssistantPanelWrapper() {
     collapseCreateWorkflowPanel,
   } = useUICommands();
   const { updateSearchParams, params } = useURLState();
+  const currentVersion = params['v'];
+
+  // Get Monaco ref context to set diff dismissal callback
+  const monacoRefContext = useContext(MonacoRefContext);
 
   // Track IDE state changes to re-focus chat input when IDE closes
   const isIDEOpen = params.panel === 'editor';
@@ -520,13 +533,43 @@ export function AIAssistantPanelWrapper() {
   const [applyingMessageId, setApplyingMessageId] = useState<string | null>(
     null
   );
+  const [previewingMessageId, setPreviewingMessageId] = useState<string | null>(
+    null
+  );
+
+  // Get shared monaco ref from context for diff preview
+  const monacoRef = useMonacoRef();
+
+  // Set diff dismissal callback in context ref so CollaborativeMonaco can call it
+  useEffect(() => {
+    if (monacoRefContext?.onDiffDismissedRef) {
+      monacoRefContext.onDiffDismissedRef.current = () => {
+        setPreviewingMessageId(null);
+      };
+    }
+  }, [monacoRefContext]);
 
   const hasLoadedSessionRef = useRef(false);
+  const previousVersionRef = useRef(currentVersion);
 
   // Reset hasLoadedSessionRef when session changes
   useEffect(() => {
     hasLoadedSessionRef.current = false;
   }, [sessionId]);
+
+  // Auto-dismiss diff when version changes (via version dropdown)
+  useEffect(() => {
+    // Only clear diff if version actually changed (not on initial mount or state updates)
+    if (
+      previousVersionRef.current !== currentVersion &&
+      previewingMessageId &&
+      monacoRef?.current
+    ) {
+      monacoRef.current.clearDiff();
+      setPreviewingMessageId(null);
+    }
+    previousVersionRef.current = currentVersion;
+  }, [currentVersion, previewingMessageId, monacoRef]);
 
   const {
     importWorkflow,
@@ -634,6 +677,55 @@ export function AIAssistantPanelWrapper() {
     [importWorkflow, startApplyingWorkflow, doneApplyingWorkflow]
   );
 
+  const handlePreviewJobCode = useCallback(
+    (code: string, messageId: string) => {
+      if (!aiMode || aiMode.mode !== 'job_code') {
+        console.error('[AI Assistant] Cannot preview - not in job mode', {
+          aiMode,
+        });
+        return;
+      }
+
+      const context = aiMode.context as JobCodeContext;
+      const jobId = context.job_id;
+
+      if (!jobId) {
+        console.error('[AI Assistant] Cannot preview - no job ID', { context });
+        notifications.alert({
+          title: 'Cannot preview code',
+          description: 'No job selected',
+        });
+        return;
+      }
+
+      // If already previewing this message, do nothing
+      if (previewingMessageId === messageId) {
+        return;
+      }
+
+      // Clear any existing diff first
+      if (previewingMessageId && monacoRef && monacoRef.current) {
+        monacoRef.current.clearDiff();
+      }
+
+      // Get current job code from Y.Doc
+      const currentJob = jobs.find(j => j.id === jobId);
+      const currentCode = currentJob?.body ?? '';
+
+      // Show diff in Monaco
+      if (monacoRef && monacoRef.current) {
+        monacoRef.current.showDiff(currentCode, code);
+        setPreviewingMessageId(messageId);
+      } else {
+        console.error('[AI Assistant] ❌ Monaco ref not available', {
+          hasMonacoRef: !!monacoRef,
+          hasMonacoRefCurrent: !!monacoRef?.current,
+        });
+      }
+    },
+    [aiMode, jobs, previewingMessageId, monacoRef]
+  );
+
   const handleApplyJobCode = useCallback(
     async (code: string, messageId: string) => {
       if (!aiMode || aiMode.mode !== 'job_code') {
@@ -650,6 +742,12 @@ export function AIAssistantPanelWrapper() {
           description: 'No job selected',
         });
         return;
+      }
+
+      // Clear diff if showing
+      if (previewingMessageId && monacoRef && monacoRef.current) {
+        monacoRef.current.clearDiff();
+        setPreviewingMessageId(null);
       }
 
       setApplyingMessageId(messageId);
@@ -681,8 +779,27 @@ export function AIAssistantPanelWrapper() {
         }
       }
     },
-    [aiMode, updateJob, startApplyingJobCode, doneApplyingJobCode]
+    [
+      aiMode,
+      updateJob,
+      startApplyingJobCode,
+      doneApplyingJobCode,
+      previewingMessageId,
+      monacoRef,
+    ]
   );
+
+  // Auto-preview job code when AI responds with code
+  // Only for the user who authored the triggering message
+  useAutoPreview({
+    aiMode,
+    session:
+      sessionId && sessionType
+        ? { id: sessionId, session_type: sessionType, messages }
+        : null,
+    currentUserId: user?.id,
+    onPreview: handlePreviewJobCode,
+  });
 
   /**
    * Auto-apply workflow when AI responds with YAML code.
@@ -828,6 +945,9 @@ export function AIAssistantPanelWrapper() {
                       }
                     : undefined
                 }
+                onPreviewJobCode={
+                  sessionType === 'job_code' ? handlePreviewJobCode : undefined
+                }
                 applyingMessageId={
                   // If anyone is applying (including other users), pass the message ID
                   // to show "APPLYING..." state. If it's just the local user, use local state.
@@ -835,6 +955,7 @@ export function AIAssistantPanelWrapper() {
                     ? (applyingMessageId ?? 'applying')
                     : undefined
                 }
+                previewingMessageId={previewingMessageId}
                 showAddButtons={
                   sessionType === 'job_code'
                     ? // For job_code: hide ADD buttons when message has code field

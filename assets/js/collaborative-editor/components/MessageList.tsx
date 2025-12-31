@@ -177,15 +177,21 @@ const CodeActionButtons = ({
   code,
   showAdd = false,
   showApply = false,
+  showPreview = false,
   onApply,
+  onPreview,
   isApplying = false,
+  isPreviewActive = false,
   isWriteDisabled = false,
 }: {
   code: string;
   showAdd?: boolean;
   showApply?: boolean;
+  showPreview?: boolean;
   onApply?: () => void;
+  onPreview?: () => void;
   isApplying?: boolean;
+  isPreviewActive?: boolean;
   /** Whether Apply/Add buttons are disabled due to readonly mode */
   isWriteDisabled?: boolean;
 }) => {
@@ -222,8 +228,16 @@ const CodeActionButtons = ({
     }
   };
 
+  const handlePreview = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (onPreview) {
+      onPreview();
+    }
+  };
+
   const isApplyDisabled = isApplying || applied || isWriteDisabled;
   const isAddDisabled = added || isWriteDisabled;
+  const isPreviewDisabled = isPreviewActive;
 
   const applyButton = (
     <button
@@ -262,8 +276,27 @@ const CodeActionButtons = ({
     </button>
   );
 
+  const previewButton = (
+    <button
+      type="button"
+      onClick={handlePreview}
+      disabled={isPreviewDisabled}
+      className={cn(
+        'rounded-md px-2 py-1 text-xs font-medium transition-all duration-300 ease-in-out',
+        isPreviewActive
+          ? 'bg-green-100 text-green-700'
+          : isPreviewDisabled
+            ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+            : 'bg-slate-300 text-white hover:bg-primary-600 text-white'
+      )}
+    >
+      {isPreviewActive ? 'PREVIEWING' : 'PREVIEW'}
+    </button>
+  );
+
   return (
-    <div className="flex items-center gap-1">
+    <div className="flex flex-wrap items-center justify-end gap-1">
+      {showPreview && previewButton}
       {showApply && (
         <Tooltip
           content={
@@ -353,7 +386,9 @@ interface MessageListProps {
   sessionType?: 'job_code' | 'workflow_template';
   onApplyWorkflow?: ((yaml: string, messageId: string) => void) | undefined;
   onApplyJobCode?: ((code: string, messageId: string) => void) | undefined;
+  onPreviewJobCode?: ((code: string, messageId: string) => void) | undefined;
   applyingMessageId?: string | null | undefined;
+  previewingMessageId?: string | null | undefined;
   showAddButtons?: boolean;
   showApplyButton?: boolean;
   onRetryMessage?: (messageId: string) => void;
@@ -367,7 +402,9 @@ export function MessageList({
   sessionType,
   onApplyWorkflow,
   onApplyJobCode,
+  onPreviewJobCode,
   applyingMessageId,
+  previewingMessageId,
   showAddButtons = false,
   showApplyButton = false,
   onRetryMessage,
@@ -427,7 +464,7 @@ export function MessageList({
                     <div className="rounded-lg overflow-hidden border border-gray-200 bg-white">
                       <div
                         className={cn(
-                          'w-full px-4 py-2 bg-gray-50 flex items-center justify-between',
+                          'w-full px-4 py-2 bg-gray-50 flex items-center justify-between gap-2',
                           expandedYaml.has(message.id) &&
                             'border-b border-gray-200'
                         )}
@@ -456,7 +493,7 @@ export function MessageList({
                           >
                             <span className="hero-chevron-right h-4 w-4 text-gray-500" />
                           </span>
-                          <span className="text-xs font-medium text-gray-700">
+                          <span className="text-xs text-left font-medium text-gray-700">
                             {sessionType === 'job_code'
                               ? 'Generated Job Code'
                               : 'Generated Workflow'}
@@ -466,6 +503,7 @@ export function MessageList({
                           code={message.code}
                           showAdd={showAddButtons}
                           showApply={showApplyButton}
+                          showPreview={sessionType === 'job_code'}
                           onApply={() => {
                             if (sessionType === 'job_code') {
                               onApplyJobCode?.(message.code!, message.id);
@@ -473,7 +511,11 @@ export function MessageList({
                               onApplyWorkflow?.(message.code!, message.id);
                             }
                           }}
+                          onPreview={() => {
+                            onPreviewJobCode?.(message.code!, message.id);
+                          }}
                           isApplying={!!applyingMessageId}
+                          isPreviewActive={previewingMessageId === message.id}
                           isWriteDisabled={isWriteDisabled}
                         />
                       </div>
