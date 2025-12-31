@@ -1,15 +1,31 @@
 import type { editor } from 'monaco-editor';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import * as monaco from 'monaco-editor';
+import {
+  forwardRef,
+  useCallback,
+  useEffect,
+  useImperativeHandle,
+  useRef,
+  useState,
+} from 'react';
 import { MonacoBinding } from 'y-monaco';
 import type { Awareness } from 'y-protocols/awareness';
 import type * as Y from 'yjs';
 
+import { cn } from '#/utils/cn';
 import _logger from '#/utils/logger';
 
 import { type Monaco, MonacoEditor, setTheme } from '../../monaco';
 import { addKeyboardShortcutOverrides } from '../../monaco/keyboard-overrides';
 
 import { Cursors } from './Cursors';
+import { Tooltip } from './Tooltip';
+
+export interface MonacoHandle {
+  showDiff: (originalCode: string, modifiedCode: string) => void;
+  clearDiff: () => void;
+  getEditor: () => editor.IStandaloneCodeEditor | null;
+}
 
 interface CollaborativeMonacoProps {
   ytext: Y.Text;
@@ -18,20 +34,34 @@ interface CollaborativeMonacoProps {
   disabled?: boolean;
   className?: string;
   options?: editor.IStandaloneEditorConstructionOptions;
+  onDiffDismissed?: () => void;
 }
 
-export function CollaborativeMonaco({
-  ytext,
-  awareness,
-  adaptor = 'common',
-  disabled = false,
-  className,
-  options = {},
-}: CollaborativeMonacoProps) {
+export const CollaborativeMonaco = forwardRef<
+  MonacoHandle,
+  CollaborativeMonacoProps
+>(function CollaborativeMonaco(
+  {
+    ytext,
+    awareness,
+    adaptor = 'common',
+    disabled = false,
+    className,
+    options = {},
+    onDiffDismissed,
+  }: CollaborativeMonacoProps,
+  ref
+) {
   const editorRef = useRef<editor.IStandaloneCodeEditor>();
   const monacoRef = useRef<Monaco>();
   const bindingRef = useRef<MonacoBinding>();
   const [editorReady, setEditorReady] = useState(false);
+
+  // Diff mode state
+  const [diffMode, setDiffMode] = useState(false);
+  const diffEditorRef = useRef<editor.IStandaloneDiffEditor | null>(null);
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const diffContainerRef = useRef<HTMLDivElement | null>(null);
 
   const handleOnMount = useCallback(
     (editor: editor.IStandaloneCodeEditor, monaco: Monaco) => {
@@ -157,6 +187,123 @@ export function CollaborativeMonaco({
     };
   }, []);
 
+  // showDiff function - creates diff editor overlay
+  const showDiff = useCallback(
+    (originalCode: string, modifiedCode: string) => {
+      if (!diffContainerRef.current) {
+        return;
+      }
+
+      // If already in diff mode, clear the existing diff first
+      if (diffMode && diffEditorRef.current) {
+        const diffEditor = diffEditorRef.current;
+        const model = diffEditor.getModel();
+        if (model) {
+          model.original?.dispose();
+          model.modified?.dispose();
+        }
+        diffEditor.dispose();
+        diffEditorRef.current = null;
+      }
+
+      // Hide standard editor container (but don't dispose - Y.Doc still bound)
+      if (containerRef.current) {
+        containerRef.current.style.setProperty('display', 'none');
+      }
+
+      // Show diff container
+      if (diffContainerRef.current) {
+        diffContainerRef.current.style.setProperty('display', 'block');
+      }
+
+      // Create diff editor in dedicated container
+      const diffEditor = monaco.editor.createDiffEditor(
+        diffContainerRef.current,
+        {
+          theme: 'vs-dark',
+          readOnly: true,
+          originalEditable: false,
+          automaticLayout: true,
+          scrollbar: {
+            vertical: 'visible',
+            horizontal: 'visible',
+          },
+          minimap: {
+            enabled: false,
+          },
+        }
+      );
+
+      // Create models
+      const originalModel = monaco.editor.createModel(
+        originalCode,
+        'javascript'
+      );
+      const modifiedModel = monaco.editor.createModel(
+        modifiedCode,
+        'javascript'
+      );
+
+      // Set models
+      diffEditor.setModel({
+        original: originalModel,
+        modified: modifiedModel,
+      });
+
+      diffEditorRef.current = diffEditor;
+      setDiffMode(true);
+    },
+    [diffMode]
+  );
+
+  // clearDiff function - removes diff editor and shows standard editor
+  const clearDiff = useCallback(() => {
+    if (!diffMode || !diffEditorRef.current) return;
+
+    // Dispose diff editor and models
+    const diffEditor = diffEditorRef.current;
+    const model = diffEditor.getModel();
+
+    if (model) {
+      model.original?.dispose();
+      model.modified?.dispose();
+    }
+
+    diffEditor.dispose();
+    diffEditorRef.current = null;
+
+    // Hide diff container
+    if (diffContainerRef.current) {
+      diffContainerRef.current.style.setProperty('display', 'none');
+    }
+
+    // Show standard editor container again
+    if (containerRef.current) {
+      containerRef.current.style.setProperty('display', 'block');
+    }
+
+    // Focus standard editor
+    if (editorRef.current) {
+      editorRef.current.focus();
+    }
+
+    setDiffMode(false);
+
+    // Notify parent component that diff was dismissed
+    onDiffDismissed?.();
+  }, [diffMode, onDiffDismissed]);
+
+  // Expose functions via ref
+  useImperativeHandle(
+    ref,
+    () => ({
+      showDiff,
+      clearDiff,
+      getEditor: () => editorRef.current || null,
+    }),
+    [showDiff, clearDiff]
+  );
+
   const editorOptions: editor.IStandaloneEditorConstructionOptions = {
     fontSize: 14,
     minimap: { enabled: false },
@@ -174,17 +321,49 @@ export function CollaborativeMonaco({
   };
 
   return (
-    <div className={className || 'h-full w-full'}>
-      <Cursors />
-      <MonacoEditor
-        onMount={handleOnMount}
-        options={editorOptions}
-        theme="default"
-        language={getLanguageFromAdaptor(adaptor)}
-      />
+    <div className={cn('relative', className || 'h-full w-full')}>
+      {/* Standard editor container */}
+      <div ref={containerRef} className="h-full w-full">
+        <Cursors />
+        <MonacoEditor
+          onMount={handleOnMount}
+          options={editorOptions}
+          theme="default"
+          language={getLanguageFromAdaptor(adaptor)}
+        />
+      </div>
+      {/* Diff editor container - hidden by default */}
+      <div
+        ref={diffContainerRef}
+        className="h-full w-full absolute inset-0"
+        style={{ display: 'none' }}
+      >
+        {/* Dismiss button - only visible when diff is showing */}
+        {diffMode && (
+          <Tooltip content="Close diff preview" side="left">
+            <button
+              type="button"
+              onClick={clearDiff}
+              className={cn(
+                'absolute top-4 right-4 z-[60]',
+                'flex items-center justify-center',
+                'h-8 w-8 rounded-md',
+                'bg-gray-800/90 hover:bg-gray-700',
+                'text-gray-300 hover:text-white',
+                'border border-gray-600',
+                'transition-colors duration-150',
+                'focus:outline-none focus:ring-2 focus:ring-primary-500'
+              )}
+              aria-label="Close diff preview"
+            >
+              <span className="hero-x-mark h-5 w-5" />
+            </button>
+          </Tooltip>
+        )}
+      </div>
     </div>
   );
-}
+});
 
 function getLanguageFromAdaptor(adaptor: string): string {
   switch (adaptor) {
