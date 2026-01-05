@@ -181,8 +181,11 @@ export function ConfigureAdaptorModal({
     const universal: CredentialWithType[] = projectCredentials
       .filter(c => {
         const isUniversal = c.schema === 'http' || c.schema === 'raw';
-        const alreadyMatched = adaptorName === 'http' || adaptorName === 'raw';
-        return isUniversal && !alreadyMatched;
+        // Only exclude if this specific credential is already in schemaMatched
+        const alreadyInSchemaMatched = schemaMatched.some(
+          matched => matched.id === c.id
+        );
+        return isUniversal && !alreadyInSchemaMatched;
       })
       .map(c => ({ ...c, type: 'project' as const }));
 
