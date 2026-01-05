@@ -804,6 +804,28 @@ describe('ConfigureAdaptorModal', () => {
       expect(screen.getByText('Raw Generic Credential')).toBeInTheDocument();
     });
 
+    it('shows OAuth credentials in schema-matched section when HTTP adaptor is selected', () => {
+      // The mock data already includes an OAuth credential: 'My Salesforce OAuth'
+      // When HTTP adaptor is selected, all OAuth credentials should appear as matching
+
+      renderWithProviders(
+        <ConfigureAdaptorModal
+          {...defaultProps}
+          currentAdaptor="@openfn/language-http"
+        />
+      );
+
+      // HTTP adaptor should show HTTP credential in schema-matched section
+      expect(screen.getByText('HTTP API Key')).toBeInTheDocument();
+
+      // OAuth credential should also appear in schema-matched section for HTTP adaptor
+      expect(screen.getByText('My Salesforce OAuth')).toBeInTheDocument();
+
+      // Both should be radio buttons in the main view (not in "Other credentials")
+      const radioButtons = screen.getAllByRole('radio');
+      expect(radioButtons.length).toBe(2); // HTTP + OAuth
+    });
+
     it('shows empty state when no credentials exist at all', () => {
       // Create a mock store context with no credentials
       const emptyCredentialSnapshot = {

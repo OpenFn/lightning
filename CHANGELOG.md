@@ -21,8 +21,8 @@ and this project adheres to
 
 ### Fixed
 
-- Fixed bug where generic credential types couldn't be selected with the HTTP
-  adaptor [#4284](https://github.com/OpenFn/lightning/issues/4284)
+- Fixed bug where Oauth credentials and raw credentials couldn't be selected
+  with the HTTP adaptor [#4284](https://github.com/OpenFn/lightning/issues/4284)
 
 ## [2.15.6] - 2025-12-24
 

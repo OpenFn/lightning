@@ -155,6 +155,10 @@ export function ConfigureAdaptorModal({
         // Exact schema match
         if (c.schema === adaptorName) return true;
 
+        // For HTTP adaptor, all OAuth credentials are considered matching
+        // (OAuth can be used for authenticated API calls via HTTP)
+        if (adaptorName === 'http' && c.schema === 'oauth') return true;
+
         // Smart OAuth matching: if credential is OAuth, check oauth_client_name
         if (c.schema === 'oauth' && c.oauth_client_name) {
           // Normalize both strings: lowercase, remove spaces/hyphens/underscores
