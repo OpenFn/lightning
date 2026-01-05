@@ -15,6 +15,9 @@ and this project adheres to
 
 ## [Unreleased]
 
+- Remove Environment input from Sandbox form
+  [#3954](https://github.com/OpenFn/lightning/issues/3954)
+
 ### Added
 
 ### Changed
