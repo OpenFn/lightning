@@ -271,10 +271,6 @@ export function AIAssistantPanelWrapper() {
     isAIAssistantPanelOpen,
   ]);
 
-  // Close handler - URL cleanup happens automatically via the effect above
-  // when isAIAssistantPanelOpen becomes false
-  const handleClosePanel = closeAIAssistantPanel;
-
   // Push job context updates to backend when job body/adaptor/name changes
   // This ensures the AI has access to the current code when "Attach code" is checked
   useEffect(() => {
@@ -371,24 +367,6 @@ export function AIAssistantPanelWrapper() {
     updateSearchParams,
     clearAIAssistantInitialMessage,
   });
-
-  const handleShowSessions = useCallback(() => {
-    aiStore.clearSession();
-    // Clear session list to force reload - ensures fresh data after tab sleep
-    aiStore._clearSessionList();
-
-    // Ensure context is initialized for session list loading
-    // This handles cases where context might have been lost (e.g., after tab sleep)
-    if (aiMode) {
-      aiStore._initializeContext(aiMode.mode, aiMode.context);
-    }
-
-    // Clear session ID from URL - shows session list
-    updateSearchParams({
-      'w-chat': null,
-      'j-chat': null,
-    });
-  }, [updateSearchParams, aiStore, aiMode]);
 
   // Note: AI session creation events are now handled by AIAssistantStore._connectChannel
   // which receives events directly from the workflow channel
@@ -554,6 +532,41 @@ export function AIAssistantPanelWrapper() {
       };
     }
   }, [monacoRefContext]);
+
+  // Close handler - clears diff preview and closes panel
+  const handleClosePanel = useCallback(() => {
+    // Clear any active diff preview when closing the panel
+    if (previewingMessageId && monacoRef?.current) {
+      monacoRef.current.clearDiff();
+      setPreviewingMessageId(null);
+    }
+    closeAIAssistantPanel();
+  }, [closeAIAssistantPanel, previewingMessageId, monacoRef]);
+
+  // Show sessions handler - clears diff preview and returns to session list
+  const handleShowSessions = useCallback(() => {
+    // Clear any active diff preview when going back to session list
+    if (previewingMessageId && monacoRef?.current) {
+      monacoRef.current.clearDiff();
+      setPreviewingMessageId(null);
+    }
+
+    aiStore.clearSession();
+    // Clear session list to force reload - ensures fresh data after tab sleep
+    aiStore._clearSessionList();
+
+    // Ensure context is initialized for session list loading
+    // This handles cases where context might have been lost (e.g., after tab sleep)
+    if (aiMode) {
+      aiStore._initializeContext(aiMode.mode, aiMode.context);
+    }
+
+    // Clear session ID from URL - shows session list
+    updateSearchParams({
+      'w-chat': null,
+      'j-chat': null,
+    });
+  }, [updateSearchParams, aiStore, aiMode, previewingMessageId, monacoRef]);
 
   const hasLoadedSessionRef = useRef(false);
   const previousVersionRef = useRef(currentVersion);
