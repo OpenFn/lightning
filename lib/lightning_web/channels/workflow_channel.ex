@@ -189,7 +189,9 @@ defmodule LightningWeb.WorkflowChannel do
         if is_nil(workflow.lock_version) do
           workflow
         else
-          Lightning.Workflows.get_workflow(workflow.id)
+          Lightning.Workflows.get_workflow(workflow.id,
+            include: [:edges, :jobs, :triggers]
+          )
         end
 
       project_repo_connection =
@@ -214,7 +216,8 @@ defmodule LightningWeb.WorkflowChannel do
         workflow_template: render_workflow_template(workflow_template),
         has_read_ai_disclaimer:
           Lightning.AiAssistant.user_has_read_disclaimer?(user),
-        limits: render_limits(project.id)
+        limits: render_limits(project.id),
+        workflow: (fresh_workflow && fresh_workflow) || %{}
       }
     end)
   end
@@ -324,8 +327,9 @@ defmodule LightningWeb.WorkflowChannel do
          {:ok, workflow} <- Session.save_workflow(session_pid, user) do
       # Broadcast the new lock_version to all users in the channel
       # so they can update their latestSnapshotLockVersion in SessionContextStore
-      broadcast_from!(socket, "workflow_saved", %{
-        latest_snapshot_lock_version: workflow.lock_version
+      broadcast!(socket, "workflow_saved", %{
+        latest_snapshot_lock_version: workflow.lock_version,
+        workflow: workflow
       })
 
       {:reply,

@@ -34,6 +34,7 @@ import { ManualRunPanel } from './ManualRunPanel';
 import { ManualRunPanelErrorBoundary } from './ManualRunPanelErrorBoundary';
 import { TemplateDetailsCard } from './TemplateDetailsCard';
 import { Tooltip } from './Tooltip';
+import { useUnsavedChanges } from '../hooks/useUnsavedChanges';
 
 interface WorkflowEditorProps {
   parentProjectId?: string | null;
@@ -44,6 +45,7 @@ export function WorkflowEditor({
   parentProjectId = null,
   parentProjectName = null,
 }: WorkflowEditorProps = {}) {
+  useUnsavedChanges();
   const { params, updateSearchParams } = useURLState();
   const { currentNode, selectNode } = useNodeSelection();
   const workflowStore = useWorkflowStoreContext();
