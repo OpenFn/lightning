@@ -28,7 +28,7 @@ export function useUnsavedChanges() {
       source_trigger_id: e.source_trigger_id,
       target_job_id: e.target_job_id,
     })),
-    positions: workflow?.positions,
+    positions: workflow?.positions || {},
     name: workflow?.name,
   };
   const storeWorkflow = useWorkflowState(state => ({
@@ -56,7 +56,7 @@ export function useUnsavedChanges() {
       source_trigger_id: e.source_trigger_id,
       target_job_id: e.target_job_id,
     })),
-    positions: state.positions,
+    positions: state.positions || {},
     name: state.workflow?.name,
   }));
 
@@ -66,7 +66,7 @@ export function useUnsavedChanges() {
 }
 
 function isDiff(base: unknown, target: unknown) {
-  const undef = [undefined, null];
+  const undef = [undefined, null, ''];
   // @ts-expect-error
   if (undef.includes(base) && undef.includes(target)) return false;
   if (typeof base !== typeof target) return true;
