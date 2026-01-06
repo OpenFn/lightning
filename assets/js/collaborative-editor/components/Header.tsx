@@ -93,7 +93,7 @@ export function SaveButton({
               onClick={onClick}
               disabled={!canSave}
             >
-              {label} me
+              {label}
             </button>
           </Tooltip>
         </div>
