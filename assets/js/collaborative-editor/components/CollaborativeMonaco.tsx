@@ -293,6 +293,22 @@ export const CollaborativeMonaco = forwardRef<
     onDiffDismissed?.();
   }, [diffMode, onDiffDismissed]);
 
+  // Cleanup diff editor on component unmount
+  useEffect(() => {
+    return () => {
+      if (diffEditorRef.current) {
+        const diffEditor = diffEditorRef.current;
+        const model = diffEditor.getModel();
+        if (model) {
+          model.original?.dispose();
+          model.modified?.dispose();
+        }
+        diffEditor.dispose();
+        diffEditorRef.current = null;
+      }
+    };
+  }, []);
+
   // Expose functions via ref
   useImperativeHandle(
     ref,

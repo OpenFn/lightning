@@ -26,7 +26,10 @@ describe('useAutoPreview', () => {
       job_id: 'job-1',
       job_body: '',
       job_adaptor: '@openfn/language-common',
+      attach_code: false,
+      attach_logs: false,
     },
+    storageKey: 'ai-job-job-1',
   });
 
   const createMockMessage = (overrides: Partial<Message> = {}): Message => ({
@@ -54,7 +57,8 @@ describe('useAutoPreview', () => {
     it('should not preview in workflow_template mode', () => {
       const workflowMode: AIModeResult = {
         mode: 'workflow_template',
-        context: { workflow_id: 'wf-1' },
+        context: { project_id: 'proj-1', workflow_id: 'wf-1' },
+        storageKey: 'ai-workflow-wf-1',
       };
       const session = createMockSession([createMockMessage()]);
 
@@ -100,6 +104,66 @@ describe('useAutoPreview', () => {
       );
 
       // First render = session load, should not preview
+      expect(mockOnPreview).not.toHaveBeenCalled();
+    });
+
+    it('should not preview old messages when switching sessions', () => {
+      // Session 1 with old messages
+      const userMsg1: Message = {
+        id: 'user-msg-1',
+        role: 'user',
+        content: 'Question in session 1',
+        status: 'success',
+        inserted_at: new Date(Date.now() - 2000).toISOString(),
+        user_id: mockCurrentUserId,
+      };
+      const assistantMsg1 = createMockMessage({
+        id: 'assistant-msg-1',
+        code: 'session 1 code',
+        inserted_at: new Date(Date.now() - 1000).toISOString(),
+      });
+      const session1 = createMockSession([userMsg1, assistantMsg1]);
+
+      // Session 2 with different old messages
+      const userMsg2: Message = {
+        id: 'user-msg-2',
+        role: 'user',
+        content: 'Question in session 2',
+        status: 'success',
+        inserted_at: new Date(Date.now() - 2000).toISOString(),
+        user_id: mockCurrentUserId,
+      };
+      const assistantMsg2 = createMockMessage({
+        id: 'assistant-msg-2',
+        code: 'session 2 code',
+        inserted_at: new Date(Date.now() - 1000).toISOString(),
+      });
+      const session2 = {
+        id: 'session-2',
+        session_type: 'job_code' as const,
+        messages: [userMsg2, assistantMsg2],
+      };
+
+      // Render with session 1
+      const { rerender } = renderHook(
+        ({ session }) =>
+          useAutoPreview({
+            aiMode: createMockJobCodeMode(),
+            session,
+            currentUserId: mockCurrentUserId,
+            onPreview: mockOnPreview,
+          }),
+        { initialProps: { session: session1 } }
+      );
+
+      // First render, no preview (initial load)
+      expect(mockOnPreview).not.toHaveBeenCalled();
+
+      // Switch to session 2 (simulating opening an old chat)
+      rerender({ session: session2 });
+
+      // Should NOT auto-preview session 2's old message
+      // because state should reset when session changes
       expect(mockOnPreview).not.toHaveBeenCalled();
     });
 

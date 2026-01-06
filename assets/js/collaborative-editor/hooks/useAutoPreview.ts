@@ -41,10 +41,44 @@ export function useAutoPreview({
   currentUserId: string | undefined;
   onPreview: (code: string, messageId: string) => void;
 }) {
-  const hasLoadedSessionRef = useRef(false);
-  const lastAutoPreviewedMessageIdRef = useRef<string | null>(null);
+  const stateRef = useRef({
+    hasLoadedSession: false,
+    lastAutoPreviewedMessageId: null as string | null,
+    sessionId: null as string | null,
+  });
 
   useEffect(() => {
+    // Reset state only when switching between different sessions
+    if (
+      session?.id &&
+      stateRef.current.sessionId &&
+      session.id !== stateRef.current.sessionId
+    ) {
+      // Switching between different existing sessions - full reset
+      stateRef.current = {
+        hasLoadedSession: false,
+        lastAutoPreviewedMessageId: null,
+        sessionId: session.id,
+      };
+    } else if (session?.id && !stateRef.current.sessionId) {
+      // Session created for first time - track the session ID
+      // If session has NO assistant code messages, mark as loaded immediately
+      // If session HAS assistant code messages, keep hasLoadedSession false (skip old messages on mount)
+      const hasCodeMessages =
+        session.messages?.some(m => m.role === 'assistant' && m.code) ?? false;
+      stateRef.current.sessionId = session.id;
+      if (!hasCodeMessages) {
+        stateRef.current.hasLoadedSession = true;
+      }
+    } else if (!session?.id && stateRef.current.sessionId) {
+      // Session cleared - reset everything
+      stateRef.current = {
+        hasLoadedSession: false,
+        lastAutoPreviewedMessageId: null,
+        sessionId: null,
+      };
+    }
+
     // Only operate in job_code mode
     if (!aiMode || aiMode.mode !== 'job_code') {
       return;
@@ -67,14 +101,14 @@ export function useAutoPreview({
     }
 
     // Skip if we've already auto-previewed this message
-    if (lastAutoPreviewedMessageIdRef.current === latestCodeMessage.id) {
+    if (stateRef.current.lastAutoPreviewedMessageId === latestCodeMessage.id) {
       return;
     }
 
     // Only auto-preview if session has loaded (not on mount)
     // This prevents preview flash when opening AI panel with existing messages
-    if (!hasLoadedSessionRef.current) {
-      hasLoadedSessionRef.current = true;
+    if (!stateRef.current.hasLoadedSession) {
+      stateRef.current.hasLoadedSession = true;
       return;
     }
 
@@ -98,6 +132,6 @@ export function useAutoPreview({
 
     // Auto-preview - Only for the message author
     onPreview(latestCodeMessage.code!, latestCodeMessage.id);
-    lastAutoPreviewedMessageIdRef.current = latestCodeMessage.id;
+    stateRef.current.lastAutoPreviewedMessageId = latestCodeMessage.id;
   }, [aiMode, session, currentUserId, onPreview]);
 }
