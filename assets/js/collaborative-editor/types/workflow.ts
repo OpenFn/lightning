@@ -145,6 +145,7 @@ export namespace Workflow {
     // Tracks when someone is applying AI-generated job code to prevent concurrent applies
     isApplyingJobCode: boolean;
     applyingJobUser: { id: string; name: string } | null;
+    applyingJobCodeMessageId: string | null;
   }
 
   export interface Actions {

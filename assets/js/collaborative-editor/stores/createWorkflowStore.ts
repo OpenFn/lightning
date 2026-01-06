@@ -211,6 +211,7 @@ function produceInitialState() {
       // AI job code apply coordination state
       isApplyingJobCode: false,
       applyingJobUser: null,
+      applyingJobCodeMessageId: null,
     } as Workflow.State,
     draft => {
       // Compute derived state on initialization
@@ -672,6 +673,7 @@ export const createWorkflowStore = () => {
           id: payload.user_id,
           name: payload.user_name,
         };
+        draft.applyingJobCodeMessageId = payload.message_id;
       }, 'job_code/applying');
     };
 
@@ -679,6 +681,7 @@ export const createWorkflowStore = () => {
       updateState(draft => {
         draft.isApplyingJobCode = false;
         draft.applyingJobUser = null;
+        draft.applyingJobCodeMessageId = null;
       }, 'job_code/applied');
     };
 

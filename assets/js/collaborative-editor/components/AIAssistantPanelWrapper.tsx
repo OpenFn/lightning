@@ -625,6 +625,9 @@ export function AIAssistantPanelWrapper() {
     state => state.isApplyingWorkflow
   );
   const isApplyingJobCode = useWorkflowState(state => state.isApplyingJobCode);
+  const applyingJobCodeMessageId = useWorkflowState(
+    state => state.applyingJobCodeMessageId
+  );
 
   const handleApplyWorkflow = useCallback(
     async (yaml: string, messageId: string) => {
@@ -990,9 +993,10 @@ export function AIAssistantPanelWrapper() {
                 }
                 applyingMessageId={
                   // If anyone is applying (including other users), pass the message ID
-                  // to show "APPLYING..." state. If it's just the local user, use local state.
+                  // to show "APPLYING..." state. Prioritize stored message ID from store,
+                  // then fall back to local state.
                   isApplyingJobCode
-                    ? (applyingMessageId ?? 'applying')
+                    ? (applyingJobCodeMessageId ?? applyingMessageId)
                     : undefined
                 }
                 previewingMessageId={previewingMessageId}
