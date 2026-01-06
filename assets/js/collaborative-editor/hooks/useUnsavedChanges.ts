@@ -62,7 +62,7 @@ export function useUnsavedChanges() {
 
   // pick items in the exising and check if the new matches it.
 
-  return { hasChanges: isDiff(wf, storeWorkflow) };
+  return { hasChanges: isDiff(wf, storeWorkflow) as boolean };
 }
 
 function isDiff(base: unknown, target: unknown) {

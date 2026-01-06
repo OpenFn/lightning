@@ -419,7 +419,7 @@ export function Header({
                 label={isNewWorkflow ? 'Create' : 'Save'}
                 canSync={githubSyncLimit.allowed}
                 syncTooltipMessage={githubSyncLimit.message}
-                hasChanges={hasChanges}
+                hasChanges={hasChanges && canSave && !isNewWorkflow}
               />
             </div>
           </div>
