@@ -80,6 +80,10 @@ export function AIAssistantPanelWrapper() {
   const { updateSearchParams, params } = useURLState();
   const currentVersion = params['v'];
 
+  // Check if viewing a pinned version (not latest) to disable AI Assistant
+  const isPinnedVersion =
+    currentVersion !== undefined && currentVersion !== null;
+
   // Get Monaco ref context to set diff dismissal callback
   const monacoRefContext = useContext(MonacoRefContext);
 
@@ -97,6 +101,7 @@ export function AIAssistantPanelWrapper() {
   }, [isIDEOpen]);
 
   // Cmd+K toggles AI Assistant with mutual exclusivity
+  // Disabled when viewing a pinned version (not latest)
   useKeyboardShortcut(
     '$mod+k',
     () => {
@@ -106,7 +111,8 @@ export function AIAssistantPanelWrapper() {
       }
       toggleAIAssistantPanel();
     },
-    0
+    0,
+    { enabled: !isPinnedVersion }
   );
 
   const aiStore = useAIStore();
