@@ -5,6 +5,7 @@ import {
   useCallback,
   useEffect,
   useImperativeHandle,
+  useMemo,
   useRef,
   useState,
 } from 'react';
@@ -62,6 +63,26 @@ export const CollaborativeMonaco = forwardRef<
   const diffEditorRef = useRef<editor.IStandaloneDiffEditor | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const diffContainerRef = useRef<HTMLDivElement | null>(null);
+
+  // Base editor options shared between main and diff editors
+  const baseEditorOptions: editor.IStandaloneEditorConstructionOptions =
+    useMemo(
+      () => ({
+        theme: 'default',
+        fontSize: 14,
+        minimap: { enabled: false },
+        scrollBeyondLastLine: false,
+        wordWrap: 'on',
+        lineNumbers: 'on',
+        folding: true,
+        renderWhitespace: 'selection',
+        tabSize: 2,
+        insertSpaces: true,
+        automaticLayout: true,
+        fixedOverflowWidgets: true,
+      }),
+      []
+    );
 
   const handleOnMount = useCallback(
     (editor: editor.IStandaloneCodeEditor, monaco: Monaco) => {
@@ -216,20 +237,16 @@ export const CollaborativeMonaco = forwardRef<
         diffContainerRef.current.style.setProperty('display', 'block');
       }
 
-      // Create diff editor in dedicated container
+      // Create diff editor in dedicated container with same options as main editor
       const diffEditor = monaco.editor.createDiffEditor(
         diffContainerRef.current,
         {
-          theme: 'vs-dark',
+          ...baseEditorOptions,
           readOnly: true,
           originalEditable: false,
-          automaticLayout: true,
           scrollbar: {
             vertical: 'visible',
             horizontal: 'visible',
-          },
-          minimap: {
-            enabled: false,
           },
         }
       );
@@ -253,7 +270,7 @@ export const CollaborativeMonaco = forwardRef<
       diffEditorRef.current = diffEditor;
       setDiffMode(true);
     },
-    [diffMode]
+    [diffMode, baseEditorOptions]
   );
 
   // clearDiff function - removes diff editor and shows standard editor
@@ -321,18 +338,8 @@ export const CollaborativeMonaco = forwardRef<
   );
 
   const editorOptions: editor.IStandaloneEditorConstructionOptions = {
-    fontSize: 14,
-    minimap: { enabled: false },
-    scrollBeyondLastLine: false,
-    wordWrap: 'on',
-    lineNumbers: 'on',
-    folding: true,
-    renderWhitespace: 'selection',
-    tabSize: 2,
-    insertSpaces: true,
-    automaticLayout: true,
+    ...baseEditorOptions,
     readOnly: disabled,
-    fixedOverflowWidgets: true,
     ...options,
   };
 
