@@ -5,6 +5,7 @@
 import { useCallback, useEffect, useRef } from 'react';
 
 import { useURLState } from '#/react/lib/use-url-state';
+import { cn } from '#/utils/cn';
 
 import type { WorkflowState as YAMLWorkflowState } from '../../yaml/types';
 import { useResizablePanel } from '../hooks/useResizablePanel';
@@ -671,7 +672,12 @@ export function WorkflowEditor({
                             }`
                       }`}
                     >
-                      <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-primary-50 group-hover:bg-primary-100 mb-4 transition-colors">
+                      <div
+                        className={cn(
+                          'inline-flex items-center justify-center w-12 h-12 rounded-xl bg-primary-50 mb-4 transition-colors',
+                          !isPinnedVersion && 'group-hover:bg-primary-100'
+                        )}
+                      >
                         <span className="hero-sparkles h-6 w-6 text-primary-600" />
                       </div>
                       <h4 className="text-sm font-semibold text-gray-900 mb-1.5 whitespace-nowrap">

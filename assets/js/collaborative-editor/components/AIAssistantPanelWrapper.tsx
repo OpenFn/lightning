@@ -563,19 +563,40 @@ export function AIAssistantPanelWrapper() {
     hasLoadedSessionRef.current = false;
   }, [sessionId]);
 
-  // Auto-dismiss diff when version changes (via version dropdown)
+  // Auto-dismiss diff AND close AI panel when version changes to pinned version
   useEffect(() => {
-    // Only clear diff if version actually changed (not on initial mount or state updates)
-    if (
-      previousVersionRef.current !== currentVersion &&
-      previewingMessageId &&
-      monacoRef?.current
-    ) {
-      monacoRef.current.clearDiff();
-      setPreviewingMessageId(null);
+    // Only act if version actually changed (not on initial mount or state updates)
+    if (previousVersionRef.current !== currentVersion) {
+      // 1. Clear diff if one is being previewed
+      if (previewingMessageId && monacoRef?.current) {
+        monacoRef.current.clearDiff();
+        setPreviewingMessageId(null);
+      }
+
+      // 2. Close AI panel and clear session if switching TO a pinned version
+      if (isPinnedVersion && isAIAssistantPanelOpen) {
+        closeAIAssistantPanel();
+        // Clear the AI session to prevent confusion about version context
+        aiStore.clearSession();
+        // Clear URL session params
+        updateSearchParams({
+          'w-chat': null,
+          'j-chat': null,
+        });
+      }
     }
+
     previousVersionRef.current = currentVersion;
-  }, [currentVersion, previewingMessageId, monacoRef]);
+  }, [
+    currentVersion,
+    previewingMessageId,
+    monacoRef,
+    isPinnedVersion,
+    isAIAssistantPanelOpen,
+    closeAIAssistantPanel,
+    aiStore,
+    updateSearchParams,
+  ]);
 
   const {
     importWorkflow,

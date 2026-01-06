@@ -57,8 +57,8 @@ export function AIButton({
           'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600',
           'disabled:opacity-50 disabled:cursor-not-allowed',
           isOpen
-            ? 'bg-primary-600 text-white hover:bg-primary-500'
-            : 'bg-primary-100 text-primary-600 hover:bg-primary-200',
+            ? 'bg-primary-600 text-white hover:enabled:bg-primary-500'
+            : 'bg-primary-100 text-primary-600 hover:enabled:bg-primary-200',
           className
         )}
       >
