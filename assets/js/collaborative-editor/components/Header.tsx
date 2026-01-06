@@ -39,6 +39,7 @@ import { NewRunButton } from './NewRunButton';
 import { ReadOnlyWarning } from './ReadOnlyWarning';
 import { ShortcutKeys } from './ShortcutKeys';
 import { Tooltip } from './Tooltip';
+import { useUnsavedChanges } from '../hooks/useUnsavedChanges';
 
 /**
  * Save button component - visible in React DevTools
@@ -54,6 +55,7 @@ export function SaveButton({
   label = 'Save',
   canSync,
   syncTooltipMessage,
+  hasChanges,
 }: {
   canSave: boolean;
   tooltipMessage: string;
@@ -63,34 +65,40 @@ export function SaveButton({
   label?: string;
   canSync: boolean;
   syncTooltipMessage: string | null;
+  hasChanges: boolean;
 }) {
   const hasGitHubIntegration = repoConnection !== null;
 
   if (!hasGitHubIntegration) {
     return (
-      <div className="inline-flex rounded-md shadow-xs z-5">
-        <Tooltip
-          content={
-            canSave ? <ShortcutKeys keys={['mod', 's']} /> : tooltipMessage
-          }
-          side="bottom"
-        >
-          <button
-            type="button"
-            data-testid="save-workflow-button"
-            className="rounded-md text-sm font-semibold shadow-xs
+      <div className="relative">
+        <div className="inline-flex rounded-md shadow-xs z-5">
+          <Tooltip
+            content={
+              canSave ? <ShortcutKeys keys={['mod', 's']} /> : tooltipMessage
+            }
+            side="bottom"
+          >
+            <button
+              type="button"
+              data-testid="save-workflow-button"
+              className="rounded-md text-sm font-semibold shadow-xs
             phx-submit-loading:opacity-75 cursor-pointer
             disabled:cursor-not-allowed disabled:bg-primary-300 px-3 py-2
             bg-primary-600 hover:bg-primary-500
             disabled:hover:bg-primary-300 text-white
             focus-visible:outline-2 focus-visible:outline-offset-2
             focus-visible:outline-primary-600 focus:ring-transparent"
-            onClick={onClick}
-            disabled={!canSave}
-          >
-            {label}
-          </button>
-        </Tooltip>
+              onClick={onClick}
+              disabled={!canSave}
+            >
+              {label} me
+            </button>
+          </Tooltip>
+        </div>
+        {hasChanges ? (
+          <div className="absolute -m-1 top-0 right-0 z-10 size-3 bg-danger-500 rounded-full"></div>
+        ) : null}
       </div>
     );
   }
@@ -204,6 +212,7 @@ export function Header({
   const { provider } = useSession();
   const limits = useLimits();
   const { isReadOnly } = useWorkflowReadOnly();
+  const { hasChanges } = useUnsavedChanges();
 
   // Check GitHub sync limit
   const githubSyncLimit = limits.github_sync ?? {
@@ -410,6 +419,7 @@ export function Header({
                 label={isNewWorkflow ? 'Create' : 'Save'}
                 canSync={githubSyncLimit.allowed}
                 syncTooltipMessage={githubSyncLimit.message}
+                hasChanges={hasChanges}
               />
             </div>
           </div>

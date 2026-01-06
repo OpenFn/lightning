@@ -2,6 +2,10 @@ import type { PhoenixChannelProvider } from 'y-phoenix-channel';
 import * as z from 'zod';
 
 import { isoDateTimeSchema, uuidSchema } from './common';
+import { type Workflow } from './workflow';
+import { JobSchema } from './job';
+import { TriggerSchema } from './trigger';
+import { EdgeSchema } from './edge';
 
 export const UserContextSchema = z.object({
   id: uuidSchema,
@@ -102,6 +106,13 @@ export const SessionContextResponseSchema = z.object({
   workflow_template: WorkflowTemplateSchema.nullable(),
   has_read_ai_disclaimer: z.boolean(),
   limits: LimitsSchema.optional(),
+  workflow: z.object({
+    jobs: z.array(JobSchema),
+    triggers: z.array(TriggerSchema),
+    edges: z.array(EdgeSchema),
+    positions: z.record(z.string(), z.any()).optional().default({}),
+    name: z.string(),
+  }), // to be fixed
 });
 
 export type UserContext = z.infer<typeof UserContextSchema>;
@@ -112,6 +123,7 @@ export type AppConfig = z.infer<typeof AppConfigSchema>;
 export interface SessionContextState {
   user: UserContext | null;
   project: ProjectContext | null;
+  workflow: Workflow | null;
   config: AppConfig | null;
   permissions: Permissions | null;
   latestSnapshotLockVersion: number | null;

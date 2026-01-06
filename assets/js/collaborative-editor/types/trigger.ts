@@ -17,8 +17,8 @@ const baseTriggerSchema = z.object({
 // Webhook trigger schema
 const webhookTriggerSchema = baseTriggerSchema.extend({
   type: z.literal('webhook'),
-  cron_expression: z.null(),
-  kafka_configuration: z.null(),
+  cron_expression: z.null().default(null),
+  kafka_configuration: z.null().default(null),
 });
 
 // Cron trigger schema with professional validation using cron-validator
