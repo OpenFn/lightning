@@ -21,6 +21,10 @@ and this project adheres to
 
 ### Fixed
 
+## [2.15.7-pre] - 2025-12-25
+
+### Fixed
+
 - Fixed bug where Oauth credentials and raw credentials couldn't be selected
   with the HTTP adaptor [#4284](https://github.com/OpenFn/lightning/issues/4284)
 
