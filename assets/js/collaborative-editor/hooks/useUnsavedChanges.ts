@@ -12,17 +12,16 @@ export function useUnsavedChanges() {
     positions: state.positions || {},
     name: state.workflow?.name,
   }));
-  // pick items in the exising and check if the new matches it.
-
   if (!workflow || !storeWorkflow) return false;
   return {
-    hasChanges: isDiff(
+    hasChanges: isDiffWorkflow(
       transformWorkflow(workflow || {}),
-      transformWorkflow(storeWorkflow || {})
-    ) as boolean,
+      transformWorkflow((storeWorkflow as Workflow) || {})
+    ),
   };
 }
 
+// we need the same structure of workflows to be able to compare
 function transformWorkflow(workflow: Workflow) {
   return {
     name: workflow.name,
@@ -58,32 +57,21 @@ function transformWorkflow(workflow: Workflow) {
   };
 }
 
-function isDiff(base: unknown, target: unknown) {
+function isDiffWorkflow(base: unknown, target: unknown): boolean {
   const undef = [undefined, null, ''];
   // @ts-expect-error
   if (undef.includes(base) && undef.includes(target)) return false;
   if (typeof base !== typeof target) return true;
   if (Array.isArray(base) && Array.isArray(target)) {
     if (base.length !== target.length) return true;
-    // enter the array
-    // iterate the array and check each item
-    let final = false;
-    for (let idx = 0; idx < base.length; idx++) {
-      final ||= isDiff(base[idx], target[idx]);
-    }
-    return final;
+    return base.some((v, i) => isDiffWorkflow(v, target[i]));
   } else if (
     base &&
     target &&
     typeof base === 'object' &&
     typeof target === 'object'
   ) {
-    // iterate the object and check each item
-    let final = false;
-    for (const key of Object.keys(base)) {
-      final ||= isDiff(base[key], target[key]);
-    }
-    return final;
+    return Object.keys(base).some(k => isDiffWorkflow(base[k], target[k]));
   } else {
     return target !== base;
   }
