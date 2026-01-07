@@ -219,6 +219,8 @@ export const CollaborativeMonaco = forwardRef<
       if (diffMode && diffEditorRef.current) {
         const diffEditor = diffEditorRef.current;
         const model = diffEditor.getModel();
+        // Reset model before disposing text models
+        diffEditor.setModel(null);
         if (model) {
           model.original?.dispose();
           model.modified?.dispose();
@@ -281,6 +283,9 @@ export const CollaborativeMonaco = forwardRef<
     const diffEditor = diffEditorRef.current;
     const model = diffEditor.getModel();
 
+    // Reset the diff editor's model to null BEFORE disposing text models
+    diffEditor.setModel(null);
+
     if (model) {
       model.original?.dispose();
       model.modified?.dispose();
@@ -316,6 +321,8 @@ export const CollaborativeMonaco = forwardRef<
       if (diffEditorRef.current) {
         const diffEditor = diffEditorRef.current;
         const model = diffEditor.getModel();
+        // Reset model before disposing text models
+        diffEditor.setModel(null);
         if (model) {
           model.original?.dispose();
           model.modified?.dispose();
