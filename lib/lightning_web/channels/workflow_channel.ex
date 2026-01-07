@@ -22,7 +22,6 @@ defmodule LightningWeb.WorkflowChannel do
   alias Lightning.Workflows.WorkflowUsageLimiter
   alias Lightning.WorkOrders
   alias LightningWeb.Channels.WorkflowJSON
-  alias Lightning.Collaboration.WorkflowSerializer
 
   require Logger
 
@@ -218,9 +217,7 @@ defmodule LightningWeb.WorkflowChannel do
         has_read_ai_disclaimer:
           Lightning.AiAssistant.user_has_read_disclaimer?(user),
         limits: render_limits(project.id),
-        workflow:
-          (fresh_workflow &&
-             WorkflowSerializer.transform_workflow(fresh_workflow)) || %{}
+        workflow: (fresh_workflow && fresh_workflow) || %{}
       }
     end)
   end
@@ -332,7 +329,7 @@ defmodule LightningWeb.WorkflowChannel do
       # so they can update their latestSnapshotLockVersion in SessionContextStore
       broadcast!(socket, "workflow_saved", %{
         latest_snapshot_lock_version: workflow.lock_version,
-        workflow: WorkflowSerializer.transform_workflow(workflow)
+        workflow: workflow
       })
 
       {:reply,
