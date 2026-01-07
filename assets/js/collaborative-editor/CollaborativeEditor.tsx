@@ -170,8 +170,7 @@ export const CollaborativeEditor: WithActionProps<
     navigate: props.navigate,
   };
 
-  // Monaco ref for diff preview - shared between FullScreenIDE and
-  // AIAssistantPanelWrapper
+  // Monaco ref for diff preview - shared between FullScreenIDE and AIAssistantPanelWrapper
   const monacoRef = useRef<MonacoHandle>(null);
 
   // Callback ref for diff dismissal - set by AIAssistantPanelWrapper

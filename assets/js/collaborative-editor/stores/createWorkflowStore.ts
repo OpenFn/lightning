@@ -714,6 +714,8 @@ export const createWorkflowStore = () => {
           );
           provider.channel.off('workflow_applying', workflowApplyingHandler);
           provider.channel.off('workflow_applied', workflowAppliedHandler);
+          provider.channel.off('job_code_applying', jobCodeApplyingHandler);
+          provider.channel.off('job_code_applied', jobCodeAppliedHandler);
         }
       },
     ];

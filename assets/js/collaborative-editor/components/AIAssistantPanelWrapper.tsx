@@ -542,9 +542,10 @@ export function AIAssistantPanelWrapper() {
 
   // Close handler - clears diff preview and closes panel
   const handleClosePanel = useCallback(() => {
+    const monaco = monacoRef?.current;
     // Clear any active diff preview when closing the panel
-    if (previewingMessageId && monacoRef?.current) {
-      monacoRef.current.clearDiff();
+    if (previewingMessageId && monaco) {
+      monaco.clearDiff();
       setPreviewingMessageId(null);
     }
     closeAIAssistantPanel();
@@ -552,9 +553,10 @@ export function AIAssistantPanelWrapper() {
 
   // Show sessions handler - clears diff preview and returns to session list
   const handleShowSessions = useCallback(() => {
+    const monaco = monacoRef?.current;
     // Clear any active diff preview when going back to session list
-    if (previewingMessageId && monacoRef?.current) {
-      monacoRef.current.clearDiff();
+    if (previewingMessageId && monaco) {
+      monaco.clearDiff();
       setPreviewingMessageId(null);
     }
 
@@ -587,9 +589,10 @@ export function AIAssistantPanelWrapper() {
   useEffect(() => {
     // Only act if version actually changed (not on initial mount or state updates)
     if (previousVersionRef.current !== currentVersion) {
+      const monaco = monacoRef?.current;
       // 1. Clear diff if one is being previewed
-      if (previewingMessageId && monacoRef?.current) {
-        monacoRef.current.clearDiff();
+      if (previewingMessageId && monaco) {
+        monaco.clearDiff();
         setPreviewingMessageId(null);
       }
 
@@ -753,9 +756,11 @@ export function AIAssistantPanelWrapper() {
         return;
       }
 
+      const monaco = monacoRef?.current;
+
       // Clear any existing diff first
-      if (previewingMessageId && monacoRef && monacoRef.current) {
-        monacoRef.current.clearDiff();
+      if (previewingMessageId && monaco) {
+        monaco.clearDiff();
       }
 
       // Get current job code from Y.Doc
@@ -763,8 +768,8 @@ export function AIAssistantPanelWrapper() {
       const currentCode = currentJob?.body ?? '';
 
       // Show diff in Monaco
-      if (monacoRef && monacoRef.current) {
-        monacoRef.current.showDiff(currentCode, code);
+      if (monaco) {
+        monaco.showDiff(currentCode, code);
         setPreviewingMessageId(messageId);
       } else {
         console.error('[AI Assistant] ❌ Monaco ref not available', {
@@ -798,9 +803,10 @@ export function AIAssistantPanelWrapper() {
         return;
       }
 
+      const monaco = monacoRef?.current;
       // Clear diff if showing
-      if (previewingMessageId && monacoRef && monacoRef.current) {
-        monacoRef.current.clearDiff();
+      if (previewingMessageId && monaco) {
+        monaco.clearDiff();
         setPreviewingMessageId(null);
       }
 
