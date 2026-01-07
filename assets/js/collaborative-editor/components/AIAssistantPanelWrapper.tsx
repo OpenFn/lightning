@@ -384,6 +384,7 @@ export function AIAssistantPanelWrapper() {
       const currentState = aiStore.getSnapshot();
 
       // For job_code with attach_code, get CURRENT code from Y.Doc
+      let updatedAiMode = aiMode;
       if (
         messageOptions?.attach_code &&
         aiMode?.mode === 'job_code' &&
@@ -396,8 +397,14 @@ export function AIAssistantPanelWrapper() {
           // Get fresh code from jobs array (backed by Y.Doc)
           const currentJob = jobs.find(j => j.id === jobId);
           if (currentJob) {
-            // Update context with current code
-            context.job_body = currentJob.body;
+            // Update aiMode with new context (don't mutate)
+            updatedAiMode = {
+              ...aiMode,
+              context: {
+                ...context,
+                job_body: currentJob.body,
+              },
+            };
           }
           // If job not found, fall back to existing context.job_body
           // (job could be unsaved or deleted)
@@ -405,8 +412,8 @@ export function AIAssistantPanelWrapper() {
       }
 
       // If no session exists, we need to include content in context for first message
-      if (!currentState.sessionId && aiMode) {
-        const { mode, context } = aiMode;
+      if (!currentState.sessionId && updatedAiMode) {
+        const { mode, context } = updatedAiMode;
 
         // Prepare context with content and message options for channel join
         let finalContext = {
@@ -763,6 +770,10 @@ export function AIAssistantPanelWrapper() {
         console.error('[AI Assistant] ❌ Monaco ref not available', {
           hasMonacoRef: !!monacoRef,
           hasMonacoRefCurrent: !!monacoRef?.current,
+        });
+        notifications.alert({
+          title: 'Preview unavailable',
+          description: 'Editor not ready. Please try again in a moment.',
         });
       }
     },
