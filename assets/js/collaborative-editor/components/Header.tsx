@@ -233,6 +233,8 @@ export function Header({
     latestSnapshotLockVersion !== null &&
     workflow.lock_version !== latestSnapshotLockVersion;
 
+  const showChangeIndicator = hasChanges && canSave && !isNewWorkflow;
+
   const handleRunClick = useCallback(() => {
     if (firstTriggerId) {
       // select the first trigger
@@ -423,7 +425,7 @@ export function Header({
                 label={isNewWorkflow ? 'Create' : 'Save'}
                 canSync={githubSyncLimit.allowed}
                 syncTooltipMessage={githubSyncLimit.message}
-                hasChanges={hasChanges && canSave && !isNewWorkflow}
+                hasChanges={showChangeIndicator}
               />
             </div>
           </div>
