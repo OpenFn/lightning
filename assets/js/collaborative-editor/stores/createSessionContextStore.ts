@@ -171,7 +171,6 @@ export const createSessionContextStore = (
    */
   const handleSessionContextReceived = (rawData: unknown) => {
     const result = SessionContextResponseSchema.safeParse(rawData);
-    console.log('han:base', result.data?.workflow, result.error, rawData);
 
     if (result.success) {
       const sessionContext = result.data;
