@@ -5,14 +5,14 @@
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="generator" content="ExDoc v0.38.4">
-    <meta name="project" content="Lightning v2.15.7-pre">
+    <meta name="project" content="Lightning v2.15.7">
 
 
-    <title>Lightning.WorkflowTemplates — Lightning v2.15.7-pre</title>
+    <title>Lightning.WorkflowTemplates — Lightning v2.15.7</title>
 
     <link rel="stylesheet" href="dist/html-elixir-RLZO5U2C.css" />
 
-    <script defer src="dist/sidebar_items-0B6A650F.js"></script>
+    <script defer src="dist/sidebar_items-56B60D8A.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-Y223O6DN.js"></script>
 
@@ -41,7 +41,7 @@
 Lightning
         </a>
         <div class="sidebar-projectVersion" translate="no">
-          v2.15.7-pre
+          v2.15.7
         </div>
       </div>
     </div>
@@ -80,7 +80,7 @@ Lightning
   <div class="heading-with-actions top-heading">
     <h1>
       <span translate="no">Lightning.WorkflowTemplates</span> 
-      <small class="app-vsn" translate="no">(Lightning v2.15.7-pre)</small>
+      <small class="app-vsn" translate="no">(Lightning v2.15.7)</small>
 
     </h1>
 
@@ -235,8 +235,8 @@ Lightning
 
   <section class="docstring">
 
-<p>Returns an <code class="inline">%Ecto.Changeset{}</code> for tracking template changes.</p><h2 id="change_template/2-examples" class="section-heading"><a href="#change_template/2-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">change_template</span><span class="p" data-group-id="0333378541-1">(</span><span class="n">template</span><span class="p" data-group-id="0333378541-1">)</span><span class="w">
-</span><span class="p" data-group-id="0333378541-2">%</span><span class="nc" data-group-id="0333378541-2">Ecto.Changeset</span><span class="p" data-group-id="0333378541-2">{</span><span class="ss">data</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="0333378541-3">%</span><span class="nc" data-group-id="0333378541-3">WorkflowTemplate</span><span class="p" data-group-id="0333378541-3">{</span><span class="p" data-group-id="0333378541-3">}</span><span class="p" data-group-id="0333378541-2">}</span></code></pre>
+<p>Returns an <code class="inline">%Ecto.Changeset{}</code> for tracking template changes.</p><h2 id="change_template/2-examples" class="section-heading"><a href="#change_template/2-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">change_template</span><span class="p" data-group-id="3323505889-1">(</span><span class="n">template</span><span class="p" data-group-id="3323505889-1">)</span><span class="w">
+</span><span class="p" data-group-id="3323505889-2">%</span><span class="nc" data-group-id="3323505889-2">Ecto.Changeset</span><span class="p" data-group-id="3323505889-2">{</span><span class="ss">data</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="3323505889-3">%</span><span class="nc" data-group-id="3323505889-3">WorkflowTemplate</span><span class="p" data-group-id="3323505889-3">{</span><span class="p" data-group-id="3323505889-3">}</span><span class="p" data-group-id="3323505889-2">}</span></code></pre>
   </section>
 </section>
 <section class="detail" id="create_template/1">
@@ -261,11 +261,11 @@ Lightning
   <section class="docstring">
 
 <p>Creates or updates a workflow template.</p><p>If a template already exists for the workflow, it will be updated.
-Otherwise, a new template will be created.</p><h2 id="create_template/1-examples" class="section-heading"><a href="#create_template/1-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">create_template</span><span class="p" data-group-id="9379683548-1">(</span><span class="p" data-group-id="9379683548-2">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;My Template&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">code</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;workflow code&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">workflow_id</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;123&quot;</span><span class="p" data-group-id="9379683548-2">}</span><span class="p" data-group-id="9379683548-1">)</span><span class="w">
-</span><span class="p" data-group-id="9379683548-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="9379683548-4">%</span><span class="nc" data-group-id="9379683548-4">WorkflowTemplate</span><span class="p" data-group-id="9379683548-4">{</span><span class="p" data-group-id="9379683548-4">}</span><span class="p" data-group-id="9379683548-3">}</span><span class="w">
+Otherwise, a new template will be created.</p><h2 id="create_template/1-examples" class="section-heading"><a href="#create_template/1-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">create_template</span><span class="p" data-group-id="9745829121-1">(</span><span class="p" data-group-id="9745829121-2">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;My Template&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">code</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;workflow code&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">workflow_id</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;123&quot;</span><span class="p" data-group-id="9745829121-2">}</span><span class="p" data-group-id="9745829121-1">)</span><span class="w">
+</span><span class="p" data-group-id="9745829121-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="9745829121-4">%</span><span class="nc" data-group-id="9745829121-4">WorkflowTemplate</span><span class="p" data-group-id="9745829121-4">{</span><span class="p" data-group-id="9745829121-4">}</span><span class="p" data-group-id="9745829121-3">}</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">create_template</span><span class="p" data-group-id="9379683548-5">(</span><span class="p" data-group-id="9379683548-6">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Invalid&quot;</span><span class="p" data-group-id="9379683548-6">}</span><span class="p" data-group-id="9379683548-5">)</span><span class="w">
-</span><span class="p" data-group-id="9379683548-7">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="9379683548-8">%</span><span class="nc" data-group-id="9379683548-8">Ecto.Changeset</span><span class="p" data-group-id="9379683548-8">{</span><span class="p" data-group-id="9379683548-8">}</span><span class="p" data-group-id="9379683548-7">}</span></code></pre>
+</span><span class="gp unselectable">iex&gt; </span><span class="n">create_template</span><span class="p" data-group-id="9745829121-5">(</span><span class="p" data-group-id="9745829121-6">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Invalid&quot;</span><span class="p" data-group-id="9745829121-6">}</span><span class="p" data-group-id="9745829121-5">)</span><span class="w">
+</span><span class="p" data-group-id="9745829121-7">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="9745829121-8">%</span><span class="nc" data-group-id="9745829121-8">Ecto.Changeset</span><span class="p" data-group-id="9745829121-8">{</span><span class="p" data-group-id="9745829121-8">}</span><span class="p" data-group-id="9745829121-7">}</span></code></pre>
   </section>
 </section>
 <section class="detail" id="delete_template/1">
@@ -287,11 +287,11 @@ Otherwise, a new template will be created.</p><h2 id="create_template/1-examples
 
   <section class="docstring">
 
-<p>Deletes a workflow template.</p><h2 id="delete_template/1-examples" class="section-heading"><a href="#delete_template/1-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">delete_template</span><span class="p" data-group-id="1091387811-1">(</span><span class="n">template</span><span class="p" data-group-id="1091387811-1">)</span><span class="w">
-</span><span class="p" data-group-id="1091387811-2">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="1091387811-3">%</span><span class="nc" data-group-id="1091387811-3">WorkflowTemplate</span><span class="p" data-group-id="1091387811-3">{</span><span class="p" data-group-id="1091387811-3">}</span><span class="p" data-group-id="1091387811-2">}</span><span class="w">
+<p>Deletes a workflow template.</p><h2 id="delete_template/1-examples" class="section-heading"><a href="#delete_template/1-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">delete_template</span><span class="p" data-group-id="1072216602-1">(</span><span class="n">template</span><span class="p" data-group-id="1072216602-1">)</span><span class="w">
+</span><span class="p" data-group-id="1072216602-2">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="1072216602-3">%</span><span class="nc" data-group-id="1072216602-3">WorkflowTemplate</span><span class="p" data-group-id="1072216602-3">{</span><span class="p" data-group-id="1072216602-3">}</span><span class="p" data-group-id="1072216602-2">}</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">delete_template</span><span class="p" data-group-id="1091387811-4">(</span><span class="n">template</span><span class="p" data-group-id="1091387811-4">)</span><span class="w">
-</span><span class="p" data-group-id="1091387811-5">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="1091387811-6">%</span><span class="nc" data-group-id="1091387811-6">Ecto.Changeset</span><span class="p" data-group-id="1091387811-6">{</span><span class="p" data-group-id="1091387811-6">}</span><span class="p" data-group-id="1091387811-5">}</span></code></pre>
+</span><span class="gp unselectable">iex&gt; </span><span class="n">delete_template</span><span class="p" data-group-id="1072216602-4">(</span><span class="n">template</span><span class="p" data-group-id="1072216602-4">)</span><span class="w">
+</span><span class="p" data-group-id="1072216602-5">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="1072216602-6">%</span><span class="nc" data-group-id="1072216602-6">Ecto.Changeset</span><span class="p" data-group-id="1072216602-6">{</span><span class="p" data-group-id="1072216602-6">}</span><span class="p" data-group-id="1072216602-5">}</span></code></pre>
   </section>
 </section>
 <section class="detail" id="get_template/1">
@@ -313,10 +313,10 @@ Otherwise, a new template will be created.</p><h2 id="create_template/1-examples
 
   <section class="docstring">
 
-<p>Gets a single workflow template.</p><p>Returns <code class="inline">nil</code> if the Workflow template does not exist.</p><h2 id="get_template/1-examples" class="section-heading"><a href="#get_template/1-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">get_template</span><span class="p" data-group-id="2634602336-1">(</span><span class="mi">123</span><span class="p" data-group-id="2634602336-1">)</span><span class="w">
-</span><span class="p" data-group-id="2634602336-2">%</span><span class="nc" data-group-id="2634602336-2">WorkflowTemplate</span><span class="p" data-group-id="2634602336-2">{</span><span class="p" data-group-id="2634602336-2">}</span><span class="w">
+<p>Gets a single workflow template.</p><p>Returns <code class="inline">nil</code> if the Workflow template does not exist.</p><h2 id="get_template/1-examples" class="section-heading"><a href="#get_template/1-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">get_template</span><span class="p" data-group-id="9751727594-1">(</span><span class="mi">123</span><span class="p" data-group-id="9751727594-1">)</span><span class="w">
+</span><span class="p" data-group-id="9751727594-2">%</span><span class="nc" data-group-id="9751727594-2">WorkflowTemplate</span><span class="p" data-group-id="9751727594-2">{</span><span class="p" data-group-id="9751727594-2">}</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">get_template</span><span class="p" data-group-id="2634602336-3">(</span><span class="mi">456</span><span class="p" data-group-id="2634602336-3">)</span><span class="w">
+</span><span class="gp unselectable">iex&gt; </span><span class="n">get_template</span><span class="p" data-group-id="9751727594-3">(</span><span class="mi">456</span><span class="p" data-group-id="9751727594-3">)</span><span class="w">
 </span><span class="no">nil</span></code></pre>
   </section>
 </section>
@@ -339,10 +339,10 @@ Otherwise, a new template will be created.</p><h2 id="create_template/1-examples
 
   <section class="docstring">
 
-<p>Gets a single workflow template.</p><p>Raises <a href="https://hexdocs.pm/ecto/3.13.2/Ecto.NoResultsError.html"><code class="inline">Ecto.NoResultsError</code></a> if the Workflow template does not exist.</p><h2 id="get_template!/1-examples" class="section-heading"><a href="#get_template!/1-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">get_template!</span><span class="p" data-group-id="5688330795-1">(</span><span class="mi">123</span><span class="p" data-group-id="5688330795-1">)</span><span class="w">
-</span><span class="p" data-group-id="5688330795-2">%</span><span class="nc" data-group-id="5688330795-2">WorkflowTemplate</span><span class="p" data-group-id="5688330795-2">{</span><span class="p" data-group-id="5688330795-2">}</span><span class="w">
+<p>Gets a single workflow template.</p><p>Raises <a href="https://hexdocs.pm/ecto/3.13.2/Ecto.NoResultsError.html"><code class="inline">Ecto.NoResultsError</code></a> if the Workflow template does not exist.</p><h2 id="get_template!/1-examples" class="section-heading"><a href="#get_template!/1-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">get_template!</span><span class="p" data-group-id="9866101371-1">(</span><span class="mi">123</span><span class="p" data-group-id="9866101371-1">)</span><span class="w">
+</span><span class="p" data-group-id="9866101371-2">%</span><span class="nc" data-group-id="9866101371-2">WorkflowTemplate</span><span class="p" data-group-id="9866101371-2">{</span><span class="p" data-group-id="9866101371-2">}</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">get_template!</span><span class="p" data-group-id="5688330795-3">(</span><span class="mi">456</span><span class="p" data-group-id="5688330795-3">)</span><span class="w">
+</span><span class="gp unselectable">iex&gt; </span><span class="n">get_template!</span><span class="p" data-group-id="9866101371-3">(</span><span class="mi">456</span><span class="p" data-group-id="9866101371-3">)</span><span class="w">
 </span><span class="gt">** (Ecto.NoResultsError)</span></code></pre>
   </section>
 </section>
@@ -365,10 +365,10 @@ Otherwise, a new template will be created.</p><h2 id="create_template/1-examples
 
   <section class="docstring">
 
-<p>Gets a template by workflow ID.</p><h2 id="get_template_by_workflow_id/1-examples" class="section-heading"><a href="#get_template_by_workflow_id/1-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">get_template_by_workflow_id</span><span class="p" data-group-id="3744218068-1">(</span><span class="s">&quot;123&quot;</span><span class="p" data-group-id="3744218068-1">)</span><span class="w">
-</span><span class="p" data-group-id="3744218068-2">%</span><span class="nc" data-group-id="3744218068-2">WorkflowTemplate</span><span class="p" data-group-id="3744218068-2">{</span><span class="p" data-group-id="3744218068-2">}</span><span class="w">
+<p>Gets a template by workflow ID.</p><h2 id="get_template_by_workflow_id/1-examples" class="section-heading"><a href="#get_template_by_workflow_id/1-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">get_template_by_workflow_id</span><span class="p" data-group-id="8015495157-1">(</span><span class="s">&quot;123&quot;</span><span class="p" data-group-id="8015495157-1">)</span><span class="w">
+</span><span class="p" data-group-id="8015495157-2">%</span><span class="nc" data-group-id="8015495157-2">WorkflowTemplate</span><span class="p" data-group-id="8015495157-2">{</span><span class="p" data-group-id="8015495157-2">}</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">get_template_by_workflow_id</span><span class="p" data-group-id="3744218068-3">(</span><span class="s">&quot;456&quot;</span><span class="p" data-group-id="3744218068-3">)</span><span class="w">
+</span><span class="gp unselectable">iex&gt; </span><span class="n">get_template_by_workflow_id</span><span class="p" data-group-id="8015495157-3">(</span><span class="s">&quot;456&quot;</span><span class="p" data-group-id="8015495157-3">)</span><span class="w">
 </span><span class="no">nil</span></code></pre>
   </section>
 </section>
@@ -391,8 +391,8 @@ Otherwise, a new template will be created.</p><h2 id="create_template/1-examples
 
   <section class="docstring">
 
-<p>Lists all workflow templates.</p><h2 id="list_templates/0-examples" class="section-heading"><a href="#list_templates/0-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">list_templates</span><span class="p" data-group-id="7281906508-1">(</span><span class="p" data-group-id="7281906508-1">)</span><span class="w">
-</span><span class="p" data-group-id="7281906508-2">[</span><span class="p" data-group-id="7281906508-3">%</span><span class="nc" data-group-id="7281906508-3">WorkflowTemplate</span><span class="p" data-group-id="7281906508-3">{</span><span class="p" data-group-id="7281906508-3">}</span><span class="p">,</span><span class="w"> </span><span class="n">...</span><span class="p" data-group-id="7281906508-2">]</span></code></pre>
+<p>Lists all workflow templates.</p><h2 id="list_templates/0-examples" class="section-heading"><a href="#list_templates/0-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">list_templates</span><span class="p" data-group-id="0336731931-1">(</span><span class="p" data-group-id="0336731931-1">)</span><span class="w">
+</span><span class="p" data-group-id="0336731931-2">[</span><span class="p" data-group-id="0336731931-3">%</span><span class="nc" data-group-id="0336731931-3">WorkflowTemplate</span><span class="p" data-group-id="0336731931-3">{</span><span class="p" data-group-id="0336731931-3">}</span><span class="p">,</span><span class="w"> </span><span class="n">...</span><span class="p" data-group-id="0336731931-2">]</span></code></pre>
   </section>
 </section>
 <section class="detail" id="list_workflow_templates/1">
@@ -414,8 +414,8 @@ Otherwise, a new template will be created.</p><h2 id="create_template/1-examples
 
   <section class="docstring">
 
-<p>Lists workflow templates for a specific workflow.</p><h2 id="list_workflow_templates/1-examples" class="section-heading"><a href="#list_workflow_templates/1-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">list_workflow_templates</span><span class="p" data-group-id="6599168992-1">(</span><span class="n">workflow</span><span class="p" data-group-id="6599168992-1">)</span><span class="w">
-</span><span class="p" data-group-id="6599168992-2">[</span><span class="p" data-group-id="6599168992-3">%</span><span class="nc" data-group-id="6599168992-3">WorkflowTemplate</span><span class="p" data-group-id="6599168992-3">{</span><span class="p" data-group-id="6599168992-3">}</span><span class="p">,</span><span class="w"> </span><span class="n">...</span><span class="p" data-group-id="6599168992-2">]</span></code></pre>
+<p>Lists workflow templates for a specific workflow.</p><h2 id="list_workflow_templates/1-examples" class="section-heading"><a href="#list_workflow_templates/1-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">list_workflow_templates</span><span class="p" data-group-id="6839574720-1">(</span><span class="n">workflow</span><span class="p" data-group-id="6839574720-1">)</span><span class="w">
+</span><span class="p" data-group-id="6839574720-2">[</span><span class="p" data-group-id="6839574720-3">%</span><span class="nc" data-group-id="6839574720-3">WorkflowTemplate</span><span class="p" data-group-id="6839574720-3">{</span><span class="p" data-group-id="6839574720-3">}</span><span class="p">,</span><span class="w"> </span><span class="n">...</span><span class="p" data-group-id="6839574720-2">]</span></code></pre>
   </section>
 </section>
 <section class="detail" id="update_template/2">
@@ -437,11 +437,11 @@ Otherwise, a new template will be created.</p><h2 id="create_template/1-examples
 
   <section class="docstring">
 
-<p>Updates a workflow template.</p><h2 id="update_template/2-examples" class="section-heading"><a href="#update_template/2-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">update_template</span><span class="p" data-group-id="5296414019-1">(</span><span class="n">template</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="5296414019-2">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;New Name&quot;</span><span class="p" data-group-id="5296414019-2">}</span><span class="p" data-group-id="5296414019-1">)</span><span class="w">
-</span><span class="p" data-group-id="5296414019-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="5296414019-4">%</span><span class="nc" data-group-id="5296414019-4">WorkflowTemplate</span><span class="p" data-group-id="5296414019-4">{</span><span class="p" data-group-id="5296414019-4">}</span><span class="p" data-group-id="5296414019-3">}</span><span class="w">
+<p>Updates a workflow template.</p><h2 id="update_template/2-examples" class="section-heading"><a href="#update_template/2-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">update_template</span><span class="p" data-group-id="4822609580-1">(</span><span class="n">template</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="4822609580-2">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;New Name&quot;</span><span class="p" data-group-id="4822609580-2">}</span><span class="p" data-group-id="4822609580-1">)</span><span class="w">
+</span><span class="p" data-group-id="4822609580-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="4822609580-4">%</span><span class="nc" data-group-id="4822609580-4">WorkflowTemplate</span><span class="p" data-group-id="4822609580-4">{</span><span class="p" data-group-id="4822609580-4">}</span><span class="p" data-group-id="4822609580-3">}</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">update_template</span><span class="p" data-group-id="5296414019-5">(</span><span class="n">template</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="5296414019-6">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;&quot;</span><span class="p" data-group-id="5296414019-6">}</span><span class="p" data-group-id="5296414019-5">)</span><span class="w">
-</span><span class="p" data-group-id="5296414019-7">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="5296414019-8">%</span><span class="nc" data-group-id="5296414019-8">Ecto.Changeset</span><span class="p" data-group-id="5296414019-8">{</span><span class="p" data-group-id="5296414019-8">}</span><span class="p" data-group-id="5296414019-7">}</span></code></pre>
+</span><span class="gp unselectable">iex&gt; </span><span class="n">update_template</span><span class="p" data-group-id="4822609580-5">(</span><span class="n">template</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="4822609580-6">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;&quot;</span><span class="p" data-group-id="4822609580-6">}</span><span class="p" data-group-id="4822609580-5">)</span><span class="w">
+</span><span class="p" data-group-id="4822609580-7">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="4822609580-8">%</span><span class="nc" data-group-id="4822609580-8">Ecto.Changeset</span><span class="p" data-group-id="4822609580-8">{</span><span class="p" data-group-id="4822609580-8">}</span><span class="p" data-group-id="4822609580-7">}</span></code></pre>
   </section>
 </section>
 

@@ -5,14 +5,14 @@
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="generator" content="ExDoc v0.38.4">
-    <meta name="project" content="Lightning v2.15.7-pre">
+    <meta name="project" content="Lightning v2.15.7">
 
 
-    <title>Lightning.DashboardStats — Lightning v2.15.7-pre</title>
+    <title>Lightning.DashboardStats — Lightning v2.15.7</title>
 
     <link rel="stylesheet" href="dist/html-elixir-RLZO5U2C.css" />
 
-    <script defer src="dist/sidebar_items-0B6A650F.js"></script>
+    <script defer src="dist/sidebar_items-56B60D8A.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-Y223O6DN.js"></script>
 
@@ -41,7 +41,7 @@
 Lightning
         </a>
         <div class="sidebar-projectVersion" translate="no">
-          v2.15.7-pre
+          v2.15.7
         </div>
       </div>
     </div>
@@ -80,7 +80,7 @@ Lightning
   <div class="heading-with-actions top-heading">
     <h1>
       <span translate="no">Lightning.DashboardStats</span> 
-      <small class="app-vsn" translate="no">(Lightning v2.15.7-pre)</small>
+      <small class="app-vsn" translate="no">(Lightning v2.15.7)</small>
 
     </h1>
 
@@ -243,11 +243,11 @@ Lightning
 
   <section class="docstring">
 
-<p>Sorts a list of workflow statistics based on the specified field and direction.</p><h2 id="sort_workflow_stats/3-parameters" class="section-heading"><a href="#sort_workflow_stats/3-parameters" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Parameters</span></h2><ul><li><code class="inline">workflow_stats</code> - A list of WorkflowStats structs to be sorted</li><li><code class="inline">sort_field</code> - Atom representing the field to sort by, options include:<ul><li><code class="inline">:last_workorder_updated_at</code> - Sort by timestamp of the latest work order</li><li><code class="inline">:workorders_count</code> - Sort by total count of work orders</li><li><code class="inline">:failed_workorders_count</code> - Sort by count of failed work orders</li></ul></li><li><code class="inline">sort_direction</code> - Atom representing sort direction, either :asc or :desc</li></ul><h2 id="sort_workflow_stats/3-returns" class="section-heading"><a href="#sort_workflow_stats/3-returns" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Returns</span></h2><p>  Sorted list of WorkflowStats structs</p><h2 id="sort_workflow_stats/3-examples" class="section-heading"><a href="#sort_workflow_stats/3-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">sort_workflow_stats</span><span class="p" data-group-id="8999050667-1">(</span><span class="n">workflow_stats</span><span class="p">,</span><span class="w"> </span><span class="ss">:workorders_count</span><span class="p">,</span><span class="w"> </span><span class="ss">:desc</span><span class="p" data-group-id="8999050667-1">)</span><span class="w">
-</span><span class="p" data-group-id="8999050667-2">[</span><span class="p" data-group-id="8999050667-3">%</span><span class="nc" data-group-id="8999050667-3">WorkflowStats</span><span class="p" data-group-id="8999050667-3">{</span><span class="ss">workorders_count</span><span class="p">:</span><span class="w"> </span><span class="mi">100</span><span class="p">,</span><span class="w"> </span><span class="n">...</span><span class="p" data-group-id="8999050667-3">}</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="8999050667-4">%</span><span class="nc" data-group-id="8999050667-4">WorkflowStats</span><span class="p" data-group-id="8999050667-4">{</span><span class="ss">workorders_count</span><span class="p">:</span><span class="w"> </span><span class="mi">50</span><span class="p">,</span><span class="w"> </span><span class="n">...</span><span class="p" data-group-id="8999050667-4">}</span><span class="p" data-group-id="8999050667-2">]</span><span class="w">
+<p>Sorts a list of workflow statistics based on the specified field and direction.</p><h2 id="sort_workflow_stats/3-parameters" class="section-heading"><a href="#sort_workflow_stats/3-parameters" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Parameters</span></h2><ul><li><code class="inline">workflow_stats</code> - A list of WorkflowStats structs to be sorted</li><li><code class="inline">sort_field</code> - Atom representing the field to sort by, options include:<ul><li><code class="inline">:last_workorder_updated_at</code> - Sort by timestamp of the latest work order</li><li><code class="inline">:workorders_count</code> - Sort by total count of work orders</li><li><code class="inline">:failed_workorders_count</code> - Sort by count of failed work orders</li></ul></li><li><code class="inline">sort_direction</code> - Atom representing sort direction, either :asc or :desc</li></ul><h2 id="sort_workflow_stats/3-returns" class="section-heading"><a href="#sort_workflow_stats/3-returns" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Returns</span></h2><p>  Sorted list of WorkflowStats structs</p><h2 id="sort_workflow_stats/3-examples" class="section-heading"><a href="#sort_workflow_stats/3-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">sort_workflow_stats</span><span class="p" data-group-id="4971142474-1">(</span><span class="n">workflow_stats</span><span class="p">,</span><span class="w"> </span><span class="ss">:workorders_count</span><span class="p">,</span><span class="w"> </span><span class="ss">:desc</span><span class="p" data-group-id="4971142474-1">)</span><span class="w">
+</span><span class="p" data-group-id="4971142474-2">[</span><span class="p" data-group-id="4971142474-3">%</span><span class="nc" data-group-id="4971142474-3">WorkflowStats</span><span class="p" data-group-id="4971142474-3">{</span><span class="ss">workorders_count</span><span class="p">:</span><span class="w"> </span><span class="mi">100</span><span class="p">,</span><span class="w"> </span><span class="n">...</span><span class="p" data-group-id="4971142474-3">}</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="4971142474-4">%</span><span class="nc" data-group-id="4971142474-4">WorkflowStats</span><span class="p" data-group-id="4971142474-4">{</span><span class="ss">workorders_count</span><span class="p">:</span><span class="w"> </span><span class="mi">50</span><span class="p">,</span><span class="w"> </span><span class="n">...</span><span class="p" data-group-id="4971142474-4">}</span><span class="p" data-group-id="4971142474-2">]</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">sort_workflow_stats</span><span class="p" data-group-id="8999050667-5">(</span><span class="n">workflow_stats</span><span class="p">,</span><span class="w"> </span><span class="ss">:last_workorder_updated_at</span><span class="p">,</span><span class="w"> </span><span class="ss">:asc</span><span class="p" data-group-id="8999050667-5">)</span><span class="w">
-</span><span class="p" data-group-id="8999050667-6">[</span><span class="p" data-group-id="8999050667-7">%</span><span class="nc" data-group-id="8999050667-7">WorkflowStats</span><span class="p" data-group-id="8999050667-7">{</span><span class="ss">last_workorder</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="8999050667-8">%{</span><span class="ss">updated_at</span><span class="p">:</span><span class="w"> </span><span class="ld">~U[2023-01-01 00:00:00Z]</span><span class="p" data-group-id="8999050667-8">}</span><span class="p">,</span><span class="w"> </span><span class="n">...</span><span class="p" data-group-id="8999050667-7">}</span><span class="p">,</span><span class="w"> </span><span class="n">...</span><span class="p" data-group-id="8999050667-6">]</span></code></pre>
+</span><span class="gp unselectable">iex&gt; </span><span class="n">sort_workflow_stats</span><span class="p" data-group-id="4971142474-5">(</span><span class="n">workflow_stats</span><span class="p">,</span><span class="w"> </span><span class="ss">:last_workorder_updated_at</span><span class="p">,</span><span class="w"> </span><span class="ss">:asc</span><span class="p" data-group-id="4971142474-5">)</span><span class="w">
+</span><span class="p" data-group-id="4971142474-6">[</span><span class="p" data-group-id="4971142474-7">%</span><span class="nc" data-group-id="4971142474-7">WorkflowStats</span><span class="p" data-group-id="4971142474-7">{</span><span class="ss">last_workorder</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="4971142474-8">%{</span><span class="ss">updated_at</span><span class="p">:</span><span class="w"> </span><span class="ld">~U[2023-01-01 00:00:00Z]</span><span class="p" data-group-id="4971142474-8">}</span><span class="p">,</span><span class="w"> </span><span class="n">...</span><span class="p" data-group-id="4971142474-7">}</span><span class="p">,</span><span class="w"> </span><span class="n">...</span><span class="p" data-group-id="4971142474-6">]</span></code></pre>
   </section>
 </section>
 
