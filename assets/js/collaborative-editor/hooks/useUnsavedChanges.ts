@@ -12,7 +12,10 @@ export function useUnsavedChanges() {
     positions: state.positions || {},
     name: state.workflow?.name,
   }));
-  if (!workflow || !storeWorkflow) return false;
+  if (!workflow || !storeWorkflow)
+    return {
+      hasChanges: false,
+    };
   return {
     hasChanges: isDiffWorkflow(
       transformWorkflow(workflow || {}),

@@ -229,6 +229,8 @@ export function Header({
   // When ?v= is present, user is viewing a specific version (even if latest)
   const isPinnedVersion = params['v'] !== undefined && params['v'] !== null;
 
+  const showChangeIndicator = hasChanges && canSave && !isNewWorkflow;
+
   const handleRunClick = useCallback(() => {
     if (firstTriggerId) {
       // select the first trigger
@@ -419,7 +421,7 @@ export function Header({
                 label={isNewWorkflow ? 'Create' : 'Save'}
                 canSync={githubSyncLimit.allowed}
                 syncTooltipMessage={githubSyncLimit.message}
-                hasChanges={hasChanges && canSave && !isNewWorkflow}
+                hasChanges={showChangeIndicator}
               />
             </div>
           </div>
