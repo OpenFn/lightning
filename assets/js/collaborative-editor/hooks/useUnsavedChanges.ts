@@ -28,7 +28,6 @@ function isDiff(base: unknown, target: unknown) {
     for (let idx = 0; idx < base.length; idx++) {
       final ||= isDiff(base[idx], target[idx]);
     }
-    console.log('array:final', final);
     return final;
   } else if (
     base &&
@@ -38,11 +37,9 @@ function isDiff(base: unknown, target: unknown) {
   ) {
     // iterate the object and check each item
     let final = false;
-    console.log(':final', Object.keys(base));
     for (const key of Object.keys(base)) {
       final ||= isDiff(base[key], target[key]);
     }
-    console.log('object:final', final);
     return final;
   } else {
     return target !== base;
