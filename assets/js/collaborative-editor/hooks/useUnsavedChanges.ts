@@ -15,11 +15,6 @@ export function useUnsavedChanges() {
   }));
 
   if (!workflow || !storeWorkflow) return { hasChanges: false };
-  console.log(
-    'han:diff',
-    transformWorkflow(workflow),
-    transformWorkflow(storeWorkflow as Workflow)
-  );
   return {
     hasChanges: isDiffWorkflow(
       transformWorkflow(workflow),
