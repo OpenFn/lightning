@@ -32,6 +32,7 @@ defmodule Lightning.Workflows.Workflow do
              :edges,
              :jobs,
              :triggers,
+             :positions,
              :inserted_at,
              :updated_at
            ]}

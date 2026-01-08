@@ -1,3 +1,4 @@
+import type { Trigger } from '../types/trigger';
 import type { Workflow } from '../types/workflow';
 
 import { useSessionContext } from './useSessionContext';
@@ -48,14 +49,30 @@ function transformWorkflow(workflow: Workflow) {
         condition_expression: edge.condition_expression?.trim(),
       }))
       .sort((a, b) => a.id.localeCompare(b.id)),
-    triggers: (workflow.triggers || []).map(trigger => ({
-      id: trigger.id,
-      type: trigger.type,
-      enabled: trigger.enabled,
-      cron_expression: trigger.cron_expression?.trim(),
-    })),
-    // positions: workflow.positions || {},
+    triggers: (workflow.triggers || []).map(trigger =>
+      transformTrigger(trigger)
+    ),
+    positions: workflow.positions || {},
   };
+}
+
+function transformTrigger(trigger: Trigger) {
+  const output: Partial<Trigger> = {
+    id: trigger.id,
+    type: trigger.type,
+    enabled: trigger.enabled,
+  };
+  switch (trigger.type) {
+    case 'cron':
+      output.cron_expression = trigger.cron_expression;
+      break;
+    case 'kafka':
+      output.kafka_configuration = trigger.kafka_configuration;
+      break;
+    case 'webhook':
+      break;
+  }
+  return output;
 }
 
 // deep comparison to detect workflow changes
