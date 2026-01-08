@@ -15,6 +15,11 @@ export function useUnsavedChanges() {
   }));
 
   if (!workflow || !storeWorkflow) return { hasChanges: false };
+  console.log(
+    'han:diff',
+    transformWorkflow(workflow),
+    transformWorkflow(storeWorkflow as Workflow)
+  );
   return {
     hasChanges: isDiffWorkflow(
       transformWorkflow(workflow),
@@ -64,7 +69,7 @@ function transformTrigger(trigger: Trigger) {
   };
   switch (trigger.type) {
     case 'cron':
-      output.cron_expression = trigger.cron_expression ?? '00 00 * * *'; // default cron expression
+      output.cron_expression = trigger.cron_expression ?? '0 0 * * *'; // default cron expression
       break;
     case 'kafka':
       output.kafka_configuration = trigger.kafka_configuration;
@@ -99,7 +104,11 @@ function isDiffWorkflow(base: unknown, target: unknown): boolean {
     const keys = [
       ...new Set(Object.keys(baseObj).concat(Object.keys(targetObj))),
     ];
-    return keys.some(k => isDiffWorkflow(baseObj[k], targetObj[k]));
+    const resp = keys.some(k => isDiffWorkflow(baseObj[k], targetObj[k]));
+    if (resp) {
+      console.log('diff:', baseObj, targetObj);
+    }
+    return resp;
   }
 
   return base !== target;
