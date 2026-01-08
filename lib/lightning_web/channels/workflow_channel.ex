@@ -217,7 +217,7 @@ defmodule LightningWeb.WorkflowChannel do
         has_read_ai_disclaimer:
           Lightning.AiAssistant.user_has_read_disclaimer?(user),
         limits: render_limits(project.id),
-        workflow: (fresh_workflow && fresh_workflow) || %{}
+        workflow: fresh_workflow || %{}
       }
     end)
   end
