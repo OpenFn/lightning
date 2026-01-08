@@ -21,6 +21,10 @@ and this project adheres to
 
 ### Fixed
 
+- Fixed AI Assistant button not being disabled when viewing pinned workflow
+  versions in collaborative editor
+  [#4292](https://github.com/OpenFn/lightning/issues/4292)
+
 ## [2.15.8-pre] - 2026-01-08
 
 ### Added
