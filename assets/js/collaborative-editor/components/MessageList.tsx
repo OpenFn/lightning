@@ -177,15 +177,21 @@ const CodeActionButtons = ({
   code,
   showAdd = false,
   showApply = false,
+  showPreview = false,
   onApply,
+  onPreview,
   isApplying = false,
+  isPreviewActive = false,
   isWriteDisabled = false,
 }: {
   code: string;
   showAdd?: boolean;
   showApply?: boolean;
+  showPreview?: boolean;
   onApply?: () => void;
+  onPreview?: () => void;
   isApplying?: boolean;
+  isPreviewActive?: boolean;
   /** Whether Apply/Add buttons are disabled due to readonly mode */
   isWriteDisabled?: boolean;
 }) => {
@@ -222,8 +228,16 @@ const CodeActionButtons = ({
     }
   };
 
+  const handlePreview = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (onPreview) {
+      onPreview();
+    }
+  };
+
   const isApplyDisabled = isApplying || applied || isWriteDisabled;
   const isAddDisabled = added || isWriteDisabled;
+  const isPreviewDisabled = isPreviewActive;
 
   const applyButton = (
     <button
@@ -262,8 +276,27 @@ const CodeActionButtons = ({
     </button>
   );
 
+  const previewButton = (
+    <button
+      type="button"
+      onClick={handlePreview}
+      disabled={isPreviewDisabled}
+      className={cn(
+        'rounded-md px-2 py-1 text-xs font-medium transition-all duration-300 ease-in-out',
+        isPreviewActive
+          ? 'bg-green-100 text-green-700'
+          : isPreviewDisabled
+            ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+            : 'bg-slate-300 text-white hover:bg-primary-600 text-white'
+      )}
+    >
+      {isPreviewActive ? 'PREVIEWING' : 'PREVIEW'}
+    </button>
+  );
+
   return (
-    <div className="flex items-center gap-1">
+    <div className="flex flex-wrap items-center justify-end gap-1">
+      {showPreview && previewButton}
       {showApply && (
         <Tooltip
           content={
@@ -350,8 +383,12 @@ const formatUserName = (user: Message['user']): string | null => {
 interface MessageListProps {
   messages?: Message[];
   isLoading?: boolean;
+  sessionType?: 'job_code' | 'workflow_template';
   onApplyWorkflow?: ((yaml: string, messageId: string) => void) | undefined;
+  onApplyJobCode?: ((code: string, messageId: string) => void) | undefined;
+  onPreviewJobCode?: ((code: string, messageId: string) => void) | undefined;
   applyingMessageId?: string | null | undefined;
+  previewingMessageId?: string | null | undefined;
   showAddButtons?: boolean;
   showApplyButton?: boolean;
   onRetryMessage?: (messageId: string) => void;
@@ -362,8 +399,12 @@ interface MessageListProps {
 export function MessageList({
   messages = [],
   isLoading = false,
+  sessionType,
   onApplyWorkflow,
+  onApplyJobCode,
+  onPreviewJobCode,
   applyingMessageId,
+  previewingMessageId,
   showAddButtons = false,
   showApplyButton = false,
   onRetryMessage,
@@ -414,7 +455,7 @@ export function MessageList({
                 <div className="space-y-3">
                   <MarkdownContent
                     content={message.content}
-                    showAddButtons={showAddButtons}
+                    showAddButtons={showAddButtons && !message.code}
                     isWriteDisabled={isWriteDisabled}
                     className="text-sm text-gray-700 leading-relaxed prose prose-sm max-w-none prose-headings:font-medium prose-h1:text-lg prose-h1:text-gray-900 prose-h1:mb-3 prose-h2:text-base prose-h2:text-gray-900 prose-h2:mb-2 prose-h2:mt-5 prose-h3:text-sm prose-h3:text-gray-900 prose-h3:mb-2 prose-h3:font-semibold prose-p:mb-3 prose-p:last:mb-0 prose-p:text-gray-700 prose-ul:list-disc prose-ul:pl-5 prose-ul:mb-3 prose-ul:space-y-1 prose-ol:list-decimal prose-ol:pl-5 prose-ol:mb-3 prose-ol:space-y-1 prose-li:text-gray-700 prose-strong:font-medium prose-strong:text-gray-900 prose-em:italic prose-a:text-primary-600 prose-a:hover:text-primary-700 prose-a:underline prose-a:font-normal prose-code:px-1.5 prose-code:py-0.5 prose-code:bg-gray-100 prose-code:text-gray-800 prose-code:rounded prose-code:text-xs prose-code:font-mono prose-code:font-normal prose-pre:rounded-md prose-pre:bg-slate-100 prose-pre:border-2 prose-pre:border-slate-200 prose-pre:text-slate-800 prose-pre:p-4 prose-pre:overflow-x-auto prose-pre:text-xs prose-pre:font-mono prose-pre:mb-4"
                   />
@@ -423,14 +464,14 @@ export function MessageList({
                     <div className="rounded-lg overflow-hidden border border-gray-200 bg-white">
                       <div
                         className={cn(
-                          'w-full px-4 py-2 bg-gray-50 flex items-center justify-between',
+                          'w-full px-4 py-2 bg-gray-50 flex items-center justify-between gap-2',
                           expandedYaml.has(message.id) &&
                             'border-b border-gray-200'
                         )}
                       >
                         <button
                           type="button"
-                          data-testid="expand-workflow-button"
+                          data-testid="expand-code-button"
                           onClick={() => {
                             setExpandedYaml(prev => {
                               const next = new Set(prev);
@@ -452,25 +493,36 @@ export function MessageList({
                           >
                             <span className="hero-chevron-right h-4 w-4 text-gray-500" />
                           </span>
-                          <span className="text-xs font-medium text-gray-700">
-                            Generated Workflow
+                          <span className="text-xs text-left font-medium text-gray-700">
+                            {sessionType === 'job_code'
+                              ? 'Generated Job Code'
+                              : 'Generated Workflow'}
                           </span>
                         </button>
                         <CodeActionButtons
                           code={message.code}
                           showAdd={showAddButtons}
                           showApply={showApplyButton}
-                          onApply={() =>
-                            onApplyWorkflow?.(message.code!, message.id)
-                          }
-                          isApplying={applyingMessageId === message.id}
+                          showPreview={sessionType === 'job_code'}
+                          onApply={() => {
+                            if (sessionType === 'job_code') {
+                              onApplyJobCode?.(message.code!, message.id);
+                            } else {
+                              onApplyWorkflow?.(message.code!, message.id);
+                            }
+                          }}
+                          onPreview={() => {
+                            onPreviewJobCode?.(message.code!, message.id);
+                          }}
+                          isApplying={!!applyingMessageId}
+                          isPreviewActive={previewingMessageId === message.id}
                           isWriteDisabled={isWriteDisabled}
                         />
                       </div>
                       {expandedYaml.has(message.id) && (
                         <pre
                           className="bg-slate-100 text-slate-800 p-3 overflow-x-auto text-xs font-mono"
-                          data-testid="workflow-code"
+                          data-testid="generated-code"
                         >
                           <code>{message.code}</code>
                         </pre>

@@ -1127,9 +1127,50 @@ defmodule Lightning.AiAssistant do
   defp build_job_message(body) do
     message = body["history"] |> Enum.reverse() |> hd()
     message_attrs = Map.take(message, ["role", "content"])
-    opts = [usage: body["usage"] || %{}, meta: body["meta"]]
+
+    # Extract code field - Apollo returns suggested_code when providing code edits,
+    # otherwise fall back to extracting code blocks from markdown content
+    code =
+      message["suggested_code"] || message["code"] ||
+        extract_code_from_markdown(message["content"])
+
+    opts = [
+      usage: body["usage"] || %{},
+      meta: body["meta"],
+      code: code
+    ]
 
     {message_attrs, opts}
+  end
+
+  @doc """
+  Extracts the first JavaScript code block from markdown content.
+
+  This function serves as a fallback when the Apollo service doesn't provide
+  code in the dedicated `suggested_code` field. It parses markdown-formatted
+  responses to extract JavaScript code blocks.
+
+  ## Parameters
+
+  - `content` - Markdown string that may contain code blocks, or `nil`
+
+  ## Returns
+
+  - The trimmed code content from the first JS/JavaScript code block
+  - `nil` if no code blocks are found or input is nil
+  """
+  @spec extract_code_from_markdown(String.t() | nil) :: String.t() | nil
+  def extract_code_from_markdown(nil), do: nil
+
+  def extract_code_from_markdown(content) when is_binary(content) do
+    # Match markdown code blocks: ```js or ```javascript followed by code
+    case Regex.run(~r/```(?:js|javascript)\n(.+?)```/s, content) do
+      [_, code] ->
+        String.trim(code)
+
+      _ ->
+        nil
+    end
   end
 
   defp build_workflow_message(body) do

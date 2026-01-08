@@ -3193,4 +3193,183 @@ defmodule LightningWeb.WorkflowChannelTest do
       assert_broadcast "workflow_applied", %{message_id: ^message_id}
     end
   end
+
+  describe "AI job code apply coordination" do
+    test "start_applying_job_code broadcasts to all clients", %{socket: socket} do
+      message_id = Ecto.UUID.generate()
+
+      ref =
+        push(socket, "start_applying_job_code", %{"message_id" => message_id})
+
+      assert_reply ref, :ok, %{}
+
+      assert_broadcast "job_code_applying", %{
+        user_id: user_id,
+        user_name: user_name,
+        message_id: ^message_id
+      }
+
+      assert user_id == socket.assigns.current_user.id
+
+      assert user_name in [
+               socket.assigns.current_user.first_name,
+               socket.assigns.current_user.email
+             ]
+    end
+
+    test "done_applying_job_code broadcasts completion", %{socket: socket} do
+      message_id = Ecto.UUID.generate()
+
+      ref = push(socket, "done_applying_job_code", %{"message_id" => message_id})
+      assert_reply ref, :ok, %{}
+
+      assert_broadcast "job_code_applied", %{message_id: ^message_id}
+    end
+
+    test "job code apply coordination works end-to-end", %{
+      socket: socket,
+      user: user
+    } do
+      message_id = Ecto.UUID.generate()
+      user_id = user.id
+
+      # Start applying
+      ref1 =
+        push(socket, "start_applying_job_code", %{"message_id" => message_id})
+
+      assert_reply ref1, :ok, %{}
+
+      assert_broadcast "job_code_applying", %{
+        user_id: ^user_id,
+        message_id: ^message_id
+      }
+
+      # Done applying
+      ref2 =
+        push(socket, "done_applying_job_code", %{"message_id" => message_id})
+
+      assert_reply ref2, :ok, %{}
+
+      assert_broadcast "job_code_applied", %{message_id: ^message_id}
+    end
+
+    test "broadcasts use user's first_name if available", %{
+      socket: socket,
+      project: project,
+      workflow: workflow
+    } do
+      user_with_name = insert(:user, first_name: "Alice", last_name: "Smith")
+
+      insert(:project_user,
+        project: project,
+        user: user_with_name,
+        role: :editor
+      )
+
+      {:ok, _, socket_alice} =
+        LightningWeb.UserSocket
+        |> socket("user_#{user_with_name.id}", %{current_user: user_with_name})
+        |> subscribe_and_join(
+          LightningWeb.WorkflowChannel,
+          "workflow:collaborate:#{workflow.id}",
+          %{"project_id" => project.id, "action" => "edit"}
+        )
+
+      message_id = Ecto.UUID.generate()
+
+      ref =
+        push(socket_alice, "start_applying_job_code", %{
+          "message_id" => message_id
+        })
+
+      assert_reply ref, :ok, %{}
+      assert_broadcast "job_code_applying", %{user_name: "Alice"}
+    end
+
+    test "broadcasts use email as fallback when first_name is nil", %{
+      socket: socket,
+      project: project,
+      workflow: workflow
+    } do
+      user_no_name = insert(:user, first_name: nil, email: "bob@example.com")
+      insert(:project_user, project: project, user: user_no_name, role: :editor)
+
+      {:ok, _, socket_bob} =
+        LightningWeb.UserSocket
+        |> socket("user_#{user_no_name.id}", %{current_user: user_no_name})
+        |> subscribe_and_join(
+          LightningWeb.WorkflowChannel,
+          "workflow:collaborate:#{workflow.id}",
+          %{"project_id" => project.id, "action" => "edit"}
+        )
+
+      message_id = Ecto.UUID.generate()
+
+      ref =
+        push(socket_bob, "start_applying_job_code", %{"message_id" => message_id})
+
+      assert_reply ref, :ok, %{}
+      assert_broadcast "job_code_applying", %{user_name: "bob@example.com"}
+    end
+
+    test "multiple users can coordinate sequentially", %{
+      socket: socket1,
+      project: project,
+      workflow: workflow
+    } do
+      user2 = insert(:user)
+      insert(:project_user, project: project, user: user2, role: :editor)
+
+      {:ok, _, socket2} =
+        LightningWeb.UserSocket
+        |> socket("user_#{user2.id}", %{current_user: user2})
+        |> subscribe_and_join(
+          LightningWeb.WorkflowChannel,
+          "workflow:collaborate:#{workflow.id}",
+          %{"project_id" => project.id, "action" => "edit"}
+        )
+
+      # User 1 starts applying
+      ref1 = push(socket1, "start_applying_job_code", %{"message_id" => "msg-1"})
+      assert_reply ref1, :ok, %{}
+      assert_broadcast "job_code_applying", %{message_id: "msg-1"}
+
+      # User 1 finishes
+      ref2 = push(socket1, "done_applying_job_code", %{"message_id" => "msg-1"})
+      assert_reply ref2, :ok, %{}
+      assert_broadcast "job_code_applied", %{message_id: "msg-1"}
+
+      # User 2 can now apply
+      ref3 = push(socket2, "start_applying_job_code", %{"message_id" => "msg-2"})
+      assert_reply ref3, :ok, %{}
+      assert_broadcast "job_code_applying", %{message_id: "msg-2"}
+    end
+
+    test "coordination works with same message_id (retry scenario)", %{
+      socket: socket
+    } do
+      message_id = "msg-retry"
+
+      # Start applying
+      ref1 =
+        push(socket, "start_applying_job_code", %{"message_id" => message_id})
+
+      assert_reply ref1, :ok, %{}
+      assert_broadcast "job_code_applying", %{message_id: ^message_id}
+
+      # Retry same message (e.g., after network error)
+      ref2 =
+        push(socket, "start_applying_job_code", %{"message_id" => message_id})
+
+      assert_reply ref2, :ok, %{}
+      assert_broadcast "job_code_applying", %{message_id: ^message_id}
+
+      # Complete
+      ref3 =
+        push(socket, "done_applying_job_code", %{"message_id" => message_id})
+
+      assert_reply ref3, :ok, %{}
+      assert_broadcast "job_code_applied", %{message_id: ^message_id}
+    end
+  end
 end

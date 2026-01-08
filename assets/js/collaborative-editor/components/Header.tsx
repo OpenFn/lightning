@@ -418,7 +418,11 @@ export function Header({
             </div>
           </div>
 
-          <AIButton className="ml-2" />
+          <AIButton
+            className="ml-2"
+            disabled={isOldSnapshot}
+            disabledMessage="Switch to the latest version of this workflow to use the AI Assistant."
+          />
 
           <GitHubSyncModal />
         </div>
