@@ -219,7 +219,19 @@ defmodule LightningWeb.RunChannel do
       {:error, changeset} ->
         reply_with(socket, {:error, changeset})
 
-      :ok ->
+      {:ok, log_line} ->
+        reply_with(socket, {:ok, %{log_line_id: log_line.id}})
+    end
+  end
+
+  def handle_in("run:batch_logs", %{"logs" => payload}, socket) do
+    %{run: run, scrubber: scrubber} = socket.assigns
+
+    case Runs.append_run_logs_batch(run, payload, scrubber) do
+      {:error, changeset} ->
+        reply_with(socket, {:error, changeset})
+
+      {:ok, _} ->
         reply_with(socket, :ok)
     end
   end

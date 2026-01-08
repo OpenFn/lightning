@@ -262,44 +262,97 @@ defmodule Lightning.Runs do
   end
 
   def append_run_log(run, params, scrubber \\ nil) do
-    log_entries =
-      case Map.get(params, :logs) || Map.get(params, "logs") do
-        logs when is_list(logs) -> logs
-        nil -> [params]
+    LogLine.new(run, params, scrubber)
+    |> Ecto.Changeset.validate_change(:step_id, fn _field, step_id ->
+      if is_nil(step_id) do
+        []
+      else
+        where(Lightning.RunStep, step_id: ^step_id, run_id: ^run.id)
+        |> Repo.exists?()
+        |> if do
+          []
+        else
+          [{:step_id, "must be associated with the run"}]
+        end
+      end
+    end)
+    |> Repo.insert()
+    |> case do
+      {:ok, log_line} ->
+        Events.log_appended(log_line)
+        {:ok, log_line}
+
+      {:error, changeset} ->
+        {:error, changeset}
+    end
+  end
+
+  @doc """
+  Appends multiple log lines to a run in a batch operation.
+
+  Returns `{:ok, [%LogLine{}, ...]}` if all logs are inserted successfully, or `{:error, changeset}`
+  for the first validation error encountered.
+  """
+  def append_run_logs_batch(run, log_entries, scrubber \\ nil)
+      when is_list(log_entries) do
+    step_ids =
+      log_entries
+      |> Enum.map(&(Map.get(&1, "step_id") || Map.get(&1, :step_id)))
+      |> Enum.reject(&is_nil/1)
+      |> Enum.uniq()
+
+    valid_step_ids =
+      if Enum.empty?(step_ids) do
+        []
+      else
+        from(s in Lightning.RunStep,
+          where: s.step_id in ^step_ids and s.run_id == ^run.id,
+          select: s.step_id
+        )
+        |> Repo.all()
       end
 
-    results =
+    changesets =
       Enum.map(log_entries, fn log_entry ->
-        IO.inspect(log_entry, label: "log object in append_run_log")
-
         LogLine.new(run, log_entry, scrubber)
         |> Ecto.Changeset.validate_change(:step_id, fn _field, step_id ->
           if is_nil(step_id) do
             []
           else
-            where(Lightning.RunStep, step_id: ^step_id, run_id: ^run.id)
-            |> Repo.exists?()
-            |> if do
+            if step_id in valid_step_ids do
               []
             else
               [{:step_id, "must be associated with the run"}]
             end
           end
         end)
-        |> Repo.insert()
-        |> case do
-          {:ok, log_line} ->
-            Events.log_appended(log_line)
-            {:ok, log_line}
-
-          {:error, changeset} ->
-            {:error, changeset}
-        end
       end)
 
-    case Enum.find(results, fn result -> match?({:error, _}, result) end) do
-      nil -> :ok
-      error -> error
+    # Check if any changeset is invalid
+    case Enum.find(changesets, fn cs -> not cs.valid? end) do
+      nil ->
+        entries =
+          Enum.map(changesets, fn changeset ->
+            changeset
+            |> Ecto.Changeset.apply_changes()
+            |> Map.take(LogLine.__schema__(:fields))
+          end)
+
+        {_count, log_lines} =
+          Repo.insert_all(
+            Lightning.Invocation.LogLine,
+            entries,
+            returning: true
+          )
+
+        Enum.each(log_lines, fn log_line ->
+          Events.log_appended(log_line)
+        end)
+
+        {:ok, log_lines}
+
+      invalid_changeset ->
+        {:error, invalid_changeset}
     end
   end
 
