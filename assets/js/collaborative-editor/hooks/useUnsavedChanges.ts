@@ -64,7 +64,7 @@ function transformTrigger(trigger: Trigger) {
   };
   switch (trigger.type) {
     case 'cron':
-      output.cron_expression = trigger.cron_expression;
+      output.cron_expression = trigger.cron_expression ?? '00 00 * * *'; // default cron expression
       break;
     case 'kafka':
       output.kafka_configuration = trigger.kafka_configuration;
