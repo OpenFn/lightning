@@ -295,40 +295,52 @@ defmodule Lightning.Runs do
   """
   def append_run_logs_batch(run, log_entries, scrubber \\ nil)
       when is_list(log_entries) do
+    valid_step_ids = fetch_valid_step_ids(run, log_entries)
+
+    changesets =
+      Enum.map(log_entries, fn log_entry ->
+        LogLine.new(run, log_entry, scrubber)
+        |> Ecto.Changeset.validate_change(:step_id, fn _field, step_id ->
+          validate_step_id(step_id, valid_step_ids)
+        end)
+      end)
+
+    with {:ok, log_lines} <- insert_all_logs(changesets) do
+      Enum.each(log_lines, &Events.log_appended/1)
+
+      {:ok, log_lines}
+    end
+  end
+
+  defp fetch_valid_step_ids(run, log_entries) do
     step_ids =
       log_entries
       |> Enum.map(&(Map.get(&1, "step_id") || Map.get(&1, :step_id)))
       |> Enum.reject(&is_nil/1)
       |> Enum.uniq()
 
-    valid_step_ids =
-      if Enum.empty?(step_ids) do
-        []
-      else
-        from(s in Lightning.RunStep,
-          where: s.step_id in ^step_ids and s.run_id == ^run.id,
-          select: s.step_id
-        )
-        |> Repo.all()
-      end
+    if Enum.empty?(step_ids) do
+      []
+    else
+      from(s in Lightning.RunStep,
+        where: s.step_id in ^step_ids and s.run_id == ^run.id,
+        select: s.step_id
+      )
+      |> Repo.all()
+    end
+  end
 
-    changesets =
-      Enum.map(log_entries, fn log_entry ->
-        LogLine.new(run, log_entry, scrubber)
-        |> Ecto.Changeset.validate_change(:step_id, fn _field, step_id ->
-          if is_nil(step_id) do
-            []
-          else
-            if step_id in valid_step_ids do
-              []
-            else
-              [{:step_id, "must be associated with the run"}]
-            end
-          end
-        end)
-      end)
+  defp validate_step_id(nil, _valid_step_ids), do: []
 
-    # Check if any changeset is invalid
+  defp validate_step_id(step_id, valid_step_ids) do
+    if step_id in valid_step_ids do
+      []
+    else
+      [{:step_id, "must be associated with the run"}]
+    end
+  end
+
+  defp insert_all_logs(changesets) do
     case Enum.find(changesets, fn cs -> not cs.valid? end) do
       nil ->
         entries =
@@ -344,10 +356,6 @@ defmodule Lightning.Runs do
             entries,
             returning: true
           )
-
-        Enum.each(log_lines, fn log_line ->
-          Events.log_appended(log_line)
-        end)
 
         {:ok, log_lines}
 
