@@ -12,19 +12,18 @@ export function useUnsavedChanges() {
     positions: state.positions || {},
     name: state.workflow?.name,
   }));
-  if (!workflow || !storeWorkflow)
-    return {
-      hasChanges: false,
-    };
+
+  if (!workflow || !storeWorkflow) return { hasChanges: false };
+
   return {
     hasChanges: isDiffWorkflow(
-      transformWorkflow(workflow || {}),
-      transformWorkflow((storeWorkflow as Workflow) || {})
+      transformWorkflow(workflow),
+      transformWorkflow(storeWorkflow as Workflow)
     ),
   };
 }
 
-// we need the same structure of workflows to be able to compare
+// transform workflow to normalized structure for comparison
 function transformWorkflow(workflow: Workflow) {
   return {
     name: workflow.name,
@@ -50,7 +49,7 @@ function transformWorkflow(workflow: Workflow) {
         condition_expression: edge.condition_expression,
       }))
       .sort((a, b) => a.id.localeCompare(b.id)),
-    trigger: (workflow.triggers || []).map(trigger => ({
+    triggers: (workflow.triggers || []).map(trigger => ({
       id: trigger.id,
       type: trigger.type,
       enabled: trigger.enabled,
@@ -60,22 +59,31 @@ function transformWorkflow(workflow: Workflow) {
   };
 }
 
+// deep comparison to detect workflow changes
 function isDiffWorkflow(base: unknown, target: unknown): boolean {
-  const undef = [undefined, null, ''];
-  // @ts-expect-error
-  if (undef.includes(base) && undef.includes(target)) return false;
+  const isNullish = (v: unknown) => v === undefined || v === null || v === '';
+  if (isNullish(base) && isNullish(target)) return false;
   if (typeof base !== typeof target) return true;
+
   if (Array.isArray(base) && Array.isArray(target)) {
-    if (base.length !== target.length) return true;
-    return base.some((v, i) => isDiffWorkflow(v, target[i]));
-  } else if (
+    return (
+      base.length !== target.length ||
+      base.some((v, i) => isDiffWorkflow(v, target[i]))
+    );
+  }
+
+  if (
     base &&
     target &&
     typeof base === 'object' &&
     typeof target === 'object'
   ) {
-    return Object.keys(base).some(k => isDiffWorkflow(base[k], target[k]));
-  } else {
-    return target !== base;
+    const baseObj = base as Record<string, unknown>;
+    const targetObj = target as Record<string, unknown>;
+    return Object.keys(baseObj).some(k =>
+      isDiffWorkflow(baseObj[k], targetObj[k])
+    );
   }
+
+  return base !== target;
 }

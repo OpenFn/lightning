@@ -97,84 +97,95 @@ export function SaveButton({
           </Tooltip>
         </div>
         {hasChanges ? (
-          <div className="absolute -m-1 top-0 right-0 z-10 size-3 bg-danger-500 rounded-full"></div>
+          <div
+            className="absolute -m-1 top-0 right-0 z-10 size-3 bg-danger-500 rounded-full"
+            data-is-dirty
+          ></div>
         ) : null}
       </div>
     );
   }
 
   return (
-    <div className="inline-flex rounded-md shadow-xs z-5">
-      <Tooltip
-        content={
-          canSave ? <ShortcutKeys keys={['mod', 's']} /> : tooltipMessage
-        }
-        side="bottom"
-      >
-        <button
-          type="button"
-          data-testid="save-workflow-button"
-          className="rounded-l-md text-sm font-semibold shadow-xs
-          phx-submit-loading:opacity-75 cursor-pointer
-          disabled:cursor-not-allowed disabled:bg-primary-300 px-3 py-2
-          bg-primary-600 hover:bg-primary-500
-          disabled:hover:bg-primary-300 text-white
-          focus-visible:outline-2 focus-visible:outline-offset-2
-          focus-visible:outline-primary-600 focus:ring-transparent"
-          onClick={onClick}
-          disabled={!canSave}
+    <div className="relative">
+      <div className="inline-flex rounded-md shadow-xs z-5">
+        <Tooltip
+          content={
+            canSave ? <ShortcutKeys keys={['mod', 's']} /> : tooltipMessage
+          }
+          side="bottom"
         >
-          {label}
-        </button>
-      </Tooltip>
-      <Menu as="div" className="relative -ml-px block">
-        <MenuButton
-          disabled={!canSave}
-          className="h-full rounded-r-md pr-2 pl-2 text-sm font-semibold
+          <button
+            type="button"
+            data-testid="save-workflow-button"
+            className="rounded-l-md text-sm font-semibold shadow-xs
+            phx-submit-loading:opacity-75 cursor-pointer
+            disabled:cursor-not-allowed disabled:bg-primary-300 px-3 py-2
+            bg-primary-600 hover:bg-primary-500
+            disabled:hover:bg-primary-300 text-white
+            focus-visible:outline-2 focus-visible:outline-offset-2
+            focus-visible:outline-primary-600 focus:ring-transparent"
+            onClick={onClick}
+            disabled={!canSave}
+          >
+            {label}
+          </button>
+        </Tooltip>
+        <Menu as="div" className="relative -ml-px block">
+          <MenuButton
+            disabled={!canSave}
+            className="h-full rounded-r-md pr-2 pl-2 text-sm font-semibold
             shadow-xs cursor-pointer disabled:cursor-not-allowed
             bg-primary-600 hover:bg-primary-500
             disabled:bg-primary-300 disabled:hover:bg-primary-300 text-white
             focus-visible:outline-2 focus-visible:outline-offset-2
             focus-visible:outline-primary-600 focus:ring-transparent"
-        >
-          <span className="sr-only">Open sync options</span>
-          <span className="hero-chevron-down w-4 h-4" />
-        </MenuButton>
-        <MenuItems
-          transition
-          className="absolute right-0 z-[100] mt-2 w-max origin-top-right
+          >
+            <span className="sr-only">Open sync options</span>
+            <span className="hero-chevron-down w-4 h-4" />
+          </MenuButton>
+          <MenuItems
+            transition
+            className="absolute right-0 z-[100] mt-2 w-max origin-top-right
           rounded-md bg-white py-1 shadow-lg outline outline-black/5
           transition data-closed:scale-95 data-closed:transform
           data-closed:opacity-0 data-enter:duration-200 data-enter:ease-out
           data-leave:duration-75 data-leave:ease-in"
-        >
-          <MenuItem>
-            <Tooltip
-              content={
-                canSave && canSync ? (
-                  <ShortcutKeys keys={['mod', 'shift', 's']} />
-                ) : !canSync && syncTooltipMessage ? (
-                  syncTooltipMessage
-                ) : (
-                  tooltipMessage
-                )
-              }
-              side="bottom"
-            >
-              <button
-                type="button"
-                onClick={onSyncClick}
-                disabled={!canSave || !canSync}
-                className="block w-full text-left px-4 py-2 text-sm text-gray-700
+          >
+            <MenuItem>
+              <Tooltip
+                content={
+                  canSave && canSync ? (
+                    <ShortcutKeys keys={['mod', 'shift', 's']} />
+                  ) : !canSync && syncTooltipMessage ? (
+                    syncTooltipMessage
+                  ) : (
+                    tooltipMessage
+                  )
+                }
+                side="bottom"
+              >
+                <button
+                  type="button"
+                  onClick={onSyncClick}
+                  disabled={!canSave || !canSync}
+                  className="block w-full text-left px-4 py-2 text-sm text-gray-700
               data-focus:bg-gray-100 data-focus:outline-hidden
               disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Save & Sync
-              </button>
-            </Tooltip>
-          </MenuItem>
-        </MenuItems>
-      </Menu>
+                >
+                  Save & Sync
+                </button>
+              </Tooltip>
+            </MenuItem>
+          </MenuItems>
+        </Menu>
+      </div>
+      {hasChanges ? (
+        <div
+          className="absolute -m-1 top-0 right-0 z-10 size-3 bg-danger-500 rounded-full"
+          data-is-dirty
+        ></div>
+      ) : null}
     </div>
   );
 }

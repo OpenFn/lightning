@@ -289,6 +289,7 @@ export interface CreateSessionContextOptions {
   workflow_template?: WorkflowTemplate | null;
   has_read_ai_disclaimer?: boolean;
   limits?: Partial<Limits>;
+  workflow?: any | null;
 }
 
 /**
@@ -397,6 +398,7 @@ export function createSessionContext(
     webhook_auth_methods: options.webhook_auth_methods ?? [],
     workflow_template: options.workflow_template ?? null,
     has_read_ai_disclaimer: options.has_read_ai_disclaimer ?? true,
+    workflow: options.workflow,
   };
 
   // Only add limits if provided
