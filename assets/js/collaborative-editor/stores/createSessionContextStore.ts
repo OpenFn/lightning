@@ -126,6 +126,7 @@ export const createSessionContextStore = (
       isLoading: false,
       error: null,
       lastUpdated: null,
+      workflow: null,
     } as SessionContextState,
     // No initial transformations needed
     draft => draft

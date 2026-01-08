@@ -106,13 +106,7 @@ export const SessionContextResponseSchema = z.object({
   workflow_template: WorkflowTemplateSchema.nullable(),
   has_read_ai_disclaimer: z.boolean(),
   limits: LimitsSchema.optional(),
-  workflow: z.object({
-    jobs: z.array(JobSchema),
-    triggers: z.array(TriggerSchema),
-    edges: z.array(EdgeSchema),
-    positions: z.record(z.string(), z.any()).optional().default({}),
-    name: z.string(),
-  }), // to be fixed
+  workflow: z.any(), // to be fixed
 });
 
 export type UserContext = z.infer<typeof UserContextSchema>;
