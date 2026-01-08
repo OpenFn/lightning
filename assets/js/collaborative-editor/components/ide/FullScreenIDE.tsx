@@ -25,10 +25,7 @@ import type { Dataclip } from '../../api/dataclips';
 import * as dataclipApi from '../../api/dataclips';
 import { RENDER_MODES } from '../../constants/panel';
 import { useCredentialModal } from '../../contexts/CredentialModalContext';
-import {
-  useMonacoRef,
-  useOnDiffDismissed,
-} from '../../contexts/MonacoRefContext';
+import { useMonacoRef } from '../../contexts/MonacoRefContext';
 import { useProjectAdaptors } from '../../hooks/useAdaptors';
 import {
   useCredentials,
@@ -135,7 +132,6 @@ export function FullScreenIDE({
   const { job: currentJob, ytext: currentJobYText } = useCurrentJob();
   const awareness = useSession(selectAwareness);
   const { canSave } = useCanSave();
-  const onDiffDismissed = useOnDiffDismissed();
 
   const workflow = useWorkflowState(state =>
     state.workflow
@@ -1027,7 +1023,6 @@ export function FullScreenIDE({
                               lineNumbers: 'on',
                               wordWrap: 'on',
                             }}
-                            onDiffDismissed={onDiffDismissed}
                           />
                         ) : null}
                       </div>

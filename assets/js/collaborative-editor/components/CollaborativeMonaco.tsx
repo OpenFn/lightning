@@ -18,6 +18,7 @@ import _logger from '#/utils/logger';
 
 import { type Monaco, MonacoEditor, setTheme } from '../../monaco';
 import { addKeyboardShortcutOverrides } from '../../monaco/keyboard-overrides';
+import { useHandleDiffDismissed } from '../contexts/MonacoRefContext';
 
 import { Cursors } from './Cursors';
 import { Tooltip } from './Tooltip';
@@ -35,7 +36,6 @@ interface CollaborativeMonacoProps {
   disabled?: boolean;
   className?: string;
   options?: editor.IStandaloneEditorConstructionOptions;
-  onDiffDismissed?: () => void;
 }
 
 export const CollaborativeMonaco = forwardRef<
@@ -49,7 +49,6 @@ export const CollaborativeMonaco = forwardRef<
     disabled = false,
     className,
     options = {},
-    onDiffDismissed,
   }: CollaborativeMonacoProps,
   ref
 ) {
@@ -57,6 +56,9 @@ export const CollaborativeMonaco = forwardRef<
   const monacoRef = useRef<Monaco>();
   const bindingRef = useRef<MonacoBinding>();
   const [editorReady, setEditorReady] = useState(false);
+
+  // Get callback from context to notify when diff is dismissed
+  const handleDiffDismissed = useHandleDiffDismissed();
 
   // Diff mode state
   const [diffMode, setDiffMode] = useState(false);
@@ -311,9 +313,9 @@ export const CollaborativeMonaco = forwardRef<
 
     setDiffMode(false);
 
-    // Notify parent component that diff was dismissed
-    onDiffDismissed?.();
-  }, [diffMode, onDiffDismissed]);
+    // Notify registered callbacks that diff was dismissed
+    handleDiffDismissed?.();
+  }, [diffMode, handleDiffDismissed]);
 
   // Cleanup diff editor on component unmount
   useEffect(() => {

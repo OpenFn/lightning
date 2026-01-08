@@ -173,9 +173,6 @@ export const CollaborativeEditor: WithActionProps<
   // Monaco ref for diff preview - shared between FullScreenIDE and AIAssistantPanelWrapper
   const monacoRef = useRef<MonacoHandle>(null);
 
-  // Callback ref for diff dismissal - set by AIAssistantPanelWrapper
-  const onDiffDismissedRef = useRef<(() => void) | undefined>();
-
   return (
     <KeyboardProvider>
       <div
@@ -192,11 +189,7 @@ export const CollaborativeEditor: WithActionProps<
             <StoreProvider>
               <LiveViewActionsProvider actions={liveViewActions}>
                 <CredentialModalProvider>
-                  <MonacoRefProvider
-                    monacoRef={monacoRef}
-                    onDiffDismissed={() => onDiffDismissedRef.current?.()}
-                    onDiffDismissedRef={onDiffDismissedRef}
-                  >
+                  <MonacoRefProvider monacoRef={monacoRef}>
                     <VersionDebugLogger />
                     <Toaster />
                     <div className="flex-1 min-h-0 overflow-hidden flex flex-col relative">

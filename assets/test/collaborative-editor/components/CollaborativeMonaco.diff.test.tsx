@@ -34,6 +34,7 @@ import {
   CollaborativeMonaco,
   type MonacoHandle,
 } from '../../../js/collaborative-editor/components/CollaborativeMonaco';
+import { MonacoRefProvider } from '../../../js/collaborative-editor/contexts/MonacoRefContext';
 
 // Extend window type for test refs
 declare global {
@@ -213,13 +214,13 @@ describe('CollaborativeMonaco - Diff Display', () => {
       expect(() => handle.clearDiff()).not.toThrow();
     });
 
-    it('should call onDiffDismissed callback when clearing', async () => {
-      const onDiffDismissed = vi.fn();
+    it('should work with MonacoRefProvider context', async () => {
       const ydoc = new Y.Doc();
       const ytext = ydoc.getText('code');
       const awareness = new Awareness(ydoc);
 
       function TestComponent() {
+        const monacoRef = useRef<MonacoHandle>(null);
         const ref = useRef<MonacoHandle>(null);
 
         useEffect(() => {
@@ -227,12 +228,13 @@ describe('CollaborativeMonaco - Diff Display', () => {
         }, []);
 
         return (
-          <CollaborativeMonaco
-            ref={ref}
-            ytext={ytext}
-            awareness={awareness}
-            onDiffDismissed={onDiffDismissed}
-          />
+          <MonacoRefProvider monacoRef={monacoRef}>
+            <CollaborativeMonaco
+              ref={ref}
+              ytext={ytext}
+              awareness={awareness}
+            />
+          </MonacoRefProvider>
         );
       }
 
@@ -244,11 +246,10 @@ describe('CollaborativeMonaco - Diff Display', () => {
 
       const handle = (window as any).testRef.current;
 
-      // Just verify clearDiff can be called with the callback prop present
+      // Verify clearDiff works with context provider
       handle.showDiff('old', 'new');
       expect(() => handle.clearDiff()).not.toThrow();
 
-      // Callback behavior is tested in integration/E2E tests
       delete (window as any).testRef;
     });
 

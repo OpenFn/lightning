@@ -1,15 +1,11 @@
-import {
-  useState,
-  useRef,
-  useEffect,
-  useCallback,
-  useMemo,
-  useContext,
-} from 'react';
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 
 import { useURLState } from '../../react/lib/use-url-state';
 import { parseWorkflowYAML, convertWorkflowSpecToState } from '../../yaml/util';
-import { useMonacoRef, MonacoRefContext } from '../contexts/MonacoRefContext';
+import {
+  useMonacoRef,
+  useRegisterDiffDismissalCallback,
+} from '../contexts/MonacoRefContext';
 import {
   useAIConnectionState,
   useAIIsLoading,
@@ -83,9 +79,6 @@ export function AIAssistantPanelWrapper() {
   // Check if viewing a pinned version (not latest) to disable AI Assistant
   const isPinnedVersion =
     currentVersion !== undefined && currentVersion !== null;
-
-  // Get Monaco ref context to set diff dismissal callback
-  const monacoRefContext = useContext(MonacoRefContext);
 
   // Track IDE state changes to re-focus chat input when IDE closes
   const isIDEOpen = params.panel === 'editor';
@@ -531,14 +524,10 @@ export function AIAssistantPanelWrapper() {
   // Get shared monaco ref from context for diff preview
   const monacoRef = useMonacoRef();
 
-  // Set diff dismissal callback in context ref so CollaborativeMonaco can call it
-  useEffect(() => {
-    if (monacoRefContext?.onDiffDismissedRef) {
-      monacoRefContext.onDiffDismissedRef.current = () => {
-        setPreviewingMessageId(null);
-      };
-    }
-  }, [monacoRefContext]);
+  // Register callback to be notified when diff is dismissed
+  useRegisterDiffDismissalCallback(() => {
+    setPreviewingMessageId(null);
+  });
 
   // Close handler - clears diff preview and closes panel
   const handleClosePanel = useCallback(() => {
