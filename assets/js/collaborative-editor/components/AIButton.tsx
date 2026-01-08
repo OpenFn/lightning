@@ -34,20 +34,18 @@ export function AIButton({
     }
   };
 
+  const tooltipContent =
+    disabled && disabledMessage ? (
+      disabledMessage
+    ) : (
+      <>
+        {isOpen ? 'Close AI Assistant' : 'Open AI Assistant'} (
+        <ShortcutKeys keys={['mod', 'k']} />)
+      </>
+    );
+
   return (
-    <Tooltip
-      content={
-        disabled && disabledMessage ? (
-          disabledMessage
-        ) : (
-          <>
-            {isOpen ? 'Close AI Assistant' : 'Open AI Assistant'} (
-            <ShortcutKeys keys={['mod', 'k']} />)
-          </>
-        )
-      }
-      side="bottom"
-    >
+    <Tooltip content={tooltipContent} side="bottom">
       <button
         type="button"
         onClick={handleClick}
