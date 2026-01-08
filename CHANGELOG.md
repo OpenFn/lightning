@@ -17,6 +17,10 @@ and this project adheres to
 
 ### Added
 
+- AI Assistant can now preview and apply code suggestions directly to job code
+  with Monaco diff editor
+  [#3369](https://github.com/OpenFn/lightning/issues/3369)
+
 ### Changed
 
 ### Fixed
