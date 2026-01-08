@@ -22,9 +22,11 @@ import { AIAssistantPanel } from '../../../js/collaborative-editor/components/AI
 import { StoreContext } from '../../../js/collaborative-editor/contexts/StoreProvider';
 import { createAIAssistantStore } from '../../../js/collaborative-editor/stores/createAIAssistantStore';
 import { createMockJobCodeContext } from '../__helpers__/aiAssistantHelpers';
+import { createMockHistoryStore } from '../__helpers__/storeMocks';
 
 describe('AIAssistantPanel', () => {
   let mockStore: ReturnType<typeof createAIAssistantStore>;
+  let mockHistoryStore: ReturnType<typeof createMockHistoryStore>;
   let mockOnClose: ReturnType<typeof vi.fn>;
   let mockOnNewConversation: ReturnType<typeof vi.fn>;
   let mockOnSessionSelect: ReturnType<typeof vi.fn>;
@@ -38,6 +40,7 @@ describe('AIAssistantPanel', () => {
         value={
           {
             aiAssistantStore: mockStore,
+            historyStore: mockHistoryStore,
           } as any
         }
       >
@@ -48,6 +51,7 @@ describe('AIAssistantPanel', () => {
 
   beforeEach(() => {
     mockStore = createAIAssistantStore();
+    mockHistoryStore = createMockHistoryStore();
     mockOnClose = vi.fn();
     mockOnNewConversation = vi.fn();
     mockOnSessionSelect = vi.fn();
@@ -433,6 +437,7 @@ describe('AIAssistantPanel', () => {
           value={
             {
               aiAssistantStore: mockStore,
+              historyStore: mockHistoryStore,
             } as any
           }
         >
@@ -470,6 +475,7 @@ describe('AIAssistantPanel', () => {
           value={
             {
               aiAssistantStore: mockStore,
+              historyStore: mockHistoryStore,
             } as any
           }
         >
@@ -610,7 +616,7 @@ describe('AIAssistantPanel', () => {
         />
       );
 
-      expect(screen.getByText(/Include job code/)).toBeInTheDocument();
+      expect(screen.getByText(/Send code/)).toBeInTheDocument();
     });
 
     it('should not show job controls when sessionType is workflow_template', () => {
@@ -622,7 +628,7 @@ describe('AIAssistantPanel', () => {
         />
       );
 
-      expect(screen.queryByText(/Include job code/)).not.toBeInTheDocument();
+      expect(screen.queryByText(/Send code/)).not.toBeInTheDocument();
     });
   });
 

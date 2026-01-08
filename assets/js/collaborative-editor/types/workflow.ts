@@ -17,7 +17,7 @@ import type { Trigger as TriggerType } from './trigger';
 /**
  * Zod schema for workflow validation
  *
- * Mirrors backend validation from lib/lightning/workflows/workflow.ex:81-89
+ * Mirrors backend validation from lib/lightning/workflows/workflow.ex:81-103
  */
 export const WorkflowSchema = z.object({
   id: z.string().uuid(),
@@ -40,6 +40,39 @@ export const WorkflowSchema = z.object({
 });
 
 export type WorkflowFormValues = z.infer<typeof WorkflowSchema>;
+
+/**
+ * Creates a workflow schema with dynamic project concurrency validation
+ *
+ * @param projectConcurrency - The project's max concurrency limit (null = unlimited)
+ * @returns Zod schema with appropriate concurrency validation
+ */
+export function createWorkflowSchema(projectConcurrency: number | null) {
+  return z.object({
+    id: z.string().uuid(),
+    name: z
+      .string()
+      .min(1, "can't be blank")
+      .max(255, 'should be at most 255 character(s)'),
+    lock_version: z.number().int(),
+    deleted_at: z.string().nullable(),
+
+    concurrency:
+      projectConcurrency !== null
+        ? z
+            .number()
+            .int()
+            .min(1, 'must be at least 1')
+            .max(
+              projectConcurrency,
+              `exceeds project concurrency limit (${projectConcurrency}) and has no effect`
+            )
+            .nullable()
+            .optional()
+        : z.number().int().min(1, 'must be at least 1').nullable().optional(),
+    enable_job_logs: z.boolean().optional(),
+  });
+}
 
 export interface Workflow extends Session.Workflow {
   jobs: Workflow.Job[];
@@ -101,11 +134,12 @@ export namespace Workflow {
         name: string;
         auth_type: string;
       }>;
-    };
-    validationErrors: {
-      name?: string[];
-      concurrency?: string[];
     } | null;
+
+    // AI workflow apply coordination state
+    // Tracks when someone is applying an AI-generated workflow to prevent concurrent applies
+    isApplyingWorkflow: boolean;
+    applyingUser: { id: string; name: string } | null;
   }
 
   export interface Actions {

@@ -13,6 +13,7 @@ defmodule LightningWeb.AiAssistantChannel do
   use LightningWeb, :channel
 
   alias Lightning.AiAssistant
+  alias Lightning.AiAssistant.Limiter
   alias Lightning.Jobs
   alias Lightning.Policies.Permissions
   alias Lightning.Projects
@@ -37,6 +38,11 @@ defmodule LightningWeb.AiAssistantChannel do
          :ok <- validate_session_type(session, session_type),
          :ok <- authorize_session_access(session, user) do
       Lightning.subscribe("ai_session:#{session.id}")
+
+      # Broadcast new session creation to workflow channel so other users see it
+      if session_id == "new" do
+        broadcast_session_created(session, user)
+      end
 
       {:ok,
        %{
@@ -73,51 +79,39 @@ defmodule LightningWeb.AiAssistantChannel do
   def handle_in("new_message", %{"content" => content} = params, socket) do
     session = socket.assigns.session
     user = socket.assigns.current_user
+    project_id = get_project_id_from_session(session)
 
-    if String.trim(content) == "" do
-      {:reply, {:error, %{reason: "Message cannot be empty"}}, socket}
+    if String.trim(content) != "" do
+      limit_result = Limiter.validate_quota(project_id)
+
+      handle_new_message_with_quota(
+        session,
+        user,
+        content,
+        limit_result,
+        params,
+        socket
+      )
     else
-      opts = extract_message_options(socket.assigns.session_type, params)
-
-      case AiAssistant.save_message(
-             session,
-             %{role: :user, content: content, user: user},
-             opts
-           ) do
-        {:ok, updated_session} ->
-          message =
-            Enum.find(updated_session.messages, fn msg ->
-              msg.role == :user && msg.content == content
-            end)
-
-          {:reply, {:ok, %{message: format_message(message)}}, socket}
-
-        {:error, changeset} ->
-          errors = format_changeset_errors(changeset)
-
-          {:reply, {:error, %{reason: "validation_error", errors: errors}},
-           socket}
-      end
+      reply_validation_error("Message cannot be empty", socket)
     end
   end
 
   @impl true
   def handle_in("retry_message", %{"message_id" => message_id}, socket) do
     message = Lightning.Repo.get(Lightning.AiAssistant.ChatMessage, message_id)
+    project_id = get_project_id_from_session(socket.assigns.session)
 
     if message && message.chat_session_id == socket.assigns.session_id do
-      case AiAssistant.retry_message(message) do
-        {:ok, {updated_message, _oban_job}} ->
-          {:reply, {:ok, %{message: format_message(updated_message)}}, socket}
+      case Limiter.validate_quota(project_id) do
+        :ok ->
+          retry_message_with_quota(message, socket)
 
-        {:error, changeset} ->
-          errors = format_changeset_errors(changeset)
-
-          {:reply, {:error, %{reason: "validation_error", errors: errors}},
-           socket}
+        {:error, _, %Lightning.Extensions.Message{text: text}} ->
+          reply_limit_error(text, socket)
       end
     else
-      {:reply, {:error, %{reason: "message not found or unauthorized"}}, socket}
+      reply_unauthorized_error("message not found or unauthorized", socket)
     end
   end
 
@@ -270,6 +264,11 @@ defmodule LightningWeb.AiAssistantChannel do
       ) do
     if socket.assigns.session_id == session_id do
       case status do
+        :processing ->
+          # Broadcast processing state so all users see loading indicator
+          # and have their input blocked
+          broadcast(socket, "message_processing", %{session_id: session_id})
+
         :success ->
           assistant_message =
             updated_session.messages
@@ -277,13 +276,39 @@ defmodule LightningWeb.AiAssistantChannel do
             |> Enum.find(fn msg -> msg.role == :assistant end)
 
           if assistant_message do
-            push(socket, "new_message", %{
+            # Broadcast to all users so everyone sees the assistant response
+            broadcast(socket, "new_message", %{
               message: format_message(assistant_message)
             })
           end
 
-        _ ->
-          :ok
+        :error ->
+          # Broadcast error state so all users can see and retry
+          user_message =
+            updated_session.messages
+            |> Enum.reverse()
+            |> Enum.find(fn msg -> msg.role == :user end)
+
+          if user_message do
+            broadcast(socket, "message_error", %{
+              message_id: user_message.id,
+              status: "error"
+            })
+          end
+
+        :failed ->
+          # Handle failed status (similar to error)
+          user_message =
+            updated_session.messages
+            |> Enum.reverse()
+            |> Enum.find(fn msg -> msg.role == :user end)
+
+          if user_message do
+            broadcast(socket, "message_error", %{
+              message_id: user_message.id,
+              status: "failed"
+            })
+          end
       end
     end
 
@@ -532,16 +557,29 @@ defmodule LightningWeb.AiAssistantChannel do
   end
 
   defp extract_session_options("job_code", params) do
-    opts = []
+    meta = %{}
 
-    opts =
+    meta =
       if params["follow_run_id"] do
-        Keyword.put(opts, :meta, %{"follow_run_id" => params["follow_run_id"]})
+        Map.put(meta, "follow_run_id", params["follow_run_id"])
       else
-        opts
+        meta
       end
 
-    opts
+    # Include message_options for the initial message (attach_io_data, step_id, etc.)
+    meta =
+      if params["attach_io_data"] || params["step_id"] || params["attach_code"] ||
+           params["attach_logs"] do
+        Map.put(meta, "message_options", build_message_options(params))
+      else
+        meta
+      end
+
+    if map_size(meta) > 0 do
+      [meta: meta]
+    else
+      []
+    end
   end
 
   defp extract_session_options("workflow_template", params) do
@@ -558,12 +596,7 @@ defmodule LightningWeb.AiAssistantChannel do
   end
 
   defp extract_message_options("job_code", params) do
-    message_options = %{
-      "code" => params["attach_code"] == true,
-      "log" => params["attach_logs"] == true
-    }
-
-    [meta: %{"message_options" => message_options}]
+    [meta: %{"message_options" => build_message_options(params)}]
   end
 
   defp extract_message_options("workflow_template", params) do
@@ -572,6 +605,15 @@ defmodule LightningWeb.AiAssistantChannel do
     else
       []
     end
+  end
+
+  defp build_message_options(params) do
+    %{
+      "code" => params["attach_code"] == true,
+      "log" => params["attach_logs"] == true,
+      "attach_io_data" => params["attach_io_data"] == true,
+      "step_id" => params["step_id"]
+    }
   end
 
   defp format_messages(messages) do
@@ -586,7 +628,20 @@ defmodule LightningWeb.AiAssistantChannel do
       role: to_string(message.role),
       status: to_string(message.status),
       inserted_at: message.inserted_at,
-      user_id: message.user_id
+      user_id: message.user_id,
+      user: format_user(message.user)
+    }
+  end
+
+  defp format_user(nil), do: nil
+
+  defp format_user(%Ecto.Association.NotLoaded{}), do: nil
+
+  defp format_user(user) do
+    %{
+      id: user.id,
+      first_name: user.first_name,
+      last_name: user.last_name
     }
   end
 
@@ -704,5 +759,188 @@ defmodule LightningWeb.AiAssistantChannel do
       nil -> {:error, "Project not found"}
       project_id -> {:ok, Projects.get_project(project_id)}
     end
+  end
+
+  defp get_project_id_from_session(session) do
+    cond do
+      session.project_id ->
+        session.project_id
+
+      session.job_id ->
+        case Jobs.get_job(session.job_id) do
+          {:ok, job} ->
+            workflow = Workflows.get_workflow(job.workflow_id)
+            workflow.project_id
+
+          {:error, :not_found} ->
+            get_project_id_from_unsaved_job(session)
+        end
+
+      true ->
+        get_project_id_from_unsaved_job(session)
+    end
+  end
+
+  defp get_project_id_from_unsaved_job(session) do
+    if session.meta["unsaved_job"] do
+      workflow_id = session.meta["unsaved_job"]["workflow_id"]
+      workflow = Workflows.get_workflow(workflow_id)
+      workflow.project_id
+    else
+      nil
+    end
+  end
+
+  # Private helpers for handle_in("new_message")
+
+  defp handle_new_message_with_quota(
+         session,
+         user,
+         content,
+         limit_result,
+         params,
+         socket
+       ) do
+    message_attrs = build_message_attrs(user, content, limit_result)
+    opts = extract_message_options(socket.assigns.session_type, params)
+
+    case AiAssistant.save_message(session, message_attrs, opts) do
+      {:ok, updated_session} ->
+        message = find_user_message(updated_session.messages, content)
+
+        # Broadcast the user message to all subscribers so other users see it
+        broadcast(socket, "user_message", %{message: format_message(message)})
+
+        response = build_message_response(message, limit_result)
+        {:reply, {:ok, response}, socket}
+
+      {:error, changeset} ->
+        errors = format_changeset_errors(changeset)
+        {:reply, {:error, %{type: "validation_error", errors: errors}}, socket}
+    end
+  end
+
+  defp build_message_attrs(user, content, limit_result) do
+    base_attrs = %{role: :user, content: content, user: user}
+
+    case limit_result do
+      :ok -> base_attrs
+      {:error, _, _} -> Map.put(base_attrs, :status, :error)
+    end
+  end
+
+  defp find_user_message(messages, content) do
+    # Find the LAST (most recently added) user message with this content
+    # This ensures we return the newly created message, not an older one
+    # with the same content
+    messages
+    |> Enum.reverse()
+    |> Enum.find(fn msg ->
+      msg.role == :user && msg.content == content
+    end)
+  end
+
+  defp build_message_response(message, limit_result) do
+    base_response = %{message: format_message(message)}
+
+    case limit_result do
+      :ok ->
+        base_response
+
+      {:error, _, %Lightning.Extensions.Message{text: text}} ->
+        Map.put(base_response, :error, text)
+    end
+  end
+
+  # Private helpers for handle_in("retry_message")
+
+  defp retry_message_with_quota(message, socket) do
+    case AiAssistant.retry_message(message) do
+      {:ok, {updated_message, _oban_job}} ->
+        # Broadcast status change to all users so retry button hides for everyone
+        broadcast(socket, "message_status_changed", %{
+          message_id: updated_message.id,
+          status: to_string(updated_message.status)
+        })
+
+        {:reply, {:ok, %{message: format_message(updated_message)}}, socket}
+
+      {:error, changeset} ->
+        errors = format_changeset_errors(changeset)
+        {:reply, {:error, %{type: "validation_error", errors: errors}}, socket}
+    end
+  end
+
+  # Private helpers for error replies
+
+  defp reply_validation_error(message, socket) do
+    {:reply, {:error, %{type: "validation_error", errors: %{base: [message]}}},
+     socket}
+  end
+
+  defp reply_limit_error(message, socket) do
+    {:reply, {:error, %{type: "limit_error", errors: %{base: [message]}}},
+     socket}
+  end
+
+  defp reply_unauthorized_error(message, socket) do
+    {:reply, {:error, %{type: "unauthorized", errors: %{base: [message]}}},
+     socket}
+  end
+
+  # Broadcasts session creation to the workflow channel so other users see the new session
+  defp broadcast_session_created(session, user) do
+    workflow_id = get_workflow_id_for_session(session)
+
+    if workflow_id do
+      # Preload associations needed for formatting
+      # Note: For job_code sessions, workflow is accessed via job.workflow
+      session =
+        Lightning.Repo.preload(
+          session,
+          [job: [:workflow], workflow: [], project: []],
+          force: true
+        )
+
+      formatted_session =
+        AiAssistantJSON.format_session(session)
+        |> Map.put(:user, format_session_user(user))
+
+      LightningWeb.Endpoint.broadcast(
+        "workflow:collaborate:#{workflow_id}",
+        "ai_session_created",
+        %{session: formatted_session}
+      )
+    end
+  end
+
+  defp get_workflow_id_for_session(session) do
+    cond do
+      session.workflow_id ->
+        session.workflow_id
+
+      session.job_id ->
+        case Jobs.get_job(session.job_id) do
+          {:ok, job} -> job.workflow_id
+          _ -> nil
+        end
+
+      session.meta["unsaved_job"] ->
+        session.meta["unsaved_job"]["workflow_id"]
+
+      session.meta["unsaved_workflow"] ->
+        session.meta["unsaved_workflow"]["id"]
+
+      true ->
+        nil
+    end
+  end
+
+  defp format_session_user(user) do
+    %{
+      id: user.id,
+      first_name: user.first_name,
+      last_name: user.last_name
+    }
   end
 end

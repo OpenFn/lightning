@@ -32,7 +32,7 @@ defmodule LightningWeb.ProjectLive.InvitedCollaborators do
     schema
     |> cast(attrs, [:first_name, :last_name, :email, :role])
     |> validate_required([:first_name, :last_name, :email, :role])
-    |> validate_format(:email, ~r/^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$/)
+    |> validate_format(:email, ~r/^[\w-\.]+@([\w-]+\.)+[\w-]{2,}$/)
   end
 
   def validate_collaborators(schema, params) do

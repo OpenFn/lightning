@@ -8,11 +8,11 @@ import {
   useWorkflowActions,
   useCanSave,
   useWorkflowReadOnly,
-  useCanRun,
 } from '../../hooks/useWorkflow';
 import type { Workflow } from '../../types/workflow';
 import { AlertDialog } from '../AlertDialog';
 import { Button } from '../Button';
+import { NewRunButton } from '../NewRunButton';
 import { ShortcutKeys } from '../ShortcutKeys';
 import { Tooltip } from '../Tooltip';
 
@@ -44,9 +44,6 @@ export function JobInspector({
   const validation = useJobDeleteValidation(job.id);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-
-  // Use centralized canRun hook for all run permission/state checks
-  const { canRun, tooltipMessage: runTooltipMessage } = useCanRun();
 
   // URL state for Edit button
   const { params, updateSearchParams } = useURLState();
@@ -84,17 +81,9 @@ export function JobInspector({
           <Tooltip
             content={
               <>
-                {isIDEOpen
-                  ? 'IDE is already open'
-                  : 'Open full-screen code editor '}
-                {!isIDEOpen && (
-                  <>
-                    {' '}
-                    {'( '}
-                    <ShortcutKeys keys={['mod', 'e']} />
-                    {' )'}
-                  </>
-                )}
+                Open code editor {'( '}
+                <ShortcutKeys keys={['mod', 'e']} />
+                {' )'}
               </>
             }
             side="top"
@@ -109,17 +98,11 @@ export function JobInspector({
               </Button>
             </span>
           </Tooltip>
-          <Tooltip content={runTooltipMessage} side="top">
-            <span className="inline-block">
-              <Button
-                variant="primary"
-                onClick={() => onOpenRunPanel({ jobId: job.id })}
-                disabled={!canRun}
-              >
-                Run
-              </Button>
-            </span>
-          </Tooltip>
+          <NewRunButton
+            onClick={() => onOpenRunPanel({ jobId: job.id })}
+            tooltipSide="top"
+            disabled={isReadOnly}
+          />
         </>
       }
       rightButtons={

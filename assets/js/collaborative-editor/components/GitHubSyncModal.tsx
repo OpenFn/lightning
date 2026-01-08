@@ -183,7 +183,8 @@ export function GitHubSyncModal() {
                 className="inline-flex w-full justify-center rounded-md
                 px-3 py-2 text-sm font-semibold text-white shadow-xs
                 bg-primary-600 hover:bg-primary-500
-                disabled:opacity-50 disabled:cursor-not-allowed
+                disabled:bg-primary-300 disabled:hover:bg-primary-300
+                disabled:cursor-not-allowed
                 focus-visible:outline-2 focus-visible:outline-offset-2
                 focus-visible:outline-primary-600
                 sm:col-start-2"

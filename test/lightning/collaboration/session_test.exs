@@ -10,6 +10,7 @@ defmodule Lightning.SessionTest do
   import Eventually
   import Lightning.Factories
   import Lightning.CollaborationHelpers
+  import Mox
 
   alias Lightning.Collaboration.DocumentState
   alias Lightning.Collaboration.DocumentSupervisor
@@ -25,6 +26,8 @@ defmodule Lightning.SessionTest do
     user = insert(:user)
     {:ok, user: user}
   end
+
+  setup :verify_on_exit!
 
   describe "start/1" do
     test "start_link/1 returns an error when the SharedDoc doesn't exist", %{
@@ -815,6 +818,47 @@ defmodule Lightning.SessionTest do
       assert {:error, :workflow_deleted} = Session.save_workflow(session, user)
     end
 
+    test "allows saving EXISTING workflow even when at activation limit", %{
+      session: session,
+      user: user,
+      project: project,
+      workflow: workflow
+    } do
+      # The workflow from setup was inserted via insert(), so it's :loaded (existing)
+      assert workflow.__meta__.state == :loaded
+
+      project_id = project.id
+
+      # Mock the usage limiter to return an error (user is at limit)
+      stub(
+        Lightning.Extensions.MockUsageLimiter,
+        :limit_action,
+        fn
+          %{type: :activate_workflow}, %{project_id: ^project_id} ->
+            {:error, :limit_exceeded,
+             %Lightning.Extensions.Message{
+               text: "Workflow activation limit exceeded"
+             }}
+
+          _action, _context ->
+            :ok
+        end
+      )
+
+      # Modify the workflow name via Y.Doc
+      doc = Session.get_doc(session)
+      workflow_map = Yex.Doc.get_map(doc, "workflow")
+
+      Yex.Doc.transaction(doc, "test_update_name", fn ->
+        Yex.Map.set(workflow_map, "name", "Updated Name")
+      end)
+
+      # Save should SUCCEED for existing workflows - limit check is skipped
+      # because their triggers are already counted in the limit
+      assert {:ok, saved_workflow} = Session.save_workflow(session, user)
+      assert saved_workflow.name == "Updated Name"
+    end
+
     test "saves all workflow components correctly", %{
       session: session,
       user: user
@@ -987,6 +1031,143 @@ defmodule Lightning.SessionTest do
       # Try to save again - should get workflow_deleted error (covering line 475)
       assert {:error, :workflow_deleted} =
                Session.save_workflow(session_pid, user)
+    end
+  end
+
+  # Separate describe block for NEW workflow tests.
+  # These tests use `build(:workflow)` instead of `insert(:workflow)` because
+  # we need workflows with :built state (not yet persisted to DB).
+  # The main save_workflow/2 tests use insert() which creates :loaded workflows.
+  describe "save_workflow/2 with NEW workflows" do
+    setup do
+      Mox.set_mox_global(LightningMock)
+      Mox.stub(LightningMock, :broadcast, fn _topic, _message -> :ok end)
+
+      user = insert(:user)
+      project = insert(:project)
+
+      # Build (not insert) a workflow - this has :built state
+      workflow_id = Ecto.UUID.generate()
+
+      workflow =
+        build(:workflow,
+          id: workflow_id,
+          name: "New Workflow",
+          project: project,
+          project_id: project.id
+        )
+
+      document_name = "workflow:new:#{workflow_id}"
+
+      start_supervised!(
+        {DocumentSupervisor, workflow: workflow, document_name: document_name}
+      )
+
+      session_pid =
+        start_supervised!(
+          {Session, workflow: workflow, user: user, document_name: document_name}
+        )
+
+      %{
+        session: session_pid,
+        user: user,
+        workflow: workflow,
+        project: project
+      }
+    end
+
+    test "auto-disables triggers when activation limit is reached", %{
+      session: session,
+      user: user,
+      project: project,
+      workflow: workflow
+    } do
+      # Verify workflow has :built state (new, not yet in DB)
+      assert workflow.__meta__.state == :built
+
+      project_id = project.id
+
+      stub(
+        Lightning.Extensions.MockUsageLimiter,
+        :limit_action,
+        fn
+          %{type: :activate_workflow}, %{project_id: ^project_id} ->
+            {:error, :limit_exceeded,
+             %Lightning.Extensions.Message{
+               text: "Workflow activation limit exceeded"
+             }}
+
+          _action, _context ->
+            :ok
+        end
+      )
+
+      # Add an enabled trigger via Y.Doc
+      doc = Session.get_doc(session)
+      triggers_array = Yex.Doc.get_array(doc, "triggers")
+      trigger_id = Ecto.UUID.generate()
+
+      trigger_data =
+        Yex.MapPrelim.from(%{
+          "id" => trigger_id,
+          "type" => "webhook",
+          "enabled" => true
+        })
+
+      Yex.Doc.transaction(doc, "add_trigger", fn ->
+        Yex.Array.push(triggers_array, trigger_data)
+      end)
+
+      # Save should SUCCEED with triggers auto-disabled
+      assert {:ok, saved_workflow} = Session.save_workflow(session, user)
+
+      # Verify trigger was disabled in the saved workflow
+      saved_trigger = Enum.find(saved_workflow.triggers, &(&1.id == trigger_id))
+      assert saved_trigger.enabled == false
+
+      # Verify trigger state was synced back to Y.Doc
+      doc = Session.get_doc(session)
+      triggers_array = Yex.Doc.get_array(doc, "triggers")
+      [ydoc_trigger] = Yex.Array.to_list(triggers_array)
+      assert Yex.Map.fetch!(ydoc_trigger, "enabled") == false
+    end
+
+    test "keeps triggers enabled when under activation limit", %{
+      session: session,
+      user: user,
+      workflow: workflow
+    } do
+      assert workflow.__meta__.state == :built
+
+      # Mock the usage limiter to return :ok (user is under limit)
+      stub(
+        Lightning.Extensions.MockUsageLimiter,
+        :limit_action,
+        fn _action, _context -> :ok end
+      )
+
+      # Add an enabled trigger via Y.Doc
+      doc = Session.get_doc(session)
+      triggers_array = Yex.Doc.get_array(doc, "triggers")
+      trigger_id = Ecto.UUID.generate()
+
+      trigger_data =
+        Yex.MapPrelim.from(%{
+          "id" => trigger_id,
+          "type" => "webhook",
+          "enabled" => true
+        })
+
+      Yex.Doc.transaction(doc, "add_trigger", fn ->
+        Yex.Array.push(triggers_array, trigger_data)
+      end)
+
+      # Save should SUCCEED with triggers STILL ENABLED
+      assert {:ok, saved_workflow} = Session.save_workflow(session, user)
+
+      # Verify trigger remains enabled
+      saved_trigger = Enum.find(saved_workflow.triggers, &(&1.id == trigger_id))
+      assert saved_trigger.enabled == true
     end
   end
 
@@ -1373,6 +1554,57 @@ defmodule Lightning.SessionTest do
                "condition_expression"
              ]
     end
+
+    test "returns error when existing workflow tries to activate trigger at limit",
+         %{
+           session: session,
+           user: user,
+           workflow: workflow,
+           project: project
+         } do
+      # Verify workflow has :loaded state (existing, from DB)
+      assert workflow.__meta__.state == :loaded
+
+      project_id = project.id
+
+      # Mock the usage limiter to return error (user is at limit)
+      stub(
+        Lightning.Extensions.MockUsageLimiter,
+        :limit_action,
+        fn
+          %{type: :activate_workflow}, %{project_id: ^project_id} ->
+            {:error, :limit_exceeded,
+             %Lightning.Extensions.Message{
+               text: "Workflow activation limit exceeded"
+             }}
+
+          _action, _context ->
+            :ok
+        end
+      )
+
+      # Add an enabled trigger via Y.Doc to simulate user enabling trigger
+      doc = Session.get_doc(session)
+      triggers_array = Yex.Doc.get_array(doc, "triggers")
+      trigger_id = Ecto.UUID.generate()
+
+      trigger_data =
+        Yex.MapPrelim.from(%{
+          "id" => trigger_id,
+          "type" => "webhook",
+          "enabled" => true
+        })
+
+      Yex.Doc.transaction(doc, "add_trigger", fn ->
+        Yex.Array.push(triggers_array, trigger_data)
+      end)
+
+      # Save should FAIL with limit exceeded error (NOT auto-disable)
+      assert {:error, %Lightning.Extensions.Message{text: text}} =
+               Session.save_workflow(session, user)
+
+      assert text =~ "limit"
+    end
   end
 
   describe "persistence reconciliation" do
@@ -1527,6 +1759,165 @@ defmodule Lightning.SessionTest do
       assert reconciled_name == "Changed by another user"
 
       Session.stop(session2)
+    end
+
+    test "handles persisted Y.Doc with nil lock_version when DB has real version",
+         %{
+           user: user
+         } do
+      # This tests the bug fix for issue #4164
+      # When a workflow is opened before first save, Y.Doc gets lock_version: nil
+      # If that state is persisted and the workflow is later saved (getting a real lock_version),
+      # loading the persisted state would crash because extract_lock_version didn't handle {:ok, nil}
+
+      workflow = insert(:simple_workflow)
+      doc_name = "workflow:#{workflow.id}"
+
+      # Manually create a persisted document state with lock_version: nil
+      # This simulates a Y.Doc that was persisted before the workflow was ever saved
+      doc = Yex.Doc.new()
+      workflow_map = Yex.Doc.get_map(doc, "workflow")
+
+      Yex.Doc.transaction(doc, "setup_nil_lock_version", fn ->
+        Yex.Map.set(workflow_map, "id", workflow.id)
+        Yex.Map.set(workflow_map, "name", "Test Workflow")
+        Yex.Map.set(workflow_map, "lock_version", nil)
+      end)
+
+      {:ok, update_data} = Yex.encode_state_as_update(doc)
+
+      Repo.insert!(%DocumentState{
+        document_name: doc_name,
+        state_data: update_data,
+        version: :update
+      })
+
+      # Now start a session - this should NOT crash
+      # The persistence layer should handle the nil lock_version and reset from DB
+      {:ok, _doc_supervisor} =
+        Lightning.Collaborate.start_document(
+          workflow,
+          doc_name
+        )
+
+      {:ok, session} =
+        Session.start_link(
+          user: user,
+          workflow: workflow,
+          parent_pid: self(),
+          document_name: doc_name
+        )
+
+      # Verify the session started and lock_version was reconciled from DB
+      shared_doc = Session.get_doc(session)
+      workflow_map2 = Yex.Doc.get_map(shared_doc, "workflow")
+      reconciled_lock_version = Yex.Map.fetch!(workflow_map2, "lock_version")
+
+      # lock_version should now match the database value
+      assert reconciled_lock_version == workflow.lock_version,
+             "Expected lock_version #{workflow.lock_version} but got #{reconciled_lock_version}"
+
+      Session.stop(session)
+    end
+
+    test "merges delta updates with persisted state across save batches", %{
+      user: user
+    } do
+      # This tests the fix for the merge_updates bug where delta updates
+      # saved in subsequent batches were applied to an empty doc instead of
+      # the current persisted state, resulting in data loss.
+      #
+      # Scenario:
+      # 1. First batch persists base state with workflow data and lock_version
+      # 2. Another change generates a delta update (adding concurrency field)
+      # 3. Second batch should merge the delta with existing persisted state
+      #
+      # Note: We verify concurrency is preserved, not name, because
+      # reconcile_workflow_metadata updates name from DB after loading.
+
+      workflow = insert(:simple_workflow)
+      doc_name = "workflow:#{workflow.id}"
+
+      # First, create initial persisted state (simulating first batch)
+      # Set lock_version to match the workflow's DB lock_version to avoid reset
+      initial_doc = Yex.Doc.new()
+      workflow_map = Yex.Doc.get_map(initial_doc, "workflow")
+
+      Yex.Doc.transaction(initial_doc, "initial_state", fn ->
+        Yex.Map.set(workflow_map, "id", workflow.id)
+        Yex.Map.set(workflow_map, "name", workflow.name)
+        Yex.Map.set(workflow_map, "lock_version", workflow.lock_version)
+      end)
+
+      {:ok, initial_update} = Yex.encode_state_as_update(initial_doc)
+
+      # Persist the initial state
+      Repo.insert!(%DocumentState{
+        document_name: doc_name,
+        state_data: initial_update,
+        version: :update
+      })
+
+      # Now create a delta update that adds a new field
+      # (simulating what happens when user edits concurrency in the workflow)
+      delta_doc = Yex.Doc.new()
+      delta_workflow_map = Yex.Doc.get_map(delta_doc, "workflow")
+
+      # Apply initial state first, then make delta change
+      Yex.apply_update(delta_doc, initial_update)
+
+      Yex.Doc.transaction(delta_doc, "add_concurrency", fn ->
+        Yex.Map.set(delta_workflow_map, "concurrency", 5)
+      end)
+
+      # Get the delta (diff since initial state)
+      {:ok, state_vector} = Yex.encode_state_vector(initial_doc)
+      {:ok, delta_update} = Yex.encode_state_as_update(delta_doc, state_vector)
+
+      # The delta should be small (just the concurrency change)
+      assert byte_size(delta_update) < byte_size(initial_update)
+
+      # Persist the delta as a second update
+      Repo.insert!(%DocumentState{
+        document_name: doc_name,
+        state_data: delta_update,
+        version: :update
+      })
+
+      # Now start a session - this will load and reconstruct the full state
+      {:ok, _doc_supervisor} =
+        Lightning.Collaborate.start_document(
+          workflow,
+          doc_name
+        )
+
+      {:ok, session} =
+        Session.start_link(
+          user: user,
+          workflow: workflow,
+          parent_pid: self(),
+          document_name: doc_name
+        )
+
+      # Verify the session loaded the full state correctly
+      shared_doc = Session.get_doc(session)
+      loaded_workflow_map = Yex.Doc.get_map(shared_doc, "workflow")
+
+      # The key assertion: concurrency from the delta update should be preserved.
+      # This verifies the fix - before the fix, delta updates applied to an empty
+      # doc would result in data loss (concurrency would be missing).
+      loaded_concurrency = Yex.Map.fetch!(loaded_workflow_map, "concurrency")
+      assert loaded_concurrency == 5
+
+      # Name should match DB (reconciliation updates it)
+      loaded_name = Yex.Map.fetch!(loaded_workflow_map, "name")
+      assert loaded_name == workflow.name
+
+      # lock_version should match DB (reconciliation updates it)
+      loaded_lock_version = Yex.Map.fetch!(loaded_workflow_map, "lock_version")
+      assert loaded_lock_version == workflow.lock_version
+
+      Session.stop(session)
     end
   end
 end

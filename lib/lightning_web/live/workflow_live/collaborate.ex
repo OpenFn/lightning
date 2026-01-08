@@ -36,8 +36,52 @@ defmodule LightningWeb.WorkflowLive.Collaborate do
   end
 
   @impl true
-  def handle_params(_params, _url, socket) do
-    {:noreply, socket}
+  def handle_params(params, _url, socket) do
+    socket
+    |> maybe_load_initial_run_data(params)
+    |> then(&{:noreply, &1})
+  end
+
+  defp maybe_load_initial_run_data(
+         %{assigns: %{is_new_workflow: true}} = socket,
+         _params
+       ),
+       do: socket
+
+  defp maybe_load_initial_run_data(socket, %{"run" => run_id})
+       when is_binary(run_id) do
+    case Lightning.Runs.get(run_id, include: [:steps]) do
+      nil -> socket
+      run -> assign(socket, initial_run_data: build_run_data(run))
+    end
+  end
+
+  defp maybe_load_initial_run_data(socket, _params), do: socket
+
+  defp build_run_data(run) do
+    %{
+      run_id: run.id,
+      steps: Enum.map(run.steps, &build_step_data/1),
+      metadata: %{
+        starting_job_id: run.starting_job_id,
+        starting_trigger_id: run.starting_trigger_id,
+        inserted_at: run.inserted_at,
+        created_by_id: run.created_by_id,
+        created_by_email: nil
+      }
+    }
+  end
+
+  defp build_step_data(step) do
+    Map.take(step, [
+      :id,
+      :job_id,
+      :exit_reason,
+      :error_type,
+      :started_at,
+      :finished_at,
+      :input_dataclip_id
+    ])
   end
 
   @impl true
@@ -130,6 +174,11 @@ defmodule LightningWeb.WorkflowLive.Collaborate do
       }
       data-project-env={@project.env}
       data-is-new-workflow={if @is_new_workflow, do: "true", else: nil}
+      data-initial-run-data={
+        if assigns[:initial_run_data],
+          do: Jason.encode!(assigns[:initial_run_data]),
+          else: nil
+      }
     />
 
     <.live_component

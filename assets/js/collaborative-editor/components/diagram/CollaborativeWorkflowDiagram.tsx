@@ -19,13 +19,16 @@ import {
   useHistoryLoading,
   useRunSteps,
 } from '../../hooks/useHistory';
-import { useIsNewWorkflow } from '../../hooks/useSessionContext';
+import {
+  useIsNewWorkflow,
+  useLatestSnapshotLockVersion,
+} from '../../hooks/useSessionContext';
 import { useVersionMismatch } from '../../hooks/useVersionMismatch';
 import { useNodeSelection } from '../../hooks/useWorkflow';
+import { useKeyboardShortcut } from '../../keyboard';
 import type { RunSummary } from '../../types/history';
 
 import MiniHistory from './MiniHistory';
-import { VersionMismatchBanner } from './VersionMismatchBanner';
 import CollaborativeWorkflowDiagramImpl from './WorkflowDiagram';
 
 interface CollaborativeWorkflowDiagramProps {
@@ -41,6 +44,7 @@ export function CollaborativeWorkflowDiagram({
   const isNewWorkflow = useIsNewWorkflow();
   const isHistoryChannelConnected = useHistoryChannelConnected();
   const { params, updateSearchParams } = useURLState();
+  const latestSnapshotLockVersion = useLatestSnapshotLockVersion();
 
   // Get history data and commands
   const history = useHistory();
@@ -60,6 +64,17 @@ export function CollaborativeWorkflowDiagram({
     setHistoryPanelCollapsed(!historyCollapsed);
   }, [historyCollapsed, setHistoryPanelCollapsed]);
 
+  useKeyboardShortcut(
+    'Control+h, Meta+h',
+    () => {
+      if (!isNewWorkflow) {
+        handleToggleHistory();
+      }
+    },
+    25, // Canvas priority (lower than IDE's 50)
+    { enabled: !isNewWorkflow }
+  );
+
   // Use hook to get run steps with automatic subscription management
   const currentRunSteps = useRunSteps(selectedRunId);
 
@@ -70,17 +85,22 @@ export function CollaborativeWorkflowDiagram({
   // URLStore notifies subscribers synchronously, triggering immediate re-render
   const handleRunSelect = useCallback(
     (run: RunSummary) => {
-      // Find the workorder that contains this run
-      const workorder = history.find(wo => wo.runs.some(r => r.id === run.id));
+      // Only include version parameter if the run's version differs from latest
+      // This prevents pinning to read-only mode when viewing latest version runs
+      const runVersion = run.version;
+      const shouldPinVersion =
+        runVersion !== null &&
+        runVersion !== undefined &&
+        runVersion !== latestSnapshotLockVersion;
 
       // Single atomic update - both version and run in one call
       // This prevents race conditions between two separate updateSearchParams calls
       updateSearchParams({
-        v: workorder ? String(workorder.version) : null,
+        v: shouldPinVersion ? String(runVersion) : null,
         run: run.id,
       });
     },
-    [history, updateSearchParams]
+    [latestSnapshotLockVersion, updateSearchParams]
   );
 
   // Clear URL parameter when deselecting run
@@ -143,14 +163,6 @@ export function CollaborativeWorkflowDiagram({
   return (
     <div ref={containerRef} className={className}>
       <ReactFlowProvider>
-        {versionMismatch && (
-          <VersionMismatchBanner
-            runVersion={versionMismatch.runVersion}
-            currentVersion={versionMismatch.currentVersion}
-            className="absolute top-4 left-1/2 -translate-x-1/2 z-[45] max-w-md"
-          />
-        )}
-
         <CollaborativeWorkflowDiagramImpl
           selection={currentNode.id}
           onSelectionChange={selectNode}
@@ -176,6 +188,7 @@ export function CollaborativeWorkflowDiagram({
               historyCommands.clearError();
               void historyCommands.requestHistory();
             }}
+            versionMismatch={versionMismatch}
           />
         )}
       </ReactFlowProvider>

@@ -8,9 +8,8 @@
  * - Footer has Import button to switch to YAML import mode
  */
 
-import { useCallback, useContext, useEffect, useMemo, useRef } from 'react';
+import { useCallback, useContext, useEffect, useMemo } from 'react';
 
-import { useURLState } from '../../../react/lib/use-url-state';
 import type { WorkflowState as YAMLWorkflowState } from '../../../yaml/types';
 import {
   parseWorkflowYAML,
@@ -21,6 +20,7 @@ import { BASE_TEMPLATES } from '../../constants/baseTemplates';
 import { StoreContext } from '../../contexts/StoreProvider';
 import { useSession } from '../../hooks/useSession';
 import { useTemplatePanel, useUICommands } from '../../hooks/useUI';
+import { useWorkflowActions } from '../../hooks/useWorkflow';
 import { notifications } from '../../lib/notifications';
 import type { Template } from '../../types/template';
 import { Tooltip } from '../Tooltip';
@@ -31,14 +31,9 @@ import { TemplateSearchInput } from './TemplateSearchInput';
 interface TemplatePanelProps {
   onImportClick: () => void;
   onImport?: (workflowState: YAMLWorkflowState) => void;
-  onSave?: () => Promise<unknown>;
 }
 
-export function TemplatePanel({
-  onImportClick,
-  onImport,
-  onSave,
-}: TemplatePanelProps) {
+export function TemplatePanel({ onImportClick, onImport }: TemplatePanelProps) {
   const context = useContext(StoreContext);
   if (!context) {
     throw new Error('TemplatePanel must be used within a StoreProvider');
@@ -48,22 +43,16 @@ export function TemplatePanel({
   const { provider } = useSession();
   const channel = provider?.channel;
   const { openAIAssistantPanel, collapseCreateWorkflowPanel } = useUICommands();
-  const { params, updateSearchParams } = useURLState();
+  const { saveWorkflow } = useWorkflowActions();
 
   const { templates, loading, error, searchQuery, selectedTemplate } =
     useTemplatePanel();
 
-  /**
-   * previousTemplateRef tracks the selected template before user starts searching.
-   * When search is cleared (query becomes empty), we restore this selection.
-   * This provides a better UX than losing the selection during search exploration.
-   *
-   * Why a ref instead of store state:
-   * - This is local to the search behavior within this component
-   * - Moving to store would add complexity without benefit (clearing on unmount, etc.)
-   * - The ref pattern keeps the restore logic self-contained
-   */
-  const previousTemplateRef = useRef<Template | null>(null);
+  // Clear template state on mount - always start fresh
+  useEffect(() => {
+    uiStore.selectTemplate(null);
+    uiStore.setTemplateSearchQuery('');
+  }, [uiStore]);
 
   useEffect(() => {
     if (!channel) return;
@@ -80,30 +69,15 @@ export function TemplatePanel({
     };
 
     void loadTemplates();
-    // Note: No cleanup - we preserve template selection when switching between panels
   }, [channel, uiStore]);
 
-  // Restore search query from URL on initial mount only
-  const hasRestoredSearchRef = useRef(false);
-  useEffect(() => {
-    if (hasRestoredSearchRef.current) return;
-
-    const urlSearchQuery = params['search'];
-    if (urlSearchQuery && urlSearchQuery !== searchQuery) {
-      uiStore.setTemplateSearchQuery(urlSearchQuery);
-    }
-    hasRestoredSearchRef.current = true;
-  }, [params, searchQuery, uiStore]);
-
   const allTemplates: Template[] = useMemo(() => {
-    const combined = [...BASE_TEMPLATES, ...templates];
-
     if (!searchQuery.trim()) {
-      return combined;
+      return [...BASE_TEMPLATES, ...templates];
     }
 
     const query = searchQuery.toLowerCase();
-    return combined.filter(template => {
+    const filteredUserTemplates = templates.filter(template => {
       const matchName = template.name.toLowerCase().includes(query);
       const matchDesc = template.description?.toLowerCase().includes(query);
       const matchTags = template.tags.some(tag =>
@@ -111,17 +85,20 @@ export function TemplatePanel({
       );
       return matchName || matchDesc || matchTags;
     });
+
+    // Always show base templates, regardless of search query
+    return [...BASE_TEMPLATES, ...filteredUserTemplates];
   }, [templates, searchQuery]);
 
   const handleSelectTemplate = useCallback(
     (template: Template) => {
       uiStore.selectTemplate(template);
-      updateSearchParams({ template: template.id });
 
       if (onImport) {
         try {
           const spec = parseWorkflowYAML(template.code);
           const state = convertWorkflowSpecToState(spec);
+
           onImport(state);
         } catch (err) {
           console.error('Failed to parse template:', err);
@@ -133,120 +110,16 @@ export function TemplatePanel({
         }
       }
     },
-    [uiStore, updateSearchParams, onImport]
+    [uiStore, onImport]
   );
 
-  // Restore template selection from URL and render on canvas
-  const hasRenderedTemplateRef = useRef(false);
-  useEffect(() => {
-    const templateId = params['template'];
-
-    // No template selected - clear canvas on mount
-    if (!templateId && !hasRenderedTemplateRef.current) {
-      hasRenderedTemplateRef.current = true;
-      if (onImport) {
-        onImport({
-          id: '',
-          name: '',
-          jobs: [],
-          triggers: [],
-          edges: [],
-          positions: null,
-        });
-      }
-      return;
-    }
-
-    if (!templateId || templates.length === 0) return;
-
-    // Find template in combined list
-    const allTemplatesList = [...BASE_TEMPLATES, ...templates];
-    const template = allTemplatesList.find(t => t.id === templateId);
-
-    if (template) {
-      // If already selected in store but not rendered yet, just render on canvas
-      if (
-        selectedTemplate?.id === templateId &&
-        !hasRenderedTemplateRef.current
-      ) {
-        hasRenderedTemplateRef.current = true;
-        if (onImport) {
-          try {
-            const spec = parseWorkflowYAML(template.code);
-            const state = convertWorkflowSpecToState(spec);
-            onImport(state);
-          } catch (err) {
-            console.error('Failed to parse template:', err);
-            notifications.alert({
-              title: 'Failed to load template',
-              description:
-                'The template YAML could not be parsed. Please try another template.',
-            });
-          }
-        }
-      } else if (selectedTemplate?.id !== templateId) {
-        // Different template - select and render
-        hasRenderedTemplateRef.current = true;
-        handleSelectTemplate(template);
-      }
-    }
-  }, [params, templates, selectedTemplate, handleSelectTemplate, onImport]);
-
-  const handleCreateWorkflow = async () => {
-    if (!selectedTemplate || !onImport || !onSave) return;
-
-    try {
-      const spec = parseWorkflowYAML(selectedTemplate.code);
-      const state = convertWorkflowSpecToState(spec);
-      onImport(state);
-      await onSave();
-
-      // After successful save, collapse panel and clear template params
-      collapseCreateWorkflowPanel();
-      uiStore.selectTemplate(null);
-      uiStore.setTemplateSearchQuery('');
-      updateSearchParams({ template: null, search: null });
-    } catch (err) {
-      console.error('Failed to create workflow from template:', err);
-      notifications.alert({
-        title: 'Failed to create workflow',
-        description:
-          'The template could not be processed. Please try again or select another template.',
-      });
-    }
-  };
-
   const handleSearchChange = (query: string) => {
-    const previousQuery = searchQuery;
     uiStore.setTemplateSearchQuery(query);
-    updateSearchParams({ search: query || null });
-
-    // Starting a search - save current selection and clear canvas
-    if (query && !previousQuery && selectedTemplate && onImport) {
-      previousTemplateRef.current = selectedTemplate;
-      uiStore.selectTemplate(null);
-      updateSearchParams({ template: null, search: query });
-      // Import empty workflow to clear canvas
-      onImport({
-        id: '',
-        name: '',
-        jobs: [],
-        triggers: [],
-        edges: [],
-        positions: null,
-      });
-    }
-    // Clearing search - restore previous selection
-    else if (!query && previousQuery && previousTemplateRef.current) {
-      const templateToRestore = previousTemplateRef.current;
-      previousTemplateRef.current = null;
-      handleSelectTemplate(templateToRestore);
-    }
   };
 
   const handleBuildWithAI = useCallback(() => {
-    // Only trigger if there are no matching templates and there's a search query
-    if (allTemplates.length === 0 && searchQuery) {
+    // Only trigger if no user templates matched and there's a search query
+    if (allTemplates.length === BASE_TEMPLATES.length && searchQuery) {
       // Clear any existing AI session and disconnect
       aiStore.disconnect();
       aiStore.clearSession();
@@ -269,7 +142,7 @@ export function TemplatePanel({
       <div className="shrink-0 px-4 py-4 border-b border-gray-200">
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-lg font-semibold text-gray-900">
-            Browse templates
+            Create a new workflow
           </h2>
           <button
             type="button"
@@ -284,7 +157,7 @@ export function TemplatePanel({
           value={searchQuery}
           onChange={handleSearchChange}
           onEnter={handleBuildWithAI}
-          placeholder="Search templates by name, description, or tags..."
+          placeholder="Describe your workflow..."
           focusOnMount
         />
       </div>
@@ -342,21 +215,19 @@ export function TemplatePanel({
               />
             ))}
 
-            {allTemplates.length === 0 && searchQuery && (
+            {allTemplates.length === BASE_TEMPLATES.length && searchQuery && (
               <div className="col-span-full flex items-center justify-center h-64">
                 <div className="text-center max-w-md">
                   <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-gray-100 mb-5">
-                    <span className="hero-magnifying-glass h-7 w-7 text-gray-400" />
+                    <span className="hero-question-mark-circle h-7 w-7 text-gray-400" />
                   </div>
-                  <h3 className="text-base font-medium text-gray-900 mb-2">
-                    No matching templates
-                  </h3>
                   <p className="text-sm text-gray-600 mb-6">
-                    We couldn't find any templates for "
+                    We couldn't find any matches for "
                     <span className="font-medium text-gray-900">
                       {searchQuery}
                     </span>
-                    "
+                    ". Start from scratch with one of these base templates or
+                    click below to generate this workflow with AI.
                   </p>
                   <button
                     type="button"
@@ -377,11 +248,7 @@ export function TemplatePanel({
       <div className="shrink-0 border-t border-gray-200 px-4 py-4 flex justify-end gap-2">
         <button
           type="button"
-          onClick={() => {
-            // Clear URL params but keep template selection in store for when user returns
-            updateSearchParams({ template: null, search: null });
-            onImportClick();
-          }}
+          onClick={onImportClick}
           className="rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 inline-flex items-center gap-x-2"
         >
           <span className="hero-document-arrow-up size-5" />
@@ -396,9 +263,9 @@ export function TemplatePanel({
           <span className="inline-block">
             <button
               type="button"
-              onClick={() => void handleCreateWorkflow()}
-              disabled={!selectedTemplate || !onSave}
-              className="rounded-md bg-primary-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-primary-500 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-primary-600"
+              onClick={() => void saveWorkflow()}
+              disabled={!selectedTemplate}
+              className="rounded-md bg-primary-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-primary-500 disabled:bg-primary-300 disabled:hover:bg-primary-300 disabled:cursor-not-allowed"
             >
               Create
             </button>

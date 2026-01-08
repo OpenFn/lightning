@@ -14,13 +14,23 @@ import { TemplateCard } from '../../../../js/collaborative-editor/components/lef
 import type { Template } from '../../../../js/collaborative-editor/types/template';
 
 describe('TemplateCard', () => {
-  const mockTemplate: Template = {
+  const mockBaseTemplate: Template = {
     id: 'test-template-1',
     name: 'Test Template',
     description: 'This is a test template description',
     code: 'workflow code here',
     tags: ['test', 'example'],
     isBase: true,
+  };
+
+  const mockUserTemplate: Template = {
+    id: 'user-template-1',
+    name: 'User Template',
+    description: 'This is a user template description',
+    code: 'workflow code here',
+    tags: ['user', 'custom'],
+    positions: null,
+    workflow_id: null,
   };
 
   let mockOnClick: ReturnType<typeof vi.fn>;
@@ -32,7 +42,7 @@ describe('TemplateCard', () => {
   it('renders template name', () => {
     render(
       <TemplateCard
-        template={mockTemplate}
+        template={mockBaseTemplate}
         isSelected={false}
         onClick={mockOnClick}
       />
@@ -41,23 +51,61 @@ describe('TemplateCard', () => {
     expect(screen.getByText('Test Template')).toBeInTheDocument();
   });
 
-  it('renders template description', () => {
+  it('renders template description for user templates', () => {
     render(
       <TemplateCard
-        template={mockTemplate}
+        template={mockUserTemplate}
         isSelected={false}
         onClick={mockOnClick}
       />
     );
 
     expect(
-      screen.getByText('This is a test template description')
+      screen.getByText('This is a user template description')
     ).toBeInTheDocument();
+  });
+
+  it('hides description for base templates', () => {
+    render(
+      <TemplateCard
+        template={mockBaseTemplate}
+        isSelected={false}
+        onClick={mockOnClick}
+      />
+    );
+
+    expect(
+      screen.queryByText('This is a test template description')
+    ).not.toBeInTheDocument();
+  });
+
+  it('shows base badge for base templates', () => {
+    render(
+      <TemplateCard
+        template={mockBaseTemplate}
+        isSelected={false}
+        onClick={mockOnClick}
+      />
+    );
+
+    expect(screen.getByText('base')).toBeInTheDocument();
+  });
+
+  it('does not show base badge for user templates', () => {
+    render(
+      <TemplateCard
+        template={mockUserTemplate}
+        isSelected={false}
+        onClick={mockOnClick}
+      />
+    );
+
+    expect(screen.queryByText('base')).not.toBeInTheDocument();
   });
 
   it('renders "No description provided" when description is missing', () => {
     const templateWithoutDesc: Template = {
-      ...mockTemplate,
+      ...mockUserTemplate,
       description: null,
     };
 
@@ -75,7 +123,7 @@ describe('TemplateCard', () => {
   it('shows selected state visually', () => {
     const { container } = render(
       <TemplateCard
-        template={mockTemplate}
+        template={mockBaseTemplate}
         isSelected={true}
         onClick={mockOnClick}
       />
@@ -88,7 +136,7 @@ describe('TemplateCard', () => {
   it('shows unselected state visually', () => {
     const { container } = render(
       <TemplateCard
-        template={mockTemplate}
+        template={mockBaseTemplate}
         isSelected={false}
         onClick={mockOnClick}
       />
@@ -101,7 +149,7 @@ describe('TemplateCard', () => {
   it('calls onClick when card is clicked', () => {
     render(
       <TemplateCard
-        template={mockTemplate}
+        template={mockBaseTemplate}
         isSelected={false}
         onClick={mockOnClick}
       />
@@ -110,13 +158,13 @@ describe('TemplateCard', () => {
     const card = screen.getByRole('button', { name: /test template/i });
     fireEvent.click(card);
 
-    expect(mockOnClick).toHaveBeenCalledWith(mockTemplate);
+    expect(mockOnClick).toHaveBeenCalledWith(mockBaseTemplate);
   });
 
   it('calls onClick when Enter key is pressed', () => {
     render(
       <TemplateCard
-        template={mockTemplate}
+        template={mockBaseTemplate}
         isSelected={false}
         onClick={mockOnClick}
       />
@@ -125,13 +173,13 @@ describe('TemplateCard', () => {
     const card = screen.getByRole('button', { name: /test template/i });
     fireEvent.keyDown(card, { key: 'Enter' });
 
-    expect(mockOnClick).toHaveBeenCalledWith(mockTemplate);
+    expect(mockOnClick).toHaveBeenCalledWith(mockBaseTemplate);
   });
 
   it('calls onClick when Space key is pressed', () => {
     render(
       <TemplateCard
-        template={mockTemplate}
+        template={mockBaseTemplate}
         isSelected={false}
         onClick={mockOnClick}
       />
@@ -140,13 +188,13 @@ describe('TemplateCard', () => {
     const card = screen.getByRole('button', { name: /test template/i });
     fireEvent.keyDown(card, { key: ' ' });
 
-    expect(mockOnClick).toHaveBeenCalledWith(mockTemplate);
+    expect(mockOnClick).toHaveBeenCalledWith(mockBaseTemplate);
   });
 
   it('does not call onClick for other keys', () => {
     render(
       <TemplateCard
-        template={mockTemplate}
+        template={mockBaseTemplate}
         isSelected={false}
         onClick={mockOnClick}
       />
@@ -161,7 +209,7 @@ describe('TemplateCard', () => {
   it('has correct accessibility attributes when selected', () => {
     render(
       <TemplateCard
-        template={mockTemplate}
+        template={mockBaseTemplate}
         isSelected={true}
         onClick={mockOnClick}
       />
@@ -175,7 +223,7 @@ describe('TemplateCard', () => {
   it('has correct accessibility attributes when not selected', () => {
     render(
       <TemplateCard
-        template={mockTemplate}
+        template={mockBaseTemplate}
         isSelected={false}
         onClick={mockOnClick}
       />
@@ -189,7 +237,7 @@ describe('TemplateCard', () => {
   it('is keyboard focusable', () => {
     render(
       <TemplateCard
-        template={mockTemplate}
+        template={mockBaseTemplate}
         isSelected={false}
         onClick={mockOnClick}
       />
@@ -203,7 +251,7 @@ describe('TemplateCard', () => {
 
   it('renders with long template name without breaking', () => {
     const longNameTemplate: Template = {
-      ...mockTemplate,
+      ...mockBaseTemplate,
       name: 'This is a very long template name that should be truncated properly',
     };
 
@@ -224,7 +272,7 @@ describe('TemplateCard', () => {
 
   it('renders with long description without breaking', () => {
     const longDescTemplate: Template = {
-      ...mockTemplate,
+      ...mockUserTemplate,
       description:
         'This is a very long description that goes on and on and should be clamped to two lines using the line-clamp-2 utility class',
     };

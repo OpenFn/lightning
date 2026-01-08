@@ -10,6 +10,7 @@ import {
   useAIHasCompletedSessionLoad,
   useAISessionListCommands,
 } from '../hooks/useAIAssistant';
+import { useSelectedStepId, useSelectedRunId } from '../hooks/useHistory';
 
 import { ChatInput } from './ChatInput';
 import { DisclaimerScreen } from './DisclaimerScreen';
@@ -57,11 +58,17 @@ interface AIAssistantPanelProps {
    * Connection state for showing loading screen
    */
   connectionState?: 'disconnected' | 'connecting' | 'connected' | 'error';
+  /**
+   * AI assistant limit information
+   */
+  aiLimit?: { allowed: boolean; message: string | null } | null;
 }
 
 interface MessageOptions {
   attach_code?: boolean;
   attach_logs?: boolean;
+  attach_io_data?: boolean;
+  step_id?: string;
 }
 
 /**
@@ -95,6 +102,7 @@ export function AIAssistantPanel({
   showDisclaimer = false,
   onAcceptDisclaimer,
   connectionState = 'connected',
+  aiLimit = null,
 }: AIAssistantPanelProps) {
   const [view, setView] = useState<'chat' | 'sessions'>(
     sessionId ? 'chat' : 'sessions'
@@ -112,6 +120,8 @@ export function AIAssistantPanel({
   const hasSessionContext = useAIHasSessionContext();
   const hasCompletedSessionLoad = useAIHasCompletedSessionLoad();
   const { loadSessionList } = useAISessionListCommands();
+  const selectedStepId = useSelectedStepId();
+  const selectedRunId = useSelectedRunId();
 
   useEffect(() => {
     if (prevViewRef.current !== view) {
@@ -136,11 +146,13 @@ export function AIAssistantPanel({
         : 'Ask me anything...';
 
   const disabledMessage =
-    view === 'sessions' && (!hasSessionContext || !hasCompletedSessionLoad)
-      ? 'Loading conversations...'
-      : view === 'chat' && connectionState !== 'connected'
-        ? 'Connecting...'
-        : undefined;
+    aiLimit && !aiLimit.allowed && aiLimit.message
+      ? aiLimit.message
+      : view === 'sessions' && (!hasSessionContext || !hasCompletedSessionLoad)
+        ? 'Loading conversations...'
+        : view === 'chat' && connectionState !== 'connected'
+          ? 'Connecting...'
+          : undefined;
 
   // Load session list when viewing sessions
   useEffect(() => {
@@ -382,6 +394,23 @@ export function AIAssistantPanel({
         </div>
       </div>
 
+      {/* AI Limit Error Banner */}
+      {aiLimit && !aiLimit.allowed && aiLimit.message && (
+        <div
+          className="flex-none bg-red-50 border-b border-red-200 px-4 py-3"
+          role="alert"
+        >
+          <div className="flex items-start gap-3">
+            <span className="hero-exclamation-triangle h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
+            <div className="flex-1 min-w-0">
+              <p className="text-sm text-red-800 font-medium">
+                {aiLimit.message}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Panel Content - Messages or Sessions */}
       <div className="flex-1 overflow-hidden bg-white">
         {view === 'chat' ? (
@@ -396,8 +425,9 @@ export function AIAssistantPanel({
 
       <ChatInput
         onSendMessage={onSendMessage}
-        isLoading={
-          isLoading ||
+        isLoading={isLoading}
+        isDisabled={
+          (aiLimit && !aiLimit.allowed) ||
           (view === 'chat' && connectionState !== 'connected') ||
           (view === 'sessions' &&
             (!hasSessionContext || !hasCompletedSessionLoad))
@@ -412,6 +442,9 @@ export function AIAssistantPanel({
         focusTrigger={(focusTrigger ?? 0) + internalFocusTrigger}
         placeholder={placeholderText}
         disabledMessage={disabledMessage}
+        selectedStepId={selectedStepId}
+        selectedRunId={selectedRunId}
+        selectedJobId={jobCodeContext?.job_id ?? null}
       />
 
       {/* About AI Assistant Modal */}
@@ -506,7 +539,17 @@ export function AIAssistantPanel({
             </h4>
             <p>
               The AI assistant uses Claude by Anthropic, a third-party AI model.
-              Messages are saved on OpenFn and Anthropic servers.
+              Messages are stored on OpenFn servers and temporarily on Anthropic
+              servers (up to 30 days) but are not used to train AI models.{' '}
+              <a
+                href="https://privacy.claude.com/en/collections/10672411-data-handling-retention"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-primary-600 hover:text-primary-700"
+              >
+                Read more about this here
+              </a>
+              .
             </p>
             <p>
               Although we continuously monitor and improve the model, the

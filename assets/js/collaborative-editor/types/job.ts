@@ -18,16 +18,16 @@ export const JobSchema = z
     id: uuidSchema,
     name: z
       .string()
-      .min(1, "can't be blank")
-      .max(100, 'should be at most 100 character(s)')
-      .regex(/^[a-zA-Z0-9_\- ]*$/, 'has invalid format')
+      .min(1, "Job name can't be blank")
+      .max(100, "Job name shouldn't be longer than 100 characters.")
+      .regex(/^[a-zA-Z0-9_\- ]*$/, "Job name can't include special characters.")
       .transform(val => val.trim()), // Auto-trim whitespace like backend
     body: z.string().min(1, "can't be blank"),
     adaptor: adaptorSchema.default('@openfn/language-common@latest'),
 
     // Credential fields (mutually exclusive)
-    project_credential_id: uuidSchema.nullable(),
-    keychain_credential_id: uuidSchema.nullable(),
+    project_credential_id: uuidSchema.nullable().default(null),
+    keychain_credential_id: uuidSchema.nullable().default(null),
 
     // Association fields
     workflow_id: uuidSchema,

@@ -10,6 +10,7 @@ import {
   useCredentialQueries,
   useCredentials,
 } from '#/collaborative-editor/hooks/useCredentials';
+import { useKeyboardShortcut } from '#/collaborative-editor/keyboard';
 import { useUser } from '#/collaborative-editor/hooks/useSessionContext';
 import type { Adaptor } from '#/collaborative-editor/types/adaptor';
 import type { CredentialWithType } from '#/collaborative-editor/types/credential';
@@ -65,6 +66,17 @@ export function ConfigureAdaptorModal({
   const currentUser = useUser();
   const { projectCredentials, keychainCredentials } = useCredentials();
   const { credentialExists, getCredentialId } = useCredentialQueries();
+
+  // High-priority Escape handler to prevent closing parent IDE/inspector
+  // Priority 100 (MODAL) ensures this runs before IDE handler (priority 50)
+  useKeyboardShortcut(
+    'Escape',
+    () => {
+      onClose();
+    },
+    100,
+    { enabled: isOpen }
+  );
 
   // When adaptor changes externally (from Y.Doc or adaptor picker),
   // automatically update to newest version and clear invalid credentials
@@ -143,6 +155,10 @@ export function ConfigureAdaptorModal({
         // Exact schema match
         if (c.schema === adaptorName) return true;
 
+        // For HTTP adaptor, all OAuth credentials are considered matching
+        // (OAuth can be used for authenticated API calls via HTTP)
+        if (adaptorName === 'http' && c.schema === 'oauth') return true;
+
         // Smart OAuth matching: if credential is OAuth, check oauth_client_name
         if (c.schema === 'oauth' && c.oauth_client_name) {
           // Normalize both strings: lowercase, remove spaces/hyphens/underscores
@@ -169,8 +185,11 @@ export function ConfigureAdaptorModal({
     const universal: CredentialWithType[] = projectCredentials
       .filter(c => {
         const isUniversal = c.schema === 'http' || c.schema === 'raw';
-        const alreadyMatched = adaptorName === 'http' || adaptorName === 'raw';
-        return isUniversal && !alreadyMatched;
+        // Only exclude if this specific credential is already in schemaMatched
+        const alreadyInSchemaMatched = schemaMatched.some(
+          matched => matched.id === c.id
+        );
+        return isUniversal && !alreadyInSchemaMatched;
       })
       .map(c => ({ ...c, type: 'project' as const }));
 

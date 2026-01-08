@@ -46,6 +46,9 @@
 
 import _logger from '#/utils/logger';
 
+import type { ChannelError } from '../hooks/useChannel';
+import { formatChannelErrorMessage } from '../lib/errors';
+import { notifications } from '../lib/notifications';
 import type {
   AIAssistantStore,
   JobCodeContext,
@@ -90,11 +93,7 @@ interface JoinResponse {
 
 interface MessageResponse {
   message: Message;
-}
-
-interface ErrorResponse {
-  reason: string;
-  errors?: Record<string, string[]>;
+  error?: string;
 }
 
 /**
@@ -110,6 +109,9 @@ interface ChannelEntry {
   // Store handler references for cleanup
   handlers: {
     newMessage: ChannelCallback;
+    userMessage: ChannelCallback;
+    messageProcessing: ChannelCallback;
+    messageError: ChannelCallback;
     messageStatusChanged: ChannelCallback;
   };
 }
@@ -323,15 +325,37 @@ export class AIChannelRegistry {
       .push('new_message', payload)
       .receive('ok', (response: unknown) => {
         const typedResponse = response as MessageResponse;
-        this.store._addMessage(typedResponse.message);
+
+        if (typedResponse.message && typedResponse.message.id) {
+          this.store._addMessage(typedResponse.message);
+        }
+
+        // If there's an error in the response, show notification
+        if (typedResponse.error) {
+          notifications.alert({
+            title: 'Message limit exceeded',
+            description: typedResponse.error,
+          });
+        }
       })
       .receive('error', (response: unknown) => {
-        const typedResponse = response as ErrorResponse;
+        const typedResponse = response as ChannelError;
         logger.error('Failed to send message', {
-          reason: typedResponse.reason,
+          type: typedResponse.type,
           errors: typedResponse.errors,
           payload,
         });
+
+        // Show notification for all errors
+        const message = formatChannelErrorMessage({
+          type: typedResponse.type,
+          errors: typedResponse.errors || {},
+        });
+        notifications.alert({
+          title: 'Failed to send message',
+          description: message,
+        });
+
         this.store._setConnectionState('connected');
       })
       .receive('timeout', () => {
@@ -364,8 +388,21 @@ export class AIChannelRegistry {
         );
       })
       .receive('error', (response: unknown) => {
-        const typedResponse = response as ErrorResponse;
+        const typedResponse = response as ChannelError;
         logger.error('Failed to retry message', typedResponse);
+
+        // Show notification for retry errors
+        const message = formatChannelErrorMessage({
+          type: typedResponse.type,
+          errors: typedResponse.errors || {},
+        });
+        notifications.alert({
+          title: 'Failed to retry message',
+          description: message,
+        });
+
+        // Keep the message status as 'error' and clear loading state
+        this.store._updateMessageStatus(messageId, 'error');
       });
   }
 
@@ -388,7 +425,7 @@ export class AIChannelRegistry {
         this.store.markDisclaimerRead();
       })
       .receive('error', (response: unknown) => {
-        const typedResponse = response as ErrorResponse;
+        const typedResponse = response as ChannelError;
         logger.error('Failed to mark disclaimer', typedResponse);
       });
   }
@@ -419,9 +456,10 @@ export class AIChannelRegistry {
           resolve();
         })
         .receive('error', (response: unknown) => {
-          const typedResponse = response as ErrorResponse;
+          const typedResponse = response as ChannelError;
           logger.error('Failed to load sessions via channel', typedResponse);
-          reject(new Error(typedResponse.reason || 'Failed to load sessions'));
+          const message = formatChannelErrorMessage(typedResponse);
+          reject(new Error(message));
         })
         .receive('timeout', () => {
           logger.error('Load sessions timeout');
@@ -457,7 +495,7 @@ export class AIChannelRegistry {
       .push('update_context', context)
       .receive('ok', () => {})
       .receive('error', (response: unknown) => {
-        const typedResponse = response as ErrorResponse;
+        const typedResponse = response as ChannelError;
         logger.error('Failed to update context', typedResponse);
       })
       .receive('timeout', () => {
@@ -501,6 +539,9 @@ export class AIChannelRegistry {
       }
       // Remove event handlers to prevent memory leaks
       entry.channel.off('new_message', entry.handlers.newMessage);
+      entry.channel.off('user_message', entry.handlers.userMessage);
+      entry.channel.off('message_processing', entry.handlers.messageProcessing);
+      entry.channel.off('message_error', entry.handlers.messageError);
       entry.channel.off(
         'message_status_changed',
         entry.handlers.messageStatusChanged
@@ -518,9 +559,35 @@ export class AIChannelRegistry {
   private setupEventHandlers(
     channel: PhoenixChannel
   ): ChannelEntry['handlers'] {
+    // Handler for assistant messages (broadcast to all users)
     const newMessageHandler: ChannelCallback = (payload: unknown) => {
       const typedPayload = payload as { message: Message };
-      this.store._addMessage(typedPayload.message);
+      if (typedPayload.message && typedPayload.message.id) {
+        this.store._addMessage(typedPayload.message);
+      }
+    };
+
+    // Handler for user messages from collaborators (including self via broadcast)
+    const userMessageHandler: ChannelCallback = (payload: unknown) => {
+      const typedPayload = payload as { message: Message };
+      if (typedPayload.message && typedPayload.message.id) {
+        this.store._addMessage(typedPayload.message);
+      }
+    };
+
+    // Handler for processing state (show loading, block input for all users)
+    const messageProcessingHandler: ChannelCallback = () => {
+      this.store._setProcessingState(true);
+    };
+
+    // Handler for message errors
+    const messageErrorHandler: ChannelCallback = (payload: unknown) => {
+      const typedPayload = payload as {
+        message_id: string;
+        status: MessageStatus;
+      };
+      this.store._updateMessageStatus(typedPayload.message_id, 'error');
+      this.store._setProcessingState(false);
     };
 
     const messageStatusChangedHandler: ChannelCallback = (payload: unknown) => {
@@ -535,10 +602,16 @@ export class AIChannelRegistry {
     };
 
     channel.on('new_message', newMessageHandler);
+    channel.on('user_message', userMessageHandler);
+    channel.on('message_processing', messageProcessingHandler);
+    channel.on('message_error', messageErrorHandler);
     channel.on('message_status_changed', messageStatusChangedHandler);
 
     return {
       newMessage: newMessageHandler,
+      userMessage: userMessageHandler,
+      messageProcessing: messageProcessingHandler,
+      messageError: messageErrorHandler,
       messageStatusChanged: messageStatusChangedHandler,
     };
   }
@@ -573,53 +646,50 @@ export class AIChannelRegistry {
         logger.debug('Channel joined successfully', { topic: entry.topic });
       })
       .receive('error', (response: unknown) => {
-        const typedResponse = response as ErrorResponse;
-        logger.error('Failed to join channel', typedResponse);
+        logger.error('Failed to join channel', response);
 
         entry.status = 'error';
 
+        // Channel join errors have format {reason: 'message'} not {errors: {base: ['message']}}
+        const errorMessage =
+          typeof response === 'object' &&
+          response !== null &&
+          'reason' in response &&
+          typeof (response as { reason: unknown }).reason === 'string'
+            ? (response as { reason: string }).reason
+            : formatChannelErrorMessage(response as ChannelError);
+
         if (
-          typedResponse.reason === 'session not found' ||
-          typedResponse.reason === 'session type mismatch'
+          errorMessage === 'session not found' ||
+          errorMessage === 'session type mismatch'
         ) {
           logger.warn(
             'Session issue detected, clearing session ID from store',
-            typedResponse.reason
+            errorMessage
           );
           this.store._clearSession();
         }
 
         if (
-          typedResponse.reason &&
-          (typedResponse.reason.includes('Ecto.NoResultsError') ||
-            typedResponse.reason.includes('expected at least one result') ||
-            typedResponse.reason.includes('join crashed'))
+          errorMessage.includes('Ecto.NoResultsError') ||
+          errorMessage.includes('expected at least one result') ||
+          errorMessage.includes('join crashed')
         ) {
           logger.error(
             'Job not found - either not saved yet or deleted during workflow update',
-            typedResponse
+            response
           );
           this.store._clearSession();
 
-          // Show notification (async import to avoid circular dependency)
-          void import('../lib/notifications')
-            .then(({ notifications }) => {
-              notifications.alert({
-                title: 'Job not available',
-                description:
-                  "This job hasn't been saved to the database yet, or was deleted. Please save the workflow first.",
-              });
-              return;
-            })
-            .catch(err => {
-              logger.error('Failed to show notification', err);
-            });
+          // Show notification
+          notifications.alert({
+            title: 'Job not available',
+            description:
+              "This job hasn't been saved to the database yet, or was deleted. Please save the workflow first.",
+          });
         }
 
-        this.store._setConnectionState(
-          'error',
-          typedResponse.reason || 'Join failed'
-        );
+        this.store._setConnectionState('error', errorMessage || 'Join failed');
       })
       .receive('timeout', () => {
         logger.error('Channel join timeout');
@@ -648,6 +718,9 @@ export class AIChannelRegistry {
 
     // Remove event handlers to prevent memory leaks
     entry.channel.off('new_message', entry.handlers.newMessage);
+    entry.channel.off('user_message', entry.handlers.userMessage);
+    entry.channel.off('message_processing', entry.handlers.messageProcessing);
+    entry.channel.off('message_error', entry.handlers.messageError);
     entry.channel.off(
       'message_status_changed',
       entry.handlers.messageStatusChanged
@@ -699,6 +772,12 @@ export class AIChannelRegistry {
       }
       if (context.attach_logs) {
         params['attach_logs'] = true;
+      }
+      if (context.attach_io_data) {
+        params['attach_io_data'] = true;
+      }
+      if (context.step_id) {
+        params['step_id'] = context.step_id;
       }
     } else {
       // WorkflowTemplateContext

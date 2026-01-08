@@ -1,8 +1,8 @@
 import { useStore } from '@tanstack/react-form';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { useAppForm } from '#/collaborative-editor/components/form';
-import { useLiveViewActions } from '#/collaborative-editor/contexts/LiveViewActionsContext';
+import { useCredentialModal } from '#/collaborative-editor/contexts/CredentialModalContext';
 import { useProjectAdaptors } from '#/collaborative-editor/hooks/useAdaptors';
 import {
   useCredentials,
@@ -12,7 +12,6 @@ import {
   useWorkflowActions,
   useWorkflowReadOnly,
 } from '#/collaborative-editor/hooks/useWorkflow';
-import { useWatchFields } from '#/collaborative-editor/stores/common';
 import { JobSchema } from '#/collaborative-editor/types/job';
 import type { Workflow } from '#/collaborative-editor/types/workflow';
 
@@ -57,13 +56,18 @@ export function JobForm({ job }: JobFormProps) {
   const { projectCredentials, keychainCredentials } = useCredentials();
   const { requestCredentials } = useCredentialsCommands();
   const { projectAdaptors, allAdaptors } = useProjectAdaptors();
-  const { pushEvent, handleEvent } = useLiveViewActions();
   const { isReadOnly } = useWorkflowReadOnly();
 
   // Modal state for adaptor configuration
   const [isConfigureModalOpen, setIsConfigureModalOpen] = useState(false);
   const [isAdaptorPickerOpen, setIsAdaptorPickerOpen] = useState(false);
-  const [isCredentialModalOpen, setIsCredentialModalOpen] = useState(false);
+  // Track if adaptor picker was opened from configure modal (to return there on close)
+  const [adaptorPickerFromConfigure, setAdaptorPickerFromConfigure] =
+    useState(false);
+
+  // Credential modal is managed by the context
+  const { openCredentialModal, onModalClose, onCredentialSaved } =
+    useCredentialModal();
 
   // Parse initial adaptor value
   const initialAdaptor = job.adaptor || '@openfn/language-common@latest';
@@ -82,8 +86,8 @@ export function JobForm({ job }: JobFormProps) {
       adaptor_package: initialAdaptorPackage,
       credential_id: initialCredentialId,
       delete: job.delete || false,
-      project_credential_id: job.project_credential_id,
-      keychain_credential_id: job.keychain_credential_id,
+      project_credential_id: job.project_credential_id || null,
+      keychain_credential_id: job.keychain_credential_id || null,
     }),
     [job, initialAdaptor, initialAdaptorPackage, initialCredentialId]
   );
@@ -105,55 +109,25 @@ export function JobForm({ job }: JobFormProps) {
     `jobs.${job.id}` // Server validation automatically filtered to this job
   );
 
-  // Y.Doc sync
-  useWatchFields(
-    job,
-    changedFields => {
-      Object.entries(changedFields).forEach(([key, value]) => {
-        if (key in form.state.values) {
-          if (key === 'adaptor' && value) {
-            const { package: adaptorPackage } = resolveAdaptor(value);
-            if (adaptorPackage) {
-              form.setFieldValue('adaptor_package', adaptorPackage);
-            }
-          }
-          form.setFieldValue(key as keyof typeof form.state.values, value);
-        }
-      });
-    },
-    ['name', 'adaptor', 'project_credential_id', 'keychain_credential_id']
-  );
+  // Reset form when job changes to prevent stale values
+  const prevJobId = useRef(job.id);
+  useEffect(() => {
+    if (prevJobId.current !== job.id) {
+      form.reset();
+      prevJobId.current = job.id;
+    }
+  }, [job.id, form]);
 
   // Listen for credential modal close event to reopen configure modal
   useEffect(() => {
-    const handleModalClose = () => {
-      setIsCredentialModalOpen(false);
-      // Reopen configure modal after a short delay to avoid flash during transition
-      // Phoenix.JS dispatches the close event at ~250ms, so 200ms feels instant
-      setTimeout(() => {
-        setIsConfigureModalOpen(true);
-      }, 200);
-      // Notify server after modal is fully closed to reset state
-      // 500ms accounts for: Phoenix.JS animation (250ms) + LiveView update time + buffer
-      // This prevents race conditions if user quickly reopens modal
-      setTimeout(() => {
-        pushEvent('close_credential_modal', {});
-      }, 500);
-    };
+    return onModalClose('inspector', () => {
+      setIsConfigureModalOpen(true);
+    });
+  }, [onModalClose]);
 
-    const element = document.getElementById('collaborative-editor-react');
-    element?.addEventListener('close_credential_modal', handleModalClose);
-
-    return () => {
-      element?.removeEventListener('close_credential_modal', handleModalClose);
-    };
-  }, [pushEvent]);
-
-  // Listen for credential saved event from LiveView
+  // Register callback to handle credential saved - update form and job (only when opened from inspector)
   useEffect(() => {
-    const cleanup = handleEvent('credential_saved', (payload: any) => {
-      setIsCredentialModalOpen(false);
-
+    return onCredentialSaved('inspector', payload => {
       const { credential, is_project_credential } = payload;
       const credentialId = is_project_credential
         ? credential.project_credential_id
@@ -178,15 +152,8 @@ export function JobForm({ job }: JobFormProps) {
 
       // Reload credentials in the background so the list is up to date
       void requestCredentials();
-
-      // Reopen configure modal after a brief delay for the close animation
-      setTimeout(() => {
-        setIsConfigureModalOpen(true);
-      }, 200);
     });
-
-    return cleanup;
-  }, [handleEvent, form, job.id, updateJob, requestCredentials]);
+  }, [onCredentialSaved, form, job.id, updateJob, requestCredentials]);
 
   // Get current adaptor and credential for display
   const currentAdaptor = useStore(form.store, state => state.values.adaptor);
@@ -195,23 +162,26 @@ export function JobForm({ job }: JobFormProps) {
     state => state.values.credential_id
   );
 
-  // Handle opening adaptor picker from ConfigureAdaptorModal
-  const handleOpenAdaptorPicker = useCallback(() => {
+  // Called from ConfigureAdaptorModal "Change" button
+  const handleOpenAdaptorPickerFromConfigure = useCallback(() => {
     setIsConfigureModalOpen(false);
     setIsAdaptorPickerOpen(true);
+    setAdaptorPickerFromConfigure(true);
+  }, []);
+
+  // Called from AdaptorDisplay (direct open)
+  const handleOpenAdaptorPickerDirect = useCallback(() => {
+    setIsAdaptorPickerOpen(true);
+    setAdaptorPickerFromConfigure(false);
   }, []);
 
   // Handle opening credential modal from ConfigureAdaptorModal
   const handleOpenCredentialModal = useCallback(
     (adaptorName: string, credentialId?: string) => {
       setIsConfigureModalOpen(false);
-      setIsCredentialModalOpen(true);
-      pushEvent('open_credential_modal', {
-        schema: adaptorName,
-        credential_id: credentialId,
-      });
+      openCredentialModal(adaptorName, credentialId, 'inspector');
     },
-    [pushEvent]
+    [openCredentialModal]
   );
 
   // Handle adaptor selection from picker
@@ -226,8 +196,9 @@ export function JobForm({ job }: JobFormProps) {
       const fullAdaptor = `${newPackage}@latest`;
       form.setFieldValue('adaptor', fullAdaptor);
 
-      // Close adaptor picker and reopen configure modal
+      // Close adaptor picker and always open configure modal
       setIsAdaptorPickerOpen(false);
+      setAdaptorPickerFromConfigure(false);
       setIsConfigureModalOpen(true);
     },
     [form]
@@ -237,8 +208,8 @@ export function JobForm({ job }: JobFormProps) {
   const handleAdaptorChange = useCallback(
     (adaptorPackage: string) => {
       // Get current version from form
-      const currentAdaptor = form.getFieldValue('adaptor');
-      const { version: currentVersion } = resolveAdaptor(currentAdaptor);
+      const currentAdaptorValue = form.getFieldValue('adaptor') as string;
+      const { version: currentVersion } = resolveAdaptor(currentAdaptorValue);
 
       // Build new adaptor string with current version
       const newAdaptor = `${adaptorPackage}@${currentVersion || 'latest'}`;
@@ -257,10 +228,12 @@ export function JobForm({ job }: JobFormProps) {
   const handleVersionChange = useCallback(
     (version: string) => {
       // Get current adaptor package from form
-      const adaptorPackage = form.getFieldValue('adaptor_package');
+      const adaptorPackage = form.getFieldValue('adaptor_package') as
+        | string
+        | null;
 
       // Build new adaptor string with new version
-      const newAdaptor = `${adaptorPackage}@${version}`;
+      const newAdaptor = `${adaptorPackage ?? '@openfn/language-common'}@${version}`;
 
       // Update form state
       form.setFieldValue('adaptor', newAdaptor);
@@ -373,7 +346,7 @@ export function JobForm({ job }: JobFormProps) {
           adaptor={currentAdaptor}
           credentialId={currentCredentialId}
           onEdit={() => setIsConfigureModalOpen(true)}
-          onChangeAdaptor={handleOpenAdaptorPicker}
+          onChangeAdaptor={handleOpenAdaptorPickerDirect}
           size="sm"
           isReadOnly={isReadOnly}
         />
@@ -392,7 +365,7 @@ export function JobForm({ job }: JobFormProps) {
         onAdaptorChange={handleAdaptorChange}
         onVersionChange={handleVersionChange}
         onCredentialChange={handleCredentialChange}
-        onOpenAdaptorPicker={handleOpenAdaptorPicker}
+        onOpenAdaptorPicker={handleOpenAdaptorPickerFromConfigure}
         onOpenCredentialModal={handleOpenCredentialModal}
         currentAdaptor={
           resolveAdaptor(currentAdaptor).package || '@openfn/language-common'
@@ -405,7 +378,14 @@ export function JobForm({ job }: JobFormProps) {
       {/* Adaptor Selection Modal (opened from ConfigureAdaptorModal) */}
       <AdaptorSelectionModal
         isOpen={isAdaptorPickerOpen}
-        onClose={() => setIsAdaptorPickerOpen(false)}
+        onClose={() => {
+          setIsAdaptorPickerOpen(false);
+          // Only return to configure modal if opened from there
+          if (adaptorPickerFromConfigure) {
+            setIsConfigureModalOpen(true);
+          }
+          setAdaptorPickerFromConfigure(false);
+        }}
         onSelect={handleAdaptorSelect}
         projectAdaptors={projectAdaptors}
       />

@@ -50,6 +50,8 @@ defmodule Lightning.WorkOrder do
       autogenerate: {DateTime, :utc_now, []}
 
     belongs_to :workflow, Workflow
+
+    # May be redundant with Run.snapshot_id - to either remove or rename
     belongs_to :snapshot, Snapshot
 
     belongs_to :trigger, Trigger

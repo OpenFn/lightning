@@ -139,6 +139,7 @@ import _logger from '#/utils/logger';
 import type { WorkflowState as YAMLWorkflowState } from '../../yaml/types';
 import { YAMLStateToYDoc } from '../adapters/YAMLStateToYDoc';
 import { channelRequest } from '../hooks/useChannel';
+import { notifications } from '../lib/notifications';
 import { EdgeSchema } from '../types/edge';
 import { JobSchema } from '../types/job';
 import type { Session } from '../types/session';
@@ -153,49 +154,6 @@ const logger = _logger.ns('WorkflowStore').seal();
 
 const JobShape = JobSchema.shape;
 const EdgeShape = EdgeSchema.shape;
-
-/**
- * Validates workflow data and returns errors for name and concurrency
- * fields.
- * Returns null if workflow is not loaded, empty object if no errors
- */
-function validateWorkflowSettings(
-  workflow: Session.Workflow | null
-): { name?: string[]; concurrency?: string[] } | null {
-  if (!workflow) return null;
-
-  try {
-    WorkflowSchema.parse({
-      id: workflow.id,
-      name: workflow.name,
-      lock_version: workflow.lock_version,
-      deleted_at: workflow.deleted_at,
-      concurrency: workflow.concurrency,
-      enable_job_logs: workflow.enable_job_logs,
-    });
-    // No validation errors
-    return {};
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      const errors: { name?: string[]; concurrency?: string[] } = {};
-
-      // Extract only name and concurrency errors
-      error.issues.forEach(err => {
-        const field = err.path[0];
-        if (field === 'name' || field === 'concurrency') {
-          if (!errors[field]) {
-            errors[field] = [];
-          }
-          errors[field].push(err.message);
-        }
-      });
-
-      return errors;
-    }
-    // Unknown error type - return null
-    return null;
-  }
-}
 
 // Helper to update derived state (defined first to avoid hoisting issues)
 function updateDerivedState(draft: Workflow.State) {
@@ -245,8 +203,10 @@ function produceInitialState() {
 
       // Active trigger webhook auth methods (loaded on-demand)
       activeTriggerAuthMethods: null,
-      // Initialize validation state
-      validationErrors: null,
+
+      // AI workflow apply coordination state
+      isApplyingWorkflow: false,
+      applyingUser: null,
     } as Workflow.State,
     draft => {
       // Compute derived state on initialization
@@ -550,9 +510,6 @@ export const createWorkflowStore = () => {
       updateState(draft => {
         const workflowData = workflowMap.toJSON() as Session.Workflow;
         draft.workflow = workflowData;
-
-        // Recompute validation errors whenever workflow changes
-        draft.validationErrors = validateWorkflowSettings(workflowData);
       }, 'workflow/observerUpdate');
     };
 
@@ -674,6 +631,33 @@ export const createWorkflowStore = () => {
       triggerAuthMethodsHandler
     );
 
+    // Set up channel listeners for AI workflow apply coordination
+    // These prevent concurrent applies that could cause duplicate nodes
+    const workflowApplyingHandler = (data: unknown) => {
+      const payload = data as {
+        user_id: string;
+        user_name: string;
+        message_id: string;
+      };
+      updateState(draft => {
+        draft.isApplyingWorkflow = true;
+        draft.applyingUser = { id: payload.user_id, name: payload.user_name };
+      }, 'workflow/applying');
+    };
+
+    const workflowAppliedHandler = () => {
+      updateState(draft => {
+        draft.isApplyingWorkflow = false;
+        draft.applyingUser = null;
+      }, 'workflow/applied');
+    };
+
+    provider.channel.on('workflow_applying', workflowApplyingHandler);
+    provider.channel.on('workflow_applied', workflowAppliedHandler);
+
+    // Note: ai_session_created events are handled by AIAssistantStore._connectChannel
+    // which is connected via StoreProvider when the channel is ready
+
     // Store cleanup functions
     // CRITICAL: Separate Y.Doc observer cleanups from channel cleanups
     // Y.Doc observers must persist during disconnection for offline editing
@@ -695,6 +679,8 @@ export const createWorkflowStore = () => {
             'trigger_auth_methods_updated',
             triggerAuthMethodsHandler
           );
+          provider.channel.off('workflow_applying', workflowApplyingHandler);
+          provider.channel.off('workflow_applied', workflowAppliedHandler);
         }
       },
     ];
@@ -1198,7 +1184,11 @@ export const createWorkflowStore = () => {
    * @param errors - Field errors { fieldName: ["error1", "error2"] }
    *                 Empty array [] clears that field
    */
-  const setClientErrors = (path: string, errors: Record<string, string[]>) => {
+  const setClientErrors = (
+    path: string,
+    errors: Record<string, string[]>,
+    isServerUpdate: boolean = false
+  ) => {
     logger.debug('setClientErrors called (before debounce)', {
       path,
       errors,
@@ -1275,8 +1265,11 @@ export const createWorkflowStore = () => {
       // Client errors REPLACE server errors for that field, not merge with them
       // This ensures that when a user edits a field with server errors,
       // their client validation takes precedence
-      const mergedErrors = produce(currentErrors, draft => {
-        Object.entries(errors).forEach(([fieldName, newMessages]) => {
+      // if isServerUpdates give server errors priority
+      const baseErrors = isServerUpdate ? errors : currentErrors;
+      const priorityErrors = isServerUpdate ? currentErrors : errors;
+      const mergedErrors = produce(baseErrors, draft => {
+        Object.entries(priorityErrors).forEach(([fieldName, newMessages]) => {
           if (newMessages.length === 0) {
             // Empty array clears the field
 
@@ -1576,6 +1569,81 @@ export const createWorkflowStore = () => {
     }
   };
 
+  // =============================================================================
+  // AI Workflow Apply Coordination
+  // =============================================================================
+  // These methods coordinate concurrent applies across collaborators to prevent
+  // duplicate nodes in Y.Doc when multiple users click Apply simultaneously.
+
+  /**
+   * Signal that this user is starting to apply an AI-generated workflow.
+   * Broadcasts to all collaborators so they disable their Apply buttons.
+   *
+   * @param messageId - The AI message ID being applied (for tracking)
+   * @returns true if coordination succeeded, false otherwise
+   */
+  const startApplyingWorkflow = async (messageId: string): Promise<boolean> => {
+    if (!provider?.channel) {
+      logger.warn('Cannot start applying workflow - no channel available');
+      notifications.warning({
+        title: 'Apply coordination unavailable',
+        description:
+          'Other users may also apply changes simultaneously. Proceeding anyway.',
+      });
+      return false;
+    }
+
+    try {
+      await channelRequest(provider.channel, 'start_applying_workflow', {
+        message_id: messageId,
+      });
+      return true;
+    } catch (error) {
+      logger.error('Failed to signal workflow apply start', error);
+      notifications.warning({
+        title: 'Apply coordination unavailable',
+        description:
+          'Other users may also apply changes simultaneously. Proceeding anyway.',
+      });
+      return false;
+    }
+  };
+
+  /**
+   * Signal that this user has finished applying an AI-generated workflow.
+   * Broadcasts to all collaborators so they can re-enable their Apply buttons.
+   *
+   * @param messageId - The AI message ID that was applied
+   */
+  const doneApplyingWorkflow = async (messageId: string) => {
+    if (!provider?.channel) {
+      logger.warn('Cannot complete applying workflow - no channel available');
+      // Clear local state anyway
+      updateState(draft => {
+        draft.isApplyingWorkflow = false;
+        draft.applyingUser = null;
+      }, 'workflow/applied/fallback');
+      return;
+    }
+
+    try {
+      await channelRequest(provider.channel, 'done_applying_workflow', {
+        message_id: messageId,
+      });
+    } catch (error) {
+      logger.error('Failed to signal workflow apply completion', error);
+      notifications.warning({
+        title: 'Apply completion signal failed',
+        description: 'Other users may not see that the apply has completed.',
+      });
+      // Clear local state even if signal fails
+      updateState(draft => {
+        draft.isApplyingWorkflow = false;
+        draft.applyingUser = null;
+      }, 'workflow/applied/fallback');
+    }
+  };
+
   // Undo/Redo Commands
   // =============================================================================
   // These commands trigger Y.Doc changes via UndoManager, which then flow
@@ -1673,6 +1741,11 @@ export const createWorkflowStore = () => {
 
     // Trigger auth methods
     requestTriggerAuthMethods,
+
+    // AI workflow apply coordination
+    startApplyingWorkflow,
+    doneApplyingWorkflow,
+
     // =============================================================================
     // Undo/Redo Commands
     // =============================================================================
@@ -1681,6 +1754,16 @@ export const createWorkflowStore = () => {
     canUndo,
     canRedo,
     clearHistory,
+
+    // =============================================================================
+    // Test Helpers (not part of public interface)
+    // =============================================================================
+    _setJobsForTesting: (jobs: Workflow.Job[]) => {
+      state = produce(state, draft => {
+        draft.jobs = jobs;
+      });
+      notify('_setJobsForTesting');
+    },
   };
 };
 

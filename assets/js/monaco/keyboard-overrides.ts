@@ -14,6 +14,7 @@ import type { Monaco } from './index';
  * Overridden shortcuts:
  * - Cmd/Ctrl+Enter: Dispatches to window for run/retry actions
  * - Cmd/Ctrl+Shift+Enter: Dispatches to window for force-run actions
+ * - Cmd/Ctrl+K: Dispatches to window for AI chat shortcut
  *
  * Usage:
  * ```typescript
@@ -63,4 +64,17 @@ export function addKeyboardShortcutOverrides(
       window.dispatchEvent(event);
     }
   );
+
+  // Override Monaco's Cmd/Ctrl+K (Quick Open) to allow AI chat shortcut
+  editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyK, () => {
+    const event = new KeyboardEvent('keydown', {
+      key: 'k',
+      code: 'KeyK',
+      metaKey: isMac,
+      ctrlKey: !isMac,
+      bubbles: true,
+      cancelable: true,
+    });
+    window.dispatchEvent(event);
+  });
 }

@@ -15,6 +15,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useWorkflowStore } from '../workflow-store/store';
 
 import { AiAssistantToggle } from './AiAssistantToggle';
+import { CollaborativeEditorPromoBanner } from './CollaborativeEditorPromoBanner';
 import MiniMapNode from './components/MiniMapNode';
 import { FIT_DURATION, FIT_PADDING } from './constants';
 import edgeTypes from './edges';
@@ -56,6 +57,7 @@ type WorkflowDiagramProps = {
   snapshotVersionTag?: string;
   aiAssistantEnabled?: boolean;
   liveAction?: string;
+  pushEvent?: (name: string, payload: Record<string, unknown>) => void;
 };
 
 type ChartCache = {
@@ -622,6 +624,7 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
         liveAction={props.liveAction}
         drawerWidth={drawerWidth}
       />
+      <CollaborativeEditorPromoBanner pushEvent={props.pushEvent} />
       {props.liveAction === 'edit' ? (
         <MiniHistory
           collapsed={!runSteps.start_from}

@@ -16,6 +16,7 @@ export const UserContextSchema = z.object({
 export const ProjectContextSchema = z.object({
   id: uuidSchema,
   name: z.string(),
+  concurrency: z.number().int().nullable().optional(),
   env: z.string().nullable().optional(),
 });
 
@@ -61,13 +62,15 @@ export const WorkflowTemplateSchema = z.object({
   tags: z.array(z.string()),
   workflow_id: uuidSchema,
   code: z.string(),
-  positions: z.record(
-    z.string(),
-    z.object({
-      x: z.number(),
-      y: z.number(),
-    })
-  ),
+  positions: z
+    .record(
+      z.string(),
+      z.object({
+        x: z.number(),
+        y: z.number(),
+      })
+    )
+    .nullable(),
 });
 
 export type WorkflowTemplate = z.infer<typeof WorkflowTemplateSchema>;
@@ -81,6 +84,9 @@ export type LimitInfo = z.infer<typeof LimitInfoSchema>;
 
 export const LimitsSchema = z.object({
   runs: LimitInfoSchema.optional(),
+  workflow_activation: LimitInfoSchema.optional(),
+  github_sync: LimitInfoSchema.optional(),
+  ai_assistant: LimitInfoSchema.optional(),
 });
 
 export type Limits = z.infer<typeof LimitsSchema>;
@@ -133,7 +139,10 @@ interface SessionContextCommands {
   setLatestSnapshotLockVersion: (lockVersion: number) => void;
   clearIsNewWorkflow: () => void;
   setHasReadAIDisclaimer: (hasRead: boolean) => void;
-  getLimits: (actionType: 'new_run') => Promise<void>;
+  markAIDisclaimerRead: () => Promise<void>;
+  getLimits: (
+    actionType: 'new_run' | 'activate_workflow' | 'github_sync'
+  ) => Promise<void>;
 }
 
 interface SessionContextQueries {

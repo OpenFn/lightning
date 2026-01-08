@@ -5,6 +5,8 @@
  * for testing adaptor store functionality.
  */
 
+import { sortAdaptors } from '#/collaborative-editor/stores/createAdaptorStore';
+
 import type {
   Adaptor,
   AdaptorVersion,
@@ -53,14 +55,32 @@ export const mockAdaptorSalesforce: Adaptor = {
   latest: '3.5.2',
 };
 
+export const mockAdaptorGmail: Adaptor = {
+  name: '@openfn/language-gmail',
+  versions: [{ version: '1.2.0' }, { version: '1.1.0' }, { version: '1.0.0' }],
+  repo: 'https://github.com/OpenFn/adaptors/tree/main/packages/gmail',
+  latest: '1.2.0',
+};
+
+export const mockAdaptorCommon: Adaptor = {
+  name: '@openfn/language-common',
+  versions: [
+    { version: '2.0.0' },
+    { version: '1.15.0' },
+    { version: '1.14.0' },
+  ],
+  repo: 'https://github.com/OpenFn/adaptors/tree/main/packages/common',
+  latest: '2.0.0',
+};
+
 /**
  * Complete adaptors list for testing
  */
-export const mockAdaptorsList: AdaptorsList = [
+export const mockAdaptorsList: AdaptorsList = sortAdaptors([
   mockAdaptor,
   mockAdaptorDhis2,
   mockAdaptorSalesforce,
-];
+]);
 
 /**
  * Empty adaptors list for testing initial state

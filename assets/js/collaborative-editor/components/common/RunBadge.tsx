@@ -9,7 +9,7 @@
  * - IDE FullScreenIDE (run selection indicator)
  */
 
-import Badge from '#/manual-run-panel/Badge';
+import Badge from './Badge';
 
 interface RunBadgeProps {
   runId: string;

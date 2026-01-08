@@ -455,9 +455,10 @@ describe('VersionDropdown', () => {
       // Open dropdown
       await user.click(button);
 
-      // Should show formatted timestamp
+      // Should show formatted timestamp (appears twice: once for "latest" and once for "v2")
       const timestamp = new Date('2024-01-15T10:30:00Z').toLocaleString();
-      expect(screen.getByText(timestamp)).toBeInTheDocument();
+      const timestampElements = screen.getAllByText(timestamp);
+      expect(timestampElements.length).toBe(2);
     });
 
     test('highlights currently selected version', async () => {
@@ -540,8 +541,11 @@ describe('VersionDropdown', () => {
       const versionButtons = screen.getAllByRole('menuitem');
       expect(versionButtons[0]).toHaveTextContent('latest');
 
-      // Second item should show version number
-      expect(versionButtons[1]).toHaveTextContent('v4');
+      // Second item should show version number (v5)
+      expect(versionButtons[1]).toHaveTextContent('v5');
+
+      // Third item should show version number (v4)
+      expect(versionButtons[2]).toHaveTextContent('v4');
     });
   });
 
@@ -827,9 +831,9 @@ describe('VersionDropdown', () => {
       // Open dropdown
       await user.click(button);
 
-      // All version items should have menuitem role
+      // All version items should have menuitem role (1 "latest" + 2 versions)
       const menuItems = screen.getAllByRole('menuitem');
-      expect(menuItems).toHaveLength(2);
+      expect(menuItems).toHaveLength(3);
     });
   });
 });

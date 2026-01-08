@@ -2,11 +2,11 @@ import {
   ChevronRightIcon,
   ClockIcon,
   DocumentTextIcon,
-  PlayIcon,
   SparklesIcon,
   ViewColumnsIcon,
   XMarkIcon,
 } from '@heroicons/react/24/outline';
+import { ClockIcon as ClockIconSolid } from '@heroicons/react/24/solid';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   type ImperativePanelHandle,
@@ -24,13 +24,14 @@ import Metadata from '../../../metadata-explorer/Explorer';
 import type { Dataclip } from '../../api/dataclips';
 import * as dataclipApi from '../../api/dataclips';
 import { RENDER_MODES } from '../../constants/panel';
-import { useLiveViewActions } from '../../contexts/LiveViewActionsContext';
+import { useCredentialModal } from '../../contexts/CredentialModalContext';
 import { useProjectAdaptors } from '../../hooks/useAdaptors';
 import {
   useCredentials,
   useCredentialsCommands,
 } from '../../hooks/useCredentials';
 import {
+  useActiveRun,
   useFollowRun,
   useHistory,
   useHistoryCommands,
@@ -42,6 +43,8 @@ import { useRunRetry } from '../../hooks/useRunRetry';
 import { useRunRetryShortcuts } from '../../hooks/useRunRetryShortcuts';
 import { useSession } from '../../hooks/useSession';
 import { useProject } from '../../hooks/useSessionContext';
+import { useVersionMismatch } from '../../hooks/useVersionMismatch';
+import { useVersionSelect } from '../../hooks/useVersionSelect';
 import {
   useCanRun,
   useCanSave,
@@ -58,9 +61,11 @@ import { CollaborativeMonaco } from '../CollaborativeMonaco';
 import { RunBadge } from '../common/RunBadge';
 import { ConfigureAdaptorModal } from '../ConfigureAdaptorModal';
 import MiniHistory from '../diagram/MiniHistory';
+import { VersionMismatchBanner } from '../diagram/VersionMismatchBanner';
 import { JobSelector } from '../JobSelector';
 import { ManualRunPanel } from '../ManualRunPanel';
 import { ManualRunPanelErrorBoundary } from '../ManualRunPanelErrorBoundary';
+import { NewRunButton } from '../NewRunButton';
 import { RunViewerErrorBoundary } from '../run-viewer/RunViewerErrorBoundary';
 import { RunViewerPanel } from '../run-viewer/RunViewerPanel';
 import { RunRetryButton } from '../RunRetryButton';
@@ -224,8 +229,12 @@ export function FullScreenIDE({
   }, [updateSearchParams, clearRun]);
 
   const handleNavigateToHistory = useCallback(() => {
+    // Clear any active run to show history
+    setFollowRunId(null);
+    clearRun();
+    updateSearchParams({ run: null });
     setRightPanelSubState('history');
-  }, []);
+  }, [updateSearchParams, clearRun]);
 
   const handleNavigateToCreateRun = useCallback(() => {
     // Reset to fresh state when entering create-run
@@ -289,7 +298,7 @@ export function FullScreenIDE({
   const jobMatchesRun = useJobMatchesRun(currentJob?.id || null);
   const shouldShowMismatch =
     !jobMatchesRun && currentRun && isFinalState(currentRun.state);
-  const selectedStepName = currentJob?.name || 'This step';
+  const selectedJobName = currentJob?.name || 'This job';
 
   const followedRunStep = useMemo(() => {
     if (!currentRun || !currentRun.steps || !jobIdFromURL) return null;
@@ -374,13 +383,40 @@ export function FullScreenIDE({
 
   const [isConfigureModalOpen, setIsConfigureModalOpen] = useState(false);
   const [isAdaptorPickerOpen, setIsAdaptorPickerOpen] = useState(false);
-  const [isCredentialModalOpen, setIsCredentialModalOpen] = useState(false);
+  // Track if adaptor picker was opened from configure modal (to return there on close)
+  const [adaptorPickerFromConfigure, setAdaptorPickerFromConfigure] =
+    useState(false);
 
   const { projectCredentials, keychainCredentials } = useCredentials();
   const { requestCredentials } = useCredentialsCommands();
   const { projectAdaptors, allAdaptors } = useProjectAdaptors();
-  const { pushEvent, handleEvent } = useLiveViewActions();
   const { updateJob } = useWorkflowActions();
+
+  // Credential modal is managed by the context
+  const {
+    openCredentialModal,
+    isCredentialModalOpen,
+    onModalClose,
+    onCredentialSaved,
+  } = useCredentialModal();
+
+  // converting 'latest' on an adaptor string to the actual version number
+  // to be used by components that can't make use of 'latest'
+  const currJobAdaptor = useMemo(() => {
+    if (!currentJob?.adaptor) {
+      const latestCommon = projectAdaptors.find(
+        a => a.name === '@openfn/language-common'
+      )?.versions?.[0]?.version;
+      return `@openfn/language-common@${latestCommon || 'latest'}`;
+    }
+    const resolved = resolveAdaptor(currentJob.adaptor);
+    if (resolved.version !== 'latest') return currentJob?.adaptor;
+    const latestVersion = projectAdaptors.find(a => a.name === resolved.package)
+      ?.versions?.[0]?.version;
+    // If version not found, return original adaptor string
+    if (!latestVersion) return currentJob.adaptor;
+    return `${resolved.package}@${latestVersion}`;
+  }, [projectAdaptors, currentJob?.adaptor]);
 
   // Run/Retry functionality for IDE Header
   const { canRun: canRunSnapshot, tooltipMessage: runTooltipMessage } =
@@ -414,7 +450,12 @@ export function FullScreenIDE({
   // Enable run/retry keyboard shortcuts in IDE
   useRunRetryShortcuts({
     onRun: () => {
-      void handleRun();
+      // If panel is not open or showing history, open create-run panel (same as New Run button)
+      if (panelState === undefined || panelState === 'history') {
+        handleNavigateToCreateRun();
+      } else {
+        void handleRun();
+      }
     },
     onRetry: () => {
       void handleRetry();
@@ -424,13 +465,22 @@ export function FullScreenIDE({
       canRunFromHook &&
       !isSubmitting &&
       !runIsProcessing &&
-      jobMatchesRun &&
-      // Only allow run when in run-viewer (retry) or create-run state
-      (panelState === 'run-viewer' || panelState === 'create-run'),
+      jobMatchesRun,
     isRunning: isSubmitting || runIsProcessing,
     isRetryable,
     priority: 50, // IDE priority
   });
+
+  useKeyboardShortcut(
+    'Control+h, Meta+h',
+    () => {
+      if (!isSubmitting && !runIsProcessing) {
+        handleNavigateToHistory();
+      }
+    },
+    50, // IDE priority
+    { enabled: true }
+  );
 
   // Handle job selection from JobSelector
   const sortedJobs = useMemo(() => {
@@ -504,6 +554,16 @@ export function FullScreenIDE({
     }
   }, [stepIdFromURL, runIdFromURL, selectStep]);
 
+  // Sync job selection to step URL param when viewing a run
+  useEffect(() => {
+    if (jobIdFromURL && currentRun?.steps && runIdFromURL) {
+      const matchingStep = currentRun.steps.find(
+        s => s.job_id === jobIdFromURL
+      );
+      updateSearchParams({ step: matchingStep?.id || null });
+    }
+  }, [jobIdFromURL, currentRun, runIdFromURL, updateSearchParams]);
+
   // Request history when entering history state
   useEffect(() => {
     if (rightPanelSubState === 'history') {
@@ -511,21 +571,25 @@ export function FullScreenIDE({
     }
   }, [rightPanelSubState, requestHistory]);
 
-  const handleOpenAdaptorPicker = useCallback(() => {
+  // Called from ConfigureAdaptorModal "Change" button
+  const handleOpenAdaptorPickerFromConfigure = useCallback(() => {
     setIsConfigureModalOpen(false);
     setIsAdaptorPickerOpen(true);
+    setAdaptorPickerFromConfigure(true);
+  }, []);
+
+  // Called from AdaptorDisplay in header (direct open)
+  const handleOpenAdaptorPickerDirect = useCallback(() => {
+    setIsAdaptorPickerOpen(true);
+    setAdaptorPickerFromConfigure(false);
   }, []);
 
   const handleOpenCredentialModal = useCallback(
     (adaptorName: string, credentialId?: string) => {
       setIsConfigureModalOpen(false);
-      setIsCredentialModalOpen(true);
-      pushEvent('open_credential_modal', {
-        schema: adaptorName,
-        credential_id: credentialId,
-      });
+      openCredentialModal(adaptorName, credentialId, 'ide');
     },
-    [pushEvent]
+    [openCredentialModal]
   );
 
   const handleAdaptorSelect = useCallback(
@@ -539,6 +603,8 @@ export function FullScreenIDE({
       updateJob(currentJob.id, { adaptor: fullAdaptor });
 
       setIsAdaptorPickerOpen(false);
+      setAdaptorPickerFromConfigure(false);
+      // Always open configure modal after selecting an adaptor
       setIsConfigureModalOpen(true);
     },
     [currentJob, updateJob]
@@ -619,31 +685,17 @@ export function FullScreenIDE({
     [currentJob, projectCredentials, keychainCredentials, updateJob]
   );
 
+  // Register callback to reopen configure modal when credential modal closes (only when opened from IDE)
   useEffect(() => {
-    const handleModalClose = () => {
-      setIsCredentialModalOpen(false);
-      setTimeout(() => {
-        setIsConfigureModalOpen(true);
-      }, 200);
-      setTimeout(() => {
-        pushEvent('close_credential_modal', {});
-      }, 500);
-    };
+    return onModalClose('ide', () => {
+      setIsConfigureModalOpen(true);
+    });
+  }, [onModalClose]);
 
-    const element = document.getElementById('collaborative-editor-react');
-    element?.addEventListener('close_credential_modal', handleModalClose);
-
-    return () => {
-      element?.removeEventListener('close_credential_modal', handleModalClose);
-    };
-  }, [pushEvent]);
-
+  // Register callback to handle credential saved - update job and refresh credentials (only when opened from IDE)
   useEffect(() => {
-    const cleanup = handleEvent('credential_saved', (payload: any) => {
-      setIsCredentialModalOpen(false);
-
-      // If we have a current job, update its credential assignment
-      // (this happens when creating a new credential and selecting it)
+    return onCredentialSaved('ide', payload => {
+      // Update the job's credential assignment
       if (currentJob) {
         const { credential, is_project_credential } = payload;
         const credentialId = is_project_credential
@@ -656,16 +708,10 @@ export function FullScreenIDE({
         });
       }
 
-      // Always refresh credentials and reopen configure modal
+      // Refresh credentials list
       void requestCredentials();
-
-      setTimeout(() => {
-        setIsConfigureModalOpen(true);
-      }, 200);
     });
-
-    return cleanup;
-  }, [handleEvent, currentJob, updateJob, requestCredentials]);
+  }, [onCredentialSaved, currentJob, updateJob, requestCredentials]);
 
   useKeyboardShortcut(
     'Escape, Control+e, Meta+e',
@@ -697,25 +743,49 @@ export function FullScreenIDE({
   // IMPORTANT: All hooks must be called before any early returns
   const { isReadOnly } = useWorkflowReadOnly();
 
+  // Detect version mismatch between run and current workflow
+  const run = useActiveRun();
+  const versionMismatch = useVersionMismatch(run?.id ?? null);
+  const handleVersionSelect = useVersionSelect();
+
+  const handleGoToVersion = useCallback(() => {
+    if (versionMismatch) {
+      handleVersionSelect(versionMismatch.runVersion);
+    }
+  }, [versionMismatch, handleVersionSelect]);
+
   // Check loading state but don't use early return (violates rules of hooks)
   // Only check for job existence, not ytext/awareness
   // ytext and awareness persist during disconnection for offline editing
-  const isLoading = !currentJob;
+
+  // Detect if job is truly missing vs still loading
+  // Job is missing if: URL has job ID, workflow is loaded, but job doesn't exist in workflow
+  const isJobMissing =
+    jobIdFromURL &&
+    workflow &&
+    workflow.jobs &&
+    !workflow.jobs.some(j => j.id === jobIdFromURL);
+
+  // Show loading spinner if no current job and job is not confirmed missing
+  const isLoading = !currentJob && !isJobMissing;
 
   // If loading, render loading state at the end instead of early return
   if (isLoading) {
     return (
       <div
-        className="absolute inset-0 z-50 bg-white flex
+        className="absolute inset-0 z-50 bg-gray-100 flex
           items-center justify-center"
       >
-        <div className="text-center">
-          <div
-            className="hero-arrow-path size-8 animate-spin
-            text-blue-500 mx-auto"
-            aria-hidden="true"
-          />
-          <p className="text-gray-500 mt-2">Loading editor...</p>
+        <div className="flex items-center justify-center h-full w-full">
+          <span className="relative inline-flex">
+            <div className="inline-flex">
+              <p className="text-gray-600">Loading IDE</p>
+            </div>
+            <span className="flex absolute h-3 w-3 right-0 -mr-5">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-3 w-3 bg-primary-500"></span>
+            </span>
+          </span>
         </div>
       </div>
     );
@@ -756,14 +826,16 @@ export function FullScreenIDE({
       <div className="flex-none bg-white border-b border-gray-200">
         <div className="flex items-center justify-between px-6 py-2">
           <div className="flex items-center gap-3 flex-1 min-w-0">
-            {/* Job Selector */}
-            <div className="shrink-0">
-              <JobSelector
-                currentJob={currentJob}
-                jobs={sortedJobs}
-                onChange={handleJobSelect}
-              />
-            </div>
+            {/* Job Selector - show when workflow loaded, even if no job selected */}
+            {workflow && (
+              <div className="shrink-0">
+                <JobSelector
+                  currentJob={currentJob}
+                  jobs={sortedJobs}
+                  onChange={handleJobSelect}
+                />
+              </div>
+            )}
 
             {/* Adaptor Display with Version Dropdown */}
             {currentJob && (
@@ -779,7 +851,7 @@ export function FullScreenIDE({
                   }
                   size="sm"
                   onEdit={() => setIsConfigureModalOpen(true)}
-                  onChangeAdaptor={handleOpenAdaptorPicker}
+                  onChangeAdaptor={handleOpenAdaptorPickerDirect}
                   isReadOnly={isReadOnly}
                 />
               </div>
@@ -817,33 +889,35 @@ export function FullScreenIDE({
           </div>
 
           <div className="flex items-center gap-2 shrink-0">
-            {/* History button - shown when no panel, viewing history, or creating new run */}
-            {panelState !== 'run-viewer' && (
+            {/* History button - always visible, disabled during submitting/processing */}
+            <Tooltip
+              content={<ShortcutKeys keys={['mod', 'h']} />}
+              side="bottom"
+            >
               <button
                 type="button"
                 onClick={handleNavigateToHistory}
+                disabled={isSubmitting || runIsProcessing}
                 className={cn(
                   'inline-flex items-center gap-1.5 rounded-md px-3 py-2 text-sm font-semibold shadow-xs transition-colors',
-                  panelState === 'history'
-                    ? 'bg-primary-600 text-white hover:bg-primary-500'
-                    : 'bg-white text-gray-900 ring-1 ring-inset ring-gray-300 hover:bg-gray-50'
+                  'disabled:bg-primary-300 disabled:hover:bg-primary-300 disabled:cursor-not-allowed',
+                  isSubmitting || runIsProcessing
+                    ? 'bg-primary-300 text-white cursor-not-allowed'
+                    : 'bg-primary-600 text-white hover:bg-primary-500'
                 )}
               >
-                <ClockIcon className="h-4 w-4" />
+                {panelState === 'history' ? (
+                  <ClockIconSolid className="h-4 w-4" />
+                ) : (
+                  <ClockIcon className="h-4 w-4" />
+                )}
                 History
               </button>
-            )}
+            </Tooltip>
 
-            {/* Run button - shown when no panel or viewing history */}
+            {/* New Run button - shown when no panel or viewing history */}
             {(panelState === undefined || panelState === 'history') && (
-              <button
-                type="button"
-                onClick={handleNavigateToCreateRun}
-                className="inline-flex items-center gap-1.5 rounded-md px-3 py-2 text-sm font-semibold shadow-xs bg-white text-gray-900 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 transition-colors"
-              >
-                <PlayIcon className="h-4 w-4" />
-                Run
-              </button>
+              <NewRunButton onClick={handleNavigateToCreateRun} />
             )}
 
             {/* Run/Retry button - shown when creating new run or viewing existing run */}
@@ -868,7 +942,7 @@ export function FullScreenIDE({
                 }}
                 buttonText={{
                   run: 'Run',
-                  retry: 'Run (retry)',
+                  retry: 'Run (Retry)',
                   processing: 'Processing',
                 }}
                 variant="primary"
@@ -917,19 +991,34 @@ export function FullScreenIDE({
                   <Panel defaultSize={60} minSize={25}>
                     <div className="h-full flex flex-col">
                       <div className="flex-1 overflow-hidden">
-                        <CollaborativeMonaco
-                          ytext={currentJobYText}
-                          awareness={awareness}
-                          adaptor={currentJob.adaptor || 'common'}
-                          disabled={!canSave}
-                          className="h-full w-full"
-                          options={{
-                            automaticLayout: true,
-                            minimap: { enabled: true },
-                            lineNumbers: 'on',
-                            wordWrap: 'on',
-                          }}
-                        />
+                        {isJobMissing ? (
+                          // Show message when job doesn't exist in current version
+                          <div className="p-8">
+                            <div className="text-center max-w-md mx-auto">
+                              <p className="text-gray-600 text-sm">
+                                The job you're trying to view didn't exist in
+                                this version of the workflow.
+                              </p>
+                              <p className="text-gray-500 text-sm mt-2">
+                                You can change versions or select another job.
+                              </p>
+                            </div>
+                          </div>
+                        ) : currentJob && currentJobYText ? (
+                          <CollaborativeMonaco
+                            ytext={currentJobYText}
+                            awareness={awareness}
+                            adaptor={currentJob.adaptor || 'common'}
+                            disabled={!canSave}
+                            className="h-full w-full"
+                            options={{
+                              automaticLayout: true,
+                              minimap: { enabled: true },
+                              lineNumbers: 'on',
+                              wordWrap: 'on',
+                            }}
+                          />
+                        ) : null}
                       </div>
                     </div>
                   </Panel>
@@ -1014,19 +1103,11 @@ export function FullScreenIDE({
                       {!isDocsCollapsed && (
                         <div className="flex-1 overflow-auto p-2">
                           {selectedDocsTab === 'docs' && (
-                            <Docs
-                              adaptor={
-                                currentJob.adaptor ||
-                                '@openfn/language-common@latest'
-                              }
-                            />
+                            <Docs adaptor={currJobAdaptor} />
                           )}
                           {selectedDocsTab === 'metadata' && (
                             <Metadata
-                              adaptor={
-                                currentJob.adaptor ||
-                                '@openfn/language-common@latest'
-                              }
+                              adaptor={currJobAdaptor}
                               metadata={null}
                             />
                           )}
@@ -1123,6 +1204,16 @@ export function FullScreenIDE({
                 </div>
               ) : (
                 <div className="h-full flex flex-col">
+                  {/* Version mismatch banner - shown when viewing a run from different version */}
+                  {panelState === 'run-viewer' && versionMismatch && (
+                    <VersionMismatchBanner
+                      runVersion={versionMismatch.runVersion}
+                      currentVersion={versionMismatch.currentVersion}
+                      onGoToVersion={handleGoToVersion}
+                      className="py-1"
+                    />
+                  )}
+
                   {/* Panel heading - only for run-viewer */}
                   {panelState === 'run-viewer' && (
                     <div className="shrink-0">
@@ -1131,7 +1222,7 @@ export function FullScreenIDE({
                         <Tooltip
                           content={
                             shouldShowMismatch
-                              ? `${selectedStepName} was not part of this run. Pick another step or deselect the run.`
+                              ? `${selectedJobName} was not part of this run. Pick another job or deselect the run.`
                               : undefined
                           }
                           side="bottom"
@@ -1242,7 +1333,7 @@ export function FullScreenIDE({
             onAdaptorChange={handleAdaptorChange}
             onVersionChange={handleVersionChange}
             onCredentialChange={handleCredentialChange}
-            onOpenAdaptorPicker={handleOpenAdaptorPicker}
+            onOpenAdaptorPicker={handleOpenAdaptorPickerFromConfigure}
             onOpenCredentialModal={handleOpenCredentialModal}
             currentAdaptor={
               resolveAdaptor(
@@ -1264,7 +1355,14 @@ export function FullScreenIDE({
 
           <AdaptorSelectionModal
             isOpen={isAdaptorPickerOpen}
-            onClose={() => setIsAdaptorPickerOpen(false)}
+            onClose={() => {
+              setIsAdaptorPickerOpen(false);
+              // Only return to configure modal if opened from there
+              if (adaptorPickerFromConfigure) {
+                setIsConfigureModalOpen(true);
+              }
+              setAdaptorPickerFromConfigure(false);
+            }}
             onSelect={handleAdaptorSelect}
             projectAdaptors={projectAdaptors}
           />

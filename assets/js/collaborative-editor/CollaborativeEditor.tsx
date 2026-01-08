@@ -12,6 +12,7 @@ import { Toaster } from './components/ui/Toaster';
 import { VersionDebugLogger } from './components/VersionDebugLogger';
 import { VersionDropdown } from './components/VersionDropdown';
 import { WorkflowEditor } from './components/WorkflowEditor';
+import { CredentialModalProvider } from './contexts/CredentialModalContext';
 import { LiveViewActionsProvider } from './contexts/LiveViewActionsContext';
 import { SessionProvider } from './contexts/SessionProvider';
 import { StoreProvider } from './contexts/StoreProvider';
@@ -34,6 +35,8 @@ export interface CollaborativeEditorDataProps {
   'data-root-project-id'?: string;
   'data-root-project-name'?: string;
   'data-is-new-workflow'?: string;
+  // Initial run data from server to avoid client-side race conditions
+  'data-initial-run-data'?: string; // JSON-encoded RunStepsData
 }
 
 /**
@@ -155,6 +158,7 @@ export const CollaborativeEditor: WithActionProps<
   const rootProjectId = props['data-root-project-id'] ?? null;
   const rootProjectName = props['data-root-project-name'] ?? null;
   const isNewWorkflow = props['data-is-new-workflow'] === 'true';
+  const initialRunData = props['data-initial-run-data'];
 
   const liveViewActions = {
     pushEvent: props.pushEvent,
@@ -174,44 +178,47 @@ export const CollaborativeEditor: WithActionProps<
             workflowId={workflowId}
             projectId={projectId}
             isNewWorkflow={isNewWorkflow}
+            {...(initialRunData !== undefined && { initialRunData })}
           >
             <StoreProvider>
               <LiveViewActionsProvider actions={liveViewActions}>
-                <VersionDebugLogger />
-                <Toaster />
-                <div className="flex-1 min-h-0 overflow-hidden flex flex-col relative">
-                  <BreadcrumbContent
-                    workflowId={workflowId}
-                    workflowName={workflowName}
-                    isNewWorkflow={isNewWorkflow}
-                    {...(projectId !== undefined && {
-                      projectIdFallback: projectId,
-                    })}
-                    {...(projectName !== undefined && {
-                      projectNameFallback: projectName,
-                    })}
-                    {...(projectEnv !== undefined && {
-                      projectEnvFallback: projectEnv,
-                    })}
-                    {...(rootProjectId !== null && {
-                      rootProjectIdFallback: rootProjectId,
-                    })}
-                    {...(rootProjectName !== null && {
-                      rootProjectNameFallback: rootProjectName,
-                    })}
-                  />
-                  <div className="flex-1 min-h-0 overflow-hidden relative">
-                    <LoadingBoundary>
-                      <div className="h-full w-full">
-                        <WorkflowEditor
-                          parentProjectId={rootProjectId}
-                          parentProjectName={rootProjectName}
-                        />
-                      </div>
-                    </LoadingBoundary>
+                <CredentialModalProvider>
+                  <VersionDebugLogger />
+                  <Toaster />
+                  <div className="flex-1 min-h-0 overflow-hidden flex flex-col relative">
+                    <BreadcrumbContent
+                      workflowId={workflowId}
+                      workflowName={workflowName}
+                      isNewWorkflow={isNewWorkflow}
+                      {...(projectId !== undefined && {
+                        projectIdFallback: projectId,
+                      })}
+                      {...(projectName !== undefined && {
+                        projectNameFallback: projectName,
+                      })}
+                      {...(projectEnv !== undefined && {
+                        projectEnvFallback: projectEnv,
+                      })}
+                      {...(rootProjectId !== null && {
+                        rootProjectIdFallback: rootProjectId,
+                      })}
+                      {...(rootProjectName !== null && {
+                        rootProjectNameFallback: rootProjectName,
+                      })}
+                    />
+                    <div className="flex-1 min-h-0 overflow-hidden relative">
+                      <LoadingBoundary>
+                        <div className="h-full w-full">
+                          <WorkflowEditor
+                            parentProjectId={rootProjectId}
+                            parentProjectName={rootProjectName}
+                          />
+                        </div>
+                      </LoadingBoundary>
+                    </div>
                   </div>
-                </div>
-                <AIAssistantPanelWrapper />
+                  <AIAssistantPanelWrapper />
+                </CredentialModalProvider>
               </LiveViewActionsProvider>
             </StoreProvider>
           </SessionProvider>

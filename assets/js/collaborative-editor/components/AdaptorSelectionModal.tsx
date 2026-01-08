@@ -1,6 +1,8 @@
 import { Dialog, DialogBackdrop, DialogPanel } from '@headlessui/react';
 import { useEffect, useMemo, useState } from 'react';
 
+import { useKeyboardShortcut } from '../keyboard';
+
 import { useAdaptors } from '../hooks/useAdaptors';
 import type { Adaptor } from '../types/adaptor';
 import { getAdaptorDisplayName } from '../utils/adaptorUtils';
@@ -41,6 +43,17 @@ export function AdaptorSelectionModal({
   useEffect(() => {
     setFocusedIndex(0);
   }, [searchQuery]);
+
+  // High-priority Escape handler to prevent closing parent IDE/inspector
+  // Priority 100 (MODAL) ensures this runs before IDE handler (priority 50)
+  useKeyboardShortcut(
+    'Escape',
+    () => {
+      onClose();
+    },
+    100,
+    { enabled: isOpen }
+  );
 
   const httpAdaptor = useMemo(
     () => allAdaptors.find(a => a.name.includes('language-http')),

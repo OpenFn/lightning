@@ -231,8 +231,9 @@ describe('TemplatePublishPanel', () => {
       const nameInput = screen.getByLabelText('Name');
       const longName = 'a'.repeat(256);
 
+      // Use paste instead of type to avoid timeout on CI (256 keystrokes is slow)
       await user.clear(nameInput);
-      await user.type(nameInput, longName);
+      await user.paste(longName);
 
       await waitFor(() => {
         expect(
@@ -266,8 +267,8 @@ describe('TemplatePublishPanel', () => {
       render(<TemplatePublishPanel />);
 
       const tagsInput = screen.getByLabelText('Tags');
-      // Use paste for faster execution on CI
-      await user.click(tagsInput);
+      // Use clear + paste to prevent state leak from previous tests
+      await user.clear(tagsInput);
       await user.paste('tag1, tag2 , tag3');
 
       // Tags should be displayed as chips
@@ -310,8 +311,8 @@ describe('TemplatePublishPanel', () => {
       render(<TemplatePublishPanel />);
 
       const tagsInput = screen.getByLabelText('Tags');
-      // Use paste for faster execution on CI
-      await user.click(tagsInput);
+      // Use clear + paste to prevent state leak from previous tests
+      await user.clear(tagsInput);
       await user.paste('tag1,,tag2, ,tag3');
 
       // Only non-empty tags should be displayed
@@ -346,6 +347,33 @@ describe('TemplatePublishPanel', () => {
           })
         );
       });
+    });
+
+    test('preserves trigger state when publishing template', async () => {
+      const user = userEvent.setup();
+      // Mock a workflow with an enabled trigger
+      mockWorkflowState.triggers = [
+        { id: 'trigger-1', type: 'webhook', enabled: true },
+      ];
+
+      render(<TemplatePublishPanel />);
+
+      const publishButton = screen.getByRole('button', {
+        name: 'Publish Template',
+      });
+      await user.click(publishButton);
+
+      await waitFor(() => {
+        expect(useChannelModule.channelRequest).toHaveBeenCalled();
+      });
+
+      // Extract the code from the call
+      const call = vi.mocked(useChannelModule.channelRequest).mock.calls[0];
+      const payload = call[2] as any;
+      const yamlCode = payload.code;
+
+      // Verify the YAML preserves the original trigger state
+      expect(yamlCode).toContain('enabled: true');
     });
 
     test('shows success notification and navigates on success', async () => {

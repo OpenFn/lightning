@@ -45,7 +45,7 @@ export function Toaster(props: ToasterProps) {
       expand={false}
       visibleToasts={3}
       closeButton={true}
-      duration={2000} // Fallback duration (overridden by notifications.ts)
+      duration={5000} // Fallback duration (overridden by notifications.ts)
       className="toaster group"
       toastOptions={{
         classNames: {

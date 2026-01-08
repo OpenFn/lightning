@@ -33,6 +33,15 @@ export type MessageStatus =
   | 'cancelled';
 
 /**
+ * User info attached to a message for attribution in collaborative sessions
+ */
+export interface MessageUser {
+  id: string;
+  first_name: string | null;
+  last_name: string | null;
+}
+
+/**
  * Message represents a single chat message in the AI assistant
  */
 export interface Message {
@@ -43,6 +52,7 @@ export interface Message {
   status: MessageStatus;
   inserted_at: string;
   user_id?: string;
+  user?: MessageUser | null;
 }
 
 /**
@@ -52,6 +62,8 @@ export interface JobCodeContext {
   job_id: string;
   attach_code?: boolean;
   attach_logs?: boolean;
+  attach_io_data?: boolean;
+  step_id?: string;
   follow_run_id?: string;
   content?: string;
 
@@ -153,6 +165,7 @@ export interface AIAssistantStore {
   _setSession: (session: Session) => void;
   _clearSession: () => void;
   _clearSessionList: () => void;
+  _prependSession: (session: SessionSummary) => void;
   _addMessage: (message: Message) => void;
   _updateMessageStatus: (messageId: string, status: MessageStatus) => void;
   _setSessionList: (response: SessionListResponse) => void;
@@ -161,6 +174,8 @@ export interface AIAssistantStore {
     sessionType: SessionType,
     context: JobCodeContext | WorkflowTemplateContext
   ) => void;
+  _setProcessingState: (isProcessing: boolean) => void;
+  _connectChannel: (channelProvider: unknown) => () => void;
 }
 
 /**
@@ -169,6 +184,8 @@ export interface AIAssistantStore {
 export interface MessageOptions {
   attach_code?: boolean;
   attach_logs?: boolean;
+  attach_io_data?: boolean;
+  step_id?: string;
 
   code?: string;
   errors?: string;

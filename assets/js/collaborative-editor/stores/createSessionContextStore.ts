@@ -305,7 +305,7 @@ export const createSessionContextStore = (
   };
 
   /**
-   * Set AI disclaimer read status
+   * Set AI disclaimer read status (local state only)
    * Called when user accepts the AI assistant disclaimer
    */
   const setHasReadAIDisclaimer = (hasRead: boolean) => {
@@ -313,6 +313,28 @@ export const createSessionContextStore = (
       draft.hasReadAIDisclaimer = hasRead;
     });
     notify('setHasReadAIDisclaimer');
+  };
+
+  /**
+   * Mark AI disclaimer as read and persist to backend
+   * Called when user accepts the AI assistant disclaimer
+   */
+  const markAIDisclaimerRead = async (): Promise<void> => {
+    if (!_channelProvider?.channel) {
+      logger.warn('Cannot mark disclaimer read - no channel connected');
+      return;
+    }
+
+    try {
+      await channelRequest(
+        _channelProvider.channel,
+        'mark_ai_disclaimer_read',
+        {}
+      );
+      setHasReadAIDisclaimer(true);
+    } catch (error) {
+      logger.error('Failed to mark disclaimer read', error);
+    }
   };
 
   /**
@@ -478,6 +500,18 @@ export const createSessionContextStore = (
             draft.lastUpdated = Date.now();
           });
           notify('getLimits');
+        } else if (action_type === 'activate_workflow') {
+          state = produce(state, draft => {
+            draft.limits.workflow_activation = limit;
+            draft.lastUpdated = Date.now();
+          });
+          notify('getLimits');
+        } else if (action_type === 'github_sync') {
+          state = produce(state, draft => {
+            draft.limits.github_sync = limit;
+            draft.lastUpdated = Date.now();
+          });
+          notify('getLimits');
         }
       } else {
         logger.error('Failed to parse get_limits message', {
@@ -556,7 +590,9 @@ export const createSessionContextStore = (
    * Get limits for a specific action type
    * Sends request to server and updates limits state via channel handler
    */
-  const getLimits = async (actionType: 'new_run'): Promise<void> => {
+  const getLimits = async (
+    actionType: 'new_run' | 'activate_workflow' | 'github_sync'
+  ): Promise<void> => {
     if (!_channelProvider?.channel) {
       logger.warn('Cannot get limits - no channel connected');
       return;
@@ -592,6 +628,7 @@ export const createSessionContextStore = (
     setLatestSnapshotLockVersion,
     clearIsNewWorkflow,
     setHasReadAIDisclaimer,
+    markAIDisclaimerRead,
     getLimits,
 
     // Internal methods (not part of public SessionContextStore interface)

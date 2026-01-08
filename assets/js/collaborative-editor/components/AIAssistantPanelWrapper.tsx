@@ -19,15 +19,22 @@ import { useResizablePanel } from '../hooks/useResizablePanel';
 import {
   useProject,
   useHasReadAIDisclaimer,
-  useSetHasReadAIDisclaimer,
+  useMarkAIDisclaimerRead,
   useSessionContextLoaded,
+  useLimits,
+  useIsNewWorkflow,
+  useUser,
 } from '../hooks/useSessionContext';
 import {
   useIsAIAssistantPanelOpen,
   useUICommands,
   useAIAssistantInitialMessage,
 } from '../hooks/useUI';
-import { useWorkflowState, useWorkflowActions } from '../hooks/useWorkflow';
+import {
+  useWorkflowState,
+  useWorkflowActions,
+  useWorkflowReadOnly,
+} from '../hooks/useWorkflow';
 import { useKeyboardShortcut } from '../keyboard';
 import { notifications } from '../lib/notifications';
 import type { JobCodeContext } from '../types/ai-assistant';
@@ -94,7 +101,6 @@ export function AIAssistantPanelWrapper() {
     sendMessage: sendMessageToChannel,
     loadSessions,
     retryMessage: retryMessageViaChannel,
-    markDisclaimerRead: markDisclaimerReadViaChannel,
     updateContext: updateContextViaChannel,
   } = useAISessionCommands();
   const messages = useAIMessages();
@@ -104,10 +110,19 @@ export function AIAssistantPanelWrapper() {
   const connectionState = useAIConnectionState();
   const sessionContextLoaded = useSessionContextLoaded();
   const hasReadDisclaimer = useHasReadAIDisclaimer();
-  const setHasReadAIDisclaimer = useSetHasReadAIDisclaimer();
+  const markAIDisclaimerRead = useMarkAIDisclaimerRead();
   const workflowTemplateContext = useAIWorkflowTemplateContext();
   const project = useProject();
+  const user = useUser();
   const workflow = useWorkflowState(state => state.workflow);
+  const limits = useLimits();
+
+  // Check readonly state and new workflow status
+  // AI can apply changes if: not readonly OR is a new workflow (being created)
+  const { isReadOnly } = useWorkflowReadOnly();
+  const isNewWorkflow = useIsNewWorkflow();
+  const canApplyChanges = !isReadOnly || isNewWorkflow;
+  const isWriteDisabled = !canApplyChanges;
 
   const jobs = useWorkflowState(state => state.jobs);
   const triggers = useWorkflowState(state => state.triggers);
@@ -356,10 +371,18 @@ export function AIAssistantPanelWrapper() {
     });
   }, [updateSearchParams, aiStore, aiMode]);
 
+  // Note: AI session creation events are now handled by AIAssistantStore._connectChannel
+  // which receives events directly from the workflow channel
+
   const sendMessage = useCallback(
     (
       content: string,
-      messageOptions?: { attach_code?: boolean; attach_logs?: boolean }
+      messageOptions?: {
+        attach_code?: boolean;
+        attach_logs?: boolean;
+        attach_io_data?: boolean;
+        step_id?: string;
+      }
     ) => {
       const currentState = aiStore.getSnapshot();
 
@@ -374,6 +397,8 @@ export function AIAssistantPanelWrapper() {
           // Include attach_code/attach_logs so backend knows to include them in first message
           ...(messageOptions?.attach_code && { attach_code: true }),
           ...(messageOptions?.attach_logs && { attach_logs: true }),
+          ...(messageOptions?.attach_io_data && { attach_io_data: true }),
+          ...(messageOptions?.step_id && { step_id: messageOptions.step_id }),
         };
 
         // Add workflow YAML if in workflow mode
@@ -411,9 +436,15 @@ export function AIAssistantPanelWrapper() {
 
       // For existing sessions, prepare options and send
       let options:
-        | { attach_code?: boolean; attach_logs?: boolean; code?: string }
+        | {
+            attach_code?: boolean;
+            attach_logs?: boolean;
+            attach_io_data?: boolean;
+            step_id?: string;
+            code?: string;
+          }
         | undefined = {
-        ...messageOptions, // Include attach_code and attach_logs
+        ...messageOptions, // Include attach_code, attach_logs, attach_io_data, step_id
       };
 
       if (currentState.sessionType === 'workflow_template') {
@@ -459,12 +490,11 @@ export function AIAssistantPanelWrapper() {
   );
 
   const handleMarkDisclaimerRead = useCallback(() => {
-    // Update session context immediately for UI responsiveness
-    setHasReadAIDisclaimer(true);
-    // Also update AI store and persist to backend via channel
+    // Persist to backend via workflow channel and update local state
+    markAIDisclaimerRead();
+    // Also update AI store for consistency
     aiStore.markDisclaimerRead();
-    markDisclaimerReadViaChannel();
-  }, [aiStore, markDisclaimerReadViaChannel, setHasReadAIDisclaimer]);
+  }, [aiStore, markAIDisclaimerRead]);
 
   const [applyingMessageId, setApplyingMessageId] = useState<string | null>(
     null
@@ -477,11 +507,21 @@ export function AIAssistantPanelWrapper() {
     hasLoadedSessionRef.current = false;
   }, [sessionId]);
 
-  const { importWorkflow } = useWorkflowActions();
+  const { importWorkflow, startApplyingWorkflow, doneApplyingWorkflow } =
+    useWorkflowActions();
+
+  // Get applying state from workflow store for disabling Apply button across all users
+  const isApplyingWorkflow = useWorkflowState(
+    state => state.isApplyingWorkflow
+  );
 
   const handleApplyWorkflow = useCallback(
-    (yaml: string, messageId: string) => {
+    async (yaml: string, messageId: string) => {
       setApplyingMessageId(messageId);
+
+      // Signal to all collaborators that we're starting to apply
+      // Returns false if coordination failed (other users won't be notified)
+      const coordinated = await startApplyingWorkflow(messageId);
 
       try {
         const workflowSpec = parseWorkflowYAML(yaml);
@@ -542,6 +582,7 @@ export function AIAssistantPanelWrapper() {
 
         validateIds(workflowSpec);
 
+        // IDs are already in the YAML from AI (sent with IDs, like legacy editor)
         const workflowState = convertWorkflowSpecToState(workflowSpec);
 
         importWorkflow(workflowState);
@@ -555,9 +596,14 @@ export function AIAssistantPanelWrapper() {
         });
       } finally {
         setApplyingMessageId(null);
+        // Only signal completion if we successfully coordinated
+        // (otherwise other users weren't notified of the start)
+        if (coordinated) {
+          await doneApplyingWorkflow(messageId);
+        }
       }
     },
-    [importWorkflow]
+    [importWorkflow, startApplyingWorkflow, doneApplyingWorkflow]
   );
 
   /**
@@ -572,6 +618,8 @@ export function AIAssistantPanelWrapper() {
    * - There are messages in the conversation
    * - Connection is established (prevents applying during reconnection)
    * - The message has code and hasn't been applied yet (tracked in appliedMessageIdsRef)
+   * - The current user is the one who sent the message that triggered the AI response
+   *   (prevents duplicate applies in collaborative sessions where multiple users view the same chat)
    *
    * Note: We only apply the LATEST message with code to avoid applying intermediate
    * drafts if the AI sends multiple responses quickly.
@@ -579,6 +627,8 @@ export function AIAssistantPanelWrapper() {
   useEffect(() => {
     if (sessionType !== 'workflow_template' || !messages.length) return;
     if (connectionState !== 'connected') return;
+    // Don't auto-apply when readonly (except for new workflow creation)
+    if (!canApplyChanges) return;
 
     const messagesWithCode = messages.filter(
       msg => msg.role === 'assistant' && msg.code && msg.status === 'success'
@@ -600,9 +650,29 @@ export function AIAssistantPanelWrapper() {
       latestMessage?.code &&
       !appliedMessageIdsRef.current.has(latestMessage.id)
     ) {
+      // Find the user message that triggered this AI response
+      // Look for the most recent user message before this assistant message
+      const latestMessageIndex = messages.findIndex(
+        m => m.id === latestMessage.id
+      );
+      const precedingUserMessage = messages
+        .slice(0, latestMessageIndex)
+        .reverse()
+        .find(m => m.role === 'user');
+
+      // Only auto-apply if the current user sent the triggering message
+      // This prevents duplicate applies in collaborative sessions where
+      // multiple users view the same chat and would otherwise all auto-apply
+      const isCurrentUserAuthor =
+        precedingUserMessage?.user_id === user?.id ||
+        // Fallback: if no user_id on message (legacy), allow apply
+        !precedingUserMessage?.user_id;
+
       appliedMessageIdsRef.current.add(latestMessage.id);
 
-      void handleApplyWorkflow(latestMessage.code, latestMessage.id);
+      if (isCurrentUserAuthor) {
+        void handleApplyWorkflow(latestMessage.code, latestMessage.id);
+      }
     }
   }, [
     messages,
@@ -612,6 +682,8 @@ export function AIAssistantPanelWrapper() {
     workflowTemplateContext,
     workflow,
     handleApplyWorkflow,
+    canApplyChanges,
+    user?.id,
   ]);
 
   return (
@@ -658,12 +730,13 @@ export function AIAssistantPanelWrapper() {
               connectionState={sessionId ? connectionState : 'connected'}
               showDisclaimer={sessionContextLoaded && !hasReadDisclaimer}
               onAcceptDisclaimer={handleMarkDisclaimerRead}
+              aiLimit={limits.ai_assistant ?? null}
             >
               <MessageList
                 messages={messages}
                 isLoading={isLoading}
                 onApplyWorkflow={
-                  sessionType === 'workflow_template'
+                  sessionType === 'workflow_template' && !isApplyingWorkflow
                     ? (yaml, messageId) => {
                         void handleApplyWorkflow(yaml, messageId);
                       }
@@ -671,7 +744,9 @@ export function AIAssistantPanelWrapper() {
                 }
                 applyingMessageId={applyingMessageId}
                 showAddButtons={sessionType === 'job_code'}
+                showApplyButton={sessionType === 'workflow_template'}
                 onRetryMessage={handleRetryMessage}
+                isWriteDisabled={isWriteDisabled}
               />
             </AIAssistantPanel>
           </div>

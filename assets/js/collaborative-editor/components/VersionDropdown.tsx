@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 
+import { useURLState } from '#/react/lib/use-url-state';
+
 import { cn } from '../../utils/cn';
 import {
   useRequestVersions,
@@ -30,11 +32,16 @@ export function VersionDropdown({
   const versionsError = useVersionsError();
   const requestVersions = useRequestVersions();
 
+  // Check if version is pinned via URL parameter
+  const { params } = useURLState();
+  const isPinnedVersion = params['v'] !== undefined && params['v'] !== null;
+
   // Show placeholder while loading version information
   const isLoadingVersion = currentVersion === null || latestVersion === null;
 
-  // Determine if viewing latest version (only when we have both values)
-  const isLatestVersion = !isLoadingVersion && currentVersion === latestVersion;
+  // Determine if viewing latest version (only when we have both values AND no pinned version)
+  const isLatestVersion =
+    !isLoadingVersion && currentVersion === latestVersion && !isPinnedVersion;
 
   // Format version display
   const currentVersionDisplay = isLoadingVersion
@@ -95,8 +102,8 @@ export function VersionDropdown({
     }
   }, [versionsError]);
 
-  const handleVersionClick = (version: Version) => {
-    if (version.is_latest) {
+  const handleVersionClick = (version: Version | 'latest') => {
+    if (version === 'latest') {
       onVersionSelect('latest');
     } else {
       onVersionSelect(version.lock_version);
@@ -146,44 +153,66 @@ export function VersionDropdown({
                 No versions available
               </div>
             ) : (
-              versions.map((version, index) => {
-                const isSelected = version.is_latest
-                  ? isLatestVersion
-                  : version.lock_version === currentVersion;
-
-                // Show "latest" for the latest version, otherwise show version number
-                // For the first item (which is latest), show "latest"
-                // For subsequent items, show version number even if they have is_latest=true
-                const displayText =
-                  index === 0 && version.is_latest
-                    ? 'latest'
-                    : `v${String(version.lock_version).substring(0, 7)}`;
-
-                return (
+              <>
+                {/* First, show "latest" option that removes version parameter */}
+                {versions.length > 0 && versions[0].is_latest && (
                   <button
-                    key={version.lock_version}
+                    key="latest"
                     type="button"
-                    onClick={() => handleVersionClick(version)}
+                    onClick={() => handleVersionClick('latest')}
                     className={cn(
                       'w-full text-left px-4 py-2 text-sm hover:bg-gray-100 flex items-center justify-between',
-                      isSelected
+                      isLatestVersion
                         ? 'bg-primary-50 text-primary-900'
                         : 'text-gray-700'
                     )}
                     role="menuitem"
                   >
                     <div className="flex flex-col">
-                      <span className="font-medium">{displayText}</span>
+                      <span className="font-medium">latest</span>
                       <span className="text-xs text-gray-500">
-                        {new Date(version.inserted_at).toLocaleString()}
+                        {new Date(versions[0].inserted_at).toLocaleString()}
                       </span>
                     </div>
-                    {isSelected && (
+                    {isLatestVersion && (
                       <span className="hero-check h-4 w-4 text-primary-600" />
                     )}
                   </button>
-                );
-              })
+                )}
+
+                {/* Then show all versions with version numbers (including latest) */}
+                {versions.map(version => {
+                  const isSelected =
+                    !isLatestVersion && version.lock_version === currentVersion;
+
+                  const displayText = `v${String(version.lock_version).substring(0, 7)}`;
+
+                  return (
+                    <button
+                      key={version.lock_version}
+                      type="button"
+                      onClick={() => handleVersionClick(version)}
+                      className={cn(
+                        'w-full text-left px-4 py-2 text-sm hover:bg-gray-100 flex items-center justify-between',
+                        isSelected
+                          ? 'bg-primary-50 text-primary-900'
+                          : 'text-gray-700'
+                      )}
+                      role="menuitem"
+                    >
+                      <div className="flex flex-col">
+                        <span className="font-medium">{displayText}</span>
+                        <span className="text-xs text-gray-500">
+                          {new Date(version.inserted_at).toLocaleString()}
+                        </span>
+                      </div>
+                      {isSelected && (
+                        <span className="hero-check h-4 w-4 text-primary-600" />
+                      )}
+                    </button>
+                  );
+                })}
+              </>
             )}
           </div>
         </div>

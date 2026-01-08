@@ -2,12 +2,11 @@ import { useCallback } from 'react';
 
 import { usePermissions } from '../../hooks/useSessionContext';
 import {
-  useCanRun,
   useWorkflowActions,
   useWorkflowReadOnly,
 } from '../../hooks/useWorkflow';
 import type { Workflow } from '../../types/workflow';
-import { Button } from '../Button';
+import { NewRunButton } from '../NewRunButton';
 import { Toggle } from '../Toggle';
 import { Tooltip } from '../Tooltip';
 
@@ -54,9 +53,6 @@ export function TriggerInspector({
   const { updateTrigger } = useWorkflowActions();
   const { isReadOnly, tooltipMessage } = useWorkflowReadOnly();
 
-  // Use centralized canRun hook for all run permission/state checks
-  const { canRun, tooltipMessage: runTooltipMessage } = useCanRun();
-
   const handleEnabledChange = useCallback(
     (enabled: boolean) => {
       updateTrigger(trigger.id, { enabled });
@@ -64,11 +60,13 @@ export function TriggerInspector({
     [trigger.id, updateTrigger]
   );
 
-  // Determine toggle tooltip based on disabled state
+  // Determine toggle disabled state and tooltip
   const isToggleDisabled = !permissions?.can_edit_workflow || isReadOnly;
-  const toggleTooltip = isToggleDisabled
-    ? tooltipMessage || 'You do not have permission to edit this workflow'
-    : 'Enable or disable this trigger';
+
+  const toggleTooltip =
+    isReadOnly || !permissions?.can_edit_workflow
+      ? tooltipMessage || 'You do not have permission to edit this workflow'
+      : 'Enable or disable this trigger';
 
   // Build footer with enabled toggle and run button
   const footer = (
@@ -87,18 +85,11 @@ export function TriggerInspector({
         </Tooltip>
       }
       rightButtons={
-        <Tooltip content={runTooltipMessage} side="top">
-          <span className="inline-block">
-            <Button
-              variant="primary"
-              onClick={() => onOpenRunPanel({ triggerId: trigger.id })}
-              disabled={!canRun}
-            >
-              <span className="hero-play-solid h-4 w-4" />
-              Run
-            </Button>
-          </span>
-        </Tooltip>
+        <NewRunButton
+          onClick={() => onOpenRunPanel({ triggerId: trigger.id })}
+          tooltipSide="top"
+          disabled={isReadOnly}
+        />
       }
     />
   );

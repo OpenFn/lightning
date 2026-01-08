@@ -30,6 +30,7 @@ import { relativeLocale } from '../../../hooks';
 import { duration } from '../../../utils/duration';
 import truncateUid from '../../../utils/truncateUID';
 import { useProject } from '../../hooks/useSessionContext';
+import { useVersionSelect } from '../../hooks/useVersionSelect';
 import { useWorkflowState } from '../../hooks/useWorkflow';
 import type { RunSummary, WorkOrder } from '../../types/history';
 import {
@@ -38,6 +39,10 @@ import {
   navigateToWorkflowHistory,
 } from '../../utils/navigation';
 import { RunBadge } from '../common/RunBadge';
+import { ShortcutKeys } from '../ShortcutKeys';
+import { Tooltip } from '../Tooltip';
+
+import { VersionMismatchBanner } from './VersionMismatchBanner';
 
 // Extended types with selection state for UI
 type RunWithSelection = RunSummary & { selected?: boolean };
@@ -282,6 +287,11 @@ interface MiniHistoryProps {
   // New props for panel variant
   variant?: 'floating' | 'panel';
   onBack?: () => void;
+  // Version mismatch detection
+  versionMismatch?: {
+    runVersion: number;
+    currentVersion: number;
+  } | null;
 }
 
 export default function MiniHistory({
@@ -296,6 +306,7 @@ export default function MiniHistory({
   onRetry,
   variant = 'floating',
   onBack,
+  versionMismatch,
 }: MiniHistoryProps) {
   const [expandedWorder, setExpandedWorder] = useState('');
   const now = new Date();
@@ -303,6 +314,14 @@ export default function MiniHistory({
   // Get project and workflow IDs from state for navigation
   const project = useProject();
   const workflow = useWorkflowState(state => state.workflow);
+  const handleVersionSelect = useVersionSelect();
+
+  // Handler to navigate to the run's version
+  const handleGoToVersion = () => {
+    if (versionMismatch) {
+      handleVersionSelect(versionMismatch.runVersion);
+    }
+  };
 
   // Clear expanded work order when panel collapses
   React.useEffect(() => {
@@ -476,57 +495,68 @@ export default function MiniHistory({
         Mouse-only clickable area for header - keyboard users can use the
         "view full history" button or chevron icon for navigation.
       */}
-      {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions */}
-      <div
-        className={`flex items-center cursor-pointer justify-between
-          px-3 py-2 border-gray-200 bg-gray-50 hover:bg-gray-100
-          transition-colors w-full text-left
-          ${collapsed ? 'border-b-0' : 'border-b'}`}
-        onClick={() => historyToggle()}
-      >
-        <div className="flex items-center gap-2">
-          <h3 className="text-sm font-medium text-gray-700">
-            {collapsed ? 'View History' : 'Recent History'}
-          </h3>
-          <button
-            id="view-history"
-            type="button"
-            className="text-gray-400 hover:text-gray-600
-              transition-colors flex items-center"
-            aria-label="View full history for this workflow"
-            onClick={gotoHistory}
-            onKeyDown={e => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                gotoHistory(e);
-              }
-            }}
-          >
-            <span className="hero-rectangle-stack w-4 h-4"></span>
-          </button>
-          {loading && history.length ? (
-            <span className="hero-arrow-path size-4 animate-spin"></span>
-          ) : null}
-        </div>
-
+      <Tooltip content={<ShortcutKeys keys={['mod', 'h']} />} side="bottom">
+        {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions */}
         <div
-          className="text-gray-400 hover:text-gray-600 transition-colors
-            cursor-pointer ml-3"
-          title="Collapse panel"
+          className={`flex items-center cursor-pointer justify-between
+            px-3 py-2 border-gray-200 bg-gray-50 hover:bg-gray-100
+            transition-colors w-full text-left
+            ${collapsed ? 'border-b-0' : 'border-b'}`}
+          onClick={() => historyToggle()}
         >
-          {collapsed ? (
-            <span className="hero-chevron-right w-4 h-4"></span>
-          ) : (
-            <span className="hero-chevron-left w-4 h-4"></span>
-          )}
+          <div className="flex items-center gap-2">
+            <h3 className="text-sm font-medium text-gray-700">
+              {collapsed ? 'View History' : 'Recent History'}
+            </h3>
+            <button
+              id="view-history"
+              type="button"
+              className="text-gray-400 hover:text-gray-600
+                transition-colors flex items-center"
+              aria-label="View full history for this workflow"
+              onClick={gotoHistory}
+              onKeyDown={e => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  gotoHistory(e);
+                }
+              }}
+            >
+              <span className="hero-rectangle-stack w-4 h-4"></span>
+            </button>
+            {loading && history.length ? (
+              <span className="hero-arrow-path size-4 animate-spin"></span>
+            ) : null}
+          </div>
+
+          <div
+            className="text-gray-400 hover:text-gray-600 transition-colors
+              cursor-pointer ml-3"
+          >
+            {collapsed ? (
+              <span className="hero-chevron-right w-4 h-4"></span>
+            ) : (
+              <span className="hero-chevron-left w-4 h-4"></span>
+            )}
+          </div>
         </div>
-      </div>
+      </Tooltip>
 
       {/* Show run chip when collapsed and run selected */}
       {collapsed && selectedRun && (
         <div className="px-3 py-2 border-t border-gray-200">
           <RunBadge runId={selectedRun.id} onClose={() => onDeselectRun?.()} />
         </div>
+      )}
+
+      {/* Version mismatch banner when collapsed */}
+      {collapsed && versionMismatch && (
+        <VersionMismatchBanner
+          runVersion={versionMismatch.runVersion}
+          currentVersion={versionMismatch.currentVersion}
+          onGoToVersion={handleGoToVersion}
+          compact={true}
+        />
       )}
 
       <div
@@ -602,6 +632,15 @@ export default function MiniHistory({
           </div>
         )}
       </div>
+
+      {/* Version mismatch banner at bottom of panel */}
+      {!collapsed && versionMismatch && (
+        <VersionMismatchBanner
+          runVersion={versionMismatch.runVersion}
+          currentVersion={versionMismatch.currentVersion}
+          onGoToVersion={handleGoToVersion}
+        />
+      )}
     </div>
   );
 }

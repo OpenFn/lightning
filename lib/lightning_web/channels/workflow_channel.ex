@@ -15,9 +15,11 @@ defmodule LightningWeb.WorkflowChannel do
   alias Lightning.Policies.Permissions
   alias Lightning.Repo
   alias Lightning.VersionControl
+  alias Lightning.VersionControl.VersionControlUsageLimiter
   alias Lightning.Workflows.Job
   alias Lightning.Workflows.Snapshot
   alias Lightning.Workflows.Workflow
+  alias Lightning.Workflows.WorkflowUsageLimiter
   alias Lightning.WorkOrders
   alias LightningWeb.Channels.WorkflowJSON
 
@@ -229,6 +231,14 @@ defmodule LightningWeb.WorkflowChannel do
         limit: render_limit_result(limit_result)
       }
     end)
+  end
+
+  @impl true
+  def handle_in("mark_ai_disclaimer_read", _params, socket) do
+    {:ok, _user} =
+      Lightning.AiAssistant.mark_disclaimer_read(socket.assigns.current_user)
+
+    {:reply, {:ok, %{success: true}}, socket}
   end
 
   @impl true
@@ -567,6 +577,37 @@ defmodule LightningWeb.WorkflowChannel do
     {:reply, {:ok, %{templates: rendered_templates}}, socket}
   end
 
+  # Handles the start of an AI workflow apply operation.
+  # When a user clicks "Apply" on an AI-generated workflow, this broadcasts
+  # to all collaborators so they can disable their Apply buttons, preventing
+  # concurrent applies that could cause duplicate nodes in Y.Doc.
+  @impl true
+  def handle_in("start_applying_workflow", %{"message_id" => message_id}, socket) do
+    user = socket.assigns.current_user
+
+    # Broadcast to ALL clients (including sender) so everyone sees the applying state
+    broadcast!(socket, "workflow_applying", %{
+      user_id: user.id,
+      user_name: user.first_name || user.email,
+      message_id: message_id
+    })
+
+    {:reply, {:ok, %{}}, socket}
+  end
+
+  # Handles the completion of an AI workflow apply operation.
+  # Broadcasts to all collaborators that the apply is complete, allowing them
+  # to re-enable their Apply buttons.
+  @impl true
+  def handle_in("done_applying_workflow", %{"message_id" => message_id}, socket) do
+    # Broadcast to ALL clients (including sender) so everyone clears the applying state
+    broadcast!(socket, "workflow_applied", %{
+      message_id: message_id
+    })
+
+    {:reply, {:ok, %{}}, socket}
+  end
+
   @impl true
   def handle_info({:yjs, chunk}, socket) do
     push(socket, "yjs", {:binary, chunk})
@@ -780,7 +821,8 @@ defmodule LightningWeb.WorkflowChannel do
   defp render_project_context(project) do
     %{
       id: project.id,
-      name: project.name
+      name: project.name,
+      concurrency: project.concurrency
     }
   end
 
@@ -903,6 +945,18 @@ defmodule LightningWeb.WorkflowChannel do
       %{
         errors: %{base: ["An internal error occurred"]},
         type: "internal_error"
+      }}, socket}
+  end
+
+  defp workflow_error_reply(
+         socket,
+         {:error, %Lightning.Extensions.Message{text: text}}
+       ) do
+    {:reply,
+     {:error,
+      %{
+        errors: %{base: [text]},
+        type: "limit_error"
       }}, socket}
   end
 
@@ -1223,7 +1277,6 @@ defmodule LightningWeb.WorkflowChannel do
         id: worder.id,
         state: worder.state,
         last_activity: worder.last_activity,
-        version: worder.snapshot.lock_version,
         runs:
           Enum.map(worder.runs, fn run ->
             %{
@@ -1231,7 +1284,8 @@ defmodule LightningWeb.WorkflowChannel do
               state: run.state,
               error_type: run.error_type,
               started_at: run.started_at,
-              finished_at: run.finished_at
+              finished_at: run.finished_at,
+              version: run.snapshot.lock_version
             }
           end)
       }
@@ -1240,24 +1294,27 @@ defmodule LightningWeb.WorkflowChannel do
 
   defp format_work_order_for_history(wo) do
     # Preload if needed
-    wo = Repo.preload(wo, [:snapshot, :runs])
+    wo = Repo.preload(wo, runs: :snapshot)
 
     %{
       id: wo.id,
       state: wo.state,
       last_activity: wo.last_activity,
-      version: wo.snapshot.lock_version,
       runs: Enum.map(wo.runs, &format_run_for_history/1)
     }
   end
 
   defp format_run_for_history(run) do
+    # Preload snapshot if not already loaded
+    run = Repo.preload(run, :snapshot)
+
     %{
       id: run.id,
       state: run.state,
       error_type: run.error_type,
       started_at: run.started_at,
-      finished_at: run.finished_at
+      finished_at: run.finished_at,
+      version: if(run.snapshot, do: run.snapshot.lock_version, else: 0)
     }
   end
 
@@ -1293,12 +1350,30 @@ defmodule LightningWeb.WorkflowChannel do
     WorkOrders.limit_run_creation(project_id)
   end
 
+  defp check_action_limit("activate_workflow", project_id) do
+    WorkflowUsageLimiter.limit_workflow_activation(true, project_id)
+  end
+
+  defp check_action_limit("github_sync", project_id) do
+    VersionControlUsageLimiter.limit_github_sync(project_id)
+  end
+
+  defp check_action_limit("ai_assistant", project_id) do
+    Lightning.AiAssistant.Limiter.validate_quota(project_id)
+  end
+
   defp render_limits(project_id) do
     # Check run limit for initial context
     run_limit_result = check_action_limit("new_run", project_id)
+    workflow_activation = check_action_limit("activate_workflow", project_id)
+    github_sync = check_action_limit("github_sync", project_id)
+    ai_assistant = check_action_limit("ai_assistant", project_id)
 
     %{
-      runs: render_limit_result(run_limit_result)
+      runs: render_limit_result(run_limit_result),
+      workflow_activation: render_limit_result(workflow_activation),
+      github_sync: render_limit_result(github_sync),
+      ai_assistant: render_limit_result(ai_assistant)
     }
   end
 
@@ -1310,6 +1385,13 @@ defmodule LightningWeb.WorkflowChannel do
   end
 
   defp render_limit_result({:error, _reason, message}) do
+    %{
+      allowed: false,
+      message: message.text
+    }
+  end
+
+  defp render_limit_result({:error, message}) do
     %{
       allowed: false,
       message: message.text

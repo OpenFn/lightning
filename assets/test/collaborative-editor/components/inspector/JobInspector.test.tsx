@@ -15,8 +15,10 @@ import { beforeEach, describe, expect, test } from 'vitest';
 import type * as Y from 'yjs';
 
 import { JobInspector } from '../../../../js/collaborative-editor/components/inspector/JobInspector';
-import { SessionContext } from '../../../../js/collaborative-editor/contexts/SessionProvider';
+import { CredentialModalProvider } from '../../../../js/collaborative-editor/contexts/CredentialModalContext';
 import { LiveViewActionsProvider } from '../../../../js/collaborative-editor/contexts/LiveViewActionsContext';
+import { SessionContext } from '../../../../js/collaborative-editor/contexts/SessionProvider';
+import { KeyboardProvider } from '../../../../js/collaborative-editor/keyboard';
 import type { StoreContextValue } from '../../../../js/collaborative-editor/contexts/StoreProvider';
 import { StoreContext } from '../../../../js/collaborative-editor/contexts/StoreProvider';
 import { createSessionStore } from '../../../../js/collaborative-editor/stores/createSessionStore';
@@ -100,13 +102,17 @@ function createWrapper(
   }
 
   return ({ children }: { children: React.ReactNode }) => (
-    <SessionContext.Provider value={{ sessionStore, isNewWorkflow: false }}>
-      <LiveViewActionsProvider actions={mockLiveViewActions}>
-        <StoreContext.Provider value={mockStoreValue}>
-          {children}
-        </StoreContext.Provider>
-      </LiveViewActionsProvider>
-    </SessionContext.Provider>
+    <KeyboardProvider>
+      <SessionContext.Provider value={{ sessionStore, isNewWorkflow: false }}>
+        <LiveViewActionsProvider actions={mockLiveViewActions}>
+          <CredentialModalProvider>
+            <StoreContext.Provider value={mockStoreValue}>
+              {children}
+            </StoreContext.Provider>
+          </CredentialModalProvider>
+        </LiveViewActionsProvider>
+      </SessionContext.Provider>
+    </KeyboardProvider>
   );
 }
 
@@ -353,6 +359,56 @@ describe('JobInspector - Footer Button States', () => {
     await user.click(codeButton);
 
     // Verify the button was clicked (URL would be updated in real scenario)
+    expect(codeButton).not.toBeDisabled();
+  });
+
+  test('Code button is enabled when viewing pinned version', () => {
+    // Set URL with version parameter to simulate viewing historical work order
+    urlState.setParams({ v: '5' });
+
+    // Set edit permissions
+    act(() => {
+      (mockChannel as any)._test.emit('session_context', {
+        user: null,
+        project: null,
+        config: { require_email_verification: false },
+        permissions: {
+          can_edit_workflow: true,
+          can_run_workflow: true,
+          can_write_webhook_auth_method: true,
+        },
+        latest_snapshot_lock_version: 6,
+        project_repo_connection: null,
+        webhook_auth_methods: [],
+        workflow_template: null,
+        has_read_ai_disclaimer: false,
+      });
+    });
+
+    const job = workflowStore.getSnapshot().jobs[0];
+    const mockOnClose = vi.fn();
+    const mockOnOpenRunPanel = vi.fn();
+
+    render(
+      <JobInspector
+        job={job}
+        onClose={mockOnClose}
+        onOpenRunPanel={mockOnOpenRunPanel}
+      />,
+      {
+        wrapper: createWrapper(
+          workflowStore,
+          credentialStore,
+          sessionContextStore,
+          adaptorStore,
+          awarenessStore
+        ),
+      }
+    );
+
+    const codeButton = screen.getByRole('button', { name: /code/i });
+
+    // Code button should be enabled even when viewing pinned version
     expect(codeButton).not.toBeDisabled();
   });
 

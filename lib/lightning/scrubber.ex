@@ -138,4 +138,49 @@ defmodule Lightning.Scrubber do
       items |> Enum.map(&[item, &1])
     end)
   end
+
+  @doc """
+  Recursively scrubs all values from a data structure, replacing them with type placeholders.
+  Preserves keys and structure while hiding actual values. Arrays are sampled up to `array_limit`
+  elements with a "...N more" indicator if truncated.
+
+  ## Examples
+
+      iex> scrub_values(%{"name" => "John", "age" => 30})
+      %{"name" => "string", "age" => "number"}
+
+      iex> scrub_values([1, 2, 3])
+      ["number", "number", "...1 more"]
+  """
+  @spec scrub_values(any(), non_neg_integer()) :: any()
+  def scrub_values(value, array_limit \\ 2)
+
+  def scrub_values(nil, _array_limit), do: "null"
+
+  def scrub_values([], _array_limit), do: []
+
+  def scrub_values(list, array_limit) when is_list(list) do
+    samples =
+      list
+      |> Enum.take(array_limit)
+      |> Enum.map(&scrub_values(&1, array_limit))
+
+    remaining = length(list) - array_limit
+
+    if remaining > 0 do
+      samples ++ ["...#{remaining} more"]
+    else
+      samples
+    end
+  end
+
+  def scrub_values(map, array_limit) when is_map(map) do
+    Map.new(map, fn {key, value} -> {key, scrub_values(value, array_limit)} end)
+  end
+
+  def scrub_values(value, _array_limit) when is_binary(value), do: "string"
+  def scrub_values(value, _array_limit) when is_integer(value), do: "number"
+  def scrub_values(value, _array_limit) when is_float(value), do: "number"
+  def scrub_values(value, _array_limit) when is_boolean(value), do: "boolean"
+  def scrub_values(_value, _array_limit), do: "unknown"
 end

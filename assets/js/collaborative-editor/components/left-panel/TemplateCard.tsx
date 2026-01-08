@@ -1,6 +1,7 @@
 import { cn } from '#/utils/cn';
 
 import type { Template } from '../../types/template';
+import Badge from '../common/Badge';
 
 interface TemplateCardProps {
   template: Template;
@@ -31,7 +32,7 @@ export function TemplateCard({
       aria-pressed={isSelected}
       aria-label={`${template.name} template`}
       className={cn(
-        'relative rounded-lg border p-4 cursor-pointer transition-all',
+        'relative rounded-lg border p-3 cursor-pointer transition-all',
         'hover:border-primary-400 focus:outline-none',
         isSelected
           ? 'border-primary-500 bg-primary-50'
@@ -40,10 +41,19 @@ export function TemplateCard({
       onClick={handleClick}
       onKeyDown={handleKeyDown}
     >
-      <div className="absolute top-4 right-4">
+      <div
+        className={cn(
+          'flex items-start gap-2',
+          !('isBase' in template && template.isBase) && 'mb-1'
+        )}
+      >
+        <h3 className="text-sm font-medium text-gray-900 inline-flex flex-wrap items-center gap-x-1 gap-y-1">
+          <span>{template.name}</span>
+          {'isBase' in template && template.isBase && <Badge>base</Badge>}
+        </h3>
         <div
           className={cn(
-            'w-5 h-5 rounded-full border-2 transition-all',
+            'w-5 h-5 rounded-full border-2 transition-all ml-auto flex-shrink-0',
             isSelected
               ? 'border-primary-500 bg-primary-500'
               : 'border-gray-300 bg-white'
@@ -56,13 +66,11 @@ export function TemplateCard({
           )}
         </div>
       </div>
-
-      <h3 className="text-sm font-medium text-gray-900 mb-1 pr-6 truncate">
-        {template.name}
-      </h3>
-      <p className="text-sm text-gray-600 line-clamp-2">
-        {template.description || 'No description provided'}
-      </p>
+      {'isBase' in template && template.isBase ? null : (
+        <p className="text-sm text-gray-600 line-clamp-2">
+          {template.description || 'No description provided'}
+        </p>
+      )}
     </div>
   );
 }

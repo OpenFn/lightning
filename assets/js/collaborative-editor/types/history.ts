@@ -25,6 +25,7 @@ export const RunSummarySchema = z.object({
   error_type: z.string().nullable(),
   started_at: isoDateTimeSchema.nullable(),
   finished_at: isoDateTimeSchema.nullable(),
+  version: z.number(),
 });
 
 /**
@@ -46,7 +47,6 @@ export const WorkOrderSchema = z.object({
     'lost',
   ]),
   last_activity: isoDateTimeSchema,
-  version: z.number(),
   runs: z.array(RunSummarySchema),
 });
 

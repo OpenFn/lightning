@@ -717,6 +717,115 @@ describe('ConfigureAdaptorModal', () => {
       expect(screen.queryByText('Keychain Salesforce')).not.toBeInTheDocument();
     });
 
+    it('shows generic credentials in "Other credentials" when HTTP adaptor is selected', async () => {
+      const user = userEvent.setup();
+
+      // Add a raw-schema credential to the mock data
+      const rawCredential: ProjectCredential = {
+        id: 'cred-raw',
+        project_credential_id: 'proj-cred-raw',
+        name: 'Raw Generic Credential',
+        schema: 'raw',
+        external_id: 'ext-raw',
+        inserted_at: '2024-01-01T00:00:00Z',
+        updated_at: '2024-01-01T00:00:00Z',
+        owner: null,
+        oauth_client_name: null,
+      };
+
+      const credSnapshot = {
+        projectCredentials: [...mockProjectCredentials, rawCredential],
+        keychainCredentials: mockKeychainCredentials,
+        isLoading: false,
+        error: null,
+      };
+
+      const adaptorSnapshot = {
+        adaptors: mockProjectAdaptors,
+        allAdaptors: mockProjectAdaptors,
+        isLoading: false,
+        error: null,
+      };
+
+      const storeContext = {
+        credentialStore: {
+          subscribe: vi.fn(() => vi.fn()),
+          getSnapshot: () => credSnapshot,
+          withSelector: (selector: any) => {
+            const result = selector(credSnapshot);
+            return () => result;
+          },
+          ...createCredentialQueryMethods(credSnapshot),
+        },
+        adaptorStore: {
+          subscribe: vi.fn(() => vi.fn()),
+          getSnapshot: () => adaptorSnapshot,
+          withSelector: (selector: any) => {
+            const result = selector(adaptorSnapshot);
+            return () => result;
+          },
+        },
+        awarenessStore: {
+          subscribe: vi.fn(() => vi.fn()),
+          getSnapshot: () => ({ users: [] }),
+          withSelector: (selector: any) => () => selector({ users: [] }),
+        },
+        workflowStore: {
+          subscribe: vi.fn(() => vi.fn()),
+          getSnapshot: () => ({ jobs: [] }),
+          withSelector: (selector: any) => () => selector({ jobs: [] }),
+        },
+        sessionContextStore: {
+          subscribe: vi.fn(() => vi.fn()),
+          getSnapshot: () => ({ context: null }),
+          withSelector: (selector: any) => () => selector({ context: null }),
+        },
+      };
+
+      renderWithProviders(
+        <ConfigureAdaptorModal
+          {...defaultProps}
+          currentAdaptor="@openfn/language-http"
+        />,
+        storeContext as any
+      );
+
+      // HTTP adaptor should show HTTP credential in schema-matched section
+      expect(screen.getByText('HTTP API Key')).toBeInTheDocument();
+
+      // Should have "Other credentials" link (for raw credential)
+      const otherCredentialsLink = screen.getByText(/other credentials/i);
+      expect(otherCredentialsLink).toBeInTheDocument();
+
+      // Click to show other credentials
+      await user.click(otherCredentialsLink);
+
+      // Raw credential should now be visible under "Generic Credentials"
+      expect(screen.getByText('Raw Generic Credential')).toBeInTheDocument();
+    });
+
+    it('shows OAuth credentials in schema-matched section when HTTP adaptor is selected', () => {
+      // The mock data already includes an OAuth credential: 'My Salesforce OAuth'
+      // When HTTP adaptor is selected, all OAuth credentials should appear as matching
+
+      renderWithProviders(
+        <ConfigureAdaptorModal
+          {...defaultProps}
+          currentAdaptor="@openfn/language-http"
+        />
+      );
+
+      // HTTP adaptor should show HTTP credential in schema-matched section
+      expect(screen.getByText('HTTP API Key')).toBeInTheDocument();
+
+      // OAuth credential should also appear in schema-matched section for HTTP adaptor
+      expect(screen.getByText('My Salesforce OAuth')).toBeInTheDocument();
+
+      // Both should be radio buttons in the main view (not in "Other credentials")
+      const radioButtons = screen.getAllByRole('radio');
+      expect(radioButtons.length).toBe(2); // HTTP + OAuth
+    });
+
     it('shows empty state when no credentials exist at all', () => {
       // Create a mock store context with no credentials
       const emptyCredentialSnapshot = {

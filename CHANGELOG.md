@@ -17,6 +17,200 @@ and this project adheres to
 
 ### Added
 
+### Changed
+
+- Support a batch of logs submitted to the `run:log` channel by the worker
+  [#4123](https://github.com/OpenFn/lightning/issues/4123) (backwards
+  compatible)
+
+### Fixed
+
+## [2.15.7] - 2026-01-07
+
+## [2.15.7-pre] - 2026-01-06
+
+### Fixed
+
+- Fixed bug where Oauth credentials and raw credentials couldn't be selected
+  with the HTTP adaptor [#4284](https://github.com/OpenFn/lightning/issues/4284)
+
+## [2.15.6] - 2025-12-24
+
+### Fixed
+
+- Fixed Code button being disabled when viewing old workflow versions
+  [#4279](https://github.com/OpenFn/lightning/issues/4279)
+
+## [2.15.5] - 2025-12-23
+
+### Fixed
+
+- Fixed Empty/Custom/Existing tabs being unresponsive when dataclip selected in
+  FullScreenIDE run panel
+  [#4275](https://github.com/OpenFn/lightning/issues/4275)
+
+## [2.15.4] - 2025-12-20
+
+### Fixed
+
+- Allow `command+k` keystroke for AI chat while focusing Monaco editor on IDE
+  [#4273](https://github.com/OpenFn/lightning/issues/4273)
+- Fixed bug where previous run steps would not be associated with jobs after
+  using AI chat [#4271](https://github.com/OpenFn/lightning/issues/4271)
+
+## [2.15.3] - 2025-12-19
+
+## [2.15.3-pre] - 2025-12-19
+
+### Fixed
+
+- Update workflow concurrency error message
+  [#4216](https://github.com/OpenFn/lightning/issues/4216)
+- Ensure workflow created via templates are disabled
+  [#4262](https://github.com/OpenFn/lightning/issues/4262)
+- Restore "Create workflow" flow
+  [#4266](https://github.com/OpenFn/lightning/issues/4266)
+- Allow users to add collaborators with long email domains
+  [#4185](https://github.com/OpenFn/lightning/issues/4185)
+
+## [2.15.2] - 2025-12-18
+
+## [2.15.2-pre] - 2025-12-18
+
+### Added
+
+- Make AI chat sessions collaborative with real-time message sync
+  [#4247](https://github.com/OpenFn/lightning/issues/4247)
+
+### Changed
+
+- Added `output_dataclip` to the default log exclusions if someone is running
+  OpenFn in `:prod` mode. (Note that this also excludes `output_dataclip_id`.)
+
+### Fixed
+
+- Fix retried runs showing incorrect workflow version in history
+  [#4186](https://github.com/OpenFn/lightning/issues/4186)
+- Log lines were getting appended to previous run in the IDE
+  [#4255](https://github.com/OpenFn/lightning/issues/4255)
+- Waiting for worker (etc.) was missing from new IDE
+  [#4257](https://github.com/OpenFn/lightning/issues/4257)
+- Fixed Argument Error on session Collaborative editor session termination
+  [#4251](https://github.com/OpenFn/lightning/issues/4251)
+- Fix Session crashes when workflow has `deleted_at` field
+  [#4245](https://github.com/OpenFn/lightning/issues/4245)
+
+## [2.15.1] - 2025-12-17
+
+### Fixed
+
+- Fix run panel override all panels
+  [#4243](https://github.com/OpenFn/lightning/issues/4243)
+
+## [2.15.0] - 2025-12-17
+
+## [2.15.0-pre7] - 2025-12-17
+
+### Changed
+
+- Update wording of errors on the canvas
+  [#4224](https://github.com/OpenFn/lightning/issues/4224)
+- Add default Logger param scrubbing for prod environments
+  [#4231](https://github.com/OpenFn/lightning/issues/4231)
+- Extend toast notification slightly
+  [#4233](https://github.com/OpenFn/lightning/issues/4233)
+
+### Fixed
+
+- Fix workflow settings panel blocking the active panel
+  [#4237](https://github.com/OpenFn/lightning/issues/4237)
+- Fix AI Assistant having write privileges in readonly mode
+  [#4227](https://github.com/OpenFn/lightning/issues/4227)
+- Remove template selection URL state persistence to fix race conditions during
+  workflow creation [#4221](https://github.com/OpenFn/lightning/issues/4221)
+- Allow null value for workflow positions in Zod types
+  [#4229](https://github.com/OpenFn/lightning/issues/4229)
+- Alias `AiAssistant.Limiter` to satisfy credo:
+  [PR#4223](https://github.com/OpenFn/lightning/pull/4223)
+
+## [2.15.0-pre6] - 2025-12-16
+
+### Added
+
+- Enforce github sync, workflow activation and concurrency limits in the collab
+  editor [#4104](https://github.com/OpenFn/lightning/pull/4104)
+  [#4105](https://github.com/OpenFn/lightning/pull/4105)
+  [#4106](https://github.com/OpenFn/lightning/pull/4106)
+- Enforce AI assistant limits in the collab editor
+  [#4107](https://github.com/OpenFn/lightning/pull/4107)
+
+### Fixed
+
+- Fix unable to open run panel when workflow settings panel is open
+  [#4207](https://github.com/OpenFn/lightning/issues/4207)
+- Fix workflow settings icon not red for server validation errros
+  [#4155](https://github.com/OpenFn/lightning/issues/4155)
+- Fix duplicate job name error stuck even when updated
+  [#4169](https://github.com/OpenFn/lightning/issues/4169)
+- Fix credential errors shown when credentials aren't set
+  [#4162](https://github.com/OpenFn/lightning/issues/4162)
+- Fix vertical alignment on enable/disable switch
+  [#4211](https://github.com/OpenFn/lightning/issues/4211)
+- Fix run selection not persisting across page reload in collaborative editor
+  [#4188](https://github.com/OpenFn/lightning/issues/4188)
+- Fix error propagation on collab editor
+  [#4069](https://github.com/OpenFn/lightning/issues/4069)
+- "Try the new editor" wasn't persisting properly to user preferences
+  [#4199](https://github.com/OpenFn/lightning/issues/4199)
+- Make template preview read-only in collaborative editor until workflow is
+  created [#4203](https://github.com/OpenFn/lightning/issues/4203)
+
+## [2.15.0-pre5] - 2025-12-13 🎂 ❤️ Happy Birthday, Mom!
+
+### Changed
+
+- Improve version pinning behavior in collaborative editor
+  [#4121](https://github.com/OpenFn/lightning/issues/4121)
+- Unify disabled button states across collaborative editor for consistent
+  styling and behaviour [#4179](https://github.com/OpenFn/lightning/issues/4179)
+
+### Fixed
+
+- Fix IDE crash when viewing jobs that don't exist in workflow version - now
+  shows informative message with option to select another job or change versions
+  [#4173](https://github.com/OpenFn/lightning/issues/4173)
+- Fix issue where selected step wasn't synced with selected workflow job
+  [#4189](https://github.com/OpenFn/lightning/issues/4189)
+- Fix job updates not persisted after saving
+  [#4154](https://github.com/OpenFn/lightning/issues/4154)
+- Fix infinite loading when reopening workflow in collaborative editor due to
+  delta updates not being merged with persisted state
+  [#4164](https://github.com/OpenFn/lightning/issues/4164)
+- Fix incorrect field access and version type in checkpoint creation that would
+  crash after 500 document updates
+  [#4176](https://github.com/OpenFn/lightning/issues/4176)
+- Fix issue where users were not able to go to the latest versin of a workflow
+  [#4149](https://github.com/OpenFn/lightning/issues/4149)
+- Fix AI Assistant disclaimer not persisting after acceptance
+  [#4158](https://github.com/OpenFn/lightning/issues/4158)
+- Credential form now shows inline validation errors for JSON schema and raw
+  body fields after field interaction
+  [#4168](https://github.com/OpenFn/lightning/issues/4168)
+- Fix saving workflow with same name as deleted workflow
+  [#4165](https://github.com/OpenFn/lightning/pull/4165)
+- Fix validation error states not changing after undo (Ctrl+Z) on Workflow
+  Settings [#4182](https://github.com/OpenFn/lightning/issues/4182))
+- Fix credential modal stacking issue in collaborative editor IDE
+  [#4171](https://github.com/OpenFn/lightning/issues/4171)
+- Fix adaptor picker Escape key returning to configure modal when opened
+  directly [#4183](https://github.com/OpenFn/lightning/issues/4183)
+
+## [2.15.0-pre4] - 2025-12-08
+
+### Added
+
+- Display collab editor promotion in the legacy editor
+  [#4091](https://github.com/OpenFn/lightning/issues/4091)
 - Template search and selection in collaborative workflow editor with AI-powered
   workflow generation for missing templates
   [#4081](https://github.com/OpenFn/lightning/issues/4081)
@@ -26,14 +220,19 @@ and this project adheres to
 
 ### Changed
 
-- Support a batch of logs submitted to the `run:log` channel by the worker
-  [#4123](https://github.com/OpenFn/lightning/issues/4123) (backwards
-  compatible)
+- Standardize run buttons so they all behave predictably
+  [#4129](https://github.com/OpenFn/lightning/issues/4129)
+- Make collab editor available to everyone (not just experimental feature users)
+  [#4091](https://github.com/OpenFn/lightning/issues/4091)
 
 ### Fixed
 
+- Fix Run/Retry button flash and improve History button UX in collaborative
+  editor [#4108](https://github.com/OpenFn/lightning/issues/4108)
 - Fix new jobs are misplaced on the canvas in manual layout
   [#4118](https://github.com/OpenFn/lightning/issues/4118)
+- Fix docs not working for latest version of adaptors in IDE
+  [#4136](https://github.com/OpenFn/lightning/issues/4136)
 
 ## [2.15.0-pre3] - 2025-12-05
 

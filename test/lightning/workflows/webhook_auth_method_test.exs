@@ -106,4 +106,90 @@ defmodule Lightning.Workflows.WebhookAuthMethodTest do
       )
     end
   end
+
+  describe "sensitive_values_for/1" do
+    test "returns password but not username for basic auth" do
+      auth_method = %WebhookAuthMethod{
+        auth_type: :basic,
+        username: "myuser",
+        password: "secret123"
+      }
+
+      assert WebhookAuthMethod.sensitive_values_for(auth_method) == [
+               "secret123"
+             ]
+    end
+
+    test "returns api_key for api auth" do
+      auth_method = %WebhookAuthMethod{
+        auth_type: :api,
+        api_key: "my-api-key-12345"
+      }
+
+      assert WebhookAuthMethod.sensitive_values_for(auth_method) == [
+               "my-api-key-12345"
+             ]
+    end
+
+    test "returns empty list for nil" do
+      assert WebhookAuthMethod.sensitive_values_for(nil) == []
+    end
+
+    test "handles nil values in basic auth" do
+      auth_method = %WebhookAuthMethod{
+        auth_type: :basic,
+        username: nil,
+        password: "super-secret"
+      }
+
+      assert WebhookAuthMethod.sensitive_values_for(auth_method) == [
+               "super-secret"
+             ]
+    end
+
+    test "handles nil api_key" do
+      auth_method = %WebhookAuthMethod{
+        auth_type: :api,
+        api_key: nil
+      }
+
+      assert WebhookAuthMethod.sensitive_values_for(auth_method) == []
+    end
+  end
+
+  describe "basic_auth_for/1" do
+    test "returns base64-encoded username:password for basic auth" do
+      auth_method = %WebhookAuthMethod{
+        auth_type: :basic,
+        username: "myuser",
+        password: "secret123"
+      }
+
+      expected = Base.encode64("myuser:secret123")
+      assert WebhookAuthMethod.basic_auth_for(auth_method) == [expected]
+    end
+
+    test "returns empty list for api auth" do
+      auth_method = %WebhookAuthMethod{
+        auth_type: :api,
+        api_key: "my-api-key-12345"
+      }
+
+      assert WebhookAuthMethod.basic_auth_for(auth_method) == []
+    end
+
+    test "returns empty list for nil" do
+      assert WebhookAuthMethod.basic_auth_for(nil) == []
+    end
+
+    test "returns empty list when password is nil" do
+      auth_method = %WebhookAuthMethod{
+        auth_type: :basic,
+        username: "something",
+        password: nil
+      }
+
+      assert WebhookAuthMethod.basic_auth_for(auth_method) == []
+    end
+  end
 end

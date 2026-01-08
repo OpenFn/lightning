@@ -1,8 +1,6 @@
 defmodule LightningWeb.WorkflowLive.HelpersTest do
   use Lightning.DataCase, async: true
 
-  import Lightning.Factories
-
   alias LightningWeb.WorkflowLive.Helpers
 
   describe "collaborative_editor_url/2" do
@@ -12,7 +10,7 @@ defmodule LightningWeb.WorkflowLive.HelpersTest do
       }
 
       result = Helpers.collaborative_editor_url(params, :new)
-      assert result == "/projects/proj-1/w/new/collaborate"
+      assert result == "/projects/proj-1/w/new/collaborate?method=template"
     end
 
     test "converts classical editor URL to collaborative for existing workflow" do
@@ -222,36 +220,6 @@ defmodule LightningWeb.WorkflowLive.HelpersTest do
 
       result = Helpers.collaborative_editor_url(params, :edit)
       assert result == "/projects/proj-1/w/wf-1/collaborate"
-    end
-  end
-
-  describe "show_collaborative_editor_toggle?/2" do
-    test "returns true when user has experimental features and viewing latest" do
-      user = insert(:user, preferences: %{"experimental_features" => true})
-
-      result = Helpers.show_collaborative_editor_toggle?(user, "latest")
-      assert result == true
-    end
-
-    test "returns false when user doesn't have experimental features" do
-      user = insert(:user, preferences: %{"experimental_features" => false})
-
-      result = Helpers.show_collaborative_editor_toggle?(user, "latest")
-      assert result == false
-    end
-
-    test "returns false when viewing a snapshot (not latest)" do
-      user = insert(:user, preferences: %{"experimental_features" => true})
-
-      result = Helpers.show_collaborative_editor_toggle?(user, "snapshot-123")
-      assert result == false
-    end
-
-    test "returns false when both conditions fail" do
-      user = insert(:user, preferences: %{"experimental_features" => false})
-
-      result = Helpers.show_collaborative_editor_toggle?(user, "snapshot-123")
-      assert result == false
     end
   end
 

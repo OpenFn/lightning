@@ -1072,6 +1072,42 @@ defmodule LightningWeb.WorkflowChannelTest do
         type: "workflow_deleted"
       }
     end
+
+    test "handles github sync limit error", %{
+      socket: socket,
+      project: project
+    } do
+      error_msg = "Github Sync is not enabled for your plan."
+      project_id = project.id
+
+      # Set up GitHub repo connection
+      insert(:project_repo_connection,
+        project: project,
+        repo: "openfn/demo",
+        branch: "main"
+      )
+
+      # Mock the usage limiter to return an error for github_sync
+      Mox.stub(
+        Lightning.Extensions.MockUsageLimiter,
+        :limit_action,
+        fn
+          %{type: :github_sync}, %{project_id: ^project_id} ->
+            {:error, :disabled, %Lightning.Extensions.Message{text: error_msg}}
+
+          _action, _context ->
+            :ok
+        end
+      )
+
+      ref =
+        push(socket, "save_and_sync", %{"commit_message" => "Test commit"})
+
+      assert_reply ref, :error, %{
+        errors: %{base: [^error_msg]},
+        type: "limit_error"
+      }
+    end
   end
 
   describe "validate_workflow_name" do
@@ -1532,7 +1568,6 @@ defmodule LightningWeb.WorkflowChannelTest do
       assert Map.has_key?(first_wo, :id)
       assert Map.has_key?(first_wo, :state)
       assert Map.has_key?(first_wo, :last_activity)
-      assert Map.has_key?(first_wo, :version)
       assert Map.has_key?(first_wo, :runs)
       assert is_list(first_wo.runs)
 
@@ -1543,6 +1578,7 @@ defmodule LightningWeb.WorkflowChannelTest do
       assert Map.has_key?(first_run, :error_type)
       assert Map.has_key?(first_run, :started_at)
       assert Map.has_key?(first_run, :finished_at)
+      assert Map.has_key?(first_run, :version)
     end
 
     test "returns empty list when workflow has no work orders", %{socket: socket} do
@@ -2738,7 +2774,13 @@ defmodule LightningWeb.WorkflowChannelTest do
 
       assert_reply ref, :ok, response
 
-      assert %{limits: %{runs: %{allowed: true, message: nil}}} = response
+      assert %{
+               limits: %{
+                 runs: %{allowed: true, message: nil},
+                 workflow_activation: %{allowed: true, message: nil},
+                 github_sync: %{allowed: true, message: nil}
+               }
+             } = response
     end
 
     test "includes limit error when run limit exceeded", %{
@@ -2750,9 +2792,13 @@ defmodule LightningWeb.WorkflowChannelTest do
       Mox.stub(
         Lightning.Extensions.MockUsageLimiter,
         :limit_action,
-        fn %{type: :new_run}, %{project_id: ^project_id} ->
-          {:error, :too_many_runs,
-           %Lightning.Extensions.Message{text: error_msg}}
+        fn
+          %{type: :new_run}, %{project_id: ^project_id} ->
+            {:error, :too_many_runs,
+             %Lightning.Extensions.Message{text: error_msg}}
+
+          _action, _context ->
+            :ok
         end
       )
 
@@ -2798,6 +2844,88 @@ defmodule LightningWeb.WorkflowChannelTest do
 
       assert %{
                action_type: "new_run",
+               limit: %{allowed: false, message: ^error_msg}
+             } = response
+    end
+
+    test "returns current limit status for activate_workflow", %{
+      socket: socket
+    } do
+      ref = push(socket, "get_limits", %{"action_type" => "activate_workflow"})
+
+      assert_reply ref, :ok, response
+
+      assert %{
+               action_type: "activate_workflow",
+               limit: %{allowed: true, message: nil}
+             } = response
+    end
+
+    test "returns allowed: false when workflow activation limit exceeded", %{
+      socket: socket,
+      project: %{id: project_id}
+    } do
+      error_msg = "Workflow activation limit exceeded"
+
+      Mox.stub(
+        Lightning.Extensions.MockUsageLimiter,
+        :limit_action,
+        fn
+          %{type: :activate_workflow}, %{project_id: ^project_id} ->
+            {:error, :limit_exceeded,
+             %Lightning.Extensions.Message{text: error_msg}}
+
+          _action, _context ->
+            :ok
+        end
+      )
+
+      ref = push(socket, "get_limits", %{"action_type" => "activate_workflow"})
+
+      assert_reply ref, :ok, response
+
+      assert %{
+               action_type: "activate_workflow",
+               limit: %{allowed: false, message: ^error_msg}
+             } = response
+    end
+
+    test "returns current limit status for github_sync", %{socket: socket} do
+      ref = push(socket, "get_limits", %{"action_type" => "github_sync"})
+
+      assert_reply ref, :ok, response
+
+      assert %{
+               action_type: "github_sync",
+               limit: %{allowed: true, message: nil}
+             } = response
+    end
+
+    test "returns allowed: false when github sync limit exceeded", %{
+      socket: socket,
+      project: %{id: project_id}
+    } do
+      error_msg = "GitHub sync limit exceeded"
+
+      Mox.stub(
+        Lightning.Extensions.MockUsageLimiter,
+        :limit_action,
+        fn
+          %{type: :github_sync}, %{project_id: ^project_id} ->
+            {:error, :limit_exceeded,
+             %Lightning.Extensions.Message{text: error_msg}}
+
+          _action, _context ->
+            :ok
+        end
+      )
+
+      ref = push(socket, "get_limits", %{"action_type" => "github_sync"})
+
+      assert_reply ref, :ok, response
+
+      assert %{
+               action_type: "github_sync",
                limit: %{allowed: false, message: ^error_msg}
              } = response
     end
@@ -2963,6 +3091,106 @@ defmodule LightningWeb.WorkflowChannelTest do
                "Middle Template",
                "Zebra Template"
              ]
+    end
+  end
+
+  describe "mark_ai_disclaimer_read" do
+    test "successfully marks AI disclaimer as read", %{
+      socket: socket,
+      user: user
+    } do
+      # Verify user hasn't read the disclaimer yet
+      user = Lightning.Accounts.get_user!(user.id)
+      assert user.preferences["ai_assistant.disclaimer_read_at"] == nil
+
+      ref = push(socket, "mark_ai_disclaimer_read", %{})
+
+      assert_reply ref, :ok, %{success: true}
+
+      # Verify user preferences were updated
+      updated_user = Lightning.Accounts.get_user!(user.id)
+      assert updated_user.preferences["ai_assistant.disclaimer_read_at"] != nil
+    end
+
+    test "is idempotent - can be called multiple times", %{
+      socket: socket,
+      user: user
+    } do
+      # Mark as read the first time
+      ref1 = push(socket, "mark_ai_disclaimer_read", %{})
+      assert_reply ref1, :ok, %{success: true}
+
+      user = Lightning.Accounts.get_user!(user.id)
+      first_read_at = user.preferences["ai_assistant.disclaimer_read_at"]
+      assert first_read_at != nil
+
+      # Mark as read again - should succeed without error
+      ref2 = push(socket, "mark_ai_disclaimer_read", %{})
+      assert_reply ref2, :ok, %{success: true}
+
+      # Timestamp may or may not be updated depending on implementation,
+      # but the call should succeed
+      updated_user = Lightning.Accounts.get_user!(user.id)
+      assert updated_user.preferences["ai_assistant.disclaimer_read_at"] != nil
+    end
+  end
+
+  describe "AI workflow apply coordination" do
+    test "start_applying_workflow broadcasts workflow_applying event", %{
+      socket: socket,
+      user: user
+    } do
+      message_id = Ecto.UUID.generate()
+
+      ref =
+        push(socket, "start_applying_workflow", %{"message_id" => message_id})
+
+      assert_reply ref, :ok, %{}
+
+      assert_broadcast "workflow_applying", %{
+        user_id: user_id,
+        user_name: user_name,
+        message_id: ^message_id
+      }
+
+      assert user_id == user.id
+      assert user_name == user.first_name || user.email
+    end
+
+    test "done_applying_workflow broadcasts workflow_applied event", %{
+      socket: socket
+    } do
+      message_id = Ecto.UUID.generate()
+
+      ref = push(socket, "done_applying_workflow", %{"message_id" => message_id})
+
+      assert_reply ref, :ok, %{}
+
+      assert_broadcast "workflow_applied", %{message_id: ^message_id}
+    end
+
+    test "apply coordination works end-to-end", %{socket: socket, user: user} do
+      message_id = Ecto.UUID.generate()
+      user_id = user.id
+
+      # Start applying
+      ref1 =
+        push(socket, "start_applying_workflow", %{"message_id" => message_id})
+
+      assert_reply ref1, :ok, %{}
+
+      assert_broadcast "workflow_applying", %{
+        user_id: ^user_id,
+        message_id: ^message_id
+      }
+
+      # Done applying
+      ref2 =
+        push(socket, "done_applying_workflow", %{"message_id" => message_id})
+
+      assert_reply ref2, :ok, %{}
+
+      assert_broadcast "workflow_applied", %{message_id: ^message_id}
     end
   end
 end

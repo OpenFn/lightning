@@ -11,6 +11,8 @@
 
 import { useMemo } from 'react';
 
+import { useURLState } from '#/react/lib/use-url-state';
+
 import { useHistory } from './useHistory';
 import { useLatestSnapshotLockVersion } from './useSessionContext';
 import { useWorkflowState } from './useWorkflow';
@@ -23,9 +25,15 @@ interface VersionMismatch {
 export function useVersionMismatch(
   selectedRunId: string | null
 ): VersionMismatch | null {
+  const { params } = useURLState();
   const history = useHistory();
   const workflow = useWorkflowState(state => state.workflow);
   const latestSnapshotLockVersion = useLatestSnapshotLockVersion();
+  const currVersion = params['v'] ? Number(params['v']) : null;
+
+  // in the process of switching version
+  const switching =
+    currVersion !== null && currVersion !== workflow?.lock_version;
 
   return useMemo(() => {
     if (
@@ -39,22 +47,18 @@ export function useVersionMismatch(
 
     const workflowLockVersion = workflow.lock_version;
 
-    // Find the work order that contains the selected run
-    const selectedWorkOrder = history.find(wo =>
-      wo.runs.some(run => run.id === selectedRunId)
-    );
+    const selectedRun = history
+      .flatMap(wo => wo.runs)
+      .find(run => run.id === selectedRunId);
 
-    if (!selectedWorkOrder) {
-      return null;
-    }
+    if (!selectedRun || switching) return null;
 
     // Show warning when viewing a different version than the run used
-    const runUsedDifferentVersion =
-      selectedWorkOrder.version !== workflowLockVersion;
+    const runUsedDifferentVersion = selectedRun.version !== workflowLockVersion;
 
     if (runUsedDifferentVersion) {
       return {
-        runVersion: selectedWorkOrder.version,
+        runVersion: selectedRun.version,
         currentVersion: workflowLockVersion,
       };
     }

@@ -131,12 +131,6 @@ defmodule LightningWeb.WorkflowLive.Edit do
               
     <!-- Add collaborative editor toggle (beaker icon only) -->
               <button
-                :if={
-                  Helpers.show_collaborative_editor_toggle?(
-                    @current_user,
-                    @snapshot_version_tag
-                  )
-                }
                 id="collaborative-editor-toggle"
                 phx-click="toggle_collaborative_editor"
                 class="inline-flex items-center justify-center p-1 text-primary-600 hover:text-primary-700 hover:bg-primary-50 rounded transition-colors"
@@ -1019,7 +1013,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
         <.icon name="hero-arrow-path" class="w-4 h-4 animate-spin mr-1" /> Processing
       <% else %>
         <%= if step_retryable?(@step, @manual_run_form, @selectable_dataclips) do %>
-          <.icon name="hero-play-mini" class="w-4 h-4 mr-1" /> Run (retry)
+          <.icon name="hero-play-mini" class="w-4 h-4 mr-1" /> Run (Retry)
         <% else %>
           <.icon name="hero-play-mini" class="w-4 h-4 mr-1" /> Run
         <% end %>

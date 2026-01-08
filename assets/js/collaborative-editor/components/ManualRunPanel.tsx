@@ -6,13 +6,13 @@ import {
 } from '@heroicons/react/24/outline';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
+import { useURLState } from '#/react/lib/use-url-state';
 import _logger from '#/utils/logger';
 
 import { FilterTypes } from '../../manual-run-panel/types';
 import CustomView from '../../manual-run-panel/views/CustomView';
 import EmptyView from '../../manual-run-panel/views/EmptyView';
 import ExistingView from '../../manual-run-panel/views/ExistingView';
-import { useURLState } from '#/react/lib/use-url-state';
 import type { Dataclip } from '../api/dataclips';
 import * as dataclipApi from '../api/dataclips';
 import { RENDER_MODES, type RenderMode } from '../constants/panel';
@@ -563,36 +563,46 @@ export function ManualRunPanel({
   if (renderMode === RENDER_MODES.EMBEDDED) {
     return (
       <div className="flex flex-col h-full">
-        {/* Header with tabs and close button */}
-        <div className="shrink-0">
-          <div className="flex items-center justify-between px-3 pt-2 pb-1">
-            <div className="flex-1">
-              <Tabs
-                variant="pills"
-                value={selectedTab}
-                onChange={value => setSelectedTab(value)}
-                options={[
-                  { value: 'empty', label: 'Empty', icon: DocumentIcon },
-                  { value: 'custom', label: 'Custom', icon: PencilSquareIcon },
-                  { value: 'existing', label: 'Existing', icon: QueueListIcon },
-                ]}
-              />
-            </div>
-            {onClosePanel && (
-              <div className="flex items-center pl-2">
-                <button
-                  type="button"
-                  onClick={onClosePanel}
-                  className="p-1 hover:bg-gray-100 rounded transition-colors"
-                  aria-label="Close panel"
-                  title="Close panel"
-                >
-                  <XMarkIcon className="h-4 w-4 text-gray-500" />
-                </button>
+        {/* Header with tabs and close button - only show when no dataclip is selected */}
+        {!selectedDataclip && !edgeId && (
+          <div className="shrink-0">
+            <div className="flex items-center justify-between px-3 pt-2 pb-1">
+              <div className="flex-1">
+                <Tabs
+                  variant="pills"
+                  value={selectedTab}
+                  onChange={value => setSelectedTab(value)}
+                  options={[
+                    { value: 'empty', label: 'Empty', icon: DocumentIcon },
+                    {
+                      value: 'custom',
+                      label: 'Custom',
+                      icon: PencilSquareIcon,
+                    },
+                    {
+                      value: 'existing',
+                      label: 'Existing',
+                      icon: QueueListIcon,
+                    },
+                  ]}
+                />
               </div>
-            )}
+              {onClosePanel && (
+                <div className="flex items-center pl-2">
+                  <button
+                    type="button"
+                    onClick={onClosePanel}
+                    className="p-1 hover:bg-gray-100 rounded transition-colors"
+                    aria-label="Close panel"
+                    title="Close panel"
+                  >
+                    <XMarkIcon className="h-4 w-4 text-gray-500" />
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
-        </div>
+        )}
         <div className="flex-1 overflow-hidden">{embeddedContent}</div>
       </div>
     );
@@ -618,8 +628,8 @@ export function ManualRunPanel({
                 void handleRetry();
               }}
               buttonText={{
-                run: 'Run Workflow Now',
-                retry: 'Run (retry)',
+                run: 'Run',
+                retry: 'Run (Retry)',
                 processing: 'Processing',
               }}
               showKeyboardShortcuts={true}

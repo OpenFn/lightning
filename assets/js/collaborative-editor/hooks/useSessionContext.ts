@@ -307,7 +307,7 @@ export const useHasReadAIDisclaimer = (): boolean => {
 
 /**
  * Hook to get setHasReadAIDisclaimer action
- * Returns function to update AI disclaimer read status
+ * Returns function to update AI disclaimer read status (local state only)
  */
 export const useSetHasReadAIDisclaimer = () => {
   const sessionContextStore = useSessionContextStore();
@@ -316,7 +316,17 @@ export const useSetHasReadAIDisclaimer = () => {
 };
 
 /**
- * Hook to access run limits from session context
+ * Hook to get markAIDisclaimerRead action
+ * Returns function to mark AI disclaimer as read and persist to backend
+ */
+export const useMarkAIDisclaimerRead = () => {
+  const sessionContextStore = useSessionContextStore();
+
+  return sessionContextStore.markAIDisclaimerRead;
+};
+
+/**
+ * Hook to access limits from session context
  * Returns limits object (empty object if not set)
  */
 export const useLimits = (): Limits => {

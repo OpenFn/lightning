@@ -1,13 +1,15 @@
 import { Menu, MenuButton, MenuItem, MenuItems } from '@headlessui/react';
-import { useCallback, useMemo } from 'react';
+import { useCallback } from 'react';
 
 import { useURLState } from '#/react/lib/use-url-state';
+
 import { buildClassicalEditorUrl } from '../../utils/editorUrlConversion';
 import { channelRequest } from '../hooks/useChannel';
 import { useSession } from '../hooks/useSession';
 import {
   useIsNewWorkflow,
   useLatestSnapshotLockVersion,
+  useLimits,
   useProjectRepoConnection,
 } from '../hooks/useSessionContext';
 import {
@@ -22,6 +24,7 @@ import {
   useNodeSelection,
   useWorkflowActions,
   useWorkflowEnabled,
+  useWorkflowReadOnly,
   useWorkflowSettingsErrors,
   useWorkflowState,
 } from '../hooks/useWorkflow';
@@ -30,10 +33,10 @@ import { useKeyboardShortcut } from '../keyboard';
 import { ActiveCollaborators } from './ActiveCollaborators';
 import { AIButton } from './AIButton';
 import { Breadcrumbs } from './Breadcrumbs';
-import { Button } from './Button';
 import { EmailVerificationBanner } from './EmailVerificationBanner';
 import { GitHubSyncModal } from './GitHubSyncModal';
 import { Switch } from './inputs/Switch';
+import { NewRunButton } from './NewRunButton';
 import { ReadOnlyWarning } from './ReadOnlyWarning';
 import { ShortcutKeys } from './ShortcutKeys';
 import { Tooltip } from './Tooltip';
@@ -50,6 +53,8 @@ export function SaveButton({
   repoConnection,
   onSyncClick,
   label = 'Save',
+  canSync,
+  syncTooltipMessage,
 }: {
   canSave: boolean;
   tooltipMessage: string;
@@ -57,6 +62,8 @@ export function SaveButton({
   repoConnection: ReturnType<typeof useProjectRepoConnection>;
   onSyncClick: () => void;
   label?: string;
+  canSync: boolean;
+  syncTooltipMessage: string | null;
 }) {
   const hasGitHubIntegration = repoConnection !== null;
 
@@ -74,9 +81,9 @@ export function SaveButton({
             data-testid="save-workflow-button"
             className="rounded-md text-sm font-semibold shadow-xs
             phx-submit-loading:opacity-75 cursor-pointer
-            disabled:cursor-not-allowed disabled:opacity-50 px-3 py-2
+            disabled:cursor-not-allowed disabled:bg-primary-300 px-3 py-2
             bg-primary-600 hover:bg-primary-500
-            disabled:hover:bg-primary-600 text-white
+            disabled:hover:bg-primary-300 text-white
             focus-visible:outline-2 focus-visible:outline-offset-2
             focus-visible:outline-primary-600 focus:ring-transparent"
             onClick={onClick}
@@ -102,9 +109,9 @@ export function SaveButton({
           data-testid="save-workflow-button"
           className="rounded-l-md text-sm font-semibold shadow-xs
           phx-submit-loading:opacity-75 cursor-pointer
-          disabled:cursor-not-allowed disabled:opacity-50 px-3 py-2
+          disabled:cursor-not-allowed disabled:bg-primary-300 px-3 py-2
           bg-primary-600 hover:bg-primary-500
-          disabled:hover:bg-primary-600 text-white
+          disabled:hover:bg-primary-300 text-white
           focus-visible:outline-2 focus-visible:outline-offset-2
           focus-visible:outline-primary-600 focus:ring-transparent"
           onClick={onClick}
@@ -118,8 +125,8 @@ export function SaveButton({
           disabled={!canSave}
           className="h-full rounded-r-md pr-2 pl-2 text-sm font-semibold
             shadow-xs cursor-pointer disabled:cursor-not-allowed
-            disabled:opacity-50 bg-primary-600 hover:bg-primary-500
-            disabled:hover:bg-primary-600 text-white
+            bg-primary-600 hover:bg-primary-500
+            disabled:bg-primary-300 disabled:hover:bg-primary-300 text-white
             focus-visible:outline-2 focus-visible:outline-offset-2
             focus-visible:outline-primary-600 focus:ring-transparent"
         >
@@ -137,8 +144,10 @@ export function SaveButton({
           <MenuItem>
             <Tooltip
               content={
-                canSave ? (
+                canSave && canSync ? (
                   <ShortcutKeys keys={['mod', 'shift', 's']} />
+                ) : !canSync && syncTooltipMessage ? (
+                  syncTooltipMessage
                 ) : (
                   tooltipMessage
                 )
@@ -148,7 +157,7 @@ export function SaveButton({
               <button
                 type="button"
                 onClick={onSyncClick}
-                disabled={!canSave}
+                disabled={!canSave || !canSync}
                 className="block w-full text-left px-4 py-2 text-sm text-gray-700
               data-focus:bg-gray-100 data-focus:outline-hidden
               disabled:opacity-50 disabled:cursor-not-allowed"
@@ -185,7 +194,7 @@ export function Header({
   const { canSave, tooltipMessage } = useCanSave();
   const triggers = useWorkflowState(state => state.triggers);
   const jobs = useWorkflowState(state => state.jobs);
-  const { canRun, tooltipMessage: runTooltipMessage } = useCanRun();
+  const { canRun } = useCanRun();
   const { openRunPanel, openGitHubSyncModal } = useUICommands();
   const repoConnection = useProjectRepoConnection();
   const { hasErrors: hasSettingsErrors } = useWorkflowSettingsErrors();
@@ -196,6 +205,14 @@ export function Header({
   const importPanelState = useImportPanelState();
   const { selectedTemplate } = useTemplatePanel();
   const { provider } = useSession();
+  const limits = useLimits();
+  const { isReadOnly } = useWorkflowReadOnly();
+
+  // Check GitHub sync limit
+  const githubSyncLimit = limits.github_sync ?? {
+    allowed: true,
+    message: null,
+  };
 
   // Derived values after all hooks are called
   const firstTriggerId = triggers[0]?.id;
@@ -209,11 +226,16 @@ export function Header({
 
   const handleRunClick = useCallback(() => {
     if (firstTriggerId) {
-      // Canvas context: open run panel with first trigger
+      // select the first trigger
       selectNode(firstTriggerId);
+      // switch panel to run
+      updateSearchParams({
+        panel: 'run',
+      });
+      // Canvas context: open run panel with first trigger
       openRunPanel({ triggerId: firstTriggerId });
     }
-  }, [firstTriggerId, openRunPanel, selectNode]);
+  }, [firstTriggerId, openRunPanel, selectNode, updateSearchParams]);
 
   const handleSwitchToLegacyEditor = useCallback(async () => {
     if (!provider?.channel || !projectId || !workflowId) return;
@@ -234,13 +256,6 @@ export function Header({
     }
   }, [provider, projectId, workflowId, isNewWorkflow]);
 
-  // Compute Run button tooltip content
-  const runButtonTooltip = useMemo(() => {
-    if (!canRun) return runTooltipMessage; // Error message
-    if (isRunPanelOpen || isIDEOpen) return null; // Shortcut captured by panel
-    return <ShortcutKeys keys={['mod', 'enter']} />; // Shortcut applies
-  }, [canRun, runTooltipMessage, isRunPanelOpen, isIDEOpen]);
-
   useKeyboardShortcut(
     'Control+s, Meta+s',
     () => {
@@ -256,7 +271,7 @@ export function Header({
       openGitHubSyncModal();
     },
     0,
-    { enabled: canSave && !!repoConnection }
+    { enabled: canSave && !!repoConnection && githubSyncLimit.allowed }
   );
 
   return (
@@ -270,7 +285,7 @@ export function Header({
           {projectId && workflowId && (
             <button
               type="button"
-              onClick={handleSwitchToLegacyEditor}
+              onClick={() => void handleSwitchToLegacyEditor()}
               className="inline-flex items-center justify-center
               w-6 h-6 text-primary-600 hover:text-primary-700
               hover:bg-primary-50 rounded transition-colors ml-2"
@@ -297,11 +312,13 @@ export function Header({
                   }
                   side="bottom"
                 >
-                  <span className="inline-block">
+                  <span className="inline-flex items-center">
                     <Switch
                       checked={enabled ?? false}
                       onChange={setEnabled}
-                      disabled={isNewWorkflow && isWorkflowEmpty}
+                      disabled={
+                        isReadOnly || (isNewWorkflow && isWorkflowEmpty)
+                      }
                     />
                   </span>
                 </Tooltip>
@@ -326,7 +343,7 @@ export function Header({
                       });
                     }}
                     disabled={isNewWorkflow && isWorkflowEmpty}
-                    className={`w-5 h-5 place-self-center ${
+                    className={`w-6 h-6 place-self-center ${
                       hasSettingsErrors
                         ? 'text-danger-500 hover:text-danger-400 cursor-pointer'
                         : isNewWorkflow && isWorkflowEmpty
@@ -348,17 +365,10 @@ export function Header({
             </div>
             <div className="relative flex gap-2">
               {projectId && workflowId && firstTriggerId && !isNewWorkflow && (
-                <Tooltip content={runButtonTooltip} side="bottom">
-                  <span className="inline-block">
-                    <Button
-                      variant="primary"
-                      onClick={handleRunClick}
-                      disabled={!canRun || isRunPanelOpen || isIDEOpen}
-                    >
-                      Run
-                    </Button>
-                  </span>
-                </Tooltip>
+                <NewRunButton
+                  onClick={handleRunClick}
+                  disabled={!canRun || isRunPanelOpen || isIDEOpen}
+                />
               )}
               <SaveButton
                 canSave={
@@ -402,6 +412,8 @@ export function Header({
                 repoConnection={repoConnection}
                 onSyncClick={openGitHubSyncModal}
                 label={isNewWorkflow ? 'Create' : 'Save'}
+                canSync={githubSyncLimit.allowed}
+                syncTooltipMessage={githubSyncLimit.message}
               />
             </div>
           </div>
