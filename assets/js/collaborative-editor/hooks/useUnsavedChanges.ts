@@ -14,7 +14,6 @@ export function useUnsavedChanges() {
   }));
 
   if (!workflow || !storeWorkflow) return { hasChanges: false };
-
   return {
     hasChanges: isDiffWorkflow(
       transformWorkflow(workflow),
@@ -30,8 +29,8 @@ function transformWorkflow(workflow: Workflow) {
     jobs: (workflow.jobs || [])
       .map(job => ({
         id: job.id,
-        name: job.name,
-        body: job.body,
+        name: job.name.trim(),
+        body: job.body.trim(),
         adaptor: job.adaptor,
         project_credential_id: job.project_credential_id,
         keychain_credential_id: job.keychain_credential_id,
@@ -45,17 +44,17 @@ function transformWorkflow(workflow: Workflow) {
         target_job_id: edge.target_job_id,
         enabled: edge.enabled || false,
         condition_type: edge.condition_type,
-        condition_label: edge.condition_label,
-        condition_expression: edge.condition_expression,
+        condition_label: edge.condition_label?.trim(),
+        condition_expression: edge.condition_expression?.trim(),
       }))
       .sort((a, b) => a.id.localeCompare(b.id)),
     triggers: (workflow.triggers || []).map(trigger => ({
       id: trigger.id,
       type: trigger.type,
       enabled: trigger.enabled,
-      cron_expression: trigger.cron_expression,
+      cron_expression: trigger.cron_expression?.trim(),
     })),
-    positions: workflow.positions || {},
+    // positions: workflow.positions || {},
   };
 }
 
@@ -80,9 +79,10 @@ function isDiffWorkflow(base: unknown, target: unknown): boolean {
   ) {
     const baseObj = base as Record<string, unknown>;
     const targetObj = target as Record<string, unknown>;
-    return Object.keys(baseObj).some(k =>
-      isDiffWorkflow(baseObj[k], targetObj[k])
-    );
+    const keys = [
+      ...new Set(Object.keys(baseObj).concat(Object.keys(targetObj))),
+    ];
+    return keys.some(k => isDiffWorkflow(baseObj[k], targetObj[k]));
   }
 
   return base !== target;
