@@ -44,6 +44,7 @@ interface WrapperOptions {
   hasGithubConnection?: boolean;
   repoName?: string;
   branchName?: string;
+  triggerSync?: boolean;
 }
 
 /**
@@ -122,8 +123,10 @@ async function createTestSetup(options: WrapperOptions = {}) {
     }
   );
 
-  // Trigger provider sync to enable save functionality
-  triggerProviderSync(sessionStore, true);
+  if (options.triggerSync) {
+    // Trigger provider sync to enable save functionality
+    triggerProviderSync(sessionStore, true);
+  }
 
   // For new workflows, replace sessionContextStore with one that has isNewWorkflow=true
   // This is a limitation of the current helper design.
@@ -963,7 +966,9 @@ describe('Header - Run Button Tooltip with Panel State', () => {
 
 describe('Header - Unsaved Changes Indicator', () => {
   test('shows red dot when workflow has unsaved changes', async () => {
-    const { wrapper, emitSessionContext, ydoc } = await createTestSetup();
+    const { wrapper, emitSessionContext, ydoc } = await createTestSetup({
+      triggerSync: true,
+    });
 
     // Modify Y.Doc to have a different name than session context
     const workflowMap = ydoc!.getMap('workflow');
@@ -994,7 +999,9 @@ describe('Header - Unsaved Changes Indicator', () => {
   });
 
   test('hides red dot when no changes present', async () => {
-    const { wrapper, emitSessionContext } = await createTestSetup();
+    const { wrapper, emitSessionContext } = await createTestSetup({
+      triggerSync: true,
+    });
 
     const { container } = render(
       <Header projectId="project-1" workflowId="workflow-1">
@@ -1015,6 +1022,7 @@ describe('Header - Unsaved Changes Indicator', () => {
   test('does not show red dot for new workflows', async () => {
     const { wrapper, emitSessionContext, ydoc } = await createTestSetup({
       isNewWorkflow: true,
+      triggerSync: true,
     });
 
     const { container } = render(
@@ -1043,6 +1051,7 @@ describe('Header - Unsaved Changes Indicator', () => {
   test('does not show red dot when save is disabled', async () => {
     const { wrapper, emitSessionContext, ydoc } = await createTestSetup({
       permissions: { can_edit_workflow: false },
+      triggerSync: true,
     });
 
     const { container } = render(
@@ -1069,7 +1078,9 @@ describe('Header - Unsaved Changes Indicator', () => {
   });
 
   test('red dot is positioned correctly on save button', async () => {
-    const { wrapper, emitSessionContext, ydoc } = await createTestSetup();
+    const { wrapper, emitSessionContext, ydoc } = await createTestSetup({
+      triggerSync: true,
+    });
 
     const { container } = render(
       <Header projectId="project-1" workflowId="workflow-1">
@@ -1103,6 +1114,7 @@ describe('Header - Unsaved Changes Indicator', () => {
   test('red dot appears on split button when GitHub connected', async () => {
     const { wrapper, emitSessionContext, ydoc } = await createTestSetup({
       hasGithubConnection: true,
+      triggerSync: true,
     });
 
     // Modify Y.Doc to have a different name than session context
@@ -1130,7 +1142,9 @@ describe('Header - Unsaved Changes Indicator', () => {
   });
 
   test('red dot disappears after workflow is saved', async () => {
-    const { wrapper, emitSessionContext, ydoc } = await createTestSetup();
+    const { wrapper, emitSessionContext, ydoc } = await createTestSetup({
+      triggerSync: true,
+    });
 
     const { container } = render(
       <Header projectId="project-1" workflowId="workflow-1">
