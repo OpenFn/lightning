@@ -3,11 +3,12 @@ defmodule Mix.Tasks.Lightning.InstallAdaptorIcons do
   Installs the adaptor icons
   """
   use Mix.Task
-  use Tesla, except: [:post, :put, :delete]
-
-  plug Tesla.Middleware.FollowRedirects
 
   @adaptors_tar_url "https://github.com/OpenFn/adaptors/archive/refs/heads/main.tar.gz"
+
+  defp adapter do
+    Application.get_env(:tesla, __MODULE__, [])[:adapter]
+  end
 
   @target_dir Application.compile_env(:lightning, :adaptor_icons_path)
 
@@ -46,8 +47,12 @@ defmodule Mix.Tasks.Lightning.InstallAdaptorIcons do
   end
 
   defp fetch_body!(url) do
-    response = get!(url)
+    response = Tesla.get!(build_client(), url)
     response.body
+  end
+
+  defp build_client do
+    Tesla.client([Tesla.Middleware.FollowRedirects], adapter())
   end
 
   defp tmp_dir! do

@@ -2,11 +2,13 @@ defmodule Lightning.UsageTracking.GithubClient do
   @moduledoc """
   A github client to make unauthenticated HTTP requests to Github.
   """
-  use Tesla, only: [:head], docs: false
-
   alias Lightning.UsageTracking.ResponseProcessor
 
   @host "https://github.com/"
+
+  defp adapter do
+    Application.get_env(:tesla, __MODULE__, [])[:adapter]
+  end
 
   def open_fn_commit?(nil = _commit_sha), do: false
   def open_fn_commit?("" = _commit_sha), do: false
@@ -15,12 +17,12 @@ defmodule Lightning.UsageTracking.GithubClient do
     response =
       @host
       |> build_client()
-      |> head("OpenFn/lightning/commit/#{commit_sha}")
+      |> Tesla.head("OpenFn/lightning/commit/#{commit_sha}")
 
     ResponseProcessor.successful_200?(response)
   end
 
   def build_client(host) do
-    Tesla.client([{Tesla.Middleware.BaseUrl, host}])
+    Tesla.client([{Tesla.Middleware.BaseUrl, host}], adapter())
   end
 end
