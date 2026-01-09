@@ -21,8 +21,12 @@ and this project adheres to
 
 ### Fixed
 
-- Fix Credential removed after AI chat applies generated workflow
-  [#4295](https://github.com/OpenFn/lightning/issues/4295)
+## [2.15.9] - 2026-01-09
+
+### Fixed
+
+- Fix credentials being removed from jobs after AI chat applies a generated
+  workflow yaml [#4295](https://github.com/OpenFn/lightning/issues/4295)
 
 ## [2.15.8] - 2026-01-09
 
