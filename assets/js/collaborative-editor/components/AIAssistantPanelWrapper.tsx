@@ -1,7 +1,12 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 
 import { useURLState } from '../../react/lib/use-url-state';
-import { parseWorkflowYAML, convertWorkflowSpecToState } from '../../yaml/util';
+import {
+  parseWorkflowYAML,
+  convertWorkflowSpecToState,
+  applyJobCredsToWorkflowState,
+  extractJobCredentials,
+} from '../../yaml/util';
 import {
   useMonacoRef,
   useRegisterDiffDismissalCallback,
@@ -698,7 +703,12 @@ export function AIAssistantPanelWrapper() {
         // IDs are already in the YAML from AI (sent with IDs, like legacy editor)
         const workflowState = convertWorkflowSpecToState(workflowSpec);
 
-        importWorkflow(workflowState);
+        const workflowStateWithCreds = applyJobCredsToWorkflowState(
+          workflowState,
+          extractJobCredentials(jobs)
+        );
+
+        importWorkflow(workflowStateWithCreds);
       } catch (error) {
         console.error('[AI Assistant] Failed to apply workflow:', error);
 
@@ -716,7 +726,7 @@ export function AIAssistantPanelWrapper() {
         }
       }
     },
-    [importWorkflow, startApplyingWorkflow, doneApplyingWorkflow]
+    [importWorkflow, startApplyingWorkflow, doneApplyingWorkflow, jobs]
   );
 
   const handlePreviewJobCode = useCallback(
