@@ -247,8 +247,10 @@ export const applyJobCredsToWorkflowState = (
   credentials: JobCredentials
 ) => {
   for (const job of state.jobs) {
-    job.keychain_credential_id = credentials[job.id]?.keychain_credential_id;
-    job.project_credential_id = credentials[job.id]?.project_credential_id;
+    job.keychain_credential_id =
+      credentials[job.id]?.keychain_credential_id ?? null;
+    job.project_credential_id =
+      credentials[job.id]?.project_credential_id ?? null;
   }
   return state;
 };
