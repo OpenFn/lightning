@@ -38,6 +38,9 @@ const roundPosition = (pos: Position): Position => {
   };
 };
 
+// Note that we don't serialize the project_credential_id or the
+// keychain_credential_id here... Should we? See discussion in
+// https://github.com/OpenFn/lightning/pull/4297
 export const convertWorkflowStateToSpec = (
   workflowState: WorkflowState,
   includeIds: boolean = true
