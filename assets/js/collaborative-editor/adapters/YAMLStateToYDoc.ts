@@ -39,6 +39,10 @@ export class YAMLStateToYDoc {
     // Add default enabled field (required by Session.Job but not in YAML)
     jobMap.set('enabled', true);
 
+    // Add credentials (needed due to ai chat removing them)
+    jobMap.set('project_credential_id', job.project_credential_id);
+    jobMap.set('keychain_credential_id', job.keychain_credential_id);
+
     return jobMap;
   }
 

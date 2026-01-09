@@ -1,10 +1,12 @@
 import Ajv, { type ErrorObject } from 'ajv';
 import YAML from 'yaml';
 
+import type { Workflow } from '../collaborative-editor/types/workflow';
 import { randomUUID } from '../common';
 
 import workflowV1Schema from './schema/workflow-spec.json';
 import type {
+  JobCredentials,
   Position,
   SpecEdge,
   SpecJob,
@@ -227,6 +229,28 @@ export const convertWorkflowSpecToState = (
   };
 
   return workflowState;
+};
+
+export const extractJobCredentials = (jobs: Workflow.Job[]): JobCredentials => {
+  const credentials: JobCredentials = {};
+  for (const job of jobs) {
+    credentials[job.id] = {
+      keychain_credential_id: job.keychain_credential_id,
+      project_credential_id: job.project_credential_id,
+    };
+  }
+  return credentials;
+};
+
+export const applyJobCredsToWorkflowState = (
+  state: WorkflowState,
+  credentials: JobCredentials
+) => {
+  for (const job of state.jobs) {
+    job.keychain_credential_id = credentials[job.id]?.keychain_credential_id;
+    job.project_credential_id = credentials[job.id]?.project_credential_id;
+  }
+  return state;
 };
 
 export const parseWorkflowYAML = (yamlString: string): WorkflowSpec => {
