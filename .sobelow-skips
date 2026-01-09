@@ -1,0 +1,11 @@
+# Sobelow skip entries - each line marks a specific finding as a known false positive
+#
+# Format: type,filename:line_no,fingerprint_hash
+#
+# Config.CSRF for authenticated_json pipeline (router.ex:50):
+# This pipeline is only used for JSON API endpoints (GET /api/ai_assistant/sessions)
+# that use session-based auth. CSRF protection is not needed because:
+# 1. GET requests don't modify state
+# 2. JSON APIs are protected by browser same-origin policy
+# 3. The browser pipeline (which handles forms) has protect_from_forgery
+Config.CSRF: Missing CSRF Protections,lib/lightning_web/router.ex:50,7116386
