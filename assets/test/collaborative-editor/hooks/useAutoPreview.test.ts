@@ -88,6 +88,122 @@ describe('useAutoPreview', () => {
 
       expect(mockOnPreview).not.toHaveBeenCalled();
     });
+
+    it('should not preview when aiMode is job_code but session is workflow_template', () => {
+      // This scenario happens when:
+      // 1. User has a workflow_template session open with YAML code
+      // 2. User clicks into a step (job) which changes aiMode to job_code
+      // 3. The session is still workflow_template with YAML in message.code
+      // We should NOT preview the YAML as if it were job JS code
+      const userMessage: Message = {
+        id: 'user-msg',
+        role: 'user',
+        content: 'Create a workflow',
+        status: 'success',
+        inserted_at: new Date(Date.now() - 1000).toISOString(),
+        user_id: mockCurrentUserId,
+      };
+      const workflowYamlMessage = createMockMessage({
+        id: 'yaml-msg',
+        code: 'name: My Workflow\njobs:\n  job-1:\n    name: Step 1',
+        inserted_at: new Date().toISOString(),
+      });
+
+      // Session type is workflow_template (contains YAML)
+      const workflowSession: Session = {
+        id: 'session-1',
+        session_type: 'workflow_template',
+        messages: [userMessage, workflowYamlMessage],
+      };
+
+      // But aiMode is job_code (user clicked into a job)
+      const jobCodeMode = createMockJobCodeMode();
+
+      const { rerender } = renderHook(
+        ({ session }) =>
+          useAutoPreview({
+            aiMode: jobCodeMode,
+            session,
+            currentUserId: mockCurrentUserId,
+            onPreview: mockOnPreview,
+          }),
+        { initialProps: { session: workflowSession } }
+      );
+
+      // Should NOT preview - session type doesn't match aiMode
+      expect(mockOnPreview).not.toHaveBeenCalled();
+
+      // Even after rerender, should still not preview
+      rerender({ session: workflowSession });
+      expect(mockOnPreview).not.toHaveBeenCalled();
+    });
+
+    it('should preview when both aiMode and session are job_code', () => {
+      // This is the happy path - aiMode and session type match
+      const userMessage: Message = {
+        id: 'user-msg',
+        role: 'user',
+        content: 'Help me write code',
+        status: 'success',
+        inserted_at: new Date(Date.now() - 2000).toISOString(),
+        user_id: mockCurrentUserId,
+      };
+      const firstAssistant = createMockMessage({
+        id: 'first-msg',
+        code: 'fn(state => state);',
+        inserted_at: new Date(Date.now() - 1000).toISOString(),
+      });
+
+      // Both session type and aiMode are job_code
+      const jobCodeSession: Session = {
+        id: 'session-1',
+        session_type: 'job_code',
+        messages: [userMessage, firstAssistant],
+      };
+
+      const { rerender } = renderHook(
+        ({ session }) =>
+          useAutoPreview({
+            aiMode: createMockJobCodeMode(),
+            session,
+            currentUserId: mockCurrentUserId,
+            onPreview: mockOnPreview,
+          }),
+        { initialProps: { session: jobCodeSession } }
+      );
+
+      // First render = session load, should not preview
+      expect(mockOnPreview).not.toHaveBeenCalled();
+
+      // Add new message
+      const userMessage2: Message = {
+        id: 'user-msg-2',
+        role: 'user',
+        content: 'Another question',
+        status: 'success',
+        inserted_at: new Date(Date.now() - 500).toISOString(),
+        user_id: mockCurrentUserId,
+      };
+      const newAssistant = createMockMessage({
+        id: 'new-msg',
+        code: 'fn(state => ({ ...state, result: true }));',
+        inserted_at: new Date().toISOString(),
+      });
+
+      const updatedSession: Session = {
+        id: 'session-1',
+        session_type: 'job_code',
+        messages: [userMessage, firstAssistant, userMessage2, newAssistant],
+      };
+
+      rerender({ session: updatedSession });
+
+      // Should preview - both aiMode and session type are job_code
+      expect(mockOnPreview).toHaveBeenCalledWith(
+        'fn(state => ({ ...state, result: true }));',
+        'new-msg'
+      );
+    });
   });
 
   describe('Session mount behavior', () => {
@@ -104,6 +220,47 @@ describe('useAutoPreview', () => {
       );
 
       // First render = session load, should not preview
+      expect(mockOnPreview).not.toHaveBeenCalled();
+    });
+
+    it('should not auto-preview existing messages on subsequent renders', () => {
+      // This tests a subtle bug: when loading a session with existing code messages,
+      // re-renders should NOT trigger auto-preview of those old messages
+      const userMessage: Message = {
+        id: 'user-msg',
+        role: 'user',
+        content: 'Old question',
+        status: 'success',
+        inserted_at: new Date(Date.now() - 1000).toISOString(),
+        user_id: mockCurrentUserId,
+      };
+      const existingCodeMessage = createMockMessage({
+        id: 'existing-code',
+        code: 'fn(state => state);',
+        inserted_at: new Date().toISOString(),
+      });
+      const session = createMockSession([userMessage, existingCodeMessage]);
+
+      const { rerender } = renderHook(
+        ({ session }) =>
+          useAutoPreview({
+            aiMode: createMockJobCodeMode(),
+            session,
+            currentUserId: mockCurrentUserId,
+            onPreview: mockOnPreview,
+          }),
+        { initialProps: { session } }
+      );
+
+      // First render - should not preview (initial load)
+      expect(mockOnPreview).not.toHaveBeenCalled();
+
+      // Second render with same session (e.g., from unrelated state change)
+      rerender({ session });
+      expect(mockOnPreview).not.toHaveBeenCalled();
+
+      // Third render - still should not preview old message
+      rerender({ session });
       expect(mockOnPreview).not.toHaveBeenCalled();
     });
 
