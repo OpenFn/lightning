@@ -111,6 +111,8 @@ export function useAutoPreview({
     // This prevents preview flash when opening AI panel with existing messages
     if (!stateRef.current.hasLoadedSession) {
       stateRef.current.hasLoadedSession = true;
+      // Mark existing message as "seen" so it won't be previewed on subsequent renders
+      stateRef.current.lastAutoPreviewedMessageId = latestCodeMessage.id;
       return;
     }
 
