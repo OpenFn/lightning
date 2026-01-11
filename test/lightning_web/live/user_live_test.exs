@@ -616,20 +616,18 @@ defmodule LightningWeb.UserLiveTest do
     end
 
     test "filter input shows clear button when text is entered", %{conn: conn} do
-      {:ok, index_live, html} = live(conn, Routes.user_index_path(conn, :index))
+      {:ok, index_live, _html} = live(conn, Routes.user_index_path(conn, :index))
 
-      # Initially clear button should be hidden (check CSS class)
-      assert html =~ "class=\"hidden\""
+      # Initially clear button should be hidden
+      assert has_element?(index_live, "#clear_filter_button.hidden")
 
       # Type in filter
       index_live
       |> element("input[name=filter]")
       |> render_keyup(%{"key" => "a", "value" => "test"})
 
-      html = render(index_live)
-
       # Clear button should now be visible (no longer hidden)
-      refute html =~ "class=\"hidden\""
+      refute has_element?(index_live, "#clear_filter_button.hidden")
       assert has_element?(index_live, "a[phx-click='clear_filter']")
     end
   end

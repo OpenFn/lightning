@@ -177,19 +177,19 @@ defmodule LightningWeb.DashboardLiveTest do
 
       assert view
              |> has_element?(
-               "ul[aria-labelledby='combobox'] li#option-#{project_1.id}",
+               "#project-picker-option-#{project_1.id}",
                project_1.name
              )
 
       assert view
              |> has_element?(
-               "ul[aria-labelledby='combobox'] li#option-#{project_2.id}",
+               "#project-picker-option-#{project_2.id}",
                project_2.name
              )
 
       refute view
              |> has_element?(
-               "ul[aria-labelledby='combobox'] li#option-#{project_3.id}",
+               "#project-picker-option-#{project_3.id}",
                project_3.name
              )
     end
@@ -217,25 +217,25 @@ defmodule LightningWeb.DashboardLiveTest do
 
       assert view
              |> has_element?(
-               "ul[aria-labelledby='combobox'] li#option-#{project_1.id}",
+               "#project-picker-option-#{project_1.id}",
                project_1.name
              )
 
       assert view
              |> has_element?(
-               "ul[aria-labelledby='combobox'] li#option-#{project_2.id}",
+               "#project-picker-option-#{project_2.id}",
                project_2.name
              )
 
       refute view
              |> has_element?(
-               "ul[aria-labelledby='combobox'] li#option-#{project_3.id}",
+               "#project-picker-option-#{project_3.id}",
                project_3.name
              )
 
       assert view
              |> has_element?(
-               "ul[aria-labelledby='combobox'] li#option-#{project_4.id}",
+               "#project-picker-option-#{project_4.id}",
                project_4.name
              )
     end
