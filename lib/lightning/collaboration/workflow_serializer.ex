@@ -29,6 +29,7 @@ defmodule Lightning.Collaboration.WorkflowSerializer do
   - Nil values: Coalesced to empty strings or defaults where appropriate
   """
 
+  alias Lightning.Workflows.Triggers.KafkaConfiguration
   alias Lightning.Workflows.Workflow
 
   @doc """
@@ -197,8 +198,30 @@ defmodule Lightning.Collaboration.WorkflowSerializer do
 
   defp initialize_triggers(triggers_array, triggers) do
     Enum.each(triggers || [], fn trigger ->
+      kafka_configuration =
+        trigger.kafka_configuration &&
+          Yex.MapPrelim.from(%{
+            "connect_timeout" => trigger.kafka_configuration.connect_timeout,
+            "group_id" => trigger.kafka_configuration.group_id,
+            "hosts_string" =>
+              KafkaConfiguration.generate_hosts_string(
+                trigger.kafka_configuration.hosts
+              ),
+            "initial_offset_reset_policy" =>
+              trigger.kafka_configuration.initial_offset_reset_policy,
+            "password" => trigger.kafka_configuration.password,
+            "sasl" => to_string(trigger.kafka_configuration.sasl),
+            "ssl" => trigger.kafka_configuration.ssl,
+            "topics_string" =>
+              KafkaConfiguration.generate_topics_string(
+                trigger.kafka_configuration.topics
+              ),
+            "username" => trigger.kafka_configuration.username
+          })
+
       trigger_map =
         Yex.MapPrelim.from(%{
+          "kafka_configuration" => kafka_configuration,
           "cron_expression" => trigger.cron_expression,
           "enabled" => trigger.enabled,
           "id" => trigger.id,
@@ -248,7 +271,7 @@ defmodule Lightning.Collaboration.WorkflowSerializer do
     |> Enum.map(fn trigger ->
       Map.take(
         trigger,
-        ~w(id type enabled cron_expression)
+        ~w(id type enabled cron_expression kafka_configuration)
       )
     end)
   end

@@ -419,7 +419,7 @@ export function TriggerForm({ trigger }: TriggerFormProps) {
                         Connection
                       </h4>
                       {/* Hosts Field */}
-                      <form.Field name="kafka_configuration.hosts">
+                      <form.Field name="kafka_configuration.hosts_string">
                         {field => (
                           <div>
                             <label
@@ -435,7 +435,7 @@ export function TriggerForm({ trigger }: TriggerFormProps) {
                               onChange={e => field.handleChange(e.target.value)}
                               onBlur={field.handleBlur}
                               disabled={isReadOnly}
-                              placeholder="localhost:9092,broker2:9092"
+                              placeholder="localhost:9092, broker2:9092"
                               className={`
                                   block w-full px-3 py-2 border rounded-md text-sm
                                   ${
@@ -463,7 +463,7 @@ export function TriggerForm({ trigger }: TriggerFormProps) {
                       </form.Field>
 
                       {/* Topics Field */}
-                      <form.Field name="kafka_configuration.topics">
+                      <form.Field name="kafka_configuration.topics_string">
                         {field => (
                           <div>
                             <label
@@ -479,7 +479,7 @@ export function TriggerForm({ trigger }: TriggerFormProps) {
                               onChange={e => field.handleChange(e.target.value)}
                               onBlur={field.handleBlur}
                               disabled={isReadOnly}
-                              placeholder="topic1,topic2,topic3"
+                              placeholder="topic1, topic2, topic3"
                               className={`
                                   block w-full px-3 py-2 border rounded-md text-sm
                                   ${
@@ -549,14 +549,15 @@ export function TriggerForm({ trigger }: TriggerFormProps) {
                             </label>
                             <select
                               id={field.name}
-                              value={field.state.value || 'none'}
+                              value={field.state.value || ''}
                               onChange={e =>
                                 field.handleChange(
-                                  e.target.value as
-                                    | 'none'
-                                    | 'plain'
-                                    | 'scram_sha_256'
-                                    | 'scram_sha_512'
+                                  e.target.value === ''
+                                    ? null
+                                    : (e.target.value as
+                                        | 'plain'
+                                        | 'scram_sha_256'
+                                        | 'scram_sha_512')
                                 )
                               }
                               onBlur={field.handleBlur}
@@ -572,7 +573,7 @@ export function TriggerForm({ trigger }: TriggerFormProps) {
                                   disabled:opacity-50 disabled:cursor-not-allowed
                                 `}
                             >
-                              <option value="none">No Authentication</option>
+                              <option value="">No Authentication</option>
                               <option value="plain">PLAIN</option>
                               <option value="scram_sha_256">
                                 SCRAM-SHA-256
