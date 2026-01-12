@@ -5,14 +5,14 @@
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="generator" content="ExDoc v0.38.4">
-    <meta name="project" content="Lightning v2.15.10-pre">
+    <meta name="project" content="Lightning v2.15.10">
 
 
-    <title>Lightning.Storage.Local — Lightning v2.15.10-pre</title>
+    <title>Lightning.Storage.Local — Lightning v2.15.10</title>
 
     <link rel="stylesheet" href="dist/html-elixir-RLZO5U2C.css" />
 
-    <script defer src="dist/sidebar_items-BD46DD64.js"></script>
+    <script defer src="dist/sidebar_items-0684BDE8.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-Y223O6DN.js"></script>
 
@@ -41,7 +41,7 @@
 Lightning
         </a>
         <div class="sidebar-projectVersion" translate="no">
-          v2.15.10-pre
+          v2.15.10
         </div>
       </div>
     </div>
@@ -80,7 +80,7 @@ Lightning
   <div class="heading-with-actions top-heading">
     <h1>
       <span translate="no">Lightning.Storage.Local</span> 
-      <small class="app-vsn" translate="no">(Lightning v2.15.10-pre)</small>
+      <small class="app-vsn" translate="no">(Lightning v2.15.10)</small>
 
     </h1>
 
@@ -100,11 +100,11 @@ from a given source path to a specified destination path on the local file
 system.</li><li><strong>Generating URLs</strong>: The <code class="inline">get_url/1</code> function generates a <code class="inline">file://</code> URL for
 accessing a stored file locally.</li><li><strong>Configuration</strong>: The module relies on application configuration to
 determine the root directory for storage operations.</li></ul><h2 id="module-example-usage" class="section-heading"><a href="#module-example-usage" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Example Usage</span></h2><pre><code class="makeup elixir" translate="no"><span class="c1"># Store a file</span><span class="w">
-</span><span class="p" data-group-id="2999026333-1">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="n">filename</span><span class="p" data-group-id="2999026333-1">}</span><span class="w"> </span><span class="o">=</span><span class="w">
-  </span><span class="nc">Lightning.Storage.Local</span><span class="o">.</span><span class="n">store</span><span class="p" data-group-id="2999026333-2">(</span><span class="s">&quot;/path/to/source&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;destination/path&quot;</span><span class="p" data-group-id="2999026333-2">)</span><span class="w">
+</span><span class="p" data-group-id="9005439445-1">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="n">filename</span><span class="p" data-group-id="9005439445-1">}</span><span class="w"> </span><span class="o">=</span><span class="w">
+  </span><span class="nc">Lightning.Storage.Local</span><span class="o">.</span><span class="n">store</span><span class="p" data-group-id="9005439445-2">(</span><span class="s">&quot;/path/to/source&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;destination/path&quot;</span><span class="p" data-group-id="9005439445-2">)</span><span class="w">
 
 </span><span class="c1"># Get the URL for the stored file</span><span class="w">
-</span><span class="p" data-group-id="2999026333-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="n">url</span><span class="p" data-group-id="2999026333-3">}</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">Lightning.Storage.Local</span><span class="o">.</span><span class="n">get_url</span><span class="p" data-group-id="2999026333-4">(</span><span class="s">&quot;destination/path&quot;</span><span class="p" data-group-id="2999026333-4">)</span></code></pre>
+</span><span class="p" data-group-id="9005439445-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="n">url</span><span class="p" data-group-id="9005439445-3">}</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">Lightning.Storage.Local</span><span class="o">.</span><span class="n">get_url</span><span class="p" data-group-id="9005439445-4">(</span><span class="s">&quot;destination/path&quot;</span><span class="p" data-group-id="9005439445-4">)</span></code></pre>
     </section>
 
 </div>
