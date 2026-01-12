@@ -21,6 +21,8 @@ and this project adheres to
 
 ### Fixed
 
+## [2.15.10] - 2026-01-12
+
 ## [2.15.10-pre] - 2026-01-12
 
 ### Fixed
