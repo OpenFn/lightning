@@ -613,8 +613,8 @@ export function MessageList({
               </div>
             ) : (
               <div className="flex justify-end">
-                <div className="flex flex-col items-end max-w-[85%] min-w-0">
-                  <div className="rounded-2xl bg-gray-100 px-4 py-2 overflow-auto">
+                <div className="flex flex-col items-end max-w-[85%]">
+                  <div className="rounded-2xl bg-gray-100 px-4 py-2">
                     <div
                       style={{ wordBreak: 'break-word' }}
                       className="overflow-x-auto text-sm text-gray-800 leading-relaxed whitespace-pre-wrap"
