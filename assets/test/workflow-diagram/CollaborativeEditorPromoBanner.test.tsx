@@ -145,7 +145,7 @@ describe('CollaborativeEditorPromoBanner', () => {
       });
       fireEvent.click(bannerButton);
 
-      expect(mockPushEvent).toHaveBeenCalledWith('toggle_legacy_editor', {});
+      expect(mockPushEvent).toHaveBeenCalledWith('switch_to_collab_editor', {});
     });
 
     test('does not error when pushEvent is not provided', () => {

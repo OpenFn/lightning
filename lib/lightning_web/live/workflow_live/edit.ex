@@ -39,7 +39,6 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
   on_mount({LightningWeb.Hooks, :project_scope})
   on_mount {LightningWeb.Hooks, :check_limits}
-  on_mount {LightningWeb.Hooks, :check_collaborative_preference}
 
   attr :selection, :string, required: false
   attr :aiAssistantId, :string, required: false
@@ -132,7 +131,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
     <!-- Add collaborative editor toggle (beaker icon only) -->
               <button
                 id="collaborative-editor-toggle"
-                phx-click="toggle_legacy_editor"
+                phx-click="switch_to_collab_editor"
                 class="inline-flex items-center justify-center p-1 text-primary-600 hover:text-primary-700 hover:bg-primary-50 rounded transition-colors"
                 data-placement="bottom"
                 aria-label="Switch to collaborative editor (experimental)"
@@ -1637,11 +1636,11 @@ defmodule LightningWeb.WorkflowLive.Edit do
     {:noreply, socket}
   end
 
-  def handle_event("toggle_legacy_editor", _params, socket) do
+  def handle_event("switch_to_collab_editor", _params, socket) do
     Lightning.Accounts.update_user_preference(
       socket.assigns.current_user,
       "prefer_legacy_editor",
-      true
+      false
     )
 
     params =

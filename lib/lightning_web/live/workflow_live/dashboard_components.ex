@@ -17,6 +17,7 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
   attr :sort_key, :string, default: "name"
   attr :sort_direction, :string, default: "asc"
   attr :search_term, :string, default: ""
+  attr :is_legacy, :boolean, default: false
 
   def workflow_list(assigns) do
     ~H"""
@@ -28,6 +29,7 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
           <.create_workflow_card
             project_id={@project.id}
             can_create_workflow={@can_create_workflow}
+            is_legacy={@is_legacy}
           />
         </div>
       </div>
@@ -39,6 +41,7 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
         project={@project}
         sort_key={@sort_key}
         sort_direction={@sort_direction}
+        is_legacy={@is_legacy}
       >
         <:empty_state>
           <div class="text-center py-8">
@@ -83,6 +86,7 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
   attr :can_delete_workflow, :boolean, default: false
   attr :sort_key, :string, default: "name"
   attr :sort_direction, :string, default: "asc"
+  attr :is_legacy, :boolean, default: false
 
   slot :empty_state, doc: "the slot for showing an empty state"
 
@@ -168,7 +172,11 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
                 class="hover:bg-gray-100 transition-colors duration-200"
                 onclick={
                   JS.navigate(
-                    ~p"/projects/#{@project.id}/w/#{workflow.id}/collaborate"
+                    if @is_legacy do
+                      ~p"/projects/#{@project.id}/w/#{workflow.id}"
+                    else
+                      ~p"/projects/#{@project.id}/w/#{workflow.id}/collaborate"
+                    end
                   )
                 }
               >
@@ -176,7 +184,11 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
                   <div
                     phx-click={
                       JS.navigate(
-                        ~p"/projects/#{@project.id}/w/#{workflow.id}/collaborate"
+                        if @is_legacy do
+                          ~p"/projects/#{@project.id}/w/#{workflow.id}"
+                        else
+                          ~p"/projects/#{@project.id}/w/#{workflow.id}/collaborate"
+                        end
                       )
                     }
                     class="cursor-pointer"
@@ -341,6 +353,7 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
 
   attr :can_create_workflow, :boolean, required: true
   attr :project_id, :string, required: true
+  attr :is_legacy, :boolean, default: false
 
   def create_workflow_card(assigns) do
     assigns =
@@ -358,11 +371,15 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
         disabled={@disabled}
         tooltip={@tooltip}
         phx-click={
-          if !@disabled,
-            do:
+          if !@disabled do
+            if @is_legacy do
+              JS.navigate(~p"/projects/#{@project_id}/w/new")
+            else
               JS.navigate(
                 ~p"/projects/#{@project_id}/w/new/collaborate?method=template"
               )
+            end
+          end
         }
         class="col-span-1 w-full"
         role="button"

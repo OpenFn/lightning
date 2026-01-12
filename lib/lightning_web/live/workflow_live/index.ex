@@ -23,6 +23,7 @@ defmodule LightningWeb.WorkflowLive.Index do
   attr :project, Lightning.Projects.Project
   attr :banner, :map, default: nil
   attr :search_term, :string, default: ""
+  attr :is_legacy, :boolean, default: false
 
   @impl true
   def render(assigns) do
@@ -52,6 +53,7 @@ defmodule LightningWeb.WorkflowLive.Index do
           sort_key={@sort_key}
           sort_direction={@sort_direction}
           search_term={@search_term}
+          is_legacy={@is_legacy}
         />
       </LayoutComponents.centered>
     </LayoutComponents.page_content>
@@ -78,6 +80,10 @@ defmodule LightningWeb.WorkflowLive.Index do
         project
       )
 
+    is_legacy =
+      Lightning.Accounts.get_preference(current_user, "prefer_legacy_editor") ||
+        false
+
     {:ok,
      socket
      |> assign(
@@ -85,7 +91,8 @@ defmodule LightningWeb.WorkflowLive.Index do
        can_create_workflow: can_create_workflow,
        sort_key: "name",
        sort_direction: "asc",
-       search_term: ""
+       search_term: "",
+       is_legacy: is_legacy
      )}
   end
 

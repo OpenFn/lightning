@@ -9,7 +9,7 @@
  * - Dark themed design matching Tailwind sticky banner pattern
  * - Dismissible via X button
  * - Persists dismissal in cookies for 90 days
- * - Navigation handled by LiveView via toggle_legacy_editor pushEvent
+ * - Navigation handled by LiveView via switch_to_collab_editor pushEvent
  */
 
 import { useState, useEffect } from 'react';
@@ -74,7 +74,9 @@ export function CollaborativeEditorPromoBanner({
       <div className="pointer-events-auto flex items-center gap-x-4 bg-primary-700 px-6 py-2.5 rounded-xl sm:py-3 sm:pr-3.5 sm:pl-4">
         <button
           type="button"
-          onClick={() => pushEvent?.('toggle_legacy_editor', {})}
+          onClick={() =>
+            pushEvent?.('switch_to_collab_editor', { banner: true })
+          }
           className="text-sm/6 text-white cursor-pointer"
         >
           <strong className="font-semibold">
