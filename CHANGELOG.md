@@ -21,6 +21,10 @@ and this project adheres to
 
 ### Fixed
 
+- Prevent returned workflow.yaml from appearing as a job code diff when opening
+  job chat after workflow chat
+  [#4296](https://github.com/OpenFn/lightning/issues/4296)
+
 ## [2.15.9] - 2026-01-09
 
 ### Fixed
