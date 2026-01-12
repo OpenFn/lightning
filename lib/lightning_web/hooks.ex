@@ -142,7 +142,7 @@ defmodule LightningWeb.Hooks do
       %{current_user: user, live_action: live_action}
       when live_action in [:edit, :new] ->
         prefer_collaborative =
-          Lightning.Accounts.get_preference(user, "prefer_collaborative_editor")
+          Lightning.Accounts.get_preference(user, "prefer_legacy_editor")
 
         if prefer_collaborative do
           path =

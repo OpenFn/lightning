@@ -166,12 +166,18 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
               <.tr
                 id={"workflow-#{workflow.id}"}
                 class="hover:bg-gray-100 transition-colors duration-200"
-                onclick={JS.navigate(~p"/projects/#{@project.id}/w/#{workflow.id}")}
+                onclick={
+                  JS.navigate(
+                    ~p"/projects/#{@project.id}/w/#{workflow.id}/collaborate"
+                  )
+                }
               >
                 <.td class="wrap-break-word max-w-[15rem]">
                   <div
                     phx-click={
-                      JS.navigate(~p"/projects/#{@project.id}/w/#{workflow.id}")
+                      JS.navigate(
+                        ~p"/projects/#{@project.id}/w/#{workflow.id}/collaborate"
+                      )
                     }
                     class="cursor-pointer"
                   >

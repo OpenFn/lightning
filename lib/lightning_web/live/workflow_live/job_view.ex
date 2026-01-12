@@ -135,7 +135,7 @@ defmodule LightningWeb.WorkflowLive.JobView do
             />
             <button
               id={"inspector-collaborative-editor-toggle-#{@job.id}"}
-              phx-click="toggle_collaborative_editor"
+              phx-click="toggle_legacy_editor"
               class="inline-flex items-center justify-center
               w-6 h-6 text-primary-600 hover:text-primary-700
               hover:bg-primary-50 rounded transition-colors"

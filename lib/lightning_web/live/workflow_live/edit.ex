@@ -132,7 +132,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
     <!-- Add collaborative editor toggle (beaker icon only) -->
               <button
                 id="collaborative-editor-toggle"
-                phx-click="toggle_collaborative_editor"
+                phx-click="toggle_legacy_editor"
                 class="inline-flex items-center justify-center p-1 text-primary-600 hover:text-primary-700 hover:bg-primary-50 rounded transition-colors"
                 data-placement="bottom"
                 aria-label="Switch to collaborative editor (experimental)"
@@ -1637,10 +1637,10 @@ defmodule LightningWeb.WorkflowLive.Edit do
     {:noreply, socket}
   end
 
-  def handle_event("toggle_collaborative_editor", _params, socket) do
+  def handle_event("toggle_legacy_editor", _params, socket) do
     Lightning.Accounts.update_user_preference(
       socket.assigns.current_user,
-      "prefer_collaborative_editor",
+      "prefer_legacy_editor",
       true
     )
 

@@ -166,7 +166,7 @@ defmodule LightningWeb.WorkflowChannel do
     # Clear the collaborative editor preference
     Lightning.Accounts.update_user_preference(
       user,
-      "prefer_collaborative_editor",
+      "prefer_legacy_editor",
       false
     )
 
