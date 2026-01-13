@@ -184,7 +184,7 @@ export function buildClassicalEditorUrl(options: {
       : '';
 
   const basePath = isNewWorkflow
-    ? `/projects/${projectId}/w/new/collaborate?method=template`
+    ? `/projects/${projectId}/w/new/collaborate`
     : `/projects/${projectId}/w/${workflowId}/collaborate`;
 
   return `${basePath}${queryString}`;
