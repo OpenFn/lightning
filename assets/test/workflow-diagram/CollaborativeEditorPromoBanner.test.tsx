@@ -48,10 +48,7 @@ describe('CollaborativeEditorPromoBanner', () => {
       render(<CollaborativeEditorPromoBanner />);
 
       expect(
-        screen.getByText('Try the new collaborative editor')
-      ).toBeInTheDocument();
-      expect(
-        screen.getByText(/Real-time editing with your team/)
+        screen.getByText(/This legacy editor will be retired/)
       ).toBeInTheDocument();
     });
 
@@ -61,20 +58,8 @@ describe('CollaborativeEditorPromoBanner', () => {
       render(<CollaborativeEditorPromoBanner />);
 
       expect(
-        screen.queryByText('Try the new collaborative editor')
+        screen.queryByText('This legacy editor will be retired')
       ).not.toBeInTheDocument();
-    });
-
-    test('renders with correct accessibility attributes', () => {
-      render(<CollaborativeEditorPromoBanner />);
-
-      const alert = screen.getByRole('alert');
-      expect(alert).toHaveAttribute('aria-live', 'polite');
-
-      const dismissButton = screen.getByLabelText(
-        'Dismiss collaborative editor promotion'
-      );
-      expect(dismissButton).toBeInTheDocument();
     });
 
     test('applies custom className', () => {
@@ -84,53 +69,6 @@ describe('CollaborativeEditorPromoBanner', () => {
       expect(alert).toHaveClass('custom-class');
     });
   });
-
-  // ===========================================================================
-  // DISMISS FUNCTIONALITY TESTS
-  // ===========================================================================
-
-  describe('dismiss functionality', () => {
-    test('hides banner when dismiss button is clicked', () => {
-      render(<CollaborativeEditorPromoBanner />);
-
-      expect(
-        screen.getByText('Try the new collaborative editor')
-      ).toBeInTheDocument();
-
-      const dismissButton = screen.getByLabelText(
-        'Dismiss collaborative editor promotion'
-      );
-      fireEvent.click(dismissButton);
-
-      expect(
-        screen.queryByText('Try the new collaborative editor')
-      ).not.toBeInTheDocument();
-    });
-
-    test('sets cookie when dismissed', () => {
-      render(<CollaborativeEditorPromoBanner />);
-
-      const dismissButton = screen.getByLabelText(
-        'Dismiss collaborative editor promotion'
-      );
-      fireEvent.click(dismissButton);
-
-      expect(getCookie(COOKIE_NAME)).toBe('true');
-    });
-
-    test('cookie has correct attributes', () => {
-      render(<CollaborativeEditorPromoBanner />);
-
-      const dismissButton = screen.getByLabelText(
-        'Dismiss collaborative editor promotion'
-      );
-      fireEvent.click(dismissButton);
-
-      // Cookie should contain path and SameSite attributes
-      expect(document.cookie).toContain(COOKIE_NAME);
-    });
-  });
-
   // ===========================================================================
   // NAVIGATION TESTS
   // ===========================================================================
@@ -141,7 +79,7 @@ describe('CollaborativeEditorPromoBanner', () => {
       render(<CollaborativeEditorPromoBanner pushEvent={mockPushEvent} />);
 
       const bannerButton = screen.getByRole('button', {
-        name: /Try the new collaborative editor/,
+        name: /This legacy editor will be retired/,
       });
       fireEvent.click(bannerButton);
 
@@ -152,7 +90,7 @@ describe('CollaborativeEditorPromoBanner', () => {
       render(<CollaborativeEditorPromoBanner />);
 
       const bannerButton = screen.getByRole('button', {
-        name: /Try the new collaborative editor/,
+        name: /This legacy editor will be retired/,
       });
       // Should not throw
       expect(() => fireEvent.click(bannerButton)).not.toThrow();

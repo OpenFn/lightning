@@ -179,7 +179,9 @@ describe('editorUrlConversion', () => {
         isNewWorkflow: false,
       });
 
-      expect(url).toBe('/projects/proj-123/w/wf-456?a=run-789&s=job-abc');
+      expect(url).toBe(
+        '/projects/proj-123/w/wf-456/collaborate?a=run-789&s=job-abc'
+      );
     });
 
     it('builds URL for new workflow', () => {
@@ -190,7 +192,9 @@ describe('editorUrlConversion', () => {
         isNewWorkflow: true,
       });
 
-      expect(url).toBe('/projects/proj-123/w/new?s=job-abc&m=expand');
+      expect(url).toBe(
+        '/projects/proj-123/w/new/collaborate?s=job-abc&m=expand'
+      );
     });
 
     it('builds URL without query params when empty', () => {
@@ -201,7 +205,7 @@ describe('editorUrlConversion', () => {
         isNewWorkflow: false,
       });
 
-      expect(url).toBe('/projects/proj-123/w/wf-456');
+      expect(url).toBe('/projects/proj-123/w/wf-456/collaborate');
     });
 
     it('handles complex parameter conversion', () => {
@@ -215,7 +219,7 @@ describe('editorUrlConversion', () => {
       });
 
       expect(url).toBe(
-        '/projects/proj-1/w/wf-1?a=r-1&s=t-1&m=workflow_input&v=5&method=ai'
+        '/projects/proj-1/w/wf-1/collaborate?a=r-1&s=t-1&m=workflow_input&v=5&method=ai'
       );
     });
   });

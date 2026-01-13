@@ -12,8 +12,6 @@
  * - Navigation handled by LiveView via switch_to_collab_editor pushEvent
  */
 
-import { useState, useEffect } from 'react';
-
 import { cn } from '#/utils/cn';
 
 interface CollaborativeEditorPromoBannerProps {
@@ -21,24 +19,6 @@ interface CollaborativeEditorPromoBannerProps {
   pushEvent?:
     | ((name: string, payload: Record<string, unknown>) => void)
     | undefined;
-}
-
-const COOKIE_NAME = 'openfn_collaborative_editor_promo_dismissed';
-const COOKIE_EXPIRY_DAYS = 90;
-
-function getCookie(name: string): string | null {
-  const value = `; ${document.cookie}`;
-  const parts = value.split(`; ${name}=`);
-  if (parts.length === 2) {
-    return parts.pop()?.split(';').shift() || null;
-  }
-  return null;
-}
-
-function setCookie(name: string, value: string, days: number): void {
-  const expires = new Date();
-  expires.setDate(expires.getDate() + days);
-  document.cookie = `${name}=${value}; expires=${expires.toUTCString()}; path=/; SameSite=Lax`;
 }
 
 export function CollaborativeEditorPromoBanner({
@@ -57,13 +37,11 @@ export function CollaborativeEditorPromoBanner({
       <div className="pointer-events-auto flex items-center gap-x-4 bg-primary-700 px-6 py-2.5 rounded-xl sm:py-3 sm:pr-3.5 sm:pl-4">
         <button
           type="button"
-          onClick={() =>
-            pushEvent?.('switch_to_collab_editor', { banner: true })
-          }
+          onClick={() => pushEvent?.('switch_to_collab_editor', {})}
           className="text-sm/6 text-white cursor-pointer"
         >
           <strong className="font-semibold">
-            The old editor will be retired in N days
+            This legacy editor will be retired in N days
           </strong>
           <svg
             viewBox="0 0 2 2"
