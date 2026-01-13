@@ -19,6 +19,9 @@ and this project adheres to
 
 ### Changed
 
+- Standardized "GitHub" brand capitalization throughout the UI
+  [#4313](https://github.com/OpenFn/lightning/issues/4313)
+
 ### Fixed
 
 ## [2.15.10] - 2026-01-12
