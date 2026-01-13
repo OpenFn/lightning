@@ -1,6 +1,9 @@
 import { useCallback, useEffect, useState } from 'react';
 
-import { TriggerSchema } from '#/collaborative-editor/types/trigger';
+import {
+  createDefaultTrigger,
+  TriggerSchema,
+} from '#/collaborative-editor/types/trigger';
 import { cn } from '#/utils/cn';
 import _logger from '#/utils/logger';
 
@@ -181,12 +184,17 @@ export function TriggerForm({ trigger }: TriggerFormProps) {
                 </label>
                 <select
                   id={field.name}
-                  value={field.state.value}
-                  onChange={e =>
-                    field.handleChange(
-                      e.target.value as 'webhook' | 'cron' | 'kafka'
-                    )
-                  }
+                  value={field.state.value as string}
+                  onChange={e => {
+                    const newType = e.target.value as
+                      | 'webhook'
+                      | 'cron'
+                      | 'kafka';
+                    // Get default values for the new trigger type
+                    const defaultValues = createDefaultTrigger(newType);
+                    // Update the entire trigger with default values for the new type
+                    updateTrigger(trigger.id, defaultValues);
+                  }}
                   onBlur={field.handleBlur}
                   disabled={isReadOnly}
                   className={`

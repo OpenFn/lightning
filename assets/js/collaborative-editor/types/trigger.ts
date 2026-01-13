@@ -78,7 +78,7 @@ const kafkaConfigSchema = z
   .refine(
     data => {
       // If SASL is not "none", username and password are required
-      if (data.sasl !== 'none') {
+      if (data.sasl !== null) {
         return data.username && data.password;
       }
       return true;
