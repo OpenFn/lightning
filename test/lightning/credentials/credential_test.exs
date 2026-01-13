@@ -2,9 +2,12 @@ defmodule Lightning.Credentials.CredentialTest do
   use Lightning.DataCase, async: true
 
   import Lightning.Factories
+  import Mox
 
   alias Lightning.Credentials.Credential
   alias Lightning.Credentials.CredentialBody
+
+  setup :verify_on_exit!
 
   describe "changeset/2" do
     test "name and user_id can't be blank" do
@@ -334,6 +337,65 @@ defmodule Lightning.Credentials.CredentialTest do
         assert changeset.valid?,
                "Environment name '#{name}' should be valid"
       end
+    end
+
+    test "validates credential body doesn't exceed max sensitive values", %{
+      credential: credential
+    } do
+      # Mock config to limit to 5 sensitive values for easier testing
+      Lightning.MockConfig
+      |> expect(:max_credential_sensitive_values, fn -> 5 end)
+
+      # Create a body with 6 sensitive values (exceeds limit of 5)
+      large_body = %{
+        "api_key_1" => "secret_1",
+        "api_key_2" => "secret_2",
+        "api_key_3" => "secret_3",
+        "api_key_4" => "secret_4",
+        "api_key_5" => "secret_5",
+        "api_key_6" => "secret_6"
+      }
+
+      changeset =
+        CredentialBody.changeset(%CredentialBody{}, %{
+          credential_id: credential.id,
+          name: "production",
+          body: large_body
+        })
+
+      refute changeset.valid?
+      errors = errors_on(changeset)
+
+      assert [error_message] = errors[:body]
+
+      assert error_message =~ "contains too many sensitive keys (6)"
+      assert error_message =~ "Max allowed is 5"
+    end
+
+    test "allows credential body with acceptable number of sensitive values", %{
+      credential: credential
+    } do
+      # Mock config to limit to 5 sensitive values
+      Lightning.MockConfig
+      |> expect(:max_credential_sensitive_values, fn -> 5 end)
+
+      # Create a body with exactly 5 sensitive values (at the limit)
+      acceptable_body = %{
+        "username" => "user@example.com",
+        "api_key_1" => "secret_1",
+        "api_key_2" => "secret_2",
+        "api_key_3" => "secret_3",
+        "api_key_4" => "secret_4"
+      }
+
+      changeset =
+        CredentialBody.changeset(%CredentialBody{}, %{
+          credential_id: credential.id,
+          name: "production",
+          body: acceptable_body
+        })
+
+      assert changeset.valid?
     end
 
     test "validates foreign key constraint for credential_id" do

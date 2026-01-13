@@ -36,7 +36,32 @@ defmodule Lightning.Credentials.CredentialBody do
     |> validate_format(:name, ~r/^[a-z0-9][a-z0-9_-]{0,31}$/,
       message: "must be a short slug"
     )
+    |> validate_credential_body_complexity()
     |> unique_constraint([:credential_id, :name])
     |> assoc_constraint(:credential)
   end
+
+  defp validate_credential_body_complexity(changeset) do
+    validate_change(changeset, :body, fn :body, body ->
+      max_values = Lightning.Config.max_credential_sensitive_values()
+      sensitive_count = count_sensitive_values(body)
+
+      if sensitive_count > max_values do
+        [
+          body:
+            "contains too many sensitive keys (#{sensitive_count}). Max allowed is #{max_values}"
+        ]
+      else
+        []
+      end
+    end)
+  end
+
+  defp count_sensitive_values(body) when is_map(body) do
+    body
+    |> Lightning.Credentials.sensitive_values_from_body()
+    |> length()
+  end
+
+  defp count_sensitive_values(_), do: 0
 end
