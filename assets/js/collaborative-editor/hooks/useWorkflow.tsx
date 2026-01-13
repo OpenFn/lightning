@@ -29,7 +29,12 @@
  * @see ../contexts/StoreProvider.tsx - Provider setup and context management
  */
 
-import React, { useCallback, useContext, useMemo, useSyncExternalStore } from 'react';
+import React, {
+  useCallback,
+  useContext,
+  useMemo,
+  useSyncExternalStore,
+} from 'react';
 
 import { useURLState } from '#/react/lib/use-url-state';
 
@@ -568,7 +573,7 @@ export const useWorkflowActions = () => {
                 href={actionsUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="underline hover:text-primary-600"
+                className="underline"
               >
                 GitHub actions
               </a>{' '}
