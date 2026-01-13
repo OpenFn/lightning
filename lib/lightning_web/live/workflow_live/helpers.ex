@@ -447,11 +447,11 @@ defmodule LightningWeb.WorkflowLive.Helpers do
   end
 
   defp collaborative_base_url(%{"project_id" => project_id}, :new) do
-    "/projects/#{project_id}/w/new/collaborate?method=template"
+    "/projects/#{project_id}/w/new?method=template"
   end
 
   defp collaborative_base_url(%{"id" => id, "project_id" => project_id}, :edit) do
-    "/projects/#{project_id}/w/#{id}/collaborate"
+    "/projects/#{project_id}/w/#{id}"
   end
 
   defp build_url_with_params(base_url, params) when map_size(params) == 0 do

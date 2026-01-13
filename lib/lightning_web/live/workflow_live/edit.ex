@@ -1589,7 +1589,9 @@ defmodule LightningWeb.WorkflowLive.Edit do
     end
     |> assign(page_title: "New Workflow")
     |> assign(method: method)
-    |> assign(base_url: ~p"/projects/#{socket.assigns.project}/w/new")
+    |> assign(
+      base_url: ~p"/projects/#{socket.assigns.project}/w/new/collaborate"
+    )
   end
 
   defp apply_action(socket, :edit, %{"id" => workflow_id} = params) do
@@ -1598,7 +1600,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
         socket
         |> assign(
           base_url:
-            ~p"/projects/#{socket.assigns.project}/w/#{socket.assigns.workflow}"
+            ~p"/projects/#{socket.assigns.project}/w/#{socket.assigns.workflow}/collaborate"
         )
 
       _ ->
@@ -1616,7 +1618,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
           |> assign_workflow(workflow, snapshot)
           |> assign(page_title: workflow.name)
           |> assign(
-            base_url: ~p"/projects/#{socket.assigns.project}/w/#{workflow}"
+            base_url:
+              ~p"/projects/#{socket.assigns.project}/w/#{workflow}/collaborate"
           )
         else
           socket
@@ -1967,7 +1970,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
       updated_socket =
         if assigns.live_action == :new do
-          base_url = ~p"/projects/#{assigns.project}/w/#{assigns.workflow}"
+          base_url =
+            ~p"/projects/#{assigns.project}/w/#{assigns.workflow}/collaborate"
 
           base_socket =
             socket
@@ -2006,7 +2010,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
       update_socket =
         if assigns.live_action == :new do
-          base_url = ~p"/projects/#{assigns.project}/w/#{assigns.workflow}"
+          base_url =
+            ~p"/projects/#{assigns.project}/w/#{assigns.workflow}/collaborate"
 
           socket
           |> assign(:base_url, base_url)
@@ -3908,9 +3913,9 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
   def collaborative_editor_base_url(assigns) do
     if assigns.live_action == :new do
-      "/projects/#{assigns.project.id}/w/new/collaborate"
+      "/projects/#{assigns.project.id}/w/new"
     else
-      "/projects/#{assigns.project.id}/w/#{assigns.workflow.id}/collaborate"
+      "/projects/#{assigns.project.id}/w/#{assigns.workflow.id}"
     end
   end
 end

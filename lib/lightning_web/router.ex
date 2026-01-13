@@ -238,10 +238,10 @@ defmodule LightningWeb.Router do
         live "/dataclips/:id/show", DataclipLive.Show, :show
 
         live "/w", WorkflowLive.Index, :index
-        live "/w/new", WorkflowLive.Edit, :new
-        live "/w/new/collaborate", WorkflowLive.Collaborate, :new
-        live "/w/:id", WorkflowLive.Edit, :edit
-        live "/w/:id/collaborate", WorkflowLive.Collaborate, :edit
+        live "/w/new/collaborate", WorkflowLive.Edit, :new
+        live "/w/new", WorkflowLive.Collaborate, :new
+        live "/w/:id/collaborate", WorkflowLive.Edit, :edit
+        live "/w/:id", WorkflowLive.Collaborate, :edit
 
         live "/sandboxes", SandboxLive.Index, :index
         live "/sandboxes/new", SandboxLive.Index, :new

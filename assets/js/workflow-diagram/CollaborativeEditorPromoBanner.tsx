@@ -45,23 +45,6 @@ export function CollaborativeEditorPromoBanner({
   className,
   pushEvent,
 }: CollaborativeEditorPromoBannerProps) {
-  const [dismissed, setDismissed] = useState(false);
-
-  useEffect(() => {
-    // Check if banner was previously dismissed
-    const isDismissed = getCookie(COOKIE_NAME) === 'true';
-    setDismissed(isDismissed);
-  }, []);
-
-  const handleDismiss = () => {
-    setCookie(COOKIE_NAME, 'true', COOKIE_EXPIRY_DAYS);
-    setDismissed(true);
-  };
-
-  if (dismissed) {
-    return null;
-  }
-
   return (
     <div
       className={cn(
@@ -80,7 +63,7 @@ export function CollaborativeEditorPromoBanner({
           className="text-sm/6 text-white cursor-pointer"
         >
           <strong className="font-semibold">
-            Try the new collaborative editor
+            The old editor will be retired in N days
           </strong>
           <svg
             viewBox="0 0 2 2"
@@ -89,16 +72,8 @@ export function CollaborativeEditorPromoBanner({
           >
             <circle r={1} cx={1} cy={1} />
           </svg>
-          Real-time editing with your team&nbsp;
+          Use the new editor&nbsp;
           <span aria-hidden="true">&rarr;</span>
-        </button>
-        <button
-          type="button"
-          onClick={handleDismiss}
-          className="-m-1.5 flex-none p-1.5 cursor-pointer"
-          aria-label="Dismiss collaborative editor promotion"
-        >
-          <span className="hero-x-mark size-5 text-white" />
         </button>
       </div>
     </div>
