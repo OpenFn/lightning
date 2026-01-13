@@ -902,7 +902,7 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
       refute Presence.has_any_presence?(workflow)
 
       {:ok, _view, _html} =
-        live(conn, ~p"/projects/#{project.id}/w/#{workflow.id}")
+        live(conn, ~p"/projects/#{project.id}/w/#{workflow.id}/collaborate")
 
       patch = %{name: "work1.1"}
 
@@ -1465,7 +1465,7 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
       refute Presence.has_any_presence?(workflow)
 
       {:ok, _view, _html} =
-        live(conn, ~p"/projects/#{project.id}/w/#{workflow.id}")
+        live(conn, ~p"/projects/#{project.id}/w/#{workflow.id}/collaborate")
 
       workflow_update = %{workflow | name: "work1.1"}
 

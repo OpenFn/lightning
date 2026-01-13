@@ -60,7 +60,8 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponentTest do
   describe "workflow creation methods" do
     @tag stub_apollo: false
     test "displays template and import options", %{conn: conn, project: project} do
-      {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/w/new")
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{project.id}/w/new/collaborate")
 
       # Initial state should show template selection
       assert view |> element("#create-workflow-from-template") |> has_element?()
@@ -73,7 +74,8 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponentTest do
       conn: conn,
       project: project
     } do
-      {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/w/new")
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{project.id}/w/new/collaborate")
 
       # Click import button
       html = view |> element("#import-workflow-btn") |> render_click()
@@ -90,7 +92,8 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponentTest do
       conn: conn,
       project: project
     } do
-      {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/w/new")
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{project.id}/w/new/collaborate")
 
       # Switch to import view
       view |> element("#import-workflow-btn") |> render_click()
@@ -106,7 +109,8 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponentTest do
 
   describe "template selection" do
     test "displays available templates", %{conn: conn, project: project} do
-      {:ok, view, html} = live(conn, ~p"/projects/#{project.id}/w/new")
+      {:ok, view, html} =
+        live(conn, ~p"/projects/#{project.id}/w/new/collaborate")
 
       assert html =~ "base-webhook"
       assert html =~ "Event-based Workflow"
@@ -118,7 +122,8 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponentTest do
     end
 
     test "allows template selection", %{conn: conn, project: project} do
-      {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/w/new")
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{project.id}/w/new/collaborate")
 
       # Select a template
       assert view
@@ -135,7 +140,8 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponentTest do
       project: project,
       templates: templates
     } do
-      {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/w/new")
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{project.id}/w/new/collaborate")
 
       # Search for each template name
       for template <- templates do
@@ -176,7 +182,8 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponentTest do
       project: project,
       templates: templates
     } do
-      {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/w/new")
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{project.id}/w/new/collaborate")
 
       # Search for each template description
       for template <- templates do
@@ -205,7 +212,8 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponentTest do
       project: project,
       templates: templates
     } do
-      {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/w/new")
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{project.id}/w/new/collaborate")
 
       # Test searching by specific tags
       view
@@ -255,7 +263,8 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponentTest do
       project: project,
       templates: templates
     } do
-      {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/w/new")
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{project.id}/w/new/collaborate")
 
       # Search with uppercase
       for template <- templates do
@@ -285,7 +294,8 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponentTest do
       conn: conn,
       project: project
     } do
-      {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/w/new")
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{project.id}/w/new/collaborate")
 
       # Search for non-existent term
       view
@@ -307,7 +317,8 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponentTest do
       project: project,
       templates: templates
     } do
-      {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/w/new")
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{project.id}/w/new/collaborate")
 
       # Search with partial word
       for template <- templates do
@@ -335,7 +346,8 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponentTest do
 
   describe "workflow import" do
     test "shows file upload interface", %{conn: conn, project: project} do
-      {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/w/new")
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{project.id}/w/new/collaborate")
 
       # Switch to import view
       html = view |> element("#import-workflow-btn") |> render_click()
@@ -358,7 +370,8 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponentTest do
         :ai_assistant_api_key -> "ai_assistant_api_key"
       end)
 
-      {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/w/new")
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{project.id}/w/new/collaborate")
 
       # Switch to import view
       view |> element("#import-workflow-btn") |> render_click()
@@ -385,7 +398,8 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponentTest do
         :timeout -> 5_000
       end)
 
-      {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/w/new")
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{project.id}/w/new/collaborate")
 
       ai_assistant = element(view, "#new-workflow-panel-assistant")
 
@@ -417,7 +431,8 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponentTest do
         :timeout -> 5_000
       end)
 
-      {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/w/new")
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{project.id}/w/new/collaborate")
 
       ai_assistant = element(view, "#new-workflow-panel-assistant")
 
@@ -453,7 +468,8 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponentTest do
           end
         end)
 
-        {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/w/new")
+        {:ok, view, _html} =
+          live(conn, ~p"/projects/#{project.id}/w/new/collaborate")
 
         view
         |> form("#search-templates-form", %{"search" => "process webhook data"})
@@ -489,7 +505,8 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponentTest do
       conn: conn,
       project: project
     } do
-      {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/w/new")
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{project.id}/w/new/collaborate")
 
       html = render(view)
       assert html =~ "Build with AI ✨"
@@ -500,7 +517,8 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponentTest do
       conn: conn,
       project: project
     } do
-      {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/w/new")
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{project.id}/w/new/collaborate")
 
       view |> element("#template-label-ai-dynamic-template") |> render_click()
 
@@ -520,7 +538,8 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponentTest do
       project: project,
       templates: [%{id: id, code: code} | _]
     } do
-      {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/w/new")
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{project.id}/w/new/collaborate")
 
       view
       |> element("#choose-workflow-template-form")
@@ -535,7 +554,8 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponentTest do
       conn: conn,
       project: project
     } do
-      {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/w/new")
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{project.id}/w/new/collaborate")
 
       view
       |> element("#choose-workflow-template-form")
@@ -560,7 +580,8 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponentTest do
       conn: conn,
       project: project
     } do
-      {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/w/new")
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{project.id}/w/new/collaborate")
 
       assert view
              |> element("#create_workflow_btn[disabled]")
@@ -571,7 +592,8 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponentTest do
       conn: conn,
       project: project
     } do
-      {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/w/new")
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{project.id}/w/new/collaborate")
 
       {view, _parsed_template} = select_template(view, "base-webhook-template")
 
@@ -589,7 +611,8 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponentTest do
       conn: conn,
       project: project
     } do
-      {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/w/new")
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{project.id}/w/new/collaborate")
 
       assert element(view, "#create_workflow_btn[disabled]") |> has_element?()
 
@@ -603,11 +626,15 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponentTest do
       conn: conn,
       project: project
     } do
-      {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/w/new")
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{project.id}/w/new/collaborate")
 
       element(view, "#import-workflow-btn") |> render_click()
 
-      assert_patch(view, ~p"/projects/#{project.id}/w/new?method=import")
+      assert_patch(
+        view,
+        ~p"/projects/#{project.id}/w/new/collaborate?method=import"
+      )
 
       assert view
              |> element("#create_workflow_btn[disabled]")
@@ -622,11 +649,12 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponentTest do
       conn: conn,
       project: project
     } do
-      {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/w/new")
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{project.id}/w/new/collaborate")
 
       view |> element("#template-label-ai-dynamic-template") |> render_click()
 
-      assert_patch(view, ~p"/projects/#{project.id}/w/new?method=ai")
+      assert_patch(view, ~p"/projects/#{project.id}/w/new/collaborate?method=ai")
 
       assert view
              |> element("#create_workflow_btn[disabled]")
