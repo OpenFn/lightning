@@ -16,7 +16,7 @@ defmodule LightningWeb.ProfileLive.GithubComponent do
       {:ok, _user} ->
         {:noreply,
          socket
-         |> put_flash(:info, "Github connection removed successfully")
+         |> put_flash(:info, "GitHub connection removed successfully")
          |> push_navigate(to: ~p"/profile")}
 
       {:error, _error} ->
@@ -40,10 +40,10 @@ defmodule LightningWeb.ProfileLive.GithubComponent do
               class="text-xl font-medium leading-6 text-gray-900"
               id={"#{@id}-label"}
             >
-              Github Access
+              GitHub Access
             </span>
             <span class="text-sm text-gray-500" id={"#{@id}-description"}>
-              Linking your OpenFn account to your Github account allows you to manage version control across your projects.
+              Linking your OpenFn account to your GitHub account allows you to manage version control across your projects.
             </span>
           </span>
           <%= if oauth_enabled?() do %>
@@ -72,7 +72,7 @@ defmodule LightningWeb.ProfileLive.GithubComponent do
               type="button"
               theme="primary"
               disabled={true}
-              tooltip="Github OAuth has not been enabled for this instance."
+              tooltip="GitHub OAuth has not been enabled for this instance."
             >
               Connect your GitHub account
             </.button>

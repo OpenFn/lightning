@@ -1,6 +1,6 @@
 defmodule Lightning.UsageTracking.GithubClient do
   @moduledoc """
-  A github client to make unauthenticated HTTP requests to Github.
+  A GitHub client to make unauthenticated HTTP requests to GitHub.
   """
   use Tesla, only: [:head], docs: false
 
