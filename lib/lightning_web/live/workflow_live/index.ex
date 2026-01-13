@@ -84,8 +84,6 @@ defmodule LightningWeb.WorkflowLive.Index do
       Lightning.Accounts.get_preference(current_user, "prefer_legacy_editor") ||
         false
 
-    IO.inspect(is_legacy, label: "is_legacy:")
-
     {:ok,
      socket
      |> assign(
