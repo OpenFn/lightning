@@ -2383,7 +2383,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{cron_workflow.id}",
+          ~p"/projects/#{project.id}/w/#{cron_workflow.id}/collaborate",
           on_error: :raise
         )
 
@@ -2404,7 +2404,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{webhook_workflow.id}",
+          ~p"/projects/#{project.id}/w/#{webhook_workflow.id}/collaborate",
           on_error: :raise
         )
 
