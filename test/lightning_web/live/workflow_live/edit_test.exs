@@ -4777,7 +4777,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       # Should navigate to collaborative editor route
       assert_redirect(
         view,
-        ~p"/projects/#{project.id}/w/#{workflow.id}/collaborate"
+        ~p"/projects/#{project.id}/w/#{workflow.id}"
       )
 
       # Verify preference was saved
@@ -4886,7 +4886,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       # Should redirect to collaborative editor
       assert redirect_path ==
-               "/projects/#{project.id}/w/#{workflow.id}/collaborate"
+               "/projects/#{project.id}/w/#{workflow.id}"
     end
 
     test "redirects to collaborative editor with query params when preference is set",
@@ -4919,7 +4919,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       # Should redirect to collaborative editor with same params
       assert redirect_path ==
-               ~p"/projects/#{project.id}/w/#{workflow.id}/collaborate?#{%{job: job.id, panel: "editor"}}"
+               ~p"/projects/#{project.id}/w/#{workflow.id}?#{%{job: job.id, panel: "editor"}}"
     end
 
     test "shows collaborative editor toggle when creating new workflow with experimental features",

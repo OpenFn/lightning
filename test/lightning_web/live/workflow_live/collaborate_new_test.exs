@@ -76,7 +76,7 @@ defmodule LightningWeb.WorkflowLive.CollaborateNewTest do
       {:ok, _view, html} =
         live(
           conn,
-          ~p"/projects/#{sandbox_b.id}/w/new/collaborate"
+          ~p"/projects/#{sandbox_b.id}/w/new"
         )
 
       assert html =~ "data-root-project-id=\"#{root_project.id}\""
