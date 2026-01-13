@@ -122,6 +122,19 @@ defmodule LightningWeb.WorkflowLive.Collaborate do
      )}
   end
 
+  def handle_event("credential_modal_closed", _params, socket) do
+    # Called when the credential modal closes (via JS.push from on_modal_close)
+    # Push event to React and clean up server state
+    {:noreply,
+     socket
+     |> push_event("credential_modal_closed", %{})
+     |> assign(
+       show_credential_modal: false,
+       credential_schema: nil,
+       credential_to_edit: nil
+     )}
+  end
+
   def handle_event("open_webhook_auth_modal", %{}, socket) do
     # Open the webhook auth method creation modal
     # Create a new webhook auth method for the form
@@ -207,9 +220,7 @@ defmodule LightningWeb.WorkflowLive.Collaborate do
           :ok
         end
       }
-      on_modal_close={
-        JS.dispatch("close_credential_modal", to: "#collaborative-editor-react")
-      }
+      on_modal_close={JS.push("credential_modal_closed")}
       return_to={nil}
       sandbox_id={@project.parent_id}
       from_collab_editor={true}

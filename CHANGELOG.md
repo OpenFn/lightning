@@ -21,6 +21,10 @@ and this project adheres to
 
 ### Fixed
 
+- Fixed credential auto-selection when creating a new credential from the
+  workflow editor's ConfigureAdaptorModal
+  [#4287](https://github.com/OpenFn/lightning/issues/4287)
+
 ## [2.15.10] - 2026-01-12
 
 ## [2.15.10-pre] - 2026-01-12
