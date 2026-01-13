@@ -1465,7 +1465,7 @@ defmodule Lightning.Credentials do
         })
       end)
       |> Multi.insert(:audit, fn %{credential: updated_credential} ->
-        Audit.user_initiated_event("transfered", credential, %{
+        Audit.user_initiated_event("transferred", credential, %{
           before: %{user_id: credential.user_id},
           after: %{user_id: updated_credential.user_id}
         })

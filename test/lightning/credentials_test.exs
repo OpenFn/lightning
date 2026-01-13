@@ -1028,7 +1028,7 @@ defmodule Lightning.CredentialsTest do
 
         assert [audit] =
                  Repo.all(
-                   from(a in Auditing.Audit, where: a.event == "transfered")
+                   from(a in Auditing.Audit, where: a.event == "transferred")
                  )
 
         assert audit.changes.before["user_id"] == credential.user_id

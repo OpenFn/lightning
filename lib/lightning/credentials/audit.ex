@@ -11,7 +11,7 @@ defmodule Lightning.Credentials.Audit do
       "added_to_project",
       "removed_from_project",
       "deleted",
-      "transfered",
+      "transferred",
       "token_refreshed",
       "token_refresh_failed",
       "token_revoked"
