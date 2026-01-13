@@ -46,6 +46,8 @@ export function TriggerForm({ trigger }: TriggerFormProps) {
   const sessionContext = useSessionContext();
   const { provider } = useSession();
   const channel = provider?.channel;
+  const kafkaTriggersEnabled =
+    sessionContext.config?.kafka_triggers_enabled ?? false;
 
   // Get active trigger auth methods from workflow store
   const activeTriggerAuthMethods = useWorkflowState(
@@ -210,7 +212,7 @@ export function TriggerForm({ trigger }: TriggerFormProps) {
                 >
                   <option value="webhook">Webhook</option>
                   <option value="cron">Cron</option>
-                  <option value="kafka">Kafka</option>
+                  {kafkaTriggersEnabled && <option value="kafka">Kafka</option>}
                 </select>
                 {field.state.meta.errors.map(error => (
                   <p key={error} className="mt-1 text-xs text-red-600">
