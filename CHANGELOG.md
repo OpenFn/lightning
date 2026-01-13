@@ -21,6 +21,9 @@ and this project adheres to
 
 ### Fixed
 
+- Fix unable to save a workflow with a Kafka trigger in the collab editor
+  [#4295](https://github.com/OpenFn/lightning/issues/4295)
+
 ## [2.15.10] - 2026-01-12
 
 ## [2.15.10-pre] - 2026-01-12
