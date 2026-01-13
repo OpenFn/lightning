@@ -21,6 +21,9 @@ and this project adheres to
 
 ### Fixed
 
+- Add clickable GitHub Actions link to collaborative editor's Save & Sync
+  success toast [#4281](https://github.com/OpenFn/lightning/issues/4281)
+
 ## [2.15.10] - 2026-01-12
 
 ## [2.15.10-pre] - 2026-01-12
