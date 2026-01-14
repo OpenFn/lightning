@@ -635,7 +635,7 @@ export function ConfigureAdaptorModal({
                       {/* Schema-matched credentials */}
                       {!showOtherCredentials &&
                         credentialSections.schemaMatched.length > 0 && (
-                          <div className="border border-gray-200 rounded-md divide-y max-h-72 overflow-y-auto">
+                          <div className="border border-gray-200 rounded-md divide-y max-h-48 overflow-y-auto">
                             {credentialSections.schemaMatched.map(cred => {
                               const credId = getCredentialId(cred);
                               const isSelected = currentCredentialId === credId;
@@ -663,7 +663,7 @@ export function ConfigureAdaptorModal({
                           {credentialSections.universal.length > 0 && (
                             <div>
                               <SectionDivider label="Generic Credentials" />
-                              <div className="border border-gray-200 rounded-md divide-y max-h-72 overflow-y-auto">
+                              <div className="border border-gray-200 rounded-md divide-y max-h-48 overflow-y-auto">
                                 {credentialSections.universal.map(cred => {
                                   const credId = getCredentialId(cred);
                                   const isSelected =
@@ -692,7 +692,7 @@ export function ConfigureAdaptorModal({
                           {credentialSections.keychain.length > 0 && (
                             <div>
                               <SectionDivider label="Keychain Credentials" />
-                              <div className="border border-gray-200 rounded-md divide-y max-h-72 overflow-y-auto">
+                              <div className="border border-gray-200 rounded-md divide-y max-h-48 overflow-y-auto">
                                 {credentialSections.keychain.map(cred => {
                                   const credId = getCredentialId(cred);
                                   const isSelected =
