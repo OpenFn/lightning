@@ -27,6 +27,9 @@ and this project adheres to
 
 ### Fixed
 
+- Fixed credential auto-selection when creating a new credential from the
+  workflow editor's ConfigureAdaptorModal
+  [#4287](https://github.com/OpenFn/lightning/issues/4287)
 - Add index on `runs.finished_at` to fix UsageTracking ReportWorker timeouts
   [#4308](https://github.com/OpenFn/lightning/pull/4308)
 
