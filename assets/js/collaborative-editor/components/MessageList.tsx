@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import Markdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 
+import { useCopyToClipboard } from '#/collaborative-editor/hooks/useCopyToClipboard';
 import { cn } from '#/utils/cn';
 
 import type { Message } from '../types/ai-assistant';
@@ -22,16 +23,16 @@ const CodeBlock = ({
   /** Whether Add button is disabled due to readonly mode */
   isWriteDisabled?: boolean;
 }) => {
-  const [copied, setCopied] = useState(false);
+  const {
+    copyText: copyButtonText,
+    copyToClipboard,
+    isCopied,
+  } = useCopyToClipboard();
   const [added, setAdded] = useState(false);
 
-  const handleCopy = async (e: React.MouseEvent) => {
+  const handleCopy = (e: React.MouseEvent) => {
     e.stopPropagation();
-    const success = await doCopy(children);
-    if (success) {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    }
+    void copyToClipboard(children);
   };
 
   const handleAdd = (e: React.MouseEvent) => {
@@ -70,13 +71,13 @@ const CodeBlock = ({
           type="button"
           onClick={handleCopy}
           className={cn(
-            'rounded-md px-2 py-1 text-xs font-medium transition-all duration-300 ease-in-out',
-            copied
+            'rounded-md px-2 py-1 text-xs font-medium transition-all duration-300 ease-in-out uppercase',
+            isCopied
               ? 'bg-green-100 text-green-700 scale-105'
               : 'bg-slate-300 text-white hover:bg-primary-600 hover:scale-105'
           )}
         >
-          {copied ? 'COPIED' : 'COPY'}
+          {copyButtonText || 'Copy'}
         </button>
         {showAddButtons && (
           <Tooltip
@@ -197,19 +198,17 @@ const CodeActionButtons = ({
   /** Whether Apply/Add buttons are disabled due to readonly mode */
   isWriteDisabled?: boolean;
 }) => {
-  const [copied, setCopied] = useState(false);
+  const {
+    copyText: copyButtonText,
+    copyToClipboard,
+    isCopied,
+  } = useCopyToClipboard();
   const [applied, setApplied] = useState(false);
   const [added, setAdded] = useState(false);
 
   const handleCopy = (e: React.MouseEvent) => {
     e.stopPropagation();
-    void (async () => {
-      const success = await doCopy(code);
-      if (success) {
-        setCopied(true);
-        setTimeout(() => setCopied(false), 2000);
-      }
-    })();
+    void copyToClipboard(code);
   };
 
   const handleAdd = (e: React.MouseEvent) => {
@@ -313,13 +312,13 @@ const CodeActionButtons = ({
         type="button"
         onClick={handleCopy}
         className={cn(
-          'rounded-md px-2 py-1 text-xs font-medium transition-all duration-300 ease-in-out',
-          copied
+          'rounded-md px-2 py-1 text-xs font-medium transition-all duration-300 ease-in-out uppercase',
+          isCopied
             ? 'bg-green-100 text-green-700 scale-105'
             : 'bg-slate-300 text-white hover:bg-primary-600 hover:scale-105'
         )}
       >
-        {copied ? 'COPIED' : 'COPY'}
+        {copyButtonText || 'Copy'}
       </button>
       {showAdd && (
         <Tooltip

@@ -5,9 +5,13 @@
  * empty states, loading indicators, and user/assistant message styling.
  */
 
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+/* eslint-disable @typescript-eslint/unbound-method */
+// Disabled because we reference navigator.clipboard.writeText in expect() calls
+// which TypeScript sees as an unbound method. This is safe in tests where we're
+// checking if the mocked method was called, not actually calling it.
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 
 import { MessageList } from '../../../js/collaborative-editor/components/MessageList';
 import { createMockAIMessage } from '../__helpers__/aiAssistantHelpers';
@@ -19,7 +23,7 @@ global.ClipboardItem = class ClipboardItem {
 
 Object.assign(navigator, {
   clipboard: {
-    write: vi.fn(() => Promise.resolve()),
+    writeText: vi.fn(() => Promise.resolve()),
   },
 });
 
@@ -237,7 +241,7 @@ describe('MessageList', () => {
       });
     });
 
-    it('should show COPY button for code blocks', () => {
+    it('should show Copy button for code blocks', () => {
       const messages = [
         createMockAIMessage({
           role: 'assistant',
@@ -247,7 +251,8 @@ describe('MessageList', () => {
 
       render(<MessageList messages={messages} />);
 
-      expect(screen.getByText('COPY')).toBeInTheDocument();
+      const copyButtons = screen.getAllByText('Copy');
+      expect(copyButtons.length).toBeGreaterThan(0);
     });
 
     it('should show APPLY button when showApplyButton is true', () => {
@@ -344,8 +349,12 @@ describe('MessageList', () => {
 
   describe('Code Action Buttons', () => {
     beforeEach(() => {
-      // Mock clipboard write
-      vi.spyOn(navigator.clipboard, 'write').mockResolvedValue();
+      // Mock clipboard API
+      Object.assign(navigator, {
+        clipboard: {
+          writeText: vi.fn(() => Promise.resolve()),
+        },
+      });
     });
 
     it('should copy code to clipboard on COPY click', async () => {
@@ -358,11 +367,15 @@ describe('MessageList', () => {
 
       render(<MessageList messages={messages} />);
 
-      const copyButton = screen.getByText('COPY');
-      await userEvent.click(copyButton);
+      // Get all Copy buttons - there are multiple (code block + message footer)
+      // Click the first one and verify the correct content was copied
+      const copyButtons = screen.getAllByText('Copy');
+      await userEvent.click(copyButtons[0]);
 
       await waitFor(() => {
-        expect(navigator.clipboard.write).toHaveBeenCalled();
+        expect(navigator.clipboard.writeText).toHaveBeenCalledWith(
+          'test code content'
+        );
       });
     });
 
@@ -376,11 +389,12 @@ describe('MessageList', () => {
 
       render(<MessageList messages={messages} />);
 
-      const copyButton = screen.getByText('COPY');
-      await userEvent.click(copyButton);
+      // Get all Copy buttons - click one and verify feedback appears
+      const copyButtons = screen.getAllByText('Copy');
+      await userEvent.click(copyButtons[0]);
 
       await waitFor(() => {
-        expect(screen.getByText('COPIED')).toBeInTheDocument();
+        expect(screen.getByText('Copied!')).toBeInTheDocument();
       });
     });
   });
@@ -433,7 +447,7 @@ describe('MessageList', () => {
       const { container } = render(<MessageList messages={messages} />);
 
       // Should not have code block with COPY/ADD buttons
-      expect(screen.queryByText('COPY')).not.toBeInTheDocument();
+      expect(screen.queryByText('Copy')).not.toBeInTheDocument();
       expect(screen.queryByText('ADD')).not.toBeInTheDocument();
 
       // Should not have pre/code block styling
@@ -707,3 +721,4 @@ describe('MessageList', () => {
     });
   });
 });
+/* eslint-enable @typescript-eslint/unbound-method */
