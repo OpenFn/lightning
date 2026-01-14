@@ -116,7 +116,7 @@ defmodule LightningWeb.WorkflowLive.Components do
            group-hover:opacity-100 group-hover:translate-y-0 group-hover:z-50 group-hover:scale-100">
         <div class="py-1">
           <div class="px-4 py-2">
-            This editor has been deprecated in favor of a new modern one which allows collaboration.
+            This editor has been deprecated in favor of a modern collaborative one.
           </div>
           <div class="my-1 h-px bg-gray-100"></div>
           <div
