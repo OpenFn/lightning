@@ -29,6 +29,8 @@ and this project adheres to
 
 - Add index on `runs.finished_at` to fix UsageTracking ReportWorker timeouts
   [#4308](https://github.com/OpenFn/lightning/pull/4308)
+- Credentials Scrubber uses too much memory
+  [#4307](https://github.com/OpenFn/lightning/issues/4307)
 
 ## [2.15.10] - 2026-01-12
 
