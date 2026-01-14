@@ -24,6 +24,8 @@ and this project adheres to
 - Optimized PromEx average claim duration query to use SQL aggregation instead
   of fetching rows into memory
   [#4317](https://github.com/OpenFn/lightning/pull/4317)
+- Make new editor the default & warn for deprecation of legacy
+  [#4111](https://github.com/OpenFn/lightning/issues/4111)
 
 ### Fixed
 
