@@ -237,8 +237,7 @@ export function ConfigureAdaptorModal({
     else if (hasSchemaMatches) {
       setShowOtherCredentials(false);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOpen, currentAdaptor, currentCredentialId]);
+  }, [isOpen, currentAdaptor, currentCredentialId, credentialSections]);
 
   // Get version options for current adaptor
   const versionOptions = useMemo(() => {

@@ -4122,7 +4122,7 @@ defmodule LightningWeb.ProjectLiveTest do
 
       flash = assert_redirect(view, ~p"/projects/#{project.id}/settings#vcs")
 
-      assert flash["info"] == "Github account linked successfully"
+      assert flash["info"] == "GitHub account linked successfully"
 
       {:ok, view, html} = live(conn, ~p"/projects/#{project.id}/settings#vcs")
 
@@ -4159,7 +4159,7 @@ defmodule LightningWeb.ProjectLiveTest do
       :ok = refute_redirected(view, ~p"/projects/#{project.id}/settings#vcs")
 
       assert render(view) =~
-               "Oops! Github account failed to link. Please try again"
+               "Oops! GitHub account failed to link. Please try again"
 
       # button to connect is still available
       assert has_element?(view, "#connect-github-link")
@@ -4860,7 +4860,7 @@ defmodule LightningWeb.ProjectLiveTest do
       )
 
       flash = assert_redirected(view, ~p"/projects/#{project.id}/settings#vcs")
-      assert flash["error"] == "Github Error: #{expected_error_msg}"
+      assert flash["error"] == "GitHub Error: #{expected_error_msg}"
     end
 
     test "users get a flash containing the github error in case the api returns an error with message key",
@@ -4952,7 +4952,7 @@ defmodule LightningWeb.ProjectLiveTest do
       )
 
       flash = assert_redirected(view, ~p"/projects/#{project.id}/settings#vcs")
-      assert flash["error"] == "Github Error: #{expected_error_msg}"
+      assert flash["error"] == "GitHub Error: #{expected_error_msg}"
     end
 
     test "connect button is disabled if the usage limiter returns an error",
@@ -5898,7 +5898,7 @@ defmodule LightningWeb.ProjectLiveTest do
 
         flash = assert_redirected(view, ~p"/projects/#{project.id}/settings#vcs")
 
-        assert flash["info"] == "Github sync initiated"
+        assert flash["info"] == "GitHub sync initiated"
       end
     end
 

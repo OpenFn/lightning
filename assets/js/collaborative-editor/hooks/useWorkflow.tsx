@@ -29,8 +29,12 @@
  * @see ../contexts/StoreProvider.tsx - Provider setup and context management
  */
 
-import type React from 'react';
-import { useCallback, useContext, useMemo, useSyncExternalStore } from 'react';
+import React, {
+  useCallback,
+  useContext,
+  useMemo,
+  useSyncExternalStore,
+} from 'react';
 
 import { useURLState } from '#/react/lib/use-url-state';
 
@@ -108,7 +112,7 @@ export const useWorkflowStoreContext = () => {
  *
  * @returns T The memoized result of your selector, with referential stability
  */
-export const useWorkflowSelector = <T>(
+export const useWorkflowSelector = <T,>(
   selector: (state: Workflow.State, store: WorkflowStoreInstance) => T,
   deps: React.DependencyList = []
 ): T => {
@@ -179,7 +183,7 @@ export const useWorkflowSelector = <T>(
  *
  * @returns T The memoized result of your selector with referential stability
  */
-export const useWorkflowState = <T>(
+export const useWorkflowState = <T,>(
   selector: (state: Workflow.State) => T,
   deps: React.DependencyList = []
 ): T => {
@@ -553,12 +557,31 @@ export const useWorkflowActions = () => {
         }
 
         // Show success toast
-        const successOptions: { title: string; description?: string } = {
+        const successOptions: {
+          title: string;
+          description?: React.ReactNode;
+        } = {
           title: 'Workflow saved and synced to GitHub',
         };
+
         if (response.repo) {
-          successOptions.description = `Changes pushed to ${response.repo}`;
+          const actionsUrl = `https://github.com/${response.repo}/actions`;
+          successOptions.description = (
+            <span>
+              Changes pushed to {response.repo}. Check the{' '}
+              <a
+                href={actionsUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="underline"
+              >
+                GitHub actions
+              </a>{' '}
+              for result
+            </span>
+          );
         }
+
         notifications.success(successOptions);
       };
 

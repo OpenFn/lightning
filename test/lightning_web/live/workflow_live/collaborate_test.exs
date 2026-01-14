@@ -715,6 +715,46 @@ defmodule LightningWeb.WorkflowLive.CollaborateTest do
       refute html =~ "new-credential-modal"
     end
 
+    test "credential_modal_closed event closes modal and pushes event to React",
+         %{conn: conn} do
+      user = insert(:user)
+
+      project =
+        insert(:project,
+          project_users: [%{user_id: user.id, role: :owner}]
+        )
+
+      workflow = workflow_fixture(project_id: project.id)
+
+      conn = log_in_user(conn, user)
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/w/#{workflow.id}/collaborate"
+        )
+
+      # First open the modal
+      html =
+        view
+        |> element("#collaborative-editor-react")
+        |> render_hook("open_credential_modal", %{"schema" => "http"})
+
+      assert html =~ "new-credential-modal"
+
+      # Close via credential_modal_closed (triggered by JS.push from on_modal_close)
+      html =
+        view
+        |> element("#collaborative-editor-react")
+        |> render_hook("credential_modal_closed", %{})
+
+      # Modal should be hidden
+      refute html =~ "new-credential-modal"
+
+      # Verify the credential_modal_closed event was pushed to React
+      assert_push_event(view, "credential_modal_closed", %{})
+    end
+
     test "modal renders with pre-selected schema", %{conn: conn} do
       user = insert(:user)
 
