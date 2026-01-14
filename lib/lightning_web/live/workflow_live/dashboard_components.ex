@@ -173,7 +173,7 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
                 onclick={
                   JS.navigate(
                     if @is_legacy do
-                      ~p"/projects/#{@project.id}/w/#{workflow.id}/collaborate"
+                      ~p"/projects/#{@project.id}/w/#{workflow.id}/legacy"
                     else
                       ~p"/projects/#{@project.id}/w/#{workflow.id}"
                     end
@@ -185,7 +185,7 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
                     phx-click={
                       JS.navigate(
                         if @is_legacy do
-                          ~p"/projects/#{@project.id}/w/#{workflow.id}/collaborate"
+                          ~p"/projects/#{@project.id}/w/#{workflow.id}/legacy"
                         else
                           ~p"/projects/#{@project.id}/w/#{workflow.id}"
                         end
@@ -373,7 +373,7 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
         phx-click={
           if !@disabled do
             if @is_legacy do
-              JS.navigate(~p"/projects/#{@project_id}/w/new/collaborate")
+              JS.navigate(~p"/projects/#{@project_id}/w/new/legacy")
             else
               JS.navigate(~p"/projects/#{@project_id}/w/new?method=template")
             end

@@ -18,7 +18,7 @@ defmodule LightningWeb.WorkflowLive.EditTemplateTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}/collaborate?m=code"
+          ~p"/projects/#{project.id}/w/#{workflow.id}/legacy?m=code"
         )
 
       render_hook(view, "workflow_code_generated", %{
@@ -65,7 +65,7 @@ defmodule LightningWeb.WorkflowLive.EditTemplateTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}/collaborate?m=code"
+          ~p"/projects/#{project.id}/w/#{workflow.id}/legacy?m=code"
         )
 
       render_hook(view, "workflow_code_generated", %{
@@ -110,7 +110,7 @@ defmodule LightningWeb.WorkflowLive.EditTemplateTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}/collaborate?m=code"
+          ~p"/projects/#{project.id}/w/#{workflow.id}/legacy?m=code"
         )
 
       render_hook(view, "workflow_code_generated", %{
@@ -146,7 +146,7 @@ defmodule LightningWeb.WorkflowLive.EditTemplateTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}/collaborate?m=code"
+          ~p"/projects/#{project.id}/w/#{workflow.id}/legacy?m=code"
         )
 
       render_hook(view, "workflow_code_generated", %{
@@ -171,7 +171,7 @@ defmodule LightningWeb.WorkflowLive.EditTemplateTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}/collaborate?m=code"
+          ~p"/projects/#{project.id}/w/#{workflow.id}/legacy?m=code"
         )
 
       render_hook(view, "workflow_code_generated", %{
@@ -194,7 +194,7 @@ defmodule LightningWeb.WorkflowLive.EditTemplateTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}/collaborate?m=code"
+          ~p"/projects/#{project.id}/w/#{workflow.id}/legacy?m=code"
         )
 
       render_hook(view, "workflow_code_generated", %{
@@ -217,7 +217,7 @@ defmodule LightningWeb.WorkflowLive.EditTemplateTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}/collaborate?m=code"
+          ~p"/projects/#{project.id}/w/#{workflow.id}/legacy?m=code"
         )
 
       render_hook(view, "workflow_code_generated", %{
@@ -244,7 +244,7 @@ defmodule LightningWeb.WorkflowLive.EditTemplateTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}/collaborate?m=code"
+          ~p"/projects/#{project.id}/w/#{workflow.id}/legacy?m=code"
         )
 
       render_hook(view, "workflow_code_generated", %{
@@ -275,7 +275,7 @@ defmodule LightningWeb.WorkflowLive.EditTemplateTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}/collaborate?m=code"
+          ~p"/projects/#{project.id}/w/#{workflow.id}/legacy?m=code"
         )
 
       render_hook(view, "workflow_code_generated", %{
@@ -308,7 +308,7 @@ defmodule LightningWeb.WorkflowLive.EditTemplateTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}/collaborate?m=code"
+          ~p"/projects/#{project.id}/w/#{workflow.id}/legacy?m=code"
         )
 
       render_hook(view, "workflow_code_generated", %{

@@ -1589,9 +1589,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
     end
     |> assign(page_title: "New Workflow")
     |> assign(method: method)
-    |> assign(
-      base_url: ~p"/projects/#{socket.assigns.project}/w/new/collaborate"
-    )
+    |> assign(base_url: ~p"/projects/#{socket.assigns.project}/w/new/legacy")
   end
 
   defp apply_action(socket, :edit, %{"id" => workflow_id} = params) do
@@ -1600,7 +1598,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
         socket
         |> assign(
           base_url:
-            ~p"/projects/#{socket.assigns.project}/w/#{socket.assigns.workflow}/collaborate"
+            ~p"/projects/#{socket.assigns.project}/w/#{socket.assigns.workflow}/legacy"
         )
 
       _ ->
@@ -1619,7 +1617,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
           |> assign(page_title: workflow.name)
           |> assign(
             base_url:
-              ~p"/projects/#{socket.assigns.project}/w/#{workflow}/collaborate"
+              ~p"/projects/#{socket.assigns.project}/w/#{workflow}/legacy"
           )
         else
           socket
@@ -1971,7 +1969,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
       updated_socket =
         if assigns.live_action == :new do
           base_url =
-            ~p"/projects/#{assigns.project}/w/#{assigns.workflow}/collaborate"
+            ~p"/projects/#{assigns.project}/w/#{assigns.workflow}/legacy"
 
           base_socket =
             socket
@@ -2011,7 +2009,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
       update_socket =
         if assigns.live_action == :new do
           base_url =
-            ~p"/projects/#{assigns.project}/w/#{assigns.workflow}/collaborate"
+            ~p"/projects/#{assigns.project}/w/#{assigns.workflow}/legacy"
 
           socket
           |> assign(:base_url, base_url)
