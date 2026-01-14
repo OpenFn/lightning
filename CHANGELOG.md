@@ -27,6 +27,8 @@ and this project adheres to
 
 ### Fixed
 
+- Add clickable GitHub Actions link to collaborative editor's Save & Sync
+  success toast [#4281](https://github.com/OpenFn/lightning/issues/4281)
 - Fixed credential auto-selection when creating a new credential from the
   workflow editor's ConfigureAdaptorModal
   [#4287](https://github.com/OpenFn/lightning/issues/4287)
