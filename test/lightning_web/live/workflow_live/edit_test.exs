@@ -4677,11 +4677,8 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       # Should show the beaker icon toggle
       assert has_element?(
                view,
-               "button[aria-label*='collaborative editor (experimental)']"
+               "div[data-id*='deprecated']"
              )
-
-      # Should have beaker icon
-      assert html =~ "hero-beaker"
     end
 
     test "shows collaborative editor toggle without experimental features",
@@ -4696,7 +4693,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       # Should show the toggle (no longer gated by experimental features)
       assert has_element?(
                view,
-               "button[aria-label*='collaborative editor (experimental)']"
+               "div[data-id*='deprecated']"
              )
     end
 
@@ -4724,7 +4721,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       # Toggle is shown even on non-latest snapshots (no longer conditionally hidden)
       assert has_element?(
                view,
-               "button[aria-label*='collaborative editor (experimental)']"
+               "div[data-id*='deprecated']"
              )
     end
 
@@ -4751,7 +4748,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       # Should show toggle on latest version
       assert has_element?(
                view,
-               "button[aria-label*='collaborative editor (experimental)']"
+               "div[data-id*='deprecated']"
              )
     end
 
@@ -4777,7 +4774,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       # Click the collaborative editor toggle
       view
-      |> element("button[aria-label*='collaborative editor (experimental)']")
+      |> element("div[data-id*='deprecated']")
       |> render_click()
 
       # Should navigate to collaborative editor route
@@ -4812,22 +4809,16 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       toggle_element =
         view
-        |> element("button[aria-label*='collaborative editor (experimental)']")
+        |> element("div[data-id*='deprecated']")
 
       toggle_html = render(toggle_element)
 
       # Check styling classes
       assert toggle_html =~ "text-primary-600"
-      assert toggle_html =~ "hover:text-primary-700"
       assert toggle_html =~ "hover:bg-primary-50"
-      assert toggle_html =~ "transition-colors"
 
       # Check accessibility
-      assert toggle_html =~ "aria-label"
-      assert toggle_html =~ "collaborative editor (experimental)"
-
-      # Check icon presence
-      assert toggle_html =~ "hero-beaker"
+      assert toggle_html =~ "Go to the new editor"
     end
 
     test "preserves existing experimental features preferences", %{
@@ -4856,7 +4847,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       # Should show toggle
       assert has_element?(
                view,
-               "button[aria-label*='collaborative editor (experimental)']"
+               "div[data-id*='deprecated']"
              )
 
       # Verify all preferences are preserved
@@ -4888,11 +4879,8 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       # Should show the beaker icon toggle even on new workflow page
       assert has_element?(
                view,
-               "button[aria-label*='collaborative editor (experimental)']"
+               "div[data-id*='deprecated']"
              )
-
-      # Should have beaker icon
-      assert html =~ "hero-beaker"
     end
 
     test "shows collaborative editor toggle when creating new workflow",
@@ -4906,7 +4894,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       # Should show the toggle (no longer gated by experimental features)
       assert has_element?(
                view,
-               "button[aria-label*='collaborative editor (experimental)']"
+               "div[data-id*='deprecated']"
              )
     end
 
@@ -4932,10 +4920,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
           ~p"/projects/#{project.id}/w/#{workflow.id}/legacy?s=#{job.id}&m=expand&v=#{workflow.lock_version}"
         )
 
-      # Should show beaker icon in job inspector
-      assert html =~ "inspector-collaborative-editor-toggle"
-      assert html =~ "hero-beaker"
-      assert html =~ "collaborative editor (experimental)"
+      assert html =~ "Go to the new editor"
     end
 
     test "shows collaborative editor toggle in job inspector without experimental features",
@@ -4954,7 +4939,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
         )
 
       # Should show beaker icon in job inspector (no longer gated by experimental features)
-      assert html =~ "inspector-collaborative-editor-toggle"
+      assert html =~ "Go to the new editor"
     end
   end
 

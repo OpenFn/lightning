@@ -101,6 +101,37 @@ defmodule LightningWeb.WorkflowLive.Components do
     """
   end
 
+  def deprecated_warning(assigns) do
+    ~H"""
+    <div class="relative inline-block group">
+      <div class="h-full flex items-center">
+        <button class="inline-flex items-center gap-1 rounded-md text-sm font-medium text-danger-900 hover:text-danger-600 focus:outline-none">
+          <span class="hero-exclamation-triangle h-4 w-4"></span> Deprecated
+        </button>
+      </div>
+
+      <div class="absolute left-0 -z-10 mt-2 w-56 origin-top-left rounded-lg bg-white shadow-lg ring-1 ring-black/5
+           opacity-0 translate-y-1 scale-95
+           transition-all duration-150 ease-out
+           group-hover:opacity-100 group-hover:translate-y-0 group-hover:z-50 group-hover:scale-100">
+        <div class="py-1">
+          <div class="px-4 py-2">
+            This editor has been deprecated in favor of a new modern one which allows collaboration.
+          </div>
+          <div class="my-1 h-px bg-gray-100"></div>
+          <div
+            class="block px-4 py-2 text-sm font-medium text-primary-600 hover:bg-primary-50 cursor-pointer"
+            phx-click="switch_to_collab_editor"
+            data-id="deprecated"
+          >
+            Go to the new editor&nbsp; <span aria-hidden="true">&rarr;</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    """
+  end
+
   attr :form, :map, required: true
   attr :can_edit_run_settings, :boolean, required: true
   attr :project_concurrency_disabled, :boolean, required: true

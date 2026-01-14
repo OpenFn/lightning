@@ -275,24 +275,58 @@ export function Header({
       <EmailVerificationBanner />
 
       <div className="flex-none bg-white shadow-xs border-b border-gray-200 relative z-50">
-        <div className="mx-auto sm:px-4 lg:px-4 py-6 flex items-center h-20 text-sm">
+        <div className="mx-auto sm:px-4 lg:px-4 py-6 flex items-center h-20 text-sm gap-2">
           <Breadcrumbs>{children}</Breadcrumbs>
           <ReadOnlyWarning className="ml-3" />
           {projectId && workflowId && (
-            <button
-              type="button"
-              onClick={() => void handleSwitchToLegacyEditor()}
-              className="inline-flex items-center justify-center
+            <>
+              {/* <button
+                type="button"
+                onClick={() => void handleSwitchToLegacyEditor()}
+                className="inline-flex items-center justify-center
               w-6 h-6 text-primary-600 hover:text-primary-700
               hover:bg-primary-50 rounded transition-colors ml-2"
-            >
-              <Tooltip
-                content={"You're using the new editor — click to switch back."}
-                side="bottom"
               >
-                <span className="hero-beaker-solid h-4 w-4" />
-              </Tooltip>
-            </button>
+                <Tooltip
+                  content={
+                    "You're using the new editor — click to switch back."
+                  }
+                  side="bottom"
+                >
+                  <span className="hero-beaker-solid h-4 w-4" />
+                </Tooltip>
+              </button> */}
+              <div className="relative inline-block group">
+                <div className="h-full flex items-center">
+                  <button className="inline-flex items-center gap-1 rounded-md text-sm font-medium text-primary-700 hover:text-primary-900 focus:outline-none">
+                    <span className="hero-information-circle h-4 w-4"></span>{' '}
+                    New Editor
+                  </button>
+                </div>
+
+                <div
+                  className="absolute left-0 -z-10 mt-2 w-56 origin-top-left rounded-lg bg-white shadow-lg ring-1 ring-black/5
+           opacity-0 translate-y-1 scale-95
+           transition-all duration-150 ease-out
+           group-hover:opacity-100 group-hover:translate-y-0 group-hover:z-50 group-hover:scale-100"
+                >
+                  <div className="py-1">
+                    <div className="px-4 py-2">
+                      This is the new editor which supports collaboration and
+                      many more.
+                    </div>
+                    <div className="my-1 h-px bg-gray-100"></div>
+                    <div
+                      className="block px-4 py-2 text-sm font-medium text-primary-600 hover:bg-primary-50 cursor-pointer"
+                      onClick={() => void handleSwitchToLegacyEditor()}
+                    >
+                      <span aria-hidden="true">&larr;</span> Go to the legacy
+                      editor&nbsp;
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </>
           )}
           <ActiveCollaborators className="ml-2" />
           <div className="grow ml-2"></div>

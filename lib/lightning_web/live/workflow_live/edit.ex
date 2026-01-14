@@ -129,17 +129,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
               <% end %>
               
     <!-- Add collaborative editor toggle (beaker icon only) -->
-              <button
-                id="collaborative-editor-toggle"
-                phx-click="switch_to_collab_editor"
-                class="inline-flex items-center justify-center p-1 text-primary-600 hover:text-primary-700 hover:bg-primary-50 rounded transition-colors"
-                data-placement="bottom"
-                aria-label="Switch to collaborative editor (experimental)"
-                type="button"
-              >
-                <.icon name="hero-beaker" class="h-4 w-4" />
-              </button>
-
+              <LightningWeb.WorkflowLive.Components.deprecated_warning />
               <LightningWeb.WorkflowLive.Components.online_users
                 id="canvas-online-users"
                 presences={@presences}

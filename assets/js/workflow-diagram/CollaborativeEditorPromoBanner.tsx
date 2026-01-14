@@ -38,9 +38,10 @@ export function CollaborativeEditorPromoBanner({
         <button
           type="button"
           onClick={() => pushEvent?.('switch_to_collab_editor', {})}
-          className="text-sm/6 text-white cursor-pointer"
+          className="text-sm/6 text-white cursor-pointer flex items-center"
         >
-          <strong className="font-semibold">
+          <strong className="font-semibold flex items-center gap-2">
+            <span className="hero-exclamation-triangle"></span>
             This legacy editor will be retired very soon
           </strong>
           <svg
