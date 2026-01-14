@@ -910,7 +910,7 @@ defmodule LightningWeb.WorkflowLive.Components do
     <span>
       Workflow saved and sync requested. Check the
       <.link href={@link_to_actions} target="_blank" class="link">
-        Github actions
+        GitHub actions
       </.link>
       for result
     </span>

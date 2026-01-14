@@ -208,34 +208,45 @@ defmodule Lightning.Runs.PromExPlugin do
   def calculate_average_claim_duration(reference_time, run_age_seconds) do
     threshold_time = reference_time |> DateTime.add(-run_age_seconds)
 
-    query =
-      from a in Run,
-        where: a.state == :available,
-        or_where: a.state != :available and a.inserted_at > ^threshold_time
+    # Available runs: duration = reference_time - inserted_at (in milliseconds)
+    available_query =
+      from r in Run,
+        where: r.state == :available,
+        select: %{
+          duration_ms:
+            fragment(
+              "EXTRACT(EPOCH FROM (? - ?)) * 1000",
+              type(^reference_time, :utc_datetime_usec),
+              r.inserted_at
+            )
+        }
 
-    query
-    |> Repo.all()
-    |> Enum.reduce({0, 0}, fn run, {sum, count} ->
-      {sum + claim_duration(run, reference_time), count + 1}
-    end)
-    |> average()
+    # Recently processed runs: duration = claimed_at - inserted_at (in milliseconds)
+    processed_query =
+      from r in Run,
+        where: r.state != :available and r.inserted_at > ^threshold_time,
+        select: %{
+          duration_ms:
+            fragment(
+              "EXTRACT(EPOCH FROM (? - ?)) * 1000",
+              r.claimed_at,
+              r.inserted_at
+            )
+        }
+
+    # Combine with UNION ALL and calculate average
+    union_query = union_all(available_query, ^processed_query)
+
+    from(u in subquery(union_query), select: avg(u.duration_ms))
+    |> Repo.one()
+    |> to_rounded_float()
   end
 
-  defp claim_duration(%Run{state: :available} = run, reference_time) do
-    DateTime.diff(reference_time, run.inserted_at, :millisecond)
-  end
+  defp to_rounded_float(%Decimal{} = d),
+    do: d |> Decimal.to_float() |> Float.round(0)
 
-  defp claim_duration(run, _reference_time) do
-    DateTime.diff(run.claimed_at, run.inserted_at, :millisecond)
-  end
-
-  defp average({_sum, 0}) do
-    0.0
-  end
-
-  defp average({sum, count}) do
-    (sum / count) |> Float.round(0)
-  end
+  defp to_rounded_float(f) when is_float(f), do: Float.round(f, 0)
+  defp to_rounded_float(nil), do: 0.0
 
   defp check_repo_state(repo_pid) do
     # NOTE: During local testing of server starts, having the pid was not enough
