@@ -21,6 +21,9 @@ and this project adheres to
 
 - Standardized "GitHub" brand capitalization throughout the UI
   [#4313](https://github.com/OpenFn/lightning/issues/4313)
+- Optimized PromEx average claim duration query to use SQL aggregation instead
+  of fetching rows into memory
+  [#4317](https://github.com/OpenFn/lightning/pull/4317)
 
 ### Fixed
 
