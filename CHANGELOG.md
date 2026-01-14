@@ -19,6 +19,9 @@ and this project adheres to
 
 ### Changed
 
+- Render AI Assistant user messages as plain text instead of markdown to prevent
+  incorrect code block formatting
+  [#4288](https://github.com/OpenFn/lightning/issues/4288)
 - Standardized "GitHub" brand capitalization throughout the UI
   [#4313](https://github.com/OpenFn/lightning/issues/4313)
 - Optimized PromEx average claim duration query to use SQL aggregation instead
