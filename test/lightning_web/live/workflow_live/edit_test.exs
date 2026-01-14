@@ -4866,68 +4866,6 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       assert updated_user.preferences["another_setting"] == false
     end
 
-    test "automatically redirects to collaborative editor when preference is set",
-         %{
-           conn: conn,
-           user: user,
-           project: project,
-           workflow: workflow
-         } do
-      # Set up user with both experimental features and collaborative preference
-      user_with_prefs =
-        user
-        |> Ecto.Changeset.change(%{
-          preferences: %{
-            "experimental_features" => true,
-            "prefer_legacy_editor" => false
-          }
-        })
-        |> Repo.update!()
-
-      # Navigate to regular workflow editor
-      {:error, {:live_redirect, %{to: redirect_path}}} =
-        conn
-        |> log_in_user(user_with_prefs)
-        |> live(~p"/projects/#{project.id}/w/#{workflow.id}/legacy")
-
-      # Should redirect to collaborative editor
-      assert redirect_path ==
-               "/projects/#{project.id}/w/#{workflow.id}"
-    end
-
-    test "redirects to collaborative editor with query params when preference is set",
-         %{
-           conn: conn,
-           user: user,
-           project: project,
-           workflow: workflow
-         } do
-      job = insert(:job, workflow: workflow)
-
-      # Set up user with both experimental features and collaborative preference
-      user_with_prefs =
-        user
-        |> Ecto.Changeset.change(%{
-          preferences: %{
-            "experimental_features" => true,
-            "prefer_legacy_editor" => false
-          }
-        })
-        |> Repo.update!()
-
-      # Navigate to regular workflow editor with query params
-      {:error, {:live_redirect, %{to: redirect_path}}} =
-        conn
-        |> log_in_user(user_with_prefs)
-        |> live(
-          ~p"/projects/#{project.id}/w/#{workflow.id}/legacy?s=#{job.id}&m=expand"
-        )
-
-      # Should redirect to collaborative editor with same params
-      assert redirect_path ==
-               ~p"/projects/#{project.id}/w/#{workflow.id}?#{%{job: job.id, panel: "editor"}}"
-    end
-
     test "shows collaborative editor toggle when creating new workflow with experimental features",
          %{
            conn: conn,

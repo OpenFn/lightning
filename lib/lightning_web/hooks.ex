@@ -136,4 +136,28 @@ defmodule LightningWeb.Hooks do
         {:cont, socket}
     end
   end
+
+  def on_mount(:check_legacy_preference, params, _session, socket) do
+    case socket.assigns do
+      %{current_user: user, live_action: live_action}
+      when live_action in [:edit, :new] ->
+        prefer_legacy_editor =
+          Lightning.Accounts.get_preference(user, "prefer_legacy_editor")
+
+        if prefer_legacy_editor do
+          path =
+            LightningWeb.WorkflowLive.Helpers.legacy_editor_url(
+              params,
+              live_action
+            )
+
+          {:halt, push_navigate(socket, to: path)}
+        else
+          {:cont, socket}
+        end
+
+      _ ->
+        {:cont, socket}
+    end
+  end
 end

@@ -337,6 +337,22 @@ defmodule LightningWeb.WorkflowLive.Helpers do
     collaborative_only: ["panel"]
   }
 
+  def legacy_editor_url(params, live_action) do
+    base_url = legacy_base_url(params, live_action)
+
+    query_params = Map.drop(params, ["id", "project_id"])
+
+    build_url_with_params(base_url, query_params)
+  end
+
+  defp legacy_base_url(%{"project_id" => project_id}, :new) do
+    "/projects/#{project_id}/w/new/legacy?method=template"
+  end
+
+  defp legacy_base_url(%{"id" => id, "project_id" => project_id}, :edit) do
+    "/projects/#{project_id}/w/#{id}/legacy"
+  end
+
   @doc """
   Builds a URL to the collaborative editor with converted query parameters.
 

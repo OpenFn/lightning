@@ -2194,4 +2194,168 @@ defmodule LightningWeb.WorkflowLive.CollaborateTest do
       refute html =~ "data-initial-run-data="
     end
   end
+
+  describe "legacy editor preference redirect" do
+    test "redirects to legacy editor when user prefers legacy editor", %{
+      conn: conn
+    } do
+      user = insert(:user)
+
+      project =
+        insert(:project,
+          name: "Test Project",
+          project_users: [%{user_id: user.id, role: :owner}]
+        )
+
+      workflow = workflow_fixture(project_id: project.id)
+
+      # Set user preference to prefer legacy editor
+      user_with_prefs =
+        user
+        |> Ecto.Changeset.change(%{
+          preferences: %{
+            "prefer_legacy_editor" => true
+          }
+        })
+        |> Lightning.Repo.update!()
+
+      # Try to navigate to collaborative editor
+      {:error, {:live_redirect, %{to: redirect_path}}} =
+        conn
+        |> log_in_user(user_with_prefs)
+        |> live(~p"/projects/#{project.id}/w/#{workflow.id}")
+
+      # Should redirect to legacy editor
+      assert redirect_path == "/projects/#{project.id}/w/#{workflow.id}/legacy"
+    end
+
+    test "redirects to legacy editor for new workflow when user prefers legacy editor",
+         %{conn: conn} do
+      user = insert(:user)
+
+      project =
+        insert(:project,
+          name: "Test Project",
+          project_users: [%{user_id: user.id, role: :owner}]
+        )
+
+      # Set user preference to prefer legacy editor
+      user_with_prefs =
+        user
+        |> Ecto.Changeset.change(%{
+          preferences: %{
+            "prefer_legacy_editor" => true
+          }
+        })
+        |> Lightning.Repo.update!()
+
+      # Try to navigate to collaborative editor for new workflow
+      {:error, {:live_redirect, %{to: redirect_path}}} =
+        conn
+        |> log_in_user(user_with_prefs)
+        |> live(~p"/projects/#{project.id}/w/new")
+
+      # Should redirect to legacy editor with method=template
+      assert redirect_path ==
+               "/projects/#{project.id}/w/new/legacy?method=template"
+    end
+
+    test "redirects to legacy editor with query params preserved", %{conn: conn} do
+      user = insert(:user)
+
+      project =
+        insert(:project,
+          name: "Test Project",
+          project_users: [%{user_id: user.id, role: :owner}]
+        )
+
+      workflow = workflow_fixture(project_id: project.id)
+      job = insert(:job, workflow: workflow)
+
+      # Set user preference to prefer legacy editor
+      user_with_prefs =
+        user
+        |> Ecto.Changeset.change(%{
+          preferences: %{
+            "prefer_legacy_editor" => true
+          }
+        })
+        |> Lightning.Repo.update!()
+
+      # Try to navigate to collaborative editor with query params
+      {:error, {:live_redirect, %{to: redirect_path}}} =
+        conn
+        |> log_in_user(user_with_prefs)
+        |> live(
+          ~p"/projects/#{project.id}/w/#{workflow.id}?job=#{job.id}&panel=editor"
+        )
+
+      # Should redirect to legacy editor with query params preserved
+      assert String.starts_with?(
+               redirect_path,
+               "/projects/#{project.id}/w/#{workflow.id}/legacy"
+             )
+
+      assert redirect_path =~ "job=#{job.id}"
+      assert redirect_path =~ "panel=editor"
+    end
+
+    test "does not redirect when user does not prefer legacy editor", %{
+      conn: conn
+    } do
+      user = insert(:user)
+
+      project =
+        insert(:project,
+          name: "Test Project",
+          project_users: [%{user_id: user.id, role: :owner}]
+        )
+
+      workflow = workflow_fixture(project_id: project.id)
+
+      # Set user preference to NOT prefer legacy editor
+      user_with_prefs =
+        user
+        |> Ecto.Changeset.change(%{
+          preferences: %{
+            "prefer_legacy_editor" => false
+          }
+        })
+        |> Lightning.Repo.update!()
+
+      # Navigate to collaborative editor
+      {:ok, _view, html} =
+        conn
+        |> log_in_user(user_with_prefs)
+        |> live(~p"/projects/#{project.id}/w/#{workflow.id}")
+
+      # Should stay on collaborative editor (no redirect)
+      assert html =~ "collaborative-editor-react"
+    end
+
+    test "does not redirect when preference is not set", %{conn: conn} do
+      user = insert(:user)
+
+      project =
+        insert(:project,
+          name: "Test Project",
+          project_users: [%{user_id: user.id, role: :owner}]
+        )
+
+      workflow = workflow_fixture(project_id: project.id)
+
+      # No preference set (default behavior)
+      conn = log_in_user(conn, user)
+
+      # Navigate to collaborative editor
+      {:ok, _view, html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/w/#{workflow.id}"
+        )
+
+      # Should stay on collaborative editor (no redirect)
+      assert html =~ "collaborative-editor-react"
+    end
+  end
 end
