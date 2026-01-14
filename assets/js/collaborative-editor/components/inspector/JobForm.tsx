@@ -153,9 +153,13 @@ export function JobForm({ job }: JobFormProps) {
 
       // Wait for credentials to load before reopening modal
       // This ensures the newly created credential appears in the list
-      await requestCredentials();
+      try {
+        await requestCredentials();
+      } catch (error) {
+        console.error('Failed to refresh credentials:', error);
+      }
 
-      // Reopen the configure modal after credentials are loaded
+      // Reopen the configure modal (even if credential refresh failed)
       setIsConfigureModalOpen(true);
     });
   }, [onCredentialSaved, form, job.id, updateJob, requestCredentials]);
