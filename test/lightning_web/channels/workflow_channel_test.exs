@@ -1077,7 +1077,7 @@ defmodule LightningWeb.WorkflowChannelTest do
       socket: socket,
       project: project
     } do
-      error_msg = "Github Sync is not enabled for your plan."
+      error_msg = "GitHub Sync is not enabled for your plan."
       project_id = project.id
 
       # Set up GitHub repo connection

@@ -283,7 +283,7 @@ export const InspectorSaveViaCtrlS = createKeyCombinationHook(
   clickAction
 );
 /**
- * Hook to open the Github Sync modal when "Ctrl+Shift+S" (or "Cmd+Shift+S" on macOS) is pressed.
+ * Hook to open the GitHub Sync modal when "Ctrl+Shift+S" (or "Cmd+Shift+S" on macOS) is pressed.
  *
  * This hook listens globally and executes the `clickAction`, which sends a click event.
  *
