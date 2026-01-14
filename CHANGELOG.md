@@ -37,6 +37,9 @@ and this project adheres to
   [#4287](https://github.com/OpenFn/lightning/issues/4287)
 - Add index on `runs.finished_at` to fix UsageTracking ReportWorker timeouts
   [#4308](https://github.com/OpenFn/lightning/pull/4308)
+- Fixed ConfigureAdaptorModal growing too tall when there are many credentials
+  by adding scrollable credential lists with max-height
+  [#4316](https://github.com/OpenFn/lightning/issues/4316)
 
 ## [2.15.10] - 2026-01-12
 
