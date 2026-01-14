@@ -34,14 +34,14 @@ export function CollaborativeEditorPromoBanner({
       role="alert"
       aria-live="polite"
     >
-      <div className="pointer-events-auto flex items-center gap-x-4 bg-primary-700 px-6 py-2.5 rounded-xl sm:py-3 sm:pr-3.5 sm:pl-4">
+      <div className="pointer-events-auto flex items-center gap-x-4 bg-danger-700 px-6 py-2.5 rounded-xl sm:py-3 sm:pr-3.5 sm:pl-4">
         <button
           type="button"
           onClick={() => pushEvent?.('switch_to_collab_editor', {})}
           className="text-sm/6 text-white cursor-pointer"
         >
           <strong className="font-semibold">
-            This legacy editor will be retired in N days
+            This legacy editor will be retired very soon
           </strong>
           <svg
             viewBox="0 0 2 2"
@@ -50,7 +50,7 @@ export function CollaborativeEditorPromoBanner({
           >
             <circle r={1} cx={1} cy={1} />
           </svg>
-          Use the new editor&nbsp;
+          Go to the new editor&nbsp;
           <span aria-hidden="true">&rarr;</span>
         </button>
       </div>

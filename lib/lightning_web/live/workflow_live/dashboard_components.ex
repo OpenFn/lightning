@@ -17,7 +17,6 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
   attr :sort_key, :string, default: "name"
   attr :sort_direction, :string, default: "asc"
   attr :search_term, :string, default: ""
-  attr :is_legacy, :boolean, default: false
 
   def workflow_list(assigns) do
     ~H"""
@@ -29,7 +28,6 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
           <.create_workflow_card
             project_id={@project.id}
             can_create_workflow={@can_create_workflow}
-            is_legacy={@is_legacy}
           />
         </div>
       </div>
@@ -41,7 +39,6 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
         project={@project}
         sort_key={@sort_key}
         sort_direction={@sort_direction}
-        is_legacy={@is_legacy}
       >
         <:empty_state>
           <div class="text-center py-8">
@@ -86,7 +83,6 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
   attr :can_delete_workflow, :boolean, default: false
   attr :sort_key, :string, default: "name"
   attr :sort_direction, :string, default: "asc"
-  attr :is_legacy, :boolean, default: false
 
   slot :empty_state, doc: "the slot for showing an empty state"
 
@@ -170,26 +166,12 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
               <.tr
                 id={"workflow-#{workflow.id}"}
                 class="hover:bg-gray-100 transition-colors duration-200"
-                onclick={
-                  JS.navigate(
-                    if @is_legacy do
-                      ~p"/projects/#{@project.id}/w/#{workflow.id}/legacy"
-                    else
-                      ~p"/projects/#{@project.id}/w/#{workflow.id}"
-                    end
-                  )
-                }
+                onclick={JS.navigate(~p"/projects/#{@project.id}/w/#{workflow.id}")}
               >
                 <.td class="wrap-break-word max-w-[15rem]">
                   <div
                     phx-click={
-                      JS.navigate(
-                        if @is_legacy do
-                          ~p"/projects/#{@project.id}/w/#{workflow.id}/legacy"
-                        else
-                          ~p"/projects/#{@project.id}/w/#{workflow.id}"
-                        end
-                      )
+                      JS.navigate(~p"/projects/#{@project.id}/w/#{workflow.id}")
                     }
                     class="cursor-pointer"
                   >
@@ -353,7 +335,6 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
 
   attr :can_create_workflow, :boolean, required: true
   attr :project_id, :string, required: true
-  attr :is_legacy, :boolean, default: false
 
   def create_workflow_card(assigns) do
     assigns =
@@ -372,11 +353,7 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
         tooltip={@tooltip}
         phx-click={
           if !@disabled do
-            if @is_legacy do
-              JS.navigate(~p"/projects/#{@project_id}/w/new/legacy")
-            else
-              JS.navigate(~p"/projects/#{@project_id}/w/new?method=template")
-            end
+            JS.navigate(~p"/projects/#{@project_id}/w/new?method=template")
           end
         }
         class="col-span-1 w-full"
