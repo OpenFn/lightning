@@ -805,6 +805,31 @@ defmodule Lightning.CredentialsTest do
                "staging_secret"
              ]
     end
+
+    test "returns only unique values when duplicates exist" do
+      credential =
+        insert(:credential, schema: "raw", user: insert(:user))
+        |> with_body(%{
+          name: "main",
+          body: %{
+            "password" => "duplicate_secret",
+            "api_key" => "duplicate_secret",
+            "token" => "unique_token",
+            "nested" => %{
+              "secret" => "duplicate_secret",
+              "other" => "another_value"
+            }
+          }
+        })
+
+      secrets = Credentials.sensitive_values_for(credential)
+
+      assert length(secrets) == 3
+      assert "duplicate_secret" in secrets
+      assert "unique_token" in secrets
+      assert "another_value" in secrets
+      assert Enum.count(secrets, &(&1 == "duplicate_secret")) == 1
+    end
   end
 
   describe "resolve_credential_body/2" do
