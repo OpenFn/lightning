@@ -760,6 +760,7 @@ defmodule Lightning.Collaboration.WorkflowSerializerTest do
                "enabled" => true,
                "cron_expression" => nil,
                "kafka_configuration" => nil
+               "webhook_reply" => "before_start"
              } == extracted_trigger
 
       assert is_nil(extracted["positions"])
@@ -979,6 +980,7 @@ defmodule Lightning.Collaboration.WorkflowSerializerTest do
                "enabled" => original_trigger.enabled,
                "cron_expression" => original_trigger.cron_expression,
                "kafka_configuration" => nil
+               "webhook_reply" => to_string(original_trigger.webhook_reply)
              } == extracted_trigger
 
       # Positions
@@ -1287,6 +1289,7 @@ defmodule Lightning.Collaboration.WorkflowSerializerTest do
                "enabled" => true,
                "cron_expression" => "0 */6 * * *",
                "kafka_configuration" => nil
+               "webhook_reply" => to_string(original_trigger.webhook_reply)
              } == trigger
     end
 
