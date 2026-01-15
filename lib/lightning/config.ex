@@ -392,7 +392,7 @@ defmodule Lightning.Config do
     @impl true
     def max_credential_sensitive_values do
       Application.get_env(:lightning, Lightning.Scrubber, [])
-      |> Keyword.get(:max_credential_sensitive_values, 200)
+      |> Keyword.get(:max_credential_sensitive_values, 50)
     end
 
     defp default_webhook_retry do

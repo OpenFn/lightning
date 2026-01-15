@@ -29,7 +29,8 @@ and this project adheres to
 
 - Add index on `runs.finished_at` to fix UsageTracking ReportWorker timeouts
   [#4308](https://github.com/OpenFn/lightning/pull/4308)
-- Credentials Scrubber uses too much memory
+- Credentials Scrubber uses too much memory. Introduce a limit on the number of
+  sensitive values in a credential body via `MAX_CREDENTIAL_SENSITIVE_VALUES`
   [#4307](https://github.com/OpenFn/lightning/issues/4307)
 
 ## [2.15.10] - 2026-01-12

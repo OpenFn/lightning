@@ -52,7 +52,7 @@ defmodule Lightning.Credentials.CredentialBody do
       :ok
 
       iex> validate_sensitive_values_count(body_with_many_secrets)
-      {:error, "contains too many sensitive keys (250). Max allowed is 200"}
+      {:error, "contains too many sensitive keys (250). Max allowed is 50"}
   """
   def validate_sensitive_values_count(body) do
     max_values = Lightning.Config.max_credential_sensitive_values()
