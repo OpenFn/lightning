@@ -82,7 +82,10 @@ defmodule LightningWeb.SandboxLive.FormComponent do
           }
         } = socket
       ) do
-    attrs = build_sandbox_attrs(params)
+    attrs =
+      params
+      |> build_sandbox_attrs()
+      |> Map.put(:env, "dev")
 
     with :ok <- ProjectLimiter.limit_new_sandbox(parent.id),
          {:ok, sandbox} <- Projects.provision_sandbox(parent, actor, attrs) do
@@ -232,14 +235,6 @@ defmodule LightningWeb.SandboxLive.FormComponent do
               <% end %>
             </div>
 
-            <.input
-              type="text"
-              field={f[:env]}
-              label="Environment"
-              placeholder="staging"
-              autocomplete="off"
-            />
-
             <Components.color_palette id="sandbox-color-picker" field={f[:color]} />
           </div>
 
@@ -276,7 +271,6 @@ defmodule LightningWeb.SandboxLive.FormComponent do
     %{
       "name" => sandbox.name,
       "raw_name" => sandbox.name,
-      "env" => sandbox.env,
       "color" => sandbox.color
     }
   end
@@ -320,8 +314,7 @@ defmodule LightningWeb.SandboxLive.FormComponent do
   defp build_sandbox_attrs(params) do
     %{
       name: params["name"],
-      color: params["color"],
-      env: params["env"]
+      color: params["color"]
     }
   end
 

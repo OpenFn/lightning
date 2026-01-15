@@ -5,6 +5,7 @@
 import { useCallback, useEffect, useRef } from 'react';
 
 import { useURLState } from '#/react/lib/use-url-state';
+import { cn } from '#/utils/cn';
 
 import type { WorkflowState as YAMLWorkflowState } from '../../yaml/types';
 import { useResizablePanel } from '../hooks/useResizablePanel';
@@ -67,6 +68,9 @@ export function WorkflowEditor({
 
   // Get selected template from UI store (for template details card)
   const { selectedTemplate } = useTemplatePanel();
+
+  // Check if viewing a pinned version (not latest) to disable AI Assistant
+  const isPinnedVersion = params['v'] !== undefined && params['v'] !== null;
 
   const isSyncingRef = useRef(false);
   const isInitialMountRef = useRef(true);
@@ -633,36 +637,57 @@ export function WorkflowEditor({
                     </p>
                   </button>
 
-                  <button
-                    type="button"
-                    onClick={() => {
-                      // Toggle AI Assistant panel
-                      if (isAIAssistantPanelOpen) {
-                        closeAIAssistantPanel();
-                      } else {
-                        // Close create panel if open
-                        if (!isCreateWorkflowPanelCollapsed) {
-                          collapseCreateWorkflowPanel();
-                        }
-                        openAIAssistantPanel();
-                      }
-                    }}
-                    className={`group flex flex-col items-center text-center bg-white border rounded-xl p-5 transition-all duration-200 cursor-pointer ${
-                      isAIAssistantPanelOpen
-                        ? 'border-primary-500 ring-2 ring-primary-100 shadow-sm'
-                        : 'border-gray-200 hover:border-primary-300 hover:shadow-sm'
-                    }`}
+                  <Tooltip
+                    content={
+                      isPinnedVersion
+                        ? 'Switch to the latest version of this workflow to use the AI Assistant.'
+                        : isAIAssistantPanelOpen
+                          ? 'Close AI Assistant'
+                          : 'Generate with AI'
+                    }
+                    side="top"
                   >
-                    <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-primary-50 group-hover:bg-primary-100 mb-4 transition-colors">
-                      <span className="hero-sparkles h-6 w-6 text-primary-600" />
-                    </div>
-                    <h4 className="text-sm font-semibold text-gray-900 mb-1.5 whitespace-nowrap">
-                      Generate with AI
-                    </h4>
-                    <p className="text-xs text-gray-500 leading-relaxed">
-                      Build custom workflows with AI
-                    </p>
-                  </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        // Toggle AI Assistant panel
+                        if (isAIAssistantPanelOpen) {
+                          closeAIAssistantPanel();
+                        } else {
+                          // Close create panel if open
+                          if (!isCreateWorkflowPanelCollapsed) {
+                            collapseCreateWorkflowPanel();
+                          }
+                          openAIAssistantPanel();
+                        }
+                      }}
+                      disabled={isPinnedVersion}
+                      className={`group flex flex-col items-center text-center bg-white border rounded-xl p-5 transition-all duration-200 ${
+                        isPinnedVersion
+                          ? 'cursor-not-allowed opacity-50'
+                          : `cursor-pointer ${
+                              isAIAssistantPanelOpen
+                                ? 'border-primary-500 ring-2 ring-primary-100 shadow-sm'
+                                : 'border-gray-200 hover:border-primary-300 hover:shadow-sm'
+                            }`
+                      }`}
+                    >
+                      <div
+                        className={cn(
+                          'inline-flex items-center justify-center w-12 h-12 rounded-xl bg-primary-50 mb-4 transition-colors',
+                          !isPinnedVersion && 'group-hover:bg-primary-100'
+                        )}
+                      >
+                        <span className="hero-sparkles h-6 w-6 text-primary-600" />
+                      </div>
+                      <h4 className="text-sm font-semibold text-gray-900 mb-1.5 whitespace-nowrap">
+                        Generate with AI
+                      </h4>
+                      <p className="text-xs text-gray-500 leading-relaxed">
+                        Build custom workflows with AI
+                      </p>
+                    </button>
+                  </Tooltip>
 
                   <button
                     type="button"

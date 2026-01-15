@@ -36,7 +36,7 @@ defmodule LightningWeb.ProfileLive.Edit do
       ) do
     {:noreply,
      socket
-     |> put_flash(:info, "Github account linked successfully")
+     |> put_flash(:info, "GitHub account linked successfully")
      |> push_navigate(to: ~p"/profile")}
   end
 
@@ -48,7 +48,7 @@ defmodule LightningWeb.ProfileLive.Edit do
      socket
      |> put_flash(
        :error,
-       "Oops! Github account failed to link. Please try again"
+       "Oops! GitHub account failed to link. Please try again"
      )}
   end
 

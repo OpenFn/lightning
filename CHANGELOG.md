@@ -21,6 +21,94 @@ and this project adheres to
 
 ### Fixed
 
+## [2.15.11-pre] - 2026-01-15
+
+### Changed
+
+- Render AI Assistant user messages as plain text instead of markdown to prevent
+  incorrect code block formatting
+  [#4288](https://github.com/OpenFn/lightning/issues/4288)
+- Standardized "GitHub" brand capitalization throughout the UI
+  [#4313](https://github.com/OpenFn/lightning/issues/4313)
+- Optimized PromEx average claim duration query to use SQL aggregation instead
+  of fetching rows into memory
+  [#4317](https://github.com/OpenFn/lightning/pull/4317)
+
+### Fixed
+
+- Add clickable GitHub Actions link to collaborative editor's Save & Sync
+  success toast [#4281](https://github.com/OpenFn/lightning/issues/4281)
+- Fixed credential auto-selection when creating a new credential from the
+  workflow editor's ConfigureAdaptorModal
+  [#4287](https://github.com/OpenFn/lightning/issues/4287)
+- Add index on `runs.finished_at` to fix UsageTracking ReportWorker timeouts
+  [#4308](https://github.com/OpenFn/lightning/pull/4308)
+- Fixed ConfigureAdaptorModal growing too tall when there are many credentials
+  by adding scrollable credential lists with max-height
+  [#4316](https://github.com/OpenFn/lightning/issues/4316)
+
+## [2.15.10] - 2026-01-12
+
+## [2.15.10-pre] - 2026-01-12
+
+### Fixed
+
+- Prevent returned workflow.yaml from appearing as a job code diff when opening
+  job chat after workflow chat
+  [#4296](https://github.com/OpenFn/lightning/issues/4296)
+
+## [2.15.9] - 2026-01-09
+
+### Fixed
+
+- Fix credentials being removed from jobs after AI chat applies a generated
+  workflow yaml [#4295](https://github.com/OpenFn/lightning/issues/4295)
+
+## [2.15.8] - 2026-01-09
+
+### Fixed
+
+- Fixed AI Assistant button not being disabled when viewing pinned workflow
+  versions in collaborative editor
+  [#4292](https://github.com/OpenFn/lightning/issues/4292)
+
+## [2.15.8-pre] - 2026-01-08
+
+### Added
+
+- AI Assistant can now preview and apply code suggestions directly to job code
+  with Monaco diff editor
+  [#3369](https://github.com/OpenFn/lightning/issues/3369)
+
+### Changed
+
+- Remove Environment input from Sandbox form
+  [#3954](https://github.com/OpenFn/lightning/issues/3954)
+
+## [2.15.7] - 2026-01-07
+
+## [2.15.7-pre] - 2026-01-06
+
+### Fixed
+
+- Fixed bug where Oauth credentials and raw credentials couldn't be selected
+  with the HTTP adaptor [#4284](https://github.com/OpenFn/lightning/issues/4284)
+
+## [2.15.6] - 2025-12-24
+
+### Fixed
+
+- Fixed Code button being disabled when viewing old workflow versions
+  [#4279](https://github.com/OpenFn/lightning/issues/4279)
+
+## [2.15.5] - 2025-12-23
+
+### Fixed
+
+- Fixed Empty/Custom/Existing tabs being unresponsive when dataclip selected in
+  FullScreenIDE run panel
+  [#4275](https://github.com/OpenFn/lightning/issues/4275)
+
 ## [2.15.4] - 2025-12-20
 
 ### Fixed

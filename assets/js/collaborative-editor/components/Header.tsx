@@ -8,7 +8,6 @@ import { channelRequest } from '../hooks/useChannel';
 import { useSession } from '../hooks/useSession';
 import {
   useIsNewWorkflow,
-  useLatestSnapshotLockVersion,
   useLimits,
   useProjectRepoConnection,
 } from '../hooks/useSessionContext';
@@ -198,8 +197,6 @@ export function Header({
   const { openRunPanel, openGitHubSyncModal } = useUICommands();
   const repoConnection = useProjectRepoConnection();
   const { hasErrors: hasSettingsErrors } = useWorkflowSettingsErrors();
-  const workflow = useWorkflowState(state => state.workflow);
-  const latestSnapshotLockVersion = useLatestSnapshotLockVersion();
   const isNewWorkflow = useIsNewWorkflow();
   const isCreateWorkflowPanelCollapsed = useIsCreateWorkflowPanelCollapsed();
   const importPanelState = useImportPanelState();
@@ -219,10 +216,9 @@ export function Header({
   const isWorkflowEmpty = jobs.length === 0 && triggers.length === 0;
   const currentMethod = params['method'] as 'template' | 'import' | 'ai' | null;
 
-  const isOldSnapshot =
-    workflow !== null &&
-    latestSnapshotLockVersion !== null &&
-    workflow.lock_version !== latestSnapshotLockVersion;
+  // Check if viewing a pinned version via URL parameter
+  // When ?v= is present, user is viewing a specific version (even if latest)
+  const isPinnedVersion = params['v'] !== undefined && params['v'] !== null;
 
   const handleRunClick = useCallback(() => {
     if (firstTriggerId) {
@@ -303,7 +299,7 @@ export function Header({
 
           <div className="flex flex-row gap-2 items-center">
             <div className="flex flex-row gap-2 items-center">
-              {!isOldSnapshot && (
+              {!isPinnedVersion && (
                 <Tooltip
                   content={
                     isNewWorkflow && isWorkflowEmpty
@@ -418,7 +414,11 @@ export function Header({
             </div>
           </div>
 
-          <AIButton className="ml-2" />
+          <AIButton
+            className="ml-2"
+            disabled={isPinnedVersion}
+            disabledMessage="Switch to the latest version of this workflow to use the AI Assistant."
+          />
 
           <GitHubSyncModal />
         </div>

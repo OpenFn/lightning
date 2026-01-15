@@ -4,7 +4,17 @@ export type StateJob = {
   name: string;
   adaptor: string;
   body: string;
+  keychain_credential_id: string | null;
+  project_credential_id: string | null;
 };
+
+export type JobCredentials = Record<
+  string,
+  {
+    project_credential_id: string | null;
+    keychain_credential_id: string | null;
+  }
+>;
 
 export type StateCronTrigger = {
   id: string;

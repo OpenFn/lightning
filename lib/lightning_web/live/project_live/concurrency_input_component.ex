@@ -18,7 +18,7 @@ defmodule LightningWeb.ProjectLive.ConcurrencyInputComponent do
       <span class="ml-3 text-sm" id="concurrency-description">
         <span class="font-medium text-gray-900">Disable parallel execution</span>
         <span class="text-gray-500">
-          (No more than one run at a time.)
+          (No more than one run at a time)
         </span>
       </span>
     </div>

@@ -25,6 +25,7 @@ import type { Dataclip } from '../../api/dataclips';
 import * as dataclipApi from '../../api/dataclips';
 import { RENDER_MODES } from '../../constants/panel';
 import { useCredentialModal } from '../../contexts/CredentialModalContext';
+import { useMonacoRef } from '../../contexts/MonacoRefContext';
 import { useProjectAdaptors } from '../../hooks/useAdaptors';
 import {
   useCredentials,
@@ -57,7 +58,7 @@ import { isFinalState } from '../../types/history';
 import { edgesToAdjList, getJobOrdinals } from '../../utils/workflowGraph';
 import { AdaptorDisplay } from '../AdaptorDisplay';
 import { AdaptorSelectionModal } from '../AdaptorSelectionModal';
-import { CollaborativeMonaco } from '../CollaborativeMonaco';
+import { CollaborativeMonaco, type MonacoHandle } from '../CollaborativeMonaco';
 import { RunBadge } from '../common/RunBadge';
 import { ConfigureAdaptorModal } from '../ConfigureAdaptorModal';
 import MiniHistory from '../diagram/MiniHistory';
@@ -149,6 +150,10 @@ export function FullScreenIDE({
   const workflowId = useWorkflowState(state => state.workflow?.id);
 
   const rightPanelRef = useRef<ImperativePanelHandle>(null);
+  // Get shared monaco ref from context (for AI Assistant diff preview)
+  // Fallback to local ref if context not available (shouldn't happen)
+  const localMonacoRef = useRef<MonacoHandle>(null);
+  const monacoRef = useMonacoRef() ?? localMonacoRef;
 
   // Docs/Metadata panel state
   const [isDocsCollapsed, setIsDocsCollapsed] = useState<boolean>(() => {
@@ -1006,6 +1011,7 @@ export function FullScreenIDE({
                           </div>
                         ) : currentJob && currentJobYText ? (
                           <CollaborativeMonaco
+                            ref={monacoRef}
                             ytext={currentJobYText}
                             awareness={awareness}
                             adaptor={currentJob.adaptor || 'common'}

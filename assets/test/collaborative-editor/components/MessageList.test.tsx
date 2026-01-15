@@ -385,8 +385,64 @@ describe('MessageList', () => {
     });
   });
 
+  describe('User Message Plain Text Rendering', () => {
+    it('should render user messages as plain text without markdown processing', () => {
+      const messages = [
+        createMockAIMessage({
+          role: 'user',
+          content: '**bold** and `code` with [link](https://test.com)',
+        }),
+      ];
+
+      const { container } = render(<MessageList messages={messages} />);
+
+      // Markdown syntax should not be processed
+      expect(container.querySelector('strong')).not.toBeInTheDocument();
+      expect(container.querySelector('a')).not.toBeInTheDocument();
+
+      // Content should display literally
+      expect(container.textContent).toContain('**bold**');
+      expect(container.textContent).toContain('`code`');
+      expect(container.textContent).toContain('[link](https://test.com)');
+    });
+
+    it('should preserve newlines and formatting in user messages', () => {
+      const messages = [
+        createMockAIMessage({
+          role: 'user',
+          content: 'Line 1\nLine 2\nLine 3',
+        }),
+      ];
+
+      const { container } = render(<MessageList messages={messages} />);
+
+      // Should have whitespace-pre-wrap class to preserve newlines
+      const textContainer = container.querySelector('.whitespace-pre-wrap');
+      expect(textContainer).toBeInTheDocument();
+      expect(textContainer?.textContent).toBe('Line 1\nLine 2\nLine 3');
+    });
+
+    it('should not render code blocks for multi-line user content', () => {
+      const messages = [
+        createMockAIMessage({
+          role: 'user',
+          content: 'const foo = "bar";\nconst baz = "qux";\nconsole.log(foo);',
+        }),
+      ];
+
+      const { container } = render(<MessageList messages={messages} />);
+
+      // Should not have code block with COPY/ADD buttons
+      expect(screen.queryByText('COPY')).not.toBeInTheDocument();
+      expect(screen.queryByText('ADD')).not.toBeInTheDocument();
+
+      // Should not have pre/code block styling
+      expect(container.querySelector('pre')).not.toBeInTheDocument();
+    });
+  });
+
   describe('Markdown Rendering', () => {
-    it('should render markdown content', () => {
+    it('should render markdown content for assistant messages', () => {
       const messages = [
         createMockAIMessage({
           role: 'assistant',

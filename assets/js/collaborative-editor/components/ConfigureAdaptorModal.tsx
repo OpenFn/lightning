@@ -10,8 +10,8 @@ import {
   useCredentialQueries,
   useCredentials,
 } from '#/collaborative-editor/hooks/useCredentials';
-import { useKeyboardShortcut } from '#/collaborative-editor/keyboard';
 import { useUser } from '#/collaborative-editor/hooks/useSessionContext';
+import { useKeyboardShortcut } from '#/collaborative-editor/keyboard';
 import type { Adaptor } from '#/collaborative-editor/types/adaptor';
 import type { CredentialWithType } from '#/collaborative-editor/types/credential';
 import {
@@ -24,6 +24,163 @@ import { cn } from '#/utils/cn';
 import { AdaptorIcon } from './AdaptorIcon';
 import { Tooltip } from './Tooltip';
 import { VersionPicker } from './VersionPicker';
+
+/**
+ * Sorts version strings semantically (newest first).
+ * Handles versions like "1.0.0", "2.1.3", "10.0.0" correctly.
+ */
+function sortVersionsDescending(versions: string[]): string[] {
+  return versions
+    .filter(v => v !== 'latest')
+    .sort((a, b) => {
+      const aParts = a.split('.').map(Number);
+      const bParts = b.split('.').map(Number);
+      for (let i = 0; i < Math.max(aParts.length, bParts.length); i++) {
+        const aNum = aParts[i] || 0;
+        const bNum = bParts[i] || 0;
+        if (aNum !== bNum) {
+          return bNum - aNum;
+        }
+      }
+      return 0;
+    });
+}
+
+interface CredentialRowProps {
+  credential: CredentialWithType;
+  credentialId: string;
+  isSelected: boolean;
+  onSelect: () => void;
+  onClear: () => void;
+  onEdit: () => void;
+  canEdit: boolean;
+  ownerEmail?: string | undefined;
+}
+
+/**
+ * A single credential row with radio button, name, owner, and action buttons.
+ * Uses data-credential-id for scroll targeting.
+ */
+function CredentialRow({
+  credential,
+  credentialId,
+  isSelected,
+  onSelect,
+  onClear,
+  onEdit,
+  canEdit,
+  ownerEmail,
+}: CredentialRowProps) {
+  const showOwner = credential.type === 'project' && credential.owner;
+
+  return (
+    <label
+      data-credential-id={credentialId}
+      className="flex items-start gap-3 p-4 hover:bg-gray-50 cursor-pointer"
+    >
+      <input
+        type="radio"
+        name="credential"
+        value={credentialId}
+        checked={isSelected}
+        onChange={onSelect}
+        aria-label={`Select ${credential.name} credential`}
+        className="mt-1 h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300"
+      />
+      <div className="flex-1 min-w-0">
+        <div className="mb-1">
+          <span className="font-medium text-gray-900 truncate">
+            {credential.name}
+          </span>
+        </div>
+        {showOwner && credential.owner && (
+          <div className="flex items-center gap-1 text-sm text-gray-500">
+            <span
+              className="hero-user-solid h-4 w-4"
+              aria-hidden="true"
+              role="img"
+            />
+            {credential.owner.name}
+          </div>
+        )}
+      </div>
+      <div className="flex items-center gap-2 flex-shrink-0 ml-2">
+        {credential.type === 'project' && credential.owner && (
+          <Tooltip
+            content={
+              canEdit
+                ? 'Edit credential'
+                : `This credential can only be edited by the owner: ${ownerEmail}`
+            }
+            side="top"
+          >
+            <button
+              type="button"
+              onClick={e => {
+                e.preventDefault();
+                if (canEdit) onEdit();
+              }}
+              disabled={!canEdit}
+              className={cn(
+                'focus:outline-none',
+                canEdit
+                  ? 'text-gray-400 hover:text-gray-600 cursor-pointer'
+                  : 'text-gray-300 cursor-not-allowed opacity-50'
+              )}
+              aria-label={
+                canEdit
+                  ? 'Edit credential'
+                  : `Cannot edit credential owned by ${ownerEmail}`
+              }
+            >
+              <span
+                className="hero-pencil-square h-5 w-5"
+                aria-hidden="true"
+                role="img"
+              />
+            </button>
+          </Tooltip>
+        )}
+        {isSelected && (
+          <button
+            type="button"
+            onClick={e => {
+              e.preventDefault();
+              onClear();
+            }}
+            className="text-gray-400 hover:text-gray-600 focus:outline-none"
+            aria-label="Clear credential selection"
+          >
+            <span
+              className="hero-x-mark h-5 w-5"
+              aria-hidden="true"
+              role="img"
+            />
+          </button>
+        )}
+      </div>
+    </label>
+  );
+}
+
+interface SectionDividerProps {
+  label: string;
+}
+
+/**
+ * A divider with centered label for separating credential sections.
+ */
+function SectionDivider({ label }: SectionDividerProps) {
+  return (
+    <div className="relative flex items-center py-3 bg-gray-50">
+      <div className="flex-grow border-t border-gray-200" />
+      <span className="flex-shrink mx-4 text-xs font-normal text-gray-400 uppercase tracking-wide">
+        {label}
+      </span>
+      <div className="flex-grow border-t border-gray-200" />
+    </div>
+  );
+}
 
 interface ConfigureAdaptorModalProps {
   isOpen: boolean;
@@ -49,7 +206,8 @@ interface ConfigureAdaptorModalProps {
 export function ConfigureAdaptorModal({
   isOpen,
   onClose,
-  onAdaptorChange: _onAdaptorChange,
+  // Note: onAdaptorChange is in the interface for parent compatibility,
+  // but adaptor changes go through onOpenAdaptorPicker flow instead
   onVersionChange,
   onCredentialChange,
   onOpenAdaptorPicker,
@@ -93,21 +251,9 @@ export function ConfigureAdaptorModal({
       const adaptor = allAdaptors.find(a => a.name === packageName);
 
       if (adaptor) {
-        const sortedVersions = adaptor.versions
-          .map(v => v.version)
-          .filter(v => v !== 'latest')
-          .sort((a, b) => {
-            const aParts = a.split('.').map(Number);
-            const bParts = b.split('.').map(Number);
-            for (let i = 0; i < Math.max(aParts.length, bParts.length); i++) {
-              const aNum = aParts[i] || 0;
-              const bNum = bParts[i] || 0;
-              if (aNum !== bNum) {
-                return bNum - aNum;
-              }
-            }
-            return 0;
-          });
+        const sortedVersions = sortVersionsDescending(
+          adaptor.versions.map(v => v.version)
+        );
 
         if (sortedVersions.length > 0 && sortedVersions[0]) {
           onVersionChange(sortedVersions[0]);
@@ -155,6 +301,10 @@ export function ConfigureAdaptorModal({
         // Exact schema match
         if (c.schema === adaptorName) return true;
 
+        // For HTTP adaptor, all OAuth credentials are considered matching
+        // (OAuth can be used for authenticated API calls via HTTP)
+        if (adaptorName === 'http' && c.schema === 'oauth') return true;
+
         // Smart OAuth matching: if credential is OAuth, check oauth_client_name
         if (c.schema === 'oauth' && c.oauth_client_name) {
           // Normalize both strings: lowercase, remove spaces/hyphens/underscores
@@ -181,8 +331,11 @@ export function ConfigureAdaptorModal({
     const universal: CredentialWithType[] = projectCredentials
       .filter(c => {
         const isUniversal = c.schema === 'http' || c.schema === 'raw';
-        const alreadyMatched = adaptorName === 'http' || adaptorName === 'raw';
-        return isUniversal && !alreadyMatched;
+        // Only exclude if this specific credential is already in schemaMatched
+        const alreadyInSchemaMatched = schemaMatched.some(
+          matched => matched.id === c.id
+        );
+        return isUniversal && !alreadyInSchemaMatched;
       })
       .map(c => ({ ...c, type: 'project' as const }));
 
@@ -230,44 +383,52 @@ export function ConfigureAdaptorModal({
     else if (hasSchemaMatches) {
       setShowOtherCredentials(false);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOpen, currentAdaptor, currentCredentialId]);
+  }, [
+    isOpen,
+    currentAdaptor,
+    currentCredentialId,
+    credentialSections,
+    getCredentialId,
+  ]);
+
+  // Ref to the single scrollable credential container
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+
+  // Scroll to selected credential when modal opens, selection changes, or section toggles.
+  // Uses requestAnimationFrame to ensure DOM has updated after React render.
+  useEffect(() => {
+    if (!isOpen || !currentCredentialId) return;
+
+    // Wait for next frame to ensure DOM is updated
+    const frameId = requestAnimationFrame(() => {
+      const container = scrollContainerRef.current;
+      if (!container) return;
+
+      const element = container.querySelector(
+        `[data-credential-id="${currentCredentialId}"]`
+      );
+
+      if (element && 'scrollIntoView' in element) {
+        element.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      }
+    });
+
+    return () => cancelAnimationFrame(frameId);
+  }, [isOpen, currentCredentialId, showOtherCredentials]);
 
   // Get version options for current adaptor
   const versionOptions = useMemo(() => {
-    // Extract package name without version using utility function
     const packageName = extractPackageName(currentAdaptor);
-
-    // Use allAdaptors to get versions (not projectAdaptors)
-    // This ensures we show all versions even for adaptors not yet used in the project
     const adaptor = allAdaptors.find(a => a.name === packageName);
 
     if (!adaptor) {
-      // Adaptor not in registry, return empty array
       return [];
     }
 
-    // Sort versions using semantic versioning (newest first)
-    const sortedVersions = adaptor.versions
-      .map(v => v.version)
-      .filter(v => v !== 'latest')
-      .sort((a, b) => {
-        // Split version strings into parts [major, minor, patch]
-        const aParts = a.split('.').map(Number);
-        const bParts = b.split('.').map(Number);
+    const sortedVersions = sortVersionsDescending(
+      adaptor.versions.map(v => v.version)
+    );
 
-        // Compare major, minor, patch in order
-        for (let i = 0; i < Math.max(aParts.length, bParts.length); i++) {
-          const aNum = aParts[i] || 0;
-          const bNum = bParts[i] || 0;
-          if (aNum !== bNum) {
-            return bNum - aNum; // Descending order (newest first)
-          }
-        }
-        return 0;
-      });
-
-    // Add "latest" as the first option
     return ['latest', ...sortedVersions];
   }, [currentAdaptor, allAdaptors]);
 
@@ -299,81 +460,19 @@ export function ConfigureAdaptorModal({
     }
   };
 
-  // Render action buttons for a credential (edit and clear)
-  const renderCredentialActions = (
-    cred: CredentialWithType,
-    isSelected: boolean
-  ) => {
-    const isOwner =
-      cred.type === 'project' &&
-      cred.owner &&
-      currentUser &&
-      cred.owner.id === currentUser.id;
-    const canEdit = cred.type === 'project' && isOwner;
-
+  // Helper to check if current user can edit a credential
+  const canEditCredential = (cred: CredentialWithType): boolean => {
     return (
-      <div className="flex items-center gap-2 flex-shrink-0 ml-2">
-        {/* Edit button - only for project credentials owned by current user */}
-        {cred.type === 'project' && cred.owner && (
-          <Tooltip
-            content={
-              canEdit
-                ? 'Edit credential'
-                : `This credential can only be edited by the owner: ${cred.owner.email}`
-            }
-            side="top"
-          >
-            <button
-              type="button"
-              onClick={e => {
-                e.preventDefault();
-                if (canEdit) {
-                  handleEditCredential(cred);
-                }
-              }}
-              disabled={!canEdit}
-              className={cn(
-                'focus:outline-none',
-                canEdit
-                  ? 'text-gray-400 hover:text-gray-600 cursor-pointer'
-                  : 'text-gray-300 cursor-not-allowed opacity-50'
-              )}
-              aria-label={
-                canEdit
-                  ? 'Edit credential'
-                  : `Cannot edit credential owned by ${cred.owner.email}`
-              }
-            >
-              <span
-                className="hero-pencil-square h-5 w-5"
-                aria-hidden="true"
-                role="img"
-              />
-            </button>
-          </Tooltip>
-        )}
-
-        {/* Clear selection button - only shown when selected */}
-        {isSelected && (
-          <button
-            type="button"
-            onClick={e => {
-              e.preventDefault();
-              onCredentialChange(null);
-            }}
-            className="text-gray-400 hover:text-gray-600
-              focus:outline-none"
-            aria-label="Clear credential selection"
-          >
-            <span
-              className="hero-x-mark h-5 w-5"
-              aria-hidden="true"
-              role="img"
-            />
-          </button>
-        )}
-      </div>
+      cred.type === 'project' &&
+      !!cred.owner &&
+      !!currentUser &&
+      cred.owner.id === currentUser.id
     );
+  };
+
+  // Helper to get owner email safely (only project credentials have owners)
+  const getOwnerEmail = (cred: CredentialWithType): string | undefined => {
+    return cred.type === 'project' ? cred.owner?.email : undefined;
   };
 
   return (
@@ -430,23 +529,19 @@ export function ConfigureAdaptorModal({
                 <div className="grid grid-cols-3 gap-4 items-end">
                   {/* Adaptor Section - takes 2 columns */}
                   <div className="col-span-2">
-                    <label
-                      className="flex items-center gap-1 text-sm
-                      font-medium text-gray-700 mb-2"
-                    >
+                    <span className="flex items-center gap-1 text-sm font-medium text-gray-700 mb-2">
                       Adaptor
                       <Tooltip
                         content="Choose an adaptor to perform operations (via helper functions) in a specific application. Pick 'http' for generic REST APIs or the 'common' adaptor if this job only performs data manipulation."
                         side="top"
                       >
                         <span
-                          className="hero-information-circle h-4 w-4
-                          text-gray-400"
+                          className="hero-information-circle h-4 w-4 text-gray-400"
                           aria-label="Information"
                           role="img"
                         />
                       </Tooltip>
-                    </label>
+                    </span>
                     <div
                       className="flex items-center justify-between p-3
                       border border-gray-200 rounded-md bg-white"
@@ -475,12 +570,9 @@ export function ConfigureAdaptorModal({
 
                   {/* Version Section - takes 1 column */}
                   <div className="col-span-1">
-                    <label
-                      className="block text-sm font-medium text-gray-700
-                      mb-2"
-                    >
+                    <span className="block text-sm font-medium text-gray-700 mb-2">
                       Version
-                    </label>
+                    </span>
                     <VersionPicker
                       versions={versionOptions}
                       selectedVersion={currentVersion}
@@ -492,29 +584,24 @@ export function ConfigureAdaptorModal({
                 {/* Credentials Section */}
                 <div>
                   <div className="flex items-center justify-between mb-2">
-                    <label
-                      className="flex items-center gap-1 text-sm
-                      font-medium text-gray-700"
-                    >
+                    <span className="flex items-center gap-1 text-sm font-medium text-gray-700">
                       Credentials
                       <Tooltip
                         content="If the system you're working with requires authentication, choose a credential with login details (secrets) that will allow this job to connect. If you're not connecting to an external system you don't need a credential."
                         side="top"
                       >
                         <span
-                          className="hero-information-circle h-4 w-4
-                          text-gray-400"
+                          className="hero-information-circle h-4 w-4 text-gray-400"
                           aria-label="Information"
                           role="img"
                         />
                       </Tooltip>
-                    </label>
+                    </span>
                     {adaptorNeedsCredentials && (
                       <button
                         type="button"
                         aria-label="Create new credential"
-                        className="text-primary-600 hover:text-primary-700
-                        text-sm font-medium underline focus:outline-none"
+                        className="text-primary-600 hover:text-primary-700 text-sm font-medium underline focus:outline-none"
                         onClick={handleCreateCredential}
                       >
                         New Credential
@@ -522,21 +609,15 @@ export function ConfigureAdaptorModal({
                     )}
                   </div>
 
-                  {/* Show message if adaptor doesn't need credentials */}
                   {!adaptorNeedsCredentials ? (
-                    <div
-                      className="border border-gray-200 rounded-md p-6
-                      text-center bg-gray-50"
-                    >
+                    <div className="border border-gray-200 rounded-md p-6 text-center bg-gray-50">
                       <p className="text-gray-600 text-sm">
                         This adaptor does not require credentials.
                       </p>
                     </div>
-                  ) : /* Check if we have any credentials at all */
-                  credentialSections.schemaMatched.length === 0 &&
+                  ) : credentialSections.schemaMatched.length === 0 &&
                     credentialSections.universal.length === 0 &&
                     credentialSections.keychain.length === 0 ? (
-                    /* No credentials at all - show empty state */
                     <div className="border border-gray-200 rounded-md p-6 text-center">
                       <p className="text-gray-500 mb-3">
                         No credentials found in this project
@@ -544,217 +625,119 @@ export function ConfigureAdaptorModal({
                       <button
                         type="button"
                         onClick={handleCreateCredential}
-                        className="text-primary-600 hover:text-primary-700
-                        text-sm font-medium underline focus:outline-none"
+                        className="text-primary-600 hover:text-primary-700 text-sm font-medium underline focus:outline-none"
                       >
                         Create a new credential
                       </button>
                     </div>
-                  ) : !showOtherCredentials &&
-                    credentialSections.schemaMatched.length > 0 ? (
-                    <>
-                      {/* Schema-matched credentials */}
-                      <div className="border border-gray-200 rounded-md divide-y">
-                        {credentialSections.schemaMatched.map(cred => {
-                          const credId = getCredentialId(cred);
-                          const isSelected = currentCredentialId === credId;
-                          return (
-                            <label
-                              key={credId}
-                              htmlFor={`credential-${credId}`}
-                              className="flex items-start gap-3 p-4
-                                hover:bg-gray-50 cursor-pointer"
-                            >
-                              <input
-                                id={`credential-${credId}`}
-                                type="radio"
-                                name="credential"
-                                value={credId}
-                                checked={isSelected}
-                                onChange={() => onCredentialChange(credId)}
-                                aria-label={`Select ${cred.name} credential`}
-                                className="mt-1 h-4 w-4 text-primary-600
-                                  focus:ring-primary-500 border-gray-300"
-                              />
-                              <div className="flex-1 min-w-0">
-                                <div className="mb-1">
-                                  <span
-                                    className="font-medium text-gray-900
-                                      truncate"
-                                  >
-                                    {cred.name}
-                                  </span>
-                                </div>
-                                {cred.type === 'project' && cred.owner && (
-                                  <div className="flex items-center gap-1 text-sm text-gray-500">
-                                    <span
-                                      className="hero-user-solid h-4 w-4"
-                                      aria-hidden="true"
-                                      role="img"
-                                    />
-                                    {cred.owner.name}
-                                  </div>
-                                )}
-                              </div>
-                              {renderCredentialActions(cred, isSelected)}
-                            </label>
-                          );
-                        })}
-                      </div>
-
-                      {/* Toggle to other credentials */}
-                      {(credentialSections.universal.length > 0 ||
-                        credentialSections.keychain.length > 0) && (
-                        <div className="mt-3">
-                          <button
-                            type="button"
-                            onClick={() => setShowOtherCredentials(true)}
-                            className="text-sm text-primary-600 hover:text-primary-700
-                            font-medium underline focus:outline-none"
-                          >
-                            Other credentials
-                          </button>
-                        </div>
-                      )}
-                    </>
                   ) : (
-                    <>
-                      {/* Other credentials (HTTP, Raw, Keychain) */}
-                      <div className="space-y-4">
-                        {/* Universal credentials (HTTP and Raw) */}
-                        {credentialSections.universal.length > 0 && (
-                          <div>
-                            {/* Divider with label */}
-                            <div className="relative flex items-center pb-3">
-                              <div className="flex-grow border-t border-gray-200"></div>
-                              <span className="flex-shrink mx-4 text-xs font-normal text-gray-400 uppercase tracking-wide">
-                                Generic Credentials
-                              </span>
-                              <div className="flex-grow border-t border-gray-200"></div>
-                            </div>
-                            <div className="border border-gray-200 rounded-md divide-y">
-                              {credentialSections.universal.map(cred => {
-                                const credId = getCredentialId(cred);
-                                const isSelected =
-                                  currentCredentialId === credId;
-                                return (
-                                  <label
-                                    key={credId}
-                                    htmlFor={`credential-${credId}`}
-                                    className="flex items-start gap-3 p-4
-                                    hover:bg-gray-50 cursor-pointer"
-                                  >
-                                    <input
-                                      id={`credential-${credId}`}
-                                      type="radio"
-                                      name="credential"
-                                      value={credId}
-                                      checked={currentCredentialId === credId}
-                                      onChange={() =>
-                                        onCredentialChange(credId)
-                                      }
-                                      aria-label={`Select ${cred.name} credential`}
-                                      className="mt-1 h-4 w-4 text-primary-600
-                                      focus:ring-primary-500 border-gray-300"
-                                    />
-                                    <div className="flex-1 min-w-0">
-                                      <div className="mb-1">
-                                        <span
-                                          className="font-medium text-gray-900
-                                          truncate"
-                                        >
-                                          {cred.name}
-                                        </span>
-                                      </div>
-                                      {cred.type === 'project' &&
-                                        cred.owner && (
-                                          <div className="flex items-center gap-1 text-sm text-gray-500">
-                                            <span
-                                              className="hero-user-solid h-4 w-4"
-                                              aria-hidden="true"
-                                              role="img"
-                                            />
-                                            {cred.owner.name}
-                                          </div>
-                                        )}
-                                    </div>
-                                    {renderCredentialActions(cred, isSelected)}
-                                  </label>
-                                );
-                              })}
-                            </div>
+                    <div ref={scrollContainerRef}>
+                      {/* Schema-matched credentials */}
+                      {!showOtherCredentials &&
+                        credentialSections.schemaMatched.length > 0 && (
+                          <div className="border border-gray-200 rounded-md divide-y max-h-48 overflow-y-auto">
+                            {credentialSections.schemaMatched.map(cred => {
+                              const credId = getCredentialId(cred);
+                              const isSelected = currentCredentialId === credId;
+                              return (
+                                <CredentialRow
+                                  key={credId}
+                                  credential={cred}
+                                  credentialId={credId}
+                                  isSelected={isSelected}
+                                  onSelect={() => onCredentialChange(credId)}
+                                  onClear={() => onCredentialChange(null)}
+                                  onEdit={() => handleEditCredential(cred)}
+                                  canEdit={canEditCredential(cred)}
+                                  ownerEmail={getOwnerEmail(cred)}
+                                />
+                              );
+                            })}
                           </div>
                         )}
 
-                        {/* Keychain credentials */}
-                        {credentialSections.keychain.length > 0 && (
-                          <div>
-                            {/* Divider with label */}
-                            <div className="relative flex items-center py-4">
-                              <div className="flex-grow border-t border-gray-200"></div>
-                              <span className="flex-shrink mx-4 text-xs font-normal text-gray-400 uppercase tracking-wide">
-                                Keychain Credentials
-                              </span>
-                              <div className="flex-grow border-t border-gray-200"></div>
-                            </div>
-                            <div className="border border-gray-200 rounded-md divide-y">
-                              {credentialSections.keychain.map(cred => {
-                                const credId = getCredentialId(cred);
-                                const isSelected =
-                                  currentCredentialId === credId;
-                                return (
-                                  <label
-                                    key={credId}
-                                    htmlFor={`credential-${credId}`}
-                                    className="flex items-start gap-3 p-4
-                                    hover:bg-gray-50 cursor-pointer"
-                                  >
-                                    <input
-                                      id={`credential-${credId}`}
-                                      type="radio"
-                                      name="credential"
-                                      value={credId}
-                                      checked={isSelected}
-                                      onChange={() =>
+                      {/* Other credentials - two separate scrollable sections */}
+                      {showOtherCredentials && (
+                        <div className="space-y-4">
+                          {/* Generic credentials (HTTP and Raw) */}
+                          {credentialSections.universal.length > 0 && (
+                            <div>
+                              <SectionDivider label="Generic Credentials" />
+                              <div className="border border-gray-200 rounded-md divide-y max-h-48 overflow-y-auto">
+                                {credentialSections.universal.map(cred => {
+                                  const credId = getCredentialId(cred);
+                                  const isSelected =
+                                    currentCredentialId === credId;
+                                  return (
+                                    <CredentialRow
+                                      key={credId}
+                                      credential={cred}
+                                      credentialId={credId}
+                                      isSelected={isSelected}
+                                      onSelect={() =>
                                         onCredentialChange(credId)
                                       }
-                                      aria-label={`Select ${cred.name} credential`}
-                                      className="mt-1 h-4 w-4 text-primary-600
-                                      focus:ring-primary-500 border-gray-300"
+                                      onClear={() => onCredentialChange(null)}
+                                      onEdit={() => handleEditCredential(cred)}
+                                      canEdit={canEditCredential(cred)}
+                                      ownerEmail={getOwnerEmail(cred)}
                                     />
-                                    <div className="flex-1 min-w-0">
-                                      <div className="flex items-center gap-2 mb-1">
-                                        <span
-                                          className="font-medium text-gray-900
-                                          truncate"
-                                        >
-                                          {cred.name}
-                                        </span>
-                                      </div>
-                                    </div>
-                                    {renderCredentialActions(cred, isSelected)}
-                                  </label>
-                                );
-                              })}
+                                  );
+                                })}
+                              </div>
                             </div>
-                          </div>
-                        )}
-                      </div>
+                          )}
 
-                      {/* Toggle back to schema-matched (only if there are matching credentials) */}
-                      {credentialSections.schemaMatched.length > 0 && (
-                        <div className="mt-3">
-                          <button
-                            type="button"
-                            onClick={() => setShowOtherCredentials(false)}
-                            className="text-sm text-primary-600 hover:text-primary-700
-                            font-medium underline focus:outline-none"
-                          >
-                            Back to matching credentials
-                          </button>
+                          {/* Keychain credentials */}
+                          {credentialSections.keychain.length > 0 && (
+                            <div>
+                              <SectionDivider label="Keychain Credentials" />
+                              <div className="border border-gray-200 rounded-md divide-y max-h-48 overflow-y-auto">
+                                {credentialSections.keychain.map(cred => {
+                                  const credId = getCredentialId(cred);
+                                  const isSelected =
+                                    currentCredentialId === credId;
+                                  return (
+                                    <CredentialRow
+                                      key={credId}
+                                      credential={cred}
+                                      credentialId={credId}
+                                      isSelected={isSelected}
+                                      onSelect={() =>
+                                        onCredentialChange(credId)
+                                      }
+                                      onClear={() => onCredentialChange(null)}
+                                      onEdit={() => handleEditCredential(cred)}
+                                      canEdit={canEditCredential(cred)}
+                                      ownerEmail={getOwnerEmail(cred)}
+                                    />
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          )}
                         </div>
                       )}
-                    </>
+
+                      {/* Toggle button - OUTSIDE the scrollable container */}
+                      {(credentialSections.universal.length > 0 ||
+                        credentialSections.keychain.length > 0) &&
+                        credentialSections.schemaMatched.length > 0 && (
+                          <div className="mt-3">
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setShowOtherCredentials(!showOtherCredentials)
+                              }
+                              className="text-sm text-primary-600 hover:text-primary-700 font-medium underline focus:outline-none"
+                            >
+                              {showOtherCredentials
+                                ? 'Back to matching credentials'
+                                : 'Other credentials'}
+                            </button>
+                          </div>
+                        )}
+                    </div>
                   )}
                 </div>
               </div>

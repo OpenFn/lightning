@@ -1,7 +1,16 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 
 import { useURLState } from '../../react/lib/use-url-state';
-import { parseWorkflowYAML, convertWorkflowSpecToState } from '../../yaml/util';
+import {
+  parseWorkflowYAML,
+  convertWorkflowSpecToState,
+  applyJobCredsToWorkflowState,
+  extractJobCredentials,
+} from '../../yaml/util';
+import {
+  useMonacoRef,
+  useRegisterDiffDismissalCallback,
+} from '../contexts/MonacoRefContext';
 import {
   useAIConnectionState,
   useAIIsLoading,
@@ -15,6 +24,7 @@ import { useAISessionCommands } from '../hooks/useAIChannelRegistry';
 import { useAIInitialMessage } from '../hooks/useAIInitialMessage';
 import { useAIMode } from '../hooks/useAIMode';
 import { useAISession } from '../hooks/useAISession';
+import { useAutoPreview } from '../hooks/useAutoPreview';
 import { useResizablePanel } from '../hooks/useResizablePanel';
 import {
   useProject,
@@ -69,6 +79,11 @@ export function AIAssistantPanelWrapper() {
     collapseCreateWorkflowPanel,
   } = useUICommands();
   const { updateSearchParams, params } = useURLState();
+  const currentVersion = params['v'];
+
+  // Check if viewing a pinned version (not latest) to disable AI Assistant
+  const isPinnedVersion =
+    currentVersion !== undefined && currentVersion !== null;
 
   // Track IDE state changes to re-focus chat input when IDE closes
   const isIDEOpen = params.panel === 'editor';
@@ -84,6 +99,7 @@ export function AIAssistantPanelWrapper() {
   }, [isIDEOpen]);
 
   // Cmd+K toggles AI Assistant with mutual exclusivity
+  // Disabled when viewing a pinned version (not latest)
   useKeyboardShortcut(
     '$mod+k',
     () => {
@@ -93,7 +109,8 @@ export function AIAssistantPanelWrapper() {
       }
       toggleAIAssistantPanel();
     },
-    0
+    0,
+    { enabled: !isPinnedVersion }
   );
 
   const aiStore = useAIStore();
@@ -252,10 +269,6 @@ export function AIAssistantPanelWrapper() {
     isAIAssistantPanelOpen,
   ]);
 
-  // Close handler - URL cleanup happens automatically via the effect above
-  // when isAIAssistantPanelOpen becomes false
-  const handleClosePanel = closeAIAssistantPanel;
-
   // Push job context updates to backend when job body/adaptor/name changes
   // This ensures the AI has access to the current code when "Attach code" is checked
   useEffect(() => {
@@ -353,24 +366,6 @@ export function AIAssistantPanelWrapper() {
     clearAIAssistantInitialMessage,
   });
 
-  const handleShowSessions = useCallback(() => {
-    aiStore.clearSession();
-    // Clear session list to force reload - ensures fresh data after tab sleep
-    aiStore._clearSessionList();
-
-    // Ensure context is initialized for session list loading
-    // This handles cases where context might have been lost (e.g., after tab sleep)
-    if (aiMode) {
-      aiStore._initializeContext(aiMode.mode, aiMode.context);
-    }
-
-    // Clear session ID from URL - shows session list
-    updateSearchParams({
-      'w-chat': null,
-      'j-chat': null,
-    });
-  }, [updateSearchParams, aiStore, aiMode]);
-
   // Note: AI session creation events are now handled by AIAssistantStore._connectChannel
   // which receives events directly from the workflow channel
 
@@ -386,9 +381,37 @@ export function AIAssistantPanelWrapper() {
     ) => {
       const currentState = aiStore.getSnapshot();
 
+      // For job_code with attach_code, get CURRENT code from Y.Doc
+      let updatedAiMode = aiMode;
+      if (
+        messageOptions?.attach_code &&
+        aiMode?.mode === 'job_code' &&
+        currentState.sessionType === 'job_code'
+      ) {
+        const context = aiMode.context as JobCodeContext;
+        const jobId = context.job_id;
+
+        if (jobId) {
+          // Get fresh code from jobs array (backed by Y.Doc)
+          const currentJob = jobs.find(j => j.id === jobId);
+          if (currentJob) {
+            // Update aiMode with new context (don't mutate)
+            updatedAiMode = {
+              ...aiMode,
+              context: {
+                ...context,
+                job_body: currentJob.body,
+              },
+            };
+          }
+          // If job not found, fall back to existing context.job_body
+          // (job could be unsaved or deleted)
+        }
+      }
+
       // If no session exists, we need to include content in context for first message
-      if (!currentState.sessionId && aiMode) {
-        const { mode, context } = aiMode;
+      if (!currentState.sessionId && updatedAiMode) {
+        const { mode, context } = updatedAiMode;
 
         // Prepare context with content and message options for channel join
         let finalContext = {
@@ -499,20 +522,115 @@ export function AIAssistantPanelWrapper() {
   const [applyingMessageId, setApplyingMessageId] = useState<string | null>(
     null
   );
+  const [previewingMessageId, setPreviewingMessageId] = useState<string | null>(
+    null
+  );
+
+  // Get shared monaco ref from context for diff preview
+  const monacoRef = useMonacoRef();
+
+  // Register callback to be notified when diff is dismissed
+  useRegisterDiffDismissalCallback(() => {
+    setPreviewingMessageId(null);
+  });
+
+  // Close handler - clears diff preview and closes panel
+  const handleClosePanel = useCallback(() => {
+    const monaco = monacoRef?.current;
+    // Clear any active diff preview when closing the panel
+    if (previewingMessageId && monaco) {
+      monaco.clearDiff();
+      setPreviewingMessageId(null);
+    }
+    closeAIAssistantPanel();
+  }, [closeAIAssistantPanel, previewingMessageId, monacoRef]);
+
+  // Show sessions handler - clears diff preview and returns to session list
+  const handleShowSessions = useCallback(() => {
+    const monaco = monacoRef?.current;
+    // Clear any active diff preview when going back to session list
+    if (previewingMessageId && monaco) {
+      monaco.clearDiff();
+      setPreviewingMessageId(null);
+    }
+
+    aiStore.clearSession();
+    // Clear session list to force reload - ensures fresh data after tab sleep
+    aiStore._clearSessionList();
+
+    // Ensure context is initialized for session list loading
+    // This handles cases where context might have been lost (e.g., after tab sleep)
+    if (aiMode) {
+      aiStore._initializeContext(aiMode.mode, aiMode.context);
+    }
+
+    // Clear session ID from URL - shows session list
+    updateSearchParams({
+      'w-chat': null,
+      'j-chat': null,
+    });
+  }, [updateSearchParams, aiStore, aiMode, previewingMessageId, monacoRef]);
 
   const hasLoadedSessionRef = useRef(false);
+  const previousVersionRef = useRef(currentVersion);
 
   // Reset hasLoadedSessionRef when session changes
   useEffect(() => {
     hasLoadedSessionRef.current = false;
   }, [sessionId]);
 
-  const { importWorkflow, startApplyingWorkflow, doneApplyingWorkflow } =
-    useWorkflowActions();
+  // Auto-dismiss diff AND close AI panel when version changes to pinned version
+  useEffect(() => {
+    // Only act if version actually changed (not on initial mount or state updates)
+    if (previousVersionRef.current !== currentVersion) {
+      const monaco = monacoRef?.current;
+      // 1. Clear diff if one is being previewed
+      if (previewingMessageId && monaco) {
+        monaco.clearDiff();
+        setPreviewingMessageId(null);
+      }
+
+      // 2. Close AI panel and clear session if switching TO a pinned version
+      if (isPinnedVersion && isAIAssistantPanelOpen) {
+        closeAIAssistantPanel();
+        // Clear the AI session to prevent confusion about version context
+        aiStore.clearSession();
+        // Clear URL session params
+        updateSearchParams({
+          'w-chat': null,
+          'j-chat': null,
+        });
+      }
+    }
+
+    previousVersionRef.current = currentVersion;
+  }, [
+    currentVersion,
+    previewingMessageId,
+    monacoRef,
+    isPinnedVersion,
+    isAIAssistantPanelOpen,
+    closeAIAssistantPanel,
+    aiStore,
+    updateSearchParams,
+  ]);
+
+  const {
+    importWorkflow,
+    startApplyingWorkflow,
+    doneApplyingWorkflow,
+    startApplyingJobCode,
+    doneApplyingJobCode,
+    updateJob,
+  } = useWorkflowActions();
 
   // Get applying state from workflow store for disabling Apply button across all users
   const isApplyingWorkflow = useWorkflowState(
     state => state.isApplyingWorkflow
+  );
+  const isApplyingJobCode = useWorkflowState(state => state.isApplyingJobCode);
+  const applyingJobCodeMessageId = useWorkflowState(
+    state => state.applyingJobCodeMessageId
   );
 
   const handleApplyWorkflow = useCallback(
@@ -585,7 +703,12 @@ export function AIAssistantPanelWrapper() {
         // IDs are already in the YAML from AI (sent with IDs, like legacy editor)
         const workflowState = convertWorkflowSpecToState(workflowSpec);
 
-        importWorkflow(workflowState);
+        const workflowStateWithCreds = applyJobCredsToWorkflowState(
+          workflowState,
+          extractJobCredentials(jobs)
+        );
+
+        importWorkflow(workflowStateWithCreds);
       } catch (error) {
         console.error('[AI Assistant] Failed to apply workflow:', error);
 
@@ -603,8 +726,139 @@ export function AIAssistantPanelWrapper() {
         }
       }
     },
-    [importWorkflow, startApplyingWorkflow, doneApplyingWorkflow]
+    [importWorkflow, startApplyingWorkflow, doneApplyingWorkflow, jobs]
   );
+
+  const handlePreviewJobCode = useCallback(
+    (code: string, messageId: string) => {
+      if (!aiMode || aiMode.mode !== 'job_code') {
+        console.error('[AI Assistant] Cannot preview - not in job mode', {
+          aiMode,
+        });
+        return;
+      }
+
+      const context = aiMode.context as JobCodeContext;
+      const jobId = context.job_id;
+
+      if (!jobId) {
+        console.error('[AI Assistant] Cannot preview - no job ID', { context });
+        notifications.alert({
+          title: 'Cannot preview code',
+          description: 'No job selected',
+        });
+        return;
+      }
+
+      // If already previewing this message, do nothing
+      if (previewingMessageId === messageId) {
+        return;
+      }
+
+      const monaco = monacoRef?.current;
+
+      // Clear any existing diff first
+      if (previewingMessageId && monaco) {
+        monaco.clearDiff();
+      }
+
+      // Get current job code from Y.Doc
+      const currentJob = jobs.find(j => j.id === jobId);
+      const currentCode = currentJob?.body ?? '';
+
+      // Show diff in Monaco
+      if (monaco) {
+        monaco.showDiff(currentCode, code);
+        setPreviewingMessageId(messageId);
+      } else {
+        console.error('[AI Assistant] ❌ Monaco ref not available', {
+          hasMonacoRef: !!monacoRef,
+          hasMonacoRefCurrent: !!monacoRef?.current,
+        });
+        notifications.alert({
+          title: 'Preview unavailable',
+          description: 'Editor not ready. Please try again in a moment.',
+        });
+      }
+    },
+    [aiMode, jobs, previewingMessageId, monacoRef]
+  );
+
+  const handleApplyJobCode = useCallback(
+    async (code: string, messageId: string) => {
+      if (!aiMode || aiMode.mode !== 'job_code') {
+        console.error('[AI Assistant] Cannot apply job code - not in job mode');
+        return;
+      }
+
+      const context = aiMode.context as JobCodeContext;
+      const jobId = context.job_id;
+
+      if (!jobId) {
+        notifications.alert({
+          title: 'Cannot apply code',
+          description: 'No job selected',
+        });
+        return;
+      }
+
+      const monaco = monacoRef?.current;
+      // Clear diff if showing
+      if (previewingMessageId && monaco) {
+        monaco.clearDiff();
+        setPreviewingMessageId(null);
+      }
+
+      setApplyingMessageId(messageId);
+
+      // Coordinate with collaborators (non-blocking)
+      const coordinated = await startApplyingJobCode(messageId);
+
+      try {
+        // Update job body in Y.Doc (syncs to all collaborators)
+        updateJob(jobId, { body: code });
+
+        notifications.success({
+          title: 'Code applied',
+          description: 'Job code has been updated',
+        });
+      } catch (error) {
+        console.error('[AI Assistant] Failed to apply job code:', error);
+
+        notifications.alert({
+          title: 'Failed to apply code',
+          description:
+            error instanceof Error ? error.message : 'Unknown error occurred',
+        });
+      } finally {
+        setApplyingMessageId(null);
+        // Only signal completion if we successfully coordinated
+        if (coordinated) {
+          await doneApplyingJobCode(messageId);
+        }
+      }
+    },
+    [
+      aiMode,
+      updateJob,
+      startApplyingJobCode,
+      doneApplyingJobCode,
+      previewingMessageId,
+      monacoRef,
+    ]
+  );
+
+  // Auto-preview job code when AI responds with code
+  // Only for the user who authored the triggering message
+  useAutoPreview({
+    aiMode,
+    session:
+      sessionId && sessionType
+        ? { id: sessionId, session_type: sessionType, messages }
+        : null,
+    currentUserId: user?.id,
+    onPreview: handlePreviewJobCode,
+  });
 
   /**
    * Auto-apply workflow when AI responds with YAML code.
@@ -735,6 +989,7 @@ export function AIAssistantPanelWrapper() {
               <MessageList
                 messages={messages}
                 isLoading={isLoading}
+                {...(sessionType && { sessionType })}
                 onApplyWorkflow={
                   sessionType === 'workflow_template' && !isApplyingWorkflow
                     ? (yaml, messageId) => {
@@ -742,9 +997,35 @@ export function AIAssistantPanelWrapper() {
                       }
                     : undefined
                 }
-                applyingMessageId={applyingMessageId}
-                showAddButtons={sessionType === 'job_code'}
-                showApplyButton={sessionType === 'workflow_template'}
+                onApplyJobCode={
+                  sessionType === 'job_code' && !isApplyingJobCode
+                    ? (code, messageId) => {
+                        void handleApplyJobCode(code, messageId);
+                      }
+                    : undefined
+                }
+                onPreviewJobCode={
+                  sessionType === 'job_code' ? handlePreviewJobCode : undefined
+                }
+                applyingMessageId={
+                  // If anyone is applying (including other users), pass the message ID
+                  // to show "APPLYING..." state. Prioritize stored message ID from store,
+                  // then fall back to local state.
+                  isApplyingJobCode
+                    ? (applyingJobCodeMessageId ?? applyingMessageId)
+                    : undefined
+                }
+                previewingMessageId={previewingMessageId}
+                showAddButtons={
+                  sessionType === 'job_code'
+                    ? // For job_code: hide ADD buttons when message has code field
+                      !messages.some(m => m.role === 'assistant' && m.code)
+                    : false
+                }
+                showApplyButton={
+                  sessionType === 'workflow_template' ||
+                  (sessionType === 'job_code' && messages.some(m => m.code))
+                }
                 onRetryMessage={handleRetryMessage}
                 isWriteDisabled={isWriteDisabled}
               />

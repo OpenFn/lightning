@@ -29,6 +29,12 @@ export default defineConfig({
     // Suppress debug logs during tests (matches current setup)
     silent: false,
     logHeapUsage: true,
+    server: {
+      deps: {
+        // Don't try to optimize monaco-editor (it's mocked in tests)
+        inline: ['monaco-editor'],
+      },
+    },
   },
   resolve: {
     alias: {
@@ -37,7 +43,7 @@ export default defineConfig({
       // morphdom is needed by phoenix_live_view internals (dom_patch.js)
       // but the deps/ folder can't resolve from our node_modules
       morphdom: path.resolve(__dirname, './node_modules/morphdom'),
-      // Mock monaco-editor for tests
+      // Mock monaco-editor for tests (8MB+ package causes issues)
       'monaco-editor': path.resolve(
         __dirname,
         './test/__mocks__/monaco-editor.ts'

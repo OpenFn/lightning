@@ -1,11 +1,13 @@
-import { useMemo } from 'react';
+import { useMemo, useRef } from 'react';
+
+import { useURLState } from '#/react/lib/use-url-state';
 
 import { SocketProvider } from '../react/contexts/SocketProvider';
-import { useURLState } from '#/react/lib/use-url-state';
 import type { WithActionProps } from '../react/lib/with-props';
 
 import { AIAssistantPanelWrapper } from './components/AIAssistantPanelWrapper';
 import { BreadcrumbLink, BreadcrumbText } from './components/Breadcrumbs';
+import type { MonacoHandle } from './components/CollaborativeMonaco';
 import { Header } from './components/Header';
 import { LoadingBoundary } from './components/LoadingBoundary';
 import { Toaster } from './components/ui/Toaster';
@@ -14,6 +16,7 @@ import { VersionDropdown } from './components/VersionDropdown';
 import { WorkflowEditor } from './components/WorkflowEditor';
 import { CredentialModalProvider } from './contexts/CredentialModalContext';
 import { LiveViewActionsProvider } from './contexts/LiveViewActionsContext';
+import { MonacoRefProvider } from './contexts/MonacoRefContext';
 import { SessionProvider } from './contexts/SessionProvider';
 import { StoreProvider } from './contexts/StoreProvider';
 import {
@@ -167,6 +170,9 @@ export const CollaborativeEditor: WithActionProps<
     navigate: props.navigate,
   };
 
+  // Monaco ref for diff preview - shared between FullScreenIDE and AIAssistantPanelWrapper
+  const monacoRef = useRef<MonacoHandle>(null);
+
   return (
     <KeyboardProvider>
       <div
@@ -183,41 +189,43 @@ export const CollaborativeEditor: WithActionProps<
             <StoreProvider>
               <LiveViewActionsProvider actions={liveViewActions}>
                 <CredentialModalProvider>
-                  <VersionDebugLogger />
-                  <Toaster />
-                  <div className="flex-1 min-h-0 overflow-hidden flex flex-col relative">
-                    <BreadcrumbContent
-                      workflowId={workflowId}
-                      workflowName={workflowName}
-                      isNewWorkflow={isNewWorkflow}
-                      {...(projectId !== undefined && {
-                        projectIdFallback: projectId,
-                      })}
-                      {...(projectName !== undefined && {
-                        projectNameFallback: projectName,
-                      })}
-                      {...(projectEnv !== undefined && {
-                        projectEnvFallback: projectEnv,
-                      })}
-                      {...(rootProjectId !== null && {
-                        rootProjectIdFallback: rootProjectId,
-                      })}
-                      {...(rootProjectName !== null && {
-                        rootProjectNameFallback: rootProjectName,
-                      })}
-                    />
-                    <div className="flex-1 min-h-0 overflow-hidden relative">
-                      <LoadingBoundary>
-                        <div className="h-full w-full">
-                          <WorkflowEditor
-                            parentProjectId={rootProjectId}
-                            parentProjectName={rootProjectName}
-                          />
-                        </div>
-                      </LoadingBoundary>
+                  <MonacoRefProvider monacoRef={monacoRef}>
+                    <VersionDebugLogger />
+                    <Toaster />
+                    <div className="flex-1 min-h-0 overflow-hidden flex flex-col relative">
+                      <BreadcrumbContent
+                        workflowId={workflowId}
+                        workflowName={workflowName}
+                        isNewWorkflow={isNewWorkflow}
+                        {...(projectId !== undefined && {
+                          projectIdFallback: projectId,
+                        })}
+                        {...(projectName !== undefined && {
+                          projectNameFallback: projectName,
+                        })}
+                        {...(projectEnv !== undefined && {
+                          projectEnvFallback: projectEnv,
+                        })}
+                        {...(rootProjectId !== null && {
+                          rootProjectIdFallback: rootProjectId,
+                        })}
+                        {...(rootProjectName !== null && {
+                          rootProjectNameFallback: rootProjectName,
+                        })}
+                      />
+                      <div className="flex-1 min-h-0 overflow-hidden relative">
+                        <LoadingBoundary>
+                          <div className="h-full w-full">
+                            <WorkflowEditor
+                              parentProjectId={rootProjectId}
+                              parentProjectName={rootProjectName}
+                            />
+                          </div>
+                        </LoadingBoundary>
+                      </div>
                     </div>
-                  </div>
-                  <AIAssistantPanelWrapper />
+                    <AIAssistantPanelWrapper />
+                  </MonacoRefProvider>
                 </CredentialModalProvider>
               </LiveViewActionsProvider>
             </StoreProvider>

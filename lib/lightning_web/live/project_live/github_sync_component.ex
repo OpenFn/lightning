@@ -201,19 +201,19 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
         error_msg
 
       %Lightning.VersionControl.GithubError{message: message} ->
-        "Github Error: #{message}"
+        "GitHub Error: #{message}"
 
       %{"message" => message} ->
-        "Github Error: #{message}"
+        "GitHub Error: #{message}"
 
       %{"error_description" => message} ->
-        "Github Error: #{message}"
+        "GitHub Error: #{message}"
 
       %Tesla.Env{body: body} ->
         error_message(body)
 
       _error ->
-        "Oops! An error occured while connecting to Github. Please try again later"
+        "Oops! An error occured while connecting to GitHub. Please try again later"
     end
   end
 
@@ -246,7 +246,7 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
         socket
         |> put_flash(
           :error,
-          "Oops! Looks like you don't have access to this installation in Github"
+          "Oops! Looks like you don't have access to this installation in GitHub"
         )
         |> push_navigate(
           to: ~p"/projects/#{socket.assigns.project}/settings#vcs"
@@ -261,7 +261,7 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
     case VersionControl.initiate_sync(repo_connection, commit_message) do
       :ok ->
         socket
-        |> put_flash(:info, "Github sync initiated")
+        |> put_flash(:info, "GitHub sync initiated")
         |> push_navigate(
           to: ~p"/projects/#{socket.assigns.project}/settings#vcs"
         )
@@ -465,18 +465,18 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
               </div>
               <div class="ml-3">
                 <h3 class="text-sm font-medium text-yellow-800">
-                  Your github project is not properly connected with Lightning.
+                  Your GitHub project is not properly connected with Lightning.
                 </h3>
                 <div class="mt-2 text-sm text-yellow-700">
                   <%= case failure do %>
                     <% {:error, %Lightning.VersionControl.GithubError{message: message}} -> %>
-                      <p>There was a problem connecting to github</p>
-                      <p><code>Github Error: {message}</code></p>
+                      <p>There was a problem connecting to GitHub</p>
+                      <p><code>GitHub Error: {message}</code></p>
                     <% {:error, %{"message" => message}} -> %>
-                      <p>There was a problem connecting to github</p>
-                      <p><code>Github Error: {message}</code></p>
+                      <p>There was a problem connecting to GitHub</p>
+                      <p><code>GitHub Error: {message}</code></p>
                     <% _other -> %>
-                      <p>There was a problem connecting to github</p>
+                      <p>There was a problem connecting to GitHub</p>
                   <% end %>
                 </div>
                 <div class="mt-4">
@@ -553,7 +553,7 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
       <div class="px-6">
         <p class="text-sm text-gray-500">
           You are about to disconnect this project from GitHub.
-          Until you reconnect, you will not be able to sync this project to Github.
+          Until you reconnect, you will not be able to sync this project to GitHub.
         </p>
       </div>
       <.modal_footer>
@@ -587,7 +587,7 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
       <:title>
         <div class="flex justify-between">
           <span class="font-bold">
-            Reconnect to Github
+            Reconnect to GitHub
           </span>
           <button
             phx-click={hide_modal(@id)}

@@ -97,6 +97,9 @@
                     disabled={!@can_edit_project}
                     label="Project environment"
                   />
+                  <small class="mt-2 block text-xs text-gray-600">
+                    Credentials will be loaded with values from this environment.
+                  </small>
                 </div>
               </div>
               <div class="grid grid-cols gap-6">
@@ -109,7 +112,7 @@
                     class="mt-1 focus:ring-primary-500 focus:border-primary-500 block w-full shadow-xs sm:text-sm border-secondary-300 rounded-md"
                   />
                   <small class="mt-2 block text-xs text-gray-600">
-                    A short description of a project [max 240 characters]
+                    A short description of a project (max 240 characters)
                   </small>
                 </div>
               </div>
@@ -727,7 +730,7 @@
           </div>
         <% end %>
         <div class="mt-2">
-          Need to learn more about Github Sync?
+          Need to learn more about GitHub Sync?
           See
           <.link
             target="_blank"

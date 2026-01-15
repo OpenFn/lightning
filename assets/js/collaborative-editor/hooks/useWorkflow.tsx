@@ -29,8 +29,12 @@
  * @see ../contexts/StoreProvider.tsx - Provider setup and context management
  */
 
-import type React from 'react';
-import { useCallback, useContext, useMemo, useSyncExternalStore } from 'react';
+import React, {
+  useCallback,
+  useContext,
+  useMemo,
+  useSyncExternalStore,
+} from 'react';
 
 import { useURLState } from '#/react/lib/use-url-state';
 
@@ -108,7 +112,7 @@ export const useWorkflowStoreContext = () => {
  *
  * @returns T The memoized result of your selector, with referential stability
  */
-export const useWorkflowSelector = <T>(
+export const useWorkflowSelector = <T,>(
   selector: (state: Workflow.State, store: WorkflowStoreInstance) => T,
   deps: React.DependencyList = []
 ): T => {
@@ -179,7 +183,7 @@ export const useWorkflowSelector = <T>(
  *
  * @returns T The memoized result of your selector with referential stability
  */
-export const useWorkflowState = <T>(
+export const useWorkflowState = <T,>(
   selector: (state: Workflow.State) => T,
   deps: React.DependencyList = []
 ): T => {
@@ -553,12 +557,31 @@ export const useWorkflowActions = () => {
         }
 
         // Show success toast
-        const successOptions: { title: string; description?: string } = {
+        const successOptions: {
+          title: string;
+          description?: React.ReactNode;
+        } = {
           title: 'Workflow saved and synced to GitHub',
         };
+
         if (response.repo) {
-          successOptions.description = `Changes pushed to ${response.repo}`;
+          const actionsUrl = `https://github.com/${response.repo}/actions`;
+          successOptions.description = (
+            <span>
+              Changes pushed to {response.repo}. Check the{' '}
+              <a
+                href={actionsUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="underline"
+              >
+                GitHub actions
+              </a>{' '}
+              for result
+            </span>
+          );
         }
+
         notifications.success(successOptions);
       };
 
@@ -640,6 +663,10 @@ export const useWorkflowActions = () => {
     // AI workflow apply coordination
     startApplyingWorkflow: store.startApplyingWorkflow,
     doneApplyingWorkflow: store.doneApplyingWorkflow,
+
+    // AI job code apply coordination
+    startApplyingJobCode: store.startApplyingJobCode,
+    doneApplyingJobCode: store.doneApplyingJobCode,
   };
 };
 
@@ -699,6 +726,12 @@ export const useCanSave = (): { canSave: boolean; tooltipMessage: string } => {
   const { hasEditPermission, isConnected, isDeleted, isPinnedVersion } =
     useWorkflowConditions();
 
+  // Check if any apply operation in progress
+  const isApplyingJobCode = useWorkflowState(state => state.isApplyingJobCode);
+  const isApplyingWorkflow = useWorkflowState(
+    state => state.isApplyingWorkflow
+  );
+
   // Determine tooltip message (check in priority order)
   let tooltipMessage = '';
   let canSave = true;
@@ -715,6 +748,12 @@ export const useCanSave = (): { canSave: boolean; tooltipMessage: string } => {
   } else if (isPinnedVersion) {
     canSave = false;
     tooltipMessage = 'You are viewing a pinned version of this workflow';
+  } else if (isApplyingJobCode) {
+    canSave = false;
+    tooltipMessage = 'Applying AI-generated code...';
+  } else if (isApplyingWorkflow) {
+    canSave = false;
+    tooltipMessage = 'Applying AI-generated workflow...';
   }
 
   return { canSave, tooltipMessage };
