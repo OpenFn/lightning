@@ -19,6 +19,12 @@ and this project adheres to
 
 ### Changed
 
+### Fixed
+
+## [2.15.11-pre] - 2026-01-15
+
+### Changed
+
 - Render AI Assistant user messages as plain text instead of markdown to prevent
   incorrect code block formatting
   [#4288](https://github.com/OpenFn/lightning/issues/4288)
