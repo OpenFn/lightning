@@ -26,8 +26,8 @@ You can read more details in our
 
 ## Pre-submission checklist
 
-- [ ] I have performed an AI review of m code (we recommend using `/review` with
-      Claude Code)
+- [ ] I have performed an AI review of my code (we recommend using `/review`
+      with Claude Code)
 - [ ] I have implemented and tested all related **authorization policies**.
       (e.g., `:owner`, `:admin`, `:editor`, `:viewer`)
 - [ ] I have updated the **changelog**.
