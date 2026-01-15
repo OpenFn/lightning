@@ -19,6 +19,10 @@ const webhookTriggerSchema = baseTriggerSchema.extend({
   type: z.literal('webhook'),
   cron_expression: z.null(),
   kafka_configuration: z.null(),
+  webhook_reply: z
+    .enum(['before_start', 'after_completion'])
+    .nullable()
+    .default('before_start'),
 });
 
 // Cron trigger schema with professional validation using cron-validator
@@ -125,6 +129,7 @@ export const createDefaultTrigger = (
         type: 'webhook' as const,
         cron_expression: null,
         kafka_configuration: null,
+        webhook_reply: 'before_start' as const,
       };
 
     case 'cron':
