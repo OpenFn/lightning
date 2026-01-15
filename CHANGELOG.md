@@ -19,6 +19,8 @@ and this project adheres to
 
 ### Changed
 
+- Standardise copy button feedback across collaborative editor
+  [#3578](https://github.com/OpenFn/lightning/issues/3578)
 - Render AI Assistant user messages as plain text instead of markdown to prevent
   incorrect code block formatting
   [#4288](https://github.com/OpenFn/lightning/issues/4288)
