@@ -255,7 +255,7 @@ describe('MessageList', () => {
       expect(copyButtons.length).toBeGreaterThan(0);
     });
 
-    it('should show APPLY button when showApplyButton is true', () => {
+    it('should show "Apply" button when showApplyButton is true', () => {
       const mockApply = vi.fn();
       const messages = [
         createMockAIMessage({
@@ -272,10 +272,10 @@ describe('MessageList', () => {
         />
       );
 
-      expect(screen.getByText('APPLY')).toBeInTheDocument();
+      expect(screen.getByText('Apply')).toBeInTheDocument();
     });
 
-    it('should call onApplyWorkflow when APPLY clicked', async () => {
+    it('should call onApplyWorkflow when "Apply" clicked', async () => {
       const mockApply = vi.fn();
       const messages = [
         createMockAIMessage({
@@ -293,13 +293,13 @@ describe('MessageList', () => {
         />
       );
 
-      const applyButton = screen.getByText('APPLY');
+      const applyButton = screen.getByText('Apply');
       await userEvent.click(applyButton);
 
       expect(mockApply).toHaveBeenCalledWith('name: Test', 'msg-1');
     });
 
-    it('should show APPLYING state during workflow apply', () => {
+    it('should show "Applying" state during workflow apply', () => {
       const messages = [
         createMockAIMessage({
           id: 'msg-1',
@@ -317,10 +317,10 @@ describe('MessageList', () => {
         />
       );
 
-      expect(screen.getByText('APPLYING...')).toBeInTheDocument();
+      expect(screen.getByText('Applying...')).toBeInTheDocument();
     });
 
-    it('should show ADD button when showAddButtons is true', () => {
+    it('should show "Add" button when showAddButtons is true', () => {
       const messages = [
         createMockAIMessage({
           role: 'assistant',
@@ -330,10 +330,10 @@ describe('MessageList', () => {
 
       render(<MessageList messages={messages} showAddButtons />);
 
-      expect(screen.getByText('ADD')).toBeInTheDocument();
+      expect(screen.getByText('Add')).toBeInTheDocument();
     });
 
-    it('should not show ADD button when showAddButtons is false', () => {
+    it('should not show Add button when showAddButtons is false', () => {
       const messages = [
         createMockAIMessage({
           role: 'assistant',
@@ -343,7 +343,7 @@ describe('MessageList', () => {
 
       render(<MessageList messages={messages} showAddButtons={false} />);
 
-      expect(screen.queryByText('ADD')).not.toBeInTheDocument();
+      expect(screen.queryByText('Add')).not.toBeInTheDocument();
     });
   });
 
@@ -357,7 +357,7 @@ describe('MessageList', () => {
       });
     });
 
-    it('should copy code to clipboard on COPY click', async () => {
+    it('should copy code to clipboard on "Copy" click', async () => {
       const messages = [
         createMockAIMessage({
           role: 'assistant',
@@ -379,7 +379,7 @@ describe('MessageList', () => {
       });
     });
 
-    it('should show COPIED feedback after copying', async () => {
+    it('should show "Copied" feedback after copying', async () => {
       const messages = [
         createMockAIMessage({
           role: 'assistant',
@@ -446,9 +446,9 @@ describe('MessageList', () => {
 
       const { container } = render(<MessageList messages={messages} />);
 
-      // Should not have code block with COPY/ADD buttons
+      // Should not have code block with Copy/Add buttons
       expect(screen.queryByText('Copy')).not.toBeInTheDocument();
-      expect(screen.queryByText('ADD')).not.toBeInTheDocument();
+      expect(screen.queryByText('Add')).not.toBeInTheDocument();
 
       // Should not have pre/code block styling
       expect(container.querySelector('pre')).not.toBeInTheDocument();
@@ -716,8 +716,8 @@ describe('MessageList', () => {
 
       render(<MessageList messages={messages} />);
 
-      // Should not show APPLY button
-      expect(screen.queryByText('APPLY')).not.toBeInTheDocument();
+      // Should not show "Apply" button
+      expect(screen.queryByText('Apply')).not.toBeInTheDocument();
     });
   });
 });

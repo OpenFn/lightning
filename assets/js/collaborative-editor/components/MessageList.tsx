@@ -59,7 +59,7 @@ const CodeBlock = ({
             : 'bg-slate-300 text-white hover:bg-primary-600 hover:scale-105'
       )}
     >
-      {added ? 'ADDED' : 'ADD'}
+      {added ? 'Added' : 'Add'}
     </button>
   );
 
@@ -71,7 +71,7 @@ const CodeBlock = ({
           type="button"
           onClick={handleCopy}
           className={cn(
-            'rounded-md px-2 py-1 text-xs font-medium transition-all duration-300 ease-in-out uppercase',
+            'rounded-md px-2 py-1 text-xs font-medium transition-all duration-300 ease-in-out',
             isCopied
               ? 'bg-green-100 text-green-700 scale-105'
               : 'bg-slate-300 text-white hover:bg-primary-600 hover:scale-105'
@@ -255,7 +255,7 @@ const CodeActionButtons = ({
             : 'bg-slate-300 text-white hover:bg-primary-600 hover:scale-105'
       )}
     >
-      {applied ? 'APPLIED' : isApplying ? 'APPLYING...' : 'APPLY'}
+      {applied ? 'Applied' : isApplying ? 'Applying...' : 'Apply'}
     </button>
   );
 
@@ -273,7 +273,7 @@ const CodeActionButtons = ({
             : 'bg-slate-300 text-white hover:bg-primary-600 hover:scale-105'
       )}
     >
-      {added ? 'ADDED' : 'ADD'}
+      {added ? 'Added' : 'Add'}
     </button>
   );
 
@@ -291,7 +291,7 @@ const CodeActionButtons = ({
             : 'bg-slate-300 text-white hover:bg-primary-600 text-white'
       )}
     >
-      {isPreviewActive ? 'PREVIEWING' : 'PREVIEW'}
+      {isPreviewActive ? 'Previewing' : 'Preview'}
     </button>
   );
 
@@ -312,7 +312,7 @@ const CodeActionButtons = ({
         type="button"
         onClick={handleCopy}
         className={cn(
-          'rounded-md px-2 py-1 text-xs font-medium transition-all duration-300 ease-in-out uppercase',
+          'rounded-md px-2 py-1 text-xs font-medium transition-all duration-300 ease-in-out',
           isCopied
             ? 'bg-green-100 text-green-700 scale-105'
             : 'bg-slate-300 text-white hover:bg-primary-600 hover:scale-105'
