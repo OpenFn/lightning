@@ -17,6 +17,9 @@ and this project adheres to
 
 ### Added
 
+- Added sync/async mode controls to the trigger
+  [#4321](https://github.com/OpenFn/lightning/issues/4321)
+
 ### Changed
 
 ### Fixed
