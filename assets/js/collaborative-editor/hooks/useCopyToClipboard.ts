@@ -16,16 +16,34 @@ interface UseCopyToClipboardReturn {
  * - Shows "Failed" for 2 seconds on error
  * - Returns to idle state after timeout
  *
- * Button Sizing Strategies (choose based on context):
+ * Button Sizing Strategies (ordered by recommendation):
  *
- * 1. **Fixed width** - For input groups or constrained layouts
- * 2. **Min-width** - For floating buttons that can grow naturally
- * 3. **Invisible spacer** - For multi-button toolbars to prevent layout shifts
+ * 1. **Invisible spacer** - Recommended for consistent UI (prevents layout shift)
+ * 2. **Fixed width** - Simpler alternative for input groups or constrained layouts
+ * 3. **Min-width** - For floating buttons that can grow naturally
  *
- * @example Fixed width (for input groups)
+ * @example Invisible spacer (recommended, prevents layout shift)
  * ```tsx
  * const { copyText, copyToClipboard } = useCopyToClipboard();
  *
+ * <div className="flex gap-2">
+ *   <button className="px-3 py-2">Download</button>
+ *   <button
+ *     onClick={() => void copyToClipboard(code)}
+ *     className="px-3 py-2 inline-grid"
+ *   >
+ *     <span className="col-start-1 row-start-1 invisible" aria-hidden="true">
+ *       Copy Code
+ *     </span>
+ *     <span className="col-start-1 row-start-1">
+ *       {copyText || 'Copy Code'}
+ *     </span>
+ *   </button>
+ * </div>
+ * ```
+ *
+ * @example Fixed width (simpler, for input groups)
+ * ```tsx
  * <div className="flex">
  *   <input type="text" value={url} readOnly className="flex-1 rounded-l-lg" />
  *   <button
@@ -41,28 +59,10 @@ interface UseCopyToClipboardReturn {
  * ```tsx
  * <button
  *   onClick={() => void copyToClipboard(text)}
- *   className="min-w-[5rem] px-2 py-1 uppercase"
+ *   className="px-2 py-1 rounded"
  * >
  *   {copyText || 'Copy'}
  * </button>
- * ```
- *
- * @example Invisible spacer (for multi-button toolbars)
- * ```tsx
- * <div className="flex gap-2">
- *   <button className="px-3 py-2">Download</button>
- *   <button
- *     onClick={() => void copyToClipboard(code)}
- *     className="px-3 py-2 inline-grid"
- *   >
- *     <span className="col-start-1 row-start-1 invisible" aria-hidden="true">
- *       Copy Code
- *     </span>
- *     <span className="col-start-1 row-start-1">
- *       {copyText || 'Copy Code'}
- *     </span>
- *   </button>
- * </div>
  * ```
  */
 export function useCopyToClipboard(): UseCopyToClipboardReturn {
