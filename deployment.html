@@ -12,7 +12,7 @@
 
     <link rel="stylesheet" href="dist/html-elixir-RLZO5U2C.css" />
 
-    <script defer src="dist/sidebar_items-3B9D9B88.js"></script>
+    <script defer src="dist/sidebar_items-C9F6C168.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-Y223O6DN.js"></script>
 
@@ -107,7 +107,8 @@ your termination_grace_period if using kubernetes)</li><li><code class="inline">
 concurrently.</li><li><code class="inline">MAX_DATACLIP_SIZE_MB</code> - the maximum size (in MB) of a dataclip created via
 the webhook trigger URL for a job. This limits the max request size via the
 JSON plug and may (in future) limit the size of dataclips that can be stored
-as run_results via the websocket connection from a worker.</li></ul><h3 id="github" class="section-heading"><a href="#github" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">GitHub</span></h3><p>Lightning enables connection to GitHub via GitHub Apps. The following GitHub
+as run_results via the websocket connection from a worker.</li><li><code class="inline">MAX_CREDENTIAL_SENSITIVE_VALUES</code> - the maximum number of sensitive values
+that can be stored in a credential. Defaults to 50.</li></ul><h3 id="github" class="section-heading"><a href="#github" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">GitHub</span></h3><p>Lightning enables connection to GitHub via GitHub Apps. The following GitHub
 repository permissions are needed for the GitHub app:</p><table><thead><tr><th style="text-align: left;"><strong>Resource</strong></th><th style="text-align: left;"><strong>Access</strong></th></tr></thead><tbody><tr><td style="text-align: left;">Actions</td><td style="text-align: left;">Read and Write</td></tr><tr><td style="text-align: left;">Contents</td><td style="text-align: left;">Read and Write</td></tr><tr><td style="text-align: left;">Metadata</td><td style="text-align: left;">Read only</td></tr><tr><td style="text-align: left;">Secrets</td><td style="text-align: left;">Read and Write</td></tr><tr><td style="text-align: left;">Workflows</td><td style="text-align: left;">Read and Write</td></tr></tbody></table><p>Ensure you set the following URLs:</p><ul><li><strong>Homepage URL:</strong> <code class="inline">&lt;app_url_here&gt;</code></li><li><strong>Callback URL for authorizing users:</strong> <code class="inline">&lt;app_url_here&gt;/oauth/github/callback</code>
 (Do NOT check the two checkboxes in this section requesting Device Flow and
 OAuth.)</li><li><strong>Setup URL for Post installation:</strong> <code class="inline">&lt;app_url_here&gt;/setup_vcs</code> (Check the box
@@ -171,9 +172,9 @@ headers and data as received by the Kafka pipeline and write this to a file
 within the subdirectory. The file will be named based on the pattern
 <code class="inline">&lt;trigger_id&gt;_&lt;message_topic&gt;_&lt;message_partition&gt;_&lt;message_offset&gt;.json</code>.</p><p>To recover the persisted messages, it is suggested that the affected triggers be
 disabled before commencing. Once this is done, the following code needs to be
-run from an IEx console on each node that is running Lightning:</p><pre><code class="makeup elixir" translate="no"><span class="nc">Lightning.KafkaTriggers.MessageRecovery</span><span class="o">.</span><span class="n">recover_messages</span><span class="p" data-group-id="2441239644-1">(</span><span class="w">
-  </span><span class="nc">Lightning.Config</span><span class="o">.</span><span class="n">kafka_alternate_storage_file_path</span><span class="p" data-group-id="2441239644-2">(</span><span class="p" data-group-id="2441239644-2">)</span><span class="w">
-</span><span class="p" data-group-id="2441239644-1">)</span></code></pre><p>Further details regarding the behaviour of <code class="inline">MessageRecovery.recover_messages/1</code>
+run from an IEx console on each node that is running Lightning:</p><pre><code class="makeup elixir" translate="no"><span class="nc">Lightning.KafkaTriggers.MessageRecovery</span><span class="o">.</span><span class="n">recover_messages</span><span class="p" data-group-id="4003769892-1">(</span><span class="w">
+  </span><span class="nc">Lightning.Config</span><span class="o">.</span><span class="n">kafka_alternate_storage_file_path</span><span class="p" data-group-id="4003769892-2">(</span><span class="p" data-group-id="4003769892-2">)</span><span class="w">
+</span><span class="p" data-group-id="4003769892-1">)</span></code></pre><p>Further details regarding the behaviour of <code class="inline">MessageRecovery.recover_messages/1</code>
 can be found in the module documentation of <code class="inline">MessageRecovery</code>. Recovered
 messages will have the <code class="inline">.json</code> extension modified to <code class="inline">.json.recovered</code> but they
 will be left in place. Future recovery runs will not process files that have
