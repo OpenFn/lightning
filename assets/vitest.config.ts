@@ -46,7 +46,7 @@ export default defineConfig({
       // Mock monaco-editor for tests (8MB+ package causes issues)
       'monaco-editor': path.resolve(
         __dirname,
-        './test/_mocks/monaco-editor.ts'
+        './test/__mocks__/monaco-editor.ts'
       ),
     },
   },
