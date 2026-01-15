@@ -641,6 +641,7 @@ export const createSessionContextStore = (
     setHasReadAIDisclaimer,
     markAIDisclaimerRead,
     getLimits,
+    setBaseWorkflow,
 
     // Internal methods (not part of public SessionContextStore interface)
     _connectChannel,

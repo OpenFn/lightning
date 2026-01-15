@@ -144,6 +144,7 @@ interface SessionContextCommands {
   clearError: () => void;
   setLatestSnapshotLockVersion: (lockVersion: number) => void;
   clearIsNewWorkflow: () => void;
+  setBaseWorkflow: (workflow: unknown) => void;
   setHasReadAIDisclaimer: (hasRead: boolean) => void;
   markAIDisclaimerRead: () => Promise<void>;
   getLimits: (

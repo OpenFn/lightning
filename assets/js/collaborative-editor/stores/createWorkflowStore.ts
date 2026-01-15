@@ -1376,6 +1376,7 @@ export const createWorkflowStore = () => {
   const saveWorkflow = async (): Promise<{
     saved_at?: string;
     lock_version?: number;
+    workflow?: unknown;
   } | null> => {
     const { ydoc, provider } = ensureConnected();
 
@@ -1400,6 +1401,7 @@ export const createWorkflowStore = () => {
       const response = await channelRequest<{
         saved_at: string;
         lock_version: number;
+        workflow: unknown;
       }>(provider.channel, 'save_workflow', payload);
 
       logger.debug('Saved workflow', response);
@@ -1417,6 +1419,7 @@ export const createWorkflowStore = () => {
     saved_at?: string;
     lock_version?: number;
     repo?: string;
+    workflow?: unknown;
   } | null> => {
     const { ydoc, provider } = ensureConnected();
 
@@ -1443,6 +1446,7 @@ export const createWorkflowStore = () => {
         saved_at: string;
         lock_version: number;
         repo: string;
+        workflow: unknown;
       }>(provider.channel, 'save_and_sync', payload);
 
       logger.debug('Saved and synced workflow to GitHub', response);
