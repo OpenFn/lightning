@@ -698,6 +698,10 @@ defmodule Lightning.Config.Bootstrap do
            :broadcast_work_available,
            env!("BROADCAST_WORK_AVAILABLE", &Utils.ensure_boolean/1, true)
 
+    config :lightning, Lightning.Scrubber,
+      max_credential_sensitive_values:
+        env!("MAX_CREDENTIAL_SENSITIVE_VALUES", :integer, 50)
+
     config :lightning, :book_demo_banner,
       enabled: false,
       calendly_url: nil,

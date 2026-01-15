@@ -58,6 +58,8 @@ Note that for secure deployments, it's recommended to use a combination of
   the webhook trigger URL for a job. This limits the max request size via the
   JSON plug and may (in future) limit the size of dataclips that can be stored
   as run_results via the websocket connection from a worker.
+- `MAX_CREDENTIAL_SENSITIVE_VALUES` - the maximum number of sensitive values
+  that can be stored in a credential. Defaults to 50.
 
 ### GitHub
 

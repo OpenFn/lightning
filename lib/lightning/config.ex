@@ -389,6 +389,12 @@ defmodule Lightning.Config do
       |> Keyword.get(:port, 2222)
     end
 
+    @impl true
+    def max_credential_sensitive_values do
+      Application.get_env(:lightning, Lightning.Scrubber, [])
+      |> Keyword.get(:max_credential_sensitive_values, 50)
+    end
+
     defp default_webhook_retry do
       [
         max_attempts: 5,
@@ -481,6 +487,7 @@ defmodule Lightning.Config do
   @callback webhook_retry(key :: atom()) :: any()
   @callback webhook_response_timeout_ms() :: integer()
   @callback runtime_manager_port() :: integer()
+  @callback max_credential_sensitive_values() :: pos_integer()
 
   @doc """
   Returns the configuration for the `Lightning.AdaptorRegistry` service
@@ -750,6 +757,16 @@ defmodule Lightning.Config do
 
   def runtime_manager_port do
     impl().runtime_manager_port()
+  end
+
+  @doc """
+  Returns the maximum number of sensitive values allowed in a credential body.
+
+  This limit prevents performance issues with the scrubber when credentials
+  have very large bodies with many secrets.
+  """
+  def max_credential_sensitive_values do
+    impl().max_credential_sensitive_values()
   end
 
   defp impl do

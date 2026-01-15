@@ -4,10 +4,10 @@ import { createRoot } from 'react-dom/client';
 import { useStore } from 'zustand';
 import { useShallow } from 'zustand/react/shallow';
 
-import { useMonacoSync } from '../hooks/useMonacoSync';
 import { type Monaco, MonacoEditor } from '../monaco';
 
 import { createLogStore } from './store';
+import { useMonacoSync } from './useMonacoSync';
 
 export function mount(
   el: HTMLElement,
@@ -85,7 +85,7 @@ const LogViewer = ({
       // Define a simple tokenizer for the language
       monaco.languages.setMonarchTokensProvider('openFnLogs', {
         tokenizer: {
-          root: [[/^([A-Z\/]{2,4})/, 'logSource']],
+          root: [[/^([A-Z/]{2,4})/, 'logSource']],
         },
       });
     }
