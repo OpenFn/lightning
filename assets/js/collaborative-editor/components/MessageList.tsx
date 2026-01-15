@@ -433,7 +433,10 @@ export function MessageList({
 
   if (messages.length === 0) {
     return (
-      <div className="flex items-center justify-center h-full">
+      <div
+        className="flex items-center justify-center h-full"
+        data-testid="empty-state"
+      >
         <div className="flex items-center gap-2 text-gray-600">
           <span className="hero-arrow-path h-5 w-5 animate-spin" />
           <span className="text-sm">Loading session...</span>
@@ -452,7 +455,7 @@ export function MessageList({
         >
           <div className="max-w-3xl mx-auto">
             {message.role === 'assistant' ? (
-              <div>
+              <div data-testid="assistant-message">
                 <div className="space-y-3">
                   <MarkdownContent
                     content={message.content}
@@ -611,7 +614,7 @@ export function MessageList({
                 </div>
               </div>
             ) : (
-              <div className="flex justify-end">
+              <div className="flex justify-end" data-testid="user-message">
                 <div className="flex flex-col items-end max-w-[85%] min-w-0">
                   <div className="rounded-2xl bg-gray-100 px-4 py-2 max-w-full">
                     <div
@@ -668,7 +671,11 @@ export function MessageList({
       ))}
 
       {isLoading && (
-        <div ref={loadingRef} className="group px-6 py-4">
+        <div
+          ref={loadingRef}
+          className="group px-6 py-4"
+          data-testid="loading-indicator"
+        >
           <div className="max-w-3xl mx-auto">
             <div className="flex items-center gap-1.5">
               <span className="inline-block w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" />
