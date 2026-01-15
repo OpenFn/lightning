@@ -12,6 +12,8 @@ export function useUnsavedChanges() {
     edges: state.edges,
     positions: state.positions || {},
     name: state.workflow?.name,
+    concurrency: state.workflow?.concurrency,
+    enable_job_logs: state.workflow?.enable_job_logs,
   }));
 
   if (!workflow || !storeWorkflow) return { hasChanges: false };
@@ -53,6 +55,8 @@ function transformWorkflow(workflow: Workflow) {
       transformTrigger(trigger)
     ),
     positions: workflow.positions || {},
+    concurrency: workflow.concurrency,
+    enable_job_logs: workflow.enable_job_logs,
   };
 }
 
@@ -99,11 +103,7 @@ function isDiffWorkflow(base: unknown, target: unknown): boolean {
     const keys = [
       ...new Set(Object.keys(baseObj).concat(Object.keys(targetObj))),
     ];
-    const resp = keys.some(k => isDiffWorkflow(baseObj[k], targetObj[k]));
-    if (resp) {
-      console.log('diff:', baseObj, targetObj);
-    }
-    return resp;
+    return keys.some(k => isDiffWorkflow(baseObj[k], targetObj[k]));
   }
 
   return base !== target;
