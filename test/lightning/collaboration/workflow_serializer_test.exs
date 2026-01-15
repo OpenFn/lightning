@@ -758,7 +758,8 @@ defmodule Lightning.Collaboration.WorkflowSerializerTest do
                "id" => trigger.id,
                "type" => "webhook",
                "enabled" => true,
-               "cron_expression" => nil
+               "cron_expression" => nil,
+               "webhook_reply" => "before_start"
              } == extracted_trigger
 
       assert is_nil(extracted["positions"])
@@ -976,7 +977,8 @@ defmodule Lightning.Collaboration.WorkflowSerializerTest do
                "id" => original_trigger.id,
                "type" => to_string(original_trigger.type),
                "enabled" => original_trigger.enabled,
-               "cron_expression" => original_trigger.cron_expression
+               "cron_expression" => original_trigger.cron_expression,
+               "webhook_reply" => to_string(original_trigger.webhook_reply)
              } == extracted_trigger
 
       # Positions
@@ -1283,7 +1285,8 @@ defmodule Lightning.Collaboration.WorkflowSerializerTest do
                "id" => original_trigger.id,
                "type" => "cron",
                "enabled" => true,
-               "cron_expression" => "0 */6 * * *"
+               "cron_expression" => "0 */6 * * *",
+               "webhook_reply" => to_string(original_trigger.webhook_reply)
              } == trigger
     end
 

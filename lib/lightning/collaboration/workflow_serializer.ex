@@ -202,7 +202,8 @@ defmodule Lightning.Collaboration.WorkflowSerializer do
           "cron_expression" => trigger.cron_expression,
           "enabled" => trigger.enabled,
           "id" => trigger.id,
-          "type" => trigger.type |> to_string()
+          "type" => trigger.type |> to_string(),
+          "webhook_reply" => trigger.webhook_reply |> to_string()
         })
 
       Yex.Array.push(triggers_array, trigger_map)
@@ -248,7 +249,7 @@ defmodule Lightning.Collaboration.WorkflowSerializer do
     |> Enum.map(fn trigger ->
       Map.take(
         trigger,
-        ~w(id type enabled cron_expression)
+        ~w(id type enabled cron_expression webhook_reply)
       )
     end)
   end
