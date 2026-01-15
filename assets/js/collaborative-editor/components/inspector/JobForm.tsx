@@ -119,6 +119,7 @@ export function JobForm({ job }: JobFormProps) {
   }, [job.id, form]);
 
   // Listen for credential modal close event to reopen configure modal
+  // (only when modal closes without saving - credential saved has its own handling)
   useEffect(() => {
     return onModalClose('inspector', () => {
       setIsConfigureModalOpen(true);
@@ -127,7 +128,7 @@ export function JobForm({ job }: JobFormProps) {
 
   // Register callback to handle credential saved - update form and job (only when opened from inspector)
   useEffect(() => {
-    return onCredentialSaved('inspector', payload => {
+    return onCredentialSaved('inspector', async payload => {
       const { credential, is_project_credential } = payload;
       const credentialId = is_project_credential
         ? credential.project_credential_id
@@ -150,8 +151,16 @@ export function JobForm({ job }: JobFormProps) {
         keychain_credential_id: is_project_credential ? null : credentialId,
       });
 
-      // Reload credentials in the background so the list is up to date
-      void requestCredentials();
+      // Wait for credentials to load before reopening modal
+      // This ensures the newly created credential appears in the list
+      try {
+        await requestCredentials();
+      } catch (error) {
+        console.error('Failed to refresh credentials:', error);
+      }
+
+      // Reopen the configure modal (even if credential refresh failed)
+      setIsConfigureModalOpen(true);
     });
   }, [onCredentialSaved, form, job.id, updateJob, requestCredentials]);
 

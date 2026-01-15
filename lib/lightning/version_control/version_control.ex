@@ -319,7 +319,7 @@ defmodule Lightning.VersionControl do
 
   @doc """
   Checks if the given token has expired.
-  Github supports access tokens that expire and those that don't.
+  GitHub supports access tokens that expire and those that don't.
   If the `access token` expires, then a `refresh token` is also availed.
   This function simply checks if the token has a `refresh_token`, if yes, it proceeds to check the expiry date
   """

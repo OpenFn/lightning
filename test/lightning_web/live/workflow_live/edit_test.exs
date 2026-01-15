@@ -2584,7 +2584,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
     end
   end
 
-  describe "Save and Sync to Github" do
+  describe "Save and Sync to GitHub" do
     setup :verify_on_exit!
     setup :create_workflow
 
@@ -2791,14 +2791,14 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       assert has_element?(
                view,
                ~s{div[data-flash-kind='info'] [href="#{link_to_actions}"][target="_blank"]},
-               "Github actions"
+               "GitHub actions"
              )
 
       refute has_element?(view, "#github-sync-modal")
     end
 
     @tag :capture_log
-    test "does not close the github modal when Github sync fails", %{
+    test "does not close the github modal when GitHub sync fails", %{
       conn: conn,
       project: project,
       workflow: workflow
@@ -2832,7 +2832,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
         end
       )
 
-      # return error for Github
+      # return error for GitHub
       stub(Lightning.Tesla.Mock, :call, fn
         %{url: "https://api.github.com/app/installations" <> _rest}, _opts ->
           {:ok,

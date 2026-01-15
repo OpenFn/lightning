@@ -24,6 +24,32 @@ and this project adheres to
 - Fix unable to save a workflow with a Kafka trigger in the collab editor
   [#4295](https://github.com/OpenFn/lightning/issues/4295)
 
+## [2.15.11-pre] - 2026-01-15
+
+### Changed
+
+- Render AI Assistant user messages as plain text instead of markdown to prevent
+  incorrect code block formatting
+  [#4288](https://github.com/OpenFn/lightning/issues/4288)
+- Standardized "GitHub" brand capitalization throughout the UI
+  [#4313](https://github.com/OpenFn/lightning/issues/4313)
+- Optimized PromEx average claim duration query to use SQL aggregation instead
+  of fetching rows into memory
+  [#4317](https://github.com/OpenFn/lightning/pull/4317)
+
+### Fixed
+
+- Add clickable GitHub Actions link to collaborative editor's Save & Sync
+  success toast [#4281](https://github.com/OpenFn/lightning/issues/4281)
+- Fixed credential auto-selection when creating a new credential from the
+  workflow editor's ConfigureAdaptorModal
+  [#4287](https://github.com/OpenFn/lightning/issues/4287)
+- Add index on `runs.finished_at` to fix UsageTracking ReportWorker timeouts
+  [#4308](https://github.com/OpenFn/lightning/pull/4308)
+- Fixed ConfigureAdaptorModal growing too tall when there are many credentials
+  by adding scrollable credential lists with max-height
+  [#4316](https://github.com/OpenFn/lightning/issues/4316)
+
 ## [2.15.10] - 2026-01-12
 
 ## [2.15.10-pre] - 2026-01-12
