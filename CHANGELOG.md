@@ -21,6 +21,10 @@ and this project adheres to
 
 ### Fixed
 
+- Credentials Scrubber uses too much memory. Introduce a limit on the number of
+  sensitive values in a credential body via `MAX_CREDENTIAL_SENSITIVE_VALUES`
+  [#4307](https://github.com/OpenFn/lightning/issues/4307)
+
 ## [2.15.11-pre] - 2026-01-15
 
 ### Changed
