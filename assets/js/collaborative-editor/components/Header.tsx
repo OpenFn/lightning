@@ -17,6 +17,7 @@ import {
   useTemplatePanel,
   useUICommands,
 } from '../hooks/useUI';
+import { useUnsavedChanges } from '../hooks/useUnsavedChanges';
 import {
   useCanRun,
   useCanSave,
@@ -39,7 +40,6 @@ import { NewRunButton } from './NewRunButton';
 import { ReadOnlyWarning } from './ReadOnlyWarning';
 import { ShortcutKeys } from './ShortcutKeys';
 import { Tooltip } from './Tooltip';
-import { useUnsavedChanges } from '../hooks/useUnsavedChanges';
 
 /**
  * Save button component - visible in React DevTools
