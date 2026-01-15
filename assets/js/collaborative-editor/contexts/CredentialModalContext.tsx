@@ -12,18 +12,10 @@ import { useKeyboardShortcut } from '../keyboard';
 import { useLiveViewActions } from './LiveViewActionsContext';
 
 /**
- * Timing constants for modal animations and LiveView coordination.
- *
- * MODAL_REOPEN_DELAY: Time to wait before reopening the configure modal after
- * credential modal closes. This allows the close animation to complete smoothly.
- * Phoenix.JS dispatches close events at ~250ms, so 200ms feels instant.
- *
- * LIVEVIEW_CLEANUP_DELAY: Time to wait before notifying LiveView to clean up
- * server-side modal state. This accounts for: Phoenix.JS animation (250ms) +
- * LiveView update time + buffer. Prevents race conditions if user quickly reopens.
+ * Time to wait before calling callbacks after modal closes.
+ * This allows the close animation to complete smoothly.
  */
 const MODAL_REOPEN_DELAY = 200;
-const LIVEVIEW_CLEANUP_DELAY = 500;
 
 type ModalSource = 'ide' | 'inspector' | null;
 
@@ -72,6 +64,11 @@ interface CredentialModalProviderProps {
  *
  * This provider owns the credential modal lifecycle and coordinates between
  * React components (JobForm, FullScreenIDE) and the LiveView credential modal.
+ *
+ * Both `credential_saved` and `credential_modal_closed` events come through
+ * the same WebSocket channel, ensuring they arrive in order:
+ * - Save case: `credential_saved` arrives first, then `credential_modal_closed`
+ * - Cancel case: Only `credential_modal_closed` arrives
  *
  * Usage:
  * - Call `openCredentialModal(schema, credentialId?)` to open the modal
@@ -185,66 +182,45 @@ export function CredentialModalProvider({
     []
   );
 
-  // Listen for close_credential_modal DOM event from LiveView
-  useEffect(() => {
-    const handleModalClose = () => {
-      // Use ref to get current state - avoids stale closure issues
-      if (!modalStateRef.current.isOpen) return;
-
-      const currentSource = modalStateRef.current.source;
-
-      setModalState({
-        isOpen: false,
-        schema: null,
-        credentialId: null,
-        source: null,
-      });
-
-      // Notify only callbacks registered for the source that opened the modal
-      // Using ref ensures we call the current callbacks, not stale ones
-      setTimeout(() => {
-        const sourceCallbacks = closeCallbacksRef.current.get(currentSource);
-        sourceCallbacks?.forEach(callback => callback());
-      }, MODAL_REOPEN_DELAY);
-
-      // Tell LiveView to close after animation completes
-      setTimeout(() => {
-        pushEvent('close_credential_modal', {});
-      }, LIVEVIEW_CLEANUP_DELAY);
-    };
-
-    const element = document.getElementById('collaborative-editor-react');
-    element?.addEventListener('close_credential_modal', handleModalClose);
-
-    return () => {
-      element?.removeEventListener('close_credential_modal', handleModalClose);
-    };
-  }, [pushEvent]);
-
   // Listen for credential_saved event from LiveView
+  // This arrives BEFORE credential_modal_closed when a credential is saved
   useEffect(() => {
     const cleanup = handleEvent('credential_saved', (rawPayload: unknown) => {
       const payload = rawPayload as CredentialSavedPayload;
-      // Use ref to get current state - avoids stale closure issues
+
+      // Capture source before credential_modal_closed clears it
       const currentSource = modalStateRef.current.source;
 
-      setModalState({
-        isOpen: false,
-        schema: null,
-        credentialId: null,
-        source: null,
-      });
-
-      // Notify only callbacks registered for the source that opened the modal
-      // Using refs ensures we call the current callbacks, not stale ones
+      // Call saved callbacks after delay for animation
       setTimeout(() => {
         const sourceSavedCallbacks =
           savedCallbacksRef.current.get(currentSource);
         sourceSavedCallbacks?.forEach(callback => callback(payload));
+      }, MODAL_REOPEN_DELAY);
+    });
 
-        const sourceCloseCallbacks =
-          closeCallbacksRef.current.get(currentSource);
-        sourceCloseCallbacks?.forEach(callback => callback());
+    return cleanup;
+  }, [handleEvent]);
+
+  // Listen for credential_modal_closed event from LiveView (via push_event)
+  // This arrives after credential_saved (for save case) or alone (for cancel case)
+  useEffect(() => {
+    const cleanup = handleEvent('credential_modal_closed', () => {
+      // Capture source before clearing state
+      const currentSource = modalStateRef.current.source;
+
+      // Clear modal state
+      setModalState({
+        isOpen: false,
+        schema: null,
+        credentialId: null,
+        source: null,
+      });
+
+      // Call close callbacks after delay for animation
+      setTimeout(() => {
+        const sourceCallbacks = closeCallbacksRef.current.get(currentSource);
+        sourceCallbacks?.forEach(callback => callback());
       }, MODAL_REOPEN_DELAY);
     });
 

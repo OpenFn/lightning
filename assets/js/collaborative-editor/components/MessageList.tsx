@@ -1,10 +1,11 @@
-import Markdown from 'react-markdown';
 import { useEffect, useRef, useState } from 'react';
+import Markdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 
 import { cn } from '#/utils/cn';
 
 import type { Message } from '../types/ai-assistant';
+
 import { Tooltip } from './Tooltip';
 
 /**
@@ -115,6 +116,7 @@ const MarkdownContent = ({
         remarkPlugins={[remarkGfm]}
         components={{
           // Custom renderer for code blocks (fenced code)
+          // Note: This only applies to assistant messages - user messages are plain text
           pre: ({ children }) => <>{children}</>,
           code: ({ className: codeClassName, children }) => {
             // Check if this is a code block (has language class) or inline code
@@ -611,13 +613,14 @@ export function MessageList({
               </div>
             ) : (
               <div className="flex justify-end">
-                <div className="flex flex-col items-end max-w-[85%]">
-                  <div className="rounded-2xl bg-gray-100 px-4 py-2">
-                    <MarkdownContent
-                      content={message.content}
-                      showAddButtons={false}
-                      className="text-sm text-gray-800 leading-relaxed prose prose-sm max-w-none prose-p:mb-2 prose-p:last:mb-0 prose-p:text-gray-800 prose-strong:font-medium prose-strong:text-gray-900 prose-code:px-1 prose-code:py-0.5 prose-code:bg-white prose-code:text-gray-800 prose-code:rounded prose-code:text-xs prose-code:font-mono prose-code:font-normal prose-pre:rounded-md prose-pre:bg-slate-100 prose-pre:border-2 prose-pre:border-slate-200 prose-pre:text-slate-800 prose-pre:p-3 prose-pre:overflow-x-auto prose-pre:text-xs prose-pre:font-mono prose-pre:mt-2"
-                    />
+                <div className="flex flex-col items-end max-w-[85%] min-w-0">
+                  <div className="rounded-2xl bg-gray-100 px-4 py-2 max-w-full">
+                    <div
+                      style={{ overflowWrap: 'break-word' }}
+                      className="text-sm text-gray-800 leading-relaxed whitespace-pre-wrap max-w-full"
+                    >
+                      {message.content}
+                    </div>
                   </div>
 
                   {message.status === 'error' && (
