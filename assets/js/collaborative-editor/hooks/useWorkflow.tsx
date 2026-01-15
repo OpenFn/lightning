@@ -419,7 +419,7 @@ export const useWorkflowActions = () => {
             searchParams.delete('template'); // Clear template selection
             searchParams.delete('search'); // Clear template search
             const queryString = searchParams.toString();
-            const newUrl = `/projects/${projectId}/w/${workflowId}/legacy${queryString ? `?${queryString}` : ''}`;
+            const newUrl = `/projects/${projectId}/w/${workflowId}${queryString ? `?${queryString}` : ''}`;
             window.history.replaceState(null, '', newUrl);
 
             // Clear template state in UI store
