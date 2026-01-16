@@ -207,7 +207,7 @@
  * Change this one place to update ALL backdrops in the app.
  */
 @utility modal-backdrop {
-  @apply fixed inset-0 bg-gray-900/60 backdrop-blur-sm transition-opacity;
+  @apply fixed inset-0 bg-gray-900/60 backdrop-blur-xs transition-opacity;
 }
 
 @layer utilities {
