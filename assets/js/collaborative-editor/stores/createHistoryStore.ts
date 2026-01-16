@@ -442,6 +442,10 @@ export const createHistoryStore = (
             if (step.input_dataclip_id !== null) {
               cachedStep.input_dataclip_id = step.input_dataclip_id;
             }
+            // Only update output_dataclip_id if it's not null
+            if (step.output_dataclip_id !== null) {
+              cachedStep.output_dataclip_id = step.output_dataclip_id;
+            }
           } else {
             // Step not found in cache - add it (new step created during run)
             // This is the key fix: when step events arrive for newly created steps,
@@ -469,7 +473,8 @@ export const createHistoryStore = (
         } else {
           // Cache doesn't exist yet - create it from activeRun data
           // This handles the race condition where step events arrive before
-          // requestRunSteps completes
+          // requestRunSteps completes. Note: This temporary cache will be
+          // overwritten when requestRunSteps completes with authoritative data.
           if (draft.activeRun && draft.activeRun.id === runId) {
             draft.runStepsCache[runId] = {
               run_id: draft.activeRun.id,
@@ -481,8 +486,15 @@ export const createHistoryStore = (
                 exit_reason: s.exit_reason,
                 error_type: s.error_type,
                 input_dataclip_id: s.input_dataclip_id,
-                output_dataclip_id: step.output_dataclip_id,
+                output_dataclip_id: s.output_dataclip_id,
               })),
+              metadata: {
+                starting_job_id: draft.activeRun.steps[0]?.job_id ?? null,
+                starting_trigger_id: null, // Not available in RunDetail
+                inserted_at: draft.activeRun.inserted_at,
+                created_by_id: null, // Not available in RunDetail
+                created_by_email: draft.activeRun.created_by?.email ?? null,
+              },
             };
           }
         }
@@ -1018,6 +1030,52 @@ export const createHistoryStore = (
     notify('_setActiveRunForTesting');
   };
 
+  /**
+   * Test helper: Set active run ID without setting full run data
+   *
+   * This is used in tests to simulate scenarios where activeRunId is set
+   * but activeRun might not match (race conditions)
+   *
+   * @param runId - The run ID to set as active
+   */
+  const _setActiveRunIdForTesting = (runId: string): void => {
+    state = produce(state, draft => {
+      draft.activeRunId = runId;
+    });
+    notify('_setActiveRunIdForTesting');
+  };
+
+  /**
+   * Test helper: Populate cache with run steps data
+   *
+   * This bypasses the normal requestRunSteps flow and directly populates
+   * the cache, useful for testing cache-related logic
+   *
+   * @param runId - The run ID
+   * @param runStepsData - The run steps data to cache
+   */
+  const _populateCacheForTesting = (
+    runId: string,
+    runStepsData: RunStepsData
+  ): void => {
+    state = produce(state, draft => {
+      draft.runStepsCache[runId] = runStepsData;
+    });
+    notify('_populateCacheForTesting');
+  };
+
+  /**
+   * Test helper: Trigger step update directly
+   *
+   * This bypasses the channel event flow and directly calls handleStepUpdate,
+   * useful for testing step update logic without Phoenix channels
+   *
+   * @param step - The step detail to update
+   */
+  const _triggerStepUpdateForTesting = (step: StepDetail): void => {
+    handleStepUpdate(step);
+  };
+
   // ===========================================================================
   // PUBLIC INTERFACE
   // ===========================================================================
@@ -1054,6 +1112,9 @@ export const createHistoryStore = (
     _closeRunViewer,
     _switchingFromRun,
     _setActiveRunForTesting,
+    _setActiveRunIdForTesting,
+    _populateCacheForTesting,
+    _triggerStepUpdateForTesting,
   };
 };
 
