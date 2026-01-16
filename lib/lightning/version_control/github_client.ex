@@ -3,23 +3,24 @@ defmodule Lightning.VersionControl.GithubClient do
   Tesla github http client we use this to make any network requests
   to github from Lightning
   """
-  use Tesla
-
   alias Lightning.VersionControl.GithubError
   alias Lightning.VersionControl.GithubToken
 
   require Logger
 
-  plug(Tesla.Middleware.BaseUrl, "https://api.github.com")
-  plug(Tesla.Middleware.JSON)
+  defp adapter do
+    Application.get_env(:tesla, __MODULE__, [])[:adapter]
+  end
 
   def create_repo_dispatch_event(client, repo_name, body) do
-    client |> post("/repos/#{repo_name}/dispatches", body) |> handle_resp([204])
+    client
+    |> Tesla.post("/repos/#{repo_name}/dispatches", body)
+    |> handle_resp([204])
   end
 
   def create_workflow_dispatch_event(client, repo_name, workflow_id, body) do
     client
-    |> post(
+    |> Tesla.post(
       "repos/#{repo_name}/actions/workflows/#{workflow_id}/dispatches",
       body
     )
@@ -27,66 +28,72 @@ defmodule Lightning.VersionControl.GithubClient do
   end
 
   def get_installations(client) do
-    client |> get("/user/installations") |> handle_resp([200])
+    client |> Tesla.get("/user/installations") |> handle_resp([200])
   end
 
   def get_installation_repos(client, query \\ [page: 1, per_page: 100]) do
     client
-    |> get("/installation/repositories", query: query)
+    |> Tesla.get("/installation/repositories", query: query)
     |> handle_resp([200])
   end
 
   def get_repo(client, repo_name) do
-    client |> get("/repos/#{repo_name}") |> handle_resp([200])
+    client |> Tesla.get("/repos/#{repo_name}") |> handle_resp([200])
   end
 
   def get_repo_branches(client, repo_name) do
-    client |> get("/repos/#{repo_name}/branches") |> handle_resp([200])
+    client |> Tesla.get("/repos/#{repo_name}/branches") |> handle_resp([200])
   end
 
   def get_repo_content(client, repo, path, ref) do
     client
-    |> get("/repos/#{repo}/contents/#{path}", query: [ref: ref])
+    |> Tesla.get("/repos/#{repo}/contents/#{path}", query: [ref: ref])
     |> handle_resp([200])
   end
 
   def delete_repo_content(client, repo, path, body) do
     client
-    |> delete("/repos/#{repo}/contents/#{path}", body: body)
+    |> Tesla.delete("/repos/#{repo}/contents/#{path}", body: body)
     |> handle_resp([200])
   end
 
   def create_blob(client, repo, body) do
-    client |> post("/repos/#{repo}/git/blobs", body) |> handle_resp([201])
+    client |> Tesla.post("/repos/#{repo}/git/blobs", body) |> handle_resp([201])
   end
 
   def create_tree(client, repo, body) do
-    client |> post("/repos/#{repo}/git/trees", body) |> handle_resp([201])
+    client |> Tesla.post("/repos/#{repo}/git/trees", body) |> handle_resp([201])
   end
 
   def get_commit(client, repo, ref) do
-    client |> get("/repos/#{repo}/commits/#{ref}") |> handle_resp([200])
+    client |> Tesla.get("/repos/#{repo}/commits/#{ref}") |> handle_resp([200])
   end
 
   def create_commit(client, repo, body) do
-    client |> post("/repos/#{repo}/git/commits", body) |> handle_resp([201])
+    client
+    |> Tesla.post("/repos/#{repo}/git/commits", body)
+    |> handle_resp([201])
   end
 
   def create_ref(client, repo, body) do
-    client |> post("/repos/#{repo}/git/refs", body) |> handle_resp([201])
+    client |> Tesla.post("/repos/#{repo}/git/refs", body) |> handle_resp([201])
   end
 
   def update_ref(client, repo, ref, body) do
-    client |> post("/repos/#{repo}/git/refs/#{ref}", body) |> handle_resp([200])
+    client
+    |> Tesla.post("/repos/#{repo}/git/refs/#{ref}", body)
+    |> handle_resp([200])
   end
 
   def delete_ref(client, repo, ref) do
-    client |> delete("/repos/#{repo}/git/refs/#{ref}") |> handle_resp([204])
+    client
+    |> Tesla.delete("/repos/#{repo}/git/refs/#{ref}")
+    |> handle_resp([204])
   end
 
   def delete_app_grant(client, app_client_id, token) do
     client
-    |> delete("/applications/#{app_client_id}/grant",
+    |> Tesla.delete("/applications/#{app_client_id}/grant",
       body: %{access_token: token}
     )
     |> handle_resp([204])
@@ -94,25 +101,25 @@ defmodule Lightning.VersionControl.GithubClient do
 
   def get_repo_public_key(client, repo) do
     client
-    |> get("/repos/#{repo}/actions/secrets/public-key")
+    |> Tesla.get("/repos/#{repo}/actions/secrets/public-key")
     |> handle_resp([200])
   end
 
   def get_repo_secret(client, repo, secret_name) do
     client
-    |> get("/repos/#{repo}/actions/secrets/#{secret_name}")
+    |> Tesla.get("/repos/#{repo}/actions/secrets/#{secret_name}")
     |> handle_resp([200])
   end
 
   def create_repo_secret(client, repo, secret_name, body) do
     client
-    |> put("/repos/#{repo}/actions/secrets/#{secret_name}", body)
+    |> Tesla.put("/repos/#{repo}/actions/secrets/#{secret_name}", body)
     |> handle_resp([201, 204])
   end
 
   def delete_repo_secret(client, repo, secret_name) do
     client
-    |> delete("/repos/#{repo}/actions/secrets/#{secret_name}")
+    |> Tesla.delete("/repos/#{repo}/actions/secrets/#{secret_name}")
     |> handle_resp([204])
   end
 
@@ -126,26 +133,30 @@ defmodule Lightning.VersionControl.GithubClient do
        ]}
     ]
 
-    {:ok, Tesla.client(middleware)}
+    {:ok, Tesla.client(middleware, adapter())}
   end
 
   def build_bearer_client(token) do
     middleware = [
+      {Tesla.Middleware.BaseUrl, "https://api.github.com"},
+      Tesla.Middleware.JSON,
       {Tesla.Middleware.Headers,
        [
          {"Authorization", "Bearer #{token}"}
        ]}
     ]
 
-    {:ok, Tesla.client(middleware)}
+    {:ok, Tesla.client(middleware, adapter())}
   end
 
   def build_basic_auth_client(username, password) do
     middleware = [
+      {Tesla.Middleware.BaseUrl, "https://api.github.com"},
+      Tesla.Middleware.JSON,
       {Tesla.Middleware.BasicAuth, [username: username, password: password]}
     ]
 
-    {:ok, Tesla.client(middleware)}
+    {:ok, Tesla.client(middleware, adapter())}
   end
 
   def build_installation_client(installation_id) do
@@ -155,7 +166,7 @@ defmodule Lightning.VersionControl.GithubClient do
 
     with {:ok, auth_token, _} <- GithubToken.build(cert, app_id),
          {:ok, client} <- build_bearer_client(auth_token) do
-      case post(
+      case Tesla.post(
              client,
              "/app/installations/#{installation_id}/access_tokens",
              ""

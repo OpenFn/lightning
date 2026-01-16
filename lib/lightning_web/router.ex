@@ -50,6 +50,7 @@ defmodule LightningWeb.Router do
   pipeline :authenticated_json do
     plug :accepts, ["json"]
     plug :fetch_session
+    plug :protect_from_forgery
     plug :fetch_current_user
   end
 
