@@ -312,8 +312,8 @@ export function Header({
                     <div className="py-1">
                       <div className="px-4 py-2 text-sm text-gray-700">
                         You're using the brand new editor which supports
-                        collaborative editing, an enhanced Job Editor & modern
-                        user-interface.
+                        real-time collaboration, modern UI, and improved
+                        performance.
                       </div>
                       <div className="my-1 h-px bg-gray-100"></div>
                       <MenuItem>
