@@ -94,6 +94,7 @@ import {
   WebhookAuthMethodSchema,
   WorkflowTemplateSchema,
 } from '../types/sessionContext';
+import type { BaseWorkflow } from '../types/workflow';
 
 import { createWithSelector } from './common';
 import { wrapStoreWithDevTools } from './devtools';
@@ -295,9 +296,9 @@ export const createSessionContextStore = (
     notify('setLatestSnapshotLockVersion');
   };
 
-  const setBaseWorkflow = (workflow: unknown) => {
+  const setBaseWorkflow = (workflow: BaseWorkflow) => {
     state = produce(state, draft => {
-      draft.workflow = workflow as any;
+      draft.workflow = workflow;
     });
     notify('setBaseWorkflow');
   };
@@ -454,8 +455,8 @@ export const createSessionContextStore = (
         ).latest_snapshot_lock_version;
         logger.debug('Workflow saved - updating lock version', lockVersion);
         setLatestSnapshotLockVersion(lockVersion);
-        if ('workflow' in message) {
-          setBaseWorkflow(message.workflow);
+        if ('workflow' in message && typeof message.workflow === 'object') {
+          setBaseWorkflow(message.workflow as BaseWorkflow);
         }
       }
     };

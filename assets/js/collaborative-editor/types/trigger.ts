@@ -42,7 +42,7 @@ const cronTriggerSchema = baseTriggerSchema.extend({
           'Invalid cron expression. Use format: minute hour day month weekday',
       }
     ),
-  kafka_configuration: z.null(),
+  kafka_configuration: z.null().default(null),
 });
 
 // Kafka configuration sub-schema
@@ -92,7 +92,7 @@ const kafkaConfigSchema = z
 // Kafka trigger schema
 const kafkaTriggerSchema = baseTriggerSchema.extend({
   type: z.literal('kafka'),
-  cron_expression: z.null(),
+  cron_expression: z.null().default(null),
   kafka_configuration: kafkaConfigSchema,
 });
 

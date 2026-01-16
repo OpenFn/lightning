@@ -2,10 +2,7 @@ import type { PhoenixChannelProvider } from 'y-phoenix-channel';
 import * as z from 'zod';
 
 import { isoDateTimeSchema, uuidSchema } from './common';
-import { type Workflow } from './workflow';
-import { JobSchema } from './job';
-import { TriggerSchema } from './trigger';
-import { EdgeSchema } from './edge';
+import { BaseWorkflowSchema, type BaseWorkflow } from './workflow';
 
 export const UserContextSchema = z.object({
   id: uuidSchema,
@@ -106,7 +103,7 @@ export const SessionContextResponseSchema = z.object({
   workflow_template: WorkflowTemplateSchema.nullable(),
   has_read_ai_disclaimer: z.boolean(),
   limits: LimitsSchema.optional(),
-  workflow: z.any(), // to be fixed
+  workflow: BaseWorkflowSchema,
 });
 
 export type UserContext = z.infer<typeof UserContextSchema>;
@@ -117,7 +114,7 @@ export type AppConfig = z.infer<typeof AppConfigSchema>;
 export interface SessionContextState {
   user: UserContext | null;
   project: ProjectContext | null;
-  workflow: Workflow | null;
+  workflow: BaseWorkflow | null;
   config: AppConfig | null;
   permissions: Permissions | null;
   latestSnapshotLockVersion: number | null;
@@ -144,7 +141,7 @@ interface SessionContextCommands {
   clearError: () => void;
   setLatestSnapshotLockVersion: (lockVersion: number) => void;
   clearIsNewWorkflow: () => void;
-  setBaseWorkflow: (workflow: unknown) => void;
+  setBaseWorkflow: (workflow: BaseWorkflow) => void;
   setHasReadAIDisclaimer: (hasRead: boolean) => void;
   markAIDisclaimerRead: () => Promise<void>;
   getLimits: (

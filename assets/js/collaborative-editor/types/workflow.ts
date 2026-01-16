@@ -10,9 +10,10 @@
 import type * as Y from 'yjs';
 import { z } from 'zod';
 
-import type { Job as JobType } from './job';
+import { EdgeSchema } from './edge';
+import { JobSchema, type Job as JobType } from './job';
 import type { Session } from './session';
-import type { Trigger as TriggerType } from './trigger';
+import { TriggerSchema, type Trigger as TriggerType } from './trigger';
 
 /**
  * Zod schema for workflow validation
@@ -40,6 +41,18 @@ export const WorkflowSchema = z.object({
 });
 
 export type WorkflowFormValues = z.infer<typeof WorkflowSchema>;
+
+export const BaseWorkflowSchema = z.object({
+  jobs: z.array(JobSchema),
+  triggers: z.array(TriggerSchema),
+  edges: z.array(EdgeSchema),
+  positions: z.record(z.string(), z.object({}).loose()).nullable(),
+  name: z.string().min(1).max(255),
+  concurrency: z.number().nullable(),
+  enable_job_logs: z.boolean(),
+});
+
+export type BaseWorkflow = z.infer<typeof BaseWorkflowSchema>;
 
 /**
  * Creates a workflow schema with dynamic project concurrency validation
