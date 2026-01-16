@@ -21,6 +21,8 @@ import {
   AltRunViaCtrlShiftEnter,
   CloseInspectorPanelViaEscape,
   CloseNodePanelViaEscape,
+  ToggleSidebarViaCtrlM,
+  OpenProjectPickerViaCtrlP,
 } from './KeyHandlers';
 import LogLineHighlight from './LogLineHighlight';
 import type { PhoenixHook } from './PhoenixHook';
@@ -47,6 +49,8 @@ export {
   AltRunViaCtrlShiftEnter,
   CloseInspectorPanelViaEscape,
   CloseNodePanelViaEscape,
+  ToggleSidebarViaCtrlM,
+  OpenProjectPickerViaCtrlP,
   FileDropzone,
   CredentialSelector,
 };
@@ -82,7 +86,7 @@ export const Combobox = {
     this.input = this.el.querySelector('input')!;
     this.dropdown = this.el.querySelector('ul')!;
     this.options = Array.from(this.el.querySelectorAll('li'));
-    this.toggleButton = this.el.querySelector('button')!;
+    this.toggleButton = this.el.querySelector('button');
     this.highlightedIndex = -1;
     this.navigatingWithKeys = false;
     this.navigatingWithMouse = false;
@@ -93,7 +97,7 @@ export const Combobox = {
       this.debounce(e => this.handleInput(e), 300)
     );
     this.input.addEventListener('keydown', e => this.handleKeydown(e));
-    this.toggleButton.addEventListener('click', () => this.toggleDropdown());
+    this.toggleButton?.addEventListener('click', () => this.toggleDropdown());
 
     this.options.forEach((option, index) => {
       option.addEventListener('click', () =>
@@ -185,7 +189,7 @@ export const Combobox = {
     this.options.forEach(option => {
       const text = (option.textContent ?? '').toLowerCase();
       if (text.includes(lowercaseSearchTerm)) {
-        option.style.display = 'block';
+        option.style.display = '';
         hasVisibleOptions = true;
       } else {
         option.style.display = 'none';
@@ -1018,4 +1022,51 @@ export const LocalTimeConverter = {
 } as PhoenixHook<{
   convertDateTime: () => void;
   convertToDisplayTime: (isoTimestamp: string, display: string) => void;
+}>;
+
+/**
+ * Delays sidebar expansion on hover by 1 second.
+ * This allows power users to click icons directly without triggering expansion.
+ * Collapse is immediate when mouse leaves.
+ */
+export const SidebarHoverDelay = {
+  mounted() {
+    this.hoverTimer = null;
+
+    this.handleMouseEnter = () => {
+      // Only apply delay when sidebar is collapsed
+      if (this.el.dataset['collapsed'] !== 'true') return;
+
+      // Start timer to add expanded class after 1s
+      this.hoverTimer = window.setTimeout(() => {
+        this.el.classList.add('sidebar-hover-expanded');
+      }, 1000);
+    };
+
+    this.handleMouseLeave = () => {
+      // Cancel pending expansion
+      if (this.hoverTimer) {
+        clearTimeout(this.hoverTimer);
+        this.hoverTimer = null;
+      }
+
+      // Immediately remove expanded class
+      this.el.classList.remove('sidebar-hover-expanded');
+    };
+
+    this.el.addEventListener('mouseenter', this.handleMouseEnter);
+    this.el.addEventListener('mouseleave', this.handleMouseLeave);
+  },
+
+  destroyed() {
+    if (this.hoverTimer) {
+      clearTimeout(this.hoverTimer);
+    }
+    this.el.removeEventListener('mouseenter', this.handleMouseEnter);
+    this.el.removeEventListener('mouseleave', this.handleMouseLeave);
+  },
+} as PhoenixHook<{
+  hoverTimer: number | null;
+  handleMouseEnter: () => void;
+  handleMouseLeave: () => void;
 }>;
