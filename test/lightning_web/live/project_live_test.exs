@@ -516,24 +516,22 @@ defmodule LightningWeb.ProjectLiveTest do
     test "project filter input shows correct placeholder and clear button", %{
       conn: conn
     } do
-      {:ok, index_live, html} =
+      {:ok, index_live, _html} =
         live(conn, Routes.project_index_path(conn, :index))
 
       # Check filter input is present
       assert has_element?(index_live, "input[name=filter]")
 
       # Initially clear button should be hidden
-      assert html =~ "class=\"hidden\""
+      assert has_element?(index_live, "#clear_filter_button.hidden")
 
       # Type in filter
       index_live
       |> element("input[name=filter]")
       |> render_keyup(%{"key" => "a", "value" => "test"})
 
-      html = render(index_live)
-
       # Clear button should now be visible (not hidden)
-      refute html =~ "class=\"hidden\""
+      refute has_element?(index_live, "#clear_filter_button.hidden")
       assert has_element?(index_live, "a[phx-click='clear_filter']")
     end
 
@@ -825,60 +823,32 @@ defmodule LightningWeb.ProjectLiveTest do
       {:ok, view, _html} =
         live(conn, ~p"/projects/#{project_1}/w", on_error: :raise)
 
+      # Current project shown in breadcrumb project picker button
       assert view
              |> element(
-               ~s{a[href="#{~p"/projects/#{project_1.id}/w"}"]},
+               "#breadcrumb-project-picker-trigger",
                ~r/project-1/
              )
              |> has_element?()
 
-      assert view
-             |> element(
-               "#option-#{project_2.id}",
-               ~r/project-2/
-             )
-             |> has_element?()
-
-      refute view
-             |> element(
-               "#option-#{project_3.id}",
-               ~r/project-3/
-             )
-             |> has_element?()
-
-      {:ok, view, html} =
-        live(conn, ~p"/projects/#{project_1}/w", on_error: :raise)
-
+      # Project picker is a React component - check data attributes contain correct projects
+      html = render(view)
       assert html =~ project_1.name
+      assert html =~ ~s(data-current-project-id="#{project_1.id}")
 
-      assert view
-             |> element("input[id='combobox'][value='#{project_1.name}']")
-             |> has_element?()
+      # Projects data is passed as JSON to React component
+      # User's projects (project_1, project_2) should be in data-projects
+      assert html =~ project_2.id
+      # Other user's project (project_3) should NOT be in data-projects
+      refute html =~ project_3.id
 
-      assert view
-             |> element("#option-#{project_2.id}")
-             |> has_element?()
-
-      refute view
-             |> element("#option-#{project_3.id}")
-             |> has_element?()
-
-      {:ok, view, html} =
+      {:ok, _view, html} =
         live(conn, ~p"/projects/#{project_2}/w", on_error: :raise)
 
       assert html =~ project_2.name
-
-      assert view
-             |> element("input[id='combobox'][value='#{project_2.name}']")
-             |> has_element?()
-
-      assert view
-             |> element("#option-#{project_1.id}")
-             |> has_element?()
-
-      refute view
-             |> element("#option-#{project_3.id}")
-             |> has_element?()
+      assert html =~ ~s(data-current-project-id="#{project_2.id}")
+      assert html =~ project_1.id
+      refute html =~ project_3.id
 
       assert live(conn, ~p"/projects/#{project_3}/w", on_error: :raise) ==
                {:error,

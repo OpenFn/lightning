@@ -625,6 +625,22 @@ defmodule LightningWeb.WorkflowLive.EditTest do
   describe "edit" do
     setup :create_workflow
 
+    test "renders breadcrumb navigation with Workflows link", %{
+      conn: conn,
+      project: project,
+      workflow: workflow
+    } do
+      {:ok, _view, html} =
+        live(conn, ~p"/projects/#{project.id}/w/#{workflow.id}",
+          on_error: :raise
+        )
+
+      # Verify the Workflows breadcrumb is rendered (else branch of breadcrumb loop)
+      assert html =~ "Workflows"
+      # Verify the project picker is rendered (if branch of breadcrumb loop)
+      assert html =~ "breadcrumb-project-picker-trigger"
+    end
+
     test "Editing tracks user presence", %{
       conn: conn,
       project: project,

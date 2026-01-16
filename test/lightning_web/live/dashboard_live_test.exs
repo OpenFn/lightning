@@ -175,23 +175,11 @@ defmodule LightningWeb.DashboardLiveTest do
 
       {:ok, view, _html} = live(conn, ~p"/projects")
 
-      assert view
-             |> has_element?(
-               "ul[aria-labelledby='combobox'] li#option-#{project_1.id}",
-               project_1.name
-             )
-
-      assert view
-             |> has_element?(
-               "ul[aria-labelledby='combobox'] li#option-#{project_2.id}",
-               project_2.name
-             )
-
-      refute view
-             |> has_element?(
-               "ul[aria-labelledby='combobox'] li#option-#{project_3.id}",
-               project_3.name
-             )
+      # Project picker is a React component - check data-projects contains correct project IDs
+      html = render(view)
+      assert html =~ project_1.id
+      assert html =~ project_2.id
+      refute html =~ project_3.id
     end
 
     test "Support user projects are listed in the project combobox", %{
@@ -215,29 +203,13 @@ defmodule LightningWeb.DashboardLiveTest do
 
       {:ok, view, _html} = live(conn, ~p"/projects")
 
-      assert view
-             |> has_element?(
-               "ul[aria-labelledby='combobox'] li#option-#{project_1.id}",
-               project_1.name
-             )
-
-      assert view
-             |> has_element?(
-               "ul[aria-labelledby='combobox'] li#option-#{project_2.id}",
-               project_2.name
-             )
-
-      refute view
-             |> has_element?(
-               "ul[aria-labelledby='combobox'] li#option-#{project_3.id}",
-               project_3.name
-             )
-
-      assert view
-             |> has_element?(
-               "ul[aria-labelledby='combobox'] li#option-#{project_4.id}",
-               project_4.name
-             )
+      # Project picker is a React component - check data-projects contains correct project IDs
+      html = render(view)
+      assert html =~ project_1.id
+      assert html =~ project_2.id
+      refute html =~ project_3.id
+      # Support user should see projects with allow_support_access
+      assert html =~ project_4.id
     end
 
     test "projects list do not count deleted workflows", %{

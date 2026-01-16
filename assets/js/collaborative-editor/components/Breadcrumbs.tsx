@@ -1,32 +1,21 @@
-import { Menu, MenuButton, MenuItem, MenuItems } from '@headlessui/react';
 import { useMemo } from 'react';
 
 import { cn } from '../../utils/cn';
 
 export function Breadcrumbs({ children }: { children: React.ReactNode[] }) {
-  // Split: Last item is always the title (always visible)
-  // Of the remaining breadcrumbs, show only the last one, hide the rest
-  const { hiddenItems, visibleBreadcrumb, title } = useMemo(() => {
+  // Split: Last item is always the title (workflow name)
+  // All other breadcrumbs are visible: Projects > Project Name > ...
+  const { visibleBreadcrumbs, title } = useMemo(() => {
     if (children.length === 0) {
-      return { hiddenItems: [], visibleBreadcrumb: null, title: null };
+      return { visibleBreadcrumbs: [], title: null };
     }
 
-    // Last child is the title
+    // Last child is the title (workflow name)
     const titleItem = children[children.length - 1];
     const breadcrumbs = children.slice(0, -1);
 
-    if (breadcrumbs.length > 1) {
-      // Hide all but the last breadcrumb
-      return {
-        hiddenItems: breadcrumbs.slice(0, -1),
-        visibleBreadcrumb: breadcrumbs[breadcrumbs.length - 1],
-        title: titleItem,
-      };
-    }
-
     return {
-      hiddenItems: [],
-      visibleBreadcrumb: breadcrumbs[0] ?? null,
+      visibleBreadcrumbs: breadcrumbs,
       title: titleItem,
     };
   }, [children]);
@@ -34,33 +23,30 @@ export function Breadcrumbs({ children }: { children: React.ReactNode[] }) {
   const items = useMemo(() => {
     const result: React.ReactNode[] = [];
 
-    // Add ellipsis dropdown if there are hidden items
-    if (hiddenItems.length > 0) {
-      result.push(<BreadcrumbDropdown key="dropdown" items={hiddenItems} />);
-    }
-
-    // Add visible breadcrumb (if exists)
-    if (visibleBreadcrumb) {
-      // Only show separator if there are hidden items (ellipsis dropdown before this)
-      if (hiddenItems.length > 0) {
+    // Add visible breadcrumbs
+    visibleBreadcrumbs.forEach((breadcrumb, index) => {
+      // Add separator - skip after first item (project picker pill)
+      if (index > 1) {
         result.push(
           <span
-            key="chevron-breadcrumb"
+            key={`chevron-breadcrumb-${index}`}
             className="hero-chevron-right-mini w-5 h-5 text-secondary-500"
           />
         );
       }
       result.push(
-        <li key="visible-breadcrumb" className="flex items-center">
-          {visibleBreadcrumb}
+        <li
+          key={`visible-breadcrumb-${index}`}
+          className={cn('flex items-center', index === 0 && 'mr-3')}
+        >
+          {breadcrumb}
         </li>
       );
-    }
+    });
 
-    // Add title (with separator only if there's something before it)
+    // Add title (with separator only if there's more than just project picker)
     if (title) {
-      // Show separator if there are hidden items OR a visible breadcrumb
-      if (hiddenItems.length > 0 || visibleBreadcrumb !== null) {
+      if (visibleBreadcrumbs.length > 1) {
         result.push(
           <span
             key="chevron-title"
@@ -76,7 +62,7 @@ export function Breadcrumbs({ children }: { children: React.ReactNode[] }) {
     }
 
     return result;
-  }, [hiddenItems, visibleBreadcrumb, title]);
+  }, [visibleBreadcrumbs, title]);
 
   return (
     <nav className="flex" aria-label="Breadcrumb">
@@ -85,33 +71,6 @@ export function Breadcrumbs({ children }: { children: React.ReactNode[] }) {
   );
 }
 
-function BreadcrumbDropdown({ items }: { items: React.ReactNode[] }) {
-  return (
-    <li>
-      <div className="flex items-center">
-        <Menu as="div" className="relative">
-          <MenuButton className="flex items-center text-sm font-medium text-gray-500 hover:text-gray-700">
-            <span className="hero-ellipsis-horizontal h-5 w-5" />
-          </MenuButton>
-          <MenuItems
-            transition
-            className="absolute left-0 z-[99999] mt-2 w-48 origin-top-left rounded-md bg-white shadow-lg outline-1 outline-black/5 transition data-closed:scale-95 data-closed:transform data-closed:opacity-0 data-enter:duration-100 data-enter:ease-out data-leave:duration-75 data-leave:ease-in"
-          >
-            <div className="py-1">
-              {items.map((item, index) => (
-                <MenuItem key={index}>
-                  <div className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
-                    {item}
-                  </div>
-                </MenuItem>
-              ))}
-            </div>
-          </MenuItems>
-        </Menu>
-      </div>
-    </li>
-  );
-}
 export function BreadcrumbLink({
   href,
   icon,
@@ -165,5 +124,24 @@ export function BreadcrumbText({
         {children}
       </span>
     </span>
+  );
+}
+
+export function BreadcrumbProjectPicker({
+  children,
+  onClick,
+}: {
+  children: React.ReactNode;
+  onClick?: (e: React.MouseEvent) => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="flex items-center gap-2 px-2.5 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 hover:border-gray-400 cursor-pointer transition-colors"
+    >
+      <span className="hero-folder h-4 w-4 text-gray-500" />
+      {children}
+    </button>
   );
 }

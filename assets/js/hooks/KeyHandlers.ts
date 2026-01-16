@@ -367,3 +367,74 @@ export const CloseNodePanelViaEscape = createKeyCombinationHook(
   closeAction,
   PRIORITY.NORMAL
 );
+
+/**
+ * Determines if the key combination for "Ctrl+M" (or "Cmd+M" on macOS) is pressed.
+ *
+ * @param e - The keyboard event to evaluate.
+ * @returns `true` if "Ctrl+M" or "Cmd+M" is pressed, otherwise `false`.
+ */
+const isCtrlOrMetaM = (e: KeyboardEvent) =>
+  (e.ctrlKey || e.metaKey) && !e.shiftKey && e.key.toLowerCase() === 'm';
+
+/**
+ * Action to toggle the sidebar collapsed state.
+ * Clicks the sidebar toggle button to trigger the toggle_sidebar event.
+ */
+const toggleSidebarAction = (_e: KeyboardEvent, _el: HTMLElement) => {
+  // Find and click the sidebar toggle button
+  const toggleButton = document.querySelector(
+    '[phx-click="toggle_sidebar"]'
+  ) as HTMLButtonElement;
+  if (toggleButton) {
+    toggleButton.click();
+  }
+};
+
+/**
+ * Hook to toggle the sidebar when "Ctrl+M" (or "Cmd+M" on macOS) is pressed.
+ *
+ * This hook listens globally and toggles the sidebar collapsed/expanded state.
+ *
+ * Priority: `PRIORITY.HIGH`, ensuring it takes precedence over other handlers.
+ */
+export const ToggleSidebarViaCtrlM = createKeyCombinationHook(
+  isCtrlOrMetaM,
+  toggleSidebarAction,
+  PRIORITY.HIGH
+);
+
+/**
+ * Determines if the key combination for "Ctrl+P" (or "Cmd+P" on macOS) is pressed.
+ *
+ * @param e - The keyboard event to evaluate.
+ * @returns `true` if "Ctrl+P" or "Cmd+P" is pressed, otherwise `false`.
+ */
+const isCtrlOrMetaP = (e: KeyboardEvent) =>
+  (e.ctrlKey || e.metaKey) && !e.shiftKey && e.key.toLowerCase() === 'p';
+
+/**
+ * Action to open the project picker modal.
+ * Clicks the project picker trigger button (in breadcrumbs) to open the modal.
+ */
+const openProjectPickerAction = (_e: KeyboardEvent, _el: HTMLElement) => {
+  const trigger = document.getElementById(
+    'breadcrumb-project-picker-trigger'
+  ) as HTMLButtonElement;
+  if (trigger) {
+    trigger.click();
+  }
+};
+
+/**
+ * Hook to open the project picker when "Ctrl+P" (or "Cmd+P" on macOS) is pressed.
+ *
+ * This hook listens globally and opens the command palette-style project picker.
+ *
+ * Priority: `PRIORITY.HIGH`, ensuring it takes precedence over browser print dialog.
+ */
+export const OpenProjectPickerViaCtrlP = createKeyCombinationHook(
+  isCtrlOrMetaP,
+  openProjectPickerAction,
+  PRIORITY.HIGH
+);

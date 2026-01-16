@@ -577,8 +577,7 @@ defmodule LightningWeb.RunLive.Components do
       phx-mounted={@show && show_modal(@id)}
       phx-remove={hide_modal(@id)}
     >
-      <div id={"#{@id}-bg"} class="fixed inset-0 bg-gray-500/75 transition-opacity">
-      </div>
+      <div id={"#{@id}-bg"} class="modal-backdrop" />
 
       <div
         aria-labelledby={"#{@id}-title"}
