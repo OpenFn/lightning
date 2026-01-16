@@ -48,8 +48,8 @@ export const BaseWorkflowSchema = z.object({
   edges: z.array(EdgeSchema),
   positions: z.record(z.string(), z.object({}).loose()).nullable(),
   name: z.string().min(1).max(255),
-  concurrency: z.number().nullable(),
-  enable_job_logs: z.boolean(),
+  concurrency: z.number().nullable().optional(),
+  enable_job_logs: z.boolean().default(false),
 });
 
 export type BaseWorkflow = z.infer<typeof BaseWorkflowSchema>;
