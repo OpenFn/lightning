@@ -299,6 +299,7 @@ export const createSessionContextStore = (
     state = produce(state, draft => {
       draft.workflow = workflow as any;
     });
+    notify('setBaseWorkflow');
   };
 
   /**
