@@ -19,6 +19,9 @@ and this project adheres to
 
 ### Changed
 
+- Standardise copy button feedback across collaborative editor
+  [#3578](https://github.com/OpenFn/lightning/issues/3578)
+
 ### Fixed
 
 - Credentials Scrubber uses too much memory. Introduce a limit on the number of

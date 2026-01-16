@@ -5,9 +5,13 @@
  * empty states, loading indicators, and user/assistant message styling.
  */
 
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+/* eslint-disable @typescript-eslint/unbound-method */
+// Disabled because we reference navigator.clipboard.writeText in expect() calls
+// which TypeScript sees as an unbound method. This is safe in tests where we're
+// checking if the mocked method was called, not actually calling it.
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 
 import { MessageList } from '../../../js/collaborative-editor/components/MessageList';
 import { createMockAIMessage } from '../__helpers__/aiAssistantHelpers';
@@ -19,6 +23,7 @@ global.ClipboardItem = class ClipboardItem {
 
 Object.assign(navigator, {
   clipboard: {
+    writeText: vi.fn(() => Promise.resolve()),
     write: vi.fn(() => Promise.resolve()),
   },
 });
@@ -32,17 +37,20 @@ describe('MessageList', () => {
   });
 
   describe('Empty State', () => {
-    it('should render loading state when no messages', () => {
-      render(<MessageList messages={[]} />);
+    it('should show "Loading session..." state when messages array is empty', () => {
+      const { rerender } = render(<MessageList messages={[]} />);
 
+      expect(screen.getByTestId('empty-state')).toBeInTheDocument();
       expect(screen.getByText(/Loading session/)).toBeInTheDocument();
-    });
 
-    it('should show spinner in loading state', () => {
-      render(<MessageList messages={[]} />);
-
+      // Spinner should be visible
       const spinner = document.querySelector('.hero-arrow-path.animate-spin');
       expect(spinner).toBeInTheDocument();
+
+      // Verify isLoading prop doesn't affect empty state
+      rerender(<MessageList messages={[]} isLoading={false} />);
+      expect(screen.getByTestId('empty-state')).toBeInTheDocument();
+      expect(screen.getByText(/Loading session/)).toBeInTheDocument();
     });
   });
 
@@ -95,53 +103,57 @@ describe('MessageList', () => {
         }),
       ];
 
-      const { container } = render(<MessageList messages={messages} />);
+      render(<MessageList messages={messages} />);
 
-      // User message should be right-aligned with bubble
-      const userContainer = container.querySelector('.justify-end');
-      expect(userContainer).toBeInTheDocument();
+      const userMessage = screen.getByTestId('user-message');
+      const assistantMessage = screen.getByTestId('assistant-message');
 
-      // Assistant message should have a different container than user
-      // User messages have justify-end, assistant messages don't
-      const userMessages = container.querySelectorAll('.justify-end');
-      expect(userMessages.length).toBeGreaterThan(0);
+      // Both messages should exist
+      expect(userMessage).toBeInTheDocument();
+      expect(assistantMessage).toBeInTheDocument();
 
-      // Check that there's at least one message without justify-end (assistant)
-      const allMessageContainers =
-        container.querySelectorAll('[class*="flex"]');
-      expect(allMessageContainers.length).toBeGreaterThan(userMessages.length);
+      // User message should be right-aligned (justify-end class)
+      expect(userMessage).toHaveClass('justify-end');
+
+      // User message should have a bubble (rounded-2xl with background)
+      const userBubble = userMessage.querySelector('.rounded-2xl.bg-gray-100');
+      expect(userBubble).toBeInTheDocument();
+
+      // Assistant message should NOT have justify-end (left-aligned)
+      expect(assistantMessage).not.toHaveClass('justify-end');
+
+      // Both messages should have their content
+      expect(screen.getByText('User msg')).toBeInTheDocument();
+      expect(screen.getByText('Assistant msg')).toBeInTheDocument();
     });
   });
 
   describe('Loading State', () => {
-    it('should show loading session spinner when no messages', () => {
-      render(<MessageList messages={[]} isLoading />);
-
-      // When no messages, shows "Loading session..." regardless of isLoading
-      expect(screen.getByText(/Loading session/)).toBeInTheDocument();
-      const spinner = document.querySelector('.hero-arrow-path.animate-spin');
-      expect(spinner).toBeInTheDocument();
-    });
-
-    it('should show loading session spinner even when isLoading is false and no messages', () => {
-      render(<MessageList messages={[]} isLoading={false} />);
-
-      // When no messages, shows "Loading session..." state
-      expect(screen.getByText(/Loading session/)).toBeInTheDocument();
-    });
-
-    it('should show loading indicator below messages', () => {
+    it('should show loading indicator below messages when isLoading is true', () => {
       const messages = [
         createMockAIMessage({ role: 'user', content: 'Question' }),
       ];
 
-      const { container } = render(
-        <MessageList messages={messages} isLoading />
-      );
+      render(<MessageList messages={messages} isLoading />);
 
       expect(screen.getByText('Question')).toBeInTheDocument();
-      const bouncingDots = container.querySelectorAll('.animate-bounce');
-      expect(bouncingDots.length).toBeGreaterThanOrEqual(3);
+      expect(screen.getByTestId('loading-indicator')).toBeInTheDocument();
+
+      // Should have three bouncing dots
+      const loadingIndicator = screen.getByTestId('loading-indicator');
+      const bouncingDots = loadingIndicator.querySelectorAll('.animate-bounce');
+      expect(bouncingDots).toHaveLength(3);
+    });
+
+    it('should not show loading indicator when isLoading is false', () => {
+      const messages = [
+        createMockAIMessage({ role: 'user', content: 'Question' }),
+      ];
+
+      render(<MessageList messages={messages} isLoading={false} />);
+
+      expect(screen.getByText('Question')).toBeInTheDocument();
+      expect(screen.queryByTestId('loading-indicator')).not.toBeInTheDocument();
     });
   });
 
@@ -221,23 +233,24 @@ describe('MessageList', () => {
 
       render(<MessageList messages={messages} />);
 
-      const expandButton = screen.getByText('Generated Workflow');
+      const expandButton = screen.getByTestId('expand-code-button');
 
-      // Initially collapsed
-      expect(screen.queryByText('name: Test')).not.toBeInTheDocument();
+      // Initially collapsed - code element should not be in DOM
+      expect(screen.queryByTestId('generated-code')).not.toBeInTheDocument();
 
       // Click to expand
       await userEvent.click(expandButton);
+      expect(screen.getByTestId('generated-code')).toBeInTheDocument();
       expect(screen.getByText(/name: Test/)).toBeInTheDocument();
 
-      // Click to collapse
+      // Click to collapse - code element should be removed from DOM
       await userEvent.click(expandButton);
       await waitFor(() => {
-        expect(screen.queryByText('name: Test')).not.toBeInTheDocument();
+        expect(screen.queryByTestId('generated-code')).not.toBeInTheDocument();
       });
     });
 
-    it('should show COPY button for code blocks', () => {
+    it('should show Copy button for code blocks', () => {
       const messages = [
         createMockAIMessage({
           role: 'assistant',
@@ -247,10 +260,11 @@ describe('MessageList', () => {
 
       render(<MessageList messages={messages} />);
 
-      expect(screen.getByText('COPY')).toBeInTheDocument();
+      const copyButtons = screen.getAllByText('Copy');
+      expect(copyButtons.length).toBeGreaterThan(0);
     });
 
-    it('should show APPLY button when showApplyButton is true', () => {
+    it('should show "Apply" button when showApplyButton is true', () => {
       const mockApply = vi.fn();
       const messages = [
         createMockAIMessage({
@@ -267,10 +281,10 @@ describe('MessageList', () => {
         />
       );
 
-      expect(screen.getByText('APPLY')).toBeInTheDocument();
+      expect(screen.getByText('Apply')).toBeInTheDocument();
     });
 
-    it('should call onApplyWorkflow when APPLY clicked', async () => {
+    it('should call onApplyWorkflow when "Apply" clicked', async () => {
       const mockApply = vi.fn();
       const messages = [
         createMockAIMessage({
@@ -288,13 +302,13 @@ describe('MessageList', () => {
         />
       );
 
-      const applyButton = screen.getByText('APPLY');
+      const applyButton = screen.getByText('Apply');
       await userEvent.click(applyButton);
 
       expect(mockApply).toHaveBeenCalledWith('name: Test', 'msg-1');
     });
 
-    it('should show APPLYING state during workflow apply', () => {
+    it('should show "Applying" state during workflow apply', () => {
       const messages = [
         createMockAIMessage({
           id: 'msg-1',
@@ -312,10 +326,10 @@ describe('MessageList', () => {
         />
       );
 
-      expect(screen.getByText('APPLYING...')).toBeInTheDocument();
+      expect(screen.getByText('Applying...')).toBeInTheDocument();
     });
 
-    it('should show ADD button when showAddButtons is true', () => {
+    it('should show "Add" button when showAddButtons is true', () => {
       const messages = [
         createMockAIMessage({
           role: 'assistant',
@@ -325,10 +339,10 @@ describe('MessageList', () => {
 
       render(<MessageList messages={messages} showAddButtons />);
 
-      expect(screen.getByText('ADD')).toBeInTheDocument();
+      expect(screen.getByText('Add')).toBeInTheDocument();
     });
 
-    it('should not show ADD button when showAddButtons is false', () => {
+    it('should not show Add button when showAddButtons is false', () => {
       const messages = [
         createMockAIMessage({
           role: 'assistant',
@@ -338,17 +352,22 @@ describe('MessageList', () => {
 
       render(<MessageList messages={messages} showAddButtons={false} />);
 
-      expect(screen.queryByText('ADD')).not.toBeInTheDocument();
+      expect(screen.queryByText('Add')).not.toBeInTheDocument();
     });
   });
 
   describe('Code Action Buttons', () => {
     beforeEach(() => {
-      // Mock clipboard write
-      vi.spyOn(navigator.clipboard, 'write').mockResolvedValue();
+      // Mock clipboard API
+      Object.assign(navigator, {
+        clipboard: {
+          writeText: vi.fn(() => Promise.resolve()),
+          write: vi.fn(() => Promise.resolve()),
+        },
+      });
     });
 
-    it('should copy code to clipboard on COPY click', async () => {
+    it('should copy code to clipboard on "Copy" click', async () => {
       const messages = [
         createMockAIMessage({
           role: 'assistant',
@@ -358,15 +377,19 @@ describe('MessageList', () => {
 
       render(<MessageList messages={messages} />);
 
-      const copyButton = screen.getByText('COPY');
-      await userEvent.click(copyButton);
+      // Get all Copy buttons - there are multiple (code block + message footer)
+      // Click the first one and verify the correct content was copied
+      const copyButtons = screen.getAllByText('Copy');
+      await userEvent.click(copyButtons[0]);
 
       await waitFor(() => {
-        expect(navigator.clipboard.write).toHaveBeenCalled();
+        expect(navigator.clipboard.writeText).toHaveBeenCalledWith(
+          'test code content'
+        );
       });
     });
 
-    it('should show COPIED feedback after copying', async () => {
+    it('should show "Copied" feedback after copying', async () => {
       const messages = [
         createMockAIMessage({
           role: 'assistant',
@@ -376,12 +399,72 @@ describe('MessageList', () => {
 
       render(<MessageList messages={messages} />);
 
-      const copyButton = screen.getByText('COPY');
-      await userEvent.click(copyButton);
+      // Get all Copy buttons - click one and verify feedback appears
+      const copyButtons = screen.getAllByText('Copy');
+      await userEvent.click(copyButtons[0]);
 
       await waitFor(() => {
-        expect(screen.getByText('COPIED')).toBeInTheDocument();
+        expect(screen.getByText('Copied!')).toBeInTheDocument();
       });
+    });
+
+    it('should handle rapid sequential copy clicks', async () => {
+      const messages = [
+        createMockAIMessage({
+          role: 'assistant',
+          code: 'test code',
+        }),
+      ];
+
+      render(<MessageList messages={messages} />);
+
+      const copyButtons = screen.getAllByText('Copy');
+
+      // Click multiple times rapidly
+      await userEvent.click(copyButtons[0]);
+      await userEvent.click(copyButtons[0]);
+      await userEvent.click(copyButtons[0]);
+
+      // Should still work - clipboard called 3 times
+      expect(navigator.clipboard.writeText).toHaveBeenCalledTimes(3);
+      expect(navigator.clipboard.writeText).toHaveBeenCalledWith('test code');
+    });
+
+    it('should handle copy failure gracefully', async () => {
+      // Spy on console.error to verify error is logged but not thrown
+      const consoleErrorSpy = vi
+        .spyOn(console, 'error')
+        .mockImplementation(() => {});
+
+      // Mock clipboard.writeText to reject for this specific test
+      // Code blocks use writeText (via useCopyToClipboard hook)
+      const writeTextSpy = vi
+        .spyOn(navigator.clipboard, 'writeText')
+        .mockRejectedValueOnce(new Error('Clipboard access denied'));
+
+      const messages = [
+        createMockAIMessage({
+          role: 'assistant',
+          code: 'test',
+        }),
+      ];
+
+      render(<MessageList messages={messages} />);
+
+      const copyButtons = screen.getAllByText('Copy');
+      await userEvent.click(copyButtons[0]);
+
+      // Should not throw error - handle gracefully
+      await waitFor(() => {
+        expect(writeTextSpy).toHaveBeenCalled();
+        expect(consoleErrorSpy).toHaveBeenCalledWith(
+          'Failed to copy to clipboard:',
+          expect.any(Error)
+        );
+      });
+
+      consoleErrorSpy.mockRestore();
+      writeTextSpy.mockRestore();
     });
   });
 
@@ -414,11 +497,17 @@ describe('MessageList', () => {
         }),
       ];
 
-      const { container } = render(<MessageList messages={messages} />);
+      render(<MessageList messages={messages} />);
+
+      // User message should exist
+      const userMessage = screen.getByTestId('user-message');
+      expect(userMessage).toBeInTheDocument();
 
       // Should have whitespace-pre-wrap class to preserve newlines
-      const textContainer = container.querySelector('.whitespace-pre-wrap');
+      const textContainer = userMessage.querySelector('.whitespace-pre-wrap');
       expect(textContainer).toBeInTheDocument();
+
+      // Should preserve exact text content with newlines
       expect(textContainer?.textContent).toBe('Line 1\nLine 2\nLine 3');
     });
 
@@ -432,9 +521,9 @@ describe('MessageList', () => {
 
       const { container } = render(<MessageList messages={messages} />);
 
-      // Should not have code block with COPY/ADD buttons
-      expect(screen.queryByText('COPY')).not.toBeInTheDocument();
-      expect(screen.queryByText('ADD')).not.toBeInTheDocument();
+      // Should not have code block with Copy/Add buttons
+      expect(screen.queryByText('Copy')).not.toBeInTheDocument();
+      expect(screen.queryByText('Add')).not.toBeInTheDocument();
 
       // Should not have pre/code block styling
       expect(container.querySelector('pre')).not.toBeInTheDocument();
@@ -657,25 +746,42 @@ describe('MessageList', () => {
   });
 
   describe('Auto-scroll Behavior', () => {
-    it('should have scroll anchor at bottom', () => {
-      const messages = [createMockAIMessage({ role: 'user', content: 'Test' })];
-
-      const { container } = render(<MessageList messages={messages} />);
-
-      // messagesEndRef creates an empty div at the bottom
-      const scrollAnchor = container.querySelector(
-        '.h-full.overflow-y-auto > div:last-child'
+    it('should call scrollIntoView when new messages are added', () => {
+      const { rerender } = render(
+        <MessageList messages={[createMockAIMessage({ content: 'First' })]} />
       );
-      expect(scrollAnchor).toBeInTheDocument();
+
+      expect(Element.prototype.scrollIntoView).toHaveBeenCalledWith({
+        behavior: 'smooth',
+        block: 'end',
+      });
+
+      vi.clearAllMocks();
+
+      // Add another message
+      rerender(
+        <MessageList
+          messages={[
+            createMockAIMessage({ id: '1', content: 'First' }),
+            createMockAIMessage({ id: '2', content: 'Second' }),
+          ]}
+        />
+      );
+
+      // Should scroll again with new message
+      expect(Element.prototype.scrollIntoView).toHaveBeenCalledWith({
+        behavior: 'smooth',
+        block: 'end',
+      });
     });
 
     it('should render messages in scrollable container', () => {
       const messages = [createMockAIMessage({ role: 'user', content: 'Test' })];
 
-      const { container } = render(<MessageList messages={messages} />);
+      render(<MessageList messages={messages} />);
 
-      const scrollContainer = container.querySelector('.overflow-y-auto');
-      expect(scrollContainer).toBeInTheDocument();
+      // Use semantic query via data-testid
+      expect(screen.getByTestId('message-list')).toBeInTheDocument();
     });
   });
 
@@ -702,8 +808,9 @@ describe('MessageList', () => {
 
       render(<MessageList messages={messages} />);
 
-      // Should not show APPLY button
-      expect(screen.queryByText('APPLY')).not.toBeInTheDocument();
+      // Should not show "Apply" button
+      expect(screen.queryByText('Apply')).not.toBeInTheDocument();
     });
   });
 });
+/* eslint-enable @typescript-eslint/unbound-method */
