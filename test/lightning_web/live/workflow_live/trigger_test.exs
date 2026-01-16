@@ -34,7 +34,7 @@ defmodule LightningWeb.WorkflowLive.TriggerTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[s: trigger.id, v: workflow.lock_version]}",
+          ~p"/projects/#{project.id}/w/#{workflow.id}/legacy?#{[s: trigger.id, v: workflow.lock_version]}",
           on_error: :raise
         )
 
@@ -45,7 +45,7 @@ defmodule LightningWeb.WorkflowLive.TriggerTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[s: trigger.id, v: workflow.lock_version]}",
+          ~p"/projects/#{project.id}/w/#{workflow.id}/legacy?#{[s: trigger.id, v: workflow.lock_version]}",
           on_error: :raise
         )
 
@@ -65,7 +65,7 @@ defmodule LightningWeb.WorkflowLive.TriggerTest do
       {:ok, _view, html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[s: trigger.id, v: workflow.lock_version]}",
+          ~p"/projects/#{project.id}/w/#{workflow.id}/legacy?#{[s: trigger.id, v: workflow.lock_version]}",
           on_error: :raise
         )
 
@@ -81,7 +81,7 @@ defmodule LightningWeb.WorkflowLive.TriggerTest do
       {:ok, _view, html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[s: trigger.id, v: workflow.lock_version]}",
+          ~p"/projects/#{project.id}/w/#{workflow.id}/legacy?#{[s: trigger.id, v: workflow.lock_version]}",
           on_error: :raise
         )
 
@@ -101,7 +101,7 @@ defmodule LightningWeb.WorkflowLive.TriggerTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[s: trigger.id, v: workflow.lock_version]}",
+          ~p"/projects/#{project.id}/w/#{workflow.id}/legacy?#{[s: trigger.id, v: workflow.lock_version]}",
           on_error: :raise
         )
 
@@ -118,7 +118,7 @@ defmodule LightningWeb.WorkflowLive.TriggerTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[s: trigger.id, v: workflow.lock_version]}",
+          ~p"/projects/#{project.id}/w/#{workflow.id}/legacy?#{[s: trigger.id, v: workflow.lock_version]}",
           on_error: :raise
         )
 
@@ -152,7 +152,7 @@ defmodule LightningWeb.WorkflowLive.TriggerTest do
 
       assert_patched(
         view,
-        ~p"/projects/#{project.id}/w/#{workflow.id}?#{[s: trigger.id]}"
+        ~p"/projects/#{project.id}/w/#{workflow.id}/legacy?#{[s: trigger.id]}"
       )
 
       # modal is removed
@@ -186,7 +186,7 @@ defmodule LightningWeb.WorkflowLive.TriggerTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[s: trigger.id, v: workflow.lock_version]}",
+          ~p"/projects/#{project.id}/w/#{workflow.id}/legacy?#{[s: trigger.id, v: workflow.lock_version]}",
           on_error: :raise
         )
 
@@ -203,7 +203,7 @@ defmodule LightningWeb.WorkflowLive.TriggerTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[s: trigger.id, v: workflow.lock_version]}",
+          ~p"/projects/#{project.id}/w/#{workflow.id}/legacy?#{[s: trigger.id, v: workflow.lock_version]}",
           on_error: :raise
         )
 
@@ -237,7 +237,7 @@ defmodule LightningWeb.WorkflowLive.TriggerTest do
 
       assert_patched(
         view,
-        ~p"/projects/#{project.id}/w/#{workflow.id}?#{[s: trigger.id]}"
+        ~p"/projects/#{project.id}/w/#{workflow.id}/legacy?#{[s: trigger.id]}"
       )
 
       # modal is removed
@@ -277,7 +277,7 @@ defmodule LightningWeb.WorkflowLive.TriggerTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[s: trigger.id, v: workflow.lock_version]}",
+          ~p"/projects/#{project.id}/w/#{workflow.id}/legacy?#{[s: trigger.id, v: workflow.lock_version]}",
           on_error: :raise
         )
 
@@ -328,7 +328,7 @@ defmodule LightningWeb.WorkflowLive.TriggerTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[s: trigger.id, v: workflow.lock_version]}",
+          ~p"/projects/#{project.id}/w/#{workflow.id}/legacy?#{[s: trigger.id, v: workflow.lock_version]}",
           on_error: :raise
         )
 
@@ -345,7 +345,7 @@ defmodule LightningWeb.WorkflowLive.TriggerTest do
       {:ok, view, html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[s: trigger.id, v: workflow.lock_version]}",
+          ~p"/projects/#{project.id}/w/#{workflow.id}/legacy?#{[s: trigger.id, v: workflow.lock_version]}",
           on_error: :raise
         )
 
@@ -365,7 +365,7 @@ defmodule LightningWeb.WorkflowLive.TriggerTest do
 
       assert_patched(
         view,
-        ~p"/projects/#{project.id}/w/#{workflow.id}?#{[s: trigger.id]}"
+        ~p"/projects/#{project.id}/w/#{workflow.id}/legacy?#{[s: trigger.id]}"
       )
 
       html = render(view)
@@ -413,7 +413,7 @@ defmodule LightningWeb.WorkflowLive.TriggerTest do
     {:ok, view, _html} =
       live(
         conn,
-        ~p"/projects/#{project.id}/w/#{workflow.id}?#{[s: webhook_trigger.id, v: workflow.lock_version]}",
+        ~p"/projects/#{project.id}/w/#{workflow.id}/legacy?#{[s: webhook_trigger.id, v: workflow.lock_version]}",
         on_error: :raise
       )
 
@@ -428,7 +428,7 @@ defmodule LightningWeb.WorkflowLive.TriggerTest do
     {:ok, view, _html} =
       live(
         conn,
-        ~p"/projects/#{project.id}/w/#{workflow.id}?#{[s: cron_trigger.id, v: workflow.lock_version]}",
+        ~p"/projects/#{project.id}/w/#{workflow.id}/legacy?#{[s: cron_trigger.id, v: workflow.lock_version]}",
         on_error: :raise
       )
 
@@ -443,7 +443,7 @@ defmodule LightningWeb.WorkflowLive.TriggerTest do
     {:ok, view, html} =
       live(
         conn,
-        ~p"/projects/#{project.id}/w/#{workflow.id}?#{[s: kafka_trigger.id, v: workflow.lock_version]}",
+        ~p"/projects/#{project.id}/w/#{workflow.id}/legacy?#{[s: kafka_trigger.id, v: workflow.lock_version]}",
         on_error: :raise
       )
 

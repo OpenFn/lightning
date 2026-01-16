@@ -337,6 +337,22 @@ defmodule LightningWeb.WorkflowLive.Helpers do
     collaborative_only: ["panel"]
   }
 
+  def legacy_editor_url(params, live_action) do
+    base_url = legacy_base_url(params, live_action)
+
+    query_params = Map.drop(params, ["id", "project_id"])
+
+    build_url_with_params(base_url, query_params)
+  end
+
+  defp legacy_base_url(%{"project_id" => project_id}, :new) do
+    "/projects/#{project_id}/w/new/legacy?method=template"
+  end
+
+  defp legacy_base_url(%{"id" => id, "project_id" => project_id}, :edit) do
+    "/projects/#{project_id}/w/#{id}/legacy"
+  end
+
   @doc """
   Builds a URL to the collaborative editor with converted query parameters.
 
@@ -374,13 +390,13 @@ defmodule LightningWeb.WorkflowLive.Helpers do
       ...>   "s" => "job-abc",
       ...>   "m" => "expand"
       ...> }, :edit)
-      "/projects/proj-1/w/wf-1/collaborate?job=job-abc&panel=editor"
+      "/projects/proj-1/w/wf-1?job=job-abc&panel=editor"
 
       # New workflow
       iex> collaborative_editor_url(%{
       ...>   "project_id" => "proj-1"
       ...> }, :new)
-      "/projects/proj-1/w/new/collaborate?method=template"
+      "/projects/proj-1/w/new?method=template"
 
       # With multiple query params
       iex> collaborative_editor_url(%{
@@ -390,7 +406,7 @@ defmodule LightningWeb.WorkflowLive.Helpers do
       ...>   "v" => "42",
       ...>   "custom" => "value"
       ...> }, :edit)
-      "/projects/proj-1/w/wf-1/collaborate?custom=value&job=job-123&v=42"
+      "/projects/proj-1/w/wf-1?custom=value&job=job-123&v=42"
 
   """
   def collaborative_editor_url(params, live_action) do
@@ -447,11 +463,11 @@ defmodule LightningWeb.WorkflowLive.Helpers do
   end
 
   defp collaborative_base_url(%{"project_id" => project_id}, :new) do
-    "/projects/#{project_id}/w/new/collaborate?method=template"
+    "/projects/#{project_id}/w/new?method=template"
   end
 
   defp collaborative_base_url(%{"id" => id, "project_id" => project_id}, :edit) do
-    "/projects/#{project_id}/w/#{id}/collaborate"
+    "/projects/#{project_id}/w/#{id}"
   end
 
   defp build_url_with_params(base_url, params) when map_size(params) == 0 do

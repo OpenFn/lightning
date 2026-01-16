@@ -116,7 +116,7 @@ export class WorkflowCollaborativePage extends LiveViewPage {
    * @param options - URL components
    * @param options.projectId - Project ID
    * @param options.workflowId - Workflow ID
-   * @param options.path - Path suffix (e.g., '/collaborate', '/edit')
+   * @param options.path - Path suffix (e.g., '/legacy', '/edit')
    * @param options.query - Optional query parameters
    * @param options.hash - Optional URL hash
    *
@@ -126,7 +126,7 @@ export class WorkflowCollaborativePage extends LiveViewPage {
    * await page.verifyUrl({
    *   projectId: '123',
    *   workflowId: '456',
-   *   path: '/collaborate'
+   *   path: '/legacy'
    * });
    *
    * // With query params and hash

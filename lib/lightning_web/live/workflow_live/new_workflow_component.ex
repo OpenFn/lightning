@@ -289,7 +289,7 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
            |> assign(search_term: nil)
            |> push_patch(
              to:
-               "/projects/#{socket.assigns.project.id}/w/new?method=ai&w-chat=#{session_id}"
+               "/projects/#{socket.assigns.project.id}/w/new/legacy?method=ai&w-chat=#{session_id}"
            )}
 
         {:error, reason} ->
@@ -315,7 +315,7 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
      |> assign(selected_template: nil)
      |> assign(chat_session_id: nil)
      |> push_patch(
-       to: "/projects/#{socket.assigns.project.id}/w/new?method=#{method}"
+       to: "/projects/#{socket.assigns.project.id}/w/new/legacy?method=#{method}"
      )}
   end
 

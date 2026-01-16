@@ -39,7 +39,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version, s: job_1.id, m: "expand"]}",
+          ~p"/projects/#{project.id}/w/#{workflow.id}/legacy?#{[v: workflow.lock_version, s: job_1.id, m: "expand"]}",
           on_error: :raise
         )
 
@@ -78,7 +78,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version, s: job_1.id, m: "expand"]}",
+          ~p"/projects/#{project.id}/w/#{workflow.id}/legacy?#{[v: workflow.lock_version, s: job_1.id, m: "expand"]}",
           on_error: :raise
         )
 
@@ -98,7 +98,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version, s: job_1.id, m: "expand"]}",
+          ~p"/projects/#{project.id}/w/#{workflow.id}/legacy?#{[v: workflow.lock_version, s: job_1.id, m: "expand"]}",
           on_error: :raise
         )
 
@@ -131,7 +131,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version, s: job_1.id, m: "expand"]}",
+          ~p"/projects/#{project.id}/w/#{workflow.id}/legacy?#{[v: workflow.lock_version, s: job_1.id, m: "expand"]}",
           on_error: :raise
         )
 
@@ -180,7 +180,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version, s: job_1.id, m: "expand"]}",
+          ~p"/projects/#{project.id}/w/#{workflow.id}/legacy?#{[v: workflow.lock_version, s: job_1.id, m: "expand"]}",
           on_error: :raise
         )
 
@@ -214,7 +214,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version, s: job_1.id, m: "expand"]}"
+          ~p"/projects/#{project.id}/w/#{workflow.id}/legacy?#{[v: workflow.lock_version, s: job_1.id, m: "expand"]}"
         )
 
       render_async(view)
@@ -284,7 +284,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
         {:ok, view, _html} =
           live(
             conn,
-            ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version, s: job_1.id, m: "expand"]}"
+            ~p"/projects/#{project.id}/w/#{workflow.id}/legacy?#{[v: workflow.lock_version, s: job_1.id, m: "expand"]}"
           )
 
         render_async(view)
@@ -341,7 +341,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
         {:ok, view, _html} =
           live(
             conn,
-            ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version, s: job_1.id, m: "expand"]}"
+            ~p"/projects/#{project.id}/w/#{workflow.id}/legacy?#{[v: workflow.lock_version, s: job_1.id, m: "expand"]}"
           )
 
         render_async(view)
@@ -403,7 +403,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       skip_disclaimer(user)
 
       {:ok, view, _html} =
-        live(conn, ~p"/projects/#{project.id}/w/#{workflow.id}")
+        live(conn, ~p"/projects/#{project.id}/w/#{workflow.id}/legacy")
 
       job_id = Ecto.UUID.generate()
       push_patches_to_view(view, [add_job_patch("new job", job_id)])
@@ -461,7 +461,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version, s: job_1.id, m: "expand"]}"
+          ~p"/projects/#{project.id}/w/#{workflow.id}/legacy?#{[v: workflow.lock_version, s: job_1.id, m: "expand"]}"
         )
 
       render_async(view)
@@ -517,7 +517,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version, s: job_1.id, m: "expand"]}"
+          ~p"/projects/#{project.id}/w/#{workflow.id}/legacy?#{[v: workflow.lock_version, s: job_1.id, m: "expand"]}"
         )
 
       render_async(view)
@@ -589,7 +589,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version, s: job_1.id, m: "expand"]}"
+          ~p"/projects/#{project.id}/w/#{workflow.id}/legacy?#{[v: workflow.lock_version, s: job_1.id, m: "expand"]}"
         )
 
       refute render_async(view) =~ session.title
@@ -642,7 +642,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version, s: job_1.id, m: "expand"]}"
+          ~p"/projects/#{project.id}/w/#{workflow.id}/legacy?#{[v: workflow.lock_version, s: job_1.id, m: "expand"]}"
         )
 
       render_async(view)
@@ -699,7 +699,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version, s: job_1.id, m: "expand"]}"
+          ~p"/projects/#{project.id}/w/#{workflow.id}/legacy?#{[v: workflow.lock_version, s: job_1.id, m: "expand"]}"
         )
 
       render_async(view)
@@ -755,7 +755,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version, s: job_1.id, m: "expand"]}"
+          ~p"/projects/#{project.id}/w/#{workflow.id}/legacy?#{[v: workflow.lock_version, s: job_1.id, m: "expand"]}"
         )
 
       render_async(view)
@@ -816,7 +816,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version, s: job_1.id, m: "expand"]}"
+          ~p"/projects/#{project.id}/w/#{workflow.id}/legacy?#{[v: workflow.lock_version, s: job_1.id, m: "expand"]}"
         )
 
       render_async(view)
@@ -872,7 +872,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version, s: job_1.id, m: "expand"]}"
+          ~p"/projects/#{project.id}/w/#{workflow.id}/legacy?#{[v: workflow.lock_version, s: job_1.id, m: "expand"]}"
         )
 
       render_async(view)
@@ -929,7 +929,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version, s: job_1.id, m: "expand"]}",
+          ~p"/projects/#{project.id}/w/#{workflow.id}/legacy?#{[v: workflow.lock_version, s: job_1.id, m: "expand"]}",
           on_error: :raise
         )
 
@@ -985,7 +985,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version, s: job_1.id, m: "expand"]}"
+          ~p"/projects/#{project.id}/w/#{workflow.id}/legacy?#{[v: workflow.lock_version, s: job_1.id, m: "expand"]}"
         )
 
       render_async(view)
@@ -1058,7 +1058,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version, s: job_1.id, m: "expand"]}",
+          ~p"/projects/#{project.id}/w/#{workflow.id}/legacy?#{[v: workflow.lock_version, s: job_1.id, m: "expand"]}",
           on_error: :raise
         )
 
@@ -1167,7 +1167,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version, s: job_1.id, m: "expand"]}",
+          ~p"/projects/#{project.id}/w/#{workflow.id}/legacy?#{[v: workflow.lock_version, s: job_1.id, m: "expand"]}",
           on_error: :raise
         )
 
@@ -1237,7 +1237,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
         {:ok, view, _html} =
           live(
             conn,
-            ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version, s: job_1.id, m: "expand", "j-chat": session.id]}",
+            ~p"/projects/#{project.id}/w/#{workflow.id}/legacy?#{[v: workflow.lock_version, s: job_1.id, m: "expand", "j-chat": session.id]}",
             on_error: :raise
           )
 
@@ -1348,7 +1348,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version, s: job_1.id, m: "expand", "j-chat": session.id]}",
+          ~p"/projects/#{project.id}/w/#{workflow.id}/legacy?#{[v: workflow.lock_version, s: job_1.id, m: "expand", "j-chat": session.id]}",
           on_error: :raise
         )
 
@@ -1402,7 +1402,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version, s: job_1.id, m: "expand", "j-chat": single_message_session.id]}",
+          ~p"/projects/#{project.id}/w/#{workflow.id}/legacy?#{[v: workflow.lock_version, s: job_1.id, m: "expand", "j-chat": single_message_session.id]}",
           on_error: :raise
         )
 
@@ -1476,7 +1476,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version, s: job_1.id, m: "expand"]}",
+          ~p"/projects/#{project.id}/w/#{workflow.id}/legacy?#{[v: workflow.lock_version, s: job_1.id, m: "expand"]}",
           on_error: :raise
         )
 
@@ -1541,7 +1541,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version, s: job_1.id, m: "expand"]}"
+          ~p"/projects/#{project.id}/w/#{workflow.id}/legacy?#{[v: workflow.lock_version, s: job_1.id, m: "expand"]}"
         )
 
       render_async(view)
@@ -1617,7 +1617,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version, s: job_1.id, m: "expand"]}"
+          ~p"/projects/#{project.id}/w/#{workflow.id}/legacy?#{[v: workflow.lock_version, s: job_1.id, m: "expand"]}"
         )
 
       render_async(view)
@@ -1704,7 +1704,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version, s: job_1.id, m: "expand"]}"
+          ~p"/projects/#{project.id}/w/#{workflow.id}/legacy?#{[v: workflow.lock_version, s: job_1.id, m: "expand"]}"
         )
 
       render_async(view)
@@ -1723,7 +1723,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}?#{%{a: run.id, m: "expand", s: job_1.id}}",
+          ~p"/projects/#{project.id}/w/#{workflow.id}/legacy?#{%{a: run.id, m: "expand", s: job_1.id}}",
           on_error: :raise
         )
 
@@ -1815,7 +1815,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}?#{%{a: run.id, m: "expand", s: job_1.id}}",
+          ~p"/projects/#{project.id}/w/#{workflow.id}/legacy?#{%{a: run.id, m: "expand", s: job_1.id}}",
           on_error: :raise
         )
 
@@ -1855,7 +1855,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       skip_disclaimer(user)
 
       {:ok, view, _html} =
-        live(conn, ~p"/projects/#{project.id}/w/new?method=ai")
+        live(conn, ~p"/projects/#{project.id}/w/new/legacy?method=ai")
 
       render_async(view)
 
@@ -1909,7 +1909,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       skip_disclaimer(user)
 
       {:ok, view, _html} =
-        live(conn, ~p"/projects/#{project.id}/w/new?method=ai")
+        live(conn, ~p"/projects/#{project.id}/w/new/legacy?method=ai")
 
       render_async(view)
 
@@ -1982,7 +1982,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       skip_disclaimer(user)
 
       {:ok, view, _html} =
-        live(conn, ~p"/projects/#{project.id}/w/new?method=ai")
+        live(conn, ~p"/projects/#{project.id}/w/new/legacy?method=ai")
 
       render_async(view)
 
@@ -2112,7 +2112,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       skip_disclaimer(user)
 
       {:ok, view, _html} =
-        live(conn, ~p"/projects/#{project.id}/w/new?method=ai")
+        live(conn, ~p"/projects/#{project.id}/w/new/legacy?method=ai")
 
       render_async(view)
 
@@ -2181,7 +2181,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       skip_disclaimer(user)
 
       {:ok, view, _html} =
-        live(conn, ~p"/projects/#{project.id}/w/new?method=ai")
+        live(conn, ~p"/projects/#{project.id}/w/new/legacy?method=ai")
 
       render_async(view)
 
@@ -2219,7 +2219,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       conn = log_in_user(conn, viewer_user)
 
       {:ok, _view, html} =
-        live(conn, ~p"/projects/#{project.id}/w/new?method=ai")
+        live(conn, ~p"/projects/#{project.id}/w/new/legacy?method=ai")
         |> follow_redirect(conn)
 
       assert html =~ "You are not authorized to perform this action."
@@ -2247,7 +2247,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       skip_disclaimer(user)
 
       {:ok, view, _html} =
-        live(conn, ~p"/projects/#{project.id}/w/new?method=ai")
+        live(conn, ~p"/projects/#{project.id}/w/new/legacy?method=ai")
 
       render_async(view)
 
@@ -2302,7 +2302,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/new?method=ai&w-chat=#{session_with_title.id}"
+          ~p"/projects/#{project.id}/w/new/legacy?method=ai&w-chat=#{session_with_title.id}"
         )
 
       render_async(view)
@@ -2313,7 +2313,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/new?method=ai&chat=#{session_without_title.id}"
+          ~p"/projects/#{project.id}/w/new/legacy?method=ai&chat=#{session_without_title.id}"
         )
 
       render_async(view)
@@ -2343,7 +2343,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       skip_disclaimer(user)
 
       {:ok, view, _html} =
-        live(conn, ~p"/projects/#{project.id}/w/new?method=ai")
+        live(conn, ~p"/projects/#{project.id}/w/new/legacy?method=ai")
 
       render_async(view)
 
@@ -2384,7 +2384,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       skip_disclaimer(user)
 
       {:ok, view, _html} =
-        live(conn, ~p"/projects/#{project.id}/w/new?method=ai")
+        live(conn, ~p"/projects/#{project.id}/w/new/legacy?method=ai")
 
       render_async(view)
 
@@ -2449,11 +2449,17 @@ defmodule LightningWeb.AiAssistantLiveTest do
         )
 
       conn1 = log_in_user(conn, user1)
-      {:ok, view1, _} = live(conn1, ~p"/projects/#{project.id}/w/new?method=ai")
+
+      {:ok, view1, _} =
+        live(conn1, ~p"/projects/#{project.id}/w/new/legacy?method=ai")
+
       render_async(view1)
 
       conn2 = log_in_user(conn, user2)
-      {:ok, view2, _} = live(conn2, ~p"/projects/#{project.id}/w/new?method=ai")
+
+      {:ok, view2, _} =
+        live(conn2, ~p"/projects/#{project.id}/w/new/legacy?method=ai")
+
       render_async(view2)
 
       html1 = render(view1)
@@ -2492,7 +2498,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       {:ok, job_view, _html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}?s=#{job_1.id}&m=expand"
+          ~p"/projects/#{project.id}/w/#{workflow.id}/legacy?s=#{job_1.id}&m=expand"
         )
 
       render_async(job_view)
@@ -2505,7 +2511,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       assert job_html =~ "Ask about your job code, debugging, or OpenFn adaptors"
 
       {:ok, workflow_view, _html} =
-        live(conn, ~p"/projects/#{project.id}/w/new?method=ai")
+        live(conn, ~p"/projects/#{project.id}/w/new/legacy?method=ai")
 
       render_async(workflow_view)
 
@@ -2541,7 +2547,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       {:ok, job_view, _html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}?s=#{job_1.id}&m=expand"
+          ~p"/projects/#{project.id}/w/#{workflow.id}/legacy?s=#{job_1.id}&m=expand"
         )
 
       render_async(job_view)
@@ -2564,7 +2570,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       assert has_element?(job_view, "[phx-click='retry_message']")
 
       {:ok, workflow_view, _html} =
-        live(conn, ~p"/projects/#{project.id}/w/new?method=ai")
+        live(conn, ~p"/projects/#{project.id}/w/new/legacy?method=ai")
 
       render_async(workflow_view)
 
@@ -2633,7 +2639,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       {:ok, job_view, _html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}?s=#{job_1.id}&m=expand"
+          ~p"/projects/#{project.id}/w/#{workflow.id}/legacy?s=#{job_1.id}&m=expand"
         )
 
       render_async(job_view)
@@ -2643,7 +2649,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       refute job_html =~ "Workflow Creation Session"
 
       {:ok, workflow_view, _html} =
-        live(conn, ~p"/projects/#{project.id}/w/new?method=ai")
+        live(conn, ~p"/projects/#{project.id}/w/new/legacy?method=ai")
 
       render_async(workflow_view)
 
@@ -2677,7 +2683,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       {:ok, job_view, _html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}?s=#{job_1.id}&m=expand"
+          ~p"/projects/#{project.id}/w/#{workflow.id}/legacy?s=#{job_1.id}&m=expand"
         )
 
       render_async(job_view)
@@ -2690,7 +2696,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       assert job_html =~ error_message
 
       {:ok, workflow_view, _html} =
-        live(conn, ~p"/projects/#{project.id}/w/new?method=ai")
+        live(conn, ~p"/projects/#{project.id}/w/new/legacy?method=ai")
 
       render_async(workflow_view)
 
@@ -2733,7 +2739,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       {:ok, job_view, _html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}?s=#{job_1.id}&m=expand"
+          ~p"/projects/#{project.id}/w/#{workflow.id}/legacy?s=#{job_1.id}&m=expand"
         )
 
       render_async(job_view)
@@ -2745,7 +2751,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       assert render(job_form) =~ "phx-hook=\"SendMessageViaCtrlEnter\""
 
       {:ok, workflow_view, _html} =
-        live(conn, ~p"/projects/#{project.id}/w/new?method=ai")
+        live(conn, ~p"/projects/#{project.id}/w/new/legacy?method=ai")
 
       render_async(workflow_view)
 
@@ -2774,7 +2780,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       {:ok, job_view, _html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}?s=#{job_1.id}&m=expand"
+          ~p"/projects/#{project.id}/w/#{workflow.id}/legacy?s=#{job_1.id}&m=expand"
         )
 
       render_async(job_view)
@@ -2787,7 +2793,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       assert job_html =~ "Get started with the AI Assistant"
 
       {:ok, workflow_view, _html} =
-        live(conn, ~p"/projects/#{project.id}/w/new?method=ai")
+        live(conn, ~p"/projects/#{project.id}/w/new/legacy?method=ai")
 
       render_async(workflow_view)
 
@@ -2800,7 +2806,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       assert user.preferences["ai_assistant.disclaimer_read_at"]
 
       {:ok, new_workflow_view, _html} =
-        live(conn, ~p"/projects/#{project.id}/w/new?method=ai")
+        live(conn, ~p"/projects/#{project.id}/w/new/legacy?method=ai")
 
       render_async(new_workflow_view)
 
@@ -2862,7 +2868,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       {:ok, job_view, _html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}?s=#{job_1.id}&m=expand"
+          ~p"/projects/#{project.id}/w/#{workflow.id}/legacy?s=#{job_1.id}&m=expand"
         )
 
       render_async(job_view)
@@ -2879,7 +2885,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       assert job_html =~ "<ol"
 
       {:ok, workflow_view, _html} =
-        live(conn, ~p"/projects/#{project.id}/w/new?method=ai")
+        live(conn, ~p"/projects/#{project.id}/w/new/legacy?method=ai")
 
       render_async(workflow_view)
 
@@ -2935,7 +2941,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       {:ok, job_view, _html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}?s=#{job_1.id}&m=expand"
+          ~p"/projects/#{project.id}/w/#{workflow.id}/legacy?s=#{job_1.id}&m=expand"
         )
 
       render_async(job_view)
@@ -2961,7 +2967,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
                "data-content=\"Here&#39;s some code you can copy\">"
 
       {:ok, workflow_view, _html} =
-        live(conn, ~p"/projects/#{project.id}/w/new?method=ai")
+        live(conn, ~p"/projects/#{project.id}/w/new/legacy?method=ai")
 
       render_async(workflow_view)
 
@@ -3022,7 +3028,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       {:ok, job_view, _html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}?s=#{job_1.id}&m=expand"
+          ~p"/projects/#{project.id}/w/#{workflow.id}/legacy?s=#{job_1.id}&m=expand"
         )
 
       render_async(job_view)
@@ -3041,7 +3047,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       assert job_html =~ initials
 
       {:ok, workflow_view, _html} =
-        live(conn, ~p"/projects/#{project.id}/w/new?method=ai")
+        live(conn, ~p"/projects/#{project.id}/w/new/legacy?method=ai")
 
       render_async(workflow_view)
 
@@ -3095,7 +3101,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       {:ok, job_view, _html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}?s=#{job_1.id}&m=expand"
+          ~p"/projects/#{project.id}/w/#{workflow.id}/legacy?s=#{job_1.id}&m=expand"
         )
 
       render_async(job_view)
@@ -3106,7 +3112,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       assert job_html =~ "20 of 25"
 
       {:ok, workflow_view, _html} =
-        live(conn, ~p"/projects/#{project.id}/w/new?method=ai")
+        live(conn, ~p"/projects/#{project.id}/w/new/legacy?method=ai")
 
       render_async(workflow_view)
 
@@ -3189,7 +3195,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       {:ok, job_view, _html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}?s=#{job_1.id}&m=expand"
+          ~p"/projects/#{project.id}/w/#{workflow.id}/legacy?s=#{job_1.id}&m=expand"
         )
 
       render_async(job_view)
@@ -3205,7 +3211,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       assert job_html_after_sort =~ "Oldest"
 
       {:ok, workflow_view, _html} =
-        live(conn, ~p"/projects/#{project.id}/w/new?method=ai")
+        live(conn, ~p"/projects/#{project.id}/w/new/legacy?method=ai")
 
       render_async(workflow_view)
 
@@ -3282,7 +3288,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       {:ok, job_view, _html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}?s=#{job_1.id}&m=expand"
+          ~p"/projects/#{project.id}/w/#{workflow.id}/legacy?s=#{job_1.id}&m=expand"
         )
 
       render_async(job_view)
@@ -3302,7 +3308,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
 
       # Navigate to workflow creation
       {:ok, workflow_view, _html} =
-        live(conn, ~p"/projects/#{project.id}/w/new?method=ai")
+        live(conn, ~p"/projects/#{project.id}/w/new/legacy?method=ai")
 
       render_async(workflow_view)
 
@@ -3367,7 +3373,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}?s=#{job_1.id}&m=expand"
+          ~p"/projects/#{project.id}/w/#{workflow.id}/legacy?s=#{job_1.id}&m=expand"
         )
 
       render_async(view)
@@ -3419,7 +3425,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}?s=#{job_1.id}&m=expand"
+          ~p"/projects/#{project.id}/w/#{workflow.id}/legacy?s=#{job_1.id}&m=expand"
         )
 
       render_async(view)
@@ -3479,7 +3485,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version, s: job.id, m: "expand"]}&j-chat=#{session.id}"
+          ~p"/projects/#{project.id}/w/#{workflow.id}/legacy?#{[v: workflow.lock_version, s: job.id, m: "expand"]}&j-chat=#{session.id}"
         )
 
       render_async(view)
@@ -3525,7 +3531,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version, s: job.id, m: "expand"]}&j-chat=#{session.id}"
+          ~p"/projects/#{project.id}/w/#{workflow.id}/legacy?#{[v: workflow.lock_version, s: job.id, m: "expand"]}&j-chat=#{session.id}"
         )
 
       render_async(view)
@@ -3572,7 +3578,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version, s: job.id, m: "expand"]}&j-chat=#{session.id}"
+          ~p"/projects/#{project.id}/w/#{workflow.id}/legacy?#{[v: workflow.lock_version, s: job.id, m: "expand"]}&j-chat=#{session.id}"
         )
 
       render_async(view)
@@ -3608,7 +3614,7 @@ defmodule LightningWeb.AiAssistantLiveTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version, s: job.id, m: "expand"]}&j-chat=#{session.id}"
+          ~p"/projects/#{project.id}/w/#{workflow.id}/legacy?#{[v: workflow.lock_version, s: job.id, m: "expand"]}&j-chat=#{session.id}"
         )
 
       render_async(view)

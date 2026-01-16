@@ -26,7 +26,7 @@ defmodule LightningWeb.WorkflowLive.CollaborateTest do
       {:ok, _view, html} =
         live(
           conn,
-          ~p"/projects/#{sandbox.id}/w/#{workflow.id}/collaborate"
+          ~p"/projects/#{sandbox.id}/w/#{workflow.id}"
         )
 
       assert html =~ "data-root-project-id=\"#{parent_project.id}\""
@@ -51,7 +51,7 @@ defmodule LightningWeb.WorkflowLive.CollaborateTest do
       {:ok, _view, html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}/collaborate"
+          ~p"/projects/#{project.id}/w/#{workflow.id}"
         )
 
       refute html =~ "data-root-project-id="
@@ -82,7 +82,7 @@ defmodule LightningWeb.WorkflowLive.CollaborateTest do
       {:ok, _view, html} =
         live(
           conn,
-          ~p"/projects/#{sandbox_b.id}/w/#{workflow.id}/collaborate"
+          ~p"/projects/#{sandbox_b.id}/w/#{workflow.id}"
         )
 
       assert html =~ "data-root-project-id=\"#{root_project.id}\""
@@ -110,7 +110,7 @@ defmodule LightningWeb.WorkflowLive.CollaborateTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}/collaborate"
+          ~p"/projects/#{project.id}/w/#{workflow.id}"
         )
 
       # Subscribe to PubSub to verify broadcast
@@ -179,7 +179,7 @@ defmodule LightningWeb.WorkflowLive.CollaborateTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}/collaborate"
+          ~p"/projects/#{project.id}/w/#{workflow.id}"
         )
 
       # Subscribe to PubSub to verify broadcast
@@ -238,7 +238,7 @@ defmodule LightningWeb.WorkflowLive.CollaborateTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}/collaborate"
+          ~p"/projects/#{project.id}/w/#{workflow.id}"
         )
 
       # Subscribe to PubSub to verify broadcast
@@ -301,7 +301,7 @@ defmodule LightningWeb.WorkflowLive.CollaborateTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}/collaborate"
+          ~p"/projects/#{project.id}/w/#{workflow.id}"
         )
 
       Phoenix.PubSub.subscribe(
@@ -363,7 +363,7 @@ defmodule LightningWeb.WorkflowLive.CollaborateTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}/collaborate"
+          ~p"/projects/#{project.id}/w/#{workflow.id}"
         )
 
       Phoenix.PubSub.subscribe(
@@ -422,7 +422,7 @@ defmodule LightningWeb.WorkflowLive.CollaborateTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}/collaborate"
+          ~p"/projects/#{project.id}/w/#{workflow.id}"
         )
 
       Phoenix.PubSub.subscribe(
@@ -462,7 +462,7 @@ defmodule LightningWeb.WorkflowLive.CollaborateTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}/collaborate"
+          ~p"/projects/#{project.id}/w/#{workflow.id}"
         )
 
       # Subscribe to verify broadcast happens
@@ -508,7 +508,7 @@ defmodule LightningWeb.WorkflowLive.CollaborateTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}/collaborate"
+          ~p"/projects/#{project.id}/w/#{workflow.id}"
         )
 
       # Subscribe to PubSub to verify broadcast
@@ -572,7 +572,7 @@ defmodule LightningWeb.WorkflowLive.CollaborateTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}/collaborate"
+          ~p"/projects/#{project.id}/w/#{workflow.id}"
         )
 
       Phoenix.PubSub.subscribe(
@@ -614,7 +614,7 @@ defmodule LightningWeb.WorkflowLive.CollaborateTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}/collaborate"
+          ~p"/projects/#{project.id}/w/#{workflow.id}"
         )
 
       # Open credential modal
@@ -662,7 +662,7 @@ defmodule LightningWeb.WorkflowLive.CollaborateTest do
       {:ok, view, html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}/collaborate"
+          ~p"/projects/#{project.id}/w/#{workflow.id}"
         )
 
       # Initially, modal should not be shown
@@ -694,7 +694,7 @@ defmodule LightningWeb.WorkflowLive.CollaborateTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}/collaborate"
+          ~p"/projects/#{project.id}/w/#{workflow.id}"
         )
 
       # First open the modal
@@ -731,7 +731,7 @@ defmodule LightningWeb.WorkflowLive.CollaborateTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}/collaborate"
+          ~p"/projects/#{project.id}/w/#{workflow.id}"
         )
 
       # First open the modal
@@ -770,7 +770,7 @@ defmodule LightningWeb.WorkflowLive.CollaborateTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}/collaborate"
+          ~p"/projects/#{project.id}/w/#{workflow.id}"
         )
 
       # Open modal with raw schema (no schema file needed)
@@ -802,7 +802,7 @@ defmodule LightningWeb.WorkflowLive.CollaborateTest do
       {:ok, _view, html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}/collaborate"
+          ~p"/projects/#{project.id}/w/#{workflow.id}"
         )
 
       # By default, modal should not be rendered
@@ -826,7 +826,7 @@ defmodule LightningWeb.WorkflowLive.CollaborateTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}/collaborate"
+          ~p"/projects/#{project.id}/w/#{workflow.id}"
         )
 
       # Open the modal
@@ -855,7 +855,7 @@ defmodule LightningWeb.WorkflowLive.CollaborateTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}/collaborate"
+          ~p"/projects/#{project.id}/w/#{workflow.id}"
         )
 
       # First cycle
@@ -906,7 +906,7 @@ defmodule LightningWeb.WorkflowLive.CollaborateTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}/collaborate"
+          ~p"/projects/#{project.id}/w/#{workflow.id}"
         )
 
       # User selects adaptor, clicks "New Credential"
@@ -935,7 +935,7 @@ defmodule LightningWeb.WorkflowLive.CollaborateTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}/collaborate"
+          ~p"/projects/#{project.id}/w/#{workflow.id}"
         )
 
       Phoenix.PubSub.subscribe(
@@ -999,7 +999,7 @@ defmodule LightningWeb.WorkflowLive.CollaborateTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}/collaborate"
+          ~p"/projects/#{project.id}/w/#{workflow.id}"
         )
 
       # Open standard credential form
@@ -1028,7 +1028,7 @@ defmodule LightningWeb.WorkflowLive.CollaborateTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}/collaborate"
+          ~p"/projects/#{project.id}/w/#{workflow.id}"
         )
 
       # Open standard form
@@ -1070,7 +1070,7 @@ defmodule LightningWeb.WorkflowLive.CollaborateTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}/collaborate"
+          ~p"/projects/#{project.id}/w/#{workflow.id}"
         )
 
       # Open standard form then navigate to advanced picker
@@ -1110,7 +1110,7 @@ defmodule LightningWeb.WorkflowLive.CollaborateTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}/collaborate"
+          ~p"/projects/#{project.id}/w/#{workflow.id}"
         )
 
       # Navigate to advanced picker
@@ -1153,7 +1153,7 @@ defmodule LightningWeb.WorkflowLive.CollaborateTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}/collaborate"
+          ~p"/projects/#{project.id}/w/#{workflow.id}"
         )
 
       # Navigate to advanced picker
@@ -1196,7 +1196,7 @@ defmodule LightningWeb.WorkflowLive.CollaborateTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}/collaborate"
+          ~p"/projects/#{project.id}/w/#{workflow.id}"
         )
 
       # Navigate to advanced picker
@@ -1241,7 +1241,7 @@ defmodule LightningWeb.WorkflowLive.CollaborateTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}/collaborate"
+          ~p"/projects/#{project.id}/w/#{workflow.id}"
         )
 
       Phoenix.PubSub.subscribe(
@@ -1316,7 +1316,7 @@ defmodule LightningWeb.WorkflowLive.CollaborateTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}/collaborate"
+          ~p"/projects/#{project.id}/w/#{workflow.id}"
         )
 
       # Navigate to keychain form
@@ -1371,7 +1371,7 @@ defmodule LightningWeb.WorkflowLive.CollaborateTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}/collaborate"
+          ~p"/projects/#{project.id}/w/#{workflow.id}"
         )
 
       # Navigate to keychain form
@@ -1436,7 +1436,7 @@ defmodule LightningWeb.WorkflowLive.CollaborateTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}/collaborate"
+          ~p"/projects/#{project.id}/w/#{workflow.id}"
         )
 
       # Navigate to keychain form
@@ -1499,7 +1499,7 @@ defmodule LightningWeb.WorkflowLive.CollaborateTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}/collaborate"
+          ~p"/projects/#{project.id}/w/#{workflow.id}"
         )
 
       # Navigate: standard → advanced → keychain
@@ -1546,7 +1546,7 @@ defmodule LightningWeb.WorkflowLive.CollaborateTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}/collaborate"
+          ~p"/projects/#{project.id}/w/#{workflow.id}"
         )
 
       # Navigate: standard → advanced → raw
@@ -1593,7 +1593,7 @@ defmodule LightningWeb.WorkflowLive.CollaborateTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}/collaborate"
+          ~p"/projects/#{project.id}/w/#{workflow.id}"
         )
 
       # Open with specific schema
@@ -1631,7 +1631,7 @@ defmodule LightningWeb.WorkflowLive.CollaborateTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}/collaborate"
+          ~p"/projects/#{project.id}/w/#{workflow.id}"
         )
 
       # Navigate to keychain form
@@ -1689,7 +1689,7 @@ defmodule LightningWeb.WorkflowLive.CollaborateTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}/collaborate"
+          ~p"/projects/#{project.id}/w/#{workflow.id}"
         )
 
       # Navigate: standard → advanced → OAuth
@@ -1738,7 +1738,7 @@ defmodule LightningWeb.WorkflowLive.CollaborateTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}/collaborate"
+          ~p"/projects/#{project.id}/w/#{workflow.id}"
         )
 
       # Open credential modal
@@ -1768,7 +1768,7 @@ defmodule LightningWeb.WorkflowLive.CollaborateTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}/collaborate"
+          ~p"/projects/#{project.id}/w/#{workflow.id}"
         )
 
       # Open credential modal with initial schema
@@ -1800,7 +1800,7 @@ defmodule LightningWeb.WorkflowLive.CollaborateTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}/collaborate"
+          ~p"/projects/#{project.id}/w/#{workflow.id}"
         )
 
       # Send update_selected_credential_type message
@@ -1825,7 +1825,7 @@ defmodule LightningWeb.WorkflowLive.CollaborateTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}/collaborate"
+          ~p"/projects/#{project.id}/w/#{workflow.id}"
         )
 
       # Open credential modal first
@@ -1858,7 +1858,7 @@ defmodule LightningWeb.WorkflowLive.CollaborateTest do
       {:ok, view, html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}/collaborate"
+          ~p"/projects/#{project.id}/w/#{workflow.id}"
         )
 
       # Initially, modal should not be shown
@@ -1889,7 +1889,7 @@ defmodule LightningWeb.WorkflowLive.CollaborateTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}/collaborate"
+          ~p"/projects/#{project.id}/w/#{workflow.id}"
         )
 
       # First open the modal
@@ -1927,7 +1927,7 @@ defmodule LightningWeb.WorkflowLive.CollaborateTest do
       {:ok, _view, html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}/collaborate"
+          ~p"/projects/#{project.id}/w/#{workflow.id}"
         )
 
       # By default, modal should not be rendered
@@ -1949,7 +1949,7 @@ defmodule LightningWeb.WorkflowLive.CollaborateTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}/collaborate"
+          ~p"/projects/#{project.id}/w/#{workflow.id}"
         )
 
       # First cycle
@@ -2008,7 +2008,7 @@ defmodule LightningWeb.WorkflowLive.CollaborateTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}/collaborate"
+          ~p"/projects/#{project.id}/w/#{workflow.id}"
         )
 
       # Subscribe to PubSub to verify broadcast
@@ -2082,7 +2082,7 @@ defmodule LightningWeb.WorkflowLive.CollaborateTest do
       {:ok, _view, html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}/collaborate?run=#{run.id}"
+          ~p"/projects/#{project.id}/w/#{workflow.id}?run=#{run.id}"
         )
 
       # Parse the HTML to extract the data attribute
@@ -2139,7 +2139,7 @@ defmodule LightningWeb.WorkflowLive.CollaborateTest do
       {:ok, _view, html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}/collaborate"
+          ~p"/projects/#{project.id}/w/#{workflow.id}"
         )
 
       # No initial run data when no run param
@@ -2164,7 +2164,7 @@ defmodule LightningWeb.WorkflowLive.CollaborateTest do
       {:ok, _view, html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}/collaborate?run=#{Ecto.UUID.generate()}"
+          ~p"/projects/#{project.id}/w/#{workflow.id}?run=#{Ecto.UUID.generate()}"
         )
 
       # No initial run data when run doesn't exist
@@ -2187,11 +2187,175 @@ defmodule LightningWeb.WorkflowLive.CollaborateTest do
       {:ok, _view, html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/new/collaborate"
+          ~p"/projects/#{project.id}/w/new"
         )
 
       # New workflows never have initial run data
       refute html =~ "data-initial-run-data="
+    end
+  end
+
+  describe "legacy editor preference redirect" do
+    test "redirects to legacy editor when user prefers legacy editor", %{
+      conn: conn
+    } do
+      user = insert(:user)
+
+      project =
+        insert(:project,
+          name: "Test Project",
+          project_users: [%{user_id: user.id, role: :owner}]
+        )
+
+      workflow = workflow_fixture(project_id: project.id)
+
+      # Set user preference to prefer legacy editor
+      user_with_prefs =
+        user
+        |> Ecto.Changeset.change(%{
+          preferences: %{
+            "prefer_legacy_editor" => true
+          }
+        })
+        |> Lightning.Repo.update!()
+
+      # Try to navigate to collaborative editor
+      {:error, {:live_redirect, %{to: redirect_path}}} =
+        conn
+        |> log_in_user(user_with_prefs)
+        |> live(~p"/projects/#{project.id}/w/#{workflow.id}")
+
+      # Should redirect to legacy editor
+      assert redirect_path == "/projects/#{project.id}/w/#{workflow.id}/legacy"
+    end
+
+    test "redirects to legacy editor for new workflow when user prefers legacy editor",
+         %{conn: conn} do
+      user = insert(:user)
+
+      project =
+        insert(:project,
+          name: "Test Project",
+          project_users: [%{user_id: user.id, role: :owner}]
+        )
+
+      # Set user preference to prefer legacy editor
+      user_with_prefs =
+        user
+        |> Ecto.Changeset.change(%{
+          preferences: %{
+            "prefer_legacy_editor" => true
+          }
+        })
+        |> Lightning.Repo.update!()
+
+      # Try to navigate to collaborative editor for new workflow
+      {:error, {:live_redirect, %{to: redirect_path}}} =
+        conn
+        |> log_in_user(user_with_prefs)
+        |> live(~p"/projects/#{project.id}/w/new")
+
+      # Should redirect to legacy editor with method=template
+      assert redirect_path ==
+               "/projects/#{project.id}/w/new/legacy?method=template"
+    end
+
+    test "redirects to legacy editor with query params preserved", %{conn: conn} do
+      user = insert(:user)
+
+      project =
+        insert(:project,
+          name: "Test Project",
+          project_users: [%{user_id: user.id, role: :owner}]
+        )
+
+      workflow = workflow_fixture(project_id: project.id)
+      job = insert(:job, workflow: workflow)
+
+      # Set user preference to prefer legacy editor
+      user_with_prefs =
+        user
+        |> Ecto.Changeset.change(%{
+          preferences: %{
+            "prefer_legacy_editor" => true
+          }
+        })
+        |> Lightning.Repo.update!()
+
+      # Try to navigate to collaborative editor with query params
+      {:error, {:live_redirect, %{to: redirect_path}}} =
+        conn
+        |> log_in_user(user_with_prefs)
+        |> live(
+          ~p"/projects/#{project.id}/w/#{workflow.id}?job=#{job.id}&panel=editor"
+        )
+
+      # Should redirect to legacy editor with query params preserved
+      assert String.starts_with?(
+               redirect_path,
+               "/projects/#{project.id}/w/#{workflow.id}/legacy"
+             )
+
+      assert redirect_path =~ "job=#{job.id}"
+      assert redirect_path =~ "panel=editor"
+    end
+
+    test "does not redirect when user does not prefer legacy editor", %{
+      conn: conn
+    } do
+      user = insert(:user)
+
+      project =
+        insert(:project,
+          name: "Test Project",
+          project_users: [%{user_id: user.id, role: :owner}]
+        )
+
+      workflow = workflow_fixture(project_id: project.id)
+
+      # Set user preference to NOT prefer legacy editor
+      user_with_prefs =
+        user
+        |> Ecto.Changeset.change(%{
+          preferences: %{
+            "prefer_legacy_editor" => false
+          }
+        })
+        |> Lightning.Repo.update!()
+
+      # Navigate to collaborative editor
+      {:ok, _view, html} =
+        conn
+        |> log_in_user(user_with_prefs)
+        |> live(~p"/projects/#{project.id}/w/#{workflow.id}")
+
+      # Should stay on collaborative editor (no redirect)
+      assert html =~ "collaborative-editor-react"
+    end
+
+    test "does not redirect when preference is not set", %{conn: conn} do
+      user = insert(:user)
+
+      project =
+        insert(:project,
+          name: "Test Project",
+          project_users: [%{user_id: user.id, role: :owner}]
+        )
+
+      workflow = workflow_fixture(project_id: project.id)
+
+      # No preference set (default behavior)
+      conn = log_in_user(conn, user)
+
+      # Navigate to collaborative editor
+      {:ok, _view, html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/w/#{workflow.id}"
+        )
+
+      # Should stay on collaborative editor (no redirect)
+      assert html =~ "collaborative-editor-react"
     end
   end
 end

@@ -16,7 +16,10 @@ defmodule LightningWeb.WorkflowLive.EditTemplateTest do
       workflow: workflow
     } do
       {:ok, view, _html} =
-        live(conn, ~p"/projects/#{project.id}/w/#{workflow.id}?m=code")
+        live(
+          conn,
+          ~p"/projects/#{project.id}/w/#{workflow.id}/legacy?m=code"
+        )
 
       render_hook(view, "workflow_code_generated", %{
         "code" => "test workflow code",
@@ -60,7 +63,10 @@ defmodule LightningWeb.WorkflowLive.EditTemplateTest do
       |> Lightning.Repo.update!()
 
       {:ok, view, _html} =
-        live(conn, ~p"/projects/#{project.id}/w/#{workflow.id}?m=code")
+        live(
+          conn,
+          ~p"/projects/#{project.id}/w/#{workflow.id}/legacy?m=code"
+        )
 
       render_hook(view, "workflow_code_generated", %{
         "code" => "test workflow code",
@@ -102,7 +108,10 @@ defmodule LightningWeb.WorkflowLive.EditTemplateTest do
         )
 
       {:ok, view, _html} =
-        live(conn, ~p"/projects/#{project.id}/w/#{workflow.id}?m=code")
+        live(
+          conn,
+          ~p"/projects/#{project.id}/w/#{workflow.id}/legacy?m=code"
+        )
 
       render_hook(view, "workflow_code_generated", %{
         "code" => "test workflow code",
@@ -135,7 +144,10 @@ defmodule LightningWeb.WorkflowLive.EditTemplateTest do
       workflow: workflow
     } do
       {:ok, view, _html} =
-        live(conn, ~p"/projects/#{project.id}/w/#{workflow.id}?m=code")
+        live(
+          conn,
+          ~p"/projects/#{project.id}/w/#{workflow.id}/legacy?m=code"
+        )
 
       render_hook(view, "workflow_code_generated", %{
         "code" => "test workflow code",
@@ -157,7 +169,10 @@ defmodule LightningWeb.WorkflowLive.EditTemplateTest do
       workflow: workflow
     } do
       {:ok, view, _html} =
-        live(conn, ~p"/projects/#{project.id}/w/#{workflow.id}?m=code")
+        live(
+          conn,
+          ~p"/projects/#{project.id}/w/#{workflow.id}/legacy?m=code"
+        )
 
       render_hook(view, "workflow_code_generated", %{
         "code" => "test workflow code",
@@ -177,7 +192,10 @@ defmodule LightningWeb.WorkflowLive.EditTemplateTest do
       workflow: workflow
     } do
       {:ok, view, _html} =
-        live(conn, ~p"/projects/#{project.id}/w/#{workflow.id}?m=code")
+        live(
+          conn,
+          ~p"/projects/#{project.id}/w/#{workflow.id}/legacy?m=code"
+        )
 
       render_hook(view, "workflow_code_generated", %{
         "code" => "test workflow code",
@@ -197,7 +215,10 @@ defmodule LightningWeb.WorkflowLive.EditTemplateTest do
       workflow: workflow
     } do
       {:ok, view, _html} =
-        live(conn, ~p"/projects/#{project.id}/w/#{workflow.id}?m=code")
+        live(
+          conn,
+          ~p"/projects/#{project.id}/w/#{workflow.id}/legacy?m=code"
+        )
 
       render_hook(view, "workflow_code_generated", %{
         "code" => "test workflow code",
@@ -221,7 +242,10 @@ defmodule LightningWeb.WorkflowLive.EditTemplateTest do
       workflow: workflow
     } do
       {:ok, view, _html} =
-        live(conn, ~p"/projects/#{project.id}/w/#{workflow.id}?m=code")
+        live(
+          conn,
+          ~p"/projects/#{project.id}/w/#{workflow.id}/legacy?m=code"
+        )
 
       render_hook(view, "workflow_code_generated", %{
         "code" => "test workflow code",
@@ -249,7 +273,10 @@ defmodule LightningWeb.WorkflowLive.EditTemplateTest do
       workflow: workflow
     } do
       {:ok, view, _html} =
-        live(conn, ~p"/projects/#{project.id}/w/#{workflow.id}?m=code")
+        live(
+          conn,
+          ~p"/projects/#{project.id}/w/#{workflow.id}/legacy?m=code"
+        )
 
       render_hook(view, "workflow_code_generated", %{
         "code" => "test workflow code",
@@ -279,7 +306,10 @@ defmodule LightningWeb.WorkflowLive.EditTemplateTest do
       conn = log_in_user(conn, user)
 
       {:ok, view, _html} =
-        live(conn, ~p"/projects/#{project.id}/w/#{workflow.id}?m=code")
+        live(
+          conn,
+          ~p"/projects/#{project.id}/w/#{workflow.id}/legacy?m=code"
+        )
 
       render_hook(view, "workflow_code_generated", %{
         "code" => "test workflow code",
