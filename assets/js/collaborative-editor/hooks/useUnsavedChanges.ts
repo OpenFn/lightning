@@ -1,3 +1,5 @@
+import { useMemo } from 'react';
+
 import type { Trigger } from '../types/trigger';
 import type { Workflow } from '../types/workflow';
 
@@ -6,23 +8,51 @@ import { useWorkflowState } from './useWorkflow';
 
 export function useUnsavedChanges() {
   const { workflow } = useSessionContext();
-  const storeWorkflow = useWorkflowState(state => ({
-    jobs: state.jobs,
-    triggers: state.triggers,
-    edges: state.edges,
-    positions: state.positions || {},
-    name: state.workflow?.name,
-    concurrency: state.workflow?.concurrency,
-    enable_job_logs: state.workflow?.enable_job_logs,
-  }));
 
-  if (!workflow || !storeWorkflow) return { hasChanges: false };
-  return {
-    hasChanges: isDiffWorkflow(
-      transformWorkflow(workflow),
-      transformWorkflow(storeWorkflow as Workflow)
-    ),
-  };
+  // Individual selectors - stable references
+  const jobs = useWorkflowState(state => state.jobs);
+  const triggers = useWorkflowState(state => state.triggers);
+  const edges = useWorkflowState(state => state.edges);
+  const positions = useWorkflowState(state => state.positions);
+  const name = useWorkflowState(state => state.workflow?.name);
+  const concurrency = useWorkflowState(state => state.workflow?.concurrency);
+  const enable_job_logs = useWorkflowState(
+    state => state.workflow?.enable_job_logs
+  );
+
+  // Memoize store workflow object to prevent recreating on every render
+  const storeWorkflow = useMemo(
+    () => ({
+      jobs,
+      triggers,
+      edges,
+      positions: positions || {},
+      name,
+      concurrency,
+      enable_job_logs,
+    }),
+    [jobs, triggers, edges, positions, name, concurrency, enable_job_logs]
+  );
+
+  // Memoize transformed base workflow (from session context)
+  const transformedBaseWorkflow = useMemo(
+    () => (workflow ? transformWorkflow(workflow) : null),
+    [workflow]
+  );
+
+  // Memoize transformed store workflow
+  const transformedStoreWorkflow = useMemo(
+    () => transformWorkflow(storeWorkflow as Workflow),
+    [storeWorkflow]
+  );
+
+  // Memoize comparison
+  const hasChanges = useMemo(() => {
+    if (!transformedBaseWorkflow) return false;
+    return isDiffWorkflow(transformedBaseWorkflow, transformedStoreWorkflow);
+  }, [transformedBaseWorkflow, transformedStoreWorkflow]);
+
+  return { hasChanges };
 }
 
 // transform workflow to normalized structure for comparison
