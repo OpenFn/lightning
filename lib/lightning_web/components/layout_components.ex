@@ -346,7 +346,7 @@ defmodule LightningWeb.LayoutComponents do
 
   def breadcrumb_project_picker(assigns) do
     ~H"""
-    <li>
+    <li class="mr-3">
       <div class="flex items-center">
         <button
           id="breadcrumb-project-picker-trigger"

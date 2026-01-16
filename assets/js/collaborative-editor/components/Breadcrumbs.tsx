@@ -35,7 +35,10 @@ export function Breadcrumbs({ children }: { children: React.ReactNode[] }) {
         );
       }
       result.push(
-        <li key={`visible-breadcrumb-${index}`} className="flex items-center">
+        <li
+          key={`visible-breadcrumb-${index}`}
+          className={cn('flex items-center', index === 0 && 'mr-3')}
+        >
           {breadcrumb}
         </li>
       );
