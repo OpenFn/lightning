@@ -1040,7 +1040,7 @@ export const SidebarHoverDelay = {
       // Start timer to add expanded class after 1s
       this.hoverTimer = window.setTimeout(() => {
         this.el.classList.add('sidebar-hover-expanded');
-      }, 1000);
+      }, 500);
     };
 
     this.handleMouseLeave = () => {

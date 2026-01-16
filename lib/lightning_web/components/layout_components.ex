@@ -465,19 +465,21 @@ defmodule LightningWeb.LayoutComponents do
   def sidebar_footer(assigns) do
     ~H"""
     <div class="flex-shrink-0 sidebar-footer flex flex-col border-t border-white/10 pt-3 mt-3">
-      <%!-- Expanded branding: left-aligned --%>
-      <div class="sidebar-branding-expanded h-14">
-        <div class="mx-3 py-1 pl-3">
-          <LightningWeb.Components.Common.openfn_logo class="h-6 primary-light" />
+      <%!-- Expanded branding: centered --%>
+      <div class="sidebar-branding-expanded h-14 text-center">
+        <div class="pt-2 pb-1">
+          <LightningWeb.Components.Common.openfn_logo class="h-6 primary-light mx-auto" />
         </div>
-        <div class="mx-3 pl-3 pb-2 text-xs primary-light opacity-50">
+        <div class="text-xs primary-light opacity-50">
           v{Application.spec(:lightning, :vsn)}
         </div>
       </div>
       <%!-- Collapsed branding: centered --%>
-      <div class="sidebar-branding-collapsed hidden h-14 text-center py-1">
-        <LightningWeb.Components.Common.openfn_logo_collapsed class="h-6 primary-light mx-auto mb-1" />
-        <div class="pb-2 text-xs primary-light opacity-50">
+      <div class="sidebar-branding-collapsed hidden h-14 text-center">
+        <div class="pt-2 pb-1">
+          <LightningWeb.Components.Common.openfn_logo_collapsed class="h-6 primary-light mx-auto" />
+        </div>
+        <div class="text-xs primary-light opacity-50">
           v{Application.spec(:lightning, :vsn)}
         </div>
       </div>
