@@ -95,6 +95,7 @@ import {
   type RunDetail,
   type RunStepsData,
   type RunSummary,
+  type Step,
   type StepDetail,
   type WorkOrder,
   HistoryListSchema,
@@ -106,6 +107,35 @@ import { createWithSelector } from './common';
 import { wrapStoreWithDevTools } from './devtools';
 
 const logger = _logger.ns('HistoryStore').seal();
+
+/**
+ * Maps step-like objects to the Step type used in cache
+ *
+ * Handles both StepDetail (from channel events) and step data from RunDetail.
+ * Note: Assumes job_id is never null in practice (steps always belong to a job).
+ *
+ * @param source - Step data from various sources (StepDetail, RunDetail.steps, etc.)
+ * @returns Step object suitable for caching
+ */
+const toStep = (source: {
+  id: string;
+  job_id: string | null;
+  started_at: string | null;
+  finished_at: string | null;
+  exit_reason: string | null;
+  error_type: string | null;
+  input_dataclip_id: string | null;
+  output_dataclip_id: string | null;
+}): Step => ({
+  id: source.id,
+  job_id: source.job_id!, // Non-null assertion - steps with events always have a job_id
+  started_at: source.started_at,
+  finished_at: source.finished_at,
+  exit_reason: source.exit_reason,
+  error_type: source.error_type,
+  input_dataclip_id: source.input_dataclip_id,
+  output_dataclip_id: source.output_dataclip_id,
+});
 
 /**
  * Options for creating a history store
@@ -450,16 +480,7 @@ export const createHistoryStore = (
             // Step not found in cache - add it (new step created during run)
             // This is the key fix: when step events arrive for newly created steps,
             // we add them to the cache so the canvas can display them in real-time
-            cachedSteps.push({
-              id: step.id,
-              job_id: step.job_id,
-              started_at: step.started_at,
-              finished_at: step.finished_at,
-              exit_reason: step.exit_reason,
-              error_type: step.error_type,
-              input_dataclip_id: step.input_dataclip_id,
-              output_dataclip_id: step.output_dataclip_id,
-            });
+            cachedSteps.push(toStep(step));
             // Sort by started_at to maintain order
             cachedSteps.sort((a, b) => {
               if (!a.started_at) return 1;
@@ -478,16 +499,7 @@ export const createHistoryStore = (
           if (draft.activeRun && draft.activeRun.id === runId) {
             draft.runStepsCache[runId] = {
               run_id: draft.activeRun.id,
-              steps: draft.activeRun.steps.map(s => ({
-                id: s.id,
-                job_id: s.job_id,
-                started_at: s.started_at,
-                finished_at: s.finished_at,
-                exit_reason: s.exit_reason,
-                error_type: s.error_type,
-                input_dataclip_id: s.input_dataclip_id,
-                output_dataclip_id: s.output_dataclip_id,
-              })),
+              steps: draft.activeRun.steps.map(toStep),
               metadata: {
                 starting_job_id: draft.activeRun.steps[0]?.job_id ?? null,
                 starting_trigger_id: null, // Not available in RunDetail
