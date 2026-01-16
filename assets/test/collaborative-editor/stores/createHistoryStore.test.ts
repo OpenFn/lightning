@@ -1076,4 +1076,396 @@ describe('createHistoryStore', () => {
       );
     });
   });
+
+  describe('step events race condition handling', () => {
+    test('step event initializes cache from activeRun when cache does not exist', () => {
+      // Setup: activeRun loaded with initial steps, cache empty, no channel
+      const mockActiveRun = {
+        id: 'run-race-1',
+        work_order_id: 'wo-1',
+        work_order: {
+          id: 'wo-1',
+          workflow_id: 'wf-1',
+        },
+        state: 'running' as const,
+        created_by: {
+          email: 'user@example.com',
+        },
+        starting_trigger: null,
+        started_at: '2025-01-16T10:00:00Z',
+        finished_at: null,
+        inserted_at: '2025-01-16T10:00:00Z',
+        steps: [
+          {
+            id: 'step-1',
+            job_id: 'job-1',
+            exit_reason: null,
+            error_type: null,
+            started_at: '2025-01-16T10:00:01Z',
+            finished_at: null,
+            input_dataclip_id: 'dc-1',
+            output_dataclip_id: null,
+          },
+          {
+            id: 'step-2',
+            job_id: 'job-2',
+            exit_reason: null,
+            error_type: null,
+            started_at: null,
+            finished_at: null,
+            input_dataclip_id: null,
+            output_dataclip_id: null,
+          },
+        ],
+      };
+
+      store._setActiveRunForTesting(mockActiveRun as any);
+
+      // Set activeRunId manually
+      store._setActiveRunIdForTesting('run-race-1');
+
+      // Verify cache is empty
+      expect(store.getSnapshot().runStepsCache['run-race-1']).toBeUndefined();
+
+      // Trigger: step:completed event arrives before requestRunSteps completes
+      store._triggerStepUpdateForTesting({
+        id: 'step-1',
+        job_id: 'job-1',
+        exit_reason: 'success',
+        error_type: null,
+        started_at: '2025-01-16T10:00:01Z',
+        finished_at: '2025-01-16T10:00:05Z',
+        input_dataclip_id: 'dc-1',
+        output_dataclip_id: 'dc-out-1',
+      });
+
+      // Assert: cache initialized with all steps from activeRun
+      const state = store.getSnapshot();
+      expect(state.runStepsCache['run-race-1']).toBeDefined();
+      expect(state.runStepsCache['run-race-1'].run_id).toBe('run-race-1');
+      expect(state.runStepsCache['run-race-1'].steps).toHaveLength(2);
+
+      // Verify metadata is populated
+      const metadata = state.runStepsCache['run-race-1'].metadata;
+      expect(metadata.starting_job_id).toBe('job-1');
+      expect(metadata.starting_trigger_id).toBeNull();
+      expect(metadata.inserted_at).toBe('2025-01-16T10:00:00Z');
+      expect(metadata.created_by_id).toBeNull();
+      expect(metadata.created_by_email).toBe('user@example.com');
+
+      // Verify step-1 was updated by the step event (has output_dataclip_id)
+      // and step-2 kept its original value from activeRun
+      expect(state.runStepsCache['run-race-1'].steps[0].id).toBe('step-1');
+      expect(
+        state.runStepsCache['run-race-1'].steps[0].output_dataclip_id
+      ).toBe('dc-out-1');
+      expect(state.runStepsCache['run-race-1'].steps[1].id).toBe('step-2');
+      expect(
+        state.runStepsCache['run-race-1'].steps[1].output_dataclip_id
+      ).toBe(null);
+    });
+
+    test('step event adds new step to existing cache and sorts by started_at', () => {
+      const mockRunSteps: RunStepsData = {
+        run_id: 'run-race-2',
+        steps: [
+          {
+            id: 'step-1',
+            job_id: 'job-1',
+            exit_reason: 'success',
+            error_type: null,
+            started_at: '2025-01-16T10:00:00Z',
+            finished_at: '2025-01-16T10:00:02Z',
+            input_dataclip_id: 'dc-1',
+            output_dataclip_id: 'dc-out-1',
+          },
+          {
+            id: 'step-2',
+            job_id: 'job-2',
+            exit_reason: 'success',
+            error_type: null,
+            started_at: '2025-01-16T10:00:03Z',
+            finished_at: '2025-01-16T10:00:05Z',
+            input_dataclip_id: 'dc-2',
+            output_dataclip_id: 'dc-out-2',
+          },
+        ],
+        metadata: {
+          starting_job_id: 'job-1',
+          starting_trigger_id: null,
+          inserted_at: '2025-01-16T10:00:00Z',
+          created_by_id: 'user-1',
+          created_by_email: 'user@example.com',
+        },
+      };
+
+      // Pre-populate cache
+      store._populateCacheForTesting('run-race-2', mockRunSteps);
+      store._setActiveRunIdForTesting('run-race-2');
+
+      // Verify initial cache state
+      expect(
+        store.getSnapshot().runStepsCache['run-race-2'].steps
+      ).toHaveLength(2);
+
+      // Trigger: step:completed event for NEW step-3
+      store._triggerStepUpdateForTesting({
+        id: 'step-3',
+        job_id: 'job-3',
+        exit_reason: 'success',
+        error_type: null,
+        started_at: '2025-01-16T10:00:06Z',
+        finished_at: '2025-01-16T10:00:08Z',
+        input_dataclip_id: 'dc-3',
+        output_dataclip_id: 'dc-out-3',
+      });
+
+      // Assert: new step added to cache
+      const state = store.getSnapshot();
+      expect(state.runStepsCache['run-race-2'].steps).toHaveLength(3);
+
+      // Verify steps are sorted by started_at
+      const steps = state.runStepsCache['run-race-2'].steps;
+      expect(steps[0].id).toBe('step-1');
+      expect(steps[1].id).toBe('step-2');
+      expect(steps[2].id).toBe('step-3');
+
+      // Verify new step has correct data
+      expect(steps[2].job_id).toBe('job-3');
+      expect(steps[2].output_dataclip_id).toBe('dc-out-3');
+    });
+
+    test('step event with null started_at is sorted to end', () => {
+      const mockRunSteps: RunStepsData = {
+        run_id: 'run-race-3',
+        steps: [
+          {
+            id: 'step-1',
+            job_id: 'job-1',
+            exit_reason: 'success',
+            error_type: null,
+            started_at: '2025-01-16T10:00:00Z',
+            finished_at: '2025-01-16T10:00:02Z',
+            input_dataclip_id: 'dc-1',
+            output_dataclip_id: 'dc-out-1',
+          },
+        ],
+        metadata: {
+          starting_job_id: 'job-1',
+          starting_trigger_id: null,
+          inserted_at: '2025-01-16T10:00:00Z',
+          created_by_id: 'user-1',
+          created_by_email: 'user@example.com',
+        },
+      };
+
+      store._populateCacheForTesting('run-race-3', mockRunSteps);
+      store._setActiveRunIdForTesting('run-race-3');
+
+      // Trigger: step event with null started_at (not yet started)
+      store._triggerStepUpdateForTesting({
+        id: 'step-pending',
+        job_id: 'job-pending',
+        exit_reason: null,
+        error_type: null,
+        started_at: null,
+        finished_at: null,
+        input_dataclip_id: null,
+        output_dataclip_id: null,
+      });
+
+      // Assert: step with null started_at is at the end
+      const state = store.getSnapshot();
+      const steps = state.runStepsCache['run-race-3'].steps;
+      expect(steps).toHaveLength(2);
+      expect(steps[0].id).toBe('step-1');
+      expect(steps[1].id).toBe('step-pending');
+    });
+
+    test('step event updates existing step in cache', () => {
+      const mockRunSteps: RunStepsData = {
+        run_id: 'run-race-4',
+        steps: [
+          {
+            id: 'step-in-progress',
+            job_id: 'job-1',
+            exit_reason: null,
+            error_type: null,
+            started_at: '2025-01-16T10:00:00Z',
+            finished_at: null,
+            input_dataclip_id: 'dc-1',
+            output_dataclip_id: null,
+          },
+        ],
+        metadata: {
+          starting_job_id: 'job-1',
+          starting_trigger_id: null,
+          inserted_at: '2025-01-16T10:00:00Z',
+          created_by_id: 'user-1',
+          created_by_email: 'user@example.com',
+        },
+      };
+
+      store._populateCacheForTesting('run-race-4', mockRunSteps);
+      store._setActiveRunIdForTesting('run-race-4');
+
+      // Trigger: step:completed event for existing step
+      store._triggerStepUpdateForTesting({
+        id: 'step-in-progress',
+        job_id: 'job-1',
+        exit_reason: 'success',
+        error_type: null,
+        started_at: '2025-01-16T10:00:00Z',
+        finished_at: '2025-01-16T10:00:05Z',
+        input_dataclip_id: 'dc-1',
+        output_dataclip_id: 'dc-out-1',
+      });
+
+      // Assert: existing step updated (not duplicated)
+      const state = store.getSnapshot();
+      const steps = state.runStepsCache['run-race-4'].steps;
+      expect(steps).toHaveLength(1);
+      expect(steps[0].exit_reason).toBe('success');
+      expect(steps[0].finished_at).toBe('2025-01-16T10:00:05Z');
+      expect(steps[0].output_dataclip_id).toBe('dc-out-1');
+    });
+
+    test('requestRunSteps overwrites cache initialized from activeRun', async () => {
+      store._connectChannel(mockChannelProvider as any);
+
+      // Setup: activeRun with incomplete data
+      const mockActiveRun = {
+        id: 'run-race-5',
+        work_order_id: 'wo-1',
+        work_order: {
+          id: 'wo-1',
+          workflow_id: 'wf-1',
+        },
+        state: 'running' as const,
+        created_by: {
+          email: 'user@example.com',
+        },
+        starting_trigger: null,
+        started_at: '2025-01-16T10:00:00Z',
+        finished_at: null,
+        inserted_at: '2025-01-16T10:00:00Z',
+        steps: [
+          {
+            id: 'step-1',
+            job_id: 'job-1',
+            exit_reason: null,
+            error_type: null,
+            started_at: '2025-01-16T10:00:01Z',
+            finished_at: null,
+            input_dataclip_id: 'dc-1',
+            output_dataclip_id: null,
+          },
+        ],
+      };
+
+      store._setActiveRunForTesting(mockActiveRun as any);
+      store._setActiveRunIdForTesting('run-race-5');
+
+      // Trigger: step event initializes cache from activeRun
+      store._triggerStepUpdateForTesting({
+        id: 'step-1',
+        job_id: 'job-1',
+        exit_reason: 'success',
+        error_type: null,
+        started_at: '2025-01-16T10:00:01Z',
+        finished_at: '2025-01-16T10:00:05Z',
+        input_dataclip_id: 'dc-1',
+        output_dataclip_id: 'dc-out-1',
+      });
+
+      // Verify cache initialized
+      let state = store.getSnapshot();
+      expect(state.runStepsCache['run-race-5']).toBeDefined();
+      expect(
+        state.runStepsCache['run-race-5'].metadata.created_by_id
+      ).toBeNull();
+
+      // Mock authoritative response from requestRunSteps
+      const authoritativeRunSteps: RunStepsData = {
+        run_id: 'run-race-5',
+        steps: [
+          {
+            id: 'step-1',
+            job_id: 'job-1',
+            exit_reason: 'success',
+            error_type: null,
+            started_at: '2025-01-16T10:00:01Z',
+            finished_at: '2025-01-16T10:00:05Z',
+            input_dataclip_id: 'dc-1',
+            output_dataclip_id: 'dc-out-1',
+          },
+        ],
+        metadata: {
+          starting_job_id: 'job-1',
+          starting_trigger_id: null,
+          inserted_at: '2025-01-16T10:00:00Z',
+          created_by_id: 'user-123', // Authoritative data has this
+          created_by_email: 'user@example.com',
+        },
+      };
+
+      mockChannel.push = () =>
+        ({
+          receive: (status: string, callback: (response?: unknown) => void) => {
+            if (status === 'ok') {
+              setTimeout(() => callback(authoritativeRunSteps), 0);
+            }
+            return { receive: () => ({ receive: () => ({}) }) };
+          },
+        }) as any;
+
+      // Trigger: requestRunSteps completes
+      await store.requestRunSteps('run-race-5');
+      await waitForCondition(() => !store.getSnapshot().isLoading);
+
+      // Assert: cache overwritten with authoritative data
+      state = store.getSnapshot();
+      expect(state.runStepsCache['run-race-5'].metadata.created_by_id).toBe(
+        'user-123'
+      );
+    });
+
+    test('step event does not initialize cache when activeRun does not match', () => {
+      // Setup: activeRun for different run
+      const mockActiveRun = {
+        id: 'run-different',
+        work_order_id: 'wo-1',
+        work_order: {
+          id: 'wo-1',
+          workflow_id: 'wf-1',
+        },
+        state: 'running' as const,
+        created_by: null,
+        starting_trigger: null,
+        started_at: '2025-01-16T10:00:00Z',
+        finished_at: null,
+        inserted_at: '2025-01-16T10:00:00Z',
+        steps: [],
+      };
+
+      store._setActiveRunForTesting(mockActiveRun as any);
+      store._setActiveRunIdForTesting('run-target'); // Different from activeRun.id
+
+      // Trigger: step event for run-target
+      store._triggerStepUpdateForTesting({
+        id: 'step-1',
+        job_id: 'job-1',
+        exit_reason: 'success',
+        error_type: null,
+        started_at: '2025-01-16T10:00:01Z',
+        finished_at: '2025-01-16T10:00:05Z',
+        input_dataclip_id: 'dc-1',
+        output_dataclip_id: 'dc-out-1',
+      });
+
+      // Assert: cache not initialized (mismatch between activeRunId and activeRun.id)
+      const state = store.getSnapshot();
+      expect(state.runStepsCache['run-target']).toBeUndefined();
+    });
+  });
 });
