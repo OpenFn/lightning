@@ -313,6 +313,7 @@ describe('useUnsavedChanges - Edge Cases', () => {
                     triggers: [],
                     edges: [],
                     positions: {},
+                    enable_job_logs: false,
                   },
                 })
               );
