@@ -226,6 +226,43 @@ vi.mock('../../../js/collaborative-editor/hooks/useSessionContext', () => ({
     workflow_activation: { allowed: true, message: null },
     github_sync: { allowed: true, message: null },
   }),
+  useSessionContext: () => ({
+    workflow: {
+      jobs: [
+        {
+          id: '5887a56d-19b0-452f-8891-9c7a72116325',
+          body: '// Validate and transform the data you\'ve received...\nfn(state => {\n  console.log("Do some data transformation here");\n  return state;\n})\n',
+          name: 'Transform data',
+          adaptor: '@openfn/language-common@3.2.1',
+        },
+      ],
+      triggers: [
+        {
+          id: '000311a3-f84c-4990-8a74-824ccf0e0561',
+          comment: null,
+          custom_path: null,
+          cron_expression: null,
+          type: 'webhook',
+          enabled: true,
+          webhook_reply: 'before_start',
+        },
+      ],
+      edges: [
+        {
+          id: '772ef8d2-f5e9-4437-81e8-ca0c68c8315b',
+          condition_type: 'always',
+          condition_expression: null,
+          condition_label: null,
+          enabled: true,
+          source_job_id: null,
+          source_trigger_id: '000311a3-f84c-4990-8a74-824ccf0e0561',
+          target_job_id: '5887a56d-19b0-452f-8891-9c7a72116325',
+        },
+      ],
+      name: 'simple-worfklow',
+      positions: {},
+    },
+  }),
 }));
 
 // Mock workflow hooks with controllable node selection

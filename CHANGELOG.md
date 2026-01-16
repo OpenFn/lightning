@@ -17,6 +17,9 @@ and this project adheres to
 
 ### Added
 
+- Add Unsaved Changes Indicator
+  [#3682](https://github.com/OpenFn/lightning/issues/3682)
+
 ### Changed
 
 ### Fixed
