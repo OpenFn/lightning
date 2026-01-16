@@ -103,7 +103,7 @@ export const SessionContextResponseSchema = z.object({
   workflow_template: WorkflowTemplateSchema.nullable(),
   has_read_ai_disclaimer: z.boolean(),
   limits: LimitsSchema.optional(),
-  workflow: BaseWorkflowSchema,
+  workflow: BaseWorkflowSchema.optional(),
 });
 
 export type UserContext = z.infer<typeof UserContextSchema>;
