@@ -390,13 +390,13 @@ defmodule LightningWeb.WorkflowLive.Helpers do
       ...>   "s" => "job-abc",
       ...>   "m" => "expand"
       ...> }, :edit)
-      "/projects/proj-1/w/wf-1/legacy?job=job-abc&panel=editor"
+      "/projects/proj-1/w/wf-1?job=job-abc&panel=editor"
 
       # New workflow
       iex> collaborative_editor_url(%{
       ...>   "project_id" => "proj-1"
       ...> }, :new)
-      "/projects/proj-1/w/new/legacy?method=template"
+      "/projects/proj-1/w/new?method=template"
 
       # With multiple query params
       iex> collaborative_editor_url(%{
@@ -406,7 +406,7 @@ defmodule LightningWeb.WorkflowLive.Helpers do
       ...>   "v" => "42",
       ...>   "custom" => "value"
       ...> }, :edit)
-      "/projects/proj-1/w/wf-1/legacy?custom=value&job=job-123&v=42"
+      "/projects/proj-1/w/wf-1?custom=value&job=job-123&v=42"
 
   """
   def collaborative_editor_url(params, live_action) do

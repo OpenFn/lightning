@@ -731,7 +731,7 @@ defmodule LightningWeb.WorkflowLive.CollaborateTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}/"
+          ~p"/projects/#{project.id}/w/#{workflow.id}"
         )
 
       # First open the modal
