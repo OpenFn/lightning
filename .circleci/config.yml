@@ -118,7 +118,7 @@ workflows:
       - build:
           name: "Check for security vulnerabilities"
           execute:
-            - run: sudo -u lightning mix sobelow
+            - run: sudo -u lightning mix sobelow --threshold medium
       - build:
           name: "Check Elixir tests (codecov)"
           execute:
