@@ -92,6 +92,8 @@ async function createTestSetup(options: WrapperOptions = {}) {
       triggers: [],
       edges: [],
       positions: {},
+      concurrency: workflowLockVersion !== null ? null : undefined,
+      enable_job_logs: workflowLockVersion !== null ? false : undefined,
     },
   };
 
