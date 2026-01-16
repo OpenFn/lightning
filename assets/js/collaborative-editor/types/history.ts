@@ -157,7 +157,8 @@ export interface Step {
   error_type: string | null;
   started_at: string | null;
   finished_at: string | null;
-  input_dataclip_id: string;
+  input_dataclip_id: string | null;
+  output_dataclip_id: string | null;
 }
 
 /**

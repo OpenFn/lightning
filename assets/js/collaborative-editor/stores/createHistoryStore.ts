@@ -425,20 +425,65 @@ export const createHistoryStore = (
 
       // 2. Update cache if this run is cached (cache coordination)
       const runId = draft.activeRunId;
-      if (runId && draft.runStepsCache[runId]) {
-        const cachedSteps = draft.runStepsCache[runId].steps;
-        const cacheIndex = cachedSteps.findIndex(s => s.id === step.id);
-        if (cacheIndex !== -1 && cachedSteps[cacheIndex]) {
-          // Update shared fields (StepDetail and cached Step have
-          // significant overlap)
-          const cachedStep = cachedSteps[cacheIndex];
-          cachedStep.started_at = step.started_at;
-          cachedStep.finished_at = step.finished_at;
-          cachedStep.exit_reason = step.exit_reason;
-          cachedStep.error_type = step.error_type;
-          // Only update input_dataclip_id if it's not null
-          if (step.input_dataclip_id !== null) {
-            cachedStep.input_dataclip_id = step.input_dataclip_id;
+      if (runId) {
+        const cacheEntry = draft.runStepsCache[runId];
+        if (cacheEntry) {
+          const cachedSteps = cacheEntry.steps;
+          const cacheIndex = cachedSteps.findIndex(s => s.id === step.id);
+          if (cacheIndex !== -1 && cachedSteps[cacheIndex]) {
+            // Update shared fields (StepDetail and cached Step have
+            // significant overlap)
+            const cachedStep = cachedSteps[cacheIndex];
+            cachedStep.started_at = step.started_at;
+            cachedStep.finished_at = step.finished_at;
+            cachedStep.exit_reason = step.exit_reason;
+            cachedStep.error_type = step.error_type;
+            // Only update input_dataclip_id if it's not null
+            if (step.input_dataclip_id !== null) {
+              cachedStep.input_dataclip_id = step.input_dataclip_id;
+            }
+          } else {
+            // Step not found in cache - add it (new step created during run)
+            // This is the key fix: when step events arrive for newly created steps,
+            // we add them to the cache so the canvas can display them in real-time
+            cachedSteps.push({
+              id: step.id,
+              job_id: step.job_id,
+              started_at: step.started_at,
+              finished_at: step.finished_at,
+              exit_reason: step.exit_reason,
+              error_type: step.error_type,
+              input_dataclip_id: step.input_dataclip_id,
+              output_dataclip_id: step.output_dataclip_id,
+            });
+            // Sort by started_at to maintain order
+            cachedSteps.sort((a, b) => {
+              if (!a.started_at) return 1;
+              if (!b.started_at) return -1;
+              return (
+                new Date(a.started_at).getTime() -
+                new Date(b.started_at).getTime()
+              );
+            });
+          }
+        } else {
+          // Cache doesn't exist yet - create it from activeRun data
+          // This handles the race condition where step events arrive before
+          // requestRunSteps completes
+          if (draft.activeRun && draft.activeRun.id === runId) {
+            draft.runStepsCache[runId] = {
+              run_id: draft.activeRun.id,
+              steps: draft.activeRun.steps.map(s => ({
+                id: s.id,
+                job_id: s.job_id,
+                started_at: s.started_at,
+                finished_at: s.finished_at,
+                exit_reason: s.exit_reason,
+                error_type: s.error_type,
+                input_dataclip_id: s.input_dataclip_id,
+                output_dataclip_id: step.output_dataclip_id,
+              })),
+            };
           }
         }
       }
