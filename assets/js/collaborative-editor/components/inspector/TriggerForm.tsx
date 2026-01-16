@@ -399,6 +399,7 @@ export function TriggerForm({ trigger }: TriggerFormProps) {
                             </div>
                             <select
                               id={field.name}
+                              aria-describedby={`${field.name}-description`}
                               value={field.state.value || 'before_start'}
                               onChange={e =>
                                 field.handleChange(
@@ -426,7 +427,10 @@ export function TriggerForm({ trigger }: TriggerFormProps) {
                               </option>
                               <option value="after_completion">Sync</option>
                             </select>
-                            <p className="mt-1 text-xs text-slate-500">
+                            <p
+                              id={`${field.name}-description`}
+                              className="mt-1 text-xs text-slate-500"
+                            >
                               {field.state.value === 'after_completion'
                                 ? 'Responds with the final output state after the run completes. (Note that depending on your queue size and the duration of the workflow itself, this could take a long time.)'
                                 : 'Responds immediately with the enqueued work order ID.'}
