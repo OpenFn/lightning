@@ -40,7 +40,7 @@ defmodule LightningWeb.Components.Modal do
     >
       <div
         id={"#{@id}-bg"}
-        class="hidden fixed inset-0 bg-black/60 transition-opacity"
+        class="hidden modal-backdrop"
         aria-hidden="true"
         phx-click={
           @close_on_click_away &&

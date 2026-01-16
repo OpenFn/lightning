@@ -88,12 +88,25 @@ function BreadcrumbContent({
 
   const handleVersionSelect = useVersionSelect();
 
+  const handleProjectPickerClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    // Trigger the global project picker modal (rendered in the layout)
+    const trigger = document.getElementById(
+      'breadcrumb-project-picker-trigger'
+    ) as HTMLButtonElement;
+    if (trigger) {
+      trigger.click();
+    }
+  };
+
   const breadcrumbElements = useMemo(() => {
     return [
+      // Link to projects list
       <BreadcrumbLink href="/projects" key="projects">
         Projects
       </BreadcrumbLink>,
-      <BreadcrumbLink href={`/projects/${projectId}/w`} key="project">
+      // Project name as picker trigger
+      <BreadcrumbLink key="project-picker" onClick={handleProjectPickerClick}>
         {projectName}
       </BreadcrumbLink>,
       <BreadcrumbLink href={`/projects/${projectId}/w`} key="workflows">

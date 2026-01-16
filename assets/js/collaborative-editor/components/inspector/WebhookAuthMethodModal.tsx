@@ -73,8 +73,7 @@ export function WebhookAuthMethodModal({
     <Dialog open={true} onClose={onClose} className="relative z-50">
       <DialogBackdrop
         transition
-        className="fixed inset-0 bg-gray-500/75 transition-opacity
-          data-closed:opacity-0 data-enter:duration-300
+        className="modal-backdrop data-closed:opacity-0 data-enter:duration-300
           data-enter:ease-out data-leave:duration-200 data-leave:ease-in"
       />
 
