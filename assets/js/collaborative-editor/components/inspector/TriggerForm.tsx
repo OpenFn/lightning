@@ -379,30 +379,22 @@ export function TriggerForm({ trigger }: TriggerFormProps) {
                     </div>
 
                     {/* Response Mode Section */}
-                    <div
-                      className="space-y-2 pt-4 border-t
-                      border-slate-200"
-                    >
+                    <div className="space-y-2 pt-4 border-t border-slate-200">
                       <form.Field name="webhook_reply">
                         {field => (
                           <div>
                             <div className="flex items-center gap-1 mb-1">
                               <label
                                 htmlFor={field.name}
-                                className="block text-sm font-medium
-                                  text-slate-800"
+                                className="block text-sm font-medium text-slate-800"
                               >
                                 Response Mode
                               </label>
                               <Tooltip
-                                content="Control when the webhook trigger
-                                responds to a request to execute this workflow."
+                                content="Control when the webhook trigger responds to a request to execute this workflow."
                                 side="right"
                               >
-                                <span
-                                  className="hero-information-circle h-4 w-4
-                                    text-gray-400 cursor-help"
-                                />
+                                <span className="hero-information-circle h-4 w-4 text-gray-400 cursor-help" />
                               </Tooltip>
                             </div>
                             <select
@@ -417,19 +409,17 @@ export function TriggerForm({ trigger }: TriggerFormProps) {
                               }
                               onBlur={field.handleBlur}
                               disabled={isReadOnly}
-                              className={`
-                                block w-full px-3 py-2 border rounded-md text-sm
-                                ${
-                                  field.state.meta.errors.length > 0
-                                    ? 'border-red-300 text-red-900 ' +
+                              className={cn(
+                                'block w-full px-3 py-2 border rounded-md text-sm',
+                                field.state.meta.errors.length > 0
+                                  ? 'border-red-300 text-red-900 ' +
                                       'focus:border-red-500 focus:ring-red-500'
-                                    : 'border-slate-300 ' +
+                                  : 'border-slate-300 ' +
                                       'focus:border-indigo-500 ' +
-                                      'focus:ring-indigo-500'
-                                }
-                                focus:outline-none focus:ring-1
-                                disabled:opacity-50 disabled:cursor-not-allowed
-                              `}
+                                      'focus:ring-indigo-500',
+                                'focus:outline-none focus:ring-1',
+                                'disabled:opacity-50 disabled:cursor-not-allowed'
+                              )}
                             >
                               <option value="before_start">
                                 Async (default)
