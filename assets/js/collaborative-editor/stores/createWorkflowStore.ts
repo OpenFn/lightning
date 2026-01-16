@@ -337,13 +337,15 @@ export const createWorkflowStore = () => {
   const withSelector = createWithSelector(getSnapshot);
 
   /**
-   * Helper to check if errors actually changed (shallow comparison)
+   * Helper to check if errors actually changed (deep comparison)
    * This prevents unnecessary object updates in Immer when errors haven't
    * changed, maintaining referential stability for React memoization.
+   *
+   * Handles both flat error structures and nested ones (e.g. kafka_configuration)
    */
   function areErrorsEqual(
-    a: Record<string, string[]>,
-    b: Record<string, string[]>
+    a: Record<string, unknown>,
+    b: Record<string, unknown>
   ): boolean {
     const keysA = Object.keys(a);
     const keysB = Object.keys(b);
@@ -353,9 +355,30 @@ export const createWorkflowStore = () => {
     return keysA.every(key => {
       const valsA = a[key];
       const valsB = b[key];
+
       if (!valsA || !valsB) return false;
-      if (valsA.length !== valsB.length) return false;
-      return valsA.every((val, i) => val === valsB[i]);
+
+      // If both values are arrays (standard error format), compare them
+      if (Array.isArray(valsA) && Array.isArray(valsB)) {
+        if (valsA.length !== valsB.length) return false;
+        return valsA.every((val, i) => val === valsB[i]);
+      }
+
+      // If both values are objects (nested errors like kafka_configuration), recurse
+      if (
+        typeof valsA === 'object' &&
+        typeof valsB === 'object' &&
+        !Array.isArray(valsA) &&
+        !Array.isArray(valsB)
+      ) {
+        return areErrorsEqual(
+          valsA as Record<string, unknown>,
+          valsB as Record<string, unknown>
+        );
+      }
+
+      // Different types or one is null - not equal
+      return false;
     });
   }
 

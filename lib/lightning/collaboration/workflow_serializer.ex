@@ -29,6 +29,7 @@ defmodule Lightning.Collaboration.WorkflowSerializer do
   - Nil values: Coalesced to empty strings or defaults where appropriate
   """
 
+  alias Lightning.Workflows.Triggers.KafkaConfiguration
   alias Lightning.Workflows.Workflow
 
   @doc """
@@ -197,8 +198,30 @@ defmodule Lightning.Collaboration.WorkflowSerializer do
 
   defp initialize_triggers(triggers_array, triggers) do
     Enum.each(triggers || [], fn trigger ->
+      kafka_configuration =
+        trigger.kafka_configuration &&
+          Yex.MapPrelim.from(%{
+            "connect_timeout" => trigger.kafka_configuration.connect_timeout,
+            "group_id" => trigger.kafka_configuration.group_id,
+            "hosts_string" =>
+              KafkaConfiguration.generate_hosts_string(
+                trigger.kafka_configuration.hosts
+              ),
+            "initial_offset_reset_policy" =>
+              trigger.kafka_configuration.initial_offset_reset_policy,
+            "password" => trigger.kafka_configuration.password,
+            "sasl" => to_string(trigger.kafka_configuration.sasl),
+            "ssl" => trigger.kafka_configuration.ssl,
+            "topics_string" =>
+              KafkaConfiguration.generate_topics_string(
+                trigger.kafka_configuration.topics
+              ),
+            "username" => trigger.kafka_configuration.username
+          })
+
       trigger_map =
         Yex.MapPrelim.from(%{
+          "kafka_configuration" => kafka_configuration,
           "cron_expression" => trigger.cron_expression,
           "enabled" => trigger.enabled,
           "id" => trigger.id,
@@ -246,12 +269,30 @@ defmodule Lightning.Collaboration.WorkflowSerializer do
     triggers_array
     |> Yex.Array.to_json()
     |> Enum.map(fn trigger ->
-      Map.take(
-        trigger,
-        ~w(id type enabled cron_expression)
-      )
+      trigger
+      |> Map.take(~w(id type enabled cron_expression kafka_configuration))
+      |> normalize_kafka_configuration()
     end)
   end
+
+  # Y.Doc serializes numbers as floats, but connect_timeout must be an integer
+  defp normalize_kafka_configuration(
+         %{"kafka_configuration" => %{} = kafka_config} = trigger
+       ) do
+    connect_timeout =
+      case Map.fetch(kafka_config, "connect_timeout") do
+        {:ok, value} when is_float(value) -> trunc(value)
+        {:ok, nil} -> nil
+        :error -> :not_found
+      end
+
+    normalized_config =
+      maybe_put_field(kafka_config, "connect_timeout", connect_timeout)
+
+    Map.put(trigger, "kafka_configuration", normalized_config)
+  end
+
+  defp normalize_kafka_configuration(trigger), do: trigger
 
   defp extract_positions(positions_map) do
     Yex.Map.to_json(positions_map)

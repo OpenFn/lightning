@@ -29,6 +29,7 @@ export const ProjectRepoConnectionSchema = z.object({
 
 export const AppConfigSchema = z.object({
   require_email_verification: z.boolean(),
+  kafka_triggers_enabled: z.boolean(),
 });
 
 export const PermissionsSchema = z.object({

@@ -860,7 +860,8 @@ defmodule LightningWeb.WorkflowChannel do
   defp render_config_context do
     %{
       require_email_verification:
-        Lightning.Config.check_flag?(:require_email_verification)
+        Lightning.Config.check_flag?(:require_email_verification),
+      kafka_triggers_enabled: Lightning.Config.kafka_triggers_enabled?()
     }
   end
 

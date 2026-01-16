@@ -21,6 +21,8 @@ and this project adheres to
 
 ### Fixed
 
+- Fix unable to save a workflow with a Kafka trigger in the collab editor
+  [#4295](https://github.com/OpenFn/lightning/issues/4295)
 - Credentials Scrubber uses too much memory. Introduce a limit on the number of
   sensitive values in a credential body via `MAX_CREDENTIAL_SENSITIVE_VALUES`
   [#4307](https://github.com/OpenFn/lightning/issues/4307)
