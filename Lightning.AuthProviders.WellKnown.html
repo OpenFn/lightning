@@ -4,17 +4,17 @@
     <meta charset="utf-8">
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="generator" content="ExDoc v0.38.4">
+    <meta name="generator" content="ExDoc v0.39.3">
     <meta name="project" content="Lightning v2.15.11">
 
 
     <title>Lightning.AuthProviders.WellKnown — Lightning v2.15.11</title>
 
-    <link rel="stylesheet" href="dist/html-elixir-RLZO5U2C.css" />
+    <link rel="stylesheet" href="dist/html-elixir-VYWJUHZE.css" />
 
-    <script defer src="dist/sidebar_items-C7898E3C.js"></script>
+    <script defer src="dist/sidebar_items-144AA46B.js"></script>
     <script defer src="docs_config.js"></script>
-    <script defer src="dist/html-Y223O6DN.js"></script>
+    <script defer src="dist/html-XBCM4BHM.js"></script>
 
   </head>
   <body>
@@ -58,16 +58,34 @@ Lightning
         <form class="search-bar" action="search.html">
           <label class="search-label">
             <span class="sr-only">Search documentation of Lightning</span>
-            <input name="q" type="text" class="search-input" placeholder="Press / to search" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
+            <div class="search-input-wrapper">
+              <input name="q" type="text" class="search-input" placeholder="Press / to search" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
+              <button type="button" tabindex="-1" class="search-close-button" aria-hidden="true">
+                <i class="ri-close-line ri-lg" title="Cancel search"></i>
+              </button>
+            </div>
           </label>
-          <button type="submit" class="search-button" aria-label="Submit Search" tabindex="-1">
-            <i class="ri-search-2-line ri-lg" aria-hidden="true"></i>
-          </button>
-          <button type="button" tabindex="-1" class="search-close-button" aria-hidden="true">
-            <i class="ri-close-line ri-lg" title="Cancel search"></i>
-          </button>
         </form>
         <div class="autocomplete">
+        </div>
+        <div class="engine-selector" data-multiple="false">
+          <button type="button" class="engine-button" aria-label="Select search engine" aria-haspopup="true" aria-expanded="false">
+            <i class="ri-search-2-line" aria-hidden="true"></i>
+            <span class="engine-name">Default</span>
+            <i class="ri-arrow-down-s-line" aria-hidden="true"></i>
+          </button>
+          <div class="engine-dropdown" hidden role="menu">
+
+              <button type="button"
+                      class="engine-option"
+                      data-engine-url="search.html?q="
+                      role="menuitemradio"
+                      aria-checked="true">
+                <span class="name">Default</span>
+                <span class="help">In-browser search</span>
+              </button>
+
+          </div>
         </div>
         <button class="icon-settings display-settings">
           <i class="ri-settings-3-line"></i>
@@ -338,7 +356,7 @@ failure.</p></div>
 
       </div>
 
-        <div class="summary-synopsis"><p>Callback implementation for <a><code class="inline">HTTPoison.Base.process_headers/1</code></a>.</p></div>
+        <div class="summary-synopsis"><p>Callback implementation for <a href="https://hexdocs.pm/httpoison/2.2.3/HTTPoison.Base.html#c:process_headers/1"><code class="inline">HTTPoison.Base.process_headers/1</code></a>.</p></div>
 
     </div>
 
@@ -348,7 +366,7 @@ failure.</p></div>
 
       </div>
 
-        <div class="summary-synopsis"><p>Callback implementation for <a><code class="inline">HTTPoison.Base.process_request_body/1</code></a>.</p></div>
+        <div class="summary-synopsis"><p>Callback implementation for <a href="https://hexdocs.pm/httpoison/2.2.3/HTTPoison.Base.html#c:process_request_body/1"><code class="inline">HTTPoison.Base.process_request_body/1</code></a>.</p></div>
 
     </div>
 
@@ -358,7 +376,7 @@ failure.</p></div>
 
       </div>
 
-        <div class="summary-synopsis"><p>Callback implementation for <a><code class="inline">HTTPoison.Base.process_request_headers/1</code></a>.</p></div>
+        <div class="summary-synopsis"><p>Callback implementation for <a href="https://hexdocs.pm/httpoison/2.2.3/HTTPoison.Base.html#c:process_request_headers/1"><code class="inline">HTTPoison.Base.process_request_headers/1</code></a>.</p></div>
 
     </div>
 
@@ -368,7 +386,7 @@ failure.</p></div>
 
       </div>
 
-        <div class="summary-synopsis"><p>Callback implementation for <a><code class="inline">HTTPoison.Base.process_request_options/1</code></a>.</p></div>
+        <div class="summary-synopsis"><p>Callback implementation for <a href="https://hexdocs.pm/httpoison/2.2.3/HTTPoison.Base.html#c:process_request_options/1"><code class="inline">HTTPoison.Base.process_request_options/1</code></a>.</p></div>
 
     </div>
 
@@ -378,7 +396,7 @@ failure.</p></div>
 
       </div>
 
-        <div class="summary-synopsis"><p>Callback implementation for <a><code class="inline">HTTPoison.Base.process_request_params/1</code></a>.</p></div>
+        <div class="summary-synopsis"><p>Callback implementation for <a href="https://hexdocs.pm/httpoison/2.2.3/HTTPoison.Base.html#c:process_request_params/1"><code class="inline">HTTPoison.Base.process_request_params/1</code></a>.</p></div>
 
     </div>
 
@@ -388,7 +406,7 @@ failure.</p></div>
 
       </div>
 
-        <div class="summary-synopsis"><p>Callback implementation for <a><code class="inline">HTTPoison.Base.process_request_url/1</code></a>.</p></div>
+        <div class="summary-synopsis"><p>Callback implementation for <a href="https://hexdocs.pm/httpoison/2.2.3/HTTPoison.Base.html#c:process_request_url/1"><code class="inline">HTTPoison.Base.process_request_url/1</code></a>.</p></div>
 
     </div>
 
@@ -398,7 +416,7 @@ failure.</p></div>
 
       </div>
 
-        <div class="summary-synopsis"><p>Callback implementation for <a><code class="inline">HTTPoison.Base.process_response/1</code></a>.</p></div>
+        <div class="summary-synopsis"><p>Callback implementation for <a href="https://hexdocs.pm/httpoison/2.2.3/HTTPoison.Base.html#c:process_response/1"><code class="inline">HTTPoison.Base.process_response/1</code></a>.</p></div>
 
     </div>
 
@@ -408,7 +426,7 @@ failure.</p></div>
 
       </div>
 
-        <div class="summary-synopsis"><p>Callback implementation for <a><code class="inline">HTTPoison.Base.process_response_body/1</code></a>.</p></div>
+        <div class="summary-synopsis"><p>Callback implementation for <a href="https://hexdocs.pm/httpoison/2.2.3/HTTPoison.Base.html#c:process_response_body/1"><code class="inline">HTTPoison.Base.process_response_body/1</code></a>.</p></div>
 
     </div>
 
@@ -418,7 +436,7 @@ failure.</p></div>
 
       </div>
 
-        <div class="summary-synopsis"><p>Callback implementation for <a><code class="inline">HTTPoison.Base.process_response_chunk/1</code></a>.</p></div>
+        <div class="summary-synopsis"><p>Callback implementation for <a href="https://hexdocs.pm/httpoison/2.2.3/HTTPoison.Base.html#c:process_response_chunk/1"><code class="inline">HTTPoison.Base.process_response_chunk/1</code></a>.</p></div>
 
     </div>
 
@@ -428,7 +446,7 @@ failure.</p></div>
 
       </div>
 
-        <div class="summary-synopsis"><p>Callback implementation for <a><code class="inline">HTTPoison.Base.process_response_headers/1</code></a>.</p></div>
+        <div class="summary-synopsis"><p>Callback implementation for <a href="https://hexdocs.pm/httpoison/2.2.3/HTTPoison.Base.html#c:process_response_headers/1"><code class="inline">HTTPoison.Base.process_response_headers/1</code></a>.</p></div>
 
     </div>
 
@@ -438,7 +456,7 @@ failure.</p></div>
 
       </div>
 
-        <div class="summary-synopsis"><p>Callback implementation for <a><code class="inline">HTTPoison.Base.process_response_status_code/1</code></a>.</p></div>
+        <div class="summary-synopsis"><p>Callback implementation for <a href="https://hexdocs.pm/httpoison/2.2.3/HTTPoison.Base.html#c:process_response_status_code/1"><code class="inline">HTTPoison.Base.process_response_status_code/1</code></a>.</p></div>
 
     </div>
 
@@ -450,7 +468,7 @@ failure.</p></div>
 
       </div>
 
-        <div class="summary-synopsis"><p>Callback implementation for <a><code class="inline">HTTPoison.Base.process_status_code/1</code></a>.</p></div>
+        <div class="summary-synopsis"><p>Callback implementation for <a href="https://hexdocs.pm/httpoison/2.2.3/HTTPoison.Base.html#c:process_status_code/1"><code class="inline">HTTPoison.Base.process_status_code/1</code></a>.</p></div>
 
     </div>
 
@@ -462,7 +480,7 @@ failure.</p></div>
 
       </div>
 
-        <div class="summary-synopsis"><p>Callback implementation for <a><code class="inline">HTTPoison.Base.process_url/1</code></a>.</p></div>
+        <div class="summary-synopsis"><p>Callback implementation for <a href="https://hexdocs.pm/httpoison/2.2.3/HTTPoison.Base.html#c:process_url/1"><code class="inline">HTTPoison.Base.process_url/1</code></a>.</p></div>
 
     </div>
 
@@ -493,7 +511,7 @@ failure.</p></div>
 
       </div>
 
-        <div class="summary-synopsis"><p>Issues an HTTP request using an <a><code class="inline">HTTPoison.Request</code></a> struct.</p></div>
+        <div class="summary-synopsis"><p>Issues an HTTP request using an <a href="https://hexdocs.pm/httpoison/2.2.3/HTTPoison.Request.html"><code class="inline">HTTPoison.Request</code></a> struct.</p></div>
 
     </div>
 
@@ -513,7 +531,7 @@ failure.</p></div>
 
       </div>
 
-        <div class="summary-synopsis"><p>Issues an HTTP request an <a><code class="inline">HTTPoison.Request</code></a> struct.
+        <div class="summary-synopsis"><p>Issues an HTTP request an <a href="https://hexdocs.pm/httpoison/2.2.3/HTTPoison.Request.html"><code class="inline">HTTPoison.Request</code></a> struct.
 exception in case of failure.</p></div>
 
     </div>
@@ -545,7 +563,7 @@ exception in case of failure.</p></div>
 
       </div>
 
-        <div class="summary-synopsis"><p>Requests the next message to be streamed for a given <a><code class="inline">HTTPoison.AsyncResponse</code></a>.</p></div>
+        <div class="summary-synopsis"><p>Requests the next message to be streamed for a given <a href="https://hexdocs.pm/httpoison/2.2.3/HTTPoison.AsyncResponse.html"><code class="inline">HTTPoison.AsyncResponse</code></a>.</p></div>
 
     </div>
 
@@ -1813,14 +1831,14 @@ the method is set to <code class="inline">:get</code> or <code class="inline">:h
 <code class="inline">307</code>.</p><p>If the method is set to <code class="inline">:post</code>, then the only <code class="inline">status_code</code> that get's automatically
 followed is <code class="inline">303</code>.</p><p>If any other method or <code class="inline">status_code</code> is returned, then this function returns a
 returns a <code class="inline">{:ok, %HTTPoison.MaybeRedirect{}}</code> containing the <code class="inline">redirect_url</code> for you to
-re-request with the method set to <code class="inline">:get</code>.</p><h2 id="request/1-examples" class="section-heading"><a href="#request/1-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="n">request</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p" data-group-id="5271130224-1">%</span><span class="nc" data-group-id="5271130224-1">HTTPoison.Request</span><span class="p" data-group-id="5271130224-1">{</span><span class="w">
+re-request with the method set to <code class="inline">:get</code>.</p><h2 id="request/1-examples" class="section-heading"><a href="#request/1-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="n">request</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p" data-group-id="3728481591-1">%</span><span class="nc" data-group-id="3728481591-1">HTTPoison.Request</span><span class="p" data-group-id="3728481591-1">{</span><span class="w">
   </span><span class="ss">method</span><span class="p">:</span><span class="w"> </span><span class="ss">:post</span><span class="p">,</span><span class="w">
   </span><span class="ss">url</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;https://my.website.com&quot;</span><span class="p">,</span><span class="w">
   </span><span class="ss">body</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;{</span><span class="se">\&quot;</span><span class="s">foo</span><span class="se">\&quot;</span><span class="s">: 3}&quot;</span><span class="p">,</span><span class="w">
-  </span><span class="ss">headers</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="5271130224-2">[</span><span class="p" data-group-id="5271130224-3">{</span><span class="s">&quot;Accept&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;application/json&quot;</span><span class="p" data-group-id="5271130224-3">}</span><span class="p" data-group-id="5271130224-2">]</span><span class="w">
-</span><span class="p" data-group-id="5271130224-1">}</span><span class="w">
+  </span><span class="ss">headers</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="3728481591-2">[</span><span class="p" data-group-id="3728481591-3">{</span><span class="s">&quot;Accept&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;application/json&quot;</span><span class="p" data-group-id="3728481591-3">}</span><span class="p" data-group-id="3728481591-2">]</span><span class="w">
+</span><span class="p" data-group-id="3728481591-1">}</span><span class="w">
 
-</span><span class="n">request</span><span class="p" data-group-id="5271130224-4">(</span><span class="n">request</span><span class="p" data-group-id="5271130224-4">)</span></code></pre>
+</span><span class="n">request</span><span class="p" data-group-id="3728481591-4">(</span><span class="n">request</span><span class="p" data-group-id="3728481591-4">)</span></code></pre>
   </section>
 </section>
 <section class="detail" id="request/5">
@@ -1866,7 +1884,7 @@ the method is set to <code class="inline">:get</code> or <code class="inline">:h
 <code class="inline">307</code>.</p><p>If the method is set to <code class="inline">:post</code>, then the only <code class="inline">status_code</code> that get's automatically
 followed is <code class="inline">303</code>.</p><p>If any other method or <code class="inline">status_code</code> is returned, then this function returns a
 returns a <code class="inline">{:ok, %HTTPoison.MaybeRedirect{}}</code> containing the <code class="inline">redirect_url</code> for you to
-re-request with the method set to <code class="inline">:get</code>.</p><h2 id="request/5-examples" class="section-heading"><a href="#request/5-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="n">request</span><span class="p" data-group-id="3450681384-1">(</span><span class="ss">:post</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;https://my.website.com&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;{</span><span class="se">\&quot;</span><span class="s">foo</span><span class="se">\&quot;</span><span class="s">: 3}&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="3450681384-2">[</span><span class="p" data-group-id="3450681384-3">{</span><span class="s">&quot;Accept&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;application/json&quot;</span><span class="p" data-group-id="3450681384-3">}</span><span class="p" data-group-id="3450681384-2">]</span><span class="p" data-group-id="3450681384-1">)</span></code></pre>
+re-request with the method set to <code class="inline">:get</code>.</p><h2 id="request/5-examples" class="section-heading"><a href="#request/5-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="n">request</span><span class="p" data-group-id="4225550743-1">(</span><span class="ss">:post</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;https://my.website.com&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;{</span><span class="se">\&quot;</span><span class="s">foo</span><span class="se">\&quot;</span><span class="s">: 3}&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="4225550743-2">[</span><span class="p" data-group-id="4225550743-3">{</span><span class="s">&quot;Accept&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;application/json&quot;</span><span class="p" data-group-id="4225550743-3">}</span><span class="p" data-group-id="4225550743-2">]</span><span class="p" data-group-id="4225550743-1">)</span></code></pre>
   </section>
 </section>
 <section class="detail" id="request!/1">
@@ -1999,27 +2017,29 @@ request fails.</p>
   </section>
 
     <footer class="footer">
-      <p>
 
-        <span class="line">
-          <button class="a-main footer-button display-quick-switch" title="Search HexDocs packages">
-            Search HexDocs
-          </button>
+        <p>
 
-            <a href="Lightning.epub" title="ePub version">
-              Download ePub version
-            </a>
+          <span class="line">
+            <button class="a-main footer-button display-quick-switch" title="Go to package docs">
+              Go to package docs
+            </button>
 
-        </span>
-      </p>
+              <a href="Lightning.epub" title="ePub version">
+                Download ePub version
+              </a>
 
-      <p class="built-using">
-        Built using
-        <a href="https://github.com/elixir-lang/ex_doc" title="ExDoc" target="_blank" rel="help noopener" translate="no">ExDoc</a> (v0.38.4) for the
+          </span>
+        </p>
 
-          <a href="https://elixir-lang.org" title="Elixir" target="_blank" translate="no">Elixir programming language</a>
+        <p class="built-using">
+          Built using
+          <a href="https://github.com/elixir-lang/ex_doc" title="ExDoc" target="_blank" rel="help noopener" translate="no">ExDoc</a> (v0.39.3) for the
 
-      </p>
+            <a href="https://elixir-lang.org" title="Elixir" target="_blank" translate="no">Elixir programming language</a>
+
+        </p>
+
 
     </footer>
   </div>

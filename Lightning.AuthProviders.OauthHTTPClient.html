@@ -4,17 +4,17 @@
     <meta charset="utf-8">
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="generator" content="ExDoc v0.38.4">
+    <meta name="generator" content="ExDoc v0.39.3">
     <meta name="project" content="Lightning v2.15.11">
 
 
     <title>Lightning.AuthProviders.OauthHTTPClient — Lightning v2.15.11</title>
 
-    <link rel="stylesheet" href="dist/html-elixir-RLZO5U2C.css" />
+    <link rel="stylesheet" href="dist/html-elixir-VYWJUHZE.css" />
 
-    <script defer src="dist/sidebar_items-C7898E3C.js"></script>
+    <script defer src="dist/sidebar_items-144AA46B.js"></script>
     <script defer src="docs_config.js"></script>
-    <script defer src="dist/html-Y223O6DN.js"></script>
+    <script defer src="dist/html-XBCM4BHM.js"></script>
 
   </head>
   <body>
@@ -58,16 +58,34 @@ Lightning
         <form class="search-bar" action="search.html">
           <label class="search-label">
             <span class="sr-only">Search documentation of Lightning</span>
-            <input name="q" type="text" class="search-input" placeholder="Press / to search" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
+            <div class="search-input-wrapper">
+              <input name="q" type="text" class="search-input" placeholder="Press / to search" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
+              <button type="button" tabindex="-1" class="search-close-button" aria-hidden="true">
+                <i class="ri-close-line ri-lg" title="Cancel search"></i>
+              </button>
+            </div>
           </label>
-          <button type="submit" class="search-button" aria-label="Submit Search" tabindex="-1">
-            <i class="ri-search-2-line ri-lg" aria-hidden="true"></i>
-          </button>
-          <button type="button" tabindex="-1" class="search-close-button" aria-hidden="true">
-            <i class="ri-close-line ri-lg" title="Cancel search"></i>
-          </button>
         </form>
         <div class="autocomplete">
+        </div>
+        <div class="engine-selector" data-multiple="false">
+          <button type="button" class="engine-button" aria-label="Select search engine" aria-haspopup="true" aria-expanded="false">
+            <i class="ri-search-2-line" aria-hidden="true"></i>
+            <span class="engine-name">Default</span>
+            <i class="ri-arrow-down-s-line" aria-hidden="true"></i>
+          </button>
+          <div class="engine-dropdown" hidden role="menu">
+
+              <button type="button"
+                      class="engine-option"
+                      data-engine-url="search.html?q="
+                      role="menuitemradio"
+                      aria-checked="true">
+                <span class="name">Default</span>
+                <span class="help">In-browser search</span>
+              </button>
+
+          </div>
         </div>
         <button class="icon-settings display-settings">
           <i class="ri-settings-3-line"></i>
@@ -107,46 +125,10 @@ requests configured with middleware appropriate for OAuth specific tasks.</p><p>
       </a>
       <span class="text">Summary</span>
     </h1>
-<div class="summary-types summary">
-  <h2>
-    <a href="#types">Types</a>
-  </h2>
-
-    <div class="summary-row">
-      <div class="summary-signature">
-        <a href="#t:option/0" data-no-tooltip="" translate="no">option()</a>
-
-      </div>
-
-        <div class="summary-synopsis"><p>Options that may be passed to a request function. See <a><code class="inline">request/2</code></a> for detailed descriptions.</p></div>
-
-    </div>
-
-</div>
 <div class="summary-functions summary">
   <h2>
     <a href="#functions">Functions</a>
   </h2>
-
-    <div class="summary-row">
-      <div class="summary-signature">
-        <a href="#delete/3" data-no-tooltip="" translate="no">delete(client, url, opts)</a>
-
-      </div>
-
-        <div class="summary-synopsis"><p>Perform a DELETE request.</p></div>
-
-    </div>
-
-    <div class="summary-row">
-      <div class="summary-signature">
-        <a href="#delete!/3" data-no-tooltip="" translate="no">delete!(client, url, opts)</a>
-
-      </div>
-
-        <div class="summary-synopsis"><p>Perform a DELETE request.</p></div>
-
-    </div>
 
     <div class="summary-row">
       <div class="summary-signature">
@@ -180,151 +162,11 @@ requests configured with middleware appropriate for OAuth specific tasks.</p><p>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#get/3" data-no-tooltip="" translate="no">get(client, url, opts)</a>
-
-      </div>
-
-        <div class="summary-synopsis"><p>Perform a GET request.</p></div>
-
-    </div>
-
-    <div class="summary-row">
-      <div class="summary-signature">
-        <a href="#get!/3" data-no-tooltip="" translate="no">get!(client, url, opts)</a>
-
-      </div>
-
-        <div class="summary-synopsis"><p>Perform a GET request.</p></div>
-
-    </div>
-
-    <div class="summary-row">
-      <div class="summary-signature">
-        <a href="#head/3" data-no-tooltip="" translate="no">head(client, url, opts)</a>
-
-      </div>
-
-        <div class="summary-synopsis"><p>Perform a HEAD request.</p></div>
-
-    </div>
-
-    <div class="summary-row">
-      <div class="summary-signature">
-        <a href="#head!/3" data-no-tooltip="" translate="no">head!(client, url, opts)</a>
-
-      </div>
-
-        <div class="summary-synopsis"><p>Perform a HEAD request.</p></div>
-
-    </div>
-
-    <div class="summary-row">
-      <div class="summary-signature">
-        <a href="#options/3" data-no-tooltip="" translate="no">options(client, url, opts)</a>
-
-      </div>
-
-        <div class="summary-synopsis"><p>Perform a OPTIONS request.</p></div>
-
-    </div>
-
-    <div class="summary-row">
-      <div class="summary-signature">
-        <a href="#options!/3" data-no-tooltip="" translate="no">options!(client, url, opts)</a>
-
-      </div>
-
-        <div class="summary-synopsis"><p>Perform a OPTIONS request.</p></div>
-
-    </div>
-
-    <div class="summary-row">
-      <div class="summary-signature">
-        <a href="#patch/4" data-no-tooltip="" translate="no">patch(client, url, body, opts)</a>
-
-      </div>
-
-        <div class="summary-synopsis"><p>Perform a PATCH request.</p></div>
-
-    </div>
-
-    <div class="summary-row">
-      <div class="summary-signature">
-        <a href="#patch!/4" data-no-tooltip="" translate="no">patch!(client, url, body, opts)</a>
-
-      </div>
-
-        <div class="summary-synopsis"><p>Perform a PATCH request.</p></div>
-
-    </div>
-
-    <div class="summary-row">
-      <div class="summary-signature">
-        <a href="#post/4" data-no-tooltip="" translate="no">post(client, url, body, opts)</a>
-
-      </div>
-
-        <div class="summary-synopsis"><p>Perform a POST request.</p></div>
-
-    </div>
-
-    <div class="summary-row">
-      <div class="summary-signature">
-        <a href="#post!/4" data-no-tooltip="" translate="no">post!(client, url, body, opts)</a>
-
-      </div>
-
-        <div class="summary-synopsis"><p>Perform a POST request.</p></div>
-
-    </div>
-
-    <div class="summary-row">
-      <div class="summary-signature">
-        <a href="#put/4" data-no-tooltip="" translate="no">put(client, url, body, opts)</a>
-
-      </div>
-
-        <div class="summary-synopsis"><p>Perform a PUT request.</p></div>
-
-    </div>
-
-    <div class="summary-row">
-      <div class="summary-signature">
-        <a href="#put!/4" data-no-tooltip="" translate="no">put!(client, url, body, opts)</a>
-
-      </div>
-
-        <div class="summary-synopsis"><p>Perform a PUT request.</p></div>
-
-    </div>
-
-    <div class="summary-row">
-      <div class="summary-signature">
         <a href="#refresh_token/2" data-no-tooltip="" translate="no">refresh_token(client, token)</a>
 
       </div>
 
         <div class="summary-synopsis"><p>Refreshes an existing token using the refresh token.</p></div>
-
-    </div>
-
-    <div class="summary-row">
-      <div class="summary-signature">
-        <a href="#request/2" data-no-tooltip="" translate="no">request(client \\ %Tesla.Client{}, options)</a>
-
-      </div>
-
-        <div class="summary-synopsis"><p>Perform a request.</p></div>
-
-    </div>
-
-    <div class="summary-row">
-      <div class="summary-signature">
-        <a href="#request!/2" data-no-tooltip="" translate="no">request!(client \\ %Tesla.Client{}, options)</a>
-
-      </div>
-
-        <div class="summary-synopsis"><p>Perform request and raise in case of error.</p></div>
 
     </div>
 
@@ -338,77 +180,10 @@ requests configured with middleware appropriate for OAuth specific tasks.</p><p>
 
     </div>
 
-    <div class="summary-row">
-      <div class="summary-signature">
-        <a href="#trace/3" data-no-tooltip="" translate="no">trace(client, url, opts)</a>
-
-      </div>
-
-        <div class="summary-synopsis"><p>Perform a TRACE request.</p></div>
-
-    </div>
-
-    <div class="summary-row">
-      <div class="summary-signature">
-        <a href="#trace!/3" data-no-tooltip="" translate="no">trace!(client, url, opts)</a>
-
-      </div>
-
-        <div class="summary-synopsis"><p>Perform a TRACE request.</p></div>
-
-    </div>
-
 </div>
 
   </section>
 
-
-  <section id="types" class="details-list">
-    <h1 class="section-heading">
-      <a class="hover-link" href="#types">
-        <i class="ri-link-m" aria-hidden="true"></i>
-      </a>
-      <span class="text">Types</span>
-    </h1>
-
-    <div class="types-list">
-<section class="detail" id="t:option/0">
-
-  <div class="detail-header">
-    <a href="#t:option/0" class="detail-link" data-no-tooltip="" aria-label="Link to this type">
-      <i class="ri-link-m" aria-hidden="true"></i>
-    </a>
-    <div class="heading-with-actions">
-      <h1 class="signature" translate="no">option()</h1>
-
-
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auth_providers/oauth_http_client.ex#L9" class="icon-action" rel="help" aria-label="View Source">
-          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-        </a>
-
-    </div>
-  </div>
-
-  <section class="docstring">
-
-      <div class="specs">
-
-          <pre translate="no"><span class="attribute">@type</span> option() ::
-  {:method, <a href="https://hexdocs.pm/tesla/1.13.2/Tesla.Env.html#t:method/0">Tesla.Env.method</a>()}
-  | {:url, <a href="https://hexdocs.pm/tesla/1.13.2/Tesla.Env.html#t:url/0">Tesla.Env.url</a>()}
-  | {:query, <a href="https://hexdocs.pm/tesla/1.13.2/Tesla.Env.html#t:query/0">Tesla.Env.query</a>()}
-  | {:headers, <a href="https://hexdocs.pm/tesla/1.13.2/Tesla.Env.html#t:headers/0">Tesla.Env.headers</a>()}
-  | {:body, <a href="https://hexdocs.pm/tesla/1.13.2/Tesla.Env.html#t:body/0">Tesla.Env.body</a>()}
-  | {:opts, <a href="https://hexdocs.pm/tesla/1.13.2/Tesla.Env.html#t:opts/0">Tesla.Env.opts</a>()}</pre>
-
-      </div>
-
-<p>Options that may be passed to a request function. See <a href="#request/2"><code class="inline">request/2</code></a> for detailed descriptions.</p>
-  </section>
-</section>
-
-    </div>
-  </section>
 
   <section id="functions" class="details-list">
     <h1 class="section-heading">
@@ -419,71 +194,6 @@ requests configured with middleware appropriate for OAuth specific tasks.</p><p>
     </h1>
 
     <div class="functions-list">
-<section class="detail" id="delete/3">
-
-  <div class="detail-header">
-    <a href="#delete/3" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
-      <i class="ri-link-m" aria-hidden="true"></i>
-    </a>
-    <div class="heading-with-actions">
-      <h1 class="signature" translate="no">delete(client, url, opts)</h1>
-
-
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auth_providers/oauth_http_client.ex#L9" class="icon-action" rel="help" aria-label="View Source">
-          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-        </a>
-
-    </div>
-  </div>
-
-  <section class="docstring">
-
-      <div class="specs">
-
-          <pre translate="no"><span class="attribute">@spec</span> delete(<a href="https://hexdocs.pm/tesla/1.13.2/Tesla.Env.html#t:client/0">Tesla.Env.client</a>(), <a href="https://hexdocs.pm/tesla/1.13.2/Tesla.Env.html#t:url/0">Tesla.Env.url</a>(), [<a href="#t:option/0">option</a>()]) :: <a href="https://hexdocs.pm/tesla/1.13.2/Tesla.Env.html#t:result/0">Tesla.Env.result</a>()</pre>
-
-      </div>
-
-<p>Perform a DELETE request.</p><p>See <a href="#request/1"><code class="inline">request/1</code></a> or <a href="#request/2"><code class="inline">request/2</code></a> for options definition.</p><pre><code class="makeup elixir" translate="no"><span class="n">delete</span><span class="p" data-group-id="9174218968-1">(</span><span class="s">&quot;/users&quot;</span><span class="p" data-group-id="9174218968-1">)</span><span class="w">
-</span><span class="n">delete</span><span class="p" data-group-id="9174218968-2">(</span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">query</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="9174218968-3">[</span><span class="ss">scope</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;admin&quot;</span><span class="p" data-group-id="9174218968-3">]</span><span class="p" data-group-id="9174218968-2">)</span><span class="w">
-</span><span class="n">delete</span><span class="p" data-group-id="9174218968-4">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p" data-group-id="9174218968-4">)</span><span class="w">
-</span><span class="n">delete</span><span class="p" data-group-id="9174218968-5">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">query</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="9174218968-6">[</span><span class="ss">scope</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;admin&quot;</span><span class="p" data-group-id="9174218968-6">]</span><span class="p" data-group-id="9174218968-5">)</span><span class="w">
-</span><span class="n">delete</span><span class="p" data-group-id="9174218968-7">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">body</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="9174218968-8">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Jon&quot;</span><span class="p" data-group-id="9174218968-8">}</span><span class="p" data-group-id="9174218968-7">)</span></code></pre>
-  </section>
-</section>
-<section class="detail" id="delete!/3">
-
-  <div class="detail-header">
-    <a href="#delete!/3" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
-      <i class="ri-link-m" aria-hidden="true"></i>
-    </a>
-    <div class="heading-with-actions">
-      <h1 class="signature" translate="no">delete!(client, url, opts)</h1>
-
-
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auth_providers/oauth_http_client.ex#L9" class="icon-action" rel="help" aria-label="View Source">
-          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-        </a>
-
-    </div>
-  </div>
-
-  <section class="docstring">
-
-      <div class="specs">
-
-          <pre translate="no"><span class="attribute">@spec</span> delete!(<a href="https://hexdocs.pm/tesla/1.13.2/Tesla.Env.html#t:client/0">Tesla.Env.client</a>(), <a href="https://hexdocs.pm/tesla/1.13.2/Tesla.Env.html#t:url/0">Tesla.Env.url</a>(), [<a href="#t:option/0">option</a>()]) ::
-  <a href="https://hexdocs.pm/tesla/1.13.2/Tesla.Env.html#t:t/0">Tesla.Env.t</a>() | <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">no_return</a>()</pre>
-
-      </div>
-
-<p>Perform a DELETE request.</p><p>See <a href="#request!/1"><code class="inline">request!/1</code></a> or <a href="#request!/2"><code class="inline">request!/2</code></a> for options definition.</p><pre><code class="makeup elixir" translate="no"><span class="n">delete!</span><span class="p" data-group-id="1763671189-1">(</span><span class="s">&quot;/users&quot;</span><span class="p" data-group-id="1763671189-1">)</span><span class="w">
-</span><span class="n">delete!</span><span class="p" data-group-id="1763671189-2">(</span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">query</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="1763671189-3">[</span><span class="ss">scope</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;admin&quot;</span><span class="p" data-group-id="1763671189-3">]</span><span class="p" data-group-id="1763671189-2">)</span><span class="w">
-</span><span class="n">delete!</span><span class="p" data-group-id="1763671189-4">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p" data-group-id="1763671189-4">)</span><span class="w">
-</span><span class="n">delete!</span><span class="p" data-group-id="1763671189-5">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">query</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="1763671189-6">[</span><span class="ss">scope</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;admin&quot;</span><span class="p" data-group-id="1763671189-6">]</span><span class="p" data-group-id="1763671189-5">)</span><span class="w">
-</span><span class="n">delete!</span><span class="p" data-group-id="1763671189-7">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">body</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="1763671189-8">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Jon&quot;</span><span class="p" data-group-id="1763671189-8">}</span><span class="p" data-group-id="1763671189-7">)</span></code></pre>
-  </section>
-</section>
 <section class="detail" id="fetch_token/2">
 
   <div class="detail-header">
@@ -494,7 +204,7 @@ requests configured with middleware appropriate for OAuth specific tasks.</p><p>
       <h1 class="signature" translate="no">fetch_token(client, code)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auth_providers/oauth_http_client.ex#L71" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auth_providers/oauth_http_client.ex#L73" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -516,7 +226,7 @@ requests configured with middleware appropriate for OAuth specific tasks.</p><p>
       <h1 class="signature" translate="no">fetch_userinfo(client, token)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auth_providers/oauth_http_client.ex#L145" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auth_providers/oauth_http_client.ex#L153" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -538,7 +248,7 @@ requests configured with middleware appropriate for OAuth specific tasks.</p><p>
       <h1 class="signature" translate="no">generate_authorize_url(client, params)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auth_providers/oauth_http_client.ex#L173" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auth_providers/oauth_http_client.ex#L182" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -548,393 +258,6 @@ requests configured with middleware appropriate for OAuth specific tasks.</p><p>
   <section class="docstring">
 
 <p>Generates an authorization URL with specified parameters.</p><h2 id="generate_authorize_url/2-parameters" class="section-heading"><a href="#generate_authorize_url/2-parameters" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Parameters</span></h2><ul><li><code class="inline">client</code>: The client configuration containing client_id, and authorization_endpoint.</li><li><code class="inline">params</code>: Additional parameters to include in the authorization URL.</li></ul><h2 id="generate_authorize_url/2-returns" class="section-heading"><a href="#generate_authorize_url/2-returns" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Returns</span></h2><ul><li>The fully formed authorization URL as a string.</li></ul>
-  </section>
-</section>
-<section class="detail" id="get/3">
-
-  <div class="detail-header">
-    <a href="#get/3" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
-      <i class="ri-link-m" aria-hidden="true"></i>
-    </a>
-    <div class="heading-with-actions">
-      <h1 class="signature" translate="no">get(client, url, opts)</h1>
-
-
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auth_providers/oauth_http_client.ex#L9" class="icon-action" rel="help" aria-label="View Source">
-          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-        </a>
-
-    </div>
-  </div>
-
-  <section class="docstring">
-
-      <div class="specs">
-
-          <pre translate="no"><span class="attribute">@spec</span> get(<a href="https://hexdocs.pm/tesla/1.13.2/Tesla.Env.html#t:client/0">Tesla.Env.client</a>(), <a href="https://hexdocs.pm/tesla/1.13.2/Tesla.Env.html#t:url/0">Tesla.Env.url</a>(), [<a href="#t:option/0">option</a>()]) :: <a href="https://hexdocs.pm/tesla/1.13.2/Tesla.Env.html#t:result/0">Tesla.Env.result</a>()</pre>
-
-      </div>
-
-<p>Perform a GET request.</p><p>See <a href="#request/1"><code class="inline">request/1</code></a> or <a href="#request/2"><code class="inline">request/2</code></a> for options definition.</p><pre><code class="makeup elixir" translate="no"><span class="n">get</span><span class="p" data-group-id="7027136762-1">(</span><span class="s">&quot;/users&quot;</span><span class="p" data-group-id="7027136762-1">)</span><span class="w">
-</span><span class="n">get</span><span class="p" data-group-id="7027136762-2">(</span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">query</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="7027136762-3">[</span><span class="ss">scope</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;admin&quot;</span><span class="p" data-group-id="7027136762-3">]</span><span class="p" data-group-id="7027136762-2">)</span><span class="w">
-</span><span class="n">get</span><span class="p" data-group-id="7027136762-4">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p" data-group-id="7027136762-4">)</span><span class="w">
-</span><span class="n">get</span><span class="p" data-group-id="7027136762-5">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">query</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="7027136762-6">[</span><span class="ss">scope</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;admin&quot;</span><span class="p" data-group-id="7027136762-6">]</span><span class="p" data-group-id="7027136762-5">)</span><span class="w">
-</span><span class="n">get</span><span class="p" data-group-id="7027136762-7">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">body</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="7027136762-8">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Jon&quot;</span><span class="p" data-group-id="7027136762-8">}</span><span class="p" data-group-id="7027136762-7">)</span></code></pre>
-  </section>
-</section>
-<section class="detail" id="get!/3">
-
-  <div class="detail-header">
-    <a href="#get!/3" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
-      <i class="ri-link-m" aria-hidden="true"></i>
-    </a>
-    <div class="heading-with-actions">
-      <h1 class="signature" translate="no">get!(client, url, opts)</h1>
-
-
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auth_providers/oauth_http_client.ex#L9" class="icon-action" rel="help" aria-label="View Source">
-          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-        </a>
-
-    </div>
-  </div>
-
-  <section class="docstring">
-
-      <div class="specs">
-
-          <pre translate="no"><span class="attribute">@spec</span> get!(<a href="https://hexdocs.pm/tesla/1.13.2/Tesla.Env.html#t:client/0">Tesla.Env.client</a>(), <a href="https://hexdocs.pm/tesla/1.13.2/Tesla.Env.html#t:url/0">Tesla.Env.url</a>(), [<a href="#t:option/0">option</a>()]) ::
-  <a href="https://hexdocs.pm/tesla/1.13.2/Tesla.Env.html#t:t/0">Tesla.Env.t</a>() | <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">no_return</a>()</pre>
-
-      </div>
-
-<p>Perform a GET request.</p><p>See <a href="#request!/1"><code class="inline">request!/1</code></a> or <a href="#request!/2"><code class="inline">request!/2</code></a> for options definition.</p><pre><code class="makeup elixir" translate="no"><span class="n">get!</span><span class="p" data-group-id="9075220522-1">(</span><span class="s">&quot;/users&quot;</span><span class="p" data-group-id="9075220522-1">)</span><span class="w">
-</span><span class="n">get!</span><span class="p" data-group-id="9075220522-2">(</span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">query</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="9075220522-3">[</span><span class="ss">scope</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;admin&quot;</span><span class="p" data-group-id="9075220522-3">]</span><span class="p" data-group-id="9075220522-2">)</span><span class="w">
-</span><span class="n">get!</span><span class="p" data-group-id="9075220522-4">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p" data-group-id="9075220522-4">)</span><span class="w">
-</span><span class="n">get!</span><span class="p" data-group-id="9075220522-5">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">query</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="9075220522-6">[</span><span class="ss">scope</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;admin&quot;</span><span class="p" data-group-id="9075220522-6">]</span><span class="p" data-group-id="9075220522-5">)</span><span class="w">
-</span><span class="n">get!</span><span class="p" data-group-id="9075220522-7">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">body</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="9075220522-8">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Jon&quot;</span><span class="p" data-group-id="9075220522-8">}</span><span class="p" data-group-id="9075220522-7">)</span></code></pre>
-  </section>
-</section>
-<section class="detail" id="head/3">
-
-  <div class="detail-header">
-    <a href="#head/3" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
-      <i class="ri-link-m" aria-hidden="true"></i>
-    </a>
-    <div class="heading-with-actions">
-      <h1 class="signature" translate="no">head(client, url, opts)</h1>
-
-
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auth_providers/oauth_http_client.ex#L9" class="icon-action" rel="help" aria-label="View Source">
-          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-        </a>
-
-    </div>
-  </div>
-
-  <section class="docstring">
-
-      <div class="specs">
-
-          <pre translate="no"><span class="attribute">@spec</span> head(<a href="https://hexdocs.pm/tesla/1.13.2/Tesla.Env.html#t:client/0">Tesla.Env.client</a>(), <a href="https://hexdocs.pm/tesla/1.13.2/Tesla.Env.html#t:url/0">Tesla.Env.url</a>(), [<a href="#t:option/0">option</a>()]) :: <a href="https://hexdocs.pm/tesla/1.13.2/Tesla.Env.html#t:result/0">Tesla.Env.result</a>()</pre>
-
-      </div>
-
-<p>Perform a HEAD request.</p><p>See <a href="#request/1"><code class="inline">request/1</code></a> or <a href="#request/2"><code class="inline">request/2</code></a> for options definition.</p><pre><code class="makeup elixir" translate="no"><span class="n">head</span><span class="p" data-group-id="1825127628-1">(</span><span class="s">&quot;/users&quot;</span><span class="p" data-group-id="1825127628-1">)</span><span class="w">
-</span><span class="n">head</span><span class="p" data-group-id="1825127628-2">(</span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">query</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="1825127628-3">[</span><span class="ss">scope</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;admin&quot;</span><span class="p" data-group-id="1825127628-3">]</span><span class="p" data-group-id="1825127628-2">)</span><span class="w">
-</span><span class="n">head</span><span class="p" data-group-id="1825127628-4">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p" data-group-id="1825127628-4">)</span><span class="w">
-</span><span class="n">head</span><span class="p" data-group-id="1825127628-5">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">query</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="1825127628-6">[</span><span class="ss">scope</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;admin&quot;</span><span class="p" data-group-id="1825127628-6">]</span><span class="p" data-group-id="1825127628-5">)</span><span class="w">
-</span><span class="n">head</span><span class="p" data-group-id="1825127628-7">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">body</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="1825127628-8">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Jon&quot;</span><span class="p" data-group-id="1825127628-8">}</span><span class="p" data-group-id="1825127628-7">)</span></code></pre>
-  </section>
-</section>
-<section class="detail" id="head!/3">
-
-  <div class="detail-header">
-    <a href="#head!/3" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
-      <i class="ri-link-m" aria-hidden="true"></i>
-    </a>
-    <div class="heading-with-actions">
-      <h1 class="signature" translate="no">head!(client, url, opts)</h1>
-
-
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auth_providers/oauth_http_client.ex#L9" class="icon-action" rel="help" aria-label="View Source">
-          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-        </a>
-
-    </div>
-  </div>
-
-  <section class="docstring">
-
-      <div class="specs">
-
-          <pre translate="no"><span class="attribute">@spec</span> head!(<a href="https://hexdocs.pm/tesla/1.13.2/Tesla.Env.html#t:client/0">Tesla.Env.client</a>(), <a href="https://hexdocs.pm/tesla/1.13.2/Tesla.Env.html#t:url/0">Tesla.Env.url</a>(), [<a href="#t:option/0">option</a>()]) ::
-  <a href="https://hexdocs.pm/tesla/1.13.2/Tesla.Env.html#t:t/0">Tesla.Env.t</a>() | <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">no_return</a>()</pre>
-
-      </div>
-
-<p>Perform a HEAD request.</p><p>See <a href="#request!/1"><code class="inline">request!/1</code></a> or <a href="#request!/2"><code class="inline">request!/2</code></a> for options definition.</p><pre><code class="makeup elixir" translate="no"><span class="n">head!</span><span class="p" data-group-id="6721301040-1">(</span><span class="s">&quot;/users&quot;</span><span class="p" data-group-id="6721301040-1">)</span><span class="w">
-</span><span class="n">head!</span><span class="p" data-group-id="6721301040-2">(</span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">query</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="6721301040-3">[</span><span class="ss">scope</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;admin&quot;</span><span class="p" data-group-id="6721301040-3">]</span><span class="p" data-group-id="6721301040-2">)</span><span class="w">
-</span><span class="n">head!</span><span class="p" data-group-id="6721301040-4">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p" data-group-id="6721301040-4">)</span><span class="w">
-</span><span class="n">head!</span><span class="p" data-group-id="6721301040-5">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">query</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="6721301040-6">[</span><span class="ss">scope</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;admin&quot;</span><span class="p" data-group-id="6721301040-6">]</span><span class="p" data-group-id="6721301040-5">)</span><span class="w">
-</span><span class="n">head!</span><span class="p" data-group-id="6721301040-7">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">body</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="6721301040-8">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Jon&quot;</span><span class="p" data-group-id="6721301040-8">}</span><span class="p" data-group-id="6721301040-7">)</span></code></pre>
-  </section>
-</section>
-<section class="detail" id="options/3">
-
-  <div class="detail-header">
-    <a href="#options/3" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
-      <i class="ri-link-m" aria-hidden="true"></i>
-    </a>
-    <div class="heading-with-actions">
-      <h1 class="signature" translate="no">options(client, url, opts)</h1>
-
-
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auth_providers/oauth_http_client.ex#L9" class="icon-action" rel="help" aria-label="View Source">
-          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-        </a>
-
-    </div>
-  </div>
-
-  <section class="docstring">
-
-      <div class="specs">
-
-          <pre translate="no"><span class="attribute">@spec</span> options(<a href="https://hexdocs.pm/tesla/1.13.2/Tesla.Env.html#t:client/0">Tesla.Env.client</a>(), <a href="https://hexdocs.pm/tesla/1.13.2/Tesla.Env.html#t:url/0">Tesla.Env.url</a>(), [<a href="#t:option/0">option</a>()]) :: <a href="https://hexdocs.pm/tesla/1.13.2/Tesla.Env.html#t:result/0">Tesla.Env.result</a>()</pre>
-
-      </div>
-
-<p>Perform a OPTIONS request.</p><p>See <a href="#request/1"><code class="inline">request/1</code></a> or <a href="#request/2"><code class="inline">request/2</code></a> for options definition.</p><pre><code class="makeup elixir" translate="no"><span class="n">options</span><span class="p" data-group-id="2768988539-1">(</span><span class="s">&quot;/users&quot;</span><span class="p" data-group-id="2768988539-1">)</span><span class="w">
-</span><span class="n">options</span><span class="p" data-group-id="2768988539-2">(</span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">query</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="2768988539-3">[</span><span class="ss">scope</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;admin&quot;</span><span class="p" data-group-id="2768988539-3">]</span><span class="p" data-group-id="2768988539-2">)</span><span class="w">
-</span><span class="n">options</span><span class="p" data-group-id="2768988539-4">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p" data-group-id="2768988539-4">)</span><span class="w">
-</span><span class="n">options</span><span class="p" data-group-id="2768988539-5">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">query</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="2768988539-6">[</span><span class="ss">scope</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;admin&quot;</span><span class="p" data-group-id="2768988539-6">]</span><span class="p" data-group-id="2768988539-5">)</span><span class="w">
-</span><span class="n">options</span><span class="p" data-group-id="2768988539-7">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">body</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="2768988539-8">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Jon&quot;</span><span class="p" data-group-id="2768988539-8">}</span><span class="p" data-group-id="2768988539-7">)</span></code></pre>
-  </section>
-</section>
-<section class="detail" id="options!/3">
-
-  <div class="detail-header">
-    <a href="#options!/3" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
-      <i class="ri-link-m" aria-hidden="true"></i>
-    </a>
-    <div class="heading-with-actions">
-      <h1 class="signature" translate="no">options!(client, url, opts)</h1>
-
-
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auth_providers/oauth_http_client.ex#L9" class="icon-action" rel="help" aria-label="View Source">
-          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-        </a>
-
-    </div>
-  </div>
-
-  <section class="docstring">
-
-      <div class="specs">
-
-          <pre translate="no"><span class="attribute">@spec</span> options!(<a href="https://hexdocs.pm/tesla/1.13.2/Tesla.Env.html#t:client/0">Tesla.Env.client</a>(), <a href="https://hexdocs.pm/tesla/1.13.2/Tesla.Env.html#t:url/0">Tesla.Env.url</a>(), [<a href="#t:option/0">option</a>()]) ::
-  <a href="https://hexdocs.pm/tesla/1.13.2/Tesla.Env.html#t:t/0">Tesla.Env.t</a>() | <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">no_return</a>()</pre>
-
-      </div>
-
-<p>Perform a OPTIONS request.</p><p>See <a href="#request!/1"><code class="inline">request!/1</code></a> or <a href="#request!/2"><code class="inline">request!/2</code></a> for options definition.</p><pre><code class="makeup elixir" translate="no"><span class="n">options!</span><span class="p" data-group-id="6414851723-1">(</span><span class="s">&quot;/users&quot;</span><span class="p" data-group-id="6414851723-1">)</span><span class="w">
-</span><span class="n">options!</span><span class="p" data-group-id="6414851723-2">(</span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">query</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="6414851723-3">[</span><span class="ss">scope</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;admin&quot;</span><span class="p" data-group-id="6414851723-3">]</span><span class="p" data-group-id="6414851723-2">)</span><span class="w">
-</span><span class="n">options!</span><span class="p" data-group-id="6414851723-4">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p" data-group-id="6414851723-4">)</span><span class="w">
-</span><span class="n">options!</span><span class="p" data-group-id="6414851723-5">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">query</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="6414851723-6">[</span><span class="ss">scope</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;admin&quot;</span><span class="p" data-group-id="6414851723-6">]</span><span class="p" data-group-id="6414851723-5">)</span><span class="w">
-</span><span class="n">options!</span><span class="p" data-group-id="6414851723-7">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">body</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="6414851723-8">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Jon&quot;</span><span class="p" data-group-id="6414851723-8">}</span><span class="p" data-group-id="6414851723-7">)</span></code></pre>
-  </section>
-</section>
-<section class="detail" id="patch/4">
-
-  <div class="detail-header">
-    <a href="#patch/4" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
-      <i class="ri-link-m" aria-hidden="true"></i>
-    </a>
-    <div class="heading-with-actions">
-      <h1 class="signature" translate="no">patch(client, url, body, opts)</h1>
-
-
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auth_providers/oauth_http_client.ex#L9" class="icon-action" rel="help" aria-label="View Source">
-          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-        </a>
-
-    </div>
-  </div>
-
-  <section class="docstring">
-
-      <div class="specs">
-
-          <pre translate="no"><span class="attribute">@spec</span> patch(<a href="https://hexdocs.pm/tesla/1.13.2/Tesla.Env.html#t:client/0">Tesla.Env.client</a>(), <a href="https://hexdocs.pm/tesla/1.13.2/Tesla.Env.html#t:url/0">Tesla.Env.url</a>(), <a href="https://hexdocs.pm/tesla/1.13.2/Tesla.Env.html#t:body/0">Tesla.Env.body</a>(), [<a href="#t:option/0">option</a>()]) ::
-  <a href="https://hexdocs.pm/tesla/1.13.2/Tesla.Env.html#t:result/0">Tesla.Env.result</a>()</pre>
-
-      </div>
-
-<p>Perform a PATCH request.</p><p>See <a href="#request/1"><code class="inline">request/1</code></a> or <a href="#request/2"><code class="inline">request/2</code></a> for options definition.</p><pre><code class="makeup elixir" translate="no"><span class="n">patch</span><span class="p" data-group-id="1605430397-1">(</span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="1605430397-2">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Jon&quot;</span><span class="p" data-group-id="1605430397-2">}</span><span class="p" data-group-id="1605430397-1">)</span><span class="w">
-</span><span class="n">patch</span><span class="p" data-group-id="1605430397-3">(</span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="1605430397-4">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Jon&quot;</span><span class="p" data-group-id="1605430397-4">}</span><span class="p">,</span><span class="w"> </span><span class="ss">query</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="1605430397-5">[</span><span class="ss">scope</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;admin&quot;</span><span class="p" data-group-id="1605430397-5">]</span><span class="p" data-group-id="1605430397-3">)</span><span class="w">
-</span><span class="n">patch</span><span class="p" data-group-id="1605430397-6">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="1605430397-7">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Jon&quot;</span><span class="p" data-group-id="1605430397-7">}</span><span class="p" data-group-id="1605430397-6">)</span><span class="w">
-</span><span class="n">patch</span><span class="p" data-group-id="1605430397-8">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="1605430397-9">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Jon&quot;</span><span class="p" data-group-id="1605430397-9">}</span><span class="p">,</span><span class="w"> </span><span class="ss">query</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="1605430397-10">[</span><span class="ss">scope</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;admin&quot;</span><span class="p" data-group-id="1605430397-10">]</span><span class="p" data-group-id="1605430397-8">)</span></code></pre>
-  </section>
-</section>
-<section class="detail" id="patch!/4">
-
-  <div class="detail-header">
-    <a href="#patch!/4" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
-      <i class="ri-link-m" aria-hidden="true"></i>
-    </a>
-    <div class="heading-with-actions">
-      <h1 class="signature" translate="no">patch!(client, url, body, opts)</h1>
-
-
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auth_providers/oauth_http_client.ex#L9" class="icon-action" rel="help" aria-label="View Source">
-          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-        </a>
-
-    </div>
-  </div>
-
-  <section class="docstring">
-
-      <div class="specs">
-
-          <pre translate="no"><span class="attribute">@spec</span> patch!(<a href="https://hexdocs.pm/tesla/1.13.2/Tesla.Env.html#t:client/0">Tesla.Env.client</a>(), <a href="https://hexdocs.pm/tesla/1.13.2/Tesla.Env.html#t:url/0">Tesla.Env.url</a>(), <a href="https://hexdocs.pm/tesla/1.13.2/Tesla.Env.html#t:body/0">Tesla.Env.body</a>(), [<a href="#t:option/0">option</a>()]) ::
-  <a href="https://hexdocs.pm/tesla/1.13.2/Tesla.Env.html#t:t/0">Tesla.Env.t</a>() | <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">no_return</a>()</pre>
-
-      </div>
-
-<p>Perform a PATCH request.</p><p>See <a href="#request!/1"><code class="inline">request!/1</code></a> or <a href="#request!/2"><code class="inline">request!/2</code></a> for options definition.</p><pre><code class="makeup elixir" translate="no"><span class="n">patch!</span><span class="p" data-group-id="5324956750-1">(</span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="5324956750-2">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Jon&quot;</span><span class="p" data-group-id="5324956750-2">}</span><span class="p" data-group-id="5324956750-1">)</span><span class="w">
-</span><span class="n">patch!</span><span class="p" data-group-id="5324956750-3">(</span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="5324956750-4">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Jon&quot;</span><span class="p" data-group-id="5324956750-4">}</span><span class="p">,</span><span class="w"> </span><span class="ss">query</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="5324956750-5">[</span><span class="ss">scope</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;admin&quot;</span><span class="p" data-group-id="5324956750-5">]</span><span class="p" data-group-id="5324956750-3">)</span><span class="w">
-</span><span class="n">patch!</span><span class="p" data-group-id="5324956750-6">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="5324956750-7">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Jon&quot;</span><span class="p" data-group-id="5324956750-7">}</span><span class="p" data-group-id="5324956750-6">)</span><span class="w">
-</span><span class="n">patch!</span><span class="p" data-group-id="5324956750-8">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="5324956750-9">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Jon&quot;</span><span class="p" data-group-id="5324956750-9">}</span><span class="p">,</span><span class="w"> </span><span class="ss">query</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="5324956750-10">[</span><span class="ss">scope</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;admin&quot;</span><span class="p" data-group-id="5324956750-10">]</span><span class="p" data-group-id="5324956750-8">)</span></code></pre>
-  </section>
-</section>
-<section class="detail" id="post/4">
-
-  <div class="detail-header">
-    <a href="#post/4" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
-      <i class="ri-link-m" aria-hidden="true"></i>
-    </a>
-    <div class="heading-with-actions">
-      <h1 class="signature" translate="no">post(client, url, body, opts)</h1>
-
-
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auth_providers/oauth_http_client.ex#L9" class="icon-action" rel="help" aria-label="View Source">
-          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-        </a>
-
-    </div>
-  </div>
-
-  <section class="docstring">
-
-      <div class="specs">
-
-          <pre translate="no"><span class="attribute">@spec</span> post(<a href="https://hexdocs.pm/tesla/1.13.2/Tesla.Env.html#t:client/0">Tesla.Env.client</a>(), <a href="https://hexdocs.pm/tesla/1.13.2/Tesla.Env.html#t:url/0">Tesla.Env.url</a>(), <a href="https://hexdocs.pm/tesla/1.13.2/Tesla.Env.html#t:body/0">Tesla.Env.body</a>(), [<a href="#t:option/0">option</a>()]) ::
-  <a href="https://hexdocs.pm/tesla/1.13.2/Tesla.Env.html#t:result/0">Tesla.Env.result</a>()</pre>
-
-      </div>
-
-<p>Perform a POST request.</p><p>See <a href="#request/1"><code class="inline">request/1</code></a> or <a href="#request/2"><code class="inline">request/2</code></a> for options definition.</p><pre><code class="makeup elixir" translate="no"><span class="n">post</span><span class="p" data-group-id="9836014734-1">(</span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="9836014734-2">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Jon&quot;</span><span class="p" data-group-id="9836014734-2">}</span><span class="p" data-group-id="9836014734-1">)</span><span class="w">
-</span><span class="n">post</span><span class="p" data-group-id="9836014734-3">(</span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="9836014734-4">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Jon&quot;</span><span class="p" data-group-id="9836014734-4">}</span><span class="p">,</span><span class="w"> </span><span class="ss">query</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="9836014734-5">[</span><span class="ss">scope</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;admin&quot;</span><span class="p" data-group-id="9836014734-5">]</span><span class="p" data-group-id="9836014734-3">)</span><span class="w">
-</span><span class="n">post</span><span class="p" data-group-id="9836014734-6">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="9836014734-7">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Jon&quot;</span><span class="p" data-group-id="9836014734-7">}</span><span class="p" data-group-id="9836014734-6">)</span><span class="w">
-</span><span class="n">post</span><span class="p" data-group-id="9836014734-8">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="9836014734-9">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Jon&quot;</span><span class="p" data-group-id="9836014734-9">}</span><span class="p">,</span><span class="w"> </span><span class="ss">query</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="9836014734-10">[</span><span class="ss">scope</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;admin&quot;</span><span class="p" data-group-id="9836014734-10">]</span><span class="p" data-group-id="9836014734-8">)</span></code></pre>
-  </section>
-</section>
-<section class="detail" id="post!/4">
-
-  <div class="detail-header">
-    <a href="#post!/4" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
-      <i class="ri-link-m" aria-hidden="true"></i>
-    </a>
-    <div class="heading-with-actions">
-      <h1 class="signature" translate="no">post!(client, url, body, opts)</h1>
-
-
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auth_providers/oauth_http_client.ex#L9" class="icon-action" rel="help" aria-label="View Source">
-          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-        </a>
-
-    </div>
-  </div>
-
-  <section class="docstring">
-
-      <div class="specs">
-
-          <pre translate="no"><span class="attribute">@spec</span> post!(<a href="https://hexdocs.pm/tesla/1.13.2/Tesla.Env.html#t:client/0">Tesla.Env.client</a>(), <a href="https://hexdocs.pm/tesla/1.13.2/Tesla.Env.html#t:url/0">Tesla.Env.url</a>(), <a href="https://hexdocs.pm/tesla/1.13.2/Tesla.Env.html#t:body/0">Tesla.Env.body</a>(), [<a href="#t:option/0">option</a>()]) ::
-  <a href="https://hexdocs.pm/tesla/1.13.2/Tesla.Env.html#t:t/0">Tesla.Env.t</a>() | <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">no_return</a>()</pre>
-
-      </div>
-
-<p>Perform a POST request.</p><p>See <a href="#request!/1"><code class="inline">request!/1</code></a> or <a href="#request!/2"><code class="inline">request!/2</code></a> for options definition.</p><pre><code class="makeup elixir" translate="no"><span class="n">post!</span><span class="p" data-group-id="6275764624-1">(</span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="6275764624-2">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Jon&quot;</span><span class="p" data-group-id="6275764624-2">}</span><span class="p" data-group-id="6275764624-1">)</span><span class="w">
-</span><span class="n">post!</span><span class="p" data-group-id="6275764624-3">(</span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="6275764624-4">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Jon&quot;</span><span class="p" data-group-id="6275764624-4">}</span><span class="p">,</span><span class="w"> </span><span class="ss">query</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="6275764624-5">[</span><span class="ss">scope</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;admin&quot;</span><span class="p" data-group-id="6275764624-5">]</span><span class="p" data-group-id="6275764624-3">)</span><span class="w">
-</span><span class="n">post!</span><span class="p" data-group-id="6275764624-6">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="6275764624-7">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Jon&quot;</span><span class="p" data-group-id="6275764624-7">}</span><span class="p" data-group-id="6275764624-6">)</span><span class="w">
-</span><span class="n">post!</span><span class="p" data-group-id="6275764624-8">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="6275764624-9">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Jon&quot;</span><span class="p" data-group-id="6275764624-9">}</span><span class="p">,</span><span class="w"> </span><span class="ss">query</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="6275764624-10">[</span><span class="ss">scope</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;admin&quot;</span><span class="p" data-group-id="6275764624-10">]</span><span class="p" data-group-id="6275764624-8">)</span></code></pre>
-  </section>
-</section>
-<section class="detail" id="put/4">
-
-  <div class="detail-header">
-    <a href="#put/4" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
-      <i class="ri-link-m" aria-hidden="true"></i>
-    </a>
-    <div class="heading-with-actions">
-      <h1 class="signature" translate="no">put(client, url, body, opts)</h1>
-
-
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auth_providers/oauth_http_client.ex#L9" class="icon-action" rel="help" aria-label="View Source">
-          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-        </a>
-
-    </div>
-  </div>
-
-  <section class="docstring">
-
-      <div class="specs">
-
-          <pre translate="no"><span class="attribute">@spec</span> put(<a href="https://hexdocs.pm/tesla/1.13.2/Tesla.Env.html#t:client/0">Tesla.Env.client</a>(), <a href="https://hexdocs.pm/tesla/1.13.2/Tesla.Env.html#t:url/0">Tesla.Env.url</a>(), <a href="https://hexdocs.pm/tesla/1.13.2/Tesla.Env.html#t:body/0">Tesla.Env.body</a>(), [<a href="#t:option/0">option</a>()]) ::
-  <a href="https://hexdocs.pm/tesla/1.13.2/Tesla.Env.html#t:result/0">Tesla.Env.result</a>()</pre>
-
-      </div>
-
-<p>Perform a PUT request.</p><p>See <a href="#request/1"><code class="inline">request/1</code></a> or <a href="#request/2"><code class="inline">request/2</code></a> for options definition.</p><pre><code class="makeup elixir" translate="no"><span class="n">put</span><span class="p" data-group-id="1553960266-1">(</span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="1553960266-2">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Jon&quot;</span><span class="p" data-group-id="1553960266-2">}</span><span class="p" data-group-id="1553960266-1">)</span><span class="w">
-</span><span class="n">put</span><span class="p" data-group-id="1553960266-3">(</span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="1553960266-4">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Jon&quot;</span><span class="p" data-group-id="1553960266-4">}</span><span class="p">,</span><span class="w"> </span><span class="ss">query</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="1553960266-5">[</span><span class="ss">scope</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;admin&quot;</span><span class="p" data-group-id="1553960266-5">]</span><span class="p" data-group-id="1553960266-3">)</span><span class="w">
-</span><span class="n">put</span><span class="p" data-group-id="1553960266-6">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="1553960266-7">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Jon&quot;</span><span class="p" data-group-id="1553960266-7">}</span><span class="p" data-group-id="1553960266-6">)</span><span class="w">
-</span><span class="n">put</span><span class="p" data-group-id="1553960266-8">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="1553960266-9">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Jon&quot;</span><span class="p" data-group-id="1553960266-9">}</span><span class="p">,</span><span class="w"> </span><span class="ss">query</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="1553960266-10">[</span><span class="ss">scope</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;admin&quot;</span><span class="p" data-group-id="1553960266-10">]</span><span class="p" data-group-id="1553960266-8">)</span></code></pre>
-  </section>
-</section>
-<section class="detail" id="put!/4">
-
-  <div class="detail-header">
-    <a href="#put!/4" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
-      <i class="ri-link-m" aria-hidden="true"></i>
-    </a>
-    <div class="heading-with-actions">
-      <h1 class="signature" translate="no">put!(client, url, body, opts)</h1>
-
-
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auth_providers/oauth_http_client.ex#L9" class="icon-action" rel="help" aria-label="View Source">
-          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-        </a>
-
-    </div>
-  </div>
-
-  <section class="docstring">
-
-      <div class="specs">
-
-          <pre translate="no"><span class="attribute">@spec</span> put!(<a href="https://hexdocs.pm/tesla/1.13.2/Tesla.Env.html#t:client/0">Tesla.Env.client</a>(), <a href="https://hexdocs.pm/tesla/1.13.2/Tesla.Env.html#t:url/0">Tesla.Env.url</a>(), <a href="https://hexdocs.pm/tesla/1.13.2/Tesla.Env.html#t:body/0">Tesla.Env.body</a>(), [<a href="#t:option/0">option</a>()]) ::
-  <a href="https://hexdocs.pm/tesla/1.13.2/Tesla.Env.html#t:t/0">Tesla.Env.t</a>() | <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">no_return</a>()</pre>
-
-      </div>
-
-<p>Perform a PUT request.</p><p>See <a href="#request!/1"><code class="inline">request!/1</code></a> or <a href="#request!/2"><code class="inline">request!/2</code></a> for options definition.</p><pre><code class="makeup elixir" translate="no"><span class="n">put!</span><span class="p" data-group-id="5096552714-1">(</span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="5096552714-2">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Jon&quot;</span><span class="p" data-group-id="5096552714-2">}</span><span class="p" data-group-id="5096552714-1">)</span><span class="w">
-</span><span class="n">put!</span><span class="p" data-group-id="5096552714-3">(</span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="5096552714-4">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Jon&quot;</span><span class="p" data-group-id="5096552714-4">}</span><span class="p">,</span><span class="w"> </span><span class="ss">query</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="5096552714-5">[</span><span class="ss">scope</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;admin&quot;</span><span class="p" data-group-id="5096552714-5">]</span><span class="p" data-group-id="5096552714-3">)</span><span class="w">
-</span><span class="n">put!</span><span class="p" data-group-id="5096552714-6">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="5096552714-7">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Jon&quot;</span><span class="p" data-group-id="5096552714-7">}</span><span class="p" data-group-id="5096552714-6">)</span><span class="w">
-</span><span class="n">put!</span><span class="p" data-group-id="5096552714-8">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="5096552714-9">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Jon&quot;</span><span class="p" data-group-id="5096552714-9">}</span><span class="p">,</span><span class="w"> </span><span class="ss">query</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="5096552714-10">[</span><span class="ss">scope</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;admin&quot;</span><span class="p" data-group-id="5096552714-10">]</span><span class="p" data-group-id="5096552714-8">)</span></code></pre>
   </section>
 </section>
 <section class="detail" id="refresh_token/2">
@@ -947,7 +270,7 @@ requests configured with middleware appropriate for OAuth specific tasks.</p><p>
       <h1 class="signature" translate="no">refresh_token(client, token)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auth_providers/oauth_http_client.ex#L99" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auth_providers/oauth_http_client.ex#L104" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -957,70 +280,6 @@ requests configured with middleware appropriate for OAuth specific tasks.</p><p>
   <section class="docstring">
 
 <p>Refreshes an existing token using the refresh token.</p><h2 id="refresh_token/2-parameters" class="section-heading"><a href="#refresh_token/2-parameters" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Parameters</span></h2><ul><li><code class="inline">client</code>: The client configuration containing client_id, client_secret, and token_endpoint.</li><li><code class="inline">token</code>: The token configuration containing refresh_token</li></ul><h2 id="refresh_token/2-returns" class="section-heading"><a href="#refresh_token/2-returns" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Returns</span></h2><ul><li><code class="inline">{:ok, refreshed_token_data}</code> on success with preserved refresh_token</li><li><code class="inline">{:error, %{status: integer(), error: term(), details: map()}}</code> on failure</li></ul>
-  </section>
-</section>
-<section class="detail" id="request/2">
-
-    <span id="request/1"></span>
-
-  <div class="detail-header">
-    <a href="#request/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
-      <i class="ri-link-m" aria-hidden="true"></i>
-    </a>
-    <div class="heading-with-actions">
-      <h1 class="signature" translate="no">request(client \\ %Tesla.Client{}, options)</h1>
-
-
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auth_providers/oauth_http_client.ex#L9" class="icon-action" rel="help" aria-label="View Source">
-          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-        </a>
-
-    </div>
-  </div>
-
-  <section class="docstring">
-
-      <div class="specs">
-
-          <pre translate="no"><span class="attribute">@spec</span> request(<a href="https://hexdocs.pm/tesla/1.13.2/Tesla.Env.html#t:client/0">Tesla.Env.client</a>(), [<a href="#t:option/0">option</a>()]) :: <a href="https://hexdocs.pm/tesla/1.13.2/Tesla.Env.html#t:result/0">Tesla.Env.result</a>()</pre>
-
-      </div>
-
-<p>Perform a request.</p><h2 id="request/2-options" class="section-heading"><a href="#request/2-options" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Options</span></h2><ul><li><code class="inline">:method</code> - the request method, one of [<code class="inline">:head</code>, <code class="inline">:get</code>, <code class="inline">:delete</code>, <code class="inline">:trace</code>, <code class="inline">:options</code>, <code class="inline">:post</code>, <code class="inline">:put</code>, <code class="inline">:patch</code>]</li><li><code class="inline">:url</code> - either full url e.g. &quot;<a href="http://example.com/some/path%22">http://example.com/some/path&quot;</a> or just &quot;/some/path&quot; if using <a href="https://hexdocs.pm/tesla/1.13.2/Tesla.Middleware.BaseUrl.html"><code class="inline">Tesla.Middleware.BaseUrl</code></a></li><li><code class="inline">:query</code> - a keyword list of query params, e.g. <code class="inline">[page: 1, per_page: 100]</code></li><li><code class="inline">:headers</code> - a keyword list of headers, e.g. <code class="inline">[{&quot;content-type&quot;, &quot;text/plain&quot;}]</code></li><li><code class="inline">:body</code> - depends on used middleware:<ul><li>by default it can be a binary</li><li>if using e.g. JSON encoding middleware it can be a nested map</li><li>if adapter supports it it can be a Stream with any of the above</li></ul></li><li><code class="inline">:opts</code> - custom, per-request middleware or adapter options</li></ul><h2 id="request/2-examples" class="section-heading"><a href="#request/2-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="nc">ExampleApi</span><span class="o">.</span><span class="n">request</span><span class="p" data-group-id="2798633287-1">(</span><span class="ss">method</span><span class="p">:</span><span class="w"> </span><span class="ss">:get</span><span class="p">,</span><span class="w"> </span><span class="ss">url</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;/users/path&quot;</span><span class="p" data-group-id="2798633287-1">)</span><span class="w">
-
-</span><span class="c1"># use shortcut methods</span><span class="w">
-</span><span class="nc">ExampleApi</span><span class="o">.</span><span class="n">get</span><span class="p" data-group-id="2798633287-2">(</span><span class="s">&quot;/users/1&quot;</span><span class="p" data-group-id="2798633287-2">)</span><span class="w">
-</span><span class="nc">ExampleApi</span><span class="o">.</span><span class="n">post</span><span class="p" data-group-id="2798633287-3">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="2798633287-4">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Jon&quot;</span><span class="p" data-group-id="2798633287-4">}</span><span class="p" data-group-id="2798633287-3">)</span></code></pre>
-  </section>
-</section>
-<section class="detail" id="request!/2">
-
-    <span id="request!/1"></span>
-
-  <div class="detail-header">
-    <a href="#request!/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
-      <i class="ri-link-m" aria-hidden="true"></i>
-    </a>
-    <div class="heading-with-actions">
-      <h1 class="signature" translate="no">request!(client \\ %Tesla.Client{}, options)</h1>
-
-
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auth_providers/oauth_http_client.ex#L9" class="icon-action" rel="help" aria-label="View Source">
-          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-        </a>
-
-    </div>
-  </div>
-
-  <section class="docstring">
-
-      <div class="specs">
-
-          <pre translate="no"><span class="attribute">@spec</span> request!(<a href="https://hexdocs.pm/tesla/1.13.2/Tesla.Env.html#t:client/0">Tesla.Env.client</a>(), [<a href="#t:option/0">option</a>()]) :: <a href="https://hexdocs.pm/tesla/1.13.2/Tesla.Env.html#t:t/0">Tesla.Env.t</a>() | <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">no_return</a>()</pre>
-
-      </div>
-
-<p>Perform request and raise in case of error.</p><p>This is similar to <a href="#request/2"><code class="inline">request/2</code></a> behaviour from Tesla 0.x</p><p>See <a href="#request/2"><code class="inline">request/2</code></a> for list of available options.</p>
   </section>
 </section>
 <section class="detail" id="revoke_token/2">
@@ -1033,7 +292,7 @@ requests configured with middleware appropriate for OAuth specific tasks.</p><p>
       <h1 class="signature" translate="no">revoke_token(client, token)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auth_providers/oauth_http_client.ex#L29" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auth_providers/oauth_http_client.ex#L31" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -1046,97 +305,34 @@ requests configured with middleware appropriate for OAuth specific tasks.</p><p>
 Per RFC 7009, providers should invalidate related tokens when one is revoked.</p><h2 id="revoke_token/2-parameters" class="section-heading"><a href="#revoke_token/2-parameters" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Parameters</span></h2><ul><li><code class="inline">client</code>: The client configuration containing client_id, client_secret, and revocation_endpoint.</li><li><code class="inline">token</code>: The token data containing access_token and refresh_token.</li></ul><h2 id="revoke_token/2-returns" class="section-heading"><a href="#revoke_token/2-returns" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Returns</span></h2><ul><li><code class="inline">:ok</code> on success (any token successfully revoked)</li><li><code class="inline">{:error, %{status: integer(), error: term(), details: map()}}</code> on failure</li></ul>
   </section>
 </section>
-<section class="detail" id="trace/3">
-
-  <div class="detail-header">
-    <a href="#trace/3" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
-      <i class="ri-link-m" aria-hidden="true"></i>
-    </a>
-    <div class="heading-with-actions">
-      <h1 class="signature" translate="no">trace(client, url, opts)</h1>
-
-
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auth_providers/oauth_http_client.ex#L9" class="icon-action" rel="help" aria-label="View Source">
-          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-        </a>
-
-    </div>
-  </div>
-
-  <section class="docstring">
-
-      <div class="specs">
-
-          <pre translate="no"><span class="attribute">@spec</span> trace(<a href="https://hexdocs.pm/tesla/1.13.2/Tesla.Env.html#t:client/0">Tesla.Env.client</a>(), <a href="https://hexdocs.pm/tesla/1.13.2/Tesla.Env.html#t:url/0">Tesla.Env.url</a>(), [<a href="#t:option/0">option</a>()]) :: <a href="https://hexdocs.pm/tesla/1.13.2/Tesla.Env.html#t:result/0">Tesla.Env.result</a>()</pre>
-
-      </div>
-
-<p>Perform a TRACE request.</p><p>See <a href="#request/1"><code class="inline">request/1</code></a> or <a href="#request/2"><code class="inline">request/2</code></a> for options definition.</p><pre><code class="makeup elixir" translate="no"><span class="n">trace</span><span class="p" data-group-id="5573706026-1">(</span><span class="s">&quot;/users&quot;</span><span class="p" data-group-id="5573706026-1">)</span><span class="w">
-</span><span class="n">trace</span><span class="p" data-group-id="5573706026-2">(</span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">query</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="5573706026-3">[</span><span class="ss">scope</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;admin&quot;</span><span class="p" data-group-id="5573706026-3">]</span><span class="p" data-group-id="5573706026-2">)</span><span class="w">
-</span><span class="n">trace</span><span class="p" data-group-id="5573706026-4">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p" data-group-id="5573706026-4">)</span><span class="w">
-</span><span class="n">trace</span><span class="p" data-group-id="5573706026-5">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">query</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="5573706026-6">[</span><span class="ss">scope</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;admin&quot;</span><span class="p" data-group-id="5573706026-6">]</span><span class="p" data-group-id="5573706026-5">)</span><span class="w">
-</span><span class="n">trace</span><span class="p" data-group-id="5573706026-7">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">body</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="5573706026-8">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Jon&quot;</span><span class="p" data-group-id="5573706026-8">}</span><span class="p" data-group-id="5573706026-7">)</span></code></pre>
-  </section>
-</section>
-<section class="detail" id="trace!/3">
-
-  <div class="detail-header">
-    <a href="#trace!/3" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
-      <i class="ri-link-m" aria-hidden="true"></i>
-    </a>
-    <div class="heading-with-actions">
-      <h1 class="signature" translate="no">trace!(client, url, opts)</h1>
-
-
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auth_providers/oauth_http_client.ex#L9" class="icon-action" rel="help" aria-label="View Source">
-          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-        </a>
-
-    </div>
-  </div>
-
-  <section class="docstring">
-
-      <div class="specs">
-
-          <pre translate="no"><span class="attribute">@spec</span> trace!(<a href="https://hexdocs.pm/tesla/1.13.2/Tesla.Env.html#t:client/0">Tesla.Env.client</a>(), <a href="https://hexdocs.pm/tesla/1.13.2/Tesla.Env.html#t:url/0">Tesla.Env.url</a>(), [<a href="#t:option/0">option</a>()]) ::
-  <a href="https://hexdocs.pm/tesla/1.13.2/Tesla.Env.html#t:t/0">Tesla.Env.t</a>() | <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">no_return</a>()</pre>
-
-      </div>
-
-<p>Perform a TRACE request.</p><p>See <a href="#request!/1"><code class="inline">request!/1</code></a> or <a href="#request!/2"><code class="inline">request!/2</code></a> for options definition.</p><pre><code class="makeup elixir" translate="no"><span class="n">trace!</span><span class="p" data-group-id="3188301890-1">(</span><span class="s">&quot;/users&quot;</span><span class="p" data-group-id="3188301890-1">)</span><span class="w">
-</span><span class="n">trace!</span><span class="p" data-group-id="3188301890-2">(</span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">query</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="3188301890-3">[</span><span class="ss">scope</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;admin&quot;</span><span class="p" data-group-id="3188301890-3">]</span><span class="p" data-group-id="3188301890-2">)</span><span class="w">
-</span><span class="n">trace!</span><span class="p" data-group-id="3188301890-4">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p" data-group-id="3188301890-4">)</span><span class="w">
-</span><span class="n">trace!</span><span class="p" data-group-id="3188301890-5">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">query</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="3188301890-6">[</span><span class="ss">scope</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;admin&quot;</span><span class="p" data-group-id="3188301890-6">]</span><span class="p" data-group-id="3188301890-5">)</span><span class="w">
-</span><span class="n">trace!</span><span class="p" data-group-id="3188301890-7">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">body</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="3188301890-8">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Jon&quot;</span><span class="p" data-group-id="3188301890-8">}</span><span class="p" data-group-id="3188301890-7">)</span></code></pre>
-  </section>
-</section>
 
     </div>
   </section>
 
     <footer class="footer">
-      <p>
 
-        <span class="line">
-          <button class="a-main footer-button display-quick-switch" title="Search HexDocs packages">
-            Search HexDocs
-          </button>
+        <p>
 
-            <a href="Lightning.epub" title="ePub version">
-              Download ePub version
-            </a>
+          <span class="line">
+            <button class="a-main footer-button display-quick-switch" title="Go to package docs">
+              Go to package docs
+            </button>
 
-        </span>
-      </p>
+              <a href="Lightning.epub" title="ePub version">
+                Download ePub version
+              </a>
 
-      <p class="built-using">
-        Built using
-        <a href="https://github.com/elixir-lang/ex_doc" title="ExDoc" target="_blank" rel="help noopener" translate="no">ExDoc</a> (v0.38.4) for the
+          </span>
+        </p>
 
-          <a href="https://elixir-lang.org" title="Elixir" target="_blank" translate="no">Elixir programming language</a>
+        <p class="built-using">
+          Built using
+          <a href="https://github.com/elixir-lang/ex_doc" title="ExDoc" target="_blank" rel="help noopener" translate="no">ExDoc</a> (v0.39.3) for the
 
-      </p>
+            <a href="https://elixir-lang.org" title="Elixir" target="_blank" translate="no">Elixir programming language</a>
+
+        </p>
+
 
     </footer>
   </div>

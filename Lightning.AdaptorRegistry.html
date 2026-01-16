@@ -4,17 +4,17 @@
     <meta charset="utf-8">
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="generator" content="ExDoc v0.38.4">
+    <meta name="generator" content="ExDoc v0.39.3">
     <meta name="project" content="Lightning v2.15.11">
 
 
     <title>Lightning.AdaptorRegistry — Lightning v2.15.11</title>
 
-    <link rel="stylesheet" href="dist/html-elixir-RLZO5U2C.css" />
+    <link rel="stylesheet" href="dist/html-elixir-VYWJUHZE.css" />
 
-    <script defer src="dist/sidebar_items-C7898E3C.js"></script>
+    <script defer src="dist/sidebar_items-144AA46B.js"></script>
     <script defer src="docs_config.js"></script>
-    <script defer src="dist/html-Y223O6DN.js"></script>
+    <script defer src="dist/html-XBCM4BHM.js"></script>
 
   </head>
   <body>
@@ -58,16 +58,34 @@ Lightning
         <form class="search-bar" action="search.html">
           <label class="search-label">
             <span class="sr-only">Search documentation of Lightning</span>
-            <input name="q" type="text" class="search-input" placeholder="Press / to search" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
+            <div class="search-input-wrapper">
+              <input name="q" type="text" class="search-input" placeholder="Press / to search" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
+              <button type="button" tabindex="-1" class="search-close-button" aria-hidden="true">
+                <i class="ri-close-line ri-lg" title="Cancel search"></i>
+              </button>
+            </div>
           </label>
-          <button type="submit" class="search-button" aria-label="Submit Search" tabindex="-1">
-            <i class="ri-search-2-line ri-lg" aria-hidden="true"></i>
-          </button>
-          <button type="button" tabindex="-1" class="search-close-button" aria-hidden="true">
-            <i class="ri-close-line ri-lg" title="Cancel search"></i>
-          </button>
         </form>
         <div class="autocomplete">
+        </div>
+        <div class="engine-selector" data-multiple="false">
+          <button type="button" class="engine-button" aria-label="Select search engine" aria-haspopup="true" aria-expanded="false">
+            <i class="ri-search-2-line" aria-hidden="true"></i>
+            <span class="engine-name">Default</span>
+            <i class="ri-arrow-down-s-line" aria-hidden="true"></i>
+          </button>
+          <div class="engine-dropdown" hidden role="menu">
+
+              <button type="button"
+                      class="engine-option"
+                      data-engine-url="search.html?q="
+                      role="menuitemradio"
+                      aria-checked="true">
+                <span class="name">Default</span>
+                <span class="help">In-browser search</span>
+              </button>
+
+          </div>
         </div>
         <button class="icon-settings display-settings">
           <i class="ri-settings-3-line"></i>
@@ -96,9 +114,9 @@ Lightning
 <p>Registry process to query and maintain a list of adaptors available for
 writing jobs.</p><p>Currently it queries NPM for all modules in the <code class="inline">@openfn</code> organization and
 filters out modules that are known not to be adaptors.</p><p><strong>Usage</strong></p><pre><code class="makeup elixir" translate="no"><span class="c1"># Starting the process</span><span class="w">
-</span><span class="nc">AdaptorRegistry</span><span class="o">.</span><span class="n">start_link</span><span class="p" data-group-id="8068748535-1">(</span><span class="p" data-group-id="8068748535-1">)</span><span class="w">
+</span><span class="nc">AdaptorRegistry</span><span class="o">.</span><span class="n">start_link</span><span class="p" data-group-id="1172429917-1">(</span><span class="p" data-group-id="1172429917-1">)</span><span class="w">
 </span><span class="c1"># Getting a list of all adaptors</span><span class="w">
-</span><span class="nc">Lightning.AdaptorRegistry.AdaptorRegistry</span><span class="o">.</span><span class="n">all</span><span class="p" data-group-id="8068748535-2">(</span><span class="p" data-group-id="8068748535-2">)</span></code></pre><p><strong>Caching</strong></p><p>By default the results are cached to disk, and will be reused every start.</p><p>In order to disable or configure caching pass see: <a href="#start_link/1"><code class="inline">start_link/1</code></a>.</p><p>The process uses <code class="inline">:continue</code> to return before the adaptors have been queried.
+</span><span class="nc">Lightning.AdaptorRegistry.AdaptorRegistry</span><span class="o">.</span><span class="n">all</span><span class="p" data-group-id="1172429917-2">(</span><span class="p" data-group-id="1172429917-2">)</span></code></pre><p><strong>Caching</strong></p><p>By default the results are cached to disk, and will be reused every start.</p><p>In order to disable or configure caching pass see: <a href="#start_link/1"><code class="inline">start_link/1</code></a>.</p><p>The process uses <code class="inline">:continue</code> to return before the adaptors have been queried.
 This does mean that the first call to the process will be delayed until
 the <code class="inline">handle_continue/2</code> has finished.</p><p><strong>Timeouts</strong></p><p>There is a 'general' timeout of 30s, this is used for GenServer calls like
 <a href="#all/1"><code class="inline">all/1</code></a> and also internally when the modules are being queried. NPM can
@@ -195,7 +213,7 @@ been fetched yet).</p></div>
 
       </div>
 
-        <div class="summary-synopsis"><p>Same as <a><code class="inline">resolve_package_name/1</code></a> except will throw an exception if a package
+        <div class="summary-synopsis"><p>Same as <a href="#resolve_package_name/1"><code class="inline">resolve_package_name/1</code></a> except will throw an exception if a package
 name cannot be matched.</p></div>
 
     </div>
@@ -420,10 +438,10 @@ been fetched yet).</p>
 
       </div>
 
-<p>Destructures an NPM style package name into module name and version.</p><p><strong>Example</strong></p><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">resolve_package_name</span><span class="p" data-group-id="3789653850-1">(</span><span class="s">&quot;@openfn/language-salesforce@1.2.3&quot;</span><span class="p" data-group-id="3789653850-1">)</span><span class="w">
-</span><span class="p" data-group-id="3789653850-2">{</span><span class="w"> </span><span class="s">&quot;@openfn/language-salesforce&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;1.2.3&quot;</span><span class="w"> </span><span class="p" data-group-id="3789653850-2">}</span><span class="w">
-</span><span class="gp unselectable">iex&gt; </span><span class="n">resolve_package_name</span><span class="p" data-group-id="3789653850-3">(</span><span class="s">&quot;@openfn/language-salesforce&quot;</span><span class="p" data-group-id="3789653850-3">)</span><span class="w">
-</span><span class="p" data-group-id="3789653850-4">{</span><span class="w"> </span><span class="s">&quot;@openfn/language-salesforce&quot;</span><span class="p">,</span><span class="w"> </span><span class="no">nil</span><span class="w"> </span><span class="p" data-group-id="3789653850-4">}</span></code></pre>
+<p>Destructures an NPM style package name into module name and version.</p><p><strong>Example</strong></p><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">resolve_package_name</span><span class="p" data-group-id="1596533649-1">(</span><span class="s">&quot;@openfn/language-salesforce@1.2.3&quot;</span><span class="p" data-group-id="1596533649-1">)</span><span class="w">
+</span><span class="p" data-group-id="1596533649-2">{</span><span class="w"> </span><span class="s">&quot;@openfn/language-salesforce&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;1.2.3&quot;</span><span class="w"> </span><span class="p" data-group-id="1596533649-2">}</span><span class="w">
+</span><span class="gp unselectable">iex&gt; </span><span class="n">resolve_package_name</span><span class="p" data-group-id="1596533649-3">(</span><span class="s">&quot;@openfn/language-salesforce&quot;</span><span class="p" data-group-id="1596533649-3">)</span><span class="w">
+</span><span class="p" data-group-id="1596533649-4">{</span><span class="w"> </span><span class="s">&quot;@openfn/language-salesforce&quot;</span><span class="p">,</span><span class="w"> </span><span class="no">nil</span><span class="w"> </span><span class="p" data-group-id="1596533649-4">}</span></code></pre>
   </section>
 </section>
 <section class="detail" id="resolve_package_name!/1">
@@ -526,27 +544,29 @@ for testing and/or running multiple versions of the registry</li></ul>
   </section>
 
     <footer class="footer">
-      <p>
 
-        <span class="line">
-          <button class="a-main footer-button display-quick-switch" title="Search HexDocs packages">
-            Search HexDocs
-          </button>
+        <p>
 
-            <a href="Lightning.epub" title="ePub version">
-              Download ePub version
-            </a>
+          <span class="line">
+            <button class="a-main footer-button display-quick-switch" title="Go to package docs">
+              Go to package docs
+            </button>
 
-        </span>
-      </p>
+              <a href="Lightning.epub" title="ePub version">
+                Download ePub version
+              </a>
 
-      <p class="built-using">
-        Built using
-        <a href="https://github.com/elixir-lang/ex_doc" title="ExDoc" target="_blank" rel="help noopener" translate="no">ExDoc</a> (v0.38.4) for the
+          </span>
+        </p>
 
-          <a href="https://elixir-lang.org" title="Elixir" target="_blank" translate="no">Elixir programming language</a>
+        <p class="built-using">
+          Built using
+          <a href="https://github.com/elixir-lang/ex_doc" title="ExDoc" target="_blank" rel="help noopener" translate="no">ExDoc</a> (v0.39.3) for the
 
-      </p>
+            <a href="https://elixir-lang.org" title="Elixir" target="_blank" translate="no">Elixir programming language</a>
+
+        </p>
+
 
     </footer>
   </div>

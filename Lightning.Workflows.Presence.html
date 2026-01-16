@@ -4,17 +4,17 @@
     <meta charset="utf-8">
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="generator" content="ExDoc v0.38.4">
+    <meta name="generator" content="ExDoc v0.39.3">
     <meta name="project" content="Lightning v2.15.11">
 
 
     <title>Lightning.Workflows.Presence — Lightning v2.15.11</title>
 
-    <link rel="stylesheet" href="dist/html-elixir-RLZO5U2C.css" />
+    <link rel="stylesheet" href="dist/html-elixir-VYWJUHZE.css" />
 
-    <script defer src="dist/sidebar_items-C7898E3C.js"></script>
+    <script defer src="dist/sidebar_items-144AA46B.js"></script>
     <script defer src="docs_config.js"></script>
-    <script defer src="dist/html-Y223O6DN.js"></script>
+    <script defer src="dist/html-XBCM4BHM.js"></script>
 
   </head>
   <body>
@@ -58,16 +58,34 @@ Lightning
         <form class="search-bar" action="search.html">
           <label class="search-label">
             <span class="sr-only">Search documentation of Lightning</span>
-            <input name="q" type="text" class="search-input" placeholder="Press / to search" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
+            <div class="search-input-wrapper">
+              <input name="q" type="text" class="search-input" placeholder="Press / to search" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
+              <button type="button" tabindex="-1" class="search-close-button" aria-hidden="true">
+                <i class="ri-close-line ri-lg" title="Cancel search"></i>
+              </button>
+            </div>
           </label>
-          <button type="submit" class="search-button" aria-label="Submit Search" tabindex="-1">
-            <i class="ri-search-2-line ri-lg" aria-hidden="true"></i>
-          </button>
-          <button type="button" tabindex="-1" class="search-close-button" aria-hidden="true">
-            <i class="ri-close-line ri-lg" title="Cancel search"></i>
-          </button>
         </form>
         <div class="autocomplete">
+        </div>
+        <div class="engine-selector" data-multiple="false">
+          <button type="button" class="engine-button" aria-label="Select search engine" aria-haspopup="true" aria-expanded="false">
+            <i class="ri-search-2-line" aria-hidden="true"></i>
+            <span class="engine-name">Default</span>
+            <i class="ri-arrow-down-s-line" aria-hidden="true"></i>
+          </button>
+          <div class="engine-dropdown" hidden role="menu">
+
+              <button type="button"
+                      class="engine-option"
+                      data-engine-url="search.html?q="
+                      role="menuitemradio"
+                      aria-checked="true">
+                <span class="name">Default</span>
+                <span class="help">In-browser search</span>
+              </button>
+
+          </div>
         </div>
         <button class="icon-settings display-settings">
           <i class="ri-settings-3-line"></i>
@@ -136,7 +154,7 @@ and edit priority.</p></div>
 
       </div>
 
-        <div class="summary-synopsis"><p>Callback implementation for <a><code class="inline">Phoenix.Presence.fetch/2</code></a>.</p></div>
+        <div class="summary-synopsis"><p>Callback implementation for <a href="https://hexdocs.pm/phoenix/1.7.21/Phoenix.Presence.html#c:fetch/2"><code class="inline">Phoenix.Presence.fetch/2</code></a>.</p></div>
 
     </div>
 
@@ -154,7 +172,7 @@ and edit priority.</p></div>
 
       </div>
 
-        <div class="summary-synopsis"><p>Callback implementation for <a><code class="inline">Phoenix.Presence.get_by_key/2</code></a>.</p></div>
+        <div class="summary-synopsis"><p>Callback implementation for <a href="https://hexdocs.pm/phoenix/1.7.21/Phoenix.Presence.html#c:get_by_key/2"><code class="inline">Phoenix.Presence.get_by_key/2</code></a>.</p></div>
 
     </div>
 
@@ -174,7 +192,7 @@ and edit priority.</p></div>
 
       </div>
 
-        <div class="summary-synopsis"><p>Callback implementation for <a><code class="inline">Phoenix.Presence.list/1</code></a>.</p></div>
+        <div class="summary-synopsis"><p>Callback implementation for <a href="https://hexdocs.pm/phoenix/1.7.21/Phoenix.Presence.html#c:list/1"><code class="inline">Phoenix.Presence.list/1</code></a>.</p></div>
 
     </div>
 
@@ -204,7 +222,7 @@ and edit priority.</p></div>
 
       </div>
 
-        <div class="summary-synopsis"><p>Callback implementation for <a><code class="inline">Phoenix.Presence.track/3</code></a>.</p></div>
+        <div class="summary-synopsis"><p>Callback implementation for <a href="https://hexdocs.pm/phoenix/1.7.21/Phoenix.Presence.html#c:track/3"><code class="inline">Phoenix.Presence.track/3</code></a>.</p></div>
 
     </div>
 
@@ -214,7 +232,7 @@ and edit priority.</p></div>
 
       </div>
 
-        <div class="summary-synopsis"><p>Callback implementation for <a><code class="inline">Phoenix.Presence.track/4</code></a>.</p></div>
+        <div class="summary-synopsis"><p>Callback implementation for <a href="https://hexdocs.pm/phoenix/1.7.21/Phoenix.Presence.html#c:track/4"><code class="inline">Phoenix.Presence.track/4</code></a>.</p></div>
 
     </div>
 
@@ -234,7 +252,7 @@ and edit priority.</p></div>
 
       </div>
 
-        <div class="summary-synopsis"><p>Callback implementation for <a><code class="inline">Phoenix.Presence.untrack/2</code></a>.</p></div>
+        <div class="summary-synopsis"><p>Callback implementation for <a href="https://hexdocs.pm/phoenix/1.7.21/Phoenix.Presence.html#c:untrack/2"><code class="inline">Phoenix.Presence.untrack/2</code></a>.</p></div>
 
     </div>
 
@@ -244,7 +262,7 @@ and edit priority.</p></div>
 
       </div>
 
-        <div class="summary-synopsis"><p>Callback implementation for <a><code class="inline">Phoenix.Presence.untrack/3</code></a>.</p></div>
+        <div class="summary-synopsis"><p>Callback implementation for <a href="https://hexdocs.pm/phoenix/1.7.21/Phoenix.Presence.html#c:untrack/3"><code class="inline">Phoenix.Presence.untrack/3</code></a>.</p></div>
 
     </div>
 
@@ -264,7 +282,7 @@ and edit priority.</p></div>
 
       </div>
 
-        <div class="summary-synopsis"><p>Callback implementation for <a><code class="inline">Phoenix.Presence.update/3</code></a>.</p></div>
+        <div class="summary-synopsis"><p>Callback implementation for <a href="https://hexdocs.pm/phoenix/1.7.21/Phoenix.Presence.html#c:update/3"><code class="inline">Phoenix.Presence.update/3</code></a>.</p></div>
 
     </div>
 
@@ -274,7 +292,7 @@ and edit priority.</p></div>
 
       </div>
 
-        <div class="summary-synopsis"><p>Callback implementation for <a><code class="inline">Phoenix.Presence.update/4</code></a>.</p></div>
+        <div class="summary-synopsis"><p>Callback implementation for <a href="https://hexdocs.pm/phoenix/1.7.21/Phoenix.Presence.html#c:update/4"><code class="inline">Phoenix.Presence.update/4</code></a>.</p></div>
 
     </div>
 
@@ -312,27 +330,27 @@ and edit priority.</p></div>
   <section class="docstring">
 
 <p>Builds a summary of presences with details about the current user's presence, promotable presences,
-and edit priority.</p><h2 id="build_presences_summary/2-parameters" class="section-heading"><a href="#build_presences_summary/2-parameters" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Parameters</span></h2><ul><li><code class="inline">presences</code> (list): A list of presence records, each containing user information and a joined_at timestamp.</li><li><code class="inline">params</code> (map): A map containing the following keys:<ul><li><code class="inline">:current_user_presence</code> - The presence record for the current user.</li><li><code class="inline">:current_user</code> - The current user record.</li><li><code class="inline">:view_only_users_ids</code> - A list of user IDs who have view-only permissions.</li></ul></li></ul><h2 id="build_presences_summary/2-returns" class="section-heading"><a href="#build_presences_summary/2-returns" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Returns</span></h2><ul><li><code class="inline">map</code>: A map containing the following keys:<ul><li><code class="inline">:presences</code> - The sorted list of all presences.</li><li><code class="inline">:prior_user_presence</code> - The presence record with edit priority.</li><li><code class="inline">:current_user_presence</code> - The presence record for the current user.</li><li><code class="inline">:has_presence_edit_priority</code> - A boolean indicating if the current user has edit priority.</li></ul></li></ul><h2 id="build_presences_summary/2-examples" class="section-heading"><a href="#build_presences_summary/2-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">presences</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p" data-group-id="0605242334-1">[</span><span class="w">
-</span><span class="gp unselectable">...&gt; </span><span class="w">  </span><span class="p" data-group-id="0605242334-2">%{</span><span class="ss">user</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="0605242334-3">%{</span><span class="ss">id</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p" data-group-id="0605242334-3">}</span><span class="p">,</span><span class="w"> </span><span class="ss">joined_at</span><span class="p">:</span><span class="w"> </span><span class="ld">~N[2024-07-03 12:00:00]</span><span class="p">,</span><span class="w"> </span><span class="ss">active_sessions</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p" data-group-id="0605242334-2">}</span><span class="p">,</span><span class="w">
-</span><span class="gp unselectable">...&gt; </span><span class="w">  </span><span class="p" data-group-id="0605242334-4">%{</span><span class="ss">user</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="0605242334-5">%{</span><span class="ss">id</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="p" data-group-id="0605242334-5">}</span><span class="p">,</span><span class="w"> </span><span class="ss">joined_at</span><span class="p">:</span><span class="w"> </span><span class="ld">~N[2024-07-03 12:05:00]</span><span class="p">,</span><span class="w"> </span><span class="ss">active_sessions</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p" data-group-id="0605242334-4">}</span><span class="p">,</span><span class="w">
-</span><span class="gp unselectable">...&gt; </span><span class="w">  </span><span class="p" data-group-id="0605242334-6">%{</span><span class="ss">user</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="0605242334-7">%{</span><span class="ss">id</span><span class="p">:</span><span class="w"> </span><span class="mi">3</span><span class="p" data-group-id="0605242334-7">}</span><span class="p">,</span><span class="w"> </span><span class="ss">joined_at</span><span class="p">:</span><span class="w"> </span><span class="ld">~N[2024-07-03 12:10:00]</span><span class="p">,</span><span class="w"> </span><span class="ss">active_sessions</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p" data-group-id="0605242334-6">}</span><span class="w">
-</span><span class="gp unselectable">...&gt; </span><span class="p" data-group-id="0605242334-1">]</span><span class="w">
-</span><span class="gp unselectable">iex&gt; </span><span class="n">params</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p" data-group-id="0605242334-8">%{</span><span class="w">
-</span><span class="gp unselectable">...&gt; </span><span class="w">  </span><span class="ss">current_user_presence</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="0605242334-9">%{</span><span class="ss">user</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="0605242334-10">%{</span><span class="ss">id</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p" data-group-id="0605242334-10">}</span><span class="p">,</span><span class="w"> </span><span class="ss">joined_at</span><span class="p">:</span><span class="w"> </span><span class="ld">~N[2024-07-03 12:00:00]</span><span class="p">,</span><span class="w"> </span><span class="ss">active_sessions</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p" data-group-id="0605242334-9">}</span><span class="p">,</span><span class="w">
-</span><span class="gp unselectable">...&gt; </span><span class="w">  </span><span class="ss">current_user</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="0605242334-11">%{</span><span class="ss">id</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p" data-group-id="0605242334-11">}</span><span class="p">,</span><span class="w">
-</span><span class="gp unselectable">...&gt; </span><span class="w">  </span><span class="ss">view_only_users_ids</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="0605242334-12">[</span><span class="mi">2</span><span class="p" data-group-id="0605242334-12">]</span><span class="w">
-</span><span class="gp unselectable">...&gt; </span><span class="p" data-group-id="0605242334-8">}</span><span class="w">
-</span><span class="gp unselectable">iex&gt; </span><span class="n">build_presences_summary</span><span class="p" data-group-id="0605242334-13">(</span><span class="n">presences</span><span class="p">,</span><span class="w"> </span><span class="n">params</span><span class="p" data-group-id="0605242334-13">)</span><span class="w">
-</span><span class="p" data-group-id="0605242334-14">%{</span><span class="w">
-  </span><span class="ss">presences</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="0605242334-15">[</span><span class="w">
-    </span><span class="p" data-group-id="0605242334-16">%{</span><span class="ss">user</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="0605242334-17">%{</span><span class="ss">id</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p" data-group-id="0605242334-17">}</span><span class="p">,</span><span class="w"> </span><span class="ss">joined_at</span><span class="p">:</span><span class="w"> </span><span class="ld">~N[2024-07-03 12:00:00]</span><span class="p">,</span><span class="w"> </span><span class="ss">active_sessions</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p" data-group-id="0605242334-16">}</span><span class="p">,</span><span class="w">
-    </span><span class="p" data-group-id="0605242334-18">%{</span><span class="ss">user</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="0605242334-19">%{</span><span class="ss">id</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="p" data-group-id="0605242334-19">}</span><span class="p">,</span><span class="w"> </span><span class="ss">joined_at</span><span class="p">:</span><span class="w"> </span><span class="ld">~N[2024-07-03 12:05:00]</span><span class="p">,</span><span class="w"> </span><span class="ss">active_sessions</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p" data-group-id="0605242334-18">}</span><span class="p">,</span><span class="w">
-    </span><span class="p" data-group-id="0605242334-20">%{</span><span class="ss">user</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="0605242334-21">%{</span><span class="ss">id</span><span class="p">:</span><span class="w"> </span><span class="mi">3</span><span class="p" data-group-id="0605242334-21">}</span><span class="p">,</span><span class="w"> </span><span class="ss">joined_at</span><span class="p">:</span><span class="w"> </span><span class="ld">~N[2024-07-03 12:10:00]</span><span class="p">,</span><span class="w"> </span><span class="ss">active_sessions</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p" data-group-id="0605242334-20">}</span><span class="w">
-  </span><span class="p" data-group-id="0605242334-15">]</span><span class="p">,</span><span class="w">
-  </span><span class="ss">prior_user_presence</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="0605242334-22">%{</span><span class="ss">user</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="0605242334-23">%{</span><span class="ss">id</span><span class="p">:</span><span class="w"> </span><span class="mi">3</span><span class="p" data-group-id="0605242334-23">}</span><span class="p">,</span><span class="w"> </span><span class="ss">joined_at</span><span class="p">:</span><span class="w"> </span><span class="ld">~N[2024-07-03 12:10:00]</span><span class="p">,</span><span class="w"> </span><span class="ss">active_sessions</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p" data-group-id="0605242334-22">}</span><span class="p">,</span><span class="w">
-  </span><span class="ss">current_user_presence</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="0605242334-24">%{</span><span class="ss">user</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="0605242334-25">%{</span><span class="ss">id</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p" data-group-id="0605242334-25">}</span><span class="p">,</span><span class="w"> </span><span class="ss">joined_at</span><span class="p">:</span><span class="w"> </span><span class="ld">~N[2024-07-03 12:00:00]</span><span class="p">,</span><span class="w"> </span><span class="ss">active_sessions</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p" data-group-id="0605242334-24">}</span><span class="p">,</span><span class="w">
+and edit priority.</p><h2 id="build_presences_summary/2-parameters" class="section-heading"><a href="#build_presences_summary/2-parameters" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Parameters</span></h2><ul><li><code class="inline">presences</code> (list): A list of presence records, each containing user information and a joined_at timestamp.</li><li><code class="inline">params</code> (map): A map containing the following keys:<ul><li><code class="inline">:current_user_presence</code> - The presence record for the current user.</li><li><code class="inline">:current_user</code> - The current user record.</li><li><code class="inline">:view_only_users_ids</code> - A list of user IDs who have view-only permissions.</li></ul></li></ul><h2 id="build_presences_summary/2-returns" class="section-heading"><a href="#build_presences_summary/2-returns" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Returns</span></h2><ul><li><code class="inline">map</code>: A map containing the following keys:<ul><li><code class="inline">:presences</code> - The sorted list of all presences.</li><li><code class="inline">:prior_user_presence</code> - The presence record with edit priority.</li><li><code class="inline">:current_user_presence</code> - The presence record for the current user.</li><li><code class="inline">:has_presence_edit_priority</code> - A boolean indicating if the current user has edit priority.</li></ul></li></ul><h2 id="build_presences_summary/2-examples" class="section-heading"><a href="#build_presences_summary/2-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">presences</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p" data-group-id="9742893264-1">[</span><span class="w">
+</span><span class="gp unselectable">...&gt; </span><span class="w">  </span><span class="p" data-group-id="9742893264-2">%{</span><span class="ss">user</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="9742893264-3">%{</span><span class="ss">id</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p" data-group-id="9742893264-3">}</span><span class="p">,</span><span class="w"> </span><span class="ss">joined_at</span><span class="p">:</span><span class="w"> </span><span class="ld">~N[2024-07-03 12:00:00]</span><span class="p">,</span><span class="w"> </span><span class="ss">active_sessions</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p" data-group-id="9742893264-2">}</span><span class="p">,</span><span class="w">
+</span><span class="gp unselectable">...&gt; </span><span class="w">  </span><span class="p" data-group-id="9742893264-4">%{</span><span class="ss">user</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="9742893264-5">%{</span><span class="ss">id</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="p" data-group-id="9742893264-5">}</span><span class="p">,</span><span class="w"> </span><span class="ss">joined_at</span><span class="p">:</span><span class="w"> </span><span class="ld">~N[2024-07-03 12:05:00]</span><span class="p">,</span><span class="w"> </span><span class="ss">active_sessions</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p" data-group-id="9742893264-4">}</span><span class="p">,</span><span class="w">
+</span><span class="gp unselectable">...&gt; </span><span class="w">  </span><span class="p" data-group-id="9742893264-6">%{</span><span class="ss">user</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="9742893264-7">%{</span><span class="ss">id</span><span class="p">:</span><span class="w"> </span><span class="mi">3</span><span class="p" data-group-id="9742893264-7">}</span><span class="p">,</span><span class="w"> </span><span class="ss">joined_at</span><span class="p">:</span><span class="w"> </span><span class="ld">~N[2024-07-03 12:10:00]</span><span class="p">,</span><span class="w"> </span><span class="ss">active_sessions</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p" data-group-id="9742893264-6">}</span><span class="w">
+</span><span class="gp unselectable">...&gt; </span><span class="p" data-group-id="9742893264-1">]</span><span class="w">
+</span><span class="gp unselectable">iex&gt; </span><span class="n">params</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p" data-group-id="9742893264-8">%{</span><span class="w">
+</span><span class="gp unselectable">...&gt; </span><span class="w">  </span><span class="ss">current_user_presence</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="9742893264-9">%{</span><span class="ss">user</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="9742893264-10">%{</span><span class="ss">id</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p" data-group-id="9742893264-10">}</span><span class="p">,</span><span class="w"> </span><span class="ss">joined_at</span><span class="p">:</span><span class="w"> </span><span class="ld">~N[2024-07-03 12:00:00]</span><span class="p">,</span><span class="w"> </span><span class="ss">active_sessions</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p" data-group-id="9742893264-9">}</span><span class="p">,</span><span class="w">
+</span><span class="gp unselectable">...&gt; </span><span class="w">  </span><span class="ss">current_user</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="9742893264-11">%{</span><span class="ss">id</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p" data-group-id="9742893264-11">}</span><span class="p">,</span><span class="w">
+</span><span class="gp unselectable">...&gt; </span><span class="w">  </span><span class="ss">view_only_users_ids</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="9742893264-12">[</span><span class="mi">2</span><span class="p" data-group-id="9742893264-12">]</span><span class="w">
+</span><span class="gp unselectable">...&gt; </span><span class="p" data-group-id="9742893264-8">}</span><span class="w">
+</span><span class="gp unselectable">iex&gt; </span><span class="n">build_presences_summary</span><span class="p" data-group-id="9742893264-13">(</span><span class="n">presences</span><span class="p">,</span><span class="w"> </span><span class="n">params</span><span class="p" data-group-id="9742893264-13">)</span><span class="w">
+</span><span class="p" data-group-id="9742893264-14">%{</span><span class="w">
+  </span><span class="ss">presences</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="9742893264-15">[</span><span class="w">
+    </span><span class="p" data-group-id="9742893264-16">%{</span><span class="ss">user</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="9742893264-17">%{</span><span class="ss">id</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p" data-group-id="9742893264-17">}</span><span class="p">,</span><span class="w"> </span><span class="ss">joined_at</span><span class="p">:</span><span class="w"> </span><span class="ld">~N[2024-07-03 12:00:00]</span><span class="p">,</span><span class="w"> </span><span class="ss">active_sessions</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p" data-group-id="9742893264-16">}</span><span class="p">,</span><span class="w">
+    </span><span class="p" data-group-id="9742893264-18">%{</span><span class="ss">user</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="9742893264-19">%{</span><span class="ss">id</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="p" data-group-id="9742893264-19">}</span><span class="p">,</span><span class="w"> </span><span class="ss">joined_at</span><span class="p">:</span><span class="w"> </span><span class="ld">~N[2024-07-03 12:05:00]</span><span class="p">,</span><span class="w"> </span><span class="ss">active_sessions</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p" data-group-id="9742893264-18">}</span><span class="p">,</span><span class="w">
+    </span><span class="p" data-group-id="9742893264-20">%{</span><span class="ss">user</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="9742893264-21">%{</span><span class="ss">id</span><span class="p">:</span><span class="w"> </span><span class="mi">3</span><span class="p" data-group-id="9742893264-21">}</span><span class="p">,</span><span class="w"> </span><span class="ss">joined_at</span><span class="p">:</span><span class="w"> </span><span class="ld">~N[2024-07-03 12:10:00]</span><span class="p">,</span><span class="w"> </span><span class="ss">active_sessions</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p" data-group-id="9742893264-20">}</span><span class="w">
+  </span><span class="p" data-group-id="9742893264-15">]</span><span class="p">,</span><span class="w">
+  </span><span class="ss">prior_user_presence</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="9742893264-22">%{</span><span class="ss">user</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="9742893264-23">%{</span><span class="ss">id</span><span class="p">:</span><span class="w"> </span><span class="mi">3</span><span class="p" data-group-id="9742893264-23">}</span><span class="p">,</span><span class="w"> </span><span class="ss">joined_at</span><span class="p">:</span><span class="w"> </span><span class="ld">~N[2024-07-03 12:10:00]</span><span class="p">,</span><span class="w"> </span><span class="ss">active_sessions</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p" data-group-id="9742893264-22">}</span><span class="p">,</span><span class="w">
+  </span><span class="ss">current_user_presence</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="9742893264-24">%{</span><span class="ss">user</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="9742893264-25">%{</span><span class="ss">id</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p" data-group-id="9742893264-25">}</span><span class="p">,</span><span class="w"> </span><span class="ss">joined_at</span><span class="p">:</span><span class="w"> </span><span class="ld">~N[2024-07-03 12:00:00]</span><span class="p">,</span><span class="w"> </span><span class="ss">active_sessions</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p" data-group-id="9742893264-24">}</span><span class="p">,</span><span class="w">
   </span><span class="ss">has_presence_edit_priority</span><span class="p">:</span><span class="w"> </span><span class="no">true</span><span class="w">
-</span><span class="p" data-group-id="0605242334-14">}</span></code></pre>
+</span><span class="p" data-group-id="9742893264-14">}</span></code></pre>
   </section>
 </section>
 <section class="detail" id="child_spec/1">
@@ -486,8 +504,8 @@ and edit priority.</p><h2 id="build_presences_summary/2-parameters" class="secti
 
   <section class="docstring">
 
-<p>Lists all presences for a given workflow.</p><h2 id="list_presences_for/1-parameters" class="section-heading"><a href="#list_presences_for/1-parameters" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Parameters</span></h2><ul><li><code class="inline">workflow</code>: The workflow to list the presences for.</li></ul><h2 id="list_presences_for/1-examples" class="section-heading"><a href="#list_presences_for/1-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="nc">Lightning.Workflows.Presence</span><span class="o">.</span><span class="n">list_presences_for</span><span class="p" data-group-id="8105853691-1">(</span><span class="p" data-group-id="8105853691-2">%</span><span class="nc" data-group-id="8105853691-2">Workflow</span><span class="p" data-group-id="8105853691-2">{</span><span class="ss">id</span><span class="p">:</span><span class="w"> </span><span class="n">xpto</span><span class="p" data-group-id="8105853691-2">}</span><span class="p" data-group-id="8105853691-1">)</span><span class="w">
-</span><span class="p" data-group-id="8105853691-3">[</span><span class="p" data-group-id="8105853691-4">%</span><span class="nc" data-group-id="8105853691-4">Lightning.Workflows.Presence</span><span class="p" data-group-id="8105853691-4">{</span><span class="ss">user</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="8105853691-5">%</span><span class="nc" data-group-id="8105853691-5">User</span><span class="p" data-group-id="8105853691-5">{</span><span class="ss">id</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p" data-group-id="8105853691-5">}</span><span class="p">,</span><span class="w"> </span><span class="n">...</span><span class="p" data-group-id="8105853691-4">}</span><span class="p">,</span><span class="w"> </span><span class="n">...</span><span class="p" data-group-id="8105853691-3">]</span></code></pre>
+<p>Lists all presences for a given workflow.</p><h2 id="list_presences_for/1-parameters" class="section-heading"><a href="#list_presences_for/1-parameters" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Parameters</span></h2><ul><li><code class="inline">workflow</code>: The workflow to list the presences for.</li></ul><h2 id="list_presences_for/1-examples" class="section-heading"><a href="#list_presences_for/1-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="nc">Lightning.Workflows.Presence</span><span class="o">.</span><span class="n">list_presences_for</span><span class="p" data-group-id="2909470276-1">(</span><span class="p" data-group-id="2909470276-2">%</span><span class="nc" data-group-id="2909470276-2">Workflow</span><span class="p" data-group-id="2909470276-2">{</span><span class="ss">id</span><span class="p">:</span><span class="w"> </span><span class="n">xpto</span><span class="p" data-group-id="2909470276-2">}</span><span class="p" data-group-id="2909470276-1">)</span><span class="w">
+</span><span class="p" data-group-id="2909470276-3">[</span><span class="p" data-group-id="2909470276-4">%</span><span class="nc" data-group-id="2909470276-4">Lightning.Workflows.Presence</span><span class="p" data-group-id="2909470276-4">{</span><span class="ss">user</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="2909470276-5">%</span><span class="nc" data-group-id="2909470276-5">User</span><span class="p" data-group-id="2909470276-5">{</span><span class="ss">id</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p" data-group-id="2909470276-5">}</span><span class="p">,</span><span class="w"> </span><span class="n">...</span><span class="p" data-group-id="2909470276-4">}</span><span class="p">,</span><span class="w"> </span><span class="n">...</span><span class="p" data-group-id="2909470276-3">]</span></code></pre>
   </section>
 </section>
 <section class="detail" id="new_user_presence/3">
@@ -511,12 +529,12 @@ and edit priority.</p><h2 id="build_presences_summary/2-parameters" class="secti
 
   <section class="docstring">
 
-<p>Creates a new <code class="inline">UserPresence</code> struct.</p><h2 id="new_user_presence/3-parameters" class="section-heading"><a href="#new_user_presence/3-parameters" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Parameters</span></h2><ul><li><code class="inline">user</code>: The user data to be included in the presence.</li><li><code class="inline">joined_at</code>: The timestamp when the user joined, in microseconds.</li><li><code class="inline">active_sessions</code>: The number of active sessions for the user (default is 0).</li></ul><h2 id="new_user_presence/3-examples" class="section-heading"><a href="#new_user_presence/3-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="nc">Lightning.Workflows.Presence</span><span class="o">.</span><span class="n">new_user_presence</span><span class="p" data-group-id="7112505276-1">(</span><span class="p" data-group-id="7112505276-2">%</span><span class="nc" data-group-id="7112505276-2">User</span><span class="p" data-group-id="7112505276-2">{</span><span class="ss">id</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p" data-group-id="7112505276-2">}</span><span class="p">,</span><span class="w"> </span><span class="mi">1625597762000000</span><span class="p" data-group-id="7112505276-1">)</span><span class="w">
-</span><span class="p" data-group-id="7112505276-3">%</span><span class="nc" data-group-id="7112505276-3">Lightning.Workflows.Presence</span><span class="p" data-group-id="7112505276-3">{</span><span class="w">
-  </span><span class="ss">user</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="7112505276-4">%</span><span class="nc" data-group-id="7112505276-4">User</span><span class="p" data-group-id="7112505276-4">{</span><span class="ss">id</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p" data-group-id="7112505276-4">}</span><span class="p">,</span><span class="w">
+<p>Creates a new <code class="inline">UserPresence</code> struct.</p><h2 id="new_user_presence/3-parameters" class="section-heading"><a href="#new_user_presence/3-parameters" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Parameters</span></h2><ul><li><code class="inline">user</code>: The user data to be included in the presence.</li><li><code class="inline">joined_at</code>: The timestamp when the user joined, in microseconds.</li><li><code class="inline">active_sessions</code>: The number of active sessions for the user (default is 0).</li></ul><h2 id="new_user_presence/3-examples" class="section-heading"><a href="#new_user_presence/3-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="nc">Lightning.Workflows.Presence</span><span class="o">.</span><span class="n">new_user_presence</span><span class="p" data-group-id="6383054262-1">(</span><span class="p" data-group-id="6383054262-2">%</span><span class="nc" data-group-id="6383054262-2">User</span><span class="p" data-group-id="6383054262-2">{</span><span class="ss">id</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p" data-group-id="6383054262-2">}</span><span class="p">,</span><span class="w"> </span><span class="mi">1625597762000000</span><span class="p" data-group-id="6383054262-1">)</span><span class="w">
+</span><span class="p" data-group-id="6383054262-3">%</span><span class="nc" data-group-id="6383054262-3">Lightning.Workflows.Presence</span><span class="p" data-group-id="6383054262-3">{</span><span class="w">
+  </span><span class="ss">user</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="6383054262-4">%</span><span class="nc" data-group-id="6383054262-4">User</span><span class="p" data-group-id="6383054262-4">{</span><span class="ss">id</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p" data-group-id="6383054262-4">}</span><span class="p">,</span><span class="w">
   </span><span class="ss">joined_at</span><span class="p">:</span><span class="w"> </span><span class="mi">1625597762000000</span><span class="p">,</span><span class="w">
   </span><span class="ss">active_sessions</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="w">
-</span><span class="p" data-group-id="7112505276-3">}</span></code></pre>
+</span><span class="p" data-group-id="6383054262-3">}</span></code></pre>
   </section>
 </section>
 <section class="detail" id="track/3">
@@ -582,7 +600,7 @@ and edit priority.</p><h2 id="build_presences_summary/2-parameters" class="secti
 
   <section class="docstring">
 
-<p>Tracks the presence of a user on editing a workflow.</p><h2 id="track_user_presence/3-parameters" class="section-heading"><a href="#track_user_presence/3-parameters" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Parameters</span></h2><ul><li><code class="inline">user</code>: The user to be tracked.</li><li><code class="inline">workflow</code>: The workflow to track the user on.</li><li><code class="inline">pid</code>: The process identifier for the user's session.</li></ul><h2 id="track_user_presence/3-examples" class="section-heading"><a href="#track_user_presence/3-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="nc">Lightning.Workflows.Presence</span><span class="o">.</span><span class="n">track_user_presence</span><span class="p" data-group-id="5556440440-1">(</span><span class="p" data-group-id="5556440440-2">%</span><span class="nc" data-group-id="5556440440-2">User</span><span class="p" data-group-id="5556440440-2">{</span><span class="ss">id</span><span class="p">:</span><span class="w"> </span><span class="n">user_id</span><span class="p" data-group-id="5556440440-2">}</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="5556440440-3">%</span><span class="nc" data-group-id="5556440440-3">Workflow</span><span class="p" data-group-id="5556440440-3">{</span><span class="ss">id</span><span class="p">:</span><span class="w"> </span><span class="n">workflow_id</span><span class="p" data-group-id="5556440440-3">}</span><span class="p">,</span><span class="w"> </span><span class="n">self</span><span class="p" data-group-id="5556440440-4">(</span><span class="p" data-group-id="5556440440-4">)</span><span class="p" data-group-id="5556440440-1">)</span><span class="w">
+<p>Tracks the presence of a user on editing a workflow.</p><h2 id="track_user_presence/3-parameters" class="section-heading"><a href="#track_user_presence/3-parameters" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Parameters</span></h2><ul><li><code class="inline">user</code>: The user to be tracked.</li><li><code class="inline">workflow</code>: The workflow to track the user on.</li><li><code class="inline">pid</code>: The process identifier for the user's session.</li></ul><h2 id="track_user_presence/3-examples" class="section-heading"><a href="#track_user_presence/3-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="nc">Lightning.Workflows.Presence</span><span class="o">.</span><span class="n">track_user_presence</span><span class="p" data-group-id="6290711005-1">(</span><span class="p" data-group-id="6290711005-2">%</span><span class="nc" data-group-id="6290711005-2">User</span><span class="p" data-group-id="6290711005-2">{</span><span class="ss">id</span><span class="p">:</span><span class="w"> </span><span class="n">user_id</span><span class="p" data-group-id="6290711005-2">}</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="6290711005-3">%</span><span class="nc" data-group-id="6290711005-3">Workflow</span><span class="p" data-group-id="6290711005-3">{</span><span class="ss">id</span><span class="p">:</span><span class="w"> </span><span class="n">workflow_id</span><span class="p" data-group-id="6290711005-3">}</span><span class="p">,</span><span class="w"> </span><span class="n">self</span><span class="p" data-group-id="6290711005-4">(</span><span class="p" data-group-id="6290711005-4">)</span><span class="p" data-group-id="6290711005-1">)</span><span class="w">
 </span><span class="ss">:ok</span></code></pre>
   </section>
 </section>
@@ -649,7 +667,7 @@ and edit priority.</p><h2 id="build_presences_summary/2-parameters" class="secti
 
   <section class="docstring">
 
-<p>Untracks the presence of a user on editing a workflow.</p><h2 id="untrack_user_presence/3-parameters" class="section-heading"><a href="#untrack_user_presence/3-parameters" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Parameters</span></h2><ul><li><code class="inline">user</code>: The user to be tracked.</li><li><code class="inline">workflow</code>: The workflow to track the user on.</li><li><code class="inline">pid</code>: The process identifier for the user's session.</li></ul><h2 id="untrack_user_presence/3-examples" class="section-heading"><a href="#untrack_user_presence/3-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="nc">Lightning.Workflows.Presence</span><span class="o">.</span><span class="n">untrack_user_presence</span><span class="p" data-group-id="0659838030-1">(</span><span class="p" data-group-id="0659838030-2">%</span><span class="nc" data-group-id="0659838030-2">User</span><span class="p" data-group-id="0659838030-2">{</span><span class="ss">id</span><span class="p">:</span><span class="w"> </span><span class="n">user_id</span><span class="p" data-group-id="0659838030-2">}</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="0659838030-3">%</span><span class="nc" data-group-id="0659838030-3">Workflow</span><span class="p" data-group-id="0659838030-3">{</span><span class="ss">id</span><span class="p">:</span><span class="w"> </span><span class="n">workflow_id</span><span class="p" data-group-id="0659838030-3">}</span><span class="p">,</span><span class="w"> </span><span class="n">self</span><span class="p" data-group-id="0659838030-4">(</span><span class="p" data-group-id="0659838030-4">)</span><span class="p" data-group-id="0659838030-1">)</span><span class="w">
+<p>Untracks the presence of a user on editing a workflow.</p><h2 id="untrack_user_presence/3-parameters" class="section-heading"><a href="#untrack_user_presence/3-parameters" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Parameters</span></h2><ul><li><code class="inline">user</code>: The user to be tracked.</li><li><code class="inline">workflow</code>: The workflow to track the user on.</li><li><code class="inline">pid</code>: The process identifier for the user's session.</li></ul><h2 id="untrack_user_presence/3-examples" class="section-heading"><a href="#untrack_user_presence/3-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="nc">Lightning.Workflows.Presence</span><span class="o">.</span><span class="n">untrack_user_presence</span><span class="p" data-group-id="9013888553-1">(</span><span class="p" data-group-id="9013888553-2">%</span><span class="nc" data-group-id="9013888553-2">User</span><span class="p" data-group-id="9013888553-2">{</span><span class="ss">id</span><span class="p">:</span><span class="w"> </span><span class="n">user_id</span><span class="p" data-group-id="9013888553-2">}</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="9013888553-3">%</span><span class="nc" data-group-id="9013888553-3">Workflow</span><span class="p" data-group-id="9013888553-3">{</span><span class="ss">id</span><span class="p">:</span><span class="w"> </span><span class="n">workflow_id</span><span class="p" data-group-id="9013888553-3">}</span><span class="p">,</span><span class="w"> </span><span class="n">self</span><span class="p" data-group-id="9013888553-4">(</span><span class="p" data-group-id="9013888553-4">)</span><span class="p" data-group-id="9013888553-1">)</span><span class="w">
 </span><span class="ss">:ok</span></code></pre>
   </section>
 </section>
@@ -702,27 +720,29 @@ and edit priority.</p><h2 id="build_presences_summary/2-parameters" class="secti
   </section>
 
     <footer class="footer">
-      <p>
 
-        <span class="line">
-          <button class="a-main footer-button display-quick-switch" title="Search HexDocs packages">
-            Search HexDocs
-          </button>
+        <p>
 
-            <a href="Lightning.epub" title="ePub version">
-              Download ePub version
-            </a>
+          <span class="line">
+            <button class="a-main footer-button display-quick-switch" title="Go to package docs">
+              Go to package docs
+            </button>
 
-        </span>
-      </p>
+              <a href="Lightning.epub" title="ePub version">
+                Download ePub version
+              </a>
 
-      <p class="built-using">
-        Built using
-        <a href="https://github.com/elixir-lang/ex_doc" title="ExDoc" target="_blank" rel="help noopener" translate="no">ExDoc</a> (v0.38.4) for the
+          </span>
+        </p>
 
-          <a href="https://elixir-lang.org" title="Elixir" target="_blank" translate="no">Elixir programming language</a>
+        <p class="built-using">
+          Built using
+          <a href="https://github.com/elixir-lang/ex_doc" title="ExDoc" target="_blank" rel="help noopener" translate="no">ExDoc</a> (v0.39.3) for the
 
-      </p>
+            <a href="https://elixir-lang.org" title="Elixir" target="_blank" translate="no">Elixir programming language</a>
+
+        </p>
+
 
     </footer>
   </div>

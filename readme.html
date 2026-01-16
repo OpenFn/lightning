@@ -4,17 +4,17 @@
     <meta charset="utf-8">
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="generator" content="ExDoc v0.38.4">
+    <meta name="generator" content="ExDoc v0.39.3">
     <meta name="project" content="Lightning v2.15.11">
 
 
     <title>Lightning — Lightning v2.15.11</title>
 
-    <link rel="stylesheet" href="dist/html-elixir-RLZO5U2C.css" />
+    <link rel="stylesheet" href="dist/html-elixir-VYWJUHZE.css" />
 
-    <script defer src="dist/sidebar_items-C7898E3C.js"></script>
+    <script defer src="dist/sidebar_items-144AA46B.js"></script>
     <script defer src="docs_config.js"></script>
-    <script defer src="dist/html-Y223O6DN.js"></script>
+    <script defer src="dist/html-XBCM4BHM.js"></script>
 
   </head>
   <body>
@@ -58,16 +58,34 @@ Lightning
         <form class="search-bar" action="search.html">
           <label class="search-label">
             <span class="sr-only">Search documentation of Lightning</span>
-            <input name="q" type="text" class="search-input" placeholder="Press / to search" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
+            <div class="search-input-wrapper">
+              <input name="q" type="text" class="search-input" placeholder="Press / to search" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
+              <button type="button" tabindex="-1" class="search-close-button" aria-hidden="true">
+                <i class="ri-close-line ri-lg" title="Cancel search"></i>
+              </button>
+            </div>
           </label>
-          <button type="submit" class="search-button" aria-label="Submit Search" tabindex="-1">
-            <i class="ri-search-2-line ri-lg" aria-hidden="true"></i>
-          </button>
-          <button type="button" tabindex="-1" class="search-close-button" aria-hidden="true">
-            <i class="ri-close-line ri-lg" title="Cancel search"></i>
-          </button>
         </form>
         <div class="autocomplete">
+        </div>
+        <div class="engine-selector" data-multiple="false">
+          <button type="button" class="engine-button" aria-label="Select search engine" aria-haspopup="true" aria-expanded="false">
+            <i class="ri-search-2-line" aria-hidden="true"></i>
+            <span class="engine-name">Default</span>
+            <i class="ri-arrow-down-s-line" aria-hidden="true"></i>
+          </button>
+          <div class="engine-dropdown" hidden role="menu">
+
+              <button type="button"
+                      class="engine-option"
+                      data-engine-url="search.html?q="
+                      role="menuitemradio"
+                      aria-checked="true">
+                <span class="name">Default</span>
+                <span class="help">In-browser search</span>
+              </button>
+
+          </div>
         </div>
         <button class="icon-settings display-settings">
           <i class="ri-settings-3-line"></i>
@@ -174,7 +192,7 @@ changes.</p><h2 id="security-and-standards" class="section-heading"><a href="#se
 pitfalls and make sure we keep everything clean and consistent.</p><p>In addition to our test suite, you can run the following commands:</p><ul><li><code class="inline">mix format --check-formatted</code> Code formatting checker, run again without the
 <code class="inline">--check-formatted</code> flag to have your code automatically changed.</li><li><a href="https://hexdocs.pm/dialyxir/1.4.6/Mix.Tasks.Dialyzer.html"><code class="inline">mix dialyzer</code></a> Static analysis for type mismatches and other common warnings.
 See <a href="https://github.com/jeremyjh/dialyxir">dialyxir</a>.</li><li><code class="inline">mix credo --strict --all</code> Static analysis for consistency, and coding
-standards. See <a href="https://github.com/rrrene/credo">Credo</a>.</li><li><a href="https://hexdocs.pm/sobelow/0.14.0/Mix.Tasks.Sobelow.html"><code class="inline">mix sobelow</code></a> Check for commonly known security exploits. See
+standards. See <a href="https://github.com/rrrene/credo">Credo</a>.</li><li><a href="https://hexdocs.pm/sobelow/0.14.1/Mix.Tasks.Sobelow.html"><code class="inline">mix sobelow</code></a> Check for commonly known security exploits. See
 <a href="https://sobelow.io/">Sobelow</a>.</li><li><code class="inline">MIX_ENV=test mix coveralls</code> Test coverage reporter. This command also runs
 the test suite, and can be used in place of <a href="https://hexdocs.pm/mix/Mix.Tasks.Test.html"><code class="inline">mix test</code></a> when checking
 everything before pushing your code. See
@@ -201,7 +219,7 @@ added automatically for you), then make sure to self-review your code and go
 through the 'Review checklist'. Don't worry about the QA checkbox, our
 product manager Amber will tick that once she has reviewed your PR. You can
 leave any notes for the reviewer in a comment.</p></li><li><p>Once you're ready to submit a pull request, you can mark your draft PR as
-'Ready for review' and assign @stuartc or @taylordowns2000.</p></li></ol><h3 id="generate-the-docs-pages" class="section-heading"><a href="#generate-the-docs-pages" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Generate the docs pages</span></h3><p>You can generate the HTML and EPUB documentation locally using:</p><p><a href="https://hexdocs.pm/ex_doc/0.38.4/Mix.Tasks.Docs.html"><code class="inline">mix docs</code></a> and opening <code class="inline">doc/index.html</code> in your browser.</p><h2 id="server-specs-for-self-hosting" class="section-heading"><a href="#server-specs-for-self-hosting" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Server Specs for Self-Hosting</span></h2><p>For recommend server specifications for self-hosting of Lightning, head to the
+'Ready for review' and assign @stuartc or @taylordowns2000.</p></li></ol><h3 id="generate-the-docs-pages" class="section-heading"><a href="#generate-the-docs-pages" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Generate the docs pages</span></h3><p>You can generate the HTML and EPUB documentation locally using:</p><p><a href="https://hexdocs.pm/ex_doc/0.39.3/Mix.Tasks.Docs.html"><code class="inline">mix docs</code></a> and opening <code class="inline">doc/index.html</code> in your browser.</p><h2 id="server-specs-for-self-hosting" class="section-heading"><a href="#server-specs-for-self-hosting" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Server Specs for Self-Hosting</span></h2><p>For recommend server specifications for self-hosting of Lightning, head to the
 <a href="https://docs.openfn.org/documentation/deploy/options">deployment planning</a>
 section of the documentation or check out this
 <a href="https://community.openfn.org/t/specs-for-self-hosting-lightning/292">self-hosting thread</a>
@@ -219,7 +237,7 @@ is started during the parent app startup defined in <code class="inline">applica
 your <code class="inline">.env</code> to ensure the DB url is correctly set for your environment — note
 that composing a DB url out of other, earlier declared variables, does not work
 while using <code class="inline">xargs</code>.</p><h3 id="problems-with-debian" class="section-heading"><a href="#problems-with-debian" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Problems with Debian</span></h3><p>If you're getting this error on debian</p><pre><code class="makeup elixir" translate="no"><span class="o">==</span><span class="o">&gt;</span><span class="w"> </span><span class="n">earmark_parser</span><span class="w">
-</span><span class="nc">Compiling</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="n">file</span><span class="w"> </span><span class="p" data-group-id="2224704252-1">(</span><span class="o">.</span><span class="n">yrl</span><span class="p" data-group-id="2224704252-1">)</span><span class="w">
+</span><span class="nc">Compiling</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="n">file</span><span class="w"> </span><span class="p" data-group-id="8129326996-1">(</span><span class="o">.</span><span class="n">yrl</span><span class="p" data-group-id="8129326996-1">)</span><span class="w">
 </span><span class="o">/</span><span class="n">usr</span><span class="o">/</span><span class="n">lib</span><span class="o">/</span><span class="n">erlang</span><span class="o">/</span><span class="n">lib</span><span class="o">/</span><span class="n">parsetools</span><span class="o">-</span><span class="mf">2.3</span><span class="o">.</span><span class="mi">1</span><span class="o">/</span><span class="n">include</span><span class="o">/</span><span class="n">yeccpre</span><span class="o">.</span><span class="ss">hrl</span><span class="p">:</span><span class="w"> </span><span class="n">no</span><span class="w"> </span><span class="n">such</span><span class="w"> </span><span class="n">file</span><span class="w"> </span><span class="ow">or</span><span class="w"> </span><span class="n">directory</span><span class="w">
 </span><span class="n">could</span><span class="w"> </span><span class="ow">not</span><span class="w"> </span><span class="n">compile</span><span class="w"> </span><span class="n">dependency</span><span class="w"> </span><span class="ss">:earmark_parser</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;mix compile&quot;</span><span class="w"> </span><span class="n">failed</span><span class="o">.</span><span class="w"> </span><span class="nc">You</span><span class="w"> </span><span class="n">can</span><span class="w"> </span><span class="n">recompile</span><span class="w"> </span><span class="n">this</span><span class="w"> </span><span class="n">dependency</span><span class="w"> </span><span class="k">with</span><span class="w"> </span><span class="s">&quot;mix deps.compile earmark_parser&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">update</span><span class="w"> </span><span class="n">it</span><span class="w"> </span><span class="k">with</span><span class="w"> </span><span class="s">&quot;mix deps.update earmark_parser&quot;</span><span class="w"> </span><span class="ow">or</span><span class="w"> </span><span class="n">clean</span><span class="w"> </span><span class="n">it</span><span class="w"> </span><span class="k">with</span><span class="w"> </span><span class="s">&quot;mix deps.clean earmark_parser&quot;</span></code></pre><p>You need to install erlang development environment <code class="inline">sudo apt install erlang-dev</code>
 <a href="https://github.com/elixir-lang/ex_doc/issues/1441">refer to this issue</a></p><h3 id="problems-with-docker" class="section-heading"><a href="#problems-with-docker" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Problems with Docker</span></h3><h4>Versions</h4><p>The build may not work on old versions of Docker and Docker compose. It has been
@@ -237,7 +255,7 @@ this:</p><pre><code class="makeup sh" translate="no"><span class=""># To remove 
 </span><span class="">docker compose run --rm web mix ecto.migrate
 </span><span class="">docker compose up
 </span></code></pre><h4>Apple Silicon</h4><p>When running <code class="inline">docker compose up</code> on Apple Silicon (aarch64), you might encounter
-the following error:</p><pre><code class="makeup elixir" translate="no"><span class="p" data-group-id="3509369723-1">[</span><span class="n">notice</span><span class="p" data-group-id="3509369723-1">]</span><span class="w"> </span><span class="nc">Application</span><span class="w"> </span><span class="n">ssl</span><span class="w"> </span><span class="ss">exited</span><span class="p">:</span><span class="w"> </span><span class="n">exited</span><span class="w"> </span><span class="ss">in</span><span class="p">:</span><span class="w"> </span><span class="nc">:ssl_app</span><span class="o">.</span><span class="n">start</span><span class="p" data-group-id="3509369723-2">(</span><span class="ss">:normal</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="3509369723-3">[</span><span class="p" data-group-id="3509369723-3">]</span><span class="p" data-group-id="3509369723-2">)</span><span class="w">
+the following error:</p><pre><code class="makeup elixir" translate="no"><span class="p" data-group-id="4540081841-1">[</span><span class="n">notice</span><span class="p" data-group-id="4540081841-1">]</span><span class="w"> </span><span class="nc">Application</span><span class="w"> </span><span class="n">ssl</span><span class="w"> </span><span class="ss">exited</span><span class="p">:</span><span class="w"> </span><span class="n">exited</span><span class="w"> </span><span class="ss">in</span><span class="p">:</span><span class="w"> </span><span class="nc">:ssl_app</span><span class="o">.</span><span class="n">start</span><span class="p" data-group-id="4540081841-2">(</span><span class="ss">:normal</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="4540081841-3">[</span><span class="p" data-group-id="4540081841-3">]</span><span class="p" data-group-id="4540081841-2">)</span><span class="w">
  </span><span class="gt">** (EXIT) an exception was raised:
      ** (ArgumentError) could not call Module.put_attribute/3 because the module Lightning.MixProject is already compiled
          (elixir 1.16.2) lib/module.ex:2360: Module.assert_not_readonly!/2
@@ -256,8 +274,8 @@ stage. You can follow this thread on our community forum for more info:
 
     </span><span class="n">lib</span><span class="o">/</span><span class="n">mix</span><span class="o">/</span><span class="n">tasks</span><span class="o">/</span><span class="n">compile</span><span class="o">.</span><span class="n">rambo</span><span class="o">.</span><span class="n">ex</span><span class="p">:</span><span class="mi">89</span><span class="p">:</span><span class="w"> </span><span class="nc">Mix.Tasks.Compile.Rambo</span><span class="o">.</span><span class="n">compile!</span><span class="o">/</span><span class="mi">0</span><span class="w">
     </span><span class="n">lib</span><span class="o">/</span><span class="n">mix</span><span class="o">/</span><span class="n">tasks</span><span class="o">/</span><span class="n">compile</span><span class="o">.</span><span class="n">rambo</span><span class="o">.</span><span class="n">ex</span><span class="p">:</span><span class="mi">51</span><span class="p">:</span><span class="w"> </span><span class="nc">Mix.Tasks.Compile.Rambo</span><span class="o">.</span><span class="n">run</span><span class="o">/</span><span class="mi">1</span><span class="w">
-    </span><span class="p" data-group-id="8097813924-1">(</span><span class="n">mix</span><span class="w"> </span><span class="mf">1.14</span><span class="o">.</span><span class="mi">2</span><span class="p" data-group-id="8097813924-1">)</span><span class="w"> </span><span class="n">lib</span><span class="o">/</span><span class="n">mix</span><span class="o">/</span><span class="n">task</span><span class="o">.</span><span class="n">ex</span><span class="p">:</span><span class="mi">421</span><span class="p">:</span><span class="w"> </span><span class="n">anonymous</span><span class="w"> </span><span class="k" data-group-id="8097813924-2">fn</span><span class="o">/</span><span class="mi">3</span><span class="w"> </span><span class="ow">in</span><span class="w"> </span><span class="nc">Mix.Task</span><span class="o">.</span><span class="n">run_task</span><span class="o">/</span><span class="mi">4</span><span class="w">
-    </span><span class="p" data-group-id="8097813924-3">(</span><span class="n">mix</span><span class="w"> </span><span class="mf">1.14</span><span class="o">.</span><span class="mi">2</span><span class="p" data-group-id="8097813924-3">)</span><span class="w"> </span><span class="n">lib</span><span class="o">/</span><span class="n">mix</span><span class="o">/</span><span class="n">cli</span><span class="o">.</span><span class="n">ex</span><span class="p">:</span><span class="mi">84</span><span class="p">:</span><span class="w"> </span><span class="nc">Mix.CLI</span><span class="o">.</span><span class="n">run_task</span><span class="o">/</span><span class="mi">2</span></code></pre><p>You can resolve this error by installing the Rust compiler using Homebrew. Run
+    </span><span class="p" data-group-id="7030805769-1">(</span><span class="n">mix</span><span class="w"> </span><span class="mf">1.14</span><span class="o">.</span><span class="mi">2</span><span class="p" data-group-id="7030805769-1">)</span><span class="w"> </span><span class="n">lib</span><span class="o">/</span><span class="n">mix</span><span class="o">/</span><span class="n">task</span><span class="o">.</span><span class="n">ex</span><span class="p">:</span><span class="mi">421</span><span class="p">:</span><span class="w"> </span><span class="n">anonymous</span><span class="w"> </span><span class="k" data-group-id="7030805769-2">fn</span><span class="o">/</span><span class="mi">3</span><span class="w"> </span><span class="ow">in</span><span class="w"> </span><span class="nc">Mix.Task</span><span class="o">.</span><span class="n">run_task</span><span class="o">/</span><span class="mi">4</span><span class="w">
+    </span><span class="p" data-group-id="7030805769-3">(</span><span class="n">mix</span><span class="w"> </span><span class="mf">1.14</span><span class="o">.</span><span class="mi">2</span><span class="p" data-group-id="7030805769-3">)</span><span class="w"> </span><span class="n">lib</span><span class="o">/</span><span class="n">mix</span><span class="o">/</span><span class="n">cli</span><span class="o">.</span><span class="n">ex</span><span class="p">:</span><span class="mi">84</span><span class="p">:</span><span class="w"> </span><span class="nc">Mix.CLI</span><span class="o">.</span><span class="n">run_task</span><span class="o">/</span><span class="mi">2</span></code></pre><p>You can resolve this error by installing the Rust compiler using Homebrew. Run
 the following command in your terminal: <code class="inline">brew install rust</code></p><p>If neither of the approaches above work, please raise an issue.</p><h2 id="support" class="section-heading"><a href="#support" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Support</span></h2><p>If you have any questions, feedback, or issues, please:</p><ul><li>Post on the OpenFn Community at
 <a href="https://community.openfn.org">community.openfn.org</a></li><li>Open an issue directly on this GitHub Repo:
 <a href="https://github.com/OpenFn/Lightning/issues">github.com/OpenFn/Lightning/issues</a></li></ul>
@@ -282,27 +300,29 @@ Running Locally
   </div>
 </div>
     <footer class="footer">
-      <p>
 
-        <span class="line">
-          <button class="a-main footer-button display-quick-switch" title="Search HexDocs packages">
-            Search HexDocs
-          </button>
+        <p>
 
-            <a href="Lightning.epub" title="ePub version">
-              Download ePub version
-            </a>
+          <span class="line">
+            <button class="a-main footer-button display-quick-switch" title="Go to package docs">
+              Go to package docs
+            </button>
 
-        </span>
-      </p>
+              <a href="Lightning.epub" title="ePub version">
+                Download ePub version
+              </a>
 
-      <p class="built-using">
-        Built using
-        <a href="https://github.com/elixir-lang/ex_doc" title="ExDoc" target="_blank" rel="help noopener" translate="no">ExDoc</a> (v0.38.4) for the
+          </span>
+        </p>
 
-          <a href="https://elixir-lang.org" title="Elixir" target="_blank" translate="no">Elixir programming language</a>
+        <p class="built-using">
+          Built using
+          <a href="https://github.com/elixir-lang/ex_doc" title="ExDoc" target="_blank" rel="help noopener" translate="no">ExDoc</a> (v0.39.3) for the
 
-      </p>
+            <a href="https://elixir-lang.org" title="Elixir" target="_blank" translate="no">Elixir programming language</a>
+
+        </p>
+
 
     </footer>
   </div>
