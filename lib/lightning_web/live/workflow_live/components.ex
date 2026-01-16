@@ -103,20 +103,19 @@ defmodule LightningWeb.WorkflowLive.Components do
 
   def deprecated_warning(assigns) do
     ~H"""
-    <div class="relative inline-block group">
-      <div class="h-full flex items-center">
-        <button class="inline-flex items-center gap-1 rounded-md text-sm font-medium text-danger-900 hover:text-danger-600 focus:outline-none">
-          <span class="hero-exclamation-triangle h-4 w-4"></span> Deprecated
-        </button>
-      </div>
+    <div class="relative inline-block group/menu">
+      <button class="inline-flex items-center gap-1 rounded-md text-sm font-medium text-danger-900 hover:text-danger-700 focus:outline-none group-hover/menu:text-danger-700">
+        <span class="hero-exclamation-triangle h-4 w-4"></span> Deprecated
+      </button>
 
-      <div class="absolute left-0 -z-10 mt-2 w-56 origin-top-left rounded-lg bg-white shadow-lg ring-1 ring-black/5
-           opacity-0 translate-y-1 scale-95
+      <div class="absolute left-0 mt-1 z-50 w-64 origin-top-left rounded-lg bg-white shadow-lg ring-1 ring-black/5 outline-none
+           invisible opacity-0 scale-95
            transition-all duration-150 ease-out
-           group-hover:opacity-100 group-hover:translate-y-0 group-hover:z-50 group-hover:scale-100">
+           group-hover/menu:visible group-hover/menu:opacity-100 group-hover/menu:scale-100
+           before:content-[''] before:absolute before:left-0 before:right-0 before:-top-1 before:h-1">
         <div class="py-1">
-          <div class="px-4 py-2">
-            This editor has been deprecated in favor of a modern collaborative one.
+          <div class="px-4 py-2 font-normal text-sm text-gray-700">
+            This legacy editor has been deprecated in favor of a modern one with better functionality
           </div>
           <div class="my-1 h-px bg-gray-100"></div>
           <div

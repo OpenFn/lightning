@@ -279,54 +279,62 @@ export function Header({
           <Breadcrumbs>{children}</Breadcrumbs>
           <ReadOnlyWarning className="ml-3" />
           {projectId && workflowId && (
-            <>
-              {/* <button
-                type="button"
-                onClick={() => void handleSwitchToLegacyEditor()}
-                className="inline-flex items-center justify-center
-              w-6 h-6 text-primary-600 hover:text-primary-700
-              hover:bg-primary-50 rounded transition-colors ml-2"
-              >
-                <Tooltip
-                  content={
-                    "You're using the new editor — click to switch back."
-                  }
-                  side="bottom"
-                >
-                  <span className="hero-beaker-solid h-4 w-4" />
-                </Tooltip>
-              </button> */}
-              <div className="relative inline-block group">
-                <div className="h-full flex items-center">
-                  <button className="inline-flex items-center gap-1 rounded-md text-sm font-medium text-primary-700 hover:text-primary-900 focus:outline-none">
+            <Menu as="div" className="relative inline-block">
+              {({ open }) => (
+                <>
+                  <MenuButton
+                    className="inline-flex items-center gap-1 rounded-md text-sm font-medium text-primary-700 hover:text-primary-900 focus:outline-none data-open:text-primary-900"
+                    onMouseEnter={e => {
+                      const button = e.currentTarget;
+                      if (!open) {
+                        button.click();
+                      }
+                    }}
+                  >
                     <span className="hero-information-circle h-4 w-4"></span>{' '}
                     New Editor
-                  </button>
-                </div>
+                  </MenuButton>
 
-                <div
-                  className="absolute left-0 -z-10 mt-2 w-56 origin-top-left rounded-lg bg-white shadow-lg ring-1 ring-black/5
-           opacity-0 translate-y-1 scale-95
-           transition-all duration-150 ease-out
-           group-hover:opacity-100 group-hover:translate-y-0 group-hover:z-50 group-hover:scale-100"
-                >
-                  <div className="py-1">
-                    <div className="px-4 py-2">
-                      This is the new editor which supports collaboration and
-                      many more.
+                  <MenuItems
+                    transition
+                    className="absolute left-0 z-50 mt-1 w-64 origin-top-left rounded-lg bg-white shadow-lg ring-1 outline-none ring-black/5
+                    transition data-closed:scale-95 data-closed:transform
+                    data-closed:opacity-0 data-enter:duration-150 data-enter:ease-out
+                    data-leave:duration-100 data-leave:ease-in"
+                    onMouseLeave={e => {
+                      const menu = e.currentTarget;
+                      const button = menu.previousElementSibling;
+                      if (button instanceof HTMLElement) {
+                        button.click();
+                      }
+                    }}
+                  >
+                    <div className="py-1">
+                      <div className="px-4 py-2 text-sm text-gray-700">
+                        You're using the brand new editor which supports
+                        collaborative editing, an enhanced Job Editor & modern
+                        user-interface.
+                      </div>
+                      <div className="my-1 h-px bg-gray-100"></div>
+                      <MenuItem>
+                        {({ focus }) => (
+                          <button
+                            type="button"
+                            onClick={() => void handleSwitchToLegacyEditor()}
+                            className={`block w-full text-left px-4 py-2 text-sm font-medium text-danger-600 hover:bg-danger-50 cursor-pointer ${
+                              focus ? 'bg-danger-50' : ''
+                            }`}
+                          >
+                            <span aria-hidden="true">&larr;</span> Go back to
+                            the legacy editor&nbsp;
+                          </button>
+                        )}
+                      </MenuItem>
                     </div>
-                    <div className="my-1 h-px bg-gray-100"></div>
-                    <div
-                      className="block px-4 py-2 text-sm font-medium text-primary-600 hover:bg-primary-50 cursor-pointer"
-                      onClick={() => void handleSwitchToLegacyEditor()}
-                    >
-                      <span aria-hidden="true">&larr;</span> Go to the legacy
-                      editor&nbsp;
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </>
+                  </MenuItems>
+                </>
+              )}
+            </Menu>
           )}
           <ActiveCollaborators className="ml-2" />
           <div className="grow ml-2"></div>
