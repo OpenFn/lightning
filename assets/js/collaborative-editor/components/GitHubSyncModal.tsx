@@ -168,7 +168,8 @@ export function GitHubSyncModal() {
                   autoFocus
                 />
                 <p className="mt-2 text-xs text-gray-500 text-left">
-                  Tip: Press Ctrl+Enter (or Cmd+Enter) to save and sync
+                  Tip: Press Ctrl+Enter (or Cmd+Enter) to save and sync after
+                  typing here
                 </p>
               </div>
             </div>

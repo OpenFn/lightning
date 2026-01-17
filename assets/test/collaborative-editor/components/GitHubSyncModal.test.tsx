@@ -802,7 +802,7 @@ describe('GitHubSyncModal - Keyboard Shortcuts', () => {
     await waitFor(() => {
       expect(
         screen.getByText(
-          /Tip: Press Ctrl\+Enter \(or Cmd\+Enter\) to save and sync/i
+          /Tip: Press Ctrl\+Enter \(or Cmd\+Enter\) to save and sync after typing here/i
         )
       ).toBeInTheDocument();
     });
