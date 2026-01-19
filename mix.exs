@@ -115,7 +115,7 @@ defmodule Lightning.MixProject do
       {:phoenix_html_helpers, "~> 1.0"},
       {:phoenix_live_dashboard, "~> 0.8"},
       {:phoenix_live_reload, "~> 1.5", only: :dev},
-      {:phoenix_live_view, "~> 1.0.17"},
+      {:phoenix_live_view, "~> 1.1.20"},
       {:phoenix_storybook, "~> 0.9.2", only: :dev},
       {:cors_plug, "~> 3.0"},
       {:plug_cowboy, "~> 2.5"},
