@@ -12,10 +12,13 @@ defmodule Lightning.Runs.Queue do
           | {:error, Ecto.Changeset.t(Lightning.Run.t())}
   def claim(demand, base_query, worker_name \\ nil) do
     Ecto.Multi.new()
-    |> Ecto.Multi.run(:force_custom_plan, fn repo, _changes ->
-      case repo.query("SET LOCAL plan_cache_mode = force_custom_plan") do
-        {:ok, _} -> {:ok, :plan_set}
-        {:error, _} = error -> error
+    |> Ecto.Multi.run(:configure_session, fn repo, _changes ->
+      work_mem = Lightning.Config.claim_work_mem()
+
+      with {:ok, _} <-
+             repo.query("SET LOCAL plan_cache_mode = force_custom_plan"),
+           {:ok, _} <- repo.query("SET LOCAL work_mem = '#{work_mem}'") do
+        {:ok, :session_configured}
       end
     end)
     |> Ecto.Multi.run(:claim_runs, fn _repo, _changes ->
