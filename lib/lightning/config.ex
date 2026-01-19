@@ -336,7 +336,7 @@ defmodule Lightning.Config do
 
     @impl true
     def claim_work_mem do
-      Application.get_env(:lightning, :claim_work_mem, "32MB")
+      Application.get_env(:lightning, :claim_work_mem)
     end
 
     @impl true
@@ -486,7 +486,7 @@ defmodule Lightning.Config do
   @callback external_metrics_module() :: module() | nil
   @callback ai_assistant_modes() :: %{atom() => module()}
   @callback per_workflow_claim_limit() :: pos_integer()
-  @callback claim_work_mem() :: String.t()
+  @callback claim_work_mem() :: String.t() | nil
   @callback broadcast_work_available?() :: boolean()
   @callback sentry() :: module()
   @callback webhook_retry() :: Keyword.t()

@@ -31,3 +31,5 @@ config :phoenix, :filter_parameters, [
 config :lightning,
   schemas_path: "priv/schemas",
   adaptor_icons_path: "priv/static/images/adaptors"
+
+config :lightning, :claim_work_mem, "32MB"

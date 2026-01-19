@@ -129,11 +129,16 @@ defmodule Lightning.Configtest do
     end
 
     test "returns the claim work_mem setting" do
-      expected = Application.get_env(:lightning, :claim_work_mem, "32MB")
+      prev = Application.get_env(:lightning, :claim_work_mem)
 
-      actual = API.claim_work_mem()
-
-      assert expected == actual
+      try do
+        Application.put_env(:lightning, :claim_work_mem, "64MB")
+        assert API.claim_work_mem() == "64MB"
+      after
+        if prev,
+          do: Application.put_env(:lightning, :claim_work_mem, prev),
+          else: Application.delete_env(:lightning, :claim_work_mem)
+      end
     end
   end
 

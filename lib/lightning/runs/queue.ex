@@ -17,7 +17,7 @@ defmodule Lightning.Runs.Queue do
 
       with {:ok, _} <-
              repo.query("SET LOCAL plan_cache_mode = force_custom_plan"),
-           {:ok, _} <- repo.query("SET LOCAL work_mem = '#{work_mem}'") do
+           {:ok, _} <- maybe_set_work_mem(repo, work_mem) do
         {:ok, :session_configured}
       end
     end)
@@ -62,4 +62,9 @@ defmodule Lightning.Runs.Queue do
         {:error, changeset}
     end
   end
+
+  defp maybe_set_work_mem(_repo, nil), do: {:ok, :skipped}
+
+  defp maybe_set_work_mem(repo, work_mem),
+    do: repo.query("SET LOCAL work_mem = '#{work_mem}'")
 end

@@ -464,16 +464,22 @@ defmodule Lightning.Config.BootstrapTest do
   end
 
   describe "claim_work_mem" do
-    test "defaults to 32MB" do
+    test "defaults to nil" do
       Dotenvy.source([%{}])
       Bootstrap.configure()
-      assert get_env(:lightning, :claim_work_mem) == "32MB"
+      assert get_env(:lightning, :claim_work_mem) == nil
     end
 
-    test "can be set to a different value" do
+    test "can be set to a value" do
       Dotenvy.source([%{"CLAIM_WORK_MEM" => "64MB"}])
       Bootstrap.configure()
       assert get_env(:lightning, :claim_work_mem) == "64MB"
+    end
+
+    test "empty string becomes nil" do
+      Dotenvy.source([%{"CLAIM_WORK_MEM" => ""}])
+      Bootstrap.configure()
+      assert get_env(:lightning, :claim_work_mem) == nil
     end
 
     test "accepts valid PostgreSQL memory values" do

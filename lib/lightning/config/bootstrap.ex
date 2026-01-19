@@ -640,15 +640,24 @@ defmodule Lightning.Config.Bootstrap do
 
     config :lightning,
            :claim_work_mem,
-           env!("CLAIM_WORK_MEM", :string, "32MB")
-           |> tap(fn value ->
-             unless Regex.match?(~r/^\d+(kB|MB|GB|TB)$/i, value) do
-               raise """
-               Invalid CLAIM_WORK_MEM value: #{inspect(value)}
+           env!("CLAIM_WORK_MEM", :string, nil)
+           |> then(fn
+             nil ->
+               nil
 
-               Must be a valid PostgreSQL memory value (e.g., "32MB", "1GB", "256kB").
-               """
-             end
+             "" ->
+               nil
+
+             value ->
+               unless Regex.match?(~r/^\d+(kB|MB|GB|TB)$/i, value) do
+                 raise """
+                 Invalid CLAIM_WORK_MEM value: #{inspect(value)}
+
+                 Must be a valid PostgreSQL memory value (e.g., "32MB", "1GB", "256kB").
+                 """
+               end
+
+               value
            end)
 
     config :lightning, :usage_tracking,
