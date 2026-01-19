@@ -279,62 +279,24 @@ export function Header({
           <Breadcrumbs>{children}</Breadcrumbs>
           <ReadOnlyWarning className="ml-3" />
           {projectId && workflowId && (
-            <Menu as="div" className="relative inline-block">
-              {({ open }) => (
-                <>
-                  <MenuButton
-                    className="inline-flex items-center gap-1 rounded-md text-sm font-medium text-primary-700 hover:text-primary-900 focus:outline-none data-open:text-primary-900"
-                    onMouseEnter={e => {
-                      const button = e.currentTarget;
-                      if (!open) {
-                        button.click();
-                      }
-                    }}
-                  >
-                    <span className="hero-information-circle h-4 w-4"></span>{' '}
-                    New Editor
-                  </MenuButton>
-
-                  <MenuItems
-                    transition
-                    className="absolute left-0 z-50 mt-1 w-64 origin-top-left rounded-lg bg-white shadow-lg ring-1 outline-none ring-black/5
-                    transition data-closed:scale-95 data-closed:transform
-                    data-closed:opacity-0 data-enter:duration-150 data-enter:ease-out
-                    data-leave:duration-100 data-leave:ease-in"
-                    onMouseLeave={e => {
-                      const menu = e.currentTarget;
-                      const button = menu.previousElementSibling;
-                      if (button instanceof HTMLElement) {
-                        button.click();
-                      }
-                    }}
-                  >
-                    <div className="py-1">
-                      <div className="px-4 py-2 text-sm text-gray-700">
-                        You're using the brand new editor which supports
-                        real-time collaboration, modern UI, and improved
-                        performance.
-                      </div>
-                      <div className="my-1 h-px bg-gray-100"></div>
-                      <MenuItem>
-                        {({ focus }) => (
-                          <button
-                            type="button"
-                            onClick={() => void handleSwitchToLegacyEditor()}
-                            className={`block w-full text-left px-4 py-2 text-sm font-medium text-danger-600 hover:bg-danger-50 cursor-pointer ${
-                              focus ? 'bg-danger-50' : ''
-                            }`}
-                          >
-                            <span aria-hidden="true">&larr;</span> Go back to
-                            the legacy editor&nbsp;
-                          </button>
-                        )}
-                      </MenuItem>
-                    </div>
-                  </MenuItems>
-                </>
-              )}
-            </Menu>
+            <Tooltip
+              content={
+                <span>
+                  Looking for the old version of the workflow builder? You can
+                  switch back for a few more days by clicking this icon. (But it
+                  will soon be retired!)
+                </span>
+              }
+              side="bottom"
+            >
+              <button
+                type="button"
+                onClick={() => void handleSwitchToLegacyEditor()}
+                className="w-6 h-6 place-self-center text-slate-500 hover:text-slate-400 cursor-pointer"
+              >
+                <span className="hero-question-mark-circle"></span>
+              </button>
+            </Tooltip>
           )}
           <ActiveCollaborators className="ml-2" />
           <div className="grow ml-2"></div>

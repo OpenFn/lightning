@@ -42,16 +42,9 @@ export function CollaborativeEditorPromoBanner({
         >
           <strong className="font-semibold flex items-center gap-2">
             <span className="hero-exclamation-triangle"></span>
-            This legacy editor will be retired very soon
+            This legacy workflow builder soon be retired.
           </strong>
-          <svg
-            viewBox="0 0 2 2"
-            aria-hidden="true"
-            className="mx-2 inline size-0.5 fill-current"
-          >
-            <circle r={1} cx={1} cy={1} />
-          </svg>
-          Go to the new editor&nbsp;
+          &nbsp; Go to the new editor&nbsp;
           <span aria-hidden="true">&rarr;</span>
         </button>
       </div>

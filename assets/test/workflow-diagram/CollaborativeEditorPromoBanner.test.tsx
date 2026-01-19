@@ -48,7 +48,7 @@ describe('CollaborativeEditorPromoBanner', () => {
       render(<CollaborativeEditorPromoBanner />);
 
       expect(
-        screen.getByText(/This legacy editor will be retired/)
+        screen.getByText(/This legacy workflow builder/)
       ).toBeInTheDocument();
     });
 
@@ -58,7 +58,7 @@ describe('CollaborativeEditorPromoBanner', () => {
       render(<CollaborativeEditorPromoBanner />);
 
       expect(
-        screen.queryByText('This legacy editor will be retired')
+        screen.queryByText('This legacy workflow builder')
       ).not.toBeInTheDocument();
     });
 
@@ -79,7 +79,7 @@ describe('CollaborativeEditorPromoBanner', () => {
       render(<CollaborativeEditorPromoBanner pushEvent={mockPushEvent} />);
 
       const bannerButton = screen.getByRole('button', {
-        name: /This legacy editor will be retired/,
+        name: /This legacy workflow builder/,
       });
       fireEvent.click(bannerButton);
 
@@ -90,7 +90,7 @@ describe('CollaborativeEditorPromoBanner', () => {
       render(<CollaborativeEditorPromoBanner />);
 
       const bannerButton = screen.getByRole('button', {
-        name: /This legacy editor will be retired/,
+        name: /This legacy workflow builder/,
       });
       // Should not throw
       expect(() => fireEvent.click(bannerButton)).not.toThrow();
