@@ -101,11 +101,13 @@ defmodule LightningWeb.WorkflowLive.Components do
     """
   end
 
+  attr :id, :string, required: true
+
   def deprecated_warning(assigns) do
     ~H"""
     <button
       type="button"
-      id="deprecated-editor-warning"
+      id={@id}
       phx-click="switch_to_collab_editor"
       phx-hook="Tooltip"
       aria-label="You're using the legacy workflow builder and will soon be upgraded. Click to switch now."

@@ -4677,7 +4677,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       # Should show the beaker icon toggle
       assert has_element?(
                view,
-               "div[data-id*='deprecated']"
+               "button[id*='deprecated']"
              )
     end
 
@@ -4693,7 +4693,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       # Should show the toggle (no longer gated by experimental features)
       assert has_element?(
                view,
-               "div[data-id*='deprecated']"
+               "button[id*='deprecated']"
              )
     end
 
@@ -4721,7 +4721,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       # Toggle is shown even on non-latest snapshots (no longer conditionally hidden)
       assert has_element?(
                view,
-               "div[data-id*='deprecated']"
+               "button[id*='deprecated']"
              )
     end
 
@@ -4748,7 +4748,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       # Should show toggle on latest version
       assert has_element?(
                view,
-               "div[data-id*='deprecated']"
+               "button[id*='deprecated']"
              )
     end
 
@@ -4774,7 +4774,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       # Click the collaborative editor toggle
       view
-      |> element("div[data-id*='deprecated']")
+      |> element("button[id*='deprecated']")
       |> render_click()
 
       # Should navigate to collaborative editor route
@@ -4809,16 +4809,16 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       toggle_element =
         view
-        |> element("div[data-id*='deprecated']")
+        |> element("button[id*='deprecated']")
 
       toggle_html = render(toggle_element)
 
       # Check styling classes
-      assert toggle_html =~ "text-primary-600"
-      assert toggle_html =~ "hover:bg-primary-50"
+      assert toggle_html =~ "text-danger-500"
+      assert toggle_html =~ "hover:text-danger-400"
 
-      # Check accessibility
-      assert toggle_html =~ "Go to the new editor"
+      # Check accessibility (aria-label)
+      assert toggle_html =~ "Click to switch"
     end
 
     test "preserves existing experimental features preferences", %{
@@ -4847,7 +4847,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       # Should show toggle
       assert has_element?(
                view,
-               "div[data-id*='deprecated']"
+               "button[id*='deprecated']"
              )
 
       # Verify all preferences are preserved
@@ -4879,7 +4879,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       # Should show the beaker icon toggle even on new workflow page
       assert has_element?(
                view,
-               "div[data-id*='deprecated']"
+               "button[id*='deprecated']"
              )
     end
 
@@ -4894,7 +4894,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       # Should show the toggle (no longer gated by experimental features)
       assert has_element?(
                view,
-               "div[data-id*='deprecated']"
+               "button[id*='deprecated']"
              )
     end
 
@@ -4920,7 +4920,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
           ~p"/projects/#{project.id}/w/#{workflow.id}/legacy?s=#{job.id}&m=expand&v=#{workflow.lock_version}"
         )
 
-      assert html =~ "Go to the new editor"
+      assert html =~ "Click to switch"
     end
 
     test "shows collaborative editor toggle in job inspector without experimental features",
@@ -4939,7 +4939,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
         )
 
       # Should show beaker icon in job inspector (no longer gated by experimental features)
-      assert html =~ "Go to the new editor"
+      assert html =~ "Click to switch"
     end
   end
 

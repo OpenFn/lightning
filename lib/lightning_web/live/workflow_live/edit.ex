@@ -129,7 +129,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
               <% end %>
               
     <!-- Add collaborative editor toggle (beaker icon only) -->
-              <LightningWeb.WorkflowLive.Components.deprecated_warning />
+              <LightningWeb.WorkflowLive.Components.deprecated_warning id="canvas-deprecated-warning" />
               <LightningWeb.WorkflowLive.Components.online_users
                 id="canvas-online-users"
                 presences={@presences}

@@ -133,7 +133,7 @@ defmodule LightningWeb.WorkflowLive.JobView do
               current_user={@current_user}
               prior_user={@prior_user_presence.user}
             />
-            <LightningWeb.WorkflowLive.Components.deprecated_warning />
+            <LightningWeb.WorkflowLive.Components.deprecated_warning id="inspector-deprecated-warning" />
           </div>
           <div class="flex grow items-center justify-end">
             <.offline_indicator />
