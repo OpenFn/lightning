@@ -290,8 +290,11 @@ defmodule LightningWeb.ProfileLiveTest do
       refute html =~ "Scan the QR code"
 
       # show QR code
-      assert view |> element("#toggle-mfa-switch") |> render_click() =~
-               "Scan the QR code"
+      qr_html = view |> element("#toggle-mfa-switch") |> render_click()
+      assert qr_html =~ "Scan the QR code"
+
+      # QR code SVG should not contain XML declaration (not valid HTML5)
+      refute qr_html =~ "<?xml"
 
       # hide QR code
       view |> element("#toggle-mfa-switch") |> render_click()

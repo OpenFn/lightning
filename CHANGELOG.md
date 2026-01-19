@@ -17,6 +17,10 @@ and this project adheres to
 
 ### Added
 
+- Add collapsible left sidebar with keyboard shortcut (Cmd/Ctrl+M) and
+  command-palette style project picker (Cmd/Ctrl+Shift+P)
+  [#4197](https://github.com/OpenFn/lightning/pull/4197)
+
 ### Changed
 
 ### Fixed

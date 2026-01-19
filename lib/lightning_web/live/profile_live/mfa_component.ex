@@ -103,7 +103,14 @@ defmodule LightningWeb.ProfileLive.MfaComponent do
     uri
     |> EQRCode.encode()
     |> EQRCode.svg(width: 264)
+    |> strip_xml_declaration()
     |> raw()
+  end
+
+  # Strip XML declaration which is not valid HTML5 and causes issues
+  # with Floki parsing when combined with phx-update="ignore" elements
+  defp strip_xml_declaration(svg) do
+    String.replace(svg, ~r/<\?xml[^?]*\?>\s*/i, "")
   end
 
   defp toggle_btn_event(%{user: user, show: show}) do
