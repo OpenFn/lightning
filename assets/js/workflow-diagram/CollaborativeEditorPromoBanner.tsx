@@ -44,7 +44,7 @@ export function CollaborativeEditorPromoBanner({
             <span className="hero-exclamation-triangle"></span>
             This legacy workflow builder soon be retired.
           </strong>
-          &nbsp; Go to the new editor&nbsp;
+          &nbsp; Go to the new builder&nbsp;
           <span aria-hidden="true">&rarr;</span>
         </button>
       </div>
