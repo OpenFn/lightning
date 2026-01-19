@@ -337,6 +337,47 @@ defmodule LightningWeb.API.ProvisioningControllerTest do
       assert workflow_resp["id"] == existing_workflow.id
     end
 
+    test "includes version_history in workflow response", %{
+      conn: conn,
+      user: user
+    } do
+      %{id: project_id} =
+        project =
+        insert(:project,
+          project_users: [%{user_id: user.id}]
+        )
+
+      workflow =
+        insert(:simple_workflow, project: project, name: "Test Workflow")
+
+      # Record some version history
+      {:ok, workflow} =
+        Lightning.WorkflowVersions.record_version(
+          workflow,
+          "aabbccddeeff",
+          "app"
+        )
+
+      {:ok, _workflow} =
+        Lightning.WorkflowVersions.record_version(
+          workflow,
+          "112233445566",
+          "cli"
+        )
+
+      conn = get(conn, ~p"/api/provision/#{project_id}")
+      response = json_response(conn, 200)
+
+      assert %{"workflows" => [workflow_json]} = response["data"]
+      assert workflow_json["id"] == workflow.id
+
+      # Verify version_history is included and has the expected values
+      assert workflow_json["version_history"] == [
+               "app:aabbccddeeff",
+               "cli:112233445566"
+             ]
+    end
+
     test "returns a project only with the specified snapshots", %{
       conn: conn,
       user: user

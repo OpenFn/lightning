@@ -7,6 +7,7 @@ defmodule LightningWeb.API.ProvisioningJSON do
   alias Lightning.Collections.Collection
   alias Lightning.Projects.Project
   alias Lightning.Projects.ProjectCredential
+  alias Lightning.WorkflowVersions
   alias Lightning.Workflows.Edge
   alias Lightning.Workflows.Job
   alias Lightning.Workflows.Snapshot
@@ -23,6 +24,7 @@ defmodule LightningWeb.API.ProvisioningJSON do
 
   def as_json(%Project{} = project) do
     Ecto.embedded_dump(project, :json)
+    |> Map.delete(:version_history)
     |> Map.put(
       :workflows,
       project.workflows
@@ -52,30 +54,45 @@ defmodule LightningWeb.API.ProvisioningJSON do
         workflow_or_snapshot.workflow_id
       end
 
-    workflow_or_snapshot
-    |> Ecto.embedded_dump(:json)
-    |> Map.take(
-      ~w(id name inserted_at updated_at deleted_at lock_version concurrency)a
-    )
-    |> Map.put(:id, workflow_id)
-    |> Map.put(
-      :jobs,
-      workflow_or_snapshot.jobs
-      |> Enum.sort_by(& &1.inserted_at, NaiveDateTime)
-      |> Enum.map(&as_json/1)
-    )
-    |> Map.put(
-      :triggers,
-      workflow_or_snapshot.triggers
-      |> Enum.sort_by(& &1.inserted_at, NaiveDateTime)
-      |> Enum.map(&as_json/1)
-    )
-    |> Map.put(
-      :edges,
-      workflow_or_snapshot.edges
-      |> Enum.sort_by(& &1.inserted_at, NaiveDateTime)
-      |> Enum.map(&as_json/1)
-    )
+    base_map =
+      workflow_or_snapshot
+      |> Ecto.embedded_dump(:json)
+      |> Map.take(
+        ~w(id name inserted_at updated_at deleted_at lock_version concurrency version_history)a
+      )
+      |> Map.put(:id, workflow_id)
+      |> Map.put(
+        :jobs,
+        workflow_or_snapshot.jobs
+        |> Enum.sort_by(& &1.inserted_at, NaiveDateTime)
+        |> Enum.map(&as_json/1)
+      )
+      |> Map.put(
+        :triggers,
+        workflow_or_snapshot.triggers
+        |> Enum.sort_by(& &1.inserted_at, NaiveDateTime)
+        |> Enum.map(&as_json/1)
+      )
+      |> Map.put(
+        :edges,
+        workflow_or_snapshot.edges
+        |> Enum.sort_by(& &1.inserted_at, NaiveDateTime)
+        |> Enum.map(&as_json/1)
+      )
+
+    # snapshots don't have version_history
+    if module == Workflow do
+      version_history =
+        case Map.get(base_map, :version_history) do
+          nil -> WorkflowVersions.history_for(workflow_or_snapshot)
+          [] -> WorkflowVersions.history_for(workflow_or_snapshot)
+          history -> history
+        end
+
+      Map.put(base_map, :version_history, version_history)
+    else
+      base_map
+    end
   end
 
   def as_json(%module{} = job) when module in [Job, Snapshot.Job] do
