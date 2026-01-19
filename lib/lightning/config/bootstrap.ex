@@ -638,6 +638,28 @@ defmodule Lightning.Config.Bootstrap do
              limit
            end)
 
+    config :lightning,
+           :claim_work_mem,
+           env!("CLAIM_WORK_MEM", :string, nil)
+           |> then(fn
+             nil ->
+               nil
+
+             "" ->
+               nil
+
+             value ->
+               unless Regex.match?(~r/^\d+(kB|MB|GB|TB)$/i, value) do
+                 raise """
+                 Invalid CLAIM_WORK_MEM value: #{inspect(value)}
+
+                 Must be a valid PostgreSQL memory value (e.g., "32MB", "1GB", "256kB").
+                 """
+               end
+
+               value
+           end)
+
     config :lightning, :usage_tracking,
       cleartext_uuids_enabled:
         env!("USAGE_TRACKING_UUIDS", :string, nil) == "cleartext",

@@ -463,6 +463,54 @@ defmodule Lightning.Config.BootstrapTest do
     end
   end
 
+  describe "claim_work_mem" do
+    test "defaults to nil" do
+      Dotenvy.source([%{}])
+      Bootstrap.configure()
+      assert get_env(:lightning, :claim_work_mem) == nil
+    end
+
+    test "can be set to a value" do
+      Dotenvy.source([%{"CLAIM_WORK_MEM" => "64MB"}])
+      Bootstrap.configure()
+      assert get_env(:lightning, :claim_work_mem) == "64MB"
+    end
+
+    test "empty string becomes nil" do
+      Dotenvy.source([%{"CLAIM_WORK_MEM" => ""}])
+      Bootstrap.configure()
+      assert get_env(:lightning, :claim_work_mem) == nil
+    end
+
+    test "accepts valid PostgreSQL memory values" do
+      for value <- ["256kB", "32MB", "1GB", "2TB", "128mb", "1gb"] do
+        Dotenvy.source([%{"CLAIM_WORK_MEM" => value}])
+        Bootstrap.configure()
+        assert get_env(:lightning, :claim_work_mem) == value
+      end
+    end
+
+    test "rejects invalid memory values" do
+      Dotenvy.source([%{"CLAIM_WORK_MEM" => "invalid"}])
+
+      assert_raise RuntimeError,
+                   ~r/Invalid CLAIM_WORK_MEM value/,
+                   fn ->
+                     Bootstrap.configure()
+                   end
+    end
+
+    test "rejects values without units" do
+      Dotenvy.source([%{"CLAIM_WORK_MEM" => "32"}])
+
+      assert_raise RuntimeError,
+                   ~r/Invalid CLAIM_WORK_MEM value/,
+                   fn ->
+                     Bootstrap.configure()
+                   end
+    end
+  end
+
   describe "webhook retry (dev)" do
     test "does not set :webhook_retry when no WEBHOOK_RETRY_* envs are provided" do
       Dotenvy.source([%{}])

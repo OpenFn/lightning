@@ -23,6 +23,10 @@ and this project adheres to
 
 ### Changed
 
+- Add configurable `CLAIM_WORK_MEM` environment variable (default: 32MB) to set
+  PostgreSQL work_mem for claim query, eliminating temp file writes during
+  window function sorting [#4331](https://github.com/OpenFn/lightning/pull/4331)
+
 ### Fixed
 
 - Fix unable to save a workflow with a Kafka trigger in the collab editor
