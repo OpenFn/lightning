@@ -127,6 +127,14 @@ defmodule Lightning.Configtest do
 
       assert expected == actual
     end
+
+    test "returns the claim work_mem setting" do
+      expected = Application.get_env(:lightning, :claim_work_mem, "32MB")
+
+      actual = API.claim_work_mem()
+
+      assert expected == actual
+    end
   end
 
   describe "webhook_retry (merge + normalize)" do
