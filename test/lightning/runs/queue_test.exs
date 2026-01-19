@@ -46,4 +46,17 @@ defmodule Lightning.Runs.QueueTest do
     assert %{worker_name: nil} = Lightning.Repo.reload!(run_1)
     assert %{worker_name: nil} = Lightning.Repo.reload!(run_2)
   end
+
+  test "configures session with work_mem and plan_cache_mode", %{run_1: _run_1} do
+    ref =
+      :telemetry_test.attach_event_handlers(self(), [[:lightning, :repo, :query]])
+
+    Queue.claim(1, Query.eligible_for_claim())
+
+    assert_receive {[:lightning, :repo, :query], ^ref, _measurements,
+                    %{query: "SET LOCAL plan_cache_mode" <> _}}
+
+    assert_receive {[:lightning, :repo, :query], ^ref, _measurements,
+                    %{query: "SET LOCAL work_mem" <> _}}
+  end
 end
