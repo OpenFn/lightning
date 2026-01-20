@@ -2,7 +2,6 @@ defmodule Lightning.Config do
   @moduledoc """
   Centralised runtime configuration for Lightning.
   """
-
   defmodule API do
     @moduledoc false
     @behaviour Lightning.Config
@@ -18,7 +17,9 @@ defmodule Lightning.Config do
       :persistent_term.get({__MODULE__, "token_signer"}, nil)
       |> case do
         nil ->
-          pem = get_worker_private_key()
+          pem =
+            Application.get_env(:lightning, :workers, [])
+            |> Keyword.get(:private_key)
 
           signer = Joken.Signer.create("RS256", %{"pem" => pem})
 
@@ -33,14 +34,11 @@ defmodule Lightning.Config do
 
     @impl true
     def run_token_signer do
-      pem = get_worker_private_key()
+      pem =
+        Application.get_env(:lightning, :workers, [])
+        |> Keyword.get(:private_key)
 
       Joken.Signer.create("RS256", %{"pem" => pem})
-    end
-
-    defp get_worker_private_key do
-      Application.get_env(:lightning, :workers, [])
-      |> Keyword.get(:private_key)
     end
 
     @impl true
