@@ -46,12 +46,16 @@ defmodule LightningWeb.WorkerChannel do
       ) do
     case Runs.claim(demand, sanitise_worker_name(worker_name)) do
       {:ok, runs} ->
+        Logger.debug("👉 Got {:ok, runs}, runs = #{inspect(runs)}")
+
         runs =
           runs
           |> Enum.map(fn run ->
             opts = run_options(run)
+            Logger.debug("👉 Got run options, opts = #{inspect(opts)}")
 
             token = Workers.generate_run_token(run, opts)
+            Logger.debug("👉 Got run token, token = #{inspect(token)}")
 
             %{
               "id" => run.id,
@@ -59,10 +63,26 @@ defmodule LightningWeb.WorkerChannel do
             }
           end)
 
+        Logger.debug(
+          "👉 Sending back runs and socket, socket = #{inspect(socket)}"
+        )
+
         {:reply, {:ok, %{runs: runs}}, socket}
 
       {:error, changeset} ->
-        {:reply, {:error, LightningWeb.ChangesetJSON.errors(changeset)}, socket}
+        Logger.debug(
+          "👉 Got {:error, changeset}, changeset = #{inspect(changeset)}"
+        )
+
+        errors = LightningWeb.ChangesetJSON.errors(changeset)
+
+        Logger.debug(
+          "👉 Calling ChangesetJSON.errors, errors = #{inspect(errors)}"
+        )
+
+        Logger.debug("👉 Responding with socket, socket = #{inspect(socket)}")
+
+        {:reply, {:error, errors}, socket}
     end
   end
 
