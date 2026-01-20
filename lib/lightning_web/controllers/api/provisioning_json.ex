@@ -7,12 +7,12 @@ defmodule LightningWeb.API.ProvisioningJSON do
   alias Lightning.Collections.Collection
   alias Lightning.Projects.Project
   alias Lightning.Projects.ProjectCredential
-  alias Lightning.WorkflowVersions
   alias Lightning.Workflows.Edge
   alias Lightning.Workflows.Job
   alias Lightning.Workflows.Snapshot
   alias Lightning.Workflows.Trigger
   alias Lightning.Workflows.Workflow
+  alias Lightning.WorkflowVersions
 
   def render("create.json", %{project: project, conn: _conn}) do
     %{"data" => as_json(project)}
