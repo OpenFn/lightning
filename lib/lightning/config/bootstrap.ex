@@ -743,6 +743,8 @@ defmodule Lightning.Config.Bootstrap do
           "lightning-cluster"
         )
 
+    setup_demo_oauth_clients()
+
     # ==============================================================================
 
     setup_storage()
@@ -925,5 +927,49 @@ defmodule Lightning.Config.Bootstrap do
       nil -> Application.get_all_env(app) |> get_in(keys)
       value -> value
     end
+  end
+
+  defp setup_demo_oauth_clients do
+    config :lightning, :demo_oauth_clients,
+      google_drive: [
+        client_id: env!("GOOGLE_DRIVE_CLIENT_ID", :string, nil),
+        client_secret: env!("GOOGLE_DRIVE_CLIENT_SECRET", :string, nil)
+      ],
+      google_sheets: [
+        client_id: env!("GOOGLE_SHEETS_CLIENT_ID", :string, nil),
+        client_secret: env!("GOOGLE_SHEETS_CLIENT_SECRET", :string, nil)
+      ],
+      gmail: [
+        client_id: env!("GMAIL_CLIENT_ID", :string, nil),
+        client_secret: env!("GMAIL_CLIENT_SECRET", :string, nil)
+      ],
+      salesforce: [
+        client_id: env!("SALESFORCE_CLIENT_ID", :string, nil),
+        client_secret: env!("SALESFORCE_CLIENT_SECRET", :string, nil)
+      ],
+      salesforce_sandbox: [
+        client_id: env!("SALESFORCE_SANDBOX_CLIENT_ID", :string, nil),
+        client_secret: env!("SALESFORCE_SANDBOX_CLIENT_SECRET", :string, nil)
+      ],
+      microsoft_sharepoint: [
+        client_id: env!("MICROSOFT_SHAREPOINT_CLIENT_ID", :string, nil),
+        client_secret: env!("MICROSOFT_SHAREPOINT_CLIENT_SECRET", :string, nil)
+      ],
+      microsoft_outlook: [
+        client_id: env!("MICROSOFT_OUTLOOK_CLIENT_ID", :string, nil),
+        client_secret: env!("MICROSOFT_OUTLOOK_CLIENT_SECRET", :string, nil)
+      ],
+      microsoft_calendar: [
+        client_id: env!("MICROSOFT_CALENDAR_CLIENT_ID", :string, nil),
+        client_secret: env!("MICROSOFT_CALENDAR_CLIENT_SECRET", :string, nil)
+      ],
+      microsoft_onedrive: [
+        client_id: env!("MICROSOFT_ONEDRIVE_CLIENT_ID", :string, nil),
+        client_secret: env!("MICROSOFT_ONEDRIVE_CLIENT_SECRET", :string, nil)
+      ],
+      microsoft_teams: [
+        client_id: env!("MICROSOFT_TEAMS_CLIENT_ID", :string, nil),
+        client_secret: env!("MICROSOFT_TEAMS_CLIENT_SECRET", :string, nil)
+      ]
   end
 end
