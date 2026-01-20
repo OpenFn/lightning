@@ -1,8 +1,6 @@
 defmodule Lightning.Configtest do
   use ExUnit.Case, async: true
 
-  import ExUnit.CaptureLog
-
   alias Lightning.Config.API
 
   describe "API" do
@@ -142,36 +140,6 @@ defmodule Lightning.Configtest do
           else: Application.delete_env(:lightning, :claim_work_mem)
       end
     end
-
-    test "run_token_signer/0 does not log error for RSA keys" do
-      # The test config uses an RSA key, so this should not log any errors
-      log =
-        capture_log(fn ->
-          API.run_token_signer()
-        end)
-
-      refute log =~ "WORKER_RUNS_PRIVATE_KEY has wrong key type"
-    end
-
-    test "run_token_signer/0 logs error for non-RSA keys" do
-      # Ed25519 key for testing
-      ed25519_key = """
-      -----BEGIN PRIVATE KEY-----
-      MC4CAQAwBQYDK2VwBCIEIGCa7P/7SXCoLXsmDPoRcfqU4aGVWkgFb8pWNVSPUNzR
-      -----END PRIVATE KEY-----
-      """
-
-      with_worker_key(ed25519_key, fn ->
-        log =
-          capture_log(fn ->
-            API.run_token_signer()
-          end)
-
-        assert log =~ "WORKER_RUNS_PRIVATE_KEY has wrong key type"
-        assert log =~ "Lightning requires an RSA key for RS256 signing"
-        assert log =~ "mix lightning.gen_worker_keys"
-      end)
-    end
   end
 
   describe "webhook_retry (merge + normalize)" do
@@ -249,20 +217,5 @@ defmodule Lightning.Configtest do
 
   defp extract_from_config(config, key) do
     Application.get_env(:lightning, config) |> Keyword.get(key)
-  end
-
-  defp with_worker_key(pem, fun) when is_function(fun, 0) do
-    prev = Application.get_env(:lightning, :workers)
-
-    try do
-      new_config = Keyword.put(prev || [], :private_key, pem)
-      Application.put_env(:lightning, :workers, new_config)
-      fun.()
-    after
-      case prev do
-        nil -> Application.delete_env(:lightning, :workers)
-        _ -> Application.put_env(:lightning, :workers, prev)
-      end
-    end
   end
 end

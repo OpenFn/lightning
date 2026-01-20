@@ -2,14 +2,11 @@ defmodule Lightning.Config do
   @moduledoc """
   Centralised runtime configuration for Lightning.
   """
-  require Logger
 
   defmodule API do
     @moduledoc false
     @behaviour Lightning.Config
     alias Lightning.Services.AdapterHelper
-
-    require Logger
 
     @impl true
     def adaptor_registry do
@@ -22,7 +19,6 @@ defmodule Lightning.Config do
       |> case do
         nil ->
           pem = get_worker_private_key()
-          validate_rsa_key!(pem)
 
           signer = Joken.Signer.create("RS256", %{"pem" => pem})
 
@@ -38,7 +34,6 @@ defmodule Lightning.Config do
     @impl true
     def run_token_signer do
       pem = get_worker_private_key()
-      validate_rsa_key!(pem)
 
       Joken.Signer.create("RS256", %{"pem" => pem})
     end
@@ -46,33 +41,6 @@ defmodule Lightning.Config do
     defp get_worker_private_key do
       Application.get_env(:lightning, :workers, [])
       |> Keyword.get(:private_key)
-    end
-
-    defp validate_rsa_key!(nil), do: :ok
-
-    defp validate_rsa_key!(pem) when is_binary(pem) do
-      try do
-        case JOSE.JWK.from_pem(pem) do
-          %JOSE.JWK{kty: {:jose_jwk_kty_rsa, _}} ->
-            :ok
-
-          %JOSE.JWK{kty: {kty_module, _}} ->
-            key_type =
-              kty_module |> to_string() |> String.replace("jose_jwk_kty_", "")
-
-            Logger.error("""
-            WORKER_RUNS_PRIVATE_KEY has wrong key type: #{key_type}
-
-            Lightning requires an RSA key for RS256 signing, but the configured key is #{key_type}.
-            Please generate new worker keys using: mix lightning.gen_worker_keys
-            """)
-
-          _ ->
-            :ok
-        end
-      rescue
-        _ -> :ok
-      end
     end
 
     @impl true
