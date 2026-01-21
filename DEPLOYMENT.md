@@ -30,9 +30,9 @@ environment.
 Lightning uses external worker processes for executing Runs. There are three
 settings required to configure worker authentication.
 
-- `WORKER_RUNS_PRIVATE_KEY`
-- `WORKER_LIGHTNING_PUBLIC_KEY`
-- `WORKER_SECRET`
+- `WORKER_RUNS_PRIVATE_KEY`: base64 encoded RSA private key
+- `WORKER_LIGHTNING_PUBLIC_KEY`: base64 encoded RSA public key
+- `WORKER_SECRET`: 256bit long shared secret used by the worker to sign JWTs
 
 You can use the `mix lightning.gen_worker_keys` task to generate these for
 convenience.

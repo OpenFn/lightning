@@ -24,6 +24,9 @@ and this project adheres to
 
 ### Changed
 
+- Validate WORKER_RUNS_PRIVATE_KEY is an RSA key at application startup
+  [#4340](https://github.com/OpenFn/lightning/issues/4340)
+
 ### Fixed
 
 ## [2.15.12-pre] - 2026-01-19
