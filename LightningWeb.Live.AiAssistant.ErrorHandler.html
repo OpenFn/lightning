@@ -5,14 +5,14 @@
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="generator" content="ExDoc v0.39.3">
-    <meta name="project" content="Lightning v2.15.12-pre">
+    <meta name="project" content="Lightning v2.15.12-pre1">
 
 
-    <title>LightningWeb.Live.AiAssistant.ErrorHandler — Lightning v2.15.12-pre</title>
+    <title>LightningWeb.Live.AiAssistant.ErrorHandler — Lightning v2.15.12-pre1</title>
 
     <link rel="stylesheet" href="dist/html-elixir-VYWJUHZE.css" />
 
-    <script defer src="dist/sidebar_items-590FFFB3.js"></script>
+    <script defer src="dist/sidebar_items-7AA4D93D.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-XBCM4BHM.js"></script>
 
@@ -41,7 +41,7 @@
 Lightning
         </a>
         <div class="sidebar-projectVersion" translate="no">
-          v2.15.12-pre
+          v2.15.12-pre1
         </div>
       </div>
     </div>
@@ -98,7 +98,7 @@ Lightning
   <div class="heading-with-actions top-heading">
     <h1>
       <span translate="no">LightningWeb.Live.AiAssistant.ErrorHandler</span> 
-      <small class="app-vsn" translate="no">(Lightning v2.15.12-pre)</small>
+      <small class="app-vsn" translate="no">(Lightning v2.15.12-pre1)</small>
 
     </h1>
 
@@ -225,10 +225,10 @@ Lightning
 
       </div>
 
-<p>Formats errors into user-friendly messages.</p><h2 id="format_error/1-examples" class="section-heading"><a href="#format_error/1-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">format_error</span><span class="p" data-group-id="5695677423-1">(</span><span class="p" data-group-id="5695677423-2">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;Something went wrong&quot;</span><span class="p" data-group-id="5695677423-2">}</span><span class="p" data-group-id="5695677423-1">)</span><span class="w">
+<p>Formats errors into user-friendly messages.</p><h2 id="format_error/1-examples" class="section-heading"><a href="#format_error/1-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">format_error</span><span class="p" data-group-id="7303096782-1">(</span><span class="p" data-group-id="7303096782-2">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;Something went wrong&quot;</span><span class="p" data-group-id="7303096782-2">}</span><span class="p" data-group-id="7303096782-1">)</span><span class="w">
 </span><span class="s">&quot;Something went wrong&quot;</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">format_error</span><span class="p" data-group-id="5695677423-3">(</span><span class="p" data-group-id="5695677423-4">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="ss">:timeout</span><span class="p" data-group-id="5695677423-4">}</span><span class="p" data-group-id="5695677423-3">)</span><span class="w">
+</span><span class="gp unselectable">iex&gt; </span><span class="n">format_error</span><span class="p" data-group-id="7303096782-3">(</span><span class="p" data-group-id="7303096782-4">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="ss">:timeout</span><span class="p" data-group-id="7303096782-4">}</span><span class="p" data-group-id="7303096782-3">)</span><span class="w">
 </span><span class="s">&quot;Request timed out. Please try again.&quot;</span></code></pre>
   </section>
 </section>
@@ -257,7 +257,7 @@ Lightning
 
       </div>
 
-<p>Formats AI usage limit errors.</p><h2 id="format_limit_error/1-examples" class="section-heading"><a href="#format_limit_error/1-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">format_limit_error</span><span class="p" data-group-id="1555495310-1">(</span><span class="p" data-group-id="1555495310-2">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="ss">:quota_exceeded</span><span class="p" data-group-id="1555495310-2">}</span><span class="p" data-group-id="1555495310-1">)</span><span class="w">
+<p>Formats AI usage limit errors.</p><h2 id="format_limit_error/1-examples" class="section-heading"><a href="#format_limit_error/1-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">format_limit_error</span><span class="p" data-group-id="1614302991-1">(</span><span class="p" data-group-id="1614302991-2">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="ss">:quota_exceeded</span><span class="p" data-group-id="1614302991-2">}</span><span class="p" data-group-id="1614302991-1">)</span><span class="w">
 </span><span class="s">&quot;AI usage limit reached. Please try again later or contact support.&quot;</span></code></pre>
   </section>
 </section>
