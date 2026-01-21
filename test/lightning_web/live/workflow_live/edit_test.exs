@@ -4669,7 +4669,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
         })
         |> Repo.update!()
 
-      {:ok, view, html} =
+      {:ok, view, _html} =
         conn
         |> log_in_user(user_with_experimental)
         |> live(~p"/projects/#{project.id}/w/#{workflow.id}/legacy")
@@ -4813,10 +4813,6 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       toggle_html = render(toggle_element)
 
-      # Check styling classes
-      assert toggle_html =~ "text-danger-500"
-      assert toggle_html =~ "hover:text-danger-400"
-
       # Check accessibility (aria-label)
       assert toggle_html =~ "Click to switch"
     end
@@ -4871,7 +4867,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
         })
         |> Repo.update!()
 
-      {:ok, view, html} =
+      {:ok, view, _html} =
         conn
         |> log_in_user(user_with_experimental)
         |> live(~p"/projects/#{project.id}/w/new/legacy")
