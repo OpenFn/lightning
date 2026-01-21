@@ -275,24 +275,28 @@ export function Header({
       <EmailVerificationBanner />
 
       <div className="flex-none bg-white shadow-xs border-b border-gray-200 relative z-50">
-        <div className="mx-auto sm:px-4 lg:px-4 py-6 flex items-center h-20 text-sm">
+        <div className="mx-auto sm:px-4 lg:px-4 py-6 flex items-center h-20 text-sm gap-2">
           <Breadcrumbs>{children}</Breadcrumbs>
           <ReadOnlyWarning className="ml-3" />
           {projectId && workflowId && (
-            <button
-              type="button"
-              onClick={() => void handleSwitchToLegacyEditor()}
-              className="inline-flex items-center justify-center
-              w-6 h-6 text-primary-600 hover:text-primary-700
-              hover:bg-primary-50 rounded transition-colors ml-2"
+            <Tooltip
+              content={
+                <span>
+                  Looking for the old version of the workflow builder? You can
+                  switch back for a few more days by clicking this icon. (But it
+                  will soon be retired!)
+                </span>
+              }
+              side="bottom"
             >
-              <Tooltip
-                content={"You're using the new editor — click to switch back."}
-                side="bottom"
+              <button
+                type="button"
+                onClick={() => void handleSwitchToLegacyEditor()}
+                className="w-6 h-6 place-self-center text-slate-500 hover:text-slate-400 cursor-pointer"
               >
-                <span className="hero-beaker-solid h-4 w-4" />
-              </Tooltip>
-            </button>
+                <span className="hero-question-mark-circle"></span>
+              </button>
+            </Tooltip>
           )}
           <ActiveCollaborators className="ml-2" />
           <div className="grow ml-2"></div>

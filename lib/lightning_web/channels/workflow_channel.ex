@@ -163,11 +163,11 @@ defmodule LightningWeb.WorkflowChannel do
   def handle_in("switch_to_legacy_editor", _payload, socket) do
     user = socket.assigns[:current_user]
 
-    # Clear the collaborative editor preference
+    # Set switch to legacy to true
     Lightning.Accounts.update_user_preference(
       user,
-      "prefer_collaborative_editor",
-      false
+      "prefer_legacy_editor",
+      true
     )
 
     {:reply, {:ok, %{}}, socket}
