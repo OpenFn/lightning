@@ -81,7 +81,8 @@ defmodule Lightning.PromEx do
         unclaimed_run_threshold_seconds:
           Config.metrics_unclaimed_run_threshold_seconds()
       },
-      Lightning.PromExTestPlugin
+      Lightning.PromExTestPlugin,
+      Lightning.Projects.SandboxPromExPlugin
     ] ++ external_plugins
   end
 
@@ -91,6 +92,8 @@ defmodule Lightning.PromEx do
     Lightning.PromExTestPlugin.seed_event_metrics()
 
     Lightning.Runs.PromExPlugin.seed_event_metrics()
+
+    Lightning.Projects.SandboxPromExPlugin.seed_event_metrics()
   end
 
   @impl true

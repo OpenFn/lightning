@@ -194,7 +194,14 @@ defmodule Lightning.Projects.Sandboxes do
       sandbox
     )
     |> if do
-      Lightning.Projects.delete_project(sandbox)
+      case Lightning.Projects.delete_project(sandbox) do
+        {:ok, deleted} ->
+          Lightning.Projects.SandboxPromExPlugin.fire_sandbox_deleted_event()
+          {:ok, deleted}
+
+        error ->
+          error
+      end
     else
       {:error, :unauthorized}
     end
@@ -240,8 +247,12 @@ defmodule Lightning.Projects.Sandboxes do
       end
     end)
     |> case do
-      {:ok, project} -> {:ok, project}
-      {:error, changeset} -> {:error, changeset}
+      {:ok, project} ->
+        Lightning.Projects.SandboxPromExPlugin.fire_sandbox_created_event()
+        {:ok, project}
+
+      {:error, changeset} ->
+        {:error, changeset}
     end
   end
 

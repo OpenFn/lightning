@@ -599,6 +599,8 @@ defmodule LightningWeb.SandboxLive.Index do
          _root_project,
          actor
        ) do
+    Lightning.Projects.SandboxPromExPlugin.fire_sandbox_merged_event()
+
     flash_message = build_merge_success_message(source, target, actor)
 
     socket

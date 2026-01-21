@@ -194,6 +194,78 @@ defmodule Lightning.Projects.SandboxesTest do
     end
   end
 
+  describe "telemetry events" do
+    test "provision emits sandbox created telemetry event on success" do
+      %{actor: actor, parent: parent} = build_parent_fixture!(:owner)
+      event = [:lightning, :sandbox, :created]
+      ref = :telemetry_test.attach_event_handlers(self(), [event])
+
+      {:ok, _sandbox} =
+        Sandboxes.provision(parent, actor, %{name: "sb-telemetry"})
+
+      assert_received {
+        ^event,
+        ^ref,
+        %{count: 1},
+        %{}
+      }
+    end
+
+    test "provision does not emit telemetry event on failure" do
+      %{actor: actor, parent: parent} = build_parent_fixture!(:owner)
+      event = [:lightning, :sandbox, :created]
+      ref = :telemetry_test.attach_event_handlers(self(), [event])
+
+      # Empty name causes validation error
+      {:error, _changeset} = Sandboxes.provision(parent, actor, %{name: ""})
+
+      refute_received {
+        ^event,
+        ^ref,
+        %{count: 1},
+        %{}
+      }
+    end
+
+    test "delete_sandbox emits sandbox deleted telemetry event on success" do
+      actor = insert(:user)
+      parent = insert(:project, name: "parent")
+      sandbox = insert(:project, name: "to-delete", parent: parent)
+      ensure_member!(sandbox, actor, :owner)
+
+      event = [:lightning, :sandbox, :deleted]
+      ref = :telemetry_test.attach_event_handlers(self(), [event])
+
+      {:ok, _deleted} = Sandboxes.delete_sandbox(sandbox, actor)
+
+      assert_received {
+        ^event,
+        ^ref,
+        %{count: 1},
+        %{}
+      }
+    end
+
+    test "delete_sandbox does not emit telemetry event on unauthorized" do
+      actor = insert(:user)
+      other_user = insert(:user)
+      sandbox = insert(:project, name: "unauthorized")
+      ensure_member!(sandbox, other_user, :owner)
+
+      event = [:lightning, :sandbox, :deleted]
+      ref = :telemetry_test.attach_event_handlers(self(), [event])
+
+      {:error, :unauthorized} = Sandboxes.delete_sandbox(sandbox, actor)
+
+      refute_received {
+        ^event,
+        ^ref,
+        %{count: 1},
+        %{}
+      }
+    end
+  end
+
   defp attach_keychain!(
          %Project{} = project,
          %User{} = creator,
