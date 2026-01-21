@@ -929,6 +929,13 @@ defmodule Lightning.Config.Bootstrap do
   end
 
   defp validate_rsa_key!(pem) when is_binary(pem) do
+    case parse_rsa_key(pem) do
+      :ok -> :ok
+      {:error, message} -> raise message
+    end
+  end
+
+  defp parse_rsa_key(pem) do
     case JOSE.JWK.from_pem(pem) do
       %JOSE.JWK{kty: {:jose_jwk_kty_rsa, _}} ->
         :ok
@@ -937,30 +944,24 @@ defmodule Lightning.Config.Bootstrap do
         key_type =
           kty_module |> to_string() |> String.replace("jose_jwk_kty_", "")
 
-        raise """
-        WORKER_RUNS_PRIVATE_KEY has wrong key type: #{key_type}
-
-        Lightning requires an RSA key for RS256 signing, but the configured key is #{key_type}.
-        You can generate new worker keys using: mix lightning.gen_worker_keys
-        """
+        {:error,
+         worker_key_error(
+           "has wrong key type: #{key_type}\n\nLightning requires an RSA key for RS256 signing, but the configured key is #{key_type}."
+         )}
 
       _ ->
-        raise """
-        WORKER_RUNS_PRIVATE_KEY could not be parsed as a valid key.
-
-        Please generate new worker keys using: mix lightning.gen_worker_keys
-        """
+        {:error, worker_key_error("could not be parsed as a valid key.")}
     end
   rescue
     e ->
-      reraise RuntimeError,
-              [
-                message: """
-                WORKER_RUNS_PRIVATE_KEY could not be parsed: #{Exception.message(e)}
+      {:error, worker_key_error("could not be parsed: #{Exception.message(e)}")}
+  end
 
-                Please generate new worker keys using: mix lightning.gen_worker_keys
-                """
-              ],
-              __STACKTRACE__
+  defp worker_key_error(reason) do
+    """
+    WORKER_RUNS_PRIVATE_KEY #{reason}
+
+    You can generate new worker keys using: mix lightning.gen_worker_keys
+    """
   end
 end
