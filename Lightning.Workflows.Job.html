@@ -274,7 +274,7 @@ Workflow changeset - and want it to be created at the same time as a Job.</p></d
       <h1 class="signature" translate="no">new(attrs \\ %{})</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/job.ex#L66" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/job.ex#L68" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -296,7 +296,7 @@ Workflow changeset - and want it to be created at the same time as a Job.</p></d
       <h1 class="signature" translate="no">put_project_credential(job, project_credential)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/job.ex#L185" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/job.ex#L187" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -318,7 +318,7 @@ Workflow changeset - and want it to be created at the same time as a Job.</p></d
       <h1 class="signature" translate="no">put_workflow(changeset, workflow)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/job.ex#L176" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/job.ex#L178" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -338,17 +338,17 @@ Workflow changeset - and want it to be created at the same time as a Job.</p></d
 
 <p>Attaches a workflow to a job, this is useful when you have an unpersisted
 Workflow changeset - and want it to be created at the same time as a Job.</p><p>Example:</p><pre><code class="makeup elixir" translate="no"><span class="n">workflow</span><span class="w"> </span><span class="o">=</span><span class="w">
-  </span><span class="nc">Ecto.Changeset</span><span class="o">.</span><span class="n">cast</span><span class="p" data-group-id="9000218170-1">(</span><span class="w">
-    </span><span class="p" data-group-id="9000218170-2">%</span><span class="nc" data-group-id="9000218170-2">Lightning.Workflows.Workflow</span><span class="p" data-group-id="9000218170-2">{</span><span class="p" data-group-id="9000218170-2">}</span><span class="p">,</span><span class="w">
-    </span><span class="p" data-group-id="9000218170-3">%{</span><span class="w"> </span><span class="s">&quot;project_id&quot;</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="n">attrs</span><span class="p" data-group-id="9000218170-4">[</span><span class="ss">:project_id</span><span class="p" data-group-id="9000218170-4">]</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;id&quot;</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="nc">Ecto.UUID</span><span class="o">.</span><span class="n">generate</span><span class="p" data-group-id="9000218170-5">(</span><span class="p" data-group-id="9000218170-5">)</span><span class="w"> </span><span class="p" data-group-id="9000218170-3">}</span><span class="p">,</span><span class="w">
-    </span><span class="p" data-group-id="9000218170-6">[</span><span class="ss">:project_id</span><span class="p">,</span><span class="w"> </span><span class="ss">:id</span><span class="p" data-group-id="9000218170-6">]</span><span class="w">
-  </span><span class="p" data-group-id="9000218170-1">)</span><span class="w">
+  </span><span class="nc">Ecto.Changeset</span><span class="o">.</span><span class="n">cast</span><span class="p" data-group-id="3494346725-1">(</span><span class="w">
+    </span><span class="p" data-group-id="3494346725-2">%</span><span class="nc" data-group-id="3494346725-2">Lightning.Workflows.Workflow</span><span class="p" data-group-id="3494346725-2">{</span><span class="p" data-group-id="3494346725-2">}</span><span class="p">,</span><span class="w">
+    </span><span class="p" data-group-id="3494346725-3">%{</span><span class="w"> </span><span class="s">&quot;project_id&quot;</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="n">attrs</span><span class="p" data-group-id="3494346725-4">[</span><span class="ss">:project_id</span><span class="p" data-group-id="3494346725-4">]</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;id&quot;</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="nc">Ecto.UUID</span><span class="o">.</span><span class="n">generate</span><span class="p" data-group-id="3494346725-5">(</span><span class="p" data-group-id="3494346725-5">)</span><span class="w"> </span><span class="p" data-group-id="3494346725-3">}</span><span class="p">,</span><span class="w">
+    </span><span class="p" data-group-id="3494346725-6">[</span><span class="ss">:project_id</span><span class="p">,</span><span class="w"> </span><span class="ss">:id</span><span class="p" data-group-id="3494346725-6">]</span><span class="w">
+  </span><span class="p" data-group-id="3494346725-1">)</span><span class="w">
 
 </span><span class="n">job</span><span class="w"> </span><span class="o">=</span><span class="w">
-  </span><span class="p" data-group-id="9000218170-7">%</span><span class="nc" data-group-id="9000218170-7">Job</span><span class="p" data-group-id="9000218170-7">{</span><span class="p" data-group-id="9000218170-7">}</span><span class="w">
-  </span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Ecto.Changeset</span><span class="o">.</span><span class="n">change</span><span class="p" data-group-id="9000218170-8">(</span><span class="p" data-group-id="9000218170-8">)</span><span class="w">
-  </span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Job</span><span class="o">.</span><span class="n">put_workflow</span><span class="p" data-group-id="9000218170-9">(</span><span class="n">workflow</span><span class="p" data-group-id="9000218170-9">)</span><span class="w">
-  </span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Job</span><span class="o">.</span><span class="n">changeset</span><span class="p" data-group-id="9000218170-10">(</span><span class="n">attrs</span><span class="p" data-group-id="9000218170-10">)</span></code></pre>
+  </span><span class="p" data-group-id="3494346725-7">%</span><span class="nc" data-group-id="3494346725-7">Job</span><span class="p" data-group-id="3494346725-7">{</span><span class="p" data-group-id="3494346725-7">}</span><span class="w">
+  </span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Ecto.Changeset</span><span class="o">.</span><span class="n">change</span><span class="p" data-group-id="3494346725-8">(</span><span class="p" data-group-id="3494346725-8">)</span><span class="w">
+  </span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Job</span><span class="o">.</span><span class="n">put_workflow</span><span class="p" data-group-id="3494346725-9">(</span><span class="n">workflow</span><span class="p" data-group-id="3494346725-9">)</span><span class="w">
+  </span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Job</span><span class="o">.</span><span class="n">changeset</span><span class="p" data-group-id="3494346725-10">(</span><span class="n">attrs</span><span class="p" data-group-id="3494346725-10">)</span></code></pre>
   </section>
 </section>
 <section class="detail" id="validate/1">
@@ -361,7 +361,7 @@ Workflow changeset - and want it to be created at the same time as a Job.</p><p>
       <h1 class="signature" translate="no">validate(changeset)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/job.ex#L93" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/job.ex#L95" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
