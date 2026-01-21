@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import Markdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 
+import { useCopyToClipboard } from '#/collaborative-editor/hooks/useCopyToClipboard';
 import { cn } from '#/utils/cn';
 
 import type { Message } from '../types/ai-assistant';
@@ -22,16 +23,12 @@ const CodeBlock = ({
   /** Whether Add button is disabled due to readonly mode */
   isWriteDisabled?: boolean;
 }) => {
-  const [copied, setCopied] = useState(false);
+  const { copyText, copyToClipboard, isCopied } = useCopyToClipboard();
   const [added, setAdded] = useState(false);
 
-  const handleCopy = async (e: React.MouseEvent) => {
+  const handleCopy = (e: React.MouseEvent) => {
     e.stopPropagation();
-    const success = await doCopy(children);
-    if (success) {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    }
+    void copyToClipboard(children);
   };
 
   const handleAdd = (e: React.MouseEvent) => {
@@ -58,7 +55,7 @@ const CodeBlock = ({
             : 'bg-slate-300 text-white hover:bg-primary-600 hover:scale-105'
       )}
     >
-      {added ? 'ADDED' : 'ADD'}
+      {added ? 'Added' : 'Add'}
     </button>
   );
 
@@ -71,12 +68,12 @@ const CodeBlock = ({
           onClick={handleCopy}
           className={cn(
             'rounded-md px-2 py-1 text-xs font-medium transition-all duration-300 ease-in-out',
-            copied
+            isCopied
               ? 'bg-green-100 text-green-700 scale-105'
               : 'bg-slate-300 text-white hover:bg-primary-600 hover:scale-105'
           )}
         >
-          {copied ? 'COPIED' : 'COPY'}
+          {copyText || 'Copy'}
         </button>
         {showAddButtons && (
           <Tooltip
@@ -197,19 +194,13 @@ const CodeActionButtons = ({
   /** Whether Apply/Add buttons are disabled due to readonly mode */
   isWriteDisabled?: boolean;
 }) => {
-  const [copied, setCopied] = useState(false);
+  const { copyText, copyToClipboard, isCopied } = useCopyToClipboard();
   const [applied, setApplied] = useState(false);
   const [added, setAdded] = useState(false);
 
   const handleCopy = (e: React.MouseEvent) => {
     e.stopPropagation();
-    void (async () => {
-      const success = await doCopy(code);
-      if (success) {
-        setCopied(true);
-        setTimeout(() => setCopied(false), 2000);
-      }
-    })();
+    void copyToClipboard(code);
   };
 
   const handleAdd = (e: React.MouseEvent) => {
@@ -256,7 +247,7 @@ const CodeActionButtons = ({
             : 'bg-slate-300 text-white hover:bg-primary-600 hover:scale-105'
       )}
     >
-      {applied ? 'APPLIED' : isApplying ? 'APPLYING...' : 'APPLY'}
+      {applied ? 'Applied' : isApplying ? 'Applying...' : 'Apply'}
     </button>
   );
 
@@ -274,7 +265,7 @@ const CodeActionButtons = ({
             : 'bg-slate-300 text-white hover:bg-primary-600 hover:scale-105'
       )}
     >
-      {added ? 'ADDED' : 'ADD'}
+      {added ? 'Added' : 'Add'}
     </button>
   );
 
@@ -292,7 +283,7 @@ const CodeActionButtons = ({
             : 'bg-slate-300 text-white hover:bg-primary-600 text-white'
       )}
     >
-      {isPreviewActive ? 'PREVIEWING' : 'PREVIEW'}
+      {isPreviewActive ? 'Previewing' : 'Preview'}
     </button>
   );
 
@@ -314,12 +305,12 @@ const CodeActionButtons = ({
         onClick={handleCopy}
         className={cn(
           'rounded-md px-2 py-1 text-xs font-medium transition-all duration-300 ease-in-out',
-          copied
+          isCopied
             ? 'bg-green-100 text-green-700 scale-105'
             : 'bg-slate-300 text-white hover:bg-primary-600 hover:scale-105'
         )}
       >
-        {copied ? 'COPIED' : 'COPY'}
+        {copyText || 'Copy'}
       </button>
       {showAdd && (
         <Tooltip
@@ -434,7 +425,10 @@ export function MessageList({
 
   if (messages.length === 0) {
     return (
-      <div className="flex items-center justify-center h-full">
+      <div
+        className="flex items-center justify-center h-full"
+        data-testid="empty-state"
+      >
         <div className="flex items-center gap-2 text-gray-600">
           <span className="hero-arrow-path h-5 w-5 animate-spin" />
           <span className="text-sm">Loading session...</span>
@@ -453,7 +447,7 @@ export function MessageList({
         >
           <div className="max-w-3xl mx-auto">
             {message.role === 'assistant' ? (
-              <div>
+              <div data-testid="assistant-message">
                 <div className="space-y-3">
                   <MarkdownContent
                     content={message.content}
@@ -612,7 +606,7 @@ export function MessageList({
                 </div>
               </div>
             ) : (
-              <div className="flex justify-end">
+              <div className="flex justify-end" data-testid="user-message">
                 <div className="flex flex-col items-end max-w-[85%] min-w-0">
                   <div className="rounded-2xl bg-gray-100 px-4 py-2 max-w-full">
                     <div
@@ -669,7 +663,11 @@ export function MessageList({
       ))}
 
       {isLoading && (
-        <div ref={loadingRef} className="group px-6 py-4">
+        <div
+          ref={loadingRef}
+          className="group px-6 py-4"
+          data-testid="loading-indicator"
+        >
           <div className="max-w-3xl mx-auto">
             <div className="flex items-center gap-1.5">
               <span className="inline-block w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" />

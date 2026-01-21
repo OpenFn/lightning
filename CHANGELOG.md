@@ -19,6 +19,9 @@ and this project adheres to
 
 ### Changed
 
+- Standardise copy button feedback across collaborative editor
+  [#3578](https://github.com/OpenFn/lightning/issues/3578)
+
 ### Fixed
 
 ## [2.15.12-pre1] - 2026-01-21

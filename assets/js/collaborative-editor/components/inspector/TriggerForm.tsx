@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useState } from 'react';
 
+import { useCopyToClipboard } from '#/collaborative-editor/hooks/useCopyToClipboard';
 import {
   createDefaultTrigger,
   TriggerSchema,
 } from '#/collaborative-editor/types/trigger';
+
 import { cn } from '#/utils/cn';
 import _logger from '#/utils/logger';
 
@@ -40,7 +42,7 @@ export function TriggerForm({ trigger }: TriggerFormProps) {
   const { isReadOnly } = useWorkflowReadOnly();
   const { updateTrigger, requestTriggerAuthMethods } = useWorkflowActions();
   const { pushEvent, handleEvent } = useLiveViewActions();
-  const [copySuccess, setCopySuccess] = useState<string>('');
+  const { copyText, copyToClipboard } = useCopyToClipboard();
   const [showAdvancedSettings, setShowAdvancedSettings] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const sessionContext = useSessionContext();
@@ -115,20 +117,6 @@ export function TriggerForm({ trigger }: TriggerFormProps) {
       );
     };
   }, [pushEvent]);
-
-  // Copy to clipboard function
-  const copyToClipboard = useCallback((text: string) => {
-    void (async () => {
-      try {
-        await navigator.clipboard.writeText(text);
-        setCopySuccess('Copied!');
-        setTimeout(() => setCopySuccess(''), 2000);
-      } catch {
-        setCopySuccess('Failed to copy');
-        setTimeout(() => setCopySuccess(''), 2000);
-      }
-    })();
-  }, []);
 
   // Handle saving webhook auth methods
   const handleSaveAuthMethods = useCallback(
@@ -255,11 +243,11 @@ export function TriggerForm({ trigger }: TriggerFormProps) {
                         />
                         <button
                           type="button"
-                          onClick={() => copyToClipboard(webhookUrl)}
+                          onClick={() => void copyToClipboard(webhookUrl)}
                           disabled={isReadOnly}
                           className="w-[100px] inline-block relative rounded-r-lg px-3 text-sm font-normal text-gray-900 border border-secondary-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                          {copySuccess || 'Copy URL'}
+                          {copyText || 'Copy URL'}
                         </button>
                       </div>
                     </div>
