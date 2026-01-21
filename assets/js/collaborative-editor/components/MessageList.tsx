@@ -23,11 +23,7 @@ const CodeBlock = ({
   /** Whether Add button is disabled due to readonly mode */
   isWriteDisabled?: boolean;
 }) => {
-  const {
-    copyText: copyButtonText,
-    copyToClipboard,
-    isCopied,
-  } = useCopyToClipboard();
+  const { copyText, copyToClipboard, isCopied } = useCopyToClipboard();
   const [added, setAdded] = useState(false);
 
   const handleCopy = (e: React.MouseEvent) => {
@@ -77,7 +73,7 @@ const CodeBlock = ({
               : 'bg-slate-300 text-white hover:bg-primary-600 hover:scale-105'
           )}
         >
-          {copyButtonText || 'Copy'}
+          {copyText || 'Copy'}
         </button>
         {showAddButtons && (
           <Tooltip
@@ -198,11 +194,7 @@ const CodeActionButtons = ({
   /** Whether Apply/Add buttons are disabled due to readonly mode */
   isWriteDisabled?: boolean;
 }) => {
-  const {
-    copyText: copyButtonText,
-    copyToClipboard,
-    isCopied,
-  } = useCopyToClipboard();
+  const { copyText, copyToClipboard, isCopied } = useCopyToClipboard();
   const [applied, setApplied] = useState(false);
   const [added, setAdded] = useState(false);
 
@@ -318,7 +310,7 @@ const CodeActionButtons = ({
             : 'bg-slate-300 text-white hover:bg-primary-600 hover:scale-105'
         )}
       >
-        {copyButtonText || 'Copy'}
+        {copyText || 'Copy'}
       </button>
       {showAdd && (
         <Tooltip
