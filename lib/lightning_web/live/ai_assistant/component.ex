@@ -705,7 +705,7 @@ defmodule LightningWeb.AiAssistant.Component do
             disabled={@disabled || form_content_empty?(@form[:content].value)}
             form={@form_id}
             class={[
-              "p-1.5 rounded-full focus:outline-none focus:ring-2 focus:ring-offset-2 transition-all duration-200 flex items-center justify-center h-7 w-7",
+              "p-1.5 rounded-full focus:outline-none focus:ring-2 focus:ring-offset-2 transition-all duration-200 flex items-center justify-center w-10 h-10",
               if(@disabled || form_content_empty?(@form[:content].value),
                 do:
                   "text-gray-400 bg-gray-300 cursor-not-allowed focus:ring-gray-300",

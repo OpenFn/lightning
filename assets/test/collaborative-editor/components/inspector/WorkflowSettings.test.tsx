@@ -150,7 +150,10 @@ function setupTest(projectConcurrency: number | null = null) {
         name: 'Test Project',
         concurrency: projectConcurrency,
       },
-      config: { require_email_verification: false },
+      config: {
+        require_email_verification: false,
+        kafka_triggers_enabled: false,
+      },
       permissions: {
         can_edit_workflow: true,
         can_run_workflow: true,

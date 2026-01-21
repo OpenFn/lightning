@@ -12,7 +12,7 @@ defmodule LightningWeb.Components.Common do
   def openfn_logo(assigns) do
     ~H"""
     <svg
-      viewBox="0 0 2162.5173 800.00009"
+      viewBox="0 0 2185 800"
       class={@class}
       fill={@fill}
       aria-label="OpenFn"
@@ -39,6 +39,40 @@ defmodule LightningWeb.Components.Common do
         <path
           d="m -1788.7957,292.9783 c 0,62.55657 -32.4367,118.62579 -97.3102,118.62579 -64.8735,0 -97.3102,-56.06922 -97.3102,-118.62579 0,-62.55657 32.4367,-118.62579 97.3102,-118.62579 64.8735,0 97.3102,56.06922 97.3102,118.62579 z m -266.908,0 c 0,93.60316 61.1664,180.71898 169.5978,180.71898 108.4314,0 169.5978,-87.11582 169.5978,-180.71898 0,-93.60316 -61.1664,-180.71897 -169.5978,-180.71897 -108.4314,0 -169.5978,87.11581 -169.5978,180.71897 z m 582.4715,53.75231 c 0,36.1438 -19.9254,70.43407 -58.3861,70.43407 -41.7044,0 -61.1665,-33.82689 -61.1665,-69.5073 0,-39.85085 21.3156,-71.36083 59.3129,-71.36083 39.3875,0 60.2397,32.90012 60.2397,70.43406 z m -183.9627,224.27689 h 66.727 V 434.77319 h 0.9268 c 22.2423,29.19307 44.9481,38.92409 75.5313,38.92409 68.5805,0 110.2849,-58.84951 110.2849,-125.11314 0,-66.26362 -44.9481,-126.0399 -111.2117,-126.0399 -30.5832,0 -58.3861,11.58455 -77.3848,39.85085 h -0.9267 v -33.3635 h -63.9468 z m 536.1329,-203.88808 v -18.53528 c 0,-76.92141 -50.0452,-126.0399 -121.8694,-126.0399 -71.8242,0 -121.8695,49.11849 -121.8695,126.0399 0,75.99465 50.0453,125.11314 121.8695,125.11314 56.0692,0 99.6271,-25.48601 115.8455,-74.14112 l -64.8735,-5.0972 c -9.2677,18.53528 -27.3396,28.2663 -47.7284,28.2663 -35.6804,0 -52.8255,-27.80292 -55.6058,-55.60584 z m -174.2316,-42.63114 c 3.7071,-26.87616 20.8522,-50.97202 55.6058,-50.97202 31.9734,0 49.5819,27.80292 51.8988,50.97202 z m 377.65664,142.72165 h 66.72701 V 305.48962 c 0,-45.87482 -25.94939,-82.94538 -83.40876,-82.94538 -26.87616,0 -50.50864,8.80426 -70.43409,37.53394 h -0.9267 v -31.04659 h -63.9468 v 238.17834 h 66.7271 V 331.90239 c 0,-32.43674 16.68171,-55.60584 43.55786,-55.60584 20.85219,0 41.70438,11.58455 41.70438,45.87482 z"
           transform="scale(1.0183501,0.98198055)"
+        />
+      </g>
+    </svg>
+    """
+  end
+
+  @doc """
+  Collapsed version of the OpenFn logo - just shows "Fn" inside the box frame.
+  Used when the sidebar is collapsed.
+  """
+  attr :class, :string, default: "h-6"
+  attr :fill, :string, default: "currentColor"
+
+  def openfn_logo_collapsed(assigns) do
+    ~H"""
+    <svg
+      viewBox="0 0 800 800"
+      class={@class}
+      fill={@fill}
+      aria-label="Fn"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <g transform="translate(-110, 120)">
+        <%!-- Box frame --%>
+        <path
+          d="M 136.21805,-92.133614 H 895.92398 V 667.57232 H 136.21805 Z"
+          fill-opacity="0"
+          stroke="currentColor"
+          stroke-width="40.2941"
+        />
+        <%!-- Fn text inside the box --%>
+        <path
+          d="m 271.68852,467.23065 h 69.5073 V 322.19209 H 472.7963 V 260.0989 H 341.19582 V 180.86058 H 476.03998 V 118.7674 H 271.68852 Z m 403.1422,0 h 66.72701 V 305.51034 c 0,-45.87482 -25.94939,-82.94538 -83.40876,-82.94538 -26.87615,0 -50.50864,8.80426 -70.43406,37.53394 h -0.92677 v -31.04659 h -63.94671 v 238.17834 h 66.72701 V 331.92311 c 0,-32.43674 16.68175,-55.60584 43.5579,-55.60584 20.85219,0 41.70438,11.58455 41.70438,45.87482 z"
+          transform="scale(1.0183501,0.98198054)"
         />
       </g>
     </svg>
@@ -267,7 +301,7 @@ defmodule LightningWeb.Components.Common do
     assigns = assign(assigns, display: display, message: message)
 
     ~H"""
-    <div class="px-3 pb-2 text-xs flex gap-1 justify-center">
+    <div class="version-chip sidebar-version-chip pb-2 text-xs flex">
       <code
         class={[
           "py-1 rounded-md",
@@ -567,67 +601,6 @@ defmodule LightningWeb.Components.Common do
     """
   end
 
-  def combobox(assigns) do
-    ~H"""
-    <div id="combobox-wrapper" phx-hook="Combobox" class="relative my-4 mx-3 px-0">
-      <input
-        id="combobox"
-        type="text"
-        spellcheck="false"
-        placeholder={@placeholder || "Search..."}
-        value={root_name(@selected_item)}
-        class="w-full rounded-md border-0 py-1.5 pl-3 pr-12 shadow-xs ring-1 ring-inset focus:ring-2 sm:text-sm sm:leading-6"
-        role="combobox"
-        aria-controls="options"
-        aria-expanded="false"
-        autocomplete="off"
-      />
-      <button
-        type="button"
-        class="absolute inset-y-0 right-0 flex items-center rounded-r-md px-2 focus:outline-none"
-        aria-label="Toggle dropdown"
-      >
-        <.icon name="hero-chevron-up-down" class="h-5 w-5 text-gray-400" />
-      </button>
-
-      <ul
-        class={[
-          "absolute z-10 mt-1 max-h-60 py-1 w-full overflow-auto rounded-md",
-          "shadow-lg ring-1 ring-black/5",
-          "text-base sm:text-sm hidden focus:outline-none"
-        ]}
-        id="options"
-        role="listbox"
-        aria-labelledby="combobox"
-      >
-        <li
-          :for={item <- @items}
-          class="group relative cursor-pointer select-none py-2 px-3 text-sm flex items-center"
-          id={"option-#{item.id}"}
-          role="option"
-          tabindex="0"
-          data-item-id={item.id}
-          data-item-selected={@selected_item && @selected_item.id == item.id}
-          data-url={@url_func.(item)}
-        >
-          <span class={[
-            "font-normal truncate flex-grow mr-6",
-            "group-data-[item-selected]:font-semibold"
-          ]}>
-            {item.name}
-          </span>
-          <span class={[
-            "flex-shrink-0 ml-auto",
-            "group-[&:not([data-item-selected])]:hidden"
-          ]}>
-            <.icon name="hero-check" class="w-5 h-5" />
-          </span>
-        </li>
-      </ul>
-    </div>
-    """
-  end
-
   attr :sort_direction, :string,
     values: ["asc", "desc"],
     default: "asc"
@@ -697,11 +670,4 @@ defmodule LightningWeb.Components.Common do
     </div>
     """
   end
-
-  defp root_name(nil), do: ""
-
-  defp root_name(%Lightning.Projects.Project{} = selected_item),
-    do: Lightning.Projects.root_of(selected_item).name
-
-  defp root_name(%{name: name}), do: name
 end

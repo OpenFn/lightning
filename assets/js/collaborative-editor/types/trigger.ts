@@ -17,8 +17,12 @@ const baseTriggerSchema = z.object({
 // Webhook trigger schema
 const webhookTriggerSchema = baseTriggerSchema.extend({
   type: z.literal('webhook'),
-  cron_expression: z.null(),
-  kafka_configuration: z.null(),
+  cron_expression: z.null().default(null),
+  kafka_configuration: z.null().default(null),
+  webhook_reply: z
+    .enum(['before_start', 'after_completion'])
+    .nullable()
+    .default('before_start'),
 });
 
 // Cron trigger schema with professional validation using cron-validator
@@ -42,29 +46,31 @@ const cronTriggerSchema = baseTriggerSchema.extend({
           'Invalid cron expression. Use format: minute hour day month weekday',
       }
     ),
-  kafka_configuration: z.null(),
+  kafka_configuration: z.null().default(null),
+  webhook_reply: z.null().default(null),
 });
 
 // Kafka configuration sub-schema
 const kafkaConfigSchema = z
   .object({
-    hosts: z
+    hosts_string: z
       .string()
       .min(1, 'Kafka hosts are required')
       .regex(
-        /^[^,]+:\d+(,[^,]+:\d+)*$/,
-        "Hosts must be in format 'host:port,host:port'"
+        /^[^,\s]+(:\d+)?(,\s*[^,\s]+(:\d+)?)*$/,
+        "Hosts must be in format 'host:port, host:port'"
       ),
-    topics: z
+    topics_string: z
       .string()
       .min(1, 'At least one topic is required')
-      .regex(/^[^,]+(,[^,]+)*$/, 'Invalid topic format'),
+      .regex(/^[^,\s]+(,\s*[^,\s]+)*$/, 'Invalid topic format'),
     ssl: z.boolean().default(false),
     sasl: z
-      .enum(['none', 'plain', 'scram_sha_256', 'scram_sha_512'])
-      .default('none'),
-    username: z.string().optional(),
-    password: z.string().optional(),
+      .enum(['plain', 'scram_sha_256', 'scram_sha_512'])
+      .nullable()
+      .default(null),
+    username: z.string().nullable().optional(),
+    password: z.string().nullable().optional(),
     initial_offset_reset_policy: z
       .enum(['earliest', 'latest'])
       .default('latest'),
@@ -77,7 +83,7 @@ const kafkaConfigSchema = z
   .refine(
     data => {
       // If SASL is not "none", username and password are required
-      if (data.sasl !== 'none') {
+      if (data.sasl !== null) {
         return data.username && data.password;
       }
       return true;
@@ -92,8 +98,9 @@ const kafkaConfigSchema = z
 // Kafka trigger schema
 const kafkaTriggerSchema = baseTriggerSchema.extend({
   type: z.literal('kafka'),
-  cron_expression: z.null(),
+  cron_expression: z.null().default(null),
   kafka_configuration: kafkaConfigSchema,
+  webhook_reply: z.null().default(null),
 });
 
 /**
@@ -125,6 +132,7 @@ export const createDefaultTrigger = (
         type: 'webhook' as const,
         cron_expression: null,
         kafka_configuration: null,
+        webhook_reply: 'before_start' as const,
       };
 
     case 'cron':
@@ -141,10 +149,10 @@ export const createDefaultTrigger = (
         type: 'kafka' as const,
         cron_expression: null,
         kafka_configuration: {
-          hosts: '',
-          topics: '',
+          hosts_string: '',
+          topics_string: '',
           ssl: false,
-          sasl: 'none' as const,
+          sasl: null,
           username: '',
           password: '',
           initial_offset_reset_policy: 'latest' as const,

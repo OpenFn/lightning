@@ -41,7 +41,7 @@ defmodule LightningWeb.WorkflowLive.WorkflowAiChatComponentTest do
       skip_disclaimer(user)
 
       {:ok, view, _html} =
-        live(conn, ~p"/projects/#{project}/w/#{workflow}?method=ai")
+        live(conn, ~p"/projects/#{project}/w/#{workflow}/legacy?method=ai")
 
       assert has_element?(view, "#workflow-ai-chat-panel")
       assert has_element?(view, "#workflow-ai-chat-panel-assistant")
@@ -100,7 +100,7 @@ defmodule LightningWeb.WorkflowLive.WorkflowAiChatComponentTest do
       skip_disclaimer(user)
 
       {:ok, view, _html} =
-        live(conn, ~p"/projects/#{project}/w/#{workflow}?method=ai")
+        live(conn, ~p"/projects/#{project}/w/#{workflow}/legacy?method=ai")
 
       render_async(view)
 
@@ -187,7 +187,7 @@ defmodule LightningWeb.WorkflowLive.WorkflowAiChatComponentTest do
       skip_disclaimer(user)
 
       {:ok, view, _html} =
-        live(conn, ~p"/projects/#{project}/w/#{workflow}?method=ai")
+        live(conn, ~p"/projects/#{project}/w/#{workflow}/legacy?method=ai")
 
       render_async(view)
 
@@ -261,7 +261,7 @@ defmodule LightningWeb.WorkflowLive.WorkflowAiChatComponentTest do
       skip_disclaimer(user)
 
       {:ok, view, _html} =
-        live(conn, ~p"/projects/#{project}/w/#{workflow}?method=ai")
+        live(conn, ~p"/projects/#{project}/w/#{workflow}/legacy?method=ai")
 
       render_async(view)
 
@@ -357,7 +357,7 @@ defmodule LightningWeb.WorkflowLive.WorkflowAiChatComponentTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project}/w/#{workflow}?method=ai&w-chat=#{session.id}"
+          ~p"/projects/#{project}/w/#{workflow}/legacy?method=ai&w-chat=#{session.id}"
         )
 
       assert_push_event(view, "template_selected", %{template: ^workflow_code})
@@ -441,7 +441,10 @@ defmodule LightningWeb.WorkflowLive.WorkflowAiChatComponentTest do
         skip_disclaimer(user)
 
         {:ok, view, _html} =
-          live(conn, ~p"/projects/#{project}/w/#{workflow}?method=ai")
+          live(
+            conn,
+            ~p"/projects/#{project}/w/#{workflow}/legacy?method=ai"
+          )
 
         render_async(view)
 
@@ -577,7 +580,10 @@ defmodule LightningWeb.WorkflowLive.WorkflowAiChatComponentTest do
         skip_disclaimer(user)
 
         {:ok, view, _html} =
-          live(conn, ~p"/projects/#{project}/w/#{workflow}?method=ai")
+          live(
+            conn,
+            ~p"/projects/#{project}/w/#{workflow}/legacy?method=ai"
+          )
 
         render_async(view)
 
@@ -656,7 +662,7 @@ defmodule LightningWeb.WorkflowLive.WorkflowAiChatComponentTest do
       skip_disclaimer(user)
 
       {:ok, view, _html} =
-        live(conn, ~p"/projects/#{project}/w/#{workflow}?method=ai")
+        live(conn, ~p"/projects/#{project}/w/#{workflow}/legacy?method=ai")
 
       render_async(view)
 
@@ -680,7 +686,7 @@ defmodule LightningWeb.WorkflowLive.WorkflowAiChatComponentTest do
       skip_disclaimer(user)
 
       {:ok, view, _html} =
-        live(conn, ~p"/projects/#{project}/w/#{workflow}?method=ai")
+        live(conn, ~p"/projects/#{project}/w/#{workflow}/legacy?method=ai")
 
       job_id = Ecto.UUID.generate()
 
@@ -726,7 +732,7 @@ defmodule LightningWeb.WorkflowLive.WorkflowAiChatComponentTest do
       skip_disclaimer(user)
 
       {:ok, view, _html} =
-        live(conn, ~p"/projects/#{project}/w/#{workflow}?method=ai")
+        live(conn, ~p"/projects/#{project}/w/#{workflow}/legacy?method=ai")
 
       import ExUnit.CaptureLog
 

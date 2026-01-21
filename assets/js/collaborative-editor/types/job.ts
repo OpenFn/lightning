@@ -30,7 +30,7 @@ export const JobSchema = z
     keychain_credential_id: uuidSchema.nullable().default(null),
 
     // Association fields
-    workflow_id: uuidSchema,
+    workflow_id: uuidSchema.optional(),
 
     // Virtual field for form deletion logic
     delete: z.boolean().optional(),

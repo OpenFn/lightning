@@ -46,4 +46,55 @@ defmodule Lightning.Runs.QueueTest do
     assert %{worker_name: nil} = Lightning.Repo.reload!(run_1)
     assert %{worker_name: nil} = Lightning.Repo.reload!(run_2)
   end
+
+  test "configures session with work_mem when configured", %{run_1: _run_1} do
+    prev = Application.get_env(:lightning, :claim_work_mem)
+
+    try do
+      Application.put_env(:lightning, :claim_work_mem, "64MB")
+
+      ref =
+        :telemetry_test.attach_event_handlers(self(), [
+          [:lightning, :repo, :query]
+        ])
+
+      Queue.claim(1, Query.eligible_for_claim())
+
+      assert_receive {[:lightning, :repo, :query], ^ref, _measurements,
+                      %{query: "SET LOCAL plan_cache_mode" <> _}}
+
+      assert_receive {[:lightning, :repo, :query], ^ref, _measurements,
+                      %{query: "SET LOCAL work_mem = '64MB'"}}
+    after
+      if prev,
+        do: Application.put_env(:lightning, :claim_work_mem, prev),
+        else: Application.delete_env(:lightning, :claim_work_mem)
+    end
+  end
+
+  test "skips work_mem when nil", %{run_1: _run_1} do
+    prev = Application.get_env(:lightning, :claim_work_mem)
+
+    try do
+      Application.put_env(:lightning, :claim_work_mem, nil)
+
+      ref =
+        :telemetry_test.attach_event_handlers(self(), [
+          [:lightning, :repo, :query]
+        ])
+
+      Queue.claim(1, Query.eligible_for_claim())
+
+      assert_receive {[:lightning, :repo, :query], ^ref, _measurements,
+                      %{query: "SET LOCAL plan_cache_mode" <> _}}
+
+      refute_receive {[:lightning, :repo, :query], ^ref, _measurements,
+                      %{query: "SET LOCAL work_mem" <> _}},
+                     100
+    after
+      if prev,
+        do: Application.put_env(:lightning, :claim_work_mem, prev),
+        else: Application.delete_env(:lightning, :claim_work_mem)
+    end
+  end
 end

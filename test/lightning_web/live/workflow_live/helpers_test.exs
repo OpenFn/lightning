@@ -10,7 +10,7 @@ defmodule LightningWeb.WorkflowLive.HelpersTest do
       }
 
       result = Helpers.collaborative_editor_url(params, :new)
-      assert result == "/projects/proj-1/w/new/collaborate?method=template"
+      assert result == "/projects/proj-1/w/new?method=template"
     end
 
     test "converts classical editor URL to collaborative for existing workflow" do
@@ -20,7 +20,7 @@ defmodule LightningWeb.WorkflowLive.HelpersTest do
       }
 
       result = Helpers.collaborative_editor_url(params, :edit)
-      assert result == "/projects/proj-1/w/wf-1/collaborate"
+      assert result == "/projects/proj-1/w/wf-1"
     end
 
     test "converts 'a' parameter (followed run) to 'run'" do
@@ -31,7 +31,7 @@ defmodule LightningWeb.WorkflowLive.HelpersTest do
       }
 
       result = Helpers.collaborative_editor_url(params, :edit)
-      assert result == "/projects/proj-1/w/wf-1/collaborate?run=run-123"
+      assert result == "/projects/proj-1/w/wf-1?run=run-123"
     end
 
     test "defaults 's' parameter to 'job' when no context" do
@@ -42,7 +42,7 @@ defmodule LightningWeb.WorkflowLive.HelpersTest do
       }
 
       result = Helpers.collaborative_editor_url(params, :edit)
-      assert result == "/projects/proj-1/w/wf-1/collaborate?job=job-abc"
+      assert result == "/projects/proj-1/w/wf-1?job=job-abc"
     end
 
     test "defaults 's' parameter to 'job' when no context (trigger case)" do
@@ -53,7 +53,7 @@ defmodule LightningWeb.WorkflowLive.HelpersTest do
       }
 
       result = Helpers.collaborative_editor_url(params, :edit)
-      assert result == "/projects/proj-1/w/wf-1/collaborate?job=trigger-xyz"
+      assert result == "/projects/proj-1/w/wf-1?job=trigger-xyz"
     end
 
     test "defaults 's' parameter to 'job' when no context (edge case)" do
@@ -64,7 +64,7 @@ defmodule LightningWeb.WorkflowLive.HelpersTest do
       }
 
       result = Helpers.collaborative_editor_url(params, :edit)
-      assert result == "/projects/proj-1/w/wf-1/collaborate?job=edge-123"
+      assert result == "/projects/proj-1/w/wf-1?job=edge-123"
     end
 
     test "defaults 's' parameter to 'job' when no selection context" do
@@ -75,7 +75,7 @@ defmodule LightningWeb.WorkflowLive.HelpersTest do
       }
 
       result = Helpers.collaborative_editor_url(params, :edit)
-      assert result == "/projects/proj-1/w/wf-1/collaborate?job=unknown-id"
+      assert result == "/projects/proj-1/w/wf-1?job=unknown-id"
     end
 
     test "converts 'm=expand' to 'panel=editor'" do
@@ -86,7 +86,7 @@ defmodule LightningWeb.WorkflowLive.HelpersTest do
       }
 
       result = Helpers.collaborative_editor_url(params, :edit)
-      assert result == "/projects/proj-1/w/wf-1/collaborate?panel=editor"
+      assert result == "/projects/proj-1/w/wf-1?panel=editor"
     end
 
     test "converts 'm=workflow_input' to 'panel=run'" do
@@ -97,7 +97,7 @@ defmodule LightningWeb.WorkflowLive.HelpersTest do
       }
 
       result = Helpers.collaborative_editor_url(params, :edit)
-      assert result == "/projects/proj-1/w/wf-1/collaborate?panel=run"
+      assert result == "/projects/proj-1/w/wf-1?panel=run"
     end
 
     test "converts 'm=settings' to 'panel=settings'" do
@@ -108,7 +108,7 @@ defmodule LightningWeb.WorkflowLive.HelpersTest do
       }
 
       result = Helpers.collaborative_editor_url(params, :edit)
-      assert result == "/projects/proj-1/w/wf-1/collaborate?panel=settings"
+      assert result == "/projects/proj-1/w/wf-1?panel=settings"
     end
 
     test "preserves 'v' parameter (version tag)" do
@@ -119,7 +119,7 @@ defmodule LightningWeb.WorkflowLive.HelpersTest do
       }
 
       result = Helpers.collaborative_editor_url(params, :edit)
-      assert result == "/projects/proj-1/w/wf-1/collaborate?v=snapshot-123"
+      assert result == "/projects/proj-1/w/wf-1?v=snapshot-123"
     end
 
     test "preserves 'method' parameter" do
@@ -130,7 +130,7 @@ defmodule LightningWeb.WorkflowLive.HelpersTest do
       }
 
       result = Helpers.collaborative_editor_url(params, :edit)
-      assert result == "/projects/proj-1/w/wf-1/collaborate?method=some-method"
+      assert result == "/projects/proj-1/w/wf-1?method=some-method"
     end
 
     test "preserves 'w-chat' parameter" do
@@ -141,7 +141,7 @@ defmodule LightningWeb.WorkflowLive.HelpersTest do
       }
 
       result = Helpers.collaborative_editor_url(params, :edit)
-      assert result == "/projects/proj-1/w/wf-1/collaborate?w-chat=chat-123"
+      assert result == "/projects/proj-1/w/wf-1?w-chat=chat-123"
     end
 
     test "preserves 'j-chat' parameter" do
@@ -152,7 +152,7 @@ defmodule LightningWeb.WorkflowLive.HelpersTest do
       }
 
       result = Helpers.collaborative_editor_url(params, :edit)
-      assert result == "/projects/proj-1/w/wf-1/collaborate?j-chat=chat-456"
+      assert result == "/projects/proj-1/w/wf-1?j-chat=chat-456"
     end
 
     test "preserves 'code' parameter" do
@@ -163,7 +163,7 @@ defmodule LightningWeb.WorkflowLive.HelpersTest do
       }
 
       result = Helpers.collaborative_editor_url(params, :edit)
-      assert result == "/projects/proj-1/w/wf-1/collaborate?code=some-code"
+      assert result == "/projects/proj-1/w/wf-1?code=some-code"
     end
 
     test "skips 'panel' parameter (collaborative-only)" do
@@ -174,7 +174,7 @@ defmodule LightningWeb.WorkflowLive.HelpersTest do
       }
 
       result = Helpers.collaborative_editor_url(params, :edit)
-      assert result == "/projects/proj-1/w/wf-1/collaborate"
+      assert result == "/projects/proj-1/w/wf-1"
     end
 
     test "preserves unknown parameters for future compatibility" do
@@ -185,7 +185,7 @@ defmodule LightningWeb.WorkflowLive.HelpersTest do
       }
 
       result = Helpers.collaborative_editor_url(params, :edit)
-      assert result == "/projects/proj-1/w/wf-1/collaborate?unknown=value"
+      assert result == "/projects/proj-1/w/wf-1?unknown=value"
     end
 
     test "handles multiple parameters with complex conversion" do
@@ -202,7 +202,7 @@ defmodule LightningWeb.WorkflowLive.HelpersTest do
       result = Helpers.collaborative_editor_url(params, :edit)
 
       # Check that all expected parameters are present
-      assert result =~ "/projects/proj-1/w/wf-1/collaborate?"
+      assert result =~ "/projects/proj-1/w/wf-1?"
       assert result =~ "run=run-123"
       assert result =~ "job=job-abc"
       assert result =~ "panel=editor"
@@ -219,7 +219,7 @@ defmodule LightningWeb.WorkflowLive.HelpersTest do
       }
 
       result = Helpers.collaborative_editor_url(params, :edit)
-      assert result == "/projects/proj-1/w/wf-1/collaborate"
+      assert result == "/projects/proj-1/w/wf-1"
     end
   end
 

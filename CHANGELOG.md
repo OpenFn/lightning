@@ -17,6 +17,11 @@ and this project adheres to
 
 ### Added
 
+- Add Unsaved Changes Indicator
+  [#3682](https://github.com/OpenFn/lightning/issues/3682)
+- Added sync/async mode controls to the trigger
+  [#4321](https://github.com/OpenFn/lightning/issues/4321)
+
 ### Changed
 
 - Standardise copy button feedback across collaborative editor
@@ -24,6 +29,24 @@ and this project adheres to
 
 ### Fixed
 
+## [2.15.12-pre] - 2026-01-19
+
+### Added
+
+- Add collapsible left sidebar with keyboard shortcut (Cmd/Ctrl+M) and
+  command-palette style project picker (Cmd/Ctrl+Shift+P)
+  [#4197](https://github.com/OpenFn/lightning/pull/4197)
+
+### Changed
+
+- Add configurable `CLAIM_WORK_MEM` environment variable (default: 32MB) to set
+  PostgreSQL work_mem for claim query, eliminating temp file writes during
+  window function sorting [#4331](https://github.com/OpenFn/lightning/pull/4331)
+
+### Fixed
+
+- Fix unable to save a workflow with a Kafka trigger in the collab editor
+  [#4295](https://github.com/OpenFn/lightning/issues/4295)
 - Credentials Scrubber uses too much memory. Introduce a limit on the number of
   sensitive values in a credential body via `MAX_CREDENTIAL_SENSITIVE_VALUES`
   [#4307](https://github.com/OpenFn/lightning/issues/4307)
@@ -42,6 +65,8 @@ and this project adheres to
 - Optimized PromEx average claim duration query to use SQL aggregation instead
   of fetching rows into memory
   [#4317](https://github.com/OpenFn/lightning/pull/4317)
+- Make new editor the default & warn for deprecation of legacy
+  [#4111](https://github.com/OpenFn/lightning/issues/4111)
 
 ### Fixed
 

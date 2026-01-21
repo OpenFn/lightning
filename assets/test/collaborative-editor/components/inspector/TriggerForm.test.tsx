@@ -1,21 +1,20 @@
 /**
- * EdgeInspector Component Tests - Footer Button States
+ * TriggerForm Component Tests - Response Mode Field
  *
- * Tests for EdgeInspector footer visibility and button states in read-only mode.
+ * Tests for the webhook_reply (Response Mode) field in TriggerForm.
  */
 
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import type React from 'react';
 import { act } from 'react';
 import { beforeEach, describe, expect, test } from 'vitest';
-import type * as Y from 'yjs';
+import * as Y from 'yjs';
 
-import { EdgeInspector } from '../../../../js/collaborative-editor/components/inspector/EdgeInspector';
+import { TriggerForm } from '../../../../js/collaborative-editor/components/inspector/TriggerForm';
 import { SessionContext } from '../../../../js/collaborative-editor/contexts/SessionProvider';
 import { LiveViewActionsProvider } from '../../../../js/collaborative-editor/contexts/LiveViewActionsContext';
 import type { StoreContextValue } from '../../../../js/collaborative-editor/contexts/StoreProvider';
 import { StoreContext } from '../../../../js/collaborative-editor/contexts/StoreProvider';
-import { createSessionStore } from '../../../../js/collaborative-editor/stores/createSessionStore';
 import type { AdaptorStoreInstance } from '../../../../js/collaborative-editor/stores/createAdaptorStore';
 import { createAdaptorStore } from '../../../../js/collaborative-editor/stores/createAdaptorStore';
 import type { AwarenessStoreInstance } from '../../../../js/collaborative-editor/stores/createAwarenessStore';
@@ -24,14 +23,34 @@ import type { CredentialStoreInstance } from '../../../../js/collaborative-edito
 import { createCredentialStore } from '../../../../js/collaborative-editor/stores/createCredentialStore';
 import type { SessionContextStoreInstance } from '../../../../js/collaborative-editor/stores/createSessionContextStore';
 import { createSessionContextStore } from '../../../../js/collaborative-editor/stores/createSessionContextStore';
+import { createSessionStore } from '../../../../js/collaborative-editor/stores/createSessionStore';
 import type { WorkflowStoreInstance } from '../../../../js/collaborative-editor/stores/createWorkflowStore';
 import { createWorkflowStore } from '../../../../js/collaborative-editor/stores/createWorkflowStore';
+import type { Session } from '../../../../js/collaborative-editor/types/session';
 import {
   createMockPhoenixChannel,
   createMockPhoenixChannelProvider,
 } from '../../__helpers__/channelMocks';
-import { createWorkflowYDoc } from '../../__helpers__/workflowFactory';
 import { createMockSocket } from '../../__helpers__/sessionStoreHelpers';
+
+/**
+ * Creates a Y.Doc with a webhook trigger including webhook_reply field
+ */
+function createWebhookTriggerYDoc(
+  webhookReply: 'before_start' | 'after_completion' = 'before_start'
+): Y.Doc {
+  const ydoc = new Y.Doc();
+
+  const triggersArray = ydoc.getArray('triggers');
+  const triggerMap = new Y.Map();
+  triggerMap.set('id', 'trigger-1');
+  triggerMap.set('type', 'webhook');
+  triggerMap.set('enabled', true);
+  triggerMap.set('webhook_reply', webhookReply);
+  triggersArray.push([triggerMap]);
+
+  return ydoc;
+}
 
 /**
  * Helper to create and connect a workflow store with Y.Doc
@@ -95,7 +114,7 @@ function createWrapper(
   );
 }
 
-describe('EdgeInspector - Footer Button States', () => {
+describe('TriggerForm - Response Mode Field', () => {
   let ydoc: Y.Doc;
   let workflowStore: WorkflowStoreInstance;
   let credentialStore: CredentialStoreInstance;
@@ -105,36 +124,7 @@ describe('EdgeInspector - Footer Button States', () => {
   let mockChannel: any;
 
   beforeEach(() => {
-    // Create Y.Doc with jobs and an edge
-    ydoc = createWorkflowYDoc({
-      jobs: {
-        'job-1': {
-          id: 'job-1',
-          name: 'First Job',
-          adaptor: '@openfn/language-common@latest',
-          body: 'fn(state => state)',
-        },
-        'job-2': {
-          id: 'job-2',
-          name: 'Second Job',
-          adaptor: '@openfn/language-common@latest',
-          body: 'fn(state => state)',
-        },
-      },
-      edges: [
-        {
-          id: 'edge-1',
-          source: 'job-1',
-          target: 'job-2',
-          condition_type: 'on_job_success',
-          enabled: true,
-        },
-      ],
-    });
-
-    // Set workflow lock_version to match session context
-    const workflowMap = ydoc.getMap('workflow');
-    workflowMap.set('lock_version', 1);
+    ydoc = createWebhookTriggerYDoc('before_start');
 
     workflowStore = createConnectedWorkflowStore(ydoc);
     credentialStore = createCredentialStore();
@@ -144,135 +134,35 @@ describe('EdgeInspector - Footer Button States', () => {
 
     mockChannel = createMockPhoenixChannel();
     const mockProvider = createMockPhoenixChannelProvider(mockChannel);
+    credentialStore._connectChannel(mockProvider as any);
+    adaptorStore._connectChannel(mockProvider as any);
     sessionContextStore._connectChannel(mockProvider as any);
 
-    // Set default read-only permissions in beforeEach
-    // Individual tests can override by emitting a new session_context event
     act(() => {
       (mockChannel as any)._test.emit('session_context', {
         user: null,
         project: null,
-        config: {
-          require_email_verification: false,
-          kafka_triggers_enabled: false,
-        },
-        permissions: {
-          can_edit_workflow: false,
-          can_run_workflow: false,
-          can_write_webhook_auth_method: false,
-        },
-        latest_snapshot_lock_version: 1,
-        project_repo_connection: null,
-        webhook_auth_methods: [],
-        workflow_template: null,
-        has_read_ai_disclaimer: true,
-      });
-    });
-  });
-
-  test('footer is rendered in read-only mode', () => {
-    // beforeEach already sets read-only permissions
-    const edge = workflowStore.getSnapshot().edges[0];
-    const mockOnClose = vi.fn();
-
-    render(<EdgeInspector edge={edge} onClose={mockOnClose} />, {
-      wrapper: createWrapper(
-        workflowStore,
-        credentialStore,
-        sessionContextStore,
-        adaptorStore,
-        awarenessStore
-      ),
-    });
-
-    // Footer should be rendered with toggle and delete button
-    expect(screen.getByLabelText(/enabled/i)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /delete/i })).toBeInTheDocument();
-  });
-
-  test('toggle and delete button are disabled in read-only mode', () => {
-    // beforeEach already sets read-only permissions
-    const edge = workflowStore.getSnapshot().edges[0];
-    const mockOnClose = vi.fn();
-
-    render(<EdgeInspector edge={edge} onClose={mockOnClose} />, {
-      wrapper: createWrapper(
-        workflowStore,
-        credentialStore,
-        sessionContextStore,
-        adaptorStore,
-        awarenessStore
-      ),
-    });
-
-    const toggle = screen.getByLabelText(/enabled/i);
-    const deleteButton = screen.getByRole('button', { name: /delete/i });
-
-    expect(toggle).toBeDisabled();
-    expect(deleteButton).toBeDisabled();
-  });
-
-  test('footer is not rendered for trigger edges', () => {
-    // Create edge from trigger - source references trigger ID
-    const ydocWithTriggerEdge = createWorkflowYDoc({
-      triggers: {
-        'trigger-1': {
-          id: 'trigger-1',
-          type: 'webhook',
-          enabled: true,
-        },
-      },
-      jobs: {
-        'job-1': {
-          id: 'job-1',
-          name: 'First Job',
-          adaptor: '@openfn/language-common@latest',
-          body: 'fn(state => state)',
-        },
-      },
-      edges: [
-        {
-          id: 'edge-1',
-          source: 'trigger-1', // Reference trigger by ID - factory will set source_trigger_id
-          target: 'job-1',
-          condition_type: 'always',
-        },
-      ],
-    });
-
-    // Set lock_version
-    const workflowMap = ydocWithTriggerEdge.getMap('workflow');
-    workflowMap.set('lock_version', 1);
-
-    const workflowStoreWithTriggerEdge =
-      createConnectedWorkflowStore(ydocWithTriggerEdge);
-
-    act(() => {
-      (mockChannel as any)._test.emit('session_context', {
-        user: null,
-        project: null,
-        config: {
-          require_email_verification: false,
-          kafka_triggers_enabled: false,
-        },
+        config: { require_email_verification: false },
         permissions: {
           can_edit_workflow: true,
           can_run_workflow: true,
           can_write_webhook_auth_method: true,
         },
+        has_read_ai_disclaimer: true,
         latest_snapshot_lock_version: 1,
         project_repo_connection: null,
         webhook_auth_methods: [],
         workflow_template: null,
       });
     });
+  });
 
-    const edge = workflowStoreWithTriggerEdge.getSnapshot().edges[0];
-    const mockOnClose = vi.fn();
+  test('renders Response Mode field for webhook triggers', async () => {
+    const trigger = workflowStore.getSnapshot().triggers[0] as Session.Trigger;
 
-    render(<EdgeInspector edge={edge} onClose={mockOnClose} />, {
+    render(<TriggerForm trigger={trigger} />, {
       wrapper: createWrapper(
-        workflowStoreWithTriggerEdge,
+        workflowStore,
         credentialStore,
         sessionContextStore,
         adaptorStore,
@@ -280,10 +170,134 @@ describe('EdgeInspector - Footer Button States', () => {
       ),
     });
 
-    // Footer should not be rendered for trigger edges
-    expect(screen.queryByLabelText(/enabled/i)).not.toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByLabelText('Response Mode')).toBeInTheDocument();
+    });
+  });
+
+  test('displays Async and Sync options', async () => {
+    const trigger = workflowStore.getSnapshot().triggers[0] as Session.Trigger;
+
+    render(<TriggerForm trigger={trigger} />, {
+      wrapper: createWrapper(
+        workflowStore,
+        credentialStore,
+        sessionContextStore,
+        adaptorStore,
+        awarenessStore
+      ),
+    });
+
+    await screen.findByLabelText('Response Mode');
+
+    // Check both options exist (use exact text to avoid "Async" matching "sync")
     expect(
-      screen.queryByRole('button', { name: /delete/i })
-    ).not.toBeInTheDocument();
+      screen.getByRole('option', { name: 'Async (default)' })
+    ).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: 'Sync' })).toBeInTheDocument();
+  });
+
+  test('shows Async as default selected value', async () => {
+    const trigger = workflowStore.getSnapshot().triggers[0] as Session.Trigger;
+
+    render(<TriggerForm trigger={trigger} />, {
+      wrapper: createWrapper(
+        workflowStore,
+        credentialStore,
+        sessionContextStore,
+        adaptorStore,
+        awarenessStore
+      ),
+    });
+
+    await waitFor(() => {
+      const select = screen.getByLabelText(
+        'Response Mode'
+      ) as HTMLSelectElement;
+      expect(select.value).toBe('before_start');
+    });
+  });
+
+  test('shows async help text when Async is selected', async () => {
+    const trigger = workflowStore.getSnapshot().triggers[0] as Session.Trigger;
+
+    render(<TriggerForm trigger={trigger} />, {
+      wrapper: createWrapper(
+        workflowStore,
+        credentialStore,
+        sessionContextStore,
+        adaptorStore,
+        awarenessStore
+      ),
+    });
+
+    await waitFor(() => {
+      expect(
+        screen.getByText(
+          /responds immediately with the enqueued work order id/i
+        )
+      ).toBeInTheDocument();
+    });
+  });
+
+  test('shows sync help text when Sync is selected', async () => {
+    // Create Y.Doc with after_completion value
+    const syncYdoc = createWebhookTriggerYDoc('after_completion');
+    const syncWorkflowStore = createConnectedWorkflowStore(syncYdoc);
+
+    const trigger = syncWorkflowStore.getSnapshot()
+      .triggers[0] as Session.Trigger;
+
+    render(<TriggerForm trigger={trigger} />, {
+      wrapper: createWrapper(
+        syncWorkflowStore,
+        credentialStore,
+        sessionContextStore,
+        adaptorStore,
+        awarenessStore
+      ),
+    });
+
+    await waitFor(() => {
+      expect(
+        screen.getByText(
+          /responds with the final output state after the run completes/i
+        )
+      ).toBeInTheDocument();
+    });
+  });
+
+  test('does not render Response Mode for cron triggers', async () => {
+    // Create a cron trigger Y.Doc
+    const cronYdoc = new Y.Doc();
+    const triggersArray = cronYdoc.getArray('triggers');
+    const triggerMap = new Y.Map();
+    triggerMap.set('id', 'trigger-1');
+    triggerMap.set('type', 'cron');
+    triggerMap.set('enabled', true);
+    triggerMap.set('cron_expression', '0 0 * * *');
+    triggersArray.push([triggerMap]);
+
+    const cronWorkflowStore = createConnectedWorkflowStore(cronYdoc);
+    const trigger = cronWorkflowStore.getSnapshot()
+      .triggers[0] as Session.Trigger;
+
+    render(<TriggerForm trigger={trigger} />, {
+      wrapper: createWrapper(
+        cronWorkflowStore,
+        credentialStore,
+        sessionContextStore,
+        adaptorStore,
+        awarenessStore
+      ),
+    });
+
+    // Wait for form to render
+    await waitFor(() => {
+      expect(screen.getByLabelText('Trigger Type')).toBeInTheDocument();
+    });
+
+    // Response Mode should NOT be present for cron triggers
+    expect(screen.queryByLabelText('Response Mode')).not.toBeInTheDocument();
   });
 });

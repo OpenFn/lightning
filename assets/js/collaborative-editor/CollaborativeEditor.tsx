@@ -6,7 +6,11 @@ import { SocketProvider } from '../react/contexts/SocketProvider';
 import type { WithActionProps } from '../react/lib/with-props';
 
 import { AIAssistantPanelWrapper } from './components/AIAssistantPanelWrapper';
-import { BreadcrumbLink, BreadcrumbText } from './components/Breadcrumbs';
+import {
+  BreadcrumbLink,
+  BreadcrumbProjectPicker,
+  BreadcrumbText,
+} from './components/Breadcrumbs';
 import type { MonacoHandle } from './components/CollaborativeMonaco';
 import { Header } from './components/Header';
 import { LoadingBoundary } from './components/LoadingBoundary';
@@ -88,14 +92,21 @@ function BreadcrumbContent({
 
   const handleVersionSelect = useVersionSelect();
 
+  const handleProjectPickerClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    // Dispatch the event that the global ProjectPicker listens for
+    document.body.dispatchEvent(new CustomEvent('open-project-picker'));
+  };
+
   const breadcrumbElements = useMemo(() => {
     return [
-      <BreadcrumbLink href="/projects" key="projects">
-        Projects
-      </BreadcrumbLink>,
-      <BreadcrumbLink href={`/projects/${projectId}/w`} key="project">
+      // Project name as picker trigger
+      <BreadcrumbProjectPicker
+        key="project-picker"
+        onClick={handleProjectPickerClick}
+      >
         {projectName}
-      </BreadcrumbLink>,
+      </BreadcrumbProjectPicker>,
       <BreadcrumbLink href={`/projects/${projectId}/w`} key="workflows">
         Workflows
       </BreadcrumbLink>,

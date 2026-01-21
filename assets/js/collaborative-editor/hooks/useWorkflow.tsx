@@ -404,6 +404,11 @@ export const useWorkflowActions = () => {
           );
         }
 
+        // set base workflow after save
+        if (response.workflow) {
+          sessionContextStore.setBaseWorkflow(response.workflow);
+        }
+
         // Check if this is a new workflow and update URL
         const currentState = sessionContextStore.getSnapshot();
         if (currentState.isNewWorkflow) {
@@ -419,7 +424,7 @@ export const useWorkflowActions = () => {
             searchParams.delete('template'); // Clear template selection
             searchParams.delete('search'); // Clear template search
             const queryString = searchParams.toString();
-            const newUrl = `/projects/${projectId}/w/${workflowId}/collaborate${queryString ? `?${queryString}` : ''}`;
+            const newUrl = `/projects/${projectId}/w/${workflowId}${queryString ? `?${queryString}` : ''}`;
             window.history.replaceState(null, '', newUrl);
 
             // Clear template state in UI store
@@ -536,6 +541,11 @@ export const useWorkflowActions = () => {
           );
         }
 
+        // set workflow base
+        if (response.workflow) {
+          sessionContextStore.setBaseWorkflow(response.workflow);
+        }
+
         // Check if this is a new workflow and update URL
         const currentState = sessionContextStore.getSnapshot();
         if (currentState.isNewWorkflow) {
@@ -549,7 +559,7 @@ export const useWorkflowActions = () => {
             const searchParams = new URLSearchParams(url.search);
             searchParams.delete('method'); // Close left panel
             const queryString = searchParams.toString();
-            const newUrl = `/projects/${projectId}/w/${workflowId}/collaborate${queryString ? `?${queryString}` : ''}`;
+            const newUrl = `/projects/${projectId}/w/${workflowId}/legacy${queryString ? `?${queryString}` : ''}`;
             window.history.pushState({}, '', newUrl);
             // Mark workflow as no longer new after first save
             sessionContextStore.clearIsNewWorkflow();
