@@ -633,7 +633,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       workflow: workflow
     } do
       {:ok, _view, html} =
-        live(conn, ~p"/projects/#{project.id}/w/#{workflow.id}",
+        live(conn, ~p"/projects/#{project.id}/w/#{workflow.id}/legacy",
           on_error: :raise
         )
 

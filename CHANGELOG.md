@@ -19,6 +19,8 @@ and this project adheres to
 
 - Add Unsaved Changes Indicator
   [#3682](https://github.com/OpenFn/lightning/issues/3682)
+- Added sync/async mode controls to the trigger
+  [#4321](https://github.com/OpenFn/lightning/issues/4321)
 
 ### Changed
 
