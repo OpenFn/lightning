@@ -158,7 +158,8 @@ defmodule Lightning.Config.Bootstrap do
           unless v do
             raise "No worker private key found, please set WORKER_RUNS_PRIVATE_KEY"
           end
-        end),
+        end)
+        |> tap(&validate_rsa_key!/1),
       worker_secret:
         env!(
           "WORKER_SECRET",
@@ -925,5 +926,42 @@ defmodule Lightning.Config.Bootstrap do
       nil -> Application.get_all_env(app) |> get_in(keys)
       value -> value
     end
+  end
+
+  defp validate_rsa_key!(pem) when is_binary(pem) do
+    case parse_rsa_key(pem) do
+      :ok -> :ok
+      {:error, message} -> raise message
+    end
+  end
+
+  defp parse_rsa_key(pem) do
+    case JOSE.JWK.from_pem(pem) do
+      %JOSE.JWK{kty: {:jose_jwk_kty_rsa, _}} ->
+        :ok
+
+      %JOSE.JWK{kty: {kty_module, _}} ->
+        key_type =
+          kty_module |> to_string() |> String.replace("jose_jwk_kty_", "")
+
+        {:error,
+         worker_key_error(
+           "has wrong key type: #{key_type}\n\nLightning requires an RSA key for RS256 signing, but the configured key is #{key_type}."
+         )}
+
+      _ ->
+        {:error, worker_key_error("could not be parsed as a valid key.")}
+    end
+  rescue
+    e ->
+      {:error, worker_key_error("could not be parsed: #{Exception.message(e)}")}
+  end
+
+  defp worker_key_error(reason) do
+    """
+    WORKER_RUNS_PRIVATE_KEY #{reason}
+
+    You can generate new worker keys using: mix lightning.gen_worker_keys
+    """
   end
 end

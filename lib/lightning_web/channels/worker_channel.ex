@@ -50,7 +50,6 @@ defmodule LightningWeb.WorkerChannel do
           runs
           |> Enum.map(fn run ->
             opts = run_options(run)
-
             token = Workers.generate_run_token(run, opts)
 
             %{
@@ -84,7 +83,22 @@ defmodule LightningWeb.WorkerChannel do
   end
 
   @impl true
-  def terminate(_reason, socket) do
+  def terminate(reason, socket) do
+    # Log unexpected termination reasons (crashes)
+    case reason do
+      :normal ->
+        :ok
+
+      :shutdown ->
+        :ok
+
+      {:shutdown, _} ->
+        :ok
+
+      error ->
+        Logger.error("WorkerChannel terminated unexpectedly: #{inspect(error)}")
+    end
+
     work_listener_pid = socket.assigns[:work_listener_pid]
 
     # copied this snippet from a Code BEAM Europe 2024 talk by Saša Jurić called Parenting
