@@ -17,8 +17,8 @@ const baseTriggerSchema = z.object({
 // Webhook trigger schema
 const webhookTriggerSchema = baseTriggerSchema.extend({
   type: z.literal('webhook'),
-  cron_expression: z.null(),
-  kafka_configuration: z.null(),
+  cron_expression: z.null().default(null),
+  kafka_configuration: z.null().default(null),
 });
 
 // Cron trigger schema with professional validation using cron-validator
@@ -42,7 +42,7 @@ const cronTriggerSchema = baseTriggerSchema.extend({
           'Invalid cron expression. Use format: minute hour day month weekday',
       }
     ),
-  kafka_configuration: z.null(),
+  kafka_configuration: z.null().default(null),
 });
 
 // Kafka configuration sub-schema
@@ -93,7 +93,7 @@ const kafkaConfigSchema = z
 // Kafka trigger schema
 const kafkaTriggerSchema = baseTriggerSchema.extend({
   type: z.literal('kafka'),
-  cron_expression: z.null(),
+  cron_expression: z.null().default(null),
   kafka_configuration: kafkaConfigSchema,
 });
 

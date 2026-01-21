@@ -94,6 +94,7 @@ import {
   WebhookAuthMethodSchema,
   WorkflowTemplateSchema,
 } from '../types/sessionContext';
+import type { BaseWorkflow } from '../types/workflow';
 
 import { createWithSelector } from './common';
 import { wrapStoreWithDevTools } from './devtools';
@@ -126,6 +127,7 @@ export const createSessionContextStore = (
       isLoading: false,
       error: null,
       lastUpdated: null,
+      workflow: null,
     } as SessionContextState,
     // No initial transformations needed
     draft => draft
@@ -178,6 +180,7 @@ export const createSessionContextStore = (
       state = produce(state, draft => {
         draft.user = sessionContext.user;
         draft.project = sessionContext.project;
+        draft.workflow = sessionContext.workflow ?? null;
         draft.config = sessionContext.config;
         draft.permissions = sessionContext.permissions;
         draft.latestSnapshotLockVersion =
@@ -291,6 +294,13 @@ export const createSessionContextStore = (
       draft.lastUpdated = Date.now();
     });
     notify('setLatestSnapshotLockVersion');
+  };
+
+  const setBaseWorkflow = (workflow: BaseWorkflow) => {
+    state = produce(state, draft => {
+      draft.workflow = workflow;
+    });
+    notify('setBaseWorkflow');
   };
 
   /**
@@ -445,6 +455,9 @@ export const createSessionContextStore = (
         ).latest_snapshot_lock_version;
         logger.debug('Workflow saved - updating lock version', lockVersion);
         setLatestSnapshotLockVersion(lockVersion);
+        if ('workflow' in message && typeof message.workflow === 'object') {
+          setBaseWorkflow(message.workflow as BaseWorkflow);
+        }
       }
     };
 
@@ -630,6 +643,7 @@ export const createSessionContextStore = (
     setHasReadAIDisclaimer,
     markAIDisclaimerRead,
     getLimits,
+    setBaseWorkflow,
 
     // Internal methods (not part of public SessionContextStore interface)
     _connectChannel,

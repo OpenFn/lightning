@@ -404,6 +404,11 @@ export const useWorkflowActions = () => {
           );
         }
 
+        // set base workflow after save
+        if (response.workflow) {
+          sessionContextStore.setBaseWorkflow(response.workflow);
+        }
+
         // Check if this is a new workflow and update URL
         const currentState = sessionContextStore.getSnapshot();
         if (currentState.isNewWorkflow) {
@@ -534,6 +539,11 @@ export const useWorkflowActions = () => {
           sessionContextStore.setLatestSnapshotLockVersion(
             response.lock_version
           );
+        }
+
+        // set workflow base
+        if (response.workflow) {
+          sessionContextStore.setBaseWorkflow(response.workflow);
         }
 
         // Check if this is a new workflow and update URL
