@@ -47,6 +47,7 @@ const cronTriggerSchema = baseTriggerSchema.extend({
       }
     ),
   kafka_configuration: z.null().default(null),
+  webhook_reply: z.null().default(null),
 });
 
 // Kafka configuration sub-schema
@@ -99,6 +100,7 @@ const kafkaTriggerSchema = baseTriggerSchema.extend({
   type: z.literal('kafka'),
   cron_expression: z.null().default(null),
   kafka_configuration: kafkaConfigSchema,
+  webhook_reply: z.null().default(null),
 });
 
 /**

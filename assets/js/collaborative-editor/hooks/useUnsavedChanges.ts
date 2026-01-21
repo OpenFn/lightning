@@ -104,6 +104,7 @@ function transformTrigger(trigger: Trigger) {
       output.kafka_configuration = trigger.kafka_configuration;
       break;
     case 'webhook':
+      output.webhook_reply = trigger.webhook_reply ?? 'before_start';
       break;
   }
   return output;
