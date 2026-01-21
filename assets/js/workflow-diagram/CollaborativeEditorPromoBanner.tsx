@@ -34,15 +34,15 @@ export function CollaborativeEditorPromoBanner({
       role="alert"
       aria-live="polite"
     >
-      <div className="pointer-events-auto flex items-center gap-x-4 bg-danger-700 px-6 py-2.5 rounded-xl sm:py-3 sm:pr-3.5 sm:pl-4">
+      <div className="pointer-events-auto flex items-center gap-x-4 bg-yellow-100 px-6 py-2.5 rounded-xl sm:py-3 sm:pr-3.5 sm:pl-4">
         <button
           type="button"
           onClick={() => pushEvent?.('switch_to_collab_editor', {})}
-          className="text-sm/6 text-white cursor-pointer flex items-center"
+          className="text-sm/6 cursor-pointer flex items-center"
         >
           <strong className="font-semibold flex items-center gap-2">
             <span className="hero-exclamation-triangle"></span>
-            This legacy workflow builder soon be retired.
+            This legacy workflow will builder soon be retired.
           </strong>
           &nbsp; Go to the new builder&nbsp;
           <span aria-hidden="true">&rarr;</span>

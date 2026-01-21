@@ -111,9 +111,9 @@ defmodule LightningWeb.WorkflowLive.Components do
       phx-click="switch_to_collab_editor"
       phx-hook="Tooltip"
       aria-label="You're using the legacy workflow builder and will soon be upgraded. Click to switch now."
-      class="w-6 h-6 place-self-center text-danger-500 hover:text-danger-400 cursor-pointer"
+      class="w-6 h-6 place-self-center text-yellow-500 hover:text-yellow-400 cursor-pointer"
     >
-      <span class="hero-exclamation-triangle"></span>
+      <span class="hero-exclamation-triangle-solid"></span>
     </button>
     """
   end
