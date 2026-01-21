@@ -39,7 +39,6 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
   on_mount({LightningWeb.Hooks, :project_scope})
   on_mount {LightningWeb.Hooks, :check_limits}
-  on_mount {LightningWeb.Hooks, :check_collaborative_preference}
 
   attr :selection, :string, required: false
   attr :aiAssistantId, :string, required: false
@@ -130,17 +129,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
               <% end %>
               
     <!-- Add collaborative editor toggle (beaker icon only) -->
-              <button
-                id="collaborative-editor-toggle"
-                phx-click="toggle_collaborative_editor"
-                class="inline-flex items-center justify-center p-1 text-primary-600 hover:text-primary-700 hover:bg-primary-50 rounded transition-colors"
-                data-placement="bottom"
-                aria-label="Switch to collaborative editor (experimental)"
-                type="button"
-              >
-                <.icon name="hero-beaker" class="h-4 w-4" />
-              </button>
-
+              <LightningWeb.WorkflowLive.Components.deprecated_warning id="canvas-deprecated-warning" />
               <LightningWeb.WorkflowLive.Components.online_users
                 id="canvas-online-users"
                 presences={@presences}
@@ -1590,7 +1579,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
     end
     |> assign(page_title: "New Workflow")
     |> assign(method: method)
-    |> assign(base_url: ~p"/projects/#{socket.assigns.project}/w/new")
+    |> assign(base_url: ~p"/projects/#{socket.assigns.project}/w/new/legacy")
   end
 
   defp apply_action(socket, :edit, %{"id" => workflow_id} = params) do
@@ -1599,7 +1588,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
         socket
         |> assign(
           base_url:
-            ~p"/projects/#{socket.assigns.project}/w/#{socket.assigns.workflow}"
+            ~p"/projects/#{socket.assigns.project}/w/#{socket.assigns.workflow}/legacy"
         )
 
       _ ->
@@ -1617,7 +1606,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
           |> assign_workflow(workflow, snapshot)
           |> assign(page_title: workflow.name)
           |> assign(
-            base_url: ~p"/projects/#{socket.assigns.project}/w/#{workflow}"
+            base_url:
+              ~p"/projects/#{socket.assigns.project}/w/#{workflow}/legacy"
           )
         else
           socket
@@ -1637,11 +1627,11 @@ defmodule LightningWeb.WorkflowLive.Edit do
     {:noreply, socket}
   end
 
-  def handle_event("toggle_collaborative_editor", _params, socket) do
+  def handle_event("switch_to_collab_editor", _params, socket) do
     Lightning.Accounts.update_user_preference(
       socket.assigns.current_user,
-      "prefer_collaborative_editor",
-      true
+      "prefer_legacy_editor",
+      false
     )
 
     params =
@@ -1968,7 +1958,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
       updated_socket =
         if assigns.live_action == :new do
-          base_url = ~p"/projects/#{assigns.project}/w/#{assigns.workflow}"
+          base_url =
+            ~p"/projects/#{assigns.project}/w/#{assigns.workflow}/legacy"
 
           base_socket =
             socket
@@ -2007,7 +1998,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
       update_socket =
         if assigns.live_action == :new do
-          base_url = ~p"/projects/#{assigns.project}/w/#{assigns.workflow}"
+          base_url =
+            ~p"/projects/#{assigns.project}/w/#{assigns.workflow}/legacy"
 
           socket
           |> assign(:base_url, base_url)
@@ -3909,9 +3901,9 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
   def collaborative_editor_base_url(assigns) do
     if assigns.live_action == :new do
-      "/projects/#{assigns.project.id}/w/new/collaborate"
+      "/projects/#{assigns.project.id}/w/new"
     else
-      "/projects/#{assigns.project.id}/w/#{assigns.workflow.id}/collaborate"
+      "/projects/#{assigns.project.id}/w/#{assigns.workflow.id}"
     end
   end
 end

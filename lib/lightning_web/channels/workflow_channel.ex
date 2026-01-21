@@ -163,11 +163,11 @@ defmodule LightningWeb.WorkflowChannel do
   def handle_in("switch_to_legacy_editor", _payload, socket) do
     user = socket.assigns[:current_user]
 
-    # Clear the collaborative editor preference
+    # Set switch to legacy to true
     Lightning.Accounts.update_user_preference(
       user,
-      "prefer_collaborative_editor",
-      false
+      "prefer_legacy_editor",
+      true
     )
 
     {:reply, {:ok, %{}}, socket}
@@ -189,7 +189,9 @@ defmodule LightningWeb.WorkflowChannel do
         if is_nil(workflow.lock_version) do
           workflow
         else
-          Lightning.Workflows.get_workflow(workflow.id)
+          Lightning.Workflows.get_workflow(workflow.id,
+            include: [:edges, :jobs, :triggers]
+          )
         end
 
       project_repo_connection =
@@ -214,7 +216,8 @@ defmodule LightningWeb.WorkflowChannel do
         workflow_template: render_workflow_template(workflow_template),
         has_read_ai_disclaimer:
           Lightning.AiAssistant.user_has_read_disclaimer?(user),
-        limits: render_limits(project.id)
+        limits: render_limits(project.id),
+        workflow: fresh_workflow || %{}
       }
     end)
   end
@@ -325,14 +328,16 @@ defmodule LightningWeb.WorkflowChannel do
       # Broadcast the new lock_version to all users in the channel
       # so they can update their latestSnapshotLockVersion in SessionContextStore
       broadcast_from!(socket, "workflow_saved", %{
-        latest_snapshot_lock_version: workflow.lock_version
+        latest_snapshot_lock_version: workflow.lock_version,
+        workflow: workflow
       })
 
       {:reply,
        {:ok,
         %{
           saved_at: workflow.updated_at,
-          lock_version: workflow.lock_version
+          lock_version: workflow.lock_version,
+          workflow: workflow
         }}, socket}
     else
       error -> workflow_error_reply(socket, error)
@@ -362,7 +367,8 @@ defmodule LightningWeb.WorkflowChannel do
            VersionControl.get_repo_connection_for_project(project.id),
          :ok <- VersionControl.initiate_sync(repo_connection, commit_message) do
       broadcast_from!(socket, "workflow_saved", %{
-        latest_snapshot_lock_version: workflow.lock_version
+        latest_snapshot_lock_version: workflow.lock_version,
+        workflow: workflow
       })
 
       {:reply,
@@ -370,7 +376,8 @@ defmodule LightningWeb.WorkflowChannel do
         %{
           saved_at: workflow.updated_at,
           lock_version: workflow.lock_version,
-          repo: repo_connection.repo
+          repo: repo_connection.repo,
+          workflow: workflow
         }}, socket}
     else
       nil ->

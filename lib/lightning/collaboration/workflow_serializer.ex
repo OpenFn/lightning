@@ -225,7 +225,9 @@ defmodule Lightning.Collaboration.WorkflowSerializer do
           "cron_expression" => trigger.cron_expression,
           "enabled" => trigger.enabled,
           "id" => trigger.id,
-          "type" => trigger.type |> to_string()
+          "type" => trigger.type |> to_string(),
+          "webhook_reply" =>
+            trigger.webhook_reply && to_string(trigger.webhook_reply)
         })
 
       Yex.Array.push(triggers_array, trigger_map)
@@ -270,7 +272,9 @@ defmodule Lightning.Collaboration.WorkflowSerializer do
     |> Yex.Array.to_json()
     |> Enum.map(fn trigger ->
       trigger
-      |> Map.take(~w(id type enabled cron_expression kafka_configuration))
+      |> Map.take(
+        ~w(id type enabled cron_expression webhook_reply kafka_configuration)
+      )
       |> normalize_kafka_configuration()
     end)
   end

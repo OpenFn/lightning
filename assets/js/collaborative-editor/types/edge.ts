@@ -12,7 +12,7 @@ export const EdgeConditionType = z.enum([
 export const EdgeSchema = z.object({
   // Core identifiers
   id: uuidSchema,
-  workflow_id: uuidSchema,
+  workflow_id: uuidSchema.optional(),
 
   // Source (mutually exclusive)
   source_job_id: uuidSchema.nullable().optional(),

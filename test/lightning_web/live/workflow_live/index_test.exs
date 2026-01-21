@@ -335,7 +335,8 @@ defmodule LightningWeb.WorkflowLive.IndexTest do
 
       # visit page directly
       {:ok, _, html} =
-        live(conn, ~p"/projects/#{project.id}/w/new") |> follow_redirect(conn)
+        live(conn, ~p"/projects/#{project.id}/w/new/legacy")
+        |> follow_redirect(conn)
 
       assert html =~ "You are not authorized to perform this action."
     end
@@ -351,7 +352,8 @@ defmodule LightningWeb.WorkflowLive.IndexTest do
       assert has_element?(view, "#new-workflow-button")
 
       # go directly
-      {:ok, view, html} = live(conn, ~p"/projects/#{project.id}/w/new")
+      {:ok, view, html} =
+        live(conn, ~p"/projects/#{project.id}/w/new/legacy")
 
       assert html =~ "Describe your workflow"
       assert has_element?(view, "form#search-templates-form")

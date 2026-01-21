@@ -9,10 +9,8 @@
  * - Dark themed design matching Tailwind sticky banner pattern
  * - Dismissible via X button
  * - Persists dismissal in cookies for 90 days
- * - Navigation handled by LiveView via toggle_collaborative_editor pushEvent
+ * - Navigation handled by LiveView via switch_to_collab_editor pushEvent
  */
-
-import { useState, useEffect } from 'react';
 
 import { cn } from '#/utils/cn';
 
@@ -23,45 +21,10 @@ interface CollaborativeEditorPromoBannerProps {
     | undefined;
 }
 
-const COOKIE_NAME = 'openfn_collaborative_editor_promo_dismissed';
-const COOKIE_EXPIRY_DAYS = 90;
-
-function getCookie(name: string): string | null {
-  const value = `; ${document.cookie}`;
-  const parts = value.split(`; ${name}=`);
-  if (parts.length === 2) {
-    return parts.pop()?.split(';').shift() || null;
-  }
-  return null;
-}
-
-function setCookie(name: string, value: string, days: number): void {
-  const expires = new Date();
-  expires.setDate(expires.getDate() + days);
-  document.cookie = `${name}=${value}; expires=${expires.toUTCString()}; path=/; SameSite=Lax`;
-}
-
 export function CollaborativeEditorPromoBanner({
   className,
   pushEvent,
 }: CollaborativeEditorPromoBannerProps) {
-  const [dismissed, setDismissed] = useState(false);
-
-  useEffect(() => {
-    // Check if banner was previously dismissed
-    const isDismissed = getCookie(COOKIE_NAME) === 'true';
-    setDismissed(isDismissed);
-  }, []);
-
-  const handleDismiss = () => {
-    setCookie(COOKIE_NAME, 'true', COOKIE_EXPIRY_DAYS);
-    setDismissed(true);
-  };
-
-  if (dismissed) {
-    return null;
-  }
-
   return (
     <div
       className={cn(
@@ -71,32 +34,18 @@ export function CollaborativeEditorPromoBanner({
       role="alert"
       aria-live="polite"
     >
-      <div className="pointer-events-auto flex items-center gap-x-4 bg-primary-700 px-6 py-2.5 rounded-xl sm:py-3 sm:pr-3.5 sm:pl-4">
+      <div className="pointer-events-auto flex items-center gap-x-4 bg-yellow-100 px-6 py-2.5 rounded-xl sm:py-3 sm:pr-3.5 sm:pl-4">
         <button
           type="button"
-          onClick={() => pushEvent?.('toggle_collaborative_editor', {})}
-          className="text-sm/6 text-white cursor-pointer"
+          onClick={() => pushEvent?.('switch_to_collab_editor', {})}
+          className="text-sm/6 cursor-pointer flex items-center"
         >
-          <strong className="font-semibold">
-            Try the new collaborative editor
+          <strong className="font-semibold flex items-center gap-2">
+            <span className="hero-exclamation-triangle"></span>
+            This legacy workflow builder will soon be retired.
           </strong>
-          <svg
-            viewBox="0 0 2 2"
-            aria-hidden="true"
-            className="mx-2 inline size-0.5 fill-current"
-          >
-            <circle r={1} cx={1} cy={1} />
-          </svg>
-          Real-time editing with your team&nbsp;
+          &nbsp; Go to the new builder&nbsp;
           <span aria-hidden="true">&rarr;</span>
-        </button>
-        <button
-          type="button"
-          onClick={handleDismiss}
-          className="-m-1.5 flex-none p-1.5 cursor-pointer"
-          aria-label="Dismiss collaborative editor promotion"
-        >
-          <span className="hero-x-mark size-5 text-white" />
         </button>
       </div>
     </div>

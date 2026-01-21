@@ -377,6 +377,76 @@ export function TriggerForm({ trigger }: TriggerFormProps) {
                         </div>
                       )}
                     </div>
+
+                    {/* Response Mode Section */}
+                    <div className="space-y-2 pt-4 border-t border-slate-200">
+                      <form.Field name="webhook_reply">
+                        {field => (
+                          <div>
+                            <div className="flex items-center gap-1 mb-1">
+                              <label
+                                htmlFor={field.name}
+                                className="block text-sm font-medium text-slate-800"
+                              >
+                                Response Mode
+                              </label>
+                              <Tooltip
+                                content="Control when the webhook trigger responds to a request to execute this workflow."
+                                side="right"
+                              >
+                                <span className="hero-information-circle h-4 w-4 text-gray-400 cursor-help" />
+                              </Tooltip>
+                            </div>
+                            <select
+                              id={field.name}
+                              aria-describedby={`${field.name}-description`}
+                              value={field.state.value || 'before_start'}
+                              onChange={e =>
+                                field.handleChange(
+                                  e.target.value as
+                                    | 'before_start'
+                                    | 'after_completion'
+                                )
+                              }
+                              onBlur={field.handleBlur}
+                              disabled={isReadOnly}
+                              className={cn(
+                                'block w-full px-3 py-2 border rounded-md text-sm',
+                                field.state.meta.errors.length > 0
+                                  ? 'border-red-300 text-red-900 ' +
+                                      'focus:border-red-500 focus:ring-red-500'
+                                  : 'border-slate-300 ' +
+                                      'focus:border-indigo-500 ' +
+                                      'focus:ring-indigo-500',
+                                'focus:outline-none focus:ring-1',
+                                'disabled:opacity-50 disabled:cursor-not-allowed'
+                              )}
+                            >
+                              <option value="before_start">
+                                Async (default)
+                              </option>
+                              <option value="after_completion">Sync</option>
+                            </select>
+                            <p
+                              id={`${field.name}-description`}
+                              className="mt-1 text-xs text-slate-500"
+                            >
+                              {field.state.value === 'after_completion'
+                                ? 'Responds with the final output state after the run completes. (Note that depending on your queue size and the duration of the workflow itself, this could take a long time.)'
+                                : 'Responds immediately with the enqueued work order ID.'}
+                            </p>
+                            {field.state.meta.errors.map(error => (
+                              <p
+                                key={error}
+                                className="mt-1 text-xs text-red-600"
+                              >
+                                {error}
+                              </p>
+                            ))}
+                          </div>
+                        )}
+                      </form.Field>
+                    </div>
                   </div>
                 );
               }

@@ -32,8 +32,11 @@ defmodule Lightning.Workflows.Workflow do
              :edges,
              :jobs,
              :triggers,
+             :positions,
              :inserted_at,
-             :updated_at
+             :updated_at,
+             :concurrency,
+             :enable_job_logs
            ]}
   schema "workflows" do
     field :name, :string
