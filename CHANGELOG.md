@@ -17,6 +17,14 @@ and this project adheres to
 
 ### Added
 
+### Changed
+
+### Fixed
+
+## [2.15.12-pre1] - 2026-01-21
+
+### Added
+
 - Add Unsaved Changes Indicator
   [#3682](https://github.com/OpenFn/lightning/issues/3682)
 - Added sync/async mode controls to the trigger
@@ -26,8 +34,6 @@ and this project adheres to
 
 - Validate WORKER_RUNS_PRIVATE_KEY is an RSA key at application startup
   [#4340](https://github.com/OpenFn/lightning/issues/4340)
-
-### Fixed
 
 ## [2.15.12-pre] - 2026-01-19
 
