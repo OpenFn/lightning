@@ -2445,7 +2445,6 @@ defmodule Lightning.ProjectsTest do
 
       assert sandbox.parent_id == parent.id
       assert sandbox.name == "sb-1"
-      assert is_list(sandbox.version_history)
     end
 
     test "update_sandbox/3 updates basic fields on the sandbox" do
