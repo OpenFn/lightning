@@ -24,7 +24,6 @@ defmodule LightningWeb.API.ProvisioningJSON do
 
   def as_json(%Project{} = project) do
     Ecto.embedded_dump(project, :json)
-    |> Map.delete(:version_history)
     |> Map.put(
       :workflows,
       project.workflows

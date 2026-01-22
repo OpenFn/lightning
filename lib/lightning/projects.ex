@@ -29,12 +29,10 @@ defmodule Lightning.Projects do
   alias Lightning.RunStep
   alias Lightning.Services.AccountHook
   alias Lightning.Services.ProjectHook
-  alias Lightning.Validators.Hex
   alias Lightning.Workflows.Job
   alias Lightning.Workflows.Snapshot
   alias Lightning.Workflows.Trigger
   alias Lightning.Workflows.Workflow
-  alias Lightning.Workflows.WorkflowVersion
   alias Lightning.WorkOrder
 
   require Logger
@@ -1451,112 +1449,6 @@ defmodule Lightning.Projects do
   def list_workspace_projects(%Project{id: project_id}, opts) do
     list_workspace_projects(project_id, opts)
   end
-
-  @doc """
-  Computes a deterministic 12-hex “project head” hash from the *latest* version
-  hash per workflow.
-
-  The algorithm:
-  1. For each workflow in the project, select the most recent row in `workflow_versions`
-     by `(inserted_at DESC, id DESC)`.
-  2. Build pairs `[[workflow_id_as_string, hash], ...]`.
-  3. JSON-encode the pairs and take `sha256` of the bytes.
-  4. Return the first 12 lowercase hex chars.
-
-  ## Guarantees
-
-  * **Deterministic** for a given set of latest heads.
-  * If a project has no workflow versions, returns the digest of `[]`, i.e. a stable
-    12-hex string representing “empty”.
-
-  ## Use cases
-
-  * Change detection across environments.
-  * Cache keys and optimistic comparisons (e.g. “is this workspace up-to-date?”).
-  """
-  def compute_project_head_hash(project_id) do
-    pairs =
-      from(v in WorkflowVersion,
-        join: w in assoc(v, :workflow),
-        where: w.project_id == ^project_id,
-        distinct: [v.workflow_id],
-        order_by: [asc: v.workflow_id, desc: v.inserted_at, desc: v.id],
-        select: {v.workflow_id, v.hash}
-      )
-      |> Repo.all()
-      |> Enum.map(fn {wid, h} -> [to_string(wid), h] end)
-
-    data = Jason.encode!(pairs)
-
-    :crypto.hash(:sha256, data)
-    |> Base.encode16(case: :lower)
-    |> binary_part(0, 12)
-  end
-
-  @doc """
-  Appends a new 12-hex head hash to `project.version_history` (append-only).
-
-  This is a lenient wrapper that validates using
-  `Lightning.Validators.Hex.valid?(hash)` and returns tagged tuples.
-  For atomic locking and errors by exception, use `append_project_head!/2`.
-
-  ## Validation
-
-  * `hash` must be **12 lowercase hex characters** (`0-9`, `a-f`).
-  * No duplicates: if the hash already exists in the array, this is a no-op.
-
-  ## Concurrency
-
-  The underlying `!/2` variant locks the row (`FOR UPDATE`) to avoid lost updates.
-  """
-  @spec append_project_head(Project.t(), String.t()) ::
-          {:ok, Project.t()} | {:error, :bad_hash}
-  def append_project_head(%Project{} = project, hash) when is_binary(hash) do
-    if Hex.valid?(hash) do
-      {:ok, append_project_head!(project, hash)}
-    else
-      {:error, :bad_hash}
-    end
-  end
-
-  @doc """
-  Like `append_project_head/2`, but raises on invalid input and performs the
-  append within a transaction that locks the project row.
-
-  ## Behavior
-
-  * Raises `ArgumentError` if `hash` is not **12 lowercase hex**.
-  * Uses `SELECT … FOR UPDATE` to read the current array, appends if missing,
-    and writes back in the same transaction.
-  * Idempotent: if the hash is already present, returns the unchanged project.
-  """
-  @spec append_project_head!(Project.t(), String.t()) :: Project.t()
-  def append_project_head!(%Project{id: id}, hash) when is_binary(hash) do
-    unless Hex.valid?(hash),
-      do: raise(ArgumentError, "head_hash must be 12 lowercase hex chars")
-
-    {:ok, proj} =
-      Repo.transaction(fn ->
-        proj =
-          from(p in Project, where: p.id == ^id, lock: "FOR UPDATE")
-          |> Repo.one!()
-
-        new_hist = append_if_missing(proj.version_history || [], hash)
-
-        if new_hist == (proj.version_history || []) do
-          proj
-        else
-          proj
-          |> Ecto.Changeset.change(version_history: new_hist)
-          |> Repo.update!()
-        end
-      end)
-
-    proj
-  end
-
-  defp append_if_missing(list, h),
-    do: if(Enum.member?(list, h), do: list, else: list ++ [h])
 
   @doc """
   Creates a new sandbox project by cloning from a parent project.

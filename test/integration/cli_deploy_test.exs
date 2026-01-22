@@ -95,13 +95,10 @@ defmodule Lightning.CliDeployTest do
       actual_state = config.statePath |> File.read!() |> Jason.decode!()
 
       # encoding and decoding in order to transform values like dates into string
-      # Note: actual_state excludes version_history at project level (by design)
-      # so we need to remove it from expected_state before comparing
       expected_state_for_comparison =
         expected_state
         |> Jason.encode!()
         |> Jason.decode!()
-        |> Map.delete("version_history")
 
       assert actual_state == expected_state_for_comparison
 

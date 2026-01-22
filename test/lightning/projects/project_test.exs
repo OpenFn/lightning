@@ -155,9 +155,4 @@ defmodule Lightning.Projects.ProjectTest do
       assert Project.sandbox?(child)
     end
   end
-
-  test "version_history defaults to []" do
-    p = insert(:project)
-    assert p.version_history == []
-  end
 end
