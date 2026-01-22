@@ -45,28 +45,6 @@ defmodule Lightning.Projects.SandboxPromExPlugin do
     ]
   end
 
-  @doc """
-  Seeds all sandbox metrics with initial zero values.
-  Called during application startup to ensure metrics are available
-  before any events are fired.
-  """
-  def seed_event_metrics do
-    :telemetry.execute(@sandbox_created_event, %{count: 0}, %{})
-    :telemetry.execute(@sandbox_merged_event, %{count: 0}, %{})
-    :telemetry.execute(@sandbox_deleted_event, %{count: 0}, %{})
-
-    :telemetry.execute(@workflow_saved_event, %{count: 0}, %{is_sandbox: true})
-    :telemetry.execute(@workflow_saved_event, %{count: 0}, %{is_sandbox: false})
-
-    :telemetry.execute(@provisioner_import_event, %{count: 0}, %{
-      is_sandbox: true
-    })
-
-    :telemetry.execute(@provisioner_import_event, %{count: 0}, %{
-      is_sandbox: false
-    })
-  end
-
   # Public API for firing events
 
   @doc "Fires a telemetry event when a sandbox project is created."

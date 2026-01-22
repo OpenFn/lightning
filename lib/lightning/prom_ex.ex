@@ -92,8 +92,6 @@ defmodule Lightning.PromEx do
     Lightning.PromExTestPlugin.seed_event_metrics()
 
     Lightning.Runs.PromExPlugin.seed_event_metrics()
-
-    Lightning.Projects.SandboxPromExPlugin.seed_event_metrics()
   end
 
   @impl true
