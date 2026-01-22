@@ -79,15 +79,8 @@ defmodule LightningWeb.API.ProvisioningJSON do
         |> Enum.map(&as_json/1)
       )
 
-    # snapshots don't have version_history
     if module == Workflow do
-      version_history =
-        case Map.get(base_map, :version_history) do
-          nil -> WorkflowVersions.history_for(workflow_or_snapshot)
-          [] -> WorkflowVersions.history_for(workflow_or_snapshot)
-          history -> history
-        end
-
+      version_history = WorkflowVersions.history_for(workflow_or_snapshot)
       Map.put(base_map, :version_history, version_history)
     else
       base_map
