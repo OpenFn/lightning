@@ -187,13 +187,7 @@ defmodule Lightning.Projects.Sandboxes do
   @spec delete_sandbox(Project.t() | Ecto.UUID.t(), User.t()) ::
           {:ok, Project.t()} | {:error, :unauthorized | :not_found | term()}
   def delete_sandbox(%Project{} = sandbox, %User{} = actor) do
-    Permissions.can?(
-      :sandboxes,
-      :delete_sandbox,
-      actor,
-      sandbox
-    )
-    |> if do
+    if Permissions.can?(:sandboxes, :delete_sandbox, actor, sandbox) do
       case Lightning.Projects.delete_project(sandbox) do
         {:ok, deleted} ->
           Lightning.Projects.SandboxPromExPlugin.fire_sandbox_deleted_event()
