@@ -114,16 +114,16 @@ Lightning
 <p>Memory debugging utilities for LiveViews to track memory usage and help
 diagnose OOM issues.</p><p>Usage in a LiveView:</p><pre><code class="makeup elixir" translate="no"><span class="kn">import</span><span class="w"> </span><span class="nc">LightningWeb.Live.MemoryDebug</span><span class="w">
 
-</span><span class="kd">def</span><span class="w"> </span><span class="nf">mount</span><span class="p" data-group-id="6661901481-1">(</span><span class="n">params</span><span class="p">,</span><span class="w"> </span><span class="n">session</span><span class="p">,</span><span class="w"> </span><span class="n">socket</span><span class="p" data-group-id="6661901481-1">)</span><span class="w"> </span><span class="k" data-group-id="6661901481-2">do</span><span class="w">
-  </span><span class="n">log_memory</span><span class="p" data-group-id="6661901481-3">(</span><span class="s">&quot;mount start&quot;</span><span class="p" data-group-id="6661901481-3">)</span><span class="w">
+</span><span class="kd">def</span><span class="w"> </span><span class="nf">mount</span><span class="p" data-group-id="7493328075-1">(</span><span class="n">params</span><span class="p">,</span><span class="w"> </span><span class="n">session</span><span class="p">,</span><span class="w"> </span><span class="n">socket</span><span class="p" data-group-id="7493328075-1">)</span><span class="w"> </span><span class="k" data-group-id="7493328075-2">do</span><span class="w">
+  </span><span class="n">log_memory</span><span class="p" data-group-id="7493328075-3">(</span><span class="s">&quot;mount start&quot;</span><span class="p" data-group-id="7493328075-3">)</span><span class="w">
 
   </span><span class="c1"># ... your code ...</span><span class="w">
 
-  </span><span class="n">socket</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">assign</span><span class="p" data-group-id="6661901481-4">(</span><span class="n">socket</span><span class="p">,</span><span class="w"> </span><span class="ss">:data</span><span class="p">,</span><span class="w"> </span><span class="n">large_data</span><span class="p" data-group-id="6661901481-4">)</span><span class="w">
-  </span><span class="n">log_memory</span><span class="p" data-group-id="6661901481-5">(</span><span class="s">&quot;after loading large data&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">socket</span><span class="p">:</span><span class="w"> </span><span class="n">socket</span><span class="p" data-group-id="6661901481-5">)</span><span class="w">
+  </span><span class="n">socket</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">assign</span><span class="p" data-group-id="7493328075-4">(</span><span class="n">socket</span><span class="p">,</span><span class="w"> </span><span class="ss">:data</span><span class="p">,</span><span class="w"> </span><span class="n">large_data</span><span class="p" data-group-id="7493328075-4">)</span><span class="w">
+  </span><span class="n">log_memory</span><span class="p" data-group-id="7493328075-5">(</span><span class="s">&quot;after loading large data&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">socket</span><span class="p">:</span><span class="w"> </span><span class="n">socket</span><span class="p" data-group-id="7493328075-5">)</span><span class="w">
 
-  </span><span class="p" data-group-id="6661901481-6">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="n">socket</span><span class="p" data-group-id="6661901481-6">}</span><span class="w">
-</span><span class="k" data-group-id="6661901481-2">end</span></code></pre>
+  </span><span class="p" data-group-id="7493328075-6">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="n">socket</span><span class="p" data-group-id="7493328075-6">}</span><span class="w">
+</span><span class="k" data-group-id="7493328075-2">end</span></code></pre>
     </section>
 
 </div>
@@ -269,9 +269,9 @@ diagnose OOM issues.</p><p>Usage in a LiveView:</p><pre><code class="makeup elix
 
   <section class="docstring">
 
-<p>Wraps a function call with before/after memory logging.</p><h2 id="measure/2-examples" class="section-heading"><a href="#measure/2-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="n">measure</span><span class="p" data-group-id="3242214308-1">(</span><span class="s">&quot;load dataclip&quot;</span><span class="p">,</span><span class="w"> </span><span class="k" data-group-id="3242214308-2">fn</span><span class="w"> </span><span class="o">-&gt;</span><span class="w">
-  </span><span class="nc">Invocation</span><span class="o">.</span><span class="n">get_dataclip!</span><span class="p" data-group-id="3242214308-3">(</span><span class="n">id</span><span class="p" data-group-id="3242214308-3">)</span><span class="w">
-</span><span class="k" data-group-id="3242214308-2">end</span><span class="p" data-group-id="3242214308-1">)</span></code></pre>
+<p>Wraps a function call with before/after memory logging.</p><h2 id="measure/2-examples" class="section-heading"><a href="#measure/2-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="n">measure</span><span class="p" data-group-id="3563447307-1">(</span><span class="s">&quot;load dataclip&quot;</span><span class="p">,</span><span class="w"> </span><span class="k" data-group-id="3563447307-2">fn</span><span class="w"> </span><span class="o">-&gt;</span><span class="w">
+  </span><span class="nc">Invocation</span><span class="o">.</span><span class="n">get_dataclip!</span><span class="p" data-group-id="3563447307-3">(</span><span class="n">id</span><span class="p" data-group-id="3563447307-3">)</span><span class="w">
+</span><span class="k" data-group-id="3563447307-2">end</span><span class="p" data-group-id="3563447307-1">)</span></code></pre>
   </section>
 </section>
 <section class="detail" id="measure_assigns/2">
