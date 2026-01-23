@@ -341,7 +341,7 @@ defmodule Lightning.WorkflowVersions do
 
     jobs_hash_list =
       workflow.jobs
-      |> Enum.sort_by(& &1.name)
+      |> Enum.sort_by(fn job -> String.downcase(job.name || "") end)
       |> Enum.reduce([], fn job, acc ->
         hash_list =
           job
@@ -377,6 +377,8 @@ defmodule Lightning.WorkflowVersions do
         jobs_hash_list,
         edges_hash_list
       ])
+
+    IO.puts("Hash input string: #{joined_data}")
 
     :crypto.hash(:sha256, joined_data)
     |> Base.encode16(case: :lower)
