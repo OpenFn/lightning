@@ -12,6 +12,7 @@ defmodule LightningWeb.API.ProvisioningJSON do
   alias Lightning.Workflows.Snapshot
   alias Lightning.Workflows.Trigger
   alias Lightning.Workflows.Workflow
+  alias Lightning.WorkflowVersions
 
   def render("create.json", %{project: project, conn: _conn}) do
     %{"data" => as_json(project)}
@@ -52,30 +53,38 @@ defmodule LightningWeb.API.ProvisioningJSON do
         workflow_or_snapshot.workflow_id
       end
 
-    workflow_or_snapshot
-    |> Ecto.embedded_dump(:json)
-    |> Map.take(
-      ~w(id name inserted_at updated_at deleted_at lock_version concurrency)a
-    )
-    |> Map.put(:id, workflow_id)
-    |> Map.put(
-      :jobs,
-      workflow_or_snapshot.jobs
-      |> Enum.sort_by(& &1.inserted_at, NaiveDateTime)
-      |> Enum.map(&as_json/1)
-    )
-    |> Map.put(
-      :triggers,
-      workflow_or_snapshot.triggers
-      |> Enum.sort_by(& &1.inserted_at, NaiveDateTime)
-      |> Enum.map(&as_json/1)
-    )
-    |> Map.put(
-      :edges,
-      workflow_or_snapshot.edges
-      |> Enum.sort_by(& &1.inserted_at, NaiveDateTime)
-      |> Enum.map(&as_json/1)
-    )
+    base_map =
+      workflow_or_snapshot
+      |> Ecto.embedded_dump(:json)
+      |> Map.take(
+        ~w(id name inserted_at updated_at deleted_at lock_version concurrency version_history)a
+      )
+      |> Map.put(:id, workflow_id)
+      |> Map.put(
+        :jobs,
+        workflow_or_snapshot.jobs
+        |> Enum.sort_by(& &1.inserted_at, NaiveDateTime)
+        |> Enum.map(&as_json/1)
+      )
+      |> Map.put(
+        :triggers,
+        workflow_or_snapshot.triggers
+        |> Enum.sort_by(& &1.inserted_at, NaiveDateTime)
+        |> Enum.map(&as_json/1)
+      )
+      |> Map.put(
+        :edges,
+        workflow_or_snapshot.edges
+        |> Enum.sort_by(& &1.inserted_at, NaiveDateTime)
+        |> Enum.map(&as_json/1)
+      )
+
+    if module == Workflow do
+      version_history = WorkflowVersions.history_for(workflow_or_snapshot)
+      Map.put(base_map, :version_history, version_history)
+    else
+      base_map
+    end
   end
 
   def as_json(%module{} = job) when module in [Job, Snapshot.Job] do

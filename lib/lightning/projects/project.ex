@@ -35,10 +35,6 @@ defmodule Lightning.Projects.Project do
     field :color, :string
     field :env, :string
 
-    # Intentionally not included in cast/3.
-    # Mutated only via Projects.append_project_head!/2 to keep append-only semantics.
-    field :version_history, {:array, :string}, default: []
-
     belongs_to :parent, __MODULE__, type: :binary_id
 
     has_many :project_users, ProjectUser

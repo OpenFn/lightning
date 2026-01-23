@@ -54,6 +54,8 @@ and this project adheres to
 - Add configurable `CLAIM_WORK_MEM` environment variable (default: 32MB) to set
   PostgreSQL work_mem for claim query, eliminating temp file writes during
   window function sorting [#4331](https://github.com/OpenFn/lightning/pull/4331)
+- Show version_history for workflows and not projects
+  [#4329](https://github.com/OpenFn/lightning/issues/4329)
 
 ### Fixed
 
