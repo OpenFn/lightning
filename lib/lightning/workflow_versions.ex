@@ -378,6 +378,8 @@ defmodule Lightning.WorkflowVersions do
         edges_hash_list
       ])
 
+    IO.puts("Hash input string: #{joined_data}")
+
     :crypto.hash(:sha256, joined_data)
     |> Base.encode16(case: :lower)
     |> binary_part(0, 12)
