@@ -166,7 +166,6 @@ export function CollaborativeWorkflowDiagram({
         <CollaborativeWorkflowDiagramImpl
           selection={currentNode.id}
           onSelectionChange={selectNode}
-          forceFit={true}
           showAiAssistant={false}
           inspectorId={inspectorId}
           containerEl={containerRef.current!}
