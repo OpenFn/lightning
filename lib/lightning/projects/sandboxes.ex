@@ -39,6 +39,7 @@ defmodule Lightning.Projects.Sandboxes do
   alias Lightning.Policies.Permissions
   alias Lightning.Projects.Project
   alias Lightning.Projects.ProjectCredential
+  alias Lightning.Projects.SandboxPromExPlugin
   alias Lightning.Repo
   alias Lightning.Workflows
   alias Lightning.Workflows.Edge
@@ -190,7 +191,7 @@ defmodule Lightning.Projects.Sandboxes do
     if Permissions.can?(:sandboxes, :delete_sandbox, actor, sandbox) do
       case Lightning.Projects.delete_project(sandbox) do
         {:ok, deleted} ->
-          Lightning.Projects.SandboxPromExPlugin.fire_sandbox_deleted_event()
+          SandboxPromExPlugin.fire_sandbox_deleted_event()
           {:ok, deleted}
 
         error ->
@@ -242,7 +243,7 @@ defmodule Lightning.Projects.Sandboxes do
     end)
     |> case do
       {:ok, project} ->
-        Lightning.Projects.SandboxPromExPlugin.fire_sandbox_created_event()
+        SandboxPromExPlugin.fire_sandbox_created_event()
         {:ok, project}
 
       {:error, changeset} ->
