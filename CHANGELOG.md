@@ -24,6 +24,9 @@ and this project adheres to
 
 ### Fixed
 
+- Fix clicking nodes causing unwanted zoom in workflow diagram
+  [#4327](https://github.com/OpenFn/lightning/issues/4327)
+
 ## [2.15.12-pre1] - 2026-01-21
 
 ### Added
