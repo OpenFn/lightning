@@ -34,7 +34,7 @@ export default (model: Flow.Model, newSelection: string | null) => {
 
   const updatedModel = {
     nodes: model.nodes.map(updateItem) as Flow.Node[],
-    // Must put selected edge LAST to ensure it stays on top.
+    // Sort edges by enabled status. Selection state does not affect order (see #4328).
     edges: model.edges.map(updateItem).sort(sortOrderForSvg) as Flow.Edge[],
   };
 

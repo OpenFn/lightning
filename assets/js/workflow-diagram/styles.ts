@@ -222,5 +222,6 @@ export const sortOrderForSvg = (a: object, b: object) => {
     return -1;
   }
 
-  return a.selected - b.selected;
+  // Fix for #4328: Preserve stable edge order to prevent layout shifts on selection
+  return 0;
 };
