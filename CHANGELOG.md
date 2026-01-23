@@ -21,6 +21,8 @@ and this project adheres to
 
 - Standardise copy button feedback across collaborative editor
   [#3578](https://github.com/OpenFn/lightning/issues/3578)
+- Modified version hashing algorithm for CLI compatibility
+  [#4346](https://github.com/OpenFn/lightning/issues/4346)
 
 ### Fixed
 
