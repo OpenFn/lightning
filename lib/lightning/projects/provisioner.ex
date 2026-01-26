@@ -151,35 +151,44 @@ defmodule Lightning.Projects.Provisioner do
          project_changeset,
          inserted_workflows
        ) do
-    project_changeset
-    |> get_assoc(:workflows)
-    |> Enum.reject(fn changeset ->
-      changeset.changes == %{} or get_change(changeset, :delete)
-    end)
-    |> Enum.reduce(Multi.new(), fn changeset, multi ->
-      workflow =
-        inserted_workflows
-        |> Enum.find(fn workflow ->
-          workflow.id == get_field(changeset, :id)
-        end)
-
-      version_operation = "version_#{workflow.id}"
-
-      Multi.run(multi, version_operation, fn _repo, _changes ->
-        hash = WorkflowVersions.generate_hash(workflow)
-        latest_hash = WorkflowVersions.latest_hash(workflow)
-
-        if latest_hash == "cli:#{hash}" do
-          {:ok, workflow}
-        else
-          WorkflowVersions.record_version(workflow, hash, "cli")
-        end
+    workflows_to_version =
+      project_changeset
+      |> get_assoc(:workflows)
+      |> Enum.reject(fn changeset ->
+        changeset.changes == %{} or get_change(changeset, :delete)
       end)
-    end)
-    |> Repo.transaction()
-    |> case do
-      {:ok, changes} -> {:ok, changes}
-      {:error, _failed_key, reason, _changes} -> {:error, reason}
+
+    case workflows_to_version do
+      [] ->
+        {:ok, %{}}
+
+      workflows ->
+        workflows
+        |> Enum.reduce(Multi.new(), fn changeset, multi ->
+          workflow =
+            inserted_workflows
+            |> Enum.find(fn workflow ->
+              workflow.id == get_field(changeset, :id)
+            end)
+
+          version_operation = "version_#{workflow.id}"
+
+          Multi.run(multi, version_operation, fn _repo, _changes ->
+            hash = WorkflowVersions.generate_hash(workflow)
+            latest_hash = WorkflowVersions.latest_hash(workflow)
+
+            if latest_hash == "cli:#{hash}" do
+              {:ok, workflow}
+            else
+              WorkflowVersions.record_version(workflow, hash, "cli")
+            end
+          end)
+        end)
+        |> Repo.transaction()
+        |> case do
+          {:ok, changes} -> {:ok, changes}
+          {:error, _failed_key, reason, _changes} -> {:error, reason}
+        end
     end
   end
 

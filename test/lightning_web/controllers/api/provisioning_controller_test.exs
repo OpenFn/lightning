@@ -1091,6 +1091,41 @@ defmodule LightningWeb.API.ProvisioningControllerTest do
       assert duplicate_history == initial_history
     end
 
+    test "handles provisioning with no workflow changes gracefully",
+         %{conn: conn, user: user} do
+      project =
+        insert(:project,
+          project_users: [%{user_id: user.id, role: :owner}]
+        )
+
+      # Create a project with a workflow that has an initial version
+      %{body: body, workflow_id: workflow_id} = valid_payload(project.id)
+
+      # First provision to create the workflow
+      conn = post(conn, ~p"/api/provision", body)
+      assert json_response(conn, 201)
+
+      # Get the workflow and its initial version history
+      workflow = Lightning.Repo.get!(Workflow, workflow_id)
+      initial_history = Lightning.WorkflowVersions.history_for(workflow)
+      assert length(initial_history) == 1
+
+      # Update only project metadata, keeping workflow unchanged
+      updated_body = Map.put(body, "name", "updated-project-name")
+
+      conn = post(conn, ~p"/api/provision", updated_body)
+      assert json_response(conn, 201)
+
+      # Verify version history unchanged since workflow content didn't change
+      workflow = Lightning.Repo.get!(Workflow, workflow_id)
+      version_history = Lightning.WorkflowVersions.history_for(workflow)
+      assert version_history == initial_history
+
+      # Verify project name was updated
+      project = Lightning.Repo.get!(Lightning.Projects.Project, project.id)
+      assert project.name == "updated-project-name"
+    end
+
     test "returns 201 for an existing project with workflows marked for deletion",
          %{
            conn: conn
