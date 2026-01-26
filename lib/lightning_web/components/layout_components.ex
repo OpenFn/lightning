@@ -235,7 +235,10 @@ defmodule LightningWeb.LayoutComponents do
           </h1>
         <% end %>
 
-        <h1 :if={!@current_user} class="text-3xl font-bold text-secondary-900 flex items-center">
+        <h1
+          :if={!@current_user}
+          class="text-3xl font-bold text-secondary-900 flex items-center"
+        >
           {if assigns[:title], do: render_slot(@title)}
         </h1>
 

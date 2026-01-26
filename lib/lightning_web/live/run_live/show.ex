@@ -64,7 +64,9 @@ defmodule LightningWeb.RunLive.Show do
           <:breadcrumbs>
             <LayoutComponents.breadcrumbs>
               <LayoutComponents.breadcrumb_project_picker label={@project.name} />
-              <LayoutComponents.breadcrumb_items items={[{"History", ~p"/projects/#{@project}/history"}]} />
+              <LayoutComponents.breadcrumb_items items={[
+                {"History", ~p"/projects/#{@project}/history"}
+              ]} />
               <LayoutComponents.breadcrumb>
                 <:label>
                   {@page_title}
