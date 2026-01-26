@@ -286,7 +286,7 @@ defmodule LightningWeb.LayoutComponents do
       <.breadcrumbs>
         <.breadcrumb_project_picker label={@project.name} />
         <.breadcrumb_items items={[{"History", ~p"/projects/\#{@project}/history"}]} />
-        <.breadcrumb show_separator={true}>
+        <.breadcrumb>
           <:label>{@page_title}</:label>
         </.breadcrumb>
       </.breadcrumbs>
@@ -296,7 +296,14 @@ defmodule LightningWeb.LayoutComponents do
   def breadcrumbs(assigns) do
     ~H"""
     <nav class="flex" aria-label="Breadcrumbs">
-      <ol role="list" class="flex items-center space-x-2">
+      <ol
+        role="list"
+        class={[
+          "flex items-center space-x-2",
+          "[&>li.breadcrumb-item_.breadcrumb-separator]:hidden",
+          "[&>li.breadcrumb-item+li.breadcrumb-item_.breadcrumb-separator]:flex"
+        ]}
+      >
         {render_slot(@inner_block)}
       </ol>
     </nav>
@@ -314,7 +321,7 @@ defmodule LightningWeb.LayoutComponents do
 
   def breadcrumb_items(assigns) do
     ~H"""
-    <.breadcrumb :for={{label, path} <- @items} path={path} show_separator={true}>
+    <.breadcrumb :for={{label, path} <- @items} path={path}>
       <:label>{label}</:label>
     </.breadcrumb>
     """
@@ -349,34 +356,26 @@ defmodule LightningWeb.LayoutComponents do
   end
 
   attr :path, :string, default: nil
-  attr :show_separator, :boolean, default: true
   slot :label
 
   def breadcrumb(assigns) do
     ~H"""
-    <li>
+    <li class="breadcrumb-item">
       <div class="flex items-center">
         <.icon
-          :if={@show_separator}
           name="hero-chevron-right"
-          class="h-5 w-5 shrink-0 text-gray-400"
+          class="breadcrumb-separator h-5 w-5 shrink-0 text-gray-400"
         />
         <%= if @path do %>
           <.link
             patch={@path}
-            class={[
-              "flex text-sm font-medium text-gray-500 hover:text-gray-700",
-              @show_separator && "ml-2"
-            ]}
+            class="flex text-sm font-medium text-gray-500 hover:text-gray-700"
             aria-current="page"
           >
             {if assigns[:label], do: render_slot(@label)}
           </.link>
         <% else %>
-          <span class={[
-            "flex items-center text-sm font-medium text-gray-500",
-            @show_separator && "ml-2"
-          ]}>
+          <span class="flex items-center text-sm font-medium text-gray-500">
             {if assigns[:label], do: render_slot(@label)}
           </span>
         <% end %>

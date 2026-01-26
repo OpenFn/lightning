@@ -64,7 +64,7 @@ defmodule LightningWeb.LayoutComponentsTest do
     test "renders project picker button with label" do
       html =
         (&LayoutComponents.breadcrumb_project_picker/1)
-        |> render_component(%{label: "My Project", show_separator: false})
+        |> render_component(%{label: "My Project"})
 
       assert html =~ "breadcrumb-project-picker-trigger"
       assert html =~ "My Project"

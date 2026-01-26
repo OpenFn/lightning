@@ -97,7 +97,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
             <LayoutComponents.breadcrumbs>
               <LayoutComponents.breadcrumb_project_picker label={@project.name} />
               <LayoutComponents.breadcrumb_items items={[{"Workflows", "/projects/#{@project.id}/w"}]} />
-              <LayoutComponents.breadcrumb show_separator={true}>
+              <LayoutComponents.breadcrumb>
                 <:label>
                   <div class="flex gap-2 items-center">
                     {@page_title}

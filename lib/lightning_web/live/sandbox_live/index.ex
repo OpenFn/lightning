@@ -328,7 +328,7 @@ defmodule LightningWeb.SandboxLive.Index do
           <:breadcrumbs>
             <LayoutComponents.breadcrumbs>
               <LayoutComponents.breadcrumb_project_picker label={@project.name} />
-              <LayoutComponents.breadcrumb show_separator={true}>
+              <LayoutComponents.breadcrumb>
                 <:label>Sandboxes</:label>
               </LayoutComponents.breadcrumb>
             </LayoutComponents.breadcrumbs>

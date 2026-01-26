@@ -41,7 +41,7 @@ defmodule LightningWeb.DataclipLive.Show do
           <:breadcrumbs>
             <LayoutComponents.breadcrumbs>
               <LayoutComponents.breadcrumb_project_picker label={@project.name} />
-              <LayoutComponents.breadcrumb show_separator={true}>
+              <LayoutComponents.breadcrumb>
                 <:label>{@page_title}</:label>
               </LayoutComponents.breadcrumb>
             </LayoutComponents.breadcrumbs>
