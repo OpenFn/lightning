@@ -26,16 +26,25 @@ defmodule Lightning.Workflows.Trigger do
   @trigger_types [:webhook, :cron, :kafka]
   @webhook_reply_types [:before_start, :after_completion, :custom]
 
-  @derive {Jason.Encoder,
-           only: [
-             :id,
-             :comment,
-             :custom_path,
-             :cron_expression,
-             :type,
-             :enabled,
-             :webhook_reply
-           ]}
+  # Custom Jason.Encoder to ensure webhook_reply is nil for non-webhook triggers.
+  defimpl Jason.Encoder, for: __MODULE__ do
+    alias Lightning.Workflows.Trigger
+
+    def encode(trigger, opts) do
+      map = %{
+        id: trigger.id,
+        comment: trigger.comment,
+        custom_path: trigger.custom_path,
+        cron_expression: trigger.cron_expression,
+        type: trigger.type,
+        enabled: trigger.enabled,
+        webhook_reply: Trigger.webhook_reply_for_json(trigger)
+      }
+
+      Jason.Encode.map(map, opts)
+    end
+  end
+
   schema "triggers" do
     field :comment, :string
     field :custom_path, :string
@@ -63,6 +72,18 @@ defmodule Lightning.Workflows.Trigger do
 
     timestamps()
   end
+
+  @doc """
+  Returns the webhook_reply value for a trigger, or nil if the trigger is not a webhook.
+
+  The database schema has webhook_reply with default :before_start for all triggers,
+  but the frontend Zod schema expects webhook_reply: null for cron/kafka triggers.
+  This function ensures the JSON sent to the frontend matches the expected schema.
+  """
+  def webhook_reply_for_json(%__MODULE__{type: :webhook, webhook_reply: reply}),
+    do: reply
+
+  def webhook_reply_for_json(%__MODULE__{}), do: nil
 
   def new(attrs) do
     change(%__MODULE__{}, Map.merge(attrs, %{id: Ecto.UUID.generate()}))

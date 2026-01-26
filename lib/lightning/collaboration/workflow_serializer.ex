@@ -227,7 +227,9 @@ defmodule Lightning.Collaboration.WorkflowSerializer do
           "id" => trigger.id,
           "type" => trigger.type |> to_string(),
           "webhook_reply" =>
-            trigger.webhook_reply && to_string(trigger.webhook_reply)
+            trigger
+            |> Lightning.Workflows.Trigger.webhook_reply_for_json()
+            |> then(fn reply -> reply && to_string(reply) end)
         })
 
       Yex.Array.push(triggers_array, trigger_map)

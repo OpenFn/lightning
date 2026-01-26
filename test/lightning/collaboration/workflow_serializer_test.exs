@@ -974,13 +974,14 @@ defmodule Lightning.Collaboration.WorkflowSerializerTest do
       extracted_trigger = List.first(extracted["triggers"])
       original_trigger = List.first(workflow.triggers)
 
+      # Cron triggers should have webhook_reply as nil
       assert %{
                "id" => original_trigger.id,
                "type" => to_string(original_trigger.type),
                "enabled" => original_trigger.enabled,
                "cron_expression" => original_trigger.cron_expression,
                "kafka_configuration" => nil,
-               "webhook_reply" => to_string(original_trigger.webhook_reply)
+               "webhook_reply" => nil
              } == extracted_trigger
 
       # Positions
@@ -1283,13 +1284,14 @@ defmodule Lightning.Collaboration.WorkflowSerializerTest do
       original_trigger = List.first(workflow.triggers)
 
       # All trigger fields should be present (excluding virtual fields)
+      # Cron triggers should have webhook_reply as nil (not applicable to cron)
       assert %{
                "id" => original_trigger.id,
                "type" => "cron",
                "enabled" => true,
                "cron_expression" => "0 */6 * * *",
                "kafka_configuration" => nil,
-               "webhook_reply" => to_string(original_trigger.webhook_reply)
+               "webhook_reply" => nil
              } == trigger
     end
 
