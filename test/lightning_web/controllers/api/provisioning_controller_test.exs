@@ -992,6 +992,105 @@ defmodule LightningWeb.API.ProvisioningControllerTest do
       assert post(conn, ~p"/api/provision", body) |> json_response(201)
     end
 
+    test "records workflow version with 'cli' source when workflow is created via provisioner",
+         %{conn: conn, user: user} do
+      project =
+        insert(:project,
+          project_users: [%{user_id: user.id, role: :owner}]
+        )
+
+      %{body: body, workflow_id: workflow_id} = valid_payload(project.id)
+
+      conn = post(conn, ~p"/api/provision", body)
+      assert json_response(conn, 201)
+
+      workflow = Lightning.Repo.get!(Workflow, workflow_id)
+      version_history = Lightning.WorkflowVersions.history_for(workflow)
+
+      assert length(version_history) == 1
+      assert [version] = version_history
+      assert String.starts_with?(version, "cli:")
+    end
+
+    test "records new workflow version when workflow is updated via provisioner",
+         %{conn: conn, user: user} do
+      project =
+        insert(:project,
+          project_users: [%{user_id: user.id, role: :owner}]
+        )
+
+      # First provision - creates workflow
+      %{body: body, workflow_id: workflow_id} = valid_payload(project.id)
+
+      conn = post(conn, ~p"/api/provision", body)
+      assert json_response(conn, 201)
+
+      workflow = Lightning.Repo.get!(Workflow, workflow_id)
+      initial_history = Lightning.WorkflowVersions.history_for(workflow)
+      assert length(initial_history) == 1
+      assert [initial_version] = initial_history
+      assert String.starts_with?(initial_version, "cli:")
+
+      # Update workflow by changing job body
+      updated_body =
+        body
+        |> Map.update!("workflows", fn workflows ->
+          Enum.at(workflows, 0)
+          |> Map.update!("jobs", fn jobs ->
+            Enum.map(jobs, fn job ->
+              Map.put(job, "body", "console.log('updated');")
+            end)
+          end)
+          |> then(fn workflow ->
+            List.replace_at(workflows, 0, workflow)
+          end)
+        end)
+
+      conn = post(conn, ~p"/api/provision", updated_body)
+      assert json_response(conn, 201)
+
+      workflow = Lightning.Repo.get!(Workflow, workflow_id)
+      updated_history = Lightning.WorkflowVersions.history_for(workflow)
+
+      # Due to squashing behavior, consecutive versions from same source replace each other
+      # So we still have 1 version, but the hash should be different
+      assert length(updated_history) == 1
+      assert [updated_version] = updated_history
+      assert String.starts_with?(updated_version, "cli:")
+
+      # Verify the hash changed after the update
+      refute initial_version == updated_version
+    end
+
+    test "does not create duplicate version when provisioning same workflow content",
+         %{conn: conn, user: user} do
+      project =
+        insert(:project,
+          project_users: [%{user_id: user.id, role: :owner}]
+        )
+
+      # First provision - creates workflow
+      %{body: body, workflow_id: workflow_id} = valid_payload(project.id)
+
+      conn = post(conn, ~p"/api/provision", body)
+      assert json_response(conn, 201)
+
+      workflow = Lightning.Repo.get!(Workflow, workflow_id)
+      initial_history = Lightning.WorkflowVersions.history_for(workflow)
+      assert length(initial_history) == 1
+
+      # Provision again with the exact same content
+      conn = post(conn, ~p"/api/provision", body)
+      assert json_response(conn, 201)
+
+      workflow = Lightning.Repo.get!(Workflow, workflow_id)
+      duplicate_history = Lightning.WorkflowVersions.history_for(workflow)
+
+      # Should still have only 1 version since content didn't change
+      assert length(duplicate_history) == 1
+      assert duplicate_history == initial_history
+    end
+
     test "returns 201 for an existing project with workflows marked for deletion",
          %{
            conn: conn
