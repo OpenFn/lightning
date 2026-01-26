@@ -147,50 +147,43 @@ defmodule Lightning.Projects.Provisioner do
     {:no_action, nil}
   end
 
-  defp update_workflows_version(
-         project_changeset,
-         inserted_workflows
-       ) do
-    workflows_to_version =
+  defp update_workflows_version(project_changeset, inserted_workflows) do
+    workflows =
       project_changeset
       |> get_assoc(:workflows)
       |> Enum.reject(fn changeset ->
         changeset.changes == %{} or get_change(changeset, :delete)
       end)
 
-    case workflows_to_version do
-      [] ->
-        {:ok, %{}}
+    if workflows == [] do
+      {:ok, %{}}
+    else
+      workflows
+      |> Enum.reduce(Multi.new(), fn changeset, multi ->
+        workflow =
+          Enum.find(inserted_workflows, &(&1.id == get_field(changeset, :id)))
 
-      workflows ->
-        workflows
-        |> Enum.reduce(Multi.new(), fn changeset, multi ->
-          workflow =
-            inserted_workflows
-            |> Enum.find(fn workflow ->
-              workflow.id == get_field(changeset, :id)
-            end)
-
-          version_operation = "version_#{workflow.id}"
-
-          Multi.run(multi, version_operation, fn _repo, _changes ->
-            hash = WorkflowVersions.generate_hash(workflow)
-            latest_hash = WorkflowVersions.latest_hash(workflow)
-
-            if latest_hash == "cli:#{hash}" do
-              {:ok, workflow}
-            else
-              WorkflowVersions.record_version(workflow, hash, "cli")
-            end
-          end)
+        Multi.run(multi, "version_#{workflow.id}", fn _repo, _changes ->
+          maybe_record_version(workflow)
         end)
-        |> Repo.transaction()
-        |> case do
-          {:ok, changes} -> {:ok, changes}
-          {:error, _failed_key, reason, _changes} -> {:error, reason}
-        end
+      end)
+      |> Repo.transaction()
+      |> normalize_txn()
     end
   end
+
+  defp maybe_record_version(workflow) do
+    hash = WorkflowVersions.generate_hash(workflow)
+
+    if WorkflowVersions.latest_hash(workflow) == "cli:#{hash}" do
+      {:ok, workflow}
+    else
+      WorkflowVersions.record_version(workflow, hash, "cli")
+    end
+  end
+
+  defp normalize_txn({:ok, changes}), do: {:ok, changes}
+  defp normalize_txn({:error, _key, reason, _}), do: {:error, reason}
 
   defp audit_workflow_multi(action, workflow_id, user_or_repo_connection) do
     Multi.new()
