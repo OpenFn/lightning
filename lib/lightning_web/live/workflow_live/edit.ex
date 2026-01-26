@@ -92,69 +92,70 @@ defmodule LightningWeb.WorkflowLive.Edit do
         />
       </:banner>
       <:header>
-        <LayoutComponents.header
-          current_user={@current_user}
-          project={@project}
-          breadcrumbs={[{"Workflows", "/projects/#{@project.id}/w"}]}
-        >
-          <:title>
-            <div class="flex gap-2 items-center">
-              {@page_title}
-
-              <LightningWeb.Components.Common.snapshot_version_chip
-                id="canvas-workflow-version"
-                version={@snapshot_version_tag}
-                tooltip={
-                  if @snapshot_version_tag == "latest",
-                    do: "This is the latest version of this workflow",
-                    else:
-                      "You are viewing a snapshot of this workflow that was taken on #{Lightning.Helpers.format_date(@snapshot.inserted_at, "%F at %T")}"
-                }
-              />
-              <%= if @project.env do %>
-                <div
-                  id="canvas-project-env-container"
-                  class="flex items-middle text-sm font-normal"
-                >
-                  <span
-                    id="canvas-project-env"
-                    phx-hook="Tooltip"
-                    data-placement="bottom"
-                    aria-label={"Project environment is #{@project.env}"}
-                    class="inline-flex items-center rounded-md px-1.5 py-0.5 text-xs font-medium bg-primary-100 text-primary-800"
-                  >
-                    {@project.env}
-                  </span>
-                </div>
-              <% end %>
-              
-    <!-- Add collaborative editor toggle (beaker icon only) -->
-              <LightningWeb.WorkflowLive.Components.deprecated_warning id="canvas-deprecated-warning" />
-              <LightningWeb.WorkflowLive.Components.online_users
-                id="canvas-online-users"
-                presences={@presences}
-                current_user={@current_user}
-                prior_user={@prior_user_presence.user}
-              />
-              <div :if={
-                @snapshot_version_tag != "latest" && @can_edit_workflow &&
-                  !@show_new_workflow_panel
-              }>
-                <span
-                  id="edit-disabled-warning"
-                  class="cursor-pointer text-xs flex items-center"
-                  phx-hook="Tooltip"
-                  data-placement="bottom"
-                  aria-label="You cannot edit or run an old snapshot of a workflow"
-                >
-                  <.icon
-                    name="hero-information-circle-solid"
-                    class="h-4 w-4 text-primary-600 opacity-50"
-                  /> Read-only
-                </span>
-              </div>
-            </div>
-          </:title>
+        <LayoutComponents.header current_user={@current_user}>
+          <:breadcrumbs>
+            <LayoutComponents.breadcrumbs>
+              <LayoutComponents.breadcrumb_project_picker label={@project.name} />
+              <LayoutComponents.breadcrumb_items items={[{"Workflows", "/projects/#{@project.id}/w"}]} />
+              <LayoutComponents.breadcrumb show_separator={true}>
+                <:label>
+                  <div class="flex gap-2 items-center">
+                    {@page_title}
+                    <LightningWeb.Components.Common.snapshot_version_chip
+                      id="canvas-workflow-version"
+                      version={@snapshot_version_tag}
+                      tooltip={
+                        if @snapshot_version_tag == "latest",
+                          do: "This is the latest version of this workflow",
+                          else:
+                            "You are viewing a snapshot of this workflow that was taken on #{Lightning.Helpers.format_date(@snapshot.inserted_at, "%F at %T")}"
+                      }
+                    />
+                    <%= if @project.env do %>
+                      <div
+                        id="canvas-project-env-container"
+                        class="flex items-middle text-sm font-normal"
+                      >
+                        <span
+                          id="canvas-project-env"
+                          phx-hook="Tooltip"
+                          data-placement="bottom"
+                          aria-label={"Project environment is #{@project.env}"}
+                          class="inline-flex items-center rounded-md px-1.5 py-0.5 text-xs font-medium bg-primary-100 text-primary-800"
+                        >
+                          {@project.env}
+                        </span>
+                      </div>
+                    <% end %>
+                    <LightningWeb.WorkflowLive.Components.deprecated_warning id="canvas-deprecated-warning" />
+                    <LightningWeb.WorkflowLive.Components.online_users
+                      id="canvas-online-users"
+                      presences={@presences}
+                      current_user={@current_user}
+                      prior_user={@prior_user_presence.user}
+                    />
+                    <div :if={
+                      @snapshot_version_tag != "latest" && @can_edit_workflow &&
+                        !@show_new_workflow_panel
+                    }>
+                      <span
+                        id="edit-disabled-warning"
+                        class="cursor-pointer text-xs flex items-center"
+                        phx-hook="Tooltip"
+                        data-placement="bottom"
+                        aria-label="You cannot edit or run an old snapshot of a workflow"
+                      >
+                        <.icon
+                          name="hero-information-circle-solid"
+                          class="h-4 w-4 text-primary-600 opacity-50"
+                        /> Read-only
+                      </span>
+                    </div>
+                  </div>
+                </:label>
+              </LayoutComponents.breadcrumb>
+            </LayoutComponents.breadcrumbs>
+          </:breadcrumbs>
 
           <.button
             :if={@snapshot_version_tag != "latest"}
