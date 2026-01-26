@@ -30,7 +30,7 @@ describe.concurrent('sortOrderForSvg', () => {
     expect(sorted[2].id).toBe('edge3');
   });
 
-  test('preserves stable order when selection state changes (fix for #4328)', () => {
+  test('preserves stable order when selection state changes', () => {
     // This test ensures that selecting edges doesn't cause layout shifts
     const edges = [
       { id: 'edge1', data: { enabled: true }, selected: false },
