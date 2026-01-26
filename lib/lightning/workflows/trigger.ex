@@ -153,11 +153,13 @@ defmodule Lightning.Workflows.Trigger do
         |> put_default(:cron_expression, "0 0 * * *")
         |> validate_cron()
         |> put_change(:kafka_configuration, nil)
+        |> put_default(:webhook_reply, :before_start)
 
       :kafka ->
         changeset
         |> put_change(:cron_expression, nil)
         |> validate_required([:kafka_configuration])
+        |> put_default(:webhook_reply, :before_start)
 
       nil ->
         changeset
