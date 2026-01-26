@@ -157,4 +157,76 @@ defmodule Lightning.Workflows.TriggerTest do
       assert get_field(changeset, :kafka_configuration) == nil
     end
   end
+
+  describe "webhook_reply_for_json/1" do
+    test "returns webhook_reply value for webhook triggers" do
+      trigger = %Trigger{type: :webhook, webhook_reply: :before_start}
+      assert Trigger.webhook_reply_for_json(trigger) == :before_start
+
+      trigger = %Trigger{type: :webhook, webhook_reply: :after_completion}
+      assert Trigger.webhook_reply_for_json(trigger) == :after_completion
+
+      trigger = %Trigger{type: :webhook, webhook_reply: :custom}
+      assert Trigger.webhook_reply_for_json(trigger) == :custom
+    end
+
+    test "returns nil for cron triggers regardless of database value" do
+      trigger = %Trigger{type: :cron, webhook_reply: :before_start}
+      assert Trigger.webhook_reply_for_json(trigger) == nil
+    end
+
+    test "returns nil for kafka triggers regardless of database value" do
+      trigger = %Trigger{type: :kafka, webhook_reply: :before_start}
+      assert Trigger.webhook_reply_for_json(trigger) == nil
+    end
+  end
+
+  describe "Jason.Encoder implementation" do
+    test "encodes webhook triggers with webhook_reply value" do
+      trigger = %Trigger{
+        id: Ecto.UUID.generate(),
+        type: :webhook,
+        enabled: true,
+        webhook_reply: :before_start
+      }
+
+      {:ok, json} = Jason.encode(trigger)
+      decoded = Jason.decode!(json)
+
+      assert decoded["type"] == "webhook"
+      assert decoded["webhook_reply"] == "before_start"
+    end
+
+    test "encodes cron triggers with webhook_reply as nil" do
+      trigger = %Trigger{
+        id: Ecto.UUID.generate(),
+        type: :cron,
+        enabled: true,
+        cron_expression: "0 0 * * *",
+        webhook_reply: :before_start
+      }
+
+      {:ok, json} = Jason.encode(trigger)
+      decoded = Jason.decode!(json)
+
+      assert decoded["type"] == "cron"
+      assert decoded["cron_expression"] == "0 0 * * *"
+      assert decoded["webhook_reply"] == nil
+    end
+
+    test "encodes kafka triggers with webhook_reply as nil" do
+      trigger = %Trigger{
+        id: Ecto.UUID.generate(),
+        type: :kafka,
+        enabled: true,
+        webhook_reply: :before_start
+      }
+
+      {:ok, json} = Jason.encode(trigger)
+      decoded = Jason.decode!(json)
+
+      assert decoded["type"] == "kafka"
+      assert decoded["webhook_reply"] == nil
+    end
+  end
 end
