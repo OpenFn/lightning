@@ -17,6 +17,9 @@ and this project adheres to
 
 ### Added
 
+- Provisioner updates version history of workflows on post
+  [#4343](https://github.com/OpenFn/lightning/issues/4343)
+
 ### Changed
 
 - Standardise copy button feedback across collaborative editor

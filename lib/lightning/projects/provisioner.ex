@@ -33,6 +33,7 @@ defmodule Lightning.Projects.Provisioner do
   alias Lightning.Workflows.Triggers.KafkaConfiguration
   alias Lightning.Workflows.Workflow
   alias Lightning.Workflows.WorkflowUsageLimiter
+  alias Lightning.WorkflowVersions
 
   @doc """
   Import a project.
@@ -70,6 +71,11 @@ defmodule Lightning.Projects.Provisioner do
            updated_project <- preload_dependencies(project),
            {:ok, _changes} <-
              audit_workflows(project_changeset, user_or_repo_connection),
+           {:ok, _changes} <-
+             update_workflows_version(
+               project_changeset,
+               updated_project.workflows
+             ),
            {:ok, _changes} <-
              create_snapshots(
                project_changeset,
@@ -140,6 +146,28 @@ defmodule Lightning.Projects.Provisioner do
   defp classify_audit(_unrecognised_changeset) do
     {:no_action, nil}
   end
+
+  defp update_workflows_version(project_changeset, inserted_workflows) do
+    project_changeset
+    |> get_assoc(:workflows)
+    |> Enum.reject(fn changeset ->
+      changeset.changes == %{} or get_change(changeset, :delete)
+    end)
+    |> Enum.reduce(Multi.new(), fn changeset, multi ->
+      workflow =
+        Enum.find(inserted_workflows, &(&1.id == get_field(changeset, :id)))
+
+      Multi.run(multi, "version_#{workflow.id}", fn _repo, _changes ->
+        hash = WorkflowVersions.generate_hash(workflow)
+        WorkflowVersions.record_version(workflow, hash, "cli")
+      end)
+    end)
+    |> Repo.transaction()
+    |> normalize_txn()
+  end
+
+  defp normalize_txn({:ok, changes}), do: {:ok, changes}
+  defp normalize_txn({:error, _key, reason, _}), do: {:error, reason}
 
   defp audit_workflow_multi(action, workflow_id, user_or_repo_connection) do
     Multi.new()
