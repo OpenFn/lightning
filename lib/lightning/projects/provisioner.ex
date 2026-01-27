@@ -148,38 +148,22 @@ defmodule Lightning.Projects.Provisioner do
   end
 
   defp update_workflows_version(project_changeset, inserted_workflows) do
-    workflows =
-      project_changeset
-      |> get_assoc(:workflows)
-      |> Enum.reject(fn changeset ->
-        changeset.changes == %{} or get_change(changeset, :delete)
+    project_changeset
+    |> get_assoc(:workflows)
+    |> Enum.reject(fn changeset ->
+      changeset.changes == %{} or get_change(changeset, :delete)
+    end)
+    |> Enum.reduce(Multi.new(), fn changeset, multi ->
+      workflow =
+        Enum.find(inserted_workflows, &(&1.id == get_field(changeset, :id)))
+
+      Multi.run(multi, "version_#{workflow.id}", fn _repo, _changes ->
+        hash = WorkflowVersions.generate_hash(workflow)
+        WorkflowVersions.record_version(workflow, hash, "cli")
       end)
-
-    if workflows == [] do
-      {:ok, %{}}
-    else
-      workflows
-      |> Enum.reduce(Multi.new(), fn changeset, multi ->
-        workflow =
-          Enum.find(inserted_workflows, &(&1.id == get_field(changeset, :id)))
-
-        Multi.run(multi, "version_#{workflow.id}", fn _repo, _changes ->
-          maybe_record_version(workflow)
-        end)
-      end)
-      |> Repo.transaction()
-      |> normalize_txn()
-    end
-  end
-
-  defp maybe_record_version(workflow) do
-    hash = WorkflowVersions.generate_hash(workflow)
-
-    if WorkflowVersions.latest_hash(workflow) == "cli:#{hash}" do
-      {:ok, workflow}
-    else
-      WorkflowVersions.record_version(workflow, hash, "cli")
-    end
+    end)
+    |> Repo.transaction()
+    |> normalize_txn()
   end
 
   defp normalize_txn({:ok, changes}), do: {:ok, changes}
