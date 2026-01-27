@@ -17,9 +17,12 @@
  * ## Channel Interactions
  *
  * **Listens to:**
- * - `history_updated` - Real-time work order and run updates from server
+ * - `history_updated` (workflow channel) - Updates history list with work orders and runs
  *   - Handles: work_order created/updated, run created/updated
- *   - Automatically invalidates and refetches affected run steps
+ *   - Updates history panel display ONLY, does not touch run steps cache
+ * - `run:updated`, `step:started`, `step:completed` (dedicated run channel) - Real-time run execution
+ *   - Updates activeRun and runStepsCache incrementally for followed runs
+ *   - Requires useFollowRun() to connect to the run channel
  *
  * **Makes requests:**
  * - `request_history` - Fetches top 20 work orders (optionally filtered to include specific run)
@@ -58,11 +61,12 @@
  * initial run data via data attributes. This is passed to createHistoryStore()
  * to pre-populate the cache, enabling instant rendering without loading flash.
  *
- * ### Selective Cache Invalidation
- * When history_updated event arrives with run changes:
- * - Check if run has active subscribers
- * - If yes: invalidate cache and trigger refetch
- * - If no: ignore (no components need fresh data)
+ * ### Separation of Concerns
+ * - **History list (draft.history)**: Updated by `history_updated` events for history panel
+ * - **Run steps cache (draft.runStepsCache)**: Updated by step events from run channel ONLY
+ *
+ * This separation prevents cache invalidation when runs complete, allowing
+ * incremental step highlighting via the dedicated run channel.
  *
  * ### Cache Persistence
  * Cache entries are NOT cleared when subscribers unsubscribe. This prevents
@@ -328,28 +332,9 @@ export const createHistoryStore = (
         }
       }
 
-      // Invalidate cached run steps if someone is watching this run
-      if ((action === 'run_updated' || action === 'run_created') && run) {
-        const subscribersForThisRun = draft.runStepsSubscribers[run.id];
-        if (subscribersForThisRun && subscribersForThisRun.size > 0) {
-          // Invalidate cache - next read will trigger refetch
-          Reflect.deleteProperty(draft.runStepsCache, run.id);
-        }
-      }
-
       draft.lastUpdated = Date.now();
     });
     notify('handleHistoryUpdated');
-
-    // Trigger refetch for invalidated runs with subscribers
-    if ((action === 'run_updated' || action === 'run_created') && run) {
-      const currentState = getSnapshot();
-      const subscribers = currentState.runStepsSubscribers[run.id];
-      if (subscribers && subscribers.size > 0) {
-        // Asynchronously refetch - don't await
-        void requestRunSteps(run.id);
-      }
-    }
   };
 
   /**
