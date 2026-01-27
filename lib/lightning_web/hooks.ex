@@ -137,16 +137,16 @@ defmodule LightningWeb.Hooks do
     end
   end
 
-  def on_mount(:check_collaborative_preference, params, _session, socket) do
+  def on_mount(:check_legacy_preference, params, _session, socket) do
     case socket.assigns do
       %{current_user: user, live_action: live_action}
       when live_action in [:edit, :new] ->
-        prefer_collaborative =
-          Lightning.Accounts.get_preference(user, "prefer_collaborative_editor")
+        prefer_legacy_editor =
+          Lightning.Accounts.get_preference(user, "prefer_legacy_editor")
 
-        if prefer_collaborative do
+        if prefer_legacy_editor do
           path =
-            LightningWeb.WorkflowLive.Helpers.collaborative_editor_url(
+            LightningWeb.WorkflowLive.Helpers.legacy_editor_url(
               params,
               live_action
             )

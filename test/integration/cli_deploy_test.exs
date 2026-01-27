@@ -95,7 +95,12 @@ defmodule Lightning.CliDeployTest do
       actual_state = config.statePath |> File.read!() |> Jason.decode!()
 
       # encoding and decoding in order to transform values like dates into string
-      assert actual_state == expected_state |> Jason.encode!() |> Jason.decode!()
+      expected_state_for_comparison =
+        expected_state
+        |> Jason.encode!()
+        |> Jason.decode!()
+
+      assert actual_state == expected_state_for_comparison
 
       expected_yaml = File.read!("test/fixtures/canonical_project.yaml")
 
@@ -272,8 +277,7 @@ defmodule Lightning.CliDeployTest do
   end
 
   defp expected_project_state(project) do
-    state =
-      Map.take(project, Lightning.Projects.Project.__schema__(:fields))
+    state = Map.take(project, Lightning.Projects.Project.__schema__(:fields))
 
     workflows =
       Map.new(project.workflows, fn workflow ->
@@ -320,7 +324,8 @@ defmodule Lightning.CliDeployTest do
         :updated_at,
         :deleted_at,
         :lock_version,
-        :concurrency
+        :concurrency,
+        :version_history
       ])
 
     jobs =

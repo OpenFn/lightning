@@ -235,6 +235,7 @@ defmodule LightningWeb.WorkflowChannelTest do
       # Config data
       assert %{config: config_data} = response
       assert config_data.require_email_verification == true
+      assert is_boolean(config_data.kafka_triggers_enabled)
 
       # Permissions data
       assert %{permissions: permissions_data} = response
@@ -257,6 +258,17 @@ defmodule LightningWeb.WorkflowChannelTest do
       assert_reply ref, :ok, response
       assert %{config: config_data} = response
       assert config_data.require_email_verification == false
+    end
+
+    test "returns config with kafka_triggers_enabled based on Lightning.Config",
+         %{socket: socket} do
+      Mox.stub(Lightning.MockConfig, :kafka_triggers_enabled?, fn -> true end)
+
+      ref = push(socket, "get_context", %{})
+
+      assert_reply ref, :ok, response
+      assert %{config: config_data} = response
+      assert config_data.kafka_triggers_enabled == true
     end
 
     test "returns can_edit_workflow false for viewer role", %{

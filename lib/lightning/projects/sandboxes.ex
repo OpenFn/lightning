@@ -551,7 +551,6 @@ defmodule Lightning.Projects.Sandboxes do
     sandbox
     |> copy_workflow_version_history(sandbox.workflow_id_mapping)
     |> create_initial_workflow_snapshots()
-    |> generate_and_store_project_head_hash()
     |> copy_selected_dataclips(parent.id, Map.get(original_attrs, :dataclip_ids))
   end
 
@@ -597,18 +596,6 @@ defmodule Lightning.Projects.Sandboxes do
       |> Workflows.maybe_create_latest_snapshot()
     end)
 
-    sandbox
-  end
-
-  defp generate_and_store_project_head_hash(sandbox) do
-    # Extract only the Project struct, removing the dynamic mapping fields
-    project_struct = Map.take(sandbox, Project.__schema__(:fields))
-    project = struct(Project, project_struct)
-
-    project_head_hash = Lightning.Projects.compute_project_head_hash(project.id)
-    Lightning.Projects.append_project_head!(project, project_head_hash)
-
-    # Return the original sandbox with mappings intact
     sandbox
   end
 
