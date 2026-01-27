@@ -103,6 +103,7 @@ import {
   type StepDetail,
   type WorkOrder,
   HistoryListSchema,
+  isFinalState,
   RunDetailSchema,
   StepDetailSchema,
 } from '../types/history';
@@ -116,14 +117,13 @@ const logger = _logger.ns('HistoryStore').seal();
  * Maps step-like objects to the Step type used in cache
  *
  * Handles both StepDetail (from channel events) and step data from RunDetail.
- * Note: Assumes job_id is never null in practice (steps always belong to a job).
  *
  * @param source - Step data from various sources (StepDetail, RunDetail.steps, etc.)
  * @returns Step object suitable for caching
  */
 const toStep = (source: {
   id: string;
-  job_id: string | null;
+  job_id: string;
   started_at: string | null;
   finished_at: string | null;
   exit_reason: string | null;
@@ -132,7 +132,7 @@ const toStep = (source: {
   output_dataclip_id: string | null;
 }): Step => ({
   id: source.id,
-  job_id: source.job_id!, // Non-null assertion - steps with events always have a job_id
+  job_id: source.job_id,
   started_at: source.started_at,
   finished_at: source.finished_at,
   exit_reason: source.exit_reason,
@@ -335,6 +335,32 @@ export const createHistoryStore = (
       draft.lastUpdated = Date.now();
     });
     notify('handleHistoryUpdated');
+
+    // Fallback cache invalidation: If a run has completed (reached final state)
+    // and there are active subscribers watching it, invalidate the cache to ensure
+    // they get the complete final data on next read.
+    //
+    // This provides a safety net for components that use useRunSteps() without
+    // useFollowRun() - they won't get real-time step updates, but will get
+    // refreshed data when the run completes.
+
+    if ((action === 'run_updated' || action === 'run_created') && run) {
+      const currentState = getSnapshot();
+      const subscribersForThisRun = currentState.runStepsSubscribers[run.id];
+
+      if (
+        subscribersForThisRun &&
+        subscribersForThisRun.size > 0 &&
+        isFinalState(run.state)
+      ) {
+        state = produce(state, draft => {
+          Reflect.deleteProperty(draft.runStepsCache, run.id);
+        });
+        notify('cacheInvalidated');
+
+        void requestRunSteps(run.id);
+      }
+    }
   };
 
   /**
