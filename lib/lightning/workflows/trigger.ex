@@ -42,9 +42,7 @@ defmodule Lightning.Workflows.Trigger do
     field :cron_expression, :string
     field :enabled, :boolean, default: false
 
-    field :webhook_reply, Ecto.Enum,
-      values: @webhook_reply_types,
-      default: :before_start
+    field :webhook_reply, Ecto.Enum, values: @webhook_reply_types
 
     belongs_to :workflow, Workflow
 
@@ -126,6 +124,7 @@ defmodule Lightning.Workflows.Trigger do
         changeset
         |> put_change(:cron_expression, nil)
         |> put_change(:kafka_configuration, nil)
+        |> put_default(:webhook_reply, :before_start)
 
       :cron ->
         changeset
