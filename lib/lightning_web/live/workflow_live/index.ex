@@ -36,8 +36,15 @@ defmodule LightningWeb.WorkflowLive.Index do
         />
       </:banner>
       <:header>
-        <LayoutComponents.header current_user={@current_user} project={@project}>
-          <:title>{@page_title}</:title>
+        <LayoutComponents.header current_user={@current_user}>
+          <:breadcrumbs>
+            <LayoutComponents.breadcrumbs>
+              <LayoutComponents.breadcrumb_project_picker label={@project.name} />
+              <LayoutComponents.breadcrumb>
+                <:label>{@page_title}</:label>
+              </LayoutComponents.breadcrumb>
+            </LayoutComponents.breadcrumbs>
+          </:breadcrumbs>
           <:period>{@dashboard_period}</:period>
         </LayoutComponents.header>
       </:header>

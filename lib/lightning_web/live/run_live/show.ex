@@ -60,23 +60,29 @@ defmodule LightningWeb.RunLive.Show do
         />
       </:banner>
       <:header>
-        <LayoutComponents.header
-          current_user={@current_user}
-          project={@project}
-          breadcrumbs={[{"History", ~p"/projects/#{@project}/history"}]}
-        >
-          <:title>
-            {@page_title}
-            <span class="pl-2 font-light">
-              {display_short_uuid(@id)}
-            </span>
-            <div class="mx-2"></div>
-            <.async_result :let={run} assign={@run}>
-              <%= if run do %>
-                <.snapshot_version run={run} workflow={@workflow} />
-              <% end %>
-            </.async_result>
-          </:title>
+        <LayoutComponents.header current_user={@current_user}>
+          <:breadcrumbs>
+            <LayoutComponents.breadcrumbs>
+              <LayoutComponents.breadcrumb_project_picker label={@project.name} />
+              <LayoutComponents.breadcrumb_items items={[
+                {"History", ~p"/projects/#{@project}/history"}
+              ]} />
+              <LayoutComponents.breadcrumb>
+                <:label>
+                  {@page_title}
+                  <span class="pl-2 font-light">
+                    {display_short_uuid(@id)}
+                  </span>
+                  <div class="mx-2"></div>
+                  <.async_result :let={run} assign={@run}>
+                    <%= if run do %>
+                      <.snapshot_version run={run} workflow={@workflow} />
+                    <% end %>
+                  </.async_result>
+                </:label>
+              </LayoutComponents.breadcrumb>
+            </LayoutComponents.breadcrumbs>
+          </:breadcrumbs>
         </LayoutComponents.header>
       </:header>
 

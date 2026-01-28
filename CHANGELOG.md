@@ -30,6 +30,8 @@ and this project adheres to
 
 ### Changed
 
+- Refactor header component to use `:breadcrumbs` slot for flexible breadcrumb
+  rendering [PR#4356](https://github.com/OpenFn/lightning/pull/4356)
 - Standardise copy button feedback across collaborative editor
   [#3578](https://github.com/OpenFn/lightning/issues/3578)
 

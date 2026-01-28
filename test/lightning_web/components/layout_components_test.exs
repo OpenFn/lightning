@@ -64,7 +64,7 @@ defmodule LightningWeb.LayoutComponentsTest do
     test "renders project picker button with label" do
       html =
         (&LayoutComponents.breadcrumb_project_picker/1)
-        |> render_component(%{label: "My Project", show_separator: false})
+        |> render_component(%{label: "My Project"})
 
       assert html =~ "breadcrumb-project-picker-trigger"
       assert html =~ "My Project"
@@ -100,117 +100,47 @@ defmodule LightningWeb.LayoutComponentsTest do
              "menu-item-active"
   end
 
-  describe "header/1 breadcrumbs" do
-    import Lightning.ProjectsFixtures
-
-    test "renders regular project breadcrumb" do
-      user = Lightning.AccountsFixtures.user_fixture()
-      project = project_fixture()
-
+  describe "breadcrumb_items/1" do
+    test "renders breadcrumbs from list of tuples" do
       assigns = %{
-        current_user: user,
-        socket: nil,
-        breadcrumbs: [],
-        project: project,
-        title: []
+        items: [
+          {"History", "/projects/123/history"},
+          {"Workflow", "/projects/123/w/abc"}
+        ]
       }
 
       html =
-        (&LayoutComponents.header/1)
+        (&LayoutComponents.breadcrumb_items/1)
         |> render_component(assigns)
 
-      # Project name shown via project picker button (no "Projects" prefix)
-      assert html =~ project.name
-      assert html =~ "breadcrumb-project-picker-trigger"
-      refute html =~ "parent"
-    end
-
-    test "renders sandbox breadcrumb with parent project" do
-      user = Lightning.AccountsFixtures.user_fixture()
-      parent_project = project_fixture(name: "Parent Project")
-
-      sandbox_project =
-        project_fixture(name: "My Sandbox", parent_id: parent_project.id)
-        |> Lightning.Repo.preload(:parent)
-
-      assigns = %{
-        current_user: user,
-        socket: nil,
-        breadcrumbs: [],
-        project: sandbox_project,
-        title: []
-      }
-
-      html =
-        (&LayoutComponents.header/1)
-        |> render_component(assigns)
-
-      # Current project shown in project picker button
-      assert html =~ "My Sandbox"
-      assert html =~ "breadcrumb-project-picker-trigger"
-    end
-
-    test "renders sandbox breadcrumb without parent when parent not preloaded" do
-      user = Lightning.AccountsFixtures.user_fixture()
-      parent_project = project_fixture(name: "Parent Project")
-
-      sandbox_project =
-        project_fixture(name: "My Sandbox", parent_id: parent_project.id)
-
-      assigns = %{
-        current_user: user,
-        socket: nil,
-        breadcrumbs: [],
-        project: sandbox_project,
-        title: []
-      }
-
-      html =
-        (&LayoutComponents.header/1)
-        |> render_component(assigns)
-
-      # Current project shown in project picker button (parent not shown)
-      refute html =~ "Parent Project"
-      assert html =~ "My Sandbox"
-      assert html =~ "breadcrumb-project-picker-trigger"
-    end
-
-    test "renders multiple breadcrumbs with separators" do
-      user = Lightning.AccountsFixtures.user_fixture()
-      project = project_fixture(name: "Test Project")
-
-      # Note: collect_breadcrumbs/1 auto-adds project as first crumb,
-      # so we add 2 more breadcrumbs to get 3 total (indices 0, 1, 2)
-      # This ensures index > 1 is true for the third breadcrumb
-      assigns = %{
-        current_user: user,
-        socket: nil,
-        breadcrumbs: [
-          {"Workflows", "/projects/#{project.id}/w"},
-          {"My Workflow", "/projects/#{project.id}/w/abc"}
-        ],
-        project: project,
-        title: []
-      }
-
-      html =
-        (&LayoutComponents.header/1)
-        |> render_component(assigns)
-
-      # First breadcrumb (index 0) uses project picker
-      assert html =~ "breadcrumb-project-picker-trigger"
-      assert html =~ "Test Project"
-
-      # Second breadcrumb (index 1) rendered via else branch
-      # show_separator = (1 > 1) = false, so no separator before "Workflows"
-      assert html =~ "Workflows"
-
-      # Third breadcrumb (index 2) rendered via else branch
-      # show_separator = (2 > 1) = true, so separator shown before "My Workflow"
-      assert html =~ "My Workflow"
-
-      # Verify separator icons are present (from index 2 and page title)
+      assert html =~ "History"
+      assert html =~ "/projects/123/history"
+      assert html =~ "Workflow"
+      assert html =~ "/projects/123/w/abc"
       assert html =~ "hero-chevron-right"
+    end
+  end
+
+  describe "header/1" do
+    test "renders h1 title when no breadcrumbs slot provided" do
+      user = Lightning.AccountsFixtures.user_fixture()
+
+      # When breadcrumbs slot is empty, header renders the title slot as h1
+      assigns = %{
+        current_user: user,
+        socket: nil,
+        breadcrumbs: [],
+        title: [],
+        inner_block: []
+      }
+
+      html =
+        (&LayoutComponents.header/1)
+        |> render_component(assigns)
+
+      # Should render h1 for title
+      assert html =~ ~r/<h1/
+      assert html =~ "top-bar"
     end
   end
 end
