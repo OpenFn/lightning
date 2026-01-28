@@ -458,7 +458,7 @@ defmodule LightningWeb.LayoutComponents do
         <div class="pt-2 pb-1">
           <LightningWeb.Components.Common.openfn_logo class="h-6 primary-light mx-auto" />
         </div>
-        <div class="text-xs primary-light opacity-50">
+        <div class="text-[8px] primary-light opacity-50">
           v{Application.spec(:lightning, :vsn)}
         </div>
       </div>
@@ -467,7 +467,7 @@ defmodule LightningWeb.LayoutComponents do
         <div class="pt-2 pb-1">
           <LightningWeb.Components.Common.openfn_logo_collapsed class="h-6 primary-light mx-auto" />
         </div>
-        <div class="text-xs primary-light opacity-50">
+        <div class="text-[8px] primary-light opacity-50">
           v{Application.spec(:lightning, :vsn)}
         </div>
       </div>
