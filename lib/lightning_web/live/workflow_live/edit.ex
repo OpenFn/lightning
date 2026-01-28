@@ -284,7 +284,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
               class={[
                 "fixed left-0 top-0 right-0 bottom-0 flex-wrap",
                 "hidden opacity-0",
-                "bg-white inset-0 z-45 overflow-hidden drop-shadow-[0_35px_35px_rgba(0,0,0,0.25)]"
+                "bg-white inset-0 z-[101] overflow-hidden drop-shadow-[0_35px_35px_rgba(0,0,0,0.25)]"
               ]}
               phx-mounted={fade_in()}
               phx-remove={fade_out()}
