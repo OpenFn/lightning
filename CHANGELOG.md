@@ -21,6 +21,13 @@ and this project adheres to
 
 ### Fixed
 
+## [2.15.12-pre3] - 2026-01-28
+
+- Refactor header component to use `:breadcrumbs` slot for flexible breadcrumb
+  rendering [PR#4356](https://github.com/OpenFn/lightning/pull/4356)
+- Fix version dropdown showing dot for workflows with cron/kafka triggers
+  [#4352](https://github.com/OpenFn/lightning/issues/4352)
+
 ## [2.15.12-pre2] - 2026-01-28
 
 ### Added
@@ -30,15 +37,11 @@ and this project adheres to
 
 ### Changed
 
-- Refactor header component to use `:breadcrumbs` slot for flexible breadcrumb
-  rendering [PR#4356](https://github.com/OpenFn/lightning/pull/4356)
 - Standardise copy button feedback across collaborative editor
   [#3578](https://github.com/OpenFn/lightning/issues/3578)
 
 ### Fixed
 
-- Fix version dropdown showing dot for workflows with cron/kafka triggers
-  [#4352](https://github.com/OpenFn/lightning/issues/4352)
 - Fix clicking nodes causing unwanted zoom in workflow diagram
   [#4327](https://github.com/OpenFn/lightning/issues/4327)
 
