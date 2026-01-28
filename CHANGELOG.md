@@ -21,6 +21,9 @@ and this project adheres to
 
 ### Fixed
 
+- Legacy editor modal was covered up by side menu, now it sits above like before
+  [PR#4358](https://github.com/OpenFn/lightning/pull/4358)
+
 ## [2.15.12-pre3] - 2026-01-28
 
 - Refactor header component to use `:breadcrumbs` slot for flexible breadcrumb
