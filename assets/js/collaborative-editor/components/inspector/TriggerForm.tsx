@@ -180,6 +180,7 @@ export function TriggerForm({ trigger }: TriggerFormProps) {
                       | 'webhook'
                       | 'cron'
                       | 'kafka';
+                    field.handleChange(newType);
                     // Get default values for the new trigger type
                     const defaultValues = createDefaultTrigger(newType);
                     // Update the entire trigger with default values for the new type

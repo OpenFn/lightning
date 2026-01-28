@@ -35,6 +35,8 @@ and this project adheres to
 
 ### Fixed
 
+- Fix version dropdown showing dot for workflows with cron/kafka triggers
+  [#4352](https://github.com/OpenFn/lightning/issues/4352)
 - Fix clicking nodes causing unwanted zoom in workflow diagram
   [#4327](https://github.com/OpenFn/lightning/issues/4327)
 
