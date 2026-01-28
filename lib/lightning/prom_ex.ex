@@ -88,10 +88,54 @@ defmodule Lightning.PromEx do
 
   def seed_event_metrics do
     Lightning.Config.external_metrics_module().seed_event_metrics()
-
     Lightning.PromExTestPlugin.seed_event_metrics()
-
     Lightning.Runs.PromExPlugin.seed_event_metrics()
+
+    # Seed sandbox metrics directly into ETS at value 0 (without firing telemetry).
+    # This establishes the Prometheus baseline so the first real event is captured,
+    # without adding phantom events on every server restart.
+    Lightning.Projects.SandboxPromExPlugin.metric_definitions()
+    |> Enum.flat_map(fn {name, opts} ->
+      case Keyword.get(opts, :tags) do
+        nil ->
+          [{name, %{}}]
+
+        tag_map ->
+          tag_map
+          |> Map.values()
+          |> combinations()
+          |> Enum.map(fn vals ->
+            {name, Enum.zip(Map.keys(tag_map), vals) |> Map.new()}
+          end)
+      end
+    end)
+    |> Enum.each(fn {name, labels} -> seed_counter(name, labels) end)
+  end
+
+  # Helper for cartesian product
+  defp combinations([]), do: [[]]
+
+  defp combinations([head | tail]) do
+    for h <- head, t <- combinations(tail), do: [h | t]
+  end
+
+  @doc """
+  Seeds a counter metric directly in the PromEx ETS table at value 0.
+
+  This avoids the GMP/Monarch "first data point lost" issue without the
+  drawback of telemetry-based seeding which adds phantom events on every
+  server restart.
+
+  By inserting 0 directly into ETS:
+  - First Prometheus scrape establishes 0 as the baseline
+  - First real event increments to 1, which shows correctly
+  - On restart, counter resets to 0 (Prometheus handles resets correctly)
+
+  Uses `insert_new` to avoid resetting existing counters during hot reloads.
+  """
+  def seed_counter(metric_name, labels \\ %{}) do
+    key = {metric_name, labels}
+    :ets.insert_new(__MODULE__.Metrics, {key, 0})
   end
 
   @impl true

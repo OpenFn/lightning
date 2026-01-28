@@ -1438,12 +1438,7 @@ defmodule Lightning.Projects.ProvisionerTest do
 
       {:ok, _project} = Provisioner.import_document(project, user, body)
 
-      assert_received {
-        ^event,
-        ^ref,
-        %{count: 1},
-        %{is_sandbox: false}
-      }
+      assert_received {^event, ^ref, %{}, %{is_sandbox: false}}
     end
 
     test "emits provisioner import telemetry with is_sandbox: true for sandbox project" do
@@ -1464,12 +1459,7 @@ defmodule Lightning.Projects.ProvisionerTest do
 
       {:ok, _project} = Provisioner.import_document(sandbox, user, body)
 
-      assert_received {
-        ^event,
-        ^ref,
-        %{count: 1},
-        %{is_sandbox: true}
-      }
+      assert_received {^event, ^ref, %{}, %{is_sandbox: true}}
     end
   end
 

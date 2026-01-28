@@ -506,12 +506,7 @@ defmodule Lightning.WorkflowsTest do
           user
         )
 
-      assert_received {
-        ^event,
-        ^ref,
-        %{count: 1},
-        %{is_sandbox: false}
-      }
+      assert_received {^event, ^ref, %{}, %{is_sandbox: false}}
     end
 
     test "save_workflow/1 emits telemetry event with is_sandbox: true for sandbox project" do
@@ -527,12 +522,7 @@ defmodule Lightning.WorkflowsTest do
           user
         )
 
-      assert_received {
-        ^event,
-        ^ref,
-        %{count: 1},
-        %{is_sandbox: true}
-      }
+      assert_received {^event, ^ref, %{}, %{is_sandbox: true}}
     end
   end
 

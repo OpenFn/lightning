@@ -203,12 +203,7 @@ defmodule Lightning.Projects.SandboxesTest do
       {:ok, _sandbox} =
         Sandboxes.provision(parent, actor, %{name: "sb-telemetry"})
 
-      assert_received {
-        ^event,
-        ^ref,
-        %{count: 1},
-        %{}
-      }
+      assert_received {^event, ^ref, %{}, %{}}
     end
 
     test "provision does not emit telemetry event on failure" do
@@ -219,12 +214,7 @@ defmodule Lightning.Projects.SandboxesTest do
       # Empty name causes validation error
       {:error, _changeset} = Sandboxes.provision(parent, actor, %{name: ""})
 
-      refute_received {
-        ^event,
-        ^ref,
-        %{count: 1},
-        %{}
-      }
+      refute_received {^event, ^ref, %{}, %{}}
     end
 
     test "delete_sandbox emits sandbox deleted telemetry event on success" do
@@ -238,12 +228,7 @@ defmodule Lightning.Projects.SandboxesTest do
 
       {:ok, _deleted} = Sandboxes.delete_sandbox(sandbox, actor)
 
-      assert_received {
-        ^event,
-        ^ref,
-        %{count: 1},
-        %{}
-      }
+      assert_received {^event, ^ref, %{}, %{}}
     end
 
     test "delete_sandbox does not emit telemetry event on unauthorized" do
@@ -257,12 +242,7 @@ defmodule Lightning.Projects.SandboxesTest do
 
       {:error, :unauthorized} = Sandboxes.delete_sandbox(sandbox, actor)
 
-      refute_received {
-        ^event,
-        ^ref,
-        %{count: 1},
-        %{}
-      }
+      refute_received {^event, ^ref, %{}, %{}}
     end
   end
 

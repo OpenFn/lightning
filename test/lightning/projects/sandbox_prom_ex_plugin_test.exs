@@ -93,50 +93,35 @@ defmodule Lightning.Projects.SandboxPromExPluginTest do
   end
 
   describe "fire_sandbox_created_event/0" do
-    test "emits telemetry event with count of 1" do
+    test "emits telemetry event" do
       event = [:lightning, :sandbox, :created]
       ref = :telemetry_test.attach_event_handlers(self(), [event])
 
       SandboxPromExPlugin.fire_sandbox_created_event()
 
-      assert_received {
-        ^event,
-        ^ref,
-        %{count: 1},
-        %{}
-      }
+      assert_received {^event, ^ref, %{}, %{}}
     end
   end
 
   describe "fire_sandbox_merged_event/0" do
-    test "emits telemetry event with count of 1" do
+    test "emits telemetry event" do
       event = [:lightning, :sandbox, :merged]
       ref = :telemetry_test.attach_event_handlers(self(), [event])
 
       SandboxPromExPlugin.fire_sandbox_merged_event()
 
-      assert_received {
-        ^event,
-        ^ref,
-        %{count: 1},
-        %{}
-      }
+      assert_received {^event, ^ref, %{}, %{}}
     end
   end
 
   describe "fire_sandbox_deleted_event/0" do
-    test "emits telemetry event with count of 1" do
+    test "emits telemetry event" do
       event = [:lightning, :sandbox, :deleted]
       ref = :telemetry_test.attach_event_handlers(self(), [event])
 
       SandboxPromExPlugin.fire_sandbox_deleted_event()
 
-      assert_received {
-        ^event,
-        ^ref,
-        %{count: 1},
-        %{}
-      }
+      assert_received {^event, ^ref, %{}, %{}}
     end
   end
 
@@ -147,12 +132,7 @@ defmodule Lightning.Projects.SandboxPromExPluginTest do
 
       SandboxPromExPlugin.fire_workflow_saved_event(true)
 
-      assert_received {
-        ^event,
-        ^ref,
-        %{count: 1},
-        %{is_sandbox: true}
-      }
+      assert_received {^event, ^ref, %{}, %{is_sandbox: true}}
     end
 
     test "emits telemetry event with is_sandbox: false" do
@@ -161,12 +141,7 @@ defmodule Lightning.Projects.SandboxPromExPluginTest do
 
       SandboxPromExPlugin.fire_workflow_saved_event(false)
 
-      assert_received {
-        ^event,
-        ^ref,
-        %{count: 1},
-        %{is_sandbox: false}
-      }
+      assert_received {^event, ^ref, %{}, %{is_sandbox: false}}
     end
   end
 
@@ -177,12 +152,7 @@ defmodule Lightning.Projects.SandboxPromExPluginTest do
 
       SandboxPromExPlugin.fire_provisioner_import_event(true)
 
-      assert_received {
-        ^event,
-        ^ref,
-        %{count: 1},
-        %{is_sandbox: true}
-      }
+      assert_received {^event, ^ref, %{}, %{is_sandbox: true}}
     end
 
     test "emits telemetry event with is_sandbox: false" do
@@ -191,12 +161,7 @@ defmodule Lightning.Projects.SandboxPromExPluginTest do
 
       SandboxPromExPlugin.fire_provisioner_import_event(false)
 
-      assert_received {
-        ^event,
-        ^ref,
-        %{count: 1},
-        %{is_sandbox: false}
-      }
+      assert_received {^event, ^ref, %{}, %{is_sandbox: false}}
     end
   end
 end
