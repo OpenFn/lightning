@@ -17,6 +17,14 @@ and this project adheres to
 
 ### Added
 
+### Changed
+
+### Fixed
+
+## [2.15.12-pre2] - 2026-01-28
+
+### Added
+
 - Provisioner updates version history of workflows on post
   [#4343](https://github.com/OpenFn/lightning/issues/4343)
 
