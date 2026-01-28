@@ -176,6 +176,9 @@ export function TriggerForm({ trigger }: TriggerFormProps) {
                   id={field.name}
                   value={field.state.value as string}
                   onChange={e => {
+                    field.handleChange(
+                      e.target.value as 'webhook' | 'cron' | 'kafka'
+                    );
                     const newType = e.target.value as
                       | 'webhook'
                       | 'cron'

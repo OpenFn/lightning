@@ -47,7 +47,7 @@ const cronTriggerSchema = baseTriggerSchema.extend({
       }
     ),
   kafka_configuration: z.null().default(null),
-  webhook_reply: z.null().default(null),
+  webhook_reply: z.null().default(null).catch(null),
 });
 
 // Kafka configuration sub-schema
@@ -100,7 +100,7 @@ const kafkaTriggerSchema = baseTriggerSchema.extend({
   type: z.literal('kafka'),
   cron_expression: z.null().default(null),
   kafka_configuration: kafkaConfigSchema,
-  webhook_reply: z.null().default(null),
+  webhook_reply: z.null().default(null).catch(null),
 });
 
 /**
@@ -141,6 +141,7 @@ export const createDefaultTrigger = (
         type: 'cron' as const,
         cron_expression: '0 0 * * *', // Daily at midnight default
         kafka_configuration: null,
+        webhook_reply: null,
       };
 
     case 'kafka':
@@ -158,6 +159,7 @@ export const createDefaultTrigger = (
           initial_offset_reset_policy: 'latest' as const,
           connect_timeout: 30000,
         },
+        webhook_reply: null,
       };
 
     default:
