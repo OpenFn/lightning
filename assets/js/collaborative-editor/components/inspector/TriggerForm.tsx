@@ -176,13 +176,11 @@ export function TriggerForm({ trigger }: TriggerFormProps) {
                   id={field.name}
                   value={field.state.value as string}
                   onChange={e => {
-                    field.handleChange(
-                      e.target.value as 'webhook' | 'cron' | 'kafka'
-                    );
                     const newType = e.target.value as
                       | 'webhook'
                       | 'cron'
                       | 'kafka';
+                    field.handleChange(newType);
                     // Get default values for the new trigger type
                     const defaultValues = createDefaultTrigger(newType);
                     // Update the entire trigger with default values for the new type
