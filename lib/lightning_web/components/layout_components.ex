@@ -367,18 +367,18 @@ defmodule LightningWeb.LayoutComponents do
       <div class="flex items-center">
         <.icon
           name="hero-chevron-right"
-          class="breadcrumb-separator h-5 w-5 shrink-0 text-gray-400"
+          class="breadcrumb-separator mr-1 h-5 w-5 shrink-0 text-gray-400"
         />
         <%= if @path do %>
           <.link
             patch={@path}
-            class="flex text-sm font-medium text-gray-500 hover:text-gray-700"
+            class="ml-1 flex text-sm font-medium text-gray-500 hover:text-gray-700"
             aria-current="page"
           >
             {if assigns[:label], do: render_slot(@label)}
           </.link>
         <% else %>
-          <span class="flex items-center text-sm font-medium text-gray-500">
+          <span class="ml-1 flex items-center text-sm font-medium text-gray-500">
             {if assigns[:label], do: render_slot(@label)}
           </span>
         <% end %>
