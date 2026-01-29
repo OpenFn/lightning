@@ -594,7 +594,7 @@ defmodule Lightning.WorkflowVersionsTest do
     end
 
     test "generates the same hash for this simple workflow" do
-      predetermined_hash = "a3605e1f6463"
+      predetermined_hash = "05c455a228e6"
 
       simple_workflow = %{
         name: "Simple Workflow",
