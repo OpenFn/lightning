@@ -1,5 +1,5 @@
 defmodule Lightning.ObanManagerTest do
-  use Lightning.DataCase, async: true
+  use Lightning.DataCase, async: false
 
   import ExUnit.CaptureLog
   import Mox

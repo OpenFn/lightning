@@ -493,6 +493,37 @@ defmodule Lightning.WorkflowsTest do
       assert {:ok, %Snapshot{lock_version: ^lock_version}} =
                Workflows.maybe_create_latest_snapshot(workflow)
     end
+
+    test "save_workflow/1 emits telemetry event with is_sandbox: false for regular project" do
+      project = insert(:project)
+      user = insert(:user)
+      event = [:lightning, :workflow, :saved]
+      ref = :telemetry_test.attach_event_handlers(self(), [event])
+
+      {:ok, _workflow} =
+        Workflows.save_workflow(
+          %{name: "telemetry-test", project_id: project.id},
+          user
+        )
+
+      assert_received {^event, ^ref, %{}, %{is_sandbox: false}}
+    end
+
+    test "save_workflow/1 emits telemetry event with is_sandbox: true for sandbox project" do
+      parent = insert(:project)
+      sandbox = insert(:project, parent: parent)
+      user = insert(:user)
+      event = [:lightning, :workflow, :saved]
+      ref = :telemetry_test.attach_event_handlers(self(), [event])
+
+      {:ok, _workflow} =
+        Workflows.save_workflow(
+          %{name: "sandbox-telemetry", project_id: sandbox.id},
+          user
+        )
+
+      assert_received {^event, ^ref, %{}, %{is_sandbox: true}}
+    end
   end
 
   describe "finders" do

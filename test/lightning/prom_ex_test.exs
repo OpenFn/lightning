@@ -67,6 +67,7 @@ defmodule Lightning.PromExTest do
         unclaimed_run_threshold_seconds: 40
       },
       Lightning.PromExTestPlugin,
+      Lightning.Projects.SandboxPromExPlugin,
       FooPlugin,
       BarPlugin
     ]

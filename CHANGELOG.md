@@ -17,6 +17,10 @@ and this project adheres to
 
 ### Added
 
+- Add PromEx plugin to track sandbox-related metrics for Prometheus including
+  sandbox lifecycle events and workflow saves by project type
+  [#4101](https://github.com/OpenFn/lightning/issues/4101)
+
 ### Changed
 
 ### Fixed

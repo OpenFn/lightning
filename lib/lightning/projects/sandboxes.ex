@@ -39,6 +39,7 @@ defmodule Lightning.Projects.Sandboxes do
   alias Lightning.Policies.Permissions
   alias Lightning.Projects.Project
   alias Lightning.Projects.ProjectCredential
+  alias Lightning.Projects.SandboxPromExPlugin
   alias Lightning.Repo
   alias Lightning.Workflows
   alias Lightning.Workflows.Edge
@@ -187,14 +188,15 @@ defmodule Lightning.Projects.Sandboxes do
   @spec delete_sandbox(Project.t() | Ecto.UUID.t(), User.t()) ::
           {:ok, Project.t()} | {:error, :unauthorized | :not_found | term()}
   def delete_sandbox(%Project{} = sandbox, %User{} = actor) do
-    Permissions.can?(
-      :sandboxes,
-      :delete_sandbox,
-      actor,
-      sandbox
-    )
-    |> if do
-      Lightning.Projects.delete_project(sandbox)
+    if Permissions.can?(:sandboxes, :delete_sandbox, actor, sandbox) do
+      case Lightning.Projects.delete_project(sandbox) do
+        {:ok, deleted} ->
+          SandboxPromExPlugin.fire_sandbox_deleted_event()
+          {:ok, deleted}
+
+        error ->
+          error
+      end
     else
       {:error, :unauthorized}
     end
@@ -240,8 +242,12 @@ defmodule Lightning.Projects.Sandboxes do
       end
     end)
     |> case do
-      {:ok, project} -> {:ok, project}
-      {:error, changeset} -> {:error, changeset}
+      {:ok, project} ->
+        SandboxPromExPlugin.fire_sandbox_created_event()
+        {:ok, project}
+
+      {:error, changeset} ->
+        {:error, changeset}
     end
   end
 

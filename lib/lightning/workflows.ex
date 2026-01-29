@@ -175,6 +175,15 @@ defmodule Lightning.Workflows do
 
         Events.workflow_updated(workflow)
 
+        # Emit telemetry for workflow save metrics
+        is_sandbox =
+          Lightning.Repo.get(Lightning.Projects.Project, workflow.project_id)
+          |> Lightning.Projects.Project.sandbox?()
+
+        Lightning.Projects.SandboxPromExPlugin.fire_workflow_saved_event(
+          is_sandbox
+        )
+
         # Reconcile changes with active collaborative editing sessions
         # Skip reconciliation when changes originate from collaborative session
         # to prevent circular updates (Session → DB → Session)
