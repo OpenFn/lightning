@@ -50,7 +50,7 @@ defmodule LightningWeb.LayoutComponents do
     ~H"""
     <div
       id="user-menu-wrapper"
-      class="h-10 mx-3 flex-1 relative"
+      class="h-10 mx-3 flex-1 min-w-0 relative"
       phx-click-away={JS.hide(to: "##{@menu_id}")}
       phx-window-keydown={JS.hide(to: "##{@menu_id}")}
       phx-key="Escape"
@@ -68,7 +68,7 @@ defmodule LightningWeb.LayoutComponents do
         type="button"
         aria-haspopup="true"
       >
-        <div class="user-menu-content flex items-center">
+        <div class="user-menu-content flex items-center w-full min-w-0">
           <.user_avatar
             first_name={@current_user.first_name}
             last_name={@current_user.last_name}
