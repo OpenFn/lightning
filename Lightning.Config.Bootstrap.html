@@ -5,14 +5,14 @@
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="generator" content="ExDoc v0.39.3">
-    <meta name="project" content="Lightning v2.15.12-pre3">
+    <meta name="project" content="Lightning v2.15.12">
 
 
-    <title>Lightning.Config.Bootstrap — Lightning v2.15.12-pre3</title>
+    <title>Lightning.Config.Bootstrap — Lightning v2.15.12</title>
 
     <link rel="stylesheet" href="dist/html-elixir-VYWJUHZE.css" />
 
-    <script defer src="dist/sidebar_items-B13168B9.js"></script>
+    <script defer src="dist/sidebar_items-54F62177.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-XBCM4BHM.js"></script>
 
@@ -41,7 +41,7 @@
 Lightning
         </a>
         <div class="sidebar-projectVersion" translate="no">
-          v2.15.12-pre3
+          v2.15.12
         </div>
       </div>
     </div>
@@ -98,7 +98,7 @@ Lightning
   <div class="heading-with-actions top-heading">
     <h1>
       <span translate="no">Lightning.Config.Bootstrap</span> 
-      <small class="app-vsn" translate="no">(Lightning v2.15.12-pre3)</small>
+      <small class="app-vsn" translate="no">(Lightning v2.15.12)</small>
 
     </h1>
 
@@ -117,8 +117,8 @@ abstracts the runtime configuration into a module that can be tested and
 called from other places (aside from <code class="inline">config/runtime.exs</code>) file.</p><section role="note" class="admonition info"><h4 class="admonition-title info">Sourcing envs</h4><p>Internally this module uses <a href="https://hexdocs.pm/dotenvy/1.1.0/Dotenvy.html#source/1"><code class="inline">Dotenvy.source/1</code></a> to source environment variables
 from the <code class="inline">.env</code>, <code class="inline">.env.&lt;config_env&gt;</code>, and <code class="inline">.env.&lt;config_env&gt;.override</code> files.
 It also sources the system environment variables.</p><p>Calling <a href="#configure/0"><code class="inline">configure/0</code></a> without calling <a href="#source_envs/0"><code class="inline">source_envs/0</code></a> or <a href="https://hexdocs.pm/dotenvy/1.1.0/Dotenvy.html#source/2"><code class="inline">Dotenvy.source/2</code></a>
-first will result in no environment variables being loaded.</p></section><p>Usage:</p><pre><code class="makeup elixir" translate="no"><span class="nc">Lightning.Config.Bootstrap</span><span class="o">.</span><span class="n">source_envs</span><span class="p" data-group-id="4333076250-1">(</span><span class="p" data-group-id="4333076250-1">)</span><span class="w">
-</span><span class="nc">Lightning.Config.Bootstrap</span><span class="o">.</span><span class="n">configure</span><span class="p" data-group-id="4333076250-2">(</span><span class="p" data-group-id="4333076250-2">)</span></code></pre>
+first will result in no environment variables being loaded.</p></section><p>Usage:</p><pre><code class="makeup elixir" translate="no"><span class="nc">Lightning.Config.Bootstrap</span><span class="o">.</span><span class="n">source_envs</span><span class="p" data-group-id="9060744945-1">(</span><span class="p" data-group-id="9060744945-1">)</span><span class="w">
+</span><span class="nc">Lightning.Config.Bootstrap</span><span class="o">.</span><span class="n">configure</span><span class="p" data-group-id="9060744945-2">(</span><span class="p" data-group-id="9060744945-2">)</span></code></pre>
     </section>
 
 </div>
