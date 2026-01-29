@@ -18,6 +18,7 @@ defmodule LightningWeb.API.JobController do
       GET /api/jobs?project_id=a1b2c3d4-...&page=1&page_size=20
       GET /api/jobs/a1b2c3d4-5e6f-7a8b-9c0d-1e2f3a4b5c6d
   """
+  @moduledoc docout: true
   use LightningWeb, :controller
 
   alias Lightning.Jobs

@@ -28,6 +28,8 @@ defmodule LightningWeb.API.WorkflowsController do
       POST /api/workflows
       PATCH /api/workflows/a1b2c3d4-...
   """
+  @moduledoc docout: true
+
   use LightningWeb, :controller
 
   import Lightning.Workflows.WorkflowUsageLimiter,
